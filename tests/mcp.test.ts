@@ -12,7 +12,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { createMcpTools, registerMcpTools, type McpAppHost, type WebMcpTool } from '../src/mcp';
 import { missionVehicle, vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
-import { satelliteById } from '../src/data/satellites';
+import { missionSatellite, satelliteById } from '../src/data/satellites';
 import { orbitById } from '../src/data/orbits';
 import { guidanceForVehicle, DEFAULT_FAILURE } from '../src/physics/defaults';
 import { missionVerdict, type Feasibility } from '../src/ui/panel';
@@ -93,7 +93,7 @@ function makeFakeSim(cfg: MissionConfig): Simulation {
     cfg,
     vehicleSpec: missionVehicle(cfg),
     site: siteById(cfg.siteId),
-    satellite: satelliteById(cfg.satelliteId),
+    satellite: missionSatellite(cfg),
     telemetry: [sample, { ...sample, t: 1.5, alt: 40, vInertial: 12 }],
     events: EVENTS.slice(0, 2),
   } as unknown as Simulation;
@@ -104,6 +104,7 @@ interface FakePanelState {
   vehicleId: string;
   vehicleSpec?: MissionConfig['vehicleSpec'];
   satelliteId: string;
+  satelliteSpec?: MissionConfig['satelliteSpec'];
   siteId: string;
   orbitId: string;
   orbit: MissionConfig['orbit'];
@@ -157,6 +158,7 @@ class FakePanel {
     return {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
       ...(s.vehicleSpec ? { vehicleSpec: structuredClone(s.vehicleSpec) } : {}),
+      ...(s.satelliteSpec ? { satelliteSpec: structuredClone(s.satelliteSpec) } : {}),
       launchTime: new Date(s.launchTime.getTime()),
       guidance: { ...guidanceForVehicle(missionVehicle(s), undefined, s.dynamics?.model), ...s.guidanceOverrides },
       failure: { ...s.failure }, boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
@@ -174,7 +176,7 @@ class FakePanel {
     let plan = null;
     try { plan = planMission(this.getConfig(), site, spec); } catch { plan = null; }
     return missionVerdict({
-      spec, site, orbit: s.orbit, satellite: satelliteById(s.satelliteId), payloadMass: s.payloadMass,
+      spec, site, orbit: s.orbit, satellite: missionSatellite(s), payloadMass: s.payloadMass,
       inclinationDeg: resolveTarget(s.orbit, site, s.launchTime).inclination * RAD,
       plan, failureMode: s.failure.mode, siteReassigned: this.siteReassigned,
     });
@@ -463,6 +465,32 @@ describe('configure_mission', () => {
     expect(host.panel.state.vehicleSpec).toBeUndefined();
     // WebMCP does not accept a spec itself (the owner's choice, 2026-09-26): an id it does not know is refused
     expect(() => configure.execute({ vehicleId: 'my-falcon' })).toThrowError(/Unknown vehicleId "my-falcon"/);
+  });
+
+  it('keeps a custom satellite a mission file brought in, and takes no new one (D06)', () => {
+    const configure = tool(tools, 'configure_mission');
+    const custom = { ...structuredClone(satelliteById('crew')), id: 'my-ship', name: 'My ship', derivedFrom: 'crew' };
+    Object.assign(host.panel.state, { satelliteId: custom.id, satelliteSpec: custom });
+    // edits act on the custom satellite, read through the one resolver
+    let out = configure.execute({ payloadMassKg: 7000, failureMode: 'launchAbort', failureTimeS: 30 }) as any;
+    expect(host.panel.state.satelliteSpec).toEqual(custom);
+    expect(out.config.customSatellite).toEqual({ name: 'My ship', derivedFrom: 'crew' });
+    expect(out.config.satelliteId).toBe('my-ship');
+    // naming it keeps it; naming a catalogue satellite replaces it, with its own mass
+    configure.execute({ satelliteId: 'my-ship', failureMode: 'none' });
+    expect(host.panel.state.satelliteSpec).toEqual(custom);
+    out = configure.execute({ satelliteId: 'cubesats' }) as any;
+    expect(host.panel.state.satelliteId).toBe('cubesats');
+    expect(host.panel.state.satelliteSpec).toBeUndefined();
+    expect(host.panel.state.payloadMass).toBe(satelliteById('cubesats').mass);
+    expect(out.config.customSatellite).toBeNull();
+    // WebMCP does not accept a spec itself (the owner's default, 2026-09-29): an id it does not know is refused
+    expect(() => configure.execute({ satelliteId: 'my-ship' })).toThrowError(/Unknown satelliteId "my-ship"/);
+    // …and its schema has no field for one: a spec sent anyway is not read
+    expect(Object.keys((configure.inputSchema as { properties: object }).properties)).not.toContain('satelliteSpec');
+    configure.execute({ satelliteSpec: custom });
+    expect(host.panel.state.satelliteId).toBe('cubesats');
+    expect(host.panel.state.satelliteSpec).toBeUndefined();
   });
 
   it('applies a valid configuration, re-renders the panel and previews it', () => {

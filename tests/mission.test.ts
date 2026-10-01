@@ -238,16 +238,19 @@ describe('insertion orbit planning', () => {
     expect(singleShot.insertionApoapsis).toBeGreaterThan(DIRECT_APOAPSIS_CAP);
   });
 
-  it('inserts a crewed R-7 into a circular parking orbit, not a decaying ellipse', () => {
+  it('inserts a crewed R-7 at the Soyuz MS insertion, 200 × 242 km, not a decaying ellipse', () => {
     // Regression guard: the ascent cut-off floor (140 km, so that a transfer
     // orbit is not flown past its apoapsis while the perigee catches up) must
-    // not apply to a circular insertion plan, which has no later burn of its
-    // own to raise the perigee with.
+    // not apply to a direct insertion, which has no later burn of the
+    // launcher's own to raise the perigee with. Every crewed flight since MS-16
+    // was put on 200 ± 2 × 242 ± 5 km (Roscosmos via russianspaceweb); it was
+    // 200 km circular here until 2026-10-01.
     const cfg = mk({ vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'), payloadMassOverride: 7150 });
     const sim = fly(cfg, 1200, false);
     const park = sim.events.find((e) => e.key === 'evt.parkingOrbit');
     expect(park, sim.events.map((e) => e.key).join(' ')).toBeDefined();
     expect(Number(park!.params!.pe)).toBeGreaterThanOrEqual(195);
-    expect(Number(park!.params!.ap)).toBeLessThanOrEqual(215);
+    expect(Number(park!.params!.ap)).toBeGreaterThanOrEqual(235);
+    expect(Number(park!.params!.ap)).toBeLessThanOrEqual(250);
   });
 });

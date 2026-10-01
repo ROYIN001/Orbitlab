@@ -10,7 +10,13 @@ sticks to what you see on screen and what it means.
 Orbitlab is being grown into one space program in three **sections**: **Launch** (this
 simulator), **Orbit** (orbits, orbit changes and what satellites do) and **Build** (designing a
 rocket and a satellite). Each section has the same three **levels** — Watch, Explore and
-Engineer — and the top bar has a switch for each: the section on the left, the level beside it.
+Engineer — and the top bar has a tab for each section. The current tab carries its level as a
+badge; pressing any tab opens the menu of that section's levels, so a section and a level are
+picked together. On a phone the switch is one button that opens a table of every section and
+level. The ORBITLAB name at the left of the bar goes back to the landing page. A tab marked with
+a dot is a section still to come (Campaign, roadmap phase 6): its menu lists what the roadmap
+brings to it. In Thai the launch section's first level is called รับชม (watching), the other
+sections' first level พื้นฐาน (the basics), and the second level ทดลอง everywhere.
 **Orbit** opens on its playground (section 0a below). **Build** takes real rockets apart, remixes
 them, builds new ones from parts and tests them before they fly (section 0b below); what is still
 to come to it (designing from parts at the Engineer level, and the satellites) is listed at its
@@ -59,7 +65,7 @@ from it. The flight itself carries on in Launch.
   asked for (see **Explore** below).
 - **Engineer** — the whole workspace, with every guidance parameter open.
 
-**Explore.** The level is chosen in the top bar only. A mission is set up in three steps,
+**Explore.** The level is chosen in the top bar only, from the Launch tab's menu. A mission is set up in three steps,
 one on screen at a time, with tabs to move between them — **Rocket**, **Payload**, **Orbit**:
 
 1. **Rocket** — the quick starts, then the vehicles as cards, each with what it lifts to low
@@ -352,8 +358,8 @@ reference.
 
 ## 0b. The Build section: rockets taken apart, remixed, built and tested
 
-Build is where rockets are taken apart and put together. Open **Build** in the top bar; the level
-switch beside it chooses Watch, Explore or Engineer. (The landing page has no Build chapter yet, so
+Build is where rockets are taken apart and put together. Press **Build** in the top bar; its menu
+chooses Watch, Explore or Engineer. (The landing page has no Build chapter yet, so
 the top bar is the way in.) Every rocket here is made from one parts catalogue, the same one the
 21 real rockets are assembled from, and every figure is worked out by the physics the launches
 fly. What the builder cannot know is marked as an estimate, and the section below the three levels
@@ -666,9 +672,14 @@ is heard long after it is seen; its pitch drops as the rocket pulls away (Dopple
 out as the rocket climbs into air too thin to carry it, whoever is listening. The onboard camera
 hears the engines through the structure instead, muffled but steady. Ignition, stage and
 fairing separation, landings and a vehicle's loss have sounds of their own, delayed the same
-way. With the flight sped up, the sound is quieter and plays without the delay (the picture
-would otherwise be minutes ahead of it); paused, it is silent. These sounds are synthesised in
-the browser. The model is in PHYSICS.md §11.
+way. The sound comes from where the rocket is: turn the camera and it moves round your head
+(wear headphones to hear it best). Near the ground you hear it twice, directly and off the
+ground a moment later, and the two make the whooshing sweep of a rocket climbing away; the
+farther it is, the more of it comes back from the surroundings as a long rolling echo. Close
+by, the roar crackles with the shocks of the exhaust. With the flight sped up, the sound is
+quieter and plays without the delay (the picture would otherwise be minutes ahead of it);
+paused, it is silent. These sounds are synthesised in the browser. The model is in
+PHYSICS.md §11.
 
 **Real launch audio in the viewer.** With the sound on, *Soyuz to the space station* plays
 NASA's broadcast of the real Soyuz MS-27 launch (8 April 2025, public domain) in step with the
@@ -1184,8 +1195,10 @@ gives **Passed with help**, recorded as such in your progress and the results fi
 the lesson's card, and **Next** still opens the next lesson. **Clear the answers I have seen**
 (on the strip while the lesson keeps any) forgets them, so your next attempt can pass unaided. The
 grades are formative: a worksheet's answer key is on the same
-device. The grade is read from the recording's head, so scrubbing back through the replay never
-changes it. **Hint** reveals up to three hints, one at a time (the
+device. The grade is taken once the flight has ended and kept, so scrubbing back through the replay
+never changes it; the orbit it reads is the one at insertion, as the event log's "Target orbit
+achieved" line gives it, however late the page reaches the end under time warp — the heights on
+screen drift afterwards (the Earth's bulge, J₂) and do not change the grade. **Hint** reveals up to three hints, one at a time (the
 results file says how many you used); **Start again** puts the lesson's mission back; **Copy
 link** gives an address that opens the lesson (`?lesson=orbit-first`). A setting the lesson fixes
 that is changed anyway — by a mission link or over WebMCP — fails the flight, and the strip says

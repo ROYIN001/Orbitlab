@@ -10,7 +10,7 @@
 import type { SimEvent } from '../physics/sim/types';
 
 /** The simulation's events a flown one is matched to. */
-export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.interstageSep' | 'evt.towerJettison' | 'evt.boosterSep' | 'evt.fairingSep' | 'evt.meco' | 'evt.stageCutoff' | 'evt.stageSep' | 'evt.seco'
+export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.interstageSep' | 'evt.aftSkirtSep' | 'evt.towerJettison' | 'evt.boosterSep' | 'evt.fairingSep' | 'evt.meco' | 'evt.stageCutoff' | 'evt.stageSep' | 'evt.seco'
   | 'evt.payloadSep' | 'evt.boosterLandedZone' | 'evt.boosterLandedShip' | 'evt.contact'
   | 'evt.ignition' | 'evt.tli' | 'evt.slaPanels' | 'evt.csmSeparation' | 'evt.csmDocked' | 'evt.lmExtraction'
   | 'evt.evasive' | 'evt.mcc' | 'evt.lunarSoi' | 'evt.loi' | 'evt.lunarOrbit' | 'evt.circularize'
@@ -58,6 +58,7 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.ceco': 'tl.evt.ceco',
   'evt.mixtureShift': 'tl.evt.mixtureShift',
   'evt.interstageSep': 'tl.evt.interstageSep',
+  'evt.aftSkirtSep': 'tl.evt.aftSkirtSep',
   'evt.towerJettison': 'tl.evt.towerJettison',
   'evt.boosterSep': 'tl.evt.boosterSep',
   'evt.fairingSep': 'tl.evt.fairingSep',

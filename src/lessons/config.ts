@@ -9,8 +9,8 @@ import { guidanceForVehicle } from '../physics/defaults';
 import { DEFAULT_FAILURE } from '../physics/defaults';
 import { defaultDynamics } from '../physics/rigid/config';
 import { orbitById } from '../data/orbits';
-import { satelliteById } from '../data/satellites';
-import { vehicleById } from '../data/vehicles';
+import { missionSatellite, satelliteById } from '../data/satellites';
+import { missionVehicle } from '../data/vehicles';
 
 /** The setup panel's opening mission (`SetupPanel`'s constructor), at a fixed time. */
 export function defaultMissionState(launchTime = new Date(Date.UTC(2026, 8, 15, 12))): MissionState {
@@ -21,11 +21,25 @@ export function defaultMissionState(launchTime = new Date(Date.UTC(2026, 8, 15, 
   };
 }
 
-/** What `SetupPanel.getConfig` builds from the same state. */
+/**
+ * What `SetupPanel.getConfig` builds from the same state, a custom rocket or
+ * satellite included (roadmap T01/T02, Phase 4 map §4.1): both are resolved
+ * through `missionVehicle` and `missionSatellite`, as the simulation resolves
+ * them, and the mission's inline `vehicleSpec` and `satelliteSpec` are kept,
+ * so a teacher's lesson on a rocket or satellite of the class's own, and the
+ * instructor's re-check of a flight of one, fly that design. Before, this
+ * called `vehicleById`, which throws for any id the catalogue does not hold,
+ * and dropped the vehicle spec. The satellite is resolved only to fail here,
+ * on a mission whose satellite id is not its spec's, rather than at launch.
+ */
 export function missionConfigFromState(s: MissionState): MissionConfig {
-  const guidance = { ...guidanceForVehicle(vehicleById(s.vehicleId), undefined, s.dynamics?.model), ...s.guidanceOverrides };
+  missionSatellite(s);
+  const guidance = { ...guidanceForVehicle(missionVehicle(s), undefined, s.dynamics?.model), ...s.guidanceOverrides };
   return {
     vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
+    // the mission's own rocket and satellite fly as the setup panel flies them (T01, D06)
+    ...(s.vehicleSpec ? { vehicleSpec: structuredClone(s.vehicleSpec) } : {}),
+    ...(s.satelliteSpec ? { satelliteSpec: structuredClone(s.satelliteSpec) } : {}),
     launchTime: new Date(s.launchTime.getTime()), guidance, failure: { ...s.failure },
     boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
     ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),

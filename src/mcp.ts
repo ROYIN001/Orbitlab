@@ -21,7 +21,7 @@
  * transitively and defeat the point of the split); instead `registerMcpTools`
  * is typed to accept anything with the same shape, which `App` already has.
  */
-import type { FailureConfig, FailureMode, GuidanceParams, MissionConfig, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from './types';
+import type { FailureConfig, FailureMode, GuidanceParams, MissionConfig, OrbitSpec, RecoveryMode, RecoveryPlan, SatelliteSpec, VehicleSpec } from './types';
 import type { Simulation, SimEvent } from './physics/simulation';
 import type { VisualFrame, StageFrame } from './physics/frame';
 import type { CameraMode } from './render/cameras';
@@ -70,6 +70,8 @@ interface McpPanelState {
   /** S02: the custom vehicle a mission file brought in, when there is one */
   vehicleSpec?: VehicleSpec;
   satelliteId: string;
+  /** D06: the custom satellite a mission file brought in, when there is one */
+  satelliteSpec?: SatelliteSpec;
   siteId: string;
   orbitId: string;
   orbit: OrbitSpec;
@@ -395,12 +397,16 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     if (id !== live.siteId) state.recoveryPlan = undefined;
     state.siteId = id;
   }
-  if (input.satelliteId !== undefined) {
+  // D06: WebMCP names catalogue satellites only (the owner's default, 2026-09-29, as for vehicles);
+  // a custom satellite the mission already carries, from a mission file, may be named to keep it.
+  const keepCustomSatellite = input.satelliteId !== undefined && !!state.satelliteSpec && input.satelliteId === state.satelliteId;
+  if (input.satelliteId !== undefined && !keepCustomSatellite) {
     const id = expectString(input.satelliteId, 'satelliteId');
     if (!SATELLITES.some((s) => s.id === id)) throw new Error(`Unknown satelliteId "${id}". Valid ids: ${SATELLITES.map((s) => s.id).join(', ')}`);
     // C01: another payload is another flight than a historical one (`ownFlight`; the panel's satellite handler
     // replaces the whole orbit with the payload's own)
     if (id !== live.satelliteId) state.orbit = ownFlight(state.orbit);
+    state.satelliteSpec = undefined;
     state.satelliteId = id;
     // Mirrors the panel's satellite handler: a new payload sets its own mass
     // unless this same call also gave an explicit payloadMassKg.
@@ -521,6 +527,8 @@ function summarizeConfig(cfg: MissionConfig): Record<string, unknown> {
     /** S02: the mission flies a custom vehicle from a mission file */
     customVehicle: cfg.vehicleSpec ? { name: cfg.vehicleSpec.name, derivedFrom: cfg.vehicleSpec.derivedFrom ?? null } : null,
     satelliteId: cfg.satelliteId,
+    /** D06: the mission flies a custom satellite from a mission file */
+    customSatellite: cfg.satelliteSpec ? { name: cfg.satelliteSpec.name, derivedFrom: cfg.satelliteSpec.derivedFrom ?? null } : null,
     siteId: cfg.siteId,
     payloadMassKg: cfg.payloadMassOverride ?? null,
     launchTimeIso: cfg.launchTime.toISOString(),

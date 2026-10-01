@@ -4,8 +4,8 @@
  */
 import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
-import { satelliteById } from '../data/satellites';
-import { rendezvousAvailable } from './rendezvous/profiles';
+import { missionSatellite } from '../data/satellites';
+import { rendezvousAvailable, soyuzShipInsertion } from './rendezvous/profiles';
 import { vehicleDataId } from '../data/vehicles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
@@ -563,8 +563,10 @@ export const ASCENT_MARGIN_REQUIRED = 150;
  */
 export const ORBIT_INSERTION_FLOOR = 140e3;
 
-/** The orbit Soyuz-2.1a puts a Soyuz MS or Progress MS into for the station: perigee and apogee, m (RussianSpaceWeb, Soyuz MS-17: 200 ± 2 × 242 ± 5 km). */
+/** The orbit Soyuz-2.1a puts a Soyuz MS into for the station: perigee and apogee, m (RussianSpaceWeb, Soyuz MS-17: 200 ± 2 × 242 ± 5 km). */
 export const RENDEZVOUS_INSERTION = { perigee: 200e3, apogee: 242e3 } as const;
+/** The orbit it puts a Progress MS into: perigee and apogee, m (Roscosmos via RussianSpaceWeb, Progress MS-14 to MS-34: 193 ± 2 × 240 ± 7 km). */
+export const CARGO_INSERTION = { perigee: 193e3, apogee: 240e3 } as const;
 
 /**
  * Height a suborbital target's ascent is cut off at, m (or its apogee, if
@@ -1037,7 +1039,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // Curie...) is treated as an orbital-manoeuvring stage: the strong stages insert
   // into an ellipse whose apogee is the target (capped) and the kick stage finishes.
   const last = _vehicle.stages[_vehicle.stages.length - 1];
-  const satellite = satelliteById(cfg.satelliteId);
+  const satellite = missionSatellite(cfg);
   // No override means "fly the spacecraft that was selected", exactly as
   // `Simulation` and the auto-tuner already read it. Defaulting to zero here
   // made the plan — the weak-final-stage test, the ideal Δv of the strong
@@ -1127,14 +1129,20 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
       insertionApoapsis = haFinal;
     }
   }
-  // A flight to the station (roadmap G07) is inserted where Soyuz MS and
-  // Progress MS are, 200 × 242 km with the cut-off near perigee: the
-  // spacecraft's own burns raise it to the station from there, and the
-  // rendezvous profiles are timed from that orbit (docs/PHYSICS.md §9.2).
-  if (cfg.rendezvous && rendezvousAvailable(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
-    && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
-    insertionAltitude = RENDEZVOUS_INSERTION.perigee;
-    insertionApoapsis = RENDEZVOUS_INSERTION.apogee;
+  // A Soyuz MS or Progress MS on Soyuz-2.1a is inserted at 200 × 242 km with the
+  // cut-off near perigee, whatever it then does: the spacecraft's own burns
+  // raise it from there, to the station (roadmap G07, whose rendezvous
+  // profiles are timed from that orbit, docs/PHYSICS.md §9.2) or anywhere
+  // higher. Every crewed flight since MS-16 was targeted at 200 ± 2 × 242 ± 5 km
+  // (Roscosmos via russianspaceweb). It used to be applied only with a
+  // rendezvous planned, and every other crewed flight went to 200 km circular.
+  // A Progress MS, which has no crew, is put lower: 193 × 240 km.
+  const ship = satellite.crewed ? RENDEZVOUS_INSERTION : CARGO_INSERTION;
+  const shipInsertion = cfg.rendezvous ? rendezvousAvailable(vehicleDataId(_vehicle), satellite, cfg.orbit)
+    : soyuzShipInsertion(vehicleDataId(_vehicle), satellite, cfg.orbit) && target.perigee > ship.apogee;
+  if (shipInsertion && parkingOverride <= 0 && ascentReaches(ship.perigee, ship.apogee)) {
+    insertionAltitude = ship.perigee;
+    insertionApoapsis = ship.apogee;
   }
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
   // A dogleg leaves on the corridor edge; the closed loop turns into the plane.

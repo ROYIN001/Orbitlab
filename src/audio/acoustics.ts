@@ -26,10 +26,23 @@
  *    T+60 s, 20 km away, the listener still hears T+1 s; and its pitch is
  *    scaled by c / (c + v_r) as the rocket recedes at v_r.
  *
+ * 6. **Ground.** A listener near the ground hears the source twice: directly,
+ *    and off the ground from its image below it (Lloyd's mirror), later by
+ *    the difference of the two paths. The two interfere — the comb whose
+ *    notches sweep down the band as the rocket climbs, the phasing every
+ *    flyover has.
+ * 7. **Surroundings.** The terrain, the pad's towers and the turbulent air
+ *    scatter the sound back as a long outdoor reverberation, a larger share
+ *    of what is heard the farther the source: the rolling of a launch heard
+ *    from tens of kilometres.
+ * 8. **Direction.** The sound comes from where the source was at the retarded
+ *    time, turned into the frame of the listener's head.
+ *
  * Levels are mapped to the loudspeaker's gain around a reference: 120 dB,
  * what the launch is at the press site 5 km from a heavy vehicle, plays at
  * full scale; every 20 dB below it is a tenth of the gain.
  */
+import type { Vec3 } from '../physics/vec3';
 
 /** Acoustic efficiency of a rocket exhaust. */
 export const ACOUSTIC_EFFICIENCY = 0.005;
@@ -95,6 +108,81 @@ export function retardedTime(t: number, distanceAt: (tau: number) => number, c =
 /** Pitch factor for a source receding at `radialSpeed` m/s (negative: approaching). */
 export function dopplerFactor(radialSpeed: number, c = SPEED_OF_SOUND_0): number {
   return c / (c + Math.max(-0.5 * c, Math.min(4 * c, radialSpeed)));
+}
+
+/**
+ * Pressure reflection coefficient of the ground: hard-packed earth and the
+ * pad's concrete reflect almost all of it (an assumption: no ground impedance
+ * is modelled; the synthesis takes the treble off the reflected path instead).
+ */
+export const GROUND_REFLECTION = 0.9;
+/** Listener heights, m, over which the ground's echo fades out: above them it is a separate, late echo, not played. */
+export const REFLECTION_FADE: readonly [number, number] = [60, 120];
+/** Longest delay of the ground's echo behind the direct sound, s. */
+export const MAX_REFLECTION_DELAY = 0.5;
+
+/** The direct sound and the ground's echo: their gains, and the echo's delay behind the direct sound. */
+export interface GroundPath {
+  /** s */
+  delay: number;
+  direct: number;
+  reflected: number;
+}
+
+/**
+ * The ground's image source for a source at `sourceHeight` and a listener at
+ * `listenerHeight` above flat ground, `distance` apart (all in m). The image
+ * path is √(r² + 4·h_s·h_l), longer than the direct one r by ≈ 2·h_s·h_l / r.
+ * The gains split the level model's power between the two paths: the
+ * hemispherical spreading of `soundPressureLevel` already counts the ground,
+ * so direct² + reflected² = 1 — they add to +3 dB where they are in phase and
+ * cancel at the notches. Without heights (or high in the air) it is all direct.
+ */
+export function groundReflection(distance: number, sourceHeight: number, listenerHeight: number, c = SPEED_OF_SOUND_0): GroundPath {
+  if (!Number.isFinite(sourceHeight) || !Number.isFinite(listenerHeight) || !Number.isFinite(distance)) return { delay: 0, direct: 1, reflected: 0 };
+  const r = Math.max(1, distance), hs = Math.max(0, sourceHeight), hl = Math.max(0, listenerHeight);
+  const [low, high] = REFLECTION_FADE;
+  const fade = Math.max(0, Math.min(1, (high - hl) / (high - low)));
+  const image = Math.sqrt(r * r + 4 * hs * hl);
+  const rho = GROUND_REFLECTION * (r / image) * fade;
+  const norm = 1 / Math.sqrt(1 + rho * rho);
+  return { delay: Math.min(MAX_REFLECTION_DELAY, (image - r) / c), direct: norm, reflected: rho * norm };
+}
+
+/** Share of the sound sent to the outdoor reverberation close by and far away, and the range at which it is half-way between. */
+export const REVERB_NEAR = 0.06;
+export const REVERB_FAR = 0.5;
+export const REVERB_HALF_RANGE = 8000;
+
+/**
+ * Gain of the send to the outdoor reverberation for a source `distance` m away:
+ * −24 dB at the pad, −13 dB at the press site 5 km out, approaching −6 dB at
+ * tens of kilometres. A sound-design choice, not a measurement: the share
+ * grows with range as the direct sound weakens against what the terrain and
+ * the air scatter back.
+ */
+export function reverbSend(distance: number): number {
+  const r = Math.max(0, Number.isFinite(distance) ? distance : 0);
+  return REVERB_NEAR + (REVERB_FAR - REVERB_NEAR) * (r / (r + REVERB_HALF_RANGE));
+}
+
+/** A rotation, as a unit quaternion. */
+export interface Quat { x: number; y: number; z: number; w: number }
+
+/**
+ * A direction in the scene's axes (the frames' ECI axes) seen from a head
+ * turned by `q`: x right, y up, z backwards — the axes of a three.js camera,
+ * and of Web Audio's listener as it stands by default. It is `d` rotated by
+ * the conjugate of `q`.
+ */
+export function toHead(d: Vec3, q: Quat): Vec3 {
+  const x = -q.x, y = -q.y, z = -q.z, w = q.w;
+  const tx = 2 * (y * d.z - z * d.y), ty = 2 * (z * d.x - x * d.z), tz = 2 * (x * d.y - y * d.x);
+  return {
+    x: d.x + w * tx + (y * tz - z * ty),
+    y: d.y + w * ty + (z * tx - x * tz),
+    z: d.z + w * tz + (x * ty - y * tx),
+  };
 }
 
 /**

@@ -10,7 +10,7 @@ import { Simulation } from '../src/physics/simulation';
 import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../src/physics/defaults';
-import { launchWindows } from '../src/physics/mission';
+import { RENDEZVOUS_INSERTION, launchWindows } from '../src/physics/mission';
 import { DEG, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import { add, norm, scale } from '../src/physics/vec3';
 import { brakeImpulse, leadAngle, planRendezvous } from '../src/physics/rendezvous/plan';
@@ -307,11 +307,13 @@ describe('settings', () => {
     expect(validateConfigInput(s)).toEqual([]);
   });
 
-  it('leaves a mission without one flying as before', () => {
+  it('leaves a mission without one on the Soyuz MS insertion, with no rendezvous', () => {
+    // a Soyuz MS is put on 200 × 242 km whatever it does next (planMission); it
+    // went to 200 km circular without a rendezvous until 2026-10-01
     const { rendezvous: _none, ...cfg } = mission();
     const sim = new Simulation(cfg, { headless: true });
     expect(sim.rendezvous.enabled).toBe(false);
-    expect(sim.plan.insertionApoapsis).toBeLessThan(230e3);
+    expect([sim.plan.insertionAltitude, sim.plan.insertionApoapsis]).toEqual([RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee]);
   });
 });
 

@@ -33,6 +33,29 @@
  * (it was 'ef9bbec0786e0558'). Its spec equals main's literal value for value
  * (tests/d01-vehicles-identity.test.ts), and the other 26 rows, unchanged,
  * show the point-mass physics is main's, so the new hash is main's flight.
+ *
+ * And a second time, for F14 (2026-09-28): Proton-M's published stage
+ * propellant loads and Proton-M's and Angara-A5's fairing jettison rule, with
+ * the insertion floor now applied during the ascent. `protonm/leo/50` (was
+ * '76fae19e6ec959b6'; it now ends as an abandoned insertion instead of a
+ * break-up), `protonm/gto/50` (was 'bb6e24576d031e4c') and `angaraa5/leo/25`
+ * (was '1ee1e0256adecd40') fly different vehicles. The three new hashes were
+ * flown both from the literal `VEHICLES` of the branch that made the change
+ * (c2aabb4, before it met the catalogue) and from the catalogue after the
+ * merge, and agree; the other 24 rows are unchanged.
+ *
+ * Re-recorded a second time for Soyuz-2 on its real flight (2026-10-01,
+ * docs/VALIDATION.md §3): `soyuz21a/leo/50`, `soyuz21b/leo/50` and
+ * `soyuz21b/gto/50` fly the published engines and loads, the commanded
+ * cut-offs and the stored pitch programme (they were 'deef4d6e49a74ea0',
+ * '487ada8595699387' and '62c11ccc40646589'). The other 24 rows, unchanged,
+ * show that the new mechanisms change no other vehicle.
+ *
+ * Re-recorded a third time for Soyuz-2's hot staging and Soyuz-2.1a's cargo
+ * payload section (2026-10-01, docs/VALIDATION.md §3, second pass):
+ * `soyuz21a/leo/50`, `soyuz21b/leo/50` and `soyuz21b/gto/50` (they were
+ * 'd90cb1ce6c496984', '4983ea1c31ef47bc' and 'd1f368b68b92d7bf'). The other 24
+ * rows, unchanged, show that the hot staging changes no other vehicle.
  */
 import { describe, expect, it } from 'vitest';
 import { VEHICLES } from '../src/data/vehicles';
@@ -40,9 +63,9 @@ import { allCases, caseKey, flyCase } from './fleet-harness';
 import { FingerprintSampler } from './flex-golden-harness';
 
 export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
-  'soyuz21a/leo/50': 'deef4d6e49a74ea0',
-  'soyuz21b/leo/50': '487ada8595699387',
-  'protonm/leo/50': '76fae19e6ec959b6',
+  'soyuz21a/leo/50': '4b1f0b7f49f9651a',
+  'soyuz21b/leo/50': '7973a02dec1cf395',
+  'protonm/leo/50': '46ca21856e1a5d25',
   'angaraa5/leo/50': '7cea61f34555f892',
   'falcon9/leo/50': '8504537bbd7ef7e5',
   'falconheavy/leo/50': '9d7255f795d6d88b',
@@ -61,12 +84,12 @@ export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
   'sputnik8k71ps/leo/50': '78195a7baaf7e849',
   'vostok8k72k/leo/50': '4e37c2c9a626ebd9',
   'saturnv/leo/50': '6216e2d36a22f147',
-  'protonm/gto/50': 'bb6e24576d031e4c',
-  'soyuz21b/gto/50': '62c11ccc40646589',
+  'protonm/gto/50': '904a8a631b0b7e7d',
+  'soyuz21b/gto/50': '9f4b1fceeea35057',
   'ariane64/gto/50': '5f39c0051d6adb58',
   'vegac/sso/50': 'c6c598e3d8ea5910',
   'pslvxl/sso/50': '4a10da20085b3a09',
-  'angaraa5/leo/25': '1ee1e0256adecd40',
+  'angaraa5/leo/25': '1fd2f80a8d65c52e',
 };
 
 const CASES = allCases();

@@ -46,8 +46,8 @@ describe('the catalogue parts of a vehicle (D01)', () => {
       const cat = vehicleParts(vehicleById(id));
       return { stages: cat.stages.map((s) => s.body?.id), boosters: cat.boosters.flat().map((b) => b.body?.id), fairing: cat.fairing?.id ?? null };
     };
-    expect(ids('soyuz21a')).toEqual({ stages: ['blokA-soyuz21a', 'blokI-rd0110'], boosters: ['blokBVGD-soyuz2'], fairing: 'soyuz21a' });
-    expect(ids('soyuz21b')).toEqual({ stages: ['blokA-soyuz21b', 'blokI-rd0124', 'fregat'], boosters: ['blokBVGD-soyuz2'], fairing: 'soyuz21b' });
+    expect(ids('soyuz21a')).toEqual({ stages: ['blokA-soyuz2', 'blokI-rd0110'], boosters: ['blokBVGD-soyuz2'], fairing: 'soyuz21a' });
+    expect(ids('soyuz21b')).toEqual({ stages: ['blokA-soyuz2', 'blokI-rd0124', 'fregat'], boosters: ['blokBVGD-soyuz2'], fairing: 'soyuz21b' });
     expect(ids('falconheavy')).toEqual({ stages: ['core', 's2'], boosters: ['side'], fairing: 'falcon9' });
     expect(ids('pslvxl')).toEqual({ stages: ['ps1', 'ps2', 'ps3', 'ps4'], boosters: ['psomg', 'psoma'], fairing: 'pslvxl' });
     expect(ids('starship')).toEqual({ stages: ['superheavy', 'ship'], boosters: [], fairing: null });

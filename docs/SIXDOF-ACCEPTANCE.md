@@ -95,7 +95,7 @@ Status recorded 2026-09-19 while integration is in progress. A test present in s
 | Control signs and authority | Actual r×F for every engine; gimbal angle/vector slew/lag limits; no roll from a single centred TVC; physical positive-force jets, depletion and residual telemetry. | Executed: all signs, asymmetric engine loss, underactuation, travel/rate/lag, fuel and slender ring roll allocation. Runtime pressure/throttle/failure mapping still open. |
 | Perturbation recovery | Feasible, specified fixture: 1° attitude and 0.1°/s disturbance on each axis reaches <0.1° and <0.05°/s in 10 s, using actuator forces. | Executed on all three axes with finite paired jets and RK4, plus the full-stack segment matrix below. Three weak-actuator 60° maneuvers pass <0.1°/<0.05°/s by 120 s, peak rate <2°/s and excursion <62°. Controller has no integral state; stopping-distance commands use physical torque/inertia and lag/slew allowance. This does **not** prove full mission performance. |
 | Aero and wind | Vacuum/zero relative speed: zero loads; translational drag power ≤0; CP sign around CG; rotational damping removes energy; deterministic ENU seed/profile, high-angle extrapolation flagged. | Executed component checks. Integrated Earth-relative airflow, configuration changes and high-angle recovery need checking. |
-| Separation | All bodies together conserve linear and orbital+spin angular momentum within 1e-8 relative with an absolute near-zero floor. Include ω×offset and paired interface impulses; no missing/duplicate mass. | `rigid-core.test.ts` mathematical partition fixtures; actual Falcon stage/fairing and Soyuz four-booster/hot-stage events still open. Energetic separation need not conserve kinetic energy. |
+| Separation | All bodies together conserve linear and orbital+spin angular momentum within 1e-8 relative with an absolute near-zero floor. Include ω×offset and paired interface impulses; no missing/duplicate mass. | `rigid-core.test.ts` mathematical partition fixtures; actual Falcon stage/fairing and Soyuz four-booster events still open. Soyuz's hot staging (2026-10-01) carries both stages' chambers in one configuration through the overlap and splits at the separation as any other staging (`tests/r7-sequence.test.ts`); its momentum is not yet checked separately. Energetic separation need not conserve kinetic energy. |
 | Step/event accuracy | Smooth coupled RK4: 0.02/0.01/0.005 s near order 4 against an independent answer. Split ignition/cutoff/failure/depletion/separation boundaries; never interpolate a discontinuous body identity. | Core convergence fixture exists. Runtime event and fuel boundaries still open. Sample-held controller/actuator error must be measured separately; do not claim global fourth order from the plant fixture alone. |
 | Mission convergence | Same checkpoint at dt 0.01/0.005 s: attitude <0.1°, speed <0.1 m/s, position <10 m, event time <0.02 s, identical terminal classification. | Requires both reference vehicles and separate first-stage recovery. Do not widen tolerances to fit results. |
 | Recovery/contact | Detached controlled Falcon stage uses the same 6DOF state/finite forces. Landing predicate declares vertical and lateral speed, tilt and rate limits; excessive conditions fail visibly. | Integration and browser evidence required. Decorative debris is labelled separately; no contact/leg dynamics claim. |
@@ -174,6 +174,9 @@ The same candidate under the declared crosswind-42 and shear-43 scenarios failed
 That gate alone did not solve the wind trajectory: the original conservative command cone could still redirect the early kick upwind even when the actual requested trim torque was feasible. Six-degree-of-freedom kick/gravity-turn trajectory guidance now uses ground-relative velocity in the intended launch direction, while aerodynamic force, dynamic pressure and the angle-budget calculation still use actual air-relative velocity. The optional input leaves legacy point-mass behavior unchanged; all eight guidance tests pass. A 50% command-trim trial passed calm/crosswind but failed the shear full mission, so it was not selected as the production Soyuz profile. Earlier raw out-of-envelope duration counts also include negligible-density flight; they are not a measure of significant aerodynamic exposure.
 
 ## Common Soyuz command profile and completed bounded wind cases
+
+*Historical: Soyuz-2.1a has flown a stored pitch programme since 2026-10-01 (VALIDATION.md §3). The
+4° kick below is what an operator who edits the six-DOF pitch-over flies, at 6° since PHY-01.*
 
 The production Soyuz reference profile uses pitch-over at 50 m, a 4° kick over 12 s, a 0.5°/s gravity-turn limit, and permits aerodynamic command trim up to 65% of the existing conservative torque radius. The same 65% fraction applies to calm, crosswind and shear, independent of seed; the already verified Falcon program retains its 35% fraction. The Soyuz trim limit leaves 35% of that radius before actual disturbance/coupling is evaluated. This is distinct from the rate controller, which separately limits requested angular acceleration to 35% of the remaining bidirectional torque margin. Neither rule changes physical TVC travel, thrust, aero coefficients or the integrated attitude/rates. Explicit user guidance overrides remain authoritative.
 
@@ -329,7 +332,12 @@ sensitivity cases. The terminal-restart stress set still lands 16 of 18. Two fai
 The Soyuz late first-stage pitch-down is unchanged in character — the command cone releases a
 closed-loop pitch command that has run far below the vehicle as the dynamic pressure falls — but
 begins earlier, at about T+89 s instead of at booster separation, because the less unstable
-vehicle is released sooner. It stays a guidance item (G01).
+vehicle is released sooner. It stays a guidance item (G01). *Since 2026-10-01 (audit PHY-01) it is
+gone: the strap-ons fly a zero-lift turn and the steering closes the loop at T+140 s
+(VALIDATION.md §3, "Soyuz-2.1a's strap-ons fly a zero-lift turn"). Later the same day Soyuz-2.1a
+took the R-7's stored pitch programme through the strap-ons and the core, with the closed loop
+only on Blok I (VALIDATION.md §3, "Soyuz-2.1a flies its stored pitch programme"): at most 1.4° of
+angle while q > 2 kPa and 1.1 °/s, on the actuator limits accepted here.*
 
 ## Every vehicle in six-DOF (roadmap P01, 2026-09-23)
 

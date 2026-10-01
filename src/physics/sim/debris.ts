@@ -631,7 +631,8 @@ export class DebrisTracker {
       this.sim.debris.push({
         id: this.sim.nextDebrisId(), name: 'fairing', r: addScaled(r, side, sgn * (f.diameter / 2 + 1)), v: addScaled(v, side, sgn * 2.5),
         dir: along, mass: f.mass / 2, area: (f.diameter * f.length) / 2, cd: 1.5,
-        visual: { diameter: f.diameter, length: f.length, color: f.color ?? '#eee', kind: 'fairing', ...(adapter ? { adapter: f.adapter, baseDiameter: adapter.diameter } : {}) },
+        visual: { diameter: f.diameter, length: f.length, color: f.color ?? '#eee', kind: 'fairing', ...(adapter ? { adapter: f.adapter, baseDiameter: adapter.diameter } : {}),
+          ...(f.noseLength !== undefined ? { noseLength: f.noseLength } : {}) },
         alive: true, createdAt: this.sim.state.t,
       });
     }

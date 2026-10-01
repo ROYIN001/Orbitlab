@@ -1,5 +1,5 @@
 /**
- * Eleven flights of ten vehicles in the point-mass model against published
+ * Twelve flights of ten vehicles in the point-mass model against published
  * launch timelines (docs/VALIDATION.md §3 and §4). Same tolerances, same rule as the
  * Falcon 9 comparison: the rows that disagree are listed by name, and the test
  * fails when the set changes in either direction.
@@ -9,9 +9,15 @@ import { flyMission } from './flight-harness';
 import { TIMELINE_REFERENCES } from './reference-data';
 import { formatRows, timelineRows } from './compare';
 
-/** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since). */
+/** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since); Proton-M and Angara-A5 re-measured 2026-09-28 with F14's fairing rule. */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
-  soyuzMs25: ['insertion/apogee'],
+  // Soyuz MS-25 agrees on every row since 2026-10-01: its insertion is the
+  // flown 200 × 242 km (it went to 200 km circular) and its programme flies the
+  // flown heights (docs/VALIDATION.md §3).
+  soyuzMs25: [],
+  // Progress MS-19 (2026-10-01): its cyclogram's times are inputs, its 143 km the cargo
+  // programme's fit target; the 43 and 91 km come out 3–7 km high, inside the tolerance
+  progressMs19: [],
   electronNtt: ['seco/time', 'kickSep/time'],
   ariane64Va267: [],
   atlasJuno: ['fairing/time'],
@@ -20,9 +26,9 @@ const DISAGREEMENTS: Record<string, readonly string[]> = {
   h3F3: ['meco/altitude', 'stageSep/altitude', 'seli1/altitude', 'seco1/time', 'seco1/altitude'],
   h2aF50: ['srbSep/time', 'seco/time'],
   vegaVV25: ['z40Sep/time', 'fairing/time', 'z9Sep/time'],
-  protonT14R: ['maxQ/time', 'fairing/time'],
+  protonT14R: ['maxQ/time'],
   fhArabsat: ['maxQ/time', 'beco/time', 'boosterSep/time', 'meco/time', 'stageSep/time', 'ses1/time', 'fairing/time'],
-  angaraF2: ['fairing/time'],
+  angaraF2: [],
 };
 
 describe('published launch timelines (point mass)', () => {

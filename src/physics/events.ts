@@ -24,3 +24,32 @@ export function chronologicalEvents(events: readonly SimEvent[]): readonly SimEv
   }
   return cached.ordered;
 }
+
+const prefixes = new WeakMap<readonly SimEvent[], { n: number; list: readonly SimEvent[] }>();
+
+/**
+ * The first `n` events of a chronological list, as the same array for the same
+ * list and count, so a reader that compares identities (the timeline's chips)
+ * sees a change only when there is one. The whole list itself when `n` covers it.
+ *
+ * Roadmap T02 (owner decision 2, 2026-09-29): the live point-mass flight now
+ * runs up to one step ahead of the instant on screen, and a recording shows
+ * only the events up to that instant (src/replay/recorder.ts).
+ */
+export function eventPrefix(ordered: readonly SimEvent[], n: number): readonly SimEvent[] {
+  if (!(n < ordered.length)) return ordered;
+  const count = Math.max(0, Math.floor(n));
+  let cached = prefixes.get(ordered);
+  if (!cached || cached.n !== count) {
+    cached = { n: count, list: Object.freeze(ordered.slice(0, count)) };
+    prefixes.set(ordered, cached);
+  }
+  return cached.list;
+}
+
+/** How many events of a chronological list happened at or before mission time `t`. */
+export function eventsThrough(ordered: readonly SimEvent[], t: number): number {
+  let n = ordered.length;
+  while (n > 0 && ordered[n - 1].t > t + 1e-9) n--;
+  return n;
+}

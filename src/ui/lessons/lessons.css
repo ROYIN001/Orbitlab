@@ -85,6 +85,13 @@ body[data-lesson] #first-use-guide { display: none; }
 .lesson-case-table { border-collapse: collapse; margin: 4px 0; font-size: 12px; }
 .lesson-case-table th { text-align: left; font-weight: 500; color: var(--muted); padding: 2px 12px 2px 0; vertical-align: top; }
 .lesson-case-table td { font: 12px var(--mono); padding: 2px 0; overflow-wrap: anywhere; }
+/* T03b: on a phone the long labels (the CZ-5B sheet's two space-weather rows the longest) left the figures a
+   column a few characters wide, broken inside numbers; there each row puts its figure under its label */
+@media (max-width: 600px) {
+  .lesson-case-table, .lesson-case-table tbody, .lesson-case-table tr, .lesson-case-table th, .lesson-case-table td { display: block; }
+  .lesson-case-table tr { padding: 3px 0; }
+  .lesson-case-table th { padding: 0; }
+}
 .lesson-case-figure { margin: 6px 0; }
 .lesson-case-figure svg { max-width: 100%; height: auto; }
 .lesson-answers.lesson-case-answers { display: grid; gap: 8px; }
@@ -96,6 +103,18 @@ body[data-lesson] #first-use-guide { display: none; }
 .lesson-case-field { display: inline-flex; align-items: center; gap: 6px; }
 .lesson-case-unit { font: 12px var(--mono); color: var(--muted); }
 .lesson-case-working { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: #cfe9d8; }
+/* a design lesson (T01): the criteria chipped, what the mission asks and the answers under the task, over the designer */
+.lesson-note.small { font-size: 11.5px; }
+.lesson-note.warn { color: #ffd98a; }
+.lesson-crit.stale { opacity: 0.6; }
+.lesson-design-req { margin: 2px 0 6px; }
+.lesson-design-req summary { cursor: pointer; font-size: 12.5px; color: var(--lesson); }
+.lesson-design-req-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 2px 14px; margin: 4px 0; font-size: 12px; }
+.lesson-design-req-list div { display: flex; flex-wrap: wrap; gap: 0 6px; min-width: 0; }
+.lesson-design-req-list dt { color: var(--muted); }
+.lesson-design-req-list dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+.lesson-answers.lesson-design-answers > button { min-height: 32px; padding: 5px 12px; border-radius: 8px; font-size: 12.5px; background: var(--panel2); border: 1px solid var(--line2); color: var(--text); }
+.lesson-answers.lesson-design-answers > button:disabled { opacity: 0.45; }
 .lesson-actions button, .lessons-page-body button:not(.dialog-close):not(.lesson-card-item):not(.assess-option):not(.assess-chip):not(.assess-conf) {
   min-height: 32px; padding: 5px 12px; border-radius: 8px; font-size: 12.5px;
   background: var(--panel2); border: 1px solid var(--line2); color: var(--text);
@@ -175,6 +194,26 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .lesson-tag.review { color: #ffb0b0; border-color: #7a3a3a; }
 .lesson-tag.do { color: var(--text); border-color: var(--line2); }
 .lesson-tag.start { color: var(--lesson-ink); background: var(--lesson); border-color: var(--lesson); font-weight: 700; }
+
+/* ── lesson packs (T03): a group each below the tracks, codes as chips ── */
+.lesson-packs { margin-top: 18px; }
+.lesson-packs-title { margin: 0 0 2px !important; font: 600 15px/1.3 var(--display) !important; color: var(--lesson) !important; }
+.lesson-pack { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; background: rgba(12, 18, 25, 0.6); min-width: 0; }
+.lesson-pack h4 { margin: 0 0 4px !important; font: 600 14.5px/1.35 var(--display) !important; color: var(--text) !important; }
+.lesson-pack-meta { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 0 0 6px !important; font-size: 12px !important; line-height: 1.45; color: var(--muted) !important; }
+.lesson-pack-draft {
+  margin: 0 0 6px !important; padding: 5px 9px; border-left: 3px solid var(--lesson); border-radius: 4px; background: var(--lesson-weak);
+  font-size: 12.5px !important; line-height: 1.5; color: var(--text) !important;
+}
+.lesson-pack-about { margin-bottom: 6px; font-size: 12px; color: var(--muted); }
+.lesson-pack-about summary { cursor: pointer; color: var(--blue); }
+.lesson-pack-about p { margin: 4px 0 !important; font-size: 12px !important; line-height: 1.5; overflow-wrap: anywhere; }
+.lesson-pack-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 2px 12px; }
+.lesson-codes { display: flex; flex-wrap: wrap; gap: 3px; margin: 3px 0 2px; }
+.lesson-code { font: 10.5px/1.5 var(--sans); color: var(--lesson); border: 1px solid var(--lesson-line); border-radius: 10px; padding: 0 6px; white-space: nowrap; }
+.lesson-card-note { display: block; margin-top: 2px; font-size: 11px; line-height: 1.4; color: var(--dim); }
+.lesson-tag.builtin { font-family: var(--sans); color: var(--muted); border-color: var(--line2); }
+.lesson-strip-head .lesson-codes { margin: 2px 0 4px; }
 
 /* ── the placement test ──────────────────────────────────────────────── */
 .assess-progress { display: flex; gap: 3px; margin: 8px 0 16px; }
@@ -274,3 +313,84 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 @media (max-width: 860px) { .ws-form { grid-template-columns: 1fr 1fr; } }
 .ws-field input, .ws-field select { height: 36px; }
 .ws-field input, .ws-field textarea { background: var(--panel2); color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; }
+
+/* ── T01/T02: writing a scenario and checking results (instructor mode) ─ */
+.lessons-page-tabs { flex-wrap: wrap; }
+.author-box { padding: 10px 12px; margin: 10px 0 14px; border: 1px solid var(--line); border-radius: 10px; background: rgba(12, 18, 25, 0.6); }
+.author-box h3 { margin: 0 0 4px !important; font: 600 14.5px/1.3 var(--display) !important; color: var(--lesson) !important; }
+.author-box > .ws-field { margin: 8px 0; max-width: 420px; }
+.author-text { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; margin: 10px 0; padding: 0; border: 0; min-width: 0; }
+.author-text legend { padding: 0; margin-bottom: 4px; font-size: 13px; color: var(--text); font-weight: 600; }
+.author-text textarea { min-height: 70px; }
+.author-box select, .author-crit input, .author-crit select, .author-end input { height: 34px; background: var(--panel2); color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 4px 8px; max-width: 100%; min-width: 0; }
+.author-locks label, .ws-areas label { font-size: 13px; }
+.author-areas { grid-column: 1 / -1; border: 0; padding: 0; margin: 0; min-width: 0; font-size: 12.5px; color: var(--muted); }
+.author-areas legend { padding: 0; margin-bottom: 4px; }
+.author-crit-fields input[list] { flex: 1 1 180px; max-width: 360px; }
+.author-locks { margin-bottom: 8px; }
+.author-crit { display: grid; grid-template-columns: 1.6em minmax(0, 280px) minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
+.author-crit-n { font: 600 13px var(--mono); color: var(--lesson); padding-top: 8px; }
+.author-crit-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; min-width: 0; }
+/* each menu as wide as its longest name, up to the row: held to 320 px, "Максимальная перегрузка экипажа при спасении, g"
+   (389 px) was cut even at 1440 px (task I2's review); on a phone the menu takes the row and the picker shows the name whole */
+.author-crit-fields > select { width: auto; max-width: 100%; }
+.author-crit-fields .author-text { flex-basis: 100%; margin: 2px 0 0; }
+.author-num { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+.author-num input { width: 120px; }
+.lessons-page-body button.author-remove { min-height: 34px; padding: 4px 10px; }
+.author-end { margin-top: 10px; max-width: 520px; }
+.author-issues ul { margin: 6px 0 0; padding-left: 18px; }
+.author-issues li.error { color: #ffb0b0; }
+.author-issues li.warn { color: #ffe3a6; }
+.author-issues.ok { border-color: #3f7a57; }
+.author-actions, .recheck-run { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.author-link { display: flex; gap: 8px; margin-top: 6px; }
+.author-link input { flex: 1; min-width: 0; height: 34px; font: 12px var(--mono); background: var(--panel2); color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 4px 8px; }
+.recheck-files { margin: 6px 0 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
+.recheck-files li { margin: 3px 0; }
+.recheck-files li.fail, .recheck-files li.error { color: #ffb0b0; }
+.recheck-run .lesson-meter { flex: 1 1 160px; max-width: 280px; }
+.recheck-summary { font-weight: 600; margin: 12px 0 6px; }
+.recheck-legend { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; margin: 6px 0 12px; font-size: 12.5px; color: var(--muted); }
+.recheck-legend dt, .recheck-legend dd { margin: 0; }
+.recheck-chip { display: inline-block; font: 600 11.5px var(--mono); border-radius: 6px; padding: 2px 7px; border: 1px solid var(--line2); white-space: nowrap; }
+.recheck-chip.match { color: var(--ok); border-color: #3f7a57; }
+.recheck-chip.borderline { color: var(--lesson); border-color: var(--lesson-line); background: var(--lesson-weak); }
+.recheck-chip.differs { color: #ffb0b0; border-color: #8a3a3a; }
+.recheck-chip.cannotRefly { color: var(--dim); }
+.recheck-record { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: rgba(12, 18, 25, 0.6); }
+.recheck-record.borderline { border-color: var(--lesson-line); }
+.recheck-record.differs { border-color: #8a3a3a; }
+.recheck-record summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 8px 10px; cursor: pointer; font-size: 13px; }
+.recheck-who { display: flex; flex-wrap: wrap; gap: 0 8px; min-width: 0; flex: 1 1 260px; }
+.recheck-who span { color: var(--muted); }
+.recheck-what, .recheck-verdict { font-size: 12.5px; color: var(--muted); }
+.recheck-notes { margin: 0 10px 6px; padding-left: 18px; font-size: 12.5px; color: var(--muted); }
+.recheck-criteria { width: calc(100% - 20px); margin: 0 10px 10px; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
+.recheck-criteria th { text-align: left; font-weight: 500; color: var(--muted); padding: 3px 6px 3px 0; border-bottom: 1px solid var(--line); }
+.recheck-criteria td { padding: 4px 6px 4px 0; vertical-align: top; overflow-wrap: anywhere; }
+.recheck-criteria td:nth-child(2), .recheck-criteria td:nth-child(3), .recheck-criteria td:nth-child(4) { font-family: var(--mono); font-size: 12px; }
+.recheck-criteria tr.borderline td:last-child { color: var(--lesson); }
+.recheck-criteria tr.differs td:last-child { color: #ffb0b0; }
+.recheck-criteria tr.match td:last-child { color: var(--ok); }
+.recheck-privacy { margin-top: 18px !important; }
+@media (max-width: 860px) {
+  .author-text { grid-template-columns: 1fr; }
+  .author-crit { grid-template-columns: 1.4em minmax(0, 1fr) auto; }
+  .author-crit-n { grid-column: 1; grid-row: 1; }
+  /* the kind's options are sentences ("The student works out a number"): the whole row, the remove button
+     under the fields, or a 360 px phone cut them to "The student works out a num…" (task I2) */
+  .author-kind { grid-column: 2 / -1; grid-row: 1; width: 100%; }
+  .lessons-page-body button.author-remove { grid-column: 2 / -1; grid-row: 3; justify-self: end; }
+  .author-crit-fields { grid-column: 2 / -1; grid-row: 2; }
+  .author-crit-fields > select { width: 100%; max-width: 100%; }
+  /* five tabs: one row under the back button that scrolls sideways inside itself, not two or three
+     rows of a bar that stays pinned to the top (in Russian it took a third of a 812 px screen) */
+  .lessons-page-tabs { flex: 1 1 100%; order: 2; gap: 2px; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .lessons-page-tabs a { padding: 5px 9px; font-size: 13px; white-space: nowrap; flex: none; }
+  .recheck-criteria thead { display: none; }
+  .recheck-criteria tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .recheck-criteria td { padding: 0; }
+  .recheck-criteria td:first-child { grid-column: 1 / -1; font-weight: 600; }
+  .recheck-criteria td[data-label]::before { content: attr(data-label) ': '; font-family: var(--sans); color: var(--muted); }
+}

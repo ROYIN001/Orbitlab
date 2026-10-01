@@ -275,7 +275,7 @@ describe('the build (U03)', () => {
     expect(urls).toEqual(expect.arrayContaining(emitted));
     expect(urls).toContain('index.html');
     expect(urls.filter((u) => /\.worker-.*\.js$/.test(u)).length).toBeGreaterThanOrEqual(2);
-    for (const f of ['earth_atmos_2048.jpg', 'earth_clouds_1024.png', 'earth_lights_2048.png', 'earth_normal_2048.jpg', 'earth_specular_2048.jpg']) {
+    for (const f of ['earth_atmos_2048.jpg', 'earth_atmos_4096.jpg', 'earth_clouds_4096.jpg', 'earth_lights_4096.jpg', 'earth_normal_2048.jpg', 'earth_specular_2048.jpg']) {
       expect(urls).toContain(`textures/${f}`);
     }
     expect(urls).toEqual(expect.arrayContaining(['manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png']));

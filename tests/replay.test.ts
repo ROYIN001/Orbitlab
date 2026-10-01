@@ -484,7 +484,7 @@ describe('phase narration', () => {
 
 describe('retrospectively detected events', () => {
   const c: MissionConfig = {
-    ...cfg({ mode: 'engineOut', time: 60, stage: 0 }),
+    ...cfg({ mode: 'engineOut', time: 64, stage: 0 }),
     vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur',
     launchTime: new Date('2026-09-20T12:00:00Z'),
     guidance: guidanceForVehicle(vehicleById('soyuz21a')), guidanceResolved: true,
@@ -495,9 +495,12 @@ describe('retrospectively detected events', () => {
     const { sim, rec } = flight;
     const failure = sim.events.find((e) => e.key === 'evt.engineOut')!;
     const peak = sim.events.find((e) => e.key === 'evt.maxQ')!;
-    // T+59.2 s since engines spin up at ignition (T+59.0 s before that)
-    expect(peak.t).toBeCloseTo(59.2, 5);
-    expect(failure.t).toBeCloseTo(60, 5);
+    // T+63.0 s on Soyuz-2.1a's stored pitch programme (T+63.3 s with the 4.11 m
+    // fairing, T+59.2 s on the kick it flew before 2026-10-01, with the engine
+    // lost at T+60 s), so the failure follows it by 1 s and the peak is still
+    // detected after the failure
+    expect(peak.t).toBeCloseTo(63.0, 5);
+    expect(failure.t).toBeCloseTo(64, 5);
     expect(sim.events.indexOf(failure)).toBeLessThan(sim.events.indexOf(peak));
     expect(rec.events.indexOf(peak)).toBeLessThan(rec.events.indexOf(failure));
     expect(rec.events).toEqual(sim.chronologicalEvents);
@@ -518,20 +521,20 @@ describe('retrospectively detected events', () => {
   it('navigates the closest occurrence and never includes the future failure', () => {
     const { sim, rec } = flight;
     const p = new ReplayPlayer(rec);
-    expect(p.nextEventTime(58.99)).toBeCloseTo(59.2, 5);
-    expect(p.prevEventTime(60.01)).toBeCloseTo(60, 5);
-    expect(p.lastEvent(61)?.key).toBe('evt.engineOut');
-    expect(p.nextEvent(59.5)?.key).toBe('evt.engineOut');
+    expect(p.nextEventTime(62.79)).toBeCloseTo(63.0, 5);
+    expect(p.prevEventTime(64.01)).toBeCloseTo(64, 5);
+    expect(p.lastEvent(65)?.key).toBe('evt.engineOut');
+    expect(p.nextEvent(63.6)?.key).toBe('evt.engineOut');
     const view = createFrameSimView(sim);
-    view.setFrame(p.frameAt(59.5)!);
+    view.setFrame(p.frameAt(63.6)!);
     expect(view.sim.events.at(-1)?.key).toBe('evt.maxQ');
-    expect(view.sim.events.every((e) => e.t <= 59.5)).toBe(true);
-    const info = phaseInfo(p.frameAt(59.5)!, rec.events);
+    expect(view.sim.events.every((e) => e.t <= 63.6)).toBe(true);
+    const info = phaseInfo(p.frameAt(63.6)!, rec.events);
     expect(info.lastEvent?.key).toBe('evt.maxQ');
     expect(info.nextEvent?.key).toBe('evt.engineOut');
-    view.setFrame(p.frameAt(61)!);
+    view.setFrame(p.frameAt(65)!);
     expect(view.sim.events.at(-1)?.key).toBe('evt.engineOut');
-    view.setFrame(p.frameAt(58)!);
+    view.setFrame(p.frameAt(62)!);
     expect(view.sim.events.some((e) => e.key === 'evt.maxQ' || e.key === 'evt.engineOut')).toBe(false);
   });
 

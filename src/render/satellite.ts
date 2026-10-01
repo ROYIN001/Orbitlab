@@ -10,6 +10,8 @@ import { clamp01, smoothstep } from './noise';
 import { buildCrewDragon } from './dragon';
 import { buildApollo } from './apollo';
 import { buildInstrumentModule, IM_LENGTH, IM_NEST } from './vostok';
+import { bellGeometry } from './liveries';
+import { cellPanel, FOIL_TILE, RADIATOR_TILE, spacecraftMaterials, tiledBox, tiledCylinder, type SpacecraftMaterials } from './spacecraft-surfaces';
 import type { ApolloState } from '../physics/sim/apollo';
 
 export interface SatelliteView {
@@ -52,20 +54,22 @@ interface Slide {
 }
 
 /** Solar array made of two panels that unfold from the side of the bus. */
-function solarWing(parent: THREE.Group, hinges: Hinge[], mats: { panel: THREE.Material; frame: THREE.Material }, side: 1 | -1, halfSpan: number, chord: number, x0: number, y: number): void {
+function solarWing(parent: THREE.Group, hinges: Hinge[], mats: SpacecraftMaterials, side: 1 | -1, halfSpan: number, chord: number, x0: number, y: number): void {
   const inner = new THREE.Group();
   inner.position.set(side * x0, y, 0);
   parent.add(inner);
-  const p1 = new THREE.Mesh(new THREE.BoxGeometry(halfSpan, 0.04, chord), mats.panel);
+  // a small gap between the panels, where the hinge line is
+  const span = halfSpan * 0.985;
+  const p1 = cellPanel(span, 0.04, chord, mats);
   p1.position.set((side * halfSpan) / 2, 0, 0);
   inner.add(p1);
   const outer = new THREE.Group();
   outer.position.set(side * halfSpan, 0, 0);
   inner.add(outer);
-  const p2 = new THREE.Mesh(new THREE.BoxGeometry(halfSpan, 0.04, chord), mats.panel);
+  const p2 = cellPanel(span, 0.04, chord, mats);
   p2.position.set((side * halfSpan) / 2, 0, 0);
   outer.add(p2);
-  const yoke = new THREE.Mesh(new THREE.CylinderGeometry(chord * 0.04, chord * 0.04, x0 * 1.4, 6), mats.frame);
+  const yoke = new THREE.Mesh(new THREE.CylinderGeometry(chord * 0.04, chord * 0.04, x0 * 1.4, 10), mats.frame);
   yoke.rotation.z = Math.PI / 2;
   yoke.position.set((side * x0) / 2, 0, 0);
   parent.add(yoke);
@@ -83,19 +87,50 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
   /** parts gone the moment deployment starts (Mercury's escape tower) */
   const shed: THREE.Object3D[] = [];
   let junctionY: number | undefined;
-  const gold = new THREE.MeshStandardMaterial({ color: 0xd4b048, metalness: 0.55, roughness: 0.35 });
-  const foil = new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.8, roughness: 0.25 });
+  const mats = spacecraftMaterials();
+  // gold blanket on the bus, and on the smaller parts that were plain gold
+  const foil = mats.foil, gold = mats.foil;
   const white = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.6, metalness: 0.05 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x4a505c, roughness: 0.7 });
-  const panel = new THREE.MeshStandardMaterial({ color: 0x1b2a6b, metalness: 0.6, roughness: 0.25, emissive: 0x070c24 });
-  const mats = { panel, frame: dark };
+  // a reflector is seen from both sides
+  const dishMat = new THREE.MeshStandardMaterial({ color: 0xf0eee8, roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide });
+  const engineMat = new THREE.MeshStandardMaterial({ color: 0x8d8f94, metalness: 0.85, roughness: 0.35, side: THREE.DoubleSide });
+  /** a box of a bus: radiators on the ±x faces (where the wings come out), blanket elsewhere */
+  const bus = (bw: number, bh: number, bd: number): THREE.Mesh => tiledBox(bw, bh, bd,
+    [mats.radiator, mats.radiator, foil, foil, foil, foil], [RADIATOR_TILE, RADIATOR_TILE, FOIL_TILE, FOIL_TILE, FOIL_TILE, FOIL_TILE]);
+  /** an engine bell hanging below `y`, `r` m across its exit */
+  const nozzle = (r: number, len: number, x: number, y: number, z: number): THREE.Mesh => {
+    const bell = new THREE.Mesh(bellGeometry(r, len, 10), engineMat);
+    bell.position.set(x, y, z);
+    return bell;
+  };
   const size = spec.size ?? { width: 2, height: 3, depth: 2 };
   const w = size.width, h = size.height, d = size.depth;
 
   switch (spec.kind) {
     case 'comsat':
     case 'weather': {
-      g.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), foil));
+      g.add(bus(w, h, d));
+      // the apogee engine under the bus and a ring of attitude thrusters round it
+      g.add(nozzle(w * 0.1, w * 0.2, 0, -h / 2, 0));
+      for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        g.add(nozzle(0.04, 0.09, sx * w * 0.42, -h / 2, sz * d * 0.42));
+      }
+      // the Earth deck on top: a tracking antenna and the reflectors' feed horns
+      const deckDish = new THREE.Mesh(new THREE.SphereGeometry(w * 0.2, 24, 8, 0, Math.PI * 2, 0, Math.PI / 3.2), white);
+      deckDish.position.y = h / 2 + 0.05;
+      deckDish.rotation.x = Math.PI;
+      deckDish.position.y += w * 0.2;
+      g.add(deckDish);
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, w * 0.22, 8), dark);
+      mast.position.y = h / 2 + w * 0.11;
+      g.add(mast);
+      for (const s of [1, -1] as const) {
+        const horn = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.07, w * 0.035, w * 0.16, 16), white);
+        horn.rotation.x = (s * Math.PI) / 2;
+        horn.position.set(0, h * 0.42, (s * d) / 2 + w * 0.08);
+        g.add(horn);
+      }
       solarWing(g, hinges, mats, 1, w * 2.0, h * 0.45, w * 0.55, 0);
       solarWing(g, hinges, mats, -1, w * 2.0, h * 0.45, w * 0.55, 0);
       for (const s of [1, -1] as const) {
@@ -106,7 +141,7 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
         boom.rotation.x = Math.PI / 2;
         boom.position.z = (s * w * 0.35);
         arm.add(boom);
-        const dish = new THREE.Mesh(new THREE.SphereGeometry(w * 0.5, 22, 10, 0, Math.PI * 2, 0, Math.PI / 3), white);
+        const dish = new THREE.Mesh(new THREE.SphereGeometry(w * 0.5, 40, 12, 0, Math.PI * 2, 0, Math.PI / 3), dishMat);
         dish.rotation.x = s > 0 ? Math.PI / 2 : -Math.PI / 2;
         dish.position.z = s * w * 0.7;
         arm.add(dish);
@@ -116,13 +151,33 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
     }
     case 'earthObs':
     case 'science': {
-      g.add(new THREE.Mesh(new THREE.CylinderGeometry(w / 2, w / 2, h, 24), white));
-      const scope = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.32, w * 0.32, h * 0.4, 20), dark);
+      // the service module blanketed in gold, the payload section painted white above it
+      const lowerH = h * 0.55;
+      const lower = tiledCylinder(w / 2, w / 2, lowerH, 40, foil, FOIL_TILE);
+      lower.position.y = -h / 2 + lowerH / 2;
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, w / 2, h - lowerH, 40), white);
+      upper.position.y = -h / 2 + lowerH + (h - lowerH) / 2;
+      g.add(lower, upper);
+      // a black band where the two meet, and the star trackers looking out of it
+      const joint = new THREE.Mesh(new THREE.CylinderGeometry(w / 2 + 0.01, w / 2 + 0.01, h * 0.035, 40, 1, true), dark);
+      joint.position.y = -h / 2 + lowerH;
+      g.add(joint);
+      for (const a of [0.6, 2.2]) {
+        const tracker = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.06, w * 0.08, w * 0.16, 14), dark);
+        tracker.position.set(Math.cos(a) * (w / 2 + w * 0.05), h * 0.18, Math.sin(a) * (w / 2 + w * 0.05));
+        tracker.rotation.set(Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9);
+        g.add(tracker);
+      }
+      // the downlink antenna under the bus
+      const xband = new THREE.Mesh(new THREE.SphereGeometry(w * 0.16, 24, 8, 0, Math.PI * 2, 0, Math.PI / 3.2), white);
+      xband.position.y = -h / 2 - w * 0.16 + w * 0.02;
+      g.add(xband);
+      const scope = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.32, w * 0.32, h * 0.4, 32), dark);
       scope.position.y = h / 2 + h * 0.2;
       g.add(scope);
       const hood = new THREE.Group();
       hood.position.y = h / 2 + h * 0.4;
-      const cover = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.34, w * 0.34, h * 0.12, 20, 1, true), gold);
+      const cover = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.34, w * 0.34, h * 0.12, 32, 1, true), gold);
       cover.position.y = h * 0.06;
       hood.add(cover);
       g.add(hood);
@@ -132,13 +187,13 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       break;
     }
     case 'navigation': {
-      g.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), foil));
+      g.add(bus(w, h, d));
       solarWing(g, hinges, mats, 1, w * 1.6, h * 0.5, w * 0.55, 0);
       solarWing(g, hinges, mats, -1, w * 1.6, h * 0.5, w * 0.55, 0);
       const arrayG = new THREE.Group();
       arrayG.position.y = -h / 2;
       for (let i = 0; i < 12; i++) {
-        const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.55, 10), white);
+        const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.55, 16), white);
         cone.position.set(((i % 4) - 1.5) * 0.42, -0.3, (Math.floor(i / 4) - 1) * 0.42);
         arrayG.add(cone);
       }
@@ -190,13 +245,14 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
         const holder = new THREE.Group();
         holder.position.set(cx, h * 0.16, cz);
         holder.rotation.y = -a;
-        const body = new THREE.Mesh(new THREE.BoxGeometry(w * 0.15, tubeL * 0.78, w * 0.15), i % 2 ? white : foil);
+        // a 3U: its own small body-mounted cells on the faces that show
+        const body = tiledBox(w * 0.15, tubeL * 0.78, w * 0.15, i % 2 ? [mats.cells, mats.cells, dark, dark, mats.cells, mats.cells] : foil, i % 2 ? 0.1 : FOIL_TILE * 0.3);
         holder.add(body);
         // a deployable panel on each side, folded flat against the bus
         for (const s of [1, -1] as const) {
           const wing = new THREE.Group();
           wing.position.set(s * w * 0.075, 0, 0);
-          const p = new THREE.Mesh(new THREE.BoxGeometry(w * 0.15, tubeL * 0.7, 0.02), panel);
+          const p = cellPanel(w * 0.15, tubeL * 0.7, 0.02, mats);
           p.position.set(s * w * 0.075, 0, 0);
           wing.add(p);
           holder.add(wing);
@@ -222,6 +278,8 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       // tension rods in a line, each unfolding its own array a moment later.
       const N = 10;
       const pitch = h / N;
+      // the flat chassis: dark composite, its phased arrays silver underneath
+      const chassis = new THREE.MeshStandardMaterial({ color: 0x3b3f46, metalness: 0.3, roughness: 0.55 });
       const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, h * 1.02, 8), dark);
       rod.position.set(w * 0.42, 0, 0);
       g.add(rod);
@@ -229,15 +287,15 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
         const sat = new THREE.Group();
         const y0 = -h / 2 + 0.2 + i * pitch;
         sat.position.y = y0;
-        const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, d), i % 2 ? white : dark);
+        const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, d), chassis);
         sat.add(plate);
         // phased-array antennas on the underside of each satellite
-        const ant = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 0.05, d * 0.7), foil);
+        const ant = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 0.05, d * 0.7), mats.radiator);
         ant.position.y = -0.14;
         sat.add(ant);
         // its own solar array, stowed flat along the plate
         const arrayG = new THREE.Group();
-        const arr = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, 0.03, d * 2.6), panel);
+        const arr = cellPanel(w * 0.92, 0.03, d * 2.6, mats);
         arr.position.z = d * 1.4;
         arrayG.add(arr);
         sat.add(arrayG);

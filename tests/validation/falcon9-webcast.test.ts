@@ -29,6 +29,13 @@ const DISAGREEMENTS: Record<string, readonly string[]> = {
   gps3sv01: ['maxQ/time', 'T+60/speed', 'seco1/altitude'],
 };
 
+/**
+ * Each test here flies one or two whole Falcon 9 ascents: about 1-2 s alone
+ * on four cores, but past vitest's 5 s default when the whole suite shares
+ * them (it timed out there three times). The checks themselves are unchanged.
+ */
+const FLIGHT_TIMEOUT_MS = 60_000;
+
 describe('Falcon 9 against webcast telemetry (point mass)', () => {
   it('has a disagreement list for every reference flight and nothing else', () => {
     expect(Object.keys(DISAGREEMENTS).sort()).toEqual(FALCON9_REFERENCES.map((r) => r.id).sort());
@@ -49,7 +56,7 @@ describe('Falcon 9 against webcast telemetry (point mass)', () => {
     for (const r of rows) expect(Number.isFinite(r.model), r.key).toBe(true);
     const disagree = rows.filter((r) => !r.agrees).map((r) => r.key.slice(id.length + 1));
     expect(disagree, `\n${formatRows(rows)}`).toEqual(DISAGREEMENTS[id]);
-  });
+  }, FLIGHT_TIMEOUT_MS);
 
   it('keeps the first-stage recovery reserve in proportion to the real one', () => {
     // A derived check that does not depend on the absolute burn time: how much
@@ -61,5 +68,5 @@ describe('Falcon 9 against webcast telemetry (point mass)', () => {
     const rtls = flyMission(FALCON9_REFERENCES.find((r) => r.id === 'crs16')!.mission, 'pointMass').eventTime('evt.meco')!;
     const expended = flyMission(FALCON9_REFERENCES.find((r) => r.id === 'gps3sv01')!.mission, 'pointMass').eventTime('evt.meco')!;
     expect(Math.abs(rtls / expended - 145 / 168)).toBeLessThanOrEqual(0.03);
-  });
+  }, FLIGHT_TIMEOUT_MS);
 });

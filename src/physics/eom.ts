@@ -63,7 +63,8 @@ export function engineExitArea(e: EngineSpec): number {
 }
 
 /** Σ n·level·T_vac and Σ n·level·A_e over the active stage's core and boosters, at the levels `VehicleModel.thrust` returned. */
-export function runningEngines(stage: StageState | null | undefined, coreLevel: number, boosterLevels: readonly number[]): { vacuumThrust: number; exitArea: number } {
+export function runningEngines(stage: StageState | null | undefined, coreLevel: number, boosterLevels: readonly number[],
+  hot?: { stage: StageState; level: number }): { vacuumThrust: number; exitArea: number } {
   if (!stage) return { vacuumThrust: 0, exitArea: 0 };
   const e = stage.spec.engine, n = e.count * stage.engineFraction;
   let vacuumThrust = n * e.thrustVac * coreLevel, exitArea = n * engineExitArea(e) * coreLevel;
@@ -74,6 +75,12 @@ export function runningEngines(stage: StageState | null | undefined, coreLevel: 
     vacuumThrust += nb * b.spec.engine.thrustVac * level;
     exitArea += nb * engineExitArea(b.spec.engine) * level;
   });
+  // a hot stage lit above it, firing through the truss (`VehicleModel.hotStage`)
+  if (hot && hot.level > 0) {
+    const he = hot.stage.spec.engine, nh = he.count * hot.stage.engineFraction;
+    vacuumThrust += nh * he.thrustVac * hot.level;
+    exitArea += nh * engineExitArea(he) * hot.level;
+  }
   return { vacuumThrust, exitArea };
 }
 

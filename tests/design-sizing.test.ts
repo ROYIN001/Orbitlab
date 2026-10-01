@@ -193,6 +193,8 @@ describe('D05 sizing: what it refuses, and its estimates', () => {
 /**
  * Recorded from the catalogue (src/data/parts.ts): 1.466 when the allowance was
  * written, 1.4648 since main's F11 gave Falcon Heavy's core Falcon 9's 410 900 kg
- * of propellant in the same 42 m (its tanks now fill more of the stage).
+ * of propellant in the same 42 m (its tanks now fill more of the stage), and
+ * 1.4445 since Soyuz-2's two cores became one body and its cores and strap-ons
+ * took their published loads (2026-10-01, docs/VALIDATION.md §3).
  */
-const LENGTH_ALLOWANCE_DIAMETERS_RECORDED = 1.4648;
+const LENGTH_ALLOWANCE_DIAMETERS_RECORDED = 1.4445;

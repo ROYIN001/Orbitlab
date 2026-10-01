@@ -72,7 +72,7 @@ Implemented compatibility geometry **E**, shared with the existing displayed lay
 | Vehicle | First/core base X | Upper-stage base X | Fairing base X | Nose X | Explanation |
 |---|---:|---:|---:|---:|---|
 | Falcon | 0 | 42.0 | 59.294 | 72.394 | Existing 2.294 m upper adapter; no extra adapter mass. |
-| Soyuz | 0 | 28.719 | 35.419 | 46.849 | Existing 0.919 m adapter; the 4.11 × 11.43 m fairing carries its own 2.2 m adapter inside its length (owner's figures, 2026-09-25; it was 3.7 × 10.1 m on a 1.744 m adapter, nose at 47.263 m); no extra adapter mass. |
+| Soyuz | 0 | 28.719 | 35.419 | 45.819 / 44.919 | Existing 0.919 m adapter; the 3.0 m payload sections carry their own 0.8 m flare inside their length: the cargo one (11S517A2) 10.4 m, the crewed one (11S517A3) 9.5 m under a 6.0 m tower, drawn from Arianespace's Table A5-1 (2026-10-01; it was the 4.11 × 11.43 m ST fairing on a 2.2 m adapter, nose at 46.849 m, and before that 3.7 × 10.1 m); no extra adapter mass. |
 
 Soyuz booster bases have X=0 and four centerline placements on radius `2.95/2 + 2.68/2 = 2.815 m` (E). In body (Y,Z) order they are (0,+r), (−r,0), (0,−r), (+r,0), matching the existing mesh and its local rotations. No manufacturer dimensional placement drawing was obtained. Vary transverse radius ±10% and base X ±0.5 m. Treat any adapter mass as a redistribution **inside** a dry budget, not an additional mass. Attached payload equivalent-body base is 0.5 m above the fairing base, matching the mesh's payload attachment gap. A spacecraft's actual size can exceed this approximation; do not silently clip its inertia or lose its mass.
 
@@ -478,7 +478,9 @@ PHYSICS.md §2g.
 The Falcon Heavy row too was measured with the earlier masses. With the published Falcon 9
 first-stage load on all three cores and the side boosters' published empty mass (VALIDATION.md,
 F11) the lift-off stack is 1 420.3 t, the published 1 420 t, and the same run lowers f₁ by 3.5 %
-(from 1.80 to 1.74 Hz) and the rate-gain cap to 1.82/s.
+(from 1.80 to 1.74 Hz) and the rate-gain cap to 1.82/s. Proton-M's row predates its published
+stage propellant loads (VALIDATION.md, F14): the lift-off stack is 10.1 t heavier and the same run
+moves f₁ by 0.4 % (2.638 to 2.627 Hz), inside the table's rounding.
 
 The frequencies rise as the propellant goes (Falcon 9's from 1.6 Hz at liftoff to 2.5 Hz at
 T+120 s) and jump at every separation: the stacks left after it measured 9–75 Hz (Vega-C 18 Hz,

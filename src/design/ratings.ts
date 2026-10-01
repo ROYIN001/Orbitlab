@@ -11,8 +11,8 @@
  *
  * THE RATING ORBITS are the catalogue's own:
  * - LEO: the vehicle's (or its origin's, `vehicleDataId`) `RATING_ORBITS` LEO
- *   entry in src/data/vehicles.ts where it has one — Soyuz-2's 240 km at
- *   51.6° from Baikonur, Long March 2D's 200 km at 41° from Jiuquan — and
+ *   entry in src/data/vehicles.ts where it has one — Soyuz-2.1a's 200 × 240 km
+ *   at 51.6° from Baikonur, Long March 2D's 200 km at 41° from Jiuquan — and
  *   otherwise the fleet-wide convention the catalogue states for
  *   `payloadLEO` (Vega-C's entry: "the capability to a LOW (about 200 km)
  *   reference orbit"): 200 km circular at the site's lowest inclination, from
