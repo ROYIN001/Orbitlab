@@ -22,8 +22,7 @@
  *    first impulse of the automatic sequence on the second day, the transfer.
  */
 
-import { SATELLITES } from '../../data/satellites';
-import type { OrbitSpec } from '../../types';
+import type { OrbitSpec, SatelliteSpec } from '../../types';
 
 export type RendezvousProfileId = 'twoOrbit' | 'fourOrbit' | 'twoDay';
 
@@ -142,9 +141,11 @@ export const APPROACH = {
  * crewed spacecraft on a Soyuz-2.1a, the one pairing whose spacecraft, docking
  * system and profiles the rendezvous models — launched into the ISS orbit.
  * `vehicleId` is the vehicle's data id (`vehicleDataId`): a custom vehicle made
- * from a Soyuz-2.1a flies there too (S02).
+ * from a Soyuz-2.1a flies there too (S02). `satellite` is the mission's
+ * (`missionSatellite`), undefined when it names none: a custom satellite of
+ * the crew kind with an engine of its own flies there as the catalogue's
+ * does (D06), since the rule reads its kind and engine, never its id.
  */
-export function rendezvousAvailable(vehicleId: string, satelliteId: string, orbit: Pick<OrbitSpec, 'raanMode' | 'suborbital'>): boolean {
-  const sat = SATELLITES.find((x) => x.id === satelliteId);
-  return vehicleId === 'soyuz21a' && sat?.kind === 'crew' && !!sat.propulsion && orbit.raanMode === 'iss' && !orbit.suborbital;
+export function rendezvousAvailable(vehicleId: string, satellite: Pick<SatelliteSpec, 'kind' | 'propulsion'> | undefined, orbit: Pick<OrbitSpec, 'raanMode' | 'suborbital'>): boolean {
+  return vehicleId === 'soyuz21a' && satellite?.kind === 'crew' && !!satellite.propulsion && orbit.raanMode === 'iss' && !orbit.suborbital;
 }

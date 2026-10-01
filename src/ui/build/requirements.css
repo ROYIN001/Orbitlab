@@ -1,0 +1,125 @@
+/* ==========================================================================
+   The requirements page — roadmap D07, src/ui/build/requirements-page.ts —
+   on the Build levels' panels, fields, charts and sentence styles (build.css,
+   explore.css, engineer.css, satellite.css).
+
+   A wide screen: the form, the table of candidate orbits (a table that
+   scrolls inside its own box if it must, never the page), the two charts
+   side by side. A phone: one column, each orbit a card of its figures, each
+   figure beside its name and its number never parted from its unit; 16 px
+   gutters, no sideways scroll.
+   ========================================================================== */
+
+.brq-grid[hidden] { display: none; }
+.brq-grid { display: flex; flex-direction: column; gap: 10px; min-height: 100%; padding: 10px; }
+.brq-grid .bs-panel { min-width: 0; }
+.brq-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 28px; }
+.brq-head .be-head-text { flex: 1 1 440px; min-width: 0; }
+.brq-head-side { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* the form: its groups side by side where the screen is wide, one under another on a phone */
+.brq-form { display: flex; flex-direction: column; gap: 10px; }
+.brq-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px 22px; align-items: start; }
+.brq-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding-top: 10px; border-top: 1px solid var(--line); }
+.brq-form .bx-h3 { margin: 0; }
+.brq-group .bx-note { margin: 0; }
+.brq-bounds, .brq-hint { display: block; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+/* the boxes of a row of fields in line, whatever their names wrap to and whatever notes they carry: each field's
+   name, box, range and note sit in the four rows of the row they share (a subgrid; without one, each field alone) */
+.brq-form .bsat-fields { row-gap: 0; align-items: start; }
+.brq-form .bsat-fields > .bsat-field { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 4px; padding-bottom: 10px; }
+.brq-form .bsat-fields > .bsat-field > .bx-field-name { align-self: end; }
+.brq-form .bsat-fields > .brq-wide { grid-column: 1 / -1; }
+.brq-form .bsat-fields > .bsat-field > .bx-with-unit, .brq-form .bsat-fields > .bsat-field > select { margin-top: 0; }
+.brq-form .bsat-field input[aria-invalid='true'] { border-color: var(--fail); }
+.brq-stations { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.brq-stations legend { width: 100%; margin-bottom: 6px; padding: 0; }
+.brq-stations .brq-hint { flex-basis: 100%; }
+.brq-run { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.brq-run .bx-note { margin: 0; }
+.brq-run .bd-say-list { align-self: stretch; }
+.brq-run .bx-progress { margin-top: 0; }
+
+/* the table of candidate orbits */
+.brq-results { display: flex; flex-direction: column; gap: 8px; }
+.brq-results .bx-note { margin: 0; }
+.brq-results > .watch-btn { align-self: flex-start; }
+.brq-table-wrap { max-width: 100%; overflow-x: auto; }
+.brq-table.bs-table { font-size: 12px; }
+.brq-table caption { caption-side: top; text-align: left; padding: 0 0 6px; font-size: 12px; color: var(--muted); }
+.brq-table.bs-table th, .brq-table.bs-table td { padding: 5px 4px; }
+.brq-table thead th { vertical-align: bottom; white-space: normal; min-width: 50px; }
+.brq-table tbody th { font-weight: 600; white-space: nowrap; }
+.brq-table tbody th .brq-open { display: block; width: max-content; margin-top: 4px; padding: 4px 10px; font-size: 12px; font-weight: 500; }
+.brq-table td.num, .brq-table th.num { text-align: right; }
+.brq-table tbody th.num .brq-open { margin-left: auto; }
+.brq-table tbody td { white-space: nowrap; }
+/* the lifetime, the disposal and what binds are words: they wrap, each figure in them whole */
+.brq-table tbody td:nth-last-child(2), .brq-table tbody td:nth-last-child(3) { white-space: normal; min-width: 92px; }
+.brq-table tbody td:last-child { white-space: normal; min-width: 128px; }
+.brq-words { white-space: normal; }
+.brq-table tr.meets > th:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.brq-table tr.opened > th, .brq-table tr.opened > td { background: var(--accent-weak); }
+.brq-binds { display: flex; flex-direction: column; gap: 2px; }
+.brq-bind { font-weight: 600; }
+.brq-meets { color: var(--accent); }
+.brq-unmet { color: var(--warn); }
+.brq-table tbody tr.brq-refused-row td { white-space: normal; padding-top: 0; }
+.brq-refused { display: block; font-size: 12px; line-height: 1.4; text-align: left; }
+.brq-notes { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+
+/* the row beside the bench */
+.brq-compare { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--accent-line); border-radius: 10px; background: var(--panel2); }
+.brq-compare .bx-h3 { margin: 0; }
+.brq-compare .watch-btn { align-self: flex-start; }
+.brq-compare-table tbody th { font-weight: 400; color: #c9d6e2; white-space: normal; }
+.brq-compare-table td.num { text-align: right; white-space: nowrap; }
+.brq-compare-table tr.differs td { color: var(--warn); }
+.brq-why { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+
+/* the charts */
+.brq-charts { display: flex; flex-direction: column; gap: 8px; }
+.brq-charts .bx-note { margin: 0; }
+
+@media (max-width: 860px) {
+  .brq-grid { padding: 10px 16px 16px; }
+  .brq-head { display: block; }
+  .brq-head-side { margin-top: 10px; }
+  .brq-groups { grid-template-columns: minmax(0, 1fr); }
+  /* each orbit a card: its figures one under another, each beside its name (the column's), the numbers to the right */
+  .brq-table-wrap { overflow-x: visible; }
+  .brq-grid table.brq-table { display: block; font-size: 12.5px; }
+  /* build.css hides its tables on a phone (the Watch level's cards stand for them); this one stays a table */
+  /* …and on a phone each of its lines is the figure's name, then the row's and the bench's figures, each named */
+  .brq-grid table.brq-compare-table, .brq-compare-table tbody, .brq-compare-table tr { display: block; width: 100%; font-size: 12.5px; }
+  .brq-compare-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .brq-compare-table tr { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .brq-compare-table.bs-table tbody th, .brq-compare-table.bs-table tbody td { display: flex; justify-content: space-between; gap: 12px; padding: 1px 0; border: 0; }
+  .brq-compare-table.bs-table tbody th { display: block; }
+  .brq-compare-table tbody td::before { content: attr(data-label); color: var(--muted); }
+  .brq-table caption { display: block; }
+  .brq-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .brq-table tbody { display: flex; flex-direction: column; gap: 8px; }
+  .brq-table tbody tr { display: block; padding: 6px 10px; border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); }
+  .brq-table tbody tr.opened { border-color: var(--accent-line); }
+  .brq-table tbody tr.meets { box-shadow: inset 3px 0 0 var(--accent); }
+  .brq-table tr.meets > th:first-child { box-shadow: none; }
+  .brq-table tbody th, .brq-table tbody td {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; padding: 4px 0;
+    border-bottom: 1px solid var(--line); white-space: normal; min-width: 0; text-align: right;
+  }
+  .brq-table tbody td:last-child { border-bottom: 0; }
+  .brq-table tbody td:nth-last-child(2), .brq-table tbody td:nth-last-child(3), .brq-table tbody td:last-child { min-width: 0; }
+  .brq-table tbody th::before, .brq-table tbody td::before {
+    content: attr(data-label); flex: 1 1 auto; min-width: 0; text-align: left; font-weight: 400; color: #b8c6d4;
+  }
+  .brq-table tbody td > span:not(.brq-binds) { flex: 0 1 auto; max-width: 62%; }
+  /* the card's button under its altitude, across the card */
+  .brq-table tbody th .brq-open { flex-basis: 100%; margin: 4px 0 2px; padding: 7px 12px; font-size: 13px; }
+  .brq-binds { align-items: flex-end; text-align: right; }
+  /* a refusal under its card: a card of its own, the sentence alone */
+  .brq-table tbody tr.brq-refused-row { margin-top: -4px; padding: 6px 10px; border-color: var(--fail); }
+  .brq-table tbody tr.brq-refused-row td { display: block; padding: 0; border: 0; }
+  .brq-table tbody tr.brq-refused-row td::before { content: none; }
+  .brq-compare { padding: 10px; }
+}

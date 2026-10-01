@@ -978,6 +978,70 @@ number: the same vehicle and air, a different model of the flight.
 Clicking a run on the Monte Carlo window's scatter puts it in the setup panel — the set's seed
 and the run's number, its guidance law, six-DOF (as the set flew it) — ready to launch.
 
+## 2n. The flight on screen is the headless flight (roadmap T02)
+
+An instructor re-checks a student's flight by flying it again headless (T02), so the flight the
+student watched has to *be* the headless flight: `sim.step(sim.suggestedDt())` from the pad, the
+loop every test, the fleet fingerprints and the pre-flight probes fly. Six-DOF always was: it flies
+whole 10 ms control ticks and carries what is left of an animation frame over. A point-mass flight
+was not — each step was cut to what was left of the frame, so the step sequence, and every number
+after it, depended on the frame rate and the warp. Measured on five fleet missions (Falcon 9 to
+the ISS orbit, Electron to LEO, H3 to SSO, a crewed Soyuz-2.1a, Ariane 64 to GTO), the orbit at
+each insertion event was up to 2.7 km from the headless one with random frames and warps, and up
+to 2.4 km at a steady 60 frames a second at 10× (Ariane 64's GTO apogee). Electron moved most, and
+most in the ordinary case of a steady frame rate at 1×: at 30, 60 and 120 frames a second its
+suborbital SECO perigee was 15, 19 and 21 km from the headless one, its parking orbit 3.3–4.5 km,
+and it reached its parking and target orbits (the ends of the Curie burns) 33–48 s earlier than
+the headless flight (with random frames: 6.7 km, 1.5 km and 16 s). Those are the amounts by which
+a live run now differs from the same run before this change.
+
+Since the owner's decision of 2026-09-29 the live point-mass flight is flown in whole steps too
+(`FlightRecorder.advance`). A point-mass step is 0.02–0.25 s in the ascent but up to 30 s in orbit
+and 60 s in a high coast, so waiting for a whole step would freeze the picture; instead the
+simulation runs up to one step *ahead* of the instant on screen, and the picture is drawn at that
+instant between the two step boundaries around it — by the interpolation a replay seek uses:
+Kepler from the earlier state on a coast or in orbit, a straight blend under thrust. Measured on
+Falcon 9 and Ariane 64 flights, the drawn position half way through a 0.25 s ascent step is at most
+0.26 m from the same step split in ten, and at a boundary the picture moves by at most 2 mm under
+thrust, 8 cm on a coast and 5.9 m at the end of a 30 s orbit step (the J2 the Kepler arc leaves
+out) — nothing a viewer can see. The recording — its frames and its events — ends at the instant
+on screen, so nothing shown runs ahead of the picture. A command (the crew's abort, the TORU hand
+controllers) is taken at the simulation's clock, the step boundary at or after the picture, and
+the picture moves on to it (at most one step: 0.1 s in the lower atmosphere); that clock, not the
+one on screen, is the time a journal of commands has to keep for a re-fly to be exact. The TORU
+panel sends a command only when it changes: a key held at its limit repeats about 30 times a
+second, and resending the same command moved the picture on by up to a 0.05 s step each time (the
+clock ran 3.0 s in 2 s). Skip and the fast-forwards count from the frame on screen
+(`RecordingSource.clock`), not from the simulation: in a high coast the simulation can already
+have started the next burn, and Skip 23 s before an apogee burn went 84 s on, a minute into the
+burn, instead of to 20 s before it. A lesson grades the flight as far as the picture shows it
+(`gradeShown`, src/lessons/grader.ts): its events up to the instant on screen, as the event log
+holds them. The docking that ends lesson 5.2 closes a 5 s step while the hooks close, and the
+strip had marked "Docked to the station" and ended the flight 4.9–5.0 s of mission time before the
+picture and the event log showed it (two- and four-orbit profiles, 1–10×). A flight that fails is
+shown failed at once, and so is its grade. The orbit it grades is the orbit at the flight's end
+for grading, not at the frame it grades on (T03 review, 2026-10-01): every event carries the state
+the step that logged it left the flight in (`SimEvent.state`; a command's, logged between steps,
+the state then), with the impulse a shut-down engine's tail-off still gives added along the
+thrust axis — the prediction the cut-off itself is judged on, and the orbit the event log's
+"Target orbit achieved" line reports — and the orbit measures and hooks read the end event's
+(src/lessons/measures.ts). Under time warp the first frame that shows the end comes minutes late,
+and by then a transfer orbit's osculating semi-major axis has risen by 9 km (135 s after
+insertion) to 16.5 km (300 s): the planned 250 × 35 786 km answer to lesson 12.1 passed when
+graded 145–710 s late. Read at the end it fails however late it is graded. The tail-off given at
+once rather than over its 1.25 s leaves the end's a 0.55 km from the head's once the tail-off is
+over on that orbit, and the speed 0.016 m/s from it on lesson 1.1's 500 km circle. The telemetry
+could not say this — in orbit it is sampled every max(10 s, period/360), 135 s on a transfer
+orbit — and the fleet fingerprints hash an event's key and time only, so no recorded flight
+changed. Flown live with random
+frames, warps, pauses and cut-short frames, Falcon 9, Electron, H3 and Ariane 64 now equal their
+headless flights bit for bit, and so does the crewed Soyuz aborted by hand at T+60 s when re-flown
+from the abort's time (`tests/live-stepping.test.ts`).
+
+A six-DOF flight in a held coast (§2a) still steps 10 s at a time and waits for a whole step, so at
+1× its picture stands still for ten seconds and then jumps (measured: 599 frames at 60 frames a
+second without a change, on the six-DOF LEO quick start at 200 km); recorded, not yet changed.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

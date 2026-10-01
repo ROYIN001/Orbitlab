@@ -8,10 +8,14 @@
  */
 import { en } from '../i18n/en';
 import type { AssessmentResult } from './assessment/score';
-import { DOMAINS, isCaseLesson, type CaseLesson, type CatalogLesson, type LessonGrade, type Lesson } from './types';
+import { DOMAINS, isCaseLesson, isDesignLesson, type CaseLesson, type CatalogLesson, type DesignLesson, type LessonGrade, type Lesson } from './types';
+import { DESIGN_MEASURES } from './design-lesson';
 import type { ProgressData } from './progress';
-import { lessonNumber } from './catalog';
+import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, lessonNumber } from './catalog';
 import { MEASURES } from './measures';
+import { parseLessonFile, type FileIssue } from './lesson-file';
+import { statusCounts } from './recheck';
+import { runRecheckJob } from './recheck-job';
 
 export interface LessonToolsHost {
   /** the catalogue: built-in lessons and any a teacher's file added */
@@ -53,8 +57,26 @@ function caseCriterionOut(lesson: CaseLesson, grade: LessonGrade | null) {
 
 function criterionOut(lesson: CatalogLesson, grade: LessonGrade | null) {
   if (isCaseLesson(lesson)) return caseCriterionOut(lesson, grade);
+  if (isDesignLesson(lesson)) return designCriterionOut(lesson, grade);
   return flightCriterionOut(lesson, grade);
 }
+
+/** A design lesson's criteria (T01): each design measure, its unit and bound, as checked so far; an answer's figure is not given. */
+function designCriterionOut(lesson: DesignLesson, grade: LessonGrade | null) {
+  return lesson.criteria.map((c) => {
+    const g = grade?.criteria.find((x) => x.id === c.id);
+    return {
+      id: c.id, kind: c.kind, measure: c.measure, unit: DESIGN_MEASURES[c.measure].unit,
+      ...(c.kind === 'design' ? { bound: { min: c.min ?? null, max: c.max ?? null, target: c.target ?? null, tol: c.tol ?? null } } : { question: c.prompt.en }),
+      state: g?.state ?? 'pending',
+      ...(g?.revealed ? { answerShown: true } : {}),
+      value: c.kind === 'answer' ? undefined : g?.value ?? null,
+    };
+  });
+}
+
+/** What a lesson is, for the tools: flown, worked from a case's data, or designed. */
+const kindOf = (l: CatalogLesson): 'case' | 'design' | 'flight' => (isCaseLesson(l) ? 'case' : isDesignLesson(l) ? 'design' : 'flight');
 
 function flightCriterionOut(lesson: Lesson, grade: LessonGrade | null) {
   return lesson.criteria.map((c) => {
@@ -77,18 +99,40 @@ function flightCriterionOut(lesson: Lesson, grade: LessonGrade | null) {
   });
 }
 
+const BUILTIN_IDS = new Set<string>([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
+
+/**
+ * T02: the lessons a re-check is held to — those of the instructor's lesson
+ * files given, then any the page's catalogue has from a lesson file opened
+ * earlier (a results file carries none of a teacher's own lessons).
+ */
+function lessonsFor(host: LessonToolsHost, raw: unknown): { lessons: CatalogLesson[]; issues: FileIssue[] } {
+  const files = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];
+  const lessons: CatalogLesson[] = [];
+  const issues: FileIssue[] = [];
+  for (const file of files) {
+    const parsed = parseLessonFile(file, new Set());
+    if (!parsed.usable) throw new Error('"lessons" must be lesson files (format "orbitlab.lessons"), as JSON');
+    // the file's placement-test questions are not checked here (and their charts are not read), only its lessons
+    issues.push(...parsed.issues.filter((i) => i.level === 'error' && i.where.startsWith('lessons[')));
+    for (const l of parsed.lessons) if (!lessons.some((x) => x.id === l.id)) lessons.push(l);
+  }
+  for (const l of host.catalogue()) if (!BUILTIN_IDS.has(l.id) && !lessons.some((x) => x.id === l.id)) lessons.push(l);
+  return { lessons, issues };
+}
+
 export function createLessonTools(host: LessonToolsHost): Tool[] {
   return [
     {
       name: 'list_lessons', title: 'List lessons',
-      description: `Roadmap E03: the lessons — training missions with a goal and pass criteria graded automatically — with their number, track, the mode they open in, the areas they exercise (${AREAS_TEXT}), whether they are written yet, and the student's progress (passed: unaided; passedWithHelp: passed on answers the student had been shown). A flight lesson is flown; a case lesson (track 6) is a case from the record worked from its data in the Orbit section.`,
+      description: `Roadmap E03: the lessons — training missions with a goal and pass criteria graded automatically — with their number, track, the mode they open in, the areas they exercise (${AREAS_TEXT}), whether they are written yet, and the student's progress (passed: unaided; passedWithHelp: passed on answers the student had been shown). A flight lesson is flown; a case lesson (track 6) is a case from the record worked from its data in the Orbit section; a design lesson (T01, from a teacher's lesson file) is a satellite designed in the Build section to meet requirements.`,
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       execute: () => {
         const progress = host.progress();
         return {
           lessons: host.catalogue().map((l) => ({
-            id: l.id, kind: isCaseLesson(l) ? 'case' : 'flight', number: lessonNumber(l), title: l.title.en, track: l.track, mode: l.mode, areas: l.domains, tags: l.tags ?? [],
+            id: l.id, kind: kindOf(l), number: lessonNumber(l), title: l.title.en, track: l.track, mode: l.mode, areas: l.domains, tags: l.tags ?? [],
             written: !l.comingSoon, passed: !!progress.lessons[l.id]?.passed, passedWithHelp: !!progress.lessons[l.id]?.passedWithHelp, attempts: progress.lessons[l.id]?.attempts ?? 0,
           })),
         };
@@ -96,7 +140,7 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
     },
     {
       name: 'start_lesson', title: 'Start a lesson',
-      description: 'Open a lesson for the student: its mission is loaded into the setup panel, the app goes to the lesson\'s mode, and the settings the lesson locks are greyed out. Does not launch. For a case lesson (track 6), the Orbit section\'s Real satellites opens at the case\'s tool instead, and the student answers the case sheet\'s questions. Returns the task and the criteria.',
+      description: 'Open a lesson for the student: its mission is loaded into the setup panel, the app goes to the lesson\'s mode, and the settings the lesson locks are greyed out. Does not launch. For a case lesson (track 6), the Orbit section\'s Real satellites opens at the case\'s tool instead, and the student answers the case sheet\'s questions. For a design lesson (T01), the Build section\'s satellite designer opens on the lesson\'s start design, with the parts it locks greyed out, its figures read on the lesson\'s design date at its fixed level of solar activity; the student changes the design, checks it and hands it in. Returns the task and the criteria.',
       inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'The lesson id, from list_lessons.' } }, required: ['id'], additionalProperties: false },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
       execute: (input) => {
@@ -105,7 +149,9 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
         const started = host.startLesson(id);
         if (!started.ok) return started;
         const lesson = host.activeLesson()!.lesson;
-        const where = isCaseLesson(lesson) ? { kind: 'case', case: lesson.case, section: 'orbit', locked: [] } : { kind: 'flight', section: 'launch', locked: lesson.locked };
+        const where = isCaseLesson(lesson) ? { kind: 'case', case: lesson.case, section: 'orbit', locked: [] }
+          : isDesignLesson(lesson) ? { kind: 'design', section: 'build', designDate: lesson.designDate, activity: lesson.level, locked: lesson.locked, ...(lesson.requirements ? { requirements: lesson.requirements } : {}) }
+          : { kind: 'flight', section: 'launch', locked: lesson.locked };
         return { ok: true, id: lesson.id, number: lessonNumber(lesson), title: lesson.title.en, task: lesson.brief.en, mode: lesson.mode, ...where, criteria: criterionOut(lesson, null), hints: lesson.hints.length };
       },
     },
@@ -138,6 +184,28 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
           areas: r.result.domains, start: r.result.start, startArea: r.result.startDomain, advice: r.result.advice,
           misconceptions: r.result.questions.filter((q) => q.misconception).map((q) => ({ question: q.id, area: q.domain, belief: q.misconceptionText?.en ?? null })),
         };
+      },
+    },
+    {
+      name: 'check_results', title: 'Re-check a class\'s results',
+      description: 'Roadmap T02, the instructor\'s re-check (the lessons page\'s "Check results" tab): each flight lesson\'s record in the results files given is flown again on this device from the mission it kept, with the commands the student gave at the step boundaries that took them, to the time it was graded at, and graded again; each design lesson\'s record (T01) has its figures worked out again from the design it kept, at its design date and level of solar activity, and is graded again. Each record and each of its criteria comes out match, borderline (within the engine tolerance of a bound, so another browser could have decided it either way), differs (edited, another build, or not the lesson the student had) or cannotRefly, with the reason (caseLesson, noLesson, noDesign, sixDof, incomplete — a record made before the grading time and command journal were kept —, mission, actions, noMission, notReached, error). Also says whether each file\'s checksum holds and which fields an older record lacks. Give the instructor\'s lesson file(s) as "lessons" for their own lessons: results files do not carry them. Six-DOF flights are not re-flown. Nothing is sent anywhere; the result holds only what the files hold and the re-check.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          results: { type: 'array', items: { type: 'object' }, description: 'Results files (format "orbitlab.results"), each as its JSON.' },
+          lessons: { description: 'The instructor\'s lesson file (format "orbitlab.lessons") as its JSON, or an array of them.' },
+          names: { type: 'array', items: { type: 'string' }, description: 'Optional: the results files\' names, in the same order, for the report.' },
+        },
+        required: ['results'], additionalProperties: false,
+      },
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+      execute: async (input) => {
+        const i = record(input);
+        if (!Array.isArray(i.results) || !i.results.length) throw new Error('"results" must be a list of one or more results files, as JSON');
+        const names = Array.isArray(i.names) ? i.names.map((n) => (typeof n === 'string' ? n : null)) : undefined;
+        const { lessons, issues } = lessonsFor(host, i.lessons);
+        const check = await runRecheckJob({ results: i.results, lessons, ...(names ? { names } : {}) }, new AbortController().signal);
+        return { ...check, counts: statusCounts(check), lessonFileIssues: issues.map((x) => `${x.where}: ${x.code}${x.detail ? ` (${x.detail})` : ''}`) };
       },
     },
   ];

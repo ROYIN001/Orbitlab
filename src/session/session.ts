@@ -83,16 +83,18 @@ export class InlineSession implements FlightSession {
     this.target = null;
   }
   tick(): void {
-    const target = this.target, sim = this.sim;
+    // Counted on the live instant, not the simulation's clock: a point-mass
+    // flight runs up to one step ahead of the picture (T02, src/replay/recorder.ts).
+    const target = this.target, sim = this.sim, recorder = this.recorder;
     if (target === null) return;
-    if (!(target > sim.state.t + 1e-3) || sim.isFailed()) { this.target = null; return; }
+    if (!(target > recorder.clock + 1e-3) || sim.isFailed()) { this.target = null; return; }
     const budget = performance.now() + INLINE_FAST_FORWARD_MS;
-    while (sim.state.t < target - 1e-3 && performance.now() < budget && !sim.isFailed()) {
-      const before = sim.state.t;
-      this.recorder.advance(Math.min(600, target - sim.state.t), 3000, budget);
-      if (sim.state.t <= before) { this.target = null; return; } // no progress: give up rather than spin
+    while (recorder.clock < target - 1e-3 && performance.now() < budget && !sim.isFailed()) {
+      const before = recorder.clock;
+      recorder.advance(Math.min(600, target - recorder.clock), 3000, budget);
+      if (recorder.clock <= before) { this.target = null; return; } // no progress: give up rather than spin
     }
-    if (sim.state.t >= target - 1e-3 || sim.isFailed()) this.target = null;
+    if (recorder.clock >= target - 1e-3 || sim.isFailed()) this.target = null;
   }
   setRigidCommand(command: RigidCommand): void {
     this.sim.setRigidCommand(command);

@@ -1,0 +1,833 @@
+{
+  "format": "orbitlab.results",
+  "version": 1,
+  "exportedAt": "2026-10-06T08:00:00.000Z",
+  "student": "Student A (fixture)",
+  "progress": {
+    "version": 1,
+    "lessons": {
+      "class-leo": {
+        "attempts": 0,
+        "hintsShown": 0,
+        "passed": true,
+        "last": {
+          "at": "2026-10-06T07:20:00.000Z",
+          "verdict": "fail",
+          "criteria": [
+            {
+              "id": "c1",
+              "state": "fail",
+              "value": null
+            },
+            {
+              "id": "c2",
+              "state": "fail",
+              "value": 16.57833414386685
+            },
+            {
+              "id": "c3",
+              "state": "pass",
+              "value": 89.6778165129015,
+              "expected": 89.6778165129015
+            }
+          ],
+          "answers": {
+            "c3": 89.6778165129015
+          },
+          "hintsShown": 0,
+          "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+              "vehicleId": "falcon9",
+              "satelliteId": "cubesats",
+              "siteId": "cape",
+              "orbitId": "custom",
+              "orbit": {
+                "id": "leo",
+                "name": "Low Earth orbit (500 km)",
+                "perigee": 500000,
+                "apogee": 500000,
+                "inclination": "site",
+                "argPerigee": 0,
+                "raanMode": "free",
+                "description": "Generic circular LEO at the minimum inclination of the launch site."
+              },
+              "launchTime": "2026-10-05T03:00:00.000Z",
+              "payloadMass": 20000,
+              "guidanceOverrides": {
+                "pitchOverAltitude": 200,
+                "kickAngle": 1.5,
+                "kickDuration": 8,
+                "gravityTurnEnd": 65000,
+                "parkingAltitude": 0,
+                "maxTimeToGo": 1500,
+                "maxTurnRate": 0.3,
+                "loftAltitude": 0,
+                "pitchMax": 35,
+                "pitchMin": -15,
+                "slewRate": 3,
+                "maxAccel": 0
+              },
+              "failure": {
+                "mode": "none",
+                "time": 60,
+                "stage": 0
+              },
+              "boosterRecovery": false,
+              "dynamics": {
+                "model": "pointMass",
+                "wind": "calm",
+                "seed": 20260919
+              }
+            }
+          },
+          "t": 553.8599999999882,
+          "clock": 544.0469232929887,
+          "actions": [],
+          "app": "0.1.0+fixture"
+        },
+        "passedRecord": {
+          "at": "2026-10-06T07:10:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "c1",
+              "state": "pass",
+              "value": null
+            },
+            {
+              "id": "c2",
+              "state": "pass",
+              "value": 1725.199846621405
+            },
+            {
+              "id": "c3",
+              "state": "pass",
+              "value": 95.11414955970703,
+              "expected": 94.61454955970703
+            }
+          ],
+          "answers": {
+            "c3": 95.11414955970703
+          },
+          "hintsShown": 0,
+          "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+              "vehicleId": "falcon9",
+              "satelliteId": "cubesats",
+              "siteId": "cape",
+              "orbitId": "custom",
+              "orbit": {
+                "id": "leo",
+                "name": "Low Earth orbit (500 km)",
+                "perigee": 500000,
+                "apogee": 500000,
+                "inclination": "site",
+                "argPerigee": 0,
+                "raanMode": "free",
+                "description": "Generic circular LEO at the minimum inclination of the launch site."
+              },
+              "launchTime": "2026-10-05T03:00:00.000Z",
+              "payloadMass": 10000,
+              "guidanceOverrides": {
+                "pitchOverAltitude": 200,
+                "kickAngle": 1.5,
+                "kickDuration": 8,
+                "gravityTurnEnd": 65000,
+                "parkingAltitude": 0,
+                "maxTimeToGo": 1500,
+                "maxTurnRate": 0.3,
+                "loftAltitude": 0,
+                "pitchMax": 35,
+                "pitchMin": -15,
+                "slewRate": 3,
+                "maxAccel": 0
+              },
+              "failure": {
+                "mode": "none",
+                "time": 60,
+                "stage": 0
+              },
+              "boosterRecovery": false,
+              "dynamics": {
+                "model": "pointMass",
+                "wind": "calm",
+                "seed": 20260919
+              }
+            }
+          },
+          "t": 3237.8201278267784,
+          "clock": 3224.91927886418,
+          "actions": [],
+          "app": "0.1.0+fixture"
+        }
+      },
+      "class-abort": {
+        "attempts": 0,
+        "hintsShown": 0,
+        "passed": true,
+        "last": {
+          "at": "2026-10-06T07:30:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "c1",
+              "state": "pass",
+              "value": 1032.399999999463
+            },
+            {
+              "id": "c2",
+              "state": "pass",
+              "value": 15.72483017555198,
+              "expected": 15.266825413157262
+            }
+          ],
+          "answers": {
+            "c2": 15.72483017555198
+          },
+          "hintsShown": 0,
+          "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+              "vehicleId": "soyuz21a",
+              "satelliteId": "crew",
+              "siteId": "baikonur",
+              "orbitId": "custom",
+              "orbit": {
+                "id": "iss",
+                "name": "ISS orbit (420 km, 51.6°)",
+                "perigee": 420000,
+                "apogee": 420000,
+                "inclination": 51.64,
+                "argPerigee": 0,
+                "raanMode": "iss",
+                "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+              },
+              "launchTime": "2026-10-05T03:00:00.000Z",
+              "payloadMass": 7150,
+              "guidanceOverrides": {
+                "pitchOverAltitude": 200,
+                "kickAngle": 3,
+                "kickDuration": 8,
+                "gravityTurnEnd": 65000,
+                "parkingAltitude": 0,
+                "maxTimeToGo": 1500,
+                "maxTurnRate": 0.3,
+                "loftAltitude": 0,
+                "pitchMax": 35,
+                "pitchMin": -15,
+                "slewRate": 3,
+                "maxAccel": 0
+              },
+              "failure": {
+                "mode": "none",
+                "time": 60,
+                "stage": 0
+              },
+              "boosterRecovery": false,
+              "dynamics": {
+                "model": "pointMass",
+                "wind": "calm",
+                "seed": 20260919
+              }
+            }
+          },
+          "t": 1033.399999999463,
+          "clock": 1032.4022443909148,
+          "actions": [
+            {
+              "t": 60.10000000000056,
+              "kind": "commandAbort"
+            }
+          ],
+          "app": "0.1.0+fixture"
+        },
+        "passedRecord": {
+          "at": "2026-10-06T07:30:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "c1",
+              "state": "pass",
+              "value": 1032.399999999463
+            },
+            {
+              "id": "c2",
+              "state": "pass",
+              "value": 15.72483017555198,
+              "expected": 15.266825413157262
+            }
+          ],
+          "answers": {
+            "c2": 15.72483017555198
+          },
+          "hintsShown": 0,
+          "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+              "vehicleId": "soyuz21a",
+              "satelliteId": "crew",
+              "siteId": "baikonur",
+              "orbitId": "custom",
+              "orbit": {
+                "id": "iss",
+                "name": "ISS orbit (420 km, 51.6°)",
+                "perigee": 420000,
+                "apogee": 420000,
+                "inclination": 51.64,
+                "argPerigee": 0,
+                "raanMode": "iss",
+                "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+              },
+              "launchTime": "2026-10-05T03:00:00.000Z",
+              "payloadMass": 7150,
+              "guidanceOverrides": {
+                "pitchOverAltitude": 200,
+                "kickAngle": 3,
+                "kickDuration": 8,
+                "gravityTurnEnd": 65000,
+                "parkingAltitude": 0,
+                "maxTimeToGo": 1500,
+                "maxTurnRate": 0.3,
+                "loftAltitude": 0,
+                "pitchMax": 35,
+                "pitchMin": -15,
+                "slewRate": 3,
+                "maxAccel": 0
+              },
+              "failure": {
+                "mode": "none",
+                "time": 60,
+                "stage": 0
+              },
+              "boosterRecovery": false,
+              "dynamics": {
+                "model": "pointMass",
+                "wind": "calm",
+                "seed": 20260919
+              }
+            }
+          },
+          "t": 1033.399999999463,
+          "clock": 1032.4022443909148,
+          "actions": [
+            {
+              "t": 60.10000000000056,
+              "kind": "commandAbort"
+            }
+          ],
+          "app": "0.1.0+fixture"
+        }
+      },
+      "class-power": {
+        "attempts": 0,
+        "hintsShown": 0,
+        "passed": true,
+        "last": {
+          "at": "2026-10-06T07:50:00.000Z",
+          "verdict": "fail",
+          "criteria": [
+            {
+              "id": "margin",
+              "state": "fail",
+              "value": 6.831164394302602
+            },
+            {
+              "id": "battery",
+              "state": "pass",
+              "value": 13.01070731749505
+            },
+            {
+              "id": "eclipse",
+              "state": "pass",
+              "value": 35.42890975723664,
+              "expected": 35.12890975723664
+            }
+          ],
+          "answers": {
+            "eclipse": 35.42890975723664
+          },
+          "hintsShown": 0,
+          "design": {
+            "id": "fixture-napa2",
+            "name": "NAPA-2 (fixture)",
+            "template": "napa2",
+            "kind": "science",
+            "orbit": {
+              "perigee": 520000,
+              "apogee": 540000,
+              "inclination": 97.516,
+              "sso": true,
+              "ltan": 22.5
+            },
+            "lifeYears": 3,
+            "bus": {
+              "dryMass": 10,
+              "size": {
+                "width": 0.2,
+                "height": 0.1,
+                "depth": 0.3405
+              },
+              "cd": 2.2,
+              "cr": 1.3
+            },
+            "power": {
+              "payloadW": 4,
+              "busW": 4,
+              "arrayArea": 0.068,
+              "mount": "body",
+              "batteryWh": 40,
+              "dod": 0.3,
+              "cellEff": 0.295,
+              "Id": 0.77,
+              "degPerYear": 0.005,
+              "regulation": "PPT",
+              "batteryEff": 0.9
+            },
+            "propulsion": null,
+            "adcs": {
+              "mode": "threeAxis",
+              "inertia": [
+                0.105,
+                0.13,
+                0.0417
+              ],
+              "pointingDeg": 1,
+              "wheelH": 0.015,
+              "residualDipole": 0.02,
+              "cpOffset": 0.02
+            },
+            "comms": {
+              "txPowerW": 1,
+              "frequency": 8380000000,
+              "txAntennaD": 0,
+              "lineLoss": 0.4,
+              "dataRate": 12500000,
+              "requiredEbN0": 5.52,
+              "station": "bangkok",
+              "minElDeg": 10,
+              "rxAntennaD": 11.28,
+              "rxNoiseK": 189.7,
+              "losses": 2
+            },
+            "payload": {
+              "focalLength": 0.58,
+              "pixelPitch": 0.0000055,
+              "pixels": 4096,
+              "aperture": 0.095,
+              "bits": 10,
+              "wavelength": 5.5e-7
+            }
+          },
+          "designDate": "2026-10-05",
+          "level": "moderate",
+          "figures": {
+            "sat.mass": 10,
+            "sat.eclipseMax": 35.12890975723664,
+            "sat.powerMargin": 6.831164394302602,
+            "sat.batteryDod": 13.01070731749505,
+            "sat.dvMargin": 0,
+            "sat.linkMargin": 8.426984511389392,
+            "sat.gsd": 4.931034482758621,
+            "sat.swath": 20.197836222906616,
+            "sat.wheelMargin": 12.853649098102164,
+            "sat.torquerDipole": 0.024277157931354085
+          },
+          "app": "0.1.0+fixture"
+        },
+        "passedRecord": {
+          "at": "2026-10-06T07:40:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "margin",
+              "state": "pass",
+              "value": 10.000000002000009
+            },
+            {
+              "id": "battery",
+              "state": "pass",
+              "value": 13.01070731749505
+            },
+            {
+              "id": "eclipse",
+              "state": "pass",
+              "value": 35.42890975723664,
+              "expected": 35.12890975723664
+            }
+          ],
+          "answers": {
+            "eclipse": 35.42890975723664
+          },
+          "hintsShown": 0,
+          "design": {
+            "id": "fixture-napa2",
+            "name": "NAPA-2 (fixture)",
+            "template": "napa2",
+            "kind": "science",
+            "orbit": {
+              "perigee": 520000,
+              "apogee": 540000,
+              "inclination": 97.516,
+              "sso": true,
+              "ltan": 22.5
+            },
+            "lifeYears": 3,
+            "bus": {
+              "dryMass": 10,
+              "size": {
+                "width": 0.2,
+                "height": 0.1,
+                "depth": 0.3405
+              },
+              "cd": 2.2,
+              "cr": 1.3
+            },
+            "power": {
+              "payloadW": 4,
+              "busW": 4,
+              "arrayArea": 0.07001702211658115,
+              "mount": "body",
+              "batteryWh": 40,
+              "dod": 0.3,
+              "cellEff": 0.295,
+              "Id": 0.77,
+              "degPerYear": 0.005,
+              "regulation": "PPT",
+              "batteryEff": 0.9
+            },
+            "propulsion": null,
+            "adcs": {
+              "mode": "threeAxis",
+              "inertia": [
+                0.105,
+                0.13,
+                0.0417
+              ],
+              "pointingDeg": 1,
+              "wheelH": 0.015,
+              "residualDipole": 0.02,
+              "cpOffset": 0.02
+            },
+            "comms": {
+              "txPowerW": 1,
+              "frequency": 8380000000,
+              "txAntennaD": 0,
+              "lineLoss": 0.4,
+              "dataRate": 12500000,
+              "requiredEbN0": 5.52,
+              "station": "bangkok",
+              "minElDeg": 10,
+              "rxAntennaD": 11.28,
+              "rxNoiseK": 189.7,
+              "losses": 2
+            },
+            "payload": {
+              "focalLength": 0.58,
+              "pixelPitch": 0.0000055,
+              "pixels": 4096,
+              "aperture": 0.095,
+              "bits": 10,
+              "wavelength": 5.5e-7
+            }
+          },
+          "designDate": "2026-10-05",
+          "level": "moderate",
+          "figures": {
+            "sat.mass": 10,
+            "sat.eclipseMax": 35.12890975723664,
+            "sat.powerMargin": 10.000000002000009,
+            "sat.batteryDod": 13.01070731749505,
+            "sat.dvMargin": 0,
+            "sat.linkMargin": 8.426984511389392,
+            "sat.gsd": 4.931034482758621,
+            "sat.swath": 20.197836222906616,
+            "sat.wheelMargin": 12.853649098102164,
+            "sat.torquerDipole": 0.024277157931354085
+          },
+          "app": "0.1.0+fixture"
+        }
+      },
+      "class-theos": {
+        "attempts": 0,
+        "hintsShown": 0,
+        "passed": true,
+        "last": {
+          "at": "2026-10-06T08:00:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "life",
+              "state": "pass",
+              "value": 18.050705695740717
+            },
+            {
+              "id": "down",
+              "state": "pass",
+              "value": 1
+            },
+            {
+              "id": "data",
+              "state": "pass",
+              "value": 160.72505322396756
+            },
+            {
+              "id": "gsd",
+              "state": "pass",
+              "value": 0.5014285714285713
+            },
+            {
+              "id": "dv",
+              "state": "pass",
+              "value": 31.893966589910377
+            },
+            {
+              "id": "swath",
+              "state": "pass",
+              "value": 10.432759127250849,
+              "expected": 10.329464482426584
+            }
+          ],
+          "answers": {
+            "swath": 10.432759127250849
+          },
+          "hintsShown": 0,
+          "design": {
+            "id": "fixture-theos2",
+            "name": "THEOS-2 (fixture)",
+            "template": "theos2",
+            "kind": "earthObs",
+            "orbit": {
+              "perigee": 621000,
+              "apogee": 621000,
+              "inclination": 97.871,
+              "sso": true,
+              "ltan": 22.25
+            },
+            "lifeYears": 10,
+            "bus": {
+              "dryMass": 385,
+              "size": {
+                "width": 1,
+                "height": 1.6,
+                "depth": 1
+              },
+              "cd": 2.2,
+              "cr": 1.3
+            },
+            "power": {
+              "payloadW": 150,
+              "busW": 250,
+              "arrayArea": 3.5,
+              "mount": "tracking",
+              "batteryWh": 1200,
+              "dod": 0.3,
+              "cellEff": 0.295,
+              "Id": 0.77,
+              "degPerYear": 0.005,
+              "regulation": "PPT",
+              "batteryEff": 0.9
+            },
+            "propulsion": {
+              "thrust": 4,
+              "isp": 223,
+              "propellant": 40
+            },
+            "adcs": {
+              "mode": "threeAxis",
+              "inertia": [
+                126,
+                70.8,
+                126
+              ],
+              "pointingDeg": 0.05,
+              "wheelH": 12,
+              "residualDipole": 1,
+              "cpOffset": 0.1
+            },
+            "comms": {
+              "txPowerW": 10,
+              "frequency": 8200000000,
+              "txAntennaD": 0.15,
+              "lineLoss": 1,
+              "dataRate": 140000000,
+              "requiredEbN0": 5.52,
+              "station": "bangkok",
+              "minElDeg": 10,
+              "rxAntennaD": 11.28,
+              "rxNoiseK": 189.7,
+              "losses": 2
+            },
+            "payload": {
+              "focalLength": 16.1,
+              "pixelPitch": 0.000013,
+              "pixels": 20600,
+              "aperture": 0.9,
+              "bits": 12,
+              "wavelength": 5.5e-7
+            }
+          },
+          "designDate": "2026-10-05",
+          "level": "moderate",
+          "figures": {
+            "sat.mass": 425,
+            "sat.eclipseMax": 34.55281310329835,
+            "sat.powerMargin": 18.6408829941902,
+            "sat.batteryDod": 21.32889697734466,
+            "sat.dvMargin": 31.893966589910377,
+            "sat.linkMargin": 26.07515262611048,
+            "sat.gsd": 0.5014285714285713,
+            "sat.swath": 10.329464482426584,
+            "sat.wheelMargin": 78.84517560084515,
+            "sat.torquerDipole": 3.243173577022257,
+            "sat.dataPerDay": 160.72505322396756,
+            "sat.lifetime": 18.050705695740717,
+            "sat.disposal25y": 1
+          },
+          "app": "0.1.0+fixture"
+        },
+        "passedRecord": {
+          "at": "2026-10-06T08:00:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "life",
+              "state": "pass",
+              "value": 18.050705695740717
+            },
+            {
+              "id": "down",
+              "state": "pass",
+              "value": 1
+            },
+            {
+              "id": "data",
+              "state": "pass",
+              "value": 160.72505322396756
+            },
+            {
+              "id": "gsd",
+              "state": "pass",
+              "value": 0.5014285714285713
+            },
+            {
+              "id": "dv",
+              "state": "pass",
+              "value": 31.893966589910377
+            },
+            {
+              "id": "swath",
+              "state": "pass",
+              "value": 10.432759127250849,
+              "expected": 10.329464482426584
+            }
+          ],
+          "answers": {
+            "swath": 10.432759127250849
+          },
+          "hintsShown": 0,
+          "design": {
+            "id": "fixture-theos2",
+            "name": "THEOS-2 (fixture)",
+            "template": "theos2",
+            "kind": "earthObs",
+            "orbit": {
+              "perigee": 621000,
+              "apogee": 621000,
+              "inclination": 97.871,
+              "sso": true,
+              "ltan": 22.25
+            },
+            "lifeYears": 10,
+            "bus": {
+              "dryMass": 385,
+              "size": {
+                "width": 1,
+                "height": 1.6,
+                "depth": 1
+              },
+              "cd": 2.2,
+              "cr": 1.3
+            },
+            "power": {
+              "payloadW": 150,
+              "busW": 250,
+              "arrayArea": 3.5,
+              "mount": "tracking",
+              "batteryWh": 1200,
+              "dod": 0.3,
+              "cellEff": 0.295,
+              "Id": 0.77,
+              "degPerYear": 0.005,
+              "regulation": "PPT",
+              "batteryEff": 0.9
+            },
+            "propulsion": {
+              "thrust": 4,
+              "isp": 223,
+              "propellant": 40
+            },
+            "adcs": {
+              "mode": "threeAxis",
+              "inertia": [
+                126,
+                70.8,
+                126
+              ],
+              "pointingDeg": 0.05,
+              "wheelH": 12,
+              "residualDipole": 1,
+              "cpOffset": 0.1
+            },
+            "comms": {
+              "txPowerW": 10,
+              "frequency": 8200000000,
+              "txAntennaD": 0.15,
+              "lineLoss": 1,
+              "dataRate": 140000000,
+              "requiredEbN0": 5.52,
+              "station": "bangkok",
+              "minElDeg": 10,
+              "rxAntennaD": 11.28,
+              "rxNoiseK": 189.7,
+              "losses": 2
+            },
+            "payload": {
+              "focalLength": 16.1,
+              "pixelPitch": 0.000013,
+              "pixels": 20600,
+              "aperture": 0.9,
+              "bits": 12,
+              "wavelength": 5.5e-7
+            }
+          },
+          "designDate": "2026-10-05",
+          "level": "moderate",
+          "figures": {
+            "sat.mass": 425,
+            "sat.eclipseMax": 34.55281310329835,
+            "sat.powerMargin": 18.6408829941902,
+            "sat.batteryDod": 21.32889697734466,
+            "sat.dvMargin": 31.893966589910377,
+            "sat.linkMargin": 26.07515262611048,
+            "sat.gsd": 0.5014285714285713,
+            "sat.swath": 10.329464482426584,
+            "sat.wheelMargin": 78.84517560084515,
+            "sat.torquerDipole": 3.243173577022257,
+            "sat.dataPerDay": 160.72505322396756,
+            "sat.lifetime": 18.050705695740717,
+            "sat.disposal25y": 1
+          },
+          "app": "0.1.0+fixture"
+        }
+      }
+    },
+    "assessments": []
+  },
+  "checksum": "948b25d6f3961a07e3c8366065566b2f1924312fdd0507cfcdc28acfc15cf51a"
+}

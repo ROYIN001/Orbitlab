@@ -28,6 +28,11 @@ const UNITS: Readonly<Record<string, Partial<Record<Lang, string>>>> = {
   'm²/kg': { ru: 'м²/кг', th: 'ตร.ม./กก.' },
   '°/d': { ru: '°/сут', th: '°/วัน' },
   'km³/s²': { ru: 'км³/с²', th: 'กม.³/วินาที²' },
+  // the design lessons' measures (T01, src/lessons/design-lesson.ts): data a day, days, years, a torquer's dipole
+  'Gbit': { ru: 'Гбит', th: 'กิกะบิต' },
+  'd': { ru: 'сут', th: 'วัน' },
+  'yr': { ru: 'г.', th: 'ปี' },
+  'A·m²': { ru: 'А·м²' },
 };
 
 export function unitText(unit: string, lang: Lang = getLang()): string {

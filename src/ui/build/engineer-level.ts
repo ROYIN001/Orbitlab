@@ -35,7 +35,7 @@ import type { MissionDocument } from '../../config/mission-file';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
 import { route, type AppRoute } from '../app-mode';
 import { BUILD_BUILT_ITEMS, BUILD_ITEM_OPEN_AT, BUILD_LEVEL_ITEMS, SECTION_PLANS } from '../section-plan';
-import { LocalDesignStore, type DesignStore, type DesignSummary } from '../../design/design-store';
+import { LocalDesignStore, isDesignOf, type DesignStore, type DesignSummary } from '../../design/design-store';
 import { pickerEntries, type PickerEntry } from '../../design/vehicle-picker';
 import { watchPayload } from '../../design/stage-table';
 import { button, el } from '../orbit/dom';
@@ -228,7 +228,7 @@ export class EngineerLevel {
       this.sourceId = id;
       void this.store.get(id.slice(SAVED.length)).catch(() => null).then((rec) => {
         if (seq !== this.loadSeq) return;
-        if (rec && rec.kind === 'vehicle') {
+        if (rec && isDesignOf(rec, 'vehicle')) {
           this.savedUpdated = rec.updated;
           this.setBench({ spec: rec.design, name: rec.name, payloadKg: watchPayload(rec.design) });
         }

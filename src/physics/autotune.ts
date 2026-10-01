@@ -9,7 +9,7 @@ import { orbitResiduals, ORBIT_INSERTION_FLOOR } from './mission';
 import type { OrbitMiss } from './mission';
 import { VehicleModel } from './vehicle';
 import { missionVehicle } from '../data/vehicles';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 
 export interface TuneResult {
   /**
@@ -158,7 +158,7 @@ export const DEFAULT_LOFTS = [0, 80e3, 150e3, 250e3];
 /** Whether the vehicle hands off to an upper stage too weak to hold altitude (needs a loft search). */
 export function needsLoftSearch(cfg: MissionConfig): boolean {
   const spec = missionVehicle(cfg);
-  const sat = satelliteById(cfg.satelliteId);
+  const sat = missionSatellite(cfg);
   const vm = new VehicleModel(spec, cfg.payloadMassOverride ?? sat.mass, cfg.boosterRecovery, sat, cfg.recoveryPlan);
   const a = vm.nextStageAccel(false);
   return a > 0 && a < 4.8;

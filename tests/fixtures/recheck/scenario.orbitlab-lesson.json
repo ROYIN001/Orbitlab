@@ -1,0 +1,348 @@
+{
+  "format": "orbitlab.lessons",
+  "version": 3,
+  "lessons": [
+    {
+      "id": "class-leo",
+      "track": 9,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        2,
+        3
+      ],
+      "title": {
+        "en": "A payload to 500 km",
+        "ru": "Полезный груз на 500 км",
+        "th": "น้ำหนักบรรทุกสู่ 500 กม."
+      },
+      "brief": {
+        "en": "Fly Falcon 9 into the 500 km circular orbit with a payload you choose, keep at least 100 m/s in the second stage, and type the orbit's period.",
+        "ru": "Выведите Falcon 9 на круговую орбиту 500 км с выбранным вами грузом, сохраните во второй ступени не меньше 100 м/с и введите период орбиты.",
+        "th": "นำ Falcon 9 ขึ้นสู่วงโคจรวงกลม 500 กม. พร้อมน้ำหนักบรรทุกที่เลือกเอง ให้ขั้นที่ 2 เหลือ Δv อย่างน้อย 100 ม./วินาที แล้วพิมพ์คาบของวงโคจร"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "falcon9",
+          "satelliteId": "cubesats",
+          "siteId": "cape",
+          "orbitId": "leo",
+          "orbit": {
+            "id": "leo",
+            "name": "Low Earth orbit (500 km)",
+            "perigee": 500000,
+            "apogee": 500000,
+            "inclination": "site",
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Generic circular LEO at the minimum inclination of the launch site."
+          },
+          "launchTime": "2026-10-05T03:00:00.000Z",
+          "payloadMass": 10000,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.failure",
+        "setup.dynamics.model"
+      ],
+      "criteria": [
+        {
+          "id": "c1",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "c2",
+          "kind": "measure",
+          "measure": "dvLeft",
+          "min": 100
+        },
+        {
+          "id": "c3",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Period (min)",
+            "ru": "Период (мин)",
+            "th": "คาบ (นาที)"
+          },
+          "tol": 0.5
+        }
+      ],
+      "hints": [
+        {
+          "en": "T = 2π√(a³/μ)",
+          "ru": "T = 2π√(a³/μ)",
+          "th": "T = 2π√(a³/μ)"
+        }
+      ]
+    },
+    {
+      "id": "class-abort",
+      "track": 9,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        6
+      ],
+      "title": {
+        "en": "Abort at max-Q",
+        "ru": "Спасение на максимальном напоре",
+        "th": "ยกเลิกการปล่อยที่ max-Q"
+      },
+      "brief": {
+        "en": "A crewed Soyuz. Press Abort at T+60 s, fly until the crew is down, and type the peak load on the crew.",
+        "ru": "Пилотируемый «Союз». Нажмите «Авария» на T+60 с, выполните полёт до приземления экипажа и введите максимальную перегрузку экипажа.",
+        "th": "ยานโซยุซมีมนุษย์ กดยกเลิกการปล่อยที่ T+60 วินาที บินจนลูกเรือถึงพื้น แล้วพิมพ์ภาระสูงสุดที่ลูกเรือได้รับ"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "soyuz21a",
+          "satelliteId": "crew",
+          "siteId": "baikonur",
+          "orbitId": "iss",
+          "orbit": {
+            "id": "iss",
+            "name": "ISS orbit (420 km, 51.6°)",
+            "perigee": 420000,
+            "apogee": 420000,
+            "inclination": 51.64,
+            "argPerigee": 0,
+            "raanMode": "iss",
+            "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+          },
+          "launchTime": "2026-10-05T03:00:00.000Z",
+          "payloadMass": 7150,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.dynamics.model"
+      ],
+      "criteria": [
+        {
+          "id": "c1",
+          "kind": "event",
+          "key": "evt.abortCrewSafe",
+          "present": true
+        },
+        {
+          "id": "c2",
+          "kind": "answer",
+          "measure": "abort.maxG",
+          "prompt": {
+            "en": "Peak load (g)",
+            "ru": "Максимальная перегрузка (ед.)",
+            "th": "ภาระสูงสุด (g)"
+          },
+          "tolPct": 10
+        }
+      ],
+      "hints": [],
+      "endEvent": "evt.abortCrewSafe"
+    },
+    {
+      "kind": "design",
+      "id": "class-power",
+      "track": 9,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        1,
+        2
+      ],
+      "title": {
+        "en": "Power through the eclipse",
+        "ru": "Мощность в тени",
+        "th": "กำลังไฟฟ้าตลอดอุปราคา"
+      },
+      "brief": {
+        "en": "Give NAPA-2 a power margin of at least 10 % at the end of its life, the battery drained no deeper than 30 %, and type its longest eclipse.",
+        "ru": "Обеспечьте NAPA-2 запас мощности не меньше 10 % к концу срока службы при разряде аккумулятора не глубже 30 % и введите самую длинную тень.",
+        "th": "ทำให้ NAPA-2 มีค่าเผื่อกำลังไฟฟ้าอย่างน้อย 10 % เมื่อสิ้นอายุการใช้งาน แบตเตอรี่คายประจุไม่เกิน 30 % แล้วพิมพ์อุปราคานานที่สุด"
+      },
+      "start": {
+        "template": "napa2"
+      },
+      "designDate": "2026-10-05",
+      "level": "moderate",
+      "locked": [
+        "orbit.perigee",
+        "orbit.apogee",
+        "orbit.inclination",
+        "orbit.ltan",
+        "orbit.raan",
+        "orbit.sso",
+        "lifeYears",
+        "bus.dryMass",
+        "bus.size.width",
+        "bus.size.height",
+        "bus.size.depth",
+        "bus.cd",
+        "bus.cr",
+        "power.payloadW",
+        "power.busW"
+      ],
+      "criteria": [
+        {
+          "id": "margin",
+          "kind": "design",
+          "measure": "sat.powerMargin",
+          "min": 10
+        },
+        {
+          "id": "battery",
+          "kind": "design",
+          "measure": "sat.batteryDod",
+          "max": 30
+        },
+        {
+          "id": "eclipse",
+          "kind": "answer",
+          "measure": "sat.eclipseMax",
+          "prompt": {
+            "en": "Longest eclipse (min)",
+            "ru": "Самая длинная тень (мин)",
+            "th": "อุปราคานานที่สุด (นาที)"
+          },
+          "tol": 1
+        }
+      ],
+      "hints": []
+    },
+    {
+      "kind": "design",
+      "id": "class-theos",
+      "track": 9,
+      "order": 1,
+      "mode": "engineer",
+      "domains": [
+        2
+      ],
+      "title": {
+        "en": "An imager that lasts and leaves",
+        "ru": "Съёмочный спутник: прослужить и уйти",
+        "th": "ดาวเทียมถ่ายภาพที่อยู่นานแล้วออกจากวงโคจร"
+      },
+      "brief": {
+        "en": "Keep the THEOS-2-class imager up for its ten years and down within IADC's 25, bring 100 Gbit down to Bangkok a day, and type its swath.",
+        "ru": "Сохраните съёмочный спутник класса THEOS-2 на орбите все десять лет и сведите его в течение 25 лет по правилу IADC, передавайте в Бангкок 100 Гбит в сутки и введите полосу обзора.",
+        "th": "ให้ดาวเทียมถ่ายภาพระดับ THEOS-2 อยู่ในวงโคจรครบ 10 ปีและตกสู่บรรยากาศภายใน 25 ปีตามแนวทาง IADC ส่งข้อมูลลงกรุงเทพฯ วันละ 100 กิกะบิต แล้วพิมพ์ความกว้างแนวถ่ายภาพ"
+      },
+      "start": {
+        "template": "theos2"
+      },
+      "designDate": "2026-10-05",
+      "level": "moderate",
+      "requirements": {
+        "target": {
+          "lat": 13.7563,
+          "lon": 100.5018,
+          "name": "Bangkok"
+        },
+        "gsd": 0.5,
+        "revisitDays": 26,
+        "daylightOnly": true,
+        "ltan": 22.25,
+        "lifeYears": 10,
+        "activity": "moderate",
+        "dataPerDay": 100000000000,
+        "stations": [
+          "bangkok"
+        ],
+        "minElDeg": 10,
+        "disposal": "25y"
+      },
+      "locked": [
+        "bus.dryMass",
+        "bus.size.width",
+        "bus.size.height",
+        "bus.size.depth",
+        "bus.cd",
+        "bus.cr"
+      ],
+      "criteria": [
+        {
+          "id": "life",
+          "kind": "design",
+          "measure": "sat.lifetime",
+          "min": 10
+        },
+        {
+          "id": "down",
+          "kind": "design",
+          "measure": "sat.disposal25y",
+          "min": 1
+        },
+        {
+          "id": "data",
+          "kind": "design",
+          "measure": "sat.dataPerDay",
+          "min": 100
+        },
+        {
+          "id": "gsd",
+          "kind": "design",
+          "measure": "sat.gsd",
+          "max": 0.55
+        },
+        {
+          "id": "dv",
+          "kind": "design",
+          "measure": "sat.dvMargin",
+          "min": 0
+        },
+        {
+          "id": "swath",
+          "kind": "answer",
+          "measure": "sat.swath",
+          "prompt": {
+            "en": "Swath (km)",
+            "ru": "Полоса обзора (км)",
+            "th": "ความกว้างแนวถ่ายภาพ (กม.)"
+          },
+          "tolPct": 2
+        }
+      ],
+      "hints": []
+    }
+  ]
+}
