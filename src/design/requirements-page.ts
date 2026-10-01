@@ -59,8 +59,8 @@ import type { SatelliteDesign } from './satellite-spec';
 // ─── the form ───────────────────────────────────────────────────────────────
 
 /** The places the page offers to look at: the app's stations in Thailand and Russia (src/orbit/applications-setup.ts), or a place typed. */
-export type TargetId = 'bangkok' | 'chiangMai' | 'hatYai' | 'stPetersburg' | 'moscow' | 'custom';
-export const REQ_TARGETS: readonly TargetId[] = ['bangkok', 'chiangMai', 'hatYai', 'stPetersburg', 'moscow', 'custom'];
+export type TargetId = 'bangkok' | 'chiangMai' | 'hatYai' | 'ubon' | 'stPetersburg' | 'moscow' | 'custom';
+export const REQ_TARGETS: readonly TargetId[] = ['bangkok', 'chiangMai', 'hatYai', 'ubon', 'stPetersburg', 'moscow', 'custom'];
 
 /** The templates a requirement can start from: those with a camera, as D07 sizes one from the GSD asked. */
 export const REQ_TEMPLATES: readonly string[] = SATELLITE_TEMPLATES.filter((tp) => tp.design.payload !== null).map((tp) => tp.id);

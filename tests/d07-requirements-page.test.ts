@@ -40,7 +40,7 @@ import { DEG, R_EARTH } from '../src/physics/constants';
 import { julianDate } from '../src/physics/orbital';
 import { runLifetimeJob } from '../src/physics/lifetime-job';
 import { sideReach } from '../src/orbit/applications';
-import { stationOf } from '../src/orbit/applications-setup';
+import { STATIONS, stationOf } from '../src/orbit/applications-setup';
 import { contactTime, repeatPeriod, revisitGaps } from '../src/orbit/coverage';
 import { circularOrbit, meanForces, altitudesForLifetimes, type AltitudeForLifetime } from '../src/orbit/lifetime-altitude';
 import { slantRange } from '../src/orbit/link';
@@ -48,9 +48,10 @@ import { levelActivity } from '../src/orbit/satellite-air';
 import { powerAtWorstBeta, requiredDataRate, requiredEirp, txPowerForEirp, focalLengthForGsd } from '../src/design/requirement-inverses';
 import { REQUIREMENTS, repeatCycles, tradePlane, tradeRow, type TradeRow } from '../src/design/requirement-trades';
 import {
-  DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TEMPLATES, RUNS_PER_SEARCH, apertureCrossing, benchNow, SECONDS_PER_LIFETIME_RUN, SECONDS_PER_LIFETIME_RUN_YEAR, SECONDS_PER_ROW_DAY, aperturePoints, benchDesign, candidateCycles, compareWithBench,
+  DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TARGETS, REQ_TEMPLATES, REVISIT_WINDOW_DAYS, RUNS_PER_SEARCH, SECONDS_PER_LIFETIME_RUN,
+  SECONDS_PER_LIFETIME_RUN_YEAR, SECONDS_PER_ROW_DAY, apertureCrossing, aperturePoints, benchDesign, benchNow, candidateCycles, compareWithBench,
   disposalState, errorKey, gbitToBits, lifeState, lifetimePoints, lifetimeRequestFor, missionRequirements, otherNode, requirementsProblems,
-  REVISIT_WINDOW_DAYS, restoreForm, revisitWindowOf, runCost, standing, targetOf, templateDesign, tradeOptionsFor, type RequirementsForm,
+  restoreForm, revisitWindowOf, runCost, standing, targetOf, templateDesign, tradeOptionsFor, type RequirementsForm,
 } from '../src/design/requirements-page';
 import { designFigures, designHandoff, satelliteChecks } from '../src/design/satellite-model';
 import { designOrbit } from '../src/design/satellite-handoff';
@@ -79,6 +80,8 @@ describe('the requirements form (D07)', () => {
     expect(missionRequirements({ ...DEFAULT_FORM, sso: false }).ltan).toBeUndefined();
     expect(targetOf({ target: 'custom', lat: 1, lon: 2 })).toEqual({ lat: 1, lon: 2 });
     expect(targetOf({ target: 'moscow', lat: 1, lon: 2 })).toEqual({ lat: 55.7558, lon: 37.6173 });
+    // added in review: every station the app knows is a place to watch, Ubon Ratchathani among them
+    expect(REQ_TARGETS.filter((id) => id !== 'custom')).toEqual(STATIONS.map((s) => s.id));
   });
 
   it('refuses each number outside its box\'s bounds by name, and the life and elevation at the design checker\'s', () => {
