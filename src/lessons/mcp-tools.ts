@@ -94,7 +94,8 @@ function lessonsFor(host: LessonToolsHost, raw: unknown): { lessons: CatalogLess
   for (const file of files) {
     const parsed = parseLessonFile(file, new Set());
     if (!parsed.usable) throw new Error('"lessons" must be lesson files (format "orbitlab.lessons"), as JSON');
-    issues.push(...parsed.issues.filter((i) => i.level === 'error'));
+    // the file's placement-test questions are not checked here (and their charts are not read), only its lessons
+    issues.push(...parsed.issues.filter((i) => i.level === 'error' && i.where.startsWith('lessons[')));
     for (const l of parsed.lessons) if (!lessons.some((x) => x.id === l.id)) lessons.push(l);
   }
   for (const l of host.catalogue()) if (!BUILTIN_IDS.has(l.id) && !lessons.some((x) => x.id === l.id)) lessons.push(l);

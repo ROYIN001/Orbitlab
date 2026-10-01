@@ -177,7 +177,8 @@ class CheckView {
       let raw: unknown = null;
       try { raw = JSON.parse(await f.text()); } catch { /* reported as unusable */ }
       const parsed = parseLessonFile(raw, new Set());
-      this.lessonFiles.push({ name: f.name, lessons: parsed.lessons, issues: parsed.issues.filter((i) => i.level === 'error'), usable: parsed.usable });
+      // its placement-test questions are no business of the check (their charts are not read here): only its lessons' problems are said
+      this.lessonFiles.push({ name: f.name, lessons: parsed.lessons, issues: parsed.issues.filter((i) => i.level === 'error' && i.where.startsWith('lessons[')), usable: parsed.usable });
     }
     this.render();
   }
