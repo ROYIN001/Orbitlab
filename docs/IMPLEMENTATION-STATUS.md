@@ -549,7 +549,7 @@ Phase 4, the satellite builder and instructor mode, on the same branch. No built
   - An electric engine flies in Launch without its engine, its propellant still in the mass; Send to Orbit keeps the engine.
   - Fly it offers other rockets only when the verdict fails, not on a caution, and one insertion probe can hold the page 0.5 s.
   - The fairing fit is a note, not part of the verdict; NAPA-2's template lays its 0.34 m side across, so it reads 0.39 × 0.10 m.
-  - In Thai at 360 px the current rocket's entry is cut in Fly it's rocket menu.
+  - On a phone the current rocket's entry in Fly it's rocket menu can be cut, as the font allows: with DejaVu Sans in English and Russian at 360 px and Russian at 375 px; an earlier walk saw it in Thai.
   - The solar torque counts nothing when the Sun is behind a surface, so a two-sided array lit from behind is understated.
   - The ground speed and the longest pass assume a circular orbit; the off-nadir sample tilts the camera across the track only.
   - With a craft of one's own picked in the playground, a design without an engine handed on keeps that craft's mass beside the design's area, as a flight's hand-off does.
