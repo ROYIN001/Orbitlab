@@ -228,6 +228,12 @@ export function restoreForm(text: string | null): RequirementsForm {
 export const MAX_ROWS = 400;
 /** Seconds a row takes for each day of its cycle: D's 0.25 s for a 26-day row (the revisit and the contact walk the cycle), on a laptop. */
 export const SECONDS_PER_ROW_DAY = 0.25 / 26;
+/**
+ * The days the revisit is walked over where the looks do not repeat with the
+ * cycle — daylight looks from an orbit that is not sun-synchronous — passed to
+ * the table as its `revisitWindow` (the core's own default, 60 days).
+ */
+export const REVISIT_WINDOW_DAYS = 60;
 /** Seconds one of the lifetime search's P07 runs takes, on a laptop: 21 runs in 9.9 s measured here for 10 and 35 years, 3.2 s for D's 11 of 5 years. */
 export const SECONDS_PER_LIFETIME_RUN = 0.45;
 /** P07 runs the search makes for each of its years: the two ends and the halvings from 150–5 000 km to ±5 km (`expectedRuns`, src/orbit/lifetime-altitude.ts). */
@@ -257,13 +263,30 @@ export interface RunCost {
   tooMany: boolean;
 }
 
-export function runCost(cycles: readonly RepeatCycle[], searches: number): RunCost {
+/**
+ * The open window the revisit of a form's rows is walked over, days: none
+ * (null) where the looks repeat with the cycle, sun-synchronous or by night
+ * and day alike, else `REVISIT_WINDOW_DAYS` (`tradeRow`: `periodic`).
+ */
+export const revisitWindowOf = (f: Pick<RequirementsForm, 'sso' | 'daylightOnly'>): number | null =>
+  (f.sso || !f.daylightOnly ? null : REVISIT_WINDOW_DAYS);
+
+/**
+ * What a run will take. A row walks its cycle twice, for the revisit and for
+ * the contact (`SECONDS_PER_ROW_DAY` is for a cycle-day of both); where the
+ * looks do not repeat with the cycle (`window`, `revisitWindowOf`), the revisit
+ * walks the open window instead: some 60 days, so a 1-day row costs some 30
+ * times as much (measured in Chromium here: 90 such rows of 1 to 5 days, 10.0 s,
+ * against 1.4 s for the 94 sun-synchronous ones).
+ */
+export function runCost(cycles: readonly RepeatCycle[], searches: number, window: number | null = null): RunCost {
   const days = cycles.map((c) => c.days);
   return {
     rows: cycles.length,
     minDays: days.length ? Math.min(...days) : 0,
     maxDays: days.length ? Math.max(...days) : 0,
-    tableSeconds: days.reduce((s, d) => s + d, 0) * SECONDS_PER_ROW_DAY,
+    // the cycle-days walked, the revisit's and the contact's, halved: the cycle's days where the looks repeat with it
+    tableSeconds: days.reduce((s, d) => s + (d + Math.max(d, window ?? d)) / 2, 0) * SECONDS_PER_ROW_DAY,
     lifetimeSeconds: searches * RUNS_PER_SEARCH * SECONDS_PER_LIFETIME_RUN,
     tooMany: cycles.length > MAX_ROWS,
   };
@@ -305,6 +328,7 @@ export function tradeOptionsFor(
     wavelength: DIFFRACTION_WAVELENGTH,
     tilt: f.tiltDeg * DEG,
     lifetime,
+    revisitWindow: REVISIT_WINDOW_DAYS,
   };
 }
 

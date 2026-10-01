@@ -39,7 +39,7 @@ import { wetMass } from '../../design/satellite-area';
 import {
   MAX_ROWS, REQ_TARGETS, REQ_TEMPLATES, aperturePoints, benchDesign, candidateCycles, compareWithBench, cycleRange, cycleText, disposalState,
   errorKey, lifeState, lifetimeKey, lifetimePoints, lifetimeRequestFor, limitsOf, missionRequirements, otherNode, requirementsProblems,
-  restoreForm, runCost, standing, templateDesign, tradeOptionsFor, type CompareLine, type ReqIssue, type ReqNumberField, type RequirementsForm,
+  restoreForm, revisitWindowOf, runCost, standing, templateDesign, tradeOptionsFor, type CompareLine, type ReqIssue, type ReqNumberField, type RequirementsForm,
   type Standing, type TargetId,
 } from '../../design/requirements-page';
 import { STATION_KEY } from '../orbit/applications-panel';
@@ -415,7 +415,7 @@ export class RequirementsPage {
     const cycles = issues.length ? [] : candidateCycles(this.form);
     const template = issues.length ? null : templateDesign(this.form.template);
     const keptLife = template ? this.keptLifetime(template) : null;
-    const cost = runCost(cycles, keptLife ? 0 : this.form.disposal === '25y' ? 2 : 1);
+    const cost = runCost(cycles, keptLife ? 0 : this.form.disposal === '25y' ? 2 : 1, revisitWindowOf(this.form));
     if (!issues.length) {
       if (!cost.rows) parts.push(el('p', 'bx-note warn', t('build.req.noRows')));
       else {
@@ -499,7 +499,7 @@ export class RequirementsPage {
     const cycles = candidateCycles(form);
     const lifeReq = lifetimeRequestFor(template, form, jd);
     const kept = this.keptLifetime(template);
-    const cost = runCost(cycles, kept ? 0 : lifeReq.years.length);
+    const cost = runCost(cycles, kept ? 0 : lifeReq.years.length, revisitWindowOf(form));
     if (!cycles.length || cost.tooMany) return;
     const controller = new AbortController();
     this.job = { controller, phase: kept ? 'table' : 'lifetime', fraction: 0, weights: { lifetime: cost.lifetimeSeconds, table: cost.tableSeconds } };

@@ -50,7 +50,7 @@ import { REQUIREMENTS, repeatCycles, tradePlane, tradeRow, type TradeRow } from 
 import {
   DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TEMPLATES, SECONDS_PER_ROW_DAY, aperturePoints, benchDesign, candidateCycles, compareWithBench,
   disposalState, errorKey, gbitToBits, lifeState, lifetimePoints, lifetimeRequestFor, missionRequirements, otherNode, requirementsProblems,
-  restoreForm, runCost, standing, targetOf, templateDesign, tradeOptionsFor, type RequirementsForm,
+  REVISIT_WINDOW_DAYS, restoreForm, revisitWindowOf, runCost, standing, targetOf, templateDesign, tradeOptionsFor, type RequirementsForm,
 } from '../src/design/requirements-page';
 import { designFigures, designHandoff, satelliteChecks } from '../src/design/satellite-model';
 import { designOrbit } from '../src/design/satellite-handoff';
@@ -133,6 +133,25 @@ describe('what a run costs (D07)', () => {
     expect(runCost(only26, 2).tooMany).toBe(false);
     // not sun-synchronous: at the inclination asked
     expect(candidateCycles({ ...DEFAULT_FORM, sso: false, inclination: 51.6, maxDays: 2 }).length).toBe(repeatCycles(2, false, 51.6 * DEG).length);
+  });
+
+  // added in review: daylight looks from a plane that is not sun-synchronous do not repeat with the cycle, so each
+  // row's revisit walks the core's 60-day window; the estimate counted the cycle's days only (Chromium: 10.0 s for
+  // 90 rows of 1 to 5 days, said "about 3 s")
+  it('counts the open window a row\'s revisit walks where daylight looks do not repeat with the cycle', () => {
+    expect(revisitWindowOf(DEFAULT_FORM)).toBeNull();
+    expect(revisitWindowOf({ sso: false, daylightOnly: false })).toBeNull();
+    expect(revisitWindowOf({ sso: false, daylightOnly: true })).toBe(REVISIT_WINDOW_DAYS);
+    expect(REVISIT_WINDOW_DAYS).toBe(60);
+    const form: RequirementsForm = { ...DEFAULT_FORM, sso: false, inclination: 51.6 };
+    // the window the estimate counts is the one the table is given
+    expect(tradeOptionsFor(templateDesign('theos2'), form, JD0, null).revisitWindow).toBe(REVISIT_WINDOW_DAYS);
+    const cycles = candidateCycles(form);
+    const open = runCost(cycles, 0, revisitWindowOf(form));
+    expect(open.tableSeconds).toBe(cycles.reduce((s, c) => s + (c.days + 60) / 2, 0) * SECONDS_PER_ROW_DAY);
+    expect(open.tableSeconds / runCost(cycles, 0).tableSeconds).toBeGreaterThan(8);
+    // a cycle longer than the window walks its own days
+    expect(runCost([{ revs: 1000, days: 70 }], 0, 60).tableSeconds).toBe(70 * SECONDS_PER_ROW_DAY);
   });
 });
 
