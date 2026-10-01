@@ -865,7 +865,7 @@ export class FlightRecorder implements RecordingSource {
       // *candidates* go rather than alternate indices — a run of protected
       // frames in the middle no longer flips which half of the coast survives.
       if (i > 0 && i < last && f.t < recent && thinnable(f)) {
-        const next = this.frames[i + 1];
+        const next = this.stored[i + 1];
         const spared = gap !== Infinity && (next.t - kept[kept.length - 1].t > gap || next.status !== f.status);
         if (seen++ % 2 === 1 && !spared) { dropped++; continue; }
       }

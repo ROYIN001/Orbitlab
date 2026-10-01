@@ -624,8 +624,9 @@ describe('thinning a recording past its ceiling', () => {
   });
 
   it('still bounds a recording too small for that, as before', () => {
-    const rec = toyFlight(50);
+    // above the 300 frames of the last 30 s at 0.1 s, which stay until an event detected late can pin them
+    const rec = toyFlight(400);
     expect(rec.frames.length).toBeLessThanOrEqual(rec.frameLimit);
-    expect(rec.frameLimit).toBeLessThanOrEqual(75);
+    expect(rec.frameLimit).toBe(400);
   });
 });

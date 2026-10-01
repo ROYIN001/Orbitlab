@@ -48,10 +48,11 @@ export function expectVostok1Recording(run: ReturnType<typeof recordVostok1>, fr
   expect(st.decimations, log).toBe(0);
   expect(st.frames, log).toBeLessThan(rec.frameLimit);
   expect(peak, log).toBeLessThan(frameBytes);
-  // the orbit: a frame every 30 s and the step after it (10 s, then every second, before the retro sequence)
+  // the orbit: a frame every 30 s, at the step that reaches it (whole steps of about 18 s in point-mass, so
+  // about every 36 s), then 10 s and every second before the retro sequence
   const deorbit = sim.cfg.orbit.deorbit!.time;
   const orbit = rec.frames.filter((f) => f.status === 'orbit');
-  expect(orbit.length, log).toBeGreaterThan(130);
+  expect(orbit.length, log).toBeGreaterThan(100);
   for (let i = 1; i < orbit.length; i++) expect(orbit[i].t - orbit[i - 1].t, `T+${orbit[i - 1].t.toFixed(1)}`).toBeLessThan(40);
   // the frame a replay holds across the change to the returning spacecraft: a second before the retro sequence, or
   // the orbit's step before it
