@@ -1564,11 +1564,12 @@ design handed in, on the day and at the solar activity it was graded at. Each re
 - **Match**: the same grade and the same numbers;
 - **Borderline**: a number too close to a limit to be sure;
 - **Differs**: edited, made on another version of Orbitlab, or not the lesson the student had. A
-  result that names its version but lacks its grading time or its commands is not excused as an old
-  one: if its numbers come out different, it differs;
+  result that names its version but lacks its grading time, the moment on screen or its commands is
+  not excused as an old one: if its numbers come out different, it differs;
 - **Cannot re-fly** (for a design, **Cannot work out again**), with the reason: a six-DOF flight
-  (minutes each) or a case lesson, a damaged record (the rest of the class is still checked), or a
-  result saved before this version whose numbers come out different. Such a result lacks the grading
+  (minutes each) or a case lesson, a lesson of your own whose file is not open, a design result that
+  kept no design, a damaged record (the rest of the class is still checked), or a result saved
+  before this version whose numbers come out different. Such a result lacks the grading
   time, the commands and the version, so it can only be flown again approximately, and a difference
   says nothing about an edit; if its numbers come out the same, it is a match.
 
