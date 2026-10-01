@@ -1,5 +1,6 @@
 /**
- * Modal dialogs: "Physics & sources", "About Orbitlab" and the camera sequence.
+ * Modal dialogs: "About" (the maker's credit, and the physics and its sources)
+ * and the camera sequence.
  *
  * Both are native `<dialog>` elements opened with `showModal()`, which gives
  * Escape-to-close and the top layer for free, plus an explicit focus trap and
@@ -13,7 +14,7 @@
 import type { CameraMode } from '../render/cameras';
 import { t } from '../i18n';
 import { BUILD } from '../build-info';
-import { CITATION_URL, DEVELOPER, NOTICE_URL, REPO_URL, citation } from '../credits';
+import { CITATION_URL, COPYRIGHT_YEAR, NOTICE_URL, REPO_URL, developerLabel, versionLabel } from '../credits';
 import rigidDossierUrl from '../../docs/SIXDOF-VEHICLE-DATA.md?url';
 import { getNotation, QUANTITIES, symbolNode, type Quantity } from './notation';
 import './notation.css';
@@ -186,91 +187,133 @@ export class Modal {
   }
 }
 
-/** Localized summary of docs/PHYSICS.md with the data sources and credits. */
-export class PhysicsDialog extends Modal {
-  applyLanguage(): void {
-    super.applyLanguage();
-    this.el.setAttribute('aria-label', t('dlg.physics.title'));
-    const b = this.body;
-    b.replaceChildren();
-    b.append(el('span', 'eyebrow', t('dlg.physics.eyebrow')));
-    b.append(el('h2', undefined, t('dlg.physics.title')));
-    b.append(el('p', 'lead', t('dlg.physics.intro')));
-    b.append(section('dlg.physics.rigid', 'dlg.physics.rigidText'));
-    b.append(section('dlg.physics.estimates', 'dlg.physics.estimatesText'));
-    const dossier = el('ul'); dossier.append(link(rigidDossierUrl, t('dlg.physics.dossier'))); b.append(dossier);
-    b.append(section('dlg.physics.frames', 'dlg.physics.framesText'));
-    b.append(section('dlg.physics.notation', 'dlg.physics.notationText'), notationTable());
-    b.append(section('dlg.physics.forces', 'dlg.physics.forcesText'));
-    b.append(section('dlg.physics.atmosphere', 'dlg.physics.atmosphereText'));
-    b.append(section('dlg.physics.propulsion', 'dlg.physics.propulsionText'));
-    b.append(section('dlg.physics.guidance', 'dlg.physics.guidanceText'));
-    b.append(section('dlg.physics.loop', 'dlg.physics.loopText')); // G03
-    b.append(section('dlg.physics.sequencing', 'dlg.physics.sequencingText'));
-    b.append(section('dlg.physics.limits', 'dlg.physics.limitsText'));
-    b.append(section('dlg.physics.shortcuts', 'dlg.physics.shortcutsText'));
-    b.append(el('h3', undefined, t('dlg.physics.sources')));
-    const ul = el('ul');
-    ul.append(
-      link('https://www.spacex.com/vehicles/falcon-9/', 'SpaceX — Falcon 9 / Falcon Heavy'),
-      link('https://www.rocketlabusa.com/launch/electron/', 'Rocket Lab — Electron'),
-      link('https://www.esa.int/Enabling_Support/Space_Transportation/Vega', 'ESA / Avio — Vega-C'),
-      link('https://global.jaxa.jp/projects/rockets/h3/', 'JAXA — H3 and H-IIA'),
-      link('http://www.cgwic.com/LaunchServices/LaunchVehicle/LM.html', 'CGWIC — Long March user manuals'),
-      link('https://www.samspace.ru/products/launch_vehicles/rn_soyuz_2/', 'Roscosmos / RKTs Progress — Soyuz-2'),
-      link('https://www.isro.gov.in/PSLV.html', 'ISRO — PSLV'),
-      link('https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/rocket-thrust-equation/', 'NASA Glenn — rocket thrust and the ideal rocket equation'),
-      link('https://ntrs.nasa.gov/citations/19770009539', 'US Standard Atmosphere 1976 (NASA-TM-X-74335)'),
-      link('https://ntrs.nasa.gov/citations/20160002944', 'NASA — flight equations and reference frames'),
-      link('https://ntrs.nasa.gov/citations/19980210404', 'NASA — dynamics of variable-mass systems'),
-      link('https://celestrak.org/software/vallado-sw.php', 'Vallado — Fundamentals of Astrodynamics and Applications'),
-      link('https://threejs.org/', 'three.js'),
-    );
-    b.append(ul);
-    b.append(el('p', 'small', t('dlg.physics.credits')));
-    b.append(el('p', 'small', t('dlg.physics.build', { commit: BUILD.commit, version: BUILD.version })));
-  }
+/** The About dialog's two tabs, in order. */
+export type AboutTab = 'about' | 'physics';
+const ABOUT_TABS: ReadonlyArray<{ id: AboutTab; label: string }> = [
+  { id: 'about', label: 'about.button' },
+  { id: 'physics', label: 'dlg.physics.button' },
+];
+
+/** The About tab: the app's mark, version, maker, licences, links and the README disclaimer (src/credits.ts). */
+function aboutPanel(b: HTMLElement): void {
+  const box = el('div', 'about-box');
+  const mark = el('p', 'about-mark');
+  const ring = el('span', 'brand-mark', '◉');
+  ring.setAttribute('aria-hidden', 'true');
+  const name = el('span', 'brand-name', 'ORBIT');
+  name.append(el('span', undefined, 'LAB'));
+  mark.append(ring, name);
+  const title = el('h2', 'sr-only', t('app.title'));
+  const version = el('p', 'about-version', `${versionLabel(BUILD.version)} · ${BUILD.commit}`);
+  const by = el('p', 'about-by', `${t('about.by', { name: developerLabel() })} · © ${COPYRIGHT_YEAR}`);
+  const lead = el('p', 'about-lead', t('about.lead'));
+  lead.append(el('br'), t('about.licenceText'));
+  const links = el('ul', 'about-links');
+  links.append(link(REPO_URL, 'GitHub'), link(NOTICE_URL, t('about.link.notice')), link(CITATION_URL, t('about.link.cite')));
+  box.append(mark, title, version, by, lead, links, el('p', 'about-disclaimer', t('about.disclaimer')));
+  b.append(box);
 }
 
-/** Who made the app, its version and licences, how to cite it, thanks and the disclaimer (README "About this project"). */
+/** The Physics & sources tab: a localized summary of docs/PHYSICS.md with the data sources and credits. */
+function physicsPanel(b: HTMLElement): void {
+  b.append(el('span', 'eyebrow', t('dlg.physics.eyebrow')));
+  b.append(el('h2', undefined, t('dlg.physics.title')));
+  b.append(el('p', 'lead', t('dlg.physics.intro')));
+  b.append(section('dlg.physics.rigid', 'dlg.physics.rigidText'));
+  b.append(section('dlg.physics.estimates', 'dlg.physics.estimatesText'));
+  const dossier = el('ul'); dossier.append(link(rigidDossierUrl, t('dlg.physics.dossier'))); b.append(dossier);
+  b.append(section('dlg.physics.frames', 'dlg.physics.framesText'));
+  b.append(section('dlg.physics.notation', 'dlg.physics.notationText'), notationTable());
+  b.append(section('dlg.physics.forces', 'dlg.physics.forcesText'));
+  b.append(section('dlg.physics.atmosphere', 'dlg.physics.atmosphereText'));
+  b.append(section('dlg.physics.propulsion', 'dlg.physics.propulsionText'));
+  b.append(section('dlg.physics.guidance', 'dlg.physics.guidanceText'));
+  b.append(section('dlg.physics.loop', 'dlg.physics.loopText')); // G03
+  b.append(section('dlg.physics.sequencing', 'dlg.physics.sequencingText'));
+  b.append(section('dlg.physics.limits', 'dlg.physics.limitsText'));
+  b.append(section('dlg.physics.shortcuts', 'dlg.physics.shortcutsText'));
+  b.append(el('h3', undefined, t('dlg.physics.sources')));
+  const ul = el('ul');
+  ul.append(
+    link('https://www.spacex.com/vehicles/falcon-9/', 'SpaceX — Falcon 9 / Falcon Heavy'),
+    link('https://www.rocketlabusa.com/launch/electron/', 'Rocket Lab — Electron'),
+    link('https://www.esa.int/Enabling_Support/Space_Transportation/Vega', 'ESA / Avio — Vega-C'),
+    link('https://global.jaxa.jp/projects/rockets/h3/', 'JAXA — H3 and H-IIA'),
+    link('http://www.cgwic.com/LaunchServices/LaunchVehicle/LM.html', 'CGWIC — Long March user manuals'),
+    link('https://www.samspace.ru/products/launch_vehicles/rn_soyuz_2/', 'Roscosmos / RKTs Progress — Soyuz-2'),
+    link('https://www.isro.gov.in/PSLV.html', 'ISRO — PSLV'),
+    link('https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/rocket-thrust-equation/', 'NASA Glenn — rocket thrust and the ideal rocket equation'),
+    link('https://ntrs.nasa.gov/citations/19770009539', 'US Standard Atmosphere 1976 (NASA-TM-X-74335)'),
+    link('https://ntrs.nasa.gov/citations/20160002944', 'NASA — flight equations and reference frames'),
+    link('https://ntrs.nasa.gov/citations/19980210404', 'NASA — dynamics of variable-mass systems'),
+    link('https://celestrak.org/software/vallado-sw.php', 'Vallado — Fundamentals of Astrodynamics and Applications'),
+    link('https://threejs.org/', 'three.js'),
+  );
+  b.append(ul);
+  b.append(el('p', 'small', t('dlg.physics.credits')));
+  b.append(el('p', 'small', t('dlg.physics.build', { commit: BUILD.commit, version: BUILD.version })));
+}
+
+/**
+ * "About": the maker's credit on one tab and the physics and its sources on
+ * the other. It opens on the tab it was last left on, or on the one asked for
+ * (the footer's credit line asks for About). The tabs follow the ARIA tabs
+ * pattern: arrow keys, Home and End move between them.
+ */
 export class AboutDialog extends Modal {
+  private tab: AboutTab = 'about';
+
+  open(opener: HTMLElement | null = null, tab?: AboutTab): void {
+    if (tab) this.tab = tab;
+    super.open(opener);
+  }
+
   applyLanguage(): void {
     super.applyLanguage();
-    this.el.setAttribute('aria-label', t('about.footerLink'));
+    this.el.setAttribute('aria-label', t('about.button'));
     const b = this.body;
     b.replaceChildren();
-    b.append(el('span', 'eyebrow', t('about.eyebrow')));
-    b.append(el('h2', undefined, t('app.title')));
-    b.append(el('p', 'lead', t('about.lead')));
+    const list = el('div', 'about-tabs');
+    list.setAttribute('role', 'tablist');
+    list.setAttribute('aria-label', t('about.button'));
+    const panel = el('div', 'about-panel');
+    panel.id = 'about-panel';
+    panel.setAttribute('role', 'tabpanel');
+    panel.tabIndex = 0;
+    const buttons = ABOUT_TABS.map(({ id, label }) => {
+      const on = id === this.tab;
+      const tab = el('button', 'about-tab', t(label));
+      tab.type = 'button';
+      tab.id = `about-tab-${id}`;
+      tab.dataset.tab = id;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(on));
+      tab.setAttribute('aria-controls', panel.id);
+      tab.tabIndex = on ? 0 : -1;
+      tab.addEventListener('click', () => this.show(id));
+      return tab;
+    });
+    list.addEventListener('keydown', (e) => {
+      const k = ABOUT_TABS.findIndex((x) => x.id === this.tab);
+      const to = e.key === 'ArrowRight' ? (k + 1) % ABOUT_TABS.length
+        : e.key === 'ArrowLeft' ? (k + ABOUT_TABS.length - 1) % ABOUT_TABS.length
+        : e.key === 'Home' ? 0 : e.key === 'End' ? ABOUT_TABS.length - 1 : -1;
+      if (to < 0) return;
+      e.preventDefault();
+      this.show(ABOUT_TABS[to].id);
+    });
+    list.append(...buttons);
+    panel.setAttribute('aria-labelledby', `about-tab-${this.tab}`);
+    if (this.tab === 'about') aboutPanel(panel); else physicsPanel(panel);
+    b.append(list, panel);
+  }
 
-    const dev = el('div', 'about-dev');
-    const avatar = el('span', 'about-avatar', DEVELOPER.name.charAt(0));
-    avatar.setAttribute('aria-hidden', 'true');
-    const who = el('div');
-    const name = el('p', 'about-name', DEVELOPER.name);
-    name.append(' ', el('span', 'about-handle', `(${DEVELOPER.handle})`));
-    who.append(name, el('p', 'about-role', t('about.role')));
-    dev.append(avatar, who);
-    b.append(dev);
-
-    const facts = el('dl', 'about-facts');
-    for (const [term, value] of [
-      [t('about.version'), t('dlg.physics.build', { commit: BUILD.commit, version: BUILD.version })],
-      [t('about.licence'), t('about.licenceText')],
-      [t('about.cite'), citation(BUILD.version)],
-    ]) facts.append(el('dt', undefined, term), el('dd', undefined, value));
-    b.append(facts);
-
-    b.append(el('h3', undefined, t('about.thanks')));
-    const thanks = el('ul');
-    thanks.append(el('li', undefined, t('about.thanks.threejs')), el('li', undefined, t('about.thanks.data')));
-    b.append(thanks);
-
-    b.append(el('p', 'about-disclaimer', t('about.disclaimer')));
-
-    const links = el('ul', 'about-links');
-    links.append(link(REPO_URL, 'GitHub'), link(NOTICE_URL, t('about.link.notice')), link(CITATION_URL, t('about.link.cite')));
-    b.append(links);
+  /** Switch tab and rebuild, keeping the keyboard on the tab strip. */
+  private show(tab: AboutTab): void {
+    this.tab = tab;
+    this.applyLanguage();
+    this.el.scrollTop = 0;
+    this.el.querySelector<HTMLElement>(`#about-tab-${tab}`)?.focus();
   }
 }
 

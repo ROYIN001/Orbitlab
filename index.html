@@ -62,11 +62,9 @@
             <span id="data-mode-label">Offline</span>
           </button>
           <button id="btn-help" class="quiet-btn" type="button"></button>
-          <button id="btn-physics" class="quiet-btn" type="button" data-i18n-aria-label="dlg.physics.button" data-i18n-title="dlg.physics.button">
-            <span aria-hidden="true">ⓘ</span><span data-i18n="dlg.physics.button">Physics &amp; sources</span>
-          </button>
+          <!-- About: the maker's credit, and the physics and its sources (ui/dialogs.ts AboutDialog) -->
           <button id="btn-about" class="quiet-btn" type="button" data-i18n-aria-label="about.button" data-i18n-title="about.button">
-            <span aria-hidden="true">✦</span><span data-i18n="about.button">About</span>
+            <span aria-hidden="true">ⓘ</span><span data-i18n="about.button">About</span>
           </button>
           <button id="btn-camera-plan" class="quiet-btn" type="button" data-i18n-aria-label="ctl.cameraSequence" data-i18n-title="ctl.cameraSequence">
             <span aria-hidden="true">◈</span><span data-i18n="ctl.cameraSequence">Camera sequence</span>
@@ -181,11 +179,10 @@
       <footer id="footer">
         <span data-i18n="app.footerModel">Earth · Newtonian flight model</span>
         <span data-i18n="app.footerNote">Educational simulation · approximate vehicle data</span>
-        <span class="footer-credit"><span id="footer-copyright">© 2026 Royin</span> · <button id="footer-about" class="link-btn" type="button" data-i18n="about.footerLink">About Orbitlab</button></span>
+        <span class="footer-credit"><span id="footer-credit">Made by Royin</span> · <button id="footer-about" class="link-btn" type="button" data-i18n="about.button">About</button></span>
       </footer>
 
-      <dialog id="physics-dialog" class="dialog"></dialog>
-      <dialog id="about-dialog" class="dialog about-dialog"></dialog>
+      <dialog id="about-dialog" class="dialog"></dialog>
       <dialog id="camera-dialog" class="dialog"></dialog>
     </div>
     <script type="module" src="./src/main.ts"></script>
