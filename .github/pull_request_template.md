@@ -12,7 +12,7 @@
 
 ## Checklist
 
-- [ ] Built-in flights unchanged: no fingerprint or golden re-recorded, or re-recorded with the reason written beside the golden and a note in docs/VALIDATION.md §9
+- [ ] Built-in flights unchanged: no fingerprint or golden re-recorded, or re-recorded with the reason written beside the golden and a note in docs/VALIDATION.md §10
 - [ ] en/ru/th dictionaries complete (tests/i18n.test.ts green)
 - [ ] No new runtime dependency; a dev dependency only with a written reason
 - [ ] A physics or data change cites its published source and adds or updates its test

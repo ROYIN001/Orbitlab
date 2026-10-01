@@ -72,6 +72,17 @@ any academy, and no service or academy name or emblem is used without written pe
   Sun's pull, the lunar orbit, the powered descent to Tranquility Base, the ascent and the
   coelliptic rendezvous, the burn for home and the lifting entry under the parachutes, within
   minutes of the flown timeline ([docs/PHYSICS.md §13](docs/PHYSICS.md)).
+- **A satellite builder** (Build, Phase 4): design a satellite from NAPA-2, a THEOS-2-class
+  imager or a class of the catalogue, with its eclipse, power, Δv budget, attitude control, downlink
+  and camera worked out as you type and held to published worked examples; test it on the satellite
+  bench, work its orbit out from what a mission needs (revisit, resolution, lifetime, data), and
+  send it into the Orbit section or fly it to its orbit in Launch as the mission's own satellite.
+- **Instructor mode**: a teacher writes a flight or a satellite-design lesson, hands it out as a
+  file or a link, and re-checks the class's results files on their own computer, each flight flown
+  again with the student's commands. No accounts, and nothing about a student leaves the device; a
+  `?scenario=` link carries the lesson, and like any address it reaches the server that serves the app.
+- **Lesson packs** matched to curricula: IPST's science and physics courses (Thailand), the Royal
+  Thai Air Force Academy's programme and Russia's speciality 24.05.06, drafts awaiting review.
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
   explains it in one line, next to the mission clock and the latest callout, and the camera
   follows a per-phase programme you can set yourself — identically live and in replay.
@@ -181,10 +192,16 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `mobile-smoke` | ✓ | At 390×844, the Thai placement test and the Russian Orbit engineer page do not scroll sideways, and every section/level link is on screen with an accessible name in the page's language |
 | `launch-explore` | ✓ | Falcon 9 configured, launched and warped to its 500 km orbit; the CSV export is over 1 MB and covers the flight |
 | `pwa-offline` | | The service worker precaches the app, a mission flies offline, and a new deploy is offered as a reload |
+| `case-worksheet-exports` | | The three case worksheets and their keys downloaded as HTML and DOCX, in Thai and Russian, through the page's own controls |
+| `satellite` | ✓ | In the satellite designer, NAPA-2's cells put on wings and its array changed, the figures following, saved and reloaded; sent to Orbit, whose lifetime dialog takes the design's own mass and drag area; Fly it gives the Launch section's verdict before the click ("Not flyable as set" on Soyuz-2.1a) and offers the rockets that can fly it; Electron, picked among them, flies the design to payload separation, and the Launch panel's verdict is the one shown |
+| `requirements` | | The requirements page from the bench: Bangkok at 0.5 m and 5 days, a run stopped and run again in the workers, a row the bench cannot take saying why, a row that meets every requirement opened on the bench and set beside it; then a Thai phone, the orbits as cards |
+| `recheck` | ✓ | The Chromium half of the instructor's re-check: the committed results files checked in the page's re-check worker through `check_results`, held to Node's answer under the engine tolerances fixed before the first run, and each measure's largest difference printed |
+| `lesson-packs` | ✓ | The five lesson packs precached and listed with their codes and draft notice; lesson 12.1 flown live from its pack and graded a pass; design lesson 13.4 failing as it starts and passing with the worked design handed in |
 
 A failed journey leaves screenshots in `tests/browser/screenshots/` (uploaded as an artifact in CI).
-Without a GPU the scene is drawn in software at about two frames a second, so the smoke set takes
-about five minutes. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
+Without a GPU the scene is drawn in software at about two frames a second, so the smoke set, six
+journeys since Phase 4, takes about ten minutes (623.5 s on 2026-10-01, on a shared four-core
+machine). `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
 another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
 leaves the CSS layout unchanged). Pull requests and branch pushes run the smoke set; the deploy
 runs every journey on the build it publishes, after checking the freshly fetched data snapshots with
@@ -270,7 +287,37 @@ The figures are the launch physics' own, and estimates are labelled as such (the
 in [docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)). The catalogue emits the fleet
 value for value and the built-in flights are unchanged; computed ratings fall within 25 % of seven
 of eight published ones (Vega-C's LEO is 31 % high), and the sized launchers tried need more Δv
-than the planner allows for ([docs/VALIDATION.md](docs/VALIDATION.md) §8). Designing satellites (D06, D07) comes in Phase 4.
+than the planner allows for ([docs/VALIDATION.md](docs/VALIDATION.md) §8).
+
+**Build** designs satellites too (Phase 4, roadmap D06–D07; the cores in `src/orbit/`, the model in
+`src/design/satellite-*.ts`, the screens in `src/ui/build/satellite-*.ts`), switched from the rocket
+above the level:
+
+- **Explore** designs a satellite from NAPA-2, a THEOS-2-class imager or one of five classes of the
+  catalogue, and works out its eclipse, power, Δv budget, torques, downlink and camera as it is
+  typed, for a design date, saying what fails and what is an estimate. **Send to Orbit** puts it in
+  its orbit in the Orbit section with no launch; **Fly it** flies it there on a rocket in Launch, as
+  the mission's own satellite (a version-3 mission file), with the Launch section's verdict shown
+  before the click and the rockets that can fly it offered.
+- **Engineer** is the satellite bench, a tab for each subsystem with its sources and a lifetime run
+  against the 25-year rule; **Start from requirements** (`#/build/engineer/requirements`) works the
+  orbit and the satellite out from a place, a resolution, a revisit, a lifetime and a data volume,
+  one row per repeat-ground-track orbit, and opens a row on the bench.
+
+The cores are held to published worked examples — SMAD's tables in TU Delft's reader, NASA's
+attitude and end-of-mission chapters, MarCO's link budget, Sentinel-2's and Landsat 8's optics,
+IADC's disposal rule — with the slips found in the sources recorded, and D07 to D06 and O04
+([docs/VALIDATION.md](docs/VALIDATION.md) §9).
+
+The **lessons** page (`#/lessons`, `src/lessons/`) has, beside the lessons, the placement test
+and the worksheets, two pages for teachers (roadmap T01–T02). **Write a scenario** makes a flight
+lesson from the mission on the setup panel, or a design lesson from the satellite in Build, with
+its locks and criteria, and saves it as a lesson file or a `?scenario=` link. **Check results**
+opens a class's results files and flies each flight again in a worker, with the commands the
+student gave, to the moment it was graded (a design's figures are worked out again), and says which
+match; Node and Chromium agree to about 1e-12 s. The **lesson packs** (T03,
+`public/lessons/packs/`) group lessons by curriculum, with each lesson's codes; all five are drafts
+awaiting the owner's review.
 
 The cloud in the top bar switches the data between **offline**, the default — the snapshots bundled in `public/data/`,
 each dated, so `dist/` works on a network with no internet — and **online**, which fetches from
@@ -418,7 +465,7 @@ mass flow reproduces the published burn time.
 When the page is opened in a browser (or an embedding surface) that exposes
 `navigator.modelContext` or `document.modelContext` — [WebMCP](https://github.com/webmachinelearning/webmcp)'s
 proposal for letting an on-page agent call back into the app it is looking at — Orbitlab
-registers 17 tools — 13 in `src/mcp.ts` and four for the lessons in `src/lessons/mcp-tools.ts` —
+registers 18 tools — 13 in `src/mcp.ts` and five for the lessons in `src/lessons/mcp-tools.ts` —
 so that agent can read the flight and fly a mission the same way a person at the keyboard would.
 This is entirely optional: registration is best-effort, wrapped so a single failing tool or a
 browser with no WebMCP support never breaks the app, and every tool that needs a mission returns
@@ -443,12 +490,13 @@ browser with no WebMCP support never breaks the app, and every tool that needs a
 | `start_lesson` | `id` (from `list_lessons`) | Opens a lesson for the student — its mission, its mode and its locked settings — without launching; returns the task and the criteria. |
 | `get_lesson_result` | none | How the open lesson's flight is graded so far: each criterion's state and value, broken locks, awaited answers and hints shown (never an answer's expected value). Needs an open lesson; safe without one. |
 | `get_assessment_result` | none | The latest finished placement test or post-test: the score and level in each area, the misconceptions, the advice per lesson and the lesson to start at. Safe when no test has been taken. |
+| `check_results` | `results` (results files as JSON); optional `lessons` (the teacher's lesson files), `names` | The **Check results** page's re-check (T02): each flight record flown again with its journaled commands to the time it was graded, each design record's figures worked out again, and each record and criterion said to match, be borderline, differ or be impossible to re-fly, with the reason and whether each file's checksum holds. Nothing is sent anywhere. |
 
 No tool checks or changes the level (Watch, Explore, Engineer) the page is on.
 `set_flight_control`, `run_attitude_test` and `inject_control_fault` need a live six-DOF flight
 and answer `{ ok: false }` with a reason without one. `run_monte_carlo` runs the set of the
 Engineer level's Monte Carlo window, whichever level the page shows; leaving the Engineer level
-closes the window and the set flies on. Of the four lesson tools, `get_lesson_result` needs an
+closes the window and the set flies on. Of the five lesson tools, `get_lesson_result` needs an
 open lesson and answers `{ active: false }` without one.
 
 Every tool declares a JSON Schema for its input, MCP annotations (`readOnlyHint`,
@@ -480,14 +528,22 @@ src/i18n/       English, Russian and Thai dictionaries
 src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground's presets,
                 rules and tour, maneuvers, Lambert and Edelbaum (O02), the propellant budget
                 (O03), what satellites do (O04), the hand-off (S03); SGP4/SDP4 and the
-                two-line element format for real satellites (R01)
+                two-line element format for real satellites (R01); a satellite's eclipse,
+                power, attitude, link, camera and propellant (D06); revisit, contact and the
+                lowest altitude that lasts (D07)
 src/data/thai-satellites.ts  Thailand's satellites, each fact with its source (O04)
 src/provider/   offline and online data: the providers, datasets, snapshots (S04)
 src/data/parts.ts  the parts catalogue the vehicles are assembled from (D01)
 src/design/     the rocket builder's logic, no DOM: remix, assembly, warnings, budgets,
                 optimal staging, sizing, test stand, wind tunnel, readiness review, ratings
-                (D02–D05); the user's designs, kept locally and as files (S05)
-src/ui/build/   the Build section's screens (Watch, Explore, Engineer)
+                (D02–D05); the satellite model, its hand-offs to Orbit and Launch, and the
+                requirements' inverses and trade table (D06, D07); the user's designs, kept
+                locally and as files (S05)
+src/ui/build/   the Build section's screens (Watch, Explore, Engineer; rockets and satellites)
+src/lessons/    the lessons, their grading, the placement test, the scenario writer's logic,
+                the re-check (T01, T02) and the lesson packs (T03)
+public/lessons/ the placement test's vehicle photographs, the lesson packs and an example
+                design lesson
 src/mcp.ts      WebMCP tools
 public/data/    bundled data snapshots, each dated
 scripts/        snapshot refresh (npm run snapshots)

@@ -829,9 +829,16 @@ const kN = 1000;
 const RD107_1957: EngineSpec = { name: 'RD-107 (8D74PS)', count: 1, thrustSL: 793 * kN, thrustVac: 975 * kN, ispSL: 247.6, ispVac: 304.2, minThrottle: 0.7 };
 // The vacuum figures are Zak's; the sea level ones scale them by the ratio en.wikipedia gives (241 / 308 s).
 const RD108_1957: EngineSpec = { name: 'RD-108 (8D75PS)', count: 1, thrustSL: 715 * kN, thrustVac: 914 * kN, ispSL: 237.2, ispVac: 303.1, minThrottle: 0.7 };
-/** RD-107 8D74-1959 and RD-108 8D75-1959 as on Vostok-K (astronautix.com; en.wikipedia, Vostok-K). */
-const RD107_1959: EngineSpec = { name: 'RD-107 (8D74-1959)', count: 1, thrustSL: 793 * kN, thrustVac: 970 * kN, ispSL: 256, ispVac: 313, minThrottle: 0.7 };
-const RD108_1959: EngineSpec = { name: 'RD-108 (8D75-1959)', count: 1, thrustSL: 718 * kN, thrustVac: 912 * kN, ispSL: 248, ispVac: 315, minThrottle: 0.7 };
+/**
+ * RD-107 8D74 and RD-108 8D75 as on Vostok-K, the maker's figures (Energomash,
+ * on lpre.de, energomash/RD-107): 8D74 1,000 kN in vacuum, 814 kN at sea level,
+ * 312.7 / 255.7 s; 8D75 941 / 745 kN, 314.8 / 247.8 s — the family
+ * src/data/parts.ts gives `rd107-8d74k` and `rd108-8d75k`. astronautix's
+ * 970 and 912 kN burnt the strap-ons out 5 s and the core 15 s late
+ * (docs/PHYSICS.md §13.6).
+ */
+const RD107_1959: EngineSpec = { name: 'RD-107 (8D74)', count: 1, thrustSL: 814 * kN, thrustVac: 1000 * kN, ispSL: 255.7, ispVac: 312.7, minThrottle: 0.7 };
+const RD108_1959: EngineSpec = { name: 'RD-108 (8D75)', count: 1, thrustSL: 745 * kN, thrustVac: 941 * kN, ispSL: 247.8, ispVac: 314.8, minThrottle: 0.7 };
 /** RD-0109 of Blok E (en.wikipedia RD-0109, Blok E): 54.52 kN, 323.5 s, no verniers. */
 /** Rocketdyne A-7 of the Mercury-Redstone as flown on MR-3 (NASA TM X-53107, Table 8-1; vacuum thrust from thisdayinaviation.com). */
 const A7_REDSTONE: EngineSpec = { name: 'Rocketdyne A-7', count: 1, thrustSL: 350.8 * kN, thrustVac: 395.9 * kN, ispSL: 214.8, ispVac: 242.4 };
@@ -912,20 +919,58 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     // 38.36 m stack less Blok A and Blok E: estimated.
     fairing: { mass: 800, diameter: 2.7, length: 6.8, sepAltitude: 70e3, sepTime: 156, color: '#d9d9d6' },
     stages: [
-      // astronautix: strap-ons 43.3 t (3.71 t dry), the core 100.4 t (6.8 t dry)
-      { id: 'blokA', name: 'Blok A (core)', dryMass: 6800, propellantMass: 93600, engine: RD108_1959,
+      // astronautix: strap-ons 43.3 t (3.71 t dry), the core 100.4 t (6.8 t dry).
+      // Neither burnt to the last kilogram: the strap-ons were shut down at the
+      // end of their burn and the core by command, with propellant still aboard
+      // (Baturin, Novaya Gazeta 2021; the December 1960 flight's telemetry, Zak).
+      // What was left is carried as dry mass, as the Saturn V's S-IC is below:
+      // 330 kg a strap-on and 500 kg in the core (estimates — no figure is
+      // published; sized so that on the engines above the strap-ons burn out at
+      // the flown T+119 s and the core near the T+300 s quoted for Vostok 1).
+      // Liftoff mass unchanged.
+      { id: 'blokA', name: 'Blok A (core)', dryMass: 7300, propellantMass: 93100, engine: RD108_1959,
         diameter: 2.95, length: 28.75, color: '#d3d3cf', accentColor: '#6a6d70', profile: 'r7Core',
-        boosters: [{ id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3710, propellantMass: 39590,
+        boosters: [{ id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 4040, propellantMass: 39260,
           engine: RD107_1959, diameter: 2.68, length: 19.8, sepDelay: 1, conicalTop: true, color: '#d3d3cf' }] },
-      // Blok E: 7,775 kg, 1,440 kg dry (astronautix), 2.84 × 2.56 m; lit
-      // through the truss before Blok A is let go.
-      { id: 'blokE1961', name: 'Blok E (RD-0109)', dryMass: 1440, propellantMass: 6335, engine: RD0109,
+      // Blok E: 7,775 kg (astronautix), 1,340 kg of it dry (Zak, vostok_lv),
+      // 2.84 × 2.56 m; lit through the truss before Blok A is let go. 6,435 kg
+      // burns 374 s on the RD-0109, the only set of these figures that can run
+      // from the core's cut-off at about T+300 s to Blok E's at T+676 s (ESA);
+      // astronautix's 1,440 kg dry leaves 369 s.
+      { id: 'blokE1961', name: 'Blok E (RD-0109)', dryMass: 1340, propellantMass: 6435, engine: RD0109,
         diameter: 2.56, length: 2.84, sepDelay: 0, ignitionDelay: 0, color: '#d3d3cf' },
     ],
     sites: ['baikonur'], maxQ: 45e3, maxAccel: 60,
     crewCapable: true,
-    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
-    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 },
+    // No flown pitch kick is published: as for Sputnik it is the model's free
+    // parameter. 2.6° in point-mass and 3.92° as a rigid body (on the R-7's
+    // trim allowance, src/physics/rigid/runtime.ts) bring Blok E's cut-off to
+    // T+672.3 and 672.8 s, against the flown 676, with 103 and 92 kg of its
+    // propellant left, the plane held (`targetPlane`, below); the orbit is the
+    // guidance's aim either way (docs/PHYSICS.md §13.6).
+    guidanceDefaults: { kickAngle: 2.6, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3.92, kickDuration: 12, maxTurnRate: 0.5 },
+    // In its last ten seconds the closed-loop law pitches Blok E down at up to
+    // 3.8°/s, to level it at the perigee. Held to the six-DOF's usual 1°/s
+    // (sized for a stage that coasts on, turning, after its cut-off) it came
+    // to the cut-off 13° nose-up and climbing at 3 m/s, and the over-burn
+    // (watch-missions.ts) then added 6 m/s more: the perigee 6.6° before the
+    // insertion point, 95 km of landing away from the point-mass flight. Blok E
+    // cannot be relit and lets the spacecraft go ten seconds after its cut-off,
+    // so it is let follow its command at the 3°/s the point-mass attitude slews
+    // at (`DEFAULT_GUIDANCE.slewRate`); how fast its steering nozzles could turn
+    // it is not published (estimate). Both models then insert at the perigee.
+    ascentCommandRate: 3,
+    // The R-7's guidance held the plane it was launched in: its autonomous
+    // system kept "Normal and Lateral Stabilization" (NS and BS) and its radio
+    // system, from the ground, corrected "deviations from the desired
+    // trajectory" (Siddiqi, *Challenge to Apollo*, NASA SP-2000-4408, pp. 130
+    // and 137) — the centre of mass brought back onto the firing plane set at
+    // the pad, not a new plane chosen through wherever the rocket had got to.
+    // So the closed loop flies into the mission's plane when it fixes one:
+    // Vostok-1's, through Gagarin's Start at liftoff (src/ui/watch-missions.ts;
+    // docs/PHYSICS.md §13.6).
+    targetPlane: true,
     notes: 'The R-7 that flew Gagarin: the Sputnik core and strap-ons with Blok E, a small third stage hot-staged through a truss.',
   },
   {

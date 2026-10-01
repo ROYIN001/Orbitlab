@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { autoWarp, flightEnding, groundSpeed, missionOrbit, parkingMilestone, reachedOrbit, watchBeat, watchSummary, WATCH_BEATS, type WatchBeat } from '../src/ui/watch-logic';
+import { autoWarp, crewAloft, flightEnding, groundSpeed, heightNearFlight, missionOrbit, parkingMilestone, reachedOrbit, vostokLandings, watchBeat, watchSummary, WATCH_BEATS, type WatchBeat } from '../src/ui/watch-logic';
 import { OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
+import { WGS84_A } from '../src/physics/geodesy';
 import type { DebrisFrame, VisualFrame } from '../src/physics/frame';
 import type { SimEvent } from '../src/physics/simulation';
 import { en } from '../src/i18n/en';
+import { tFor } from '../src/i18n';
 import evidence from '../docs/history/audit-2026-09-27/live-evidence.json';
 
 function frame(o: Partial<VisualFrame> = {}): VisualFrame {
@@ -292,5 +294,157 @@ describe('the end of an orbital flight is its final orbit, not its parking orbit
     // a stage sent home that came down without landing
     const lost = frame({ t: 640, status: 'orbit', debris: [{ ...named('First stage'), outcome: 'impact' } as DebrisFrame] });
     expect(watchSummary(lost, [{ ...ev(600, 'evt.stageImpact'), params: { name: 'First stage' } }]).recovery).toEqual([{ name: 'First stage', outcome: 'lost' }]);
+  });
+});
+
+/**
+ * C01: Vostok-1 from its retro-fire to Gagarin on the ground, on event times
+ * like a flight's (illustrative: taken from an earlier point-mass flight in
+ * still air with the retro-fire level, not the mission as it now flies): the TDU-1's fuel out at
+ * T+4726.4 s, the straps at T+5340 and the cables at T+5344, the module's
+ * break-up at T+5582.7, the hatch at T+5841.6 and the seat at T+5843.6, the
+ * sphere's braking parachute at T+5860.1, Gagarin's seat separation and main
+ * at T+5875.2, the sphere's main at T+5881.7, his reserve at T+6018.6, the
+ * sphere down at T+6091.9 and Gagarin down at T+6615.4.
+ */
+describe('Vostok-1 home: the sphere and Gagarin', () => {
+  const log: SimEvent[] = [
+    ev(4686.4, 'evt.tduFire'), ev(4726.4, 'evt.retroShortfall'), ev(4728.2, 'evt.retroCutoff'),
+    ev(5340, 'evt.vostokStraps'), ev(5344, 'evt.vostokSeparation'), ev(5582.7, 'evt.moduleBreakup'),
+    ev(5841.6, 'evt.hatchOff'), ev(5841.6, 'evt.pilotChute'), ev(5843.6, 'evt.ejection'), ev(5860.1, 'evt.escapeDrogue'),
+    ev(5875.2, 'evt.seatSeparation'), ev(5877.4, 'evt.pilotMain'), ev(5881.7, 'evt.escapeMain'), ev(6018.6, 'evt.pilotReserve'),
+    ev(6091.9, 'evt.capsuleLanding'), { ...ev(6615.4, 'evt.pilotLanding'), params: { speed: 4.7, km: 0.23, lat: 49.925, lon: 44.647 } },
+  ];
+  const upTo = (t: number): SimEvent[] => log.filter((e) => e.t <= t + 1e-6);
+  /** Gagarin `h` m above the ellipsoid at the equator. */
+  const pilot = (h: number, alive = true): DebrisFrame => ({
+    id: 18, name: 'pilot', r: { x: WGS84_A + h, y: 0, z: 0 }, v: { x: 0, y: 0, z: 0 }, dir: { x: 1, y: 0, z: 0 }, alive, burning: false, createdAt: 5843.6,
+    visual: { kind: 'pilot', length: 1.8, diameter: 0.6, color: '#e8641e' }, outcome: alive ? undefined : 'landed',
+    crew: { phase: alive ? 'main' : 'landed', stabiliser: 0, main: 1, reserve: 0.6, seat: false, naz: false },
+  } as DebrisFrame);
+  /** The flight at `t`: the sphere's state as the return has it then, over ground at 0 m. */
+  function vostok(t: number, o: { altitude?: number; phase?: string; retro?: number; joint?: string; pilotAboard?: boolean; status?: VisualFrame['status']; debris?: DebrisFrame[] } = {}): VisualFrame {
+    const altitude = o.altitude ?? 100e3;
+    return frame({
+      t, status: o.status ?? 'abort', altitude, altitudeAGL: altitude, note: o.status === 'landed' ? 'vostokLanded' : 'capsuleReturn',
+      debris: o.debris ?? [],
+      abort: {
+        kind: 'return', capsule: 'vostok', mode: 'separation', phase: o.phase ?? 'fall', body: 'capsule', t0: 4684.2, maxG: 9.1, maxGT: 5733,
+        motors: { main: 0, control: 0, fairing: 0, softLanding: 0, retro: o.retro ?? 0 }, finsOpen: false, drogue: 0, main: 0, heatShield: false,
+        joint: o.joint ?? 'free', pilotAboard: o.pilotAboard ?? true, hatch: o.pilotAboard !== false, cause: 'evt.deorbitPlanned',
+      } as unknown as VisualFrame['abort'],
+    });
+  }
+  const at = (f: VisualFrame) => { const beat = watchBeat(f, upTo(f.t)); return { beat, warp: autoWarp(f, beat, upTo(f.t)) }; };
+
+  it('tells the burn, the spin it left, the ten minutes joined, the straps and the cables', () => {
+    expect(at(vostok(4700, { altitude: 252e3, retro: 1, joint: 'joined' }))).toEqual({ beat: 'vostokRetro', warp: 5 });
+    // the fuel out a second early: no main command, and the oxidiser venting spins the pair; at 2×
+    expect(at(vostok(4727, { altitude: 249e3, retro: 0.5, joint: 'joined' }))).toEqual({ beat: 'vostokSpin', warp: 2 });
+    expect(at(vostok(4750, { altitude: 247e3, joint: 'joined' }))).toEqual({ beat: 'vostokSpin', warp: 2 });
+    expect(at(vostok(4800, { altitude: 240e3, joint: 'joined' }))).toEqual({ beat: 'vostokCoast', warp: 20 });
+    // the straps, the few seconds on the cables and their parting: one moment, live
+    expect(at(vostok(5341, { altitude: 139e3, joint: 'tethered' }))).toEqual({ beat: 'vostokSeparation', warp: 1 });
+    expect(at(vostok(5350, { altitude: 137e3 }))).toEqual({ beat: 'vostokSeparation', warp: 1 });
+    expect(at(vostok(5363, { altitude: 133e3 }))).toEqual({ beat: 'vostokSeparation', warp: 1 });
+    // then the sphere and the module, apart, toward the air
+    expect(at(vostok(5400, { altitude: 125e3 }))).toEqual({ beat: 'vostokApart', warp: 10 });
+  });
+
+  it('tells the module breaking up, then the entry, and the hatch and the seat as one moment', () => {
+    expect(at(vostok(5590, { altitude: 76e3 }))).toEqual({ beat: 'vostokModuleBurn', warp: 2 });
+    expect(at(vostok(5610, { altitude: 71e3 }))).toEqual({ beat: 'vostokEntry', warp: 5 });
+    expect(at(vostok(5760, { altitude: 28e3 }))).toEqual({ beat: 'vostokEntry', warp: 2 });
+    // the hatch goes first, the seat two seconds later: the ejection from the hatch on, live
+    expect(at(vostok(5842, { altitude: 6.9e3 }))).toEqual({ beat: 'vostokEjection', warp: 1 });
+    expect(at(vostok(5850, { altitude: 5.6e3, pilotAboard: false }))).toEqual({ beat: 'vostokEjection', warp: 1 });
+    // the pilot out and the sphere not yet on its braking parachute: still his moment
+    expect(at(vostok(5859.9, { altitude: 4.1e3, pilotAboard: false }))).toEqual({ beat: 'vostokEjection', warp: 1 });
+  });
+
+  it('holds Gagarin\'s main over the sphere\'s, then tells the sphere\'s, his reserve, the sphere down', () => {
+    const out = { pilotAboard: false };
+    expect(at(vostok(5865, { ...out, altitude: 3.6e3, phase: 'drogue', debris: [pilot(4.6e3)] }))).toEqual({ beat: 'vostokDrogue', warp: 2 });
+    expect(at(vostok(5876, { ...out, altitude: 2.8e3, phase: 'drogue', debris: [pilot(4e3)] }))).toEqual({ beat: 'vostokPilotMain', warp: 1 });
+    // the sphere's main opens at T+5881.7, while his is told
+    expect(at(vostok(5885, { ...out, altitude: 2.4e3, phase: 'main', debris: [pilot(3.9e3)] }))).toEqual({ beat: 'vostokPilotMain', warp: 1 });
+    expect(at(vostok(5900, { ...out, altitude: 2e3, phase: 'main', debris: [pilot(3.8e3)] }))).toEqual({ beat: 'vostokMain', warp: 20 });
+    expect(at(vostok(6025, { ...out, altitude: 700, phase: 'main', debris: [pilot(2.95e3)] }))).toEqual({ beat: 'vostokPilotReserve', warp: 2 });
+    expect(at(vostok(6085, { ...out, altitude: 60, phase: 'main', debris: [pilot(2.6e3)] }))).toEqual({ beat: 'vostokMain', warp: 1 });
+    // down, with Gagarin still 2.6 km up: the moment live
+    expect(at(vostok(6095, { ...out, altitude: 0, phase: 'landed', debris: [pilot(2.58e3)] }))).toEqual({ beat: 'vostokSphereDown', warp: 1 });
+  });
+
+  it('follows Gagarin down by his own height, then lands him', () => {
+    const down = { pilotAboard: false, altitude: 0, phase: 'landed' };
+    expect(at(vostok(6120, { ...down, debris: [pilot(2.4e3)] }))).toEqual({ beat: 'vostokPilotDescent', warp: 20 });
+    expect(at(vostok(6540, { ...down, debris: [pilot(350)] }))).toEqual({ beat: 'vostokPilotDescent', warp: 5 });
+    expect(at(vostok(6600, { ...down, debris: [pilot(60)] }))).toEqual({ beat: 'vostokPilotDescent', warp: 1 });
+    // his height is over the ground the sphere rests on, not over the ellipsoid
+    const high = { ...vostok(6540, { ...down, debris: [pilot(350)] }), altitude: 200, altitudeAGL: 0 };
+    expect(heightNearFlight(high, crewAloft(high)!.r)).toBeCloseTo(150, 3);
+    expect(autoWarp(high, 'vostokPilotDescent', upTo(6540))).toBe(5);
+    const landed = vostok(6616, { ...down, status: 'landed', debris: [pilot(0, false)] });
+    expect(crewAloft(landed)).toBeNull();
+    expect(at(landed)).toEqual({ beat: 'vostokLanding', warp: 1 });
+    expect(at({ ...landed, t: 6700 })).toEqual({ beat: 'vostokLanding', warp: 1 });
+  });
+
+  it('ends only once Gagarin is down, and a few seconds after', () => {
+    const down = { pilotAboard: false, altitude: 0, phase: 'landed' };
+    // the sphere down for minutes, the flight still waiting for him ('abort')
+    expect(flightEnding(vostok(6200, { ...down, debris: [pilot(2e3)] }), log)).toBeNull();
+    const landed = (t: number) => vostok(t, { ...down, status: 'landed', debris: [pilot(0, false)] });
+    expect(flightEnding(landed(6620), log)).toBeNull();
+    expect(flightEnding(landed(6625.5), log)).toBe('splashdown');
+    // the sphere's landing alone never ends a flight whose pilot flew on his own
+    expect(flightEnding(landed(6625.5), upTo(6600))).toBeNull();
+    // a recording made before Gagarin flew on his own ends with the sphere
+    const old = log.filter((e) => e.key !== 'evt.pilotLanding');
+    expect(flightEnding(vostok(6105, { ...down, status: 'landed' }), old)).toBe('splashdown');
+    expect(flightEnding(vostok(6100, { ...down, status: 'landed' }), old)).toBeNull();
+  });
+
+  it('gives the end card both landings, each at its own time and place', () => {
+    const f = { ...vostok(6626, { pilotAboard: false, altitude: 0, phase: 'landed', status: 'landed', debris: [pilot(0, false)] }), lat: 49.927, lon: 44.648 };
+    expect(vostokLandings(f, log)).toEqual({
+      sphere: { t: 6091.9, lat: 49.927, lon: 44.648 },
+      pilot: { t: 6615.4, lat: 49.925, lon: 44.647, km: 0.23 },
+    });
+    // before he is down, and in a recording without him: the sphere alone
+    expect(vostokLandings({ ...f, t: 6200 }, log).pilot).toBeNull();
+    expect(vostokLandings(f, log.filter((e) => e.key !== 'evt.pilotLanding'))).toMatchObject({ sphere: { t: 6091.9 }, pilot: null });
+  });
+
+  it('has a label and a sentence for every beat of the way home, and never says the module burned up whole', () => {
+    const home: WatchBeat[] = ['vostokSpin', 'vostokApart', 'vostokModuleBurn', 'vostokDrogue', 'vostokPilotMain', 'vostokMain',
+      'vostokPilotReserve', 'vostokSphereDown', 'vostokPilotDescent', 'vostokLanding'];
+    for (const b of home) {
+      expect(en[WATCH_BEATS[b].label]).toBeTruthy();
+      expect(en[WATCH_BEATS[b].text]).toBeTruthy();
+    }
+    // it breaks apart; what burns is told per piece (the lightest), as the model flies them, never the module whole
+    expect(en['watch.say.vostokModuleBurn']).toMatch(/breaks apart/);
+    expect(en['watch.say.vostokModuleBurn']).not.toMatch(/breaks apart and burns|burns? up|burned up/);
+  });
+
+  it('tells 1961\'s places and distances as 1961\'s, in every language: the model\'s own are the HUD\'s and the end card\'s', () => {
+    // the 1.5 km, the ravine above the Volga and the first to meet him are history; the model's Gagarin comes down
+    // 5.5 km from its sphere and some 30 km from the monument (docs/PHYSICS.md §13.6)
+    const year = { en: /In 1961/, ru: /В 1961 году/, th: /ในปี 1961/ };
+    for (const lang of ['en', 'ru', 'th'] as const) {
+      for (const key of ['watch.say.vostokSphereDown', 'watch.say.vostokLanding']) expect(tFor(lang, key), `${lang} ${key}`).toMatch(year[lang]);
+    }
+    // both the report's distance and Gagarin's own, in the narration and on the end card
+    expect(en['watch.say.vostokLanding']).toMatch(/one and a half kilometres from the sphere by OKB-1's report, about four by his own reckoning/);
+    for (const lang of ['en', 'ru', 'th'] as const) expect(tFor(lang, 'watch.end.vostokFact'), lang).toMatch(/1[.,]5 (km|км|กม\.).*4 (km|км|กม\.)/);
+    // nothing on screen is said to lie below him that the model does not put there
+    expect(en['watch.say.vostokPilotDescent']).not.toMatch(/Below him/);
+    expect(tFor('ru', 'watch.say.vostokPilotDescent')).not.toMatch(/Под ним/);
+    expect(tFor('th', 'watch.say.vostokPilotDescent')).not.toMatch(/เบื้องล่างคือ/);
+    // Anna Takhtarova as every source has her, the local forester's wife (Gagarin's report; RussianSpaceWeb; KP 2011)
+    expect(en['watch.say.vostokLanding']).toMatch(/Anna Takhtarova, the local forester's wife/);
+    expect(tFor('ru', 'watch.say.vostokLanding')).toMatch(/жена местного лесника Анна Тахтарова/);
+    expect(tFor('th', 'watch.say.vostokLanding')).toMatch(/อันนา ทัคทาโรวา ภรรยาของเจ้าหน้าที่ป่าไม้ในท้องถิ่น/);
   });
 });

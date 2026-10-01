@@ -174,6 +174,27 @@ sized launchers that need more Δv than the planner allows for, is in [VALIDATIO
 | **T02** checking a student's file | The instructor's copy re-flies a student's submitted mission or design and checks it against the criteria. Results are compared with a tolerance, because `Math.*` can differ in the last bits between JavaScript engines. | A file flown on two engines (Node and Chromium) passes within the tolerance. |
 | **T03** lesson packs | Lessons matched to the Thai science curriculum (สสวท., IPST), built on the three sections. | Reviewed by the owner. |
 
+Built by 2026-10-01, but for T03's review. Build's Explore and Engineer levels have a satellite side
+(D06): a satellite is designed from NAPA-2, a THEOS-2-class imager or one of five classes of the
+catalogue, its eclipse, power, propulsion Δv, attitude control, link budget, camera and drag area
+worked out by cores of their own (`src/orbit/eclipse.ts`, `power.ts`, `attitude.ts`, `link.ts`,
+`imaging.ts`, `disposal.ts`; the drag area in `src/design/satellite-area.ts`), tested on a bench,
+sent into the Orbit section with no launch, or flown in Launch as the mission's own satellite (the
+owner's decision of 2026-09-29: a full inline spec, in a mission file of version 3 only when it
+carries one). *The New SMAD* is not free, so by
+the owner's default open sources stand in for it: SMAD's tables as TU Delft's course reader gives
+them, and two NASA manuscripts that appear to be chapters of the New SMAD itself (Starin and
+Eterno's on attitude control, Hull's on the end of a mission). D07 is the bench's **Start from
+requirements** page, a table of repeat-ground-track orbits held to D06 and O04. T01 and T02 are the
+lessons page's **Write a scenario** and **Check results**: a flight or a design lesson handed out as
+a file or a `?scenario=` link, and a class's results flown again on the teacher's computer, Node
+and Chromium held to tolerances fixed before; underneath, a live flight is now the headless flight
+bit for bit. T03's five lesson packs (IPST basic science, Earth and space, and physics; the RTAF
+Academy; Russia's speciality 24.05.06) are written, but their validation is the owner's review,
+which has not happened: they ship as drafts. What each met and missed, among them TM-113111's arcjet
+row, the propagator's Sun 0.45° from the orbit tools' and the class templates short of Δv, is in
+[VALIDATION.md](VALIDATION.md) §9 and [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
+
 ## Phase 5: The Moon
 
 | Item | What | Validation |

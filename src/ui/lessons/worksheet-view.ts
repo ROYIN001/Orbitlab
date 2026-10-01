@@ -26,6 +26,7 @@ import type { WsFlight } from '../../worksheets/flight-questions';
 import type { ProgressData } from '../../lessons/progress';
 import { siteName } from '../names';
 import { downloadBlob } from '../download';
+import { nameForFile } from '../file-name';
 
 export interface WorksheetHost {
   /** the flight on screen, and whether it has ended (the answers need all of it) */
@@ -118,7 +119,8 @@ class WorksheetView {
 
   private fileName(kind: 'worksheets' | 'key', sheets: Worksheet[], ext: string): string {
     const source = worksheetSource({ lesson: this.host.lesson() ?? undefined, flight: this.host.flight()!.flight }).replace(/[^a-z0-9]+/gi, '-').replace(/-+$/, '').slice(0, 60);
-    const code = this.form.classCode.replace(/[^\p{L}\p{N}]+/gu, '') || 'class';
+    // W: a Thai class code keeps its vowels and tones («ห้อง 5/1» → ห้อง51)
+    const code = nameForFile(this.form.classCode, '') || 'class';
     return `orbitlab-${kind}-${source}-${code}-${sheets[0].lang}.${ext}`;
   }
 

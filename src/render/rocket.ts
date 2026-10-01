@@ -15,7 +15,7 @@ import { interstageHeight, stackLayout } from '../physics/frame';
 import { buildSatellite, type SatelliteView } from './satellite';
 import { Plume, type PlumeKind } from './plume';
 import { bellGeometry, bellTexture, bodyBump, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout, type NozzlePos } from './liveries';
-import { clamp01, seedFromString } from './noise';
+import { clamp01, seedFromString, smoothstep } from './noise';
 import { vehicleDataId } from '../data/vehicles';
 import { disposeObject } from './dispose';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
@@ -25,6 +25,13 @@ import {
   AftSkirt, CrewedTop, FrostCoat, R7_BOOSTER_GAP, R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7BoosterTip, r7CoreBase,
   r7CoreProfile, r7CoreTop, r7RudderGeometry, r7TrussGeometry, buildSoyuzMs,
 } from './soyuz';
+import { retroAttitude, VOSTOK_RETRO_TURN } from './vostok';
+import { VOSTOK_CAPSULE } from '../physics/rigid/escape';
+
+/** The rocket's model axes onto a rigid body's (+Y along body x), as src/main.ts turns them. */
+const TURN_MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+/** C01: Vostok's drawing in orbit (its module along −Y, render/satellite.ts) end over end into the return's (+Y). */
+const TURN_FLIP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
 
 export interface RocketEnv {
   /** 0 = full day, 1 = night at the vehicle; scales the exhaust's own light */
@@ -199,6 +206,14 @@ export class RocketView {
   private readonly humidity: number;
   private readonly crewed: boolean;
   private satellite: SatelliteView;
+  /** C01: Vostok's turn for its retro-fire, mission time s (`VOSTOK_RETRO_TURN`), when it flies home from orbit */
+  private readonly retroTurn: { from: number; to: number } | null;
+  private readonly turnQ = new THREE.Quaternion();
+  private readonly turnInv = new THREE.Quaternion();
+  private readonly turnP = new THREE.Vector3();
+  private readonly turnCg = new THREE.Vector3();
+  private readonly turnR = new THREE.Quaternion();
+  private readonly turnPole = new THREE.Vector3();
   private materials: THREE.Material[] = [];
   private textures: THREE.Texture[] = [];
   private matCache = new Map<string, THREE.MeshStandardMaterial>();
@@ -212,11 +227,16 @@ export class RocketView {
   private engineQuaternion = new THREE.Quaternion();
   private engineParentInverse = new THREE.Quaternion();
 
-  /** @param opts.humidity the launch site's air, 0–1: how thick the vapour cone is (`SITE_HUMIDITY`) */
-  constructor(spec: VehicleSpec, sat: SatelliteSpec, opts: { humidity?: number } = {}) {
+  /**
+   * @param opts.humidity the launch site's air, 0–1: how thick the vapour cone is (`SITE_HUMIDITY`)
+   * @param opts.deorbit the mission time a return from the orbit starts at (`OrbitSpec.deorbit.time`), s
+   */
+  constructor(spec: VehicleSpec, sat: SatelliteSpec, opts: { humidity?: number; deorbit?: number } = {}) {
     this.spec = spec;
     this.crewed = !!sat.crewed;
     this.humidity = opts.humidity ?? 0.6;
+    const at = opts.deorbit;
+    this.retroTurn = sat.descent === 'vostok' && at !== undefined ? { from: at + VOSTOK_RETRO_TURN.from, to: at + VOSTOK_RETRO_TURN.to } : null;
     // One source of truth for the stacking geometry. `stackLayout` already
     // computes both the per-stage height and the diameter of whatever sits on
     // top of each stage; this view used to re-derive the "next non-spacecraft
@@ -870,17 +890,47 @@ export class RocketView {
       // (C01: Apollo's drawing first, which sets its height: the stack, or Eagle alone)
       this.satellite.setApollo?.(frame.apollo, frame.t, true);
       satG.position.y = this.satellite.height / 2;
+      if (this.retroTurn) this.turnForRetro(frame);
       const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;
       this.satellite.setDeploy(p);
       satG.visible = true;
     } else {
       // a payload flown in the open stands on the stage; one in a fairing half a metre up inside it
       satG.position.y = top + this.satellite.height / 2 + (this.spec.exposedPayload ? 0 : 0.5);
+      if (this.retroTurn) satG.quaternion.identity();
       this.satellite.setDeploy(0);
       this.satellite.setJettisoned?.(frame.jettisoned);
       this.satellite.setApollo?.(frame.apollo, frame.t, false);
       satG.visible = this.spec.exposedPayload ? true : !this.spec.fairing ? false : !frame.fairingAttached;
     }
+  }
+
+  /**
+   * C01: Vostok turned for its retro-fire (`VOSTOK_RETRO_TURN`): from the attitude the frame flies it in (this
+   * group's, which the app has set) to the one the return starts in (`retroAttitude`), the instrument module
+   * ahead, and to where the return draws the pair from (render/escape.ts, its model +Y the body's +x): the
+   * sphere's pole on the module's side `cgAbove` ahead of the sphere's CG, which is the frame's position (this
+   * group's origin, or the rigid body's render offset from it).
+   */
+  private turnForRetro(frame: VisualFrame): void {
+    const satG = this.satellite.group, turn = this.retroTurn!;
+    const u = smoothstep(turn.from, turn.to, frame.t);
+    if (u <= 0) { satG.quaternion.identity(); return; }
+    const q = retroAttitude(frame.r, frame.v);
+    this.turnR.set(q.x, q.y, q.z, q.w);
+    // the return's model attitude in the world, the satellite's model turned end over end into it, seen from this group
+    this.turnInv.copy(this.group.quaternion).invert();
+    this.turnQ.copy(this.turnR).multiply(TURN_MODEL_TO_BODY).multiply(TURN_FLIP).premultiply(this.turnInv);
+    // the sphere's pole there, cgAbove along the body's +x from the CG (in this group's model axes: body x, y, z
+    // are +Y, −X, +Z, so the CG is the render offset's (y, −x, −z) from the origin)
+    const o = frame.rigid?.renderOffsetBody;
+    this.turnCg.set(o ? o.y : 0, o ? -o.x : 0, o ? -o.z : 0);
+    this.turnP.set(VOSTOK_CAPSULE.cgAbove, 0, 0).applyQuaternion(this.turnR).applyQuaternion(this.turnInv).add(this.turnCg);
+    // less the pole's own place on the turned satellite: where the satellite's centre goes
+    this.turnPole.set(0, this.satellite.junctionY ?? 0, 0).applyQuaternion(this.turnQ);
+    this.turnP.sub(this.turnPole);
+    satG.quaternion.identity().slerp(this.turnQ, u);
+    satG.position.lerp(this.turnP, u);
   }
 
   /** Approximate current stack height (for camera framing), m. */

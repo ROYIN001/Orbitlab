@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseNumberField, parseUtcDateTime, validateConfigInput, guidanceLimits, type ConfigInput } from '../src/config/validation';
+import { flownRecord, ownFlight, parseNumberField, parseUtcDateTime, validateConfigInput, guidanceLimits, type ConfigInput } from '../src/config/validation';
+import { watchMissionSettings } from '../src/ui/watch-missions';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { ORBIT_PRESETS, orbitById } from '../src/data/orbits';
 import { DEFAULT_FAILURE } from '../src/physics/defaults';
@@ -147,5 +148,43 @@ describe('recovery plans and suborbital targets', () => {
     expect(field(flight5({ orbit: { ...flight5().orbit, perigee: -6400e3 } }))).toEqual(['setup.perigee:minimum']);
     // an orbit still needs its payload and a perigee above the air
     expect(field(flight5({ orbit: { ...orbitById('leo') } }))).toEqual(['setup.payloadMass:minimum']);
+  });
+});
+
+describe('a historical flight\'s record of how it flew (C01: Vostok-1)', () => {
+  const vostok = (): ConfigInput => {
+    const s = watchMissionSettings('vostok1');
+    return { ...s, orbit: { ...s.orbit } };
+  };
+  const field = (input: ConfigInput) => validateConfigInput(input).map((i) => `${i.field}:${i.code}`);
+
+  it('takes no suborbital target: Vostok\'s sphere is timed for a return from orbit, not a lob, and a deorbit needs an orbit', () => {
+    const lob = (orbit: Partial<ConfigInput['orbit']>): ConfigInput => ({ ...vostok(), orbit: { ...vostok().orbit, perigee: -15e3, apogee: 211e3, suborbital: true, ...orbit } });
+    // the capsule is no lob's, with or without the return: it fired 2 s after the separation and came down in the Pacific
+    expect(field(lob({}))).toEqual(['setup.perigee:suborbital']);
+    expect(field(lob({ deorbit: undefined }))).toEqual(['setup.perigee:suborbital']);
+    // Mercury's is, from its own Redstone; but not with a return from orbit on it
+    const mr3 = watchMissionSettings('mr3');
+    expect(field(mr3)).toEqual([]);
+    expect(field({ ...mr3, orbit: { ...mr3.orbit, deorbit: { time: 600 } } })).toEqual(['setup.perigee:suborbital']);
+    // the flight as flown is valid
+    expect(field(vostok())).toEqual([]);
+  });
+
+  it('goes with an edit (`ownFlight`), the orbit\'s own fields and node kept; an orbit without one is untouched', () => {
+    const orbit = vostok().orbit;
+    expect(flownRecord(orbit)).toBe(true);
+    const own = ownFlight(orbit);
+    expect(flownRecord(own)).toBe(false);
+    for (const key of ['aim', 'backupCutoff', 'extremes', 'deorbit'] as const) expect(own, key).not.toHaveProperty(key);
+    expect(own).toEqual({ ...orbit, aim: undefined, backupCutoff: undefined, extremes: undefined, deorbit: undefined });
+    expect(own.raanMode).toBe('fixed');
+    expect(own.raan).toBe(326.653);
+    // never written to
+    expect(orbit.aim).toEqual({ apogee: 230e3 });
+    const leo = { ...orbitById('leo') };
+    expect(ownFlight(leo)).toBe(leo);
+    const apollo = watchMissionSettings('apollo11').orbit;
+    expect(ownFlight(apollo)).toBe(apollo);
   });
 });

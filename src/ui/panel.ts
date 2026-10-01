@@ -47,7 +47,7 @@ import { runTuneJob } from '../physics/tune-job';
 import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
 import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes, zoneName } from './names';
-import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
+import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHomeCapable, guidanceLimits, ownFlight, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
 import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionSettings } from './watch-missions';
@@ -856,8 +856,8 @@ export class SetupPanel {
         { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
         { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
       ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
-      if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
-      if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
+      if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { this.ownFlight(); s.orbit.raan = v; this.changed(); }, 1, 0, 360));
+      if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { this.ownFlight(); s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
     }
     if (this.rendezvousAvailable()) s3.appendChild(this.rendezvousOption());
 
@@ -1239,6 +1239,8 @@ export class SetupPanel {
     if (!carries(v, missionSatellite(s))) { s.satelliteId = 'crew'; s.satelliteSpec = undefined; s.payloadMass = satelliteById('crew').mass; }
     s.recoveryPlan = undefined;
     s.padId = undefined;
+    // C01: another rocket is another flight: a historical one's record of how it flew goes (`ownFlight`)
+    this.ownFlight();
     // only a ship that flies itself home can take a suborbital target
     if (s.orbit.suborbital && !flightHomeCapable(spec)) s.orbit = this.orbitalAgain(s.orbit);
     this.render();
@@ -1478,8 +1480,9 @@ export class SetupPanel {
     const target = resolveTarget(s.orbit, site, s.launchTime);
     row(t('setup.tab.vehicle'), vehicle.name);
     row(t('setup.site'), siteName(site));
-    row(t('setup.tab.payload'), `${satelliteName(missionSatellite(s))} · ${num(s.payloadMass)} kg`);
-    row(t('setup.tab.orbit'), `${num(Math.round(s.orbit.perigee / 1000))} × ${num(Math.round(s.orbit.apogee / 1000))} km · ${(target.inclination * RAD).toFixed(1)}°`);
+    // W: each figure keeps its unit on its line ("4,150 kg" broke before "kg" in the 1440 px column)
+    row(t('setup.tab.payload'), `${satelliteName(missionSatellite(s))} · ${num(s.payloadMass)}\u00a0kg`);
+    row(t('setup.tab.orbit'), `${num(Math.round(s.orbit.perigee / 1000))} × ${num(Math.round(s.orbit.apogee / 1000))}\u00a0km · ${(target.inclination * RAD).toFixed(1)}°`);
     if (s.failure.mode !== 'none') row(t('setup.challenge.title'), t(`setup.fail.${s.failure.mode}`));
     if (s.dynamics?.model === 'sixDof') row(t('setup.weather'), t(`setup.dynamics.${s.dynamics.wind}`));
     section.append(box, this.el('p', 'field-note', t('setup.flying.note')));
@@ -2095,7 +2098,21 @@ export class SetupPanel {
     ].join(' · ');
   }
 
+  /**
+   * C01: an edited flight is a different flight. A historical one's record of
+   * how it flew — Vostok-1's planned orbit and over-burn (`OrbitSpec.aim`,
+   * `backupCutoff`), its figures' measure (`extremes`), its return in that
+   * day's wind (`deorbit`) — would steer the new one somewhere else, and goes
+   * (`ownFlight`, src/config/validation.ts, which WebMCP's edits go through
+   * too). Every edit of the orbit (`customise`, and the node's fields) and of
+   * the vehicle (`pickVehicle`) calls it; a new payload brings its own orbit.
+   */
+  private ownFlight(): void {
+    this.state.orbit = ownFlight(this.state.orbit);
+  }
+
   private customise(): void {
+    this.ownFlight();
     if (this.state.orbitId !== 'custom') {
       this.state.orbitId = 'custom';
       const custom = orbitById('custom');

@@ -47,7 +47,7 @@ import { STATION_KEY } from '../orbit/applications-panel';
 import { button, el, hhmm, num } from '../orbit/dom';
 import { field, numberBox, select } from './explore-level';
 import { toggle } from './satellite-controls';
-import { sayFig } from './satellite-text';
+import { keepUnits, sayFig } from './satellite-text';
 import type { SatelliteWorkspace } from './satellite-workspace';
 import './requirements.css';
 
@@ -429,7 +429,7 @@ export class RequirementsPage {
         const li = el('li', 'bd-say bd-say-fail');
         const values: Record<string, string> = {};
         for (const [k, v] of Object.entries(i.values ?? {})) values[k] = num(v, v % 1 ? 2 : 0);
-        li.append(el('span', 'bd-say-body', `${t(FIELD_KEY[i.field])}: ${t(i.key, values)}`));
+        li.append(el('span', 'bd-say-body', keepUnits(`${t(FIELD_KEY[i.field])}: ${t(i.key, values)}`)));
         list.append(li);
       }
       parts.push(list);
@@ -606,7 +606,8 @@ export class RequirementsPage {
     const held = r.template.propulsion ? ['build.req.note.held'] as const : [];
     for (const key of ['build.req.note.binds', 'build.req.note.gsd', 'build.req.note.rate', 'build.req.note.power', 'build.req.note.life',
       'build.req.note.disposal', ...held, 'build.req.note.revisit', 'build.req.note.mass'] as const) {
-      const li = el('li', undefined, t(key));
+      // each figure a note writes stays with its unit on a phone ("100 %"; task W)
+      const li = el('li', undefined, keepUnits(t(key)));
       if (key === 'build.req.note.mass' || key === 'build.req.note.power') li.append(' ', el('em', 'bs-est', t('build.stat.estimate')));
       notes.append(li);
     }

@@ -14,6 +14,7 @@ import { RAD } from '../../physics/constants';
 import type { Fig, FieldUnit, SatLevel, SatText, SatValue } from '../../design/satellite-model';
 import { el, hhmm, num, sci } from '../orbit/dom';
 import { unbroken } from './figures';
+import { keepUnits } from '../keep-units';
 
 /** A distance, m, in m or km with the decimals its size needs. */
 function distance(v: number): string {
@@ -111,6 +112,9 @@ export function fieldUnitText(u: FieldUnit): string {
   }
 }
 
+/** Numbers kept with their units (task W); shared with the lesson strip, so in src/ui/keep-units.ts. */
+export { keepUnits };
+
 const sayValue = (v: SatValue): string => (typeof v === 'string' ? v : 'key' in v ? t(v.key) : sayFig(v));
 
 /** The sentence alone, its numbers filled in. */
@@ -130,7 +134,7 @@ export function satTextItem(s: SatText): HTMLLIElement {
   const glyph = el('span', 'bd-say-glyph', LEVEL_GLYPH[s.level]);
   glyph.setAttribute('aria-hidden', 'true');
   tag.append(glyph, ` ${t(LEVEL_KEY[s.level])}`);
-  li.append(tag, el('span', 'bd-say-body', saySat(s)));
+  li.append(tag, el('span', 'bd-say-body', keepUnits(saySat(s))));
   if (s.detail) {
     const more = el('details', 'bd-say-detail');
     more.append(el('summary', undefined, t('build.ex.detail')));
@@ -153,7 +157,8 @@ export function figureTable(rows: readonly (readonly [string, string, string?])[
   const dl = el('dl', 'bsat-dl');
   for (const [label, value, note] of rows) {
     const row = el('div', 'bsat-row');
-    const dt = el('dt', undefined, label);
+    // a label's own figure ("Diffraction limit (550 nm)") stays with its unit too (W)
+    const dt = el('dt', undefined, keepUnits(label));
     if (note) dt.append(' ', el('em', 'bs-est', note));
     // each figure keeps its number and unit on one line; a pair ("520 km × 540 km", "35 min (37 %)") may part between its figures
     const dd = el('dd');

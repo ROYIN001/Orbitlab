@@ -17,7 +17,8 @@ import { runRecheckJob } from '../../lessons/recheck-job';
 import { localText, unitText } from '../../lessons/text';
 import type { CatalogLesson, Criterion, DesignCriterion } from '../../lessons/types';
 import { designMeasureName } from './design-text';
-import { downloadBlob } from '../download';
+import { downloadBlob, spreadsheetCsv } from '../download';
+import { keepUnits } from '../keep-units';
 import { issueSentence } from './author-view';
 
 export interface CheckHost {
@@ -66,7 +67,9 @@ function valueText(v: number | null | undefined, unit: string, tol: number | nul
   if (v === null || v === undefined || !Number.isFinite(v)) return '—';
   const digits = tol && tol > 0 ? Math.min(9, Math.max(0, Math.ceil(-Math.log10(tol)) + 1)) : 3;
   const text = v.toLocaleString(getLang(), { maximumFractionDigits: digits, useGrouping: false });
-  // one unit with its number: a no-break space, and no line break after a slash ("ม./วินาที" broke there on a phone)
+  // one unit with its number: a no-break space, and no line break after a slash ("ม./วินาที" broke there on a phone);
+  // an angle's ° straight after it, as the app writes angles ("97,52°", W)
+  if (unit === '°') return `${text}°`;
   return unit ? `${text}\u00a0${unitText(unit).replace(/\//g, '/\u2060')}` : text;
 }
 
@@ -132,7 +135,8 @@ class CheckView {
       const state = !f.readable ? t('lesson.check.unreadable') : sum === true ? t('lesson.check.checksumOk') : sum === false ? t('lesson.check.checksumBad') : '';
       const li = el('li', !f.readable || sum === false ? 'fail' : undefined);
       li.append(el('b', undefined, f.name ?? String(i + 1)), document.createTextNode(` — ${f.student ?? t('lesson.check.noName')}`));
-      if (f.exportedAt) li.append(document.createTextNode(`, ${t('lesson.check.exported', { date: f.exportedAt.slice(0, 16).replace('T', ' ') })}`));
+      // W: a time stays whole with its "UTC" on a phone ("12:10 | UTC" broke at 360 px)
+      if (f.exportedAt) li.append(document.createTextNode(`, ${keepUnits(t('lesson.check.exported', { date: f.exportedAt.slice(0, 16).replace('T', ' ') }))}`));
       if (state) li.append(el('span', 'recheck-sum', ` · ${state}`));
       list.append(li);
     });
@@ -209,7 +213,7 @@ class CheckView {
       csv.type = 'button';
       csv.addEventListener('click', () => {
         const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-        downloadBlob(new Blob([recheckCsv(this.check!)], { type: 'text/csv' }), `orbitlab-recheck-${stamp}.csv`);
+        downloadBlob(new Blob([spreadsheetCsv(recheckCsv(this.check!))], { type: 'text/csv;charset=utf-8' }), `orbitlab-recheck-${stamp}.csv`);
       });
       box.append(csv);
     }
@@ -280,7 +284,7 @@ class CheckView {
       el('span', undefined, lesson ? `${lessonNumber(lesson)} ${localText(lesson.title)}` : r.lessonId));
     // the record's own time, as the file keeps it: UTC, as the file's "saved" time says
     const design = r.kind === 'design';
-    const what = el('span', 'recheck-what', `${r.which.map((w) => t((design ? DESIGN_WHICH_KEY : WHICH_KEY)[w])).join(' + ')} · ${r.at.slice(0, 16).replace('T', ' ')} UTC`);
+    const what = el('span', 'recheck-what', `${r.which.map((w) => t((design ? DESIGN_WHICH_KEY : WHICH_KEY)[w])).join(' + ')} · ${keepUnits(`${r.at.slice(0, 16).replace('T', ' ')} UTC`)}`);
     const said = (v: string): string => t(VERDICT_KEY[v] ?? v);
     const verdict = el('span', 'recheck-verdict', r.recheckedVerdict ? `${said(r.recordedVerdict)} → ${said(r.recheckedVerdict)}` : said(r.recordedVerdict));
     head.append(el('span', `recheck-chip ${r.status}`, statusText(r.status, design)), who, what, verdict);

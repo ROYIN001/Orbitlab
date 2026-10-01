@@ -19,7 +19,7 @@ Later, Falcon Heavy took the same published first-stage masses and Falcon 9's ma
 (§4, F11), and Proton-M its published stage propellant loads and, with Angara-A5, its operator's
 fairing jettison rule (§4, F14). None of these was fitted.
 
-Status on 2026-09-28:
+Status on 2026-10-01:
 
 | vehicle | reference | state |
 | --- | --- | --- |
@@ -48,6 +48,11 @@ Status on 2026-09-28:
 | Computed payload ratings (D03, D04) | Eight published ratings (Soyuz-2.1a, Falcon 9, Long March 2D, Vega-C, Ariane 64, Electron), ±25 % fixed before | Seven met; Vega-C's LEO 31 % high, missed and unexplained; the method changed after its first GTO results (§8), 2026-09-28 |
 | Six-DOF for a vehicle of one's own (D03) | The point-mass thrust; slender-body theory; the thick-walled tube; the 21 six-DOF fingerprints | Four fixes and two found in review, each with a test that failed first; the catalogue unchanged; still experimental (§8), 2026-09-28 |
 | Sizing (D05) | The planner's own ascent cost; sanity bounds from launchers of the class; point-mass flights | The design Δv is the planner's exactly; the 1 t launcher plausible; but none of the sized launchers tried reaches orbit at its design Δv (a finding) (§8), 2026-09-28 |
+| Satellite subsystems (D06) | SMAD's tables and worked examples as the TU Delft reader gives them; Rickman (TFAWS 2023); Starin & Eterno and Hull (NTRS, chapters of the New SMAD); MarCO (JPL DESCANSO 18), Palo et al. 2014, ITU-R P.525-5; ESA, NASA and eoPortal for Sentinel-2, Landsat 8 and THEOS-2; NASA TM-113111; IADC-02-01 Rev. 4 | All met but one, recorded (TM-113111's arcjet row, 0.11 kg under); five slips in Starin & Eterno, four in Palo and three in Valispace recorded; the propagator's Sun 0.45° from the orbit tools' (a finding); four bugs found in review fixed (§9), 2026-10-01 |
+| The satellite model, and a designed satellite in Orbit and Launch (D06) | The cores themselves; the catalogue satellites' own flights; the design's orbit | Every figure the cores' own; copies of catalogue satellites fly their recordings exactly, point mass and six-DOF; NAPA-2 and THEOS-2 designs reach their orbits within 3.0 km and 0.001°, the node 2.6° off by the true and the mean Sun (a finding); the communications, weather and science templates short of Δv (findings) (§9), 2026-10-01 |
+| Requirements to an orbit and a satellite (D07) | D06 and O04; USGS's and ESA's repeat cycles; TU Delft's data-volume example | All met; D07's closed-form eclipse 0.12 % from D06's sampled one, its array and battery sized with the payload off in the shadow; a repeat cycle off a sun-synchronous plane found not to be whole days (fixed) (§9), 2026-10-01 |
+| The instructor's re-check (T01, T02) | The same flights and designs in Node and in Chromium; a live flight against the headless one | Live equals headless bit for bit; Node and Chromium within 1.4e-12 s and 1.4e-11 m/s on flights and 5.4e-15 relative on designs, against tolerances fixed before; a two-day flight graded a step late across engines, found and fixed (§9), 2026-10-01 |
+| Lesson packs (T03) | The owner's review, not yet done; the worked solutions flown and graded | 17 lessons in five packs, drafts; two tolerances set after a flight, said so (§9), 2026-10-01 |
 
 ## 1. Method
 
@@ -3277,7 +3282,844 @@ where it is logic, and in Chromium (Playwright, software rendering) where it is 
   porkchop plot), a tour's figures covered by its own buttons, and the phone layouts of the
   drawing, the sizing and staging tables and the tunnel's labels.
 
-## 9. Re-running
+## 9. The satellite builder and instructor mode (D06, D07, T01–T03)
+
+Phase 4 ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md), D06, D07, T01–T03) adds a satellite builder to
+the Build section and an instructor's mode to the lessons. Unlike the rocket builder, the satellite
+needs physics of its own: the eclipse, the power, the attitude, the radio link, the camera and the
+propellant budget are cores of their own (`src/orbit/eclipse.ts`, `power.ts`, `attitude.ts`,
+`link.ts`, `imaging.ts`, `disposal.ts`; the drag area in `src/design/satellite-area.ts`), each held
+to published worked examples. The satellite model (`src/design/satellite-model.ts`) only calls them.
+D07 (`src/orbit/coverage.ts`, `lifetime-altitude.ts`, `src/design/requirement-*.ts`) is held to
+D06 and O04, and the instructor's re-check (T02, `src/lessons/recheck.ts`) to the same flight on
+another JavaScript engine.
+
+The roadmap named *Space Mission Engineering: The New SMAD* for D06's checks. It is not free, so by
+the owner's default (2026-09-29) open sources stand in: B.T.C. Zandbergen's TU Delft course reader,
+*Spacecraft bus design and sizing* (2020, [PDF](https://repository.tudelft.nl/file/File_124a068a-158f-4b40-a44f-9ba407a14845)),
+which reproduces SMAD's tables, and two NASA manuscripts on NTRS that appear to be chapters of the
+New SMAD itself: S.R. Starin and J. Eterno's "Attitude Determination and Control Systems", §19.1
+([NTRS 20110007070](https://ntrs.nasa.gov/api/citations/20110007070/downloads/20110007070.pdf)), and
+S.M. Hull's "End of Mission Considerations", chapter 30
+([NTRS 20130000278](https://ntrs.nasa.gov/api/citations/20130000278/downloads/20130000278.pdf)). Every
+other source is linked where it is used.
+
+The bounds were fixed before each comparison unless the text says otherwise. Most cores went in as
+one commit with their tests, so git cannot show that a bound came before its first run; the
+reviewers said so each time. Where a bound or a test's premise was written after a result, it says
+so here and in the test.
+
+### What did not change
+
+- **The satellites the launches fly.** Before any satellite code was written, `SATELLITES`
+  (`src/data/satellites.ts`, 11 entries) was written to `tests/fixtures/satellites-pre-d06.json` at
+  c5e2437 with its keys sorted. `tests/d06-satellites-identity.test.ts` reads it as text and
+  compares, as the D01 test does, so `vitest -u` cannot rewrite it. A second test rejects anything
+  JSON would hide, and a third holds the key order by a SHA-256 of the unsorted JSON (3 295
+  characters). Until then no test pinned `SATELLITES` directly: the D01 fingerprints fly only the
+  CubeSat dispenser, and a change to a satellite's size showed only in the six-DOF heavy suite.
+- **The built-in flights.** The D01 identity test, its 27 point-mass fingerprints and the
+  satellites' fixture passed untouched at every stage of Phase 4, and the 21 six-DOF fingerprints
+  (`npm run test:heavy`) on the tracks that changed the flight's code for a satellite or the live
+  stepping (C2, E1). No fingerprint or golden was re-recorded. When events came to carry the
+  flight's state (below, "Grading the orbit at the flight's end"), nothing moved: both kinds of
+  fingerprint hash an event's key and time only (`tests/flex-golden-harness.ts`), and a saved
+  reference flight drops the state. The six-DOF fingerprints were run again for this section at
+  120a4f0, after that change: the 21 fingerprints and the test that every catalogue vehicle has one,
+  22 of 22, passed in 343.6 s, and again in review in 306.5 s.
+- **A copied satellite flies as the original** (`tests/d06-custom-satellite.test.ts`,
+  `tests/heavy/custom-satellite-sixdof.test.ts`). A mission may carry its satellite inline
+  (`MissionConfig.satelliteSpec`, the owner's option B), as S02's missions carry a rocket. A deep
+  copy of the communications satellite under a new id, on Falcon 9 from the Cape to GEO for a day
+  (its three apogee burns on its own 490 N engine included), and of the crewed Soyuz MS, on
+  Soyuz-2.1a from Baikonur to docking, fly the same frames, events, telemetry, plan and elements as
+  the originals, point mass and six-DOF, and through the flight worker's structured clone. The
+  criterion, exact equality, was fixed before the first run. The one thing set apart is the events'
+  `satId`, the designer's label, which the code showed and a probe confirmed before the test was
+  written. **Met.** A copy given 980 N shows 980 N in its telemetry against the original's 490 N,
+  so the spec's own figures fly. The heavy pair took 1 292 s and, in review, 1 379 s, on a shared
+  machine.
+
+### Eclipses and the β angle (D06)
+
+`src/orbit/eclipse.ts` takes the Sun from `sunDirectionEci` and the shadow as `inSunlight`'s
+cylinder of radius `R_EARTH`, the pair held to Skyfield's shadow edges of the ISS (§6). The closed
+form uses the same cylinder. `tests/eclipse.test.ts`:
+
+| check | reference | bound, fixed first | result |
+| --- | --- | --- | --- |
+| V-E1: period and maximum eclipse at β = 0, all 41 rows of the table | SMAD's "Earth Satellite Parameters", TU Delft reader App. H, p. 274 | ±0.01 min | met: worst 0.0049 min (the period at 250 km), 0.0046 min (the eclipse at 1 000 km) |
+| V-E2: eclipse fraction at 408 km, β 0–65° | S.L. Rickman, "Introduction to On-Orbit Thermal Environments", TFAWS 2023, slide 118 ([PDF](https://tfaws.nasa.gov/wp-content/uploads/16.On-Orbit-Thermal-Environments-TFAWS-2023_SRickman.pdf)), read off the chart by pixel (1 px = 0.0019) | ±0.005 | met: worst 0.0010, at 30° |
+| V-E2: the β where the eclipse ends at 408 km | the same curve, 70.1° | ±0.3° | met: 70.03° |
+| β against Rickman's closed form (slide 96), the node held and drifting under J2 | identity | 1e-12 rad | met |
+| V-E3: `inSunlight` sampled against the closed form, 16 low orbits at 408 and 700 km | the closed form at the β in the middle of the revolution | 2 s a revolution | met: worst 0.47 s |
+| GEO at the 2027 March equinox (USNO, 20 March 20:25 UTC) | SMAD's 69.41 min lengthened by the Sun's own motion, ÷ (1 − ṡ/n) | 2 s | met; the real eclipse is about 10 s longer than SMAD's |
+| the worst eclipse at the ISS's orbit over 70 days, J2 on | the closed form at β = 0 | 5 s, at \|β\| ≤ 3° | met: 0.18 s short, at β −0.013° |
+| the worst eclipse at GEO near the equinox | as the GEO row | 2 s, at \|β\| ≤ 0.3° | met: 69.569 min, at β 0.15° |
+| GEO around the June solstice | no eclipse | exact | met |
+
+- **Changed after the first run.** The first run also held the propagator's own shadow test
+  (`inShadow`, with its own Sun) to at most four samples of disagreement a revolution, and to the
+  closed form at `sunDirectionEci`'s β. Both assumed, as the plan did, that the two Suns differ by
+  arc-minutes. The run found up to 22 samples and 12.8 s. They were replaced by two checks the
+  first run's numbers already met: fed the same Sun, `inShadow` and `inSunlight` agree on every
+  sample; with its own Sun, `inShadow` is within 2 s of the closed form at that Sun's β (worst
+  1.1 s). The J2 β row first missed 1e-12 by 8.5e-12 rad because the test drifted its node over a
+  differently rounded time; the reference was corrected, the bound kept.
+- **Finding: the propagator's Sun is 0.45° from the orbit tools' Sun** (0.4543° on 2026-09-26,
+  0.626° by 2036; a test explains it to 0.01°). `sunPosition` uses the J2000 equinox: 0.37° is the
+  precession of the equinox since 2000, and the rest its series holding the perihelion at its
+  J2000 longitude. The propagator's sunlight-pressure shadow edges therefore move by up to 11 s in
+  low orbit. Recorded, not changed: a fix would change the P07 Cowell lifetimes, and needs its own
+  task.
+- **A bug found in review, fixed.** `worstEclipse` joined the tail of one eclipse to the head of
+  the next when a revolution began in the shadow. At GEO, where the revolution is locked to the
+  day, it gave 3 951.7 s where the eclipse is 4 175 s: 5 % short, the unsafe side for sizing a
+  battery (up to 4 s in low orbit). A revolution now begins on the day side. The test, eleven GEO
+  phases within 2 s, was written before the fix ran; the old code fails it by 168 s.
+- **Source defect:** slide 96 writes β = φ − π/2, then uses sin⁻¹(ô·ŝ), which is π/2 − φ. Its
+  final formula is right.
+- `cyclesPerYear` assumes an eclipse every revolution, an upper bound: GEO has about 90 eclipses a
+  year, and a dawn–dusk orbit has months without one. The builder shows it as "at most".
+
+### Power (D06)
+
+`src/orbit/power.ts`. The solar flux is 1 361 W/m², the nominal total solar irradiance of IAU 2015
+Resolution B3 ([Prša et al. 2016](https://arxiv.org/abs/1510.07674), p. 3) and the
+[NASA Earth fact sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html)'s, scaled by
+1/r² from `sunPosition`. The defaults are SMAD's, as MIT OCW 16.851's Problem Set 4 tabulates them
+(Table 1, [PDF](https://ocw.mit.edu/courses/16-851-satellite-engineering-fall-2003/81f80cdc5f01208a496a412a52b00a71_ps4_cg_solution.pdf)).
+`tests/power.test.ts`, every bound met on the first run:
+
+| check | reference | bound, fixed first | result |
+| --- | --- | --- | --- |
+| V-P1: array power | TU Delft p. 120: 734.5 W, 4 003.1 Wh an orbit | ±0.1 W, ±0.1 Wh | met: 734.518 W, 4 003.125 Wh |
+| V-P2: array power | TU Delft p. 134, problem 5: 408 W | ±0.5 W | met: 408.47 W |
+| V-P3: array area, tracking, body-mounted, spinning | TU Delft p. 133: 10, 10.9 and 34.26 m² | ±0.01 m² | met: 10.000, 10.904, 34.257 m² |
+| V-P4: array power | Valispace, *EPS sizing tutorial* ([PDF](https://www.valispace.com/wp-content/uploads/2018/12/EPS-sizing-tutorial-1.pdf)), a commercial, secondary source: 1 218.2 W | ±0.1 W | met: 1 218.182 W |
+| its area chain: P_BOL, P_EOL, the area | 347.758 and 332.053 W/m², 3.669 m² | ±0.01 W/m², ±0.001 m² | met, with inputs inferred (below) |
+| the flux at USNO's 2027 perihelion and aphelion ([USNO](https://aa.usno.navy.mil/api/seasons?year=2027)) | 1 361 × (AU/r)², r 147.095 and 152.100 million km | 0.2 % | met: worst 0.006 % |
+| the dates of the year's extremes | USNO | ±3 days | met: within 0.9 day |
+| charge cycles at a 90-minute orbit | NASA/TM—2007-215044 ([PDF](https://ntrs.nasa.gov/api/citations/20080006656/downloads/20080006656.pdf)): "more than 5,000 cycles per year", a 55 + 35 min profile | exact | 5 844 |
+| flown batteries' cycle limits (Britton & Miller, NASA Glenn 2000, as TU Delft Table 42) | Landsat-7 and Terra fewer than 30 000 in 5 years; Aqua fewer than 35 000 in 6; HST fewer than 32 000 in 5 | bound | 26 595; 31 914; 29 220 |
+| `P_SUN` × c, the propagator's sunlight pressure | 1 367 W/m², 0.44 % above 1 361 | ±1.5 W/m² | met; recorded, not changed |
+
+**Source defects, recorded:** Valispace's text gives the eclipse load as 810 W, but every number it
+works uses 688.5 W; it divides by a battery "efficiency" of 1.045, above 1, which
+`batteryCapacity` refuses (at 90 % the battery would be 596.5 Wh, not its 513.8 Wh); and it prints
+the inherent degradation as 0.9548 and the Sun angle as "1.0 h", where its own numbers imply 0.77
+and 23.5°, which the test uses and labels inferred. MIT's battery code turns the eclipse into
+minutes and calls the result watt-hours: it is watt-minutes, 60 times too large. TU Delft p. 133
+rounds 1/cos 23.5° to 1.09. The two solar constants, 1 361 here and the propagator's 1 367, are a
+question for the owner.
+
+### Attitude (D06)
+
+`src/orbit/attitude.ts`, held to Starin and Eterno's Tables 19-4 (PDF pp. 9–10), 19-11 (p. 20) and
+19-12 (p. 21) and the thruster example on p. 19, with the chapter's printed inputs.
+`tests/satellite-attitude.test.ts`, bound ±½ unit in the last printed digit, written in the test's
+header before the first run; every comparison passed on it:
+
+| quantity | published | model |
+| --- | --- | --- |
+| period and circular speed at 7 078 km and 27 378 km | 5 926 s, 45 083 s; 7 504, 3 816 m/s | 5 926.2 s, 45 083.1 s; 7 504.4, 3 815.6 m/s |
+| gravity gradient, FireSat (I_z 90, I_y 60 kg·m²) at 1° and 30°; SCS at 10° | 1.8e-6, 4.4e-5; 5.0e-7 N·m | 1.7654e-6, 4.3808e-5; 4.9825e-7 N·m |
+| SCS solar and aerodynamic torques | 1.2e-5; 2.2e-11 N·m | 1.1628e-5; 2.1843e-11 N·m |
+| the field over the poles at 7 078 km; the magnetic torque at 1 A·m²; SCS's at λ = 1.2 | 4.4e-5 T; 4.4e-5 N·m; 4.6e-7 N·m | 4.3994e-5; 4.3994e-5; 4.5611e-7 |
+| slew torque, 30° in 600 s at 90 kg·m² | 5.2e-4 N·m | 5.2360e-4 N·m |
+| wheel momentum: FireSat, SCS, all four torques aligned | 0.046, 0.1, ≈0.1 N·m·s | 0.046093, 0.095635, 0.10476 |
+| bias momentum at 1° | 3.8 N·m·s | 3.8345 |
+| slew thruster force (α as printed); momentum dump; the p. 19 example | 0.72, 2.0, 50 N | 0.72000, 2.0000, 50.000 |
+
+**Source defects, recorded, not tuned away.** Each equation is held to the corrected figure, and
+the test shows that the printed one does not follow from its own inputs:
+
+| | row | printed | the equation gives | the slip |
+| --- | --- | --- | --- | --- |
+| D1 | FireSat's aerodynamic torque | 1.7e-5 N·m | 3.3786e-6 | the 0.2 m arm left out |
+| D2 | FireSat's solar torque | 3.3e-6 N·m | 6.5661e-6 | an extra factor of 0.5 |
+| D3 | bias momentum at 0.1° | 37.7 N·m·s | 38.345 at 0.0017 rad; 37.349 at 0.1° exactly | neither gives the printed figure |
+| D4 | SCS thruster force against the disturbance | 6e-6 N | 2.4e-5 N | T·L where T/L is meant |
+| D5 | the margin of a 0.4 N·m·s wheel | "above 9" | 8.678 | arithmetic |
+
+D4 and D5 were found here; the plan's references had listed the first three. Smaller slips change
+no result ("2.5 m × 2.0 m = 3 m²", worked as 5 m²; B and T_D printed in the wrong units).
+
+- **A bug found in review, fixed.** The solar and aerodynamic torques were multiplied by the arm as
+  given, and the chapter writes the arm as the offset cp − cm, so a negative offset gave a negative
+  torque (−3.4e-6 N·m for FireSat's drag), which a sum of worst cases would cancel. Both now take
+  its magnitude; the new test fails on the old code.
+- **A cross-check, not a bound:** IGRF-14's 2025.0 dipole terms
+  ([NOAA](https://www.ngdc.noaa.gov/IAGA/vmod/coeffs/igrf14coeffs.txt)) give 7.6897e15 T·m³; the
+  chapter's 7.8e15 is 1.43 % higher. No geomagnetic model is in the code.
+- **No published worked number:** the pointing loss 12(e/θ₃dB)² (MIT OCW 16.851 lecture 21,
+  slide 23, [PDF](https://ocw.mit.edu/courses/16-851-satellite-engineering-fall-2003/818606568cbb5f2e4116783f6eb0573e_l21satelitecomm2_done.pdf))
+  is held only to analytic checks: exactly 3 dB at half the beamwidth, and 0.34 % under a Gaussian
+  lobe (bound 0.35 %). The wheel rule T·P·0.707/4 is π/(2√2), 11 %, above the momentum a sine
+  builds in a quarter orbit, a margin in its favour.
+- The torques are worst-case magnitudes and sizing estimates, labelled as such: the gravity
+  gradient at a 45° tilt, the field at the pole (the strongest, so the smallest torquer).
+
+### The radio link (D06)
+
+`src/orbit/link.ts`, built on O04's free-space loss and Boltzmann's constant; losses are positive
+decibels, subtracted. `tests/link.test.ts`:
+
+| check | reference | bound, fixed first | result |
+| --- | --- | --- | --- |
+| V-L1: MarCO's X-band downlink, four columns (low-, medium- and high-gain antennas to a 34 m dish, the high-gain to 70 m), every line from EIRP to the margin over threshold | Kobayashi, Shihabi and Taylor, *Mars Cube One Telecommunications Subsystem Design*, JPL DESCANSO 18 (2021), Table 5-4 ([PDF](https://descanso.jpl.nasa.gov/DPSummary/DESCANSO18_MarCO.pdf)) | ±0.1 dB a line | met: largest difference 0.070 dB (the low-gain free-space loss, 254.47 against 254.4); the high-gain margin to 34 m 7.296 dB against 7.3 |
+| V-L2: a low-orbit X-band CubeSat, 2 566 km, 12.5 Mbit/s | S. Palo et al., 28th AIAA/USU SmallSat Conference (2014), Table 1 ([NTRS 20150000169](https://ntrs.nasa.gov/api/citations/20150000169/downloads/20150000169.pdf)): margin 4.79 dB | 0.6 dB, the source's own inconsistency | met: 5.310 dB |
+| V-L3: free-space loss | ITU-R P.525-5 ([ITU](https://www.itu.int/rec/R-REC-P.525/en)), Eq. (5) exact, Eq. (6) and O04's 195.6 dB at 36 000 km and 4 GHz | 1e-9 dB; 0.05 dB | met: 195.615 dB |
+| slant range at 0° elevation | SMAD's "range to horizon", TU Delft App. H, all 41 rows | 0.5 km | met: worst −0.488 km, at 15 000 km |
+| the table against O04's `linkBudget`; the highest rate as its inverse | identity; Palo's 12.5 Mbit/s from its printed C/N₀ | 1e-9 dB; 0.02 dB | met: 12.503 Mbit/s |
+| the longest overhead pass, (P/π)·λ_max | `findPassesOf` on a 500 km polar orbit | 1 % | met: −0.206 % at 0°, −0.213 % at 10° (the Earth's turning) |
+
+The commit that added V-L1 called its largest difference 0.063 dB; it is 0.070 dB, and the
+high-gain P_t/N₀ to 34 m is 0.066 dB off. The test was right; the history was not rewritten.
+
+**Source defects in Palo et al., recorded:** its "Space Loss −119.1 dB" is the loss over 2 566 m,
+not km (179.10 dB), 60 dB short; its received power, −94.53 dBm, does not follow from its own flux
+and dish (−94.02 dBm), and its C/N₀ and margin carry the same 0.52 dB; its text gives E_b/N₀ as
+10.23 dB where the table has 10.32; it prints no atmospheric loss or system temperature, so
+1.993 dB and 189.7 K are worked back from its other lines. In MarCO's table the carrier suppression
+belongs to the residual carrier, not the data. Only two required E_b/N₀ are sourced, MarCO's turbo
+code (−0.10 dB) and Palo's convolutional code (5.52 dB): CCSDS 130.1-G could not be fetched. The
+3 dB margin is MarCO's deep-space figure.
+
+### The camera (D06)
+
+`src/orbit/imaging.ts`, beside O04's `applications.ts`, which did not change. `tests/imaging.test.ts`:
+
+| check | reference | bound, fixed first | result |
+| --- | --- | --- | --- |
+| V-G1: Sentinel-2's sample, 786 km, 7.5 and 15 µm pitch, f ≈ 0.600 m | 10 and 20 m (ESA's [slides](https://seom.esa.int/S2forScience2014/files/03_S2forScience-Opening_SPOTO_MARTIMORT.pdf); [eoPortal](https://www.eoportal.org/satellite-missions/copernicus-sentinel-2)); the focal length from an SPIE ICSO paper, not ESA | 3 % | met: 9.825 and 19.65 m |
+| V-G1: Sentinel-2's swath | 290 km, at ESA's 21° and eoPortal's 20.6° | 2 % | met: 292.0 and 286.3 km |
+| V-G2: Landsat 8 OLI's swath, 705 km, 15° | 185 km ([NASA](https://science.nasa.gov/mission/landsat/oli); [eoPortal](https://www.eoportal.org/satellite-missions/landsat-8-ldcm)) | 1 % | met: 185.8 km |
+| V-G2b: Landsat 8 TIRS, 25 µm, 142 µrad | 100 m (eoPortal) | 0.35 %, half a unit of the printed 142 µrad (the 100.1 m had been worked out while reading the source; the bound is the printing, not a fit) | met: 100.11 m |
+| V-G3: the example camera, 16.1 m, 13 µm, 621 km | THEOS-2's 0.5 m ([eoPortal](https://www.eoportal.org/satellite-missions/theos-2)) | three decimals | met: 0.501 m |
+| V-G4: the image data rate, 500 km | TU Delft p. 183: 338.4 kbit/s, from an orbital speed rounded to 7.6 km/s | 0.7 %, half a unit of the 7.6 | met: 338.84 kbit/s (+0.13 %) |
+
+- **Self-consistency only, and labelled so in the code:** the off-nadir sample (a ray traced to the
+  sphere; the slope of O04's `sideReach` within 1e-6) and the diffraction limit (the Airy pattern's
+  first zero, 1.2197; every Sentinel-2 band coarser than its 150 mm pupil allows). No free worked
+  example of either was found. The 1.22 check's 0.03 % confirms the rounding of a known number; it
+  is not an independent bound.
+- **A bug found in review, fixed.** Pointed away from the Earth, the off-nadir sample came out
+  negative (−4.43 m at 120°, −10.80 m at 180°, from 621 km): the horizon check looked only at
+  |sin|. It is now infinite beyond 90°, as past the horizon; the test was written before the fix.
+- **A finding on the ground speed:** `groundSpeed` leaves the Earth's rotation out, as TU Delft
+  Eq. [140] does. On a sun-synchronous track that understates it by about 1 % (0.92 % at 500 km,
+  1.05 % at 786 km); on a prograde orbit it overstates it, by 4.1 % at 51.6° and 6.6 % on the
+  equator at 500 km, and at GEO wholly.
+- **Not made a test:** ESA's slides give Sentinel-2's raw rate as 1.4 Gbit/s; the pixel counts on
+  the same slides give about 1.38 Gbit/s if the 60 m bands are binned 3 to 1, which is not
+  published.
+
+### Propellant and the drag area (D06)
+
+`src/orbit/disposal.ts` and `src/design/satellite-area.ts`; `tests/d06-disposal.test.ts` and
+`tests/d06-satellite-area.test.ts`, whose bounds were committed before each file's first run:
+
+| check | reference | bound | result |
+| --- | --- | --- | --- |
+| V-V1: propellant for 450 m/s on 430 kg, hydrazine at 223 s | M.J. Patterson and S.R. Oleson, NASA TM-113111 (1997), Table III ([NTRS 19980017819](https://ntrs.nasa.gov/api/citations/19980017819/downloads/19980017819.pdf)): 79.9 kg | ±0.1 kg | met: 79.972 kg |
+| the same table, xenon ion at 2 960 s and a 30° cant | 7.6 kg | ±0.1 kg | met: 7.629 kg |
+| the same table, arcjet at 450 s and a 17° cant | 43.6 kg | ±0.1 kg | **missed: 43.491 kg, 0.109 under** (17.5° of cant would give 43.60). Recorded, unexplained |
+| V-V2: Hohmann to a 2 000 km circle | Hull, Fig. 30.2-1: 658.9 and 83.8 m/s worked, the plot read 660 and 85 | ±0.1 m/s; the plot ±10 | met: 658.935 and 83.829 m/s |
+| V-V2b: Hull's "lower to under 25 years" curve, from 600–1 800 km | the plot read as 0, 70, 130, 250 and 335 m/s, lowered by 10 m/s more; P07's mean method at ECSS moderate | down within 25 years | met: 9.6, 14.7, 17.4, 8.5 and 12.7 years |
+| V-V3: GEO disposal | IADC-02-01 Rev. 4 §5.3.1.1 ([UNOOSA](https://www.unoosa.org/res/oosadoc/data/documents/2025/aac_105c_12025crp/aac_105c_12025crp_9_0_html/AC105_C1_2025_CRP09E.pdf)): C_R 1.2, A/m 0.01 → 247 km, 8.97 m/s; 1.5 and 0.02 → 265 km, 9.62 m/s | ±0.01 | met: 8.9664 and 9.6167 m/s |
+| V-V4: north–south station keeping at 0.85°/yr | TU Delft Fig. 11, p. 26: 45.5 m/s a year | ±0.5 m/s a year | met: 45.613 |
+| the perigee lowered to Hull's 50 km from 600, 700, 800 km | the closed form; O02's `deorbit` | ±0.1 m/s; 1e-6 m/s | met: 156.656, 182.801, 208.290 m/s |
+| a 15-year GEO budget | TU Delft Fig. 11: 2 549.3 m/s | ±0.1 m/s | met: 2 549.270 |
+| drag on 5 m² at 500 km | TU Delft p. 138: 142 µN | ±1 µN | met: 141.707 µN |
+| NAPA-2's ballistic coefficient and re-entry, the 6U built as the satellite model builds it | §7: B = 0.0134 m²/kg, lifetime +8.0 % against its re-entry of 2026-07-05 | ±0.00005; 25 % | met: 0.013437; +8.046 % |
+
+- **Changed after the first run:** NAPA-2's lifetime was first held to +8.0 ± 0.05 points (met,
+  0.004 inside). Because a refresh of the committed solar baseline could move that digit, it is now
+  held to the same re-entry as `tests/ballistic.test.ts`'s box (1e-9 day). The 25 % criterion is
+  unchanged. The arcjet row was recorded as missed after its run; its bound did not move.
+- **The graveyard raise is the exact Hohmann transfer.** The plan's v·ΔH/(2a) is its first-order
+  term: 9.006 m/s, 0.44 % high, where IADC's own worked 8.97 m/s is the Hohmann figure.
+- **A bug found in review, fixed.** The drag make-up per year used the circle's speed on every
+  orbit. On an eccentric one the burn belongs at perigee, so it was too high by v_p/v: 1 %, 11 %,
+  56 % and 2.5 times at e = 0.014, 0.11, 0.42 and 0.73. It now uses μ|ȧ|/(2a²v_p), the same on a
+  circle; against the drag's own sampled impulse on four eccentric orbits it is 0.44–0.54 % under.
+  That test's 1 % bound was set after a probe, and says so. Open orbits, a perigee under the ground,
+  a zero mass and a negative area are now refused.
+- **Source defects:** Hull gives C_R as "typically 1 – 2 kg/m²" (C_R has no unit; IADC gives
+  1.2–1.5); TM-113111's arcjet row, above.
+- **Weak by construction:** V-V2b only adds to the Δv read, so too dense an air can never fail it.
+  At the Δv read itself the 1 000 km case lasts 27.5 years at moderate activity; at ECSS's low
+  level every case lasts 56 to more than 200 years, at its high level 2.0 to 6.0.
+- **Estimates, labelled:** the drag area is a tumbling mean, a quarter of the bus's surface
+  (Cauchy) plus half the one-sided area of Sun-tracking wings; one area serves drag and sunlight
+  pressure. The drag make-up holds the Sun and the season at the epoch (moving it about ±30 % over
+  a year, the epoch's value within 6 % of the year's mean) and averages the year's indices, not the
+  density.
+
+### The satellite model and its templates (D06)
+
+`src/design/satellite-model.ts` works out every figure the designer and the bench show;
+`src/data/satellite-templates.ts` holds the seven places a design starts from.
+`tests/d06-satellite-model.test.ts`, `d06-satellite-templates.test.ts`, `d06-satellite-design.test.ts`
+and `d06-satellite-spec.test.ts`, every bound written before the first run:
+
+- **One number, one way.** For all seven templates, every figure `designFigures` returns is the
+  core's own answer for the design's inputs, identical (`toBe`), for the eclipse, power, Δv,
+  attitude, link and camera cores and the drag area. This shows that the model calls the cores, not
+  that the cores are right; the sections above do that.
+- **Published figures through the model:** the communications template at GEO, SMAD's 69.41 min at
+  β = 0 (±0.01 min); THEOS-2's 0.501 m and 10.33 km from 621 km (eoPortal's 0.5 m and 10.3 km;
+  three decimals and ±0.05 km); NAPA-2's B = 0.013437 (±0.00005) and its re-entry flown through the
+  template equal to the box's (1e-9 day); the communications template's tanks (1 882 m/s) cover
+  TU Delft's 1 836.49 m/s apogee kick but not fifteen years in the box: margin −667.8 m/s, inside
+  the bound of 0 to −712.8 m/s, which is loose, and the builder says so.
+- **The templates.** The five class templates take their mass, engine and size from `SATELLITES`
+  (1e-9 kg) and their orbits from `presetOrbit` (1e-9). NAPA-2 takes GCAT's 10 kg and Janes's
+  20 × 10 × 34.05 cm (`src/data/napa2.ts`); its camera, an estimate, gives 5 m from 530 km
+  (±5 %). The THEOS-2-class imager carries eoPortal's 425 kg labelled an estimate (another report
+  gives 417 kg), by the owner's default. The sourced defaults equal the cores' own: a 29.5 % cell
+  (NASA, *State-of-the-Art of Small Spacecraft Technology* 2026, ch. 3, Table 3-1,
+  [page](https://www.nasa.gov/smallsat-institute/sst-soa/power-subsystems)); SMAD's degradation and
+  path efficiencies (MIT 16.851); 30 % depth of discharge in low orbit (Terra and Aqua, TU Delft
+  Table 42) and 80 % in GEO (TU Delft p. 125); E_b/N₀ 5.52 dB (Palo); the 1 836.5 m/s apogee kick.
+  Every power, attitude, radio and payload figure has a source or is an estimate, and the designer
+  marks each one.
+- **By hand, in review,** independently of the cores: NAPA-2's array needs 0.0637 m² (+6.7 %
+  margin), its battery is drawn 13 % and its link closes with 8.4 dB; THEOS-2 samples 0.5014 m over
+  a 10.33 km swath; NAPA-2's magnetic torque is 9.5e-7 N·m. 250 random designs the checker accepts
+  never made the model throw, each worked out in under 3 s.
+
+**Findings, recorded, not tuned away** (the templates on 2026-10-01 at ECSS moderate, as the model
+gives them):
+
+| template | finding |
+| --- | --- |
+| communications (GEO) | Δv 667.8 m/s short of fifteen years in the box (1 882 available, 2 549.8 needed) |
+| weather (GEO) | Δv 632.4 m/s short |
+| science (800 km polar) | Δv 25.6 m/s short of a controlled re-entry, the perigee lowered to 50 km |
+| NAPA-2 | power margin +6.8 % on 0.068 m² of body cells, with 4 + 4 W of estimated loads; battery drawn 13 %; longest eclipse of the year 35.14 min; link margin 8.43 dB at 12.5 Mbit/s |
+| NAPA-2 | 6.8 years in orbit from the design orbit on the bench, at ECSS moderate. Not a validation: it came down after 1 806 days, and the run with the Sun as measured gives +8.0 % (§7) |
+
+- **A rule corrected in review: the 25-year rule for a satellite with an engine.** The Δv budget
+  holds such a satellite's orbit through its mission, so its 25 years start when the mission ends:
+  from the design orbit it must come down within 25 years, not within its life plus 25. The old
+  test was too lenient by the whole design life. Without an engine the rule stays life + 25.
+- **Model choices, labelled estimates:** the GEO inclination drift of 0.85°/yr (it reproduces
+  TU Delft's 45.5 m/s a year; no free source gives a default), east–west keeping 1.33 m/s a year;
+  the receiving station is Palo's 11.28 m NASA dish at 57 %, far larger than a school's; the
+  satellite's dish 55 % efficient; the beamwidth 21/(f·D)° (MIT lecture 21); the sunlit
+  reflectance 0.6 (Starin and Eterno); the same loads in sunlight and shadow; a low orbit's end of
+  life always budgeted as a controlled re-entry, the cautious case.
+- **The design date.** The figures are worked out for the design's date, not the Launch section's
+  clock (a finding in review: the bench's lifetime ran from 2026-10-17 after Launch's time moved).
+  The same date gives identical figures on a later day; a new date moves β and the figures
+  (`tests/d06-satellite-date.test.ts`). "Today" is the student's own calendar day, checked in UTC,
+  Bangkok, Vladivostok, Los Angeles and Kiritimati: in Bangkok before 07:00 the UTC day is still
+  yesterday.
+
+### From the designer to the Orbit section (D06, S03)
+
+`src/design/satellite-handoff.ts` hands a design to the Orbit section as an S03 hand-off, with no
+launch; `tests/d06-build-orbit-handoff.test.ts`. No published figure applies, so every check is
+analytic, bound fixed first:
+
+| check | bound | result |
+| --- | --- | --- |
+| the hand-off read back through `parseHandoff` after a JSON round trip | exact | equal, for an SSO imager with an engine and a 6U CubeSat without one |
+| the spacecraft: wet mass, area, C_D, C_R, kind, the engine with full tanks | exact | equal |
+| r, v from `stateAt(designOrbit(…))`; the orbit back as the playground reads it | exact; 1 mm and 1e-9 rad | equal; worst 4.7e-9 m on the apsides, 0 on the angles and the local time |
+| the lifetime dialog's inputs, opened on the hand-off and through the playground | exact | the design's |
+| the planner's Δv against Isp·g₀·ln(m/(m − m_p)) | 1e-12 relative | met |
+| a perigee at or under 100 km, a zero area, C_D or thrust, a negative C_R, a mass that is not a number, a dry mass not above zero | refused | refused |
+| every catalogue satellite handed on from a flight, against the hand-off before D06 | byte for byte | identical |
+
+The review added a GEO orbit, a 500 × 39 000 km orbit (e ≈ 0.74), an engine with no propellant and
+propellant of −5 kg or NaN, with the existing bounds, looked at before they were written. The
+Chromium walk saw NAPA-2's 0.061075 m² in the Orbit section's lifetime dialog; the dialog showed it
+as "0.061075000000000004", and now shows twelve significant figures (the run keeps the exact
+number). The design's apsides become a state as if osculating, as the rest of the Orbit section
+does; in Cowell mode the semi-major axis then differs from the mean one by a few km.
+
+### A designed satellite in the Launch section (D06)
+
+`src/config/satellite-spec.ts` checks a satellite a mission carries, `src/design/satellite-launch.ts`
+turns a design into one, and `src/design/satellite-verdict.ts` gives the Launch section's verdict
+before **Fly it**. A mission file is version 3 only when it carries such a satellite (the owner,
+2026-09-29); otherwise it stays version 2.
+
+- **The checker.** Every catalogue satellite, copied under a new id, passes; each kind of slip is
+  refused by its path. Added in integration: C_D·A/m held to the lifetime model's range,
+  0.0001–1 m²/kg, when the satellite gives its own area (both ends accepted, 1 % outside refused);
+  `crewed` only on the crewed origin's own kind (a literal "crew" would refuse copies of Crew
+  Dragon, Vostok, Mercury and Apollo 11). **Found in review:** a 0.25 kg satellite passed the
+  checker but not the payload field's 1 kg minimum, and made the whole mission file unreadable; the
+  floor is now 1 kg, held equal to the field's, and only the satellite is refused.
+- **Does it fit the fairing: an estimate.** The usable space is taken as 85 % of the fairing's
+  diameter and 80 % of its length, round shares, neither published nor fitted. The criterion fixed
+  before: no pairing a built-in mission flies may come out too big. **Met.** Recorded after a
+  probe: every pairing fits but Vostok's, "tight", and Saturn V and Starship have no fairing to
+  check. The AIAA vehicle guide gives Falcon's largest payload diameter as 4.6 m
+  ([AIAA](https://aiaa.org/vehicle-guide/vehicles/falcon/payload-accommodations)), 88 % of its
+  5.2 m shell, so 85 % is on the small side. A designed bus is a box, so its width is the diagonal
+  of its body: a 4 × 4 × 5 m box on Falcon 9 went from "fits" to "too big" (5.657 m against
+  5.2 m). The note warns; it does not stop a launch.
+- **Flown** (`tests/d06-satellite-launch.test.ts`), headless and point mass, as the Launch section
+  flies a designed satellite. The criteria were fixed before the first run: the spec's figures the
+  design's exactly; the apsides within 30 km (the Explore journey's bound), the inclination within
+  0.3°; the mass after separation the design's wet mass within 1e-6 kg.
+
+  | flight | separation | orbit flown | the design's |
+  | --- | --- | --- | --- |
+  | NAPA-2 on Electron from Mahia | T+3 321 s | 519.4 × 537.0 km, 97.516° | 520 × 540 km, 97.516° |
+  | THEOS-2 class on Vega-C from Kourou | T+3 189 s | 620.6 × 623.1 km, 97.870° | 621 km, 97.871° |
+
+  Each flight ends at the separation, and the orbit is the last frame's, measured again for this
+  section at 120a4f0 (the integration's report had given the perigees as 519.9 and 620.9 km); the
+  inclinations are 0.00045° and 0.00021° below the designs' (97.51559° against 97.51604°, 97.87032°
+  against 97.87052°). The mission file is version 3 and reads
+  back equal with no issue, and the flight records the spec. Of 300 random sound designs, those
+  inside the drag range pass the spec's checker and the rest are refused only on their area. The
+  browser journey separates at the same T+3 321 s (again on 2026-10-01 for this section).
+- **The node: a finding, and a bound written in review.** The Launch section aims a node's local
+  time at the true Sun; the designer, like the rest of the Orbit tools, at the mean Sun. A 22:30
+  design is therefore flown to a node 10.5 minutes (2.62°) earlier by its own reckoning on
+  1 October, up to about 16 minutes through the year. The test holds the flown node to the design's
+  moved by the equation of time, within 0.3°: −0.147° for NAPA-2 (offset 2.622°) and −0.197° for
+  THEOS-2 (2.633°). The bound was written after NAPA-2's residual had been seen and before
+  THEOS-2's was run. Changing the Launch side would change built-in flights, so it was documented,
+  not changed.
+- **The launch site** (found in review): **Fly it** took the Launch section's site without its
+  range-safety corridor, so every sun-synchronous design on the default Soyuz-2.1a opened with a
+  failing corridor, and on Falcon 9 flew from the Cape. A site whose corridor reaches the plane is
+  now chosen by the Launch section's own `inclinationCorridor`: NAPA-2 on Soyuz-2.1a asked from
+  Baikonur flies from Plesetsk, on Falcon 9 from Vandenberg; a geostationary design stays at the
+  Cape. Tested for every template on every fleet rocket from each of its sites.
+- **A design flies as the catalogue satellite does:** a designed communications satellite on
+  Falcon 9 to GEO and the catalogue one give identical flights (separation at T+17 628 s, then
+  their propellant runs out off target at T+177 204 s); so do the weather satellite on Ariane 64
+  and a sun-synchronous custom target on Electron.
+- **The verdict before the click** (`tests/d06-satellite-verdict.test.ts`): for every template on
+  Soyuz-2.1a from Baikonur, Electron and Falcon 9, `designVerdict` equals, exactly (level, cause,
+  off-window flag, text), the Launch panel's recipe applied to the mission document read back
+  through its own parser. The states below were read from a probe (launch 2026-10-01 12:00 UTC)
+  before the test was written; they are a record, not a tolerance:
+
+  | template | Soyuz-2.1a | Electron | Falcon 9 |
+  | --- | --- | --- | --- |
+  | NAPA-2 | fails: no restart (from Plesetsk) | ready | ready |
+  | THEOS-2 class, Earth observation, science | ready | fails: over capacity | ready |
+  | communications, weather | fails: no rating | fails: no rating | caution: inclination |
+  | navigation | fails: burn budget | fails: over capacity | ready |
+
+  In Chromium the verdict shown before the click and the Launch panel's after it were equal, level
+  and sentence, for five cases (NAPA-2 on Soyuz-2.1a, Earth observation on Vega-C with its probe
+  flown, communications on Falcon 9, THEOS-2 on Electron, navigation on Soyuz-2.1a); the satellite
+  journey checks it on Electron. A verdict takes under 2 ms a rocket unless the insertion probe
+  flies (30–565 ms); the whole fleet 0.1–1.1 s a design in Node. 17 designs on 21 rockets in review:
+  nothing threw, and no rocket offered was one the mission checks refuse.
+
+### Requirements to an orbit and a satellite (D07)
+
+`src/orbit/coverage.ts` (revisit and contact), `src/orbit/lifetime-altitude.ts` (the lowest
+altitude that lasts), `src/design/requirement-inverses.ts` and `requirement-trades.ts` (the trade
+table) and `src/design/requirements-page.ts` (the page's model); `tests/d07-*.test.ts`. The bounds
+were committed in each test's header before its first run; the changes made after a run were the
+tests' premises, said where they were made.
+
+**A pass search over any orbit** (`findPassesOf`, `src/orbit/passes.ts`, `tests/passes.test.ts`):
+R03's search without SGP4, which `findPasses` now wraps. Over 120 cases (391 passes) its output is
+byte for byte what it was, and the Skyfield fixtures hold. An overhead pass over a 500 km polar
+orbit with J2 lasts (P/π)·λ_max (SMAD's coverage form, derived in the test since the book is not
+free) within 1 %, the plan's bound; the Earth's turning was predicted by hand to shorten it by
+0.207 % at 0° and 0.213 % at 10°, bounded to [−0.30 %, −0.12 %], and the found passes are
+−0.206 % and −0.213 % (694.23 s and 443.62 s by the form; 692.80 and 442.67 s found), within
+0.17 ms of the exact rotating-Earth solution.
+
+**Revisit by brute force** on the ground track (`tests/d07-coverage.test.ts`):
+
+| check | reference | bound, fixed first | result |
+| --- | --- | --- | --- |
+| the refined search against a 1 s brute force, Landsat's 233/16 over Bangkok, 4 days | an independent path | 1 s; the refined distance never more than 1 m farther | met: 8 of 8 approaches, worst 0.499 s; up to 8.0 m nearer, never farther |
+| a place 50 km to either side of the track | geometry | 0.5 s, 20 m, the side | met |
+| Landsat 233/16, 185 km, by day, 25 longitudes at Bangkok's latitude | USGS, "every 16 days" | ≤ 16 days | met: longest gaps 9.00–16.00 days |
+| Sentinel-2A 143/10, 290 km | ESA, 10 days | ≤ 10 days | met: 10.00 days |
+| Sentinel-1A 175/12, dawn–dusk, the radar's band to the right, day and night | ESA's 12-day repeat | ≤ 12 days | met: 7.51 days |
+| the grid bound: a swath of the track spacing × cos φ | the plan | longest gap ≤ the cycle | met: ratio 1.000000 on the three sun-synchronous orbits (the bound is tight), 0.8646 for 31/2 at 51.6° |
+| contact time | `findPassesOf` | the sum 1e-9 s; overhead bound + 1 % | met |
+
+- **Changed after the first run (premises):** the reach was raised from 400 to 1 000 km in two
+  cases (two days gave only two approaches); the converse grid check for 31/2 uses a quarter of the
+  grid swath, not half, because flown day and night its descending tracks fall exactly halfway
+  between its ascending ones.
+- **A bug found in review, fixed: one repeat is not a whole number of days** off a sun-synchronous
+  plane. A repeat cycle's days are turns of the Earth under the orbit's node; 31/2 at 51.6° repeats
+  in 1.966488 days, not 2. Over two solar days its longest gap over Bangkok read 1.4549 days, over
+  one repeat 1.4214, and its contact 18.67 against 18.96 minutes a day. The table now uses
+  `repeatPeriod`; against twenty repeats the looks are exactly twenty times, the contact a day
+  equal to 1e-6, the longest gap within 0.1 s. That 0.1 s was loosened from 2 ms after an 8.5 ms
+  result, which is the Julian date's time resolution (40 µs, in which the ground moves up to 19 m),
+  not the orbit. Sun-synchronous repeats fall short of whole days by 5.4 ms (143/10), 8.6 ms
+  (233/16) and 14.0 ms (385/26).
+
+**The lowest altitude that lasts** (`tests/d07-lifetime-altitude.test.ts`): a bisection over P07's
+mean method at a fixed ECSS level, in a worker, stopping at ±5 km. NAPA-2 (10 kg, B 0.0134 m²/kg),
+sun-synchronous with the node at 22:30, moderate activity, from 2026-09-21:
+
+| check | bound | result |
+| --- | --- | --- |
+| a 5-year life | ±5 km | met: bracket 509.96–519.43 km, 514.70 km, in 11 runs |
+| P07 run again at the bracket's bottom, middle and top | inside the bracket | met: 4.9938, 5.3569, 5.7634 years |
+| lifetime against altitude, 250 to 550 km | strictly rising | met: 0.026, 0.087, 0.260, 0.727, 1.848, 4.240, 9.245 years |
+| a life of 1 year, and of 1 + 25 | — | 413.67–418.95 km; 617.36–625.85 km |
+
+The below-range case first asked for 0.001 years at 150 km, which P07 brings down in 4.25 hours;
+it now asks for half of that (a premise, changed after the run).
+
+**The inverses** (`tests/d07-inverses.test.ts`): the GSD, aperture, link margin, EIRP and power,
+the rate at the margin, the array and the battery go through D06 and O04 and back within 1e-9.
+TU Delft p. 200's data volume is exact: 8 Mbit/s for 120 minutes is 57.6 Gbit (7.2 GB), which
+needs 96 Mbit/s over a 10-minute pass. THEOS-2's 385/26 orbit comes out 621.071 km at 97.871°,
+against eoPortal's 621 km (±1 km) and the catalogue's 97.91° (±0.1°), the bounds O04's test holds
+them to (§5), and the example camera's 13 µm pitch wants f = 16.148 m against its 16.1 m (±0.08 m:
+0.05 m for the one printed decimal, 0.026 m for the 1 km). Its worst β, 20.28° on 2027-06-03, gives
+a closed-form eclipse of 2 070.62 s against D06's sampled 2 073.16 s: −0.122 %, within 0.5 %.
+
+**D07 against D06, one number one way** (`tests/d07-trades.test.ts`, bounds fixed first: 1e-9 for
+closed forms, 0.5 % for what depends on the eclipse): since integration the table reads the
+antenna, the receiver and the camera's wavelength from the design itself, so the GSD, diffraction
+limit, swath, link margin and the rate at it, the orbit and the Δv available equal D06's to 1e-9.
+The eclipse differs by 0.122 %, the array by 0.002 % and the battery by 0.122 %. Landsat's and
+Sentinel-2's revisits through a row meet 16 and 10 days; a design made from a row gives the
+requirements back within 1e-9 and its revisit within 2 ms; the lifetime and disposal verdicts agree
+with P07 at the rows either side of the brackets. **A bug found in review, fixed:** a mission that
+asked for no data gave its design 0 W at 0 bit/s, which is −∞ in D06's link budget; it keeps the
+template's transmitter now.
+
+**THEOS-2 worked through the page** (`tests/d07-requirements-page.test.ts`; Bangkok, 0.5 m, 385/26
+sun-synchronous with the descending node at 10:15, a ten-year life, ECSS moderate, 100 Gbit a day,
+a 30° tilt, from 2026-09-30):
+
+- the orbit and camera: 621.071 km and 97.871°, f = 16.148 m, an aperture of 0.833 m (at the
+  550 nm wavelength, an estimate), a 10.30 km swath;
+- revisit: the longest gap 5.00 days, 7 looks in the cycle; contact 19.1 minutes a day;
+- the lifetime searches: the lowest altitude that lasts 10 years lies in 576.3–585.7 km, and 35 years
+  in 662.7–671.3 km;
+- the design opened on the bench carries the camera the row sizes, so its GSD and diffraction limit
+  are the 0.5 m asked (1e-9), and it meets each requirement the row claims: the revisit seen from
+  the design's orbit, a 3 dB link carrying the day's data (1e-9), power and battery as the bench
+  sizes them; the bench's own P07 run brings it down after 19.44 years, so it lasts its life and
+  meets the 25-year rule with its engine; its Δv margin is +34.1 m/s (182.1 of 216.2 m/s);
+- the row beside the bench: every figure both give equal to 1e-9 but four, each with its reason:
+  the eclipse (2 070.6 s closed form against 2 073.2 s sampled), the array (2.481 against
+  2.950 m²) and the battery (533 against 853 Wh), because the bench sizes them with every load on
+  through the shadow, and the highest rate (28.4 Gbit/s with the template's transmitter against
+  87.1 Mbit/s with the design's).
+
+**Changed after the first run (a premise):** the row does not claim the GSD met with the template's
+camera: its 16.1 m gives 0.5014 m from 621.07 km, a camera ratio of 1.0030, so the row asks for
+16.148 m. The template's camera itself misses THEOS-2's 0.5 m by 0.3 %, a finding about the
+template.
+
+**The page's estimates of its own time,** corrected in review. With daylight looks off a
+sun-synchronous plane each row walks a 60-day window, not one cycle: the page said "about 3 s", and
+the table took 10.0 s in Chromium for Bangkok at 51.6° and 5 days (90 rows), against 1.4 s for the
+94 sun-synchronous rows. The window now enters the estimate. The lifetime search's estimate,
+11 × (0.05 + 0.02 × years) seconds for each life searched, was fitted after four measured searches
+(6.6 to 21.0 s) and the test holds it within 0.8–1.25 of them. The aperture chart's crossing is at
+h = D·GSD/(1.22 λ), 670.6 km for THEOS-2 at 0.5 m (1e-6 m).
+
+### The flight on screen is the headless flight (T02)
+
+An instructor re-checks a student's flight by flying it again headless, so a live point-mass
+flight now flies in whole steps, as the headless loop does ([PHYSICS.md](PHYSICS.md) §2n).
+`tests/live-stepping.test.ts`, the criterion fixed before the first comparison: bit for bit
+(`toEqual`).
+
+- **Met:** Falcon 9 to the ISS orbit, Electron to LEO, H3 to SSO and Ariane 64 to GTO, each flown
+  live twice with random frames, warps, pauses and cut-short frames, equal their headless flights
+  and recordings; so does a crewed Soyuz-2.1a aborted by hand at T+60 s, re-flown from the
+  journaled step; fast-forwards cut at random, inline and in the worker; and the worker's copy of
+  the flight. A deliberate return to the old stepping failed all eight of the file's first tests. In review, separately:
+  a Soyuz two-orbit rendezvous with a TORU take-over and hand-back (two seeds, 30 and 144 frames a
+  second, docked at T+12 848–12 853 s), Falcon 9 with its booster landing at T+396.0 s, and an abort
+  through the worker equal to the inline flight to the landing at T+900.8 s.
+- **What changed for a user, measured, not tuned:** before (cc29d57) the orbit at each insertion was
+  up to 2.7 km from the headless one with random frames, and Electron moved most at a steady frame
+  rate at 1×: its suborbital cut-off perigee 15–21 km, and its parking and target orbits reached
+  33–48 s early. Now all are zero.
+- **A bug found in review, fixed: lesson 5.2 docked early.** Its end, the docking, closes a 5 s
+  step, and the strip had ended the flight 4.87–5.00 s of mission time before the picture showed
+  it. A lesson now grades the events the picture has reached; the new test, which fails on both the
+  unfixed and the first-fixed code, and Chromium (145 samples in the worker at 1 280 px, 123 inline
+  at 375 px) found it graded at the same frame the docking shows.
+- **Recorded, not changed:** a six-DOF coast still holds the picture for 10 s at 1× (599 frames
+  without a change).
+
+### Instructor mode: the scenario file, the link and the re-check (T01, T02)
+
+`src/lessons/authoring.ts` (the writer), `src/lessons/scenario-link.ts` (the `?scenario=` link) and
+`src/lessons/recheck.ts`, `recheck-job.ts` and `recheck.worker.ts` (the re-check);
+`tests/instructor-mode.test.ts`, `tests/scenario-link.test.ts`, `tests/recheck-core.test.ts` and
+`tests/recheck.test.ts`, with the Chromium half in `tests/browser/journeys/recheck.mjs`.
+
+- **Files.** A lesson file is written at the lowest version every reader of which can fly all its
+  lessons: version 1 for catalogue rockets and satellites (the v1 fixture is still written back byte
+  for byte), 2 for a case lesson or a rocket of one's own, 3 for a satellite of one's own or a
+  design lesson. A version-3 file reads back to the same lessons and is written again byte for
+  byte. The results file stays at version 1; its records gain optional fields, which the check
+  names when they are missing.
+- **The writer:** each criterion kind it writes (how the flight ends, a number within bounds, a
+  number the student works out, an event) was graded on a headless flight that passes it and one
+  that fails it. Found in review and refused since: a built-in lesson's id (that lesson was dropped
+  from every catalogue, and the link opened lesson 1.1), a range whose lower bound is above its
+  upper one, a negative tolerance.
+- **The link.** Lesson 1.1 alone is 3 470 characters, a lesson written on the page with short texts
+  1 248, the two-lesson version-1 fixture 6 536 and every built-in flight lesson together 52 837.
+  The links are offered up to 8 000 characters; past that, the file. The test's 2 % band on these
+  lengths was set after measuring them.
+- **A live flight re-checks exactly.** Lesson 1.1 flown with random frames and warps and an Abort
+  pressed by hand re-checks bit for bit (criterion fixed before the run: exact); without its journal
+  the Abort record differs. Lesson 5.2's TORU take-over and hand-back, given again at their journaled
+  times, give the same events and state. In review, every one of the 14 point-mass built-in lessons
+  and three of one's own (a communications copy to GEO, 38 636 steps to T+177 204 s; a polar
+  Falcon 9 copy; lesson 5.2's docking) re-checked "match" in Node bit for bit.
+- **A record made before T02** has no grading time, no instant on screen, no journal and no build,
+  and the check names what it lacks. Re-flown without them, lesson 1.1 stopped at the first step the
+  flight had ended at, 13.75 s before the real grading time, its speed there 0.021 m/s off when T02
+  was built. Such a record is "cannot re-fly: incomplete" when its numbers come out different, not
+  "differs", since a difference proves nothing about an edit, and a match when they come out the
+  same: since the orbit is read at the flight's end (below), the test's two records match, while the
+  same records as a build of that age kept them, read at a late frame, are incomplete
+  (`tests/recheck-core.test.ts`). A record that names its build but lacks one of the others is not
+  excused, since every build that writes the build writes all four (a review fix): any difference is
+  "differs". Like any record it matches when its numbers come out the same, though the header of
+  `src/lessons/recheck.ts` still says such a record differs (found in the grade-at-end review).
+
+**Node against Chromium.** The engine tolerances were fixed in `tests/recheck.test.ts`'s header on
+2026-09-30, before the first Chromium run: the plan's (0.01 km on the apsides, 1e-4° on the angles,
+0.01 m/s on Δv, 0.01 s on times, 1e-4 kPa on max-Q, 1e-5 g on max-g) and, for the measures it did
+not list, values derived in `src/lessons/recheck.ts` (the period 1e-3 min, the speed 1e-5 km/s, the
+eccentricity 2e-6, the docking hour 3e-6 h, the crew's peak load 1e-4 g). A test holds each to at
+most a hundredth of the tightest tolerance a built-in lesson gives its measure, and the journey to
+the same table. The fixtures (`tests/fixtures/recheck/`) were written once by
+`scripts/recheck-fixtures.ts` in Node and are read as text, never as a snapshot: a borderline pass
+0.0004 min inside its period band, a clear fail (20 t on a rocket that takes 17.5 t there), and a
+clear pass with an Abort journaled at T+60 s.
+
+| run | grading time reached | Δv left | period | other values |
+| --- | --- | --- | --- | --- |
+| first run, Node 22.22.2 against Playwright's Chromium (2026-09-30) | 1.4e-12 s | 1.4e-11 m/s | 3.8e-13 min | event times and the crew's peak load 0 |
+| after the design lessons (2026-10-01) | 1.36e-12 s | 1.36e-11 m/s | 3.8e-13 min | the design measures 0 |
+| after grading at the end (2026-10-01, as its report gives it) | within about 1e-11 | within about 1e-11 | 3.6e-13 min | every value within about 1e-11 |
+| run again for this section, at 120a4f0 (2026-10-01; 6 records, 4 match and 2 borderline) | 1.36e-12 s | 1.36e-11 m/s | 3.55e-13 min | event times, the crew's peak load and every design measure 0 |
+
+`Math.*` does not agree bit for bit between the two engines, but the differences are about ten
+orders of magnitude inside the table; the step counts, statuses and verdicts were equal every time.
+
+- **A cross-engine bug found in review, fixed.** Re-checked in Chromium, a two-day flight to GEO
+  recorded in Node was graded one 30 s step late and still said "match": Chromium's clock reached
+  the grading boundary 2.1e-8 s early, the 1e-9 s window missed it, and the re-fly took 38 637 steps
+  against 38 636. Journaled commands used the same window. The window is now 10 µs (no step is
+  shorter than 1e-4 s, so it still holds one boundary at most), and a re-fly that stops more than
+  0.01 s from the grading time shows "differs". After: equal step counts, the grading times
+  2.1e-8 s apart, the values within 2e-11.
+- **End to end in Chromium:** a `?scenario=` link carrying a rocket and a satellite of its own,
+  opened in a fresh browser, flown live in the page's physics worker with its locks held; the
+  record kept the grading time (T+3 237.820127826364 s), the instant on screen (3 225.05 s), the
+  commands and the build; re-checked in Chromium, "match"; the same results file re-checked in
+  Node, its checksum holding, "match", the grading time identical.
+- **Also found in review, fixed:** one record with a broken criterion stopped the whole class's check
+  (it now shows "cannot re-fly" and the rest are checked), and a recorded verdict went into the CSV
+  raw, so a hand-edited `=HYPERLINK(…)` became a formula (it is escaped now).
+- **Not covered:** six-DOF flights are not re-flown (minutes each), nor are case lessons; time drift
+  beyond two days is not measured, and TORU commands were not re-checked across engines. The
+  checksum on a results file shows an accident, not a forgery: anyone who edits a file can work it
+  out again, and a student who deletes the four new fields makes an edited record look like an old
+  one ("incomplete").
+
+### Design lessons and their re-check (T01, T02)
+
+A design lesson (`src/lessons/design-lesson.ts`, the lesson file's version 3) is graded on the
+satellite model's figures for the design handed in, at the date and ECSS level the lesson fixes, by
+fourteen measures (`sat.mass` to `sat.torquerDipole`). `tests/design-lessons.test.ts` has a pass and
+a fail for each measure; `tests/recheck-design.test.ts` and the journey re-check design records.
+
+- **The engine tolerances for designs** were fixed on 2026-10-01 before the first comparison
+  (`DESIGN_ENGINE_TOLERANCE`, each argued in `src/lessons/recheck.ts`): 1e-9 relative for closed
+  forms (the plan's); 2e-4 min for the sampled eclipse (edges bisected to 1 ms, ten edges' worth);
+  1e-7 day for the revisit (a look refined to 1 ms, kept to the Julian date's 40 µs); 1e-6 relative
+  for the data a day; 0.1 % for the lifetime (the plan's); the 25-year flag exact.
+- **Node against Chromium:** 0 on every design measure of the fixtures' designs (two lessons with
+  their design date 2026-10-05; a pass, a fail, and a borderline record whose array is the need ×
+  (1.1 + 2e-11), on its 10 % bound). In review, 8 more designs on all 14 measures in the production
+  build: 0 for the revisit, the data a day, the eclipse, mass, power, battery, link, GSD, wheel and
+  torquer; at most 2.2e-15 relative for the swath, 5.4e-15 for the lifetime and 9.6e-16 for the Δv
+  margin. The implementer's "0 on every measure" therefore held for the fixtures' designs only. The
+  flight records came out identical bit for bit when the design records were added.
+- **Written after the first run, and said so:** the 25-year flag is borderline only when the
+  lifetime is within 0.1 % of the limit (the first run found the flag borderline at its own exact
+  bound with tolerance 0); no tolerance changed. Two test setups were changed after their first run:
+  the lifetime case moved from ECSS low to moderate (the satellite was still up after 28 years at
+  low), and the revisit case to a 1 cm lens and a 7-day bound.
+- **The example lesson** (`public/lessons/napa2-power.orbitlab-lesson.json`): NAPA-2 starts with a
+  +6.8 % margin, its battery drawn 13 %, its longest eclipse 35.14 minutes; with 0.08 m² of cells
+  the margin is 25.7 %. Its first hint said the margin grows in proportion to the cells' area; it
+  does not ((1 + margin)/area is 15.708 per m² at every area, so 10 % needs 0.07003 m²: 0.0701 m²
+  gives 10.11 % and 0.0700 m² 9.96 %), and the hint was corrected in all three languages in review.
+
+### Grading the orbit at the flight's end (T01, T03)
+
+A live page grades a flight at the first frame that shows its end, and under time warp that frame
+can come minutes late, when a transfer orbit's osculating elements have moved. Since 2026-10-01
+every event carries the state its step left the flight in, with the impulse a shut-down engine's
+tail-off still gives added along the thrust axis (`SimEvent.state`), and the orbit measures and hooks
+read the end event's (`src/lessons/measures.ts`, `tests/lesson-grading-end.test.ts`;
+[PHYSICS.md](PHYSICS.md) §2n).
+
+- **Why:** on lesson 12.1's transfer orbit the head's semi-major axis is 9.07 km higher 136 s after
+  insertion and 16.52 km higher 301 s after, and its speed falls from 10.19 to 9.89 km/s. The
+  telemetry could not say the end state: its last sample before insertion is mid-burn (apogee
+  34 888.65 km at T+549.14 s), and the next comes 135 s later. In Chromium the page graded 12.1
+  1 485 s late, and read the end's a, 24 361.73591902372 km, bit for bit Node's; the planned
+  answers failed and the reached ones passed.
+- **Read at the end,** 12.1 and 14.2: a 24 361.74 km, e 0.727873, the period 630.70 min, the speed
+  10.1896 km/s at 254.76 km (perigee 251.34 km). Vis-viva from the event log's 251 × 35 716 km gives
+  10.1929 km/s, 0.0033 km/s away. The planned orbit's a is 34.4 km off, and fails at every 5 s from 0
+  to 900 s after insertion (a test).
+- **Bounds:** the new tests compare grades with no tolerance, fixed before the first run; the single
+  "end state within 1 km of a" bound was set after measuring 0.55 km, and says so. Giving the
+  tail-off at once, not over its 1.25 s, leaves the end within 0.55 km of a, 0.022 min of period and
+  0.22 m/s of speed of the head after the tail-off on the transfer orbit, 0.006 min on lesson 5.3,
+  0.018 m/s on 13.2 and 0.016 m/s on 1.1. The last is above the re-check's 0.01 m/s, which matters
+  only for records from earlier builds; those re-check as differing on any orbit value graded late.
+- **The re-check's fixtures were regenerated** for it, once: only class-leo's period moved
+  (94.61590580531123 → 94.61454955970703 min expected), the typed answer still 0.0004 min inside its
+  band. Every status, verdict and grading time is the same; the results file's checksum changed.
+- **Found in review:** `tests/rigid-replay.test.ts` compared a command's whole event and broke when
+  events gained a state; it now also checks the state at that instant.
+
+### The lesson packs (T03)
+
+Five packs ship as lesson files under `public/lessons/packs/`, written from their sources
+(`src/lessons/pack-sources/`) by `scripts/lesson-packs.ts`: IPST basic science (M.5–M.6), IPST
+Earth, astronomy and space (M.6), IPST additional physics (M.4–M.6), the Royal Thai Air Force
+Academy's cadets, and Russia's speciality 24.05.06. They hold 17 lessons of their own (11.1–15.4)
+and list built-in lessons by reference. The roadmap validates T03 by the owner's review, which has
+not happened: every pack is marked `reviewed: false`, and the page says it is a draft.
+`tests/lesson-pack-format.test.ts`, `tests/lesson-packs.test.ts`, `tests/lesson-packs-design.test.ts`
+and `tests/heavy/lesson-packs-sixdof.test.ts`:
+
+- **The files** are what their sources write; each reads with no issue at the version its lessons
+  need (version 3 for the four packs with a design lesson); every text is in all three languages,
+  the Russian and the Thai in their own scripts; every code is of a known kind; no pack lesson takes
+  a built-in id. Before the design lessons, the reader at d9d00c3 read all five with no issue and
+  gave the same lessons without their codes; a copy older than Phase 4 now says the four version-3
+  files are newer and keeps their flights. A pack lesson's record re-checks to "match" from the packs alone, with no lesson
+  file opened, and so does a pack design record.
+- **The worked solutions,** each point-mass pack lesson flown headless as solved, pass, and a
+  typical wrong answer or wrong flight fails. The tolerances are the research's, fixed before any
+  flight, but two, set after seeing the flight and said so in the test: lesson 13.1's period, ±5 min
+  where the research had ±2 (the flown 1 432.1 min and the textbook sidereal day, 1 436 min, both
+  pass; 24 hours fails), and lesson 15.2's navigation bound, 1 000 m (the worked flight's 773 m plus
+  25 % is 966 m, rounded up). Lesson 14.2 also grades the perigee speed (±0.02 km/s), which the
+  pack added to the research's R2. For a while 14.1's period and 14.2's semi-major axis were widened
+  (to 0.4 min and 20 km) and the speed dropped, while the grader read the orbit at a late frame;
+  since it reads the end they are as the research set them, and the worked answers pass however
+  late they are graded (up to 1 000 s on the transfer orbit, anywhere on the next revolution of the
+  circles).
+- **Flown headless, in review:** 11.1 peaks at 4.588 g, Falcon 9's 45 m/s² limit, with max-Q at
+  50.1 s; 11.2 reaches 418 × 418 km; 12.2 and 14.1 reach 599 × 599 km at 97.787°, the node 0.19° off
+  in the window, 0.31° launched 120 s late (passes) and 0.81° at 240 s (fails); 13.1 a 35 709 km
+  circle with a period of 1 432.1 min, inserted at T+80 386 s (22.3 h; 1 t of payload, which comes
+  closest to the geostationary height, where 1.5–2.5 t end at 35 649–35 660 km); 13.2 548 × 550 km
+  at 53.00°. The figures the briefs quote (orbital speeds and periods, the sun-synchronous
+  inclination, the geostationary period, local mean time at Kourou and Bangkok) were worked again
+  by hand.
+- **Six-DOF** (heavy, 3 tests, 345.7 s; 335 s and 398 s in reviews): at max-q Soyuz's autopilot has
+  a phase margin of 46.1°, a gain margin of 36.7 dB and a crossover at 2.84 rad/s (15.1); the
+  navigation error at the third stage's cut-off is 2 951 m as set, 773 m with the star tracker,
+  388 m with a navigation-grade unit, 4 740 m with a MEMS unit and the star tracker, 3.2 m with
+  GNSS (15.2); with the FDIR on, unit 1 is voted out at 89 s and the vehicle reaches orbit, with it
+  off the vehicle breaks up at 46 s (15.3). Lesson 15.3 flies uncrewed, against the research,
+  because a crewed failed flight ends in the escape system's landing, which the grader does not end.
+
+**The packs' design lessons** (T03b). Each fixes its design date (2026-10-01) and ECSS level
+(moderate) in the file, so no lifetime is run and the grade reproduces on any day. Their bounds were
+fixed in the sources before the first test run; the worked designs were chosen from a probe of the
+model's figures first, and the tests say so. Each start design fails, the worked design passes, a
+wrong change and a lock-breaking change fail:
+
+| lesson | task | start | worked design |
+| --- | --- | --- | --- |
+| 11.4 (B6) | a communications satellite at 119.5° E: link margin ≥ 3 dB | 20 W: −3.10 dB | 100 W: 3.89 dB (81.5 W is the least that passes) |
+| 13.3 (P5) | NAPA-2's torquer dipole at most a third of an example coil's 0.06 A·m² | 0.0243 A·m² | a 0.01 A·m² residual dipole: 0.0143 A·m² |
+| 13.4 (P6) | THEOS-2 class with a 550 W payload: margin ≥ 0 %, depth ≤ 30 % | 3.5 m², 1 200 Wh: −40.7 %, 42.7 % | 6.5 m², 1 800 Wh: +10.2 %, 28.4 % |
+| 14.3 (R6) | a 6U with a 1 mN·m·s wheel and a 50 Mbit/s downlink: wheel over need ≥ 1, link ≥ 3 dB | 0.86, 2.41 dB | a 0.01 A·m² dipole and a 10 cm dish: 1.46, 18.66 dB |
+| 15.4 (S6) | the Earth-observation class: wheel over need between 1 and 2, from 4, 8, 16, 32 N·m·s | 25 N·m·s: 4.17 | 8 N·m·s: 1.34 (only 8 passes) |
+
+Re-derived by hand in review: B6's beam 21/(f·D) = 3.89°, its slant range at 10° 40 587 km and its
+free-space loss 206.2 dB at 12 GHz; P5's field at the pole, 2 × 7.8e15/(6 898 km)³ = 47.5 µT; P6's
+battery drawn 800 W × 34.55 min / 0.9 = 511.9 Wh, 42.7 % of 1 200 and 28.4 % of 1 800 Wh; R6's
+wheel need 0.707 × 1.153e-6 N·m × 5 721.5 s / 4 = 1.166 mN·m·s; S6's gravity gradient
+5.49e-3 N·m, 23.9 times the magnetic torque, the dipole 127.1 A·m² and the momentum 5.99 N·m·s.
+One setup was changed after its first run and says so: B6's "slower stream" first divided the rate
+by 4, which leaves 2.92 dB and fails on its own; it divides by 5. **Found in review:** R6's hint said
+halving the dipole "nearly halves" the torque; the magnetic part is 0.82 of it, so halving takes
+41 % off, and the hint and a test now say so. **A finding about the bench:** B6's link is reckoned
+at the edge of coverage, 10° up (40 586 km); Bangkok sees the satellite at 62.7°, about 36 400 km
+away, which would add about 0.95 dB. S6 passes any wheel from 5.99 to 11.98 N·m·s, not only the 8
+of the series.
+
+**A storm on the Long March 5B case** (B5, lesson 11.3, and built-in 6.2, `tests/case-worksheets.test.ts`).
+The sheet now predicts the stage of Tianhe's re-entry twice more, with indices fixed before
+running: the flux F10.7 = 75 (GFZ's mean over 29 April–8 May 2021 is 72.63, rounded to 5), and a
+quiet field, Kp 1 (Ap 4), or a strong storm, Kp 7 (Ap 132, NOAA G3), held the whole time, which makes
+the storm figure an upper bound. Quiet 9.27 days, storm 6.99 days, the Sun as measured 9.32 days:
+the question's answer is 2.29 ± 0.05 days. The quiet run within 5 % of the measured one, fixed
+before, is met (0.995). The storm's 6.99 days falls outside the agencies' ±20 % window
+(7.45–11.18 days), and the debrief says so. In review the two fixed-index predictions became
+recorded constants (9.273177 and 6.985586 days): they had run on the page's main thread whenever the
+sheet was built, 686 ms on top of the 519 ms already there; the test runs them again and holds the
+constants within 1e-6 day.
+
+### The bundle budget
+
+`scripts/bundle-budget.mjs` holds each group of the build to a ceiling in `budgets.json`
+(`tests/bundle-budget.test.ts`). Ceilings only ratchet down; a raise names its reason in the file,
+beside the group, and is set at the measured size plus 2 %. Phase 4 raised these, each with its
+reason recorded:
+
+| group | measured at each raise, kB | ceiling now | at 120a4f0 | why |
+| --- | --- | --- | --- | --- |
+| `index-*.js` | 4 191.5 (stage 2), 4 406.4 (stage 3a), 4 509.7 (stage 3b) | 4 600 | 4 514.5 | the satellite designer and bench; instructor mode's two pages, D07's page and its charts, **Fly it** for a satellite; the design lessons, the packs' page, the verdict before the click and plural counts; and about 315 + 330 new keys in each of the three dictionaries, which every chunk importing `src/i18n` carries |
+| `index-*.css` | 144.9, 156.8, 161.6 | 165 | 161.8 | the satellite pages, the writer, the check and the requirements page, the design-lesson strip and the packs' chips |
+| `ratings.worker`, `readiness.worker` | 1 891.1 and 1 899.8, 2 005.9 and 2 014.5, 2 048.7 and 2 058.0 | 2 090, 2 100 | 2 049.3, 2 058.6 | the dictionaries again: these workers write the verdict's text through `src/config/verdict.ts`, so each new key costs three times. The last raise was for T03b's four storm keys; the readiness worker stood exactly at its ceiling before them |
+| `flight.worker` | 537.2 | 548 | 537.2 | every event carries its end state (grading at the end) |
+| `recheck.worker` | seeded at 737.8, then 837.5 | 855 | 840.4 | the simulation, the built-in lessons and the grader, then the satellite model, the coverage search and P07's run for design records; no dictionaries |
+| `lifetime-altitude.worker`, `requirement-trades.worker` | seeded at 119.2 and 133.1 | 122, 136 | 119.4, 133.3 | D07's two workers, first imported by its page |
+| precache | 13 959.6, 15 408.9, 17 545.8, 17 993.6 | 18 354 | 18 116.0 | the chunks above and the new workers, precached for offline use as every worker is; the merge with PR #55's 4 096 × 2 048 Earth maps (about +2 100 kB of textures); the five pack files and the example lesson |
+
+The tracks reported their overruns and the raises were made at the stages' gates, but two: the
+re-check of design records raised the re-check worker's ceiling in its own commit (d96b893, from
+753 to 855 kB), and T03b the two verdict workers' for its own keys (29e353e). On stage 3a's base the budget already failed (the
+index chunk 4 191.5 kB against 4 065), stage 2's growth not yet raised for. At 120a4f0 the build is inside every ceiling (`npm run budget`, 2026-10-01).
+
+### The screens
+
+The pages format the cores' output and re-derive no physics. Each track walked its pages in
+Chromium (Playwright, software rendering, the fonts blocked, nothing let off the device) in English,
+Russian and Thai at 360, 375 and 1 440 px: the satellite designer and its six bench tabs, **Send to
+Orbit** and **Fly it**, the requirements page with a run, a Stop and a row opened, the scenario
+writer and the check page with the fixtures, design lessons from their desks to the hand-in, and
+every pack. The last passes had no sideways scroll of the page, no page or console errors and no
+request leaving the device. The walks found and fixed, among others: a page error when the array
+box was emptied with wings on, the five lesson tabs wrapping to three rows on a Russian phone,
+numbers parted from their units, Russian decimal commas, a case's data breaking figures mid-number
+on a phone, cut menus in the writer, and wording the reviewers read in Russian and Thai. A native
+speaker has still to read the Russian and Thai of Phase 4.
+
+## 10. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
@@ -3294,7 +4136,18 @@ npx vitest run tests/validation                                                 
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/screening-filter.test.ts     # the time filter's whole sweep, ~4 min
+npx vitest run tests/d06-satellites-identity.test.ts tests/phase4-contracts.test.ts tests/eclipse.test.ts tests/power.test.ts tests/satellite-attitude.test.ts tests/link.test.ts tests/imaging.test.ts   # D06's cores, ~2 s
+npx vitest run tests/d06-*.test.ts                                                # D06: the model, templates, hand-off, Launch, Fly it's verdict, ~35 s
+npx vitest run tests/d07-*.test.ts                                                # D07: revisit, lifetime searches, the trade table, the page, ~40 s
+npx vitest run tests/live-stepping.test.ts tests/instructor-mode.test.ts tests/scenario-link.test.ts tests/recheck-core.test.ts tests/recheck.test.ts tests/recheck-design.test.ts tests/design-lessons.test.ts tests/design-authoring.test.ts tests/design-lesson-example.test.ts tests/lesson-grading-end.test.ts tests/teacher-lessons.test.ts   # T01, T02, ~1½ min
+npx vitest run tests/lesson-pack-format.test.ts tests/lesson-packs.test.ts tests/lesson-packs-design.test.ts   # T03: the packs, their flights and their designs, ~12 s
+npx vitest run --config vitest.heavy.config.ts tests/heavy/custom-satellite-sixdof.test.ts   # D06: two copied satellites in six-DOF, ~20 min
+npx vitest run --config vitest.heavy.config.ts tests/heavy/lesson-packs-sixdof.test.ts      # T03: lessons 15.1–15.3 in six-DOF, ~6 min
+npm run build && CHROMIUM=/path/to/chromium node tests/browser/run.mjs satellite requirements recheck lesson-packs   # Phase 4 in Chromium, 1–2 min each; recheck is T02's Chromium half
 ```
+
+The Phase 4 times were measured on 2026-10-01 on the shared four-core build machine, under a load
+of about nine; the journeys' under a load of about seventeen.
 
 When a test fails, its message prints the whole comparison table for that flight. If the change
 behind it is intended, update the disagreement list in the test and the tables and findings here

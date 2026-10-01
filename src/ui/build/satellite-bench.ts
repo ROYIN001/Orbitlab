@@ -44,7 +44,7 @@ import { formatDuration } from '../lifetime';
 import { field, select } from './explore-level';
 import { camera, designDateField, engine, menu, numberField, refreshControls } from './satellite-controls';
 import { attitudeRows, cameraRows, dvRows, eclipseRows, linkRows, massRows, orbitRows, powerRows, type Row } from './satellite-figures';
-import { figureTable, satTextList, sayFig } from './satellite-text';
+import { figureTable, keepUnits, satTextList, sayFig } from './satellite-text';
 import type { SatelliteWorkspace } from './satellite-workspace';
 import { SatelliteFly, type SatelliteFlyHost } from './satellite-fly';
 import './satellite.css';
@@ -381,9 +381,10 @@ export class SatelliteBench {
       else if (r.result) {
         const res = r.result;
         const last = res.samples[res.samples.length - 1];
-        out.append(el('p', 'bsb-verdict', res.lifetime !== null
+        // the verdict's time stays with its unit on a phone ("через 6,8 года", task W)
+        out.append(el('p', 'bsb-verdict', keepUnits(res.lifetime !== null
           ? t('build.sat.life.down', { time: formatDuration(res.lifetime) })
-          : t('build.sat.life.up', { time: formatDuration(last.t), pe: num(last.perigeeAlt / 1000), ap: num(last.apogeeAlt / 1000) })));
+          : t('build.sat.life.up', { time: formatDuration(last.t), pe: num(last.perigeeAlt / 1000), ap: num(last.apogeeAlt / 1000) }))));
         // IADC's rule for the low region: down within 25 years of the end of the mission. With no engine the air
         // has it from the start, so the run from the design orbit has the mission and 25 years; with one, the
         // budget holds the orbit through the mission (its drag make-up), so the 25 years start from the design

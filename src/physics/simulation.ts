@@ -27,6 +27,7 @@ import { missionSatellite } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
 import { atmosphere } from './atmosphere';
+import { geodetic } from './geodesy';
 import { dragCoefficient, tumblingDragCoefficient } from './aero';
 import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
 import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
@@ -700,6 +701,8 @@ export class Simulation {
         // seconds of the burn.
         const vh = Math.sqrt(Math.max(0, s.speed * s.speed - s.vz * s.vz));
         if (s.altitude > 100e3 && this.ascent.insertionSpeed - vh < 250) dt = 0.02;
+        // C01: a backup cut-off lands on its own speed, not a step past it
+        dt = Math.min(dt, Math.max(1e-3, this.ascent.overrunTimeLeft()));
         break;
       }
       case 'burn': {
@@ -736,7 +739,8 @@ export class Simulation {
       case 'landed': dt = 1; break;
       default: dt = 1;
     }
-    if (this.rigidRuntime) {
+    // C01: not while the sphere lies on the ground waiting for its pilot, who flies himself (crew-descent.ts)
+    if (this.rigidRuntime && !this.escape.resting) {
       const held = this.rigidLink.heldCoastWindow();
       dt = held > 0 ? Math.min(dt, held) : Math.min(dt, this.rigidDt);
     }
@@ -972,6 +976,9 @@ export class Simulation {
           if (explicit.record?.predictedApoapsis !== undefined) s.predictedApoapsis = explicit.record.predictedApoapsis;
         }
       }
+      // C01: past a cut-off command that did not pass, the stage holds the
+      // attitude it had until the backup stops it (`AscentMonitor.overrun`).
+      if (this.ascent.overrun) dirCmd = this.ascent.overrun.dir;
     } else if (s.status === 'orbit') {
       // The final cut-off's tail-off: hold the attitude it was cut off in.
       dirCmd = s.dir;
@@ -1007,12 +1014,14 @@ export class Simulation {
       if (toGo < RIGID_STEERING_FREEZE_S) dirCmd = this.frozenCommand ??= dirCmd;
       else this.frozenCommand = null;
       // Above the atmosphere the ascent command swings no faster than
-      // RIGID_ASCENT_COMMAND_RATE: the stage follows it, and cuts off turning
-      // at the rate it was following.
+      // RIGID_ASCENT_COMMAND_RATE (C01: or the vehicle's own `ascentCommandRate`,
+      // Vostok-K's Blok E): the stage follows it, and cuts off turning at the
+      // rate it was following.
       // G01: a PEG/IGM flight releases the load relief (which holds the command above 500 Pa) from
       // where it held it, at LOAD_RELIEF_RELEASE_RATE down to 100 Pa and at the vacuum rate below.
       if (s.status === 'ascent' && (this.explicitGuidance ? q <= 500 : q < 100)) {
-        const rate = this.explicitGuidance && q >= 100 ? LOAD_RELIEF_RELEASE_RATE : RIGID_ASCENT_COMMAND_RATE;
+        const vacuum = this.vehicleSpec.ascentCommandRate !== undefined ? this.vehicleSpec.ascentCommandRate * DEG : RIGID_ASCENT_COMMAND_RATE;
+        const rate = this.explicitGuidance && q >= 100 ? LOAD_RELIEF_RELEASE_RATE : vacuum;
         dirCmd = this.limitedCommand = this.limitedCommand
           ? slerpLimited(this.limitedCommand, dirCmd, rate * dt) : this.relievedCommand ?? dirCmd;
       } else this.limitedCommand = null;
@@ -1498,10 +1507,18 @@ export class Simulation {
   updateDerived(): void {
     const s = this.state;
     const rm = norm(s.r);
-    s.altitude = rm - R_EARTH;
+    // C01: a return from orbit on the WGS-84 datum (Vostok-1) reports the height above the ellipsoid, the one
+    // its air, its barometric commands and its ground are on, and the geodetic latitude
+    const geo = this.escape.geodetic ? geodetic(s.r.x, s.r.y, s.r.z) : null;
+    s.altitude = geo ? geo.h : rm - R_EARTH;
     s.altitudeAGL = s.altitude - this.groundElevation(s.r);
     const omega = v3(0, 0, OMEGA_EARTH);
-    const vAir = this.rigidRuntime ? this.rigidRuntime.airVelocity(s, s.t) : sub(s.v, cross(omega, s.r));
+    // C01: an escape or a return in flight reports the air it flies in (`LaunchEscape.windAt`): on Vostok-1's return
+    // the wind measured at Saratov (docs/PHYSICS.md §13.6), elsewhere the same scenario wind or still air as below.
+    // At rest on the ground (the sphere waiting for its pilot) the vehicle's own again, so no surface wind reads as air.
+    const flight = this.escape.flight;
+    const vAir = flight && !flight.landed ? flight.airVelocity(flight.state, s.t)
+      : this.rigidRuntime ? this.rigidRuntime.airVelocity(s, s.t) : sub(s.v, cross(omega, s.r));
     if (this.rigidRuntime?.snapshot && !this.escape.flight) s.mass = this.rigidRuntime.snapshot.mass;
     s.airspeed = norm(vAir);
     s.speed = norm(s.v);
@@ -1509,7 +1526,7 @@ export class Simulation {
     s.q = 0.5 * atm.rho * s.airspeed * s.airspeed;
     s.mach = s.airspeed / atm.a;
     const ll = eciToLatLon(s.r, s.theta);
-    s.lat = ll.lat * RAD;
+    s.lat = (geo ? geo.lat : ll.lat) * RAD;
     s.lon = ll.lon * RAD;
     const lat0 = this.site.latitude * DEG, lon0 = this.site.longitude * DEG;
     const cosC = Math.sin(lat0) * Math.sin(ll.lat) + Math.cos(lat0) * Math.cos(ll.lat) * Math.cos(ll.lon - lon0);

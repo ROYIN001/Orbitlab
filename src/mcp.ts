@@ -32,7 +32,7 @@ import { SATELLITES, satelliteById } from './data/satellites';
 import { ORBIT_PRESETS } from './data/orbits';
 import { resolveTarget } from './physics/mission';
 import { DEG, RAD } from './physics/constants';
-import { FAILURE_MODES, GUIDANCE_FIELDS, NUMBER_FIELDS, fieldLimits, flightHomeCapable, guidanceLimits, numericIssue, issueText, parseUtcDateTime, assertConfigInput } from './config/validation';
+import { FAILURE_MODES, GUIDANCE_FIELDS, NUMBER_FIELDS, fieldLimits, flightHomeCapable, guidanceLimits, numericIssue, issueText, ownFlight, parseUtcDateTime, assertConfigInput } from './config/validation';
 import { LANDING_ZONES } from './data/landing-zones';
 import { buildTelemetryCsv } from './ui/csv';
 import { defaultDynamics } from './physics/rigid/config';
@@ -284,7 +284,7 @@ function applyOrbitInput(state: McpPanelState, input: Record<string, unknown>): 
       // `customise()`): carrying over the previous preset's name/description
       // would paint "custom" with e.g. the ISS preset's description.
       const custom = ORBIT_PRESETS.find((o) => o.id === 'custom')!;
-      orbit = { ...state.orbit, id: 'custom', name: custom.name, description: custom.description };
+      orbit = { ...ownFlight(state.orbit), id: 'custom', name: custom.name, description: custom.description };
       explicitCustom = true;
     } else {
       const preset = ORBIT_PRESETS.find((o) => o.id === id);
@@ -292,7 +292,9 @@ function applyOrbitInput(state: McpPanelState, input: Record<string, unknown>): 
       orbit = { ...preset };
     }
   } else {
-    orbit = { ...state.orbit };
+    // C01: any field of the orbit edited makes it another flight than a historical one, as on the panel
+    // (`ownFlight`): Vostok-1's planned orbit, over-burn, measure and return no longer belong to it
+    orbit = hasCustomFields ? { ...ownFlight(state.orbit) } : { ...state.orbit };
   }
   if (hasCustomFields) {
     // First: a suborbital target changes what the perigee may be.
@@ -383,8 +385,9 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
       notices.push(`Site reassigned to "${state.siteId}": ${spec.name} does not fly from the previously selected site.`);
     }
     if (!spec.recoverable) state.boosterRecovery = false;
-    // a plan belongs to one vehicle at one site, as on the panel
-    if (id !== live.vehicleId) state.recoveryPlan = undefined;
+    // a plan belongs to one vehicle at one site, as on the panel; and another rocket is another flight than a
+    // historical one (C01: `ownFlight`, as the panel's `pickVehicle`)
+    if (id !== live.vehicleId) { state.recoveryPlan = undefined; state.orbit = ownFlight(state.orbit); }
   }
   if (input.siteId !== undefined) {
     const id = expectString(input.siteId, 'siteId');
@@ -400,6 +403,9 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   if (input.satelliteId !== undefined && !keepCustomSatellite) {
     const id = expectString(input.satelliteId, 'satelliteId');
     if (!SATELLITES.some((s) => s.id === id)) throw new Error(`Unknown satelliteId "${id}". Valid ids: ${SATELLITES.map((s) => s.id).join(', ')}`);
+    // C01: another payload is another flight than a historical one (`ownFlight`; the panel's satellite handler
+    // replaces the whole orbit with the payload's own)
+    if (id !== live.satelliteId) state.orbit = ownFlight(state.orbit);
     state.satelliteSpec = undefined;
     state.satelliteId = id;
     // Mirrors the panel's satellite handler: a new payload sets its own mass
@@ -534,7 +540,18 @@ function summarizeConfig(cfg: MissionConfig): Record<string, unknown> {
       resolvedInclinationDeg: target.inclination * RAD,
       argPerigeeDeg: cfg.orbit.argPerigee,
       raanMode: cfg.orbit.raanMode,
+      ...(cfg.orbit.raanMode === 'fixed' ? { raanDeg: cfg.orbit.raan ?? 0 } : {}),
+      ...(cfg.orbit.raanMode === 'ltan' ? { ltanHours: cfg.orbit.ltan ?? 10.5 } : {}),
       suborbital: !!cfg.orbit.suborbital,
+      // C01: a historical flight's record of how it flew, while the orbit carries it (Vostok-1; any edit of the
+      // vehicle, payload or orbit drops it, `ownFlight`): the orbit the guidance was set for, the cut-off command
+      // that did not pass, the figures read as the orbit's extremes, and the return from orbit
+      ...(cfg.orbit.aim ? { aimKm: {
+        ...(cfg.orbit.aim.perigee !== undefined ? { perigee: cfg.orbit.aim.perigee / 1000 } : {}),
+        ...(cfg.orbit.aim.apogee !== undefined ? { apogee: cfg.orbit.aim.apogee / 1000 } : {}) } } : {}),
+      ...(cfg.orbit.backupCutoff ? { backupCutoffDvMs: cfg.orbit.backupCutoff.dv } : {}),
+      ...(cfg.orbit.extremes !== undefined ? { extremes: cfg.orbit.extremes } : {}),
+      ...(cfg.orbit.deorbit ? { deorbit: { timeS: cfg.orbit.deorbit.time, ...(cfg.orbit.deorbit.wind !== undefined ? { wind: cfg.orbit.deorbit.wind } : {}) } } : {}),
     },
     boosterRecovery: cfg.boosterRecovery,
     recoveryPlan: cfg.recoveryPlan ? structuredClone(cfg.recoveryPlan) : null,
@@ -671,7 +688,7 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   satelliteId: { type: 'string', enum: SATELLITES.map((s) => s.id), description: 'Payload id. Sets payloadMassKg to its typical mass unless payloadMassKg is also given.' },
   orbitId: { type: 'string', enum: [...ORBIT_PRESETS.map((o) => o.id)], description: 'Orbit preset id, or "custom" together with the fields below.' },
   perigeeKm: { type: 'number', minimum: -6300, description: 'Custom orbit perigee altitude, km: at least 100 for an orbit, between -6300 and 0 for a suborbital flight. Setting this (or any other custom field) switches the orbit to "custom".' },
-  suborbital: { type: 'boolean', description: 'A suborbital test flight (Starship only): the ship is cut off short of orbit on a path whose perigee is below the ground, and flies itself home to a splashdown, as on Flight 5 (perigee -15 km, apogee 213 km, 26.2°). Switches the orbit to "custom".' },
+  suborbital: { type: 'boolean', description: 'A suborbital flight: Starship\'s ship cut off short of orbit on a path whose perigee is below the ground, flying itself home to a splashdown, as on Flight 5 (perigee -15 km, apogee 213 km, 26.2°); or the Mercury capsule lobbed on its Redstone and brought home on its parachutes. Never with a return from orbit (a deorbit). Switches the orbit to "custom".' },
   apogeeKm: { type: 'number', minimum: 100, description: 'Custom orbit apogee altitude, km.' },
   inclinationDeg: { type: 'number', minimum: 0, maximum: 180, description: 'Custom orbit inclination, deg.' },
   argPerigeeDeg: { type: 'number', minimum: 0, maximum: 360, description: 'Custom orbit argument of perigee, deg.' },

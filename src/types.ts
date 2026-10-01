@@ -296,11 +296,21 @@ export interface VehicleSpec {
    * mission fixes its RAAN, the distance and the speed out of it brought to
    * zero together (C01: the Saturn V's iterative guidance flew to a descending
    * node set by the day's lunar geometry, yawing up to 274 m/s across its
-   * launch plane, AS-506 flight evaluation report Table 4-5). Absent: the plane
+   * launch plane, AS-506 flight evaluation report Table 4-5; Vostok-K, whose
+   * lateral stabilization and radio control held the firing plane set at the
+   * pad, Siddiqi, *Challenge to Apollo*, pp. 130 and 137). Absent: the plane
    * through wherever the vehicle is, with the target inclination — the rule for
    * every other launcher, whose plane is set by the moment of liftoff.
    */
   targetPlane?: boolean;
+  /**
+   * Six-DOF: how fast its vacuum ascent's guidance command may swing, deg/s.
+   * Absent: `RIGID_ASCENT_COMMAND_RATE`, 1°/s, the ceiling sized for a stage
+   * that coasts on after its cut-off (C01: Vostok-K's Blok E, which cannot be
+   * relit and lets its spacecraft go ten seconds after it, is let follow its
+   * last pitch-down at the point-mass model's 3°/s; src/data/vehicles.ts).
+   */
+  ascentCommandRate?: number;
   /** Reference drag area override (m^2); default from max diameter */
   dragArea?: number;
   /** Crewed launches supported */
@@ -419,6 +429,41 @@ export interface OrbitSpec {
    */
   flightAzimuth?: number;
   injection?: InjectionSpec;
+  /**
+   * A return from this orbit (C01: Vostok-1): the spacecraft's retro
+   * sequence started at mission time `time`, s (Vostok's TDU-1 pressurising
+   * command, its launch command `retro.starts` later), and its descent
+   * capsule flown home (`SatelliteSpec.descent`, src/physics/rigid/escape.ts).
+   * `wind` names the wind measured that day over the landing area
+   * (`MEASURED_WINDS`, src/data/measured-winds.ts), which the return and
+   * everything it lets go of fly in, in place of the flight's own air, while
+   * the record's time span lasts.
+   */
+  deorbit?: { time: number; wind?: string };
+  /**
+   * The orbit the ascent's guidance was set for, when the flight was left in
+   * another (C01: Vostok-1, planned 168 × 230 km, flown 168 × 314 km). The
+   * ascent is aimed and cut off on these apsides (each one given replaces the
+   * orbit's own); the flight is judged on `perigee` and `apogee`.
+   */
+  aim?: { perigee?: number; apogee?: number };
+  /**
+   * The last stage's cut-off command did not pass and a backup stopped it late
+   * (C01: Vostok-1, Baturin 2021): at the cut-off decision the stage burns on,
+   * its attitude held, until `dv` m/s more has been gained, then shuts down.
+   */
+  backupCutoff?: { dv: number };
+  /**
+   * The perigee and apogee given (and the `aim`'s) are the lowest and highest
+   * heights the orbit reaches, not one instant's conic (C01: Vostok-1, whose
+   * figures are the Soviet reports' least and greatest distance from the
+   * Earth): the ascent is cut off on, and the flight judged on, the extremes of
+   * the next revolution under J2 (`physicalApsides`) in both models. Absent:
+   * the ascent is cut off on the osculating conic, and the flight judged on the
+   * extremes in six-DOF and on the conic in point-mass — which, cut off at
+   * 63° N, puts the apogee 18 km under the extreme the orbit then reaches.
+   */
+  extremes?: boolean;
   description: string;
 }
 
@@ -462,15 +507,22 @@ export interface SatelliteSpec {
   carriers?: string[];
   /**
    * A capsule that comes home on its own parachutes from a suborbital flight
-   * (C01: Mercury), which lets a vehicle with no ship to fly home take one.
+   * (C01: Mercury), which lets a vehicle with no ship to fly home take one;
+   * or from orbit, when the orbit has a `deorbit` (Vostok).
    */
-  descent?: 'mercury';
+  descent?: 'mercury' | 'vostok';
   /**
    * Rides the last stage into orbit and stays on it: the Apollo spacecraft
    * stayed on the S-IVB through the parking orbit (C01), where every other
    * payload is let go 15 s after the target orbit is reached.
    */
   staysAttached?: boolean;
+  /**
+   * Seconds from reaching the orbit to the spacecraft's release, when it is
+   * not the 15 s every other payload waits (C01: Vostok, ten seconds after
+   * Blok E's cut-off, ESA).
+   */
+  separationDelay?: number;
   /**
    * The satellite's own drag and sunlight figures for the orbit it is handed
    * on in (S03, src/orbit/handoff.ts; roadmap D06, Phase 4 map §2.6): its mean

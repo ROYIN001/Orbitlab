@@ -93,9 +93,24 @@ export class BurnSequencer {
    * state the engine's tail-off still leaves behind: at a cut-off that is
    * metres per second, and Falcon 9's circularisation read 500 × 452 km
    * without it.
+   *
+   * C01: a mission whose figures are the orbit's lowest and highest heights
+   * (`OrbitSpec.extremes`, Vostok-1) is judged on them in point-mass too: the
+   * point-mass orbit is flown under J2 as well (`stepOrbit`), and Vostok cut
+   * off at 63° N reads 168 × 297 km on the conic of that instant in an orbit
+   * whose extremes are 168 × 315 km.
    */
   judgedElements(el: OrbitalElements): OrbitalElements {
-    if (!this.sim.rigidRuntime || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
+    if ((!this.sim.rigidRuntime && !this.sim.cfg.orbit.extremes) || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
+    return this.extremesOf(el);
+  }
+
+  /**
+   * `el` with its apsides replaced by the lowest and highest altitude of the
+   * next revolution under J2 from the present state, the engine's tail-off
+   * counted (`physicalApsides`); `el` itself when no revolution can be flown.
+   */
+  extremesOf(el: OrbitalElements): OrbitalElements {
     const s = this.sim.state;
     const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass);
     const apsides = physicalApsides({ r: s.r, v: tail > 0 ? addScaled(s.v, s.dir, tail) : s.v });
@@ -831,9 +846,21 @@ export class BurnSequencer {
     });
     const st = this.sim.vehicle.active;
     if (st) this.sim.vehicle.cutoffStage(st, s.t);
-    if (!s.payloadSeparated && !this.sim.satellite.staysAttached) this.sim.schedule(s.t + 15, 'payloadSep', () => this.sim.staging.separatePayload(false));
+    if (!s.payloadSeparated && !this.sim.satellite.staysAttached) {
+      this.sim.schedule(s.t + (this.sim.satellite.separationDelay ?? 15), 'payloadSep', () => this.sim.staging.separatePayload(false));
+    }
     // C01: a parking orbit, with an injection to fly from it
     if (this.sim.cfg.orbit.injection) this.sim.apollo.begin();
+    // C01: a spacecraft that comes home from this orbit, from the start of its retro sequence (Vostok-1: the
+    // TDU-1's pressurising command at T+4,684.2 s, the engine's launch command 2.2 s later)
+    const deorbit = this.sim.cfg.orbit.deorbit;
+    if (deorbit && this.sim.satellite.descent) {
+      const at = Math.max(s.t + 30, deorbit.time);
+      this.sim.event('evt.deorbitPlanned', 'info', { t: at, min: Math.round(at / 60) });
+      this.sim.schedule(at, 'deorbit', () => {
+        if (this.sim.state.status === 'orbit' && this.sim.state.payloadSeparated) this.sim.escape.beginReturn();
+      });
+    }
   }
 
   /**
