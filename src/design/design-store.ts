@@ -220,7 +220,9 @@ export function designFileText(doc: DesignDocument): string {
 
 /** A file name for a design: its name made safe for any file system, and its kind. */
 export function designFileName(record: Pick<DesignRecord, 'name' | 'kind'>): string {
-  const slug = record.name.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  // a Latin letter drops its accent ("Café" → "cafe"); a Cyrillic letter keeps its own, as NFC puts it back: «й» and
+  // «ё» are letters of their own, and «Мой спутник» came out as "мои-спутник" (review of task W)
+  const slug = record.name.normalize('NFKD').replace(/([a-z])[̀-ͯ]+/gi, '$1').normalize('NFC').toLowerCase()
     .replace(/[^a-z0-9฀-๿Ѐ-ӿ]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'design';
   return `${slug}-${record.kind}${DESIGN_FILE_EXTENSION}`;
 }

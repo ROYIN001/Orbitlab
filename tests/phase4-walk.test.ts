@@ -35,6 +35,11 @@
  *   "สมชาย-ใจดี", «วิชัย» → "วิชัย"); Cyrillic and Latin names are joined by
  *   a hyphen as before ("Иван-Петров", "Anna-Student"), with none at either
  *   end; a class code joins with nothing («ห้อง 5/1» → "ห้อง51").
+ * - A saved design's file name keeps a Russian name's «й» and «ё», letters of
+ *   their own, as it keeps a Thai name's marks: «Мой спутник» →
+ *   "мой-спутник-satellite.orbitlab.json", not "мои-спутник-…"; «Ёлка-1» →
+ *   "ёлка-1-…"; a Latin letter still drops its accent ("Café" → "cafe")
+ *   (review of W).
  */
 import { describe, expect, it } from 'vitest';
 import { setLang, t, tCount } from '../src/i18n';
@@ -43,6 +48,7 @@ import { keepUnits as stripKeepUnits } from '../src/ui/keep-units';
 import { decimal, measureText, unitAfter } from '../src/ui/lessons/measure-text';
 import { spreadsheetCsv } from '../src/ui/download';
 import { nameForFile } from '../src/ui/file-name';
+import { designFileName } from '../src/design/design-store';
 import PHYSICS_PACK from '../public/lessons/packs/ipst-physics.orbitlab-lesson.json?raw';
 
 const NBSP = ' ';
@@ -142,5 +148,11 @@ describe('a file named after a student or a class keeps a Thai name whole (W)', 
     expect(nameForFile('  Anna  Student! ')).toBe('Anna-Student');
     expect(nameForFile('ห้อง 5/1', '')).toBe('ห้อง51');
     expect(nameForFile('---')).toBe('');
+  });
+  it('keeps a Russian design name\'s «й» and «ё» in its file name (review of W)', () => {
+    expect(designFileName({ name: 'Мой спутник', kind: 'satellite' })).toBe('мой-спутник-satellite.orbitlab.json');
+    expect(designFileName({ name: 'Ёлка-1', kind: 'vehicle' })).toBe('ёлка-1-vehicle.orbitlab.json');
+    expect(designFileName({ name: 'Café Ñandú', kind: 'satellite' })).toBe('cafe-nandu-satellite.orbitlab.json');
+    expect(designFileName({ name: 'สมชาย ใจดี', kind: 'satellite' })).toBe('สมชาย-ใจดี-satellite.orbitlab.json');
   });
 });
