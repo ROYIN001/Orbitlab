@@ -41,6 +41,9 @@ export default async function satellite(t) {
   // the array: cells on wings that track the Sun, 0.1 m² of them
   await page.selectOption(`${grid} [data-k="sx:mount"]`, 'tracking');
   const areaBox = page.locator(`${grid} [data-k="sx:power.arrayArea"]`);
+  // emptied on the way to a new number, as a student retypes it: a NaN the Fly it box must not try to fly (no page error)
+  await areaBox.fill('');
+  t.check(await page.locator(`${grid} [data-k="sx:fly"]`).isDisabled(), 'Fly it is offered for a design with an empty array area');
   await areaBox.fill('0.1');
   await areaBox.press('Tab');
   const after = await t.until(async () => { const g = await glance(); return g !== before && !(await page.$(`${grid} .bsat-glance.stale`)) ? g : null; }, { timeoutMs: 10_000 });

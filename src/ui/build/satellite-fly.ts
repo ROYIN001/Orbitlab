@@ -24,6 +24,7 @@ import { VEHICLES, vehicleById } from '../../data/vehicles';
 import { siteById } from '../../data/sites';
 import { B_RANGE } from '../../orbit/ballistic-range';
 import type { MissionDocument } from '../../config/mission-file';
+import { satelliteDesignProblems } from '../../config/satellite-design';
 import {
   LAUNCH_ISP, designLaunch, designMissionDocument, designMissionIssues, designTargetOrbit, type DesignFlight, type DesignLaunch,
 } from '../../design/satellite-launch';
@@ -69,9 +70,16 @@ export class SatelliteFly {
     return { flight: { vehicle, siteId: vehicle === own ? mission.siteId : undefined, from: mission.launchTime }, own, mission };
   }
 
-  /** Draw the box for the design on screen; `refused` when the design's checker refuses it. */
+  /**
+   * Draw the box for the design on screen; `refused` when the design's
+   * checker refuses it. The design on screen is checked here as well: while
+   * the student types, the workspace's verdict is still the last design's
+   * (its figures wait for the typing to pause), and a box emptied on the way
+   * to a new number is a NaN no spec is made from (`dragArea` throws on it).
+   */
   render(refused: boolean): void {
     const d = this.ws.design;
+    refused ||= satelliteDesignProblems(d).length > 0;
     const { flight, own } = this.flight();
     const parts: HTMLElement[] = [el('h3', 'bx-h3', t('build.ex.fly.title'))];
 
