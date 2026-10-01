@@ -11,7 +11,7 @@ import { ALL_VEHICLES, HISTORICAL_VEHICLES, VEHICLES, vehicleById } from '../src
 import { siteById } from '../src/data/sites';
 import { satelliteById } from '../src/data/satellites';
 import { DEG, G0, MU_EARTH, R_EARTH } from '../src/physics/constants';
-import { gmst, julianDate } from '../src/physics/orbital';
+import { gmst, julianDate, planeNormal, raanFromLaunch } from '../src/physics/orbital';
 import { add, cross, dot, norm, normalize, scale, sub, v3 } from '../src/physics/vec3';
 import { moonState, R_MOON } from '../src/physics/lunar/ephemeris';
 import { eciToSelenographic, selenographicToEci } from '../src/physics/lunar/orientation';
@@ -120,6 +120,26 @@ describe('the flights they are here for, point-mass', () => {
     });
 });
 
+describe('Vostok-1\'s plane', () => {
+  it('is the one through Gagarin\'s Start at liftoff, the pad where it really is, and Vostok-K holds it', () => {
+    // the pad's 45.920° N is geodetic: on WGS-84 it is 45.728° geocentric, 21 km south of where the app's
+    // convention (every site's latitude placed as geocentric) puts it; liftoff 09:06:59.7 Moscow time
+    const s = watchMissionSettings('vostok1');
+    const pad = siteById('baikonur').pads!.find((p) => p.id === s.padId)!;
+    const f = 1 / 298.257223563, geocentric = Math.atan((1 - f) ** 2 * Math.tan(pad.latitude * DEG));
+    expect(geocentric / DEG).toBeCloseTo(45.728, 3);
+    const lst = pad.longitude * DEG + gmst(julianDate(new Date('1961-04-12T06:06:59.700Z')));
+    const node = raanFromLaunch(geocentric, lst, 64.95 * DEG);
+    expect(s.orbit.raanMode).toBe('fixed');
+    expect(s.orbit.raan!).toBeCloseTo(node / DEG, 3);
+    // the pad lies in it, northbound: the plane's normal is square to the pad
+    expect(Math.abs(dot(planeNormal(64.95 * DEG, s.orbit.raan! * DEG),
+      v3(Math.cos(geocentric) * Math.cos(lst), Math.cos(geocentric) * Math.sin(lst), Math.sin(geocentric))))).toBeLessThan(1e-5);
+    // the closed loop flies into it (the plane through wherever the rocket is, otherwise)
+    expect(vehicleById('vostokk').targetPlane).toBe(true);
+  });
+});
+
 describe('Vostok-1\'s over-burn, point-mass', () => {
   // Baturin (Novaya Gazeta, 11 April 2021): the radio command to shut the core down did not pass, and the
   // backups stopped the core and Blok E 25.43 m/s late — 327 km of apogee where 230 km was planned. The
@@ -169,6 +189,10 @@ describe('Vostok-1\'s over-burn, point-mass', () => {
     // the conic of the cut-off's instant, at 63° N, reads its apogee 18 km under the highest point reached
     expect(Math.abs(flown.extremes.apoapsisAlt - flown.el.apoapsisAlt - 18e3), log).toBeLessThan(2e3);
     expect(flown.sim.events.some((e) => e.key === 'evt.targetOrbit'), log).toBe(true);
+    // in the plane it was launched in, held through the climb: the node where the pad put it at liftoff (the
+    // conic of the cut-off's instant reads 0.04° east of it), not 0.58° east as with the plane left free
+    expect(Math.abs(flown.el.raan / DEG - s.orbit.raan!), log).toBeLessThan(0.1);
+    expect(Math.abs(flown.el.i / DEG - 64.95), log).toBeLessThan(0.02);
   });
 });
 

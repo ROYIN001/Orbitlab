@@ -118,14 +118,16 @@ export function expectFlownVostok1(sim: Simulation): void {
   expect(Number(down.params!.g)).toBeLessThan(11);
   expect(Math.abs(Number(down.params!.speed) - 10)).toBeLessThan(1.5);
   expect(Math.abs(sim.state.mass - 2100)).toBeLessThan(30);
-  // where the sphere came down, by its geodetic latitude: within 60 km of its place by Smelovka, cross-track
-  // included (the orbit's plane, about 25–30 km: §13.6), and on it along the track, which is what the TDU-1's
-  // pitch was reconstructed for (2.6°, about 52 km a degree)
+  // where the sphere came down, by its geodetic latitude: within 15 km of its place by Smelovka. Along the
+  // track is what the TDU-1's pitch was reconstructed for (2.51°, about 52 km a degree; within 1 km in both
+  // models); across it is the orbit's plane, held from liftoff through the pad where it really is (1 km in
+  // both; 28–32 km with the plane left free to drift east with the climb: §13.6)
   const miss = vostok1Miss(sim), { along, cross } = vostok1Residual(sim);
   const where = `${sim.state.lat.toFixed(3)} N ${sim.state.lon.toFixed(3)} E: ${miss.toFixed(1)} km, ${along.toFixed(1)} km along the track `
     + `(+ short), ${cross.toFixed(1)} km across it (+ the place to the north-west)`;
-  expect(miss, where).toBeLessThan(60);
-  expect(Math.abs(along), where).toBeLessThan(20);
+  expect(miss, where).toBeLessThan(15);
+  expect(Math.abs(along), where).toBeLessThan(10);
+  expect(Math.abs(cross), where).toBeLessThan(10);
   expectGagarinHome(sim, log);
   expectModuleGone(sim, log);
   // nothing of the return makes a stage's impact: not the hatch, the seat or the module's pieces

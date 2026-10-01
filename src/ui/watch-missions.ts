@@ -238,7 +238,16 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // src/physics/rigid/escape.ts; docs/PHYSICS.md §13.6), in the wind Saratov
   // measured that morning (`SARATOV_1961_04_12`, src/data/measured-winds.ts).
   { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok1', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
-    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free', deorbit: { time: 4684.2, wind: 'saratov-1961-04-12' },
+    // The plane: the one through the pad at liftoff, 09:06:59.7 Moscow time (06:06:59.7 UTC), at 64.95°, held
+    // fixed in space by Vostok-K's guidance (`targetPlane`, src/data/vehicles.ts). The pad as it really lies:
+    // Gagarin's Start's 45.920° N is geodetic, 45.728° geocentric on WGS-84 (the app places every site's
+    // latitude as geocentric, which would put it 21 km north); with 63.342° E and GMST 291.957° at liftoff
+    // (`gmst`), the northbound node is 326.653° from the equinox of date (`raanFromLaunch`;
+    // tests/historical-vehicles.test.ts recomputes it). The rocket itself still lifts off from the site as the
+    // app places it and is steered the 13 km across onto that plane. Left free, the closed loop re-aims its
+    // plane through wherever the rocket has got to: the node drifted 0.8° east during the climb, and the
+    // sphere came down 28–32 km across the track from its place (docs/PHYSICS.md §13.6).
+    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'fixed', raan: 326.653, deorbit: { time: 4684.2, wind: 'saratov-1961-04-12' },
       aim: { apogee: 230e3 }, backupCutoff: { dv: 25.43 }, extremes: true }, launchTime: '1961-04-12T06:07:00Z',
     flown: { events: [
       // the core's cut-off is quoted rounded (Zak gives 299 s; on the December 1960 flight its command was due at
