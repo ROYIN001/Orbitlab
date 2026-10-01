@@ -4153,6 +4153,7 @@ export const ru: Record<string, string> = {
   'lesson.author.locks': 'Что учащимся менять нельзя',
   'lesson.author.locksNote': 'Отмеченный здесь параметр становится недоступным на панели настройки, а полёт, в котором его всё же изменили, не может быть зачтён.',
   'lesson.author.locksDefault': 'Закрепить всю миссию',
+  'lesson.author.lock.orbit': 'Целевая орбита',
   'lesson.author.criteria': 'Как оценивается полёт',
   'lesson.author.criteriaNote': 'Урок зачтён, когда выполнены все критерии. Числа указываются в показанных единицах.',
   'lesson.author.add': 'Добавить критерий',

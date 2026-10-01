@@ -445,9 +445,14 @@ class AuthorView {
   }
 }
 
-/** A lockable setting in the setup panel's own words (as the lesson strip names them). */
+/**
+ * A lockable setting in the setup panel's own words (as the lesson strip names
+ * them) — but the orbit's lock by the orbit alone: the strip's name for it,
+ * the setup step's "Target orbit & launch time", stood here beside the launch
+ * time's own box, and the orbit's lock does not hold the launch time.
+ */
 function lockText(key: LockKey): string {
-  if (key === 'setup.orbit') return t('setup.step.orbit');
+  if (key === 'setup.orbit') return t('lesson.author.lock.orbit');
   if (key === 'setup.faults') return t('setup.faults.title');
   return t(key);
 }

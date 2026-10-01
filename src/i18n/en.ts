@@ -4174,6 +4174,7 @@ export const en: Record<string, string> = {
   'lesson.author.locks': 'What the students may not change',
   'lesson.author.locksNote': 'A setting ticked here is greyed out on the setup panel, and a flight that changes it anyway cannot pass.',
   'lesson.author.locksDefault': 'Lock the whole mission',
+  'lesson.author.lock.orbit': 'Target orbit',
   'lesson.author.criteria': 'How the flight is graded',
   'lesson.author.criteriaNote': 'The lesson is passed when every criterion is met. Numbers are in the units shown.',
   'lesson.author.add': 'Add a criterion',

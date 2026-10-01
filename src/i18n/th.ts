@@ -4154,6 +4154,7 @@ export const th: Record<string, string> = {
   'lesson.author.locks': 'สิ่งที่นักเรียนเปลี่ยนไม่ได้',
   'lesson.author.locksNote': 'ค่าที่เลือกไว้ที่นี่จะเป็นสีเทาในแผงตั้งค่า และการบินที่เปลี่ยนค่านั้นจะไม่ผ่าน',
   'lesson.author.locksDefault': 'ล็อกทั้งภารกิจ',
+  'lesson.author.lock.orbit': 'วงโคจรเป้าหมาย',
   'lesson.author.criteria': 'เกณฑ์การประเมินการบิน',
   'lesson.author.criteriaNote': 'บทเรียนจะผ่านเมื่อผ่านทุกเกณฑ์ ตัวเลขใช้หน่วยตามที่แสดง',
   'lesson.author.add': 'เพิ่มเกณฑ์',
