@@ -11,12 +11,13 @@
  * rocket is doing and why, and the numbers on screen are the three anyone can
  * read (time, height, speed).
  */
-import type { VisualFrame } from '../physics/frame';
+import type { DebrisFrame, VisualFrame } from '../physics/frame';
 import { APOLLO_AT_MOON, APOLLO_CM } from '../physics/sim/apollo';
 import { STATIONKEEPING_M } from '../physics/sim/apollo-rendezvous';
 import type { SimEvent } from '../physics/simulation';
 import { OMEGA_EARTH } from '../physics/constants';
 import { VOSTOK_CAPSULE } from '../physics/rigid/escape';
+import { geodeticHeight } from '../physics/geodesy';
 
 export type WatchBeat =
   | 'countdown' | 'liftoff' | 'climb' | 'transonic' | 'maxQ' | 'gravityTurn' | 'boosterSep' | 'boosterSepCross' | 'boosterSepSolid'
@@ -30,8 +31,12 @@ export type WatchBeat =
   | 'escapeCoast' | 'escapeCapsule' | 'escapeModules' | 'ballistic' | 'drogue' | 'mainChute' | 'mainDescent' | 'softLanding' | 'crewSafe'
   // a capsule flown home from a suborbital flight (C01: Mercury-Redstone 3)
   | 'capsuleCutoff' | 'capsuleSep' | 'capsuleArc' | 'retroFire' | 'capsuleEntry' | 'capsuleDrogue' | 'capsuleMain' | 'capsuleSplash'
-  // Vostok-1 from its orbit home (C01): the orbit, the retro-fire, the stuck separation, the entry, the ejection, the steppe
-  | 'vostokOrbit' | 'vostokRetro' | 'vostokCoast' | 'vostokSeparation' | 'vostokEntry' | 'vostokEjection' | 'vostokDrogue' | 'vostokMain' | 'vostokLanding'
+  // Vostok-1 from its orbit home (C01): the orbit, the retro-fire and the spin it left, the separation that waited for
+  // the thermal sensors, the module breaking up, the entry, the ejection, the sphere's and Gagarin's parachutes, the
+  // sphere down with Gagarin still in the air, and Gagarin down
+  | 'vostokOrbit' | 'vostokRetro' | 'vostokSpin' | 'vostokCoast' | 'vostokSeparation' | 'vostokApart' | 'vostokEntry' | 'vostokModuleBurn'
+  | 'vostokEjection' | 'vostokDrogue' | 'vostokPilotMain' | 'vostokMain' | 'vostokPilotReserve' | 'vostokSphereDown' | 'vostokPilotDescent'
+  | 'vostokLanding'
   // a flight on to the station (G07)
   | 'rvPlan' | 'rvPhasing' | 'rvBurn' | 'rvApproach' | 'rvFlyaround' | 'rvStationkeeping' | 'rvFinal' | 'rvContact' | 'rvCapture' | 'rvDocked'
   // Apollo from its parking orbit (C01): the restart for the Moon, the transposition, the extraction,
@@ -135,12 +140,19 @@ export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
   capsuleSplash: { label: 'watch.beat.splashdown', text: 'watch.say.capsuleSplash' },
   vostokOrbit: { label: 'watch.beat.vostokOrbit', text: 'watch.say.vostokOrbit' },
   vostokRetro: { label: 'watch.beat.vostokRetro', text: 'watch.say.vostokRetro' },
+  vostokSpin: { label: 'watch.beat.vostokSpin', text: 'watch.say.vostokSpin' },
   vostokCoast: { label: 'watch.beat.vostokCoast', text: 'watch.say.vostokCoast' },
   vostokSeparation: { label: 'watch.beat.vostokSeparation', text: 'watch.say.vostokSeparation' },
+  vostokApart: { label: 'watch.beat.vostokApart', text: 'watch.say.vostokApart' },
   vostokEntry: { label: 'watch.beat.capsuleEntry', text: 'watch.say.vostokEntry' },
+  vostokModuleBurn: { label: 'watch.beat.vostokModuleBurn', text: 'watch.say.vostokModuleBurn' },
   vostokEjection: { label: 'watch.beat.vostokEjection', text: 'watch.say.vostokEjection' },
-  vostokDrogue: { label: 'watch.beat.drogue', text: 'watch.say.vostokDrogue' },
-  vostokMain: { label: 'watch.beat.capsuleMain', text: 'watch.say.vostokMain' },
+  vostokDrogue: { label: 'watch.beat.vostokDrogue', text: 'watch.say.vostokDrogue' },
+  vostokPilotMain: { label: 'watch.beat.vostokPilotMain', text: 'watch.say.vostokPilotMain' },
+  vostokMain: { label: 'watch.beat.vostokMain', text: 'watch.say.vostokMain' },
+  vostokPilotReserve: { label: 'watch.beat.vostokPilotReserve', text: 'watch.say.vostokPilotReserve' },
+  vostokSphereDown: { label: 'watch.beat.vostokSphereDown', text: 'watch.say.vostokSphereDown' },
+  vostokPilotDescent: { label: 'watch.beat.vostokPilotDescent', text: 'watch.say.vostokPilotDescent' },
   vostokLanding: { label: 'watch.beat.vostokLanding', text: 'watch.say.vostokLanding' },
   escapeCapsule: { label: 'watch.beat.escapeCapsule', text: 'watch.say.escapeCapsule' },
   escapeModules: { label: 'watch.beat.escapeCapsule', text: 'watch.say.escapeModules' },
@@ -191,9 +203,23 @@ const EVENT_BEATS: ReadonlyArray<{ key: string; beat: WatchBeat; hold: number }>
   { key: 'evt.escapeCapsule', beat: 'escapeCapsule', hold: 10 },
   { key: 'evt.escapeDrogue', beat: 'drogue', hold: 12 },
   { key: 'evt.retroFire', beat: 'retroFire', hold: 12 },
-  // C01: Vostok's instrument module letting go at last, and Gagarin leaving on his seat
+  // C01: Vostok-1's way home (src/physics/rigid/escape.ts, sim/module-entry.ts, sim/crew-descent.ts): the TDU-1's
+  // fuel out a second early and the spin the venting left; the straps fired by the thermal sensors and the cables
+  // parting a few seconds on, one moment on screen; the module breaking up; the hatch and, two seconds later,
+  // Gagarin on his seat, one moment too; his main parachute as he leaves the seat, and his reserve; the sphere
+  // down while he is still in the air; his landing. Each hold is long enough to read its sentence at the beat's
+  // own pace (`beatWarp`).
+  { key: 'evt.retroShortfall', beat: 'vostokSpin', hold: 30 },
+  { key: 'evt.vostokStraps', beat: 'vostokSeparation', hold: 24 },
   { key: 'evt.vostokSeparation', beat: 'vostokSeparation', hold: 20 },
-  { key: 'evt.ejection', beat: 'vostokEjection', hold: 15 },
+  { key: 'evt.moduleBreakup', beat: 'vostokModuleBurn', hold: 20 },
+  { key: 'evt.hatchOff', beat: 'vostokEjection', hold: 20 },
+  { key: 'evt.ejection', beat: 'vostokEjection', hold: 18 },
+  { key: 'evt.seatSeparation', beat: 'vostokPilotMain', hold: 20 },
+  { key: 'evt.pilotMain', beat: 'vostokPilotMain', hold: 18 },
+  { key: 'evt.pilotReserve', beat: 'vostokPilotReserve', hold: 20 },
+  { key: 'evt.capsuleLanding', beat: 'vostokSphereDown', hold: 20 },
+  { key: 'evt.pilotLanding', beat: 'vostokLanding', hold: 20 },
   { key: 'evt.escapeMain', beat: 'mainChute', hold: 15 },
   { key: 'evt.escapeMainLow', beat: 'mainChute', hold: 15 },
   { key: 'evt.escapeSoftLanding', beat: 'softLanding', hold: 10 },
@@ -258,7 +284,11 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
         // Vostok's retro-fire is the 40 s of its burn, read from the engine (`abortBeat`)
         if (vostok && b.key === 'evt.retroFire') continue;
         if (vostok && b.key === 'evt.escapeDrogue') return 'vostokDrogue';
-        if (vostok && (b.key === 'evt.escapeMain' || b.key === 'evt.escapeMainLow')) return 'vostokMain';
+        // the sphere's main opens seconds after Gagarin's: his holds the screen, and the sphere's is read from its
+        // phase once his has been told (`abortBeat`)
+        if (vostok && (b.key === 'evt.escapeMain' || b.key === 'evt.escapeMainLow')) continue;
+        // the sphere down with Gagarin still in the air; once he is down too, the landing is his
+        if (b.key === 'evt.capsuleLanding' && (!vostok || frame.status === 'landed')) continue;
         if (b.key === 'evt.suborbitalTarget' && frame.status !== 'descent') return 'capsuleCutoff';
         if (b.key === 'evt.payloadSep') { if (capsule) return 'capsuleSep'; continue; }
         if (capsule && b.key === 'evt.escapeDrogue') return 'capsuleDrogue';
@@ -378,12 +408,18 @@ function capsuleBeat(frame: VisualFrame): WatchBeat {
 function abortBeat(frame: VisualFrame): WatchBeat {
   const a = frame.abort!;
   if (a.kind === 'return' && a.capsule === 'vostok') {
-    if (frame.status === 'landed' || a.phase === 'landed') return 'vostokLanding';
+    // the flight is 'landed' only once Gagarin is down; until then the sphere waits on the ground for him
+    if (frame.status === 'landed') return 'vostokLanding';
+    if (a.phase === 'landed') return crewAloft(frame) ? 'vostokPilotDescent' : 'vostokLanding';
     if (a.phase === 'drogue') return 'vostokDrogue';
     if (a.phase === 'main') return 'vostokMain';
     // the burn's 40 s from the return's start, its first frame taken before the engine has run a step
     if ((a.motors.retro ?? 0) > 0 || frame.t - a.t0 < VOSTOK_CAPSULE.retro!.burn) return 'vostokRetro';
-    return frame.altitude > CAPSULE_ARC_ALTITUDE ? 'vostokCoast' : 'vostokEntry';
+    // Gagarin out on his seat, until the sphere's braking parachute
+    if (a.pilotAboard === false) return 'vostokEjection';
+    // still joined to the instrument module, or (`joint` 'free') falling apart from it toward the air
+    if (frame.altitude > CAPSULE_ARC_ALTITUDE) return a.joint === 'free' ? 'vostokApart' : 'vostokCoast';
+    return 'vostokEntry';
   }
   if (a.kind === 'return') {
     // C01: the capsule coming home as planned
@@ -400,6 +436,25 @@ function abortBeat(frame: VisualFrame): WatchBeat {
     case 'drogue': return 'drogue';
     default: return 'mainDescent';
   }
+}
+
+/**
+ * C01: Gagarin on his own parachutes, from his ejection to his landing
+ * (src/physics/sim/crew-descent.ts), or null when no one is in the air.
+ */
+export function crewAloft(frame: VisualFrame): DebrisFrame | null {
+  return frame.debris?.find((d) => !!d.crew && d.alive) ?? null;
+}
+
+/**
+ * C01: how high a body close to the flight's own is above the ground, m. The
+ * frame carries the ground's height only under the flight's body
+ * (`altitude − altitudeAGL`, both above WGS-84 on Vostok's return); Gagarin
+ * comes down within a few kilometres of the sphere, and the ground there is
+ * taken to be as high.
+ */
+export function heightNearFlight(frame: VisualFrame, r: VisualFrame['r']): number {
+  return geodeticHeight(r) - (frame.altitude - frame.altitudeAGL);
 }
 
 /** A stage still flying home, in the frame. */
@@ -562,16 +617,37 @@ function beatWarp(frame: VisualFrame, beat: WatchBeat, events: readonly SimEvent
     }
     case 'vostokRetro':
       return 5;
+    // the spin after the fuel ran out at a pace to see it; the ten minutes joined quickly; the straps and the
+    // cables live; the sphere and the module falling apart toward the air at 10×
+    case 'vostokSpin':
+      return 2;
     case 'vostokCoast':
       return 20;
     case 'vostokSeparation':
-      return 2;
+      return 1;
+    case 'vostokApart':
+      return 10;
     case 'vostokEntry':
       return frame.altitude > 30e3 ? 5 : 2;
+    case 'vostokModuleBurn':
+      return 2;
+    // the hatch and the seat, and Gagarin's main, live; the parachutes either side of them at 2×
+    case 'vostokEjection':
+    case 'vostokPilotMain':
+      return 1;
     case 'vostokDrogue':
+    case 'vostokPilotReserve':
       return 2;
     case 'vostokMain':
       return frame.altitudeAGL > 400 ? 20 : frame.altitudeAGL > 80 ? 5 : 1;
+    // the sphere's landing live; then Gagarin's minutes under his canopies by his own height, his last metres live
+    case 'vostokSphereDown':
+      return 1;
+    case 'vostokPilotDescent': {
+      const pilot = crewAloft(frame);
+      const h = pilot ? heightNearFlight(frame, pilot.r) : 0;
+      return h > 400 ? 20 : h > 80 ? 5 : 1;
+    }
     default:
       return 1;
   }
@@ -739,9 +815,13 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
   // G06: after an abort, the end is the crew down and a few seconds more
   if (frame.abort) {
     if (frame.status !== 'landed') return null;
-    // C01: a capsule home as planned ends in a splashdown; Vostok-1's, with Gagarin down after it on his own parachutes
+    // C01: a capsule home as planned ends in a splashdown; Vostok-1's with Gagarin down, minutes after the sphere,
+    // on his own parachutes (the flight is 'landed' only then; a recording made before he flew on his own ends
+    // with the sphere)
     const planned = frame.abort.kind === 'return';
-    const keys = planned ? ['evt.capsuleSplashdown', 'evt.capsuleLanding', 'evt.pilotLanding'] : ['evt.escapeLanded'];
+    const crew = planned && frame.abort.capsule === 'vostok' && events.some((e) => e.key === 'evt.ejection' && e.t <= frame.t + 1e-6)
+      && (frame.debris ?? []).some((d) => !!d.crew);
+    const keys = crew ? ['evt.pilotLanding'] : planned ? ['evt.capsuleSplashdown', 'evt.capsuleLanding'] : ['evt.escapeLanded'];
     const down = [...events].reverse().find((e) => keys.includes(e.key) && e.t <= frame.t + 1e-6);
     return down && frame.t - down.t >= RETURN_SETTLE ? (planned ? 'splashdown' : 'crewSafe') : null;
   }
@@ -761,6 +841,30 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
   }
   return ending;
 }
+
+/**
+ * C01: Vostok-1's two landings, for the end card: the sphere's (the flight's
+ * own body, resting where it came down; its place is the frame's, geodetic)
+ * and Gagarin's on his own parachutes, with his distance from the sphere as
+ * he touched down (`evt.pilotLanding`). `pilot` is null before he is down, or
+ * in a recording made before he flew on his own.
+ */
+export interface VostokLandings {
+  sphere: { t: number; lat: number; lon: number };
+  pilot: { t: number; lat: number; lon: number; km: number | null } | null;
+}
+
+export function vostokLandings(frame: VisualFrame, events: readonly SimEvent[]): VostokLandings {
+  const sphere = lastEvent(frame, events, SPHERE_DOWN);
+  const down = lastEvent(frame, events, PILOT_DOWN);
+  const lat = Number(down?.params?.lat), lon = Number(down?.params?.lon), km = Number(down?.params?.km);
+  return {
+    sphere: { t: sphere?.t ?? frame.t, lat: frame.lat, lon: frame.lon },
+    pilot: down && Number.isFinite(lat) && Number.isFinite(lon) ? { t: down.t, lat, lon, km: Number.isFinite(km) ? km : null } : null,
+  };
+}
+const SPHERE_DOWN = new Set(['evt.capsuleLanding']);
+const PILOT_DOWN = new Set(['evt.pilotLanding']);
 
 /** How a stage flown home came down, for the end card. */
 export type RecoveryOutcome = 'zone' | 'ship' | 'tower' | 'landed' | 'lost';
