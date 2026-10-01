@@ -51,6 +51,9 @@ const VERDICT_KEY: Record<string, string> = {
   pass: 'lesson.check.verdict.pass', passedWithHelp: 'lesson.check.verdict.passedWithHelp', fail: 'lesson.check.verdict.fail', open: 'lesson.check.verdict.open',
 };
 const WHICH_KEY = { passed: 'lesson.check.which.passed', last: 'lesson.check.which.last' } as const;
+/** T01: a design record is handed in and worked out again, not flown: its own words where a flight's would be wrong. */
+const DESIGN_WHICH_KEY = { passed: 'lesson.check.which.passed', last: 'lesson.design.check.which.last' } as const;
+const statusText = (s: CheckStatus, design: boolean): string => t(design && s === 'cannotRefly' ? 'lesson.design.check.status.cannotRefly' : STATUS_KEY[s]);
 const FIELD_KEY: Record<RecheckField, string> = {
   mission: 'lesson.check.field.mission', t: 'lesson.check.field.t', clock: 'lesson.check.field.clock', actions: 'lesson.check.field.actions', app: 'lesson.check.field.app',
   design: 'lesson.design.field.design', designDate: 'lesson.design.field.designDate', level: 'lesson.design.field.level', figures: 'lesson.design.field.figures',
@@ -246,7 +249,10 @@ class CheckView {
   private report(check: ResultsCheck): HTMLElement {
     const box = el('section', 'recheck-report');
     const n = statusCounts(check);
-    const summary = el('p', 'recheck-summary', t(check.stopped ? 'lesson.check.stopped' : 'lesson.check.summary', {
+    // "cannot be flown again" is a flight's: with a design record among them, "cannot be checked again" (T01)
+    const designs = check.records.some((r) => r.kind === 'design');
+    const summaryKey = check.stopped ? (designs ? 'lesson.design.check.stopped' : 'lesson.check.stopped') : designs ? 'lesson.design.check.summary' : 'lesson.check.summary';
+    const summary = el('p', 'recheck-summary', t(summaryKey, {
       total: tCount('lesson.check.n.results', check.records.length), match: n.match, borderline: n.borderline, differs: n.differs, cannot: n.cannotRefly,
     }));
     summary.setAttribute('role', 'status');
@@ -273,15 +279,15 @@ class CheckView {
     who.append(el('b', undefined, r.student ?? check.files[r.file]?.name ?? t('lesson.check.noName')),
       el('span', undefined, lesson ? `${lessonNumber(lesson)} ${localText(lesson.title)}` : r.lessonId));
     // the record's own time, as the file keeps it: UTC, as the file's "saved" time says
-    const what = el('span', 'recheck-what', `${r.which.map((w) => t(WHICH_KEY[w])).join(' + ')} · ${r.at.slice(0, 16).replace('T', ' ')} UTC`);
+    const design = r.kind === 'design';
+    const what = el('span', 'recheck-what', `${r.which.map((w) => t((design ? DESIGN_WHICH_KEY : WHICH_KEY)[w])).join(' + ')} · ${r.at.slice(0, 16).replace('T', ' ')} UTC`);
     const said = (v: string): string => t(VERDICT_KEY[v] ?? v);
     const verdict = el('span', 'recheck-verdict', r.recheckedVerdict ? `${said(r.recordedVerdict)} → ${said(r.recheckedVerdict)}` : said(r.recordedVerdict));
-    head.append(el('span', `recheck-chip ${r.status}`, t(STATUS_KEY[r.status])), who, what, verdict);
+    head.append(el('span', `recheck-chip ${r.status}`, statusText(r.status, design)), who, what, verdict);
     card.append(head);
     const notes = el('ul', 'recheck-notes');
     if (r.reason) notes.append(el('li', undefined, t(REASON_KEY[r.reason])));
     if (r.missing.length) notes.append(el('li', undefined, t('lesson.check.missing', { fields: missingFieldList(r.missing) })));
-    const design = r.kind === 'design';
     notes.append(el('li', undefined, r.sameBuild === null ? t('lesson.check.build.unknown')
       : r.sameBuild ? t(design ? 'lesson.design.check.build.same' : 'lesson.check.build.same')
         : t(design ? 'lesson.design.check.build.other' : 'lesson.check.build.other', { build: r.app ?? '' })));
@@ -321,7 +327,7 @@ class CheckView {
         cell(gradeText(c, 'recorded', unit, r.kind === 'design'), 'lesson.check.col.recorded'),
         cell(gradeText(c, 'rechecked', unit, r.kind === 'design'), again),
         cell(c.tol === null ? '—' : `±\u00a0${valueText(c.tol, unit, c.tol)}`, 'lesson.check.col.tolerance'),
-        cell(t(STATUS_KEY[c.status]), 'lesson.check.col.result'),
+        cell(statusText(c.status, r.kind === 'design'), 'lesson.check.col.result'),
       );
       table.tBodies[0].append(row);
     }
