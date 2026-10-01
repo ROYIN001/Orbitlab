@@ -2947,6 +2947,13 @@ export const en: Record<string, string> = {
   'build.req.chart.apertureUnder': 'Every orbit here needs an aperture no larger than the template\'s {d}.',
   'build.req.chart.apertureAll': 'Every orbit here needs a larger aperture than the template\'s {d}.',
   // --- end of D07 ---
+  // --- I2 (Phase 4 stage 3b): follow-ups — Fly it's verdict, the scenario writer, lesson files, counts ---
+  'build.sat.fly.verdict': 'The Launch section\'s verdict: {state}',
+  'build.sat.fly.alts.looking': 'Looking through the other rockets here for those that can fly it…',
+  'build.sat.fly.alts.lead': 'By the same verdict, these rockets can fly it:',
+  'build.sat.fly.alts.none': 'By the same verdict, none of the other rockets here can fly it as it is designed.',
+  'build.sat.fly.alts.pick': 'Choose {name}: {state}',
+  // --- end of I2 ---
   'watch.beat.countdown': 'Countdown',
   'watch.beat.liftoff': 'Liftoff',
   'watch.beat.climb': 'Clearing the tower',

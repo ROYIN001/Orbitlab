@@ -2926,6 +2926,13 @@ export const ru: Record<string, string> = {
   'build.req.chart.apertureUnder': 'Всем орбитам здесь хватает апертуры шаблона ({d}).',
   'build.req.chart.apertureAll': 'Всем орбитам здесь нужна апертура больше, чем у шаблона ({d}).',
   // --- end of D07 ---
+  // --- I2 (Phase 4 stage 3b): follow-ups — Fly it's verdict, the scenario writer, lesson files, counts ---
+  'build.sat.fly.verdict': 'Оценка раздела «Запуск»: {state}',
+  'build.sat.fly.alts.looking': 'Ищем среди других ракет те, что смогут вывести этот спутник…',
+  'build.sat.fly.alts.lead': 'По той же оценке этот спутник могут вывести:',
+  'build.sat.fly.alts.none': 'По той же оценке ни одна из других ракет здесь не выведет этот спутник в таком виде.',
+  'build.sat.fly.alts.pick': 'Выбрать {name}: {state}',
+  // --- end of I2 ---
   'watch.beat.countdown': 'Обратный отсчёт',
   'watch.beat.liftoff': 'Старт',
   'watch.beat.climb': 'Уход от башни',

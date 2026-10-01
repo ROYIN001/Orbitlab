@@ -6,8 +6,11 @@
  * still there — then send it to the Orbit section, where the lifetime
  * dialog takes the design's own mass and drag area (the body's tumbling
  * area plus half the wings, 0.111075 m² here, not a class's), and last "Fly
- * it" on Electron: the Launch section flies the design as the mission's own
- * satellite, point mass, to payload separation.
+ * it": before the click the box gives the Launch section's verdict on the
+ * Launch section's own Soyuz-2.1a ("Not flyable as set", task I2) and offers
+ * the rockets that can fly it; Electron is chosen among them, and the Launch
+ * section flies the design as the mission's own satellite, point mass, to
+ * payload separation.
  *
  * Driven through the page's own controls, as a student would; the flight is
  * launched and fast-forwarded through WebMCP (`launch_mission`,
@@ -82,7 +85,20 @@ export default async function satellite(t) {
   // Fly it on Electron, point mass, to payload separation
   await page.evaluate(() => { location.hash = '#/build/explore'; });
   if (!t.check(await page.waitForSelector(`${grid} [data-k="sx:fly"]`, { timeout: 30_000 }).catch(() => null), 'no Fly it in the satellite designer')) return;
-  await page.selectOption(`${grid} [data-k="sx:flyVehicle"]`, 'electron');
+  // before the click (task I2): the Launch section's verdict on its own Soyuz-2.1a, in the setup panel's words —
+  // not flyable as set, since with no restartable upper stage its insertion is final — and the rockets that can fly it
+  const verdictOf = () => page.$eval(`${grid} .bsat-fly-verdict`, (e) => `${e.dataset.verdict} ${e.dataset.cause}`).catch(() => null);
+  const verdictBefore = await t.until(verdictOf, { timeoutMs: 15_000 });
+  t.check(verdictBefore === 'fail noRestart', `Fly it does not say NAPA-2 on Soyuz-2.1a is not flyable as set: ${verdictBefore}`);
+  t.check((await page.locator(`${grid} .bsat-fly-verdict .status-title`).innerText().catch(() => '')).includes('Not flyable as set'),
+    'the verdict is not in the setup panel\'s words');
+  const offered = await t.until(async () => (await page.$(`${grid} [data-k="sx:flyOn:electron"]`)) !== null, { timeoutMs: 60_000 });
+  t.check(offered, 'Electron is not offered among the rockets that can fly it');
+  t.check(!(await page.$(`${grid} [data-k="sx:flyOn:soyuz21a"]`)), 'Soyuz-2.1a is offered as a rocket that can fly it');
+  if (offered) await page.click(`${grid} [data-k="sx:flyOn:electron"]`);
+  else await page.selectOption(`${grid} [data-k="sx:flyVehicle"]`, 'electron');
+  t.check(await page.inputValue(`${grid} [data-k="sx:flyVehicle"]`) === 'electron', 'choosing Electron among them did not pick it');
+  t.check(await t.until(async () => (await verdictOf()) === 'ok ready'), `the verdict on Electron is ${await verdictOf()}, not ready`);
   const fit = await page.getAttribute(`${grid} .bsat-fly [data-fairing-fit]`, 'data-fairing-fit');
   t.check(fit === 'fits', `the fairing note on Electron says ${fit}`);
   await page.click(`${grid} [data-k="sx:fly"]`);

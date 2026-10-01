@@ -65,6 +65,14 @@
 .bsat-fly .bx-fly-btn { align-self: flex-start; }
 .bsat-fly-vehicle select { max-width: 100%; }
 .bsb-fly .bsat-fly { margin-top: 0; padding-top: 0; border-top: 0; max-width: 72ch; }
+/* the Launch section's verdict on the mission, before the click, in the setup panel's light and words (task I2); then the rockets that can fly it */
+.bsat-fly .status-note { margin: 0; overflow-wrap: anywhere; }
+.bsat-fly .status-note.stale, .bsat-fly-alts.stale { opacity: 0.55; transition: opacity 0.2s; }
+.bsat-fly-alts { display: flex; flex-direction: column; gap: 6px; }
+.bsat-fly-alts:empty { display: none; }
+.bsat-fly-alt-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.bsat-fly-alt { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 12.5px; }
+.bsat-fly-alt.warn .status-dot { background: var(--warn); }
 /* the design date: a date box and "Today" beside it */
 .bsat-date-field { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 8px; }
 .bsat-date { min-width: 10.5em; }
