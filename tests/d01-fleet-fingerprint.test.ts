@@ -46,6 +46,12 @@
  * `protonm/gto/50` (they were '76fae19e6ec959b6' and 'bb6e24576d031e4c'). The
  * LEO row, a known failure, now ends `insertionAbandoned` at the floor instead
  * of breaking up (`AscentMonitor.abandonInsertion`). The other 25 are unchanged.
+ *
+ * Re-recorded a fourth time for Soyuz-2's hot staging and Soyuz-2.1a's cargo
+ * payload section (2026-10-01, docs/VALIDATION.md §3, second pass):
+ * `soyuz21a/leo/50`, `soyuz21b/leo/50` and `soyuz21b/gto/50` (they were
+ * 'd90cb1ce6c496984', '4983ea1c31ef47bc' and 'd1f368b68b92d7bf'). The other 24
+ * rows, unchanged, show that the hot staging changes no other vehicle.
  */
 import { describe, expect, it } from 'vitest';
 import { VEHICLES } from '../src/data/vehicles';
@@ -53,8 +59,8 @@ import { allCases, caseKey, flyCase } from './fleet-harness';
 import { FingerprintSampler } from './flex-golden-harness';
 
 export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
-  'soyuz21a/leo/50': 'd90cb1ce6c496984',
-  'soyuz21b/leo/50': '4983ea1c31ef47bc',
+  'soyuz21a/leo/50': '4b1f0b7f49f9651a',
+  'soyuz21b/leo/50': '7973a02dec1cf395',
   'protonm/leo/50': '44f2777c1b1d8fc8',
   'angaraa5/leo/50': '7cea61f34555f892',
   'falcon9/leo/50': '8504537bbd7ef7e5',
@@ -75,7 +81,7 @@ export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
   'vostok8k72k/leo/50': '4e37c2c9a626ebd9',
   'saturnv/leo/50': '6216e2d36a22f147',
   'protonm/gto/50': '0a7cfde12d3d2250',
-  'soyuz21b/gto/50': 'd1f368b68b92d7bf',
+  'soyuz21b/gto/50': '9f4b1fceeea35057',
   'ariane64/gto/50': '5f39c0051d6adb58',
   'vegac/sso/50': 'c6c598e3d8ea5910',
   'pslvxl/sso/50': '4a10da20085b3a09',

@@ -92,6 +92,8 @@ export interface DebrisVisual {
   /** `fairing`: its own adapter cone's height, m, down to `baseDiameter` (`FairingSpec.adapter`) */
   adapter?: number;
   baseDiameter?: number;
+  /** `fairing`: its nose's length, m (`FairingSpec.noseLength`) */
+  noseLength?: number;
 }
 
 export interface Debris {
@@ -183,6 +185,12 @@ export interface SimState {
    */
   coreThrottle: number;
   boosterThrottle: number;
+  /**
+   * The same for a hot stage lit above the active one and still attached to it
+   * (`VehicleModel.hotStage`): Blok I firing through the truss before the core
+   * has gone. Absent on every flight that does not hot-stage.
+   */
+  hotThrottle?: number;
   thrust: number;
   mass: number;
   q: number;

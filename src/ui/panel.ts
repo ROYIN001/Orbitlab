@@ -32,7 +32,7 @@
  *   better.
  */
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
-import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
+import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, payloadVehicle, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
@@ -244,9 +244,14 @@ export class SetupPanel {
     this.render();
   }
 
-  /** The guidance that will be flown: the vehicle's own programme plus operator edits. */
+  /**
+   * The guidance that will be flown: the vehicle's own programme (a crewed
+   * launch's, `VehicleSpec.crewedProfile`) plus operator edits.
+   */
   get guidance(): GuidanceParams {
-    return { ...guidanceForVehicle(missionVehicle(this.state), undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
+    const sat = SATELLITES.find((x) => x.id === this.state.satelliteId);
+    const spec = sat ? payloadVehicle(missionVehicle(this.state), sat) : missionVehicle(this.state);
+    return { ...guidanceForVehicle(spec, undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
   }
 
   getConfig(): MissionConfig {

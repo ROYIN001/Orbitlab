@@ -8,8 +8,8 @@ import type { MissionConfig, FailureMode } from '../../types';
 import type { Simulation } from '../simulation';
 import { hashSeed, mulberry32 } from './seed';
 
-/** From a strap-on striking the core to the vehicle out of control, s (Soyuz MS-10: T+118.6 s to the abort at T+121.6 s). */
-export const COLLISION_TO_LOSS = 3;
+/** From a strap-on striking the core to the vehicle out of control, s (Soyuz MS-10, Roscosmos's timeline of 1 November 2018: the strap-ons separated at T+118 s, the abort command at T+121.57 s). */
+export const COLLISION_TO_LOSS = 3.57;
 /** From a stage separation that half-fails to the attitude limit, s (Soyuz 18a: T+288.6 s, the abort some 6 s later; estimate). */
 export const STAGING_TO_LOSS = 6;
 
@@ -44,10 +44,17 @@ export class FailureInjector {
     this.sim.schedule(this.failureTime, 'failure', () => this.applyFailure());
   }
 
-  /** The strap-ons have separated: one of them strikes the core, which soon goes out of control. */
+  /**
+   * The strap-ons have separated: one of them strikes the core, which soon
+   * goes out of control. On Soyuz MS-10 it tore the core's tail section off,
+   * engine and all (Roscosmos's briefing of 1 November 2018): the core makes
+   * no more thrust from the strike on.
+   */
   onBoosterSeparation(): void {
     if (this.failureMode !== 'boosterCollision' || this.failureApplied) return;
     this.failureApplied = true;
+    const core = this.sim.vehicle.active;
+    if (core) core.engineFraction = 0;
     this.sim.event('evt.boosterCollision', 'fail');
     this.sim.schedule(this.sim.state.t + COLLISION_TO_LOSS, 'failure', () => {
       this.sim.event('evt.attitudeLost', 'fail');

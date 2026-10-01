@@ -129,6 +129,9 @@ export class Staging {
   cutoffAscentStage(st: StageState | null): void {
     const s = this.sim.state;
     if (st) this.sim.vehicle.cutoffStage(st, s.t);
+    // a hot stage already lit through the truss is shut down with it
+    const hot = this.sim.vehicle.hotStage();
+    if (hot) this.sim.vehicle.cutoffStage(hot, s.t);
     if (this.secoReported) return;
     this.secoReported = true;
     this.sim.event('evt.seco', 'major', st ? this.sim.stageParams(st) : { stage: '' });
@@ -137,8 +140,20 @@ export class Staging {
   onCoreBurnout(st: StageState, rNext: Vec3, vNext: Vec3): void {
     const s = this.sim.state;
     const isLast = st.index >= this.sim.vehicle.lastLauncherIndex;
+    // Hot staging: the stage above is already firing through the truss (or
+    // lights now, if this one went out before its lead). It flies on; this one
+    // tails off attached and separates on its delay. No coast to apoapsis: the
+    // stage above is lit and cannot wait.
+    const next = this.sim.vehicle.stages[st.index + 1];
+    const hot = !!next?.spec.hotStage && next.attached && st.attached && (s.status === 'ascent' || s.status === 'burn');
     if (st.spec.isSpacecraft) this.sim.event('evt.spacecraftPropellantOut', 'warn', this.sim.stageParams(st));
-    else this.sim.event(st.index === 0 ? 'evt.meco' : 'evt.stageCutoff', 'major', { stage: st.spec.name, n: st.index + 1 });
+    // (stamped at the cut-off itself where the stage above has already lit, so the two keep their order)
+    else this.sim.event(st.index === 0 ? 'evt.meco' : 'evt.stageCutoff', 'major', { stage: st.spec.name, n: st.index + 1 }, hot ? st.cutoffTime : undefined);
+    if (hot) {
+      if (!next.ignited) this.igniteHotStage(next, st.cutoffTime);
+      this.separateHot(st, next);
+      return;
+    }
     if (s.status === 'burn' && s.currentBurn) {
       // stage exhausted mid-burn
       if (st.index === this.sim.vehicle.stages.length - 1) {
@@ -202,6 +217,31 @@ export class Staging {
       }
       this.stageTo(st.index + 1, true);
     }
+  }
+
+  /**
+   * Light a hot-staged stage (`StageSpec.hotStage`) still attached above the
+   * active one, at `t`: it fires through the truss between them until the
+   * stage below separates. Lighting a stage already lit does nothing.
+   */
+  igniteHotStage(next: StageState, t: number): void {
+    if (next.ignited || !next.attached) return;
+    this.sim.vehicle.igniteStage(next, t);
+    this.stagingInProgress = true;
+    this.sim.event('evt.ignition', 'major', { stage: next.spec.name }, t);
+  }
+
+  /** Separate `prev` from the hot stage `next` already burning above it, `sepDelay` s after `prev`'s cut-off. */
+  private separateHot(prev: StageState, next: StageState): void {
+    if (this.sim.pending.some((p) => p.label === 'stageSep')) return;
+    this.stagingInProgress = true;
+    this.sim.schedule(prev.cutoffTime + (next.spec.sepDelay ?? 0), 'stageSep', () => {
+      if (!prev.attached) return;
+      this.detachStage(prev);
+      this.sim.event('evt.stageSep', 'success', { stage: prev.spec.name, n: prev.index + 1, alt: Math.round(this.sim.state.altitude / 1000), speed: Math.round(this.sim.state.speed) });
+      this.sim.failures.onStageSeparation(prev.index);
+      this.stagingInProgress = false;
+    });
   }
 
   /** Separate the stage below `nextIndex` and (optionally) ignite the next stage after its delays. */

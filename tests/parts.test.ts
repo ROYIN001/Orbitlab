@@ -38,7 +38,7 @@ const pick = (o: object, keys: readonly string[]): Record<string, unknown> =>
   Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, (o as Record<string, unknown>)[k]]));
 const STAGE_HARDWARE = ['id', 'name', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length'] as const;
 const BOOSTER_HARDWARE = ['id', 'name', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length'] as const;
-const FAIRING_HARDWARE = ['mass', 'diameter', 'length', 'adapter'] as const;
+const FAIRING_HARDWARE = ['mass', 'diameter', 'length', 'adapter', 'noseLength'] as const;
 
 /** Which parts each vehicle is built from, found by matching the emitted hardware fields. */
 function usage() {
@@ -63,10 +63,12 @@ function usage() {
         else note(boosters, hitsB[0], v.id);
       });
     });
-    if (v.fairing) {
-      const wantF = pick(v.fairing, FAIRING_HARDWARE);
+    // the vehicle's own fairing, and a crewed launch's (`VehicleSpec.crewedProfile`)
+    for (const [which, fairing] of [['fairing', v.fairing], ['crewed fairing', v.crewedProfile?.fairing]] as const) {
+      if (!fairing) continue;
+      const wantF = pick(fairing, FAIRING_HARDWARE);
       const hitsF = FAIRING_PARTS.filter((f) => isDeepStrictEqual(pick(fairingSpec(f, { sepAltitude: 0 }), FAIRING_HARDWARE), wantF));
-      if (hitsF.length !== 1) unmatched.push(`${v.id} fairing: ${hitsF.length} parts`);
+      if (hitsF.length !== 1) unmatched.push(`${v.id} ${which}: ${hitsF.length} parts`);
       else note(fairings, hitsF[0], v.id);
     }
   }
@@ -91,9 +93,9 @@ function undefinedKeys(v: unknown, path: string, out: string[] = []): string[] {
 }
 
 describe('D01 parts catalogue: the fleet is built from it', () => {
-  it('holds 55 engine parts, 49 stage bodies, 14 strap-on bodies and 17 fairings for the 21 vehicles', () => {
+  it('holds 55 engine parts, 49 stage bodies, 14 strap-on bodies and 18 fairings for the 21 vehicles', () => {
     // The roadmap's D01 row and plan.item.D01 quote 55 engines and 21 vehicles.
-    expect([VEHICLES.length, ENGINE_PARTS.length, STAGE_BODIES.length, BOOSTER_BODIES.length, FAIRING_PARTS.length]).toEqual([21, 55, 49, 14, 17]);
+    expect([VEHICLES.length, ENGINE_PARTS.length, STAGE_BODIES.length, BOOSTER_BODIES.length, FAIRING_PARTS.length]).toEqual([21, 55, 49, 14, 18]);
   });
 
   it('emits every stage, strap-on group and fairing of the fleet from exactly one part', () => {

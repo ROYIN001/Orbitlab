@@ -43,6 +43,16 @@
  * T+348.2 s and the third stage's and Briz-M's staging delays; only `protonm`
  * changed (the Briz-M Angara-A5 installs keeps its 2 s), 32 020 characters.
  *
+ * And a fifth, for Soyuz-2's hot staging and its two payload sections
+ * (2026-10-01, docs/VALIDATION.md §3, "Soyuz-2.1a: hot staging, and a crewed
+ * and a cargo flight"): Blok I's `hotStage` lead and 1.02 s separation delay,
+ * the cores' `cutoffAt` from the 2.1a cyclogram, the skirts' times from
+ * Blok I's ignition, Soyuz-2.1a's cargo fairing (11S517A2, 3.0 m) and
+ * cyclogram with a `crewedProfile` (11S517A3) and a `cargoShipProfile`
+ * (Progress MS's programme), the refitted crewed programme, and Soyuz-2.1b's
+ * fairing at Arianespace's T+208.4 s. Only `soyuz21a` and `soyuz21b` changed;
+ * 32 724 characters.
+ *
  * What the JSON pins and what it leaves out, on purpose:
  * - keys are sorted recursively, so key order is left out of the fixture. It
  *   reaches no catalogue flight; it only shows in the bytes of a mission file
@@ -63,14 +73,15 @@ import { VEHICLES } from '../src/data/vehicles';
 import FIXTURE from './fixtures/vehicles-pre-d01.json?raw';
 
 /**
- * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, with Proton-M's published
- * data; 32 020 characters. With Soyuz-2 on its real flight it was 0b6d8d1b…,
+ * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, with Soyuz-2's hot staging
+ * and payload sections; 32 724 characters. With Proton-M's published data it was
+ * 7cbd0fff…, 32 020 characters; with Soyuz-2 on its real flight 0b6d8d1b…,
  * 31 994 characters; with Soyuz-2.1a's PHY-01 programme
  * 04d88a36…, 31 009 characters; from main's literal fleet at 3d713b5 (F11
  * included) 420d7d17…, 30 987 characters; at eedd035, the pre-D01 HEAD,
  * f891238e…, 30 926 characters.
  */
-const PRE_D01_UNSORTED_SHA256 = '7cbd0fff4ace1c5393439abbb1aeb596b936f5e7432e95c727d1293b2341a0d2';
+const PRE_D01_UNSORTED_SHA256 = 'fcc33cb8bc7f882de1e95d3d538d7fc4661928685846d978d6045f3ec48650c4';
 
 const sortKeys = (v: unknown): unknown => (Array.isArray(v) ? v.map(sortKeys)
   : v && typeof v === 'object'
@@ -108,6 +119,6 @@ describe('D01: the catalogue vehicles, recorded before the parts catalogue', () 
     const unsorted = JSON.stringify(VEHICLES);
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(unsorted));
     const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    expect([unsorted.length, hex]).toEqual([32020, PRE_D01_UNSORTED_SHA256]);
+    expect([unsorted.length, hex]).toEqual([32724, PRE_D01_UNSORTED_SHA256]);
   });
 });

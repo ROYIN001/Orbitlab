@@ -557,8 +557,10 @@ export const ASCENT_MARGIN_REQUIRED = 150;
  */
 export const ORBIT_INSERTION_FLOOR = 140e3;
 
-/** The orbit Soyuz-2.1a puts a Soyuz MS or Progress MS into for the station: perigee and apogee, m (RussianSpaceWeb, Soyuz MS-17: 200 ± 2 × 242 ± 5 km). */
+/** The orbit Soyuz-2.1a puts a Soyuz MS into for the station: perigee and apogee, m (RussianSpaceWeb, Soyuz MS-17: 200 ± 2 × 242 ± 5 km). */
 export const RENDEZVOUS_INSERTION = { perigee: 200e3, apogee: 242e3 } as const;
+/** The orbit it puts a Progress MS into: perigee and apogee, m (Roscosmos via RussianSpaceWeb, Progress MS-14 to MS-34: 193 ± 2 × 240 ± 7 km). */
+export const CARGO_INSERTION = { perigee: 193e3, apogee: 240e3 } as const;
 
 /**
  * Height a suborbital target's ascent is cut off at, m (or its apogee, if
@@ -1123,11 +1125,13 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // higher. Every crewed flight since MS-16 was targeted at 200 ± 2 × 242 ± 5 km
   // (Roscosmos via russianspaceweb). It used to be applied only with a
   // rendezvous planned, and every other crewed flight went to 200 km circular.
+  // A Progress MS, which has no crew, is put lower: 193 × 240 km.
+  const ship = satelliteById(cfg.satelliteId).crewed ? RENDEZVOUS_INSERTION : CARGO_INSERTION;
   const shipInsertion = cfg.rendezvous ? rendezvousAvailable(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit)
-    : soyuzShipInsertion(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && target.perigee > RENDEZVOUS_INSERTION.apogee;
-  if (shipInsertion && parkingOverride <= 0 && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
-    insertionAltitude = RENDEZVOUS_INSERTION.perigee;
-    insertionApoapsis = RENDEZVOUS_INSERTION.apogee;
+    : soyuzShipInsertion(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && target.perigee > ship.apogee;
+  if (shipInsertion && parkingOverride <= 0 && ascentReaches(ship.perigee, ship.apogee)) {
+    insertionAltitude = ship.perigee;
+    insertionApoapsis = ship.apogee;
   }
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
   // A dogleg leaves on the corridor edge; the closed loop turns into the plane.

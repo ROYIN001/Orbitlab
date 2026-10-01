@@ -106,11 +106,12 @@ class Checker {
 const ENGINE_FIELDS = ['name', 'count', 'thrustSL', 'thrustVac', 'ispSL', 'ispVac', 'minThrottle', 'solid', 'peakFactor', 'vacuumOnly', 'startupS', 'tailoffS'];
 const BOOSTER_FIELDS = ['id', 'name', 'count', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset', 'thrustSteps'];
 const STAGE_FIELDS = ['id', 'name', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'restartable', 'sepDelay', 'ignitionDelay',
-  'throttleWithBoosters', 'boosters', 'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength', 'jettisons', 'engineEvents', 'cutoffAt'];
-const FAIRING_FIELDS = ['mass', 'diameter', 'length', 'sepAltitude', 'sepTime', 'adapter', 'color'];
+  'throttleWithBoosters', 'boosters', 'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength', 'jettisons', 'engineEvents', 'cutoffAt',
+  'hotStage'];
+const FAIRING_FIELDS = ['mass', 'diameter', 'length', 'sepAltitude', 'sepTime', 'adapter', 'noseLength', 'color'];
 const VEHICLE_FIELDS = ['id', 'name', 'country', 'manufacturer', 'height', 'payloadLEO', 'payloadGTO', 'payloadSSO', 'fairing', 'escapeSystem',
   'stages', 'sites', 'maxQ', 'maxAccel', 'maxQThrottle', 'recoverable', 'recoveryReserve', 'returnReserve', 'guidanceDefaults',
-  'guidanceDefaultsSixDof', 'dragArea', 'crewCapable', 'notes', 'derivedFrom', 'padBurnS'];
+  'guidanceDefaultsSixDof', 'dragArea', 'crewCapable', 'notes', 'derivedFrom', 'padBurnS', 'crewedProfile', 'cargoShipProfile'];
 /** Guidance fields a vehicle's own programme may set, with their stored-unit bounds (validation.ts's GUIDANCE_FIELDS, widened to cover the catalogue). */
 const GUIDANCE_BOUNDS: Record<string, [number, number]> = {
   pitchOverAltitude: [0, 20000], kickAngle: [0, 60], kickDuration: [0, 120], maxTurnRate: [0, 10], loftAltitude: [0, 1e6],
@@ -273,6 +274,15 @@ function checkStage(c: Checker, raw: unknown, path: string, index: number, ids: 
   checkJettisons(c, raw.jettisons, `${path}.jettisons`, raw.dryMass);
   checkEngineEvents(c, raw.engineEvents, `${path}.engineEvents`, raw.engine);
   c.number(raw, 'cutoffAt', path, 0, 2e4, { optional: true, exclusiveMin: true });
+  if (raw.hotStage !== undefined) {
+    // hot staging (`StageSpec.hotStage`): a stage above the first, lit a moment before the one below is shut down
+    if (!isObj(raw.hotStage)) c.add(`${path}.hotStage`, `must be { leadS } (got ${describe(raw.hotStage)})`);
+    else if (index === 0) c.add(`${path}.hotStage`, 'the first stage has no stage below it to fire through');
+    else {
+      c.known(raw.hotStage, `${path}.hotStage`, ['leadS']);
+      c.number(raw.hotStage, 'leadS', `${path}.hotStage`, 0, 10, { exclusiveMin: true });
+    }
+  }
   if (raw.boosters !== undefined) {
     if (!Array.isArray(raw.boosters)) c.add(`${path}.boosters`, `must be a list of strap-on groups (got ${describe(raw.boosters)})`);
     else if (index !== 0) c.add(`${path}.boosters`, 'strap-ons are flown on the first stage only');
@@ -318,19 +328,8 @@ export function vehicleSpecProblems(raw: unknown): VehicleSpecIssue[] {
   }
 
   if (raw.fairing !== null) {
-    const f = raw.fairing;
-    if (!isObj(f)) c.add('fairing', `must be a fairing, or null for an integrated payload bay (got ${describe(f)})`);
-    else {
-      c.known(f, 'fairing', FAIRING_FIELDS);
-      c.number(f, 'mass', 'fairing', 0, 2e4, { exclusiveMin: true });
-      c.number(f, 'diameter', 'fairing', 0, 15, { exclusiveMin: true });
-      const length = c.number(f, 'length', 'fairing', 0, 40, { exclusiveMin: true });
-      c.number(f, 'sepAltitude', 'fairing', 0, 3e5);
-      c.number(f, 'sepTime', 'fairing', 0, 2000, { optional: true });
-      const adapter = c.number(f, 'adapter', 'fairing', 0, 40, { optional: true });
-      if (adapter !== undefined && length !== undefined && adapter >= length) c.add('fairing.adapter', 'must be shorter than the fairing');
-      c.string(f, 'color', 'fairing', { optional: true, max: 32 });
-    }
+    if (!isObj(raw.fairing)) c.add('fairing', `must be a fairing, or null for an integrated payload bay (got ${describe(raw.fairing)})`);
+    else checkFairing(c, raw.fairing, 'fairing');
   }
 
   if (!Array.isArray(raw.stages) || raw.stages.length === 0) c.add('stages', `must be a list of 1 to ${MAX_STAGES} stages`);
@@ -362,15 +361,62 @@ export function vehicleSpecProblems(raw: unknown): VehicleSpecIssue[] {
       c.number(m, 'throttle', 'maxQThrottle', 0, 1, { exclusiveMin: true });
     }
   }
-  for (const key of ['guidanceDefaults', 'guidanceDefaultsSixDof']) {
-    const g = raw[key];
-    if (g === undefined) continue;
-    if (!isObj(g)) { c.add(key, `must be a set of guidance values (got ${describe(g)})`); continue; }
-    c.known(g, key, [...Object.keys(GUIDANCE_BOUNDS), 'pitchProgram']);
-    for (const [field, [min, max]] of Object.entries(GUIDANCE_BOUNDS)) c.number(g, field, key, min, max, { optional: true });
-    checkPitchProgram(c, g.pitchProgram, `${key}.pitchProgram`);
-  }
+  for (const key of ['guidanceDefaults', 'guidanceDefaultsSixDof']) checkGuidance(c, raw[key], key);
+  for (const key of ['crewedProfile', 'cargoShipProfile']) if (raw[key] !== undefined) checkProfile(c, raw[key], key, raw.stages);
   return c.issues;
+}
+
+function checkFairing(c: Checker, f: Obj, path: string): void {
+  c.known(f, path, FAIRING_FIELDS);
+  c.number(f, 'mass', path, 0, 2e4, { exclusiveMin: true });
+  c.number(f, 'diameter', path, 0, 15, { exclusiveMin: true });
+  const length = c.number(f, 'length', path, 0, 40, { exclusiveMin: true });
+  c.number(f, 'sepAltitude', path, 0, 3e5);
+  c.number(f, 'sepTime', path, 0, 2000, { optional: true });
+  const adapter = c.number(f, 'adapter', path, 0, 40, { optional: true });
+  if (adapter !== undefined && length !== undefined && adapter >= length) c.add(`${path}.adapter`, 'must be shorter than the fairing');
+  const nose = c.number(f, 'noseLength', path, 0, 40, { optional: true, exclusiveMin: true });
+  if (nose !== undefined && length !== undefined && nose + (adapter ?? 0) >= length) c.add(`${path}.noseLength`, 'must leave the fairing a cylinder');
+  c.string(f, 'color', path, { optional: true, max: 32 });
+}
+
+function checkGuidance(c: Checker, g: unknown, key: string): void {
+  if (g === undefined) return;
+  if (!isObj(g)) { c.add(key, `must be a set of guidance values (got ${describe(g)})`); return; }
+  c.known(g, key, [...Object.keys(GUIDANCE_BOUNDS), 'pitchProgram']);
+  for (const [field, [min, max]] of Object.entries(GUIDANCE_BOUNDS)) c.number(g, field, key, min, max, { optional: true });
+  checkPitchProgram(c, g.pitchProgram, `${key}.pitchProgram`);
+}
+
+/** What one kind of payload flies in place of the vehicle's own (`VehicleSpec.crewedProfile`, `cargoShipProfile`): a fairing, guidance, and stage cyclogram fields. */
+function checkProfile(c: Checker, raw: unknown, path: string, stages: unknown): void {
+  if (!isObj(raw)) { c.add(path, `must be a payload profile (got ${describe(raw)})`); return; }
+  c.known(raw, path, ['fairing', 'guidanceDefaults', 'stages']);
+  if (raw.fairing !== undefined) {
+    if (!isObj(raw.fairing)) c.add(`${path}.fairing`, `must be a fairing (got ${describe(raw.fairing)})`);
+    else checkFairing(c, raw.fairing, `${path}.fairing`);
+  }
+  checkGuidance(c, raw.guidanceDefaults, `${path}.guidanceDefaults`);
+  if (raw.stages === undefined) return;
+  const count = Array.isArray(stages) ? stages.length : 0;
+  if (!Array.isArray(raw.stages) || raw.stages.length > count) { c.add(`${path}.stages`, `must be a list of at most ${count} stage cyclograms`); return; }
+  raw.stages.forEach((st, i) => {
+    const at = `${path}.stages[${i}]`;
+    if (st === null) return;
+    if (!isObj(st)) { c.add(at, `must be a stage's cyclogram, or null (got ${describe(st)})`); return; }
+    c.known(st, at, ['cutoffAt', 'sepDelay', 'hotStage', 'jettisons']);
+    c.number(st, 'cutoffAt', at, 0, 2e4, { optional: true, exclusiveMin: true });
+    c.number(st, 'sepDelay', at, 0, 60, { optional: true });
+    if (st.hotStage !== undefined) {
+      if (!isObj(st.hotStage) || i === 0) c.add(`${at}.hotStage`, 'must be { leadS }, on a stage above the first');
+      else {
+        c.known(st.hotStage, `${at}.hotStage`, ['leadS']);
+        c.number(st.hotStage, 'leadS', `${at}.hotStage`, 0, 10, { exclusiveMin: true });
+      }
+    }
+    const own = Array.isArray(stages) && isObj(stages[i]) ? stages[i].dryMass : undefined;
+    checkJettisons(c, st.jettisons, `${at}.jettisons`, own);
+  });
 }
 
 /** The problems as one message, for an error thrown at a caller that sent a bad spec. */

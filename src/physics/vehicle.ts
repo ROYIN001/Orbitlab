@@ -194,6 +194,12 @@ export interface ThrustResult {
    * four is wrong.
    */
   boosterLevels: number[];
+  /**
+   * The level of a hot-staged stage lit above the active one and still
+   * attached to it (`VehicleModel.hotStage`), unclamped; absent when there is
+   * none, which is every vehicle but the ones that hot-stage.
+   */
+  hotLevel?: number;
   /** any engine currently producing thrust */
   burning: boolean;
 }
@@ -480,6 +486,45 @@ export class VehicleModel {
     return this.activeIndex < this.stages.length ? this.stages[this.activeIndex] : null;
   }
 
+  /**
+   * A hot-staged stage (`StageSpec.hotStage`) lit while still attached above
+   * the active one, firing through the truss between them; null once the
+   * stage below has separated, and on every vehicle that does not hot-stage.
+   * The stage below stays the active one until then.
+   */
+  hotStage(): StageState | null {
+    const st = this.stages[this.activeIndex + 1];
+    return st && st.spec.hotStage && st.attached && st.ignited && this.stages[this.activeIndex].attached ? st : null;
+  }
+  /** The hot-staged stage above `st` that has yet to light, if any. */
+  private hotPending(st: StageState): StageState | null {
+    const n = this.stages[st.index + 1];
+    return n && n.spec.hotStage && n.attached && !n.ignited ? n : null;
+  }
+  /** The time `st`'s command integrator reaches its hot stage's lead before `cutoffAt`, or undefined. */
+  private hotLightAt(st: StageState): number | undefined {
+    const pending = this.hotPending(st);
+    return pending && st.spec.cutoffAt !== undefined ? st.spec.cutoffAt - pending.spec.hotStage!.leadS : undefined;
+  }
+
+  /**
+   * A lit hot stage's level over [t, t + dt], with what full thrust it is
+   * commanded to: the core formula, start-up and tank limit included, or its
+   * tail-off once it has been shut down.
+   */
+  private hotStageLevel(hot: StageState, t: number, throttleCmd: number, dt: number): { level: number; thr: number; burning: boolean } {
+    const e = hot.spec.engine;
+    if (throttleCmd > 0 && !hot.cutoff && !hot.burnedOut && this.usablePropellant(hot) > 0 && hot.engineFraction > 0) {
+      const thr = Math.max(e.solid ? 1 : e.minThrottle ?? 1, Math.min(1, throttleCmd));
+      const profile = e.solid ? this.solidProfileFor(hot) : 1;
+      const level = VehicleModel.withinTank(thr * profile * startupFactor(e, t - hot.startTime, dt), this.usablePropellant(hot),
+        VehicleModel.enginesRunning(hot) * engineMassFlow(e), dt);
+      return { level, thr, burning: true };
+    }
+    if (this.coreTailingOff(hot, t)) return { level: this.coreTailLevel(hot, t, dt), thr: 0, burning: false };
+    return { level: 0, thr: 0, burning: false };
+  }
+
   /** Usable propellant of a stage (excluding recovery reserve on stage 0/boosters). */
   usablePropellant(st: StageState): number {
     const reserve = st.index === 0 ? this.recoveryReserve * st.spec.propellantMass : 0;
@@ -614,6 +659,17 @@ export class VehicleModel {
       out.boosterLevels[group] = level;
       if (level > 0) out.burning = true;
     }
+    // the stage above, lit through the truss before this one has gone
+    const hot = this.hotStage();
+    if (hot) {
+      const he = hot.spec.engine, nh = VehicleModel.enginesRunning(hot);
+      const h = this.hotStageLevel(hot, t, throttleCmd, dt);
+      out.thrust += nh * engineThrust(he, p) * h.level;
+      out.mdot += nh * engineMassFlow(he) * h.level;
+      if (h.burning) out.thrustFullVac += nh * he.thrustVac;
+      out.hotLevel = h.level;
+      if (h.level > 0) out.burning = true;
+    }
     return out;
   }
 
@@ -660,6 +716,9 @@ export class VehicleModel {
     // at full thrust the integrators run with the clock (`commandClock`)
     if (st.ignited && !st.cutoff && !st.burnedOut && st.spec.cutoffAt !== undefined && st.spec.cutoffAt > st.commandClock) {
       next = t + (st.spec.cutoffAt - st.commandClock);
+      // and the stage above lighting through the truss ahead of it
+      const light = this.hotLightAt(st);
+      if (light !== undefined && light > st.commandClock) next = Math.min(next, t + (light - st.commandClock));
     }
     for (const b of st.boosters) {
       if (!b.attached || !b.ignited || b.burnedOut) continue;
@@ -703,6 +762,8 @@ export class VehicleModel {
       if (!b.burnedOut && t - b.startTime < engineStartupS(b.spec.engine)) return true;
       if (this.boosterTailingOff(b, t)) return true;
     }
+    const hot = this.hotStage();
+    if (hot && !hot.cutoff && !hot.burnedOut && t - hot.startTime < engineStartupS(hot.spec.engine)) return true;
     return false;
   }
 
@@ -734,9 +795,9 @@ export class VehicleModel {
   }
 
   /** Consume propellant for dt seconds at the given conditions. Returns burnout flags. */
-  consume(t: number, throttleCmd: number, dt: number): { coreBurnout: boolean; boosterBurnout: BoosterState[] } {
+  consume(t: number, throttleCmd: number, dt: number): { coreBurnout: boolean; boosterBurnout: BoosterState[]; hotIgnition?: StageState } {
     const st = this.active;
-    const res = { coreBurnout: false, boosterBurnout: [] as BoosterState[] };
+    const res: { coreBurnout: boolean; boosterBurnout: BoosterState[]; hotIgnition?: StageState } = { coreBurnout: false, boosterBurnout: [] };
     if (!st) return res;
     const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
     const e = st.spec.engine;
@@ -755,6 +816,9 @@ export class VehicleModel {
       const flow = n * engineMassFlow(e) * level;
       st.propellant -= flow * dt;
       st.commandClock += thr * dt;
+      // the stage above is due to light through the truss (`StageSpec.hotStage`)
+      const light = this.hotLightAt(st);
+      if (light !== undefined && st.commandClock >= light - 1e-9) res.hotIgnition = this.stages[st.index + 1];
       // Shut down by command (`StageSpec.cutoffAt`) with propellant aboard, as
       // the R-7 core is at GK-2, or by the depletion sensor with the tail-off's.
       if (st.spec.cutoffAt !== undefined && st.commandClock >= st.spec.cutoffAt - 1e-9 && this.usablePropellant(st) > VehicleModel.tailoffReserve(e, flow)) {
@@ -813,6 +877,27 @@ export class VehicleModel {
         const level = this.boosterTailLevel(b, t, dt);
         b.propellant -= Math.min(this.usableBoosterPropellant(b), nb * engineMassFlow(be) * level * dt);
         b.level = 0;
+      }
+    }
+    // a hot stage lit above this one burns from its own tanks
+    const hot = this.hotStage();
+    if (hot) {
+      const he = hot.spec.engine, nh = VehicleModel.enginesRunning(hot);
+      const h = this.hotStageLevel(hot, t, throttleCmd, dt);
+      const flow = nh * engineMassFlow(he) * h.level;
+      if (h.burning) {
+        hot.level = h.level;
+        hot.propellant -= flow * dt;
+        hot.commandClock += h.thr * dt;
+        if (this.usablePropellant(hot) <= VehicleModel.tailoffReserve(he, flow)) {
+          hot.burnedOut = true;
+          hot.cutoffTime = t + dt;
+          const perLevel = VehicleModel.tailoffReserve(he, nh * engineMassFlow(he));
+          hot.stopLevel = perLevel > 0 ? Math.min(h.level, this.usablePropellant(hot) / perLevel) : 0;
+        }
+      } else {
+        hot.propellant -= Math.min(this.usablePropellant(hot), flow * dt);
+        hot.level = 0;
       }
     }
     return res;

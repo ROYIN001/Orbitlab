@@ -89,6 +89,12 @@ export interface EngineEvent {
   mixture?: { thrustVac: number; thrustSL: number; ispVac: number; ispSL: number };
 }
 
+/** How a hot-staged stage lights (`StageSpec.hotStage`). */
+export interface HotStageSpec {
+  /** s before the stage below is shut down by command (its `cutoffAt`) that this stage lights */
+  leadS: number;
+}
+
 export interface StageSpec {
   id: string;
   name: string;
@@ -101,8 +107,17 @@ export interface StageSpec {
   restartable?: boolean;
   /** Seconds between cutoff of the previous stage and separation */
   sepDelay?: number;
-  /** Seconds between separation and ignition of this stage */
+  /** Seconds between separation and ignition of this stage (not read for a `hotStage`) */
   ignitionDelay?: number;
+  /**
+   * The stage lights while still attached to the stage below and fires through
+   * the open truss between them (hot staging, as the R-7's Blok I does). It
+   * lights `leadS` s before the stage below is shut down, on that stage's
+   * `cutoffAt` integrator; the stage below stays the active one, tails off
+   * attached and separates `sepDelay` s after its cut-off. Absent: the stage
+   * lights `ignitionDelay` s after the separation.
+   */
+  hotStage?: HotStageSpec;
   /** Throttle fraction of this stage while parallel boosters are attached */
   throttleWithBoosters?: number;
   boosters?: BoosterGroupSpec[];
@@ -174,11 +189,28 @@ export interface FairingSpec {
   /**
    * Height of the fairing's own lower cone, m, down to the diameter of the
    * stage it stands on, counted in `length`: that stage then carries no
-   * interstage adapter of its own. Soyuz-2.1a's 4.11 × 11.43 m unit includes
-   * its transition section.
+   * interstage adapter of its own. Soyuz-2.1a's payload sections include
+   * their short flare down to Blok I.
    */
   adapter?: number;
+  /** Length of its nose, m, counted in `length` (drawing only); absent, 48 % of the fairing */
+  noseLength?: number;
   color?: string;
+}
+
+/**
+ * How a launcher flies one kind of payload where that differs from how it
+ * flies everything else (`VehicleSpec.crewedProfile`, `cargoShipProfile`):
+ * Soyuz-2.1a's crewed payload section, its cyclogram and its stored
+ * programme, or the Progress cargo flight's programme.
+ */
+export interface VehicleProfile {
+  /** the payload section's fairing, in place of the vehicle's */
+  fairing?: FairingSpec;
+  /** guidance values that replace the vehicle's own (its stored pitch programme) */
+  guidanceDefaults?: Partial<GuidanceParams>;
+  /** per stage, by index: fields of its cyclogram that replace the stage's own */
+  stages?: (Partial<Pick<StageSpec, 'cutoffAt' | 'sepDelay' | 'hotStage' | 'jettisons'>> | null)[];
 }
 
 export interface VehicleSpec {
@@ -195,6 +227,19 @@ export interface VehicleSpec {
   fairing: FairingSpec | null;
   /** The launch escape system a crewed launch carries (roadmap G06): Soyuz's tower and fairing motors. */
   escapeSystem?: 'soyuz';
+  /**
+   * What a crewed launch flies in place of the vehicle's own: Soyuz-2.1a's
+   * crewed payload section (11S517A3) and its cyclogram and programme, where
+   * the vehicle itself is its cargo configuration (11S517A2, Progress MS).
+   * Applied by `openTopVehicle` for a crewed satellite.
+   */
+  crewedProfile?: VehicleProfile;
+  /**
+   * What a cargo ship to the station flies in place of the vehicle's own
+   * (`SatelliteSpec.cargoShip`): Soyuz-2.1a's Progress MS programme. Applied
+   * by `openTopVehicle`.
+   */
+  cargoShipProfile?: VehicleProfile;
   /**
    * A payload flown in the open on top of the last stage instead of inside the
    * fairing (Crew Dragon; roadmap C01): its outer shape, which is then the
@@ -387,6 +432,8 @@ export interface SatelliteSpec {
   typicalOrbit: string;
   description: string;
   crewed?: boolean;
+  /** A cargo ship to the station (Progress MS), which its launcher flies its own way (`VehicleSpec.cargoShipProfile`) */
+  cargoShip?: boolean;
   /** On-board propulsion used for orbit raising once the launcher is spent */
   propulsion?: { thrust: number; isp: number; propellantFraction: number };
   /** Approximate body dimensions for visuals, m */

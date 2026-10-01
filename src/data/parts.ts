@@ -200,6 +200,8 @@ export interface FairingPart {
   length: number;
   /** its own lower cone, counted in `length` (`FairingSpec.adapter`) */
   adapter?: number;
+  /** its nose, counted in `length` (`FairingSpec.noseLength`) */
+  noseLength?: number;
   source: string;
   note?: string;
 }
@@ -854,15 +856,30 @@ export const BOOSTER_BODIES: readonly BoosterBodyPart[] = [
 
 // ---------------------------------------------------------------- fairings
 export const FAIRING_PARTS: readonly FairingPart[] = [
-  // The 4.11 m fairing, 11.43 m long with its own adapter cone down to Blok I
-  // (TASS/RIA: the 4.11 × 11.43 m payload unit), for the crewed and the cargo
-  // flights alike; with the escape tower on its nose the head of a crewed stack
-  // is 15.59 m (owner's figures, 2026-09-25). It was drawn and flown at
-  // 3.7 × 10.1 m on a 1.7 m adapter of its own.
-  // 1 645 kg: the crewed head fairing with its four abort motors that the escape
-  // model flies (src/physics/rigid/escape.ts, an estimate); Arianespace publishes
-  // 1 700 kg for the 4.11 m ST fairing (81KS). It was 1 000 kg.
-  { id: 'soyuz21a', mass: 1645, diameter: 4.11, length: 11.43, adapter: 2.2, source: 'TASS/RIA (the 4.11 × 11.43 m payload unit); owner’s figures, 2026-09-25; mass: the escape model’s crewed fairing (estimate), Arianespace 1 700 kg for the ST fairing' },
+  // Soyuz-2.1a's two payload sections (СЗБ) to the station, each with its own
+  // fairing: the cargo one, 11S517A2 (Progress MS), which is the vehicle's
+  // own, and the crewed one, 11S517A3 (Soyuz MS), which a crewed launch flies
+  // (`VehicleSpec.crewedProfile`; russianspaceweb's flight tables name both).
+  // - Both 3.0 m across: "a 3.0-meter fairing", RKTs Progress's table for
+  //   11S517A2 (russianspaceweb, soyuz2-1a); the crewed one's is not
+  //   published, and Arianespace's drawing of the two (Soyuz CSG User's
+  //   Manual, 2012, Table A5-1) gives it the same, 2.85–2.95 m at its cylinder.
+  // - Lengths from that drawing, from the top of Blok I (derived): 10.4 m with
+  //   a 3.0 m ogive for the cargo one; 9.5 m with a 1.3 m nose under the
+  //   escape tower for the crewed one, whose head is 15.5 m with the tower.
+  //   Each flares out from Blok I's 2.66 m in under a metre (0.8 m, estimate).
+  // - Masses are not published: 1 100 kg is Glavkosmos's 1 400 kg Ø3.715 ×
+  //   10.4 m Soyuz fairing scaled by its surface (estimate); 1 645 kg is the
+  //   crewed one with its four РДГ 860М abort motors (4 × 56 kg, KTRV) and its
+  //   grid fins (estimate).
+  // Until 2026-10-01 both were flown as the 4.11 × 11.43 m ST fairing of the
+  // commercial flights (Arianespace: 4.110 × 11.433 m, 1 700 kg).
+  { id: 'soyuz21a', mass: 1100, diameter: 3.0, length: 10.4, adapter: 0.8, noseLength: 3.0,
+    source: 'RKTs Progress via russianspaceweb (soyuz2-1a: the 3.0 m 11S517A2); lengths from Arianespace’s Soyuz CSG User’s Manual (2012), Table A5-1 (derived); mass: Glavkosmos’s 1 400 kg Ø3.715 × 10.4 m fairing scaled by surface (estimate)',
+    note: 'the cargo payload section, 11S517A2 (Progress MS)' },
+  { id: 'soyuz21a-crew', mass: 1645, diameter: 3.0, length: 9.5, adapter: 0.8, noseLength: 1.3,
+    source: 'Arianespace’s Soyuz CSG User’s Manual (2012), Table A5-1 (diameter and lengths, derived); mass: with the four РДГ 860М (4 × 56 kg, KTRV) and the grid fins (estimate)',
+    note: 'the crewed payload section, 11S517A3 (Soyuz MS), under the escape tower' },
   { id: 'soyuz21b', mass: 1500, diameter: 4.11, length: 11.4, source: UNCITED },
   { id: 'protonm', mass: 2000, diameter: 4.35, length: 15, source: UNCITED, note: 'Proton-M and Angara-A5' },
   { id: 'falcon9', mass: 1900, diameter: 5.2, length: 13.1, source: UNCITED, note: 'Falcon 9 and Falcon Heavy' },
@@ -968,14 +985,14 @@ export const fairingPart = (id: string): FairingPart => find(FAIRINGS, id, 'fair
 
 /** What a vehicle adds to a stage body where it installs it. */
 export type StageInstall = Partial<Pick<StageSpec, 'restartable' | 'sepDelay' | 'ignitionDelay' | 'throttleWithBoosters' | 'boosters'
-  | 'color' | 'accentColor' | 'profile' | 'fins' | 'gridFins' | 'legs' | 'flaps' | 'nozzleLength' | 'jettisons' | 'engineEvents' | 'cutoffAt'>>;
+  | 'color' | 'accentColor' | 'profile' | 'fins' | 'gridFins' | 'legs' | 'flaps' | 'nozzleLength' | 'jettisons' | 'engineEvents' | 'cutoffAt' | 'hotStage'>>;
 /** What a vehicle adds to a strap-on body, besides how many. */
 export type BoosterInstall = Partial<Pick<BoosterGroupSpec, 'igniteAt' | 'sepDelay' | 'color' | 'conicalTop' | 'baseOffset' | 'thrustSteps'>>;
 /** What a vehicle adds to a fairing: when it is jettisoned, and its livery. */
 export type FairingInstall = Pick<FairingSpec, 'sepAltitude'> & Partial<Pick<FairingSpec, 'sepTime' | 'color'>>;
 
 const STAGE_INSTALL_FIELDS: ReadonlySet<string> = new Set(['restartable', 'sepDelay', 'ignitionDelay', 'throttleWithBoosters', 'boosters',
-  'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength', 'jettisons', 'engineEvents', 'cutoffAt']);
+  'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength', 'jettisons', 'engineEvents', 'cutoffAt', 'hotStage']);
 const BOOSTER_INSTALL_FIELDS: ReadonlySet<string> = new Set(['igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset', 'thrustSteps']);
 const FAIRING_INSTALL_FIELDS: ReadonlySet<string> = new Set(['sepAltitude', 'sepTime', 'color']);
 const ENGINE_OPTIONAL_FIELDS = ['minThrottle', 'solid', 'peakFactor', 'vacuumOnly', 'startupS', 'tailoffS'] as const;
@@ -1029,6 +1046,7 @@ export function fairingSpec(part: FairingPart | string, install: FairingInstall)
   const f = typeof part === 'string' ? fairingPart(part) : part;
   return {
     mass: f.mass, diameter: f.diameter, length: f.length, ...(f.adapter !== undefined ? { adapter: f.adapter } : {}),
+    ...(f.noseLength !== undefined ? { noseLength: f.noseLength } : {}),
     ...installed(install, FAIRING_INSTALL_FIELDS, 'fairing'),
   } as FairingSpec;
 }

@@ -1203,16 +1203,19 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   // 250 km cells moved by up to 79 km of apoapsis, the profile's own flight
   // through the strap-on and core phases now fixed whatever the target, and
   // the heaviest 300 km cell, `failed` with its tanks dry before, now reaches a
-  // 144.0 x 879.6 km ellipse like the lighter two.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 198.1, ap: 202.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 197.1, ap: 200.1 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 198.0, ap: 201.0 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 247.3, ap: 266.8 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 247.1, ap: 268.7 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 241.3, ap: 298.9 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 146.7, ap: 821.6 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 146.0, ap: 831.7 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 144.0, ap: 879.6 },
+  // 144.0 x 879.6 km ellipse like the lighter two. Re-measured again for the
+  // hot staging and the cargo payload section's 3.0 m fairing (same day, second
+  // pass): every verdict held, the cells moved by up to 30 km of apoapsis and
+  // 6 km of periapsis (the 6.3 t / 250 km one, which no longer runs short).
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 197.1, ap: 203.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 197.9, ap: 200.6 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 198.6, ap: 200.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 247.2, ap: 264.2 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 247.1, ap: 265.4 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.3, ap: 267.4 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 147.3, ap: 791.4 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 147.1, ap: 813.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 144.9, ap: 849.7 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
   // rating. Nothing closes, at any altitude or any payload. Re-measured when
   // the planner started flying the heading the site's window licenses: the

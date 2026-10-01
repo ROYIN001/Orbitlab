@@ -2,15 +2,18 @@
  * The R-7's flight sequence as Soyuz-2.1a flies it (src/data/vehicles.ts): the
  * engines' start on the pad (`VehicleSpec.padBurnS`), the strap-ons' step to
  * their intermediate level and their commanded cut-off (`BoosterGroupSpec.thrustSteps`),
- * the core's GK-2 cut-off (`StageSpec.cutoffAt`), the escape tower carried to
- * its jettison on a crewed flight, Blok I's aft skirt, and the stored pitch
- * programme (`GuidanceParams.pitchProgram`) that an operator's own pitch-over
- * replaces. The point mass, so that the sequence is checked apart from the
- * attitude loop (tests/rigid-soyuz-programme.test.ts flies it as a rigid body).
+ * the core's cut-off (`StageSpec.cutoffAt`) with Blok I already firing through
+ * the truss (`StageSpec.hotStage`), the escape tower carried to its jettison
+ * on a crewed flight, Blok I's aft skirt, the crewed and cargo cyclograms
+ * (`VehicleSpec.crewedProfile`), and the stored pitch programme
+ * (`GuidanceParams.pitchProgram`) that an operator's own pitch-over replaces.
+ * The point mass, so that the sequence is checked apart from the attitude
+ * loop (tests/rigid-soyuz-programme.test.ts flies it as a rigid body).
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
-import { vehicleById } from '../src/data/vehicles';
+import { payloadVehicle, vehicleById } from '../src/data/vehicles';
+import { satelliteById } from '../src/data/satellites';
 import { guidanceForVehicle, programmeOverridden } from '../src/physics/defaults';
 import { programmePitch } from '../src/physics/guidance';
 import { VehicleModel, boosterCutoffAt, boosterStepLevel, engineMassFlow, liftoffMass } from '../src/physics/vehicle';
@@ -19,14 +22,17 @@ import { vehicleSpecProblems } from '../src/config/vehicle-spec';
 import { ESCAPE } from '../src/physics/rigid/escape';
 import type { AscentPhase } from '../src/physics/guidance';
 
-function crewedFlight(guidance = guidanceForVehicle(vehicleById('soyuz21a'))) {
+function crewedFlight(guidance = guidanceForVehicle(vehicleById('soyuz21a')), model: 'pointMass' | 'sixDof' = 'pointMass', satelliteId?: string) {
   const s = watchMissionSettings('soyuzMs25', new Date('2026-09-22T03:00:00Z'));
   return new Simulation({
-    vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, padId: s.padId,
-    launchTime: s.launchTime, payloadMassOverride: s.payloadMass, guidance, guidanceResolved: true,
-    failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 20260919 },
+    vehicleId: s.vehicleId, satelliteId: satelliteId ?? s.satelliteId, siteId: s.siteId, orbit: s.orbit, padId: s.padId,
+    launchTime: s.launchTime, payloadMassOverride: satelliteId ? undefined : s.payloadMass, guidance, guidanceResolved: true,
+    failure: s.failure, boosterRecovery: false, dynamics: { model, wind: 'calm', seed: 20260919 },
   }, { headless: true });
 }
+/** Soyuz-2.1a as a crewed launch flies it, and as a Progress MS flight does. */
+const crewed = () => payloadVehicle(vehicleById('soyuz21a'), satelliteById('crew'));
+const progress = () => payloadVehicle(vehicleById('soyuz21a'), satelliteById('progress'));
 
 describe('Soyuz-2.1a’s flight sequence', () => {
   it('steps the strap-ons to 81 % at T+112 s and cuts them off by command at T+117.45 s', () => {
@@ -44,7 +50,7 @@ describe('Soyuz-2.1a’s flight sequence', () => {
 
   it('flies the published sequence: pad start, step, cut-offs, tower, fairing, skirt', () => {
     const sim = crewedFlight();
-    const spec = vehicleById('soyuz21a');
+    const spec = crewed();
     const core = spec.stages[0], booster = core.boosters![0];
     const at = (key: string) => sim.events.find((e) => e.key === key)?.t;
     let liftoffM: number | undefined, beforeStep = 0, afterStep = 0, beforeTower = 0, afterTower = 0;
@@ -86,16 +92,79 @@ describe('Soyuz-2.1a’s flight sequence', () => {
     // the fairing on its published time, not held by its altitude floor
     expect(at('evt.fairingSep')!).toBeCloseTo(153.3, 0);
 
-    // the core shut down by GK-2 with about 1 % of its load (measured 1.3 %)
+    // the core shut down by its command with under 1 % of its load (measured 0.7 %)
     expect(coreLeft! / core.propellantMass).toBeGreaterThan(0.002);
     expect(coreLeft! / core.propellantMass).toBeLessThan(0.03);
+    // hot staging, on the crewed cyclogram: Blok I lights at T+286.44 s, the
+    // core is cut off 0.24 s later and separates at the flown T+287.70 s
     const blokI = sim.events.find((e) => e.key === 'evt.ignition' && e.t > 200)?.t;
-    expect(blokI!).toBeCloseTo(285.05, 1);
-    // the aft skirt 11.07 s after Blok I lights, 430 kg off its dry mass
-    expect(at('evt.aftSkirtSep')! - blokI!).toBeCloseTo(11.07, 1);
+    // (the point mass touches the load-relief placard at max Q: its integrators run 0.01 s late)
+    expect(blokI!).toBeCloseTo(286.44, 1);
+    expect(at('evt.meco')!).toBeCloseTo(286.68, 1);
+    expect(at('evt.stageSep')!).toBeCloseTo(287.70, 1);
+    expect(at('evt.stageSep')! - at('evt.meco')!).toBeCloseTo(1.02, 6);
+    // the aft skirt at the flown T+296.12 s, 430 kg off its dry mass
+    expect(at('evt.aftSkirtSep')!).toBeCloseTo(296.12, 1);
     expect(sim.vehicle.jettisoned.aftSkirt).toBe(true);
     expect(sim.vehicle.stages[1].spec.dryMass).toBe(spec.stages[1].dryMass - 430);
   }, 120_000);
+
+  it('fires Blok I through the truss before the core has gone, in both flight models', () => {
+    for (const model of ['pointMass', 'sixDof'] as const) {
+      const sim = crewedFlight(guidanceForVehicle(vehicleById('soyuz21a'), undefined, model), model);
+      let overlap = 0, alone = 0, tailAttached = false, hotThrottle = 0;
+      while (!sim.isFailed() && sim.state.t < 289) {
+        const v = sim.vehicle, t = sim.state.t, hot = v.hotStage();
+        if (hot && !v.stages[0].burnedOut) {
+          // both stages thrust: the core at full, Blok I spinning up
+          overlap = Math.max(overlap, v.thrust(t, 0, 1, 0.05).thrust);
+          alone = v.stages[0].spec.engine.count * v.stages[0].spec.engine.thrustVac;
+        }
+        if (hot) hotThrottle = Math.max(hotThrottle, sim.state.hotThrottle ?? 0);
+        if (hot && v.coreTailingOff(v.stages[0], t)) tailAttached = true;
+        sim.step(sim.suggestedDt());
+      }
+      const at = (key: string) => sim.events.find((e) => e.key === key)?.t;
+      const ignition = sim.events.find((e) => e.key === 'evt.ignition' && e.t > 200)!.t;
+      expect(ignition, model).toBeLessThan(at('evt.meco')!);
+      expect(at('evt.meco')!, model).toBeLessThan(at('evt.stageSep')!);
+      expect(at('evt.stageSep')! - at('evt.meco')!, model).toBeCloseTo(1.02, 2);
+      expect(overlap, model).toBeGreaterThan(alone);
+      expect(hotThrottle, model).toBeGreaterThan(0.02);
+      // the core's tail-off is flown attached, not handed to its debris
+      expect(tailAttached, model).toBe(true);
+      expect(sim.vehicle.hotStage(), model).toBeNull();
+    }
+  }, 300_000);
+
+  it('flies the cargo cyclogram for every payload but a crew: Progress MS-19’s', () => {
+    expect(vehicleById('soyuz21a').stages[0].cutoffAt).toBe(286.399);
+    // in six-DOF: the point mass reaches the load-relief placard at max Q on this flight and its
+    // throttled integrators run a tenth of a second late (docs/VALIDATION.md §3)
+    const sim = crewedFlight(guidanceForVehicle(vehicleById('soyuz21a'), undefined, 'sixDof'), 'sixDof', 'progress');
+    while (!sim.isFailed() && sim.state.t < 300) sim.step(sim.suggestedDt());
+    const at = (key: string) => sim.events.find((e) => e.key === key)?.t;
+    expect(sim.vehicle.escapeTowerMass).toBe(0);
+    expect(at('evt.towerJettison')).toBeUndefined();
+    expect(sim.vehicleSpec.fairing!.diameter).toBe(3.0);
+    expect(at('evt.fairingSep')!).toBeCloseTo(183.2, 0);
+    expect(sim.events.find((e) => e.key === 'evt.ignition' && e.t > 200)!.t).toBeCloseTo(286.159, 2);
+    expect(at('evt.meco')!).toBeCloseTo(286.399, 2);
+    expect(at('evt.stageSep')!).toBeCloseTo(287.419, 2);
+    expect(at('evt.aftSkirtSep')!).toBeCloseTo(296.779, 2);
+  }, 300_000);
+
+  it('flies hot staging on no other vehicle', () => {
+    for (const id of ['soyuz21a', 'soyuz21b']) expect(vehicleById(id).stages[1].hotStage, id).toEqual({ leadS: 0.24 });
+    for (const v of ['falcon9', 'protonm', 'vostok8k72k', 'sputnik8k71ps', 'saturnv506', 'atlasv551']) {
+      const spec = vehicleById(v);
+      expect(spec.stages.some((st) => st.hotStage), v).toBe(false);
+      const vm = new VehicleModel(spec, 1000);
+      vm.igniteStage(vm.active!, 0);
+      expect(vm.thrust(10, 0, 1, 0.1).hotLevel, v).toBeUndefined();
+      expect(vm.hotStage(), v).toBeNull();
+    }
+  });
 
   it('cuts a throttled strap-on off later, on its integrator, with what a nominal flight leaves', () => {
     const burn = (throttle: number) => {
@@ -142,31 +211,46 @@ describe('the stored pitch programme', () => {
     expect(programmePitch(prog, 400)).toBe(40);
   });
 
-  it('is the Soyuz-2’s in both flight models, handed over as Blok I lights', () => {
+  it('is the Soyuz-2’s in both flight models, crewed and Progress, handed over as the core separates', () => {
     for (const model of ['pointMass', 'sixDof'] as const) {
-      const g = guidanceForVehicle(vehicleById('soyuz21a'), undefined, model);
-      expect(g.pitchProgram, model).toBeDefined();
-      expect(g.pitchProgram!.at(-1)![0]).toBeCloseTo(285.1, 6);
-      expect(programmeOverridden(g, vehicleById('soyuz21a'), model)).toBe(false);
+      const own = guidanceForVehicle(vehicleById('soyuz21a'), undefined, model);
+      const crew = guidanceForVehicle(crewed(), undefined, model);
+      const cargo = guidanceForVehicle(progress(), undefined, model);
+      expect(own.pitchProgram, model).toBeDefined();
+      // every payload but Progress flies the crewed programme; Progress its own
+      expect(crew.pitchProgram, model).toBe(own.pitchProgram);
+      expect(cargo.pitchProgram, model).not.toEqual(crew.pitchProgram);
+      // held through the hot staging to the separation: 287.42 s on Progress, 287.70 s on a crewed flight
+      expect(cargo.pitchProgram!.at(-1)![0]).toBeCloseTo(287.4, 6);
+      expect(crew.pitchProgram!.at(-1)![0]).toBeCloseTo(287.7, 6);
+      expect(programmeOverridden(own, vehicleById('soyuz21a'), model)).toBe(false);
+      expect(programmeOverridden(cargo, progress(), model)).toBe(false);
     }
-    // 2.1b flies the same first two stages, and their programme
+    // 2.1b flies the same first two stages, and the crewed programme it was validated on
     expect(guidanceForVehicle(vehicleById('soyuz21b')).pitchProgram).toBe(guidanceForVehicle(vehicleById('soyuz21a')).pitchProgram);
     expect(guidanceForVehicle(vehicleById('falcon9')).pitchProgram).toBeUndefined();
+  });
+
+  it('flies Progress’s programme on a Progress flight, given the vehicle’s own', () => {
+    const sim = crewedFlight(guidanceForVehicle(vehicleById('soyuz21a')), 'pointMass', 'progress');
+    expect(sim.cfg.guidance.pitchProgram).toEqual(guidanceForVehicle(progress()).pitchProgram);
+    const own: [number, number][] = [[0, 90], [5, 90], [300, 10]];
+    expect(crewedFlight({ ...guidanceForVehicle(vehicleById('soyuz21a')), pitchProgram: own }, 'pointMass', 'progress').cfg.guidance.pitchProgram).toEqual(own);
   });
 
   it('flies the programme to the hand-over, then the closed loop', () => {
     const sim = crewedFlight();
     const phases = new Map<AscentPhase, number>();
-    while (!sim.isFailed() && sim.state.t < 290) {
+    while (!sim.isFailed() && sim.state.t < 292) {
       sim.step(sim.suggestedDt());
       const p = sim.state.ascentPhase as AscentPhase;
       if (!phases.has(p)) phases.set(p, sim.state.t);
     }
     expect([...phases.keys()]).toEqual(['vertical', 'pitchProgram', 'closedLoop']);
     expect(phases.get('pitchProgram')!).toBeLessThan(6);
-    // the closed loop's first command comes as Blok I's thrust builds
-    expect(phases.get('closedLoop')!).toBeGreaterThanOrEqual(285.1);
-    expect(phases.get('closedLoop')!).toBeLessThan(286);
+    // the closed loop's first command comes on Blok I alone
+    expect(phases.get('closedLoop')!).toBeGreaterThanOrEqual(287.7);
+    expect(phases.get('closedLoop')!).toBeLessThan(288.5);
   }, 60_000);
 
   it('gives way to an operator’s own pitch-over, or an acceleration limit', () => {
@@ -210,6 +294,21 @@ describe('the sequence fields in a vehicle file', () => {
     const m = messages(v).join('\n');
     expect(m).toMatch(/thrustSteps\[0\]\.level.*last step/);
     expect(m).toMatch(/thrustSteps\[1\]/);
+  });
+
+  it('rejects hot staging on the first stage, a lead of a minute, and a crewed profile of unknown fields', () => {
+    const v = copy();
+    v.stages[0].hotStage = { leadS: 0.24 };
+    v.stages[1].hotStage = { leadS: 60 };
+    v.crewedProfile.stages[0].thrust = 1;
+    v.crewedProfile.colour = 'red';
+    v.cargoShipProfile.guidanceDefaults.pitchProgram = [[0, 90]];
+    const m = messages(v).join('\n');
+    expect(m).toMatch(/stages\[0\]\.hotStage.*first stage/);
+    expect(m).toMatch(/stages\[1\]\.hotStage\.leadS/);
+    expect(m).toMatch(/crewedProfile\.stages\[0\].*thrust/);
+    expect(m).toMatch(/crewedProfile.*colour/);
+    expect(m).toMatch(/cargoShipProfile\.guidanceDefaults\.pitchProgram/);
   });
 
   it('rejects a skirt heavier than the stage, and a pad start of minutes', () => {

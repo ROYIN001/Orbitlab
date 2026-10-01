@@ -12,7 +12,8 @@
 import { assessMissionResult } from '../ui/result-content';
 import { guidanceForVehicle } from '../physics/defaults';
 import { defaultDynamics } from '../physics/rigid/config';
-import { vehicleById } from '../data/vehicles';
+import { payloadVehicle, vehicleById } from '../data/vehicles';
+import { SATELLITES } from '../data/satellites';
 import { LESSON_HOOKS } from './hooks';
 import { MEASURES, missionTarget } from './measures';
 import type { CatalogLesson, Criterion, CriterionGrade, CriterionState, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
@@ -189,11 +190,16 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
       case 'setup.guidance': {
         const spec = vehicleById(m.vehicleId);
         const model = m.dynamics?.model ?? defaultDynamics(m.vehicleId).model;
-        const expected = { ...guidanceForVehicle(spec, undefined, model), ...m.guidanceOverrides } as Record<string, unknown>;
         const flown = cfg.guidance as unknown as Record<string, unknown>;
-        // numbers to a tolerance; a stored pitch programme (`pitchProgram`) as a whole
-        kept = Object.keys(expected).every((k) => typeof expected[k] === 'number' || expected[k] === undefined
-          ? near(flown[k] as number | undefined, expected[k] as number | undefined, 1e-6) : same(flown[k], expected[k]))
+        // numbers to a tolerance; a stored pitch programme (`pitchProgram`) as a whole. A payload
+        // with a profile of its own flies its programme (`VehicleSpec.crewedProfile`, `cargoShipProfile`).
+        const keeps = (v: typeof spec) => {
+          const expected = { ...guidanceForVehicle(v, undefined, model), ...m.guidanceOverrides } as Record<string, unknown>;
+          return Object.keys(expected).every((k) => typeof expected[k] === 'number' || expected[k] === undefined
+            ? near(flown[k] as number | undefined, expected[k] as number | undefined, 1e-6) : same(flown[k], expected[k]));
+        };
+        const sat = SATELLITES.find((x) => x.id === m.satelliteId);
+        kept = (keeps(spec) || (!!sat && keeps(payloadVehicle(spec, sat))))
           && same(cfg.dynamics?.explicitGuidance, m.dynamics?.explicitGuidance);
         break;
       }

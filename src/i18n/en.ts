@@ -831,6 +831,7 @@ export const en: Record<string, string> = {
   'sat.cubesats.name': 'CubeSat rideshare dispenser',
   'sat.starlink.name': 'Starlink batch (60 × 260 kg)',
   'sat.crew.name': 'Crewed spacecraft',
+  'sat.progress.name': 'Progress MS cargo ship',
   'sat.crewDragon.name': 'Crew Dragon',
   'site.baikonur.name': 'Baikonur Cosmodrome',
   'site.plesetsk.name': 'Plesetsk Cosmodrome',

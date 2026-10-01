@@ -1,5 +1,5 @@
 /**
- * Eleven flights of ten vehicles in the six-DOF model against published
+ * Twelve flights of ten vehicles in the six-DOF model against published
  * launch timelines (docs/VALIDATION.md §3 and §4): the references and tolerances of
  * `tests/validation/timelines.test.ts`, flown in the default flight model.
  * The rows listed below are the measured disagreements; the test fails when
@@ -15,6 +15,9 @@ const DISAGREEMENTS: Record<string, readonly string[]> = {
   // every row agrees since 2026-10-01: the flown insertion, and the stored
   // programme fitted to the two heights (docs/VALIDATION.md §3)
   soyuzMs25: [],
+  // Progress MS-19 (2026-10-01): its cyclogram's times are inputs, its 143 km the cargo
+  // programme's fit target; the 43 and 91 km come out 3–7 km high, inside the tolerance
+  progressMs19: [],
   electronNtt: ['fairing/time', 'seco/time', 'kickSep/time'],
   ariane64Va267: ['fairing/altitude'],
   atlasJuno: ['fairing/time'],

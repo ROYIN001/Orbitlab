@@ -61,18 +61,42 @@ For Soyuz:
 - The strap-ons step to 81 % at T+112.0 s, taken from the CSG trace (3.981 → 3.367 g in a
   quarter of a second). They are cut off by command, never run dry (Andrienko 2013:
   "full propellant depletion on stage I is inadmissible").
-- The core is cut off by GK-2 at T+285.05 s.
+- The core is cut off by command at T+286.40 s on the cargo flight (the Progress MS-19
+  cyclogram) and T+286.68 s on a crewed one (derived from its separation). It used to be
+  SoyCOM's GK-2 at T+285.05 s, which belongs to the Soyuz-U.
 - The engines run for about 20 s on the pad at intermediate levels (CSG §A5), worth 2 s of full
   flow.
 
-The predictions came out inside their bands: about 1 t left in each strap-on, 1.3 % in the core,
-306.8 t and 1.39 g at liftoff.
+The predictions came out inside their bands: about 1 t left in each strap-on, about 1 % in the
+core, 306.8 t and 1.39 g at liftoff.
+
+Check the drag with a trace before fitting anything to heights. Soyuz-2.1b's longitudinal
+acceleration, with the commercial flights' 4.11 m fairing and the model's generic drag
+coefficient, follows Arianespace's Fig. 3.2.1a within 1 % through max Q (1.839 / 1.833 /
+1.855 g at T+45 / 50 / 55 s against 1.828 / 1.841 / 1.869 g). So the drag is not a knob.
 
 ### 3. Events
 
 Timed commands are inputs: the tower, the fairing, the skirt, the cut-offs. Name the structural
-gaps instead of hiding them. Soyuz's hot staging is not modelled, so the core separates 2.65 s
-early. That gap is pinned, not tuned.
+gaps instead of hiding them, and build the mechanism when a source describes it. Soyuz's hot
+staging was a pinned gap (the core separated 2.65 s early) until it was built
+(`StageSpec.hotStage`):
+
+- Blok I lights 0.24 s before the core's cut-off, while still attached;
+- both stages thrust together, and the core tails off attached;
+- the core separates 1.02 s after its cut-off, from a timed cyclogram (Progress MS-19:
+  286.159 / 286.399 / 287.419 s);
+- the stored programme holds the attitude to the separation.
+
+Starsem's and Arianespace's "about 2 s before the core's shutdown" is in prose; no timed sequence
+bears it out, so the cyclogram won.
+
+One vehicle can fly more than one cyclogram. Soyuz-2.1a flies a crewed and a cargo one: different
+payload sections, fairing times, cut-offs and programmes. The vehicle carries the cargo payload
+section and cyclogram; a crewed launch flies its `crewedProfile` and a Progress MS its
+`cargoShipProfile` instead. Do not average two missions into one profile, and do not hand one
+mission's fitted programme to every other payload: Progress's, fitted to its low core separation,
+left Blok I short of other orbits, so the other payloads fly the crewed one.
 
 A gate that decides an event must not depend on a fitted quantity. Soyuz's fairing altitude
 floor was set below the 79 km fit target, so that the published time decides when the fairing

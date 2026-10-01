@@ -810,6 +810,7 @@ export const ru: Record<string, string> = {
   'sat.cubesats.name': 'Контейнер попутных кубсатов',
   'sat.starlink.name': 'Партия Starlink (60 × 260 кг)',
   'sat.crew.name': 'Пилотируемый корабль',
+  'sat.progress.name': 'Грузовой корабль «Прогресс МС»',
   'sat.crewDragon.name': 'Корабль «Крю Дрэгон»',
   'site.baikonur.name': 'Космодром Байконур',
   'site.plesetsk.name': 'Космодром Плесецк',

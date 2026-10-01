@@ -1,5 +1,5 @@
 /**
- * Eleven flights of ten vehicles in the point-mass model against published
+ * Twelve flights of ten vehicles in the point-mass model against published
  * launch timelines (docs/VALIDATION.md §3 and §4). Same tolerances, same rule as the
  * Falcon 9 comparison: the rows that disagree are listed by name, and the test
  * fails when the set changes in either direction.
@@ -15,6 +15,9 @@ const DISAGREEMENTS: Record<string, readonly string[]> = {
   // flown 200 × 242 km (it went to 200 km circular) and its programme flies the
   // flown heights (docs/VALIDATION.md §3).
   soyuzMs25: [],
+  // Progress MS-19 (2026-10-01): its cyclogram's times are inputs, its 143 km the cargo
+  // programme's fit target; the 43 and 91 km come out 3–7 km high, inside the tolerance
+  progressMs19: [],
   electronNtt: ['seco/time', 'kickSep/time'],
   ariane64Va267: [],
   atlasJuno: ['fairing/time'],

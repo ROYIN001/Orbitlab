@@ -811,6 +811,7 @@ export const th: Record<string, string> = {
   'sat.cubesats.name': 'ชุดปล่อยคิวบ์แซตแบบร่วมเที่ยวบิน',
   'sat.starlink.name': 'ชุดดาวเทียม Starlink (60 × 260 กก.)',
   'sat.crew.name': 'ยานอวกาศมีมนุษย์ควบคุม',
+  'sat.progress.name': 'ยานขนส่งสินค้าโปรเกรส MS',
   'sat.crewDragon.name': 'ยานครูว์ดรากอน',
   'site.baikonur.name': 'ท่าอวกาศยานไบโคนูร์',
   'site.plesetsk.name': 'ท่าอวกาศยานเพลเซตสก์',

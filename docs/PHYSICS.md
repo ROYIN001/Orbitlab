@@ -1127,8 +1127,14 @@ Throttle is limited by the engine's minimum throttle, an acceleration limit (e.g
 throttle bucket around max-Q for vehicles that fly one, and the load-relief law of §3.
 
 Stages are burned serially; strap-on boosters burn in parallel with the core (the core may
-throttle down while they are attached) and are jettisoned after a short delay. Hot staging
-(Soyuz Blok I, Proton stage 2, Starship) ignites the next stage at separation.
+throttle down while they are attached) and are jettisoned after a short delay. A hot-staged stage
+(`StageSpec.hotStage`; Soyuz-2's Blok I) lights while still attached, a set lead before the stage
+below is cut off by command, and fires through the open truss between them: both stages thrust
+together, the stage below stays the active one, tails off attached, and separates `sepDelay` s
+after its cut-off (Soyuz-2.1a: Blok I at T+286.16 s, the core cut off at 286.40 s and separated at
+287.42 s, the Progress MS-19 cyclogram). The six-DOF body carries both stages' chambers then; the
+attitude is held through it. Its jet's push on the core's dome is not modelled. Every other
+hot-staging vehicle (Proton's second stage, Starship) still lights the next stage at separation.
 
 **Fairing jettison** follows a thermal placard rather than a fixed altitude: the fairing is
 released at the first moment the free-molecular heating rate q̇ = ½ρv³ falls below the vehicle's
@@ -2576,12 +2582,13 @@ g is the specific force on the body carrying them, and its peak is kept.
 
 | Quantity | Value | Source |
 |---|---|---|
-| Head section with the tower | 7 635 kg | Braeunig, Soyuz specifications |
-| Fairing; head with the tower | 4.11 m × 11.43 m; 15.59 m (the tower 4.16 m above the nose) | owner's figures (2026-09-25), TASS/RIA for the 4.11 × 11.43 m unit; the tower's split into truss, motor and cap is an estimate |
+| Head section with the tower | 7 635 kg | Braeunig, Soyuz specifications (the 1966 system's; 7.5–8.0 t from today's parts) |
+| Crewed fairing (11S517A3); head with the tower | 3.0 m × 9.5 m; 15.5 m (the tower 6.0 m above the nose) | Arianespace, Soyuz CSG User's Manual (2012), Table A5-1, derived from the drawing; the tower's split into truss, motor and cap is an estimate |
 | Descent module; orbital module | 2 950 kg, 2.17 m; 1 300 kg | Soyuz MS data (en.wikipedia), GCTC |
-| Tower's main motor | 1.05 MN for 1.55 s, 800 kg of propellant, Isp 218 s | 76 tf is quoted (MKB Iskra, vesvks.ru), but the 14–17 g of T-10-1 needs about 1 MN on this mass: chosen for the g |
+| Upper fairing, which leaves with the crew | 1 180 kg, from 3.5 m above the fairing's base | estimate: its shell above the joint (63 %) of the crewed fairing's 1 645 kg, with the motors and the fins |
+| Tower's main motor | 1.05 MN for 1.55 s, 800 kg of propellant, Isp 218 s | the 14–17 g of T-10-1's Soyuz-T system; KTRV gives today's ДУ САС 855М 1 930 kg, about 4 s, 45–73 tf, not yet flown here |
 | Control motor | 4 kN for 1.6 s, at the tower's top | estimate |
-| Fairing motors | 280 kN together for 2.6 s, 300 kg | estimate (thrust and burn not published) |
+| Fairing motors (four РДГ 860М) | 135 kN together, in two pairs 0.32 s apart, for about 3 s; 0.40 MN·s, 176 kg | KTRV: 56 kg each, about 3 s, 2.4–4.5 tf each (flown at 3.45); SoyCOM for the pairs; the propellant is that impulse at 230 s (estimate). Was 280 kN for 2.6 s, twice the impulse |
 | Tower jettison, fairing jettison | T+113.5 s, T+153.3 s | Soyuz MS-21 to MS-27 as flown (113.45–113.70 s; 153.33 s, russianspaceweb) |
 | Main parachute, drogue | 1 000 m², 24 m² (16–25 m² quoted) | ESA, RussianSpaceWeb |
 | Descent rate on the main | 7.2 m/s | ESA |
@@ -2593,28 +2600,34 @@ three aborts the escape system has flown:
 
 | | Model | Flight |
 |---|---|---|
-| **T-10-1** (pad fire, 1983) | 14.3 g; apogee 1.4 km; down 0.3 km from the pad 2.8 min after the abort | 14–17 g; 1.2–2 km; about 4 km away, 5 min 13 s (at night, in wind) |
-| **MS-10** (strap-on collision, 2018) | abort at T+120.9 s in the fairing mode; apogee 108 km; 8.1 g; down 428 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
-| **18a** (separation failure, 1975) | abort at T+291.0 s in the separation mode; apogee 167 km; 16.6 g; down 1 458 km downrange at 50.67°N 81.75°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
+| **T-10-1** (pad fire, 1983) | 15.5 g; apogee 1.7 km; down 0.7 km from the pad 3.6 min after the abort | 14–17 g; 1.2–2 km; about 4 km away, 5 min 13 s (at night, in wind) |
+| **MS-10** (strap-on collision, 2018) | abort at T+121.4 s in the fairing mode, at 50.6 km and 1.72 km/s, climbing at 33°; apogee 102 km; 7.9 g; down 411 km downrange at 47.55°N 68.17°E | T+121.57 s at about 47–50 km; 93 km; 6.7 g on entry; 402 km, 47.59°N 68.01°E |
+| **18a** (separation failure, 1975) | abort at T+293.7 s in the separation mode; apogee 169 km; 17.0 g; down 1 535 km downrange at 50.84°N 82.81°E | T+295 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
 
-Re-measured 2026-10-01 with Soyuz-2.1a's stored pitch programme, which flies it on its flown
-heights (47 km at strap-on separation, 79 km at the fairing, 157 km at core separation;
-VALIDATION.md §3). Neither abort is a fit target.
+Re-measured 2026-10-01 (second pass) with the hot staging, the crewed payload section's 3.0 m
+fairing, the KTRV fairing motors and the crewed programme refitted to the flown heights (79 km at
+the fairing, 157 km at core separation; VALIDATION.md §3). Neither abort is a fit target.
 
-- **MS-10 comes out 15 km high** (162 km before the programme). At T+120 s this 2.1a is at 47 km
-  and 1.70 km/s over the ground, climbing at 35°. SoyCOM gives MS-10's Soyuz-FG 45.4 km and
-  1.67 km/s at the tower's jettison, T+121.2 s, so the launcher's state is no longer the cause.
-  What is left is in the escape: the fairing motors' thrust is an estimate, and the head is
-  3.39 t against the 4.2–4.5 t published, so it gets too much from them.
-- **18a comes out 25 km low** (206 km before, when the core separated at 199 km). This 2.1a
-  separates its core at 157 km climbing at 5°; SoyCOM's Soyuz-FG is at 168 km and about 6° at
-  GK-2. A crew released there coasts to about 167 km. The 1975 rocket was an 11A511, and its
-  Blok I spent six seconds pushing the core it could not shed. The model's Blok I burns those six
-  seconds free of the core, and the rocket's own history is not modelled.
+- **MS-10 comes out 9 km high** (108 km before this pass). The strap-on that struck the core
+  tore its tail section off (Roscosmos, 1 November 2018), so the core now makes no thrust from the
+  strike, and the abort comes 3.57 s later, as the Roscosmos timeline has it (118 → 121.57 s). The
+  fairing motors are KTRV's, half the impulse they had. What is left is the launcher: MS-10 flew a
+  Soyuz-FG, whose tower went at 42 km (T+114.16 s) against this 2.1a's 45 km; flown from this
+  2.1a's state at the abort with no motors at all the crew would still coast to about 97 km.
+  The head's mass cannot bring it to 93 km: a lighter head gets more from the motors and climbs
+  higher, and the 4.2–4.5 t sometimes quoted is the orbital and descent modules alone, not what
+  the motors pull (about 5.4 t here, the upper fairing with them).
+- **18a comes out 23 km low** (25 km before). The core now separates on the hot-staged cyclogram,
+  and Blok I burns until the abort, 6 s after the half-failed separation. This 2.1a separates its
+  core at 157 km climbing at 5°; SoyCOM's Soyuz-FG is at 168 km and about 6° at GK-2. The 1975
+  rocket was an 11A511 whose Blok I spent seconds pushing the core it could not shed, a failure
+  the model does not fly.
 
-T-10-1's crew came down farther away, in wind this model does not
-fly, and after a longer flight: at the model's 7.2 m/s its 5 min 13 s would need an apogee near
-2 km, where the model's head section, as wide as the 4.11 m fairing, climbs to 1.4 km.
+T-10-1's crew came down farther away, in wind this model does not fly, and after a longer flight:
+at the model's 7.2 m/s its 5 min 13 s would need an apogee near 2 km; the model's head section,
+3.0 m across since this pass (it was as wide as the 4.11 m fairing), climbs to 1.7 km. Its tower
+is still the Soyuz-T system that T-10-1 flew, chosen for its 14–17 g; today's ДУ САС 855М is
+KTRV's 45–73 tf for about 4 s, which the model does not yet fly.
 
 Limits: the fairing motors, the control motor, the fins' effect and the aerodynamics are
 estimates; the descent module flies a ballistic entry after every abort; the rocket left behind

@@ -8,7 +8,7 @@
  *
  * Model axes as the rocket's: +Y along the body's x axis, the tower's end of
  * the head section, the heat shield of the descent module. The head section
- * starts at the service module's interface, 2.7 m above the fairing's base,
+ * starts at the service module's interface, 3.5 m above the fairing's base,
  * and is cut from the same drawn fairing as the stack it left.
  */
 import * as THREE from 'three';
@@ -98,8 +98,9 @@ export class EscapeView {
   /**
    * @param fairingRadius the drawn fairing's radius, m
    * @param fairingLength the drawn fairing's length, m
+   * @param noseLength its nose's length, m (absent: 48 % of it)
    */
-  constructor(fairingRadius: number, fairingLength: number, readonly capsuleId: DescentCapsule['id'] = 'soyuz') {
+  constructor(fairingRadius: number, fairingLength: number, readonly capsuleId: DescentCapsule['id'] = 'soyuz', noseLength?: number) {
     const mat = (color: string, metal = 0.2, rough = 0.6) => {
       const m = new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough });
       this.materials.push(m);
@@ -108,8 +109,8 @@ export class EscapeView {
     const geo = <G extends THREE.BufferGeometry>(g: G): G => { this.geometries.push(g); return g; };
     const finMaterial = new THREE.MeshStandardMaterial({ map: gridFinTexture(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5, color: 0x9a9da1 });
     this.materials.push(finMaterial);
-    const R = fairingRadius, cut = ESCAPE.serviceModule.length, headL = fairingLength - cut;
-    const cylTop = fairingLength * 0.52 - cut;
+    const R = fairingRadius, cut = ESCAPE.headBase, headL = fairingLength - cut;
+    const cylTop = (noseLength !== undefined ? fairingLength - noseLength : fairingLength * 0.52) - cut;
     // --- the head section: the fairing above the service module, its fins and motors, the tower
     const shell = mat('#e8e8e8', 0.15, 0.5);
     const cyl = new THREE.Mesh(geo(new THREE.CylinderGeometry(R, R, cylTop, 40, 1)), shell);

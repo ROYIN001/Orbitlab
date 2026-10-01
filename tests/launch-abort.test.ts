@@ -6,7 +6,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
-import { vehicleById } from '../src/data/vehicles';
+import { payloadVehicle, vehicleById } from '../src/data/vehicles';
+import { satelliteById } from '../src/data/satellites';
 import { orbitById } from '../src/data/orbits';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
 import { failureAvailable, validateConfigInput } from '../src/config/validation';
@@ -22,15 +23,18 @@ const keys = (sim: Simulation) => sim.events.map((e) => e.key);
 const log = (sim: Simulation) => sim.events.map((e) => `${e.t.toFixed(1)} ${e.key} ${JSON.stringify(e.params ?? {})}`).join('\n');
 
 describe('the escape system', () => {
-  it('flies the head section the vehicle draws: the same fairing, and a 15.59 m head with the tower', () => {
-    const fairing = vehicleById('soyuz21a').fairing!;
+  it('flies the head section a crewed launch draws: the crewed fairing, and a 15.5 m head with the tower', () => {
+    const spec = payloadVehicle(vehicleById('soyuz21a'), satelliteById('crew'));
+    const fairing = spec.fairing!;
     expect(ESCAPE.fairing.diameter).toBe(fairing.diameter);
-    expect(ESCAPE.fairing.length + ESCAPE.serviceModule.length).toBeCloseTo(fairing.length, 6);
-    expect(fairing.length + ESCAPE.tower.length).toBeCloseTo(15.59, 6);
-    // the stack stands 46.3–51.38 m, without and with the tower (owner's figures)
-    const stack = stackLayout(vehicleById('soyuz21a')).total + fairing.length;
-    expect(stack).toBeGreaterThanOrEqual(46.3);
-    expect(stack + ESCAPE.tower.length).toBeLessThanOrEqual(51.38);
+    expect(ESCAPE.headBase + ESCAPE.fairing.length).toBeCloseTo(fairing.length, 6);
+    // Arianespace's drawing gives 15.3–15.5 m, the owner's figure 15.59 m
+    expect(fairing.length + ESCAPE.tower.length).toBeGreaterThan(15.3);
+    expect(fairing.length + ESCAPE.tower.length).toBeLessThan(15.6);
+    // the crewed stack stands 49.5–51.3 m with the tower (ru.wikipedia's Soyuz-FG; SoyCOM's Soyuz-U)
+    const stack = stackLayout(spec).total + fairing.length + ESCAPE.tower.length;
+    expect(stack).toBeGreaterThan(49.5);
+    expect(stack).toBeLessThan(51.3);
   });
 
   it('is fitted to a crewed Soyuz only, and armed from the countdown until orbit', () => {

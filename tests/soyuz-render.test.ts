@@ -63,7 +63,7 @@ describe('the strap-ons', () => {
 });
 
 describe("Blok I's aft skirt", () => {
-  it('rides through the staging and falls away in three petals eleven seconds after Blok A, or when its stage says', () => {
+  it('rides through the staging and falls away in three petals eleven seconds after its stage lights, or when its stage says', () => {
     const skirt = new AftSkirt(1.33, 1.2, new THREE.MeshBasicMaterial());
     expect(skirt.group.children).toHaveLength(3);
     skirt.update(-1);
@@ -83,11 +83,11 @@ describe("Blok I's aft skirt", () => {
     skirt.update(-1);
     expect(skirt.group.visible).toBe(true);
     for (const p of skirt.group.children) expect(p.position.y).toBe(0);
-    // Soyuz-2.1b's, 15.45 s after its core's cut-off (Arianespace's T+300.4 s)
-    const later = new AftSkirt(1.33, 1.2, new THREE.MeshBasicMaterial(), 15.45);
-    later.update(15);
+    // Soyuz-2.1b's, 14.06 s after its stage lights (Arianespace's T+300.4 s)
+    const later = new AftSkirt(1.33, 1.2, new THREE.MeshBasicMaterial(), 14.06);
+    later.update(14);
     for (const p of later.group.children) expect(p.rotation.x).toBe(0);
-    later.update(16.5);
+    later.update(15.5);
     for (const p of later.group.children) expect(p.rotation.x).toBeLessThan(0);
   });
 });
