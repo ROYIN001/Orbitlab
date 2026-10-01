@@ -39,7 +39,12 @@ import { allLessons } from '../src/lessons/catalog';
 import { flightRecord } from '../src/lessons/progress';
 import { checkRecord } from '../src/lessons/recheck';
 import { appBuildId } from '../src/build-info';
-import { CURRICULUM_KINDS, isDesignLesson, isFlightLesson, type Lesson, type LocalText } from '../src/lessons/types';
+import { CURRICULUM_KINDS, isCaseLesson, isDesignLesson, isFlightLesson, type CaseLesson, type Lesson, type LocalText } from '../src/lessons/types';
+import { gradeCaseLesson } from '../src/lessons/case-grader';
+import { caseKey, caseWorksheet, cz5bNumbers, cz5bStormNumbers } from '../src/worksheets/cases';
+import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
+import HISTORY from '../src/data/solar-daily.json';
+import { setLang } from '../src/i18n';
 import type { MissionState } from '../src/config/mission-file';
 
 const FILES = import.meta.glob('../public/lessons/packs/*.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
@@ -131,9 +136,9 @@ describe('the bundled lesson packs', () => {
     }
   });
 
-  it('carry the research\'s lessons: B1–B4 and B6, A1–A4, P1–P3, P5 and P6, R1–R3, R5 and R6, S1–S6', () => {
+  it('carry the research\'s lessons: B1–B6, A1–A4, P1–P3, P5 and P6, R1–R3, R5 and R6, S1–S6', () => {
     expect(PACKS.map((p) => [p.pack.id, p.items.map((i) => i.lesson.id)])).toEqual([
-      ['ipst-basic', ['ipst-b-forces', 'ipst-b-falling-around', 'orbit-payload', 'case-theos2', 'ipst-b-thaicom-link']],
+      ['ipst-basic', ['ipst-b-forces', 'ipst-b-falling-around', 'orbit-payload', 'case-theos2', 'ipst-b-solar-storms', 'ipst-b-thaicom-link']],
       ['ipst-earth-space', ['ipst-a-kepler3', 'ipst-a-sun-clock', 'case-theos2', 'adv-history']],
       ['ipst-physics', ['ipst-p-geo', 'ipst-p-starlink', 'orbit-payload', 'fail-engine-out', 'ipst-p-magnetorquer', 'ipst-p-solar-power']],
       ['rtaf-academy', ['rtaf-napa1-sso', 'rtaf-elements', 'ctl-inspector', 'ctl-margins', 'adv-docking', 'rtaf-6u-adcs']],
@@ -286,6 +291,56 @@ describe('each point-mass pack lesson, flown as solved and flown wrong', () => {
     expect(gradeLesson(l, sim, solved).verdict, why(l, sim, solved)).toBe('pass');
     expect(gradeLesson(l, sim, { ...solved, a: ellipse(250, 35786).a }).verdict).toBe('fail');
     expect(gradeLesson(l, sim, { ...solved, speed: Math.sqrt(MU / (R + hp)) }).verdict).toBe('fail');
+  });
+});
+
+/**
+ * B5 (T03b): the pack's own case lesson, on the CZ-5B sheet with its new
+ * space-weather question (src/worksheets/cases.ts `cz5bStormNumbers`), graded
+ * by the sheet's own key and tolerances as the built-in case lessons are
+ * (tests/case-lessons.test.ts). Exact constructions, fixed before the run.
+ */
+describe('the pack\'s case lesson', () => {
+  const activity = measuredActivity(HISTORY as SolarDaily, null).series;
+  const at = new Date('2026-10-01T12:00:00Z');
+  {
+    const g = globalThis as { document?: unknown };
+    if (!g.document) g.document = { documentElement: {} };
+  }
+  const b5 = (): CaseLesson => {
+    const l = packLessons(PACKS).find((x) => x.id === 'ipst-b-solar-storms');
+    if (!l || !isCaseLesson(l)) throw new Error('no case lesson ipst-b-solar-storms');
+    return l;
+  };
+
+  it('B5 solar storms: the CZ-5B sheet\'s drag, window and storm questions, passed on its key; the storm\'s own prediction, or the window\'s width, fails', () => {
+    setLang('en');
+    const l = b5();
+    expect([l.case, l.track, l.order, l.criteria.map((c) => c.item)]).toEqual(['cz5b', 11, 3, ['area', 'b', 'early', 'late', 'storm', 'why']]);
+    const key = caseKey(caseWorksheet('cz5b', { lang: 'en', generatedAt: at, activity, theos2: null })!);
+    const exact = Object.fromEntries(l.criteria.map((c) => [c.id, key[c.item].value]));
+    expect(gradeCaseLesson(l, key, exact).verdict).toBe('pass');
+    // the storm's answer from the two predictions in the data, as printed to 0.01 day
+    const w = cz5bStormNumbers();
+    expect(gradeCaseLesson(l, key, { ...exact, storm: Number(w.quiet.toFixed(2)) - Number(w.storm.toFixed(2)) }).verdict).toBe('pass');
+    expect(gradeCaseLesson(l, key, { ...exact, storm: w.storm }).verdict).toBe('fail');
+    const left = cz5bNumbers(activity).left;
+    expect(gradeCaseLesson(l, key, { ...exact, storm: 0.4 * left }).verdict).toBe('fail');
+  });
+
+  it('B5 gives in its task and hints no number the key holds, in English or Russian', () => {
+    const l = b5();
+    const told = [l.brief, ...l.hints].flatMap((x) => [x.en, x.ru ?? '', x.th ?? '']).join(' ');
+    for (const lang of ['en', 'ru'] as const) {
+      setLang(lang);
+      const sheet = caseWorksheet('cz5b', { lang, generatedAt: at, activity, theos2: null })!;
+      for (const item of sheet.sections[1].items) {
+        if (item.kind !== 'number' || !l.criteria.some((c) => c.item === item.id)) continue;
+        const figure = item.answer.text.split(' ')[0];
+        expect(told, `${lang}: ${item.id} = ${figure}`).not.toContain(figure);
+      }
+    }
+    setLang('en');
   });
 });
 
