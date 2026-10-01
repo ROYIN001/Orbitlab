@@ -28,7 +28,7 @@
  * (src/design/satellite-model.ts), every number box the one the Explore
  * level uses (src/ui/build/satellite-controls.ts).
  */
-import { t } from '../../i18n';
+import { t, tCount } from '../../i18n';
 import { runLifetimeJob } from '../../physics/lifetime-job';
 import type { PropagationResult } from '../../physics/propagator/propagate';
 import {
@@ -364,7 +364,7 @@ export class SatelliteBench {
       line.append(stop);
       box.append(line);
     } else {
-      const go = button('watch-btn primary', t('build.sat.life.run', { years: num(d.lifeYears + 25) }), () => this.runLifetime());
+      const go = button('watch-btn primary', t('build.sat.life.run', { years: tCount('build.sat.n.years', d.lifeYears + 25) }), () => this.runLifetime());
       go.dataset.k = `${P}lifeRun`;
       go.disabled = refused || !fig;
       box.append(go);

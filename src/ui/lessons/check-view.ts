@@ -8,7 +8,7 @@
  * difference, or a flight that cannot be flown again, with why; the whole
  * check saves as CSV. Everything stays on this computer.
  */
-import { getLang, t } from '../../i18n';
+import { getLang, t, tCount } from '../../i18n';
 import { allLessons, lessonNumber } from '../../lessons/catalog';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import { RESULTS_FILE_EXTENSION, verifyResults, type RecheckField, type ResultsFile } from '../../lessons/progress';
@@ -247,7 +247,7 @@ class CheckView {
     const box = el('section', 'recheck-report');
     const n = statusCounts(check);
     const summary = el('p', 'recheck-summary', t(check.stopped ? 'lesson.check.stopped' : 'lesson.check.summary', {
-      total: check.records.length, match: n.match, borderline: n.borderline, differs: n.differs, cannot: n.cannotRefly,
+      total: tCount('lesson.check.n.results', check.records.length), match: n.match, borderline: n.borderline, differs: n.differs, cannot: n.cannotRefly,
     }));
     summary.setAttribute('role', 'status');
     box.append(summary);
@@ -282,7 +282,7 @@ class CheckView {
     notes.append(el('li', undefined, r.sameBuild === null ? t('lesson.check.build.unknown') : r.sameBuild ? t('lesson.check.build.same') : t('lesson.check.build.other', { build: r.app ?? '' })));
     if (r.lateActions) notes.append(el('li', undefined, t('lesson.check.lateActions', { n: r.lateActions })));
     if (r.lockBroken.length) notes.append(el('li', undefined, t('lesson.check.lockBroken', { n: r.lockBroken.length })));
-    if (r.flownTo !== null) notes.append(el('li', undefined, t('lesson.check.flownTo', { t: valueText(r.flownTo, '', 0.01), steps: r.steps.toLocaleString(getLang()) })));
+    if (r.flownTo !== null) notes.append(el('li', undefined, t('lesson.check.flownTo', { t: valueText(r.flownTo, '', 0.01), steps: tCount('lesson.check.n.steps', r.steps) })));
     card.append(notes);
     if (r.criteria.length) card.append(this.criteriaTable(r, lesson));
     return card;

@@ -24,7 +24,7 @@
  * The thin DOM part: everything it shows comes from
  * src/design/requirements-page.ts and the cores it calls.
  */
-import { t } from '../../i18n';
+import { t, tCount } from '../../i18n';
 import { drawChart, type Series } from '../charts';
 import { runAltitudesJob } from '../../orbit/lifetime-altitude-job';
 import type { AltitudeForLifetime } from '../../orbit/lifetime-altitude';
@@ -87,6 +87,8 @@ interface Ctx { lifetime: AltitudeForLifetime[] | null; req: MissionRequirements
 
 const fig = (value: number, unit: Fig['unit'], digits?: number): string => sayFig({ value, unit }, digits);
 const days = (d: number): string => `${num(d, 2)} ${t('build.req.u.days')}`;
+/** A number of years with its word, "1 year", "2.5 years" (task I2: it said "1 years"); a whole number shows no decimals. */
+const yearsText = (y: number): string => tCount('build.sat.n.years', y, y % 1 ? 1 : 0);
 
 /**
  * A sentence with figures in it, each figure kept whole on a line: a Thai
@@ -131,7 +133,7 @@ const COLUMNS: readonly Column[] = [
     key: 'build.req.col.life', words: true, cell: (r, x) => {
       const s = lifeState(r, x.lifetime);
       if (s.kind === 'none') return '—';
-      if (s.kind === 'lasts') return t('build.req.life.lasts', { years: num(x.req.lifeYears, x.req.lifeYears % 1 ? 1 : 0) });
+      if (s.kind === 'lasts') return t('build.req.life.lasts', { years: yearsText(x.req.lifeYears) });
       // with no Δv in the tanks nothing holds it: the Δv is what holding it would take
       const key = s.kind === 'held' ? (s.engine ? 'build.req.life.held' : 'build.req.life.falls')
         : s.engine ? 'build.req.life.notProven' : 'build.req.life.notProvenFalls';
@@ -323,7 +325,7 @@ export class RequirementsPage {
         const box = this.formPanel.querySelector<HTMLInputElement>(`[data-k="${P}maxDays"]`);
         if (box) box.placeholder = String(auto);
         const hint = this.formPanel.querySelector<HTMLElement>(`[data-k="${P}maxDaysHint"]`);
-        if (hint) hint.textContent = t('build.req.f.maxDaysHint', { n: num(auto) });
+        if (hint) hint.textContent = t('build.req.f.maxDaysHint', { n: tCount('build.req.n.days', auto) });
       }),
       this.numberField('tiltDeg', 'build.req.f.tilt', '°', f.tiltDeg, 5, (v) => this.set({ tiltDeg: v }), { hint: t('build.req.f.tiltHint') }),
     );
@@ -391,7 +393,7 @@ export class RequirementsPage {
         this.set({ maxDays: box && box.value.trim() === '' ? null : v });
       // with no revisit typed yet there is no default to name
       }, Number.isFinite(auto)
-        ? { placeholder: String(auto), hint: t('build.req.f.maxDaysHint', { n: num(auto) }), hintKey: `${P}maxDaysHint` }
+        ? { placeholder: String(auto), hint: t('build.req.f.maxDaysHint', { n: tCount('build.req.n.days', auto) }), hintKey: `${P}maxDaysHint` }
         : { placeholder: '', hint: ' ', hintKey: `${P}maxDaysHint` }),
     );
     group('build.req.form.cycles', cycles);
@@ -444,12 +446,12 @@ export class RequirementsPage {
       }
       else {
         parts.push(el('p', 'bx-note', t('build.req.cost', {
-          rows: num(cost.rows), min: num(cost.minDays), max: num(cost.maxDays), table: num(Math.max(1, Math.round(cost.tableSeconds))),
+          rows: tCount('build.req.n.orbits', cost.rows), min: num(cost.minDays), max: tCount('build.req.n.days', cost.maxDays), table: num(Math.max(1, Math.round(cost.tableSeconds))),
         })));
         parts.push(el('p', 'bx-note', keptLife ? t('build.req.costKept')
           : t('build.req.costLife', { life: num(Math.max(1, Math.round(cost.lifetimeSeconds))) })));
         parts.push(el('p', 'bx-note small', t('build.req.costTablet')));
-        if (cost.tooMany) parts.push(el('p', 'bx-note warn', t('build.req.tooMany', { rows: num(cost.rows), max: num(MAX_ROWS) })));
+        if (cost.tooMany) parts.push(el('p', 'bx-note warn', t('build.req.tooMany', { rows: tCount('build.req.n.orbits', cost.rows), max: num(MAX_ROWS) })));
       }
     }
     const job = this.job;
@@ -571,7 +573,7 @@ export class RequirementsPage {
     const meeting = r.rows.filter((x) => x.meets).length;
     const date = new Date((r.jd - 2440587.5) * 86400e3).toISOString().slice(0, 10);
     parts.push(el('p', 'bx-note', t('build.req.table.summary', {
-      rows: num(r.rows.length), meet: num(meeting), date, level: t(LEVEL_KEY[r.req.activity]),
+      rows: tCount('build.req.n.orbits', r.rows.length), meet: num(meeting), date, level: t(LEVEL_KEY[r.req.activity]),
     })));
     const stale = el('p', 'bx-note warn brq-stale', t('build.req.table.stale'));
     stale.hidden = r.formKey === JSON.stringify(this.form);
@@ -760,18 +762,18 @@ export class RequirementsPage {
     };
     const [life, down] = r.lifetime;
     const lifeRead = [life.outcome === 'found'
-      ? t('build.req.chart.lifeFound', { years: num(life.years, life.years % 1 ? 1 : 0), h: fig(life.altitude!, 'm') })
-      : t(life.outcome === 'belowRange' ? 'build.req.chart.lifeBelow' : 'build.req.chart.lifeAbove', { years: num(life.years, life.years % 1 ? 1 : 0) })];
+      ? t('build.req.chart.lifeFound', { years: yearsText(life.years), h: fig(life.altitude!, 'm') })
+      : t(life.outcome === 'belowRange' ? 'build.req.chart.lifeBelow' : 'build.req.chart.lifeAbove', { years: yearsText(life.years) })];
     if (down) {
       lifeRead.push(down.outcome === 'found'
-        ? t('build.req.chart.downFound', { years: num(down.years, down.years % 1 ? 1 : 0), h: fig(down.altitude!, 'm') })
-        : t(down.outcome === 'belowRange' ? 'build.req.chart.lifeBelow' : 'build.req.chart.lifeAbove', { years: num(down.years, down.years % 1 ? 1 : 0) }));
+        ? t('build.req.chart.downFound', { years: yearsText(down.years), h: fig(down.altitude!, 'm') })
+        : t(down.outcome === 'belowRange' ? 'build.req.chart.lifeBelow' : 'build.req.chart.lifeAbove', { years: yearsText(down.years) }));
     }
     const lifeKey: [string, string, boolean][] = [
       [COLOURS.line, t('build.req.chart.lifeRuns'), false],
-      [COLOURS.asked, t('build.req.chart.lifeAsked', { years: num(r.req.lifeYears, r.req.lifeYears % 1 ? 1 : 0) }), true],
+      [COLOURS.asked, t('build.req.chart.lifeAsked', { years: yearsText(r.req.lifeYears) }), true],
     ];
-    if (down) lifeKey.push([COLOURS.rule, t('build.req.chart.life25', { years: num(down.years, down.years % 1 ? 1 : 0) }), true]);
+    if (down) lifeKey.push([COLOURS.rule, t('build.req.chart.life25', { years: yearsText(down.years) }), true]);
     const cam = r.template.payload!;
     const cross = apertureCrossing(r.rows, cam.aperture);
     const apRead = [cross.kind === 'from'
@@ -809,8 +811,8 @@ export class RequirementsPage {
     if (r.lifetime[1]) life.push({ x: [xMin, xMax], y: [r.lifetime[1].years, r.lifetime[1].years], color: COLOURS.rule, dash: [5, 4] });
     drawChart(this.lifeCanvas, life, {
       title: t('build.req.chart.life'), xLabel: t('u.km'), yMin: 0, yMax: top, xMin, xMax,
-      seriesLabels: [t('build.req.chart.lifeRuns'), t('build.req.chart.lifeAsked', { years: num(r.req.lifeYears) }),
-        ...(r.lifetime[1] ? [t('build.req.chart.life25', { years: num(r.lifetime[1].years) })] : [])],
+      seriesLabels: [t('build.req.chart.lifeRuns'), t('build.req.chart.lifeAsked', { years: yearsText(r.req.lifeYears) }),
+        ...(r.lifetime[1] ? [t('build.req.chart.life25', { years: yearsText(r.lifetime[1].years) })] : [])],
       xFormat: (x) => num(x),
     });
     const ap = aperturePoints(r.rows);

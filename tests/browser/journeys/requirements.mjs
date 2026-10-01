@@ -35,7 +35,7 @@ export default async function requirements(t) {
   await page.fill('[data-k="rq:gsd"]', '0.5');
   await page.fill('[data-k="rq:revisitDays"]', '5');
   const cost = (await page.textContent('.brq-run')).replace(/\s+/g, ' ');
-  t.check(/\b94 orbits to try \(repeat cycles of 1 to 5 days\)/.test(cost), `the page does not say what the run will take: ${cost}`);
+  t.check(/\b94\sorbits to try \(repeat cycles of 1 to 5\sdays\)/.test(cost), `the page does not say what the run will take: ${cost}`);
 
   // a run, stopped
   await page.click('[data-k="rq:run"]');
@@ -54,7 +54,7 @@ export default async function requirements(t) {
   if (!t.check(done, 'the table did not come')) return;
   t.log(`table in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   const summary = await page.textContent('.brq-results > .bx-note');
-  t.check(/^94 orbits; \d+ of them meet every requirement/.test(summary), `the summary: ${summary}`);
+  t.check(/^94\sorbits; meeting every requirement: \d+/.test(summary), `the summary: ${summary}`);
   t.check(await page.evaluate(() => document.querySelectorAll('.brq-plots canvas[role="img"]').length === 2), 'the two charts are not drawn');
 
   // the highest row needs a focal length past the bench's 100 m: it says so and stays
