@@ -478,7 +478,9 @@ PHYSICS.md §2g.
 The Falcon Heavy row too was measured with the earlier masses. With the published Falcon 9
 first-stage load on all three cores and the side boosters' published empty mass (VALIDATION.md,
 F11) the lift-off stack is 1 420.3 t, the published 1 420 t, and the same run lowers f₁ by 3.5 %
-(from 1.80 to 1.74 Hz) and the rate-gain cap to 1.82/s.
+(from 1.80 to 1.74 Hz) and the rate-gain cap to 1.82/s. Proton-M's row predates its published
+stage propellant loads (VALIDATION.md, F14): the lift-off stack is 10.1 t heavier and the same run
+moves f₁ by 0.4 % (2.638 to 2.627 Hz), inside the table's rounding.
 
 The frequencies rise as the propellant goes (Falcon 9's from 1.6 Hz at liftoff to 2.5 Hz at
 T+120 s) and jump at every separation: the stacks left after it measured 9–75 Hz (Vega-C 18 Hz,

@@ -20,6 +20,11 @@
  *   Falcon 9 Block 5's published first-stage masses and a max-Q bucket; it was
  *   'dd5364877d7d1b7f'. The spec equals main's literal value for value
  *   (tests/d01-vehicles-identity.test.ts) and the other 20 are unchanged.
+ * - protonm and angaraa5, after F14 (2026-09-28): Proton-M's published stage
+ *   propellant loads, and Angara-A5's six-DOF kick of 8°; they were
+ *   '2844117a23563142' and '1e14a01434e78edb'. Both were flown from the
+ *   literal fleet of the branch that made the change (c2aabb4 with the kick)
+ *   and from the catalogue, and agree; the other 19 are unchanged.
  *
  * Heavy suite only (`npm run test:heavy`): 21 six-DOF flights of 160 s.
  */
@@ -48,8 +53,8 @@ function sixDofMission(c: FleetCase): MissionConfig {
 const FINGERPRINTS: Readonly<Record<string, string>> = {
   soyuz21a: '6cffff9a7d35bbd0',
   soyuz21b: 'bc74fbe1899c4e51',
-  protonm: '2844117a23563142',
-  angaraa5: '1e14a01434e78edb',
+  protonm: '336045ed763a8b3e',
+  angaraa5: '4d4263d76a86d994',
   falcon9: '4e7814725cdd4e3b',
   falconheavy: 'd54a7e829a77ee6a',
   atlasv551: '24fc1e3c19a18c03',

@@ -104,6 +104,8 @@ export interface DesignFairing {
   /** jettison altitude, m; the fleet's median when absent (an estimate) */
   sepAltitude?: number;
   sepTime?: number;
+  /** jettison a fixed time after a named stage ignites (`FairingSpec.sepAfterIgnition`) */
+  sepAfterIgnition?: { stage: string; delay: number };
   color?: string;
 }
 
@@ -251,6 +253,7 @@ export function assemble(design: PartsDesign): Assembly {
     fairing = fairingSpec(part, {
       sepAltitude: f.sepAltitude ?? FLEET_FAIRING_SEP_ALTITUDE,
       ...(f.sepTime !== undefined ? { sepTime: f.sepTime } : {}),
+      ...(f.sepAfterIgnition !== undefined ? { sepAfterIgnition: { ...f.sepAfterIgnition } } : {}),
       ...(f.color !== undefined ? { color: f.color } : {}),
     });
   }

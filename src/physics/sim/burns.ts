@@ -333,7 +333,18 @@ export class BurnSequencer {
       tGo = burn.kind === 'raiseApoapsis' ? extremes.periapsisTimeS : extremes.apoapsisTimeS;
     }
     if (!isFinite(tGo)) tGo = 0;
-    const at = this.sim.rigidRuntime ? propagateJ2Coast(s, tGo) : propagateKepler(s.r, s.v, tGo);
+    let at = this.sim.rigidRuntime ? propagateJ2Coast(s, tGo) : propagateKepler(s.r, s.v, tGo);
+    // Six-DOF, a cut-off just past a suborbital apex (Angara-A5 to low orbit
+    // with its fairing kept to the third stage: SECO at 200.5 km, 1 km after
+    // the 201.6 km apex, perigee -602 km): the next apoapsis is a revolution
+    // away through the Earth, the coast prediction rightly reports the impact,
+    // and the mission used to end there with the kick stage full. The apex is
+    // where it is: burn now. Only when the prediction has failed, so every
+    // flight it did not fail is flown as before.
+    if (!at && this.sim.rigidRuntime && el.periapsisAlt < 0) {
+      tGo = 0;
+      at = { r: s.r, v: s.v };
+    }
     if (!at) { this.failRigidOrbitPrediction(); return; }
     const vDes = desiredVelocity(at.r, at.v, burn.kind, burn.targetApoapsis, burn.targetPeriapsis, burn.targetInclination);
     let dv = norm(sub(vDes, at.v));

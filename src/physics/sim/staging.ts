@@ -249,6 +249,10 @@ export class Staging {
     // src/types.ts for why that was not a placard (audit hand-off d, review
     // follow-up).
     if (f.sepTime !== undefined) return this.sim.state.t >= f.sepTime;
+    // A rule naming a stage the stack does not have (a remix that took it
+    // away) is not a rule: that fairing falls back on the placard below.
+    const ruleStage = f.sepAfterIgnition && this.sim.vehicle.stages.find((s) => s.spec.id === f.sepAfterIgnition!.stage);
+    if (f.sepAfterIgnition && ruleStage) return ruleStage.ignited && this.sim.state.t >= ruleStage.ignitionTime + f.sepAfterIgnition.delay;
     const heatFlux = 0.5 * rho * airspeed * airspeed * airspeed;
     // The placard is an operator's choice, not a law of nature, but 1135 W/m²
     // (0.1 BTU/ft²·s) is the common one and it is the only one in the model.
