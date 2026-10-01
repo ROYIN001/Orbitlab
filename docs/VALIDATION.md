@@ -2838,7 +2838,8 @@ so here and in the test.
   flight's state (below, "Grading the orbit at the flight's end"), nothing moved: both kinds of
   fingerprint hash an event's key and time only (`tests/flex-golden-harness.ts`), and a saved
   reference flight drops the state. The six-DOF fingerprints were run again for this section at
-  120a4f0, after that change: 22 of 22 passed, in 343.6 s.
+  120a4f0, after that change: the 21 fingerprints and the test that every catalogue vehicle has one,
+  22 of 22, passed in 343.6 s, and again in review in 306.5 s.
 - **A copied satellite flies as the original** (`tests/d06-custom-satellite.test.ts`,
   `tests/heavy/custom-satellite-sixdof.test.ts`). A mission may carry its satellite inline
   (`MissionConfig.satelliteSpec`, the owner's option B), as S02's missions carry a rocket. A deep
