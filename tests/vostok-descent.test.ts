@@ -78,7 +78,9 @@ describe('the WGS-84 datum', () => {
 
 describe("Vostok's TDU-1", () => {
   it('gives 132 m/s of the 136 set, on its flowing mass, along the line held from its launch command', () => {
-    const s = start(), f = flight(s);
+    // the line's pitch above the horizontal, reconstructed from the landing (§13.6)
+    const pitch = VOSTOK_CAPSULE.retro!.pitch!;
+    const s = start(pitch), f = flight(s);
     const events = fly(f, 44);
     const keys = events.map((e) => `${e.key}@${e.t!.toFixed(2)}`);
     expect(keys).toEqual(['evt.retroFire@2.20', 'evt.retroShortfall@42.20']);
@@ -87,8 +89,9 @@ describe("Vostok's TDU-1", () => {
     // what the integration actually delivered, against a coast on the same gravity
     const c = coast(s, 44), dv = sub(f.state.v, c.v);
     expect(Math.abs(norm(dv) - 132)).toBeLessThan(0.5);
-    // held: horizontal at the launch command, against the flight, whatever the orbit has turned since
-    const r2 = coast(s, 2.2), line = retroDirection(r2.r, r2.v, 0);
+    // held: at that pitch above the horizontal at the launch command, against the flight, whatever the orbit has
+    // turned since
+    const r2 = coast(s, 2.2), line = retroDirection(r2.r, r2.v, pitch * DEG);
     expect(Math.acos(Math.min(1, dot(normalize(dv), line))) / DEG).toBeLessThan(0.05);
     expect(retroDeltaV(VOSTOK_CAPSULE.retro!, 44, VOSTOK_CAPSULE.mass)).toBeCloseTo(norm(dv), 0);
   });

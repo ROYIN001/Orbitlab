@@ -920,12 +920,14 @@ export class Simulation {
       if (toGo < RIGID_STEERING_FREEZE_S) dirCmd = this.frozenCommand ??= dirCmd;
       else this.frozenCommand = null;
       // Above the atmosphere the ascent command swings no faster than
-      // RIGID_ASCENT_COMMAND_RATE: the stage follows it, and cuts off turning
-      // at the rate it was following.
+      // RIGID_ASCENT_COMMAND_RATE (C01: or the vehicle's own `ascentCommandRate`,
+      // Vostok-K's Blok E): the stage follows it, and cuts off turning at the
+      // rate it was following.
       // G01: a PEG/IGM flight releases the load relief (which holds the command above 500 Pa) from
       // where it held it, at LOAD_RELIEF_RELEASE_RATE down to 100 Pa and at the vacuum rate below.
       if (s.status === 'ascent' && (this.explicitGuidance ? q <= 500 : q < 100)) {
-        const rate = this.explicitGuidance && q >= 100 ? LOAD_RELIEF_RELEASE_RATE : RIGID_ASCENT_COMMAND_RATE;
+        const vacuum = this.vehicleSpec.ascentCommandRate !== undefined ? this.vehicleSpec.ascentCommandRate * DEG : RIGID_ASCENT_COMMAND_RATE;
+        const rate = this.explicitGuidance && q >= 100 ? LOAD_RELIEF_RELEASE_RATE : vacuum;
         dirCmd = this.limitedCommand = this.limitedCommand
           ? slerpLimited(this.limitedCommand, dirCmd, rate * dt) : this.relievedCommand ?? dirCmd;
       } else this.limitedCommand = null;

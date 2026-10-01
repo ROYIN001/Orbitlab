@@ -130,8 +130,9 @@ describe('the recorder\'s cadence for the return', () => {
 
 describe('the bodies of a flown return on the frame', () => {
   // flown to the moment Gagarin's main opens over the steppe, the sphere still on its braking parachute
+  // (T+5,891 s with the TDU-1's reconstructed pitch)
   const sim = vostok();
-  while (!sim.isFailed() && sim.state.t < 5880) sim.step(sim.suggestedDt());
+  while (!sim.isFailed() && sim.state.t < 7000 && !sim.events.some((e) => e.key === 'evt.pilotMain')) sim.step(sim.suggestedDt());
   const frame = captureFrame(sim);
 
   it('carry Gagarin\'s canopies, the hatch, the seat, and the module\'s pieces with their heat', () => {
