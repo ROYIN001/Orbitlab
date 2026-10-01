@@ -1019,7 +1019,7 @@ The six-DOF fleet matrix and its dedicated missions (`npm run test:sixdof-fleet`
 
 - *Six circularise first*, with the apex outside the band: Electron's three SSO rows (619–625 km)
   and its ISS-plane row at 25 % (430.3 km), Long March 2D's 650 kg SSO mission (621.9 km) and this
-  mission (618.0 km).
+  mission (619.0 km with hot staging, 618.0 km before it).
 - *Three still lower first*, with the apex inside the band: Soyuz-2.1b's LEO and ISS-plane rows
   at 25 % (508.5 and 428.3 km) and Electron's ISS-plane row at 50 % (429.9 km).
 
@@ -1032,8 +1032,12 @@ three that lower first end as they did before this change: 498.4 × 501.6, 418.4
 - its flexible flight;
 - its PEG and IGM flights.
 
-The flexible Long March 2D and Electron flights and Electron's PEG and IGM flights passed under
-the first version of the rule.
+The flexible Long March 2D and Electron flights and Electron's PEG and IGM flights pass with the
+final rule too.
+
+Re-flown after hot staging (c109f98), with the final rule, the matrix passes again: 164 tests, the
+same nine flights in the same two groups, and the apexes within 0.1 km of the above except this
+mission's. The four heavy cases just above pass on that tree too.
 
 None of the others reached that branch; the rows that raise a low apex first fly as they did. No
 tank ran dry on a coast with a burn ahead.
