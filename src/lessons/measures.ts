@@ -1,14 +1,23 @@
 /**
  * The numbers a lesson can grade (roadmap E03), each read from the recorded
- * flight: the simulation's state at its head, its telemetry and its event log.
- * DOM-free, so a test can grade a headless flight exactly as the page grades
- * the one on screen.
+ * flight: the simulation's state, its telemetry and its event log. DOM-free,
+ * so a test can grade a headless flight exactly as the page grades the one on
+ * screen.
+ *
+ * A number the flight goes on changing after it has ended for grading is read
+ * at that end, never at the head (T03 review, 2026-10-01): a live page grades
+ * at the first frame that shows the end, and under time warp that frame comes
+ * minutes later. The orbit's numbers are read from the state the end event
+ * left the flight in (`SimEvent.state`), the Δv left and the navigation's
+ * error from the telemetry up to the end, the orbital burns from the events
+ * up to it.
  */
 import { MU_EARTH, RAD } from '../physics/constants';
-import { wrapPi, type OrbitalElements } from '../physics/orbital';
-import { norm } from '../physics/vec3';
+import { elementsFromState, wrapPi, type OrbitalElements } from '../physics/orbital';
+import { norm, type Vec3 } from '../physics/vec3';
+import type { EventState } from '../physics/simulation';
 import { physicalApsides } from '../physics/rigid/orbit-prediction';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import type { LessonFlight, MeasureId } from './types';
 import { unitText } from './text';
 import { linearModelAt } from '../physics/rigid/linear';
@@ -25,31 +34,46 @@ export interface MeasureDef {
   /** decimals to show */
   digits: number;
   /**
-   * `at`: the mission time the flight ended for grading. A value that goes on
-   * changing after it (the Δv left, once the payload separates and the
-   * spacecraft's own is shown) is read there, so a flight graded long after
-   * its insertion grades the same as one graded at it.
+   * `at`: the mission time the flight ended for grading; `end`: the state its
+   * end event left it in (src/lessons/grader.ts `gradingEndEvent`). A value
+   * that goes on changing after the end — the orbit, which J₂ and the next
+   * burn move on; the Δv left, once the payload separates and the
+   * spacecraft's own is shown — is read there, so a flight graded long after
+   * its insertion grades the same as one graded at it. Without them (a panel,
+   * a test reading the flight as it stands, a flight recorded before events
+   * carried a state) it is read at the head.
    */
-  read(flight: LessonFlight, at?: number): number | null;
+  read(flight: LessonFlight, at?: number, end?: EventState): number | null;
 }
 
 const finite = (v: number): number | null => (Number.isFinite(v) ? v : null);
 
 /**
- * The orbit the flight is in. A six-DOF flight coasts under J2, so its apsides
- * are the lowest and highest altitude of the next revolution rather than the
- * osculating ellipse of one instant (as the fleet acceptance reads them).
+ * The orbit the flight is in: at its grading end when `end` is given (the
+ * state its end event left it in), else at its head. A six-DOF flight coasts
+ * under J2, so its apsides are the lowest and highest altitude of the next
+ * revolution rather than the osculating ellipse of one instant (as the fleet
+ * acceptance reads them).
  */
-export function flightElements(flight: LessonFlight): OrbitalElements {
-  const el = flight.state.elements;
+export function flightElements(flight: LessonFlight, end?: EventState): OrbitalElements {
+  const { r, v } = orbitState(flight, end);
+  const el = end ? elementsFromState(r, v) : flight.state.elements;
   if (flight.cfg.dynamics?.model !== 'sixDof' || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
   try {
-    const apsides = physicalApsides({ r: flight.state.r, v: flight.state.v });
+    const apsides = physicalApsides({ r, v });
     return apsides ? { ...el, ...apsides } : el;
   } catch {
     return el;
   }
 }
+
+/** The position and velocity the orbit is read from: the grading end's, else the head's. */
+function orbitState(flight: LessonFlight, end?: EventState): { r: Vec3; v: Vec3 } {
+  return end ? { r: end.r, v: end.v } : { r: flight.state.r, v: flight.state.v };
+}
+
+/** The events up to the grading end `at` (all of them without one). */
+const eventsTo = (flight: LessonFlight, at?: number) => (at === undefined ? flight.events : flight.events.filter((e) => e.t <= at + 1e-6));
 
 function peak(flight: LessonFlight, field: 'q' | 'gLoad'): number {
   let max = 0;
@@ -94,28 +118,29 @@ export function gradedPitchStep(flight: LessonFlight, at?: number): AttitudeTest
 }
 
 export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
-  'orbit.perigee': { unit: 'km', over: 'final', digits: 1, read: (f) => finite(flightElements(f).periapsisAlt / 1e3) },
+  // the orbit at the grading end (`end`), whenever the flight is graded (T03 review)
+  'orbit.perigee': { unit: 'km', over: 'final', digits: 1, read: (f, _at, end) => finite(flightElements(f, end).periapsisAlt / 1e3) },
   // P08: how far a dispersed run's perigee is from the target's (below it negative)
-  'orbit.perigeeMiss': { unit: 'km', over: 'final', digits: 1, read: (f) => finite((flightElements(f).periapsisAlt - f.plan.target.perigee) / 1e3) },
-  'orbit.apogee': { unit: 'km', over: 'final', digits: 1, read: (f) => finite(flightElements(f).apoapsisAlt / 1e3) },
-  'orbit.inclination': { unit: '°', over: 'final', digits: 2, read: (f) => finite(flightElements(f).i * RAD) },
+  'orbit.perigeeMiss': { unit: 'km', over: 'final', digits: 1, read: (f, _at, end) => finite((flightElements(f, end).periapsisAlt - f.plan.target.perigee) / 1e3) },
+  'orbit.apogee': { unit: 'km', over: 'final', digits: 1, read: (f, _at, end) => finite(flightElements(f, end).apoapsisAlt / 1e3) },
+  'orbit.inclination': { unit: '°', over: 'final', digits: 2, read: (f, _at, end) => finite(flightElements(f, end).i * RAD) },
   'orbit.raanError': {
     unit: '°', over: 'final', digits: 2,
-    read: (f) => {
+    read: (f, _at, end) => {
       const target = f.plan.target.raan;
-      return target === null ? null : finite(Math.abs(wrapPi(flightElements(f).raan - target)) * RAD);
+      return target === null ? null : finite(Math.abs(wrapPi(flightElements(f, end).raan - target)) * RAD);
     },
   },
   'orbit.period': {
     unit: 'min', over: 'final', digits: 1,
-    read: (f) => {
-      const a = flightElements(f).a;
+    read: (f, _at, end) => {
+      const a = flightElements(f, end).a;
       return a > 0 ? finite((2 * Math.PI * Math.sqrt(a ** 3 / MU_EARTH)) / 60) : null;
     },
   },
-  'orbit.speed': { unit: 'km/s', over: 'final', digits: 2, read: (f) => finite(norm(f.state.v) / 1e3) },
-  'orbit.eccentricity': { unit: '', over: 'final', digits: 4, read: (f) => finite(flightElements(f).e) },
-  'orbit.semiMajorAxis': { unit: 'km', over: 'final', digits: 0, read: (f) => finite(flightElements(f).a / 1e3) },
+  'orbit.speed': { unit: 'km/s', over: 'final', digits: 2, read: (f, _at, end) => finite(norm(orbitState(f, end).v) / 1e3) },
+  'orbit.eccentricity': { unit: '', over: 'final', digits: 4, read: (f, _at, end) => finite(flightElements(f, end).e) },
+  'orbit.semiMajorAxis': { unit: 'km', over: 'final', digits: 0, read: (f, _at, end) => finite(flightElements(f, end).a / 1e3) },
   'maxQ': { unit: 'kPa', over: 'history', digits: 1, read: (f) => Math.max(f.state.maxQ.value, peak(f, 'q')) / 1e3 },
   'maxQTime': { unit: 's', over: 'final', digits: 0, read: (f) => (f.state.maxQ.value > 0 ? f.state.maxQ.t : null) },
   'maxG': { unit: 'g', over: 'history', digits: 2, read: (f) => peak(f, 'gLoad') },
@@ -129,18 +154,18 @@ export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
   },
   'payload': {
     unit: 'kg', over: 'final', digits: 0,
-    read: (f) => f.cfg.payloadMassOverride ?? satelliteById(f.cfg.satelliteId).mass,
+    read: (f) => f.cfg.payloadMassOverride ?? missionSatellite(f.cfg).mass,
   },
   'insertionTime': { unit: 's', over: 'final', digits: 0, read: (f) => firstEvent(f, ['evt.seco', 'evt.parkingOrbit', 'evt.targetOrbit']) },
   'loss.gravity': { unit: 'm/s', over: 'final', digits: 0, read: (f) => finite(f.state.losses.gravity) },
   'loss.drag': { unit: 'm/s', over: 'final', digits: 0, read: (f) => finite(f.state.losses.drag) },
   'loss.steering': { unit: 'm/s', over: 'final', digits: 0, read: (f) => finite(f.state.losses.steering) },
   'burnDv': {
-    // the orbital burns the sequencer planned after the ascent, as it announced them
+    // the orbital burns the sequencer planned after the ascent, as it announced them, up to the grading end
     unit: 'm/s', over: 'final', digits: 0,
-    read: (f) => {
+    read: (f, at) => {
       let sum = 0, any = false;
-      for (const e of f.events) {
+      for (const e of eventsTo(f, at)) {
         if (e.key !== 'evt.burnComplete') continue;
         const scheduled = [...f.events].reverse().find((s) => s.key === 'evt.burnScheduled' && s.t <= e.t && s.params?.kind === e.params?.kind);
         const dv = Number(scheduled?.params?.dv);
@@ -197,8 +222,8 @@ export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
   // `burnDv` would add in, is not counted
   'burnDv.raise': {
     unit: 'm/s', over: 'final', digits: 0,
-    read: (f) => {
-      const done = f.events.find((e) => e.key === 'evt.burnComplete' && e.params?.kind === 'raiseApoapsis');
+    read: (f, at) => {
+      const done = eventsTo(f, at).find((e) => e.key === 'evt.burnComplete' && e.params?.kind === 'raiseApoapsis');
       if (!done) return null;
       const scheduled = [...f.events].reverse().find((s) => s.key === 'evt.burnScheduled' && s.t <= done.t && s.params?.kind === 'raiseApoapsis');
       const dv = Number(scheduled?.params?.dv);

@@ -5,10 +5,18 @@
  * file is read.
  */
 import { inclinationCorridor } from '../physics/mission';
+import { elementsFromState } from '../physics/orbital';
+import type { EventState } from '../physics/simulation';
 import type { CriterionState, LessonFlight } from './types';
 
 export interface HookResult { state: CriterionState; value: number | null }
-export type LessonHook = (flight: LessonFlight, params: Record<string, number | string | boolean>, final: boolean) => HookResult;
+/**
+ * `end`: the state the flight's end event left it in (src/lessons/grader.ts
+ * `gradingEndEvent`), where a hook reads the orbit, so a flight graded late
+ * grades as at its end (T03 review); absent before the end, or for a flight
+ * recorded before events carried it, when the head is read.
+ */
+export type LessonHook = (flight: LessonFlight, params: Record<string, number | string | boolean>, final: boolean, end?: EventState) => HookResult;
 
 const decided = (ok: boolean, final: boolean, value: number | null = null): HookResult =>
   ({ state: ok ? (final ? 'pass' : 'passing') : (final ? 'fail' : 'pending'), value });
@@ -31,10 +39,11 @@ export const LESSON_HOOKS: Readonly<Record<string, LessonHook>> = {
    * The payload reached an orbit whose perigee clears `minPerigeeKm` (default
    * 150 km): it will stay up, whatever orbit was planned.
    */
-  stableOrbit(flight, params, final) {
+  stableOrbit(flight, params, final, end) {
     const min = typeof params.minPerigeeKm === 'number' ? params.minPerigeeKm : 150;
-    const pe = flight.state.elements.periapsisAlt / 1e3;
-    const inOrbit = flight.state.status !== 'failed' && flight.state.elements.e < 1 && pe >= min;
+    const el = end ? elementsFromState(end.r, end.v) : flight.state.elements;
+    const pe = el.periapsisAlt / 1e3;
+    const inOrbit = flight.state.status !== 'failed' && el.e < 1 && pe >= min;
     return decided(inOrbit, final, Number.isFinite(pe) ? pe : null);
   },
   /**

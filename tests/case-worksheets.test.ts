@@ -5,11 +5,13 @@
  * their own script (as tests/worksheets.test.ts asks of the flight sheets).
  */
 import { afterAll, describe, expect, it } from 'vitest';
-import { CASE_IDS, caseKey, caseWorksheet, cz5bNumbers, iridiumNumbers, theos2Numbers } from '../src/worksheets/cases';
-import { CASE_CHOICE_ITEMS, CASE_ITEM_IDS } from '../src/worksheets/case-ids';
+import { CASE_IDS, CZ5B_SPACE_WEATHER, caseKey, caseWorksheet, cz5bNumbers, cz5bStormNumbers, iridiumNumbers, theos2Numbers } from '../src/worksheets/cases';
+import { CASE_CHOICE_ITEMS, CASE_ITEM_IDS, CZ5B_CASE_STAGE } from '../src/worksheets/case-ids';
 import { letterOf } from '../src/worksheets/bank-items';
 import { answerKeyHtml, worksheetsHtml } from '../src/worksheets/html';
-import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
+import { kpToAp, measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
+import { CZ5B_STAGES } from '../src/data/cz5b';
+import { predictReentry, tumblingCylinderArea } from '../src/orbit/reentry';
 import HISTORY from '../src/data/solar-daily.json';
 import { setLang, type Lang } from '../src/i18n';
 import { elementsFromRecord } from '../src/orbit/omm';
@@ -50,6 +52,34 @@ describe('the cases\' numbers (P2.5)', () => {
     expect(n.b).toBeCloseTo(2.2 * n.area / 21600, 12);
     expect(n.actual).toBeGreaterThan(n.left * 0.8);
     expect(n.actual).toBeLessThan(n.left * 1.2);
+  });
+
+  /**
+   * T03b (the research's B5, IPST ว 3.1 ม.6/9): the space-weather question.
+   * Its indices (src/worksheets/cases.ts `CZ5B_SPACE_WEATHER`) and this
+   * check were fixed before the first prediction ran: the quiet run, with the
+   * stage's days' own flux rounded and a field as quiet as theirs, comes
+   * within 5 % of the prediction with the Sun as measured, and the storm's
+   * comes down sooner. The first run gave quiet 9.27 days, storm 6.99 and
+   * the measured Sun 9.32 (recorded, not tuned).
+   */
+  it('the Long March 5B stage through a storm: the days\' own flux, the quiet run within 5 % of the measured Sun\'s, the storm\'s sooner', () => {
+    const h = HISTORY as SolarDaily;
+    const k0 = Math.round((Date.parse('2021-04-29') - Date.parse(h.from)) / 86400e3);
+    const days = h.f107.slice(k0, k0 + 10);
+    expect(Math.round(days.reduce((s, x) => s + x, 0) / days.length / 5) * 5).toBe(CZ5B_SPACE_WEATHER.f107);
+    expect(Math.max(...h.ap.slice(k0, k0 + 10))).toBeLessThanOrEqual(8);
+    const n = cz5bNumbers(activity), w = cz5bStormNumbers();
+    expect(Math.abs(w.quiet / n.left - 1)).toBeLessThan(0.05);
+    expect(w.storm).toBeLessThan(w.quiet);
+    // the sheet's days are recorded, not run on the page: both runs again, with the fixed indices, give them
+    const s = CZ5B_STAGES.find((x) => x.name === CZ5B_CASE_STAGE)!;
+    const el = elementsFromRecord(s.elements);
+    const craft = { mass: s.mass, area: tumblingCylinderArea(s.length, s.diameter), cd: 2.2 };
+    const left = (kp: number): number => predictReentry(el, craft, { f107: 75, f107a: 75, ap: kpToAp(kp) }).jd! - (el.jdEpoch + el.jdEpochFrac);
+    expect([kpToAp(CZ5B_SPACE_WEATHER.quietKp), kpToAp(CZ5B_SPACE_WEATHER.stormKp)]).toEqual([4, 132]);
+    expect(Math.abs(left(CZ5B_SPACE_WEATHER.quietKp) - w.quiet)).toBeLessThan(1e-6);
+    expect(Math.abs(left(CZ5B_SPACE_WEATHER.stormKp) - w.storm)).toBeLessThan(1e-6);
   });
 
   it('THEOS-2: J₂ turns its plane at the sun-synchronous rate, within 1 %', () => {
@@ -155,6 +185,8 @@ describe('the case sheets (P2.5)', () => {
     const c = cz5bNumbers(activity);
     expect(key('cz5b').actual).toEqual({ kind: 'number', value: c.actual, tol: 0.05 });
     expect(key('cz5b').error.value).toBeCloseTo((c.left / c.actual - 1) * 100, 9);
+    const w = cz5bStormNumbers();
+    expect(key('cz5b').storm).toEqual({ kind: 'number', value: w.quiet - w.storm, tol: 0.05 });
     expect(key('theos2').j2).toEqual({ kind: 'number', value: theos2Numbers(theos2).j2, tol: 0.01 });
     expect(key('theos2').why.value).toBe(3);
     // the re-entry is predicted once for a Sun, however many sheets are built with it

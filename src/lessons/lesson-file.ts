@@ -13,6 +13,36 @@
  * so a teacher's file of flight lessons reads back byte for byte, and an
  * older copy of the app warns of a newer file rather than calling a case
  * lesson's missing mission an error.
+ *
+ * Version 3 (roadmap T01, Phase 4 map §4.1; C2's open question) is a file
+ * with a flight lesson whose mission carries a satellite of its own (mission
+ * file v3, D06). The layout is unchanged, but a reader older than D06 cannot
+ * fly such a lesson: it does not know the satellite's id and leaves the
+ * lesson out as an error in its mission. With the version raised it also says
+ * the file is newer than itself, which is the one thing its user can act on
+ * (update the app), exactly the reason version 2 was raised for case lessons.
+ * The same rule, applied to what came before, writes a lesson on a custom
+ * rocket (mission v2, S02) as version 2: every reader of version 2 (P2.5 on)
+ * flies one, while a reader of version 1 alone may predate S02. A file is
+ * written at the lowest version whose every reader flies all of its lessons
+ * (`lessonFileVersion`), so a file of catalogue flights stays version 1.
+ *
+ * The design lessons (`"kind": "design"`, T01, map §4.1: design a satellite
+ * that meets these requirements) are version 3 too. E2 put a custom
+ * satellite at version 3 in this same Phase 4 release, so every reader of
+ * version 3 has both, and none lacks the design kind: an older copy says the
+ * file is newer (as for a case lesson in version 2) rather than refuse the
+ * lesson's kind as an error. Had the kind come a release later it would have
+ * needed a number of its own.
+ *
+ * Lesson packs (roadmap T03, map §4.3) raise no version: a file's optional
+ * `pack` (`LessonPack`: its title, audience, curriculum and order, and the
+ * built-in lessons it reuses by reference) and a lesson's optional
+ * `curriculum` codes are fields an older reader never looks at — `readMeta`
+ * and `parseLessonFile` build their results from the fields they know — so
+ * the same file opens there as a teacher's file of the same lessons, without
+ * the grouping. tests/lesson-packs.test.ts holds a pack file to the version
+ * its lessons need.
  */
 import { missionDocument, parseMissionDocument, MISSION_FORMAT, type MissionDocument } from '../config/mission-file';
 import { defaultMissionState } from './config';
@@ -21,27 +51,40 @@ import { MEASURE_IDS } from './measures';
 import { compileExpression } from './assessment/expression';
 import { DIAGRAM_IDS } from './assessment/diagrams';
 import {
-  DOMAINS, LOCK_KEYS, REVEAL_KEYS, isCaseLesson,
-  type CaseCriterion, type CaseLesson, type CatalogLesson, type Criterion, type Domain, type Lesson, type LocalText, type LockKey, type MeasureId, type RevealKey,
+  CURRICULUM_KINDS, DOMAINS, LOCK_KEYS, REVEAL_KEYS, isCaseLesson, isDesignLesson,
+  type CaseCriterion, type CaseLesson, type CatalogLesson, type Criterion, type CurriculumCode, type CurriculumKind, type DesignCriterion, type DesignLesson,
+  type DesignMeasureId, type Domain, type Lesson, type LessonPack, type LocalText, type LockKey, type MeasureId, type PackEntry, type RevealKey,
 } from './types';
+import { DESIGN_LOCK_KEYS, DESIGN_MEASURE_IDS } from './design-lesson';
+import { satelliteDesignProblems } from '../config/satellite-design';
+import { satelliteTemplateById } from '../data/satellite-templates';
+import { STATIONS } from '../orbit/applications-setup';
+import type { SatelliteDesign } from '../design/satellite-spec';
+import type { MissionRequirements } from '../design/requirements';
 import { CASE_CHOICE_ITEMS, CASE_IDS, CASE_ITEM_IDS, type CaseId } from '../worksheets/case-ids';
 import type { ChoiceOption, Figure, FlightSeries, Question } from './assessment/types';
 import { VEHICLES } from '../data/vehicles';
 
 export const LESSON_FORMAT = 'orbitlab.lessons';
-export const LESSON_FORMAT_VERSION = 2;
-/** The version a file of flight lessons alone is written as: every copy of the app reads it. */
+export const LESSON_FORMAT_VERSION = 3;
+/** The version a file of flight lessons on catalogue rockets and satellites is written as: every copy of the app reads it. */
 const FLIGHT_ONLY_VERSION = 1;
+/** The version that first read case lessons (track 6), after S02's custom rockets. */
+const CASE_VERSION = 2;
+/** The version that first read a custom satellite (D06) and the design lessons (T01): one Phase 4 release (see the header). */
+const DESIGN_VERSION = 3;
 export const LESSON_FILE_EXTENSION = '.orbitlab-lesson.json';
 
 export interface LessonFileDocument {
   format: typeof LESSON_FORMAT;
   version: number;
+  /** T03: the file is a lesson pack (`LessonPack`) */
+  pack?: LessonPack;
   lessons?: unknown[];
   questions?: unknown[];
 }
 
-export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 'mission' | 'translation' | 'hook' | 'expression' | 'duplicate';
+export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 'mission' | 'translation' | 'hook' | 'expression' | 'duplicate' | 'event' | 'builtinId' | 'pack';
 export interface FileIssue { where: string; code: FileIssueCode; level: 'error' | 'warn'; detail?: string }
 
 export interface ParsedLessonFile {
@@ -50,6 +93,8 @@ export interface ParsedLessonFile {
   issues: FileIssue[];
   /** false when the file is not a lesson file at all */
   usable: boolean;
+  /** T03: the file's lesson pack, when it is one and its pack could be read */
+  pack?: LessonPack;
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -73,6 +118,20 @@ class Reader {
       if (isStr(v[lang])) out[lang] = v[lang] as string;
       else this.warn(where, 'translation', lang);
     }
+    return out;
+  }
+  /**
+   * T03: a lesson's curriculum codes. A code that cannot be read is left out
+   * with a warning, not the lesson: the codes are shown, never graded.
+   */
+  codes(v: unknown, where: string): CurriculumCode[] | undefined {
+    if (v === undefined) return undefined;
+    if (!Array.isArray(v)) { this.warn(where, 'invalid', 'curriculum'); return undefined; }
+    const out: CurriculumCode[] = [];
+    v.forEach((c, i) => {
+      if (isRecord(c) && isStr(c.code) && CURRICULUM_KINDS.includes(c.kind as CurriculumKind)) out.push({ code: c.code.trim(), kind: c.kind as CurriculumKind });
+      else this.warn(`${where}[${i}]`, 'invalid', 'curriculum');
+    });
     return out;
   }
 }
@@ -140,7 +199,8 @@ function readMeta(r: Reader, raw: Record<string, unknown>, at: string) {
   if (!domains.length) return r.error(`${at}.domains`, 'missing') || null;
   const tags = Array.isArray(raw.tags) ? raw.tags.filter(isStr) : undefined;
   const comingSoon = raw.comingSoon === true;
-  return { title, brief, debrief, track, order, mode, domains, tags, comingSoon };
+  const curriculum = r.codes(raw.curriculum, `${at}.curriculum`);
+  return { title, brief, debrief, track, order, mode, domains, tags, comingSoon, curriculum };
 }
 
 function readHints(r: Reader, raw: Record<string, unknown>, at: string): LocalText[] {
@@ -159,7 +219,7 @@ export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Le
   const at = `${where} (${raw.id})`;
   const meta = readMeta(r, raw, at);
   if (!meta) return null;
-  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon } = meta;
+  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon, curriculum } = meta;
 
   let mission: MissionDocument;
   if (!isRecord(raw.mission) || raw.mission.format !== MISSION_FORMAT) return r.error(`${at}.mission`, 'mission', 'format') || null;
@@ -191,6 +251,7 @@ export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Le
     title, brief, ...(debrief ? { debrief } : {}), mission, locked, ...(reveal.length ? { reveal } : {}), criteria, hints,
     ...(isStr(raw.endEvent) ? { endEvent: raw.endEvent } : {}),
     ...(comingSoon ? { comingSoon } : {}),
+    ...(curriculum?.length ? { curriculum } : {}),
   };
 }
 
@@ -223,7 +284,7 @@ export function readCaseLesson(raw: unknown, where: string, issues: FileIssue[])
   const at = `${where} (${raw.id})`;
   const meta = readMeta(r, raw, at);
   if (!meta) return null;
-  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon } = meta;
+  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon, curriculum } = meta;
   if (!CASE_IDS.includes(raw.case as CaseId)) return r.error(`${at}.case`, 'invalid', 'case') || null;
   const id = raw.case as CaseId;
   for (const k of ['mission', 'locked', 'reveal', 'endEvent']) if (raw[k] !== undefined) r.warn(`${at}.${k}`, 'invalid', k);
@@ -240,13 +301,143 @@ export function readCaseLesson(raw: unknown, where: string, issues: FileIssue[])
     kind: 'case', id: raw.id, track, order, mode, domains, ...(tags?.length ? { tags } : {}),
     title, brief, ...(debrief ? { debrief } : {}), case: id, criteria, hints,
     ...(comingSoon ? { comingSoon } : {}),
+    ...(curriculum?.length ? { curriculum } : {}),
   };
 }
 
-/** Read one lesson of either kind: a case lesson says so; a lesson without a kind is a flight lesson. */
+// ─── design lessons (T01) ───────────────────────────────────────────────────
+
+const DESIGN_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+/** A design date: `YYYY-MM-DD`, a real day of 1957–2200 (the satellite model's `designDateJd`; tests/design-lessons.test.ts holds the two equal). */
+export function isDesignDate(v: unknown): v is string {
+  const m = typeof v === 'string' ? DESIGN_DATE.exec(v) : null;
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const back = new Date(Date.UTC(y, mo - 1, d));
+  return y >= 1957 && y <= 2200 && back.getUTCMonth() === mo - 1 && back.getUTCDate() === d;
+}
+/** ECSS's fixed levels of solar activity, spelt out as src/design/requirements.ts spells them (the propagator stays out of src/lessons). */
+const ECSS = ['low', 'moderate', 'high'] as const;
+type Ecss = (typeof ECSS)[number];
+
+function readDesignCriterion(r: Reader, raw: unknown, where: string): DesignCriterion | null {
+  if (!isRecord(raw) || !isStr(raw.id)) { r.error(where, 'missing', 'id'); return null; }
+  const id = raw.id;
+  if (!DESIGN_MEASURE_IDS.includes(raw.measure as DesignMeasureId)) { r.error(where, 'invalid', 'measure'); return null; }
+  const measure = raw.measure as DesignMeasureId;
+  const label = raw.label === undefined ? undefined : r.text(raw.label, `${where}.label`) ?? undefined;
+  const withLabel = <T extends object>(c: T): T => (label ? { ...c, label } : c);
+  if (raw.kind === 'design') {
+    const bound: { min?: number; max?: number; target?: number; tol?: number } = {};
+    for (const k of ['min', 'max', 'target', 'tol'] as const) {
+      if (raw[k] === undefined) continue;
+      if (!isNum(raw[k])) { r.error(where, 'invalid', k); return null; }
+      bound[k] = raw[k] as number;
+    }
+    if (bound.min === undefined && bound.max === undefined && bound.target === undefined) { r.error(where, 'missing', 'bound'); return null; }
+    if (bound.tol !== undefined && bound.tol < 0) { r.error(where, 'invalid', 'tol'); return null; }
+    return withLabel({ id, kind: 'design' as const, measure, ...bound });
+  }
+  if (raw.kind === 'answer') {
+    const prompt = r.text(raw.prompt, `${where}.prompt`);
+    if (!prompt) return null;
+    for (const k of ['tol', 'tolPct'] as const) if (raw[k] !== undefined && (!isNum(raw[k]) || (raw[k] as number) < 0)) { r.error(where, 'invalid', k); return null; }
+    if (raw.tol === undefined && raw.tolPct === undefined) { r.error(where, 'missing', 'tol'); return null; }
+    return withLabel({ id, kind: 'answer' as const, measure, prompt,
+      ...(raw.tol !== undefined ? { tol: raw.tol as number } : {}), ...(raw.tolPct !== undefined ? { tolPct: raw.tolPct as number } : {}),
+      ...(isStr(raw.unit) ? { unit: raw.unit } : {}) });
+  }
+  r.error(where, 'invalid', 'kind');
+  return null;
+}
+
+/** What a mission asks (D07's `MissionRequirements`), within plausible bounds; null, with the field named, when it cannot be used. */
+function readRequirements(r: Reader, raw: unknown, where: string): MissionRequirements | null {
+  if (!isRecord(raw) || !isRecord(raw.target)) return r.error(where, 'invalid', 'requirements') || null;
+  const t = raw.target;
+  const num = (v: unknown, lo: number, hi: number): v is number => isNum(v) && v >= lo && v <= hi;
+  const bad = (field: string): null => r.error(`${where}.${field}`, 'invalid', field) || null;
+  if (!num(t.lat, -90, 90) || !num(t.lon, -180, 360) || typeof t.name !== 'string') return bad('target');
+  if (!num(raw.gsd, 1e-3, 1e4)) return bad('gsd');
+  if (!num(raw.revisitDays, 1e-3, 366)) return bad('revisitDays');
+  if (typeof raw.daylightOnly !== 'boolean') return bad('daylightOnly');
+  if (raw.ltan !== undefined && !num(raw.ltan, 0, 24)) return bad('ltan');
+  if (!num(raw.lifeYears, 0.1, 30)) return bad('lifeYears');
+  if (!ECSS.includes(raw.activity as Ecss)) return bad('activity');
+  if (!num(raw.dataPerDay, 0, 1e15)) return bad('dataPerDay');
+  if (!Array.isArray(raw.stations) || !raw.stations.every((s) => STATIONS.some((x) => x.id === s))) return bad('stations');
+  if (!num(raw.minElDeg, 0, 89)) return bad('minElDeg');
+  if (raw.disposal !== '25y' && raw.disposal !== 'none') return bad('disposal');
+  return {
+    target: { lat: t.lat, lon: t.lon, name: t.name }, gsd: raw.gsd, revisitDays: raw.revisitDays, daylightOnly: raw.daylightOnly,
+    ...(raw.ltan !== undefined ? { ltan: raw.ltan as number } : {}),
+    lifeYears: raw.lifeYears, activity: raw.activity as Ecss, dataPerDay: raw.dataPerDay, stations: [...raw.stations as string[]],
+    minElDeg: raw.minElDeg, disposal: raw.disposal,
+  };
+}
+
+/**
+ * Read one design lesson (T01, map §4.1): its start — a template, or a whole
+ * design the satellite checker accepts —, the day and the ECSS level its
+ * figures are read at (fixed, so a grade reproduces: never the measured
+ * series), what the mission asks, the parts it locks and its criteria on
+ * design measures. What only a flight or a case lesson has is dropped with a
+ * warning.
+ */
+export function readDesignLesson(raw: unknown, where: string, issues: FileIssue[]): DesignLesson | null {
+  const r = new Reader(issues);
+  if (!isRecord(raw) || !isStr(raw.id)) return r.error(where, 'missing', 'id') || null;
+  const at = `${where} (${raw.id})`;
+  const meta = readMeta(r, raw, at);
+  if (!meta) return null;
+  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon, curriculum } = meta;
+  let start: DesignLesson['start'];
+  if (!isRecord(raw.start)) return r.error(`${at}.start`, 'missing', 'start') || null;
+  if (raw.start.template !== undefined) {
+    if (!isStr(raw.start.template) || !satelliteTemplateById(raw.start.template)) return r.error(`${at}.start`, 'invalid', 'template') || null;
+    start = { template: raw.start.template };
+  } else {
+    const problems = satelliteDesignProblems(raw.start.design);
+    if (problems.length) return r.error(`${at}.start.design`, 'invalid', `${problems[0].path} ${problems[0].message}`) || null;
+    start = { design: JSON.parse(JSON.stringify(raw.start.design)) as SatelliteDesign };
+  }
+  if (!isDesignDate(raw.designDate)) return r.error(`${at}.designDate`, 'invalid', 'designDate') || null;
+  if (!ECSS.includes(raw.level as Ecss)) return r.error(`${at}.level`, 'invalid', 'level') || null;
+  let requirements: MissionRequirements | undefined;
+  if (raw.requirements !== undefined) {
+    const req = readRequirements(r, raw.requirements, `${at}.requirements`);
+    if (!req) return null;
+    requirements = req;
+  }
+  const locked = Array.isArray(raw.locked) ? raw.locked.filter((k): k is string => DESIGN_LOCK_KEYS.includes(k as string)) : [];
+  if (Array.isArray(raw.locked) && locked.length !== raw.locked.length) r.warn(`${at}.locked`, 'invalid');
+  for (const k of ['mission', 'reveal', 'endEvent', 'case']) if (raw[k] !== undefined) r.warn(`${at}.${k}`, 'invalid', k);
+  if (!Array.isArray(raw.criteria) || (!raw.criteria.length && !comingSoon)) return r.error(`${at}.criteria`, 'missing') || null;
+  const criteria: DesignCriterion[] = [];
+  for (let i = 0; i < raw.criteria.length; i++) {
+    const c = readDesignCriterion(r, raw.criteria[i], `${at}.criteria[${i}]`);
+    if (!c) return null;
+    if (criteria.some((x) => x.id === c.id)) return r.error(`${at}.criteria[${i}]`, 'duplicate', c.id) || null;
+    // the revisit is the wait at the requirements' place: without them there is no place to look at
+    if (c.measure === 'sat.revisitMax' && !requirements) return r.error(`${at}.criteria[${i}]`, 'missing', 'requirements') || null;
+    criteria.push(c);
+  }
+  const hints = readHints(r, raw, at);
+  return {
+    kind: 'design', id: raw.id, track, order, mode, domains, ...(tags?.length ? { tags } : {}),
+    title, brief, ...(debrief ? { debrief } : {}), start, designDate: raw.designDate, level: raw.level as Ecss,
+    ...(requirements ? { requirements } : {}), locked, criteria, hints,
+    ...(comingSoon ? { comingSoon } : {}),
+    // T03 meets T01: a pack's design lesson keeps its codes, as its flight and case lessons do (T03b)
+    ...(curriculum?.length ? { curriculum } : {}),
+  };
+}
+
+/** Read one lesson of any kind: a case or a design lesson says so; a lesson without a kind is a flight lesson. */
 export function readAnyLesson(raw: unknown, where: string, issues: FileIssue[]): CatalogLesson | null {
   const kind = isRecord(raw) ? raw.kind : undefined;
   if (kind === 'case') return readCaseLesson(raw, where, issues);
+  if (kind === 'design') return readDesignLesson(raw, where, issues);
   if (kind === undefined || kind === 'flight') return readLesson(raw, where, issues);
   issues.push({ where: isRecord(raw) && isStr(raw.id) ? `${where} (${raw.id})` : where, code: 'invalid', level: 'error', detail: 'kind' });
   return null;
@@ -343,8 +534,69 @@ export function readQuestion(raw: unknown, where: string, issues: FileIssue[], d
   }
 }
 
-/** Read a lesson file. */
-export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>): ParsedLessonFile {
+/**
+ * Warnings for the event keys a flight lesson names that no flight emits (T01,
+ * map §4.1): an `event` criterion's key and the `endEvent`. The reader takes
+ * any key — a newer app may emit one this build does not know — so a typo
+ * reads and then never happens: "must happen" fails and an `endEvent` never
+ * ends the flight. `knownEvents` is the set the page knows (the `evt.*` keys of
+ * its dictionary, which name every event the simulation emits); the reader
+ * itself stays free of the dictionaries, so the re-check's worker does not
+ * carry them.
+ */
+export function eventIssues(lesson: Lesson, where: string, knownEvents: ReadonlySet<string>): FileIssue[] {
+  const issues: FileIssue[] = [];
+  lesson.criteria.forEach((c, i) => {
+    if (c.kind === 'event' && !knownEvents.has(c.key)) issues.push({ where: `${where}.criteria[${i}]`, code: 'event', level: 'warn', detail: c.key });
+  });
+  if (lesson.endEvent !== undefined && !knownEvents.has(lesson.endEvent)) issues.push({ where: `${where}.endEvent`, code: 'event', level: 'warn', detail: lesson.endEvent });
+  return issues;
+}
+
+/**
+ * T03: a file's lesson pack. Its texts are read as a lesson's are; `audience`
+ * and `framework` may also be one plain string, the same in every language.
+ * A pack that cannot be read is reported and left out, while the file's
+ * lessons are kept, as an older reader keeps them. Which of its entries name
+ * a built-in lesson is not known here (the catalogue reads its lessons
+ * through this reader): src/lessons/packs.ts resolves them.
+ */
+function readPack(raw: unknown, lessons: readonly CatalogLesson[], issues: FileIssue[]): LessonPack | undefined {
+  const r = new Reader(issues);
+  if (!isRecord(raw) || !isStr(raw.id)) { r.error('pack', 'pack', 'id'); return undefined; }
+  const at = `pack (${raw.id})`;
+  const loose = (v: unknown, w: string): LocalText | null => (isStr(v) ? { en: v.trim() } : r.text(v, w));
+  const title = r.text(raw.title, `${at}.title`);
+  const audience = loose(raw.audience, `${at}.audience`);
+  const framework = loose(raw.framework, `${at}.framework`);
+  if (!title || !audience || !framework) { r.error(at, 'pack', 'text'); return undefined; }
+  // not reviewed unless it says so: the page then calls it a draft
+  if (typeof raw.reviewed !== 'boolean') r.warn(`${at}.reviewed`, 'invalid', 'reviewed');
+  const description = raw.description === undefined ? undefined : r.text(raw.description, `${at}.description`) ?? undefined;
+  const contents: PackEntry[] = [];
+  const named = new Set<string>();
+  if (raw.contents !== undefined && !Array.isArray(raw.contents)) r.warn(`${at}.contents`, 'invalid', 'contents');
+  if (Array.isArray(raw.contents)) raw.contents.forEach((e, i) => {
+    const w = `${at}.contents[${i}]`;
+    if (!isRecord(e) || !isStr(e.id)) { r.warn(w, 'invalid', 'id'); return; }
+    if (named.has(e.id)) { r.warn(w, 'duplicate', e.id); return; }
+    named.add(e.id);
+    const own = lessons.some((l) => l.id === e.id);
+    // a lesson of the file carries its own codes: codes on its entry as well could say something else
+    if (own && e.curriculum !== undefined) r.warn(`${w}.curriculum`, 'invalid', 'curriculum');
+    const curriculum = own ? undefined : r.codes(e.curriculum, `${w}.curriculum`);
+    const note = e.note === undefined ? undefined : r.text(e.note, `${w}.note`) ?? undefined;
+    contents.push({ id: e.id, ...(curriculum?.length ? { curriculum } : {}), ...(note ? { note } : {}) });
+  });
+  for (const l of lessons) if (!named.has(l.id)) contents.push({ id: l.id });
+  return {
+    id: raw.id, title, audience, framework, reviewed: raw.reviewed === true,
+    ...(description ? { description } : {}), contents,
+  };
+}
+
+/** Read a lesson file; with `knownEvents`, warn of event keys no flight emits (`eventIssues`). */
+export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>, knownEvents?: ReadonlySet<string>): ParsedLessonFile {
   const issues: FileIssue[] = [];
   if (!isRecord(raw) || raw.format !== LESSON_FORMAT || !isNum(raw.version) || raw.version < 1) {
     return { lessons: [], questions: [], issues: [{ where: 'document', code: 'format', level: 'error' }], usable: false };
@@ -360,19 +612,52 @@ export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>): Pa
   };
   if (Array.isArray(raw.lessons)) raw.lessons.forEach((l, i) => {
     const lesson = readAnyLesson(l, `lessons[${i}]`, issues);
-    if (lesson && unique(lesson.id, `lessons[${i}]`)) lessons.push(lesson);
+    if (lesson && unique(lesson.id, `lessons[${i}]`)) {
+      lessons.push(lesson);
+      if (knownEvents && !isCaseLesson(lesson) && !isDesignLesson(lesson)) issues.push(...eventIssues(lesson, `lessons[${i}] (${lesson.id})`, knownEvents));
+    }
   });
   if (Array.isArray(raw.questions)) raw.questions.forEach((q, i) => {
     const question = readQuestion(q, `questions[${i}]`, issues, datasets);
     if (question && unique(question.id, `questions[${i}]`)) questions.push({ ...question, custom: true });
   });
   if (!lessons.length && !questions.length) return { lessons, questions, issues, usable: false };
-  return { lessons, questions, issues, usable: true };
+  const pack = raw.pack === undefined ? undefined : readPack(raw.pack, lessons, issues);
+  return { lessons, questions, issues, usable: true, ...(pack ? { pack } : {}) };
 }
 
-/** A file holding the given lessons and questions: version 1 unless it holds a case lesson. */
-export function lessonFileText(lessons: readonly CatalogLesson[], questions: readonly Question[] = []): string {
-  const version = lessons.some(isCaseLesson) ? LESSON_FORMAT_VERSION : FLIGHT_ONLY_VERSION;
-  const doc: LessonFileDocument = { format: LESSON_FORMAT, version, lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}) };
-  return `${JSON.stringify(doc, null, 2)}\n`;
+/**
+ * The lowest file version whose every reader flies this lesson (see the
+ * header): 1 for a flight on catalogue parts, 2 for a case lesson or a custom
+ * rocket, 3 for a custom satellite or a design lesson.
+ */
+export function lessonVersion(lesson: CatalogLesson): number {
+  if (isCaseLesson(lesson)) return CASE_VERSION;
+  if (isDesignLesson(lesson)) return DESIGN_VERSION;
+  const m = lesson.mission.mission;
+  if (m.satelliteSpec) return LESSON_FORMAT_VERSION;
+  if (m.vehicleSpec) return CASE_VERSION;
+  return FLIGHT_ONLY_VERSION;
+}
+
+/** The version a file of these lessons is written as: the highest any of them needs. */
+export function lessonFileVersion(lessons: readonly CatalogLesson[]): number {
+  return lessons.reduce((v, l) => Math.max(v, lessonVersion(l)), FLIGHT_ONLY_VERSION);
+}
+
+/**
+ * The document of a file holding the given lessons and questions, at the
+ * lowest version that reads them all (`lessonFileVersion`); with `pack`, a
+ * lesson pack (T03), which needs no version of its own.
+ */
+export function lessonFileDocument(lessons: readonly CatalogLesson[], questions: readonly Question[] = [], pack?: LessonPack): LessonFileDocument {
+  return {
+    format: LESSON_FORMAT, version: lessonFileVersion(lessons), ...(pack ? { pack } : {}),
+    lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}),
+  };
+}
+
+/** That document as the file's text. */
+export function lessonFileText(lessons: readonly CatalogLesson[], questions: readonly Question[] = [], pack?: LessonPack): string {
+  return `${JSON.stringify(lessonFileDocument(lessons, questions, pack), null, 2)}\n`;
 }

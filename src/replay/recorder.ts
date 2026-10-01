@@ -33,10 +33,26 @@
  * liftoff, max Q and staging, not the 143rd minute of a parking orbit. Event
  * frames are never thinned at all, so seeking to a callout is exact however
  * hard the recording has been squeezed.
+ *
+ * Live stepping (roadmap T02; owner decision 2, 2026-09-29): a point-mass flight
+ * is flown in the whole steps `Simulation.suggestedDt` asks for, never in steps
+ * cut to the length of an animation frame, so the flight a student watched is
+ * bit for bit the headless flight of the same mission (`sim.step(sim.suggestedDt())`
+ * until the end) and an instructor's copy can re-fly it exactly. Six-DOF already
+ * flew whole control ticks and carried the rest of a frame over; a point-mass
+ * step is up to 60 s long in a high coast, though, so waiting for a whole step
+ * would freeze the picture and the clock for most of a minute at 1×. The live
+ * point-mass flight therefore runs *ahead* of the instant on screen by less than
+ * one step, and `recordNow` draws that instant between the two step boundaries
+ * around it, exactly as a replay seek draws a time between two stored frames
+ * (`interpolateFrames`). What the recording shows — its frames and events — ends
+ * at the instant on screen: the frame and the events of the step still ahead are
+ * held back until the clock reaches them, so nothing on screen runs ahead of the
+ * picture (tests/live-stepping.test.ts; measurements in docs/PHYSICS.md §2n).
  */
-import { captureFrame, cloneFrame, type VisualFrame } from '../physics/frame';
+import { captureFrame, cloneFrame, interpolateFrames, type VisualFrame } from '../physics/frame';
 import type { Simulation, SimEvent, SimStatus } from '../physics/simulation';
-import { chronologicalEvents } from '../physics/events';
+import { chronologicalEvents, eventPrefix, eventsThrough } from '../physics/events';
 import { AttitudeTrack, type AttitudeWindow } from './attitude-track';
 import { quatRotate } from '../physics/rigid/math';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
@@ -156,6 +172,12 @@ export interface RecordingSource {
   applyRecordedAttitudes(frame: VisualFrame): VisualFrame;
   /** A copy of the live instant, for drawing. */
   recordNow(): VisualFrame;
+  /**
+   * The live instant, s of mission time: the time `recordNow` draws. A
+   * point-mass simulation runs up to one step ahead of it (T02), so what the
+   * app counts from — a skip, a fast-forward — reads this, not the simulation's clock.
+   */
+  readonly clock: number;
   stats(): RecorderStats;
 }
 
@@ -217,12 +239,24 @@ export function recordingStats(frames: readonly VisualFrame[], events: number, d
 }
 
 export class FlightRecorder implements RecordingSource {
-  /** Stored frames, strictly increasing in mission time. */
+  /**
+   * The recording as the app sees it: stored frames up to the live instant,
+   * strictly increasing in mission time. A point-mass flight can have stored
+   * one frame more, at the end of the step it has flown ahead of the picture;
+   * that frame is appended here once the clock reaches it (see the header).
+   */
   readonly frames: VisualFrame[] = [];
+  /** Every stored frame, the one still ahead of the live instant included. */
+  private readonly stored: VisualFrame[] = [];
+  /** `decimations` when `frames` was last rebuilt from `stored`. */
+  private publishedDecimations = 0;
   /** Consumed detections, kept append-only independently of their timestamps. */
   private detectedEvents: SimEvent[] = [];
-  /** Events in occurrence order for playback and display. */
-  get events(): readonly SimEvent[] { return chronologicalEvents(this.detectedEvents); }
+  /** Events in occurrence order for playback and display, up to the live instant. */
+  get events(): readonly SimEvent[] {
+    const ordered = chronologicalEvents(this.detectedEvents);
+    return this.lookahead ? eventPrefix(ordered, eventsThrough(ordered, this.liveTime)) : ordered;
+  }
   private sim: Simulation | null = null;
   private maxFrames: number;
   private decimations = 0;
@@ -234,6 +268,24 @@ export class FlightRecorder implements RecordingSource {
   /** Render packets accumulate until one complete rigid physics step is due. */
   private rigidRemainder = 0;
   private attitudeTracks = new Map<string, AttitudeTrack>();
+  /**
+   * T02: a point-mass flight — flown in whole steps ahead of the picture. False
+   * for six-DOF, whose live instant is the simulation's own clock.
+   */
+  private lookahead = false;
+  /** The live instant on screen, s of mission time; never after `sim.state.t`. */
+  private liveTime = 0;
+  /**
+   * The state at the start of the step that carried the simulation past the
+   * live instant: the earlier end of the span `recordNow` draws inside.
+   */
+  private liveFrom: VisualFrame | null = null;
+  /** Bumped by every step and every changed state, for the two caches below. */
+  private revision = 0;
+  /** The simulation's current state as a frame, captured once per revision. */
+  private stateCache: { revision: number; frame: VisualFrame } | null = null;
+  /** The frame drawn at the live instant, computed once per revision and instant. */
+  private liveCache: { revision: number; t: number; frame: VisualFrame } | null = null;
 
   /**
    * @param observer told of every rotation sample the recorder accepts, so a
@@ -253,23 +305,42 @@ export class FlightRecorder implements RecordingSource {
   start(sim: Simulation): void {
     this.sim = sim;
     this.maxFrames = this.requestedMaxFrames ?? (sim.rigidRuntime ? RIGID_MAX_FRAMES : DEFAULT_MAX_FRAMES);
+    this.stored.length = 0;
     this.frames.length = 0;
+    this.publishedDecimations = 0;
     this.detectedEvents = [];
     this.decimations = 0;
     this.keep = new WeakSet<VisualFrame>();
     this.copySource = null;
     this.copyCache = null;
     this.rigidRemainder = 0;
+    this.lookahead = !sim.rigidRuntime;
+    this.liveTime = sim.state.t;
+    this.liveFrom = null;
+    this.revision++;
+    this.stateCache = null;
+    this.liveCache = null;
     this.attitudeTracks.clear();
     this.recordAttitudes(true);
     const f = captureFrame(sim);
-    this.frames.push(f);
+    this.stored.push(f);
     this.keep.add(f);
     this.pullEvents();
+    this.publish();
   }
 
   get simulation(): Simulation | null {
     return this.sim;
+  }
+  /**
+   * The live instant, s of mission time: what `recordNow` draws and what the
+   * fast-forwards count towards. The simulation's own clock for six-DOF; for a
+   * point-mass flight up to one step behind it (see the header).
+   */
+  get clock(): number {
+    const sim = this.sim;
+    if (!sim) return 0;
+    return this.lookahead ? this.liveTime : sim.state.t;
   }
   /** Mission time of the first recorded frame (T-10 s on every vehicle). */
   get startTime(): number {
@@ -281,6 +352,32 @@ export class FlightRecorder implements RecordingSource {
   }
   get head(): VisualFrame | null {
     return this.frames.length > 0 ? this.frames[this.frames.length - 1] : null;
+  }
+  /** The last stored frame, shown yet or not: what the step loop compares against. */
+  private get last(): VisualFrame | null {
+    return this.stored.length > 0 ? this.stored[this.stored.length - 1] : null;
+  }
+
+  /**
+   * Bring `frames` up to the live instant: every stored frame at or before it.
+   * Only the newest stored frame can lie after it (the live instant is inside
+   * the last step flown), so after a decimation the list is rebuilt and
+   * otherwise only its tail changes.
+   */
+  private publish(): void {
+    const stored = this.stored, shown = this.frames;
+    let n = stored.length;
+    if (this.lookahead) while (n > 0 && stored[n - 1].t > this.liveTime + 1e-9) n--;
+    if (this.publishedDecimations !== this.decimations) {
+      shown.length = 0;
+      for (let i = 0; i < n; i++) shown.push(stored[i]);
+      this.publishedDecimations = this.decimations;
+      return;
+    }
+    let common = Math.min(shown.length, n);
+    while (common > 0 && shown[common - 1] !== stored[common - 1]) common--;
+    shown.length = common;
+    for (let i = common; i < n; i++) shown.push(stored[i]);
   }
 
   private recordAttitudes(force = false): void {
@@ -363,10 +460,10 @@ export class FlightRecorder implements RecordingSource {
     for (let i = this.detectedEvents.length; i < sim.events.length; i++) {
       const e = sim.events[i];
       this.detectedEvents.push(e);
-      const k = this.indexAt(e.t);
+      const k = frameIndexAt(this.stored, e.t);
       if (k >= 0) {
-        this.keep.add(this.frames[k]);
-        if (k + 1 < this.frames.length) this.keep.add(this.frames[k + 1]);
+        this.keep.add(this.stored[k]);
+        if (k + 1 < this.stored.length) this.keep.add(this.stored[k + 1]);
       }
     }
     return true;
@@ -374,7 +471,7 @@ export class FlightRecorder implements RecordingSource {
 
   /** Append a frame if it is newer than the head; returns the stored frame. */
   private store(f: VisualFrame, important: boolean): VisualFrame {
-    const head = this.head;
+    const head = this.last;
     if (head && f === head) {
       if (important) this.keep.add(head);
       return head;
@@ -388,13 +485,13 @@ export class FlightRecorder implements RecordingSource {
       // it replaces the head rather than being dropped. (An out-of-order frame
       // from further back is dropped: the recording only moves forwards.)
       if (f.t < head.t - 1e-9) return head;
-      this.frames[this.frames.length - 1] = f;
+      this.stored[this.stored.length - 1] = f;
       if (important || this.keep.has(head)) this.keep.add(f);
       return f;
     }
-    this.frames.push(f);
+    this.stored.push(f);
     if (important) this.keep.add(f);
-    if (this.frames.length > this.maxFrames) this.decimate();
+    if (this.stored.length > this.maxFrames) this.decimate();
     return f;
   }
 
@@ -416,29 +513,76 @@ export class FlightRecorder implements RecordingSource {
    * vectors, every stage, every booster and every debris item sixty times a
    * second for a frame that cannot have changed. The cache is a copy, so the
    * recording is still untouchable; it is simply the same copy each tick.
+   *
+   * A point-mass flight flown ahead of the picture (T02, see the header) is
+   * drawn at the live instant between the two step boundaries around it, the
+   * frame computed once for each instant.
    */
   recordNow(): VisualFrame {
     const sim = this.sim;
     if (!sim) throw new Error('FlightRecorder.recordNow before start()');
     if (sim.events.length !== this.detectedEvents.length) return this.captureChangedState();
-    const head = this.head;
+    if (this.lookahead && this.liveFrom && this.liveTime < sim.state.t) return this.liveBetween(this.liveFrom);
+    const head = this.last;
     if (head && Math.abs(head.t - sim.state.t) < 1e-9) return this.copyOf(head);
     const f = captureFrame(sim);
     if (!head || f.t - head.t >= this.intervalOf(f) - 1e-9) {
-      return this.copyOf(this.store(f, false));
+      const stored = this.copyOf(this.store(f, false));
+      this.publish();
+      return stored;
     }
     return f;
   }
 
+  /** T02: the frame on screen at the live instant, between `from` and the simulation's state. */
+  private liveBetween(from: VisualFrame): VisualFrame {
+    const cached = this.liveCache;
+    if (cached && cached.revision === this.revision && cached.t === this.liveTime) return cached.frame;
+    const frame = interpolateFrames(from, this.currentState(), this.liveTime);
+    // `interpolateFrames` rebuilds the time from the span; the clock is the instant asked for.
+    frame.t = this.liveTime;
+    this.liveCache = { revision: this.revision, t: this.liveTime, frame };
+    return frame;
+  }
+
+  /** The simulation's current state as a frame the recording does not hold. */
+  private currentState(): VisualFrame {
+    const cached = this.stateCache;
+    if (cached && cached.revision === this.revision) return cached.frame;
+    const frame = captureFrame(this.sim!);
+    this.stateCache = { revision: this.revision, frame };
+    return frame;
+  }
+
+  /**
+   * T02: the simulation's own state, when the picture is behind it; null when
+   * `recordNow` draws that state itself. The physics worker hands it to the
+   * main thread's shell (src/session/mirror.ts), so the shell's clock and state
+   * are the simulation's, as an `InlineSession`'s are. A frame the recording
+   * does not hold.
+   */
+  simulationFrame(): VisualFrame | null {
+    const sim = this.sim;
+    if (!sim || !this.lookahead || !(this.liveTime < sim.state.t)) return null;
+    return this.currentState();
+  }
+
   /** Pin an accepted command/state change at the current live clock, even when
    * paused or coasting. At an identical timestamp store replaces the head with
-   * the post-command state; all earlier times retain their earlier command. */
+   * the post-command state; all earlier times retain their earlier command.
+   *
+   * A point-mass flight takes the change at the simulation's clock, which is up
+   * to one step ahead of the picture (T02), and the picture moves on to it, so
+   * a command shows at once as it always did. */
   captureChangedState(): VisualFrame {
     const sim = this.sim;
     if (!sim) throw new Error('FlightRecorder.captureChangedState before start()');
+    this.revision++;
+    if (this.lookahead) { this.liveTime = sim.state.t; this.liveFrom = null; }
     const stored = this.store(captureFrame(sim), true);
     this.recordAttitudes(true);
     this.pullEvents();
+    this.publish();
     return this.copyOf(stored);
   }
 
@@ -452,9 +596,7 @@ export class FlightRecorder implements RecordingSource {
   }
 
   /**
-   * Advance the live simulation by `seconds` of mission time, recording as it
-   * goes. Mirrors `Simulation.advance` step for step, so the flight is the one
-   * the physics would have flown on its own.
+   * One simulation step of `dt`, recorded; returns the time the step used.
    *
    * Scheduled actions commit when their clock is reached. Already-due actions
    * invoke the transition callback before integration, so their post-action
@@ -462,7 +604,48 @@ export class FlightRecorder implements RecordingSource {
    * after the step; neighboring frames retain the pre-event state. This uses
    * recorded physical states, without re-simulation or invented timestamps.
    */
+  private flyStep(sim: Simulation, dt: number, rigid: boolean): number {
+    this.revision++;
+    const head = this.last;
+    // The pre-step frame: reuse the head when it already sits on this instant
+    // (the common case in the dense phases, where the cadence matches the
+    // step size), otherwise capture one speculatively and keep it only if it
+    // earns its place — the cadence is due, or the step turned out to emit an
+    // event stamped with this very time.
+    const preIsHead = !!head && Math.abs(head.t - sim.state.t) < 1e-9;
+    const pre = preIsHead ? head! : captureFrame(sim);
+    const dueBefore = !head || pre.t - head.t >= this.intervalOf(pre) - 1e-9;
+    const nEvents = sim.events.length;
+    // Set inside the step's callback; typed wide so the compiler does not narrow it to null.
+    let transitioned = null as VisualFrame | null;
+    const used = sim.step(dt, () => {
+      transitioned = this.store(captureFrame(sim), true);
+      if (rigid) this.recordAttitudes(true);
+    });
+    if (rigid) this.recordAttitudes();
+    // T02: the state this step started from, after any action it committed first.
+    this.liveFrom = transitioned ?? pre;
+    const fired = sim.events.length > nEvents;
+    if (!transitioned && !preIsHead && (dueBefore || fired)) this.store(pre, fired);
+    // The pre-step frame is already the head, so there is nothing to store —
+    // but if the step emitted an event stamped with *this* time (the queue of
+    // scheduled actions is drained before integrating, with the clock still
+    // on the old time), the head has to be marked as an event boundary or
+    // decimation is free to drop the only frame that event has.
+    else if (!transitioned && preIsHead && fired) this.store(pre, true);
+    const s = sim.state;
+    const headNow = this.last;
+    const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn' || (s.status === 'orbit' && s.thrust > 1e3)) - 1e-9;
+    if (dueAfter || fired) this.store(captureFrame(sim), fired);
+    if (fired) this.pullEvents();
+    return used;
+  }
+
   /**
+   * Advance the live flight by `seconds` of mission time, recording as it
+   * goes. Mirrors `Simulation.advance` step for step, so the flight is the one
+   * the physics would have flown on its own.
+   *
    * @param deadline optional `performance.now()` value to stop at. A step count
    *        is not a time budget: the same 6000 steps are a millisecond of coast
    *        and a tenth of a second of powered flight, so at a high warp the
@@ -471,74 +654,71 @@ export class FlightRecorder implements RecordingSource {
    *        the clock instead costs nothing but a slower advance on a slow
    *        machine, and the sequence of steps — hence the recorded flight — is
    *        unchanged either way.
+   * @returns the mission time the live instant moved.
    */
   advance(seconds: number, maxSteps = 5000, deadline = Infinity): number {
     const sim = this.sim;
     if (!sim) return 0;
     if (sim.events.length !== this.detectedEvents.length) this.captureChangedState();
     const clocked = deadline !== Infinity && typeof performance !== 'undefined';
-    const rigid = !!sim.rigidRuntime;
+    if (this.lookahead) return this.advanceAhead(sim, seconds, maxSteps, deadline, clocked);
     const before = sim.state.t;
-    let remaining = rigid ? this.rigidRemainder + Math.max(0, seconds) : seconds;
+    let remaining = this.rigidRemainder + Math.max(0, seconds);
     let steps = 0;
     let limited = false;
     let stalled = false;
     while (remaining > 1e-6 && steps < maxSteps && sim.state.status !== 'failed') {
       // Rigid steps are substantially heavier: check every four so the wall
-      // budget still protects interaction latency. Legacy checks every 32.
-      const clockMask = rigid ? 3 : 31;
-      if (clocked && (steps & clockMask) === clockMask && performance.now() > deadline) { limited = true; break; }
+      // budget still protects interaction latency.
+      if (clocked && (steps & 3) === 3 && performance.now() > deadline) { limited = true; break; }
       const suggested = sim.suggestedDt();
-      if (rigid && remaining + 1e-10 < suggested) break;
+      if (remaining + 1e-10 < suggested) break;
       // A rendering packet must not shorten a rigid step. suggestedDt still
       // owns exact event boundaries; sim.step can re-clamp after a transition.
-      const dt = rigid ? suggested : Math.min(suggested, remaining);
-      const head = this.head;
-      // The pre-step frame: reuse the head when it already sits on this instant
-      // (the common case in the dense phases, where the cadence matches the
-      // step size), otherwise capture one speculatively and keep it only if it
-      // earns its place — the cadence is due, or the step turned out to emit an
-      // event stamped with this very time.
-      const preIsHead = !!head && Math.abs(head.t - sim.state.t) < 1e-9;
-      const pre = preIsHead ? head! : captureFrame(sim);
-      const dueBefore = !head || pre.t - head.t >= this.intervalOf(pre) - 1e-9;
-      const nEvents = sim.events.length;
-      let transitionCaptured = false;
-      const used = sim.step(dt, () => {
-        this.store(captureFrame(sim), true);
-        if (rigid) this.recordAttitudes(true);
-        transitionCaptured = true;
-      });
-      if (rigid) this.recordAttitudes();
-      const fired = sim.events.length > nEvents;
-      if (!transitionCaptured && !preIsHead && (dueBefore || fired)) this.store(pre, fired);
-      // The pre-step frame is already the head, so there is nothing to store —
-      // but if the step emitted an event stamped with *this* time (the queue of
-      // scheduled actions is drained before integrating, with the clock still
-      // on the old time), the head has to be marked as an event boundary or
-      // decimation is free to drop the only frame that event has.
-      else if (!transitionCaptured && preIsHead && fired) this.store(pre, true);
-      const s = sim.state;
-      const headNow = this.head;
-      const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn' || (s.status === 'orbit' && s.thrust > 1e3)) - 1e-9;
-      if (dueAfter || fired) this.store(captureFrame(sim), fired);
-      if (fired) this.pullEvents();
-      if (rigid && !(used > 0)) { stalled = true; break; }
-      remaining -= used > 0 ? used : dt;
+      const used = this.flyStep(sim, suggested, true);
+      if (!(used > 0)) { stalled = true; break; }
+      remaining -= used;
       steps++;
     }
-    if (rigid) {
-      remaining = Math.max(0, remaining);
-      if (stalled || sim.state.status === 'failed') this.rigidRemainder = 0;
-      else if (limited || steps >= maxSteps) {
-        // Keep only fractional time, never a queue of unserved warp work.
-        const next = sim.suggestedDt();
-        this.rigidRemainder = remaining % next;
-        if (next - this.rigidRemainder < 1e-10) this.rigidRemainder = 0;
-      } else this.rigidRemainder = remaining;
-      return sim.state.t - before;
+    remaining = Math.max(0, remaining);
+    if (stalled || sim.state.status === 'failed') this.rigidRemainder = 0;
+    else if (limited || steps >= maxSteps) {
+      // Keep only fractional time, never a queue of unserved warp work.
+      const next = sim.suggestedDt();
+      this.rigidRemainder = remaining % next;
+      if (next - this.rigidRemainder < 1e-10) this.rigidRemainder = 0;
+    } else this.rigidRemainder = remaining;
+    this.publish();
+    return sim.state.t - before;
+  }
+
+  /**
+   * T02: the point-mass flight, in whole steps. The simulation steps exactly as
+   * a headless loop does — `sim.step(sim.suggestedDt())` — until it has reached
+   * or passed the new live instant; what a frame's length decides is only when
+   * a step is flown, never how long it is. The picture then stands between the
+   * two boundaries of the last step (`recordNow`).
+   *
+   * Time the wall-clock budget or the step count could not serve is dropped, as
+   * it always was, rather than queued: the live instant stops at the
+   * simulation's clock. A flight that fails is shown failed at once (at most
+   * one step early, a tenth of a second in the air), since nothing follows it.
+   */
+  private advanceAhead(sim: Simulation, seconds: number, maxSteps: number, deadline: number, clocked: boolean): number {
+    const before = this.liveTime;
+    const target = before + (seconds > 0 ? seconds : 0);
+    let steps = 0;
+    // A nanosecond's grace, so a clock that sums to a boundary give or take the
+    // last bit does not fly a whole further step (it changes when, never how).
+    while (sim.state.t < target - 1e-9 && steps < maxSteps && sim.state.status !== 'failed') {
+      if (clocked && (steps & 31) === 31 && performance.now() > deadline) break;
+      this.flyStep(sim, sim.suggestedDt(), false);
+      steps++;
     }
-    return seconds - remaining;
+    const now = sim.state.t;
+    this.liveTime = sim.state.status === 'failed' ? Math.max(before, now) : Math.max(before, Math.min(target, now));
+    this.publish();
+    return this.liveTime - before;
   }
 
   /**
@@ -565,10 +745,10 @@ export class FlightRecorder implements RecordingSource {
   private thin(thinnable: (f: VisualFrame) => boolean): boolean {
     const kept: VisualFrame[] = [];
     let dropped = 0;
-    const last = this.frames.length - 1;
+    const last = this.stored.length - 1;
     let seen = 0;
-    for (let i = 0; i < this.frames.length; i++) {
-      const f = this.frames[i];
+    for (let i = 0; i < this.stored.length; i++) {
+      const f = this.stored[i];
       // `seen` counts candidates rather than array slots, so alternate
       // *candidates* go rather than alternate indices — a run of protected
       // frames in the middle no longer flips which half of the coast survives.
@@ -578,8 +758,8 @@ export class FlightRecorder implements RecordingSource {
       kept.push(f);
     }
     if (dropped === 0) return false;
-    this.frames.length = 0;
-    for (const f of kept) this.frames.push(f);
+    this.stored.length = 0;
+    for (const f of kept) this.stored.push(f);
     this.decimations++;
     return true;
   }

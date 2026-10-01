@@ -47,6 +47,48 @@ export function tFor(lang: Lang, key: string, params?: Record<string, string | n
   return s;
 }
 
+/** CLDR's plural categories, in the order a counted word lists its forms (`tCount`). */
+const PLURAL_ORDER: readonly Intl.LDMLPluralRule[] = ['zero', 'one', 'two', 'few', 'many', 'other'];
+
+/**
+ * A count and the word it counts, in the reader's language (Phase 4 stage
+ * 3b, task I2: the satellite builder's pages said "1 days" and "1 years").
+ *
+ * The smallest plural the dictionaries can hold as they are — one line per
+ * key, the same keys in every language, `{param}` placeholders alike: the
+ * key's value lists the word's forms separated by "|", one for each plural
+ * category the language has, in CLDR's order (zero, one, two, few, many,
+ * other). English "day|days" (one, other); Russian "день|дня|дней|дня"
+ * (one, few, many, other: 1 день, 2 дня, 5 дней, 1,5 дня); Thai "วัน"
+ * alone, since Thai has no plural. The form is the one `Intl.PluralRules`
+ * gives the count as it is shown, with `digits` decimals ("1.0 years" is
+ * plural in English, as CLDR has it); the count is written as the pages
+ * write a number (`toLocaleString` with those decimals) and kept on its
+ * word's line by a no-break space. The forms are the nominative's, so a
+ * sentence puts the count where Russian takes that case (after a colon,
+ * or "через", "за", "на" with a masculine word). A value with fewer forms
+ * than the language has categories gives its last form for the rest.
+ */
+export function tCount(key: string, count: number, digits = 0): string {
+  return tCountFor(current, key, count, digits);
+}
+
+/** `tCount` in a given language. */
+export function tCountFor(lang: Lang, key: string, count: number, digits = 0): string {
+  const forms = (DICTS[lang][key] ?? en[key] ?? key).split('|');
+  const shown = { minimumFractionDigits: digits, maximumFractionDigits: digits };
+  let at = forms.length - 1;
+  try {
+    const rules = new Intl.PluralRules(lang, shown);
+    const categories = PLURAL_ORDER.filter((c) => rules.resolvedOptions().pluralCategories.includes(c));
+    const i = categories.indexOf(rules.select(count));
+    if (i >= 0) at = Math.min(i, forms.length - 1);
+  } catch { /* no plural rules here: the last form, the general one */ }
+  let number: string;
+  try { number = count.toLocaleString(lang, shown); } catch { number = count.toFixed(digits); }
+  return `${number}\u00a0${forms[at]}`;
+}
+
 /** Apply translations to all elements carrying data-i18n attributes. */
 export function applyStatic(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => {

@@ -22,6 +22,7 @@ import {
   applyAttitudeTracks, frameIndexAt, recordingStats, type RecorderStats, type RecordingSource,
 } from '../replay/recorder';
 import { applyFrameToState } from '../replay/simview';
+import { eventPrefix } from '../physics/events';
 import type { RecordingDelta } from './protocol';
 
 export class RecordingMirror implements RecordingSource {
@@ -29,6 +30,8 @@ export class RecordingMirror implements RecordingSource {
   private readonly tracks = new Map<string, AttitudeTrack>();
   private decimations = 0;
   private live: VisualFrame;
+  /** T02: how many events the worker's recording shows (up to its live instant). */
+  private shownEvents = Infinity;
 
   /**
    * @param shell the never-stepped simulation of the same mission. Until the
@@ -40,8 +43,9 @@ export class RecordingMirror implements RecordingSource {
     this.frames.push(captureFrame(shell));
   }
 
+  /** The events the worker's recording shows: the shell's log up to the live instant (T02). */
   get events() {
-    return this.shell.chronologicalEvents;
+    return eventPrefix(this.shell.chronologicalEvents, this.shownEvents);
   }
   get startTime(): number {
     return this.frames.length > 0 ? this.frames[0].t : 0;
@@ -61,6 +65,10 @@ export class RecordingMirror implements RecordingSource {
   /** The live instant. Like the recorder's, never an object the recording holds. */
   recordNow(): VisualFrame {
     return this.live;
+  }
+  /** The live instant's mission time, as the worker's recorder last drew it (T02). */
+  get clock(): number {
+    return this.live.t;
   }
   stats(): RecorderStats {
     return recordingStats(this.frames, this.events.length, this.decimations, this.tracks);
@@ -85,12 +93,16 @@ export class RecordingMirror implements RecordingSource {
       track.record(sample.t, sample.telemetry as RigidTelemetry, sample.force);
     }
     this.live = delta.live;
+    this.shownEvents = delta.shownEvents;
 
     const shell = this.shell;
     for (const e of delta.events) shell.events.push(e);
+    // T02: the worker's command journal, for a lesson's record
+    for (const a of delta.actions) shell.actions.push(a);
     shell.mirrorTelemetry(delta.telemetry.samples, delta.telemetry.reset, delta.telemetry.revision);
     if (delta.plan) Object.assign(shell.plan, delta.plan);
-    applyFrameToState(shell.state, shell.vehicle, shell.vehicle.stages, delta.live);
+    // T02: the simulation's clock and state, which a point-mass flight keeps up to one step ahead of the picture
+    applyFrameToState(shell.state, shell.vehicle, shell.vehicle.stages, delta.state ?? delta.live);
     const x = delta.extras;
     shell.state.currentBurn = x.currentBurn;
     shell.state.burnStartTime = x.burnStartTime;

@@ -17,22 +17,36 @@
  */
 import type { VehicleSpec } from '../types';
 import { vehicleSpecProblems, vehicleSpecText } from '../config/vehicle-spec';
+import { satelliteDesignProblems, satelliteDesignText } from '../config/satellite-design';
+import type { SatelliteDesign } from './satellite-spec';
 
-/** What a design is of. Satellites (D06) join as a kind of their own. */
+/**
+ * What a design is of: a rocket (Phase 3's builders) or a satellite (D06,
+ * Phase 4 map §2.4). A new kind is a new value, not a field that changes
+ * meaning, so the store and the file stay at version 1: an older build
+ * refuses a satellite file as `invalid`, and keeps a satellite record raw
+ * (risk R4, `Entry` below).
+ */
 export interface DesignKinds {
   vehicle: VehicleSpec;
+  satellite: SatelliteDesign;
 }
 export type DesignKind = keyof DesignKinds;
-export const DESIGN_KINDS: readonly DesignKind[] = ['vehicle'];
+export const DESIGN_KINDS: readonly DesignKind[] = ['vehicle', 'satellite'];
 
-/** Each kind's own check, shared with everything else that reads one (a vehicle's is S02's). */
+/** Each kind's own check, shared with everything else that reads one (a vehicle's is S02's, a satellite's D06's). */
 const PROBLEMS: { readonly [K in DesignKind]: (design: unknown) => string | null } = {
   vehicle: (design) => {
     const issues = vehicleSpecProblems(design);
     return issues.length ? vehicleSpecText(issues) : null;
   },
+  satellite: (design) => {
+    const issues = satelliteDesignProblems(design);
+    return issues.length ? satelliteDesignText(issues) : null;
+  },
 };
 
+/** One kept design; `K` a kind, or all of them (then `isDesignOf` narrows it). */
 export interface DesignRecord<K extends DesignKind = DesignKind> {
   /** the store's key for it */
   id: string;
@@ -43,6 +57,11 @@ export interface DesignRecord<K extends DesignKind = DesignKind> {
   created: string;
   updated: string;
   design: DesignKinds[K];
+}
+
+/** A record of any kind as one of kind `kind`, or not: its design is then that kind's (the store checked it on the way in). */
+export function isDesignOf<K extends DesignKind>(record: DesignRecord, kind: K): record is DesignRecord<K> {
+  return record.kind === kind;
 }
 
 export type DesignSummary = Pick<DesignRecord, 'id' | 'kind' | 'name' | 'created' | 'updated'>;
@@ -226,7 +245,12 @@ export function parseDesignDocument(raw: unknown): ParsedDesign {
   const issues: ParsedDesign['issues'] = raw.version > DESIGN_FORMAT_VERSION ? [{ code: 'newerVersion' }] : [];
   const problem = designProblems(raw.kind, raw.name, raw.design);
   if (problem) return { input: null, issues: [...issues, { code: 'invalid', detail: problem }] };
-  return { input: { kind: raw.kind as DesignKind, name: (raw.name as string).trim(), design: clone(raw.design) as VehicleSpec }, issues };
+  return { input: inputOf(raw.kind as DesignKind, (raw.name as string).trim(), clone(raw.design)), issues };
+}
+
+/** A design to keep, of the kind the file names: the check above has held `design` to that kind. */
+function inputOf<K extends DesignKind>(kind: K, name: string, design: unknown): DesignInput<K> {
+  return { kind, name, design: design as DesignKinds[K] };
 }
 
 /** A file's text back to the JSON it holds; null when it is not JSON. */

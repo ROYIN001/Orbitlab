@@ -29,15 +29,16 @@ import type { Activity } from '../physics/propagator/activity';
 import type { ForceModel, Spacecraft } from '../physics/propagator/forces';
 import { meanStart } from './mean-state';
 import type { ElementSet } from './tle';
+import { B_RANGE } from './ballistic-range';
+
+/** B's plausible range (src/orbit/ballistic-range.ts, where the launch side reads it without the propagator). */
+export { B_RANGE };
 
 /** A spacecraft standing for a ballistic coefficient alone: C_D A / m = b. */
 export const craftOfB = (b: number): Omit<Spacecraft, 'cr'> => ({ mass: 1, area: b, cd: 1 });
 
 /** The mean-element forces a re-entry is carried by (as src/orbit/reentry.ts). */
 const forces = (activity: Activity): ForceModel => ({ j2: true, j3j4: false, drag: true, sun: false, moon: false, srp: false, activity });
-
-/** B's plausible range, m²/kg: a dense sphere to a sheet of foil. */
-export const B_RANGE = [1e-4, 1] as const;
 
 /**
  * B from one element set's decay rate, m²/kg; null when the set carries no

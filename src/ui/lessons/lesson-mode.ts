@@ -18,24 +18,51 @@
  * The catalogue and the placement test are a page of their own over the whole
  * window below the top bar (`#/lessons`, `#/lessons/test`), like a mode: the
  * browser's Back leaves it, and opening a lesson goes to the workspace.
+ *
+ * Lesson packs (roadmap T03, map §4.3) are lesson files that ship with the
+ * app (src/lessons/packs.ts): fetched once, when the lessons page or a link
+ * first needs them, and listed below the tracks, a group each, with their
+ * audience, curriculum and codes, and a plain word that a pack not yet
+ * reviewed by the owner is a draft. Their own lessons join the catalogue (a
+ * link, "Next", the instructor's check find them) but not the progress count
+ * nor the placement test's path, which stay the app's lessons and the
+ * teacher's; a built-in lesson a pack reuses opened from the pack goes on to
+ * the pack's next lesson.
  */
 import { t, getLang } from '../../i18n';
+import { en } from '../../i18n/en';
 import type { AppMode } from '../app-mode';
 import type { Simulation } from '../../physics/simulation';
 import type { MissionState } from '../../config/mission-file';
-import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
+import { allLessons, BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, lessonNumber, takeLessons, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
-import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
+import { awaitingAnswers, flightEnded, flightStarted, gradeShown, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
 import { FlightLessons } from '../../lessons/flight-lessons';
 import { draftValue, submittedAnswers, type AnswerDrafts } from '../../lessons/answer-drafts';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
-import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
+import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue, type ParsedLessonFile } from '../../lessons/lesson-file';
+import { SCENARIO_LINK_MAX, SCENARIO_PARAM, readScenarioParam, scenarioLink } from '../../lessons/scenario-link';
+import { loadBundledPacks, packLessons, packOf, packPath, type PackItem, type ResolvedPack } from '../../lessons/packs';
 import {
-  RESULTS_FILE_EXTENSION, clearRevealed, flownMission, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
+  RESULTS_FILE_EXTENSION, clearRevealed, designRecord, flightRecord, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
-import { isCaseLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
+import { appBuildId } from '../../build-info';
+import {
+  isCaseLesson, isDesignLesson, isFlightLesson,
+  type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type CurriculumCode, type CurriculumKind, type DesignCriterion, type DesignKey,
+  type DesignLesson, type Lesson, type LessonGrade,
+} from '../../lessons/types';
+import { gradeDesign } from '../../lessons/design-lesson';
+import { designLessonStart } from '../../design/design-lesson-key';
+import { TEMPLATE_TEXT } from '../../design/satellite-model';
+import type { SatelliteDesign } from '../../design/satellite-spec';
+import type { EcssLevel } from '../../orbit/satellite-air';
+import type { LessonDesk } from '../build/satellite-workspace';
+import { designLessonKey } from './design-key';
+import { designChip, designCriterionName, levelName, lockName, requirementsBox } from './design-strip';
+import { designValueText } from './design-text';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
 import { letterOf } from '../../worksheets/bank-items';
 import type { CaseId, CaseLessonState } from '../../worksheets/case-ids';
@@ -44,6 +71,9 @@ import type { LessonToolsHost } from '../../lessons/mcp-tools';
 import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
 import { PanelLocks } from './locks';
+// T01/T02: small, and on the page that is open anyway (a lazy chunk of them split the dictionaries off the main one)
+import { renderAuthor } from './author-view';
+import { renderCheck } from './check-view';
 import './lessons.css';
 
 export interface LessonHost {
@@ -55,6 +85,11 @@ export interface LessonHost {
   loadMission(state: MissionState): void;
   /** the mission's simulation (a main-thread mirror in worker mode) */
   sim(): Simulation | null;
+  /**
+   * The live instant on screen, s of mission time (`RecordingSource.clock`). A point-mass flight
+   * is flown up to one step ahead of it (T02, src/replay/recorder.ts), so a grade waits for it.
+   */
+  clock(): number;
   /** the setup panel's element */
   panelRoot: HTMLElement;
   /** re-render the setup panel (to lift the locks) */
@@ -65,6 +100,22 @@ export interface LessonHost {
   caseInput?(): Promise<CaseSource>;
   /** the case lesson open now, or none: the Orbit section keeps that case's answers out of sight until it is answered */
   lessonCase?(state: CaseLessonState | null): void;
+  /** T01: the mission on the setup panel, as it stands — what the authoring tab turns into a scenario */
+  mission?(): MissionState;
+  /**
+   * T01, a design lesson: open the Build section's satellite designer
+   * (Explore) or bench (Engineer) on the lesson's desk — its start design,
+   * date, level and locks — the student's own design put aside meanwhile.
+   */
+  openDesign?(desk: LessonDesk, level: 'explore' | 'engineer'): void;
+  /** T01: back to the lesson's design where the student left it */
+  showDesign?(level: 'explore' | 'engineer'): void;
+  /** T01: close the lesson's desk: the student's own design back */
+  closeDesign?(): void;
+  /** T01: the design on the lesson's desk now; null when none is open */
+  designNow?(): SatelliteDesign | null;
+  /** T01: the design on the satellite workspace, its date and its level, whatever is open — what the writer makes a design lesson from */
+  designDesk?(): { design: SatelliteDesign; date: string; level: EcssLevel } | null;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
@@ -79,9 +130,21 @@ const STUDENT_KEY = 'orbitlab.student';
 export const LESSONS_HASH = '#/lessons';
 export const TEST_HASH = '#/lessons/test';
 export const WORKSHEETS_HASH = '#/lessons/worksheets';
-type PageView = 'catalog' | 'test' | 'worksheets';
-const pageViewOf = (hash: string): PageView | null =>
-  hash === LESSONS_HASH ? 'catalog' : hash === TEST_HASH ? 'test' : hash === WORKSHEETS_HASH ? 'worksheets' : null;
+/** T01/T02, instructor mode (owner decision 2026-09-29: on the lessons page): writing a scenario, and checking a class's results. */
+export const AUTHOR_HASH = '#/lessons/author';
+export const CHECK_HASH = '#/lessons/check';
+type PageView = 'catalog' | 'test' | 'worksheets' | 'author' | 'check';
+const PAGE_HASHES: ReadonlyArray<readonly [PageView, string]> = [
+  ['catalog', LESSONS_HASH], ['test', TEST_HASH], ['worksheets', WORKSHEETS_HASH], ['author', AUTHOR_HASH], ['check', CHECK_HASH],
+];
+const pageViewOf = (hash: string): PageView | null => PAGE_HASHES.find(([, h]) => h === hash)?.[0] ?? null;
+/** The event keys a flight emits: the dictionary's `evt.*` (tests/i18n.test.ts's family), for a lesson file's warnings (T01). */
+const KNOWN_EVENTS: ReadonlySet<string> = new Set(Object.keys(en).filter((k) => /^evt\.[a-zA-Z]+$/.test(k)));
+const BUILTIN_IDS: ReadonlySet<string> = new Set([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
+/** T03: what each kind of curriculum code is called, for a chip's title. */
+const CODE_KIND_KEYS: Readonly<Record<CurriculumKind, string>> = {
+  indicator: 'lesson.pack.kind.indicator', outcome: 'lesson.pack.kind.outcome', course: 'lesson.pack.kind.course', competence: 'lesson.pack.kind.competence',
+};
 
 /** A case lesson's own state: its data, frozen when it opened, and the sheet and key built from them. */
 interface CaseState {
@@ -95,6 +158,23 @@ interface CaseState {
   openedAt: Date;
   /** "The data" is open (it is, until the student closes it) */
   dataOpen: boolean;
+}
+
+/**
+ * A design lesson's own state (T01): the key of the design last checked, the
+ * design it was the key of (to say when the design on the desk has moved on),
+ * and a check in progress — the figures, then the lifetime run in its worker.
+ */
+interface DesignState {
+  key: DesignKey | null;
+  /** the design the key is of, as JSON */
+  keyFor: string | null;
+  /** that design itself, for the record */
+  checked: SatelliteDesign | null;
+  checking: { controller: AbortController; progress: number; record: boolean } | null;
+  failed: string | null;
+  /** the student asked to hand in with answers still to type */
+  answersFirst: boolean;
 }
 
 /** The open lesson's state. */
@@ -111,8 +191,15 @@ interface Active {
   grade: LessonGrade | null;
   /** the grade taken when the flight ended: kept, with only the answers checked again */
   frozen: LessonGrade | null;
+  /**
+   * T02: when `frozen` was taken, the instant on screen and how many commands
+   * the flight's journal held — what the record keeps for the re-check.
+   */
+  frozenAt?: { clock: number; actions: number };
   /** a case lesson's (no flight: `sim` and `frozen` stay empty) */
   case?: CaseState;
+  /** a design lesson's (T01: no flight either) */
+  design?: DesignState;
   /** answers shown, then cleared during this attempt: they still count as shown in it, so only a later one passes unaided */
   seen?: RevealedAnswers;
 }
@@ -137,6 +224,14 @@ export class LessonMode implements LessonToolsHost {
   private orbitKey = 'null';
   /** E05: the lesson each flight was flown in, for its worksheet's title */
   private readonly flights = new FlightLessons<Simulation, Lesson>();
+  /** T03: the lesson packs the app ships, fetched once (`loadPacks`) */
+  private packs: ResolvedPack[] = [];
+  private packsState: 'idle' | 'loading' | 'ready' = 'idle';
+  /** the bundled packs that could not be fetched or read */
+  private packsFailed: string[] = [];
+  private packsLoad: Promise<void> | null = null;
+  /** the pack the open lesson was opened from: "Next" goes on in its order */
+  private activePack: string | null = null;
 
   constructor(private readonly host: LessonHost) {
     this.locks = new PanelLocks(host.panelRoot);
@@ -161,8 +256,48 @@ export class LessonMode implements LessonToolsHost {
 
   // ─── the catalogue and progress ──────────────────────────────────────────
 
+  /**
+   * The built-in lessons, a teacher's and, once fetched, the packs' own. A
+   * pack ships with the app: a teacher's lesson under one of its ids gives way
+   * to it, as one under a built-in id does to the built-in lesson.
+   */
   catalogue(): CatalogLesson[] {
-    return allLessons(this.progressData.customLessons);
+    const fromPacks = packLessons(this.packs);
+    const ids = new Set(fromPacks.map((l) => l.id));
+    return allLessons([...this.progressData.customLessons.filter((l) => !ids.has(l.id)), ...fromPacks]);
+  }
+
+  /** The catalogue without the packs: what the progress count and the placement test go by. */
+  private ownCatalogue(): CatalogLesson[] {
+    const ids = this.packLessonIds();
+    return this.catalogue().filter((l) => !ids.has(l.id));
+  }
+
+  /** The packs' own lessons' ids. */
+  private packLessonIds(): Set<string> {
+    return new Set(packLessons(this.packs).map((l) => l.id));
+  }
+
+  /**
+   * T03: fetch the bundled packs, once. They are precached with the app
+   * (public/lessons/packs/), so this works offline once the app has been
+   * loaded; a pack that cannot be had is named on the lessons page.
+   */
+  private loadPacks(): Promise<void> {
+    this.packsLoad ??= (async () => {
+      this.packsState = 'loading';
+      const fetchText = async (path: string): Promise<string> => {
+        const res = await fetch(new URL(path, document.baseURI));
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      };
+      const loaded = await loadBundledPacks(fetchText, KNOWN_EVENTS);
+      this.packs = loaded.packs;
+      this.packsFailed = loaded.failed.map((f) => f.id);
+      this.packsState = 'ready';
+      if (this.pageView === 'catalog') this.renderCatalog();
+    })();
+    return this.packsLoad;
   }
 
   progress(): ProgressData {
@@ -187,7 +322,7 @@ export class LessonMode implements LessonToolsHost {
   }
 
   private written(): CatalogLesson[] {
-    return this.catalogue().filter((l) => !l.comingSoon);
+    return this.ownCatalogue().filter((l) => !l.comingSoon);
   }
 
   private paintButton(): void {
@@ -212,11 +347,17 @@ export class LessonMode implements LessonToolsHost {
 
   // ─── opening and leaving a lesson ────────────────────────────────────────
 
-  startLesson(id: string): { ok: true } | { ok: false; reason: string } {
+  /** Open a lesson; `fromPack`: the pack whose card opened it, whose order "Next" then follows (T03). */
+  startLesson(id: string, fromPack?: string): { ok: true } | { ok: false; reason: string } {
     const lesson = this.catalogue().find((l) => l.id === id);
     if (!lesson) return { ok: false, reason: t('lesson.notFound', { id }) };
     if (lesson.comingSoon) return { ok: false, reason: t('lesson.comingSoon') };
+    // a design lesson's desk is put away before another lesson opens (T01): the student's own design comes back
+    this.closeDesk(lesson);
+    this.activePack = packOf(this.packs, id, fromPack)?.pack.pack.id ?? null;
     if (isCaseLesson(lesson)) return this.startCase(lesson);
+    if (isDesignLesson(lesson)) return this.startDesign(lesson);
+    if (!isFlightLesson(lesson)) return { ok: false, reason: t('lesson.comingSoon') };
     this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.tellOrbit();
     lessonProgress(this.progressData, id);
@@ -232,6 +373,125 @@ export class LessonMode implements LessonToolsHost {
     this.lastStripKey = '';
     this.update();
     return { ok: true };
+  }
+
+  /** Close the open design lesson's desk, unless `next` is that same lesson opened again. */
+  private closeDesk(next?: CatalogLesson): void {
+    const a = this.active;
+    if (!a?.design || (next && next.id === a.lesson.id)) return;
+    a.design.checking?.controller.abort();
+    this.host.closeDesign?.();
+  }
+
+  /**
+   * A design lesson (T01, map §4.1): the satellite designer (Explore) or its
+   * bench (Engineer) on the lesson's desk — the start design, the day and the
+   * air its figures are read in, the parts it locks — and the strip over it
+   * with the task, what the mission asks and the criteria. Nothing is graded
+   * until the student checks the design or hands it in.
+   */
+  private startDesign(lesson: DesignLesson): { ok: true } | { ok: false; reason: string } {
+    if (!this.host.openDesign) return { ok: false, reason: t('lesson.comingSoon') };
+    const template = 'template' in lesson.start ? lesson.start.template : null;
+    const start = designLessonStart(lesson.start, 'lesson', template ? t(TEMPLATE_TEXT[template]?.name ?? template) : '');
+    const state: DesignState = { key: null, keyFor: null, checked: null, checking: null, failed: null, answersFirst: false };
+    this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null, design: state };
+    lessonProgress(this.progressData, lesson.id);
+    this.save();
+    // nothing is flown: a flight lesson's locks are lifted
+    this.locks.set([]);
+    this.host.renderPanel();
+    delete document.body.dataset.lessonReveal;
+    document.body.dataset.lesson = lesson.id;
+    this.strip.hidden = false;
+    this.tellOrbit();
+    this.host.openDesign({ start, date: lesson.designDate, level: lesson.level, locked: lesson.locked }, lesson.mode);
+    this.lastStripKey = '';
+    this.paintStrip();
+    return { ok: true };
+  }
+
+  /**
+   * Work the design on the desk out for the lesson (the figures, then the
+   * lifetime in its worker when a criterion asks for it) and grade it; with
+   * `handIn`, keep it in the progress as well — the design, its figures, the
+   * day and the air (decision 3) — once every answer is typed.
+   */
+  private checkDesign(handIn: boolean): void {
+    const a = this.active;
+    if (!a?.design || !isDesignLesson(a.lesson)) return;
+    const lesson = a.lesson;
+    const design = this.host.designNow?.() ?? null;
+    if (!design) { this.host.showDesign?.(lesson.mode); return; }
+    const state = a.design;
+    state.answersFirst = false;
+    state.checking?.controller.abort();
+    const job = { controller: new AbortController(), progress: 0, record: handIn };
+    state.checking = job;
+    state.failed = null;
+    this.lastStripKey = '';
+    this.paintStrip();
+    const snapshot = structuredClone(design);
+    // let the strip say "working out" before the figures take the main thread for a moment
+    setTimeout(() => {
+      if (state.checking !== job) return;
+      designLessonKey(lesson, snapshot, job.controller.signal, (f) => { job.progress = f; this.lastStripKey = ''; this.paintStrip(); })
+        .then((key) => {
+          if (this.active !== a || state.checking !== job) return;
+          state.checking = null;
+          state.key = key;
+          state.keyFor = JSON.stringify(snapshot);
+          state.checked = snapshot;
+          a.recorded = false;
+          this.gradeDesignNow(a);
+          if (job.record) this.handInDesign(a);
+          this.lastStripKey = '';
+          this.paintStrip();
+        }, (err: unknown) => {
+          if (this.active !== a || state.checking !== job) return;
+          state.checking = null;
+          if (!(err instanceof DOMException && err.name === 'AbortError')) state.failed = t('lesson.design.strip.failed', { reason: err instanceof Error ? err.message : String(err) });
+          this.lastStripKey = '';
+          this.paintStrip();
+        });
+    }, 30);
+  }
+
+  /** The design last checked, graded again with the answers as they stand. */
+  private gradeDesignNow(a: Active): void {
+    if (!a.design?.key || !isDesignLesson(a.lesson)) return;
+    a.grade = gradeDesign(a.lesson, a.design.key, a.answers, this.revealedOf(a.lesson.id));
+  }
+
+  /** Keep the design handed in, with its grade (an attempt is a hand-in). Every answer must be typed first. */
+  private handInDesign(a: Active): void {
+    const d = a.design;
+    if (!d?.key || !d.checked || !a.grade || !isDesignLesson(a.lesson)) return;
+    if (awaitingAnswers(a.lesson, a.grade).length) { d.answersFirst = true; return; }
+    const p = lessonProgress(this.progressData, a.lesson.id);
+    p.attempts++;
+    recordGrade(this.progressData, {
+      lessonId: a.lesson.id,
+      ...designRecord({
+        at: new Date(), grade: a.grade, answers: a.answers, hintsShown: p.hintsShown, design: d.checked,
+        designDate: a.lesson.designDate, level: a.lesson.level, figures: d.key.values, app: appBuildId(),
+      }),
+    });
+    a.recorded = true;
+    this.save();
+  }
+
+  /** T01: the design on the desk changed (the Build section says so): the strip says whether its check still holds. */
+  designChanged(): void {
+    if (this.active?.design) this.paintStrip();
+  }
+
+  /** Whether the design on the desk is no longer the one last checked. */
+  private designStale(a: Active): boolean {
+    const d = a.design;
+    if (!d?.keyFor) return false;
+    const now = this.host.designNow?.() ?? null;
+    return !!now && JSON.stringify(now) !== d.keyFor;
   }
 
   /**
@@ -334,6 +594,24 @@ export class LessonMode implements LessonToolsHost {
       this.gradeCase(false);
       return;
     }
+    if (isDesignLesson(lesson)) {
+      // the lesson's start design again, its answers cleared; the student's own design stays put aside
+      const a = this.active;
+      a.design?.checking?.controller.abort();
+      a.answers = {};
+      a.drafts = {};
+      a.recorded = false;
+      a.grade = null;
+      delete a.seen;
+      a.design = { key: null, keyFor: null, checked: null, checking: null, failed: null, answersFirst: false };
+      const template = 'template' in lesson.start ? lesson.start.template : null;
+      const start = designLessonStart(lesson.start, 'lesson', template ? t(TEMPLATE_TEXT[template]?.name ?? template) : '');
+      this.host.openDesign?.({ start, date: lesson.designDate, level: lesson.level, locked: lesson.locked }, lesson.mode);
+      this.lastStripKey = '';
+      this.paintStrip();
+      return;
+    }
+    if (!isFlightLesson(lesson)) return;
     this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.host.loadMission(missionStateOf(lesson.mission));
     this.locks.set(lesson.locked);
@@ -342,7 +620,9 @@ export class LessonMode implements LessonToolsHost {
   }
 
   exit(): void {
+    this.closeDesk();
     this.active = null;
+    this.activePack = null;
     this.locks.set([]);
     this.host.renderPanel();
     this.strip.hidden = true;
@@ -360,14 +640,34 @@ export class LessonMode implements LessonToolsHost {
     return { lesson: a.lesson, grade: a.grade, hintsShown: lessonProgress(this.progressData, a.lesson.id).hintsShown, awaiting: a.grade ? awaitingAnswers(a.lesson, a.grade) : [] };
   }
 
-  /** `?lesson=<id>` opens a lesson (a link from a teacher, or the strip's own link). */
+  /**
+   * `?lesson=<id>` opens a lesson (a link from a teacher, or the strip's own
+   * link); `?scenario=z…` (T01) brings a teacher's whole lesson file and opens
+   * its lesson.
+   */
   openFromLink(): void {
     const url = new URL(location.href);
+    const scenario = url.searchParams.get(SCENARIO_PARAM);
+    if (scenario !== null) {
+      url.searchParams.delete(SCENARIO_PARAM);
+      history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+      void this.openScenario(scenario);
+      return;
+    }
     const id = url.searchParams.get('lesson');
     if (id === null) return;
     url.searchParams.delete('lesson');
     history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
-    const started = this.startLesson(id);
+    void this.openLinkedLesson(id);
+  }
+
+  /** `?lesson=<id>`: a pack's lesson is in the catalogue once the packs are fetched (T03). */
+  private async openLinkedLesson(id: string): Promise<void> {
+    let started = this.startLesson(id);
+    if (!started.ok && this.packsState !== 'ready') {
+      await this.loadPacks();
+      started = this.startLesson(id);
+    }
     if (!started.ok) { this.notice = { level: 'error', text: started.reason, details: [] }; this.openCatalog(); }
   }
 
@@ -379,6 +679,9 @@ export class LessonMode implements LessonToolsHost {
     if (!a) return;
     // a case lesson has no flight: one flying on in the Launch section is not its business (nor are its answers cleared by it)
     if (isCaseLesson(a.lesson)) return;
+    // nor has a design lesson: its strip says whether the design on the desk is still the one checked
+    if (isDesignLesson(a.lesson)) { this.paintStrip(); return; }
+    if (!isFlightLesson(a.lesson)) return;
     const lesson = a.lesson;
     const sim = this.host.sim();
     if (sim !== a.sim) {
@@ -390,6 +693,7 @@ export class LessonMode implements LessonToolsHost {
       a.drafts = {};
       a.frozen = null;
       delete a.seen;
+      a.frozenAt = undefined;
     }
     if (!sim) { a.grade = null; this.paintStrip(); return; }
     const started = flightStarted(sim);
@@ -402,8 +706,14 @@ export class LessonMode implements LessonToolsHost {
     const revealed = this.revealedOf(lesson.id);
     if (a.frozen) a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed);
     else {
-      a.grade = gradeLesson(lesson, sim, a.answers);
-      if (started && a.grade.final) { a.frozen = a.grade; a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed); }
+      // T02: final only once the picture has reached the end — the simulation can be a step past it
+      const clock = this.host.clock();
+      a.grade = gradeShown(lesson, sim, clock, a.answers);
+      if (started && a.grade.final) {
+        a.frozen = a.grade;
+        a.frozenAt = { clock, actions: sim.actions.length };
+        a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed);
+      }
     }
     if (started && a.grade.final && !a.recorded && awaitingAnswers(lesson, a.grade).length === 0) this.record(a);
     this.paintStrip();
@@ -427,11 +737,13 @@ export class LessonMode implements LessonToolsHost {
   private record(a: Active): void {
     if (!a.grade || !a.sim) return;
     a.recorded = true;
-    const revealed = a.grade.criteria.filter((c) => c.revealed).map((c) => c.id);
     const p = lessonProgress(this.progressData, a.lesson.id);
+    // T02: the grading time, the instant on screen and the commands up to the grade, for the instructor's re-check
+    const at = a.frozenAt ?? { clock: this.host.clock(), actions: a.sim.actions.length };
     recordGrade(this.progressData, {
-      lessonId: a.lesson.id, at: new Date().toISOString(), verdict: a.grade.verdict, criteria: a.grade.criteria,
-      answers: { ...a.answers }, hintsShown: p.hintsShown, mission: flownMission(a.sim.cfg), ...(revealed.length ? { revealed } : {}),
+      lessonId: a.lesson.id,
+      ...flightRecord({ at: new Date(), grade: a.grade, answers: a.answers, hintsShown: p.hintsShown, cfg: a.sim.cfg,
+        clock: at.clock, actions: a.sim.actions.slice(0, at.actions), app: appBuildId() }),
     });
     this.save();
   }
@@ -470,6 +782,8 @@ export class LessonMode implements LessonToolsHost {
       this.gradeCase(true);
       return;
     }
+    // a design lesson's answers are checked with the design (its attempts are its hand-ins)
+    if (isDesignLesson(a.lesson)) { this.checkDesign(false); return; }
     this.update();
   }
 
@@ -493,6 +807,7 @@ export class LessonMode implements LessonToolsHost {
     this.save();
     this.lastStripKey = '';
     if (isCaseLesson(a.lesson)) this.gradeCase(true);
+    else if (isDesignLesson(a.lesson)) { this.gradeDesignNow(a); this.paintStrip(); }
     else this.update();
   }
 
@@ -509,6 +824,7 @@ export class LessonMode implements LessonToolsHost {
     this.save();
     this.lastStripKey = '';
     if (isCaseLesson(a.lesson)) this.gradeCase(false);
+    else if (isDesignLesson(a.lesson)) { this.gradeDesignNow(a); this.paintStrip(); }
     else this.update();
     this.flash(t('lesson.strip.revealedCleared'));
   }
@@ -577,10 +893,16 @@ export class LessonMode implements LessonToolsHost {
   /** The strip's head: the lesson's number and track, its title and task, and the hints shown. */
   private stripHead(lesson: CatalogLesson, hints: number): HTMLElement {
     const track = TRACKS.find((x) => x.id === lesson.track);
+    // T03: a pack's own lesson is listed under the pack; a reused one keeps its track, and shows the pack's codes
+    const inPack = packOf(this.packs, lesson.id, this.activePack);
+    const item = inPack?.pack.items[inPack.index];
+    const group = item && !item.reference ? localText(inPack!.pack.pack.title) : track ? localText(track.title) : t('lesson.catalog.custom');
     this.strip.setAttribute('aria-label', `${t('lesson.button')} ${lessonNumber(lesson)}`);
     const head = el('div', 'lesson-strip-head');
-    head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: track ? localText(track.title) : '' })),
-      el('h2', undefined, localText(lesson.title)), el('p', 'lesson-brief', localText(lesson.brief)));
+    head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: group })),
+      el('h2', undefined, localText(lesson.title)));
+    if (item?.curriculum.length) head.append(this.codeChips(item.curriculum));
+    head.append(el('p', 'lesson-brief', localText(lesson.brief)));
     for (let i = 0; i < hints; i++) head.append(el('p', 'lesson-hint', `💡 ${localText(lesson.hints[i])}`));
     return head;
   }
@@ -602,7 +924,10 @@ export class LessonMode implements LessonToolsHost {
     const a = this.active;
     if (!a) return;
     this.strip.classList.toggle('case', isCaseLesson(a.lesson));
+    this.strip.classList.toggle('design', isDesignLesson(a.lesson));
     if (isCaseLesson(a.lesson)) { this.paintCase(a, a.lesson); return; }
+    if (isDesignLesson(a.lesson)) { this.paintDesign(a, a.lesson); return; }
+    if (!isFlightLesson(a.lesson)) return;
     const lang = getLang();
     const g = a.grade;
     const flown = !!a.sim && flightStarted(a.sim);
@@ -684,7 +1009,7 @@ export class LessonMode implements LessonToolsHost {
     if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
     if (flown && g?.final && (g.verdict === 'pass' || g.verdict === 'passedWithHelp')) {
       const next = this.nextLesson(lesson);
-      if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
+      if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id, this.activePack ?? undefined), 'lesson-primary');
     }
     button(t('lesson.strip.catalog'), () => this.openCatalog());
     if (flown && g?.final) button(t('ws.stripButton'), () => this.navigate(WORKSHEETS_HASH));
@@ -732,7 +1057,7 @@ export class LessonMode implements LessonToolsHost {
     if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
     if (g?.verdict === 'pass' || g?.verdict === 'passedWithHelp') {
       const next = this.nextLesson(lesson);
-      if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
+      if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id, this.activePack ?? undefined), 'lesson-primary');
     }
     button(t('lesson.strip.catalog'), () => this.openCatalog());
     button(t('lesson.strip.caseTool'), () => this.host.openCase?.(lesson.case, lesson.mode));
@@ -740,6 +1065,129 @@ export class LessonMode implements LessonToolsHost {
     button(t('lesson.strip.link'), () => void this.copyLink(lesson));
     button(t('lesson.strip.exit'), () => this.exit());
     this.strip.replaceChildren(head, status, actions);
+  }
+
+  /**
+   * A design lesson's strip (T01, map §4.1): the task and the hints shown,
+   * what the mission asks, the day and the air the figures are read in, each
+   * criterion with its bound and — once the design is checked — its figure
+   * and mark, the numbers to work out and type, and "Check the design" and
+   * "Hand in". A check of a design since changed on the desk is marked out
+   * of date; nothing is kept until the design is handed in.
+   */
+  private paintDesign(a: Active, lesson: DesignLesson): void {
+    const d = a.design!;
+    const g = a.grade;
+    const stale = this.designStale(a);
+    const shown = !!g && !stale && !d.checking;
+    const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
+    const key = JSON.stringify([getLang(), lesson.id, stale, d.keyFor !== null, d.checking ? [d.checking.record, Math.round(d.checking.progress * 100)] : null,
+      d.failed, d.answersFirst, g?.verdict, g?.lockBroken, g?.criteria.map((x) => [x.state, x.value, x.expected, !!x.revealed]), hints, a.answers, a.recorded,
+      this.saved, this.hasRevealed(lesson.id)]);
+    if (key === this.lastStripKey) return;
+    const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
+    if (typing && this.lastStripKey) return;
+    this.lastStripKey = key;
+    const head = this.stripHead(lesson, hints);
+    const crits = el('div', 'lesson-crits');
+    for (const c of lesson.criteria) if (c.kind === 'design') crits.append(designChip(c, g?.criteria.find((x) => x.id === c.id), d.key, stale || !!d.checking));
+
+    const status = el('div', 'lesson-status');
+    if (lesson.requirements) status.append(requirementsBox(lesson.requirements));
+    status.append(el('p', 'lesson-note small', t('lesson.design.strip.fixed', { date: lesson.designDate, level: levelName(lesson.level) })));
+    if (shown && g.lockBroken.length) status.append(el('p', 'lesson-note fail', t('lesson.design.strip.lockBroken', { fields: g.lockBroken.map(lockName).join(', ') })));
+    if (shown && d.key?.refused) status.append(el('p', 'lesson-note fail', t('lesson.design.strip.refused')));
+    if (d.checking) {
+      const line = el('p', 'lesson-note');
+      line.setAttribute('role', 'status');
+      line.textContent = d.checking.progress > 0 ? t('lesson.design.strip.lifetime', { p: Math.round(d.checking.progress * 100) }) : t('lesson.design.strip.checking');
+      status.append(line);
+    } else if (d.failed) status.append(el('p', 'lesson-note fail', d.failed));
+    else if (!d.keyFor) status.append(el('p', 'lesson-note', t('lesson.design.strip.notChecked')));
+    else if (stale) status.append(el('p', 'lesson-note warn', t('lesson.design.strip.stale')));
+
+    // the numbers to work out, and the two buttons, in one form (Enter checks)
+    const form = el('form', 'lesson-answers lesson-design-answers');
+    const inputs = new Map<string, () => string>();
+    const answerCrits = lesson.criteria.filter((c): c is Extract<DesignCriterion, { kind: 'answer' }> => c.kind === 'answer');
+    if (answerCrits.length) form.append(el('p', 'lesson-note', t('lesson.design.strip.answers')));
+    for (const c of answerCrits) {
+      const cg = shown ? g.criteria.find((x) => x.id === c.id) : undefined;
+      const row = el('label', `lesson-answer ${cg?.state ?? 'pending'}`);
+      const input = el('input');
+      input.type = 'text';
+      input.inputMode = 'decimal';
+      input.value = draftValue(a.drafts, a.answers, c.id);
+      input.addEventListener('input', () => { a.drafts[c.id] = input.value; });
+      input.setAttribute('aria-label', designCriterionName(c));
+      inputs.set(c.id, () => input.value);
+      const mark = cg?.state === 'pass' ? '✓' : cg?.state === 'fail' ? '✗' : '';
+      const verdict = cg?.revealed ? `${mark} ${t('lesson.design.strip.expected', { value: designValueText(c.measure, cg.expected ?? null) })}`.trim() : mark;
+      row.append(el('span', undefined, designCriterionName(c)), input, el('span', 'lesson-answer-mark', verdict));
+      form.append(row);
+    }
+    const busy = !!d.checking;
+    const check = el('button', undefined, t('lesson.design.strip.check'));
+    check.type = 'submit';
+    check.disabled = busy;
+    const handIn = el('button', 'lesson-primary', t('lesson.design.strip.handIn'));
+    handIn.type = 'button';
+    handIn.disabled = busy;
+    handIn.addEventListener('click', () => { this.readAnswers(inputs); this.checkDesign(true); });
+    form.append(check, handIn);
+    const hidden = shown ? answerCrits.filter((c) => {
+      const cg = g.criteria.find((x) => x.id === c.id);
+      return cg && cg.state !== 'pass' && !cg.revealed && typeof cg.expected === 'number' && Number.isFinite(cg.expected);
+    }) : [];
+    if (hidden.length) {
+      const reveal = el('button', undefined, t('lesson.strip.reveal'));
+      reveal.type = 'button';
+      reveal.title = t('lesson.strip.revealTitle');
+      reveal.addEventListener('click', () => this.revealAnswers());
+      form.append(reveal);
+    }
+    form.addEventListener('submit', (e) => { e.preventDefault(); this.submitAnswers(inputs); });
+    status.append(form);
+
+    if (shown && !stale) {
+      if (g.verdict === 'pass' || g.verdict === 'passedWithHelp') {
+        status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
+        if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+      } else if (g.verdict === 'fail') {
+        const onlyAnswers = !g.lockBroken.length && g.criteria.every((cg) => cg.state !== 'fail' || lesson.criteria.find((c) => c.id === cg.id)?.kind === 'answer');
+        status.append(el('p', 'lesson-note fail', t(g.criteria.some((cg) => cg.revealed) ? 'lesson.strip.revealed' : onlyAnswers ? 'lesson.strip.answersWrong' : 'lesson.design.strip.fail')));
+      }
+    }
+    if (d.answersFirst) status.append(el('p', 'lesson-note warn', t('lesson.design.strip.answersFirst')));
+    if (a.recorded && !stale) status.append(el('p', 'lesson-note ok', t('lesson.design.strip.handedIn')));
+    const saveNote = a.recorded || this.saved === false ? this.saveNote('p') : null;
+    if (saveNote) status.append(saveNote);
+
+    const { actions, button } = this.actionBar();
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    hintBtn.disabled = hints >= lesson.hints.length;
+    button(t('lesson.design.strip.open'), () => this.host.showDesign?.(lesson.mode));
+    button(t('lesson.strip.restart'), () => this.restart());
+    if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
+    if (shown && !stale && a.recorded && (g.verdict === 'pass' || g.verdict === 'passedWithHelp')) {
+      const next = this.nextLesson(lesson);
+      if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
+    }
+    button(t('lesson.strip.catalog'), () => this.openCatalog());
+    button(t('lesson.strip.link'), () => void this.copyLink(lesson));
+    button(t('lesson.strip.exit'), () => this.exit());
+    this.strip.replaceChildren(head, crits, status, actions);
+  }
+
+  /** The answers as typed into the strip's boxes (a design lesson's, before a hand-in). */
+  private readAnswers(inputs: Map<string, () => string>): void {
+    const a = this.active;
+    if (!a) return;
+    for (const [id, read] of inputs) a.drafts[id] = read();
+    a.answers = submittedAnswers(a.drafts);
+    a.recorded = false;
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && this.strip.contains(focused)) focused.blur();
   }
 
   /** "The data": the case sheet's table and figure, as the student works from them. */
@@ -842,6 +1290,9 @@ export class LessonMode implements LessonToolsHost {
   }
 
   private nextLesson(lesson: CatalogLesson): CatalogLesson | null {
+    // T03: in a pack, its own order; at its end, nothing
+    const inPack = packOf(this.packs, lesson.id, this.activePack);
+    if (inPack) return inPack.pack.items.slice(inPack.index + 1).find((i) => !i.lesson.comingSoon)?.lesson ?? null;
     const written = this.written();
     const i = written.findIndex((l) => l.id === lesson.id);
     return i >= 0 && i + 1 < written.length ? written[i + 1] : null;
@@ -851,7 +1302,15 @@ export class LessonMode implements LessonToolsHost {
     const url = new URL(location.href);
     url.search = '';
     url.searchParams.set('lesson', lesson.id);
-    try { await navigator.clipboard.writeText(url.toString()); this.flash(t('lesson.strip.linkCopied')); } catch { this.flash(url.toString()); }
+    let text = url.toString();
+    // T01: a teacher's own lesson is not in another browser's catalogue: its link carries the lesson itself
+    // (T03: a pack's lesson is, since the packs ship with the app)
+    if (!BUILTIN_IDS.has(lesson.id) && !this.packLessonIds().has(lesson.id)) {
+      const link = await scenarioLink(location.href, [lesson]);
+      if (!link.fits) { this.flash(t('lesson.author.linkTooLong', { length: link.length, max: SCENARIO_LINK_MAX })); return; }
+      text = link.url;
+    }
+    try { await navigator.clipboard.writeText(text); this.flash(t('lesson.strip.linkCopied')); } catch { this.flash(text); }
   }
 
   private flash(text: string): void {
@@ -908,6 +1367,8 @@ export class LessonMode implements LessonToolsHost {
       return;
     }
     document.body.dataset.lessonsPage = view;
+    // T03: the catalogue lists the packs, and the check knows their lessons
+    void this.loadPacks();
     this.button.setAttribute('aria-current', 'page');
     nav.forEach((a) => a.removeAttribute('aria-current'));
     this.page.hidden = false;
@@ -915,6 +1376,8 @@ export class LessonMode implements LessonToolsHost {
     this.paintPageBar();
     if (view === 'catalog') this.renderCatalog();
     else if (view === 'test') void this.showAssessment();
+    else if (view === 'author') this.showAuthor();
+    else if (view === 'check') this.showCheck();
     else void this.showWorksheets();
     this.page.scrollTo(0, 0);
   }
@@ -932,7 +1395,8 @@ export class LessonMode implements LessonToolsHost {
     back.addEventListener('click', () => this.closePage());
     const tabs = el('nav', 'lessons-page-tabs');
     tabs.setAttribute('aria-label', t('lesson.button'));
-    for (const [view, key, hash] of [['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH], ['worksheets', 'ws.tab', WORKSHEETS_HASH]] as const) {
+    for (const [view, key, hash] of [['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH], ['worksheets', 'ws.tab', WORKSHEETS_HASH],
+      ['author', 'lesson.author.tab', AUTHOR_HASH], ['check', 'lesson.check.tab', CHECK_HASH]] as const) {
       const a = el('a', undefined, t(key));
       a.href = hash;
       if (this.pageView === view) a.setAttribute('aria-current', 'page');
@@ -942,6 +1406,9 @@ export class LessonMode implements LessonToolsHost {
     title.append(el('span', 'lesson-glyph', '✎'), document.createTextNode(` ${t('lesson.page.title')}`));
     this.page.setAttribute('aria-label', t('lesson.page.title'));
     this.pageBar.replaceChildren(title, tabs, back);
+    // on a phone the tabs are one row that scrolls sideways (lessons.css): the open one is brought into it
+    const current = tabs.querySelector<HTMLElement>('a[aria-current="page"]');
+    if (current && tabs.scrollWidth > tabs.clientWidth) tabs.scrollLeft = Math.max(0, current.offsetLeft - tabs.offsetLeft - 12);
     const saveNote = this.pageView === 'test' ? this.saveNote('span') : null;
     if (saveNote) { saveNote.setAttribute('role', 'status'); this.pageBar.append(saveNote); }
   }
@@ -956,7 +1423,7 @@ export class LessonMode implements LessonToolsHost {
 
   private loadAssessment(): Promise<typeof import('./assessment-view')> {
     this.assessmentModule ??= import('./assessment-view').then((m) => {
-      this.assessmentSummary = () => m.latestResult(this.progressData, this.catalogue());
+      this.assessmentSummary = () => m.latestResult(this.progressData, this.ownCatalogue());
       return m;
     });
     return this.assessmentModule;
@@ -1024,9 +1491,9 @@ export class LessonMode implements LessonToolsHost {
     body.append(assess);
     if (!summary && !this.assessmentSummary) void this.loadAssessment().then(() => { if (this.pageView === 'catalog' && this.assessmentResult()) this.renderCatalog(); });
 
-    // the tracks
+    // the tracks (a pack's own lessons are listed under the pack, below)
     const grid = el('div', 'lesson-tracks');
-    const lessons = this.catalogue();
+    const lessons = this.ownCatalogue();
     const advice = summary?.result.advice ?? {};
     const tracks = [...TRACKS, ...[...new Set(lessons.map((l) => l.track))].filter((id) => !TRACKS.some((x) => x.id === id))
       .map((id) => ({ id, title: { en: t('lesson.catalog.custom') }, note: { en: '' } }))];
@@ -1035,35 +1502,96 @@ export class LessonMode implements LessonToolsHost {
       if (!own.length) continue;
       const col = el('section', 'lesson-track');
       col.append(el('h3', undefined, `${track.id} · ${localText(track.title)}`), el('p', 'lesson-track-note', localText(track.note)));
-      for (const l of own) {
-        const p = this.progressData.lessons[l.id];
-        const card = el('button', 'lesson-card-item');
-        card.type = 'button';
-        card.disabled = !!l.comingSoon;
-        const helped = !p?.passed && !!p?.passedWithHelp;
-        const status = l.comingSoon ? '○' : p?.passed ? '✓' : helped ? '◐' : p?.attempts ? '●' : '○';
-        card.classList.toggle('passed', !!p?.passed);
-        card.classList.toggle('helped', helped);
-        card.classList.toggle('active', this.active?.lesson.id === l.id);
-        card.append(el('span', 'lesson-card-status', status));
-        const text = el('span', 'lesson-card-text');
-        text.append(el('b', undefined, `${lessonNumber(l)} ${localText(l.title)}`), el('small', undefined, localText(l.brief)));
-        const tags = el('span', 'lesson-card-tags');
-        for (const tag of l.tags ?? []) tags.append(el('span', 'lesson-tag', tag));
-        if (l.comingSoon) tags.append(el('span', 'lesson-tag soon', t('lesson.comingSoon')));
-        if (helped) tags.append(el('span', 'lesson-tag helped', t('lesson.catalog.passedWithHelp')));
-        const a = advice[l.id];
-        if (summary?.result.start === l.id) tags.append(el('span', 'lesson-tag start', t('lesson.advice.start')));
-        else if (a) tags.append(el('span', `lesson-tag ${a}`, t(`lesson.advice.${a}`)));
-        text.append(tags);
-        card.append(text);
-        card.addEventListener('click', () => this.startLesson(l.id));
-        col.append(card);
-      }
+      for (const l of own) col.append(this.lessonCard(l, { advice: advice[l.id], start: summary?.result.start === l.id }));
       grid.append(col);
     }
-    body.append(grid);
+    body.append(grid, this.packsSection());
     this.content.replaceChildren(body);
+  }
+
+  /** A lesson's card: its state, number and title, task and tags; in a pack (T03), its codes and the pack's note. */
+  private lessonCard(l: CatalogLesson, opts: { advice?: string; start?: boolean; pack?: { id: string; item: PackItem } }): HTMLElement {
+    const p = this.progressData.lessons[l.id];
+    const card = el('button', 'lesson-card-item');
+    card.type = 'button';
+    card.disabled = !!l.comingSoon;
+    const helped = !p?.passed && !!p?.passedWithHelp;
+    const status = l.comingSoon ? '○' : p?.passed ? '✓' : helped ? '◐' : p?.attempts ? '●' : '○';
+    card.classList.toggle('passed', !!p?.passed);
+    card.classList.toggle('helped', helped);
+    card.classList.toggle('active', this.active?.lesson.id === l.id);
+    card.append(el('span', 'lesson-card-status', status));
+    const text = el('span', 'lesson-card-text');
+    text.append(el('b', undefined, `${lessonNumber(l)} ${localText(l.title)}`));
+    const item = opts.pack?.item;
+    if (item?.curriculum.length) text.append(this.codeChips(item.curriculum));
+    text.append(el('small', undefined, localText(l.brief)));
+    if (item?.note) text.append(el('span', 'lesson-card-note', localText(item.note)));
+    const tags = el('span', 'lesson-card-tags');
+    if (item?.reference) {
+      const track = TRACKS.find((x) => x.id === l.track);
+      if (track) tags.append(el('span', 'lesson-tag builtin', t('lesson.pack.builtin', { track: localText(track.title) })));
+    }
+    for (const tag of l.tags ?? []) tags.append(el('span', 'lesson-tag', tag));
+    if (l.comingSoon) tags.append(el('span', 'lesson-tag soon', t('lesson.comingSoon')));
+    if (helped) tags.append(el('span', 'lesson-tag helped', t('lesson.catalog.passedWithHelp')));
+    if (opts.start) tags.append(el('span', 'lesson-tag start', t('lesson.advice.start')));
+    else if (opts.advice) tags.append(el('span', `lesson-tag ${opts.advice}`, t(`lesson.advice.${opts.advice}`)));
+    text.append(tags);
+    card.append(text);
+    card.addEventListener('click', () => this.startLesson(l.id, opts.pack?.id));
+    return card;
+  }
+
+  /** T03: a lesson's curriculum codes as chips, each titled with its kind. */
+  private codeChips(codes: readonly CurriculumCode[]): HTMLElement {
+    const box = el('span', 'lesson-codes');
+    box.setAttribute('role', 'list');
+    box.setAttribute('aria-label', t('lesson.pack.codes'));
+    for (const c of codes) {
+      const chip = el('span', `lesson-code ${c.kind}`, c.code);
+      chip.setAttribute('role', 'listitem');
+      chip.title = t(CODE_KIND_KEYS[c.kind]);
+      chip.setAttribute('aria-label', `${t(CODE_KIND_KEYS[c.kind])} ${c.code}`);
+      box.append(chip);
+    }
+    return box;
+  }
+
+  /**
+   * T03: the lesson packs, a group each — its title, audience and curriculum,
+   * a draft's notice, its description and file, and its lessons with their
+   * codes — or why they are not here yet.
+   */
+  private packsSection(): HTMLElement {
+    const section = el('section', 'lesson-packs');
+    section.append(el('h3', 'lesson-packs-title', t('lesson.pack.title')), el('p', 'lesson-track-note', t('lesson.pack.lead')));
+    if (this.packsState !== 'ready') section.append(el('p', 'lesson-note', t('lesson.pack.loading')));
+    if (this.packsFailed.length) section.append(el('p', 'lesson-note fail', t('lesson.pack.failed', { packs: this.packsFailed.join(', ') })));
+    for (const p of this.packs) {
+      const group = el('section', 'lesson-pack');
+      group.dataset.pack = p.pack.id;
+      group.append(el('h4', undefined, localText(p.pack.title)));
+      const meta = el('p', 'lesson-pack-meta');
+      meta.append(el('span', undefined, t('lesson.pack.audience', { audience: localText(p.pack.audience) })),
+        el('span', undefined, t('lesson.pack.framework', { framework: localText(p.pack.framework) })));
+      group.append(meta);
+      // the roadmap's validation of a pack is the owner's review: until then it says so
+      if (!p.pack.reviewed) group.append(el('p', 'lesson-pack-draft', t('lesson.pack.draft')));
+      const about = el('details', 'lesson-pack-about');
+      about.append(el('summary', undefined, t('lesson.pack.about')));
+      if (p.pack.description) about.append(el('p', undefined, localText(p.pack.description)));
+      const file = el('a', undefined, t('lesson.pack.file'));
+      file.href = packPath(p.pack.id);
+      file.download = packPath(p.pack.id).split('/').pop()!;
+      about.append(file);
+      group.append(about);
+      const items = el('div', 'lesson-pack-items');
+      for (const item of p.items) items.append(this.lessonCard(item.lesson, { pack: { id: p.pack.id, item } }));
+      group.append(items);
+      section.append(group);
+    }
+    return section;
   }
 
   private openAssessment(): void {
@@ -1087,6 +1615,24 @@ export class LessonMode implements LessonToolsHost {
     }, this.content);
   }
 
+  /** T01: the authoring tab, on the setup panel's mission as it stands. */
+  private showAuthor(): void {
+    this.assessmentView = renderAuthor({
+      mission: () => this.host.mission?.() ?? null,
+      knownEvents: () => KNOWN_EVENTS,
+      reservedIds: () => this.packLessonIds(),
+      tryLesson: (lesson) => this.tryLesson(lesson),
+      page: () => location.href,
+      // T01: a design lesson is written from the design on the satellite bench, its date and its level
+      designDesk: () => this.host.designDesk?.() ?? null,
+    }, this.content);
+  }
+
+  /** T02: the checking tab, with the teacher's lessons this browser's catalogue already has. */
+  private showCheck(): void {
+    this.assessmentView = renderCheck({ customLessons: () => [...this.progressData.customLessons, ...packLessons(this.packs)] }, this.content);
+  }
+
   /** The open case lesson's sheet, from its frozen data, in the language on screen; the key only once it gives nothing away. */
   private caseSheet(): { lesson: CaseLesson; sheet: Worksheet | null; keyOpen: boolean } | null {
     const a = this.active;
@@ -1101,7 +1647,7 @@ export class LessonMode implements LessonToolsHost {
     this.assessmentView = m.renderAssessment({
       progress: () => this.progressData,
       save: () => this.save(),
-      lessons: () => this.catalogue(),
+      lessons: () => this.ownCatalogue(),
       goToLesson: (id) => { this.startLesson(id); },
       exportResults: () => void this.exportResults(),
       back: () => this.openCatalog(),
@@ -1112,22 +1658,59 @@ export class LessonMode implements LessonToolsHost {
     let raw: unknown = null;
     try { raw = JSON.parse(await file.text()); } catch { /* reported below */ }
     const m = await this.loadAssessment();
-    const parsed = parseLessonFile(raw, m.datasetIds());
-    if (!parsed.usable) {
-      this.notice = { level: 'error', text: t('lesson.file.unusable'), details: [] };
-    } else {
-      const keep = <T extends { id: string }>(old: T[], added: T[]): T[] => [...old.filter((x) => !added.some((y) => y.id === x.id)), ...added];
-      this.progressData.customLessons = keep(this.progressData.customLessons, parsed.lessons);
-      this.progressData.customQuestions = keep(this.progressData.customQuestions, parsed.questions);
-      this.save();
-      const errors = parsed.issues.filter((i) => i.level === 'error');
-      this.notice = {
-        level: errors.length ? 'warn' : 'ok',
-        text: t('lesson.file.loaded', { lessons: parsed.lessons.length, questions: parsed.questions.length }),
-        details: errors.length ? [t('lesson.file.issues'), ...errors.map(issueText)] : [],
-      };
-    }
+    this.addFromFile(parseLessonFile(raw, m.datasetIds(), KNOWN_EVENTS), 'lesson.file.unusable');
     this.renderCatalog();
+  }
+
+  /** A lesson file's lessons and questions into this browser's catalogue, and what was found in it said. */
+  private addFromFile(parsed: ParsedLessonFile, unusable: string): boolean {
+    if (!parsed.usable) {
+      this.notice = { level: 'error', text: t(unusable), details: [] };
+      return false;
+    }
+    const keep = <T extends { id: string }>(old: T[], added: T[]): T[] => [...old.filter((x) => !added.some((y) => y.id === x.id)), ...added];
+    // I2: a lesson under a built-in lesson's id is not taken, and is named (it used to be dropped without a word);
+    // one already kept is replaced where it stands, so its number holds
+    const { lessons, builtin } = takeLessons(this.progressData.customLessons, parsed.lessons);
+    this.progressData.customLessons = lessons;
+    this.progressData.customQuestions = keep(this.progressData.customQuestions, parsed.questions);
+    this.save();
+    const errors = parsed.issues.filter((i) => i.level === 'error');
+    // T01: an event no flight emits reads, and then never happens: said, though the lesson is kept
+    const events = parsed.issues.filter((i) => i.code === 'event');
+    this.notice = {
+      level: errors.length || events.length || builtin.length ? 'warn' : 'ok',
+      text: t('lesson.file.loaded', { lessons: parsed.lessons.length - builtin.length, questions: parsed.questions.length }),
+      details: [...builtin.map((l) => t('lesson.author.notTaken', { title: localText(l.title), id: l.id })),
+        ...(errors.length ? [t('lesson.file.issues'), ...errors.map(issueText)] : []),
+        ...events.map((i) => t('lesson.author.issue.event', { where: i.where, key: i.detail ?? '' }))],
+    };
+    return true;
+  }
+
+  /** T01: a scenario link's lesson file, added like a file, and its lesson opened (the catalogue, when it holds several or needs a word). */
+  private async openScenario(param: string): Promise<void> {
+    let raw: unknown = null;
+    try { raw = await readScenarioParam(param); } catch { /* reported as unusable */ }
+    const m = await this.loadAssessment();
+    const parsed = parseLessonFile(raw, m.datasetIds(), KNOWN_EVENTS);
+    if (!this.addFromFile(parsed, 'lesson.author.linkUnusable')) { this.openCatalog(); return; }
+    const written = parsed.lessons.filter((l) => !l.comingSoon);
+    if (written.length === 1 && this.notice?.level === 'ok') {
+      this.notice = null;
+      const started = this.startLesson(written[0].id);
+      if (started.ok) return;
+      this.notice = { level: 'error', text: started.reason, details: [] };
+    }
+    this.openCatalog();
+  }
+
+  /** T01: a lesson written on the authoring tab, into the catalogue and opened, as its students will have it. */
+  private tryLesson(lesson: CatalogLesson): void {
+    this.addFromFile({ lessons: [lesson], questions: [], issues: [], usable: true }, 'lesson.file.unusable');
+    this.notice = null;
+    const started = this.startLesson(lesson.id);
+    if (!started.ok) { this.notice = { level: 'error', text: started.reason, details: [] }; this.openCatalog(); }
   }
 
   private async exportResults(): Promise<void> {

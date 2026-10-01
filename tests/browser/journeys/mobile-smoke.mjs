@@ -1,11 +1,13 @@
 /**
- * A phone (390×844, touch): the Thai placement test and the Russian Orbit
- * engineer page fit the screen — the document never scrolls sideways (a strip
- * of tabs that scrolls inside itself is fine) — and the section switch, on a
- * phone one button that opens a table of sections × levels
- * (src/ui/section-nav.ts), has an accessible name in the page's language, and
- * once opened every one of its links is on the screen with a name of its own
- * in that language (audit 2026-09-27, "ภาษาและมือถือ"; owner, 2026-10-01).
+ * A phone (390×844, touch): the Thai placement test, the Russian Orbit
+ * engineer page, and the instructor's tabs (the Thai results check, the
+ * Russian scenario writer; T01/T02) fit the screen — the document never
+ * scrolls sideways (a strip of tabs that scrolls inside itself is fine) — and
+ * the section switch, on a phone one button that opens a table of sections ×
+ * levels (src/ui/section-nav.ts), has an accessible name in the page's
+ * language, and once opened every one of its links is on the screen with a
+ * name of its own in that language (audit 2026-09-27, "ภาษาและมือถือ";
+ * owner, 2026-10-01).
  *
  * The names are Chromium's own computed accessible names (the DevTools
  * accessibility tree), not the attributes they might come from.
@@ -19,6 +21,11 @@ const PAGES = [
   { hash: '#/orbit/engineer', lang: 'ru', script: /[Ѐ-ӿ]/, what: 'the Russian Orbit engineer page',
     isRight: () => location.hash === '#/orbit/engineer' && document.documentElement.lang === 'ru'
       && document.querySelector('#section-nav a[data-section="orbit"][data-mode="engineer"]')?.getAttribute('aria-current') === 'page' },
+  // T01/T02, instructor mode: five tabs on the lessons page's bar, and the forms under it
+  { hash: '#/lessons/check', lang: 'th', script: /[฀-๿]/, what: 'the Thai results check', shot: 'th-check',
+    isRight: () => document.body.dataset.lessonsPage === 'check' && document.documentElement.lang === 'th' && !!document.querySelector('.recheck-run') },
+  { hash: '#/lessons/author', lang: 'ru', script: /[Ѐ-ӿ]/, what: 'the Russian scenario writer', shot: 'ru-author',
+    isRight: () => document.body.dataset.lessonsPage === 'author' && document.documentElement.lang === 'ru' && !!document.querySelector('.author-crit') },
 ];
 
 export default async function mobileSmoke(t) {
@@ -93,7 +100,7 @@ export default async function mobileSmoke(t) {
       t.check(new Set(names).size === names.length, `${where}: the table's links share a name: ${names.join(' | ')}`);
       t.log(`${p.lang} switch "${buttonName}": ${names.join(', ')}`);
     }
-    await app.shot(p.lang);
+    await app.shot(p.shot ?? p.lang);
     app.checkErrors();
     await app.context.close();
   }

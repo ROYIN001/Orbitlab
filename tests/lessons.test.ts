@@ -13,7 +13,7 @@ import { BUILTIN_CASE_LESSONS, BUILTIN_ISSUES, BUILTIN_LESSONS, allLessons, less
 import { lessonConfig } from '../src/lessons/config';
 import { answerMatches, awaitingAnswers, brokenLocks, flightEnded, gradeLesson, regradeAnswers, type LessonAnswers } from '../src/lessons/grader';
 import { MEASURES } from '../src/lessons/measures';
-import { LESSON_FORMAT, lessonFileText, parseLessonFile, readLesson, type FileIssue } from '../src/lessons/lesson-file';
+import { LESSON_FORMAT, LESSON_FORMAT_VERSION, lessonFileText, parseLessonFile, readLesson, type FileIssue } from '../src/lessons/lesson-file';
 import { localText } from '../src/lessons/text';
 import type { MissionState } from '../src/config/mission-file';
 import type { Lesson, LessonFlight } from '../src/lessons/types';
@@ -279,8 +279,8 @@ describe('a teacher\'s lesson file', () => {
     expect(parsed.lessons).toEqual([]);
     expect(parsed.issues[0]).toMatchObject({ code: 'mission', detail: 'setup.site' });
     expect(parseLessonFile({ format: 'orbitlab.mission', version: 1 }, new Set()).usable).toBe(false);
-    // version 2 holds the case lessons (track 6); a file newer than that still reads, with a warning
-    expect(parseLessonFile({ format: LESSON_FORMAT, version: 3, lessons: JSON.parse(base()).lessons }, new Set()).issues)
+    // version 2 holds the case lessons (track 6), version 3 a custom satellite (T01); a file newer than that still reads, with a warning
+    expect(parseLessonFile({ format: LESSON_FORMAT, version: LESSON_FORMAT_VERSION + 1, lessons: JSON.parse(base()).lessons }, new Set()).issues)
       .toEqual([{ where: 'document', code: 'newerVersion', level: 'warn' }]);
   });
 

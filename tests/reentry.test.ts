@@ -51,5 +51,7 @@ describe('re-entry prediction (M03)', () => {
     }, 0) / CZ5B_STAGES.length;
     // measured: 7.6 % on average; moderate: 23 %
     expect(err(measured)).toBeLessThan(err(ECSS_LEVELS.moderate));
-  });
+    // eight re-entry runs (four stages, two Suns): about 3 s alone on four
+    // cores, past vitest's 5 s default when the whole suite shares them
+  }, 30_000);
 });

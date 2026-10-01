@@ -26,7 +26,7 @@ import { setLang, t } from '../src/i18n';
 import { localized, localizeEventParams } from '../src/ui/names';
 import { SATELLITES } from '../src/data/satellites';
 import { DesignStoreError, type DesignStoreErrorCode } from '../src/design/design-store';
-import { ExploreStore } from '../src/ui/build/explore-store';
+import { ExploreStore, STORE_TEXTS } from '../src/ui/build/explore-store';
 
 // `import.meta.glob` requires its options to be an inline object literal — a
 // shared `const RAW = {…}` is rejected by the transform at build time.
@@ -299,11 +299,13 @@ describe('call sites', () => {
     expect(definition).not.toBeNull();
     const codes = [...definition![1].matchAll(/'([^']+)'/g)].map((m) => m[1] as DesignStoreErrorCode);
     expect(codes.length).toBeGreaterThan(0);
-    const rendering = ExploreStore.prototype as unknown as { failure(error: unknown): { level: string; text: string } };
+    // each designer's store (D06: rockets and satellites) names a refused design by its kind
+    const renderings = Object.values(STORE_TEXTS).map((texts) =>
+      Object.assign(Object.create(ExploreStore.prototype), { texts }) as { failure(error: unknown): { level: string; text: string } });
     try {
       for (const [lang, dict] of Object.entries({ en, ru, th })) {
         withLang(lang as 'en' | 'ru' | 'th');
-        for (const code of codes) {
+        for (const code of codes) for (const rendering of renderings) {
           const message = rendering.failure(new DesignStoreError(code, 'Raw internal detail'));
           expect(message.level).toBe('error');
           expect(Object.values(dict), `${lang}/${code}`).toContain(message.text);
