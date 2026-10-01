@@ -1304,6 +1304,7 @@ canvas.chart:focus-visible { outline: 1px solid var(--accent-line); outline-offs
 .life-check { display: flex; gap: 8px; align-items: center; font-size: 13px; }
 .life-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
 .life-settings .field { margin-top: 0; }
+.life-settings > .life-wide { grid-column: 1 / -1; }
 .life-run { margin-top: 12px; min-width: 140px; }
 .life-status { font-size: 12px; color: var(--muted); min-height: 1.4em; }
 .life-verdict { font-size: 15px; font-weight: 600; color: var(--accent); }
