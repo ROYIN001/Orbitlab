@@ -47,6 +47,9 @@ import type { LessonToolsHost } from '../../lessons/mcp-tools';
 import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
 import { PanelLocks } from './locks';
+// T01/T02: small, and on the page that is open anyway (a lazy chunk of them split the dictionaries off the main one)
+import { renderAuthor } from './author-view';
+import { renderCheck } from './check-view';
 import './lessons.css';
 
 export interface LessonHost {
@@ -961,8 +964,8 @@ export class LessonMode implements LessonToolsHost {
     this.paintPageBar();
     if (view === 'catalog') this.renderCatalog();
     else if (view === 'test') void this.showAssessment();
-    else if (view === 'author') void this.showAuthor();
-    else if (view === 'check') void this.showCheck();
+    else if (view === 'author') this.showAuthor();
+    else if (view === 'check') this.showCheck();
     else void this.showWorksheets();
     this.page.scrollTo(0, 0);
   }
@@ -1137,10 +1140,8 @@ export class LessonMode implements LessonToolsHost {
   }
 
   /** T01: the authoring tab, on the setup panel's mission as it stands. */
-  private async showAuthor(): Promise<void> {
-    const m = await import('./author-view');
-    if (this.pageView !== 'author') return;
-    this.assessmentView = m.renderAuthor({
+  private showAuthor(): void {
+    this.assessmentView = renderAuthor({
       mission: () => this.host.mission?.() ?? null,
       knownEvents: () => KNOWN_EVENTS,
       tryLesson: (lesson) => this.tryLesson(lesson),
@@ -1149,10 +1150,8 @@ export class LessonMode implements LessonToolsHost {
   }
 
   /** T02: the checking tab, with the teacher's lessons this browser's catalogue already has. */
-  private async showCheck(): Promise<void> {
-    const m = await import('./check-view');
-    if (this.pageView !== 'check') return;
-    this.assessmentView = m.renderCheck({ customLessons: () => this.progressData.customLessons }, this.content);
+  private showCheck(): void {
+    this.assessmentView = renderCheck({ customLessons: () => this.progressData.customLessons }, this.content);
   }
 
   /** The open case lesson's sheet, from its frozen data, in the language on screen; the key only once it gives nothing away. */
