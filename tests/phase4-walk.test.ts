@@ -24,12 +24,16 @@
  *   "35786,0 км" and a tolerance "0,000002" in Russian, "35786.0 km" in
  *   English and "35786.0 กม." in Thai, with no grouping and a no-break space
  *   before the unit. A value that is not a number is "—".
+ * - The check page's CSV starts with a UTF-8 byte order mark, once, and is
+ *   otherwise the core's text unchanged, so Excel reads a Thai or Russian
+ *   student's name as written.
  */
 import { describe, expect, it } from 'vitest';
 import { setLang, t, tCount } from '../src/i18n';
 import { keepUnits } from '../src/ui/build/satellite-text';
 import { keepUnits as stripKeepUnits } from '../src/ui/keep-units';
 import { decimal, measureText } from '../src/ui/lessons/measure-text';
+import { spreadsheetCsv } from '../src/ui/download';
 import PHYSICS_PACK from '../public/lessons/packs/ipst-physics.orbitlab-lesson.json?raw';
 
 const NBSP = ' ';
@@ -101,5 +105,15 @@ describe('a flight lesson\'s strip writes numbers in the reader\'s decimal sign 
     expect(withLang('ru', () => decimal(10))).toBe('10');
     expect(withLang('en', () => decimal(24361.73591902372, 1))).toBe('24361.7');
     expect(withLang('ru', () => measureText('orbit.apogee', Number.NaN))).toBe('—');
+  });
+});
+
+describe('the check page\'s CSV opens in a spreadsheet with its names whole (W)', () => {
+  it('puts one byte order mark before the core\'s text and changes nothing else', () => {
+    const csv = 'file,student\nresults.json,สมชาย ใจดี\nresults2.json,Иван Петров\n';
+    const out = spreadsheetCsv(csv);
+    expect(out.charCodeAt(0)).toBe(0xfeff);
+    expect(out.slice(1)).toBe(csv);
+    expect(new TextEncoder().encode(out).slice(0, 3)).toEqual(new Uint8Array([0xef, 0xbb, 0xbf]));
   });
 });

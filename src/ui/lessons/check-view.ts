@@ -17,7 +17,7 @@ import { runRecheckJob } from '../../lessons/recheck-job';
 import { localText, unitText } from '../../lessons/text';
 import type { CatalogLesson, Criterion, DesignCriterion } from '../../lessons/types';
 import { designMeasureName } from './design-text';
-import { downloadBlob } from '../download';
+import { downloadBlob, spreadsheetCsv } from '../download';
 import { issueSentence } from './author-view';
 
 export interface CheckHost {
@@ -209,7 +209,7 @@ class CheckView {
       csv.type = 'button';
       csv.addEventListener('click', () => {
         const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-        downloadBlob(new Blob([recheckCsv(this.check!)], { type: 'text/csv' }), `orbitlab-recheck-${stamp}.csv`);
+        downloadBlob(new Blob([spreadsheetCsv(recheckCsv(this.check!))], { type: 'text/csv;charset=utf-8' }), `orbitlab-recheck-${stamp}.csv`);
       });
       box.append(csv);
     }
