@@ -32,7 +32,7 @@ import { STATIONS } from '../../orbit/applications-setup';
 import { REPEAT_SEARCH } from '../../orbit/playground-model';
 import { DESIGN_ACTIVITY_LEVELS, type EcssLevel } from '../../orbit/satellite-air';
 import { runTradesJob } from '../../design/requirement-trades-job';
-import type { Requirement, TradeRow } from '../../design/requirement-trades';
+import type { RepeatCycle, Requirement, TradeRow } from '../../design/requirement-trades';
 import type { MissionRequirements } from '../../design/requirements';
 import type { SatelliteDesign } from '../../design/satellite-spec';
 import { TEMPLATE_TEXT, designFigures, newSatelliteId, type Fig } from '../../design/satellite-model';
@@ -196,6 +196,8 @@ export class RequirementsPage {
   private opened: Opened | null = null;
   /** the row the bench could not take, and why: said in that row, under its button */
   private refused: { cycle: string; text: string } | null = null;
+  /** the cycles the form tries, kept while the boxes they follow are unchanged: 30-day cycles take some 0.1 s to find, at every key typed */
+  private cyclesKept: { key: string; cycles: RepeatCycle[] } | null = null;
   private readonly head = el('header', 'bs-panel brq-head');
   private readonly formPanel = el('section', 'bs-panel brq-form');
   private readonly runPanel = el('div', 'brq-run');
@@ -406,6 +408,13 @@ export class RequirementsPage {
     return requirementsProblems(this.form);
   }
 
+  /** `candidateCycles` for a checked form, found again only when the cycles asked or the plane change. */
+  private cycles(f: RequirementsForm): RepeatCycle[] {
+    const key = JSON.stringify([cycleRange(f), f.sso, f.sso ? null : f.inclination]);
+    if (this.cyclesKept?.key !== key) this.cyclesKept = { key, cycles: candidateCycles(f) };
+    return this.cyclesKept.cycles;
+  }
+
   private renderRun(): void {
     const parts: HTMLElement[] = [];
     const issues = this.issues();
@@ -423,7 +432,7 @@ export class RequirementsPage {
       }
       parts.push(list);
     }
-    const cycles = issues.length ? [] : candidateCycles(this.form);
+    const cycles = issues.length ? [] : this.cycles(this.form);
     const template = issues.length ? null : templateDesign(this.form.template);
     const keptLife = template ? this.keptLifetime(template) : null;
     const cost = runCost(cycles, keptLife || !template ? [] : lifetimeRequestFor(template, this.form, this.ws.jd()).years, revisitWindowOf(this.form));
@@ -511,7 +520,7 @@ export class RequirementsPage {
     const jd = this.ws.jd();
     const template = templateDesign(form.template);
     const req = missionRequirements(form);
-    const cycles = candidateCycles(form);
+    const cycles = this.cycles(form);
     const lifeReq = lifetimeRequestFor(template, form, jd);
     const kept = this.keptLifetime(template);
     const cost = runCost(cycles, kept ? [] : lifeReq.years, revisitWindowOf(form));
