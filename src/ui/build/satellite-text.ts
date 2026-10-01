@@ -111,6 +111,18 @@ export function fieldUnitText(u: FieldUnit): string {
   }
 }
 
+/**
+ * A sentence's numbers kept with their units on a narrow screen (task W,
+ * Phase 4's last check: on a 375 px phone the Russian notes read
+ * "потоке 1361 | Вт/м²" and "0,0189 м²/ | кг"). A number the sentence
+ * itself writes was free to end a line, and a unit with a slash broke after
+ * the slash. So the space after a digit becomes a no-break space, and a
+ * slash between two letters takes a word joiner (U+2060), which nothing
+ * shows. Both leave the text as it reads and as it copies.
+ */
+export const keepUnits = (s: string): string =>
+  s.replace(/(\d) (?=\S)/g, '$1 ').replace(/(?<=[^\s\d/])\/(?=[^\s\d/])/g, '/⁠');
+
 const sayValue = (v: SatValue): string => (typeof v === 'string' ? v : 'key' in v ? t(v.key) : sayFig(v));
 
 /** The sentence alone, its numbers filled in. */
@@ -130,7 +142,7 @@ export function satTextItem(s: SatText): HTMLLIElement {
   const glyph = el('span', 'bd-say-glyph', LEVEL_GLYPH[s.level]);
   glyph.setAttribute('aria-hidden', 'true');
   tag.append(glyph, ` ${t(LEVEL_KEY[s.level])}`);
-  li.append(tag, el('span', 'bd-say-body', saySat(s)));
+  li.append(tag, el('span', 'bd-say-body', keepUnits(saySat(s))));
   if (s.detail) {
     const more = el('details', 'bd-say-detail');
     more.append(el('summary', undefined, t('build.ex.detail')));
