@@ -134,6 +134,24 @@ describe('the authoring page\'s writer (T01)', () => {
     expect(lessonIdFrom('วงโคจรแรก')).toBe('class-lesson');
   });
 
+  it('refuses a built-in lesson\'s id, a range no flight can meet and a negative tolerance, which the reader would take', () => {
+    const m = lesson('orbit-first').mission;
+    const refusals = (d: LessonDraft) => {
+      const r = draftLesson(d, m, KNOWN_EVENTS);
+      return { written: r.lesson !== null, errors: r.issues.filter((i) => i.level === 'error').map((i) => `${i.where}:${i.code}:${i.detail}`) };
+    };
+    // a built-in id: every catalogue leaves the teacher's lesson out, and its link or "Try it now" opens lesson 1.1
+    expect(refusals({ ...draft(), id: 'orbit-first' })).toEqual({ written: false, errors: ['id:builtinId:orbit-first'] });
+    expect(refusals({ ...draft(), id: ' case-theos2 ' }).errors).toEqual(['id:builtinId:case-theos2']);
+    expect(refusals({ ...draft(), criteria: [{ kind: 'measure', measure: 'orbit.apogee', min: 600, max: 400 }] })).toEqual({ written: false, errors: ['criteria[0]:invalid:range'] });
+    expect(refusals({ ...draft(), criteria: [{ kind: 'measure', measure: 'orbit.apogee', min: 500, max: 500 }] }).written).toBe(true);
+    expect(refusals({ ...draft(), criteria: [{ kind: 'measure', measure: 'orbit.apogee', target: 'mission', tol: -5 }] }).errors).toEqual(['criteria[0]:invalid:negative']);
+    expect(refusals({ ...draft(), criteria: [{ kind: 'answer', measure: 'orbit.period', tolPct: -1, prompt: { en: 'T', ru: 'T', th: 'T' } }] }).errors).toEqual(['criteria[0]:invalid:negative']);
+    // the reader itself still takes such a file (another tool may have written it): only the writer refuses
+    const raw = JSON.parse(lessonFileText([{ ...draftLesson(draft(), m).lesson!, criteria: [{ id: 'c1', kind: 'measure', measure: 'orbit.apogee', min: 600, max: 400 }] }]));
+    expect(parseLessonFile(raw, new Set()).lessons).toHaveLength(1);
+  });
+
   it('grades each kind of criterion it writes: a flight that passes it and one that fails it', () => {
     const written = draftLesson(draft(), lesson('orbit-first').mission, KNOWN_EVENTS).lesson!;
     const fly = (l: Lesson, edit?: (s: MissionState) => void) => {

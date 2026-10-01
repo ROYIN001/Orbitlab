@@ -14,6 +14,7 @@
  */
 import type { MissionDocument } from '../config/mission-file';
 import { eventIssues, readLesson, type FileIssue } from './lesson-file';
+import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS } from './catalog';
 import { DOMAINS, LOCK_KEYS, type Domain, type Lesson, type LocalText, type LockKey, type MeasureId } from './types';
 
 /** A text as typed, in each language (empty where not given). */
@@ -62,6 +63,13 @@ export function lessonIdFrom(title: string, fallback = 'lesson'): string {
 
 const LANGS = ['en', 'ru', 'th'] as const;
 
+/**
+ * The built-in lessons' ids. A teacher's lesson under one of them is left out
+ * of every catalogue (`allLessons`), so its file adds nothing and its link and
+ * "Try it now" open the built-in lesson instead: the writer refuses the id.
+ */
+const BUILTIN_IDS: ReadonlySet<string> = new Set([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
+
 /** A typed text as a lesson's text, or null when none was given; `stood` names the language standing in for English. */
 function localOf(text: DraftText): { text: LocalText; stood: 'ru' | 'th' | null } | null {
   const given = LANGS.filter((l) => text[l].trim() !== '');
@@ -72,9 +80,19 @@ function localOf(text: DraftText): { text: LocalText; stood: 'ru' | 'th' | null 
   return { text: out, stood: text.en.trim() ? null : given[0] as 'ru' | 'th' };
 }
 
-/** The criterion as the file writes it, with an id of its own: `c1`, `c2`, … */
+/**
+ * The criterion as the file writes it, with an id of its own: `c1`, `c2`, …
+ * The reader takes any numbers; the writer refuses (an error) the two that no
+ * flight can ever pass: a range whose lower bound is above its upper one, and a
+ * negative tolerance.
+ */
 function criterionOf(c: DraftCriterion, i: number, issues: FileIssue[]): Record<string, unknown> {
   const id = `c${i + 1}`;
+  const where = `criteria[${i}]`;
+  if (c.kind === 'measure' && c.min !== undefined && c.max !== undefined && c.min > c.max) issues.push({ where, code: 'invalid', level: 'error', detail: 'range' });
+  if ((c.kind === 'measure' || c.kind === 'answer') && [c.tol, c.kind === 'answer' ? c.tolPct : undefined].some((v) => v !== undefined && v < 0)) {
+    issues.push({ where, code: 'invalid', level: 'error', detail: 'negative' });
+  }
   switch (c.kind) {
     case 'outcome': return { id, kind: 'outcome', is: c.is };
     case 'event': return { id, kind: 'event', key: c.key.trim(), present: c.present };
@@ -121,10 +139,13 @@ export function draftLesson(draft: LessonDraft, mission: MissionDocument, knownE
     hints: hints.map((h) => h.text),
     ...(draft.endEvent?.trim() ? { endEvent: draft.endEvent.trim() } : {}),
   };
+  if (BUILTIN_IDS.has(raw.id)) issues.push({ where: 'id', code: 'builtinId', level: 'error', detail: raw.id });
+  // the writer's own refusals (above and in `criterionOf`): every one of them is an error
+  const refused = issues.some((i) => i.level === 'error');
   const read: FileIssue[] = [];
   const lesson = readLesson(raw, 'lesson', read);
   // a language missing from a text is the file's usual warning; one standing in for English is said above
   issues.push(...read);
   if (lesson && knownEvents) issues.push(...eventIssues(lesson, 'lesson', knownEvents));
-  return { lesson, issues };
+  return { lesson: refused ? null : lesson, issues };
 }

@@ -59,7 +59,7 @@ export interface LessonFileDocument {
   questions?: unknown[];
 }
 
-export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 'mission' | 'translation' | 'hook' | 'expression' | 'duplicate' | 'event';
+export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 'mission' | 'translation' | 'hook' | 'expression' | 'duplicate' | 'event' | 'builtinId';
 export interface FileIssue { where: string; code: FileIssueCode; level: 'error' | 'warn'; detail?: string }
 
 export interface ParsedLessonFile {

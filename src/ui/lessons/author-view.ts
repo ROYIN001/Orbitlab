@@ -79,6 +79,7 @@ function boundMode(c: Extract<DraftCriterion, { kind: 'measure' }>): BoundMode {
 function whereText(where: string): string {
   const crit = /criteria\[(\d+)\]/.exec(where);
   if (crit) return t('lesson.author.criterionN', { n: Number(crit[1]) + 1 });
+  if (where === 'id') return t('lesson.author.id');
   for (const [part, key] of [['.title', 'lesson.author.field.title'], ['title', 'lesson.author.field.title'], ['.brief', 'lesson.author.field.brief'],
     ['brief', 'lesson.author.field.brief'], ['.hints', 'lesson.author.field.hints'], ['.domains', 'lesson.author.field.areas'],
     ['.endEvent', 'lesson.author.field.endEvent'], ['.mission', 'lesson.author.mission'], ['.locked', 'lesson.author.locks']] as const) {
@@ -103,6 +104,11 @@ export function issueSentence(i: FileIssue): string {
     case 'missing': return t('lesson.author.issue.missing', { where });
     case 'mission': return t('lesson.author.issue.mission', { where });
     case 'duplicate': return t('lesson.author.issue.duplicate', { where });
+    case 'builtinId': return t('lesson.author.issue.builtinId', { where, id: i.detail ?? '' });
+    case 'invalid':
+      if (i.detail === 'range') return t('lesson.author.issue.range', { where });
+      if (i.detail === 'negative') return t('lesson.author.issue.negative', { where });
+      return t('lesson.author.issue.invalid', { where });
     default: return t('lesson.author.issue.invalid', { where });
   }
 }
