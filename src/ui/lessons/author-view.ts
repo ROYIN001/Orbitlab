@@ -615,7 +615,12 @@ class AuthorView {
       const u = designUnitText(m);
       measure.append(new Option(`${designMeasureName(m)}${u ? `, ${u}` : ''}`, m, false, m === c.measure));
     }
-    measure.addEventListener('change', () => { c.measure = measure.value as DesignMeasureId; this.render(); });
+    measure.addEventListener('change', () => {
+      c.measure = measure.value as DesignMeasureId;
+      // the 25-year rule is a yes (1) or a no (0): a bound kept from another measure ("at least 0") would pass every design
+      if (c.kind === 'design' && c.measure === 'sat.disposal25y') { delete c.max; delete c.target; delete c.tol; c.min = 1; }
+      this.render();
+    });
     fields.append(measure);
     const unit = designUnitText(c.measure);
     if (c.kind === 'design') {
