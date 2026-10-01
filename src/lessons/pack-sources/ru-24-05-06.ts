@@ -54,9 +54,9 @@ export const RU_24_05_06: PackSource = {
       th: 'สาขาวิชา 24.05.06 «ระบบควบคุมอากาศยาน» (รัสเซีย)',
     },
     audience: {
-      en: 'Cadets and students of the five-year specialist degree, years 3–5',
+      en: 'Cadets and students of the specialist degree (специалитет), years 3–5',
       ru: 'Курсанты и студенты специалитета, 3–5 курсы',
-      th: 'นักเรียนทหารและนักศึกษาหลักสูตรวิศวกรผู้เชี่ยวชาญห้าปี ชั้นปีที่ 3–5',
+      th: 'นักเรียนทหารและนักศึกษาหลักสูตรวิศวกรผู้เชี่ยวชาญ (специалитет) ชั้นปีที่ 3–5',
     },
     framework: {
       en: 'Russian federal standard ФГОС ВО 3++, speciality 24.05.06 (Order No. 874 of the Ministry of Science and Higher Education, 4 August 2020, as amended 27 February 2023)',
