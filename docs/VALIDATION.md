@@ -3611,8 +3611,9 @@ reason recorded:
 | `lifetime-altitude.worker`, `requirement-trades.worker` | seeded at 119.2 and 133.1 | 122, 136 | 119.4, 133.3 | D07's two workers, first imported by its page |
 | precache | 13 959.6, 15 408.9, 17 545.8, 17 993.6 | 18 354 | 18 116.0 | the chunks above and the new workers, precached for offline use as every worker is; the merge with PR #55's 4 096 × 2 048 Earth maps (about +2 100 kB of textures); the five pack files and the example lesson |
 
-The tracks reported their overruns and the raises were made at the stages' gates, but one: T03b
-raised the two verdict workers for its own keys. On stage 3a's base the budget already failed (the
+The tracks reported their overruns and the raises were made at the stages' gates, but two: the
+re-check of design records raised the re-check worker's ceiling in its own commit (d96b893, from
+753 to 855 kB), and T03b the two verdict workers' for its own keys (29e353e). On stage 3a's base the budget already failed (the
 index chunk 4 191.5 kB against 4 065), stage 2's growth not yet raised for. At 120a4f0 the build is inside every ceiling (`npm run budget`, 2026-10-01).
 
 ### The screens
