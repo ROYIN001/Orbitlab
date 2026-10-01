@@ -1,10 +1,13 @@
 /**
- * A phone (390×844, touch): the Thai placement test and the Russian Orbit
- * engineer page fit the screen — the document never scrolls sideways (a strip
- * of tabs that scrolls inside itself is fine) — and every link of the section
- * and level switches is on the screen and has an accessible name in the page's
- * language even where the switch shows only its icon (audit 2026-09-27,
- * "ภาษาและมือถือ").
+ * A phone (390×844, touch): the Thai placement test, the Russian Orbit
+ * engineer page, and the instructor's tabs (the Thai results check, the
+ * Russian scenario writer; T01/T02) fit the screen — the document never
+ * scrolls sideways (a strip of tabs that scrolls inside itself is fine) — and
+ * the section switch, on a phone one button that opens a table of sections ×
+ * levels (src/ui/section-nav.ts), has an accessible name in the page's
+ * language, and once opened every one of its links is on the screen with a
+ * name of its own in that language (audit 2026-09-27, "ภาษาและมือถือ";
+ * owner, 2026-10-01).
  *
  * The names are Chromium's own computed accessible names (the DevTools
  * accessibility tree), not the attributes they might come from.
@@ -17,7 +20,12 @@ const PAGES = [
     isRight: () => document.body.dataset.lessonsPage === 'test' && document.documentElement.lang === 'th' },
   { hash: '#/orbit/engineer', lang: 'ru', script: /[Ѐ-ӿ]/, what: 'the Russian Orbit engineer page',
     isRight: () => location.hash === '#/orbit/engineer' && document.documentElement.lang === 'ru'
-      && document.querySelector('#section-nav a[data-section="orbit"]')?.getAttribute('aria-current') === 'page' },
+      && document.querySelector('#section-nav a[data-section="orbit"][data-mode="engineer"]')?.getAttribute('aria-current') === 'page' },
+  // T01/T02, instructor mode: five tabs on the lessons page's bar, and the forms under it
+  { hash: '#/lessons/check', lang: 'th', script: /[฀-๿]/, what: 'the Thai results check', shot: 'th-check',
+    isRight: () => document.body.dataset.lessonsPage === 'check' && document.documentElement.lang === 'th' && !!document.querySelector('.recheck-run') },
+  { hash: '#/lessons/author', lang: 'ru', script: /[Ѐ-ӿ]/, what: 'the Russian scenario writer', shot: 'ru-author',
+    isRight: () => document.body.dataset.lessonsPage === 'author' && document.documentElement.lang === 'ru' && !!document.querySelector('.author-crit') },
 ];
 
 export default async function mobileSmoke(t) {
@@ -53,34 +61,46 @@ export default async function mobileSmoke(t) {
     t.check(overflow.scrollWidth <= overflow.clientWidth && overflow.scrolledX === 0,
       `${where}: the document scrolls sideways — ${overflow.scrollWidth} px wide in a ${overflow.clientWidth} px viewport, scrolls to x=${overflow.scrolledX}; sticking out: ${overflow.out.join(', ') || 'nothing found outside a clipping box'}`);
 
-    // 2. every section/level link has a name, in the page's language, even with its text hidden
+    // 2. the switch's button has a name in the page's language, and opens the table
     const cdp = await app.context.newCDPSession(page);
-    const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
-    for (const nav of ['#section-nav', '#mode-nav']) {
-      const { nodeIds } = await cdp.send('DOM.querySelectorAll', { nodeId: root.nodeId, selector: `${nav} a` });
-      if (!t.check(nodeIds.length >= 3, `${where}: ${nav} has ${nodeIds.length} links`)) continue;
-      const hrefs = await page.$$eval(`${nav} a`, (as) => as.map((a) => {
-        const r = a.getBoundingClientRect();
-        return { href: a.getAttribute('href'), textShown: a.innerText.replace(/[^\p{L}]/gu, '') !== '',
-          onScreen: r.width > 0 && r.left >= -1 && r.right <= document.documentElement.clientWidth + 1, left: Math.round(r.left), right: Math.round(r.right) };
-      }));
-      // the page clips what does not fit (#app hides its overflow): a switch pushed past the edge would just vanish
-      for (const h of hrefs) t.check(h.onScreen, `${where}: the ${nav} link to ${h.href} is not on the screen (${h.left}–${h.right} px of ${await page.evaluate(() => document.documentElement.clientWidth)})`);
-      const names = [];
-      for (const [i, nodeId] of nodeIds.entries()) {
+    const axOf = async (selector) => {
+      const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
+      const { nodeIds } = await cdp.send('DOM.querySelectorAll', { nodeId: root.nodeId, selector });
+      const out = [];
+      for (const nodeId of nodeIds) {
         const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
-        const ax = nodes[0];
+        out.push(nodes[0]);
+      }
+      return out;
+    };
+    const [button] = await axOf('#section-nav .nav-sheet-btn');
+    const buttonName = (button?.name?.value ?? '').trim();
+    if (t.check(button && !button.ignored && button.role?.value === 'button', `${where}: the section switch is not exposed as a button (role ${button?.role?.value})`)) {
+      t.check(p.script.test(buttonName), `${where}: the section switch is named "${buttonName}", not in the page's language (${p.lang})`);
+    }
+    await page.tap('#section-nav .nav-sheet-btn');
+    const opened = await page.waitForFunction(() => document.getElementById('nav-sheet')?.hidden === false, null, { timeout: 5_000 }).then(() => true, () => false);
+    if (t.check(opened, `${where}: tapping the section switch did not open the table`)) {
+      // 3. every link of the table is on the screen and named, in the page's language, uniquely
+      const hrefs = await page.$$eval('#nav-sheet a', (as) => as.map((a) => {
+        const r = a.getBoundingClientRect();
+        return { href: a.getAttribute('href'), onScreen: r.width > 0 && r.left >= -1 && r.right <= document.documentElement.clientWidth + 1 && r.bottom <= innerHeight + 1, left: Math.round(r.left), right: Math.round(r.right) };
+      }));
+      t.check(hrefs.length >= 9, `${where}: the table has ${hrefs.length} links`);
+      for (const h of hrefs) t.check(h.onScreen, `${where}: the table's link to ${h.href} is not on the screen (${h.left}–${h.right} px of ${await page.evaluate(() => document.documentElement.clientWidth)})`);
+      const names = [];
+      for (const [i, ax] of (await axOf('#nav-sheet a')).entries()) {
         const name = (ax?.name?.value ?? '').trim();
-        const link = `${nav} link to ${hrefs[i]?.href}${hrefs[i]?.textShown ? '' : ' (text hidden)'}`;
+        const link = `the table's link to ${hrefs[i]?.href}`;
         names.push(name);
         if (!t.check(ax && !ax.ignored && ax.role?.value === 'link', `${where}: ${link} is not exposed as a link (role ${ax?.role?.value}, ignored ${ax?.ignored})`)) continue;
         if (!t.check(name !== '', `${where}: ${link} has no accessible name`)) continue;
         t.check(p.script.test(name), `${where}: ${link} is named "${name}", not in the page's language (${p.lang})`);
       }
-      t.check(new Set(names).size === names.length, `${where}: ${nav} links share a name: ${names.join(' | ')}`);
-      t.log(`${p.lang} ${nav}: ${names.map((n, i) => `${n}${hrefs[i]?.textShown ? '' : '*'}`).join(', ')} (* text hidden)`);
+      t.check(new Set(names).size === names.length, `${where}: the table's links share a name: ${names.join(' | ')}`);
+      t.log(`${p.lang} switch "${buttonName}": ${names.join(', ')}`);
     }
-    await app.shot(p.lang);
+    await app.shot(p.shot ?? p.lang);
     app.checkErrors();
     await app.context.close();
   }

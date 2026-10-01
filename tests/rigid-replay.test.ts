@@ -159,9 +159,13 @@ describe('accepted command recording', () => {
     sim.setRigidCommand(command);
     const event = sim.events.at(-1)!;
     // The event records ISO 1151 rates (U07): p = x, q = −z, r = y of the simulator's body axes.
+    // A command is taken between steps, so its event carries the state the flight is in then
+    // (`SimEvent.state`, T03 review): nothing is tailing off, and it is a copy, not the live vectors.
     expect(event).toEqual({ t: at, key: 'evt.controlCommand', severity: 'info', params: {
       mode: 'manual', rollRateRadS: 0.01, pitchRateRadS: -0.03, yawRateRadS: -0.02, throttle: 0.6,
-    } });
+    }, state: { t: at, r: sim.state.r, v: sim.state.v } });
+    expect(event.state!.r).not.toBe(sim.state.r);
+    expect(event.state!.v).not.toBe(sim.state.v);
     expect(sim.state.rigid).toEqual({ ...actual, controlMode: 'manual', commandRatesBody: command.rates, commandThrottle: 0.6 });
     recorder.captureChangedState();
     expect(recorder.headTime).toBe(at);

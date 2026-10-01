@@ -306,6 +306,7 @@ export function remix(origin: VehicleSpec, ops: readonly RemixOp[], id: string, 
         spec.fairing = fairingSpec(part, {
           sepAltitude: was ? was.sepAltitude : FLEET_FAIRING_SEP_ALTITUDE,
           ...(was?.sepTime !== undefined ? { sepTime: was.sepTime } : {}),
+          ...(was?.sepAfterIgnition !== undefined ? { sepAfterIgnition: { ...was.sepAfterIgnition } } : {}),
           ...(was?.color !== undefined ? { color: was.color } : {}),
         });
         break;

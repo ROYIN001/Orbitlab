@@ -628,10 +628,15 @@ export const STAGE_BODIES: readonly StageBodyPart[] = [
   // boosters would invent a staging event Proton does not have. Instead the
   // stage carries its real diameter and the vehicle carries a `dragArea`
   // override (src/data/vehicles.ts).
-  { id: 'p1', stageId: 'p1', name: 'First stage (6× RD-276)', dryMass: 30600, propellantMass: 419400, diameter: 4.1, length: 21.2,
-    engine: { part: 'rd276', count: 6 }, source: `${UNCITED}; diameter: audit item B23` },
-  { id: 'p2', stageId: 'p2', name: 'Second stage', dryMass: 11000, propellantMass: 156100, diameter: 4.1, length: 17,
-    engine: { part: 'rd0210', count: 4 }, source: UNCITED },
+  //
+  // Propellant loads as published, 428.3 t and 157.3 t. The 419.4 / 156.1 t
+  // flown before had no source; the ~10 t they were short was hidden while the
+  // heating placard dropped the 2 t fairing at T+175 s, and showed once it
+  // stayed on to the published 348 s (docs/VALIDATION.md, F14).
+  { id: 'p1', stageId: 'p1', name: 'First stage (6× RD-276)', dryMass: 30600, propellantMass: 428300, diameter: 4.1, length: 21.2,
+    engine: { part: 'rd276', count: 6 }, source: `${W}Proton-M (propellant, empty mass); diameter: audit item B23` },
+  { id: 'p2', stageId: 'p2', name: 'Second stage', dryMass: 11000, propellantMass: 157300, diameter: 4.1, length: 17,
+    engine: { part: 'rd0210', count: 4 }, source: `${W}Proton-M (propellant, empty mass)` },
   { id: 'p3', stageId: 'p3', name: 'Third stage', dryMass: 3500, propellantMass: 46600, diameter: 4.1, length: 6.5,
     engine: { part: 'rd0213', count: 1 }, source: UNCITED },
   { id: 'brizm', stageId: 'brizm', name: 'Briz-M', dryMass: 2370, propellantMass: 19800, diameter: 4.0, length: 2.6,
@@ -984,12 +989,12 @@ export type StageInstall = Partial<Pick<StageSpec, 'restartable' | 'sepDelay' | 
 /** What a vehicle adds to a strap-on body, besides how many. */
 export type BoosterInstall = Partial<Pick<BoosterGroupSpec, 'igniteAt' | 'sepDelay' | 'color' | 'conicalTop' | 'baseOffset' | 'thrustSteps'>>;
 /** What a vehicle adds to a fairing: when it is jettisoned, and its livery. */
-export type FairingInstall = Pick<FairingSpec, 'sepAltitude'> & Partial<Pick<FairingSpec, 'sepTime' | 'color'>>;
+export type FairingInstall = Pick<FairingSpec, 'sepAltitude'> & Partial<Pick<FairingSpec, 'sepTime' | 'sepAfterIgnition' | 'color'>>;
 
 const STAGE_INSTALL_FIELDS: ReadonlySet<string> = new Set(['restartable', 'sepDelay', 'ignitionDelay', 'throttleWithBoosters', 'boosters',
   'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength', 'jettisons', 'engineEvents', 'cutoffAt', 'hotStage']);
 const BOOSTER_INSTALL_FIELDS: ReadonlySet<string> = new Set(['igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset', 'thrustSteps']);
-const FAIRING_INSTALL_FIELDS: ReadonlySet<string> = new Set(['sepAltitude', 'sepTime', 'color']);
+const FAIRING_INSTALL_FIELDS: ReadonlySet<string> = new Set(['sepAltitude', 'sepTime', 'sepAfterIgnition', 'color']);
 const ENGINE_OPTIONAL_FIELDS = ['minThrottle', 'solid', 'peakFactor', 'vacuumOnly', 'startupS', 'tailoffS'] as const;
 
 /**

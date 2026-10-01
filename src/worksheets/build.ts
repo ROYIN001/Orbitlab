@@ -9,7 +9,7 @@ import { t, type Lang } from '../i18n';
 import { RAD } from '../physics/constants';
 import { missionVehicle } from '../data/vehicles';
 import { siteById } from '../data/sites';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import { localizeEventParams, satelliteName, siteName } from '../ui/names';
 import { localText, unitText } from '../lessons/text';
 import { lessonNumber } from '../lessons/catalog';
@@ -72,7 +72,7 @@ export function buildWorksheet(input: WorksheetInput): Worksheet {
   const { flight: f, lang } = input;
   const seed = worksheetSeed(input.student, input.classCode, worksheetSource(input));
   const random = rng(seed);
-  const spec = missionVehicle(f.cfg), site = siteById(f.cfg.siteId), sat = satelliteById(f.cfg.satelliteId);
+  const spec = missionVehicle(f.cfg), site = siteById(f.cfg.siteId), sat = missionSatellite(f.cfg);
   const target = f.plan.target;
   const date = `${f.cfg.launchTime.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
   const mission: Array<[string, string]> = [

@@ -1,50 +1,76 @@
 /**
  * The Explore level's saved designs (roadmap S05's store, used by D02 and
- * D03): save the design on screen in this browser, list what is kept, open,
- * rename, delete, export a design as a `.orbitlab.json` file and import one.
+ * D03, and by D06's satellite designer): save the design on screen in this
+ * browser, list what is kept, open, rename, delete, export a design as a
+ * `.orbitlab.json` file and import one.
  *
- * A design is kept as the vehicle it flies (`LocalDesignStore`, kind
- * 'vehicle', src/design/design-store.ts); opening one hands its spec to the
- * level, which finds the parts design or the remix it can be edited as
- * (src/design/explore-model.ts, `draftFromSpec`). Importing is all or nothing
- * and held to the store's own checks (`parseDesignDocument`): half a rocket
- * is not a rocket. Every way the browser can refuse — storage switched off, a
+ * One of these per kind of design (`LocalDesignStore`,
+ * src/design/design-store.ts): the rocket designer's keeps the vehicle it
+ * flies (kind 'vehicle'), and opening one hands its spec to the level, which
+ * finds the parts design or the remix it can be edited as
+ * (src/design/explore-model.ts, `draftFromSpec`); the satellite designer's
+ * keeps a `SatelliteDesign` (kind 'satellite', D06). An imported file of the
+ * other kind is kept too and handed to its own designer (`other`), never
+ * opened as the wrong thing. Importing is all or nothing and held to the
+ * store's own checks (`parseDesignDocument`): half a rocket is not a rocket. Every way the browser can refuse — storage switched off, a
  * full quota, a record deleted in another tab — is said in words, because a
  * design is someone's work and losing it silently is the one thing this must
  * not do.
  */
 import { getLang, t } from '../../i18n';
-import type { VehicleSpec } from '../../types';
 import {
-  DESIGN_FILE_EXTENSION, DesignStoreError, LocalDesignStore, designDocument, designFileName, designFileText, parseDesignDocument,
-  readDesignFileText, type DesignRecord, type DesignStore, type DesignStoreErrorCode, type DesignSummary,
+  DESIGN_FILE_EXTENSION, DesignStoreError, LocalDesignStore, designDocument, designFileName, designFileText, isDesignOf, parseDesignDocument,
+  readDesignFileText, type DesignInput, type DesignKind, type DesignKinds, type DesignRecord, type DesignStore, type DesignStoreErrorCode, type DesignSummary,
 } from '../../design/design-store';
 import { MISSION_FORMAT } from '../../config/mission-file';
 import { downloadBlob } from '../download';
 import { button, el } from '../orbit/dom';
 
-export interface ExploreStoreHost {
-  /** the design on screen as a vehicle, its name, and the record it was saved as or opened from; null when it cannot be built */
-  current(): { spec: VehicleSpec; name: string; recordId: string | null } | null;
+export interface ExploreStoreHost<K extends DesignKind = 'vehicle'> {
+  /** the design on screen (a vehicle, or a satellite), its name, and the record it was saved as or opened from; null when it cannot be kept */
+  current(): { spec: DesignKinds[K]; name: string; recordId: string | null } | null;
   /** the design on screen was saved as `record` */
   saved(recordId: string, name: string): void;
   /** open a kept or imported design */
-  open(record: DesignRecord): void;
+  open(record: DesignRecord<K>): void;
   /** the record the design on screen belongs to was deleted */
   forgotten(recordId: string): void;
+  /**
+   * an imported file held the other kind of design (a satellite in the rocket
+   * designer, or a rocket in the satellite's): kept, and opened where it
+   * belongs, whose store says `message` (this one is hidden by then)
+   */
+  other?(record: DesignRecord, message: string): void;
 }
+
+/** The sentences that name what a kind is: the rest of the store's words are the same for both. */
+export interface StoreTexts {
+  /** the store refused the design on screen */
+  invalid: string;
+  /** a file of this kind whose design is not sound */
+  fileInvalid: string;
+}
+/** Each kind's sentences (the rocket designer's and the satellite designer's, D06). */
+export const STORE_TEXTS: Readonly<Record<DesignKind, StoreTexts>> = {
+  vehicle: { invalid: 'build.ex.store.invalid', fileInvalid: 'build.ex.store.fileInvalid' },
+  satellite: { invalid: 'build.sat.store.invalid', fileInvalid: 'build.sat.store.fileInvalid' },
+};
+const ROCKET_TEXTS = STORE_TEXTS.vehicle;
+/** What a file of each kind is called when it is refused, whichever designer it was imported in. */
+const FILE_INVALID: Record<DesignKind, string> = { vehicle: 'build.ex.store.fileInvalid', satellite: 'build.sat.store.fileInvalid' };
 
 type Message = { level: 'ok' | 'warn' | 'error'; text: string; extra?: string };
 
 const STORE_ERROR_KEY: Record<DesignStoreErrorCode, string> = {
   unavailable: 'build.ex.store.unavailable',
   full: 'build.ex.store.full',
+  // a design the store refuses is named by its kind (`StoreTexts.invalid`); this is the rocket's
   invalid: 'build.ex.store.invalid',
   collection: 'build.ex.store.collection',
   notFound: 'build.ex.store.notFound',
 };
 
-export class ExploreStore {
+export class ExploreStore<K extends DesignKind = 'vehicle'> {
   readonly root = el('section', 'bs-panel bx-store');
   private list: DesignSummary[] = [];
   private message: Message | null = null;
@@ -54,9 +80,12 @@ export class ExploreStore {
   /** the control the keyboard goes to once the list is drawn again (a `data-k`) */
   private focusNext: string | null = null;
   private readonly fileInput = el('input');
+  /** The heading's id, one per kind: the rocket's and the satellite's stores are both in the page once both designers were shown. */
+  private get titleId(): string { return this.kind === 'vehicle' ? 'bx-store-title' : `bx-store-title-${this.kind}`; }
 
-  constructor(private readonly host: ExploreStoreHost, private readonly store: DesignStore = new LocalDesignStore()) {
-    this.root.setAttribute('aria-labelledby', 'bx-store-title');
+  constructor(private readonly host: ExploreStoreHost<K>, private readonly store: DesignStore = new LocalDesignStore(),
+    private readonly kind: K = 'vehicle' as K, private readonly texts: StoreTexts = ROCKET_TEXTS) {
+    this.root.setAttribute('aria-labelledby', this.titleId);
     this.fileInput.type = 'file';
     this.fileInput.accept = `${DESIGN_FILE_EXTENSION},.json,application/json`;
     this.fileInput.hidden = true;
@@ -69,7 +98,7 @@ export class ExploreStore {
 
   /** Read the list again and draw it. */
   async refresh(): Promise<void> {
-    this.list = await this.store.list('vehicle');
+    this.list = await this.store.list(this.kind);
     this.render();
   }
 
@@ -78,8 +107,13 @@ export class ExploreStore {
     this.render();
   }
 
+  /** Say something that happened elsewhere (a file of this kind imported in the other designer and opened here). */
+  announce(level: Message['level'], text: string): void {
+    this.say({ level, text });
+  }
+
   private failure(error: unknown): Message {
-    if (error instanceof DesignStoreError) return { level: 'error', text: t(STORE_ERROR_KEY[error.code]) };
+    if (error instanceof DesignStoreError) return { level: 'error', text: t(error.code === 'invalid' ? this.texts.invalid : STORE_ERROR_KEY[error.code]) };
     return { level: 'error', text: t('build.ex.store.unavailable') };
   }
 
@@ -89,7 +123,7 @@ export class ExploreStore {
     if (!cur) return;
     const keep = !asNew && cur.recordId !== null && this.list.some((d) => d.id === cur.recordId);
     try {
-      const rec = await this.store.save({ kind: 'vehicle', name: cur.name, design: cur.spec, ...(keep ? { id: cur.recordId! } : {}) });
+      const rec = await this.store.save({ kind: this.kind, name: cur.name, design: cur.spec, ...(keep ? { id: cur.recordId! } : {}) } as DesignInput<K>);
       this.host.saved(rec.id, rec.name);
       this.message = { level: 'ok', text: t('build.ex.store.saved', { name: rec.name }) };
     } catch (error) {
@@ -100,7 +134,7 @@ export class ExploreStore {
 
   private async openRecord(id: string): Promise<void> {
     const rec = await this.store.get(id);
-    if (!rec) { this.say({ level: 'error', text: t('build.ex.store.notFound') }); await this.refresh(); return; }
+    if (!rec || !isDesignOf(rec, this.kind)) { this.say({ level: 'error', text: t('build.ex.store.notFound') }); await this.refresh(); return; }
     this.host.open(rec);
   }
 
@@ -110,8 +144,8 @@ export class ExploreStore {
     const rec = await this.store.get(id);
     if (!rec) { this.renaming = null; this.say({ level: 'error', text: t('build.ex.store.notFound') }); await this.refresh(); return; }
     try {
-      // the vehicle keeps its name in step with the record's: the Launch section shows the vehicle's
-      const saved = await this.store.save({ id, kind: 'vehicle', name: trimmed, design: { ...rec.design, name: trimmed } });
+      // the design keeps its name in step with the record's: the Launch section shows the vehicle's, the Orbit section the satellite's
+      const saved = await this.store.save({ id, kind: rec.kind, name: trimmed, design: { ...rec.design, name: trimmed } } as DesignInput);
       this.renaming = null;
       this.message = { level: 'ok', text: t('build.ex.store.renamed', { name: saved.name }) };
       const cur = this.host.current();
@@ -153,7 +187,7 @@ export class ExploreStore {
     const cur = this.host.current();
     if (!cur) return;
     const now = new Date().toISOString();
-    this.exportRecord({ id: cur.recordId ?? '', kind: 'vehicle', name: cur.name, created: now, updated: now, design: cur.spec });
+    this.exportRecord({ id: cur.recordId ?? '', kind: this.kind, name: cur.name, created: now, updated: now, design: cur.spec } as DesignRecord);
   }
 
   async importFile(file: File): Promise<void> {
@@ -162,9 +196,12 @@ export class ExploreStore {
     if (!parsed.input) {
       const isMission = !!raw && typeof raw === 'object' && (raw as { format?: unknown }).format === MISSION_FORMAT;
       const invalid = parsed.issues.find((i) => i.code === 'invalid');
+      // a satellite file refused in the rocket designer is called a satellite, and the other way round
+      const kind = (raw as { kind?: unknown } | null)?.kind;
+      const fileInvalid = kind === 'vehicle' || kind === 'satellite' ? FILE_INVALID[kind] : this.texts.fileInvalid;
       this.say({
         level: 'error',
-        text: t(isMission ? 'build.ex.store.fileMission' : invalid ? 'build.ex.store.fileInvalid' : 'build.ex.store.fileFormat'),
+        text: t(isMission ? 'build.ex.store.fileMission' : invalid ? fileInvalid : 'build.ex.store.fileFormat'),
         ...(invalid?.detail ? { extra: invalid.detail } : {}),
       });
       return;
@@ -172,7 +209,17 @@ export class ExploreStore {
     try {
       const rec = await this.store.save(parsed.input);
       const newer = parsed.issues.some((i) => i.code === 'newerVersion');
-      this.message = { level: newer ? 'warn' : 'ok', text: `${t('build.ex.store.imported', { name: rec.name })}${newer ? ` ${t('build.ex.store.fileNewer')}` : ''}` };
+      const newerText = newer ? ` ${t('build.ex.store.fileNewer')}` : '';
+      if (!isDesignOf(rec, this.kind)) {
+        // the other kind: kept, and opened in its own designer, never as the wrong thing. That designer's store says
+        // so: this one is hidden once the other designer is on screen, and a message left here would be stale on return
+        const text = `${t(rec.kind === 'satellite' ? 'build.sat.store.toSatellite' : 'build.sat.store.toRocket', { name: rec.name })}${newerText}`;
+        this.message = null;
+        await this.refresh();
+        this.host.other?.(rec, text);
+        return;
+      }
+      this.message = { level: newer ? 'warn' : 'ok', text: `${t('build.ex.store.imported', { name: rec.name })}${newerText}` };
       await this.refresh();
       this.host.open(rec);
     } catch (error) {
@@ -184,7 +231,7 @@ export class ExploreStore {
     const cur = this.host.current();
     const head = el('div', 'bx-store-head');
     const title = el('h2', 'bx-h2', t('build.ex.store'));
-    title.id = 'bx-store-title';
+    title.id = this.titleId;
     head.append(title);
     const actions = el('div', 'bx-actions');
     const save = button('watch-btn primary', t('build.ex.store.save'), () => void this.save(false));

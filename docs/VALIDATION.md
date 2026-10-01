@@ -16,7 +16,8 @@ two fitted scalars, to its flown heights at the fairing and at core separation (
 flies its stored pitch programme"). Every fitted, derived and constructed value the vehicles fly
 is in one register (§1, "Fitted and derived values").
 Later, Falcon Heavy took the same published first-stage masses and Falcon 9's max-Q bucket
-(§4, F11). Neither was fitted.
+(§4, F11), and Proton-M its published stage propellant loads and, with Angara-A5, its operator's
+fairing jettison rule (§4, F14). None of these was fitted.
 
 Status on 2026-09-28:
 
@@ -391,6 +392,13 @@ the merge of that work with main, in point mass:
 
 The smaller reserve burns the first stage longer, which is what SSO-A needed (above) and what
 Iridium NEXT 8's T+140 s speed did not. Nothing was fitted.
+
+The six-DOF comparison (`tests/heavy/validation-falcon9.test.ts`, outside `npm test`) was not
+re-measured with that work and was found failing on the first `npm run test:heavy` after it, on
+2026-10-01. In six-DOF only Bangabandhu-1 moved: 9 → 11 of its 14 rows, the MECO speed (2 042 m/s
+against 2 259 ± 231) and the second stage's start (150.2 s against 163.0 ± 16.3) now agreeing. Its
+maximum dynamic pressure time, T+140 s altitude and SECO altitude still disagree. The other four
+flights' six-DOF rows are unchanged.
 
 **What is left of F1 and F2.** MECO is now 4–10 % early (it was 7–12 %). The expended flight's
 first-stage burn is 157.9 s against 168 s. The speed at T+100 s is within 1–16 % (it was 2–22 %).
@@ -1039,7 +1047,8 @@ reachable gave a flight-specific timeline with its payload, or the only source w
 
 The code is in `tests/validation/reference-data.ts`. The pinned disagreements are in
 `tests/validation/timelines.test.ts` (point mass) and `tests/heavy/validation-timelines.test.ts`
-(six-DOF). The point-mass model agrees on 39 of these 68 rows, the six-DOF model on 37.
+(six-DOF). The point-mass model agrees on 41 of these 71 rows, the six-DOF model on 39 (39 and 37 before
+F14's fairing rule).
 
 ### Results
 
@@ -1122,11 +1131,11 @@ The code is in `tests/validation/reference-data.ts`. The pinned disagreements ar
 
 | milestone | unit | published | point mass | six-DOF | tolerance |
 | --- | --- | ---: | ---: | ---: | ---: |
-| maxQ time | s | 62.0 | 50.4 (−19 %) ✗ | 50.5 (−19 %) ✗ | ±6.2 |
-| sep12 time | s | 120.0 | 111.6 (−7 %) | 111.4 (−7 %) | ±12.0 |
-| sep23 time | s | 327.0 | 327.6 (0 %) | 327.7 (0 %) | ±32.7 |
-| fairing time | s | 347.0 | 174.6 (−50 %) ✗✗ | 151.0 (−56 %) ✗✗ | ±34.7 |
-| sep3b time | s | 582.0 | 572.6 (−2 %) | 572.9 (−2 %) | ±58.2 |
+| maxQ time | s | 62.0 | 52.2 (−16 %) ✗ | 52.4 (−15 %) ✗ | ±6.2 |
+| sep12 time | s | 120.0 | 113.7 (−5 %) | 113.6 (−5 %) | ±12.0 |
+| sep23 time | s | 327.0 | 331.6 (+1 %) | 331.5 (+1 %) | ±32.7 |
+| fairing time | s | 347.0 | 342.6 (−1 %) | 342.5 (−1 %) | ±34.7 |
+| sep3b time | s | 582.0 | 576.6 (−1 %) | 576.7 (−1 %) | ±58.2 |
 
 **Falcon Heavy Arabsat-6A (planned)**
 
@@ -1154,15 +1163,22 @@ MECO at T+174.0 s (six-DOF 174.2 s), max Q at T+51.3 s and fairing jettison at T
 | stage2Cutoff time | s | 323.0 | 330.6 (+2 %) | 330.8 (+2 %) | ±32.3 |
 | stage2Sep time | s | 326.0 | 331.6 (+2 %) | 331.8 (+2 %) | ±32.6 |
 | stage3Ign time | s | 328.0 | 332.6 (+1 %) | 332.8 (+1 %) | ±32.8 |
-| fairing time | s | 340.0 | 301.6 (−11 %) ✗ | 256.2 (−25 %) ✗ | ±34.0 |
-| stage3Cutoff time | s | 746.0 | 727.3 (−3 %) | 743.1 (0 %) | ±74.6 |
-| brizSep time | s | 748.0 | 730.6 (−2 %) | 746.3 (0 %) | ±74.8 |
+| fairing time | s | 340.0 | 341.6 (+0 %) | 341.8 (+1 %) | ±34.0 |
+| stage3Cutoff time | s | 746.0 | 729.5 (−2 %) | 732.6 (−2 %) | ±74.6 |
+| brizSep time | s | 748.0 | 732.7 (−2 %) | 735.9 (−2 %) | ±74.8 |
+
+The Proton-M and Angara-A5 fairing rows are measured with the jettison rule of F14, and Proton-M
+with its published stage propellant loads (F14). On the heating placard and the earlier loads the
+Proton rows were max Q 50.4 / 50.5 s, sep12 111.6 / 111.4 s, sep23 327.6 / 327.7 s, fairing
+174.6 / 151.0 s and sep3b 572.6 / 572.9 s; Angara's fairing was 301.6 / 256.2 s, and its
+third-stage cut-off and Briz-M separation 727.3 / 743.1 s and 730.6 / 746.3 s before the fairing
+rule and its six-DOF kick (F14).
 
 ### Findings
 
 **What agrees.**
 
-- **Angara-A5:** every time except the fairing is within 3 %.
+- **Angara-A5:** every time is within 3 %, the fairing included since F14's rule.
 - **Atlas V 551, Proton-M and H-IIA 202:** the staging times are within 7 % (Atlas V and Proton)
   and 3 % (H-IIA, as flown).
 - **PSLV-XL:** the second-stage separation agrees in time, altitude and inertial speed.
@@ -1231,8 +1247,9 @@ than any frame difference (about 0.4 km/s). The stage data agree with JAXA's tab
 gravity, and its second stage then burns for 661 s where the model's burns for 364 s. This is
 guidance, not propulsion.
 
-**F14. Fairing jettison is mostly early.** On a heating placard the model drops the fairing
-where the free-molecular heating falls to 1 135 W/m²:
+**F14. Fairing jettison: two operators' rules applied, two placard vehicles still early.** On a
+heating placard the model drops the fairing where the free-molecular heating falls to
+1 135 W/m². At first it did that on these flights:
 
 | vehicle | model, point mass / six-DOF | published |
 | --- | --- | --- |
@@ -1242,11 +1259,60 @@ where the free-molecular heating falls to 1 135 W/m²:
 | Falcon Heavy | 205 s / 165 s | 247 s |
 | H3, six-DOF only | 176 s | 210 s |
 
-The real vehicles hold theirs much longer. Two fixed jettison times (`fairing.sepTime`) also do
-not match these flights: Vega-C's 220 s against VV25's 304 s, and H-IIA's 250 s against F50's
-266 s (inside tolerance). The placard is one physical criterion standing in for each operator's
-own thermal and loads rules (PHYSICS.md §10). On these flights it drops the fairing 10–50 %
-early.
+Measured on 2026-09-28, the heating the model has at each published time spans 25 to 950 W/m²
+(Electron 950, H3 638, Angara 342, Falcon Heavy 146, Atlas V 58, Proton 31, PSLV-XL 25). No single
+lower threshold fits all of them, so the placard itself was not changed. What the operators'
+documents say instead:
+
+- *Proton-M and Angara-A5 are timed to the sequence, not to heating.* ILS's Proton Mission
+  Planner's Guide (Rev. 7, 2009, §2.3.1) has the third stage lighting at 338 s and "PLF jettison
+  typically at 348 s", and says jettison times "are constrained to occur so that fairing
+  hardware will impact in designated areas" (§2.4.2); the 1 135 W/m² figure is only a ceiling.
+  ILS describes Angara-A5's as "at the initial phase of Stage III operation", ten seconds after
+  the core separated on the first flight (23 December 2014). Both now fly that rule,
+  `fairing.sepAfterIgnition`: ten seconds after the Proton third stage lights, nine after the
+  URM-2 does (it lights a second after separation). The rule comes from the operator's guide and
+  from Angara's first flight; Telstar 14R and Angara flight 2 are the check. Proton comes off at
+  T+342.6 / 342.5 s against 347 s (−1 %), Angara at T+341.6 / 341.8 s against 340 s. The Proton
+  row is not fully independent of the guide's 348 s, since the model's third stage lights at
+  332.6 s, near the flight's 327 s, but it is timed by the model's own staging.
+- *The early jettison had been hiding a Proton shortfall.* Carrying the 2 t fairing to T+339 s
+  instead of T+175 s costs about 110 m/s, and on its earlier stage data Proton-M no longer took
+  90 % of its GTO rating (6.2 t) to orbit. Those data were short: the first and second stages
+  carried 419.4 t and 156.1 t of propellant, with no source, against the published 428.3 t and
+  157.3 t (Wikipedia, "Proton-M"). With the published loads the row flies again, with 425 m/s
+  to spare, and every Telstar 14R row moves towards the flight (table above). The crew-ship
+  flight (7.15 t, which stays beyond the stack) showed that the insertion floor did not cover a
+  stack that never reaches SECO: it broke up at T+1 448 s instead of ending as an abandoned
+  insertion. The floor now applies during the ascent once the first stage has gone (PHYSICS.md
+  §6, "The insertion floor"); it ends at T+1 458 s.
+- *And a six-DOF coast that could not reach its apex.* Angara-A5 to low orbit (6.1 t, six-DOF
+  with PEG or IGM) now cuts its URM-2 off at 200.5 km, a kilometre past a 201.6 km apex, with a
+  −602 km perigee. The next apoapsis is a revolution away through the Earth, the J2 coast
+  prediction reported the impact and the mission ended there with the Briz-M full. With the
+  placard the same cut-off came before the apex. The sequencer now burns at once when that
+  prediction fails on a suborbital state, and the flight reaches its orbit at T+4 251 s.
+- *And a six-DOF ascent that was already short.* Angara-A5 to the sun-synchronous preset (6.1 t,
+  six-DOF) stopped reaching orbit: the Briz-M, burning from a suborbital cut-off, sank into the
+  air during its first burn and the insertion was abandoned at 76 km with 3.1 km/s aboard. The
+  sequencer was not the cause (keeping its thrust at or above the horizon changed nothing): the
+  six-DOF ascent handed the Briz-M 257 m/s less than the point mass does (7 094 m/s at 250 km
+  against 7 351 m/s at 190 km), which the placard's earlier jettison had been covering. As for
+  Atlas V, the rigid body cannot hold the angle of attack the point mass pitches over at. A
+  six-DOF kick (`guidanceDefaultsSixDof`) of 4–8° was swept on that case and 8° chosen, as the
+  one leaving the most delta-v; it brings the held-out cases, low orbit at 25 % and the transfer
+  orbit at 25, 50 and 90 %, to within 20 m/s of the point mass's remaining delta-v, where they
+  had been up to 255 m/s short. No flight data was fitted: Angara's published timelines give
+  times only, and every flight-2 row stays inside its tolerance.
+- *Atlas V's criterion is a 3-sigma one.* ULA jettisons "when the 3-sigma free molecular heat flux
+  falls below 1,135 W/m²" (Atlas V Launch Services User's Guide, Rev. 11, 2010, §2.3), on a
+  dispersed atmosphere and trajectory. The model evaluates the same number on the nominal
+  atmosphere, so it jettisons earlier. The guide's typical 500-series timelines put it at 206–212
+  s, but for the 521, not the 551, so no time was applied. Falcon Heavy is in the same position.
+  H3 agrees in point mass and is early only in six-DOF, where the trajectory differs.
+
+Two fixed jettison times (`fairing.sepTime`) also do not match these flights: Vega-C's 220 s
+against VV25's 304 s, and H-IIA's 250 s against F50's 266 s (inside tolerance).
 
 **F15. Vega-C's second and third stages separate 15–17 % early**: T+231 s against 272 s, and
 T+357 s against 428 s. The first stage agrees (−4 %). The kit gives only separation times, so it

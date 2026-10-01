@@ -114,7 +114,7 @@ export class FailureInjector {
         break;
       }
       case 'launchAbort':
-        if (!this.sim.commandAbort()) this.sim.event('evt.abortUnavailable', 'warn');
+        if (!this.sim.abortLaunch()) this.sim.event('evt.abortUnavailable', 'warn');
         break;
       case 'padFire':
         this.sim.event('evt.padFire', 'fail');

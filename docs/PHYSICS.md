@@ -978,6 +978,70 @@ number: the same vehicle and air, a different model of the flight.
 Clicking a run on the Monte Carlo window's scatter puts it in the setup panel — the set's seed
 and the run's number, its guidance law, six-DOF (as the set flew it) — ready to launch.
 
+## 2n. The flight on screen is the headless flight (roadmap T02)
+
+An instructor re-checks a student's flight by flying it again headless (T02), so the flight the
+student watched has to *be* the headless flight: `sim.step(sim.suggestedDt())` from the pad, the
+loop every test, the fleet fingerprints and the pre-flight probes fly. Six-DOF always was: it flies
+whole 10 ms control ticks and carries what is left of an animation frame over. A point-mass flight
+was not — each step was cut to what was left of the frame, so the step sequence, and every number
+after it, depended on the frame rate and the warp. Measured on five fleet missions (Falcon 9 to
+the ISS orbit, Electron to LEO, H3 to SSO, a crewed Soyuz-2.1a, Ariane 64 to GTO), the orbit at
+each insertion event was up to 2.7 km from the headless one with random frames and warps, and up
+to 2.4 km at a steady 60 frames a second at 10× (Ariane 64's GTO apogee). Electron moved most, and
+most in the ordinary case of a steady frame rate at 1×: at 30, 60 and 120 frames a second its
+suborbital SECO perigee was 15, 19 and 21 km from the headless one, its parking orbit 3.3–4.5 km,
+and it reached its parking and target orbits (the ends of the Curie burns) 33–48 s earlier than
+the headless flight (with random frames: 6.7 km, 1.5 km and 16 s). Those are the amounts by which
+a live run now differs from the same run before this change.
+
+Since the owner's decision of 2026-09-29 the live point-mass flight is flown in whole steps too
+(`FlightRecorder.advance`). A point-mass step is 0.02–0.25 s in the ascent but up to 30 s in orbit
+and 60 s in a high coast, so waiting for a whole step would freeze the picture; instead the
+simulation runs up to one step *ahead* of the instant on screen, and the picture is drawn at that
+instant between the two step boundaries around it — by the interpolation a replay seek uses:
+Kepler from the earlier state on a coast or in orbit, a straight blend under thrust. Measured on
+Falcon 9 and Ariane 64 flights, the drawn position half way through a 0.25 s ascent step is at most
+0.26 m from the same step split in ten, and at a boundary the picture moves by at most 2 mm under
+thrust, 8 cm on a coast and 5.9 m at the end of a 30 s orbit step (the J2 the Kepler arc leaves
+out) — nothing a viewer can see. The recording — its frames and its events — ends at the instant
+on screen, so nothing shown runs ahead of the picture. A command (the crew's abort, the TORU hand
+controllers) is taken at the simulation's clock, the step boundary at or after the picture, and
+the picture moves on to it (at most one step: 0.1 s in the lower atmosphere); that clock, not the
+one on screen, is the time a journal of commands has to keep for a re-fly to be exact. The TORU
+panel sends a command only when it changes: a key held at its limit repeats about 30 times a
+second, and resending the same command moved the picture on by up to a 0.05 s step each time (the
+clock ran 3.0 s in 2 s). Skip and the fast-forwards count from the frame on screen
+(`RecordingSource.clock`), not from the simulation: in a high coast the simulation can already
+have started the next burn, and Skip 23 s before an apogee burn went 84 s on, a minute into the
+burn, instead of to 20 s before it. A lesson grades the flight as far as the picture shows it
+(`gradeShown`, src/lessons/grader.ts): its events up to the instant on screen, as the event log
+holds them. The docking that ends lesson 5.2 closes a 5 s step while the hooks close, and the
+strip had marked "Docked to the station" and ended the flight 4.9–5.0 s of mission time before the
+picture and the event log showed it (two- and four-orbit profiles, 1–10×). A flight that fails is
+shown failed at once, and so is its grade. The orbit it grades is the orbit at the flight's end
+for grading, not at the frame it grades on (T03 review, 2026-10-01): every event carries the state
+the step that logged it left the flight in (`SimEvent.state`; a command's, logged between steps,
+the state then), with the impulse a shut-down engine's tail-off still gives added along the
+thrust axis — the prediction the cut-off itself is judged on, and the orbit the event log's
+"Target orbit achieved" line reports — and the orbit measures and hooks read the end event's
+(src/lessons/measures.ts). Under time warp the first frame that shows the end comes minutes late,
+and by then a transfer orbit's osculating semi-major axis has risen by 9 km (135 s after
+insertion) to 16.5 km (300 s): the planned 250 × 35 786 km answer to lesson 12.1 passed when
+graded 145–710 s late. Read at the end it fails however late it is graded. The tail-off given at
+once rather than over its 1.25 s leaves the end's a 0.55 km from the head's once the tail-off is
+over on that orbit, and the speed 0.016 m/s from it on lesson 1.1's 500 km circle. The telemetry
+could not say this — in orbit it is sampled every max(10 s, period/360), 135 s on a transfer
+orbit — and the fleet fingerprints hash an event's key and time only, so no recorded flight
+changed. Flown live with random
+frames, warps, pauses and cut-short frames, Falcon 9, Electron, H3 and Ariane 64 now equal their
+headless flights bit for bit, and so does the crewed Soyuz aborted by hand at T+60 s when re-flown
+from the abort's time (`tests/live-stepping.test.ts`).
+
+A six-DOF flight in a held coast (§2a) still steps 10 s at a time and waits for a whole step, so at
+1× its picture stands still for ten seconds and then jumps (measured: 599 frames at 60 frames a
+second without a change, on the six-DOF LEO quick start at 200 km); recorded, not yet changed.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic
@@ -1159,12 +1223,27 @@ So the mechanism is modelled instead. Those four operators **publish a jettison 
 it**, and the field is now `FairingSpec.sepTime`: Ariane 64 200 s, Vega-C 220 s, Long March 2D
 220 s, H-IIA 202 250 s (measured T+200.1, 220.0, 220.2, 250.2 s). Soyuz-2.1a, Soyuz-2.1b and Long
 March 3B/E carry the same field for the same reason — their operators publish a jettison time too
-— at 153.3 s (the crewed profile as flown since MS-21; 157 s until 2026-10-01, Soyuz-FG's), 157 s
-and 215 s (measured T+153.3 s, T+157.1 s and T+215.2 s). The 80 km altitude floor still
-applies to a timeline release (Soyuz-2.1a's is 70 km, below its 79 km fit target, so the time decides), so a trajectory that is still deep in the atmosphere at its
-published time does not shed the fairing there. Everything else in the fleet — Falcon 9, H3,
-Electron, PSLV-XL, Long March 5, Angara, Proton, Atlas V, Vulcan — keeps the unmodified physical
-placard.
+— Soyuz-2.1a at 183.2 s on a Progress MS and every other payload, at 153.3 s on a crewed
+flight (its own fairing and profile, `VehicleSpec.crewedProfile`; the crewed flights since MS-21),
+Soyuz-2.1b at 208.4 s and Long March 3B/E at 215 s (measured T+183.2, 153.3, 208.4 and 215.2 s).
+The 80 km altitude floor still applies to a timeline release (Soyuz-2.1a's is 70 km, below its
+79 km and 91 km heights, so the time decides), so a trajectory that is still deep in the atmosphere
+at its published time does not shed the fairing there. Proton-M and Angara-A5 carry a rule instead of a
+time, `FairingSpec.sepAfterIgnition`: Khrunichev drops the fairing ten seconds into third-stage
+flight. ILS's Proton Mission Planner's Guide (Rev. 7, 2009) has the third stage lighting at 338 s
+and "PLF jettison typically at 348 s", timed "so that fairing hardware will impact in designated
+areas"; on Angara-A5 it goes "at the initial phase of Stage III operation", ten seconds after the
+core separated on the first flight (ILS, 2014). On the placard they had dropped it at T+175 s and
+T+302 s against Telstar 14R's 347 s and Angara flight 2's 340 s; on the rule they drop it at
+T+342.6 s and T+341.6 s (point mass). Carrying Proton's fairing that long uncovered a first
+stage 8.9 t short of its published propellant load, now corrected (VALIDATION.md, F14). Everything else in the fleet — Falcon 9, H3, Electron,
+PSLV-XL, Long March 5, Atlas V, Vulcan — keeps the unmodified physical placard.
+
+That placard is not what the operators who quote it evaluate. ULA jettisons Atlas V's fairing
+"when the 3-sigma free molecular heat flux falls below 1,135 W/m²" (Atlas V Launch Services
+User's Guide, Rev. 11, 2010, §2.3): the limit applies to a dispersed atmosphere and trajectory, so
+the nominal heating at jettison is lower, and the model, which evaluates it on the nominal
+atmosphere, drops the fairing early (VALIDATION.md, F14).
 
 Soyuz-2.1a and Soyuz-2.1b fly the published callout directly instead of the heating
 placard, which used to leave Soyuz-2.1a 19 s late (T+176 s against the ~157 s of the time): at the
@@ -1619,6 +1698,12 @@ screen's knife edge showed.
   tests over the whole matrix pin both halves: `no flight breaks up after it has reported an
   insertion` and `no flight reports a parking orbit below the insertion floor`.
 
+  The rule was first written for the stack after SECO, in `burn` and `coast`. With the fairing
+  kept to the published T+339 s (§4) the same crew-ship flight never reaches SECO: the Briz-M
+  lights during the ascent and burns out short of orbit, and it broke up at T+1 448 s still in
+  `ascent`. The floor now applies during the ascent too, once the first stage has separated; a
+  first-stage failure is an ascent failure and is left to the placards.
+
 ## 6a. Reference timelines
 
 Flown with `DEFAULT_GUIDANCE` merged with each vehicle's `guidanceDefaults`, no auto-tuning and
@@ -1955,8 +2040,8 @@ configuration, and the column that matters is whether it agrees with the outcome
 
 | mission | outcome | final orbit | insertion | verdict |
 | --- | --- | --- | --- | --- |
-| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 292 s | — | T+570 s | **fail** ✓ |
-| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+21 519 s | 254 × 35 731 km | T+570 s | warn ✓ |
+| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 458 s | — | — | **fail** ✓ |
+| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+37 597 s | 250 × 35 732 km | T+575 s | warn ✓ |
 | Angara-A5/Briz-M · crew 7.15 t → 500 km, Plesetsk | target orbit T+8 394 s | 498 × 498 km | T+1 051 s | warn ✓ |
 | Angara-A5/Briz-M · comsat 5 t → GTO, Plesetsk | target orbit T+57 235 s | 251 × 35 720 km | T+754 s | warn ✓ |
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Vostochny | target orbit T+3 626 s | 597 × 597 km | T+827 s | ok ✓ |
@@ -1988,7 +2073,13 @@ Two rows are failures and both are capability limits with the shortfall measured
   target, all at kick angles of 6–8° with turn rates the fleet does not use and none at or
   near the shipped programme: with the DEFAULT guidance this combination does not fly. The
   boundary is measured either side — 5.75 t delivers 412 × 412 km, 7.15 t does not — and it
-  is sharp because the sink is cubic in the shortfall.
+  is sharp because the sink is cubic in the shortfall. Since the fairing stays on to T+339 s,
+  as ILS publishes (§4), the third stage no longer reaches a cut-off at all: the Briz-M lights
+  during the ascent, burns short of orbit and the stack falls back. The insertion floor
+  (`abandonInsertion`) used to apply only after SECO and let that end in a break-up at
+  T+1 448 s; it now covers the ascent once the first stage has gone, and the flight ends
+  abandoned at T+1 458 s (measured 2026-09-28 with Proton-M's published stage propellant loads;
+  the two Proton rows of the table above were re-measured the same day, the verdicts were not).
 - **Soyuz-2.1b/Fregat with the same crew ship** is the same shape one step down: the Blok I
   under a Fregat and 7.15 t is 470 m/s short (`ascentMargin` −470), the ascent sags and the
   stack breaks up at T+962 s — *before* any insertion is announced, which is the honest end
@@ -2832,9 +2923,10 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     cut-off works and is tested, the 300–800 km band does not close and all six `soyuz21a`
     rows plus Long March 2D's seven remain `ARCHITECTURE` exclusions. `insertionAltitudeFor`
     also still takes only the target and not the `VehicleSpec`, as the audit asked.
-  - The fairing placard is one physical criterion (1135 W/m²) plus, for four vehicles, the
-    jettison **time** their operator publishes (§4). Neither is a model of the real decision,
-    which is a heating placard evaluated against a specific fairing's thermal design.
+  - The fairing placard is one physical criterion (1135 W/m²) plus, for eight vehicles, the
+    jettison **time** their operator publishes and, for Proton-M and Angara-A5, the operator's
+    rule (§4). The placard is evaluated on the nominal atmosphere, where operators evaluate it on
+    3-sigma dispersions, so it drops Atlas V's and Falcon Heavy's fairings early.
   - The physics has been compared with flight data for twelve vehicles: Falcon 9 (webcast
     telemetry of five flights) and eleven others against published timelines
     ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
@@ -2844,7 +2936,7 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     - PSLV-XL's first stage is 29 % slow at separation. It flies too steep and then turns hard;
       the solid-motor curve shape was measured and is not the cause.
     - H3's first stage flies far flatter than JAXA's plan.
-    - The heating placard drops most fairings 10–50 % early.
+    - The heating placard drops Atlas V's and Falcon Heavy's fairings 17–27 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.
@@ -2869,15 +2961,42 @@ into the flight.
   (20 °C, 50 % relative humidity) at a 6 dB loss.
 - **Delay and Doppler.** What is heard at t left the source at the retarded time τ with
   τ = t − r(τ)/c, solved by fixed-point iteration over the recorded trajectory (c = 340.3 m/s);
-  the pitch is scaled by c/(c + v_r). Events are heard at t_e + r(t_e)/c.
+  the pitch is scaled by c/(c + v_r). Events are heard at t_e + r(t_e)/c. The sound travels in
+  the air, which turns with the Earth: the source's position at τ is turned about the pole
+  through ω⊕·(t − τ) before r is measured, and v_r is its speed relative to the air,
+  v − ω⊕ × r. Measured in the inertial frame instead, a pad at Cape Canaveral moves at 409 m/s:
+  a rocket standing on it was heard Doppler-shifted, and from 5 km west of it its ignition
+  arrived 8 s early (from the east, never).
 - **Loudspeaker.** 120 dB plays at full scale and every 20 dB less at a tenth of it; below
   40 dB nothing plays. Warped time drops the delay and plays at 35 % (up to 5×) or 18 % (up to
   50×), silent beyond; the onboard camera hears a structure-borne rumble that follows the
   throttle.
+- **Ground.** A listener near the ground hears each source twice, directly and from its image
+  below the ground (Lloyd's mirror), the image path √(r² + 4·h_s·h_l) longer than r by
+  ≈ 2·h_s·h_l / r; the two interfere in a comb whose notches sweep down as the rocket climbs.
+  The ground reflects R = 0.9 of the pressure (an assumption: hard-packed ground and concrete,
+  no ground impedance), the echo loses its treble above 2 kHz, and the two gains split the
+  level's power, direct² + reflected² = 1, since the hemispherical spreading above already
+  counts the ground. A camera above 60–120 m hears no ground echo.
+- **Surroundings.** A share of each sound, −24 dB at the pad, −13 dB at 5 km and approaching
+  −6 dB far away, goes to an outdoor reverberation: silence for 25 ms, seven echoes off the
+  pad's structures between 30 and 380 ms, then a diffuse tail that builds over ~100 ms and
+  decays with T₆₀ = 2.6 s, its corner falling from 6 kHz to 400 Hz. The share and the shape are
+  sound-design choices, not measurements.
+- **Direction.** Each source is heard from where it was at the retarded time, turned into the
+  camera's head and placed by the browser's HRTF panner (best on headphones); a source keeps
+  its voice from frame to frame, and up to four are heard at once.
 
-The roar is synthesised from brown, pink and white noise (the last gated by a slow random
-envelope for the crackle of a shock-laden exhaust), filtered and mixed by the numbers above;
-the cues are filtered noise bursts over a falling sine thump.
+The roar of each source is three layers: brown noise below 180 Hz, pink noise up to the
+absorption corner, and crackle. The crackle is a train of shocks, not noise: Ffowcs Williams,
+Simson and Virchis (J. Fluid Mech. 71, 1975) define crackle by a pressure skewness above 0.4,
+so the generator draws instant compressions decaying in 0.15–0.6 ms, each paid back by a
+shallow rarefaction, at a mean 1500 a second that swells and fades with a slow random
+intensity, with log-normal strengths (skewness ≈ 1.4; src/audio/waveforms.ts). It is played
+in full up to ~2 km and fades out as the absorption corner falls to 800 Hz, a fifth of it left
+at 15 km. A limiter at −3 dBFS catches the peaks without squeezing the range out of the
+level. The cues are filtered noise bursts over a falling sine thump, placed and reverberated
+the same way.
 
 ## 12. The sky (roadmap V02)
 

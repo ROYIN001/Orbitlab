@@ -192,7 +192,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 2 538 tests in 179 files, 20 to 30 minutes on four cores. Among it:
+`npm test` runs the regular suite (vitest): 9 858 tests in 243 files, 20 to 30 minutes on four cores. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -503,7 +503,8 @@ Phase 3, the rocket builder (the Build section), on the same branch. No built-in
   - PSLV-XL's first stage is 29 % slow at separation, because of its ascent profile, not its
     solid-motor thrust curve.
   - H3's first stage flies far flatter than planned.
-  - Most fairings come off 10–50 % early.
+  - Atlas V's and Falcon Heavy's fairings come off 17–27 % early. Proton-M and Angara-A5 now fly
+    their operator's jettison rule.
 
   Long March 2D, 3B/E and 5, Vulcan, Soyuz-2.1b and Starship are not compared; see
   "Assumptions and limitations" in [PHYSICS.md](PHYSICS.md). The three historical vehicles are

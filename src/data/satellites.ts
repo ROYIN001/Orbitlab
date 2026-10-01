@@ -44,3 +44,22 @@ export const satelliteById = (id: string): SatelliteSpec => {
   if (!s) throw new Error(`Unknown satellite ${id}`);
   return s;
 };
+
+/** A satellite of the catalogue above (as against a custom one, roadmap D06). */
+export const isCatalogueSatellite = (id: string): boolean => SATELLITES.some((x) => x.id === id);
+
+/**
+ * The satellite a mission flies (roadmap D06, Phase 4 map §2.6 c): its inline
+ * spec when it carries a custom one, else the catalogue's. Modelled on
+ * `missionVehicle` (src/data/vehicles.ts) and, like it, the one way to
+ * resolve a mission's satellite — the simulation, the planner, the auto-tuner,
+ * the flight and Monte Carlo workers (which get the spec inside the config
+ * they are sent), the setup panel, the lessons, the report and WebMCP all
+ * come through here, so a designed satellite's engine, size and drag figures
+ * are the ones every reader sees.
+ */
+export function missionSatellite(cfg: { satelliteId: string; satelliteSpec?: SatelliteSpec }): SatelliteSpec {
+  if (!cfg.satelliteSpec) return satelliteById(cfg.satelliteId);
+  if (cfg.satelliteSpec.id !== cfg.satelliteId) throw new Error(`The mission's satellite ${cfg.satelliteId} is not its custom satellite ${cfg.satelliteSpec.id}`);
+  return cfg.satelliteSpec;
+}

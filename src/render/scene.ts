@@ -19,6 +19,7 @@ import { buildMoon, type MoonView } from './moon';
 import { R_EARTH } from '../physics/constants';
 import { skyState, type SkyState } from './sky';
 import { buildStarField } from './stars';
+import { sharpenEarthTextures } from './sharpness';
 import { clamp01, hash11, smoothstep } from './noise';
 
 const EARTH_VERT = /* glsl */ `
@@ -329,6 +330,7 @@ export class SceneManager {
     // Earth
     tex.day.colorSpace = THREE.SRGBColorSpace;
     tex.night.colorSpace = THREE.SRGBColorSpace;
+    sharpenEarthTextures(this.renderer, tex);
     const geo = new THREE.SphereGeometry(R_EARTH, 128, 96);
     this.earthMat = new THREE.ShaderMaterial({
       vertexShader: EARTH_VERT, fragmentShader: EARTH_FRAG,
@@ -346,8 +348,9 @@ export class SceneManager {
     this.earthMesh = new THREE.Mesh(geo, this.earthMat);
     this.earthGroup.add(this.earthMesh);
     if (tex.clouds) {
-      const cm = new THREE.MeshLambertMaterial({ map: tex.clouds, transparent: true, opacity: 0.85, depthWrite: false, fog: false });
-      cm.alphaMap = tex.clouds;
+      // The cloud map is a greyscale density: white cloud, as opaque as the
+      // map is bright (an alpha map reads the green channel).
+      const cm = new THREE.MeshLambertMaterial({ color: 0xffffff, alphaMap: tex.clouds, transparent: true, opacity: 0.85, depthWrite: false, fog: false });
       this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 9000, 96, 64), cm);
       this.earthGroup.add(this.cloudMesh);
     } else {
@@ -373,7 +376,7 @@ export class SceneManager {
     // lights
     this.sun = new THREE.DirectionalLight(0xfff4e0, SUN_INTENSITY);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(1024, 1024);
+    this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.6;
     this.scene.add(this.sun);
@@ -709,7 +712,7 @@ export class SceneManager {
   }
 
   /**
-   * Restrict the shadow map to a small region (the pad) so a 1024² map still
+   * Restrict the shadow map to a small region (the pad) so a 2048² map still
    * produces crisp shadows at a site that is 6000 km from the scene origin.
    */
   setShadowFocus(pos: THREE.Vector3, radius: number, enabled: boolean): void {
@@ -990,7 +993,7 @@ export class SceneManager {
     if (this.cloudMesh) {
       this.cloudMesh.geometry.dispose();
       const cm = this.cloudMesh.material as THREE.MeshLambertMaterial;
-      cm.map?.dispose();
+      cm.alphaMap?.dispose();
       cm.dispose();
     }
     for (const u of ['dayMap', 'nightMap', 'specMap', 'normalMap'] as const) {
@@ -1010,8 +1013,11 @@ export function loadEarthTextures(base: string): Promise<EarthTextures> {
     loader.load(`${base}textures/${name}`, (t) => { t.anisotropy = 4; resolve(t); }, undefined, () => resolve(null));
   });
   return Promise.all([
-    load('earth_atmos_2048.jpg'), load('earth_lights_2048.png'), load('earth_specular_2048.jpg'),
-    load('earth_normal_2048.jpg'), load('earth_clouds_1024.png'),
+    // Colour, night lights and clouds at 4096 × 2048 (about 10 km a texel at
+    // the equator): from low orbit and on the way up the 2048 maps were
+    // visibly soft. Specular and relief stay at 2048, where it does not show.
+    load('earth_atmos_4096.jpg'), load('earth_lights_4096.jpg'), load('earth_specular_2048.jpg'),
+    load('earth_normal_2048.jpg'), load('earth_clouds_4096.jpg'),
   ]).then(
     ([day, night, spec, normal, clouds]) => ({
       day: day ?? proceduralTexture('#2a5ea8', '#3f7a3a'),

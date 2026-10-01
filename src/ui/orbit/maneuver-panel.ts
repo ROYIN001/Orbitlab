@@ -40,7 +40,8 @@ export interface ManeuverPanelHost {
    * O03: the spacecraft the plan is budgeted for — which, your own, the one
    * from the flight (if it has an engine), and the one chosen (null for none)
    */
-  craft(): { source: CraftSource; own: Craft; fromLaunch: Craft | null; launchHasNoEngine: boolean; chosen: Craft | null };
+  /** `fromDesign`: the hand-off is a satellite designed in the Build section (D06), not a launch */
+  craft(): { source: CraftSource; own: Craft; fromLaunch: Craft | null; launchHasNoEngine: boolean; chosen: Craft | null; fromDesign?: boolean };
   setCraft(source: CraftSource, own?: Partial<Craft>): void;
   /** the plan against that spacecraft's tanks, or null with none chosen */
   budget(): Budget | null;
@@ -165,14 +166,14 @@ function craftControls(host: ManeuverPanelHost): HTMLElement {
   pick.append(el('span', undefined, t('mv.craft')));
   const sel = el('select');
   const opts: [CraftSource, string][] = [['none', t('mv.craft.none')]];
-  if (c.fromLaunch) opts.push(['launch', t('mv.craft.launch')]);
+  if (c.fromLaunch) opts.push(['launch', t(c.fromDesign ? 'build.sat.orbit.craft' : 'mv.craft.launch')]);
   opts.push(['own', t('mv.craft.own')]);
   sel.append(...opts.map(([v, label]) => { const o = el('option', undefined, label); o.value = v; return o; }));
   sel.value = c.source;
   sel.addEventListener('change', () => host.setCraft(sel.value as CraftSource));
   pick.append(sel);
   box.append(pick);
-  if (c.launchHasNoEngine) box.append(el('p', 'pg-tool-lead', t('mv.craft.noEngine')));
+  if (c.launchHasNoEngine) box.append(el('p', 'pg-tool-lead', t(c.fromDesign ? 'build.sat.orbit.noEngine' : 'mv.craft.noEngine')));
   // audit 2026-09-27 A2: a spacecraft that cannot be one (more propellant than mass) is said so, and has no budget
   const problem = el('p', 'pg-warn pg-craft-problem');
   problem.setAttribute('aria-live', 'polite');

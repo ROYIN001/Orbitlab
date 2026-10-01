@@ -27,15 +27,16 @@
  * so this reads src/orbit only, and the four numbers P07 takes are typed as
  * the S03 hand-off carries them (`HandoffSpacecraft`, src/orbit/handoff.ts).
  * It still brings the propagator and NRLMSISE-00 along at run time, through
- * `tumblingBoxArea` (src/orbit/reentry.ts) and `B_RANGE`
- * (src/orbit/ballistic.ts): the guard reads direct imports only, and the
+ * `tumblingBoxArea` (src/orbit/reentry.ts): the guard reads direct imports only, and the
  * app's main bundle holds them already (src/worksheets/cases.ts), but a
- * worker that imports this file takes them in too. It is the only file in
- * src/design that does.
+ * worker that imports this file takes them in too. The satellite model
+ * (src/design/satellite-model.ts, track B) does the same through
+ * src/orbit/satellite-air.ts and src/orbit/disposal.ts, and imports this
+ * file besides; those two are the files in src/design that do.
  * tests/d06-satellite-area.test.ts holds it to NAPA-2 (B = 0.0134 m²/kg and
  * its lifetime within 25 %, docs/VALIDATION.md §7) and to TU Delft p. 138.
  */
-import { B_RANGE } from '../orbit/ballistic';
+import { B_RANGE } from '../orbit/ballistic-range';
 import type { HandoffSpacecraft } from '../orbit/handoff';
 import { tumblingBoxArea } from '../orbit/reentry';
 import type { SatelliteAreaCore, SatelliteDesign } from './satellite-spec';
@@ -83,7 +84,7 @@ export function ballisticCoefficient(design: Pick<SatelliteDesign, 'bus' | 'powe
 
 /**
  * Where a ballistic coefficient falls outside what anything in orbit has,
- * `B_RANGE` (src/orbit/ballistic.ts: a dense sphere, 1e-4 m²/kg, to a sheet
+ * `B_RANGE` (src/orbit/ballistic-range.ts: a dense sphere, 1e-4 m²/kg, to a sheet
  * of foil, 1 m²/kg): `'low'` or `'high'`, or null inside it. A code, not a
  * sentence: the screen words it (src/design/warning-text.ts's pattern).
  */

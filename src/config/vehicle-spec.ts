@@ -103,12 +103,15 @@ class Checker {
   }
 }
 
+/** The checker and its helpers, shared with the custom satellite's (src/config/satellite-spec.ts, roadmap D06). */
+export { Checker as SpecChecker, describe as describeSpecValue, isObj as isSpecRecord };
+
 const ENGINE_FIELDS = ['name', 'count', 'thrustSL', 'thrustVac', 'ispSL', 'ispVac', 'minThrottle', 'solid', 'peakFactor', 'vacuumOnly', 'startupS', 'tailoffS'];
 const BOOSTER_FIELDS = ['id', 'name', 'count', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset', 'thrustSteps'];
 const STAGE_FIELDS = ['id', 'name', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'restartable', 'sepDelay', 'ignitionDelay',
   'throttleWithBoosters', 'boosters', 'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength', 'jettisons', 'engineEvents', 'cutoffAt',
   'hotStage'];
-const FAIRING_FIELDS = ['mass', 'diameter', 'length', 'sepAltitude', 'sepTime', 'adapter', 'noseLength', 'color'];
+const FAIRING_FIELDS = ['mass', 'diameter', 'length', 'sepAltitude', 'sepTime', 'sepAfterIgnition', 'adapter', 'noseLength', 'color'];
 const VEHICLE_FIELDS = ['id', 'name', 'country', 'manufacturer', 'height', 'payloadLEO', 'payloadGTO', 'payloadSSO', 'fairing', 'escapeSystem',
   'stages', 'sites', 'maxQ', 'maxAccel', 'maxQThrottle', 'recoverable', 'recoveryReserve', 'returnReserve', 'guidanceDefaults',
   'guidanceDefaultsSixDof', 'dragArea', 'crewCapable', 'notes', 'derivedFrom', 'padBurnS', 'crewedProfile', 'cargoShipProfile'];
@@ -329,7 +332,7 @@ export function vehicleSpecProblems(raw: unknown): VehicleSpecIssue[] {
 
   if (raw.fairing !== null) {
     if (!isObj(raw.fairing)) c.add('fairing', `must be a fairing, or null for an integrated payload bay (got ${describe(raw.fairing)})`);
-    else checkFairing(c, raw.fairing, 'fairing');
+    else checkFairing(c, raw.fairing, 'fairing', raw.stages);
   }
 
   if (!Array.isArray(raw.stages) || raw.stages.length === 0) c.add('stages', `must be a list of 1 to ${MAX_STAGES} stages`);
@@ -366,13 +369,27 @@ export function vehicleSpecProblems(raw: unknown): VehicleSpecIssue[] {
   return c.issues;
 }
 
-function checkFairing(c: Checker, f: Obj, path: string): void {
+function checkFairing(c: Checker, f: Obj, path: string, stages: unknown): void {
   c.known(f, path, FAIRING_FIELDS);
   c.number(f, 'mass', path, 0, 2e4, { exclusiveMin: true });
   c.number(f, 'diameter', path, 0, 15, { exclusiveMin: true });
   const length = c.number(f, 'length', path, 0, 40, { exclusiveMin: true });
   c.number(f, 'sepAltitude', path, 0, 3e5);
   c.number(f, 'sepTime', path, 0, 2000, { optional: true });
+  const rule = f.sepAfterIgnition;
+  if (rule !== undefined) {
+    if (!isObj(rule)) c.add(`${path}.sepAfterIgnition`, `must be { stage, delay } (got ${describe(rule)})`);
+    else {
+      c.known(rule, `${path}.sepAfterIgnition`, ['stage', 'delay']);
+      c.string(rule, 'stage', `${path}.sepAfterIgnition`, { max: 32 });
+      c.number(rule, 'delay', `${path}.sepAfterIgnition`, 0, 600);
+      const stageIds = Array.isArray(stages) ? stages.map((s) => (isObj(s) ? s.id : undefined)) : [];
+      if (typeof rule.stage === 'string' && !stageIds.includes(rule.stage)) {
+        c.add(`${path}.sepAfterIgnition.stage`, `must name one of the vehicle's stages (got "${rule.stage}")`);
+      }
+    }
+    if (f.sepTime !== undefined) c.add(`${path}.sepAfterIgnition`, 'a fairing has a jettison time or a jettison rule, not both');
+  }
   const adapter = c.number(f, 'adapter', path, 0, 40, { optional: true });
   if (adapter !== undefined && length !== undefined && adapter >= length) c.add(`${path}.adapter`, 'must be shorter than the fairing');
   const nose = c.number(f, 'noseLength', path, 0, 40, { optional: true, exclusiveMin: true });
@@ -394,7 +411,7 @@ function checkProfile(c: Checker, raw: unknown, path: string, stages: unknown): 
   c.known(raw, path, ['fairing', 'guidanceDefaults', 'stages']);
   if (raw.fairing !== undefined) {
     if (!isObj(raw.fairing)) c.add(`${path}.fairing`, `must be a fairing (got ${describe(raw.fairing)})`);
-    else checkFairing(c, raw.fairing, `${path}.fairing`);
+    else checkFairing(c, raw.fairing, `${path}.fairing`, stages);
   }
   checkGuidance(c, raw.guidanceDefaults, `${path}.guidanceDefaults`);
   if (raw.stages === undefined) return;

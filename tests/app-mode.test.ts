@@ -38,6 +38,24 @@ describe('app routes (S01: section × level)', () => {
     expect(routeFromHash('#home')).toEqual(HOME_ROUTE);
   });
 
+  it('opens a page of a level by its own address, and only in its own section and level (D07)', () => {
+    const requirements = route('build', 'engineer', 'requirements');
+    expect(hashForRoute(requirements)).toBe('#/build/engineer/requirements');
+    expect(routeFromHash('#/build/engineer/requirements')).toEqual(requirements);
+    expect(routeFromHash('#build/Engineer/REQUIREMENTS')).toEqual(requirements);
+    expect(sameRoute(requirements, route('build', 'engineer'))).toBe(false);
+    expect(sameRoute(requirements, routeFromHash('#/build/engineer/requirements')!)).toBe(true);
+    // a page with no address of its own is no route; nor is a page at another level or section
+    expect(route('build', 'engineer', undefined)).toEqual(route('build', 'engineer'));
+    for (const hash of ['#/build/explore/requirements', '#/orbit/engineer/requirements', '#/build/engineer/bench', '#/build/engineer/requirements/x']) {
+      expect(routeFromHash(hash)).toBeNull();
+    }
+    // the level is what is remembered: a reload with no hash opens the bench, not the page
+    const store = memory();
+    saveRoute(requirements, store);
+    expect(loadRoute(store)).toEqual(route('build', 'engineer'));
+  });
+
   it('ignores the in-page anchors of the narrow layout and anything else', () => {
     for (const hash of ['', '#', '#setup', '#viewport', '#telemetry', '#/astronaut', '#/watch/extra',
       '#/home/watch', '#/launch/home', '#/orbit/', '#/launch/watch/1', '#/moon/watch']) {

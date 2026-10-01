@@ -1,11 +1,12 @@
 /** Shared validation of configuration data, separate from mission feasibility.
  * A valid but overweight or unreachable mission is still an experiment the
  * operator may launch. Only malformed or unsupported input is rejected here. */
-import type { FailureConfig, FailureMode, GuidanceParams, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from '../types';
+import type { FailureConfig, FailureMode, GuidanceParams, OrbitSpec, RecoveryMode, RecoveryPlan, SatelliteSpec, VehicleSpec } from '../types';
 import { ALL_VEHICLES, vehicleDataId } from '../data/vehicles';
 import { pitchProgramValid, vehicleSpecProblems, vehicleSpecText } from './vehicle-spec';
 import { LANDING_ZONES } from '../data/landing-zones';
-import { SATELLITES, satelliteById } from '../data/satellites';
+import { SATELLITES } from '../data/satellites';
+import { satelliteSpecProblems, satelliteSpecText } from './satellite-spec';
 import { SITES } from '../data/sites';
 import { guidanceForVehicle } from '../physics/defaults';
 import { supportsRigid } from '../physics/rigid/config';
@@ -27,7 +28,9 @@ export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'in
   /** a rendezvous needs the station's orbit and a spacecraft with its own engine */
   | 'rendezvousUnavailable'
   /** S02: the mission's custom vehicle is malformed (`detail` says where and how) */
-  | 'vehicleSpec';
+  | 'vehicleSpec'
+  /** D06: the mission's custom satellite is malformed (`detail` says where and how) */
+  | 'satelliteSpec';
 export interface ValidationIssue { field: string; code: ValidationCode; limit?: number; detail?: string }
 
 /** Bounds are in the stored SI/degree units; UI and WebMCP convert at the edge. */
@@ -148,6 +151,8 @@ export interface ConfigInput {
   vehicleId: string; satelliteId: string; siteId: string;
   /** S02: a custom vehicle, inline; its id is `vehicleId` (`MissionConfig.vehicleSpec`) */
   vehicleSpec?: VehicleSpec;
+  /** D06: a custom satellite, inline; its id is `satelliteId` (`MissionConfig.satelliteSpec`) */
+  satelliteSpec?: SatelliteSpec;
   orbit: OrbitSpec; launchTime: Date; payloadMass: number;
   guidanceOverrides: Partial<GuidanceParams>; failure: FailureConfig; boosterRecovery: boolean;
   /** where each recovered stage is flown back to (`boosterRecovery` has to be on for it to fly) */
@@ -179,10 +184,12 @@ export const FAILURE_MODES: readonly FailureMode[] = ['none', 'engineOut', 'thru
 /**
  * Whether a vehicle can have this failure: a launch abort needs an escape
  * system and a crew for it (roadmap G06), a strap-on collision strap-ons, a
- * stage separation failure a second stage.
+ * stage separation failure a second stage. `satellite` is the mission's, a
+ * custom one included (`missionSatellite`, D06), or undefined when it names
+ * none.
  */
-export function failureAvailable(mode: FailureMode, spec: VehicleSpec, satelliteId: string): boolean {
-  if (mode === 'launchAbort') return !!spec.escapeSystem && !!satelliteById(satelliteId)?.crewed;
+export function failureAvailable(mode: FailureMode, spec: VehicleSpec, satellite: Pick<SatelliteSpec, 'crewed'> | undefined): boolean {
+  if (mode === 'launchAbort') return !!spec.escapeSystem && !!satellite?.crewed;
   if (mode === 'boosterCollision') return !!spec.stages[0]?.boosters?.length;
   if (mode === 'stagingFailure') return spec.stages.filter((st) => !st.isSpacecraft).length > 1;
   return true;
@@ -245,13 +252,22 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     if (problems.length) issues.push({ field: 'setup.vehicle', code: 'vehicleSpec', detail: vehicleSpecText(problems) });
     else spec = state.vehicleSpec;
   } else spec = ALL_VEHICLES.find((v) => v.id === state.vehicleId);
+  // D06: so is a custom satellite
+  let satellite: SatelliteSpec | undefined;
+  if (state.satelliteSpec !== undefined) {
+    const problems = satelliteSpecProblems(state.satelliteSpec);
+    const custom = state.satelliteSpec as Partial<SatelliteSpec> | null;
+    if (!problems.length && custom?.id !== state.satelliteId) problems.push({ path: 'id', message: `is "${String(custom?.id)}", but the mission names satellite "${state.satelliteId}"` });
+    if (problems.length) issues.push({ field: 'setup.satellite', code: 'satelliteSpec', detail: satelliteSpecText(problems) });
+    else satellite = state.satelliteSpec;
+  } else satellite = SATELLITES.find((s) => s.id === state.satelliteId);
   if (state.padId !== undefined && !SITES.find((x) => x.id === state.siteId)?.pads?.some((p) => p.id === state.padId)) {
     issues.push({ field: 'setup.site', code: 'selection' });
   }
   if (state.rendezvous !== undefined) {
     const rv = state.rendezvous;
     if (!rv || !PROFILE_IDS.includes(rv.profile) || (rv.port !== undefined && !PORT_IDS.includes(rv.port))) issues.push({ field: 'setup.rendezvous', code: 'selection' });
-    else if (!spec || !rendezvousAvailable(vehicleDataId(spec), state.satelliteId, state.orbit)) issues.push({ field: 'setup.rendezvous', code: 'rendezvousUnavailable' });
+    else if (!spec || !rendezvousAvailable(vehicleDataId(spec), satellite, state.orbit)) issues.push({ field: 'setup.rendezvous', code: 'rendezvousUnavailable' });
   }
   if (state.dynamics !== undefined) {
     const d = state.dynamics;
@@ -274,10 +290,10 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     }
   }
   if (!spec && state.vehicleSpec === undefined) issues.push({ field: 'setup.vehicle', code: 'selection' });
-  const satellite = SATELLITES.find((s) => s.id === state.satelliteId);
   // a payload only some vehicles carry (Crew Dragon: Falcon 9, or a vehicle made from it)
   const carrier = spec ? vehicleDataId(spec) : state.vehicleId;
-  if (!satellite || (satellite.carriers && !satellite.carriers.includes(carrier))) issues.push({ field: 'setup.satellite', code: 'selection' });
+  if (!satellite && state.satelliteSpec === undefined) issues.push({ field: 'setup.satellite', code: 'selection' });
+  else if (satellite?.carriers && !satellite.carriers.includes(carrier)) issues.push({ field: 'setup.satellite', code: 'selection' });
   if (!SITES.some((s) => s.id === state.siteId) || (spec && !spec.sites.includes(state.siteId))) issues.push({ field: 'setup.site', code: 'selection' });
   const orbit = state.orbit;
   // A suborbital test flight may carry nothing at all (Flight 5 did not).
@@ -307,7 +323,7 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     }
   }
   if (!(FAILURE_MODES as readonly string[]).includes(state.failure.mode)) issues.push({ field: 'setup.failureMode', code: 'selection' });
-  else if (spec && !failureAvailable(state.failure.mode, spec, state.satelliteId)) issues.push({ field: 'setup.failureMode', code: 'failureUnavailable' });
+  else if (spec && !failureAvailable(state.failure.mode, spec, satellite)) issues.push({ field: 'setup.failureMode', code: 'failureUnavailable' });
   check(state.failure.time, 'setup.failureTime', NUMBER_FIELDS['setup.failureTime']);
   check(state.failure.stage, 'setup.failureStage', { min: 0, max: spec ? spec.stages.length - 1 : 0, integer: true });
   if (typeof state.boosterRecovery !== 'boolean' || (state.boosterRecovery && spec && !spec.recoverable)) issues.push({ field: 'setup.boosterRecovery', code: 'selection' });
@@ -356,6 +372,7 @@ export function issueText(issue: ValidationIssue): string {
     case 'failureUnavailable': return 'This vehicle cannot have that failure: a launch abort needs a crewed Soyuz, a strap-on collision strap-ons, a stage separation failure a second stage';
     case 'rendezvousUnavailable': return 'A flight to the station needs the crewed spacecraft on a Soyuz-2.1a and the ISS orbit';
     case 'vehicleSpec': return `The custom vehicle is not valid: ${issue.detail ?? 'malformed'}`;
+    case 'satelliteSpec': return `The custom satellite is not valid: ${issue.detail ?? 'malformed'}`;
   }
 }
 

@@ -22,13 +22,22 @@
  * from the catalogue, so this test still proves the catalogue emits exactly
  * the fleet main flies. Only Falcon Heavy changed.
  *
- * Re-recorded a second time, for audit PHY-01 (2026-10-01, docs/VALIDATION.md
+ * And a second time, for F14 (2026-09-28, docs/VALIDATION.md): Proton-M's
+ * published first- and second-stage propellant loads, and Proton-M's and
+ * Angara-A5's fairing jettison rule (`fairing.sepAfterIgnition`), and
+ * Angara-A5's six-DOF kick (`guidanceDefaultsSixDof`). Written the
+ * same way, from the literal `VEHICLES` of the branch that made the change
+ * (its src/data/vehicles.ts at c2aabb4, 3d713b5 plus F14, before it met the
+ * catalogue, with the kick added); the catalogue after the merge emits it
+ * byte for byte. Only Proton-M and Angara-A5 changed.
+ *
+ * Re-recorded a third time, for audit PHY-01 (2026-10-01, docs/VALIDATION.md
  * §3, "Soyuz-2.1a's strap-ons fly a zero-lift turn"): Soyuz-2.1a's six-DOF
  * programme takes a 6° kick (was 4°) and `closedLoopStart: 140`. Only those two
  * values of `soyuz21a.guidanceDefaultsSixDof` changed; the fixture's diff is
  * those lines, and the unsorted string grew from 30 987 to 31 009 characters.
  *
- * Re-recorded a third time, for Soyuz-2 on its real flight (2026-10-01,
+ * A fourth, for Soyuz-2 on its real flight (2026-10-01,
  * docs/VALIDATION.md §3, "Soyuz-2.1a flies its stored pitch programme"): the
  * RD-107A and RD-108A take Arianespace's figures and the strap-on and core
  * bodies their published loads; the strap-ons get their thrust step and
@@ -37,7 +46,7 @@
  * Soyuz-2.1a's fairing its crewed mass and T+153.3 s. Only `soyuz21a` and
  * `soyuz21b` changed; the unsorted string grew to 31 994 characters.
  *
- * And a fourth, for Soyuz-2's hot staging and its two payload sections
+ * And a fifth, for Soyuz-2's hot staging and its two payload sections
  * (2026-10-01, docs/VALIDATION.md §3, "Soyuz-2.1a: hot staging, and a crewed
  * and a cargo flight"): Blok I's `hotStage` lead and 1.02 s separation delay,
  * the cores' `cutoffAt` from the 2.1a cyclogram, the skirts' times from
@@ -45,7 +54,7 @@
  * cyclogram with a `crewedProfile` (11S517A3) and a `cargoShipProfile`
  * (Progress MS's programme), the refitted crewed programme, and Soyuz-2.1b's
  * fairing at Arianespace's T+208.4 s. Only `soyuz21a` and `soyuz21b` changed;
- * 32 724 characters.
+ * 32 724 characters before it met main's F14, 32 830 with it.
  *
  * What the JSON pins and what it leaves out, on purpose:
  * - keys are sorted recursively, so key order is left out of the fixture. It
@@ -68,14 +77,16 @@ import FIXTURE from './fixtures/vehicles-pre-d01.json?raw';
 
 /**
  * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, with Soyuz-2's hot staging
- * and payload sections; 32 724 characters. With Proton-M's published data it was
- * 7cbd0fff…, 32 020 characters; with Soyuz-2 on its real flight 0b6d8d1b…,
+ * and payload sections and F14 (Proton-M's published loads, Proton-M's and
+ * Angara-A5's fairing rule, Angara-A5's kick); 32 830 characters. Without F14
+ * it was fcc33cb8…, 32 724 characters; main with F14 alone 2793a05e…, 31 119;
+ * with Soyuz-2 on its real flight 0b6d8d1b…,
  * 31 994 characters; with Soyuz-2.1a's PHY-01 programme
  * 04d88a36…, 31 009 characters; from main's literal fleet at 3d713b5 (F11
  * included) 420d7d17…, 30 987 characters; at eedd035, the pre-D01 HEAD,
  * f891238e…, 30 926 characters.
  */
-const PRE_D01_UNSORTED_SHA256 = 'fcc33cb8bc7f882de1e95d3d538d7fc4661928685846d978d6045f3ec48650c4';
+const PRE_D01_UNSORTED_SHA256 = '08ff49794f9601fbb3548bd97b1aa63274cbd3b50796dead2d67550b911b3130';
 
 const sortKeys = (v: unknown): unknown => (Array.isArray(v) ? v.map(sortKeys)
   : v && typeof v === 'object'
@@ -113,6 +124,6 @@ describe('D01: the catalogue vehicles, recorded before the parts catalogue', () 
     const unsorted = JSON.stringify(VEHICLES);
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(unsorted));
     const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    expect([unsorted.length, hex]).toEqual([32724, PRE_D01_UNSORTED_SHA256]);
+    expect([unsorted.length, hex]).toEqual([32830, PRE_D01_UNSORTED_SHA256]);
   });
 });

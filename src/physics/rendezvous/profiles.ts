@@ -22,8 +22,7 @@
  *    first impulse of the automatic sequence on the second day, the transfer.
  */
 
-import { SATELLITES } from '../../data/satellites';
-import type { OrbitSpec } from '../../types';
+import type { OrbitSpec, SatelliteSpec } from '../../types';
 
 export type RendezvousProfileId = 'twoOrbit' | 'fourOrbit' | 'twoDay';
 
@@ -142,19 +141,23 @@ export const APPROACH = {
  * crewed spacecraft on a Soyuz-2.1a, the one pairing whose spacecraft, docking
  * system and profiles the rendezvous models — launched into the ISS orbit.
  * `vehicleId` is the vehicle's data id (`vehicleDataId`): a custom vehicle made
- * from a Soyuz-2.1a flies there too (S02).
+ * from a Soyuz-2.1a flies there too (S02). `satellite` is the mission's
+ * (`missionSatellite`), undefined when it names none: a custom satellite of
+ * the crew kind with an engine of its own flies there as the catalogue's
+ * does (D06), since the rule reads its kind and engine, never its id.
  */
-export function rendezvousAvailable(vehicleId: string, satelliteId: string, orbit: Pick<OrbitSpec, 'raanMode' | 'suborbital'>): boolean {
+export function rendezvousAvailable(vehicleId: string, satellite: ShipSatellite | undefined, orbit: Pick<OrbitSpec, 'raanMode' | 'suborbital'>): boolean {
   // the rendezvous flies the Soyuz MS, from its own insertion orbit: not a Progress MS
-  return soyuzShipInsertion(vehicleId, satelliteId, orbit) && orbit.raanMode === 'iss' && !!SATELLITES.find((x) => x.id === satelliteId)?.crewed;
+  return soyuzShipInsertion(vehicleId, satellite, orbit) && orbit.raanMode === 'iss' && !!satellite?.crewed;
 }
+
+type ShipSatellite = Pick<SatelliteSpec, 'kind' | 'propulsion' | 'crewed'>;
 
 /**
  * A Soyuz MS or Progress MS (a crew-kind spacecraft with its own engine) on
  * Soyuz-2.1a, to orbit: inserted at 200 × 242 km (`RENDEZVOUS_INSERTION`), or
  * 193 × 240 km without a crew (`CARGO_INSERTION`).
  */
-export function soyuzShipInsertion(vehicleId: string, satelliteId: string, orbit: Pick<OrbitSpec, 'suborbital'>): boolean {
-  const sat = SATELLITES.find((x) => x.id === satelliteId);
-  return vehicleId === 'soyuz21a' && sat?.kind === 'crew' && !!sat.propulsion && !orbit.suborbital;
+export function soyuzShipInsertion(vehicleId: string, satellite: ShipSatellite | undefined, orbit: Pick<OrbitSpec, 'suborbital'>): boolean {
+  return vehicleId === 'soyuz21a' && satellite?.kind === 'crew' && !!satellite.propulsion && !orbit.suborbital;
 }

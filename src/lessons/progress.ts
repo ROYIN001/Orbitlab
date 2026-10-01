@@ -7,7 +7,7 @@
  * was not edited by accident; it is not a signature, and does not claim to be.
  */
 import { missionDocument, type MissionDocument, type MissionState } from '../config/mission-file';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import type { MissionConfig } from '../types';
 import type { AssessmentAttempt, Question } from './assessment/types';
 import { CZ5B_CASE_STAGE, type CaseId } from '../worksheets/case-ids';
@@ -15,7 +15,9 @@ import { CZ5B_STAGES } from '../data/cz5b';
 import type { CaseSource } from '../worksheets/cases';
 import type { Activity, DailyActivity } from '../physics/propagator/activity';
 import type { Worksheet } from '../worksheets/types';
-import type { CatalogLesson, CriterionGrade, LessonGrade } from './types';
+import type { CatalogLesson, CriterionGrade, DesignMeasureId, LessonGrade } from './types';
+import type { SatelliteDesign } from '../design/satellite-spec';
+import type { FlightAction } from '../physics/sim/actions';
 
 export const PROGRESS_STORAGE_KEY = 'orbitlab.lessons';
 export const RESULTS_FORMAT = 'orbitlab.results';
@@ -40,6 +42,56 @@ export interface LessonRecord {
   caseData?: CaseRecordData;
   /** the answers shown to the student in this attempt, by criterion id: on them it passes only with help */
   revealed?: string[];
+  /**
+   * T02 (owner decision 3, 2026-09-29): the mission time the flight was
+   * graded at, s (`LessonGrade.t`, the simulation's clock). A flight lesson's
+   * numbers are read there — the orbit goes on changing after the end — so
+   * the instructor's re-check flies to exactly this time.
+   */
+  t?: number;
+  /**
+   * T02: the instant on screen when the grade was taken, s. A live point-mass
+   * flight runs up to one step ahead of the picture (src/replay/recorder.ts),
+   * and the grade counts only the events the picture had reached
+   * (`gradeShown`), so the re-check counts the same ones.
+   */
+  clock?: number;
+  /**
+   * T02: the commands given during the flight, up to the grade, each at the
+   * simulation time that took it (src/physics/sim/actions.ts): a re-check
+   * gives them again at the same step boundaries. Absent from a record made
+   * before T02, which the re-check says.
+   */
+  actions?: FlightAction[];
+  /** T02: the build the flight was flown on, `<version>+<commit>` (`appBuildId`, src/build-info.ts) */
+  app?: string;
+  /**
+   * A design lesson's (T01; owner decision 3, 2026-09-29: a results file may
+   * carry the satellite design): the design handed in, the design date and
+   * the ECSS level its figures were read at (the lesson's, kept so the
+   * re-check works them out again on the same day and in the same air, T02),
+   * and the figures it was graded on, each in its measure's unit.
+   */
+  design?: SatelliteDesign;
+  designDate?: string;
+  level?: 'low' | 'moderate' | 'high';
+  figures?: Partial<Record<DesignMeasureId, number | null>>;
+}
+
+/** The fields a flight lesson's record needs for an exact re-check (T02), in the order the checker lists them. */
+export const RECHECK_FIELDS = ['mission', 't', 'clock', 'actions', 'app'] as const;
+/** The fields a design lesson's record needs (T01, T02): the design, the day and the air it was graded in, the build. */
+export const DESIGN_RECHECK_FIELDS = ['design', 'designDate', 'level', 'figures', 'app'] as const;
+export type RecheckField = (typeof RECHECK_FIELDS)[number] | (typeof DESIGN_RECHECK_FIELDS)[number];
+
+/** Which of those a flight lesson's record lacks: all but `mission` are new with T02, so an older file lacks them. */
+export function missingFields(record: LessonRecord): RecheckField[] {
+  return RECHECK_FIELDS.filter((f) => record[f] === undefined);
+}
+
+/** Which of its fields a design lesson's record lacks (every build that writes one writes all five: one lacking is edited). */
+export function missingDesignFields(record: LessonRecord): RecheckField[] {
+  return DESIGN_RECHECK_FIELDS.filter((f) => record[f] === undefined);
 }
 
 export interface CaseRecordData {
@@ -131,7 +183,7 @@ export interface ProgressData {
  * edits dropped. `cfg.guidance` is the guidance already merged with the
  * vehicle's defaults, and is kept whole, so the document flies the same
  * guidance even if a later Orbitlab changes those defaults. The docking
- * profile, the pad and a custom vehicle go with it.
+ * profile, the pad, a custom vehicle and a custom satellite go with it.
  */
 export function flownMission(cfg: MissionConfig): MissionDocument {
   const state: MissionState = {
@@ -139,8 +191,10 @@ export function flownMission(cfg: MissionConfig): MissionDocument {
     launchTime: new Date(cfg.launchTime.getTime()), guidanceOverrides: { ...cfg.guidance }, failure: { ...cfg.failure },
     boosterRecovery: cfg.boosterRecovery,
     // what the simulation flew: the override, else the payload's own mass
-    payloadMass: cfg.payloadMassOverride ?? satelliteById(cfg.satelliteId).mass,
+    payloadMass: cfg.payloadMassOverride ?? missionSatellite(cfg).mass,
     ...(cfg.vehicleSpec ? { vehicleSpec: cfg.vehicleSpec } : {}),
+    // D06: and a custom satellite, which makes the document version 3
+    ...(cfg.satelliteSpec ? { satelliteSpec: cfg.satelliteSpec } : {}),
     ...(cfg.recoveryPlan ? { recoveryPlan: cfg.recoveryPlan } : {}),
     ...(cfg.dynamics ? { dynamics: cfg.dynamics } : {}),
     ...(cfg.padId ? { padId: cfg.padId } : {}),
@@ -148,6 +202,61 @@ export function flownMission(cfg: MissionConfig): MissionDocument {
   };
   // the document copies every nested object: nothing is shared with the flight
   return missionDocument(state);
+}
+
+/** What a flight lesson's grade is kept as, with what the instructor's re-check needs to fly it again (T02). */
+export interface FlightRecordInput {
+  at: Date;
+  /** the grade taken when the flight ended, with the answers checked since */
+  grade: LessonGrade;
+  answers: Readonly<Record<string, number>>;
+  hintsShown: number;
+  /** the configuration the simulation flew */
+  cfg: MissionConfig;
+  /** the instant on screen when the grade was taken */
+  clock: number;
+  /** the flight's command journal as it stood when the grade was taken */
+  actions: readonly FlightAction[];
+  /** the build flying it (`appBuildId`, src/build-info.ts) */
+  app: string;
+}
+
+export function flightRecord(input: FlightRecordInput): LessonRecord {
+  const { grade } = input;
+  const revealed = grade.criteria.filter((c) => c.revealed).map((c) => c.id);
+  return {
+    at: input.at.toISOString(), verdict: grade.verdict, criteria: grade.criteria, answers: { ...input.answers }, hintsShown: input.hintsShown,
+    mission: flownMission(input.cfg), ...(revealed.length ? { revealed } : {}),
+    t: grade.t, clock: input.clock, actions: structuredClone([...input.actions]), app: input.app,
+  };
+}
+
+/** What a design lesson's hand-in is kept as (T01): the grade, and what the re-check needs to work it out again (T02). */
+export interface DesignRecordInput {
+  at: Date;
+  grade: LessonGrade;
+  answers: Readonly<Record<string, number>>;
+  hintsShown: number;
+  /** the design handed in */
+  design: SatelliteDesign;
+  /** the lesson's design date and ECSS level, which the figures were read at */
+  designDate: string;
+  level: 'low' | 'moderate' | 'high';
+  /** the figures graded (`DesignKey.values`) */
+  figures: Partial<Record<DesignMeasureId, number | null>>;
+  app: string;
+}
+
+export function designRecord(input: DesignRecordInput): LessonRecord {
+  const { grade } = input;
+  const revealed = grade.criteria.filter((c) => c.revealed).map((c) => c.id);
+  return {
+    at: input.at.toISOString(), verdict: grade.verdict, criteria: structuredClone(grade.criteria), answers: { ...input.answers }, hintsShown: input.hintsShown,
+    ...(revealed.length ? { revealed } : {}),
+    design: structuredClone(input.design), designDate: input.designDate, level: input.level,
+    // a figure that does not apply is kept as null, as JSON keeps it
+    figures: JSON.parse(JSON.stringify(input.figures)) as Partial<Record<DesignMeasureId, number | null>>, app: input.app,
+  };
 }
 
 export const emptyProgress = (): ProgressData => ({ version: 1, lessons: {}, assessments: [], customLessons: [], customQuestions: [] });

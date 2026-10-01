@@ -4,7 +4,7 @@
  */
 import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import { rendezvousAvailable, soyuzShipInsertion } from './rendezvous/profiles';
 import { vehicleDataId } from '../data/vehicles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
@@ -1028,7 +1028,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // Curie...) is treated as an orbital-manoeuvring stage: the strong stages insert
   // into an ellipse whose apogee is the target (capped) and the kick stage finishes.
   const last = _vehicle.stages[_vehicle.stages.length - 1];
-  const satellite = satelliteById(cfg.satelliteId);
+  const satellite = missionSatellite(cfg);
   // No override means "fly the spacecraft that was selected", exactly as
   // `Simulation` and the auto-tuner already read it. Defaulting to zero here
   // made the plan — the weak-final-stage test, the ideal Δv of the strong
@@ -1126,9 +1126,9 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // (Roscosmos via russianspaceweb). It used to be applied only with a
   // rendezvous planned, and every other crewed flight went to 200 km circular.
   // A Progress MS, which has no crew, is put lower: 193 × 240 km.
-  const ship = satelliteById(cfg.satelliteId).crewed ? RENDEZVOUS_INSERTION : CARGO_INSERTION;
-  const shipInsertion = cfg.rendezvous ? rendezvousAvailable(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit)
-    : soyuzShipInsertion(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && target.perigee > ship.apogee;
+  const ship = satellite.crewed ? RENDEZVOUS_INSERTION : CARGO_INSERTION;
+  const shipInsertion = cfg.rendezvous ? rendezvousAvailable(vehicleDataId(_vehicle), satellite, cfg.orbit)
+    : soyuzShipInsertion(vehicleDataId(_vehicle), satellite, cfg.orbit) && target.perigee > ship.apogee;
   if (shipInsertion && parkingOverride <= 0 && ascentReaches(ship.perigee, ship.apogee)) {
     insertionAltitude = ship.perigee;
     insertionApoapsis = ship.apogee;

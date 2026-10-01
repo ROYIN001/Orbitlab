@@ -41,9 +41,9 @@ describe('the escape system', () => {
     expect(crewedSoyuz('none', 0).escape.fitted).toBe(true);
     expect(crewedSoyuz('none', 0, 'sixDof', 'comsat').escape.fitted).toBe(false);
     const falcon = vehicleById('falcon9');
-    expect(failureAvailable('launchAbort', falcon, 'crew')).toBe(false);
-    expect(failureAvailable('launchAbort', vehicleById('soyuz21a'), 'crew')).toBe(true);
-    expect(failureAvailable('boosterCollision', falcon, 'crew')).toBe(false);
+    expect(failureAvailable('launchAbort', falcon, satelliteById('crew'))).toBe(false);
+    expect(failureAvailable('launchAbort', vehicleById('soyuz21a'), satelliteById('crew'))).toBe(true);
+    expect(failureAvailable('boosterCollision', falcon, satelliteById('crew'))).toBe(false);
     const issues = validateConfigInput({ vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'crew', payloadMass: 7150, orbit: { ...orbitById('iss') },
       launchTime: ABORT_LAUNCH, guidanceOverrides: {}, failure: { mode: 'launchAbort', time: 30, stage: 0 }, boosterRecovery: false });
     expect(issues).toContainEqual({ field: 'setup.failureMode', code: 'failureUnavailable' });
