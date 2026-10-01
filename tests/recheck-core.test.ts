@@ -252,6 +252,33 @@ describe('a class\'s files', () => {
     expect(risky).not.toMatch(/(^|,)=HYPERLINK/m);
   }, 60_000);
 
+  it('checks the rest of the class past a record a file mangled, and keeps the file\'s text out of the CSV\'s formulas', async () => {
+    const { record } = firstOrbit();
+    const good = await fileOf([['orbit-first', record]], 'A');
+    // a criterion that is not one (edited by hand): before, the whole check stopped on it with a TypeError
+    const mangled = structuredClone(good);
+    mangled.progress.lessons['orbit-first'].last.criteria = [null];
+    mangled.progress.lessons['orbit-first'].passedRecord.verdict = '=HYPERLINK("x")';
+    const check = await checkResults({ results: [mangled, good] }, { app: APP });
+    expect(check.records.map((r) => [r.file, r.which.join('+'), r.status, r.reason ?? null])).toEqual([
+      [0, 'passed', 'differs', null], [0, 'last', 'cannotRefly', 'error'], [1, 'passed+last', 'match', null],
+    ]);
+    expect(recheckCsv(check)).not.toMatch(/(^|,)=HYPERLINK/m);
+  }, 60_000);
+
+  it('calls a record that names its build but lacks its grading time edited, not incomplete', () => {
+    // every build that writes `app` writes `t`, `clock` and `actions` with it: one without them was edited
+    // seed 1 was graded 13.75 s after the first step the flight has ended at (the test above); seed 2 at that step
+    const statuses = [1, 2].map((seed) => {
+      const { record } = firstOrbit(seed);
+      const { t: _t, ...noTime } = record;
+      const check = checkRecord(job('orbit-first', noTime), CATALOGUE, APP);
+      expect(check.missing).toEqual(['t']);
+      return [check.status, check.reason ?? null];
+    });
+    expect(statuses).toEqual([['differs', null], ['match', null]]);
+  }, 60_000);
+
   it('runs as a job where there is no worker, with progress, and a Stop keeps what is done', async () => {
     const { record } = firstOrbit();
     const file = await fileOf([['orbit-first', record], ['orbit-hohmann', { ...record, verdict: 'fail' }]]);

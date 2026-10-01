@@ -32,7 +32,11 @@
  *   first step the flight has ended at, which can be a step before the grade
  *   was taken (13.75 s on lesson 1.1, where the speed then read moves by
  *   0.02 m/s), and without its commands, so a difference says nothing about
- *   an edit (`incomplete`). One that comes out the same is a match.
+ *   an edit (`incomplete`). One that comes out the same is a match. A record
+ *   that names its build (`app`) and lacks one of the others was edited, since
+ *   every build that writes `app` writes all four: it differs.
+ * - a record whose fields are not a record's (a criterion that is not one)
+ *   cannot be re-flown (`error`), and the rest of the class is checked.
  *
  * The re-check's verdict is the instructor's re-grade.
  */
@@ -326,6 +330,16 @@ export function reflyRecord(lesson: Lesson, record: LessonRecord): { sim: Simula
 
 const RANK: Record<CheckStatus, number> = { match: 0, borderline: 1, differs: 2, cannotRefly: 3 };
 
+/** A record whose fields are not what a record's are (edited by hand): it cannot be flown again, and says so. */
+function unreadableRecord(job: RecheckJob): RecordCheck {
+  const r = job.record;
+  return {
+    file: job.file, student: job.student, lessonId: job.lessonId, which: job.which, at: r.at, kind: 'flight', status: 'cannotRefly', reason: 'error',
+    missing: [], sameBuild: null, app: typeof r.app === 'string' ? r.app : null, recordedVerdict: r.verdict, recheckedVerdict: null,
+    lockBroken: [], criteria: [], flownTo: null, steps: 0, lateActions: 0,
+  };
+}
+
 /** Check one record against the catalogue (the built-in lessons and the instructor's). */
 export function checkRecord(job: RecheckJob, catalogue: readonly CatalogLesson[], app = appBuildId()): RecordCheck {
   const r = job.record;
@@ -355,8 +369,9 @@ export function checkRecord(job: RecheckJob, catalogue: readonly CatalogLesson[]
   for (const g of r.criteria) if (!lesson.criteria.some((c) => c.id === g.id)) criteria.push({ id: g.id, kind: 'missing', recorded: g, rechecked: null, tol: null, status: 'differs' });
   let status: CheckStatus = criteria.reduce<CheckStatus>((worst, c) => (RANK[c.status] > RANK[worst] ? c.status : worst), 'match');
   if (grade.verdict !== r.verdict && status === 'match') status = 'differs';
-  // a record made before T02 is flown as near as it can be: a difference is not evidence of an edit
-  const incomplete = status === 'differs' && out.missing.some((f) => f === 't' || f === 'clock' || f === 'actions');
+  // a record made before T02 is flown as near as it can be: a difference is not evidence of an edit. One
+  // that names its build was made by T02 or later, which keeps all four fields: lacking one, it was edited.
+  const incomplete = status === 'differs' && out.missing.includes('app') && out.missing.some((f) => f === 't' || f === 'clock' || f === 'actions');
   return {
     ...out, status: incomplete ? 'cannotRefly' : status, ...(incomplete ? { reason: 'incomplete' as const } : {}),
     recheckedVerdict: grade.verdict, lockBroken: grade.lockBroken, criteria,
@@ -394,7 +409,9 @@ export async function checkResults(input: RecheckInput, opts: CheckOptions = {})
   opts.onProgress?.(0, jobs.length);
   for (const job of jobs) {
     if (opts.stopped?.()) { stopped = true; break; }
-    const record = checkRecord(job, catalogue, app);
+    // one record a file mangled (a criterion that is not one) is said, not the end of the class's check
+    let record: RecordCheck;
+    try { record = checkRecord(job, catalogue, app); } catch { record = unreadableRecord(job); }
     records.push(record);
     opts.onRecord?.(record, records.length, jobs.length);
     opts.onProgress?.(records.length, jobs.length);
@@ -434,7 +451,8 @@ export function recheckCsv(check: ResultsCheck): string {
   for (const r of check.records) {
     const file = check.files[r.file];
     const lead = [csvText(file?.name ?? String(r.file + 1)), csvText(r.student ?? ''), csvText(r.lessonId), r.which.join('+'), csvText(r.at), STATUS_CSV[r.status],
-      r.reason ?? '', r.recordedVerdict, r.recheckedVerdict ?? '', r.missing.join(' '), r.sameBuild === null ? '' : r.sameBuild ? '1' : '0', csvText(r.app ?? ''),
+      // the recorded verdict is the file's text, as the name is: a hand-edited file could put anything there
+      r.reason ?? '', csvText(r.recordedVerdict), r.recheckedVerdict ?? '', r.missing.join(' '), r.sameBuild === null ? '' : r.sameBuild ? '1' : '0', csvText(r.app ?? ''),
       file?.checksum === null || file?.checksum === undefined ? '' : file.checksum ? '1' : '0', num(r.flownTo)];
     if (!r.criteria.length) { rows.push([...lead, '', '', '', '', '', '', '', '', '', '', STATUS_CSV[r.status]].join(',')); continue; }
     for (const c of r.criteria) {
