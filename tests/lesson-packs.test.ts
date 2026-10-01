@@ -28,6 +28,10 @@ import { lessonFileVersion } from '../src/lessons/lesson-file';
 import { BUNDLED_PACKS, packLessons, packPath, readPackText, type ResolvedPack } from '../src/lessons/packs';
 import { PACK_SOURCES, packFileText } from '../src/lessons/pack-sources';
 import { precacheable } from '../src/pwa/manifest';
+import { allLessons } from '../src/lessons/catalog';
+import { flightRecord } from '../src/lessons/progress';
+import { checkRecord } from '../src/lessons/recheck';
+import { appBuildId } from '../src/build-info';
 import { CURRICULUM_KINDS, type Lesson, type LocalText } from '../src/lessons/types';
 import type { MissionState } from '../src/config/mission-file';
 
@@ -268,5 +272,25 @@ describe('each point-mass pack lesson, flown as solved and flown wrong', () => {
     expect(gradeLesson(l, sim, solved).verdict, why(l, sim, solved)).toBe('pass');
     expect(gradeLesson(l, sim, { ...solved, a: ellipse(250, 35786).a }).verdict).toBe('fail');
     expect(gradeLesson(l, sim, { ...solved, speed: Math.sqrt(MU / (R + hp)) }).verdict).toBe('fail');
+  });
+});
+
+describe('the instructor\'s check of a pack lesson', () => {
+  it('re-flies a pack lesson\'s record from the packs\' own lessons, with no lesson file opened, and matches', () => {
+    // the check page hands the packs' lessons to the re-check (src/ui/lessons/lesson-mode.ts `showCheck`)
+    const l = lesson('ipst-a-kepler3');
+    const sim = fly(l);
+    const { hp, ha } = heights(sim);
+    const o = ellipse(hp, ha);
+    const answers = { a: o.a, period: o.period, e: o.e };
+    const grade = gradeLesson(l, sim, answers);
+    expect(grade.verdict).toBe('pass');
+    const record = flightRecord({ at: new Date(0), grade, answers, hintsShown: 0, cfg: sim.cfg, clock: grade.t, actions: sim.actions, app: appBuildId() });
+    const job = { file: 0, student: null, lessonId: l.id, which: ['passed' as const], record };
+    const check = checkRecord(job, allLessons(packLessons(PACKS)));
+    expect(check.status, JSON.stringify(check)).toBe('match');
+    expect(check.recheckedVerdict).toBe('pass');
+    // without the packs the lesson is not known
+    expect(checkRecord(job, allLessons()).reason).toBe('noLesson');
   });
 });

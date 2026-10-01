@@ -42,6 +42,8 @@ export interface AuthorHost {
   mission(): MissionState | null;
   /** the event keys a flight emits (the dictionary's `evt.*`) */
   knownEvents(): ReadonlySet<string>;
+  /** T03: the lesson packs' lessons' ids, which a teacher's lesson may not take */
+  reservedIds?(): ReadonlySet<string>;
   /** put the lesson in this browser's catalogue and open it */
   tryLesson(lesson: CatalogLesson): void;
   /** T01: the design open on the satellite bench, its design date and its level; null when there is none to be had */
@@ -151,6 +153,7 @@ export function issueSentence(i: FileIssue): string {
     case 'mission': return t('lesson.author.issue.mission', { where });
     case 'duplicate': return t('lesson.author.issue.duplicate', { where });
     case 'builtinId': return t('lesson.author.issue.builtinId', { where, id: i.detail ?? '' });
+    case 'pack': return t('lesson.pack.authorId', { where, id: i.detail ?? '' });
     case 'invalid':
       if (i.detail === 'range') return t('lesson.author.issue.range', { where });
       if (i.detail === 'negative') return t('lesson.author.issue.negative', { where });
@@ -234,7 +237,7 @@ class AuthorView {
     } else {
       saveDraft(this.draft);
       const mission = this.host.mission();
-      if (mission) ({ lesson, issues } = draftLesson(this.draft, missionDocument(mission), this.host.knownEvents()));
+      if (mission) ({ lesson, issues } = draftLesson(this.draft, missionDocument(mission), this.host.knownEvents(), this.host.reservedIds?.()));
       else none = t('lesson.author.missionNone');
     }
     this.lesson = lesson;

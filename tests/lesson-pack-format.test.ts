@@ -10,6 +10,9 @@ import { describe, expect, it } from 'vitest';
 import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, allLessons } from '../src/lessons/catalog';
 import { lessonFileText, parseLessonFile, type LessonFileDocument } from '../src/lessons/lesson-file';
 import { packLessons, packOf, readPackText, resolvePack } from '../src/lessons/packs';
+import { draftLesson, newDraft } from '../src/lessons/authoring';
+import { missionDocument } from '../src/config/mission-file';
+import { defaultMissionState } from '../src/lessons/config';
 import type { CatalogLesson, Lesson, LessonPack } from '../src/lessons/types';
 
 const builtin = (id: string): Lesson => {
@@ -140,5 +143,19 @@ describe('resolving a pack', () => {
     expect(packOf([resolved], 'orbit-payload')).toBeNull();
     expect(packOf([resolved], 'orbit-payload', 'test-pack')?.index).toBe(1);
     expect(packLessons([resolved, resolved]).map((l) => l.id)).toEqual(['pack-one']);
+  });
+});
+
+describe('the scenario writer and the packs', () => {
+  it('refuses a pack lesson\'s id as it refuses a built-in one, and takes any other', () => {
+    const mission = missionDocument(defaultMissionState());
+    const draft = (id: string) => ({ ...newDraft(id), title: { en: 'T', ru: 'Т', th: 'ท' }, brief: { en: 'B', ru: 'Б', th: 'บ' } });
+    const reserved = new Set(['ipst-b-forces']);
+    const taken = draftLesson(draft('ipst-b-forces'), mission, undefined, reserved);
+    expect(taken.lesson).toBeNull();
+    expect(taken.issues.filter((i) => i.level === 'error').map((i) => `${i.code} ${i.detail}`)).toEqual(['pack ipst-b-forces']);
+    expect(draftLesson(draft('class-forces'), mission, undefined, reserved).lesson?.id).toBe('class-forces');
+    // without the packs known (their files not fetched), the id is not refused
+    expect(draftLesson(draft('ipst-b-forces'), mission).lesson?.id).toBe('ipst-b-forces');
   });
 });

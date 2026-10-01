@@ -125,8 +125,10 @@ export interface DraftResult<L = Lesson> {
  * The draft as a flight lesson on `mission` (the setup panel's, as a mission
  * document), read back through `readLesson`. `knownEvents`: the event keys a
  * flight emits (the page's `evt.*` keys), for the warnings of `eventIssues`.
+ * `reserved`: the ids of the lesson packs' lessons (T03), refused like a
+ * built-in lesson's id.
  */
-export function draftLesson(draft: LessonDraft, mission: MissionDocument, knownEvents?: ReadonlySet<string>): DraftResult {
+export function draftLesson(draft: LessonDraft, mission: MissionDocument, knownEvents?: ReadonlySet<string>, reserved?: ReadonlySet<string>): DraftResult {
   const issues: FileIssue[] = [];
   const title = localOf(draft.title), brief = localOf(draft.brief);
   if (title?.stood) issues.push({ where: 'title', code: 'translation', level: 'warn', detail: `en=${title.stood}` });
@@ -144,6 +146,8 @@ export function draftLesson(draft: LessonDraft, mission: MissionDocument, knownE
     ...(draft.endEvent?.trim() ? { endEvent: draft.endEvent.trim() } : {}),
   };
   if (BUILTIN_IDS.has(raw.id)) issues.push({ where: 'id', code: 'builtinId', level: 'error', detail: raw.id });
+  // T03: a lesson pack's lesson ships with the app as a built-in one does, and wins over a teacher's of the same id
+  else if (reserved?.has(raw.id)) issues.push({ where: 'id', code: 'pack', level: 'error', detail: raw.id });
   // the writer's own refusals (above and in `criterionOf`): every one of them is an error
   const refused = issues.some((i) => i.level === 'error');
   const read: FileIssue[] = [];
