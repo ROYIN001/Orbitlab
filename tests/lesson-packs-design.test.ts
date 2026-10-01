@@ -38,6 +38,9 @@ import { STATIONS } from '../src/orbit/applications-setup';
 import { DEG } from '../src/physics/constants';
 import { DESIGN_LOCK_KEYS, brokenDesignLocks, designLessonOptions, gradeDesign } from '../src/lessons/design-lesson';
 import { BUNDLED_PACKS, packLessons, packPath, readPackText, type ResolvedPack } from '../src/lessons/packs';
+import { designRecord } from '../src/lessons/progress';
+import { checkRecord } from '../src/lessons/recheck';
+import { allLessons } from '../src/lessons/catalog';
 import { isDesignLesson, type DesignKey, type DesignLesson, type LessonGrade } from '../src/lessons/types';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
 
@@ -205,5 +208,24 @@ describe('the packs\' design lessons (T03b)', () => {
     expect(states(grade(l, solved, { ...answers, dipole: answers.dipole / 1e6 })).dipole).toBe('fail');
     // balancing the body is not the choice asked for
     expect(grade(l, withValue(solved, 'adcs.cpOffset', 0), answers).lockBroken).toEqual(['adcs.cpOffset']);
+  }, 60_000);
+
+  /**
+   * The instructor's check (T02 for designs) of a pack design lesson's
+   * record: worked out again from the packs' lessons alone, with no lesson
+   * file opened, it matches; without the packs the lesson is unknown.
+   */
+  it('re-checks a handed-in pack design to a match from the packs\' lessons, and knows no such lesson without them', () => {
+    const l = lesson('ipst-p-solar-power');
+    const design = set(designLessonStart(l.start), { 'power.arrayArea': 6.5, 'power.batteryWh': 1800 });
+    const key = keyFor(l, design);
+    const answers = { eclipse: Number((key.values['sat.eclipseMax']!).toFixed(1)) };
+    const grade = gradeDesign(l, key, answers);
+    expect(grade.verdict).toBe('pass');
+    const record = designRecord({ at: new Date(Date.UTC(2026, 9, 1, 9)), grade, answers, hintsShown: 0, design, designDate: l.designDate, level: l.level, figures: key.values, app: 'test+build' });
+    const job = { file: 0, student: null, lessonId: l.id, which: ['last' as const], record: JSON.parse(JSON.stringify(record)) };
+    const check = checkRecord(job, allLessons(packLessons(PACKS)), 'test+build');
+    expect([check.kind, check.status, check.recheckedVerdict], JSON.stringify(check)).toEqual(['design', 'match', 'pass']);
+    expect(checkRecord(job, allLessons(), 'test+build').reason).toBe('noLesson');
   }, 60_000);
 });
