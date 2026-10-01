@@ -115,9 +115,9 @@
       ],
       "hints": [
         {
-          "en": "The margin is what the cells give at the end of life over what the satellite needs, and it grows in proportion to their area: NAPA-2's 0.068 m² gives about +7 %.",
-          "ru": "Запас — это мощность элементов к концу срока службы сверх нужной спутнику, и он растёт пропорционально их площади: 0,068 м² у NAPA-2 дают около +7 %.",
-          "th": "ค่าเผื่อคือกำลังไฟฟ้าที่เซลล์ผลิตได้เมื่อสิ้นอายุการใช้งานส่วนที่เกินกว่าที่ดาวเทียมต้องใช้ และเพิ่มขึ้นตามสัดส่วนพื้นที่เซลล์ พื้นที่ 0.068 ตร.ม. ของ NAPA-2 ให้ค่าเผื่อราว +7 %"
+          "en": "The margin is how much more the cells give at the end of life than the satellite needs. What they give grows in proportion to their area, so the margin grows faster than the area does: NAPA-2's 0.068 m² gives about 7 % more than it needs.",
+          "ru": "Запас — это то, на сколько мощность элементов к концу срока службы больше нужной спутнику. Сама мощность пропорциональна площади элементов, поэтому запас растёт быстрее площади: 0,068 м² у NAPA-2 дают примерно на 7 % больше нужного.",
+          "th": "ค่าเผื่อคือส่วนที่กำลังไฟฟ้าจากเซลล์เมื่อสิ้นอายุการใช้งานมากกว่าที่ดาวเทียมต้องใช้ กำลังไฟฟ้าที่เซลล์ผลิตได้แปรผันตรงกับพื้นที่เซลล์ ค่าเผื่อจึงเพิ่มเร็วกว่าพื้นที่ พื้นที่ 0.068 ตร.ม. ของ NAPA-2 ให้กำลังไฟฟ้ามากกว่าที่ต้องใช้ราว 7 %"
         },
         {
           "en": "Wings that track the Sun (the \"Solar array\" menu) need less area for the same power than cells on the body, which see the Sun at a slant.",
