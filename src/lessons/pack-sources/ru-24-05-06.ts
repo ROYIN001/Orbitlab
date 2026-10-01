@@ -13,11 +13,14 @@
  *
  * S1–S3 fly six-DOF (S3 uncrewed, see `soyuzUncrewed`): their worked solutions are in
  * tests/heavy/lesson-packs-sixdof.test.ts, run by hand. S4 is built-in
- * lesson 2.4, S5 built-in 6.2 and 6.3, by reference. S6 (the design kind)
- * comes in a later stage.
+ * lesson 2.4, S5 built-in 6.2 and 6.3, by reference. S6 (T03b) is a design
+ * lesson on the D06 attitude core (T01's design kind, with its answer form
+ * for design measures; worked solution in tests/lesson-packs-design.test.ts).
+ * ГОСТ 20058-80 has no symbols for a spacecraft's disturbance torques, so S6
+ * uses the textbooks' M_гр, M_м, M_Σ and H, and says so in the description.
  */
 import { orbitById } from '../../data/orbits';
-import { ALL_LOCKS, SIX_DOF, missionDoc, windowAfter, type PackSource } from './common';
+import { ALL_LOCKS, PACK_DESIGN_DATE, PACK_DESIGN_LEVEL, SIX_DOF, designLocksBut, missionDoc, windowAfter, type PackSource } from './common';
 
 /** S1–S3's flight: the accepted six-DOF reference, a crewed Soyuz to the station's plane, in the window. */
 const soyuz = (dynamics: object) => missionDoc({
@@ -65,9 +68,9 @@ export const RU_24_05_06: PackSource = {
     },
     reviewed: false,
     description: {
-      en: 'Matched to the general professional competences ОПК-1, ОПК-7 and ОПК-8 of the 24.05.06 standard (pp. 11–12) and, for the ballistic cases, ОПК-6 of the 24.05.04 standard (Order No. 975 of 12 August 2020). A military academy\'s professional competences are set by the Ministry of Defence (the standard\'s §3.4), and the Mozhaisky Military Space Academy\'s own curriculum and course programmes are not public, so the pack follows the standard and the published discipline lists of civilian universities (MAI department С-12; Bauman University, Mytishchi branch, department К1). Notation follows ГОСТ 20058-80. The first three lessons are written for this pack; the others are the app\'s own lessons, listed again with the competences they meet.',
-      ru: 'Соответствует общепрофессиональным компетенциям ОПК-1, ОПК-7 и ОПК-8 ФГОС ВО 24.05.06 (с. 11–12), а для баллистических кейсов — ОПК-6 ФГОС ВО 24.05.04 (приказ № 975 от 12.08.2020). Профессиональные компетенции военной образовательной организации устанавливает Министерство обороны (§3.4 стандарта), а учебный план и рабочие программы дисциплин ВКА им. А. Ф. Можайского не опубликованы, поэтому набор опирается на стандарт и открытые перечни дисциплин гражданских вузов (МАИ, кафедра С-12; МГТУ им. Н. Э. Баумана, Мытищинский филиал, кафедра К1). Обозначения — по ГОСТ 20058-80. Первые три урока написаны для этого набора; остальные — уроки самого приложения, приведённые здесь ещё раз с компетенциями, которым они отвечают.',
-      th: 'สอดคล้องกับสมรรถนะวิชาชีพทั่วไป ОПК-1, ОПК-7 และ ОПК-8 ของมาตรฐานสาขา 24.05.06 (หน้า 11–12) และสำหรับกรณีศึกษาด้านขีปนวิถี คือ ОПК-6 ของมาตรฐานสาขา 24.05.04 (คำสั่งฉบับที่ 975 ลงวันที่ 12 สิงหาคม 2020) สมรรถนะวิชาชีพของสถาบันการศึกษาทางทหารกำหนดโดยกระทรวงกลาโหม (ข้อ 3.4 ของมาตรฐาน) และแผนการเรียนกับแผนการสอนรายวิชาของสถาบันอวกาศทหาร A. F. Mozhaisky ไม่ได้เผยแพร่ ชุดนี้จึงอิงมาตรฐานและรายชื่อวิชาที่มหาวิทยาลัยพลเรือนเผยแพร่ (MAI ภาควิชา С-12 และมหาวิทยาลัยเทคนิค Bauman วิทยาเขต Mytishchi ภาควิชา К1) สัญลักษณ์เป็นไปตาม ГОСТ 20058-80 สามบทแรกเขียนขึ้นสำหรับชุดนี้ บทอื่นเป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมสมรรถนะที่สอดคล้อง',
+      en: 'Matched to the general professional competences ОПК-1, ОПК-7 and ОПК-8 of the 24.05.06 standard (pp. 11–12) and, for the ballistic cases, ОПК-6 of the 24.05.04 standard (Order No. 975 of 12 August 2020). A military academy\'s professional competences are set by the Ministry of Defence (the standard\'s §3.4), and the Mozhaisky Military Space Academy\'s own curriculum and course programmes are not public, so the pack follows the standard and the published discipline lists of civilian universities (MAI department С-12; Bauman University, Mytishchi branch, department К1). Notation follows ГОСТ 20058-80; for a spacecraft\'s disturbance torques, which it does not cover, lesson 15.4 uses the textbooks\' M_гр, M_м, M_Σ and H. Lessons 15.1–15.3 are six-DOF flights written for this pack, and 15.4 a spacecraft to design; the others are the app\'s own lessons, listed again with the competences they meet.',
+      ru: 'Соответствует общепрофессиональным компетенциям ОПК-1, ОПК-7 и ОПК-8 ФГОС ВО 24.05.06 (с. 11–12), а для баллистических кейсов — ОПК-6 ФГОС ВО 24.05.04 (приказ № 975 от 12.08.2020). Профессиональные компетенции военной образовательной организации устанавливает Министерство обороны (§3.4 стандарта), а учебный план и рабочие программы дисциплин ВКА им. А. Ф. Можайского не опубликованы, поэтому набор опирается на стандарт и открытые перечни дисциплин гражданских вузов (МАИ, кафедра С-12; МГТУ им. Н. Э. Баумана, Мытищинский филиал, кафедра К1). Обозначения — по ГОСТ 20058-80; для возмущающих моментов КА, которых этот стандарт не охватывает, урок 15.4 использует принятые в учебниках M_гр, M_м, M_Σ и H. Уроки 15.1–15.3 — полёты в шестистепенной модели, написанные для этого набора, 15.4 — проект КА; остальные — уроки самого приложения, приведённые здесь ещё раз с компетенциями, которым они отвечают.',
+      th: 'สอดคล้องกับสมรรถนะวิชาชีพทั่วไป ОПК-1, ОПК-7 และ ОПК-8 ของมาตรฐานสาขา 24.05.06 (หน้า 11–12) และสำหรับกรณีศึกษาด้านขีปนวิถี คือ ОПК-6 ของมาตรฐานสาขา 24.05.04 (คำสั่งฉบับที่ 975 ลงวันที่ 12 สิงหาคม 2020) สมรรถนะวิชาชีพของสถาบันการศึกษาทางทหารกำหนดโดยกระทรวงกลาโหม (ข้อ 3.4 ของมาตรฐาน) และแผนการเรียนกับแผนการสอนรายวิชาของสถาบันอวกาศทหาร A. F. Mozhaisky ไม่ได้เผยแพร่ ชุดนี้จึงอิงมาตรฐานและรายชื่อวิชาที่มหาวิทยาลัยพลเรือนเผยแพร่ (MAI ภาควิชา С-12 และมหาวิทยาลัยเทคนิค Bauman วิทยาเขต Mytishchi ภาควิชา К1) สัญลักษณ์เป็นไปตาม ГОСТ 20058-80 ส่วนแรงบิดรบกวนของยานอวกาศซึ่งมาตรฐานนี้ไม่ได้กำหนด บทที่ 15.4 ใช้สัญลักษณ์ตามตำรา M_гр, M_м, M_Σ และ H บทที่ 15.1–15.3 เป็นการบินแบบหกองศาอิสระที่เขียนขึ้นสำหรับชุดนี้ บทที่ 15.4 เป็นการออกแบบยานอวกาศ บทอื่นเป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมสมรรถนะที่สอดคล้อง',
     },
     contents: [
       { id: 'ru-soyuz-margins' },
@@ -100,6 +103,7 @@ export const RU_24_05_06: PackSource = {
           th: 'การเฝ้าระวังอวกาศ: การชนกันของ Iridium 33 กับ Cosmos 2251 ในปี 2009 ระยะผ่านใกล้ที่สุด และความน่าจะเป็นของการชน',
         },
       },
+      { id: 'ru-ka-oss' },
     ],
   },
   lessons: [
@@ -199,6 +203,44 @@ export const RU_24_05_06: PackSource = {
         { en: 'Three units are carried so that two good ones can outvote a bad one — but only if the voting is switched on.', ru: 'Три блока ставят, чтобы два исправных перевесили неисправный, — но только если голосование включено.', th: 'ยานมีสามหน่วยเพื่อให้สองหน่วยที่ดีชนะหน่วยที่เสีย แต่ต้องเปิดการลงคะแนนก่อน' },
         { en: 'The switch is in the setup panel, section "Control-system failures (G08)".', ru: 'Переключатель — на панели настройки, раздел «Отказы системы управления (G08)».', th: 'สวิตช์อยู่ในแผงตั้งค่า หัวข้อ «ความล้มเหลวของระบบควบคุม (G08)»' },
         { en: 'Watch the event log after T+30 s: without the FDIR the rocket breaks up about 15 seconds later; with it, unit 1 is isolated.', ru: 'Следите за журналом событий после T+30 с: без FDIR ракета разрушается примерно через 15 с, с ним блок 1 отключается.', th: 'ดูบันทึกเหตุการณ์หลัง T+30 วินาที ถ้าไม่มี FDIR จรวดจะแตกหักในราว 15 วินาทีต่อมา ถ้ามี หน่วยที่ 1 จะถูกแยกออก' },
+      ],
+    },
+    {
+      kind: 'design', id: 'ru-ka-oss', track: 15, order: 4, mode: 'engineer', domains: [5], tags: ['M_Σ', 'H', 'D06'],
+      curriculum: [{ code: 'ФГОС 24.05.06 ОПК-8', kind: 'competence' }],
+      title: { en: 'Disturbance torques and the choice of a wheel', ru: 'Возмущающие моменты и выбор маховика КА', th: 'แรงบิดรบกวนกับการเลือกวงล้อปฏิกิริยาของดาวเทียม' },
+      brief: {
+        en: 'An Earth-observation spacecraft of 2.2 t on a sun-synchronous orbit 600 km up opens on the satellite bench: the designer\'s template, with figures typical of its class (estimates). On the Attitude tab, work out the disturbance torques: the gravity gradient M_gg = (3μ/2r³)·|I_z − I_y|·sin 2θ at θ = 45° (the upper bound the method takes), the magnetic M_m = L·B from the residual magnetic dipole L, and the air and sunlight torques. From their sum M_Σ find the dipole the magnetorquers need, D = M_Σ/B, and the momentum the wheel must store over a quarter of an orbit, H = 0.707·M_Σ·T/4. Then choose a wheel from the series 4, 8, 16 and 32 N·m·s (an example series): the smallest that is enough, so that its momentum over the need is at least 1 and at most 2. The template\'s 25 N·m·s wheel is more than it needs. Type D and your wheel\'s ratio.',
+        ru: 'На стенде спутника открыт космический аппарат дистанционного зондирования Земли массой 2,2 т на солнечно-синхронной орбите высотой 600 км — шаблон конструктора с показателями, типичными для своего класса (оценка). На вкладке «Ориентация» рассчитайте возмущающие моменты: гравитационный M_гр = (3μ/2r³)·|I_z − I_y|·sin 2θ при θ = 45° (верхняя оценка, принятая методикой), магнитный M_м = L·B от остаточного магнитного момента L, а также аэродинамический и от светового давления. По суммарному моменту M_Σ найдите нужный дипольный момент магнитных исполнительных органов D = M_Σ/B и кинетический момент, который маховик должен накопить за четверть витка, H = 0,707·M_Σ·T/4. Затем выберите маховик из условного ряда 4, 8, 16 и 32 Н·м·с — наименьший достаточный, то есть с запасом не меньше 1 и не больше 2. Маховик шаблона (25 Н·м·с) взят с избытком. Введите D и запас выбранного маховика.',
+        th: 'บนแท่นทดสอบเปิดดาวเทียมสำรวจโลกมวล 2.2 ตันในวงโคจรสัมพันธ์กับดวงอาทิตย์ที่ความสูง 600 กม. ไว้ ซึ่งเป็นแม่แบบของเครื่องมือออกแบบที่มีค่าตามแบบฉบับของดาวเทียมประเภทนี้ (ค่าประมาณ) ในแท็บ «ท่าทาง» ให้คำนวณแรงบิดรบกวน ได้แก่ แรงบิดจากเกรเดียนต์แรงโน้มถ่วง M_gg = (3μ/2r³)·|I_z − I_y|·sin 2θ ที่ θ = 45° (ค่าสูงสุดที่วิธีนี้ใช้) แรงบิดแม่เหล็ก M_m = L·B จากไดโพลแม่เหล็กตกค้าง L และแรงบิดจากอากาศและแสงอาทิตย์ จากผลรวม M_Σ ให้หาไดโพลที่แมกนีโทร์กเกอร์ต้องใช้ D = M_Σ/B และโมเมนตัมที่วงล้อต้องเก็บได้ในหนึ่งในสี่รอบวงโคจร H = 0.707·M_Σ·T/4 จากนั้นเลือกวงล้อจากอนุกรม 4, 8, 16 และ 32 N·m·s (อนุกรมตัวอย่าง) ให้เป็นตัวที่เล็กที่สุดที่เพียงพอ คือโมเมนตัมของวงล้อเทียบกับที่ต้องใช้ไม่น้อยกว่า 1 และไม่เกิน 2 วงล้อ 25 N·m·s ของแม่แบบใหญ่เกินความจำเป็น พิมพ์ค่า D และอัตราส่วนของวงล้อที่เลือก',
+      },
+      debrief: {
+        en: 'The largest disturbance here is the gravity gradient: the long body\'s moments of inertia differ a lot, and tilted 45° it gives more than 20 times the magnetic torque. For a spacecraft pointed at the Earth this is an upper bound: at small attitude errors the gravity-gradient torque grows with the error, and a body stretched along the local vertical is held there by it — which is what gravity-gradient stabilisation uses. The wheel absorbs the cyclic part of the disturbances; a steady part piles momentum up from orbit to orbit, and the magnetorquers unload it by pushing against the Earth\'s field — hence the dipole they need, taken three to ten times over. Choosing a wheel is a trade: too small saturates, too big weighs more and draws more power.',
+        ru: 'Наибольший возмущающий момент здесь — гравитационный: моменты инерции вытянутого аппарата сильно различаются, и при наклоне 45° он более чем в 20 раз больше магнитного. Для аппарата, ориентированного на Землю, это верхняя оценка: при малых ошибках ориентации гравитационный момент растёт вместе с ошибкой, а аппарат, вытянутый вдоль местной вертикали, он сам удерживает в этом положении — на этом построена гравитационная стабилизация. Маховик поглощает циклическую составляющую возмущений; постоянная составляющая накапливает кинетический момент от витка к витку, и его сбрасывают магнитными исполнительными органами, работающими против поля Земли, — отсюда нужный дипольный момент, который берут с запасом в 3–10 раз. Выбор маховика — компромисс: малый насыщается, избыточный тяжелее и потребляет больше энергии.',
+        th: 'แรงบิดรบกวนที่มากที่สุดในที่นี้คือเกรเดียนต์แรงโน้มถ่วง เพราะโมเมนต์ความเฉื่อยของตัวดาวเทียมที่ยาวแตกต่างกันมาก และเมื่อเอียง 45° แรงบิดนี้มากกว่าแรงบิดแม่เหล็กกว่า 20 เท่า สำหรับดาวเทียมที่หันเข้าหาโลก ค่านี้เป็นขอบบน เมื่อท่าทางคลาดเคลื่อนน้อย แรงบิดจากเกรเดียนต์แรงโน้มถ่วงจะโตตามความคลาดเคลื่อน และดาวเทียมที่ยืดยาวตามแนวดิ่งจะถูกแรงบิดนี้ตรึงไว้ในแนวนั้น ซึ่งเป็นหลักของการรักษาเสถียรภาพด้วยเกรเดียนต์แรงโน้มถ่วง วงล้อดูดซับส่วนที่เป็นคาบของแรงรบกวน ส่วนที่คงที่จะสะสมโมเมนตัมเพิ่มขึ้นทุกรอบ และต้องถ่ายออกด้วยแมกนีโทร์กเกอร์ที่ออกแรงต้านกับสนามแม่เหล็กของโลก จึงต้องหาไดโพลที่ต้องใช้ และเลือกให้มากกว่านั้น 3 ถึง 10 เท่า การเลือกวงล้อเป็นการแลกเปลี่ยน วงล้อเล็กไปจะอิ่มตัว ใหญ่ไปก็หนักและกินไฟมากขึ้น',
+      },
+      start: { template: 'earthObs' },
+      designDate: PACK_DESIGN_DATE, level: PACK_DESIGN_LEVEL,
+      locked: designLocksBut('adcs.wheelH'),
+      criteria: [
+        {
+          // [1, 2]: the research's "at least 1", and the choice of the smallest that is enough from a doubling series
+          id: 'wheel', kind: 'design', measure: 'sat.wheelMargin', min: 1, max: 2,
+          label: { en: 'The wheel: enough, and not twice too big (wheel over need)', ru: 'Маховик: достаточный, но не больше чем вдвое (запас маховика)', th: 'วงล้อ: เพียงพอ และไม่ใหญ่เกินสองเท่า (วงล้อเทียบกับที่ต้องใช้)' },
+        },
+        {
+          id: 'dipole', kind: 'answer', measure: 'sat.torquerDipole', tolPct: 5,
+          prompt: { en: 'Dipole the magnetorquers need, D = M_Σ/B (A·m²)', ru: 'Нужный дипольный момент магнитных исполнительных органов D = M_Σ/B (А·м²)', th: 'ไดโพลที่แมกนีโทร์กเกอร์ต้องใช้ D = M_Σ/B (A·m²)' },
+        },
+        {
+          id: 'ratio', kind: 'answer', measure: 'sat.wheelMargin', tolPct: 5,
+          prompt: { en: 'Your wheel over the need, H_wheel ÷ (0.707·M_Σ·T/4)', ru: 'Запас выбранного маховика: H_мах ÷ (0,707·M_Σ·T/4)', th: 'วงล้อที่เลือกเทียบกับที่ต้องใช้: H_wheel ÷ (0.707·M_Σ·T/4)' },
+        },
+      ],
+      hints: [
+        { en: 'The Attitude tab shows the four torques, their sum and the field B (at the pole, in µT). For the gravity gradient: μ = 3.986 × 10¹⁴ m³/s², r the orbit\'s radius (6 978 km), and I_z and I_y the largest and smallest principal moments of inertia on the same tab.', ru: 'На вкладке «Ориентация» показаны все четыре момента, их сумма и индукция поля B (на полюсе, в мкТл). Для гравитационного момента: μ = 3,986 · 10¹⁴ м³/с², r — радиус орбиты (6 978 км), I_z и I_y — наибольший и наименьший главные моменты инерции на той же вкладке.', th: 'แท็บ «ท่าทาง» แสดงแรงบิดทั้งสี่ ผลรวม และสนามแม่เหล็ก B (ที่ขั้วโลก หน่วย µT) สำหรับแรงบิดจากเกรเดียนต์แรงโน้มถ่วงใช้ μ = 3.986 × 10¹⁴ ม.³/วินาที² r คือรัศมีวงโคจร (6 978 กม.) และ I_z กับ I_y คือโมเมนต์ความเฉื่อยหลักค่ามากที่สุดและน้อยที่สุดในแท็บเดียวกัน' },
+        { en: 'The magnetic torque M_m = L·B is the spacecraft\'s residual dipole, L = 5 A·m² (the template\'s estimate), times the field. The sum M_Σ adds the magnitudes: the worst case, with all four turning the same way.', ru: 'Магнитный момент M_м = L·B: остаточный магнитный момент аппарата L = 5 А·м² (оценка шаблона), умноженный на индукцию поля. Сумму M_Σ берут как сумму модулей — самый неблагоприятный случай, когда все четыре момента действуют в одну сторону.', th: 'แรงบิดแม่เหล็ก M_m = L·B คือไดโพลตกค้างของดาวเทียม L = 5 A·m² (ค่าประมาณของแม่แบบ) คูณสนามแม่เหล็ก ผลรวม M_Σ คือผลบวกของขนาด ซึ่งเป็นกรณีเลวร้ายที่สุดที่แรงบิดทั้งสี่หมุนไปทางเดียวกัน' },
+        { en: 'H = 0.707·M_Σ·T/4 is Starin and Eterno\'s rule (Table 19-11) for a cyclic torque, with T the period (about 96.8 min). A wheel\'s ratio is its momentum over H; in a series where each wheel is twice the last, the smallest that is enough always gives a ratio between 1 and 2.', ru: 'H = 0,707·M_Σ·T/4 — правило Старина и Этерно (табл. 19-11) для циклического момента, T — период обращения (около 96,8 мин). Запас маховика — его кинетический момент, делённый на H; в ряду, где каждый следующий маховик вдвое больше предыдущего, наименьший достаточный всегда даёт запас от 1 до 2.', th: 'H = 0.707·M_Σ·T/4 เป็นกฎของ Starin และ Eterno (ตาราง 19-11) สำหรับแรงบิดแบบเป็นคาบ โดย T คือคาบการโคจร (ประมาณ 96.8 นาที) อัตราส่วนของวงล้อคือโมเมนตัมของวงล้อหารด้วย H ในอนุกรมที่วงล้อแต่ละตัวใหญ่เป็นสองเท่าของตัวก่อน ตัวที่เล็กที่สุดที่เพียงพอจะให้อัตราส่วนระหว่าง 1 ถึง 2 เสมอ' },
       ],
     },
   ],

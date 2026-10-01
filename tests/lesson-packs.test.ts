@@ -9,7 +9,8 @@
  * in the fleet matrix exactly as the lesson sets it (a window time, a
  * payload, an orbit the matrix does not fly), so each is flown here before it
  * ships. The six-DOF lessons (S1–S3) are flown in
- * tests/heavy/lesson-packs-sixdof.test.ts.
+ * tests/heavy/lesson-packs-sixdof.test.ts, and the design lessons (B6, P5,
+ * P6, R6, S6; T03b) worked in tests/lesson-packs-design.test.ts.
  *
  * Tolerances: the lessons' own, from the research (fixed before any flight)
  * except two, set after seeing the flight and said where they are used —
@@ -38,7 +39,7 @@ import { allLessons } from '../src/lessons/catalog';
 import { flightRecord } from '../src/lessons/progress';
 import { checkRecord } from '../src/lessons/recheck';
 import { appBuildId } from '../src/build-info';
-import { CURRICULUM_KINDS, isFlightLesson, type Lesson, type LocalText } from '../src/lessons/types';
+import { CURRICULUM_KINDS, isDesignLesson, isFlightLesson, type Lesson, type LocalText } from '../src/lessons/types';
 import type { MissionState } from '../src/config/mission-file';
 
 const FILES = import.meta.glob('../public/lessons/packs/*.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
@@ -124,19 +125,19 @@ describe('the bundled lesson packs', () => {
       expect(p.issues, p.pack.id).toEqual([]);
       expect(p.pack.reviewed, p.pack.id).toBe(false);
       const doc = JSON.parse(fileText(p.pack.id)) as { version: number };
-      // no version of its own (map §4.3): the lessons decide, and these fly catalogue rockets and satellites
+      // no version of its own (map §4.3): the lessons decide — catalogue flights 1, and (T03b) a design lesson 3
       expect(doc.version, p.pack.id).toBe(lessonFileVersion(p.lessons));
-      expect(doc.version, p.pack.id).toBe(1);
+      expect(doc.version, p.pack.id).toBe(p.lessons.some(isDesignLesson) ? 3 : 1);
     }
   });
 
-  it('carry the research\'s lessons: B1–B4, A1–A4, P1–P3, R1–R3 and R5, S1–S5', () => {
+  it('carry the research\'s lessons: B1–B4 and B6, A1–A4, P1–P3, P5 and P6, R1–R3, R5 and R6, S1–S6', () => {
     expect(PACKS.map((p) => [p.pack.id, p.items.map((i) => i.lesson.id)])).toEqual([
-      ['ipst-basic', ['ipst-b-forces', 'ipst-b-falling-around', 'orbit-payload', 'case-theos2']],
+      ['ipst-basic', ['ipst-b-forces', 'ipst-b-falling-around', 'orbit-payload', 'case-theos2', 'ipst-b-thaicom-link']],
       ['ipst-earth-space', ['ipst-a-kepler3', 'ipst-a-sun-clock', 'case-theos2', 'adv-history']],
-      ['ipst-physics', ['ipst-p-geo', 'ipst-p-starlink', 'orbit-payload', 'fail-engine-out']],
-      ['rtaf-academy', ['rtaf-napa1-sso', 'rtaf-elements', 'ctl-inspector', 'ctl-margins', 'adv-docking']],
-      ['ru-24-05-06', ['ru-soyuz-margins', 'ru-bins-astro', 'ru-fdir-dus', 'guid-monte-carlo', 'case-cz5b', 'case-iridium']],
+      ['ipst-physics', ['ipst-p-geo', 'ipst-p-starlink', 'orbit-payload', 'fail-engine-out', 'ipst-p-magnetorquer', 'ipst-p-solar-power']],
+      ['rtaf-academy', ['rtaf-napa1-sso', 'rtaf-elements', 'ctl-inspector', 'ctl-margins', 'adv-docking', 'rtaf-6u-adcs']],
+      ['ru-24-05-06', ['ru-soyuz-margins', 'ru-bins-astro', 'ru-fdir-dus', 'guid-monte-carlo', 'case-cz5b', 'case-iridium', 'ru-ka-oss']],
     ]);
   });
 

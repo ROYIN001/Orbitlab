@@ -1,14 +1,40 @@
 /**
- * Pack: IPST additional physics, grade 10 (roadmap T03; the T03 research's
- * §4, lessons P1–P3). Group 1 learning outcomes 6 (universal gravitation),
- * 14–15 (momentum, impulse and separation) and 17 (circular motion applied to
- * satellites, the geostationary orbit), from IPST's ผลการเรียนรู้ สาระฟิสิกส์
- * หมวดที่ 1. P1 and P2 are written here (both outside the fleet matrix, so
- * tests/lesson-packs.test.ts flies their worked solutions); P3 is built-in
- * lessons 1.4 and 3.1 by reference. P4 (six-DOF, a thrust off the centre of
- * mass) is left for the stage that adds the design kind with P5–P6.
+ * Pack: IPST additional physics, grades 10–12 (roadmap T03; the T03
+ * research's §4, lessons P1–P3, P5 and P6). Group 1 learning outcomes 6
+ * (universal gravitation), 14–15 (momentum, impulse and separation) and 17
+ * (circular motion applied to satellites, the geostationary orbit), from
+ * IPST's ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1; group 3 outcome 11 of grade 11
+ * (renewable energy into electricity) and outcomes 2–3 of grade 12 (the
+ * magnetic force on a current, the couple on a coil: galvanometers and DC
+ * motors), from หมวดที่ 3. P1 and P2 are written here (both outside the fleet
+ * matrix, so tests/lesson-packs.test.ts flies their worked solutions); P3 is
+ * built-in lessons 1.4 and 3.1 by reference. P5 and P6 (T03b) are design
+ * lessons on the D06 attitude and power cores (T01's design kind; worked
+ * solutions in tests/lesson-packs-design.test.ts). P4 (six-DOF, a thrust off
+ * the centre of mass) was not in this stage's task.
  */
-import { ALL_LOCKS, POINT_MASS, missionDoc, type PackSource } from './common';
+import {
+  ALL_LOCKS, PACK_DESIGN_DATE, PACK_DESIGN_LEVEL, POINT_MASS, designFrom, designLocksBut, missionDoc, type PackSource,
+} from './common';
+
+/**
+ * P5's coil, an example and not NAPA-2's own: 100 turns round the 6U's
+ * 10 cm × 20 cm end face carrying at most 30 mA, so NIA = 0.06 A·m². Starin
+ * & Eterno (NTRS 20110007070, Table 19-11) take a torquer 3 to 10 times the
+ * dipole the disturbances need, as the field it pushes on swings twice an
+ * orbit (src/orbit/attitude.ts `torquerDipole`); the lesson takes the
+ * lowest, 3, so the need may be at most NIA/3.
+ */
+const COIL = { turns: 100, area: 0.02, current: 0.03 };
+const COIL_DIPOLE = COIL.turns * COIL.current * COIL.area;
+const TORQUER_FACTOR = 3;
+
+/**
+ * P6's start: the THEOS-2-class template with a payload drawing 550 W where
+ * the template has 150 W (an example load, not THEOS-2's), on the template's
+ * 3.5 m² of cells and 1 200 Wh battery, which then fall short.
+ */
+const THEOS2_HUNGRY = designFrom('theos2', 'ipst-p-solar-power', 'THEOS-2 · 550 W', { 'power.payloadW': 550 });
 
 export const IPST_PHYSICS: PackSource = {
   pack: {
@@ -19,20 +45,20 @@ export const IPST_PHYSICS: PackSource = {
       th: 'ฟิสิกส์ (รายวิชาเพิ่มเติม สสวท.): ความโน้มถ่วง การเคลื่อนที่แบบวงกลม และโมเมนตัม',
     },
     audience: {
-      en: 'Grade 10 (M.4), additional physics',
-      ru: '10 класс (М.4), углублённый курс физики',
-      th: 'ชั้น ม.4 รายวิชาเพิ่มเติมฟิสิกส์',
+      en: 'Grades 10–12 (M.4–M.6), additional physics',
+      ru: '10–12 классы (М.4–М.6), углублённый курс физики',
+      th: 'ชั้น ม.4–ม.6 รายวิชาเพิ่มเติมฟิสิกส์',
     },
     framework: {
-      en: 'IPST learning outcomes for additional physics, group 1, 2017 revision (B.E. 2560)',
-      ru: 'Результаты обучения IPST по углублённой физике, раздел 1, редакция 2017 г. (2560 г. буддийской эры)',
-      th: 'ผลการเรียนรู้ รายวิชาเพิ่มเติมวิทยาศาสตร์ ฟิสิกส์ หมวดที่ 1 (ฉบับปรับปรุง พ.ศ. 2560)',
+      en: 'IPST learning outcomes for additional physics, groups 1 and 3, 2017 revision (B.E. 2560)',
+      ru: 'Результаты обучения IPST по углублённой физике, разделы 1 и 3, редакция 2017 г. (2560 г. буддийской эры)',
+      th: 'ผลการเรียนรู้ รายวิชาเพิ่มเติมวิทยาศาสตร์ ฟิสิกส์ หมวดที่ 1 และหมวดที่ 3 (ฉบับปรับปรุง พ.ศ. 2560)',
     },
     reviewed: false,
     description: {
-      en: 'Matched to group 1 learning outcomes 6, 14, 15 and 17 of grade 10 physics. Sources: IPST, ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th, book pp. 192–197; IPST, ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th, pp. 4–9. The first two lessons are written for this pack; the other two are the app\'s own lessons, listed again with the outcomes they meet.',
-      ru: 'Соответствует результатам обучения 6, 14, 15 и 17 раздела 1 физики для 10 класса. Источники: IPST, ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th, с. 192–197 издания; IPST, ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th, с. 4–9. Первые два урока написаны для этого набора; два других — уроки самого приложения, приведённые здесь ещё раз с результатами, которым они отвечают.',
-      th: 'สอดคล้องกับผลการเรียนรู้หมวดที่ 1 ข้อ 6, 14, 15 และ 17 ของฟิสิกส์ ม.4 แหล่งที่มา: สสวท., ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th หน้า 192–197 ของเล่ม และ สสวท., ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th หน้า 4–9 สองบทแรกเขียนขึ้นสำหรับชุดนี้ อีกสองบทเป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมผลการเรียนรู้ที่สอดคล้อง',
+      en: 'Matched to group 1 learning outcomes 6, 14, 15 and 17 of grade 10 physics, group 3 outcome 11 of grade 11 and group 3 outcomes 2 and 3 of grade 12 (with basic-science indicator ว 2.3 ม.5/2). Sources: IPST, ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th, book pp. 76, 192–197, 205 and 210; IPST, ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th, pp. 4–9, and หมวดที่ 3, pp. 6–7. Lessons 13.1 and 13.2 are flights written for this pack, and 13.3 and 13.4 satellites to design; 1.4 and 3.1 are the app\'s own lessons, listed again with the outcomes they meet.',
+      ru: 'Соответствует результатам обучения 6, 14, 15 и 17 раздела 1 физики для 10 класса, результату 11 раздела 3 для 11 класса и результатам 2 и 3 раздела 3 для 12 класса (а также индикатору базового курса ว 2.3 ม.5/2). Источники: IPST, ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th, с. 76, 192–197, 205 и 210 издания; IPST, ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th, с. 4–9, и หมวดที่ 3, с. 6–7. Уроки 13.1 и 13.2 — полёты, написанные для этого набора, 13.3 и 13.4 — проекты спутников; 1.4 и 3.1 — уроки самого приложения, приведённые здесь ещё раз с результатами, которым они отвечают.',
+      th: 'สอดคล้องกับผลการเรียนรู้หมวดที่ 1 ข้อ 6, 14, 15 และ 17 ของฟิสิกส์ ม.4 หมวดที่ 3 ข้อ 11 ของ ม.5 และหมวดที่ 3 ข้อ 2 และ 3 ของ ม.6 (รวมทั้งตัวชี้วัดวิทยาศาสตร์พื้นฐาน ว 2.3 ม.5/2) แหล่งที่มา: สสวท., ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th หน้า 76, 192–197, 205 และ 210 ของเล่ม และ สสวท., ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th หน้า 4–9 กับหมวดที่ 3 หน้า 6–7 บทที่ 13.1 และ 13.2 เป็นการบินที่เขียนขึ้นสำหรับชุดนี้ บทที่ 13.3 และ 13.4 เป็นการออกแบบดาวเทียม ส่วนบทที่ 1.4 และ 3.1 เป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมผลการเรียนรู้ที่สอดคล้อง',
     },
     contents: [
       { id: 'ipst-p-geo' },
@@ -55,6 +81,8 @@ export const IPST_PHYSICS: PackSource = {
           th: 'การดลคือแรงคูณเวลา เมื่อเครื่องยนต์ดับไปหนึ่งเครื่อง อีกแปดเครื่องต้องทำงานนานขึ้นเพื่อให้ขั้นจรวดมีการเปลี่ยนโมเมนตัมเท่าเดิม',
         },
       },
+      { id: 'ipst-p-magnetorquer' },
+      { id: 'ipst-p-solar-power' },
     ],
   },
   lessons: [
@@ -126,6 +154,70 @@ export const IPST_PHYSICS: PackSource = {
         { en: 'Newton\'s law of gravitation, F = GMm/r², set equal to the centripetal force mv²/r: the satellite\'s own mass m cancels.', ru: 'Приравняйте силу тяготения Ньютона F = GMm/r² центростремительной силе mv²/r: масса спутника m сокращается.', th: 'ให้แรงโน้มถ่วงตามกฎของนิวตัน F = GMm/r² เท่ากับแรงสู่ศูนย์กลาง mv²/r มวล m ของดาวเทียมจะตัดกันหมดไป' },
         { en: 'v = √(GM/r), with GM = 398 600 km³/s² and r = 6 378 km plus the height reached; then T = 2πr/v.', ru: 'v = √(GM/r), где GM = 398 600 км³/с², а r = 6 378 км плюс достигнутая высота; затем T = 2πr/v.', th: 'v = √(GM/r) โดย GM = 398 600 กม.³/วินาที² และ r = 6 378 กม. บวกความสูงที่ได้ แล้ว T = 2πr/v' },
         { en: 'A check: g = GM/r² at 550 km is about 8.3 m/s². Your v²/r must give the same — mind the units (km and m).', ru: 'Для проверки: g = GM/r² на высоте 550 км около 8,3 м/с². Ваше v²/r должно дать то же — следите за единицами (км и м).', th: 'ใช้ตรวจสอบ: g = GM/r² ที่ความสูง 550 กม. ประมาณ 8.3 ม./วินาที² ค่า v²/r ของนักเรียนต้องได้เท่ากัน ระวังหน่วย (กม. กับ ม.)' },
+      ],
+    },
+    {
+      kind: 'design', id: 'ipst-p-magnetorquer', track: 13, order: 3, mode: 'engineer', domains: [5], tags: ['M = NIAB cos α', 'D06'],
+      curriculum: [{ code: 'ฟส ม.6 หมวด 3 ผล 2', kind: 'outcome' }, { code: 'ฟส ม.6 หมวด 3 ผล 3', kind: 'outcome' }],
+      title: { en: 'A coil that turns a satellite', ru: 'Катушка, которая поворачивает спутник', th: 'ขดลวดที่หมุนดาวเทียมได้' },
+      brief: {
+        en: 'A coil carrying a current in a magnetic field feels a couple, M = NIAB cos α: that is what turns a galvanometer\'s needle and a DC motor. A small satellite uses the same law with the Earth\'s own field: a magnetorquer, a coil with no moving parts, turns it or takes away the spin its reaction wheel has gathered. NAPA-2, the Royal Thai Air Force\'s 6U CubeSat, opens on the satellite bench. Give it a coil of 100 turns round its 10 cm × 20 cm end face (A = 0.02 m²) carrying at most 30 mA — an example, not NAPA-2\'s own. Engineers make a torquer three to ten times as strong as the bare need, because the coil can only push across the field and the field\'s direction swings round as the satellite goes from pole to pole; so the dipole the disturbances need, D = T/B, may be at most a third of the coil\'s NIA. On the Attitude tab, find which disturbance torque is largest and change the residual magnetic dipole or the centre of pressure until the satellite meets this rule; then work out D for your design and type it in.',
+        ru: 'На катушку с током в магнитном поле действует пара сил с моментом M = NIAB cos α — так поворачиваются стрелка гальванометра и якорь двигателя постоянного тока. Малый спутник пользуется тем же законом в поле самой Земли: магнитная катушка без движущихся частей поворачивает его или гасит вращение, накопленное маховиком. На стенде спутника открыт NAPA-2 — кубсат формата 6U Королевских ВВС Таиланда. Дадим ему катушку из 100 витков вокруг торцевой грани размером 10 × 20 см (A = 0,02 м²) с током не более 30 мА — это пример, а не катушка самого NAPA-2. Магнитную катушку берут в 3–10 раз сильнее, чем требуется в обрез: она может давить только поперёк поля, а направление поля поворачивается, пока спутник идёт от полюса к полюсу; поэтому дипольный момент, нужный против возмущений, D = T/B, должен быть не больше трети NIA катушки. На вкладке «Ориентация» найдите, какой возмущающий момент больше всех, и измените остаточный магнитный момент или смещение центра давления так, чтобы спутник выполнял это правило; затем рассчитайте D для своего проекта и введите его.',
+        th: 'ขดลวดที่มีกระแสไฟฟ้าผ่านและอยู่ในสนามแม่เหล็กจะมีโมเมนต์ของแรงคู่ควบกระทำ M = NIAB cos α ซึ่งเป็นหลักที่ทำให้เข็มของแกลแวนอมิเตอร์และมอเตอร์ไฟฟ้ากระแสตรงหมุน ดาวเทียมขนาดเล็กใช้กฎเดียวกันนี้กับสนามแม่เหล็กของโลกเอง แมกนีโทร์กเกอร์ซึ่งเป็นขดลวดที่ไม่มีชิ้นส่วนเคลื่อนไหว ใช้หมุนดาวเทียมหรือถ่ายการหมุนที่วงล้อปฏิกิริยาสะสมไว้ออกไป บนแท่นทดสอบเปิด NAPA-2 ดาวเทียมคิวบ์แซตขนาด 6U ของกองทัพอากาศไทยไว้ ให้ติดขดลวด 100 รอบรอบหน้าด้านท้ายขนาด 10 ซม. × 20 ซม. (A = 0.02 ตร.ม.) ที่มีกระแสได้สูงสุด 30 mA ซึ่งเป็นตัวอย่าง ไม่ใช่ขดลวดจริงของ NAPA-2 วิศวกรเลือกแมกนีโทร์กเกอร์ให้แรงกว่าที่ต้องใช้พอดี 3 ถึง 10 เท่า เพราะขดลวดออกแรงได้เฉพาะในทิศขวางสนาม และทิศของสนามจะหมุนไปขณะที่ดาวเทียมโคจรจากขั้วโลกหนึ่งไปอีกขั้วโลกหนึ่ง ไดโพลที่ต้องใช้ต้านแรงบิดรบกวน D = T/B จึงต้องไม่เกินหนึ่งในสามของ NIA ของขดลวด ในแท็บ «ท่าทาง» ให้หาว่าแรงบิดรบกวนตัวใดมากที่สุด แล้วปรับไดโพลแม่เหล็กตกค้างหรือตำแหน่งศูนย์กลางแรงดันจนดาวเทียมเป็นไปตามเกณฑ์นี้ จากนั้นคำนวณ D ของแบบที่ได้และพิมพ์คำตอบ',
+      },
+      debrief: {
+        en: 'On each side of the coil the current feels F = ILB, and the forces on opposite sides make a couple whose moment is NIAB cos α. The product NIA, the coil\'s magnetic dipole in A·m², says how strongly it turns in a field. In orbit the field is the Earth\'s, about 50 µT over the poles at NAPA-2\'s height, so the 0.06 A·m² coil gives at most about 3 × 10⁻⁶ N·m: tiny, but so are the disturbances. On a CubeSat the largest is often its own magnetism: wires and parts leave it a weak magnet, which the field turns like a compass needle. Halving that residual dipole halves its torque, while bringing the centre of pressure onto the centre of mass removes only the small air and sunlight torques. A magnetorquer needs no propellant and has no moving parts, but it works only where the field is strong: at the geostationary height the field is some 200 times weaker.',
+        ru: 'На каждую сторону катушки действует сила F = ILB, а силы на противоположных сторонах образуют пару с моментом NIAB cos α. Произведение NIA — магнитный момент катушки в А·м² — показывает, насколько сильно она поворачивается в поле. На орбите это поле Земли, около 50 мкТл над полюсами на высоте NAPA-2, поэтому катушка 0,06 А·м² даёт не более примерно 3 · 10⁻⁶ Н·м: очень мало, но и возмущения малы. У кубсата самое большое из них часто — его собственный магнетизм: провода и детали делают его слабым магнитом, и поле поворачивает его, как стрелку компаса. Уменьшив остаточный магнитный момент вдвое, вдвое уменьшают и вызванный им момент, а совмещение центра давления с центром масс убирает лишь малые моменты от атмосферы и светового давления. Магнитной катушке не нужно топливо и у неё нет движущихся частей, но работает она только там, где поле сильное: на геостационарной высоте поле примерно в 200 раз слабее.',
+        th: 'ด้านแต่ละด้านของขดลวดมีแรง F = ILB กระทำ และแรงบนด้านตรงข้ามกันรวมเป็นแรงคู่ควบที่มีโมเมนต์ NIAB cos α ผลคูณ NIA คือไดโพลแม่เหล็กของขดลวด หน่วย A·m² บอกว่าขดลวดหมุนในสนามได้แรงเพียงใด ในวงโคจร สนามแม่เหล็กคือสนามของโลก ซึ่งเหนือขั้วโลกที่ความสูงของ NAPA-2 มีค่าประมาณ 50 µT ขดลวด 0.06 A·m² จึงให้โมเมนต์ได้สูงสุดราว 3 × 10⁻⁶ N·m ซึ่งน้อยมาก แต่แรงบิดรบกวนก็น้อยเช่นกัน สำหรับคิวบ์แซต แรงบิดรบกวนที่มากที่สุดมักมาจากความเป็นแม่เหล็กของตัวดาวเทียมเอง สายไฟและชิ้นส่วนต่าง ๆ ทำให้ดาวเทียมเป็นแม่เหล็กอ่อน ๆ และสนามของโลกจะหมุนมันเหมือนเข็มทิศ การลดไดโพลตกค้างลงครึ่งหนึ่งทำให้แรงบิดส่วนนี้ลดลงครึ่งหนึ่ง ส่วนการเลื่อนศูนย์กลางแรงดันมาที่ศูนย์กลางมวลช่วยลดได้เพียงแรงบิดเล็ก ๆ จากอากาศและแสงอาทิตย์ แมกนีโทร์กเกอร์ไม่ต้องใช้เชื้อเพลิงและไม่มีชิ้นส่วนเคลื่อนไหว แต่ใช้ได้เฉพาะที่ที่สนามแม่เหล็กแรงพอ ที่ความสูงของวงโคจรค้างฟ้าสนามอ่อนกว่าราว 200 เท่า',
+      },
+      start: { template: 'napa2' },
+      designDate: PACK_DESIGN_DATE, level: PACK_DESIGN_LEVEL,
+      locked: designLocksBut('adcs.residualDipole', 'adcs.cpOffset'),
+      criteria: [
+        {
+          id: 'torquer', kind: 'design', measure: 'sat.torquerDipole', max: COIL_DIPOLE / TORQUER_FACTOR,
+          label: { en: 'Dipole needed, at most a third of the coil\'s NIA', ru: 'Нужный дипольный момент — не больше трети NIA катушки', th: 'ไดโพลที่ต้องใช้ ไม่เกินหนึ่งในสามของ NIA ของขดลวด' },
+        },
+        {
+          id: 'need', kind: 'answer', measure: 'sat.torquerDipole', tolPct: 5,
+          prompt: { en: 'The dipole the disturbances need, D = T/B (A·m²)', ru: 'Дипольный момент, нужный против возмущений, D = T/B (А·м²)', th: 'ไดโพลที่ต้องใช้ต้านแรงบิดรบกวน D = T/B (A·m²)' },
+        },
+      ],
+      hints: [
+        { en: 'On the Attitude tab, "All together" is the torque T the coil must be able to beat, and "Magnetic field (pole)" is B (1 µT = 10⁻⁶ T). The coil\'s largest couple is NIAB (cos α = 1), so it holds the satellite against T when NIA ≥ T/B; the bench shows T/B as "Magnetorquer dipole needed".', ru: 'На вкладке «Ориентация» «Суммарно» — это момент T, который катушка должна перебороть, а «Магнитное поле (полюс)» — индукция B (1 мкТл = 10⁻⁶ Тл). Наибольший момент пары сил катушки — NIAB (cos α = 1), поэтому она удерживает спутник против T, если NIA ≥ T/B; величину T/B стенд показывает как «Нужный дипольный момент магнитных катушек».', th: 'ในแท็บ «ท่าทาง» ค่า «รวมทั้งหมด» คือแรงบิด T ที่ขดลวดต้องเอาชนะ และ «สนามแม่เหล็ก (ขั้วโลก)» คือ B (1 µT = 10⁻⁶ T) โมเมนต์ของแรงคู่ควบสูงสุดของขดลวดคือ NIAB (cos α = 1) ขดลวดจึงต้านแรงบิด T ได้เมื่อ NIA ≥ T/B แท่นทดสอบแสดงค่า T/B ไว้ในแถว «ไดโพลของแมกนีโทร์กเกอร์ที่ต้องใช้»' },
+        { en: 'Which torque is largest? Compare the four rows above "All together". The "Magnetic" one is the satellite\'s own residual dipole times B: the satellite is a weak magnet, and the Earth\'s field turns it like a compass needle.', ru: 'Какой момент больше всех? Сравните четыре строки над «Суммарно». «Магнитный момент» — это остаточный магнитный момент самого спутника, умноженный на B: спутник — слабый магнит, и поле Земли поворачивает его, как стрелку компаса.', th: 'แรงบิดตัวใดมากที่สุด? เปรียบเทียบสี่แถวที่อยู่เหนือ «รวมทั้งหมด» แถว «แม่เหล็ก» คือไดโพลตกค้างของดาวเทียมเองคูณด้วย B ดาวเทียมเป็นแม่เหล็กอ่อน ๆ และสนามของโลกหมุนมันเหมือนเข็มทิศ' },
+        { en: 'Moving the centre of pressure onto the centre of mass removes only the air and sunlight torques, which are small here. The residual dipole falls when the wiring is laid in twisted pairs and magnetic parts are kept out, and it can be measured and trimmed before launch.', ru: 'Совмещение центра давления с центром масс убирает лишь моменты от атмосферы и светового давления, а они здесь малы. Остаточный магнитный момент уменьшают, прокладывая провода витыми парами и избегая магнитных деталей; перед запуском его измеряют и компенсируют.', th: 'การเลื่อนศูนย์กลางแรงดันมาที่ศูนย์กลางมวลช่วยลดได้เพียงแรงบิดจากอากาศและแสงอาทิตย์ ซึ่งในที่นี้มีค่าน้อย ไดโพลตกค้างจะลดลงเมื่อเดินสายไฟเป็นคู่บิดเกลียวและไม่ใช้ชิ้นส่วนที่เป็นแม่เหล็ก และยังวัดแล้วชดเชยได้ก่อนปล่อยดาวเทียม' },
+      ],
+    },
+    {
+      kind: 'design', id: 'ipst-p-solar-power', track: 13, order: 4, mode: 'explore', domains: [1], tags: ['P = ΦAη', 'D06'],
+      curriculum: [{ code: 'ฟส ม.5 หมวด 3 ผล 11', kind: 'outcome' }, { code: 'ว 2.3 ม.5/2', kind: 'indicator' }],
+      title: { en: 'Sunlight into electricity, through the shadow', ru: 'Солнечный свет — в электричество, и на всю тень', th: 'เปลี่ยนแสงอาทิตย์เป็นไฟฟ้าให้พอใช้ผ่านเงามืด' },
+      brief: {
+        en: 'A THEOS-2-class Earth-observation satellite flies a sun-synchronous orbit 621 km up, and about a third of each 97-minute revolution is spent in the Earth\'s shadow. Suppose its new camera and recorder draw 550 W instead of 150 W, with the bus\'s 250 W on top (an example, not THEOS-2\'s own figures). Solar cells turn sunlight into electricity, but only in sunlight: the array must run the loads and also charge the battery that runs them through the shadow. With its 3.5 m² of cells and 1 200 Wh battery the satellite now falls short. Change only the solar cell area and the battery capacity so that the array still covers the need at the end of its ten-year life (a power margin of at least 0 %) and the battery is drained no deeper than 30 % in the longest eclipse of the year; then type how long that eclipse lasts.',
+        ru: 'Съёмочный спутник класса THEOS-2 летает по солнечно-синхронной орбите высотой 621 км и около трети каждого 97-минутного витка проводит в тени Земли. Пусть его новая камера с накопителем данных потребляет 550 Вт вместо 150 Вт, и ещё 250 Вт — служебная аппаратура (это пример, а не данные самого THEOS-2). Солнечные элементы превращают свет в электричество, но только на свету: батарея должна питать нагрузку и ещё заряжать аккумулятор, который питает её в тени. С 3,5 м² элементов и аккумулятором 1 200 Вт·ч мощности теперь не хватает. Измените только площадь солнечных элементов и ёмкость аккумулятора так, чтобы к концу десятилетнего срока службы батарея по-прежнему покрывала потребность (запас мощности не меньше 0 %), а в самой длинной тени года аккумулятор разряжался не глубже чем на 30 %; затем введите, сколько длится эта тень.',
+        th: 'ดาวเทียมสำรวจโลกระดับ THEOS-2 โคจรในวงโคจรสัมพันธ์กับดวงอาทิตย์ที่ความสูง 621 กม. และอยู่ในเงามืดของโลกราวหนึ่งในสามของแต่ละรอบที่ใช้เวลา 97 นาที สมมุติว่ากล้องและเครื่องบันทึกข้อมูลชุดใหม่ใช้กำลังไฟฟ้า 550 วัตต์แทน 150 วัตต์ และระบบของตัวดาวเทียมใช้อีก 250 วัตต์ (เป็นตัวอย่าง ไม่ใช่ค่าจริงของ THEOS-2) เซลล์แสงอาทิตย์เปลี่ยนแสงเป็นไฟฟ้าได้เฉพาะเมื่อได้รับแสง แผงเซลล์จึงต้องจ่ายไฟให้อุปกรณ์และชาร์จแบตเตอรี่ไว้จ่ายไฟในช่วงเงามืดด้วย เซลล์ 3.5 ตร.ม. กับแบตเตอรี่ 1 200 วัตต์-ชม. ที่มีอยู่จึงไม่พอแล้ว จงปรับเฉพาะพื้นที่เซลล์แสงอาทิตย์และความจุแบตเตอรี่ ให้แผงเซลล์ยังจ่ายไฟได้พอเมื่อสิ้นอายุการใช้งาน 10 ปี (ค่าเผื่อกำลังไฟฟ้าไม่น้อยกว่า 0 %) และแบตเตอรี่คายประจุไม่เกิน 30 % ในอุปราคานานที่สุดของปี แล้วพิมพ์ว่าอุปราคานั้นนานเท่าใด',
+      },
+      debrief: {
+        en: 'Near the Earth sunlight brings about 1 361 W to every square metre facing the Sun, and today\'s best space cells turn about 29.5 % of it into electricity, so a square metre of cells gives some 400 W — less after the losses in the wiring and the years in orbit, which is why the margin is reckoned at the end of life. The array works only in sunlight, so it must make enough for the day and for the night: here about twice the load, since a third of every revolution is dark and the battery gives back its energy with losses. A battery drained deeply on every revolution, some 5 400 times a year, wears out within a few years, so satellites in low orbit keep the depth shallow; those in the geostationary orbit, with only about 90 eclipses a year, may drain theirs much deeper.',
+        ru: 'У Земли солнечный свет приносит около 1 361 Вт на каждый квадратный метр, обращённый к Солнцу, а лучшие современные космические элементы превращают в электричество около 29,5 % этой мощности: квадратный метр элементов даёт примерно 400 Вт — меньше с учётом потерь в проводах и деградации за годы на орбите, поэтому запас считают к концу срока службы. Батарея работает только на свету, поэтому должна вырабатывать достаточно и на день, и на ночь: здесь примерно вдвое больше нагрузки, ведь треть каждого витка проходит в тени, а аккумулятор отдаёт энергию с потерями. Аккумулятор, глубоко разряжаемый на каждом витке — около 5 400 раз в год, — изнашивается за несколько лет, поэтому на низких орбитах глубину разряда держат малой; на геостационарной орбите, где теней лишь около 90 в год, аккумуляторы можно разряжать гораздо глубже.',
+        th: 'บริเวณใกล้โลก แสงอาทิตย์ให้พลังงานประมาณ 1 361 วัตต์ต่อพื้นที่หนึ่งตารางเมตรที่หันเข้าหาดวงอาทิตย์ และเซลล์แสงอาทิตย์สำหรับอวกาศที่ดีที่สุดในปัจจุบันเปลี่ยนพลังงานนี้เป็นไฟฟ้าได้ราว 29.5 % เซลล์หนึ่งตารางเมตรจึงให้ไฟฟ้าราว 400 วัตต์ และน้อยลงอีกเมื่อหักการสูญเสียในสายไฟและการเสื่อมตลอดหลายปีในวงโคจร จึงต้องคิดค่าเผื่อ ณ ตอนสิ้นอายุการใช้งาน แผงเซลล์ทำงานได้เฉพาะเมื่อได้รับแสง จึงต้องผลิตไฟให้พอทั้งกลางวันและกลางคืน ในที่นี้ประมาณสองเท่าของโหลด เพราะหนึ่งในสามของทุกรอบอยู่ในความมืด และแบตเตอรี่คืนพลังงานได้ไม่ครบ แบตเตอรี่ที่คายประจุลึกทุกรอบ ราว 5 400 ครั้งต่อปี จะเสื่อมภายในไม่กี่ปี ดาวเทียมวงโคจรต่ำจึงใช้แบตเตอรี่แบบคายประจุตื้น ส่วนดาวเทียมในวงโคจรค้างฟ้าซึ่งเข้าเงามืดเพียงราว 90 ครั้งต่อปี คายประจุได้ลึกกว่ามาก',
+      },
+      start: { design: THEOS2_HUNGRY },
+      designDate: PACK_DESIGN_DATE, level: PACK_DESIGN_LEVEL,
+      locked: designLocksBut('power.arrayArea', 'power.batteryWh'),
+      criteria: [
+        { id: 'margin', kind: 'design', measure: 'sat.powerMargin', min: 0 },
+        { id: 'battery', kind: 'design', measure: 'sat.batteryDod', max: 30 },
+        {
+          id: 'eclipse', kind: 'answer', measure: 'sat.eclipseMax', tol: 1,
+          prompt: { en: 'Longest eclipse of the year (min)', ru: 'Самая длинная тень за год (мин)', th: 'อุปราคานานที่สุดของปี (นาที)' },
+        },
+      ],
+      hints: [
+        { en: 'A square metre of cells facing the Sun gives P = Φ·A·η = 1 361 W/m² × 1 m² × 0.295 ≈ 400 W at the start of life, before any loss. In the Power table, "Array must give in sunlight" is what the cells must give, and "Cells needed" the area that gives it at the end of life.', ru: 'Квадратный метр элементов, обращённый к Солнцу, даёт P = Φ·A·η = 1 361 Вт/м² × 1 м² × 0,295 ≈ 400 Вт в начале срока службы, без потерь. В таблице «Энергетика» «Батарея должна давать на свету» — это то, что должны давать элементы, а «Нужно элементов» — площадь, которая даёт это к концу срока службы.', th: 'เซลล์หนึ่งตารางเมตรที่หันเข้าหาดวงอาทิตย์ให้กำลัง P = Φ·A·η = 1 361 วัตต์/ตร.ม. × 1 ตร.ม. × 0.295 ≈ 400 วัตต์ ตอนเริ่มใช้งานโดยยังไม่หักการสูญเสีย ในตาราง «ระบบไฟฟ้า» แถว «แผงต้องให้กำลังขณะรับแสง» คือกำลังที่เซลล์ต้องผลิต และ «เซลล์ที่ต้องใช้» คือพื้นที่ที่ผลิตได้เท่านั้นเมื่อสิ้นอายุการใช้งาน' },
+        { en: 'The battery must run the loads through the longest eclipse: the energy is the load × the eclipse\'s time ÷ the battery\'s efficiency (0.9). The depth is that energy over the battery\'s capacity, so to keep it at 30 % the capacity must be at least that energy ÷ 0.3.', ru: 'Аккумулятор должен питать нагрузку всю самую длинную тень: энергия равна нагрузке × длительность тени ÷ КПД аккумулятора (0,9). Глубина разряда — эта энергия, делённая на ёмкость, поэтому, чтобы удержать её на 30 %, ёмкость должна быть не меньше этой энергии ÷ 0,3.', th: 'แบตเตอรี่ต้องจ่ายไฟให้โหลดตลอดอุปราคาที่นานที่สุด พลังงานที่ใช้เท่ากับโหลด × เวลาของอุปราคา ÷ ประสิทธิภาพของแบตเตอรี่ (0.9) ความลึกของการคายประจุคือพลังงานนี้หารด้วยความจุ ถ้าจะให้ไม่เกิน 30 % ความจุต้องไม่น้อยกว่าพลังงานนี้ ÷ 0.3' },
+        { en: 'The longest eclipse is under "At a glance" and in the Eclipse table. By hand: with the Sun in the orbit\'s plane the shadow takes (1/π)·acos(√(h² + 2Rh) / (R + h)) of a revolution, about 36 % at 621 km; this orbit never has the Sun quite in its plane, so a little less.', ru: 'Самая длинная тень приведена в блоке «Коротко» и в таблице «Тень Земли». Вручную: когда Солнце в плоскости орбиты, тень занимает (1/π)·arccos(√(h² + 2Rh) / (R + h)) витка — около 36 % на высоте 621 км; на этой орбите Солнце никогда не бывает точно в плоскости, поэтому чуть меньше.', th: 'อุปราคานานที่สุดดูได้ในส่วน «สรุปสั้น ๆ» และในตาราง «อุปราคา» หากคำนวณเอง เมื่อดวงอาทิตย์อยู่ในระนาบวงโคจร เงามืดกินเวลา (1/π)·acos(√(h² + 2Rh) / (R + h)) ของหนึ่งรอบ ราว 36 % ที่ความสูง 621 กม. แต่ในวงโคจรนี้ดวงอาทิตย์ไม่เคยอยู่ในระนาบพอดี จึงสั้นกว่านั้นเล็กน้อย' },
       ],
     },
   ],

@@ -7,11 +7,23 @@
  * course specifications (มคอ.3) are not public, so the matching is to the
  * course descriptions only. Military content: public, cited sources only
  * (owner ruling). R1 and R2 are written here; R3 is built-in lessons 4.1 and
- * 4.2 and R5 built-in 5.2 by reference. R4 (a calibrated six-DOF step test)
- * and R6 (the design kind) are left for a later stage. Worked solutions:
- * tests/lesson-packs.test.ts.
+ * 4.2 and R5 built-in 5.2 by reference. R6 (T03b) is a design lesson on the
+ * D06 attitude and link cores (T01's design kind), its course AE 541 from the
+ * 2020 Aeronautical programme. R4 (a calibrated six-DOF step test) was not in
+ * this stage's task. Worked solutions: tests/lesson-packs.test.ts (flights)
+ * and tests/lesson-packs-design.test.ts (designs).
  */
-import { ALL_LOCKS, POINT_MASS, locksBut, missionDoc, type PackSource } from './common';
+import {
+  ALL_LOCKS, PACK_DESIGN_DATE, PACK_DESIGN_LEVEL, POINT_MASS, designFrom, designLocksBut, locksBut, missionDoc, type PackSource,
+} from './common';
+
+/**
+ * R6's start: the NAPA-2 template with a new mission's two changes — four
+ * times its 12.5 Mbit/s downlink through the same 1 W radio, and a wheel of
+ * 1 mN·m·s (an example wheel, not a catalogue's) — which leave the wheel short
+ * of the disturbances' momentum and the link short of 3 dB.
+ */
+const NAPA2_FAST = designFrom('napa2', 'rtaf-6u-adcs', 'NAPA-2 · 6U', { 'adcs.wheelH': 0.001, 'comms.dataRate': 50e6 });
 
 export const RTAF_ACADEMY: PackSource = {
   pack: {
@@ -33,9 +45,9 @@ export const RTAF_ACADEMY: PackSource = {
     },
     reviewed: false,
     description: {
-      en: 'Matched to PLO4 (flight mechanics and automatic control) and PLO7 (space engineering; calculating the motion of objects in space) and to the course descriptions of วอ 462, 478, 526, 528 and 529, EE 316 (Electrical Engineering 2025) and วก 433 (Mechanical Engineering 2020). Sources: the academy\'s public programme documents linked from nkrafa.rtaf.mi.th/curriculum (Aeronautical Engineering 2025, PDF pp. 18 and 118–123; Electrical Engineering 2025, PDF p. 109) and its self-declaration for Mechanical Engineering 2020 to the Council of Engineers (coe.or.th, pp. 34–35). The week-by-week course specifications are not public, so the match is to the descriptions only. The first two lessons are written for this pack; the others are the app\'s own lessons, listed again with the codes they meet.',
-      ru: 'Соответствует PLO4 (механика полёта и автоматическое управление) и PLO7 (космическая техника; расчёт движения тел в космосе), а также описаниям дисциплин วอ 462, 478, 526, 528 и 529, EE 316 (программа по электротехнике 2025 г.) и วก 433 (программа по машиностроению 2020 г.). Источники: открытые документы программ академии, на которые ссылается nkrafa.rtaf.mi.th/curriculum (авиационная техника 2025 г., с. 18 и 118–123 PDF; электротехника 2025 г., с. 109 PDF), и её самодекларация по программе машиностроения 2020 г. для Инженерного совета Таиланда (coe.or.th, с. 34–35). Рабочие программы дисциплин по неделям не опубликованы, поэтому соответствие установлено только по описаниям. Первые два урока написаны для этого набора; остальные — уроки самого приложения, приведённые здесь ещё раз с кодами, которым они отвечают.',
-      th: 'สอดคล้องกับ PLO4 (กลศาสตร์การบินและระบบควบคุมอัตโนมัติ) และ PLO7 (วิศวกรรมอวกาศ การคำนวณการเคลื่อนที่ของวัตถุในอวกาศ) และคำอธิบายรายวิชา วอ 462, 478, 526, 528 และ 529, EE 316 (หลักสูตรวิศวกรรมไฟฟ้า พ.ศ. 2568) และ วก 433 (หลักสูตรวิศวกรรมเครื่องกล พ.ศ. 2563) แหล่งที่มา: เอกสารหลักสูตรที่เผยแพร่ของโรงเรียนนายเรืออากาศ ซึ่งเชื่อมโยงจาก nkrafa.rtaf.mi.th/curriculum (หลักสูตรวิศวกรรมอากาศยาน พ.ศ. 2568 หน้า PDF 18 และ 118–123 หลักสูตรวิศวกรรมไฟฟ้า พ.ศ. 2568 หน้า PDF 109) และคำรับรองตนเองหลักสูตรวิศวกรรมเครื่องกล พ.ศ. 2563 ที่ยื่นต่อสภาวิศวกร (coe.or.th หน้า 34–35) รายละเอียดของรายวิชา (มคอ.3) รายสัปดาห์ไม่ได้เผยแพร่ การจับคู่จึงอิงคำอธิบายรายวิชาเท่านั้น สองบทแรกเขียนขึ้นสำหรับชุดนี้ บทอื่นเป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมรหัสที่สอดคล้อง',
+      en: 'Matched to PLO4 (flight mechanics and automatic control) and PLO7 (space engineering; calculating the motion of objects in space) and to the course descriptions of วอ 462, 478, 526, 528 and 529, AE 541 (Aeronautical Engineering 2020), EE 316 (Electrical Engineering 2025) and วก 433 (Mechanical Engineering 2020). Sources: the academy\'s public programme documents linked from nkrafa.rtaf.mi.th/curriculum (Aeronautical Engineering 2025, PDF pp. 18 and 118–123; Aeronautical Engineering 2020, PDF p. 92; Electrical Engineering 2025, PDF p. 109) and its self-declaration for Mechanical Engineering 2020 to the Council of Engineers (coe.or.th, pp. 34–35). The week-by-week course specifications are not public, so the match is to the descriptions only. Lessons 14.1 and 14.2 are flights written for this pack, and 14.3 a satellite to design; the others are the app\'s own lessons, listed again with the codes they meet.',
+      ru: 'Соответствует PLO4 (механика полёта и автоматическое управление) и PLO7 (космическая техника; расчёт движения тел в космосе), а также описаниям дисциплин วอ 462, 478, 526, 528 и 529, AE 541 (программа по авиационной технике 2020 г.), EE 316 (программа по электротехнике 2025 г.) и วก 433 (программа по машиностроению 2020 г.). Источники: открытые документы программ академии, на которые ссылается nkrafa.rtaf.mi.th/curriculum (авиационная техника 2025 г., с. 18 и 118–123 PDF; авиационная техника 2020 г., с. 92 PDF; электротехника 2025 г., с. 109 PDF), и её самодекларация по программе машиностроения 2020 г. для Инженерного совета Таиланда (coe.or.th, с. 34–35). Рабочие программы дисциплин по неделям не опубликованы, поэтому соответствие установлено только по описаниям. Уроки 14.1 и 14.2 — полёты, написанные для этого набора, 14.3 — проект спутника; остальные — уроки самого приложения, приведённые здесь ещё раз с кодами, которым они отвечают.',
+      th: 'สอดคล้องกับ PLO4 (กลศาสตร์การบินและระบบควบคุมอัตโนมัติ) และ PLO7 (วิศวกรรมอวกาศ การคำนวณการเคลื่อนที่ของวัตถุในอวกาศ) และคำอธิบายรายวิชา วอ 462, 478, 526, 528 และ 529, AE 541 (หลักสูตรวิศวกรรมอากาศยาน พ.ศ. 2563), EE 316 (หลักสูตรวิศวกรรมไฟฟ้า พ.ศ. 2568) และ วก 433 (หลักสูตรวิศวกรรมเครื่องกล พ.ศ. 2563) แหล่งที่มา: เอกสารหลักสูตรที่เผยแพร่ของโรงเรียนนายเรืออากาศ ซึ่งเชื่อมโยงจาก nkrafa.rtaf.mi.th/curriculum (หลักสูตรวิศวกรรมอากาศยาน พ.ศ. 2568 หน้า PDF 18 และ 118–123 หลักสูตรวิศวกรรมอากาศยาน พ.ศ. 2563 หน้า PDF 92 หลักสูตรวิศวกรรมไฟฟ้า พ.ศ. 2568 หน้า PDF 109) และคำรับรองตนเองหลักสูตรวิศวกรรมเครื่องกล พ.ศ. 2563 ที่ยื่นต่อสภาวิศวกร (coe.or.th หน้า 34–35) รายละเอียดของรายวิชา (มคอ.3) รายสัปดาห์ไม่ได้เผยแพร่ การจับคู่จึงอิงคำอธิบายรายวิชาเท่านั้น บทที่ 14.1 และ 14.2 เป็นการบินที่เขียนขึ้นสำหรับชุดนี้ บทที่ 14.3 เป็นการออกแบบดาวเทียม บทอื่นเป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมรหัสที่สอดคล้อง',
     },
     contents: [
       { id: 'rtaf-napa1-sso' },
@@ -67,6 +79,7 @@ export const RTAF_ACADEMY: PackSource = {
           th: 'การนัดพบในวงโคจร ซึ่งเป็นหัวข้อหนึ่งของ วอ 478 และ วอ 528 และการเชื่อมต่อกับสถานี ซึ่งเป็นหัวข้อหนึ่งของ วอ 529',
         },
       },
+      { id: 'rtaf-6u-adcs' },
     ],
   },
   lessons: [
@@ -146,6 +159,37 @@ export const RTAF_ACADEMY: PackSource = {
         { en: 'r_p = R + h_p and r_a = R + h_a with R = 6 378.137 km; a = (r_p + r_a)/2 and e = (r_a − r_p)/(r_a + r_p).', ru: 'r_п = R + h_п и r_а = R + h_а, R = 6 378,137 км; a = (r_п + r_а)/2, e = (r_а − r_п)/(r_а + r_п).', th: 'r_p = R + h_p และ r_a = R + h_a โดย R = 6 378.137 กม. แล้ว a = (r_p + r_a)/2 และ e = (r_a − r_p)/(r_a + r_p)' },
         { en: 'T = 2π√(a³/μ), μ = 398 600.4 km³/s²; vis-viva at perigee: v_p = √(μ (2/r_p − 1/a)).', ru: 'T = 2π√(a³/μ), μ = 398 600,4 км³/с²; интеграл энергии в перигее: v_п = √(μ (2/r_п − 1/a)).', th: 'T = 2π√(a³/μ) โดย μ = 398 600.4 กม.³/วินาที² และสมการ vis-viva ที่จุดใกล้โลก: v_p = √(μ (2/r_p − 1/a))' },
         { en: 'A check on the speed: at the perigee of any elliptical orbit it lies between the circular speed √(μ/r_p) and the escape speed √(2μ/r_p).', ru: 'Проверка скорости: в перигее любой эллиптической орбиты она лежит между круговой √(μ/r_п) и параболической √(2μ/r_п).', th: 'ตรวจสอบอัตราเร็ว: ที่จุดใกล้โลกของวงโคจรวงรีใด ๆ อัตราเร็วต้องอยู่ระหว่างอัตราเร็ววงกลม √(μ/r_p) กับอัตราเร็วหลุดพ้น √(2μ/r_p)' },
+      ],
+    },
+    {
+      kind: 'design', id: 'rtaf-6u-adcs', track: 14, order: 3, mode: 'engineer', domains: [5], tags: ['h = 0.707·T·P/4', 'D06'],
+      curriculum: [{ code: 'NKRAFA วอ 529', kind: 'course' }, { code: 'NKRAFA AE 541', kind: 'course' }, { code: 'NKRAFA PLO7', kind: 'outcome' }],
+      title: { en: 'Attitude control for a 6U like NAPA-2', ru: 'Ориентация кубсата 6U вроде NAPA-2', th: 'การควบคุมท่าทางของคิวบ์แซต 6U แบบ NAPA-2' },
+      brief: {
+        en: 'A 6U CubeSat like NAPA-2, the Royal Thai Air Force\'s, opens on the satellite bench with two changes for a new mission. It must send its images down at 50 Mbit/s, four times NAPA-2\'s rate, through the same 1 W X-band radio, and the only reaction wheel that fits stores 1 mN·m·s (an example, not a catalogue wheel). As set, the wheel cannot store the momentum the disturbance torques build up over an orbit, and the downlink has less than 3 dB of margin. Without touching the wheel, the radio or the data rate, make the wheel enough (wheel over need at least 1) and close the link with at least 3 dB of margin. You may change the residual magnetic dipole, the centre of pressure and the satellite\'s dish. Then work out the wheel over need yourself from the torques, with h = 0.707·T·P/4, and type it in.',
+        ru: 'На стенде спутника открыт кубсат формата 6U вроде NAPA-2 Королевских ВВС Таиланда — с двумя изменениями под новую задачу. Снимки нужно передавать со скоростью 50 Мбит/с, вчетверо быстрее NAPA-2, через тот же передатчик X-диапазона мощностью 1 Вт, а единственный помещающийся маховик накапливает кинетический момент 1 мН·м·с (это пример, а не изделие из каталога). В исходном проекте маховик не вмещает кинетический момент, который возмущающие моменты накапливают за виток, а запас радиолинии меньше 3 дБ. Не трогая маховик, передатчик и скорость передачи, добейтесь, чтобы маховика хватало (запас маховика не меньше 1), а запас радиолинии был не меньше 3 дБ. Менять можно остаточный магнитный момент, смещение центра давления и антенну спутника. Затем сами рассчитайте запас маховика по возмущающим моментам, h = 0,707·T·P/4, и введите его.',
+        th: 'บนแท่นทดสอบเปิดคิวบ์แซตขนาด 6U แบบเดียวกับ NAPA-2 ของกองทัพอากาศไทยไว้ โดยมีการเปลี่ยนแปลงสองอย่างสำหรับภารกิจใหม่ ดาวเทียมต้องส่งภาพลงมาที่ 50 เมกะบิต/วินาที เร็วกว่าของ NAPA-2 สี่เท่า ผ่านวิทยุย่าน X กำลัง 1 วัตต์ตัวเดิม และวงล้อปฏิกิริยาตัวเดียวที่ใส่ได้เก็บโมเมนตัมได้ 1 mN·m·s (เป็นตัวอย่าง ไม่ใช่วงล้อจากแคตตาล็อก) ในแบบตั้งต้น วงล้อเก็บโมเมนตัมที่แรงบิดรบกวนสะสมขึ้นในหนึ่งรอบวงโคจรไม่ไหว และลิงก์ขาลงมีค่าเผื่อน้อยกว่า 3 dB โดยไม่แตะต้องวงล้อ วิทยุ และอัตราข้อมูล จงทำให้วงล้อเพียงพอ (วงล้อเทียบกับที่ต้องใช้ไม่น้อยกว่า 1) และให้ลิงก์มีค่าเผื่อไม่น้อยกว่า 3 dB สิ่งที่เปลี่ยนได้คือไดโพลแม่เหล็กตกค้าง ตำแหน่งศูนย์กลางแรงดัน และจานของดาวเทียม จากนั้นคำนวณอัตราส่วนวงล้อเทียบกับที่ต้องใช้จากแรงบิดด้วยตนเองโดยใช้ h = 0.707·T·P/4 แล้วพิมพ์คำตอบ',
+      },
+      debrief: {
+        en: 'A cyclic torque T builds up momentum over a quarter of an orbit that the wheel must store and give back: about 0.707·T·P/4 by Starin and Eterno\'s rule (Table 19-11). A wheel too small saturates, and from then on the satellite turns with the disturbance. On a CubeSat the largest disturbance is often its own magnetism, so a magnetically clean build — twisted-pair wiring, no magnetic parts, the dipole measured and trimmed before launch — can stand in for a bigger wheel. The faster downlink is paid for in decibels, and with a 1 W radio they must come from antenna gain: a small dish focuses the same watt into a beam. That beam is then something the attitude control must keep on the station; the bench\'s pointing loss shows what an error costs, little while the beam is wide.',
+        ru: 'Циклический возмущающий момент T за четверть витка накапливает кинетический момент, который маховик должен поглотить и отдать обратно: около 0,707·T·P/4 по правилу Старина и Этерно (табл. 19-11). Слишком малый маховик насыщается, и дальше спутник поворачивается вместе с возмущением. У кубсата самое большое возмущение часто — его собственный магнетизм, поэтому магнитно чистая конструкция — витые пары, отсутствие магнитных деталей, измерение и компенсация дипольного момента перед запуском — может заменить больший маховик. Более быструю передачу оплачивают децибелами, и при передатчике 1 Вт их приходится брать из усиления антенны: небольшая параболическая антенна собирает тот же ватт в луч. Этот луч система ориентации должна удерживать на станции; потери наведения на стенде показывают, во что обходится ошибка, — немного, пока луч широкий.',
+        th: 'แรงบิดรบกวนแบบเป็นคาบ T สะสมโมเมนตัมขึ้นในหนึ่งในสี่รอบวงโคจร ซึ่งวงล้อต้องเก็บไว้แล้วคืนกลับ ประมาณ 0.707·T·P/4 ตามกฎของ Starin และ Eterno (ตาราง 19-11) วงล้อที่เล็กเกินไปจะอิ่มตัว และหลังจากนั้นดาวเทียมจะหมุนไปตามแรงรบกวน สำหรับคิวบ์แซต แรงบิดรบกวนที่มากที่สุดมักมาจากความเป็นแม่เหล็กของตัวเอง การสร้างดาวเทียมให้สะอาดทางแม่เหล็ก ทั้งเดินสายแบบคู่บิดเกลียว ไม่ใช้ชิ้นส่วนที่เป็นแม่เหล็ก และวัดแล้วชดเชยไดโพลก่อนปล่อย จึงใช้แทนวงล้อที่ใหญ่ขึ้นได้ อัตราข้อมูลที่สูงขึ้นต้องจ่ายด้วยเดซิเบล และเมื่อวิทยุมีกำลังเพียง 1 วัตต์ เดซิเบลเหล่านั้นต้องมาจากอัตราขยายของสายอากาศ จานขนาดเล็กรวมกำลังหนึ่งวัตต์เดิมให้เป็นลำคลื่น ลำคลื่นนั้นระบบควบคุมท่าทางต้องชี้ไปที่สถานีให้ได้ การสูญเสียจากการชี้บนแท่นทดสอบบอกว่าความคลาดเคลื่อนทำให้เสียไปเท่าใด ซึ่งยังน้อยตราบที่ลำคลื่นยังกว้าง',
+      },
+      start: { design: NAPA2_FAST },
+      designDate: PACK_DESIGN_DATE, level: PACK_DESIGN_LEVEL,
+      locked: designLocksBut('adcs.residualDipole', 'adcs.cpOffset', 'comms.txAntennaD'),
+      criteria: [
+        { id: 'wheel', kind: 'design', measure: 'sat.wheelMargin', min: 1 },
+        { id: 'link', kind: 'design', measure: 'sat.linkMargin', min: 3 },
+        {
+          id: 'ratio', kind: 'answer', measure: 'sat.wheelMargin', tolPct: 5,
+          prompt: { en: 'Wheel over need, 1 mN·m·s ÷ (0.707·T·P/4)', ru: 'Запас маховика: 1 мН·м·с ÷ (0,707·T·P/4)', th: 'วงล้อเทียบกับที่ต้องใช้: 1 mN·m·s ÷ (0.707·T·P/4)' },
+        },
+      ],
+      hints: [
+        { en: 'On the Attitude tab, "All together" is T, and the orbit\'s period P is about 95.4 min (5 720 s): h = 0.707·T·P/4 is the momentum the wheel must hold, and the wheel over need is 0.001 N·m·s ÷ h.', ru: 'На вкладке «Ориентация» «Суммарно» — это T, а период обращения P около 95,4 мин (5 720 с): h = 0,707·T·P/4 — кинетический момент, который должен вместить маховик, а запас маховика равен 0,001 Н·м·с ÷ h.', th: 'ในแท็บ «ท่าทาง» ค่า «รวมทั้งหมด» คือ T และคาบการโคจร P ประมาณ 95.4 นาที (5 720 วินาที) h = 0.707·T·P/4 คือโมเมนตัมที่วงล้อต้องเก็บ และวงล้อเทียบกับที่ต้องใช้คือ 0.001 N·m·s ÷ h' },
+        { en: 'Compare the four torques: on this CubeSat the magnetic one, the residual dipole times the field, is far the largest, so halving the dipole nearly halves T.', ru: 'Сравните четыре момента: у этого кубсата магнитный — остаточный магнитный момент, умноженный на индукцию поля, — намного больше остальных, поэтому уменьшение диполя вдвое почти вдвое уменьшает T.', th: 'เปรียบเทียบแรงบิดทั้งสี่: สำหรับคิวบ์แซตดวงนี้ แรงบิดแม่เหล็ก คือไดโพลตกค้างคูณสนามแม่เหล็ก มากกว่าตัวอื่นมาก การลดไดโพลลงครึ่งหนึ่งจึงลด T ลงเกือบครึ่งหนึ่ง' },
+        { en: 'Four times the data rate costs 10·log₁₀ 4 ≈ 6 dB. A dish of diameter D gains about 0.55·(πD/λ)²; at 8.38 GHz (λ ≈ 3.6 cm) even 10 cm gives some 16 dBi and a beam about 25° wide, which a 1° pointing error hardly dents.', ru: 'Вчетверо большая скорость стоит 10·lg 4 ≈ 6 дБ. Параболическая антенна диаметром D даёт усиление около 0,55·(πD/λ)²; на 8,38 ГГц (λ ≈ 3,6 см) даже 10 см дают около 16 дБи и луч шириной около 25°, которому ошибка наведения в 1° почти не вредит.', th: 'อัตราข้อมูลสี่เท่าต้องแลกด้วย 10·log₁₀ 4 ≈ 6 dB จานเส้นผ่านศูนย์กลาง D ให้อัตราขยายประมาณ 0.55·(πD/λ)² ที่ 8.38 GHz (λ ≈ 3.6 ซม.) แม้จานเพียง 10 ซม. ก็ให้ราว 16 dBi และลำคลื่นกว้างประมาณ 25° ซึ่งความคลาดเคลื่อนในการชี้ 1° แทบไม่มีผล' },
       ],
     },
   ],
