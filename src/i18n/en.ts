@@ -2874,6 +2874,8 @@ export const en: Record<string, string> = {
   'build.req.life.lasts': 'lasts {years} years',
   'build.req.life.held': 'held by the engine: {dv}',
   'build.req.life.notProven': 'not proven to last; held by the engine: {dv}',
+  'build.req.life.falls': 'comes down within the life; holding it would take {dv}',
+  'build.req.life.notProvenFalls': 'not proven to last; holding it would take {dv}',
   'build.req.disp.inTime': 'none: down in time',
   'build.req.disp.burn': 'burn {low}–{high}',
   'build.req.disp.notProven': 'not proven down in time: {low}–{high}',

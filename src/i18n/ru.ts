@@ -2853,6 +2853,8 @@ export const ru: Record<string, string> = {
   'build.req.life.lasts': 'продержится {years} г.',
   'build.req.life.held': 'удерживать двигателем: {dv}',
   'build.req.life.notProven': 'не доказано, что продержится; удерживать двигателем: {dv}',
+  'build.req.life.falls': 'сойдёт раньше срока; для удержания нужно {dv}',
+  'build.req.life.notProvenFalls': 'не доказано, что продержится; для удержания нужно {dv}',
   'build.req.disp.inTime': 'не нужен: сойдёт вовремя',
   'build.req.disp.burn': 'импульс {low}–{high}',
   'build.req.disp.notProven': 'не доказано, что сойдёт вовремя: {low}–{high}',

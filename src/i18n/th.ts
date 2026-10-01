@@ -2854,6 +2854,8 @@ export const th: Record<string, string> = {
   'build.req.life.lasts': 'อยู่ได้ {years} ปี',
   'build.req.life.held': 'ใช้เครื่องยนต์รักษาวงโคจร: {dv}',
   'build.req.life.notProven': 'ยังพิสูจน์ไม่ได้ว่าอยู่ได้ ใช้เครื่องยนต์รักษาวงโคจร: {dv}',
+  'build.req.life.falls': 'ตกลงมาก่อนครบอายุ ถ้าจะรักษาวงโคจรต้องใช้ {dv}',
+  'build.req.life.notProvenFalls': 'ยังพิสูจน์ไม่ได้ว่าอยู่ได้ ถ้าจะรักษาวงโคจรต้องใช้ {dv}',
   'build.req.disp.inTime': 'ไม่ต้อง: ตกลงมาทันเวลา',
   'build.req.disp.burn': 'จุดเครื่องยนต์ {low}–{high}',
   'build.req.disp.notProven': 'ยังพิสูจน์ไม่ได้ว่าตกทันเวลา: {low}–{high}',

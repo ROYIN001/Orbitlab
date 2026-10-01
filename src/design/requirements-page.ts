@@ -378,12 +378,17 @@ export function errorKey(e: unknown): string {
 
 // ─── what a row says ────────────────────────────────────────────────────────
 
-/** A row's life: it lasts; it is held against the drag (the Δv over the life); or it sits inside the search's bracket, where the search cannot say. */
+/**
+ * A row's life: it lasts; it is held against the drag (the Δv over the life);
+ * or it sits inside the search's bracket, where the search cannot say. `engine`:
+ * the template's tanks hold some Δv to hold it with; without (NAPA-2), the Δv
+ * is only what holding it would take, and the row comes down within its life.
+ */
 export type LifeState =
   | { kind: 'none' }
   | { kind: 'lasts' }
-  | { kind: 'held'; holdDv: number; perYear: number }
-  | { kind: 'notProven'; holdDv: number; perYear: number };
+  | { kind: 'held'; holdDv: number; perYear: number; engine: boolean }
+  | { kind: 'notProven'; holdDv: number; perYear: number; engine: boolean };
 
 /**
  * The lifetime column (D07): what `TradeRow.life` means with the search's
@@ -397,7 +402,7 @@ export function lifeState(row: TradeRow, lifetime: readonly AltitudeForLifetime[
   if (row.life.lasts) return { kind: 'lasts' };
   const s = lifetime?.[0];
   const inside = !!s && s.outcome === 'found' && row.altitude > s.lo && row.altitude < s.hi;
-  return { kind: inside ? 'notProven' : 'held', holdDv: row.life.holdDv, perYear: row.life.holdDvPerYear };
+  return { kind: inside ? 'notProven' : 'held', holdDv: row.life.holdDv, perYear: row.life.holdDvPerYear, engine: row.dvAvailable > 0 };
 }
 
 /**

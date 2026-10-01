@@ -254,6 +254,23 @@ describe('what the lifetime, disposal and binds columns say (D07)', () => {
     expect(lifeState(rowWith([]), null).kind).toBe('none');
   });
 
+  // added in review: NAPA-2's rows below the life's altitude said "held by the engine" though it carries none
+  it('says whether an engine holds a row that would come down, or nothing does', () => {
+    const probe = rowWith([search(1, 400e3, 410e3), search(26, 600e3, 610e3)]);
+    const h = probe.altitude;
+    const below = [search(1, h + 5e3, h + 15e3), search(26, h + 100e3, h + 110e3)];
+    const inside = [search(1, h - 5e3, h + 5e3), search(26, h + 100e3, h + 110e3)];
+    expect(rowWith(below).dvAvailable).toBe(0);
+    expect(lifeState(rowWith(below), below)).toMatchObject({ kind: 'held', engine: false });
+    expect(lifeState(rowWith(inside), inside)).toMatchObject({ kind: 'notProven', engine: false });
+    // THEOS-2 carries hydrazine: the same orbit is held by its engine
+    const theos = templateDesign('theos2');
+    const tform: RequirementsForm = { ...form, template: 'theos2' };
+    const held = tradeRow(missionRequirements(tform), theos, { revs: 15, days: 1 }, tradeOptionsFor(theos, tform, JD0, below))!;
+    expect(held.dvAvailable).toBeGreaterThan(0);
+    expect(lifeState(held, below)).toMatchObject({ kind: 'held', engine: true });
+  });
+
   it('draws lifetime against altitude from the search\'s runs that came down, and aperture against altitude from the rows', () => {
     const results: AltitudeForLifetime[] = [
       { ...search(1, 400e3, 410e3), runs: [{ altitude: 150e3, lifetime: 1e4 }, { altitude: 5000e3, lifetime: null }, { altitude: 400e3, lifetime: 0.5 * YEAR }] },

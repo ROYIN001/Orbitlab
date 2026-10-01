@@ -128,7 +128,10 @@ const COLUMNS: readonly Column[] = [
       const s = lifeState(r, x.lifetime);
       if (s.kind === 'none') return '—';
       if (s.kind === 'lasts') return t('build.req.life.lasts', { years: num(x.req.lifeYears, x.req.lifeYears % 1 ? 1 : 0) });
-      return phrase(s.kind === 'held' ? 'build.req.life.held' : 'build.req.life.notProven', { dv: fig(s.holdDv, 'm/s') });
+      // with no Δv in the tanks nothing holds it: the Δv is what holding it would take
+      const key = s.kind === 'held' ? (s.engine ? 'build.req.life.held' : 'build.req.life.falls')
+        : s.engine ? 'build.req.life.notProven' : 'build.req.life.notProvenFalls';
+      return phrase(key, { dv: fig(s.holdDv, 'm/s') });
     },
   },
   {
