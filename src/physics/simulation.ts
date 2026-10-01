@@ -27,6 +27,7 @@ import { satelliteById } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
 import { atmosphere } from './atmosphere';
+import { geodetic } from './geodesy';
 import { dragCoefficient, tumblingDragCoefficient } from './aero';
 import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
 import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
@@ -1375,7 +1376,10 @@ export class Simulation {
   updateDerived(): void {
     const s = this.state;
     const rm = norm(s.r);
-    s.altitude = rm - R_EARTH;
+    // C01: a return from orbit on the WGS-84 datum (Vostok-1) reports the height above the ellipsoid, the one
+    // its air, its barometric commands and its ground are on, and the geodetic latitude
+    const geo = this.escape.geodetic ? geodetic(s.r.x, s.r.y, s.r.z) : null;
+    s.altitude = geo ? geo.h : rm - R_EARTH;
     s.altitudeAGL = s.altitude - this.groundElevation(s.r);
     const omega = v3(0, 0, OMEGA_EARTH);
     const vAir = this.rigidRuntime ? this.rigidRuntime.airVelocity(s, s.t) : sub(s.v, cross(omega, s.r));
@@ -1386,7 +1390,7 @@ export class Simulation {
     s.q = 0.5 * atm.rho * s.airspeed * s.airspeed;
     s.mach = s.airspeed / atm.a;
     const ll = eciToLatLon(s.r, s.theta);
-    s.lat = ll.lat * RAD;
+    s.lat = (geo ? geo.lat : ll.lat) * RAD;
     s.lon = ll.lon * RAD;
     const lat0 = this.site.latitude * DEG, lon0 = this.site.longitude * DEG;
     const cosC = Math.sin(lat0) * Math.sin(ll.lat) + Math.cos(lat0) * Math.cos(ll.lat) * Math.cos(ll.lon - lon0);

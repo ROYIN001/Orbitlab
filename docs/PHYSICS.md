@@ -3032,26 +3032,64 @@ apogee was some 90 km above the planned one) is flown to, not modelled. The R-7'
 of Blok E's own, drawn and flown as one gimballed chamber (estimated). The pad is Gagarin's Start
 (Site 1/5) for both.
 
-*Vostok 1 home.* The orbit carries a `deorbit` at T+4,714 s, the TDU-1's ignition at 10:25:34
-Moscow time (ru.wikipedia's chronology of the flight; the TASS communiqué gives 10:25 to the
-minute). Reaching orbit logs `evt.deorbitPlanned`, which keeps the viewer from ending the flight
-there; at the retro-fire the spacecraft is flown home as a capsule, `VOSTOK_CAPSULE` in
-src/physics/rigid/escape.ts, by the same rigid descent as Mercury's (§13.7):
+*Vostok 1 home.* The orbit carries a `deorbit` at T+4,684.2 s: the TDU-1's pressurising command at
+10:25:04.2 Moscow time, by OKB-1's preliminary report of 3 May 1961 (as Baturin, *Novaya Gazeta*, 11
+April 2021, and Lisov and Afanasyev quote it; Siddiqi's "67 minutes after" the 09:18:07 separation
+agrees). The 10:25:34 the model used before is ru.wikipedia's, and the page it cites does not
+contain it. Reaching orbit logs `evt.deorbitPlanned`, which keeps the viewer from ending the flight
+there; from the pressurising command the spacecraft is flown home as a capsule, `VOSTOK_CAPSULE` in
+src/physics/rigid/escape.ts, by the same rigid descent as Mercury's (§13.7), with what Vostok adds:
 
 | | Model | Flown |
 |---|---|---|
-| Retro-fire | 15.83 kN for 40 s against the flight path, on 4,725 kg held constant: 134 m/s | 40 s, to depletion, 1 s short; 132 m/s of 136 planned (RSW) |
-| Separation | the instrument module (2,265 kg with what is left of its propellant) at +626 s | ten seconds after the burn as planned; at 10:36 over the Mediterranean, about 130 km up, when the heat burnt through the cable bundle that held it (RSW; ru.wikipedia) |
-| Entry | the 2.3 m sphere, 2,460 kg, ballistic, CG 0.95 m above its leading face (estimated) | ballistic; "over 10 g" by Gagarin's report, 8–10 g in most accounts |
-| Ejection | at 7 km, with 180 kg (hatch, seat, pilot; estimated) | hatch off and the seat fired at 7 km, 10:42 |
-| Parachutes | the braking chute at 4 km (18 m², C_D 0.6), the 574 m² main at 2.5 km (C_D 0.55; estimated) | 4 km and 2.5 km (Siddiqi, *Challenge to Apollo*) |
-| Landing | the sphere, 10.7 m/s | the sphere at 10:48, Gagarin at about 10:53–10:55; 51.27° N, 46.00° E, by Smelovka |
+| Attitude | set before the burn and held inertially through it: in the orbit plane, against the flight, `retro.pitch` above the local horizontal at the launch command (reconstructed, below; 0° for now) | single-axis solar orientation, held by gyros; no source gives the angle |
+| TDU-1 | the launch command 2.2 s after the pressurising command, full thrust 1.5 s later; 15.69 kN at 266 s, its 6.0 kg/s out of the instrument module; the fuel out at +42.2 s, the thrust falling over its last second (estimate): 131.9 m/s | 1,600 kgf (Feoktistov, *Космические аппараты*, 1983; GCTC; Gudilin), 266 s (astronautix), 280 kg; a check valve that did not close lost fuel into its separator bag; 132 m/s of the 136 set (Chertok, from Fomin, *Novosti Kosmonavtiki* 2002/4) |
+| Cut-off | the rest of the 280 kg vented by the timer's cut-off at +44.0 s; a moment spins the pair to 30°/s about a transverse axis (axis estimated) | no main command, so the lines stayed open and oxidiser and gas at about 60 atm vented through the chamber and the steering nozzles until the timer cut it off at 10:25:48.2; "no less than 30°/s" (Gagarin's report) |
+| Separation | no main command, so no separation; the straps at T+5,340 s, the cables parting 4 s later (estimate), at 137 km: the instrument module goes, 1,985 kg (not yet flown as a body) | the thermal sensors' backup (150 °C on the hull) fired the straps at 10:36 (the report; Gagarin's clock read 10:35); the cable mast's circuit ran through the straps' cutters, and the cables held the modules "a few seconds" (Siddiqi, *The Space Review*, 2015); 130 km (Baturin's chronology) to 150–170 km. The older story of ten minutes on the cables was that wait for the backup |
+| Entry | the 2.3 m sphere, 2,460 kg: a sphere's drag, 0.96 hypersonic, 1.0 transonic, 0.45 subsonic (Hoerner ch. 16; Bailey and Hiatt 1972), along the flow through its centre (Feoktistov §3.5); its CG 0.2 m toward the heat shield (estimate) | ballistic; "over 10 g" by Gagarin's report, 8–10 g in most accounts |
+| Hatch and seat | at 7 km above WGS-84, hatch No. 1 (25 kg, estimate) and the 1.5 m² pilot chute; 2 s later the seat, 336 kg with Gagarin (astronautix: 7.1 % of the ship) | hatch at about 7 km, the seat 2 s later at up to 20 m/s; 10:42 to the minute (planned 10:44:12) |
+| Parachutes | braking 18 m² at 4 km (C_D 0.6), main 574 m² at 2.5 km (C_D 0.55; estimates) | 4 km and 2.5 km (Feoktistov §9.6; GCTC) |
+| Landing | the sphere, 2,099 kg (GCAT 2,125), 10.3 m/s | the sphere at 10:48 (the report), about 10 m/s, some 1.5 km from Gagarin toward the Volga (the report, via Zak); Gagarin at 10:53 (the report; 10:55 officially) at 51°16′14″ N 45°59′50″ E, the monument |
 
-Flown in point-mass (six-DOF within a few seconds and 35 km of it): the separation at 140 km, the
-ejection at T+5,835 s (flown about 5,700), the sphere down at T+6,084 s (6,060) at 9.0 g peak, at
-49.0° N, 43.8° E, 280 km short of Smelovka along the ground track. The real flight came down some
-300 km from its own aim; the model's miss is not tuned away. Gagarin's own parachute descent is
-not flown: the viewer follows the sphere. tests/vostok1-harness.ts holds the flight to these.
+*The height datum.* The orbit is flown in radius: GCAT's 168 × 314 km are the radius less 6,378 km
+(McDowell, GCAT's *Orbits*), as the model's heights are on its 6,378.137 km sphere. The air and the
+ground are not on that sphere. The atmosphere's heights are above sea level, the geoid, within about
+100 m of the WGS-84 ellipsoid, and the ellipsoid lies 21.4 km × sin²(latitude) below the sphere:
+0.6 km at 10° S where the TDU-1 fires, 5.4 km at 30° N, 11.1 km at 46° N, 13.0 km at 51° N. A
+sphere that decelerates over 30–50° N, flown on the sphere's heights, meets the air some 10 km too
+high and comes down about 300 km short, 27 km of landing for each kilometre of datum. So the return
+reads every height above the ellipsoid (`DescentCapsule.datum: 'wgs84'`, src/physics/geodesy.ts,
+the same `geodetic` the long-term propagator's density uses): the air and the Mach number, the
+barometric commands of the hatch and the parachutes, the ground, the events' altitudes, and the
+simulation's own altitude and (geodetic) latitude from the pressurising command until the sphere is
+at rest. The switch comes at 10° S, where the two heights differ by 0.6 km. The ascent and the orbit
+stay on the sphere, and so do Mercury-Redstone 3 and the Soyuz aborts, whose sites are placed on it.
+
+Flown in point-mass with the pitch at 0° (six-DOF in brackets): 131.9 m/s, the straps at 138 km
+(136), 100 km at T+5,496 s, 37.4° N 32.9° E, 2.1° down; 9.05 g at 34 km at T+5,733 s, 10:42:33
+(9.02 g); the hatch at T+5,841 s and the seat at 5,843, 10:44:43 (5,836 and 5,838); the sphere down at
+T+6,091 s, 10:48:31 (6,086), at 10.3 m/s, at 50.26° N 45.12° E (50.01° N 44.91° E): 126 km short of
+Gagarin's place along the track and 23 km across it (157 and 29 km). The cross-track part comes from
+the orbit's plane, its node 327.3° against about 326.5° for a plane through the pad at liftoff, not
+from the descent.
+
+*The pitch.* What the sources do not give is the angle of the thrust line, and the landing turns on
+it: in point-mass 48–51 km a degree up to 3°, 54 km from 3° to 6°, 59 km from 6° to 9°.
+
+| `retro.pitch` | 0° | 1° | 2° | 2.5° | 3° | 6° | 9° |
+|---|---|---|---|---|---|---|---|
+| landing, point-mass | 50.26° N 45.12° E | 50.59° N 45.55° E | 50.93° N 46.00° E | 51.11° N 46.24° E | 51.28° N 46.48° E | 52.37° N 48.03° E | 53.53° N 49.81° E |
+| along the track from Gagarin's place, km (− short) | −126 | −78 | −29 | −3 | +22 | +184 | +360 |
+| sphere down, T+ s | 6,091 | 6,098 | 6,105 | 6,108 | 6,112 | 6,134 | 6,158 |
+
+It is the one number of the return to be fitted, to the landing, and it is labelled so wherever it
+appears. The other inputs move the landing as much: 6.1 km for each second of the retro's time, 23
+km a metre per second of its Δv, 18.5 km for each kilometre of the orbit's height. Kamanin's diary
+records that in flight the ballistics put the landing for this orbit 110 km south of Stalingrad;
+the sphere came down about 400 km beyond that, and Lisov puts it 180 km short of the pre-launch aim
+in the Kuibyshev region. Gagarin's own parachute descent and the instrument module's burn-up are not
+flown yet: the viewer follows the sphere. tests/vostok1-harness.ts holds the flight to these, and
+tests/vostok-descent.test.ts the burn, the spin, the separation and the sphere's drag.
 
 **13.7 Mercury-Redstone 3.** The vehicle `mercuryredstone` in `HISTORICAL_VEHICLES`, the spacecraft
 `mercury` in src/data/satellites.ts, the capsule's flight home `MERCURY_CAPSULE` in

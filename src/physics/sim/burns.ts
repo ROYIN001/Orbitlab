@@ -782,7 +782,8 @@ export class BurnSequencer {
     if (!s.payloadSeparated && !this.sim.satellite.staysAttached) this.sim.schedule(s.t + 15, 'payloadSep', () => this.sim.staging.separatePayload(false));
     // C01: a parking orbit, with an injection to fly from it
     if (this.sim.cfg.orbit.injection) this.sim.apollo.begin();
-    // C01: a spacecraft that comes home from this orbit, at its retro-fire
+    // C01: a spacecraft that comes home from this orbit, from the start of its retro sequence (Vostok-1: the
+    // TDU-1's pressurising command at T+4,684.2 s, the engine's launch command 2.2 s later)
     const deorbit = this.sim.cfg.orbit.deorbit;
     if (deorbit && this.sim.satellite.descent) {
       const at = Math.max(s.t + 30, deorbit.time);

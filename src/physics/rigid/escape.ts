@@ -32,6 +32,7 @@
 import { atmosphere } from '../atmosphere';
 import { G0, OMEGA_EARTH, R_EARTH } from '../constants';
 import { gravityJ2 } from '../gravity';
+import { geodeticHeight } from '../geodesy';
 import { add, addScaled, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { integrateRigidStep, type RigidLoads, type RigidState } from './integrator';
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatRotate, type Mat3 } from './math';
@@ -129,14 +130,58 @@ export interface DescentCapsule {
    * Retro-rockets fired against the flight direction (Mercury's three), s
    * after the flight's start, each `thrust` N for `burn` s, then the pack
    * of `packMass` kg jettisoned at `jettison` s.
+   *
+   * A liquid engine on a module of its own (C01: Vostok's TDU-1 on the
+   * instrument module) adds the rest, all optional: its thrust rises over
+   * `rise` s and, the fuel run out, decays over `tailOff` s ending `burn` s
+   * after the start; it burns `isp` s, so the flow comes out of the pack's
+   * `propellant`, and what is left of it is gone by the timer's `cutoff`.
+   * With `pitch` the thrust line is held inertially, as the attitude was set
+   * before the burn (`retroDirection`); without, it follows the flight path.
    */
-  retro?: { starts: readonly number[]; thrust: number; burn: number; packMass: number; jettison: number };
+  retro?: {
+    starts: readonly number[]; thrust: number; burn: number; packMass: number; jettison: number;
+    rise?: number; tailOff?: number; isp?: number; propellant?: number;
+    /** the timer's cut-off, s after the flight's start */
+    cutoff?: number;
+    /** the Δv the burn was set to give, m/s: a burn that runs out short of it says so */
+    planned?: number;
+    /** held thrust line: degrees above the local horizontal at ignition, in the orbit plane, against the flight */
+    pitch?: number;
+    /** the spin the propellant venting from the fuel's run-out to the cut-off gives: deg/s about `axis` (body) */
+    vent?: { rate: number; axis: Vec3 };
+    /** the straps that hold the pack let go, s after the flight's start, before the pack itself goes at `jettison` */
+    straps?: number;
+    /** the pack's CG beyond the capsule's along +x, m, for the pair's moments of inertia */
+    packX?: number;
+  };
   /**
    * The pilot leaves on an ejection seat below this altitude, m, on the way
    * down (Vostok's hatch and seat), and `mass` kg go with him: the capsule
-   * lands on its own parachute without him.
+   * lands on its own parachute without him. With `hatch` (its mass, kg) the
+   * hatch goes at the altitude and the seat `delay` s later, at up to `speed`
+   * m/s along rails `rails` degrees off the capsule's axis.
    */
-  ejection?: { altitude: number; mass: number };
+  ejection?: { altitude: number; mass: number; hatch?: number; delay?: number; speed?: number; rails?: number };
+  /**
+   * The height datum of every altitude the return reads: the air and the
+   * Mach number, the barometric commands, the ground. 'sphere' (the default)
+   * is the 6,378.137 km sphere the rest of the flight measures from; 'wgs84'
+   * is the height above the ellipsoid, on which the air and the ground lie
+   * (src/physics/geodesy.ts). A pad abort or a suborbital arc starts from a
+   * site placed on the sphere and stays on it.
+   */
+  datum?: 'sphere' | 'wgs84';
+  /** axial drag coefficient against Mach on π(diameter/2)² (default: `CAPSULE_CD`, a bell's) */
+  cd?: readonly (readonly [number, number])[];
+  /**
+   * A sphere: the air's resultant passes through its geometric centre
+   * whatever the attitude, as drag along the flow; only the CG's offset
+   * from the centre (`cgAbove` against the radius) turns it.
+   */
+  sphere?: boolean;
+  /** a pilot chute opened at the ejection's hatch, drawing out the drogue below (area m², drag coefficient, inflation s) */
+  pilot?: { area: number; cd: number; inflation: number };
 }
 
 /** Soyuz's descent module, as the escape flies it (G06). */
@@ -167,28 +212,86 @@ export const MERCURY_CAPSULE: DescentCapsule = {
 };
 
 /**
- * Vostok 3KA from its retro-fire (C01: Vostok-1, docs/PHYSICS.md §13.6):
- * 4,725 kg in orbit, the 2.3 m descent sphere 2,460 kg of it and the
- * instrument module, with what was left of its propellant, the rest. The
- * TDU-1's 15.83 kN for about 42 s (the sources give 40 to 44 s), held
- * against the flight path; the instrument module should have gone ten
- * seconds after, but a cable bundle held it to the sphere until the heat of
- * the entry burnt through it, ten minutes later. The sphere flew no lift:
- * the CG set below its centre turned its thickest ablator into the flow. At
- * 7 km the hatch went and Gagarin left on his seat; the sphere came down on
- * its own: the braking parachute at 4 km, the 574 m² main at 2.5 km, about
- * 10 m/s at the ground (Siddiqi, *Challenge to Apollo*, 2000; Zak,
- * RussianSpaceWeb). The sphere's CG offset, the canopies' drag coefficients
- * and the mass ejected with the seat are estimates; the retro's propellant
- * is counted in the instrument module's mass, which the burn does not lessen.
+ * A sphere's drag coefficient against Mach, on its cross-section: 0.45–0.5
+ * subsonic, the transonic rise to about 1.0 by Mach 1.2, 0.92–0.96
+ * hypersonic (Hoerner, *Fluid-Dynamic Drag*, ch. 16; Bailey and Hiatt, AIAA
+ * J. 10, 1972; modified Newtonian flow gives 0.92 in a perfect gas and about
+ * 0.96 in equilibrium air at entry speeds, Anderson, *Hypersonic and
+ * High-Temperature Gas Dynamics*). No Soviet value was found.
+ */
+const SPHERE_CD = [[0, 0.45], [0.6, 0.5], [0.8, 0.75], [1.0, 0.95], [1.2, 1.0], [1.5, 1.02], [2, 1.0], [3, 0.96], [5, 0.94], [10, 0.95], [25, 0.96]] as const;
+
+/**
+ * Vostok 3KA from the TDU-1's pressurising command (C01: Vostok-1,
+ * docs/PHYSICS.md §13.6): 4,725 kg in orbit, the 2.3 m descent sphere
+ * 2,460 kg of it with the pilot, his seat, the survival kit and the
+ * parachutes, and the instrument module 2,265 kg with the TDU-1's 280 kg of
+ * propellant (Feoktistov (ed.), *Космические аппараты*, 1983, table 3.2).
+ *
+ * The burn as the OKB-1's preliminary report of 3 May 1961 and Lisov and
+ * Afanasyev tell it, timed from the pressurising command (the flight's
+ * start, 10:25:04.2 Moscow time): the launch command 2.2 s later, full
+ * thrust 1.5 s after it, 1,600 kgf = 15.69 kN (Feoktistov; GCTC; Gudilin)
+ * at 266 s (astronautix). A check valve that did not close let fuel into
+ * its tank's separator bag, and the fuel ran out 42.2 s after the
+ * pressurising command, under a second before the integrator's main command:
+ * the thrust's fall over that last second (an estimate) leaves the burn at
+ * 132 m/s of the 136 set (Chertok, from Fomin, *Novosti Kosmonavtiki*
+ * 2002/4). With no main command the lines stayed open; oxidiser and
+ * pressurant at about 60 atm vented through the chamber and the steering
+ * nozzles and spun the pair at "no less than 30°/s" (Gagarin's report)
+ * until the timer's cut-off at 10:25:48.2 (Baturin, *Novaya Gazeta*, 11
+ * April 2021). The spin's axis is an estimate. The engine fired along the
+ * attitude the orientation system had set and the gyros held: in the orbit
+ * plane, against the flight, `pitch` above the local horizontal at
+ * ignition. No source gives that angle; it is the one reconstructed number
+ * of the return (§13.6), about 50 km of landing a degree.
+ *
+ * The planned separation needed the main command, so it never came. The
+ * thermal sensors' backup (150 °C on the hull) fired the four straps at
+ * 10:36 (the report; Gagarin's clock read 10:35), and the cable mast,
+ * whose firing circuit ran through the straps' cutters, held the modules
+ * together "for a few seconds" (Siddiqi, *The Space Review*, 2015; 4 s
+ * here, an estimate) until the cables parted. The older story of ten
+ * minutes on the cables is that wait for the backup. The straps go on the
+ * report's time, since the heat that set them off is not sourced.
+ *
+ * The sphere flew no lift: the air's resultant on a sphere passes through
+ * its centre (Feoktistov §3.5), and the CG set toward its thickly shielded
+ * bottom (0.2 m here, an estimate) turned that side into the flow. At 7 km
+ * by the barometric sensors hatch No. 1 went (its mass, 25 kg, is an
+ * estimate) and the pilot chute came out; two seconds later Gagarin was
+ * fired out on his seat at up to 20 m/s along rails 64° off the sphere's
+ * axis, the seat system 336 kg with him (astronautix: 7.1 % of the ship).
+ * The empty sphere, about 2,100 kg (GCAT lists 2,125), came down on its
+ * 18 m² braking parachute from 4 km and its 574 m² main from 2.5 km at
+ * about 10 m/s (Feoktistov §9.6; GCTC; Siddiqi, *Challenge to Apollo*,
+ * 2000). The canopies' drag coefficients are estimates.
+ *
+ * Every altitude of the return is the height above WGS-84 (`datum`): the
+ * air the sphere decelerates in over 30–51° N lies 5–13 km below the
+ * 6,378.137 km sphere the orbit's heights are counted from.
  */
 export const VOSTOK_CAPSULE: DescentCapsule = {
   id: 'vostok', mass: 4725, diameter: 2.3, length: 2.3, cgAbove: 0.95, heatShield: 0, heatShieldDelay: 0,
-  lowAltitude: 0,
+  lowAltitude: 0, datum: 'wgs84', sphere: true, cd: SPHERE_CD,
+  // the pilot chute 1.5 m² (Feoktistov §9.6; GCTC); its drag coefficient and inflation estimated
+  pilot: { area: 1.5, cd: 0.6, inflation: 1.0 },
   drogue: { area: 18, cd: 0.6, altitude: 4000, maxSpeed: 300, inflation: 1.5, duration: 300 },
   main: { area: 574, cd: 0.55, altitude: 2500, reefed: 0.1, reefS: 3, inflation: 4, lowDelay: 1.0 },
-  retro: { starts: [0], thrust: 15830, burn: 40, packMass: 2265, jettison: 626 },
-  ejection: { altitude: 7000, mass: 180 },
+  retro: {
+    // the launch command 2.2 s after the pressurising command; the fuel out 40 s after it (42.2 s), the
+    // timer's cut-off at 44.0 s (10:25:48.2); the 1 s fall of thrust at the run-out is an estimate
+    starts: [2.2], thrust: 15690, rise: 1.5, burn: 40, tailOff: 1.0, isp: 266, propellant: 280, cutoff: 44.0, planned: 136,
+    // reconstructed: held level for now (§13.6)
+    pitch: 0,
+    // about a transverse axis (estimate)
+    vent: { rate: 30, axis: v3(0, 0, 1) },
+    // the instrument module's CG 2.0 m beyond the sphere's (estimate); the straps at 10:36:00, T+5340 (655.8 s);
+    // the cables parted 4 s on (estimate)
+    packMass: 2265, packX: 2.0, straps: 655.8, jettison: 659.8,
+  },
+  ejection: { altitude: 7000, hatch: 25, delay: 2, mass: 336, speed: 20, rails: 64 },
 };
 
 const EARTH_RATE = v3(0, 0, OMEGA_EARTH);
@@ -213,6 +316,61 @@ export function motorThrust(peak: number, rise: number, burn: number, tailOff: n
 }
 /** Total impulse of `motorThrust`, N s. */
 export const motorImpulse = (peak: number, rise: number, burn: number, tailOff: number): number => peak * (burn - rise / 2 + tailOff / 2);
+
+type Retro = NonNullable<DescentCapsule['retro']>;
+
+/**
+ * A liquid retro engine's thrust (C01: Vostok's TDU-1), 0–1 of full, at
+ * `tau` s after the flight's start: a linear rise from its start, the
+ * plateau, and the fuel's run-out, a linear fall ending `burn` s after the
+ * start.
+ */
+export function retroThrust(rp: Retro, tau: number): number {
+  const t = tau - rp.starts[0], rise = rp.rise ?? 0, tail = rp.tailOff ?? 0;
+  if (t <= 0 || t >= rp.burn) return 0;
+  if (t < rise) return t / rise;
+  if (t > rp.burn - tail) return (rp.burn - t) / tail;
+  return 1;
+}
+
+/** Seconds at full thrust the engine has given by `tau`: the integral of `retroThrust`. */
+function retroFullSeconds(rp: Retro, tau: number): number {
+  const rise = rp.rise ?? 0, tail = rp.tailOff ?? 0, t = clamp(tau - rp.starts[0], 0, rp.burn);
+  let s = rise > 0 ? Math.min(t, rise) ** 2 / (2 * rise) : 0;
+  if (t > rise) s += Math.min(t, rp.burn - tail) - rise;
+  if (t > rp.burn - tail) { const d = t - (rp.burn - tail); s += d - d * d / (2 * tail); }
+  return s;
+}
+
+/**
+ * Propellant gone from the pack by `tau`, kg: burnt at the thrust's own rate,
+ * F/(Isp·g0), to the fuel's run-out; the rest vented, at an even rate here
+ * (an estimate), by the timer's cut-off.
+ */
+export function retroPropellantGone(rp: Retro, tau: number): number {
+  if (!rp.isp || !rp.propellant) return 0;
+  const burnt = Math.min(rp.propellant, retroFullSeconds(rp, tau) * rp.thrust / (rp.isp * G0));
+  const out = rp.starts[0] + rp.burn, cut = Math.max(out, rp.cutoff ?? out);
+  if (tau <= out) return burnt;
+  return burnt + (rp.propellant - burnt) * (cut > out ? clamp((tau - out) / (cut - out), 0, 1) : 1);
+}
+
+/** The Δv the engine has given by `tau`, m/s, from `m0` kg at its start: Tsiolkovsky's, the flow tied to the thrust. */
+export function retroDeltaV(rp: Retro, tau: number, m0: number): number {
+  if (!rp.isp) return 0;
+  const burnt = Math.min(rp.propellant ?? Infinity, retroFullSeconds(rp, tau) * rp.thrust / (rp.isp * G0));
+  return rp.isp * G0 * Math.log(m0 / (m0 - burnt));
+}
+
+/**
+ * The retro's thrust line held through the burn (C01: Vostok): in the orbit
+ * plane of `r`, `v`, against the flight, `pitch` rad above the local
+ * horizontal at `r` (up: a shallower entry, a longer flight).
+ */
+export function retroDirection(r: Vec3, v: Vec3, pitch: number): Vec3 {
+  const up = normalize(r), along = normalize(cross(cross(r, v), up));
+  return add(scale(along, -Math.cos(pitch)), scale(up, Math.sin(pitch)));
+}
 
 /** A part of a body: a uniform cylinder along x. */
 interface Part { mass: number; x0: number; length: number; radius: number }
@@ -245,6 +403,8 @@ interface Aero {
   /** pitch/yaw damping, nondimensional; roll damping */
   damping: number;
   rollDamping: number;
+  /** a sphere: the force is drag along the flow, through `cpX`, its centre, whatever the attitude */
+  sphere?: boolean;
 }
 
 export interface EscapeConfiguration {
@@ -313,10 +473,30 @@ export function capsuleConfiguration(heatShield: boolean, capsule: DescentCapsul
   const R = capsule.diameter / 2, h = capsule.cgAbove;
   // a bell (Soyuz 2.24 m tall with its CG 0.9 m above the heat shield's face)
   const ixx = 0.5 * mass * (0.75 * R) ** 2, iyy = mass * (3 * (0.75 * R) ** 2 + capsule.length ** 2) / 12;
-  // the pressure through the heat shield's centre of curvature, about 1.18 diameters behind its face
+  // the pressure through the heat shield's centre of curvature, about 1.18 diameters behind its face; on a
+  // sphere through its centre (Feoktistov §3.5)
   return { body: 'capsule', mass, cgX: 0, inertia: [ixx, 0, 0, 0, iyy, 0, 0, 0, iyy], bottomX: h, topX: -(capsule.length - h), radius: R,
-    aero: { area: Math.PI * R * R, length: capsule.diameter, cd: CAPSULE_CD, cnAlpha: 0.35, crossflowCd: 0.9, sideArea: capsule.diameter * capsule.length,
-      cpX: h - 1.03 * capsule.diameter, damping: 0.6, rollDamping: 0.05 } };
+    aero: { area: Math.PI * R * R, length: capsule.diameter, cd: capsule.cd ?? CAPSULE_CD, cnAlpha: 0.35, crossflowCd: 0.9, sideArea: capsule.diameter * capsule.length,
+      cpX: capsule.sphere ? h - R : h - 1.03 * capsule.diameter, damping: 0.6, rollDamping: 0.05, ...(capsule.sphere ? { sphere: true } : {}) } };
+}
+
+/**
+ * The capsule with its retro pack still on (C01: Vostok's sphere and
+ * instrument module, `pack` kg of it now): the sphere's shape and
+ * aerodynamics with the pair's mass, and the pair's moments of inertia about
+ * its own CG, the pack a cylinder 2.25 m long (GCTC) of 1 m radius, its CG
+ * `packX` m beyond the sphere's (estimates). The pair is flown about the sphere's CG:
+ * above 130 km its drag moves the landing by a kilometre at most, and the
+ * metre between the two CGs, which would give the sphere about half a metre
+ * a second in a direction only the spin's phase decides as the cables part,
+ * is left out.
+ */
+export function pairConfiguration(capsule: DescentCapsule, pack: number): EscapeConfiguration {
+  const rp = capsule.retro!, sphere = capsuleConfiguration(true, capsule, rp.packMass);
+  const mass = sphere.mass + pack, d = rp.packX ?? 0, xc = pack * d / mass, r = 1.0, l = 2.25;
+  const ixx = sphere.inertia[0] + 0.5 * pack * r * r;
+  const iyy = sphere.inertia[4] + sphere.mass * xc * xc + pack * (3 * r * r + l * l) / 12 + pack * (d - xc) ** 2;
+  return { ...sphere, mass, inertia: [ixx, 0, 0, 0, iyy, 0, 0, 0, iyy] };
 }
 
 /** The descent module's riser point, capsule axes: its top. */
@@ -352,10 +532,24 @@ export interface EscapeStatus {
   maxGT: number;
   /** touchdown speed, m/s, once down */
   touchdownSpeed?: number;
+  /** 0–1: the pilot chute (C01: Vostok's), open from the hatch's going until the drogue it draws out */
+  pilot?: number;
 }
 
 /** An event the escape raises, for the simulation's log. */
-export interface EscapeEvent { key: string; severity: 'info' | 'major' | 'warn' | 'success'; params?: Record<string, number | string> }
+export interface EscapeEvent {
+  key: string; severity: 'info' | 'major' | 'warn' | 'success'; params?: Record<string, number | string>;
+  /** mission time it happened at, when that is finer than the owner's step (C01: Vostok); else the step's end */
+  t?: number;
+}
+
+/**
+ * A body the flight leaves behind: the head section, or the orbital and
+ * service modules (G06); Vostok's instrument module as its cables part, its
+ * hatch and the pilot on his seat (C01). `state` is the body's own, at its
+ * CG, and `mass` its mass, kg, where the flight knows it.
+ */
+export type EscapeRelease = 'head' | 'modules' | 'instrumentModule' | 'hatch' | 'seat';
 
 /** The environment the escape flies in. */
 export interface EscapeEnvironment {
@@ -367,7 +561,8 @@ export interface EscapeEnvironment {
  * One escape, from the abort command to the descent module at rest. The
  * owner reads `state`, `config` and `status` after each `step`, and is told
  * through `onRelease` of each body the flight leaves behind (the tower with
- * the fairing and the orbital module; the orbital and service modules).
+ * the fairing and the orbital module; the orbital and service modules;
+ * Vostok's instrument module, hatch and seat).
  */
 export class EscapeFlight {
   state: RigidState;
@@ -393,12 +588,13 @@ export class EscapeFlight {
    * @param side unit vector, head-section body axes, the control motor pushes the tower's top towards
    */
   constructor(readonly mode: EscapeMode, state: RigidState, readonly t0: number, side: Vec3,
-    private readonly env: EscapeEnvironment, readonly onRelease: (what: 'head' | 'modules', state: RigidState, t: number) => void,
+    private readonly env: EscapeEnvironment, readonly onRelease: (what: EscapeRelease, state: RigidState, t: number, mass?: number) => void,
     readonly capsule: DescentCapsule = SOYUZ_DESCENT) {
     this.towerPropellant = mode === 'tower' ? ESCAPE.tower.propellant : 0;
     this.fairingPropellant = mode === 'separation' || mode === 'capsule' ? 0 : ESCAPE.fairing.propellant;
     this.controlDir = normalize(v3(0, side.y, side.z));
-    this.config = mode === 'capsule' ? capsuleConfiguration(true, capsule)
+    this.tdu = mode === 'capsule' && capsule.retro?.isp !== undefined;
+    this.config = mode === 'capsule' ? (this.tdu ? pairConfiguration(capsule, capsule.retro!.packMass) : capsuleConfiguration(true, capsule))
       : mode === 'separation' ? spacecraftConfiguration() : headConfiguration(mode === 'tower', this.towerPropellant, this.fairingPropellant, false);
     this.state = { r: { ...state.r }, v: { ...state.v }, attitudeQ: { ...state.attitudeQ }, omegaBody: { ...state.omegaBody } };
     if (mode === 'separation') {
@@ -406,8 +602,62 @@ export class EscapeFlight {
       this.state.v = addScaled(this.state.v, quatRotate(this.state.attitudeQ, v3(1, 0, 0)), ESCAPE.separationSpeed);
     }
     this.status = { mode, capsule: capsule.id, phase: mode === 'separation' ? 'coast' : mode === 'capsule' ? 'fall' : 'escape', body: this.config.body, t0,
-      motors: { main: 0, control: 0, fairing: 0, softLanding: 0, ...(capsule.retro ? { retro: 0 } : {}) }, finsOpen: false, drogue: 0, main: 0, heatShield: true, maxG: 0, maxGT: t0 };
-    if (mode === 'capsule') { this.freedAt = t0; this.freedAlt = norm(this.state.r) - R_EARTH; }
+      motors: { main: 0, control: 0, fairing: 0, softLanding: 0, ...(capsule.retro ? { retro: 0 } : {}) }, finsOpen: false, drogue: 0, main: 0, heatShield: true, maxG: 0, maxGT: t0,
+      ...(capsule.pilot ? { pilot: 0 } : {}) };
+    if (mode === 'capsule') { this.freedAt = t0; this.freedAlt = this.altitude(this.state.r); }
+  }
+
+  /**
+   * Height of a point above the return's datum, m: the 6,378.137 km sphere,
+   * or for a return that asks for it the WGS-84 ellipsoid, on which the air
+   * and the ground lie (`DescentCapsule.datum`).
+   */
+  altitude(r: Vec3): number {
+    return this.capsule.datum === 'wgs84' && this.mode === 'capsule' ? geodeticHeight(r) : norm(r) - R_EARTH;
+  }
+
+  /** C01: the retro is a liquid engine on a module of its own (Vostok's TDU-1 on the instrument module) */
+  private readonly tdu: boolean;
+  /** …and that module is still on: its straps let go, then its cables part */
+  private packOn = true;
+  private strapsGone = false;
+  /** the TDU-1's thrust line, ECI, fixed at its launch command */
+  private retroDir?: Vec3;
+  private fuelOutLogged = false;
+  private cutoffLogged = false;
+  /** the hatch's going and the pilot chute it lets out (C01: Vostok) */
+  private hatchAt?: number;
+  private pilotAt?: number;
+
+  /** Mass now, kg: the pair's falls with the TDU-1's flow, at the time of any RK4 stage. */
+  private massAt(t: number): number {
+    if (!this.tdu || !this.packOn) return this.config.mass;
+    return this.capsule.mass - retroPropellantGone(this.capsule.retro!, t - this.t0);
+  }
+
+  /** The mass the capsule has lost since its start, kg, past its pack: the hatch and the seat. */
+  private get crewMassGone(): number {
+    const ej = this.capsule.ejection;
+    if (!ej) return 0;
+    return (this.hatchAt !== undefined ? ej.hatch ?? 0 : 0) + (this.ejected ? ej.mass : 0);
+  }
+
+  /** The configuration flying now (C01: Vostok's pair with what is left of its propellant, then the sphere). */
+  private rebuild(t: number): void {
+    const rp = this.capsule.retro!;
+    this.config = this.packOn ? pairConfiguration(this.capsule, rp.packMass - retroPropellantGone(rp, t - this.t0))
+      : capsuleConfiguration(this.status.heatShield, this.capsule, rp.packMass + this.crewMassGone);
+  }
+
+  /** The next time, s after the start, the TDU-1's sequence changes, for the step to land on it. */
+  private nextBreak(tau: number): number | undefined {
+    const rp = this.capsule.retro!, a = rp.starts[0];
+    const ej = this.capsule.ejection;
+    const marks = [a, a + (rp.rise ?? 0), a + rp.burn - (rp.tailOff ?? 0), a + rp.burn, rp.cutoff ?? 0, rp.straps ?? 0, rp.jettison,
+      ...(this.hatchAt !== undefined && !this.ejected ? [this.hatchAt - this.t0 + (ej?.delay ?? 0)] : [])];
+    let next: number | undefined;
+    for (const m of marks) if (m > tau + 1e-6 && (next === undefined || m < next)) next = m;
+    return next;
   }
 
   /** Whether the capsule's retro-rockets are firing at `t`, and how many. */
@@ -415,6 +665,8 @@ export class EscapeFlight {
     const rp = this.capsule.retro;
     if (!rp) return 0;
     const tau = t - this.t0;
+    // C01: the TDU-1's thrust, 0–1 of full
+    if (this.tdu) return retroThrust(rp, tau);
     return rp.starts.filter((s0) => tau >= s0 && tau < s0 + rp.burn).length;
   }
   /** The retropack still on (until its jettison). */
@@ -424,15 +676,25 @@ export class EscapeFlight {
 
   /** Events raised since the last call. */
   takeEvents(): EscapeEvent[] { return this.events.splice(0); }
+  /** C01: Vostok's are timed to the step they happened in, its marks a tenth of a second apart. */
+  private log(e: EscapeEvent, t: number): void { this.events.push(this.tdu ? { ...e, t } : e); }
 
   get landed(): boolean { return this.status.phase === 'landed'; }
 
   /** The integration step the current phase needs, s. */
   suggestedDt(): number {
+    const dt = this.phaseDt();
+    if (!this.tdu || this.status.phase === 'landed') return dt;
+    // C01: the TDU-1's 40 s finely, and each change of its sequence landed on
+    const tau = this.lastT - this.t0, next = this.nextBreak(tau);
+    const burning = Math.min(dt, tau < (this.capsule.retro!.cutoff ?? 0) + 1 ? 0.05 : dt);
+    return next !== undefined ? Math.min(burning, next - tau) : burning;
+  }
+  private phaseDt(): number {
     const tau = this.lastT - this.t0, phase = this.status.phase;
     if (phase === 'landed') return 1;
     if (phase === 'escape' || tau < 4) return 0.005;
-    const alt = norm(this.state.r) - R_EARTH;
+    const alt = this.altitude(this.state.r);
     if (this.softAt !== undefined || (this.mainAt !== undefined && this.height() < 30)) return 0.005;
     if (phase === 'drogue' || (this.mainAt !== undefined && this.mainFullAt === undefined)) return 0.01;
     if (phase === 'main') return 0.02;
@@ -442,7 +704,13 @@ export class EscapeFlight {
 
   /** Height of the lowest point above the ground, m. */
   height(state: RigidState = this.state): number {
-    const bottom = add(state.r, quatRotate(state.attitudeQ, v3(this.config.bottomX - this.config.cgX, 0, 0)));
+    const c = this.config;
+    if (c.aero.sphere) {
+      // a sphere's lowest point is its radius below its centre, whichever way it is turned
+      const centre = add(state.r, quatRotate(state.attitudeQ, v3(c.aero.cpX - c.cgX, 0, 0)));
+      return this.altitude(centre) - c.radius - this.env.groundElevation(centre);
+    }
+    const bottom = add(state.r, quatRotate(state.attitudeQ, v3(c.bottomX - c.cgX, 0, 0)));
     return norm(bottom) - R_EARTH - this.env.groundElevation(bottom);
   }
 
@@ -481,30 +749,37 @@ export class EscapeFlight {
     if (this.config.body === 'head') {
       this.config = headConfiguration(this.mode === 'tower', this.towerPropellant, this.fairingPropellant, this.status.finsOpen);
     }
+    // C01: the pair lightens as the TDU-1 burns and vents
+    if (this.tdu && this.packOn && tau < (this.capsule.retro!.cutoff ?? 0) + h) this.rebuild(t + h);
   }
 
   /** The events of the sequence, by time, altitude and speed. */
   private sequence(t: number): void {
     const tau = t - this.t0, s = this.status;
     const rp = this.capsule.retro;
-    if (rp && this.retroFired < rp.starts.length && tau >= rp.starts[this.retroFired]) {
+    // (the TDU-1's sequence is stepped onto its marks, so a mark is reached to within rounding)
+    const eps = this.tdu ? 1e-6 : 0;
+    if (rp && this.retroFired < rp.starts.length && tau >= rp.starts[this.retroFired] - eps) {
       this.retroFired++;
-      this.events.push({ key: 'evt.retroFire', severity: 'info', params: { n: this.retroFired } });
+      this.log({ key: 'evt.retroFire', severity: 'info', params: { n: this.retroFired } }, t);
+      // C01: the thrust line the gyros hold for the burn, set by the attitude at the launch command
+      if (rp.pitch !== undefined) this.retroDir = retroDirection(this.state.r, this.state.v, rp.pitch * Math.PI / 180);
     }
-    const alt = norm(this.state.r) - R_EARTH;
+    if (this.tdu) this.tduSequence(t);
+    const alt = this.altitude(this.state.r);
     const up = normalize(this.state.r);
     const vz = dot(this.state.v, up);
     if (s.body === 'head' && !s.finsOpen && tau >= ESCAPE.fairing.finsOpen) {
       s.finsOpen = true;
       this.config = headConfiguration(this.mode === 'tower', this.towerPropellant, this.fairingPropellant, true);
-      this.events.push({ key: 'evt.escapeFins', severity: 'info', params: { alt: Math.round(alt) } });
+      this.log({ key: 'evt.escapeFins', severity: 'info', params: { alt: Math.round(alt) } }, t);
     }
     if (s.phase === 'escape') {
       const tw = ESCAPE.tower, f = ESCAPE.fairing;
       const done = this.mode === 'tower' ? tau > tw.burn + tw.tailOff : tau > f.burn + f.tailOff;
       if (done) {
         s.phase = 'coast';
-        this.events.push({ key: 'evt.escapeBurnout', severity: 'info', params: { alt: Math.round(alt), speed: Math.round(norm(this.airVelocity(this.state, t))) } });
+        this.log({ key: 'evt.escapeBurnout', severity: 'info', params: { alt: Math.round(alt), speed: Math.round(norm(this.airVelocity(this.state, t))) } }, t);
       }
     }
     if ((s.body === 'head' || s.body === 'spacecraft') && s.phase === 'coast') {
@@ -518,14 +793,31 @@ export class EscapeFlight {
         if (t - this.freedAt >= this.capsule.main.lowDelay) this.openMain(t, alt, true);
       } else if (alt < this.capsule.drogue.altitude && airspeed < this.capsule.drogue.maxSpeed) {
         this.drogueAt = t; s.phase = 'drogue';
-        this.events.push({ key: 'evt.escapeDrogue', severity: 'info', params: { alt: Math.round(alt), speed: Math.round(airspeed) } });
+        this.log({ key: 'evt.escapeDrogue', severity: 'info', params: { alt: Math.round(alt), speed: Math.round(airspeed) } }, t);
       }
     }
     const ej = this.capsule.ejection;
-    if (ej && !this.ejected && vz < 0 && alt < ej.altitude) {
+    if (ej && ej.hatch === undefined && !this.ejected && vz < 0 && alt < ej.altitude) {
       this.ejected = true;
       this.config = capsuleConfiguration(s.heatShield, this.capsule, (this.retroPackOn ? 0 : this.capsule.retro?.packMass ?? 0) + ej.mass);
-      this.events.push({ key: 'evt.ejection', severity: 'major', params: { alt: Math.round(alt), speed: Math.round(airspeed) } });
+      this.log({ key: 'evt.ejection', severity: 'major', params: { alt: Math.round(alt), speed: Math.round(airspeed) } }, t);
+    }
+    // C01: Vostok's hatch at the barometric command, the pilot chute with it, the seat two seconds on
+    if (ej && ej.hatch !== undefined && this.hatchAt === undefined && vz < 0 && alt < ej.altitude) {
+      this.hatchAt = t;
+      this.rebuild(t);
+      this.onRelease('hatch', { ...this.state }, t, ej.hatch);
+      this.log({ key: 'evt.hatchOff', severity: 'info', params: { alt: Math.round(alt) } }, t);
+      if (this.capsule.pilot && s.phase === 'fall') {
+        this.pilotAt = t;
+        this.log({ key: 'evt.pilotChute', severity: 'info', params: { alt: Math.round(alt), speed: Math.round(airspeed) } }, t);
+      }
+    }
+    if (ej && ej.hatch !== undefined && this.hatchAt !== undefined && !this.ejected && t - this.hatchAt >= (ej.delay ?? 0) - 1e-6) {
+      this.ejected = true;
+      this.onRelease('seat', { ...this.state }, t, ej.mass);
+      this.rebuild(t);
+      this.log({ key: 'evt.ejection', severity: 'major', params: { alt: Math.round(alt), speed: Math.round(airspeed) } }, t);
     }
     if (s.phase === 'drogue' && (t - this.drogueAt! >= this.capsule.drogue.duration || alt < this.capsule.main.altitude)) this.openMain(t, alt, false);
     if (s.phase === 'main') {
@@ -533,11 +825,11 @@ export class EscapeFlight {
       if (s.heatShield && this.capsule.heatShield > 0 && this.mainFullAt !== undefined && t - this.mainFullAt >= this.capsule.heatShieldDelay) {
         s.heatShield = false;
         this.config = capsuleConfiguration(false, this.capsule);
-        this.events.push({ key: 'evt.escapeHeatShield', severity: 'info', params: { alt: Math.round(alt) } });
+        this.log({ key: 'evt.escapeHeatShield', severity: 'info', params: { alt: Math.round(alt) } }, t);
       }
       if (this.capsule.softLanding && this.softAt === undefined && this.height() <= this.capsule.softLanding.height) {
         this.softAt = t;
-        this.events.push({ key: 'evt.escapeSoftLanding', severity: 'info', params: { speed: +(-vz).toFixed(1) } });
+        this.log({ key: 'evt.escapeSoftLanding', severity: 'info', params: { speed: +(-vz).toFixed(1) } }, t);
       }
     }
   }
@@ -546,10 +838,45 @@ export class EscapeFlight {
   private retroFired = 0;
   private ejected = false;
 
+  /**
+   * C01: Vostok's TDU-1 after its launch command: the fuel's run-out short of
+   * the integrator's setting, the timer's cut-off with the pair spinning,
+   * and, with no main command to part the modules, the thermal sensors'
+   * straps and the cables parting a few seconds later.
+   */
+  private tduSequence(t: number): void {
+    const rp = this.capsule.retro!, tau = t - this.t0, eps = 1e-6;
+    const out = rp.starts[0] + rp.burn;
+    if (!this.fuelOutLogged && tau >= out - eps) {
+      this.fuelOutLogged = true;
+      const dv = retroDeltaV(rp, tau, this.capsule.mass);
+      if (rp.planned !== undefined && dv < rp.planned) this.log({ key: 'evt.retroShortfall', severity: 'warn', params: { dv: +dv.toFixed(1), planned: rp.planned } }, t);
+    }
+    if (!this.cutoffLogged && rp.cutoff !== undefined && tau >= rp.cutoff - eps) {
+      this.cutoffLogged = true;
+      const w = this.state.omegaBody;
+      this.log({ key: 'evt.retroCutoff', severity: 'warn', params: { rate: Math.round(norm(w) * 180 / Math.PI) } }, t);
+    }
+    if (!this.strapsGone && rp.straps !== undefined && tau >= rp.straps - eps) {
+      this.strapsGone = true;
+      this.log({ key: 'evt.vostokStraps', severity: 'info', params: { alt: Math.round(this.altitude(this.state.r) / 1000) } }, t);
+    }
+    if (this.packOn && tau >= rp.jettison - eps) {
+      // the instrument module goes at its own CG, `packX` beyond the sphere's, with the spin's speed there
+      const st = this.state, mass = rp.packMass - retroPropellantGone(rp, tau);
+      const arm = quatRotate(st.attitudeQ, v3(rp.packX ?? 0, 0, 0));
+      this.onRelease('instrumentModule', { r: add(st.r, arm), v: add(st.v, cross(quatRotate(st.attitudeQ, st.omegaBody), arm)),
+        attitudeQ: { ...st.attitudeQ }, omegaBody: { ...st.omegaBody } }, t, mass);
+      this.packOn = false;
+      this.rebuild(t);
+      this.log({ key: 'evt.vostokSeparation', severity: 'major', params: { alt: Math.round(this.altitude(st.r) / 1000) } }, t);
+    }
+  }
+
   private openMain(t: number, alt: number, low: boolean): void {
     this.mainAt = t; this.drogueAt = undefined;
     this.status.phase = 'main'; this.status.drogue = 0;
-    this.events.push({ key: low ? 'evt.escapeMainLow' : 'evt.escapeMain', severity: 'info', params: { alt: Math.round(alt) } });
+    this.log({ key: low ? 'evt.escapeMainLow' : 'evt.escapeMain', severity: 'info', params: { alt: Math.round(alt) } }, t);
   }
 
   /** The descent module leaves the head section (or the spacecraft's other modules). */
@@ -570,7 +897,7 @@ export class EscapeFlight {
     this.config = c;
     s.body = 'capsule'; s.phase = 'fall'; s.finsOpen = false;
     this.freedAt = t; this.freedAlt = norm(r) - R_EARTH;
-    this.events.push({ key: 'evt.escapeCapsule', severity: 'major', params: { alt: Math.round(this.freedAlt) } });
+    this.log({ key: 'evt.escapeCapsule', severity: 'major', params: { alt: Math.round(this.freedAlt) } }, t);
   }
 
   private touchdown(): void {
@@ -583,8 +910,8 @@ export class EscapeFlight {
     s.drogue = 0; s.main = 0;
     this.drogueAt = undefined; this.mainAt = undefined;
     // a Mercury capsule comes down in the sea at the end of a planned flight, Vostok on the steppe (C01)
-    this.events.push({ key: this.capsule.id === 'mercury' ? 'evt.capsuleSplashdown' : this.capsule.id === 'vostok' ? 'evt.capsuleLanding' : 'evt.escapeLanded', severity: 'success',
-      params: { speed: +s.touchdownSpeed.toFixed(1), g: +s.maxG.toFixed(1) } });
+    this.log({ key: this.capsule.id === 'mercury' ? 'evt.capsuleSplashdown' : this.capsule.id === 'vostok' ? 'evt.capsuleLanding' : 'evt.escapeLanded', severity: 'success',
+      params: { speed: +s.touchdownSpeed.toFixed(1), g: +s.maxG.toFixed(1) } }, this.lastT);
   }
 
   airVelocity(state: RigidState, t: number): Vec3 {
@@ -593,7 +920,7 @@ export class EscapeFlight {
 
   /** Forces and moments on the flying body. */
   private loads(t: number, st: Readonly<RigidState>): RigidLoads {
-    const c = this.config, tau = t - this.t0;
+    const c = this.config, tau = t - this.t0, mass = this.massAt(t);
     const force = v3(), moment = v3();
     const addForce = (fBody: Vec3, atX: number, lateral = v3()) => {
       force.x += fBody.x; force.y += fBody.y; force.z += fBody.z;
@@ -617,20 +944,25 @@ export class EscapeFlight {
       addForce(v3(-soft.thrust, 0, 0), c.bottomX);
     }
     // aerodynamics
-    const alt = norm(st.r) - R_EARTH;
+    const alt = this.altitude(st.r);
     const atm = atmosphere(Math.max(0, alt));
     const air = this.airVelocity(st, t);
     const u = quatInverseRotate(st.attitudeQ, air), speed = norm(u);
     if (atm.rho > 0 && speed > 1e-3) {
       const q = 0.5 * atm.rho * speed * speed, a = c.aero, mach = speed / atm.a;
       const cosA = clamp(u.x / speed, -1, 1), sinA = Math.sqrt(Math.max(0, 1 - cosA * cosA));
-      // axial drag, whichever end leads
-      addForce(v3(-Math.sign(u.x) * q * a.area * table(a.cd, mach) * cosA * cosA, 0, 0), c.cgX);
-      // normal force against the crossflow, at the centre of pressure
-      const lateral = v3(0, u.y, u.z), lat = norm(lateral);
-      if (lat > 1e-6) {
-        const cn = a.cnAlpha * sinA * Math.abs(cosA) + a.crossflowCd * (a.sideArea / a.area) * sinA * sinA;
-        addForce(scale(lateral, -q * a.area * cn / lat), a.cpX);
+      if (a.sphere) {
+        // a sphere: drag along the flow through its centre, the same whatever the attitude
+        addForce(scale(u, -q * a.area * table(a.cd, mach) / speed), a.cpX);
+      } else {
+        // axial drag, whichever end leads
+        addForce(v3(-Math.sign(u.x) * q * a.area * table(a.cd, mach) * cosA * cosA, 0, 0), c.cgX);
+        // normal force against the crossflow, at the centre of pressure
+        const lateral = v3(0, u.y, u.z), lat = norm(lateral);
+        if (lat > 1e-6) {
+          const cn = a.cnAlpha * sinA * Math.abs(cosA) + a.crossflowCd * (a.sideArea / a.area) * sinA * sinA;
+          addForce(scale(lateral, -q * a.area * cn / lat), a.cpX);
+        }
       }
       // damping
       const k = q * a.area * a.length * a.length / (2 * speed);
@@ -644,7 +976,10 @@ export class EscapeFlight {
       const cp = this.capsule;
       const drogue = canopy(cp.drogue.area, cp.drogue.cd, this.drogueAt, cp.drogue.inflation, t);
       const main = canopy(cp.main.area, cp.main.cd, this.mainAt, cp.main.inflation, t, cp.main.reefed, cp.main.reefS);
-      const cdA = drogue + main;
+      // C01: Vostok's pilot chute, until the drogue it draws out is open (it rides on its apex)
+      const pilot = cp.pilot && this.status.phase === 'fall' ? canopy(cp.pilot.area, cp.pilot.cd, this.pilotAt, cp.pilot.inflation, t) : 0;
+      if (cp.pilot) this.status.pilot = pilot / (cp.pilot.area * cp.pilot.cd);
+      const cdA = drogue + main + pilot;
       if (cdA > 0) {
         const q = 0.5 * atm.rho * speed * speed;
         addForce(scale(u, -q * cdA / speed), RISER_X);
@@ -658,11 +993,23 @@ export class EscapeFlight {
     // resting on the ground is the owner's business; mass flow is quasi-steady
     this.windNow = this.env.wind(st.r, t);
     let forceECI = quatRotate(st.attitudeQ, force);
-    // Mercury's retro-rockets (Vostok's TDU-1), held against the flight path by the attitude control
+    // Mercury's retro-rockets, held against the flight path by the attitude control; Vostok's TDU-1 along
+    // the line the gyros hold, and the venting after its fuel ran out turning the pair
     const retros = c.body === 'capsule' ? this.retrosAt(t) : 0;
-    if (retros > 0 && speed > 1e-3) forceECI = addScaled(forceECI, normalize(st.v), -retros * this.capsule.retro!.thrust);
-    this.lastSpecificForce = norm(force) / c.mass / G0;
-    return { mass: c.mass, inertiaBody: c.inertia, forceECI, momentBody: moment, externalAccelerationECI: gravityJ2(st.r) };
+    if (this.retroDir) {
+      if (retros > 0) forceECI = addScaled(forceECI, this.retroDir, retros * this.capsule.retro!.thrust);
+      const rp = this.capsule.retro!, out = rp.starts[0] + rp.burn;
+      if (rp.vent && rp.cutoff !== undefined && tau >= out && tau < rp.cutoff) {
+        const ax = normalize(rp.vent.axis), iAx = ax.x * ax.x * c.inertia[0] + ax.y * ax.y * c.inertia[4] + ax.z * ax.z * c.inertia[8];
+        const torque = iAx * rp.vent.rate * Math.PI / 180 / (rp.cutoff - out);
+        moment.x += ax.x * torque; moment.y += ax.y * torque; moment.z += ax.z * torque;
+      }
+      this.lastSpecificForce = norm(forceECI) / mass / G0;
+    } else {
+      if (retros > 0 && speed > 1e-3) forceECI = addScaled(forceECI, normalize(st.v), -retros * this.capsule.retro!.thrust);
+      this.lastSpecificForce = norm(force) / c.mass / G0;
+    }
+    return { mass, inertiaBody: c.inertia, forceECI, momentBody: moment, externalAccelerationECI: gravityJ2(st.r) };
   }
 
   /** Motors' state and the crew's g, after an accepted step. */
@@ -674,12 +1021,10 @@ export class EscapeFlight {
     s.motors.softLanding = this.capsule.softLanding && this.softAt !== undefined && t - this.softAt <= this.capsule.softLanding.burn ? 1 : 0;
     if (this.capsule.retro) {
       s.motors.retro = this.retrosAt(t);
-      // the retropack falls away once the retros are spent
-      if (this.config.body === 'capsule' && !this.retroPackOn && this.config.mass > this.capsule.mass - this.capsule.retro.packMass + 1e-6) {
+      // the retropack falls away once the retros are spent (Vostok's instrument module: `tduSequence`)
+      if (!this.tdu && this.config.body === 'capsule' && !this.retroPackOn && this.config.mass > this.capsule.mass - this.capsule.retro.packMass + 1e-6) {
         this.config = capsuleConfiguration(true, this.capsule, this.capsule.retro.packMass + (this.ejected ? this.capsule.ejection!.mass : 0));
-        // Vostok's pack is its instrument module, and its going the separation of the two
-        this.events.push({ key: this.capsule.id === 'vostok' ? 'evt.vostokSeparation' : 'evt.retroPackOff', severity: this.capsule.id === 'vostok' ? 'major' : 'info',
-          params: { alt: Math.round((norm(this.state.r) - R_EARTH) / 1000) } });
+        this.log({ key: 'evt.retroPackOff', severity: 'info', params: { alt: Math.round((norm(this.state.r) - R_EARTH) / 1000) } }, t);
       }
     }
     // re-evaluate the loads at the accepted state for the specific force

@@ -224,17 +224,21 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // Vostok 1, 12 April 1961, from Site 1/5: Yuri Gagarin, once round the
   // Earth, 168 × 314 km at 64.95° (GCAT; 181 × 327 km in the older figures).
   // Strap-ons T+119 s, shroud T+156 s, Blok A off and Blok E lit T+300 s,
-  // Blok E off T+676 s (ESA). Home: the TDU-1 lit at 10:25:34 Moscow time,
-  // T+78:34 (ru.wikipedia's chronology), and the descent flown from there
+  // Blok E off T+676 s (ESA). Home: the TDU-1's pressurising command at
+  // 10:25:04.2 Moscow time, T+4,684.2 s (OKB-1's preliminary report of 3 May
+  // 1961; Baturin, Novaya Gazeta 2021), and the descent flown from there
   // (`VOSTOK_CAPSULE`, src/physics/rigid/escape.ts; docs/PHYSICS.md §13.6).
   { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok1', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
-    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free', deorbit: { time: 4714 } }, launchTime: '1961-04-12T06:07:00Z',
+    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free', deorbit: { time: 4684.2 } }, launchTime: '1961-04-12T06:07:00Z',
     flown: { events: [
       { key: 'evt.boosterSep', t: 119 }, { key: 'evt.fairingSep', t: 156 }, { key: 'evt.meco', t: 300 },
       { key: 'evt.seco', t: 676 },
-      // the retro-fire to the second; the separation over the Mediterranean at 10:36, the ejection at 10:42 and
-      // the sphere on the ground at 10:48, each to the minute (ru.wikipedia; Zak, RussianSpaceWeb)
-      { key: 'evt.retroFire', t: 4714 }, { key: 'evt.vostokSeparation', t: 5340, approx: true },
+      // the TDU-1's launch command, its fuel out and the timer's cut-off, to a tenth of a second (OKB-1's report;
+      // Lisov and Afanasyev; Baturin); the straps over the Mediterranean at 10:36, the cables a few seconds on
+      // (Siddiqi 2015), the ejection at 10:42 and the sphere on the ground at 10:48, each to the minute (the
+      // report; Zak, RussianSpaceWeb)
+      { key: 'evt.retroFire', t: 4686.4 }, { key: 'evt.retroShortfall', t: 4726.4 }, { key: 'evt.retroCutoff', t: 4728.2 },
+      { key: 'evt.vostokStraps', t: 5340, approx: true }, { key: 'evt.vostokSeparation', t: 5344, approx: true },
       { key: 'evt.ejection', t: 5700, approx: true }, { key: 'evt.capsuleLanding', t: 6060, approx: true },
     ], orbit: { perigee: 168, apogee: 314, inclination: 64.95 } },
     titleKey: 'watch.mission.vostok1', blurbKey: 'watch.mission.vostok1Blurb', payloadKey: 'watch.payload.vostok1' },

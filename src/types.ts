@@ -338,9 +338,10 @@ export interface OrbitSpec {
   flightAzimuth?: number;
   injection?: InjectionSpec;
   /**
-   * A return from this orbit (C01: Vostok-1): the spacecraft's retro-rocket
-   * fired at mission time `time`, s, and its descent capsule flown home
-   * (`SatelliteSpec.descent`, src/physics/rigid/escape.ts).
+   * A return from this orbit (C01: Vostok-1): the spacecraft's retro
+   * sequence started at mission time `time`, s (Vostok's TDU-1 pressurising
+   * command, its launch command `retro.starts` later), and its descent
+   * capsule flown home (`SatelliteSpec.descent`, src/physics/rigid/escape.ts).
    */
   deorbit?: { time: number };
   description: string;

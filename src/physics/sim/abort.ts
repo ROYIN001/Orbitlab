@@ -12,13 +12,14 @@
  */
 import type { Simulation } from '../simulation';
 import type { Debris } from './types';
-import { add, addScaled, clone, cross, dot, normalize, scale, v3, type Vec3 } from '../vec3';
+import { add, addScaled, clone, cross, dot, norm, normalize, scale, v3, type Vec3 } from '../vec3';
 import { enuFrame } from '../orbital';
 import { OMEGA_EARTH } from '../constants';
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate, type Quat } from '../rigid/math';
 import { targetAttitude } from '../rigid/runtime';
 import type { RigidState } from '../rigid/integrator';
-import { ESCAPE, EscapeFlight, MERCURY_CAPSULE, VOSTOK_CAPSULE, capsuleConfiguration, headConfiguration, spacecraftConfiguration, type EscapeMode } from '../rigid/escape';
+import { ESCAPE, EscapeFlight, MERCURY_CAPSULE, VOSTOK_CAPSULE, capsuleConfiguration, headConfiguration, retroDirection, spacecraftConfiguration,
+  type EscapeMode, type EscapeRelease } from '../rigid/escape';
 import { stackLayout } from '../frame';
 
 /** Seconds from the escape to the burning rocket's explosion on its pad (T-10-1: 2–6 s). */
@@ -35,6 +36,16 @@ export class LaunchEscape {
   private rocketLost?: { r: Vec3; t: number };
 
   constructor(readonly sim: Simulation) {}
+
+  /**
+   * C01: the flight is a return that measures its heights on the WGS-84
+   * ellipsoid (Vostok-1, `DescentCapsule.datum`), from the retro sequence to
+   * the sphere at rest: the simulation's altitude and latitude are then
+   * geodetic too.
+   */
+  get geodetic(): boolean {
+    return this.flight?.mode === 'capsule' && this.flight.capsule.datum === 'wgs84';
+  }
 
   /** This flight carries an escape system: a crewed launch of a vehicle that has one. */
   get fitted(): boolean {
@@ -95,16 +106,22 @@ export class LaunchEscape {
    * the water. The same flight as an abort's descent module, for Mercury's
    * capsule, and not an abort.
    *
-   * Or from orbit (C01: Vostok-1), at the retro-fire: the spacecraft turned
-   * with its retro engine, and the sphere's heavy side, along the flight
-   * path, the way the air goes on to hold it.
+   * Or from orbit (C01: Vostok-1), at the TDU-1's pressurising command, the
+   * deorbit's time: the spacecraft turned as the orientation system set it
+   * and its gyros hold it, the engine's nozzle and the sphere's heavy side
+   * ahead, the thrust line `retroDirection` at the launch command `starts[0]`
+   * s later (the local horizontal turns with the orbit, 0.15° in the 2.2 s).
    */
   beginReturn(): void {
     const sim = this.sim, s = sim.state;
     const capsule = sim.satellite.descent === 'vostok' ? VOSTOK_CAPSULE : MERCURY_CAPSULE;
     let attitudeQ;
-    if (capsule.id === 'vostok') attitudeQ = targetAttitude(normalize(s.v), cross(s.r, s.v));
-    else {
+    if (capsule.id === 'vostok') {
+      const rp = capsule.retro!, n = cross(s.r, s.v);
+      const ahead = quatFromAxisAngle(normalize(n), norm(n) / dot(s.r, s.r) * rp.starts[0]);
+      const thrust = retroDirection(quatRotate(ahead, s.r), s.v, (rp.pitch ?? 0) * Math.PI / 180);
+      attitudeQ = targetAttitude(scale(thrust, -1), n);
+    } else {
       if (s.rigid) attitudeQ = s.rigid.attitudeQ;
       else {
         const { east, north, up } = enuFrame(s.r);
@@ -211,8 +228,14 @@ export class LaunchEscape {
     sim.vehicle.fairingAttached = false;
   }
 
-  /** A body the escape leaves behind, as debris. */
-  private release(what: 'head' | 'modules', state: RigidState, t: number): void {
+  /**
+   * A body the escape leaves behind, as debris. Vostok's instrument module,
+   * hatch and seat (C01) are handed over with their own state at the release
+   * (and their mass, `EscapeFlight.onRelease`); they are not flown as bodies
+   * yet, so nothing is kept of them.
+   */
+  private release(what: EscapeRelease, state: RigidState, t: number): void {
+    if (what !== 'head' && what !== 'modules') return;
     const sim = this.sim, flight = this.flight!;
     const config = flight.config;
     const tower = what === 'head' && flight.mode === 'tower';
@@ -237,7 +260,7 @@ export class LaunchEscape {
     const sim = this.sim, s = sim.state, flight = this.flight!;
     flight.step(s.t, dt);
     s.t += dt;
-    for (const e of flight.takeEvents()) sim.event(e.key, e.severity, e.params);
+    for (const e of flight.takeEvents()) sim.event(e.key, e.severity, e.params, e.t);
     this.sync();
     if (flight.landed) {
       s.status = 'landed';

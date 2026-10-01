@@ -28,34 +28,13 @@ import { gmst } from '../orbital';
 import type { V3 } from './ephemeris';
 import { msisDensity, type MsisInput } from './msis';
 import type { Indices } from './activity';
+import { geodetic } from '../geodesy';
 
-/** WGS-84: equatorial radius, m; flattening. */
-const A = 6_378_137, F = 1 / 298.257223563;
-const B = A * (1 - F), E2 = F * (2 - F), EP2 = (A * A - B * B) / (B * B);
+/** The WGS-84 geodetic latitude and height, shared with the return from orbit (src/physics/geodesy.ts). */
+export { geodetic };
 
 /** No air above this height, m. */
 export const TOP_OF_ATMOSPHERE = 2_500_000;
-
-/**
- * Geodetic latitude (rad) and height above the WGS-84 ellipsoid (m) of an
- * Earth-centred position (m): Bowring's formula, two passes (the second from
- * the reduced latitude of the first), good to a small fraction of a
- * millimetre from the ground to 2000 km.
- */
-export function geodetic(x: number, y: number, z: number): { lat: number; h: number } {
-  const p = Math.hypot(x, y);
-  let lat = 0;
-  let th = Math.atan2(z * A, p * B);
-  for (let pass = 0; pass < 2; pass++) {
-    const s = Math.sin(th), c = Math.cos(th);
-    lat = Math.atan2(z + EP2 * B * s * s * s, p - E2 * A * c * c * c);
-    th = Math.atan2((1 - F) * Math.sin(lat), Math.cos(lat));
-  }
-  const sl = Math.sin(lat), cl = Math.cos(lat);
-  const n = A / Math.sqrt(1 - E2 * sl * sl);
-  const h = Math.abs(cl) > 1e-3 ? p / cl - n : Math.abs(z) / Math.abs(sl) - n * (1 - E2);
-  return { lat, h };
-}
 
 /** Height above the WGS-84 ellipsoid, km, of an ECI position, m. */
 export function heightKm(r: V3): number {
