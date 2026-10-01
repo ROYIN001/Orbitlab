@@ -5,7 +5,7 @@
     "groups": "A key names the chunks in dist/assets with that prefix (hash dropped); other chunks is every other *.js and *.css there, together; precache is every file listed in the manifest inside dist/sw.js.",
     "set": {
       "index-*.js": "seeded 2026-09-30 at the measured size 3708.1 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
-      "index-*.css": "seeded 2026-09-30 at the measured size 139.4 kB + 2 %",
+      "index-*.css": "seeded 2026-09-30 at the measured size 139.4 kB + 2 %; raised 2026-10-01 to the measured 144.7 kB + 2 % after the About dialog (#56, 1.6 kB) and the top bar's section switch (a tab per section with its level menu, the phone's table of sections × levels, 2.2 kB after trimming) together passed the old ceiling",
       "flight.worker-*.js": "seeded 2026-09-30 at the measured size 428.6 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
       "tune.worker-*.js": "seeded 2026-09-30 at the measured size 412.9 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
       "monte-carlo.worker-*.js": "seeded 2026-09-30 at the measured size 411.1 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
@@ -20,7 +20,7 @@
     }
   },
   "index-*.js": 4065,
-  "index-*.css": 143,
+  "index-*.css": 148,
   "flight.worker-*.js": 537,
   "tune.worker-*.js": 520,
   "monte-carlo.worker-*.js": 519,
