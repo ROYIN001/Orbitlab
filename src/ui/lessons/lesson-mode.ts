@@ -41,7 +41,7 @@ import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lesson
 import { FlightLessons } from '../../lessons/flight-lessons';
 import { draftValue, submittedAnswers, type AnswerDrafts } from '../../lessons/answer-drafts';
 import { MEASURES } from '../../lessons/measures';
-import { localText, unitText } from '../../lessons/text';
+import { localText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue, type ParsedLessonFile } from '../../lessons/lesson-file';
 import { SCENARIO_LINK_MAX, SCENARIO_PARAM, readScenarioParam, scenarioLink } from '../../lessons/scenario-link';
 import { loadBundledPacks, packLessons, packOf, packPath, type PackItem, type ResolvedPack } from '../../lessons/packs';
@@ -72,7 +72,7 @@ import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
 import { keepUnits } from '../keep-units';
 import { nameForFile } from '../file-name';
-import { decimal, measureText } from './measure-text';
+import { decimal, measureText, unitAfter } from './measure-text';
 import { PanelLocks } from './locks';
 // T01/T02: small, and on the page that is open anyway (a lazy chunk of them split the dictionaries off the main one)
 import { renderAuthor } from './author-view';
@@ -857,9 +857,8 @@ export class LessonMode implements LessonToolsHost {
 
   private criterionBound(c: Criterion): string {
     if (c.kind !== 'measure') return '';
-    const unit = MEASURES[c.measure].unit;
-    // W: in the reader's decimal sign ("35786,0 ± 10 км"), as the design strip writes its bounds
-    const u = unit ? `\u00a0${unitText(unit)}` : '';
+    // W: in the reader's decimal sign ("35786,0 ± 10 км"), as the design strip writes its bounds; an angle's ° with no space ("64,85 … 65,05°")
+    const u = unitAfter(MEASURES[c.measure].unit);
     if (c.target === 'mission') {
       const target = this.missionValue(c);
       return `${target === null ? t('lesson.bound.mission') : decimal(target, MEASURES[c.measure].digits)} ± ${decimal(c.tol ?? 0)}${u}`;

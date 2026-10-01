@@ -23,7 +23,10 @@
  *   decimal sign, as the design strip and the check page do: the apogee
  *   "35786,0 км" and a tolerance "0,000002" in Russian, "35786.0 km" in
  *   English and "35786.0 กม." in Thai, with no grouping and a no-break space
- *   before the unit. A value that is not a number is "—".
+ *   before the unit. A value that is not a number is "—". An angle's degree
+ *   sign follows its number with no space, as the app writes angles
+ *   everywhere else and as ГОСТ 8.417 and the SI brochure write them:
+ *   "97,52°" in Russian, "28.50°" in English and Thai (review of W).
  * - The check page's CSV starts with a UTF-8 byte order mark, once, and is
  *   otherwise the core's text unchanged, so Excel reads a Thai or Russian
  *   student's name as written.
@@ -37,7 +40,7 @@ import { describe, expect, it } from 'vitest';
 import { setLang, t, tCount } from '../src/i18n';
 import { keepUnits } from '../src/ui/build/satellite-text';
 import { keepUnits as stripKeepUnits } from '../src/ui/keep-units';
-import { decimal, measureText } from '../src/ui/lessons/measure-text';
+import { decimal, measureText, unitAfter } from '../src/ui/lessons/measure-text';
 import { spreadsheetCsv } from '../src/ui/download';
 import { nameForFile } from '../src/ui/file-name';
 import PHYSICS_PACK from '../public/lessons/packs/ipst-physics.orbitlab-lesson.json?raw';
@@ -111,6 +114,13 @@ describe('a flight lesson\'s strip writes numbers in the reader\'s decimal sign 
     expect(withLang('ru', () => decimal(10))).toBe('10');
     expect(withLang('en', () => decimal(24361.73591902372, 1))).toBe('24361.7');
     expect(withLang('ru', () => measureText('orbit.apogee', Number.NaN))).toBe('—');
+  });
+  it('writes an angle\'s degree sign straight after its number (review of W)', () => {
+    expect(withLang('ru', () => measureText('orbit.inclination', 97.5234))).toBe('97,52°');
+    expect(withLang('en', () => measureText('orbit.inclination', 28.5))).toBe('28.50°');
+    expect(withLang('th', () => measureText('orbit.inclination', 28.5))).toBe('28.50°');
+    expect(withLang('ru', () => unitAfter('km'))).toBe(`${NBSP}км`);
+    expect(unitAfter('')).toBe('');
   });
 });
 

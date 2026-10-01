@@ -19,10 +19,17 @@ export const decimal = (v: number, digits?: number): string => v.toLocaleString(
   ? { maximumFractionDigits: 10, useGrouping: false }
   : { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false });
 
+/**
+ * What follows a number for its unit: the degree sign right after it, as the
+ * app writes an angle everywhere else ("97.52°"; ГОСТ 8.417 and the SI
+ * brochure put no space before °), any other unit after a no-break space
+ * ("35786,0 км"), and nothing for a measure with no unit.
+ */
+export const unitAfter = (unit: string): string => (!unit ? '' : unit === '°' ? '°' : ` ${unitText(unit)}`);
+
 /** A flight measure's value with its unit, to the measure's own decimals (as `formatMeasure` gives it, in the reader's decimal sign). */
 export function measureText(measure: MeasureId, value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
   const def = MEASURES[measure];
-  const text = decimal(value, def.digits);
-  return def.unit ? `${text} ${unitText(def.unit)}` : text;
+  return `${decimal(value, def.digits)}${unitAfter(def.unit)}`;
 }

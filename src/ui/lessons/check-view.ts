@@ -67,7 +67,9 @@ function valueText(v: number | null | undefined, unit: string, tol: number | nul
   if (v === null || v === undefined || !Number.isFinite(v)) return '—';
   const digits = tol && tol > 0 ? Math.min(9, Math.max(0, Math.ceil(-Math.log10(tol)) + 1)) : 3;
   const text = v.toLocaleString(getLang(), { maximumFractionDigits: digits, useGrouping: false });
-  // one unit with its number: a no-break space, and no line break after a slash ("ม./วินาที" broke there on a phone)
+  // one unit with its number: a no-break space, and no line break after a slash ("ม./วินาที" broke there on a phone);
+  // an angle's ° straight after it, as the app writes angles ("97,52°", W)
+  if (unit === '°') return `${text}°`;
   return unit ? `${text}\u00a0${unitText(unit).replace(/\//g, '/\u2060')}` : text;
 }
 
