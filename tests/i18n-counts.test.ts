@@ -97,7 +97,8 @@ describe('a count and its word (I2, item 5)', () => {
     const one = (lang: 'en' | 'ru' | 'th'): string[] => withLang(lang, () => [
       t('build.req.life.lasts', { years: tCount('build.sat.n.years', 1) }),
       t('build.req.f.maxDaysHint', { n: tCount('build.req.n.days', 1) }),
-      t('build.req.cost', { rows: tCount('build.req.n.orbits', 1), min: '1', max: tCount('build.req.n.days', 1), table: '1' }),
+      // ADDED BY THE REVIEW: one cycle length is said as one (it read "repeat cycles of 1 to 1 day")
+      t('build.req.costOne', { rows: tCount('build.req.n.orbits', 1), days: tCount('build.req.n.days', 1), table: '1' }),
       t('build.req.table.summary', { rows: tCount('build.req.n.orbits', 1), meet: '1', date: '2026-10-01', level: '' }),
       t('build.req.chart.downFound', { years: tCount('build.sat.n.years', 1), h: '500 km' }),
       t('lesson.check.summary', { total: tCount('lesson.check.n.results', 1), match: 1, borderline: 0, differs: 0, cannot: 0 }),
@@ -107,7 +108,7 @@ describe('a count and its word (I2, item 5)', () => {
     expect(english).toEqual([
       'lasts 1 year',
       'Empty: the longest wait asked, rounded up (1 day).',
-      '1 orbit to try (repeat cycles of 1 to 1 day). The table takes about 1 s on a laptop.',
+      '1 orbit to try (a repeat cycle of 1 day). The table takes about 1 s on a laptop.',
       '1 orbit; meeting every requirement: 1. Worked out for 2026-10-01, solar activity: .',
       'It comes down within 1 year from below about 500 km.',
       '1 result checked — match: 1, borderline: 0, differ: 0, cannot be flown again: 0.',
@@ -116,7 +117,7 @@ describe('a count and its word (I2, item 5)', () => {
     const russian = one('ru');
     expect(russian[0]).toBe('продержится 1 год');
     expect(russian[1]).toContain('(1 день)');
-    expect(russian[2]).toContain('Для перебора: 1 орбита (циклы повторения 1–1 день)');
+    expect(russian[2]).toContain('Для перебора: 1 орбита (цикл повторения 1 день)');
     expect(russian[3]).toContain('Всего 1 орбита,');
     expect(russian[4]).toContain('не позже чем через 1 год');
     expect(russian[5]).toContain('Проверено: 1 результат.');

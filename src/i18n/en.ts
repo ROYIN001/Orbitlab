@@ -2959,6 +2959,7 @@ export const en: Record<string, string> = {
   'build.req.n.orbits': 'orbit|orbits',
   'lesson.check.n.results': 'result|results',
   'lesson.check.n.steps': 'step|steps',
+  'build.req.costOne': '{rows} to try (a repeat cycle of {days}). The table takes about {table} s on a laptop.',
   // --- end of I2 ---
   'watch.beat.countdown': 'Countdown',
   'watch.beat.liftoff': 'Liftoff',

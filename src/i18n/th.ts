@@ -2939,6 +2939,7 @@ export const th: Record<string, string> = {
   'build.req.n.orbits': 'วง',
   'lesson.check.n.results': 'ผล',
   'lesson.check.n.steps': 'ขั้น',
+  'build.req.costOne': 'มีวงโคจรให้ลอง {rows} (รอบการซ้ำ {days}) ตารางใช้เวลาราว {table} วินาทีบนแล็ปท็อป',
   // --- end of I2 ---
   'watch.beat.countdown': 'นับถอยหลัง',
   'watch.beat.liftoff': 'ทะยานขึ้น',

@@ -2938,6 +2938,7 @@ export const ru: Record<string, string> = {
   'build.req.n.orbits': 'орбита|орбиты|орбит|орбиты',
   'lesson.check.n.results': 'результат|результата|результатов|результата',
   'lesson.check.n.steps': 'шаг|шага|шагов|шага',
+  'build.req.costOne': 'Для перебора: {rows} (цикл повторения {days}). Таблица займёт около {table} с на ноутбуке.',
   // --- end of I2 ---
   'watch.beat.countdown': 'Обратный отсчёт',
   'watch.beat.liftoff': 'Старт',

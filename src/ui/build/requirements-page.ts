@@ -445,9 +445,11 @@ export class RequirementsPage {
         parts.push(none);
       }
       else {
-        parts.push(el('p', 'bx-note', t('build.req.cost', {
-          rows: tCount('build.req.n.orbits', cost.rows), min: num(cost.minDays), max: tCount('build.req.n.days', cost.maxDays), table: num(Math.max(1, Math.round(cost.tableSeconds))),
-        })));
+        // one cycle length ("a revisit of 1 day" asks only the 1-day cycles) is said as one, not "of 1 to 1 day"
+        const table = num(Math.max(1, Math.round(cost.tableSeconds)));
+        parts.push(el('p', 'bx-note', cost.minDays === cost.maxDays
+          ? t('build.req.costOne', { rows: tCount('build.req.n.orbits', cost.rows), days: tCount('build.req.n.days', cost.maxDays), table })
+          : t('build.req.cost', { rows: tCount('build.req.n.orbits', cost.rows), min: num(cost.minDays), max: tCount('build.req.n.days', cost.maxDays), table })));
         parts.push(el('p', 'bx-note', keptLife ? t('build.req.costKept')
           : t('build.req.costLife', { life: num(Math.max(1, Math.round(cost.lifetimeSeconds))) })));
         parts.push(el('p', 'bx-note small', t('build.req.costTablet')));
