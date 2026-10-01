@@ -62,8 +62,8 @@ describe('historical vehicles', () => {
     const e = vostok.stages[1];
     expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 365)).toBeLessThan(10);
     // the S-IC: five F-1s from ignition 2.5 s before liftoff to the centre engine's
-    // shutdown at T+135.2 s, four to the LOX running out at T+161.63 s (AS-506); the
-    // load is the FER's, not the clock's, so this is a check (measured 0.4 s)
+    // shutdown at T+135.2 s, four to the LOX running out at T+161.63 s (AS-506): the
+    // FER's flow and load are one consumption record, so this holds by construction
     const sic = vehicleById('saturnv506').stages[0];
     const flow = sic.engine.thrustVac / (G0 * sic.engine.ispVac);
     expect(Math.abs(sic.propellantMass / flow - (137.7 * 5 + (161.63 - 135.2) * 4)) / 5).toBeLessThan(2);

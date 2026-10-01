@@ -11,7 +11,7 @@
  *
  * FAIRING JETTISON. Eight vehicles carry a `fairing.sepTime`, the operator's own
  * published callout, because their operators publish one and fly it: Soyuz-2.1a
- * and 2.1b 157 s, Ariane 64 200 s, Vega-C 220 s, Long March 2D 220 s, Long
+ * 153.3 s and 2.1b 157 s, Ariane 64 200 s, Vega-C 220 s, Long March 2D 220 s, Long
  * March 3B/E 215 s, H-IIA 202 250 s, Vostok-K 156 s. The rest stay on the physical
  * free-molecular-heating placard, and the altitude floor applies to both, so a
  * trajectory still deep in the atmosphere at its published time does not shed
@@ -896,9 +896,12 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
       // outboard tail-off's 3,634 kg (Table 20-9) and the 27.9 t the model burns on
       // the pad from its ignition 2.5 s before liftoff (measured; the real build-up
       // took 39.3 t before the release); the centre engine is shut down at
-      // T+135.20 s to hold the acceleration under 4 g. The LOX running out is a
-      // prediction: T+161.40 s, flown 161.63 s. It was 152,250 kg dry and
-      // 2,053,900 kg held to the clock.
+      // T+135.20 s to hold the acceleration under 4 g. The LOX runs out at
+      // T+161.40 s (flown 161.63) by construction, the flow and the load being
+      // the same consumption; the state there is the check (65.8 km and
+      // 2,770 m/s against 66.1 km and 2,764 m/s). The 27.9 t pad term follows the
+      // fleet's start at T−2.5 s (simulation.ts), and moves if that does. It was
+      // 152,250 kg dry and 2,053,900 kg held to the clock.
       { id: 'sic506', name: 'S-IC', dryMass: 164995, propellantMass: 2102829, engine: F1_AS506,
         diameter: 10.06, length: 42.06, fins: true, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 5.8,
         engineEvents: [{ t: 137.7, shutdown: [4] }] },

@@ -3153,8 +3153,8 @@ the S-IC's is what its F-1s expelled from the hold-down release to the LOX runni
 tail-off and the 27.9 t the model burns on the pad from its ignition (T−2.5 s here; the real build-up
 from T−8.9 s took 39.3 t), with what was left at separation, the gaseous oxygen and the small ring
 carried as dry mass, so the stack weighs 2,898.9 t at liftoff (2,899.0 t at first motion) and 825.0 t
-at the S-IC's cut-off (827.3 t flown), and the LOX running out is a prediction (T+161.40 s, flown
-161.63 s). The S-II's is the FER's best estimate at the start command less what was left at the
+at the S-IC's cut-off (827.3 t flown). The LOX runs out at T+161.40 s (flown 161.63) by
+construction, since the flow and the load are the same consumption; the state there is the check. The S-II's is the FER's best estimate at the start command less what was left at the
 cut-off signal (Table 6-2), started at T+165.72 s, where the build-up's propellant at full flow puts
 the flown mainstage. Before, the S-IC carried 2,053,900 kg and the S-II 442,530 kg held to the clock,
 hiding an F-1 flow 2.5 % low; the stack lifted off 61 t light. The ullage-motor propellant rides with
@@ -3191,7 +3191,8 @@ Model − flight, s:
 
 Re-measured 2026-10-01 on the FER's loads and the published tilt programme; on the clock-held loads
 and the kick the S-IVB cut off 6.7 s early and 4.9 s late, and the six-DOF orbit was 174 × 183 km. The
-S-IC's cut-off is now a prediction, 0.2 s early. The S-IC hands over at 65.8 km and 2,770 m/s
+S-IC's and the S-II's cut-off times agree by construction (their loads and flows are one
+consumption record each); the states and the S-IVB's cut-off are the checks. The S-IC hands over at 65.8 km and 2,770 m/s
 point-mass, 66.5 km and 2,759 m/s six-DOF (66.1 km and 2,764 m/s flown, space-fixed), and the S-II
 at 183.8 and 184.1 km, 6,934 and 6,925 m/s (187.3 km and 6,916 m/s): the S-II's own closed loop
 flies it about 3.5 km under the flown IGM. Ten seconds after the cut-off the

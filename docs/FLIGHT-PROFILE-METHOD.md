@@ -173,8 +173,9 @@ The tiers depend on what each vehicle has published.
 
 - **Tier A (a fit is allowed).** These have state points along the ascent (heights or speeds at
   two or more events per fitted phase) and three or more independent checks: Falcon 9 (its kick,
-  VALIDATION.md §2), Soyuz-2.1a (done) and Saturn V, whose published tilt programme is an input,
-  not a fit.
+  VALIDATION.md §2), Soyuz-2.1a (done) and Saturn V (done 2026-10-01: its published tilt programme
+  is an input, so nothing was fitted, and its S-IC and S-II loads, held to the clock, took the flight
+  evaluation report's).
   - PSLV-XL, H3 and Ariane 64 need a second flight's data first.
 - **Tier B (times only).** These get the propulsion and event steps (1–3), with no trajectory
   fit: Atlas V, H-IIA, Vega-C, Proton-M, Falcon Heavy, Angara-A5 and Electron.
@@ -182,6 +183,14 @@ The tiers depend on what each vehicle has published.
   Long March 2D, 3B and 5, Vulcan and Starship.
   - Soyuz-2.1b is a transfer case: it shares Soyuz-2.1a's first two stages and flies their
     programme. Arianespace's 2.1b profile (CSG Fig. 2.3.1c) is a check, not a target.
+
+The first audit of steps 1–3 across eight vehicles (2026-10-01: Saturn V, Vostok-K, Falcon 9,
+Atlas V 551, Proton-M, Ariane 64, Electron, H-IIA 202) found the same faults Soyuz had:
+loads and thrusts held to a clock (Saturn V's S-IC and S-II, a 2.5 % low F-1 flow),
+source strings missing where a manufacturer's user's guide gives the figure, cut-offs modelled
+as depletion where the vehicle commands them, and one rocket held in two inconsistent data sets
+(Vostok-K). Its reports, and the critic's verdict on each proposal, are in
+[history/audit-2026-10-01-flight-profile.md](history/audit-2026-10-01-flight-profile.md).
 
 Once three or more vehicles have been through the method, a fleet rule cross-validated by
 leaving one vehicle out can give an error bar to the vehicles with no profile of their own.
