@@ -33,7 +33,7 @@
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
-import { route, type AppLevel, type AppRoute } from '../app-mode';
+import { route, type AppLevel, type AppPage, type AppRoute } from '../app-mode';
 import { stageName } from '../names';
 import { BUILD_TOUR, tourFigures, type TourFigure, type TourStat } from '../../design/build-tour';
 import type { DrawnPart } from '../../design/exploded';
@@ -47,8 +47,15 @@ import { figuresView, mass } from './figures';
 import { partCardView } from './part-card';
 import { ExploreLevel } from './explore-level';
 import { EngineerLevel } from './engineer-level';
+import { SatelliteWorkspace, type LessonDesk } from './satellite-workspace';
+import type { SatelliteDesign } from '../../design/satellite-spec';
+import type { EcssLevel } from '../../orbit/satellite-air';
+import { SatelliteLevel } from './satellite-level';
+import { SatelliteBench } from './satellite-bench';
+import { RequirementsPage } from './requirements-page';
 import type { MissionDocument } from '../../config/mission-file';
 import type { OrbitHandoff } from '../../orbit/handoff';
+import type { LaunchMissionNow } from './satellite-fly';
 import './build.css';
 
 export interface BuildScreenHost {
@@ -61,10 +68,25 @@ export interface BuildScreenHost {
    * D06 (Phase 4 map §2.6 a): hand a designed satellite to the Orbit section
    * in its own orbit, with no launch, as the S03 hand-off
    * `handoffFromDesign` makes (src/design/satellite-handoff.ts), and open it
-   * at `level`. Nothing here calls it yet: the satellite levels will.
+   * at `level`. The Explore level's satellite designer calls it ("Send to
+   * Orbit").
    */
   toOrbit?(h: OrbitHandoff, level: AppLevel): void;
+  /**
+   * D06 (map §2.6 c, the integration): the Launch section's mission now —
+   * its vehicle (a custom one inline), site and launch time — which the
+   * satellite designer's "Fly it" launches on unless the student picks
+   * another vehicle. It hands the design over through `flyDesign`.
+   */
+  launchMission?(): LaunchMissionNow;
 }
+
+/** What the Explore and Engineer levels build: a rocket (Phase 3) or a satellite (D06). */
+export type BuildCraft = 'rocket' | 'satellite';
+const CRAFTS: readonly BuildCraft[] = ['rocket', 'satellite'];
+const CRAFT_KEY: Record<BuildCraft, string> = { rocket: 'build.sat.switch.rocket', satellite: 'build.sat.switch.satellite' };
+/** Where this browser keeps which one was on screen: a convenience only (a blocked storage starts on the rocket). */
+const CRAFT_STORE = 'orbitlab.build.craft.v1';
 
 type BuildView = 'exploded' | 'assembled';
 const VIEWS: readonly BuildView[] = ['exploded', 'assembled'];
@@ -137,6 +159,19 @@ export class BuildScreen {
   /** the Engineer level (D03–D05), made the first time it is shown */
   private engineer: EngineerLevel | null = null;
   private readonly engineerRoot = el('div', 'bs-engineer');
+  /** D06: rocket or satellite at the Explore and Engineer levels, the switch over each, and the satellite's two levels over one design */
+  private craft: BuildCraft = 'rocket';
+  private readonly exploreBar = el('div', 'bs-craft');
+  private readonly engineerBar = el('div', 'bs-craft');
+  private satWorkspace: SatelliteWorkspace | null = null;
+  /** T01: who is told when the design on the desk changes (the lesson strip) */
+  private readonly designListeners: (() => void)[] = [];
+  private satLevel: SatelliteLevel | null = null;
+  private satBench: SatelliteBench | null = null;
+  /** D07: the page of a level with an address of its own (the requirements page), and the row last opened from it on the bench */
+  private page: AppPage | null = null;
+  private reqPage: RequirementsPage | null = null;
+  private reqOrigin: { designId: string; cycle: string; altitude: number } | null = null;
 
   constructor(private readonly root: HTMLElement, private readonly host: BuildScreenHost) {
     root.classList.add('build-screen');
@@ -150,6 +185,9 @@ export class BuildScreen {
     this.tour.setAttribute('aria-live', 'polite');
     this.grid.append(this.intro, this.stage, this.card, this.tour, this.figures);
     root.replaceChildren(this.grid, this.exploreRoot, this.engineerRoot);
+    this.exploreRoot.append(this.exploreBar);
+    this.engineerRoot.append(this.engineerBar);
+    try { if (localStorage.getItem(CRAFT_STORE) === 'satellite') this.craft = 'satellite'; } catch { /* storage blocked: the rocket */ }
     // The launch scene's camera takes every press on the viewport and captures
     // the pointer to drag with it (src/render/cameras.ts), which would steal the
     // click from a part of the drawing. The scene is covered here; keep the press.
@@ -159,10 +197,11 @@ export class BuildScreen {
     this.ro?.observe(this.draw);
   }
 
-  /** Show the section at a level. */
-  show(level: AppLevel): void {
-    const entering = !this.visible || level !== this.level;
+  /** Show the section at a level, or at a page of it (D07: `requirements`, at the Engineer level). */
+  show(level: AppLevel, page?: AppPage): void {
+    const entering = !this.visible || level !== this.level || (page ?? null) !== this.page;
     this.level = level;
+    this.page = page ?? null;
     this.visible = true;
     if (entering) {
       this.render();
@@ -175,6 +214,9 @@ export class BuildScreen {
     this.visible = false;
     this.explore?.hide();
     this.engineer?.hide();
+    this.satLevel?.hide();
+    this.satBench?.hide();
+    this.reqPage?.hide();
     if (this.anim) cancelAnimationFrame(this.anim);
     this.anim = 0;
     this.explode = this.view === 'exploded' ? 1 : 0;
@@ -282,11 +324,186 @@ export class BuildScreen {
     this.grid.hidden = !watch;
     this.exploreRoot.hidden = !explore;
     this.engineerRoot.hidden = watch || explore;
-    if (!explore) this.explore?.hide();
-    if (watch || explore) this.engineer?.hide();
+    const rocket = this.craft === 'rocket';
+    if (!explore || !rocket) this.explore?.hide();
+    if (watch || explore || !rocket) this.engineer?.hide();
+    if (!explore || rocket) this.satLevel?.hide();
+    if (watch || explore || rocket) this.satBench?.hide();
+    if (this.explore) this.explore.root.hidden = !rocket;
+    if (this.engineer) this.engineer.root.hidden = !rocket;
+    if (this.satLevel) this.satLevel.root.hidden = rocket;
+    if (this.satBench) this.satBench.root.hidden = rocket;
+    // D07: the requirements page takes the Engineer level's place, the switch and the benches with it
+    const requirements = !watch && !explore && this.page === 'requirements';
+    this.engineerBar.hidden = requirements;
+    if (!requirements) {
+      this.reqPage?.hide();
+      if (this.reqPage) this.reqPage.root.hidden = true;
+    }
     if (watch) this.renderWatch();
-    else if (explore) this.showExplore();
-    else this.showEngineer();
+    else if (requirements) this.showRequirements();
+    else {
+      this.renderCraftBar(explore ? this.exploreBar : this.engineerBar);
+      if (explore) {
+        if (rocket) this.showExplore(); else this.showSatellite();
+      } else if (rocket) this.showEngineer(); else this.showBench();
+    }
+  }
+
+  // ─── rocket or satellite (D06) ────────────────────────────────────────────
+
+  /** The switch over the Explore and Engineer levels: build a rocket or a satellite. */
+  private renderCraftBar(bar: HTMLElement): void {
+    bar.setAttribute('role', 'group');
+    bar.setAttribute('aria-label', t('build.sat.switch'));
+    bar.replaceChildren(el('span', 'bs-craft-label', t('build.sat.switch')), ...CRAFTS.map((c) => {
+      const b = button('bx-mode bs-craft-btn', t(CRAFT_KEY[c]), () => this.setCraft(c));
+      b.dataset.k = `craft:${c}`;
+      b.setAttribute('aria-pressed', String(c === this.craft));
+      return b;
+    }));
+  }
+
+  private setCraft(c: BuildCraft): void {
+    if (c === this.craft) return;
+    this.rememberCraft(c);
+    if (this.visible) {
+      this.render();
+      const bar = this.level === 'explore' ? this.exploreBar : this.engineerBar;
+      bar.querySelector<HTMLElement>(`[data-k="craft:${c}"]`)?.focus();
+    }
+  }
+
+  /** The Launch section's mission now, for "Fly it"; without a host that gives one, Falcon 9 from the Cape now. */
+  private launchMission(): LaunchMissionNow {
+    return this.host.launchMission?.() ?? { vehicleId: 'falcon9', siteId: 'cape', launchTime: this.host.launchTime?.() ?? new Date() };
+  }
+
+  private rememberCraft(c: BuildCraft): void {
+    this.craft = c;
+    try { localStorage.setItem(CRAFT_STORE, c); } catch { /* storage blocked: kept for this visit */ }
+  }
+
+  /**
+   * D07: the requirements page (`#/build/engineer/requirements`), made the
+   * first time it is shown. It is the satellite side's, so leaving it for
+   * the bench leaves the Engineer level on the satellite; a row it opens is
+   * put on the shared workspace and shown on the bench.
+   */
+  private showRequirements(): void {
+    this.engineer?.hide();
+    if (this.engineer) this.engineer.root.hidden = true;
+    this.satBench?.hide();
+    if (this.satBench) this.satBench.root.hidden = true;
+    if (!this.reqPage) {
+      this.reqPage = new RequirementsPage(this.workspace(), {
+        toBench: () => { this.rememberCraft('satellite'); this.host.go(route('build', 'engineer')); },
+        opened: (origin) => { this.reqOrigin = origin; this.rememberCraft('satellite'); this.host.go(route('build', 'engineer')); },
+      });
+      this.engineerRoot.append(this.reqPage.root);
+    }
+    this.reqPage.root.hidden = false;
+    this.reqPage.show();
+    this.root.setAttribute('aria-labelledby', this.reqPage.titleId);
+  }
+
+  /** The one satellite both levels work on, made the first time either is wanted. */
+  private workspace(): SatelliteWorkspace {
+    if (!this.satWorkspace) {
+      const ws = new SatelliteWorkspace();
+      for (const fn of this.designListeners) ws.subscribe((what) => { if (what === 'design') fn(); });
+      this.satWorkspace = ws;
+    }
+    return this.satWorkspace;
+  }
+
+  // ─── a design lesson (T01) ────────────────────────────────────────────────
+
+  /**
+   * T01: open a design lesson's desk — its start design, date, level and
+   * locks on the shared satellite workspace (the student's own design is put
+   * aside until `closeDesignLesson`) — and show the satellite designer at the
+   * lesson's level (Explore) or its bench (Engineer).
+   */
+  openDesignLesson(desk: LessonDesk, level: 'explore' | 'engineer'): void {
+    this.rememberCraft('satellite');
+    this.workspace().enterLesson(desk);
+    this.showDesignLesson(level);
+  }
+
+  /** T01: back to the lesson's design where the student left it, at its level. */
+  showDesignLesson(level: 'explore' | 'engineer'): void {
+    this.rememberCraft('satellite');
+    // the route closes the lessons page over it; the same route shown already is drawn again, with the satellite on it
+    const shown = this.visible && this.level === level && !this.page;
+    this.host.go(route('build', level));
+    if (shown) this.render();
+  }
+
+  /** T01: close the lesson's desk; the student's own design comes back. */
+  closeDesignLesson(): void {
+    this.satWorkspace?.leaveLesson();
+  }
+
+  /** T01: the design on the lesson's desk now; null when no lesson's desk is open. */
+  lessonDesign(): SatelliteDesign | null {
+    return this.satWorkspace?.lessonDesk ? this.satWorkspace.design : null;
+  }
+
+  /** T01: be told when the design on the desk changes (the lesson strip marks its check out of date); from when the desk is first made. */
+  onDesignChange(fn: () => void): void {
+    this.designListeners.push(fn);
+    this.satWorkspace?.subscribe((what) => { if (what === 'design') fn(); });
+  }
+
+  /** T01: the design on the satellite workspace, its date and its level — what the scenario writer makes a design lesson from. */
+  designDesk(): { design: SatelliteDesign; date: string; level: EcssLevel } {
+    const ws = this.workspace();
+    return { design: structuredClone(ws.design), date: ws.date, level: ws.activityLevel };
+  }
+
+  /** The Explore level's satellite designer, made the first time it is wanted (shown, or handed a design). */
+  private ensureSatellite(): SatelliteLevel {
+    if (!this.satLevel) {
+      this.satLevel = new SatelliteLevel(this.workspace(), {
+        toOrbit: (h) => this.host.toOrbit?.(h, 'explore'),
+        launchMission: () => this.launchMission(),
+        fly: (doc) => this.host.flyDesign?.(doc, 'explore') ?? false,
+        // a rocket imported in the satellite designer opens in the rocket designer
+        openRocket: (record, message) => {
+          this.setCraft('rocket');
+          this.ensureExplore().openSaved(record, message);
+          if (this.level !== 'explore') this.host.go(route('build', 'explore'));
+        },
+      });
+      this.satLevel.root.hidden = this.craft !== 'satellite';
+      this.exploreRoot.append(this.satLevel.root);
+    }
+    return this.satLevel;
+  }
+
+  private showSatellite(): void {
+    const level = this.ensureSatellite();
+    level.show();
+    this.root.setAttribute('aria-labelledby', level.titleId);
+  }
+
+  /** The Engineer level's satellite bench (six tabs), made the first time it is shown. */
+  private showBench(): void {
+    if (!this.satBench) {
+      this.satBench = new SatelliteBench(this.workspace(), {
+        toExplore: () => { this.setCraft('satellite'); this.host.go(route('build', 'explore')); },
+        launchMission: () => this.launchMission(),
+        fly: (doc) => this.host.flyDesign?.(doc, 'engineer') ?? false,
+        // D07: "Start from requirements", and where a design opened from a row came from
+        toRequirements: () => this.host.go(route('build', 'engineer', 'requirements')),
+        origin: (designId) => (this.reqOrigin?.designId === designId ? this.reqOrigin : null),
+      });
+      this.engineerRoot.append(this.satBench.root);
+    }
+    this.satBench.root.hidden = false;
+    this.satBench.show();
+    this.root.setAttribute('aria-labelledby', this.satBench.titleId);
   }
 
   /** The Engineer level: the test stand and the wind tunnel (src/ui/build/engineer-level.ts). */
@@ -305,6 +522,7 @@ export class BuildScreen {
       });
       this.engineerRoot.append(this.engineer.root);
     }
+    this.engineer.root.hidden = false;
     this.engineer.show();
     this.root.setAttribute('aria-labelledby', this.engineer.titleId);
   }
@@ -315,7 +533,13 @@ export class BuildScreen {
       this.explore = new ExploreLevel({
         launchTime: () => this.host.launchTime?.() ?? new Date(),
         fly: (doc) => this.host.flyDesign?.(doc, 'explore') ?? false,
+        // D06: a satellite file imported in the rocket designer opens in the satellite designer
+        openSatellite: (record, message) => {
+          this.setCraft('satellite');
+          this.ensureSatellite().open(record, message);
+        },
       });
+      this.explore.root.hidden = this.craft !== 'rocket';
       this.exploreRoot.append(this.explore.root);
     }
     return this.explore;

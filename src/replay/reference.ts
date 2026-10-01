@@ -66,7 +66,8 @@ export function referenceFromFlight(o: {
   return {
     label: o.label, mission: JSON.parse(JSON.stringify(o.mission)) as MissionDocument, launchJd: o.launchJd,
     telemetry,
-    events: o.events.map((e) => ({ ...e, ...(e.params ? { params: { ...e.params } } : {}) })),
+    // without the state each event carries (`SimEvent.state`, for a lesson's grade): a reference compares times
+    events: o.events.map(({ state: _state, ...e }) => ({ ...e, ...(e.params ? { params: { ...e.params } } : {}) })),
     path: {
       t: points.map((p) => round(p.t, 3)),
       x: points.map((p) => Math.round(p.r.x)), y: points.map((p) => Math.round(p.r.y)), z: points.map((p) => Math.round(p.r.z)),

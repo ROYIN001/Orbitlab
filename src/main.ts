@@ -72,7 +72,7 @@ import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, 
 import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
 import { add, normalize, cross, dot, norm, scale, addScaled, sub, v3, type Vec3 } from './physics/vec3';
 import { missionVehicle } from './data/vehicles';
-import { satelliteById } from './data/satellites';
+import { missionSatellite } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
@@ -500,6 +500,11 @@ class App {
         this.go(route('launch', level));
         return true;
       },
+      // D06 (the integration): "Fly it" on the Launch section's own vehicle, from its site, after its launch time
+      launchMission: () => {
+        const m = this.panel.missionState();
+        return { vehicleId: m.vehicleId, ...(m.vehicleSpec ? { vehicleSpec: m.vehicleSpec } : {}), siteId: m.siteId, launchTime: m.launchTime };
+      },
       // D06: a designed satellite in its own orbit, with no launch, handed on as "Continue in Orbit" hands a flight's
       toOrbit: (h, level) => {
         this.handoff = h;
@@ -578,9 +583,19 @@ class App {
       back: () => this.go(this.route),
       loadMission: (state) => { this.goLive(); this.playing = false; this.workspace.adopt(); this.panel.restoreMission(state); },
       sim: () => this.sim,
+      clock: () => this.recorder.clock,
       panelRoot: document.getElementById('setup')!,
       renderPanel: () => this.panel.render(),
+      // T01: the authoring tab writes a scenario on the mission the panel holds
+      mission: () => this.panel.missionState(),
+      // T01: a design lesson works on the Build section's satellite desk, the student's own design put aside meanwhile
+      openDesign: (desk, level) => this.buildScreen.openDesignLesson(desk, level),
+      showDesign: (level) => this.buildScreen.showDesignLesson(level),
+      closeDesign: () => this.buildScreen.closeDesignLesson(),
+      designNow: () => this.buildScreen.lessonDesign(),
+      designDesk: () => this.buildScreen.designDesk(),
     });
+    this.buildScreen.onDesignChange(() => this.lessons.designChanged());
     this.lessons.openFromHash(startHash);
   }
 
@@ -677,7 +692,7 @@ class App {
     const orbit = next.section === 'orbit';
     const build = next.section === 'build';
     document.getElementById('build-screen')!.hidden = !build;
-    if (build) this.buildScreen.show(next.mode as AppLevel);
+    if (build) this.buildScreen.show(next.mode as AppLevel, next.page); // D07: a page of the level (#/build/engineer/requirements)
     else this.buildScreen.hide();
     document.getElementById('orbit-playground')!.hidden = !orbit;
     if (orbit) this.playground.show(next.mode as AppLevel);
@@ -813,7 +828,7 @@ class App {
     this.started = true;
     requestAnimationFrame((now) => this.frame(now));
     registerServiceWorker();
-    this.lessons.openFromLink(); // E03: ?lesson=<id>
+    this.lessons.openFromLink(); // E03: ?lesson=<id>; T01: ?scenario=z…
   }
 
   /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
@@ -1196,7 +1211,7 @@ class App {
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
     this.narration.setMission(missionVehicle(cfg).name,
-      this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(satelliteById(cfg.satelliteId)));
+      this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(missionSatellite(cfg)));
   }
 
   setCamera(mode: CameraMode): void {
@@ -1288,11 +1303,14 @@ class App {
       if (next !== null) this.seek(next); else this.goLive();
       return;
     }
-    const s = this.sim.state;
-    if (s.status === 'coast' && s.nextBurnTime > s.t) this.fastForwardTo = s.nextBurnTime - 20;
-    else if (s.status === 'orbit' && isFinite(s.elements.period)) this.fastForwardTo = s.t + s.elements.period;
-    else if (s.status === 'prelaunch') this.fastForwardTo = 0;
-    else this.fastForwardTo = s.t + 60;
+    // From the frame on screen, not the simulation: a point-mass simulation runs up to a step
+    // ahead of it (T02), 60 s in a high coast, and there it had already started the burn, so
+    // Skip jumped a minute into the burn instead of to 20 s before it.
+    const f = this.recorder.recordNow();
+    if (f.status === 'coast' && f.nextBurnTime > f.t) this.fastForwardTo = f.nextBurnTime - 20;
+    else if (f.status === 'orbit' && isFinite(f.elements.period)) this.fastForwardTo = f.t + f.elements.period;
+    else if (f.status === 'prelaunch') this.fastForwardTo = 0;
+    else this.fastForwardTo = f.t + 60;
     if (!this.playing) this.togglePlay();
   }
 
@@ -1553,7 +1571,7 @@ class App {
     // The live flight runs whether or not the user is watching the head.
     if (sim && session && this.playing) {
       const target = this.fastForwardTo;
-      if (target !== null && target > sim.state.t + 1e-3 && !sim.isFailed()) {
+      if (target !== null && target > this.recorder.clock + 1e-3 && !sim.isFailed()) {
         // In the worker the chunks run on their own; on the main thread
         // `tick` spends up to 30 ms of this frame on them.
         session.fastForward(target);
@@ -1642,7 +1660,7 @@ class App {
       // Explore: a card a moment after the live flight's outcome; a lesson grades in its own strip
       const cfg = this.panel.state;
       this.debrief.update(this.flightNo, this.simView.sim, this.player.live, this.mode === 'explore' && !document.body.dataset.lesson,
-        `${missionVehicle(cfg).name} · ${satelliteName(satelliteById(cfg.satelliteId))}`, performance.now());
+        `${missionVehicle(cfg).name} · ${satelliteName(missionSatellite(cfg))}`, performance.now());
       this.lessons.update(); // E03
       // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);

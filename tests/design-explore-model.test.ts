@@ -197,7 +197,7 @@ describe('state → vehicle → saved → opened → vehicle', () => {
       const spec = built('base' in d.edit ? remixResult(d as Draft<RemixEdit>) : partsResult(d as Draft<PartsEdit>));
       const saved = await store.save({ kind: 'vehicle', name: spec.name, design: spec });
       const kept = await store.get(saved.id);
-      const opened = draftFromSpec(kept!.design, kept!.id);
+      const opened = draftFromSpec(kept!.design as VehicleSpec, kept!.id);
       expect(built(opened.mode === 'remix' ? remixResult(opened.draft) : partsResult(opened.draft))).toEqual(spec);
       const file = parseDesignDocument(readDesignFileText(designFileText(designDocument(saved))));
       expect(file.issues).toEqual([]);

@@ -124,13 +124,20 @@ export class ToruControls {
   private nudge(kind: 'translate' | 'rotate', axis: Axis, step: number, max: number): void {
     if (!this.live || !this.manual) return;
     const v = this.cmd[kind];
-    v[axis] = Math.max(-max, Math.min(max, Math.round((v[axis] + step) / Math.abs(step)) * Math.abs(step)));
+    const next = Math.max(-max, Math.min(max, Math.round((v[axis] + step) / Math.abs(step)) * Math.abs(step)));
+    // A press that changes nothing — a key held at the limit repeats about 30 times a second — is
+    // not sent: each command is taken at the simulation's next step and the picture moves on to it
+    // (T02, src/replay/recorder.ts), so a stream of them would run the clock fast.
+    if (next === v[axis]) return;
+    v[axis] = next;
     this.send(this.copy());
     this.refresh();
   }
 
   private zero(kind: 'translate' | 'rotate'): void {
     if (!this.live || !this.manual) return;
+    const v = this.cmd[kind];
+    if (v.x === 0 && v.y === 0 && v.z === 0) return; // nothing to stop (see `nudge`)
     this.cmd[kind] = { x: 0, y: 0, z: 0 };
     this.send(this.copy());
     this.refresh();

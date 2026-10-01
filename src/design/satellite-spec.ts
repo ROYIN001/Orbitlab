@@ -82,6 +82,14 @@ export interface SatelliteDesign {
     isp: number;
     /** kg */
     propellant: number;
+    /**
+     * m/s: what the satellite's own engine must give to reach the orbit
+     * above after the launcher lets it go — a geostationary satellite's
+     * apogee kick from its transfer orbit (TU Delft Fig. 11: 1836.5 m/s
+     * from a Proton's). Absent or 0 when the launcher puts it there. The
+     * first line of the Δv budget (D06, map §2.2 C; track B).
+     */
+    insertionDv?: number;
   } | null;
   adcs: {
     mode: AttitudeMode;
@@ -108,6 +116,17 @@ export interface SatelliteDesign {
     /** a `STATIONS` id (src/orbit/applications-setup.ts), and the lowest elevation it works at, deg */
     station: string;
     minElDeg: number;
+    /**
+     * The receiving station (track B): its dish, m, and its system noise
+     * temperature, K; and the path's other losses, dB — atmosphere,
+     * polarisation, modulation and implementation, one figure (positive,
+     * subtracted). Optional so a design written before them still reads;
+     * absent, the satellite model takes the defaults it names
+     * (src/design/satellite-model.ts, `RX_DEFAULTS`).
+     */
+    rxAntennaD?: number;
+    rxNoiseK?: number;
+    losses?: number;
   };
   /** the camera, or null for a satellite without one */
   payload: {
@@ -120,6 +139,15 @@ export interface SatelliteDesign {
     aperture: number;
     /** bits per pixel */
     bits: number;
+    /**
+     * The wavelength its aperture must resolve, m: the diffraction limit's
+     * (D06's camera figure, and D07's aperture for a ground sample). Optional,
+     * so a design written before it still reads; absent, 550 nm, the middle
+     * of the visible (`DIFFRACTION_WAVELENGTH`, src/design/satellite-link.ts),
+     * an estimate and labelled one. The integration of D06 and D07: the
+     * requirement solver used to take it as an option of its own.
+     */
+    wavelength?: number;
   } | null;
   /** where its figures come from, as the designer or the template gave them */
   sources?: string[];
@@ -141,6 +169,12 @@ export interface SatelliteTemplate {
   kind: SatelliteKind;
   /** an orbit preset id (src/data/orbits.ts) */
   typicalOrbit: string;
+  /**
+   * An orbit of its own, where the satellite it is drawn from flew one that
+   * no preset holds (NAPA-2's 520 × 540 km, THEOS-2's 621 km): it wins over
+   * `typicalOrbit`, which then only names the preset nearest to it.
+   */
+  orbit?: SatelliteDesign['orbit'];
   /** everything else a design starts with */
   design: Omit<SatelliteDesign, 'id' | 'name' | 'template' | 'kind' | 'orbit'>;
   /**
@@ -149,6 +183,13 @@ export interface SatelliteTemplate {
    * and the screen says so (Principle 4).
    */
   sources: Readonly<Record<string, string>>;
+  /**
+   * Paths that have a source and are still estimates here (track B): a
+   * catalogue class's typical figure standing in for one satellite's, or a
+   * published figure the sources disagree on (THEOS-2's mass). The screen
+   * labels them estimates, and names the source.
+   */
+  estimates?: readonly string[];
 }
 
 /**
@@ -166,6 +207,6 @@ export interface SatelliteAreaCore {
    * also the area sunlight pressure sees in Cowell mode.
    */
   dragArea: (design: SatelliteDesign) => number;
-  /** B = C_D·A/m, m²/kg, with the wet mass (dry + propellant); shown against `B_RANGE` (src/orbit/ballistic.ts). */
+  /** B = C_D·A/m, m²/kg, with the wet mass (dry + propellant); shown against `B_RANGE` (src/orbit/ballistic-range.ts). */
   ballisticCoefficient: (design: SatelliteDesign) => number;
 }

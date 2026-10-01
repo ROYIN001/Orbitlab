@@ -103,6 +103,9 @@ class Checker {
   }
 }
 
+/** The checker and its helpers, shared with the custom satellite's (src/config/satellite-spec.ts, roadmap D06). */
+export { Checker as SpecChecker, describe as describeSpecValue, isObj as isSpecRecord };
+
 const ENGINE_FIELDS = ['name', 'count', 'thrustSL', 'thrustVac', 'ispSL', 'ispVac', 'minThrottle', 'solid', 'peakFactor', 'vacuumOnly', 'startupS', 'tailoffS'];
 const BOOSTER_FIELDS = ['id', 'name', 'count', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset'];
 const STAGE_FIELDS = ['id', 'name', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'restartable', 'sepDelay', 'ignitionDelay',

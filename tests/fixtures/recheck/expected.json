@@ -1,0 +1,508 @@
+{
+  "app": "0.1.0+checker",
+  "files": [
+    {
+      "index": 0,
+      "name": "results.orbitlab-results.json",
+      "readable": true,
+      "student": "Student A (fixture)",
+      "exportedAt": "2026-10-06T08:00:00.000Z",
+      "checksum": true
+    }
+  ],
+  "records": [
+    {
+      "file": 0,
+      "student": "Student A (fixture)",
+      "lessonId": "class-leo",
+      "which": [
+        "passed"
+      ],
+      "at": "2026-10-06T07:10:00.000Z",
+      "kind": "flight",
+      "status": "borderline",
+      "missing": [],
+      "sameBuild": false,
+      "app": "0.1.0+fixture",
+      "recordedVerdict": "pass",
+      "recheckedVerdict": "pass",
+      "lockBroken": [],
+      "criteria": [
+        {
+          "id": "c1",
+          "kind": "outcome",
+          "recorded": {
+            "id": "c1",
+            "state": "pass",
+            "value": null
+          },
+          "rechecked": {
+            "id": "c1",
+            "state": "pass",
+            "value": null
+          },
+          "tol": null,
+          "status": "match"
+        },
+        {
+          "id": "c2",
+          "kind": "measure",
+          "measure": "dvLeft",
+          "recorded": {
+            "id": "c2",
+            "state": "pass",
+            "value": 1725.199846621405
+          },
+          "rechecked": {
+            "id": "c2",
+            "state": "pass",
+            "value": 1725.199846621405
+          },
+          "tol": 0.01,
+          "status": "match"
+        },
+        {
+          "id": "c3",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "recorded": {
+            "id": "c3",
+            "state": "pass",
+            "value": 95.11414955970703,
+            "expected": 94.61454955970703
+          },
+          "rechecked": {
+            "id": "c3",
+            "state": "pass",
+            "value": 95.11414955970703,
+            "expected": 94.61454955970703
+          },
+          "tol": 0.001,
+          "status": "borderline",
+          "bound": 95.11454955970703
+        }
+      ],
+      "flownTo": 3237.8201278267784,
+      "steps": 3939,
+      "lateActions": 0
+    },
+    {
+      "file": 0,
+      "student": "Student A (fixture)",
+      "lessonId": "class-leo",
+      "which": [
+        "last"
+      ],
+      "at": "2026-10-06T07:20:00.000Z",
+      "kind": "flight",
+      "status": "match",
+      "missing": [],
+      "sameBuild": false,
+      "app": "0.1.0+fixture",
+      "recordedVerdict": "fail",
+      "recheckedVerdict": "fail",
+      "lockBroken": [],
+      "criteria": [
+        {
+          "id": "c1",
+          "kind": "outcome",
+          "recorded": {
+            "id": "c1",
+            "state": "fail",
+            "value": null
+          },
+          "rechecked": {
+            "id": "c1",
+            "state": "fail",
+            "value": null
+          },
+          "tol": null,
+          "status": "match"
+        },
+        {
+          "id": "c2",
+          "kind": "measure",
+          "measure": "dvLeft",
+          "recorded": {
+            "id": "c2",
+            "state": "fail",
+            "value": 16.57833414386685
+          },
+          "rechecked": {
+            "id": "c2",
+            "state": "fail",
+            "value": 16.57833414386685
+          },
+          "tol": 0.01,
+          "status": "match"
+        },
+        {
+          "id": "c3",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "recorded": {
+            "id": "c3",
+            "state": "pass",
+            "value": 89.6778165129015,
+            "expected": 89.6778165129015
+          },
+          "rechecked": {
+            "id": "c3",
+            "state": "pass",
+            "value": 89.6778165129015,
+            "expected": 89.6778165129015
+          },
+          "tol": 0.001,
+          "status": "match"
+        }
+      ],
+      "flownTo": 553.8599999999882,
+      "steps": 3723,
+      "lateActions": 0
+    },
+    {
+      "file": 0,
+      "student": "Student A (fixture)",
+      "lessonId": "class-abort",
+      "which": [
+        "passed",
+        "last"
+      ],
+      "at": "2026-10-06T07:30:00.000Z",
+      "kind": "flight",
+      "status": "match",
+      "missing": [],
+      "sameBuild": false,
+      "app": "0.1.0+fixture",
+      "recordedVerdict": "pass",
+      "recheckedVerdict": "pass",
+      "lockBroken": [],
+      "criteria": [
+        {
+          "id": "c1",
+          "kind": "event",
+          "event": "evt.abortCrewSafe",
+          "recorded": {
+            "id": "c1",
+            "state": "pass",
+            "value": 1032.399999999463
+          },
+          "rechecked": {
+            "id": "c1",
+            "state": "pass",
+            "value": 1032.399999999463
+          },
+          "tol": 0.01,
+          "status": "match"
+        },
+        {
+          "id": "c2",
+          "kind": "answer",
+          "measure": "abort.maxG",
+          "recorded": {
+            "id": "c2",
+            "state": "pass",
+            "value": 15.72483017555198,
+            "expected": 15.266825413157262
+          },
+          "rechecked": {
+            "id": "c2",
+            "state": "pass",
+            "value": 15.72483017555198,
+            "expected": 15.266825413157262
+          },
+          "tol": 0.0001,
+          "status": "match"
+        }
+      ],
+      "flownTo": 1033.399999999463,
+      "steps": 54696,
+      "lateActions": 0
+    },
+    {
+      "file": 0,
+      "student": "Student A (fixture)",
+      "lessonId": "class-power",
+      "which": [
+        "passed"
+      ],
+      "at": "2026-10-06T07:40:00.000Z",
+      "kind": "design",
+      "status": "borderline",
+      "missing": [],
+      "sameBuild": false,
+      "app": "0.1.0+fixture",
+      "recordedVerdict": "pass",
+      "recheckedVerdict": "pass",
+      "lockBroken": [],
+      "criteria": [
+        {
+          "id": "margin",
+          "kind": "design",
+          "measure": "sat.powerMargin",
+          "recorded": {
+            "id": "margin",
+            "state": "pass",
+            "value": 10.000000002000009
+          },
+          "rechecked": {
+            "id": "margin",
+            "state": "pass",
+            "value": 10.000000002000009
+          },
+          "tol": 1.000000000200001e-8,
+          "status": "borderline",
+          "bound": 10
+        },
+        {
+          "id": "battery",
+          "kind": "design",
+          "measure": "sat.batteryDod",
+          "recorded": {
+            "id": "battery",
+            "state": "pass",
+            "value": 13.01070731749505
+          },
+          "rechecked": {
+            "id": "battery",
+            "state": "pass",
+            "value": 13.01070731749505
+          },
+          "tol": 1.3010707317495051e-8,
+          "status": "match"
+        },
+        {
+          "id": "eclipse",
+          "kind": "answer",
+          "measure": "sat.eclipseMax",
+          "recorded": {
+            "id": "eclipse",
+            "state": "pass",
+            "value": 35.42890975723664,
+            "expected": 35.12890975723664
+          },
+          "rechecked": {
+            "id": "eclipse",
+            "state": "pass",
+            "value": 35.42890975723664,
+            "expected": 35.12890975723664
+          },
+          "tol": 0.0002,
+          "status": "match"
+        }
+      ],
+      "flownTo": null,
+      "steps": 0,
+      "lateActions": 0,
+      "designDate": "2026-10-05",
+      "level": "moderate"
+    },
+    {
+      "file": 0,
+      "student": "Student A (fixture)",
+      "lessonId": "class-power",
+      "which": [
+        "last"
+      ],
+      "at": "2026-10-06T07:50:00.000Z",
+      "kind": "design",
+      "status": "match",
+      "missing": [],
+      "sameBuild": false,
+      "app": "0.1.0+fixture",
+      "recordedVerdict": "fail",
+      "recheckedVerdict": "fail",
+      "lockBroken": [],
+      "criteria": [
+        {
+          "id": "margin",
+          "kind": "design",
+          "measure": "sat.powerMargin",
+          "recorded": {
+            "id": "margin",
+            "state": "fail",
+            "value": 6.831164394302602
+          },
+          "rechecked": {
+            "id": "margin",
+            "state": "fail",
+            "value": 6.831164394302602
+          },
+          "tol": 6.831164394302603e-9,
+          "status": "match"
+        },
+        {
+          "id": "battery",
+          "kind": "design",
+          "measure": "sat.batteryDod",
+          "recorded": {
+            "id": "battery",
+            "state": "pass",
+            "value": 13.01070731749505
+          },
+          "rechecked": {
+            "id": "battery",
+            "state": "pass",
+            "value": 13.01070731749505
+          },
+          "tol": 1.3010707317495051e-8,
+          "status": "match"
+        },
+        {
+          "id": "eclipse",
+          "kind": "answer",
+          "measure": "sat.eclipseMax",
+          "recorded": {
+            "id": "eclipse",
+            "state": "pass",
+            "value": 35.42890975723664,
+            "expected": 35.12890975723664
+          },
+          "rechecked": {
+            "id": "eclipse",
+            "state": "pass",
+            "value": 35.42890975723664,
+            "expected": 35.12890975723664
+          },
+          "tol": 0.0002,
+          "status": "match"
+        }
+      ],
+      "flownTo": null,
+      "steps": 0,
+      "lateActions": 0,
+      "designDate": "2026-10-05",
+      "level": "moderate"
+    },
+    {
+      "file": 0,
+      "student": "Student A (fixture)",
+      "lessonId": "class-theos",
+      "which": [
+        "passed",
+        "last"
+      ],
+      "at": "2026-10-06T08:00:00.000Z",
+      "kind": "design",
+      "status": "match",
+      "missing": [],
+      "sameBuild": false,
+      "app": "0.1.0+fixture",
+      "recordedVerdict": "pass",
+      "recheckedVerdict": "pass",
+      "lockBroken": [],
+      "criteria": [
+        {
+          "id": "life",
+          "kind": "design",
+          "measure": "sat.lifetime",
+          "recorded": {
+            "id": "life",
+            "state": "pass",
+            "value": 18.050705695740717
+          },
+          "rechecked": {
+            "id": "life",
+            "state": "pass",
+            "value": 18.050705695740717
+          },
+          "tol": 0.01805070569574072,
+          "status": "match"
+        },
+        {
+          "id": "down",
+          "kind": "design",
+          "measure": "sat.disposal25y",
+          "recorded": {
+            "id": "down",
+            "state": "pass",
+            "value": 1
+          },
+          "rechecked": {
+            "id": "down",
+            "state": "pass",
+            "value": 1
+          },
+          "tol": 0,
+          "status": "match"
+        },
+        {
+          "id": "data",
+          "kind": "design",
+          "measure": "sat.dataPerDay",
+          "recorded": {
+            "id": "data",
+            "state": "pass",
+            "value": 160.72505322396756
+          },
+          "rechecked": {
+            "id": "data",
+            "state": "pass",
+            "value": 160.72505322396756
+          },
+          "tol": 0.00016072505322396757,
+          "status": "match"
+        },
+        {
+          "id": "gsd",
+          "kind": "design",
+          "measure": "sat.gsd",
+          "recorded": {
+            "id": "gsd",
+            "state": "pass",
+            "value": 0.5014285714285713
+          },
+          "rechecked": {
+            "id": "gsd",
+            "state": "pass",
+            "value": 0.5014285714285713
+          },
+          "tol": 5.014285714285714e-10,
+          "status": "match"
+        },
+        {
+          "id": "dv",
+          "kind": "design",
+          "measure": "sat.dvMargin",
+          "recorded": {
+            "id": "dv",
+            "state": "pass",
+            "value": 31.893966589910377
+          },
+          "rechecked": {
+            "id": "dv",
+            "state": "pass",
+            "value": 31.893966589910377
+          },
+          "tol": 3.189396658991038e-8,
+          "status": "match"
+        },
+        {
+          "id": "swath",
+          "kind": "answer",
+          "measure": "sat.swath",
+          "recorded": {
+            "id": "swath",
+            "state": "pass",
+            "value": 10.432759127250849,
+            "expected": 10.329464482426584
+          },
+          "rechecked": {
+            "id": "swath",
+            "state": "pass",
+            "value": 10.432759127250849,
+            "expected": 10.329464482426584
+          },
+          "tol": 1.0329464482426584e-8,
+          "status": "match"
+        }
+      ],
+      "flownTo": null,
+      "steps": 0,
+      "lateActions": 0,
+      "designDate": "2026-10-05",
+      "level": "moderate"
+    }
+  ],
+  "stopped": false
+}

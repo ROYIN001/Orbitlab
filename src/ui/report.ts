@@ -14,7 +14,7 @@ import type { TelemetrySample } from '../physics/sim/types';
 import type { MissionConfig, VehicleSpec } from '../types';
 import { RAD } from '../physics/constants';
 import { siteById } from '../data/sites';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import { localizeEventParams, satelliteName, siteName } from './names';
 import { faultKindName } from './fault-names';
 import { chartTitle, insertionEvent, reportTelemetryCharts } from './telemetry-charts';
@@ -54,7 +54,7 @@ const utc = (d: Date): string => `${d.toISOString().slice(0, 16).replace('T', ' 
 /** The mission as it was set up: every choice that shapes the flight. */
 function setupRows(flight: ReportFlight, lang: Lang, guidanceEdited: boolean): [string, string][] {
   const { cfg, plan, vehicleSpec } = flight;
-  const site = siteById(cfg.siteId), sat = satelliteById(cfg.satelliteId);
+  const site = siteById(cfg.siteId), sat = missionSatellite(cfg);
   const n = (v: number, d = 1) => numberIn(lang, v, d);
   const d = cfg.dynamics;
   const target = plan.target;
@@ -160,7 +160,7 @@ export function buildFlightReport(input: ReportInput): string {
   const lang = getLang();
   const { flight, result, figures } = input;
   const copy = RESULT_COPY[lang];
-  const site = siteById(flight.cfg.siteId), sat = satelliteById(flight.cfg.satelliteId);
+  const site = siteById(flight.cfg.siteId), sat = missionSatellite(flight.cfg);
   const title = t('report.title', { vehicle: flight.vehicleSpec.name, payload: satelliteName(sat) });
   const parts: string[] = [];
   parts.push(`<header><h1>${esc(title)}</h1><p class="sub">${esc(`${flight.vehicleSpec.name} · ${siteName(site)} · ${utc(flight.cfg.launchTime)}`)}</p>`

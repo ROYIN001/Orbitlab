@@ -32,8 +32,21 @@ export const APP_SECTIONS: readonly AppSection[] = ['launch', 'orbit', 'build'];
 export type AppLevel = Exclude<AppMode, 'home'>;
 export const APP_LEVELS: readonly AppLevel[] = ['watch', 'explore', 'engineer'];
 
-/** Where the app is: the landing page, or one level of one section. */
-export type AppRoute = { section: null; mode: 'home' } | { section: AppSection; mode: AppLevel };
+/**
+ * A page inside a level with an address of its own (roadmap D07): the
+ * requirements page at the Build section's Engineer level,
+ * `#/build/engineer/requirements`, beside the satellite bench rather than a
+ * seventh tab on it (six already fill a phone's width). Each page belongs to
+ * one section and level (`APP_PAGES`); any other third part of a hash is not
+ * a route.
+ */
+export type AppPage = 'requirements';
+export const APP_PAGES: Readonly<Record<AppPage, { section: AppSection; mode: AppLevel }>> = {
+  requirements: { section: 'build', mode: 'engineer' },
+};
+
+/** Where the app is: the landing page, or one level of one section (and a page inside it). */
+export type AppRoute = { section: null; mode: 'home' } | { section: AppSection; mode: AppLevel; page?: AppPage };
 export const HOME_ROUTE: AppRoute = { section: null, mode: 'home' };
 
 /** The level a section opens at when nothing says otherwise. */
@@ -47,13 +60,18 @@ const isMode = (value: string | null | undefined): value is AppMode => APP_MODES
 const isLevel = (value: string | null | undefined): value is AppLevel => APP_LEVELS.includes(value as AppLevel);
 const isSection = (value: string | null | undefined): value is AppSection => APP_SECTIONS.includes(value as AppSection);
 
-export function route(section: AppSection, mode: AppLevel): AppRoute {
-  return { section, mode };
+export function route(section: AppSection, mode: AppLevel, page?: AppPage): AppRoute {
+  return page ? { section, mode, page } : { section, mode };
 }
 
+const pageOf = (r: AppRoute): AppPage | null => (r.section === null ? null : r.page ?? null);
+
 export function sameRoute(a: AppRoute, b: AppRoute): boolean {
-  return a.section === b.section && a.mode === b.mode;
+  return a.section === b.section && a.mode === b.mode && pageOf(a) === pageOf(b);
 }
+
+const isPageOf = (name: string, section: AppSection, mode: AppLevel): name is AppPage =>
+  Object.hasOwn(APP_PAGES, name) && APP_PAGES[name as AppPage].section === section && APP_PAGES[name as AppPage].mode === mode;
 
 /**
  * The route a location hash names, or null for any other hash.
@@ -63,7 +81,8 @@ export function sameRoute(a: AppRoute, b: AppRoute): boolean {
  * a missing slash (`#launch/watch`), any letter case, the pre-S01 addresses
  * `#/watch`, `#/explore` and `#/engineer` (the launch section), and a
  * section alone (`#/orbit`), which opens at `level` — the caller's last
- * level, else `DEFAULT_LEVEL`. Anything else — including the in-page anchors
+ * level, else `DEFAULT_LEVEL`. A third part names a page of that level
+ * (`APP_PAGES`, D07's `#/build/engineer/requirements`). Anything else — including the in-page anchors
  * the narrow layout uses (`#setup`, `#viewport`, `#telemetry`) — is not a
  * route and must leave the route alone.
  */
@@ -80,11 +99,16 @@ export function routeFromHash(hash: string, level: AppLevel = DEFAULT_LEVEL): Ap
     const [section, mode] = parts;
     if (isSection(section) && isLevel(mode)) return route(section, mode);
   }
+  // D07: a page with an address of its own inside its level, `#/build/engineer/requirements`
+  if (parts.length === 3) {
+    const [section, mode, page] = parts;
+    if (isSection(section) && isLevel(mode) && isPageOf(page, section, mode)) return route(section, mode, page);
+  }
   return null;
 }
 
 export function hashForRoute(r: AppRoute): string {
-  return r.section === null ? '#/home' : `#/${r.section}/${r.mode}`;
+  return r.section === null ? '#/home' : `#/${r.section}/${r.mode}${r.page ? `/${r.page}` : ''}`;
 }
 
 /**

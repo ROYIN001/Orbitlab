@@ -17,9 +17,11 @@ any academy, and no service or academy name or emblem is used without written pe
   [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
   Attribute them to "Orbitlab (Royin, ROYIN001)" with a link to
   <https://github.com/ROYIN001/Orbitlab>.
-- **The app's own pictures** — the icons (`public/icons/`), the landing page's screenshots
-  (`public/home/`) and the link preview (`public/social/preview.jpg`), taken from the app itself
-  with `npm run shots` — are the project's own work. The Earth imagery that appears in the
+- **The app's own pictures** — the Orbitlab mark (a delta in the Thai flag's stripes with an orbit
+  across it, drawn in `index.html`) and the icons and favicon made from it (`public/icons/`,
+  `npm run icons`), the landing page's screenshots (`public/home/`) and the link preview
+  (`public/social/preview.jpg`), taken from the app itself with `npm run shots` — are the project's
+  own work. The Earth imagery that appears in the
   screenshots is credited below.
 
 How to cite the project: [CITATION.cff](CITATION.cff).

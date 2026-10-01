@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MISSION_FORMAT, MISSION_FORMAT_VERSION, copyMission, decodeMissionParam, encodeMissionParam, loadStoredMission,
+  MISSION_BASE_VERSION, MISSION_FORMAT, MISSION_FORMAT_VERSION, copyMission, decodeMissionParam, encodeMissionParam, loadStoredMission,
   missionDocument, missionFileName, missionFileText, parseMissionDocument, readMissionFileText, saveStoredMission,
   type MissionState,
 } from '../src/config/mission-file';
@@ -13,6 +13,9 @@ import { defaultDynamics } from '../src/physics/rigid/config';
 import { CONTROL_FAULT_PRESETS } from '../src/physics/rigid/fault-config';
 import { quickstartMission } from '../src/ui/quickstart';
 import { FEATURED_WATCH_MISSION, WATCH_MISSIONS, watchMissionSettings } from '../src/ui/watch-missions';
+import { BUILTIN_LESSONS } from '../src/lessons/catalog';
+import { lessonConfig } from '../src/lessons/config';
+import { flownMission } from '../src/lessons/progress';
 
 const FROM = new Date('2026-09-25T06:00:00Z');
 
@@ -67,7 +70,8 @@ describe('mission document (U01)', () => {
   it('names its format and version', () => {
     const doc = missionDocument(fallback());
     expect(doc.format).toBe(MISSION_FORMAT);
-    expect(doc.version).toBe(MISSION_FORMAT_VERSION);
+    // D06: a mission with a catalogue satellite is written as version 2; version 3 carries a custom one
+    expect(doc.version).toBe(MISSION_BASE_VERSION);
     expect(doc.mission.launchTime).toBe('2026-09-25T00:00:00.000Z');
   });
 
@@ -273,6 +277,121 @@ describe('mission document version 2: a custom vehicle (S02)', () => {
     const back = parseMissionDocument(forged, fallback());
     expect(back.state.vehicleSpec).toBeUndefined();
     expect(back.issues.map((i) => i.field)).toContain('setup.vehicle');
+  });
+});
+
+describe('mission document version 3: a custom satellite (D06)', () => {
+  const mySat = () => ({ ...structuredClone(satelliteById('earthObs')), id: 'my-imager', name: 'My imager', derivedFrom: 'earthObs',
+    mass: 950, area: 6.5, cd: 2.3, cr: 1.4, size: { width: 1.2, height: 2.4, depth: 1.1 } });
+  const withSat = (): MissionState => ({ ...everything(), satelliteId: 'my-imager', satelliteSpec: mySat() });
+
+  it('is written only when the mission carries one, so every other mission stays a version-2 file', () => {
+    expect(missionDocument(everything()).version).toBe(MISSION_BASE_VERSION);
+    expect(missionDocument(fallback()).version).toBe(2);
+    const doc = missionDocument(withSat());
+    expect(doc.version).toBe(3);
+    expect(doc.version).toBe(MISSION_FORMAT_VERSION);
+    expect(doc.mission.satelliteSpec).toEqual(mySat());
+    // …and the built-in lessons' missions, which the v1 lesson fixture embeds, stay version 2 (tests/case-lessons.test.ts)
+    for (const l of BUILTIN_LESSONS) expect({ [l.id]: l.mission.version }).toEqual({ [l.id]: 2 });
+  });
+
+  it('carries the satellite inline and brings it back whole, through a file, a link and the page store', async () => {
+    const state = withSat();
+    expect(validateConfigInput(state)).toEqual([]);
+    const back = parseMissionDocument(viaJson(state), fallback());
+    expect(back.issues).toEqual([]);
+    expect(back.state).toEqual(state);
+    expect(parseMissionDocument(await decodeMissionParam(await encodeMissionParam(missionDocument(state))), fallback()).state).toEqual(state);
+    const store = new Map<string, string>();
+    saveStoredMission(state, { setItem: (k, v) => { store.set(k, v); } });
+    expect(parseMissionDocument(loadStoredMission({ getItem: (k) => store.get(k) ?? null }), fallback()).state).toEqual(state);
+    // with a custom vehicle too
+    const both = { ...state, vehicleId: 'my-falcon', dynamics: defaultDynamics('falcon9'),
+      vehicleSpec: { ...structuredClone(vehicleById('falcon9')), id: 'my-falcon', name: 'My Falcon', derivedFrom: 'falcon9' } };
+    expect(parseMissionDocument(viaJson(both), fallback())).toMatchObject({ issues: [], state: both });
+    // a copy shares nothing with it
+    const copy = copyMission(state);
+    copy.satelliteSpec!.size!.width = 9;
+    expect(state.satelliteSpec!.size!.width).toBe(1.2);
+  });
+
+  it('drops the page\'s custom satellite when the document names a catalogue one, and keeps the page\'s when it names none', () => {
+    const back = parseMissionDocument(viaJson(everything()), withSat());
+    expect(back.state.satelliteId).toBe('cubesats');
+    expect(back.state.satelliteSpec).toBeUndefined();
+    expect(back.issues).toEqual([]);
+    const partial = { format: MISSION_FORMAT, version: 3, mission: { payloadMass: 900 } };
+    expect(parseMissionDocument(partial, withSat()).state).toEqual({ ...withSat(), payloadMass: 900 });
+  });
+
+  it('refuses a malformed satellite, naming the satellite, and flies the page mission\'s', () => {
+    const doc = viaJson(withSat());
+    doc.mission.satelliteSpec.propulsion.isp = null;
+    const back = parseMissionDocument(doc, fallback());
+    expect(back.issues).toContainEqual(expect.objectContaining({ field: 'setup.satellite', code: 'satelliteSpec' }));
+    expect(back.state.satelliteId).toBe('crew');
+    expect(back.state.satelliteSpec).toBeUndefined();
+    expect(back.state.payloadMass).toBe(satelliteById('crew').mass);
+    expect(validateConfigInput(back.state)).toEqual([]);
+    const notObject = viaJson(withSat());
+    notObject.mission.satelliteSpec = 'imager';
+    const again = parseMissionDocument(notObject, fallback());
+    expect(again.issues).toContainEqual({ field: 'setup.satellite', code: 'satelliteSpec' });
+    expect(again.state.satelliteId).toBe('crew');
+    // a page mission with its own custom satellite keeps it through the reset
+    const kept = parseMissionDocument(doc, withSat());
+    expect(kept.state.satelliteSpec).toEqual(mySat());
+    expect(kept.state.payloadMass).toBe(950);
+  });
+
+  it('refuses a satellite lighter than a payload may be, and still reads the rest of the file', () => {
+    // Review, 2026-09-30: a 0.25 kg satellite passed its checker, the 1 kg payload
+    // floor reset its payload mass to 0.25 kg again on every pass, and the whole
+    // file came back unusable.
+    const doc = viaJson({ ...withSat(), payloadMass: 0.25, satelliteSpec: { ...mySat(), mass: 0.25 } });
+    const back = parseMissionDocument(doc, fallback());
+    expect(back.usable).toBe(true);
+    expect(back.issues).toContainEqual({ field: 'setup.satellite', code: 'satelliteSpec' });
+    expect(back.state.satelliteId).toBe('crew');
+    expect(back.state.satelliteSpec).toBeUndefined();
+    expect(back.state.vehicleId).toBe(everything().vehicleId);
+    expect(validateConfigInput(back.state)).toEqual([]);
+  });
+
+  it('resets a bad payload mass to the custom satellite\'s own', () => {
+    const doc = viaJson(withSat());
+    doc.mission.payloadMass = -5;
+    const back = parseMissionDocument(doc, fallback());
+    expect(back.issues.map((i) => i.field)).toEqual(['setup.payloadMass']);
+    expect(back.state.payloadMass).toBe(950);
+    expect(back.state.satelliteSpec).toEqual(mySat());
+  });
+
+  it('never reads a satellite out of a version-1 or version-2 file, which no Orbitlab wrote one into', () => {
+    for (const version of [1, 2]) {
+      const forged = viaJson(withSat());
+      forged.version = version;
+      const back = parseMissionDocument(forged, fallback());
+      expect(back.state.satelliteSpec).toBeUndefined();
+      expect(back.issues).toContainEqual({ field: 'setup.satellite', code: 'selection' });
+      expect(back.state.satelliteId).toBe('crew');
+    }
+    // a version-2 file with a custom vehicle still brings the vehicle
+    const v2 = viaJson({ ...everything(), vehicleId: 'my-falcon', dynamics: defaultDynamics('falcon9'),
+      vehicleSpec: { ...structuredClone(vehicleById('falcon9')), id: 'my-falcon', name: 'My Falcon', derivedFrom: 'falcon9' } });
+    expect(v2.version).toBe(2);
+    expect(parseMissionDocument(v2, fallback()).state.vehicleSpec?.id).toBe('my-falcon');
+  });
+
+  it('goes with a lesson\'s flight: the record\'s mission and the lesson\'s flight configuration carry it', () => {
+    const cfg = lessonConfig(missionDocument(withSat()));
+    expect(cfg.satelliteSpec).toEqual(mySat());
+    expect(cfg.satelliteId).toBe('my-imager');
+    const flown = flownMission(cfg);
+    expect(flown.version).toBe(3);
+    expect(flown.mission.satelliteSpec).toEqual(mySat());
+    expect(flownMission({ ...cfg, satelliteId: 'cubesats', satelliteSpec: undefined }).version).toBe(2);
   });
 });
 
