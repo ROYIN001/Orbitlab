@@ -3477,8 +3477,8 @@ a fail for each measure; `tests/recheck-design.test.ts` and the journey re-check
 - **The example lesson** (`public/lessons/napa2-power.orbitlab-lesson.json`): NAPA-2 starts with a
   +6.8 % margin, its battery drawn 13 %, its longest eclipse 35.14 minutes; with 0.08 m² of cells
   the margin is 25.7 %. Its first hint said the margin grows in proportion to the cells' area; it
-  does not ((1 + margin)/area is 15.708 per m² at every area, so 0.0702 m² is enough for 10 %), and
-  the hint was corrected in all three languages in review.
+  does not ((1 + margin)/area is 15.708 per m² at every area, so 10 % needs 0.07003 m²: 0.0701 m²
+  gives 10.11 % and 0.0700 m² 9.96 %), and the hint was corrected in all three languages in review.
 
 ### Grading the orbit at the flight's end (T01, T03)
 
