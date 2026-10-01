@@ -206,18 +206,18 @@ function cz5bWorked(activity: Activity): Cz5bNumbers {
  */
 export const CZ5B_SPACE_WEATHER = { f107: 75, quietKp: 1, stormKp: 7 } as const;
 
-/** The two space-weather predictions, days after the first set's epoch: computed once (some 0.4 s each), the same for every sheet. */
-let cz5bWeather: { quiet: number; storm: number } | null = null;
+/**
+ * The two space-weather predictions, days after the first set's epoch:
+ * `predictReentry` on the stage (tumbling, C_D 2.2) with
+ * `CZ5B_SPACE_WEATHER`'s fixed indices, recorded here rather than run on the
+ * page. Fixed indices give the same days on every device and day, and the
+ * two runs held the main thread some 0.7 s in Node (longer on a phone) when
+ * the case lesson opened or the sheet was printed. tests/case-worksheets
+ * runs both again and holds these to them.
+ */
+export const CZ5B_STORM_DAYS = { quiet: 9.273177459836006, storm: 6.985586435068399 } as const;
 export function cz5bStormNumbers(): { quiet: number; storm: number } {
-  if (cz5bWeather) return cz5bWeather;
-  const s = CZ5B_STAGES.find((x) => x.name === CZ5B_CASE_STAGE)!;
-  const el = elementsFromRecord(s.elements);
-  const craft = { mass: s.mass, area: tumblingCylinderArea(s.length, s.diameter), cd: 2.2 };
-  const from = el.jdEpoch + el.jdEpochFrac;
-  const w = CZ5B_SPACE_WEATHER;
-  const left = (kp: number): number => predictReentry(el, craft, { f107: w.f107, f107a: w.f107, ap: kpToAp(kp) }).jd! - from;
-  cz5bWeather = { quiet: left(w.quietKp), storm: left(w.stormKp) };
-  return cz5bWeather;
+  return CZ5B_STORM_DAYS;
 }
 
 function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'generatedAt'> {

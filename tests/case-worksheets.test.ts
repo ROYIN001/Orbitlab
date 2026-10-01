@@ -6,10 +6,12 @@
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { CASE_IDS, CZ5B_SPACE_WEATHER, caseKey, caseWorksheet, cz5bNumbers, cz5bStormNumbers, iridiumNumbers, theos2Numbers } from '../src/worksheets/cases';
-import { CASE_CHOICE_ITEMS, CASE_ITEM_IDS } from '../src/worksheets/case-ids';
+import { CASE_CHOICE_ITEMS, CASE_ITEM_IDS, CZ5B_CASE_STAGE } from '../src/worksheets/case-ids';
 import { letterOf } from '../src/worksheets/bank-items';
 import { answerKeyHtml, worksheetsHtml } from '../src/worksheets/html';
-import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
+import { kpToAp, measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
+import { CZ5B_STAGES } from '../src/data/cz5b';
+import { predictReentry, tumblingCylinderArea } from '../src/orbit/reentry';
 import HISTORY from '../src/data/solar-daily.json';
 import { setLang, type Lang } from '../src/i18n';
 import { elementsFromRecord } from '../src/orbit/omm';
@@ -70,8 +72,14 @@ describe('the cases\' numbers (P2.5)', () => {
     const n = cz5bNumbers(activity), w = cz5bStormNumbers();
     expect(Math.abs(w.quiet / n.left - 1)).toBeLessThan(0.05);
     expect(w.storm).toBeLessThan(w.quiet);
-    // computed once, whatever the Sun or the language of the sheet
-    expect(cz5bStormNumbers()).toBe(w);
+    // the sheet's days are recorded, not run on the page: both runs again, with the fixed indices, give them
+    const s = CZ5B_STAGES.find((x) => x.name === CZ5B_CASE_STAGE)!;
+    const el = elementsFromRecord(s.elements);
+    const craft = { mass: s.mass, area: tumblingCylinderArea(s.length, s.diameter), cd: 2.2 };
+    const left = (kp: number): number => predictReentry(el, craft, { f107: 75, f107a: 75, ap: kpToAp(kp) }).jd! - (el.jdEpoch + el.jdEpochFrac);
+    expect([kpToAp(CZ5B_SPACE_WEATHER.quietKp), kpToAp(CZ5B_SPACE_WEATHER.stormKp)]).toEqual([4, 132]);
+    expect(Math.abs(left(CZ5B_SPACE_WEATHER.quietKp) - w.quiet)).toBeLessThan(1e-6);
+    expect(Math.abs(left(CZ5B_SPACE_WEATHER.stormKp) - w.storm)).toBeLessThan(1e-6);
   });
 
   it('THEOS-2: J₂ turns its plane at the sun-synchronous rate, within 1 %', () => {
