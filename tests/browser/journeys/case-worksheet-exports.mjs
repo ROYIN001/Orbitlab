@@ -55,9 +55,10 @@ export default async function caseWorksheetExports(t) {
         const skip = page.getByRole('button', { name: 'Skip guide', exact: true });
         if (await skip.isVisible()) await skip.click();
         assert.equal(await page.locator('#btn-data-mode').getAttribute('data-mode'), 'offline', 'fresh QA context should use bundled offline data');
-        const card = page.locator('.lesson-card-item').filter({ has: page.locator('b').filter({ hasText: new RegExp(`^${number.replace('.', '\\.')} `) }) });
+        // the track's own card: the packs below the tracks (T03) list the same lesson again under their codes
+        const card = page.locator('.lesson-tracks .lesson-card-item').filter({ has: page.locator('b').filter({ hasText: new RegExp(`^${number.replace('.', '\\.')} `) }) });
         await card.waitFor({ state: 'visible', timeout: 120_000 });
-        assert.equal(await card.count(), 1, `one catalogue card for lesson ${number}`);
+        assert.equal(await card.count(), 1, `one track card for lesson ${number}`);
         await card.click();
         await page.waitForSelector(`body[data-lesson="case-${id}"] .lesson-case-answers`, { timeout: 120_000 });
         await page.getByRole('button', { name: 'Show the answers', exact: true }).click();
