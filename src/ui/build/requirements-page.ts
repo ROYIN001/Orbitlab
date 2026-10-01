@@ -29,6 +29,7 @@ import { drawChart, type Series } from '../charts';
 import { runAltitudesJob } from '../../orbit/lifetime-altitude-job';
 import type { AltitudeForLifetime } from '../../orbit/lifetime-altitude';
 import { STATIONS } from '../../orbit/applications-setup';
+import { REPEAT_SEARCH } from '../../orbit/playground-model';
 import { DESIGN_ACTIVITY_LEVELS, type EcssLevel } from '../../orbit/satellite-air';
 import { runTradesJob } from '../../design/requirement-trades-job';
 import type { Requirement, TradeRow } from '../../design/requirement-trades';
@@ -101,6 +102,9 @@ function phrase(key: string, values: Record<string, string>): HTMLElement {
   });
   return out;
 }
+
+/** The altitudes the repeat orbits are searched between, in the interface language, for a sentence (`phrase` keeps each whole on a line). */
+const searched = (): Record<string, string> => ({ lo: fig(REPEAT_SEARCH.min, 'm'), hi: fig(REPEAT_SEARCH.max, 'm') });
 
 /** A requirement's standing on a row, in words: its share of what is allowed or carried, or why it has none. */
 function standingText(s: Standing): string {
@@ -246,7 +250,9 @@ export class RequirementsPage {
     const title = el('h1', 'bs-title', t('build.req.title'));
     title.id = this.titleId;
     const text = el('div', 'be-head-text');
-    text.append(eyebrow, title, el('p', 'bs-lead', t('build.req.lead')));
+    const lead = el('p', 'bs-lead');
+    lead.append(phrase('build.req.lead', searched()));
+    text.append(eyebrow, title, lead);
     const back = button('watch-btn', t('build.req.toBench'), () => this.host.toBench());
     back.dataset.k = `${P}toBench`;
     const side = el('div', 'brq-head-side');
@@ -422,7 +428,11 @@ export class RequirementsPage {
     const keptLife = template ? this.keptLifetime(template) : null;
     const cost = runCost(cycles, keptLife || !template ? [] : lifetimeRequestFor(template, this.form, this.ws.jd()).years, revisitWindowOf(this.form));
     if (!issues.length) {
-      if (!cost.rows) parts.push(el('p', 'bx-note warn', t('build.req.noRows')));
+      if (!cost.rows) {
+        const none = el('p', 'bx-note warn');
+        none.append(phrase('build.req.noRows', searched()));
+        parts.push(none);
+      }
       else {
         parts.push(el('p', 'bx-note', t('build.req.cost', {
           rows: num(cost.rows), min: num(cost.minDays), max: num(cost.maxDays), table: num(Math.max(1, Math.round(cost.tableSeconds))),
@@ -561,7 +571,11 @@ export class RequirementsPage {
     if (this.opened) parts.push(this.compareBox(this.opened));
     parts.push(toggle(`${P}only`, 'build.req.table.only', this.onlyMeeting, (on) => { this.onlyMeeting = on; this.shown = PAGE_ROWS; this.renderResults(); }));
     const rows = this.onlyMeeting ? r.rows.filter((x) => x.meets) : r.rows;
-    if (!rows.length) parts.push(el('p', 'bx-note', t(r.rows.length ? 'build.req.table.noneMeet' : 'build.req.noRows')));
+    if (!rows.length) {
+      const none = el('p', 'bx-note');
+      none.append(r.rows.length ? t('build.req.table.noneMeet') : phrase('build.req.noRows', searched()));
+      parts.push(none);
+    }
     else {
       parts.push(this.table(rows.slice(0, this.shown), r));
       if (rows.length > this.shown) {
