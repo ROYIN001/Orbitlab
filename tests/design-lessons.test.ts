@@ -39,6 +39,7 @@ import {
 } from '../src/lessons/design-lesson';
 import { isDesignDate, lessonFileText, lessonFileVersion, parseLessonFile, readDesignLesson, type FileIssue } from '../src/lessons/lesson-file';
 import { designRecord } from '../src/lessons/progress';
+import { boundDigits, designValueText } from '../src/ui/lessons/design-text';
 import type { DesignCriterion, DesignKey, DesignLesson, DesignMeasureId } from '../src/lessons/types';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
 import type { MissionRequirements } from '../src/design/requirements';
@@ -234,6 +235,23 @@ describe('grading a design (gradeDesign)', () => {
     expect(keyFor(free, at(napa, 'orbit.perigee', 500e3)).lockBroken).toEqual([]);
     expect(keyFor(free, withSso(napa, false)).lockBroken).toEqual([]);
     expect(keyFor(free, at(withSso(napa, false), 'orbit.inclination', 45)).lockBroken).toEqual(['orbit.inclination']);
+  });
+});
+
+describe('a figure shown beside its bound (the strip)', () => {
+  it('is shown to as many decimals as keep it on the side of the bound it was graded on', () => {
+    const min10 = { id: 'c1', kind: 'design' as const, measure: 'sat.powerMargin' as const, min: 10 };
+    // NAPA-2 with 0.07 m² of cells: 9.957 %, a fail, never shown as "10 %"
+    const margin = designValuesNow(at(napa, 'power.arrayArea', 0.07), { date: DATE, level: 'moderate', measures: [] }, lifetimeNow).values['sat.powerMargin']!;
+    const l = lesson([min10]);
+    expect(gradeDesign(l, keyFor(l, at(napa, 'power.arrayArea', 0.07))).verdict).toBe('fail');
+    expect(boundDigits(min10, margin)).toBe(2);
+    expect(designValueText('sat.powerMargin', margin, { digits: boundDigits(min10, margin) })).toBe('9.96\u00a0%');
+    // far from the bound, the measure's own decimals
+    expect(boundDigits(min10, 25.665)).toBe(1);
+    expect(boundDigits({ id: 'c', kind: 'design', measure: 'sat.mass', max: 11 }, 11.004)).toBe(3);
+    expect(boundDigits({ id: 'c', kind: 'design', measure: 'sat.mass', target: 10.5, tol: 0.5 }, 10.9999)).toBe(2);
+    expect(boundDigits({ id: 'c', kind: 'design', measure: 'sat.mass', target: 10.5, tol: 0.5 }, 11.0001)).toBe(4);
   });
 });
 

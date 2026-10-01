@@ -5,8 +5,8 @@
  * (tests/i18n.test.ts finds each one).
  */
 import { getLang, t } from '../../i18n';
-import { DESIGN_MEASURES } from '../../lessons/design-lesson';
-import type { DesignMeasureId } from '../../lessons/types';
+import { DESIGN_MEASURES, withinDesignBound } from '../../lessons/design-lesson';
+import type { DesignCriterion, DesignMeasureId } from '../../lessons/types';
 
 export const DESIGN_MEASURE_KEY: Readonly<Record<DesignMeasureId, string>> = {
   'sat.mass': 'lesson.design.measure.sat.mass',
@@ -61,4 +61,19 @@ export function designValueText(m: DesignMeasureId, v: number | null | undefined
   const digits = opts.digits ?? DESIGN_MEASURES[m].digits;
   const text = m === 'sat.wheelMargin' ? `${designNumber(v, digits)} ×` : `${designNumber(v, digits)} ${designUnitText(m)}`.replace(/ $/, '');
   return opts.capped ? t('lesson.design.moreThan', { value: text }) : text;
+}
+
+/**
+ * How many decimals a design figure is shown to beside its bound: the
+ * measure's own, or more, until the figure as shown lies on the same side of
+ * the bound as the figure graded — so 9.957 % against "≥ 10 %" reads 9.96 %,
+ * never a failed "10 %" (NAPA-2 with 0.07 m² of cells, a student's first
+ * try in the example lesson).
+ */
+export function boundDigits(c: DesignCriterion, v: number): number {
+  const base = DESIGN_MEASURES[c.measure].digits;
+  if (c.kind !== 'design' || !Number.isFinite(v)) return base;
+  const inside = withinDesignBound(v, c);
+  for (let d = base; d <= base + 9; d++) if (withinDesignBound(Number(v.toFixed(d)), c) === inside) return d;
+  return base + 9;
 }

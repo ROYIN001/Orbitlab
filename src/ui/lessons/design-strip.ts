@@ -10,7 +10,7 @@ import type { MissionRequirements } from '../../design/requirements';
 import { STATION_KEY } from '../orbit/applications-panel';
 import { localText } from '../../lessons/text';
 import type { CriterionGrade, DesignCriterion, DesignKey } from '../../lessons/types';
-import { designMeasureName, designNumber, designUnitText, designValueText } from './design-text';
+import { boundDigits, designMeasureName, designNumber, designUnitText, designValueText } from './design-text';
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
   const node = document.createElement(tag);
@@ -57,7 +57,9 @@ export function designChip(c: DesignCriterion, g: CriterionGrade | undefined, ke
   const chip = el('div', `lesson-crit ${state}${stale && g ? ' stale' : ''}`);
   chip.dataset.criterion = c.id;
   chip.append(el('span', 'lesson-crit-name', designCriterionName(c)));
-  const value = g && key ? designValueText(c.measure, g.value, { capped: c.measure === 'sat.lifetime' && key.lifetimeCapped }) : '';
+  const value = g && key ? designValueText(c.measure, g.value, {
+    capped: c.measure === 'sat.lifetime' && key.lifetimeCapped, ...(typeof g.value === 'number' ? { digits: boundDigits(c, g.value) } : {}),
+  }) : '';
   const mark = state === 'pass' ? '✓' : state === 'fail' ? '✗' : t('lesson.crit.pending');
   chip.append(el('span', 'lesson-crit-value', [designBoundText(c), value, mark].filter(Boolean).join(' · ')));
   return chip;
