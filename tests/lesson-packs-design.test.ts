@@ -174,6 +174,10 @@ describe('the packs\' design lessons (T03b)', () => {
     const g = grade(l, solved, { ratio });
     expect(g.verdict, JSON.stringify(g)).toBe('pass');
     expect(f.orbit.nodalPeriod.value).toBeCloseTo(5720, -1);
+    // hint 2 (review): the magnetic torque is some four fifths of T, so halving the dipole takes about 40 % off T, not half
+    const a0 = figures(l, start).attitude;
+    expect(a0.magnetic.value / a0.total.value).toBeCloseTo(0.8, 1);
+    expect(1 - f.attitude.total.value / a0.total.value).toBeCloseTo(0.4, 1);
     // either change alone leaves the other criterion failed
     expect(states(grade(l, withValue(start, 'adcs.residualDipole', 0.01), { ratio }))).toMatchObject({ wheel: 'pass', link: 'fail' });
     expect(states(grade(l, withValue(start, 'comms.txAntennaD', 0.1), { ratio }))).toMatchObject({ wheel: 'fail', link: 'pass' });
