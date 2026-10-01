@@ -20,6 +20,11 @@
  *   Falcon 9 Block 5's published first-stage masses and a max-Q bucket; it was
  *   'dd5364877d7d1b7f'. The spec equals main's literal value for value
  *   (tests/d01-vehicles-identity.test.ts) and the other 20 are unchanged.
+ * - soyuz21a, after audit PHY-01 (2026-10-01, docs/VALIDATION.md §3): its
+ *   six-DOF programme takes a 6° kick and closes the loop at T+140 s, holding
+ *   the launch azimuth until then; it was '6cffff9a7d35bbd0'. Only soyuz21a's
+ *   `guidanceDefaultsSixDof` changed, and the azimuth hold reaches no other
+ *   catalogue vehicle (the other 20 are unchanged).
  *
  * Heavy suite only (`npm run test:heavy`): 21 six-DOF flights of 160 s.
  */
@@ -46,7 +51,7 @@ function sixDofMission(c: FleetCase): MissionConfig {
 }
 
 const FINGERPRINTS: Readonly<Record<string, string>> = {
-  soyuz21a: '6cffff9a7d35bbd0',
+  soyuz21a: '2c9438cf9d3df949',
   soyuz21b: 'bc74fbe1899c4e51',
   protonm: '2844117a23563142',
   angaraa5: '1e14a01434e78edb',

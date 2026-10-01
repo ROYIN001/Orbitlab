@@ -2585,12 +2585,14 @@ three aborts the escape system has flown:
 | | Model | Flight |
 |---|---|---|
 | **T-10-1** (pad fire, 1983) | 14.3 g; apogee 1.4 km; down 0.3 km from the pad 2.8 min after the abort | 14–17 g; 1.2–2 km; about 4 km away, 5 min 13 s (at night, in wind) |
-| **MS-10** (strap-on collision, 2018) | abort at T+123.7 s in the fairing mode; apogee 147 km; 10.4 g; down 505 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
-| **18a** (separation failure, 1975) | abort at T+300 s in the separation mode; apogee 192 km; 18.5 g; down 1 548 km downrange at 50.72°N 83.04°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
+| **MS-10** (strap-on collision, 2018) | abort at T+123.7 s in the fairing mode; apogee 162 km; 10.8 g; down 541 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
+| **18a** (separation failure, 1975) | abort at T+300.5 s in the separation mode; apogee 206 km; 19.4 g; down 1 567 km downrange at 50.79°N 83.31°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
 
-18a comes out close. MS-10 does not, for a reason outside the escape: at T+120 s this Soyuz-2.1a
-is at about 60 km and 2.1 km/s, some 16 km higher and 400 m/s faster than MS-10's Soyuz-FG, so its
-crew leaves on a loftier arc. T-10-1's crew came down farther away, in wind this model does not
+18a comes out close, its apogee 14 km high. MS-10 does not, for a reason outside the escape: at
+T+120 s this Soyuz-2.1a is at about 56 km and 2.1 km/s inertial, still climbing at 40°, some 12 km
+higher and 400 m/s faster than MS-10's Soyuz-FG, so its crew leaves on a loftier arc. Both apogees
+rose with the zero-lift strap-on turn of audit PHY-01 (2026-10-01), which climbs more steeply than
+the pitch-down it replaced: 145 → 162 km and 191 → 206 km (VALIDATION.md §3). T-10-1's crew came down farther away, in wind this model does not
 fly, and after a longer flight: at the model's 7.2 m/s its 5 min 13 s would need an apogee near
 2 km, where the model's head section, as wide as the 4.11 m fairing, climbs to 1.4 km.
 

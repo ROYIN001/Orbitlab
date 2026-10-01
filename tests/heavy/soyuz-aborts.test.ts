@@ -5,11 +5,17 @@
  * separation that half-failed, the spacecraft released for a ballistic entry
  * (1975). About a minute.
  *
- * 18a comes out close to the flight: an apogee of 192 km, a landing 1 574 km
- * downrange at 50°50′N 83°25′E, 18–21 g. MS-10 does not: at T+120 s this
- * Soyuz-2.1a is some 16 km higher and 400 m/s faster than MS-10's Soyuz-FG
- * was, so its crew climbs to about 147 km (93 km in 2018), comes down about
- * 505 km downrange (402 km) at about 10.4 g (6.7 g). docs/PHYSICS.md §8.3.
+ * 18a comes out close to the flight: a landing 1 567 km downrange at
+ * 50.79°N 83.31°E (1 574 km, 50°50′N 83°25′E), 19.4 g (18–21 g), its apogee
+ * 206 km against 192 km. MS-10 does not: at T+120 s this Soyuz-2.1a is some
+ * 12 km higher and 400 m/s faster than MS-10's Soyuz-FG was and still climbing
+ * at 40°, so its crew climbs to about 162 km (93 km in 2018), comes down about
+ * 541 km downrange (402 km) at about 10.8 g (6.7 g). docs/PHYSICS.md §8.3.
+ *
+ * Both apogees rose with audit PHY-01 (2026-10-01), whose zero-lift strap-on
+ * turn climbs more steeply than the pitch-down it replaced (191 → 206 km and
+ * 145 → 162 km; docs/VALIDATION.md §3): 18a's upper bound went from 205 to
+ * 212 km with it, the other bounds unchanged.
  */
 import { describe, expect, it } from 'vitest';
 import { crewedSoyuz, flyAbort } from '../abort-harness';
@@ -52,7 +58,7 @@ describe('Soyuz 18a: a stage separation half-fails', () => {
     expect(bodies).toEqual(['spacecraft', 'capsule']);
     // 18a: an apogee of 192 km, down 1 574 km downrange at 50.83°N 83.42°E, 18–21 g
     expect(apogee).toBeGreaterThan(175e3);
-    expect(apogee).toBeLessThan(205e3);
+    expect(apogee).toBeLessThan(212e3);
     expect(sim.state.downrange).toBeGreaterThan(1450e3);
     expect(sim.state.downrange).toBeLessThan(1650e3);
     expect(Math.abs(sim.state.lat - 50.83)).toBeLessThan(1);
