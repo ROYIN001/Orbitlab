@@ -1589,7 +1589,8 @@ your lessons stay in the browser and in the files you choose to save. A results 
 the name if one is typed, the placement tests' results and each lesson's attempts: its grades, the
 answers typed, the hints and any answers shown, and, for each flight, the mission flown, the moment
 it was graded, the moment on screen, the commands given and the app's version; for a design lesson,
-the design handed in, its date, its solar activity and its figures. Checking results sends
+the design handed in, its date, its solar activity, its figures and the app's version; for a case,
+the data it was worked from and the sheet as it was given. Checking results sends
 nothing anywhere: the files are read and flown again in your browser. A results file can hold a
 student's name, so keep the files where your school keeps marks. A `?scenario=` or `?m=`
 link carries the lesson or the mission in its address, which reaches the web server that serves the
