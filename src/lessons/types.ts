@@ -73,6 +73,59 @@ export type Criterion =
   /** a check written in code (`hooks.ts`), for what the kinds above cannot say */
   | { id: string; kind: 'hook'; hook: string; params?: Record<string, number | string | boolean>; label?: LocalText };
 
+/**
+ * What a curriculum code names (roadmap T03, "Lessons matched to the Thai
+ * science curriculum (IPST)"; Phase 4 map §4.3; the T03 research's §1.5): an
+ * IPST basic-science indicator (`ว 2.2 ม.5/6`), a learning outcome of an
+ * additional course (`ฟส ม.4 ผล 17`), a course of an academy's programme
+ * (`วอ 478`), or a competence of a federal standard (`ОПК-8`). The last two
+ * were added to the map's pair for the cadet curricula.
+ */
+export type CurriculumKind = 'indicator' | 'outcome' | 'course' | 'competence';
+export const CURRICULUM_KINDS: readonly CurriculumKind[] = ['indicator', 'outcome', 'course', 'competence'];
+
+/** One code of a curriculum a lesson is matched to, as the curriculum document writes it. */
+export interface CurriculumCode {
+  code: string;
+  kind: CurriculumKind;
+}
+
+/**
+ * A lesson of a pack (T03): one of the pack file's own lessons, or a built-in
+ * lesson the pack reuses by reference (the research's §8 item 1), so a tested
+ * lesson is listed again rather than copied under a new id. A reference
+ * carries its codes here; a lesson of the file carries its own `curriculum`.
+ */
+export interface PackEntry {
+  id: string;
+  curriculum?: CurriculumCode[];
+  /** a reference's word on what the lesson is for in this curriculum, shown under its card */
+  note?: LocalText;
+}
+
+/**
+ * A lesson pack (T03): a lesson file read as a group of lessons matched to one
+ * curriculum. It is an optional field of the file, so the file stays at the
+ * version its lessons need: an older reader skips the field and reads the
+ * lessons as any teacher's file (map §1.3, `readMeta`).
+ */
+export interface LessonPack {
+  id: string;
+  title: LocalText;
+  /** who it is for: the grades or the cadets' year */
+  audience: LocalText;
+  /** the curriculum document its codes are read from */
+  framework: LocalText;
+  /**
+   * The roadmap's validation for T03 is the owner's review: until it is done
+   * the pack is a draft, and the lessons page says so.
+   */
+  reviewed: boolean;
+  description?: LocalText;
+  /** its lessons in order: the file's own, and built-in ones by reference; the file's own not named are listed after */
+  contents: PackEntry[];
+}
+
 /** Where a lesson is listed, and the mode it opens in. */
 export interface LessonMeta {
   id: string;
@@ -88,6 +141,8 @@ export interface LessonMeta {
   tags?: string[];
   /** a built-in lesson that is only listed, not yet written */
   comingSoon?: boolean;
+  /** T03: the curriculum codes the lesson is matched to, shown as chips in its pack */
+  curriculum?: CurriculumCode[];
 }
 
 export interface Lesson extends LessonMeta {

@@ -34,6 +34,15 @@
  * file is newer (as for a case lesson in version 2) rather than refuse the
  * lesson's kind as an error. Had the kind come a release later it would have
  * needed a number of its own.
+ *
+ * Lesson packs (roadmap T03, map §4.3) raise no version: a file's optional
+ * `pack` (`LessonPack`: its title, audience, curriculum and order, and the
+ * built-in lessons it reuses by reference) and a lesson's optional
+ * `curriculum` codes are fields an older reader never looks at — `readMeta`
+ * and `parseLessonFile` build their results from the fields they know — so
+ * the same file opens there as a teacher's file of the same lessons, without
+ * the grouping. tests/lesson-packs.test.ts holds a pack file to the version
+ * its lessons need.
  */
 import { missionDocument, parseMissionDocument, MISSION_FORMAT, type MissionDocument } from '../config/mission-file';
 import { defaultMissionState } from './config';
@@ -42,9 +51,9 @@ import { MEASURE_IDS } from './measures';
 import { compileExpression } from './assessment/expression';
 import { DIAGRAM_IDS } from './assessment/diagrams';
 import {
-  DOMAINS, LOCK_KEYS, REVEAL_KEYS, isCaseLesson, isDesignLesson,
-  type CaseCriterion, type CaseLesson, type CatalogLesson, type Criterion, type DesignCriterion, type DesignLesson, type DesignMeasureId, type Domain,
-  type Lesson, type LocalText, type LockKey, type MeasureId, type RevealKey,
+  CURRICULUM_KINDS, DOMAINS, LOCK_KEYS, REVEAL_KEYS, isCaseLesson, isDesignLesson,
+  type CaseCriterion, type CaseLesson, type CatalogLesson, type Criterion, type CurriculumCode, type CurriculumKind, type DesignCriterion, type DesignLesson,
+  type DesignMeasureId, type Domain, type Lesson, type LessonPack, type LocalText, type LockKey, type MeasureId, type PackEntry, type RevealKey,
 } from './types';
 import { DESIGN_LOCK_KEYS, DESIGN_MEASURE_IDS } from './design-lesson';
 import { satelliteDesignProblems } from '../config/satellite-design';
@@ -69,11 +78,13 @@ export const LESSON_FILE_EXTENSION = '.orbitlab-lesson.json';
 export interface LessonFileDocument {
   format: typeof LESSON_FORMAT;
   version: number;
+  /** T03: the file is a lesson pack (`LessonPack`) */
+  pack?: LessonPack;
   lessons?: unknown[];
   questions?: unknown[];
 }
 
-export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 'mission' | 'translation' | 'hook' | 'expression' | 'duplicate' | 'event' | 'builtinId';
+export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 'mission' | 'translation' | 'hook' | 'expression' | 'duplicate' | 'event' | 'builtinId' | 'pack';
 export interface FileIssue { where: string; code: FileIssueCode; level: 'error' | 'warn'; detail?: string }
 
 export interface ParsedLessonFile {
@@ -82,6 +93,8 @@ export interface ParsedLessonFile {
   issues: FileIssue[];
   /** false when the file is not a lesson file at all */
   usable: boolean;
+  /** T03: the file's lesson pack, when it is one and its pack could be read */
+  pack?: LessonPack;
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -105,6 +118,20 @@ class Reader {
       if (isStr(v[lang])) out[lang] = v[lang] as string;
       else this.warn(where, 'translation', lang);
     }
+    return out;
+  }
+  /**
+   * T03: a lesson's curriculum codes. A code that cannot be read is left out
+   * with a warning, not the lesson: the codes are shown, never graded.
+   */
+  codes(v: unknown, where: string): CurriculumCode[] | undefined {
+    if (v === undefined) return undefined;
+    if (!Array.isArray(v)) { this.warn(where, 'invalid', 'curriculum'); return undefined; }
+    const out: CurriculumCode[] = [];
+    v.forEach((c, i) => {
+      if (isRecord(c) && isStr(c.code) && CURRICULUM_KINDS.includes(c.kind as CurriculumKind)) out.push({ code: c.code.trim(), kind: c.kind as CurriculumKind });
+      else this.warn(`${where}[${i}]`, 'invalid', 'curriculum');
+    });
     return out;
   }
 }
@@ -172,7 +199,8 @@ function readMeta(r: Reader, raw: Record<string, unknown>, at: string) {
   if (!domains.length) return r.error(`${at}.domains`, 'missing') || null;
   const tags = Array.isArray(raw.tags) ? raw.tags.filter(isStr) : undefined;
   const comingSoon = raw.comingSoon === true;
-  return { title, brief, debrief, track, order, mode, domains, tags, comingSoon };
+  const curriculum = r.codes(raw.curriculum, `${at}.curriculum`);
+  return { title, brief, debrief, track, order, mode, domains, tags, comingSoon, curriculum };
 }
 
 function readHints(r: Reader, raw: Record<string, unknown>, at: string): LocalText[] {
@@ -191,7 +219,7 @@ export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Le
   const at = `${where} (${raw.id})`;
   const meta = readMeta(r, raw, at);
   if (!meta) return null;
-  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon } = meta;
+  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon, curriculum } = meta;
 
   let mission: MissionDocument;
   if (!isRecord(raw.mission) || raw.mission.format !== MISSION_FORMAT) return r.error(`${at}.mission`, 'mission', 'format') || null;
@@ -223,6 +251,7 @@ export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Le
     title, brief, ...(debrief ? { debrief } : {}), mission, locked, ...(reveal.length ? { reveal } : {}), criteria, hints,
     ...(isStr(raw.endEvent) ? { endEvent: raw.endEvent } : {}),
     ...(comingSoon ? { comingSoon } : {}),
+    ...(curriculum?.length ? { curriculum } : {}),
   };
 }
 
@@ -255,7 +284,7 @@ export function readCaseLesson(raw: unknown, where: string, issues: FileIssue[])
   const at = `${where} (${raw.id})`;
   const meta = readMeta(r, raw, at);
   if (!meta) return null;
-  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon } = meta;
+  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon, curriculum } = meta;
   if (!CASE_IDS.includes(raw.case as CaseId)) return r.error(`${at}.case`, 'invalid', 'case') || null;
   const id = raw.case as CaseId;
   for (const k of ['mission', 'locked', 'reveal', 'endEvent']) if (raw[k] !== undefined) r.warn(`${at}.${k}`, 'invalid', k);
@@ -272,6 +301,7 @@ export function readCaseLesson(raw: unknown, where: string, issues: FileIssue[])
     kind: 'case', id: raw.id, track, order, mode, domains, ...(tags?.length ? { tags } : {}),
     title, brief, ...(debrief ? { debrief } : {}), case: id, criteria, hints,
     ...(comingSoon ? { comingSoon } : {}),
+    ...(curriculum?.length ? { curriculum } : {}),
   };
 }
 
@@ -521,6 +551,48 @@ export function eventIssues(lesson: Lesson, where: string, knownEvents: Readonly
   return issues;
 }
 
+/**
+ * T03: a file's lesson pack. Its texts are read as a lesson's are; `audience`
+ * and `framework` may also be one plain string, the same in every language.
+ * A pack that cannot be read is reported and left out, while the file's
+ * lessons are kept, as an older reader keeps them. Which of its entries name
+ * a built-in lesson is not known here (the catalogue reads its lessons
+ * through this reader): src/lessons/packs.ts resolves them.
+ */
+function readPack(raw: unknown, lessons: readonly CatalogLesson[], issues: FileIssue[]): LessonPack | undefined {
+  const r = new Reader(issues);
+  if (!isRecord(raw) || !isStr(raw.id)) { r.error('pack', 'pack', 'id'); return undefined; }
+  const at = `pack (${raw.id})`;
+  const loose = (v: unknown, w: string): LocalText | null => (isStr(v) ? { en: v.trim() } : r.text(v, w));
+  const title = r.text(raw.title, `${at}.title`);
+  const audience = loose(raw.audience, `${at}.audience`);
+  const framework = loose(raw.framework, `${at}.framework`);
+  if (!title || !audience || !framework) { r.error(at, 'pack', 'text'); return undefined; }
+  // not reviewed unless it says so: the page then calls it a draft
+  if (typeof raw.reviewed !== 'boolean') r.warn(`${at}.reviewed`, 'invalid', 'reviewed');
+  const description = raw.description === undefined ? undefined : r.text(raw.description, `${at}.description`) ?? undefined;
+  const contents: PackEntry[] = [];
+  const named = new Set<string>();
+  if (raw.contents !== undefined && !Array.isArray(raw.contents)) r.warn(`${at}.contents`, 'invalid', 'contents');
+  if (Array.isArray(raw.contents)) raw.contents.forEach((e, i) => {
+    const w = `${at}.contents[${i}]`;
+    if (!isRecord(e) || !isStr(e.id)) { r.warn(w, 'invalid', 'id'); return; }
+    if (named.has(e.id)) { r.warn(w, 'duplicate', e.id); return; }
+    named.add(e.id);
+    const own = lessons.some((l) => l.id === e.id);
+    // a lesson of the file carries its own codes: codes on its entry as well could say something else
+    if (own && e.curriculum !== undefined) r.warn(`${w}.curriculum`, 'invalid', 'curriculum');
+    const curriculum = own ? undefined : r.codes(e.curriculum, `${w}.curriculum`);
+    const note = e.note === undefined ? undefined : r.text(e.note, `${w}.note`) ?? undefined;
+    contents.push({ id: e.id, ...(curriculum?.length ? { curriculum } : {}), ...(note ? { note } : {}) });
+  });
+  for (const l of lessons) if (!named.has(l.id)) contents.push({ id: l.id });
+  return {
+    id: raw.id, title, audience, framework, reviewed: raw.reviewed === true,
+    ...(description ? { description } : {}), contents,
+  };
+}
+
 /** Read a lesson file; with `knownEvents`, warn of event keys no flight emits (`eventIssues`). */
 export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>, knownEvents?: ReadonlySet<string>): ParsedLessonFile {
   const issues: FileIssue[] = [];
@@ -548,7 +620,8 @@ export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>, kno
     if (question && unique(question.id, `questions[${i}]`)) questions.push({ ...question, custom: true });
   });
   if (!lessons.length && !questions.length) return { lessons, questions, issues, usable: false };
-  return { lessons, questions, issues, usable: true };
+  const pack = raw.pack === undefined ? undefined : readPack(raw.pack, lessons, issues);
+  return { lessons, questions, issues, usable: true, ...(pack ? { pack } : {}) };
 }
 
 /**
@@ -570,12 +643,19 @@ export function lessonFileVersion(lessons: readonly CatalogLesson[]): number {
   return lessons.reduce((v, l) => Math.max(v, lessonVersion(l)), FLIGHT_ONLY_VERSION);
 }
 
-/** The document of a file holding the given lessons and questions, at the lowest version that reads them all (`lessonFileVersion`). */
-export function lessonFileDocument(lessons: readonly CatalogLesson[], questions: readonly Question[] = []): LessonFileDocument {
-  return { format: LESSON_FORMAT, version: lessonFileVersion(lessons), lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}) };
+/**
+ * The document of a file holding the given lessons and questions, at the
+ * lowest version that reads them all (`lessonFileVersion`); with `pack`, a
+ * lesson pack (T03), which needs no version of its own.
+ */
+export function lessonFileDocument(lessons: readonly CatalogLesson[], questions: readonly Question[] = [], pack?: LessonPack): LessonFileDocument {
+  return {
+    format: LESSON_FORMAT, version: lessonFileVersion(lessons), ...(pack ? { pack } : {}),
+    lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}),
+  };
 }
 
 /** That document as the file's text. */
-export function lessonFileText(lessons: readonly CatalogLesson[], questions: readonly Question[] = []): string {
-  return `${JSON.stringify(lessonFileDocument(lessons, questions), null, 2)}\n`;
+export function lessonFileText(lessons: readonly CatalogLesson[], questions: readonly Question[] = [], pack?: LessonPack): string {
+  return `${JSON.stringify(lessonFileDocument(lessons, questions, pack), null, 2)}\n`;
 }
