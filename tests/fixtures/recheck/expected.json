@@ -68,18 +68,18 @@
           "recorded": {
             "id": "c3",
             "state": "pass",
-            "value": 95.11550580531123,
-            "expected": 94.61590580531123
+            "value": 95.11414955970703,
+            "expected": 94.61454955970703
           },
           "rechecked": {
             "id": "c3",
             "state": "pass",
-            "value": 95.11550580531123,
-            "expected": 94.61590580531123
+            "value": 95.11414955970703,
+            "expected": 94.61454955970703
           },
           "tol": 0.001,
           "status": "borderline",
-          "bound": 95.11590580531123
+          "bound": 95.11454955970703
         }
       ],
       "flownTo": 3237.8201278267784,
@@ -143,14 +143,14 @@
           "recorded": {
             "id": "c3",
             "state": "pass",
-            "value": 89.67925183462822,
-            "expected": 89.67925183462822
+            "value": 89.6778165129015,
+            "expected": 89.6778165129015
           },
           "rechecked": {
             "id": "c3",
             "state": "pass",
-            "value": 89.67925183462822,
-            "expected": 89.67925183462822
+            "value": 89.6778165129015,
+            "expected": 89.6778165129015
           },
           "tol": 0.001,
           "status": "match"
