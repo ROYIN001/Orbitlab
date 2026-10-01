@@ -376,7 +376,10 @@ export class RequirementsPage {
       this.numberField('maxDays', 'build.req.f.maxDays', t('build.req.u.days'), f.maxDays ?? Number.NaN, 1, (v) => {
         const box = this.formPanel.querySelector<HTMLInputElement>(`[data-k="${P}maxDays"]`);
         this.set({ maxDays: box && box.value.trim() === '' ? null : v });
-      }, { placeholder: String(auto), hint: t('build.req.f.maxDaysHint', { n: num(auto) }), hintKey: `${P}maxDaysHint` }),
+      // with no revisit typed yet there is no default to name
+      }, Number.isFinite(auto)
+        ? { placeholder: String(auto), hint: t('build.req.f.maxDaysHint', { n: num(auto) }), hintKey: `${P}maxDaysHint` }
+        : { placeholder: '', hint: ' ', hintKey: `${P}maxDaysHint` }),
     );
     group('build.req.form.cycles', cycles);
 

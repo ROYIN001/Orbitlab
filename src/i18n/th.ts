@@ -2793,7 +2793,7 @@ export const th: Record<string, string> = {
   'build.req.form.cycles': 'วงโคจรที่จะลอง',
   'build.req.f.minDays': 'รอบการซ้ำสั้นที่สุด',
   'build.req.f.maxDays': 'รอบการซ้ำยาวที่สุด',
-  'build.req.f.maxDaysHint': 'เว้นว่างไว้ = ระยะรอนานที่สุดที่กำหนด ปัดขึ้น ({n} วัน)',
+  'build.req.f.maxDaysHint': 'ถ้าเว้นว่าง จะใช้ระยะรอนานที่สุดที่กำหนด ปัดขึ้น ({n} วัน)',
   'build.req.u.days': 'วัน',
   'build.req.bounds': 'ตั้งแต่ {min} ถึง {max}',
   'build.req.bad.number': 'ใส่ตัวเลข',
