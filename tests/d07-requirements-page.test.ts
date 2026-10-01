@@ -48,7 +48,7 @@ import { levelActivity } from '../src/orbit/satellite-air';
 import { powerAtWorstBeta, requiredDataRate, requiredEirp, txPowerForEirp, focalLengthForGsd } from '../src/design/requirement-inverses';
 import { REQUIREMENTS, repeatCycles, tradePlane, tradeRow, type TradeRow } from '../src/design/requirement-trades';
 import {
-  DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TEMPLATES, SECONDS_PER_ROW_DAY, aperturePoints, benchDesign, candidateCycles, compareWithBench,
+  DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TEMPLATES, RUNS_PER_SEARCH, SECONDS_PER_LIFETIME_RUN, SECONDS_PER_LIFETIME_RUN_YEAR, SECONDS_PER_ROW_DAY, aperturePoints, benchDesign, candidateCycles, compareWithBench,
   disposalState, errorKey, gbitToBits, lifeState, lifetimePoints, lifetimeRequestFor, missionRequirements, otherNode, requirementsProblems,
   REVISIT_WINDOW_DAYS, restoreForm, revisitWindowOf, runCost, standing, targetOf, templateDesign, tradeOptionsFor, type RequirementsForm,
 } from '../src/design/requirements-page';
@@ -118,19 +118,19 @@ describe('what a run costs (D07)', () => {
     const cycles = candidateCycles(DEFAULT_FORM);
     expect(cycles.length).toBe(repeatCycles(5, true, 0).length);
     expect(Math.max(...cycles.map((c) => c.days))).toBe(5);
-    const cost = runCost(cycles, 2);
+    const cost = runCost(cycles, [5, 30]);
     expect(cost.rows).toBe(cycles.length);
     expect(cost.tableSeconds).toBe(cycles.reduce((s, c) => s + c.days, 0) * SECONDS_PER_ROW_DAY);
     expect(cost.tooMany).toBe(false);
-    expect(runCost(cycles, 0).lifetimeSeconds).toBe(0);
+    expect(runCost(cycles, []).lifetimeSeconds).toBe(0);
     // THEOS-2's 26 days: every cycle to 26 days is far too many rows; the 26-day ones alone are not
-    const all = runCost(candidateCycles({ ...THEOS2, minDays: 1 }), 2);
+    const all = runCost(candidateCycles({ ...THEOS2, minDays: 1 }), [10, 35]);
     expect(all.rows).toBeGreaterThan(MAX_ROWS);
     expect(all.tooMany).toBe(true);
     const only26 = candidateCycles(THEOS2);
     expect(only26.every((c) => c.days === 26)).toBe(true);
     expect(only26.some((c) => c.revs === 385)).toBe(true);
-    expect(runCost(only26, 2).tooMany).toBe(false);
+    expect(runCost(only26, [10, 35]).tooMany).toBe(false);
     // not sun-synchronous: at the inclination asked
     expect(candidateCycles({ ...DEFAULT_FORM, sso: false, inclination: 51.6, maxDays: 2 }).length).toBe(repeatCycles(2, false, 51.6 * DEG).length);
   });
@@ -147,11 +147,27 @@ describe('what a run costs (D07)', () => {
     // the window the estimate counts is the one the table is given
     expect(tradeOptionsFor(templateDesign('theos2'), form, JD0, null).revisitWindow).toBe(REVISIT_WINDOW_DAYS);
     const cycles = candidateCycles(form);
-    const open = runCost(cycles, 0, revisitWindowOf(form));
+    const open = runCost(cycles, [], revisitWindowOf(form));
     expect(open.tableSeconds).toBe(cycles.reduce((s, c) => s + (c.days + 60) / 2, 0) * SECONDS_PER_ROW_DAY);
-    expect(open.tableSeconds / runCost(cycles, 0).tableSeconds).toBeGreaterThan(8);
+    expect(open.tableSeconds / runCost(cycles, []).tableSeconds).toBeGreaterThan(8);
     // a cycle longer than the window walks its own days
-    expect(runCost([{ revs: 1000, days: 70 }], 0, 60).tableSeconds).toBe(70 * SECONDS_PER_ROW_DAY);
+    expect(runCost([{ revs: 1000, days: 70 }], [], 60).tableSeconds).toBe(70 * SECONDS_PER_ROW_DAY);
+  });
+
+  // added in review: a P07 run takes longer the more years it flies; a flat 0.45 s a run said "about 10 s" for the
+  // 30- and 55-year searches of a 30-year life, measured here at 21.0 s
+  it('says the lifetime search takes longer for a longer life', () => {
+    const search = (years: number[]): number => runCost([], years).lifetimeSeconds;
+    const life = (lifeYears: number): number[] => lifetimeRequestFor(templateDesign('theos2'), { ...DEFAULT_FORM, lifeYears }, JD0).years;
+    expect(life(5)).toEqual([5, 30]);
+    expect(search(life(5))).toBe(RUNS_PER_SEARCH * (2 * SECONDS_PER_LIFETIME_RUN + 35 * SECONDS_PER_LIFETIME_RUN_YEAR));
+    // the measured searches (21 runs each) within a factor 1.25 either way
+    for (const [years, measured] of [[[5, 30], 9.1], [[30, 55], 21.0], [[0.1, 25.1], 6.6], [[10, 35], 9.9]] as const) {
+      expect(search([...years]) / measured, String(years)).toBeGreaterThan(0.8);
+      expect(search([...years]) / measured, String(years)).toBeLessThan(1.25);
+    }
+    expect(search(life(30)) / search(life(5))).toBeGreaterThan(2);
+    expect(search(lifetimeRequestFor(templateDesign('theos2'), { ...DEFAULT_FORM, disposal: 'none' }, JD0).years)).toBeLessThan(search(life(5)) / 3);
   });
 });
 

@@ -415,7 +415,7 @@ export class RequirementsPage {
     const cycles = issues.length ? [] : candidateCycles(this.form);
     const template = issues.length ? null : templateDesign(this.form.template);
     const keptLife = template ? this.keptLifetime(template) : null;
-    const cost = runCost(cycles, keptLife ? 0 : this.form.disposal === '25y' ? 2 : 1, revisitWindowOf(this.form));
+    const cost = runCost(cycles, keptLife || !template ? [] : lifetimeRequestFor(template, this.form, this.ws.jd()).years, revisitWindowOf(this.form));
     if (!issues.length) {
       if (!cost.rows) parts.push(el('p', 'bx-note warn', t('build.req.noRows')));
       else {
@@ -499,7 +499,7 @@ export class RequirementsPage {
     const cycles = candidateCycles(form);
     const lifeReq = lifetimeRequestFor(template, form, jd);
     const kept = this.keptLifetime(template);
-    const cost = runCost(cycles, kept ? 0 : lifeReq.years.length, revisitWindowOf(form));
+    const cost = runCost(cycles, kept ? [] : lifeReq.years, revisitWindowOf(form));
     if (!cycles.length || cost.tooMany) return;
     const controller = new AbortController();
     this.job = { controller, phase: kept ? 'table' : 'lifetime', fraction: 0, weights: { lifetime: cost.lifetimeSeconds, table: cost.tableSeconds } };

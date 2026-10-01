@@ -234,8 +234,15 @@ export const SECONDS_PER_ROW_DAY = 0.25 / 26;
  * the table as its `revisitWindow` (the core's own default, 60 days).
  */
 export const REVISIT_WINDOW_DAYS = 60;
-/** Seconds one of the lifetime search's P07 runs takes, on a laptop: 21 runs in 9.9 s measured here for 10 and 35 years, 3.2 s for D's 11 of 5 years. */
-export const SECONDS_PER_LIFETIME_RUN = 0.45;
+/**
+ * Seconds one of the lifetime search's P07 runs takes: a little to start, and
+ * more for each year it flies (a run that lasts flies them all). Fitted to the
+ * searches measured here, 21 runs each: 9.1 s for 5 and 30 years, 21.0 s for
+ * 30 and 55, 6.6 s for 0.1 and 25.1, and the track's 9.9 s for 10 and 35 (a
+ * flat 0.45 s a run said "about 10 s" for a 30-year life's 21 s).
+ */
+export const SECONDS_PER_LIFETIME_RUN = 0.05;
+export const SECONDS_PER_LIFETIME_RUN_YEAR = 0.02;
 /** P07 runs the search makes for each of its years: the two ends and the halvings from 150–5 000 km to ±5 km (`expectedRuns`, src/orbit/lifetime-altitude.ts). */
 export const RUNS_PER_SEARCH = 11;
 
@@ -257,7 +264,7 @@ export interface RunCost {
   minDays: number;
   maxDays: number;
   tableSeconds: number;
-  /** 0 when the lifetime search's answers are kept from the last run */
+  /** 0 when the lifetime search's answers are kept from the last run (no years to search) */
   lifetimeSeconds: number;
   /** more rows than `MAX_ROWS`: the page will not run it */
   tooMany: boolean;
@@ -279,7 +286,7 @@ export const revisitWindowOf = (f: Pick<RequirementsForm, 'sso' | 'daylightOnly'
  * times as much (measured in Chromium here: 90 such rows of 1 to 5 days, 10.0 s,
  * against 1.4 s for the 94 sun-synchronous ones).
  */
-export function runCost(cycles: readonly RepeatCycle[], searches: number, window: number | null = null): RunCost {
+export function runCost(cycles: readonly RepeatCycle[], years: readonly number[], window: number | null = null): RunCost {
   const days = cycles.map((c) => c.days);
   return {
     rows: cycles.length,
@@ -287,7 +294,8 @@ export function runCost(cycles: readonly RepeatCycle[], searches: number, window
     maxDays: days.length ? Math.max(...days) : 0,
     // the cycle-days walked, the revisit's and the contact's, halved: the cycle's days where the looks repeat with it
     tableSeconds: days.reduce((s, d) => s + (d + Math.max(d, window ?? d)) / 2, 0) * SECONDS_PER_ROW_DAY,
-    lifetimeSeconds: searches * RUNS_PER_SEARCH * SECONDS_PER_LIFETIME_RUN,
+    // each of the years searched (`lifetimeRequest`'s, none when they are kept): its runs, each longer the more years it flies
+    lifetimeSeconds: years.reduce((s, y) => s + RUNS_PER_SEARCH * (SECONDS_PER_LIFETIME_RUN + SECONDS_PER_LIFETIME_RUN_YEAR * y), 0),
     tooMany: cycles.length > MAX_ROWS,
   };
 }
