@@ -178,9 +178,10 @@ Built by 2026-10-01, but for T03's review. Build's Explore and Engineer levels h
 (D06): a satellite is designed from NAPA-2, a THEOS-2-class imager or one of five classes of the
 catalogue, its eclipse, power, propulsion Δv, attitude control, link budget, camera and drag area
 worked out by cores of their own (`src/orbit/eclipse.ts`, `power.ts`, `attitude.ts`, `link.ts`,
-`imaging.ts`, `disposal.ts`), tested on a bench, sent into the Orbit section with no launch, or
-flown in Launch as the mission's own satellite (the owner's decision of 2026-09-29: a full inline
-spec, in a mission file of version 3 only when it carries one). *The New SMAD* is not free, so by
+`imaging.ts`, `disposal.ts`; the drag area in `src/design/satellite-area.ts`), tested on a bench,
+sent into the Orbit section with no launch, or flown in Launch as the mission's own satellite (the
+owner's decision of 2026-09-29: a full inline spec, in a mission file of version 3 only when it
+carries one). *The New SMAD* is not free, so by
 the owner's default open sources stand in for it: SMAD's tables as TU Delft's course reader gives
 them, and two NASA manuscripts that appear to be chapters of the New SMAD itself (Starin and
 Eterno's on attitude control, Hull's on the end of a mission). D07 is the bench's **Start from
