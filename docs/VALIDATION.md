@@ -813,7 +813,9 @@ planner spends an orbit on a 5 m/s apoapsis trim before the circularisation. It 
 trim an orbit later and runs out of time to align for it (`evt.burnAlignmentTimeout`, three hours into
 the flight). This is a burn-planner item for the Fregat phase, not the ascent: 2.1b's ascent now reaches orbit in six-DOF on
 the cases it used to fail (5 t to the ISS plane fell back on the kick; it reaches 412 × 424 km), and
-the six-DOF fleet matrix has no SSO row for it.
+the six-DOF fleet matrix has no SSO row for it. Its seven six-DOF matrix rows (LEO and the ISS plane at
+25 and 50 %, GTO at 25, 50 and 90 %) all reach their targets on the stored programme
+(`tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts`, flown 2026-10-01).
 
 ### Soyuz-2.1a's strap-ons fly a zero-lift turn (six-DOF, audit PHY-01)
 
