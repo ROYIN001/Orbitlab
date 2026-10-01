@@ -35,10 +35,22 @@ import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue, type ParsedLessonFile } from '../../lessons/lesson-file';
 import { SCENARIO_LINK_MAX, SCENARIO_PARAM, readScenarioParam, scenarioLink } from '../../lessons/scenario-link';
 import {
-  RESULTS_FILE_EXTENSION, clearRevealed, flightRecord, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
+  RESULTS_FILE_EXTENSION, clearRevealed, designRecord, flightRecord, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
 import { appBuildId } from '../../build-info';
-import { isCaseLesson, isFlightLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
+import {
+  isCaseLesson, isDesignLesson, isFlightLesson,
+  type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type DesignCriterion, type DesignKey, type DesignLesson, type Lesson, type LessonGrade,
+} from '../../lessons/types';
+import { gradeDesign } from '../../lessons/design-lesson';
+import { designLessonStart } from '../../design/design-lesson-key';
+import { TEMPLATE_TEXT } from '../../design/satellite-model';
+import type { SatelliteDesign } from '../../design/satellite-spec';
+import type { EcssLevel } from '../../orbit/satellite-air';
+import type { LessonDesk } from '../build/satellite-workspace';
+import { designLessonKey } from './design-key';
+import { designChip, designCriterionName, levelName, lockName, requirementsBox } from './design-strip';
+import { designValueText } from './design-text';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
 import { letterOf } from '../../worksheets/bank-items';
 import type { CaseId, CaseLessonState } from '../../worksheets/case-ids';
@@ -78,6 +90,20 @@ export interface LessonHost {
   lessonCase?(state: CaseLessonState | null): void;
   /** T01: the mission on the setup panel, as it stands — what the authoring tab turns into a scenario */
   mission?(): MissionState;
+  /**
+   * T01, a design lesson: open the Build section's satellite designer
+   * (Explore) or bench (Engineer) on the lesson's desk — its start design,
+   * date, level and locks — the student's own design put aside meanwhile.
+   */
+  openDesign?(desk: LessonDesk, level: 'explore' | 'engineer'): void;
+  /** T01: back to the lesson's design where the student left it */
+  showDesign?(level: 'explore' | 'engineer'): void;
+  /** T01: close the lesson's desk: the student's own design back */
+  closeDesign?(): void;
+  /** T01: the design on the lesson's desk now; null when none is open */
+  designNow?(): SatelliteDesign | null;
+  /** T01: the design on the satellite workspace, its date and its level, whatever is open — what the writer makes a design lesson from */
+  designDesk?(): { design: SatelliteDesign; date: string; level: EcssLevel } | null;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
@@ -118,6 +144,23 @@ interface CaseState {
   dataOpen: boolean;
 }
 
+/**
+ * A design lesson's own state (T01): the key of the design last checked, the
+ * design it was the key of (to say when the design on the desk has moved on),
+ * and a check in progress — the figures, then the lifetime run in its worker.
+ */
+interface DesignState {
+  key: DesignKey | null;
+  /** the design the key is of, as JSON */
+  keyFor: string | null;
+  /** that design itself, for the record */
+  checked: SatelliteDesign | null;
+  checking: { controller: AbortController; progress: number; record: boolean } | null;
+  failed: string | null;
+  /** the student asked to hand in with answers still to type */
+  answersFirst: boolean;
+}
+
 /** The open lesson's state. */
 interface Active {
   lesson: CatalogLesson;
@@ -139,6 +182,8 @@ interface Active {
   frozenAt?: { clock: number; actions: number };
   /** a case lesson's (no flight: `sim` and `frozen` stay empty) */
   case?: CaseState;
+  /** a design lesson's (T01: no flight either) */
+  design?: DesignState;
   /** answers shown, then cleared during this attempt: they still count as shown in it, so only a later one passes unaided */
   seen?: RevealedAnswers;
 }
@@ -242,7 +287,10 @@ export class LessonMode implements LessonToolsHost {
     const lesson = this.catalogue().find((l) => l.id === id);
     if (!lesson) return { ok: false, reason: t('lesson.notFound', { id }) };
     if (lesson.comingSoon) return { ok: false, reason: t('lesson.comingSoon') };
+    // a design lesson's desk is put away before another lesson opens (T01): the student's own design comes back
+    this.closeDesk(lesson);
     if (isCaseLesson(lesson)) return this.startCase(lesson);
+    if (isDesignLesson(lesson)) return this.startDesign(lesson);
     if (!isFlightLesson(lesson)) return { ok: false, reason: t('lesson.comingSoon') };
     this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.tellOrbit();
@@ -259,6 +307,125 @@ export class LessonMode implements LessonToolsHost {
     this.lastStripKey = '';
     this.update();
     return { ok: true };
+  }
+
+  /** Close the open design lesson's desk, unless `next` is that same lesson opened again. */
+  private closeDesk(next?: CatalogLesson): void {
+    const a = this.active;
+    if (!a?.design || (next && next.id === a.lesson.id)) return;
+    a.design.checking?.controller.abort();
+    this.host.closeDesign?.();
+  }
+
+  /**
+   * A design lesson (T01, map §4.1): the satellite designer (Explore) or its
+   * bench (Engineer) on the lesson's desk — the start design, the day and the
+   * air its figures are read in, the parts it locks — and the strip over it
+   * with the task, what the mission asks and the criteria. Nothing is graded
+   * until the student checks the design or hands it in.
+   */
+  private startDesign(lesson: DesignLesson): { ok: true } | { ok: false; reason: string } {
+    if (!this.host.openDesign) return { ok: false, reason: t('lesson.comingSoon') };
+    const template = 'template' in lesson.start ? lesson.start.template : null;
+    const start = designLessonStart(lesson.start, 'lesson', template ? t(TEMPLATE_TEXT[template]?.name ?? template) : '');
+    const state: DesignState = { key: null, keyFor: null, checked: null, checking: null, failed: null, answersFirst: false };
+    this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null, design: state };
+    lessonProgress(this.progressData, lesson.id);
+    this.save();
+    // nothing is flown: a flight lesson's locks are lifted
+    this.locks.set([]);
+    this.host.renderPanel();
+    delete document.body.dataset.lessonReveal;
+    document.body.dataset.lesson = lesson.id;
+    this.strip.hidden = false;
+    this.tellOrbit();
+    this.host.openDesign({ start, date: lesson.designDate, level: lesson.level, locked: lesson.locked }, lesson.mode);
+    this.lastStripKey = '';
+    this.paintStrip();
+    return { ok: true };
+  }
+
+  /**
+   * Work the design on the desk out for the lesson (the figures, then the
+   * lifetime in its worker when a criterion asks for it) and grade it; with
+   * `handIn`, keep it in the progress as well — the design, its figures, the
+   * day and the air (decision 3) — once every answer is typed.
+   */
+  private checkDesign(handIn: boolean): void {
+    const a = this.active;
+    if (!a?.design || !isDesignLesson(a.lesson)) return;
+    const lesson = a.lesson;
+    const design = this.host.designNow?.() ?? null;
+    if (!design) { this.host.showDesign?.(lesson.mode); return; }
+    const state = a.design;
+    state.answersFirst = false;
+    state.checking?.controller.abort();
+    const job = { controller: new AbortController(), progress: 0, record: handIn };
+    state.checking = job;
+    state.failed = null;
+    this.lastStripKey = '';
+    this.paintStrip();
+    const snapshot = structuredClone(design);
+    // let the strip say "working out" before the figures take the main thread for a moment
+    setTimeout(() => {
+      if (state.checking !== job) return;
+      designLessonKey(lesson, snapshot, job.controller.signal, (f) => { job.progress = f; this.lastStripKey = ''; this.paintStrip(); })
+        .then((key) => {
+          if (this.active !== a || state.checking !== job) return;
+          state.checking = null;
+          state.key = key;
+          state.keyFor = JSON.stringify(snapshot);
+          state.checked = snapshot;
+          a.recorded = false;
+          this.gradeDesignNow(a);
+          if (job.record) this.handInDesign(a);
+          this.lastStripKey = '';
+          this.paintStrip();
+        }, (err: unknown) => {
+          if (this.active !== a || state.checking !== job) return;
+          state.checking = null;
+          if (!(err instanceof DOMException && err.name === 'AbortError')) state.failed = t('lesson.design.strip.failed', { reason: err instanceof Error ? err.message : String(err) });
+          this.lastStripKey = '';
+          this.paintStrip();
+        });
+    }, 30);
+  }
+
+  /** The design last checked, graded again with the answers as they stand. */
+  private gradeDesignNow(a: Active): void {
+    if (!a.design?.key || !isDesignLesson(a.lesson)) return;
+    a.grade = gradeDesign(a.lesson, a.design.key, a.answers, this.revealedOf(a.lesson.id));
+  }
+
+  /** Keep the design handed in, with its grade (an attempt is a hand-in). Every answer must be typed first. */
+  private handInDesign(a: Active): void {
+    const d = a.design;
+    if (!d?.key || !d.checked || !a.grade || !isDesignLesson(a.lesson)) return;
+    if (awaitingAnswers(a.lesson, a.grade).length) { d.answersFirst = true; return; }
+    const p = lessonProgress(this.progressData, a.lesson.id);
+    p.attempts++;
+    recordGrade(this.progressData, {
+      lessonId: a.lesson.id,
+      ...designRecord({
+        at: new Date(), grade: a.grade, answers: a.answers, hintsShown: p.hintsShown, design: d.checked,
+        designDate: a.lesson.designDate, level: a.lesson.level, figures: d.key.values, app: appBuildId(),
+      }),
+    });
+    a.recorded = true;
+    this.save();
+  }
+
+  /** T01: the design on the desk changed (the Build section says so): the strip says whether its check still holds. */
+  designChanged(): void {
+    if (this.active?.design) this.paintStrip();
+  }
+
+  /** Whether the design on the desk is no longer the one last checked. */
+  private designStale(a: Active): boolean {
+    const d = a.design;
+    if (!d?.keyFor) return false;
+    const now = this.host.designNow?.() ?? null;
+    return !!now && JSON.stringify(now) !== d.keyFor;
   }
 
   /**
@@ -361,6 +528,23 @@ export class LessonMode implements LessonToolsHost {
       this.gradeCase(false);
       return;
     }
+    if (isDesignLesson(lesson)) {
+      // the lesson's start design again, its answers cleared; the student's own design stays put aside
+      const a = this.active;
+      a.design?.checking?.controller.abort();
+      a.answers = {};
+      a.drafts = {};
+      a.recorded = false;
+      a.grade = null;
+      delete a.seen;
+      a.design = { key: null, keyFor: null, checked: null, checking: null, failed: null, answersFirst: false };
+      const template = 'template' in lesson.start ? lesson.start.template : null;
+      const start = designLessonStart(lesson.start, 'lesson', template ? t(TEMPLATE_TEXT[template]?.name ?? template) : '');
+      this.host.openDesign?.({ start, date: lesson.designDate, level: lesson.level, locked: lesson.locked }, lesson.mode);
+      this.lastStripKey = '';
+      this.paintStrip();
+      return;
+    }
     if (!isFlightLesson(lesson)) return;
     this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.host.loadMission(missionStateOf(lesson.mission));
@@ -370,6 +554,7 @@ export class LessonMode implements LessonToolsHost {
   }
 
   exit(): void {
+    this.closeDesk();
     this.active = null;
     this.locks.set([]);
     this.host.renderPanel();
@@ -417,6 +602,9 @@ export class LessonMode implements LessonToolsHost {
     const a = this.active;
     if (!a) return;
     // a case lesson has no flight: one flying on in the Launch section is not its business (nor are its answers cleared by it)
+    if (isCaseLesson(a.lesson)) return;
+    // nor has a design lesson: its strip says whether the design on the desk is still the one checked
+    if (isDesignLesson(a.lesson)) { this.paintStrip(); return; }
     if (!isFlightLesson(a.lesson)) return;
     const lesson = a.lesson;
     const sim = this.host.sim();
@@ -518,6 +706,8 @@ export class LessonMode implements LessonToolsHost {
       this.gradeCase(true);
       return;
     }
+    // a design lesson's answers are checked with the design (its attempts are its hand-ins)
+    if (isDesignLesson(a.lesson)) { this.checkDesign(false); return; }
     this.update();
   }
 
@@ -541,6 +731,7 @@ export class LessonMode implements LessonToolsHost {
     this.save();
     this.lastStripKey = '';
     if (isCaseLesson(a.lesson)) this.gradeCase(true);
+    else if (isDesignLesson(a.lesson)) { this.gradeDesignNow(a); this.paintStrip(); }
     else this.update();
   }
 
@@ -557,6 +748,7 @@ export class LessonMode implements LessonToolsHost {
     this.save();
     this.lastStripKey = '';
     if (isCaseLesson(a.lesson)) this.gradeCase(false);
+    else if (isDesignLesson(a.lesson)) { this.gradeDesignNow(a); this.paintStrip(); }
     else this.update();
     this.flash(t('lesson.strip.revealedCleared'));
   }
@@ -650,7 +842,9 @@ export class LessonMode implements LessonToolsHost {
     const a = this.active;
     if (!a) return;
     this.strip.classList.toggle('case', isCaseLesson(a.lesson));
+    this.strip.classList.toggle('design', isDesignLesson(a.lesson));
     if (isCaseLesson(a.lesson)) { this.paintCase(a, a.lesson); return; }
+    if (isDesignLesson(a.lesson)) { this.paintDesign(a, a.lesson); return; }
     if (!isFlightLesson(a.lesson)) return;
     const lang = getLang();
     const g = a.grade;
@@ -789,6 +983,129 @@ export class LessonMode implements LessonToolsHost {
     button(t('lesson.strip.link'), () => void this.copyLink(lesson));
     button(t('lesson.strip.exit'), () => this.exit());
     this.strip.replaceChildren(head, status, actions);
+  }
+
+  /**
+   * A design lesson's strip (T01, map §4.1): the task and the hints shown,
+   * what the mission asks, the day and the air the figures are read in, each
+   * criterion with its bound and — once the design is checked — its figure
+   * and mark, the numbers to work out and type, and "Check the design" and
+   * "Hand in". A check of a design since changed on the desk is marked out
+   * of date; nothing is kept until the design is handed in.
+   */
+  private paintDesign(a: Active, lesson: DesignLesson): void {
+    const d = a.design!;
+    const g = a.grade;
+    const stale = this.designStale(a);
+    const shown = !!g && !stale && !d.checking;
+    const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
+    const key = JSON.stringify([getLang(), lesson.id, stale, d.keyFor !== null, d.checking ? [d.checking.record, Math.round(d.checking.progress * 100)] : null,
+      d.failed, d.answersFirst, g?.verdict, g?.lockBroken, g?.criteria.map((x) => [x.state, x.value, x.expected, !!x.revealed]), hints, a.answers, a.recorded,
+      this.saved, this.hasRevealed(lesson.id)]);
+    if (key === this.lastStripKey) return;
+    const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
+    if (typing && this.lastStripKey) return;
+    this.lastStripKey = key;
+    const head = this.stripHead(lesson, hints);
+    const crits = el('div', 'lesson-crits');
+    for (const c of lesson.criteria) if (c.kind === 'design') crits.append(designChip(c, g?.criteria.find((x) => x.id === c.id), d.key, stale || !!d.checking));
+
+    const status = el('div', 'lesson-status');
+    if (lesson.requirements) status.append(requirementsBox(lesson.requirements));
+    status.append(el('p', 'lesson-note small', t('lesson.design.strip.fixed', { date: lesson.designDate, level: levelName(lesson.level) })));
+    if (shown && g.lockBroken.length) status.append(el('p', 'lesson-note fail', t('lesson.design.strip.lockBroken', { fields: g.lockBroken.map(lockName).join(', ') })));
+    if (shown && d.key?.refused) status.append(el('p', 'lesson-note fail', t('lesson.design.strip.refused')));
+    if (d.checking) {
+      const line = el('p', 'lesson-note');
+      line.setAttribute('role', 'status');
+      line.textContent = d.checking.progress > 0 ? t('lesson.design.strip.lifetime', { p: Math.round(d.checking.progress * 100) }) : t('lesson.design.strip.checking');
+      status.append(line);
+    } else if (d.failed) status.append(el('p', 'lesson-note fail', d.failed));
+    else if (!d.keyFor) status.append(el('p', 'lesson-note', t('lesson.design.strip.notChecked')));
+    else if (stale) status.append(el('p', 'lesson-note warn', t('lesson.design.strip.stale')));
+
+    // the numbers to work out, and the two buttons, in one form (Enter checks)
+    const form = el('form', 'lesson-answers lesson-design-answers');
+    const inputs = new Map<string, () => string>();
+    const answerCrits = lesson.criteria.filter((c): c is Extract<DesignCriterion, { kind: 'answer' }> => c.kind === 'answer');
+    if (answerCrits.length) form.append(el('p', 'lesson-note', t('lesson.design.strip.answers')));
+    for (const c of answerCrits) {
+      const cg = shown ? g.criteria.find((x) => x.id === c.id) : undefined;
+      const row = el('label', `lesson-answer ${cg?.state ?? 'pending'}`);
+      const input = el('input');
+      input.type = 'text';
+      input.inputMode = 'decimal';
+      input.value = draftValue(a.drafts, a.answers, c.id);
+      input.addEventListener('input', () => { a.drafts[c.id] = input.value; });
+      input.setAttribute('aria-label', designCriterionName(c));
+      inputs.set(c.id, () => input.value);
+      const mark = cg?.state === 'pass' ? '✓' : cg?.state === 'fail' ? '✗' : '';
+      const verdict = cg?.revealed ? `${mark} ${t('lesson.design.strip.expected', { value: designValueText(c.measure, cg.expected ?? null) })}`.trim() : mark;
+      row.append(el('span', undefined, designCriterionName(c)), input, el('span', 'lesson-answer-mark', verdict));
+      form.append(row);
+    }
+    const busy = !!d.checking;
+    const check = el('button', undefined, t('lesson.design.strip.check'));
+    check.type = 'submit';
+    check.disabled = busy;
+    const handIn = el('button', 'lesson-primary', t('lesson.design.strip.handIn'));
+    handIn.type = 'button';
+    handIn.disabled = busy;
+    handIn.addEventListener('click', () => { this.readAnswers(inputs); this.checkDesign(true); });
+    form.append(check, handIn);
+    const hidden = shown ? answerCrits.filter((c) => {
+      const cg = g.criteria.find((x) => x.id === c.id);
+      return cg && cg.state !== 'pass' && !cg.revealed && typeof cg.expected === 'number' && Number.isFinite(cg.expected);
+    }) : [];
+    if (hidden.length) {
+      const reveal = el('button', undefined, t('lesson.strip.reveal'));
+      reveal.type = 'button';
+      reveal.title = t('lesson.strip.revealTitle');
+      reveal.addEventListener('click', () => this.revealAnswers());
+      form.append(reveal);
+    }
+    form.addEventListener('submit', (e) => { e.preventDefault(); this.submitAnswers(inputs); });
+    status.append(form);
+
+    if (shown && !stale) {
+      if (g.verdict === 'pass' || g.verdict === 'passedWithHelp') {
+        status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
+        if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+      } else if (g.verdict === 'fail') {
+        const onlyAnswers = !g.lockBroken.length && g.criteria.every((cg) => cg.state !== 'fail' || lesson.criteria.find((c) => c.id === cg.id)?.kind === 'answer');
+        status.append(el('p', 'lesson-note fail', t(g.criteria.some((cg) => cg.revealed) ? 'lesson.strip.revealed' : onlyAnswers ? 'lesson.strip.answersWrong' : 'lesson.design.strip.fail')));
+      }
+    }
+    if (d.answersFirst) status.append(el('p', 'lesson-note warn', t('lesson.design.strip.answersFirst')));
+    if (a.recorded && !stale) status.append(el('p', 'lesson-note ok', t('lesson.design.strip.handedIn')));
+    const saveNote = a.recorded || this.saved === false ? this.saveNote('p') : null;
+    if (saveNote) status.append(saveNote);
+
+    const { actions, button } = this.actionBar();
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    hintBtn.disabled = hints >= lesson.hints.length;
+    button(t('lesson.design.strip.open'), () => this.host.showDesign?.(lesson.mode));
+    button(t('lesson.strip.restart'), () => this.restart());
+    if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
+    if (shown && !stale && a.recorded && (g.verdict === 'pass' || g.verdict === 'passedWithHelp')) {
+      const next = this.nextLesson(lesson);
+      if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
+    }
+    button(t('lesson.strip.catalog'), () => this.openCatalog());
+    button(t('lesson.strip.link'), () => void this.copyLink(lesson));
+    button(t('lesson.strip.exit'), () => this.exit());
+    this.strip.replaceChildren(head, crits, status, actions);
+  }
+
+  /** The answers as typed into the strip's boxes (a design lesson's, before a hand-in). */
+  private readAnswers(inputs: Map<string, () => string>): void {
+    const a = this.active;
+    if (!a) return;
+    for (const [id, read] of inputs) a.drafts[id] = read();
+    a.answers = submittedAnswers(a.drafts);
+    a.recorded = false;
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && this.strip.contains(focused)) focused.blur();
   }
 
   /** "The data": the case sheet's table and figure, as the student works from them. */

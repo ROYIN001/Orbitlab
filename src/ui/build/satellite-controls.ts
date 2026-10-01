@@ -50,35 +50,47 @@ export function numberField(ws: SatelliteWorkspace, f: SatelliteField, keyPrefix
   // a camera that gives no wavelength is read at 550 nm (an estimate, `cameraWavelength`): the empty box says so
   if (f.path === 'payload.wavelength' && v === undefined) box.placeholder = typedText(DIFFRACTION_WAVELENGTH * SHOWN.um, getLang());
   if (f.path === 'orbit.inclination') box.disabled = inclinationFollows(d);
+  // T01: a part a design lesson fixes is shown, greyed out and marked
+  if (ws.locked(f.path)) box.disabled = true;
   const unit = fieldUnitText(f.unit);
   const row = el('span', 'bx-with-unit');
   row.append(box);
   if (unit) row.append(el('span', 'bx-unit', unit));
   const label = field(t(f.key), row, 'bx-field bsat-field');
   label.querySelector('.bx-field-name')!.append(' ', originTag(d, f.path));
+  lockTag(ws, f.path, label);
   return label;
 }
 
-/** A switch (sun-synchronous, has an engine, has a camera). */
-export function toggle(key: string, labelKey: string, on: boolean, onChange: (on: boolean) => void, noteKey?: string): HTMLElement {
+/** T01: the mark on a part a design lesson fixes (`SatelliteWorkspace.locked`), after its name. */
+function lockTag(ws: SatelliteWorkspace, path: string, label: HTMLElement): void {
+  if (!ws.locked(path)) return;
+  label.classList.add('bsat-locked');
+  label.querySelector('.bx-field-name, span')?.append(' ', el('em', 'bsat-lock', `🔒 ${t('lesson.design.lockedTag')}`));
+}
+
+/** A switch (sun-synchronous, has an engine, has a camera); `locked` greys it out (a design lesson fixes it, T01). */
+export function toggle(key: string, labelKey: string, on: boolean, onChange: (on: boolean) => void, noteKey?: string, locked = false): HTMLElement {
   const label = el('label', 'bx-check bsat-toggle');
   const input = el('input');
   input.type = 'checkbox';
   input.checked = on;
+  input.disabled = locked;
   input.dataset.k = key;
   input.addEventListener('change', () => onChange(input.checked));
   const text = el('span', undefined, t(labelKey));
+  if (locked) text.append(' ', el('em', 'bsat-lock', `🔒 ${t('lesson.design.lockedTag')}`));
   if (noteKey) text.append(el('small', 'bsat-toggle-note', t(noteKey)));
   label.append(input, text);
   return label;
 }
 
 export const sso = (ws: SatelliteWorkspace, prefix: string): HTMLElement =>
-  toggle(`${prefix}sso`, 'build.sat.sso', ws.design.orbit.sso, (on) => ws.change(withSso(ws.design, on)), 'build.sat.ssoNote');
+  toggle(`${prefix}sso`, 'build.sat.sso', ws.design.orbit.sso, (on) => ws.change(withSso(ws.design, on)), 'build.sat.ssoNote', ws.locked('orbit.sso'));
 export const engine = (ws: SatelliteWorkspace, prefix: string): HTMLElement =>
-  toggle(`${prefix}engine`, 'build.sat.engine', !!ws.design.propulsion, (on) => ws.change(withEngine(ws.design, on)));
+  toggle(`${prefix}engine`, 'build.sat.engine', !!ws.design.propulsion, (on) => ws.change(withEngine(ws.design, on)), undefined, ws.locked('propulsion'));
 export const camera = (ws: SatelliteWorkspace, prefix: string): HTMLElement =>
-  toggle(`${prefix}camera`, 'build.sat.camera', !!ws.design.payload, (on) => ws.change(withCamera(ws.design, on)));
+  toggle(`${prefix}camera`, 'build.sat.camera', !!ws.design.payload, (on) => ws.change(withCamera(ws.design, on)), undefined, ws.locked('payload'));
 
 const MOUNT_KEY = { tracking: 'build.sat.mount.tracking', body: 'build.sat.mount.body', spinner: 'build.sat.mount.spinner' } as const;
 const REGULATION_KEY = { DET: 'build.sat.regulation.DET', PPT: 'build.sat.regulation.PPT' } as const;
@@ -93,8 +105,10 @@ export function menu(ws: SatelliteWorkspace, which: 'mount' | 'regulation' | 'mo
       : which === 'mode' ? ['build.sat.mode', 'adcs.mode', Object.entries(MODE_KEY), d.adcs.mode] as const
         : ['build.sat.station', 'comms.station', STATIONS.map((s) => [s.id, STATION_KEY[s.id]] as const), d.comms.station] as const;
   const s = select(`${prefix}${which}`, options.map(([v, k]) => ({ value: v, label: t(k) })), value, (v) => ws.change(withChoice(ws.design, which, v)));
+  s.disabled = ws.locked(path);
   const label = field(t(labelKey), s, 'bx-field bsat-field');
   label.querySelector('.bx-field-name')!.append(' ', originTag(d, path));
+  lockTag(ws, path, label);
   return label;
 }
 
@@ -104,11 +118,11 @@ export function menu(ws: SatelliteWorkspace, which: 'mount' | 'regulation' | 'mo
  * orbit's inclination follows its height). A box being typed in is left as
  * it is.
  */
-export function refreshControls(root: HTMLElement, design: SatelliteDesign): void {
+export function refreshControls(root: HTMLElement, design: SatelliteDesign, locked: (path: string) => boolean = () => false): void {
   for (const tag of root.querySelectorAll<HTMLElement>('[data-origin]')) tag.replaceWith(originTag(design, tag.dataset.origin!));
   const inc = root.querySelectorAll<HTMLInputElement>('input[data-path="orbit.inclination"]');
   for (const box of inc) {
-    box.disabled = inclinationFollows(design);
+    box.disabled = inclinationFollows(design) || locked('orbit.inclination');
     if (document.activeElement !== box && Number.isFinite(design.orbit.inclination)) box.value = typedText(design.orbit.inclination, getLang());
   }
 }
@@ -129,7 +143,12 @@ export function designDateField(ws: SatelliteWorkspace, prefix: string): HTMLEle
   const today = button('watch-btn link bsat-today', t('build.sat.date.today'), () => { ws.setDate(todayDesignDate()); box.value = ws.date; });
   today.dataset.k = `${prefix}today`;
   const wrap = el('div', 'bsat-date-field');
-  wrap.append(field(t('build.sat.date'), box, 'bx-field'), today);
+  wrap.append(field(t('build.sat.date'), box, 'bx-field'));
+  // T01: a design lesson fixes the day its figures are read on, so a grade comes out the same any day
+  if (ws.lessonDesk) {
+    box.disabled = true;
+    wrap.append(el('em', 'bsat-lock', `🔒 ${t('lesson.design.lockedTag')}`));
+  } else wrap.append(today);
   wrap.title = t('build.sat.date.note');
   return wrap;
 }

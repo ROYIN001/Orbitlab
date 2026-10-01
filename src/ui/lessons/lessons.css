@@ -96,6 +96,18 @@ body[data-lesson] #first-use-guide { display: none; }
 .lesson-case-field { display: inline-flex; align-items: center; gap: 6px; }
 .lesson-case-unit { font: 12px var(--mono); color: var(--muted); }
 .lesson-case-working { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: #cfe9d8; }
+/* a design lesson (T01): the criteria chipped, what the mission asks and the answers under the task, over the designer */
+.lesson-note.small { font-size: 11.5px; }
+.lesson-note.warn { color: #ffd98a; }
+.lesson-crit.stale { opacity: 0.6; }
+.lesson-design-req { margin: 2px 0 6px; }
+.lesson-design-req summary { cursor: pointer; font-size: 12.5px; color: var(--lesson); }
+.lesson-design-req-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 2px 14px; margin: 4px 0; font-size: 12px; }
+.lesson-design-req-list div { display: flex; flex-wrap: wrap; gap: 0 6px; min-width: 0; }
+.lesson-design-req-list dt { color: var(--muted); }
+.lesson-design-req-list dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+.lesson-answers.lesson-design-answers > button { min-height: 32px; padding: 5px 12px; border-radius: 8px; font-size: 12.5px; background: var(--panel2); border: 1px solid var(--line2); color: var(--text); }
+.lesson-answers.lesson-design-answers > button:disabled { opacity: 0.45; }
 .lesson-actions button, .lessons-page-body button:not(.dialog-close):not(.lesson-card-item):not(.assess-option):not(.assess-chip):not(.assess-conf) {
   min-height: 32px; padding: 5px 12px; border-radius: 8px; font-size: 12.5px;
   background: var(--panel2); border: 1px solid var(--line2); color: var(--text);

@@ -42,6 +42,18 @@ const KEEP_MS = 400;
 /** A template's default name in the interface language: "My NAPA-2 (6U CubeSat)". */
 export const defaultNameFor = (templateId: string): string => t('build.sat.defaultName', { template: t(TEMPLATE_TEXT[templateId]?.name ?? templateId) });
 
+/**
+ * A design lesson's desk (roadmap T01): the design the lesson starts from,
+ * the day and the air its figures are read in (fixed by the lesson), and the
+ * parts of the design the student may not change (`DesignLockKey`).
+ */
+export interface LessonDesk {
+  start: SatelliteDesign;
+  date: DesignDate;
+  level: EcssLevel;
+  locked: readonly string[];
+}
+
 export interface WorkedOut {
   /** the figures of the design on screen, or of the last sound one while it is refused */
   fig: SatelliteFigures | null;
@@ -65,6 +77,10 @@ export class SatelliteWorkspace {
   private dateShown: DesignDate;
   /** the vehicle "Fly it" launches on: a catalogue id, or null for the Launch section's own (the default) */
   private vehicle: string | null = null;
+  /** T01: the design lesson open on the desk, and the student's own design, date and level it put aside */
+  private lesson: LessonDesk | null = null;
+  private aside: { draft: SatelliteDraft; date: DesignDate; level: EcssLevel } | null = null;
+  private replaced = 0;
 
   constructor() {
     let kept: string | null = null;
@@ -78,6 +94,8 @@ export class SatelliteWorkspace {
   }
 
   get design(): SatelliteDesign { return this.draft.design; }
+  /** How many times another design altogether was put on the desk (a template, a saved design, a lesson's): the controls are drawn again. */
+  get generation(): number { return this.replaced; }
   get recordId(): string | null { return this.draft.recordId; }
   get activityLevel(): EcssLevel { return this.level; }
 
@@ -89,8 +107,56 @@ export class SatelliteWorkspace {
     return designDateJd(this.dateShown)!;
   }
 
-  /** Another design date (a day of 1957–2200, else nothing changes; false): the figures again, and the draft kept with it. */
+  // ─── a design lesson on the desk (T01) ────────────────────────────────────
+
+  /** The design lesson open on the desk, if any. */
+  get lessonDesk(): LessonDesk | null { return this.lesson; }
+
+  /** Whether the lesson open on the desk fixes this part of the design (a field's path, a menu's, `propulsion`, `payload`). */
+  locked(path: string): boolean {
+    return !!this.lesson && this.lesson.locked.includes(path);
+  }
+
+  /**
+   * Open a design lesson's desk: its start design, its date and level, its
+   * locks. The student's own design, date and level are put aside — and the
+   * draft this browser keeps is left as it is, so a reload in the middle of
+   * a lesson brings the student's own design back — until `leaveLesson`.
+   */
+  enterLesson(desk: LessonDesk): void {
+    if (!this.lesson) this.aside = { draft: this.draft, date: this.dateShown, level: this.level };
+    this.lesson = desk;
+    this.replaced++;
+    this.draft = { design: structuredClone(desk.start), recordId: null, defaultName: desk.start.name };
+    this.dateShown = desk.date;
+    this.level = desk.level;
+    this.workOut();
+    this.tell('design');
+  }
+
+  /** The lesson's start design again ("Start again"), its date and level as the lesson fixes them. */
+  restartLesson(): void {
+    if (this.lesson) this.enterLesson(this.lesson);
+  }
+
+  /** Close the lesson's desk: the student's own design, date and level back. */
+  leaveLesson(): void {
+    if (!this.lesson) return;
+    this.lesson = null;
+    this.replaced++;
+    if (this.aside) {
+      this.draft = this.aside.draft;
+      this.dateShown = this.aside.date;
+      this.level = this.aside.level;
+      this.aside = null;
+    }
+    this.workOut();
+    this.tell('design');
+  }
+
+  /** Another design date (a day of 1957–2200, else nothing changes; false): the figures again, and the draft kept with it. A lesson fixes its own. */
   setDate(date: DesignDate): boolean {
+    if (this.lesson) return date === this.dateShown;
     if (designDateJd(date) === null) return false;
     if (date === this.dateShown) return true;
     this.dateShown = date;
@@ -124,6 +190,7 @@ export class SatelliteWorkspace {
 
   /** Another design altogether (a template, a saved or imported record): figures at once. */
   replace(draft: SatelliteDraft): void {
+    this.replaced++;
     this.draft = draft;
     this.queueKeep();
     this.workOut();
@@ -145,9 +212,9 @@ export class SatelliteWorkspace {
     this.tell('design');
   }
 
-  /** The level of solar activity the air is read at (the bench's choice). */
+  /** The level of solar activity the air is read at (the bench's choice; a lesson fixes its own). */
   setLevel(level: EcssLevel): void {
-    if (level === this.level) return;
+    if (level === this.level || this.lesson) return;
     this.level = level;
     this.workOut();
   }
@@ -203,6 +270,8 @@ export class SatelliteWorkspace {
   private write(): void {
     if (this.keep !== null) clearTimeout(this.keep);
     this.keep = null;
+    // a lesson's design is the lesson's: the draft kept is the student's own, put aside (`enterLesson`)
+    if (this.lesson) return;
     try { localStorage.setItem(SATELLITE_DRAFT_KEY, keptSatelliteText({ ...this.draft, date: this.dateShown })); } catch { /* full or blocked: Save says so */ }
   }
 }

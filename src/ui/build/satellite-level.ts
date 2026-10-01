@@ -78,8 +78,11 @@ export function orbitLabel(design: SatelliteDesign, fig: SatelliteFigures | null
   return t('build.sat.orbit.label', { name: design.name.trim() || design.template, pe: num(o.perigee / 1000), ap: num(o.apogee / 1000), i: num(i, 1), u: t('u.km') });
 }
 
-/** The design's shape: what decides which controls there are. */
-const shapeOf = (d: SatelliteDesign): string => JSON.stringify([d.template, d.orbit.sso, !!d.propulsion, !!d.payload]);
+/** The design's shape: what decides which controls there are, and (T01) another design altogether or a lesson's locks. */
+const shapeOf = (ws: SatelliteWorkspace): string => {
+  const d = ws.design;
+  return JSON.stringify([d.template, d.orbit.sso, !!d.propulsion, !!d.payload, ws.generation, ws.lessonDesk?.locked ?? null]);
+};
 
 export class SatelliteLevel {
   readonly root = el('div', 'bsat-grid');
@@ -114,7 +117,7 @@ export class SatelliteLevel {
     this.root.append(this.head, this.glance, this.controls, this.checks, this.figures, this.store.root);
     this.ws.subscribe(() => {
       if (!this.visible) return;
-      if (shapeOf(this.ws.design) !== this.shape) this.rebuild();
+      if (shapeOf(this.ws) !== this.shape) this.rebuild();
       else this.refresh();
     });
   }
@@ -157,7 +160,7 @@ export class SatelliteLevel {
 
   private rebuild(): void {
     if (!this.visible) return;
-    this.shape = shapeOf(this.ws.design);
+    this.shape = shapeOf(this.ws);
     this.keepFocus(() => {
       this.renderHead();
       this.renderControls();
@@ -168,7 +171,7 @@ export class SatelliteLevel {
   private refresh(): void {
     if (!this.visible) return;
     this.keepFocus(() => {
-      refreshControls(this.controls, this.ws.design);
+      refreshControls(this.controls, this.ws.design, (p) => this.ws.locked(p));
       this.renderGlance();
       this.renderChecks();
       this.renderFigures();
@@ -189,19 +192,24 @@ export class SatelliteLevel {
       value: x.id, label: t(TEMPLATE_TEXT[x.id].name), group: t(thai.includes(x) ? 'build.sat.tpl.group.thai' : 'build.sat.tpl.group.class'),
     }));
     const picker = select(`${P}template`, options, d.template, (id) => this.pickTemplate(id));
+    // T01: a design lesson starts where it says; "Start again" puts its start design back
+    const lesson = this.ws.lessonDesk;
+    picker.disabled = !!lesson;
     const name = el('input', 'bx-text');
     name.type = 'text';
     name.maxLength = 80;
     name.value = d.name;
     name.dataset.k = `${P}name`;
     name.addEventListener('input', () => this.ws.rename(name.value));
-    const again = button('watch-btn', t('build.sat.startOver'), () => this.pickTemplate(this.ws.design.template));
+    const again = button('watch-btn', t(lesson ? 'lesson.strip.restart' : 'build.sat.startOver'),
+      () => (this.ws.lessonDesk ? this.ws.restartLesson() : this.pickTemplate(this.ws.design.template)));
     again.dataset.k = `${P}again`;
     const row = el('div', 'bx-head-row');
     row.append(field(t('build.sat.template'), picker, 'bx-field bsat-template'), field(t('build.sat.name'), name, 'bx-field bx-name'), again,
       designDateField(this.ws, P));
     const about = el('p', 'bsat-about', t(TEMPLATE_TEXT[d.template]?.about ?? 'build.sat.tpl.none'));
     this.head.replaceChildren(text, row, about, el('p', 'bx-note small', `${t('build.sat.origin.legend')} ${t('build.sat.date.note')}`));
+    if (lesson) this.head.append(el('p', 'bx-note bsat-lesson-note', t('lesson.design.deskNote')));
   }
 
   private renderControls(): void {

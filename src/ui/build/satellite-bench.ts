@@ -144,7 +144,7 @@ export class SatelliteBench {
 
   private shapeOf(): string {
     const d = this.ws.design;
-    return JSON.stringify([this.tab, d.template, d.orbit.sso, !!d.propulsion, !!d.payload, d.adcs.mode, this.ws.activityLevel]);
+    return JSON.stringify([this.tab, d.template, d.orbit.sso, !!d.propulsion, !!d.payload, d.adcs.mode, this.ws.activityLevel, this.ws.generation, this.ws.lessonDesk?.locked ?? null]);
   }
 
   // ─── drawing ──────────────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ export class SatelliteBench {
   private refresh(): void {
     if (!this.visible) return;
     this.keepFocus(() => {
-      refreshControls(this.panel, this.ws.design);
+      refreshControls(this.panel, this.ws.design, (p) => this.ws.locked(p));
       // not under the student's hands: a date half typed in the head's box stays as it is
       if (!this.head.contains(document.activeElement)) this.renderHead();
       this.renderResults();
@@ -199,7 +199,10 @@ export class SatelliteBench {
     }
     const level = select(`${P}level`, DESIGN_ACTIVITY_LEVELS.map((l) => ({ value: l, label: t(LEVEL_KEY[l]) })), this.ws.activityLevel,
       (v) => this.ws.setLevel(v as EcssLevel));
+    // T01: a design lesson fixes the air its figures are read in, as it fixes their day
+    level.disabled = !!this.ws.lessonDesk;
     side.append(field(t('build.sat.bench.level'), level, 'bx-field bsb-level'), designDateField(this.ws, P));
+    if (this.ws.lessonDesk) side.append(el('p', 'bx-note small bsat-lesson-note', t('lesson.design.deskNote')));
     this.head.replaceChildren(text, side);
   }
 

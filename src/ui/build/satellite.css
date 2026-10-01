@@ -57,6 +57,10 @@
 .bsat-origin-sourced { border-color: var(--accent-line); color: var(--accent); cursor: help; }
 .bsat-origin-estimate { border-style: dashed; }
 .bsat-origin-yours { border-color: var(--line2); color: #dce6ee; }
+/* T01: a part a design lesson fixes — a mark and a lock, never colour alone */
+.bsat-lock { font-style: normal; font-size: 10.5px; line-height: 1.5; color: var(--lesson, #f5c451); white-space: nowrap; }
+.bsat-locked input:disabled, .bsat-locked select:disabled { opacity: 0.7; }
+.bsat-lesson-note { color: var(--lesson, #f5c451); }
 
 .bsat-orbit { padding-top: 10px; border-top: 1px solid var(--line); }
 /* "Fly it" in the Launch section (the integration of D06): the vehicle, what will fly, the fairing note, the button */

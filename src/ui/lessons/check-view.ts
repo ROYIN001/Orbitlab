@@ -258,6 +258,8 @@ class CheckView {
       legend.append(dt, el('dd', undefined, t(STATUS_NOTE[s])));
     }
     box.append(legend);
+    // T01: a design lesson's result is worked out again, not flown
+    if (check.records.some((r) => r.kind === 'design')) box.append(el('p', 'lesson-note', t('lesson.design.check.legend')));
     const catalogue = allLessons(this.lessons());
     for (const r of check.records) box.append(this.recordCard(r, check, catalogue));
     return box;
@@ -279,7 +281,10 @@ class CheckView {
     const notes = el('ul', 'recheck-notes');
     if (r.reason) notes.append(el('li', undefined, t(REASON_KEY[r.reason])));
     if (r.missing.length) notes.append(el('li', undefined, t('lesson.check.missing', { fields: missingFieldList(r.missing) })));
-    notes.append(el('li', undefined, r.sameBuild === null ? t('lesson.check.build.unknown') : r.sameBuild ? t('lesson.check.build.same') : t('lesson.check.build.other', { build: r.app ?? '' })));
+    const design = r.kind === 'design';
+    notes.append(el('li', undefined, r.sameBuild === null ? t('lesson.check.build.unknown')
+      : r.sameBuild ? t(design ? 'lesson.design.check.build.same' : 'lesson.check.build.same')
+        : t(design ? 'lesson.design.check.build.other' : 'lesson.check.build.other', { build: r.app ?? '' })));
     if (r.lateActions) notes.append(el('li', undefined, t('lesson.check.lateActions', { n: r.lateActions })));
     if (r.lockBroken.length) notes.append(el('li', undefined, t('lesson.check.lockBroken', { n: r.lockBroken.length })));
     if (r.flownTo !== null) notes.append(el('li', undefined, t('lesson.check.flownTo', { t: valueText(r.flownTo, '', 0.01), steps: tCount('lesson.check.n.steps', r.steps) })));
@@ -294,7 +299,9 @@ class CheckView {
   private criteriaTable(r: RecordCheck, lesson: CatalogLesson | undefined): HTMLElement {
     const table = el('table', 'recheck-criteria');
     const head = el('tr');
-    for (const key of ['lesson.check.col.criterion', 'lesson.check.col.recorded', 'lesson.check.col.rechecked', 'lesson.check.col.tolerance', 'lesson.check.col.result']) head.append(el('th', undefined, t(key)));
+    // a design's figures are worked out again (T01), a flight is flown again
+    const again = r.kind === 'design' ? 'lesson.design.check.col.rechecked' : 'lesson.check.col.rechecked';
+    for (const key of ['lesson.check.col.criterion', 'lesson.check.col.recorded', again, 'lesson.check.col.tolerance', 'lesson.check.col.result']) head.append(el('th', undefined, t(key)));
     table.append(el('thead'), el('tbody'));
     table.tHead!.append(head);
     const criteria = lesson && !('case' in lesson) ? (lesson.criteria as (Criterion | DesignCriterion)[]) : [];
@@ -311,8 +318,8 @@ class CheckView {
       };
       row.append(
         cell(criterionName(c, def)),
-        cell(gradeText(c, 'recorded', unit), 'lesson.check.col.recorded'),
-        cell(gradeText(c, 'rechecked', unit), 'lesson.check.col.rechecked'),
+        cell(gradeText(c, 'recorded', unit, r.kind === 'design'), 'lesson.check.col.recorded'),
+        cell(gradeText(c, 'rechecked', unit, r.kind === 'design'), again),
         cell(c.tol === null ? '—' : `±\u00a0${valueText(c.tol, unit, c.tol)}`, 'lesson.check.col.tolerance'),
         cell(t(STATUS_KEY[c.status]), 'lesson.check.col.result'),
       );
@@ -334,12 +341,12 @@ function criterionName(c: CriterionCheck, def: Criterion | DesignCriterion | und
 }
 
 /** One side of a criterion: its state, and the value it was decided on (an answer: typed, and the flight's). */
-function gradeText(c: CriterionCheck, side: 'recorded' | 'rechecked', unit: string): string {
+function gradeText(c: CriterionCheck, side: 'recorded' | 'rechecked', unit: string, design = false): string {
   const g = c[side];
   if (!g) return '—';
   const state = g.state === 'pass' ? '✓' : g.state === 'fail' ? '✗' : '…';
   const value = c.kind === 'answer'
-    ? t('lesson.check.answer', { typed: valueText(g.value, unit, c.tol), flown: valueText(g.expected, unit, c.tol) })
+    ? t(design ? 'lesson.design.check.answer' : 'lesson.check.answer', { typed: valueText(g.value, unit, c.tol), flown: valueText(g.expected, unit, c.tol) })
     : g.value === null ? ''
     // the 25-year rule's figure is a yes or a no (T01)
       : c.measure === 'sat.disposal25y' ? t(g.value >= 0.5 ? 'lesson.design.yes' : 'lesson.design.no') : valueText(g.value, unit, c.tol);

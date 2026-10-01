@@ -47,7 +47,9 @@ import { figuresView, mass } from './figures';
 import { partCardView } from './part-card';
 import { ExploreLevel } from './explore-level';
 import { EngineerLevel } from './engineer-level';
-import { SatelliteWorkspace } from './satellite-workspace';
+import { SatelliteWorkspace, type LessonDesk } from './satellite-workspace';
+import type { SatelliteDesign } from '../../design/satellite-spec';
+import type { EcssLevel } from '../../orbit/satellite-air';
 import { SatelliteLevel } from './satellite-level';
 import { SatelliteBench } from './satellite-bench';
 import { RequirementsPage } from './requirements-page';
@@ -162,6 +164,8 @@ export class BuildScreen {
   private readonly exploreBar = el('div', 'bs-craft');
   private readonly engineerBar = el('div', 'bs-craft');
   private satWorkspace: SatelliteWorkspace | null = null;
+  /** T01: who is told when the design on the desk changes (the lesson strip) */
+  private readonly designListeners: (() => void)[] = [];
   private satLevel: SatelliteLevel | null = null;
   private satBench: SatelliteBench | null = null;
   /** D07: the page of a level with an address of its own (the requirements page), and the row last opened from it on the bench */
@@ -405,8 +409,57 @@ export class BuildScreen {
 
   /** The one satellite both levels work on, made the first time either is wanted. */
   private workspace(): SatelliteWorkspace {
-    this.satWorkspace ??= new SatelliteWorkspace();
+    if (!this.satWorkspace) {
+      const ws = new SatelliteWorkspace();
+      for (const fn of this.designListeners) ws.subscribe((what) => { if (what === 'design') fn(); });
+      this.satWorkspace = ws;
+    }
     return this.satWorkspace;
+  }
+
+  // ─── a design lesson (T01) ────────────────────────────────────────────────
+
+  /**
+   * T01: open a design lesson's desk — its start design, date, level and
+   * locks on the shared satellite workspace (the student's own design is put
+   * aside until `closeDesignLesson`) — and show the satellite designer at the
+   * lesson's level (Explore) or its bench (Engineer).
+   */
+  openDesignLesson(desk: LessonDesk, level: 'explore' | 'engineer'): void {
+    this.rememberCraft('satellite');
+    this.workspace().enterLesson(desk);
+    this.showDesignLesson(level);
+  }
+
+  /** T01: back to the lesson's design where the student left it, at its level. */
+  showDesignLesson(level: 'explore' | 'engineer'): void {
+    this.rememberCraft('satellite');
+    // the route closes the lessons page over it; the same route shown already is drawn again, with the satellite on it
+    const shown = this.visible && this.level === level && !this.page;
+    this.host.go(route('build', level));
+    if (shown) this.render();
+  }
+
+  /** T01: close the lesson's desk; the student's own design comes back. */
+  closeDesignLesson(): void {
+    this.satWorkspace?.leaveLesson();
+  }
+
+  /** T01: the design on the lesson's desk now; null when no lesson's desk is open. */
+  lessonDesign(): SatelliteDesign | null {
+    return this.satWorkspace?.lessonDesk ? this.satWorkspace.design : null;
+  }
+
+  /** T01: be told when the design on the desk changes (the lesson strip marks its check out of date); from when the desk is first made. */
+  onDesignChange(fn: () => void): void {
+    this.designListeners.push(fn);
+    this.satWorkspace?.subscribe((what) => { if (what === 'design') fn(); });
+  }
+
+  /** T01: the design on the satellite workspace, its date and its level — what the scenario writer makes a design lesson from. */
+  designDesk(): { design: SatelliteDesign; date: string; level: EcssLevel } {
+    const ws = this.workspace();
+    return { design: structuredClone(ws.design), date: ws.date, level: ws.activityLevel };
   }
 
   /** The Explore level's satellite designer, made the first time it is wanted (shown, or handed a design). */

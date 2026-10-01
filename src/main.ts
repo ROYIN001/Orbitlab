@@ -588,7 +588,14 @@ class App {
       renderPanel: () => this.panel.render(),
       // T01: the authoring tab writes a scenario on the mission the panel holds
       mission: () => this.panel.missionState(),
+      // T01: a design lesson works on the Build section's satellite desk, the student's own design put aside meanwhile
+      openDesign: (desk, level) => this.buildScreen.openDesignLesson(desk, level),
+      showDesign: (level) => this.buildScreen.showDesignLesson(level),
+      closeDesign: () => this.buildScreen.closeDesignLesson(),
+      designNow: () => this.buildScreen.lessonDesign(),
+      designDesk: () => this.buildScreen.designDesk(),
     });
+    this.buildScreen.onDesignChange(() => this.lessons.designChanged());
     this.lessons.openFromHash(startHash);
   }
 
