@@ -4310,7 +4310,7 @@ export const th: Record<string, string> = {
   'lesson.pack.kind.outcome': 'ผลการเรียนรู้',
   'lesson.pack.kind.course': 'รายวิชา',
   'lesson.pack.kind.competence': 'สมรรถนะ',
-  'lesson.pack.authorId': '{where}: "{id}" เป็นรหัสของบทเรียนในชุดบทเรียนของโปรแกรม Orbitlab ทุกเครื่องจะเปิดบทเรียนนั้นแทนบทเรียนของคุณ โปรดเลือกรหัสอื่น',
+  'lesson.pack.authorId': '{where}: «{id}» เป็นรหัสของบทเรียนในชุดบทเรียนที่มากับโปรแกรม Orbitlab ทุกเครื่องจะเปิดบทเรียนนั้นแทนบทเรียนของคุณ ให้เลือกรหัสอื่น',
   'assess.multiHint': 'เลือกทุกคำตอบที่ถูก แล้วไปต่อ',
   'assess.orderHint': 'คลิกรายการตามลำดับจากแรกไปสุดท้าย คลิกซ้ำเพื่อยกเลิก',
   'assess.photoCredit': 'ภาพ: {author} · {license} · Wikimedia Commons',
