@@ -10,7 +10,7 @@ import { flyMission } from '../validation/flight-harness';
 import { TIMELINE_REFERENCES } from '../validation/reference-data';
 import { formatRows, timelineRows } from '../validation/compare';
 
-/** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since). */
+/** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since); Proton-M and Angara-A5 re-measured 2026-09-28 with F14's fairing rule. */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
   soyuzMs25: ['fairing/altitude', 'coreSep/altitude', 'insertion/apogee'],
   electronNtt: ['fairing/time', 'seco/time', 'kickSep/time'],
@@ -21,9 +21,9 @@ const DISAGREEMENTS: Record<string, readonly string[]> = {
   h3F3: ['fairing/time', 'fairing/altitude', 'meco/altitude', 'stageSep/altitude', 'seli1/altitude', 'seco1/time', 'seco1/altitude'],
   h2aF50: ['srbSep/time', 'seco/time'],
   vegaVV25: ['z40Sep/time', 'fairing/time', 'z9Sep/time'],
-  protonT14R: ['maxQ/time', 'fairing/time'],
+  protonT14R: ['maxQ/time'],
   fhArabsat: ['maxQ/time', 'beco/time', 'boosterSep/time', 'meco/time', 'stageSep/time', 'ses1/time', 'fairing/time'],
-  angaraF2: ['fairing/time'],
+  angaraF2: [],
 };
 
 describe('published launch timelines (six-DOF)', () => {

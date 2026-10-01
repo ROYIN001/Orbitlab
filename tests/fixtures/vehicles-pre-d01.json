@@ -234,6 +234,10 @@
    "diameter": 4.35,
    "length": 15,
    "mass": 2000,
+   "sepAfterIgnition": {
+    "delay": 10,
+    "stage": "p3"
+   },
    "sepAltitude": 120000
   },
   "guidanceDefaults": {
@@ -272,7 +276,7 @@
     "id": "p1",
     "length": 21.2,
     "name": "First stage (6× RD-276)",
-    "propellantMass": 419400
+    "propellantMass": 428300
    },
    {
     "color": "#d9d9d9",
@@ -290,7 +294,7 @@
     "ignitionDelay": 0,
     "length": 17,
     "name": "Second stage",
-    "propellantMass": 156100,
+    "propellantMass": 157300,
     "sepDelay": 0
    },
    {
@@ -342,6 +346,10 @@
    "diameter": 4.35,
    "length": 15,
    "mass": 2000,
+   "sepAfterIgnition": {
+    "delay": 9,
+    "stage": "urm2"
+   },
    "sepAltitude": 120000
   },
   "guidanceDefaults": {
@@ -349,6 +357,9 @@
    "loftAltitude": 150000,
    "maxTurnRate": 0.3,
    "pitchMax": 25
+  },
+  "guidanceDefaultsSixDof": {
+   "kickAngle": 8
   },
   "height": 55.4,
   "id": "angaraa5",

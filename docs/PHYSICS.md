@@ -1148,9 +1148,22 @@ it**, and the field is now `FairingSpec.sepTime`: Ariane 64 200 s, Vega-C 220 s,
 March 3B/E carry the same field for the same reason — their operators publish a jettison time too
 — at 157 s, 157 s and 215 s (measured T+157.1 s and T+215.2 s). The 80 km altitude floor still
 applies to a timeline release, so a trajectory that is still deep in the atmosphere at its
-published time does not shed the fairing there. Everything else in the fleet — Falcon 9, H3,
-Electron, PSLV-XL, Long March 5, Angara, Proton, Atlas V, Vulcan — keeps the unmodified physical
-placard.
+published time does not shed the fairing there. Proton-M and Angara-A5 carry a rule instead of a
+time, `FairingSpec.sepAfterIgnition`: Khrunichev drops the fairing ten seconds into third-stage
+flight. ILS's Proton Mission Planner's Guide (Rev. 7, 2009) has the third stage lighting at 338 s
+and "PLF jettison typically at 348 s", timed "so that fairing hardware will impact in designated
+areas"; on Angara-A5 it goes "at the initial phase of Stage III operation", ten seconds after the
+core separated on the first flight (ILS, 2014). On the placard they had dropped it at T+175 s and
+T+302 s against Telstar 14R's 347 s and Angara flight 2's 340 s; on the rule they drop it at
+T+342.6 s and T+341.6 s (point mass). Carrying Proton's fairing that long uncovered a first
+stage 8.9 t short of its published propellant load, now corrected (VALIDATION.md, F14). Everything else in the fleet — Falcon 9, H3, Electron,
+PSLV-XL, Long March 5, Atlas V, Vulcan — keeps the unmodified physical placard.
+
+That placard is not what the operators who quote it evaluate. ULA jettisons Atlas V's fairing
+"when the 3-sigma free molecular heat flux falls below 1,135 W/m²" (Atlas V Launch Services
+User's Guide, Rev. 11, 2010, §2.3): the limit applies to a dispersed atmosphere and trajectory, so
+the nominal heating at jettison is lower, and the model, which evaluates it on the nominal
+atmosphere, drops the fairing early (VALIDATION.md, F14).
 
 Soyuz-2.1a and Soyuz-2.1b now fly the published T+157 s callout directly instead of the heating
 placard, which used to leave Soyuz-2.1a 19 s late (T+176 s against that same ~157 s): at the
@@ -1600,6 +1613,12 @@ screen's knife edge showed.
   tests over the whole matrix pin both halves: `no flight breaks up after it has reported an
   insertion` and `no flight reports a parking orbit below the insertion floor`.
 
+  The rule was first written for the stack after SECO, in `burn` and `coast`. With the fairing
+  kept to the published T+339 s (§4) the same crew-ship flight never reaches SECO: the Briz-M
+  lights during the ascent and burns out short of orbit, and it broke up at T+1 448 s still in
+  `ascent`. The floor now applies during the ascent too, once the first stage has separated; a
+  first-stage failure is an ascent failure and is left to the placards.
+
 ## 6a. Reference timelines
 
 Flown with `DEFAULT_GUIDANCE` merged with each vehicle's `guidanceDefaults`, no auto-tuning and
@@ -1935,8 +1954,8 @@ configuration, and the column that matters is whether it agrees with the outcome
 
 | mission | outcome | final orbit | insertion | verdict |
 | --- | --- | --- | --- | --- |
-| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 292 s | — | T+570 s | **fail** ✓ |
-| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+21 519 s | 254 × 35 731 km | T+570 s | warn ✓ |
+| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 458 s | — | — | **fail** ✓ |
+| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+37 597 s | 250 × 35 732 km | T+575 s | warn ✓ |
 | Angara-A5/Briz-M · crew 7.15 t → 500 km, Plesetsk | target orbit T+8 394 s | 498 × 498 km | T+1 051 s | warn ✓ |
 | Angara-A5/Briz-M · comsat 5 t → GTO, Plesetsk | target orbit T+57 235 s | 251 × 35 720 km | T+754 s | warn ✓ |
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Vostochny | target orbit T+3 626 s | 597 × 597 km | T+827 s | ok ✓ |
@@ -1968,7 +1987,13 @@ Two rows are failures and both are capability limits with the shortfall measured
   target, all at kick angles of 6–8° with turn rates the fleet does not use and none at or
   near the shipped programme: with the DEFAULT guidance this combination does not fly. The
   boundary is measured either side — 5.75 t delivers 412 × 412 km, 7.15 t does not — and it
-  is sharp because the sink is cubic in the shortfall.
+  is sharp because the sink is cubic in the shortfall. Since the fairing stays on to T+339 s,
+  as ILS publishes (§4), the third stage no longer reaches a cut-off at all: the Briz-M lights
+  during the ascent, burns short of orbit and the stack falls back. The insertion floor
+  (`abandonInsertion`) used to apply only after SECO and let that end in a break-up at
+  T+1 448 s; it now covers the ascent once the first stage has gone, and the flight ends
+  abandoned at T+1 458 s (measured 2026-09-28 with Proton-M's published stage propellant loads;
+  the two Proton rows of the table above were re-measured the same day, the verdicts were not).
 - **Soyuz-2.1b/Fregat with the same crew ship** is the same shape one step down: the Blok I
   under a Fregat and 7.15 t is 470 m/s short (`ascentMargin` −470), the ascent sags and the
   stack breaks up at T+962 s — *before* any insertion is announced, which is the honest end
@@ -2792,9 +2817,10 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     cut-off works and is tested, the 300–800 km band does not close and all six `soyuz21a`
     rows plus Long March 2D's seven remain `ARCHITECTURE` exclusions. `insertionAltitudeFor`
     also still takes only the target and not the `VehicleSpec`, as the audit asked.
-  - The fairing placard is one physical criterion (1135 W/m²) plus, for four vehicles, the
-    jettison **time** their operator publishes (§4). Neither is a model of the real decision,
-    which is a heating placard evaluated against a specific fairing's thermal design.
+  - The fairing placard is one physical criterion (1135 W/m²) plus, for eight vehicles, the
+    jettison **time** their operator publishes and, for Proton-M and Angara-A5, the operator's
+    rule (§4). The placard is evaluated on the nominal atmosphere, where operators evaluate it on
+    3-sigma dispersions, so it drops Atlas V's and Falcon Heavy's fairings early.
   - The physics has been compared with flight data for twelve vehicles: Falcon 9 (webcast
     telemetry of five flights) and eleven others against published timelines
     ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
@@ -2804,7 +2830,7 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     - PSLV-XL's first stage is 29 % slow at separation. It flies too steep and then turns hard;
       the solid-motor curve shape was measured and is not the cause.
     - H3's first stage flies far flatter than JAXA's plan.
-    - The heating placard drops most fairings 10–50 % early.
+    - The heating placard drops Atlas V's and Falcon Heavy's fairings 17–27 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.

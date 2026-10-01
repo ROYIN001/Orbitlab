@@ -22,6 +22,15 @@
  * from the catalogue, so this test still proves the catalogue emits exactly
  * the fleet main flies. Only Falcon Heavy changed.
  *
+ * And a second time, for F14 (2026-09-28, docs/VALIDATION.md): Proton-M's
+ * published first- and second-stage propellant loads, and Proton-M's and
+ * Angara-A5's fairing jettison rule (`fairing.sepAfterIgnition`), and
+ * Angara-A5's six-DOF kick (`guidanceDefaultsSixDof`). Written the
+ * same way, from the literal `VEHICLES` of the branch that made the change
+ * (its src/data/vehicles.ts at c2aabb4, 3d713b5 plus F14, before it met the
+ * catalogue, with the kick added); the catalogue after the merge emits it
+ * byte for byte. Only Proton-M and Angara-A5 changed.
+ *
  * What the JSON pins and what it leaves out, on purpose:
  * - keys are sorted recursively, so key order is left out of the fixture. It
  *   reaches no catalogue flight; it only shows in the bytes of a mission file
@@ -42,11 +51,13 @@ import { VEHICLES } from '../src/data/vehicles';
 import FIXTURE from './fixtures/vehicles-pre-d01.json?raw';
 
 /**
- * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, from main's literal fleet at
- * 3d713b5 (F11 included); 30 987 characters. At eedd035, the pre-D01 HEAD, it
- * was f891238e…, 30 926 characters.
+ * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, from the literal fleet at
+ * c2aabb4 with Angara-A5's six-DOF kick (F11 and F14 included); 31 119
+ * characters. At 3d713b5 (F11) it was
+ * 420d7d17…, 30 987 characters; at eedd035, the pre-D01 HEAD, f891238e…,
+ * 30 926 characters.
  */
-const PRE_D01_UNSORTED_SHA256 = '420d7d170991740362d985e602da126d94c4efb4187ac167a102be108c93f420';
+const PRE_D01_UNSORTED_SHA256 = '2793a05e3d7e1ce48093aefa065d4ff69b4808ad775cc4ea75f565505c5b8a3a';
 
 const sortKeys = (v: unknown): unknown => (Array.isArray(v) ? v.map(sortKeys)
   : v && typeof v === 'object'
@@ -84,6 +95,6 @@ describe('D01: the catalogue vehicles, recorded before the parts catalogue', () 
     const unsorted = JSON.stringify(VEHICLES);
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(unsorted));
     const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    expect([unsorted.length, hex]).toEqual([30987, PRE_D01_UNSORTED_SHA256]);
+    expect([unsorted.length, hex]).toEqual([31119, PRE_D01_UNSORTED_SHA256]);
   });
 });
