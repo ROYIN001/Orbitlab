@@ -4,8 +4,11 @@
  * each as a group with its curriculum codes and a draft's notice, and a
  * point-mass pack lesson (12.1, Kepler's third law on a transfer orbit:
  * Falcon 9 to GTO, about 550 s of flight) opened from its card is flown live,
- * answered from the result's heights and graded a pass. tests/lesson-packs.test.ts
- * flies every pack lesson's worked solution headless; this checks the page.
+ * answered from the result's heights and graded a pass. Then (T03b) a pack's
+ * design lesson (13.4: a THEOS-2-class imager's cells and battery) opened
+ * from its card fails as it starts and passes with the worked design handed
+ * in. tests/lesson-packs.test.ts and tests/lesson-packs-design.test.ts work
+ * every pack lesson's solution headless; this checks the page.
  * Point-mass, about a minute on a loaded 4-core machine (64 s on 2026-10-01): smoke.
  */
 import { existsSync, readFileSync } from 'node:fs';
@@ -74,5 +77,34 @@ export default async function lessonPacks(t) {
   const next = await page.evaluate(() => [...document.querySelectorAll('.lesson-actions button')].some((b) => /12\.2/.test(b.textContent ?? '')));
   t.check(next, '"Next" does not go on to the pack\'s next lesson, 12.2');
   await app.shot('graded');
+
+  // T03b: a pack's design lesson (13.4, sunlight into electricity: a THEOS-2-class imager's cells and battery)
+  // opens the satellite designer from its card, fails as it starts, and passes with the worked design handed in
+  await page.evaluate(() => { location.hash = '#/lessons'; });
+  await t.until(() => page.evaluate(() => document.querySelectorAll('.lesson-pack').length === 5), { timeoutMs: 60_000, intervalMs: 500 });
+  const designCard = page.locator('.lesson-pack[data-pack="ipst-physics"] .lesson-card-item', { hasText: '13.4 ' }).first();
+  await designCard.scrollIntoViewIfNeeded();
+  await designCard.click({ noWaitAfter: true });
+  const desk = await t.until(() => page.evaluate(() => document.body.dataset.lesson === 'ipst-p-solar-power'
+    && !!document.querySelector('.lesson-strip.design:not([hidden])') && !!document.querySelector('input[data-path="power.arrayArea"]')), { timeoutMs: 60_000, intervalMs: 500 });
+  if (!t.check(desk, 'lesson 13.4 did not open the designer under its pack')) return;
+  const locked = await page.evaluate(() => [document.querySelector('input[data-path="power.payloadW"]')?.disabled, document.querySelector('input[data-path="power.arrayArea"]')?.disabled]);
+  t.check(locked[0] === true && locked[1] === false, `13.4's locks: payload ${locked[0]}, cells ${locked[1]}`);
+  await page.click('.lesson-design-answers button[type=submit]');
+  const failed = await t.until(() => page.evaluate(() => document.querySelectorAll('.lesson-strip .lesson-crit.fail').length === 2), { timeoutMs: 60_000, intervalMs: 500 });
+  t.check(failed, 'the start design of 13.4 did not fail its power and battery criteria');
+  for (const [path, value] of [['power.arrayArea', '6.5'], ['power.batteryWh', '1800']]) {
+    const box = page.locator(`input[data-path="${path}"]:visible`);
+    await box.fill(value);
+    await box.press('Tab');
+  }
+  // the longest eclipse, as "At a glance" prints it
+  const eclipse = (await page.locator('.bsat-summary .bx-sum').nth(1).locator('dd').textContent()).replace(/[^0-9.]/g, '');
+  await page.fill('.lesson-design-answers input', eclipse);
+  await page.click('.lesson-design-answers button.lesson-primary');
+  const handedIn = await t.until(() => page.evaluate(() => (document.querySelector('.lesson-strip .lesson-note.pass') && document.querySelector('.lesson-strip .lesson-note.ok') ? 'pass'
+    : document.querySelector('.lesson-strip .lesson-note.fail')?.textContent ?? null)), { timeoutMs: 60_000, intervalMs: 500 });
+  t.check(handedIn === 'pass', `lesson 13.4 with 6.5 m², 1 800 Wh and ${eclipse} min: ${handedIn}`);
+  await app.shot('design-handed-in');
   app.checkErrors();
 }
