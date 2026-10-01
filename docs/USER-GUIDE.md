@@ -1181,8 +1181,10 @@ gives **Passed with help**, recorded as such in your progress and the results fi
 the lesson's card, and **Next** still opens the next lesson. **Clear the answers I have seen**
 (on the strip while the lesson keeps any) forgets them, so your next attempt can pass unaided. The
 grades are formative: a worksheet's answer key is on the same
-device. The grade is read from the recording's head, so scrubbing back through the replay never
-changes it. **Hint** reveals up to three hints, one at a time (the
+device. The grade is taken once the flight has ended and kept, so scrubbing back through the replay
+never changes it; the orbit it reads is the one at insertion, as the event log's "Target orbit
+achieved" line gives it, however late the page reaches the end under time warp — the heights on
+screen drift afterwards (the Earth's bulge, J₂) and do not change the grade. **Hint** reveals up to three hints, one at a time (the
 results file says how many you used); **Start again** puts the lesson's mission back; **Copy
 link** gives an address that opens the lesson (`?lesson=orbit-first`). A setting the lesson fixes
 that is changed anyway — by a mission link or over WebMCP — fails the flight, and the strip says

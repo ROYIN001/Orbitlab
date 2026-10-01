@@ -1019,7 +1019,21 @@ burn, instead of to 20 s before it. A lesson grades the flight as far as the pic
 holds them. The docking that ends lesson 5.2 closes a 5 s step while the hooks close, and the
 strip had marked "Docked to the station" and ended the flight 4.9–5.0 s of mission time before the
 picture and the event log showed it (two- and four-orbit profiles, 1–10×). A flight that fails is
-shown failed at once, and so is its grade. Flown live with random
+shown failed at once, and so is its grade. The orbit it grades is the orbit at the flight's end
+for grading, not at the frame it grades on (T03 review, 2026-10-01): every event carries the state
+the step that logged it left the flight in (`SimEvent.state`; a command's, logged between steps,
+the state then), with the impulse a shut-down engine's tail-off still gives added along the
+thrust axis — the prediction the cut-off itself is judged on, and the orbit the event log's
+"Target orbit achieved" line reports — and the orbit measures and hooks read the end event's
+(src/lessons/measures.ts). Under time warp the first frame that shows the end comes minutes late,
+and by then a transfer orbit's osculating semi-major axis has risen by 9 km (135 s after
+insertion) to 16.5 km (300 s): the planned 250 × 35 786 km answer to lesson 12.1 passed when
+graded 145–710 s late. Read at the end it fails however late it is graded. The tail-off given at
+once rather than over its 1.25 s leaves the end's a 0.55 km from the head's once the tail-off is
+over on that orbit, and the speed 0.016 m/s from it on lesson 1.1's 500 km circle. The telemetry
+could not say this — in orbit it is sampled every max(10 s, period/360), 135 s on a transfer
+orbit — and the fleet fingerprints hash an event's key and time only, so no recorded flight
+changed. Flown live with random
 frames, warps, pauses and cut-short frames, Falcon 9, Electron, H3 and Ariane 64 now equal their
 headless flights bit for bit, and so does the crewed Soyuz aborted by hand at T+60 s when re-flown
 from the abort's time (`tests/live-stepping.test.ts`).
