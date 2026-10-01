@@ -29,7 +29,7 @@
  * teacher's; a built-in lesson a pack reuses opened from the pack goes on to
  * the pack's next lesson.
  */
-import { t, getLang } from '../../i18n';
+import { t, tCount, getLang } from '../../i18n';
 import { en } from '../../i18n/en';
 import type { AppMode } from '../app-mode';
 import type { Simulation } from '../../physics/simulation';
@@ -1680,7 +1680,8 @@ export class LessonMode implements LessonToolsHost {
     const events = parsed.issues.filter((i) => i.code === 'event');
     this.notice = {
       level: errors.length || events.length || builtin.length ? 'warn' : 'ok',
-      text: t('lesson.file.loaded', { lessons: parsed.lessons.length - builtin.length, questions: parsed.questions.length }),
+      // W: each count with its word ("1 lesson", «1 урок»), not "1 lessons"
+      text: t('lesson.file.loaded', { lessons: tCount('lesson.file.n.lessons', parsed.lessons.length - builtin.length), questions: tCount('lesson.file.n.questions', parsed.questions.length) }),
       details: [...builtin.map((l) => t('lesson.author.notTaken', { title: localText(l.title), id: l.id })),
         ...(errors.length ? [t('lesson.file.issues'), ...errors.map(issueText)] : []),
         ...events.map((i) => t('lesson.author.issue.event', { where: i.where, key: i.detail ?? '' }))],

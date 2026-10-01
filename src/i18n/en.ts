@@ -4083,7 +4083,7 @@ export const en: Record<string, string> = {
   'lesson.advice.do': 'Go ahead',
   'lesson.advice.review': 'Review',
   'lesson.file.unusable': 'This is not a lesson file Orbitlab can read.',
-  'lesson.file.loaded': 'Added from the file: {lessons} lessons and {questions} placement-test questions.',
+  'lesson.file.loaded': 'Added from the file: {lessons} and {questions}.',
   'lesson.file.issues': 'These parts could not be used and were left out:',
   'lesson.strip.eyebrow': 'Lesson {n} · {track}',
   'lesson.strip.notFlown': 'Press Launch to fly the lesson. It is graded when the flight ends.',
@@ -4751,4 +4751,8 @@ export const en: Record<string, string> = {
   'lesson.design.author.criteriaNote': 'Each criterion is a figure of the design the students hand in, worked out by the satellite designer; or a figure they work out and type. The longest wait between looks needs the mission\'s place, which a lesson file can carry but this page does not write.',
   'lesson.design.author.crit.design': 'A figure stays within bounds',
   'lesson.design.author.crit.answer': 'The student works out a figure',
+  // --- W (Phase 4 final check): fixes from the walk in Chromium ---
+  'lesson.file.n.lessons': 'lesson|lessons',
+  'lesson.file.n.questions': 'placement-test question|placement-test questions',
+  // --- end of W ---
 };

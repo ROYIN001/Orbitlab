@@ -4062,7 +4062,7 @@ export const ru: Record<string, string> = {
   'lesson.advice.do': 'Рекомендуется',
   'lesson.advice.review': 'Повторить',
   'lesson.file.unusable': 'Это не файл уроков, который может прочитать Orbitlab.',
-  'lesson.file.loaded': 'Из файла добавлено уроков: {lessons}, вопросов входного теста: {questions}.',
+  'lesson.file.loaded': 'Из файла добавлено: {lessons} и {questions}.',
   'lesson.file.issues': 'Эти части использовать нельзя, они пропущены:',
   'lesson.strip.eyebrow': 'Урок {n} · {track}',
   'lesson.strip.notFlown': 'Нажмите «Пуск», чтобы выполнить урок. Проверка — по окончании полёта.',
@@ -4730,4 +4730,8 @@ export const ru: Record<string, string> = {
   'lesson.design.author.criteriaNote': 'Каждый критерий — это показатель сданного проекта, рассчитанный конструктором спутника, или величина, которую ученик рассчитывает и вводит сам. Для наибольшего интервала между съёмками нужно место наблюдения из требований миссии: файл урока может его содержать, но эта страница его не записывает.',
   'lesson.design.author.crit.design': 'Показатель в пределах',
   'lesson.design.author.crit.answer': 'Ученик рассчитывает показатель сам',
+  // --- W (Phase 4 final check): fixes from the walk in Chromium ---
+  'lesson.file.n.lessons': 'урок|урока|уроков|урока',
+  'lesson.file.n.questions': 'вопрос входного теста|вопроса входного теста|вопросов входного теста|вопроса входного теста',
+  // --- end of W ---
 };

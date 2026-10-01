@@ -4063,7 +4063,7 @@ export const th: Record<string, string> = {
   'lesson.advice.do': 'ทำได้เลย',
   'lesson.advice.review': 'ควรทบทวน',
   'lesson.file.unusable': 'ไฟล์นี้ไม่ใช่ไฟล์บทเรียนที่ Orbitlab อ่านได้',
-  'lesson.file.loaded': 'เพิ่มจากไฟล์แล้ว: บทเรียน {lessons} บท และข้อสอบวัดพื้นฐาน {questions} ข้อ',
+  'lesson.file.loaded': 'เพิ่มจากไฟล์แล้ว: บทเรียน {lessons} และข้อสอบวัดพื้นฐาน {questions}',
   'lesson.file.issues': 'ส่วนต่อไปนี้ใช้ไม่ได้และถูกข้ามไป:',
   'lesson.strip.eyebrow': 'บทเรียน {n} · {track}',
   'lesson.strip.notFlown': 'กด «ปล่อยจรวด» เพื่อบินบทเรียนนี้ ระบบจะตรวจเมื่อเที่ยวบินจบ',
@@ -4731,4 +4731,8 @@ export const th: Record<string, string> = {
   'lesson.design.author.criteriaNote': 'แต่ละเกณฑ์คือค่าของแบบที่นักเรียนส่งมา ซึ่งเครื่องมือออกแบบดาวเทียมคำนวณให้ หรือค่าที่นักเรียนคำนวณเองแล้วพิมพ์ ระยะรอนานสุดระหว่างการถ่ายภาพต้องใช้สถานที่จากความต้องการของภารกิจ ซึ่งไฟล์บทเรียนเก็บได้ แต่หน้านี้ไม่ได้เขียนให้',
   'lesson.design.author.crit.design': 'ค่าอยู่ในขอบเขต',
   'lesson.design.author.crit.answer': 'นักเรียนคำนวณค่าเอง',
+  // --- W (Phase 4 final check): fixes from the walk in Chromium ---
+  'lesson.file.n.lessons': 'บท',
+  'lesson.file.n.questions': 'ข้อ',
+  // --- end of W ---
 };
