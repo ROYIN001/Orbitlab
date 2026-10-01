@@ -337,8 +337,10 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
   .author-text { grid-template-columns: 1fr; }
   .author-crit { grid-template-columns: 1.4em minmax(0, 1fr) auto; }
   .author-crit-n { grid-column: 1; grid-row: 1; }
-  .author-kind { grid-column: 2; grid-row: 1; }
-  .lessons-page-body button.author-remove { grid-column: 3; grid-row: 1; }
+  /* the kind's options are sentences ("The student works out a number"): the whole row, the remove button
+     under the fields, or a 360 px phone cut them to "The student works out a num…" (task I2) */
+  .author-kind { grid-column: 2 / -1; grid-row: 1; width: 100%; }
+  .lessons-page-body button.author-remove { grid-column: 2 / -1; grid-row: 3; justify-self: end; }
   .author-crit-fields { grid-column: 2 / -1; grid-row: 2; }
   .author-crit-fields > select { max-width: 100%; }
   /* five tabs: one row under the back button that scrolls sideways inside itself, not two or three
