@@ -2928,7 +2928,7 @@ export const th: Record<string, string> = {
   'build.req.chart.apertureAll': 'ทุกวงโคจรในนี้ต้องการช่องรับแสงที่ใหญ่กว่าของแม่แบบ ({d})',
   // --- end of D07 ---
   // --- I2 (Phase 4 stage 3b): follow-ups — Fly it's verdict, the scenario writer, lesson files, counts ---
-  'build.sat.fly.verdict': 'การประเมินของส่วนปล่อยจรวด: {state}',
+  'build.sat.fly.verdict': 'ผลการประเมินของส่วนปล่อยจรวด: {state}',
   'build.sat.fly.alts.looking': 'กำลังหาจรวดลำอื่นในรายการที่นำดาวเทียมดวงนี้ขึ้นไปได้…',
   'build.sat.fly.alts.lead': 'ตามการประเมินเดียวกัน จรวดเหล่านี้นำดาวเทียมดวงนี้ขึ้นไปได้:',
   'build.sat.fly.alts.none': 'ตามการประเมินเดียวกัน ไม่มีจรวดลำอื่นในรายการนี้ที่นำดาวเทียมแบบนี้ขึ้นไปได้',

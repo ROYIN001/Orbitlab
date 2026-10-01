@@ -2816,7 +2816,7 @@ export const ru: Record<string, string> = {
   'build.req.costLife': 'Перед этим ищется наименьшая высота, на которой спутник продержится весь срок: около {life} с.',
   'build.req.costKept': 'Наименьшая высота сохранена с прошлого расчёта: считается только таблица.',
   'build.req.costTablet': 'На школьном планшете это займёт в несколько раз больше времени. Расчёт можно остановить в любой момент.',
-  'build.req.tooMany': '{rows} — больше, чем {max}, которые страница перебирает за раз: увеличьте кратчайший цикл или уменьшите наибольший.',
+  'build.req.tooMany': '{rows} — слишком много: страница перебирает не больше {max} за раз. Увеличьте кратчайший цикл или уменьшите наибольший.',
   'build.req.run': 'Рассчитать таблицу',
   'build.req.stop': 'Остановить',
   'build.req.running.life': 'Поиск наименьшей высоты… {p} %',
@@ -2927,7 +2927,7 @@ export const ru: Record<string, string> = {
   'build.req.chart.apertureAll': 'Всем орбитам здесь нужна апертура больше, чем у шаблона ({d}).',
   // --- end of D07 ---
   // --- I2 (Phase 4 stage 3b): follow-ups — Fly it's verdict, the scenario writer, lesson files, counts ---
-  'build.sat.fly.verdict': 'Оценка раздела «Запуск»: {state}',
+  'build.sat.fly.verdict': '{state} — по оценке раздела «Запуск»',
   'build.sat.fly.alts.looking': 'Ищем среди других ракет те, что смогут вывести этот спутник…',
   'build.sat.fly.alts.lead': 'По той же оценке этот спутник могут вывести:',
   'build.sat.fly.alts.none': 'По той же оценке ни одна из других ракет здесь не выведет этот спутник в таком виде.',
