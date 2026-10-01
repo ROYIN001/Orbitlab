@@ -64,6 +64,20 @@ describe('the built-in case lessons', () => {
     }
   });
 
+  // T03b: the sheet's space-weather question (the research's B5) is asked by 6.2 with the rest, and its task names it
+  it('6.2 asks the CZ-5B sheet\'s storm question too, and its task says so in each language', () => {
+    const l = lesson('case-cz5b');
+    expect(l.criteria.map((c) => c.item)).toContain('storm');
+    expect([l.brief.en, l.brief.ru, l.brief.th]).toEqual([
+      expect.stringContaining('geomagnetic storm'), expect.stringContaining('магнитная буря'), expect.stringContaining('พายุแม่เหล็กโลก'),
+    ]);
+    const key = keyOf(l);
+    expect(gradeCaseLesson(l, key, exact(l, key)).verdict).toBe('pass');
+    // the eight answers of before, without the storm's, leave the lesson open
+    const before = Object.fromEntries(Object.entries(exact(l, key)).filter(([id]) => id !== 'storm'));
+    expect(gradeCaseLesson(l, key, before).verdict).toBe('open');
+  });
+
   it('carry Russian in Cyrillic and Thai in Thai script, and no hint or task gives a number the key holds', () => {
     for (const l of BUILTIN_CASE_LESSONS) {
       for (const text of [l.title, l.brief, ...(l.debrief ? [l.debrief] : []), ...l.hints]) {

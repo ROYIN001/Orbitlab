@@ -17,7 +17,7 @@
 import { t, type Lang } from '../i18n';
 import { J2_EARTH, MU_EARTH, R_EARTH } from '../physics/constants';
 import { v3 } from '../physics/vec3';
-import type { Activity } from '../physics/propagator/activity';
+import { kpToAp, type Activity } from '../physics/propagator/activity';
 import IRIDIUM from '../data/iridium33-cosmos2251.json';
 import { CZ5B_STAGES } from '../data/cz5b';
 import { collisionProbability, inertialVelocity, rtnAxes, rtnToFrame, type Mat3, type PosVel } from '../orbit/conjunction';
@@ -185,9 +185,46 @@ function cz5bWorked(activity: Activity): Cz5bNumbers {
   };
 }
 
+/**
+ * The space-weather question of the sheet (roadmap T03b; the T03 research's
+ * lesson B5, IPST ว 3.1 ม.6/9: solar storms and their effects on the Earth,
+ * with R05's activity in the drag): the same stage's re-entry predicted twice
+ * more, the same way, with the Sun's flux held at the stage's days' and the
+ * magnetic field quiet, then through a strong geomagnetic storm; the answer
+ * is how many days sooner the storm brings it down. Fixed indices, not the
+ * measured series, so the key is the same for everyone on every day and
+ * needs no freezing. Fixed on 2026-10-01, before the first prediction ran:
+ * - F10.7 = F10.7a = 75 sfu in both runs, so only the field differs: the
+ *   mean observed flux over the ten days from the first set's epoch to the
+ *   re-entry (GFZ, src/data/solar-daily.json, 29 April–8 May 2021: 72.6),
+ *   rounded to 5 sfu;
+ * - quiet: Kp 1, ap 4 by Bartels's table (`kpToAp`), about those days' own
+ *   (daily Ap 1–8);
+ * - storm: Kp 7, ap 132, NOAA's G3 "strong" storm, held for the whole
+ *   prediction. No storm lasts ten days, so the difference is an upper bound,
+ *   and the sheet says so.
+ */
+export const CZ5B_SPACE_WEATHER = { f107: 75, quietKp: 1, stormKp: 7 } as const;
+
+/** The two space-weather predictions, days after the first set's epoch: computed once (some 0.4 s each), the same for every sheet. */
+let cz5bWeather: { quiet: number; storm: number } | null = null;
+export function cz5bStormNumbers(): { quiet: number; storm: number } {
+  if (cz5bWeather) return cz5bWeather;
+  const s = CZ5B_STAGES.find((x) => x.name === CZ5B_CASE_STAGE)!;
+  const el = elementsFromRecord(s.elements);
+  const craft = { mass: s.mass, area: tumblingCylinderArea(s.length, s.diameter), cd: 2.2 };
+  const from = el.jdEpoch + el.jdEpochFrac;
+  const w = CZ5B_SPACE_WEATHER;
+  const left = (kp: number): number => predictReentry(el, craft, { f107: w.f107, f107a: w.f107, ap: kpToAp(kp) }).jd! - from;
+  cz5bWeather = { quiet: left(w.quietKp), storm: left(w.stormKp) };
+  return cz5bWeather;
+}
+
 function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'generatedAt'> {
   const s = CZ5B_STAGES.find((x) => x.name === CZ5B_CASE_STAGE)!;
   const n = cz5bNumbers(activity);
+  const sw = cz5bStormNumbers(), w = CZ5B_SPACE_WEATHER;
+  const indices = (kp: number) => ({ f107: fmt(lang, w.f107, 0), kp: fmt(lang, kp, 0), ap: fmt(lang, kpToAp(kp), 0) });
   const early = n.left * (1 - WINDOW_FRACTION), late = n.left * (1 + WINDOW_FRACTION);
   const err = (n.left / n.actual - 1) * 100;
   const broadsideLeft = n.left * (n.area / n.broadside);
@@ -202,6 +239,8 @@ function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'ge
           [t('wsc.cz5b.orbit'), `${fmt(lang, n.hp, 0)} × ${fmt(lang, n.ha, 0)} ${u('km')}, ${fmt(lang, s.elements.INCLINATION, 1)}°`],
           [t('wsc.cz5b.body'), `${fmt(lang, s.mass, 0)} ${u('kg')}; ${fmt(lang, s.length, 1)} × ${fmt(lang, s.diameter, 1)} ${u('m')}; ${cdSymbol(lang)} ${fmt(lang, 2.2, 1)}`],
           [t('wsc.cz5b.predicted'), t('wsc.cz5b.predictedValue', { days: fmt(lang, n.left, 2) })],
+          [t('wsc.cz5b.quiet', indices(w.quietKp)), t('wsc.cz5b.predictedValue', { days: fmt(lang, sw.quiet, 2) })],
+          [t('wsc.cz5b.storm', indices(w.stormKp)), t('wsc.cz5b.predictedValue', { days: fmt(lang, sw.storm, 2) })],
           [t('wsc.cz5b.actual'), utc(s.reentry)],
         ],
         items: [],
@@ -216,6 +255,7 @@ function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'ge
           num(lang, 'actual', t('wsc.cz5b.q.actual'), t('wsc.days'), n.actual, 2, 0.05, t('wsc.cz5b.w.actual')),
           num(lang, 'error', t('wsc.cz5b.q.error'), '%', err, 1, 1, t('wsc.cz5b.w.error')),
           num(lang, 'broadside', t('wsc.cz5b.q.broadside'), t('wsc.days'), broadsideLeft, 1, 0.5, t('wsc.cz5b.w.broadside', { a: fmt(lang, n.broadside, 1) })),
+          num(lang, 'storm', t('wsc.cz5b.q.storm'), t('wsc.days'), sw.quiet - sw.storm, 2, 0.05, t('wsc.cz5b.w.storm')),
           choice(lang, 'why', t('wsc.cz5b.q.why'), t('wsc.cz5b.why.right'), [t('wsc.cz5b.why.b'), t('wsc.cz5b.why.c'), t('wsc.cz5b.why.d')], 1),
         ],
       },
