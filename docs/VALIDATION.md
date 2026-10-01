@@ -2544,6 +2544,19 @@ and the unsorted JSON 30 987 characters (30 926 at eedd035). Falcon Heavy's poin
 six-DOF fingerprints were re-recorded, each with the reason written beside it and the old hash
 kept in the comment. The other vehicles' were not touched.
 
+**Soyuz-2, re-recorded with its reasons (2026-10-01).** The Soyuz realism work (§3: the
+published engines and loads, the commanded sequence, the stored pitch programme, then the hot
+staging and the crewed and cargo payload sections) changed Soyuz-2.1a and Soyuz-2.1b on purpose,
+in two passes. Each pass re-recorded `soyuz21a/leo/50`, `soyuz21b/leo/50` and `soyuz21b/gto/50`
+(point mass), `soyuz21a` and `soyuz21b` (six-DOF, 160 s; in the second pass Soyuz-2.1b's fairing
+moved from T+157 s to Arianespace's T+208.4 s, out of the window) and the Soyuz-2.1a whole-mission
+golden, each with the reason and the old hash beside it, and wrote the identity fixture again
+(32 830 characters with main's F14). Every other vehicle's hash is unchanged, which is what shows
+that the hot staging (`StageSpec.hotStage`) and the payload profiles reach no other vehicle. The
+T02 re-check fixtures were written again with `--force` for the same reason: the crewed Soyuz
+aborted at T+60 s (`class-abort`) now peaks at 17.48 g instead of 15.27 g, and every other record
+came out bit for bit (tests/recheck-fixture-build.ts).
+
 **Point-mass flights** (`tests/d01-fleet-fingerprint.test.ts`, part of `npm test`). 27 fleet
 cases, flown as the fleet matrix flies them, each hashed (SHA-256, first 16 hex digits) over the
 state `[t, r, v]` once a second from T−10 s, the recorded telemetry and the event log:

@@ -34,6 +34,11 @@
  *   docs/VALIDATION.md §3): published engines and loads, the commanded
  *   sequence and the stored pitch programme; they were '2c9438cf9d3df949' and
  *   'bc74fbe1899c4e51'. The other 19 are unchanged.
+ * - soyuz21a and soyuz21b again, for Soyuz-2's second pass (2026-10-01,
+ *   docs/VALIDATION.md §3): Soyuz-2.1a's cargo payload section (the 3.0 m
+ *   11S517A2) and refitted programme, Soyuz-2.1b's fairing at Arianespace's
+ *   T+208.4 s instead of 157 s, inside the 160 s; they were 'c59c89cad663d74b'
+ *   and '644b71375fa52e3d'. The other 19, F14's two included, are unchanged.
  *
  * Heavy suite only (`npm run test:heavy`): 21 six-DOF flights of 160 s.
  */
@@ -60,8 +65,8 @@ function sixDofMission(c: FleetCase): MissionConfig {
 }
 
 const FINGERPRINTS: Readonly<Record<string, string>> = {
-  soyuz21a: 'c59c89cad663d74b',
-  soyuz21b: '644b71375fa52e3d',
+  soyuz21a: 'f8fa995d2de674a4',
+  soyuz21b: '6f67c4ea034ec61e',
   protonm: '336045ed763a8b3e',
   angaraa5: '4d4263d76a86d994',
   falcon9: '4e7814725cdd4e3b',
