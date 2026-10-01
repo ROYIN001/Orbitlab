@@ -3032,6 +3032,27 @@ apogee was some 90 km above the planned one) is flown to, not modelled. The R-7'
 of Blok E's own, drawn and flown as one gimballed chamber (estimated). The pad is Gagarin's Start
 (Site 1/5) for both.
 
+*Vostok 1 home.* The orbit carries a `deorbit` at T+4,714 s, the TDU-1's ignition at 10:25:34
+Moscow time (ru.wikipedia's chronology of the flight; the TASS communiqué gives 10:25 to the
+minute). Reaching orbit logs `evt.deorbitPlanned`, which keeps the viewer from ending the flight
+there; at the retro-fire the spacecraft is flown home as a capsule, `VOSTOK_CAPSULE` in
+src/physics/rigid/escape.ts, by the same rigid descent as Mercury's (§13.7):
+
+| | Model | Flown |
+|---|---|---|
+| Retro-fire | 15.83 kN for 40 s against the flight path, on 4,725 kg held constant: 134 m/s | 40 s, to depletion, 1 s short; 132 m/s of 136 planned (RSW) |
+| Separation | the instrument module (2,265 kg with what is left of its propellant) at +626 s | ten seconds after the burn as planned; at 10:36 over the Mediterranean, about 130 km up, when the heat burnt through the cable bundle that held it (RSW; ru.wikipedia) |
+| Entry | the 2.3 m sphere, 2,460 kg, ballistic, CG 0.95 m above its leading face (estimated) | ballistic; "over 10 g" by Gagarin's report, 8–10 g in most accounts |
+| Ejection | at 7 km, with 180 kg (hatch, seat, pilot; estimated) | hatch off and the seat fired at 7 km, 10:42 |
+| Parachutes | the braking chute at 4 km (18 m², C_D 0.6), the 574 m² main at 2.5 km (C_D 0.55; estimated) | 4 km and 2.5 km (Siddiqi, *Challenge to Apollo*) |
+| Landing | the sphere, 10.7 m/s | the sphere at 10:48, Gagarin at about 10:53–10:55; 51.27° N, 46.00° E, by Smelovka |
+
+Flown in point-mass (six-DOF within a few seconds and 35 km of it): the separation at 140 km, the
+ejection at T+5,835 s (flown about 5,700), the sphere down at T+6,084 s (6,060) at 9.0 g peak, at
+49.0° N, 43.8° E, 280 km short of Smelovka along the ground track. The real flight came down some
+300 km from its own aim; the model's miss is not tuned away. Gagarin's own parachute descent is
+not flown: the viewer follows the sphere. tests/vostok1-harness.ts holds the flight to these.
+
 **13.7 Mercury-Redstone 3.** The vehicle `mercuryredstone` in `HISTORICAL_VEHICLES`, the spacecraft
 `mercury` in src/data/satellites.ts, the capsule's flight home `MERCURY_CAPSULE` in
 src/physics/rigid/escape.ts. Alan Shepard's Freedom 7, 5 May 1961, 14:34:13 UTC, from Launch Complex

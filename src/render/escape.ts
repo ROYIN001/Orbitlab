@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three';
 import type { VisualFrame } from '../physics/frame';
-import { ESCAPE, MERCURY_CAPSULE, SOYUZ_DESCENT, type DescentCapsule } from '../physics/rigid/escape';
+import { ESCAPE, MERCURY_CAPSULE, SOYUZ_DESCENT, VOSTOK_CAPSULE, type DescentCapsule } from '../physics/rigid/escape';
 import { ogiveProfile } from './liveries';
 import { Plume } from './plume';
 import { CrewedTop, FIN_CENTRE } from './soyuz';
@@ -181,8 +181,8 @@ export class EscapeView {
 
     // --- the descent module: +Y out of its heat shield, its body towards −Y
     const dm = ESCAPE.descentModule;
-    const mercury = capsuleId === 'mercury';
-    this.spec = mercury ? MERCURY_CAPSULE : SOYUZ_DESCENT;
+    const mercury = capsuleId === 'mercury', vostok = capsuleId === 'vostok';
+    this.spec = mercury ? MERCURY_CAPSULE : vostok ? VOSTOK_CAPSULE : SOYUZ_DESCENT;
     // from the hatch on top down to the shield's rim: a lathe faces outward with its profile rising in y.
     // Mercury (C01): the 1.89 m shield, the conical crew cabin to 0.8 m, the
     // recovery compartment and the antenna canister above it, in its dark
@@ -190,12 +190,17 @@ export class EscapeView {
     const bell = mercury
       ? [[0, -2.08], [0.2, -2.08], [0.24, -1.72], [0.36, -1.72], [0.4, -1.3], [0.53, -1.3], [0.93, -0.12], [0.946, -0.02]] as const
       : [[0, -dm.length], [0.36, -dm.length], [0.46, -2.1], [0.72, -1.8], [0.95, -1.2], [1.07, -0.6], [1.085, -0.15], [0.95, -0.02]] as const;
-    const body = new THREE.Mesh(geo(new THREE.LatheGeometry(bell.map(([r, y]) => new THREE.Vector2(r, y)), 32)), mercury ? mat('#24262b', 0.35, 0.55) : mat('#7c7a66', 0.1, 0.85));
+    // Vostok (C01): the 2.3 m sphere in its ablative, the heat shield nowhere and everywhere
+    const body = vostok
+      ? new THREE.Mesh(geo(new THREE.SphereGeometry(1.15, 36, 24)), mat('#6b6a66', 0.05, 0.85))
+      : new THREE.Mesh(geo(new THREE.LatheGeometry(bell.map(([r, y]) => new THREE.Vector2(r, y)), 32)), mercury ? mat('#24262b', 0.35, 0.55) : mat('#7c7a66', 0.1, 0.85));
+    if (vostok) body.position.y = -1.15;
     this.capsule.add(body);
     const shieldR = mercury ? 2.0 : 2.235;
     this.heatShield = new THREE.Mesh(geo(new THREE.SphereGeometry(shieldR, 32, 6, 0, Math.PI * 2, 0, Math.asin(Math.min(1, (this.spec.diameter / 2) / shieldR)))), mat('#3b2d24', 0.05, 0.95));
     // the shield is a spherical cap bulging out along +Y from the capsule's base
     this.heatShield.position.y = 0.12 - shieldR;
+    this.heatShield.visible = !vostok;
     this.capsule.add(this.heatShield);
     // Mercury's retropack: three motors strapped over the shield's centre
     this.retroPack = new THREE.Group();
@@ -211,6 +216,22 @@ export class EscapeView {
       }
       this.retroPlume = new Plume({ radius: 0.25, length: 3, kind: 'solid', seed: 0.3 });
       this.retroPlume.group.position.y = 0.55;
+      this.retroPack.add(this.retroPlume.group);
+      this.capsule.add(this.retroPack);
+    } else if (vostok) {
+      // Vostok's instrument module under the sphere, two cones base to base, 2.43 m across and 2.25 m long,
+      // its TDU-1 nozzle at the far end (as the payload is drawn, render/satellite.ts)
+      const upper = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.9, 1.215, 1.0, 28)), mat('#2c2e33', 0.3, 0.6));
+      upper.position.y = 0.5;
+      const lower = new THREE.Mesh(geo(new THREE.CylinderGeometry(1.215, 0.6, 1.25, 28)), mat('#b8bcc2', 0.5, 0.45));
+      lower.position.y = 1.0 + 0.625;
+      const nozzle = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.12, 0.2, 0.3, 16)), mat('#3a3a3a', 0.6, 0.5));
+      nozzle.position.y = 2.4;
+      this.retroPack.add(upper, lower, nozzle);
+      // the exhaust out ahead of the flight: the engine fires against it
+      this.retroPlume = new Plume({ radius: 0.2, length: 4, kind: 'hypergolic', seed: 0.3 });
+      this.retroPlume.group.position.y = 2.55;
+      this.retroPlume.group.rotation.z = Math.PI;
       this.retroPack.add(this.retroPlume.group);
       this.capsule.add(this.retroPack);
     }
@@ -264,7 +285,7 @@ export class EscapeView {
       for (const plume of this.fairingPlumes) plume.update(a.motors.fairing, p, t);
     }
     if (a.body === 'capsule') {
-      this.heatShield.visible = a.heatShield;
+      this.heatShield.visible = a.heatShield && a.capsule !== 'vostok';
       // the retropack stays on until it is jettisoned, a minute after the retros
       this.retroPack.visible = !!this.spec.retro && tau < this.spec.retro.jettison;
       this.retroPlume?.update(Math.min(1, a.motors.retro ?? 0), p, t);
@@ -279,7 +300,11 @@ export class EscapeView {
   size(frame: VisualFrame): number {
     const a = frame.abort;
     if (!a) return 0;
-    if (a.body === 'capsule') return a.main > 0.2 ? 32 : a.drogue > 0.2 ? 16 : this.spec.length + 1;
+    if (a.body === 'capsule') {
+      // Vostok's sphere with its instrument module still on
+      const pack = this.spec.id === 'vostok' && frame.t - a.t0 < (this.spec.retro?.jettison ?? 0) ? 2.6 : 0;
+      return a.main > 0.2 ? 32 : a.drogue > 0.2 ? 16 : this.spec.length + 1 + pack;
+    }
     if (a.body === 'spacecraft') return ESCAPE.serviceModule.length + ESCAPE.descentModule.length + 2.6;
     return ESCAPE.fairing.length + (a.mode === 'tower' ? ESCAPE.tower.length : 0);
   }

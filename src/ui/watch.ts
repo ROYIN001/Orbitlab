@@ -287,7 +287,7 @@ export class WatchView {
   }
 
   private applyAutoWarp(): void {
-    const w = autoWarp(this.lastFrame, this.beat ?? 'countdown');
+    const w = autoWarp(this.lastFrame, this.beat ?? 'countdown', this.lastEvents);
     if (w !== this.lastWarp) {
       this.lastWarp = w;
       this.host.setWarp(w);
@@ -410,7 +410,7 @@ export class WatchView {
     const card = this.endCard;
     card.replaceChildren();
     card.classList.toggle('failed', !success);
-    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? (frame.apollo ? 'watch.end.apolloSplashTitle' : 'watch.end.splashTitle')
+    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? (frame.apollo ? 'watch.end.apolloSplashTitle' : frame.abort?.capsule === 'vostok' ? 'watch.end.vostokLandingTitle' : 'watch.end.splashTitle')
       : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle'
       : 'watch.fail.title'));
     title.id = 'watch-end-title';
@@ -443,10 +443,12 @@ export class WatchView {
       card.append(el('p', 'watch-end-fact', t('watch.end.apolloSplashFact')));
     } else if (ending === 'splashdown') {
       // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
-      const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.shipSplashdown');
+      const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.capsuleLanding' || e.key === 'evt.shipSplashdown');
       const since = (down?.t ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
       // C01: a capsule, not a ship
-      card.append(el('p', undefined, frame.abort?.kind === 'return'
+      card.append(el('p', undefined, frame.abort?.kind === 'return' && frame.abort.capsule === 'vostok'
+        ? t('watch.end.vostokLandingText', { time: fmtClock(since).replace(/^T\+/, ''), lat: frame.lat.toFixed(2), lon: frame.lon.toFixed(2), g: num(frame.abort.maxG) })
+        : frame.abort?.kind === 'return'
         ? t('watch.end.capsuleSplashText', { time: fmtClock(since).replace(/^T\+/, ''), km: num(frame.downrange / 1000), g: num(frame.abort.maxG) })
         : t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
     } else if (success) {

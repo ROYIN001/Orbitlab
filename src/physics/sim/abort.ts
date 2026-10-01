@@ -18,7 +18,7 @@ import { OMEGA_EARTH } from '../constants';
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate, type Quat } from '../rigid/math';
 import { targetAttitude } from '../rigid/runtime';
 import type { RigidState } from '../rigid/integrator';
-import { ESCAPE, EscapeFlight, MERCURY_CAPSULE, capsuleConfiguration, headConfiguration, spacecraftConfiguration, type EscapeMode } from '../rigid/escape';
+import { ESCAPE, EscapeFlight, MERCURY_CAPSULE, VOSTOK_CAPSULE, capsuleConfiguration, headConfiguration, spacecraftConfiguration, type EscapeMode } from '../rigid/escape';
 import { stackLayout } from '../frame';
 
 /** Seconds from the escape to the burning rocket's explosion on its pad (T-10-1: 2–6 s). */
@@ -94,24 +94,32 @@ export class LaunchEscape {
    * the top, its retro-rockets, the entry heat shield first, drogue, main,
    * the water. The same flight as an abort's descent module, for Mercury's
    * capsule, and not an abort.
+   *
+   * Or from orbit (C01: Vostok-1), at the retro-fire: the spacecraft turned
+   * with its retro engine, and the sphere's heavy side, along the flight
+   * path, the way the air goes on to hold it.
    */
   beginReturn(): void {
     const sim = this.sim, s = sim.state;
+    const capsule = sim.satellite.descent === 'vostok' ? VOSTOK_CAPSULE : MERCURY_CAPSULE;
     let attitudeQ;
-    if (s.rigid) attitudeQ = s.rigid.attitudeQ;
+    if (capsule.id === 'vostok') attitudeQ = targetAttitude(normalize(s.v), cross(s.r, s.v));
     else {
-      const { east, north, up } = enuFrame(s.r);
-      const az = sim.plan.azimuthRotating;
-      attitudeQ = targetAttitude(s.dir, cross(up, add(scale(east, Math.sin(az)), scale(north, Math.cos(az)))));
+      if (s.rigid) attitudeQ = s.rigid.attitudeQ;
+      else {
+        const { east, north, up } = enuFrame(s.r);
+        const az = sim.plan.azimuthRotating;
+        attitudeQ = targetAttitude(s.dir, cross(up, add(scale(east, Math.sin(az)), scale(north, Math.cos(az)))));
+      }
+      // capsule axes: +x out of the heat shield, which faced the booster
+      attitudeQ = quatMultiply(attitudeQ, quatFromAxisAngle(v3(0, 1, 0), Math.PI));
     }
-    // capsule axes: +x out of the heat shield, which faced the booster
-    attitudeQ = quatMultiply(attitudeQ, quatFromAxisAngle(v3(0, 1, 0), Math.PI));
     this.returning = true;
     this.cause = '';
     this.flight = new EscapeFlight('capsule', { r: clone(s.r), v: clone(s.v), attitudeQ, omegaBody: v3() }, s.t, v3(0, 1, 0), {
       groundElevation: (r) => sim.groundElevation(r),
       wind: (r, t) => sim.rigidRuntime ? sim.rigidRuntime.windAt(r, t) : v3(),
-    }, (what, state, t) => this.release(what, state, t), MERCURY_CAPSULE);
+    }, (what, state, t) => this.release(what, state, t), capsule);
     s.status = 'abort';
     s.note = 'capsuleReturn';
     s.ascentPhase = null;

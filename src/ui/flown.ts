@@ -17,7 +17,8 @@ export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.inter
   | 'evt.undocking' | 'evt.separationBurn' | 'evt.doi' | 'evt.pdi' | 'evt.throttleRecovery' | 'evt.highGate' | 'evt.lowGate'
   | 'evt.lunarLanding' | 'evt.lmEngineOff'
   | 'evt.lunarLiftoff' | 'evt.lmInsertion' | 'evt.csi' | 'evt.cdh' | 'evt.tpi' | 'evt.lmMcc' | 'evt.braking' | 'evt.stationkeeping' | 'evt.lmDocked' | 'evt.lmJettison' | 'evt.asSeparation'
-  | 'evt.tei' | 'evt.transearth' | 'evt.transearthMcc' | 'evt.cmSmSeparation' | 'evt.entryInterface' | 'evt.drogues' | 'evt.cmSplashdown';
+  | 'evt.tei' | 'evt.transearth' | 'evt.transearthMcc' | 'evt.cmSmSeparation' | 'evt.entryInterface' | 'evt.drogues' | 'evt.cmSplashdown'
+  | 'evt.retroFire' | 'evt.vostokSeparation' | 'evt.ejection' | 'evt.capsuleLanding';
 
 export interface FlownEvent {
   key: FlownKey;
@@ -100,6 +101,10 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.entryInterface': 'tl.evt.entryInterface',
   'evt.drogues': 'tl.evt.drogues',
   'evt.cmSplashdown': 'tl.evt.cmSplashdown',
+  'evt.retroFire': 'tl.evt.retroFire',
+  'evt.vostokSeparation': 'tl.evt.vostokSeparation',
+  'evt.ejection': 'tl.evt.ejection',
+  'evt.capsuleLanding': 'tl.evt.capsuleLanding',
 };
 
 export interface FlownRow {

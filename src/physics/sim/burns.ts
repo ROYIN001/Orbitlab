@@ -782,6 +782,15 @@ export class BurnSequencer {
     if (!s.payloadSeparated && !this.sim.satellite.staysAttached) this.sim.schedule(s.t + 15, 'payloadSep', () => this.sim.staging.separatePayload(false));
     // C01: a parking orbit, with an injection to fly from it
     if (this.sim.cfg.orbit.injection) this.sim.apollo.begin();
+    // C01: a spacecraft that comes home from this orbit, at its retro-fire
+    const deorbit = this.sim.cfg.orbit.deorbit;
+    if (deorbit && this.sim.satellite.descent) {
+      const at = Math.max(s.t + 30, deorbit.time);
+      this.sim.event('evt.deorbitPlanned', 'info', { t: at, min: Math.round(at / 60) });
+      this.sim.schedule(at, 'deorbit', () => {
+        if (this.sim.state.status === 'orbit' && this.sim.state.payloadSeparated) this.sim.escape.beginReturn();
+      });
+    }
   }
 
   /**

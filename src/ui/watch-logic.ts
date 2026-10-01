@@ -16,6 +16,7 @@ import { APOLLO_AT_MOON, APOLLO_CM } from '../physics/sim/apollo';
 import { STATIONKEEPING_M } from '../physics/sim/apollo-rendezvous';
 import type { SimEvent } from '../physics/simulation';
 import { OMEGA_EARTH } from '../physics/constants';
+import { VOSTOK_CAPSULE } from '../physics/rigid/escape';
 
 export type WatchBeat =
   | 'countdown' | 'liftoff' | 'climb' | 'transonic' | 'maxQ' | 'gravityTurn' | 'boosterSep' | 'boosterSepCross' | 'boosterSepSolid'
@@ -29,6 +30,8 @@ export type WatchBeat =
   | 'escapeCoast' | 'escapeCapsule' | 'escapeModules' | 'ballistic' | 'drogue' | 'mainChute' | 'mainDescent' | 'softLanding' | 'crewSafe'
   // a capsule flown home from a suborbital flight (C01: Mercury-Redstone 3)
   | 'capsuleCutoff' | 'capsuleSep' | 'capsuleArc' | 'retroFire' | 'capsuleEntry' | 'capsuleDrogue' | 'capsuleMain' | 'capsuleSplash'
+  // Vostok-1 from its orbit home (C01): the orbit, the retro-fire, the stuck separation, the entry, the ejection, the steppe
+  | 'vostokOrbit' | 'vostokRetro' | 'vostokCoast' | 'vostokSeparation' | 'vostokEntry' | 'vostokEjection' | 'vostokDrogue' | 'vostokMain' | 'vostokLanding'
   // a flight on to the station (G07)
   | 'rvPlan' | 'rvPhasing' | 'rvBurn' | 'rvApproach' | 'rvFlyaround' | 'rvStationkeeping' | 'rvFinal' | 'rvContact' | 'rvCapture' | 'rvDocked'
   // Apollo from its parking orbit (C01): the restart for the Moon, the transposition, the extraction,
@@ -130,6 +133,15 @@ export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
   capsuleDrogue: { label: 'watch.beat.drogue', text: 'watch.say.capsuleDrogue' },
   capsuleMain: { label: 'watch.beat.capsuleMain', text: 'watch.say.capsuleMain' },
   capsuleSplash: { label: 'watch.beat.splashdown', text: 'watch.say.capsuleSplash' },
+  vostokOrbit: { label: 'watch.beat.vostokOrbit', text: 'watch.say.vostokOrbit' },
+  vostokRetro: { label: 'watch.beat.vostokRetro', text: 'watch.say.vostokRetro' },
+  vostokCoast: { label: 'watch.beat.vostokCoast', text: 'watch.say.vostokCoast' },
+  vostokSeparation: { label: 'watch.beat.vostokSeparation', text: 'watch.say.vostokSeparation' },
+  vostokEntry: { label: 'watch.beat.capsuleEntry', text: 'watch.say.vostokEntry' },
+  vostokEjection: { label: 'watch.beat.vostokEjection', text: 'watch.say.vostokEjection' },
+  vostokDrogue: { label: 'watch.beat.drogue', text: 'watch.say.vostokDrogue' },
+  vostokMain: { label: 'watch.beat.capsuleMain', text: 'watch.say.vostokMain' },
+  vostokLanding: { label: 'watch.beat.vostokLanding', text: 'watch.say.vostokLanding' },
   escapeCapsule: { label: 'watch.beat.escapeCapsule', text: 'watch.say.escapeCapsule' },
   escapeModules: { label: 'watch.beat.escapeCapsule', text: 'watch.say.escapeModules' },
   ballistic: { label: 'watch.beat.ballistic', text: 'watch.say.ballistic' },
@@ -179,6 +191,9 @@ const EVENT_BEATS: ReadonlyArray<{ key: string; beat: WatchBeat; hold: number }>
   { key: 'evt.escapeCapsule', beat: 'escapeCapsule', hold: 10 },
   { key: 'evt.escapeDrogue', beat: 'drogue', hold: 12 },
   { key: 'evt.retroFire', beat: 'retroFire', hold: 12 },
+  // C01: Vostok's instrument module letting go at last, and Gagarin leaving on his seat
+  { key: 'evt.vostokSeparation', beat: 'vostokSeparation', hold: 20 },
+  { key: 'evt.ejection', beat: 'vostokEjection', hold: 15 },
   { key: 'evt.escapeMain', beat: 'mainChute', hold: 15 },
   { key: 'evt.escapeMainLow', beat: 'mainChute', hold: 15 },
   { key: 'evt.escapeSoftLanding', beat: 'softLanding', hold: 10 },
@@ -239,6 +254,11 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
       if (b.key === e.key && frame.t - e.t <= b.hold) {
         // C01: a capsule flight's cut-off, separation and parachutes are its own
         const capsule = frame.abort?.kind === 'return';
+        const vostok = capsule && frame.abort!.capsule === 'vostok';
+        // Vostok's retro-fire is the 40 s of its burn, read from the engine (`abortBeat`)
+        if (vostok && b.key === 'evt.retroFire') continue;
+        if (vostok && b.key === 'evt.escapeDrogue') return 'vostokDrogue';
+        if (vostok && (b.key === 'evt.escapeMain' || b.key === 'evt.escapeMainLow')) return 'vostokMain';
         if (b.key === 'evt.suborbitalTarget' && frame.status !== 'descent') return 'capsuleCutoff';
         if (b.key === 'evt.payloadSep') { if (capsule) return 'capsuleSep'; continue; }
         if (capsule && b.key === 'evt.escapeDrogue') return 'capsuleDrogue';
@@ -253,6 +273,8 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
   if (frame.abort) return abortBeat(frame);
   if (frame.rendezvous) return rendezvousBeat(frame);
   if (frame.apollo) return apolloBeat(frame);
+  // C01: Vostok once round the Earth, before its retro-fire
+  if (frame.status === 'orbit' && deorbitAt(frame, events) !== null) return 'vostokOrbit';
   switch (frame.status) {
     case 'ascent': {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
@@ -355,6 +377,14 @@ function capsuleBeat(frame: VisualFrame): WatchBeat {
 /** The escape between its events: pulling clear, falling, under a parachute, down. */
 function abortBeat(frame: VisualFrame): WatchBeat {
   const a = frame.abort!;
+  if (a.kind === 'return' && a.capsule === 'vostok') {
+    if (frame.status === 'landed' || a.phase === 'landed') return 'vostokLanding';
+    if (a.phase === 'drogue') return 'vostokDrogue';
+    if (a.phase === 'main') return 'vostokMain';
+    // the burn's 40 s from the return's start, its first frame taken before the engine has run a step
+    if ((a.motors.retro ?? 0) > 0 || frame.t - a.t0 < VOSTOK_CAPSULE.retro!.burn) return 'vostokRetro';
+    return frame.altitude > CAPSULE_ARC_ALTITUDE ? 'vostokCoast' : 'vostokEntry';
+  }
   if (a.kind === 'return') {
     // C01: the capsule coming home as planned
     if (frame.status === 'landed' || a.phase === 'landed') return 'capsuleSplash';
@@ -395,9 +425,9 @@ function returning(frame: VisualFrame): { alive: boolean; low: boolean } {
  * reacts to what has happened — a separation cannot be seen coming live — so
  * each one is caught just after it starts and then held at 1×.
  */
-export function autoWarp(frame: VisualFrame | null, beat: WatchBeat): number {
+export function autoWarp(frame: VisualFrame | null, beat: WatchBeat, events: readonly SimEvent[] = []): number {
   if (!frame) return 1;
-  const w = beatWarp(frame, beat);
+  const w = beatWarp(frame, beat, events);
   // A stage on its way home is worth watching whatever the rest of the
   // flight is doing: never faster than 5× while one flies, 2× once it is
   // back in the air.
@@ -405,7 +435,7 @@ export function autoWarp(frame: VisualFrame | null, beat: WatchBeat): number {
   return home.low ? Math.min(w, 2) : home.alive ? Math.min(w, 5) : w;
 }
 
-function beatWarp(frame: VisualFrame, beat: WatchBeat): number {
+function beatWarp(frame: VisualFrame, beat: WatchBeat, events: readonly SimEvent[]): number {
   switch (beat) {
     case 'gravityTurn':
       return frame.t - Math.max(0, frame.liftoffT ?? 0) < 100 ? 1 : 2;
@@ -523,6 +553,25 @@ function beatWarp(frame: VisualFrame, beat: WatchBeat): number {
       return 5;
     case 'circularizeBurn':
       return 1;
+    // C01: Vostok's hour in orbit quickly, the last minute before the retro-fire and its 40 s at a pace to
+    // follow; the ten minutes falling with the instrument module still on quickly, the entry and the parachutes
+    // slower, the ejection and the landing live
+    case 'vostokOrbit': {
+      const at = deorbitAt(frame, events);
+      return at !== null && at - frame.t < 60 ? 5 : 100;
+    }
+    case 'vostokRetro':
+      return 5;
+    case 'vostokCoast':
+      return 20;
+    case 'vostokSeparation':
+      return 2;
+    case 'vostokEntry':
+      return frame.altitude > 30e3 ? 5 : 2;
+    case 'vostokDrogue':
+      return 2;
+    case 'vostokMain':
+      return frame.altitudeAGL > 400 ? 20 : frame.altitudeAGL > 80 ? 5 : 1;
     default:
       return 1;
   }
@@ -613,6 +662,18 @@ export function missionOrbit(frame: VisualFrame | null, events: readonly SimEven
   return frame.status === 'orbit' || !!lastEvent(frame, events, FINAL_ORBIT);
 }
 
+/**
+ * The mission time of the retro-fire a spacecraft in orbit is waiting for
+ * (C01: Vostok-1), from `evt.deorbitPlanned` at or before the frame; null
+ * when none is to come.
+ */
+export function deorbitAt(frame: VisualFrame, events: readonly SimEvent[]): number | null {
+  const e = lastEvent(frame, events, DEORBIT);
+  const at = Number(e?.params?.t);
+  return e && Number.isFinite(at) && at >= frame.t - 1 ? at : null;
+}
+const DEORBIT = new Set(['evt.deorbitPlanned']);
+
 /** The parking orbit on screen, and the burn it is waiting for (audit 2026-09-27 A9). */
 export interface ParkingMilestone {
   /** mission time of the insertion, s */
@@ -680,10 +741,13 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
     if (frame.status !== 'landed') return null;
     // C01: a capsule home as planned ends in a splashdown
     const planned = frame.abort.kind === 'return';
-    const down = [...events].reverse().find((e) => e.key === (planned ? 'evt.capsuleSplashdown' : 'evt.escapeLanded') && e.t <= frame.t + 1e-6);
+    const keys = planned ? ['evt.capsuleSplashdown', 'evt.capsuleLanding'] : ['evt.escapeLanded'];
+    const down = [...events].reverse().find((e) => keys.includes(e.key) && e.t <= frame.t + 1e-6);
     return down && frame.t - down.t >= RETURN_SETTLE ? (planned ? 'splashdown' : 'crewSafe') : null;
   }
   if (frame.status === 'failed' || (frame.status === 'landed' && frame.note === 'shipLost')) return 'failed';
+  // C01: a spacecraft with a retro-fire to come is not at its end in orbit (Vostok-1)
+  if (frame.status === 'orbit' && deorbitAt(frame, events) !== null) return null;
   const ending = frame.status === 'landed' ? 'splashdown' : missionOrbit(frame, events) ? 'orbit' : null;
   if (!ending || returning(frame).alive) return null;
   // A9: the payload coming free is the moment an orbital flight was for

@@ -109,7 +109,7 @@ export const ESCAPE = {
  * Mercury capsule another.
  */
 export interface DescentCapsule {
-  id: 'soyuz' | 'mercury';
+  id: 'soyuz' | 'mercury' | 'vostok';
   /** mass, kg, as it falls free (with its heat shield and, until jettisoned, its retropack) */
   mass: number;
   diameter: number;
@@ -131,6 +131,12 @@ export interface DescentCapsule {
    * of `packMass` kg jettisoned at `jettison` s.
    */
   retro?: { starts: readonly number[]; thrust: number; burn: number; packMass: number; jettison: number };
+  /**
+   * The pilot leaves on an ejection seat below this altitude, m, on the way
+   * down (Vostok's hatch and seat), and `mass` kg go with him: the capsule
+   * lands on its own parachute without him.
+   */
+  ejection?: { altitude: number; mass: number };
 }
 
 /** Soyuz's descent module, as the escape flies it (G06). */
@@ -158,6 +164,31 @@ export const MERCURY_CAPSULE: DescentCapsule = {
   main: { area: 290, cd: 0.75, altitude: 3230, reefed: 0.1, reefS: 4, inflation: 3, lowDelay: 1.0 },
   // separation at T+2:32.3: the retros at +161.8, +166.5, +171.3 s, the pack at +221.3 s
   retro: { starts: [161.8, 166.5, 171.3], thrust: 4448, burn: 10, packMass: 125.3, jettison: 221.3 },
+};
+
+/**
+ * Vostok 3KA from its retro-fire (C01: Vostok-1, docs/PHYSICS.md §13.6):
+ * 4,725 kg in orbit, the 2.3 m descent sphere 2,460 kg of it and the
+ * instrument module, with what was left of its propellant, the rest. The
+ * TDU-1's 15.83 kN for about 42 s (the sources give 40 to 44 s), held
+ * against the flight path; the instrument module should have gone ten
+ * seconds after, but a cable bundle held it to the sphere until the heat of
+ * the entry burnt through it, ten minutes later. The sphere flew no lift:
+ * the CG set below its centre turned its thickest ablator into the flow. At
+ * 7 km the hatch went and Gagarin left on his seat; the sphere came down on
+ * its own: the braking parachute at 4 km, the 574 m² main at 2.5 km, about
+ * 10 m/s at the ground (Siddiqi, *Challenge to Apollo*, 2000; Zak,
+ * RussianSpaceWeb). The sphere's CG offset, the canopies' drag coefficients
+ * and the mass ejected with the seat are estimates; the retro's propellant
+ * is counted in the instrument module's mass, which the burn does not lessen.
+ */
+export const VOSTOK_CAPSULE: DescentCapsule = {
+  id: 'vostok', mass: 4725, diameter: 2.3, length: 2.3, cgAbove: 0.95, heatShield: 0, heatShieldDelay: 0,
+  lowAltitude: 0,
+  drogue: { area: 18, cd: 0.6, altitude: 4000, maxSpeed: 300, inflation: 1.5, duration: 300 },
+  main: { area: 574, cd: 0.55, altitude: 2500, reefed: 0.1, reefS: 3, inflation: 4, lowDelay: 1.0 },
+  retro: { starts: [0], thrust: 15830, burn: 40, packMass: 2265, jettison: 626 },
+  ejection: { altitude: 7000, mass: 180 },
 };
 
 const EARTH_RATE = v3(0, 0, OMEGA_EARTH);
@@ -490,6 +521,12 @@ export class EscapeFlight {
         this.events.push({ key: 'evt.escapeDrogue', severity: 'info', params: { alt: Math.round(alt), speed: Math.round(airspeed) } });
       }
     }
+    const ej = this.capsule.ejection;
+    if (ej && !this.ejected && vz < 0 && alt < ej.altitude) {
+      this.ejected = true;
+      this.config = capsuleConfiguration(s.heatShield, this.capsule, (this.retroPackOn ? 0 : this.capsule.retro?.packMass ?? 0) + ej.mass);
+      this.events.push({ key: 'evt.ejection', severity: 'major', params: { alt: Math.round(alt), speed: Math.round(airspeed) } });
+    }
     if (s.phase === 'drogue' && (t - this.drogueAt! >= this.capsule.drogue.duration || alt < this.capsule.main.altitude)) this.openMain(t, alt, false);
     if (s.phase === 'main') {
       if (this.mainFullAt === undefined && t - this.mainAt! >= this.capsule.main.reefS + this.capsule.main.inflation) this.mainFullAt = t;
@@ -507,6 +544,7 @@ export class EscapeFlight {
   private freedAt = 0;
   private freedAlt = 0;
   private retroFired = 0;
+  private ejected = false;
 
   private openMain(t: number, alt: number, low: boolean): void {
     this.mainAt = t; this.drogueAt = undefined;
@@ -544,8 +582,8 @@ export class EscapeFlight {
     // the main parachute is released on the ground so it does not drag the module over
     s.drogue = 0; s.main = 0;
     this.drogueAt = undefined; this.mainAt = undefined;
-    // a Mercury capsule comes down in the sea at the end of a planned flight (C01)
-    this.events.push({ key: this.capsule.id === 'mercury' ? 'evt.capsuleSplashdown' : 'evt.escapeLanded', severity: 'success',
+    // a Mercury capsule comes down in the sea at the end of a planned flight, Vostok on the steppe (C01)
+    this.events.push({ key: this.capsule.id === 'mercury' ? 'evt.capsuleSplashdown' : this.capsule.id === 'vostok' ? 'evt.capsuleLanding' : 'evt.escapeLanded', severity: 'success',
       params: { speed: +s.touchdownSpeed.toFixed(1), g: +s.maxG.toFixed(1) } });
   }
 
@@ -620,7 +658,7 @@ export class EscapeFlight {
     // resting on the ground is the owner's business; mass flow is quasi-steady
     this.windNow = this.env.wind(st.r, t);
     let forceECI = quatRotate(st.attitudeQ, force);
-    // Mercury's retro-rockets, held against the flight path by the attitude control
+    // Mercury's retro-rockets (Vostok's TDU-1), held against the flight path by the attitude control
     const retros = c.body === 'capsule' ? this.retrosAt(t) : 0;
     if (retros > 0 && speed > 1e-3) forceECI = addScaled(forceECI, normalize(st.v), -retros * this.capsule.retro!.thrust);
     this.lastSpecificForce = norm(force) / c.mass / G0;
@@ -638,8 +676,10 @@ export class EscapeFlight {
       s.motors.retro = this.retrosAt(t);
       // the retropack falls away once the retros are spent
       if (this.config.body === 'capsule' && !this.retroPackOn && this.config.mass > this.capsule.mass - this.capsule.retro.packMass + 1e-6) {
-        this.config = capsuleConfiguration(true, this.capsule, this.capsule.retro.packMass);
-        this.events.push({ key: 'evt.retroPackOff', severity: 'info', params: { alt: Math.round((norm(this.state.r) - R_EARTH) / 1000) } });
+        this.config = capsuleConfiguration(true, this.capsule, this.capsule.retro.packMass + (this.ejected ? this.capsule.ejection!.mass : 0));
+        // Vostok's pack is its instrument module, and its going the separation of the two
+        this.events.push({ key: this.capsule.id === 'vostok' ? 'evt.vostokSeparation' : 'evt.retroPackOff', severity: this.capsule.id === 'vostok' ? 'major' : 'info',
+          params: { alt: Math.round((norm(this.state.r) - R_EARTH) / 1000) } });
       }
     }
     // re-evaluate the loads at the accepted state for the specific force

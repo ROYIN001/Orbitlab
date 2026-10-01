@@ -25,7 +25,7 @@ export const SATELLITES: SatelliteSpec[] = [
   { id: 'ps1', kind: 'ps1', name: 'Sputnik 1 (PS-1)', mass: 83.6, typicalOrbit: 'custom', description: 'The first artificial satellite: a polished 58 cm sphere with four whip aerials and two radio transmitters.', size: { width: 0.58, height: 0.58, depth: 0.58 }, carriers: ['r7sputnik'] },
   // Vostok 3KA: 4,725 kg; the 2.3 m descent sphere (2,460 kg) on the
   // 2.43 × 2.25 m instrument module. Its retro engine only brings it down.
-  { id: 'vostok1', kind: 'vostok', name: 'Vostok 3KA', mass: 4725, typicalOrbit: 'custom', description: 'The first crewed spacecraft: a 2.3 m descent sphere on an instrument module with the retro engine.', crewed: true, size: { width: 2.43, height: 4.4, depth: 2.43 }, carriers: ['vostokk'] },
+  { id: 'vostok1', kind: 'vostok', name: 'Vostok 3KA', mass: 4725, typicalOrbit: 'custom', description: 'The first crewed spacecraft: a 2.3 m descent sphere on an instrument module with the retro engine.', crewed: true, size: { width: 2.43, height: 4.4, depth: 2.43 }, carriers: ['vostokk'], descent: 'vostok' },
   // Freedom 7 (MR-3): 1,832.6 kg at launch with its escape tower, 1.892 m
   // across, 7.9 m with the tower (NASA, *Postlaunch Report for Mercury-Redstone
   // No. 3*, 1961). Flown on the stack as it stood; it comes home on its own

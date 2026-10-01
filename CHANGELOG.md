@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Viewer: Vostok-1 goes on from its orbit to the landing — once round the Earth, the TDU-1's 40 s retro-fire at 10:25:34, the instrument module held on by its cables for ten minutes, the ballistic entry at about 9 g, Gagarin's ejection at 7 km and the sphere down on its parachutes by the Volga, told beat by beat in English, Russian and Thai and set beside the real flight's times.
 - Docs: user-test protocol for October 2026 (Thai) — five timed tasks, observer script, printable forms, PDPA rules and the wave 3 decisions it must settle.
 - CI: vitest sharded three ways, typecheck as its own job, build once and reuse dist for browser smoke, deploy guarded against re-running old runs and skipping the full suite on the daily schedule, weekly heavy and monthly six-DOF fleet runs; the viewer missions' flights split out of tests/watch-missions.test.ts into several files that vitest runs in parallel and the shards balance, and the test job's time limit raised from 20 to 30 minutes as a guard against runner variance.
 - Repository: LICENSE (Apache-2.0), NOTICE, CITATION, pull request template, CHANGELOG; README disclaimer, licence section and three stale facts corrected.

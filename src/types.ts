@@ -337,6 +337,12 @@ export interface OrbitSpec {
    */
   flightAzimuth?: number;
   injection?: InjectionSpec;
+  /**
+   * A return from this orbit (C01: Vostok-1): the spacecraft's retro-rocket
+   * fired at mission time `time`, s, and its descent capsule flown home
+   * (`SatelliteSpec.descent`, src/physics/rigid/escape.ts).
+   */
+  deorbit?: { time: number };
   description: string;
 }
 
@@ -378,9 +384,10 @@ export interface SatelliteSpec {
   carriers?: string[];
   /**
    * A capsule that comes home on its own parachutes from a suborbital flight
-   * (C01: Mercury), which lets a vehicle with no ship to fly home take one.
+   * (C01: Mercury), which lets a vehicle with no ship to fly home take one;
+   * or from orbit, when the orbit has a `deorbit` (Vostok).
    */
-  descent?: 'mercury';
+  descent?: 'mercury' | 'vostok';
   /**
    * Rides the last stage into orbit and stays on it: the Apollo spacecraft
    * stayed on the S-IVB through the parking orbit (C01), where every other

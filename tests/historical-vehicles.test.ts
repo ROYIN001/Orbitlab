@@ -24,6 +24,7 @@ import { validateConfigInput } from '../src/config/validation';
 import { WATCH_MISSIONS, watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
 import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
 import { expectFlownMr3, flyMr3 } from './mr3-harness';
+import { expectFlownVostok1, flyVostok1 } from './vostok1-harness';
 import { captureFrame } from '../src/physics/frame';
 import { autoWarp, flightEnding, watchBeat, watchReadout } from '../src/ui/watch-logic';
 import { entryGlow } from '../src/render/apollo-cm';
@@ -115,6 +116,12 @@ describe('the flights they are here for, point-mass', () => {
     });
 });
 
+describe('Vostok-1 home, point-mass', () => {
+  it('fires the TDU-1 on time, loses its instrument module late, ejects Gagarin at 7 km and lands the sphere by the Volga', { timeout: 300_000 }, () => {
+    expectFlownVostok1(flyVostok1('pointMass'));
+  });
+});
+
 describe('Mercury-Redstone 3, point-mass', () => {
   it('lobs Freedom 7 to 187 km and brings it down in the Atlantic under its parachutes, as flown', { timeout: 300_000 }, () => {
     expectFlownMr3(flyMr3('pointMass'));
@@ -145,6 +152,37 @@ describe('Mercury-Redstone 3 in the viewer', () => {
     const order = ['capsuleCutoff', 'capsuleSep', 'retroFire', 'capsuleEntry', 'capsuleDrogue', 'capsuleMain', 'capsuleSplash'].map((b) => beats.indexOf(b));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(ending).toBe('splashdown');
+  });
+});
+
+describe('Vostok-1 in the viewer', () => {
+  it('does not stop in orbit: it tells the way home beat by beat and ends on the landing', { timeout: 300_000 }, () => {
+    const s = watchMissionSettings('vostok1');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    const beats: string[] = [];
+    const warps = new Map<string, Set<number>>();
+    let ending: string | null = null;
+    while (!sim.isFailed() && sim.state.t < 8000 && !ending) {
+      sim.step(sim.suggestedDt());
+      const frame = captureFrame(sim);
+      const beat = watchBeat(frame, sim.events);
+      if (beats[beats.length - 1] !== beat) beats.push(beat);
+      if (!warps.has(beat)) warps.set(beat, new Set());
+      warps.get(beat)!.add(autoWarp(frame, beat, sim.events));
+      ending = flightEnding(frame, sim.events);
+    }
+    const order = ['vostokOrbit', 'vostokRetro', 'vostokCoast', 'vostokSeparation', 'vostokEntry', 'vostokEjection', 'vostokDrogue', 'vostokMain', 'vostokLanding']
+      .map((b) => beats.indexOf(b));
+    expect(order.every((i) => i >= 0), beats.join(' ')).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(ending).toBe('splashdown');
+    expect(sim.state.abort?.capsule).toBe('vostok');
+    // the hour in orbit quickly, the minute before the retro-fire slowly
+    expect([...warps.get('vostokOrbit')!].sort((a, b) => a - b)).toEqual([5, 100]);
   });
 });
 
