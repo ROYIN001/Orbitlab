@@ -146,6 +146,18 @@ export const APPROACH = {
  * the crew kind with an engine of its own flies there as the catalogue's
  * does (D06), since the rule reads its kind and engine, never its id.
  */
-export function rendezvousAvailable(vehicleId: string, satellite: Pick<SatelliteSpec, 'kind' | 'propulsion'> | undefined, orbit: Pick<OrbitSpec, 'raanMode' | 'suborbital'>): boolean {
-  return vehicleId === 'soyuz21a' && satellite?.kind === 'crew' && !!satellite.propulsion && orbit.raanMode === 'iss' && !orbit.suborbital;
+export function rendezvousAvailable(vehicleId: string, satellite: ShipSatellite | undefined, orbit: Pick<OrbitSpec, 'raanMode' | 'suborbital'>): boolean {
+  // the rendezvous flies the Soyuz MS, from its own insertion orbit: not a Progress MS
+  return soyuzShipInsertion(vehicleId, satellite, orbit) && orbit.raanMode === 'iss' && !!satellite?.crewed;
+}
+
+type ShipSatellite = Pick<SatelliteSpec, 'kind' | 'propulsion' | 'crewed'>;
+
+/**
+ * A Soyuz MS or Progress MS (a crew-kind spacecraft with its own engine) on
+ * Soyuz-2.1a, to orbit: inserted at 200 × 242 km (`RENDEZVOUS_INSERTION`), or
+ * 193 × 240 km without a crew (`CARGO_INSERTION`).
+ */
+export function soyuzShipInsertion(vehicleId: string, satellite: ShipSatellite | undefined, orbit: Pick<OrbitSpec, 'suborbital'>): boolean {
+  return vehicleId === 'soyuz21a' && satellite?.kind === 'crew' && !!satellite.propulsion && !orbit.suborbital;
 }

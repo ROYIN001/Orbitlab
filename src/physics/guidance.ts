@@ -35,7 +35,20 @@ import { Vec3, v3, add, scale, dot, cross, norm, normalize, slerpLimited } from 
 import { enuFrame, elementsFromState } from './orbital';
 import { kickStageSink, ORBIT_INSERTION_FLOOR } from './mission';
 
-export type AscentPhase = 'vertical' | 'kick' | 'gravityTurn' | 'closedLoop';
+export type AscentPhase = 'vertical' | 'kick' | 'gravityTurn' | 'pitchProgram' | 'closedLoop';
+
+/** The stored programme's pitch at time `t`, deg (`GuidanceParams.pitchProgram`): linear between points, held past either end. */
+export function programmePitch(programme: readonly (readonly [number, number])[], t: number): number {
+  if (t <= programme[0][0]) return programme[0][1];
+  for (let i = 1; i < programme.length; i++) {
+    const [t1, p1] = programme[i];
+    if (t <= t1) {
+      const [t0, p0] = programme[i - 1];
+      return p0 + (p1 - p0) * (t - t0) / (t1 - t0);
+    }
+  }
+  return programme[programme.length - 1][1];
+}
 
 export interface GuidanceCommand {
   dir: Vec3;
@@ -223,7 +236,14 @@ export class AscentGuidance {
     let predictedApoapsis = 0;
 
     // ---------------------------------------------------------------- phases
-    if (this.phase === 'vertical' && inp.altitudeAGL > p.pitchOverAltitude) {
+    // A stored pitch programme (the R-7's) replaces the vertical rise, the kick
+    // and the gravity turn, and hands over to the closed loop at its last point.
+    const programme = p.pitchProgram && p.pitchProgram.length > 0 ? p.pitchProgram : undefined;
+    if (programme && this.phase !== 'closedLoop') {
+      const handover = programme[programme.length - 1][0];
+      this.phase = inp.t >= handover ? 'closedLoop' : programmePitch(programme, inp.t) >= 90 - 1e-9 ? 'vertical' : 'pitchProgram';
+    }
+    if (this.phase === 'vertical' && !programme && inp.altitudeAGL > p.pitchOverAltitude) {
       this.phase = 'kick';
       this.kickStart = inp.t;
     }
@@ -460,6 +480,18 @@ export class AscentGuidance {
         dir = up;
         pitchDeg = 90;
         break;
+      case 'pitchProgram': {
+        // Pitch above the local horizon, on the launch azimuth over the ground
+        // (the plan's rotating-frame azimuth, as the gravity turn's hold below).
+        // That azimuth is the one that also takes the Earth's rotation out of
+        // the plane: a plane fixed in inertial space where the programme starts
+        // left the pad's eastward speed across it, 0.8° of RAAN off an ISS
+        // target at insertion and up to 9° of yaw on Blok I (2026-10-01).
+        const theta = programmePitch(programme!, inp.t) * DEG;
+        dir = normalize(add(scale(up, Math.sin(theta)), scale(downrange, Math.cos(theta))));
+        pitchDeg = theta / DEG;
+        break;
+      }
       case 'kick': {
         const f = Math.min(1, (inp.t - this.kickStart) / Math.max(0.1, p.kickDuration));
         const theta = p.kickAngle * DEG * f;
@@ -470,6 +502,19 @@ export class AscentGuidance {
       case 'gravityTurn': {
         const turnSpeed = norm(turnVelocity);
         let vDir = turnSpeed > 1 ? scale(turnVelocity, 1 / turnSpeed) : up;
+        // A pitch programme flown open-loop to a fixed hand-over (`closedLoopStart`)
+        // holds the launch azimuth, as the R-7's lateral stabilisation held its
+        // strap-ons in the firing plane (PHY-01). Following the ground track
+        // instead, a six-DOF flight let the wind and its own attitude loop turn the
+        // plane for 140 s that the closed loop, steering into the plane through
+        // wherever the vehicle is, could not take back: an ISS target's RAAN missed
+        // by 0.8° calm and up to 2.1° in the reference winds (0.1° held). A closed loop that will fly into the target
+        // plane (`this.plane`) steers it out itself; the point mass has neither wind
+        // nor an attitude loop (six-DOF only, `requireDownrangeKick`).
+        if (fixedHandover && !this.plane && inp.requireDownrangeKick) {
+          const climb = Math.max(-1, Math.min(1, dot(vDir, up)));
+          vDir = normalize(add(scale(up, climb), scale(downrange, Math.sqrt(1 - climb * climb))));
+        }
         // Pitch-program limit: do not let the commanded pitch fall faster than
         // maxTurnRate. Flying the nose above the velocity vector costs angle of
         // attack, so the deviation is charged against the q·α budget below.

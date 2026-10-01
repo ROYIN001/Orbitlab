@@ -32,6 +32,11 @@ export const SATELLITES: SatelliteSpec[] = [
   // parachutes (`MERCURY_CAPSULE`, src/physics/rigid/escape.ts).
   { id: 'mercury', kind: 'mercury', name: 'Mercury capsule', mass: 1832.6, typicalOrbit: 'custom', description: 'The first American crewed spacecraft: a one-man capsule under a solid-rocket escape tower, landing in the sea on parachutes.', crewed: true, size: { width: 1.892, height: 7.9, depth: 1.892 }, exposed: { diameter: 1.892, length: 7.9, noseLength: 7.9 }, carriers: ['mercuryredstone'], descent: 'mercury' },
   { id: 'apollo11', kind: 'apollo', name: 'Apollo CSM and LM', mass: 49735, typicalOrbit: 'custom', description: 'Apollo 11: Columbia, the command and service module, and Eagle, the lunar module folded in its adapter under the escape tower — 49.7 t on top of the Saturn V.', crewed: true, size: { width: 6.604, height: 24.93, depth: 6.604 }, exposed: { diameter: 6.604, length: 24.93, noseLength: 24.93 }, carriers: ['saturnv506'], staysAttached: true },
+  // Progress MS, the station's cargo ship, as Soyuz-2.1a flies it: 7 430 kg
+  // (7 392–7 430 kg, Progress MS-07 to MS-26, russianspaceweb quoting Roscosmos),
+  // 7.2 m long and 2.72 m across, under the cargo payload section (11S517A2).
+  // Put into a 193 × 240 km orbit; its engine, the Soyuz MS's, raises it.
+  { id: 'progress', kind: 'crew', name: 'Progress MS cargo ship', mass: 7430, typicalOrbit: 'iss', cargoShip: true, description: 'The uncrewed cargo ship to the station on Soyuz-2.1a: about 2.5 t of cargo and propellant. Raises its own orbit to the station with the Soyuz MS’s engine.', propulsion: { thrust: 3920, isp: 302, propellantFraction: 0.12 }, size: { width: 2.72, height: 7.2, depth: 2.72 }, carriers: ['soyuz21a'] },
 ];
 
 export const satelliteById = (id: string): SatelliteSpec => {

@@ -71,7 +71,7 @@
 import { describe, it, expect } from 'vitest';
 import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
-import { VEHICLES } from '../src/data/vehicles';
+import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { Simulation } from '../src/physics/simulation';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
 import {
@@ -518,14 +518,15 @@ describe('default mission', () => {
     expect(Math.abs(el.periapsisAlt - 420e3), `perigee ${Math.round(el.periapsisAlt / 1e3)} km`).toBeLessThanOrEqual(10e3);
     expect(Math.abs(el.apoapsisAlt - 420e3), `apogee ${Math.round(el.apoapsisAlt / 1e3)} km`).toBeLessThanOrEqual(10e3);
     expect(Math.abs(el.i * RAD - 51.64)).toBeLessThanOrEqual(0.3);
-    // The launcher's own job is a *circular* parking orbit at the planned
-    // insertion altitude, on the published clock — not an ellipse with a
-    // decaying perigee that the spacecraft has to rescue.
+    // The launcher's own job is the Soyuz MS insertion, 200 × 242 km (Roscosmos:
+    // 200 ± 2 × 242 ± 5 km), on the published clock — not an ellipse with a
+    // decaying perigee that the spacecraft has to rescue. It was 200 km
+    // circular until 2026-10-01.
     const park = sim.events.find((e) => e.key === 'evt.parkingOrbit')!;
     expect(Number(park.params!.pe), log).toBeGreaterThanOrEqual(195);
-    expect(Number(park.params!.pe), log).toBeLessThanOrEqual(215);
-    expect(Number(park.params!.ap), log).toBeGreaterThanOrEqual(195);
-    expect(Number(park.params!.ap), log).toBeLessThanOrEqual(215);
+    expect(Number(park.params!.pe), log).toBeLessThanOrEqual(205);
+    expect(Number(park.params!.ap), log).toBeGreaterThanOrEqual(235);
+    expect(Number(park.params!.ap), log).toBeLessThanOrEqual(250);
     expect(insertionTime(sim), log).toBeGreaterThan(500);
     expect(insertionTime(sim), log).toBeLessThan(570);
   }, 60000);
@@ -636,18 +637,19 @@ describe('real missions', () => {
  * whose MEASURED time falls outside its published callout is named in
  * `disagreements with the published callout` below, and that test fails if the
  * set changes — a new disagreement has to be acknowledged, and one that gets
- * fixed has to be removed. There are SEVEN of them, listed with their causes in
- * that test's own comment — the same seven docs/PHYSICS.md §6a tabulates, and
- * the same seven the assertion at the bottom of this file spells out. It
+ * fixed has to be removed. There are SIX of them, listed with their causes in
+ * that test's own comment — the same six docs/PHYSICS.md §6a tabulates, and
+ * the same six the assertion at the bottom of this file spells out. It
  * reported two until the wave before last, because it compared the published
  * callout with the ±8-10 s `regression` band rather than with the model, and a
  * band drawn around the measured value absorbs up to 10 s of real disagreement;
  * comparing the model's own number gave nine, of which two (Soyuz-2.1a's and
  * Long March 3B/E's fairing jettison) have since closed by flying their
- * operators' published jettison time. This paragraph still said "nine" after
- * they closed (release review 2, minor #6).
+ * operators' published jettison time, and a third (Soyuz-2.1a's core cut-off)
+ * on 2026-10-01 by its commanded GK-2. This paragraph still said "nine" after
+ * the first two closed (release review 2, minor #6).
  *
- * The oldest of the seven is Falcon 9's max Q: T+50.3 s at 22.6 kPa against a
+ * The oldest of the six is Falcon 9's max Q: T+50.3 s at 22.6 kPa against a
  * published 65-80 s at ~33 kPa. It is a DATA disagreement — `maxQThrottle`
  * starts the throttle bucket at 22 kPa and pins q there from T+45 s — and
  * PHYSICS.md §6a carries the measured sweep showing that raising `qStart`
@@ -767,9 +769,8 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
     fly: () => flyReference('soyuz21a', 'baikonur', 'iss', 'crew', 7150, 6 * 3600),
     milestones: [
       { label: 'booster separation', at: evTime('evt.boosterSep'), published: '~118 s', regression: [112, 128] },
-      // The heating placard drops the fairing at ~105 km, which this trajectory
-      // reaches about 12 % later than the published callout.
-      { label: 'fairing jettison', at: evTime('evt.fairingSep'), published: '~157 s', regression: [148, 185] },
+      // flown on the published time, T+153.3 s (`fairing.sepTime`)
+      { label: 'fairing jettison', at: evTime('evt.fairingSep'), published: '~153 s', regression: [148, 185] },
       { label: 'core cut-off', at: evTime('evt.meco'), published: '~287 s', regression: [275, 305] },
       { label: 'third-stage cut-off (SECO)', at: evTime('evt.seco'), published: '~528 s', regression: [500, 570] },
     ],
@@ -929,7 +930,7 @@ describe('reference timelines', () => {
    * window (Electron's max Q at T+51 s against 60-70 s, and its MECO at T+138 s
    * against 145-155 s) were counted as agreeing (review follow-up). Comparing
    * the model's own number instead gave nine, and every one of them was
-   * already there. Seven are left; the two that closed are at the bottom of
+   * already there. Six are left; the three that closed are at the bottom of
    * this comment.
    *
    * What each is, with what is known about the cause:
@@ -955,12 +956,6 @@ describe('reference timelines', () => {
    *    Rutherford gives a 142 s first-stage burn; still ~5 % early.
    *  - Ariane 64 core cut-off (T+445 s vs ~460 s) — the Vulcain phase runs ~15 s
    *    short with the corrected P120C mean thrust and peak factor.
-   *  - Soyuz-2.1a core cut-off (T+294 s vs ~287 s) — ~2.5 % late, i.e. just
-   *    outside the 2 % band a point callout is given. Small, and it is the one
-   *    Soyuz row left: the 87 000 kg Blok A load that produces it is
-   *    deliberately kept on 2.1a for exactly that reason, while the audited
-   *    90 100 kg went to 2.1b, which has no published clock to move (see the
-   *    two R-7 core bodies in src/data/parts.ts).
    *  - H3-22 SRB-3 burnout (T+104.3 s vs 105-115 s) — 0.7 s early, the smallest
    *    disagreement in the table and the one most likely to flip. It is listed
    *    rather than rounded away because the rule here is the published window,
@@ -968,8 +963,15 @@ describe('reference timelines', () => {
    *  - PSLV-XL PS3 cut-off (T+386 s vs 400-600 s) — PS3 is a fixed-impulse
    *    solid, so its burn time follows from the modelled grain.
    *
-   * That is seven, which is the number the file header and docs/PHYSICS.md §6a
+   * That is six, which is the number the file header and docs/PHYSICS.md §6a
    * both quote.
+   *
+   * Soyuz-2.1a's core cut-off (T+294 s vs ~287 s) left it on 2026-10-01, by
+   * the mechanism too: the core is shut down by its GK-2 command at T+285.05 s
+   * with propellant aboard, as the R-7's is, instead of running dry, and it
+   * carries its published load (the 87 000 kg held to the clock is gone;
+   * src/data/parts.ts). The time agrees by construction; the propellant left
+   * at it, 1.3 %, is the prediction (docs/VALIDATION.md §3).
    *
    * TWO ROWS LEFT THIS LIST in the fleet-data wave, and both left it the way
    * H-IIA's did — by changing the mechanism, not by widening a band. Soyuz-2.1a
@@ -1003,7 +1005,6 @@ describe('reference timelines', () => {
       'Falcon 9, Starlink-class 15.6 t to the ISS plane › max Q',
       'H3-22, 5 t to 500 km › SRB-3 burnout',
       'PSLV-XL, 1.75 t to sun-synchronous orbit › PS3 cut-off',
-      'Soyuz-2.1a, 7.15 t crew ship from Baikonur to the ISS › core cut-off',
     ]);
   }, 180000);
 });
@@ -1150,9 +1151,9 @@ function flyCircular(vehicle: string, site: string, mass: number, hKm: number, i
  * cannot drift from the constant it justifies without turning a test red.
  *
  * What the numbers say: 200 km closes on every Soyuz-2.1a row; 250 km is where
- * the profile stops closing (the heaviest row misses on the apogee by 15 km,
- * the lighter ones by 50-100 km); 300 km is well past it, and the heaviest row
- * there does not even survive. Long March 2D does not close at any altitude
+ * the profile stops closing (the lighter rows miss on the apogee by 17-19 km,
+ * the heaviest by 49 km); 300 km is well past it, every row cut off on a
+ * 145 x 820-880 km ellipse. Long March 2D does not close at any altitude
  * with an inert payload, which is why all seven of its matrix rows are
  * ARCHITECTURE exclusions and why its dedicated mission flies a spacecraft with
  * its own propulsion.
@@ -1196,18 +1197,25 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   // was 3.7 × 10.1 m on an adapter of its own): every verdict held, the cells
   // that reach orbit moved by up to 4.3 km of apoapsis, and the failing 6.3 t /
   // 300 km cell, which carries the wider fairing's drag longest on the heaviest
-  // stack, moved to 88.7 x 700.9 km.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 198.0, ap: 200.7 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 197.6, ap: 200.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 198.6, ap: 200.3 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 219.4, ap: 345.5 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 240.3, ap: 301.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.3, ap: 266.3 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 143.9, ap: 899.2 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 143.8, ap: 875.5 },
-  // The one cell that does not survive: the heaviest Soyuz row aimed a hundred
-  // kilometres above where the profile closes ends `failed`, with the tanks dry.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 88.7, ap: 700.9 },
+  // stack, moved to 88.7 x 700.9 km. Re-measured on 2026-10-01, when Soyuz-2.1a
+  // took its published engines and loads, its commanded cut-offs and the R-7's
+  // stored pitch programme (docs/VALIDATION.md §3): every verdict held; the
+  // 250 km cells moved by up to 79 km of apoapsis, the profile's own flight
+  // through the strap-on and core phases now fixed whatever the target, and
+  // the heaviest 300 km cell, `failed` with its tanks dry before, now reaches a
+  // 144.0 x 879.6 km ellipse like the lighter two. Re-measured again for the
+  // hot staging and the cargo payload section's 3.0 m fairing (same day, second
+  // pass): every verdict held, the cells moved by up to 30 km of apoapsis and
+  // 6 km of periapsis (the 6.3 t / 250 km one, which no longer runs short).
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 197.1, ap: 203.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 197.9, ap: 200.6 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 198.6, ap: 200.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 247.2, ap: 264.2 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 247.1, ap: 265.4 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.3, ap: 267.4 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 147.3, ap: 791.4 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 147.1, ap: 813.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 144.9, ap: 849.7 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
   // rating. Nothing closes, at any altitude or any payload. Re-measured when
   // the planner started flying the heading the site's window licenses: the
@@ -1340,6 +1348,7 @@ describe('the shipped default mission', () => {
     expect(cfg.guidanceResolved).toBeUndefined();
     const sim = new Simulation(cfg, { headless: true });
     expect(sim.cfg.guidance.kickAngle, 'the R-7 program, not the library 2.5 deg').toBe(3);
+    expect(sim.cfg.guidance.pitchProgram, 'and its stored pitch programme').toBe(vehicleById('soyuz21a').guidanceDefaults!.pitchProgram);
     let guard = 0;
     while (!sim.done && sim.state.t < 6 * 3600 && guard++ < 400000) sim.step(sim.suggestedDt());
     const log = sim.events.map((e) => `${Math.round(e.t)}:${e.key}`).join(' ');
@@ -1349,8 +1358,8 @@ describe('the shipped default mission', () => {
     }
     expect(keys, log).toContain('evt.targetOrbit');
     expect(sim.state.status, log).toBe('orbit');
-    // A crewed launch is flown into a circular parking orbit, not a transfer
-    // ellipse: the abort options depend on it.
-    expect(sim.plan.insertionApoapsis, log).toBe(sim.plan.insertionAltitude);
+    // A crewed launch is flown into the Soyuz MS insertion, 200 × 242 km with
+    // the cut-off near perigee (it was a circular parking orbit until 2026-10-01).
+    expect([sim.plan.insertionAltitude, sim.plan.insertionApoapsis], log).toEqual([200e3, 242e3]);
   }, 60000);
 });

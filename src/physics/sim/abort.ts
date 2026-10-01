@@ -130,7 +130,7 @@ export class LaunchEscape {
     const sim = this.sim, s = sim.state;
     const config = mode === 'separation' ? spacecraftConfiguration() : headConfiguration(mode === 'tower', ESCAPE.tower.propellant, ESCAPE.fairing.propellant, false);
     // the head section's base, the interface with the service module, above the fairing's base
-    const interfaceAboveFairing = ESCAPE.serviceModule.length;
+    const interfaceAboveFairing = ESCAPE.headBase;
     let attitudeQ, omegaBody = v3(), offset: number;
     if (s.rigid && sim.rigidRuntime) {
       attitudeQ = s.rigid.attitudeQ; omegaBody = s.rigid.omegaBody;
@@ -216,7 +216,7 @@ export class LaunchEscape {
       mass: config.mass - capsuleConfiguration(true).mass, area: config.aero.area, cd: 0.8,
       // the head section as it was drawn on the stack: the vehicle's fairing, cut above the service module
       visual: what === 'head'
-        ? { diameter: sim.vehicleSpec.fairing?.diameter ?? 2 * config.radius, length: (sim.vehicleSpec.fairing?.length ?? ESCAPE.fairing.length + ESCAPE.serviceModule.length) - ESCAPE.serviceModule.length,
+        ? { diameter: sim.vehicleSpec.fairing?.diameter ?? 2 * config.radius, length: (sim.vehicleSpec.fairing?.length ?? ESCAPE.fairing.length + ESCAPE.headBase) - ESCAPE.headBase,
           color: '#e8e8e8', kind: 'escapeHead', ...(tower ? { tower } : {}) }
         : { diameter: 2.72, length: ESCAPE.serviceModule.length, color: '#5b6457', kind: 'modules' },
       alive: true, createdAt: t,

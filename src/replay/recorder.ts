@@ -54,6 +54,14 @@ import { captureFrame, cloneFrame, interpolateFrames, type VisualFrame } from '.
 import type { Simulation, SimEvent, SimStatus } from '../physics/simulation';
 import { chronologicalEvents, eventPrefix, eventsThrough } from '../physics/events';
 import { AttitudeTrack, type AttitudeWindow } from './attitude-track';
+
+/**
+ * How far back an event can be stamped when it is detected, s: max Q is
+ * reported at its peak once the dynamic pressure is 3 % off it, which on
+ * Falcon 9's throttle bucket is 19 s later. Frames this close to the head are
+ * not thinned, so the frame at the peak is still there to pin.
+ */
+const RETRO_EVENT_WINDOW_S = 30;
 import { quatRotate } from '../physics/rigid/math';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
 
@@ -746,13 +754,16 @@ export class FlightRecorder implements RecordingSource {
     const kept: VisualFrame[] = [];
     let dropped = 0;
     const last = this.stored.length - 1;
+    // An event stamped in the past (max Q, at its peak) is pinned only when it
+    // is detected, so the frames it may land on stay until then.
+    const recent = this.stored[last].t - RETRO_EVENT_WINDOW_S;
     let seen = 0;
     for (let i = 0; i < this.stored.length; i++) {
       const f = this.stored[i];
       // `seen` counts candidates rather than array slots, so alternate
       // *candidates* go rather than alternate indices — a run of protected
       // frames in the middle no longer flips which half of the coast survives.
-      if (i > 0 && i < last && thinnable(f)) {
+      if (i > 0 && i < last && f.t < recent && thinnable(f)) {
         if (seen++ % 2 === 1) { dropped++; continue; }
       }
       kept.push(f);

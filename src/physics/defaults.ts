@@ -28,6 +28,46 @@ export const DEFAULT_GUIDANCE: GuidanceParams = {
 export const DEFAULT_FAILURE: FailureConfig = { mode: 'none', time: 60, stage: 0 };
 
 /**
+ * The fields that give way a vehicle's stored pitch programme: an operator's own
+ * pitch-over (the vertical rise, the kick and the turn's rate limit), and an
+ * acceleration limit, which throttles the vehicle off the thrust the programme
+ * was computed for. A programme flown at a fixed pitch against time by a
+ * throttled stack goes flat and low into dense air (Soyuz-2.1a held to 18 m/s²
+ * met 45 kPa on it, against 37 kPa unthrottled); a pitch-over turns with the
+ * velocity it actually has.
+ */
+export const PROGRAMME_FIELDS = ['pitchOverAltitude', 'kickAngle', 'kickDuration', 'maxTurnRate', 'maxAccel'] as const;
+
+/**
+ * Whether `g` replaces the vehicle's stored pitch programme with a pitch-over
+ * of the operator's own: any of `PROGRAMME_FIELDS` set to something other than
+ * the vehicle's value. A programme flies none of those fields, so an edit to
+ * one would otherwise change nothing (`GuidanceParams.pitchProgram`).
+ */
+export function programmeOverridden(g: GuidanceParams, spec: VehicleSpec, model?: DynamicsConfig['model']): boolean {
+  if (!g.pitchProgram) return false;
+  const own = guidanceForVehicle(spec, DEFAULT_GUIDANCE, model);
+  return PROGRAMME_FIELDS.some((k) => g[k] !== own[k]);
+}
+
+/**
+ * `g` as it flies on `flown`, the vehicle as it flies its payload
+ * (`payloadVehicle`, src/data/vehicles.ts): each value `g` holds at `base`'s
+ * own takes `flown`'s in its place — Progress's stored programme for the
+ * vehicle's own that a caller took from `guidanceForVehicle(base)`. A value
+ * the operator changed is kept.
+ */
+export function profiledGuidance(g: GuidanceParams, base: VehicleSpec, flown: VehicleSpec, model?: DynamicsConfig['model']): GuidanceParams {
+  if (flown === base) return g;
+  const own = guidanceForVehicle(base, DEFAULT_GUIDANCE, model) as unknown as Record<string, unknown>;
+  const next = guidanceForVehicle(flown, DEFAULT_GUIDANCE, model) as unknown as Record<string, unknown>;
+  const out: Record<string, unknown> = { ...g };
+  const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
+  for (const k of Object.keys(next)) if (!same(next[k], own[k]) && same(out[k], own[k])) out[k] = next[k];
+  return out as unknown as GuidanceParams;
+}
+
+/**
  * The guidance a vehicle is actually flown with when nobody has touched the
  * controls: the library baseline with the vehicle's own program on top.
  *

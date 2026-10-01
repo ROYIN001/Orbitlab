@@ -61,7 +61,7 @@ describe('track 2, guidance and navigation', () => {
     // the acceleration limit the student set goes into the results (audit 2026-09-27 A11)
     expect(solved.cfg.guidance.maxAccel).toBe(18);
     expectRecordedAsFlown(l, solved);
-    // flown as it is, about 34 kPa
+    // flown as it is, about 37 kPa (34 kPa before Soyuz-2.1a's published data and stored programme)
     const asIs = fly(l);
     expect(MEASURES.maxQ.read(asIs)).toBeGreaterThan(30);
     expect(gradeLesson(l, asIs).verdict).toBe('fail');

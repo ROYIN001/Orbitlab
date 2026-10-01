@@ -3,7 +3,7 @@ import { vehicleById } from '../src/data/vehicles';
 import { G0 } from '../src/physics/constants';
 import {
   VehicleModel, engineStartupS, engineTailoffS, startupFactor, tailoffFactor,
-  LIQUID_STARTUP_S, SOLID_STARTUP_S, LIQUID_TAILOFF_S, SOLID_TAILOFF_S, TAILOFF_SPAN,
+  LIQUID_STARTUP_S, SOLID_STARTUP_S, LIQUID_TAILOFF_S, SOLID_TAILOFF_S, TAILOFF_SPAN, THRUST_STEP_RAMP_S, boosterStepLevel,
 } from '../src/physics/vehicle';
 
 /**
@@ -116,7 +116,8 @@ describe('engine start-up and tail-off', () => {
 
   it('takes four Soyuz strap-ons off the stack over a second, not in one step', () => {
     // 3.3 MN disappearing inside one 10 ms step was what the six-DOF attitude
-    // loop answered with a nose dip at T+01:59.
+    // loop answered with a nose dip at T+01:59. Their step to 81 % at T+112 s
+    // is ramped as well, over the quarter second Arianespace's trace shows.
     const vm = new VehicleModel(vehicleById('soyuz21a'), 7000);
     const st = vm.active!;
     vm.igniteStage(st, -2.5);
@@ -132,7 +133,12 @@ describe('engine start-up and tail-off', () => {
       const res = vm.consume(t, 1, dt);
       if (res.boosterBurnout.length && Number.isNaN(burnout)) burnout = t;
     }
-    expect(burnout).toBeGreaterThan(100);
+    // shut down by command at T+117.45 s, not run dry
+    expect(burnout).toBeCloseTo(117.44, 1);
+    const b0 = st.boosters[0].spec;
+    expect(boosterStepLevel(b0, 112)).toBe(1);
+    expect(boosterStepLevel(b0, 112 + THRUST_STEP_RAMP_S / 2)).toBeCloseTo(0.905, 9);
+    expect(boosterStepLevel(b0, 112 + THRUST_STEP_RAMP_S)).toBeCloseTo(0.81, 9);
     const strapOns = st.boosters.reduce((sum, b) => sum + b.spec.engine.count * b.spec.count * b.spec.engine.thrustVac, 0);
     expect(strapOns).toBeGreaterThan(3e6);
     // the largest single-step loss is a few per cent of what the strap-ons make

@@ -185,12 +185,12 @@
           "recorded": {
             "id": "c1",
             "state": "pass",
-            "value": 1032.399999999463
+            "value": 1027.1399999994633
           },
           "rechecked": {
             "id": "c1",
             "state": "pass",
-            "value": 1032.399999999463
+            "value": 1027.1399999994633
           },
           "tol": 0.01,
           "status": "match"
@@ -202,21 +202,21 @@
           "recorded": {
             "id": "c2",
             "state": "pass",
-            "value": 15.72483017555198,
-            "expected": 15.266825413157262
+            "value": 18.008237250911666,
+            "expected": 17.483725486322005
           },
           "rechecked": {
             "id": "c2",
             "state": "pass",
-            "value": 15.72483017555198,
-            "expected": 15.266825413157262
+            "value": 18.008237250911666,
+            "expected": 17.483725486322005
           },
           "tol": 0.0001,
           "status": "match"
         }
       ],
-      "flownTo": 1033.399999999463,
-      "steps": 54696,
+      "flownTo": 1028.1399999994633,
+      "steps": 53734,
       "lateActions": 0
     },
     {

@@ -14,7 +14,7 @@ import { SATELLITES } from '../data/satellites';
 import { ORBIT_PRESETS } from '../data/orbits';
 import { DEFAULT_FAILURE } from '../physics/defaults';
 import { defaultDynamics } from '../physics/rigid/config';
-import { GUIDANCE_FIELDS, parseUtcDateTime, validateConfigInput, type ConfigInput, type ValidationCode } from './validation';
+import { GUIDANCE_FIELDS, parseUtcDateTime, validateConfigInput, vehicleGuidanceFigureValid, type ConfigInput, type ValidationCode } from './validation';
 
 /** What the file says it is. */
 export const MISSION_FORMAT = 'orbitlab.mission';
@@ -259,7 +259,8 @@ function reset(state: MissionState, field: string, fallback: MissionState): void
   if (field === 'setup.launchTime') { state.launchTime = new Date(fallback.launchTime.getTime()); return; }
   if (field === 'setup.guidance') {
     const known = new Set(Object.values(GUIDANCE_FIELDS).map((f) => f.key as string));
-    for (const key of Object.keys(state.guidanceOverrides)) if (!known.has(key)) delete (state.guidanceOverrides as Record<string, unknown>)[key];
+    const g = state.guidanceOverrides as Record<string, unknown>;
+    for (const key of Object.keys(g)) if (!known.has(key) && !vehicleGuidanceFigureValid(key, g[key])) delete g[key];
     return;
   }
   const guidanceKey = Object.values(GUIDANCE_FIELDS).find((f) => `setup.${f.key}` === field)?.key;

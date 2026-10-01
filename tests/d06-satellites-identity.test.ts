@@ -65,9 +65,11 @@ describe('D06: the satellite classes, recorded before the satellite builder', ()
   // at the head of the list, are what the fixture pins.
   const PRE_D06 = SATELLITES.slice(0, 11);
   const C01_ADDED = ['crewDragon', 'ps1', 'vostok1', 'mercury', 'apollo11'];
+  // and Progress MS after them (2026-10-01, Soyuz-2.1a's cargo flight)
+  const ADDED_SINCE = ['progress'];
 
   it('equal the pre-D06 entries, value for value', () => {
-    expect(SATELLITES.slice(11).map((s) => s.id)).toEqual(C01_ADDED);
+    expect(SATELLITES.slice(11).map((s) => s.id)).toEqual([...C01_ADDED, ...ADDED_SINCE]);
     // read and compared, never written: a mismatch fails, even under `vitest -u`
     expect(`${JSON.stringify(sortKeys(PRE_D06), null, 1)}\n`).toBe(FIXTURE);
   });

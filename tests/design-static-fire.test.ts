@@ -128,11 +128,11 @@ describe('test stand · the engine model reproduced', () => {
    * mass flow (vehicle.ts, `engineIsp`), so it need not equal the `ispSL` a
    * data file quotes. The bound is tests/physics-core.test.ts's 8 %, the
    * fleet's measured worst case, and the engines more than 2 % off must be
-   * exactly the four that test names — the stand has to agree with it, not
+   * exactly the three that test names — the stand has to agree with it, not
    * find a different list. Ground-lit engines only (the first stage and its
    * strap-ons), as there: an upper stage's sea-level pair may be a placeholder.
    */
-  it('delivers each ground-lit engine’s sea-level Isp within 8 % of the quoted ispSL, with the four known exceptions', () => {
+  it('delivers each ground-lit engine’s sea-level Isp within 8 % of the quoted ispSL, with the three known exceptions', () => {
     const off: string[] = [];
     for (const { owner, engine: e, groundLit } of installations()) {
       if (!groundLit || e.vacuumOnly) continue;
@@ -143,7 +143,7 @@ describe('test stand · the engine model reproduced', () => {
       expect(err, `${owner} ${e.name}: delivers ${s.isp.toFixed(1)} s against a quoted ${e.ispSL} s`).toBeLessThan(0.08);
       if (err > 0.02) off.push(`${e.name} ${(err * 100).toFixed(1)} %`);
     }
-    expect([...new Set(off)].sort()).toEqual(['RD-108A 6.9 %', 'Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
+    expect([...new Set(off)].sort()).toEqual(['Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
   });
 
   /**
