@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-09-28. This file states the current position only; how it was reached is in the
+Updated 2026-10-01. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -54,6 +54,20 @@ import, and **Fly it**, which hands the design to Launch as a mission, point-mas
 flight readiness review (D04), finds the best split of a Δv among stages, and sizes a launcher
 from a payload and an orbit (D05). The figures are the launch physics' own, and estimates are
 labelled as such; the known gaps are under "Known limitations" below.
+
+Since Phase 4, Build designs satellites too (D06, D07): a switch above the level turns Explore
+and Engineer to **Satellite**. Explore designs one from NAPA-2, a THEOS-2-class imager or one of
+five classes of the catalogue, and works out every figure as it is typed — the eclipse, the array and
+battery, the Δv budget, the torques and the wheel, the downlink, the camera — for a design date,
+saying in words what fails and what is an estimate. **Send to Orbit** puts the satellite in its
+orbit in the Orbit section with no launch; **Fly it** flies it to its orbit on a rocket in Launch,
+as the mission's own satellite, with the Launch section's verdict before the click. Engineer is the
+satellite bench, a tab for each subsystem and the lifetime against the 25-year rule, and **Start
+from requirements** works the orbit and the satellite out from what a mission must do. The
+**lessons** page gained two pages for teachers (T01, T02): a scenario writer that makes a flight or
+a design lesson and hands it out as a file or a link, and a check that flies a class's results
+again on the teacher's own computer. Five lesson packs matched to Thai and Russian curricula (T03)
+are listed there as drafts awaiting the owner's review.
 
 - **Physics** ([PHYSICS.md](PHYSICS.md)): a rigid-body (six-DOF) model with finite actuators
   for every vehicle, which is the default, with each stage's chambers, steering, thrusters and
@@ -180,10 +194,21 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 - **Vulcan's ascent** inserts well away from its planned parking orbit (about 137 × 1 200 km
   against 250 × 500 km) and makes the target with its later burns. Every Vulcan mission in the
   fleet matrix reaches its target; the ascent itself is a guidance-quality item for G01.
+- **The lesson packs** (T03) are drafts. Their curriculum codes, their Thai and Russian wording,
+  the cohort each is for and the naming of the RTAF Academy and NAPA-1 wait for the owner's
+  review; each pack says so on the page.
+- **A satellite's figures are sizing estimates** (D06, D07), each marked on screen: the class
+  templates carry their class's typical mass, engine and size, not any satellite's; the THEOS-2
+  class carries eoPortal's 425 kg, labelled an estimate; NAPA-2's radio is a CubeSat X-band
+  transceiver's (Palo et al.) and its camera one that gives its published 5 m, neither its own; the
+  drag area is a tumbling mean; the receiving station is NASA's 11.28 m dish; whether a satellite
+  fits its fairing is an estimate, a note that does not stop a launch.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 9 858 tests in 243 files, 20 to 30 minutes on four cores. Among it:
+`npm test` runs the regular suite (vitest): 9 858 tests in 243 files, 20 to 30 minutes on four cores
+(measured 2026-10-01 at 120a4f0; on a machine shared with other work the run took 50 minutes, and
+the two tests that ran past their time limits under that load passed alone). Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -200,12 +225,21 @@ moves only with the physics' wind; the calm default leaves it where it was made.
   parts catalogue emits the fleet main flies, value for value, and 27 point-mass flights hash as
   they did before it; the builder's figures are the flight model's own or the rocket equation
   worked by hand ([VALIDATION.md](VALIDATION.md) §8).
+- **The satellite builder and instructor mode** (tests/eclipse, power, satellite-attitude, link,
+  imaging, d06-*, d07-*, live-stepping, instructor-mode, recheck*, design-lesson*, lesson-pack*):
+  each satellite core against published worked examples; the satellite model as the cores' own
+  answers; the catalogue satellites held to their recorded values and a copied satellite flown as
+  the original; D07 against D06 and O04; a live flight against the headless one, bit for bit; and
+  the re-check against committed fixtures in Node, with its Chromium half in the `recheck` browser
+  journey ([VALIDATION.md](VALIDATION.md) §9).
 
 `npm run test:heavy` runs the seven delivered-orbit cases with wind and a reduced-flux mass flow
 model, Soyuz MS-10's and 18a's aborts flown to the crew on the ground, Soyuz MS-16 and MS-25 flown
 from their real second of launch to the station, and the screening's time filter against the full
 search over its whole sweep (tests/heavy/, about 20 minutes), and D01's 21 six-DOF fingerprints,
-160 s of flight each (about four minutes more).
+160 s of flight each (about four minutes more); for Phase 4, a copied communications satellite and
+a copied Soyuz MS flown as the originals in six-DOF (about 20 minutes on a shared machine) and the
+lesson packs' three six-DOF lessons (about 6 minutes).
 `npm run test:sixdof-fleet` flies the fleet matrix as rigid bodies: its 126 accepted cases, each
 vehicle's first case in crosswind and shear, and Long March 2D's real mission — 161 cases, about
 2 h 40 min on four cores ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). `npm run typecheck` and
@@ -353,6 +387,17 @@ Phase 3, the rocket builder (the Build section), on the same branch. No built-in
 | Build at Explore | done: D02 and D03 above, with designs kept in the browser (the one on the bench also across a reload), `.orbitlab.json` files, and ratings computed off the page's thread with a Stop button. Walked in Chromium in English, Russian and Thai at desktop and phone widths ([VALIDATION.md](VALIDATION.md) §8) |
 | Build at Engineer ("Design and test") | done: D04 and D05 above as five tabs, on a real rocket, the design open in Explore, a saved one or a launcher sized there. **Fly it** from the review opens Launch's Engineer level on the mission reviewed; **Open in the builder** takes a sized launcher to Explore's parts builder ([VALIDATION.md](VALIDATION.md) §8) |
 
+Phase 4, the satellite builder and instructor mode, on the same branch. No built-in flight changed
+(the fingerprints above, and since D06 the satellites' own fixture).
+
+| Item | |
+|---|---|
+| D06 satellite subsystems | done, at Explore and Engineer: **Design a satellite** starts from NAPA-2, a THEOS-2-class imager or one of five classes (communications, Earth observation, weather, navigation, science) and works out, as the student types and for a design date, the eclipse and β, the array and battery for the year's longest eclipse, the Δv budget (insertion, drag make-up or station keeping, disposal), the disturbance torques and the wheel and torquer they call for, the downlink's design control table, and the camera's sample, swath and diffraction limit; each number is marked sourced, estimate or the student's own. The **satellite bench** (Engineer) shows each subsystem in a tab with its sources and runs the lifetime against the 25-year rule. Designs are kept in the browser and as `.orbitlab.json` files. **Send to Orbit** hands the satellite to the Orbit section with no launch (its mass, drag area, C_D, C_R and engine); **Fly it** flies it in Launch as the mission's own satellite (a mission file of version 3), from a site whose corridor reaches its plane, with the Launch section's verdict shown before the click and the rockets that can fly it offered. Each core is held to published worked examples (TU Delft's reader, Rickman, Starin & Eterno, MarCO, Palo et al., ITU-R P.525, Sentinel-2, Landsat 8, TM-113111, Hull, IADC): all met but TM-113111's arcjet row (0.11 kg), and the slips found in the sources are recorded. Copies of catalogue satellites fly their flights exactly, point mass and six-DOF ([VALIDATION.md](VALIDATION.md) §9) |
+| D07 requirements-driven design | done, at Engineer: **Start from requirements** on the bench (`#/build/engineer/requirements`). A place, the coarsest GSD, the longest wait between looks, a tilt, daylight or not, the plane, a life, a fixed solar-activity level, the 25-year rule, the data a day and the stations give a table of the repeat-ground-track orbits from 150 to 5 000 km: what each asks of the satellite (focal length, aperture, transmitter, array, battery, Δv), what it gives (the revisit by brute force, contact, the longest eclipse, the lifetime from a search over P07 in a worker), which requirement binds and every one unmet; two charts; and **Open**, which puts a row's design on the bench, where every figure is worked out again and set beside the row's. Held to D06 and O04 to 1e-9 but the eclipse (0.12 %), to the published repeat cycles of Landsat 8, Sentinel-2 and Sentinel-1, and to TU Delft's data-volume example ([VALIDATION.md](VALIDATION.md) §9) |
+| T01 instructor scenarios | done: **Write a scenario** (`#/lessons/author`) makes a lesson from the mission on the setup panel (a rocket or a satellite of one's own included) or from the satellite design open in Build: its texts in any of the three languages, what students may not change, and criteria for a flight (how it ends, a number within bounds, a number worked out, an event) or for a design (one of 13 figures within bounds, or worked out; the 14th, the longest wait between looks, needs the mission's place, which a lesson file can carry but the writer does not write). It saves the lesson as a file, makes a `?scenario=` link (up to 8 000 characters) that opens and starts it in any browser, or tries it at once. A design lesson is graded on the satellite model's figures at the date and solar activity it fixes, on the lesson's desk in the designer; an example is `public/lessons/napa2-power.orbitlab-lesson.json`. A teacher's lessons are numbered 9.1, 9.2… in the order of the file. A lesson file is written at the lowest version that can fly it: 1 for flights, 2 for a case or a rocket of one's own, 3 for a satellite of one's own or a design, and reads back to the same lessons. Each kind of flight criterion passes and fails on constructed flights, and each of the 14 design measures on constructed designs ([VALIDATION.md](VALIDATION.md) §9) |
+| T02 checking a student's file | done: **Check results** (`#/lessons/check`) opens a class's results files and the teacher's lesson file, flies each point-mass record again in a worker to the time it was graded at, its journaled commands at the same step boundaries, or works a design record's figures out again at its date and solar activity, and says Match, Borderline, Differs or Cannot re-fly with the reason and whether the file changed after it was saved; the check can be saved as CSV. A results file now keeps a flight's grading time, the instant on screen, its commands and the app's build, and a design lesson's design. Underneath, a live point-mass flight is the headless flight bit for bit at any frame rate and warp ([PHYSICS.md](PHYSICS.md) §2n), and a lesson grades the orbit where the flight ended, however late the page grades it. Node and Chromium agree within 1.4e-12 s of grading time and 1.4e-11 m/s on flights and 5.4e-15 relative on designs, against tolerances fixed before the first comparison ([VALIDATION.md](VALIDATION.md) §9) |
+| T03 lesson packs | drafts, awaiting the owner's review: five packs, precached files under `public/lessons/packs/`, listed on the lessons page as groups with their curriculum codes as chips — IPST basic science (M.5–M.6), IPST Earth, astronomy and space (M.6), IPST additional physics (M.4–M.6), the RTAF Academy's aeronautical-engineering cadets, and Russia's speciality 24.05.06 — with 17 lessons of their own (11.1–15.4: flights, a case and design lessons) and built-in lessons listed again with their codes. Each pack says on the page that it is a draft. Every worked solution passes and a wrong answer fails; two tolerances were set after the flight, and say so ([VALIDATION.md](VALIDATION.md) §9) |
+
 ## Known limitations
 
 - The orbit playground (O01) carries an orbit by Kepler's equation and J2's secular drift to
@@ -409,8 +454,8 @@ Phase 3, the rocket builder (the Build section), on the same branch. No built-in
 - The lessons' grades are formative. The answer keys are on the same device: a case's key, and the
   Long March 5B case study's error for the stage of Tianhe, wait while that case's lesson is open and
   unanswered, but a flight's worksheet key does not. Showing a lesson's answers is recorded, and a
-  number once shown never passes. The case lessons' Russian and Thai texts have not yet been read by
-  a native speaker.
+  number once shown passes only "with help". The case lessons' Russian and Thai texts have not yet
+  been read by a native speaker.
 - Build's computed payload ratings (D03, D04) are the model's estimates, flown point-mass in calm
   air on the guidance programme the design carries. Seven of eight published ratings come out
   within 25 %; Vega-C's LEO rating is 31 % high (4 330 against 3 300 kg), and 26 % high to its own
@@ -479,6 +524,82 @@ Phase 3, the rocket builder (the Build section), on the same branch. No built-in
   every language. On a phone the wind tunnel's table of numbers scrolls sideways in its own box,
   the Engineer level's lead runs to 8–12 lines, and in Russian at 360 px its five tabs take five
   rows; at 1440 px the sizing drawing cuts off "Rutherford Vacu…".
+- The satellite builder (D06), each left open by a review ([VALIDATION.md](VALIDATION.md) §9):
+  - The propagator's Sun is 0.45° from the orbit tools', so its sunlight-pressure shadow edges move by up to 11 s; not changed.
+  - Power reads 1 361 W/m² and the propagator's sunlight pressure 1 367 W/m²; which to keep is the owner's call.
+  - Charge cycles a year assume an eclipse every revolution, an upper bound, and are shown as "at most".
+  - The off-nadir sample, the diffraction limit and the pointing loss have no published worked example to be held to.
+  - The ground speed leaves out the Earth's turning: about 1 % low on a sun-synchronous track, 6.6 % high on the equator.
+  - The torques are sized with the field over the pole (the smallest torquer) and the gravity gradient at a 45° tilt.
+  - The loads are the same in sunlight and in shadow, and a geostationary camera gets no data rate.
+  - A low orbit's end of life is always budgeted as a controlled re-entry; the Δv budget has no "decay within 25 years".
+  - The drag make-up holds the Sun and the season at the design date (±30 % over a year) and averages the indices, not the density.
+  - TM-113111's arcjet row is missed by 0.11 kg, unexplained; Hull's 25-year curve is checked from one side only.
+  - A design names one ground station and has no argument of perigee (taken as 0); the designer draws no picture of it.
+  - The receiving station is NASA's 11.28 m dish, so link rates come out far above a school station's (28 Gbit/s from 10 W).
+  - The geostationary templates' default place (the node at 0°) is below Bangkok's horizon, so their data a day is 0.
+  - The bench's lifetime runs at a fixed ECSS level, while the Orbit section's lifetime dialog starts on the Sun as measured.
+  - The design date is kept with the unsaved design only, not with a saved one, and its box shows the browser's date format.
+  - While the figures are worked out again (about 180 ms) the checks read the new design against the old figures.
+  - The Orbit section tells a design's hand-off from a flight's by its having no mission and no vehicle: a heuristic.
+  - The pointing loss holds inside the main beam only, and the design lets the pointing error run to 180°.
+  - Some bad inputs to the cores are taken quietly: an infinite β gives no eclipse, and a tiny step can hold a page.
+  - Launch aims a node's local time at the true Sun and the designer at the mean Sun, so a flown node is up to about 16 min off.
+  - A crew-kind satellite of one's own flies a rendezvous with the Soyuz MS's engine and inertia, not its own.
+  - An electric engine flies in Launch without its engine, its propellant still in the mass; Send to Orbit keeps the engine.
+  - Fly it offers other rockets only when the verdict fails, not on a caution, and one insertion probe can hold the page 0.5 s.
+  - The fairing fit is a note, not part of the verdict; NAPA-2's template lays its 0.34 m side across, so it reads 0.39 × 0.10 m.
+  - In Thai at 360 px the current rocket's entry is cut in Fly it's rocket menu.
+  - The solar torque counts nothing when the Sun is behind a surface, so a two-sided array lit from behind is understated.
+  - The ground speed and the longest pass assume a circular orbit; the off-nadir sample tilts the camera across the track only.
+  - With a craft of one's own picked in the playground, a design without an engine handed on keeps that craft's mass beside the design's area, as a flight's hand-off does.
+  - A weather satellite on Ariane 64, designed or from the catalogue, separates only when the recorder steps 20 s (at T+47 439 s), not 5 s: Launch's behaviour, unchanged.
+- Requirements (D07), each left open by a review:
+  - D07 sizes the array and battery with the closed-form eclipse and, for daylight looks, the payload off in the shadow; the bench keeps every load on (THEOS-2: 18.9 % more array, 60.2 % more battery).
+  - D07 lets an orbit that lasts its life by drag take life + 25 years; D06 gives a satellite with an engine 25 from its design orbit (THEOS-2's rows from about 645 to 663 km disagree).
+  - The lifetime search flies the template's mass and drag area; a row's resized wings change the area (THEOS-2: 3.85 → 3.575 m²).
+  - A daylight revisit holds for the season of the start date only (a dawn–dusk orbit over Tromsø sees nothing in December).
+  - A row inside the lifetime search's bracket says "not proven to last"; a row that never enters the shadow gets no battery.
+  - The table stops at 400 rows: THEOS-2's own 26-day case needs the shortest cycle set to 26 (112 rows, about 28 s).
+  - The table's time estimate runs about 2.5 times high on the machine the lifetime estimate was fitted on.
+  - At a GSD of 1 000 m, 8 of 18 rows are refused, their aperture below the smallest the bench takes.
+  - Opening a row replaces the unsaved design on the bench without asking.
+  - THEOS-2's template camera gives 0.5014 m from 621 km, 0.3 % coarser than the published 0.5 m.
+- Instructor mode and design lessons (T01, T02), each left open by a review:
+  - Six-DOF flights and case lessons are not re-flown; drift across engines past two days, and TORU across engines, are unmeasured.
+  - A results file's checksum shows an accident, not a forgery; deleting the four new fields makes an edited record read as an old one.
+  - Records from before T02 re-check only approximately (a difference reads "incomplete"); those from before grading at the flight's end differ on an orbit graded late.
+  - The `?scenario=` link reaches the web server that serves the app, as a mission link does; it carries the lesson, nothing about a student.
+  - Only V8's engines (Node, Chromium) have been compared; the design revisit's 1e-7 day may not hold in another browser.
+  - A grading measure reads the simulation up to one step ahead of the picture (a peak load can fail 0.1–0.25 s early); so do the CSV export and the worksheets.
+  - A six-DOF coast holds the picture 10 s at 1×, and a command moves the picture on by up to one step (0.1 s low down, 1 s on a far approach).
+  - The orbit is graded at cut-off with the tail-off added at once: 0.016 m/s from the speed after it on lesson 1.1.
+  - A design lesson that starts from a template moves if the template changes, and its old records then read as breaking a lock.
+  - Opening a requirements row or a saved design during a design lesson replaces the lesson's design without asking.
+  - A typed answer to a design lesson can be read off its criterion chip after a check, and off the bench.
+  - A lesson file's range whose lower bound is above its upper one is read; only the writer refuses it.
+  - A design lesson's requirements may name another solar activity than the lesson's own; the strip then shows both.
+  - The revisit measure assumes a camera looking straight down, over a fixed 30 days from the design date.
+  - The writer writes no mission requirements, so it does not offer the revisit measure.
+  - On a phone the design lesson's strip can take 42 % of the screen, and the writer's long measure names are cut in its menu.
+  - The check page does not report a lesson file whose lesson takes a built-in id, and the lesson-file notice still says "1 lessons".
+  - A typed answer on a lifetime the run did not see the end of is graded against the run's length.
+  - A record that names its build but lacks its grading time is a match when its numbers come out the same; the re-check's header says it differs.
+  - A teacher's lesson that ends on an event other than the insertion reads the orbit with the rest of that engine's tail-off added.
+- The lesson packs (T03), each left open by a review:
+  - The packs are drafts (`reviewed: false`); the research's lessons A5, P4 and R4 are not written.
+  - Lesson 15.3 flies uncrewed: the grader does not end a crewed failed flight that ends on the escape system's parachutes.
+  - Pack lessons are listed once the packs are fetched; before that WebMCP's lesson tools and a check page opened first miss them.
+  - A teacher's lesson file that reuses a pack lesson's id is replaced silently.
+  - The event log's "Target orbit achieved" line prints the period in whole minutes, much of the answer in 11.2, 12.2, 13.1 and 13.2.
+  - Lessons 13.3 and 15.4 start from unchanged templates, so a later change to a template would move them.
+  - 15.4 asks for the torquer dipole and the wheel ratio, not the two torques the research asked for; 13.4's depth bound is 30 %, not 40 %.
+  - 11.4's link is reckoned at 10° elevation, about 1 dB worse than Bangkok sees; 15.4 passes any wheel from 5.99 to 11.98 N·m·s.
+  - The storm question holds Kp 7 through the whole prediction, an upper bound; built-in lesson 6.2 now asks nine questions.
+  - The design names stored in the pack files are not translated.
+  - A build from before T03b refuses a case lesson with the CZ-5B sheet's storm question as invalid, not as newer (unreleased builds only).
+  - R6's brief says the wheel cannot hold the momentum built up over an orbit, while the rule it gives uses a quarter orbit.
+- Phase 4's Russian and Thai texts, the lesson packs' among them, have not been read by a native speaker.
 - D01's fingerprints (27 point-mass flights, 21 six-DOF) are exact hashes of floating-point
   flights: a Node or V8 upgrade could change them with no change to the code, as it could the older
   six-DOF goldens.
