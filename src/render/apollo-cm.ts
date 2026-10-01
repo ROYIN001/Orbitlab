@@ -8,7 +8,7 @@
  * canopies' shapes from photographs, approximate.
  */
 import * as THREE from 'three';
-import { density } from '../physics/atmosphere';
+import { entryGlow } from './entry-glow';
 
 const CM_R = 1.956;
 const CM_H = 3.23;
@@ -50,15 +50,8 @@ export interface EntryCmView {
   dispose(): void;
 }
 
-/**
- * How brightly the air round the CM glows, 0..1: as the heating at its stagnation
- * point goes, √ρ·v³ — full at Apollo's peak heating, about 60 km up at 10 km/s,
- * first seen near 100 km (the scale the model's, for the picture).
- */
-export function entryGlow(alt: number, airspeed: number): number {
-  if (!(airspeed > 0) || alt > 130e3) return 0;
-  return Math.min(1, (Math.sqrt(density(Math.max(0, alt))) * airspeed ** 3) / 1.2e10);
-}
+/** How brightly the air round the CM glows, 0..1 (shared with Vostok-1's sphere and module, render/entry-glow.ts). */
+export { entryGlow };
 
 /**
  * C01: the command module on its own, its group's origin at the heat shield's

@@ -31,11 +31,18 @@ export interface WatchHost {
   explore(): void;
   /** S03: hand the orbit reached on to the Orbit section */
   continueInOrbit?(): void;
-  /** point the camera at a stage flying home, or back at the rocket */
-  follow(target: 'booster' | 'rocket'): void;
+  /** point the camera at a stage flying home, or back at the rocket; C01: at Vostok-1's pilot, or back at the capsule */
+  follow(target: FollowTarget): void;
   /** V01: shown under the launches, the launch audio each one plays */
   pickerFooter?(): HTMLElement | null;
 }
+
+/** What the follow button points the camera at. */
+export type FollowTarget = 'booster' | 'rocket' | 'crew' | 'capsule';
+/** The button's label for each target. */
+const FOLLOW_LABEL: Record<FollowTarget, string> = {
+  booster: 'watch.follow.booster', rocket: 'watch.follow.rocket', crew: 'watch.follow.pilot', capsule: 'watch.follow.capsule',
+};
 
 /** 'auto' or a fixed time warp */
 export type WatchSpeed = 'auto' | number;
@@ -51,8 +58,12 @@ interface UpdateState {
   playing: boolean;
   /** the vehicle the frame belongs to (a custom one included, roadmap S02) */
   vehicle: VehicleSpec | null;
-  /** a stage flown home is in the frame, and whether the camera is on it */
-  follow?: { available: boolean; booster: boolean };
+  /**
+   * a stage flown home is in the frame, and whether the camera is on it; C01:
+   * with `crew`, what can be followed is Vostok-1's pilot on his own, and
+   * `booster` says the camera is on him rather than on the capsule
+   */
+  follow?: { available: boolean; booster: boolean; crew?: boolean };
   /**
    * The stage the camera follows instead of the rocket: the height and speed
    * on screen are its own, or they would read 200 km and 27,000 km/h under a
@@ -186,7 +197,10 @@ export class WatchView {
     this.followBtn = el('button', 'watch-follow-btn');
     this.followBtn.type = 'button';
     this.followBtn.hidden = true;
-    this.followBtn.addEventListener('click', () => this.host.follow(this.followBtn.dataset.target === 'booster' ? 'booster' : 'rocket'));
+    this.followBtn.addEventListener('click', () => {
+      const target = this.followBtn.dataset.target;
+      this.host.follow(target === 'booster' || target === 'crew' || target === 'capsule' ? target : 'rocket');
+    });
     const controls = el('div', 'watch-controls');
     controls.append(this.playBtn, this.speedGroup, this.followBtn, this.missionsBtn);
 
@@ -386,13 +400,16 @@ export class WatchView {
     this.milestone.hidden = true;
   }
 
+  /** The follow button offers the other subject: the stage or the rocket; Vostok-1's pilot or the capsule (C01). */
   private syncFollow(follow: UpdateState['follow']): void {
-    const key = !follow || (!follow.available && !follow.booster) ? '' : follow.booster ? 'rocket' : 'booster';
+    const key: FollowTarget | '' = !follow || (!follow.available && !follow.booster) ? ''
+      : follow.crew ? (follow.booster ? 'capsule' : 'crew')
+      : follow.booster ? 'rocket' : 'booster';
     if (key === this.shown.follow) return;
     this.shown.follow = key;
     this.followBtn.hidden = !key;
     this.followBtn.dataset.target = key;
-    if (key) this.followBtn.textContent = t(key === 'booster' ? 'watch.follow.booster' : 'watch.follow.rocket');
+    if (key) this.followBtn.textContent = t(FOLLOW_LABEL[key]);
   }
 
   private syncPlay(playing: boolean): void {

@@ -175,7 +175,11 @@ export class OrbitalMap {
       }
       // debris
       for (const d of sim.debris) {
-        if (d.visual.kind === 'fairing') continue;
+        const kind = d.visual.kind;
+        if (kind === 'fairing') continue;
+        // C01: what Vostok-1's return leaves is not a stage: no markers for the module's pieces, the hatch and the
+        // seat, the module only while it is whole; Gagarin on his own in his suit's orange
+        if (kind === 'imFragment' || kind === 'hatch' || kind === 'seat' || (kind === 'instrumentModule' && !d.alive)) continue;
         // A piece that has come down is on the ground, and the ground turns
         // with the Earth: its frozen ECI position does not, so the marker for a
         // landed booster used to crawl west at 15°/hour, away from the pad it
@@ -184,6 +188,13 @@ export class OrbitalMap {
         // (`impact` is recorded in degrees, `eciToLatLon` returns radians)
         const ll = !d.alive && d.impact ? { lat: d.impact.lat * DEG, lon: d.impact.lon * DEG } : eciToLatLon(d.r, theta);
         const [x, y] = this.xy(ll.lat * RAD, ll.lon * RAD, mw, mh);
+        if (kind === 'pilot') {
+          g.fillStyle = '#e8641e';
+          g.strokeStyle = '#fff';
+          g.lineWidth = 1.5;
+          g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); g.stroke();
+          continue;
+        }
         g.fillStyle = d.outcome === 'landed' ? '#7ddba0' : d.alive ? '#efa47e' : '#ff6b6b';
         g.beginPath();
         g.rect(x - 3, y - 3, 6, 6);

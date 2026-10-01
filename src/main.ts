@@ -80,6 +80,9 @@ import { LessonMode } from './ui/lessons/lesson-mode';
 import { getNotation, initNotation, onNotationChange } from './ui/notation';
 import { FramesView } from './render/frames';
 import { EscapeView } from './render/escape';
+import { crewViewSize } from './render/cosmonaut';
+import { drawnFrame, onDrawnSphere, onEllipsoid } from './render/datum';
+import { geodeticHeight } from './physics/geodesy';
 import { StationView } from './render/station';
 import { apolloViewSize, buildAscentStage, buildCsm, buildDescentStage, CSM_LENGTH, LM_HEIGHT } from './render/apollo';
 import { PORTS, TARGET_OFFSET, targetOffset } from './physics/rendezvous/ports';
@@ -172,6 +175,43 @@ const WATCH_CAMERA_PLAN: CameraPlan = { ...DEFAULT_CAMERA_PLAN, upper: 'exterior
 
 /** Mission time the viewer stays on a stage flown home after it is down, s. */
 const WATCH_FOCUS_HOLD = 10;
+
+/** C01: Vostok-1's pilot on his own (from his ejection; on the ground too), if the frame has him. */
+function watchPilot(frame: VisualFrame): VisualFrame['debris'][number] | undefined {
+  return frame.debris.find((d) => d.visual.kind === 'pilot' && (d.alive || d.outcome === 'landed'));
+}
+
+/** How close the instrument module or a piece of it must be for the sphere's camera to look past the sphere at it, m. */
+const VOSTOK_MODULE_SHOT = 3000;
+/** How far Gagarin may have gone from the sphere on his seat for the camera to look out at him, m. */
+const VOSTOK_EJECTION_SHOT = 400;
+
+/**
+ * C01: what the camera on Vostok-1's sphere looks at past the sphere
+ * (`CameraFocus.partner`, the drawn frame's positions): the instrument
+ * module while it glows below 100 km, and the nearest of its pieces after
+ * it breaks up, while they are close by; and Gagarin just out on his seat.
+ * Read from the frame alone, so a replay frames the same. (Not Gagarin under
+ * his canopies once the sphere is down: he is then a kilometre or two almost
+ * straight above it, and no one picture holds both.)
+ */
+function vostokPartner(frame: VisualFrame): VisualFrame['debris'][number] | undefined {
+  const a = frame.abort;
+  if (!a || a.body !== 'capsule' || a.capsule !== 'vostok') return undefined;
+  const away = (d: VisualFrame['debris'][number]) => norm(sub(d.r, frame.r));
+  const pilot = frame.debris.find((d) => d.visual.kind === 'pilot' && d.alive);
+  if (pilot && pilot.crew?.seat && away(pilot) > 3 && away(pilot) < VOSTOK_EJECTION_SHOT) return pilot;
+  let best: VisualFrame['debris'][number] | undefined, nearest = VOSTOK_MODULE_SHOT;
+  for (const d of frame.debris) {
+    const kind = d.visual.kind;
+    if (!d.alive || (kind !== 'instrumentModule' && kind !== 'imFragment')) continue;
+    // (the drawn frame's heights are over the drawn sphere: render/datum.ts)
+    if (kind === 'instrumentModule' && norm(d.r) - R_EARTH > 100e3) continue;
+    const m = away(d);
+    if (m < nearest) { nearest = m; best = d; }
+  }
+  return best;
+}
 
 /** G07: within this of the station the cameras frame it with the spacecraft, m. */
 const NEAR_STATION = 6000;
@@ -403,11 +443,13 @@ class App {
   focusDebrisId: number | null = null;
   /**
    * What the viewer's camera follows: its own programme (the rocket, and each
-   * stage flown home for its entry, landing and a few seconds after), or
-   * whichever the viewer picked with the follow button, for the rest of the
-   * flight.
+   * stage flown home for its entry, landing and a few seconds after; C01:
+   * Vostok-1's sphere to its landing, then Gagarin), or whichever the viewer
+   * picked with the follow button, for the rest of the flight: the rocket
+   * (or the capsule coming home), a stage flown home, or the pilot on his own
+   * parachutes.
    */
-  private watchFollow: 'auto' | 'rocket' | 'booster' = 'auto';
+  private watchFollow: 'auto' | 'rocket' | 'booster' | 'crew' = 'auto';
   /** mission time the followed stage was first seen down, s (-1 while it flies) */
   private focusDownT = -1;
   private readonly helpGuide: HelpGuide;
@@ -415,6 +457,8 @@ class App {
   private watchPayloadKey: string | null = null;
   private vehiclePos = new THREE.Vector3();
   private earthC = new THREE.Vector3();
+  /** C01: where what the camera on Vostok-1's sphere looks past it at is drawn (`vostokPartner`) */
+  private mateV = new THREE.Vector3();
 
   constructor() {
     this.helpGuide = new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
@@ -527,7 +571,7 @@ class App {
       setWarp: (warp) => this.setWarp(warp),
       explore: () => this.go(route('launch', 'explore')),
       continueInOrbit: () => this.continueInOrbit(),
-      follow: (target) => { this.watchFollow = target; },
+      follow: (target) => { this.watchFollow = target === 'capsule' ? 'rocket' : target; },
       pickerFooter: () => this.soundtrackPanel.render(),
     });
     this.physicsDialog = new PhysicsDialog(document.getElementById('physics-dialog') as HTMLDialogElement);
@@ -1616,8 +1660,10 @@ class App {
           playing: this.playing && this.player.live,
           vehicle: sim?.vehicleSpec ?? null,
           follow: {
-            available: !!this.shown?.debris.some((d) => d.alive && d.recovery?.target),
+            available: !!this.shown?.debris.some((d) => d.alive && d.recovery?.target) || (!!this.shown && !!watchPilot(this.shown)),
             booster: this.focusDebrisId !== null,
+            // C01: Vostok-1's pilot once he is out of the sphere: the button goes between him and the capsule
+            crew: !!this.shown && !!watchPilot(this.shown),
           },
           subject: this.watchSubject(),
         });
@@ -1675,7 +1721,8 @@ class App {
     }
     for (let i = this.trailIdx + 1; i <= target; i++) {
       const f = frames[i];
-      if (f.status !== 'prelaunch') this.trail.add(f.r);
+      // (C01: a return on WGS-84 heights where the scene draws it, render/datum.ts)
+      if (f.status !== 'prelaunch') this.trail.add(onEllipsoid(f) ? onDrawnSphere(f.r) : f.r);
     }
     this.trailIdx = target;
     if (live && liveFrame.status !== 'prelaunch') this.trail.add(liveFrame.r);
@@ -1771,12 +1818,24 @@ class App {
     const r = Math.hypot(d.r.x, d.r.y, d.r.z);
     // ω × r with ω along +z, as `groundSpeed` does for the vehicle
     const vx = d.v.x + OMEGA_EARTH * d.r.y, vy = d.v.y - OMEGA_EARTH * d.r.x;
-    return { altitude: Math.max(0, r - R_EARTH - this.sim.groundElevation(d.r)), speed: d.alive ? Math.hypot(vx, vy, d.v.z) : 0 };
+    // C01: Vostok-1's pilot, like the sphere, flies on WGS-84 heights
+    const h = this.shown && onEllipsoid(this.shown) ? geodeticHeight(d.r) : r - R_EARTH;
+    return { altitude: Math.max(0, h - this.sim.groundElevation(d.r)), speed: d.alive ? Math.hypot(vx, vy, d.v.z) : 0 };
   }
 
   /** The stage the viewer's camera should be on, or null for the rocket. */
   private watchFocusTarget(frame: VisualFrame): number | null {
     if (this.watchFollow === 'rocket') return null;
+    // C01: Vostok-1. After the ejection the programme stays on the sphere through
+    // its landing and WATCH_FOCUS_HOLD beyond (the landing event's own time, so a
+    // replay cuts at the same instant), then goes to Gagarin and holds on him to
+    // his own landing and after; the button pins one or the other.
+    const pilot = watchPilot(frame);
+    if (this.watchFollow === 'crew') return pilot?.id ?? null;
+    if (pilot && this.watchFollow === 'auto') {
+      const down = this.recorder.events.find((e) => e.key === 'evt.capsuleLanding' && e.t <= frame.t + 1e-6);
+      return down && frame.t >= down.t + WATCH_FOCUS_HOLD ? pilot.id : null;
+    }
     const home = frame.debris.filter((d) => d.recovery?.target && (d.alive || d.outcome === 'landed'));
     const current = home.find((d) => d.id === this.focusDebrisId);
     if (this.watchFollow === 'booster') return current?.id ?? home.find((d) => d.alive)?.id ?? home[0]?.id ?? null;
@@ -1815,12 +1874,14 @@ class App {
     }
     // One frame snapshot drives every view this tick: the live head when the
     // cursor follows the recorder, an interpolated recorded frame when not.
-    const frame: VisualFrame = this.player.live
+    const shown: VisualFrame = this.player.live
       ? this.recorder.recordNow()
       : this.player.frame() ?? this.recorder.recordNow();
-    if (this.player.live) this.player.syncLive(frame.t);
-    this.shown = frame;
-    view.setFrame(frame);
+    if (this.player.live) this.player.syncLive(shown.t);
+    this.shown = shown;
+    view.setFrame(shown);
+    // C01: what the scene draws: a return flown on WGS-84 heights moved onto the drawn sphere (render/datum.ts)
+    const frame = drawnFrame(shown);
     // G06: the abort is there on a crewed Soyuz, and live until the escape system stands down
     this.abortBtn.hidden = !sim.escape.fitted;
     this.abortBtn.disabled = !this.player.live || !this.abortArmed(frame);
@@ -1837,6 +1898,7 @@ class App {
     this.timeline.update(this.recorder.startTime, this.recorder.headTime, this.player.cursor, this.player.live);
     const focus = this.focusDebrisId === null ? undefined : frame.debris.find((d) => d.id === this.focusDebrisId);
     const focusR = focus ? focus.r : frame.r;
+    const heardFrom = focus ? shown.debris.find((d) => d.id === focus.id)?.r ?? focusR : shown.r;
     scene.origin = { x: focusR.x, y: focusR.y, z: focusR.z };
     // the sun (and therefore every sky/exposure/shading decision) comes from the
     // frame's own epoch, so a replayed frame relights identically
@@ -2027,9 +2089,11 @@ class App {
       const along = focus.rigid ? quatRotate(focus.rigid.attitudeQ, v3(0, 0, 1)) : cross(focus.dir, f.up);
       const fSide = norm(along) > 0.05 ? normalize(along) : f.east;
       const ground = sim.groundElevation(focus.r);
+      // C01: Vostok-1's pilot: the seat on its small chute, then he and his canopies, framed up the risers; upright once down
+      const crew = focus.visual.kind === 'pilot';
       this.cams.update(scene.camera, {
-        pos: this.originV, up: f.up, east: f.east, north: f.north, dir: focus.dir, side: fSide,
-        height: focus.visual.length, radius: focus.visual.diameter / 2,
+        pos: this.originV, up: f.up, east: f.east, north: f.north, dir: crew && !focus.alive ? f.up : focus.dir, side: fSide,
+        height: crew ? crewViewSize(focus.crew) : focus.visual.length, radius: focus.visual.diameter / 2,
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: focus.burning ? 0.1 : 0,
         vDir: norm(focus.v) > 1 ? normalize(focus.v) : f.up,
         t: frame.t, phase: 'ascent', agl: norm(focus.r) - R_EARTH - ground,
@@ -2038,15 +2102,21 @@ class App {
       // G06: under a parachute the camera frames the canopy above the capsule,
       // not the ground below its heat shield
       const canopy = frame.abort?.body === 'capsule' && (frame.abort.main > 0.2 || frame.abort.drogue > 0.2);
+      // C01: Vostok's sphere has no axis worth aiming along: the pair spins at 30°/s after the retro burn and the
+      // sphere tumbles on into the air, and the aim (`dir` times the size, ahead of the CG) would swing round with
+      // it. The camera aims up the local vertical instead, until a canopy holds the sphere still.
+      const steady = frame.abort?.body === 'capsule' && frame.abort.capsule === 'vostok' && !canopy;
+      const vostokMate = vostokPartner(frame);
       // C01: at the Moon the camera's up and its ground are the Moon's
       const lunar = frame.apollo && APOLLO_AT_MOON.includes(frame.apollo.phase) ? sub(frame.r, moonState(frame.jd).r) : null;
       const ground = lunar ? enuFrame(lunar) : { up, east, north };
       this.cams.update(scene.camera, {
-        pos: this.originV, up: ground.up, east: ground.east, north: ground.north, dir: canopy ? scale(frame.dir, -1) : frame.dir, side, height, radius,
+        pos: this.originV, up: ground.up, east: ground.east, north: ground.north, dir: canopy ? scale(frame.dir, -1) : steady ? up : frame.dir, side, height, radius,
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
         vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
         t: frame.t, phase: camPhase(frame), agl: lunar ? norm(lunar) - APOLLO11.siteRadius : frame.altitudeAGL,
-        ...(nearStation ? { partner: this.stationView!.group.position } : apolloPartner ? { partner: apolloPartner } : {}),
+        ...(nearStation ? { partner: this.stationView!.group.position } : apolloPartner ? { partner: apolloPartner }
+          : vostokMate ? { partner: scene.toScene(vostokMate.r, this.mateV) } : {}),
         ...(docking && rv ? { dockingEye: this.dockingEye(frame, rv) } : {}),
       }, dt, R_EARTH);
     }
@@ -2076,7 +2146,9 @@ class App {
     this.twilight.update(frame, scene.toScene(frame.r, this.twilightPos), frame.dir, sunDir, camSunElev, scene.camera);
     this.audio.update({
       t: frame.t, frameAt: (x) => this.player.frameAt(x), events: this.recorder.events,
-      listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },
+      // (the sounds come from the frames as flown: the camera, about the body it is on, put back by that body's
+      // own place there, for a return drawn off its WGS-84 heights, render/datum.ts)
+      listener: { x: cam.x + heardFrom.x, y: cam.y + heardFrom.y, z: cam.z + heardFrom.z },
       warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
       onboard: this.camMode === 'onboard',
       suppressed: this.soundtrack.sounding,

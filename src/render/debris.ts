@@ -24,6 +24,7 @@ import { ogiveProfile } from './liveries';
 import { clamp01, hash11, smoothstep } from './noise';
 import { disposeObject } from './dispose';
 import { R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7CoreProfile, r7CoreTop, r7TrussGeometry } from './soyuz';
+import { VostokBody, isVostokBody } from './vostok-debris';
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
@@ -35,7 +36,10 @@ interface DebrisItem {
   hinge: THREE.Group | null;
   side: 1 | -1;
   plume: Plume | null;
-  bodyMat: THREE.MeshStandardMaterial;
+  /** the body's material, for the sunlit flash just after separation (none for Vostok's bodies) */
+  bodyMat: THREE.MeshStandardMaterial | null;
+  /** C01: one of Vostok-1's bodies, drawn by render/vostok-debris.ts */
+  vostok: VostokBody | null;
   createdAt: number;
   tumbleAxis: THREE.Vector3;
   tumbleRate: number;
@@ -179,6 +183,14 @@ export class DebrisView {
   }
 
   private build(d: DebrisFrame): DebrisItem {
+    // C01: Vostok-1's module, its pieces, hatch, seat and pilot have shapes, and no engines, of their own
+    if (isVostokBody(d)) {
+      const vostok = new VostokBody(d);
+      return {
+        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, vostok, createdAt: d.createdAt,
+        tumbleAxis: new THREE.Vector3(0, 1, 0), tumbleRate: 0, fins: [], legs: [], legAngle: 0, footDrop: 0, finT: -1, legT: -1, shift: null,
+      };
+    }
     const root = new THREE.Group();
     const r = d.visual.diameter / 2;
     const L = d.visual.length;
@@ -269,7 +281,7 @@ export class DebrisView {
     }
     const ax = this.randAxis(d.id);
     return {
-      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: m, createdAt: d.createdAt,
+      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: m, vostok: null, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
       fins, legs, legAngle, footDrop, finT: -1, legT: -1, shift,
@@ -294,14 +306,13 @@ export class DebrisView {
     for (const d of list) {
       // A stage that landed stays where it came down (the tracker carries it
       // round with the Earth); everything else that is no longer flying has
-      // hit the ground or the sea and is gone.
-      if (!d.alive && d.outcome !== 'landed') continue;
+      // hit the ground or the sea and is gone — but for Vostok-1's hatch and
+      // seat, which lie on the steppe near the sphere where they fell.
+      if (!d.alive && d.outcome !== 'landed' && !(d.outcome === 'impact' && (d.visual.kind === 'hatch' || d.visual.kind === 'seat'))) continue;
       seen.add(d.id);
       let item = this.items.get(d.id);
       if (item && item.rigidGeometry !== !!d.rigid) {
-        this.scene.scene.remove(item.group);
-        item.plume?.dispose();
-        disposeObject(item.group);
+        this.drop(item);
         this.items.delete(d.id);
         item = undefined;
       }
@@ -311,6 +322,7 @@ export class DebrisView {
         this.items.set(d.id, item);
       }
       this.scene.toScene(d.r, this.tmp);
+      if (item.vostok) { item.vostok.update(d, t, this.tmp, this.scene.camera?.position); continue; }
       item.group.position.copy(this.tmp);
       // A rigid body is placed from its own render offset (below).
       if (item.shift) item.shift.position.y = d.rigid ? 0 : d.anchor ?? 0;
@@ -352,16 +364,22 @@ export class DebrisView {
       // (Not what an abort leaves beside the crew's descent module: it is seen from metres away.)
       const escapePart = d.visual.kind === 'escapeHead' || d.visual.kind === 'modules';
       const glow = escapePart ? 0 : age < 1.2 ? smoothstep(0, 0.4, age) : Math.max(0, 1 - smoothstep(1.2, 9, age));
-      item.bodyMat.emissiveIntensity = glow * 1.3;
+      if (item.bodyMat) item.bodyMat.emissiveIntensity = glow * 1.3;
     }
     for (const [id, item] of this.items) {
       if (!seen.has(id)) {
-        this.scene.scene.remove(item.group);
-        item.plume?.dispose();
-        disposeObject(item.group);
+        this.drop(item);
         this.items.delete(id);
       }
     }
+  }
+
+  /** Take an item out of the scene and free what it holds. */
+  private drop(item: DebrisItem): void {
+    this.scene.scene.remove(item.group);
+    item.plume?.dispose();
+    item.vostok?.dispose();
+    disposeObject(item.group);
   }
 
   /**
@@ -392,11 +410,7 @@ export class DebrisView {
   }
 
   clear(): void {
-    for (const item of this.items.values()) {
-      this.scene.scene.remove(item.group);
-      item.plume?.dispose();
-      disposeObject(item.group);
-    }
+    for (const item of this.items.values()) this.drop(item);
     this.items.clear();
   }
 }
