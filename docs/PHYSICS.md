@@ -65,11 +65,12 @@ from 501 to 515 km of apoapsis). So a six-DOF orbit is **judged on its physical 
 lowest and highest altitude of the next revolution under J2 — when the mission decides it is
 on target, in the event that says so, on the result panel and in the acceptance tests. The
 planner aims at the same orbit. A coast that arrives below the target raises its physical apex
-before circularising there. One that arrives above it is circularised first, when that is the
-last burn and one aimed impulse can fly it, with its lowest altitude shot to the target perigee,
-and its apex is brought down at the perigee at the end: the stage turns retrograde once instead
-of there and back, which a Fregat's attitude gas does not last for (VALIDATION.md §3; otherwise
-the apex comes down first). The last circularisation to a circular target, when no plane change
+before circularising there. One that arrives above the band the orbit is judged on is
+circularised first, when that is the last burn and one aimed impulse can fly it, with its lowest
+altitude shot to the target perigee, and its apex is brought down at the perigee at the end: the
+stage turns retrograde once instead of there and back, which a Fregat's attitude gas does not
+last for (VALIDATION.md §3). Otherwise, and for an apex above the planner's band but inside the
+judged one, the apex comes down first. The last circularisation to a circular target, when no plane change
 is left, is shot so that the middle of that revolution's lowest and highest altitude is the
 target (a J2 orbit through the burn point rises and falls by kilometres whatever its speed —
 Electron's 600 km sun-synchronous orbit ran 599–624 km after a conic circularisation, 595–602 km

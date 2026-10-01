@@ -81,14 +81,16 @@ describe('J2-consistent six-DOF burn planning', () => {
     expect(apex.radiusM - 6378137).toBeLessThan(502000);
   });
 
-  // The fixture 0.1 % faster: its physical apex is 516 km, too high for the
-  // 500 km circle, the way a Fregat's parking orbit from Plesetsk comes out
-  // 617.6 km for a 600 km one.
-  function highApexFixture() {
+  // The fixture a little faster, its physical apex above the 500 km circle:
+  // by default 516 km, outside the 10 km band the orbit is judged on, the way
+  // a Fregat's parking orbit from Plesetsk comes out 617.6 km for a 600 km one.
+  function highApexFixture(speedFactor = 1.001, apexKm: [number, number] = [510, 520]) {
     const sim = cutoffFixture();
-    sim.state.v = scale(sim.state.v, 1.001);
+    sim.state.v = scale(sim.state.v, speedFactor);
     sim.state.elements = elementsFromState(sim.state.r, sim.state.v);
-    expect(prediction.nextJ2Apsis(sim.state, 'apoapsis', { includeInitial: true })!.radiusM - R_EARTH).toBeGreaterThan(508000);
+    const apex = prediction.nextJ2Apsis(sim.state, 'apoapsis', { includeInitial: true })!.radiusM - R_EARTH;
+    expect(apex).toBeGreaterThan(apexKm[0] * 1e3);
+    expect(apex).toBeLessThan(apexKm[1] * 1e3);
     return sim;
   }
 
@@ -99,6 +101,15 @@ describe('J2-consistent six-DOF burn planning', () => {
     expect(sim.plan.burns.map(b => b.kind)).toEqual(['shapeAtApoapsis']);
     expect(sim.state.currentBurn?.kind).toBe('shapeAtApoapsis');
     expect(sim.state.currentBurn?.physicalObjective).toEqual({ measure: 'lowest', altitudeM: 500000 });
+  });
+
+  it('still lowers first an apex above the planner\'s band but inside the judged one', () => {
+    // 509 km: circularised there it would stay, 1 km inside the band's edge;
+    // lowered first, the aimed circularisation centres the orbit.
+    const sim = highApexFixture(1.000745, [508, 510]);
+    boundary(sim).scheduleNextBurn(sim.state.elements);
+    expect(sim.plan.burns.map(b => b.kind)).toEqual(['raiseApoapsis', 'shapeAtApoapsis']);
+    expect(sim.state.currentBurn?.physicalApoapsis).toBe(500000);
   });
 
   it('still lowers a high apex first when the shaping burn has a plane change to fly', () => {

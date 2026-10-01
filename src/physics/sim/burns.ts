@@ -284,17 +284,23 @@ export class BurnSequencer {
         .some((b) => !b.done && b.kind === 'raiseApoapsis');
       const tooHigh = !lowersLater && apex > apogee + 0.8 * apsisTolerance(apogee);
       // The apex comes down at the perigee, with the stage turned retrograde.
-      // When the shaping burn is the last one and one aimed impulse can fly it
-      // (`aimableShape`), it goes first, at the apex the stage already points
+      // When it is outside the band the orbit is judged on, and the shaping
+      // burn is the last one and one aimed impulse can fly it (`aimableShape`),
+      // the shaping burn goes first, at the apex the stage already points
       // along, aimed at the target perigee as the lowest altitude of the next
-      // revolution; `finalPhysicalCorrection` then brings the apex down: one
-      // turn, and none back. Lowering first turned the stage retrograde and
-      // back for the shaping burn: Soyuz-2.1b's Fregat spent its last 30 kg of
-      // attitude gas on the two turns and could not align for the
-      // circularisation (`evt.burnAlignmentTimeout`), after waiting a
-      // revolution for a perigee that had gone by 236 s before its cut-off.
-      // Electron to the same orbit reaches it 39–45 minutes sooner this way.
-      if (tooHigh && this.aimableShape(burn, el)) {
+      // revolution; `finalPhysicalCorrection`, which flies for an orbit
+      // outside that band, then brings the apex down: one turn, and none
+      // back. Lowering first turned the stage retrograde and back for the
+      // shaping burn: Soyuz-2.1b's Fregat spent its last 30 kg of attitude gas
+      // on the two turns and could not align for the circularisation
+      // (`evt.burnAlignmentTimeout`), after waiting a revolution for a perigee
+      // that had gone by 236 s before its cut-off. Electron to the same orbit
+      // reaches it 39–45 minutes sooner this way. An apex inside the band is
+      // still lowered first, so that the aimed circularisation after it
+      // centres the orbit: circularised first, it stays where it came out,
+      // and Soyuz-2.1b to 500 km ended 500.0 × 508.7 km instead of
+      // 498.4 × 501.5 km.
+      if (tooHigh && apex > apogee + apsisTolerance(apogee) && this.aimableShape(burn, el)) {
         burn.physicalObjective = { measure: 'lowest', altitudeM: perigee };
       } else if (apex < perigee - 0.5 * apsisTolerance(perigee) || tooHigh) {
         if (this.rigidApexCorrections >= 3) { this.failRigidOrbitPrediction(); return; }

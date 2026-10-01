@@ -860,14 +860,20 @@ The RAAN was its only miss, and in the window it reaches its orbit (below).
 
 **What changed** (`src/physics/sim/burns.ts`; six-DOF only, the point mass is untouched).
 
-- *The last shaping burn goes before the trim of an apex that came out high.* This applies when the
-  burn is the last one and one aimed impulse can fly it: no plane change left, and one pass
+- *The last shaping burn goes before the trim of an apex outside the band.* This applies when the
+  apex is outside the band the orbit is judged on (Soyuz's 617.6 km against 612 km), and the
+  shaping burn is the last one and one aimed impulse can fly it: no plane change left, and one pass
   (`aimableShape`, the test the aimed circularisation already used). It is then flown first, at the
   apex, aimed at the target perigee as the lowest altitude of the next revolution. The
-  end-of-mission correction (`finalPhysicalCorrection`) then brings the apex down at the perigee.
-  That is one turn to retrograde and none back. The conic planner already puts a high apoapsis in
-  this order (`planBurns`). With a plane change or a multi-pass burn still to fly, the apex is
-  lowered first, as before.
+  end-of-mission correction (`finalPhysicalCorrection`), which flies for an orbit outside that
+  band, then brings the apex down at the perigee. That is one turn to retrograde and none back. The
+  conic planner already puts a high apoapsis in this order (`planBurns`). In every other case the
+  apex is lowered first, as before. That includes a plane change or a multi-pass burn still to
+  fly, and an apex above the planner's band but inside the judged one. In that last case the
+  circularisation would leave the apex where it came out, with nothing left to correct it. A
+  first version of this change did it anyway, and the Soyuz-2.1b Monte Carlo set at 500 km
+  (`tests/heavy/monte-carlo-soyuz21b.test.ts`) ended its runs 500.0 × 508.1–508.9 km instead of
+  498.4 × 501.5 km, which widened the perigee's 3σ to 9.1 km against the set's 8 km.
 - *The attitude gas is not a planning context* (`rigidOrbitContext`). A tank that runs dry no
   longer makes the coast re-plan.
 
@@ -888,13 +894,13 @@ now reaches the orbit 39–45 minutes sooner, and nearer its middle:
 | electron/sso/90 | 595.3 × 601.9 km, T+9 344 s | 598.1 × 601.9 km, T+6 653 s |
 
 The six-DOF fleet matrix and its dedicated missions (`npm run test:sixdof-fleet`, 164 tests, flown
-2026-10-01) pass with this change. Nine flights reach the high-apex branch, and all of them now
-circularise first:
+2026-10-01) pass with this change. Nine flights reach the high-apex branch:
 
-- Electron's three SSO rows and its ISS-plane rows at 25 and 50 %;
-- Soyuz-2.1b's LEO and ISS-plane rows at 25 %;
-- Long March 2D's 650 kg SSO mission;
-- this mission.
+- *Six circularise first*, with the apex outside the band: Electron's three SSO rows (619–625 km)
+  and its ISS-plane row at 25 % (430.3 km), Long March 2D's 650 kg SSO mission (621.9 km) and this
+  mission (618.0 km).
+- *Three still lower first*, with the apex inside the band: Soyuz-2.1b's LEO and ISS-plane rows
+  at 25 % (508.5 and 428.3 km) and Electron's ISS-plane row at 50 % (429.9 km).
 
 None of the others reached that branch; the rows that raise a low apex first fly as they did. No
 tank ran dry on a coast with a burn ahead.
