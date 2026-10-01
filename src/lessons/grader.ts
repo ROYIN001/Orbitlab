@@ -8,6 +8,13 @@
  * that could still be broken holds, and `pass` or `fail` once decided. A bound
  * on a peak over the flight (q, the load factor) fails the moment it is
  * broken; everything else is decided when the flight ends for grading.
+ *
+ * And it is decided on the flight as it was at that end, not at the head (T03
+ * review, 2026-10-01): the page grades at the first frame that shows the end,
+ * which under time warp comes minutes later, and by then a transfer orbit's
+ * osculating semi-major axis has moved by tens of kilometres. So the orbit is
+ * read from the state the end event left the flight in (`gradingEndEvent`,
+ * `SimEvent.state`), and a flight graded late grades as one graded at its end.
  */
 import { assessMissionResult } from '../ui/result-content';
 import { guidanceForVehicle } from '../physics/defaults';
@@ -16,6 +23,7 @@ import { missionVehicle } from '../data/vehicles';
 import { LESSON_HOOKS } from './hooks';
 import { MEASURES, missionTarget } from './measures';
 import type { CatalogLesson, Criterion, CriterionGrade, CriterionState, DesignLockKey, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
+import type { EventState, SimEvent } from '../physics/simulation';
 
 /** Answers the student has typed, by criterion id. */
 export type LessonAnswers = Readonly<Record<string, number>>;
@@ -68,13 +76,24 @@ export function flightEnded(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFlig
 /** The events that end a flight for grading, as the result card reads them. */
 const COMPLETION_KEYS = ['evt.targetOrbit', 'evt.offTargetOrbit', 'evt.suborbitalTarget', 'evt.suborbitalOffTarget'];
 
+/**
+ * The event that ends the flight for grading — the lesson's end event, or the
+ * mission's end (the target orbit reached or missed, the suborbital arc
+ * judged) — or null while none has come. Its `state` is where the flight was
+ * left then, the orbit a lesson grades (src/lessons/measures.ts).
+ */
+export function gradingEndEvent(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFlight): SimEvent | null {
+  let first: SimEvent | null = null;
+  const keys = lesson.endEvent ? [lesson.endEvent] : COMPLETION_KEYS;
+  for (const e of flight.events) if (keys.includes(e.key) && (first === null || e.t < first.t)) first = e;
+  return first;
+}
+
 /** The mission time the flight ended for grading, or null while it has not. */
 export function gradingEnd(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFlight): number | null {
-  let t: number | null = null;
-  const keys = lesson.endEvent ? [lesson.endEvent] : COMPLETION_KEYS;
-  for (const e of flight.events) if (keys.includes(e.key) && (t === null || e.t < t)) t = e.t;
-  if (t === null && flight.state.status === 'failed') t = flight.state.t;
-  return t;
+  const e = gradingEndEvent(lesson, flight);
+  if (e) return e.t;
+  return flight.state.status === 'failed' ? flight.state.t : null;
 }
 
 /**
@@ -140,13 +159,13 @@ export function answerMatches(answer: number, expected: number, tol?: number, to
   return Math.abs(answer - expected) <= band + 1e-9;
 }
 
-function gradeCriterion(c: Criterion, flight: LessonFlight, final: boolean, answers: LessonAnswers, end: number | undefined): CriterionGrade {
+function gradeCriterion(c: Criterion, flight: LessonFlight, final: boolean, answers: LessonAnswers, end: number | undefined, endState: EventState | undefined): CriterionGrade {
   const state = (s: CriterionState, value: number | null = null, expected?: number | null): CriterionGrade =>
     expected === undefined ? { id: c.id, state: s, value } : { id: c.id, state: s, value, expected };
   switch (c.kind) {
     case 'measure': {
       const def = MEASURES[c.measure];
-      const value = def.read(flight, end);
+      const value = def.read(flight, end, endState);
       const target = c.target === 'mission' ? missionTarget(flight, c.measure) : c.target ?? null;
       if (def.over === 'history') {
         if (value !== null && !withinBound(value, c, target)) return state('fail', value);
@@ -171,7 +190,7 @@ function gradeCriterion(c: Criterion, flight: LessonFlight, final: boolean, answ
     }
     case 'answer': {
       if (!final) return state('pending');
-      const expected = MEASURES[c.measure].read(flight, end);
+      const expected = MEASURES[c.measure].read(flight, end, endState);
       const typed = answers[c.id];
       if (typed === undefined || !Number.isFinite(typed)) return state('pending', null, expected);
       if (expected === null) return state('fail', typed, expected);
@@ -180,7 +199,7 @@ function gradeCriterion(c: Criterion, flight: LessonFlight, final: boolean, answ
     case 'hook': {
       const hook = LESSON_HOOKS[c.hook];
       if (!hook) return state('fail');
-      const r = hook(flight, c.params ?? {}, final);
+      const r = hook(flight, c.params ?? {}, final, endState);
       return state(r.state, r.value);
     }
   }
@@ -245,8 +264,10 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
  */
 export function gradeLesson(lesson: Lesson, flight: LessonFlight, answers: LessonAnswers = {}, finalOverride?: boolean): LessonGrade {
   const final = finalOverride ?? flightEnded(lesson, flight);
+  // T03 review: what goes on changing after the end (the orbit above all) is read at the end, not at the head
+  const endEvent = gradingEndEvent(lesson, flight);
   const end = gradingEnd(lesson, flight) ?? undefined;
-  const criteria = lesson.criteria.map((c) => gradeCriterion(c, flight, final, answers, end));
+  const criteria = lesson.criteria.map((c) => gradeCriterion(c, flight, final, answers, end, endEvent?.state));
   const lockBroken = brokenLocks(lesson, flight);
   return { lessonId: lesson.id, final, verdict: verdictOf(criteria, lockBroken, final), criteria, lockBroken, t: flight.state.t };
 }

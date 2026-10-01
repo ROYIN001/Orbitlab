@@ -32,9 +32,11 @@
  *   graded at — or a record made before T02 (no grading time, instant on
  *   screen or journal) whose re-fly came out different: it is flown to the
  *   first step the flight has ended at, which can be a step before the grade
- *   was taken (13.75 s on lesson 1.1, where the speed then read moves by
- *   0.02 m/s), and without its commands, so a difference says nothing about
- *   an edit (`incomplete`). One that comes out the same is a match. A record
+ *   was taken (13.75 s on lesson 1.1), and without its commands, and a build
+ *   that old read the orbit at the frame it graded on (the speed 13.75 s on
+ *   moves by 0.02 m/s), not at the grading end as this one does (T03 review),
+ *   so a difference says nothing about an edit (`incomplete`). One that comes
+ *   out the same is a match. A record
  *   that names its build (`app`) and lacks one of the others was edited, since
  *   every build that writes `app` writes all four: it differs.
  * - a record whose fields are not a record's (a criterion that is not one)

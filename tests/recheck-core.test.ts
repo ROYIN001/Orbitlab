@@ -44,6 +44,21 @@ function firstOrbit(seed = 1) {
   return flyLessonLive(l, { seed, answers: (g) => ({ period: expectedOf(g, 'period'), speed: expectedOf(g, 'speed') }) });
 }
 
+/**
+ * The record a build from before the T03 review kept of the same flight: it
+ * read the orbit at the frame it graded on (the head), not at the grading
+ * end, and the student typed what that frame showed.
+ */
+function keptByAnOlderBuild(flown: ReturnType<typeof firstOrbit>): LessonRecord {
+  const r = structuredClone(flown.record);
+  for (const [id, measure] of [['period', 'orbit.period'], ['speed', 'orbit.speed']] as const) {
+    const v = MEASURES[measure].read(flown.session.sim)!;
+    const g = r.criteria.find((c) => c.id === id)!;
+    g.value = v; g.expected = v; r.answers[id] = v;
+  }
+  return r;
+}
+
 /** Lesson 3.3 as a teacher might set it: no scripted abort, the student presses Abort at T+60 s. */
 function abortByHand(): Lesson {
   const base = lesson('fail-abort');
@@ -136,10 +151,16 @@ describe('the re-check finds a live flight again (T02)', () => {
   it('re-checks a record made before T02 as far as it can, lists what it lacks, and does not call a difference an edit', () => {
     // Measured on the first run (recorded, not tuned): without the grading time the re-fly stops at
     // the first step the flight has ended at, 13.75 s before seeds 1 and 3 were graded (the picture
-    // reached the end mid-step); the speed read there is 0.021 m/s lower, beyond the 0.01 m/s
-    // tolerance. Seed 2 was graded at that very step and matches.
+    // reached the end mid-step); seed 2 was graded at that very step. The speed read at the head there
+    // was 0.021 m/s lower, beyond the 0.01 m/s tolerance, and seed 1 re-checked as incomplete. Since the
+    // orbit is read at the grading end (T03 review, src/lessons/measures.ts) both re-check to a match.
+    // A build that old read the orbit at the frame it graded on, so the record it kept differs —
+    // measured: seed 1, graded 15 s after the cut-off, by 0.037 m/s and 0.0014 min; seed 2 by 0.016 m/s,
+    // the head 1.25 s after the cut-off (the tail-off over) against the state the end event carries —
+    // and the check says it cannot tell that from an edit.
     const statuses = [1, 2].map((seed) => {
-      const { record } = firstOrbit(seed);
+      const flown = firstOrbit(seed);
+      const { record } = flown;
       const { t: _t, clock: _c, actions: _a, app: _p, ...old } = record;
       const check = checkRecord(job('orbit-first', old), CATALOGUE, APP);
       expect(check.missing).toEqual(['t', 'clock', 'actions', 'app']);
@@ -147,9 +168,12 @@ describe('the re-check finds a live flight again (T02)', () => {
       expect(check.flownTo!).toBeLessThanOrEqual(record.t!);
       expect(record.t! - check.flownTo!).toBeLessThan(60);
       expect(check.recheckedVerdict).toBe('pass');
-      return [check.status, check.reason ?? null];
+      const { t: _t2, clock: _c2, actions: _a2, app: _p2, ...older } = keptByAnOlderBuild(flown);
+      const olderCheck = checkRecord(job('orbit-first', older), CATALOGUE, APP);
+      expect(olderCheck.recheckedVerdict).toBe('pass');
+      return [[check.status, check.reason ?? null], [olderCheck.status, olderCheck.reason ?? null]];
     });
-    expect(statuses).toEqual([['cannotRefly', 'incomplete'], ['match', null]]);
+    expect(statuses).toEqual([[['match', null], ['cannotRefly', 'incomplete']], [['match', null], ['cannotRefly', 'incomplete']]]);
   }, 60_000);
 
   it('says why a record cannot be re-flown', () => {
@@ -290,15 +314,19 @@ describe('a class\'s files', () => {
 
   it('calls a record that names its build but lacks its grading time edited, not incomplete', () => {
     // every build that writes `app` writes `t`, `clock` and `actions` with it: one without them was edited
-    // seed 1 was graded 13.75 s after the first step the flight has ended at (the test above); seed 2 at that step
+    // seed 1 was graded 13.75 s after the first step the flight has ended at (the test above); seed 2 at that step.
+    // Read at the grading end, both come out the same flown to either step; the values an older build kept
+    // (`keptByAnOlderBuild`) do not, and with `app` named that difference is an edit, not an incomplete record
     const statuses = [1, 2].map((seed) => {
-      const { record } = firstOrbit(seed);
-      const { t: _t, ...noTime } = record;
+      const flown = firstOrbit(seed);
+      const { t: _t, ...noTime } = flown.record;
       const check = checkRecord(job('orbit-first', noTime), CATALOGUE, APP);
       expect(check.missing).toEqual(['t']);
-      return [check.status, check.reason ?? null];
+      const { t: _t2, ...olderNoTime } = keptByAnOlderBuild(flown);
+      const older = checkRecord(job('orbit-first', olderNoTime), CATALOGUE, APP);
+      return [[check.status, check.reason ?? null], [older.status, older.reason ?? null]];
     });
-    expect(statuses).toEqual([['differs', null], ['match', null]]);
+    expect(statuses).toEqual([[['match', null], ['differs', null]], [['match', null], ['differs', null]]]);
   }, 60_000);
 
   it('runs as a job where there is no worker, with progress, and a Stop keeps what is done', async () => {
