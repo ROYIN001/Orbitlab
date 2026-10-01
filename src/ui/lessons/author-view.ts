@@ -116,7 +116,8 @@ class AuthorView {
   private lesson: Lesson | null = null;
 
   constructor(private readonly host: AuthorHost, private readonly container: HTMLElement) {
-    this.idEdited = this.draft.id !== lessonIdFrom(this.draft.title.en);
+    // an id the page made (from the English title, or a stamp while there is none) follows the title; a typed one stays
+    this.idEdited = this.draft.id !== lessonIdFrom(this.draft.title.en) && !this.draft.id.startsWith('class-lesson-');
   }
 
   applyLanguage(): void { this.render(); }
