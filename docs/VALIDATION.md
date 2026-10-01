@@ -347,6 +347,13 @@ the merge of that work with main, in point mass:
 The smaller reserve burns the first stage longer, which is what SSO-A needed (above) and what
 Iridium NEXT 8's T+140 s speed did not. Nothing was fitted.
 
+The six-DOF comparison (`tests/heavy/validation-falcon9.test.ts`, outside `npm test`) was not
+re-measured with that work and was found failing on the first `npm run test:heavy` after it, on
+2026-10-01. In six-DOF only Bangabandhu-1 moved: 9 → 11 of its 14 rows, the MECO speed (2 042 m/s
+against 2 259 ± 231) and the second stage's start (150.2 s against 163.0 ± 16.3) now agreeing. Its
+maximum dynamic pressure time, T+140 s altitude and SECO altitude still disagree. The other four
+flights' six-DOF rows are unchanged.
+
 **What is left of F1 and F2.** MECO is now 4–10 % early (it was 7–12 %). The expended flight's
 first-stage burn is 157.9 s against 168 s. The speed at T+100 s is within 1–16 % (it was 2–22 %).
 The first minute moved the other way: the heavier stack is 1–11 % slow at T+60 s, where it was
