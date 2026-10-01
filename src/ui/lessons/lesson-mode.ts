@@ -622,7 +622,7 @@ export class LessonMode implements LessonToolsHost {
     const track = TRACKS.find((x) => x.id === lesson.track);
     this.strip.setAttribute('aria-label', `${t('lesson.button')} ${lessonNumber(lesson)}`);
     const head = el('div', 'lesson-strip-head');
-    head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: track ? localText(track.title) : '' })),
+    head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: track ? localText(track.title) : t('lesson.catalog.custom') })),
       el('h2', undefined, localText(lesson.title)), el('p', 'lesson-brief', localText(lesson.brief)));
     for (let i = 0; i < hints; i++) head.append(el('p', 'lesson-hint', `💡 ${localText(lesson.hints[i])}`));
     return head;
