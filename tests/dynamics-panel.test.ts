@@ -32,7 +32,7 @@ describe('flight model changes', () => {
     panel.state = { vehicleId: cfg.vehicleId, dynamics: cfg.dynamics, guidanceOverrides: {} } as SetupPanel['state'];
     const untouched = new Simulation(cfg, { headless: true });
     expect(panel.guidance).toEqual(untouched.cfg.guidance);
-    expect(panel.guidance).toMatchObject({ pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 });
+    expect(panel.guidance).toMatchObject({ pitchOverAltitude: 50, kickAngle: 6, kickDuration: 12, maxTurnRate: 0.5 });
     panel.state.guidanceOverrides = { kickAngle: DEFAULT_GUIDANCE.kickAngle };
     const explicit = new Simulation({ ...cfg, guidance: panel.guidance, guidanceResolved: true }, { headless: true });
     expect(explicit.cfg.guidance.kickAngle).toBe(DEFAULT_GUIDANCE.kickAngle);

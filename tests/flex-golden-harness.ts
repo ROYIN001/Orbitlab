@@ -88,9 +88,13 @@ export async function missionFingerprint(cfg: MissionConfig, until: number): Pro
  * when its fairing became the 4.11 × 11.43 m unit with its own adapter
  * (owner's figures, 2026-09-25): a change to the vehicle, not to the options,
  * and with every option given and off it still flies the same 160 s bit for bit.
+ * They were re-recorded again for audit PHY-01 (2026-10-01): its six-DOF
+ * programme takes a 6° kick and closes the loop at T+140 s, a change to the
+ * vehicle's data, not to the options. The earlier values were
+ * '839f89154a81d07c' / '1edcbd927a140a70'.
  */
 export const GOLDEN: Record<(typeof GOLDEN_FLIGHTS)[number]['vehicle'], { first160s: string; mission: string }> = {
   falcon9: { first160s: '3f48e9ee37213f9e', mission: '7fb4ebc11cd17b4f' },
-  soyuz21a: { first160s: '839f89154a81d07c', mission: '1edcbd927a140a70' },
+  soyuz21a: { first160s: '48fa26cc77ca2900', mission: 'be8b6db2b3ee3e26' },
   angaraa5: { first160s: 'c3022008e3f8d476', mission: '08a8c33302e646d6' },
 };

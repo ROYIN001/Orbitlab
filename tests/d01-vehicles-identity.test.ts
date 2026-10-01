@@ -22,6 +22,12 @@
  * from the catalogue, so this test still proves the catalogue emits exactly
  * the fleet main flies. Only Falcon Heavy changed.
  *
+ * Re-recorded a second time, for audit PHY-01 (2026-10-01, docs/VALIDATION.md
+ * §3, "Soyuz-2.1a's strap-ons fly a zero-lift turn"): Soyuz-2.1a's six-DOF
+ * programme takes a 6° kick (was 4°) and `closedLoopStart: 140`. Only those two
+ * values of `soyuz21a.guidanceDefaultsSixDof` changed; the fixture's diff is
+ * those lines, and the unsorted string grew from 30 987 to 31 009 characters.
+ *
  * What the JSON pins and what it leaves out, on purpose:
  * - keys are sorted recursively, so key order is left out of the fixture. It
  *   reaches no catalogue flight; it only shows in the bytes of a mission file
@@ -42,11 +48,12 @@ import { VEHICLES } from '../src/data/vehicles';
 import FIXTURE from './fixtures/vehicles-pre-d01.json?raw';
 
 /**
- * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, from main's literal fleet at
- * 3d713b5 (F11 included); 30 987 characters. At eedd035, the pre-D01 HEAD, it
- * was f891238e…, 30 926 characters.
+ * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, with Soyuz-2.1a's PHY-01
+ * programme; 31 009 characters. From main's literal fleet at 3d713b5 (F11
+ * included) it was 420d7d17…, 30 987 characters; at eedd035, the pre-D01
+ * HEAD, f891238e…, 30 926 characters.
  */
-const PRE_D01_UNSORTED_SHA256 = '420d7d170991740362d985e602da126d94c4efb4187ac167a102be108c93f420';
+const PRE_D01_UNSORTED_SHA256 = '04d88a36a71d623c0377a9c97b70ad97c2a509c2810cc73a4d8e6407dcfb9fb8';
 
 const sortKeys = (v: unknown): unknown => (Array.isArray(v) ? v.map(sortKeys)
   : v && typeof v === 'object'
@@ -84,6 +91,6 @@ describe('D01: the catalogue vehicles, recorded before the parts catalogue', () 
     const unsorted = JSON.stringify(VEHICLES);
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(unsorted));
     const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    expect([unsorted.length, hex]).toEqual([30987, PRE_D01_UNSORTED_SHA256]);
+    expect([unsorted.length, hex]).toEqual([31009, PRE_D01_UNSORTED_SHA256]);
   });
 });

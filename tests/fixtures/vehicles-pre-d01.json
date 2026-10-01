@@ -19,7 +19,8 @@
    "pitchMax": 35
   },
   "guidanceDefaultsSixDof": {
-   "kickAngle": 4,
+   "closedLoopStart": 140,
+   "kickAngle": 6,
    "kickDuration": 12,
    "maxTurnRate": 0.5,
    "pitchOverAltitude": 50
