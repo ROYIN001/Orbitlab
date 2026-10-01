@@ -3127,10 +3127,11 @@ back to the CSM §13.13 and the way home §13.14.
 | | Value | Source |
 |---|---|---|
 | S-IC | 130,423 kg dry, 2,145,798 kg RP-1 and LOX, 2,468 kg other; 28.4 t left at separation | FER Table 20-9; SP-4029 Table 23 |
-| F-1 | 6,719 kN, 264.5 s at sea level (flight average); 304 s in vacuum (en.wikipedia) with the same flow → 7,722 kN | FER; secondary |
+| F-1 | the flow burned in flight, 2,654.8 kg/s an engine (Table 5-2, hold-down release to OECO, over Table 2-2's engine-seconds, less the gaseous oxygen kept; Fig. 5-3 reads the same), at 264.5 s at sea level and 304 s above 40 km → 6,886.2 / 7,914.6 kN. Table 5-1's 6,719 kN is the thrust reduced to standard inlet conditions, which the flight beat by 2–4 % | FER Tables 5-1, 5-2, 2-2, 20-9, Fig. 5-3 |
+| S-IC tilt programme | the commanded pitch of FER Fig. 11-1, digitised (±0.5°), turned to the local horizon by the range angle and the Earth's turn since guidance reference release; tilt from T+13.2 s, arrest at T+160.0 s, held to T+204.1 s | FER Fig. 11-1, Table 2-2; Boeing D5-15560-6 Table B-III |
 | S-II | 36,158 kg dry, 443,236 kg LOX and LH2, 572 kg other; 3.3 t left at cut-off | FER |
 | J-2, S-II | 5,141.5 kN for the stage and 423.2 s at ESC +61 s (mixture ratio 5.5) | FER §6.3 |
-| S-II mixture shift | at ESC +335 s: 3,082.8 kN on four engines (770.7 kN each); 427 s (the J-2's rating at ratio 4.3–4.5; **estimated**) | FER §6.3 |
+| S-II mixture shift | at about T+498 s: 3,082.8 kN on four engines (770.7 kN each); 427 s (Fig. 6-3's stage Isp after the shift) | FER §6.3, Fig. 6-3 |
 | S-IC/S-II interstage | 5,206 kg: 614 kg stays with the S-IC; the 3,982 kg ring, with its 609 kg of ullage-motor propellant, dropped at T+192.3 s | FER |
 | S-II/S-IVB interstage | 3,663 kg, with the S-II | FER |
 | S-IVB, IU | 11,273 kg dry, 751 kg other, IU 1,939 kg; 107,095 kg LOX and LH2; J-2 901.2 kN, 428.7 s (first burn) | FER |
@@ -3147,17 +3148,24 @@ where every consumer reads it — point mass, six-DOF mass model, guidance. `Sta
 mass during the burn: an `interstage` off the stage's dry mass, a `tower` off the payload's. Events
 `evt.ceco`, `evt.mixtureShift`, `evt.interstageSep`, `evt.towerJettison`.
 
-*Approximations.* The propellant loads are what the stages burn in the model, their totals kept: the
-S-IC's is what five F-1s burn from ignition (T−2.5 s here; T−8.9 s flown) to its centre engine's
-shutdown and four to the LOX's end at T+161.63 s, the 28.4 t left over is carried as dry mass, and the
-73 t burned on the pad before that is left out, so the stack weighs 2,838 t at liftoff, about what
-flew (2,938 t at ignition), and 825 t at the S-IC's cut-off (827.3 t flown); the S-II's is 2.6 t over what the published
-flows burn to T+548.22 s (the thrust build-up from ESC to mainstage, 3 s flown, is not modelled), taken
-from its residual. The ullage-motor propellant rides with the ring until it drops. The clock's zero is range zero; the
-flown liftoff, T+0.63 s, is not modelled. The model flies a gravity turn where the Saturn V flew a
-time-based tilt programme, frozen at the S-IC's cut-off: along the air-relative velocity, its kick
-(3° at 0.5°/s) set so that the S-IC hands over at the flown state; and from T+204.1 s, as the
-Saturn V's iterative guidance mode did, its own closed-loop steering, into the flown plane. The azimuth
+*Approximations.* Since 2026-10-01 the loads are the FER's, not the clock's (docs/FLIGHT-PROFILE-METHOD.md):
+the S-IC's is what its F-1s expelled from the hold-down release to the LOX running out, the outboard
+tail-off and the 27.9 t the model burns on the pad from its ignition (T−2.5 s here; the real build-up
+from T−8.9 s took 39.3 t), with what was left at separation, the gaseous oxygen and the small ring
+carried as dry mass, so the stack weighs 2,898.9 t at liftoff (2,899.0 t at first motion) and 825.0 t
+at the S-IC's cut-off (827.3 t flown), and the LOX running out is a prediction (T+161.40 s, flown
+161.63 s). The S-II's is the FER's best estimate at the start command less what was left at the
+cut-off signal (Table 6-2), started at T+165.72 s, where the build-up's propellant at full flow puts
+the flown mainstage. Before, the S-IC carried 2,053,900 kg and the S-II 442,530 kg held to the clock,
+hiding an F-1 flow 2.5 % low; the stack lifted off 61 t light. The ullage-motor propellant rides with
+the ring until it drops. The clock's zero is range zero; the flown liftoff, T+0.63 s, is not modelled.
+Both flight models fly the published tilt programme (`GuidanceParams.pitchProgram`, the table above;
+the yaw manoeuvre off the tower is not flown), and from T+204.1 s, as the Saturn V's iterative
+guidance mode did, their own closed-loop steering, into the flown plane. It replaces a gravity turn
+whose kick (3° at 0.5 °/s, still what an operator who edits the pitch-over flies) had been set so
+that the S-IC handed over at the flown state: flown as a rigid body in the reference crosswind, that
+turn reached 139 kPa·deg of q·α at max Q; the programme 35, and 19 in calm air (the FER's largest
+angle at high q with the day's winds, 1.6°, Table 11-2). The azimuth
 is the flown one (`OrbitSpec.flightAzimuth`, 72.058° in the inertial frame at the pad, turned over the
 ground as the site's rotation turns it), not the one the inclination alone would ask for (73.83°), and
 the closed loop steers into the parking orbit's own plane (`VehicleSpec.targetPlane`, the mission's RAAN
@@ -3178,21 +3186,24 @@ Model − flight, s:
 | | Max-Q | CECO | OECO | Sep. | Ring | Tower | S-II CECO | Mixture | S-II cut-off | Sep. | S-IVB cut-off | Orbit, km |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Flown | 83.0 (35.2 kPa) | 135.20 | 161.63 | 162.30 | 192.3 | 197.9 | 460.62 | ≈ 498 | 548.22 | 549.00 | 699.33 | 183.2 × 186.0 |
-| Point-mass | −6.3 (35.7 kPa) | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | +0.3 | +0.3 | −6.7 | 180 × 183 |
-| Six-DOF | −6.1 (38.0 kPa) | ±0.0 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.4 | +0.4 | +4.9 | 174 × 183 |
+| Point-mass | −7.3 (33.2 kPa) | ±0.0 | −0.2 | −0.2 | −0.2 | −0.2 | −0.2 | −0.2 | −0.2 | −0.3 | −0.9 | 180 × 183 |
+| Six-DOF | −7.6 (32.4 kPa) | ±0.0 | −0.2 | −0.2 | −0.2 | −0.2 | −0.2 | −0.1 | +0.1 | −0.1 | +0.6 | 180 × 183 |
 
-The stages' own clocks keep the flown times. The S-IC hands over at 68 km and 2,742 m/s point-mass,
-66 km and 2,780 m/s six-DOF (66.1 km and 2,764 m/s flown), and the S-II at 186 and 183 km, 6,968 and
-6,902 m/s (187.3 km and 6,910 m/s); the S-IVB then cuts off 7 s early and 5 s late — its yaw into the
-flown plane costs the six-DOF flight, whose gravity turn leaves it 436 m/s across that plane at the
-hand-over against the point mass's 309, more than the point mass. Ten seconds after the cut-off the
+Re-measured 2026-10-01 on the FER's loads and the published tilt programme; on the clock-held loads
+and the kick the S-IVB cut off 6.7 s early and 4.9 s late, and the six-DOF orbit was 174 × 183 km. The
+S-IC's cut-off is now a prediction, 0.2 s early. The S-IC hands over at 65.8 km and 2,770 m/s
+point-mass, 66.5 km and 2,759 m/s six-DOF (66.1 km and 2,764 m/s flown, space-fixed), and the S-II
+at 183.8 and 184.1 km, 6,934 and 6,925 m/s (187.3 km and 6,916 m/s): the S-II's own closed loop
+flies it about 3.5 km under the flown IGM. Ten seconds after the cut-off the
 point mass is at 32.674° N (geodetic), 52.68° W, the node 359.70° (flown 32.672° N, 52.694° W,
-359.624°). Max-Q, 35.7 and 38 kPa
-against 35.2, comes 6 s early whatever the kick: the flown peak was broad and flat, and where on it the
-maximum falls moves with the day's air, which the model's standard atmosphere is not. The orbits are
+359.624°). Max-Q, 33.2 and 32.4 kPa
+against 35.2, comes 7–8 s early on the published programme as it did on the kick: the flown peak was
+broad and flat, and where on it the maximum falls moves with the day's air, which the model's standard
+atmosphere is not (at T+80 s the point mass is at 12.6 km and 477 m/s, the flight at 12.8 km and
+466 m/s, FER Table 4-1 and D5-15560-6). The orbits are
 3–9 km under the flown perigee, inside the model's acceptance band. In six-DOF the S-II's closed-loop
-steering takes its angle of attack past the aerodynamic table's 15° at T+218 s, 108 km up, where the
-dynamic pressure is under 1 Pa: the disclosure every six-DOF flight in the fleet makes once where its
+steering takes its angle of attack past the aerodynamic table's 15° at T+212 s, 100 km up, where the
+dynamic pressure is under 2 Pa: the disclosure every six-DOF flight in the fleet makes once where its
 steering leaves the table in thin air (`evt.aeroEnvelopeExceeded`; Soyuz at T+162 s, Falcon 9 at
 T+123 s, H-IIA at T+104 s), not a load.
 

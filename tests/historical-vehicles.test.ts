@@ -62,7 +62,8 @@ describe('historical vehicles', () => {
     const e = vostok.stages[1];
     expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 365)).toBeLessThan(10);
     // the S-IC: five F-1s from ignition 2.5 s before liftoff to the centre engine's
-    // shutdown at T+135.2 s, four to the LOX running out at T+161.63 s (AS-506)
+    // shutdown at T+135.2 s, four to the LOX running out at T+161.63 s (AS-506); the
+    // load is the FER's, not the clock's, so this is a check (measured 0.4 s)
     const sic = vehicleById('saturnv506').stages[0];
     const flow = sic.engine.thrustVac / (G0 * sic.engine.ispVac);
     expect(Math.abs(sic.propellantMass / flow - (137.7 * 5 + (161.63 - 135.2) * 4)) / 5).toBeLessThan(2);
@@ -169,8 +170,8 @@ describe('Apollo 11, point-mass', () => {
     expect(sim.vehicle.stages[1].spec.dryMass).toBe(vehicleById('saturnv506').stages[1].dryMass - 4591);
     massAt(200);
     expect(sim.vehicle.jettisoned.tower).toBe(true);
-    // the gravity turn flown across the staging to T+204.1 s, as the tilt programme held until the iterative guidance
-    expect(sim.state.ascentPhase).toBe('gravityTurn');
+    // the published tilt programme, its attitude held across the staging to the iterative guidance at T+204.1 s
+    expect(sim.state.ascentPhase).toBe('pitchProgram');
     expect(payload0 - sim.vehicle.payloadMass).toBe(4042);
     // the S-II after its mixture shift: 770.7 kN an engine, four of them
     massAt(210);

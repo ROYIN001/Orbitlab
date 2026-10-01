@@ -768,10 +768,16 @@ const RD108_1959: EngineSpec = { name: 'RD-108 (8D75-1959)', count: 1, thrustSL:
 const A7_REDSTONE: EngineSpec = { name: 'Rocketdyne A-7', count: 1, thrustSL: 350.8 * kN, thrustVac: 395.9 * kN, ispSL: 214.8, ispVac: 242.4 };
 /**
  * Saturn V AS-506 (Apollo 11), from the flight evaluation report MPR-SAT-FE-69-9
- * (FER) and NASA SP-4029. F-1: 6,719 kN and 264.5 s at sea level, the flight's
- * average (FER); its 304 s in vacuum (en.wikipedia) with the same flow, 2,590 kg/s.
+ * (FER) and NASA SP-4029. F-1: the flow the engines really burned, 2,654.8 kg/s
+ * an engine — hold-down release to the LOX running out, 2,074,429 kg (Table 5-2)
+ * over 780.22 engine-seconds (Table 2-2), less the 3,134 kg of gaseous oxygen the
+ * stage kept (Table 20-9); Fig. 5-3's flow trace reads the same — at the FER's
+ * 264.5 s at sea level (Table 5-1) and 304 s above 40 km (Fig. 5-3). It was
+ * 6,719 kN, Table 5-1's thrust reduced to standard inlet conditions at T+35-38 s,
+ * which the higher pump inlet pressures of the flight beat by 2-4 % (34.35 MN for
+ * the five at liftoff, 40.05 MN before CECO, Fig. 5-3).
  */
-const F1_AS506: EngineSpec = { name: 'Rocketdyne F-1', count: 5, thrustSL: 6719 * kN, thrustVac: 7722 * kN, ispSL: 264.5, ispVac: 304 };
+const F1_AS506: EngineSpec = { name: 'Rocketdyne F-1', count: 5, thrustSL: 6886.2 * kN, thrustVac: 7914.6 * kN, ispSL: 264.5, ispVac: 304 };
 /**
  * The S-II's five J-2s at the high mixture ratio (5.5): 5,141.5 kN for the stage
  * and 423.2 s at ESC +61 s (FER §6.3). The J-2 never ran at sea level; its
@@ -781,6 +787,25 @@ const J2_SII: EngineSpec = { name: 'Rocketdyne J-2', count: 5, thrustSL: 486 * k
 /** The S-IVB's J-2, first burn: 901.2 kN, 428.7 s (FER). */
 const J2_SIVB: EngineSpec = { name: 'Rocketdyne J-2', count: 1, thrustSL: 426 * kN, thrustVac: 901.2 * kN, ispSL: 200, ispVac: 428.7, vacuumOnly: true };
 const RD0109: EngineSpec = { name: 'RD-0109', count: 1, thrustSL: 40 * kN, thrustVac: 54.52 * kN, ispSL: 240, ispVac: 323.5, vacuumOnly: true };
+
+/**
+ * AS-506's S-IC tilt programme, as flown: [s after liftoff, pitch above the
+ * local horizon on the flight azimuth, deg] (`GuidanceParams.pitchProgram`).
+ * The LVDC flew a time polynomial "which gives a near zero lift trajectory"
+ * (MSFC, AS-506 Technical Information Summary), from T+13.2 s to the tilt arrest
+ * at T+160.0 s, then held the attitude in inertial space to the iterative
+ * guidance at T+204.1 s (FER Table 2-2), where the table ends and the closed
+ * loop takes over. The commanded attitude is FER Fig. 11-1, digitised (±0.5°),
+ * turned from the platform frame to the local horizon by the range angle
+ * (Boeing D5-15560-6, the AS-506 postflight trajectory, Table B-III) and the
+ * Earth's turn since the guidance reference release, 0.003495 °/s × (t + 17).
+ * Published, not fitted; the yaw manoeuvre that took the stack off the tower
+ * (T+1.7-9.7 s) is not flown.
+ */
+const SATURN_V_506_PROGRAMME: [number, number][] = [
+  [0, 90], [13.2, 90], [20, 88.53], [30, 85.86], [40, 81.40], [50, 75.24], [60, 68.98], [70, 60.63], [80, 53.48], [90, 47.25],
+  [100, 41.83], [110, 36.42], [120, 32.93], [130, 28.87], [135, 27.15], [140, 26.44], [150, 23.82], [160, 21.83], [180, 22.30], [204.1, 22.90],
+];
 
 export const HISTORICAL_VEHICLES: VehicleSpec[] = [
   {
@@ -863,28 +888,38 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     // no fairing: the Apollo spacecraft, its adapter and the escape tower are the nose
     fairing: null,
     stages: [
-      // S-IC (FER Table 20-9, SP-4029 Table 23): 130,423 kg dry, 2,145,798 kg of
-      // RP-1 and LOX, 2,468 kg of other fluids; the interstage's small ring (614 kg)
-      // stays with it, and 28.4 t of propellant was left at the separation — all
-      // carried here as dry mass. The propellant is what the five F-1s burn from
-      // ignition, 2.5 s before liftoff here, to the LOX running out at T+161.63 s,
-      // the centre engine shut down at T+135.20 s to hold the acceleration under 4 g.
-      { id: 'sic506', name: 'S-IC', dryMass: 152250, propellantMass: 2053900, engine: F1_AS506,
+      // S-IC (FER Table 20-9, SP-4029 Table 23): at separation 164,381 kg — 130,423
+      // dry, 2,468 of other fluids, the 28,356 kg of propellant left and about
+      // 3,134 kg of gaseous oxygen — with the interstage's small ring (614 kg), all
+      // carried here as dry mass. The propellant is what the five F-1s expel from
+      // the hold-down release to the LOX running out (2,071,295 kg, Table 5-2), the
+      // outboard tail-off's 3,634 kg (Table 20-9) and the 27.9 t the model burns on
+      // the pad from its ignition 2.5 s before liftoff (measured; the real build-up
+      // took 39.3 t before the release); the centre engine is shut down at
+      // T+135.20 s to hold the acceleration under 4 g. The LOX running out is a
+      // prediction: T+161.40 s, flown 161.63 s. It was 152,250 kg dry and
+      // 2,053,900 kg held to the clock.
+      { id: 'sic506', name: 'S-IC', dryMass: 164995, propellantMass: 2102829, engine: F1_AS506,
         diameter: 10.06, length: 42.06, fins: true, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 5.8,
         engineEvents: [{ t: 137.7, shutdown: [4] }] },
       // S-II: 36,158 kg dry, 443,236 kg of LOX and LH2, 572 kg other; the S-II/S-IVB
       // interstage (3,663 kg) goes with it, and the S-IC/S-II aft interstage ring
       // (3,982 kg, with its 609 kg of spent ullage-motor propellant) until it is
-      // dropped 30 s into the burn (T+192.3 s, "second-plane separation"); 3.3 t
-      // left at the cut-off. Engine start command 0.74 s after the separation
-      // (T+163.04 s); the centre engine off at ESC +297.58 s against pogo; the
-      // mixture ratio shifted to 4.3 at about ESC +335 s: 3,082.8 kN on four
-      // engines (FER §6.3), at 427 s (the J-2's rating at that ratio; estimated).
-      { id: 'sii506', name: 'S-II', dryMass: 45654, propellantMass: 442530, engine: J2_SII,
-        diameter: 10.06, length: 24.84, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 3.4, sepDelay: 0.67, ignitionDelay: 0.74,
-        engineEvents: [{ t: 297.58, shutdown: [4] }, { t: 335, mixture: { thrustVac: 770.7 * kN, thrustSL: 364 * kN, ispVac: 427, ispSL: 200 } }],
+      // dropped 30 s into the burn (T+192.3 s, "second-plane separation"). The load
+      // is the FER's best estimate at the start command, 442,393 kg, less the
+      // 3,388 kg left at the cut-off signal (Table 6-2), which is carried as dry
+      // mass: 439,005 / 49,179 kg (it was 442,530 / 45,654, the gross the same).
+      // Engine start command 0.74 s after the separation (T+163.04 s), mainstage at
+      // T+166.2 s: the build-up's 593 kg (Table 20-9) at full flow puts the start at
+      // T+165.72 s, 3.42 s after the separation. The centre engine off at T+460.62 s
+      // against pogo; the mixture ratio shifted to 4.3 at about T+498 s: 3,082.8 kN
+      // on four engines (FER §6.3), at 427 s (Fig. 6-3's stage Isp after the shift).
+      // The events are timed from the start here, on the flown clock.
+      { id: 'sii506', name: 'S-II', dryMass: 49179, propellantMass: 439005, engine: J2_SII,
+        diameter: 10.06, length: 24.84, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 3.4, sepDelay: 0.67, ignitionDelay: 3.42,
+        engineEvents: [{ t: 294.90, shutdown: [4] }, { t: 332.32, mixture: { thrustVac: 770.7 * kN, thrustSL: 364 * kN, ispVac: 427, ispSL: 200 } }],
         // the aft interstage ring, then the escape tower (T+197.9 s)
-        jettisons: [{ t: 29.26, mass: 4591, part: 'interstage' }, { t: 34.86, mass: 4042, part: 'tower' }] },
+        jettisons: [{ t: 26.58, mass: 4591, part: 'interstage' }, { t: 32.18, mass: 4042, part: 'tower' }] },
       // S-IVB with the instrument unit: 11,273 kg dry, 751 kg other, IU 1,939 kg;
       // 107,095 kg of LOX and LH2, of which the two burns use 105.3 t (FER). Start
       // command 3.2 s after the separation (T+552.2 s). Restarts for the
@@ -894,7 +929,11 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     ],
     sites: ['ksc39a'], maxQ: 45e3, maxAccel: 40,
     crewCapable: true,
-    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.5, pitchMax: 40, loftAltitude: 0, closedLoopStart: 204.1 },
+    // The published tilt programme (SATURN_V_506_PROGRAMME) in both flight models,
+    // the closed loop from T+204.1 s. The kick is what an operator who edits the
+    // pitch-over flies, with the same hand-over: 3° at 0.5 °/s was set so that
+    // the S-IC handed over at the flown state, before the programme.
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.5, pitchMax: 40, loftAltitude: 0, closedLoopStart: 204.1, pitchProgram: SATURN_V_506_PROGRAMME },
     targetPlane: true,
     guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3, kickDuration: 12, maxTurnRate: 0.5 },
     notes: 'The Moon rocket: five F-1s, five J-2s and one restartable J-2 on three stages, 2,938 t at ignition. Apollo 11\'s flew on 16 July 1969.',

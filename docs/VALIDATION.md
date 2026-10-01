@@ -111,14 +111,19 @@ lands on a published time. *Derived*: computed from published figures by stated 
 | Soyuz-2.1a, 2.1b | Blok I aft skirt, 430 kg | estimate | Starsem's 2 410 kg dry Blok I less Braeunig's 1 976 kg without it | — | 2026-10-01 |
 | Soyuz-2.1a | fairing altitude floor 70 km | construction | below the 79 km fit target, so the published time decides | the fairing at T+153.3 s in both models | 2026-10-01 |
 | Soyuz-2.1a | escape tower 1 740 kg, fairing 1 645 kg | estimate | the escape model's head (PHYSICS.md §8.3); 4.2–4.5 t published for the head | — | 2026-10-01 |
-| Saturn V | kick 3° at 0.5 °/s | fitted | the S-IC hands over at the flown state (PHYSICS.md §13.8) | — | 2026-09 |
+| Saturn V (AS-506) | S-IC tilt programme | input | FER Fig. 11-1 digitised (±0.5°); its frame turned to the local horizon (derived, D5-15560-6) | OECO 65.8 km / 2,770 m/s against 66.1 / 2,764; SECO −0.9 s | 2026-10-01 |
+| Saturn V (AS-506) | F-1 flow 2,654.8 kg/s (6,886.2 / 7,914.6 kN) | derived | FER Table 5-2, Table 2-2, Table 20-9; Fig. 5-3 a check | liftoff thrust 34.4 MN against 34.35 | 2026-10-01 |
+| Saturn V (AS-506) | S-IC load 2,102,829 kg, dry 164,995 kg | derived | FER Table 5-2, Table 20-9; the 27.9 t the model burns on the pad, measured | liftoff 2,898.9 t against 2,899.0; OECO T+161.40 s against 161.63 (a prediction) | 2026-10-01 |
+| Saturn V (AS-506) | S-II load 439,005 kg, start T+165.72 s | input / derived | FER Table 6-2; the build-up's 593 kg at full flow (Table 20-9, Table 2-2) | S-II cut-off +0.1 / −0.2 s | 2026-10-01 |
 | Mercury-Redstone | pitch floor, 3° kick falling 0.34 °/s | fitted | both models cut off on the flown arc (PHYSICS.md, C01) | — | 2026-09 |
 | crewed Soyuz | 3 s from a strap-on's strike to the loss of the vehicle | fitted | MS-10's T+118.6 → 121.6 s (`COLLISION_TO_LOSS`) | — | 2026-09 |
 
 Retired 2026-10-01: Soyuz-2.1a's 87 000 kg core load, held to the published clock, and its
 kick-and-turn programmes (3° / 0.3 °/s for the point mass; 6° with a T+140 s hand-over in
-six-DOF, audit PHY-01). Both kick programmes remain what an operator who edits the pitch-over
-flies in place of the stored programme.
+six-DOF, audit PHY-01); Saturn V AS-506's S-IC and S-II loads (2,053,900 and 442,530 kg, held to
+the clock over an F-1 flow 2.5 % low) and its fitted kick (3° at 0.5 °/s, set so that the S-IC
+handed over at the flown state). The kick programmes remain what an operator who edits the
+pitch-over flies in place of the stored programme.
 
 ## 2. Falcon 9 Block 5
 
