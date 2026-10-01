@@ -27,6 +27,11 @@
  * - The check page's CSV starts with a UTF-8 byte order mark, once, and is
  *   otherwise the core's text unchanged, so Excel reads a Thai or Russian
  *   student's name as written.
+ * - A results file's name and a worksheet's keep a Thai name whole: its
+ *   vowels and tones are combining marks and stay («สมชาย ใจดี» →
+ *   "สมชาย-ใจดี", «วิชัย» → "วิชัย"); Cyrillic and Latin names are joined by
+ *   a hyphen as before ("Иван-Петров", "Anna-Student"), with none at either
+ *   end; a class code joins with nothing («ห้อง 5/1» → "ห้อง51").
  */
 import { describe, expect, it } from 'vitest';
 import { setLang, t, tCount } from '../src/i18n';
@@ -34,6 +39,7 @@ import { keepUnits } from '../src/ui/build/satellite-text';
 import { keepUnits as stripKeepUnits } from '../src/ui/keep-units';
 import { decimal, measureText } from '../src/ui/lessons/measure-text';
 import { spreadsheetCsv } from '../src/ui/download';
+import { nameForFile } from '../src/ui/file-name';
 import PHYSICS_PACK from '../public/lessons/packs/ipst-physics.orbitlab-lesson.json?raw';
 
 const NBSP = ' ';
@@ -115,5 +121,16 @@ describe('the check page\'s CSV opens in a spreadsheet with its names whole (W)'
     expect(out.charCodeAt(0)).toBe(0xfeff);
     expect(out.slice(1)).toBe(csv);
     expect(new TextEncoder().encode(out).slice(0, 3)).toEqual(new Uint8Array([0xef, 0xbb, 0xbf]));
+  });
+});
+
+describe('a file named after a student or a class keeps a Thai name whole (W)', () => {
+  it('keeps letters with their marks and digits, and joins the rest', () => {
+    expect(nameForFile('สมชาย ใจดี')).toBe('สมชาย-ใจดี');
+    expect(nameForFile('วิชัย ศรีสุข')).toBe('วิชัย-ศรีสุข');
+    expect(nameForFile('Иван Петров')).toBe('Иван-Петров');
+    expect(nameForFile('  Anna  Student! ')).toBe('Anna-Student');
+    expect(nameForFile('ห้อง 5/1', '')).toBe('ห้อง51');
+    expect(nameForFile('---')).toBe('');
   });
 });

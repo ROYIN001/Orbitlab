@@ -71,6 +71,7 @@ import type { LessonToolsHost } from '../../lessons/mcp-tools';
 import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
 import { keepUnits } from '../keep-units';
+import { nameForFile } from '../file-name';
 import { decimal, measureText } from './measure-text';
 import { PanelLocks } from './locks';
 // T01/T02: small, and on the page that is open anyway (a lazy chunk of them split the dictionaries off the main one)
@@ -1726,7 +1727,8 @@ export class LessonMode implements LessonToolsHost {
     const file = await resultsFile(this.progressData, new Date(), student || undefined,
       summary ? { kind: summary.kind, percent: summary.result.percent, areas: summary.result.domains, start: summary.result.start } : undefined);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-    const who = student.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+    // W: a Thai name keeps its vowels and tones («สมชาย ใจดี», not "สมชาย-ใจด")
+    const who = nameForFile(student);
     downloadBlob(new Blob([`${JSON.stringify(file, null, 2)}\n`], { type: 'application/json' }), `orbitlab${who ? `-${who}` : ''}-${stamp}${RESULTS_FILE_EXTENSION}`);
   }
 }
