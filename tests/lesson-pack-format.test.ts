@@ -94,6 +94,29 @@ describe('a lesson pack file', () => {
     ]);
   });
 
+  /**
+   * T03b: the packs carry design lessons now (B6, P5, P6, R6, S6). The design
+   * reader (T01) built its lesson without `curriculum`, so a pack's design
+   * lesson showed no chips; it keeps them now, as the flight and case readers
+   * do. Exact, written before the fix was run.
+   */
+  it('keeps a design lesson\'s codes, and the file is version 3 for its design lesson, not for its pack', () => {
+    const design = {
+      kind: 'design' as const, id: 'pack-design', track: 11, order: 2, mode: 'explore' as const, domains: [1 as const],
+      title: { en: 'Design', ru: 'Проект', th: 'ออกแบบ' }, brief: { en: 'Do it', ru: 'Сделайте', th: 'ลงมือ' },
+      start: { template: 'napa2' }, designDate: '2026-10-01', level: 'moderate' as const, locked: ['orbit.perigee'],
+      criteria: [{ id: 'm', kind: 'design' as const, measure: 'sat.powerMargin' as const, min: 0 }], hints: [],
+      curriculum: [{ code: 'ฟส ม.5 หมวด 3 ผล 11', kind: 'outcome' as const }],
+    };
+    const text = lessonFileText([...lessons, design], [], { ...PACK, contents: [...PACK.contents, { id: 'pack-design' }] });
+    expect((JSON.parse(text) as LessonFileDocument).version).toBe(3);
+    const parsed = read(text);
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.lessons[1]).toEqual(design);
+    expect(lessonFileText(parsed.lessons, [], parsed.pack)).toBe(text);
+    expect(resolvePack(parsed, 'test')?.items.find((i) => i.lesson.id === 'pack-design')?.curriculum).toEqual(design.curriculum);
+  });
+
   it('leaves out a pack it cannot read and keeps the file\'s lessons', () => {
     const doc = JSON.parse(lessonFileText(lessons, [], PACK)) as { pack: Record<string, unknown> };
     delete doc.pack.title;

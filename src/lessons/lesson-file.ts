@@ -390,7 +390,7 @@ export function readDesignLesson(raw: unknown, where: string, issues: FileIssue[
   const at = `${where} (${raw.id})`;
   const meta = readMeta(r, raw, at);
   if (!meta) return null;
-  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon } = meta;
+  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon, curriculum } = meta;
   let start: DesignLesson['start'];
   if (!isRecord(raw.start)) return r.error(`${at}.start`, 'missing', 'start') || null;
   if (raw.start.template !== undefined) {
@@ -428,6 +428,8 @@ export function readDesignLesson(raw: unknown, where: string, issues: FileIssue[
     title, brief, ...(debrief ? { debrief } : {}), start, designDate: raw.designDate, level: raw.level as Ecss,
     ...(requirements ? { requirements } : {}), locked, criteria, hints,
     ...(comingSoon ? { comingSoon } : {}),
+    // T03 meets T01: a pack's design lesson keeps its codes, as its flight and case lessons do (T03b)
+    ...(curriculum?.length ? { curriculum } : {}),
   };
 }
 
