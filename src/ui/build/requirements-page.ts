@@ -87,6 +87,21 @@ interface Ctx { lifetime: AltitudeForLifetime[] | null; req: MissionRequirements
 const fig = (value: number, unit: Fig['unit'], digits?: number): string => sayFig({ value, unit }, digits);
 const days = (d: number): string => `${num(d, 2)} ${t('build.req.u.days')}`;
 
+/**
+ * A sentence with figures in it, each figure kept whole on a line: a Thai
+ * sentence breaks between its words, and "ม./วินาที" is two of them.
+ */
+function phrase(key: string, values: Record<string, string>): HTMLElement {
+  const marks: Record<string, string> = {};
+  for (const k of Object.keys(values)) marks[k] = `\u0000${k}\u0000`;
+  const out = el('span', 'brq-words');
+  t(key, marks).split(/\u0000(\w+)\u0000/).forEach((part, i) => {
+    if (i % 2) out.append(el('span', 'bsat-nw', values[part] ?? ''));
+    else if (part) out.append(part);
+  });
+  return out;
+}
+
 /** A requirement's standing on a row, in words: its share of what is allowed or carried, or why it has none. */
 function standingText(s: Standing): string {
   if (s.kind !== 'ratio') return t(STANDING_KEY[s.kind]);
@@ -113,7 +128,7 @@ const COLUMNS: readonly Column[] = [
       const s = lifeState(r, x.lifetime);
       if (s.kind === 'none') return '—';
       if (s.kind === 'lasts') return t('build.req.life.lasts', { years: num(x.req.lifeYears, x.req.lifeYears % 1 ? 1 : 0) });
-      return t(s.kind === 'held' ? 'build.req.life.held' : 'build.req.life.notProven', { dv: fig(s.holdDv, 'm/s') });
+      return phrase(s.kind === 'held' ? 'build.req.life.held' : 'build.req.life.notProven', { dv: fig(s.holdDv, 'm/s') });
     },
   },
   {
@@ -121,7 +136,7 @@ const COLUMNS: readonly Column[] = [
       const s = disposalState(r, x.lifetime);
       if (s.kind === 'none') return '—';
       if (s.kind === 'inTime') return t('build.req.disp.inTime');
-      return t(s.kind === 'burn' ? 'build.req.disp.burn' : 'build.req.disp.notProven', { low: fig(s.dvLow, 'm/s'), high: fig(s.dvHigh, 'm/s') });
+      return phrase(s.kind === 'burn' ? 'build.req.disp.burn' : 'build.req.disp.notProven', { low: fig(s.dvLow, 'm/s'), high: fig(s.dvHigh, 'm/s') });
     },
   },
   {
@@ -574,9 +589,6 @@ export class RequirementsPage {
       th.scope = 'col';
       head.append(th);
     }
-    const open = el('th', 'brq-open-col', t('build.req.col.open'));
-    open.scope = 'col';
-    head.append(open);
     const thead = el('thead');
     thead.append(head);
     const body = el('tbody');
@@ -592,22 +604,27 @@ export class RequirementsPage {
         // a figure never parts from its unit; a sentence (the lifetime, the disposal) wraps between its words, each figure in it kept whole
         const v = c.cell(row, ctx);
         if (typeof v === 'string') cell.append(el('span', c.words ? 'brq-words' : 'bsat-nw', v)); else cell.append(v);
+        // the row's action sits in its header cell, under the altitude: a column of its own does not fit a laptop's width in Russian
+        if (k === 0) {
+          const b = button('watch-btn brq-open', t('build.req.open'), () => this.openRow(row));
+          b.dataset.k = `${P}open:${cycleText(row)}`;
+          b.setAttribute('aria-label', t('build.req.openRow', { cycle: cycleText(row), h: fig(row.altitude, 'm') }));
+          cell.append(b);
+        }
         tr.append(cell);
       });
-      // the row's action, and why the bench could not take it if it could not
-      const td = el('td', 'brq-open-col');
-      td.dataset.label = t('build.req.col.open');
-      const b = button('watch-btn', t('build.req.open'), () => this.openRow(row));
-      b.dataset.k = `${P}open:${cycleText(row)}`;
-      b.setAttribute('aria-label', t('build.req.openRow', { cycle: cycleText(row), h: fig(row.altitude, 'm') }));
-      td.append(b);
+      body.append(tr);
+      // why the bench could not take it, on a line of its own under the row
       if (this.refused?.cycle === cycleText(row)) {
-        const why = el('small', 'brq-refused bx-msg-error', this.refused.text);
+        const line = el('tr', 'brq-refused-row');
+        const td = el('td');
+        td.colSpan = COLUMNS.length;
+        const why = el('span', 'brq-refused bx-msg-error', this.refused.text);
         why.setAttribute('role', 'status');
         td.append(why);
+        line.append(td);
+        body.append(line);
       }
-      tr.append(td);
-      body.append(tr);
     }
     table.append(thead, body);
     wrap.append(table);
@@ -659,7 +676,12 @@ export class RequirementsPage {
       if (!l.same && l.why) th.append(el('small', 'brq-why', t(l.why)));
       // as the bench writes the same figure: an inclination to 0.01°, the rest in their unit's own digits
       const digits = l.row.unit === 'rad' ? 2 : undefined;
-      tr.append(th, el('td', 'num', sayFig(l.row, digits)), el('td', 'num', `${sayFig(l.bench, digits)}${l.same ? ' =' : ' ≠'}`));
+      const rowCell = el('td', 'num', sayFig(l.row, digits));
+      const benchCell = el('td', 'num', `${sayFig(l.bench, digits)}${l.same ? ' =' : ' ≠'}`);
+      // a phone shows each line as its name, then the two figures each beside its column's name
+      rowCell.dataset.label = t('build.req.cmp.row');
+      benchCell.dataset.label = t('build.req.cmp.bench');
+      tr.append(th, rowCell, benchCell);
       body.append(tr);
     }
     table.append(thead, body);

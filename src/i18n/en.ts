@@ -2869,7 +2869,6 @@ export const en: Record<string, string> = {
   'build.req.col.life': 'Lifetime',
   'build.req.col.disposal': 'Δv to leave (low–high)',
   'build.req.col.binds': 'What binds',
-  'build.req.col.open': 'Satellite bench',
   'build.req.open': 'Open',
   'build.req.openRow': 'Open the {cycle} orbit at {h} on the satellite bench',
   'build.req.life.lasts': 'lasts {years} years',
