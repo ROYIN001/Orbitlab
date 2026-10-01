@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Orbitlab — launch &amp; orbital insertion simulator</title>
     <meta id="meta-description" name="description" content="Physics-based rocket launch and orbital insertion simulator: real launch vehicles, satellites, orbit presets, four camera views and engineering telemetry." />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1017'/%3E%3Cellipse cx='32' cy='32' rx='26' ry='12' transform='rotate(-32 32 32)' fill='none' stroke='%238be5cd' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='10' fill='%238be5cd'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3CclipPath id='orbitlab-logo-delta'%3E%3Cpath d='M100 16 L162 176 L100 146 L38 176 Z' /%3E%3C/clipPath%3E%3CclipPath id='orbitlab-logo-front'%3E%3Crect x='0' y='112' width='200' height='100' /%3E%3C/clipPath%3E%3C/defs%3E%3Crect width='200' height='200' rx='44' fill='%230a1017'/%3E%3Cg style='--logo-ground: %230a1017' transform='translate(100 102) scale(0.86) translate(-100 -100)'%3E %3Cellipse cx='100' cy='112' rx='92' ry='30' transform='rotate(-18 100 112)' fill='none' stroke='%23ffffff' stroke-width='7' /%3E %3Cg clip-path='url(%23orbitlab-logo-delta)'%3E %3Crect x='0' y='16' width='200' height='160' fill='%23e4002b' /%3E %3Crect x='0' y='42.67' width='200' height='106.67' fill='%23ffffff' /%3E %3Crect x='0' y='69.33' width='200' height='53.33' fill='%231f3a9e' /%3E %3C/g%3E %3Cg transform='rotate(-18 100 112)' clip-path='url(%23orbitlab-logo-front)'%3E %3Cellipse cx='100' cy='112' rx='92' ry='30' fill='none' style='stroke: var(--logo-ground%2C %23080c13)' stroke-width='16' /%3E %3Cellipse cx='100' cy='112' rx='92' ry='30' fill='none' stroke='%23ffffff' stroke-width='7' /%3E %3C/g%3E %3Ccircle cx='186.4' cy='122.3' r='9' transform='rotate(-18 100 112)' fill='%23ffffff' style='stroke: var(--logo-ground%2C %23080c13)' stroke-width='4' /%3E %3C/g%3E%3C/svg%3E" />
     <!-- How a link to the site is shown where it is shared (LINE, Facebook, Telegram, X…). Those
          sites read these without running the page, so the picture's address is written out whole;
          the picture is the landing page's first screen (public/social/preview.jpg, npm run shots). -->
@@ -27,11 +27,34 @@
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
+    <!-- The Orbitlab mark (A1): a delta in the Thai flag's stripes with an orbit across it. Drawn once
+         here and used by the top bar and the About dialog (<use href="#orbitlab-logo">); the favicon
+         and the PWA icons are made from it by scripts/icons.mjs. The gap under the front of the orbit
+         takes its colour from --logo-ground, the ground the mark sits on. -->
+    <svg id="logo-sprite" width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <clipPath id="orbitlab-logo-delta"><path d="M100 16 L162 176 L100 146 L38 176 Z" /></clipPath>
+        <clipPath id="orbitlab-logo-front"><rect x="0" y="112" width="200" height="100" /></clipPath>
+        <symbol id="orbitlab-logo" viewBox="0 0 200 200">
+          <ellipse cx="100" cy="112" rx="92" ry="30" transform="rotate(-18 100 112)" fill="none" stroke="#ffffff" stroke-width="7" />
+          <g clip-path="url(#orbitlab-logo-delta)">
+            <rect x="0" y="16" width="200" height="160" fill="#e4002b" />
+            <rect x="0" y="42.67" width="200" height="106.67" fill="#ffffff" />
+            <rect x="0" y="69.33" width="200" height="53.33" fill="#1f3a9e" />
+          </g>
+          <g transform="rotate(-18 100 112)" clip-path="url(#orbitlab-logo-front)">
+            <ellipse cx="100" cy="112" rx="92" ry="30" fill="none" style="stroke: var(--logo-ground, #080c13)" stroke-width="16" />
+            <ellipse cx="100" cy="112" rx="92" ry="30" fill="none" stroke="#ffffff" stroke-width="7" />
+          </g>
+          <circle cx="186.4" cy="122.3" r="9" transform="rotate(-18 100 112)" fill="#ffffff" style="stroke: var(--logo-ground, #080c13)" stroke-width="4" />
+        </symbol>
+      </defs>
+    </svg>
     <div id="app">
       <header id="topbar">
         <!-- the product name is the way home (owner, 2026-10-01) -->
         <a class="brand" href="#/home" data-i18n-title="mode.home">
-          <span class="brand-mark" aria-hidden="true">◉</span>
+          <svg class="brand-mark" viewBox="0 0 200 200" aria-hidden="true" focusable="false"><use href="#orbitlab-logo" /></svg>
           <span class="brand-name" aria-hidden="true">ORBIT<span>LAB</span></span>
         </a>
         <div class="top-context">

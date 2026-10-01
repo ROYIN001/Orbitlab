@@ -98,12 +98,12 @@ a { color: var(--accent); }
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 8px; }
+/* the Orbitlab mark (index.html #orbitlab-logo); --logo-ground is the colour it sits on */
 .brand-mark {
-  display: grid; place-items: center;
-  width: 32px; height: 32px;
-  border: 1.5px solid var(--accent); border-radius: 50%;
-  color: var(--accent); font-size: 28px; line-height: 1;
-  transform: rotate(-25deg);
+  --logo-ground: var(--bg);
+  display: block; flex: none;
+  width: 38px; height: 38px;
+  overflow: visible;
 }
 .brand-name { font: 700 21px/1 var(--display); letter-spacing: -0.6px; color: #f3f7fb; }
 .brand-name span { font-weight: 400; color: #a5b2c3; margin-left: -3px; }
@@ -978,6 +978,7 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
 /* B4: the classic About box, centred */
 .about-box { display: grid; justify-items: center; gap: 10px; padding: 18px 8px 4px; text-align: center; }
 .about-mark { display: flex; align-items: center; gap: 12px; margin: 0; }
+.about-mark .brand-mark { --logo-ground: var(--panel2); width: 64px; height: 64px; }
 .about-mark .brand-name { font-size: 30px; }
 .dialog-body .about-version {
   margin: 0; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--accent-line);
@@ -1114,7 +1115,7 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .launch-area { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -10px 24px rgba(8, 12, 19, 0.55); }
   #topbar { height: 54px; padding: 0 12px; gap: 8px; }
   .brand-name { font-size: 18px; }
-  .brand-mark { width: 28px; height: 28px; font-size: 24px; }
+  .brand-mark { width: 32px; height: 32px; }
   .lang span { display: none; }
   .narration .phase-title { font-size: 19px; }
   .narration .latest-event { display: none; }

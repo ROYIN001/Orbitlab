@@ -18,7 +18,7 @@
 
 /* The product name is the way home. */
 a.brand { color: inherit; text-decoration: none; border-radius: 8px; padding: 3px 6px 3px 2px; margin-left: -2px; }
-a.brand:hover { background: var(--panel2); }
+a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 
 /* A tab per section, the current one underlined and carrying its level as a
    badge; every tab opens the menu of its section's levels. On a phone the
