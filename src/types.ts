@@ -89,6 +89,12 @@ export interface EngineEvent {
   mixture?: { thrustVac: number; thrustSL: number; ispVac: number; ispSL: number };
 }
 
+/** How a hot-staged stage lights (`StageSpec.hotStage`). */
+export interface HotStageSpec {
+  /** s before the stage below is shut down by command (its `cutoffAt`) that this stage lights */
+  leadS: number;
+}
+
 export interface StageSpec {
   id: string;
   name: string;
@@ -101,8 +107,17 @@ export interface StageSpec {
   restartable?: boolean;
   /** Seconds between cutoff of the previous stage and separation */
   sepDelay?: number;
-  /** Seconds between separation and ignition of this stage */
+  /** Seconds between separation and ignition of this stage (not read for a `hotStage`) */
   ignitionDelay?: number;
+  /**
+   * The stage lights while still attached to the stage below and fires through
+   * the open truss between them (hot staging, as the R-7's Blok I does). It
+   * lights `leadS` s before the stage below is shut down, on that stage's
+   * `cutoffAt` integrator; the stage below stays the active one, tails off
+   * attached and separates `sepDelay` s after its cut-off. Absent: the stage
+   * lights `ignitionDelay` s after the separation.
+   */
+  hotStage?: HotStageSpec;
   /** Throttle fraction of this stage while parallel boosters are attached */
   throttleWithBoosters?: number;
   boosters?: BoosterGroupSpec[];
@@ -172,13 +187,44 @@ export interface FairingSpec {
    */
   sepTime?: number;
   /**
+   * Jettison a fixed time after a named stage first ignites, for an operator
+   * whose published rule ties the fairing to the sequence rather than to the
+   * clock or to a heating placard. Khrunichev's vehicles drop it early in
+   * third-stage flight: Proton-M "typically at 348 s", ten seconds after the
+   * third stage's main engine lights at 338 s, with the time "constrained to
+   * occur so that fairing hardware will impact in designated areas" (ILS,
+   * Proton Mission Planner's Guide, Rev. 7, 2009, §2.3.1 and §2.4.2); on
+   * Angara-A5 "at the initial phase of Stage III operation", ten seconds after
+   * the core separated on the first flight (ILS, 23 December 2014). A trajectory
+   * that ignites that stage late carries the fairing later, as the real one
+   * would. The altitude floor applies as for `sepTime`.
+   */
+  sepAfterIgnition?: { stage: string; delay: number };
+  /**
    * Height of the fairing's own lower cone, m, down to the diameter of the
    * stage it stands on, counted in `length`: that stage then carries no
-   * interstage adapter of its own. Soyuz-2.1a's 4.11 × 11.43 m unit includes
-   * its transition section.
+   * interstage adapter of its own. Soyuz-2.1a's payload sections include
+   * their short flare down to Blok I.
    */
   adapter?: number;
+  /** Length of its nose, m, counted in `length` (drawing only); absent, 48 % of the fairing */
+  noseLength?: number;
   color?: string;
+}
+
+/**
+ * How a launcher flies one kind of payload where that differs from how it
+ * flies everything else (`VehicleSpec.crewedProfile`, `cargoShipProfile`):
+ * Soyuz-2.1a's crewed payload section, its cyclogram and its stored
+ * programme, or the Progress cargo flight's programme.
+ */
+export interface VehicleProfile {
+  /** the payload section's fairing, in place of the vehicle's */
+  fairing?: FairingSpec;
+  /** guidance values that replace the vehicle's own (its stored pitch programme) */
+  guidanceDefaults?: Partial<GuidanceParams>;
+  /** per stage, by index: fields of its cyclogram that replace the stage's own */
+  stages?: (Partial<Pick<StageSpec, 'cutoffAt' | 'sepDelay' | 'hotStage' | 'jettisons'>> | null)[];
 }
 
 export interface VehicleSpec {
@@ -195,6 +241,19 @@ export interface VehicleSpec {
   fairing: FairingSpec | null;
   /** The launch escape system a crewed launch carries (roadmap G06): Soyuz's tower and fairing motors. */
   escapeSystem?: 'soyuz';
+  /**
+   * What a crewed launch flies in place of the vehicle's own: Soyuz-2.1a's
+   * crewed payload section (11S517A3) and its cyclogram and programme, where
+   * the vehicle itself is its cargo configuration (11S517A2, Progress MS).
+   * Applied by `openTopVehicle` for a crewed satellite.
+   */
+  crewedProfile?: VehicleProfile;
+  /**
+   * What a cargo ship to the station flies in place of the vehicle's own
+   * (`SatelliteSpec.cargoShip`): Soyuz-2.1a's Progress MS programme. Applied
+   * by `openTopVehicle`.
+   */
+  cargoShipProfile?: VehicleProfile;
   /**
    * A payload flown in the open on top of the last stage instead of inside the
    * fairing (Crew Dragon; roadmap C01): its outer shape, which is then the
@@ -387,6 +446,8 @@ export interface SatelliteSpec {
   typicalOrbit: string;
   description: string;
   crewed?: boolean;
+  /** A cargo ship to the station (Progress MS), which its launcher flies its own way (`VehicleSpec.cargoShipProfile`) */
+  cargoShip?: boolean;
   /** On-board propulsion used for orbit raising once the launcher is spent */
   propulsion?: { thrust: number; isp: number; propellantFraction: number };
   /** Approximate body dimensions for visuals, m */
@@ -423,6 +484,27 @@ export interface SatelliteSpec {
   area?: number;
   cd?: number;
   cr?: number;
+  /**
+   * The catalogue satellite a custom one was made from (roadmap D06, Phase 4
+   * map §2.6 c): a D06 template's origin, or a copy. Nothing is looked up by
+   * it — a satellite flies by its kind and its own figures, and a custom
+   * satellite's name is the designer's text, never translated — except that
+   * only a copy of a crewed catalogue satellite may say `crewed`
+   * (src/config/satellite-spec.ts), as only a copy of the Soyuz may carry its
+   * escape system. Catalogue satellites never set it.
+   */
+  derivedFrom?: string;
+  /**
+   * The body's section across the launcher's axis, for the fairing-fit
+   * estimate (roadmap D06, Phase 4 map §2.6 c; src/config/satellite-spec.ts
+   * `fairingFit`): `'box'`, a designed satellite's bus, a rectangle of its
+   * width and depth whose corners reach out to its diagonal (a 4 × 4 m box
+   * needs 5.66 m across). Absent, the body is taken as round, the larger of
+   * its width and depth across, as every catalogue satellite is (a sphere, a
+   * capsule, a bus under its arrays folded round it), so no built-in
+   * pairing's verdict changes. Nothing in the flight reads it.
+   */
+  crossSection?: 'box';
 }
 
 export interface GuidanceParams {
@@ -512,6 +594,16 @@ export interface MissionConfig {
    */
   vehicleSpec?: VehicleSpec;
   satelliteId: string;
+  /**
+   * D06 (Phase 4 map §2.6 c, the owner's option B, 2026-09-29): a custom
+   * satellite — a designed one — carried inline, as `vehicleSpec` carries a
+   * custom vehicle: its `id` is `satelliteId`, which no catalogue satellite
+   * has, so its engine, size, drag area, C_D and C_R fly in Launch and go on
+   * in the S03 hand-off. Absent, `satelliteId` names a catalogue satellite.
+   * Resolve a mission's satellite with `missionSatellite`
+   * (src/data/satellites.ts), never with `satelliteById(cfg.satelliteId)`.
+   */
+  satelliteSpec?: SatelliteSpec;
   siteId: string;
   orbit: OrbitSpec;
   /** Launch epoch (UTC) */

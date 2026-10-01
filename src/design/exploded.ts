@@ -184,7 +184,7 @@ function fairingOutline(spec: VehicleSpec): OutlinePoint[] {
   const R = f.diameter / 2, L = f.length;
   const below = [...spec.stages].reverse().find((s) => !s.isSpacecraft);
   const adapter = f.adapter ?? 0;
-  const cyl = L * FAIRING_CYLINDER;
+  const cyl = f.noseLength !== undefined ? L - f.noseLength : L * FAIRING_CYLINDER;
   const rows: OutlinePoint[] = adapter > 0 ? [sym(0, (below?.diameter ?? f.diameter) / 2), sym(adapter, R)] : [sym(0, R)];
   rows.push(sym(cyl, R), ...noseRows(R, cyl, L - cyl, haack));
   return rows;

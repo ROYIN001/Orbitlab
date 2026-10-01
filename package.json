@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit",
     "snapshots": "node --experimental-strip-types scripts/refresh-snapshots.ts",
     "shots": "node --experimental-strip-types scripts/shots.ts",
+    "icons": "node scripts/icons.mjs",
     "budget": "node scripts/bundle-budget.mjs"
   },
   "dependencies": {

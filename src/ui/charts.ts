@@ -118,7 +118,7 @@ let onDrawn: ((canvas: HTMLCanvasElement, series: Series[], opt: ChartOptions) =
 export function setChartDrawnHook(hook: typeof onDrawn): void { onDrawn = hook; }
 
 export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: ChartOptions): void {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
   const w = canvas.clientWidth || 300;
   const h = canvas.clientHeight || 120;
   if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {

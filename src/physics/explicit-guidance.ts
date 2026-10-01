@@ -82,7 +82,8 @@ export function burnProfile(vehicle: VehicleModel, opts: { excludeWeakFinal: boo
     && !(opts.excludeWeakFinal && s.index === vehicle.lastLauncherIndex && s.index !== act.index));
   for (const st of stages) {
     // The gap before a stage lights.
-    if (st !== act) out.push({ kind: 'coast', a0: 0, ve: 0, tb: (st.spec.sepDelay ?? 1) + (st.spec.ignitionDelay ?? 1) });
+    // A hot-staged stage lights before the one below has gone: no gap.
+    if (st !== act) out.push({ kind: 'coast', a0: 0, ve: 0, tb: st.spec.hotStage ? 0 : (st.spec.sepDelay ?? 1) + (st.spec.ignitionDelay ?? 1) });
     else if (!st.ignited) out.push({ kind: 'coast', a0: 0, ve: 0, tb: st.spec.ignitionDelay ?? 1 });
     const e = st.spec.engine, flow = e.count * st.engineFraction * engineMassFlow(e), thrust = e.count * st.engineFraction * e.thrustVac;
     const prop = vehicle.usablePropellant(st);

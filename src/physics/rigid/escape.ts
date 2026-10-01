@@ -53,12 +53,16 @@ export type EscapeBody = 'head' | 'spacecraft' | 'capsule';
 
 /**
  * The escape tower above the fairing's nose, m: the adapter truss, the motor,
- * the separation motor's cap. 4.16 m altogether, so that a crewed Soyuz's head
- * is 15.59 m with the 11.43 m fairing (owner's figures; the split is an estimate).
+ * the separation motor's cap. 6.0 m altogether, so that a crewed Soyuz's head
+ * is 15.5 m with its 9.5 m fairing (Arianespace's drawing, Soyuz CSG User's
+ * Manual 2012, Table A5-1, derived; the owner's figure is 15.59 m; the split
+ * is an estimate).
  */
-const TOWER_TRUSS = 1.0, TOWER_MOTOR = 2.3, TOWER_CAP = 0.86;
-/** The fairing from the service module's interface to its nose, m: the vehicle's 11.43 m less the service module's 2.7 m. */
-const HEAD_FAIRING = 8.73;
+const TOWER_TRUSS = 1.6, TOWER_MOTOR = 3.3, TOWER_CAP = 1.1;
+/** The head section's base, the interface with the service module, above the fairing's base, m: its 0.8 m flare and the service module's 2.7 m. */
+const HEAD_BASE = 0.8 + 2.7;
+/** The fairing from the service module's interface to its nose, m: the crewed fairing's 9.5 m (src/data/parts.ts, `soyuz21a-crew`) less `HEAD_BASE`. */
+const HEAD_FAIRING = 9.5 - HEAD_BASE;
 
 /** The data the escape is flown on. Estimates are marked; the rest is sourced (PHYSICS.md §8.3). */
 export const ESCAPE = {
@@ -78,14 +82,27 @@ export const ESCAPE = {
     controlThrust: 4e3, controlBurn: 1.6,
     truss: TOWER_TRUSS, motor: TOWER_MOTOR, cap: TOWER_CAP,
     length: TOWER_TRUSS + TOWER_MOTOR + TOWER_CAP },
-  /** the upper fairing with its grid fins and its four РДГ 860М motors (mass, thrust and burn are estimates) */
-  fairing: { mass: 1645, propellant: 300, thrust: 280e3, rise: 0.1, burn: 2.6, tailOff: 0.3, nozzleX: 5.2,
+  /**
+   * The upper fairing, which leaves with the crew, with its grid fins and its
+   * four РДГ 860М motors. The motors are KTRV's (the parent of MKB Iskra, which
+   * makes them): 56 kg each, about 3 s, 2.4–4.5 tf each; flown at the middle of
+   * that, 3.45 tf (33.8 kN), 135 kN for the four, 0.40 MN·s, in pairs, the
+   * second pair 0.32 s after the first (SoyCOM). They were 280 kN for 2.6 s,
+   * twice the impulse. Estimates: their 4 × 44 kg of propellant (that impulse
+   * at 230 s), their station in the orbital module's zone ("попарно в зоне
+   * БО"), and the upper fairing's mass, 1 180 kg: its shell above the joint
+   * (6.0 of the 9.5 m, 63 %) of the crewed fairing's 1 645 kg, with the four
+   * motors' 224 kg and the fins'.
+   */
+  fairing: { mass: 1180, propellant: 176, thrust: 135e3, rise: 0.1, burn: 2.85, tailOff: 0.3, pairDelay: 0.32, nozzleX: 4.5,
     /** the head section's length from the service module's interface to the fairing's nose, m */
     length: HEAD_FAIRING,
-    /** the fairing's diameter: the vehicle's (src/data/vehicles.ts) */
-    diameter: 4.11,
+    /** the fairing's diameter: the crewed fairing's (src/data/parts.ts, `soyuz21a-crew`) */
+    diameter: 3.0,
     /** seconds after the abort before the grid fins open (T-10-1: at about 650 m, estimate) */
     finsOpen: 2.5 },
+  /** the head section's base above the fairing's base, m (`HEAD_BASE`) */
+  headBase: HEAD_BASE,
   orbitalModule: { mass: 1300, x0: 2.25, length: 2.6 },
   descentModule: { mass: 2950, x0: 0, length: 2.24, diameter: 2.17,
     /** heat shield dropped under the main parachute (estimate) */
@@ -186,6 +203,12 @@ export function motorThrust(peak: number, rise: number, burn: number, tailOff: n
 }
 /** Total impulse of `motorThrust`, N s. */
 export const motorImpulse = (peak: number, rise: number, burn: number, tailOff: number): number => peak * (burn - rise / 2 + tailOff / 2);
+
+/** The four fairing motors' thrust at `t` s after the abort, N: half of them at once, the other pair `pairDelay` s later. */
+export function fairingMotorThrust(t: number, peak: number = ESCAPE.fairing.thrust): number {
+  const f = ESCAPE.fairing;
+  return 0.5 * (motorThrust(peak, f.rise, f.burn, f.tailOff, t) + motorThrust(peak, f.rise, f.burn, f.tailOff, t - f.pairDelay));
+}
 
 /** A part of a body: a uniform cylinder along x. */
 interface Part { mass: number; x0: number; length: number; radius: number }
@@ -449,7 +472,7 @@ export class EscapeFlight {
     }
     if (this.mode === 'fairing' && this.fairingPropellant > 0) {
       const f = ESCAPE.fairing, impulse = motorImpulse(f.thrust, f.rise, f.burn, f.tailOff);
-      this.fairingPropellant = Math.max(0, this.fairingPropellant - motorThrust(f.thrust, f.rise, f.burn, f.tailOff, tau) * h * f.propellant / impulse);
+      this.fairingPropellant = Math.max(0, this.fairingPropellant - fairingMotorThrust(tau) * h * f.propellant / impulse);
     }
     if (this.config.body === 'head') {
       this.config = headConfiguration(this.mode === 'tower', this.towerPropellant, this.fairingPropellant, this.status.finsOpen);
@@ -474,7 +497,7 @@ export class EscapeFlight {
     }
     if (s.phase === 'escape') {
       const tw = ESCAPE.tower, f = ESCAPE.fairing;
-      const done = this.mode === 'tower' ? tau > tw.burn + tw.tailOff : tau > f.burn + f.tailOff;
+      const done = this.mode === 'tower' ? tau > tw.burn + tw.tailOff : tau > f.burn + f.tailOff + f.pairDelay;
       if (done) {
         s.phase = 'coast';
         this.events.push({ key: 'evt.escapeBurnout', severity: 'info', params: { alt: Math.round(alt), speed: Math.round(norm(this.airVelocity(this.state, t))) } });
@@ -574,8 +597,7 @@ export class EscapeFlight {
         addForce(v3(motorThrust(tw.thrust, tw.rise, tw.burn, tw.tailOff, tau), 0, 0), tw.nozzleX);
         if (tau >= 0 && tau <= tw.controlBurn) addForce(scale(this.controlDir, tw.controlThrust), tw.controlX);
       } else if (this.mode === 'fairing') {
-        const f = ESCAPE.fairing;
-        addForce(v3(motorThrust(f.thrust, f.rise, f.burn, f.tailOff, tau), 0, 0), f.nozzleX);
+        addForce(v3(fairingMotorThrust(tau), 0, 0), ESCAPE.fairing.nozzleX);
       }
     }
     const soft = this.capsule.softLanding;
@@ -633,10 +655,10 @@ export class EscapeFlight {
 
   /** Motors' state and the crew's g, after an accepted step. */
   private observe(t: number): void {
-    const tau = t - this.t0, s = this.status, tw = ESCAPE.tower, f = ESCAPE.fairing;
+    const tau = t - this.t0, s = this.status, tw = ESCAPE.tower;
     s.motors.main = s.body === 'head' && this.mode === 'tower' ? motorThrust(1, tw.rise, tw.burn, tw.tailOff, tau) : 0;
     s.motors.control = s.body === 'head' && this.mode === 'tower' && tau <= tw.controlBurn ? 1 : 0;
-    s.motors.fairing = s.body === 'head' && this.mode === 'fairing' ? motorThrust(1, f.rise, f.burn, f.tailOff, tau) : 0;
+    s.motors.fairing = s.body === 'head' && this.mode === 'fairing' ? fairingMotorThrust(tau, 1) : 0;
     s.motors.softLanding = this.capsule.softLanding && this.softAt !== undefined && t - this.softAt <= this.capsule.softLanding.burn ? 1 : 0;
     if (this.capsule.retro) {
       s.motors.retro = this.retrosAt(t);

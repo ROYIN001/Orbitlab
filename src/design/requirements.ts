@@ -1,8 +1,9 @@
 /**
  * What a mission asks of a satellite, the input of the requirements solver
  * (roadmap D07, docs/ROADMAP-PART2-3.md; Phase 4 map §3, step 0.3). Types
- * only for now: the shape D07's solver, its trade table and the design
- * lessons (T01) compile against. From it D07 derives candidate orbits and a
+ * only: the shape D07's solver (src/design/requirement-inverses.ts), its
+ * trade table (src/design/requirement-trades.ts) and the design lessons (T01)
+ * compile against. From it D07 derives candidate orbits and a
  * `SatelliteDesign` (src/design/satellite-spec.ts), which the D06 bench then
  * recomputes with the D06 cores, so D07 never shows a number differently
  * from D06.

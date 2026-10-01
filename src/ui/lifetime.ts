@@ -178,7 +178,9 @@ export class LifetimeDialog extends Modal {
       i.type = 'number';
       i.step = 'any';
       i.min = '0';
-      i.value = String(sc[key]);
+      // shown to 12 significant figures, so a figure worked out (a designed satellite's drag area, D06) does not show
+      // its floating-point tail ("0.061075000000000004"); the run flies `sc[key]` itself until the box is edited
+      i.value = String(Number(sc[key].toPrecision(12)));
       i.setAttribute('aria-label', label);
       const why = el('span', 'field-note warn life-invalid', t('result.invalid'));
       why.hidden = true;

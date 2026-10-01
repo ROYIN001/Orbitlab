@@ -6,11 +6,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  DESIGN_FORMAT, DESIGN_FORMAT_VERSION, DESIGN_STORE_KEY, DesignStoreError, LocalDesignStore, designDocument, designFileName,
-  designFileText, parseDesignDocument, readDesignFileText, type DesignStorage, type DesignStore,
+  DESIGN_FORMAT, DESIGN_FORMAT_VERSION, DESIGN_KINDS, DESIGN_STORE_KEY, DesignStoreError, LocalDesignStore, designDocument, designFileName,
+  designFileText, isDesignOf, parseDesignDocument, readDesignFileText, type DesignStorage, type DesignStore,
 } from '../src/design/design-store';
 import { vehicleById } from '../src/data/vehicles';
 import type { VehicleSpec } from '../src/types';
+import type { SatelliteDesign } from '../src/design/satellite-spec';
+import { designFromTemplate } from '../src/design/satellite-model';
 
 const rocket = (id = 'my-falcon', extra: Partial<VehicleSpec> = {}): VehicleSpec =>
   ({ ...structuredClone(vehicleById('falcon9')), id, name: 'My Falcon', derivedFrom: 'falcon9', ...extra });
@@ -40,7 +42,8 @@ describe('the local design store (S05)', () => {
     expect(changed).toMatchObject({ id: 'd1', created: a.created, name: 'My Falcon II' });
     expect(changed.updated > a.updated).toBe(true);
     expect((await s.list('vehicle')).map((d) => d.id)).toEqual(['d1', 'd2']);
-    expect((await s.get('d1'))!.design.maxQ).toBe(40000);
+    const kept = (await s.get('d1'))!;
+    expect(isDesignOf(kept, 'vehicle') && kept.design.maxQ).toBe(40000);
     expect(await s.remove('d2')).toBe(true);
     expect(await s.remove('d2')).toBe(false);
     expect((await s.list()).map((d) => d.name)).toEqual(['My Falcon II']);
@@ -52,7 +55,8 @@ describe('the local design store (S05)', () => {
     const saved = await s.save({ kind: 'vehicle', name: 'X', design });
     design.stages[0].dryMass = 1;
     saved.design.stages[0].dryMass = 2;
-    expect((await s.get(saved.id))!.design.stages[0].dryMass).toBe(vehicleById('falcon9').stages[0].dryMass);
+    const kept = (await s.get(saved.id))!;
+    expect(isDesignOf(kept, 'vehicle') && kept.design.stages[0].dryMass).toBe(vehicleById('falcon9').stages[0].dryMass);
   });
 
   it('refuses a design that is not one, and a change to one it does not keep', async () => {
@@ -60,7 +64,9 @@ describe('the local design store (S05)', () => {
     await expect(s.save({ kind: 'vehicle', name: 'Bad', design: rocket('bad', { maxQ: NaN }) }))
       .rejects.toMatchObject({ code: 'invalid', message: 'maxQ must be a finite number (got NaN)' });
     await expect(s.save({ kind: 'vehicle', name: '', design: rocket() })).rejects.toMatchObject({ code: 'invalid' });
-    await expect(s.save({ kind: 'satellite' as 'vehicle', name: 'Sat', design: rocket() })).rejects.toMatchObject({ code: 'invalid' });
+    // a kind no build knows (D06 made 'satellite' one this build does), and a rocket filed as a satellite
+    await expect(s.save({ kind: 'kindFromTheFuture' as 'vehicle', name: 'Sat', design: rocket() })).rejects.toMatchObject({ code: 'invalid' });
+    await expect(s.save({ kind: 'satellite', name: 'Sat', design: rocket() as unknown as SatelliteDesign })).rejects.toMatchObject({ code: 'invalid' });
     await expect(s.save({ id: 'nothing', kind: 'vehicle', name: 'X', design: rocket() })).rejects.toMatchObject({ code: 'notFound' });
     expect(await s.list()).toEqual([]);
   });
@@ -224,5 +230,53 @@ describe('a design as a file (S05)', () => {
     const back = parseDesignDocument(JSON.parse(JSON.stringify(doc)));
     expect(back.issues).toEqual([{ code: 'newerVersion' }]);
     expect(back.input?.design).toEqual(rocket());
+  });
+});
+
+/**
+ * D06 (Phase 4 map §2.4, track B): a satellite is a kind of its own, checked
+ * by src/config/satellite-design.ts, kept and filed like a rocket. The store
+ * and the file stay at version 1: a new kind is a new value, and an older
+ * build keeps the record raw (R4, above) and refuses the file as invalid.
+ */
+describe('a satellite design (D06)', () => {
+  const sat = (): SatelliteDesign => designFromTemplate('napa2', 'my-napa', 'My NAPA-2');
+
+  it('is a kind the store knows, beside the vehicle', () => {
+    expect(DESIGN_KINDS).toEqual(['vehicle', 'satellite']);
+  });
+
+  it('is kept, listed by its kind, narrowed by it, and changed', async () => {
+    const s = store(memory());
+    const r = await s.save({ kind: 'vehicle', name: 'Rocket', design: rocket() });
+    const a = await s.save({ kind: 'satellite', name: 'My NAPA-2', design: sat() });
+    expect((await s.list('satellite')).map((d) => d.id)).toEqual([a.id]);
+    expect((await s.list('vehicle')).map((d) => d.id)).toEqual([r.id]);
+    const kept = (await s.get(a.id))!;
+    expect(isDesignOf(kept, 'satellite')).toBe(true);
+    expect(isDesignOf(kept, 'vehicle')).toBe(false);
+    expect(kept.design).toEqual(sat());
+    const bigger = { ...sat(), power: { ...sat().power, arrayArea: 0.2 } };
+    await s.save({ id: a.id, kind: 'satellite', name: 'Bigger wings', design: bigger });
+    const back = (await s.get(a.id))!;
+    expect(isDesignOf(back, 'satellite') && back.design.power.arrayArea).toBe(0.2);
+  });
+
+  it('is refused whole when the satellite checker refuses it, naming the path', async () => {
+    const s = store(memory());
+    const bad = { ...sat(), power: { ...sat().power, cellEff: 29.5 } };
+    await expect(s.save({ kind: 'satellite', name: 'Bad', design: bad })).rejects.toMatchObject({ code: 'invalid', message: 'power.cellEff must be at most 0.5 (got 29.5)' });
+    expect(await s.list()).toEqual([]);
+  });
+
+  it('round-trips through its file, typed as a satellite, and names its kind in the file name', async () => {
+    const record = await store(memory()).save({ kind: 'satellite', name: 'My NAPA-2', design: sat() });
+    const back = parseDesignDocument(readDesignFileText(designFileText(designDocument(record))));
+    expect(back.issues).toEqual([]);
+    expect(back.input).toEqual({ kind: 'satellite', name: 'My NAPA-2', design: record.design });
+    expect(designFileName(record)).toBe('my-napa-2-satellite.orbitlab.json');
+    // a rocket filed as a satellite is not one
+    const lie = { ...designDocument(record), design: rocket() };
+    expect(parseDesignDocument(JSON.parse(JSON.stringify(lie))).input).toBeNull();
   });
 });

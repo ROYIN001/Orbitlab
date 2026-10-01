@@ -32,6 +32,8 @@ export interface BudgetedEngine extends ChamberGeometry {
 export interface RigidOperatingState {
   /** Throttles are engine levels: a solid motor's may exceed 1 (its profile above the mean thrust). */
   pressure?: number; coreThrottle?: number; boosterThrottle?: number; time?: number;
+  /** Level of a hot stage lit above the active one, firing through the truss (`VehicleModel.hotStage`). */
+  hotThrottle?: number;
   /** Level of each strap-on group of the active stage; `boosterThrottle` stands in for a missing one. */
   boosterThrottles?: readonly number[];
   /** RK trial time within a held-command step. Pure prediction, not consumption. */
@@ -294,12 +296,13 @@ function shiftTable(table: AeroTable, dx: number): AeroTable {
 }
 const MAX_LEVEL = 2;
 function validateOperating(op: RigidOperatingState): void {
-  for (const n of [op.pressure ?? 0, op.coreThrottle ?? 0, op.boosterThrottle ?? 0, op.propellantOffsetSeconds ?? 0, ...(op.boosterThrottles ?? [])]) {
+  for (const n of [op.pressure ?? 0, op.coreThrottle ?? 0, op.boosterThrottle ?? 0, op.hotThrottle ?? 0, op.propellantOffsetSeconds ?? 0, ...(op.boosterThrottles ?? [])]) {
     if (!Number.isFinite(n) || n < 0) throw new RangeError('Invalid rigid operating state');
   }
   // Levels, not commands: a solid's regressive profile runs up to about 1.5 ×
   // its mean thrust early in the burn. Anything past 2 is not an engine.
-  if ((op.coreThrottle ?? 0) > MAX_LEVEL || (op.boosterThrottle ?? 0) > MAX_LEVEL || (op.boosterThrottles ?? []).some((n) => n > MAX_LEVEL)) {
+  if ((op.coreThrottle ?? 0) > MAX_LEVEL || (op.boosterThrottle ?? 0) > MAX_LEVEL || (op.hotThrottle ?? 0) > MAX_LEVEL
+    || (op.boosterThrottles ?? []).some((n) => n > MAX_LEVEL)) {
     throw new RangeError('Engine level outside [0, 2]');
   }
 }
@@ -318,6 +321,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
   const stepStart = op.time !== undefined ? op.time - (op.propellantOffsetSeconds ?? 0) : undefined;
   let activeBase = geometry.payloadBase, diameter = op.payloadDiameter ?? 2, highest = geometry.payloadBase.x + (op.payloadLength ?? 3);
   let firstAttached = true;
+  const hot = vehicle.hotStage();
   for (const st of vehicle.stages) {
     if (!st.attached) continue;
     const base = st.spec.isSpacecraft ? geometry.payloadBase : geometry.stageBases[st.index];
@@ -331,7 +335,10 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     // level the caller passes is already the decayed one (VehicleModel.thrust).
     const coreOn = st.index === vehicle.activeIndex && st.ignited && vehicle.usablePropellant(st) > 0
       && ((!st.cutoff && !st.burnedOut) || (stepStart !== undefined && vehicle.coreTailingOff(st, stepStart)));
-    const throttle = coreOn ? op.coreThrottle ?? 0 : 0;
+    // the stage above lit through the truss before the one below has gone
+    const hotOn = st === hot && vehicle.usablePropellant(st) > 0
+      && ((!st.cutoff && !st.burnedOut) || (stepStart !== undefined && vehicle.coreTailingOff(st, stepStart)));
+    const throttle = coreOn ? op.coreThrottle ?? 0 : hotOn ? op.hotThrottle ?? 0 : 0;
     const offset = op.propellantOffsetSeconds ?? 0;
     const massFlow = st.litEngines ? engineMassFlow(st.spec.engine) * st.litEngines.length * fraction(st.engineFraction) * throttle
       : engineMassFlow(st.spec.engine) * st.spec.engine.count * fraction(st.engineFraction) * throttle;

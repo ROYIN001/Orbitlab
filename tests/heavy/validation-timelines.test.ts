@@ -1,5 +1,5 @@
 /**
- * Eleven flights of ten vehicles in the six-DOF model against published
+ * Twelve flights of ten vehicles in the six-DOF model against published
  * launch timelines (docs/VALIDATION.md §3 and §4): the references and tolerances of
  * `tests/validation/timelines.test.ts`, flown in the default flight model.
  * The rows listed below are the measured disagreements; the test fails when
@@ -10,11 +10,14 @@ import { flyMission } from '../validation/flight-harness';
 import { TIMELINE_REFERENCES } from '../validation/reference-data';
 import { formatRows, timelineRows } from '../validation/compare';
 
-/** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since). */
+/** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since); Proton-M and Angara-A5 re-measured 2026-09-28 with F14's fairing rule. */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
   // every row agrees since 2026-10-01: the flown insertion, and the stored
   // programme fitted to the two heights (docs/VALIDATION.md §3)
   soyuzMs25: [],
+  // Progress MS-19 (2026-10-01): its cyclogram's times are inputs, its 143 km the cargo
+  // programme's fit target; the 43 and 91 km come out 3–7 km high, inside the tolerance
+  progressMs19: [],
   electronNtt: ['fairing/time', 'seco/time', 'kickSep/time'],
   ariane64Va267: ['fairing/altitude'],
   atlasJuno: ['fairing/time'],
@@ -23,9 +26,9 @@ const DISAGREEMENTS: Record<string, readonly string[]> = {
   h3F3: ['fairing/time', 'fairing/altitude', 'meco/altitude', 'stageSep/altitude', 'seli1/altitude', 'seco1/time', 'seco1/altitude'],
   h2aF50: ['srbSep/time', 'seco/time'],
   vegaVV25: ['z40Sep/time', 'fairing/time', 'z9Sep/time'],
-  protonT14R: ['maxQ/time', 'fairing/time'],
+  protonT14R: ['maxQ/time'],
   fhArabsat: ['maxQ/time', 'beco/time', 'boosterSep/time', 'meco/time', 'stageSep/time', 'ses1/time', 'fairing/time'],
-  angaraF2: ['fairing/time'],
+  angaraF2: [],
 };
 
 describe('published launch timelines (six-DOF)', () => {

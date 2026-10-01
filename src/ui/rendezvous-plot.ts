@@ -63,7 +63,7 @@ export class RendezvousPlot {
 
   private draw(x: number, z: number, range: number, rate: number, port: keyof typeof PORTS): void {
     const c = this.canvas;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
     const w = c.clientWidth || 300, h = c.clientHeight || 220;
     if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
       c.width = Math.round(w * dpr);

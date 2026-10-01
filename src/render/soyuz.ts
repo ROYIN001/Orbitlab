@@ -244,23 +244,22 @@ export class FrostCoat {
 // ------------------------------------------------------------------ Blok I aft skirt
 
 /**
- * Seconds after Blok A leaves that Blok I drops its aft skirt, where its stage
- * does not say (`StageSpec.jettisons`, an `aftSkirt`): Soyuz-2.1a's 11.07 s from
- * the model's separation, which is at the core's cut-off, so that the skirt
- * goes at the flown T+296.1 s.
+ * Seconds after its stage lights that Blok I drops its aft skirt, where the
+ * stage does not say (`StageSpec.jettisons`, an `aftSkirt`, timed from the
+ * same ignition): 11.07 s, Vostok-K's Blok E, which lights as its core goes.
  */
 const SKIRT_AFTER = 11.07;
 
 /**
  * Blok I's aft skirt round its engine, in three petals. It rides through the
- * truss during the hot staging and is shed 11.1 seconds after Blok A has gone,
+ * truss during the hot staging and is shed some seconds after Blok A has gone,
  * the petals swinging out and falling behind.
  */
 export class AftSkirt {
   readonly group = new THREE.Group();
   private readonly petals: THREE.Group[] = [];
 
-  /** @param after seconds after Blok A leaves that it falls away, as the stage's physics drops it */
+  /** @param after seconds after its stage lights that it falls away, as the stage's physics drops it */
   constructor(r: number, height: number, mat: THREE.Material, private readonly after = SKIRT_AFTER) {
     for (let k = 0; k < 3; k++) {
       const mid = (k + 0.5) * (Math.PI * 2 / 3);
@@ -279,11 +278,11 @@ export class AftSkirt {
   }
 
   /**
-   * @param sinceBlokA mission time since Blok A separated, s (negative while
-   *        it is still attached)
+   * @param sinceIgnition mission time since its stage lit, s, once Blok A has
+   *        separated (negative while Blok A is still attached)
    */
-  update(sinceBlokA: number): void {
-    const tau = sinceBlokA - this.after;
+  update(sinceIgnition: number): void {
+    const tau = sinceIgnition - this.after;
     if (tau <= 0) {
       this.group.visible = true;
       for (const p of this.petals) { p.rotation.x = 0; p.position.y = 0; }

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { vehicleById } from '../src/data/vehicles';
+import { payloadVehicle, vehicleById } from '../src/data/vehicles';
 import { satelliteById } from '../src/data/satellites';
 import { VehicleModel } from '../src/physics/vehicle';
 import { atmosphere } from '../src/physics/atmosphere';
@@ -181,7 +181,8 @@ describe('reference full-stack uncertainty response bands', () => {
 
 describe('Soyuz max-Q authority boundary regression', () => {
   it('distinguishes insufficient 5° steering travel from feasible 10° travel using actual force/moment', () => {
-    const vehicle = new VehicleModel(vehicleById('soyuz21a'), 7150, false, satelliteById('crew'));
+    // the crewed stack, under its 3.0 m payload section (`VehicleSpec.crewedProfile`)
+    const vehicle = new VehicleModel(payloadVehicle(vehicleById('soyuz21a'), satelliteById('crew')), 7150, false, satelliteById('crew'));
     vehicle.igniteStage(vehicle.stages[0], 0);
     vehicle.stages[0].boosters.forEach(booster => vehicle.igniteBooster(booster));
     vehicle.consume(0, 1, 42.5);
@@ -202,9 +203,11 @@ describe('Soyuz max-Q authority boundary regression', () => {
       return allocateEngineGimbals(specs, specs.map(spec => spec.maxThrust > 0 ? 1 : 0), required, snapshot.cg);
     };
     const five = allocate(5), ten = allocate(10);
-    expect(required.z).toBeGreaterThan(250000);
+    // measured 244 kN·m; 5° falls 3.6 % short and 10° leaves 0.14 % (under the 4.11 m fairing
+    // flown before 2026-10-01 the stack needed over 250 kN·m and 5° fell over a tenth short)
+    expect(required.z).toBeGreaterThan(200000);
     expect(five.saturated).toBe(true);
-    expect(five.residualMomentBody.z / required.z).toBeGreaterThan(0.1);
+    expect(five.residualMomentBody.z / required.z).toBeGreaterThan(0.02);
     expect(Math.abs(ten.residualMomentBody.z) / required.z).toBeLessThan(0.005);
     expect(ten.saturated).toBe(false);
   });

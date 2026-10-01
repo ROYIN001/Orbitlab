@@ -20,7 +20,8 @@ export const CASE_IDS: readonly CaseId[] = ['iridium', 'cz5b', 'theos2'];
  */
 export const CASE_ITEM_IDS: Readonly<Record<CaseId, readonly string[]>> = {
   iridium: ['miss', 'speed', 'angle', 'radius', 'sigma', 'nsigma', 'why', 'times'],
-  cz5b: ['area', 'b', 'early', 'late', 'actual', 'error', 'broadside', 'why'],
+  // `storm` (T03b, the research's B5): the re-entry sooner through a geomagnetic storm
+  cz5b: ['area', 'b', 'early', 'late', 'actual', 'error', 'broadside', 'storm', 'why'],
   theos2: ['required', 'j2', 'height', 'reach', 'lst', 'why'],
 };
 

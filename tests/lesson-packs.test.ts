@@ -1,0 +1,439 @@
+/**
+ * The lesson packs the app ships (roadmap T03; the T03 research's packs B, A,
+ * P, R and S): the committed files under public/lessons/packs/ are what
+ * their sources write, they read with no issue at the version their lessons
+ * need, every text is in all three scripts, every code is of a known kind,
+ * and no pack lesson takes a built-in id. Then each point-mass lesson's
+ * worked solution is flown headless and passes, and a wrong answer or a wrong
+ * flight fails (the tests/lessons.test.ts pattern). None of these missions is
+ * in the fleet matrix exactly as the lesson sets it (a window time, a
+ * payload, an orbit the matrix does not fly), so each is flown here before it
+ * ships. The six-DOF lessons (S1–S3) are flown in
+ * tests/heavy/lesson-packs-sixdof.test.ts, and the design lessons (B6, P5,
+ * P6, R6, S6; T03b) worked in tests/lesson-packs-design.test.ts.
+ *
+ * Tolerances: the lessons' own, from the research (fixed before any flight)
+ * except two, set after seeing the flight and said where they are used —
+ * P1's period (5 min, so both the computed and the textbook sidereal-day
+ * answers pass) and S2's navigation bound (heavy test). R2's graded perigee
+ * speed (±0.02 km/s) is not in the research's R2: the pack's first version
+ * added it. R1's period (0.2 min) and R2's semi-major axis (10 km) were
+ * widened, and R2's perigee speed dropped, for a while, when the grader read
+ * the orbit at the frame it graded on; since the orbit is read at the grading
+ * end (src/lessons/measures.ts, T03 review) they are back as they were (the
+ * last describe below holds them graded late).
+ */
+import { describe, expect, it } from 'vitest';
+import { Simulation } from '../src/physics/simulation';
+import { launchWindows } from '../src/physics/mission';
+import { siteById } from '../src/data/sites';
+import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS } from '../src/lessons/catalog';
+import { lessonConfig } from '../src/lessons/config';
+import { flightEnded, gradeLesson, type LessonAnswers } from '../src/lessons/grader';
+import { MEASURES } from '../src/lessons/measures';
+import { lessonFileVersion } from '../src/lessons/lesson-file';
+import { BUNDLED_PACKS, packLessons, packPath, readPackText, type ResolvedPack } from '../src/lessons/packs';
+import { PACK_SOURCES, packFileText } from '../src/lessons/pack-sources';
+import { precacheable } from '../src/pwa/manifest';
+import { allLessons } from '../src/lessons/catalog';
+import { flightRecord } from '../src/lessons/progress';
+import { checkRecord } from '../src/lessons/recheck';
+import { appBuildId } from '../src/build-info';
+import { CURRICULUM_KINDS, isCaseLesson, isDesignLesson, isFlightLesson, type CaseLesson, type Lesson, type LocalText } from '../src/lessons/types';
+import { gradeCaseLesson } from '../src/lessons/case-grader';
+import { caseKey, caseWorksheet, cz5bNumbers, cz5bStormNumbers } from '../src/worksheets/cases';
+import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
+import HISTORY from '../src/data/solar-daily.json';
+import { setLang } from '../src/i18n';
+import type { MissionState } from '../src/config/mission-file';
+
+const FILES = import.meta.glob('../public/lessons/packs/*.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const SRC = import.meta.glob('../src/**/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+const fileText = (id: string): string => {
+  const text = FILES[`../public/${packPath(id)}`];
+  if (text === undefined) throw new Error(`no file for ${id}`);
+  return text;
+};
+const PACKS: ResolvedPack[] = BUNDLED_PACKS.map((id) => {
+  const pack = readPackText(fileText(id), packPath(id));
+  if (!pack) throw new Error(`${id} is not a pack`);
+  return pack;
+});
+
+/** A pack lesson as the app reads it: from the committed file. */
+const lesson = (id: string): Lesson => {
+  const l = packLessons(PACKS).find((x) => x.id === id);
+  if (!l || !isFlightLesson(l)) throw new Error(`no flight lesson ${id}`);
+  return l;
+};
+
+/** Fly a lesson's mission, with the student's edits, until it ends for grading. */
+function fly(l: Lesson, edit?: (s: MissionState) => void, limit = 200_000): Simulation {
+  const sim = new Simulation(lessonConfig(l.mission, edit), { headless: true });
+  let guard = 0;
+  while (!flightEnded(l, sim) && !sim.done && sim.state.t < limit && guard++ < 5_000_000) sim.step(sim.suggestedDt());
+  return sim;
+}
+const why = (l: Lesson, sim: Simulation, answers: LessonAnswers) =>
+  `${JSON.stringify(gradeLesson(l, sim, answers))}\n${sim.events.map((e) => `${e.t.toFixed(0)} ${e.key}`).join('\n')}`;
+/** The next window, as the setup panel's "Next window" sets it. */
+const nextWindow = (s: MissionState) => { s.launchTime = launchWindows(s.orbit, siteById(s.siteId), s.launchTime, 1)[0].time; };
+
+// what a student types, worked from the numbers on screen
+const MU = 398600.4418, R = 6378.137;
+/**
+ * The reached heights as the event log's "Target orbit achieved" line gives
+ * them, in whole km: the moment of insertion, where the flight is graded.
+ * Later the osculating heights on screen swing by tens of km under J₂ (a GTO's
+ * a by ±27 km over an orbit, measured), which is why the briefs send students
+ * to this line.
+ */
+const heights = (sim: Simulation) => {
+  const e = sim.events.find((x) => x.key === 'evt.targetOrbit');
+  if (!e) throw new Error('no target orbit');
+  return { hp: Number(e.params!.pe), ha: Number(e.params!.ap) };
+};
+const circle = (h: number) => {
+  const r = R + h;
+  return { speed: Math.sqrt(MU / r), period: 2 * Math.PI * Math.sqrt(r ** 3 / MU) / 60 };
+};
+const ellipse = (hp: number, ha: number) => {
+  const rp = R + hp, ra = R + ha, a = (rp + ra) / 2;
+  return { a, e: (ra - rp) / (ra + rp), period: 2 * Math.PI * Math.sqrt(a ** 3 / MU) / 60, vp: Math.sqrt(MU * (2 / rp - 1 / a)) };
+};
+
+const CYRILLIC = /\p{Script=Cyrillic}/u;
+const THAI = /\p{Script=Thai}/u;
+const scripts = (text: LocalText, where: string) => {
+  expect(text.ru, `${where}: ${text.en}`).toMatch(CYRILLIC);
+  expect(text.th, `${where}: ${text.en}`).toMatch(THAI);
+  // the app writes Thai numbers with Arabic numerals (tests/i18n.test.ts)
+  expect(text.th, where).not.toMatch(/[๐-๙]/);
+};
+
+describe('the bundled lesson packs', () => {
+  it('are the five the research proposes, in its order, each file what its source writes', () => {
+    expect(BUNDLED_PACKS).toEqual(Object.keys(PACK_SOURCES));
+    expect(BUNDLED_PACKS).toEqual(['ipst-basic', 'ipst-earth-space', 'ipst-physics', 'rtaf-academy', 'ru-24-05-06']);
+    expect(Object.keys(FILES).sort()).toEqual(BUNDLED_PACKS.map((id) => `../public/${packPath(id)}`).sort());
+    for (const id of BUNDLED_PACKS) {
+      const written = packFileText(id);
+      expect(written.issues, id).toEqual([]);
+      // a difference here: run `node --experimental-strip-types scripts/lesson-packs.ts`
+      expect(fileText(id), id).toBe(written.text);
+    }
+  });
+
+  it('read with no issue at all, at the version their lessons need, as drafts awaiting review', () => {
+    for (const p of PACKS) {
+      expect(p.issues, p.pack.id).toEqual([]);
+      expect(p.pack.reviewed, p.pack.id).toBe(false);
+      const doc = JSON.parse(fileText(p.pack.id)) as { version: number };
+      // no version of its own (map §4.3): the lessons decide — catalogue flights 1, and (T03b) a design lesson 3
+      expect(doc.version, p.pack.id).toBe(lessonFileVersion(p.lessons));
+      expect(doc.version, p.pack.id).toBe(p.lessons.some(isDesignLesson) ? 3 : 1);
+    }
+  });
+
+  it('carry the research\'s lessons: B1–B6, A1–A4, P1–P3, P5 and P6, R1–R3, R5 and R6, S1–S6', () => {
+    expect(PACKS.map((p) => [p.pack.id, p.items.map((i) => i.lesson.id)])).toEqual([
+      ['ipst-basic', ['ipst-b-forces', 'ipst-b-falling-around', 'orbit-payload', 'case-theos2', 'ipst-b-solar-storms', 'ipst-b-thaicom-link']],
+      ['ipst-earth-space', ['ipst-a-kepler3', 'ipst-a-sun-clock', 'case-theos2', 'adv-history']],
+      ['ipst-physics', ['ipst-p-geo', 'ipst-p-starlink', 'orbit-payload', 'fail-engine-out', 'ipst-p-magnetorquer', 'ipst-p-solar-power']],
+      ['rtaf-academy', ['rtaf-napa1-sso', 'rtaf-elements', 'ctl-inspector', 'ctl-margins', 'adv-docking', 'rtaf-6u-adcs']],
+      ['ru-24-05-06', ['ru-soyuz-margins', 'ru-bins-astro', 'ru-fdir-dus', 'guid-monte-carlo', 'case-cz5b', 'case-iridium', 'ru-ka-oss']],
+    ]);
+  });
+
+  it('never take a built-in lesson\'s id, nor one another\'s, and number their own lessons track by pack', () => {
+    const builtin = new Set([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
+    const own = PACKS.flatMap((p) => p.lessons.map((l) => l.id));
+    expect(own.filter((id) => builtin.has(id))).toEqual([]);
+    expect(new Set(own).size).toBe(own.length);
+    PACKS.forEach((p, i) => {
+      expect(p.lessons.map((l) => [l.track, l.order]), p.pack.id).toEqual(p.lessons.map((_, k) => [11 + i, k + 1]));
+    });
+    // a reference is the built-in lesson itself
+    for (const p of PACKS) for (const item of p.items.filter((x) => x.reference)) expect(builtin.has(item.lesson.id)).toBe(true);
+  });
+
+  it('give every lesson, own or reused, at least one code of a known kind, and every reference a note', () => {
+    for (const p of PACKS) for (const item of p.items) {
+      expect(item.curriculum.length, `${p.pack.id}/${item.lesson.id}`).toBeGreaterThan(0);
+      for (const c of item.curriculum) expect(CURRICULUM_KINDS).toContain(c.kind);
+      if (item.reference) expect(item.note, `${p.pack.id}/${item.lesson.id}`).toBeDefined();
+    }
+  });
+
+  it('write every text in Russian and Thai script, with three hints to each lesson', () => {
+    for (const p of PACKS) {
+      const { title, audience, framework, description } = p.pack;
+      for (const [k, text] of Object.entries({ title, audience, framework, description: description! })) scripts(text, `${p.pack.id}.${k}`);
+      for (const item of p.items) if (item.note) scripts(item.note, `${p.pack.id}/${item.lesson.id}.note`);
+      for (const l of p.lessons) {
+        expect(l.hints.length, l.id).toBe(3);
+        const texts = [l.title, l.brief, ...(l.debrief ? [l.debrief] : []), ...l.hints,
+          ...l.criteria.flatMap((c) => [...(c.label ? [c.label] : []), ...('prompt' in c ? [c.prompt] : [])])];
+        texts.forEach((text, k) => scripts(text, `${l.id}[${k}]`));
+      }
+    }
+  });
+
+  it('are precached for offline use, and kept out of the app\'s own bundle', () => {
+    for (const id of BUNDLED_PACKS) expect(precacheable(packPath(id)), id).toBe(true);
+    // the sources are for scripts/lesson-packs.ts and the tests: no app module imports them
+    const importers = Object.entries(SRC)
+      .filter(([path]) => !path.includes('/pack-sources/'))
+      .filter(([, text]) => /from\s+['"][^'"]*pack-sources/.test(text))
+      .map(([path]) => path);
+    expect(importers).toEqual([]);
+  });
+});
+
+describe('each point-mass pack lesson, flown as solved and flown wrong', () => {
+  it('B1 forces on a rocket: the peak acceleration and the time of max-Q read off the flight pass; 1 g and MECO\'s time fail', () => {
+    const l = lesson('ipst-b-forces');
+    const sim = fly(l);
+    const peak = MEASURES.maxG.read(sim)!;
+    const maxQ = MEASURES.maxQTime.read(sim)!;
+    // read off the chart and the event log, to a chart's precision
+    const read = { 'peak-g': Math.round(peak * 10) / 10, 'maxq-time': Math.round(maxQ) };
+    expect(gradeLesson(l, sim, read).verdict, why(l, sim, read)).toBe('pass');
+    expect(peak).toBeGreaterThan(4);
+    expect(peak).toBeLessThan(5);
+    expect(gradeLesson(l, sim, { ...read, 'peak-g': 1 }).verdict).toBe('fail');
+    const meco = sim.events.find((e) => e.key === 'evt.meco')!.t;
+    expect(gradeLesson(l, sim, { ...read, 'maxq-time': meco }).verdict).toBe('fail');
+  });
+
+  it('B2 falling around the Earth: v = √(GM/r) and T = 2πr/v for the reached height pass; v = √(g₀r) fails', () => {
+    const l = lesson('ipst-b-falling-around');
+    const sim = fly(l);
+    const { hp, ha } = heights(sim);
+    const c = circle((hp + ha) / 2);
+    expect(gradeLesson(l, sim, c).verdict, why(l, sim, c)).toBe('pass');
+    // surface gravity taken for the gravity up there
+    const wrong = { ...c, speed: Math.sqrt(9.80665e-3 * (R + (hp + ha) / 2)) };
+    expect(gradeLesson(l, sim, wrong).verdict).toBe('fail');
+  });
+
+  it('A1 Kepler\'s third law: a, T and e from the reached heights pass; a from the planned 250 × 35 786 km fails, as the brief warns', () => {
+    const l = lesson('ipst-a-kepler3');
+    const sim = fly(l);
+    const { hp, ha } = heights(sim);
+    const o = ellipse(hp, ha);
+    const solved = { a: o.a, period: o.period, e: o.e };
+    expect(gradeLesson(l, sim, solved).verdict, why(l, sim, solved)).toBe('pass');
+    const planned = ellipse(250, 35786);
+    expect(gradeLesson(l, sim, { ...solved, a: planned.a }).verdict).toBe('fail');
+    // the Earth's radius forgotten
+    expect(gradeLesson(l, sim, { ...solved, a: (hp + ha) / 2 }).verdict).toBe('fail');
+  });
+
+  it('A2 the Sun\'s time: the next window passes with the period from Kepler; the panel\'s own time misses the 10:30 plane', () => {
+    const l = lesson('ipst-a-sun-clock');
+    const solved = fly(l, nextWindow);
+    const answer = { period: circle(600).period };
+    expect(gradeLesson(l, solved, answer).verdict, why(l, solved, answer)).toBe('pass');
+    const wrong = fly(l);
+    const g = gradeLesson(l, wrong, answer);
+    expect(g.verdict).toBe('fail');
+    expect(g.criteria.find((c) => c.id === 'node')!.state).toBe('fail');
+    expect(g.lockBroken).toEqual([]);
+  });
+
+  it('P1 the geostationary orbit: the period and speed computed for the reached height pass, and so do the textbook 1 436 min and 3.07 km/s; 24 hours fails', () => {
+    const l = lesson('ipst-p-geo');
+    const sim = fly(l);
+    const { hp, ha } = heights(sim);
+    const c = circle((hp + ha) / 2);
+    expect(gradeLesson(l, sim, c).verdict, why(l, sim, c)).toBe('pass');
+    expect(MEASURES['orbit.inclination'].read(sim)!).toBeLessThan(0.5);
+    // the tolerance (5 min) was set after this flight was seen to stop about 80 km short of the
+    // geostationary height (1 432 min): the sidereal day passes, the solar day does not
+    const textbook = { period: 1436.07, speed: 3.0747 };
+    expect(gradeLesson(l, sim, textbook).verdict, why(l, sim, textbook)).toBe('pass');
+    expect(gradeLesson(l, sim, { ...textbook, period: 1440 }).verdict).toBe('fail');
+  });
+
+  it('P2 gravity as the centripetal force: v and T for the reached shell pass; surface gravity fails', () => {
+    const l = lesson('ipst-p-starlink');
+    const sim = fly(l);
+    const { hp, ha } = heights(sim);
+    const c = circle((hp + ha) / 2);
+    expect(gradeLesson(l, sim, c).verdict, why(l, sim, c)).toBe('pass');
+    const wrong = { ...c, speed: Math.sqrt(9.80665e-3 * (R + (hp + ha) / 2)) };
+    expect(gradeLesson(l, sim, wrong).verdict).toBe('fail');
+  });
+
+  it('R1 the sun-synchronous inclination: J₂\'s cos i at 600 km and the period pass in the window; the prograde mirror and the panel\'s time fail', () => {
+    const l = lesson('rtaf-napa1-sso');
+    const solved = fly(l, nextWindow);
+    // what a cadet computes from the hint's constants
+    const a = R + 600, rate = 2 * Math.PI / (365.2422 * 86400), j2 = 1.0826e-3;
+    const cosi = -2 * rate * a ** 3.5 / (3 * j2 * R ** 2 * Math.sqrt(MU));
+    const answers = { inclination: Math.acos(cosi) * 180 / Math.PI, period: circle(600).period };
+    expect(answers.inclination).toBeCloseTo(97.79, 2);
+    expect(gradeLesson(l, solved, answers).verdict, why(l, solved, answers)).toBe('pass');
+    expect(gradeLesson(l, solved, { ...answers, inclination: 180 - answers.inclination }).verdict).toBe('fail');
+    const wrong = gradeLesson(l, fly(l), answers);
+    expect(wrong.verdict).toBe('fail');
+    expect(wrong.criteria.find((c) => c.id === 'node')!.state).toBe('fail');
+  });
+
+  it('R2 elements and vis-viva: a, e, T and the perigee speed from the reached heights pass; planned heights and the circular speed fail', () => {
+    const l = lesson('rtaf-elements');
+    const sim = fly(l);
+    const { hp, ha } = heights(sim);
+    const o = ellipse(hp, ha);
+    const solved = { a: o.a, e: o.e, period: o.period, speed: o.vp };
+    expect(gradeLesson(l, sim, solved).verdict, why(l, sim, solved)).toBe('pass');
+    expect(gradeLesson(l, sim, { ...solved, a: ellipse(250, 35786).a }).verdict).toBe('fail');
+    expect(gradeLesson(l, sim, { ...solved, speed: Math.sqrt(MU / (R + hp)) }).verdict).toBe('fail');
+  });
+});
+
+/**
+ * B5 (T03b): the pack's own case lesson, on the CZ-5B sheet with its new
+ * space-weather question (src/worksheets/cases.ts `cz5bStormNumbers`), graded
+ * by the sheet's own key and tolerances as the built-in case lessons are
+ * (tests/case-lessons.test.ts). Exact constructions, fixed before the run.
+ */
+describe('the pack\'s case lesson', () => {
+  const activity = measuredActivity(HISTORY as SolarDaily, null).series;
+  const at = new Date('2026-10-01T12:00:00Z');
+  {
+    const g = globalThis as { document?: unknown };
+    if (!g.document) g.document = { documentElement: {} };
+  }
+  const b5 = (): CaseLesson => {
+    const l = packLessons(PACKS).find((x) => x.id === 'ipst-b-solar-storms');
+    if (!l || !isCaseLesson(l)) throw new Error('no case lesson ipst-b-solar-storms');
+    return l;
+  };
+
+  it('B5 solar storms: the CZ-5B sheet\'s drag, window and storm questions, passed on its key; the storm\'s own prediction, or the window\'s width, fails', () => {
+    setLang('en');
+    const l = b5();
+    expect([l.case, l.track, l.order, l.criteria.map((c) => c.item)]).toEqual(['cz5b', 11, 3, ['area', 'b', 'early', 'late', 'storm', 'why']]);
+    const key = caseKey(caseWorksheet('cz5b', { lang: 'en', generatedAt: at, activity, theos2: null })!);
+    const exact = Object.fromEntries(l.criteria.map((c) => [c.id, key[c.item].value]));
+    expect(gradeCaseLesson(l, key, exact).verdict).toBe('pass');
+    // the storm's answer from the two predictions in the data, as printed to 0.01 day
+    const w = cz5bStormNumbers();
+    expect(gradeCaseLesson(l, key, { ...exact, storm: Number(w.quiet.toFixed(2)) - Number(w.storm.toFixed(2)) }).verdict).toBe('pass');
+    expect(gradeCaseLesson(l, key, { ...exact, storm: w.storm }).verdict).toBe('fail');
+    const left = cz5bNumbers(activity).left;
+    expect(gradeCaseLesson(l, key, { ...exact, storm: 0.4 * left }).verdict).toBe('fail');
+  });
+
+  it('B5 gives in its task and hints no number the key holds, in English or Russian', () => {
+    const l = b5();
+    const told = [l.brief, ...l.hints].flatMap((x) => [x.en, x.ru ?? '', x.th ?? '']).join(' ');
+    for (const lang of ['en', 'ru'] as const) {
+      setLang(lang);
+      const sheet = caseWorksheet('cz5b', { lang, generatedAt: at, activity, theos2: null })!;
+      for (const item of sheet.sections[1].items) {
+        if (item.kind !== 'number' || !l.criteria.some((c) => c.item === item.id)) continue;
+        const figure = item.answer.text.split(' ')[0];
+        expect(told, `${lang}: ${item.id} = ${figure}`).not.toContain(figure);
+      }
+    }
+    setLang('en');
+  });
+});
+
+describe('the instructor\'s check of a pack lesson', () => {
+  it('re-flies a pack lesson\'s record from the packs\' own lessons, with no lesson file opened, and matches', () => {
+    // the check page hands the packs' lessons to the re-check (src/ui/lessons/lesson-mode.ts `showCheck`)
+    const l = lesson('ipst-a-kepler3');
+    const sim = fly(l);
+    const { hp, ha } = heights(sim);
+    const o = ellipse(hp, ha);
+    const answers = { a: o.a, period: o.period, e: o.e };
+    const grade = gradeLesson(l, sim, answers);
+    expect(grade.verdict).toBe('pass');
+    const record = flightRecord({ at: new Date(0), grade, answers, hintsShown: 0, cfg: sim.cfg, clock: grade.t, actions: sim.actions, app: appBuildId() });
+    const job = { file: 0, student: null, lessonId: l.id, which: ['passed' as const], record };
+    const check = checkRecord(job, allLessons(packLessons(PACKS)));
+    expect(check.status, JSON.stringify(check)).toBe('match');
+    expect(check.recheckedVerdict).toBe('pass');
+    // without the packs the lesson is not known
+    expect(checkRecord(job, allLessons()).reason).toBe('noLesson');
+  });
+});
+
+/**
+ * A live page grades a flight at the first frame that shows its end
+ * (src/lessons/grader.ts `gradeShown`). Under time warp the frame can come
+ * minutes late, and under J₂ the osculating elements swing with the point of
+ * the orbit (measured: a GTO's a by +16 km 300 s after insertion, 24 334-24 379
+ * km over an orbit; an SSO's period 96.33-96.72 min). The orbit measures read
+ * the state the flight's end event left it in (src/lessons/measures.ts; T03
+ * review), so the worked answers pass at the research's tolerances however
+ * late they are graded, and the planned orbit fails however late
+ * (tests/lesson-grading-end.test.ts holds the same for built-in lessons and
+ * for a page flown live).
+ */
+describe('each worked solution, graded as late as a warped page may grade it', () => {
+  /** Grade the flight again after it has coasted on `lag` s past its end, as a late frame would. */
+  function lateVerdicts(l: Lesson, sim: Simulation, answers: LessonAnswers, lags: readonly number[]): Array<[number, string]> {
+    const t0 = sim.state.t;
+    return lags.map((lag) => {
+      while (sim.state.t < t0 + lag) sim.step(Math.min(sim.suggestedDt(), t0 + lag - sim.state.t + 1e-9));
+      return [lag, gradeLesson(l, sim, answers, true).verdict];
+    });
+  }
+  const pass = (lags: readonly number[]) => lags.map((lag) => [lag, 'pass']);
+
+  it('12.1 and 14.2 (a GTO): up to 1 000 s late', () => {
+    const lags = [0, 30, 120, 300, 600, 1000];
+    for (const id of ['ipst-a-kepler3', 'rtaf-elements']) {
+      const l = lesson(id);
+      const sim = fly(l);
+      const { hp, ha } = heights(sim);
+      const o = ellipse(hp, ha);
+      expect(lateVerdicts(l, sim, { a: o.a, e: o.e, period: o.period, speed: o.vp }, lags), id).toEqual(pass(lags));
+    }
+  });
+
+  /**
+   * The other side of grading a late frame (review, 2026-10-01). When the
+   * orbit measures read the frame the page graded on, the planned 250 × 35 786
+   * km orbit, 34 km above the reached one in a at insertion, passed graded
+   * 145–710 s late in 12.1 and 240–585 s late in 14.2 (measured at 5 s steps),
+   * as the GTO's osculating a rose by up to 17 km after perigee. This case held
+   * that limit (fail at the end, pass 300 s late) so that it would fail the day
+   * the grader read the orbit at the grading end; it did, and now holds the
+   * planned orbit failing at every 5 s across those windows and well past them.
+   */
+  it('12.1 and 14.2: the planned orbit fails at the end and however late it is graded', () => {
+    const p = ellipse(250, 35786);
+    const lags = Array.from({ length: 181 }, (_, k) => k * 5);
+    for (const id of ['ipst-a-kepler3', 'rtaf-elements']) {
+      const l = lesson(id);
+      const sim = fly(l);
+      const o = ellipse(heights(sim).hp, heights(sim).ha);
+      expect(lateVerdicts(l, sim, { a: p.a, e: p.e, period: p.period, speed: o.vp }, lags), id).toEqual(lags.map((lag) => [lag, 'fail']));
+    }
+  });
+
+  it('11.2, 12.2, 13.2 and 14.1 (circles): anywhere on the next revolution', () => {
+    const lags = Array.from({ length: 11 }, (_, k) => k * 600);
+    const cases: Array<[string, ((s: MissionState) => void) | undefined, (sim: Simulation) => LessonAnswers]> = [
+      ['ipst-b-falling-around', undefined, (sim) => { const { hp, ha } = heights(sim); return circle((hp + ha) / 2); }],
+      ['ipst-a-sun-clock', nextWindow, () => ({ period: circle(600).period })],
+      ['ipst-p-starlink', undefined, (sim) => { const { hp, ha } = heights(sim); return circle((hp + ha) / 2); }],
+      ['rtaf-napa1-sso', nextWindow, () => {
+        const a = R + 600, rate = 2 * Math.PI / (365.2422 * 86400);
+        return { inclination: Math.acos(-2 * rate * a ** 3.5 / (3 * 1.0826e-3 * R ** 2 * Math.sqrt(MU))) * 180 / Math.PI, period: circle(600).period };
+      }],
+    ];
+    for (const [id, edit, answers] of cases) {
+      const l = lesson(id);
+      const sim = fly(l, edit);
+      expect(lateVerdicts(l, sim, answers(sim), lags), id).toEqual(pass(lags));
+    }
+  });
+});

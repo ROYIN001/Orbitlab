@@ -11,8 +11,10 @@
  *
  * FAIRING JETTISON. Eight vehicles carry a `fairing.sepTime`, the operator's own
  * published callout, because their operators publish one and fly it: Soyuz-2.1a
- * 153.3 s and 2.1b 157 s, Ariane 64 200 s, Vega-C 220 s, Long March 2D 220 s, Long
- * March 3B/E 215 s, H-IIA 202 250 s, Vostok-K 156 s. The rest stay on the physical
+ * crewed 153.3 s and cargo 183.2 s, 2.1b 208.4 s, Ariane 64 200 s, Vega-C 220 s, Long
+ * March 2D 220 s, Long March 3B/E 215 s, H-IIA 202 250 s, Vostok-K 156 s. Proton-M and Angara-A5 carry a
+ * `fairing.sepAfterIgnition`: Khrunichev drops it ten seconds into third-stage
+ * flight. The rest stay on the physical
  * free-molecular-heating placard, and the altitude floor applies to both, so a
  * trajectory still deep in the atmosphere at its published time does not shed
  * the fairing there. See `FairingSpec.sepTime` in src/types.ts for why a
@@ -58,35 +60,62 @@ const soyuzBoosters = (cutoff: number): BoosterGroupSpec[] => [boosterSpec('blok
   { sepDelay: 0.4, conicalTop: true, color: '#c9c7bd', thrustSteps: [{ t: 112, level: 0.81 }, { t: cutoff, level: 0 }] })];
 
 /**
- * Soyuz-2.1a's stored pitch programme: [s after liftoff, pitch above the local
- * horizon on the launch azimuth, deg], flown open-loop through the strap-on and
- * core phases and handed to the closed loop at its last point, T+285.1 s, as
- * Blok I lights (`GuidanceParams.pitchProgram`). The R-7 flies its first two
- * stages on a programme computed before flight (Khorolsky 2011; SoyCOM §8.1.2),
- * not on a free gravity turn.
+ * Soyuz-2.1a's stored pitch programme for a crewed launch: [s after liftoff,
+ * pitch above the local horizon on the launch azimuth, deg], flown open-loop
+ * through the strap-on and core phases and the hot staging, and handed to the
+ * closed loop at its last point, T+287.7 s, as the core separates
+ * (`GuidanceParams.pitchProgram`). The R-7 flies its first two stages on a
+ * programme computed before flight (Khorolsky 2011; SoyCOM §8.1.2), not on a
+ * free gravity turn. Every payload flies it but Progress MS, which has its
+ * own (SOYUZ_21A_CARGO_PROGRAMME).
  *
  * - T+0–5 s vertical; T+5–96 s the shape of Starsem's typical Soyuz programme
  *   (Soyuz User's Manual ST-GTD-SUM-01 Issue 3, 2001, Fig. 2-4) advanced by
- *   10 s, its departure from the vertical scaled by 1.06. Its own altitude
- *   curve does not agree with its pitch (rep-5, docs/VALIDATION.md), so only
- *   the shape is used; flown as a rigid body it holds α between −1.4° and
- *   +0.6° through max Q (35.7 kPa at T+63 s, SoyCOM's 3 700 kgf/m² is 36.3).
+ *   10 s, its departure from the vertical scaled by 1.06 and its high-q part
+ *   flown along the path (2026-10-01, the 4.11 m fairing), then scaled by a
+ *   further 1.028 for the crewed payload section's 3.0 m fairing. Its own
+ *   altitude curve does not agree with its pitch (rep-5, docs/VALIDATION.md),
+ *   so only the shape is used; flown as a rigid body it holds α within 1.5°
+ *   through max Q (37.2 kPa at T+62 s, docs/VALIDATION.md §3).
  * - T+96–118 s, 5° below the path as the strap-ons tail off; then 7° down over
  *   10 s in thin air after they leave, Starsem's post-staging pitch-down.
- * - The core: linear to 16° at T+210 s and 10° at T+285 s.
+ * - The core: linear to 17.28° at T+210 s and 11.28° at T+285 s, held through
+ *   the hot staging to the separation.
  *
  * Fitted, not published (docs/VALIDATION.md, "Fitted and derived values"):
- * the scale 1.06 to the fairing's 79 km at T+153.3 s and the core's 16° / 10°
- * to its 157 km at separation (russianspaceweb, Soyuz MS-16 to MS-28); the
- * advance, the 5° and the 7° by hand against the same flights. Flown calm on
- * the crewed ISS mission: 78.8 km at T+153.3 s, 157.2 km at T+287.7 s, a
- * 199.9 × 239.5 km insertion; the strap-ons come down ~340 km downrange
- * (flown: ~350 km) and the core 1 376 km (flown: ~1 550 km).
+ * the scale to the fairing's 79 km at T+153.3 s and the core's two pitches,
+ * shifted together, to its 157 km at separation (russianspaceweb, Soyuz MS-16
+ * to MS-28); the advance, the 5° and the 7° by hand against the same flights.
+ * Flown calm on the crewed ISS mission: 79.0 km at T+153.3 s and 157.0 km at
+ * T+287.7 s in six-DOF, 77.8 and 153.1 km as a point mass.
  */
 const SOYUZ_21A_PROGRAMME: [number, number][] = [
-  [0, 90], [5, 90], [6, 89.85], [8.5, 89.48], [11, 88.92], [13.5, 88.07], [16, 87.2], [18.5, 86.3], [21, 85.26], [23.5, 84.02],
-  [26, 82.77], [28.5, 81.53], [31, 80.14], [36, 76.96], [41, 73.68], [46, 69.97], [51, 66.3], [56, 62.8], [61, 59.32], [66, 55.93],
-  [71, 52.66], [76, 49.85], [81, 47.1], [86, 44.61], [91, 42.2], [96, 40.14], [118, 35.14], [128, 28.14], [210, 16], [285, 10], [285.1, 10],
+  [0, 90], [5, 90], [6, 89.85], [8.5, 89.47], [11, 88.89], [13.5, 88.02], [16, 87.12], [18.5, 86.2], [21, 85.13], [23.5, 83.85],
+  [26, 82.57], [28.5, 81.29], [31, 79.86], [36, 76.59], [41, 73.22], [46, 69.4], [51, 65.63], [56, 62.03], [61, 58.45], [66, 54.97],
+  [71, 51.6], [76, 48.71], [81, 45.89], [86, 43.32], [91, 40.85], [96, 38.73], [118, 33.73], [128, 26.73], [210, 17.28], [285, 11.28], [287.7, 11.28],
+];
+/**
+ * Soyuz-2.1a's stored pitch programme for a Progress MS cargo flight
+ * (`cargoShipProfile`; every other payload flies SOYUZ_21A_PROGRAMME, above).
+ * The same shape, its departure from the vertical scaled by a further 1.05
+ * over the crewed one's, and its own core: linear to 15.11° at T+210 s and
+ * 9.11° at T+285 s, held to the separation at T+287.4 s.
+ *
+ * Progress flies flatter and faster than a crew (russianspaceweb quoting
+ * Roscosmos: about 43 km at strap-on separation, 91 km at the fairing's
+ * T+183.2 s, 143 km and about 4 km/s at the core's separation; a crew 45, 79
+ * and 157 km). The core's two pitches, shifted together, are fitted to the
+ * 143 km (143.0 km in six-DOF, 138.6 km as a point mass). The 1.05 is set by
+ * hand, the flattest strap-on phase whose six-DOF max Q (37.9 kPa) stays under
+ * the load-relief placard, where the model would throttle an R-7 that never
+ * throttles for it: the flown 43 and 91 km need 1.14–1.20 and 38.3–38.6 kPa
+ * here. So this flight comes out 3.7 km high at strap-on separation (46.7 km)
+ * and 7 km high at the fairing (98.0 km), recorded in docs/VALIDATION.md §3.
+ */
+const SOYUZ_21A_CARGO_PROGRAMME: [number, number][] = [
+  [0, 90], [5, 90], [6, 89.84], [8.5, 89.44], [11, 88.83], [13.5, 87.92], [16, 86.98], [18.5, 86.01], [21, 84.89], [23.5, 83.54],
+  [26, 82.2], [28.5, 80.85], [31, 79.35], [36, 75.92], [41, 72.38], [46, 68.37], [51, 64.41], [56, 60.63], [61, 56.87], [66, 53.22],
+  [71, 49.68], [76, 46.65], [81, 43.68], [86, 40.99], [91, 38.39], [96, 36.17], [118, 31.17], [128, 24.17], [210, 15.11], [285, 9.11], [287.4, 9.11],
 ];
 /** Briz-M, on Proton-M and Angara-A5. */
 const briz = (): StageSpec => stageSpec('brizm', { restartable: true, sepDelay: 2, ignitionDelay: 3, color: '#d8d8d8' });
@@ -147,39 +176,59 @@ export const VEHICLES: VehicleSpec[] = [
     // published site; see RATING_ORBITS above and audit item B26.
     // https://en.wikipedia.org/wiki/Soyuz-2_(rocket)
     height: 46.3, payloadLEO: 7430, payloadGTO: 0,
-    // Soyuz publishes a fairing callout and flies it: T+153.3 s on the crewed
-    // profile (MS-21 and MS-25 as flown, 153.33 s; T+157 s on Soyuz-FG, which this
-    // was until 2026-10-01). On the heating placard alone this trajectory shed it at T+176 s,
-    // ~12 % late, which was one of the recorded disagreements with the published
-    // timeline. See `FairingSpec.sepTime` in src/types.ts for why the published
-    // TIME is modelled rather than a back-solved heat-flux placard.
-    // The 4.11 m fairing, 11.43 m long with its own adapter cone down to Blok I
-    // (TASS/RIA: the 4.11 × 11.43 m payload unit), for the crewed and the cargo
-    // flights alike; with the escape tower on its nose the head of a crewed
-    // stack is 15.59 m, and the stack 46.3–51.4 m (owner's figures,
-    // 2026-09-25): 46.85 m drawn, 51.0 m with the tower. It was drawn and flown
-    // at 3.7 × 10.1 m on a 1.7 m adapter of its own.
-    // The crewed fairing goes at 79 km (russianspaceweb, Soyuz MS-16 to MS-28),
-    // which the stored programme reaches (78.8 km, SOYUZ_21A_PROGRAMME below);
-    // the floor is set below it, at 70 km (q under 0.3 kPa), so that the
-    // published time and not the fitted height decides when it goes.
-    fairing: fairingSpec('soyuz21a', { sepAltitude: 70e3, sepTime: 153.3, color: '#e8e8e8' }),
+    // Two payload sections to the station, each with its own fairing and
+    // cyclogram (src/data/parts.ts): the cargo one, 11S517A2 (Progress MS),
+    // is the vehicle's own and flies every payload but a crew; a crewed launch
+    // flies the crewed one, 11S517A3 (Soyuz MS), with its escape tower
+    // (`crewedProfile` below), and Progress MS its own programme
+    // (`cargoShipProfile`). Both fairings are 3.0 m; until 2026-10-01 both
+    // were flown as the commercial flights' 4.11 × 11.43 m ST fairing.
+    // Soyuz publishes its fairing callouts and flies them. Progress drops its
+    // fairing at T+183.2 s (183.06–183.52 s on Progress MS-15 to MS-34; the
+    // MS-19 cyclogram's 183.079 s), at about 91 km (russianspaceweb quoting
+    // Roscosmos); it went after the core until Progress MS-06, and was moved
+    // into the core's burn from MS-07 to rehearse the crewed ascent. The floor,
+    // 70 km, is below it, so that the published time and not the fitted
+    // height decides when it goes. See `FairingSpec.sepTime` in src/types.ts
+    // for why the published TIME is modelled rather than a heating placard.
+    fairing: fairingSpec('soyuz21a', { sepAltitude: 70e3, sepTime: 183.2, color: '#e8e8e8' }),
     // A crewed launch carries the escape tower and the fairing's abort motors (G06).
     escapeSystem: 'soyuz',
+    // The crewed launch's payload section and cyclogram; it flies the vehicle's
+    // own programme, which is the crewed one.
+    crewedProfile: {
+      // The crewed fairing goes at T+153.3 s (Soyuz MS-21 and MS-25 as flown,
+      // 153.33 s; T+157 s on Soyuz-FG) at 79 km (russianspaceweb, Soyuz MS-16 to
+      // MS-28), which the crewed programme reaches; the same 70 km floor.
+      fairing: fairingSpec('soyuz21a-crew', { sepAltitude: 70e3, sepTime: 153.3, color: '#e8e8e8' }),
+      // The core cut off at T+286.68 s, derived: the crewed separation at
+      // T+287.70 s (Soyuz MS-21 to MS-29, russianspaceweb quoting Roscosmos)
+      // less the cargo cyclogram's 1.02 s from cut-off to separation. Blok I's
+      // aft skirt at T+296.12 s (Soyuz MS-25), 9.68 s after its ignition here.
+      stages: [{ cutoffAt: 286.68 }, { jettisons: [{ t: 9.68, mass: 430, part: 'aftSkirt' }] }],
+    },
+    // A Progress MS flies its own, flatter programme (SOYUZ_21A_CARGO_PROGRAMME);
+    // every other uncrewed payload the crewed one, which leaves Blok I more
+    // height to reach other orbits from (the cargo one's 143 km at core
+    // separation leaves a 6.3 t, 200 km circular single burn 15 km long).
+    cargoShipProfile: { guidanceDefaults: { pitchProgram: SOYUZ_21A_CARGO_PROGRAMME } },
     stages: [
-        // Blok A at its published load (src/data/parts.ts), shut down by the GK-2
-      // command at T+285.05 s (russianspaceweb, soyuz_launch) with about 1 % of
-      // its load left; the Arianespace trace shows no step in its thrust in flight.
-      stageSpec('blokA-soyuz2', { color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core', boosters: soyuzBoosters(117.45), cutoffAt: 285.05 }),
-      // Blok I lights as the core cuts off and fires through the lattice; the
-      // model separates the core at that moment, 2.65 s before the flown
-      // separation (287.70 s), as it cannot burn two stages at once. Its aft
-      // skirt falls away in three segments at T+296.12 s on Soyuz MS-25, 11.07 s
-      // after the ignition here (russianspaceweb quoting Roscosmos). The skirt's
-      // mass is not published: 430 kg is Starsem's 2 410 kg dry Blok I less
-      // Braeunig's 1 976 kg without it, an estimate.
-      stageSpec('blokI-rd0110', { sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd', profile: 'r7Upper',
-        jettisons: [{ t: 11.07, mass: 430, part: 'aftSkirt' }] }),
+      // Blok A at its published load (src/data/parts.ts), shut down by its
+      // command with about 1 % of its load left; the Arianespace trace shows
+      // no step in its thrust in flight. The cargo cyclogram (Progress MS-19,
+      // published): Blok I lights at T+286.159 s, the core is cut off at
+      // 286.399 s and separates at 287.419 s; the skirt goes at 296.779 s. The
+      // core's cut-off was SoyCOM's GK-2 at T+285.05 s, which is the Soyuz-U's.
+      stageSpec('blokA-soyuz2', { color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core', boosters: soyuzBoosters(117.45), cutoffAt: 286.399 }),
+      // Hot staging: Blok I lights 0.24 s before the core's cut-off and fires
+      // through the lattice while still attached; the core separates 1.02 s
+      // after its cut-off (the cyclogram above). Starsem's and Arianespace's
+      // "about 2 s before the core's shutdown" is not borne out by any timed
+      // sequence. Its aft skirt falls away in three segments 10.62 s after its
+      // ignition. The skirt's mass is not published: 430 kg is Starsem's
+      // 2 410 kg dry Blok I less Braeunig's 1 976 kg without it, an estimate.
+      stageSpec('blokI-rd0110', { sepDelay: 1.02, hotStage: { leadS: 0.24 }, color: '#c9c7bd', profile: 'r7Upper',
+        jettisons: [{ t: 10.62, mass: 430, part: 'aftSkirt' }] }),
     ],
     sites: ['baikonur', 'plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 60,
     crewCapable: true,
@@ -205,17 +254,20 @@ export const VEHICLES: VehicleSpec[] = [
     // 8 670 kg to 240 km / 51.6 deg from Baikonur (was 8 200 kg, which is no
     // published site's figure). https://en.wikipedia.org/wiki/Soyuz-2_(rocket)
     height: 46.3, payloadLEO: 8670, payloadGTO: 1900, payloadSSO: 4900,
-    fairing: fairingSpec('soyuz21b', { sepAltitude: 95e3, sepTime: 157, color: '#e8e8e8' }),
+    // The fairing goes at T+208.4 s on Arianespace's 2.1b sequence (Soyuz CSG
+    // User's Manual, Fig. 2.3.1a); it was the Soyuz-FG crewed flights' 157 s.
+    fairing: fairingSpec('soyuz21b', { sepAltitude: 95e3, sepTime: 208.4, color: '#e8e8e8' }),
     stages: [
       // The 2.1a core (src/data/parts.ts), the strap-ons on Arianespace's own
       // 2.1b sequence (vernier cut-off T+117.7 s). The core is cut off at
-      // T+284.95 s: the manual's separation at 287.6 s less the 2.65 s by which
-      // 2.1a's GK-2 leads its separation.
-      stageSpec('blokA-soyuz2', { color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core', boosters: soyuzBoosters(117.7), cutoffAt: 284.95 }),
-      // Its aft skirt goes at T+300.4 s on Arianespace's sequence, 15.45 s after
-      // the ignition here (the core's cut-off below); the 2.1a skirt's mass.
-      stageSpec('blokI-rd0124', { sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd', profile: 'r7Upper',
-        jettisons: [{ t: 15.45, mass: 430, part: 'aftSkirt' }] }),
+      // T+286.58 s: the manual's separation at 287.6 s less the 2.1a
+      // cyclogram's 1.02 s, which also fits the drop in the manual's
+      // acceleration trace between 286.45 and 287.19 s.
+      stageSpec('blokA-soyuz2', { color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core', boosters: soyuzBoosters(117.7), cutoffAt: 286.58 }),
+      // Hot-staged as on 2.1a. Its aft skirt goes at T+300.4 s on Arianespace's
+      // sequence, 14.06 s after the ignition here; the 2.1a skirt's mass.
+      stageSpec('blokI-rd0124', { sepDelay: 1.02, hotStage: { leadS: 0.24 }, color: '#c9c7bd', profile: 'r7Upper',
+        jettisons: [{ t: 14.06, mass: 430, part: 'aftSkirt' }] }),
       stageSpec('fregat', { restartable: true, sepDelay: 2, ignitionDelay: 3, color: '#b8b0a0' }),
     ],
     sites: ['baikonur', 'plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 60,
@@ -236,7 +288,12 @@ export const VEHICLES: VehicleSpec[] = [
   {
     id: 'protonm', name: 'Proton-M / Briz-M', country: 'RU', manufacturer: 'Khrunichev',
     height: 58.2, payloadLEO: 23000, payloadGTO: 6920,
-    fairing: fairingSpec('protonm', { sepAltitude: 120e3, color: '#e8e8e8' }),
+    // Ten seconds after the third stage lights: ILS's Proton Mission Planner's
+    // Guide (Rev. 7, 2009, §2.3.1) has RD-0213 ignition at 338 s and "PLF
+    // jettison typically at 348 s", timed so the halves fall in their impact
+    // areas (§2.4.2). The heating placard dropped it at T+175 s, 170 s early
+    // against Telstar 14R's 347 s (docs/VALIDATION.md, F14).
+    fairing: fairingSpec('protonm', { sepAltitude: 120e3, sepAfterIgnition: { stage: 'p3', delay: 10 }, color: '#e8e8e8' }),
     stages: [
       // The first stage is 4.1 m, its core, not the 7.4 m span across the six
       // outboard tanks (audit item B23; the body in src/data/parts.ts). With
@@ -277,7 +334,11 @@ export const VEHICLES: VehicleSpec[] = [
   {
     id: 'angaraa5', name: 'Angara-A5 / Briz-M', country: 'RU', manufacturer: 'Khrunichev',
     height: 55.4, payloadLEO: 24500, payloadGTO: 5400,
-    fairing: fairingSpec('protonm', { sepAltitude: 120e3, color: '#e8e8e8' }),
+    // "At the initial phase of Stage III operation": on the first flight ten
+    // seconds after the core separated (ILS, 23 December 2014), and the URM-2
+    // lights a second after separation here. The heating placard dropped it at
+    // T+302 s against flight 2's 340 s (docs/VALIDATION.md, F14).
+    fairing: fairingSpec('protonm', { sepAltitude: 120e3, sepAfterIgnition: { stage: 'urm2', delay: 9 }, color: '#e8e8e8' }),
     stages: [
       stageSpec('urm1core', {
         color: '#f0f0f0', accentColor: '#c33', throttleWithBoosters: 0.3,
@@ -289,6 +350,14 @@ export const VEHICLES: VehicleSpec[] = [
     sites: ['plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 50,
     // Low liftoff T/W with the core throttled to 30 %; lofts so that the URM-2 takes over climbing.
     guidanceDefaults: { kickAngle: 4, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
+    // As Atlas V: the rigid body cannot hold the angle of attack the point mass
+    // pitches over at, and handed the Briz-M a slower, higher arc — 257 m/s short
+    // of the point mass at SECO to the sun-synchronous orbit, which stopped
+    // flying once the fairing stayed on to the third stage (docs/VALIDATION.md,
+    // F14). Chosen on angaraa5/sso/25 as the kick leaving the most delta-v, and
+    // checked on leo/25 and gto/25/50/90, which it brings to within 20 m/s of
+    // the point mass's remaining delta-v (they were up to 255 m/s short).
+    guidanceDefaultsSixDof: { kickAngle: 8 },
     notes: 'Modular kerolox launcher; core throttles to 30 % while four identical URM-1 boosters burn.',
   },
   {
@@ -981,7 +1050,8 @@ export const vehicleDataId = (spec: VehicleSpec): string => spec.derivedFrom ?? 
  * that a payload flown in the open (Crew Dragon) takes the fairing's place, so
  * the fairing is left off and the payload's own shape is the nose (roadmap C01).
  */
-export function openTopVehicle(v: VehicleSpec, sat: Pick<SatelliteSpec, 'exposed'>): VehicleSpec {
+export function openTopVehicle(v: VehicleSpec, sat: Pick<SatelliteSpec, 'exposed' | 'crewed' | 'cargoShip'>): VehicleSpec {
+  v = payloadVehicle(v, sat);
   if (!sat.exposed) return v;
   // one object per combination, so caches keyed by the spec (`stackLayout`) keep hitting
   const { diameter, length, noseLength } = sat.exposed;
@@ -993,3 +1063,31 @@ export function openTopVehicle(v: VehicleSpec, sat: Pick<SatelliteSpec, 'exposed
   return open;
 }
 const OPEN_TOP = new WeakMap<VehicleSpec, Map<string, VehicleSpec>>();
+
+/**
+ * The vehicle as it flies `sat`: its `crewedProfile` for a crewed spacecraft
+ * (the crewed payload section, cyclogram and programme), its
+ * `cargoShipProfile` for a cargo ship to the station, in place of its own; the
+ * vehicle as it is for any other payload, or when it has no such profile. One
+ * object per vehicle and profile, so caches keyed by the spec keep hitting.
+ */
+export function payloadVehicle(v: VehicleSpec, sat: Pick<SatelliteSpec, 'crewed' | 'cargoShip'>): VehicleSpec {
+  const which = sat.crewed ? 'crewed' : sat.cargoShip ? 'cargoShip' : null;
+  const p = which === 'crewed' ? v.crewedProfile : which === 'cargoShip' ? v.cargoShipProfile : undefined;
+  if (!p || !which) return v;
+  let byProfile = PROFILED.get(v);
+  if (!byProfile) PROFILED.set(v, byProfile = new Map());
+  let out = byProfile.get(which);
+  if (!out) {
+    const { crewedProfile: _c, cargoShipProfile: _s, ...rest } = v;
+    out = {
+      ...rest,
+      ...(p.fairing ? { fairing: p.fairing } : {}),
+      ...(p.guidanceDefaults ? { guidanceDefaults: { ...v.guidanceDefaults, ...p.guidanceDefaults } } : {}),
+      stages: v.stages.map((st, i) => (p.stages?.[i] ? { ...st, ...p.stages[i] } : st)),
+    };
+    byProfile.set(which, out);
+  }
+  return out;
+}
+const PROFILED = new WeakMap<VehicleSpec, Map<string, VehicleSpec>>();

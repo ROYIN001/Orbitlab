@@ -75,8 +75,9 @@ any academy, and no service or academy name or emblem is used without written pe
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
   explains it in one line, next to the mission clock and the latest callout, and the camera
   follows a per-phase programme you can set yourself — identically live and in replay.
-- **Physics & sources dialog**: a localized summary of the model with the data sources and
-  the credits.
+- **About dialog** (ⓘ in the top bar, on every page, and the footer's credit line): an About
+  tab with the version, the maker, the licences and the disclaimer, and a Physics & sources tab
+  with a localized summary of the model, the data sources and the credits.
 - **WebMCP tools** (see [below](#webmcp-tools)) for a page-attached agent to read the flight
   and drive the simulator programmatically.
 
@@ -194,7 +195,9 @@ and `tests/activity.test.ts`.
 
 The app is organised on two axes (roadmap S01, [docs/ROADMAP-PART2-3.md](docs/ROADMAP-PART2-3.md)):
 three **sections** — **Launch** (this simulator), **Orbit** and **Build** — and in each of them
-three **levels**, Watch, Explore and Engineer. The top bar has a switch for each. Every section
+three **levels**, Watch, Explore and Engineer. The top bar has a tab per section, each opening
+the menu of its levels (on a phone, one button opening a table of them), and the product name
+leads home (`src/ui/section-nav.ts`). Every section
 and level has its own address, `#/<section>/<level>` (`#/launch/watch`, `#/orbit/explore`, …)
 plus `#/home` for the landing page, so it can be linked to and Back moves between them; the last
 section and level are remembered. The addresses from before the sections — `#/watch`,
@@ -505,8 +508,8 @@ snapshots, builds and runs every browser journey. A run whose commit is no longe
 CI on pull requests and branch pushes runs the typecheck, the default suite in three shards, the
 build and the browser smoke set; a change to Markdown files only skips it, except
 `docs/ROADMAP-PART2-3.md` and `docs/SIXDOF-VEHICLE-DATA.md`, which the tests and the app read.
-The slow suites run in the `Heavy suites` workflow instead: `npm run test:heavy` every Sunday and
-the six-DOF fleet matrix on the 1st of each month, or either on demand from **Run workflow**.
+The slow suites run in the `Heavy suites` workflow instead: `tests/heavy` every Sunday, one job per
+file, and the six-DOF fleet matrix on the 1st of each month, or either on demand from **Run workflow**.
 
 From the next release the launch soundtrack (`public/audio/soyuz-ms-27-nasa.mp3`) is no longer
 part of what the service worker installs on the first visit: the public site's first-visit install
@@ -524,6 +527,6 @@ software keep their own terms, all collected in [NOTICE.md](NOTICE.md). To cite 
 
 ## Acknowledgements
 
-Earth textures are the planet textures from the three.js examples (NASA Blue Marble
-derivatives). Atmosphere: US Standard Atmosphere 1976 and the exponential model tabulated in
+Earth textures are NASA Blue Marble and Black Marble imagery, from NASA Visible Earth and the
+three.js examples (details in [NOTICE.md](NOTICE.md)). Atmosphere: US Standard Atmosphere 1976 and the exponential model tabulated in
 Vallado, *Fundamentals of Astrodynamics and Applications*.

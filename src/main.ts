@@ -42,7 +42,7 @@ import './ui/orbit/playground.css';
 import { WatchView } from './ui/watch';
 import {
   HOME_ROUTE, experienceForMode, hashForRoute, initialRoute, launchMode, loadRoute, route, routeFromHash, sameRoute, saveRoute,
-  DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
+  DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute,
 } from './ui/app-mode';
 import { BuildScreen } from './ui/build/build-screen';
 import { WorkspaceMission, missionSummary, startupMission } from './ui/workspace-mission';
@@ -52,9 +52,9 @@ import { DataDialog } from './ui/data-dialog';
 import { applyWebFonts } from './ui/web-fonts';
 import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
 import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentCaches } from './provider/data-provider';
-import { sectionLinkLevel } from './ui/section-plan';
+import { SectionNav } from './ui/section-nav';
 import { FEATURED_WATCH_MISSION, historicalFor, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
-import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
+import { AboutDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
 import { FlightRecorder, type RecordingSource } from './replay/recorder';
@@ -72,7 +72,7 @@ import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, 
 import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
 import { add, normalize, cross, dot, norm, scale, addScaled, sub, v3, type Vec3 } from './physics/vec3';
 import { missionVehicle } from './data/vehicles';
-import { satelliteById } from './data/satellites';
+import { missionSatellite } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
@@ -90,7 +90,8 @@ import { ToruControls } from './ui/toru-controls';
 import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
-import { stampDocument } from './build-info';
+import { BUILD, stampDocument } from './build-info';
+import { DEVELOPER, versionLabel } from './credits';
 
 /** The viewer's own choice of glow, remembered between visits. */
 const GLOW_STORAGE_KEY = 'orbitlab.glow';
@@ -240,6 +241,7 @@ class App {
   route: AppRoute = HOME_ROUTE;
   /** the level last shown in any section, for the section links from the landing page */
   private levelMemory: AppLevel = DEFAULT_LEVEL;
+  private readonly sectionNav = new SectionNav(document.getElementById('section-nav')!);
   /**
    * The launch simulator's own face: its level in the launch section, and
    * the landing page's everywhere else — another section covers the scene the
@@ -346,7 +348,7 @@ class App {
   glCanvas: HTMLCanvasElement;
   mapCanvas: HTMLCanvasElement;
   obCanvas: HTMLCanvasElement;
-  private physicsDialog: PhysicsDialog;
+  private aboutDialog: AboutDialog;
   /** S04: offline (the default) or online, and where datasets come from under it */
   private dataMode: DataMode = loadDataMode();
   /** R02: online answers kept so a source is not asked more often than it allows (CelesTrak: every two hours) */
@@ -499,6 +501,11 @@ class App {
         this.go(route('launch', level));
         return true;
       },
+      // D06 (the integration): "Fly it" on the Launch section's own vehicle, from its site, after its launch time
+      launchMission: () => {
+        const m = this.panel.missionState();
+        return { vehicleId: m.vehicleId, ...(m.vehicleSpec ? { vehicleSpec: m.vehicleSpec } : {}), siteId: m.siteId, launchTime: m.launchTime };
+      },
       // D06: a designed satellite in its own orbit, with no launch, handed on as "Continue in Orbit" hands a flight's
       toOrbit: (h, level) => {
         this.handoff = h;
@@ -530,7 +537,7 @@ class App {
       follow: (target) => { this.watchFollow = target; },
       pickerFooter: () => this.soundtrackPanel.render(),
     });
-    this.physicsDialog = new PhysicsDialog(document.getElementById('physics-dialog') as HTMLDialogElement);
+    this.aboutDialog = new AboutDialog(document.getElementById('about-dialog') as HTMLDialogElement);
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
       plan: this.cameraPlan,
       isAuto: () => this.autoCamera,
@@ -577,9 +584,19 @@ class App {
       back: () => this.go(this.route),
       loadMission: (state) => { this.goLive(); this.playing = false; this.workspace.adopt(); this.panel.restoreMission(state); },
       sim: () => this.sim,
+      clock: () => this.recorder.clock,
       panelRoot: document.getElementById('setup')!,
       renderPanel: () => this.panel.render(),
+      // T01: the authoring tab writes a scenario on the mission the panel holds
+      mission: () => this.panel.missionState(),
+      // T01: a design lesson works on the Build section's satellite desk, the student's own design put aside meanwhile
+      openDesign: (desk, level) => this.buildScreen.openDesignLesson(desk, level),
+      showDesign: (level) => this.buildScreen.showDesignLesson(level),
+      closeDesign: () => this.buildScreen.closeDesignLesson(),
+      designNow: () => this.buildScreen.lessonDesign(),
+      designDesk: () => this.buildScreen.designDesk(),
     });
+    this.buildScreen.onDesignChange(() => this.lessons.designChanged());
     this.lessons.openFromHash(startHash);
   }
 
@@ -616,27 +633,9 @@ class App {
     return this.route.section !== null ? this.route.mode : this.levelMemory;
   }
 
-  /**
-   * S01: point every section link at the level showing (or last used) and
-   * every level link at the section showing — the launch section's from the
-   * landing page, where those links always led — and mark the current ones.
-   */
+  /** S01: the section switch shows the route (src/ui/section-nav.ts). */
   private syncNav(): void {
-    const level = this.lastLevel();
-    const section: AppSection = this.route.section ?? 'launch';
-    document.querySelectorAll<HTMLAnchorElement>('#section-nav a').forEach((a) => {
-      const name = a.dataset.section as AppSection | 'home';
-      // the Build section opens at a level that is built (src/ui/section-plan.ts)
-      a.href = name === 'home' ? hashForRoute(HOME_ROUTE) : hashForRoute(route(name, sectionLinkLevel(name, level)));
-      if (name === (this.route.section ?? 'home')) a.setAttribute('aria-current', 'page');
-      else a.removeAttribute('aria-current');
-    });
-    document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
-      const mode = a.dataset.mode as AppLevel;
-      a.href = hashForRoute(route(section, mode));
-      if (this.route.section !== null && mode === this.route.mode) a.setAttribute('aria-current', 'page');
-      else a.removeAttribute('aria-current');
-    });
+    this.sectionNav.show(this.route);
   }
 
   /** O01, Phase 3: the Orbit playground and the Build screen are drawn over the whole scene, which need not be drawn under them. */
@@ -676,7 +675,7 @@ class App {
     const orbit = next.section === 'orbit';
     const build = next.section === 'build';
     document.getElementById('build-screen')!.hidden = !build;
-    if (build) this.buildScreen.show(next.mode as AppLevel);
+    if (build) this.buildScreen.show(next.mode as AppLevel, next.page); // D07: a page of the level (#/build/engineer/requirements)
     else this.buildScreen.hide();
     document.getElementById('orbit-playground')!.hidden = !orbit;
     if (orbit) this.playground.show(next.mode as AppLevel);
@@ -812,7 +811,7 @@ class App {
     this.started = true;
     requestAnimationFrame((now) => this.frame(now));
     registerServiceWorker();
-    this.lessons.openFromLink(); // E03: ?lesson=<id>
+    this.lessons.openFromLink(); // E03: ?lesson=<id>; T01: ?scenario=z…
   }
 
   /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
@@ -1056,7 +1055,9 @@ class App {
       this.applyLanguage();
     });
     (document.getElementById('lang-select') as HTMLSelectElement).value = getLang();
-    document.getElementById('btn-physics')!.addEventListener('click', (e) => this.physicsDialog.open(e.currentTarget as HTMLElement));
+    // the topbar opens the tab last left open; the footer's credit line opens the maker's credit
+    document.getElementById('btn-about')!.addEventListener('click', (e) => this.aboutDialog.open(e.currentTarget as HTMLElement));
+    document.getElementById('footer-about')!.addEventListener('click', (e) => this.aboutDialog.open(e.currentTarget as HTMLElement, 'about'));
     document.getElementById('btn-camera-plan')!.addEventListener('click', (e) => this.cameraDialog.open(e.currentTarget as HTMLElement));
     // No panel drawer: the narrow layout stacks the panels in reading order
     // (viewport, mission setup, telemetry) rather than hiding two of them
@@ -1075,7 +1076,7 @@ class App {
    * owns its own keyboard entirely.
    */
   private onKey(e: KeyboardEvent): void {
-    if (this.physicsDialog.isOpen || this.cameraDialog.isOpen) return;
+    if (this.aboutDialog.isOpen || this.cameraDialog.isOpen) return;
     if (document.body.dataset.lessonsPage) return; // E03: the lessons page owns the keyboard
     // O01: the Orbit section's playground has its own clock
     if (this.route.section === 'orbit') { this.playground.onKey(e); return; }
@@ -1148,6 +1149,7 @@ class App {
 
   applyLanguage(): void {
     applyStatic();
+    document.getElementById('footer-credit')!.textContent = t('app.footerCredit', { name: DEVELOPER.name, version: versionLabel(BUILD.version) });
     document.title = `${t('app.title')} — ${t('app.subtitle')}`;
     const meta = document.getElementById('meta-description');
     if (meta) meta.setAttribute('content', t('app.subtitle'));
@@ -1159,6 +1161,7 @@ class App {
     this.narration.applyLanguage();
     this.timeline.applyStaticText();
     this.home.applyLanguage();
+    this.sectionNav.applyLanguage();
     this.watch.applyLanguage();
     this.buildScreen.applyLanguage();
     this.playground.applyLanguage();
@@ -1172,9 +1175,9 @@ class App {
     this.viewport.setAttribute('aria-label', t('a11y.viewport'));
     this.warpSel?.setAttribute('aria-label', t('ctl.warp'));
     this.framesMenu?.applyLanguage();
-    // both dialogs rebuild their body from the dictionaries when opened; an
+    // the dialogs rebuild their body from the dictionaries when opened; an
     // open one has to be rebuilt now
-    if (this.physicsDialog.isOpen) this.physicsDialog.applyLanguage();
+    if (this.aboutDialog.isOpen) this.aboutDialog.applyLanguage();
     if (this.cameraDialog.isOpen) this.cameraDialog.applyLanguage();
     // applyStatic() rewrote the play button's title from its data-i18n-title,
     // which loses the pause/play state and the live-flight hint
@@ -1192,7 +1195,7 @@ class App {
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
     this.narration.setMission(missionVehicle(cfg).name,
-      this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(satelliteById(cfg.satelliteId)));
+      this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(missionSatellite(cfg)));
   }
 
   setCamera(mode: CameraMode): void {
@@ -1284,11 +1287,14 @@ class App {
       if (next !== null) this.seek(next); else this.goLive();
       return;
     }
-    const s = this.sim.state;
-    if (s.status === 'coast' && s.nextBurnTime > s.t) this.fastForwardTo = s.nextBurnTime - 20;
-    else if (s.status === 'orbit' && isFinite(s.elements.period)) this.fastForwardTo = s.t + s.elements.period;
-    else if (s.status === 'prelaunch') this.fastForwardTo = 0;
-    else this.fastForwardTo = s.t + 60;
+    // From the frame on screen, not the simulation: a point-mass simulation runs up to a step
+    // ahead of it (T02), 60 s in a high coast, and there it had already started the burn, so
+    // Skip jumped a minute into the burn instead of to 20 s before it.
+    const f = this.recorder.recordNow();
+    if (f.status === 'coast' && f.nextBurnTime > f.t) this.fastForwardTo = f.nextBurnTime - 20;
+    else if (f.status === 'orbit' && isFinite(f.elements.period)) this.fastForwardTo = f.t + f.elements.period;
+    else if (f.status === 'prelaunch') this.fastForwardTo = 0;
+    else this.fastForwardTo = f.t + 60;
     if (!this.playing) this.togglePlay();
   }
 
@@ -1412,7 +1418,7 @@ class App {
     }
     const fairing = sim.vehicleSpec.fairing;
     if (sim.escape.fitted && fairing) {
-      this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length);
+      this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length, 'soyuz', fairing.noseLength);
       this.scene.scene.add(this.escapeView.group);
     } else if (sim.satellite.descent) {
       // C01: a capsule coming home from a suborbital flight (Mercury-Redstone 3)
@@ -1549,7 +1555,7 @@ class App {
     // The live flight runs whether or not the user is watching the head.
     if (sim && session && this.playing) {
       const target = this.fastForwardTo;
-      if (target !== null && target > sim.state.t + 1e-3 && !sim.isFailed()) {
+      if (target !== null && target > this.recorder.clock + 1e-3 && !sim.isFailed()) {
         // In the worker the chunks run on their own; on the main thread
         // `tick` spends up to 30 ms of this frame on them.
         session.fastForward(target);
@@ -1638,7 +1644,7 @@ class App {
       // Explore: a card a moment after the live flight's outcome; a lesson grades in its own strip
       const cfg = this.panel.state;
       this.debrief.update(this.flightNo, this.simView.sim, this.player.live, this.mode === 'explore' && !document.body.dataset.lesson,
-        `${missionVehicle(cfg).name} · ${satelliteName(satelliteById(cfg.satelliteId))}`, performance.now());
+        `${missionVehicle(cfg).name} · ${satelliteName(missionSatellite(cfg))}`, performance.now());
       this.lessons.update(); // E03
       // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);
@@ -2079,6 +2085,8 @@ class App {
       listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },
       warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
       onboard: this.camMode === 'onboard',
+      // scene axes are the frames' ECI axes, and the camera has no parent: its quaternion turns ECI into its head
+      orientation: scene.camera.quaternion,
       suppressed: this.soundtrack.sounding,
     });
     this.soundtrack.update(frame.t, this.activeWarp, this.player.live ? this.playing : this.player.playing, this.audio.on);

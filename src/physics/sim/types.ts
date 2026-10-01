@@ -44,11 +44,41 @@ export type DescentPhase = 'coast' | 'entry' | 'bellyflop' | 'flip' | 'landing';
 
 export type EventSeverity = 'info' | 'major' | 'warn' | 'fail' | 'success';
 
+/**
+ * Where the flight was left by the step that logged an event (`SimEvent.state`):
+ * mission time, s; position and velocity, ECI, m and m/s.
+ */
+export interface EventState {
+  t: number;
+  r: Vec3;
+  v: Vec3;
+}
+
 export interface SimEvent {
   t: number;
   key: string;
   params?: Record<string, string | number>;
   severity: EventSeverity;
+  /**
+   * The state the step that logged the event left the flight in (one logged
+   * between steps, a command's: the state then), with the impulse a core
+   * already shut down still gives as it dies away added along the thrust
+   * axis — so a cut-off's event carries the orbit its tail-off leaves, the
+   * one the event's own numbers report.
+   *
+   * Why (T03 review, roadmap E03/T02): a lesson grades the orbit at its
+   * grading end, its end event or the mission's end, and a live page grades
+   * at the first frame that shows that end, minutes later under time warp,
+   * where the osculating orbit has moved on (a transfer orbit's semi-major
+   * axis by +16 km 300 s after insertion). The telemetry cannot say where the
+   * flight was then: in orbit it is sampled every max(10 s, period/360) —
+   * 135 s after a transfer-orbit insertion — and a sample there would change
+   * every recorded flight's fingerprint, which hashes the telemetry. So the
+   * event log, which already crosses to the page from the physics worker
+   * whole, carries it. Nothing in the flight reads it back, and the
+   * fingerprints hash an event's key and time only.
+   */
+  state?: EventState;
 }
 
 export interface TelemetrySample {
@@ -92,6 +122,8 @@ export interface DebrisVisual {
   /** `fairing`: its own adapter cone's height, m, down to `baseDiameter` (`FairingSpec.adapter`) */
   adapter?: number;
   baseDiameter?: number;
+  /** `fairing`: its nose's length, m (`FairingSpec.noseLength`) */
+  noseLength?: number;
 }
 
 export interface Debris {
@@ -183,6 +215,12 @@ export interface SimState {
    */
   coreThrottle: number;
   boosterThrottle: number;
+  /**
+   * The same for a hot stage lit above the active one and still attached to it
+   * (`VehicleModel.hotStage`): Blok I firing through the truss before the core
+   * has gone. Absent on every flight that does not hot-stage.
+   */
+  hotThrottle?: number;
   thrust: number;
   mass: number;
   q: number;

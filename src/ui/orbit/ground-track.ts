@@ -94,7 +94,7 @@ export class GroundTrackView {
    * night side and whatever the overlay brings.
    */
   draw(stateOf: ((t: number) => OrbitState) | null, time: number, jd: number, period: number, overlay: TrackOverlay = {}): void {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
     const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
     if (W === 0 || H === 0) return;
     if (this.canvas.width !== Math.round(W * dpr) || this.canvas.height !== Math.round(H * dpr)) {

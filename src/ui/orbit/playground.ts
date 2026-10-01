@@ -337,6 +337,16 @@ export class OrbitPlayground {
     this.render();
   }
 
+  /**
+   * D06: the orbit handed on is a designed satellite's, sent from the Build
+   * section with no launch (`handoffFromDesign`: no mission, no vehicle), so
+   * it is not called "your launch".
+   */
+  private fromDesign(): boolean {
+    const o = this.handoff?.origin;
+    return !!o && o.mission === null && o.vehicleName === '';
+  }
+
   private loadHandoff(): void {
     if (!this.handoff) return;
     this.orbit = handoffOrbit(this.handoff);
@@ -771,7 +781,7 @@ export class OrbitPlayground {
     showPorkchop: () => this.setView('porkchop'),
     craft: () => ({
       source: this.craftSource, own: this.ownCraft, fromLaunch: this.launchCraft,
-      launchHasNoEngine: !!this.handoff && !this.launchCraft, chosen: this.craft,
+      launchHasNoEngine: !!this.handoff && !this.launchCraft, chosen: this.craft, fromDesign: this.fromDesign(),
     }),
     setCraft: (source: CraftSource, own?: Partial<Craft>) => {
       const changedSource = source !== this.craftSource;
@@ -941,7 +951,7 @@ export class OrbitPlayground {
     const sel = this.presetSelect;
     if (!sel) return;
     const opts: [string, string][] = PLAYGROUND_PRESET_IDS.map((id) => [id, t(`orbit.${id}.name`)]);
-    if (this.handoff) opts.unshift([HANDOFF, t('pg.preset.handoff')]);
+    if (this.handoff) opts.unshift([HANDOFF, t(this.fromDesign() ? 'build.sat.orbit.from' : 'pg.preset.handoff')]);
     opts.push([CUSTOM, t('pg.preset.custom')]);
     sel.replaceChildren(...opts.map(([v, label]) => {
       const o = el('option', undefined, label);
@@ -1089,7 +1099,7 @@ export class OrbitPlayground {
   /** S03: the orbit a flight handed on — what it is, put it back on, and how long it lasts. */
   private handoffBlock(): HTMLElement {
     const box = el('section', 'pg-handoff');
-    box.append(el('span', 'eyebrow', t('handoff.eyebrow')));
+    box.append(el('span', 'eyebrow', t(this.fromDesign() ? 'build.sat.orbit.from' : 'handoff.eyebrow')));
     const h = this.handoff;
     if (!h) {
       box.append(el('p', 'pg-handoff-empty', this.handoffNote ?? t('handoff.none')));
@@ -1257,9 +1267,10 @@ export class OrbitPlayground {
     const step = sky ?? TOUR[Math.max(0, this.tourIndex)];
     const n = yours ? 0 : this.tourIndex + 1, total = TOUR.length + SKY_TOUR.length;
     box.append(
-      el('span', 'eyebrow pg-tour-step', yours ? t('handoff.eyebrow') : `${t('pg.tour.step', { n, total })}${sky ? ` · ${t('skytour.eyebrow')}` : ''}`),
-      el('h2', undefined, yours ? t('pg.tour.yours.title') : t(step.titleKey)),
-      el('p', 'pg-tour-text', yours ? t('pg.tour.yours.text', { label: this.handoff!.label }) : t(step.textKey)),
+      el('span', 'eyebrow pg-tour-step', yours ? t(this.fromDesign() ? 'build.sat.orbit.from' : 'handoff.eyebrow')
+        : `${t('pg.tour.step', { n, total })}${sky ? ` · ${t('skytour.eyebrow')}` : ''}`),
+      el('h2', undefined, yours ? t(this.fromDesign() ? 'build.sat.orbit.tourTitle' : 'pg.tour.yours.title') : t(step.titleKey)),
+      el('p', 'pg-tour-text', yours ? t(this.fromDesign() ? 'build.sat.orbit.tourText' : 'pg.tour.yours.text', { label: this.handoff!.label }) : t(step.textKey)),
     );
     if (sky) {
       // P2.5: a real satellite's readouts, and what the step adds

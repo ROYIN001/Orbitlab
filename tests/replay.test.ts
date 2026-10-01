@@ -495,10 +495,11 @@ describe('retrospectively detected events', () => {
     const { sim, rec } = flight;
     const failure = sim.events.find((e) => e.key === 'evt.engineOut')!;
     const peak = sim.events.find((e) => e.key === 'evt.maxQ')!;
-    // T+63.3 s on Soyuz-2.1a's stored pitch programme (T+59.2 s on the kick it
-    // flew before 2026-10-01, with the engine lost at T+60 s), so the failure
-    // follows it by 0.7 s and the peak is still detected after the failure
-    expect(peak.t).toBeCloseTo(63.3, 5);
+    // T+63.0 s on Soyuz-2.1a's stored pitch programme (T+63.3 s with the 4.11 m
+    // fairing, T+59.2 s on the kick it flew before 2026-10-01, with the engine
+    // lost at T+60 s), so the failure follows it by 1 s and the peak is still
+    // detected after the failure
+    expect(peak.t).toBeCloseTo(63.0, 5);
     expect(failure.t).toBeCloseTo(64, 5);
     expect(sim.events.indexOf(failure)).toBeLessThan(sim.events.indexOf(peak));
     expect(rec.events.indexOf(peak)).toBeLessThan(rec.events.indexOf(failure));
@@ -520,7 +521,7 @@ describe('retrospectively detected events', () => {
   it('navigates the closest occurrence and never includes the future failure', () => {
     const { sim, rec } = flight;
     const p = new ReplayPlayer(rec);
-    expect(p.nextEventTime(63.09)).toBeCloseTo(63.3, 5);
+    expect(p.nextEventTime(62.79)).toBeCloseTo(63.0, 5);
     expect(p.prevEventTime(64.01)).toBeCloseTo(64, 5);
     expect(p.lastEvent(65)?.key).toBe('evt.engineOut');
     expect(p.nextEvent(63.6)?.key).toBe('evt.engineOut');

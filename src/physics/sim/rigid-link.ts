@@ -99,6 +99,9 @@ export class RigidLink {
     const manual = this.sim.rigidRuntime.command.mode === 'manual';
     if (manual && throttle === 0 && !stage.cutoff && !stage.burnedOut) {
       this.sim.vehicle.cutoffStage(stage, this.sim.state.t);
+      // and a hot stage already firing through the truss above it
+      const hot = this.sim.vehicle.hotStage();
+      if (hot) this.sim.vehicle.cutoffStage(hot, this.sim.state.t);
       for (const booster of stage.boosters) if (booster.attached) booster.ignited = false;
       this.manualShutdown.add(stage);
       this.sim.event('evt.stageCutoff', 'major', { stage: stage.spec.name, n: stage.index + 1 });

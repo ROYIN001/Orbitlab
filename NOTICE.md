@@ -17,9 +17,11 @@ any academy, and no service or academy name or emblem is used without written pe
   [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
   Attribute them to "Orbitlab (Royin, ROYIN001)" with a link to
   <https://github.com/ROYIN001/Orbitlab>.
-- **The app's own pictures** — the icons (`public/icons/`), the landing page's screenshots
-  (`public/home/`) and the link preview (`public/social/preview.jpg`), taken from the app itself
-  with `npm run shots` — are the project's own work. The Earth imagery that appears in the
+- **The app's own pictures** — the Orbitlab mark (a delta in the Thai flag's stripes with an orbit
+  across it, drawn in `index.html`) and the icons and favicon made from it (`public/icons/`,
+  `npm run icons`), the landing page's screenshots (`public/home/`) and the link preview
+  (`public/social/preview.jpg`), taken from the app itself with `npm run shots` — are the project's
+  own work. The Earth imagery that appears in the
   screenshots is credited below.
 
 How to cite the project: [CITATION.cff](CITATION.cff).
@@ -41,11 +43,22 @@ shipped in it; each carries its own licence in `node_modules/`.
 
 ### Earth textures — `public/textures/`
 
-`earth_atmos_2048.jpg`, `earth_clouds_1024.png`, `earth_lights_2048.png`, `earth_normal_2048.jpg`,
-`earth_specular_2048.jpg`: the planet textures from the three.js examples
-(<https://github.com/mrdoob/three.js/tree/dev/examples/textures/planets>), derivatives of NASA's
-Blue Marble imagery (<https://visibleearth.nasa.gov/>). Used for the Earth in every 3-D view and in
-the screenshots made from them. Terms: see source.
+`earth_atmos_2048.jpg`, `earth_normal_2048.jpg`, `earth_specular_2048.jpg`: the planet textures
+from the three.js examples (<https://github.com/mrdoob/three.js/tree/dev/examples/textures/planets>),
+derivatives of NASA's Blue Marble imagery (<https://visibleearth.nasa.gov/>). Terms: see source.
+
+`earth_atmos_4096.jpg`: NASA Visible Earth, *Blue Marble: Land Surface, Ocean Color and Sea Ice*
+(`land_ocean_ice_8192.png`, <https://visibleearth.nasa.gov/images/57730>), reduced to 4096 × 2048
+and colour-matched to `earth_atmos_2048.jpg`. `earth_clouds_4096.jpg`: NASA Visible Earth, *Blue
+Marble: Clouds* (`cloud_combined_8192.tif`, <https://visibleearth.nasa.gov/images/57747>), reduced
+to 4096 × 2048 and its density curve matched to the three.js cloud map it replaces.
+`earth_lights_4096.jpg`: `earth_night_4096.jpg` from the same three.js examples (NASA *Black
+Marble* derivative, <https://earthobservatory.nasa.gov/features/NightLights>), colour-matched to
+the 2048 night map it replaces. NASA imagery is not protected by copyright in the United States
+(NASA Images and Media Usage Guidelines); NASA is credited as the source.
+
+Used for the Earth in every 3-D view (the 4096 maps) and the 2-D ground-track maps (the 2048
+colour map), and in the screenshots made from them.
 
 ### Launch audio — `public/audio/soyuz-ms-27-nasa.mp3`
 
