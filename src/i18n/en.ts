@@ -2905,6 +2905,8 @@ export const en: Record<string, string> = {
   'build.req.open.outside': 'The bench cannot take this orbit\'s design. Outside the range it takes: {field}.',
   'build.req.cmp.title': 'The {cycle} orbit at {h}, beside the bench',
   'build.req.cmp.lead': 'Each figure as the row gives it and as the satellite bench works it out for the design it opened: = the same, ≠ different, with the reason.',
+  'build.req.cmp.changed': 'The design has been changed on the bench since this row was opened: the Bench column is the design as it was opened. Open the row again to compare anew.',
+  'build.req.cmp.other': 'The bench now holds another design: the Bench column is this row\'s design as it was opened.',
   'build.req.cmp.figure': 'Figure',
   'build.req.cmp.row': 'Row',
   'build.req.cmp.bench': 'Bench',

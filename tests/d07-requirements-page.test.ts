@@ -48,7 +48,7 @@ import { levelActivity } from '../src/orbit/satellite-air';
 import { powerAtWorstBeta, requiredDataRate, requiredEirp, txPowerForEirp, focalLengthForGsd } from '../src/design/requirement-inverses';
 import { REQUIREMENTS, repeatCycles, tradePlane, tradeRow, type TradeRow } from '../src/design/requirement-trades';
 import {
-  DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TEMPLATES, RUNS_PER_SEARCH, SECONDS_PER_LIFETIME_RUN, SECONDS_PER_LIFETIME_RUN_YEAR, SECONDS_PER_ROW_DAY, aperturePoints, benchDesign, candidateCycles, compareWithBench,
+  DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TEMPLATES, RUNS_PER_SEARCH, benchNow, SECONDS_PER_LIFETIME_RUN, SECONDS_PER_LIFETIME_RUN_YEAR, SECONDS_PER_ROW_DAY, aperturePoints, benchDesign, candidateCycles, compareWithBench,
   disposalState, errorKey, gbitToBits, lifeState, lifetimePoints, lifetimeRequestFor, missionRequirements, otherNode, requirementsProblems,
   REVISIT_WINDOW_DAYS, restoreForm, revisitWindowOf, runCost, standing, targetOf, templateDesign, tradeOptionsFor, type RequirementsForm,
 } from '../src/design/requirements-page';
@@ -385,6 +385,21 @@ describe('a row opened on the bench (D07 → D06, map §3 round trip)', () => {
     expect(opened.design.comms.dataRate).toBe(96e6);
     expect(opened.design.comms.dataRate * 10 * 60).toBe(57.6e9);
     expect(Math.abs(opened.figures.link.margin.value - 3)).toBeLessThanOrEqual(3e-9);
+  });
+
+  // added in review: back on the page, the Bench column kept the figures of the design as it was opened, though it had
+  // since been changed on the bench (an array of 5 m² still showed 2.95 m²); the page now says so
+  it('knows when the bench no longer holds the design as it was opened', () => {
+    const tpl = templateDesign('theos2');
+    const req = missionRequirements(DEFAULT_FORM);
+    const row = tradeRow(req, tpl, { revs: 15, days: 1 }, tradeOptionsFor(tpl, DEFAULT_FORM, JD0, null))!;
+    const opened = benchDesign(tpl, row, req, JD0, 'moderate', 'opened', 'From requirements');
+    if (!opened.ok) throw new Error(opened.key);
+    const d = opened.design;
+    expect(benchNow(JSON.parse(JSON.stringify(d)), d)).toBe('same');
+    expect(benchNow({ ...d, name: 'Renamed' }, d)).toBe('same');
+    expect(benchNow({ ...d, power: { ...d.power, arrayArea: 5 } }, d)).toBe('changed');
+    expect(benchNow({ ...tpl, id: 'another' }, d)).toBe('other');
   });
 
   it('refuses a row whose camera the bench cannot take, naming the field, and raises a transmitter below the bench\'s smallest', () => {

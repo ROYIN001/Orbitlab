@@ -577,5 +577,16 @@ export function compareWithBench(row: TradeRow, req: MissionRequirements, templa
   return out;
 }
 
+/**
+ * Where the design an opened row put on the bench stands now (the page sets
+ * the row beside the bench's figures for it as opened): still there as opened
+ * (`same`; a new name changes no figure), changed on the bench since
+ * (`changed`), or another design in its place (`other`).
+ */
+export function benchNow(onBench: SatelliteDesign, opened: SatelliteDesign): 'same' | 'changed' | 'other' {
+  if (onBench.id !== opened.id) return 'other';
+  return JSON.stringify({ ...onBench, name: '' }) === JSON.stringify({ ...opened, name: '' }) ? 'same' : 'changed';
+}
+
 /** The name an opened row's design is given: its cycle and altitude, in the words the page passes. */
 export const cycleText = (row: Pick<TradeRow, 'revs' | 'days'>): string => `${row.revs}/${row.days}`;

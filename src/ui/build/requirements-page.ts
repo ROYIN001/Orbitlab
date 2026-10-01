@@ -37,7 +37,7 @@ import type { SatelliteDesign } from '../../design/satellite-spec';
 import { TEMPLATE_TEXT, designFigures, newSatelliteId, type Fig } from '../../design/satellite-model';
 import { wetMass } from '../../design/satellite-area';
 import {
-  MAX_ROWS, REQ_TARGETS, REQ_TEMPLATES, aperturePoints, benchDesign, candidateCycles, compareWithBench, cycleRange, cycleText, disposalState,
+  MAX_ROWS, REQ_TARGETS, REQ_TEMPLATES, aperturePoints, benchDesign, benchNow, candidateCycles, compareWithBench, cycleRange, cycleText, disposalState,
   errorKey, lifeState, lifetimeKey, lifetimePoints, lifetimeRequestFor, limitsOf, missionRequirements, otherNode, requirementsProblems,
   restoreForm, revisitWindowOf, runCost, standing, templateDesign, tradeOptionsFor, type CompareLine, type ReqIssue, type ReqNumberField, type RequirementsForm,
   type Standing, type TargetId,
@@ -174,6 +174,8 @@ interface Opened {
   altitude: number;
   lines: CompareLine[];
   txRaised: boolean;
+  /** the design put on the bench, as it was opened: the bench's figures in `lines` are for it */
+  design: SatelliteDesign;
 }
 
 export class RequirementsPage {
@@ -653,7 +655,7 @@ export class RequirementsPage {
       this.renderResults();
       return;
     }
-    this.opened = { cycle, altitude: row.altitude, lines: compareWithBench(row, r.req, r.template, b), txRaised: b.txRaised };
+    this.opened = { cycle, altitude: row.altitude, lines: compareWithBench(row, r.req, r.template, b), txRaised: b.txRaised, design: b.design };
     this.refused = null;
     // the bench reads the air at the level the table was worked out for, as the lifetime search did
     this.ws.setLevel(r.req.activity);
@@ -668,6 +670,9 @@ export class RequirementsPage {
     const h = el('h3', 'bx-h3', t('build.req.cmp.title', { cycle: o.cycle, h: fig(o.altitude, 'm') }));
     h.id = 'brq-compare-title';
     box.append(h, el('p', 'bx-note small', t('build.req.cmp.lead')));
+    // the bench's figures are for the design as it was opened: said when the bench holds it no longer as it was
+    const now = benchNow(this.ws.design, o.design);
+    if (now !== 'same') box.append(el('p', 'bx-note warn small', t(now === 'changed' ? 'build.req.cmp.changed' : 'build.req.cmp.other')));
     const table = el('table', 'bs-table be-compare brq-compare-table');
     const head = el('tr');
     for (const k of ['build.req.cmp.figure', 'build.req.cmp.row', 'build.req.cmp.bench'] as const) {
