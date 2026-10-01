@@ -409,7 +409,10 @@ Soyuz-2.1a included:
   unless a later burn of the plan lowers the apoapsis anyway, and sizes the correction on the
   vis-viva Δv it needs rather than a fixed 10 m/s.
   Electron's ascent into a 600 km sun-synchronous orbit cut off on a 598 km conic apoapsis and
-  reached 617 km, where no circularisation can be trimmed back down.
+  reached 617 km, where no circularisation can be trimmed back down. (Since 2026-10-01, a
+  circularisation that is the last burn goes first and the apex is lowered after it: one turn to
+  retrograde instead of two. Soyuz-2.1b's Fregat ran out of attitude gas on the two;
+  VALIDATION.md §3.)
 - **A burn ends when it has passed its minimum, whatever the step.** A shape or circularisation
   burn ends when its Δv-to-go starts to grow again, and the test asked for a 2 % rise over one
   step. Six-DOF steps are 0.01 s: past the minimum Briz-M adds about 0.02 m/s a step, under that

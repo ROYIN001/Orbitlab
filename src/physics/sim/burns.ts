@@ -61,8 +61,18 @@ export class BurnSequencer {
   }
 
   // ------------------------------------------------------------ orbital burns
+  /**
+   * What a scheduled six-DOF burn was planned for: the configuration, the
+   * stage and its engines, any failure, the operator's mode. Not the attitude
+   * gas: a reservoir that runs dry drops out of the configuration without
+   * changing the orbit or the stage that burns, and re-planning on it read the
+   * osculating apoapsis of the moment — Soyuz-2.1b's Fregat, empty on its
+   * coast to a circularisation, saw 583 km on an orbit whose apex was 600 km
+   * and added an 8 m/s trim a revolution later.
+   */
   rigidOrbitContext(): string {
-    return `${this.sim.state.rigid?.configurationId ?? ''}/${this.sim.vehicle.activeIndex}/${this.sim.vehicle.active?.engineFraction ?? 0}/${this.sim.failures.failureApplied}/${this.sim.rigidRuntime?.command.mode}`;
+    const configuration = (this.sim.state.rigid?.configurationId ?? '').split('|').filter((part) => !part.endsWith('.rcs')).join('|');
+    return `${configuration}/${this.sim.vehicle.activeIndex}/${this.sim.vehicle.active?.engineFraction ?? 0}/${this.sim.failures.failureApplied}/${this.sim.rigidRuntime?.command.mode}`;
   }
 
   rigidForecastAt(burn: BurnPlan, time: number): { r: Vec3; v: Vec3 } | null {
@@ -159,6 +169,22 @@ export class BurnSequencer {
     return correction;
   }
 
+  /**
+   * Six-DOF: whether a shaping burn can be flown as one aimed impulse along
+   * the velocity (`physicalObjective`): the last burn to a circular target,
+   * with no plane change left to fly, which a burn along the velocity would
+   * not make, and short enough for one pass: Long March 2D's satellite raises
+   * its own perigee on a 22 N engine over hours of passes, which an aimed
+   * impulse cannot model.
+   */
+  private aimableShape(burn: BurnPlan, el: OrbitalElements): boolean {
+    const target = this.sim.plan.target;
+    return !!this.sim.rigidRuntime && burn.kind === 'shapeAtApoapsis'
+      && Math.abs(target.apogee - target.perigee) < 1e3 && Math.abs(target.inclination - el.i) < 0.5 * INCLINATION_TOLERANCE
+      && this.sim.plan.burns.filter((b) => !b.done).length === 1
+      && this.sim.vehicle.burnTimeFor(burn.dvEstimate, true) < 0.8 * this.maxBurnDurationFor(burn, el);
+  }
+
   prepareRigidTransfer(burn: BurnPlan): boolean {
     const s = this.sim.state, aim = this.rigidAim;
     if (burn.physicalObjective && aim?.burn === burn) {
@@ -242,8 +268,9 @@ export class BurnSequencer {
       const apex = physicalApex.radiusM - R_EARTH;
       // Too high as well: a coast flown under J2 can arrive tens of kilometres
       // above the conic apoapsis the ascent cut off on (Electron into a 600 km
-      // sun-synchronous orbit: 598 km at cut-off, 617 km when it got there),
-      // and a circularisation flown there cannot be trimmed back down. "Too
+      // sun-synchronous orbit: 598 km at cut-off, 617 km when it got there;
+      // Soyuz-2.1b's Fregat with 4 t from Plesetsk: 597 km and 617.6 km), and
+      // a circularisation flown there leaves the apex where it is. "Too
       // high" is above the target's apogee — the height a burn at the apoapsis
       // is meant to be flown at — not above its perigee, which on a transfer
       // orbit the apex rightly is by 35 000 km — and only when no later burn
@@ -255,7 +282,21 @@ export class BurnSequencer {
       // physical apex 426.6 km), and a lowering burn costs a revolution.
       const lowersLater = this.sim.plan.burns.slice(this.sim.plan.burns.indexOf(burn) + 1)
         .some((b) => !b.done && b.kind === 'raiseApoapsis');
-      if (apex < perigee - 0.5 * apsisTolerance(perigee) || (!lowersLater && apex > apogee + 0.8 * apsisTolerance(apogee))) {
+      const tooHigh = !lowersLater && apex > apogee + 0.8 * apsisTolerance(apogee);
+      // The apex comes down at the perigee, with the stage turned retrograde.
+      // When the shaping burn is the last one and one aimed impulse can fly it
+      // (`aimableShape`), it goes first, at the apex the stage already points
+      // along, aimed at the target perigee as the lowest altitude of the next
+      // revolution; `finalPhysicalCorrection` then brings the apex down: one
+      // turn, and none back. Lowering first turned the stage retrograde and
+      // back for the shaping burn: Soyuz-2.1b's Fregat spent its last 30 kg of
+      // attitude gas on the two turns and could not align for the
+      // circularisation (`evt.burnAlignmentTimeout`), after waiting a
+      // revolution for a perigee that had gone by 236 s before its cut-off.
+      // Electron to the same orbit reaches it 39–45 minutes sooner this way.
+      if (tooHigh && this.aimableShape(burn, el)) {
+        burn.physicalObjective = { measure: 'lowest', altitudeM: perigee };
+      } else if (apex < perigee - 0.5 * apsisTolerance(perigee) || tooHigh) {
         if (this.rigidApexCorrections >= 3) { this.failRigidOrbitPrediction(); return; }
         this.rigidApexCorrections++;
         // The shooting bracket is sized on the estimate: the vis-viva change
@@ -274,15 +315,9 @@ export class BurnSequencer {
     // velocity. A conic circularisation leaves whatever eccentricity J2 hides
     // from the osculating ellipse at cut-off: Electron's 600 km
     // sun-synchronous orbit came out 599–624 km, with its Curie stage's
-    // attitude gas too low for another burn. Only when no plane change is
-    // left to fly, which this burn would then not make, and only for a burn
-    // one pass can fly: Long March 2D's satellite raises its own perigee on a
-    // 22 N engine over hours of passes, which an aimed impulse cannot model.
+    // attitude gas too low for another burn.
     const target = this.sim.plan.target;
-    if (this.sim.rigidRuntime && burn.kind === 'shapeAtApoapsis' && !burn.physicalObjective
-      && Math.abs(target.apogee - target.perigee) < 1e3 && Math.abs(target.inclination - el.i) < 0.5 * INCLINATION_TOLERANCE
-      && this.sim.plan.burns.filter((b) => !b.done).length === 1
-      && this.sim.vehicle.burnTimeFor(burn.dvEstimate, true) < 0.8 * this.maxBurnDurationFor(burn, el)) {
+    if (!burn.physicalObjective && this.aimableShape(burn, el)) {
       burn.physicalObjective = { measure: 'mean', altitudeM: (target.apogee + target.perigee) / 2 };
     }
     let tGo: number;

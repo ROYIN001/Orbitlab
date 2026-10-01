@@ -811,17 +811,100 @@ table left only under 1 Pa. The same table reaches orbit in the reference crossw
 - *The 18a abort* comes out 25 km low: another rocket (the 1975 11A511) and a failure the model
   does not fly (its Blok I pushing the core it could not shed).
 
-**Found in passing, not changed: Soyuz-2.1b to sun-synchronous orbit ends off target.** 4 t to the
-600 km SSO preset from Plesetsk ends `off target` in both flight models, before and after this
-change. The point mass goes to 597 × 597 km both times. In six-DOF it went to 588 × 606 km before
-and to 187 × 600 km after: the Fregat's first burn leaves a 187 × 597 km orbit, and the six-DOF burn
-planner spends an orbit on a 5 m/s apoapsis trim before the circularisation. It then re-plans a second
-trim an orbit later and runs out of time to align for it (`evt.burnAlignmentTimeout`, three hours into
-the flight). This is a burn-planner item for the Fregat phase, not the ascent: 2.1b's ascent now reaches orbit in six-DOF on
-the cases it used to fail (5 t to the ISS plane fell back on the kick; it reaches 412 × 424 km), and
-the six-DOF fleet matrix has no SSO row for it. Its seven six-DOF matrix rows (LEO and the ISS plane at
-25 and 50 %, GTO at 25, 50 and 90 %) all reach their targets on the stored programme
+**Found in passing: Soyuz-2.1b to sun-synchronous orbit ended off target.** 4 t to the 600 km SSO
+preset from Plesetsk ended `off target` in both flight models, before and after this change. It was
+not the ascent. In six-DOF it was the burn planner, which now flies the mission to its orbit (next
+section); in the point mass it was the launch time. 2.1b's ascent reaches orbit in six-DOF on the
+cases it used to fail (5 t to the ISS plane fell back on the kick; it reaches 412 × 424 km), and its
+seven six-DOF matrix rows (LEO and the ISS plane at 25 and 50 %, GTO at 25, 50 and 90 %) all reach
+their targets on the stored programme
 (`tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts`, flown 2026-10-01).
+
+### Soyuz-2.1b to sun-synchronous orbit: the burn order (six-DOF, 2026-10-01)
+
+**The case.** Soyuz-2.1b/Fregat-M with 4 t (the `weather` satellite) to the 600 km SSO preset
+(LTAN 10:30) from Plesetsk: six-DOF, calm, seed 20260919, launched in the LTAN window. The fleet
+matrix has no row for it, because it flies 2.1b from Baikonur, and no Baikonur azimuth reaches the
+orbit. The case is now `tests/sixdof-fleet/dedicated.test.ts`.
+
+**What was wrong.** Three things, each set up by the one before.
+
+1. *The parking orbit was high, not short.* The Fregat's first burn cuts off at T+1 062.8 s on an
+   osculating 187 × 597 km. The 3 km under 600 km comes from the cut-off gate. An ascent to an
+   elliptical insertion stops as soon as the apoapsis is within 3 km of the insertion apoapsis
+   (`checkAscent`, `src/physics/sim/ascent.ts`). The apoapsis is still rising by several kilometres
+   a second when it gets there, so the cut-off lands on that edge. That happens in both models, and
+   inside the 12 km band. In the point mass that is the orbit. A six-DOF coast is flown under J2,
+   and at 97.8°, 236 s past the perigee, the osculating apoapsis reads 20 km under the highest point
+   the stage reaches. That point is 617.6 km, above the planner's 609.6 km.
+2. *The planner lowered that apex before circularising.* It planned a 5 m/s retrograde trim at the
+   next J2 perigee, then the 115 m/s circularisation at the apex. The perigee had passed 236 s before
+   the cut-off, so the trim waited a revolution (5 307 s). It also turned the stage retrograde and
+   back.
+3. *The Fregat ran out of attitude gas.* The model gives it 60 kg (an estimate, `STAGE_RCS`). The
+   first burn, which the Fregat steers on its jets (its engine is fixed), and the settling after it
+   took about 30 kg. A held coast costs nothing: the tank stayed at the same mass through 4 900 s of
+   coast. The two turns took the other 30 kg, 23 kg of it before the first had finished. The coast
+   loop turns the 7.1 t stack (42 000 kg·m² across) at up to 4.6 °/s, overshoots retrograde by 49°,
+   and swings back and forth for two more minutes before it settles. A turn paced to the 240 s
+   pre-orientation would cost about 2 kg or less. With the Fregat's tank empty, its component left
+   the configuration, and the coast took that for a new planning context. It re-planned from the
+   osculating apoapsis of the moment: 583 km, on an orbit whose apex the trim had just put at
+   600 km. The result was an 8 m/s trim another revolution later. The stage could not turn for it:
+   `evt.burnAlignmentTimeout` came after 240 s (the floor, since an empty tank has no stopping time
+   to allow for), and the mission ended off target at T+12 157 s on 188 × 600 km.
+
+The point mass's `off target` came from the launch time. The finding was measured at the fixed epoch
+2026-09-15 12:00 UTC, and the plane reached from there is 81.5° of RAAN away from the LTAN plane.
+The RAAN was its only miss, and in the window it reaches its orbit (below).
+
+**What changed** (`src/physics/sim/burns.ts`; six-DOF only, the point mass is untouched).
+
+- *The last shaping burn goes before the trim of an apex that came out high.* This applies when the
+  burn is the last one and one aimed impulse can fly it: no plane change left, and one pass
+  (`aimableShape`, the test the aimed circularisation already used). It is then flown first, at the
+  apex, aimed at the target perigee as the lowest altitude of the next revolution. The
+  end-of-mission correction (`finalPhysicalCorrection`) then brings the apex down at the perigee.
+  That is one turn to retrograde and none back. The conic planner already puts a high apoapsis in
+  this order (`planBurns`). With a plane change or a multi-pass burn still to fly, the apex is
+  lowered first, as before.
+- *The attitude gas is not a planning context* (`rigidOrbitContext`). A tank that runs dry no
+  longer makes the coast re-plan.
+
+**Results.** Soyuz-2.1b, 4 t:
+
+| flown | point mass | six-DOF before | six-DOF after |
+| --- | --- | --- | --- |
+| in the LTAN window | target orbit, 597.1 × 597.1 km, T+3 563 s | off target, 188.0 × 599.9 km, T+12 157 s (`evt.burnAlignmentTimeout`) | **target orbit, 597.9 × 602.2 km, T+6 436 s**, 1 119 m/s left |
+| at 2026-09-15 12:00 UTC | off target on RAAN only (232.3° against 150.8°), 597.1 × 597.1 km | not re-flown | off target on RAAN only (232.5°), 597.9 × 602.2 km |
+
+Electron to the same orbit takes the same branch (apex 612–625 km). In the six-DOF fleet matrix it
+now reaches the orbit 39–45 minutes sooner, and nearer its middle:
+
+| six-DOF fleet row | before | after |
+| --- | --- | --- |
+| electron/sso/25 | 595.3 × 603.3 km, T+8 847 s | 597.2 × 602.8 km, T+6 517 s |
+| electron/sso/50 | 594.9 × 603.1 km, T+8 876 s | 597.3 × 602.7 km, T+6 513 s |
+| electron/sso/90 | 595.3 × 601.9 km, T+9 344 s | 598.1 × 601.9 km, T+6 653 s |
+
+**What remains.**
+
+- *The margin is the Fregat's attitude gas.* It reaches its orbit with 0.16 kg of its 60 kg left;
+  the 10 kg aboard after that are the spacecraft's. The one turn left costs 25 kg. This change
+  leaves alone how the coast loop turns a stage this weak, and the 60 kg is an estimate. Either one
+  moving could take the mission back off target.
+- *The six-DOF ascent still cuts off on the osculating apoapsis.* Under J2 that puts a near-polar
+  parking orbit's apex up to 20 km from the insertion apoapsis, and the planner absorbs it with an
+  apex correction. Cutting off on the physical apex would change every six-DOF row with an
+  elliptical insertion. It is not done here.
+- *Both models cut off 3 km under the insertion apoapsis*, by construction of the gate. That is
+  inside the band and is not changed.
+- *A six-DOF re-plan still reads the osculating apsides* (`replanRemainingBurns`). A coast that an
+  operator's command, a separation or an engine failure re-plans starts from the orbit of that
+  instant. Only the empty tank, which changes none of those, no longer triggers a re-plan.
+
+Held by `tests/rigid-orbit-planning.test.ts` (the order, and the empty tank) and
+`tests/sixdof-fleet/dedicated.test.ts` (the mission).
 
 ### Soyuz-2.1a's strap-ons fly a zero-lift turn (six-DOF, audit PHY-01)
 
