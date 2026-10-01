@@ -68,9 +68,9 @@ import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
 import { ApolloFlight } from './sim/apollo';
 import { RIGID_ASCENT_COMMAND_RATE, RIGID_STEERING_FREEZE_S, TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
-import type { Debris, EventSeverity, PendingAction, SimEvent, SimState, TelemetrySample } from './sim/types';
+import type { Debris, EventSeverity, EventState, PendingAction, SimEvent, SimState, TelemetrySample } from './sim/types';
 
-export type { SimStatus, DescentPhase, EventSeverity, SimEvent, TelemetrySample, DebrisVisual, Debris, Losses, SimState } from './sim/types';
+export type { SimStatus, DescentPhase, EventSeverity, EventState, SimEvent, TelemetrySample, DebrisVisual, Debris, Losses, SimState } from './sim/types';
 export { hashSeed, mulberry32 } from './sim/seed';
 export { FAIRING_HEAT_FLUX_LIMIT, FAIRING_Q_LIMIT, FAIRING_ALTITUDE_FLOOR } from './sim/constants';
 
@@ -548,7 +548,32 @@ export class Simulation {
    */
   /** @internal */
   event(key: string, severity: EventSeverity, params?: Record<string, string | number>, at?: number): void {
-    this.events.push({ t: at ?? this.state.t, key, params, severity });
+    const e: SimEvent = { t: at ?? this.state.t, key, params, severity };
+    this.events.push(e);
+    // a command's, between steps: the flight is where it is now (one logged in a step is stamped when the step ends)
+    if (!this.stepping) e.state = this.eventState();
+  }
+
+  /** Inside `step`: the events it logs are stamped with the state it ends in (`SimEvent.state`). */
+  private stepping = false;
+
+  /**
+   * The state an event leaves the flight in (`SimEvent.state`): now, with the
+   * impulse a core already shut down still gives as it dies away added along
+   * the thrust axis — the orbit a cut-off is judged on (`stepFlight`, "the
+   * orbit it would leave behind once its tail-off is over") and the one the
+   * flight is in when it has ended for a lesson (src/lessons/grader.ts
+   * `flightEnded` waits for the tail-off). Copies: nothing here may change
+   * with the state.
+   */
+  private eventState(): EventState {
+    const s = this.state;
+    const st = this.vehicle.active;
+    // the vehicle's own engines drive the state only while it flies itself (not the escape's capsule, nor on the ground)
+    const own = s.status !== 'abort' && s.status !== 'prelaunch' && s.status !== 'landed' && s.status !== 'failed';
+    const tail = own && st && (st.cutoff || st.burnedOut)
+      ? this.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass) : 0;
+    return { t: s.t, r: clone(s.r), v: tail > 0 ? addScaled(s.v, s.dir, tail) : clone(s.v) };
   }
 
   /**
@@ -730,7 +755,25 @@ export class Simulation {
   }
 
   // ------------------------------------------------------------------ step
+  /**
+   * Fly one step of up to `dt` s; returns the time flown. The events it logs
+   * are given the state it ends in (`SimEvent.state`, `eventState`).
+   */
   step(dt: number, onTransition?: () => void): number {
+    const from = this.events.length;
+    this.stepping = true;
+    try {
+      return this.stepOnce(dt, onTransition);
+    } finally {
+      this.stepping = false;
+      if (this.events.length > from) {
+        const state = this.eventState();
+        for (let i = from; i < this.events.length; i++) this.events[i].state ??= state;
+      }
+    }
+  }
+
+  private stepOnce(dt: number, onTransition?: () => void): number {
     const s = this.state;
     if (s.status === 'failed') return 0;
     // Observe already-due transitions before integrating; a recorder must never
