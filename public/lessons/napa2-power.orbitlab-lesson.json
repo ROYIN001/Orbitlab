@@ -1,0 +1,135 @@
+{
+  "format": "orbitlab.lessons",
+  "version": 3,
+  "lessons": [
+    {
+      "kind": "design",
+      "id": "example-napa2-power",
+      "track": 9,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        1,
+        2
+      ],
+      "tags": [
+        "D06",
+        "T01"
+      ],
+      "title": {
+        "en": "Power to spare through the eclipse: NAPA-2",
+        "ru": "Запас мощности в тени Земли: NAPA-2",
+        "th": "กำลังไฟฟ้าเหลือพอตลอดช่วงอุปราคา: NAPA-2"
+      },
+      "brief": {
+        "en": "NAPA-2, the Royal Thai Air Force's 6U CubeSat, flies a sun-synchronous orbit at about 530 km and spends over a third of each revolution in the Earth's shadow. As it flew, the cells on its body leave it a power margin of under 7 % at the end of its three-year life. Change its power system so that the margin is at least 10 % through the longest eclipse of the year, without draining the battery deeper than 30 %, and type how long that eclipse lasts. Its orbit, its bus, its loads, its radio and its camera are locked.",
+        "ru": "NAPA-2 — кубсат формата 6U Военно-воздушных сил Таиланда — летает по солнечно-синхронной орбите высотой около 530 км и больше трети каждого витка проводит в тени Земли. Элементов на его корпусе хватает лишь на запас мощности меньше 7 % к концу трёхлетнего срока службы. Измените систему электропитания так, чтобы в самой длинной тени года запас мощности был не меньше 10 %, а аккумулятор разряжался не глубже чем на 30 %, и введите, сколько длится эта тень. Орбита, платформа, нагрузки, радиосвязь и камера заблокированы.",
+        "th": "NAPA-2 ดาวเทียมคิวบ์แซตขนาด 6U ของกองทัพอากาศไทย โคจรในวงโคจรสัมพันธ์กับดวงอาทิตย์ที่ความสูงประมาณ 530 กม. และอยู่ในเงามืดของโลกมากกว่าหนึ่งในสามของแต่ละรอบ เซลล์แสงอาทิตย์บนตัวดาวเทียมตามแบบจริงให้ค่าเผื่อกำลังไฟฟ้าไม่ถึง 7 % เมื่อสิ้นอายุการใช้งาน 3 ปี จงปรับระบบไฟฟ้าให้ค่าเผื่อกำลังไฟฟ้าในอุปราคานานที่สุดของปีไม่น้อยกว่า 10 % โดยแบตเตอรี่คายประจุไม่เกิน 30 % แล้วพิมพ์ว่าอุปราคานั้นนานเท่าใด วงโคจร โครงดาวเทียม โหลดไฟฟ้า วิทยุสื่อสาร และกล้องถูกล็อกไว้"
+      },
+      "debrief": {
+        "en": "In sunlight the array must make enough for the loads and to charge the battery for the eclipse, and solar cells lose some of their output every year in orbit: that is why the margin is kept for the end of life, not the start. Cells on the body see the Sun at a slant, so a CubeSat that needs more power unfolds panels or carries more cells. The longest eclipse comes when the Sun lies nearest the orbit's plane (β close to 0); a dawn–dusk orbit hardly enters the shadow at all.",
+        "ru": "На освещённом участке солнечная батарея должна вырабатывать достаточно и для нагрузок, и для зарядки аккумулятора на время тени, а солнечные элементы на орбите каждый год теряют часть мощности: поэтому запас нужен к концу срока службы, а не к его началу. Элементы на корпусе освещаются Солнцем под углом, и кубсату, которому нужна бо́льшая мощность, ставят раскрывающиеся панели или больше элементов. Самая длинная тень бывает, когда Солнце ближе всего к плоскости орбиты (угол β около 0); орбита «рассвет — закат» почти не заходит в тень.",
+        "th": "ในช่วงที่ได้รับแสงอาทิตย์ แผงเซลล์ต้องผลิตไฟฟ้าให้พอทั้งสำหรับโหลดและสำหรับชาร์จแบตเตอรี่ไว้ใช้ในช่วงอุปราคา และเซลล์แสงอาทิตย์จะเสื่อมลงทุกปีในวงโคจร จึงต้องเผื่อกำลังไฟฟ้าไว้สำหรับตอนสิ้นอายุการใช้งาน ไม่ใช่ตอนเริ่มต้น เซลล์บนตัวดาวเทียมรับแสงอาทิตย์เป็นมุมเอียง คิวบ์แซตที่ต้องการไฟฟ้ามากขึ้นจึงกางแผงหรือติดเซลล์เพิ่ม อุปราคานานที่สุดเกิดเมื่อดวงอาทิตย์อยู่ใกล้ระนาบวงโคจรที่สุด (มุม β ใกล้ 0) ส่วนวงโคจรรุ่งอรุณ–พลบค่ำแทบไม่เข้าสู่เงามืดเลย"
+      },
+      "start": {
+        "template": "napa2"
+      },
+      "designDate": "2026-10-01",
+      "level": "moderate",
+      "locked": [
+        "orbit.perigee",
+        "orbit.apogee",
+        "orbit.inclination",
+        "orbit.ltan",
+        "orbit.raan",
+        "orbit.sso",
+        "lifeYears",
+        "bus.dryMass",
+        "bus.size.width",
+        "bus.size.height",
+        "bus.size.depth",
+        "bus.cd",
+        "bus.cr",
+        "propulsion",
+        "propulsion.thrust",
+        "propulsion.isp",
+        "propulsion.propellant",
+        "propulsion.insertionDv",
+        "adcs.mode",
+        "adcs.pointingDeg",
+        "adcs.inertia.0",
+        "adcs.inertia.1",
+        "adcs.inertia.2",
+        "adcs.wheelH",
+        "adcs.residualDipole",
+        "adcs.cpOffset",
+        "comms.txPowerW",
+        "comms.frequency",
+        "comms.txAntennaD",
+        "comms.lineLoss",
+        "comms.dataRate",
+        "comms.requiredEbN0",
+        "comms.station",
+        "comms.minElDeg",
+        "comms.rxAntennaD",
+        "comms.rxNoiseK",
+        "comms.losses",
+        "payload",
+        "payload.focalLength",
+        "payload.pixelPitch",
+        "payload.pixels",
+        "payload.aperture",
+        "payload.bits",
+        "payload.wavelength",
+        "power.payloadW",
+        "power.busW",
+        "power.cellEff",
+        "power.Id",
+        "power.degPerYear",
+        "power.batteryEff"
+      ],
+      "criteria": [
+        {
+          "id": "margin",
+          "kind": "design",
+          "measure": "sat.powerMargin",
+          "min": 10
+        },
+        {
+          "id": "battery",
+          "kind": "design",
+          "measure": "sat.batteryDod",
+          "max": 30
+        },
+        {
+          "id": "eclipse",
+          "kind": "answer",
+          "measure": "sat.eclipseMax",
+          "prompt": {
+            "en": "Longest eclipse of the year (min)",
+            "ru": "Самая длинная тень за год (мин)",
+            "th": "อุปราคานานที่สุดของปี (นาที)"
+          },
+          "tol": 1
+        }
+      ],
+      "hints": [
+        {
+          "en": "The margin is what the cells give at the end of life over what the satellite needs, and it grows in proportion to their area: NAPA-2's 0.068 m² gives about +7 %.",
+          "ru": "Запас — это мощность элементов к концу срока службы сверх нужной спутнику, и он растёт пропорционально их площади: 0,068 м² у NAPA-2 дают около +7 %.",
+          "th": "ค่าเผื่อคือกำลังไฟฟ้าที่เซลล์ผลิตได้เมื่อสิ้นอายุการใช้งานส่วนที่เกินกว่าที่ดาวเทียมต้องใช้ และเพิ่มขึ้นตามสัดส่วนพื้นที่เซลล์ พื้นที่ 0.068 ตร.ม. ของ NAPA-2 ให้ค่าเผื่อราว +7 %"
+        },
+        {
+          "en": "Wings that track the Sun (the \"Solar array\" menu) need less area for the same power than cells on the body, which see the Sun at a slant.",
+          "ru": "Панелям, следящим за Солнцем (меню «Солнечная батарея»), для той же мощности нужна меньшая площадь, чем элементам на корпусе, которые освещаются под углом.",
+          "th": "ปีกที่หันตามดวงอาทิตย์ (เมนู \"แผงเซลล์แสงอาทิตย์\") ใช้พื้นที่น้อยกว่าเซลล์บนตัวดาวเทียมเพื่อให้ได้กำลังไฟฟ้าเท่ากัน เพราะเซลล์บนตัวรับแสงเป็นมุมเอียง"
+        },
+        {
+          "en": "The eclipse is under \"At a glance\". By hand: with the Sun in the orbit's plane the shadow takes (1/π)·acos(√(h² + 2Rh) / (R + h)) of a revolution, about 37 % of NAPA-2's 95 minutes; its orbit never has the Sun quite in the plane, so a little less.",
+          "ru": "Длительность тени есть в блоке «Коротко». Вручную: когда Солнце в плоскости орбиты, тень занимает (1/π)·arccos(√(h² + 2Rh) / (R + h)) витка — около 37 % от 95 минут у NAPA-2; на его орбите Солнце никогда не бывает точно в плоскости, поэтому чуть меньше.",
+          "th": "ความยาวอุปราคาดูได้ในส่วน \"สรุปสั้น ๆ\" หากคำนวณเอง เมื่อดวงอาทิตย์อยู่ในระนาบวงโคจร เงามืดกินเวลา (1/π)·acos(√(h² + 2Rh) / (R + h)) ของหนึ่งรอบ ราว 37 % ของ 95 นาทีของ NAPA-2 แต่ในวงโคจรนี้ดวงอาทิตย์ไม่เคยอยู่ในระนาบพอดี จึงสั้นกว่านั้นเล็กน้อย"
+        }
+      ]
+    }
+  ]
+}
