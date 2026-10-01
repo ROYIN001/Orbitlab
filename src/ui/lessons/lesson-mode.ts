@@ -29,7 +29,7 @@
  * teacher's; a built-in lesson a pack reuses opened from the pack goes on to
  * the pack's next lesson.
  */
-import { t, getLang } from '../../i18n';
+import { t, tCount, getLang } from '../../i18n';
 import { en } from '../../i18n/en';
 import type { AppMode } from '../app-mode';
 import type { Simulation } from '../../physics/simulation';
@@ -40,8 +40,8 @@ import { awaitingAnswers, flightEnded, flightStarted, gradeShown, regradeAnswers
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
 import { FlightLessons } from '../../lessons/flight-lessons';
 import { draftValue, submittedAnswers, type AnswerDrafts } from '../../lessons/answer-drafts';
-import { formatMeasure, MEASURES } from '../../lessons/measures';
-import { localText, unitText } from '../../lessons/text';
+import { MEASURES } from '../../lessons/measures';
+import { localText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue, type ParsedLessonFile } from '../../lessons/lesson-file';
 import { SCENARIO_LINK_MAX, SCENARIO_PARAM, readScenarioParam, scenarioLink } from '../../lessons/scenario-link';
 import { loadBundledPacks, packLessons, packOf, packPath, type PackItem, type ResolvedPack } from '../../lessons/packs';
@@ -70,6 +70,9 @@ import type { Worksheet } from '../../worksheets/types';
 import type { LessonToolsHost } from '../../lessons/mcp-tools';
 import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
+import { keepUnits } from '../keep-units';
+import { nameForFile } from '../file-name';
+import { decimal, measureText, unitAfter } from './measure-text';
 import { PanelLocks } from './locks';
 // T01/T02: small, and on the page that is open anyway (a lazy chunk of them split the dictionaries off the main one)
 import { renderAuthor } from './author-view';
@@ -854,16 +857,16 @@ export class LessonMode implements LessonToolsHost {
 
   private criterionBound(c: Criterion): string {
     if (c.kind !== 'measure') return '';
-    const unit = MEASURES[c.measure].unit;
-    const u = unit ? ` ${unitText(unit)}` : '';
+    // W: in the reader's decimal sign ("35786,0 ± 10 км"), as the design strip writes its bounds; an angle's ° with no space ("64,85 … 65,05°")
+    const u = unitAfter(MEASURES[c.measure].unit);
     if (c.target === 'mission') {
       const target = this.missionValue(c);
-      return `${target === null ? t('lesson.bound.mission') : target.toFixed(MEASURES[c.measure].digits)} ± ${c.tol ?? 0}${u}`;
+      return `${target === null ? t('lesson.bound.mission') : decimal(target, MEASURES[c.measure].digits)} ± ${decimal(c.tol ?? 0)}${u}`;
     }
-    if (c.target !== undefined) return `${c.target} ± ${c.tol ?? 0}${u}`;
-    if (c.min !== undefined && c.max !== undefined) return `${c.min} … ${c.max}${u}`;
-    if (c.max !== undefined) return `≤ ${c.max}${u}`;
-    return `≥ ${c.min}${u}`;
+    if (c.target !== undefined) return `${decimal(c.target)} ± ${decimal(c.tol ?? 0)}${u}`;
+    if (c.min !== undefined && c.max !== undefined) return `${decimal(c.min)} … ${decimal(c.max)}${u}`;
+    if (c.max !== undefined) return `≤ ${decimal(c.max)}${u}`;
+    return c.min !== undefined ? `≥ ${decimal(c.min)}${u}` : '';
   }
 
   private missionValue(c: Criterion): number | null {
@@ -882,7 +885,7 @@ export class LessonMode implements LessonToolsHost {
     chip.dataset.criterion = c.id;
     chip.append(el('span', 'lesson-crit-name', this.criterionLabel(c)));
     const bound = this.criterionBound(c);
-    const value = c.kind === 'measure' && flown && g?.value !== null && g?.value !== undefined ? formatMeasure(c.measure, g.value) : '';
+    const value = c.kind === 'measure' && flown && g?.value !== null && g?.value !== undefined ? measureText(c.measure, g.value) : '';
     const mark = { pending: t('lesson.crit.pending'), passing: t('lesson.crit.passing'), pass: '✓', fail: '✗' }[state];
     const line = el('span', 'lesson-crit-value');
     line.textContent = [bound, value, mark].filter(Boolean).join(' · ');
@@ -900,10 +903,11 @@ export class LessonMode implements LessonToolsHost {
     this.strip.setAttribute('aria-label', `${t('lesson.button')} ${lessonNumber(lesson)}`);
     const head = el('div', 'lesson-strip-head');
     head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: group })),
-      el('h2', undefined, localText(lesson.title)));
+      el('h2', undefined, keepUnits(localText(lesson.title))));
     if (item?.curriculum.length) head.append(this.codeChips(item.curriculum));
-    head.append(el('p', 'lesson-brief', localText(lesson.brief)));
-    for (let i = 0; i < hints; i++) head.append(el('p', 'lesson-hint', `💡 ${localText(lesson.hints[i])}`));
+    // W: a lesson's own figures stay with their units on a phone (a pack's "3.5 m²", a debrief's "5 400 times")
+    head.append(el('p', 'lesson-brief', keepUnits(localText(lesson.brief))));
+    for (let i = 0; i < hints; i++) head.append(el('p', 'lesson-hint', `💡 ${keepUnits(localText(lesson.hints[i]))}`));
     return head;
   }
 
@@ -968,7 +972,7 @@ export class LessonMode implements LessonToolsHost {
         inputs.set(c.id, () => input.value);
         // a wrong answer is only marked: the value is shown only when asked for, and then passes only with help
         const mark = cg?.state === 'pass' ? '✓' : cg?.state === 'fail' ? '✗' : '';
-        const verdict = cg?.revealed ? `${mark} ${t('lesson.strip.expected', { value: formatMeasure(c.measure, cg.expected ?? null) })}`.trim() : mark;
+        const verdict = cg?.revealed ? `${mark} ${t('lesson.strip.expected', { value: measureText(c.measure, cg.expected ?? null) })}`.trim() : mark;
         row.append(el('span', undefined, localText(c.prompt)), input, el('span', 'lesson-answer-mark', verdict));
         form.append(row);
       }
@@ -992,7 +996,7 @@ export class LessonMode implements LessonToolsHost {
     }
     if (flown && g?.final && (g.verdict === 'pass' || g.verdict === 'passedWithHelp')) {
       status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
-      if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+      if (lesson.debrief) status.append(el('p', 'lesson-debrief', keepUnits(localText(lesson.debrief))));
     } else if (flown && g?.final && g.verdict === 'fail') {
       const onlyAnswers = !g.lockBroken.length && g.criteria.every((cg) => cg.state !== 'fail' || lesson.criteria.find((c) => c.id === cg.id)?.kind === 'answer');
       const key = g.criteria.some((cg) => cg.revealed) ? 'lesson.strip.revealed' : onlyAnswers ? 'lesson.strip.answersWrong' : 'lesson.strip.fail';
@@ -1003,7 +1007,7 @@ export class LessonMode implements LessonToolsHost {
     if (saveNote) status.append(saveNote);
 
     const { actions, button } = this.actionBar();
-    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t(lesson.hints.length ? 'lesson.strip.noHints' : 'lesson.strip.hintsNone'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.strip.restart'), () => this.restart());
     if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
@@ -1043,7 +1047,7 @@ export class LessonMode implements LessonToolsHost {
       status.append(this.caseData(c, c.sheet), this.caseForm(a, lesson, c.sheet, g));
       if (g.verdict === 'pass' || g.verdict === 'passedWithHelp') {
         status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
-        if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+        if (lesson.debrief) status.append(el('p', 'lesson-debrief', keepUnits(localText(lesson.debrief))));
       } else if (g.verdict === 'fail') {
         status.append(el('p', 'lesson-note fail', t(g.criteria.some((x) => x.revealed) ? 'lesson.strip.revealed' : 'lesson.strip.answersWrong')));
       }
@@ -1051,7 +1055,7 @@ export class LessonMode implements LessonToolsHost {
     const saveNote = a.recorded || this.saved === false ? this.saveNote('p') : null;
     if (saveNote) status.append(saveNote);
     const { actions, button } = this.actionBar();
-    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t(lesson.hints.length ? 'lesson.strip.noHints' : 'lesson.strip.hintsNone'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.strip.restart'), () => this.restart());
     if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
@@ -1152,7 +1156,7 @@ export class LessonMode implements LessonToolsHost {
     if (shown && !stale) {
       if (g.verdict === 'pass' || g.verdict === 'passedWithHelp') {
         status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
-        if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+        if (lesson.debrief) status.append(el('p', 'lesson-debrief', keepUnits(localText(lesson.debrief))));
       } else if (g.verdict === 'fail') {
         const onlyAnswers = !g.lockBroken.length && g.criteria.every((cg) => cg.state !== 'fail' || lesson.criteria.find((c) => c.id === cg.id)?.kind === 'answer');
         status.append(el('p', 'lesson-note fail', t(g.criteria.some((cg) => cg.revealed) ? 'lesson.strip.revealed' : onlyAnswers ? 'lesson.strip.answersWrong' : 'lesson.design.strip.fail')));
@@ -1164,7 +1168,7 @@ export class LessonMode implements LessonToolsHost {
     if (saveNote) status.append(saveNote);
 
     const { actions, button } = this.actionBar();
-    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t(lesson.hints.length ? 'lesson.strip.noHints' : 'lesson.strip.hintsNone'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.design.strip.open'), () => this.host.showDesign?.(lesson.mode));
     button(t('lesson.strip.restart'), () => this.restart());
@@ -1522,10 +1526,11 @@ export class LessonMode implements LessonToolsHost {
     card.classList.toggle('active', this.active?.lesson.id === l.id);
     card.append(el('span', 'lesson-card-status', status));
     const text = el('span', 'lesson-card-text');
-    text.append(el('b', undefined, `${lessonNumber(l)} ${localText(l.title)}`));
+    text.append(el('b', undefined, `${lessonNumber(l)} ${keepUnits(localText(l.title))}`));
     const item = opts.pack?.item;
     if (item?.curriculum.length) text.append(this.codeChips(item.curriculum));
-    text.append(el('small', undefined, localText(l.brief)));
+    // W review: the card's brief keeps its figures with their units as the title does ("20 %", "500 กม." broke at 360 px)
+    text.append(el('small', undefined, keepUnits(localText(l.brief))));
     if (item?.note) text.append(el('span', 'lesson-card-note', localText(item.note)));
     const tags = el('span', 'lesson-card-tags');
     if (item?.reference) {
@@ -1573,14 +1578,14 @@ export class LessonMode implements LessonToolsHost {
       group.dataset.pack = p.pack.id;
       group.append(el('h4', undefined, localText(p.pack.title)));
       const meta = el('p', 'lesson-pack-meta');
-      meta.append(el('span', undefined, t('lesson.pack.audience', { audience: localText(p.pack.audience) })),
-        el('span', undefined, t('lesson.pack.framework', { framework: localText(p.pack.framework) })));
+      meta.append(el('span', undefined, keepUnits(t('lesson.pack.audience', { audience: localText(p.pack.audience) }))),
+        el('span', undefined, keepUnits(t('lesson.pack.framework', { framework: localText(p.pack.framework) }))));
       group.append(meta);
       // the roadmap's validation of a pack is the owner's review: until then it says so
       if (!p.pack.reviewed) group.append(el('p', 'lesson-pack-draft', t('lesson.pack.draft')));
       const about = el('details', 'lesson-pack-about');
       about.append(el('summary', undefined, t('lesson.pack.about')));
-      if (p.pack.description) about.append(el('p', undefined, localText(p.pack.description)));
+      if (p.pack.description) about.append(el('p', undefined, keepUnits(localText(p.pack.description))));
       const file = el('a', undefined, t('lesson.pack.file'));
       file.href = packPath(p.pack.id);
       file.download = packPath(p.pack.id).split('/').pop()!;
@@ -1625,6 +1630,12 @@ export class LessonMode implements LessonToolsHost {
       page: () => location.href,
       // T01: a design lesson is written from the design on the satellite bench, its date and its level
       designDesk: () => this.host.designDesk?.() ?? null,
+      // W: a lesson still open lends the writer its mission or its design; the page says which
+      openLesson: () => {
+        const l = this.active?.lesson;
+        if (!l) return null;
+        return { id: l.id, n: lessonNumber(l), title: localText(l.title), sets: isDesignLesson(l) ? 'design' : isFlightLesson(l) ? 'mission' : 'none' };
+      },
     }, this.content);
   }
 
@@ -1680,7 +1691,8 @@ export class LessonMode implements LessonToolsHost {
     const events = parsed.issues.filter((i) => i.code === 'event');
     this.notice = {
       level: errors.length || events.length || builtin.length ? 'warn' : 'ok',
-      text: t('lesson.file.loaded', { lessons: parsed.lessons.length - builtin.length, questions: parsed.questions.length }),
+      // W: each count with its word ("1 lesson", «1 урок»), not "1 lessons"
+      text: t('lesson.file.loaded', { lessons: tCount('lesson.file.n.lessons', parsed.lessons.length - builtin.length), questions: tCount('lesson.file.n.questions', parsed.questions.length) }),
       details: [...builtin.map((l) => t('lesson.author.notTaken', { title: localText(l.title), id: l.id })),
         ...(errors.length ? [t('lesson.file.issues'), ...errors.map(issueText)] : []),
         ...events.map((i) => t('lesson.author.issue.event', { where: i.where, key: i.detail ?? '' }))],
@@ -1721,7 +1733,8 @@ export class LessonMode implements LessonToolsHost {
     const file = await resultsFile(this.progressData, new Date(), student || undefined,
       summary ? { kind: summary.kind, percent: summary.result.percent, areas: summary.result.domains, start: summary.result.start } : undefined);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-    const who = student.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+    // W: a Thai name keeps its vowels and tones («สมชาย ใจดี», not "สมชาย-ใจด")
+    const who = nameForFile(student);
     downloadBlob(new Blob([`${JSON.stringify(file, null, 2)}\n`], { type: 'application/json' }), `orbitlab${who ? `-${who}` : ''}-${stamp}${RESULTS_FILE_EXTENSION}`);
   }
 }

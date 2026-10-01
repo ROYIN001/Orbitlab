@@ -196,11 +196,14 @@ export class LifetimeDialog extends Modal {
       return l;
     };
     const settings = el('div', 'life-settings');
+    // W: the two menus whose choices are phrases ("Measured, then NOAA's forecast", "Mean elements (fast; J2 and drag)")
+    // take a row each, first; at 1440 px half a row cut them. The horizon, a short figure, sits beside the mass.
+    const wide = (l: HTMLLabelElement): HTMLLabelElement => { l.classList.add('life-wide'); return l; };
     settings.append(
-      select<ActivityChoice>(t('life.activity'), ACTIVITY_CHOICES.map((c) => [c, t(ACTIVITY_KEY[c])] as [ActivityChoice, string]),
-        this.activity, (v) => { this.activity = v; }),
+      wide(select<ActivityChoice>(t('life.activity'), ACTIVITY_CHOICES.map((c) => [c, t(ACTIVITY_KEY[c])] as [ActivityChoice, string]),
+        this.activity, (v) => { this.activity = v; })),
+      wide(select<'mean' | 'cowell'>(t('life.method'), [['mean', t('life.method.mean')], ['cowell', t('life.method.cowell')]], this.method, (v) => { this.method = v; })),
       select<number>(t('life.horizon'), HORIZONS.map((d) => [d, formatDuration(d * 86400)] as [number, string]), this.horizon, (v) => { this.horizon = v; }),
-      select<'mean' | 'cowell'>(t('life.method'), [['mean', t('life.method.mean')], ['cowell', t('life.method.cowell')]], this.method, (v) => { this.method = v; }),
     );
     const sc = this.spacecraft;
     if (sc) {

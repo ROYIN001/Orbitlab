@@ -4,6 +4,9 @@ dist/
 *.log
 .DS_Store
 
+# what the browser journeys write when run locally (case-worksheet-exports: CASE_EXPORT_DIR's default)
+tests/browser/artifacts/
+
 # throwaway experiment files written by audit/implementation agents
 tests/probe/
 probe-out.txt

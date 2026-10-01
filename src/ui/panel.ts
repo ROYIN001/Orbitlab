@@ -1480,8 +1480,9 @@ export class SetupPanel {
     const target = resolveTarget(s.orbit, site, s.launchTime);
     row(t('setup.tab.vehicle'), vehicle.name);
     row(t('setup.site'), siteName(site));
-    row(t('setup.tab.payload'), `${satelliteName(missionSatellite(s))} · ${num(s.payloadMass)} kg`);
-    row(t('setup.tab.orbit'), `${num(Math.round(s.orbit.perigee / 1000))} × ${num(Math.round(s.orbit.apogee / 1000))} km · ${(target.inclination * RAD).toFixed(1)}°`);
+    // W: each figure keeps its unit on its line ("4,150 kg" broke before "kg" in the 1440 px column)
+    row(t('setup.tab.payload'), `${satelliteName(missionSatellite(s))} · ${num(s.payloadMass)}\u00a0kg`);
+    row(t('setup.tab.orbit'), `${num(Math.round(s.orbit.perigee / 1000))} × ${num(Math.round(s.orbit.apogee / 1000))}\u00a0km · ${(target.inclination * RAD).toFixed(1)}°`);
     if (s.failure.mode !== 'none') row(t('setup.challenge.title'), t(`setup.fail.${s.failure.mode}`));
     if (s.dynamics?.model === 'sixDof') row(t('setup.weather'), t(`setup.dynamics.${s.dynamics.wind}`));
     section.append(box, this.el('p', 'field-note', t('setup.flying.note')));

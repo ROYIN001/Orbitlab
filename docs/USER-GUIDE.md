@@ -18,10 +18,11 @@ a dot is a section still to come (Campaign, roadmap phase 6): its menu lists wha
 brings to it. In Thai the launch section's first level is called รับชม (watching), the other
 sections' first level พื้นฐาน (the basics), and the second level ทดลอง everywhere.
 **Orbit** opens on its playground (section 0a below). **Build** takes real rockets apart, remixes
-them, builds new ones from parts and tests them before they fly (section 0b below); what is still
-to come to it (designing from parts at the Engineer level, and the satellites) is listed at its
-Engineer level, from [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md). Everything after section 0b is
-about Launch.
+them, builds new ones from parts and tests them before they fly (section 0b below), and designs
+satellites, tests them and flies them (section 0c); what is still to come to it (designing a rocket
+from parts at the Engineer level) is listed at its Engineer level, from
+[ROADMAP-PART2-3.md](ROADMAP-PART2-3.md). Everything after section 0c is about Launch, and about the
+lessons (section 18), which a teacher can now write and check.
 
 - **Home** — the landing page, a page you scroll (the wheel scrolls it; it does not move the
   scene). Its first screen is the featured rocket on its pad: **Watch a launch** plays the
@@ -358,12 +359,12 @@ reference.
 
 ## 0b. The Build section: rockets taken apart, remixed, built and tested
 
-Build is where rockets are taken apart and put together. Press **Build** in the top bar; its menu
-chooses Watch, Explore or Engineer. (The landing page has no Build chapter yet, so
-the top bar is the way in.) Every rocket here is made from one parts catalogue, the same one the
-21 real rockets are assembled from, and every figure is worked out by the physics the launches
-fly. What the builder cannot know is marked as an estimate, and the section below the three levels
-says what those estimates mean.
+Build is where rockets are taken apart and put together (satellites are section 0c). Press
+**Build** in the top bar; its menu chooses Watch, Explore or Engineer. (The landing page has no
+Build chapter yet, so the top bar is the way in.) Every rocket here is made from one parts
+catalogue, the same one the 21 real rockets are assembled from, and every figure is worked out by
+the physics the launches fly. What the builder cannot know is marked as an estimate, and the
+section below the three levels says what those estimates mean.
 
 ### Watch: real rockets, taken apart
 
@@ -536,6 +537,176 @@ has been opened in this session), a saved design, or a launcher sized here.
 - **The Engineer level's "Coming" list** notes that building from parts is already at the
   Explore level, with a link there.
 
+## 0c. The Build section: satellites designed, tested and flown
+
+Build designs satellites too. At Explore and Engineer, the switch above the level ("Build a"
+**Rocket** or **Satellite**) changes what is on the bench: at Explore the satellite is **Design a
+satellite**, at Engineer the **Satellite bench**, and both work on the same design. (Watch takes
+rockets apart only.) Every figure is worked out as you type, by the same satellite physics at both
+levels, for a day you choose. What the designer cannot know is marked as an estimate, and the last
+part of this section says what those estimates mean.
+
+### Explore: design a satellite
+
+- **Where it starts.** Pick a template. Under "Thai satellites": **NAPA-2**, the Royal Thai Air
+  Force's 6U CubeSat (10 kg, on the orbit it flew), or a **THEOS-2-class** imager. Under "Classes
+  of satellite": communications and weather (in GEO), Earth observation, navigation and science,
+  each the Launch section's class with its typical mass, engine and size. **Start again from the
+  template** puts it back as it was.
+- **What you change.** The orbit (perigee, apogee and inclination; with **Sun-synchronous** on,
+  the inclination follows the height), the design life, the dry mass, the loads, the cells' area and
+  how they are mounted (Sun-tracking wings, on the body, or on a spinning drum), the battery, the
+  propellant, the radio's power and data rate, and the camera's focal length and pixels. Each
+  number carries a mark: **sourced** (point at the mark to read the source, or see the sources at
+  the Engineer level), **estimate**, or **yours** once you have changed it.
+- **What it gives.** **At a glance** and **The figures** follow every change: the eclipse (on the
+  design date, and the year's longest), the array and battery that eclipse needs and the margin
+  you have, the Δv budget against what the tanks hold, the torques the satellite meets and the wheel
+  they call for, the downlink's margin and highest data rate, and the camera's detail on the ground,
+  its swath and the finest detail its aperture allows. **What works and what does not** says, in
+  words and numbers, what **Will not work**, each **Warning** and each **Note**, including what is
+  estimated.
+- **The design date.** The figures are worked out for one day, shown at the top of both levels:
+  the Sun's angle to the orbit, and with it the eclipse and the power, change through the year. It
+  is today on your own calendar unless you set it, and **Today** brings it back. It is kept with
+  the design you are working on in this browser, not with a saved design. The bench's lifetime run
+  starts on it, and **Send to Orbit** places the satellite on it.
+- **Your designs.** **Save**, **Save as new**, export and import work as for rockets, with
+  `.orbitlab.json` files. A rocket's file imported here is opened in the rocket designer, and a
+  satellite's file imported there is opened here; the page says so. The design on the desk comes
+  back after a reload in the same browser.
+
+### Send to Orbit
+
+Under **Fly it in the Orbit section**, **Send to Orbit** puts the satellite in its orbit in the
+Orbit section, with no launch. The playground labels it "From your satellite design", the **Orbit
+lifetime** analysis flies its own mass, drag area, C_D and C_R, and the manoeuvre planner its own
+engine and propellant (a design with no engine is said to have none). It is held back until the
+checks accept the design.
+
+### Fly it in the Launch section
+
+- **Launch vehicle:** the Launch section's current rocket first, then the fleet. The box
+  says what will fly: the rocket and its launch site, the target orbit (a preset's name, or "a
+  custom orbit of 520 × 540 km, sun-synchronous with the ascending node at 22:30"), the mass with
+  full tanks, what the satellite's own engine will do, and whether it fits the fairing. That last is
+  an estimate: the usable space is taken as 85 % of the fairing's diameter and 80 % of its length,
+  and a satellite's width is the diagonal of its box, since a box's corners reach further out than
+  its sides.
+- **The verdict before you click.** The box shows the Launch section's own verdict on the mission
+  it will open, with the same light and words as the Launch panel: **Ready to fly**, **Flyable,
+  with a caution** or **Not flyable as set**, and the same sentence. When it says "Not flyable as
+  set", it lists the rockets in the menu that the same verdict lets fly your satellite; click one to
+  pick it. NAPA-2 on the Launch section's default Soyuz-2.1a, for one, is not flyable as set:
+  Soyuz-2.1a has no upper stage that can light again to finish its orbit. While you type a number
+  the verdict fades until it is worked out again. **Fly it** stays available on a failing verdict,
+  as Launch itself lets you try.
+- **Fly it** opens the Launch section with your satellite as the mission's payload, flown point
+  mass; change the rest of the mission there. The launch site is one whose range-safety corridor
+  reaches the orbit's plane: on Soyuz a sun-synchronous design flies from Plesetsk, not Baikonur;
+  on Falcon 9, Atlas V or Vulcan, from Vandenberg. A satellite whose orbit's plane is set launches
+  in the first window after the Launch section's launch time. A mission that carries your
+  satellite is saved as a version-3 mission file; an older copy of Orbitlab says the file is newer.
+- **Its engine.** A chemical engine flies as the last stage, for any burn after the launcher lets
+  the satellite go. An electric engine (Isp above 480 s) cannot: the Launch section flies burns, not
+  months of gentle thrust, so there the satellite flies with no engine of its own, its propellant
+  still in its mass. **Send to Orbit** keeps the engine for the planner. Empty tanks fly with no
+  engine either.
+- **When Fly it is held back:** while a number is half typed or the checks refuse the design, and
+  when the satellite's C_D·A/m is outside 0.0001–1 m²/kg, the range anything in orbit has. The box
+  says which.
+- After the flight, **Continue in Orbit** takes the satellite on with its own mass, drag area, C_D
+  and C_R.
+- **The node can land a few minutes from the design's local time.** The Launch section aims a
+  node's local time at the true Sun, the designer at the mean Sun, and the two differ through the
+  year by up to about 16 minutes (10.5 minutes on 1 October).
+
+### Engineer: the satellite bench
+
+The bench works on the design open in Explore (**Open it in Explore** goes back to it). It has six
+tabs — **Power**, **Propulsion**, **Attitude**, **Radio**, **Camera** and **Lifetime** — and each
+gives **Its numbers** (every number of that subsystem, among them some Explore does not show: the
+ascending node of a plane that is not sun-synchronous, on Power, and the wavelength the
+diffraction limit is worked at, 0.55 µm unless you change it, an estimate, on Camera), **What they
+give**, and **Where these numbers come from**. **Solar activity for the air** chooses one of
+ECSS's fixed levels for the air's drag.
+
+**Lifetime** runs the Orbit section's lifetime analysis (the mean-element method) on the design's
+orbit, mass and drag area, from the design date, for the design life plus 25 years, at the level
+chosen, so the answer is the same every time; **Stop** stops it. It says when the satellite comes
+down, or where it still is at the end, and whether it meets the 25-year rule. A satellite with no
+engine must come down within 25 years of the end of its mission. One with an engine holds its orbit
+through the mission (its Δv budget pays for that), so its 25 years start when the mission ends: from
+its design orbit, it must come down within 25 years.
+
+### Start from requirements
+
+**Start from requirements**, on the bench (its address is `#/build/engineer/requirements`), works
+the orbit and the satellite out from what the mission must do. **Back to the satellite bench**
+returns.
+
+- **Say what the mission needs.** A template with a camera (the THEOS-2 class, NAPA-2 or Earth
+  observation; its mass stays fixed, and is marked an estimate). The place to watch: Bangkok,
+  Chiang Mai, Hat Yai, Ubon Ratchathani, Saint Petersburg, Moscow, or your own coordinates. The
+  coarsest detail on the ground (GSD), the longest wait between looks, and how far the camera may
+  tilt. Daylight looks only, or not. Sun-synchronous at a local time (the descending node's time is
+  shown beside the ascending one's), or a fixed inclination. The life; the solar activity (a fixed
+  ECSS level, so the results repeat); the 25-year rule, or none; the data a day, the stations that
+  bring it down and their lowest elevation; and the repeat cycles to try. Every box shows its
+  bounds.
+- **Run it.** Before it runs, the page says how many orbits it will try and about how long it will
+  take. **Work out the table** first finds the lowest altitude that lasts the life (and the life
+  plus 25 years), then tries the orbits, both off the page's thread, with **Stop** at any time; a
+  run after a Stop reuses the lifetime search. With **Sun-synchronous** off and daylight looks on,
+  each orbit is walked for about two months, which takes much longer, and the estimate says so. A
+  table worked out for older requirements says so too.
+- **Read the table.** One row per repeat-ground-track orbit between 150 and 5 000 km, highest
+  first (on a phone, a card each): its height and inclination; the camera and aperture the GSD
+  needs, and the swath; the longest wait between looks, found by flying the ground track over the
+  place (not the "days to cover" a grid argument gives); the contact a day, the highest data rate
+  and the data a day; the longest eclipse, the array and the battery; the lifetime, or for a
+  satellite with an engine the Δv to hold the orbit (one with none "comes down within the life");
+  the Δv to dispose of it, as a range; and **what binds**, the requirement nearest to failing, as a
+  percentage of what is allowed or carried. Over 100 % is not met, and every unmet requirement is
+  listed. Above the table the page says how many orbits meet every requirement; **Only the orbits
+  that meet every requirement** filters the rest out, and when none does, the page says so (untick
+  it to see what binds each). The table shows 40 rows at a time; **Show 40 more of …** adds the
+  next. A row inside the lifetime search's bracket says "not proven to last". The GSD is met
+  looking straight down; the row gives the coarser one at the largest tilt.
+- **The charts:** the lifetime against altitude, with the life asked and the life plus 25 years;
+  and the aperture the GSD needs against altitude, with the template's aperture and the altitude
+  where the two cross.
+- **Open a row.** **Open** puts the row's design on the bench (replacing the design there, without
+  asking), where every figure is worked out again. Back on the page, the row stands beside the
+  bench's figures, and each that differs says why: the eclipse (the table works it from a formula,
+  the bench by following the orbit), the array and the battery (the bench keeps every load on
+  through the shadow), and the highest rate (the table uses the template's transmitter, the bench
+  the one the row sized). Run the bench's **Lifetime** to check the row's lifetime. If you change
+  the design on the bench, the page says that its Bench column is the design as it was opened.
+- **What the page estimates:** the mass and bus stay the template's; the drag area is a tumbling
+  estimate; the disposal Δv is a range (the higher end is the one judged); with daylight looks only,
+  the payload is taken as switched off in the shadow; the aperture comes from the diffraction limit,
+  which no free worked example checks.
+
+### What the satellite's estimates mean
+
+- **The class templates** carry their class's typical mass, engine and size, not any one
+  satellite's. **The THEOS-2 class** carries eoPortal's 425 kg, labelled an estimate, and an example
+  camera that gives THEOS-2's published 0.5 m and 10.3 km from 621 km, not its real design.
+  **NAPA-2** has its published mass, size and the orbit it flew; its radio is a CubeSat X-band
+  transceiver's and its camera one that gives its published 5 m: estimates, not its own.
+- **The ground station** that receives the downlink is NASA's 11.28 m dish, far larger than a
+  school's, so the data rates come out generous.
+- **The drag area** is the satellite tumbling: a quarter of the body's surface, plus half the
+  wings'. The same area is what sunlight pushes on.
+- **Sized for the worst case:** the torques (the gravity gradient at a 45° tilt, the magnetic field
+  over the pole), the loads (the same in sunlight and shadow), and a low orbit's end of life (a
+  controlled re-entry, the perigee lowered to 50 km).
+- **Some templates do not close, and say so:** the communications satellite's tanks are 668 m/s
+  short of its fifteen years in its slot, the weather satellite's 632 m/s short of its ten, and the
+  science class's 26 m/s short of its controlled re-entry. That is what their classes' propellant holds, not a fault in the designer.
+- **Charge cycles a year** count an eclipse every revolution, so they read "at most".
+
 ## 1. Set up a mission
 
 The left-hand panel (top of the page on a phone) builds a `MissionConfig` in three steps.
@@ -582,6 +753,16 @@ vehicle listed first in the vehicle menu as "*name* — custom vehicle", and it 
 other. Every figure in it is checked before it flies — masses and sizes above zero, engine figures
 a chemical engine can have, at most six stages, strap-ons on the first stage only — and a vehicle
 that fails the check is not flown: the note names the vehicle as reset. Picking a catalogue vehicle from the menu drops the custom one.
+
+Since version 3 a file can carry a **satellite of its own** too, designed in the Build section and
+handed over with **Fly it** (section 0c). It is listed first in the payload menu as "*name* — custom
+satellite" (the name as its designer wrote it, not translated), it flies with its own mass, size
+and engine, and picking a catalogue satellite drops it. Under the payload mass a note says whether
+it fits the fairing: an estimate, the usable space taken as 85 % of the fairing's diameter and 80 %
+of its length, so "May not fit" and "Does not fit" are warnings and do not stop a launch. Only a
+mission that carries such a satellite is written as version 3; an older copy of Orbitlab says the
+file is newer and falls back to a satellite it knows. WebMCP's `configure_mission` cannot make such
+a satellite; given the loaded one's id, it keeps it.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
@@ -1170,9 +1351,11 @@ a mission file or link carries it and the flight report names it. Untick it to f
 ## 18. Lessons and the placement test
 
 The gold **Lessons** button in the top bar (and **Start with a lesson** on the landing page) opens the
-lessons page: a page of its own over the whole window below the top bar, like a mode, with two
-tabs — **Lessons** and **Placement test** — and **Back to the simulator** (or Esc, or the
-browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either can be linked to.
+lessons page: a page of its own over the whole window below the top bar, like a mode, with five
+tabs — **Lessons**, **Placement test**, **Worksheets**, and for teachers **Write a scenario** and
+**Check results** — and **Back to the simulator** (or Esc, or the browser's Back). On a phone the
+tabs sit in one row that scrolls sideways. Its addresses are `#/lessons`, `#/lessons/test`,
+`#/lessons/worksheets`, `#/lessons/author` and `#/lessons/check`, so each can be linked to.
 The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends,
 and three cases from the record, worked from their data. They are listed in six tracks — orbital
 mechanics, guidance and navigation, failures, attitude control, advanced missions, real cases —
@@ -1306,8 +1489,9 @@ outcome, an event, a number the student works out from the flight, or a check wr
 its hints, and its texts in English, Russian and Thai (a missing language falls back to English).
 A case lesson (`"kind": "case"`, with `"case"` one of `theos2`, `cz5b`, `iridium`) has no mission:
 its criteria name the case sheet's questions (`"item"`, as `src/worksheets/case-ids.ts` lists them),
-each optionally with a tolerance of its own for a number. A file that holds one is written as
-version 2; a file of flight lessons alone is still version 1, so an older copy of the app reads it.
+each optionally with a tolerance of its own for a number. A file that holds one, or a rocket of
+your own, is written as version 2; one with a satellite of your own or a design lesson as version 3;
+a file of flight lessons alone is still version 1, so an older copy of the app reads it.
 A question is a choice, several answers (`multi`), an ordering (`order`, its items in the right
 order), a calculation whose answer is an arithmetic expression of its drawn numbers, or a vehicle to
 recognise, with its area (1–6, as above), level and explanation, and optionally a chart of a
@@ -1315,6 +1499,108 @@ recorded flight or one of the built-in diagrams (`src/lessons/assessment/diagram
 used is left out, and the catalogue says what and why. Over WebMCP, `list_lessons`,
 `start_lesson`, `get_lesson_result` and `get_assessment_result` let an assistant open a lesson for
 the student (a case lesson too) and read how it is going — never the expected value of an answer.
+
+**Design lessons.** A lesson can ask you to design a satellite instead of flying one. Opened, it
+puts the satellite designer (or the bench, if the lesson says so) on the lesson's design, on the
+day and at the solar activity the lesson fixes, so a grade comes out the same on any day; your own
+design comes back when you leave the lesson. The parts the lesson locks are greyed and marked
+"locked by the lesson", and the template, the design date and the solar activity are fixed. The
+strip above the designer holds the task, the criteria (figures of the design within bounds, and
+figures you work out and type) and, if the lesson has them, what the mission asks for. **Check the
+design** grades the design as it stands; **Hand in** (every typed answer needed) keeps the design,
+its figures and its grade with your results. Near a bound a figure is shown with as many decimals
+as keep it on the side it was graded on (9.96 %, not 10 %), and a figure that does not apply says
+why (no camera, not seen in 30 days, not a low orbit). Hints and **Start again** work as in flight
+lessons. An example is the file `public/lessons/napa2-power.orbitlab-lesson.json` in the app's
+source: open it with **Open lesson file…** and bring NAPA-2's power margin up to 10 %.
+
+**Lesson packs.** Below the tracks, **Lesson packs matched to curricula** lists five packs, one
+group each: IPST basic science (M.5–M.6), IPST Earth, astronomy and space (M.6), IPST additional
+physics (M.4–M.6), the Royal Thai Air Force Academy's cadets, and Russia's speciality 24.05.06
+(flight vehicle control systems). Each says who it is for and which curriculum it follows, and
+**About this pack and its sources** names its sources and offers **Save the pack file**. Every pack
+is a **draft awaiting review by Orbitlab's owner**: its curriculum codes and wording have not yet
+been checked against the curriculum, and the page says so; use it with that in mind. A pack holds
+lessons of its own (numbered by pack: 11.x IPST basic, 12.x Earth and space, 13.x physics, 14.x
+RTAF, 15.x 24.05.06 — flights, a case and design lessons) and lists some of the app's own lessons
+again, marked "Also under <track>" with a note on why they fit. Each lesson shows its curriculum
+codes as chips; point at a chip to see whether it is an indicator, a learning outcome, a course or a
+competence. Opened from a pack, a lesson's strip names the pack and shows the codes, and **Next**
+goes to the pack's next lesson. The packs come with the app and open offline. They do not count
+toward the progress count in the top bar or the placement test's path. In lessons that ask for an
+orbit's numbers, read the heights from the event log's "Target orbit achieved" line (lesson 14.2's
+speed is graded where the second stage's second burn ends, at insertion: work it with vis-viva from
+those heights).
+
+**For teachers: writing a scenario.** **Write a scenario** (`#/lessons/author`) makes a lesson for
+your class. Under **What the students do**, choose **Fly a mission** or **Design a satellite**.
+- **A flight** takes the mission on the setup panel as it stands, launch time and any rocket or
+  satellite of your own included. Choose what students may not change (**Lock the whole mission** is
+  the default; **Target orbit** holds the orbit only, the launch time has its own box) and add
+  criteria: how the flight ends, a number within bounds (or the mission's own target), a number the
+  student works out, an event that must or must not happen. You may say at which event the flight
+  is graded.
+- **A design** starts from the design open in Build → Satellite as it stands, with its design date
+  and solar activity. Tick the parts students may not change (each locks its whole group) and add
+  criteria: a figure of the design within bounds (at least, at most, between, or a value ± a
+  tolerance), or a figure the student works out and types. Choosing "Down within 25 years of the
+  mission's end" sets the criterion to "at least 1" (yes). The longest wait between looks needs the
+  mission's place, which a lesson file can carry but this page does not write.
+- Write the texts in any of the three languages; a text in one language only is used for all three,
+  and the page says so once. Before you save, the page lists every problem: an event no flight has,
+  an id a built-in or pack lesson already uses, a range whose lower bound is above its upper one, a
+  negative tolerance. **Save lesson file**, **Make a link** and **Try it now** stay off until the
+  problems are fixed.
+- **Save lesson file** writes a `.orbitlab-lesson.json` file; give it to your class, and "Open lesson
+  file" under Lessons adds it. **Make a link** gives a `?scenario=` address that carries the whole
+  lesson (offered when it is short enough, up to 8 000 characters; otherwise use the file): opened,
+  it adds the lesson to that browser and starts it. **Try it now** starts it here. **Copy link** on a
+  lesson of your own also copies such a link, since `?lesson=<id>` means nothing in another browser.
+- Your lessons are numbered 9.1, 9.2… in the order they are written in the file, and a later file's
+  lessons continue the count. **Open lesson file…** names any lesson it did not add because its id is
+  a built-in lesson's, and asks for it saved again under another id.
+
+**For teachers: checking a class's results.** **Check results** (`#/lessons/check`) checks your
+students' results files on your own computer. Open their results files (**Open results files**) and
+your own lesson file (**Open your lesson file**; the app's lessons and the packs' need none), then
+press **Check**. Each flight is flown again, its commands included, to the moment it was graded, and
+graded again; a design lesson's result is not flown, its figures are worked out again from the
+design handed in, on the day and at the solar activity it was graded at. Each result is:
+- **Match**: the same grade and the same numbers;
+- **Borderline**: a number too close to a limit to be sure;
+- **Differs**: edited, made on another version of Orbitlab, or not the lesson the student had. A
+  result that names its version but lacks its grading time, the moment on screen or its commands is
+  not excused as an old one: if its numbers come out different, it differs;
+- **Cannot re-fly** (for a design, **Cannot work out again**), with the reason: a six-DOF flight
+  (minutes each) or a case lesson, a lesson of your own whose file is not open, a design result that
+  kept no design, a damaged record (the rest of the class is still checked), or a result saved
+  before this version whose numbers come out different. Such a result lacks the grading
+  time, the commands and the version, so it can only be flown again approximately, and a difference
+  says nothing about an edit; if its numbers come out the same, it is a match.
+
+The check lists what each result lacks, says whether each file changed after it was saved, gives
+its times in UTC, and **Save as CSV** keeps it. A teacher's lessons keep their catalogue numbers
+here, and over WebMCP `check_results` runs the same check.
+
+**Why a flight can be flown again.** Every flight you watch is the flight the simulator flies
+without drawing it, so the same launch ends in the same orbit at any time warp or frame rate; an
+Abort or a TORU command takes effect at the simulation's next step (at most a tenth of a second
+later low in the atmosphere, up to a second on a far approach), and the picture moves on to it.
+That is what lets your computer fly a student's flight again and get their numbers. A grade counts
+only what the picture has reached, so lesson 5.2's docking is ticked when the picture docks.
+
+**What is kept, and what never leaves the device.** There are no accounts. Progress, results and
+your lessons stay in the browser and in the files you choose to save. A results file keeps, besides
+the name if one is typed, the placement tests' results and each lesson's attempts: its grades, the
+answers typed, the hints and any answers shown, and, for each flight, the mission flown, the moment
+it was graded, the moment on screen, the commands given and the app's version; for a design lesson,
+the design handed in, its date, its solar activity, its figures and the app's version; for a case,
+the data it was worked from and the sheet as it was given. Checking results sends
+nothing anywhere: the files are read and flown again in your browser. A results file can hold a
+student's name, so keep the files where your school keeps marks. A `?scenario=` or `?m=`
+link carries the lesson or the mission in its address, which reaches the web server that serves the
+app as any address does; it holds nothing about any student. The checksum on a results file shows
+whether it was changed after it was saved; it is a check against accidents, not a signature.
 
 ## 19. Historical missions
 

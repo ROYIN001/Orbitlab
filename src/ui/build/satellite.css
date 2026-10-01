@@ -46,6 +46,13 @@
 .bsat-field input:disabled { opacity: 0.6; }
 /* a field whose name wraps (Thai, Russian) keeps its box on the row's line with the others */
 .bsat-fields > .bsat-field > .bx-with-unit, .bsat-fields > .bsat-field > select { margin-top: auto; }
+/* a menu's choices are phrases, not numbers ("Отслеживание точки максимальной мощности", "Панели, следящие за Солнцем"):
+   the menu takes a row of its own, as wide as its longest choice and never wider than the row (task W: at 1440 px a
+   number's column cut them in Russian; a phone's single column already gives them the whole width) */
+@media (min-width: 861px) {
+  .bsat-fields > .bsat-field:has(> select) { grid-column: 1 / -1; }
+  .bsat-fields > .bsat-field > select { width: auto; max-width: 100%; align-self: flex-start; }
+}
 .bsat-toggle { margin: 2px 0 8px; }
 .bsat-toggle small, .bsat-toggle-note { display: block; font-size: 12px; color: var(--muted); }
 

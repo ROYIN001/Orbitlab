@@ -50,7 +50,7 @@ import { button, el, hhmm, num } from '../orbit/dom';
 import { localized, siteName } from '../names';
 import { fairingFitText } from '../fairing-fit';
 import { field, select } from './explore-level';
-import { ballisticDigits, sayFig } from './satellite-text';
+import { ballisticDigits, keepUnits, sayFig } from './satellite-text';
 import { unbroken } from './figures';
 import type { SatelliteWorkspace } from './satellite-workspace';
 
@@ -315,7 +315,8 @@ export class SatelliteFly {
   }
 
   private note(text: string, cls = ''): HTMLParagraphElement {
-    return el('p', `bx-note${cls ? ` ${cls}` : ''}`, text);
+    // W: each figure with its unit, and a rocket's name whole ("Falcon 9 Block 5"), on a phone
+    return el('p', `bx-note${cls ? ` ${cls}` : ''}`, keepUnits(text));
   }
 
   /** "the Sun-synchronous (600 km) preset", or "a custom orbit, 520 × 540 km, sun-synchronous, ascending node at 22:30". */
