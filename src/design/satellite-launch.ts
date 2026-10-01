@@ -46,9 +46,11 @@
  * taken for a design: its orbit would change with the site or the perigee.
  *
  * THE MISSION (`designMission`): the vehicle given — the Launch section's
- * own (a custom one included, S02) or one the student picks — from its site
- * (the Launch section's where that vehicle flies from it, else its first),
- * point mass unless asked, calm air, no failure; the launch time the Launch
+ * own (a custom one included, S02) or one the student picks — from a site
+ * whose range-safety corridor reaches the target's plane (`designSite`: the
+ * Launch section's where that vehicle flies from it and it does, else the
+ * vehicle's first that does, else the Launch section's or the vehicle's
+ * first), point mass unless asked, calm air, no failure; the launch time the Launch
  * section's, or for a target whose plane is set the first window after it,
  * as the readiness review does (`reviewLaunchTime`). The document is
  * version 3 because it carries the spec (src/config/mission-file.ts).
@@ -62,6 +64,8 @@ import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { isCatalogueSatellite } from '../data/satellites';
 import { satelliteTemplateById } from '../data/satellite-templates';
 import { DEFAULT_FAILURE } from '../physics/defaults';
+import { inclinationCorridor, resolveInclination } from '../physics/mission';
+import { siteById } from '../data/sites';
 import { PART_ID_PATTERN } from '../config/vehicle-spec';
 import { SATELLITE_LIMITS as SPEC_LIMITS, satelliteSpecProblems, type SatelliteSpecIssue } from '../config/satellite-spec';
 import { validateConfigInput, type ValidationIssue } from '../config/validation';
@@ -165,18 +169,39 @@ export function designLaunch(design: SatelliteDesign): DesignLaunch {
 export interface DesignFlight {
   /** the vehicle: a catalogue one, or the Launch section's own custom one (S02), carried inline */
   vehicle: VehicleSpec;
-  /** the launch site: taken where the vehicle flies from it, else the vehicle's first */
+  /** the launch site asked for: taken where the vehicle flies from it and it reaches the target's plane (`designSite`) */
   siteId?: string;
   /** the Launch section's launch time; a target whose plane is set waits for the first window after it */
   from: Date;
   model?: DynamicsConfig['model'];
 }
 
+/**
+ * The site the design flies from: the one asked for (the Launch section's)
+ * where the vehicle flies from it and its range-safety corridor reaches the
+ * target's plane — `inclinationCorridor`, the Launch section's own verdict —
+ * else the first of the vehicle's sites that reaches it (Plesetsk, not
+ * Baikonur, for a sun-synchronous orbit on Soyuz; Vandenberg, not the Cape,
+ * on Falcon 9). A plane none of them reaches as it is — a geostationary 0°,
+ * below every site's latitude, which the satellite's own engine turns —
+ * flies from the one asked for, else the vehicle's first, as the Launch
+ * section flies the geostationary preset.
+ */
+export function designSite(design: Pick<SatelliteDesign, 'orbit'>, f: Pick<DesignFlight, 'vehicle' | 'siteId'>): string {
+  const { orbit } = designTargetOrbit(design);
+  const asked = f.siteId !== undefined && f.vehicle.sites.includes(f.siteId) ? f.siteId : f.vehicle.sites[0];
+  const reaches = (id: string): boolean => {
+    const site = siteById(id);
+    return inclinationCorridor(site, resolveInclination(orbit, site)) === 'ok';
+  };
+  return [asked, ...f.vehicle.sites].find(reaches) ?? asked;
+}
+
 /** The mission "Fly it" hands the Launch section, as its state (see the module's note). */
 export function designMission(design: SatelliteDesign, f: DesignFlight): MissionState {
   const { spec } = designLaunch(design);
   const { orbitId, orbit } = designTargetOrbit(design);
-  const siteId = f.siteId !== undefined && f.vehicle.sites.includes(f.siteId) ? f.siteId : f.vehicle.sites[0];
+  const siteId = designSite(design, f);
   return {
     vehicleId: f.vehicle.id, ...(isCatalogueEntry(f.vehicle) ? {} : { vehicleSpec: structuredClone(f.vehicle) }),
     satelliteId: spec.id, satelliteSpec: spec, siteId, orbitId, orbit,

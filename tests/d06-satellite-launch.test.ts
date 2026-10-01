@@ -18,6 +18,14 @@
  *   and THEOS-2's own orbits a custom target with their apsides,
  *   sun-synchronous at their node's local time; a node fixed by right
  *   ascension a fixed node; nothing else changed;
+ * - ADDED IN REVIEW, fixed before its first run: the site (`designSite`) is
+ *   one whose range-safety corridor reaches the target's plane, by the
+ *   Launch section's own verdict (`inclinationCorridor`), whenever one of the
+ *   vehicle's sites does — the one asked for when it does, else the
+ *   vehicle's first that does (a sun-synchronous design on Soyuz-2.1a asked
+ *   from Baikonur, the Launch section's default, flies from Plesetsk; on
+ *   Falcon 9, from Vandenberg) — and the one asked for when none does (a
+ *   geostationary 0° from the Cape);
  * - the document: version 3, and read back through the Launch section's own
  *   parser (`parseMissionDocument`) after a JSON round trip it gives the same
  *   mission, exactly, with no issue;
@@ -38,7 +46,9 @@ import { FlightRecorder } from '../src/replay/recorder';
 import { DEG } from '../src/physics/constants';
 import { SATELLITE_TEMPLATES } from '../src/data/satellite-templates';
 import { ORBIT_PRESETS } from '../src/data/orbits';
-import { vehicleById } from '../src/data/vehicles';
+import { VEHICLES, vehicleById } from '../src/data/vehicles';
+import { siteById } from '../src/data/sites';
+import { inclinationCorridor, resolveInclination } from '../src/physics/mission';
 import { isCatalogueSatellite } from '../src/data/satellites';
 import { satelliteDesignProblems } from '../src/config/satellite-design';
 import { MISSION_FORMAT_VERSION, parseMissionDocument } from '../src/config/mission-file';
@@ -49,7 +59,7 @@ import { designFromTemplate, SATELLITE_FIELDS, withValue, withChoice } from '../
 import { ballisticProblem, dragArea, wetMass } from '../src/design/satellite-area';
 import { designOrbit } from '../src/design/satellite-handoff';
 import {
-  designLaunch, designMission, designMissionDocument, designMissionIssues, designTargetOrbit, launchSpecId, satelliteSpecFromDesign,
+  designLaunch, designMission, designMissionDocument, designMissionIssues, designSite, designTargetOrbit, launchSpecId, satelliteSpecFromDesign,
 } from '../src/design/satellite-launch';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
 
@@ -181,6 +191,41 @@ describe('the Launch target for the design\'s orbit (D06, integration)', () => {
   });
 });
 
+describe('the site a design flies from (D06, integration; added in review)', () => {
+  const reaches = (design: SatelliteDesign, id: string): boolean => {
+    const site = siteById(id);
+    return inclinationCorridor(site, resolveInclination(designTargetOrbit(design).orbit, site)) === 'ok';
+  };
+
+  it('is one whose corridor reaches the plane: Plesetsk for NAPA-2 on Soyuz asked from Baikonur, Vandenberg on Falcon 9', () => {
+    const napa = designFromTemplate('napa2', 'x', 'x');
+    expect(designSite(napa, { vehicle: vehicleById('soyuz21a'), siteId: 'baikonur' })).toBe('plesetsk');
+    expect(designSite(napa, { vehicle: vehicleById('falcon9') })).toBe('vandenberg');
+    expect(designSite(napa, { vehicle: vehicleById('electron'), siteId: 'mahia' })).toBe('mahia');
+    expect(designSite(designFromTemplate('theos2', 'x', 'x'), { vehicle: vehicleById('vegac') })).toBe('kourou');
+    // a geostationary 0° no site reaches as it is: the one asked for
+    expect(designSite(designFromTemplate('comsat', 'x', 'x'), { vehicle: vehicleById('falcon9'), siteId: 'ksc39a' })).toBe('ksc39a');
+    expect(designMission(napa, { vehicle: vehicleById('soyuz21a'), siteId: 'baikonur', from: FROM }).siteId).toBe('plesetsk');
+  });
+
+  it('keeps the site asked for when it reaches the plane, and reaches it whenever one of the vehicle\'s sites does, for every template and vehicle', () => {
+    for (const tpl of SATELLITE_TEMPLATES) {
+      const d = designFromTemplate(tpl.id, 'x', 'x');
+      for (const vehicle of VEHICLES) {
+        const any = vehicle.sites.some((id) => reaches(d, id));
+        for (const asked of [undefined, ...vehicle.sites]) {
+          const got = designSite(d, { vehicle, siteId: asked });
+          const where = `${tpl.id} on ${vehicle.id} asked ${asked}`;
+          expect(vehicle.sites, where).toContain(got);
+          if (asked !== undefined && reaches(d, asked)) expect(got, where).toBe(asked);
+          else if (any) expect(reaches(d, got), where).toBe(true);
+          else expect(got, where).toBe(asked ?? vehicle.sites[0]);
+        }
+      }
+    }
+  });
+});
+
 interface Flown {
   design: SatelliteDesign;
   vehicle: string;
@@ -219,6 +264,7 @@ describe('a designed satellite flown in Launch (D06, integration)', () => {
     it(`flies ${c.design.name} on ${c.vehicle} to its orbit with its own mass, and the flight carries its spec`, () => {
       const { state, doc, parsed, cfg, sim, rec, sepAt } = flyDesign(c);
       const spec = satelliteSpecFromDesign(c.design);
+      expect(state.siteId).toBe(c.site);
       // the document: version 3, read back equal by the Launch section's own parser
       expect(doc.version).toBe(MISSION_FORMAT_VERSION);
       expect(doc.version).toBe(3);

@@ -26,7 +26,7 @@ import { B_RANGE } from '../../orbit/ballistic-range';
 import type { MissionDocument } from '../../config/mission-file';
 import { satelliteDesignProblems } from '../../config/satellite-design';
 import {
-  LAUNCH_ISP, designLaunch, designMissionDocument, designMissionIssues, designTargetOrbit, type DesignFlight, type DesignLaunch,
+  LAUNCH_ISP, designLaunch, designMissionDocument, designMissionIssues, designSite, designTargetOrbit, type DesignFlight, type DesignLaunch,
 } from '../../design/satellite-launch';
 import type { SatelliteDesign } from '../../design/satellite-spec';
 import { button, el, hhmm, num } from '../orbit/dom';
@@ -98,7 +98,7 @@ export class SatelliteFly {
     if (refused) parts.push(this.note(t('build.sat.fly.blocked'), 'warn'));
     else {
       launch = designLaunch(d);
-      const siteId = flight.siteId && flight.vehicle.sites.includes(flight.siteId) ? flight.siteId : flight.vehicle.sites[0];
+      const siteId = designSite(d, flight);
       parts.push(this.note(t('build.sat.fly.lead', {
         vehicle: flight.vehicle.name, site: siteName(siteById(siteId)), orbit: this.targetText(d),
         mass: sayFig({ value: launch.spec.mass, unit: 'kg' }),
