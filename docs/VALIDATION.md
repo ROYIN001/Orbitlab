@@ -887,6 +887,18 @@ now reaches the orbit 39–45 minutes sooner, and nearer its middle:
 | electron/sso/50 | 594.9 × 603.1 km, T+8 876 s | 597.3 × 602.7 km, T+6 513 s |
 | electron/sso/90 | 595.3 × 601.9 km, T+9 344 s | 598.1 × 601.9 km, T+6 653 s |
 
+The six-DOF fleet matrix and its dedicated missions (`npm run test:sixdof-fleet`, 164 tests, flown
+2026-10-01) pass with this change. Nine flights reach the high-apex branch, and all of them now
+circularise first:
+
+- Electron's three SSO rows and its ISS-plane rows at 25 and 50 %;
+- Soyuz-2.1b's LEO and ISS-plane rows at 25 %;
+- Long March 2D's 650 kg SSO mission;
+- this mission.
+
+None of the others reached that branch; the rows that raise a low apex first fly as they did. No
+tank ran dry on a coast with a burn ahead.
+
 **What remains.**
 
 - *The margin is the Fregat's attitude gas.* It reaches its orbit with 0.16 kg of its 60 kg left;
