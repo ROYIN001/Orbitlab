@@ -629,6 +629,8 @@ export class Simulation {
         // seconds of the burn.
         const vh = Math.sqrt(Math.max(0, s.speed * s.speed - s.vz * s.vz));
         if (s.altitude > 100e3 && this.ascent.insertionSpeed - vh < 250) dt = 0.02;
+        // C01: a backup cut-off lands on its own speed, not a step past it
+        dt = Math.min(dt, Math.max(1e-3, this.ascent.overrunTimeLeft()));
         break;
       }
       case 'burn': {
@@ -878,6 +880,9 @@ export class Simulation {
           if (explicit.record?.predictedApoapsis !== undefined) s.predictedApoapsis = explicit.record.predictedApoapsis;
         }
       }
+      // C01: past a cut-off command that did not pass, the stage holds the
+      // attitude it had until the backup stops it (`AscentMonitor.overrun`).
+      if (this.ascent.overrun) dirCmd = this.ascent.overrun.dir;
     } else if (s.status === 'orbit') {
       // The final cut-off's tail-off: hold the attitude it was cut off in.
       dirCmd = s.dir;

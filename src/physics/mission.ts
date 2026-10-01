@@ -81,6 +81,12 @@ export interface MissionPlan {
    * the apogee. Absent for every orbit (flown level to its perigee speed).
    */
   suborbitalAim?: SuborbitalAim;
+  /**
+   * The orbit the ascent is aimed and cut off on, when it is not the one the
+   * flight is judged on (`OrbitSpec.aim`; C01: Vostok-1's planned 230 km
+   * apogee). Absent: `target` is both.
+   */
+  aim?: ResolvedTarget;
   /** the final stage is a low-thrust kick stage: insert into an ellipse and circularise at apogee */
   weakFinalStage: boolean;
   burns: BurnPlan[];
@@ -1011,7 +1017,12 @@ export function ascentCost(h: number, ha: number, vRot: number): number {
 }
 
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
-  const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
+  const judged = resolveTarget(cfg.orbit, site, cfg.launchTime);
+  // C01: a flight whose guidance was set for another orbit than the one it was
+  // left in (Vostok-1) is planned, aimed and cut off on that one; `judged` is
+  // what it is held to (`ascentMargin` and the plan's `target`).
+  const aim = cfg.orbit.aim ? resolveTarget({ ...cfg.orbit, ...cfg.orbit.aim }, site, cfg.launchTime) : undefined;
+  const target = aim ?? judged;
   const { inc: ascentInclination } = ascentInclinationFor(target, site);
   const direction = launchDirection(site, ascentInclination, undefined, cfg.orbit.descending);
   const descending = direction.descending;
@@ -1156,7 +1167,8 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     MU_EARTH / (rIns * rIns),
   );
   return {
-    target, ascentInclination, descending, doglegDeg: direction.doglegDeg, azimuthInertial, azimuthRotating, insertionAltitude, insertionApoapsis, weakFinalStage, burns,
+    target: judged, ...(aim ? { aim } : {}),
+    ascentInclination, descending, doglegDeg: direction.doglegDeg, azimuthInertial, azimuthRotating, insertionAltitude, insertionApoapsis, weakFinalStage, burns,
     launchTime: cfg.launchTime, jd0, gmst0, raanExpected,
     planeChangeDeg: Math.abs(target.inclination - ascentInclination) / DEG,
     // Both ends of the corridor, not just the declared minimum: the ascent
@@ -1169,7 +1181,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     // The same arithmetic as `ascentReaches`, evaluated against the MISSION's
     // own orbit rather than against whatever the planner ended up aiming at:
     // that is the question a capability claim asks.
-    ascentMargin: dvStrong - (target.suborbital ? insertionCost : ascentCostHere(target.perigee, target.apogee)),
+    ascentMargin: dvStrong - (judged.suborbital ? insertionCost : ascentCostHere(judged.perigee, judged.apogee)),
     ascentMakeUp, kickStageAccel, insertionSink,
     ...(suborbitalAim ? { suborbitalAim } : {}),
   };

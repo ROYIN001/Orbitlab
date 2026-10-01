@@ -343,6 +343,19 @@ export interface OrbitSpec {
    * (`SatelliteSpec.descent`, src/physics/rigid/escape.ts).
    */
   deorbit?: { time: number };
+  /**
+   * The orbit the ascent's guidance was set for, when the flight was left in
+   * another (C01: Vostok-1, planned 168 × 230 km, flown 168 × 314 km). The
+   * ascent is aimed and cut off on these apsides (each one given replaces the
+   * orbit's own); the flight is judged on `perigee` and `apogee`.
+   */
+  aim?: { perigee?: number; apogee?: number };
+  /**
+   * The last stage's cut-off command did not pass and a backup stopped it late
+   * (C01: Vostok-1, Baturin 2021): at the cut-off decision the stage burns on,
+   * its attitude held, until `dv` m/s more has been gained, then shuts down.
+   */
+  backupCutoff?: { dv: number };
   description: string;
 }
 
@@ -394,6 +407,12 @@ export interface SatelliteSpec {
    * payload is let go 15 s after the target orbit is reached.
    */
   staysAttached?: boolean;
+  /**
+   * Seconds from reaching the orbit to the spacecraft's release, when it is
+   * not the 15 s every other payload waits (C01: Vostok, ten seconds after
+   * Blok E's cut-off, ESA).
+   */
+  separationDelay?: number;
   /**
    * The satellite's own drag and sunlight figures for the orbit it is handed
    * on in (S03, src/orbit/handoff.ts; roadmap D06, Phase 4 map §2.6): its mean
