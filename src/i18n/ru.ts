@@ -2569,7 +2569,7 @@ export const ru: Record<string, string> = {
   'build.sat.mount.spinner': 'Элементы на вращающемся корпусе',
   'build.sat.regulation': 'Регулирование мощности',
   'build.sat.regulation.DET': 'Прямая передача энергии',
-  'build.sat.regulation.PPT': 'Отслеживание пиковой мощности',
+  'build.sat.regulation.PPT': 'Отбор максимальной мощности',
   'build.sat.mode': 'Способ ориентации',
   'build.sat.mode.gravityGradient': 'Гравитационная стабилизация',
   'build.sat.mode.spin': 'Закрутка',
