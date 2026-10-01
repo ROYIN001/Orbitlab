@@ -3177,17 +3177,50 @@ Point-mass, pitch 0° (six-DOF in brackets):
 - Gagarin leaves his seat at 4,000 m at T+5,874.7 s (5,869.8), 68 m/s. His main opens at 8.7 g.
   The reserve comes out at 3,000 m at T+6,018 s (6,013).
 - He lands at T+6,615.0 s, 10:57:15 (6,610.1), at 4.7 m/s, 0.12 km from the sphere (0.11), at
-  50.261° N 45.121° E (50.009° N 44.911° E). That is 8.7 min after the sphere. The flown 1.5 km
-  between them is the wind, westerly at 7 km that day, which is not flown.
+  50.261° N 45.121° E (50.009° N 44.911° E), in still air. That is 8.7 min after the sphere. In
+  the wind of that morning (below) he comes down 5.5 km east of it.
 - His descent from the ejection takes 772 s; the flown 10:42 to 10:53–10:55 is 660–780 s.
 - The replay records the return at a second through the retro-fire, 2 s while the pair spins
   above 140 km, 0.2 s from there to the sphere's main, and a second under it and while waiting
   for Gagarin: 7,939 frames in all, 62.7 MB by the recorder's estimate. Before this change it
   was 11,319 frames, to the sphere's landing only, at 0.1 s below 140 km.
 
+*The wind that morning.* The return, and everything it lets go of, flies in the wind measured at
+Saratov, 32 km north of where Gagarin came down (`OrbitSpec.deorbit.wind`,
+src/data/measured-winds.ts, read by src/physics/measured-wind.ts), from the pressurising command
+on; the six-DOF wind scenarios and the Monte Carlo's dispersed wind stay the ascent's. Upper air:
+NOAA NCEI's radiosonde archive (IGRA2), station 34172, the ascents of 12 April 1961 at 00 and 12
+UTC, standard levels only. At 00 UTC 15 m/s from 300° at 850 hPa (1.4 km), 18 m/s from 300° at
+700 hPa (2.9 km), 29 m/s from 290° at 500 hPa (5.3 km) and 42 m/s from 290° at 400 hPa (6.8 km),
+where its winds end; at 12 UTC 11 m/s from 240°, 10 m/s from 260°, 15 and 20 m/s from 270°, and 29–31
+m/s from 260–270° from 300 to 100 hPa (8.7–15.9 km). Volgograd and Samara agree on the jet. At the
+surface, NOAA's Integrated Surface Database, the station's synoptic reports: 3.1 m/s from 270° at
+06 UTC and 5.1 m/s from 230° at 09 UTC (whole knots in the archive), Gagarin's "солнце, ветерок".
+This is the strong westerly at 7 km that RussianSpaceWeb says drifted the sphere and Gagarin east,
+away from the Volga. The wind is read linearly in height and in time, its east and north
+components: at the landing, about 07:50 UTC, 4 m/s from 240° at the ground, 11–15 m/s from
+265–280° from 1.4 to 4 km, 27 m/s from 280° at 7 km. The station's wind is taken for the whole area. Above
+the record's top, 15.9 km, it is let fall off to calm at 20 km (an estimate; calm straight above
+15.9 km would put the sphere 0.3 km further west); outside 00–12 UTC that day the record is not
+flown.
+
+| | still air | the wind of 12 April | flown |
+|---|---|---|---|
+| the sphere's landing | — | 3.6 km further east: 1.9 km along the track, 3.1 km to its right | |
+| Gagarin's landing | — | 9.2 km further east | |
+| Gagarin from the sphere | 0.19 km | 5.5 km, east of it (bearing 94°) | 1.5 km (OKB-1's report, via Zak); "up to 4 km" (Gagarin); the sphere toward the Volga |
+
+(point-mass, `retro.pitch` 3.6°, where the sphere comes down abreast of its place; at 0° and in
+six-DOF at 0° and 5.5° the shifts are the same to 0.05 km, and the distance 5.35–5.5 km.) The two
+ascents alone bracket it: 4.8 km on the 12 UTC winds, 8.0 km on the 00 UTC winds. The wind under
+the canopies is about 10 m/s, so the distance follows the time Gagarin spends on his parachutes
+after the sphere is down: 524 s in the model, 5–7 minutes flown (10:48 to 10:53–10:55), which
+alone would take 1–2 km off. Gagarin also steered his canopy, which is not flown. The sphere's
+1.9 km along the track is 0.04° of the reconstructed pitch.
+
 tests/vostok1-harness.ts holds the flight to these. tests/vostok-descent.test.ts covers the burn,
 the spin, the separation and the sphere's drag; tests/entry-heating.test.ts and
-tests/crew-descent.test.ts cover the bodies.
+tests/crew-descent.test.ts cover the bodies; tests/measured-wind.test.ts the wind.
 
 **13.7 Mercury-Redstone 3.** The vehicle `mercuryredstone` in `HISTORICAL_VEHICLES`, the spacecraft
 `mercury` in src/data/satellites.ts, the capsule's flight home `MERCURY_CAPSULE` in

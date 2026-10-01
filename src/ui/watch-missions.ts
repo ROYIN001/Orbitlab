@@ -231,9 +231,10 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // §13.6). Home: the TDU-1's pressurising command at 10:25:04.2 Moscow time,
   // T+4,684.2 s (OKB-1's preliminary report of 3 May 1961; Baturin, Novaya
   // Gazeta 2021), and the descent flown from there (`VOSTOK_CAPSULE`,
-  // src/physics/rigid/escape.ts; docs/PHYSICS.md §13.6).
+  // src/physics/rigid/escape.ts; docs/PHYSICS.md §13.6), in the wind Saratov
+  // measured that morning (`SARATOV_1961_04_12`, src/data/measured-winds.ts).
   { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok1', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
-    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free', deorbit: { time: 4684.2 },
+    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free', deorbit: { time: 4684.2, wind: 'saratov-1961-04-12' },
       aim: { apogee: 230e3 }, backupCutoff: { dv: 25.43 } }, launchTime: '1961-04-12T06:07:00Z',
     flown: { events: [
       // the core's cut-off is quoted rounded (Zak gives 299 s; on the December 1960 flight its command was due at

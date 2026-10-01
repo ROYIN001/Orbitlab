@@ -168,7 +168,8 @@ export class DebrisTracker {
   constructor(readonly sim: Simulation) {
     this.environment = {
       groundElevation: (r) => sim.groundElevation(r),
-      wind: (r, t) => sim.rigidRuntime ? sim.rigidRuntime.windAt(r, t) : v3(),
+      // the bodies that fly themselves are those a return lets go of (C01: Vostok-1's), in its air
+      wind: (r, t) => sim.escape.windAt(r, t),
       theta: (t) => sim.plan.gmst0 + OMEGA_EARTH * t,
       nextId: () => sim.nextDebrisId(),
     };
