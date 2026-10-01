@@ -21,7 +21,7 @@ import { gridFinTexture } from './rocket';
 import { smoothstep } from './noise';
 import { Canopy, canopyStripes, spentCanopyGeometry } from './canopy';
 import { buildEntryGlow, entryGlow, type EntryGlowView } from './entry-glow';
-import { buildInstrumentModule, contactShadow, IM_NEST, IM_NOZZLE_Y, type InstrumentModuleView } from './vostok';
+import { buildInstrumentModule, castShadows, contactShadow, IM_NEST, IM_NOZZLE_Y, type InstrumentModuleView } from './vostok';
 import { OMEGA_EARTH } from '../physics/constants';
 
 /** Vostok's sphere: its radius, m (2.3 m across, GCTC). */
@@ -288,6 +288,8 @@ export class EscapeView {
       this.shadow.visible = false;
       this.capsule.add(this.spentMain, this.shadow);
     }
+    // C01: Vostok's sphere and its canopies throw their shadows on the steppe (render/steppe.ts)
+    if (vostok) castShadows(this.capsule);
     this.softPlume = new Plume({ radius: 0.6, length: 2.5, kind: 'solid', seed: 0.7 });
     // the soft-landing motors fire at the ground, beyond the heat shield's place
     this.softPlume.group.position.y = 0.3;

@@ -15,6 +15,10 @@
  * the engine's nozzle at `IM_NOZZLE_Y` firing towards +Y.
  */
 import * as THREE from 'three';
+import { retroDirection, VOSTOK_CAPSULE } from '../physics/rigid/escape';
+import { targetAttitude } from '../physics/rigid/runtime';
+import { quatFromAxisAngle, quatRotate, type Quat } from '../physics/rigid/math';
+import { cross, dot, norm, normalize, scale, type Vec3 } from '../physics/vec3';
 
 /** Length of the module's body, m (GCTC). */
 export const IM_LENGTH = 2.25;
@@ -29,6 +33,32 @@ export const IM_NOZZLE_Y = IM_LENGTH + 0.3;
  * interface, so the sphere rests in it rather than on a point (the drawing's).
  */
 export const IM_NEST = 0.3;
+/**
+ * The spacecraft's turn into the attitude its TDU-1 fires in, s from the pressurising command the return
+ * starts at (`OrbitSpec.deorbit.time`; Vostok-1's at 10:25:04.2 Moscow time, docs/PHYSICS.md §13.6). The
+ * programme timer started the automatic orientation at 09:51 (Pervushin, *Yuri Gagarin: the first flight in
+ * documents and memoirs*), and the orientation for the descent was built by 09:55 (ru.wikipedia's chronology,
+ * citing Baturin, *Novaya Gazeta*, 11 April 2021), both to the minute. Through it the drawn spacecraft turns
+ * end over end, from the sphere ahead, as it left Blok E (render/satellite.ts), to the instrument module and
+ * its engine ahead, as the return draws it from the command on (render/escape.ts), so the two drawings meet
+ * without a flip (render/rocket.ts, `retroAttitude`). Its path, the shortest turn, and its smooth rate are
+ * the drawing's; the solar orientation catching the Sun after 10:09 (Gagarin's report) is not drawn.
+ */
+export const VOSTOK_RETRO_TURN = { from: -(34 * 60 + 4.2), to: -(30 * 60 + 4.2) } as const;
+
+/**
+ * The attitude Vostok's return starts in at `r`, `v` (ECI), as src/physics/sim/abort.ts `beginReturn` sets it:
+ * body +x, the instrument module's engine and the sphere's heavy side, against the TDU-1's thrust line,
+ * `retro.pitch` above the local horizontal where the engine's launch command finds it `starts[0]` s on; body
+ * +z along the orbit's normal. Through and after `VOSTOK_RETRO_TURN` the drawn spacecraft is held in it, so it
+ * meets the return's first frame in either dynamics model, whatever attitude the orbit had drawn it in.
+ */
+export function retroAttitude(r: Vec3, v: Vec3): Quat {
+  const rp = VOSTOK_CAPSULE.retro!, n = cross(r, v);
+  const ahead = quatFromAxisAngle(normalize(n), norm(n) / dot(r, r) * rp.starts[0]);
+  const thrust = retroDirection(quatRotate(ahead, r), v, (rp.pitch ?? 0) * Math.PI / 180);
+  return targetAttitude(scale(thrust, -1), n);
+}
 /** The cone towards the sphere is this much of the length; the waist sits there (the drawing's, as render/satellite.ts had it). */
 const UPPER = 0.45;
 /** Radius of the end in the sphere's cradle and of the engine's end, m (the drawing's, as render/satellite.ts had them). */
@@ -78,6 +108,20 @@ export function contactShadow(radius: number): THREE.Mesh {
     new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, fog: false }));
   mesh.renderOrder = 1;
   return mesh;
+}
+
+/**
+ * Let `root`'s solid parts throw the sun's shadow (the sphere, Gagarin, the seat, the hatch, their canopies),
+ * not its glows, plumes and contact shadows. Nothing here receives one: the ground does (render/steppe.ts), and
+ * only where the scene keeps its shadow map on them, near the ground (src/main.ts).
+ */
+export function castShadows(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    if (mats.every((m) => !m.transparent)) mesh.castShadow = true;
+  });
 }
 
 export interface InstrumentModuleView {

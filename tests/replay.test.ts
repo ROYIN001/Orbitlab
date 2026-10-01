@@ -586,3 +586,43 @@ describe('telemetry compaction revisions', () => {
     expect(pausedView.sim.telemetry).toEqual(sim.telemetry);
   });
 });
+
+describe('thinning a recording past its ceiling', () => {
+  // A toy flight through the recorder's own step loop: 300 s of ascent at 0.1 s, an hour of orbit, 300 s of a
+  // dense return. The physics is replaced; the capture, the cadence and the thinning are production code.
+  function toyFlight(ceiling: number) {
+    const sim = new Simulation(cfg(), { headless: true });
+    const rec = new FlightRecorder(ceiling);
+    rec.start(sim);
+    const phase = (t: number) => (t < 300 ? 'ascent' : t < 3900 ? 'orbit' : 'burn') as 'ascent' | 'orbit' | 'burn';
+    sim.suggestedDt = () => (phase(sim.state.t) === 'orbit' ? 5 : 0.1);
+    sim.step = (dt) => {
+      sim.state.t += dt;
+      sim.state.status = phase(sim.state.t);
+      sim.state.altitude = 200e3;
+      return dt;
+    };
+    while (sim.state.t < 4200) rec.advance(10, 100000);
+    return rec;
+  }
+
+  it('keeps the orbit at a frame a minute and its last frame, and takes the dense frames instead', () => {
+    const full = toyFlight(100000).frames.length;
+    const rec = toyFlight(4000);
+    expect(full).toBeGreaterThan(6000);
+    expect(rec.stats().decimations).toBeGreaterThan(0);
+    expect(rec.frames.length).toBeLessThanOrEqual(rec.frameLimit);
+    expect(rec.frameLimit).toBe(4000);
+    const orbit = rec.frames.filter((f) => f.status === 'orbit');
+    for (let i = 1; i < orbit.length; i++) expect(orbit[i].t - orbit[i - 1].t, `T+${orbit[i - 1].t}`).toBeLessThanOrEqual(60 + 1e-9);
+    // the orbit's last frame, the one a replay holds up to the next phase, is still the last one recorded
+    const lastOrbit = toyFlight(100000).frames.filter((f) => f.status === 'orbit').at(-1)!;
+    expect(orbit.at(-1)!.t).toBeCloseTo(lastOrbit.t, 9);
+  });
+
+  it('still bounds a recording too small for that, as before', () => {
+    const rec = toyFlight(50);
+    expect(rec.frames.length).toBeLessThanOrEqual(rec.frameLimit);
+    expect(rec.frameLimit).toBeLessThanOrEqual(75);
+  });
+});

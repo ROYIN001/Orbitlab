@@ -142,7 +142,7 @@ describe('Vostok-1\'s plane', () => {
 
 describe('Vostok-1\'s over-burn, point-mass', () => {
   // Baturin (Novaya Gazeta, 11 April 2021): the radio command to shut the core down did not pass, and the
-  // backups stopped the core and Blok E 25.43 m/s late — 327 km of apogee where 230 km was planned. The
+  // backup time mark stopped the core 22.0 m/s fast and Blok E ran 2.4 s long, 25.43 m/s in all — 327 km of apogee where 230 km was planned. The
   // guidance aims at the planned orbit (`OrbitSpec.aim`) and Blok E burns the excess on (`backupCutoff`).
   // Both orbits are the lowest and highest heights reached (`OrbitSpec.extremes`): measured on the next
   // revolution under J2, as the flight is cut off and judged on them.
@@ -643,5 +643,62 @@ describe('the flown injection, propagated', () => {
     expect(Math.abs(norm(p.rel.r) - APOLLO11.siteRadius - want.alt)).toBeLessThan(300 * 1852);
     expect(Math.abs(p.t - want.t)).toBeLessThan(15 * 60);
     expect(Math.abs(eciToSelenographic(p.rel.r, jd0 + p.t / 86400).lon - want.lon)).toBeLessThan(5);
+  });
+});
+
+describe('Vostok-1 as the flight reports it, point-mass', () => {
+  it('states the orbit it is judged on at insertion, and the air the return flies in under its canopies', { timeout: 300_000 }, () => {
+    const s = watchMissionSettings('vostok1');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    let canopy = 0, worst = 0, windSeen = 0, ground = 0, groundAir = 0;
+    while (!sim.isFailed() && sim.state.t < 8000 && sim.state.status !== 'landed') {
+      sim.step(sim.suggestedDt());
+      const flight = sim.escape.flight, st = sim.state;
+      if (!flight || st.status !== 'abort') continue;
+      // (from the step after the touchdown, whose state still carries the speed it hit the ground at)
+      if (flight.landed) { if (ground++ > 0) groundAir = Math.max(groundAir, st.airspeed); continue; }
+      // under the sphere's main, below 3 km: the Saratov wind is several metres a second there
+      if (!(st.abort?.phase === 'main' && st.abort.main >= 1 && st.altitude < 3000)) continue;
+      canopy++;
+      const air = flight.airVelocity(flight.state, st.t);
+      worst = Math.max(worst, Math.abs(st.airspeed - norm(air)));
+      // the speed over the ground, the Earth's turning (Ω⊕, rad/s) taken out
+      windSeen = Math.max(windSeen, Math.abs(st.airspeed - norm(sub(st.v, cross(v3(0, 0, 7.2921159e-5), st.r)))));
+    }
+    const log = sim.events.map((e) => `${e.t.toFixed(1)}:${e.key}`).join(' ');
+    // C01: one orbit at the cut-off, the extremes it is judged on (168 × 315 km), not the conic of the instant beside
+    // it (168 × 297 km at 63° N)
+    const parking = sim.events.find((e) => e.key === 'evt.parkingOrbit')!, target = sim.events.find((e) => e.key === 'evt.targetOrbit')!;
+    expect(parking.t, log).toBeCloseTo(target.t, 6);
+    expect(parking.params!.ap).toBe(target.params!.ap);
+    expect(parking.params!.pe).toBe(target.params!.pe);
+    expect(Number(parking.params!.ap)).toBeGreaterThan(311);
+    // the airspeed, q and Mach shown are the air the sphere flies in, the wind measured that morning (C01), which
+    // the ground-relative speed is not: metres a second apart under the main
+    expect(canopy, log).toBeGreaterThan(50);
+    expect(worst).toBeLessThan(0.1);
+    expect(windSeen).toBeGreaterThan(1);
+    // and on the steppe, waiting for its pilot, the sphere is in no airstream
+    expect(ground, log).toBeGreaterThan(10);
+    expect(groundAir).toBeLessThan(1e-6);
+  });
+
+  it('is auto-tuned onto its orbit: the over-burn is how the flight was meant to leave it, not a missed insertion', { timeout: 300_000 }, async () => {
+    const { autotune } = await import('../src/physics/autotune');
+    const s = watchMissionSettings('vostok1');
+    const out = autotune({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'),
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    });
+    // every candidate that flew the over-burn into 168 × 314 km passes the insertion screen
+    const overBurnt = out.results.filter((r) => r.loftAltitude === 0 && r.reason !== 'suborbital:evt.outOfPropellant');
+    expect(overBurnt.length).toBeGreaterThan(10);
+    for (const r of overBurnt) expect(r.reason, `${r.kickAngle} ${r.maxTurnRate}`).toBe('ok');
+    expect(out.best?.missionOnTarget, JSON.stringify(out.best?.missionMisses)).toBe(true);
   });
 });

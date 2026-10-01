@@ -46,7 +46,7 @@ import { runTuneJob } from '../physics/tune-job';
 import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
 import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes, zoneName } from './names';
-import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
+import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHomeCapable, guidanceLimits, ownFlight, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
 import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionSettings } from './watch-missions';
@@ -820,8 +820,8 @@ export class SetupPanel {
     const site = siteById(s.siteId);
     const target = resolveTarget(s.orbit, site, s.launchTime);
     const orbitRow = this.el('div', 'row');
-    orbitRow.appendChild(this.number('setup.perigee', s.orbit.perigee / 1000, (v) => { this.customise(); this.ownApsides(); s.orbit.perigee = v * 1000; this.changed(); }, 10, 100));
-    orbitRow.appendChild(this.number('setup.apogee', s.orbit.apogee / 1000, (v) => { this.customise(); this.ownApsides(); s.orbit.apogee = v * 1000; this.changed(); }, 10, 100));
+    orbitRow.appendChild(this.number('setup.perigee', s.orbit.perigee / 1000, (v) => { this.customise(); s.orbit.perigee = v * 1000; this.changed(); }, 10, 100));
+    orbitRow.appendChild(this.number('setup.apogee', s.orbit.apogee / 1000, (v) => { this.customise(); s.orbit.apogee = v * 1000; this.changed(); }, 10, 100));
     s3.appendChild(orbitRow);
     const orbitRow2 = this.el('div', 'row');
     // `changed()`, not `render()`: the control set does not depend on the
@@ -839,8 +839,8 @@ export class SetupPanel {
         { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
         { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
       ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
-      if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
-      if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
+      if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { this.ownFlight(); s.orbit.raan = v; this.changed(); }, 1, 0, 360));
+      if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { this.ownFlight(); s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
     }
     if (this.rendezvousAvailable()) s3.appendChild(this.rendezvousOption());
 
@@ -1207,6 +1207,8 @@ export class SetupPanel {
     if (!carries(v, satelliteById(s.satelliteId))) { s.satelliteId = 'crew'; s.payloadMass = satelliteById('crew').mass; }
     s.recoveryPlan = undefined;
     s.padId = undefined;
+    // C01: another rocket is another flight: a historical one's record of how it flew goes (`ownFlight`)
+    this.ownFlight();
     // only a ship that flies itself home can take a suborbital target
     if (s.orbit.suborbital && !flightHomeCapable(spec)) s.orbit = this.orbitalAgain(s.orbit);
     this.render();
@@ -2064,17 +2066,20 @@ export class SetupPanel {
   }
 
   /**
-   * C01: apsides typed in are the orbit the flight is aimed at. Vostok-1's
-   * planned orbit and its over-burn (`OrbitSpec.aim`, `backupCutoff`) belong
-   * to the orbit it was left in, and would steer a new one somewhere else; and
-   * its figures' measure (`extremes`) is the reports', not the panel's.
+   * C01: an edited flight is a different flight. A historical one's record of
+   * how it flew — Vostok-1's planned orbit and over-burn (`OrbitSpec.aim`,
+   * `backupCutoff`), its figures' measure (`extremes`), its return in that
+   * day's wind (`deorbit`) — would steer the new one somewhere else, and goes
+   * (`ownFlight`, src/config/validation.ts, which WebMCP's edits go through
+   * too). Every edit of the orbit (`customise`, and the node's fields) and of
+   * the vehicle (`pickVehicle`) calls it; a new payload brings its own orbit.
    */
-  private ownApsides(): void {
-    const { aim: _aim, backupCutoff: _backup, extremes: _extremes, ...own } = this.state.orbit;
-    if (_aim || _backup || _extremes !== undefined) this.state.orbit = own;
+  private ownFlight(): void {
+    this.state.orbit = ownFlight(this.state.orbit);
   }
 
   private customise(): void {
+    this.ownFlight();
     if (this.state.orbitId !== 'custom') {
       this.state.orbitId = 'custom';
       const custom = orbitById('custom');

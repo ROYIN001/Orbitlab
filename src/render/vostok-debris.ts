@@ -24,7 +24,7 @@ import { OMEGA_EARTH, R_EARTH } from '../physics/constants';
 import { VOSTOK_CAPSULE } from '../physics/rigid/escape';
 import { VOSTOK_IM, type ModulePiece } from '../physics/sim/module-entry';
 import { buildEntryGlow, entryGlow, type EntryGlowView } from './entry-glow';
-import { buildInstrumentModule, IM_NEST, type InstrumentModuleView } from './vostok';
+import { buildInstrumentModule, castShadows, IM_NEST, type InstrumentModuleView } from './vostok';
 import { buildCosmonaut, buildEmptySeat, type CosmonautView } from './cosmonaut';
 import { hash11 } from './noise';
 
@@ -145,6 +145,8 @@ export class VostokBody {
       this.body.add(this.pilot.group);
       this.owned.push(this.pilot);
     }
+    // the hatch, the seat and Gagarin throw their shadows on the steppe they come down on (render/steppe.ts)
+    if (this.kind === 'hatch' || this.kind === 'seat' || this.kind === 'pilot') castShadows(this.body);
     if (this.glow) { this.root.add(this.glow.group); this.owned.push(this.glow); }
   }
 

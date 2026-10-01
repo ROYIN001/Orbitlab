@@ -514,7 +514,10 @@ export class WatchView {
    * preliminary report of 3 May 1961), Gagarin at 10:55 by the official
    * account, the 108 minutes (10:53 in the report), at 51°16′14″ N 45°59′50″ E
    * near Smelovka — Gagarin's place, where his monument stands, not the
-   * sphere's — about 1.5 km from the sphere (OKB-1 via Zak, RussianSpaceWeb).
+   * sphere's — about 1.5 km from the sphere (OKB-1's preliminary report),
+   * "about 4 km" by Gagarin's own post-flight report (as Pervushin prints
+   * it). The narration tells those as 1961's; the model's own times, places
+   * and distance are the card's first paragraph.
    */
   private vostokEnd(card: HTMLElement, frame: VisualFrame): void {
     const liftoff = Math.max(0, frame.liftoffT ?? 0);

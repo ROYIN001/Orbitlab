@@ -372,12 +372,23 @@ export class AscentMonitor {
 
   finishAscent(el: OrbitalElements): void {
     const s = this.sim.state;
-    // G07: a flight to the station hands over to the rendezvous at the cut-off
-    if (this.sim.rendezvous.enabled && el.periapsisAlt >= ORBIT_INSERTION_FLOOR - 3e3) {
+    // C01: a mission whose figures are the orbit's lowest and highest heights (`OrbitSpec.extremes`, Vostok-1)
+    // states the ones it is judged on (`judgedElements`) in its insertion event too, not the conic of the cut-off's
+    // instant: at 63° N that read 168 × 297 km beside 'Target orbit achieved: 168 × 315 km' at the same T+671 s
+    // (docs/PHYSICS.md §13.6: "the conic of one instant is not that orbit here"). Every other mission's event is
+    // the conic, as it was.
+    let judged: OrbitalElements | undefined;
+    const judge = () => (judged ??= this.sim.burns.judgedElements(el));
+    const insertion = () => {
+      const shown = this.sim.cfg.orbit.extremes ? judge() : el;
       this.sim.event('evt.parkingOrbit', 'success', {
-        ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
+        ap: Math.round(shown.apoapsisAlt / 1000), pe: Math.round(shown.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
         dv: Math.round(this.sim.vehicle.deltaVRemaining()),
       });
+    };
+    // G07: a flight to the station hands over to the rendezvous at the cut-off
+    if (this.sim.rendezvous.enabled && el.periapsisAlt >= ORBIT_INSERTION_FLOOR - 3e3) {
+      insertion();
       this.sim.rendezvous.onInsertion();
       return;
     }
@@ -387,12 +398,7 @@ export class AscentMonitor {
     // its periapsis inside the air has already said `evt.lowPerigee`; calling
     // that a parking orbit too is how a decaying 107 km arc came to be
     // announced as an insertion.
-    if (el.periapsisAlt >= ORBIT_INSERTION_FLOOR - 3e3) {
-      this.sim.event('evt.parkingOrbit', 'success', {
-        ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
-        dv: Math.round(this.sim.vehicle.deltaVRemaining()),
-      });
-    }
+    if (el.periapsisAlt >= ORBIT_INSERTION_FLOOR - 3e3) insertion();
     // The mission may already be over. A direct insertion that meets the
     // acceptance band at cut-off has nothing left to do, and the plan it was
     // given before liftoff must not be flown anyway: Falcon 9 to the ISS inserts
@@ -400,7 +406,7 @@ export class AscentMonitor {
     // sub-tolerance circularisation trim, so `evt.targetOrbit` — the moment the
     // user is waiting for, and the moment the payload is deployed — landed at
     // T+53 min instead of T+9 min (audit item B6).
-    if (orbitResiduals(this.sim.plan.target, this.sim.burns.judgedElements(el), this.sim.raanWasReachable()).onTarget) {
+    if (orbitResiduals(this.sim.plan.target, judge(), this.sim.raanWasReachable()).onTarget) {
       for (const b of this.sim.plan.burns) b.done = true;
       this.sim.burns.reachTargetOrbit(el);
       return;

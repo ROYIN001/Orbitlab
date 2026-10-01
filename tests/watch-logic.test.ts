@@ -5,6 +5,7 @@ import { WGS84_A } from '../src/physics/geodesy';
 import type { DebrisFrame, VisualFrame } from '../src/physics/frame';
 import type { SimEvent } from '../src/physics/simulation';
 import { en } from '../src/i18n/en';
+import { tFor } from '../src/i18n';
 import evidence from '../docs/history/audit-2026-09-27/live-evidence.json';
 
 function frame(o: Partial<VisualFrame> = {}): VisualFrame {
@@ -297,8 +298,9 @@ describe('the end of an orbital flight is its final orbit, not its parking orbit
 });
 
 /**
- * C01: Vostok-1 from its retro-fire to Gagarin on the ground, on the event
- * times of a point-mass flight (calm air, seed 1): the TDU-1's fuel out at
+ * C01: Vostok-1 from its retro-fire to Gagarin on the ground, on event times
+ * like a flight's (illustrative: taken from an earlier point-mass flight in
+ * still air with the retro-fire level, not the mission as it now flies): the TDU-1's fuel out at
  * T+4726.4 s, the straps at T+5340 and the cables at T+5344, the module's
  * break-up at T+5582.7, the hatch at T+5841.6 and the seat at T+5843.6, the
  * sphere's braking parachute at T+5860.1, Gagarin's seat separation and main
@@ -307,7 +309,7 @@ describe('the end of an orbital flight is its final orbit, not its parking orbit
  */
 describe('Vostok-1 home: the sphere and Gagarin', () => {
   const log: SimEvent[] = [
-    ev(4686.4, 'evt.retroFire'), ev(4726.4, 'evt.retroShortfall'), ev(4728.2, 'evt.retroCutoff'),
+    ev(4686.4, 'evt.tduFire'), ev(4726.4, 'evt.retroShortfall'), ev(4728.2, 'evt.retroCutoff'),
     ev(5340, 'evt.vostokStraps'), ev(5344, 'evt.vostokSeparation'), ev(5582.7, 'evt.moduleBreakup'),
     ev(5841.6, 'evt.hatchOff'), ev(5841.6, 'evt.pilotChute'), ev(5843.6, 'evt.ejection'), ev(5860.1, 'evt.escapeDrogue'),
     ev(5875.2, 'evt.seatSeparation'), ev(5877.4, 'evt.pilotMain'), ev(5881.7, 'evt.escapeMain'), ev(6018.6, 'evt.pilotReserve'),
@@ -421,7 +423,28 @@ describe('Vostok-1 home: the sphere and Gagarin', () => {
       expect(en[WATCH_BEATS[b].label]).toBeTruthy();
       expect(en[WATCH_BEATS[b].text]).toBeTruthy();
     }
-    expect(en['watch.say.vostokModuleBurn']).toMatch(/breaks apart and burns/);
-    expect(en['watch.say.vostokModuleBurn']).not.toMatch(/burns? up|burned up/);
+    // it breaks apart; what burns is told per piece (the lightest), as the model flies them, never the module whole
+    expect(en['watch.say.vostokModuleBurn']).toMatch(/breaks apart/);
+    expect(en['watch.say.vostokModuleBurn']).not.toMatch(/breaks apart and burns|burns? up|burned up/);
+  });
+
+  it('tells 1961\'s places and distances as 1961\'s, in every language: the model\'s own are the HUD\'s and the end card\'s', () => {
+    // the 1.5 km, the ravine above the Volga and the first to meet him are history; the model's Gagarin comes down
+    // 5.5 km from its sphere and some 30 km from the monument (docs/PHYSICS.md §13.6)
+    const year = { en: /In 1961/, ru: /В 1961 году/, th: /ในปี 1961/ };
+    for (const lang of ['en', 'ru', 'th'] as const) {
+      for (const key of ['watch.say.vostokSphereDown', 'watch.say.vostokLanding']) expect(tFor(lang, key), `${lang} ${key}`).toMatch(year[lang]);
+    }
+    // both the report's distance and Gagarin's own, in the narration and on the end card
+    expect(en['watch.say.vostokLanding']).toMatch(/one and a half kilometres from the sphere by OKB-1's report, about four by his own reckoning/);
+    for (const lang of ['en', 'ru', 'th'] as const) expect(tFor(lang, 'watch.end.vostokFact'), lang).toMatch(/1[.,]5 (km|км|กม\.).*4 (km|км|กม\.)/);
+    // nothing on screen is said to lie below him that the model does not put there
+    expect(en['watch.say.vostokPilotDescent']).not.toMatch(/Below him/);
+    expect(tFor('ru', 'watch.say.vostokPilotDescent')).not.toMatch(/Под ним/);
+    expect(tFor('th', 'watch.say.vostokPilotDescent')).not.toMatch(/เบื้องล่างคือ/);
+    // Anna Takhtarova as every source has her, the local forester's wife (Gagarin's report; RussianSpaceWeb; KP 2011)
+    expect(en['watch.say.vostokLanding']).toMatch(/Anna Takhtarova, the local forester's wife/);
+    expect(tFor('ru', 'watch.say.vostokLanding')).toMatch(/жена местного лесника Анна Тахтарова/);
+    expect(tFor('th', 'watch.say.vostokLanding')).toMatch(/อันนา ทัคทาโรวา ภรรยาของเจ้าหน้าที่ป่าไม้ในท้องถิ่น/);
   });
 });

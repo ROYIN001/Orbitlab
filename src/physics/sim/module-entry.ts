@@ -294,9 +294,13 @@ export class ModuleEntry implements DebrisFlight {
   }
 
   /**
-   * At the break-up height: the module ends (`burnup`: as a body it is gone)
+   * At the break-up height: the module ends (`burnup`: as a body it is gone,
+   * and its row in the list says it broke up in the air, 'tel.debris.burnup')
    * and its pieces take its place, each where it sat in it with the
    * tumble's velocity there and a small spread in a direction of its own.
+   * The break-up is reported as it happens (`evt.moduleBreakup`); which
+   * pieces burned up and which reached the ground only once the last of them
+   * is done (`FragmentGroup`, `evt.moduleBurnedUp`).
    */
   private breakUp(d: Debris, env: DebrisEnvironment): DebrisFlightResult {
     const spec = this.spec, st = this.state, t = this.t;

@@ -15,7 +15,7 @@ import { watchMissionSettings } from '../src/ui/watch-missions';
 import type { CrewState } from '../src/physics/sim/types';
 import type { RigidTelemetry } from '../src/physics/rigid/telemetry';
 import { quatFromAxisAngle, quatRotate } from '../src/physics/rigid/math';
-import { v3, norm } from '../src/physics/vec3';
+import { add, cross, normalize, scale, v3, norm } from '../src/physics/vec3';
 import { R_EARTH } from '../src/physics/constants';
 import { geodeticHeight, WGS84_A, WGS84_F } from '../src/physics/geodesy';
 import { drawnFrame, onDrawnSphere, onEllipsoid } from '../src/render/datum';
@@ -23,6 +23,14 @@ import { crewViewSize } from '../src/render/cosmonaut';
 import { entryGlow } from '../src/render/entry-glow';
 import { entryGlow as apolloGlow } from '../src/render/apollo-cm';
 import { incandescence } from '../src/render/vostok-debris';
+import { RecoverySceneryView } from '../src/render/recovery';
+import { buildSteppe } from '../src/render/steppe';
+import { RocketView } from '../src/render/rocket';
+import { retroAttitude, VOSTOK_RETRO_TURN } from '../src/render/vostok';
+import { SITES } from '../src/data/sites';
+import { satelliteById } from '../src/data/satellites';
+import { VOSTOK_CAPSULE } from '../src/physics/rigid/escape';
+import { debrisRowAltitude } from '../src/ui/telemetry';
 
 /** The canvases (helmet, louvres, halo, canopy stripes) are textures; nothing here draws them. */
 const withCanvas = <T>(run: () => T): T => {
@@ -194,6 +202,30 @@ describe('the return on WGS-84 heights, drawn on the scene\'s sphere', () => {
   });
 });
 
+describe('the sphere at rest on the steppe', () => {
+  it('stands on the drawn ground, whatever the recording\'s chord and its touchdown step left it at', () => {
+    const lat = 51.27 * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
+    const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
+    // the sphere's CG 2.4 m under where it rests (0.95 m up, its heavy side down), as between two frames 30 s apart
+    const h = 0.95 - 2.4;
+    const r = v3((N + h) * Math.cos(lat), 0, (N * (1 - e2) + h) * Math.sin(lat));
+    const up = v3(Math.cos(lat), 0, Math.sin(lat));
+    // the attitude that turns body +x, the heavy side, onto `to`
+    const turned = (to: { x: number; y: number; z: number }) => {
+      const t = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), new THREE.Vector3(to.x, to.y, to.z));
+      return { x: t.x, y: t.y, z: t.z, w: t.w };
+    };
+    const frame = { r, debris: [], rigid: { attitudeQ: turned(v3(-up.x, 0, -up.z)) }, abort: { body: 'capsule', capsule: 'vostok', phase: 'landed' } } as unknown as VisualFrame;
+    expect(norm(drawnFrame(frame).r) - R_EARTH).toBeCloseTo(0.95, 2);
+    // on its side, the CG at the centre's height
+    const side = { ...frame, rigid: { attitudeQ: turned(v3(-up.z, 0, up.x)) } } as unknown as VisualFrame;
+    expect(norm(drawnFrame(side).r) - R_EARTH).toBeCloseTo(1.15, 2);
+    // still flying, it is drawn at its height
+    const flying = { ...frame, abort: { body: 'capsule', capsule: 'vostok', phase: 'main' } } as unknown as VisualFrame;
+    expect(norm(drawnFrame(flying).r) - R_EARTH).toBeCloseTo(h, 2);
+  });
+});
+
 describe('a body at rest between two recorded frames', () => {
   it('turns with the Earth, and one that stays put stays put', () => {
     const w = 7.292115e-5, span = 30, R = 6.36e6;
@@ -233,5 +265,181 @@ describe('framing Gagarin', () => {
     expect(seat).toBeLessThan(main);
     expect(main).toBeLessThanOrEqual(both);
     expect(down).toBeLessThan(seat);
+  });
+});
+
+describe('the ground Vostok-1 comes down on', () => {
+  /** A scene with its camera `range` m up over `r`, drawing positions where they are. */
+  const sceneAt = (r: { x: number; y: number; z: number }, range: number) => {
+    const n = norm(r);
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(r.x * (1 + range / n), r.y * (1 + range / n), r.z * (1 + range / n));
+    return { scene: new THREE.Scene(), camera, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y, p.z) } as unknown as SceneManager;
+  };
+  const baikonur = SITES.find((x) => x.id === 'baikonur')!;
+  // the sphere at rest near Smelovka, drawn on the drawn sphere (render/datum.ts)
+  const lat = 51.27 * Math.PI / 180, lon = 45.98 * Math.PI / 180;
+  const ground = v3(R_EARTH * Math.cos(lat) * Math.cos(lon), R_EARTH * Math.cos(lat) * Math.sin(lon), R_EARTH * Math.sin(lat));
+  const vostok = (status: string, altitude: number) => ({ status, altitude, theta: 0, t: 6640, r: ground, debris: [],
+    abort: { body: 'capsule', capsule: 'vostok', phase: altitude > 0 ? 'main' : 'landed' } }) as unknown as VisualFrame;
+  type Parts = { sea: { group: THREE.Group }; land: { anchor: { group: THREE.Group } } | null };
+  const parts = (v: RecoverySceneryView) => v as unknown as Parts;
+
+  it('lays out fields, not sea, under the sphere and Gagarin, before and after he is down', () => {
+    for (const status of ['abort', 'landed']) {
+      const view = new RecoverySceneryView(baikonur);
+      view.update(sceneAt(ground, 30), vostok(status, 0));
+      expect(parts(view).sea.group.visible).toBe(false);
+      expect(parts(view).land?.anchor.group.visible).toBe(true);
+      view.dispose();
+    }
+    // a capsule that splashes down still gets its sea
+    const view = new RecoverySceneryView(baikonur);
+    const mercury = { ...vostok('landed', 0), abort: { body: 'capsule', capsule: 'mercury', phase: 'landed' } } as unknown as VisualFrame;
+    view.update(sceneAt(ground, 30), mercury);
+    expect(parts(view).sea.group.visible).toBe(true);
+    expect(parts(view).land).toBeNull();
+    view.dispose();
+  });
+
+  it('puts the fields on the drawn sphere, where the bodies on the ground stand, and not 1.3 km under them', () => {
+    const view = new RecoverySceneryView(baikonur);
+    view.update(sceneAt(ground, 30), vostok('landed', 0));
+    const anchor = parts(view).land!.anchor.group;
+    anchor.updateMatrixWorld(true);
+    // centred on the step grid within a step of the sphere
+    expect(anchor.position.distanceTo(new THREE.Vector3(ground.x, ground.y, ground.z))).toBeLessThan(1000);
+    let worst = 0, meshes = 0;
+    const p = new THREE.Vector3();
+    anchor.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      // every number finite, the plain's too (three sorts by the bounding sphere, and a NaN blanked the picture)
+      for (const a of Object.values(mesh.geometry.attributes)) expect((a.array as Float32Array).every(Number.isFinite)).toBe(true);
+      if (!(mesh.material as THREE.MeshStandardMaterial).map) return;
+      meshes++;
+      const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) worst = Math.max(worst, Math.abs(p.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).length() - R_EARTH));
+    });
+    expect(meshes).toBe(1);
+    expect(worst).toBeLessThan(0.05);
+    view.dispose();
+  });
+
+  it('fades out from far away and is not drawn high in the entry', () => {
+    const view = new RecoverySceneryView(baikonur);
+    view.update(sceneAt(ground, 60e3), vostok('landed', 0));
+    expect(parts(view).land?.anchor.group.visible).toBe(false);
+    view.update(sceneAt(ground, 30), vostok('abort', 50e3));
+    expect(parts(view).land?.anchor.group.visible).toBe(false);
+    view.dispose();
+  });
+
+  it('keeps its fields where they lie when it steps after a body coming down', () => {
+    const steppe = buildSteppe();
+    const centreUv = () => {
+      const uv = (steppe.group.children.find((o) => ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).map) as THREE.Mesh)
+        .geometry.attributes.uv as THREE.BufferAttribute;
+      return [uv.getX(0), uv.getY(0)];
+    };
+    const step = 1000 / (R_EARTH * Math.cos(lat));
+    steppe.centre(lat, lon);
+    const [u0, v0] = centreUv();
+    steppe.centre(lat, lon + step);
+    const [u1, v1] = centreUv();
+    // a kilometre east is a kilometre further along the texture (6,144 m a repeat), whatever the disc's place
+    const frac = (x: number) => x - Math.floor(x);
+    expect(frac(u1 - u0 + 1e-9)).toBeCloseTo(1000 / 6144, 6);
+    expect(v1 - v0).toBeCloseTo(0, 6);
+    steppe.dispose();
+  });
+});
+
+/** As `withCanvas`, with the pixels the stack's textures write (render/soyuz.ts's frost). */
+const withPixels = <T>(run: () => T): T => {
+  const pixels = (...a: number[]) => ({ data: new Uint8ClampedArray(Math.max(1, (a.length > 2 ? a[2] * a[3] : a[0] * a[1]) * 4)) });
+  const context = new Proxy({}, { get: (_, key) => (key === 'createImageData' || key === 'getImageData' ? pixels
+    : key === 'measureText' ? () => ({ width: 10 }) : () => ({ addColorStop: () => undefined })) });
+  vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => context }) });
+  try { return run(); } finally { vi.unstubAllGlobals(); }
+};
+
+describe('the spacecraft turned for its retro-fire', () => {
+  it('turns before the TDU-1 fires into the attitude the return starts in, to where it draws the pair from', () => withPixels(() => {
+    const deorbit = 4684.2;
+    const rocket = new RocketView(vehicleById('vostokk'), satelliteById('vostok1'), { deorbit });
+    // whatever attitude the frame has it in (the app sets the group's; in a six-DOF orbit at warp it drifts)
+    rocket.group.quaternion.setFromAxisAngle(new THREE.Vector3(0.3, 1, -0.4).normalize(), 2.1);
+    const sat = (rocket as unknown as { satellite: { group: THREE.Group; junctionY: number } }).satellite;
+    const frameAt = (t: number) => ({ ...captureFrameStub(t), payloadSeparated: true, payloadSepT: 686 });
+    const world = (t: number) => {
+      const f = frameAt(t);
+      rocket.update(f, { night: 0 });
+      rocket.group.updateMatrixWorld(true);
+      const o = sat.group.localToWorld(new THREE.Vector3(0, 0, 0));
+      return {
+        f,
+        // the module points along the satellite's −Y; the pole sits at junctionY
+        module: sat.group.localToWorld(new THREE.Vector3(0, -1, 0)).sub(o).normalize(),
+        pole: sat.group.localToWorld(new THREE.Vector3(0, sat.junctionY, 0)),
+      };
+    };
+    // the orientation for the descent built from 09:51 to 09:55 Moscow time, the command at 10:25:04.2
+    expect(deorbit + VOSTOK_RETRO_TURN.from).toBeCloseTo(2640, 0);
+    expect(deorbit + VOSTOK_RETRO_TURN.to).toBeCloseTo(2880, 0);
+    world(2000);
+    expect(sat.group.quaternion.equals(new THREE.Quaternion())).toBe(true);
+    const mid = world(2760);
+    expect(sat.group.quaternion.angleTo(new THREE.Quaternion())).toBeGreaterThan(0.1);
+    expect(mid.module.length()).toBeCloseTo(1, 6);
+    for (const t of [3000, 4684]) {
+      const { f, module, pole } = world(t);
+      const q = retroAttitude(f.r, f.v), x = quatRotate(q, v3(1, 0, 0));
+      // turned: the module ahead along the return's body +x, the sphere's pole cgAbove ahead of the CG (the origin)
+      expect(module.dot(new THREE.Vector3(x.x, x.y, x.z))).toBeCloseTo(1, 6);
+      expect(pole.distanceTo(new THREE.Vector3(x.x, x.y, x.z).multiplyScalar(VOSTOK_CAPSULE.cgAbove))).toBeLessThan(1e-6);
+    }
+    rocket.dispose();
+  }));
+
+  it('is the attitude src/physics/sim/abort.ts starts the return in', () => {
+    const s = watchMissionSettings('vostok1');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    // a spacecraft in a 180 km orbit over the Atlantic, its retro sequence starting
+    const st = sim.state, rr = R_EARTH + 180e3, vc = Math.sqrt(3.986004418e14 / rr);
+    st.r = v3(rr * 0.8, rr * 0.36, rr * 0.48);
+    const up = normalize(st.r), east = normalize(cross(v3(0, 0, 1), up));
+    st.v = scale(normalize(add(east, scale(cross(up, east), 0.6))), vc);
+    st.payloadSeparated = true;
+    const r = { ...st.r }, v = { ...st.v };
+    sim.escape.beginReturn();
+    const flown = sim.state.rigid!.attitudeQ, drawn = retroAttitude(r, v);
+    const a = quatRotate(flown, v3(1, 0, 0)), b = quatRotate(drawn, v3(1, 0, 0));
+    const c = quatRotate(flown, v3(0, 0, 1)), d = quatRotate(drawn, v3(0, 0, 1));
+    expect(a.x * b.x + a.y * b.y + a.z * b.z).toBeCloseTo(1, 9);
+    expect(c.x * d.x + c.y * d.y + c.z * d.z).toBeCloseTo(1, 9);
+  });
+});
+
+describe('the bodies Vostok-1 lets go of, in the telemetry list', () => {
+  it('reads the hatch, the seat and the module above WGS-84 in the return, Blok E above the sphere', () => {
+    const lat = 51.27 * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
+    const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
+    const r = v3((N + 4000) * Math.cos(lat), 0, (N * (1 - e2) + 4000) * Math.sin(lat));
+    const frame = { abort: { body: 'capsule', capsule: 'vostok' } } as unknown as VisualFrame;
+    for (const kind of ['hatch', 'seat', 'instrumentModule'] as const) {
+      const row = debrisRowAltitude({ r, visual: { kind, diameter: 1, length: 1, color: '#fff' } } as never, frame);
+      expect(row.wgs84).toBe(true);
+      expect(row.km).toBeCloseTo(4, 3);
+    }
+    // the 6,378 km sphere is 12.5 km over that seat: 0 on it, as the row read before
+    const blokE = debrisRowAltitude({ r, visual: { kind: 'upperStage', diameter: 2.6, length: 3, color: '#fff' } } as never, frame);
+    expect(blokE.wgs84).toBe(false);
+    expect(blokE.km).toBe(0);
+    expect(debrisRowAltitude({ r, visual: { kind: 'seat', diameter: 1, length: 1, color: '#fff' } } as never, null).wgs84).toBe(false);
   });
 });

@@ -817,7 +817,8 @@ export class EscapeFlight {
     const eps = this.tdu ? 1e-6 : 0;
     if (rp && this.retroFired < rp.starts.length && tau >= rp.starts[this.retroFired] - eps) {
       this.retroFired++;
-      this.log({ key: 'evt.retroFire', severity: 'info', params: { n: this.retroFired } }, t);
+      // C01: Vostok's one TDU-1 braking engine is logged as itself, never as Mercury's numbered retro-rockets
+      this.log(this.tdu ? { key: 'evt.tduFire', severity: 'info' } : { key: 'evt.retroFire', severity: 'info', params: { n: this.retroFired } }, t);
       // C01: the thrust line the gyros hold for the burn, set by the attitude at the launch command
       if (rp.pitch !== undefined) this.retroDir = retroDirection(this.state.r, this.state.v, rp.pitch * Math.PI / 180);
     }

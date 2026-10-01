@@ -157,8 +157,15 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       }
       titleKey = 'hud.status.orbit';
       detailKey = frame.payloadSeparated ? 'phase.detail.deployed' : 'phase.detail.orbit';
-      params.ap = fmtAlt(frame.elements.apoapsisAlt);
-      params.pe = fmtAlt(frame.elements.periapsisAlt);
+      {
+        // The orbit the flight was judged on, where that was its lowest and highest heights rather than the
+        // conic of the instant (six-DOF; Vostok-1's `extremes`): the conic at a 63° N insertion reads the
+        // apogee 18 km low and swings by tens of kilometres round the orbit, beside an event log that gives
+        // the judged figures (review of the Vostok-1 work, finding 23)
+        const judged = latestJudgedOrbit(frame, events);
+        params.ap = fmtAlt(judged?.ap ?? frame.elements.apoapsisAlt);
+        params.pe = fmtAlt(judged?.pe ?? frame.elements.periapsisAlt);
+      }
       params.inc = (frame.elements.i * RAD).toFixed(2);
       break;
     case 'descent':
@@ -237,6 +244,17 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
 }
 
 /** A distance for the rendezvous narration: kilometres to 2 decimals from 1 km out, metres inside. */
+/** The apsides, m, of the latest final-orbit verdict at or before the frame, when it gave judged ones. */
+function latestJudgedOrbit(frame: VisualFrame, events: readonly SimEvent[]): { pe: number; ap: number } | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.t > frame.t + 1e-6 || (e.key !== 'evt.targetOrbit' && e.key !== 'evt.offTargetOrbit')) continue;
+    const pe = Number(e.params?.peAltM), ap = Number(e.params?.apAltM);
+    return Number.isFinite(pe) && Number.isFinite(ap) ? { pe, ap } : null;
+  }
+  return null;
+}
+
 export function rendezvousRange(m: number): { range: string; unit: string } {
   return m >= 1000 ? { range: (m / 1000).toFixed(m >= 100e3 ? 0 : 2), unit: t('rv.unit.km') } : { range: m.toFixed(0), unit: t('rv.unit.m') };
 }

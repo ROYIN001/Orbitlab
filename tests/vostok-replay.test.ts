@@ -18,6 +18,7 @@ import { watchMissionSettings } from '../src/ui/watch-missions';
 import { stageNameByLabel } from '../src/ui/names';
 import { v3 } from '../src/physics/vec3';
 import type { AbortState } from '../src/physics/sim/types';
+import { expectVostok1Recording, recordVostok1 } from './vostok1-recording-harness';
 
 function vostok(): Simulation {
   const s = watchMissionSettings('vostok1');
@@ -117,14 +118,21 @@ describe('frames between two recorded instants', () => {
 });
 
 describe('the recorder\'s cadence for the return', () => {
-  it('is a second through the burn, 2 s above the air, five a second through the entry, a second under the main and on the ground', () => {
+  it('is a second through the burn, 2 s above 100 km, four a second through the entry, two below 20 km, a second under the main, 5 s on the ground', () => {
     expect(vostokInterval(ABORT, 180e3)).toBe(1);
     const after = { ...ABORT, motors: { ...ABORT.motors, retro: 0 } };
     expect(vostokInterval(after, 180e3)).toBe(2);
-    expect(vostokInterval(after, 100e3)).toBe(0.2);
-    expect(vostokInterval({ ...after, phase: 'main', main: 0.5 }, 2000)).toBe(0.2);
+    expect(vostokInterval(after, 120e3)).toBe(2);
+    expect(vostokInterval(after, 99e3)).toBe(0.25);
+    expect(vostokInterval(after, 21e3)).toBe(0.25);
+    expect(vostokInterval(after, 7e3)).toBe(0.5);
+    expect(vostokInterval({ ...after, phase: 'main', main: 0.5 }, 2000)).toBe(0.5);
     expect(vostokInterval({ ...after, phase: 'main', main: 1 }, 2000)).toBe(1);
-    expect(vostokInterval({ ...after, phase: 'landed' }, 0)).toBe(1);
+    expect(vostokInterval({ ...after, phase: 'landed' }, 0)).toBe(5);
+  });
+
+  it('records the whole flight, point-mass, untouched by the ceiling, the orbit and the way home at their own cadence', { timeout: 300_000 }, () => {
+    expectVostok1Recording(recordVostok1('pointMass'), 50e6);
   });
 });
 

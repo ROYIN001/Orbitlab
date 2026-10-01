@@ -106,7 +106,9 @@ const RUN_TIME_LIMIT_S = 30 * 3600;
 
 function orbitOf(sim: Simulation, physical: boolean): RunOrbit {
   const s = sim.state, el = elementsFromState(s.r, s.v);
-  const apsides = physical && el.e < 1 && el.periapsisAlt >= 120e3 && sim.rigidRuntime ? physicalApsides({ r: s.r, v: s.v }) : null;
+  // the J2 revolution's extremes in six-DOF, and for an orbit stated as its extremes in either model (C01: Vostok-1)
+  const apsides = physical && el.e < 1 && el.periapsisAlt >= 120e3 && (sim.rigidRuntime || sim.cfg.orbit.extremes)
+    ? physicalApsides({ r: s.r, v: s.v }) : null;
   const periapsis = apsides?.periapsisAlt ?? el.periapsisAlt, apoapsis = apsides?.apoapsisAlt ?? (el.e < 1 ? el.apoapsisAlt : Infinity);
   return { perigeeKm: periapsis / 1000, apogeeKm: apoapsis / 1000, inclinationDeg: el.i * RAD,
     dvLeft: s.payloadSeparated ? sim.vehicle.spacecraftDeltaV() : sim.vehicle.deltaVRemaining(), t: s.t };
@@ -127,7 +129,7 @@ export function flyRun(cfg: MissionConfig, drawn: DrawnRun, law: GuidanceLaw): M
     const s = sim.state;
     if (s.status === 'ascent' && s.rigid) maxQAlpha = Math.max(maxQAlpha, s.q / 1000 * Math.hypot(s.rigid.angleOfAttack, s.rigid.sideslip) * RAD);
     if (!cutoff && s.status !== 'prelaunch' && s.status !== 'ascent' && s.status !== 'failed'
-      && (s.status === 'burn' || !sim.vehicle.inTransient(s.t))) cutoff = orbitOf(sim, false);
+      && (s.status === 'burn' || !sim.vehicle.inTransient(s.t))) cutoff = orbitOf(sim, !!cfg.orbit.extremes);
   }
   const s = sim.state, failed = s.status === 'failed', timedOut = !sim.done;
   if (!cutoff && !failed && !timedOut) cutoff = orbitOf(sim, false);
@@ -157,8 +159,11 @@ export function missionTargetsOf(cfg: MissionConfig): Record<MeasurePoint, Inser
   const plan = new Simulation(runMission(cfg, 'standard'), { headless: true, equations: false, rigidOptions: { recordLoop: false } }).plan;
   return {
     final: { perigeeKm: plan.target.perigee / 1000, apogeeKm: plan.target.apogee / 1000, inclinationDeg: plan.target.inclination * RAD },
-    cutoff: { perigeeKm: plan.insertionAltitude / 1000, apogeeKm: Math.max(plan.insertionAltitude, plan.insertionApoapsis) / 1000,
-      inclinationDeg: plan.ascentInclination * RAD },
+    // a cut-off made late on purpose leaves the flown orbit, not the one aimed at (C01: Vostok-1's over-burn)
+    cutoff: cfg.orbit.backupCutoff
+      ? { perigeeKm: plan.target.perigee / 1000, apogeeKm: plan.target.apogee / 1000, inclinationDeg: plan.ascentInclination * RAD }
+      : { perigeeKm: plan.insertionAltitude / 1000, apogeeKm: Math.max(plan.insertionAltitude, plan.insertionApoapsis) / 1000,
+        inclinationDeg: plan.ascentInclination * RAD },
   };
 }
 

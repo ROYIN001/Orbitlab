@@ -89,7 +89,8 @@ export function expectFlownVostok1(sim: Simulation): void {
   const at = (key: string) => sim.events.find((e) => e.key === key);
   expect(at('evt.deorbitPlanned')?.params?.t, log).toBeCloseTo(4684.2, 6);
   // the TDU-1 to a tenth of a second: launch command, the fuel out short of the integrator's 136 m/s, the cut-off
-  expect(Math.abs(at('evt.retroFire')!.t - 4686.4), log).toBeLessThan(0.5);
+  expect(Math.abs(at('evt.tduFire')!.t - 4686.4), log).toBeLessThan(0.5);
+  expect(at('evt.retroFire'), log).toBeUndefined();
   const out = at('evt.retroShortfall')!;
   expect(Math.abs(out.t - 4726.4), log).toBeLessThan(0.5);
   expect(Math.abs(Number(out.params!.dv) - 132), log).toBeLessThan(0.5);
@@ -155,14 +156,14 @@ function expectGagarinHome(sim: Simulation, log: string): void {
   expect(Number(home.params!.speed)).toBeLessThan(7);
   // a few minutes after the sphere, a few kilometres from it, and downwind: in the westerly Saratov measured that
   // morning (src/data/measured-winds.ts) his longer time under the canopy carries him further east than the
-  // sphere, which came down toward the Volga. The model gives 5.5 km; OKB-1's report 1.5 km (via Zak), Gagarin
-  // "up to 4 km"
+  // sphere, which came down toward the Volga. The model gives 5.5 km; OKB-1's preliminary report 1.5 km,
+  // Gagarin's own report "about 4 km"
   expect(home.t - down.t, log).toBeGreaterThan(60);
   expect(home.t - down.t, log).toBeLessThan(900);
   expect(Number(home.params!.km), log).toBeGreaterThan(1);
   expect(Number(home.params!.km), log).toBeLessThan(7);
   expect(Number(home.params!.lon), log).toBeGreaterThan(sim.state.lon);
-  // on 10:53–10:55 to within five minutes
+  // on 10:55 (officially; 10:53 in OKB-1's report) to within five minutes
   const row = compareEvents(watchMissionById('vostok1')!.flown!, sim.events).find((r) => r.key === 'evt.pilotLanding')!;
   expect(Math.abs(row.delta!), log).toBeLessThan(300);
   // the flight waits for him, the sphere at rest, and ends ('landed') only once he is down

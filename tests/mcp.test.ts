@@ -26,6 +26,7 @@ import type { VisualFrame } from '../src/physics/frame';
 import type { MissionConfig } from '../src/types';
 import { defaultMonteCarlo, type MonteCarloConfig } from '../src/physics/monte-carlo';
 import { MonteCarloJob, type MonteCarloReply, type MonteCarloWorker } from '../src/physics/monte-carlo-job';
+import { watchMissionSettings } from '../src/ui/watch-missions';
 
 // ────────────────────────────────────────────────────────────────── fakes
 
@@ -1154,3 +1155,58 @@ describe('Monte Carlo insertion accuracy (roadmap G05)', () => {
   });
 });
 
+describe('configure_mission on a historical flight (C01: Vostok-1)', () => {
+  // as the panel's historical list loads it (`SetupPanel.loadMission`)
+  const loadVostok = () => {
+    const s = watchMissionSettings('vostok1');
+    Object.assign(host.panel.state, { ...s, orbit: { ...s.orbit }, dynamics: defaultDynamics(s.vehicleId) });
+  };
+  const RECORD = ['aim', 'backupCutoff', 'extremes', 'deorbit'] as const;
+
+  it('shows the record of how it flew while the orbit carries it', () => {
+    loadVostok();
+    const out = tool(tools, 'configure_mission').execute({ launchTimeIso: '1961-04-12T06:07:00Z' }) as any;
+    expect(out.config.orbit).toMatchObject({ raanMode: 'fixed', raanDeg: 326.653, aimKm: { apogee: 230 }, backupCutoffDvMs: 25.43, extremes: true,
+      deorbit: { timeS: 4684.2, wind: 'saratov-1961-04-12' } });
+    expect(out.config.orbit.aimKm).not.toHaveProperty('perigee');
+    expect(host.panel.state.orbit.backupCutoff).toEqual({ dv: 25.43 });
+  });
+
+  it('drops it with an apsis edited, as the panel does: aimed at the 250 km asked for, no over-burn, the node kept', () => {
+    loadVostok();
+    const out = tool(tools, 'configure_mission').execute({ apogeeKm: 250 }) as any;
+    for (const key of RECORD) expect(host.panel.state.orbit, key).not.toHaveProperty(key);
+    expect(host.panel.state.orbit.apogee).toBe(250e3);
+    expect(host.panel.state.orbit).toMatchObject({ raanMode: 'fixed', raan: 326.653 });
+    for (const key of ['aimKm', 'backupCutoffDvMs', 'extremes', 'deorbit']) expect(out.config.orbit, key).not.toHaveProperty(key);
+    const cfg = host.panel.getConfig();
+    const plan = planMission(cfg, siteById(cfg.siteId), missionVehicle(cfg));
+    expect(plan.target.apogee).toBeCloseTo(250e3, 0);
+    expect(plan.aim).toBeUndefined();
+    // any other field of the orbit, and an explicit "custom", too
+    for (const edit of [{ inclinationDeg: 65 }, { argPerigeeDeg: 10 }, { raanDeg: 300 }, { orbitId: 'custom' }]) {
+      loadVostok();
+      tool(tools, 'configure_mission').execute(edit);
+      for (const key of RECORD) expect(host.panel.state.orbit, `${JSON.stringify(edit)} ${key}`).not.toHaveProperty(key);
+    }
+  });
+
+  it('drops it with another vehicle or another payload', () => {
+    loadVostok();
+    tool(tools, 'configure_mission').execute({ vehicleId: 'soyuz21a', satelliteId: 'crew' });
+    for (const key of RECORD) expect(host.panel.state.orbit, key).not.toHaveProperty(key);
+    loadVostok();
+    tool(tools, 'configure_mission').execute({ satelliteId: 'crew' });
+    for (const key of RECORD) expect(host.panel.state.orbit, key).not.toHaveProperty(key);
+    // the same vehicle and payload named again are not an edit
+    loadVostok();
+    tool(tools, 'configure_mission').execute({ vehicleId: 'vostokk', satelliteId: 'vostok1' });
+    expect(host.panel.state.orbit.backupCutoff).toEqual({ dv: 25.43 });
+  });
+
+  it('takes no suborbital target for Vostok\'s sphere, which is timed for a return from orbit', () => {
+    loadVostok();
+    expect(() => tool(tools, 'configure_mission').execute({ suborbital: true, perigeeKm: -15, apogeeKm: 211 })).toThrowError(/suborbital target/);
+    expect(host.panel.state.orbit.suborbital).toBeUndefined();
+  });
+});

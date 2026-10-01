@@ -301,3 +301,27 @@ describe('the stored mission restored over a viewer launch (audit 2026-09-27 A1)
     expect(parseMissionDocument(viaJson(quick), featured())).toMatchObject({ issues: [], state: quick });
   });
 });
+
+describe('a historical flight in a mission file (C01: Vostok-1)', () => {
+  const vostok = (): MissionState => {
+    const s = watchMissionSettings('vostok1', FROM);
+    return { ...s, orbit: { ...s.orbit }, dynamics: defaultDynamics(s.vehicleId) };
+  };
+
+  it('keeps the record of how it flew through a file', () => {
+    const state = vostok();
+    const back = parseMissionDocument(viaJson(state), fallback());
+    expect(back.issues).toEqual([]);
+    expect(back.state.orbit).toMatchObject({ aim: { apogee: 230e3 }, backupCutoff: { dv: 25.43 }, extremes: true,
+      deorbit: { time: 4684.2, wind: 'saratov-1961-04-12' } });
+  });
+
+  it('refuses it a suborbital target, its sphere being timed for a return from orbit, and puts the orbit back', () => {
+    const doc = viaJson(vostok());
+    doc.mission.orbit = { ...doc.mission.orbit, suborbital: true, perigee: -15e3, apogee: 211e3 };
+    const back = parseMissionDocument(doc, fallback());
+    expect(back.issues).toContainEqual({ field: 'setup.perigee', code: 'suborbital' });
+    expect(back.state.orbit.suborbital).toBeUndefined();
+    expect(validateConfigInput(back.state)).toEqual([]);
+  });
+});

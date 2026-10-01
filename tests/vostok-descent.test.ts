@@ -83,7 +83,7 @@ describe("Vostok's TDU-1", () => {
     const s = start(pitch), f = flight(s);
     const events = fly(f, 44);
     const keys = events.map((e) => `${e.key}@${e.t!.toFixed(2)}`);
-    expect(keys).toEqual(['evt.retroFire@2.20', 'evt.retroShortfall@42.20']);
+    expect(keys).toEqual(['evt.tduFire@2.20', 'evt.retroShortfall@42.20']);
     const fuelOut = events[1];
     expect(Math.abs(Number(fuelOut.params!.dv) - 132)).toBeLessThan(0.5);
     // what the integration actually delivered, against a coast on the same gravity

@@ -226,9 +226,10 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // Strap-ons T+119 s, shroud T+156 s, Blok A off and Blok E lit T+300 s,
   // Blok E off T+676 s, the spacecraft off ten seconds later (ESA). The orbit
   // planned was 168 × 230 km (Baturin 2021; Kommersant gives 180 × 235): the
-  // radio command to shut the core down did not pass, and the backups stopped
-  // the core and Blok E 25.43 m/s late (`aim`, `backupCutoff`; docs/PHYSICS.md
-  // §13.6). Both orbits are the least and greatest heights the reports give
+  // radio command to shut the core down did not pass, the backup time mark
+  // stopped the core 22.0 m/s fast and Blok E ran 2.4 s long, 25.43 m/s in
+  // all (`aim`, `backupCutoff`; docs/PHYSICS.md §13.6). Both orbits are the
+  // least and greatest heights the reports give
   // (`extremes`): GCAT's are 181 × 327 km "from the Earth's surface" (OKB-1's
   // report; the FAI record file) less 13 km, over a 6,378 km radius, and its
   // period, 89.34 min, is the one those extremes fly under J2 (OKB-1: 89.44 min
@@ -258,11 +259,13 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       // Lisov and Afanasyev; Baturin); the straps over the Mediterranean at 10:36, the cables a few seconds on
       // (Siddiqi 2015), the ejection at 10:42 and the sphere on the ground at 10:48, each to the minute (the
       // report; Zak, RussianSpaceWeb)
-      { key: 'evt.retroFire', t: 4686.4 }, { key: 'evt.retroShortfall', t: 4726.4 }, { key: 'evt.retroCutoff', t: 4728.2 },
+      { key: 'evt.tduFire', t: 4686.4 }, { key: 'evt.retroShortfall', t: 4726.4 }, { key: 'evt.retroCutoff', t: 4728.2 },
       { key: 'evt.vostokStraps', t: 5340, approx: true }, { key: 'evt.vostokSeparation', t: 5344, approx: true },
       { key: 'evt.ejection', t: 5700, approx: true }, { key: 'evt.capsuleLanding', t: 6060, approx: true },
-      // Gagarin on the ground at 10:53 by the OKB-1's preliminary report, 10:55 (the 108 minutes) officially
-      { key: 'evt.pilotLanding', t: 6360, span: [6360, 6480], approx: true },
+      // Gagarin on the ground at 10:55 (the 108 minutes) officially, the time the narration gives and the one
+      // the difference is measured from; 10:53 by OKB-1's preliminary report, which the end card gives beside
+      // it (`watch.end.vostokFact`)
+      { key: 'evt.pilotLanding', t: 6480, approx: true },
     ], orbit: { perigee: 168, apogee: 314, inclination: 64.95 } },
     titleKey: 'watch.mission.vostok1', blurbKey: 'watch.mission.vostok1Blurb', payloadKey: 'watch.payload.vostok1' },
   // Mercury-Redstone 3, 5 May 1961: Alan Shepard in Freedom 7, lobbed from

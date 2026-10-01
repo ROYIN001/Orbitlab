@@ -1390,7 +1390,12 @@ export class Simulation {
     s.altitude = geo ? geo.h : rm - R_EARTH;
     s.altitudeAGL = s.altitude - this.groundElevation(s.r);
     const omega = v3(0, 0, OMEGA_EARTH);
-    const vAir = this.rigidRuntime ? this.rigidRuntime.airVelocity(s, s.t) : sub(s.v, cross(omega, s.r));
+    // C01: an escape or a return in flight reports the air it flies in (`LaunchEscape.windAt`): on Vostok-1's return
+    // the wind measured at Saratov (docs/PHYSICS.md §13.6), elsewhere the same scenario wind or still air as below.
+    // At rest on the ground (the sphere waiting for its pilot) the vehicle's own again, so no surface wind reads as air.
+    const flight = this.escape.flight;
+    const vAir = flight && !flight.landed ? flight.airVelocity(flight.state, s.t)
+      : this.rigidRuntime ? this.rigidRuntime.airVelocity(s, s.t) : sub(s.v, cross(omega, s.r));
     if (this.rigidRuntime?.snapshot && !this.escape.flight) s.mass = this.rigidRuntime.snapshot.mass;
     s.airspeed = norm(vAir);
     s.speed = norm(s.v);

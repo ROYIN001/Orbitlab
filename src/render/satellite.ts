@@ -21,6 +21,11 @@ export interface SatelliteView {
   setJettisoned?(j: { tower: boolean } | undefined): void;
   /** C01: Apollo's transposition, docking and extraction, at mission time `t` */
   setApollo?(state: ApolloState | undefined, t: number, separated: boolean): void;
+  /**
+   * C01: Vostok: where its sphere sits on the instrument module, along the model's Y: the sphere's pole on
+   * the module's side, the point render/escape.ts draws the pair from once the return begins.
+   */
+  junctionY?: number;
 }
 
 interface Hinge {
@@ -77,6 +82,7 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
   const slides: Slide[] = [];
   /** parts gone the moment deployment starts (Mercury's escape tower) */
   const shed: THREE.Object3D[] = [];
+  let junctionY: number | undefined;
   const gold = new THREE.MeshStandardMaterial({ color: 0xd4b048, metalness: 0.55, roughness: 0.35 });
   const foil = new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.8, roughness: 0.25 });
   const white = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.6, metalness: 0.05 });
@@ -272,13 +278,15 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       const bottles = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.45, metalness: 0.5 });
       const sphereR = 1.15;
       const im = buildInstrumentModule().group;
-      // its engine down the rocket's axis, its cradle up at the sphere
+      // its engine down the rocket's axis, its cradle up at the sphere, as it left Blok E; turned engine first for
+      // the retro-fire by render/rocket.ts (render/vostok.ts `VOSTOK_RETRO_TURN`)
       im.rotation.x = Math.PI;
       im.position.y = -h / 2 + IM_LENGTH;
       g.add(im);
       const sphere = new THREE.Mesh(new THREE.SphereGeometry(sphereR, 36, 24), ablative);
       sphere.position.y = -h / 2 + IM_LENGTH + sphereR - IM_NEST;
       g.add(sphere);
+      junctionY = sphere.position.y - sphereR;
       const glass = new THREE.MeshStandardMaterial({ color: 0x14171d, roughness: 0.1, metalness: 0.8 });
       for (const [y, rz, size] of [[0.2, 0, 0.22], [-0.35, 1.9, 0.3]] as const) {
         const port = new THREE.Mesh(new THREE.CircleGeometry(size, 20), glass);
@@ -372,5 +380,5 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
     }
   };
   setDeploy(0);
-  return { group: g, height: h, setDeploy };
+  return { group: g, height: h, setDeploy, ...(junctionY !== undefined ? { junctionY } : {}) };
 }

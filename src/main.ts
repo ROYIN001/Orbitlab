@@ -100,6 +100,12 @@ const GLOW_STORAGE_KEY = 'orbitlab.glow';
 
 /** Proper rotation: rendered +Y nose to physics +X nose, no reflection. */
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+/**
+ * C01: the shadow biases on the steppe under Vostok-1's sphere and Gagarin (`SceneManager.setShadowFocus`):
+ * some 9 cm of depth and 3 cm along the normal, a texel of the 1024² map over 80 m, so a man's shadow
+ * reaches his boots. The values are the drawing's.
+ */
+const VOSTOK_SHADOW_BIAS = { depth: -0.00002, normal: 0.03 };
 
 /**
  * A stage or booster came off within the last few seconds.
@@ -411,7 +417,7 @@ class App {
   /** index of the last recorded frame fed to the trail line */
   private trailIdx = -1;
   /** elements the predicted-orbit line was last sampled for (see syncPredicted) */
-  private predictedShape = { a: NaN, e: NaN, i: NaN, raan: NaN, argp: NaN };
+  private predictedShape = { a: NaN, e: NaN, i: NaN, raan: NaN, argp: NaN, ellipsoid: false };
   private predictedOn = false;
   /** 0..1 fade of the predicted-orbit line (see syncPredicted) */
   private predictedFade = 0;
@@ -1439,7 +1445,7 @@ class App {
       this.scene.scene.remove(this.pad.group);
       this.pad.dispose();
     }
-    this.rocket = new RocketView(sim.vehicleSpec, sim.satellite, { humidity: SITE_HUMIDITY[sim.site.id] });
+    this.rocket = new RocketView(sim.vehicleSpec, sim.satellite, { humidity: SITE_HUMIDITY[sim.site.id], deorbit: sim.cfg.orbit.deorbit?.time });
     this.scene.scene.add(this.rocket.group);
     // V03: the smoke the flight leaves in the air, from its own recording
     if (this.trails) {
@@ -1777,16 +1783,22 @@ class App {
       return;
     }
     const p = this.predictedShape;
+    // C01: a return flown on WGS-84 heights is drawn on the drawn sphere (render/datum.ts), and so is its conic,
+    // or the capsule and its trail would run up to 12 km off the line through Vostok-1's entry. The mapping
+    // reads only the latitude, so the sampled shape stays good while the elements hold.
+    const ellipsoid = onEllipsoid(frame);
     const moved = !this.predictedOn
+      || ellipsoid !== p.ellipsoid
       || Math.abs(el.a - p.a) > Math.abs(p.a) * 2e-4
       || Math.abs(el.e - p.e) > 2e-4
       || Math.abs(el.i - p.i) > 2e-4
       || Math.abs(el.raan - p.raan) > 2e-4
       || Math.abs(el.argp - p.argp) > 2e-4;
     if (!moved) return;
-    p.a = el.a; p.e = el.e; p.i = el.i; p.raan = el.raan; p.argp = el.argp;
+    p.a = el.a; p.e = el.e; p.i = el.i; p.raan = el.raan; p.argp = el.argp; p.ellipsoid = ellipsoid;
     this.predictedOn = true;
-    this.predicted.setPoints(sampleOrbit(el, 180));
+    const pts = sampleOrbit(el, 180);
+    this.predicted.setPoints(ellipsoid ? pts.map(onDrawnSphere) : pts);
   }
 
   /**
@@ -2130,6 +2142,10 @@ class App {
     // C01: Eagle's shadow on the Moon, from the last kilometres of the descent
     const lunarAlt = frame.apollo?.descent?.alt ?? (frame.apollo?.phase === 'landed' ? 0 : frame.apollo?.phase === 'ascent' ? frame.apollo.moon.alt : Infinity);
     if (lunarAlt < 200) scene.setShadowFocus(this.vehiclePos, 60, true);
+    // C01: Vostok-1 over the ground it comes down on (render/steppe.ts): the shadow map kept on the body the camera
+    // follows, so the sphere, Gagarin and their canopies throw their shadows on the fields from the last few hundred
+    // metres, and no map left from the pad, a world away and read in the scene's moved axes, darkens them
+    if (onEllipsoid(frame) && norm(focusR) - R_EARTH < 30e3) scene.setShadowFocus(this.originV, 40, true, VOSTOK_SHADOW_BIAS);
     // `height` is the size of the object actually being tracked — the stack
     // now, the spacecraft after payload separation. Without it the space view's
     // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for
