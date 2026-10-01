@@ -21,7 +21,9 @@ const DISAGREEMENTS: Record<string, readonly string[]> = {
   crs16: ['T+100/speed'],
   ssoA: ['T+100/speed', 'T+140/speed', 'meco/speed'],
   iridium8: ['maxQ/time', 'T+140/speed'],
-  bangabandhu1: ['maxQ/time', 'T+140/altitude', 'meco/speed', 'ses1/time', 'seco1/altitude'],
+  // re-measured 2026-10-01 with the drone-ship reserve sized for the mission (C01, `droneShipReserve`;
+  // docs/VALIDATION.md, "The drone-ship reserve sized for the mission"): MECO speed and SES-1 now agree
+  bangabandhu1: ['maxQ/time', 'T+140/altitude', 'seco1/altitude'],
   gps3sv01: ['maxQ/time', 'seco1/altitude'],
 };
 

@@ -125,7 +125,7 @@ export class TunnelMapView {
     const map = this.map;
     if (!g || !map || g.w < 50) return;
     this.canvas.style.height = `${g.h}px`;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
     if (this.canvas.width !== Math.round(g.w * dpr) || this.canvas.height !== Math.round(g.h * dpr)) {
       this.canvas.width = Math.round(g.w * dpr);
       this.canvas.height = Math.round(g.h * dpr);

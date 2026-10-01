@@ -620,6 +620,7 @@ export const en: Record<string, string> = {
   'app.buildMission': 'Build your mission',
   'app.footerModel': 'Earth · Newtonian flight model',
   'app.footerNote': 'Educational simulation · approximate vehicle data',
+  'app.footerCredit': 'Made by {name} · {version}',
   'misc.close': 'Close',
   'misc.webglFailed': 'WebGL could not be initialised: {error}',
   'a11y.viewport': 'Interactive 3-D launch scene. Drag to rotate, pinch or scroll to zoom.',
@@ -755,6 +756,14 @@ export const en: Record<string, string> = {
   'dlg.physics.sources': 'Sources & credits',
   'dlg.physics.credits': 'Earth textures: the planet textures from the three.js examples (NASA Blue Marble derivatives). 3-D rendering: three.js (MIT). Vehicle and site figures use public guides and summaries; estimated six-DOF parameters are identified in the dossier.',
   'dlg.physics.build': 'Build {commit} · version {version}',
+  // the About dialog's About tab, its topbar button and the footer's credit line (ui/dialogs.ts AboutDialog, main.ts)
+  'about.button': 'About',
+  'about.by': 'Made by {name}',
+  'about.lead': 'A launch, orbit and rocket-design simulator for teaching.',
+  'about.licenceText': 'Code: Apache License 2.0 · lessons, worksheets and documentation: CC BY 4.0',
+  'about.disclaimer': 'Orbitlab is a personal educational project by a Thai Air Force cadet studying at a military space academy, built from public sources. It is not a product of the Royal Thai Air Force or of any academy, and no service or academy name or emblem is used without written permission.',
+  'about.link.notice': 'Third-party credits',
+  'about.link.cite': 'How to cite',
   // telemetry panel
   'tel.eyebrow': 'FLIGHT TELEMETRY',
   'tel.range': 'Chart range',

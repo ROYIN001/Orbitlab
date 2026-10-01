@@ -29,7 +29,60 @@ export function bellGeometry(rExit: number, length: number, segments = 14): THRE
     const r = rThroat + (rExit - rThroat) * Math.pow(s, 0.62);
     pts.push(new THREE.Vector2(Math.max(0.01, r), -s * length));
   }
-  return new THREE.LatheGeometry(pts, 16);
+  return new THREE.LatheGeometry(pts, 32);
+}
+
+/**
+ * The skin of an engine bell, shared by every engine: the brazed coolant tubes
+ * running from the throat to the exit, which is what makes a regeneratively
+ * cooled bell read as an engine and not as a turned cone, and the temper
+ * colours of the hot end — bronze and blue near the throat, fading out toward
+ * the cooler skirt. Grey, so the bell material's own colour still tints it.
+ *
+ * The lathe's u runs around the bell and v from the throat (0) to the exit (1).
+ */
+let bellTex: THREE.CanvasTexture | null = null;
+export function bellTexture(): THREE.CanvasTexture {
+  if (bellTex) return bellTex;
+  const W = 512, H = 256;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#c4c4c4';
+  g.fillRect(0, 0, W, H);
+  // temper colours: the throat end is the hot end (v = 0, the canvas's foot)
+  const heat = g.createLinearGradient(0, H, 0, 0);
+  heat.addColorStop(0, 'rgba(70,52,40,0.85)');
+  heat.addColorStop(0.12, 'rgba(150,104,62,0.55)');
+  heat.addColorStop(0.3, 'rgba(92,96,140,0.28)');
+  heat.addColorStop(0.55, 'rgba(0,0,0,0)');
+  heat.addColorStop(0.92, 'rgba(0,0,0,0)');
+  heat.addColorStop(1, 'rgba(40,40,44,0.45)');
+  g.fillStyle = heat;
+  g.fillRect(0, 0, W, H);
+  // the tubes: a lit crown and a shadowed joint each, 128 of them round the bell
+  const n = 128, pitch = W / n;
+  for (let i = 0; i < n; i++) {
+    const x = i * pitch;
+    g.fillStyle = 'rgba(0,0,0,0.30)';
+    g.fillRect(x, 0, 1, H);
+    g.fillStyle = 'rgba(255,255,255,0.10)';
+    g.fillRect(x + pitch * 0.45, 0, 1, H);
+  }
+  // stiffening hoops round the skirt
+  for (const v of [0.42, 0.68, 0.9]) {
+    const y = (1 - v) * H;
+    g.fillStyle = 'rgba(30,30,32,0.55)';
+    g.fillRect(0, y - 2, W, 3);
+    g.fillStyle = 'rgba(255,255,255,0.18)';
+    g.fillRect(0, y + 1, W, 1);
+  }
+  bellTex = new THREE.CanvasTexture(c);
+  bellTex.colorSpace = THREE.SRGBColorSpace;
+  bellTex.wrapS = THREE.RepeatWrapping;
+  bellTex.anisotropy = 8;
+  bellTex.userData.shared = true;
+  return bellTex;
 }
 
 /**
@@ -231,26 +284,29 @@ function drawFlag(g: CanvasRenderingContext2D, id: FlagId, x: number, y: number,
   g.restore();
 }
 
-const POT = [64, 128, 256, 512];
+const POT = [64, 128, 256, 512, 1024];
 /**
  * Hexagonal thermal tiles, about 0.3 m across, over the belly. The canvas is
  * stretched differently along and around the stage, so the tile size is laid
  * out in metres and converted on each axis. A few tiles are the off-white of a
  * replacement or a patch, the way the real shield looks after a few flights.
+ * On the relief layer (`bump`) only the gaps between the tiles are drawn.
  */
-function heatShield(g: CanvasRenderingContext2D, W: number, H: number, half: number, diameter: number, length: number, seed: number): void {
+function heatShield(g: CanvasRenderingContext2D, W: number, H: number, half: number, diameter: number, length: number, seed: number, k: number, bump: boolean): void {
   const w = half * W;
   g.save();
   g.beginPath();
   g.rect(0, 0, w, H);
   g.rect(W - w, 0, w, H);
   g.clip();
-  g.fillStyle = '#1b1c1f';
-  g.fillRect(0, 0, W, H);
-  const tw = Math.max(3, (0.32 * W) / (Math.PI * diameter));
-  const th = Math.max(3, (0.28 * H) / Math.max(1, length));
-  g.strokeStyle = 'rgba(255,255,255,0.07)';
-  g.lineWidth = 1;
+  if (!bump) {
+    g.fillStyle = '#1b1c1f';
+    g.fillRect(0, 0, W, H);
+  }
+  const tw = Math.max(3 * k, (0.32 * W) / (Math.PI * diameter));
+  const th = Math.max(3 * k, (0.28 * H) / Math.max(1, length));
+  g.strokeStyle = bump ? '#5c5c5c' : 'rgba(255,255,255,0.07)';
+  g.lineWidth = k;
   let row = 0;
   for (let y = 0; y < H; y += th, row++) {
     g.beginPath();
@@ -258,13 +314,15 @@ function heatShield(g: CanvasRenderingContext2D, W: number, H: number, half: num
     for (let x = (row % 2) * tw / 2; x < W; x += tw) { g.moveTo(x, y); g.lineTo(x, y + th); }
     g.stroke();
   }
-  const rows = Math.ceil(H / th), cols = Math.ceil((2 * w) / tw);
-  for (let i = 0; i < 28; i++) {
-    const r = Math.floor(hash11(seed + i * 1.7) * rows);
-    const c = Math.floor(hash11(seed + i * 2.9 + 0.3) * cols);
-    const x = ((c * tw + (r % 2) * tw / 2 - w) % W + W) % W;
-    g.fillStyle = hash11(seed + i * 3.3) < 0.5 ? 'rgba(214,212,204,0.3)' : 'rgba(92,94,98,0.5)';
-    g.fillRect(x, r * th, tw, th);
+  if (!bump) {
+    const rows = Math.ceil(H / th), cols = Math.ceil((2 * w) / tw);
+    for (let i = 0; i < 28; i++) {
+      const r = Math.floor(hash11(seed + i * 1.7) * rows);
+      const c = Math.floor(hash11(seed + i * 2.9 + 0.3) * cols);
+      const x = ((c * tw + (r % 2) * tw / 2 - w) % W + W) % W;
+      g.fillStyle = hash11(seed + i * 3.3) < 0.5 ? 'rgba(214,212,204,0.3)' : 'rgba(92,94,98,0.5)';
+      g.fillRect(x, r * th, tw, th);
+    }
   }
   g.restore();
 }
@@ -275,77 +333,155 @@ function nearestPot(x: number): number {
   return best;
 }
 
+/** Texels along a stage's length in the colour map: about 2 cm on a 40 m stage. */
+const BODY_TEXELS = 2048;
+/** The relief map is half that: its joints are a few centimetres wide anyway. */
+const BUMP_TEXELS = 1024;
+/** Mid-grey: the relief map's flat skin. Darker is recessed, lighter raised. */
+const FLAT = '#808080';
+
 /**
  * Paint a stage body texture. The canvas wraps once around the cylinder: u runs
  * around the circumference, v runs from the bottom (v = 0) to the top.
  */
 export function bodyTexture(liv: StageLivery, diameter: number, length: number, seed: number): THREE.CanvasTexture {
-  const H = 1024;
+  return paintBody(liv, diameter, length, seed, false);
+}
+
+/**
+ * The relief that goes with `bodyTexture`, for a material's `bumpMap`: the
+ * tank-dome welds and panel joints sunk into the skin, the stringers and the
+ * cable raceway standing proud of it, Starship's ring welds as ridges and the
+ * fairing's half-shell joint as a groove. Drawn from the same seed and the same
+ * layout as the paint, so every line the paint shows has its edge in the light.
+ */
+export function bodyBump(liv: StageLivery, diameter: number, length: number, seed: number): THREE.CanvasTexture {
+  return paintBody(liv, diameter, length, seed, true);
+}
+
+function paintBody(liv: StageLivery, diameter: number, length: number, seed: number, bump: boolean): THREE.CanvasTexture {
+  const H = bump ? BUMP_TEXELS : BODY_TEXELS;
+  /** pixel sizes below were tuned on a 1024-texel canvas */
+  const k = H / 1024;
   const W = nearestPot((H * Math.PI * diameter) / Math.max(1, length));
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const g = c.getContext('2d')!;
   const yOf = (v: number) => H * (1 - v);
-  g.fillStyle = liv.base;
+  g.fillStyle = bump ? FLAT : liv.base;
   g.fillRect(0, 0, W, H);
 
   if (liv.steel) {
     // brushed stainless: horizontal ring welds and a vertical sheen
     for (let i = 0; i < 46; i++) {
       const v = i / 46;
+      if (bump) {
+        // a weld bead stands proud of the rings either side of it
+        g.fillStyle = '#a4a4a4';
+        g.fillRect(0, yOf(v) - k, W, 2 * k);
+        g.fillStyle = '#727272';
+        g.fillRect(0, yOf(v) + k, W, 1.5 * k);
+        continue;
+      }
       g.fillStyle = `rgba(255,255,255,${0.05 + 0.05 * hash11(seed + i)})`;
-      g.fillRect(0, yOf(v), W, 2);
+      g.fillRect(0, yOf(v), W, 2 * k);
       g.fillStyle = 'rgba(0,0,0,0.07)';
-      g.fillRect(0, yOf(v) + 2, W, 1.5);
+      g.fillRect(0, yOf(v) + 2 * k, W, 1.5 * k);
     }
-    const sheen = g.createLinearGradient(0, 0, W, 0);
-    sheen.addColorStop(0, 'rgba(0,0,0,0.20)');
-    sheen.addColorStop(0.3, 'rgba(255,255,255,0.18)');
-    sheen.addColorStop(0.55, 'rgba(0,0,0,0.12)');
-    sheen.addColorStop(0.8, 'rgba(255,255,255,0.10)');
-    sheen.addColorStop(1, 'rgba(0,0,0,0.20)');
-    g.fillStyle = sheen;
-    g.fillRect(0, 0, W, H);
+    if (!bump) {
+      // each ring is rolled from its own sheet: a slightly different tone per ring
+      for (let i = 0; i < 46; i++) {
+        const a = (hash11(seed + i * 4.1 + 0.2) - 0.5) * 0.09;
+        g.fillStyle = a > 0 ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${-a})`;
+        g.fillRect(0, yOf((i + 1) / 46), W, H / 46);
+      }
+      const sheen = g.createLinearGradient(0, 0, W, 0);
+      sheen.addColorStop(0, 'rgba(0,0,0,0.20)');
+      sheen.addColorStop(0.3, 'rgba(255,255,255,0.18)');
+      sheen.addColorStop(0.55, 'rgba(0,0,0,0.12)');
+      sheen.addColorStop(0.8, 'rgba(255,255,255,0.10)');
+      sheen.addColorStop(1, 'rgba(0,0,0,0.20)');
+      g.fillStyle = sheen;
+      g.fillRect(0, 0, W, H);
+    }
   } else {
     // panel lines: a few horizontal tank domes plus vertical stringers
-    g.strokeStyle = 'rgba(0,0,0,0.13)';
-    g.lineWidth = 1.5;
-    for (let i = 1; i < 9; i++) {
-      const y = (i / 9) * H + hash11(seed + i) * 6;
+    const rings: number[] = [];
+    for (let i = 1; i < 9; i++) rings.push((i / 9) * H + hash11(seed + i) * 6 * k);
+    if (!bump) {
+      // Each barrel section between two joints is its own sheet, and no two
+      // take the paint quite alike: a percent or two of tone either way.
+      let prev = 0;
+      for (let i = 0; i <= rings.length; i++) {
+        const next = i < rings.length ? rings[i] : H;
+        const a = (hash11(seed + i * 5.3 + 0.7) - 0.5) * 0.05;
+        g.fillStyle = a > 0 ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${-a})`;
+        g.fillRect(0, prev, W, next - prev);
+        prev = next;
+      }
+    }
+    g.strokeStyle = bump ? '#5a5a5a' : 'rgba(0,0,0,0.13)';
+    g.lineWidth = (bump ? 2 : 1.5) * k;
+    for (const y of rings) {
       g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
     }
-    g.strokeStyle = 'rgba(0,0,0,0.08)';
+    g.strokeStyle = bump ? '#8e8e8e' : 'rgba(0,0,0,0.08)';
+    g.lineWidth = 1.5 * k;
     for (let i = 0; i < 8; i++) {
       const x = (i / 8) * W;
       g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
     }
     // a cable raceway running the length of the stage
-    g.fillStyle = 'rgba(0,0,0,0.16)';
-    g.fillRect(W * 0.12, 0, Math.max(3, W * 0.035), H);
+    const rw = Math.max(3 * k, W * 0.035);
+    if (bump) {
+      g.fillStyle = '#b4b4b4';
+      g.fillRect(W * 0.12, 0, rw, H);
+      // its cover is fastened down every half-metre or so
+      g.fillStyle = '#9a9a9a';
+      const step = Math.max(6 * k, (0.5 * H) / Math.max(1, length));
+      for (let y = step / 2; y < H; y += step) g.fillRect(W * 0.12, y, rw, k);
+    } else {
+      g.fillStyle = 'rgba(0,0,0,0.16)';
+      g.fillRect(W * 0.12, 0, rw, H);
+      // Grime: faint streaks running down from the joints, where the
+      // condensation off the cold tanks has dried on the paint.
+      for (let i = 0; i < 26; i++) {
+        const x = hash11(seed + i * 7.7 + 0.1) * W;
+        const y0 = rings[Math.floor(hash11(seed + i * 2.3) * rings.length)];
+        const len = (0.04 + 0.12 * hash11(seed + i * 9.1)) * H;
+        const streak = g.createLinearGradient(0, y0, 0, y0 + len);
+        streak.addColorStop(0, `rgba(70,64,56,${0.05 + 0.05 * hash11(seed + i * 1.3)})`);
+        streak.addColorStop(1, 'rgba(70,64,56,0)');
+        g.fillStyle = streak;
+        g.fillRect(x, y0, Math.max(2 * k, W * (0.004 + 0.01 * hash11(seed + i * 3.9))), len);
+      }
+    }
   }
 
-  for (const b of liv.bands) {
-    g.fillStyle = b.color;
-    const y1 = yOf(Math.min(1, b.at + b.h));
-    const y2 = yOf(Math.max(0, b.at));
-    g.fillRect(0, y1, W, Math.max(2, y2 - y1));
-  }
+  if (!bump) {
+    for (const b of liv.bands) {
+      g.fillStyle = b.color;
+      const y1 = yOf(Math.min(1, b.at + b.h));
+      const y2 = yOf(Math.max(0, b.at));
+      g.fillRect(0, y1, W, Math.max(2 * k, y2 - y1));
+    }
 
-  for (const q of liv.quarters ?? []) {
-    g.fillStyle = q.color;
-    const y1 = yOf(Math.min(1, q.at + q.h));
-    const y2 = yOf(Math.max(0, q.at));
-    g.fillRect(0, y1, W * 0.25, Math.max(2, y2 - y1));
-    g.fillRect(W * 0.5, y1, W * 0.25, Math.max(2, y2 - y1));
-  }
+    for (const q of liv.quarters ?? []) {
+      g.fillStyle = q.color;
+      const y1 = yOf(Math.min(1, q.at + q.h));
+      const y2 = yOf(Math.max(0, q.at));
+      g.fillRect(0, y1, W * 0.25, Math.max(2 * k, y2 - y1));
+      g.fillRect(W * 0.5, y1, W * 0.25, Math.max(2 * k, y2 - y1));
+    }
 
-  if (liv.soot) {
-    const soot = g.createLinearGradient(0, H, 0, H * 0.72);
-    soot.addColorStop(0, 'rgba(24,22,20,0.82)');
-    soot.addColorStop(0.5, 'rgba(40,36,32,0.35)');
-    soot.addColorStop(1, 'rgba(60,54,48,0)');
-    g.fillStyle = soot;
-    g.fillRect(0, H * 0.72, W, H * 0.28);
+    if (liv.soot) {
+      const soot = g.createLinearGradient(0, H, 0, H * 0.72);
+      soot.addColorStop(0, 'rgba(24,22,20,0.82)');
+      soot.addColorStop(0.5, 'rgba(40,36,32,0.35)');
+      soot.addColorStop(1, 'rgba(60,54,48,0)');
+      g.fillStyle = soot;
+      g.fillRect(0, H * 0.72, W, H * 0.28);
+    }
   }
 
   // Half-shell joints. Drawn over the panel lines and the bands (a real joint
@@ -355,18 +491,20 @@ export function bodyTexture(liv: StageLivery, diameter: number, length: number, 
   // whose width is already sized to the body's aspect ratio, so the joint is
   // about a tenth of a metre wide on a 5 m fairing at every texture size.
   for (const u of liv.seams ?? []) {
-    const w = Math.max(2, W * 0.008);
+    const w = Math.max(2 * k, W * 0.008);
     const x = ((u % 1) + 1) % 1 * W;
-    g.fillStyle = 'rgba(26,28,32,0.85)';
+    g.fillStyle = bump ? '#383838' : 'rgba(26,28,32,0.85)';
     g.fillRect(x - w / 2, 0, w, H);
-    g.fillStyle = 'rgba(255,255,255,0.20)';
-    g.fillRect(x + w / 2, 0, Math.max(1, w * 0.45), H);
+    g.fillStyle = bump ? '#a8a8a8' : 'rgba(255,255,255,0.20)';
+    g.fillRect(x + w / 2, 0, Math.max(k, w * 0.45), H);
   }
 
-  if (liv.heatShield) heatShield(g, W, H, liv.heatShield, diameter, length, seed);
+  if (liv.heatShield) heatShield(g, W, H, liv.heatShield, diameter, length, seed, k, bump);
+
+  if (bump) return finishBody(c);
 
   if (liv.text) {
-    const px = Math.max(12, Math.min(W * 0.42, H * 0.032));
+    const px = Math.max(12 * k, Math.min(W * 0.42, H * 0.032));
     g.save();
     g.translate(W * 0.5, yOf(liv.textAt ?? 0.5));
     g.rotate(-Math.PI / 2);
@@ -384,14 +522,20 @@ export function bodyTexture(liv: StageLivery, diameter: number, length: number, 
   }
 
   if (liv.flag) {
-    const fw = Math.max(14, W * 0.16);
+    const fw = Math.max(14 * k, W * 0.16);
     drawFlag(g, liv.flag, W * 0.5 - fw / 2, H * 0.12, fw, fw * 0.62);
   }
 
-  const tex = new THREE.CanvasTexture(c);
+  const tex = finishBody(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function finishBody(c: HTMLCanvasElement): THREE.CanvasTexture {
+  const tex = new THREE.CanvasTexture(c);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.anisotropy = 4;
+  // the stage is seen edge-on along most of its length
+  tex.anisotropy = 8;
   return tex;
 }

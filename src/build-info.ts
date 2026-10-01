@@ -1,6 +1,6 @@
 /**
  * The build stamp (plan S5): which version and commit this page is, shown in
- * the Physics & sources dialog and as `<html data-build="…">` for a browser
+ * the About dialog and the footer and as `<html data-build="…">` for a browser
  * harness. The build time and the data dates are in `build-info.json` beside
  * the page, not here, so the bundle of one commit is the same on every build.
  */
