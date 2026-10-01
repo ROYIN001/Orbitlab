@@ -4635,4 +4635,11 @@ export const th: Record<string, string> = {
   'lesson.design.yes': 'ใช่',
   'lesson.design.no': 'ไม่ใช่',
   'lesson.design.moreThan': 'มากกว่า {value}',
+  'lesson.design.check.noDesign': 'ผลนี้ไม่มีแบบดาวเทียมให้คำนวณซ้ำ',
+  'lesson.design.check.workedOut': 'บทเรียนออกแบบ: คำนวณค่าต่าง ๆ ใหม่จากแบบที่ส่งมา สำหรับวันที่ {date} กิจกรรมดวงอาทิตย์ {level}',
+  'lesson.design.check.mismatch': 'ผลนี้ถูกตรวจในวันที่หรือระดับกิจกรรมดวงอาทิตย์ต่างจากที่ไฟล์บทเรียนของคุณกำหนด จึงไม่ใช่บทเรียนเดียวกับที่นักเรียนได้รับ',
+  'lesson.design.field.design': 'แบบดาวเทียม',
+  'lesson.design.field.designDate': 'วันที่ใช้คำนวณ',
+  'lesson.design.field.level': 'กิจกรรมดวงอาทิตย์',
+  'lesson.design.field.figures': 'ค่าที่คำนวณได้',
 };

@@ -50,8 +50,17 @@ import { allLessons } from './catalog';
 import { defaultMissionState, missionConfigFromState } from './config';
 import { flightEnded, gradeShown, regradeAnswers, type RevealedAnswers } from './grader';
 import { MEASURES, missionTarget } from './measures';
-import { RESULTS_FORMAT, missingFields, verifyResults, type LessonProgress, type LessonRecord, type RecheckField, type ResultsFile } from './progress';
-import { isCaseLesson, isFlightLesson, type CatalogLesson, type Criterion, type CriterionGrade, type DesignLockKey, type Lesson, type LessonGrade, type LockKey, type MeasureId } from './types';
+import {
+  RESULTS_FORMAT, missingDesignFields, missingFields, verifyResults, type LessonProgress, type LessonRecord, type RecheckField, type ResultsFile,
+} from './progress';
+import {
+  isCaseLesson, isDesignLesson, isFlightLesson,
+  type CatalogLesson, type Criterion, type CriterionGrade, type DesignCriterion, type DesignKey, type DesignLesson, type DesignLockKey, type DesignMeasureId,
+  type Lesson, type LessonGrade, type LockKey, type MeasureId,
+} from './types';
+import { DESIGN_MEASURES, brokenDesignLocks, designLessonOptions, gradeDesign, type DesignMeasureKind } from './design-lesson';
+import { designLessonStart, designValuesNow } from '../design/design-lesson-key';
+import { lifetimeNow } from '../orbit/lifetime-now';
 
 /**
  * How far a re-checked value may be from the recorded one and still match, in
@@ -83,6 +92,55 @@ export const ENGINE_TOLERANCE: Readonly<Record<MeasureId, number>> = {
 };
 /** An event criterion's value is the event's time, s. */
 export const EVENT_TIME_TOLERANCE = 0.01;
+
+/**
+ * A design lesson's figures (T01, T02; map §4.2's table, its design half),
+ * worked out again from the record's design at its design date and ECSS
+ * level: how far each may move between two engines, by how it is worked out
+ * (`DESIGN_MEASURES[m].kind`). FIXED ON 2026-10-01 BEFORE THE FIRST RE-CHECK
+ * OF A DESIGN RECORD, in this header and in tests/recheck.test.ts's:
+ *
+ *   | kind     | measures                                              | tolerance                                     |
+ *   |----------|-------------------------------------------------------|-----------------------------------------------|
+ *   | closed   | mass, power and Δv and link margins, battery depth,   | 1e-9 relative (of the larger of the two), and |
+ *   |          | GSD, swath, wheel margin, torquer dipole              | never under 1e-12 in the unit (a zero)        |
+ *   | eclipse  | sat.eclipseMax                                        | 2e-4 min (0.012 s)                            |
+ *   | revisit  | sat.revisitMax                                        | 1e-7 d (8.6 ms)                               |
+ *   | contact  | sat.dataPerDay                                        | 1e-6 relative                                 |
+ *   | lifetime | sat.lifetime                                          | 0.1 % relative                                |
+ *   | flag     | sat.disposal25y                                       | exact (borderline: the lifetime within 0.1 %  |
+ *   |          |                                                       | of the 25-year limit)                         |
+ *
+ * The closed forms and the lifetime are map §4.2's. The others are DERIVED
+ * from how they are refined: an eclipse's edges are bisected to 1 ms
+ * (src/orbit/eclipse.ts), so another engine's last bit can move each by at
+ * most that, two edges 2 ms, and the year's search for the longest picks a
+ * revolution within a minute of the same one, where the eclipse is at its
+ * flattest — ten edges' worth, 0.012 s, covers both; a look's closest
+ * approach is refined to 1 ms (src/orbit/coverage.ts `REFINE`), a gap two of
+ * them, kept to the Julian date's 40 µs — 8.6 ms is four times that; a
+ * pass's rise and set are bisected to 1 ms (src/orbit/passes.ts), and a
+ * station hears a low orbit some 2 000 s a day, so a millisecond flipped in
+ * a month of passes moves the day's data by 1e-8 of itself — 1e-6 is a
+ * hundred times that. A look whose closest approach lies within a hair of
+ * the swath's edge can come and go between engines; it shows as "differs",
+ * not loosened here.
+ */
+export const DESIGN_ENGINE_TOLERANCE: Readonly<Record<DesignMeasureKind, { rel?: number; abs?: number }>> = {
+  closed: { rel: 1e-9, abs: 1e-12 },
+  eclipse: { abs: 2e-4 },
+  revisit: { abs: 1e-7 },
+  contact: { rel: 1e-6, abs: 1e-12 },
+  lifetime: { rel: 1e-3 },
+  flag: { abs: 0 },
+};
+
+/** The tolerance a design measure's value is held to between `a` and `b` (the recorded and the re-checked), in its unit. */
+export function designTolerance(measure: DesignMeasureId, a: number | null | undefined, b: number | null | undefined): number {
+  const t = DESIGN_ENGINE_TOLERANCE[DESIGN_MEASURES[measure].kind];
+  const size = Math.max(Math.abs(a ?? 0), Math.abs(b ?? 0));
+  return Math.max(t.abs ?? 0, (t.rel ?? 0) * (Number.isFinite(size) ? size : 0));
+}
 /**
  * A hook's value, in its own unit: the crew's peak load (g, as `abort.maxG`),
  * the perigee (km), a run's number (exact). A hook with no value is its state.
@@ -106,15 +164,15 @@ const MAX_REFLY_STEPS = 2_000_000;
 export const SAME_T = 1e-5;
 
 export type CheckStatus = 'match' | 'borderline' | 'differs' | 'cannotRefly';
-export type CannotReason = 'caseLesson' | 'noLesson' | 'noMission' | 'mission' | 'sixDof' | 'actions' | 'notReached' | 'incomplete' | 'error';
+export type CannotReason = 'caseLesson' | 'noLesson' | 'noMission' | 'mission' | 'sixDof' | 'actions' | 'notReached' | 'incomplete' | 'error' | 'noDesign';
 export type Which = 'passed' | 'last';
 export const CHECK_STATUSES: readonly CheckStatus[] = ['match', 'borderline', 'differs', 'cannotRefly'];
 
 /** One criterion, as recorded and as re-checked. */
 export interface CriterionCheck {
   id: string;
-  kind: Criterion['kind'] | 'missing';
-  measure?: MeasureId;
+  kind: Criterion['kind'] | DesignCriterion['kind'] | 'missing';
+  measure?: MeasureId | DesignMeasureId;
   hook?: string;
   event?: string;
   recorded: CriterionGrade | null;
@@ -122,7 +180,7 @@ export interface CriterionCheck {
   /** the tolerance the values were held to, in their unit; null for a state alone */
   tol: number | null;
   status: CheckStatus;
-  /** borderline: the bound the value lies near, in its unit */
+  /** borderline: the bound the value lies near, in its unit (`sat.disposal25y`: the 25-year rule's limit, years, which the lifetime lies near) */
   bound?: number;
 }
 
@@ -136,11 +194,16 @@ export interface RecordCheck {
   which: Which[];
   /** when it was graded, as the record says */
   at: string;
-  kind: 'flight' | 'case';
+  kind: 'flight' | 'case' | 'design';
   status: CheckStatus;
   reason?: CannotReason;
-  /** the fields an exact re-check needs that the record lacks (a record made before T02) */
+  /** the fields an exact re-check needs that the record lacks (a record made before T02; a design record, edited) */
   missing: RecheckField[];
+  /** a design record: the design date and ECSS level its figures were worked out again at (the record's own) */
+  designDate?: string;
+  level?: string;
+  /** a design record whose date or level is not the instructor's lesson's: graded on another day or in other air than the lesson asks */
+  mismatch?: ('designDate' | 'level')[];
   /** whether it was flown on this build; null when the record does not say */
   sameBuild: boolean | null;
   /** the build the record says it was flown on */
@@ -150,7 +213,7 @@ export interface RecordCheck {
   recheckedVerdict: LessonGrade['verdict'] | null;
   lockBroken: (LockKey | DesignLockKey)[];
   criteria: CriterionCheck[];
-  /** the mission time flown to, s, and in how many steps */
+  /** the mission time flown to, s, and in how many steps (a design record: null and 0) */
   flownTo: number | null;
   steps: number;
   /** journal commands the re-fly gave at a boundary later than recorded (a record not flown on whole steps) */
@@ -229,6 +292,19 @@ export function collectRecords(results: readonly unknown[], names: readonly (str
   return { files, jobs };
 }
 
+/**
+ * The edge of an answer's band the typed `v` lies within `tol` of, when it
+ * does: the typed answer against the band round the flight's (or the
+ * design's) value; a percentage band moves with that value too.
+ */
+function nearAnswerBound(c: { tol?: number; tolPct?: number }, v: number, tol: number, expected?: number | null): number | null {
+  if (expected === null || expected === undefined) return null;
+  const band = Math.max(c.tol ?? 0, c.tolPct !== undefined ? Math.abs(expected) * c.tolPct / 100 : 0);
+  const slack = tol * (1 + (c.tolPct ?? 0) / 100);
+  if (Math.abs(Math.abs(v - expected) - band) <= slack) return v > expected ? expected + band : expected - band;
+  return null;
+}
+
 /** The bound `v` lies within `tol` of, when there is one; else null. */
 function nearBound(c: Criterion, v: number | null | undefined, tol: number, target: number | null, expected?: number | null): number | null {
   if (v === null || v === undefined || !Number.isFinite(v)) return null;
@@ -244,14 +320,7 @@ function nearBound(c: Criterion, v: number | null | undefined, tol: number, targ
       }
       return null;
     }
-    case 'answer': {
-      if (expected === null || expected === undefined) return null;
-      // the typed answer against the band round the flight's value; a percentage band moves with that value too
-      const band = Math.max(c.tol ?? 0, c.tolPct !== undefined ? Math.abs(expected) * c.tolPct / 100 : 0);
-      const slack = tol * (1 + (c.tolPct ?? 0) / 100);
-      if (Math.abs(Math.abs(v - expected) - band) <= slack) return v > expected ? expected + band : expected - band;
-      return null;
-    }
+    case 'answer': return nearAnswerBound(c, v, tol, expected);
     case 'hook':
       if (c.hook === 'stableOrbit') return near(typeof c.params?.minPerigeeKm === 'number' ? c.params.minPerigeeKm : 150);
       return null;
@@ -352,21 +421,105 @@ function unreadableRecord(job: RecheckJob): RecordCheck {
   };
 }
 
+// ─── design lessons (T01, T02) ──────────────────────────────────────────────
+
+/** The bound a design figure lies within the engine tolerance of, when there is one; else null. */
+function nearDesignBound(c: DesignCriterion, v: number | null | undefined, tol: number, expected?: number | null): number | null {
+  if (v === null || v === undefined || !Number.isFinite(v)) return null;
+  if (c.kind === 'answer') return nearAnswerBound(c, v, tol, expected);
+  const near = (b: number | undefined): number | null => (b !== undefined && Math.abs(v - b) <= tol ? b : null);
+  return near(c.min) ?? near(c.max) ?? (c.target !== undefined ? near(c.target - (c.tol ?? 0)) ?? near(c.target + (c.tol ?? 0)) : null);
+}
+
+/**
+ * One design criterion held to its record: the figure (an answer's: the
+ * figure it asks for; the typed number must be the same) within the design
+ * engine tolerance, borderline within it of a bound — for `sat.disposal25y`,
+ * a lifetime within 0.1 % of the 25-year limit (`values`, `limit`: the
+ * re-check's key).
+ */
+export function checkDesignCriterion(c: DesignCriterion, recorded: CriterionGrade | null, rechecked: CriterionGrade | null, key?: DesignKey): CriterionCheck {
+  const base = { id: c.id, kind: c.kind, measure: c.measure, recorded, rechecked };
+  if (!recorded || !rechecked) return { ...base, tol: null, status: 'differs' };
+  const sameState = recorded.state === rechecked.state && !!recorded.revealed === !!rechecked.revealed;
+  const answer = c.kind === 'answer';
+  const ra = answer ? recorded.expected : recorded.value, rb = answer ? rechecked.expected : rechecked.value;
+  const tol = designTolerance(c.measure, ra, rb);
+  const valuesAgree = (answer ? within(recorded.value, rechecked.value, 0) : true) && within(ra, rb, tol);
+  if (!valuesAgree) return { ...base, tol, status: 'differs' };
+  // a yes or a no is never near its bound itself: the lifetime it is read from is (below)
+  const flag = DESIGN_MEASURES[c.measure].kind === 'flag';
+  let bound = flag ? null : answer ? nearDesignBound(c, rechecked.value, tol, rechecked.expected) ?? nearDesignBound(c, recorded.value, tol, recorded.expected)
+    : nearDesignBound(c, rb, tol) ?? nearDesignBound(c, ra, tol);
+  if (bound === null && c.measure === 'sat.disposal25y' && key?.disposalLimit !== undefined) {
+    const life = key.values['sat.lifetime'];
+    const limit = key.disposalLimit;
+    if (typeof life === 'number' && !key.lifetimeCapped && Math.abs(life - limit) <= DESIGN_ENGINE_TOLERANCE.lifetime.rel! * limit) bound = limit;
+  }
+  if (bound !== null) return { ...base, tol, status: 'borderline', bound };
+  return { ...base, tol, status: sameState ? 'match' : 'differs' };
+}
+
+/**
+ * A design record worked out again (T02 for designs; map §4.2): the record's
+ * design at the record's design date and ECSS level, through the same
+ * `designFigures` and lifetime run the page graded it with
+ * (src/design/design-lesson-key.ts; the lifetime flown here, `lifetimeNow`),
+ * graded with the instructor's lesson, and each criterion held to the record
+ * within `DESIGN_ENGINE_TOLERANCE`. A date or a level that is not the
+ * lesson's says the record is not of the lesson the instructor has: it
+ * differs, whatever the figures.
+ */
+function checkDesignRecord(lesson: DesignLesson, r: LessonRecord, out: RecordCheck): RecordCheck {
+  const missing = missingDesignFields(r);
+  const base: RecordCheck = { ...out, kind: 'design', missing };
+  if (!r.design) return { ...base, reason: 'noDesign' };
+  const designDate = typeof r.designDate === 'string' ? r.designDate : lesson.designDate;
+  const level = r.level === 'low' || r.level === 'moderate' || r.level === 'high' ? r.level : lesson.level;
+  const mismatch = [...(designDate !== lesson.designDate ? ['designDate' as const] : []), ...(level !== lesson.level ? ['level' as const] : [])];
+  const start = designLessonStart(lesson.start);
+  const values = designValuesNow(r.design, { ...designLessonOptions(lesson), date: designDate, level }, lifetimeNow);
+  const key: DesignKey = { ...values, lockBroken: brokenDesignLocks(lesson.locked, start, r.design) };
+  // the answers the student had been shown pass only with help, as the page marked them (owner decision D-6)
+  const shown = new Set(r.revealed ?? []);
+  const revealed: Record<string, number[]> = {};
+  for (const c of lesson.criteria) {
+    const v = key.values[c.measure];
+    if (c.kind === 'answer' && shown.has(c.id) && typeof v === 'number') revealed[c.id] = [v];
+  }
+  const grade = gradeDesign(lesson, key, r.answers ?? {}, revealed);
+  const criteria: CriterionCheck[] = lesson.criteria.map((c) =>
+    checkDesignCriterion(c, r.criteria.find((g) => g.id === c.id) ?? null, grade.criteria.find((g) => g.id === c.id) ?? null, key));
+  for (const g of r.criteria) if (!lesson.criteria.some((c) => c.id === g.id)) criteria.push({ id: g.id, kind: 'missing', recorded: g, rechecked: null, tol: null, status: 'differs' });
+  let status: CheckStatus = criteria.reduce<CheckStatus>((worst, c) => (RANK[c.status] > RANK[worst] ? c.status : worst), 'match');
+  if (grade.verdict !== r.verdict && status === 'match') status = 'differs';
+  // every build that hands a design in keeps all its fields, and the lesson's date and level: one lacking or other was edited
+  if ((missing.length || mismatch.length) && RANK[status] < RANK.differs) status = 'differs';
+  return {
+    ...base, status, designDate, level, ...(mismatch.length ? { mismatch } : {}),
+    recheckedVerdict: grade.verdict, lockBroken: grade.lockBroken, criteria,
+  };
+}
+
 /** Check one record against the catalogue (the built-in lessons and the instructor's). */
 export function checkRecord(job: RecheckJob, catalogue: readonly CatalogLesson[], app = appBuildId()): RecordCheck {
   const r = job.record;
   const lesson = catalogue.find((l) => l.id === job.lessonId);
-  const kind: RecordCheck['kind'] = r.caseData || (lesson && isCaseLesson(lesson)) ? 'case' : 'flight';
+  const kind: RecordCheck['kind'] = r.caseData || (lesson && isCaseLesson(lesson)) ? 'case'
+    : r.design !== undefined || (lesson && isDesignLesson(lesson)) ? 'design' : 'flight';
   const out: RecordCheck = {
     file: job.file, student: job.student, lessonId: job.lessonId, which: job.which, at: r.at, kind,
-    status: 'cannotRefly', missing: kind === 'flight' ? missingFields(r) : [],
+    status: 'cannotRefly', missing: kind === 'flight' ? missingFields(r) : kind === 'design' ? missingDesignFields(r) : [],
     sameBuild: typeof r.app === 'string' ? r.app === app : null, app: typeof r.app === 'string' ? r.app : null,
     recordedVerdict: r.verdict, recheckedVerdict: null, lockBroken: [],
     criteria: r.criteria.map((g) => ({ id: g.id, kind: 'missing', recorded: g, rechecked: null, tol: null, status: 'cannotRefly' as const })),
     flownTo: null, steps: 0, lateActions: 0,
   };
   if (kind === 'case') return { ...out, reason: 'caseLesson' };
-  // a design lesson's record (T01) is not flown: its re-check is the next step's (T02 for designs)
+  if (kind === 'design') {
+    if (!lesson || !isDesignLesson(lesson)) return { ...out, reason: 'noLesson' };
+    try { return checkDesignRecord(lesson, r, out); } catch { return { ...out, reason: 'error' }; }
+  }
   if (!lesson || !isFlightLesson(lesson)) return { ...out, reason: 'noLesson' };
   let flown: ReturnType<typeof reflyRecord>;
   try { flown = reflyRecord(lesson, r); } catch { return { ...out, reason: 'error' }; }
@@ -450,6 +603,8 @@ const csvText = (v: string): string => {
   const safe = /^[=+\-@]/.test(v) ? `'${v}` : v;
   return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 };
+/** A measure's unit, a flight's (`MEASURES`) or a design's (`DESIGN_MEASURES`). */
+export const measureUnit = (m: MeasureId | DesignMeasureId): string => (m in MEASURES ? MEASURES[m as MeasureId].unit : DESIGN_MEASURES[m as DesignMeasureId].unit);
 const num = (v: number | null | undefined): string => (v === null || v === undefined || !Number.isFinite(v) ? '' : String(v));
 const STATUS_CSV: Record<CheckStatus, string> = { match: 'match', borderline: 'borderline', differs: 'differs', cannotRefly: 'cannot_refly' };
 
@@ -472,7 +627,7 @@ export function recheckCsv(check: ResultsCheck): string {
       file?.checksum === null || file?.checksum === undefined ? '' : file.checksum ? '1' : '0', num(r.flownTo)];
     if (!r.criteria.length) { rows.push([...lead, '', '', '', '', '', '', '', '', '', '', STATUS_CSV[r.status]].join(',')); continue; }
     for (const c of r.criteria) {
-      const unit = c.measure ? MEASURES[c.measure].unit : c.kind === 'event' ? 's' : '';
+      const unit = c.measure ? measureUnit(c.measure) : c.kind === 'event' ? 's' : '';
       rows.push([...lead, csvText(c.id), c.kind, csvText(c.measure ?? c.hook ?? c.event ?? ''), csvText(unit), num(c.recorded?.value), num(c.rechecked?.value),
         num(c.recorded?.expected), num(c.rechecked?.expected), num(c.tol), num(c.bound), STATUS_CSV[c.status]].join(','));
     }

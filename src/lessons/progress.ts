@@ -80,13 +80,19 @@ export interface LessonRecord {
 
 /** The fields a flight lesson's record needs for an exact re-check (T02), in the order the checker lists them. */
 export const RECHECK_FIELDS = ['mission', 't', 'clock', 'actions', 'app'] as const;
-export type RecheckField = (typeof RECHECK_FIELDS)[number];
+/** The fields a design lesson's record needs (T01, T02): the design, the day and the air it was graded in, the build. */
+export const DESIGN_RECHECK_FIELDS = ['design', 'designDate', 'level', 'figures', 'app'] as const;
+export type RecheckField = (typeof RECHECK_FIELDS)[number] | (typeof DESIGN_RECHECK_FIELDS)[number];
 
 /** Which of those a flight lesson's record lacks: all but `mission` are new with T02, so an older file lacks them. */
 export function missingFields(record: LessonRecord): RecheckField[] {
   return RECHECK_FIELDS.filter((f) => record[f] === undefined);
 }
 
+/** Which of its fields a design lesson's record lacks (every build that writes one writes all five: one lacking is edited). */
+export function missingDesignFields(record: LessonRecord): RecheckField[] {
+  return DESIGN_RECHECK_FIELDS.filter((f) => record[f] === undefined);
+}
 
 export interface CaseRecordData {
   case: CaseId;

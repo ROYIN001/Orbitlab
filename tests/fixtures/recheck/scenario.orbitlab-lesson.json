@@ -1,6 +1,6 @@
 {
   "format": "orbitlab.lessons",
-  "version": 1,
+  "version": 3,
   "lessons": [
     {
       "id": "class-leo",
@@ -178,6 +178,171 @@
       ],
       "hints": [],
       "endEvent": "evt.abortCrewSafe"
+    },
+    {
+      "kind": "design",
+      "id": "class-power",
+      "track": 9,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        1,
+        2
+      ],
+      "title": {
+        "en": "Power through the eclipse",
+        "ru": "Мощность в тени",
+        "th": "กำลังไฟฟ้าตลอดอุปราคา"
+      },
+      "brief": {
+        "en": "Give NAPA-2 a power margin of at least 10 % at the end of its life, the battery drained no deeper than 30 %, and type its longest eclipse.",
+        "ru": "Обеспечьте NAPA-2 запас мощности не меньше 10 % к концу срока службы при разряде аккумулятора не глубже 30 % и введите самую длинную тень.",
+        "th": "ทำให้ NAPA-2 มีค่าเผื่อกำลังไฟฟ้าอย่างน้อย 10 % เมื่อสิ้นอายุการใช้งาน แบตเตอรี่คายประจุไม่เกิน 30 % แล้วพิมพ์อุปราคานานที่สุด"
+      },
+      "start": {
+        "template": "napa2"
+      },
+      "designDate": "2026-10-05",
+      "level": "moderate",
+      "locked": [
+        "orbit.perigee",
+        "orbit.apogee",
+        "orbit.inclination",
+        "orbit.ltan",
+        "orbit.raan",
+        "orbit.sso",
+        "lifeYears",
+        "bus.dryMass",
+        "bus.size.width",
+        "bus.size.height",
+        "bus.size.depth",
+        "bus.cd",
+        "bus.cr",
+        "power.payloadW",
+        "power.busW"
+      ],
+      "criteria": [
+        {
+          "id": "margin",
+          "kind": "design",
+          "measure": "sat.powerMargin",
+          "min": 10
+        },
+        {
+          "id": "battery",
+          "kind": "design",
+          "measure": "sat.batteryDod",
+          "max": 30
+        },
+        {
+          "id": "eclipse",
+          "kind": "answer",
+          "measure": "sat.eclipseMax",
+          "prompt": {
+            "en": "Longest eclipse (min)",
+            "ru": "Самая длинная тень (мин)",
+            "th": "อุปราคานานที่สุด (นาที)"
+          },
+          "tol": 1
+        }
+      ],
+      "hints": []
+    },
+    {
+      "kind": "design",
+      "id": "class-theos",
+      "track": 9,
+      "order": 1,
+      "mode": "engineer",
+      "domains": [
+        2
+      ],
+      "title": {
+        "en": "An imager that lasts and leaves",
+        "ru": "Съёмочный спутник: прослужить и уйти",
+        "th": "ดาวเทียมถ่ายภาพที่อยู่นานแล้วออกจากวงโคจร"
+      },
+      "brief": {
+        "en": "Keep the THEOS-2-class imager up for its ten years and down within IADC's 25, bring 100 Gbit down to Bangkok a day, and type its swath.",
+        "ru": "Сохраните съёмочный спутник класса THEOS-2 на орбите все десять лет и сведите его в течение 25 лет по правилу IADC, передавайте в Бангкок 100 Гбит в сутки и введите полосу обзора.",
+        "th": "ให้ดาวเทียมถ่ายภาพระดับ THEOS-2 อยู่ในวงโคจรครบ 10 ปีและตกสู่บรรยากาศภายใน 25 ปีตามแนวทาง IADC ส่งข้อมูลลงกรุงเทพฯ วันละ 100 กิกะบิต แล้วพิมพ์ความกว้างแนวถ่ายภาพ"
+      },
+      "start": {
+        "template": "theos2"
+      },
+      "designDate": "2026-10-05",
+      "level": "moderate",
+      "requirements": {
+        "target": {
+          "lat": 13.7563,
+          "lon": 100.5018,
+          "name": "Bangkok"
+        },
+        "gsd": 0.5,
+        "revisitDays": 26,
+        "daylightOnly": true,
+        "ltan": 22.25,
+        "lifeYears": 10,
+        "activity": "moderate",
+        "dataPerDay": 100000000000,
+        "stations": [
+          "bangkok"
+        ],
+        "minElDeg": 10,
+        "disposal": "25y"
+      },
+      "locked": [
+        "bus.dryMass",
+        "bus.size.width",
+        "bus.size.height",
+        "bus.size.depth",
+        "bus.cd",
+        "bus.cr"
+      ],
+      "criteria": [
+        {
+          "id": "life",
+          "kind": "design",
+          "measure": "sat.lifetime",
+          "min": 10
+        },
+        {
+          "id": "down",
+          "kind": "design",
+          "measure": "sat.disposal25y",
+          "min": 1
+        },
+        {
+          "id": "data",
+          "kind": "design",
+          "measure": "sat.dataPerDay",
+          "min": 100
+        },
+        {
+          "id": "gsd",
+          "kind": "design",
+          "measure": "sat.gsd",
+          "max": 0.55
+        },
+        {
+          "id": "dv",
+          "kind": "design",
+          "measure": "sat.dvMargin",
+          "min": 0
+        },
+        {
+          "id": "swath",
+          "kind": "answer",
+          "measure": "sat.swath",
+          "prompt": {
+            "en": "Swath (km)",
+            "ru": "Полоса обзора (км)",
+            "th": "ความกว้างแนวถ่ายภาพ (กม.)"
+          },
+          "tolPct": 2
+        }
+      ],
+      "hints": []
     }
   ]
 }

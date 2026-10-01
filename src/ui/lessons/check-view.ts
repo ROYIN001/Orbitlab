@@ -12,11 +12,11 @@ import { getLang, t, tCount } from '../../i18n';
 import { allLessons, lessonNumber, lessonsWithFiles } from '../../lessons/catalog';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import { RESULTS_FILE_EXTENSION, verifyResults, type RecheckField, type ResultsFile } from '../../lessons/progress';
-import { collectRecords, recheckCsv, statusCounts, type CheckStatus, type CriterionCheck, type RecordCheck, type ResultsCheck } from '../../lessons/recheck';
+import { collectRecords, measureUnit, recheckCsv, statusCounts, type CheckStatus, type CriterionCheck, type RecordCheck, type ResultsCheck } from '../../lessons/recheck';
 import { runRecheckJob } from '../../lessons/recheck-job';
-import { MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
-import type { CatalogLesson, Criterion } from '../../lessons/types';
+import type { CatalogLesson, Criterion, DesignCriterion } from '../../lessons/types';
+import { designMeasureName } from './design-text';
 import { downloadBlob } from '../download';
 import { issueSentence } from './author-view';
 
@@ -45,6 +45,7 @@ const REASON_KEY: Record<NonNullable<RecordCheck['reason']>, string> = {
   caseLesson: 'lesson.check.reason.caseLesson', noLesson: 'lesson.check.reason.noLesson', noMission: 'lesson.check.reason.noMission',
   mission: 'lesson.check.reason.mission', sixDof: 'lesson.check.reason.sixDof', actions: 'lesson.check.reason.actions',
   notReached: 'lesson.check.reason.notReached', incomplete: 'lesson.check.reason.incomplete', error: 'lesson.check.reason.error',
+  noDesign: 'lesson.design.check.noDesign',
 };
 const VERDICT_KEY: Record<string, string> = {
   pass: 'lesson.check.verdict.pass', passedWithHelp: 'lesson.check.verdict.passedWithHelp', fail: 'lesson.check.verdict.fail', open: 'lesson.check.verdict.open',
@@ -52,7 +53,9 @@ const VERDICT_KEY: Record<string, string> = {
 const WHICH_KEY = { passed: 'lesson.check.which.passed', last: 'lesson.check.which.last' } as const;
 const FIELD_KEY: Record<RecheckField, string> = {
   mission: 'lesson.check.field.mission', t: 'lesson.check.field.t', clock: 'lesson.check.field.clock', actions: 'lesson.check.field.actions', app: 'lesson.check.field.app',
+  design: 'lesson.design.field.design', designDate: 'lesson.design.field.designDate', level: 'lesson.design.field.level', figures: 'lesson.design.field.figures',
 };
+const LEVEL_KEY: Record<string, string> = { low: 'life.activity.low', moderate: 'life.activity.moderate', high: 'life.activity.high' };
 const missingFieldList = (fields: readonly RecheckField[]): string => fields.map((f) => t(FIELD_KEY[f])).join(', ');
 
 /** A number to as many digits as a difference at the tolerance shows, in the language's own decimal sign, with its unit. */
@@ -280,6 +283,9 @@ class CheckView {
     if (r.lateActions) notes.append(el('li', undefined, t('lesson.check.lateActions', { n: r.lateActions })));
     if (r.lockBroken.length) notes.append(el('li', undefined, t('lesson.check.lockBroken', { n: r.lockBroken.length })));
     if (r.flownTo !== null) notes.append(el('li', undefined, t('lesson.check.flownTo', { t: valueText(r.flownTo, '', 0.01), steps: tCount('lesson.check.n.steps', r.steps) })));
+    // T01: a design is worked out again, on the day and in the air the record says it was graded on
+    if (r.designDate) notes.append(el('li', undefined, t('lesson.design.check.workedOut', { date: r.designDate, level: t(LEVEL_KEY[r.level ?? ''] ?? 'life.activity.moderate') })));
+    if (r.mismatch?.length) notes.append(el('li', undefined, t('lesson.design.check.mismatch')));
     card.append(notes);
     if (r.criteria.length) card.append(this.criteriaTable(r, lesson));
     return card;
@@ -291,11 +297,11 @@ class CheckView {
     for (const key of ['lesson.check.col.criterion', 'lesson.check.col.recorded', 'lesson.check.col.rechecked', 'lesson.check.col.tolerance', 'lesson.check.col.result']) head.append(el('th', undefined, t(key)));
     table.append(el('thead'), el('tbody'));
     table.tHead!.append(head);
-    const criteria = lesson && !('case' in lesson) ? (lesson.criteria as Criterion[]) : [];
+    const criteria = lesson && !('case' in lesson) ? (lesson.criteria as (Criterion | DesignCriterion)[]) : [];
     for (const c of r.criteria) {
       const def = criteria.find((x) => x.id === c.id);
-      const measure = c.measure ?? (def?.kind === 'measure' || def?.kind === 'answer' ? def.measure : undefined);
-      const unit = measure ? MEASURES[measure].unit : c.kind === 'event' || def?.kind === 'event' ? 's' : '';
+      const measure = c.measure ?? (def?.kind === 'measure' || def?.kind === 'answer' || def?.kind === 'design' ? def.measure : undefined);
+      const unit = measure ? measureUnit(measure) : c.kind === 'event' || def?.kind === 'event' ? 's' : '';
       const row = el('tr', c.status);
       const cell = (text: string, label?: string): HTMLTableCellElement => {
         const td = el('td', undefined, text);
@@ -317,9 +323,10 @@ class CheckView {
 }
 
 /** A criterion's name as the lesson strip gives it. */
-function criterionName(c: CriterionCheck, def: Criterion | undefined): string {
+function criterionName(c: CriterionCheck, def: Criterion | DesignCriterion | undefined): string {
   if (def?.label) return localText(def.label);
   if (def?.kind === 'answer') return localText(def.prompt);
+  if (def?.kind === 'design') return designMeasureName(def.measure);
   const measure = c.measure ?? (def?.kind === 'measure' ? def.measure : undefined);
   if (measure) return t(`lesson.measure.${measure}`);
   if (def?.kind === 'outcome') return t(`lesson.outcome.${def.is}`);
@@ -333,7 +340,9 @@ function gradeText(c: CriterionCheck, side: 'recorded' | 'rechecked', unit: stri
   const state = g.state === 'pass' ? '✓' : g.state === 'fail' ? '✗' : '…';
   const value = c.kind === 'answer'
     ? t('lesson.check.answer', { typed: valueText(g.value, unit, c.tol), flown: valueText(g.expected, unit, c.tol) })
-    : g.value === null ? '' : valueText(g.value, unit, c.tol);
+    : g.value === null ? ''
+    // the 25-year rule's figure is a yes or a no (T01)
+      : c.measure === 'sat.disposal25y' ? t(g.value >= 0.5 ? 'lesson.design.yes' : 'lesson.design.no') : valueText(g.value, unit, c.tol);
   return `${state}${value ? ` ${value}` : ''}${g.revealed ? ` (${t('lesson.check.shown')})` : ''}`;
 }
 

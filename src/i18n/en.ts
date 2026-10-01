@@ -4655,4 +4655,11 @@ export const en: Record<string, string> = {
   'lesson.design.yes': 'yes',
   'lesson.design.no': 'no',
   'lesson.design.moreThan': 'more than {value}',
+  'lesson.design.check.noDesign': 'The result holds no design to work out again.',
+  'lesson.design.check.workedOut': 'A design lesson: its figures worked out again from the design handed in, for {date}, solar activity {level}.',
+  'lesson.design.check.mismatch': 'The result was graded on another day or at another solar activity than your lesson file sets: it is not your lesson as the student had it.',
+  'lesson.design.field.design': 'the design',
+  'lesson.design.field.designDate': 'the design date',
+  'lesson.design.field.level': 'the solar activity',
+  'lesson.design.field.figures': 'the figures',
 };

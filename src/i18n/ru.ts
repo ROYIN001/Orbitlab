@@ -4634,4 +4634,11 @@ export const ru: Record<string, string> = {
   'lesson.design.yes': 'да',
   'lesson.design.no': 'нет',
   'lesson.design.moreThan': 'более {value}',
+  'lesson.design.check.noDesign': 'В результате нет проекта, по которому можно было бы пересчитать показатели.',
+  'lesson.design.check.workedOut': 'Урок проектирования: показатели пересчитаны по сданному проекту на {date}, солнечная активность — {level}.',
+  'lesson.design.check.mismatch': 'Результат оценён на другую дату или при другой солнечной активности, чем задано в вашем файле урока: это не тот урок, который был у ученика.',
+  'lesson.design.field.design': 'проект',
+  'lesson.design.field.designDate': 'дата расчёта',
+  'lesson.design.field.level': 'солнечная активность',
+  'lesson.design.field.figures': 'показатели',
 };
