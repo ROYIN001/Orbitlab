@@ -669,9 +669,14 @@ is heard long after it is seen; its pitch drops as the rocket pulls away (Dopple
 out as the rocket climbs into air too thin to carry it, whoever is listening. The onboard camera
 hears the engines through the structure instead, muffled but steady. Ignition, stage and
 fairing separation, landings and a vehicle's loss have sounds of their own, delayed the same
-way. With the flight sped up, the sound is quieter and plays without the delay (the picture
-would otherwise be minutes ahead of it); paused, it is silent. These sounds are synthesised in
-the browser. The model is in PHYSICS.md §11.
+way. The sound comes from where the rocket is: turn the camera and it moves round your head
+(wear headphones to hear it best). Near the ground you hear it twice, directly and off the
+ground a moment later, and the two make the whooshing sweep of a rocket climbing away; the
+farther it is, the more of it comes back from the surroundings as a long rolling echo. Close
+by, the roar crackles with the shocks of the exhaust. With the flight sped up, the sound is
+quieter and plays without the delay (the picture would otherwise be minutes ahead of it);
+paused, it is silent. These sounds are synthesised in the browser. The model is in
+PHYSICS.md §11.
 
 **Real launch audio in the viewer.** With the sound on, *Soyuz to the space station* plays
 NASA's broadcast of the real Soyuz MS-27 launch (8 April 2025, public domain) in step with the

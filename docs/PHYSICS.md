@@ -2919,15 +2919,42 @@ into the flight.
   (20 °C, 50 % relative humidity) at a 6 dB loss.
 - **Delay and Doppler.** What is heard at t left the source at the retarded time τ with
   τ = t − r(τ)/c, solved by fixed-point iteration over the recorded trajectory (c = 340.3 m/s);
-  the pitch is scaled by c/(c + v_r). Events are heard at t_e + r(t_e)/c.
+  the pitch is scaled by c/(c + v_r). Events are heard at t_e + r(t_e)/c. The sound travels in
+  the air, which turns with the Earth: the source's position at τ is turned about the pole
+  through ω⊕·(t − τ) before r is measured, and v_r is its speed relative to the air,
+  v − ω⊕ × r. Measured in the inertial frame instead, a pad at Cape Canaveral moves at 409 m/s:
+  a rocket standing on it was heard Doppler-shifted, and from 5 km west of it its ignition
+  arrived 8 s early (from the east, never).
 - **Loudspeaker.** 120 dB plays at full scale and every 20 dB less at a tenth of it; below
   40 dB nothing plays. Warped time drops the delay and plays at 35 % (up to 5×) or 18 % (up to
   50×), silent beyond; the onboard camera hears a structure-borne rumble that follows the
   throttle.
+- **Ground.** A listener near the ground hears each source twice, directly and from its image
+  below the ground (Lloyd's mirror), the image path √(r² + 4·h_s·h_l) longer than r by
+  ≈ 2·h_s·h_l / r; the two interfere in a comb whose notches sweep down as the rocket climbs.
+  The ground reflects R = 0.9 of the pressure (an assumption: hard-packed ground and concrete,
+  no ground impedance), the echo loses its treble above 2 kHz, and the two gains split the
+  level's power, direct² + reflected² = 1, since the hemispherical spreading above already
+  counts the ground. A camera above 60–120 m hears no ground echo.
+- **Surroundings.** A share of each sound, −24 dB at the pad, −13 dB at 5 km and approaching
+  −6 dB far away, goes to an outdoor reverberation: silence for 25 ms, seven echoes off the
+  pad's structures between 30 and 380 ms, then a diffuse tail that builds over ~100 ms and
+  decays with T₆₀ = 2.6 s, its corner falling from 6 kHz to 400 Hz. The share and the shape are
+  sound-design choices, not measurements.
+- **Direction.** Each source is heard from where it was at the retarded time, turned into the
+  camera's head and placed by the browser's HRTF panner (best on headphones); a source keeps
+  its voice from frame to frame, and up to four are heard at once.
 
-The roar is synthesised from brown, pink and white noise (the last gated by a slow random
-envelope for the crackle of a shock-laden exhaust), filtered and mixed by the numbers above;
-the cues are filtered noise bursts over a falling sine thump.
+The roar of each source is three layers: brown noise below 180 Hz, pink noise up to the
+absorption corner, and crackle. The crackle is a train of shocks, not noise: Ffowcs Williams,
+Simson and Virchis (J. Fluid Mech. 71, 1975) define crackle by a pressure skewness above 0.4,
+so the generator draws instant compressions decaying in 0.15–0.6 ms, each paid back by a
+shallow rarefaction, at a mean 1500 a second that swells and fades with a slow random
+intensity, with log-normal strengths (skewness ≈ 1.4; src/audio/waveforms.ts). It is played
+in full up to ~2 km and fades out as the absorption corner falls to 800 Hz, a fifth of it left
+at 15 km. A limiter at −3 dBFS catches the peaks without squeezing the range out of the
+level. The cues are filtered noise bursts over a falling sine thump, placed and reverberated
+the same way.
 
 ## 12. The sky (roadmap V02)
 
