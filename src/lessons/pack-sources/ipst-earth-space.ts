@@ -98,7 +98,7 @@ export const IPST_EARTH_SPACE: PackSource = {
     {
       id: 'ipst-a-sun-clock', track: 12, order: 2, mode: 'explore', domains: [2, 1], tags: ['SSO', 'LTAN'],
       curriculum: [{ code: 'ดศ ม.6 ผล 15', kind: 'outcome' }, { code: 'ดศ ม.6 ผล 16', kind: 'outcome' }],
-      title: { en: 'An orbit that keeps the Sun\'s time', ru: 'Орбита, которая держит солнечное время', th: 'วงโคจรที่เดินตามเวลาของดวงอาทิตย์' },
+      title: { en: 'An orbit that keeps the Sun\'s time', ru: 'Орбита по солнечным часам', th: 'วงโคจรที่เดินตามเวลาของดวงอาทิตย์' },
       brief: {
         en: 'Vega-C stands at Kourou with a 1.15 t science satellite for a sun-synchronous orbit 600 km up, the kind of orbit THEOS-2 flies (a Vega launched it from Kourou too). The orbit\'s plane must cross the equator going north at 10:30 local solar time. The Earth turns under that plane, so only a launch at the right moment of the day puts the satellite into it — and the time on the panel is not that moment. Choose the launch time, fly, and type in the period of the orbit you reach. Only the launch time may be changed.',
         ru: 'Vega-C стоит в Куру с научным спутником массой 1,15 т для солнечно-синхронной орбиты высотой 600 км — такой, по какой летает THEOS-2 (его тоже запустила Vega из Куру). Плоскость орбиты должна пересекать экватор с юга на север в 10:30 по местному солнечному времени. Земля вращается под этой плоскостью, поэтому вывести в неё спутник можно лишь при старте в определённый момент суток, а время на панели — не этот момент. Выберите время старта, выполните полёт и введите период полученной орбиты. Изменять можно только время старта.',
