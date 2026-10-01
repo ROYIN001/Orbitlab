@@ -524,6 +524,6 @@ software keep their own terms, all collected in [NOTICE.md](NOTICE.md). To cite 
 
 ## Acknowledgements
 
-Earth textures are the planet textures from the three.js examples (NASA Blue Marble
-derivatives). Atmosphere: US Standard Atmosphere 1976 and the exponential model tabulated in
+Earth textures are NASA Blue Marble and Black Marble imagery, from NASA Visible Earth and the
+three.js examples (details in [NOTICE.md](NOTICE.md)). Atmosphere: US Standard Atmosphere 1976 and the exponential model tabulated in
 Vallado, *Fundamentals of Astrodynamics and Applications*.

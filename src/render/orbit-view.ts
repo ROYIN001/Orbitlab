@@ -16,6 +16,7 @@ import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import type { EarthTextures } from './scene';
+import { ORBIT_VIEW_MAX_PIXEL_RATIO, sharpenEarthTextures } from './sharpness';
 import { buildStarField } from './stars';
 import { R_EARTH } from '../physics/constants';
 import { gmst, sunDirectionEci } from '../physics/orbital';
@@ -166,7 +167,7 @@ export class OrbitView {
 
   constructor(private readonly canvas: HTMLCanvasElement, textures: Promise<EarthTextures> | null) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, ORBIT_VIEW_MAX_PIXEL_RATIO));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.setClearColor(0x05080d, 1);
     this.camera.up.set(0, 0, 1);
@@ -183,6 +184,7 @@ export class OrbitView {
       // colour maps (the launch scene says the same of the textures it shares)
       tex.day.colorSpace = THREE.SRGBColorSpace;
       tex.night.colorSpace = THREE.SRGBColorSpace;
+      sharpenEarthTextures(this.renderer, tex);
       this.earthMat.uniforms.dayMap.value = tex.day;
       this.earthMat.uniforms.nightMap.value = tex.night;
       this.earthMat.uniforms.hasMaps.value = 1;
@@ -489,7 +491,7 @@ export class OrbitView {
   render(): void {
     // Moving the window between displays can change DPR without changing the
     // canvas's CSS box. Refresh here too: ResizeObserver alone does not catch it.
-    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    const pr = Math.min(window.devicePixelRatio || 1, ORBIT_VIEW_MAX_PIXEL_RATIO);
     if (pr !== this.renderer.getPixelRatio()) {
       this.renderer.setPixelRatio(pr);
       this.stars.material.uniforms.uPixelRatio.value = pr;
