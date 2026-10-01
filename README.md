@@ -191,14 +191,16 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `mobile-smoke` | ✓ | At 390×844, the Thai placement test and the Russian Orbit engineer page do not scroll sideways, and every section/level link is on screen with an accessible name in the page's language |
 | `launch-explore` | ✓ | Falcon 9 configured, launched and warped to its 500 km orbit; the CSV export is over 1 MB and covers the flight |
 | `pwa-offline` | | The service worker precaches the app, a mission flies offline, and a new deploy is offered as a reload |
+| `case-worksheet-exports` | | The three case worksheets and their keys downloaded as HTML and DOCX, in Thai and Russian, through the page's own controls |
 | `satellite` | ✓ | In the satellite designer, NAPA-2's cells put on wings and its array changed, the figures following, saved and reloaded; sent to Orbit, whose lifetime dialog takes the design's own mass and drag area; Fly it gives the Launch section's verdict before the click ("Not flyable as set" on Soyuz-2.1a) and offers the rockets that can fly it; Electron, picked among them, flies the design to payload separation, and the Launch panel's verdict is the one shown |
 | `requirements` | | The requirements page from the bench: Bangkok at 0.5 m and 5 days, a run stopped and run again in the workers, a row the bench cannot take saying why, a row that meets every requirement opened on the bench and set beside it; then a Thai phone, the orbits as cards |
 | `recheck` | ✓ | The Chromium half of the instructor's re-check: the committed results files checked in the page's re-check worker through `check_results`, held to Node's answer under the engine tolerances fixed before the first run, and each measure's largest difference printed |
 | `lesson-packs` | ✓ | The five lesson packs precached and listed with their codes and draft notice; lesson 12.1 flown live from its pack and graded a pass; design lesson 13.4 failing as it starts and passing with the worked design handed in |
 
 A failed journey leaves screenshots in `tests/browser/screenshots/` (uploaded as an artifact in CI).
-Without a GPU the scene is drawn in software at about two frames a second, so the smoke set takes
-about five minutes. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
+Without a GPU the scene is drawn in software at about two frames a second, so the smoke set, six
+journeys since Phase 4, takes about ten minutes (623.5 s on 2026-10-01, on a shared four-core
+machine). `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
 another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
 leaves the CSS layout unchanged). Pull requests and branch pushes run the smoke set; the deploy
 runs every journey on the build it publishes, after checking the freshly fetched data snapshots with
