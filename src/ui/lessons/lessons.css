@@ -85,6 +85,13 @@ body[data-lesson] #first-use-guide { display: none; }
 .lesson-case-table { border-collapse: collapse; margin: 4px 0; font-size: 12px; }
 .lesson-case-table th { text-align: left; font-weight: 500; color: var(--muted); padding: 2px 12px 2px 0; vertical-align: top; }
 .lesson-case-table td { font: 12px var(--mono); padding: 2px 0; overflow-wrap: anywhere; }
+/* T03b: on a phone the long labels (the CZ-5B sheet's two space-weather rows the longest) left the figures a
+   column a few characters wide, broken inside numbers; there each row puts its figure under its label */
+@media (max-width: 600px) {
+  .lesson-case-table, .lesson-case-table tbody, .lesson-case-table tr, .lesson-case-table th, .lesson-case-table td { display: block; }
+  .lesson-case-table tr { padding: 3px 0; }
+  .lesson-case-table th { padding: 0; }
+}
 .lesson-case-figure { margin: 6px 0; }
 .lesson-case-figure svg { max-width: 100%; height: auto; }
 .lesson-answers.lesson-case-answers { display: grid; gap: 8px; }
