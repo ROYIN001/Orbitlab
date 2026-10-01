@@ -194,15 +194,27 @@ const ABOUT_TABS: ReadonlyArray<{ id: AboutTab; label: string }> = [
   { id: 'physics', label: 'dlg.physics.button' },
 ];
 
+/** The Orbitlab mark from index.html's sprite (#orbitlab-logo), as an inline SVG. */
+function logoMark(): SVGSVGElement {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'brand-mark');
+  svg.setAttribute('viewBox', '0 0 200 200');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const use = document.createElementNS(NS, 'use');
+  use.setAttribute('href', '#orbitlab-logo');
+  svg.append(use);
+  return svg;
+}
+
 /** The About tab: the app's mark, version, maker, licences, links and the README disclaimer (src/credits.ts). */
 function aboutPanel(b: HTMLElement): void {
   const box = el('div', 'about-box');
   const mark = el('p', 'about-mark');
-  const ring = el('span', 'brand-mark', '◉');
-  ring.setAttribute('aria-hidden', 'true');
   const name = el('span', 'brand-name', 'ORBIT');
   name.append(el('span', undefined, 'LAB'));
-  mark.append(ring, name);
+  mark.append(logoMark(), name);
   const title = el('h2', 'sr-only', t('app.title'));
   const version = el('p', 'about-version', `${versionLabel(BUILD.version)} · ${BUILD.commit}`);
   const by = el('p', 'about-by', `${t('about.by', { name: developerLabel() })} · © ${COPYRIGHT_YEAR}`);
