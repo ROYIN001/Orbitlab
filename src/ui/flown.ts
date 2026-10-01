@@ -17,7 +17,9 @@ export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.inter
   | 'evt.undocking' | 'evt.separationBurn' | 'evt.doi' | 'evt.pdi' | 'evt.throttleRecovery' | 'evt.highGate' | 'evt.lowGate'
   | 'evt.lunarLanding' | 'evt.lmEngineOff'
   | 'evt.lunarLiftoff' | 'evt.lmInsertion' | 'evt.csi' | 'evt.cdh' | 'evt.tpi' | 'evt.lmMcc' | 'evt.braking' | 'evt.stationkeeping' | 'evt.lmDocked' | 'evt.lmJettison' | 'evt.asSeparation'
-  | 'evt.tei' | 'evt.transearth' | 'evt.transearthMcc' | 'evt.cmSmSeparation' | 'evt.entryInterface' | 'evt.drogues' | 'evt.cmSplashdown';
+  | 'evt.tei' | 'evt.transearth' | 'evt.transearthMcc' | 'evt.cmSmSeparation' | 'evt.entryInterface' | 'evt.drogues' | 'evt.cmSplashdown'
+  | 'evt.retroFire' | 'evt.tduFire' | 'evt.retroShortfall' | 'evt.retroCutoff' | 'evt.vostokStraps' | 'evt.vostokSeparation' | 'evt.ejection'
+  | 'evt.capsuleLanding' | 'evt.pilotLanding';
 
 export interface FlownEvent {
   key: FlownKey;
@@ -25,7 +27,13 @@ export interface FlownEvent {
   t: number;
   /** which occurrence of `key` in the simulation (1 = the first) */
   n?: number;
-  /** a planned, rounded or secondary value rather than a measured one */
+  /**
+   * a planned, rounded or secondary value rather than a measured one. Where
+   * the sources disagree, `t` is the one the viewer's narration gives, and
+   * the difference is measured from it: one time shown, one time compared
+   * (C01: Gagarin down at 10:55 officially, 10:53 in OKB-1's report; the
+   * end card gives both, `watch.end.vostokFact`)
+   */
   approx?: boolean;
 }
 
@@ -101,6 +109,15 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.entryInterface': 'tl.evt.entryInterface',
   'evt.drogues': 'tl.evt.drogues',
   'evt.cmSplashdown': 'tl.evt.cmSplashdown',
+  'evt.retroFire': 'tl.evt.retroFire',
+  'evt.tduFire': 'tl.evt.tduFire',
+  'evt.retroShortfall': 'tl.evt.retroShortfall',
+  'evt.retroCutoff': 'tl.evt.retroCutoff',
+  'evt.vostokStraps': 'tl.evt.vostokStraps',
+  'evt.vostokSeparation': 'tl.evt.vostokSeparation',
+  'evt.ejection': 'tl.evt.ejection',
+  'evt.capsuleLanding': 'tl.evt.capsuleLanding',
+  'evt.pilotLanding': 'tl.evt.pilotLanding',
 };
 
 export interface FlownRow {

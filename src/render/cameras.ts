@@ -268,6 +268,10 @@ export class CameraController {
           .addScaledVector(this.side.crossVectors(u, p1), Math.sin(e) * d * py);
         this.desiredTarget.copy(f.pos).addScaledVector(u, Math.min(range * 0.5, d * 1.5));
         this.side.set(f.side.x, f.side.y, f.side.z);
+        // looking up past a body on the ground at one in the sky (C01: Vostok-1's sphere, and Gagarin coming
+        // down): behind it is below it, so the camera is kept out of the ground here too
+        const above = this.tmp.copy(this.desired).sub(f.pos).dot(up) + f.agl;
+        if (above < 5) this.desired.addScaledVector(up, 5 - above);
       } else {
         this.horiz.copy(east).multiplyScalar(Math.cos(this.az)).addScaledVector(north, Math.sin(this.az));
         this.desired.copy(f.pos)

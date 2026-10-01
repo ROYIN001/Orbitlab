@@ -217,6 +217,11 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
               }
               : undefined,
             impact: d.impact ? { ...d.impact } : undefined,
+            // C01: a crew member's canopies; an entry's heat (the frame records the flux, the temperature and the
+            // melting, not the heat load or the masses, which read 0 as the recovery's propulsion does)
+            ...(d.crew ? { crew: { ...d.crew } } : {}),
+            ...(d.entry ? { entry: { heatFlux: d.entry.heatFlux, heatLoad: 0, temperature: d.entry.temperature, ablating: d.entry.ablating, initialMass: 0 } } : {}),
+            ...(d.fragmentOf !== undefined ? { fragmentOf: d.fragmentOf } : {}),
           }));
         }
         return debrisCache;

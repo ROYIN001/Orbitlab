@@ -16,7 +16,7 @@ import type { SimEvent } from '../physics/simulation';
 import { vehicleById, vehicleDataId } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
-import { autoWarp, flightEnding, groundSpeed, parkingMilestone, watchBeat, watchReadout, watchSummary, WATCH_BEATS, type WatchBeat, type WatchEnding, type WatchSummary } from './watch-logic';
+import { autoWarp, flightEnding, groundSpeed, parkingMilestone, vostokLandings, watchBeat, watchReadout, watchSummary, WATCH_BEATS, type WatchBeat, type WatchEnding, type WatchSummary } from './watch-logic';
 import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionById, type WatchMissionId } from './watch-missions';
 import { FLOWN_LABEL, recentFlown } from './flown';
 import { flownTable, fmtMissionTime } from './flown-view';
@@ -31,11 +31,18 @@ export interface WatchHost {
   explore(): void;
   /** S03: hand the orbit reached on to the Orbit section */
   continueInOrbit?(): void;
-  /** point the camera at a stage flying home, or back at the rocket */
-  follow(target: 'booster' | 'rocket'): void;
+  /** point the camera at a stage flying home, or back at the rocket; C01: at Vostok-1's pilot, or back at the capsule */
+  follow(target: FollowTarget): void;
   /** V01: shown under the launches, the launch audio each one plays */
   pickerFooter?(): HTMLElement | null;
 }
+
+/** What the follow button points the camera at. */
+export type FollowTarget = 'booster' | 'rocket' | 'crew' | 'capsule';
+/** The button's label for each target. */
+const FOLLOW_LABEL: Record<FollowTarget, string> = {
+  booster: 'watch.follow.booster', rocket: 'watch.follow.rocket', crew: 'watch.follow.pilot', capsule: 'watch.follow.capsule',
+};
 
 /** 'auto' or a fixed time warp */
 export type WatchSpeed = 'auto' | number;
@@ -51,8 +58,12 @@ interface UpdateState {
   playing: boolean;
   /** the vehicle the frame belongs to (a custom one included, roadmap S02) */
   vehicle: VehicleSpec | null;
-  /** a stage flown home is in the frame, and whether the camera is on it */
-  follow?: { available: boolean; booster: boolean };
+  /**
+   * a stage flown home is in the frame, and whether the camera is on it; C01:
+   * with `crew`, what can be followed is Vostok-1's pilot on his own, and
+   * `booster` says the camera is on him rather than on the capsule
+   */
+  follow?: { available: boolean; booster: boolean; crew?: boolean };
   /**
    * The stage the camera follows instead of the rocket: the height and speed
    * on screen are its own, or they would read 200 km and 27,000 km/h under a
@@ -186,7 +197,10 @@ export class WatchView {
     this.followBtn = el('button', 'watch-follow-btn');
     this.followBtn.type = 'button';
     this.followBtn.hidden = true;
-    this.followBtn.addEventListener('click', () => this.host.follow(this.followBtn.dataset.target === 'booster' ? 'booster' : 'rocket'));
+    this.followBtn.addEventListener('click', () => {
+      const target = this.followBtn.dataset.target;
+      this.host.follow(target === 'booster' || target === 'crew' || target === 'capsule' ? target : 'rocket');
+    });
     const controls = el('div', 'watch-controls');
     controls.append(this.playBtn, this.speedGroup, this.followBtn, this.missionsBtn);
 
@@ -287,7 +301,7 @@ export class WatchView {
   }
 
   private applyAutoWarp(): void {
-    const w = autoWarp(this.lastFrame, this.beat ?? 'countdown');
+    const w = autoWarp(this.lastFrame, this.beat ?? 'countdown', this.lastEvents);
     if (w !== this.lastWarp) {
       this.lastWarp = w;
       this.host.setWarp(w);
@@ -386,13 +400,16 @@ export class WatchView {
     this.milestone.hidden = true;
   }
 
+  /** The follow button offers the other subject: the stage or the rocket; Vostok-1's pilot or the capsule (C01). */
   private syncFollow(follow: UpdateState['follow']): void {
-    const key = !follow || (!follow.available && !follow.booster) ? '' : follow.booster ? 'rocket' : 'booster';
+    const key: FollowTarget | '' = !follow || (!follow.available && !follow.booster) ? ''
+      : follow.crew ? (follow.booster ? 'capsule' : 'crew')
+      : follow.booster ? 'rocket' : 'booster';
     if (key === this.shown.follow) return;
     this.shown.follow = key;
     this.followBtn.hidden = !key;
     this.followBtn.dataset.target = key;
-    if (key) this.followBtn.textContent = t(key === 'booster' ? 'watch.follow.booster' : 'watch.follow.rocket');
+    if (key) this.followBtn.textContent = t(FOLLOW_LABEL[key]);
   }
 
   private syncPlay(playing: boolean): void {
@@ -410,7 +427,7 @@ export class WatchView {
     const card = this.endCard;
     card.replaceChildren();
     card.classList.toggle('failed', !success);
-    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? (frame.apollo ? 'watch.end.apolloSplashTitle' : 'watch.end.splashTitle')
+    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? (frame.apollo ? 'watch.end.apolloSplashTitle' : frame.abort?.capsule === 'vostok' ? 'watch.end.vostokLandingTitle' : 'watch.end.splashTitle')
       : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle'
       : 'watch.fail.title'));
     title.id = 'watch-end-title';
@@ -441,9 +458,11 @@ export class WatchView {
         docked: clock(at('evt.lmDocked')), g: (ap.entry?.maxLoad ?? 0).toFixed(1), mass: num(Math.round(frame.mass)),
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.apolloSplashFact')));
+    } else if (ending === 'splashdown' && frame.abort?.kind === 'return' && frame.abort.capsule === 'vostok') {
+      this.vostokEnd(card, frame);
     } else if (ending === 'splashdown') {
       // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
-      const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.shipSplashdown');
+      const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.capsuleLanding' || e.key === 'evt.shipSplashdown');
       const since = (down?.t ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
       // C01: a capsule, not a ship
       card.append(el('p', undefined, frame.abort?.kind === 'return'
@@ -486,6 +505,32 @@ export class WatchView {
     button('watch.end.explore', 'watch-btn link', () => this.host.explore());
     card.append(actions);
     card.hidden = false;
+  }
+
+  /**
+   * C01: Vostok-1 home, the sphere and Gagarin each on their own: when and
+   * where each came down and how far apart, timed at the landings, not at the
+   * card. Then the real flight's: the sphere at 10:48 Moscow time (OKB-1's
+   * preliminary report of 3 May 1961), Gagarin at 10:55 by the official
+   * account, the 108 minutes (10:53 in the report), at 51°16′14″ N 45°59′50″ E
+   * near Smelovka — Gagarin's place, where his monument stands, not the
+   * sphere's — about 1.5 km from the sphere (OKB-1's preliminary report),
+   * "about 4 km" by Gagarin's own post-flight report (as Pervushin prints
+   * it). The narration tells those as 1961's; the model's own times, places
+   * and distance are the card's first paragraph.
+   */
+  private vostokEnd(card: HTMLElement, frame: VisualFrame): void {
+    const liftoff = Math.max(0, frame.liftoffT ?? 0);
+    const { sphere, pilot } = vostokLandings(frame, this.lastEvents);
+    const at = { time: fmtSpan(sphere.t - liftoff), lat: num(sphere.lat, 2), lon: num(sphere.lon, 2), g: num(frame.abort?.maxG ?? 0, 1) };
+    card.append(el('p', undefined, pilot
+      ? t('watch.end.vostokLandingText', {
+        ...at, pilotTime: fmtSpan(pilot.t - liftoff), plat: num(pilot.lat, 2), plon: num(pilot.lon, 2),
+        km: pilot.km !== null ? num(pilot.km, pilot.km < 1 ? 2 : 1) : '—',
+      })
+      // a recording made before Gagarin flew on his own: the sphere alone
+      : t('watch.end.vostokSphereText', at)));
+    if (this.missionId === 'vostok1') card.append(el('p', 'watch-end-fact', t('watch.end.vostokFact')));
   }
 
   /**

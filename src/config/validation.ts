@@ -213,6 +213,46 @@ export function flightHomeCapable(spec: VehicleSpec | undefined): boolean {
 }
 
 /**
+ * A capsule built to come home from a suborbital lob on its own parachutes
+ * (C01: Mercury, `SatelliteSpec.descent`), which lets a vehicle with no ship
+ * to fly home take a suborbital target. Vostok's sphere comes home from orbit
+ * on its TDU-1's programme (`VOSTOK_CAPSULE`), timed for an orbit: from a lob
+ * it fired 2 s after the separation and came down in the Pacific.
+ */
+export function suborbitalCapsule(satelliteId: string | undefined): boolean {
+  return SATELLITES.find((s) => s.id === satelliteId)?.descent === 'mercury';
+}
+
+/**
+ * C01: whether an orbit still carries the record of one historical flight as
+ * it was flown (Vostok-1, src/ui/watch-missions.ts): the orbit its guidance
+ * was set for (`aim`), the cut-off command that did not pass (`backupCutoff`),
+ * the measure its figures are given in (`extremes`), and its return at its own
+ * time in that day's measured wind (`deorbit`).
+ */
+export function flownRecord(orbit: OrbitSpec): boolean {
+  return orbit.aim !== undefined || orbit.backupCutoff !== undefined || orbit.extremes !== undefined || orbit.deorbit !== undefined;
+}
+
+/**
+ * The orbit of a flight edited away from the historical one: another vehicle,
+ * another payload, or any field of the orbit makes it a different flight, and
+ * what the record says of the one flown (`flownRecord`) would steer it
+ * somewhere else — a Soyuz-2.1a aimed at Vostok-K's planned 230 km and flying
+ * its 25.43 m/s over-burn, a TDU-1 fired at T+4,684.2 s from an orbit it was
+ * not timed for, in Saratov's wind of 12 April 1961. The record goes; what the
+ * setup shows and edits stays, the node with it (Vostok-1's is the plane
+ * through its pad at the launch time the edit keeps). An orbit without a
+ * record is returned as it is. The setup panel's controls (`SetupPanel`) and
+ * WebMCP's `configure_mission` (src/mcp.ts) both edit through this.
+ */
+export function ownFlight(orbit: OrbitSpec): OrbitSpec {
+  if (!flownRecord(orbit)) return orbit;
+  const { aim: _aim, backupCutoff: _backup, extremes: _extremes, deorbit: _deorbit, ...own } = orbit;
+  return own;
+}
+
+/**
  * The recovery plan: every stage it names flown to a place the flight can
  * reach from its site, on the hardware that place needs — legs for a pad or a
  * drone ship's deck; a tower's arms take a stage without them.
@@ -298,7 +338,11 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
   const orbit = state.orbit;
   // A suborbital test flight may carry nothing at all (Flight 5 did not).
   check(state.payloadMass, 'setup.payloadMass', fieldLimits('setup.payloadMass', orbit));
-  if (orbit.suborbital && spec && !flightHomeCapable(spec) && !satellite?.descent) issues.push({ field: 'setup.perigee', code: 'suborbital' });
+  // a suborbital target: a ship that flies itself home, or a capsule built for a lob (`suborbitalCapsule`); and never
+  // with a return from orbit (`deorbit`, C01: Vostok-1's), which a lob has no orbit for
+  if (orbit.suborbital && ((spec && !flightHomeCapable(spec) && !suborbitalCapsule(state.satelliteId)) || orbit.deorbit !== undefined)) {
+    issues.push({ field: 'setup.perigee', code: 'suborbital' });
+  }
   check(orbit.perigee / 1000, 'setup.perigee', fieldLimits('setup.perigee', orbit));
   check(orbit.apogee / 1000, 'setup.apogee', NUMBER_FIELDS['setup.apogee']);
   if (Number.isFinite(orbit.perigee) && Number.isFinite(orbit.apogee) && orbit.perigee > orbit.apogee) {
@@ -368,7 +412,7 @@ export function issueText(issue: ValidationIssue): string {
     case 'date': return `${issue.field} must be a valid ISO 8601 date-time`;
     case 'orbitOrder': return 'Custom orbit perigee must not exceed apogee';
     case 'selection': return `${issue.field} is not a valid selection`;
-    case 'suborbital': return 'A suborbital target needs a vehicle whose upper stage flies itself home (Starship), or a capsule that comes home on its parachutes (Mercury)';
+    case 'suborbital': return 'A suborbital target needs a vehicle whose upper stage flies itself home (Starship), or a capsule built to come home from one on its parachutes (Mercury); a return from orbit (deorbit) needs an orbit';
     case 'failureUnavailable': return 'This vehicle cannot have that failure: a launch abort needs a crewed Soyuz, a strap-on collision strap-ons, a stage separation failure a second stage';
     case 'rendezvousUnavailable': return 'A flight to the station needs the crewed spacecraft on a Soyuz-2.1a and the ISS orbit';
     case 'vehicleSpec': return `The custom vehicle is not valid: ${issue.detail ?? 'malformed'}`;

@@ -1,8 +1,10 @@
 /**
  * Where returning hardware comes down, drawn on the globe: Landing Zones 1
  * and 2 at Cape Canaveral, a drone ship on the station its booster is flown
- * to, and a patch of open sea under a ship coming down to splash down. The
- * tower that catches Super Heavy is part of the Starbase pad (src/render/pads.ts).
+ * to, a patch of open sea under a ship coming down to splash down, and (C01)
+ * the fields under a return that comes down on land, Vostok-1's on the
+ * Saratov steppe (render/steppe.ts). The tower that catches Super Heavy is
+ * part of the Starbase pad (src/render/pads.ts).
  *
  * Each piece sits in a local frame fixed to the rotating Earth — X east, Y up,
  * Z south, as the launch complex — at the height the simulation puts its
@@ -22,6 +24,8 @@ import type { Vec3 } from '../physics/vec3';
 import type { SceneManager } from './scene';
 import { disposeObject } from './dispose';
 import { smoothstep } from './noise';
+import { onEllipsoid } from './datum';
+import { buildSteppe, type SteppeView } from './steppe';
 
 /** Slant range past which a landing zone or a drone ship is not drawn, m. */
 const DRAW_RANGE = 150e3;
@@ -29,6 +33,17 @@ const DRAW_RANGE = 150e3;
 const SEA_RADIUS = 6e3;
 /** Below this a ship coming home gets its sea drawn under it, m. */
 const SEA_FROM_ALTITUDE = 40e3;
+/** Below this a return on land gets its ground drawn under it, m (render/steppe.ts). */
+const LAND_FROM_ALTITUDE = 30e3;
+/**
+ * Slant range over which that ground fades in, m: from 12 km and nearer its
+ * bodies are seen against it, and the 1.3 km the drawn globe's facets lie
+ * under the sphere there (render/steppe.ts) would show.
+ */
+const LAND_NEAR = 12e3;
+const LAND_FAR = 30e3;
+/** The step that ground is re-centred in under the body coming down, m (its fields stay where they lie). */
+const LAND_STEP = 1000;
 
 /** A local frame on the rotating Earth at a latitude and longitude (rad). */
 class SurfaceAnchor {
@@ -192,6 +207,8 @@ export class RecoverySceneryView {
   private readonly pads: SurfaceAnchor[] = [];
   private readonly ship: SurfaceAnchor;
   private readonly sea: SurfaceAnchor;
+  /** C01: the ground under a return on land, made the first time one comes down */
+  private land: { anchor: SurfaceAnchor; view: SteppeView } | null = null;
 
   constructor(site: SiteExtra) {
     const mat: Mat = (color, metal = 0.1, rough = 0.7) => {
@@ -237,8 +254,13 @@ export class RecoverySceneryView {
     } else {
       this.ship.group.visible = false;
     }
+    // C01: a return flown on WGS-84 heights comes down on land (Vostok-1, on the Saratov steppe): the fields under
+    // it, and no sea, through its descent, its landing and after
+    const onLand = onEllipsoid(frame);
+    if (onLand && frame.altitude < LAND_FROM_ALTITUDE) this.placeLand(scene, frame);
+    else if (this.land) this.land.anchor.group.visible = false;
     // A ship coming home over the sea: open water under it from the belly flop on.
-    const home = (frame.status === 'descent' && frame.altitude < SEA_FROM_ALTITUDE) || frame.status === 'landed';
+    const home = !onLand && ((frame.status === 'descent' && frame.altitude < SEA_FROM_ALTITUDE) || frame.status === 'landed');
     if (home) {
       const r = Math.hypot(frame.r.x, frame.r.y, frame.r.z);
       this.sea.lat = Math.asin(frame.r.z / r);
@@ -246,6 +268,36 @@ export class RecoverySceneryView {
       this.sea.place(scene, frame.theta);
     } else {
       this.sea.group.visible = false;
+    }
+  }
+
+  /**
+   * The fields under the return's body (the frame's: Vostok's sphere), on the drawn sphere, in a disc held on a
+   * LAND_STEP grid of latitude and longitude, so it follows the sphere down in steps while its fields, laid out
+   * on the ground itself, stay put (render/steppe.ts); faded in with the camera's distance.
+   */
+  private placeLand(scene: SceneManager, frame: VisualFrame): void {
+    if (!this.land) {
+      const anchor = new SurfaceAnchor(0, 0, R_EARTH);
+      const view = buildSteppe();
+      anchor.group.add(view.group);
+      this.group.add(anchor.group);
+      this.land = { anchor, view };
+    }
+    const { anchor, view } = this.land;
+    const r = Math.hypot(frame.r.x, frame.r.y, frame.r.z);
+    const lat = Math.asin(frame.r.z / r);
+    let lon = Math.atan2(frame.r.y, frame.r.x) - frame.theta;
+    lon = Math.atan2(Math.sin(lon), Math.cos(lon));
+    const dLat = LAND_STEP / R_EARTH;
+    anchor.lat = Math.round(lat / dLat) * dLat;
+    const dLon = LAND_STEP / (R_EARTH * Math.cos(anchor.lat));
+    anchor.lon = Math.round(lon / dLon) * dLon;
+    view.centre(anchor.lat, anchor.lon);
+    if (anchor.place(scene, frame.theta)) {
+      const fade = 1 - smoothstep(LAND_NEAR, LAND_FAR, anchor.group.position.distanceTo(scene.camera.position));
+      view.setOpacity(fade);
+      anchor.group.visible = fade > 0;
     }
   }
 
