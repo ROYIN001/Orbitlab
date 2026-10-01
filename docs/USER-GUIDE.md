@@ -699,9 +699,9 @@ returns.
 - **Sized for the worst case:** the torques (the gravity gradient at a 45° tilt, the magnetic field
   over the pole), the loads (the same in sunlight and shadow), and a low orbit's end of life (a
   controlled re-entry, the perigee lowered to 50 km).
-- **Some templates do not close, and say so:** the communications and weather satellites' tanks are
-  668 and 632 m/s short of fifteen years in their slot, and the science class's 26 m/s short of its
-  controlled re-entry. That is what their classes' propellant holds, not a fault in the designer.
+- **Some templates do not close, and say so:** the communications satellite's tanks are 668 m/s
+  short of its fifteen years in its slot, the weather satellite's 632 m/s short of its ten, and the
+  science class's 26 m/s short of its controlled re-entry. That is what their classes' propellant holds, not a fault in the designer.
 - **Charge cycles a year** count an eclipse every revolution, so they read "at most".
 
 ## 1. Set up a mission
