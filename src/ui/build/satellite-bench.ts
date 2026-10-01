@@ -364,7 +364,7 @@ export class SatelliteBench {
       line.append(stop);
       box.append(line);
     } else {
-      const go = button('watch-btn primary', t('build.sat.life.run', { years: tCount('build.sat.n.years', d.lifeYears + 25) }), () => this.runLifetime());
+      const go = button('watch-btn primary', t('build.sat.life.run', { years: tCount('build.sat.n.years', d.lifeYears + 25, (d.lifeYears + 25) % 1 ? 1 : 0) }), () => this.runLifetime());
       go.dataset.k = `${P}lifeRun`;
       go.disabled = refused || !fig;
       box.append(go);
