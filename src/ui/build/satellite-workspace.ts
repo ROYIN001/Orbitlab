@@ -29,8 +29,8 @@
 import { t } from '../../i18n';
 import { satelliteDesignProblems, type SatelliteDesignIssue } from '../../config/satellite-design';
 import {
-  FIRST_TEMPLATE, SATELLITE_DRAFT_KEY, TEMPLATE_TEXT, designDateJd, designDateOf, designFigures, designFromTemplate, keptSatelliteText, newSatelliteId,
-  restoreKeptSatellite, type DesignDate, type SatelliteDraft, type SatelliteFigures,
+  FIRST_TEMPLATE, SATELLITE_DRAFT_KEY, TEMPLATE_TEXT, designDateJd, designFigures, designFromTemplate, keptSatelliteText, newSatelliteId,
+  restoreKeptSatellite, todayDesignDate, type DesignDate, type SatelliteDraft, type SatelliteFigures,
 } from '../../design/satellite-model';
 import type { SatelliteDesign } from '../../design/satellite-spec';
 import { DEFAULT_ACTIVITY_LEVEL, type EcssLevel } from '../../orbit/satellite-air';
@@ -72,7 +72,7 @@ export class SatelliteWorkspace {
     const name = defaultNameFor(FIRST_TEMPLATE);
     const restored = restoreKeptSatellite(kept);
     this.draft = restored ?? { design: designFromTemplate(FIRST_TEMPLATE, newSatelliteId(), name), recordId: null, defaultName: name };
-    this.dateShown = restored?.date ?? designDateOf(new Date());
+    this.dateShown = restored?.date ?? todayDesignDate();
     // written once the page is being left too, so a change made just before a reload is kept
     addEventListener('pagehide', () => this.write());
   }

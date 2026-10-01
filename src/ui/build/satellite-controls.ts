@@ -14,7 +14,7 @@
  */
 import { getLang, t } from '../../i18n';
 import {
-  DIFFRACTION_WAVELENGTH, SHOWN, designDateOf, fieldOrigin, ssoInclinationDeg, valueAt, withCamera, withChoice, withEngine, withSso, withValue, type SatelliteField,
+  DIFFRACTION_WAVELENGTH, SHOWN, fieldOrigin, ssoInclinationDeg, todayDesignDate, valueAt, withCamera, withChoice, withEngine, withSso, withValue, type SatelliteField,
 } from '../../design/satellite-model';
 import { typedText } from '../../design/number-entry';
 import type { SatelliteDesign } from '../../design/satellite-spec';
@@ -126,7 +126,7 @@ export function designDateField(ws: SatelliteWorkspace, prefix: string): HTMLEle
   box.value = ws.date;
   box.dataset.k = `${prefix}date`;
   box.addEventListener('change', () => { if (!ws.setDate(box.value)) box.value = ws.date; });
-  const today = button('watch-btn link bsat-today', t('build.sat.date.today'), () => { ws.setDate(designDateOf(new Date())); box.value = ws.date; });
+  const today = button('watch-btn link bsat-today', t('build.sat.date.today'), () => { ws.setDate(todayDesignDate()); box.value = ws.date; });
   today.dataset.k = `${prefix}today`;
   const wrap = el('div', 'bsat-date-field');
   wrap.append(field(t('build.sat.date'), box, 'bx-field'), today);

@@ -811,6 +811,17 @@ export function designDateJd(date: string): number | null {
 /** A moment's day as a design date (UTC). */
 export const designDateOf = (at: Date): DesignDate => at.toISOString().slice(0, 10);
 
+/**
+ * Today as the student's calendar has it, as a design date: the local day,
+ * not the UTC one, which before 07:00 in Bangkok or 10:00 in Vladivostok is
+ * still yesterday. The figures are then read from that day's 0 h UTC, as for
+ * any design date.
+ */
+export function todayDesignDate(now: Date = new Date()): DesignDate {
+  const two = (n: number): string => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+}
+
 /** The first draft: NAPA-2, a Thai design small enough to change by hand. */
 export const FIRST_TEMPLATE = 'napa2';
 

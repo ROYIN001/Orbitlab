@@ -16,7 +16,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { julianDate } from '../src/physics/orbital';
 import {
-  SATELLITE_DRAFT_KEY, designDateJd, designDateOf, designFigures, designFromTemplate, keptSatelliteText, restoreKeptSatellite,
+  SATELLITE_DRAFT_KEY, designDateJd, designDateOf, designFigures, designFromTemplate, keptSatelliteText, restoreKeptSatellite, todayDesignDate,
 } from '../src/design/satellite-model';
 import { SatelliteWorkspace } from '../src/ui/build/satellite-workspace';
 
@@ -26,6 +26,10 @@ describe('the design date', () => {
     expect(designDateJd('2000-01-01')).toBe(2451544.5);
     for (const bad of ['', '2026-02-30', '2026-13-01', '2026-1-1', '1956-12-31', '2201-01-01', '2026-10-01T00:00', 'today']) expect(designDateJd(bad)).toBeNull();
     expect(designDateOf(new Date(Date.UTC(2026, 9, 1, 23, 59)))).toBe('2026-10-01');
+    // ADDED IN REVIEW: today is the student's calendar day, whatever the time zone (local times, so in any zone the test runs in)
+    expect(todayDesignDate(new Date(2026, 9, 2, 0, 30))).toBe('2026-10-02');
+    expect(todayDesignDate(new Date(2026, 9, 1, 23, 59))).toBe('2026-10-01');
+    expect(todayDesignDate(new Date(2027, 0, 5, 12))).toBe('2027-01-05');
   });
 
   it('is kept with the draft, and a draft kept before it restores without one', () => {
@@ -44,7 +48,8 @@ describe('the workspace\'s figures on the design date', () => {
   beforeEach(() => {
     store.clear();
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(Date.UTC(2026, 9, 1, 15, 30)));
+    // a local 15:30, so today is 1 October in whatever zone the test runs (review: today is the local day)
+    vi.setSystemTime(new Date(2026, 9, 1, 15, 30));
     vi.stubGlobal('localStorage', {
       getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); }, removeItem: (k: string) => { store.delete(k); },
     });
