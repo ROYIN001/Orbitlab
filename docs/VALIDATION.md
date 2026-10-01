@@ -348,6 +348,13 @@ the merge of that work with main, in point mass:
 The smaller reserve burns the first stage longer, which is what SSO-A needed (above) and what
 Iridium NEXT 8's T+140 s speed did not. Nothing was fitted.
 
+The six-DOF comparison (`tests/heavy/validation-falcon9.test.ts`, outside `npm test`) was not
+re-measured with that work and was found failing on the first `npm run test:heavy` after it, on
+2026-10-01. In six-DOF only Bangabandhu-1 moved: 9 → 11 of its 14 rows, the MECO speed (2 042 m/s
+against 2 259 ± 231) and the second stage's start (150.2 s against 163.0 ± 16.3) now agreeing. Its
+maximum dynamic pressure time, T+140 s altitude and SECO altitude still disagree. The other four
+flights' six-DOF rows are unchanged.
+
 **What is left of F1 and F2.** MECO is now 4–10 % early (it was 7–12 %). The expended flight's
 first-stage burn is 157.9 s against 168 s. The speed at T+100 s is within 1–16 % (it was 2–22 %).
 The first minute moved the other way: the heavier stack is 1–11 % slow at T+60 s, where it was
@@ -543,15 +550,6 @@ Soyuz-2.1a already uses). The point-mass programme is unchanged.
 
 Six-DOF rows in tolerance, all five flights: **48 → 53 of 66**. The disagreements left are listed
 in `tests/heavy/validation-falcon9.test.ts`. The point-mass rows are unchanged (49 of 66).
-
-**Re-measured with the drone-ship reserve sized for the mission** (above, "The drone-ship reserve
-sized for the mission"). That work and this fit were made side by side and first measured together
-on main at 0cbb50e. Bangabandhu-1's smaller reserve burns its first stage longer: MECO at T+143.2 s
-(flight 152.0 ± 15.2 s) at 2 042 m/s (flight 2 259 ± 231 m/s), and the second stage starts at
-T+150.2 s (163.0 ± 16.3 s). Both now agree, so it has 11 of its 14 rows in tolerance in six-DOF,
-up from 9. The three left are max Q (53.0 s against 74.0 s, F3), the altitude at T+140 s
-(65.4 km against 53.5 ± 9.0 km, F5) and the 250 km parking orbit (F6). The other four flights'
-six-DOF lists did not change. Six-DOF rows in tolerance, all five flights: **53 → 55 of 66**.
 
 **What else the change moved** (`npm test` green; the two long suites re-run separately):
 

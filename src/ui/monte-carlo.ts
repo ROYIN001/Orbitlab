@@ -100,7 +100,7 @@ function reasonName(key: string): string {
 
 /** A canvas sized to its box at the screen's pixel ratio, cleared to the chart surface. */
 function prepare(canvas: HTMLCanvasElement): { g: CanvasRenderingContext2D; w: number; h: number } {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
   const w = canvas.clientWidth || 320, h = canvas.clientHeight || 200;
   if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
   const g = canvas.getContext('2d')!;
