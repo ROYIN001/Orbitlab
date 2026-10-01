@@ -2895,6 +2895,7 @@ export const en: Record<string, string> = {
   'build.req.note.power': 'Array and battery: for the longest eclipse of the year, by the closed form at the worst β angle; with daylight looks only, the payload is off in the shadow. The bench sizes them again from its sampled orbit, with every load on.',
   'build.req.note.life': 'Lifetime: the lowest altitude that lasts the life, searched by the lifetime analysis at a fixed level of solar activity, to within ±5 km. Below it the engine must make up the drag (the Δv shown); inside the search\'s last 10 km a row is not proven to last.',
   'build.req.note.disposal': 'Δv to leave: from lowering the perigee to the altitude that comes down in time (too little) to Hull\'s controlled re-entry with a 50 km perigee (enough). The verdict uses the upper figure.',
+  'build.req.note.held': 'With an engine, the bench budgets the drag make-up through the mission and a controlled re-entry at its end, and asks the satellite to come down within 25 years of its design orbit; the table lets an orbit that lasts its life by drag alone count the life plus 25 years. So the bench can say no where a row says yes.',
   'build.req.note.revisit': 'Longest wait: the longest gap between looks over one repeat of the ground track, found by walking along it; by day, for the season of the date worked out for.',
   'build.req.note.mass': 'The mass, the bus and the drag area stay the template\'s.',
   'build.req.designName': 'From requirements: {cycle} at {h}',

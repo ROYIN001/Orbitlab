@@ -570,8 +570,11 @@ export class RequirementsPage {
       }
     }
     const notes = el('ul', 'brq-notes');
+    // with an engine the bench's end of life is not the table's (src/design/satellite-model.ts budgets a controlled
+    // re-entry and counts the 25 years from the design orbit): said, as the two can disagree on a row
+    const held = r.template.propulsion ? ['build.req.note.held'] as const : [];
     for (const key of ['build.req.note.binds', 'build.req.note.gsd', 'build.req.note.rate', 'build.req.note.power', 'build.req.note.life',
-      'build.req.note.disposal', 'build.req.note.revisit', 'build.req.note.mass'] as const) {
+      'build.req.note.disposal', ...held, 'build.req.note.revisit', 'build.req.note.mass'] as const) {
       const li = el('li', undefined, t(key));
       if (key === 'build.req.note.mass' || key === 'build.req.note.power') li.append(' ', el('em', 'bs-est', t('build.stat.estimate')));
       notes.append(li);
