@@ -70,11 +70,18 @@ const nextWindow = (s: MissionState) => { s.launchTime = launchWindows(s.orbit, 
 
 // what a student types, worked from the numbers on screen
 const MU = 398600.4418, R = 6378.137;
-/** The reached heights as the result card shows them, to 0.1 km. */
-const heights = (sim: Simulation) => ({
-  hp: Math.round(MEASURES['orbit.perigee'].read(sim)! * 10) / 10,
-  ha: Math.round(MEASURES['orbit.apogee'].read(sim)! * 10) / 10,
-});
+/**
+ * The reached heights as the event log's "Target orbit achieved" line gives
+ * them, in whole km: the moment of insertion, where the flight is graded.
+ * Later the osculating heights on screen swing by tens of km under J₂ (a GTO's
+ * a by ±27 km over an orbit, measured), which is why the briefs send students
+ * to this line.
+ */
+const heights = (sim: Simulation) => {
+  const e = sim.events.find((x) => x.key === 'evt.targetOrbit');
+  if (!e) throw new Error('no target orbit');
+  return { hp: Number(e.params!.pe), ha: Number(e.params!.ap) };
+};
 const circle = (h: number) => {
   const r = R + h;
   return { speed: Math.sqrt(MU / r), period: 2 * Math.PI * Math.sqrt(r ** 3 / MU) / 60 };
