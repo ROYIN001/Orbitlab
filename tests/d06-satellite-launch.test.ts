@@ -62,6 +62,7 @@ import {
   designLaunch, designMission, designMissionDocument, designMissionIssues, designSite, designTargetOrbit, launchSpecId, satelliteSpecFromDesign,
 } from '../src/design/satellite-launch';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
+import { ballisticDigits } from '../src/ui/build/satellite-text';
 
 const FROM = new Date(Date.UTC(2026, 9, 1, 12));
 const rel = (a: number, b: number): number => Math.abs(a - b) / Math.abs(b);
@@ -154,6 +155,18 @@ describe('a design as the satellite a mission carries (D06, integration)', () =>
     // the draw reaches both sides
     expect(flown).toBeGreaterThan(50);
     expect(refused).toBeGreaterThan(5);
+  });
+});
+
+describe('the C_D·A/m Fly it gives when it holds a design back (added in review)', () => {
+  it('keeps three figures below 0.001 m²/kg, so a dense design\'s does not read as the 0.0001 it is held to', () => {
+    expect(ballisticDigits(0.0134)).toBe(4);
+    expect(ballisticDigits(1.009)).toBe(4);
+    expect(ballisticDigits(1e-3)).toBe(4);
+    expect(ballisticDigits(9.99e-4)).toBe(6);
+    expect(ballisticDigits(4.1e-5)).toBe(7);
+    expect((4.1e-5).toFixed(ballisticDigits(4.1e-5))).toBe('0.0000410');
+    expect(ballisticDigits(1e-12)).toBe(10);
   });
 });
 

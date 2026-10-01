@@ -33,7 +33,7 @@ import { button, el, hhmm, num } from '../orbit/dom';
 import { localized, siteName } from '../names';
 import { fairingFitText } from '../fairing-fit';
 import { field, select } from './explore-level';
-import { sayFig } from './satellite-text';
+import { ballisticDigits, sayFig } from './satellite-text';
 import { unbroken } from './figures';
 import type { SatelliteWorkspace } from './satellite-workspace';
 
@@ -116,9 +116,10 @@ export class SatelliteFly {
       }
       if (launch.problems.length) {
         cannot = true;
-        const b = launch.problems.some((p) => p.path === 'area');
-        const text = b
-          ? t('build.sat.fly.ballistic', { lo: num(B_RANGE[0], 4), hi: num(B_RANGE[1]), b: num((launch.spec.cd! * launch.spec.area!) / launch.spec.mass, 4), u: t('u.m2kg') })
+        const ballistic = launch.problems.some((p) => p.path === 'area');
+        const b = (launch.spec.cd! * launch.spec.area!) / launch.spec.mass;
+        const text = ballistic
+          ? t('build.sat.fly.ballistic', { lo: num(B_RANGE[0], 4), hi: num(B_RANGE[1]), b: num(b, ballisticDigits(b)), u: t('u.m2kg') })
           : t('build.sat.fly.refused');
         parts.push(this.note(text, 'warn'));
       } else {

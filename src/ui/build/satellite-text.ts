@@ -33,6 +33,13 @@ function rate(v: number): string {
 /** A small or a large quantity: a plain number, or × 10ⁿ where it would need many zeros. */
 const flexible = (v: number, d = 2): string => (v !== 0 && (Math.abs(v) < 0.01 || Math.abs(v) >= 1e6) ? sci(v, d) : num(v, Math.abs(v) < 1 ? 3 : d));
 
+/**
+ * The decimals a C_D·A/m (m²/kg) is shown with: four, and below 0.001 as
+ * many more as keep three figures — a dense satellite's 0.00004 m²/kg read
+ * as "0.0000" would sit under the 0.0001 it is held to and look equal to it.
+ */
+export const ballisticDigits = (v: number): number => (v > 0 && v < 1e-3 ? Math.min(10, 2 - Math.floor(Math.log10(v))) : 4);
+
 /** A figure in its unit, as the app shows it; `digits` overrides the decimals where the unit's default is not right. */
 export function sayFig(f: Fig, digits?: number): string {
   const v = f.value;
@@ -54,7 +61,7 @@ export function sayFig(f: Fig, digits?: number): string {
     case 'W/m2': s = `${n(0)} ${t('build.sat.u.Wm2')}`; break;
     case 'm2': s = `${n(Math.abs(v) < 1 ? 3 : Math.abs(v) < 10 ? 2 : 1)} ${t('build.eng.u.m2')}`; break;
     case 'kg': s = `${n(Math.abs(v) < 100 ? 1 : 0)} ${t('u.kg')}`; break;
-    case 'm2/kg': s = `${n(4)} ${t('u.m2kg')}`; break;
+    case 'm2/kg': s = `${n(ballisticDigits(Math.abs(v)))} ${t('u.m2kg')}`; break;
     case 'kg/m3': s = `${v === 0 ? '0' : sci(v, 2)} ${t('build.sat.u.kgm3')}`; break;
     case 'm/s': s = `${n(1)} ${t('u.ms')}`; break;
     case 'm/s/yr': s = `${n(2)} ${t('build.sat.u.msYear')}`; break;
