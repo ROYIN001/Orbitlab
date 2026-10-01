@@ -36,7 +36,12 @@
  *   after separation the flight's mass is the design's wet mass (to 1e-6 kg);
  *   the orbit is the design's within 30 km in each apsis (the Explore journey's
  *   bound for a 500 km orbit, tests/browser/journeys/launch-explore.mjs) and
- *   0.3° in inclination; the flight carries the spec (its configuration, its
+ *   0.3° in inclination (ADDED IN REVIEW, and in the node: the design's
+ *   right ascension moved by the equation of time, since the Launch section
+ *   aims a local time at the true Sun, `raanFromLtan`, and the design at the
+ *   mean Sun, `raanForLocalTime` — the same 0.3°, written after NAPA-2's
+ *   0.15° residual had been seen in review and before THEOS-2's was run);
+ *   the flight carries the spec (its configuration, its
  *   payload's size in the frames, `satId` in the separation event) and the
  *   mission it records (`flownMission`) is version 3 with the spec in it.
  */
@@ -44,6 +49,8 @@ import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
 import { FlightRecorder } from '../src/replay/recorder';
 import { DEG } from '../src/physics/constants';
+import { sunRightAscension, wrapPi } from '../src/physics/orbital';
+import { meanSunRightAscension } from '../src/orbit/kepler';
 import { SATELLITE_TEMPLATES } from '../src/data/satellite-templates';
 import { ORBIT_PRESETS } from '../src/data/orbits';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
@@ -304,6 +311,10 @@ describe('a designed satellite flown in Launch (D06, integration)', () => {
       expect(Math.abs(got.periapsisAlt - c.design.orbit.perigee) / 1e3).toBeLessThanOrEqual(30);
       expect(Math.abs(got.apoapsisAlt - c.design.orbit.apogee) / 1e3).toBeLessThanOrEqual(30);
       expect(Math.abs(got.i - want.i) / DEG).toBeLessThanOrEqual(0.3);
+      // the node: the design's, moved by the equation of time (Launch aims its local time at the true Sun, the design at the mean Sun)
+      const jd = cfg.launchTime.getTime() / 86400e3 + 2440587.5;
+      const node = want.raan - (meanSunRightAscension(jd) - sunRightAscension(jd));
+      expect(Math.abs(wrapPi(got.raan - node)) / DEG).toBeLessThanOrEqual(0.3);
       // the mission the flight records: version 3, the spec in it
       const flown = flownMission(sim.cfg);
       expect(flown.version).toBe(3);

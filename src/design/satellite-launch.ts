@@ -44,6 +44,12 @@
  * figures take it). A preset whose inclination is the launch site's
  * (`'site'`) or whose perigee is not on the node (Molniya, Tundra) is never
  * taken for a design: its orbit would change with the site or the perigee.
+ * The local time is carried as it is, though the two do not read it alike:
+ * the Launch section aims a node's local time at the true Sun
+ * (`raanFromLtan`, src/physics/mission.ts), the design at the mean Sun
+ * (`raanForLocalTime`, src/orbit/kepler.ts), so the flight's node is the
+ * design's moved by the equation of time — up to about 16 minutes (4°),
+ * 10.5 minutes on 1 October (tests/d06-satellite-launch.test.ts measures it).
  *
  * THE MISSION (`designMission`): the vehicle given — the Launch section's
  * own (a custom one included, S02) or one the student picks — from a site
