@@ -902,6 +902,18 @@ The six-DOF fleet matrix and its dedicated missions (`npm run test:sixdof-fleet`
 - *Three still lower first*, with the apex inside the band: Soyuz-2.1b's LEO and ISS-plane rows
   at 25 % (508.5 and 428.3 km) and Electron's ISS-plane row at 50 % (429.9 km).
 
+The matrix was first flown with all nine circularising first. Re-flown with the final rule, the
+three that lower first end as they did before this change: 498.4 × 501.6, 418.4 × 421.6 and
+417.4 × 422.1 km. So do the heavy tests that fly Soyuz-2.1b's 25 % LEO row:
+
+- its Monte Carlo set: 25 of 30 runs on target, perigee and apogee 3σ 7.2 and 7.6 km, the same as
+  without the change;
+- its flexible flight;
+- its PEG and IGM flights.
+
+The flexible Long March 2D and Electron flights and Electron's PEG and IGM flights passed under
+the first version of the rule.
+
 None of the others reached that branch; the rows that raise a low apex first fly as they did. No
 tank ran dry on a coast with a burn ahead.
 
