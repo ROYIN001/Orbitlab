@@ -79,7 +79,8 @@ any academy, and no service or academy name or emblem is used without written pe
   send it into the Orbit section or fly it to its orbit in Launch as the mission's own satellite.
 - **Instructor mode**: a teacher writes a flight or a satellite-design lesson, hands it out as a
   file or a link, and re-checks the class's results files on their own computer, each flight flown
-  again with the student's commands. No accounts, and nothing leaves the device.
+  again with the student's commands. No accounts, and nothing about a student leaves the device; a
+  `?scenario=` link carries the lesson, and like any address it reaches the server that serves the app.
 - **Lesson packs** matched to curricula: IPST's science and physics courses (Thailand), the Royal
   Thai Air Force Academy's programme and Russia's speciality 24.05.06, drafts awaiting review.
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
