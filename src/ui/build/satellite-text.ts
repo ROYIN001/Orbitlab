@@ -165,7 +165,8 @@ export function figureTable(rows: readonly (readonly [string, string, string?])[
   const dl = el('dl', 'bsat-dl');
   for (const [label, value, note] of rows) {
     const row = el('div', 'bsat-row');
-    const dt = el('dt', undefined, label);
+    // a label's own figure ("Diffraction limit (550 nm)") stays with its unit too (W)
+    const dt = el('dt', undefined, keepUnits(label));
     if (note) dt.append(' ', el('em', 'bs-est', note));
     // each figure keeps its number and unit on one line; a pair ("520 km × 540 km", "35 min (37 %)") may part between its figures
     const dd = el('dd');
