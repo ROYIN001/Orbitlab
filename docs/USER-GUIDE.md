@@ -665,9 +665,11 @@ returns.
   satellite with an engine the Δv to hold the orbit (one with none "comes down within the life");
   the Δv to dispose of it, as a range; and **what binds**, the requirement nearest to failing, as a
   percentage of what is allowed or carried. Over 100 % is not met, and every unmet requirement is
-  listed. **Only the orbits that meet every requirement** filters the rest out. A row inside the
-  lifetime search's bracket says "not proven to last". The GSD is met looking straight down; the
-  row gives the coarser one at the largest tilt.
+  listed. Above the table the page says how many orbits meet every requirement; **Only the orbits
+  that meet every requirement** filters the rest out, and when none does, the page says so (untick
+  it to see what binds each). The table shows 40 rows at a time; **Show 40 more of …** adds the
+  next. A row inside the lifetime search's bracket says "not proven to last". The GSD is met
+  looking straight down; the row gives the coarser one at the largest tilt.
 - **The charts:** the lifetime against altitude, with the life asked and the life plus 25 years;
   and the aperture the GSD needs against altitude, with the template's aperture and the altitude
   where the two cross.
