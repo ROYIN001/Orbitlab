@@ -536,8 +536,8 @@ has been opened in this session), a saved design, or a launcher sized here.
 
 ## 0c. The Build section: satellites designed, tested and flown
 
-Build designs satellites too. At Explore and Engineer, the switch above the level — **Build a**
-**Rocket** or **Satellite** — changes what is on the bench: at Explore the satellite is **Design a
+Build designs satellites too. At Explore and Engineer, the switch above the level ("Build a"
+**Rocket** or **Satellite**) changes what is on the bench: at Explore the satellite is **Design a
 satellite**, at Engineer the **Satellite bench**, and both work on the same design. (Watch takes
 rockets apart only.) Every figure is worked out as you type, by the same satellite physics at both
 levels, for a day you choose. What the designer cannot know is marked as an estimate, and the last
@@ -583,7 +583,7 @@ checks accept the design.
 
 ### Fly it in the Launch section
 
-- **Choose the launch vehicle:** the Launch section's current rocket first, then the fleet. The box
+- **Launch vehicle:** the Launch section's current rocket first, then the fleet. The box
   says what will fly: the rocket and its launch site, the target orbit (a preset's name, or "a
   custom orbit of 520 × 540 km, sun-synchronous with the ascending node at 22:30"), the mass with
   full tanks, what the satellite's own engine will do, and whether it fits the fairing. That last is
@@ -748,6 +748,16 @@ vehicle listed first in the vehicle menu as "*name* — custom vehicle", and it 
 other. Every figure in it is checked before it flies — masses and sizes above zero, engine figures
 a chemical engine can have, at most six stages, strap-ons on the first stage only — and a vehicle
 that fails the check is not flown: the note names the vehicle as reset. Picking a catalogue vehicle from the menu drops the custom one.
+
+Since version 3 a file can carry a **satellite of its own** too, designed in the Build section and
+handed over with **Fly it** (section 0c). It is listed first in the payload menu as "*name* — custom
+satellite" (the name as its designer wrote it, not translated), it flies with its own mass, size
+and engine, and picking a catalogue satellite drops it. Under the payload mass a note says whether
+it fits the fairing: an estimate, the usable space taken as 85 % of the fairing's diameter and 80 %
+of its length, so "May not fit" and "Does not fit" are warnings and do not stop a launch. Only a
+mission that carries such a satellite is written as version 3; an older copy of Orbitlab says the
+file is newer and falls back to a satellite it knows. WebMCP's `configure_mission` cannot make such
+a satellite; given the loaded one's id, it keeps it.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
@@ -1553,30 +1563,34 @@ graded again; a design lesson's result is not flown, its figures are worked out 
 design handed in, on the day and at the solar activity it was graded at. Each result is:
 - **Match**: the same grade and the same numbers;
 - **Borderline**: a number too close to a limit to be sure;
-- **Differs**: edited, made on another version of Orbitlab, or not the lesson the student had (a
-  result that names its version but lacks its grading time or its commands differs);
+- **Differs**: edited, made on another version of Orbitlab, or not the lesson the student had. A
+  result that names its version but lacks its grading time or its commands is not excused as an old
+  one: if its numbers come out different, it differs;
 - **Cannot re-fly** (for a design, **Cannot work out again**), with the reason: a six-DOF flight
   (minutes each) or a case lesson, a damaged record (the rest of the class is still checked), or a
-  result saved before this version, which lacks the grading time, the commands and the version and
-  can only be flown again approximately.
+  result saved before this version whose numbers come out different. Such a result lacks the grading
+  time, the commands and the version, so it can only be flown again approximately, and a difference
+  says nothing about an edit; if its numbers come out the same, it is a match.
 
-The check says whether each file changed after it was saved, its times are UTC, and **Save as CSV**
-keeps it. A teacher's lessons keep their catalogue numbers here, and over WebMCP `check_results`
-runs the same check. Every flight you watch is the
-flight the simulator flies without drawing it, so the same launch ends in the same orbit at any time
-warp or frame rate; an Abort or a TORU command takes effect at the simulation's next step (at most a
-tenth of a second later low in the atmosphere, up to a second on a far approach), and the picture
-moves on to it. That is what lets your computer fly a student's flight again and get their numbers;
-a grade counts only what the picture has reached, so lesson 5.2's docking is ticked when the picture
-docks.
+The check lists what each result lacks, says whether each file changed after it was saved, gives
+its times in UTC, and **Save as CSV** keeps it. A teacher's lessons keep their catalogue numbers
+here, and over WebMCP `check_results` runs the same check.
+
+**Why a flight can be flown again.** Every flight you watch is the flight the simulator flies
+without drawing it, so the same launch ends in the same orbit at any time warp or frame rate; an
+Abort or a TORU command takes effect at the simulation's next step (at most a tenth of a second
+later low in the atmosphere, up to a second on a far approach), and the picture moves on to it.
+That is what lets your computer fly a student's flight again and get their numbers. A grade counts
+only what the picture has reached, so lesson 5.2's docking is ticked when the picture docks.
 
 **What is kept, and what never leaves the device.** There are no accounts. Progress, results and
 your lessons stay in the browser and in the files you choose to save. A results file keeps, besides
-the name if one is typed, each lesson's attempts, hints and grades and, for each flight, the mission
-flown, the moment it was graded, the moment on screen, the commands given and the app's version; for
-a design lesson, the design handed in, its date, its solar activity and its figures. Checking
-results sends nothing anywhere: the files are read and flown again in your browser. A results file
-can hold a student's name, so keep the files where your school keeps marks. A `?scenario=` or `?m=`
+the name if one is typed, the placement tests' results and each lesson's attempts: its grades, the
+answers typed, the hints and any answers shown, and, for each flight, the mission flown, the moment
+it was graded, the moment on screen, the commands given and the app's version; for a design lesson,
+the design handed in, its date, its solar activity and its figures. Checking results sends
+nothing anywhere: the files are read and flown again in your browser. A results file can hold a
+student's name, so keep the files where your school keeps marks. A `?scenario=` or `?m=`
 link carries the lesson or the mission in its address, which reaches the web server that serves the
 app as any address does; it holds nothing about any student. The checksum on a results file shows
 whether it was changed after it was saved; it is a check against accidents, not a signature.
