@@ -3,7 +3,7 @@
  * orbital sequence, max-Q and the structural placard, and the insertion floor.
  */
 import { MU_EARTH, R_EARTH, RAD } from '../constants';
-import { norm } from '../vec3';
+import { norm, type Vec3 } from '../vec3';
 import type { OrbitalElements } from '../orbital';
 import { orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
 import { CAPSULE_SEPARATION_DELAY } from './abort';
@@ -31,6 +31,22 @@ export class AscentMonitor {
   /** a suborbital cut-off has been judged (a capsule rides the stack on to its separation) */
   suborbitalCut = false;
   sinkingSince = -1;
+  /**
+   * C01: a stage burning on past a cut-off command that did not pass
+   * (`OrbitSpec.backupCutoff`): the attitude it holds, the speed it still has
+   * to gain until the backup stops it, m/s, and the time that was last
+   * counted. Null when no such over-run is under way.
+   */
+  overrun: { dir: Vec3; dvLeft: number; t: number } | null = null;
+  /** the backup cut-off has been flown (it is flown once) */
+  private overrunFlown = false;
+
+  /** Seconds of thrust the over-run still has to run, at the current acceleration; Infinity when none is running. */
+  overrunTimeLeft(): number {
+    const s = this.sim.state;
+    if (!this.overrun || !(s.thrust > 0) || !(s.mass > 0)) return Infinity;
+    return this.overrun.dvLeft / (s.thrust / s.mass);
+  }
 
   /**
    * Whether the vehicle could still light an engine after shutting the current
@@ -94,7 +110,8 @@ export class AscentMonitor {
   singleShotCutoff(el: OrbitalElements, alt: number): boolean {
     if (el.e >= 1 || this.canReigniteAfterCutoff()) return false;
     if (!this.sim.state.liftoff || alt < 100e3) return false;
-    if (orbitResiduals(this.sim.plan.target, el, this.sim.raanWasReachable(), SINGLE_SHOT_CUTOFF_BAND).onTarget) return true;
+    // the orbit the ascent is aimed at (`MissionPlan.aim`, C01: Vostok-1's planned one), else the mission's
+    if (orbitResiduals(this.sim.plan.aim ?? this.sim.plan.target, el, this.sim.raanWasReachable(), SINGLE_SHOT_CUTOFF_BAND).onTarget) return true;
     if (el.periapsisAlt < Math.min(this.sim.plan.insertionAltitude, ASCENT_MIN_PERIAPSIS)) return false;
     const residual = Math.abs(el.apoapsisAlt - this.sim.plan.insertionApoapsis)
       + Math.abs(el.periapsisAlt - this.sim.plan.insertionAltitude);
@@ -114,12 +131,16 @@ export class AscentMonitor {
       return;
     }
     const s = this.sim.state;
+    if (this.overrun) {
+      this.continueOverrun(el);
+      if (this.overrun) this.rangeSafety(alt, vz);
+      return;
+    }
     const hIns = this.sim.plan.insertionAltitude;
     const haIns = this.sim.plan.insertionApoapsis;
     const tol = 3e3;
     if (this.singleShotCutoff(el, alt)) {
-      this.sim.staging.cutoffAscentStage(this.sim.vehicle.active);
-      this.finishAscent(el);
+      this.commandCutoff(el);
       return;
     }
     // Cut-off. When the insertion orbit is an ellipse (a transfer whose apogee
@@ -157,9 +178,7 @@ export class AscentMonitor {
       && (atPeriapsis || el.apoapsisAlt > haIns + margin)
       && this.canReigniteAfterCutoff();
     if (el.e < 1 && (el.periapsisAlt >= peGate - tol || stalled) && el.apoapsisAlt >= haIns - tol) {
-      const act = this.sim.vehicle.active;
-      this.sim.staging.cutoffAscentStage(act);
-      this.finishAscent(el);
+      this.commandCutoff(el);
       return;
     }
     // Apoapsis guard. The periapsis-based cut-off above never fires on a lofted
@@ -208,6 +227,52 @@ export class AscentMonitor {
       return;
     }
     this.rangeSafety(alt, vz);
+  }
+
+  /**
+   * The ascent's cut-off command. On a flight whose command did not pass
+   * (`OrbitSpec.backupCutoff`) the stage burns on instead, its attitude held,
+   * and `continueOverrun` stops it on the backup.
+   *
+   * C01, Vostok-1 (Baturin, Novaya Gazeta, 11 April 2021, from the archive):
+   * the power supply of the core's radio-control antenna failed at T+156 s, so
+   * the radio command to shut the core down never came; the core stopped
+   * 0.46 s late on the backup time mark (+22.0 m/s) and Blok E ran 2.4 s
+   * longer than calculated — 25.43 m/s in all, an apogee of 327 km against the
+   * 230 km planned. The model's core burns to depletion and its guidance would
+   * take any excess on the core back out of Blok E's burn, so the whole
+   * 25.43 m/s is flown on Blok E: the guidance aims at the planned orbit
+   * (`OrbitSpec.aim`) and the over-run starts where it would have cut off.
+   */
+  private commandCutoff(el: OrbitalElements): void {
+    const s = this.sim.state;
+    const backup = this.sim.cfg.orbit.backupCutoff;
+    if (backup && !this.overrunFlown && backup.dv > 0 && s.thrust > 0 && this.sim.vehicle.active) {
+      this.overrunFlown = true;
+      this.overrun = { dir: { ...s.dir }, dvLeft: backup.dv, t: s.t };
+      return;
+    }
+    this.sim.staging.cutoffAscentStage(this.sim.vehicle.active);
+    this.finishAscent(el);
+  }
+
+  /**
+   * Count the over-run's speed and stop it on the backup once it is gained.
+   * The speed is the thrust's — what the rocket's longitudinal integrator
+   * measured — over the step just flown, at the thrust that step was flown at.
+   */
+  private continueOverrun(el: OrbitalElements): void {
+    const s = this.sim.state;
+    const run = this.overrun!;
+    if (s.mass > 0) run.dvLeft -= (s.thrust / s.mass) * (s.t - run.t);
+    run.t = s.t;
+    // a millimetre per second short is the step's rounding, not speed to gain
+    if (run.dvLeft > 1e-3) return;
+    const backup = this.sim.cfg.orbit.backupCutoff!;
+    this.overrun = null;
+    this.sim.event('evt.backupCutoff', 'warn', { dv: +(backup.dv - run.dvLeft).toFixed(1) });
+    this.sim.staging.cutoffAscentStage(this.sim.vehicle.active);
+    this.finishAscent(el);
   }
 
   /** Range safety / loss of vehicle: falling back without thrust below 100 km. */

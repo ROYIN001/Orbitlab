@@ -224,15 +224,22 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // Vostok 1, 12 April 1961, from Site 1/5: Yuri Gagarin, once round the
   // Earth, 168 × 314 km at 64.95° (GCAT; 181 × 327 km in the older figures).
   // Strap-ons T+119 s, shroud T+156 s, Blok A off and Blok E lit T+300 s,
-  // Blok E off T+676 s (ESA). Home: the TDU-1's pressurising command at
-  // 10:25:04.2 Moscow time, T+4,684.2 s (OKB-1's preliminary report of 3 May
-  // 1961; Baturin, Novaya Gazeta 2021), and the descent flown from there
-  // (`VOSTOK_CAPSULE`, src/physics/rigid/escape.ts; docs/PHYSICS.md §13.6).
+  // Blok E off T+676 s, the spacecraft off ten seconds later (ESA). The orbit
+  // planned was 168 × 230 km (Baturin 2021; Kommersant gives 180 × 235): the
+  // radio command to shut the core down did not pass, and the backups stopped
+  // the core and Blok E 25.43 m/s late (`aim`, `backupCutoff`; docs/PHYSICS.md
+  // §13.6). Home: the TDU-1's pressurising command at 10:25:04.2 Moscow time,
+  // T+4,684.2 s (OKB-1's preliminary report of 3 May 1961; Baturin, Novaya
+  // Gazeta 2021), and the descent flown from there (`VOSTOK_CAPSULE`,
+  // src/physics/rigid/escape.ts; docs/PHYSICS.md §13.6).
   { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok1', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
-    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free', deorbit: { time: 4684.2 } }, launchTime: '1961-04-12T06:07:00Z',
+    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free', deorbit: { time: 4684.2 },
+      aim: { apogee: 230e3 }, backupCutoff: { dv: 25.43 } }, launchTime: '1961-04-12T06:07:00Z',
     flown: { events: [
-      { key: 'evt.boosterSep', t: 119 }, { key: 'evt.fairingSep', t: 156 }, { key: 'evt.meco', t: 300 },
-      { key: 'evt.seco', t: 676 },
+      // the core's cut-off is quoted rounded (Zak gives 299 s; on the December 1960 flight its command was due at
+      // T+308–309 s); the spacecraft's separation is ESA's "ten seconds later"
+      { key: 'evt.boosterSep', t: 119 }, { key: 'evt.fairingSep', t: 156 }, { key: 'evt.meco', t: 300, approx: true },
+      { key: 'evt.seco', t: 676 }, { key: 'evt.payloadSep', t: 686, approx: true },
       // the TDU-1's launch command, its fuel out and the timer's cut-off, to a tenth of a second (OKB-1's report;
       // Lisov and Afanasyev; Baturin); the straps over the Mediterranean at 10:36, the cables a few seconds on
       // (Siddiqi 2015), the ejection at 10:42 and the sphere on the ground at 10:48, each to the minute (the

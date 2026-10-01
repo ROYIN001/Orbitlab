@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, VEHICLES, vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
 import { satelliteById } from '../src/data/satellites';
-import { DEG, G0, R_EARTH } from '../src/physics/constants';
+import { DEG, G0, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import { gmst, julianDate } from '../src/physics/orbital';
 import { add, cross, dot, norm, normalize, scale, sub, v3 } from '../src/physics/vec3';
 import { moonState, R_MOON } from '../src/physics/lunar/ephemeris';
@@ -53,7 +53,8 @@ describe('historical vehicles', () => {
         for (const b of st.boosters ?? []) expect(b.propellantMass).toBeGreaterThan(b.dryMass);
       }
     }
-    // burn times against the published ones: strap-ons 116–120 s, cores 295–301 s, Blok E 365 s
+    // burn times against the flown ones: strap-ons 116–120 s, cores 295–301 s (Vostok-K's from its
+    // ignition 2.5 s before liftoff to about T+300 s), Blok E about 375 s (T+300 to T+676, ESA)
     const sputnik = vehicleById('r7sputnik'), vostok = vehicleById('vostokk');
     const b = (v: typeof sputnik) => v.stages[0].boosters![0];
     expect(burn(b(sputnik).propellantMass, b(sputnik).engine.thrustVac, b(sputnik).engine.ispVac)).toBeGreaterThan(110);
@@ -61,7 +62,9 @@ describe('historical vehicles', () => {
     expect(burn(sputnik.stages[0].propellantMass, sputnik.stages[0].engine.thrustVac, sputnik.stages[0].engine.ispVac)).toBeGreaterThan(285);
     expect(burn(sputnik.stages[0].propellantMass, sputnik.stages[0].engine.thrustVac, sputnik.stages[0].engine.ispVac)).toBeLessThan(310);
     const e = vostok.stages[1];
-    expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 365)).toBeLessThan(10);
+    expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 375)).toBeLessThan(3);
+    expect(Math.abs(burn(b(vostok).propellantMass, b(vostok).engine.thrustVac, b(vostok).engine.ispVac) - 2.5 - 118)).toBeLessThan(2);
+    expect(Math.abs(burn(vostok.stages[0].propellantMass, vostok.stages[0].engine.thrustVac, vostok.stages[0].engine.ispVac) - 2.5 - 302)).toBeLessThan(4);
     // the S-IC: five F-1s from ignition 2.5 s before liftoff to the centre engine's
     // shutdown at T+135.2 s, four to the LOX running out at T+161.63 s (AS-506)
     const sic = vehicleById('saturnv506').stages[0];
@@ -114,6 +117,54 @@ describe('the flights they are here for, point-mass', () => {
         expect(Math.abs(row.delta!), `${id} ${row.key}: ${log}`).toBeLessThan(Math.max(20, 0.1 * row.real));
       }
     });
+});
+
+describe('Vostok-1\'s over-burn, point-mass', () => {
+  // Baturin (Novaya Gazeta, 11 April 2021): the radio command to shut the core down did not pass, and the
+  // backups stopped the core and Blok E 25.43 m/s late — 327 km of apogee where 230 km was planned. The
+  // guidance aims at the planned orbit (`OrbitSpec.aim`) and Blok E burns the excess on (`backupCutoff`).
+  const toCutoff = (orbit: ReturnType<typeof watchMissionSettings>['orbit']) => {
+    const s = watchMissionSettings('vostok1');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    // on through the engine's tail-off
+    const seco = () => sim.events.find((e) => e.key === 'evt.seco');
+    while (!sim.isFailed() && sim.state.t < 800 && !(seco() && sim.state.t > seco()!.t + 5)) sim.step(sim.suggestedDt());
+    const el = sim.state.elements;
+    const rp = R_EARTH + el.periapsisAlt, a = R_EARTH + (el.periapsisAlt + el.apoapsisAlt) / 2;
+    return { sim, seco: seco()!.t, el, vPerigee: Math.sqrt(MU_EARTH * (2 / rp - 1 / a)), left: sim.vehicle.stages[1].propellant };
+  };
+
+  it('aims at the planned 168 × 230 km and is cut off on the backup 25.4 m/s later, in the flown 168 × 314 km', { timeout: 120_000 }, () => {
+    const s = watchMissionSettings('vostok1');
+    expect(s.orbit.aim?.apogee).toBe(230e3);
+    const flown = toCutoff(s.orbit);
+    const planned = toCutoff({ ...s.orbit, backupCutoff: undefined });
+    const log = flown.sim.events.map((e) => `${e.t.toFixed(1)}:${e.key}`).join(' ');
+    // the planned cut-off: the orbit the guidance was set for
+    expect(Math.abs(planned.el.periapsisAlt - 168e3), log).toBeLessThan(3e3);
+    expect(Math.abs(planned.el.apoapsisAlt - 230e3), log).toBeLessThan(6e3);
+    expect(planned.sim.events.some((e) => e.key === 'evt.backupCutoff')).toBe(false);
+    // the backup: 25.4 m/s more, logged, and held to the flown orbit
+    const backup = flown.sim.events.find((e) => e.key === 'evt.backupCutoff');
+    expect(backup, log).toBeDefined();
+    expect(Number(backup!.params!.dv)).toBeCloseTo(25.4, 1);
+    expect(backup!.t).toBeCloseTo(flown.seco, 6);
+    // 2.4 s flown long on Blok E alone (Baturin; the core's 0.46 s is flown here too): about 3 s and 50 kg
+    expect(flown.seco - planned.seco).toBeGreaterThan(2);
+    expect(flown.seco - planned.seco).toBeLessThan(4);
+    expect(planned.left - flown.left).toBeGreaterThan(40);
+    expect(planned.left - flown.left).toBeLessThan(60);
+    // the speed at the perigee, where both were cut off
+    expect(Math.abs(flown.vPerigee - planned.vPerigee - 25.43), log).toBeLessThan(1);
+    expect(Math.abs(flown.el.periapsisAlt - 168e3), log).toBeLessThan(3e3);
+    expect(flown.el.apoapsisAlt, log).toBeGreaterThan(311e3);
+    expect(flown.el.apoapsisAlt, log).toBeLessThan(320e3);
+    expect(flown.sim.events.some((e) => e.key === 'evt.targetOrbit'), log).toBe(true);
+  });
 });
 
 describe('Vostok-1 home, point-mass', () => {

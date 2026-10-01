@@ -820,8 +820,8 @@ export class SetupPanel {
     const site = siteById(s.siteId);
     const target = resolveTarget(s.orbit, site, s.launchTime);
     const orbitRow = this.el('div', 'row');
-    orbitRow.appendChild(this.number('setup.perigee', s.orbit.perigee / 1000, (v) => { this.customise(); s.orbit.perigee = v * 1000; this.changed(); }, 10, 100));
-    orbitRow.appendChild(this.number('setup.apogee', s.orbit.apogee / 1000, (v) => { this.customise(); s.orbit.apogee = v * 1000; this.changed(); }, 10, 100));
+    orbitRow.appendChild(this.number('setup.perigee', s.orbit.perigee / 1000, (v) => { this.customise(); this.ownApsides(); s.orbit.perigee = v * 1000; this.changed(); }, 10, 100));
+    orbitRow.appendChild(this.number('setup.apogee', s.orbit.apogee / 1000, (v) => { this.customise(); this.ownApsides(); s.orbit.apogee = v * 1000; this.changed(); }, 10, 100));
     s3.appendChild(orbitRow);
     const orbitRow2 = this.el('div', 'row');
     // `changed()`, not `render()`: the control set does not depend on the
@@ -2061,6 +2061,16 @@ export class SetupPanel {
       `${t('setup.recovery.core')}: ${where(plan.core)}`,
       ...Array.from({ length: strapOns }, (_, k) => `${t('setup.recovery.booster', { n: k + 1 })}: ${where(plan.boosters?.[k])}`),
     ].join(' · ');
+  }
+
+  /**
+   * C01: apsides typed in are the orbit the flight is aimed at. Vostok-1's
+   * planned orbit and its over-burn (`OrbitSpec.aim`, `backupCutoff`) belong
+   * to the orbit it was left in, and would steer a new one somewhere else.
+   */
+  private ownApsides(): void {
+    const { aim: _aim, backupCutoff: _backup, ...own } = this.state.orbit;
+    if (_aim || _backup) this.state.orbit = own;
   }
 
   private customise(): void {

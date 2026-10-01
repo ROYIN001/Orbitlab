@@ -779,7 +779,9 @@ export class BurnSequencer {
     });
     const st = this.sim.vehicle.active;
     if (st) this.sim.vehicle.cutoffStage(st, s.t);
-    if (!s.payloadSeparated && !this.sim.satellite.staysAttached) this.sim.schedule(s.t + 15, 'payloadSep', () => this.sim.staging.separatePayload(false));
+    if (!s.payloadSeparated && !this.sim.satellite.staysAttached) {
+      this.sim.schedule(s.t + (this.sim.satellite.separationDelay ?? 15), 'payloadSep', () => this.sim.staging.separatePayload(false));
+    }
     // C01: a parking orbit, with an injection to fly from it
     if (this.sim.cfg.orbit.injection) this.sim.apollo.begin();
     // C01: a spacecraft that comes home from this orbit, from the start of its retro sequence (Vostok-1: the

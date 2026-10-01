@@ -3017,16 +3017,21 @@ Vostok 1* (esa.int).
 
 | | R-7 Sputnik (8K71PS) | Vostok-K (8K72K) |
 |---|---|---|
-| Strap-ons (each) | 42.0 t, 38.3 t propellant (Zak; W: 43.0 / 3.40 t dry) | 43.3 t, 3.71 t dry (astronautix) |
-| RD-107 | 8D74PS: 793 / 975 kN, 247.6 / 304.2 s (Zak) | 8D74-1959: 970 kN vac., 256 / 313 s (astronautix, W); 793 kN SL from the Isp ratio |
-| Core (Blok A) | 99.1 t, 91.8 t propellant, 28.0 m (Zak; W: 94.0 / 7.5 t, 26 m) | 100.4 t, 6.8 t dry, 28.75 m (astronautix; W ru) |
-| RD-108 | 8D75PS: 914 kN, 303.1 s vac. (Zak); sea level from W's 241 / 308 s ratio: 715 kN, 237.2 s | 8D75-1959: 912 kN vac., 248 / 315 s (astronautix, W en; W ru 941 kN) |
-| Blok E | — | 7,775 kg, 1,440 kg dry, 2.84 × 2.56 m (astronautix; Zak 1.34 t dry); RD-0109 54.52 kN, 323.5 s (W; astronautix 326 s), 365 s |
+| Strap-ons (each) | 42.0 t, 38.3 t propellant (Zak; W: 43.0 / 3.40 t dry) | 43.3 t, 3.71 t dry (astronautix); 330 kg of the propellant left unburnt, carried as dry mass (estimate) |
+| RD-107 | 8D74PS: 793 / 975 kN, 247.6 / 304.2 s (Zak) | 8D74: 814 / 1,000 kN, 255.7 / 312.7 s (Energomash, on lpre.de; astronautix and W en 970 kN, 256 / 313 s) |
+| Core (Blok A) | 99.1 t, 91.8 t propellant, 28.0 m (Zak; W: 94.0 / 7.5 t, 26 m) | 100.4 t, 6.8 t dry, 28.75 m (astronautix; W ru); 500 kg left at the cut-off, carried as dry mass (estimate) |
+| RD-108 | 8D75PS: 914 kN, 303.1 s vac. (Zak); sea level from W's 241 / 308 s ratio: 715 kN, 237.2 s | 8D75: 745 / 941 kN, 247.8 / 314.8 s (Energomash, on lpre.de; W ru 941 kN; astronautix and W en 912 kN, 248 / 315 s) |
+| Blok E | — | 7,775 kg (astronautix), 1,340 kg dry (Zak; astronautix 1,440), 2.84 × 2.56 m (astronautix); RD-0109 54.52 kN, 323.5 s (W; astronautix 326 s), 374 s |
 | Nose | a 1.17 m cone over PS-1, released with it (W); its 1.0 m base and 40 kg estimated | the 0.8 t, 2.7 m shroud (Zak), off at T+156 s (ESA); its 6.8 m length from the 38.36 m stack, estimated |
 | Spacecraft | PS-1, 83.6 kg, 0.58 m sphere, four whips of 2.4 and 2.9 m (W) | Vostok 3KA, 4,725 kg: the 2.3 m descent sphere and the 2.43 × 2.25 m instrument module (W) |
 
 With these, the strap-ons of 8K71PS burn out at 117 s (flown 116.38 s) and its core at 298 s (295.4 s);
-Vostok-K's Blok E burns 368 s (365 s published).
+Vostok-K's strap-ons at 118 s (flown 119 s, the separation), its core at 303 s (about 300 s) and Blok E
+can burn 374 s. That is the only set of these figures that runs from the core's cut-off at about T+300 s to
+Blok E's at T+676 s: on astronautix's engines the strap-ons burnt out 5 s late and the core 15 s late, and its
+1,440 kg dry Blok E holds 369 s. Neither the strap-ons nor the core burnt to the last kilogram (the core was
+shut down by command), and the unburnt propellant is carried as dry mass, as the S-IC's is (§13.8): 330 kg a
+strap-on and 500 kg in the core, estimates sized to the flown times, the liftoff mass unchanged.
 
 Flown from Gagarin's Start at their own second, model − flight, s, and the orbit reached:
 
@@ -3034,16 +3039,42 @@ Flown from Gagarin's Start at their own second, model − flight, s, and the orb
 |---|---|---|---|---|---|---|
 | Sputnik 1, point-mass | −0.5 (116.38) | — | — | +7.9 (295.4) | +3.8 (314.5) | 214 × 937 km, 65.09° (214 × 938, 65.1°) |
 | Sputnik 1, six-DOF | −0.4 | — | — | +8.2 | +5.4 | 214 × 949 km, 65.09° |
-| Vostok 1, point-mass | +5.0 (119) | +0.1 (156) | +14.6 (300) | −18.3 (676) | — | 168 × 311 km, 64.95° (168 × 314, 64.95°) |
-| Vostok 1, six-DOF | +5.0 | ±0.0 | +14.8 | −23.3 | — | 168 × 311 km, 64.95° |
+| Vostok 1, point-mass | +0.1 (119) | +0.1 (156) | +3.1 (300) | −4.3 (676) | −4.3 (686) | 168 × 314 km, 64.95° (168 × 314, 64.95°) |
+| Vostok 1, six-DOF | +0.1 | ±0.0 | +3.2 | −4.5 | −4.5 | 168 × 312 km, 64.95° |
 
 Sputnik's core, the orbital stage itself, cuts off 8 s late on Zak's 91.8 t; the real one shut down
 about a second early (en.wikipedia). With no upper stage its cut-off orbit is final, so the pitch
 kick sets the apogee: 4° in point-mass and 5° as a rigid body reach the flown 938 km, where
-Soyuz's 3° and 4° leave it 130 and 510 km short. Vostok-K's core, on astronautix's 93.6 t, burns
-15 s longer than flown and Blok E, lit late, is 18–23 s early to the same orbit; the published
-over-burn of Blok E (a backup timer cut it off when the radio command did not come, and the
-apogee was some 90 km above the planned one) is flown to, not modelled. The R-7's engines did not throttle; `minThrottle`
+Soyuz's 3° and 4° leave it 130 and 510 km short.
+
+*Vostok 1's over-burn.* Vostok was meant for 168 × 230 km (Baturin, *Novaya Gazeta*, 11 April 2021,
+from the archive; Kommersant gives 180 × 235 km). At T+156 s the power supply of the antenna of the
+core's radio-control system failed, so the radio command to shut the core down did not pass: the core
+stopped 0.46 s late on the backup time mark (its preliminary command 0.51 s late), 22.0 m/s fast, and
+Blok E then ran 2.4 s longer than calculated — 25.43 m/s in all, and an apogee of 327 km. (Zak agrees
+that the core ran about half a second long; ru.wikipedia puts the failure on the third stage. The account
+of a backup *timer* on Blok E that an earlier version of this section gave was wrong.) 25.43 m/s on a
+168 × 230 km orbit gives 168 × 317 km; GCAT's 168 × 314 km is the orbit the model is held to. The model
+flies it as it happened: the guidance is aimed at the planned orbit (`OrbitSpec.aim`), and where it
+would have cut Blok E off, Blok E burns on with its attitude held until 25.43 m/s more is gained
+(`OrbitSpec.backupCutoff`, counted as the thrust's own speed, what the rocket's integrator measured),
+then stops, logs `evt.backupCutoff`, and the flight is judged on the flown orbit. The model's core
+burns to depletion and its guidance would take any excess on the core back out of Blok E's burn, so
+the whole excess is flown on Blok E: about 2.9 s and 50 kg. Without it the flight is cut off at
+168 × 227 km at T+668.8 s (point-mass). Cutting Blok E off at a fixed T+676 s instead would tie the
+orbit to the pitch kick.
+
+The pitch kick, with no flown value, is the model's free parameter, as it is for Sputnik: 2.6° in
+point-mass and 3.95° as a rigid body (on the R-7's 65 % trim allowance, `R7_TRIM_SHARE_VEHICLES`)
+bring Blok E's cut-off to T+671.7 s and T+671.5 s with 113 and 114 kg of its propellant left (a
+tenth of a degree either way moves it about 2 s and 25–40 kg). The spacecraft is let go 10 s after the
+cut-off (ESA; `SatelliteSpec.separationDelay`), flown about T+686 s. The core's T+300 s is a rounded
+figure (Zak gives 299 s); on the December 1960 flight its cut-off command was due at T+308–309 s
+and Blok E's at T+676.61 s (Zak). As a rigid body the orbit is 168 × 312 km osculating at the
+cut-off; the J2 revolution that judges it reaches 330 km, as it did before this calibration (329 km),
+so the rigid flight is reported off target.
+
+The R-7's engines did not throttle; `minThrottle`
 0.7 stands for the verniers' authority. RD-0109 steered by turbine exhaust through control nozzles
 of Blok E's own, drawn and flown as one gimballed chamber (estimated). The pad is Gagarin's Start
 (Site 1/5) for both.
