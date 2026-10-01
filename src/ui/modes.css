@@ -102,7 +102,7 @@ body:not([data-mode='engineer']) .top-context { display: none; }
   .lang > span { display: none; }
 }
 @media (max-width: 1180px) {
-  .brand-name { display: none; }
+  #topbar .brand-name { display: none; }
 }
 @media (max-width: 1040px) {
   .nav-tab-btn .mode-glyph { display: none; }
@@ -123,8 +123,8 @@ body:not([data-mode='engineer']) .top-context { display: none; }
 
 /* ── lean modes: the scene is the page ───────────────────────────────────── */
 
-body[data-mode='home'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-physics, #btn-camera-plan),
-body[data-mode='watch'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-physics, #btn-camera-plan) {
+body[data-mode='home'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan),
+body[data-mode='watch'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan) {
   display: none !important;
 }
 body[data-mode='home'] #app, body[data-mode='watch'] #app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }

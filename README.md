@@ -75,8 +75,9 @@ any academy, and no service or academy name or emblem is used without written pe
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
   explains it in one line, next to the mission clock and the latest callout, and the camera
   follows a per-phase programme you can set yourself — identically live and in replay.
-- **Physics & sources dialog**: a localized summary of the model with the data sources and
-  the credits.
+- **About dialog** (ⓘ in the top bar, on every page, and the footer's credit line): an About
+  tab with the version, the maker, the licences and the disclaimer, and a Physics & sources tab
+  with a localized summary of the model, the data sources and the credits.
 - **WebMCP tools** (see [below](#webmcp-tools)) for a page-attached agent to read the flight
   and drive the simulator programmatically.
 
