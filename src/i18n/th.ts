@@ -670,7 +670,6 @@ export const th: Record<string, string> = {
   'tl.evt.shipImpact': 'ยานแตกหัก',
 
   // ─── ระลอกที่ 2 · งานออกแบบส่วนติดต่อผู้ใช้ ───────────────────────────────
-  'app.tagline': 'โปรแกรมจำลองการบิน',
   'app.missionControl': 'ศูนย์ควบคุมภารกิจ',
   'app.buildMission': 'ออกแบบภารกิจของคุณ',
   'app.footerModel': 'โลก · แบบจำลองการบินตามกลศาสตร์นิวตัน',

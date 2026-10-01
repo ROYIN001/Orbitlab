@@ -85,14 +85,10 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 .nav-cell[aria-current='page'] { background: var(--accent-weak); border-color: var(--accent-line); color: var(--accent); }
 .nav-cell-future { grid-column: 2 / 5; display: grid; gap: 4px; justify-items: start; }
 
-/* the "flight simulator 02" tag is workspace chrome, and the first thing to
-   give way to the switch */
-body:not([data-mode='engineer']) .top-context { display: none; }
-@media (max-width: 1600px) { .top-context { display: none; } }
-/* then the labels of the workspace's top-bar tools (their names stay as the
-   tooltip and the accessible name); a Russian label wrapped onto two lines.
-   The order in which things give way to the switch, measured in Russian —
-   the longest labels — is: the tools' labels and the language label; the
+/* The labels of the workspace's top-bar tools give way to the switch first
+   (their names stay as the tooltip and the accessible name); a Russian label
+   wrapped onto two lines. The order in which things give way to the switch,
+   measured in Russian — the longest labels — is: the tools' labels and the language label; the
    product name; the sections' glyphs; and on a phone the switch becomes one
    button on a row of its own under the brand and the tools. */
 .quiet-btn { white-space: nowrap; }

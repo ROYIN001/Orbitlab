@@ -684,7 +684,6 @@ export const en: Record<string, string> = {
 
   // ─── wave 2 · design pass ────────────────────────────────────────────────
   // shell
-  'app.tagline': 'FLIGHT SIMULATOR',
   'app.missionControl': 'MISSION CONTROL',
   'app.buildMission': 'Build your mission',
   'app.footerModel': 'Earth · Newtonian flight model',
