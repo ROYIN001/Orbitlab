@@ -19,11 +19,17 @@
  *   the debrief's "5 400 times" no longer part at a line's end, and no digit
  *   in its brief, hints or debrief is followed by a breaking space. The
  *   designer's sentences and the strip use the same function.
+ * - A flight lesson's strip writes its bounds and values in the reader's
+ *   decimal sign, as the design strip and the check page do: the apogee
+ *   "35786,0 км" and a tolerance "0,000002" in Russian, "35786.0 km" in
+ *   English and "35786.0 กม." in Thai, with no grouping and a no-break space
+ *   before the unit. A value that is not a number is "—".
  */
 import { describe, expect, it } from 'vitest';
 import { setLang, t, tCount } from '../src/i18n';
 import { keepUnits } from '../src/ui/build/satellite-text';
 import { keepUnits as stripKeepUnits } from '../src/ui/keep-units';
+import { decimal, measureText } from '../src/ui/lessons/measure-text';
 import PHYSICS_PACK from '../public/lessons/packs/ipst-physics.orbitlab-lesson.json?raw';
 
 const NBSP = ' ';
@@ -83,5 +89,17 @@ describe('the lesson strip keeps a lesson\'s figures with their units (W)', () =
         expect(say(keepUnits(text)).replace(/\u2060/g, '')).toBe(text);
       }
     }
+  });
+});
+
+describe('a flight lesson\'s strip writes numbers in the reader\'s decimal sign (W)', () => {
+  it('says the apogee and a tolerance as each language writes them', () => {
+    expect(withLang('ru', () => measureText('orbit.apogee', 35786))).toBe(`35786,0${NBSP}км`);
+    expect(withLang('en', () => measureText('orbit.apogee', 35786))).toBe(`35786.0${NBSP}km`);
+    expect(withLang('th', () => measureText('orbit.apogee', 35786))).toBe(`35786.0${NBSP}กม.`);
+    expect(withLang('ru', () => decimal(0.000002))).toBe('0,000002');
+    expect(withLang('ru', () => decimal(10))).toBe('10');
+    expect(withLang('en', () => decimal(24361.73591902372, 1))).toBe('24361.7');
+    expect(withLang('ru', () => measureText('orbit.apogee', Number.NaN))).toBe('—');
   });
 });

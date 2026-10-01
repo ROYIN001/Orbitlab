@@ -40,7 +40,7 @@ import { awaitingAnswers, flightEnded, flightStarted, gradeShown, regradeAnswers
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
 import { FlightLessons } from '../../lessons/flight-lessons';
 import { draftValue, submittedAnswers, type AnswerDrafts } from '../../lessons/answer-drafts';
-import { formatMeasure, MEASURES } from '../../lessons/measures';
+import { MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue, type ParsedLessonFile } from '../../lessons/lesson-file';
 import { SCENARIO_LINK_MAX, SCENARIO_PARAM, readScenarioParam, scenarioLink } from '../../lessons/scenario-link';
@@ -71,6 +71,7 @@ import type { LessonToolsHost } from '../../lessons/mcp-tools';
 import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
 import { keepUnits } from '../keep-units';
+import { decimal, measureText } from './measure-text';
 import { PanelLocks } from './locks';
 // T01/T02: small, and on the page that is open anyway (a lazy chunk of them split the dictionaries off the main one)
 import { renderAuthor } from './author-view';
@@ -856,15 +857,16 @@ export class LessonMode implements LessonToolsHost {
   private criterionBound(c: Criterion): string {
     if (c.kind !== 'measure') return '';
     const unit = MEASURES[c.measure].unit;
-    const u = unit ? ` ${unitText(unit)}` : '';
+    // W: in the reader's decimal sign ("35786,0 ± 10 км"), as the design strip writes its bounds
+    const u = unit ? `\u00a0${unitText(unit)}` : '';
     if (c.target === 'mission') {
       const target = this.missionValue(c);
-      return `${target === null ? t('lesson.bound.mission') : target.toFixed(MEASURES[c.measure].digits)} ± ${c.tol ?? 0}${u}`;
+      return `${target === null ? t('lesson.bound.mission') : decimal(target, MEASURES[c.measure].digits)} ± ${decimal(c.tol ?? 0)}${u}`;
     }
-    if (c.target !== undefined) return `${c.target} ± ${c.tol ?? 0}${u}`;
-    if (c.min !== undefined && c.max !== undefined) return `${c.min} … ${c.max}${u}`;
-    if (c.max !== undefined) return `≤ ${c.max}${u}`;
-    return `≥ ${c.min}${u}`;
+    if (c.target !== undefined) return `${decimal(c.target)} ± ${decimal(c.tol ?? 0)}${u}`;
+    if (c.min !== undefined && c.max !== undefined) return `${decimal(c.min)} … ${decimal(c.max)}${u}`;
+    if (c.max !== undefined) return `≤ ${decimal(c.max)}${u}`;
+    return c.min !== undefined ? `≥ ${decimal(c.min)}${u}` : '';
   }
 
   private missionValue(c: Criterion): number | null {
@@ -883,7 +885,7 @@ export class LessonMode implements LessonToolsHost {
     chip.dataset.criterion = c.id;
     chip.append(el('span', 'lesson-crit-name', this.criterionLabel(c)));
     const bound = this.criterionBound(c);
-    const value = c.kind === 'measure' && flown && g?.value !== null && g?.value !== undefined ? formatMeasure(c.measure, g.value) : '';
+    const value = c.kind === 'measure' && flown && g?.value !== null && g?.value !== undefined ? measureText(c.measure, g.value) : '';
     const mark = { pending: t('lesson.crit.pending'), passing: t('lesson.crit.passing'), pass: '✓', fail: '✗' }[state];
     const line = el('span', 'lesson-crit-value');
     line.textContent = [bound, value, mark].filter(Boolean).join(' · ');
@@ -970,7 +972,7 @@ export class LessonMode implements LessonToolsHost {
         inputs.set(c.id, () => input.value);
         // a wrong answer is only marked: the value is shown only when asked for, and then passes only with help
         const mark = cg?.state === 'pass' ? '✓' : cg?.state === 'fail' ? '✗' : '';
-        const verdict = cg?.revealed ? `${mark} ${t('lesson.strip.expected', { value: formatMeasure(c.measure, cg.expected ?? null) })}`.trim() : mark;
+        const verdict = cg?.revealed ? `${mark} ${t('lesson.strip.expected', { value: measureText(c.measure, cg.expected ?? null) })}`.trim() : mark;
         row.append(el('span', undefined, localText(c.prompt)), input, el('span', 'lesson-answer-mark', verdict));
         form.append(row);
       }
