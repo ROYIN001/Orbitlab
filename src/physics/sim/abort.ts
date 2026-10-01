@@ -27,6 +27,8 @@ import { hashSeed } from './seed';
 import { ModuleEntry, VOSTOK_IM } from './module-entry';
 import { CrewDescent, VOSTOK_CREW } from './crew-descent';
 import { FallingBody } from './fall';
+import { MEASURED_WINDS, type MeasuredWind } from '../../data/measured-winds';
+import { measuredWindECI } from '../measured-wind';
 
 /** Seconds from the escape to the burning rocket's explosion on its pad (T-10-1: 2–6 s). */
 export const PAD_FIRE_EXPLOSION = 4;
@@ -56,6 +58,8 @@ export class LaunchEscape {
   private rocketLost?: { r: Vec3; t: number };
   /** C01: the pilot's own body, from his ejection (Vostok-1: the sphere lands without him) */
   private crewId?: number;
+  /** C01: the wind measured that day over the landing area, which a return flies in (`OrbitSpec.deorbit.wind`) */
+  private measuredWind?: MeasuredWind;
 
   constructor(readonly sim: Simulation) {}
 
@@ -67,6 +71,22 @@ export class LaunchEscape {
    */
   get geodetic(): boolean {
     return this.flight?.mode === 'capsule' && this.flight.capsule.datum === 'wgs84';
+  }
+
+  /**
+   * The wind the escape and everything it lets go of fly in, ECI, m/s, at
+   * `r` and mission time `t`: on a return that names one (C01: Vostok-1),
+   * the wind measured that day over the landing area while its record lasts
+   * (src/physics/measured-wind.ts); otherwise the flight's own, the six-DOF
+   * scenario's, or still air.
+   */
+  windAt(r: Vec3, t: number): Vec3 {
+    const sim = this.sim;
+    if (this.measuredWind) {
+      const w = measuredWindECI(this.measuredWind, r, sim.cfg.launchTime.getTime() + t * 1000);
+      if (w) return w;
+    }
+    return sim.rigidRuntime ? sim.rigidRuntime.windAt(r, t) : v3();
   }
 
   /** This flight carries an escape system: a crewed launch of a vehicle that has one. */
@@ -110,7 +130,7 @@ export class LaunchEscape {
     sim.pending.length = 0;
     this.flight = new EscapeFlight(mode, start, s.t, v3(0, 1, 0), {
       groundElevation: (r) => sim.groundElevation(r),
-      wind: (r, t) => sim.rigidRuntime ? sim.rigidRuntime.windAt(r, t) : v3(),
+      wind: (r, t) => this.windAt(r, t),
     }, (what, state, t, mass) => this.release(what, state, t, mass));
     s.status = 'abort';
     s.note = 'abort';
@@ -132,7 +152,8 @@ export class LaunchEscape {
    * deorbit's time: the spacecraft turned as the orientation system set it
    * and its gyros hold it, the engine's nozzle and the sphere's heavy side
    * ahead, the thrust line `retroDirection` at the launch command `starts[0]`
-   * s later (the local horizontal turns with the orbit, 0.15° in the 2.2 s).
+   * s later (the local horizontal turns with the orbit, 0.15° in the 2.2 s);
+   * in the wind measured that day, when the orbit's `deorbit` names it.
    */
   beginReturn(): void {
     const sim = this.sim, s = sim.state;
@@ -155,9 +176,11 @@ export class LaunchEscape {
     }
     this.returning = true;
     this.cause = '';
+    const wind = sim.cfg.orbit.deorbit?.wind;
+    this.measuredWind = wind !== undefined ? MEASURED_WINDS[wind] : undefined;
     this.flight = new EscapeFlight('capsule', { r: clone(s.r), v: clone(s.v), attitudeQ, omegaBody: v3() }, s.t, v3(0, 1, 0), {
       groundElevation: (r) => sim.groundElevation(r),
-      wind: (r, t) => sim.rigidRuntime ? sim.rigidRuntime.windAt(r, t) : v3(),
+      wind: (r, t) => this.windAt(r, t),
     }, (what, state, t, mass) => this.release(what, state, t, mass), capsule);
     s.status = 'abort';
     s.note = 'capsuleReturn';

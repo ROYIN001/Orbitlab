@@ -97,7 +97,7 @@ export class FallingBody implements DebrisFlight {
       const step = fallStepToGround({ r: d.r, v: d.v }, this.t, h, d.mass, cda, env);
       d.r = step.state.r; d.v = step.state.v;
       this.t += step.h;
-      const u = airVelocity(d.r, d.v, v3()), speed = norm(u);
+      const u = airVelocity(d.r, d.v, env.wind(d.r, this.t)), speed = norm(u);
       if (speed > 1) d.dir = { x: -u.x / speed, y: -u.y / speed, z: -u.z / speed };
       if (step.contact) comeDown(d, this.t, env, 'impact');
     }

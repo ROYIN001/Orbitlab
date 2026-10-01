@@ -350,8 +350,12 @@ export interface OrbitSpec {
    * sequence started at mission time `time`, s (Vostok's TDU-1 pressurising
    * command, its launch command `retro.starts` later), and its descent
    * capsule flown home (`SatelliteSpec.descent`, src/physics/rigid/escape.ts).
+   * `wind` names the wind measured that day over the landing area
+   * (`MEASURED_WINDS`, src/data/measured-winds.ts), which the return and
+   * everything it lets go of fly in, in place of the flight's own air, while
+   * the record's time span lasts.
    */
-  deorbit?: { time: number };
+  deorbit?: { time: number; wind?: string };
   /**
    * The orbit the ascent's guidance was set for, when the flight was left in
    * another (C01: Vostok-1, planned 168 × 230 km, flown 168 × 314 km). The
