@@ -2953,6 +2953,7 @@ export const en: Record<string, string> = {
   'build.sat.fly.alts.lead': 'By the same verdict, these rockets can fly it:',
   'build.sat.fly.alts.none': 'By the same verdict, none of the other rockets here can fly it as it is designed.',
   'build.sat.fly.alts.pick': 'Choose {name}: {state}',
+  'lesson.author.notTaken': '“{title}” was not added: its id, “{id}”, is a built-in lesson\'s, and every copy of Orbitlab opens the built-in lesson under it. Ask for the lesson saved again with another id.',
   // --- end of I2 ---
   'watch.beat.countdown': 'Countdown',
   'watch.beat.liftoff': 'Liftoff',

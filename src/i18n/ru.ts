@@ -2932,6 +2932,7 @@ export const ru: Record<string, string> = {
   'build.sat.fly.alts.lead': 'По той же оценке этот спутник могут вывести:',
   'build.sat.fly.alts.none': 'По той же оценке ни одна из других ракет здесь не выведет этот спутник в таком виде.',
   'build.sat.fly.alts.pick': 'Выбрать {name}: {state}',
+  'lesson.author.notTaken': 'Урок «{title}» не добавлен: его идентификатор «{id}» принадлежит встроенному уроку, и любая копия Orbitlab открывает под ним встроенный урок. Попросите сохранить урок заново с другим идентификатором.',
   // --- end of I2 ---
   'watch.beat.countdown': 'Обратный отсчёт',
   'watch.beat.liftoff': 'Старт',

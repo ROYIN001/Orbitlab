@@ -24,7 +24,7 @@ import { en } from '../../i18n/en';
 import type { AppMode } from '../app-mode';
 import type { Simulation } from '../../physics/simulation';
 import type { MissionState } from '../../config/mission-file';
-import { allLessons, BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, lessonNumber, TRACKS } from '../../lessons/catalog';
+import { allLessons, BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, lessonNumber, takeLessons, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
 import { awaitingAnswers, flightEnded, flightStarted, gradeShown, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
@@ -1193,16 +1193,20 @@ export class LessonMode implements LessonToolsHost {
       return false;
     }
     const keep = <T extends { id: string }>(old: T[], added: T[]): T[] => [...old.filter((x) => !added.some((y) => y.id === x.id)), ...added];
-    this.progressData.customLessons = keep(this.progressData.customLessons, parsed.lessons);
+    // I2: a lesson under a built-in lesson's id is not taken, and is named (it used to be dropped without a word);
+    // one already kept is replaced where it stands, so its number holds
+    const { lessons, builtin } = takeLessons(this.progressData.customLessons, parsed.lessons);
+    this.progressData.customLessons = lessons;
     this.progressData.customQuestions = keep(this.progressData.customQuestions, parsed.questions);
     this.save();
     const errors = parsed.issues.filter((i) => i.level === 'error');
     // T01: an event no flight emits reads, and then never happens: said, though the lesson is kept
     const events = parsed.issues.filter((i) => i.code === 'event');
     this.notice = {
-      level: errors.length || events.length ? 'warn' : 'ok',
-      text: t('lesson.file.loaded', { lessons: parsed.lessons.length, questions: parsed.questions.length }),
-      details: [...(errors.length ? [t('lesson.file.issues'), ...errors.map(issueText)] : []),
+      level: errors.length || events.length || builtin.length ? 'warn' : 'ok',
+      text: t('lesson.file.loaded', { lessons: parsed.lessons.length - builtin.length, questions: parsed.questions.length }),
+      details: [...builtin.map((l) => t('lesson.author.notTaken', { title: localText(l.title), id: l.id })),
+        ...(errors.length ? [t('lesson.file.issues'), ...errors.map(issueText)] : []),
         ...events.map((i) => t('lesson.author.issue.event', { where: i.where, key: i.detail ?? '' }))],
     };
     return true;

@@ -11,9 +11,16 @@
  *   on from there (9.4); a lesson a file places in another track keeps the
  *   file's number; the built-in lessons' numbers do not move; the lessons
  *   kept are not changed (the numbers are the catalogue's).
+ * - item 4: of a file's lessons, one under a built-in lesson's id is not
+ *   taken and is handed back to be named (it was dropped without a word);
+ *   the others are kept, a lesson already kept replaced where it stands and
+ *   a new one after; the sentence that names it has its title and id, in
+ *   each of the three languages, with no placeholder left.
  */
 import { describe, expect, it } from 'vitest';
-import { allLessons, AUTHOR_TRACK, BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, lessonNumber, numberTeacherLessons } from '../src/lessons/catalog';
+import { allLessons, AUTHOR_TRACK, BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, BUILTIN_LESSON_IDS, lessonNumber, numberTeacherLessons, takeLessons } from '../src/lessons/catalog';
+import { setLang, t } from '../src/i18n';
+import { localText } from '../src/lessons/text';
 import { draftLesson, newDraft, type LessonDraft } from '../src/lessons/authoring';
 import { lessonFileText, parseLessonFile } from '../src/lessons/lesson-file';
 import { missionDocument } from '../src/config/mission-file';
@@ -66,5 +73,50 @@ describe('a teacher\'s lessons are numbered in the order they are written (I2, i
     const builtin = new Map([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => [l.id, lessonNumber(l)]));
     for (const l of catalogue) if (builtin.has(l.id)) expect(lessonNumber(l), l.id).toBe(builtin.get(l.id));
     expect(allLessons().map(lessonNumber)).toEqual(allLessons(kept).filter((l) => builtin.has(l.id)).map(lessonNumber));
+  });
+});
+
+describe('a lesson file\'s lesson under a built-in lesson\'s id is named, not dropped (I2, item 4)', () => {
+  /** A lesson file written by hand (or by a copy before the writer refused the id): lesson 1.1 under its own id, retitled. */
+  const clash = (): CatalogLesson => {
+    const l = BUILTIN_LESSONS.find((x) => x.id === 'orbit-first')!;
+    return { ...l, title: { en: 'My first orbit', ru: 'Моя первая орбита', th: 'วงโคจรแรกของฉัน' } };
+  };
+
+  it('takes the file\'s other lessons, replaces a kept one where it stands, and hands the clash back', () => {
+    const a = written('class-a', 'First'), b = written('class-b', 'Second');
+    const b2 = { ...written('class-b', 'Second, corrected') };
+    const file = readBack([clash(), b2, written('class-c', 'Third')]);
+    expect(file.map((l) => l.id)).toEqual(['orbit-first', 'class-b', 'class-c']); // the reader itself keeps it
+    const { lessons, builtin } = takeLessons([a, b], file);
+    expect(builtin.map((l) => l.id)).toEqual(['orbit-first']);
+    expect(BUILTIN_LESSON_IDS.has('orbit-first')).toBe(true);
+    expect(lessons.map((l) => l.id)).toEqual(['class-a', 'class-b', 'class-c']);
+    expect(localText(lessons[1].title)).toBe('Second, corrected');
+    // the catalogue: the built-in 1.1 under its id, the teacher's in order
+    const catalogue = allLessons(lessons);
+    expect(catalogue.filter((l) => l.id === 'orbit-first')).toEqual([BUILTIN_LESSONS.find((x) => x.id === 'orbit-first')]);
+    expect(numbers(catalogue, ['class-a', 'class-b', 'class-c'])).toEqual(['9.1', '9.2', '9.3']);
+    // nothing to name in a file without a clash
+    expect(takeLessons(lessons, readBack([written('class-d', 'Fourth')])).builtin).toEqual([]);
+  });
+
+  it('names the lesson, its title and its id, in English, Russian and Thai', () => {
+    const g = globalThis as { document?: unknown };
+    if (!g.document) g.document = { documentElement: {} };
+    const l = clash();
+    const said: Record<string, string> = {};
+    try {
+      for (const lang of ['en', 'ru', 'th'] as const) {
+        setLang(lang);
+        said[lang] = t('lesson.author.notTaken', { title: localText(l.title), id: l.id });
+        expect(said[lang], lang).toContain(localText(l.title));
+        expect(said[lang], lang).toContain('orbit-first');
+        expect(said[lang], lang).not.toMatch(/\{[a-zA-Z]+\}/);
+      }
+    } finally { setLang('en'); }
+    expect(said.ru).toMatch(/[\u0400-\u04FF]/);
+    expect(said.th).toMatch(/[\u0E00-\u0E7F]/);
+    expect(new Set(Object.values(said)).size).toBe(3);
   });
 });

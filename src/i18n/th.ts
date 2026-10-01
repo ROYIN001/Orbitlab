@@ -2933,6 +2933,7 @@ export const th: Record<string, string> = {
   'build.sat.fly.alts.lead': 'ตามการประเมินเดียวกัน จรวดเหล่านี้นำดาวเทียมดวงนี้ขึ้นไปได้:',
   'build.sat.fly.alts.none': 'ตามการประเมินเดียวกัน ไม่มีจรวดลำอื่นในรายการนี้ที่นำดาวเทียมแบบนี้ขึ้นไปได้',
   'build.sat.fly.alts.pick': 'เลือก {name}: {state}',
+  'lesson.author.notTaken': 'ไม่ได้เพิ่มบทเรียน “{title}” เพราะรหัส “{id}” เป็นรหัสของบทเรียนที่มากับโปรแกรม Orbitlab ทุกเครื่องจะเปิดบทเรียนนั้นแทน ให้ขอไฟล์ที่บันทึกบทเรียนนี้ใหม่ด้วยรหัสอื่น',
   // --- end of I2 ---
   'watch.beat.countdown': 'นับถอยหลัง',
   'watch.beat.liftoff': 'ทะยานขึ้น',

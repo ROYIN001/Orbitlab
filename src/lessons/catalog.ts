@@ -62,6 +62,33 @@ export const AUTHOR_TRACK = 9;
 /** The built-in lessons' ids, of both kinds: the catalogue lists the built-in lesson under each. */
 export const BUILTIN_LESSON_IDS: ReadonlySet<string> = new Set([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
 
+/** What this browser keeps of a file's lessons, and the ones it does not take (`takeLessons`). */
+export interface TakenLessons {
+  /** the lessons kept, the file's among them */
+  lessons: CatalogLesson[];
+  /** the file's lessons under a built-in lesson's id, not taken */
+  builtin: CatalogLesson[];
+}
+
+/**
+ * A file's lessons into the ones this browser keeps (roadmap T01; Phase 4
+ * stage 3b, task I2, item 4): a lesson under a built-in lesson's id is not
+ * taken, and is handed back to be named — the catalogue lists the built-in
+ * lesson under that id, so the file's could never be opened, and "Open
+ * lesson file" used to drop it without a word (the scenario writer refuses
+ * such an id; a file written by hand or by an older copy may carry one). A
+ * lesson already kept is replaced where it stands, so a file opened again
+ * keeps its lessons' numbers; the rest follow in the order they are written
+ * in the file.
+ */
+export function takeLessons(kept: readonly CatalogLesson[], added: readonly CatalogLesson[]): TakenLessons {
+  const builtin = added.filter((l) => BUILTIN_LESSON_IDS.has(l.id));
+  const taken = added.filter((l) => !BUILTIN_LESSON_IDS.has(l.id));
+  const lessons = kept.map((l) => taken.find((x) => x.id === l.id) ?? l);
+  for (const l of taken) if (!kept.some((x) => x.id === l.id)) lessons.push(l);
+  return { lessons, builtin };
+}
+
 /**
  * The teacher's lessons (the author track) numbered 1, 2, 3… in the order
  * they are kept: each file's in the order they are written in it, the files
