@@ -568,7 +568,7 @@ Phase 4, the satellite builder and instructor mode, on the same branch. No built
 - Instructor mode and design lessons (T01, T02), each left open by a review:
   - Six-DOF flights and case lessons are not re-flown; drift across engines past two days, and TORU across engines, are unmeasured.
   - A results file's checksum shows an accident, not a forgery; deleting the four new fields makes an edited record read as an old one.
-  - Records from before T02 re-check only approximately (a difference reads "incomplete"); those from before grading at the flight's end differ on an orbit graded late.
+  - Records from before T02 re-check only approximately (a difference reads "Cannot re-fly", saved by an older version); those from before grading at the flight's end differ on an orbit graded late.
   - The `?scenario=` link reaches the web server that serves the app, as a mission link does; it carries the lesson, nothing about a student.
   - Only V8's engines (Node, Chromium) have been compared; the design revisit's 1e-7 day may not hold in another browser.
   - A grading measure reads the simulation up to one step ahead of the picture (a peak load can fail 0.1–0.25 s early); so do the CSV export and the worksheets.
