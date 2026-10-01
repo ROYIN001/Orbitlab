@@ -2595,7 +2595,7 @@ export const ru: Record<string, string> = {
   'build.sat.level.fail': 'Не заработает',
   'build.sat.level.warn': 'Предупреждение',
   'build.sat.level.note': 'Примечание',
-  'build.sat.toOrbit.title': 'Полёт в разделе «Орбита»',
+  'build.sat.toOrbit.title': 'Сразу на орбиту, без запуска',
   'build.sat.toOrbit.lead': 'Поставить спутник на его орбиту в разделе «Орбита», без запуска. Расчёт времени жизни там возьмёт его массу, площадь сопротивления, C_x и C_R, а планировщик манёвров — его двигатель и топливо.',
   'build.sat.toOrbit': 'Отправить на орбиту',
   'build.sat.toOrbit.blocked': 'Исправьте значения, названные в проверках, прежде чем отправлять.',

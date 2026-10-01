@@ -2596,7 +2596,7 @@ export const th: Record<string, string> = {
   'build.sat.level.fail': 'ใช้งานไม่ได้',
   'build.sat.level.warn': 'คำเตือน',
   'build.sat.level.note': 'หมายเหตุ',
-  'build.sat.toOrbit.title': 'ให้บินในส่วนวงโคจร',
+  'build.sat.toOrbit.title': 'เข้าสู่วงโคจรทันทีโดยไม่ต้องปล่อยจรวด',
   'build.sat.toOrbit.lead': 'นำดาวเทียมดวงนี้ไปไว้ในวงโคจรของมันในส่วนวงโคจรโดยไม่ต้องปล่อยจรวด การคำนวณอายุวงโคจรที่นั่นจะใช้มวล พื้นที่แรงต้าน C_D และ C_R ส่วนตัววางแผนการปรับวงโคจรจะใช้เครื่องยนต์และเชื้อเพลิงของมัน',
   'build.sat.toOrbit': 'ส่งไปยังวงโคจร',
   'build.sat.toOrbit.blocked': 'แก้ตัวเลขที่การตรวจระบุไว้ก่อนส่งต่อ',

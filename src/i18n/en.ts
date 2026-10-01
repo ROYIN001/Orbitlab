@@ -2616,7 +2616,7 @@ export const en: Record<string, string> = {
   'build.sat.level.fail': 'Will not work',
   'build.sat.level.warn': 'Warning',
   'build.sat.level.note': 'Note',
-  'build.sat.toOrbit.title': 'Fly it in the Orbit section',
+  'build.sat.toOrbit.title': 'Straight into orbit, with no launch',
   'build.sat.toOrbit.lead': 'Put this satellite in its orbit in the Orbit section, with no launch. The lifetime there flies its mass, drag area, C_D and C_R, and the manoeuvre planner its engine and propellant.',
   'build.sat.toOrbit': 'Send to Orbit',
   'build.sat.toOrbit.blocked': 'Fix the numbers the checks name before sending it on.',
