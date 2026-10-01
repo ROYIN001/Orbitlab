@@ -508,8 +508,8 @@ snapshots, builds and runs every browser journey. A run whose commit is no longe
 CI on pull requests and branch pushes runs the typecheck, the default suite in three shards, the
 build and the browser smoke set; a change to Markdown files only skips it, except
 `docs/ROADMAP-PART2-3.md` and `docs/SIXDOF-VEHICLE-DATA.md`, which the tests and the app read.
-The slow suites run in the `Heavy suites` workflow instead: `npm run test:heavy` every Sunday and
-the six-DOF fleet matrix on the 1st of each month, or either on demand from **Run workflow**.
+The slow suites run in the `Heavy suites` workflow instead: `tests/heavy` every Sunday, one job per
+file, and the six-DOF fleet matrix on the 1st of each month, or either on demand from **Run workflow**.
 
 From the next release the launch soundtrack (`public/audio/soyuz-ms-27-nasa.mp3`) is no longer
 part of what the service worker installs on the first visit: the public site's first-visit install
@@ -527,6 +527,6 @@ software keep their own terms, all collected in [NOTICE.md](NOTICE.md). To cite 
 
 ## Acknowledgements
 
-Earth textures are the planet textures from the three.js examples (NASA Blue Marble
-derivatives). Atmosphere: US Standard Atmosphere 1976 and the exponential model tabulated in
+Earth textures are NASA Blue Marble and Black Marble imagery, from NASA Visible Earth and the
+three.js examples (details in [NOTICE.md](NOTICE.md)). Atmosphere: US Standard Atmosphere 1976 and the exponential model tabulated in
 Vallado, *Fundamentals of Astrodynamics and Applications*.
