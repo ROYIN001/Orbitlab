@@ -2638,6 +2638,8 @@ export const ru: Record<string, string> = {
   'watch.end.crewSafeText': 'САС доставила экипаж на Землю в {km} км от старта через {time} после аварии. Максимальная перегрузка составила {g} g.',
   'watch.follow.booster': 'Следить за ступенью',
   'watch.follow.rocket': 'Следить за ракетой',
+  'watch.follow.pilot': 'Следить за Гагариным',
+  'watch.follow.capsule': 'Следить за спускаемым аппаратом',
   'watch.payload.bandwagon': 'Bandwagon-1 (11 спутников)',
   'watch.payload.arabsat': 'Спутник связи Arabsat-6A',
   'watch.payload.flight5': 'Испытательный полёт без полезной нагрузки',

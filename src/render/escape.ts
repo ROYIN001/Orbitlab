@@ -19,58 +19,27 @@ import { Plume } from './plume';
 import { CrewedTop, FIN_CENTRE } from './soyuz';
 import { gridFinTexture } from './rocket';
 import { smoothstep } from './noise';
+import { Canopy, canopyStripes, spentCanopyGeometry } from './canopy';
+import { buildEntryGlow, entryGlow, type EntryGlowView } from './entry-glow';
+import { buildInstrumentModule, contactShadow, IM_NEST, IM_NOZZLE_Y, type InstrumentModuleView } from './vostok';
+import { OMEGA_EARTH } from '../physics/constants';
+
+/** Vostok's sphere: its radius, m (2.3 m across, GCTC). */
+const VOSTOK_R = 1.15;
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+/**
+ * Hatch No. 1's outward normal in the model's axes (+Y the sphere's heavy
+ * bottom, the body's +x; the body's +y is the model's −X): physics/rigid/
+ * escape.ts `hatchNormal`, turned into the drawing.
+ */
+function hatchModel(rails: number): THREE.Vector3 {
+  const a = rails * Math.PI / 180;
+  return new THREE.Vector3(-Math.sin(a), -Math.cos(a), 0);
+}
 
 /** How far the fins swing out when they open, rad, and how long it takes, s. */
 const FIN_OPEN = Math.PI / 2;
 const FIN_SWING = 0.6;
-
-function stripes(): THREE.CanvasTexture {
-  const c = document.createElement('canvas');
-  c.width = 256; c.height = 16;
-  const g = c.getContext('2d')!;
-  for (let i = 0; i < 16; i++) {
-    g.fillStyle = i % 2 ? '#f4f1ea' : '#ef6b21';
-    g.fillRect(i * 16, 0, 16, 16);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-/** A parachute: a dome over its risers, the dome's mouth towards the capsule. */
-class Canopy {
-  readonly group = new THREE.Group();
-  private readonly dome: THREE.Mesh;
-  private readonly risers: THREE.LineSegments;
-  constructor(radius: number, private readonly distance: number, material: THREE.Material, lineMat: THREE.LineBasicMaterial) {
-    const dome = new THREE.SphereGeometry(radius, 32, 10, 0, Math.PI * 2, 0, Math.PI * 0.42);
-    this.dome = new THREE.Mesh(dome, material);
-    // convex side away from the capsule, which is towards −Y from its apex
-    this.dome.rotation.x = Math.PI;
-    this.group.add(this.dome);
-    const rim = radius * Math.sin(Math.PI * 0.42), rimDrop = radius * Math.cos(Math.PI * 0.42);
-    const pts: number[] = [];
-    for (let k = 0; k < 12; k++) {
-      const a = (k / 12) * Math.PI * 2;
-      pts.push(0, distance, 0, Math.cos(a) * rim, -rimDrop, Math.sin(a) * rim);
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-    this.risers = new THREE.LineSegments(geo, lineMat);
-    this.group.add(this.risers);
-    this.group.visible = false;
-  }
-  /** Open 0–1, hung `distance` above `apexY` (towards −Y). */
-  update(open: number, apexY: number): void {
-    this.group.visible = open > 0.01;
-    if (!this.group.visible) return;
-    const s = 0.25 + 0.75 * Math.min(1, open);
-    this.group.position.y = apexY - this.distance;
-    this.dome.scale.set(s, 0.6 + 0.4 * s, s);
-    this.risers.scale.set(s, 1, s);
-  }
-  dispose(): void { this.dome.geometry.dispose(); this.risers.geometry.dispose(); }
-}
 
 export class EscapeView {
   readonly group = new THREE.Group();
@@ -94,6 +63,21 @@ export class EscapeView {
   private readonly spec: DescentCapsule;
   private readonly retroPack: THREE.Group;
   private retroPlume: Plume | null = null;
+  /** C01, Vostok: the instrument module, its straps and cables, hatch No. 1, the pilot chute, the entry's glow */
+  private module: InstrumentModuleView | null = null;
+  private readonly straps = new THREE.Group();
+  private cable: THREE.Line | null = null;
+  private hatch: THREE.Mesh | null = null;
+  private hatchHole: THREE.Mesh | null = null;
+  private pilotChute: Canopy | null = null;
+  private spentMain: THREE.Mesh | null = null;
+  private shadow: THREE.Mesh | null = null;
+  private glow: EntryGlowView | null = null;
+  private readonly qInv = new THREE.Quaternion();
+  private readonly flow = new THREE.Vector3();
+  private readonly cg = new THREE.Vector3();
+  private readonly across = new THREE.Vector3();
+  private readonly lay = new THREE.Matrix4();
 
   /**
    * @param fairingRadius the drawn fairing's radius, m
@@ -219,23 +203,68 @@ export class EscapeView {
       this.retroPack.add(this.retroPlume.group);
       this.capsule.add(this.retroPack);
     } else if (vostok) {
-      // Vostok's instrument module under the sphere, two cones base to base, 2.43 m across and 2.25 m long,
-      // its TDU-1 nozzle at the far end (as the payload is drawn, render/satellite.ts)
-      const upper = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.9, 1.215, 1.0, 28)), mat('#2c2e33', 0.3, 0.6));
-      upper.position.y = 0.5;
-      const lower = new THREE.Mesh(geo(new THREE.CylinderGeometry(1.215, 0.6, 1.25, 28)), mat('#b8bcc2', 0.5, 0.45));
-      lower.position.y = 1.0 + 0.625;
-      const nozzle = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.12, 0.2, 0.3, 16)), mat('#3a3a3a', 0.6, 0.5));
-      nozzle.position.y = 2.4;
-      this.retroPack.add(upper, lower, nozzle);
+      // Vostok's instrument module under the sphere (render/vostok.ts), the sphere sitting in its cradle
+      this.module = buildInstrumentModule();
+      this.module.group.position.y = -IM_NEST;
+      this.retroPack.add(this.module.group);
       // the exhaust out ahead of the flight: the engine fires against it
       this.retroPlume = new Plume({ radius: 0.2, length: 4, kind: 'hypergolic', seed: 0.3 });
-      this.retroPlume.group.position.y = 2.55;
+      this.retroPlume.group.position.y = IM_NOZZLE_Y - IM_NEST;
       this.retroPlume.group.rotation.z = Math.PI;
       this.retroPack.add(this.retroPlume.group);
       this.capsule.add(this.retroPack);
+      // the four steel straps over the sphere from the module's rim to the lock on its top, until the backup fires
+      // them (their width and run the drawing's)
+      const strapMat = mat('#c9ccd0', 0.7, 0.3);
+      const strapGeo = geo(new THREE.TorusGeometry(VOSTOK_R + 0.03, 0.045, 5, 40, Math.PI * 0.72));
+      for (let k = 0; k < 4; k++) {
+        const az = new THREE.Group();
+        az.position.y = -VOSTOK_R;
+        az.rotation.y = (k / 4) * Math.PI * 2 + Math.PI / 4;
+        // an arc in the plane of the axis from near the cradle's rim (+Y side) over the top (−Y) of the sphere
+        const band = new THREE.Mesh(strapGeo, strapMat);
+        band.rotation.z = -Math.PI / 2;
+        az.add(band);
+        this.straps.add(az);
+      }
+      this.capsule.add(this.straps);
+      // the cables that held on for a few seconds after the straps, between their two ends (`AbortState.tether`)
+      const cableGeo = geo(new THREE.BufferGeometry());
+      cableGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3));
+      const cableMat = new THREE.LineBasicMaterial({ color: 0x2b2b2b });
+      this.materials.push(cableMat);
+      this.cable = new THREE.Line(cableGeo, cableMat);
+      this.cable.frustumCulled = false;
+      this.cable.visible = false;
+      this.capsule.add(this.cable);
+      // hatch No. 1 above the equator, 1 m across, `rails` degrees from the top (physics hatchNormal; GCTC), and
+      // the dark opening it leaves
+      const n = hatchModel(this.spec.ejection?.rails ?? 64);
+      const centre = new THREE.Vector3(0, -VOSTOK_R, 0);
+      const hatchR = 0.5, inset = Math.sqrt(VOSTOK_R ** 2 - hatchR ** 2);
+      this.hatch = new THREE.Mesh(geo(new THREE.CylinderGeometry(hatchR, hatchR, 0.06, 28)), mat('#86847d', 0.15, 0.7));
+      this.hatch.position.copy(centre).addScaledVector(n, inset + 0.03);
+      this.hatch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
+      this.hatchHole = new THREE.Mesh(geo(new THREE.CircleGeometry(hatchR * 0.97, 28)), mat('#060607', 0, 1));
+      this.hatchHole.position.copy(centre).addScaledVector(n, inset + 0.01);
+      this.hatchHole.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+      this.hatchHole.visible = false;
+      this.capsule.add(this.hatch, this.hatchHole);
+      // the window at the pilot's side and the Vzor port at his feet (placed as render/satellite.ts places them)
+      const glass = mat('#14171d', 0.8, 0.1);
+      for (const [polar, azimuth, size] of [[1.4, 0.0, 0.22], [1.95, 1.9, 0.3]] as const) {
+        const dir = new THREE.Vector3(Math.sin(polar) * Math.cos(azimuth), -Math.cos(polar), Math.sin(polar) * Math.sin(azimuth));
+        const port = new THREE.Mesh(geo(new THREE.CircleGeometry(size, 20)), glass);
+        port.position.copy(centre).addScaledVector(dir, VOSTOK_R + 0.01);
+        port.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+        this.capsule.add(port);
+      }
+      // the shock layer and the wake through the entry, round the sphere's centre
+      this.glow = buildEntryGlow(VOSTOK_R, { wake: 8 });
+      this.glow.group.position.copy(centre);
+      this.capsule.add(this.glow.group);
     }
-    const stripeTex = stripes();
+    const stripeTex = canopyStripes();
     this.textures.push(stripeTex);
     const canopyMat = new THREE.MeshStandardMaterial({ map: stripeTex, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
     this.materials.push(canopyMat);
@@ -244,6 +273,21 @@ export class EscapeView {
     this.drogue = new Canopy(Math.sqrt(this.spec.drogue.area / Math.PI), 16, canopyMat, lineMat);
     this.main = new Canopy(Math.sqrt(this.spec.main.area / Math.PI), 38, canopyMat, lineMat);
     this.capsule.add(this.drogue.group, this.main.group);
+    // C01: Vostok's 1.5 m² pilot chute, out with the hatch, drawing the braking chute out (its lines' length an estimate)
+    if (vostok && this.spec.pilot) {
+      this.pilotChute = new Canopy(Math.sqrt(this.spec.pilot.area / Math.PI), 10, canopyMat, lineMat, 8);
+      this.capsule.add(this.pilotChute.group);
+    }
+    // C01: Vostok's main lying collapsed beside the sphere once it is down, a long heap (the drawing's)
+    if (vostok) {
+      this.spentMain = new THREE.Mesh(geo(spentCanopyGeometry(16, 5)), canopyMat);
+      this.spentMain.visible = false;
+      this.shadow = contactShadow(1.6);
+      this.geometries.push(this.shadow.geometry);
+      this.materials.push(this.shadow.material as THREE.Material);
+      this.shadow.visible = false;
+      this.capsule.add(this.spentMain, this.shadow);
+    }
     this.softPlume = new Plume({ radius: 0.6, length: 2.5, kind: 'solid', seed: 0.7 });
     // the soft-landing motors fire at the ground, beyond the heat shield's place
     this.softPlume.group.position.y = 0.3;
@@ -286,13 +330,69 @@ export class EscapeView {
     }
     if (a.body === 'capsule') {
       this.heatShield.visible = a.heatShield && a.capsule !== 'vostok';
-      // the retropack stays on until it is jettisoned, a minute after the retros
-      this.retroPack.visible = !!this.spec.retro && tau < this.spec.retro.jettison;
+      // the retropack stays on until it is jettisoned, a minute after the retros; Vostok's instrument module
+      // until the cables part (C01: `joint`; the pair flies as one body on its cables, so it is drawn on until then)
+      this.retroPack.visible = !!this.spec.retro && (a.joint !== undefined ? a.joint !== 'free' : tau < this.spec.retro.jettison);
       this.retroPlume?.update(Math.min(1, a.motors.retro ?? 0), p, t);
       const apex = -this.spec.length;
       this.drogue.update(a.drogue, apex);
       this.main.update(a.main, apex);
+      this.pilotChute?.update(a.pilot ?? 0, apex);
       this.softPlume.update(a.motors.softLanding, p, t);
+      if (this.module) this.updateVostok(frame, a);
+    }
+  }
+
+  /**
+   * C01: Vostok's sphere: its straps until the backup fires them, the cables
+   * between their two ends while they alone hold the pair, hatch No. 1 or the
+   * dark opening it leaves, and the entry's glow, which is turned onto the air
+   * the sphere is moving through, whatever its spin (`group` already carries
+   * the attitude the app gave it).
+   */
+  private updateVostok(frame: VisualFrame, a: NonNullable<VisualFrame['abort']>): void {
+    this.straps.visible = a.joint !== undefined ? a.joint === 'joined' : frame.t - a.t0 < (this.spec.retro?.straps ?? Infinity);
+    const hatchOn = a.hatch ?? true;
+    this.hatch!.visible = hatchOn;
+    this.hatchHole!.visible = !hatchOn;
+    this.qInv.copy(this.group.quaternion).invert();
+    // the sphere's CG in the model: the group's origin is the frame's render offset from it
+    const off = frame.rigid?.renderOffsetBody;
+    this.cg.set(off ? off.y : 0, off ? -off.x : -this.spec.cgAbove, off ? -off.z : 0);
+    const cable = this.cable!;
+    cable.visible = a.joint === 'tethered' && !!a.tether;
+    if (cable.visible) {
+      const pos = cable.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (const [k, e] of [a.tether!.sphere, a.tether!.module].entries()) {
+        this.flow.set(e.x, e.y, e.z).applyQuaternion(this.qInv).add(this.cg);
+        pos.setXYZ(k, this.flow.x, this.flow.y, this.flow.z);
+      }
+      pos.needsUpdate = true;
+    }
+    // the air the sphere moves through: its velocity less the turning atmosphere's (ω × r)
+    const r = frame.r, v = frame.v;
+    this.flow.set(v.x + OMEGA_EARTH * r.y, v.y - OMEGA_EARTH * r.x, v.z).applyQuaternion(this.qInv);
+    const k = a.phase === 'landed' ? 0 : entryGlow(frame.altitude, frame.airspeed);
+    this.glow!.set(k, this.flow);
+    // on the ground: its shadow under it, and its main laid out on the steppe beside it. With no wind flown, where
+    // the main lay is the drawing's: beyond the sphere and off to one side, seen from where the exterior camera
+    // first looks (render/cameras.ts: from 0.9 rad north of east)
+    const spent = this.spentMain!, shadow = this.shadow!;
+    spent.visible = shadow.visible = a.phase === 'landed';
+    if (spent.visible) {
+      const r = frame.r, n = Math.hypot(r.x, r.y, r.z), h = Math.hypot(r.x, r.y);
+      const az = 0.9 + Math.PI + 0.7;
+      // the local east and north, in the scene's (ECI) axes, then the model's
+      const ex = -r.y / h, ey = r.x / h;
+      const nx = -r.z * ey / n, ny = r.z * ex / n, nz = (r.x * ey - r.y * ex) / n;
+      const away = this.cg.set(ex * Math.cos(az) + nx * Math.sin(az), ey * Math.cos(az) + ny * Math.sin(az), nz * Math.sin(az))
+        .applyQuaternion(this.qInv);
+      const up = this.flow.set(r.x / n, r.y / n, r.z / n).applyQuaternion(this.qInv);
+      shadow.position.set(0, -VOSTOK_R, 0).addScaledVector(up, 0.02 - VOSTOK_R);
+      shadow.quaternion.setFromUnitVectors(Z_AXIS, up);
+      spent.position.copy(shadow.position).addScaledVector(up, 0.01).addScaledVector(away, 9);
+      // lying out along that bearing, its narrow end, where the lines gather, towards the sphere
+      spent.quaternion.setFromRotationMatrix(this.lay.makeBasis(away, this.across.crossVectors(up, away), up));
     }
   }
 
@@ -302,7 +402,8 @@ export class EscapeView {
     if (!a) return 0;
     if (a.body === 'capsule') {
       // Vostok's sphere with its instrument module still on
-      const pack = this.spec.id === 'vostok' && frame.t - a.t0 < (this.spec.retro?.jettison ?? 0) ? 2.6 : 0;
+      const joined = a.joint !== undefined ? a.joint !== 'free' : frame.t - a.t0 < (this.spec.retro?.jettison ?? 0);
+      const pack = this.spec.id === 'vostok' && joined ? 2.6 : 0;
       return a.main > 0.2 ? 32 : a.drogue > 0.2 ? 16 : this.spec.length + 1 + pack;
     }
     if (a.body === 'spacecraft') return ESCAPE.serviceModule.length + ESCAPE.descentModule.length + 2.6;
@@ -313,7 +414,9 @@ export class EscapeView {
     for (const m of this.materials) m.dispose();
     for (const g of this.geometries) g.dispose();
     for (const x of this.textures) x.dispose();
-    this.drogue.dispose(); this.main.dispose();
+    this.drogue.dispose(); this.main.dispose(); this.pilotChute?.dispose();
+    this.module?.dispose();
+    this.glow?.dispose();
     this.retroPlume?.dispose();
     this.crewedTop.dispose();
     for (const plume of [...this.mainPlumes, ...this.fairingPlumes, this.controlPlume, this.softPlume]) plume.dispose();

@@ -587,6 +587,18 @@ const lerpVec = (a: Vec3, b: Vec3, u: number): Vec3 => ({
 });
 
 /**
+ * A point on the turning ground between `a` and `b`, `u` of the way: turned
+ * about the Earth's axis (+z) through `u` of the angle between them, its
+ * height along z blended (exact for a point carried round with the Earth).
+ */
+function turnWithEarth(a: Vec3, b: Vec3, u: number): Vec3 {
+  const da = Math.atan2(b.y, b.x) - Math.atan2(a.y, a.x);
+  const d = da > Math.PI ? da - 2 * Math.PI : da < -Math.PI ? da + 2 * Math.PI : da;
+  const ra = Math.hypot(a.x, a.y), rb = Math.hypot(b.x, b.y), lon = Math.atan2(a.y, a.x) + d * u, rr = ra + (rb - ra) * u;
+  return { x: rr * Math.cos(lon), y: rr * Math.sin(lon), z: a.z + (b.z - a.z) * u };
+}
+
+/**
  * Deep copy of a frame, down to every sub-object a consumer could write to.
  *
  * The recording is append-only and must stay that way, but nothing in the type
@@ -762,6 +774,12 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     const other = b.debris.find((x) => x.id === d.id);
     const rec = d.recovery ? { ...d.recovery } : undefined;
     const imp = d.impact ? { ...d.impact } : undefined;
+    if (other && !other.alive && !d.alive && (other.r.x !== d.r.x || other.r.y !== d.r.y || other.r.z !== d.r.z)) {
+      // C01: a body lying on the ground in both frames that the tracker carries round with the Earth (Gagarin,
+      // his seat and his hatch beside the sphere, while the recording takes a frame every 30 s): turned with it
+      // between them, not left where the earlier frame had it in space. One that stays put in both is as it was.
+      return { ...cloneDebrisFrame(d), r: turnWithEarth(d.r, other.r, u) };
+    }
     if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
       return cloneDebrisFrame(d);
     }

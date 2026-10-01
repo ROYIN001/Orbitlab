@@ -2659,6 +2659,8 @@ export const en: Record<string, string> = {
   'watch.end.crewSafeText': 'The escape system brought the crew down {km} km from the pad, {time} after the abort. The highest load on them was {g} g.',
   'watch.follow.booster': 'Follow the booster',
   'watch.follow.rocket': 'Follow the rocket',
+  'watch.follow.pilot': 'Follow Gagarin',
+  'watch.follow.capsule': 'Follow the capsule',
   'watch.payload.bandwagon': 'Bandwagon-1 (11 satellites)',
   'watch.payload.arabsat': 'Arabsat-6A communications satellite',
   'watch.payload.flight5': 'Test flight, no payload',

@@ -2639,6 +2639,8 @@ export const th: Record<string, string> = {
   'watch.end.crewSafeText': 'ระบบหนีภัยพาลูกเรือลงถึงพื้นห่างฐานปล่อย {km} กม. {time} หลังการยกเลิก ลูกเรือรับแรงสูงสุด {g} g',
   'watch.follow.booster': 'ติดตามบูสเตอร์',
   'watch.follow.rocket': 'ติดตามจรวด',
+  'watch.follow.pilot': 'ติดตามกาการิน',
+  'watch.follow.capsule': 'ติดตามแคปซูล',
   'watch.payload.bandwagon': 'Bandwagon-1 (ดาวเทียม 11 ดวง)',
   'watch.payload.arabsat': 'ดาวเทียมสื่อสาร Arabsat-6A',
   'watch.payload.flight5': 'เที่ยวบินทดสอบ ไม่มีสัมภาระ',
