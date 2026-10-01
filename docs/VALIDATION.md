@@ -939,6 +939,13 @@ their targets on the stored programme
 matrix has no row for it, because it flies 2.1b from Baikonur, and no Baikonur azimuth reaches the
 orbit. The case is now `tests/sixdof-fleet/dedicated.test.ts`.
 
+The account below was measured on the stored programme before hot staging (5a81e6d). With hot
+staging (c109f98) the numbers move by a few kilometres and seconds, and the mechanism is the same.
+Without this change the Fregat parks on 197 × 597 km (cut-off T+1 045.2 s, 151 s past the
+perigee), and its apex reaches 619.0 km. The trim waits 5 396 s, a re-planned 7 m/s trim follows,
+and `evt.burnAlignmentTimeout` ends it off target at T+12 234 s on 197.5 × 599.9 km. Both sets of
+results are in the table below.
+
 **What was wrong.** Three things, each set up by the one before.
 
 1. *The parking orbit was high, not short.* The Fregat's first burn cuts off at T+1 062.8 s on an
@@ -973,7 +980,8 @@ The RAAN was its only miss, and in the window it reaches its orbit (below).
 **What changed** (`src/physics/sim/burns.ts`; six-DOF only, the point mass is untouched).
 
 - *The last shaping burn goes before the trim of an apex outside the band.* This applies when the
-  apex is outside the band the orbit is judged on (Soyuz's 617.6 km against 612 km), and the
+  apex is outside the band the orbit is judged on (Soyuz's 617.6 km, 619.0 km with hot staging,
+  against 612 km), and the
   shaping burn is the last one and one aimed impulse can fly it: no plane change left, and one pass
   (`aimableShape`, the test the aimed circularisation already used). It is then flown first, at the
   apex, aimed at the target perigee as the lowest altitude of the next revolution. The
@@ -993,8 +1001,9 @@ The RAAN was its only miss, and in the window it reaches its orbit (below).
 
 | flown | point mass | six-DOF before | six-DOF after |
 | --- | --- | --- | --- |
-| in the LTAN window | target orbit, 597.1 × 597.1 km, T+3 563 s | off target, 188.0 × 599.9 km, T+12 157 s (`evt.burnAlignmentTimeout`) | **target orbit, 597.9 × 602.2 km, T+6 436 s**, 1 119 m/s left |
-| at 2026-09-15 12:00 UTC | off target on RAAN only (232.3° against 150.8°), 597.1 × 597.1 km | not re-flown | off target on RAAN only (232.5°), 597.9 × 602.2 km |
+| hot staging (c109f98), in the LTAN window | target orbit, 597.0 × 597.1 km, T+3 631 s | off target, 197.5 × 599.9 km, T+12 234 s (`evt.burnAlignmentTimeout`) | **target orbit, 597.8 × 602.3 km, T+6 448 s**, 1 172 m/s left |
+| before hot staging (5a81e6d), in the LTAN window | target orbit, 597.1 × 597.1 km, T+3 563 s | off target, 188.0 × 599.9 km, T+12 157 s (`evt.burnAlignmentTimeout`) | target orbit, 597.9 × 602.2 km, T+6 436 s, 1 119 m/s left |
+| before hot staging, at 2026-09-15 12:00 UTC | off target on RAAN only (232.3° against 150.8°), 597.1 × 597.1 km | not re-flown | off target on RAAN only (232.5°), 597.9 × 602.2 km |
 
 Electron to the same orbit takes the same branch (apex 612–625 km). In the six-DOF fleet matrix it
 now reaches the orbit 39–45 minutes sooner, and nearer its middle:
@@ -1031,8 +1040,9 @@ tank ran dry on a coast with a burn ahead.
 
 **What remains.**
 
-- *The margin is the Fregat's attitude gas.* It reaches its orbit with 0.16 kg of its 60 kg left;
-  the 10 kg aboard after that are the spacecraft's. The one turn left costs 25 kg. This change
+- *The margin is the Fregat's attitude gas.* It reaches its orbit with 0.8 kg of its 60 kg left
+  with hot staging, and 0.16 kg before it; the 10 kg aboard after that are the spacecraft's. The
+  one turn left costs 24–25 kg. This change
   leaves alone how the coast loop turns a stage this weak, and the 60 kg is an estimate. Either one
   moving could take the mission back off target.
 - *The six-DOF ascent still cuts off on the osculating apoapsis.* Under J2 that puts a near-polar
