@@ -54,7 +54,7 @@ import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode'
 import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentCaches } from './provider/data-provider';
 import { sectionLinkLevel } from './ui/section-plan';
 import { FEATURED_WATCH_MISSION, historicalFor, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
-import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
+import { AboutDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
 import { FlightRecorder, type RecordingSource } from './replay/recorder';
@@ -90,7 +90,8 @@ import { ToruControls } from './ui/toru-controls';
 import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
-import { stampDocument } from './build-info';
+import { BUILD, stampDocument } from './build-info';
+import { DEVELOPER, versionLabel } from './credits';
 
 /** The viewer's own choice of glow, remembered between visits. */
 const GLOW_STORAGE_KEY = 'orbitlab.glow';
@@ -346,7 +347,7 @@ class App {
   glCanvas: HTMLCanvasElement;
   mapCanvas: HTMLCanvasElement;
   obCanvas: HTMLCanvasElement;
-  private physicsDialog: PhysicsDialog;
+  private aboutDialog: AboutDialog;
   /** S04: offline (the default) or online, and where datasets come from under it */
   private dataMode: DataMode = loadDataMode();
   /** R02: online answers kept so a source is not asked more often than it allows (CelesTrak: every two hours) */
@@ -530,7 +531,7 @@ class App {
       follow: (target) => { this.watchFollow = target; },
       pickerFooter: () => this.soundtrackPanel.render(),
     });
-    this.physicsDialog = new PhysicsDialog(document.getElementById('physics-dialog') as HTMLDialogElement);
+    this.aboutDialog = new AboutDialog(document.getElementById('about-dialog') as HTMLDialogElement);
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
       plan: this.cameraPlan,
       isAuto: () => this.autoCamera,
@@ -1056,7 +1057,9 @@ class App {
       this.applyLanguage();
     });
     (document.getElementById('lang-select') as HTMLSelectElement).value = getLang();
-    document.getElementById('btn-physics')!.addEventListener('click', (e) => this.physicsDialog.open(e.currentTarget as HTMLElement));
+    // the topbar opens the tab last left open; the footer's credit line opens the maker's credit
+    document.getElementById('btn-about')!.addEventListener('click', (e) => this.aboutDialog.open(e.currentTarget as HTMLElement));
+    document.getElementById('footer-about')!.addEventListener('click', (e) => this.aboutDialog.open(e.currentTarget as HTMLElement, 'about'));
     document.getElementById('btn-camera-plan')!.addEventListener('click', (e) => this.cameraDialog.open(e.currentTarget as HTMLElement));
     // No panel drawer: the narrow layout stacks the panels in reading order
     // (viewport, mission setup, telemetry) rather than hiding two of them
@@ -1075,7 +1078,7 @@ class App {
    * owns its own keyboard entirely.
    */
   private onKey(e: KeyboardEvent): void {
-    if (this.physicsDialog.isOpen || this.cameraDialog.isOpen) return;
+    if (this.aboutDialog.isOpen || this.cameraDialog.isOpen) return;
     if (document.body.dataset.lessonsPage) return; // E03: the lessons page owns the keyboard
     // O01: the Orbit section's playground has its own clock
     if (this.route.section === 'orbit') { this.playground.onKey(e); return; }
@@ -1148,6 +1151,7 @@ class App {
 
   applyLanguage(): void {
     applyStatic();
+    document.getElementById('footer-credit')!.textContent = t('app.footerCredit', { name: DEVELOPER.name, version: versionLabel(BUILD.version) });
     document.title = `${t('app.title')} — ${t('app.subtitle')}`;
     const meta = document.getElementById('meta-description');
     if (meta) meta.setAttribute('content', t('app.subtitle'));
@@ -1172,9 +1176,9 @@ class App {
     this.viewport.setAttribute('aria-label', t('a11y.viewport'));
     this.warpSel?.setAttribute('aria-label', t('ctl.warp'));
     this.framesMenu?.applyLanguage();
-    // both dialogs rebuild their body from the dictionaries when opened; an
+    // the dialogs rebuild their body from the dictionaries when opened; an
     // open one has to be rebuilt now
-    if (this.physicsDialog.isOpen) this.physicsDialog.applyLanguage();
+    if (this.aboutDialog.isOpen) this.aboutDialog.applyLanguage();
     if (this.cameraDialog.isOpen) this.cameraDialog.applyLanguage();
     // applyStatic() rewrote the play button's title from its data-i18n-title,
     // which loses the pause/play state and the live-flight hint

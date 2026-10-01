@@ -136,6 +136,13 @@ a { color: var(--accent); }
   padding: 8px 20px 12px;
   font-size: 10px; letter-spacing: 0.6px; color: var(--dim);
 }
+/* the maker's credit and the way into the About dialog */
+.footer-credit { color: var(--muted); }
+.link-btn {
+  padding: 0; font-size: inherit; letter-spacing: inherit; color: var(--accent);
+  border-bottom: 1px dotted var(--accent-line);
+}
+.link-btn:hover { border-bottom-style: solid; }
 
 .panel {
   background: var(--panel);
@@ -955,6 +962,35 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
 .dialog-body ul { padding-left: 20px; margin: 6px 0 0; }
 .check-label { display: flex; align-items: center; gap: 10px; margin: 18px 0; font-size: 14px; }
 .check-label input { accent-color: var(--accent); width: auto; height: auto; }
+/* the About dialog (ui/dialogs.ts AboutDialog): two tabs, About and Physics & sources */
+.about-tabs { display: flex; flex-wrap: wrap; gap: 2px; margin: 0 0 18px; border-bottom: 1px solid var(--line2); }
+.about-tab {
+  padding: 8px 14px; margin-bottom: -1px; font-size: 13.5px; color: var(--muted);
+  border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0;
+}
+.about-tab:hover { color: var(--text); }
+.about-tab[aria-selected='true'] { color: var(--accent); border-bottom-color: var(--accent); }
+.about-panel:focus-visible { outline-offset: 6px; border-radius: 4px; }
+/* B4: the classic About box, centred */
+.about-box { display: grid; justify-items: center; gap: 10px; padding: 18px 8px 4px; text-align: center; }
+.about-mark { display: flex; align-items: center; gap: 12px; margin: 0; }
+.about-mark .brand-name { font-size: 30px; }
+.dialog-body .about-version {
+  margin: 0; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--accent-line);
+  font: 12px/1.4 var(--mono); color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.dialog-body .about-by { margin: 4px 0 0; font-size: 15px; color: var(--text); }
+.dialog-body .about-lead { margin: 0; max-width: 60ch; text-wrap: balance; }
+.dialog-body .about-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0; margin: 6px 0 0; list-style: none; }
+.about-links a {
+  display: inline-block; padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--line2); color: var(--text); font-size: 12.5px; text-decoration: none;
+}
+.about-links a:hover { border-color: var(--accent-line); color: var(--accent); }
+.dialog-body .about-disclaimer {
+  margin: 10px 0 0; padding-top: 12px; max-width: 58ch; border-top: 1px solid var(--line);
+  font-size: 12px; line-height: 1.7; color: var(--muted);
+}
 .camera-plan { display: flex; flex-direction: column; gap: 10px; }
 .camera-plan-row { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 14px; }
 .camera-plan-row label { font-size: 13.5px; color: #b7c2d0; }
