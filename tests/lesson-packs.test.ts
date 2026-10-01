@@ -209,7 +209,7 @@ describe('each point-mass pack lesson, flown as solved and flown wrong', () => {
     expect(gradeLesson(l, sim, wrong).verdict).toBe('fail');
   });
 
-  it('A1 Kepler\'s third law: a, T and e from the reached heights pass; a from the planned 250 × 35 786 km fails, as the brief warns', () => {
+  it('A1 Kepler\'s third law: a, T and e from the reached heights pass; a from the planned 250 × 35 786 km fails graded at the flight\'s end, as the brief warns', () => {
     const l = lesson('ipst-a-kepler3');
     const sim = fly(l);
     const { hp, ha } = heights(sim);
@@ -335,6 +335,28 @@ describe('each worked solution, graded as late as a warped page may grade it', (
       const { hp, ha } = heights(sim);
       const o = ellipse(hp, ha);
       expect(lateVerdicts(l, sim, { a: o.a, e: o.e, period: o.period }, lags), id).toEqual(pass(lags));
+    }
+  });
+
+  /**
+   * The other side of grading a late frame (review, 2026-10-01), held here so
+   * it cannot be forgotten: the planned 250 × 35 786 km orbit's a is 34 km
+   * above the reached one at insertion, but the GTO's osculating a rises by up
+   * to 17 km in the minutes after perigee, so the planned answers pass when
+   * graded 145–710 s late in 12.1 (25 km) and 240–585 s late in 14.2 (20 km),
+   * measured at 5 s steps — and again for some minutes one revolution
+   * (10½ h) later. A page warped at 1 000× grades up to 500 s late (the strip is
+   * graded every 0.5 s of real time, src/main.ts), so there the briefs'
+   * "use the reached heights" is not enforced. When the orbit measures read
+   * the state at the grading end (src/lessons/measures.ts, `at`), this fails:
+   * then put back the research's tolerances (14.1's period 0.2 min, 14.2's a
+   * 10 km) and drop this case.
+   */
+  it('12.1 and 14.2: the planned orbit fails at the end, and passes 300 s late (a known limit of the grader)', () => {
+    const p = ellipse(250, 35786);
+    for (const id of ['ipst-a-kepler3', 'rtaf-elements']) {
+      const l = lesson(id);
+      expect(lateVerdicts(l, fly(l), { a: p.a, e: p.e, period: p.period }, [0, 300]), id).toEqual([[0, 'fail'], [300, 'pass']]);
     }
   });
 
