@@ -928,17 +928,144 @@ comes down to −12°. No published Blok I attitude for a direct insertion is kn
   acts on the attached stack (Arianespace's 2.1b trace shows Blok I's acceleration before the
   separation; Starsem's shows a plateau), worth under 5 m/s either way.
 
-**Found in passing, not changed: Soyuz-2.1b to sun-synchronous orbit ends off target.** 4 t to the
-600 km SSO preset from Plesetsk ends `off target` in both flight models, before and after this
-change. The point mass goes to 597 × 597 km both times. In six-DOF it went to 588 × 606 km before
-and to 187 × 600 km after: the Fregat's first burn leaves a 187 × 597 km orbit, and the six-DOF burn
-planner spends an orbit on a 5 m/s apoapsis trim before the circularisation. It then re-plans a second
-trim an orbit later and runs out of time to align for it (`evt.burnAlignmentTimeout`, three hours into
-the flight). This is a burn-planner item for the Fregat phase, not the ascent: 2.1b's ascent now reaches orbit in six-DOF on
-the cases it used to fail (5 t to the ISS plane fell back on the kick; it reaches 412 × 424 km), and
-the six-DOF fleet matrix has no SSO row for it. Its seven six-DOF matrix rows (LEO and the ISS plane at
-25 and 50 %, GTO at 25, 50 and 90 %) all reach their targets on the stored programme
+**Found in passing: Soyuz-2.1b to sun-synchronous orbit ended off target.** 4 t to the 600 km SSO
+preset from Plesetsk ended `off target` in both flight models. It was not the
+ascent. In six-DOF it was the burn planner, which now flies the mission to its orbit (next
+section); in the point mass it was the launch time. 2.1b's ascent reaches orbit in six-DOF on the
+cases it used to fail (5 t to the ISS plane fell back on the kick; it reaches 412 × 424 km), and its
+seven six-DOF matrix rows (LEO and the ISS plane at 25 and 50 %, GTO at 25, 50 and 90 %) all reach
+their targets on the stored programme
 (`tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts`, flown 2026-10-01).
+
+### Soyuz-2.1b to sun-synchronous orbit: the burn order (six-DOF, 2026-10-01)
+
+**The case.** Soyuz-2.1b/Fregat-M with 4 t (the `weather` satellite) to the 600 km SSO preset
+(LTAN 10:30) from Plesetsk: six-DOF, calm, seed 20260919, launched in the LTAN window. The fleet
+matrix has no row for it, because it flies 2.1b from Baikonur, and no Baikonur azimuth reaches the
+orbit. The case is now `tests/sixdof-fleet/dedicated.test.ts`.
+
+The account below was measured on the stored programme before hot staging (5a81e6d). With hot
+staging (c109f98) the numbers move by a few kilometres and seconds, and the mechanism is the same.
+Without this change the Fregat parks on 197 × 597 km (cut-off T+1 045.2 s, 151 s past the
+perigee), and its apex reaches 619.0 km. The trim waits 5 396 s, a re-planned 7 m/s trim follows,
+and `evt.burnAlignmentTimeout` ends it off target at T+12 234 s on 197.5 × 599.9 km. Both sets of
+results are in the table below.
+
+**What was wrong.** Three things, each set up by the one before.
+
+1. *The parking orbit was high, not short.* The Fregat's first burn cuts off at T+1 062.8 s on an
+   osculating 187 × 597 km. The 3 km under 600 km comes from the cut-off gate. An ascent to an
+   elliptical insertion stops as soon as the apoapsis is within 3 km of the insertion apoapsis
+   (`checkAscent`, `src/physics/sim/ascent.ts`). The apoapsis is still rising by several kilometres
+   a second when it gets there, so the cut-off lands on that edge. That happens in both models, and
+   inside the 12 km band. In the point mass that is the orbit. A six-DOF coast is flown under J2,
+   and at 97.8°, 236 s past the perigee, the osculating apoapsis reads 20 km under the highest point
+   the stage reaches. That point is 617.6 km, above the planner's 609.6 km.
+2. *The planner lowered that apex before circularising.* It planned a 5 m/s retrograde trim at the
+   next J2 perigee, then the 115 m/s circularisation at the apex. The perigee had passed 236 s before
+   the cut-off, so the trim waited a revolution (5 307 s). It also turned the stage retrograde and
+   back.
+3. *The Fregat ran out of attitude gas.* The model gives it 60 kg (an estimate, `STAGE_RCS`). The
+   first burn, which the Fregat steers on its jets (its engine is fixed), and the settling after it
+   took about 30 kg. A held coast costs nothing: the tank stayed at the same mass through 4 900 s of
+   coast. The two turns took the other 30 kg, 23 kg of it before the first had finished. The coast
+   loop turns the 7.1 t stack (42 000 kg·m² across) at up to 4.6 °/s, overshoots retrograde by 49°,
+   and swings back and forth for two more minutes before it settles. A turn paced to the 240 s
+   pre-orientation would cost about 2 kg or less. With the Fregat's tank empty, its component left
+   the configuration, and the coast took that for a new planning context. It re-planned from the
+   osculating apoapsis of the moment: 583 km, on an orbit whose apex the trim had just put at
+   600 km. The result was an 8 m/s trim another revolution later. The stage could not turn for it:
+   `evt.burnAlignmentTimeout` came after 240 s (the floor, since an empty tank has no stopping time
+   to allow for), and the mission ended off target at T+12 157 s on 188 × 600 km.
+
+The point mass's `off target` came from the launch time. The finding was measured at the fixed epoch
+2026-09-15 12:00 UTC, and the plane reached from there is 81.5° of RAAN away from the LTAN plane.
+The RAAN was its only miss, and in the window it reaches its orbit (below).
+
+**What changed** (`src/physics/sim/burns.ts`; six-DOF only, the point mass is untouched).
+
+- *The last shaping burn goes before the trim of an apex outside the band.* This applies when the
+  apex is outside the band the orbit is judged on (Soyuz's 617.6 km, 619.0 km with hot staging,
+  against 612 km), and the
+  shaping burn is the last one and one aimed impulse can fly it: no plane change left, and one pass
+  (`aimableShape`, the test the aimed circularisation already used). It is then flown first, at the
+  apex, aimed at the target perigee as the lowest altitude of the next revolution. The
+  end-of-mission correction (`finalPhysicalCorrection`), which flies for an orbit outside that
+  band, then brings the apex down at the perigee. That is one turn to retrograde and none back. The
+  conic planner already puts a high apoapsis in this order (`planBurns`). In every other case the
+  apex is lowered first, as before. That includes a plane change or a multi-pass burn still to
+  fly, and an apex above the planner's band but inside the judged one. In that last case the
+  circularisation would leave the apex where it came out, with nothing left to correct it. A
+  first version of this change did it anyway, and the Soyuz-2.1b Monte Carlo set at 500 km
+  (`tests/heavy/monte-carlo-soyuz21b.test.ts`) ended its runs 500.0 × 508.1–508.9 km instead of
+  498.4 × 501.5 km, which widened the perigee's 3σ to 9.1 km against the set's 8 km.
+- *The attitude gas is not a planning context* (`rigidOrbitContext`). A tank that runs dry no
+  longer makes the coast re-plan.
+
+**Results.** Soyuz-2.1b, 4 t:
+
+| flown | point mass | six-DOF before | six-DOF after |
+| --- | --- | --- | --- |
+| hot staging (c109f98), in the LTAN window | target orbit, 597.0 × 597.1 km, T+3 631 s | off target, 197.5 × 599.9 km, T+12 234 s (`evt.burnAlignmentTimeout`) | **target orbit, 597.8 × 602.3 km, T+6 448 s**, 1 172 m/s left |
+| before hot staging (5a81e6d), in the LTAN window | target orbit, 597.1 × 597.1 km, T+3 563 s | off target, 188.0 × 599.9 km, T+12 157 s (`evt.burnAlignmentTimeout`) | target orbit, 597.9 × 602.2 km, T+6 436 s, 1 119 m/s left |
+| before hot staging, at 2026-09-15 12:00 UTC | off target on RAAN only (232.3° against 150.8°), 597.1 × 597.1 km | not re-flown | off target on RAAN only (232.5°), 597.9 × 602.2 km |
+
+Electron to the same orbit takes the same branch (apex 612–625 km). In the six-DOF fleet matrix it
+now reaches the orbit 39–45 minutes sooner, and nearer its middle:
+
+| six-DOF fleet row | before | after |
+| --- | --- | --- |
+| electron/sso/25 | 595.3 × 603.3 km, T+8 847 s | 597.2 × 602.8 km, T+6 517 s |
+| electron/sso/50 | 594.9 × 603.1 km, T+8 876 s | 597.3 × 602.7 km, T+6 513 s |
+| electron/sso/90 | 595.3 × 601.9 km, T+9 344 s | 598.1 × 601.9 km, T+6 653 s |
+
+The six-DOF fleet matrix and its dedicated missions (`npm run test:sixdof-fleet`, 164 tests, flown
+2026-10-01) pass with this change. Nine flights reach the high-apex branch:
+
+- *Six circularise first*, with the apex outside the band: Electron's three SSO rows (619–625 km)
+  and its ISS-plane row at 25 % (430.3 km), Long March 2D's 650 kg SSO mission (621.9 km) and this
+  mission (619.0 km with hot staging, 618.0 km before it).
+- *Three still lower first*, with the apex inside the band: Soyuz-2.1b's LEO and ISS-plane rows
+  at 25 % (508.5 and 428.3 km) and Electron's ISS-plane row at 50 % (429.9 km).
+
+The matrix was first flown with all nine circularising first. Re-flown with the final rule, the
+three that lower first end as they did before this change: 498.4 × 501.6, 418.4 × 421.6 and
+417.4 × 422.1 km. So do the heavy tests that fly Soyuz-2.1b's 25 % LEO row:
+
+- its Monte Carlo set: 25 of 30 runs on target, perigee and apogee 3σ 7.2 and 7.6 km, the same as
+  without the change;
+- its flexible flight;
+- its PEG and IGM flights.
+
+The flexible Long March 2D and Electron flights and Electron's PEG and IGM flights pass with the
+final rule too.
+
+Re-flown after hot staging (c109f98), with the final rule, the matrix passes again: 164 tests, the
+same nine flights in the same two groups, and the apexes within 0.1 km of the above except this
+mission's. The four heavy cases just above pass on that tree too.
+
+None of the others reached that branch; the rows that raise a low apex first fly as they did. No
+tank ran dry on a coast with a burn ahead.
+
+**What remains.**
+
+- *The margin is the Fregat's attitude gas.* It reaches its orbit with 0.8 kg of its 60 kg left
+  with hot staging, and 0.16 kg before it; the 10 kg aboard after that are the spacecraft's. The
+  one turn left costs 24–25 kg. This change
+  leaves alone how the coast loop turns a stage this weak, and the 60 kg is an estimate. Either one
+  moving could take the mission back off target.
+- *The six-DOF ascent still cuts off on the osculating apoapsis.* Under J2 that puts a near-polar
+  parking orbit's apex up to 20 km from the insertion apoapsis, and the planner absorbs it with an
+  apex correction. Cutting off on the physical apex would change every six-DOF row with an
+  elliptical insertion. It is not done here.
+- *Both models cut off 3 km under the insertion apoapsis*, by construction of the gate. That is
+  inside the band and is not changed.
+- *A six-DOF re-plan still reads the osculating apsides* (`replanRemainingBurns`). A coast that an
+  operator's command, a separation or an engine failure re-plans starts from the orbit of that
+  instant. Only the empty tank, which changes none of those, no longer triggers a re-plan.
+
+Held by `tests/rigid-orbit-planning.test.ts` (the order, and the empty tank) and
+`tests/sixdof-fleet/dedicated.test.ts` (the mission).
 
 ### Soyuz-2.1a's strap-ons fly a zero-lift turn (six-DOF, audit PHY-01)
 

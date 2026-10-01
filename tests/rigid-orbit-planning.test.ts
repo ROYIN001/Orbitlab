@@ -4,9 +4,9 @@ import { rigidMission } from './rigid-harness';
 import { buildRigidVehicle } from '../src/physics/rigid/mass';
 import { quatFromBasis } from '../src/physics/rigid/math';
 import { elementsFromState } from '../src/physics/orbital';
-import { cross, norm, normalize, v3 } from '../src/physics/vec3';
+import { cross, norm, normalize, scale, v3 } from '../src/physics/vec3';
 import * as prediction from '../src/physics/rigid/orbit-prediction';
-import { G0, MU_EARTH, R_EARTH, J2_EARTH } from '../src/physics/constants';
+import { DEG, G0, MU_EARTH, R_EARTH, J2_EARTH } from '../src/physics/constants';
 
 const boundary = (sim: Simulation) => sim.burns;
 
@@ -79,6 +79,58 @@ describe('J2-consistent six-DOF burn planning', () => {
     const apex = prediction.nextJ2Apsis(sim.state, 'apoapsis')!;
     expect(apex.radiusM - 6378137).toBeGreaterThan(499000);
     expect(apex.radiusM - 6378137).toBeLessThan(502000);
+  });
+
+  // The fixture a little faster, its physical apex above the 500 km circle:
+  // by default 516 km, outside the 10 km band the orbit is judged on, the way
+  // a Fregat's parking orbit from Plesetsk comes out 617.6 km for a 600 km one.
+  function highApexFixture(speedFactor = 1.001, apexKm: [number, number] = [510, 520]) {
+    const sim = cutoffFixture();
+    sim.state.v = scale(sim.state.v, speedFactor);
+    sim.state.elements = elementsFromState(sim.state.r, sim.state.v);
+    const apex = prediction.nextJ2Apsis(sim.state, 'apoapsis', { includeInitial: true })!.radiusM - R_EARTH;
+    expect(apex).toBeGreaterThan(apexKm[0] * 1e3);
+    expect(apex).toBeLessThan(apexKm[1] * 1e3);
+    return sim;
+  }
+
+  it('circularises first and lowers a high apex after it when the shaping burn is the last', () => {
+    const sim = highApexFixture();
+    boundary(sim).scheduleNextBurn(sim.state.elements);
+    // No lowering burn ahead of it: that would turn the stage retrograde and back.
+    expect(sim.plan.burns.map(b => b.kind)).toEqual(['shapeAtApoapsis']);
+    expect(sim.state.currentBurn?.kind).toBe('shapeAtApoapsis');
+    expect(sim.state.currentBurn?.physicalObjective).toEqual({ measure: 'lowest', altitudeM: 500000 });
+  });
+
+  it('still lowers first an apex above the planner\'s band but inside the judged one', () => {
+    // 509 km: circularised there it would stay, 1 km inside the band's edge;
+    // lowered first, the aimed circularisation centres the orbit.
+    const sim = highApexFixture(1.000745, [508, 510]);
+    boundary(sim).scheduleNextBurn(sim.state.elements);
+    expect(sim.plan.burns.map(b => b.kind)).toEqual(['raiseApoapsis', 'shapeAtApoapsis']);
+    expect(sim.state.currentBurn?.physicalApoapsis).toBe(500000);
+  });
+
+  it('still lowers a high apex first when the shaping burn has a plane change to fly', () => {
+    const sim = highApexFixture();
+    sim.plan.target = { ...sim.plan.target, inclination: sim.plan.target.inclination + 1 * DEG };
+    boundary(sim).scheduleNextBurn(sim.state.elements);
+    expect(sim.plan.burns.map(b => b.kind)).toEqual(['raiseApoapsis', 'shapeAtApoapsis']);
+    expect(sim.state.currentBurn?.physicalApoapsis).toBe(500000);
+    expect(sim.state.currentBurn?.lowering).toBe(true);
+  });
+
+  it('does not re-plan a scheduled burn when an attitude-gas reservoir runs dry', () => {
+    const sim = cutoffFixture(); boundary(sim).scheduleNextBurn(sim.state.elements);
+    const burn = sim.state.currentBurn!, context = boundary(sim).rigidOrbitContext();
+    const configuration = sim.state.rigid!.configurationId!;
+    sim.state.rigid = { ...sim.state.rigid!, configurationId: configuration.split('|').filter(part => part !== 's2.rcs').join('|') };
+    expect(sim.state.rigid.configurationId).not.toBe(configuration);
+    expect(boundary(sim).rigidOrbitContext()).toBe(context);
+    boundary(sim).checkCoast(sim.state.elements);
+    expect(sim.state.currentBurn).toBe(burn);
+    expect(sim.pending.filter(action => action.label === 'burnStart')).toHaveLength(1);
   });
 
   it('replans a changed coast and never executes a stale scheduled burn under manual control', () => {
