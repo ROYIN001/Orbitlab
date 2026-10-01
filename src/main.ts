@@ -2083,6 +2083,8 @@ class App {
       listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },
       warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
       onboard: this.camMode === 'onboard',
+      // scene axes are the frames' ECI axes, and the camera has no parent: its quaternion turns ECI into its head
+      orientation: scene.camera.quaternion,
       suppressed: this.soundtrack.sounding,
     });
     this.soundtrack.update(frame.t, this.activeWarp, this.player.live ? this.playing : this.player.playing, this.audio.on);
