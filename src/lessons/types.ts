@@ -14,6 +14,8 @@ import type { Lang } from '../i18n';
 import type { CaseId } from '../worksheets/case-ids';
 import type { MissionDocument } from '../config/mission-file';
 import type { Simulation } from '../physics/simulation';
+import type { SatelliteDesign } from '../design/satellite-spec';
+import type { MissionRequirements } from '../design/requirements';
 
 /** A text in the three languages of the interface; English is required, the others fall back to it. */
 export type LocalText = { en: string } & Partial<Record<Exclude<Lang, 'en'>, string>>;
@@ -141,10 +143,108 @@ export interface CaseLesson extends LessonMeta {
   hints: LocalText[];
 }
 
-/** A lesson of either kind, as the catalogue lists it. */
-export type CatalogLesson = Lesson | CaseLesson;
+/**
+ * A number of a designed satellite a design lesson grades (roadmap T01, Phase 4
+ * map §4.1 "Design a satellite that meets these requirements"), each read from
+ * the D06 satellite model's figures (src/design/satellite-model.ts
+ * `designFigures`) or, for the two the air decides, the lifetime analysis (P07)
+ * flown on the design — never worked out a second way (src/design/design-lesson-key.ts).
+ * Units, as a lesson file writes its bounds (`DESIGN_MEASURES`): kg, min, %, %,
+ * m/s, dB, Gbit a day, m, km, days, years, a ratio, 0 or 1, A·m².
+ * `sat.torquerDipole` is the T03 research's addition (the magnetorquer lesson
+ * of the IPST physics pack, phase4-t03-curricula §8): the torquer dipole the
+ * disturbances need.
+ */
+export type DesignMeasureId =
+  | 'sat.mass' | 'sat.eclipseMax' | 'sat.powerMargin' | 'sat.batteryDod' | 'sat.dvMargin' | 'sat.linkMargin' | 'sat.dataPerDay'
+  | 'sat.gsd' | 'sat.swath' | 'sat.revisitMax' | 'sat.lifetime' | 'sat.wheelMargin' | 'sat.disposal25y' | 'sat.torquerDipole';
+
+/**
+ * A part of the design a design lesson fixes (T01): a number's path in the
+ * design (`power.arrayArea`, as the satellite model's `SATELLITE_FIELDS` name
+ * it), a menu's (`power.mount`, `power.regulation`, `adcs.mode`,
+ * `comms.station`), the sun-synchronous switch (`orbit.sso`), or whether the
+ * design has an engine (`propulsion`) or a camera (`payload`). The full list
+ * is `DESIGN_LOCK_KEYS` (src/lessons/design-lesson.ts).
+ */
+export type DesignLockKey = string;
+
+/** A bound on a design measure, in its unit: a range, or a number and a tolerance round it. */
+export interface DesignBound {
+  min?: number;
+  max?: number;
+  target?: number;
+  /** half-width of the band round `target` */
+  tol?: number;
+}
+
+export type DesignCriterion =
+  /** a figure of the design held within bounds */
+  | ({ id: string; kind: 'design'; measure: DesignMeasureId; label?: LocalText } & DesignBound)
+  /** a figure the student works out and types in (the T03 answer form, curricula §8), checked against the design's own */
+  | { id: string; kind: 'answer'; measure: DesignMeasureId; tol?: number; tolPct?: number; prompt: LocalText; unit?: string; label?: LocalText };
+
+/**
+ * A design lesson (roadmap T01, Phase 4 map §4.1): the satellite designer
+ * opens (Explore, or the Engineer level's bench: `mode`) on a start design,
+ * some of its parts locked, and the student changes the rest until the
+ * design's figures meet the criteria, then hands it in. Graded outside
+ * src/lessons (src/design/design-lesson-key.ts builds the `DesignKey`; the
+ * grade itself is src/lessons/design-lesson.ts `gradeDesign`), as the case
+ * lessons are, so the lessons keep clear of the propagator
+ * (tests/propagator.test.ts).
+ *
+ * REPRODUCIBLE: the lesson fixes the day the figures are read on
+ * (`designDate`, the design date of the integration of D06) and the ECSS
+ * level of the air (`level`), never the measured series, so the same design
+ * gets the same grade on any day, on any computer within the re-check's
+ * engine tolerances (T02).
+ */
+export interface DesignLesson extends LessonMeta {
+  kind: 'design';
+  title: LocalText;
+  brief: LocalText;
+  debrief?: LocalText;
+  /** where the design starts: a template's design (src/data/satellite-templates.ts), or a whole design of the file's own */
+  start: { template: string } | { design: SatelliteDesign };
+  /** the day the figures are read on, `YYYY-MM-DD` (UTC) */
+  designDate: string;
+  /** the ECSS level of solar activity the air is read at */
+  level: 'low' | 'moderate' | 'high';
+  /** what the mission asks, shown beside the designer; its place is where `sat.revisitMax` looks */
+  requirements?: MissionRequirements;
+  /** the parts of the design the student may not change */
+  locked: DesignLockKey[];
+  criteria: DesignCriterion[];
+  hints: LocalText[];
+}
+
+/**
+ * A design's figures for a design lesson, as the grader reads them (T01):
+ * built outside src/lessons from the D06 model and the lifetime run
+ * (src/design/design-lesson-key.ts), handed in as data, as a case sheet's key
+ * is (`CaseKey`).
+ */
+export interface DesignKey {
+  /** each measure the lesson asks about, in its unit (`DESIGN_MEASURES`); null where it does not apply (no camera, no wheel, outside the low region) */
+  values: Partial<Record<DesignMeasureId, number | null>>;
+  /** the locked parts the design changed */
+  lockBroken: DesignLockKey[];
+  /** the design is refused by the checker: no figure could be worked out */
+  refused?: boolean;
+  /** `sat.lifetime` is the run's end: the satellite was still up then, so its lifetime is longer */
+  lifetimeCapped?: boolean;
+  /** the 25-year rule's limit for this design, years from the design date (life + 25 with no engine, 25 with one) */
+  disposalLimit?: number;
+}
+
+/** A lesson of any kind, as the catalogue lists it. */
+export type CatalogLesson = Lesson | CaseLesson | DesignLesson;
 
 export const isCaseLesson = (l: CatalogLesson): l is CaseLesson => l.kind === 'case';
+export const isDesignLesson = (l: CatalogLesson): l is DesignLesson => l.kind === 'design';
+/** A flight lesson: the kind every flown thing takes. */
+export const isFlightLesson = (l: CatalogLesson): l is Lesson => l.kind === undefined || l.kind === 'flight';
 
 /**
  * What the grader reads: a live simulation, the main thread's mirror of one in
@@ -189,8 +289,8 @@ export interface LessonGrade {
    */
   verdict: 'pass' | 'passedWithHelp' | 'fail' | 'open';
   criteria: CriterionGrade[];
-  /** settings the lesson locked that the flight did not keep */
-  lockBroken: LockKey[];
+  /** settings the lesson locked that the flight did not keep (a design lesson: the design's parts, `DesignLockKey`) */
+  lockBroken: (LockKey | DesignLockKey)[];
   /** mission time graded at, s */
   t: number;
 }

@@ -51,7 +51,7 @@ import { defaultMissionState, missionConfigFromState } from './config';
 import { flightEnded, gradeShown, regradeAnswers, type RevealedAnswers } from './grader';
 import { MEASURES, missionTarget } from './measures';
 import { RESULTS_FORMAT, missingFields, verifyResults, type LessonProgress, type LessonRecord, type RecheckField, type ResultsFile } from './progress';
-import { isCaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade, type LockKey, type MeasureId } from './types';
+import { isCaseLesson, isFlightLesson, type CatalogLesson, type Criterion, type CriterionGrade, type DesignLockKey, type Lesson, type LessonGrade, type LockKey, type MeasureId } from './types';
 
 /**
  * How far a re-checked value may be from the recorded one and still match, in
@@ -148,7 +148,7 @@ export interface RecordCheck {
   recordedVerdict: LessonRecord['verdict'];
   /** the re-grade, when the flight was flown again */
   recheckedVerdict: LessonGrade['verdict'] | null;
-  lockBroken: LockKey[];
+  lockBroken: (LockKey | DesignLockKey)[];
   criteria: CriterionCheck[];
   /** the mission time flown to, s, and in how many steps */
   flownTo: number | null;
@@ -366,7 +366,8 @@ export function checkRecord(job: RecheckJob, catalogue: readonly CatalogLesson[]
     flownTo: null, steps: 0, lateActions: 0,
   };
   if (kind === 'case') return { ...out, reason: 'caseLesson' };
-  if (!lesson || isCaseLesson(lesson)) return { ...out, reason: 'noLesson' };
+  // a design lesson's record (T01) is not flown: its re-check is the next step's (T02 for designs)
+  if (!lesson || !isFlightLesson(lesson)) return { ...out, reason: 'noLesson' };
   let flown: ReturnType<typeof reflyRecord>;
   try { flown = reflyRecord(lesson, r); } catch { return { ...out, reason: 'error' }; }
   if ('reason' in flown) return { ...out, reason: flown.reason };

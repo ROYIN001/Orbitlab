@@ -15,7 +15,8 @@ import { CZ5B_STAGES } from '../data/cz5b';
 import type { CaseSource } from '../worksheets/cases';
 import type { Activity, DailyActivity } from '../physics/propagator/activity';
 import type { Worksheet } from '../worksheets/types';
-import type { CatalogLesson, CriterionGrade, LessonGrade } from './types';
+import type { CatalogLesson, CriterionGrade, DesignMeasureId, LessonGrade } from './types';
+import type { SatelliteDesign } from '../design/satellite-spec';
 import type { FlightAction } from '../physics/sim/actions';
 
 export const PROGRESS_STORAGE_KEY = 'orbitlab.lessons';
@@ -64,6 +65,17 @@ export interface LessonRecord {
   actions?: FlightAction[];
   /** T02: the build the flight was flown on, `<version>+<commit>` (`appBuildId`, src/build-info.ts) */
   app?: string;
+  /**
+   * A design lesson's (T01; owner decision 3, 2026-09-29: a results file may
+   * carry the satellite design): the design handed in, the design date and
+   * the ECSS level its figures were read at (the lesson's, kept so the
+   * re-check works them out again on the same day and in the same air, T02),
+   * and the figures it was graded on, each in its measure's unit.
+   */
+  design?: SatelliteDesign;
+  designDate?: string;
+  level?: 'low' | 'moderate' | 'high';
+  figures?: Partial<Record<DesignMeasureId, number | null>>;
 }
 
 /** The fields a flight lesson's record needs for an exact re-check (T02), in the order the checker lists them. */
@@ -74,6 +86,7 @@ export type RecheckField = (typeof RECHECK_FIELDS)[number];
 export function missingFields(record: LessonRecord): RecheckField[] {
   return RECHECK_FIELDS.filter((f) => record[f] === undefined);
 }
+
 
 export interface CaseRecordData {
   case: CaseId;
@@ -209,6 +222,34 @@ export function flightRecord(input: FlightRecordInput): LessonRecord {
     at: input.at.toISOString(), verdict: grade.verdict, criteria: grade.criteria, answers: { ...input.answers }, hintsShown: input.hintsShown,
     mission: flownMission(input.cfg), ...(revealed.length ? { revealed } : {}),
     t: grade.t, clock: input.clock, actions: structuredClone([...input.actions]), app: input.app,
+  };
+}
+
+/** What a design lesson's hand-in is kept as (T01): the grade, and what the re-check needs to work it out again (T02). */
+export interface DesignRecordInput {
+  at: Date;
+  grade: LessonGrade;
+  answers: Readonly<Record<string, number>>;
+  hintsShown: number;
+  /** the design handed in */
+  design: SatelliteDesign;
+  /** the lesson's design date and ECSS level, which the figures were read at */
+  designDate: string;
+  level: 'low' | 'moderate' | 'high';
+  /** the figures graded (`DesignKey.values`) */
+  figures: Partial<Record<DesignMeasureId, number | null>>;
+  app: string;
+}
+
+export function designRecord(input: DesignRecordInput): LessonRecord {
+  const { grade } = input;
+  const revealed = grade.criteria.filter((c) => c.revealed).map((c) => c.id);
+  return {
+    at: input.at.toISOString(), verdict: grade.verdict, criteria: structuredClone(grade.criteria), answers: { ...input.answers }, hintsShown: input.hintsShown,
+    ...(revealed.length ? { revealed } : {}),
+    design: structuredClone(input.design), designDate: input.designDate, level: input.level,
+    // a figure that does not apply is kept as null, as JSON keeps it
+    figures: JSON.parse(JSON.stringify(input.figures)) as Partial<Record<DesignMeasureId, number | null>>, app: input.app,
   };
 }
 

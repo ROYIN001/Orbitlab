@@ -15,7 +15,7 @@ import { defaultDynamics } from '../physics/rigid/config';
 import { missionVehicle } from '../data/vehicles';
 import { LESSON_HOOKS } from './hooks';
 import { MEASURES, missionTarget } from './measures';
-import type { CatalogLesson, Criterion, CriterionGrade, CriterionState, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
+import type { CatalogLesson, Criterion, CriterionGrade, CriterionState, DesignLockKey, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
 
 /** Answers the student has typed, by criterion id. */
 export type LessonAnswers = Readonly<Record<string, number>>;
@@ -118,7 +118,7 @@ export function flightStarted(flight: LessonFlight): boolean {
  * all passed once the flight has ended → pass, or passedWithHelp when an
  * answer passed on a value the student had been shown; else open.
  */
-export function verdictOf(criteria: readonly CriterionGrade[], lockBroken: readonly LockKey[], final: boolean): LessonGrade['verdict'] {
+export function verdictOf(criteria: readonly CriterionGrade[], lockBroken: readonly (LockKey | DesignLockKey)[], final: boolean): LessonGrade['verdict'] {
   if (lockBroken.length > 0 || criteria.some((c) => c.state === 'fail')) return 'fail';
   if (!final || !criteria.every((c) => c.state === 'pass')) return 'open';
   return criteria.some((c) => c.revealed) ? 'passedWithHelp' : 'pass';

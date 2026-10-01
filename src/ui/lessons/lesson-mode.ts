@@ -38,7 +38,7 @@ import {
   RESULTS_FILE_EXTENSION, clearRevealed, flightRecord, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
 import { appBuildId } from '../../build-info';
-import { isCaseLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
+import { isCaseLesson, isFlightLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
 import { letterOf } from '../../worksheets/bank-items';
 import type { CaseId, CaseLessonState } from '../../worksheets/case-ids';
@@ -243,6 +243,7 @@ export class LessonMode implements LessonToolsHost {
     if (!lesson) return { ok: false, reason: t('lesson.notFound', { id }) };
     if (lesson.comingSoon) return { ok: false, reason: t('lesson.comingSoon') };
     if (isCaseLesson(lesson)) return this.startCase(lesson);
+    if (!isFlightLesson(lesson)) return { ok: false, reason: t('lesson.comingSoon') };
     this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.tellOrbit();
     lessonProgress(this.progressData, id);
@@ -360,6 +361,7 @@ export class LessonMode implements LessonToolsHost {
       this.gradeCase(false);
       return;
     }
+    if (!isFlightLesson(lesson)) return;
     this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.host.loadMission(missionStateOf(lesson.mission));
     this.locks.set(lesson.locked);
@@ -415,7 +417,7 @@ export class LessonMode implements LessonToolsHost {
     const a = this.active;
     if (!a) return;
     // a case lesson has no flight: one flying on in the Launch section is not its business (nor are its answers cleared by it)
-    if (isCaseLesson(a.lesson)) return;
+    if (!isFlightLesson(a.lesson)) return;
     const lesson = a.lesson;
     const sim = this.host.sim();
     if (sim !== a.sim) {
@@ -649,6 +651,7 @@ export class LessonMode implements LessonToolsHost {
     if (!a) return;
     this.strip.classList.toggle('case', isCaseLesson(a.lesson));
     if (isCaseLesson(a.lesson)) { this.paintCase(a, a.lesson); return; }
+    if (!isFlightLesson(a.lesson)) return;
     const lang = getLang();
     const g = a.grade;
     const flown = !!a.sim && flightStarted(a.sim);

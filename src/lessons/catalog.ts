@@ -11,7 +11,7 @@ import { TRACK4 } from './builtin/track4';
 import { TRACK5 } from './builtin/track5';
 import { TRACK6 } from './builtin/track6';
 import { COMING } from './builtin/coming';
-import { isCaseLesson, type CaseLesson, type CatalogLesson, type Lesson, type LocalText } from './types';
+import { isCaseLesson, isFlightLesson, type CaseLesson, type CatalogLesson, type Lesson, type LocalText } from './types';
 
 /** What reading the built-in lessons reported; the tests hold it empty. */
 export const BUILTIN_ISSUES: FileIssue[] = [];
@@ -27,7 +27,7 @@ function readAll(raw: readonly unknown[], from: string): CatalogLesson[] {
 
 /** The built-in flight lessons, tracks 1–5: everything that flies a lesson reads these. */
 export const BUILTIN_LESSONS: readonly Lesson[] = readAll([...TRACK1, ...TRACK2, ...TRACK3, ...TRACK4, ...TRACK5, ...COMING], 'builtin')
-  .filter((l): l is Lesson => !isCaseLesson(l));
+  .filter(isFlightLesson);
 
 /** The built-in case lessons, track 6 (P2.5's cases from the record). */
 export const BUILTIN_CASE_LESSONS: readonly CaseLesson[] = readAll(TRACK6, 'builtin.track6').filter(isCaseLesson);

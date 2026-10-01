@@ -32,19 +32,19 @@ import { t, tCount } from '../../i18n';
 import { runLifetimeJob } from '../../physics/lifetime-job';
 import type { PropagationResult } from '../../physics/propagator/propagate';
 import {
-  SATELLITE_FIELDS, designHandoff, estimateTexts, fieldByPath, fieldOrigin, problemTexts, satelliteChecks,
+  SATELLITE_FIELDS, estimateTexts, fieldByPath, fieldOrigin, problemTexts, satelliteChecks,
   type FieldGroup, type SatText, type SatelliteFigures,
 } from '../../design/satellite-model';
 import { lifetimeSpacecraft } from '../../design/satellite-area';
 import type { SatelliteDesign } from '../../design/satellite-spec';
-import { DESIGN_ACTIVITY_LEVELS, levelActivity, type EcssLevel } from '../../orbit/satellite-air';
+import { DESIGN_ACTIVITY_LEVELS, type EcssLevel } from '../../orbit/satellite-air';
+import { designLifetimeRequest } from '../../design/design-lesson-key';
 import { button, el, num } from '../orbit/dom';
 import { formatDuration } from '../lifetime';
 import { field, select } from './explore-level';
 import { camera, designDateField, engine, menu, numberField, refreshControls } from './satellite-controls';
 import { attitudeRows, cameraRows, dvRows, eclipseRows, linkRows, massRows, orbitRows, powerRows, type Row } from './satellite-figures';
 import { figureTable, satTextList, sayFig } from './satellite-text';
-import { orbitLabel } from './satellite-level';
 import type { SatelliteWorkspace } from './satellite-workspace';
 import { SatelliteFly, type SatelliteFlyHost } from './satellite-fly';
 import './satellite.css';
@@ -404,10 +404,11 @@ export class SatelliteBench {
     if (this.running) return;
     const d = structuredClone(this.ws.design);
     const jd = this.ws.jd();
-    const h = designHandoff(d, jd, orbitLabel(d, null));
-    if (!h) return;
-    const sc = lifetimeSpacecraft(d);
     const level = this.ws.activityLevel;
+    // the run a design lesson grades the lifetime with too (T01): one request, one way (src/design/design-lesson-key.ts)
+    const req = designLifetimeRequest(d, jd, level, d.lifeYears + 25);
+    if (!req) return;
+    const sc = lifetimeSpacecraft(d);
     const run: LifeRun = {
       key: this.runKey(), level, from: this.ws.date,
       mass: sc.mass, area: sc.area, cd: sc.cd, cr: sc.cr, years: d.lifeYears, held: !!d.propulsion,
@@ -417,15 +418,8 @@ export class SatelliteBench {
     this.running = job;
     this.run = null;
     this.renderResults();
-    runLifetimeJob({
-      r0: h.r, v0: h.v, jd0: h.jd,
-      options: {
-        // the mean-element method, the dialog's default; it leaves out the Sun, the Moon and sunlight pressure
-        method: 'mean', duration: (d.lifeYears + 25) * YEAR,
-        forces: { j2: true, j3j4: true, drag: true, sun: false, moon: false, srp: false, activity: levelActivity(level) },
-        spacecraft: sc, samples: 600, tolerance: 1e-9,
-      },
-    }, controller.signal, (f) => {
+    // the mean-element method, the dialog's default; it leaves out the Sun, the Moon and sunlight pressure
+    runLifetimeJob(req, controller.signal, (f) => {
       job.progress = f;
       const bar = this.panel.querySelector<HTMLProgressElement>('.bsb-life progress');
       if (bar) bar.value = f;
