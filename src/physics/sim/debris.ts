@@ -24,8 +24,46 @@ import { elementsFromState, eciToLatLon, propagateKepler } from '../orbital';
 import type { StageState, BoosterState } from '../vehicle';
 import { targetedRecovery } from '../vehicle';
 import type { Simulation } from '../simulation';
-import type { Debris } from './types';
+import type { Debris, EventSeverity } from './types';
 import { pointMassAcceleration } from './forces';
+
+/** An event a debris flight raises, at the mission time it happened. */
+export interface DebrisFlightEvent {
+  key: string;
+  severity: EventSeverity;
+  params?: Record<string, string | number>;
+  t: number;
+}
+
+/** What one step of a debris flight gives back: its events, and the bodies it has let go of. */
+export interface DebrisFlightResult {
+  events: DebrisFlightEvent[];
+  /** new bodies, created at their own `createdAt`, each flown from then by its own flight */
+  spawn?: { debris: Debris; flight?: DebrisFlight }[];
+}
+
+/** The world a debris flight flies in. */
+export interface DebrisEnvironment {
+  /** height of the ground above the mean sphere, m (`Simulation.groundElevation`) */
+  groundElevation(r: Vec3): number;
+  /** the wind, ECI, m/s */
+  wind(r: Vec3, t: number): Vec3;
+  /** Greenwich's sidereal angle at mission time `t`, rad */
+  theta(t: number): number;
+  /** an id for a new body */
+  nextId(): number;
+}
+
+/**
+ * A body that flies itself (C01: Vostok-1's instrument module, its pieces,
+ * the hatch, the seat and Gagarin): its own integrator and its own clock,
+ * from the instant it was let go to wherever `step` is asked to take it.
+ * A flight sets `alive` false, an `outcome` and, on the ground, `restT`;
+ * from there the tracker turns it with the Earth.
+ */
+export interface DebrisFlight {
+  step(d: Debris, to: number, env: DebrisEnvironment): DebrisFlightResult;
+}
 
 
 /**
@@ -121,8 +159,58 @@ function entryEngineCount(e: EngineSpec, dryMass: number, landingReserve: number
 
 export class DebrisTracker {
   readonly rigidDebris = new Map<number, RigidDebrisRuntime>();
+  /** C01: the bodies that fly themselves (`DebrisFlight`), by debris id */
+  readonly flown = new Map<number, DebrisFlight>();
+  /** …and those of them now on the ground, whatever became of them, which turn with the Earth */
+  private readonly grounded = new Set<number>();
+  private readonly environment: DebrisEnvironment;
 
-  constructor(readonly sim: Simulation) {}
+  constructor(readonly sim: Simulation) {
+    this.environment = {
+      groundElevation: (r) => sim.groundElevation(r),
+      wind: (r, t) => sim.rigidRuntime ? sim.rigidRuntime.windAt(r, t) : v3(),
+      theta: (t) => sim.plan.gmst0 + OMEGA_EARTH * t,
+      nextId: () => sim.nextDebrisId(),
+    };
+  }
+
+  /** C01: a body that flies itself from now on: `d` goes on the debris list and `flight` takes it from `d.createdAt`. */
+  attachFlight(d: Debris, flight: DebrisFlight): void {
+    this.flown.set(d.id, flight);
+  }
+
+  /**
+   * Fly the self-flying bodies to `to`, and any they let go of on the way
+   * (queued, so that the list is not grown while it is walked, and flown
+   * from their own instant after it).
+   */
+  private stepFlown(to: number): void {
+    let queue: { debris: Debris; flight?: DebrisFlight }[] = [];
+    const fly = (d: Debris, flight: DebrisFlight) => {
+      const result = flight.step(d, to, this.environment);
+      for (const e of result.events) this.sim.event(e.key, e.severity, e.params, e.t);
+      if (result.spawn) queue.push(...result.spawn);
+      if (!d.alive) {
+        this.flown.delete(d.id);
+        if (d.restT !== undefined) this.grounded.add(d.id);
+      }
+    };
+    for (const d of this.sim.debris) {
+      const flight = this.flown.get(d.id);
+      if (flight && d.alive) fly(d, flight);
+    }
+    while (queue.length > 0) {
+      const next = queue;
+      queue = [];
+      for (const s of next) {
+        this.sim.debris.push(s.debris);
+        if (s.flight && s.debris.alive) {
+          this.flown.set(s.debris.id, s.flight);
+          fly(s.debris, s.flight);
+        }
+      }
+    }
+  }
 
   /**
    * Hand a separated body to the rigid model. `stage` is the stage it was —
@@ -576,8 +664,9 @@ export class DebrisTracker {
 
   stepDebris(dt: number): void {
     const omega = v3(0, 0, OMEGA_EARTH);
+    if (this.flown.size > 0) this.stepFlown(this.sim.state.t);
     for (const d of this.sim.debris) {
-      if (!d.alive) continue;
+      if (!d.alive || this.flown.has(d.id)) continue;
       const rigid = this.rigidDebris.get(d.id);
       if (rigid) {
         const from = Math.max(d.createdAt, this.sim.state.t - dt);
@@ -725,6 +814,6 @@ export class DebrisTracker {
         }
       }
     }
-    for (const d of this.sim.debris) if (!d.alive && d.outcome === 'landed') this.rest(d);
+    for (const d of this.sim.debris) if (!d.alive && (d.outcome === 'landed' || this.grounded.has(d.id))) this.rest(d);
   }
 }

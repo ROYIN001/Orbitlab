@@ -18,7 +18,8 @@ export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.inter
   | 'evt.lunarLanding' | 'evt.lmEngineOff'
   | 'evt.lunarLiftoff' | 'evt.lmInsertion' | 'evt.csi' | 'evt.cdh' | 'evt.tpi' | 'evt.lmMcc' | 'evt.braking' | 'evt.stationkeeping' | 'evt.lmDocked' | 'evt.lmJettison' | 'evt.asSeparation'
   | 'evt.tei' | 'evt.transearth' | 'evt.transearthMcc' | 'evt.cmSmSeparation' | 'evt.entryInterface' | 'evt.drogues' | 'evt.cmSplashdown'
-  | 'evt.retroFire' | 'evt.retroShortfall' | 'evt.retroCutoff' | 'evt.vostokStraps' | 'evt.vostokSeparation' | 'evt.ejection' | 'evt.capsuleLanding';
+  | 'evt.retroFire' | 'evt.retroShortfall' | 'evt.retroCutoff' | 'evt.vostokStraps' | 'evt.vostokSeparation' | 'evt.ejection' | 'evt.capsuleLanding'
+  | 'evt.pilotLanding';
 
 export interface FlownEvent {
   key: FlownKey;
@@ -28,6 +29,13 @@ export interface FlownEvent {
   n?: number;
   /** a planned, rounded or secondary value rather than a measured one */
   approx?: boolean;
+  /**
+   * When the sources disagree, the times they give, s (`t` the first of
+   * them): a simulated time inside the span is on time, one outside it is
+   * off by its distance to the nearer end (C01: Gagarin down at 10:53 by the
+   * post-flight report, 10:55 officially).
+   */
+  span?: readonly [number, number];
 }
 
 export interface FlownOrbit {
@@ -108,6 +116,7 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.vostokSeparation': 'tl.evt.vostokSeparation',
   'evt.ejection': 'tl.evt.ejection',
   'evt.capsuleLanding': 'tl.evt.capsuleLanding',
+  'evt.pilotLanding': 'tl.evt.pilotLanding',
 };
 
 export interface FlownRow {
@@ -133,7 +142,8 @@ export function compareEvents(record: FlownRecord, events: readonly SimEvent[]):
   return [...record.events].sort((a, b) => a.t - b.t).map((f) => {
     const n = f.n ?? 1;
     const e = nth(events, f.key, n);
-    return { key: f.key, n, real: f.t, approx: !!f.approx, sim: e ? e.t : null, delta: e ? e.t - f.t : null };
+    const delta = !e ? null : f.span ? (e.t < f.span[0] ? e.t - f.span[0] : e.t > f.span[1] ? e.t - f.span[1] : 0) : e.t - f.t;
+    return { key: f.key, n, real: f.t, approx: !!f.approx, sim: e ? e.t : null, delta };
   });
 }
 

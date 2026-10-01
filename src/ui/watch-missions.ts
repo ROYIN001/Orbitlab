@@ -240,6 +240,8 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       { key: 'evt.retroFire', t: 4686.4 }, { key: 'evt.retroShortfall', t: 4726.4 }, { key: 'evt.retroCutoff', t: 4728.2 },
       { key: 'evt.vostokStraps', t: 5340, approx: true }, { key: 'evt.vostokSeparation', t: 5344, approx: true },
       { key: 'evt.ejection', t: 5700, approx: true }, { key: 'evt.capsuleLanding', t: 6060, approx: true },
+      // Gagarin on the ground at 10:53 by the OKB-1's preliminary report, 10:55 (the 108 minutes) officially
+      { key: 'evt.pilotLanding', t: 6360, span: [6360, 6480], approx: true },
     ], orbit: { perigee: 168, apogee: 314, inclination: 64.95 } },
     titleKey: 'watch.mission.vostok1', blurbKey: 'watch.mission.vostok1Blurb', payloadKey: 'watch.payload.vostok1' },
   // Mercury-Redstone 3, 5 May 1961: Alan Shepard in Freedom 7, lobbed from

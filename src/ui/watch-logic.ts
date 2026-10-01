@@ -739,9 +739,9 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
   // G06: after an abort, the end is the crew down and a few seconds more
   if (frame.abort) {
     if (frame.status !== 'landed') return null;
-    // C01: a capsule home as planned ends in a splashdown
+    // C01: a capsule home as planned ends in a splashdown; Vostok-1's, with Gagarin down after it on his own parachutes
     const planned = frame.abort.kind === 'return';
-    const keys = planned ? ['evt.capsuleSplashdown', 'evt.capsuleLanding'] : ['evt.escapeLanded'];
+    const keys = planned ? ['evt.capsuleSplashdown', 'evt.capsuleLanding', 'evt.pilotLanding'] : ['evt.escapeLanded'];
     const down = [...events].reverse().find((e) => keys.includes(e.key) && e.t <= frame.t + 1e-6);
     return down && frame.t - down.t >= RETURN_SETTLE ? (planned ? 'splashdown' : 'crewSafe') : null;
   }

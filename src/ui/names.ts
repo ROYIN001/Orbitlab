@@ -195,10 +195,30 @@ export function satelliteNameById(id: string): string | null {
   return sat ? satelliteName(sat) : null;
 }
 
+/**
+ * C01: what Vostok-1 left on the way down, by its debris name: the instrument
+ * module and the kinds of piece it broke into (src/physics/sim/module-entry.ts),
+ * the hatch, the seat and Gagarin himself.
+ */
+const RETURN_PARTS: Record<string, string> = {
+  instrumentModule: 'abort.part.instrumentModule',
+  'im.tdu': 'abort.part.imTdu',
+  'im.tanks': 'abort.part.imTanks',
+  'im.frame': 'abort.part.imFrame',
+  'im.bottle': 'abort.part.imBottles',
+  'im.battery': 'abort.part.imBatteries',
+  'im.equipment': 'abort.part.imEquipment',
+  'im.shell': 'abort.part.imShell',
+  hatch: 'abort.part.hatch',
+  seat: 'abort.part.seat',
+  pilot: 'abort.part.pilot',
+};
+
 export function stageNameByLabel(vehicle: VehicleSpec | null, name: string): string {
   // G06: what a launch abort leaves behind is named by the escape, not the vehicle
   if (name === 'escapeHead') return t('abort.part.head');
   if (name === 'modules') return t('abort.part.modules');
+  if (name in RETURN_PARTS) return t(RETURN_PARTS[name]);
   if (!vehicle) return name;
   for (const st of vehicle.stages) {
     if (st.name === name) return stageName(vehicle, st.id, name);

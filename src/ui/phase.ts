@@ -13,6 +13,7 @@ import type { VisualFrame } from '../physics/frame';
 import type { DescentPhase, SimEvent } from '../physics/simulation';
 import type { EscapePhase } from '../physics/rigid/escape';
 import { RAD } from '../physics/constants';
+import { geodeticHeight } from '../physics/geodesy';
 import { t } from '../i18n';
 import { rendezvousBurnName } from './names';
 
@@ -174,6 +175,13 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       params.alt = (frame.altitude / 1000).toFixed(1);
       params.speed = frame.airspeed.toFixed(0);
       params.g = frame.gLoad.toFixed(1);
+      // C01: Vostok-1's sphere on the ground while Gagarin is still on his parachutes
+      if (frame.note === 'vostokSphereDown') {
+        const pilot = frame.debris.find((d) => d.crew && d.alive);
+        titleKey = 'hud.vostok.sphereDown';
+        detailKey = 'phase.detail.vostokSphereDown';
+        params.alt = pilot ? Math.max(0, geodeticHeight(pilot.r)).toFixed(0) : '0';
+      }
       break;
     case 'landed':
       if (frame.abort) {

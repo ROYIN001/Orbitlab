@@ -33,6 +33,7 @@ import { atmosphere } from '../atmosphere';
 import { G0, OMEGA_EARTH, R_EARTH } from '../constants';
 import { gravityJ2 } from '../gravity';
 import { geodeticHeight } from '../geodesy';
+import { stagnationHeatFlux } from '../sim/entry-heating';
 import { add, addScaled, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { integrateRigidStep, type RigidLoads, type RigidState } from './integrator';
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatRotate, type Mat3 } from './math';
@@ -159,10 +160,11 @@ export interface DescentCapsule {
    * The pilot leaves on an ejection seat below this altitude, m, on the way
    * down (Vostok's hatch and seat), and `mass` kg go with him: the capsule
    * lands on its own parachute without him. With `hatch` (its mass, kg) the
-   * hatch goes at the altitude and the seat `delay` s later, at up to `speed`
-   * m/s along rails `rails` degrees off the capsule's axis.
+   * hatch goes at the altitude, blown off at `hatchSpeed` m/s, and the seat
+   * `delay` s later, at up to `speed` m/s along rails `rails` degrees off the
+   * capsule's axis, out of the hatch (`hatchNormal`).
    */
-  ejection?: { altitude: number; mass: number; hatch?: number; delay?: number; speed?: number; rails?: number };
+  ejection?: { altitude: number; mass: number; hatch?: number; hatchSpeed?: number; delay?: number; speed?: number; rails?: number };
   /**
    * The height datum of every altitude the return reads: the air and the
    * Mach number, the barometric commands, the ground. 'sphere' (the default)
@@ -291,8 +293,22 @@ export const VOSTOK_CAPSULE: DescentCapsule = {
     // the cables parted 4 s on (estimate)
     packMass: 2265, packX: 2.0, straps: 655.8, jettison: 659.8,
   },
-  ejection: { altitude: 7000, hatch: 25, delay: 2, mass: 336, speed: 20, rails: 64 },
+  // the hatch blown off at 10 m/s (an estimate)
+  ejection: { altitude: 7000, hatch: 25, hatchSpeed: 10, delay: 2, mass: 336, speed: 20, rails: 64 },
 };
+
+/**
+ * Vostok's hatch No. 1 as a unit vector in the sphere's axes (+x the heavy
+ * bottom that leads through the entry and toward the instrument module): the
+ * three 1 m hatches sit above the sphere's equator (GCTC; Siddiqi), and the
+ * seat's rails, along which it leaves through this one, are `rails` degrees
+ * off the axis (Feoktistov §9.6), so the hatch faces `rails` degrees from
+ * the top. Which side of the axis it is on, body +y, is an estimate.
+ */
+export function hatchNormal(rails: number): Vec3 {
+  const a = rails * Math.PI / 180;
+  return v3(-Math.cos(a), Math.sin(a), 0);
+}
 
 const EARTH_RATE = v3(0, 0, OMEGA_EARTH);
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
@@ -502,8 +518,15 @@ export function pairConfiguration(capsule: DescentCapsule, pack: number): Escape
 /** The descent module's riser point, capsule axes: its top. */
 const RISER_X = -1.1;
 
-/** One parachute: its drag area now, m² (area × drag coefficient). */
-function canopy(area: number, cd: number, openedAt: number | undefined, inflation: number, t: number, reefed = 1, reefS = 0): number {
+/**
+ * One parachute: its drag area now, m² (area × drag coefficient). Opened at
+ * `openedAt`, it grows as the square of the time over `inflation` s from
+ * `reefed` of its full drag area — or, reefed (`reefS` > 0), to `reefed` of
+ * it first and the rest after `reefS` s. With `reefed` 1 and no reefing it
+ * is fully open at once (the descent module's drogue); 0, it fills from
+ * nothing (C01: Gagarin's canopies, src/physics/sim/crew-descent.ts).
+ */
+export function canopy(area: number, cd: number, openedAt: number | undefined, inflation: number, t: number, reefed = 1, reefS = 0): number {
   if (openedAt === undefined || t < openedAt) return 0;
   const age = t - openedAt;
   if (age < reefS) return area * cd * reefed * clamp(age / Math.max(1e-3, inflation * 0.5), 0, 1) ** 2;
@@ -534,6 +557,23 @@ export interface EscapeStatus {
   touchdownSpeed?: number;
   /** 0–1: the pilot chute (C01: Vostok's), open from the hatch's going until the drogue it draws out */
   pilot?: number;
+  /**
+   * C01, Vostok's: the instrument module held on (`joined`), its straps gone
+   * and the pair held by the cables alone (`tethered`, flown as one body until
+   * they part), or gone (`free`)
+   */
+  joint?: 'joined' | 'tethered' | 'free';
+  /**
+   * C01: while `tethered`, the cable bundle's two ends, at the sphere and at the
+   * instrument module, as ECI offsets from the sphere's CG (`state.r`), m
+   */
+  tether?: { sphere: Vec3; module: Vec3 };
+  /** C01: hatch No. 1 still on the sphere */
+  hatch?: boolean;
+  /** C01: the pilot still in the sphere (until his ejection) */
+  pilotAboard?: boolean;
+  /** C01: the convective heat flux at the sphere's stagnation point, W/m² (`stagnationHeatFlux`) */
+  heatFlux?: number;
 }
 
 /** An event the escape raises, for the simulation's log. */
@@ -605,6 +645,9 @@ export class EscapeFlight {
       motors: { main: 0, control: 0, fairing: 0, softLanding: 0, ...(capsule.retro ? { retro: 0 } : {}) }, finsOpen: false, drogue: 0, main: 0, heatShield: true, maxG: 0, maxGT: t0,
       ...(capsule.pilot ? { pilot: 0 } : {}) };
     if (mode === 'capsule') { this.freedAt = t0; this.freedAlt = this.altitude(this.state.r); }
+    // C01: Vostok's pair, its hatch and its pilot, and the heat on its sphere
+    if (this.tdu) { this.status.joint = 'joined'; this.status.heatFlux = 0; }
+    if (mode === 'capsule' && capsule.ejection?.hatch !== undefined) { this.status.hatch = true; this.status.pilotAboard = true; }
   }
 
   /**
@@ -805,8 +848,9 @@ export class EscapeFlight {
     // C01: Vostok's hatch at the barometric command, the pilot chute with it, the seat two seconds on
     if (ej && ej.hatch !== undefined && this.hatchAt === undefined && vz < 0 && alt < ej.altitude) {
       this.hatchAt = t;
+      this.onRelease('hatch', this.throughHatch(ej.hatchSpeed ?? 0), t, ej.hatch);
       this.rebuild(t);
-      this.onRelease('hatch', { ...this.state }, t, ej.hatch);
+      s.hatch = false;
       this.log({ key: 'evt.hatchOff', severity: 'info', params: { alt: Math.round(alt) } }, t);
       if (this.capsule.pilot && s.phase === 'fall') {
         this.pilotAt = t;
@@ -815,8 +859,9 @@ export class EscapeFlight {
     }
     if (ej && ej.hatch !== undefined && this.hatchAt !== undefined && !this.ejected && t - this.hatchAt >= (ej.delay ?? 0) - 1e-6) {
       this.ejected = true;
-      this.onRelease('seat', { ...this.state }, t, ej.mass);
+      this.onRelease('seat', this.throughHatch(ej.speed ?? 0), t, ej.mass);
       this.rebuild(t);
+      s.pilotAboard = false;
       this.log({ key: 'evt.ejection', severity: 'major', params: { alt: Math.round(alt), speed: Math.round(airspeed) } }, t);
     }
     if (s.phase === 'drogue' && (t - this.drogueAt! >= this.capsule.drogue.duration || alt < this.capsule.main.altitude)) this.openMain(t, alt, false);
@@ -859,6 +904,8 @@ export class EscapeFlight {
     }
     if (!this.strapsGone && rp.straps !== undefined && tau >= rp.straps - eps) {
       this.strapsGone = true;
+      this.status.joint = 'tethered';
+      this.updateTether();
       this.log({ key: 'evt.vostokStraps', severity: 'info', params: { alt: Math.round(this.altitude(this.state.r) / 1000) } }, t);
     }
     if (this.packOn && tau >= rp.jettison - eps) {
@@ -868,9 +915,38 @@ export class EscapeFlight {
       this.onRelease('instrumentModule', { r: add(st.r, arm), v: add(st.v, cross(quatRotate(st.attitudeQ, st.omegaBody), arm)),
         attitudeQ: { ...st.attitudeQ }, omegaBody: { ...st.omegaBody } }, t, mass);
       this.packOn = false;
+      this.status.joint = 'free';
+      delete this.status.tether;
       this.rebuild(t);
       this.log({ key: 'evt.vostokSeparation', severity: 'major', params: { alt: Math.round(this.altitude(st.r) / 1000) } }, t);
     }
+  }
+
+  /**
+   * C01: the state of a body leaving through Vostok's hatch at `speed` m/s
+   * along its normal: at the hatch, on the sphere's surface, with the
+   * sphere's velocity there. The seat's push back on the sphere (its 336 kg
+   * at 20 m/s would give the 2,100 kg sphere about 3 m/s sideways, which the
+   * air takes off again within seconds at 7 km) is left out, as the
+   * instrument module's parting kick is.
+   */
+  private throughHatch(speed: number): RigidState {
+    const st = this.state, c = this.config, n = quatRotate(st.attitudeQ, hatchNormal(this.capsule.ejection?.rails ?? 90));
+    const centre = quatRotate(st.attitudeQ, v3(c.aero.cpX - c.cgX, 0, 0));
+    const arm = addScaled(centre, n, c.radius);
+    return { r: add(st.r, arm), v: addScaled(add(st.v, cross(quatRotate(st.attitudeQ, st.omegaBody), arm)), n, speed),
+      attitudeQ: { ...st.attitudeQ }, omegaBody: { ...st.omegaBody } };
+  }
+
+  /**
+   * C01: where the cables run while they alone hold the pair: from the
+   * sphere's bottom, on its axis, to the instrument module's end in its
+   * cradle, which the pair, flown as one body until they part, keeps where it
+   * was (the module's half-length, 1.1 m, is an estimate).
+   */
+  private updateTether(): void {
+    const rp = this.capsule.retro!, c = this.config, q = this.state.attitudeQ;
+    this.status.tether = { sphere: quatRotate(q, v3(c.aero.cpX - c.cgX + c.radius, 0, 0)), module: quatRotate(q, v3((rp.packX ?? 0) - 1.1, 0, 0)) };
   }
 
   private openMain(t: number, alt: number, low: boolean): void {
@@ -909,6 +985,7 @@ export class EscapeFlight {
     // the main parachute is released on the ground so it does not drag the module over
     s.drogue = 0; s.main = 0;
     this.drogueAt = undefined; this.mainAt = undefined;
+    if (s.heatFlux !== undefined) s.heatFlux = 0;
     // a Mercury capsule comes down in the sea at the end of a planned flight, Vostok on the steppe (C01)
     this.log({ key: this.capsule.id === 'mercury' ? 'evt.capsuleSplashdown' : this.capsule.id === 'vostok' ? 'evt.capsuleLanding' : 'evt.escapeLanded', severity: 'success',
       params: { speed: +s.touchdownSpeed.toFixed(1), g: +s.maxG.toFixed(1) } }, this.lastT);
@@ -1029,6 +1106,12 @@ export class EscapeFlight {
     }
     // re-evaluate the loads at the accepted state for the specific force
     this.loads(t, this.state);
+    // C01: the heat on Vostok's sphere at its stagnation point, its radius the nose radius; the cables turning with the pair
+    if (this.tdu) {
+      const alt = this.altitude(this.state.r);
+      s.heatFlux = alt < 1000e3 ? stagnationHeatFlux(atmosphere(Math.max(0, alt)).rho, norm(this.airVelocity(this.state, t)), this.config.radius) : 0;
+      if (s.joint === 'tethered') this.updateTether();
+    }
     if (this.lastSpecificForce > s.maxG) { s.maxG = this.lastSpecificForce; s.maxGT = t; }
   }
 

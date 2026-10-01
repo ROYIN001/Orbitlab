@@ -666,7 +666,8 @@ export class Simulation {
       case 'landed': dt = 1; break;
       default: dt = 1;
     }
-    if (this.rigidRuntime) {
+    // C01: not while the sphere lies on the ground waiting for its pilot, who flies himself (crew-descent.ts)
+    if (this.rigidRuntime && !this.escape.resting) {
       const held = this.rigidLink.heldCoastWindow();
       dt = held > 0 ? Math.min(dt, held) : Math.min(dt, this.rigidDt);
     }

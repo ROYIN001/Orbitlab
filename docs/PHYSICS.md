@@ -2300,6 +2300,22 @@ slender ascent curve. Recovered boosters fly the entry and landing burns describ
 report a landing when they touch down below 12 m/s; a stage flown to a target flies the
 boostback and burns of §8.1.
 
+A body can also fly itself (`DebrisFlight`, src/physics/sim/debris.ts; C01: Vostok-1's, §13.6):
+its own integrator and its own clock from the instant it was let go, stepped by the tracker before
+the generic debris, its events stamped with their own times, and the bodies it lets go of on the
+way queued and flown from their own instant once the list has been walked. On the ground it turns
+with the Earth whatever came of it. *Burn-up* is one such flight, and opt-in
+(src/physics/sim/entry-heating.ts): nothing else is heated. It is done as NASA's DAS and ORSAT
+and ESA's DRAMA do it. The body breaks up at their conventional 78 km (a convention of the tools,
+not a measurement). Each piece is then a lump of one material (aluminium, steel, titanium, roughly
+as the tools' tables give them) that takes in a quarter of the stagnation-point flux over its
+surface (an estimate: Lees's distribution over a sphere's front half). The flux is Sutton and
+Graves's k√(ρ/rₙ)v³ (NASA TR R-376, 1971), capped by the free-molecular ½ρv³. The piece radiates
+εσT⁴, warms to its melting point, and then melts away at its heat of fusion, keeping its shape so
+that its surface goes as its mass to the 2/3 (the meteor-ablation rule). Below 0.5 kg it has
+burned up; a piece that slows down first reaches the ground. Neither outcome raises
+`evt.stageImpact`.
+
 ### 8.1 Flying a stage back to a target
 
 A recovery plan (`MissionConfig.recoveryPlan`, `src/types.ts`) names where each recovered body
@@ -3045,9 +3061,9 @@ src/physics/rigid/escape.ts, by the same rigid descent as Mercury's (§13.7), wi
 | Attitude | set before the burn and held inertially through it: in the orbit plane, against the flight, `retro.pitch` above the local horizontal at the launch command (reconstructed, below; 0° for now) | single-axis solar orientation, held by gyros; no source gives the angle |
 | TDU-1 | the launch command 2.2 s after the pressurising command, full thrust 1.5 s later; 15.69 kN at 266 s, its 6.0 kg/s out of the instrument module; the fuel out at +42.2 s, the thrust falling over its last second (estimate): 131.9 m/s | 1,600 kgf (Feoktistov, *Космические аппараты*, 1983; GCTC; Gudilin), 266 s (astronautix), 280 kg; a check valve that did not close lost fuel into its separator bag; 132 m/s of the 136 set (Chertok, from Fomin, *Novosti Kosmonavtiki* 2002/4) |
 | Cut-off | the rest of the 280 kg vented by the timer's cut-off at +44.0 s; a moment spins the pair to 30°/s about a transverse axis (axis estimated) | no main command, so the lines stayed open and oxidiser and gas at about 60 atm vented through the chamber and the steering nozzles until the timer cut it off at 10:25:48.2; "no less than 30°/s" (Gagarin's report) |
-| Separation | no main command, so no separation; the straps at T+5,340 s, the cables parting 4 s later (estimate), at 137 km: the instrument module goes, 1,985 kg (not yet flown as a body) | the thermal sensors' backup (150 °C on the hull) fired the straps at 10:36 (the report; Gagarin's clock read 10:35); the cable mast's circuit ran through the straps' cutters, and the cables held the modules "a few seconds" (Siddiqi, *The Space Review*, 2015); 130 km (Baturin's chronology) to 150–170 km. The older story of ten minutes on the cables was that wait for the backup |
+| Separation | no main command, so no separation; the straps at T+5,340 s, the cables parting 4 s later (estimate), at 137 km: the instrument module goes, 1,985 kg, a body of its own (below) | the thermal sensors' backup (150 °C on the hull) fired the straps at 10:36 (the report; Gagarin's clock read 10:35); the cable mast's circuit ran through the straps' cutters, and the cables held the modules "a few seconds" (Siddiqi, *The Space Review*, 2015); 130 km (Baturin's chronology) to 150–170 km. The older story of ten minutes on the cables was that wait for the backup |
 | Entry | the 2.3 m sphere, 2,460 kg: a sphere's drag, 0.96 hypersonic, 1.0 transonic, 0.45 subsonic (Hoerner ch. 16; Bailey and Hiatt 1972), along the flow through its centre (Feoktistov §3.5); its CG 0.2 m toward the heat shield (estimate) | ballistic; "over 10 g" by Gagarin's report, 8–10 g in most accounts |
-| Hatch and seat | at 7 km above WGS-84, hatch No. 1 (25 kg, estimate) and the 1.5 m² pilot chute; 2 s later the seat, 336 kg with Gagarin (astronautix: 7.1 % of the ship) | hatch at about 7 km, the seat 2 s later at up to 20 m/s; 10:42 to the minute (planned 10:44:12) |
+| Hatch and seat | at 7 km above WGS-84, hatch No. 1 (25 kg, estimate) and the 1.5 m² pilot chute; 2 s later the seat, 336 kg with Gagarin (astronautix: 7.1 % of the ship), at 20 m/s out of the hatch, 64° off the sphere's axis; each a body of its own (below) | hatch at about 7 km, the seat 2 s later at up to 20 m/s, on rails 64° off the axis (Feoktistov §9.6); 10:42 to the minute (planned 10:44:12) |
 | Parachutes | braking 18 m² at 4 km (C_D 0.6), main 574 m² at 2.5 km (C_D 0.55; estimates) | 4 km and 2.5 km (Feoktistov §9.6; GCTC) |
 | Landing | the sphere, 2,099 kg (GCAT 2,125), 10.3 m/s | the sphere at 10:48 (the report), about 10 m/s, some 1.5 km from Gagarin toward the Volga (the report, via Zak); Gagarin at 10:53 (the report; 10:55 officially) at 51°16′14″ N 45°59′50″ E, the monument |
 
@@ -3087,9 +3103,60 @@ appears. The other inputs move the landing as much: 6.1 km for each second of th
 km a metre per second of its Δv, 18.5 km for each kilometre of the orbit's height. Kamanin's diary
 records that in flight the ballistics put the landing for this orbit 110 km south of Stalingrad;
 the sphere came down about 400 km beyond that, and Lisov puts it 180 km short of the pre-launch aim
-in the Kuibyshev region. Gagarin's own parachute descent and the instrument module's burn-up are not
-flown yet: the viewer follows the sphere. tests/vostok1-harness.ts holds the flight to these, and
-tests/vostok-descent.test.ts the burn, the spin, the separation and the sphere's drag.
+in the Kuibyshev region.
+
+*What the sphere leaves behind.* Each body flies itself from its release (§8, `DebrisFlight`), on
+the WGS-84 heights of the return. The flight's status stays `abort`, the note `vostokSphereDown`,
+while the sphere lies on the steppe turning with the Earth and Gagarin is still in the air; it
+becomes `landed` (`vostokLanded`) only once he is down, so the headless loops, the harness and the
+viewer's end wait for him.
+
+- *The instrument module* (src/physics/sim/module-entry.ts) leaves as the cables part. It keeps
+  the pair's state and its 30°/s tumble, as a rigid body with its own `bodyId`, its drag through
+  its CG on its mean projected area (a 2.2 × 2.25 m cylinder, C_D 1.0: estimates). The heat at its
+  stagnation point warms a thin aluminium skin, and it breaks up at 78 km. It never came back and
+  nothing of it is on record as found ("burned up", Siddiqi; GCAT's decay 07:40 UTC). Of its
+  pieces only the mass is sourced: 1,985 kg in all after the burn, the TDU-1 unit 396 kg dry
+  (Feoktistov) with an engine of about 100 kg (astronautix 98 kg). The split is an estimate, in
+  57 pieces flown as seven records of alike pieces: the steel engine; two aluminium toroidal
+  tanks; eight frame members; eight steel ball bottles; six batteries; 24 equipment boxes; and
+  eight shell panels. Whatever the model gives is what is reported (`evt.moduleBurnedUp`); no
+  piece is made to burn up.
+- *Hatch No. 1* falls as a tumbling 1 m disc (C_D 1.2 on its mean area, estimate), blown off at
+  10 m/s (estimate).
+- *Gagarin* (src/physics/sim/crew-descent.ts) is a point mass with the drag of whatever he hangs
+  from, by RK4 in 5 ms steps while a canopy fills. The sequence is Feoktistov §9.6, GCTC, Svergun
+  and Baturin (2021) and RussianSpaceWeb. He leaves on his seat on its 2 m² stabilising chute
+  (C_D 0.6, estimate), which opens 0.45 s out. At 4 km, by the barometric sensor, the 83.5 m²
+  main comes out and he leaves the seat, which falls on its own. The 56 m² reserve comes out too
+  at 3 km, hangs and fills (60 % of its drag area beside the main: an estimate). The canopies'
+  C_D is 0.75 and their fill time 8 diameters over the opening speed (Knacke). The survival kit
+  goes 10 s after he leaves the seat (it was lost; when is an estimate). The 336 kg divides into
+  Gagarin 70 kg (low confidence), the SK-1 suit 20 kg, the parachutes 20 kg, the seat back 10 kg
+  and the kit 43 kg (Baturin), with the seat's 173 kg the rest (estimates but the suit and the
+  kit). The seat's push back on the sphere, about 3 m/s at 7 km that the air soon takes off, is
+  left out.
+
+Point-mass, pitch 0° (six-DOF in brackets):
+
+- The module breaks up at 78.0 km at T+5,581.6 s (5,574.7). 8 of its 57 pieces burn up (the
+  frame members); 49 reach the ground with 610 kg, 31 % of it, the last at T+6,921 s (608 kg,
+  6,914). That is
+  about the share of a large body's mass the survivability analyses expect to survive.
+- Gagarin leaves his seat at 4,000 m at T+5,874.7 s (5,869.8), 68 m/s. His main opens at 8.7 g.
+  The reserve comes out at 3,000 m at T+6,018 s (6,013).
+- He lands at T+6,615.0 s, 10:57:15 (6,610.1), at 4.7 m/s, 0.12 km from the sphere (0.11), at
+  50.261° N 45.121° E (50.009° N 44.911° E). That is 8.7 min after the sphere. The flown 1.5 km
+  between them is the wind, westerly at 7 km that day, which is not flown.
+- His descent from the ejection takes 772 s; the flown 10:42 to 10:53–10:55 is 660–780 s.
+- The replay records the return at a second through the retro-fire, 2 s while the pair spins
+  above 140 km, 0.2 s from there to the sphere's main, and a second under it and while waiting
+  for Gagarin: 7,939 frames in all, 62.7 MB by the recorder's estimate. Before this change it
+  was 11,319 frames, to the sphere's landing only, at 0.1 s below 140 km.
+
+tests/vostok1-harness.ts holds the flight to these. tests/vostok-descent.test.ts covers the burn,
+the spin, the separation and the sphere's drag; tests/entry-heating.test.ts and
+tests/crew-descent.test.ts cover the bodies.
 
 **13.7 Mercury-Redstone 3.** The vehicle `mercuryredstone` in `HISTORICAL_VEHICLES`, the spacecraft
 `mercury` in src/data/satellites.ts, the capsule's flight home `MERCURY_CAPSULE` in

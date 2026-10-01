@@ -14,6 +14,11 @@
  *   (steps drop to 0.02 s near cut-off and a 50 Hz recording of the last
  *   seconds of a Soyuz ascent buys nothing a 10 Hz one does not).
  * - atmospheric coast (below 140 km): every 2 s.
+ * - a return from orbit with its module and its pilot's own descent (C01:
+ *   Vostok-1, `vostokInterval`): every second through the retro-fire, every
+ *   2 s while the pair spins above 140 km, five times a second from there
+ *   until the sphere's main parachute is open, and every second under it and
+ *   while the sphere waits on the ground for the pilot.
  * - orbital coast: every 10 s while a burn is less than two minutes away,
  *   every 30 s otherwise.
  * - always the frame on both sides of any step that emitted an event, so every
@@ -40,11 +45,29 @@ import { chronologicalEvents } from '../physics/events';
 import { AttitudeTrack, type AttitudeWindow } from './attitude-track';
 import { quatRotate } from '../physics/rigid/math';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
+import type { AbortState } from '../physics/sim/types';
 
 /** Altitude below which a coast is still an atmospheric one, m. */
 const ATMOSPHERIC_CEILING = 140e3;
 /** Fastest recording rate in mission time, s. */
 const DENSE_INTERVAL = 0.1;
+
+/**
+ * C01: the cadence of a return from orbit with its instrument module on
+ * (Vostok-1, `AbortState.joint`), s. Every second through the TDU-1's burn;
+ * every 2 s above the dense air, where the pair spins at 30°/s (60° a frame,
+ * which an attitude blend still turns the right way); five times a second
+ * through the entry, the module's break-up and the ejection; every second
+ * once the sphere's main is open and while it lies on the ground waiting
+ * for its pilot, whose canopies change by the second at most. About 4,000
+ * frames from the retro-fire to Gagarin on the ground, where 0.1 s below
+ * 140 km and on to his landing would be some 13,000.
+ */
+export function vostokInterval(a: AbortState, altitude: number): number {
+  if ((a.motors.retro ?? 0) > 0) return 1;
+  if (a.phase === 'landed' || (a.phase === 'main' && a.main >= 1)) return 1;
+  return altitude < ATMOSPHERIC_CEILING ? 0.2 : 2;
+}
 
 /**
  * Retained heap of one stored frame, bytes, fitted to a measurement rather than
@@ -309,7 +332,7 @@ export class FlightRecorder implements RecordingSource {
    * loose fields rather than a frame so the live step loop can ask the question
    * without paying for a snapshot it may not keep.
    */
-  private interval(status: SimStatus, t: number, altitude: number, nextBurnTime: number, range = Infinity, burning = false): number {
+  private interval(status: SimStatus, t: number, altitude: number, nextBurnTime: number, range = Infinity, burning = false, abort?: AbortState): number {
     switch (status) {
       case 'prelaunch':
       case 'ascent':
@@ -324,6 +347,8 @@ export class FlightRecorder implements RecordingSource {
         if (range < 30e3) return 5;
         return nextBurnTime > t && nextBurnTime - t < 120 ? 5 : 30;
       case 'abort':
+        // C01: a return from orbit that leaves its module and its pilot (Vostok-1)
+        if (abort?.joint !== undefined) return vostokInterval(abort, altitude);
         // An escape: dense in the air, sparse on a ballistic arc above it.
         return altitude < ATMOSPHERIC_CEILING ? DENSE_INTERVAL : 10;
       case 'coast':
@@ -343,7 +368,7 @@ export class FlightRecorder implements RecordingSource {
   }
 
   private intervalOf(f: VisualFrame): number {
-    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn' || (f.status === 'orbit' && f.thrust > 1e3));
+    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn' || (f.status === 'orbit' && f.thrust > 1e3), f.abort);
   }
 
   /**
@@ -520,7 +545,7 @@ export class FlightRecorder implements RecordingSource {
       else if (!transitionCaptured && preIsHead && fired) this.store(pre, true);
       const s = sim.state;
       const headNow = this.head;
-      const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn' || (s.status === 'orbit' && s.thrust > 1e3)) - 1e-9;
+      const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn' || (s.status === 'orbit' && s.thrust > 1e3), s.abort) - 1e-9;
       if (dueAfter || fired) this.store(captureFrame(sim), fired);
       if (fired) this.pullEvents();
       if (rigid && !(used > 0)) { stalled = true; break; }

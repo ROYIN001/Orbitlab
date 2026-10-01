@@ -86,12 +86,53 @@ export interface DebrisVisual {
   profile?: 'r7Core' | 'r7Upper';
   kind: 'stage' | 'booster' | 'fairing' | 'upperStage'
     /** after an abort: the tower (if still on), the upper fairing and the orbital module; the orbital and service modules */
-    | 'escapeHead' | 'modules';
+    | 'escapeHead' | 'modules'
+    /**
+     * C01, Vostok-1: the instrument module and the pieces it breaks into, the
+     * hatch, the ejection seat and the pilot (src/physics/sim/module-entry.ts,
+     * crew-descent.ts)
+     */
+    | 'instrumentModule' | 'imFragment' | 'hatch' | 'seat' | 'pilot';
+  /** `imFragment`: what it is made of (src/physics/sim/entry-heating.ts) */
+  material?: 'aluminium' | 'steel' | 'titanium';
   /** `escapeHead`: the tower was still on it */
   tower?: boolean;
   /** `fairing`: its own adapter cone's height, m, down to `baseDiameter` (`FairingSpec.adapter`) */
   adapter?: number;
   baseDiameter?: number;
+}
+
+/**
+ * A body heated by its entry (C01: Vostok-1's instrument module and its
+ * pieces, src/physics/sim/entry-heating.ts).
+ */
+export interface DebrisEntry {
+  /** convective heat flux at its stagnation point now, W/m² */
+  heatFlux: number;
+  /** that flux integrated over the flight so far, J/m² */
+  heatLoad: number;
+  /** K: a piece's own lumped temperature; the whole module's, its stagnation point's radiative-equilibrium temperature */
+  temperature: number;
+  /** melting away now */
+  ablating: boolean;
+  /** kg, as it began its entry (a piece: at the break-up) */
+  initialMass: number;
+}
+
+/**
+ * A crew member on his own parachutes (C01: Gagarin from his ejection,
+ * src/physics/sim/crew-descent.ts): 0–1, how far each canopy is open.
+ */
+export interface CrewState {
+  /** on the seat before its chute; on the stabilising chute; on the main (and the reserve); down */
+  phase: 'seat' | 'stabiliser' | 'main' | 'landed';
+  stabiliser: number;
+  main: number;
+  reserve: number;
+  /** still in the seat */
+  seat: boolean;
+  /** the survival kit still with him */
+  naz: boolean;
 }
 
 export interface Debris {
@@ -146,6 +187,12 @@ export interface Debris {
     guidance?: ReturnGuidanceMemory;
   };
   outcome?: 'impact' | 'landed' | 'orbit' | 'burnup';
+  /** C01: heated by its entry */
+  entry?: DebrisEntry;
+  /** C01: a crew member's descent */
+  crew?: CrewState;
+  /** C01: a piece of the body with this id, which broke up */
+  fragmentOf?: number;
   impact?: { lat: number; lon: number };
   /**
    * Once it has landed: the mission time its stored state is for. From there
