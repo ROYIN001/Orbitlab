@@ -165,7 +165,7 @@ describe('Apollo 11, point-mass', () => {
     // the ring off the S-II's dry mass, then the tower off the payload
     const payload0 = sim.vehicle.payloadMass;
     massAt(195);
-    expect(sim.vehicle.jettisoned).toEqual({ interstage: true, tower: false });
+    expect(sim.vehicle.jettisoned).toEqual({ interstage: true, tower: false, aftSkirt: false });
     expect(sim.vehicle.stages[1].spec.dryMass).toBe(vehicleById('saturnv506').stages[1].dryMass - 4591);
     massAt(200);
     expect(sim.vehicle.jettisoned.tower).toBe(true);

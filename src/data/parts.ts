@@ -208,6 +208,8 @@ export interface FairingPart {
 export const UNCITED = 'not cited in the data (public sources, rounded, ±10 %)';
 
 const W = 'https://en.wikipedia.org/wiki/';
+/** Arianespace, Soyuz from the Guiana Space Centre User's Manual, Issue 2 Revision 1 (2018), Fig. 1.5.1a; the 2012 Issue 2 has the same table. */
+const CSG_SOYUZ = 'Arianespace, Soyuz CSG User’s Manual, Issue 2.1 (2018), Fig. 1.5.1a (https://courses.edx.org/asset-v1:DelftX+AEASM1x+1T2023+type@asset+block/Soyuz-Users-Manual-March-2012.pdf, Issue 2)';
 const C01 = 'astronautix.com, the Saturn V Flight Manual SA-503 and the AS-506 launch vehicle flight evaluation report; sea-level Isp = vacuum Isp × sea-level/vacuum thrust';
 
 // ---------------------------------------------------------------- engines
@@ -255,13 +257,24 @@ const C01 = 'astronautix.com, the Saturn V Flight Manual SA-503 and the AS-506 l
 // https://en.wikipedia.org/wiki/H-IIA
 export const ENGINE_PARTS: readonly EnginePart[] = [
   // --- R-7 (Soyuz-2) and its upper stages
-  { id: 'rd107a', kind: 'engine', family: 'kerolox', name: 'RD-107A', thrustSL: 839.5 * kN, thrustVac: 1019.9 * kN, ispSL: 263.3, ispVac: 320.2, minThrottle: 0.5,
-    source: UNCITED, note: 'one engine: four chambers and two verniers',
+  // RD-107A and RD-108A as published (Arianespace, Soyuz CSG User's Manual, Issue
+  // 2.1 2018, Fig. 1.5.1a: RD-107A 838.5 / 1 021.3 kN and 262 / 319 s, RD-108A
+  // 792.5 / 990.2 kN and 255 / 319 s; lpre.de gives 101 tf and 3 142 m/s for the
+  // RD-108A with its steering chambers). The Isp is taken over the whole flow,
+  // the hydrogen peroxide that drives the turbopump included: the stage loads
+  // below carry it as propellant. The same manual's acceleration trace (Fig.
+  // 3.2.1a) gives about 1 600 kg/s for the whole first stage at this thrust, 1 622
+  // on that reading against 1 672 with the peroxide as extra flow (review
+  // 2026-10-01). The RD-108A was 921.9 kN in vacuum (94 tf, Energomash's figure
+  // without the steering chambers), which left its pair 6.9 % apart and the core
+  // 2.4 % slow.
+  { id: 'rd107a', kind: 'engine', family: 'kerolox', name: 'RD-107A', thrustSL: 838.5 * kN, thrustVac: 1021.3 * kN, ispSL: 262, ispVac: 319, minThrottle: 0.5,
+    source: CSG_SOYUZ, note: 'one engine: four chambers and two verniers',
     mass: { kg: 1090, basis: 'published', what: 'dry, one complete engine (four chambers and two verniers); 1 156 kg filled',
       sources: ['https://web.archive.org/web/20190308003032/http://engine.space/dejatelnost/engines/rd-107-108/', 'http://engine.space/dejatelnost/engines/rd-107-108/', 'http://www.lpre.de/energomash/RD-107/index.htm', 'https://ru.wikipedia.org/wiki/РД-107', 'https://en.wikipedia.org/wiki/RD-107'],
       note: 'Energomash (2019 archive), lpre.de and ru.wikipedia agree on 1 090 kg. The en.wikipedia infobox’s 1 190 kg is the base RD-107 of the Vostok era, paired there with RD-107A performance.' } },
-  { id: 'rd108a', kind: 'engine', family: 'kerolox', name: 'RD-108A', thrustSL: 792.4 * kN, thrustVac: 921.9 * kN, ispSL: 257.7, ispVac: 320.6, minThrottle: 0.5,
-    source: UNCITED, note: 'one engine: four chambers and four verniers',
+  { id: 'rd108a', kind: 'engine', family: 'kerolox', name: 'RD-108A', thrustSL: 792.5 * kN, thrustVac: 990.2 * kN, ispSL: 255, ispVac: 319, minThrottle: 0.5,
+    source: CSG_SOYUZ, note: 'one engine: four chambers and four verniers',
     mass: { kg: 1075, basis: 'published', what: 'dry, one complete engine (four chambers and four verniers); 1 151 kg filled',
       sources: ['https://web.archive.org/web/20190308003032/http://engine.space/dejatelnost/engines/rd-107-108/', 'http://engine.space/dejatelnost/engines/rd-107-108/', 'http://www.lpre.de/energomash/RD-107/index.htm'],
       note: 'Energomash (2019 archive) and lpre.de agree; no conflicting figure found.' } },
@@ -580,33 +593,21 @@ export const ENGINE_PARTS: readonly EnginePart[] = [
 
 // ---------------------------------------------------------------- stage bodies
 export const STAGE_BODIES: readonly StageBodyPart[] = [
-  // THE R-7 CORE, IN TWO VARIANTS — and the split is the point, not an accident.
+  // THE R-7 CORE. Arianespace (Soyuz CSG User's Manual, Issue 2.1 2018, Fig. 1.5.1a):
+  // gross 99 765 kg, dry 6 545 kg, 63 800 kg LOX + 26 300 kg kerosene. The rest,
+  // 3 120 kg, is about 2 600 kg of hydrogen peroxide for the turbopump (carried
+  // as propellant, the RD-108A's Isp covering it, above) and about 520 kg of
+  // liquid nitrogen that pressurises the tanks and stays aboard (carried as dry
+  // mass). The stage weighs its published gross exactly.
   //
-  // Blok A's published masses (https://en.wikipedia.org/wiki/Soyuz-2_(rocket) ):
-  // gross 99 765 kg, empty 6 545 kg, propellant 63 800 kg LOX + 26 300 kg RP-1 =
-  // 90 100 kg. The dry mass is exactly right here. The propellant was
-  // 87 000 kg, 3.4 % light — and note that the published figures do not close
-  // among themselves either (99 765 − 6 545 = 93 220 kg, 3 120 kg above the
-  // LOX+RP-1 sum), so 90 100 kg is itself a ±3 t number.
-  //
-  // Soyuz-2.1a and 2.1b fly the SAME core. But 2.1a is the application's
-  // default mission and the one vehicle whose whole published timeline is
-  // pinned as a regression band (booster separation T+118 s, core cut-off
-  // T+287 s, SECO T+528 s — tests/fleet-defaults.test.ts), and 3 100 kg more
-  // core propellant moves core cut-off by ~10 s. Ten seconds is inside that
-  // band, but it would be spent on a figure that is itself uncertain by more
-  // than the change.
-  //
-  // So the correction lands where it is free: 2.1b, which has no published-clock
-  // regression band, takes the audited load, and 2.1a keeps the 87 000 kg that
-  // reproduces its callouts. That is a deliberate, documented divergence between
-  // two records of the same hardware, not two independent estimates — which is
-  // why 2.1b's body is a variant of 2.1a's and both stand on one strap-on body.
-  // See docs/history/AUDIT-2026-09-16.md, data proposals, "soyuz Blok A".
-  { id: 'blokA-soyuz21a', stageId: 'blokA', name: 'Blok A (core)', dryMass: 6545, propellantMass: 87000, diameter: 2.95, length: 27.8,
-    engine: { part: 'rd108a', count: 1 }, source: `${W}Soyuz-2_(rocket) (dry mass); 87 000 kg held to the published 2.1a clock` },
-  { id: 'blokA-soyuz21b', stageId: 'blokA', name: 'Blok A (core)', dryMass: 6545, propellantMass: 90100, diameter: 2.95, length: 27.8,
-    engine: { part: 'rd108a', count: 1 }, variantOf: 'blokA-soyuz21a', source: `${W}Soyuz-2_(rocket) (63 800 LOX + 26 300 RP-1)` },
+  // 2.1a flew 87 000 kg here until 2026-10-01, held to the published clock to hide
+  // an RD-108A vacuum thrust 7 % low; with the published engine the published
+  // load burns in the published time (docs/history/AUDIT-2026-09-16.md, data
+  // proposals, "soyuz Blok A", told the earlier story). Soyuz-2.1a and 2.1b fly
+  // the same core, which was two bodies, blokA-soyuz21a and blokA-soyuz21b, while
+  // their loads differed (`RETIRED_PART_IDS`).
+  { id: 'blokA-soyuz2', stageId: 'blokA', name: 'Blok A (core)', dryMass: 7065, propellantMass: 92700, diameter: 2.95, length: 27.8,
+    engine: { part: 'rd108a', count: 1 }, source: CSG_SOYUZ, note: 'Soyuz-2.1a and 2.1b; dry mass 6 545 kg + about 520 kg of nitrogen; propellant 90 100 kg LOX and kerosene + about 2 600 kg of hydrogen peroxide' },
   { id: 'blokI-rd0110', stageId: 'blokI', name: 'Blok I (3rd stage, RD-0110)', dryMass: 2410, propellantMass: 22900, diameter: 2.66, length: 6.7,
     engine: { part: 'rd0110', count: 1 }, source: UNCITED },
   { id: 'blokI-rd0124', stageId: 'blokI', name: 'Blok I (3rd stage)', dryMass: 2355, propellantMass: 23000, diameter: 2.66, length: 6.7,
@@ -777,9 +778,9 @@ export const STAGE_BODIES: readonly StageBodyPart[] = [
   // C01. Sputnik's core: 97.5 t, 90 t of it propellant, the load that puts it on
   // the 215 × 939 km orbit it reached (270 t in all against the 267 t quoted).
   { id: 'blokA-8k71ps', stageId: 'blokA', name: 'Blok A (core, RD-108)', dryMass: 7500, propellantMass: 90000, diameter: 2.95, length: 26,
-    engine: { part: 'rd108-8d75ps', count: 1 }, variantOf: 'blokA-soyuz21a', source: 'http://www.astronautix.com/s/sputnik8k71ps.html' },
+    engine: { part: 'rd108-8d75ps', count: 1 }, variantOf: 'blokA-soyuz2', source: 'http://www.astronautix.com/s/sputnik8k71ps.html' },
   { id: 'blokA-8k72k', stageId: 'blokA', name: 'Blok A (core, RD-108)', dryMass: 6800, propellantMass: 93000, diameter: 2.95, length: 28,
-    engine: { part: 'rd108-8d75k', count: 1 }, variantOf: 'blokA-soyuz21a', source: 'http://www.astronautix.com/v/vostok8k72k.html' },
+    engine: { part: 'rd108-8d75k', count: 1 }, variantOf: 'blokA-soyuz2', source: 'http://www.astronautix.com/v/vostok8k72k.html' },
   // Blok E: 1.44 t dry, 7.78 t of propellant, RD-0109.
   { id: 'blokE', stageId: 'blokE', name: 'Blok E (RD-0109)', dryMass: 1440, propellantMass: 7780, diameter: 2.56, length: 3.1,
     engine: { part: 'rd0109', count: 1 }, source: 'http://www.astronautix.com/v/vostok8k72k.html' },
@@ -795,8 +796,13 @@ export const STAGE_BODIES: readonly StageBodyPart[] = [
 
 // ---------------------------------------------------------------- strap-on bodies
 export const BOOSTER_BODIES: readonly BoosterBodyPart[] = [
-  { id: 'blokBVGD-soyuz2', stageId: 'blokBVGD', name: 'Blok B/V/G/D boosters', dryMass: 3784, propellantMass: 39600, diameter: 2.68, length: 19.6,
-    engine: { part: 'rd107a', count: 1 }, source: UNCITED, note: 'Soyuz-2.1a and 2.1b' },
+  // Arianespace (Soyuz CSG User's Manual, Issue 2.1 2018, Fig. 1.5.1a): gross 44 413 kg,
+  // dry 3 784 kg, 27 900 kg LOX + 11 260 kg kerosene; 1 212 kg of hydrogen peroxide
+  // (russianspaceweb soyuz_lv_stage1) carried as propellant, the RD-107A's Isp
+  // covering it, and the remaining 257 kg, liquid nitrogen, as dry mass. It was
+  // 39 600 kg of propellant, the older Starsem figure, and 3 784 kg dry.
+  { id: 'blokBVGD-soyuz2', stageId: 'blokBVGD', name: 'Blok B/V/G/D boosters', dryMass: 4041, propellantMass: 40372, diameter: 2.68, length: 19.6,
+    engine: { part: 'rd107a', count: 1 }, source: CSG_SOYUZ, note: 'Soyuz-2.1a and 2.1b; dry mass 3 784 kg + 257 kg of nitrogen; propellant 39 160 kg LOX and kerosene + 1 212 kg of hydrogen peroxide' },
   { id: 'urm1', stageId: 'urm1', name: 'URM-1 boosters', dryMass: 9000, propellantMass: 128800, diameter: 2.9, length: 25.7,
     engine: { part: 'rd191', count: 1 }, source: UNCITED, note: 'the same URM-1 module as the stage body urm1core' },
   // A Falcon Heavy side booster is a Falcon 9 first stage ("a Falcon 9 first
@@ -848,7 +854,10 @@ export const FAIRING_PARTS: readonly FairingPart[] = [
   // flights alike; with the escape tower on its nose the head of a crewed stack
   // is 15.59 m (owner's figures, 2026-09-25). It was drawn and flown at
   // 3.7 × 10.1 m on a 1.7 m adapter of its own.
-  { id: 'soyuz21a', mass: 1000, diameter: 4.11, length: 11.43, adapter: 2.2, source: 'TASS/RIA (the 4.11 × 11.43 m payload unit); owner’s figures, 2026-09-25' },
+  // 1 645 kg: the crewed head fairing with its four abort motors that the escape
+  // model flies (src/physics/rigid/escape.ts, an estimate); Arianespace publishes
+  // 1 700 kg for the 4.11 m ST fairing (81KS). It was 1 000 kg.
+  { id: 'soyuz21a', mass: 1645, diameter: 4.11, length: 11.43, adapter: 2.2, source: 'TASS/RIA (the 4.11 × 11.43 m payload unit); owner’s figures, 2026-09-25; mass: the escape model’s crewed fairing (estimate), Arianespace 1 700 kg for the ST fairing' },
   { id: 'soyuz21b', mass: 1500, diameter: 4.11, length: 11.4, source: UNCITED },
   { id: 'protonm', mass: 2000, diameter: 4.35, length: 15, source: UNCITED, note: 'Proton-M and Angara-A5' },
   { id: 'falcon9', mass: 1900, diameter: 5.2, length: 13.1, source: UNCITED, note: 'Falcon 9 and Falcon Heavy' },
@@ -933,7 +942,12 @@ export function enginePartOf(engine: EngineSpec): EnginePart | null {
   }
   return null;
 }
-export const stageBody = (id: string): StageBodyPart => find(STAGES, id, 'stage body');
+/**
+ * Part ids retired by a merge, with the part that replaced each: a saved design
+ * that names one still opens, on the part the catalogue now has.
+ */
+export const RETIRED_PART_IDS: Readonly<Record<string, string>> = { 'blokA-soyuz21a': 'blokA-soyuz2', 'blokA-soyuz21b': 'blokA-soyuz2' };
+export const stageBody = (id: string): StageBodyPart => find(STAGES, RETIRED_PART_IDS[id] ?? id, 'stage body');
 export const boosterBody = (id: string): BoosterBodyPart => find(BOOSTERS, id, 'strap-on body');
 export const fairingPart = (id: string): FairingPart => find(FAIRINGS, id, 'fairing');
 
@@ -949,15 +963,15 @@ export const fairingPart = (id: string): FairingPart => find(FAIRINGS, id, 'fair
 
 /** What a vehicle adds to a stage body where it installs it. */
 export type StageInstall = Partial<Pick<StageSpec, 'restartable' | 'sepDelay' | 'ignitionDelay' | 'throttleWithBoosters' | 'boosters'
-  | 'color' | 'accentColor' | 'profile' | 'fins' | 'gridFins' | 'legs' | 'flaps' | 'nozzleLength'>>;
+  | 'color' | 'accentColor' | 'profile' | 'fins' | 'gridFins' | 'legs' | 'flaps' | 'nozzleLength' | 'jettisons' | 'engineEvents' | 'cutoffAt'>>;
 /** What a vehicle adds to a strap-on body, besides how many. */
-export type BoosterInstall = Partial<Pick<BoosterGroupSpec, 'igniteAt' | 'sepDelay' | 'color' | 'conicalTop' | 'baseOffset'>>;
+export type BoosterInstall = Partial<Pick<BoosterGroupSpec, 'igniteAt' | 'sepDelay' | 'color' | 'conicalTop' | 'baseOffset' | 'thrustSteps'>>;
 /** What a vehicle adds to a fairing: when it is jettisoned, and its livery. */
 export type FairingInstall = Pick<FairingSpec, 'sepAltitude'> & Partial<Pick<FairingSpec, 'sepTime' | 'color'>>;
 
 const STAGE_INSTALL_FIELDS: ReadonlySet<string> = new Set(['restartable', 'sepDelay', 'ignitionDelay', 'throttleWithBoosters', 'boosters',
-  'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength']);
-const BOOSTER_INSTALL_FIELDS: ReadonlySet<string> = new Set(['igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset']);
+  'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength', 'jettisons', 'engineEvents', 'cutoffAt']);
+const BOOSTER_INSTALL_FIELDS: ReadonlySet<string> = new Set(['igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset', 'thrustSteps']);
 const FAIRING_INSTALL_FIELDS: ReadonlySet<string> = new Set(['sepAltitude', 'sepTime', 'color']);
 const ENGINE_OPTIONAL_FIELDS = ['minThrottle', 'solid', 'peakFactor', 'vacuumOnly', 'startupS', 'tailoffS'] as const;
 

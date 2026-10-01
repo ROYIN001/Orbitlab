@@ -40,6 +40,7 @@ import { configuredDispersion } from './dispersed-flight';
 import { attitudeTestStub, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './rigid/attitude-test';
 import { limitAscentCommand } from './rigid/control';
 import { nosePointingTarget } from './rigid/guidance-attitude';
+import { ESCAPE } from './rigid/escape';
 import { AeroEnvelopeEvents } from './rigid/envelope-events';
 import { buildRigidVehicle } from './rigid/mass';
 import { rigidContactMetrics } from './rigid/debris-runtime';
@@ -53,7 +54,7 @@ import { VehicleModel, StageState, engineMassFlow } from './vehicle';
 import { AscentGuidance, planeNormalThrough } from './guidance';
 import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
 import { MissionPlan, planMission, RAAN_TOLERANCE } from './mission';
-import { DEFAULT_GUIDANCE, guidanceForVehicle } from './defaults';
+import { DEFAULT_GUIDANCE, guidanceForVehicle, programmeOverridden } from './defaults';
 import { chronologicalEvents } from './events';
 import { AscentMonitor } from './sim/ascent';
 import { BurnSequencer } from './sim/burns';
@@ -90,12 +91,12 @@ export { FAIRING_HEAT_FLUX_LIMIT, FAIRING_Q_LIMIT, FAIRING_ALTITUDE_FLOOR } from
  */
 export function applyVehicleGuidanceDefaults(g: GuidanceParams, spec: VehicleSpec, model?: DynamicsConfig['model']): GuidanceParams {
   const vd = guidanceForVehicle(spec, DEFAULT_GUIDANCE, model);
-  const out: GuidanceParams = { ...g };
+  const out: Record<string, unknown> = { ...g };
   for (const k of Object.keys(vd) as (keyof GuidanceParams)[]) {
     const v = vd[k];
     if (v !== undefined && out[k] === DEFAULT_GUIDANCE[k]) out[k] = v;
   }
-  return out;
+  return out as unknown as GuidanceParams;
 }
 
 export class Simulation {
@@ -245,7 +246,10 @@ export class Simulation {
       this.payloadMass, cfg.boosterRecovery, this.satellite, cfg.recoveryPlan);
     const fixedPlane = this.vehicleSpec.targetPlane && this.plan.target.raan !== null && !this.plan.suborbitalAim
       ? planeNormal(this.plan.target.inclination, this.plan.target.raan) : undefined;
-    this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis,
+    // an operator's own pitch-over replaces the vehicle's stored programme
+    const flown = programmeOverridden(cfg.guidance, this.vehicleSpec, cfg.dynamics?.model)
+      ? { ...cfg.guidance, pitchProgram: undefined } : cfg.guidance;
+    this.guidance = new AscentGuidance(flown, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis,
       this.plan.suborbitalAim, fixedPlane);
     // G01: PEG or IGM, aimed at the same insertion orbit (orbital targets only: a suborbital flight keeps its own guidance).
     const explicit = cfgIn.dynamics?.explicitGuidance;
@@ -289,8 +293,27 @@ export class Simulation {
     this.schedule(ignT, 'ignition0', () => {
       this.vehicle.igniteStage(st0, this.state.t);
       for (const b of st0.boosters) if ((b.spec.igniteAt ?? 0) <= 0 && !b.spec.engine.solid) this.vehicle.igniteBooster(b, this.state.t);
+      // the R-7's run on the pad at intermediate levels before the main stage (`VehicleSpec.padBurnS`)
+      const pad = this.vehicleSpec.padBurnS ?? 0;
+      if (pad > 0 && !st0.spec.engine.solid) {
+        st0.propellant = Math.max(0, st0.propellant - pad * st0.spec.engine.count * engineMassFlow(st0.spec.engine));
+        for (const b of st0.boosters) if (b.ignited) b.propellant = Math.max(0, b.propellant - pad * b.spec.engine.count * engineMassFlow(b.spec.engine));
+        this.state.mass = this.vehicle.totalMass();
+      }
       this.event('evt.ignition', 'major', { stage: st0.spec.name });
     });
+    // A crewed Soyuz carries its escape tower until the nominal jettison; an
+    // abort clears the schedule and flies the tower itself (sim/abort.ts).
+    if (this.escape.fitted && this.vehicle.fairingAttached) {
+      this.vehicle.escapeTowerMass = ESCAPE.tower.mass;
+      this.state.mass = this.vehicle.totalMass();
+      this.schedule(ESCAPE.towerJettison, 'towerJettison', () => {
+        this.vehicle.escapeTowerMass = 0;
+        this.vehicle.jettisoned.tower = true;
+        this.state.mass = this.vehicle.totalMass();
+        this.event('evt.towerJettison', 'success', {});
+      });
+    }
     this.schedule(0, 'liftoff', () => {
       for (const b of st0.boosters) if ((b.spec.igniteAt ?? 0) <= 0 && !b.ignited) this.vehicle.igniteBooster(b, this.state.t);
       if (st0.spec.engine.solid && !st0.ignited) {
@@ -434,6 +457,10 @@ export class Simulation {
         st.spec = { ...st.spec, dryMass: st.spec.dryMass - j.mass };
         this.vehicle.jettisoned.interstage = true;
         this.event('evt.interstageSep', 'success', { ...this.stageParams(st) }, st.ignitionTime + j.t);
+      } else if (j.part === 'aftSkirt') {
+        st.spec = { ...st.spec, dryMass: st.spec.dryMass - j.mass };
+        this.vehicle.jettisoned.aftSkirt = true;
+        this.event('evt.aftSkirtSep', 'success', { ...this.stageParams(st) }, st.ignitionTime + j.t);
       } else {
         this.vehicle.payloadMass = Math.max(0, this.vehicle.payloadMass - j.mass);
         this.vehicle.jettisoned.tower = true;
@@ -675,6 +702,11 @@ export class Simulation {
     if (s.status !== 'prelaunch' && dt > TRANSIENT_DT && this.vehicle.inTransient(s.t)) dt = TRANSIENT_DT;
     if (this.pending.length > 0) {
       const gap = this.pending[0].t - s.t;
+      if (gap > 1e-4 && gap < dt) dt = gap;
+    }
+    // a planned thrust step or commanded cut-off ends a step exactly
+    if (s.status === 'ascent') {
+      const gap = this.vehicle.nextPlannedChange(s.t) - s.t;
       if (gap > 1e-4 && gap < dt) dt = gap;
     }
     if (s.status === 'coast' && s.nextBurnTime > s.t) {

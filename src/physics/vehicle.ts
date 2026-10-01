@@ -19,6 +19,8 @@ export interface BoosterState {
   level: number;
   /** level it was running at when it ran dry, the start of its tail-off */
   stopLevel: number;
+  /** the integrator its commanded steps and cut-off are issued from, s (`StageState.commandClock`) */
+  commandClock: number;
 }
 
 export interface StageState {
@@ -54,6 +56,18 @@ export interface StageState {
   level: number;
   /** level at the latest shutdown, the start of its tail-off */
   stopLevel: number;
+  /**
+   * The integrator a commanded step or cut-off (`StageSpec.cutoffAt`,
+   * `BoosterGroupSpec.thrustSteps`) is issued from, s, started at ignition. The
+   * R-7 issues them when the apparent velocity reaches the value set for it
+   * (Andrienko, Tropova and Chadaev 2013), which a nominal flight reaches at the
+   * published times. The model integrates the throttle the guidance holds the
+   * engines at, which at full thrust is the mission clock itself, so the
+   * published times are flown exactly; held back by an acceleration limit, a
+   * stage is cut off later with about the propellant a nominal flight leaves, as
+   * the integrator would cut it off, instead of on time with its tanks half full.
+   */
+  commandClock: number;
   /**
    * Engines lit, by engine index, when not all of them are: Starship's ship
    * lands on its three sea-level Raptors and leaves the vacuum ones cold.
@@ -358,6 +372,28 @@ export function droneShipReserve(spec: VehicleSpec, payloadMass: number, base: n
   return r;
 }
 
+/**
+ * How long a planned thrust step takes, s: Soyuz-2's strap-ons go from full to
+ * their intermediate level between 3.981 g at T+111.99 s and 3.367 g at
+ * T+112.24 s on Arianespace's acceleration trace (CSG User's Manual, Fig. 3.2.1a).
+ */
+export const THRUST_STEP_RAMP_S = 0.25;
+
+/** A strap-on group's planned thrust level at mission time `t` (`BoosterGroupSpec.thrustSteps`), ramped over `THRUST_STEP_RAMP_S`; a level-0 step is its cut-off, `boosterCutoffAt`. */
+export function boosterStepLevel(spec: BoosterGroupSpec, t: number): number {
+  let level = 1;
+  for (const step of spec.thrustSteps ?? []) {
+    if (t < step.t || step.level <= 0) continue;
+    level += (step.level - level) * Math.min(1, (t - step.t) / THRUST_STEP_RAMP_S);
+  }
+  return level;
+}
+
+/** When a strap-on group is shut down by command, s after liftoff: its level-0 thrust step (`BoosterGroupSpec.thrustSteps`), else never. */
+export function boosterCutoffAt(spec: BoosterGroupSpec): number {
+  return spec.thrustSteps?.find((step) => step.level === 0)?.t ?? Infinity;
+}
+
 export class VehicleModel {
   readonly spec: VehicleSpec;
   readonly stages: StageState[];
@@ -365,7 +401,14 @@ export class VehicleModel {
   payloadMass: number;
   payloadAttached = true;
   /** C01: the parts `StageSpec.jettisons` has dropped so far */
-  jettisoned = { interstage: false, tower: false };
+  jettisoned = { interstage: false, tower: false, aftSkirt: false };
+  /**
+   * A crewed Soyuz's escape tower on the fairing's nose, kg, until its nominal
+   * jettison (`ESCAPE.towerJettison`); 0 on every other flight. The crew ship
+   * flies as a stage of its own (`hasSpacecraftStage`), so the tower cannot
+   * come off `payloadMass` as the Saturn V's does through `StageSpec.jettisons`.
+   */
+  escapeTowerMass = 0;
   activeIndex = 0;
   /** first-stage (core) propellant fraction reserved for recovery */
   recoveryReserve: number;
@@ -420,6 +463,7 @@ export class VehicleModel {
         startTime: -Infinity,
         level: 0,
         stopLevel: 0,
+        commandClock: 0,
       })),
       ignitionTime: 0,
       sepTime: 0,
@@ -428,6 +472,7 @@ export class VehicleModel {
       startTime: -Infinity,
       level: 0,
       stopLevel: 0,
+      commandClock: 0,
     }));
   }
 
@@ -462,7 +507,7 @@ export class VehicleModel {
 
   totalMass(): number {
     let m = this.payloadAttached ? this.payloadMass : 0;
-    if (this.fairingAttached && this.spec.fairing) m += this.spec.fairing.mass;
+    if (this.fairingAttached && this.spec.fairing) m += this.spec.fairing.mass + this.escapeTowerMass;
     for (const st of this.stages) {
       if (!st.attached) continue;
       m += st.spec.dryMass + st.propellant;
@@ -553,7 +598,7 @@ export class VehicleModel {
         if (!(throttleCmd > 0) || this.usableBoosterPropellant(b) <= 0) continue;
         let profile = 1;
         if (be.solid) profile = this.solidProfileForBooster(b);
-        const thr = be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd));
+        const thr = (be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd))) * boosterStepLevel(b.spec, b.commandClock);
         level = VehicleModel.withinTank(thr * profile * startupFactor(be, t - b.startTime, dt), this.usableBoosterPropellant(b), be.count * engineMassFlow(be), dt);
         out.thrustFullVac += nb * be.thrustVac * profile;
       } else if (this.boosterTailingOff(b, t)) {
@@ -601,6 +646,26 @@ export class VehicleModel {
     const level = b.stopLevel * tailoffFactor(e, t - b.burnoutTime, dt);
     if (!(dt > 0)) return level;
     return Math.min(level, this.usableBoosterPropellant(b) / (e.count * engineMassFlow(e) * dt));
+  }
+
+  /**
+   * The next planned change in the active stage's thrust after `t`, s after
+   * liftoff: a strap-on step or cut-off (`BoosterGroupSpec.thrustSteps`) or the
+   * core's commanded cut-off (`StageSpec.cutoffAt`), so a step can end on it.
+   */
+  nextPlannedChange(t: number): number {
+    const st = this.active;
+    let next = Infinity;
+    if (!st) return next;
+    // at full thrust the integrators run with the clock (`commandClock`)
+    if (st.ignited && !st.cutoff && !st.burnedOut && st.spec.cutoffAt !== undefined && st.spec.cutoffAt > st.commandClock) {
+      next = t + (st.spec.cutoffAt - st.commandClock);
+    }
+    for (const b of st.boosters) {
+      if (!b.attached || !b.ignited || b.burnedOut) continue;
+      for (const step of b.spec.thrustSteps ?? []) if (step.t > b.commandClock) next = Math.min(next, t + (step.t - b.commandClock));
+    }
+    return next;
   }
 
   /** The stage's core was shut down (or ran dry) and is still tailing off at `t`. */
@@ -689,8 +754,15 @@ export class VehicleModel {
       st.level = level;
       const flow = n * engineMassFlow(e) * level;
       st.propellant -= flow * dt;
-      // Shut down by the depletion sensor with the tail-off's propellant aboard.
-      if (this.usablePropellant(st) <= VehicleModel.tailoffReserve(e, flow)) {
+      st.commandClock += thr * dt;
+      // Shut down by command (`StageSpec.cutoffAt`) with propellant aboard, as
+      // the R-7 core is at GK-2, or by the depletion sensor with the tail-off's.
+      if (st.spec.cutoffAt !== undefined && st.commandClock >= st.spec.cutoffAt - 1e-9 && this.usablePropellant(st) > VehicleModel.tailoffReserve(e, flow)) {
+        st.burnedOut = true;
+        st.cutoffTime = t + dt;
+        st.stopLevel = level;
+        res.coreBurnout = true;
+      } else if (this.usablePropellant(st) <= VehicleModel.tailoffReserve(e, flow)) {
         st.propellant = Math.max(st.propellant, st.index === 0 ? this.recoveryReserve * st.spec.propellantMass : 0);
         st.burnedOut = true;
         st.cutoffTime = t + dt;
@@ -715,12 +787,21 @@ export class VehicleModel {
         if (!(throttleCmd > 0)) { b.level = 0; continue; }
         let profile = 1;
         if (be.solid) profile = this.solidProfileForBooster(b);
-        const thr = be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd));
+        const cmd = be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd));
+        const thr = cmd * boosterStepLevel(b.spec, b.commandClock);
         const level = VehicleModel.withinTank(thr * profile * startupFactor(be, t - b.startTime, dt), this.usableBoosterPropellant(b), nb * engineMassFlow(be), dt);
         b.level = level;
         const flow = nb * engineMassFlow(be) * level;
         b.propellant -= flow * dt;
-        if (this.usableBoosterPropellant(b) <= VehicleModel.tailoffReserve(be, flow)) {
+        b.commandClock += cmd * dt;
+        // Shut down by command (a level-0 thrust step) with propellant still aboard,
+        // as Soyuz-2's strap-ons are, or by the depletion sensor.
+        if (b.commandClock >= boosterCutoffAt(b.spec) - 1e-9) {
+          b.burnedOut = true;
+          b.burnoutTime = t + dt;
+          b.stopLevel = level;
+          res.boosterBurnout.push(b);
+        } else if (this.usableBoosterPropellant(b) <= VehicleModel.tailoffReserve(be, flow)) {
           b.propellant = Math.max(b.propellant, this.boosterRecoveryReserve * b.spec.propellantMass);
           b.burnedOut = true;
           b.burnoutTime = t + dt;
@@ -738,7 +819,10 @@ export class VehicleModel {
   }
 
   igniteStage(st: StageState, t: number): void {
-    if (!st.ignited) st.ignitionTime = t;
+    if (!st.ignited) {
+      st.ignitionTime = t;
+      st.commandClock = t;
+    }
     st.ignited = true;
     st.cutoff = false;
     st.ignitions += 1;
@@ -751,6 +835,7 @@ export class VehicleModel {
   igniteBooster(b: BoosterState, t = -Infinity): void {
     b.ignited = true;
     b.startTime = t;
+    b.commandClock = Number.isFinite(t) ? t : 0;
   }
   /**
    * The engine starts thrusting now rather than at ignition: an orbital burn
@@ -815,7 +900,8 @@ export class VehicleModel {
     if (!act) return 0;
     let dv = 0;
     let mass = this.totalMass();
-    let fairing = this.fairingAttached && this.spec.fairing ? this.spec.fairing.mass : 0;
+    // a crewed Soyuz's escape tower goes before the fairing does (`escapeTowerMass`)
+    let fairing = this.fairingAttached && this.spec.fairing ? this.spec.fairing.mass + this.escapeTowerMass : 0;
     const stagesAbove = this.stages.filter((s) => s.attached && s.index >= act.index && !s.spec.isSpacecraft);
     // The fairing is jettisoned a minute or so into the second stage's burn. If
     // the walk starts above the first stage the jettison is already imminent, so

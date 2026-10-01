@@ -33,6 +33,13 @@
  * (it was 'ef9bbec0786e0558'). Its spec equals main's literal value for value
  * (tests/d01-vehicles-identity.test.ts), and the other 26 rows, unchanged,
  * show the point-mass physics is main's, so the new hash is main's flight.
+ *
+ * Re-recorded a second time for Soyuz-2 on its real flight (2026-10-01,
+ * docs/VALIDATION.md §3): `soyuz21a/leo/50`, `soyuz21b/leo/50` and
+ * `soyuz21b/gto/50` fly the published engines and loads, the commanded
+ * cut-offs and the stored pitch programme (they were 'deef4d6e49a74ea0',
+ * '487ada8595699387' and '62c11ccc40646589'). The other 24 rows, unchanged,
+ * show that the new mechanisms change no other vehicle.
  */
 import { describe, expect, it } from 'vitest';
 import { VEHICLES } from '../src/data/vehicles';
@@ -40,8 +47,8 @@ import { allCases, caseKey, flyCase } from './fleet-harness';
 import { FingerprintSampler } from './flex-golden-harness';
 
 export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
-  'soyuz21a/leo/50': 'deef4d6e49a74ea0',
-  'soyuz21b/leo/50': '487ada8595699387',
+  'soyuz21a/leo/50': 'd90cb1ce6c496984',
+  'soyuz21b/leo/50': '4983ea1c31ef47bc',
   'protonm/leo/50': '76fae19e6ec959b6',
   'angaraa5/leo/50': '7cea61f34555f892',
   'falcon9/leo/50': '8504537bbd7ef7e5',
@@ -62,7 +69,7 @@ export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
   'vostok8k72k/leo/50': '4e37c2c9a626ebd9',
   'saturnv/leo/50': '6216e2d36a22f147',
   'protonm/gto/50': 'bb6e24576d031e4c',
-  'soyuz21b/gto/50': '62c11ccc40646589',
+  'soyuz21b/gto/50': 'd1f368b68b92d7bf',
   'ariane64/gto/50': '5f39c0051d6adb58',
   'vegac/sso/50': 'c6c598e3d8ea5910',
   'pslvxl/sso/50': '4a10da20085b3a09',

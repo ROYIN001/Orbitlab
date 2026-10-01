@@ -28,6 +28,29 @@ export const DEFAULT_GUIDANCE: GuidanceParams = {
 export const DEFAULT_FAILURE: FailureConfig = { mode: 'none', time: 60, stage: 0 };
 
 /**
+ * The fields that give way a vehicle's stored pitch programme: an operator's own
+ * pitch-over (the vertical rise, the kick and the turn's rate limit), and an
+ * acceleration limit, which throttles the vehicle off the thrust the programme
+ * was computed for. A programme flown at a fixed pitch against time by a
+ * throttled stack goes flat and low into dense air (Soyuz-2.1a held to 18 m/s²
+ * met 45 kPa on it, against 37 kPa unthrottled); a pitch-over turns with the
+ * velocity it actually has.
+ */
+export const PROGRAMME_FIELDS = ['pitchOverAltitude', 'kickAngle', 'kickDuration', 'maxTurnRate', 'maxAccel'] as const;
+
+/**
+ * Whether `g` replaces the vehicle's stored pitch programme with a pitch-over
+ * of the operator's own: any of `PROGRAMME_FIELDS` set to something other than
+ * the vehicle's value. A programme flies none of those fields, so an edit to
+ * one would otherwise change nothing (`GuidanceParams.pitchProgram`).
+ */
+export function programmeOverridden(g: GuidanceParams, spec: VehicleSpec, model?: DynamicsConfig['model']): boolean {
+  if (!g.pitchProgram) return false;
+  const own = guidanceForVehicle(spec, DEFAULT_GUIDANCE, model);
+  return PROGRAMME_FIELDS.some((k) => g[k] !== own[k]);
+}
+
+/**
  * The guidance a vehicle is actually flown with when nobody has touched the
  * controls: the library baseline with the vehicle's own program on top.
  *

@@ -8,15 +8,141 @@
    "color": "#e8e8e8",
    "diameter": 4.11,
    "length": 11.43,
-   "mass": 1000,
-   "sepAltitude": 95000,
-   "sepTime": 157
+   "mass": 1645,
+   "sepAltitude": 70000,
+   "sepTime": 153.3
   },
   "guidanceDefaults": {
    "kickAngle": 3,
    "loftAltitude": 0,
    "maxTurnRate": 0.3,
-   "pitchMax": 35
+   "pitchMax": 35,
+   "pitchProgram": [
+    [
+     0,
+     90
+    ],
+    [
+     5,
+     90
+    ],
+    [
+     6,
+     89.85
+    ],
+    [
+     8.5,
+     89.48
+    ],
+    [
+     11,
+     88.92
+    ],
+    [
+     13.5,
+     88.07
+    ],
+    [
+     16,
+     87.2
+    ],
+    [
+     18.5,
+     86.3
+    ],
+    [
+     21,
+     85.26
+    ],
+    [
+     23.5,
+     84.02
+    ],
+    [
+     26,
+     82.77
+    ],
+    [
+     28.5,
+     81.53
+    ],
+    [
+     31,
+     80.14
+    ],
+    [
+     36,
+     76.96
+    ],
+    [
+     41,
+     73.68
+    ],
+    [
+     46,
+     69.97
+    ],
+    [
+     51,
+     66.3
+    ],
+    [
+     56,
+     62.8
+    ],
+    [
+     61,
+     59.32
+    ],
+    [
+     66,
+     55.93
+    ],
+    [
+     71,
+     52.66
+    ],
+    [
+     76,
+     49.85
+    ],
+    [
+     81,
+     47.1
+    ],
+    [
+     86,
+     44.61
+    ],
+    [
+     91,
+     42.2
+    ],
+    [
+     96,
+     40.14
+    ],
+    [
+     118,
+     35.14
+    ],
+    [
+     128,
+     28.14
+    ],
+    [
+     210,
+     16
+    ],
+    [
+     285,
+     10
+    ],
+    [
+     285.1,
+     10
+    ]
+   ]
   },
   "guidanceDefaultsSixDof": {
    "closedLoopStart": 140,
@@ -32,6 +158,7 @@
   "maxQ": 40000,
   "name": "Soyuz-2.1a",
   "notes": "The crew/cargo launcher for Soyuz MS and Progress: R-7 boosters and core with the RD-0110 third stage, direct insertion.",
+  "padBurnS": 2,
   "payloadGTO": 0,
   "payloadLEO": 7430,
   "sites": [
@@ -48,40 +175,51 @@
       "conicalTop": true,
       "count": 4,
       "diameter": 2.68,
-      "dryMass": 3784,
+      "dryMass": 4041,
       "engine": {
        "count": 1,
-       "ispSL": 263.3,
-       "ispVac": 320.2,
+       "ispSL": 262,
+       "ispVac": 319,
        "minThrottle": 0.5,
        "name": "RD-107A",
-       "thrustSL": 839500,
-       "thrustVac": 1019900
+       "thrustSL": 838500,
+       "thrustVac": 1021300
       },
       "id": "blokBVGD",
       "length": 19.6,
       "name": "Blok B/V/G/D boosters",
-      "propellantMass": 39600,
-      "sepDelay": 1
+      "propellantMass": 40372,
+      "sepDelay": 0.4,
+      "thrustSteps": [
+       {
+        "level": 0.81,
+        "t": 112
+       },
+       {
+        "level": 0,
+        "t": 117.45
+       }
+      ]
      }
     ],
     "color": "#c9c7bd",
+    "cutoffAt": 285.05,
     "diameter": 2.95,
-    "dryMass": 6545,
+    "dryMass": 7065,
     "engine": {
      "count": 1,
-     "ispSL": 257.7,
-     "ispVac": 320.6,
+     "ispSL": 255,
+     "ispVac": 319,
      "minThrottle": 0.5,
      "name": "RD-108A",
-     "thrustSL": 792400,
-     "thrustVac": 921900
+     "thrustSL": 792500,
+     "thrustVac": 990200
     },
     "id": "blokA",
     "length": 27.8,
     "name": "Blok A (core)",
     "profile": "r7Core",
-    "propellantMass": 87000
+    "propellantMass": 92700
    },
    {
     "color": "#c9c7bd",
@@ -99,6 +237,13 @@
     },
     "id": "blokI",
     "ignitionDelay": 0,
+    "jettisons": [
+     {
+      "mass": 430,
+      "part": "aftSkirt",
+      "t": 11.07
+     }
+    ],
     "length": 6.7,
     "name": "Blok I (3rd stage, RD-0110)",
     "profile": "r7Upper",
@@ -121,7 +266,133 @@
    "kickAngle": 1.5,
    "loftAltitude": 0,
    "maxTurnRate": 0.3,
-   "pitchMax": 35
+   "pitchMax": 35,
+   "pitchProgram": [
+    [
+     0,
+     90
+    ],
+    [
+     5,
+     90
+    ],
+    [
+     6,
+     89.85
+    ],
+    [
+     8.5,
+     89.48
+    ],
+    [
+     11,
+     88.92
+    ],
+    [
+     13.5,
+     88.07
+    ],
+    [
+     16,
+     87.2
+    ],
+    [
+     18.5,
+     86.3
+    ],
+    [
+     21,
+     85.26
+    ],
+    [
+     23.5,
+     84.02
+    ],
+    [
+     26,
+     82.77
+    ],
+    [
+     28.5,
+     81.53
+    ],
+    [
+     31,
+     80.14
+    ],
+    [
+     36,
+     76.96
+    ],
+    [
+     41,
+     73.68
+    ],
+    [
+     46,
+     69.97
+    ],
+    [
+     51,
+     66.3
+    ],
+    [
+     56,
+     62.8
+    ],
+    [
+     61,
+     59.32
+    ],
+    [
+     66,
+     55.93
+    ],
+    [
+     71,
+     52.66
+    ],
+    [
+     76,
+     49.85
+    ],
+    [
+     81,
+     47.1
+    ],
+    [
+     86,
+     44.61
+    ],
+    [
+     91,
+     42.2
+    ],
+    [
+     96,
+     40.14
+    ],
+    [
+     118,
+     35.14
+    ],
+    [
+     128,
+     28.14
+    ],
+    [
+     210,
+     16
+    ],
+    [
+     285,
+     10
+    ],
+    [
+     285.1,
+     10
+    ]
+   ]
   },
   "height": 46.3,
   "id": "soyuz21b",
@@ -130,6 +401,7 @@
   "maxQ": 40000,
   "name": "Soyuz-2.1b / Fregat-M",
   "notes": "R-7 family; four conical strap-on boosters, hot-staged third stage, restartable Fregat upper stage.",
+  "padBurnS": 2,
   "payloadGTO": 1900,
   "payloadLEO": 8670,
   "payloadSSO": 4900,
@@ -147,40 +419,51 @@
       "conicalTop": true,
       "count": 4,
       "diameter": 2.68,
-      "dryMass": 3784,
+      "dryMass": 4041,
       "engine": {
        "count": 1,
-       "ispSL": 263.3,
-       "ispVac": 320.2,
+       "ispSL": 262,
+       "ispVac": 319,
        "minThrottle": 0.5,
        "name": "RD-107A",
-       "thrustSL": 839500,
-       "thrustVac": 1019900
+       "thrustSL": 838500,
+       "thrustVac": 1021300
       },
       "id": "blokBVGD",
       "length": 19.6,
       "name": "Blok B/V/G/D boosters",
-      "propellantMass": 39600,
-      "sepDelay": 1
+      "propellantMass": 40372,
+      "sepDelay": 0.4,
+      "thrustSteps": [
+       {
+        "level": 0.81,
+        "t": 112
+       },
+       {
+        "level": 0,
+        "t": 117.7
+       }
+      ]
      }
     ],
     "color": "#c9c7bd",
+    "cutoffAt": 284.95,
     "diameter": 2.95,
-    "dryMass": 6545,
+    "dryMass": 7065,
     "engine": {
      "count": 1,
-     "ispSL": 257.7,
-     "ispVac": 320.6,
+     "ispSL": 255,
+     "ispVac": 319,
      "minThrottle": 0.5,
      "name": "RD-108A",
-     "thrustSL": 792400,
-     "thrustVac": 921900
+     "thrustSL": 792500,
+     "thrustVac": 990200
     },
     "id": "blokA",
     "length": 27.8,
     "name": "Blok A (core)",
     "profile": "r7Core",
-    "propellantMass": 90100
+    "propellantMass": 92700
    },
    {
     "color": "#c9c7bd",
@@ -198,6 +481,13 @@
     },
     "id": "blokI",
     "ignitionDelay": 0,
+    "jettisons": [
+     {
+      "mass": 430,
+      "part": "aftSkirt",
+      "t": 15.45
+     }
+    ],
     "length": 6.7,
     "name": "Blok I (3rd stage)",
     "profile": "r7Upper",

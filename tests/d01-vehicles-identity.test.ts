@@ -28,6 +28,15 @@
  * values of `soyuz21a.guidanceDefaultsSixDof` changed; the fixture's diff is
  * those lines, and the unsorted string grew from 30 987 to 31 009 characters.
  *
+ * Re-recorded a third time, for Soyuz-2 on its real flight (2026-10-01,
+ * docs/VALIDATION.md §3, "Soyuz-2.1a flies its stored pitch programme"): the
+ * RD-107A and RD-108A take Arianespace's figures and the strap-on and core
+ * bodies their published loads; the strap-ons get their thrust step and
+ * commanded cut-off and a 0.4 s separation delay, the cores `cutoffAt`, both
+ * vehicles `padBurnS` and a stored `pitchProgram`, Blok I an aft skirt, and
+ * Soyuz-2.1a's fairing its crewed mass and T+153.3 s. Only `soyuz21a` and
+ * `soyuz21b` changed; the unsorted string grew to 31 994 characters.
+ *
  * What the JSON pins and what it leaves out, on purpose:
  * - keys are sorted recursively, so key order is left out of the fixture. It
  *   reaches no catalogue flight; it only shows in the bytes of a mission file
@@ -48,12 +57,13 @@ import { VEHICLES } from '../src/data/vehicles';
 import FIXTURE from './fixtures/vehicles-pre-d01.json?raw';
 
 /**
- * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, with Soyuz-2.1a's PHY-01
- * programme; 31 009 characters. From main's literal fleet at 3d713b5 (F11
- * included) it was 420d7d17…, 30 987 characters; at eedd035, the pre-D01
- * HEAD, f891238e…, 30 926 characters.
+ * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, with Soyuz-2 on its real
+ * flight; 31 994 characters. With Soyuz-2.1a's PHY-01 programme it was
+ * 04d88a36…, 31 009 characters; from main's literal fleet at 3d713b5 (F11
+ * included) 420d7d17…, 30 987 characters; at eedd035, the pre-D01 HEAD,
+ * f891238e…, 30 926 characters.
  */
-const PRE_D01_UNSORTED_SHA256 = '04d88a36a71d623c0377a9c97b70ad97c2a509c2810cc73a4d8e6407dcfb9fb8';
+const PRE_D01_UNSORTED_SHA256 = '0b6d8d1b85c134b3ed449d2d6c01bbd0b5a22bc72be055abfe0746438f4b395f';
 
 const sortKeys = (v: unknown): unknown => (Array.isArray(v) ? v.map(sortKeys)
   : v && typeof v === 'object'
@@ -91,6 +101,6 @@ describe('D01: the catalogue vehicles, recorded before the parts catalogue', () 
     const unsorted = JSON.stringify(VEHICLES);
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(unsorted));
     const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    expect([unsorted.length, hex]).toEqual([31009, PRE_D01_UNSORTED_SHA256]);
+    expect([unsorted.length, hex]).toEqual([31994, PRE_D01_UNSORTED_SHA256]);
   });
 });

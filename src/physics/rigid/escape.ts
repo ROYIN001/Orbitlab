@@ -7,12 +7,12 @@
  *
  * Three ways out, by the time of the abort (docs/PHYSICS.md §8.3):
  *
- * - `tower`, on the pad and up to the tower's jettison at T+114.5 s: the head
+ * - `tower`, on the pad and up to the tower's jettison at T+113.5 s: the head
  *   section (tower, upper fairing, orbital and descent modules) leaves the
  *   service module behind on the tower's main motor, pushed sideways by its
  *   control motor; the fairing's grid fins open; the descent module drops out
  *   of the fairing near the top of the climb.
- * - `fairing`, from the tower's jettison to the fairing's (T+157 s): the four
+ * - `fairing`, from the tower's jettison to the fairing's (T+153.3 s): the four
  *   solid motors on the fairing (РДГ 860М) do the tower's work, as on Soyuz
  *   MS-10.
  * - `separation`, after the fairing is gone: the spacecraft is released from
@@ -62,8 +62,12 @@ const HEAD_FAIRING = 8.73;
 
 /** The data the escape is flown on. Estimates are marked; the rest is sourced (PHYSICS.md §8.3). */
 export const ESCAPE = {
-  /** nominal tower jettison, s after liftoff (MKB Iskra: T+114 s; Soyuz MS flights T+114–115 s) */
-  towerJettison: 114.5,
+  /**
+   * nominal tower jettison, s after liftoff: Soyuz-2.1a crewed flights as flown,
+   * T+113.45–113.70 s (MS-21, -23 to -27; russianspaceweb, quoting Roscosmos).
+   * It was 114.5 s from MKB Iskra's T+114 s and the Soyuz-FG flights' 114–115 s.
+   */
+  towerJettison: 113.5,
   /** head section with the tower, kg: 7 635 kg (Braeunig) */
   tower: { mass: 1740, propellant: 800,
     /** net axial thrust, N. 76 tf is quoted, but the crews of T-10-1 felt 14–17 g, which needs about 1 MN on this mass (estimate) */

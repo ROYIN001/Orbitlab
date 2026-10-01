@@ -75,7 +75,7 @@ export function burnProfile(vehicle: VehicleModel, opts: { excludeWeakFinal: boo
   if (!act) return null;
   if (act.boosters.some((b) => b.attached && b.ignited && !b.burnedOut)) return null;
   let mass = vehicle.totalMass();
-  let fairing = vehicle.fairingAttached && vehicle.spec.fairing ? vehicle.spec.fairing.mass : 0;
+  let fairing = vehicle.fairingAttached && vehicle.spec.fairing ? vehicle.spec.fairing.mass + vehicle.escapeTowerMass : 0;
   if (fairing > 0 && act.index > 0) { mass -= fairing; fairing = 0; }
   const out: BurnSegment[] = [];
   const stages = vehicle.stages.filter((s) => s.attached && s.index >= act.index && !s.spec.isSpacecraft

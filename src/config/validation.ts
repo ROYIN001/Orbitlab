@@ -3,7 +3,7 @@
  * operator may launch. Only malformed or unsupported input is rejected here. */
 import type { FailureConfig, FailureMode, GuidanceParams, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from '../types';
 import { ALL_VEHICLES, vehicleDataId } from '../data/vehicles';
-import { vehicleSpecProblems, vehicleSpecText } from './vehicle-spec';
+import { pitchProgramValid, vehicleSpecProblems, vehicleSpecText } from './vehicle-spec';
 import { LANDING_ZONES } from '../data/landing-zones';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES } from '../data/sites';
@@ -31,8 +31,23 @@ export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'in
 export interface ValidationIssue { field: string; code: ValidationCode; limit?: number; detail?: string }
 
 /** Bounds are in the stored SI/degree units; UI and WebMCP convert at the edge. */
-// `closedLoopStart` (C01) is a vehicle's own figure, not a setting: it is not offered here
-export const GUIDANCE_FIELDS: Record<string, { key: Exclude<keyof GuidanceParams, 'closedLoopStart'>; scale: number; range: [number, number] }> = {
+/**
+ * Guidance a vehicle carries as its own figures, not settings: no field offers
+ * them, but a mission file that saved the guidance as flown (a lesson's
+ * results, `flownMission`) carries them, and they are checked for shape here.
+ */
+const VEHICLE_GUIDANCE_FIGURES: Record<string, (value: unknown) => boolean> = {
+  closedLoopStart: (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 2e4,
+  pitchProgram: pitchProgramValid,
+};
+
+/** Whether a vehicle's own guidance figure in a mission file (`closedLoopStart`, `pitchProgram`) is well formed; false for any other key. */
+export function vehicleGuidanceFigureValid(key: string, value: unknown): boolean {
+  return VEHICLE_GUIDANCE_FIGURES[key]?.(value) ?? false;
+}
+
+// `closedLoopStart` (C01) and `pitchProgram` are a vehicle's own figures, not settings: they are not offered here
+export const GUIDANCE_FIELDS: Record<string, { key: Exclude<keyof GuidanceParams, 'closedLoopStart' | 'pitchProgram'>; scale: number; range: [number, number] }> = {
   pitchOverAltitudeM: { key: 'pitchOverAltitude', scale: 1, range: [20, 5000] },
   kickAngleDeg: { key: 'kickAngle', scale: 1, range: [0, 45] },
   kickDurationS: { key: 'kickDuration', scale: 1, range: [1, 60] },
@@ -85,7 +100,7 @@ export const NUMBER_FIELDS: Record<string, NumberLimits> = {
 /** Vehicle programmes are trusted data, not fresh user overrides. Extending a
  * field to include its shipped default preserves programmes outside a generic
  * UI band and lets the user put the displayed default back after an edit. */
-export function guidanceLimits(key: keyof GuidanceParams, spec?: VehicleSpec): NumberLimits {
+export function guidanceLimits(key: (typeof GUIDANCE_FIELDS)[string]['key'], spec?: VehicleSpec): NumberLimits {
   const def = Object.values(GUIDANCE_FIELDS).find((f) => f.key === key)!;
   const baseline = spec ? guidanceForVehicle(spec)[key] : undefined;
   return {
@@ -281,7 +296,9 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
   if (orbit.raanMode === 'ltan') check(orbit.ltan ?? 10.5, 'setup.ltan', NUMBER_FIELDS['setup.ltan']);
   if (!(state.launchTime instanceof Date) || !Number.isFinite(state.launchTime.getTime())) issues.push({ field: 'setup.launchTime', code: 'date' });
   for (const [key, value] of Object.entries(state.guidanceOverrides)) {
-    if (!Object.values(GUIDANCE_FIELDS).some((f) => f.key === key)) issues.push({ field: 'setup.guidance', code: 'selection' });
+    if (key in VEHICLE_GUIDANCE_FIGURES) {
+      if (!vehicleGuidanceFigureValid(key, value)) issues.push({ field: 'setup.guidance', code: 'selection' });
+    } else if (!Object.values(GUIDANCE_FIELDS).some((f) => f.key === key)) issues.push({ field: 'setup.guidance', code: 'selection' });
     else {
       const def = Object.values(GUIDANCE_FIELDS).find((f) => f.key === key)!;
       const limits = guidanceLimits(def.key, spec);

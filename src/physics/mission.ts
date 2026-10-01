@@ -5,7 +5,7 @@
 import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
 import { satelliteById } from '../data/satellites';
-import { rendezvousAvailable } from './rendezvous/profiles';
+import { rendezvousAvailable, soyuzShipInsertion } from './rendezvous/profiles';
 import { vehicleDataId } from '../data/vehicles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
@@ -1116,12 +1116,16 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
       insertionApoapsis = haFinal;
     }
   }
-  // A flight to the station (roadmap G07) is inserted where Soyuz MS and
-  // Progress MS are, 200 × 242 km with the cut-off near perigee: the
-  // spacecraft's own burns raise it to the station from there, and the
-  // rendezvous profiles are timed from that orbit (docs/PHYSICS.md §9.2).
-  if (cfg.rendezvous && rendezvousAvailable(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
-    && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
+  // A Soyuz MS or Progress MS on Soyuz-2.1a is inserted at 200 × 242 km with the
+  // cut-off near perigee, whatever it then does: the spacecraft's own burns
+  // raise it from there, to the station (roadmap G07, whose rendezvous
+  // profiles are timed from that orbit, docs/PHYSICS.md §9.2) or anywhere
+  // higher. Every crewed flight since MS-16 was targeted at 200 ± 2 × 242 ± 5 km
+  // (Roscosmos via russianspaceweb). It used to be applied only with a
+  // rendezvous planned, and every other crewed flight went to 200 km circular.
+  const shipInsertion = cfg.rendezvous ? rendezvousAvailable(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit)
+    : soyuzShipInsertion(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && target.perigee > RENDEZVOUS_INSERTION.apogee;
+  if (shipInsertion && parkingOverride <= 0 && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
     insertionAltitude = RENDEZVOUS_INSERTION.perigee;
     insertionApoapsis = RENDEZVOUS_INSERTION.apogee;
   }

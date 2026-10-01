@@ -1249,7 +1249,7 @@ export class SetupPanel {
     const learning = this.experience === 'learning';
     gd.appendChild(this.el('summary', undefined, t(learning ? 'setup.auto.title' : 'setup.guidance')));
     const g = this.guidance;
-    const set = (k: keyof GuidanceParams, v: number): void => {
+    const set = (k: (typeof GUIDANCE_FIELDS)[string]['key'], v: number): void => {
       this.state.guidanceOverrides[k] = v;
       // an explicit edit belongs to this mission too
       this.tunedFor = this.missionSignature();

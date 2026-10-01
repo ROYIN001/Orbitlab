@@ -388,9 +388,10 @@ describe('delivered engine performance (B27)', () => {
       }
     }
     // The audit named the two that move a timeline; this is the full list at a
-    // 2 % threshold, so a new inconsistency cannot slip in unnoticed.
+    // 2 % threshold, so a new inconsistency cannot slip in unnoticed. The RD-108A
+    // left it on 2026-10-01 with Arianespace's published pair (0.1 %).
     expect([...new Set(off)].sort())
-      .toEqual(['RD-108A 6.9 %', 'Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
+      .toEqual(['Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
   });
 
   it('a vacuum-only engine never uses its placeholder sea-level figures', () => {

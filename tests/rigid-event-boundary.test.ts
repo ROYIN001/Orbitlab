@@ -8,19 +8,22 @@ import { groundPositionEci, groundVelocityEci } from '../src/physics/orbital';
 import { DEG, OMEGA_EARTH } from '../src/physics/constants';
 import { norm, sub } from '../src/physics/vec3';
 import { rigidMission } from './rigid-harness';
-import { LIQUID_STARTUP_S } from '../src/physics/vehicle';
+import { LIQUID_STARTUP_S, engineMassFlow } from '../src/physics/vehicle';
 
 describe('accepted scheduled-event recording', () => {
   it.each(['leo', 'iss'] as const)('%s records real pad ignition on arrival, with fuel consumed only afterwards', id => {
     const sim = new Simulation(rigidMission(id), { headless: true });
     const recorder = new FlightRecorder(); recorder.start(sim);
-    const fuel = sim.vehicle.stages[0].propellant;
+    // An R-7 runs its engines on the pad at intermediate levels before the
+    // modelled start (`VehicleSpec.padBurnS`), taken off at the ignition itself.
+    const st0 = sim.vehicle.stages[0];
+    const fuel = st0.propellant - (sim.vehicleSpec.padBurnS ?? 0) * st0.spec.engine.count * engineMassFlow(st0.spec.engine);
     recorder.advance(7.5);
     const ignition = sim.events.find(event => event.key === 'evt.ignition')!;
     expect(ignition).toBeDefined();
     expect(ignition.t).toBeCloseTo(-2.5, 9);
     expect(sim.state.t).toBeCloseTo(-2.5, 9);
-    expect(sim.vehicle.stages[0].propellant).toBe(fuel);
+    expect(sim.vehicle.stages[0].propellant).toBeCloseTo(fuel, 6);
     const player = new ReplayPlayer(recorder);
     const before = player.frameAt(ignition.t - 0.001)!;
     const exact = player.frameAt(ignition.t)!;

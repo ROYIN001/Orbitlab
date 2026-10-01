@@ -7,6 +7,7 @@ import { engineMassFlow, engineThrust } from '../vehicle';
 import { add, scale, sub, v3, type Vec3 } from '../vec3';
 import { dragCoefficient, tumblingDragCoefficient } from '../aero';
 import { assertSPD, type Mat3 } from './math';
+import { ESCAPE } from './escape';
 import type { Aero6DofSpec } from './aero';
 import { AERO_MACH, ascentAeroTable, detachedAeroTable, shipDescentAeroTable, type AeroTable } from './aero-tables';
 import {
@@ -371,6 +372,14 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
       centerBody: add(geometry.fairingBase, v3(f.length / 2, 0, 0)), inertiaAtCenter: cylinderInertia(f.mass, f.diameter / 2, f.length, true), kind: 'fairing' });
     highest = Math.max(highest, geometry.fairingBase.x + f.length);
     diameter = Math.max(diameter, f.diameter);
+    // a crewed Soyuz's escape tower on the fairing's nose, until its jettison
+    if (vehicle.escapeTowerMass > 0) {
+      const towerLength = ESCAPE.tower.length;
+      components.push({ id: 'escapeTower', ownerId: 'fairing', mass: vehicle.escapeTowerMass,
+        centerBody: add(geometry.fairingBase, v3(f.length + towerLength / 2, 0, 0)),
+        inertiaAtCenter: cylinderInertia(vehicle.escapeTowerMass, 0.42, towerLength), kind: 'fairing' });
+      highest = Math.max(highest, geometry.fairingBase.x + f.length + towerLength);
+    }
   }
   if (vehicle.payloadAttached && vehicle.payloadMass > 0) {
     const L = op.payloadLength ?? 3, R = (op.payloadDiameter ?? 2) / 2;

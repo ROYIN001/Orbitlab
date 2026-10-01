@@ -189,9 +189,11 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
       case 'setup.guidance': {
         const spec = vehicleById(m.vehicleId);
         const model = m.dynamics?.model ?? defaultDynamics(m.vehicleId).model;
-        const expected = { ...guidanceForVehicle(spec, undefined, model), ...m.guidanceOverrides } as Record<string, number>;
-        const flown = cfg.guidance as unknown as Record<string, number>;
-        kept = Object.keys(expected).every((k) => near(flown[k], expected[k], 1e-6))
+        const expected = { ...guidanceForVehicle(spec, undefined, model), ...m.guidanceOverrides } as Record<string, unknown>;
+        const flown = cfg.guidance as unknown as Record<string, unknown>;
+        // numbers to a tolerance; a stored pitch programme (`pitchProgram`) as a whole
+        kept = Object.keys(expected).every((k) => typeof expected[k] === 'number' || expected[k] === undefined
+          ? near(flown[k] as number | undefined, expected[k] as number | undefined, 1e-6) : same(flown[k], expected[k]))
           && same(cfg.dynamics?.explicitGuidance, m.dynamics?.explicitGuidance);
         break;
       }

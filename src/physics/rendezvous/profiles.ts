@@ -145,6 +145,11 @@ export const APPROACH = {
  * from a Soyuz-2.1a flies there too (S02).
  */
 export function rendezvousAvailable(vehicleId: string, satelliteId: string, orbit: Pick<OrbitSpec, 'raanMode' | 'suborbital'>): boolean {
+  return soyuzShipInsertion(vehicleId, satelliteId, orbit) && orbit.raanMode === 'iss';
+}
+
+/** A Soyuz MS or Progress MS (a crew-kind spacecraft with its own engine) on Soyuz-2.1a, to orbit: inserted at 200 × 242 km (`RENDEZVOUS_INSERTION`). */
+export function soyuzShipInsertion(vehicleId: string, satelliteId: string, orbit: Pick<OrbitSpec, 'suborbital'>): boolean {
   const sat = SATELLITES.find((x) => x.id === satelliteId);
-  return vehicleId === 'soyuz21a' && sat?.kind === 'crew' && !!sat.propulsion && orbit.raanMode === 'iss' && !orbit.suborbital;
+  return vehicleId === 'soyuz21a' && sat?.kind === 'crew' && !!sat.propulsion && !orbit.suborbital;
 }

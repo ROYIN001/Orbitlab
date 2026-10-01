@@ -1040,7 +1040,8 @@ the pair every source quotes, and the only one a vacuum-only engine has) and **b
 Isp at every pressure** from Isp(p) = F(p)/(ṁ g₀), so F = ṁ g₀ Isp holds exactly at every
 altitude. The sea-level Isp a ground-lit engine then delivers is within 1 % of the quoted
 `ispSL` for most of the fleet; the exceptions are recorded by a test rather than hidden —
-RD-108A +6.9 %, Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 %.
+Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it took
+Arianespace's published pair on 2026-10-01).
 
 An engine flagged `vacuumOnly` — every upper- and kick-stage engine that only ever ignites above
 ~100 km — has no sea-level operating point at all (an RL10 nozzle would not flow full at sea
@@ -1115,11 +1116,12 @@ at 32°) being released by the aerodynamic angle limit as the dynamic pressure f
 step. With the per-vehicle aerodynamic tables (§3) the less unstable Soyuz is released sooner:
 the pitch-down now begins at about T+89 s, before the strap-ons separate, and takes the vehicle
 from 60° to 33° over twenty seconds at up to 3 °/s while the command runs down to 7°.
-That pitch-down is gone since audit PHY-01 (2026-10-01): in six-DOF the Soyuz-2.1a strap-ons fly
-a zero-lift turn from a 6° kick, holding the launch azimuth, and the steering closes the loop at
-T+140 s, under 100 Pa, so the
-flow angle stays under 1° through the strap-ons' burn and the stack turns at the 1 °/s the
-command is allowed above the air (VALIDATION.md §3, "Soyuz-2.1a's strap-ons fly a zero-lift turn").
+That pitch-down is gone. Since 2026-10-01 Soyuz-2.1a flies the R-7's own stored pitch programme
+through its strap-ons and core in both flight models (`GuidanceParams.pitchProgram`; VALIDATION.md
+§3, "Soyuz-2.1a flies its stored pitch programme"), and the closed loop takes over only on Blok I,
+in vacuum: at most 1.4° of angle while q > 2 kPa, at most 1.1 °/s. Before it (audit PHY-01) the
+six-DOF strap-ons flew a zero-lift turn from a 6° kick to a T+140 s hand-over, which is still what
+an operator who edits the six-DOF pitch-over flies.
 
 Throttle is limited by the engine's minimum throttle, an acceleration limit (e.g. 4.5 g), a
 throttle bucket around max-Q for vehicles that fly one, and the load-relief law of §3.
@@ -1151,15 +1153,16 @@ So the mechanism is modelled instead. Those four operators **publish a jettison 
 it**, and the field is now `FairingSpec.sepTime`: Ariane 64 200 s, Vega-C 220 s, Long March 2D
 220 s, H-IIA 202 250 s (measured T+200.1, 220.0, 220.2, 250.2 s). Soyuz-2.1a, Soyuz-2.1b and Long
 March 3B/E carry the same field for the same reason — their operators publish a jettison time too
-— at 157 s, 157 s and 215 s (measured T+157.1 s and T+215.2 s). The 80 km altitude floor still
-applies to a timeline release, so a trajectory that is still deep in the atmosphere at its
+— at 153.3 s (the crewed profile as flown since MS-21; 157 s until 2026-10-01, Soyuz-FG's), 157 s
+and 215 s (measured T+153.3 s, T+157.1 s and T+215.2 s). The 80 km altitude floor still
+applies to a timeline release (Soyuz-2.1a's is 70 km, below its 79 km fit target, so the time decides), so a trajectory that is still deep in the atmosphere at its
 published time does not shed the fairing there. Everything else in the fleet — Falcon 9, H3,
 Electron, PSLV-XL, Long March 5, Angara, Proton, Atlas V, Vulcan — keeps the unmodified physical
 placard.
 
-Soyuz-2.1a and Soyuz-2.1b now fly the published T+157 s callout directly instead of the heating
-placard, which used to leave Soyuz-2.1a 19 s late (T+176 s against that same ~157 s): at the
-published time the vehicle is at 90 km, above the 80 km floor, while the free-molecular heating
+Soyuz-2.1a and Soyuz-2.1b fly the published callout directly instead of the heating
+placard, which used to leave Soyuz-2.1a 19 s late (T+176 s against the ~157 s of the time): at the
+published time the vehicle was at 90 km, above the 80 km floor, while the free-molecular heating
 is still 11.9 kW/m² — ten times any sensible placard — so the fairing was never coming off there
 on the physical criterion alone. As with the four vehicles above, that row now agrees by
 construction and is a regression guard rather than evidence.
@@ -1336,8 +1339,8 @@ know. Two consequences worth knowing about:
 
 | vehicle | kick ° | pitch rate °/s | pitch max ° | loft km |
 | --- | --- | --- | --- | --- |
-| Soyuz-2.1a | 3.0 | 0.30 | 35 | 0 |
-| Soyuz-2.1b / Fregat | 1.5 | 0.30 | 35 | 0 |
+| Soyuz-2.1a | stored programme (3.0 if edited) | — (0.30) | 35 | 0 |
+| Soyuz-2.1b / Fregat | stored programme (1.5 if edited) | — (0.30) | 35 | 0 |
 | Proton-M | 6.0 | 0.30 | 25 | 150 |
 | Angara-A5 | 4.0 | 0.30 | 25 | 150 |
 | Falcon 9 | 1.5 | 0.30 | 35 | 0 |
@@ -1354,7 +1357,9 @@ know. Two consequences worth knowing about:
 The pattern is physical rather than arbitrary: launchers that leave the pad with a high
 thrust-to-weight or a solid first stage (Atlas V, Ariane 64, Electron, Proton-M) turn over
 early and want a large kick; the ones that climb slowly (Falcon 9, Starship, H3) need a
-shallow kick or they never build the altitude. Soyuz-2.1a is the exception in the R-7 family:
+shallow kick or they never build the altitude. The two Soyuz-2 fly the R-7's stored pitch
+programme instead (VALIDATION.md §3); the kicks in the table are what an operator who edits the
+pitch-over flies, and the paragraph that follows is why 2.1a's is 3°. Soyuz-2.1a is the exception in the R-7 family:
 it has no upper stage that can make up a slow start (the Blok I fires once), so the 1.5° kick
 that suits Soyuz-2.1b costs it about 450 m/s of gravity and steering loss and leaves the
 7.15 t crew mission 30 km of perigee short. 3° / 0.30 °/s recovers that at 34 kPa of max Q,
@@ -1436,9 +1441,9 @@ screen's knife edge showed.
 
   | target | Soyuz-2.1a + 1.755 t | + 3.51 t | + 6.318 t | Long March 2D + 325 kg |
   | --- | --- | --- | --- | --- |
-  | 200 km | 198.0 × 200.7 ✓ | 197.6 × 200.4 ✓ | 198.6 × 200.3 ✓ | 150.8 × 355.2 |
-  | 250 km | 219.4 × 345.5 | 240.3 × 301.4 | 247.3 × 266.3 | 140.6 × 2 415.6 |
-  | 300 km | 143.9 × 899.2 | 143.8 × 875.5 | 88.7 × 700.9 (tanks dry) | 140.6 × 2 421.1 |
+  | 200 km | 198.1 × 202.4 ✓ | 197.1 × 200.1 ✓ | 198.0 × 201.0 ✓ | 150.8 × 355.2 |
+  | 250 km | 247.3 × 266.8 | 247.1 × 268.7 | 241.3 × 298.9 | 140.6 × 2 415.6 |
+  | 300 km | 146.7 × 821.6 | 146.0 × 831.7 | 144.0 × 879.6 | 140.6 × 2 421.1 |
 
   This grid is **asserted**, not quoted: it is a data table in the `single-shot direct
   insertion` section of `tests/fleet-defaults.test.ts`, and `the grid behind
@@ -1455,7 +1460,10 @@ screen's knife edge showed.
   with its own adapter (owner's figures, 2026-09-25; it was 3.7 × 10.1 m) moved the Soyuz cells
   that reach orbit by up to 4.3 km of apoapsis and the heaviest 300 km cell, which carries the
   wider fairing's drag longest, to 88.7 × 700.9 km. No verdict changed, and both copies read the
-  current figures.
+  current figures. Re-measured on 2026-10-01, when Soyuz-2.1a took its published engines and
+  loads, its commanded cut-offs and the R-7's stored pitch programme (VALIDATION.md §3): again no
+  verdict changed; the 250 km cells moved by up to 79 km of apoapsis, and the heaviest 300 km cell
+  no longer runs dry, reaching 144.0 × 879.6 km like the lighter two.
 
   That change is the second half of a fix the last wave only half made.
   `src/physics/mission.ts` used to carry its own copy in the `DIRECT_INSERTION_CEILING` doc
@@ -1614,7 +1622,7 @@ each one inside the window in brackets.
 
 **The "window" column is a regression band, not a fidelity claim.** It is drawn around the
 *measured* value (±8 or ±10 s by convention, or the published band where that is wider), so any
-change to the model shows up as a test failure. **Seven milestones in this section fall outside
+change to the model shows up as a test failure. **Six milestones in this section fall outside
 their published callout**, and they are pinned by a test (`disagreements with the published
 callout`) that fails if the set changes. A green table is evidence of self-consistency; the
 `published` column is where fidelity is judged.
@@ -1628,15 +1636,15 @@ now measured-value against published window, with a stated ±2 % (minimum ±5 s)
 point callout such as "~157 s", because a single rounded press-kit number is not a window. That
 gave nine; two have since closed — Soyuz-2.1a's and Long March 3B/E's fairing jettison, both
 still on the heating placard at the time — by flying their operators' published jettison time
-instead (§4), the same fix already given to Ariane 64, Vega-C, Long March 2D and H-IIA 202. The
-seven left:
+instead (§4), the same fix already given to Ariane 64, Vega-C, Long March 2D and H-IIA 202; and
+on 2026-10-01 Soyuz-2.1a's core cut-off, now commanded at its flown time with its published load
+(VALIDATION.md §3). The six left:
 
 | mission | milestone | model | published |
 | --- | --- | --- | --- |
 | Falcon 9 | max Q | 49.4 s | 65–80 s |
 | Electron | max Q | 50.7 s | 60–70 s |
 | Electron | MECO | 138.0 s | 145–155 s |
-| Soyuz-2.1a | core cut-off | 294.1 s | ~287 s |
 | H3-22 | SRB-3 burnout | 104.3 s | 105–115 s |
 | PSLV-XL | PS3 cut-off | 386.1 s | 400–600 s |
 | Ariane 64 | core cut-off | 444.6 s | ~460 s |
@@ -1706,17 +1714,18 @@ profile (`guidanceDefaults`), which moves every other row in this table.
 
 | milestone | published | model | window |
 | --- | --- | --- | --- |
-| booster separation | ~118 s | 120.4 s | 112–128 |
-| fairing jettison | ~157 s | 157.1 s | 148–185 |
-| core cut-off | ~287 s | 294.1 s | 275–305 |
-| third-stage cut-off (SECO) | ~528 s | 535.9 s | 500–570 |
+| booster separation | ~118 s | 117.8 s | 112–128 |
+| fairing jettison | ~153 s | 153.4 s | 148–185 |
+| core cut-off | ~287 s | 284.9 s | 275–305 |
+| third-stage cut-off (SECO) | ~528 s | 526.6 s | 500–570 |
 
-Insertion is 197 × 200 km at T+536 s and the crew ship circularises itself at 417.9 × 418.0 km /
-51.64° at T+3397 s. The fairing is now flown on Soyuz's **published jettison time**
-(`fairing.sepTime` = 157 s, see §4), so that row agrees by construction and is a regression guard
-rather than evidence: at the published time this trajectory is at 90 km, where the free-molecular
-heating is still 11.9 kW/m² — ten times any sensible placard — which is why the heating placard
-alone used to leave it 19 s late (T+176 s).
+Insertion is 200 × 240 km at T+527 s, the Soyuz MS insertion (§9.2), and the crew ship raises
+itself to 417.9 × 418.0 km / 51.64° by T+3345 s. Since 2026-10-01 the strap-ons and the core are
+cut off by command at their flown times and the vehicle flies the R-7's stored pitch programme
+(VALIDATION.md §3), so the first three rows agree by construction; the propellant left at the
+commands and the heights are the evidence. The fairing is flown on Soyuz's **published jettison
+time** (`fairing.sepTime`, see §4), at 78 km on this trajectory; on the heating placard alone it
+used to leave 19 s late (T+176 s, when the published time was taken as ~157 s).
 
 **H3-22, 5 t to 500 km from Tanegashima**
 
@@ -2544,8 +2553,8 @@ lost. The flight ends with the crew at rest, status `landed`. Code: src/physics/
 
 | Time of the abort | Way out | What flies |
 |---|---|---|
-| Countdown to T+114.5 s | The tower's main motor, with its control motor pushing the tower's top sideways | The head section: tower, upper fairing, orbital and descent modules (7 635 kg) |
-| T+114.5 s to the fairing's jettison (T+157 s) | The fairing's four motors (РДГ 860М), as on MS-10 | The head section without the tower |
+| Countdown to T+113.5 s | The tower's main motor, with its control motor pushing the tower's top sideways | The head section: tower, upper fairing, orbital and descent modules (7 635 kg) |
+| T+113.5 s to the fairing's jettison (T+153.3 s) | The fairing's four motors (РДГ 860М), as on MS-10 | The head section without the tower |
 | After the fairing | The spacecraft released from the rocket on springs | Service, descent and orbital modules together |
 
 Every body is a rigid body integrated like the rocket (RK4, J2 gravity, 5–20 ms steps) with the
@@ -2573,7 +2582,7 @@ g is the specific force on the body carrying them, and its peak is kept.
 | Tower's main motor | 1.05 MN for 1.55 s, 800 kg of propellant, Isp 218 s | 76 tf is quoted (MKB Iskra, vesvks.ru), but the 14–17 g of T-10-1 needs about 1 MN on this mass: chosen for the g |
 | Control motor | 4 kN for 1.6 s, at the tower's top | estimate |
 | Fairing motors | 280 kN together for 2.6 s, 300 kg | estimate (thrust and burn not published) |
-| Tower jettison, fairing jettison | T+114.5 s, T+157 s | MKB Iskra (T+114 s), Soyuz MS timelines |
+| Tower jettison, fairing jettison | T+113.5 s, T+153.3 s | Soyuz MS-21 to MS-27 as flown (113.45–113.70 s; 153.33 s, russianspaceweb) |
 | Main parachute, drogue | 1 000 m², 24 m² (16–25 m² quoted) | ESA, RussianSpaceWeb |
 | Descent rate on the main | 7.2 m/s | ESA |
 | Soft landing | at about 1 m, down at 1.5 m/s | ESA, GCTC |
@@ -2585,14 +2594,25 @@ three aborts the escape system has flown:
 | | Model | Flight |
 |---|---|---|
 | **T-10-1** (pad fire, 1983) | 14.3 g; apogee 1.4 km; down 0.3 km from the pad 2.8 min after the abort | 14–17 g; 1.2–2 km; about 4 km away, 5 min 13 s (at night, in wind) |
-| **MS-10** (strap-on collision, 2018) | abort at T+123.7 s in the fairing mode; apogee 162 km; 10.8 g; down 541 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
-| **18a** (separation failure, 1975) | abort at T+300.5 s in the separation mode; apogee 206 km; 19.4 g; down 1 567 km downrange at 50.79°N 83.31°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
+| **MS-10** (strap-on collision, 2018) | abort at T+120.9 s in the fairing mode; apogee 108 km; 8.1 g; down 428 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
+| **18a** (separation failure, 1975) | abort at T+291.0 s in the separation mode; apogee 167 km; 16.6 g; down 1 458 km downrange at 50.67°N 81.75°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
 
-18a comes out close, its apogee 14 km high. MS-10 does not, for a reason outside the escape: at
-T+120 s this Soyuz-2.1a is at about 56 km and 2.1 km/s inertial, still climbing at 40°, some 12 km
-higher and 400 m/s faster than MS-10's Soyuz-FG, so its crew leaves on a loftier arc. Both apogees
-rose with the zero-lift strap-on turn of audit PHY-01 (2026-10-01), which climbs more steeply than
-the pitch-down it replaced: 145 → 162 km and 191 → 206 km (VALIDATION.md §3). T-10-1's crew came down farther away, in wind this model does not
+Re-measured 2026-10-01 with Soyuz-2.1a's stored pitch programme, which flies it on its flown
+heights (47 km at strap-on separation, 79 km at the fairing, 157 km at core separation;
+VALIDATION.md §3). Neither abort is a fit target.
+
+- **MS-10 comes out 15 km high** (162 km before the programme). At T+120 s this 2.1a is at 47 km
+  and 1.70 km/s over the ground, climbing at 35°. SoyCOM gives MS-10's Soyuz-FG 45.4 km and
+  1.67 km/s at the tower's jettison, T+121.2 s, so the launcher's state is no longer the cause.
+  What is left is in the escape: the fairing motors' thrust is an estimate, and the head is
+  3.39 t against the 4.2–4.5 t published, so it gets too much from them.
+- **18a comes out 25 km low** (206 km before, when the core separated at 199 km). This 2.1a
+  separates its core at 157 km climbing at 5°; SoyCOM's Soyuz-FG is at 168 km and about 6° at
+  GK-2. A crew released there coasts to about 167 km. The 1975 rocket was an 11A511, and its
+  Blok I spent six seconds pushing the core it could not shed. The model's Blok I burns those six
+  seconds free of the core, and the rocket's own history is not modelled.
+
+T-10-1's crew came down farther away, in wind this model does not
 fly, and after a longer flight: at the model's 7.2 m/s its 5 min 13 s would need an apogee near
 2 km, where the model's head section, as wide as the 4.11 m fairing, climbs to 1.4 km.
 

@@ -210,7 +210,7 @@ export interface VisualFrame {
   /** C01: Apollo's flight from the parking orbit */
   apollo?: ApolloState;
   /** C01: parts dropped on the way up (`StageSpec.jettisons`) — the Saturn V's interstage ring and escape tower */
-  jettisoned?: { interstage: boolean; tower: boolean };
+  jettisoned?: { interstage: boolean; tower: boolean; aftSkirt?: boolean };
   destroyed: boolean;
   liftoff: boolean;
   debris: DebrisFrame[];
@@ -505,7 +505,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     activeStageIndex: sim.vehicle.activeIndex,
     fairingAttached: sim.vehicle.fairingAttached,
     payloadSeparated: s.payloadSeparated,
-    ...(sim.vehicle.jettisoned.interstage || sim.vehicle.jettisoned.tower ? { jettisoned: { ...sim.vehicle.jettisoned } } : {}),
+    ...(sim.vehicle.jettisoned.interstage || sim.vehicle.jettisoned.tower || sim.vehicle.jettisoned.aftSkirt ? { jettisoned: { ...sim.vehicle.jettisoned } } : {}),
     ...(sim.apollo.active ? { apollo: sim.apollo.frame() } : {}),
     destroyed: s.destroyed,
     liftoff: s.liftoff,

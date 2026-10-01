@@ -104,13 +104,13 @@ class Checker {
 }
 
 const ENGINE_FIELDS = ['name', 'count', 'thrustSL', 'thrustVac', 'ispSL', 'ispVac', 'minThrottle', 'solid', 'peakFactor', 'vacuumOnly', 'startupS', 'tailoffS'];
-const BOOSTER_FIELDS = ['id', 'name', 'count', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset'];
+const BOOSTER_FIELDS = ['id', 'name', 'count', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset', 'thrustSteps'];
 const STAGE_FIELDS = ['id', 'name', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'restartable', 'sepDelay', 'ignitionDelay',
-  'throttleWithBoosters', 'boosters', 'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength'];
+  'throttleWithBoosters', 'boosters', 'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength', 'jettisons', 'engineEvents', 'cutoffAt'];
 const FAIRING_FIELDS = ['mass', 'diameter', 'length', 'sepAltitude', 'sepTime', 'adapter', 'color'];
 const VEHICLE_FIELDS = ['id', 'name', 'country', 'manufacturer', 'height', 'payloadLEO', 'payloadGTO', 'payloadSSO', 'fairing', 'escapeSystem',
   'stages', 'sites', 'maxQ', 'maxAccel', 'maxQThrottle', 'recoverable', 'recoveryReserve', 'returnReserve', 'guidanceDefaults',
-  'guidanceDefaultsSixDof', 'dragArea', 'crewCapable', 'notes', 'derivedFrom'];
+  'guidanceDefaultsSixDof', 'dragArea', 'crewCapable', 'notes', 'derivedFrom', 'padBurnS'];
 /** Guidance fields a vehicle's own programme may set, with their stored-unit bounds (validation.ts's GUIDANCE_FIELDS, widened to cover the catalogue). */
 const GUIDANCE_BOUNDS: Record<string, [number, number]> = {
   pitchOverAltitude: [0, 20000], kickAngle: [0, 60], kickDuration: [0, 120], maxTurnRate: [0, 10], loftAltitude: [0, 1e6],
@@ -119,6 +119,28 @@ const GUIDANCE_BOUNDS: Record<string, [number, number]> = {
   // a vehicle's own hand-over time (C01, PHY-01): part of a spec, never a user setting
   closedLoopStart: [0, 2e4],
 };
+
+/** Whether `raw` is a well-formed stored pitch programme (`checkPitchProgram`), for a mission file that carries one. */
+export function pitchProgramValid(raw: unknown): boolean {
+  const c = new Checker();
+  checkPitchProgram(c, raw, 'pitchProgram');
+  return raw !== undefined && c.issues.length === 0;
+}
+
+/** A stored pitch programme (`GuidanceParams.pitchProgram`): [s, deg] pairs, times rising from 0, pitch within ±90°. */
+function checkPitchProgram(c: Checker, raw: unknown, path: string): void {
+  if (raw === undefined) return;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 200) { c.add(path, `must be 2 to 200 [time s, pitch deg] pairs (got ${describe(raw)})`); return; }
+  let last = -Infinity;
+  raw.forEach((pair, i) => {
+    const ok = Array.isArray(pair) && pair.length === 2 && pair.every((x) => typeof x === 'number' && Number.isFinite(x));
+    if (!ok) { c.add(`${path}[${i}]`, `must be a [time s, pitch deg] pair (got ${describe(pair)})`); return; }
+    const [t, pitch] = pair as [number, number];
+    if (t < 0 || t > 2e4 || !(t > last)) c.add(`${path}[${i}]`, `time must rise, from 0 to 20 000 s (got ${t})`);
+    if (pitch < -90 || pitch > 90) c.add(`${path}[${i}]`, `pitch must be within ±90° (got ${pitch})`);
+    last = t;
+  });
+}
 
 function checkEngine(c: Checker, raw: unknown, path: string, groundLit: boolean): void {
   if (!isObj(raw)) { c.add(path, `must be an engine (got ${describe(raw)})`); return; }
@@ -161,7 +183,72 @@ function checkBooster(c: Checker, raw: unknown, path: string): string | undefine
   c.string(raw, 'color', path, { optional: true, max: 32 });
   c.boolean(raw, 'conicalTop', path);
   c.number(raw, 'baseOffset', path, -100, 100, { optional: true });
+  checkThrustSteps(c, raw.thrustSteps, `${path}.thrustSteps`);
   return id;
+}
+
+/** Parts a stage drops on its way (`StageSpec.jettisons`): times rising from 0, masses within its dry mass. */
+function checkJettisons(c: Checker, raw: unknown, path: string, dryMass: unknown): void {
+  if (raw === undefined) return;
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 10) { c.add(path, `must be 1 to 10 parts dropped (got ${describe(raw)})`); return; }
+  let last = -Infinity, total = 0;
+  raw.forEach((j, i) => {
+    const at = `${path}[${i}]`;
+    if (!isObj(j)) { c.add(at, `must be a part dropped (got ${describe(j)})`); return; }
+    c.known(j, at, ['t', 'mass', 'part']);
+    const t = c.number(j, 't', at, 0, 2e4);
+    const mass = c.number(j, 'mass', at, 0, PART_LIMITS.stageDryMass, { exclusiveMin: true });
+    if (j.part !== 'interstage' && j.part !== 'tower' && j.part !== 'aftSkirt') c.add(`${at}.part`, 'must be "interstage", "tower" or "aftSkirt"');
+    if (t !== undefined && !(t > last)) c.add(`${at}.t`, `must rise (got ${t})`);
+    if (t !== undefined) last = t;
+    if (mass !== undefined && j.part !== 'tower') total += mass;
+  });
+  if (typeof dryMass === 'number' && total >= dryMass) c.add(path, `must drop less than the stage's dry mass (${total} of ${dryMass} kg)`);
+}
+
+/** A stage's planned engine events (`StageSpec.engineEvents`): times rising, shutdowns of engines it has, or a mixture shift. */
+function checkEngineEvents(c: Checker, raw: unknown, path: string, engine: unknown): void {
+  if (raw === undefined) return;
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 10) { c.add(path, `must be 1 to 10 engine events (got ${describe(raw)})`); return; }
+  const count = isObj(engine) && typeof engine.count === 'number' ? engine.count : 0;
+  let last = -Infinity;
+  raw.forEach((e, i) => {
+    const at = `${path}[${i}]`;
+    if (!isObj(e)) { c.add(at, `must be an engine event (got ${describe(e)})`); return; }
+    c.known(e, at, ['t', 'shutdown', 'mixture']);
+    const t = c.number(e, 't', at, 0, 2e4);
+    if (t !== undefined && !(t > last)) c.add(`${at}.t`, `must rise (got ${t})`);
+    if (t !== undefined) last = t;
+    if (e.shutdown !== undefined && (!Array.isArray(e.shutdown) || !e.shutdown.every((n) => Number.isInteger(n) && n >= 0 && n < count))) {
+      c.add(`${at}.shutdown`, `must list engines of the stage, 0 to ${count - 1}`);
+    }
+    if (e.mixture !== undefined) {
+      if (!isObj(e.mixture)) c.add(`${at}.mixture`, 'must be an operating point');
+      else {
+        c.known(e.mixture, `${at}.mixture`, ['thrustVac', 'thrustSL', 'ispVac', 'ispSL']);
+        c.number(e.mixture, 'thrustVac', `${at}.mixture`, 0, 2e7, { exclusiveMin: true });
+        c.number(e.mixture, 'thrustSL', `${at}.mixture`, 0, 2e7);
+        c.number(e.mixture, 'ispVac', `${at}.mixture`, 50, 480);
+        c.number(e.mixture, 'ispSL', `${at}.mixture`, 0, 480);
+      }
+    }
+  });
+}
+
+/** Planned thrust levels (`BoosterGroupSpec.thrustSteps`): times rising from 0, levels in [0, 1], a level-0 cut-off last. */
+function checkThrustSteps(c: Checker, raw: unknown, path: string): void {
+  if (raw === undefined) return;
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 20) { c.add(path, `must be 1 to 20 thrust steps (got ${describe(raw)})`); return; }
+  let last = -Infinity;
+  raw.forEach((step, i) => {
+    if (!isObj(step)) { c.add(`${path}[${i}]`, `must be a thrust step (got ${describe(step)})`); return; }
+    c.known(step, `${path}[${i}]`, ['t', 'level']);
+    const t = c.number(step, 't', `${path}[${i}]`, 0, 2e4);
+    const level = c.number(step, 'level', `${path}[${i}]`, 0, 1);
+    if (level === 0 && i !== raw.length - 1) c.add(`${path}[${i}].level`, 'a cut-off (level 0) must be the last step');
+    if (t !== undefined && !(t > last)) c.add(`${path}[${i}].t`, `must rise (got ${t})`);
+    if (t !== undefined) last = t;
+  });
 }
 
 function checkStage(c: Checker, raw: unknown, path: string, index: number, ids: string[]): void {
@@ -183,6 +270,9 @@ function checkStage(c: Checker, raw: unknown, path: string, index: number, ids: 
   c.string(raw, 'accentColor', path, { optional: true, max: 32 });
   if (raw.profile !== undefined && raw.profile !== 'r7Core' && raw.profile !== 'r7Upper') c.add(`${path}.profile`, 'must be "r7Core" or "r7Upper"');
   c.number(raw, 'nozzleLength', path, 0, 20, { optional: true, exclusiveMin: true });
+  checkJettisons(c, raw.jettisons, `${path}.jettisons`, raw.dryMass);
+  checkEngineEvents(c, raw.engineEvents, `${path}.engineEvents`, raw.engine);
+  c.number(raw, 'cutoffAt', path, 0, 2e4, { optional: true, exclusiveMin: true });
   if (raw.boosters !== undefined) {
     if (!Array.isArray(raw.boosters)) c.add(`${path}.boosters`, `must be a list of strap-on groups (got ${describe(raw.boosters)})`);
     else if (index !== 0) c.add(`${path}.boosters`, 'strap-ons are flown on the first stage only');
@@ -214,6 +304,7 @@ export function vehicleSpecProblems(raw: unknown): VehicleSpecIssue[] {
   c.number(raw, 'recoveryReserve', '', 0, 0.5, { optional: true });
   c.number(raw, 'returnReserve', '', 0, 0.5, { optional: true });
   for (const key of ['recoverable', 'crewCapable']) c.boolean(raw, key, '');
+  c.number(raw, 'padBurnS', '', 0, 60, { optional: true });
   c.string(raw, 'notes', '', { optional: true, max: 2000, allowEmpty: true });
 
   let origin: VehicleSpec | undefined;
@@ -275,8 +366,9 @@ export function vehicleSpecProblems(raw: unknown): VehicleSpecIssue[] {
     const g = raw[key];
     if (g === undefined) continue;
     if (!isObj(g)) { c.add(key, `must be a set of guidance values (got ${describe(g)})`); continue; }
-    c.known(g, key, Object.keys(GUIDANCE_BOUNDS));
+    c.known(g, key, [...Object.keys(GUIDANCE_BOUNDS), 'pitchProgram']);
     for (const [field, [min, max]] of Object.entries(GUIDANCE_BOUNDS)) c.number(g, field, key, min, max, { optional: true });
+    checkPitchProgram(c, g.pitchProgram, `${key}.pitchProgram`);
   }
   return c.issues;
 }

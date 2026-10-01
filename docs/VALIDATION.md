@@ -11,9 +11,10 @@ The comparison was first made with nothing in `src/` changed (main @ 844ffca). I
 data changes and one bug fix, all in §2. Falcon 9's first stage now flies its published masses
 ("Data change applied"), and a propellant-conservation bug found along the way is fixed (F10).
 Falcon 9's six-DOF pitch programme was fitted to three flights' flight-path angles and checked on
-two held-out flights ("Six-DOF pitch programme fitted"). That is the only fitted value.
-Soyuz-2.1a's six-DOF programme was changed on physical grounds, not fitted (§3, "Soyuz-2.1a's
-strap-ons fly a zero-lift turn").
+two held-out flights ("Six-DOF pitch programme fitted"). Soyuz-2.1a's stored pitch programme has
+two fitted scalars, to its flown heights at the fairing and at core separation (§3, "Soyuz-2.1a
+flies its stored pitch programme"). Every fitted, derived and constructed value the vehicles fly
+is in one register (§1, "Fitted and derived values").
 Later, Falcon Heavy took the same published first-stage masses and Falcon 9's max-Q bucket
 (§4, F11). Neither was fitted.
 
@@ -22,7 +23,7 @@ Status on 2026-09-28:
 | vehicle | reference | state |
 | --- | --- | --- |
 | Falcon 9 Block 5 | Webcast telemetry of five flights, 2018–2019 | Compared in both flight models (§2); first-stage masses corrected |
-| Soyuz-2.1a | Soyuz MS-25 as flown (RussianSpaceWeb, quoting Roskosmos) | Compared in both flight models (§3) |
+| Soyuz-2.1a | Soyuz MS-25 as flown (RussianSpaceWeb, quoting Roskosmos); Arianespace's and Starsem's user's manuals; SoyCOM | Published engines and loads, commanded cut-offs, a stored pitch programme with two fitted scalars; held-out checks judged in both flight models (§3), 2026-10-01 |
 | Electron, Ariane 64 | Rocket Lab press kit, Arianespace launch kit (planned timelines) | Compared in both flight models (§3) |
 | Atlas V 551, PSLV-XL, H3, H-IIA 202, Vega-C, Proton-M, Falcon Heavy, Angara-A5 | ULA, ISRO, JAXA, Arianespace, ILS (primary); Spaceflight Now, RussianSpaceWeb (secondary) | Compared in both flight models (§4) |
 | Orbit playground (O01) | Published orbits: geostationary, GPS, Landsat WRS-2, Sentinel-2; closed forms | Kepler and first-order J2 held to them (§5), 2026-09-26 |
@@ -88,6 +89,36 @@ event is a failure, not a pass.
 The code is in `tests/validation/`: `flight-harness.ts` flies a mission and samples its
 telemetry, `reference-data.ts` holds the flight data with a source for every number, and
 `compare.ts` turns the two into rows.
+
+### Fitted and derived values
+
+Every value a vehicle flies that is not a published figure used as given. *Fitted*: solved for
+against a target, which then cannot be a check. *Construction*: an input chosen so that an event
+lands on a published time. *Derived*: computed from published figures by stated arithmetic.
+*Estimate*: no source. How a vehicle goes through this is in
+[FLIGHT-PROFILE-METHOD.md](FLIGHT-PROFILE-METHOD.md).
+
+| vehicle | value | role | targets or basis | result | date |
+| --- | --- | --- | --- | --- | --- |
+| Falcon 9 | six-DOF kick | fitted | three flights' flight-path angles (§2, "Six-DOF pitch programme fitted") | two held-out flights | 2026-09-26 |
+| Soyuz-2.1a | pitch programme: departure from the vertical × 1.06 | fitted | 79 km at T+153.3 s (RussianSpaceWeb, MS-16 to MS-28) | 78.8 km six-DOF, 77.5 km point mass | 2026-10-01 |
+| Soyuz-2.1a | pitch programme: the core's 16° at T+210 s and 10° at T+285 s | fitted | 157 km at T+287.7 s (same) | 157.3 km six-DOF, 152.8 km point mass | 2026-10-01 |
+| Soyuz-2.1a | pitch programme: Starsem's shape advanced 10 s; 5° below the path from T+96 s; 7° down after the strap-ons | set by hand | the same two heights; Starsem Fig. 2-4's post-staging pitch-down | — | 2026-10-01 |
+| Soyuz-2.1a | strap-on cut-off T+117.45 s | construction | the flown separation, 117.85 s, less Arianespace's 0.4 s delay | separation at 117.8–117.9 s | 2026-10-01 |
+| Soyuz-2.1a, 2.1b | strap-on intermediate level 81 % from T+112.0 s | derived | Arianespace Fig. 3.2.1a: 3.981 → 3.367 g with the core unchanged | — | 2026-10-01 |
+| Soyuz-2.1a, 2.1b | pad start, 2 s of full flow | derived (estimate) | Arianespace §A5 (about 20 s at intermediate levels); the acceleration drop at separation gives about 5.1 t per strap-on | 1.03–1.05 t left per strap-on, 1.3 % in the core, 306.8 t at liftoff | 2026-10-01 |
+| Soyuz-2.1b | core cut-off T+284.95 s | construction | Arianespace's separation at 287.6 s less 2.1a's 2.65 s from GK-2 to separation | — | 2026-10-01 |
+| Soyuz-2.1a, 2.1b | Blok I aft skirt, 430 kg | estimate | Starsem's 2 410 kg dry Blok I less Braeunig's 1 976 kg without it | — | 2026-10-01 |
+| Soyuz-2.1a | fairing altitude floor 70 km | construction | below the 79 km fit target, so the published time decides | the fairing at T+153.3 s in both models | 2026-10-01 |
+| Soyuz-2.1a | escape tower 1 740 kg, fairing 1 645 kg | estimate | the escape model's head (PHYSICS.md §8.3); 4.2–4.5 t published for the head | — | 2026-10-01 |
+| Saturn V | kick 3° at 0.5 °/s | fitted | the S-IC hands over at the flown state (PHYSICS.md §13.8) | — | 2026-09 |
+| Mercury-Redstone | pitch floor, 3° kick falling 0.34 °/s | fitted | both models cut off on the flown arc (PHYSICS.md, C01) | — | 2026-09 |
+| crewed Soyuz | 3 s from a strap-on's strike to the loss of the vehicle | fitted | MS-10's T+118.6 → 121.6 s (`COLLISION_TO_LOSS`) | — | 2026-09 |
+
+Retired 2026-10-01: Soyuz-2.1a's 87 000 kg core load, held to the published clock, and its
+kick-and-turn programmes (3° / 0.3 °/s for the point mass; 6° with a T+140 s hand-over in
+six-DOF, audit PHY-01). Both kick programmes remain what an operator who edits the pitch-over
+flies in place of the stored programme.
 
 ## 2. Falcon 9 Block 5
 
@@ -665,10 +696,13 @@ and its own example profile runs the stage from L+162 s to L+535 s, 373 s. At th
 the stage throttles to about 70 % on average, which the model does not do. The
 first stage is 4 % early, as PHYSICS.md §6a already records.
 
-**F8. Soyuz inserts into a 197 × 200 km orbit; the flight went to 200 × 242 km.** The model aims
-the third stage at a circular 200 km parking orbit and lets the crew ship raise it. The real
-Soyuz is put on an ellipse with a 242 km apogee from the start. This is a guidance choice, like
-F6, not physics. The times of the whole ascent agree with the flight to within 2 %.
+**F8 (closed 2026-10-01). Soyuz inserted into a 197 × 200 km orbit; the flight went to
+200 × 242 km.** The model aimed the third stage at a circular 200 km parking orbit and let the
+crew ship raise it; the real Soyuz is put on an ellipse with a 242 km apogee from the start
+(Roscosmos: 200 ± 2 × 242 ± 5 km for every crewed flight since MS-16). A Soyuz MS or Progress MS
+on Soyuz-2.1a is now inserted there whatever it does next (`soyuzShipInsertion`,
+src/physics/rendezvous/profiles.ts; it used to be done only with a rendezvous planned): 200.0 ×
+241.0 km in the point mass, 199.9 × 239.6 km in six-DOF.
 
 **F9. The six-DOF model climbs higher than the point-mass model on every vehicle.** Soyuz is
 13–33 km higher at fairing and core separation (10–17 km before its strap-on turn below). Ariane 64 is 14–68 km higher from booster
@@ -679,7 +713,95 @@ six-DOF ascent comes out of max Q steeper than the flights, while the point-mass
 the published altitudes (Ariane 64: 87.1 km against 87 km at booster separation, 128.5 km
 against 127 km at the fairing).
 
+### Soyuz-2.1a flies its stored pitch programme (2026-10-01)
+
+**The request.** Fly Soyuz-2.1a as the real one flies: its attitude, the fairing's and the core's
+separation heights, the abort apogees. Never fly an attitude the real vehicle cannot. The method
+is written down for the other vehicles in [FLIGHT-PROFILE-METHOD.md](FLIGHT-PROFILE-METHOD.md).
+
+**Sources and their roles.** Each source has one role, so that none is both a target and a
+check.
+
+| source | role |
+| --- | --- |
+| Arianespace, Soyuz CSG User's Manual (Issue 2, 2012; Issue 2.1, 2018), Fig. 1.5.1a | input: engines and stage loads |
+| the same, Fig. 2.3.1a (2.1b's sequence) | input: the strap-ons' step at T+112.0 s, the 0.4 s separation delay; 2.1b's own times |
+| the same, Fig. 3.2.1a (acceleration) | derived: the step's 81 %, the pad start; the rest of the trace a check |
+| the same, Fig. 2.3.1c (2.1b's altitude and speed) | check: Soyuz-2.1b flown on 2.1a's programme, unfitted |
+| Starsem, Soyuz User's Manual (2001), Fig. 2-4 | input: the programme's shape; its altitude curve not used (it disagrees with its own pitch) |
+| SoyCOM (the Soyuz Crew Operations Manual, Soyuz-FG) | check, loose: max Q, the state at GK-1 and GK-2 (another rocket) |
+| RussianSpaceWeb, Soyuz MS-16 to MS-28 | times: inputs (tower, fairing, cut-offs, skirt); 79 km and 157 km: fit targets; impacts: checks |
+| Andrienko, Tropova and Chadaev (Problemy Upravleniya 2013) | input: the strap-ons cut off by command, never at depletion |
+| Khorolsky (2011) | input: the R-7 flies its first two stages on a stored pitch programme |
+| RKTs Progress (via RussianSpaceWeb) | input: 7 430 kg to 200 × 240 km at 51.6° |
+
+**What changed, in the order the method takes it.**
+
+1. *Data* (`src/data/parts.ts`). The RD-107A and RD-108A are Arianespace's figures; the RD-108A
+   was 921.9 kN in vacuum, 7 % low, which left the core 2.4 % slow. The strap-on and core loads
+   close on the published gross masses, the hydrogen peroxide counted as propellant (the
+   published Isp covers the whole flow; the acceleration trace gives about 1 600 kg/s for the
+   whole first stage, 1 622 on this reading and 1 672 with the peroxide as extra flow) and the
+   nitrogen as dry mass. The 87 000 kg core load, held to the clock, is gone.
+2. *Propulsion and events* (`src/data/vehicles.ts`). The strap-ons step to 81 % at T+112.0 s
+   (`BoosterGroupSpec.thrustSteps`) and are cut off by command at T+117.45 s; the core by GK-2 at
+   T+285.05 s (`StageSpec.cutoffAt`); a 2 s pad start (`VehicleSpec.padBurnS`). The propellant
+   left at the cut-offs is a prediction and came out inside its bands: 1.03–1.05 t per strap-on
+   (0.3–1.3 t expected), 1.3 % of the core (0–2 %), 306.8 t and 1.39 g at liftoff (306–313 t,
+   1.36–1.40 g). A crewed flight carries its 1 740 kg escape tower to T+113.5 s (flown
+   113.45–113.70 s); Blok I drops its aft skirt 11.07 s after it lights.
+3. *Guidance* (`GuidanceParams.pitchProgram`). The R-7's own structure: a stored programme for
+   the strap-ons and the core, flown in both flight models, then the closed loop on Blok I from
+   T+285.1 s. Pitch is above the local horizon on the launch azimuth; a plane fixed in inertial
+   space was tried and left the pad's eastward speed across it (0.8° of RAAN off an ISS target,
+   up to 9° of yaw on Blok I).
+4. *Fit*: two scalars for two targets (the register in §1). Zero-angle iterations of the
+   high-q segment were tried and lofted the trajectory away from both targets; Starsem's shape
+   holds the angle at −1.4 to +0.6° and was kept.
+
+**Flyability.** Six-DOF, Soyuz MS-25, calm: max Q 35.7 kPa at T+63 s (the R-7's 3 700 kgf/m²,
+36.3 kPa, SoyCOM), at most 1.4° of angle while q > 2 kPa, q·α at most 47 kPa·deg (the steering
+is allowed 120), the body turning at most 1.1 °/s (on Blok I's closed loop), the aerodynamic
+table left only under 1 Pa. The same table reaches orbit in the reference crosswind and shear
+(at most 1.5° while q > 2 kPa; the wind across the pad gives 8–9° at T+15 s, under 1 kPa) and at
+3 t and 7.43 t (2.1° and 1.4°), each to 199.9–200.0 × 239.3–239.9 km. Held by `tests/rigid-soyuz-programme.test.ts`; the sequence by
+`tests/r7-sequence.test.ts`.
+
+**Held-out checks.** Fixed before the fit; nothing was refitted to pass them.
+
+| check | model (six-DOF / point mass) | reference | |
+| --- | --- | --- | --- |
+| speed at strap-on separation | 1.70 / 1.71 km/s over the ground | 1.64–1.75 km/s | met |
+| peak acceleration on stage I | 4.10 g | at most 4.3 g (Arianespace); 3.5 g at GK-1 on Soyuz-FG (SoyCOM) | met |
+| max Q | T+63 s, 11.0 km | T+65 s, 11.1 km (SoyCOM) | met |
+| speed at the fairing | 1.92 / 1.93 km/s over the ground | 1.90–1.93 km/s | met |
+| strap-on impacts | 320–375 / 361 km | about 350 km | met |
+| fairing impact | 490 / 493 km | about 500 km (loose) | met |
+| core impact | 1 377 / 1 415 km | about 1 550 km | **missed**, −11 % |
+| speed at core separation | 3.85 / 3.87 km/s over the ground | 3.65–3.8 km/s | **missed** by 0.05 km/s |
+| third-stage cut-off | T+526.4 / 526.7 s | T+525.9 s | met |
+| insertion | 199.9 × 239.6 / 199.8 × 240.6 km | 200 ± 2 × 242 ± 5 km | met |
+| the rating: 7 430 kg | 200.0 × 237.5 km | to 200 × 240 km | met |
+| Blok I's attitude | its closed loop lifts the nose from 10° to 35° above the horizon, then down to −3° | Starsem: smooth, 12° to −10° | **missed** |
+| aborts | MS-10 108 km, 18a 167 km (PHYSICS.md §8.3) | 93 km, 192 km | MS-10 met loosely, 18a **missed** |
+| Soyuz-2.1b on the same programme, unfitted | T+117.9 s: 47.2 / 45.0 km, 1.66 / 1.68 km/s; T+286.4 s: 153.2 / 142.2 km, 3.61 / 3.66 km/s | 43.2 km, 1.72 km/s; 144.7 km, 3.65 km/s (Arianespace Fig. 2.3.1c, to GTO from Kourou) | met within 10 % |
+
+**Disagreements, pinned.**
+
+- *Hot staging is not modelled.* The model separates the core as it cuts off, 2.65 s before the
+  flown separation (287.70 s), so the core-separation event is that much early.
+- *The core falls 11 % short.* Probably the same cause as the speed at separation and the climb
+  angle of 5° there: SoyCOM's Soyuz-FG is at 168 km and about 6° at GK-2. With 79 km at the
+  fairing and 157 km at separation both held, about 5° is what a monotonic turn allows.
+- *Blok I's closed loop is not Starsem's smooth programme.* It flies the closed loop's own
+  answer to a 200 × 242 km insertion.
+- *The 18a abort* comes out 25 km low: another rocket (the 1975 11A511) and a failure the model
+  does not fly (its Blok I pushing the core it could not shed).
+
 ### Soyuz-2.1a's strap-ons fly a zero-lift turn (six-DOF, audit PHY-01)
+
+*Superseded on 2026-10-01 by the stored programme above. This is what an operator who edits the
+six-DOF pitch-over flies in its place.*
 
 **What was wrong.** Soyuz MS-25 in six-DOF handed its steering over to the closed loop in the
 usual way, blended in from 12 kPa and complete at 4 kPa. From T+90 s that loop asked for a nose
@@ -758,8 +880,9 @@ further out than before (the table above, §3 Results). Both altitudes were outs
 before and are now, so `tests/heavy/validation-timelines.test.ts` lists the same rows. A flatter
 zero-lift turn would need more authority at max Q than the model's R-7 has; the real strap-ons
 also steer with an air vane each, which the model does not have, so that is one place to look.
-Held by `tests/rigid-soyuz-strapon-turn.test.ts` (flow angle under 2°, pitch rate under 1.5 °/s,
-the table left only under 10 Pa, the strap-ons on the flown clock); the plane by the delivered-orbit
+It was held by `tests/rigid-soyuz-strapon-turn.test.ts` (flow angle under 2°, pitch rate under
+1.5 °/s, the table left only under 10 Pa, the strap-ons on the flown clock), which became
+`tests/rigid-soyuz-programme.test.ts` with the stored programme; the plane by the delivered-orbit
 matrix in the reference winds.
 
 **Found in passing, not changed.** In the crosswind and shear reference winds every Soyuz
@@ -2279,10 +2402,12 @@ drawn), Saturn V 90.15 m. Bound 1e-12 m, fixed before the first comparison. **Me
 **Findings, not filled in.** The old file recorded no source for many figures, and the parts say
 so (`UNCITED`) rather than borrow one:
 
-- 29 of 55 engine parts, and 5 more solid motors that cite only their peak-to-mean thrust ratio;
-- 25 of 50 stage bodies (26 before F11 gave Falcon Heavy's core a source for its propellant; its
-  28 000 kg dry mass is still an estimate), and Proton-M's first stage cites only its diameter;
-- 6 of 14 strap-on bodies (7 before F11);
+- 27 of 55 engine parts (29 before the RD-107A and RD-108A took Arianespace's figures on
+  2026-10-01, §3), and 5 more solid motors that cite only their peak-to-mean thrust ratio;
+- 25 of 49 stage bodies (26 of 50 before F11 gave Falcon Heavy's core a source for its
+  propellant, and the two Soyuz-2 cores became one on 2026-10-01; Falcon Heavy's 28 000 kg dry
+  mass is still an estimate), and Proton-M's first stage cites only its diameter;
+- 5 of 14 strap-on bodies (7 before F11, 6 before Soyuz-2's strap-ons took Arianespace's figures);
 - 13 of 17 fairings.
 
 Four engine entries are not one real engine: RD-0213 + RD-0214, YF-24C, YF-75 and Raptor 2 /
@@ -2745,7 +2870,7 @@ split optimally, and the stages' masses, engine counts and lengths follow.
   All **met**. Whole engines overshoot the T/W target (0.926 against 0.7 on the upper stage). The
   lengths come from the propellant's volume plus the catalogue's median length beyond the tanks,
   a recorded value: 1.466 diameters when it was written, 1.4648 since F11 filled Falcon Heavy's
-  core fuller.
+  core fuller, 1.4445 since the Soyuz-2 cores and strap-ons took their published loads (§3).
 
 **Finding: the design Δv is not enough.** The plan expected a sized launcher to pass the readiness
 review at its design Δv. It does not. Flown point mass, the 1 t launcher runs out of propellant

@@ -450,7 +450,7 @@ export class RocketView {
     if (spec.legs) this.addLegs(g, r, spec.length);
     let skirt: AftSkirt | null = null;
     if (spec.profile === 'r7Upper') {
-      skirt = new AftSkirt(r, 1.2, this.mat(spec.color ?? '#c9c7bd', 0.2, 0.6));
+      skirt = new AftSkirt(r, 1.2, this.mat(spec.color ?? '#c9c7bd', 0.2, 0.6), spec.jettisons?.find((j) => j.part === 'aftSkirt')?.t);
       g.add(skirt.group);
     }
     let flaps: FlapVisual[] = [];

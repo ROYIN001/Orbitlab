@@ -63,7 +63,7 @@ describe('the strap-ons', () => {
 });
 
 describe("Blok I's aft skirt", () => {
-  it('rides through the staging and falls away in three petals ten seconds after Blok A', () => {
+  it('rides through the staging and falls away in three petals eleven seconds after Blok A, or when its stage says', () => {
     const skirt = new AftSkirt(1.33, 1.2, new THREE.MeshBasicMaterial());
     expect(skirt.group.children).toHaveLength(3);
     skirt.update(-1);
@@ -71,16 +71,24 @@ describe("Blok I's aft skirt", () => {
     skirt.update(9.5);
     for (const p of skirt.group.children) expect(p.rotation.x).toBe(0);
     skirt.update(11);
+    for (const p of skirt.group.children) expect(p.rotation.x).toBe(0);
+    skirt.update(12);
     for (const p of skirt.group.children) {
       expect(p.rotation.x).toBeLessThan(0);
       expect(p.position.y).toBeLessThan(0);
     }
-    skirt.update(15);
+    skirt.update(16);
     expect(skirt.group.visible).toBe(false);
     // scrubbed back before staging, it is whole again
     skirt.update(-1);
     expect(skirt.group.visible).toBe(true);
     for (const p of skirt.group.children) expect(p.position.y).toBe(0);
+    // Soyuz-2.1b's, 15.45 s after its core's cut-off (Arianespace's T+300.4 s)
+    const later = new AftSkirt(1.33, 1.2, new THREE.MeshBasicMaterial(), 15.45);
+    later.update(15);
+    for (const p of later.group.children) expect(p.rotation.x).toBe(0);
+    later.update(16.5);
+    for (const p of later.group.children) expect(p.rotation.x).toBeLessThan(0);
   });
 });
 
@@ -88,7 +96,7 @@ describe("the crewed Soyuz's escape tower", () => {
   const mat = () => new THREE.MeshStandardMaterial();
   const top = new CrewedTop(1.85, 10.1, mat, new THREE.MeshBasicMaterial());
 
-  it('stands on the fairing\'s nose until T+114.5 s, then pulls away on its motor and is gone', () => {
+  it('stands on the fairing\'s nose until T+113.5 s, then pulls away on its motor and is gone', () => {
     expect(top.fins.children).toHaveLength(4);
     top.update(100, 10.1);
     expect(top.tower.visible).toBe(true);

@@ -74,9 +74,16 @@ labelled as such; the known gaps are under "Known limitations" below.
   same choices (off by default).
 - **The R-7 as drawn** (`src/render/soyuz.ts`): Blok A's taper from 2.05 m at its engines to
   2.95 m, the strap-ons leaning in against it, the open truss up to Blok I, Blok I's aft skirt
-  falling away in three petals ten seconds after Blok A, the frost on the oxygen tanks shedding
+  falling away in three petals eleven seconds after Blok A (T+296 s, as flown), the frost on the oxygen tanks shedding
   in the first half minute, and on a crewed launch the escape tower and the fairing's four grid
-  fins, the tower pulling away at T+114.5 s. Drawing only; the physics is unchanged.
+  fins, the tower pulling away at T+113.5 s. Drawing only; the physics is unchanged.
+- **Soyuz-2 on its real flight** ([VALIDATION.md §3](VALIDATION.md), 2026-10-01): published
+  engines and stage loads; the strap-ons' step to 81 % and their commanded cut-off, the core's
+  GK-2, a pad start; a crewed flight's escape tower carried to T+113.5 s and Blok I's aft skirt;
+  the R-7's stored pitch programme in both flight models to Blok I, then the closed loop. The
+  fairing goes at 78.8 km (flown 79) and the core at 157.3 km (157); the insertion is
+  199.9 × 239.6 km (200 × 242). The method, for the other vehicles, is
+  [FLIGHT-PROFILE-METHOD.md](FLIGHT-PROFILE-METHOD.md).
 - **Launch escape** ([PHYSICS.md §8.3](PHYSICS.md)): a crewed Soyuz's escape tower, fairing
   motors and spacecraft separation, flown as rigid bodies to the descent module on its
   parachutes and soft-landing motors. It fires on any failure that is losing the rocket with the

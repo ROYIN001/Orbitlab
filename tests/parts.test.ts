@@ -91,9 +91,9 @@ function undefinedKeys(v: unknown, path: string, out: string[] = []): string[] {
 }
 
 describe('D01 parts catalogue: the fleet is built from it', () => {
-  it('holds 55 engine parts, 50 stage bodies, 14 strap-on bodies and 17 fairings for the 21 vehicles', () => {
+  it('holds 55 engine parts, 49 stage bodies, 14 strap-on bodies and 17 fairings for the 21 vehicles', () => {
     // The roadmap's D01 row and plan.item.D01 quote 55 engines and 21 vehicles.
-    expect([VEHICLES.length, ENGINE_PARTS.length, STAGE_BODIES.length, BOOSTER_BODIES.length, FAIRING_PARTS.length]).toEqual([21, 55, 50, 14, 17]);
+    expect([VEHICLES.length, ENGINE_PARTS.length, STAGE_BODIES.length, BOOSTER_BODIES.length, FAIRING_PARTS.length]).toEqual([21, 55, 49, 14, 17]);
   });
 
   it('emits every stage, strap-on group and fairing of the fleet from exactly one part', () => {
@@ -142,11 +142,11 @@ describe('D01 parts catalogue: agreement with the tables still keyed by stage id
     // without an entry would fall back to liquid tanks there, so it must be
     // noticed here.
     expect([...noEntry].sort()).toEqual(['blokA', 'blokBVGD', 'blokI', 'core', 's1', 's2', 'side']);
-    // With no table to hold them to, the 13 bodies behind those ids are held
+    // With no table to hold them to, the 12 bodies behind those ids are held
     // to what is stated here by hand: every R-7 block (the RD-107/108 family,
     // RD-0110, RD-0124) and every Falcon stage (Merlin) burns LOX and kerosene.
     const unkeyed = [...STAGE_BODIES, ...BOOSTER_BODIES].filter((b) => noEntry.has(b.stageId));
-    expect(unkeyed).toHaveLength(13);
+    expect(unkeyed).toHaveLength(12);
     expect(unkeyed.filter((b) => enginePart(b.engine.part).family !== 'kerolox').map((b) => b.id)).toEqual([]);
   });
 

@@ -11,7 +11,10 @@ import { formatRows, timelineRows } from './compare';
 
 /** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since). */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
-  soyuzMs25: ['insertion/apogee'],
+  // Soyuz MS-25 agrees on every row since 2026-10-01: its insertion is the
+  // flown 200 × 242 km (it went to 200 km circular) and its programme flies the
+  // flown heights (docs/VALIDATION.md §3).
+  soyuzMs25: [],
   electronNtt: ['seco/time', 'kickSep/time'],
   ariane64Va267: [],
   atlasJuno: ['fairing/time'],

@@ -64,6 +64,14 @@ export interface BoosterGroupSpec {
   conicalTop?: boolean;
   /** Vertical offset of the booster base relative to the core base, m */
   baseOffset?: number;
+  /**
+   * Planned thrust levels, s after liftoff, in time order: from `t` on the
+   * engines run at `level` of full thrust and flow, and a level of 0 is their
+   * cut-off by command, with propellant still aboard. The R-7's strap-ons step
+   * down to an intermediate level a few seconds before it ("two level thrust
+   * throttling", Arianespace Soyuz CSG User's Manual).
+   */
+  thrustSteps?: { t: number; level: number }[];
 }
 
 /**
@@ -119,12 +127,20 @@ export interface StageSpec {
   /** planned engine shutdowns and mixture shifts during the burn, in time order (C01) */
   engineEvents?: EngineEvent[];
   /**
+   * Shut down by command at this mission time, s after liftoff, with propellant
+   * still aboard, unless it has run dry first: the R-7 core's GK-2 command at
+   * T+285.05 s. Absent: the stage burns until its depletion sensor trips.
+   */
+  cutoffAt?: number;
+  /**
    * Parts dropped during this stage's burn, s after its first ignition, in time
    * order (C01: the Saturn V's S-II aft interstage ring, off 28 s into the S-II's
    * burn, and the Apollo escape tower six seconds later): an `interstage` comes
-   * off this stage's dry mass, a `tower` off the payload's.
+   * off this stage's dry mass, a `tower` off the payload's. An `aftSkirt` comes
+   * off this stage's dry mass too: the Soyuz third stage's aft section, which
+   * falls away in three segments after the core has gone.
    */
-  jettisons?: { t: number; mass: number; part: 'interstage' | 'tower' }[];
+  jettisons?: { t: number; mass: number; part: 'interstage' | 'tower' | 'aftSkirt' }[];
 }
 
 export interface FairingSpec {
@@ -230,6 +246,13 @@ export interface VehicleSpec {
   dragArea?: number;
   /** Crewed launches supported */
   crewCapable?: boolean;
+  /**
+   * The first stage's and its strap-ons' burn on the pad before the modelled
+   * ignition at T−2.5 s, s of full flow: the R-7's engines run at intermediate
+   * levels for about 20 s before liftoff (Arianespace, Soyuz CSG User's
+   * Manual, §A5), which the model takes off their loads at ignition. Absent: 0.
+   */
+  padBurnS?: number;
   notes?: string;
   /**
    * S02: a custom vehicle's origin, the id of the catalogue vehicle it was
@@ -416,9 +439,25 @@ export interface GuidanceParams {
    * and altitude, across staging, before closed-loop guidance takes over (C01:
    * the Saturn V, whose tilt programme froze at the S-IC's cut-off and whose
    * iterative guidance took over at T+204.1 s). Absent: the hand-over is at
-   * thin air (`AscentGuidance`) or `gravityTurnEnd`, the rule for every other vehicle.
+   * thin air (`AscentGuidance`) or `gravityTurnEnd`, the rule for every other
+   * vehicle. A `pitchProgram` hands over at its own last point instead.
    */
   closedLoopStart?: number;
+  /**
+   * A stored pitch programme, flown open-loop from liftoff instead of the
+   * vertical rise, the kick and the gravity turn: [s after liftoff, pitch above
+   * the local horizon in the launch azimuth's vertical plane, deg] pairs in time
+   * order, linearly interpolated. It is how the R-7 family flies its strap-ons
+   * and core ("по заранее рассчитанной программе угла тангажа", Khorolsky 2011;
+   * the Soyuz Crew Operations Manual, §8.1.2), with terminal guidance from the
+   * programme's last time (`closedLoopStart` is not used). The closed loop's
+   * angle-of-attack placard and the six-DOF load relief still bound it. A
+   * vehicle's own figure, not a setting: an operator who sets any of the
+   * pitch-over fields, or an acceleration limit, flies their own pitch-over
+   * instead, with that pitch-over's own hand-over (`programmeOverridden` in
+   * src/physics/defaults.ts).
+   */
+  pitchProgram?: readonly (readonly [number, number])[];
   /** Target altitude for the initial (parking) orbit, m */
   parkingAltitude: number;
   /** Closed-loop planning horizon cap, s (limits lofting for weak upper stages) */

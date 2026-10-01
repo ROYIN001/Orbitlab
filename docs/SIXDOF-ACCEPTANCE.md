@@ -175,6 +175,9 @@ That gate alone did not solve the wind trajectory: the original conservative com
 
 ## Common Soyuz command profile and completed bounded wind cases
 
+*Historical: Soyuz-2.1a has flown a stored pitch programme since 2026-10-01 (VALIDATION.md §3). The
+4° kick below is what an operator who edits the six-DOF pitch-over flies, at 6° since PHY-01.*
+
 The production Soyuz reference profile uses pitch-over at 50 m, a 4° kick over 12 s, a 0.5°/s gravity-turn limit, and permits aerodynamic command trim up to 65% of the existing conservative torque radius. The same 65% fraction applies to calm, crosswind and shear, independent of seed; the already verified Falcon program retains its 35% fraction. The Soyuz trim limit leaves 35% of that radius before actual disturbance/coupling is evaluated. This is distinct from the rate controller, which separately limits requested angular acceleration to 35% of the remaining bidirectional torque margin. Neither rule changes physical TVC travel, thrust, aero coefficients or the integrated attitude/rates. Explicit user guidance overrides remain authoritative.
 
 The three bounded complete ISS-plane orbit runs below used identical Soyuz guidance and trim values, the existing hardware/force model, 0.01 s control/RK steps and unchanged orbit bands. Each emitted the actual target-orbit event and had no residual misses; none establishes rendezvous with the ISS. These diagnostic records set the trim explicitly in memory before the identical production profile was installed. An exact-production full-mission convergence run remains a separate gate.
@@ -331,7 +334,10 @@ closed-loop pitch command that has run far below the vehicle as the dynamic pres
 begins earlier, at about T+89 s instead of at booster separation, because the less unstable
 vehicle is released sooner. It stays a guidance item (G01). *Since 2026-10-01 (audit PHY-01) it is
 gone: the strap-ons fly a zero-lift turn and the steering closes the loop at T+140 s
-(VALIDATION.md §3, "Soyuz-2.1a's strap-ons fly a zero-lift turn").*
+(VALIDATION.md §3, "Soyuz-2.1a's strap-ons fly a zero-lift turn"). Later the same day Soyuz-2.1a
+took the R-7's stored pitch programme through the strap-ons and the core, with the closed loop
+only on Blok I (VALIDATION.md §3, "Soyuz-2.1a flies its stored pitch programme"): at most 1.4° of
+angle while q > 2 kPa and 1.1 °/s, on the actuator limits accepted here.*
 
 ## Every vehicle in six-DOF (roadmap P01, 2026-09-23)
 
