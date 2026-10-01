@@ -1529,7 +1529,8 @@ export class LessonMode implements LessonToolsHost {
     text.append(el('b', undefined, `${lessonNumber(l)} ${keepUnits(localText(l.title))}`));
     const item = opts.pack?.item;
     if (item?.curriculum.length) text.append(this.codeChips(item.curriculum));
-    text.append(el('small', undefined, localText(l.brief)));
+    // W review: the card's brief keeps its figures with their units as the title does ("20 %", "500 กม." broke at 360 px)
+    text.append(el('small', undefined, keepUnits(localText(l.brief))));
     if (item?.note) text.append(el('span', 'lesson-card-note', localText(item.note)));
     const tags = el('span', 'lesson-card-tags');
     if (item?.reference) {
@@ -1577,14 +1578,14 @@ export class LessonMode implements LessonToolsHost {
       group.dataset.pack = p.pack.id;
       group.append(el('h4', undefined, localText(p.pack.title)));
       const meta = el('p', 'lesson-pack-meta');
-      meta.append(el('span', undefined, t('lesson.pack.audience', { audience: localText(p.pack.audience) })),
-        el('span', undefined, t('lesson.pack.framework', { framework: localText(p.pack.framework) })));
+      meta.append(el('span', undefined, keepUnits(t('lesson.pack.audience', { audience: localText(p.pack.audience) }))),
+        el('span', undefined, keepUnits(t('lesson.pack.framework', { framework: localText(p.pack.framework) }))));
       group.append(meta);
       // the roadmap's validation of a pack is the owner's review: until then it says so
       if (!p.pack.reviewed) group.append(el('p', 'lesson-pack-draft', t('lesson.pack.draft')));
       const about = el('details', 'lesson-pack-about');
       about.append(el('summary', undefined, t('lesson.pack.about')));
-      if (p.pack.description) about.append(el('p', undefined, localText(p.pack.description)));
+      if (p.pack.description) about.append(el('p', undefined, keepUnits(localText(p.pack.description))));
       const file = el('a', undefined, t('lesson.pack.file'));
       file.href = packPath(p.pack.id);
       file.download = packPath(p.pack.id).split('/').pop()!;
