@@ -270,7 +270,8 @@ class CheckView {
     const who = el('span', 'recheck-who');
     who.append(el('b', undefined, r.student ?? check.files[r.file]?.name ?? t('lesson.check.noName')),
       el('span', undefined, lesson ? `${lessonNumber(lesson)} ${localText(lesson.title)}` : r.lessonId));
-    const what = el('span', 'recheck-what', `${r.which.map((w) => t(WHICH_KEY[w])).join(' + ')} · ${r.at.slice(0, 16).replace('T', ' ')}`);
+    // the record's own time, as the file keeps it: UTC, as the file's "saved" time says
+    const what = el('span', 'recheck-what', `${r.which.map((w) => t(WHICH_KEY[w])).join(' + ')} · ${r.at.slice(0, 16).replace('T', ' ')} UTC`);
     const said = (v: string): string => t(VERDICT_KEY[v] ?? v);
     const verdict = el('span', 'recheck-verdict', r.recheckedVerdict ? `${said(r.recordedVerdict)} → ${said(r.recheckedVerdict)}` : said(r.recordedVerdict));
     head.append(el('span', `recheck-chip ${r.status}`, t(STATUS_KEY[r.status])), who, what, verdict);
