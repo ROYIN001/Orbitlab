@@ -771,12 +771,24 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     sites: ['baikonur'], maxQ: 45e3, maxAccel: 60,
     crewCapable: true,
     // No flown pitch kick is published: as for Sputnik it is the model's free
-    // parameter. 2.6° in point-mass and 3.95° as a rigid body (on the R-7's
+    // parameter. 2.6° in point-mass and 3.92° as a rigid body (on the R-7's
     // trim allowance, src/physics/rigid/runtime.ts) bring Blok E's cut-off to
-    // T+672 s, against the flown 676, with more than 100 kg of its propellant
-    // left; the orbit is the guidance's aim either way (docs/PHYSICS.md §13.6).
+    // T+671.1 and 671.5 s, against the flown 676, with 123 and 115 kg of its
+    // propellant left; the orbit is the guidance's aim either way
+    // (docs/PHYSICS.md §13.6).
     guidanceDefaults: { kickAngle: 2.6, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
-    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3.95, kickDuration: 12, maxTurnRate: 0.5 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3.92, kickDuration: 12, maxTurnRate: 0.5 },
+    // In its last ten seconds the closed-loop law pitches Blok E down at up to
+    // 3.8°/s, to level it at the perigee. Held to the six-DOF's usual 1°/s
+    // (sized for a stage that coasts on, turning, after its cut-off) it came
+    // to the cut-off 13° nose-up and climbing at 3 m/s, and the over-burn
+    // (watch-missions.ts) then added 6 m/s more: the perigee 6.6° before the
+    // insertion point, 95 km of landing away from the point-mass flight. Blok E
+    // cannot be relit and lets the spacecraft go ten seconds after its cut-off,
+    // so it is let follow its command at the 3°/s the point-mass attitude slews
+    // at (`DEFAULT_GUIDANCE.slewRate`); how fast its steering nozzles could turn
+    // it is not published (estimate). Both models then insert at the perigee.
+    ascentCommandRate: 3,
     notes: 'The R-7 that flew Gagarin: the Sputnik core and strap-ons with Blok E, a small third stage hot-staged through a truss.',
   },
   {

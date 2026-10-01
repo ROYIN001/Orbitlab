@@ -111,7 +111,8 @@ export class AscentMonitor {
     if (el.e >= 1 || this.canReigniteAfterCutoff()) return false;
     if (!this.sim.state.liftoff || alt < 100e3) return false;
     // the orbit the ascent is aimed at (`MissionPlan.aim`, C01: Vostok-1's planned one), else the mission's
-    if (orbitResiduals(this.sim.plan.aim ?? this.sim.plan.target, el, this.sim.raanWasReachable(), SINGLE_SHOT_CUTOFF_BAND).onTarget) return true;
+    const aim = this.sim.plan.aim ?? this.sim.plan.target;
+    if (orbitResiduals(aim, this.measured(el, aim), this.sim.raanWasReachable(), SINGLE_SHOT_CUTOFF_BAND).onTarget) return true;
     if (el.periapsisAlt < Math.min(this.sim.plan.insertionAltitude, ASCENT_MIN_PERIAPSIS)) return false;
     const residual = Math.abs(el.apoapsisAlt - this.sim.plan.insertionApoapsis)
       + Math.abs(el.periapsisAlt - this.sim.plan.insertionAltitude);
@@ -122,6 +123,23 @@ export class AscentMonitor {
     // Ignore the numerical noise of a residual sitting at its minimum; only a
     // clear, sustained rise means the burn has started undoing its own work.
     return residual > this.bestAscentResidual + apsisTolerance(this.sim.plan.insertionApoapsis);
+  }
+
+  /**
+   * The orbit the cut-off is aimed on, measured as the mission's figures are.
+   * C01: Vostok-1's planned 168 × 230 km and flown 168 × 314 km are the
+   * orbit's lowest and highest heights (`OrbitSpec.extremes`), and the conic
+   * of the instant reads its apogee 18 km low at a cut-off at 63° N, where J2
+   * pulls hardest: so its cut-off is decided on the extremes of the next
+   * revolution under J2 from the state the cut-off would leave
+   * (`BurnSequencer.extremesOf`), once the conic is within 50 km of the aim —
+   * J2 moves them no further than about 20 km from it in low orbit. Every
+   * other mission: the conic.
+   */
+  private measured(el: OrbitalElements, aim: { perigee: number; apogee: number }): OrbitalElements {
+    if (!this.sim.cfg.orbit.extremes || !(el.e < 1)) return el;
+    if (el.apoapsisAlt < aim.apogee - 50e3 || el.periapsisAlt < aim.perigee - 50e3) return el;
+    return this.sim.burns.extremesOf(el);
   }
 
   // ------------------------------------------------------------ ascent

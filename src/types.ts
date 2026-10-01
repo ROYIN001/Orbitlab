@@ -226,6 +226,14 @@ export interface VehicleSpec {
    * every other launcher, whose plane is set by the moment of liftoff.
    */
   targetPlane?: boolean;
+  /**
+   * Six-DOF: how fast its vacuum ascent's guidance command may swing, deg/s.
+   * Absent: `RIGID_ASCENT_COMMAND_RATE`, 1°/s, the ceiling sized for a stage
+   * that coasts on after its cut-off (C01: Vostok-K's Blok E, which cannot be
+   * relit and lets its spacecraft go ten seconds after it, is let follow its
+   * last pitch-down at the point-mass model's 3°/s; src/data/vehicles.ts).
+   */
+  ascentCommandRate?: number;
   /** Reference drag area override (m^2); default from max diameter */
   dragArea?: number;
   /** Crewed launches supported */
@@ -357,6 +365,17 @@ export interface OrbitSpec {
    * its attitude held, until `dv` m/s more has been gained, then shuts down.
    */
   backupCutoff?: { dv: number };
+  /**
+   * The perigee and apogee given (and the `aim`'s) are the lowest and highest
+   * heights the orbit reaches, not one instant's conic (C01: Vostok-1, whose
+   * figures are the Soviet reports' least and greatest distance from the
+   * Earth): the ascent is cut off on, and the flight judged on, the extremes of
+   * the next revolution under J2 (`physicalApsides`) in both models. Absent:
+   * the ascent is cut off on the osculating conic, and the flight judged on the
+   * extremes in six-DOF and on the conic in point-mass — which, cut off at
+   * 63° N, puts the apogee 18 km under the extreme the orbit then reaches.
+   */
+  extremes?: boolean;
   description: string;
 }
 

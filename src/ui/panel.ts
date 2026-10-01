@@ -2066,11 +2066,12 @@ export class SetupPanel {
   /**
    * C01: apsides typed in are the orbit the flight is aimed at. Vostok-1's
    * planned orbit and its over-burn (`OrbitSpec.aim`, `backupCutoff`) belong
-   * to the orbit it was left in, and would steer a new one somewhere else.
+   * to the orbit it was left in, and would steer a new one somewhere else; and
+   * its figures' measure (`extremes`) is the reports', not the panel's.
    */
   private ownApsides(): void {
-    const { aim: _aim, backupCutoff: _backup, ...own } = this.state.orbit;
-    if (_aim || _backup) this.state.orbit = own;
+    const { aim: _aim, backupCutoff: _backup, extremes: _extremes, ...own } = this.state.orbit;
+    if (_aim || _backup || _extremes !== undefined) this.state.orbit = own;
   }
 
   private customise(): void {

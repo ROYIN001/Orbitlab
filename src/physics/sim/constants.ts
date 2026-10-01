@@ -84,6 +84,8 @@ export const RIGID_STEERING_FREEZE_S = 4;
  * thrusters take minutes to stop. A cap on how fast the stage turns, sized on
  * those thrusters, was tried and was too tight for a heavy Centaur that needs to
  * pitch down quickly to hold its apoapsis; this caps only the command's swing,
- * and only at a rate no normal steering reaches.
+ * and only at a rate no normal steering reaches. A vehicle may carry its own
+ * (`VehicleSpec.ascentCommandRate`; C01: Vostok-K, whose Blok E is not flown on
+ * after its cut-off).
  */
 export const RIGID_ASCENT_COMMAND_RATE = 1 * Math.PI / 180;

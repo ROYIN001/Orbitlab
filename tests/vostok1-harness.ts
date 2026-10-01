@@ -12,6 +12,8 @@ import { compareEvents } from '../src/ui/flown';
 
 /** When each flight's status first read 'landed', and whether it waited, the sphere down, for its pilot. */
 const ENDED = new WeakMap<Simulation, { t: number; waited: boolean }>();
+/** Where each flight's return came down through 100 km (geodetic), the start of its ground track's last arc. */
+const ENTRY = new WeakMap<Simulation, { lat: number; lon: number }>();
 
 export function flyVostok1(model: 'pointMass' | 'sixDof'): Simulation {
   const s = watchMissionSettings('vostok1');
@@ -24,6 +26,7 @@ export function flyVostok1(model: 'pointMass' | 'sixDof'): Simulation {
   while (!sim.isFailed() && sim.state.t < 8000 && sim.state.status !== 'landed' && guard++ < 3_000_000) {
     sim.step(sim.suggestedDt());
     if (sim.state.status === 'abort' && sim.state.note === 'vostokSphereDown') waited = true;
+    if (sim.state.status === 'abort' && !ENTRY.has(sim) && sim.state.altitude <= 100e3) ENTRY.set(sim, { lat: sim.state.lat, lon: sim.state.lon });
   }
   ENDED.set(sim, { t: sim.state.t, waited });
   // the instrument module's lightest remains may still be drifting down when Gagarin is down: fly on, the sphere
@@ -44,6 +47,27 @@ export function vostok1Miss(sim: Simulation): number {
   const d2r = Math.PI / 180, { lat, lon } = SPHERE_LANDING;
   return 6371 * Math.acos(Math.min(1, Math.sin(lat * d2r) * Math.sin(sim.state.lat * d2r)
     + Math.cos(lat * d2r) * Math.cos(sim.state.lat * d2r) * Math.cos((sim.state.lon - lon) * d2r)));
+}
+
+/**
+ * The miss split along and across the sphere's last arc, km, on the great
+ * circle from where it came down through 100 km to where it landed: `along`
+ * positive when the sphere's place lies beyond the landing (the flight came
+ * down short), `cross` positive when it lies to the left of the track (to
+ * the north-west). The along-track part is what the TDU-1's reconstructed
+ * pitch answers for (§13.6); the cross-track part is the orbit's plane.
+ */
+export function vostok1Residual(sim: Simulation): { along: number; cross: number } {
+  const d2r = Math.PI / 180, from = ENTRY.get(sim)!;
+  const unit = (lat: number, lon: number) => [Math.cos(lat * d2r) * Math.cos(lon * d2r), Math.cos(lat * d2r) * Math.sin(lon * d2r), Math.sin(lat * d2r)];
+  const a = unit(from.lat, from.lon), b = unit(sim.state.lat, sim.state.lon), t = unit(SPHERE_LANDING.lat, SPHERE_LANDING.lon);
+  const crossOf = (u: number[], w: number[]) => [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+  const dotOf = (u: number[], w: number[]) => u[0] * w[0] + u[1] * w[1] + u[2] * w[2];
+  // the track's pole (left of the direction of flight), the place's offset from the track's plane, and its foot on it
+  const pole = crossOf(a, b), size = Math.hypot(...pole), n = pole.map((x) => x / size);
+  const off = dotOf(n, t), foot = t.map((x, k) => x - off * n[k]), footSize = Math.hypot(...foot);
+  const ahead = dotOf(crossOf(n, b), foot) >= 0 ? 1 : -1;
+  return { along: ahead * 6371 * Math.acos(Math.min(1, dotOf(b, foot) / footSize)), cross: 6371 * Math.asin(off) };
 }
 
 /**
@@ -86,18 +110,22 @@ export function expectFlownVostok1(sim: Simulation): void {
   expect(Math.abs(Number(hatch.params!.alt) - 7000), log).toBeLessThan(50);
   expect(Math.abs(ej.t - hatch.t - 2), log).toBeLessThan(0.1);
   expect(Math.abs(ej.t - 5700), log).toBeLessThan(180);
-  // the sphere down within two minutes of 10:48
+  // the sphere down within a minute and a half of 10:48
   const down = at('evt.capsuleLanding')!;
-  expect(Math.abs(down.t - 6060), log).toBeLessThan(120);
+  expect(Math.abs(down.t - 6060), log).toBeLessThan(90);
   // a ballistic entry: eight to ten g, as Gagarin felt it; about 10 m/s at the ground, 2,100 kg
   expect(Number(down.params!.g)).toBeGreaterThan(7.5);
   expect(Number(down.params!.g)).toBeLessThan(11);
   expect(Math.abs(Number(down.params!.speed) - 10)).toBeLessThan(1.5);
   expect(Math.abs(sim.state.mass - 2100)).toBeLessThan(30);
-  // where the sphere came down, by its geodetic latitude: the TDU-1's pitch is still to be reconstructed from
-  // it, so the miss is held loosely for now
-  const miss = vostok1Miss(sim);
-  expect(miss, `${sim.state.lat.toFixed(3)} N ${sim.state.lon.toFixed(3)} E, ${miss.toFixed(0)} km`).toBeLessThan(400);
+  // where the sphere came down, by its geodetic latitude: within 60 km of its place by Smelovka, cross-track
+  // included (the orbit's plane, about 25–30 km: §13.6), and on it along the track, which is what the TDU-1's
+  // pitch was reconstructed for (2.6°, about 52 km a degree)
+  const miss = vostok1Miss(sim), { along, cross } = vostok1Residual(sim);
+  const where = `${sim.state.lat.toFixed(3)} N ${sim.state.lon.toFixed(3)} E: ${miss.toFixed(1)} km, ${along.toFixed(1)} km along the track `
+    + `(+ short), ${cross.toFixed(1)} km across it (+ the place to the north-west)`;
+  expect(miss, where).toBeLessThan(60);
+  expect(Math.abs(along), where).toBeLessThan(20);
   expectGagarinHome(sim, log);
   expectModuleGone(sim, log);
   // nothing of the return makes a stage's impact: not the hatch, the seat or the module's pieces

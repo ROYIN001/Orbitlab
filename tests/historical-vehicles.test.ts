@@ -20,6 +20,7 @@ import { APOLLO11 } from '../src/data/apollo11';
 import { Simulation } from '../src/physics/simulation';
 import { guidanceForVehicle } from '../src/physics/defaults';
 import { supportsRigid } from '../src/physics/rigid/config';
+import { physicalApsides } from '../src/physics/rigid/orbit-prediction';
 import { validateConfigInput } from '../src/config/validation';
 import { WATCH_MISSIONS, watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
 import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
@@ -123,6 +124,8 @@ describe('Vostok-1\'s over-burn, point-mass', () => {
   // Baturin (Novaya Gazeta, 11 April 2021): the radio command to shut the core down did not pass, and the
   // backups stopped the core and Blok E 25.43 m/s late — 327 km of apogee where 230 km was planned. The
   // guidance aims at the planned orbit (`OrbitSpec.aim`) and Blok E burns the excess on (`backupCutoff`).
+  // Both orbits are the lowest and highest heights reached (`OrbitSpec.extremes`): measured on the next
+  // revolution under J2, as the flight is cut off and judged on them.
   const toCutoff = (orbit: ReturnType<typeof watchMissionSettings>['orbit']) => {
     const s = watchMissionSettings('vostok1');
     const sim = new Simulation({
@@ -133,9 +136,9 @@ describe('Vostok-1\'s over-burn, point-mass', () => {
     // on through the engine's tail-off
     const seco = () => sim.events.find((e) => e.key === 'evt.seco');
     while (!sim.isFailed() && sim.state.t < 800 && !(seco() && sim.state.t > seco()!.t + 5)) sim.step(sim.suggestedDt());
-    const el = sim.state.elements;
+    const el = sim.state.elements, extremes = physicalApsides({ r: sim.state.r, v: sim.state.v })!;
     const rp = R_EARTH + el.periapsisAlt, a = R_EARTH + (el.periapsisAlt + el.apoapsisAlt) / 2;
-    return { sim, seco: seco()!.t, el, vPerigee: Math.sqrt(MU_EARTH * (2 / rp - 1 / a)), left: sim.vehicle.stages[1].propellant };
+    return { sim, seco: seco()!.t, el, extremes, vPerigee: Math.sqrt(MU_EARTH * (2 / rp - 1 / a)), left: sim.vehicle.stages[1].propellant };
   };
 
   it('aims at the planned 168 × 230 km and is cut off on the backup 25.4 m/s later, in the flown 168 × 314 km', { timeout: 120_000 }, () => {
@@ -145,8 +148,8 @@ describe('Vostok-1\'s over-burn, point-mass', () => {
     const planned = toCutoff({ ...s.orbit, backupCutoff: undefined });
     const log = flown.sim.events.map((e) => `${e.t.toFixed(1)}:${e.key}`).join(' ');
     // the planned cut-off: the orbit the guidance was set for
-    expect(Math.abs(planned.el.periapsisAlt - 168e3), log).toBeLessThan(3e3);
-    expect(Math.abs(planned.el.apoapsisAlt - 230e3), log).toBeLessThan(6e3);
+    expect(Math.abs(planned.extremes.periapsisAlt - 168e3), log).toBeLessThan(3e3);
+    expect(Math.abs(planned.extremes.apoapsisAlt - 230e3), log).toBeLessThan(6e3);
     expect(planned.sim.events.some((e) => e.key === 'evt.backupCutoff')).toBe(false);
     // the backup: 25.4 m/s more, logged, and held to the flown orbit
     const backup = flown.sim.events.find((e) => e.key === 'evt.backupCutoff');
@@ -160,9 +163,11 @@ describe('Vostok-1\'s over-burn, point-mass', () => {
     expect(planned.left - flown.left).toBeLessThan(60);
     // the speed at the perigee, where both were cut off
     expect(Math.abs(flown.vPerigee - planned.vPerigee - 25.43), log).toBeLessThan(1);
-    expect(Math.abs(flown.el.periapsisAlt - 168e3), log).toBeLessThan(3e3);
-    expect(flown.el.apoapsisAlt, log).toBeGreaterThan(311e3);
-    expect(flown.el.apoapsisAlt, log).toBeLessThan(320e3);
+    expect(Math.abs(flown.extremes.periapsisAlt - 168e3), log).toBeLessThan(3e3);
+    expect(flown.extremes.apoapsisAlt, log).toBeGreaterThan(311e3);
+    expect(flown.extremes.apoapsisAlt, log).toBeLessThan(320e3);
+    // the conic of the cut-off's instant, at 63° N, reads its apogee 18 km under the highest point reached
+    expect(Math.abs(flown.extremes.apoapsisAlt - flown.el.apoapsisAlt - 18e3), log).toBeLessThan(2e3);
     expect(flown.sim.events.some((e) => e.key === 'evt.targetOrbit'), log).toBe(true);
   });
 });
