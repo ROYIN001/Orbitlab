@@ -14,7 +14,7 @@ import type { BoosterFrame, StageFrame, VisualFrame } from '../physics/frame';
 import { interstageHeight, stackLayout } from '../physics/frame';
 import { buildSatellite, type SatelliteView } from './satellite';
 import { Plume, type PlumeKind } from './plume';
-import { bellGeometry, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout, type NozzlePos } from './liveries';
+import { bellGeometry, bellTexture, bodyBump, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout, type NozzlePos } from './liveries';
 import { clamp01, seedFromString } from './noise';
 import { vehicleDataId } from '../data/vehicles';
 import { disposeObject } from './dispose';
@@ -132,6 +132,23 @@ export function rigidNozzleIds(ownerId: string, shapeId: string, layout: EngineL
 }
 
 const ENGINE_Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+/**
+ * The bell's front faces are its inside: `bellGeometry`'s profile runs down
+ * from the throat, which winds the lathe's triangles to face the axis.
+ */
+const BELL_INTERIOR = /* glsl */`
+#include <map_fragment>
+if ( gl_FrontFacing ) diffuseColor.rgb *= vec3( 0.22, 0.2, 0.19 );
+`;
+
+/**
+ * How deep the panel joints and welds of `bodyBump` read. Bump mapping is a
+ * slope trick: this is in the relief map's grey levels per texel, not metres.
+ */
+const BODY_RELIEF = 2.5;
+/** Radial segments of a stage's barrel, nose and adapters: round in a close-up. */
+const ROUND = 64;
 
 const GLOW_GEO = new THREE.CircleGeometry(1, 12);
 GLOW_GEO.rotateX(Math.PI / 2);
@@ -260,13 +277,16 @@ export class RocketView {
       for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
         if (patched.has(material) || !(material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshBasicMaterial)) continue;
         patched.add(material);
+        // a material may bring a fragment patch of its own (the bells' sooty inside)
+        const fragment = material.userData.orbitlabFragment as string | undefined;
         material.onBeforeCompile = (shader) => {
           Object.assign(shader.uniforms, this.bend);
           shader.vertexShader = `uniform mat4 uBendWorld;\nuniform mat4 uBendInverse;\nuniform float uBendShape[${BEND_SAMPLES}];\n`
             + `uniform float uBendY0;\nuniform float uBendDy;\nuniform vec2 uBendAmp;\n`
             + shader.vertexShader.replace('#include <project_vertex>', BEND_VERTEX);
+          if (fragment) shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', fragment);
         };
-        material.customProgramCacheKey = () => 'orbitlab-bend';
+        material.customProgramCacheKey = () => (fragment ? 'orbitlab-bend-bell' : 'orbitlab-bend');
       }
     });
   }
@@ -301,10 +321,14 @@ export class RocketView {
   /** Instanced engine bells plus the matching additive nozzle-glow discs. */
   private engines(parent: THREE.Group, layout: EngineLayout, steel: boolean, ownerId: string, shapeId: string): { glow: THREE.InstancedMesh; bellLength: number; bellMat: THREE.MeshStandardMaterial; engines: EngineVisual } {
     const all = [...layout.nozzles, ...layout.verniers];
-    const geo = bellGeometry(1, 1, 12);
+    const geo = bellGeometry(1, 1, 20);
     // metalness 0.85 with the sky/sun environment probe: a real bell is bare
     // Inconel or niobium and reads as metal, not as grey plastic
-    const bellMat = new THREE.MeshStandardMaterial({ color: steel ? 0xa8aeb4 : 0x7d838a, metalness: 0.85, roughness: 0.36, side: THREE.DoubleSide, emissive: 0x000000 });
+    const bellMat = new THREE.MeshStandardMaterial({ map: bellTexture(), color: steel ? 0xc8ced4 : 0xa2a8ae, metalness: 0.85, roughness: 0.4, side: THREE.DoubleSide, emissive: 0x000000 });
+    // The inside of the bell is soot over the hot wall: dark, and dull. Its
+    // emissive glow (the throttle, in `update`) stays, so a firing engine
+    // still shows its hot throat from below.
+    bellMat.userData.orbitlabFragment = BELL_INTERIOR;
     this.materials.push(bellMat);
     const bells = new THREE.InstancedMesh(geo, bellMat, all.length);
     bells.castShadow = true;
@@ -379,12 +403,13 @@ export class RocketView {
     const noseH = !this.spec.fairing && !this.spec.exposedPayload && index === this.spec.stages.length - 1 ? spec.length * SHIP_NOSE_FRACTION : 0;
     const barrel = spec.length - noseH;
     const tex = bodyTexture(liv, spec.diameter, barrel, seed);
-    this.textures.push(tex);
+    const bump = bodyBump(liv, spec.diameter, barrel, seed);
+    this.textures.push(tex, bump);
     // `SceneManager` provides a small procedural sky/ground PMREM probe, so a
     // metallic surface now has something to reflect: bare stainless (Starship,
     // Atlas-family tanks) can run genuinely metallic. Painted stages stay
     // near-dielectric — a 0.12 metalness on white paint is already generous.
-    const bodyMat = new THREE.MeshStandardMaterial({ map: tex, metalness: liv.steel ? 0.72 : 0.12, roughness: liv.steel ? 0.34 : 0.62 });
+    const bodyMat = new THREE.MeshStandardMaterial({ map: tex, bumpMap: bump, bumpScale: BODY_RELIEF, metalness: liv.steel ? 0.72 : 0.12, roughness: liv.steel ? 0.34 : 0.62 });
     this.materials.push(bodyMat);
     const r7Core = spec.profile === 'r7Core';
     let frost: FrostCoat | null = null;
@@ -401,7 +426,9 @@ export class RocketView {
       this.materials.push(frost.material);
       this.textures.push(frost.texture);
     } else {
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, barrel, 40, 1), bodyMat);
+      // the end caps are bulkheads, not paint: the barrel's canvas smeared
+      // across a disc showed its marking as a smudge under the engines
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, barrel, ROUND, 1), [bodyMat, this.mat('#4a4d52', 0.35, 0.75), this.mat('#4a4d52', 0.35, 0.75)]);
       body.position.y = barrel / 2;
       body.castShadow = true;
       body.receiveShadow = true;
@@ -411,11 +438,13 @@ export class RocketView {
       // Its own canvas: the lathe's v runs over the nose alone, and the
       // marking and bands belong to the barrel. `LatheGeometry` and
       // `CylinderGeometry` share u, so the heat shield continues onto it.
-      const noseTex = bodyTexture({ ...liv, text: undefined, flag: undefined, bands: [], soot: false }, spec.diameter, noseH, seed + 0.5);
-      this.textures.push(noseTex);
-      const noseMat = new THREE.MeshStandardMaterial({ map: noseTex, metalness: bodyMat.metalness, roughness: bodyMat.roughness });
+      const noseLiv = { ...liv, text: undefined, flag: undefined, bands: [], soot: false };
+      const noseTex = bodyTexture(noseLiv, spec.diameter, noseH, seed + 0.5);
+      const noseBump = bodyBump(noseLiv, spec.diameter, noseH, seed + 0.5);
+      this.textures.push(noseTex, noseBump);
+      const noseMat = new THREE.MeshStandardMaterial({ map: noseTex, bumpMap: noseBump, bumpScale: BODY_RELIEF, metalness: bodyMat.metalness, roughness: bodyMat.roughness });
       this.materials.push(noseMat);
-      const nose = new THREE.Mesh(new THREE.LatheGeometry(tangentOgiveProfile(r, barrel, noseH, 24), 40), noseMat);
+      const nose = new THREE.Mesh(new THREE.LatheGeometry(tangentOgiveProfile(r, barrel, noseH, 32), ROUND), noseMat);
       nose.castShadow = true;
       g.add(nose);
     }
@@ -432,13 +461,13 @@ export class RocketView {
       truss.castShadow = true;
       g.add(truss);
     } else if (interH > 0 && topDiameter !== null) {
-      const cone = new THREE.Mesh(new THREE.CylinderGeometry(topDiameter / 2, r, interH, 40, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
+      const cone = new THREE.Mesh(new THREE.CylinderGeometry(topDiameter / 2, r, interH, ROUND, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
       cone.position.y = spec.length + interH / 2;
       cone.castShadow = true;
       g.add(cone);
     } else if (topDiameter !== null) {
       // flush interstage band
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.004, r * 1.004, Math.min(2.5, spec.length * 0.06), 40, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.004, r * 1.004, Math.min(2.5, spec.length * 0.06), ROUND, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
       band.position.y = spec.length - Math.min(2.5, spec.length * 0.06) / 2;
       g.add(band);
     }
@@ -516,7 +545,7 @@ export class RocketView {
     let ring: THREE.Mesh | undefined;
     if (spec.jettisons?.some((j) => j.part === 'interstage')) {
       const ringH = bellLength + 0.4;
-      ring = new THREE.Mesh(new THREE.CylinderGeometry(r, r, ringH, 40, 1, true), bodyMat);
+      ring = new THREE.Mesh(new THREE.CylinderGeometry(r, r, ringH, ROUND, 1, true), bodyMat);
       ring.position.y = -ringH / 2;
       g.add(ring);
     }
@@ -551,9 +580,11 @@ export class RocketView {
 
   /** Body paint for one booster group, shared by every unit of the group. */
   private boosterMaterial(spec: BoosterGroupSpec, seed: number): THREE.MeshStandardMaterial {
-    const tex = bodyTexture(boosterLivery(this.spec, spec), spec.diameter, spec.length, seed);
-    this.textures.push(tex);
-    const m = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.12, roughness: 0.6 });
+    const liv = boosterLivery(this.spec, spec);
+    const tex = bodyTexture(liv, spec.diameter, spec.length, seed);
+    const bump = bodyBump(liv, spec.diameter, spec.length, seed);
+    this.textures.push(tex, bump);
+    const m = new THREE.MeshStandardMaterial({ map: tex, bumpMap: bump, bumpScale: BODY_RELIEF, metalness: 0.12, roughness: 0.6 });
     this.materials.push(m);
     return m;
   }
@@ -581,17 +612,17 @@ export class RocketView {
       this.materials.push(frost.material);
       this.textures.push(frost.texture);
     } else {
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, spec.length, 28, 1), m);
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, spec.length, 48, 1), m);
       body.position.y = spec.length / 2;
       body.castShadow = true;
       g.add(body);
       const topH = r * 1.9;
-      const nose = new THREE.Mesh(new THREE.ConeGeometry(r, topH, 24), m);
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(r, topH, 48), m);
       nose.position.y = spec.length + topH / 2;
       nose.castShadow = true;
       g.add(nose);
       if (spec.engine.solid) {
-        const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.06, r * 1.06, r * 1.4, 24, 1, true), this.mat('#6d665c', 0.3, 0.7));
+        const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.06, r * 1.06, r * 1.4, 48, 1, true), this.mat('#6d665c', 0.3, 0.7));
         skirt.position.y = r * 0.7;
         g.add(skirt);
       }
@@ -677,25 +708,26 @@ export class RocketView {
     // through it the way the old flat `BoxGeometry` split line did.
     liv.seams = [0.25, 0.75];
     const tex = bodyTexture(liv, f.diameter, f.length, seedFromString(spec.id + 'fairing'));
-    this.textures.push(tex);
-    const m = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.15, roughness: 0.5 });
+    const bump = bodyBump(liv, f.diameter, f.length, seedFromString(spec.id + 'fairing'));
+    this.textures.push(tex, bump);
+    const m = new THREE.MeshStandardMaterial({ map: tex, bumpMap: bump, bumpScale: BODY_RELIEF, metalness: 0.15, roughness: 0.5 });
     this.materials.push(m);
     const cylH = f.length * 0.52;
     // a fairing with its own adapter narrows to the stage it stands on
     const adapter = f.adapter ?? 0;
     if (adapter > 0) {
       const below = [...spec.stages].reverse().find((st) => !st.isSpacecraft);
-      const cone = new THREE.Mesh(new THREE.CylinderGeometry(r, (below?.diameter ?? f.diameter) / 2, adapter, 40, 1), m);
+      const cone = new THREE.Mesh(new THREE.CylinderGeometry(r, (below?.diameter ?? f.diameter) / 2, adapter, ROUND, 1), m);
       cone.position.y = adapter / 2;
       cone.castShadow = true;
       g.add(cone);
     }
-    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH - adapter, 40, 1), m);
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH - adapter, ROUND, 1), m);
     cyl.position.y = adapter + (cylH - adapter) / 2;
     cyl.castShadow = true;
     g.add(cyl);
     const noseH = f.length - cylH;
-    const nose = new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, noseH, 24), 40), m);
+    const nose = new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, noseH, 32), ROUND), m);
     nose.castShadow = true;
     g.add(nose);
     // A crewed R-7 flies its escape tower on the fairing's nose and the

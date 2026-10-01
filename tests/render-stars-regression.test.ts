@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { buildStarField } from '../src/render/stars';
 import { OrbitView } from '../src/render/orbit-view';
+import { ORBIT_VIEW_MAX_PIXEL_RATIO } from '../src/render/sharpness';
 import { SceneManager } from '../src/render/scene';
 import { R_EARTH } from '../src/physics/constants';
 
@@ -121,10 +122,10 @@ describe('shared Launch/Orbit star field', () => {
     expect(far.y).toBeCloseTo(near.y, 10);
 
     // Moving displays changes DPR even when CSS canvas size is unchanged.
-    vi.stubGlobal('window', { devicePixelRatio: 3 });
+    vi.stubGlobal('window', { devicePixelRatio: 4 });
     view.render();
-    expect(ratio).toBe(2);
-    expect(stars.material.uniforms.uPixelRatio.value).toBe(2);
+    expect(ratio).toBe(ORBIT_VIEW_MAX_PIXEL_RATIO);
+    expect(stars.material.uniforms.uPixelRatio.value).toBe(ORBIT_VIEW_MAX_PIXEL_RATIO);
     vi.stubGlobal('window', { devicePixelRatio: 1.25 });
     view.render();
     expect(ratio).toBe(1.25);
