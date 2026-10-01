@@ -1469,6 +1469,8 @@ export class LessonMode implements LessonToolsHost {
       knownEvents: () => KNOWN_EVENTS,
       tryLesson: (lesson) => this.tryLesson(lesson),
       page: () => location.href,
+      // T01: a design lesson is written from the design on the satellite bench, its date and its level
+      designDesk: () => this.host.designDesk?.() ?? null,
     }, this.content);
   }
 
@@ -1550,7 +1552,7 @@ export class LessonMode implements LessonToolsHost {
   }
 
   /** T01: a lesson written on the authoring tab, into the catalogue and opened, as its students will have it. */
-  private tryLesson(lesson: Lesson): void {
+  private tryLesson(lesson: CatalogLesson): void {
     this.addFromFile({ lessons: [lesson], questions: [], issues: [], usable: true }, 'lesson.file.unusable');
     this.notice = null;
     const started = this.startLesson(lesson.id);

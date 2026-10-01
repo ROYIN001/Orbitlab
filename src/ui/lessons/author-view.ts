@@ -8,6 +8,13 @@
  * problem the reader would find, and every event no flight has, is listed
  * before anything is saved. The draft is kept in this browser only (a
  * convenience; it holds no student's data).
+ *
+ * A DESIGN LESSON (T01, map §4.1) is written the same way from the design
+ * open on the satellite bench (Build → Satellite) as it stands, with its
+ * design date and solar activity, which the lesson then fixes: the groups of
+ * the design the students may not change, and criteria on design measures
+ * (src/lessons/authoring.ts `draftDesignLesson`, read back through the
+ * lesson-file reader).
  */
 import { getLang, t } from '../../i18n';
 import type { MissionState } from '../../config/mission-file';
@@ -15,12 +22,18 @@ import { missionDocument } from '../../config/mission-file';
 import { missionVehicle } from '../../data/vehicles';
 import { missionSatellite } from '../../data/satellites';
 import { siteById } from '../../data/sites';
-import { DEFAULT_LOCKS, draftLesson, emptyText, lessonIdFrom, newDraft, type DraftCriterion, type DraftText, type LessonDraft } from '../../lessons/authoring';
+import {
+  DEFAULT_LOCKS, WRITER_DESIGN_MEASURES, draftDesignLesson, draftLesson, emptyText, lessonIdFrom, newDesignDraft, newDraft,
+  type DesignDesk, type DesignLessonDraft, type DraftCriterion, type DraftDesignCriterion, type DraftText, type LessonDraft,
+} from '../../lessons/authoring';
+import { DESIGN_LOCK_GROUPS, type DesignLockGroup } from '../../lessons/design-lesson';
+import { designMeasureName, designUnitText } from './design-text';
+import { levelName } from './design-strip';
 import { LESSON_FILE_EXTENSION, lessonFileText, type FileIssue } from '../../lessons/lesson-file';
 import { SCENARIO_LINK_MAX, scenarioLink } from '../../lessons/scenario-link';
 import { MEASURE_IDS, MEASURES } from '../../lessons/measures';
 import { unitText } from '../../lessons/text';
-import { DOMAINS, LOCK_KEYS, type Lesson, type LockKey, type MeasureId } from '../../lessons/types';
+import { DOMAINS, LOCK_KEYS, type CatalogLesson, type DesignMeasureId, type LockKey, type MeasureId } from '../../lessons/types';
 import { localized, satelliteName, siteName } from '../names';
 import { downloadBlob } from '../download';
 
@@ -30,12 +43,20 @@ export interface AuthorHost {
   /** the event keys a flight emits (the dictionary's `evt.*`) */
   knownEvents(): ReadonlySet<string>;
   /** put the lesson in this browser's catalogue and open it */
-  tryLesson(lesson: Lesson): void;
+  tryLesson(lesson: CatalogLesson): void;
+  /** T01: the design open on the satellite bench, its design date and its level; null when there is none to be had */
+  designDesk?(): DesignDesk | null;
   /** the app's own address, for the link */
   page(): string;
 }
 
 const STORE = 'orbitlab.author.draft';
+/** T01: the design lesson's draft, and which of the two the page shows: conveniences of this browser only */
+const DESIGN_STORE = 'orbitlab.author.design';
+const KIND_STORE = 'orbitlab.author.kind';
+type AuthorKind = 'flight' | 'design';
+/** What both drafts have: the texts and where the lesson is listed. */
+type TextsDraft = Pick<LessonDraft, 'id' | 'title' | 'brief' | 'hints' | 'mode' | 'domains'>;
 const LANGS = ['en', 'ru', 'th'] as const;
 type BoundMode = 'min' | 'max' | 'range' | 'target' | 'mission';
 
@@ -65,6 +86,30 @@ function loadDraft(): LessonDraft {
 function saveDraft(d: LessonDraft): void {
   try { localStorage.setItem(STORE, JSON.stringify(d)); } catch { /* a convenience only */ }
 }
+function loadDesignDraft(): DesignLessonDraft {
+  try {
+    const raw = JSON.parse(localStorage.getItem(DESIGN_STORE) ?? 'null') as DesignLessonDraft | null;
+    if (raw && typeof raw.id === 'string' && Array.isArray(raw.criteria)) return { ...newDesignDraft(), ...raw };
+  } catch { /* a convenience only */ }
+  return newDesignDraft(lessonIdFrom('', `design-${stamp()}`));
+}
+function saveDesignDraft(d: DesignLessonDraft): void {
+  try { localStorage.setItem(DESIGN_STORE, JSON.stringify(d)); } catch { /* a convenience only */ }
+}
+function loadKind(): AuthorKind {
+  try { return localStorage.getItem(KIND_STORE) === 'design' ? 'design' : 'flight'; } catch { return 'flight'; }
+}
+/** The writer's lock groups in the satellite designer's own words. */
+const GROUP_KEY: Record<DesignLockGroup, string> = {
+  orbit: 'build.sat.g.orbit', bus: 'build.sat.g.bus', power: 'build.sat.g.power', propulsion: 'build.sat.g.propulsion',
+  adcs: 'build.sat.tab.attitude', comms: 'build.sat.g.comms', payload: 'build.sat.g.payload',
+};
+type DesignBoundMode = 'min' | 'max' | 'range' | 'target';
+function designBoundMode(c: Extract<DraftDesignCriterion, { kind: 'design' }>): DesignBoundMode {
+  if (c.target !== undefined) return 'target';
+  if (c.min !== undefined && c.max !== undefined) return 'range';
+  return c.max !== undefined ? 'max' : 'min';
+}
 /** Minutes since 2020, in base 36: a short, stable suffix for an id with no English words in its title. */
 const stamp = (): string => Math.floor((Date.now() - Date.UTC(2020, 0, 1)) / 60000).toString(36);
 
@@ -82,7 +127,8 @@ function whereText(where: string): string {
   if (where === 'id') return t('lesson.author.id');
   for (const [part, key] of [['.title', 'lesson.author.field.title'], ['title', 'lesson.author.field.title'], ['.brief', 'lesson.author.field.brief'],
     ['brief', 'lesson.author.field.brief'], ['.hints', 'lesson.author.field.hints'], ['.domains', 'lesson.author.field.areas'],
-    ['.endEvent', 'lesson.author.field.endEvent'], ['.mission', 'lesson.author.mission'], ['.locked', 'lesson.author.locks']] as const) {
+    ['.endEvent', 'lesson.author.field.endEvent'], ['.mission', 'lesson.author.mission'], ['.locked', 'lesson.author.locks'],
+    ['.start.design', 'lesson.design.author.desk'], ['.designDate', 'lesson.design.author.desk']] as const) {
     if (where.endsWith(part) || where.includes(`${part}[`) || where === part) return t(key);
   }
   return t('lesson.author.field.lesson');
@@ -115,39 +161,89 @@ export function issueSentence(i: FileIssue): string {
 
 class AuthorView {
   private draft = loadDraft();
+  /** T01: the design lesson's draft, and which of the two the page writes */
+  private designDraft = loadDesignDraft();
+  private kind: AuthorKind = loadKind();
   private idEdited = false;
   private readonly issuesBox = el('div', 'author-issues');
   private readonly result = el('div', 'author-result');
   private readonly actions = el('div', 'author-actions');
-  private lesson: Lesson | null = null;
+  private lesson: CatalogLesson | null = null;
 
   constructor(private readonly host: AuthorHost, private readonly container: HTMLElement) {
-    // an id the page made (from the English title, or a stamp while there is none) follows the title; a typed one stays
-    this.idEdited = this.draft.id !== lessonIdFrom(this.draft.title.en) && !this.draft.id.startsWith('class-lesson-');
+    this.idEdited = this.editedId();
+  }
+
+  /** An id the page made (from the English title, or a stamp while there is none) follows the title; a typed one stays. */
+  private editedId(): boolean {
+    const d = this.texts();
+    return d.id !== lessonIdFrom(d.title.en) && !d.id.startsWith('class-lesson-') && !d.id.startsWith('class-design-');
+  }
+
+  /** The draft on the page: its texts and listing are the same fields for both kinds. */
+  private texts(): TextsDraft {
+    return this.kind === 'design' ? this.designDraft : this.draft;
   }
 
   applyLanguage(): void { this.render(); }
 
   render(): void {
     const body = el('div', 'lesson-catalog author');
-    body.append(el('h2', undefined, t('lesson.author.title')), el('p', 'lead', t('lesson.author.lead')));
-    body.append(this.missionBox(), this.textsBox(), this.locksBox(), this.criteriaBox(), this.issuesBox, this.actions, this.result);
+    body.append(el('h2', undefined, t('lesson.author.title')), el('p', 'lead', t('lesson.author.lead')), this.kindBox());
+    if (this.kind === 'design') body.append(this.deskBox(), this.textsBox(), this.designLocksBox(), this.designCriteriaBox());
+    else body.append(this.missionBox(), this.textsBox(), this.locksBox(), this.criteriaBox());
+    body.append(this.issuesBox, this.actions, this.result);
     this.container.replaceChildren(body);
     this.update();
   }
 
+  /** T01: what the students do — fly a mission, or design a satellite. */
+  private kindBox(): HTMLElement {
+    const box = el('fieldset', 'author-kind-box');
+    box.append(el('legend', undefined, t('lesson.design.author.kind')));
+    for (const k of ['flight', 'design'] as const) {
+      const lab = el('label');
+      const r = el('input');
+      r.type = 'radio';
+      r.name = 'author-kind';
+      r.checked = this.kind === k;
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        this.kind = k;
+        try { localStorage.setItem(KIND_STORE, k); } catch { /* a convenience only */ }
+        this.idEdited = this.editedId();
+        this.result.replaceChildren();
+        this.render();
+      });
+      lab.append(r, document.createTextNode(` ${t(k === 'flight' ? 'lesson.design.author.kind.flight' : 'lesson.design.author.kind.design')}`));
+      box.append(lab);
+    }
+    return box;
+  }
+
   /** The draft changed: keep it, check it, and say what the reader finds. */
   private update(): void {
-    saveDraft(this.draft);
-    const mission = this.host.mission();
-    const { lesson, issues } = mission ? draftLesson(this.draft, missionDocument(mission), this.host.knownEvents()) : { lesson: null, issues: [] };
+    let lesson: CatalogLesson | null = null;
+    let issues: FileIssue[] = [];
+    let none: string | null = null;
+    if (this.kind === 'design') {
+      saveDesignDraft(this.designDraft);
+      const desk = this.host.designDesk?.() ?? null;
+      if (desk) ({ lesson, issues } = draftDesignLesson(this.designDraft, desk));
+      else none = t('lesson.design.author.deskNone');
+    } else {
+      saveDraft(this.draft);
+      const mission = this.host.mission();
+      if (mission) ({ lesson, issues } = draftLesson(this.draft, missionDocument(mission), this.host.knownEvents()));
+      else none = t('lesson.author.missionNone');
+    }
     this.lesson = lesson;
     const list = el('ul');
     for (const i of issues) list.append(el('li', i.level, issueSentence(i)));
     const ok = lesson && !issues.length;
     this.issuesBox.className = `author-issues lesson-file-notice ${lesson ? (issues.length ? 'warn' : 'ok') : 'error'}`;
     this.issuesBox.setAttribute('role', 'status');
-    this.issuesBox.replaceChildren(el('p', undefined, !mission ? t('lesson.author.missionNone') : ok ? t('lesson.author.ok') : lesson ? t('lesson.author.warnings') : t('lesson.author.errors')));
+    this.issuesBox.replaceChildren(el('p', undefined, none ?? (ok ? t('lesson.author.ok') : lesson ? t('lesson.author.warnings') : t('lesson.author.errors'))));
     if (issues.length) this.issuesBox.append(list);
     this.paintActions();
   }
@@ -162,7 +258,13 @@ class AuthorView {
     };
     const again = el('button', undefined, t('lesson.author.startOver'));
     again.type = 'button';
-    again.addEventListener('click', () => { this.draft = newDraft(lessonIdFrom('', `lesson-${stamp()}`)); this.idEdited = false; this.result.replaceChildren(); this.render(); });
+    again.addEventListener('click', () => {
+      if (this.kind === 'design') this.designDraft = newDesignDraft(lessonIdFrom('', `design-${stamp()}`));
+      else this.draft = newDraft(lessonIdFrom('', `lesson-${stamp()}`));
+      this.idEdited = false;
+      this.result.replaceChildren();
+      this.render();
+    });
     this.actions.replaceChildren(
       button(t('lesson.author.save'), () => this.saveFile(), true),
       button(t('lesson.author.link'), () => void this.makeLink()),
@@ -245,7 +347,7 @@ class AuthorView {
   }
 
   private textsBox(): HTMLElement {
-    const d = this.draft;
+    const d = this.texts();
     const box = this.section(t('lesson.author.texts'), t('lesson.author.textsNote'));
     const idField = el('label', 'ws-field');
     const id = el('input');
@@ -255,7 +357,11 @@ class AuthorView {
     id.addEventListener('input', () => { d.id = id.value; this.idEdited = true; this.update(); });
     idField.append(el('span', undefined, t('lesson.author.id')), id, el('small', 'lesson-note', t('lesson.author.idNote')));
     const title = this.textRow(t('lesson.author.field.title'), d.title, false, () => {
-      if (!this.idEdited) { d.id = lessonIdFrom(d.title.en, d.id.startsWith('class-lesson-') ? d.id.slice(6) : `lesson-${stamp()}`); id.value = d.id; }
+      if (!this.idEdited) {
+        const kept = d.id.startsWith('class-lesson-') || d.id.startsWith('class-design-') ? d.id.slice(6) : `${this.kind === 'design' ? 'design' : 'lesson'}-${stamp()}`;
+        d.id = lessonIdFrom(d.title.en, kept);
+        id.value = d.id;
+      }
       this.update();
     });
     const brief = this.textRow(t('lesson.author.field.brief'), d.brief, true, () => this.update());
@@ -273,6 +379,7 @@ class AuthorView {
     const mode = el('select');
     for (const [m, key] of [['explore', 'mode.explore'], ['engineer', 'mode.engineer']] as const) mode.append(new Option(t(key), m, false, d.mode === m));
     mode.addEventListener('change', () => { d.mode = mode.value as LessonDraft['mode']; this.update(); });
+    // a design lesson opens the satellite designer (Explore) or its bench (Engineer)
     modeField.append(el('span', undefined, t('lesson.author.mode')), mode);
     const areas = el('fieldset', 'author-areas');
     areas.append(el('legend', undefined, t('lesson.author.field.areas')));
@@ -434,6 +541,114 @@ class AuthorView {
         fields.append(key, present);
         break;
       }
+    }
+    const remove = el('button', 'author-remove', '✕');
+    remove.type = 'button';
+    remove.title = t('lesson.author.remove');
+    remove.setAttribute('aria-label', `${t('lesson.author.remove')}: ${t('lesson.author.criterionN', { n: i + 1 })}`);
+    remove.addEventListener('click', () => { d.criteria.splice(i, 1); this.render(); });
+    row.append(fields, remove);
+    return row;
+  }
+
+  // ─── a design lesson (T01) ─────────────────────────────────────────────────
+
+  /** The design on the satellite bench the lesson starts from, its date and its level, as they stand. */
+  private deskBox(): HTMLElement {
+    const box = this.section(t('lesson.design.author.desk'), t('lesson.design.author.deskNote'));
+    const desk = this.host.designDesk?.() ?? null;
+    if (!desk) { box.append(el('p', 'ws-what', t('lesson.design.author.deskNone'))); return box; }
+    const o = desk.design.orbit;
+    const n = (v: number, d = 0): string => v.toLocaleString(getLang(), { maximumFractionDigits: d, useGrouping: false });
+    box.append(el('p', 'ws-what', t('lesson.design.author.deskLine', {
+      name: desk.design.name.trim() || desk.design.template, pe: n(o.perigee / 1000), ap: n(o.apogee / 1000), i: n(o.inclination, 2),
+      date: desk.date, level: levelName(desk.level),
+    })));
+    return box;
+  }
+
+  /** The groups of the design the students may not change. */
+  private designLocksBox(): HTMLElement {
+    const d = this.designDraft;
+    const box = this.section(t('lesson.author.locks'), t('lesson.design.author.locksNote'));
+    const list = el('div', 'ws-areas author-locks');
+    for (const g of DESIGN_LOCK_GROUPS) {
+      const lab = el('label');
+      const c = el('input');
+      c.type = 'checkbox';
+      c.checked = d.lockGroups.includes(g);
+      c.addEventListener('change', () => { d.lockGroups = DESIGN_LOCK_GROUPS.filter((x) => (x === g ? c.checked : d.lockGroups.includes(x))); this.update(); });
+      lab.append(c, document.createTextNode(` ${t(GROUP_KEY[g])}`));
+      list.append(lab);
+    }
+    box.append(list);
+    return box;
+  }
+
+  private designCriteriaBox(): HTMLElement {
+    const d = this.designDraft;
+    const box = this.section(t('lesson.design.author.criteria'), t('lesson.design.author.criteriaNote'));
+    d.criteria.forEach((c, i) => box.append(this.designCriterionRow(c, i)));
+    const add = el('button', undefined, `+ ${t('lesson.author.add')}`);
+    add.type = 'button';
+    add.addEventListener('click', () => { d.criteria.push({ kind: 'design', measure: 'sat.batteryDod', max: 30 }); this.render(); });
+    box.append(add);
+    return box;
+  }
+
+  private designCriterionRow(c: DraftDesignCriterion, i: number): HTMLElement {
+    const d = this.designDraft;
+    const row = el('div', 'author-crit');
+    row.append(el('b', 'author-crit-n', `${i + 1}`));
+    const kind = el('select', 'author-kind');
+    kind.setAttribute('aria-label', t('lesson.author.criterionN', { n: i + 1 }));
+    kind.append(new Option(t('lesson.design.author.crit.design'), 'design', false, c.kind === 'design'), new Option(t('lesson.design.author.crit.answer'), 'answer', false, c.kind === 'answer'));
+    kind.addEventListener('change', () => {
+      d.criteria[i] = kind.value === 'design' ? { kind: 'design', measure: c.measure, min: 0 } : { kind: 'answer', measure: c.measure, tolPct: 5, prompt: emptyText() };
+      this.render();
+    });
+    row.append(kind);
+    const fields = el('div', 'author-crit-fields');
+    const measure = el('select');
+    measure.setAttribute('aria-label', t('lesson.author.measure'));
+    for (const m of WRITER_DESIGN_MEASURES) {
+      const u = designUnitText(m);
+      measure.append(new Option(`${designMeasureName(m)}${u ? `, ${u}` : ''}`, m, false, m === c.measure));
+    }
+    measure.addEventListener('change', () => { c.measure = measure.value as DesignMeasureId; this.render(); });
+    fields.append(measure);
+    const unit = designUnitText(c.measure);
+    if (c.kind === 'design') {
+      const mode = el('select');
+      mode.setAttribute('aria-label', t('lesson.author.bound'));
+      for (const b of ['min', 'max', 'range', 'target'] as const) mode.append(new Option(t(`lesson.author.bound.${b}`), b, false, designBoundMode(c) === b));
+      mode.addEventListener('change', () => {
+        const b = mode.value as DesignBoundMode;
+        delete c.min; delete c.max; delete c.target; delete c.tol;
+        if (b === 'min') c.min = 0;
+        else if (b === 'max') c.max = 0;
+        else if (b === 'range') { c.min = 0; c.max = 0; } else { c.target = 0; c.tol = 1; }
+        this.render();
+      });
+      fields.append(mode);
+      const b = designBoundMode(c);
+      if (b === 'min' || b === 'range') fields.append(this.numberInput(t('lesson.author.min', { unit }), c.min, (v) => { c.min = v; }));
+      if (b === 'max' || b === 'range') fields.append(this.numberInput(t('lesson.author.max', { unit }), c.max, (v) => { c.max = v; }));
+      if (b === 'target') {
+        fields.append(this.numberInput(t('lesson.author.target', { unit }), c.target, (v) => { c.target = v; }),
+          this.numberInput(t('lesson.author.tol', { unit }), c.tol, (v) => { c.tol = v; }));
+      }
+    } else {
+      const pct = c.tolPct !== undefined;
+      const how = el('select');
+      how.setAttribute('aria-label', t('lesson.author.tolKind'));
+      how.append(new Option(t('lesson.author.tolAbs', { unit }), 'abs', false, !pct), new Option(t('lesson.author.tolPct'), 'pct', false, pct));
+      how.addEventListener('change', () => {
+        if (how.value === 'pct') { c.tolPct = c.tolPct ?? 5; delete c.tol; } else { c.tol = c.tol ?? 1; delete c.tolPct; }
+        this.render();
+      });
+      fields.append(how, this.numberInput(pct ? t('lesson.author.tolPct') : t('lesson.author.tol', { unit }), pct ? c.tolPct : c.tol, (v) => { if (pct) c.tolPct = v; else c.tol = v; }));
+      fields.append(this.textRow(t('lesson.author.prompt'), c.prompt, false, () => this.update()));
     }
     const remove = el('button', 'author-remove', '✕');
     remove.type = 'button';
