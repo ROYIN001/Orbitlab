@@ -20,10 +20,11 @@
  * browser's Back leaves it, and opening a lesson goes to the workspace.
  */
 import { t, getLang } from '../../i18n';
+import { en } from '../../i18n/en';
 import type { AppMode } from '../app-mode';
 import type { Simulation } from '../../physics/simulation';
 import type { MissionState } from '../../config/mission-file';
-import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
+import { allLessons, BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
 import { awaitingAnswers, flightEnded, flightStarted, gradeShown, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
@@ -31,7 +32,8 @@ import { FlightLessons } from '../../lessons/flight-lessons';
 import { draftValue, submittedAnswers, type AnswerDrafts } from '../../lessons/answer-drafts';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
-import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
+import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue, type ParsedLessonFile } from '../../lessons/lesson-file';
+import { SCENARIO_LINK_MAX, SCENARIO_PARAM, readScenarioParam, scenarioLink } from '../../lessons/scenario-link';
 import {
   RESULTS_FILE_EXTENSION, clearRevealed, flightRecord, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
@@ -71,6 +73,8 @@ export interface LessonHost {
   caseInput?(): Promise<CaseSource>;
   /** the case lesson open now, or none: the Orbit section keeps that case's answers out of sight until it is answered */
   lessonCase?(state: CaseLessonState | null): void;
+  /** T01: the mission on the setup panel, as it stands — what the authoring tab turns into a scenario */
+  mission?(): MissionState;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
@@ -85,9 +89,17 @@ const STUDENT_KEY = 'orbitlab.student';
 export const LESSONS_HASH = '#/lessons';
 export const TEST_HASH = '#/lessons/test';
 export const WORKSHEETS_HASH = '#/lessons/worksheets';
-type PageView = 'catalog' | 'test' | 'worksheets';
-const pageViewOf = (hash: string): PageView | null =>
-  hash === LESSONS_HASH ? 'catalog' : hash === TEST_HASH ? 'test' : hash === WORKSHEETS_HASH ? 'worksheets' : null;
+/** T01/T02, instructor mode (owner decision 2026-09-29: on the lessons page): writing a scenario, and checking a class's results. */
+export const AUTHOR_HASH = '#/lessons/author';
+export const CHECK_HASH = '#/lessons/check';
+type PageView = 'catalog' | 'test' | 'worksheets' | 'author' | 'check';
+const PAGE_HASHES: ReadonlyArray<readonly [PageView, string]> = [
+  ['catalog', LESSONS_HASH], ['test', TEST_HASH], ['worksheets', WORKSHEETS_HASH], ['author', AUTHOR_HASH], ['check', CHECK_HASH],
+];
+const pageViewOf = (hash: string): PageView | null => PAGE_HASHES.find(([, h]) => h === hash)?.[0] ?? null;
+/** The event keys a flight emits: the dictionary's `evt.*` (tests/i18n.test.ts's family), for a lesson file's warnings (T01). */
+const KNOWN_EVENTS: ReadonlySet<string> = new Set(Object.keys(en).filter((k) => /^evt\.[a-zA-Z]+$/.test(k)));
+const BUILTIN_IDS: ReadonlySet<string> = new Set([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
 
 /** A case lesson's own state: its data, frozen when it opened, and the sheet and key built from them. */
 interface CaseState {
@@ -371,9 +383,20 @@ export class LessonMode implements LessonToolsHost {
     return { lesson: a.lesson, grade: a.grade, hintsShown: lessonProgress(this.progressData, a.lesson.id).hintsShown, awaiting: a.grade ? awaitingAnswers(a.lesson, a.grade) : [] };
   }
 
-  /** `?lesson=<id>` opens a lesson (a link from a teacher, or the strip's own link). */
+  /**
+   * `?lesson=<id>` opens a lesson (a link from a teacher, or the strip's own
+   * link); `?scenario=z…` (T01) brings a teacher's whole lesson file and opens
+   * its lesson.
+   */
   openFromLink(): void {
     const url = new URL(location.href);
+    const scenario = url.searchParams.get(SCENARIO_PARAM);
+    if (scenario !== null) {
+      url.searchParams.delete(SCENARIO_PARAM);
+      history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+      void this.openScenario(scenario);
+      return;
+    }
     const id = url.searchParams.get('lesson');
     if (id === null) return;
     url.searchParams.delete('lesson');
@@ -871,7 +894,14 @@ export class LessonMode implements LessonToolsHost {
     const url = new URL(location.href);
     url.search = '';
     url.searchParams.set('lesson', lesson.id);
-    try { await navigator.clipboard.writeText(url.toString()); this.flash(t('lesson.strip.linkCopied')); } catch { this.flash(url.toString()); }
+    let text = url.toString();
+    // T01: a teacher's own lesson is not in another browser's catalogue: its link carries the lesson itself
+    if (!BUILTIN_IDS.has(lesson.id)) {
+      const link = await scenarioLink(location.href, [lesson]);
+      if (!link.fits) { this.flash(t('lesson.author.linkTooLong', { length: link.length, max: SCENARIO_LINK_MAX })); return; }
+      text = link.url;
+    }
+    try { await navigator.clipboard.writeText(text); this.flash(t('lesson.strip.linkCopied')); } catch { this.flash(text); }
   }
 
   private flash(text: string): void {
@@ -931,6 +961,8 @@ export class LessonMode implements LessonToolsHost {
     this.paintPageBar();
     if (view === 'catalog') this.renderCatalog();
     else if (view === 'test') void this.showAssessment();
+    else if (view === 'author') void this.showAuthor();
+    else if (view === 'check') void this.showCheck();
     else void this.showWorksheets();
     this.page.scrollTo(0, 0);
   }
@@ -948,7 +980,8 @@ export class LessonMode implements LessonToolsHost {
     back.addEventListener('click', () => this.closePage());
     const tabs = el('nav', 'lessons-page-tabs');
     tabs.setAttribute('aria-label', t('lesson.button'));
-    for (const [view, key, hash] of [['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH], ['worksheets', 'ws.tab', WORKSHEETS_HASH]] as const) {
+    for (const [view, key, hash] of [['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH], ['worksheets', 'ws.tab', WORKSHEETS_HASH],
+      ['author', 'lesson.author.tab', AUTHOR_HASH], ['check', 'lesson.check.tab', CHECK_HASH]] as const) {
       const a = el('a', undefined, t(key));
       a.href = hash;
       if (this.pageView === view) a.setAttribute('aria-current', 'page');
@@ -1103,6 +1136,25 @@ export class LessonMode implements LessonToolsHost {
     }, this.content);
   }
 
+  /** T01: the authoring tab, on the setup panel's mission as it stands. */
+  private async showAuthor(): Promise<void> {
+    const m = await import('./author-view');
+    if (this.pageView !== 'author') return;
+    this.assessmentView = m.renderAuthor({
+      mission: () => this.host.mission?.() ?? null,
+      knownEvents: () => KNOWN_EVENTS,
+      tryLesson: (lesson) => this.tryLesson(lesson),
+      page: () => location.href,
+    }, this.content);
+  }
+
+  /** T02: the checking tab, with the teacher's lessons this browser's catalogue already has. */
+  private async showCheck(): Promise<void> {
+    const m = await import('./check-view');
+    if (this.pageView !== 'check') return;
+    this.assessmentView = m.renderCheck({ customLessons: () => this.progressData.customLessons }, this.content);
+  }
+
   /** The open case lesson's sheet, from its frozen data, in the language on screen; the key only once it gives nothing away. */
   private caseSheet(): { lesson: CaseLesson; sheet: Worksheet | null; keyOpen: boolean } | null {
     const a = this.active;
@@ -1128,22 +1180,55 @@ export class LessonMode implements LessonToolsHost {
     let raw: unknown = null;
     try { raw = JSON.parse(await file.text()); } catch { /* reported below */ }
     const m = await this.loadAssessment();
-    const parsed = parseLessonFile(raw, m.datasetIds());
-    if (!parsed.usable) {
-      this.notice = { level: 'error', text: t('lesson.file.unusable'), details: [] };
-    } else {
-      const keep = <T extends { id: string }>(old: T[], added: T[]): T[] => [...old.filter((x) => !added.some((y) => y.id === x.id)), ...added];
-      this.progressData.customLessons = keep(this.progressData.customLessons, parsed.lessons);
-      this.progressData.customQuestions = keep(this.progressData.customQuestions, parsed.questions);
-      this.save();
-      const errors = parsed.issues.filter((i) => i.level === 'error');
-      this.notice = {
-        level: errors.length ? 'warn' : 'ok',
-        text: t('lesson.file.loaded', { lessons: parsed.lessons.length, questions: parsed.questions.length }),
-        details: errors.length ? [t('lesson.file.issues'), ...errors.map(issueText)] : [],
-      };
-    }
+    this.addFromFile(parseLessonFile(raw, m.datasetIds(), KNOWN_EVENTS), 'lesson.file.unusable');
     this.renderCatalog();
+  }
+
+  /** A lesson file's lessons and questions into this browser's catalogue, and what was found in it said. */
+  private addFromFile(parsed: ParsedLessonFile, unusable: string): boolean {
+    if (!parsed.usable) {
+      this.notice = { level: 'error', text: t(unusable), details: [] };
+      return false;
+    }
+    const keep = <T extends { id: string }>(old: T[], added: T[]): T[] => [...old.filter((x) => !added.some((y) => y.id === x.id)), ...added];
+    this.progressData.customLessons = keep(this.progressData.customLessons, parsed.lessons);
+    this.progressData.customQuestions = keep(this.progressData.customQuestions, parsed.questions);
+    this.save();
+    const errors = parsed.issues.filter((i) => i.level === 'error');
+    // T01: an event no flight emits reads, and then never happens: said, though the lesson is kept
+    const events = parsed.issues.filter((i) => i.code === 'event');
+    this.notice = {
+      level: errors.length || events.length ? 'warn' : 'ok',
+      text: t('lesson.file.loaded', { lessons: parsed.lessons.length, questions: parsed.questions.length }),
+      details: [...(errors.length ? [t('lesson.file.issues'), ...errors.map(issueText)] : []),
+        ...events.map((i) => t('lesson.author.issue.event', { where: i.where, key: i.detail ?? '' }))],
+    };
+    return true;
+  }
+
+  /** T01: a scenario link's lesson file, added like a file, and its lesson opened (the catalogue, when it holds several or needs a word). */
+  private async openScenario(param: string): Promise<void> {
+    let raw: unknown = null;
+    try { raw = await readScenarioParam(param); } catch { /* reported as unusable */ }
+    const m = await this.loadAssessment();
+    const parsed = parseLessonFile(raw, m.datasetIds(), KNOWN_EVENTS);
+    if (!this.addFromFile(parsed, 'lesson.author.linkUnusable')) { this.openCatalog(); return; }
+    const written = parsed.lessons.filter((l) => !l.comingSoon);
+    if (written.length === 1 && this.notice?.level === 'ok') {
+      this.notice = null;
+      const started = this.startLesson(written[0].id);
+      if (started.ok) return;
+      this.notice = { level: 'error', text: started.reason, details: [] };
+    }
+    this.openCatalog();
+  }
+
+  /** T01: a lesson written on the authoring tab, into the catalogue and opened, as its students will have it. */
+  private tryLesson(lesson: Lesson): void {
+    this.addFromFile({ lessons: [lesson], questions: [], issues: [], usable: true }, 'lesson.file.unusable');
+    this.notice = null;
+    const started = this.startLesson(lesson.id);
+    if (!started.ok) { this.notice = { level: 'error', text: started.reason, details: [] }; this.openCatalog(); }
   }
 
   private async exportResults(): Promise<void> {

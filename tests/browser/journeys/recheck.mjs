@@ -2,8 +2,8 @@
  * The instructor's re-check in Chromium, the browser half of the
  * Node-against-Chromium test (roadmap T02; Phase 4 map §4.2; the Node half is
  * tests/recheck.test.ts, which holds the acceptance and this table in its
- * header). The built app opens on the lessons page; the `check_results`
- * lesson tool is called through the harness's `app.mcp` with
+ * header). The built app opens on the checking page (`#/lessons/check`); the
+ * `check_results` lesson tool is called through the harness's `app.mcp` with
  * the committed results file and the instructor's scenario file
  * (tests/fixtures/recheck/), so each record is flown again in the page's own
  * re-check worker; the answer is held to `expected.json` (Node's re-check,
@@ -82,7 +82,8 @@ export default async function recheck(t) {
   const results = read('results.orbitlab-results.json');
   const scenario = read('scenario.orbitlab-lesson.json');
   const expected = read('expected.json');
-  const app = await t.open({ hash: '#/lessons', viewport: 'desktop' });
+  const app = await t.open({ hash: '#/lessons/check', viewport: 'desktop' });
+  t.check(await app.page.locator('body[data-lessons-page="check"]').count() === 1, 'the checking page is open');
   const t0 = Date.now();
   const out = await app.mcp('check_results', { results: [results], lessons: scenario, names: ['results.orbitlab-results.json'] });
   const seconds = (Date.now() - t0) / 1000;

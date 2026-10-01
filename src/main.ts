@@ -585,6 +585,8 @@ class App {
       clock: () => this.recorder.clock,
       panelRoot: document.getElementById('setup')!,
       renderPanel: () => this.panel.render(),
+      // T01: the authoring tab writes a scenario on the mission the panel holds
+      mission: () => this.panel.missionState(),
     });
     this.lessons.openFromHash(startHash);
   }
@@ -818,7 +820,7 @@ class App {
     this.started = true;
     requestAnimationFrame((now) => this.frame(now));
     registerServiceWorker();
-    this.lessons.openFromLink(); // E03: ?lesson=<id>
+    this.lessons.openFromLink(); // E03: ?lesson=<id>; T01: ?scenario=z…
   }
 
   /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
