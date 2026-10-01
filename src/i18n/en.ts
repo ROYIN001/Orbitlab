@@ -4755,5 +4755,7 @@ export const en: Record<string, string> = {
   'lesson.file.n.lessons': 'lesson|lessons',
   'lesson.file.n.questions': 'placement-test question|placement-test questions',
   'lesson.strip.hintsNone': 'No hints',
+  'lesson.author.lessonOpen': 'Lesson {n}, "{title}", is still open, so this is its mission, not yours. To write from your own, leave the lesson first: "Leave the lesson" on its strip.',
+  'lesson.design.author.lessonOpen': 'Lesson {n}, "{title}", is still open, so this is its design, not yours. To write from your own, leave the lesson first: "Leave the lesson" on its strip.',
   // --- end of W ---
 };

@@ -50,6 +50,12 @@ export interface AuthorHost {
   designDesk?(): DesignDesk | null;
   /** the app's own address, for the link */
   page(): string;
+  /**
+   * W: the lesson open now, its number and title, and what it sets: a flight lesson the setup panel's mission, a
+   * design lesson the bench's design. The page says so where it takes them, or a teacher who tried a pack lesson
+   * writes from its mission or design unawares. Null when none is open.
+   */
+  openLesson?(): { n: string; title: string; sets: 'mission' | 'design' | 'none' } | null;
 }
 
 const STORE = 'orbitlab.author.draft';
@@ -327,6 +333,8 @@ class AuthorView {
     orbit = localized(`orbit.${m.orbitId}.name`, m.orbitId);
     const time = m.launchTime.toISOString().slice(0, 16).replace('T', ' ');
     box.append(el('p', 'ws-what', t('lesson.author.missionLine', { vehicle, satellite, site, orbit, time, mass: Math.round(m.payloadMass).toLocaleString(getLang()) })));
+    const open = this.host.openLesson?.() ?? null;
+    if (open?.sets === 'mission') box.append(el('p', 'lesson-note warn', t('lesson.author.lessonOpen', { n: open.n, title: open.title })));
     if (m.dynamics?.model === 'sixDof') box.append(el('p', 'lesson-note fail', t('lesson.author.sixDof')));
     return box;
   }
@@ -567,6 +575,8 @@ class AuthorView {
       name: desk.design.name.trim() || desk.design.template, pe: n(o.perigee / 1000), ap: n(o.apogee / 1000), i: n(o.inclination, 2),
       date: desk.date, level: levelName(desk.level),
     })));
+    const open = this.host.openLesson?.() ?? null;
+    if (open?.sets === 'design') box.append(el('p', 'lesson-note warn', t('lesson.design.author.lessonOpen', { n: open.n, title: open.title })));
     return box;
   }
 

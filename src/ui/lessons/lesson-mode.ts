@@ -1630,6 +1630,12 @@ export class LessonMode implements LessonToolsHost {
       page: () => location.href,
       // T01: a design lesson is written from the design on the satellite bench, its date and its level
       designDesk: () => this.host.designDesk?.() ?? null,
+      // W: a lesson still open lends the writer its mission or its design; the page says which
+      openLesson: () => {
+        const l = this.active?.lesson;
+        if (!l) return null;
+        return { n: lessonNumber(l), title: localText(l.title), sets: isDesignLesson(l) ? 'design' : isFlightLesson(l) ? 'mission' : 'none' };
+      },
     }, this.content);
   }
 
