@@ -337,9 +337,9 @@
       ],
       "hints": [
         {
-          "en": "Navigation (INS / GNSS) → Star tracker. The telemetry shows the position error as it grows.",
-          "ru": "«Навигация (БИНС / ГНСС)» → «Звёздный датчик». Телеметрия показывает, как растёт ошибка положения.",
-          "th": "การนำทาง (INS / GNSS) → ตัวจับดาว ข้อมูลทางไกลแสดงความคลาดเคลื่อนตำแหน่งขณะที่โตขึ้น"
+          "en": "In the setup panel: Navigation (INS / GNSS) → Star tracker. The attitude-loop inspector's Navigation tab draws the position error as it grows.",
+          "ru": "На панели настройки: «Навигация (БИНС / ГНСС)» → «Звёздный датчик». Как растёт ошибка координат, показывает вкладка «Навигация» инспектора контура стабилизации.",
+          "th": "ในแผงตั้งค่า: «การนำร่อง (INS / GNSS)» → «ตัวจับดาว (star tracker)» ส่วนความคลาดของตำแหน่งที่ค่อย ๆ เพิ่มขึ้น ดูได้ในแท็บ «การนำร่อง» ของตัวตรวจลูปควบคุมท่าทาง"
         },
         {
           "en": "The star tracker corrects the attitude, not the position: it helps by keeping the frame the accelerometers are read in from tilting.",

@@ -167,7 +167,7 @@ export const RU_24_05_06: PackSource = {
         { id: 'flying', kind: 'outcome', is: 'survived' },
       ],
       hints: [
-        { en: 'Navigation (INS / GNSS) → Star tracker. The telemetry shows the position error as it grows.', ru: '«Навигация (БИНС / ГНСС)» → «Звёздный датчик». Телеметрия показывает, как растёт ошибка положения.', th: 'การนำทาง (INS / GNSS) → ตัวจับดาว ข้อมูลทางไกลแสดงความคลาดเคลื่อนตำแหน่งขณะที่โตขึ้น' },
+        { en: 'In the setup panel: Navigation (INS / GNSS) → Star tracker. The attitude-loop inspector\'s Navigation tab draws the position error as it grows.', ru: 'На панели настройки: «Навигация (БИНС / ГНСС)» → «Звёздный датчик». Как растёт ошибка координат, показывает вкладка «Навигация» инспектора контура стабилизации.', th: 'ในแผงตั้งค่า: «การนำร่อง (INS / GNSS)» → «ตัวจับดาว (star tracker)» ส่วนความคลาดของตำแหน่งที่ค่อย ๆ เพิ่มขึ้น ดูได้ในแท็บ «การนำร่อง» ของตัวตรวจลูปควบคุมท่าทาง' },
         { en: 'The star tracker corrects the attitude, not the position: it helps by keeping the frame the accelerometers are read in from tilting.', ru: 'Звёздный датчик корректирует ориентацию, а не положение: он помогает тем, что не даёт наклониться базису, в котором интегрируются показания акселерометров.', th: 'ตัวจับดาวแก้ไขท่าทาง ไม่ได้แก้ไขตำแหน่ง มันช่วยโดยไม่ให้กรอบที่ใช้อ่านค่ามาตรความเร่งเอียง' },
         { en: 'A navigation-grade unit (ring-laser gyros) is another answer — and a dearer one.', ru: 'БИНС навигационного класса (лазерные гироскопы) — тоже решение, но более дорогое.', th: 'หน่วยวัดเฉื่อยเกรดนำทาง (ไจโรเลเซอร์วงแหวน) ก็เป็นอีกคำตอบหนึ่ง แต่ราคาแพงกว่า' },
       ],
