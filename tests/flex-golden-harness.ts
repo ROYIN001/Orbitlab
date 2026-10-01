@@ -99,6 +99,6 @@ export async function missionFingerprint(cfg: MissionConfig, until: number): Pro
  */
 export const GOLDEN: Record<(typeof GOLDEN_FLIGHTS)[number]['vehicle'], { first160s: string; mission: string }> = {
   falcon9: { first160s: '3f48e9ee37213f9e', mission: '7fb4ebc11cd17b4f' },
-  soyuz21a: { first160s: 'c98116939e7b6678', mission: '912a1b0ea08f3b3e' },
+  soyuz21a: { first160s: 'c98116939e7b6678', mission: 'd4074ac66128d02a' },
   angaraa5: { first160s: 'c3022008e3f8d476', mission: '08a8c33302e646d6' },
 };

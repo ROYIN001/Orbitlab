@@ -631,8 +631,9 @@ Three caveats about how independent these comparisons are:
   and Ariane 64 times in the table below are close to that section's published callouts (Soyuz:
   118 / 287 / 528 s), so their agreement is partly calibration, not independent evidence. The
   altitudes, Soyuz's initial orbit and Electron's second stage (which §6a does not list) are
-  the independent part. The Soyuz and Ariane 64 fairings are flown on fixed times (`fairing.sepTime`, 157 s and
-  200 s), so their times agree by construction. Their altitudes are still a real comparison.
+  the independent part. The Soyuz and Ariane 64 fairings are flown on fixed times (`fairing.sepTime`, 153.3 s and
+  200 s), so their times agree by construction. Ariane 64's altitudes are still a real comparison; Soyuz's
+  two heights have been the targets of its programme's fit since 2026-10-01.
 
 ### Results
 
@@ -640,21 +641,25 @@ Three caveats about how independent these comparisons are:
 
 | milestone | flight | point mass | six-DOF | tolerance |
 | --- | ---: | ---: | ---: | ---: |
-| strap-on separation | 117.8 s | 120.6 s (+2 %) | 120.7 s (+2 %) | ±11.8 s |
-| fairing jettison | 153.3 s | 157.1 s (+2 %) | 157.0 s (+2 %) | ±15.3 s |
-| fairing altitude (nominal) | 79 km | 89.2 km (+13 %) | 101.8 km (+29 %) ✗ | ±12.8 km |
-| core separation | 287.7 s | 294.6 s (+2 %) | 294.5 s (+2 %) | ±28.8 s |
-| core separation altitude (nominal) | 157 km | 166.0 km (+6 %) | 199.2 km (+27 %) ✗ | ±24.6 km |
-| third-stage cut-off | 525.9 s | 536.7 s (+2 %) | 533.6 s (+1 %) | ±52.6 s |
-| spacecraft separation | 529.2 s | 537.9 s (+2 %) | 534.8 s (+1 %) | ±52.9 s |
-| initial orbit, perigee | 200.0 km | 197.0 km | 197.0 km | ±31.0 km |
-| initial orbit, apogee | 242.0 km | 200.0 km (−17 %) ✗ | 201.0 km (−17 %) ✗ | ±37.3 km |
-| *speed at fairing (frame not stated)* | *2.2 km/s* | *1.92 relative / 2.19 inertial* | *2.07 / 2.32* | *not graded* |
-| *speed at core separation (frame not stated)* | *3.8 km/s* | *3.85 relative / 4.14 inertial* | *3.88 / 4.18* | *not graded* |
+| strap-on separation | 117.8 s | 117.8 s (0 %) | 117.9 s (0 %) | ±11.8 s |
+| fairing jettison | 153.3 s | 153.4 s (0 %) | 153.3 s (0 %) | ±15.3 s |
+| fairing altitude (nominal) | 79 km | 77.7 km (−2 %) | 79.1 km (0 %) | ±12.8 km |
+| core separation | 287.7 s | 285.1 s (−1 %) | 285.0 s (−1 %) | ±28.8 s |
+| core separation altitude (nominal) | 157 km | 152.0 km (−3 %) | 156.3 km (0 %) | ±24.6 km |
+| third-stage cut-off | 525.9 s | 526.7 s (0 %) | 526.4 s (0 %) | ±52.6 s |
+| spacecraft separation | 529.2 s | 527.9 s (0 %) | 527.6 s (0 %) | ±52.9 s |
+| initial orbit, perigee | 200.0 km | 200.0 km | 200.0 km | ±31.0 km |
+| initial orbit, apogee | 242.0 km | 240.0 km (−1 %) | 240.0 km (−1 %) | ±37.3 km |
+| *speed at fairing (frame not stated)* | *2.2 km/s* | *1.93 relative / 2.20 inertial* | *1.92 / 2.19* | *not graded* |
+| *speed at core separation (frame not stated)* | *3.8 km/s* | *3.85 relative / 4.14 inertial* | *3.83 / 4.12* | *not graded* |
 
-Re-measured 2026-10-01 with the six-DOF strap-on turn of PHY-01 (below, under the findings). Before
-it the six-DOF column read 99.3 km at the fairing and 183.7 km at core separation, both outside
-tolerance as now; the point-mass column had drifted by under 0.6 km and 0.4 s since it was written.
+Re-measured 2026-10-01 with the stored pitch programme, the published data and the commanded
+sequence ("Soyuz-2.1a flies its stored pitch programme", below). The strap-on, fairing and
+core-cut-off times are now inputs (construction rows), so they agree by construction; the two
+heights are the programme's fit targets, so they are not evidence either. What is evidence is in
+the held-out checks below. The core separates 2.65 s before the flown time because hot staging is
+not modelled. Under the PHY-01 strap-on turn the six-DOF column read 101.8 km and 199.2 km, and
+the point mass 89.2 km and 166.0 km, with a 197 × 200 km insertion (F8).
 
 **Electron "No Time Toulouse"** (planned)
 
@@ -704,8 +709,10 @@ on Soyuz-2.1a is now inserted there whatever it does next (`soyuzShipInsertion`,
 src/physics/rendezvous/profiles.ts; it used to be done only with a rendezvous planned): 200.0 ×
 241.0 km in the point mass, 199.9 × 239.6 km in six-DOF.
 
-**F9. The six-DOF model climbs higher than the point-mass model on every vehicle.** Soyuz is
-13–33 km higher at fairing and core separation (10–17 km before its strap-on turn below). Ariane 64 is 14–68 km higher from booster
+**F9. The six-DOF model climbs higher than the point-mass model on every vehicle.** Soyuz was
+13–33 km higher at fairing and core separation (10–17 km before its strap-on turn below); flying
+one stored pitch programme in both models it is 1.4 and 4.3 km higher (2026-10-01), which says the
+gap was the two models' different turns, not their dynamics. Ariane 64 is 14–68 km higher from booster
 separation onwards. Electron's six-DOF fairing leaves 27 s earlier than the point-mass one,
 because it is released on the heating placard, which is reached sooner on the higher
 trajectory. This is the same behaviour as F5 on Falcon 9, now seen on four vehicles: the
@@ -797,6 +804,16 @@ table left only under 1 Pa. The same table reaches orbit in the reference crossw
   answer to a 200 × 242 km insertion.
 - *The 18a abort* comes out 25 km low: another rocket (the 1975 11A511) and a failure the model
   does not fly (its Blok I pushing the core it could not shed).
+
+**Found in passing, not changed: Soyuz-2.1b to sun-synchronous orbit ends off target.** 4 t to the
+600 km SSO preset from Plesetsk ends `off target` in both flight models, before and after this
+change. The point mass goes to 597 × 597 km both times. In six-DOF it went to 588 × 606 km before
+and to 187 × 600 km after: the Fregat's first burn leaves a 187 × 597 km orbit, and the six-DOF burn
+planner spends an orbit on a 5 m/s apoapsis trim before the circularisation. It then re-plans a second
+trim an orbit later and runs out of time to align for it (`evt.burnAlignmentTimeout`, three hours into
+the flight). This is a burn-planner item for the Fregat phase, not the ascent: 2.1b's ascent now reaches orbit in six-DOF on
+the cases it used to fail (5 t to the ISS plane fell back on the kick; it reaches 412 × 424 km), and
+the six-DOF fleet matrix has no SSO row for it.
 
 ### Soyuz-2.1a's strap-ons fly a zero-lift turn (six-DOF, audit PHY-01)
 

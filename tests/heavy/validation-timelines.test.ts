@@ -12,7 +12,9 @@ import { formatRows, timelineRows } from '../validation/compare';
 
 /** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since). */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
-  soyuzMs25: ['fairing/altitude', 'coreSep/altitude', 'insertion/apogee'],
+  // every row agrees since 2026-10-01: the flown insertion, and the stored
+  // programme fitted to the two heights (docs/VALIDATION.md §3)
+  soyuzMs25: [],
   electronNtt: ['fairing/time', 'seco/time', 'kickSep/time'],
   ariane64Va267: ['fairing/altitude'],
   atlasJuno: ['fairing/time'],
