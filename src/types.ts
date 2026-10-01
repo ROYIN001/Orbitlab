@@ -221,7 +221,9 @@ export interface VehicleSpec {
    * mission fixes its RAAN, the distance and the speed out of it brought to
    * zero together (C01: the Saturn V's iterative guidance flew to a descending
    * node set by the day's lunar geometry, yawing up to 274 m/s across its
-   * launch plane, AS-506 flight evaluation report Table 4-5). Absent: the plane
+   * launch plane, AS-506 flight evaluation report Table 4-5; Vostok-K, whose
+   * lateral stabilization and radio control held the firing plane set at the
+   * pad, Siddiqi, *Challenge to Apollo*, pp. 130 and 137). Absent: the plane
    * through wherever the vehicle is, with the target inclination — the rule for
    * every other launcher, whose plane is set by the moment of liftoff.
    */

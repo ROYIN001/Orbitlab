@@ -3039,8 +3039,8 @@ Flown from Gagarin's Start at their own second, model − flight, s, and the orb
 |---|---|---|---|---|---|---|
 | Sputnik 1, point-mass | −0.5 (116.38) | — | — | +7.9 (295.4) | +3.8 (314.5) | 214 × 937 km, 65.09° (214 × 938, 65.1°) |
 | Sputnik 1, six-DOF | −0.4 | — | — | +8.2 | +5.4 | 214 × 949 km, 65.09° |
-| Vostok 1, point-mass | +0.1 (119) | +0.1 (156) | +3.1 (300) | −4.9 (676) | −4.9 (686) | 168 × 315 km, 64.95° (168 × 314, 64.95°) |
-| Vostok 1, six-DOF | +0.1 | ±0.0 | +3.2 | −4.5 | −4.5 | 168 × 314 km, 64.95° |
+| Vostok 1, point-mass | +0.1 (119) | +0.1 (156) | +3.1 (300) | −3.7 (676) | −3.7 (686) | 168 × 315 km, 64.96° (168 × 314, 64.95°) |
+| Vostok 1, six-DOF | +0.1 | ±0.0 | +3.2 | −3.2 | −3.2 | 168 × 315 km, 64.96° |
 
 (Vostok's orbits are its lowest and highest heights over the next revolution, radius less 6,378 km, as
 GCAT's are; below.)
@@ -3064,7 +3064,7 @@ would have cut Blok E off, Blok E burns on with its attitude held until 25.43 m/
 then stops, logs `evt.backupCutoff`, and the flight is judged on the flown orbit. The model's core
 burns to depletion and its guidance would take any excess on the core back out of Blok E's burn, so
 the whole excess is flown on Blok E: about 2.9 s and 50 kg. Without it the flight is cut off at
-168 × 228 km at T+668.2 s (point-mass). Cutting Blok E off at a fixed T+676 s instead would tie the
+168 × 228 km at T+669.4 s (point-mass). Cutting Blok E off at a fixed T+676 s instead would tie the
 orbit to the pitch kick.
 
 *Vostok 1's orbit.* Both orbits, the planned and the flown, are measured as the sources measure them:
@@ -3077,14 +3077,14 @@ under the highest point it then reaches. Aimed on the conic, as they were before
 
 | | Model, point-mass (six-DOF) | Flown |
 |---|---|---|
-| Lowest × highest, radius − 6,378 km | 168.0 × 314.9 km (168.0 × 314.7) | 168 × 314 km (GCAT) |
-| Above WGS-84 there | 185.0 × 331.7 km (185.0 × 331.4) | 181 × 327 km "from the Earth's surface" (OKB-1's report; the FAI record file); on a 6,371 km Earth the model's are 175 × 322 km |
-| The conic at insertion | 168.0 × 296.9 km (168.0 × 296.6) | — |
+| Lowest × highest, radius − 6,378 km | 168.0 × 314.8 km (168.0 × 314.8) | 168 × 314 km (GCAT) |
+| Above WGS-84 there | 184.6 × 331.9 km (184.6 × 331.8) | 181 × 327 km "from the Earth's surface" (OKB-1's report; the FAI record file); on a 6,371 km Earth the model's are 175 × 322 km |
+| The conic at insertion | 168.0 × 296.5 km (168.0 × 296.6) | — |
 | Nodal period | 89.35 min (89.35) | 89.34 min (GCAT); 89.44 min (OKB-1's report, its heights on 6,371 km) |
-| Inclination | 64.95° | 64°57′ |
-| Perigee | at the insertion, 62.9° N 98.2° E, T+671 s | near the insertion, over central Siberia (no source gives it: from the timing) |
-| Apogee | T+3,329 s, 10:02:29, 62.2° S 96.1° W, 44.3 min after Blok E's cut-off | over the South Pacific, 44–45 min after insertion (Gagarin: "in apogee" about 10:04) |
-| At the pressurising command, T+4,684.2 s | 11.37° S 10.14° E, 243.6 km (11.48° S 10.16° E, 244.4 km) | "over the west coast of Africa, near Angola" (en.wikipedia) |
+| Inclination | 64.95°, the plane held from liftoff (64.96° on the cut-off's conic) | 64°57′ |
+| Perigee | at the insertion, 63.0° N 98.4° E, T+674 s (T+675 s) | near the insertion, over central Siberia (no source gives it: from the timing) |
+| Apogee | T+3,326 s, 10:02:26, 62.3° S 96.6° W, 44.2 min after Blok E's cut-off (T+3,330 s, 62.4° S 96.1° W) | over the South Pacific, 44–45 min after insertion (Gagarin: "in apogee" about 10:04) |
+| At the pressurising command, T+4,684.2 s | 11.24° S 9.69° E, 243.6 km (11.33° S 9.64° E, 244.6 km) | "over the west coast of Africa, near Angola" (en.wikipedia) |
 
 GCAT's figures are OKB-1's 181 × 327 km less 13 km, and its 89.34 min is the period those extremes fly
 under J2; on OKB-1's 6,371 km Earth they are 6 km higher, and 89.44 min theirs. The model stands with
@@ -3097,14 +3097,15 @@ ten seconds, which the six-DOF's ceiling on the vacuum command's swing (1°/s,
 follow. Blok E cannot be relit and lets the spacecraft go ten seconds after its cut-off, so Vostok-K
 carries its own ceiling, the 3°/s the point-mass attitude slews at (`VehicleSpec.ascentCommandRate`;
 how fast its steering nozzles could turn it is not published). Both models now insert at the perigee
-and agree at the retro-fire to 0.11° of latitude, 0.8 km of height and 0.7 km of the landing along the
+and agree at the retro-fire to 0.09° of latitude, 1.0 km of height and 0.7 km of the landing along the
 track.
 
 The pitch kick, with no flown value, is the model's free parameter, as it is for Sputnik: 2.6° in
 point-mass and 3.92° as a rigid body (on the R-7's 65 % trim allowance, `R7_TRIM_SHARE_VEHICLES`)
-bring Blok E's cut-off to T+671.1 s and T+671.5 s with 123 and 115 kg of its propellant left (a
-tenth of a degree either way moves it about 2 s and 25–40 kg). The spacecraft is let go 10 s after the
-cut-off (ESA; `SatelliteSpec.separationDelay`), flown about T+686 s. The core's T+300 s is a rounded
+bring Blok E's cut-off to T+672.3 s and T+672.8 s with 103 and 92 kg of its propellant left (a
+tenth of a degree either way moves it about 2 s and 25–40 kg). Holding the plane from liftoff (below)
+costs 20–23 kg of that and 1.2–1.3 s, so the kick was left where it was. The spacecraft is let go 10 s
+after the cut-off (ESA; `SatelliteSpec.separationDelay`), flown about T+686 s. The core's T+300 s is a rounded
 figure (Zak gives 299 s); on the December 1960 flight its cut-off command was due at T+308–309 s
 and Blok E's at T+676.61 s (Zak).
 
@@ -3123,10 +3124,10 @@ src/physics/rigid/escape.ts, by the same rigid descent as Mercury's (§13.7), wi
 
 | | Model | Flown |
 |---|---|---|
-| Attitude | set before the burn and held inertially through it: in the orbit plane, against the flight, `retro.pitch` above the local horizontal at the launch command: 2.6°, RECONSTRUCTED from the landing (below) | single-axis solar orientation, held by gyros; no source gives the angle |
+| Attitude | set before the burn and held inertially through it: in the orbit plane, against the flight, `retro.pitch` above the local horizontal at the launch command: 2.51°, RECONSTRUCTED from the landing (below) | single-axis solar orientation, held by gyros; no source gives the angle |
 | TDU-1 | the launch command 2.2 s after the pressurising command, full thrust 1.5 s later; 15.69 kN at 266 s, its 6.0 kg/s out of the instrument module; the fuel out at +42.2 s, the thrust falling over its last second (estimate): 131.9 m/s | 1,600 kgf (Feoktistov, *Космические аппараты*, 1983; GCTC; Gudilin), 266 s (astronautix), 280 kg; a check valve that did not close lost fuel into its separator bag; 132 m/s of the 136 set (Chertok, from Fomin, *Novosti Kosmonavtiki* 2002/4) |
 | Cut-off | the rest of the 280 kg vented by the timer's cut-off at +44.0 s; a moment spins the pair to 30°/s about a transverse axis (axis estimated) | no main command, so the lines stayed open and oxidiser and gas at about 60 atm vented through the chamber and the steering nozzles until the timer cut it off at 10:25:48.2; "no less than 30°/s" (Gagarin's report) |
-| Separation | no main command, so no separation; the straps at T+5,340 s, the cables parting 4 s later (estimate), at 138 km: the instrument module goes, 1,985 kg, a body of its own (below) | the thermal sensors' backup (150 °C on the hull) fired the straps at 10:36 (the report; Gagarin's clock read 10:35); the cable mast's circuit ran through the straps' cutters, and the cables held the modules "a few seconds" (Siddiqi, *The Space Review*, 2015); 130 km (Baturin's chronology) to 150–170 km. The older story of ten minutes on the cables was that wait for the backup |
+| Separation | no main command, so no separation; the straps at T+5,340 s, the cables parting 4 s later (estimate), at 138 km (six-DOF 139 km): the instrument module goes, 1,985 kg, a body of its own (below) | the thermal sensors' backup (150 °C on the hull) fired the straps at 10:36 (the report; Gagarin's clock read 10:35); the cable mast's circuit ran through the straps' cutters, and the cables held the modules "a few seconds" (Siddiqi, *The Space Review*, 2015); 130 km (Baturin's chronology) to 150–170 km. The older story of ten minutes on the cables was that wait for the backup |
 | Entry | the 2.3 m sphere, 2,460 kg: a sphere's drag, 0.96 hypersonic, 1.0 transonic, 0.45 subsonic (Hoerner ch. 16; Bailey and Hiatt 1972), along the flow through its centre (Feoktistov §3.5); its CG 0.2 m toward the heat shield (estimate) | ballistic; "over 10 g" by Gagarin's report, 8–10 g in most accounts |
 | Hatch and seat | at 7 km above WGS-84, hatch No. 1 (25 kg, estimate) and the 1.5 m² pilot chute; 2 s later the seat, 336 kg with Gagarin (astronautix: 7.1 % of the ship), at 20 m/s out of the hatch, 64° off the sphere's axis; each a body of its own (below) | hatch at about 7 km, the seat 2 s later at up to 20 m/s, on rails 64° off the axis (Feoktistov §9.6); 10:42 to the minute (planned 10:44:12) |
 | Parachutes | braking 18 m² at 4 km (C_D 0.6), main 574 m² at 2.5 km (C_D 0.55; estimates) | 4 km and 2.5 km (Feoktistov §9.6; GCTC) |
@@ -3148,66 +3149,89 @@ stay on the sphere, and so do Mercury-Redstone 3 and the Soyuz aborts, whose sit
 
 *The pitch.* What the sources do not give is the angle of the thrust line: the solar orientation's
 set angle is not published, and the landing turns on it. It is the one number of the return that is
-fitted, and it is fitted to the landing: `retro.pitch` = 2.6°, RECONSTRUCTED, the angle that brings the
-sphere down on its place by Smelovka along the track in the app's own model, six-DOF (its along-track
-zero falls at 2.61°; point-mass, flown with the same 2.6°, at 2.60°). The place is 1.5 km west of
-Gagarin's monument (`SPHERE_LANDING` in tests/vostok1-harness.ts; the direction is an estimate),
-which fixes the angle to a few hundredths of a degree; whatever else the model has wrong along the
-track goes into it too. The landing moves 50–56 km a degree, 52 km near 2.6°:
+fitted, and it is fitted to the landing: `retro.pitch` = 2.51°, RECONSTRUCTED, the angle that brings the
+sphere down on its place by Smelovka along the track in the app's own model, six-DOF, with the orbit's
+plane held from liftoff (below) and the return flown in the wind measured that morning (its along-track
+zero falls at 2.51°; point-mass, flown with the same 2.51°, at 2.50°). The place is 1.5 km west of
+Gagarin's monument (`SPHERE_LANDING` in tests/vostok1-harness.ts; the direction is an estimate), which
+fixes the angle to a few hundredths of a degree; whatever else the model has wrong along the track goes
+into it too. The wind and the plane each carry the landing about 2.5 km further along the track than
+the still air and the drifting plane it was first reconstructed in, which took it from 2.6° to 2.51°.
+The landing moves 50–56 km a degree, 52 km near 2.5°:
 
-| `retro.pitch` | 0° | 2.5° | **2.6°** | 3° | 5° | 6° |
-|---|---|---|---|---|---|---|
-| sphere's landing, point-mass | 50.23° N 45.08° E | 51.09° N 46.21° E | 51.12° N 46.26° E | 51.27° N 46.45° E | 52.00° N 47.48° E | 52.37° N 48.02° E |
-| along the track from its place, km (+ long), point-mass (six-DOF) | −129 | −5.0 (−5.7) | +0.2 (−0.5) | +20.9 (+20.2) | +128.5 (+127.7) | +184.6 (+183.7) |
-| sphere down, T+ s, point-mass | 6,088 | 6,105 | 6,105 | 6,108 | 6,123 | 6,131 |
+| `retro.pitch` | 0° | 2.4° | **2.51°** | 2.6° | 3° | 5° | 6° |
+|---|---|---|---|---|---|---|---|
+| sphere's landing, point-mass | 50.42° N 44.83° E | 51.24° N 45.92° E | 51.28° N 45.98° E | 51.31° N 46.02° E | 51.45° N 46.21° E | 52.18° N 47.25° E | 52.55° N 47.80° E |
+| along the track from its place, km (+ long), point-mass (six-DOF) | −124.1 | −5.1 (−5.9) | +0.5 (−0.2) | +5.2 (+4.4) | +25.9 (+25.2) | +133.4 (+132.5) | +189.5 (+188.5) |
+| sphere down, T+ s, point-mass | 6,088 | 6,104 | 6,105 | 6,106 | 6,108 | 6,123 | 6,131 |
 
 Kamanin's diary records that in flight the ballistics put the landing for this orbit 110 km south of
 Stalingrad, about 400 km short of where the sphere came down. The documented shortfall explains only
-part of that: in the model the full 136 m/s on a level line comes down 242 km short of the place
-(49.44° N 44.09° E), of which the 4 m/s are 113 km and the 2.6° the other 129 km; the remaining
+part of that: in the model the full 136 m/s on a level line comes down 237 km short of the place
+(49.63° N 43.83° E), of which the 4 m/s are 113 km and the 2.51° the other 124 km; the remaining
 160 km or so of Kamanin's figure is the in-flight prediction's own, which the model cannot attribute.
 Lisov puts the landing 180 km short of the pre-launch aim in the Kuibyshev region; the planned
 168 × 228 km orbit, flown in the model and fired the same way with 136 m/s on a level line, comes down
-within 10 km of the sphere's place, so that figure is not reproduced either.
+17 km from the sphere's place (12 km beyond it), so that figure is not reproduced either.
 
 The reconstructed angle is physically plausible. It is small: the burn loses nothing to it
-(cos 2.6° = 0.999), and it turns 6 m/s of the 132 outward. And it has the sign and size an attitude
+(cos 2.51° = 0.999), and it turns 6 m/s of the 132 outward. And it has the sign and size an attitude
 computed for the planned orbit would have: the over-burned orbit goes round 53 s slower and was cut
-off 2.9 s later, and at the pressurising command it had the ship 3.47° of its orbit behind the
+off 2.9 s later, and at the pressurising command it had the ship 3.46° of its orbit behind the
 planned flight's place (both flown in the model). A line set level and against the flight for that
-place, and held inertially by the gyros as the orientation system held it, points 3.47° above the
-local horizontal where the ship was; the reconstruction is within 0.9° of it. The other inputs move
+place, and held inertially by the gyros as the orientation system held it, points 3.46° above the
+local horizontal where the ship was; the reconstruction is within 1.0° of it. The other inputs move
 the landing as much: 6.1 km for each second of the retro's time, 28 km a metre per second of its Δv,
 18.5 km for each kilometre of the orbit's height — and they are the orbit's and the burn's, which is
-why the orbit above had to be right first: aimed and judged on the conic, the same flight wanted
-3.5° in point-mass and 5.4° in six-DOF.
+why the orbit above had to be right first: aimed and judged on the conic, the flight as it then was
+wanted 3.5° in point-mass and 5.4° in six-DOF.
 
-Flown at 2.6° in point-mass (six-DOF in brackets): 131.9 m/s, its line 2.60° above the horizontal;
-the straps at T+5,340 s at 139 km (139), the cables 4 s later at 138 km (139); the instrument module
-broken up at 78 km at T+5,594 s (5,595); 100 km at T+5,506 s, 38.1° N 33.4° E, 2.0° down (5,507,
-38.1° N 33.5° E); 9.00 g at 34 km at T+5,747 s, 10:42:47 (9.01 g, 5,749); the hatch at T+5,855.3 s and
-the seat at 5,857.3 s, 10:44:37 (5,856.6 and 5,858.6); the sphere down at T+6,105.4 s, 10:48:45
-(6,106.9), at 10.3 m/s, at 51.125° N 46.260° E (51.099° N 46.295° E): 0.2 km beyond its place along
-the track (0.5 km short) and 25.6 km across it (29.3), north-west of the track. Gagarin is down at
-T+6,629.4 s, 10:57:29 (6,630.6), at 51.124° N 46.260° E (51.099° N 46.293° E), 0.06 km from the sphere
-(0.15). Against the flown times: the sphere 45 s after 10:48; the seat 157 s after 10:42 (the planned
-10:44:12 is 5,832 s); Gagarin 149 s after the official 10:55.
+Flown at 2.51° in point-mass (six-DOF in brackets): 131.9 m/s, its line 2.51° above the horizontal;
+the straps at T+5,340 s at 139 km (140), the cables 4 s later at 138 km (139); the instrument module
+broken up at 78 km at T+5,593.5 s (5,594.5); 100 km at T+5,505 s, 38.3° N 33.0° E, 2.0° down (5,507,
+38.3° N 33.0° E); 9.01 g at 34 km at T+5,747 s, 10:42:47 (9.01 g, 5,749); the hatch at T+5,854.7 s and
+the seat at 5,856.7 s, 10:44:37 (5,856.1 and 5,858.1); the sphere down at T+6,104.9 s, 10:48:45
+(6,106.4), at 10.3 m/s, at 51.277° N 45.975° E (51.275° N 45.963° E): 0.5 km beyond its place along
+the track (0.2 km short) and 0.5 km across it (1.0), the place to the south-east of the track, 0.7 km
+from it in all (1.0). Gagarin is down at T+6,628.9 s, 10:57:29 (6,630.2), at 51.275° N 46.055° E
+(51.272° N 46.041° E): 5.5 km east of the sphere (5.4), in the morning's westerly (below), and 4.0 km
+east of his monument (3.0). Against the flown times: the sphere 45 s after 10:48 (46); the seat 157 s
+after 10:42 (158; the planned 10:44:12 is 5,832 s); Gagarin 149 s after the official 10:55 (150).
 
-*The cross-track part* of the miss, 26 km in point-mass and 29 km in six-DOF with the place north-west
-of the track, is the orbit's plane: not the descent, and the pad's latitude convention is a smaller
-part of the other sign. The ascent's closed-loop yaw steering flies into the plane through wherever
-the vehicle is (`AscentGuidance`; Vostok-K has no `targetPlane`), so the plane drifts east with the
-vehicle through the ascent: the node at the cut-off is 327.24° (six-DOF 327.32°), 0.80° east of the
-326.44° of the plane through the pad at liftoff on 64.95°, and a degree of node moves the track 51 km
-across at the landing's latitude. The sites stand on the 6,378.137 km sphere at their geodetic
-latitude taken as geocentric, which puts Gagarin's Start 0.193° (21 km) north of where it is; the
-plane through the pad where it is has its node at 326.66°, 0.21° east of the model pad's, so the
-convention moves the track 11 km north-west, toward the place, and hides that much of the drift.
-Measured in point-mass at 2.6°: the pad at its geocentric 45.727°, the guidance as it is: 35.8 km
-across; the plane held to the model pad's at liftoff (`targetPlane`, raanMode `fixed`, 326.44°):
-14.0 km across the other way; held to the real pad's (326.66°): 2.8 km across, 4 km from the place in
-all. Neither is changed here: the site convention is every mission's, and the plane is the ascent
-guidance's.
+*The orbit's plane.* The miss across the track was the ascent's plane, and Vostok-K now flies it as the
+R-7 did. The R-7's control system held the plane it was launched in: the autonomous system's normal and
+lateral stabilization (NS and BS) and the radio system's correction, from the ground, of "deviations
+from the desired trajectory" (Siddiqi, *Challenge to Apollo*, NASA SP-2000-4408, pp. 130 and 137)
+brought the centre of mass back onto the firing plane set at the pad; it did not choose a new plane
+through wherever the rocket had got to. The app's closed loop does exactly that unless told otherwise
+(`AscentGuidance` flies into the plane through the vehicle's position with the target inclination). At
+liftoff the Earth's rotation carries the rocket across its plane at 260 m/s (323 m/s east at the pad,
+the plane heading 37.5° east of north); the launch heading takes that out only as the speed builds, and
+a law that accepts whatever plane this leaves ends in the plane through the pad about 190 s after
+liftoff (the planner's `T_PLANE`, 200 s, is that figure): the node 0.8° east of the plane through the
+pad (as placed) at liftoff, and the sphere 28 km (six-DOF 32 km) across the track from its place, the
+place to the north-west. So Vostok-K carries `targetPlane`, as the Saturn V does (§13.8): when the
+mission fixes its plane, the closed loop steers into it, the distance from it and the speed out of it
+brought to zero together. Vostok 1 fixes it (raanMode `fixed`): the plane through the pad at liftoff,
+09:06:59.7 Moscow time, at 64.95°. The pad is taken where it is. The sites stand on the 6,378.137 km
+sphere at their geodetic latitude taken as geocentric, which puts Gagarin's Start 0.193° (21 km) north
+of its geocentric 45.728° on WGS-84. That convention is every mission's and stays; only the plane is
+computed from the true pad: its node 326.653° from the equinox of date (GMST 291.957° at liftoff;
+tests/historical-vehicles.test.ts recomputes it), where the plane through the pad as placed has
+326.442°. The rocket lifts off from the pad as placed, 13 km off that plane, and is steered onto it in
+the climb. Measured at 2.51° in the wind, point-mass (six-DOF):
+
+| Plane | Node at the cut-off | Across the track at the landing | Blok E left, cut-off |
+|---|---|---|---|
+| free: through wherever the vehicle is (before) | 327.24° (327.32°) | 28.3 km (32.0), the place north-west | 123 kg, T+671.1 s (115 kg, 671.5 s) |
+| held: through the pad as placed, 326.442° | 326.49° | 11.1 km, the place south-east | 76 kg, T+673.8 s |
+| **held: through the pad where it is, 326.653°** | 326.69° (326.69°) | 0.5 km (1.0), the place south-east | 103 kg, T+672.3 s (92 kg, 672.8 s) |
+
+(The node of the cut-off's conic at 63° N reads 0.04° east of the plane flown.) Holding the plane costs
+Blok E 20 kg of its propellant (six-DOF 23 kg), its Δv left falling from 64 to 53 m/s (60 to 48), and
+puts its cut-off 1.2 s later (1.3 s): inside the flown 676 s and with 90 kg or more left in both
+models, so the kick was not re-chosen. The plane through the pad as placed would cost more than twice
+that: it lies 0.21° west of the true one, further against the drift.
 
 *What the sphere leaves behind.* Each body flies itself from its release (§8, `DebrisFlight`), on
 the WGS-84 heights of the return. The flight's status stays `abort`, the note `vostokSphereDown`,
@@ -3241,24 +3265,25 @@ viewer's end wait for him.
   kit). The seat's push back on the sphere, about 3 m/s at 7 km that the air soon takes off, is
   left out.
 
-Point-mass, pitch 2.6° (six-DOF in brackets):
+Point-mass, pitch 2.51° (six-DOF in brackets):
 
-- The module breaks up at 78.0 km at T+5,593.8 s (5,594.6). 8 of its 57 pieces burn up (the
-  frame members); 49 reach the ground with 605 kg, 30 % of it, the last at T+6,936 s (607 kg,
-  6,934). That is
+- The module breaks up at 78.0 km at T+5,593.5 s (5,594.5). 8 of its 57 pieces burn up (the
+  frame members); 49 reach the ground with 605 kg, 30 % of it, the last at T+6,935.5 s (608 kg,
+  6,934.3). That is
   about the share of a large body's mass the survivability analyses expect to survive.
-- Gagarin leaves his seat at 4,000 m at T+5,889.1 s (5,890.3), 68 m/s. His main opens at 8.7 g.
-  The reserve comes out at 3,000 m at T+6,033 s (6,034).
-- He lands at T+6,629.4 s, 10:57:29 (6,630.6), at 4.7 m/s, 0.06 km from the sphere (0.15), at
-  51.124° N 46.260° E (51.099° N 46.293° E). That is 8.7 min after the sphere. The flown 1.5 km
-  between them is the wind, westerly at 7 km that day: in still air. In the wind of that morning
-  (below) he comes down some 5.5 km east of it.
+- Gagarin leaves his seat at 4,000 m at T+5,888.5 s (5,889.9), 68 m/s. His main opens at 8.7 g.
+  The reserve comes out at 3,000 m at T+6,032 s (6,033).
+- He lands at T+6,628.9 s, 10:57:29 (6,630.2), at 4.7 m/s, 5.5 km east of the sphere (5.4), at
+  51.275° N 46.055° E (51.272° N 46.041° E), 4.0 km east of his monument (3.0). That is 8.7 min after
+  the sphere. In still air he would come down 0.04 km from it (0.14): the distance between them is
+  the wind, westerly at 7 km that day (below).
 - His descent from the ejection takes 772 s; the flown 10:42 to 10:53–10:55 is 660–780 s.
 - The replay records the return at a second through the retro-fire, 2 s while the pair spins
   above 140 km, 0.2 s from there to the sphere's main, and a second under it and while waiting
-  for Gagarin: 7,939 frames in all, 62.7 MB by the recorder's estimate (measured with the pitch
-  at 0°). Before this change it was 11,319 frames, to the sphere's landing only, at 0.1 s below
-  140 km.
+  for Gagarin: 7,993 frames in all, 63.3 MB by the recorder's estimate; six-DOF (the default
+  seed) 4,808 frames, thinned ten times to stay under its 6,000, 122.4 MB with 7.0 MB of rotation
+  tracks (measured at 2.51°, the plane held, in the wind). Before the bodies were flown it was 11,319
+  frames in point-mass, to the sphere's landing only, at 0.1 s below 140 km.
 
 *The wind that morning.* The return, and everything it lets go of, flies in the wind measured at
 Saratov, 32 km north of where Gagarin came down (`OrbitSpec.deorbit.wind`,
@@ -3281,20 +3306,21 @@ flown.
 
 | | still air | the wind of 12 April | flown |
 |---|---|---|---|
-| the sphere's landing | — | 3.6 km further east: 1.9 km along the track, 3.1 km to its right | |
+| the sphere's landing | — | 3.6 km further east: 2.4 km along the track, 2.8 km to its right | |
 | Gagarin's landing | — | 9.2 km further east | |
-| Gagarin from the sphere | 0.19 km | 5.5 km, east of it (bearing 94°) | 1.5 km (OKB-1's report, via Zak); "up to 4 km" (Gagarin); the sphere toward the Volga |
+| Gagarin from the sphere | 0.04 km (0.14) | 5.5 km, east of it (bearing 93°) (5.4) | 1.5 km (OKB-1's report, via Zak); "up to 4 km" (Gagarin); the sphere toward the Volga |
 
-(point-mass, `retro.pitch` 3.6°, where the sphere comes down abreast of its place; at 0° and in
-six-DOF at 0° and 5.5° the shifts are the same to 0.05 km, and the distance 5.35–5.5 km.) The two
-ascents alone bracket it: 4.8 km on the 12 UTC winds, 8.0 km on the 00 UTC winds. The wind under
-the canopies is about 10 m/s, so the distance follows the time Gagarin spends on his parachutes
-after the sphere is down: 524 s in the model, 5–7 minutes flown (10:48 to 10:53–10:55), which
-alone would take 1–2 km off. Gagarin also steered his canopy, which is not flown. The sphere's
-1.9 km along the track is 0.04° of the reconstructed pitch.
+(point-mass, `retro.pitch` 2.51°, the plane held; six-DOF in brackets, whose shifts are the same to
+0.02 km.) The two ascents alone bracket it: 4.9 km on the 12 UTC winds, 8.0 km on the 00 UTC winds.
+The wind under the canopies is about 10 m/s, so the distance follows the time Gagarin spends on his
+parachutes after the sphere is down: 524 s in the model, 5–7 minutes flown (10:48 to 10:53–10:55),
+which alone would take 1–2 km off. Gagarin also steered his canopy, which is not flown. The sphere's
+2.4 km along the track is 0.05° of the reconstructed pitch.
 
-tests/vostok1-harness.ts holds the flight to these, the sphere within 60 km of its place and within
-20 km of it along the track in both models (`vostok1Residual` reports the two parts).
+tests/vostok1-harness.ts holds the flight to these, the sphere within 15 km of its place, and within
+10 km of it both along the track and across it, in both models (`vostok1Residual` reports the two
+parts); tests/historical-vehicles.test.ts recomputes the plane from the pad and checks that the ascent
+keeps it.
 tests/vostok-descent.test.ts covers the burn,
 the spin, the separation and the sphere's drag; tests/entry-heating.test.ts and
 tests/crew-descent.test.ts cover the bodies; tests/measured-wind.test.ts the wind.
@@ -3401,7 +3427,7 @@ ground as the site's rotation turns it), not the one the inclination alone would
 the closed loop steers into the parking orbit's own plane (`VehicleSpec.targetPlane`, the mission's RAAN
 fixed at the flown 359.624°): the distance out of the plane and the speed across it both brought to zero
 by the cut-off, the lateral acceleration −(6y/T² + 4ẏ/T) for the time to go T (held to a minute at the
-end) — where every other vehicle flies the plane through wherever it is, which set the Saturn V's node
+end) — where every other vehicle but Vostok-K (§13.6) flies the plane through wherever it is, which set the Saturn V's node
 1.7° east of the flown one, and the restart for the Moon 200 km round the orbit from where it was. The
 Saturn's guidance yawed as much: 274 m/s across its launch plane by the insertion (FER Table 4-5). The hand-over time is new in
 the guidance (`GuidanceParams.closedLoopStart`): without it every vehicle's gravity turn hands over

@@ -248,13 +248,14 @@ const SPHERE_CD = [[0, 0.45], [0.6, 0.5], [0.8, 0.75], [1.0, 0.95], [1.2, 1.0], 
  * plane, against the flight, `pitch` above the local horizontal at
  * ignition. No source gives that angle (the solar orientation's set angle
  * is not published); it is the one RECONSTRUCTED number of the return
- * (§13.6): 2.6°, the angle that brings the sphere down on its place by
+ * (§13.6): 2.51°, the angle that brings the sphere down on its place by
  * Smelovka along the track, in either model, at about 52 km of landing a
- * degree. Kamanin's diary has the in-flight prediction for this orbit 110
- * km south of Stalingrad, about 400 km short of where the sphere came down;
- * in the model the 4 m/s shortfall is 113 km of that and the 2.6° another
- * 129 km. The angle has the sign and size an attitude set for the planned
- * orbit would give: on the over-burned orbit the ship was 3.5° of its orbit
+ * degree, the orbit's plane held from liftoff and the return flown in the
+ * morning's measured wind. Kamanin's diary has the in-flight prediction for
+ * this orbit 110 km south of Stalingrad, about 400 km short of where the
+ * sphere came down; in the model the 4 m/s shortfall is 113 km of that and
+ * the 2.51° another 124 km. The angle has the sign and size an attitude set
+ * for the planned orbit would give: on the over-burned orbit the ship was 3.5° of its orbit
  * behind its planned place at the pressurising command, and a thrust line
  * set level for that place and held by the gyros points 3.5° above the local
  * horizontal where it was, within a degree of the reconstruction.
@@ -296,8 +297,9 @@ export const VOSTOK_CAPSULE: DescentCapsule = {
     // timer's cut-off at 44.0 s (10:25:48.2); the 1 s fall of thrust at the run-out is an estimate
     starts: [2.2], thrust: 15690, rise: 1.5, burn: 40, tailOff: 1.0, isp: 266, propellant: 280, cutoff: 44.0, planned: 136,
     // RECONSTRUCTED from the landing point, not from a source: the sphere's along-track place in the six-DOF
-    // model (its along-track zero at 2.61°, point-mass 2.60°); 52 km of landing a degree (§13.6)
-    pitch: 2.6,
+    // model (its along-track zero at 2.51°, point-mass 2.50°), the plane held from liftoff, in the measured
+    // wind; 52 km of landing a degree (§13.6)
+    pitch: 2.51,
     // about a transverse axis (estimate)
     vent: { rate: 30, axis: v3(0, 0, 1) },
     // the instrument module's CG 2.0 m beyond the sphere's (estimate); the straps at 10:36:00, T+5340 (655.8 s);

@@ -773,9 +773,9 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     // No flown pitch kick is published: as for Sputnik it is the model's free
     // parameter. 2.6° in point-mass and 3.92° as a rigid body (on the R-7's
     // trim allowance, src/physics/rigid/runtime.ts) bring Blok E's cut-off to
-    // T+671.1 and 671.5 s, against the flown 676, with 123 and 115 kg of its
-    // propellant left; the orbit is the guidance's aim either way
-    // (docs/PHYSICS.md §13.6).
+    // T+672.3 and 672.8 s, against the flown 676, with 103 and 92 kg of its
+    // propellant left, the plane held (`targetPlane`, below); the orbit is the
+    // guidance's aim either way (docs/PHYSICS.md §13.6).
     guidanceDefaults: { kickAngle: 2.6, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
     guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3.92, kickDuration: 12, maxTurnRate: 0.5 },
     // In its last ten seconds the closed-loop law pitches Blok E down at up to
@@ -789,6 +789,16 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     // at (`DEFAULT_GUIDANCE.slewRate`); how fast its steering nozzles could turn
     // it is not published (estimate). Both models then insert at the perigee.
     ascentCommandRate: 3,
+    // The R-7's guidance held the plane it was launched in: its autonomous
+    // system kept "Normal and Lateral Stabilization" (NS and BS) and its radio
+    // system, from the ground, corrected "deviations from the desired
+    // trajectory" (Siddiqi, *Challenge to Apollo*, NASA SP-2000-4408, pp. 130
+    // and 137) — the centre of mass brought back onto the firing plane set at
+    // the pad, not a new plane chosen through wherever the rocket had got to.
+    // So the closed loop flies into the mission's plane when it fixes one:
+    // Vostok-1's, through Gagarin's Start at liftoff (src/ui/watch-missions.ts;
+    // docs/PHYSICS.md §13.6).
+    targetPlane: true,
     notes: 'The R-7 that flew Gagarin: the Sputnik core and strap-ons with Blok E, a small third stage hot-staged through a truss.',
   },
   {
