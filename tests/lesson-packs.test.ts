@@ -12,9 +12,12 @@
  * tests/heavy/lesson-packs-sixdof.test.ts.
  *
  * Tolerances: the lessons' own, from the research (fixed before any flight)
- * except two, set after seeing the flight and said where they are used —
+ * except four, set after seeing the flights and said where they are used —
  * P1's period (5 min, so both the computed and the textbook sidereal-day
- * answers pass) and S2's navigation bound (heavy test).
+ * answers pass), S2's navigation bound (heavy test), and R1's period (0.4
+ * min) and R2's semi-major axis (20 km), widened from the research's 0.2 min
+ * and 10 km after measuring how the osculating elements a late frame grades
+ * swing under J₂ (the last describe below).
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
@@ -270,15 +273,16 @@ describe('each point-mass pack lesson, flown as solved and flown wrong', () => {
     expect(wrong.criteria.find((c) => c.id === 'node')!.state).toBe('fail');
   });
 
-  it('R2 elements and vis-viva: a, e, T and the perigee speed from the reached heights pass; planned heights and the circular speed fail', () => {
+  it('R2 the elements: a, e and T from the reached heights pass, and vis-viva gives the speed after the burn; planned heights fail', () => {
     const l = lesson('rtaf-elements');
     const sim = fly(l);
     const { hp, ha } = heights(sim);
     const o = ellipse(hp, ha);
-    const solved = { a: o.a, e: o.e, period: o.period, speed: o.vp };
+    const solved = { a: o.a, e: o.e, period: o.period };
     expect(gradeLesson(l, sim, solved).verdict, why(l, sim, solved)).toBe('pass');
     expect(gradeLesson(l, sim, { ...solved, a: ellipse(250, 35786).a }).verdict).toBe('fail');
-    expect(gradeLesson(l, sim, { ...solved, speed: Math.sqrt(MU / (R + hp)) }).verdict).toBe('fail');
+    // the hint's check: vis-viva at perigee against the speed just after the burn
+    expect(Math.abs(o.vp - MEASURES['orbit.speed'].read(sim)!)).toBeLessThan(0.02);
   });
 });
 
@@ -299,5 +303,56 @@ describe('the instructor\'s check of a pack lesson', () => {
     expect(check.recheckedVerdict).toBe('pass');
     // without the packs the lesson is not known
     expect(checkRecord(job, allLessons()).reason).toBe('noLesson');
+  });
+});
+
+/**
+ * A live page grades a flight at the first frame that shows its end
+ * (src/lessons/grader.ts `gradeShown`), and its orbit measures are the
+ * osculating ones of that frame. Under time warp the frame can come minutes
+ * late, and under J₂ the osculating elements swing with the point of the orbit
+ * (measured: a GTO's a by +16 km 300 s after insertion, 24 334-24 379 km over
+ * an orbit; an SSO's period 96.33-96.72 min). The tolerances of 12.1 and
+ * 14.2 (a), 14.1 (period) were set after that measurement so that the worked
+ * answers pass graded that late; this holds them to it.
+ */
+describe('each worked solution, graded as late as a warped page may grade it', () => {
+  /** Grade the flight again after it has coasted on `lag` s past its end, as a late frame would. */
+  function lateVerdicts(l: Lesson, sim: Simulation, answers: LessonAnswers, lags: readonly number[]): Array<[number, string]> {
+    const t0 = sim.state.t;
+    return lags.map((lag) => {
+      while (sim.state.t < t0 + lag) sim.step(Math.min(sim.suggestedDt(), t0 + lag - sim.state.t + 1e-9));
+      return [lag, gradeLesson(l, sim, answers, true).verdict];
+    });
+  }
+  const pass = (lags: readonly number[]) => lags.map((lag) => [lag, 'pass']);
+
+  it('12.1 and 14.2 (a GTO): up to 1 000 s late', () => {
+    const lags = [0, 30, 120, 300, 600, 1000];
+    for (const id of ['ipst-a-kepler3', 'rtaf-elements']) {
+      const l = lesson(id);
+      const sim = fly(l);
+      const { hp, ha } = heights(sim);
+      const o = ellipse(hp, ha);
+      expect(lateVerdicts(l, sim, { a: o.a, e: o.e, period: o.period }, lags), id).toEqual(pass(lags));
+    }
+  });
+
+  it('11.2, 12.2, 13.2 and 14.1 (circles): anywhere on the next revolution', () => {
+    const lags = Array.from({ length: 11 }, (_, k) => k * 600);
+    const cases: Array<[string, ((s: MissionState) => void) | undefined, (sim: Simulation) => LessonAnswers]> = [
+      ['ipst-b-falling-around', undefined, (sim) => { const { hp, ha } = heights(sim); return circle((hp + ha) / 2); }],
+      ['ipst-a-sun-clock', nextWindow, () => ({ period: circle(600).period })],
+      ['ipst-p-starlink', undefined, (sim) => { const { hp, ha } = heights(sim); return circle((hp + ha) / 2); }],
+      ['rtaf-napa1-sso', nextWindow, () => {
+        const a = R + 600, rate = 2 * Math.PI / (365.2422 * 86400);
+        return { inclination: Math.acos(-2 * rate * a ** 3.5 / (3 * 1.0826e-3 * R ** 2 * Math.sqrt(MU))) * 180 / Math.PI, period: circle(600).period };
+      }],
+    ];
+    for (const [id, edit, answers] of cases) {
+      const l = lesson(id);
+      const sim = fly(l, edit);
+      expect(lateVerdicts(l, sim, answers(sim), lags), id).toEqual(pass(lags));
+    }
   });
 });
