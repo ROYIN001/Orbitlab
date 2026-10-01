@@ -207,7 +207,7 @@ describe('Mercury-Redstone 3 in the viewer', () => {
 });
 
 describe('Vostok-1 in the viewer', () => {
-  it('does not stop in orbit: it tells the way home beat by beat and ends on the landing', { timeout: 300_000 }, () => {
+  it('does not stop in orbit: it tells the way home beat by beat and ends on Gagarin\'s landing', { timeout: 300_000 }, () => {
     const s = watchMissionSettings('vostok1');
     const sim = new Simulation({
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
@@ -217,6 +217,7 @@ describe('Vostok-1 in the viewer', () => {
     const beats: string[] = [];
     const warps = new Map<string, Set<number>>();
     let ending: string | null = null;
+    let endT = 0;
     while (!sim.isFailed() && sim.state.t < 8000 && !ending) {
       sim.step(sim.suggestedDt());
       const frame = captureFrame(sim);
@@ -225,15 +226,33 @@ describe('Vostok-1 in the viewer', () => {
       if (!warps.has(beat)) warps.set(beat, new Set());
       warps.get(beat)!.add(autoWarp(frame, beat, sim.events));
       ending = flightEnding(frame, sim.events);
+      endT = frame.t;
     }
-    const order = ['vostokOrbit', 'vostokRetro', 'vostokCoast', 'vostokSeparation', 'vostokEntry', 'vostokEjection', 'vostokDrogue', 'vostokMain', 'vostokLanding']
+    // the burn and the spin it left, ten minutes joined, the straps and the cables, the module breaking up in
+    // the entry, the hatch and the seat, the sphere's braking parachute, Gagarin's main and his reserve, the
+    // sphere down with him still in the air, his descent and his landing
+    const order = ['vostokOrbit', 'vostokRetro', 'vostokSpin', 'vostokCoast', 'vostokSeparation', 'vostokApart', 'vostokEntry',
+      'vostokModuleBurn', 'vostokEjection', 'vostokDrogue', 'vostokPilotMain', 'vostokPilotReserve', 'vostokSphereDown',
+      'vostokPilotDescent', 'vostokLanding']
       .map((b) => beats.indexOf(b));
     expect(order.every((i) => i >= 0), beats.join(' ')).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect([...order].sort((a, b) => a - b), beats.join(' ')).toEqual(order);
+    // the sphere's main opens seconds from Gagarin's, either side of it
+    expect(beats.indexOf('vostokMain')).toBeGreaterThan(beats.indexOf('vostokEjection'));
+    expect(beats.indexOf('vostokMain')).toBeLessThan(beats.indexOf('vostokSphereDown'));
     expect(ending).toBe('splashdown');
     expect(sim.state.abort?.capsule).toBe('vostok');
+    // the end waits for Gagarin, minutes after the sphere, and a few seconds more
+    const at = (key: string) => sim.events.find((e) => e.key === key)!.t;
+    expect(at('evt.pilotLanding') - at('evt.capsuleLanding')).toBeGreaterThan(60);
+    expect(endT).toBeGreaterThanOrEqual(at('evt.pilotLanding') + 10);
+    expect(endT).toBeLessThan(at('evt.pilotLanding') + 12);
     // the hour in orbit quickly, the minute before the retro-fire slowly
     expect([...warps.get('vostokOrbit')!].sort((a, b) => a - b)).toEqual([5, 100]);
+    // the straps and the cables live; Gagarin's minutes under his canopies quickly, his last metres live
+    expect([...warps.get('vostokSeparation')!]).toEqual([1]);
+    expect([...warps.get('vostokPilotDescent')!].sort((a, b) => a - b)).toEqual([1, 5, 20]);
+    expect([...warps.get('vostokLanding')!]).toEqual([1]);
   });
 });
 

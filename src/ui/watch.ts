@@ -16,7 +16,7 @@ import type { SimEvent } from '../physics/simulation';
 import { vehicleById, vehicleDataId } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
-import { autoWarp, flightEnding, groundSpeed, parkingMilestone, watchBeat, watchReadout, watchSummary, WATCH_BEATS, type WatchBeat, type WatchEnding, type WatchSummary } from './watch-logic';
+import { autoWarp, flightEnding, groundSpeed, parkingMilestone, vostokLandings, watchBeat, watchReadout, watchSummary, WATCH_BEATS, type WatchBeat, type WatchEnding, type WatchSummary } from './watch-logic';
 import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionById, type WatchMissionId } from './watch-missions';
 import { FLOWN_LABEL, recentFlown } from './flown';
 import { flownTable, fmtMissionTime } from './flown-view';
@@ -441,14 +441,14 @@ export class WatchView {
         docked: clock(at('evt.lmDocked')), g: (ap.entry?.maxLoad ?? 0).toFixed(1), mass: num(Math.round(frame.mass)),
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.apolloSplashFact')));
+    } else if (ending === 'splashdown' && frame.abort?.kind === 'return' && frame.abort.capsule === 'vostok') {
+      this.vostokEnd(card, frame);
     } else if (ending === 'splashdown') {
       // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
       const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.capsuleLanding' || e.key === 'evt.shipSplashdown');
       const since = (down?.t ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
       // C01: a capsule, not a ship
-      card.append(el('p', undefined, frame.abort?.kind === 'return' && frame.abort.capsule === 'vostok'
-        ? t('watch.end.vostokLandingText', { time: fmtClock(since).replace(/^T\+/, ''), lat: frame.lat.toFixed(2), lon: frame.lon.toFixed(2), g: num(frame.abort.maxG) })
-        : frame.abort?.kind === 'return'
+      card.append(el('p', undefined, frame.abort?.kind === 'return'
         ? t('watch.end.capsuleSplashText', { time: fmtClock(since).replace(/^T\+/, ''), km: num(frame.downrange / 1000), g: num(frame.abort.maxG) })
         : t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
     } else if (success) {
@@ -488,6 +488,29 @@ export class WatchView {
     button('watch.end.explore', 'watch-btn link', () => this.host.explore());
     card.append(actions);
     card.hidden = false;
+  }
+
+  /**
+   * C01: Vostok-1 home, the sphere and Gagarin each on their own: when and
+   * where each came down and how far apart, timed at the landings, not at the
+   * card. Then the real flight's: the sphere at 10:48 Moscow time (OKB-1's
+   * preliminary report of 3 May 1961), Gagarin at 10:55 by the official
+   * account, the 108 minutes (10:53 in the report), at 51°16′14″ N 45°59′50″ E
+   * near Smelovka — Gagarin's place, where his monument stands, not the
+   * sphere's — about 1.5 km from the sphere (OKB-1 via Zak, RussianSpaceWeb).
+   */
+  private vostokEnd(card: HTMLElement, frame: VisualFrame): void {
+    const liftoff = Math.max(0, frame.liftoffT ?? 0);
+    const { sphere, pilot } = vostokLandings(frame, this.lastEvents);
+    const at = { time: fmtSpan(sphere.t - liftoff), lat: num(sphere.lat, 2), lon: num(sphere.lon, 2), g: num(frame.abort?.maxG ?? 0, 1) };
+    card.append(el('p', undefined, pilot
+      ? t('watch.end.vostokLandingText', {
+        ...at, pilotTime: fmtSpan(pilot.t - liftoff), plat: num(pilot.lat, 2), plon: num(pilot.lon, 2),
+        km: pilot.km !== null ? num(pilot.km, pilot.km < 1 ? 2 : 1) : '—',
+      })
+      // a recording made before Gagarin flew on his own: the sphere alone
+      : t('watch.end.vostokSphereText', at)));
+    if (this.missionId === 'vostok1') card.append(el('p', 'watch-end-fact', t('watch.end.vostokFact')));
   }
 
   /**

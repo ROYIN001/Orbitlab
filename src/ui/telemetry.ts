@@ -37,8 +37,10 @@ import { fmtTime } from './hud';
 import { eventLabel } from './phase';
 import { localizeEventParams, stageNameByLabel } from './names';
 import { OMEGA_EARTH, R_EARTH, DEG, RAD } from '../physics/constants';
+import { geodeticHeight } from '../physics/geodesy';
+import { VOSTOK_IM } from '../physics/sim/module-entry';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
-import type { TelemetrySample } from '../physics/sim/types';
+import type { Debris, TelemetrySample } from '../physics/sim/types';
 import { symbolText } from './notation';
 import { EquationsPanel } from './equations';
 import type { EquationLevel } from './equations-model';
@@ -56,6 +58,28 @@ const FLEX_CHART_TITLES: Record<(typeof FLEX_CHART_IDS)[number], string> = { fle
 
 /** How close to the bottom the log has to be before an update re-pins it there, px. */
 const LOG_STICK = 24;
+/**
+ * C01: how many alike pieces each of the instrument module's piece records
+ * carries (one record flies `count` pieces together), by its debris name.
+ */
+const VOSTOK_PIECE_COUNT: ReadonlyMap<string, number> = new Map(VOSTOK_IM.pieces.map((p) => [p.id, p.count]));
+
+/**
+ * C01: the pieces a body broke into (`fragmentOf`), counted as pieces rather
+ * than records: falling, burned up, and on the ground.
+ */
+export function pieceTally(debris: readonly Pick<Debris, 'name' | 'alive' | 'outcome' | 'fragmentOf'>[]): { n: number; falling: number; burnt: number; down: number } {
+  const tally = { n: 0, falling: 0, burnt: 0, down: 0 };
+  for (const d of debris) {
+    if (d.fragmentOf === undefined) continue;
+    const n = VOSTOK_PIECE_COUNT.get(d.name) ?? 1;
+    tally.n += n;
+    if (d.alive) tally.falling += n;
+    else if (d.outcome === 'burnup') tally.burnt += n;
+    else tally.down += n;
+  }
+  return tally;
+}
 /**
  * Most points handed to one chart. The canvases are 250-320 px wide, so two
  * samples per pixel is already more than the rasteriser can show; the cap is
@@ -626,11 +650,28 @@ export class TelemetryPanel {
     }
     this.endRows(this.plan);
 
-    // Spent stages, from the frame's debris list.
+    // Spent stages, from the frame's debris list. C01: Vostok-1's pilot on his
+    // own parachutes is no spent stage: he has a row of his own, first; and the
+    // instrument module's pieces, seven records of 57 pieces in all
+    // (src/physics/sim/module-entry.ts), are one line.
     this.beginRows(this.debris);
     let any = false;
     for (const d of view.debris) {
-      if (d.visual.kind === 'fairing') continue;
+      if (!d.crew) continue;
+      any = true;
+      // above WGS-84, as the rest of Vostok's return is measured: over the steppe at 51° N the 6,378 km sphere
+      // lies some 11 km above the ground
+      const h = Math.max(0, geodeticHeight(d.r) / 1000);
+      const c = d.crew;
+      const st = c.phase === 'landed' || !d.alive ? t('tel.crew.landed')
+        : c.phase === 'main' ? t(c.reserve > 0 ? 'tel.crew.mainReserve' : 'tel.crew.main')
+          : c.phase === 'stabiliser' ? t('tel.crew.stabiliser') : t('tel.crew.seat');
+      let v = d.alive ? `${st} · ${h.toFixed(1)} km` : st;
+      if (d.impact) v += ` · ${d.impact.lat.toFixed(2)}°, ${d.impact.lon.toFixed(2)}°`;
+      this.row(this.debris, stageNameByLabel(view.vehicleSpec, d.name), v, 'crew');
+    }
+    for (const d of view.debris) {
+      if (d.visual.kind === 'fairing' || d.crew || d.fragmentOf !== undefined) continue;
       any = true;
       let st: string;
       if (!d.alive) st = t(`tel.debris.${d.outcome ?? 'impact'}`);
@@ -645,6 +686,11 @@ export class TelemetryPanel {
       if (d.alive) v += ` · ${alt2.toFixed(0)} km`;
       if (d.impact) v += ` · ${d.impact.lat.toFixed(1)}°, ${d.impact.lon.toFixed(1)}°`;
       this.row(this.debris, stageNameByLabel(view.vehicleSpec, d.name), v);
+    }
+    const pieces = pieceTally(view.debris);
+    if (pieces.n > 0) {
+      any = true;
+      this.row(this.debris, t('tel.debris.pieces'), t('tel.debris.piecesState', pieces));
     }
     if (!any) this.row(this.debris, t('misc.none'), '');
     this.endRows(this.debris);
