@@ -59,7 +59,9 @@ export default async function caseWorksheetExports(t) {
         const card = page.locator('.lesson-tracks .lesson-card-item').filter({ has: page.locator('b').filter({ hasText: new RegExp(`^${number.replace('.', '\\.')} `) }) });
         await card.waitFor({ state: 'visible', timeout: 120_000 });
         assert.equal(await card.count(), 1, `one track card for lesson ${number}`);
-        await card.click();
+        // opening a case works its figures out on the page: on a CI runner the Iridium case keeps the
+        // page busy past the 45 s default, so the click gets the same budget as the waits around it
+        await card.click({ timeout: 120_000 });
         await page.waitForSelector(`body[data-lesson="case-${id}"] .lesson-case-answers`, { timeout: 120_000 });
         await page.getByRole('button', { name: 'Show the answers', exact: true }).click();
         await page.locator('.lesson-case-working').first().waitFor({ state: 'visible' });
