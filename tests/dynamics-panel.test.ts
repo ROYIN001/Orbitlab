@@ -5,7 +5,8 @@ import { defaultDynamics } from '../src/physics/rigid/config';
 import { DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
 import { Simulation } from '../src/physics/simulation';
 import { rigidMission } from './rigid-harness';
-import { vehicleById } from '../src/data/vehicles';
+import { payloadVehicle, vehicleById } from '../src/data/vehicles';
+import { satelliteById } from '../src/data/satellites';
 
 /** Exercise the production section's model-change callback independently from
  * expensive mission preview and DOM layout. Browser smoke covers rendering. */
@@ -29,15 +30,16 @@ describe('flight model changes', () => {
   it('shows and flies the same model-specific defaults while retaining explicit edits', () => {
     const panel = Object.create(SetupPanel.prototype) as SetupPanel;
     const cfg = rigidMission('iss');
-    panel.state = { vehicleId: cfg.vehicleId, dynamics: cfg.dynamics, guidanceOverrides: {} } as SetupPanel['state'];
+    panel.state = { vehicleId: cfg.vehicleId, satelliteId: cfg.satelliteId, dynamics: cfg.dynamics, guidanceOverrides: {} } as SetupPanel['state'];
     const untouched = new Simulation(cfg, { headless: true });
     expect(panel.guidance).toEqual(untouched.cfg.guidance);
-    expect(panel.guidance).toMatchObject({ pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 });
+    expect(panel.guidance).toMatchObject({ pitchOverAltitude: 50, kickAngle: 6, kickDuration: 12, maxTurnRate: 0.5 });
     panel.state.guidanceOverrides = { kickAngle: DEFAULT_GUIDANCE.kickAngle };
     const explicit = new Simulation({ ...cfg, guidance: panel.guidance, guidanceResolved: true }, { headless: true });
     expect(explicit.cfg.guidance.kickAngle).toBe(DEFAULT_GUIDANCE.kickAngle);
     panel.state.dynamics = { ...cfg.dynamics!, model: 'pointMass' };
-    expect(panel.guidance).toEqual({ ...guidanceForVehicle(vehicleById(cfg.vehicleId)), kickAngle: DEFAULT_GUIDANCE.kickAngle });
+    // a crew flies the crewed programme (`VehicleSpec.crewedProfile`), shown as flown
+    expect(panel.guidance).toEqual({ ...guidanceForVehicle(payloadVehicle(vehicleById(cfg.vehicleId), satelliteById(cfg.satelliteId))), kickAngle: DEFAULT_GUIDANCE.kickAngle });
     panel.state.guidanceOverrides = {};
     const legacy = new Simulation({ ...cfg, dynamics: panel.state.dynamics }, { headless: true });
     expect(legacy.cfg.guidance).toEqual(panel.guidance);

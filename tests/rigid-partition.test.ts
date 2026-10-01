@@ -39,7 +39,8 @@ describe('component ownership staging adapter', () => {
     const children = partitionRigidSnapshot(state(), parent, definitions);
     expect(children.length).toBe(5);
     for (const child of children.slice(1)) {
-      expect(child.properties.mass).toBeCloseTo(43384, 8);
+      // Arianespace's gross strap-on, 44 413 kg (it was 43 384 kg before 2026-10-01)
+      expect(child.properties.mass).toBeCloseTo(44413, 8);
       expect(Math.abs(child.properties.cg.y) + Math.abs(child.properties.cg.z)).toBeLessThan(1e-10);
       expect(child.properties.components.every(c => Math.abs(c.centerBody.y) + Math.abs(c.centerBody.z) < 1e-10)).toBe(true);
       expect(child.sourceOwnerIds).toEqual([child.id]);

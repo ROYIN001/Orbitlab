@@ -38,6 +38,13 @@
  * - `expected.json`: `checkResults` over them in Node, as the build
  *   `CHECKER_APP` (the records say `RECORD_APP`: another build, as a
  *   student's would be).
+ * - Written again with `--force` on 2026-10-01, a deliberate change of the
+ *   fixture, when Soyuz-2.1a's crewed flight took its real escape system,
+ *   payload section, stored programme and hot staging (docs/VALIDATION.md
+ *   §3): `class-abort`'s escape at T+60 s now peaks at 17.48 g (it was
+ *   15.27 g; the typed answer kept 3 % high, 18.01) and the crew is down
+ *   5.3 s sooner, and its record carries the vehicle's stored pitch
+ *   programme. The scenario and every other record came out bit for bit.
  */
 import { BUILTIN_LESSONS } from '../src/lessons/catalog';
 import { missionStateOf } from '../src/lessons/config';

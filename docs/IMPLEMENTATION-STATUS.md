@@ -88,18 +88,32 @@ are listed there as drafts awaiting the owner's review.
   same choices (off by default).
 - **The R-7 as drawn** (`src/render/soyuz.ts`): Blok A's taper from 2.05 m at its engines to
   2.95 m, the strap-ons leaning in against it, the open truss up to Blok I, Blok I's aft skirt
-  falling away in three petals ten seconds after Blok A, the frost on the oxygen tanks shedding
+  falling away in three petals some nine seconds after Blok A (T+296 s, as flown), Blok I's flame through the truss
+  before the core has gone, the frost on the oxygen tanks shedding
   in the first half minute, and on a crewed launch the escape tower and the fairing's four grid
-  fins, the tower pulling away at T+114.5 s. Drawing only; the physics is unchanged.
+  fins, the tower pulling away at T+113.5 s. Drawing only; the physics is unchanged.
+- **Soyuz-2 on its real flight** ([VALIDATION.md §3](VALIDATION.md), 2026-10-01): published
+  engines and stage loads; the strap-ons' step to 81 % and their commanded cut-off, the core's
+  commanded cut-off, a pad start; a crewed flight's escape tower carried to T+113.5 s and Blok I's
+  aft skirt; the R-7's stored pitch programme in both flight models to the core's separation, then
+  the closed loop. The crewed fairing goes at 79.0 km (flown 79) and the core at 157.0 km (157);
+  the insertion is 199.9 × 239.8 km (200 × 242). The method, for the other vehicles, is
+  [FLIGHT-PROFILE-METHOD.md](FLIGHT-PROFILE-METHOD.md).
 - **Launch escape** ([PHYSICS.md §8.3](PHYSICS.md)): a crewed Soyuz's escape tower, fairing
   motors and spacecraft separation, flown as rigid bodies to the descent module on its
   parachutes and soft-landing motors. It fires on any failure that is losing the rocket with the
   crew on it, on the `launchAbort` failure and on the Engineer mode's Abort button; the pad fire,
   strap-on collision and separation failure of Soyuz T-10-1, MS-10 and 18a are failure modes and
   Watch launches.
-- **Soyuz-2.1a's fairing** is the 4.11 × 11.43 m unit with its own adapter cone down to Blok I,
-  drawn and flown (it was 3.7 × 10.1 m): the stack stands 46.85 m, 51.0 m with the escape tower,
-  inside the owner's 46.3–51.38 m, and a crewed head with the tower is 15.59 m.
+- **Soyuz-2 hot staging and Soyuz-2.1a's two payload sections** ([VALIDATION.md §3](VALIDATION.md),
+  2026-10-01, second pass): Blok I lights 0.24 s before the core's cut-off and fires through the
+  truss, the core separating 1.02 s after it (`StageSpec.hotStage`). Soyuz-2.1a flies its cargo
+  payload section (11S517A2, 3.0 × 10.4 m, fairing at T+183.2 s, the Progress MS cyclogram) for
+  every payload but a crew, and a crewed launch the crewed one (11S517A3, 3.0 × 9.5 m under the
+  tower, fairing at T+153.3 s, its own cyclogram; `VehicleSpec.crewedProfile`). A Progress MS
+  payload flies its own programme (`cargoShipProfile`) into 193 × 240 km. The crewed stack
+  stands 50.9 m with its tower, its head 15.5 m. The fairing motors are KTRV's; MS-10's core
+  loses its thrust at the strike.
 - **Baikonur's pads** (roadmap V05, `src/render/pads.ts`): an R-7 from Baikonur is drawn on
   Site 31/6, where every crewed Soyuz has flown from since MS-16 (2020), and the three Watch
   aborts on Gagarin's Start, Site 1/5, where T-10-1, 18a and MS-10 flew from (`padId` in the
@@ -182,11 +196,6 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 - **Six-DOF for a rocket of one's own** (Build, D03). Point mass is its default; six-DOF flies it
   with generic steering and thrusters where the real rockets have their own. What is still
   missing is under "Known limitations" below.
-- **Soyuz-2.1a's late first-stage pitch in six-DOF**: from about T+89 s, as the dynamic
-  pressure falls, the aerodynamic angle limit releases a closed-loop pitch command that has run
-  far below the vehicle (7° against 33°), and the vehicle pitches down from 60° to 33° above the
-  horizon over twenty seconds at up to 3 °/s. It is not a thrust effect and is left for the
-  guidance work (G01).
 - **Flying back and flying home.** The returns and the ship's descent are flown on estimated
   data (return aerodynamics, the flaps, the catch envelope, the landing propellant), and
   Flight 5's ship comes down about six minutes early and 15–25° of longitude short of the real

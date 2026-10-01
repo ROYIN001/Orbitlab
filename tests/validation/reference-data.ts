@@ -237,6 +237,36 @@ export const SOYUZ_MS25: TimelineReference = {
 };
 
 /**
+ * Progress MS-19, 15 February 2022, Baikonur Site 31: the cargo ship on
+ * Soyuz-2.1a under the cargo payload section (11S517A2). The nominal
+ * cyclogram RussianSpaceWeb published from TsUP's table, with its heights
+ * (secondary, quoting Roskosmos): the core's cut-off, Blok I's ignition and
+ * the aft skirt are the model's own inputs, so those rows agree by
+ * construction; the heights are genuine comparisons. The 193 × 240 km
+ * insertion is the Progress MS target (Roscosmos via RussianSpaceWeb,
+ * Progress MS-14 to MS-34: 193 ± 2 × 240 ± 7 km).
+ */
+export const PROGRESS_MS19: TimelineReference = {
+  id: 'progressMs19', name: 'Progress MS-19', date: '2022-02-15',
+  sources: 'russianspaceweb.com/progress-ms-19.html (secondary, quoting TsUP); nominal cyclogram and heights',
+  mission: {
+    vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'progress', orbitId: 'iss', orbit: { raanMode: 'free' },
+    payloadMass: 7430, launchTime: new Date('2026-09-22T18:00:00Z'),
+  },
+  milestones: [
+    { id: 'boosterSep', label: 'strap-on separation', event: 'evt.boosterSep', t: 117.848, alt: 43e3 },
+    { id: 'fairing', label: 'fairing jettison', event: 'evt.fairingSep', t: 183.079, alt: 91e3 },
+    { id: 'blokIIgnition', label: 'Blok I ignition', event: 'evt.ignition', afterEvent: 'evt.fairingSep', t: 286.159 },
+    { id: 'coreCutoff', label: 'core cut-off', event: 'evt.meco', t: 286.399 },
+    { id: 'coreSep', label: 'core (Blok A) separation', event: 'evt.stageSep', nth: 1, t: 287.419, alt: 143e3 },
+    { id: 'aftSkirt', label: 'aft skirt jettison', event: 'evt.aftSkirtSep', t: 296.779 },
+    { id: 'seco', label: 'third-stage cut-off', event: 'evt.seco', t: 525.45 },
+    { id: 'payloadSep', label: 'spacecraft separation', event: 'evt.payloadSep', t: 530.24, alt: 192e3 },
+  ],
+  insertion: { perigee: 193.0e3, apogee: 240.0e3 },
+};
+
+/**
  * Electron "No Time Toulouse", 20 June 2024, LC-1 Mahia: five Kinéis
  * satellites to 635 km at 98°. Times, orbit and inclination from Rocket Lab's
  * press kit (rocketlabcorp.com/assets/Uploads/No-Time-Toulouse-Press-Kit.pdf):
@@ -458,5 +488,5 @@ export const ANGARA_F2: TimelineReference = {
   ],
 };
 
-export const TIMELINE_REFERENCES: readonly TimelineReference[] = [SOYUZ_MS25, ELECTRON_NTT, ARIANE64_VA267,
+export const TIMELINE_REFERENCES: readonly TimelineReference[] = [SOYUZ_MS25, PROGRESS_MS19, ELECTRON_NTT, ARIANE64_VA267,
   ATLASV_JUNO, PSLV_C52, H3_F3, H2A_F50, VEGAC_VV25, PROTON_T14R, FH_ARABSAT, ANGARA_F2];

@@ -32,7 +32,7 @@
  *   better.
  */
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
-import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
+import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, payloadVehicle, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
 import { SATELLITES, missionSatellite, satelliteById } from '../data/satellites';
 import { fairingFitText } from './fairing-fit';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
@@ -247,9 +247,13 @@ export class SetupPanel {
     this.render();
   }
 
-  /** The guidance that will be flown: the vehicle's own programme plus operator edits. */
+  /**
+   * The guidance that will be flown: the vehicle's own programme (a crewed
+   * launch's, `VehicleSpec.crewedProfile`) plus operator edits.
+   */
   get guidance(): GuidanceParams {
-    return { ...guidanceForVehicle(missionVehicle(this.state), undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
+    const spec = payloadVehicle(missionVehicle(this.state), missionSatellite(this.state));
+    return { ...guidanceForVehicle(spec, undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
   }
 
   getConfig(): MissionConfig {
@@ -1277,7 +1281,7 @@ export class SetupPanel {
     const learning = this.experience === 'learning';
     gd.appendChild(this.el('summary', undefined, t(learning ? 'setup.auto.title' : 'setup.guidance')));
     const g = this.guidance;
-    const set = (k: keyof GuidanceParams, v: number): void => {
+    const set = (k: (typeof GUIDANCE_FIELDS)[string]['key'], v: number): void => {
       this.state.guidanceOverrides[k] = v;
       // an explicit edit belongs to this mission too
       this.tunedFor = this.missionSignature();

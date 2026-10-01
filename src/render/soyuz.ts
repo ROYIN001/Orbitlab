@@ -243,19 +243,24 @@ export class FrostCoat {
 
 // ------------------------------------------------------------------ Blok I aft skirt
 
-/** Seconds after Blok A leaves that Blok I drops its aft skirt. */
-const SKIRT_AFTER = 10;
+/**
+ * Seconds after its stage lights that Blok I drops its aft skirt, where the
+ * stage does not say (`StageSpec.jettisons`, an `aftSkirt`, timed from the
+ * same ignition): 11.07 s, Vostok-K's Blok E, which lights as its core goes.
+ */
+const SKIRT_AFTER = 11.07;
 
 /**
  * Blok I's aft skirt round its engine, in three petals. It rides through the
- * truss during the hot staging and is shed ten seconds after Blok A has gone,
+ * truss during the hot staging and is shed some seconds after Blok A has gone,
  * the petals swinging out and falling behind.
  */
 export class AftSkirt {
   readonly group = new THREE.Group();
   private readonly petals: THREE.Group[] = [];
 
-  constructor(r: number, height: number, mat: THREE.Material) {
+  /** @param after seconds after its stage lights that it falls away, as the stage's physics drops it */
+  constructor(r: number, height: number, mat: THREE.Material, private readonly after = SKIRT_AFTER) {
     for (let k = 0; k < 3; k++) {
       const mid = (k + 0.5) * (Math.PI * 2 / 3);
       // hinge on the top edge at the middle of the petal
@@ -273,11 +278,11 @@ export class AftSkirt {
   }
 
   /**
-   * @param sinceBlokA mission time since Blok A separated, s (negative while
-   *        it is still attached)
+   * @param sinceIgnition mission time since its stage lit, s, once Blok A has
+   *        separated (negative while Blok A is still attached)
    */
-  update(sinceBlokA: number): void {
-    const tau = sinceBlokA - SKIRT_AFTER;
+  update(sinceIgnition: number): void {
+    const tau = sinceIgnition - this.after;
     if (tau <= 0) {
       this.group.visible = true;
       for (const p of this.petals) { p.rotation.x = 0; p.position.y = 0; }
@@ -295,8 +300,8 @@ export class AftSkirt {
 
 // ------------------------------------------------------------------ crewed Soyuz: escape tower and fairing fins
 
-/** The escape tower is jettisoned at T+114.5 s, forty seconds before the fairing. */
-export const LES_JETTISON = 114.5;
+/** The escape tower is jettisoned at T+113.5 s, forty seconds before the fairing: the physics' own time. */
+export const LES_JETTISON = ESCAPE.towerJettison;
 
 /**
  * The launch escape tower (САС) on the crewed fairing's nose, and the four

@@ -49,12 +49,13 @@ describe('custom satellite checker (D06)', () => {
     for (const s of SATELLITES) {
       expect({ [s.id]: satelliteSpecProblems(satelliteCopyOf(s.id)) }).toEqual({ [s.id]: [] });
       expect({ [s.id]: satelliteSpecProblems(satelliteCopyOf(s.id, { area: 12, cd: 2.2, cr: 1.3 })) }).toEqual({ [s.id]: [] });
-      // without an origin, unless it claims a crew or one of C01's flight
-      // behaviours (flown on top, home on its own parachutes, riding the last
-      // stage into orbit), which only a copy keeps
-      const { derivedFrom: _, crewed, exposed, descent, staysAttached, ...plain } = satelliteCopyOf(s.id);
+      // without an origin, unless it claims a crew, a cargo ship's flight or
+      // one of C01's flight behaviours (flown on top, home on its own
+      // parachutes, riding the last stage into orbit), which only a copy keeps
+      const { derivedFrom: _, crewed, cargoShip, exposed, descent, staysAttached, ...plain } = satelliteCopyOf(s.id);
       expect({ [s.id]: satelliteSpecProblems(plain) }).toEqual({ [s.id]: [] });
       if (crewed) expect(satelliteSpecProblems({ ...plain, crewed }).map((i) => i.path)).toEqual(['crewed']);
+      if (cargoShip) expect(satelliteSpecProblems({ ...plain, cargoShip }).map((i) => i.path)).toEqual(['cargoShip']);
       if (exposed) expect(satelliteSpecProblems({ ...plain, exposed }).map((i) => i.path)).toEqual(['exposed']);
       if (descent) expect(satelliteSpecProblems({ ...plain, descent }).map((i) => i.path)).toEqual(['descent']);
       if (staysAttached) expect(satelliteSpecProblems({ ...plain, staysAttached }).map((i) => i.path)).toEqual(['staysAttached']);
@@ -155,11 +156,16 @@ describe('fairing fit, an estimate (D06)', () => {
   it('takes the satellite as a cylinder and the usable space as fixed shares of the shell above its adapter cone', () => {
     const soyuz = vehicleById('soyuz21a');
     const fit = fairingFit(soyuz, satelliteById('crew'));
-    // Soyuz-2.1a's 4.11 × 11.43 m unit with its 2.2 m adapter cone (src/data/parts.ts)
-    expect(fit.shell).toEqual({ diameter: 4.11, length: 11.43 - 2.2 });
-    expect(fit.envelope).toEqual({ diameter: 4.11 * FAIRING_ENVELOPE.diameter, length: (11.43 - 2.2) * FAIRING_ENVELOPE.length });
+    // the crew ship flies in Soyuz-2.1a's crewed payload section, the 3.0 × 9.5 m
+    // 11S517A3 with its 0.8 m adapter (src/data/parts.ts, `crewedProfile`); the
+    // 2.7 m Soyuz MS is wider than 85 % of it, flown, so only "tight" as Vostok's
+    expect(fit.shell).toEqual({ diameter: 3.0, length: 9.5 - 0.8 });
+    expect(fit.envelope).toEqual({ diameter: 3.0 * FAIRING_ENVELOPE.diameter, length: (9.5 - 0.8) * FAIRING_ENVELOPE.length });
     expect(fit.payload).toEqual({ diameter: 2.7, length: 7 });
-    expect(fit.verdict).toBe('fits');
+    expect(fit.verdict).toBe('tight');
+    // any other payload, the cargo ship included, in the 3.0 × 10.4 m 11S517A2
+    expect(fairingFit(soyuz, satelliteById('cubesats')).shell).toEqual({ diameter: 3.0, length: 10.4 - 0.8 });
+    expect(fairingFit(soyuz, satelliteById('progress')).shell).toEqual({ diameter: 3.0, length: 10.4 - 0.8 });
     const box = (width: number, height: number, depth: number): Pick<SatelliteSpec, 'size'> => ({ size: { width, height, depth } });
     const f9 = vehicleById('falcon9'); // 5.2 × 13.1 m, no adapter cone
     expect(fairingFit(f9, box(3, 5, 4.4)).verdict).toBe('fits');
@@ -211,10 +217,12 @@ describe('fairing fit, an estimate (D06)', () => {
     // Recorded again when C01 (PR #38 and after) added its historical
     // missions: their six pairings, on the same rule, with Vostok 1 as tight
     // as the Vostok before it and the three spacecraft flown on top with no
-    // fairing (Crew Dragon, Mercury, Apollo 11) as "noFairing".
+    // fairing (Crew Dragon, Mercury, Apollo 11) as "noFairing". And when
+    // Soyuz-2.1a's crewed flight took its own 3.0 m payload section (11S517A3,
+    // 2026-10-01): the Soyuz MS in it is "tight" too, as flown.
     expect(verdicts).toEqual({
       'electron|cubesats': 'fits', 'falcon9|comsat': 'fits', 'falcon9|cubesats': 'fits', 'falconheavy|comsat': 'fits',
-      'ariane64|starlink': 'fits', 'saturnv|apollo': 'noFairing', 'soyuz21a|crew': 'fits', 'soyuz21a|cubesats': 'fits',
+      'ariane64|starlink': 'fits', 'saturnv|apollo': 'noFairing', 'soyuz21a|crew': 'tight', 'soyuz21a|cubesats': 'fits',
       'sputnik8k71ps|sputnik1': 'fits', 'starship|cubesats': 'noFairing', 'vostok8k72k|vostok3ka': 'tight',
       'angaraa5|comsat': 'fits', 'falcon9|crewDragon': 'noFairing', 'h2a202|science': 'fits', 'mercuryredstone|mercury': 'noFairing',
       'r7sputnik|ps1': 'fits', 'saturnv506|apollo11': 'noFairing', 'vostokk|vostok1': 'tight',

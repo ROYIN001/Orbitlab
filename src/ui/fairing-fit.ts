@@ -10,9 +10,8 @@
  * "4,4 × 10,5 м" never ends a line at "10,5" (`unbroken`). A size under a
  * metre keeps two decimals, so a CubeSat's 0.22 m is not shown as 0.2.
  */
-import type { SatelliteSpec, VehicleSpec } from '../types';
 import { t } from '../i18n';
-import { FAIRING_ENVELOPE, fairingFit, type FairingFitVerdict } from '../config/satellite-spec';
+import { FAIRING_ENVELOPE, fairingFit, type FairingFitSatellite, type FairingFitVehicle, type FairingFitVerdict } from '../config/satellite-spec';
 import { unbroken } from './build/figures';
 import { num } from './orbit/dom';
 
@@ -23,7 +22,7 @@ export interface FairingFitText {
   warn: boolean;
 }
 
-export function fairingFitText(vehicle: Pick<VehicleSpec, 'fairing'>, satellite: Pick<SatelliteSpec, 'size' | 'exposed' | 'crossSection'>): FairingFitText {
+export function fairingFitText(vehicle: FairingFitVehicle, satellite: FairingFitSatellite): FairingFitText {
   const fit = fairingFit(vehicle, satellite);
   const digits = (x: number): number => (x < 1 ? 2 : 1);
   const size = (b?: { diameter: number; length: number }): string =>

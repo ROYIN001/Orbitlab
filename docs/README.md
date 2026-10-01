@@ -11,7 +11,8 @@ Read in this order. Each document assumes the ones before it.
 | 5 | [SIXDOF-BROWSER-QA.md](SIXDOF-BROWSER-QA.md) | Browser checks of the six-DOF build: what was verified by hand, performance and memory limits. |
 | 6 | [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) | Where the project stands now: what is done, what is experimental, what is next, and how it is tested. |
 | 7 | [VALIDATION.md](VALIDATION.md) | The simulator against real flight data: Falcon 9 webcast telemetry of five flights and published timelines of ten more vehicles, the tolerances, where it disagrees and why, and the data changes it led to. |
-| 8 | [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md) | What comes after the launch simulator: the Orbit and Build sections, the section × level structure, online and offline data, the Moon, and the order they are built in. |
+| 8 | [FLIGHT-PROFILE-METHOD.md](FLIGHT-PROFILE-METHOD.md) | How a vehicle is brought onto its real flight: data closed against the published masses, propulsion and events checked first, the guidance's structure from a source, the fewest fitted numbers, held-out checks; Soyuz-2.1a as the worked example and which vehicles can go through it next. |
+| 9 | [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md) | What comes after the launch simulator: the Orbit and Build sections, the section × level structure, online and offline data, the Moon, and the order they are built in. |
 
 The repository's own [README](../README.md) covers installing, running and the source layout.
 
@@ -33,4 +34,5 @@ the documents above are right. File names they mention without a folder are in `
 | [CHECKPOINT-2026-09-20.md](history/CHECKPOINT-2026-09-20.md) | 2026-09-19/20 | The status file as it stood when the six-DOF phase was accepted. It was appended to over two days and contradicts itself; [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) replaces it. |
 | [audit-2026-09-27/](history/audit-2026-09-27/) | 2026-09-27 | The usage audit of the live site and its source (Thai), the three source reviews behind it, its event-log evidence and screenshots, and the fix plan of 2026-09-28 (Thai) with one prompt per session. |
 | [review-2026-09-30/](history/review-2026-09-30/) | 2026-09-30 | Status inventory, the remaining-work audit of ten areas, the review of PR #41 and the next-level development plan (five angles, three judges, a twelve-week sequence) — all in Thai, with an index. |
+| [audit-2026-10-01-flight-profile.md](history/audit-2026-10-01-flight-profile.md) | 2026-10-01 | The flight-profile method's audit of eight vehicles (steps 1–3: data, propulsion, events) and the critic's verdict on each proposal. |
 | [USER-TEST-2026-10.md](USER-TEST-2026-10.md) | 2026-10 | The user-test protocol (Thai) to run after waves 1–2 of the 2026-09-28 plan: five timed tasks for 5–6 first-time users, the observer script, printable per-person forms, the PDPA rules and the wave 3 decisions the results must settle. |

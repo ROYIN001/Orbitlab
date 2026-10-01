@@ -243,7 +243,7 @@ export class RocketView {
     const last = spec.stages[spec.stages.length - 1];
     if (spec.fairing) {
       this.vapour = new VapourCone(spec.fairing.diameter / 2, spec.fairing.diameter * 1.7);
-      this.vapourAt = { onFairing: true, y: spec.fairing.length * 0.52 };
+      this.vapourAt = { onFairing: true, y: spec.fairing.length - (spec.fairing.noseLength ?? spec.fairing.length * 0.48) };
     } else if (spec.exposedPayload) {
       // a payload flown in the open: the collar forms at its capsule's shoulder
       const p = spec.exposedPayload;
@@ -479,7 +479,7 @@ export class RocketView {
     if (spec.legs) this.addLegs(g, r, spec.length);
     let skirt: AftSkirt | null = null;
     if (spec.profile === 'r7Upper') {
-      skirt = new AftSkirt(r, 1.2, this.mat(spec.color ?? '#c9c7bd', 0.2, 0.6));
+      skirt = new AftSkirt(r, 1.2, this.mat(spec.color ?? '#c9c7bd', 0.2, 0.6), spec.jettisons?.find((j) => j.part === 'aftSkirt')?.t);
       g.add(skirt.group);
     }
     let flaps: FlapVisual[] = [];
@@ -712,7 +712,7 @@ export class RocketView {
     this.textures.push(tex, bump);
     const m = new THREE.MeshStandardMaterial({ map: tex, bumpMap: bump, bumpScale: BODY_RELIEF, metalness: 0.15, roughness: 0.5 });
     this.materials.push(m);
-    const cylH = f.length * 0.52;
+    const cylH = f.length - (f.noseLength ?? f.length * 0.48);
     // a fairing with its own adapter narrows to the stage it stands on
     const adapter = f.adapter ?? 0;
     if (adapter > 0) {
@@ -765,7 +765,8 @@ export class RocketView {
       this.updateEngineVisual(part.engines, frame.rigid);
       if (part.flaps.length) foldShipFlaps(part.flaps, frame.rigid);
       part.frost?.update(sinceLiftoff);
-      part.skirt?.update(sinceFirstSep);
+      // timed from its stage's own ignition, as the physics drops it, once Blok A has gone
+      part.skirt?.update(sinceFirstSep >= 0 && sf.ignited ? t - (sf.ignitionTime ?? t) : -1);
       if (part.ring) part.ring.visible = !frame.jettisoned?.interstage;
       part.group.position.y = y;
       const burning = sf.burning;

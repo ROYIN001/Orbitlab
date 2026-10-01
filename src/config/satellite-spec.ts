@@ -96,7 +96,7 @@ export const SATELLITE_LIMITS = {
  */
 const CLASS_CD = 2.2;
 
-const SATELLITE_FIELDS = ['id', 'kind', 'name', 'mass', 'typicalOrbit', 'description', 'crewed', 'propulsion', 'size', 'area', 'cd', 'cr', 'derivedFrom',
+const SATELLITE_FIELDS = ['id', 'kind', 'name', 'mass', 'typicalOrbit', 'description', 'crewed', 'cargoShip', 'propulsion', 'size', 'area', 'cd', 'cr', 'derivedFrom',
   'exposed', 'carriers', 'descent', 'staysAttached', 'crossSection'];
 
 /**
@@ -134,6 +134,15 @@ export function satelliteSpecProblems(raw: unknown): SatelliteSpecIssue[] {
   if (raw.crewed === true) {
     if (!origin?.crewed) c.add('crewed', 'only a satellite derived from a crewed catalogue one carries a crew');
     else if (raw.kind !== origin.kind) c.add('crewed', `only a crewed spacecraft's own kind carries a crew: a copy of ${origin.id} keeps "${origin.kind}" (got ${JSON.stringify(raw.kind)})`);
+  }
+  // A cargo ship to the station (`cargoShip`) changes how its launcher flies:
+  // Soyuz-2.1a's Progress MS programme, cyclogram and fairing
+  // (`VehicleSpec.cargoShipProfile`). As a crew, only a copy of one keeps it,
+  // in its original's kind.
+  c.boolean(raw, 'cargoShip', '');
+  if (raw.cargoShip === true) {
+    if (!origin?.cargoShip) c.add('cargoShip', 'only a satellite derived from a cargo ship to the station flies as one');
+    else if (raw.kind !== origin.kind) c.add('cargoShip', `only a cargo ship's own kind flies as one: a copy of ${origin.id} keeps "${origin.kind}" (got ${JSON.stringify(raw.kind)})`);
   }
   // C01's flight behaviours — flown on top with no fairing (`exposed`), home
   // on its own parachutes (`descent`), riding the last stage into orbit
@@ -237,6 +246,9 @@ export const FAIRING_ENVELOPE = { diameter: 0.85, length: 0.8 } as const;
  */
 export type FairingFitVerdict = 'fits' | 'tight' | 'tooBig' | 'noFairing' | 'noSize';
 
+export type FairingFitVehicle = Pick<VehicleSpec, 'fairing'> & Partial<Pick<VehicleSpec, 'crewedProfile' | 'cargoShipProfile'>>;
+export type FairingFitSatellite = Pick<SatelliteSpec, 'size' | 'exposed' | 'crossSection' | 'crewed' | 'cargoShip'>;
+
 export interface FairingFit {
   verdict: FairingFitVerdict;
   /**
@@ -262,8 +274,11 @@ export interface FairingFit {
  * The catalogue sets no section, so no built-in pairing's verdict changes
  * (tests/d06-satellite-spec.test.ts).
  */
-export function fairingFit(vehicle: Pick<VehicleSpec, 'fairing'>, satellite: Pick<SatelliteSpec, 'size' | 'exposed' | 'crossSection'>): FairingFit {
-  const f = vehicle.fairing;
+export function fairingFit(vehicle: FairingFitVehicle, satellite: FairingFitSatellite): FairingFit {
+  // the payload section the satellite flies in: a crewed or cargo ship's own
+  // (`VehicleSpec.crewedProfile`, `cargoShipProfile`, as `payloadVehicle` takes it)
+  const profile = satellite.crewed ? vehicle.crewedProfile : satellite.cargoShip ? vehicle.cargoShipProfile : undefined;
+  const f = profile?.fairing ?? vehicle.fairing;
   if (!f || satellite.exposed) return { verdict: 'noFairing' };
   const shell = { diameter: f.diameter, length: f.length - (f.adapter ?? 0) };
   const envelope = { diameter: shell.diameter * FAIRING_ENVELOPE.diameter, length: shell.length * FAIRING_ENVELOPE.length };

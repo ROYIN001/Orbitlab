@@ -65,7 +65,8 @@ describe('D01 interstages: derived, massless display parts', () => {
     };
     expect(Math.abs(stack('falcon9') - 59.294)).toBeLessThan(1e-12);
     expect(Math.abs(stack('soyuz21a') - 35.419)).toBeLessThan(1e-12);
-    expect(Math.abs(stack('soyuz21a') + VEHICLES.find((v) => v.id === 'soyuz21a')!.fairing!.length - 46.849)).toBeLessThan(1e-12);
+    // under the cargo payload section's 10.4 m fairing (2026-10-01; it was the 4.11 × 11.43 m ST fairing, 46.849 m)
+    expect(Math.abs(stack('soyuz21a') + VEHICLES.find((v) => v.id === 'soyuz21a')!.fairing!.length - 45.819)).toBeLessThan(1e-12);
     expect(Math.abs(stack('saturnv') - 90.15)).toBeLessThan(1e-12);
   });
 });

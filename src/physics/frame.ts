@@ -210,7 +210,7 @@ export interface VisualFrame {
   /** C01: Apollo's flight from the parking orbit */
   apollo?: ApolloState;
   /** C01: parts dropped on the way up (`StageSpec.jettisons`) — the Saturn V's interstage ring and escape tower */
-  jettisoned?: { interstage: boolean; tower: boolean };
+  jettisoned?: { interstage: boolean; tower: boolean; aftSkirt?: boolean };
   destroyed: boolean;
   liftoff: boolean;
   debris: DebrisFrame[];
@@ -411,8 +411,11 @@ export function captureFrame(sim: Simulation): VisualFrame {
   const layout = stackLayout(sim.vehicleSpec);
   const stages: StageFrame[] = [];
   const boosters: BoosterFrame[] = [];
+  // a hot stage lit above the active one fires through the truss (`VehicleModel.hotStage`)
+  const hot = sim.vehicle.hotStage();
   for (const st of sim.vehicle.stages) {
-    const burning = st.ignited && !st.cutoff && !st.burnedOut && st.engineFraction > 0 && st.attached && st.index === sim.vehicle.activeIndex && s.thrust > 0;
+    const burning = st.ignited && !st.cutoff && !st.burnedOut && st.engineFraction > 0 && st.attached
+      && (st.index === sim.vehicle.activeIndex || st === hot) && s.thrust > 0;
     stages.push({
       id: st.spec.id,
       index: st.index,
@@ -428,8 +431,9 @@ export function captureFrame(sim: Simulation): VisualFrame {
       engineFraction: st.engineFraction,
       // `s.coreThrottle` is what `VehicleModel.thrust` actually applied on the
       // last step, solid profile included — only the active stage can be
-      // `burning`, so one recorded number covers the whole list.
-      effectiveThrottle: burning ? s.coreThrottle : 0,
+      // `burning`, so one recorded number covers the whole list, but for a
+      // hot stage lit above it, which has its own (`s.hotThrottle`).
+      effectiveThrottle: burning ? st === hot ? s.hotThrottle ?? 0 : s.coreThrottle : 0,
     });
     for (const b of st.boosters) {
       const bBurning = b.attached && b.ignited && !b.burnedOut && st.attached;
@@ -505,7 +509,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     activeStageIndex: sim.vehicle.activeIndex,
     fairingAttached: sim.vehicle.fairingAttached,
     payloadSeparated: s.payloadSeparated,
-    ...(sim.vehicle.jettisoned.interstage || sim.vehicle.jettisoned.tower ? { jettisoned: { ...sim.vehicle.jettisoned } } : {}),
+    ...(sim.vehicle.jettisoned.interstage || sim.vehicle.jettisoned.tower || sim.vehicle.jettisoned.aftSkirt ? { jettisoned: { ...sim.vehicle.jettisoned } } : {}),
     ...(sim.apollo.active ? { apollo: sim.apollo.frame() } : {}),
     destroyed: s.destroyed,
     liftoff: s.liftoff,

@@ -51,7 +51,7 @@ const pick = (o: object, keys: readonly string[]): Record<string, unknown> =>
 
 /** The hardware fields a body part emits; the rest of a `StageSpec` is its installation. */
 const BODY_HARDWARE = ['id', 'name', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length'] as const;
-const FAIRING_HARDWARE = ['mass', 'diameter', 'length', 'adapter'] as const;
+const FAIRING_HARDWARE = ['mass', 'diameter', 'length', 'adapter', 'noseLength'] as const;
 
 /** The one element of `list` the predicate holds for, or null when none or several do. */
 function only<T>(list: readonly T[], match: (item: T) => boolean): T | null {

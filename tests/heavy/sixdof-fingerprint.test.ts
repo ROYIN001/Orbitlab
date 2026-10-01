@@ -25,6 +25,20 @@
  *   '2844117a23563142' and '1e14a01434e78edb'. Both were flown from the
  *   literal fleet of the branch that made the change (c2aabb4 with the kick)
  *   and from the catalogue, and agree; the other 19 are unchanged.
+ * - soyuz21a, after audit PHY-01 (2026-10-01, docs/VALIDATION.md §3): its
+ *   six-DOF programme takes a 6° kick and closes the loop at T+140 s, holding
+ *   the launch azimuth until then; it was '6cffff9a7d35bbd0'. Only soyuz21a's
+ *   `guidanceDefaultsSixDof` changed, and the azimuth hold reaches no other
+ *   catalogue vehicle (the other 20 are unchanged).
+ * - soyuz21a and soyuz21b, for Soyuz-2 on its real flight (2026-10-01,
+ *   docs/VALIDATION.md §3): published engines and loads, the commanded
+ *   sequence and the stored pitch programme; they were '2c9438cf9d3df949' and
+ *   'bc74fbe1899c4e51'. The other 19 are unchanged.
+ * - soyuz21a and soyuz21b again, for Soyuz-2's second pass (2026-10-01,
+ *   docs/VALIDATION.md §3): Soyuz-2.1a's cargo payload section (the 3.0 m
+ *   11S517A2) and refitted programme, Soyuz-2.1b's fairing at Arianespace's
+ *   T+208.4 s instead of 157 s, inside the 160 s; they were 'c59c89cad663d74b'
+ *   and '644b71375fa52e3d'. The other 19, F14's two included, are unchanged.
  *
  * Heavy suite only (`npm run test:heavy`): 21 six-DOF flights of 160 s.
  */
@@ -51,8 +65,8 @@ function sixDofMission(c: FleetCase): MissionConfig {
 }
 
 const FINGERPRINTS: Readonly<Record<string, string>> = {
-  soyuz21a: '6cffff9a7d35bbd0',
-  soyuz21b: 'bc74fbe1899c4e51',
+  soyuz21a: 'f8fa995d2de674a4',
+  soyuz21b: '6f67c4ea034ec61e',
   protonm: '336045ed763a8b3e',
   angaraa5: '4d4263d76a86d994',
   falcon9: '4e7814725cdd4e3b',

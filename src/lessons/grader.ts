@@ -19,7 +19,8 @@
 import { assessMissionResult } from '../ui/result-content';
 import { guidanceForVehicle } from '../physics/defaults';
 import { defaultDynamics } from '../physics/rigid/config';
-import { missionVehicle } from '../data/vehicles';
+import { missionVehicle, payloadVehicle } from '../data/vehicles';
+import { missionSatellite } from '../data/satellites';
 import { LESSON_HOOKS } from './hooks';
 import { MEASURES, missionTarget } from './measures';
 import type { CatalogLesson, Criterion, CriterionGrade, CriterionState, DesignLockKey, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
@@ -242,9 +243,15 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
         // the lesson's own rocket, a custom one included (T01, map §4.1): `vehicleById` threw for it
         const spec = missionVehicle(m);
         const model = m.dynamics?.model ?? defaultDynamics(spec).model;
-        const expected = { ...guidanceForVehicle(spec, undefined, model), ...m.guidanceOverrides } as Record<string, number>;
-        const flown = cfg.guidance as unknown as Record<string, number>;
-        kept = Object.keys(expected).every((k) => near(flown[k], expected[k], 1e-6))
+        const flown = cfg.guidance as unknown as Record<string, unknown>;
+        // numbers to a tolerance; a stored pitch programme (`pitchProgram`) as a whole. A payload
+        // with a profile of its own flies its programme (`VehicleSpec.crewedProfile`, `cargoShipProfile`).
+        const keeps = (v: typeof spec) => {
+          const expected = { ...guidanceForVehicle(v, undefined, model), ...m.guidanceOverrides } as Record<string, unknown>;
+          return Object.keys(expected).every((k) => typeof expected[k] === 'number' || expected[k] === undefined
+            ? near(flown[k] as number | undefined, expected[k] as number | undefined, 1e-6) : same(flown[k], expected[k]));
+        };
+        kept = (keeps(spec) || keeps(payloadVehicle(spec, missionSatellite(m))))
           && same(cfg.dynamics?.explicitGuidance, m.dynamics?.explicitGuidance);
         break;
       }

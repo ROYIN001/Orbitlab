@@ -5,8 +5,8 @@
  * VALIDATION against published ratings. The bound was fixed before the first
  * run: the computed LEO rating within ±25 % of the published `payloadLEO`,
  * for six catalogue vehicles of different kinds — an R-7 with liquid
- * strap-ons flown single-shot (Soyuz-2.1a, to its RATING_ORBITS 240 km ×
- * 51.6° from Baikonur), a two-stage kerolox launcher with a restartable upper
+ * strap-ons flown single-shot (Soyuz-2.1a, to its RATING_ORBITS 200 × 240 km ×
+ * 51.6° from Baikonur, 240 km circular until 2026-10-01), a two-stage kerolox launcher with a restartable upper
  * stage (Falcon 9), a single-shot hypergolic two-stager (Long March 2D, to its
  * RATING_ORBITS 200 km × 41° from Jiuquan), three solid stages and a liquid
  * kick stage (Vega-C), a hydrolox core with solid strap-ons (Ariane 64), and
@@ -72,7 +72,7 @@ import { assemble } from '../src/design/assemble';
 describe('computed ratings: the rating orbits', () => {
   it('takes a vehicle’s RATING_ORBITS entry, its origin’s for a remix, and the catalogue’s convention otherwise', () => {
     const soyuz = ratingOrbits(vehicleById('soyuz21a'));
-    expect([soyuz.LEO.from, soyuz.LEO.siteId, soyuz.LEO.orbit.perigee, soyuz.LEO.orbit.apogee, soyuz.LEO.orbit.inclination]).toEqual(['ratingOrbits', 'baikonur', 240e3, 240e3, 51.6]);
+    expect([soyuz.LEO.from, soyuz.LEO.siteId, soyuz.LEO.orbit.perigee, soyuz.LEO.orbit.apogee, soyuz.LEO.orbit.inclination]).toEqual(['ratingOrbits', 'baikonur', 200e3, 240e3, 51.6]);
     const copy = ratingOrbits(remix(vehicleById('soyuz21a'), [], 'soyuz-x', 'X').spec);
     expect(copy.LEO).toEqual(soyuz.LEO);
     const f9 = ratingOrbits(vehicleById('falcon9'));

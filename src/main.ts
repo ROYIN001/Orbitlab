@@ -1418,7 +1418,7 @@ class App {
     }
     const fairing = sim.vehicleSpec.fairing;
     if (sim.escape.fitted && fairing) {
-      this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length);
+      this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length, 'soyuz', fairing.noseLength);
       this.scene.scene.add(this.escapeView.group);
     } else if (sim.satellite.descent) {
       // C01: a capsule coming home from a suborbital flight (Mercury-Redstone 3)
