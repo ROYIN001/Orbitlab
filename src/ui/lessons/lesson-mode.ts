@@ -903,7 +903,7 @@ export class LessonMode implements LessonToolsHost {
     this.strip.setAttribute('aria-label', `${t('lesson.button')} ${lessonNumber(lesson)}`);
     const head = el('div', 'lesson-strip-head');
     head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: group })),
-      el('h2', undefined, localText(lesson.title)));
+      el('h2', undefined, keepUnits(localText(lesson.title))));
     if (item?.curriculum.length) head.append(this.codeChips(item.curriculum));
     // W: a lesson's own figures stay with their units on a phone (a pack's "3.5 m²", a debrief's "5 400 times")
     head.append(el('p', 'lesson-brief', keepUnits(localText(lesson.brief))));
@@ -1526,7 +1526,7 @@ export class LessonMode implements LessonToolsHost {
     card.classList.toggle('active', this.active?.lesson.id === l.id);
     card.append(el('span', 'lesson-card-status', status));
     const text = el('span', 'lesson-card-text');
-    text.append(el('b', undefined, `${lessonNumber(l)} ${localText(l.title)}`));
+    text.append(el('b', undefined, `${lessonNumber(l)} ${keepUnits(localText(l.title))}`));
     const item = opts.pack?.item;
     if (item?.curriculum.length) text.append(this.codeChips(item.curriculum));
     text.append(el('small', undefined, localText(l.brief)));

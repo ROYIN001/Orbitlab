@@ -42,7 +42,7 @@ import { ExploreStore, STORE_TEXTS } from './explore-store';
 import { field, select } from './explore-level';
 import { camera, designDateField, engine, menu, numberField, refreshControls, sso } from './satellite-controls';
 import { SECTION_KEY, sectionRows, type Section } from './satellite-figures';
-import { figureTable, satTextList, sayFig } from './satellite-text';
+import { figureTable, keepUnits, satTextList, sayFig } from './satellite-text';
 import { defaultNameFor, type SatelliteWorkspace } from './satellite-workspace';
 import { SatelliteFly, type LaunchMissionNow } from './satellite-fly';
 import type { MissionDocument } from '../../config/mission-file';
@@ -207,7 +207,7 @@ export class SatelliteLevel {
     const row = el('div', 'bx-head-row');
     row.append(field(t('build.sat.template'), picker, 'bx-field bsat-template'), field(t('build.sat.name'), name, 'bx-field bx-name'), again,
       designDateField(this.ws, P));
-    const about = el('p', 'bsat-about', t(TEMPLATE_TEXT[d.template]?.about ?? 'build.sat.tpl.none'));
+    const about = el('p', 'bsat-about', keepUnits(t(TEMPLATE_TEXT[d.template]?.about ?? 'build.sat.tpl.none')));
     this.head.replaceChildren(text, row, about, el('p', 'bx-note small', `${t('build.sat.origin.legend')} ${t('build.sat.date.note')}`));
     if (lesson) this.head.append(el('p', 'bx-note bsat-lesson-note', t('lesson.design.deskNote')));
   }

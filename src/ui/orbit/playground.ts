@@ -52,6 +52,7 @@ import { PorkchopView, type PorkchopData } from './porkchop-view';
 import type { OrbitHandoff } from '../../orbit/handoff';
 import { GroundTrackView } from './ground-track';
 import { Field, altKm, button, clockText, deg, el, hhmm, km, num, plain, sci, span } from './dom';
+import { keepUnits } from '../keep-units';
 import { CannonView } from './cannon-view';
 import { RealSky } from './sky-panel';
 import { CASE_FOCUS, type CaseId, type CaseLessonState } from '../../worksheets/case-ids';
@@ -1105,7 +1106,8 @@ export class OrbitPlayground {
       box.append(el('p', 'pg-handoff-empty', this.handoffNote ?? t('handoff.none')));
       return box;
     }
-    box.append(el('p', 'pg-handoff-label', h.label));
+    // W: a designed satellite's orbit keeps its figures with their units ("540 | km" broke at 1440 px)
+    box.append(el('p', 'pg-handoff-label', keepUnits(h.label)));
     const dl = el('dl', 'pg-dl');
     // O03: as it is now — lighter by whatever the plans flown from it burned
     const kg = t('u.kg'), craft = this.launchCraft;
