@@ -23,7 +23,9 @@
  *   way it went here;
  * - **differs**: a value or a state the tolerance does not explain — the
  *   record was edited, it comes from another build (`sameBuild`), or the
- *   lesson file is not the one the student had;
+ *   lesson file is not the one the student had — or a re-fly that could not
+ *   stop within `EVENT_TIME_TOLERANCE` of the grading time (no step boundary
+ *   within `SAME_T` of it: an edited time, or another build's steps);
  * - **cannot re-fly**: a case lesson (no flight), a six-DOF flight (minutes
  *   each: not re-flown), a lesson this checker does not have, a mission or a
  *   journal that does not read, a flight that never reaches the time it was
@@ -90,8 +92,18 @@ export const HOOK_TOLERANCE: Readonly<Record<string, number>> = { crewSafe: 1e-4
 /** Longest re-fly, s of mission time, and most steps: a flight that runs on past these never reaches its grade. */
 const MAX_REFLY_T = 30 * 86400;
 const MAX_REFLY_STEPS = 2_000_000;
-/** Step boundaries are compared to a nanosecond: a journal written as JSON reads back to the same double. */
-const SAME_T = 1e-9;
+/**
+ * How near a step boundary must be to a recorded time (a journal entry's, the
+ * grading time) to be the boundary that took it, s. On the engine that flew
+ * the record the boundary is that very double (a journal written as JSON reads
+ * back to it). Another engine's clock sums the same steps to a hair either side
+ * — measured, Chromium against Node: 1.4e-12 s at T+3 238 s, 2.1e-8 s at
+ * T+177 204 s on a two-day flight to GEO, where a nanosecond's window let the
+ * re-fly step past the grading boundary and grade a whole 30 s step later. No
+ * step is shorter than 1e-4 s (`Simulation.suggestedDt`'s smallest clamp, a
+ * pending action's gap), so a 10 µs window still holds one boundary at most.
+ */
+export const SAME_T = 1e-5;
 
 export type CheckStatus = 'match' | 'borderline' | 'differs' | 'cannotRefly';
 export type CannotReason = 'caseLesson' | 'noLesson' | 'noMission' | 'mission' | 'sixDof' | 'actions' | 'notReached' | 'incomplete' | 'error';
@@ -359,6 +371,8 @@ export function checkRecord(job: RecheckJob, catalogue: readonly CatalogLesson[]
   try { flown = reflyRecord(lesson, r); } catch { return { ...out, reason: 'error' }; }
   if ('reason' in flown) return { ...out, reason: flown.reason };
   const { sim, grade } = flown;
+  // flown on past the time it was graded at, a whole step or more: graded at another moment than the record
+  const offTime = typeof r.t === 'number' && Math.abs(sim.state.t - r.t) > EVENT_TIME_TOLERANCE;
   const criteria: CriterionCheck[] = lesson.criteria.map((c) => {
     const recorded = r.criteria.find((g) => g.id === c.id) ?? null;
     const rechecked = grade.criteria.find((g) => g.id === c.id) ?? null;
@@ -369,6 +383,7 @@ export function checkRecord(job: RecheckJob, catalogue: readonly CatalogLesson[]
   for (const g of r.criteria) if (!lesson.criteria.some((c) => c.id === g.id)) criteria.push({ id: g.id, kind: 'missing', recorded: g, rechecked: null, tol: null, status: 'differs' });
   let status: CheckStatus = criteria.reduce<CheckStatus>((worst, c) => (RANK[c.status] > RANK[worst] ? c.status : worst), 'match');
   if (grade.verdict !== r.verdict && status === 'match') status = 'differs';
+  if (offTime && RANK[status] < RANK.differs) status = 'differs';
   // a record made before T02 is flown as near as it can be: a difference is not evidence of an edit. One
   // that names its build was made by T02 or later, which keeps all four fields: lacking one, it was edited.
   const incomplete = status === 'differs' && out.missing.includes('app') && out.missing.some((f) => f === 't' || f === 'clock' || f === 'actions');

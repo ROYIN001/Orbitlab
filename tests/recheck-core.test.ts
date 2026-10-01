@@ -18,7 +18,7 @@ import { lessonConfig, missionStateOf } from '../src/lessons/config';
 import { missionDocument } from '../src/config/mission-file';
 import { flightRecord, resultsFile, emptyProgress, recordGrade, type LessonRecord, type ProgressData } from '../src/lessons/progress';
 import {
-  CHECK_STATUSES, ENGINE_TOLERANCE, checkCriterion, checkResults, collectRecords, recheckCsv, statusCounts, type RecheckJob,
+  CHECK_STATUSES, ENGINE_TOLERANCE, EVENT_TIME_TOLERANCE, SAME_T, checkCriterion, checkResults, collectRecords, recheckCsv, statusCounts, type RecheckJob,
 } from '../src/lessons/recheck';
 import { checkRecord } from '../src/lessons/recheck';
 import { runRecheckJob } from '../src/lessons/recheck-job';
@@ -92,6 +92,28 @@ describe('the re-check finds a live flight again (T02)', () => {
     const bare = checkRecord(job(l.id, { ...record, actions: [] }), catalogue, APP);
     expect(bare.status).toBe('differs');
     expect(bare.recheckedVerdict).not.toBe('pass');
+  }, 120_000);
+
+  it('finds the boundaries of a record whose clock another engine summed a hair off, and not of one a step off', () => {
+    // Chromium's re-fly of a two-day GEO flight Node flew came to the grading boundary 2.1e-8 s early; with a
+    // nanosecond's window it stepped on and graded 30 s late. Here the record's times are moved 5 µs, as another
+    // engine's clock could put them, and the re-fly still takes each command and stops at the same boundaries.
+    const l = abortByHand();
+    const { record } = flyLessonLive(l, {
+      seed: 3, maxWarp: 4, commands: [{ at: 60, give: (s) => s.commandAbort() }],
+      answers: (g) => ({ peak: expectedOf(g, 'peak') }),
+    });
+    const catalogue = allLessons([l]);
+    for (const shift of [5e-6, -5e-6]) {
+      const moved = { ...structuredClone(record), t: record.t! + shift, actions: record.actions!.map((a) => ({ ...a, t: a.t + shift })) };
+      const check = checkRecord(job(l.id, moved), catalogue, APP);
+      expect([check.status, check.flownTo, check.lateActions], `shift ${shift}`).toEqual(['match', record.t, 0]);
+    }
+    expect(SAME_T).toBeLessThan(1e-4 / 5);
+    // a grading time that falls between boundaries (edited): the re-fly passes it, and the record differs
+    const off = checkRecord(job(l.id, { ...structuredClone(record), t: record.t! - 0.05 }), catalogue, APP);
+    expect(off.status).toBe('differs');
+    expect(Math.abs(off.flownTo! - (record.t! - 0.05))).toBeGreaterThan(EVENT_TIME_TOLERANCE);
   }, 120_000);
 
   it('says a record was edited: a value, a verdict, a typed answer', () => {
