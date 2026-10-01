@@ -29,6 +29,10 @@
   --accent: #8be5cd;
   --accent-weak: #162e2d;
   --accent-line: #42685e;
+  /* a section still to come, in the top bar's switch */
+  --future: #b9a6ff;
+  --future-weak: #211d33;
+  --future-line: #4b4170;
   --blue: #6ec8ff;
   --ok: #7ddba0;
   --warn: #efa47e;

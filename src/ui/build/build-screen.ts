@@ -30,6 +30,7 @@
  * cards, stage-table.ts over budget.ts for the figures, build-tour.ts for the
  * tour, vehicle-picker.ts for the list of rockets.
  */
+import { levelNameKey } from '../section-nav-model';
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
@@ -340,7 +341,7 @@ export class BuildScreen {
   }
 
   private renderIntro(): void {
-    const eyebrow = el('span', 'eyebrow bs-eyebrow', `${t('section.build')} · ${t('mode.watch')}`);
+    const eyebrow = el('span', 'eyebrow bs-eyebrow', `${t('section.build')} · ${t(levelNameKey('build', 'watch'))}`);
     const title = el('h1', 'bs-title', t('build.watch.title'));
     title.id = 'bs-title';
     this.root.setAttribute('aria-labelledby', title.id);

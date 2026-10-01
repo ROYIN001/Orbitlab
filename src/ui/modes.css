@@ -14,60 +14,111 @@
    the launch workspace applies unchanged.
    ========================================================================== */
 
-/* ── the section and level switches in the top bar ──────────────────────── */
+/* ── the section switch in the top bar (src/ui/section-nav.ts) ────────────── */
 
-/* the two switches sit side by side in the middle of the bar */
-.topbar-nav { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.mode-nav {
-  display: flex; gap: 2px; padding: 3px;
-  border: 1px solid var(--line2); border-radius: 9px; background: var(--panel3);
-}
-.mode-nav a {
+/* The product name is the way home. */
+a.brand { color: inherit; text-decoration: none; border-radius: 8px; padding: 3px 6px 3px 2px; margin-left: -2px; }
+a.brand:hover { background: var(--panel2); }
+
+/* A tab per section, the current one underlined and carrying its level as a
+   badge; every tab opens the menu of its section's levels. On a phone the
+   switch is one button that opens a table of sections × levels instead. */
+#topbar { position: relative; z-index: 46; } /* the menus open over the lessons page (z-index 45) */
+.topbar-nav { display: flex; align-items: stretch; align-self: stretch; gap: 8px; min-width: 0; }
+.section-nav { display: flex; align-items: stretch; min-width: 0; }
+.nav-tabs { display: flex; align-items: stretch; gap: 2px; }
+.nav-tab { position: relative; display: flex; }
+.nav-tab-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 6px;
-  font-size: 13px; color: #a9b7c8; text-decoration: none; white-space: nowrap;
+  padding: 0 11px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  background: none; color: #a9b7c8; font: 500 14px/1 var(--sans); white-space: nowrap; cursor: pointer;
 }
-.mode-nav a:hover { color: var(--text); }
-.mode-nav a[aria-current='page'] { background: var(--accent-weak); color: var(--accent); }
+.nav-tab-btn:hover, .nav-tab-btn[aria-expanded='true'], [data-current] > .nav-tab-btn { color: var(--text); }
+[data-current] > .nav-tab-btn { border-bottom-color: var(--accent); }
+[data-current] .mode-glyph, .nav-sheet-here .mode-glyph { color: var(--accent); }
 .mode-glyph { font-size: 12px; line-height: 1; }
-/* the level switch is the quieter of the two: it changes the depth, not the subject */
-.level-nav { background: none; }
-.level-nav a[aria-current='page'] { background: var(--panel2); color: var(--text); }
+.nav-badge {
+  font: 400 12px/1.4 var(--sans); color: var(--accent); background: var(--accent-weak);
+  border: 1px solid var(--accent-line); border-radius: 999px; padding: 0 8px;
+}
+.nav-chev { font-size: 10px; color: var(--dim); }
+.nav-future-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--future); transform: translateY(-6px); }
+
+.nav-menu, .nav-sheet {
+  position: absolute; top: calc(100% + 6px); display: grid; gap: 2px; padding: 6px;
+  background: var(--panel); border: 1px solid var(--line2); border-radius: 10px; box-shadow: 0 12px 32px #0007;
+}
+.nav-menu { left: 0; min-width: 310px; max-width: min(380px, calc(100vw - 24px)); }
+:is(.nav-menu, .nav-sheet)[hidden] { display: none; }
+.nav-menu-head { margin: 0; padding: 6px 10px 4px; font-size: 11px; letter-spacing: 1.2px; color: var(--dim); }
+.nav-level {
+  display: grid; grid-template-columns: 18px 1fr; gap: 2px 8px; align-items: baseline;
+  padding: 8px 10px; border-radius: 7px; color: #a9b7c8; text-decoration: none; font-size: 14px;
+}
+.nav-level:hover { background: var(--panel2); color: var(--text); }
+.nav-level[aria-current='page'] { background: var(--accent-weak); color: var(--accent); }
+.nav-level-desc { grid-column: 2; font-size: 12px; line-height: 1.4; color: var(--dim); }
+.nav-future { display: grid; gap: 4px; padding: 6px 10px 8px; }
+.nav-future p { padding: 0; }
+.nav-future-tag {
+  justify-self: start; margin: 0; font-size: 12px; color: var(--future); background: var(--future-weak);
+  border: 1px solid var(--future-line); border-radius: 999px; padding: 1px 9px;
+}
+.nav-future-items { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+
+/* the phone's switch: hidden on a wider screen */
+.nav-sheet-wrap { display: none; }
+.nav-sheet-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;
+  padding: 8px 12px; border: 1px solid var(--line2); border-radius: 9px; background: var(--panel3);
+  color: var(--text); font: 500 14px/1.2 var(--sans); cursor: pointer;
+}
+.nav-sheet-btn[aria-expanded='true'] { border-color: var(--accent-line); }
+.nav-sheet-here { display: flex; align-items: center; gap: 6px; }
+.nav-sheet { left: 12px; right: 12px; gap: 4px; }
+.nav-sheet-row { display: grid; grid-template-columns: 84px repeat(3, minmax(0, 1fr)); gap: 4px; align-items: stretch; }
+.nav-sheet-name { align-self: center; padding: 0 4px; font-size: 13px; font-weight: 500; }
+.nav-cell {
+  min-width: 0; padding: 8px 6px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel3); color: #a9b7c8; text-decoration: none; font-size: 13px;
+}
+.nav-cell[aria-current='page'] { background: var(--accent-weak); border-color: var(--accent-line); color: var(--accent); }
+.nav-cell-future { grid-column: 2 / 5; display: grid; gap: 4px; justify-items: start; }
 
 /* the "flight simulator 02" tag is workspace chrome, and the first thing to
-   give way to the mode switch */
+   give way to the switch */
 body:not([data-mode='engineer']) .top-context { display: none; }
 @media (max-width: 1600px) { .top-context { display: none; } }
 /* then the labels of the workspace's top-bar tools (their names stay as the
    tooltip and the accessible name); a Russian label wrapped onto two lines.
-   Since S01 the bar carries two switches, and the order in which things give
-   way to them, measured in Russian — the longest labels — is: the tools'
-   labels and the language label; the labels of the levels not chosen; the
-   product name; the labels of the sections not chosen; and on a phone the
-   switches take a row of their own under the brand and the tools. Every
-   link keeps its name as its tooltip and accessible name. */
+   The order in which things give way to the switch, measured in Russian —
+   the longest labels — is: the tools' labels and the language label; the
+   product name; the sections' glyphs; and on a phone the switch becomes one
+   button on a row of its own under the brand and the tools. */
 .quiet-btn { white-space: nowrap; }
 @media (max-width: 1600px) {
   .quiet-btn span:last-child { display: none; }
   .quiet-btn { padding: 7px; }
   .lang > span { display: none; }
 }
-@media (max-width: 1440px) {
-  .level-nav a:not([aria-current='page']) span[data-i18n] { display: none; }
-}
 @media (max-width: 1180px) {
   .brand-name { display: none; }
 }
-@media (max-width: 960px) {
-  .section-nav a:not([aria-current='page']) span[data-i18n] { display: none; }
+@media (max-width: 1040px) {
+  .nav-tab-btn .mode-glyph { display: none; }
+  .nav-tab-btn { padding: 0 8px; }
 }
 @media (max-width: 860px) {
-  #topbar { height: auto; flex-wrap: wrap; row-gap: 8px; padding: 8px 12px; }
-  .topbar-nav { order: 3; flex: 1 0 100%; justify-content: space-between; }
+  #topbar { height: auto; flex-wrap: wrap; row-gap: 0; padding: 8px 12px 0; }
+  .topbar-nav { order: 3; flex: 1 0 100%; min-height: 42px; }
+  .nav-tab-btn .mode-glyph { display: inline; }
 }
-@media (max-width: 480px) {
-  /* the level is still marked, by its highlight; its name is the tooltip */
-  .level-nav a span[data-i18n] { display: none; }
+@media (max-width: 640px) {
+  #topbar { padding-bottom: 8px; row-gap: 8px; }
+  .topbar-nav { min-height: 0; position: static; }
+  .section-nav { flex: 1; }
+  .nav-tabs { display: none; }
+  .nav-sheet-wrap { display: block; flex: 1; }
 }
 
 /* ── lean modes: the scene is the page ───────────────────────────────────── */
@@ -289,7 +340,6 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
   .watch-card h2 { font-size: 21px; }
 }
 @media (max-width: 640px) {
-  .mode-nav a { padding: 6px 9px; font-size: 12px; }
   .watch-stats { width: 100%; justify-content: space-between; gap: 10px; }
   .watch-stat strong { font-size: 21px; }
   .watch-speed { padding: 6px 8px; }

@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Top bar: the ORBITLAB name leads home (no Home tab); a tab per section opens the menu of its levels, the current level a badge on its tab, and a phone gets one button opening a table of sections × levels; Thai levels are รับชม (launch only) / พื้นฐาน · ทดลอง · วิศวกร; a Campaign tab marks the section still to come.
 - Docs: user-test protocol for October 2026 (Thai) — five timed tasks, observer script, printable forms, PDPA rules and the wave 3 decisions it must settle.
 - CI: vitest sharded three ways, typecheck as its own job, build once and reuse dist for browser smoke, deploy guarded against re-running old runs and skipping the full suite on the daily schedule, weekly heavy and monthly six-DOF fleet runs; the viewer missions' flights split out of tests/watch-missions.test.ts into several files that vitest runs in parallel and the shards balance, and the test job's time limit raised from 20 to 30 minutes as a guard against runner variance.
 - Repository: LICENSE (Apache-2.0), NOTICE, CITATION, pull request template, CHANGELOG; README disclaimer, licence section and three stale facts corrected.
