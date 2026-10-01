@@ -4754,5 +4754,6 @@ export const en: Record<string, string> = {
   // --- W (Phase 4 final check): fixes from the walk in Chromium ---
   'lesson.file.n.lessons': 'lesson|lessons',
   'lesson.file.n.questions': 'placement-test question|placement-test questions',
+  'lesson.strip.hintsNone': 'No hints',
   // --- end of W ---
 };

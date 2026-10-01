@@ -4734,5 +4734,6 @@ export const th: Record<string, string> = {
   // --- W (Phase 4 final check): fixes from the walk in Chromium ---
   'lesson.file.n.lessons': 'บท',
   'lesson.file.n.questions': 'ข้อ',
+  'lesson.strip.hintsNone': 'ไม่มีคำใบ้',
   // --- end of W ---
 };

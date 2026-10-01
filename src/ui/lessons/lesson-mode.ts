@@ -1003,7 +1003,7 @@ export class LessonMode implements LessonToolsHost {
     if (saveNote) status.append(saveNote);
 
     const { actions, button } = this.actionBar();
-    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t(lesson.hints.length ? 'lesson.strip.noHints' : 'lesson.strip.hintsNone'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.strip.restart'), () => this.restart());
     if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
@@ -1051,7 +1051,7 @@ export class LessonMode implements LessonToolsHost {
     const saveNote = a.recorded || this.saved === false ? this.saveNote('p') : null;
     if (saveNote) status.append(saveNote);
     const { actions, button } = this.actionBar();
-    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t(lesson.hints.length ? 'lesson.strip.noHints' : 'lesson.strip.hintsNone'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.strip.restart'), () => this.restart());
     if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
@@ -1164,7 +1164,7 @@ export class LessonMode implements LessonToolsHost {
     if (saveNote) status.append(saveNote);
 
     const { actions, button } = this.actionBar();
-    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t(lesson.hints.length ? 'lesson.strip.noHints' : 'lesson.strip.hintsNone'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.design.strip.open'), () => this.host.showDesign?.(lesson.mode));
     button(t('lesson.strip.restart'), () => this.restart());

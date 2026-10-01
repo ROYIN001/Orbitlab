@@ -4733,5 +4733,6 @@ export const ru: Record<string, string> = {
   // --- W (Phase 4 final check): fixes from the walk in Chromium ---
   'lesson.file.n.lessons': 'урок|урока|уроков|урока',
   'lesson.file.n.questions': 'вопрос входного теста|вопроса входного теста|вопросов входного теста|вопроса входного теста',
+  'lesson.strip.hintsNone': 'Без подсказок',
   // --- end of W ---
 };
