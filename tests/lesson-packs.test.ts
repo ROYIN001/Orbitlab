@@ -35,7 +35,7 @@ import { allLessons } from '../src/lessons/catalog';
 import { flightRecord } from '../src/lessons/progress';
 import { checkRecord } from '../src/lessons/recheck';
 import { appBuildId } from '../src/build-info';
-import { CURRICULUM_KINDS, type Lesson, type LocalText } from '../src/lessons/types';
+import { CURRICULUM_KINDS, isFlightLesson, type Lesson, type LocalText } from '../src/lessons/types';
 import type { MissionState } from '../src/config/mission-file';
 
 const FILES = import.meta.glob('../public/lessons/packs/*.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
@@ -55,7 +55,7 @@ const PACKS: ResolvedPack[] = BUNDLED_PACKS.map((id) => {
 /** A pack lesson as the app reads it: from the committed file. */
 const lesson = (id: string): Lesson => {
   const l = packLessons(PACKS).find((x) => x.id === id);
-  if (!l || l.kind === 'case') throw new Error(`no flight lesson ${id}`);
+  if (!l || !isFlightLesson(l)) throw new Error(`no flight lesson ${id}`);
   return l;
 };
 

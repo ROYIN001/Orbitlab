@@ -22,14 +22,14 @@ import { lessonConfig } from '../../src/lessons/config';
 import { flightEnded, gradeLesson, type LessonAnswers } from '../../src/lessons/grader';
 import { MEASURES } from '../../src/lessons/measures';
 import { packPath, readPackText } from '../../src/lessons/packs';
-import type { Lesson } from '../../src/lessons/types';
+import { isFlightLesson, type Lesson } from '../../src/lessons/types';
 import type { MissionState } from '../../src/config/mission-file';
 import packText from '../../public/lessons/packs/ru-24-05-06.orbitlab-lesson.json?raw';
 
 const PACK = readPackText(packText, packPath('ru-24-05-06'))!;
 const lesson = (id: string): Lesson => {
   const l = PACK.lessons.find((x) => x.id === id);
-  if (!l || l.kind === 'case') throw new Error(`no flight lesson ${id}`);
+  if (!l || !isFlightLesson(l)) throw new Error(`no flight lesson ${id}`);
   return l;
 };
 

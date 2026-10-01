@@ -235,7 +235,7 @@ function designCriterionOf(c: DraftDesignCriterion, i: number, issues: FileIssue
  * figures are read on that day and in that air), read back through
  * `readDesignLesson`: what the page writes is what every copy of the app reads.
  */
-export function draftDesignLesson(draft: DesignLessonDraft, desk: DesignDesk): DraftResult<DesignLesson> {
+export function draftDesignLesson(draft: DesignLessonDraft, desk: DesignDesk, reserved?: ReadonlySet<string>): DraftResult<DesignLesson> {
   const issues: FileIssue[] = [];
   const title = localOf(draft.title), brief = localOf(draft.brief);
   if (title?.stood) issues.push({ where: 'title', code: 'translation', level: 'warn', detail: `en=${title.stood}` });
@@ -251,6 +251,8 @@ export function draftDesignLesson(draft: DesignLessonDraft, desk: DesignDesk): D
     hints: hints.map((h) => h.text),
   };
   if (BUILTIN_IDS.has(raw.id)) issues.push({ where: 'id', code: 'builtinId', level: 'error', detail: raw.id });
+  // and a lesson pack's (T03), as a flight lesson's id is (`draftLesson`)
+  else if (reserved?.has(raw.id)) issues.push({ where: 'id', code: 'pack', level: 'error', detail: raw.id });
   const refused = issues.some((i) => i.level === 'error');
   const read: FileIssue[] = [];
   const lesson = readDesignLesson(JSON.parse(JSON.stringify(raw)), 'lesson', read);

@@ -232,7 +232,7 @@ class AuthorView {
     if (this.kind === 'design') {
       saveDesignDraft(this.designDraft);
       const desk = this.host.designDesk?.() ?? null;
-      if (desk) ({ lesson, issues } = draftDesignLesson(this.designDraft, desk));
+      if (desk) ({ lesson, issues } = draftDesignLesson(this.designDraft, desk, this.host.reservedIds?.()));
       else none = t('lesson.design.author.deskNone');
     } else {
       saveDraft(this.draft);

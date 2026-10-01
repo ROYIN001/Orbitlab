@@ -39,6 +39,15 @@ const grade = (l: DesignLesson, d: SatelliteDesign, answers: Record<string, numb
 };
 
 describe('the scenario writer\'s design lessons (T01)', () => {
+  // added when T03 met T01: a pack lesson's id is refused for a design lesson too, as for a flight lesson (tests/lesson-pack-format.test.ts)
+  it('refuses a lesson pack\'s id as it refuses a built-in one', () => {
+    const reserved = new Set(['ipst-b-forces']);
+    const taken = draftDesignLesson(draft({ id: 'ipst-b-forces' }), desk, reserved);
+    expect(taken.lesson).toBeNull();
+    expect(taken.issues.filter((i) => i.level === 'error').map((i) => `${i.code} ${i.detail}`)).toEqual(['pack ipst-b-forces']);
+    expect(draftDesignLesson(draft(), desk, reserved).lesson?.id).toBe('class-power-up');
+  });
+
   it('writes the bench\'s design, its date and level, the groups locked and the criteria, as a version-3 file that reads back byte for byte', () => {
     const { lesson, issues } = draftDesignLesson(draft(), desk);
     expect(issues).toEqual([]);
