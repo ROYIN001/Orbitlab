@@ -15,13 +15,16 @@ import { falcon9Rows, formatRows } from '../validation/compare';
 /**
  * Measured 2026-09-26 with the published first-stage masses and the six-DOF
  * pitch programme fitted to these flights (docs/VALIDATION.md, F5); the lists
- * measured before each change are in that document.
+ * measured before each change are in that document. Bangabandhu-1's was
+ * re-measured on 2026-10-01 with the drone-ship reserve sized for the mission
+ * ("The drone-ship reserve sized for the mission" there): its MECO speed and
+ * second-stage start now agree.
  */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
   crs16: ['T+100/speed'],
   ssoA: ['T+100/speed', 'T+140/speed', 'meco/speed'],
   iridium8: ['maxQ/time', 'T+140/speed'],
-  bangabandhu1: ['maxQ/time', 'T+140/altitude', 'meco/speed', 'ses1/time', 'seco1/altitude'],
+  bangabandhu1: ['maxQ/time', 'T+140/altitude', 'seco1/altitude'],
   gps3sv01: ['maxQ/time', 'seco1/altitude'],
 };
 
