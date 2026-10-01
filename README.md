@@ -195,7 +195,9 @@ and `tests/activity.test.ts`.
 
 The app is organised on two axes (roadmap S01, [docs/ROADMAP-PART2-3.md](docs/ROADMAP-PART2-3.md)):
 three **sections** — **Launch** (this simulator), **Orbit** and **Build** — and in each of them
-three **levels**, Watch, Explore and Engineer. The top bar has a switch for each. Every section
+three **levels**, Watch, Explore and Engineer. The top bar has a tab per section, each opening
+the menu of its levels (on a phone, one button opening a table of them), and the product name
+leads home (`src/ui/section-nav.ts`). Every section
 and level has its own address, `#/<section>/<level>` (`#/launch/watch`, `#/orbit/explore`, …)
 plus `#/home` for the landing page, so it can be linked to and Back moves between them; the last
 section and level are remembered. The addresses from before the sections — `#/watch`,

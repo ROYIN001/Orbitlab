@@ -127,6 +127,7 @@ function literalStrings(): Set<string> {
  * upstream must not go on excusing orphaned entries here.
  */
 const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
+  { pattern: /^nav\.level\.(launch|orbit|build)\.(watch|explore|engineer)$/, from: 'ui/section-nav-model.ts levelDescKey: `nav.level.${section}.${level}`' },
   { pattern: /^hud\.[a-z][a-zA-Z0-9]*$/, from: 'ui/hud.ts applyLabels: t(`hud.${k}`)' },
   { pattern: /^hud\.status\.[a-zA-Z]+$/, from: 'ui/hud.ts: t(`hud.status.${frame.status}`)' },
   { pattern: /^hud\.phase\.[a-zA-Z]+$/, from: 'ui/hud.ts: t(`hud.phase.${frame.ascentPhase}`)' },

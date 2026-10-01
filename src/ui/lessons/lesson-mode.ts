@@ -1352,14 +1352,18 @@ export class LessonMode implements LessonToolsHost {
     }
     this.pageView = view;
     this.assessmentView = null;
-    const nav = document.querySelectorAll<HTMLAnchorElement>('#mode-nav a');
+    // the section switch's level links (src/ui/section-nav.ts); its root says which one is the route
+    const switcher = document.getElementById('section-nav');
+    const nav = document.querySelectorAll<HTMLAnchorElement>('#section-nav a[data-mode]');
     if (!view) {
       this.page.hidden = true;
       this.content.replaceChildren();
       delete document.body.dataset.lessonsPage;
       this.button.removeAttribute('aria-current');
       // the mode under the page is the current one again
-      nav.forEach((a) => { if (a.dataset.mode === document.body.dataset.mode) a.setAttribute('aria-current', 'page'); });
+      nav.forEach((a) => {
+        if (a.dataset.section === switcher?.dataset.currentSection && a.dataset.mode === switcher?.dataset.currentLevel) a.setAttribute('aria-current', 'page');
+      });
       return;
     }
     document.body.dataset.lessonsPage = view;

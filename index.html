@@ -52,31 +52,23 @@
     </svg>
     <div id="app">
       <header id="topbar">
-        <div class="brand">
+        <!-- the product name is the way home (owner, 2026-10-01) -->
+        <a class="brand" href="#/home" data-i18n-title="mode.home">
           <svg class="brand-mark" viewBox="0 0 200 200" aria-hidden="true" focusable="false"><use href="#orbitlab-logo" /></svg>
-          <span class="brand-name">ORBIT<span>LAB</span></span>
-        </div>
+          <span class="brand-name" aria-hidden="true">ORBIT<span>LAB</span></span>
+        </a>
         <div class="top-context">
           <span class="status-dot" aria-hidden="true"></span>
           <span data-i18n="app.tagline">FLIGHT SIMULATOR</span>
           <span class="version" aria-hidden="true">02</span>
         </div>
-        <!-- One app, three sections at three levels (src/ui/app-mode.ts, roadmap
-             S01). Plain links: the route is the URL hash, so every face can be
-             linked to and Back works; main.ts keeps each link's hash pointing
-             at its section with the current level, and the other way round. -->
+        <!-- One app, sections at three levels (src/ui/app-mode.ts, roadmap S01).
+             The switch is drawn by src/ui/section-nav.ts: a tab per section,
+             each opening the menu of its levels, or on a phone one button
+             opening a table of them. The levels are plain links: the route is
+             the URL hash, so every face can be linked to and Back works. -->
         <div class="topbar-nav">
-          <nav id="section-nav" class="mode-nav section-nav" data-i18n-aria-label="section.nav">
-            <a href="#/home" data-section="home" data-i18n-title="mode.home"><span class="mode-glyph" aria-hidden="true">⌂</span><span data-i18n="mode.home">Home</span></a>
-            <a href="#/launch/explore" data-section="launch" data-i18n-title="section.launch"><span class="mode-glyph" aria-hidden="true">▲</span><span data-i18n="section.launch">Launch</span></a>
-            <a href="#/orbit/explore" data-section="orbit" data-i18n-title="section.orbit"><span class="mode-glyph" aria-hidden="true">⊕</span><span data-i18n="section.orbit">Orbit</span></a>
-            <a href="#/build/watch" data-section="build" data-i18n-title="section.build"><span class="mode-glyph" aria-hidden="true">⚙&#xFE0E;</span><span data-i18n="section.build">Build</span></a>
-          </nav>
-          <nav id="mode-nav" class="mode-nav level-nav" data-i18n-aria-label="mode.nav">
-            <a href="#/launch/watch" data-mode="watch" data-i18n-title="mode.watch"><span class="mode-glyph" aria-hidden="true">▷</span><span data-i18n="mode.watch">Watch</span></a>
-            <a href="#/launch/explore" data-mode="explore" data-i18n-title="mode.explore"><span class="mode-glyph" aria-hidden="true">◎</span><span data-i18n="mode.explore">Explore</span></a>
-            <a href="#/launch/engineer" data-mode="engineer" data-i18n-title="mode.engineer"><span class="mode-glyph" aria-hidden="true">⌬</span><span data-i18n="mode.engineer">Engineer</span></a>
-          </nav>
+          <nav id="section-nav" class="section-nav" data-i18n-aria-label="section.nav"></nav>
         </div>
         <div class="topbar-right">
           <!-- S04: offline or online data (src/provider/), and every dataset's "data as of" -->

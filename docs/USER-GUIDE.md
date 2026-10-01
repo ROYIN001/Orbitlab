@@ -10,7 +10,13 @@ sticks to what you see on screen and what it means.
 Orbitlab is being grown into one space program in three **sections**: **Launch** (this
 simulator), **Orbit** (orbits, orbit changes and what satellites do) and **Build** (designing a
 rocket and a satellite). Each section has the same three **levels** — Watch, Explore and
-Engineer — and the top bar has a switch for each: the section on the left, the level beside it.
+Engineer — and the top bar has a tab for each section. The current tab carries its level as a
+badge; pressing any tab opens the menu of that section's levels, so a section and a level are
+picked together. On a phone the switch is one button that opens a table of every section and
+level. The ORBITLAB name at the left of the bar goes back to the landing page. A tab marked with
+a dot is a section still to come (Campaign, roadmap phase 6): its menu lists what the roadmap
+brings to it. In Thai the launch section's first level is called รับชม (watching), the other
+sections' first level พื้นฐาน (the basics), and the second level ทดลอง everywhere.
 **Orbit** opens on its playground (section 0a below). **Build** takes real rockets apart, remixes
 them, builds new ones from parts and tests them before they fly (section 0b below); what is still
 to come to it (designing from parts at the Engineer level, and the satellites) is listed at its
@@ -56,7 +62,7 @@ from it. The flight itself carries on in Launch.
   asked for (see **Explore** below).
 - **Engineer** — the whole workspace, with every guidance parameter open.
 
-**Explore.** The level is chosen in the top bar only. A mission is set up in three steps,
+**Explore.** The level is chosen in the top bar only, from the Launch tab's menu. A mission is set up in three steps,
 one on screen at a time, with tabs to move between them — **Rocket**, **Payload**, **Orbit**:
 
 1. **Rocket** — the quick starts, then the vehicles as cards, each with what it lifts to low
@@ -349,8 +355,8 @@ reference.
 
 ## 0b. The Build section: rockets taken apart, remixed, built and tested
 
-Build is where rockets are taken apart and put together. Open **Build** in the top bar; the level
-switch beside it chooses Watch, Explore or Engineer. (The landing page has no Build chapter yet, so
+Build is where rockets are taken apart and put together. Press **Build** in the top bar; its menu
+chooses Watch, Explore or Engineer. (The landing page has no Build chapter yet, so
 the top bar is the way in.) Every rocket here is made from one parts catalogue, the same one the
 21 real rockets are assembled from, and every figure is worked out by the physics the launches
 fly. What the builder cannot know is marked as an estimate, and the section below the three levels

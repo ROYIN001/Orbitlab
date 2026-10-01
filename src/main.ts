@@ -42,7 +42,7 @@ import './ui/orbit/playground.css';
 import { WatchView } from './ui/watch';
 import {
   HOME_ROUTE, experienceForMode, hashForRoute, initialRoute, launchMode, loadRoute, route, routeFromHash, sameRoute, saveRoute,
-  DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
+  DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute,
 } from './ui/app-mode';
 import { BuildScreen } from './ui/build/build-screen';
 import { WorkspaceMission, missionSummary, startupMission } from './ui/workspace-mission';
@@ -52,7 +52,7 @@ import { DataDialog } from './ui/data-dialog';
 import { applyWebFonts } from './ui/web-fonts';
 import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
 import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentCaches } from './provider/data-provider';
-import { sectionLinkLevel } from './ui/section-plan';
+import { SectionNav } from './ui/section-nav';
 import { FEATURED_WATCH_MISSION, historicalFor, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { AboutDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
@@ -241,6 +241,7 @@ class App {
   route: AppRoute = HOME_ROUTE;
   /** the level last shown in any section, for the section links from the landing page */
   private levelMemory: AppLevel = DEFAULT_LEVEL;
+  private readonly sectionNav = new SectionNav(document.getElementById('section-nav')!);
   /**
    * The launch simulator's own face: its level in the launch section, and
    * the landing page's everywhere else — another section covers the scene the
@@ -632,27 +633,9 @@ class App {
     return this.route.section !== null ? this.route.mode : this.levelMemory;
   }
 
-  /**
-   * S01: point every section link at the level showing (or last used) and
-   * every level link at the section showing — the launch section's from the
-   * landing page, where those links always led — and mark the current ones.
-   */
+  /** S01: the section switch shows the route (src/ui/section-nav.ts). */
   private syncNav(): void {
-    const level = this.lastLevel();
-    const section: AppSection = this.route.section ?? 'launch';
-    document.querySelectorAll<HTMLAnchorElement>('#section-nav a').forEach((a) => {
-      const name = a.dataset.section as AppSection | 'home';
-      // the Build section opens at a level that is built (src/ui/section-plan.ts)
-      a.href = name === 'home' ? hashForRoute(HOME_ROUTE) : hashForRoute(route(name, sectionLinkLevel(name, level)));
-      if (name === (this.route.section ?? 'home')) a.setAttribute('aria-current', 'page');
-      else a.removeAttribute('aria-current');
-    });
-    document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
-      const mode = a.dataset.mode as AppLevel;
-      a.href = hashForRoute(route(section, mode));
-      if (this.route.section !== null && mode === this.route.mode) a.setAttribute('aria-current', 'page');
-      else a.removeAttribute('aria-current');
-    });
+    this.sectionNav.show(this.route);
   }
 
   /** O01, Phase 3: the Orbit playground and the Build screen are drawn over the whole scene, which need not be drawn under them. */
@@ -1178,6 +1161,7 @@ class App {
     this.narration.applyLanguage();
     this.timeline.applyStaticText();
     this.home.applyLanguage();
+    this.sectionNav.applyLanguage();
     this.watch.applyLanguage();
     this.buildScreen.applyLanguage();
     this.playground.applyLanguage();
