@@ -110,7 +110,7 @@ const ENGINE_FIELDS = ['name', 'count', 'thrustSL', 'thrustVac', 'ispSL', 'ispVa
 const BOOSTER_FIELDS = ['id', 'name', 'count', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'igniteAt', 'sepDelay', 'color', 'conicalTop', 'baseOffset'];
 const STAGE_FIELDS = ['id', 'name', 'dryMass', 'propellantMass', 'engine', 'diameter', 'length', 'restartable', 'sepDelay', 'ignitionDelay',
   'throttleWithBoosters', 'boosters', 'color', 'accentColor', 'profile', 'fins', 'gridFins', 'legs', 'flaps', 'nozzleLength'];
-const FAIRING_FIELDS = ['mass', 'diameter', 'length', 'sepAltitude', 'sepTime', 'adapter', 'color'];
+const FAIRING_FIELDS = ['mass', 'diameter', 'length', 'sepAltitude', 'sepTime', 'sepAfterIgnition', 'adapter', 'color'];
 const VEHICLE_FIELDS = ['id', 'name', 'country', 'manufacturer', 'height', 'payloadLEO', 'payloadGTO', 'payloadSSO', 'fairing', 'escapeSystem',
   'stages', 'sites', 'maxQ', 'maxAccel', 'maxQThrottle', 'recoverable', 'recoveryReserve', 'returnReserve', 'guidanceDefaults',
   'guidanceDefaultsSixDof', 'dragArea', 'crewCapable', 'notes', 'derivedFrom'];
@@ -237,6 +237,20 @@ export function vehicleSpecProblems(raw: unknown): VehicleSpecIssue[] {
       const length = c.number(f, 'length', 'fairing', 0, 40, { exclusiveMin: true });
       c.number(f, 'sepAltitude', 'fairing', 0, 3e5);
       c.number(f, 'sepTime', 'fairing', 0, 2000, { optional: true });
+      const rule = f.sepAfterIgnition;
+      if (rule !== undefined) {
+        if (!isObj(rule)) c.add('fairing.sepAfterIgnition', `must be { stage, delay } (got ${describe(rule)})`);
+        else {
+          c.known(rule, 'fairing.sepAfterIgnition', ['stage', 'delay']);
+          c.string(rule, 'stage', 'fairing.sepAfterIgnition', { max: 32 });
+          c.number(rule, 'delay', 'fairing.sepAfterIgnition', 0, 600);
+          const stageIds = Array.isArray(raw.stages) ? raw.stages.map((s) => (isObj(s) ? s.id : undefined)) : [];
+          if (typeof rule.stage === 'string' && !stageIds.includes(rule.stage)) {
+            c.add('fairing.sepAfterIgnition.stage', `must name one of the vehicle's stages (got "${rule.stage}")`);
+          }
+        }
+        if (f.sepTime !== undefined) c.add('fairing.sepAfterIgnition', 'a fairing has a jettison time or a jettison rule, not both');
+      }
       const adapter = c.number(f, 'adapter', 'fairing', 0, 40, { optional: true });
       if (adapter !== undefined && length !== undefined && adapter >= length) c.add('fairing.adapter', 'must be shorter than the fairing');
       c.string(f, 'color', 'fairing', { optional: true, max: 32 });

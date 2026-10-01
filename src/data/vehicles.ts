@@ -12,7 +12,9 @@
  * FAIRING JETTISON. Eight vehicles carry a `fairing.sepTime`, the operator's own
  * published callout, because their operators publish one and fly it: Soyuz-2.1a
  * and 2.1b 157 s, Ariane 64 200 s, Vega-C 220 s, Long March 2D 220 s, Long
- * March 3B/E 215 s, H-IIA 202 250 s, Vostok-K 156 s. The rest stay on the physical
+ * March 3B/E 215 s, H-IIA 202 250 s, Vostok-K 156 s. Proton-M and Angara-A5 carry a
+ * `fairing.sepAfterIgnition`: Khrunichev drops it ten seconds into third-stage
+ * flight. The rest stay on the physical
  * free-molecular-heating placard, and the altitude floor applies to both, so a
  * trajectory still deep in the atmosphere at its published time does not shed
  * the fairing there. See `FairingSpec.sepTime` in src/types.ts for why a
@@ -158,7 +160,12 @@ export const VEHICLES: VehicleSpec[] = [
   {
     id: 'protonm', name: 'Proton-M / Briz-M', country: 'RU', manufacturer: 'Khrunichev',
     height: 58.2, payloadLEO: 23000, payloadGTO: 6920,
-    fairing: fairingSpec('protonm', { sepAltitude: 120e3, color: '#e8e8e8' }),
+    // Ten seconds after the third stage lights: ILS's Proton Mission Planner's
+    // Guide (Rev. 7, 2009, §2.3.1) has RD-0213 ignition at 338 s and "PLF
+    // jettison typically at 348 s", timed so the halves fall in their impact
+    // areas (§2.4.2). The heating placard dropped it at T+175 s, 170 s early
+    // against Telstar 14R's 347 s (docs/VALIDATION.md, F14).
+    fairing: fairingSpec('protonm', { sepAltitude: 120e3, sepAfterIgnition: { stage: 'p3', delay: 10 }, color: '#e8e8e8' }),
     stages: [
       // The first stage is 4.1 m, its core, not the 7.4 m span across the six
       // outboard tanks (audit item B23; the body in src/data/parts.ts). With
@@ -199,7 +206,11 @@ export const VEHICLES: VehicleSpec[] = [
   {
     id: 'angaraa5', name: 'Angara-A5 / Briz-M', country: 'RU', manufacturer: 'Khrunichev',
     height: 55.4, payloadLEO: 24500, payloadGTO: 5400,
-    fairing: fairingSpec('protonm', { sepAltitude: 120e3, color: '#e8e8e8' }),
+    // "At the initial phase of Stage III operation": on the first flight ten
+    // seconds after the core separated (ILS, 23 December 2014), and the URM-2
+    // lights a second after separation here. The heating placard dropped it at
+    // T+302 s against flight 2's 340 s (docs/VALIDATION.md, F14).
+    fairing: fairingSpec('protonm', { sepAltitude: 120e3, sepAfterIgnition: { stage: 'urm2', delay: 9 }, color: '#e8e8e8' }),
     stages: [
       stageSpec('urm1core', {
         color: '#f0f0f0', accentColor: '#c33', throttleWithBoosters: 0.3,
@@ -211,6 +222,14 @@ export const VEHICLES: VehicleSpec[] = [
     sites: ['plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 50,
     // Low liftoff T/W with the core throttled to 30 %; lofts so that the URM-2 takes over climbing.
     guidanceDefaults: { kickAngle: 4, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
+    // As Atlas V: the rigid body cannot hold the angle of attack the point mass
+    // pitches over at, and handed the Briz-M a slower, higher arc — 257 m/s short
+    // of the point mass at SECO to the sun-synchronous orbit, which stopped
+    // flying once the fairing stayed on to the third stage (docs/VALIDATION.md,
+    // F14). Chosen on angaraa5/sso/25 as the kick leaving the most delta-v, and
+    // checked on leo/25 and gto/25/50/90, which it brings to within 20 m/s of
+    // the point mass's remaining delta-v (they were up to 255 m/s short).
+    guidanceDefaultsSixDof: { kickAngle: 8 },
     notes: 'Modular kerolox launcher; core throttles to 30 % while four identical URM-1 boosters burn.',
   },
   {

@@ -174,6 +174,15 @@ describe('custom vehicles (S02): validation', () => {
     expect(problems((s) => { s.fairing = null; })).toEqual([]);
   });
 
+  it('checks a fairing jettison rule against the stages', () => {
+    const rule = (stage: unknown, delay: unknown) => problems((s) => { s.fairing.sepAfterIgnition = { stage, delay }; });
+    expect(rule('s2', 10)).toEqual([]);
+    expect(rule('s3', 10)).toEqual(['fairing.sepAfterIgnition.stage must name one of the vehicle\'s stages (got "s3")']);
+    expect(rule('s2', -1)).toEqual(['fairing.sepAfterIgnition.delay must be at least 0 (got -1)']);
+    expect(problems((s) => { s.fairing.sepAfterIgnition = { stage: 's2', delay: 10 }; s.fairing.sepTime = 200; }))
+      .toEqual(['fairing.sepAfterIgnition a fairing has a jettison time or a jettison rule, not both']);
+  });
+
   it('rejects ids, sites and fields it does not know', () => {
     expect(problems((s) => { s.id = 'falcon9'; })).toEqual(['id "falcon9" is a catalogue vehicle\'s id: a custom vehicle needs an id of its own']);
     expect(problems((s) => { s.id = 'My Rocket'; })).toEqual([expect.stringMatching(/^id must be Latin letters, digits/)]);
