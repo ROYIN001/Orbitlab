@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- App: a new Orbitlab mark — a delta in the Thai flag's stripes (red, white, blue, white, red) with a white orbit and a satellite across it — in the top bar and the About tab, and the favicon and PWA icons made from it by `npm run icons` (scripts/icons.mjs); the mark is drawn once, in index.html.
 - Graphics: the 3-D Earth on 4096 × 2048 colour, night-light and cloud maps (NASA Blue Marble / Black Marble, colour-matched to the old look) with 16x anisotropic filtering and a 2048² pad shadow map, orbit views and 2-D canvases up to a 3x pixel ratio; rocket stages painted at twice the resolution with a relief map of joints, welds and raceways, engine bells with coolant tubes and a sooty inside; satellites built from solar cells, crinkled gold MLI and radiator mirrors, with engines, thrusters and antennas.
 - App: developer credit — the Physics & sources dialog becomes "About" (ⓘ, shown on every page including Home and Watch) with two tabs: About (the Orbitlab mark, version and build, maker, licences, links to the repository, NOTICE and CITATION, and the README disclaimer) and Physics & sources; the footer gains "Made by Royin · v0.1.0 · About", which opens the About tab; all three languages; the name and links live in src/credits.ts.
 - CI: the weekly heavy suite runs one job per test file (the whole suite in one job ran past its hour and was cancelled); Falcon 9's six-DOF webcast comparison re-measured for Bangabandhu-1 after C01's drone-ship reserve.
