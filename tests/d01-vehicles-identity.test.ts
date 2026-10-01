@@ -37,13 +37,7 @@
  * Soyuz-2.1a's fairing its crewed mass and T+153.3 s. Only `soyuz21a` and
  * `soyuz21b` changed; the unsorted string grew to 31 994 characters.
  *
- * And a fourth, for Proton-M on ILS's and Energomash's published data
- * (2026-10-01, the flight-profile audit, docs/history/audit-2026-10-01-flight-profile.md):
- * the RD-276 and RD-0210's figures, the three stage loads, the fairing's
- * T+348.2 s and the third stage's and Briz-M's staging delays; only `protonm`
- * changed (the Briz-M Angara-A5 installs keeps its 2 s), 32 020 characters.
- *
- * And a fifth, for Soyuz-2's hot staging and its two payload sections
+ * And a fourth, for Soyuz-2's hot staging and its two payload sections
  * (2026-10-01, docs/VALIDATION.md §3, "Soyuz-2.1a: hot staging, and a crewed
  * and a cargo flight"): Blok I's `hotStage` lead and 1.02 s separation delay,
  * the cores' `cutoffAt` from the 2.1a cyclogram, the skirts' times from

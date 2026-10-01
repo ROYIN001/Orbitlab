@@ -372,13 +372,6 @@ fill(BEYOND_CAPABILITY,
 fill(BEYOND_CAPABILITY,
   'the three Proton stages are 548-1206 m/s short under a Briz-M and 11.5-20.7 t: the ascent flattens and the 19.6 kN Briz-M cannot hold 30 t up, break-up at T+780-1038 s',
   'protonm/leo/50', 'protonm/leo/90', 'protonm/iss/50', 'protonm/iss/90');
-// On Proton-M's published engines and loads (ILS, 2026-10-01) the 90 % GTO row
-// still reaches its transfer orbit, but its parking orbit only at T+2391 s: the
-// three stages leave 6.2 t and the Briz-M suborbital, and 19.6 kN closes the gap
-// slowly. It flew inside the 1900 s class limit on the old, lighter stage-1 load.
-fill(BEYOND_CAPABILITY,
-  'the three Proton stages leave 6.2 t and the 22.2 t Briz-M suborbital (-2 660 m/s of ascent margin on the published data): the 19.6 kN Briz-M reaches the parking orbit at T+2391 s, past the 1900 s its class is held to, and the GTO after it',
-  'protonm/gto/90');
 fill(BEYOND_CAPABILITY,
   'URM-1/URM-2 are 735-1533 m/s short under a Briz-M and 12.3-22 t: the gravity turn cannot be held at 0.3 deg/s (the q-alpha placard leaves 4 deg of authority at 27 kPa), the trajectory flattens at 32 km and the vehicle breaks up by T+146-202 s',
   'angaraa5/leo/50', 'angaraa5/leo/90', 'angaraa5/sso/50', 'angaraa5/sso/90');
