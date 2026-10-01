@@ -670,7 +670,6 @@ export const ru: Record<string, string> = {
   'tl.evt.shipImpact': 'Потеря корабля',
 
   // ─── волна 2 · оформление ───────────────────────────────────────────────
-  'app.tagline': 'СИМУЛЯТОР ПОЛЁТА',
   'app.missionControl': 'ЦЕНТР УПРАВЛЕНИЯ',
   'app.buildMission': 'Соберите миссию',
   'app.footerModel': 'Земля · ньютоновская модель полёта',

@@ -24,9 +24,7 @@ export function appBuildId(stamp: BuildStamp = BUILD): string {
   return `${stamp.version}+${stamp.commit}`;
 }
 
-/** Mark the document with the build and put the commit in the top bar's version tag. */
+/** Mark the document with the build (the About dialog and the footer show it). */
 export function stampDocument(doc: Document = document): void {
   doc.documentElement.dataset.build = BUILD.commit;
-  const tag = doc.querySelector<HTMLElement>('#topbar .version');
-  if (tag) tag.textContent = BUILD.commit;
 }

@@ -107,11 +107,6 @@ a { color: var(--accent); }
 }
 .brand-name { font: 700 21px/1 var(--display); letter-spacing: -0.6px; color: #f3f7fb; }
 .brand-name span { font-weight: 400; color: #a5b2c3; margin-left: -3px; }
-.top-context {
-  display: flex; align-items: center; gap: 9px;
-  font-size: 11px; letter-spacing: 1.6px; color: var(--muted);
-}
-.version { border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; letter-spacing: 0; }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 .quiet-btn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -1022,7 +1017,6 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .flight-column { grid-column: 2; grid-row: 1; }
   #telemetry { grid-column: 2; grid-row: 2; max-height: 300px; }
   .scene-hint { display: none; }
-  .top-context { display: none; }
   .quiet-btn span:last-child { display: none; }
   .quiet-btn { padding: 7px; }
 }
