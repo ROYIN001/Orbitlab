@@ -101,8 +101,17 @@ export default async function satellite(t) {
   t.check(await t.until(async () => (await verdictOf()) === 'ok ready'), `the verdict on Electron is ${await verdictOf()}, not ready`);
   const fit = await page.getAttribute(`${grid} .bsat-fly [data-fairing-fit]`, 'data-fairing-fit');
   t.check(fit === 'fits', `the fairing note on Electron says ${fit}`);
+  const saidBefore = await page.locator(`${grid} .bsat-fly-verdict .status-text`).innerText().catch(() => '');
   await page.click(`${grid} [data-k="sx:fly"]`);
   t.check(await t.until(async () => (await page.evaluate(() => location.hash)) === '#/launch/explore'), 'Fly it did not open the Launch section');
+  // what was said before the click is what the Launch section's own panel says of the mission it opened (the review's check)
+  const panelSays = await t.until(() => page.evaluate(() => {
+    const n = document.querySelector('#mission-note');
+    const text = n?.querySelector('.status-text')?.textContent;
+    return text ? { level: n.className.replace('status-note', '').trim(), text } : null;
+  }), { timeoutMs: 30_000 });
+  t.check(panelSays?.level === 'ok' && panelSays.text === saidBefore,
+    `the Launch section's verdict (${panelSays?.level}: ${panelSays?.text}) is not the one Fly it gave (ok: ${saidBefore})`);
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('orbitlab.mission') ?? 'null'));
   t.check(stored?.version === 3 && stored.mission.vehicleId === 'electron' && stored.mission.satelliteSpec?.name === 'Journey NAPA-2',
     `the Launch section's mission is not the design on Electron (v3): ${JSON.stringify(stored?.mission ?? null).slice(0, 300)}`);
