@@ -3053,8 +3053,10 @@ about a second early (en.wikipedia). With no upper stage its cut-off orbit is fi
 kick sets the apogee: 4° in point-mass and 5° as a rigid body reach the flown 938 km, where
 Soyuz's 3° and 4° leave it 130 and 510 km short. Vostok-K's core, on astronautix's 93.6 t, burns
 15 s longer than flown and Blok E, lit late, is 18–23 s early to the same orbit; the published
-over-burn of Blok E (a backup timer cut it off when the radio command did not come, and the
-apogee was some 90 km above the planned one) is flown to, not modelled. The R-7's engines did not throttle; `minThrottle`
+over-burn is flown to, not modelled: the radio command to shut down Blok A did not come, its own
+apparent-velocity integrator, set above the radio's velocity, shut it down late (Chertok, *Rockets
+and People* vol. III; Zak, russianspaceweb), and the apogee was some 90 km above the planned one.
+It was told here as Blok E's until 2026-10-01. The R-7's engines did not throttle; `minThrottle`
 0.7 stands for the verniers' authority. RD-0109 steered by turbine exhaust through control nozzles
 of Blok E's own, drawn and flown as one gimballed chamber (estimated). The pad is Gagarin's Start
 (Site 1/5) for both.
