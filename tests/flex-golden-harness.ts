@@ -89,12 +89,13 @@ export async function missionFingerprint(cfg: MissionConfig, until: number): Pro
  * (owner's figures, 2026-09-25): a change to the vehicle, not to the options,
  * and with every option given and off it still flies the same 160 s bit for bit.
  * They were re-recorded again for audit PHY-01 (2026-10-01): its six-DOF
- * programme takes a 6° kick and closes the loop at T+140 s, a change to the
- * vehicle's data, not to the options. The earlier values were
- * '839f89154a81d07c' / '1edcbd927a140a70'.
+ * programme takes a 6° kick and closes the loop at T+140 s, holding the launch
+ * azimuth until then (src/physics/guidance.ts), a change to the vehicle's
+ * programme, not to the options. The earlier values were '839f89154a81d07c' /
+ * '1edcbd927a140a70'.
  */
 export const GOLDEN: Record<(typeof GOLDEN_FLIGHTS)[number]['vehicle'], { first160s: string; mission: string }> = {
   falcon9: { first160s: '3f48e9ee37213f9e', mission: '7fb4ebc11cd17b4f' },
-  soyuz21a: { first160s: '48fa26cc77ca2900', mission: 'be8b6db2b3ee3e26' },
+  soyuz21a: { first160s: '3ec643f99d65806d', mission: '912a1b0ea08f3b3e' },
   angaraa5: { first160s: 'c3022008e3f8d476', mission: '08a8c33302e646d6' },
 };

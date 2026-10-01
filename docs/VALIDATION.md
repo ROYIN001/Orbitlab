@@ -611,15 +611,15 @@ Three caveats about how independent these comparisons are:
 | --- | ---: | ---: | ---: | ---: |
 | strap-on separation | 117.8 s | 120.6 s (+2 %) | 120.7 s (+2 %) | ±11.8 s |
 | fairing jettison | 153.3 s | 157.1 s (+2 %) | 157.0 s (+2 %) | ±15.3 s |
-| fairing altitude (nominal) | 79 km | 89.2 km (+13 %) | 101.9 km (+29 %) ✗ | ±12.8 km |
+| fairing altitude (nominal) | 79 km | 89.2 km (+13 %) | 101.8 km (+29 %) ✗ | ±12.8 km |
 | core separation | 287.7 s | 294.6 s (+2 %) | 294.5 s (+2 %) | ±28.8 s |
-| core separation altitude (nominal) | 157 km | 166.0 km (+6 %) | 199.9 km (+27 %) ✗ | ±24.6 km |
-| third-stage cut-off | 525.9 s | 536.7 s (+2 %) | 534.1 s (+2 %) | ±52.6 s |
-| spacecraft separation | 529.2 s | 537.9 s (+2 %) | 535.4 s (+1 %) | ±52.9 s |
+| core separation altitude (nominal) | 157 km | 166.0 km (+6 %) | 199.2 km (+27 %) ✗ | ±24.6 km |
+| third-stage cut-off | 525.9 s | 536.7 s (+2 %) | 533.6 s (+1 %) | ±52.6 s |
+| spacecraft separation | 529.2 s | 537.9 s (+2 %) | 534.8 s (+1 %) | ±52.9 s |
 | initial orbit, perigee | 200.0 km | 197.0 km | 197.0 km | ±31.0 km |
 | initial orbit, apogee | 242.0 km | 200.0 km (−17 %) ✗ | 201.0 km (−17 %) ✗ | ±37.3 km |
-| *speed at fairing (frame not stated)* | *2.2 km/s* | *1.92 relative / 2.19 inertial* | *2.07 / 2.33* | *not graded* |
-| *speed at core separation (frame not stated)* | *3.8 km/s* | *3.85 relative / 4.14 inertial* | *3.87 / 4.16* | *not graded* |
+| *speed at fairing (frame not stated)* | *2.2 km/s* | *1.92 relative / 2.19 inertial* | *2.07 / 2.32* | *not graded* |
+| *speed at core separation (frame not stated)* | *3.8 km/s* | *3.85 relative / 4.14 inertial* | *3.88 / 4.18* | *not graded* |
 
 Re-measured 2026-10-01 with the six-DOF strap-on turn of PHY-01 (below, under the findings). Before
 it the six-DOF column read 99.3 km at the fairing and 183.7 km at core separation, both outside
@@ -671,7 +671,7 @@ Soyuz is put on an ellipse with a 242 km apogee from the start. This is a guidan
 F6, not physics. The times of the whole ascent agree with the flight to within 2 %.
 
 **F9. The six-DOF model climbs higher than the point-mass model on every vehicle.** Soyuz is
-13–34 km higher at fairing and core separation (10–17 km before its strap-on turn below). Ariane 64 is 14–68 km higher from booster
+13–33 km higher at fairing and core separation (10–17 km before its strap-on turn below). Ariane 64 is 14–68 km higher from booster
 separation onwards. Electron's six-DOF fairing leaves 27 s earlier than the point-mass one,
 because it is released on the heating placard, which is reached sooner on the higher
 trajectory. This is the same behaviour as F5 on Falcon 9, now seen on four vehicles: the
@@ -696,7 +696,25 @@ T+123.5 s and 374 Pa, on a crewed flight. PHYSICS.md and IMPLEMENTATION-STATUS h
 from a 6° kick (it was 4°), and the steering closes the loop at a fixed T+140 s
 (`closedLoopStart`, the mechanism the Saturn V uses), twenty seconds after the strap-ons leave,
 where the air is under 100 Pa and the command turns at the 1 °/s the model allows above the
-atmosphere. The point-mass programme is unchanged.
+atmosphere. Until the hand-over the turn holds the launch azimuth (`src/physics/guidance.ts`,
+six-DOF only), as the R-7's lateral stabilisation held the stack in its firing plane. The
+point-mass programme is unchanged.
+
+**Why the azimuth is held.** Following its own ground track for 140 s, the six-DOF stack let the
+wind and its attitude loop turn its plane, and the closed loop, which steers into the plane with
+the target inclination through wherever the vehicle is, cannot take that back. Soyuz-2.1a to the
+ISS (the quick-start mission, `tests/heavy/delivered-soyuz-wind.test.ts`), RAAN off the target at
+spacecraft separation:
+
+| | calm | crosswind | shear |
+| --- | ---: | ---: | ---: |
+| before (kick 4°, closed loop from ~4 kPa) | 0.32° | 1.05° | 0.96° |
+| kick 6°, closed loop at T+140 s, following the ground track | 0.76° | 2.05° | 1.87° |
+| **the same, holding the launch azimuth (chosen)** | **0.13°** | **0.14°** | **0.14°** |
+
+The band is 1.5°; the middle row missed it in both winds at the end of the mission (1.9° and
+1.7°). Holding the azimuth leaves the flow angle at most 0.7° and moves the other figures below by
+under 1 km and 1 s.
 
 **How it was chosen.** Soyuz MS-25 flown in six-DOF, calm, from the pad to spacecraft
 separation. Flow angle: from T+20 s until the dynamic pressure is under 100 Pa after max Q.
@@ -708,7 +726,8 @@ Altitudes at T+153.3 s (the flown fairing time) and at core separation.
 | kick 5–7°, closed loop from ~4 kPa | 14.3°; 14.6° | 3.0 °/s | T+306 s, in vacuum | 87.4–83.2 / 172.3–166.5 | reached |
 | kick 4°, closed loop at T+122 s | 0.4°; 28.8° | 5.2 °/s | T+127.6 s, 97 Pa | 107.6 / 207.2 | **missed** (perigee −190 km) |
 | kick 6°, closed loop at T+122 s | 0.6°; 31.8° | 5.1 °/s | T+127.5 s, 265 Pa | 95.7 / 188.2 | reached |
-| **kick 6°, closed loop at T+140 s (chosen)** | **0.6°; 0.3°** | **1.0 °/s at T+158 s** | **T+161 s, under 1 Pa** | **97.1 / 199.7** | reached |
+| kick 6°, closed loop at T+140 s | 0.6°; 0.3° | 1.0 °/s at T+158 s | T+161 s, under 1 Pa | 97.1 / 199.7 | reached |
+| **the same, holding the launch azimuth (chosen)** | **0.6°; 0.5°** | **1.0 °/s at T+158 s** | **T+162 s, under 1 Pa** | **97.1 / 199.1** | reached |
 | kick 7°, closed loop at T+140 s | 0.6° (1.9° at max Q); 0.3° | 1.0 °/s | T+161 s, under 1 Pa | 95.8 / 196.6 | reached |
 | kick 7.5°, closed loop at T+140 s | — | — | — | — | **broke up** at max Q (T+58 s) |
 | kick 6°, turn limit 1 °/s, closed loop at T+140 s | calm 0.6°; crosswind 31.6°, shear 35.0° at hand-over | 4.0–4.7 °/s in wind | | calm 93.1 / 190.5 | reached |
@@ -726,21 +745,22 @@ Altitudes at T+153.3 s (the flown fairing time) and at core separation.
 - **The hand-over.** At T+122 s, just after the strap-ons, the air is still a few hundred
   pascals and the closed loop swings the stack 30° at 5 °/s. By T+135–140 s it is under 100 Pa.
 - **The chosen programme, elsewhere.** Crosswind and shear (the reference winds): at most 0.6°
-  with the strap-ons and 0.2° after, 1.0 °/s, 93.7–94.6 / 193.1–195.7 km. Payloads of 3 t and
+  with the strap-ons and 0.5° after, 1.0 °/s, 93.7–94.7 / 190.9–193.3 km. Payloads of 3 t and
   7.43 t (the rating) from Baikonur, 4 t to SSO from Plesetsk, 6 t to 240 km from Vostochny: at
-  most 0.6°, 1.0 °/s, the table left at T+161–162 s under 1 Pa, every orbit reached.
+  most 0.7°, 1.0 °/s, the table left at T+161.7–162.1 s under 1 Pa, every orbit reached.
 
 The criteria were the flow angle, the pitch rate, the table and reaching orbit; the altitudes
 were looked at and did not decide it. So this is a choice of programme on physical grounds, not a
 value fitted to the flight.
 
-**What it costs.** The six-DOF core now separates 199.9 km up against the nominal 157 km, 16 km
+**What it costs.** The six-DOF core now separates 199.2 km up against the nominal 157 km, 16 km
 further out than before (the table above, §3 Results). Both altitudes were outside tolerance
 before and are now, so `tests/heavy/validation-timelines.test.ts` lists the same rows. A flatter
 zero-lift turn would need more authority at max Q than the model's R-7 has; the real strap-ons
 also steer with an air vane each, which the model does not have, so that is one place to look.
 Held by `tests/rigid-soyuz-strapon-turn.test.ts` (flow angle under 2°, pitch rate under 1.5 °/s,
-the table left only under 10 Pa, the strap-ons on the flown clock).
+the table left only under 10 Pa, the strap-ons on the flown clock); the plane by the delivered-orbit
+matrix in the reference winds.
 
 **Found in passing, not changed.** In the crosswind and shear reference winds every Soyuz
 programme, old and new, records `evt.aeroEnvelopeExceeded` at T+0: the wind across the pad

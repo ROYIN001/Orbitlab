@@ -470,6 +470,19 @@ export class AscentGuidance {
       case 'gravityTurn': {
         const turnSpeed = norm(turnVelocity);
         let vDir = turnSpeed > 1 ? scale(turnVelocity, 1 / turnSpeed) : up;
+        // A pitch programme flown open-loop to a fixed hand-over (`closedLoopStart`)
+        // holds the launch azimuth, as the R-7's lateral stabilisation held its
+        // strap-ons in the firing plane (PHY-01). Following the ground track
+        // instead, a six-DOF flight let the wind and its own attitude loop turn the
+        // plane for 140 s that the closed loop, steering into the plane through
+        // wherever the vehicle is, could not take back: an ISS target's RAAN missed
+        // by 0.8° calm and up to 2.1° in the reference winds (0.1° held). A closed loop that will fly into the target
+        // plane (`this.plane`) steers it out itself; the point mass has neither wind
+        // nor an attitude loop (six-DOF only, `requireDownrangeKick`).
+        if (fixedHandover && !this.plane && inp.requireDownrangeKick) {
+          const climb = Math.max(-1, Math.min(1, dot(vDir, up)));
+          vDir = normalize(add(scale(up, climb), scale(downrange, Math.sqrt(1 - climb * climb))));
+        }
         // Pitch-program limit: do not let the commanded pitch fall faster than
         // maxTurnRate. Flying the nose above the velocity vector costs angle of
         // attack, so the deviation is charged against the q·α budget below.

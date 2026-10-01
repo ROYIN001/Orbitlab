@@ -1,8 +1,8 @@
 /**
  * Audit PHY-01: Soyuz-2.1a in six-DOF, Soyuz MS-25 as the viewer flies it,
- * from the pad to T+170 s. Its strap-ons fly a zero-lift turn and the steering
- * closes the loop at T+140 s (`guidanceDefaultsSixDof.closedLoopStart` in
- * src/data/vehicles.ts). Handed over at the usual ~4 kPa it asked for a nose far
+ * from the pad to T+170 s. Its strap-ons fly a zero-lift turn, holding the
+ * launch azimuth (src/physics/guidance.ts), and the steering closes the loop at
+ * T+140 s (`guidanceDefaultsSixDof.closedLoopStart` in src/data/vehicles.ts). Handed over at the usual ~4 kPa it asked for a nose far
  * below the vehicle: 14° of angle held at the aerodynamic table's edge from
  * T+90 s with the strap-ons still on, a 3 °/s pitch-down, and 25° past the
  * table after they left, recorded as `evt.aeroEnvelopeExceeded` at 380 Pa on a
@@ -62,7 +62,7 @@ describe('Soyuz-2.1a in six-DOF: the strap-ons fly a zero-lift turn (PHY-01)', (
     // handed over still climbing steeply (measured 32° above the horizon)
     expect(pitchAtHandover).toBeGreaterThan(20);
     // Every six-DOF flight leaves the 15° table once its steering is out of the
-    // air (PHYSICS.md §13.8); here at T+161 s, under 1 Pa. It was at 380 Pa.
+    // air (PHYSICS.md §13.8); here at T+162 s, under 1 Pa. It was at 380 Pa.
     if (envelopeQ !== undefined) expect(envelopeQ).toBeLessThan(10);
   }, 300_000);
 });
