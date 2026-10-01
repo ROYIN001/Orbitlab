@@ -52,9 +52,32 @@ export const TRACKS: readonly Track[] = [
 /** The catalogue's number for a lesson: "1.2". */
 export const lessonNumber = (l: Pick<Lesson, 'track' | 'order'>): string => `${l.track}.${l.order}`;
 
-/** The built-in lessons of both kinds followed by any a teacher's file added, in catalogue order. */
+/**
+ * A teacher's lessons are listed after the six tracks, under the catalogue's
+ * own heading for them: the track the scenario writer writes (T01), and the
+ * reader's for a lesson that names none (src/lessons/lesson-file.ts).
+ */
+export const AUTHOR_TRACK = 9;
+
+/** The built-in lessons' ids, of both kinds: the catalogue lists the built-in lesson under each. */
+export const BUILTIN_LESSON_IDS: ReadonlySet<string> = new Set([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
+
+/**
+ * The teacher's lessons (the author track) numbered 1, 2, 3… in the order
+ * they are kept: each file's in the order they are written in it, the files
+ * in the order they were opened (task I2, item 2). The writer writes each
+ * lesson as the first of a file of its own (`order: 1`), so every teacher's
+ * lesson used to read "9.1". A lesson a file places in another track keeps
+ * the file's number. Copies: the lessons kept are not changed.
+ */
+export function numberTeacherLessons(custom: readonly CatalogLesson[]): CatalogLesson[] {
+  let n = 0;
+  return custom.map((l) => (l.track === AUTHOR_TRACK ? { ...l, order: ++n } : l));
+}
+
+/** The built-in lessons of both kinds followed by any a teacher's file added (a teacher's numbered in order), in catalogue order. */
 export function allLessons(custom: readonly CatalogLesson[] = []): CatalogLesson[] {
   const builtin: CatalogLesson[] = [...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS];
-  const ids = new Set(builtin.map((l) => l.id));
-  return [...builtin, ...custom.filter((l) => !ids.has(l.id))].sort((a, b) => a.track - b.track || a.order - b.order);
+  const own = numberTeacherLessons(custom.filter((l) => !BUILTIN_LESSON_IDS.has(l.id)));
+  return [...builtin, ...own].sort((a, b) => a.track - b.track || a.order - b.order);
 }

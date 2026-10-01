@@ -14,7 +14,7 @@
  */
 import type { MissionDocument } from '../config/mission-file';
 import { eventIssues, readLesson, type FileIssue } from './lesson-file';
-import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS } from './catalog';
+import { AUTHOR_TRACK, BUILTIN_LESSON_IDS } from './catalog';
 import { DOMAINS, LOCK_KEYS, type Domain, type Lesson, type LocalText, type LockKey, type MeasureId } from './types';
 
 /** A text as typed, in each language (empty where not given). */
@@ -42,8 +42,8 @@ export interface LessonDraft {
 
 /** What a scenario locks unless the instructor frees it: every setting of the mission, so each student flies the same one. */
 export const DEFAULT_LOCKS: readonly LockKey[] = ['setup.vehicle', 'setup.site', 'setup.satellite', 'setup.payloadMass', 'setup.orbit', 'setup.launchTime', 'setup.failure', 'setup.dynamics.model'];
-/** A teacher's lessons are listed after the six tracks, under the catalogue's own heading for them. */
-export const AUTHOR_TRACK = 9;
+/** A teacher's lessons are listed after the six tracks, under the catalogue's own heading for them (src/lessons/catalog.ts). */
+export { AUTHOR_TRACK };
 
 export const emptyText = (): DraftText => ({ en: '', ru: '', th: '' });
 
@@ -68,7 +68,7 @@ const LANGS = ['en', 'ru', 'th'] as const;
  * of every catalogue (`allLessons`), so its file adds nothing and its link and
  * "Try it now" open the built-in lesson instead: the writer refuses the id.
  */
-const BUILTIN_IDS: ReadonlySet<string> = new Set([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
+const BUILTIN_IDS = BUILTIN_LESSON_IDS;
 
 /** A typed text as a lesson's text, or null when none was given; `stood` names the language standing in for English. */
 function localOf(text: DraftText): { text: LocalText; stood: 'ru' | 'th' | null } | null {
@@ -131,6 +131,8 @@ export function draftLesson(draft: LessonDraft, mission: MissionDocument, knownE
   if (brief?.stood) issues.push({ where: 'brief', code: 'translation', level: 'warn', detail: `en=${brief.stood}` });
   const hints = draft.hints.map(localOf).filter((h): h is NonNullable<typeof h> => h !== null);
   const raw = {
+    // the first of the file it is written to, which holds it alone; the catalogue numbers a teacher's lessons
+    // in the order they are kept (`numberTeacherLessons`, task I2), so the second file's is not a second 9.1
     id: draft.id.trim(), track: AUTHOR_TRACK, order: 1, mode: draft.mode,
     domains: DOMAINS.filter((d) => draft.domains.includes(d)),
     title: title?.text ?? {}, brief: brief?.text ?? {},
