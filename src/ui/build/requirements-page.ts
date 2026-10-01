@@ -35,7 +35,7 @@ import { runTradesJob } from '../../design/requirement-trades-job';
 import type { RepeatCycle, Requirement, TradeRow } from '../../design/requirement-trades';
 import type { MissionRequirements } from '../../design/requirements';
 import type { SatelliteDesign } from '../../design/satellite-spec';
-import { TEMPLATE_TEXT, designFigures, newSatelliteId, type Fig } from '../../design/satellite-model';
+import { TEMPLATE_TEXT, newSatelliteId, type Fig } from '../../design/satellite-model';
 import { wetMass } from '../../design/satellite-area';
 import {
   MAX_ROWS, REQ_TARGETS, REQ_TEMPLATES, apertureCrossing, aperturePoints, benchDesign, benchNow, candidateCycles, compareWithBench, cycleRange, cycleText, disposalState,
@@ -221,7 +221,6 @@ export class RequirementsPage {
 
   show(): void {
     this.visible = true;
-    this.ws.readDate();
     this.render();
   }
 
@@ -517,7 +516,6 @@ export class RequirementsPage {
     if (this.job || this.issues().length) return;
     const form = structuredClone(this.form);
     const formKey = JSON.stringify(form);
-    this.ws.readDate();
     const jd = this.ws.jd();
     const template = templateDesign(form.template);
     const req = missionRequirements(form);
@@ -535,7 +533,7 @@ export class RequirementsPage {
       this.kept = { key: lifetimeKey(lifeReq), results: lifetime };
       this.progress('table', 0);
       // the D06 bench's own figures for the template give the link and camera the rows use
-      const opts = tradeOptionsFor(template, form, jd, lifetime, designFigures(template, jd, { level: form.activity }));
+      const opts = tradeOptionsFor(form, jd, lifetime);
       const rows = await runTradesJob({ req, template, opts }, controller.signal, (f) => this.progress('table', f));
       this.result = { formKey, req, template, jd, lifetime, rows };
       this.shown = PAGE_ROWS;

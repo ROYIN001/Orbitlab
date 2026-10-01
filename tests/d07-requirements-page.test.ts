@@ -57,6 +57,7 @@ import { designFigures, designHandoff, satelliteChecks } from '../src/design/sat
 import { designOrbit } from '../src/design/satellite-handoff';
 import { lifetimeSpacecraft } from '../src/design/satellite-area';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
+import { designDownlink } from '../src/design/satellite-link';
 
 const JD0 = julianDate(new Date(Date.UTC(2026, 8, 30)));
 const YEAR = 365.25 * 86400;
@@ -148,7 +149,7 @@ describe('what a run costs (D07)', () => {
     expect(REVISIT_WINDOW_DAYS).toBe(60);
     const form: RequirementsForm = { ...DEFAULT_FORM, sso: false, inclination: 51.6 };
     // the window the estimate counts is the one the table is given
-    expect(tradeOptionsFor(templateDesign('theos2'), form, JD0, null).revisitWindow).toBe(REVISIT_WINDOW_DAYS);
+    expect(tradeOptionsFor(form, JD0, null).revisitWindow).toBe(REVISIT_WINDOW_DAYS);
     const cycles = candidateCycles(form);
     const open = runCost(cycles, [], revisitWindowOf(form));
     expect(open.tableSeconds).toBe(cycles.reduce((s, c) => s + (c.days + 60) / 2, 0) * SECONDS_PER_ROW_DAY);
@@ -178,7 +179,7 @@ describe('the cores\' errors in the page\'s words (D07)', () => {
   const thrown = (fn: () => unknown): unknown => { try { fn(); } catch (e) { return e; } throw new Error('did not throw'); };
   const tpl = templateDesign('theos2');
   const req = missionRequirements(THEOS2);
-  const opts = tradeOptionsFor(tpl, THEOS2, JD0, null);
+  const opts = tradeOptionsFor(THEOS2, JD0, null);
 
   it('maps every RangeError a run can meet to a sentence of its own, never the English', () => {
     const cases: [unknown, string][] = [
@@ -209,7 +210,7 @@ describe('a row\'s link and camera are the bench\'s (D07 → D06)', () => {
       const form: RequirementsForm = { ...DEFAULT_FORM, template: id, gsd: id === 'napa2' ? 5 : 0.5 };
       const tpl = templateDesign(id);
       const req = missionRequirements(form);
-      const row = tradeRow(req, tpl, { revs: 15, days: 1 }, tradeOptionsFor(tpl, form, JD0, null))!;
+      const row = tradeRow(req, tpl, { revs: 15, days: 1 }, tradeOptionsFor(form, JD0, null))!;
       // the template itself, flown at the row's orbit: the bench's highest rate at 3 dB is the row's
       const at: SatelliteDesign = { ...tpl, orbit: { perigee: row.altitude, apogee: row.altitude, inclination: row.inclination / DEG, sso: true, ltan: req.ltan } };
       const fig = designFigures(at, JD0);
@@ -227,7 +228,7 @@ describe('what the lifetime, disposal and binds columns say (D07)', () => {
   const form: RequirementsForm = { ...DEFAULT_FORM, template: 'napa2', gsd: 5, lifeYears: 1, revisitDays: 1 };
   const req = missionRequirements(form);
   const search = (years: number, lo: number, hi: number): AltitudeForLifetime => ({ years, outcome: 'found', altitude: (lo + hi) / 2, lo, hi, runs: [] });
-  const rowWith = (lifetime: AltitudeForLifetime[]): TradeRow => tradeRow(req, tpl, { revs: 15, days: 1 }, tradeOptionsFor(tpl, form, JD0, lifetime))!;
+  const rowWith = (lifetime: AltitudeForLifetime[]): TradeRow => tradeRow(req, tpl, { revs: 15, days: 1 }, tradeOptionsFor(form, JD0, lifetime))!;
 
   it('says a row inside the lifetime search\'s bracket is not proven to last, not an infinite ratio', () => {
     const probe = rowWith([search(1, 400e3, 410e3), search(26, 600e3, 610e3)]);
@@ -269,7 +270,7 @@ describe('what the lifetime, disposal and binds columns say (D07)', () => {
     // THEOS-2 carries hydrazine: the same orbit is held by its engine
     const theos = templateDesign('theos2');
     const tform: RequirementsForm = { ...form, template: 'theos2' };
-    const held = tradeRow(missionRequirements(tform), theos, { revs: 15, days: 1 }, tradeOptionsFor(theos, tform, JD0, below))!;
+    const held = tradeRow(missionRequirements(tform), theos, { revs: 15, days: 1 }, tradeOptionsFor(tform, JD0, below))!;
     expect(held.dvAvailable).toBeGreaterThan(0);
     expect(lifeState(held, below)).toMatchObject({ kind: 'held', engine: true });
   });
@@ -280,7 +281,7 @@ describe('what the lifetime, disposal and binds columns say (D07)', () => {
       { ...search(26, 600e3, 610e3), runs: [{ altitude: 400e3, lifetime: 0.5 * YEAR }, { altitude: 600e3, lifetime: 20 * YEAR }] },
     ];
     expect(lifetimePoints(results)).toEqual([{ altitude: 150e3, years: 1e4 / YEAR }, { altitude: 400e3, years: 0.5 }, { altitude: 600e3, years: 20 }]);
-    const rows = [rowWith([]), tradeRow(req, tpl, { revs: 14, days: 1 }, tradeOptionsFor(tpl, form, JD0, null))!];
+    const rows = [rowWith([]), tradeRow(req, tpl, { revs: 14, days: 1 }, tradeOptionsFor(form, JD0, null))!];
     const pts = aperturePoints(rows);
     expect(pts[0].altitude).toBeLessThan(pts[1].altitude);
     expect(rel(pts[0].aperture / pts[0].altitude, pts[1].aperture / pts[1].altitude)).toBeLessThanOrEqual(1e-12);
@@ -291,7 +292,7 @@ describe('what the lifetime, disposal and binds columns say (D07)', () => {
   it('says where the aperture the GSD needs passes the template\'s', () => {
     const tpl = templateDesign('theos2');
     const req = missionRequirements(DEFAULT_FORM);
-    const opts = tradeOptionsFor(tpl, DEFAULT_FORM, JD0, null);
+    const opts = tradeOptionsFor(DEFAULT_FORM, JD0, null);
     const rows = [{ revs: 15, days: 1 }, { revs: 14, days: 1 }, { revs: 13, days: 1 }].map((c) => tradeRow(req, tpl, c, opts)!);
     const cross = apertureCrossing(rows, 0.9);
     expect(cross.kind).toBe('from');
@@ -307,7 +308,7 @@ describe('a row opened on the bench (D07 → D06, map §3 round trip)', () => {
     const req = missionRequirements(THEOS2);
     const lifetime = altitudesForLifetimes(lifetimeRequestFor(tpl, THEOS2, JD0));
     expect(lifetime.map((r) => r.outcome)).toEqual(['found', 'found']);
-    const opts = tradeOptionsFor(tpl, THEOS2, JD0, lifetime);
+    const opts = tradeOptionsFor(THEOS2, JD0, lifetime);
     const row = tradeRow(req, tpl, { revs: 385, days: 26 }, opts)!;
     expect(Math.abs(row.altitude / 1e3 - 621)).toBeLessThanOrEqual(1);
     expect(Math.abs(row.inclination / DEG - 97.91)).toBeLessThanOrEqual(0.1);
@@ -388,15 +389,18 @@ describe('a row opened on the bench (D07 → D06, map §3 round trip)', () => {
     expect(requiredDataRate(req.dataPerDay, 10 * 60)).toBe(96e6);
     // THEOS-2's row, heard for ten minutes a day: the rate and the transmitter the row would size, through the same cores
     const tpl = templateDesign('theos2');
-    const opts = tradeOptionsFor(tpl, form, JD0, null);
+    const opts = tradeOptionsFor(form, JD0, null);
     const base = tradeRow(req, tpl, { revs: 385, days: 26 }, opts)!;
     const rate = requiredDataRate(req.dataPerDay, 600);
+    // the downlink as the table and the bench both read it from the design
+    const dl = designDownlink(tpl);
     const eirpNeeded = requiredEirp({
-      frequency: tpl.comms.frequency, rxGain: opts.ground.rxGain, systemTemperature: opts.ground.systemTemperature, losses: opts.ground.losses,
-      requiredEbN0: tpl.comms.requiredEbN0, implementationLoss: opts.ground.implementationLoss,
+      frequency: tpl.comms.frequency, rxGain: dl.rxGain, systemTemperature: dl.systemTemperature, losses: dl.losses,
+      requiredEbN0: tpl.comms.requiredEbN0, implementationLoss: dl.implementationLoss,
       range: slantRange(R_EARTH + base.altitude, form.minElDeg * DEG), dataRate: rate,
     }, 3);
-    const row: TradeRow = { ...base, contactPerDay: 600, requiredRate: rate, requiredTxPower: txPowerForEirp(eirpNeeded, tpl.comms.lineLoss, opts.txGain) };
+    // the pointing loss taken off the gain gives the same EIRP (D07's `eirp` has no pointing term)
+    const row: TradeRow = { ...base, contactPerDay: 600, requiredRate: rate, requiredTxPower: txPowerForEirp(eirpNeeded, tpl.comms.lineLoss, dl.txGain - dl.pointingLoss) };
     const opened = benchDesign(tpl, row, req, JD0, form.activity, 'tud', 'tud');
     if (!opened.ok) throw new Error(`not opened: ${opened.key}`);
     expect(opened.design.comms.dataRate).toBe(96e6);
@@ -409,7 +413,7 @@ describe('a row opened on the bench (D07 → D06, map §3 round trip)', () => {
   it('knows when the bench no longer holds the design as it was opened', () => {
     const tpl = templateDesign('theos2');
     const req = missionRequirements(DEFAULT_FORM);
-    const row = tradeRow(req, tpl, { revs: 15, days: 1 }, tradeOptionsFor(tpl, DEFAULT_FORM, JD0, null))!;
+    const row = tradeRow(req, tpl, { revs: 15, days: 1 }, tradeOptionsFor(DEFAULT_FORM, JD0, null))!;
     const opened = benchDesign(tpl, row, req, JD0, 'moderate', 'opened', 'From requirements');
     if (!opened.ok) throw new Error(opened.key);
     const d = opened.design;
@@ -423,13 +427,13 @@ describe('a row opened on the bench (D07 → D06, map §3 round trip)', () => {
     const tpl = templateDesign('theos2');
     // 0.5 m from some 4 000 km needs a focal length past the bench's 100 m
     const req = missionRequirements({ ...DEFAULT_FORM });
-    const high = tradeRow(req, tpl, { revs: 8, days: 1 }, tradeOptionsFor(tpl, DEFAULT_FORM, JD0, null))!;
+    const high = tradeRow(req, tpl, { revs: 8, days: 1 }, tradeOptionsFor(DEFAULT_FORM, JD0, null))!;
     expect(high.focalLength).toBeGreaterThan(100);
     expect(benchDesign(tpl, high, req, JD0, 'moderate', 'x', 'x')).toEqual({ ok: false, key: 'build.req.open.outside', field: 'build.sat.f.focal' });
     // a gigabit a day through an 11 m dish needs well under a milliwatt
     const small = { ...DEFAULT_FORM, dataGbit: 1 };
     const sreq = missionRequirements(small);
-    const row = tradeRow(sreq, tpl, { revs: 15, days: 1 }, tradeOptionsFor(tpl, small, JD0, null))!;
+    const row = tradeRow(sreq, tpl, { revs: 15, days: 1 }, tradeOptionsFor(small, JD0, null))!;
     expect(row.requiredTxPower).toBeLessThan(1e-3);
     const opened = benchDesign(tpl, row, sreq, JD0, 'moderate', 'x', 'x');
     if (!opened.ok) throw new Error(opened.key);

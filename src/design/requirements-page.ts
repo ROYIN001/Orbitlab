@@ -51,8 +51,7 @@ import type { MissionRequirements } from './requirements';
 import {
   REQUIREMENTS, designFromRow, lifetimeRequest, repeatCycles, type RepeatCycle, type Requirement, type TradeOptions, type TradeRow,
 } from './requirement-trades';
-import { DIFFRACTION_WAVELENGTH, RX_DEFAULTS, RX_DISH_EFFICIENCY, designFigures, designFromTemplate, fieldByPath, type Fig, type SatelliteFigures } from './satellite-model';
-import { dishGain } from '../orbit/applications';
+import { designFigures, designFromTemplate, fieldByPath, type Fig, type SatelliteFigures } from './satellite-model';
 import { wetMass } from './satellite-area';
 import type { SatelliteDesign } from './satellite-spec';
 
@@ -306,34 +305,19 @@ export function runCost(cycles: readonly RepeatCycle[], years: readonly number[]
 export const templateDesign = (id: string): SatelliteDesign => designFromTemplate(id, `req-${id}`, id);
 
 /**
- * The trade table's options for a template, read off the D06 bench's own
- * figures for it (`designFigures`), so a row's link and camera are the
- * bench's: the transmitting antenna's gain less its pointing loss (D07's
- * `eirp` has no pointing term, and a gain lowered by the loss gives the same
- * EIRP), the receiving station's dish gain, noise temperature and losses as
- * the bench reads them (`RX_DEFAULTS` where the design has none; no separate
- * implementation loss, as the bench counts none), and the bench's
- * wavelength for the diffraction limit (`DIFFRACTION_WAVELENGTH`). The link
- * is held to the bench's 3 dB (`LINK_MARGIN_THRESHOLD`).
+ * The trade table's options for a template. The row's link and camera are
+ * the bench's without being passed: the table reads the transmitting
+ * antenna, its pointing loss, the receiving station and the camera's
+ * wavelength from the template itself (src/design/satellite-link.ts
+ * `designDownlink`, `cameraWavelength`), as the D06 bench does. The link is
+ * held to the bench's 3 dB (`LINK_MARGIN_THRESHOLD`).
  */
-export function tradeOptionsFor(
-  template: SatelliteDesign, f: RequirementsForm, jd0: number, lifetime: AltitudeForLifetime[] | null, fig?: SatelliteFigures,
-): Omit<TradeOptions, 'onProgress'> {
-  const figures = fig ?? designFigures(template, jd0, { level: f.activity });
-  const c = template.comms;
+export function tradeOptionsFor(f: RequirementsForm, jd0: number, lifetime: AltitudeForLifetime[] | null): Omit<TradeOptions, 'onProgress'> {
   return {
     jd0,
     cycles: candidateCycles(f),
     ...(f.sso ? {} : { inclination: f.inclination * DEG, raan: 0 }),
-    txGain: figures.link.txGain.value - figures.link.pointingLoss.value,
-    ground: {
-      rxGain: dishGain(c.rxAntennaD ?? RX_DEFAULTS.rxAntennaD, c.frequency, RX_DISH_EFFICIENCY),
-      systemTemperature: c.rxNoiseK ?? RX_DEFAULTS.rxNoiseK,
-      losses: c.losses ?? RX_DEFAULTS.losses,
-      implementationLoss: 0,
-    },
     margin: LINK_MARGIN_THRESHOLD,
-    wavelength: DIFFRACTION_WAVELENGTH,
     tilt: f.tiltDeg * DEG,
     lifetime,
     revisitWindow: REVISIT_WINDOW_DAYS,
