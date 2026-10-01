@@ -292,7 +292,9 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .author-crit { display: grid; grid-template-columns: 1.6em minmax(0, 280px) minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
 .author-crit-n { font: 600 13px var(--mono); color: var(--lesson); padding-top: 8px; }
 .author-crit-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; min-width: 0; }
-.author-crit-fields > select { max-width: 320px; }
+/* as wide as its longest name where the row has room: at 320 px "Максимальная перегрузка экипажа при спасении, g" (389 px)
+   was cut even at 1440 px (task I2's review); on a phone the menu still takes the row and the picker shows the name whole */
+.author-crit-fields > select { max-width: 100%; }
 .author-crit-fields .author-text { flex-basis: 100%; margin: 2px 0 0; }
 .author-num { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
 .author-num input { width: 120px; }
