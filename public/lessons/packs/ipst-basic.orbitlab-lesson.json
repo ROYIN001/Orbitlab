@@ -1,0 +1,342 @@
+{
+  "format": "orbitlab.lessons",
+  "version": 1,
+  "pack": {
+    "id": "ipst-basic",
+    "title": {
+      "en": "IPST basic science: forces, gravity and satellites",
+      "ru": "IPST, базовый курс естествознания: силы, тяготение и спутники",
+      "th": "วิทยาศาสตร์พื้นฐาน (สสวท.): แรง ความโน้มถ่วง และดาวเทียม"
+    },
+    "audience": {
+      "en": "Upper secondary school, grades 11–12 (M.5–M.6)",
+      "ru": "Старшая школа Таиланда, 11–12 классы (М.5–М.6)",
+      "th": "มัธยมศึกษาตอนปลาย ชั้น ม.5–ม.6"
+    },
+    "framework": {
+      "en": "IPST indicators for science, 2017 revision (B.E. 2560) of the Basic Education Core Curriculum B.E. 2551",
+      "ru": "Индикаторы IPST по естествознанию, редакция 2017 г. (2560 г. буддийской эры) Основной учебной программы базового образования 2008 г.",
+      "th": "ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560) ตามหลักสูตรแกนกลางการศึกษาขั้นพื้นฐาน พุทธศักราช 2551"
+    },
+    "reviewed": false,
+    "description": {
+      "en": "Matched to standard ว 2.2 (forces and motion), grade 11 indicators 1 and 3–6, and standard ว 3.1 (the universe and space), grade 12 indicator 10. Source: IPST, ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th, book pp. 65–66 and 86–87. The first two lessons are written for this pack; the other two are the app's own lessons, listed again with the codes they meet.",
+      "ru": "Соответствует стандарту ว 2.2 (силы и движение), индикаторам 1 и 3–6 для 11 класса, и стандарту ว 3.1 (Вселенная и космос), индикатору 10 для 12 класса. Источник: IPST, ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th, с. 65–66 и 86–87 издания. Первые два урока написаны для этого набора; два других — уроки самого приложения, приведённые здесь ещё раз с кодами, которым они отвечают.",
+      "th": "สอดคล้องกับมาตรฐาน ว 2.2 (แรงและการเคลื่อนที่) ตัวชี้วัดชั้น ม.5 ข้อ 1 และข้อ 3–6 และมาตรฐาน ว 3.1 (เอกภพและอวกาศ) ตัวชี้วัดชั้น ม.6 ข้อ 10 แหล่งที่มา: สสวท., ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th หน้า 65–66 และ 86–87 ของเล่ม สองบทแรกเขียนขึ้นสำหรับชุดนี้ อีกสองบทเป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมรหัสตัวชี้วัดที่สอดคล้อง"
+    },
+    "contents": [
+      {
+        "id": "ipst-b-forces"
+      },
+      {
+        "id": "ipst-b-falling-around"
+      },
+      {
+        "id": "orbit-payload",
+        "curriculum": [
+          {
+            "code": "ว 2.2 ม.5/3",
+            "kind": "indicator"
+          },
+          {
+            "code": "ว 2.2 ม.5/5",
+            "kind": "indicator"
+          }
+        ],
+        "note": {
+          "en": "Mass and acceleration: every kilogram of payload rides the second stage all the way, so the same thrust gives it less speed. Too heavy, and the stage falls back like a projectile instead of going round.",
+          "ru": "Масса и ускорение: каждый килограмм нагрузки вторая ступень несёт до конца, и та же тяга сообщает ей меньшую скорость. Слишком тяжёлая нагрузка — и ступень падает обратно, как брошенное тело, а не обращается вокруг Земли.",
+          "th": "มวลกับความเร่ง: น้ำหนักบรรทุกทุกกิโลกรัมอยู่บนขั้นที่ 2 ตลอดทาง แรงขับเท่าเดิมจึงให้อัตราเร็วน้อยลง ถ้าหนักเกินไป ขั้นจรวดจะตกกลับลงมาแบบโพรเจกไทล์แทนที่จะโคจรรอบโลก"
+        }
+      },
+      {
+        "id": "case-theos2",
+        "curriculum": [
+          {
+            "code": "ว 3.1 ม.6/10",
+            "kind": "indicator"
+          }
+        ],
+        "note": {
+          "en": "Space technology put to use: Thailand's own Earth-observation satellite, and the orbit chosen for its work.",
+          "ru": "Космические технологии на практике: собственный таиландский спутник наблюдения Земли и орбита, выбранная для его работы.",
+          "th": "การนำเทคโนโลยีอวกาศมาใช้ประโยชน์: ดาวเทียมสำรวจทรัพยากรของไทยเอง และวงโคจรที่เลือกให้เหมาะกับงานของมัน"
+        }
+      }
+    ]
+  },
+  "lessons": [
+    {
+      "id": "ipst-b-forces",
+      "track": 11,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        3,
+        1
+      ],
+      "tags": [
+        "F = ma",
+        "max-Q"
+      ],
+      "title": {
+        "en": "Forces on a rocket",
+        "ru": "Силы, действующие на ракету",
+        "th": "แรงที่กระทำต่อจรวด"
+      },
+      "brief": {
+        "en": "Falcon 9 carries 10 t from Cape Canaveral into a circular orbit 500 km up, and everything is set: press Launch and watch the telemetry panel's Acceleration (g) chart. The engines push the rocket up, its weight pulls it down, and while it is low the air pushes back against it. How fast it speeds up follows Newton's second law, a = F/m. When the flight is over, read two numbers from it and type them in: the largest acceleration the chart shows, and the time after liftoff at which the air pushed hardest on the rocket (max-Q).",
+        "ru": "Falcon 9 выводит 10 т с мыса Канаверал на круговую орбиту высотой 500 км; всё уже настроено. Нажмите «Пуск» и следите за графиком «Перегрузка (g)» на панели телеметрии. Двигатели толкают ракету вверх, сила тяжести тянет её вниз, а пока ракета низко, движению противодействует воздух. Как быстро ракета разгоняется, определяет второй закон Ньютона: a = F/m. После полёта снимите с него два числа и введите их: наибольшую перегрузку на графике и время после отрыва, когда воздух давил на ракету сильнее всего (максимальный скоростной напор, max-Q).",
+        "th": "Falcon 9 นำน้ำหนักบรรทุก 10 ตันจากแหลมคะแนเวอรัลขึ้นสู่วงโคจรวงกลมที่ความสูง 500 กม. ทุกอย่างตั้งค่าไว้แล้ว ให้กด «ปล่อยจรวด» แล้วสังเกตกราฟ «ความเร่ง (g)» ในแผงโทรมาตร เครื่องยนต์ผลักจรวดขึ้น น้ำหนักของจรวดดึงลง และขณะที่จรวดยังอยู่ต่ำ อากาศก็ต้านการเคลื่อนที่ไว้ จรวดจะมีความเร่งมากหรือน้อยเป็นไปตามกฎการเคลื่อนที่ข้อที่สองของนิวตัน a = F/m เมื่อบินเสร็จแล้ว ให้อ่านค่าสองค่าจากการบินแล้วพิมพ์คำตอบ ได้แก่ ความเร่งสูงสุดที่กราฟแสดง และเวลาหลังจรวดยกตัวที่อากาศกดจรวดแรงที่สุด (ความดันพลวัตสูงสุด หรือ max-Q)"
+      },
+      "debrief": {
+        "en": "The engines throw the exhaust down, and the exhaust pushes the rocket up with an equal and opposite force: action and reaction, Newton's third law. The thrust hardly changes while the first stage burns more than two tonnes of propellant a second, so the mass falls and a = F/m grows — until, near 4.6 g, the flight computer throttles the engines back to hold the acceleration at the limit set for the payload. The chart shows the acceleration the thrust and the air give the rocket, which is what an accelerometer on board reads and what the payload feels; it drops at once when the first stage cuts off. The air's push grows with its density and with the square of the speed (q = ½ρv²): it is largest within the first minute, here at about 50 s, and then falls, because the air thins faster than the speed grows.",
+        "ru": "Двигатели отбрасывают струю газов вниз, а газы толкают ракету вверх с равной по модулю и противоположно направленной силой — действие и противодействие, третий закон Ньютона. Тяга почти не меняется, а первая ступень сжигает больше двух тонн топлива в секунду, поэтому масса уменьшается и a = F/m растёт — пока около 4,6 g бортовой компьютер не дросселирует двигатели, удерживая перегрузку на пределе, допустимом для полезной нагрузки. График показывает ускорение, которое сообщают ракете тяга и воздух: его измеряет бортовой акселерометр, его испытывает нагрузка; при выключении первой ступени оно сразу падает. Давление встречного потока растёт с плотностью воздуха и квадратом скорости (q = ½ρv²): наибольшим оно бывает в первую минуту, здесь около 50-й секунды, а затем убывает, потому что воздух разрежается быстрее, чем растёт скорость.",
+        "th": "เครื่องยนต์พ่นแก๊สไอเสียลงด้านล่าง แก๊สจึงผลักจรวดขึ้นด้วยแรงขนาดเท่ากันในทิศตรงข้าม นี่คือแรงกิริยาและแรงปฏิกิริยาตามกฎการเคลื่อนที่ข้อที่สามของนิวตัน แรงขับแทบไม่เปลี่ยน ขณะที่ขั้นที่ 1 เผาเชื้อเพลิงมากกว่าสองตันทุกวินาที มวลจึงลดลงและ a = F/m เพิ่มขึ้น จนเมื่อใกล้ 4.6 g คอมพิวเตอร์การบินจะหรี่เครื่องยนต์ลงเพื่อคุมความเร่งไว้ไม่ให้เกินค่าที่น้ำหนักบรรทุกรับได้ กราฟแสดงความเร่งที่แรงขับและอากาศให้แก่จรวด ซึ่งเป็นค่าที่มาตรความเร่งบนจรวดอ่านได้และเป็นภาระที่น้ำหนักบรรทุกรู้สึก ค่านี้ลดลงทันทีเมื่อขั้นที่ 1 ดับเครื่อง ส่วนแรงที่อากาศกดจรวดเพิ่มตามความหนาแน่นของอากาศและกำลังสองของอัตราเร็ว (q = ½ρv²) จึงมีค่าสูงสุดภายในนาทีแรก ในที่นี้ราววินาทีที่ 50 แล้วจึงลดลง เพราะอากาศเบาบางลงเร็วกว่าที่อัตราเร็วเพิ่มขึ้น"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "falcon9",
+          "satelliteId": "cubesats",
+          "siteId": "cape",
+          "orbitId": "leo",
+          "orbit": {
+            "id": "leo",
+            "name": "Low Earth orbit (500 km)",
+            "perigee": 500000,
+            "apogee": 500000,
+            "inclination": "site",
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Generic circular LEO at the minimum inclination of the launch site."
+          },
+          "launchTime": "2026-09-15T12:00:00.000Z",
+          "payloadMass": 10000,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.failure",
+        "setup.dynamics.model",
+        "setup.guidance",
+        "setup.boosterRecovery",
+        "setup.faults"
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "peak-g",
+          "kind": "answer",
+          "measure": "maxG",
+          "prompt": {
+            "en": "Largest acceleration on the Acceleration (g) chart (g)",
+            "ru": "Наибольшая перегрузка на графике «Перегрузка (g)» (g)",
+            "th": "ความเร่งสูงสุดบนกราฟความเร่ง (g)"
+          },
+          "tolPct": 10,
+          "unit": "g"
+        },
+        {
+          "id": "maxq-time",
+          "kind": "answer",
+          "measure": "maxQTime",
+          "prompt": {
+            "en": "Time of max-Q, when the air pushed hardest (s after liftoff)",
+            "ru": "Время максимального скоростного напора (с после отрыва)",
+            "th": "เวลาที่เกิดความดันพลวัตสูงสุด (วินาทีหลังยกตัว)"
+          },
+          "tol": 5,
+          "unit": "s"
+        }
+      ],
+      "hints": [
+        {
+          "en": "The Acceleration (g) chart is in the telemetry panel: its highest point is the first answer. The event log lists max-Q with its time.",
+          "ru": "График «Перегрузка (g)» — на панели телеметрии: его наивысшая точка и есть первый ответ. Журнал событий указывает max-Q вместе со временем.",
+          "th": "กราฟ «ความเร่ง (g)» อยู่ในแผงโทรมาตร จุดสูงสุดของกราฟคือคำตอบข้อแรก ส่วนบันทึกเหตุการณ์จะบอก max-Q พร้อมเวลา"
+        },
+        {
+          "en": "The thrust of the first stage hardly changes, but its mass falls by more than two tonnes every second. By a = F/m, what happens to the acceleration? Watch the curve near the end of the first stage.",
+          "ru": "Тяга первой ступени почти постоянна, а её масса каждую секунду уменьшается больше чем на две тонны. Что по a = F/m происходит с ускорением? Посмотрите на кривую в конце работы первой ступени.",
+          "th": "แรงขับของขั้นที่ 1 แทบไม่เปลี่ยน แต่มวลลดลงมากกว่าสองตันทุกวินาที ตาม a = F/m ความเร่งจะเป็นอย่างไร ลองดูเส้นกราฟช่วงท้ายของขั้นที่ 1"
+        },
+        {
+          "en": "The air pushes hardest when it is still thick and the rocket is already fast: within the first minute of flight.",
+          "ru": "Сильнее всего воздух давит, когда он ещё плотный, а ракета уже быстрая: в первую минуту полёта.",
+          "th": "อากาศกดจรวดแรงที่สุดตอนที่อากาศยังหนาแน่นและจรวดเร็วแล้ว คือภายในนาทีแรกของการบิน"
+        }
+      ],
+      "curriculum": [
+        {
+          "code": "ว 2.2 ม.5/1",
+          "kind": "indicator"
+        },
+        {
+          "code": "ว 2.2 ม.5/3",
+          "kind": "indicator"
+        },
+        {
+          "code": "ว 2.2 ม.5/4",
+          "kind": "indicator"
+        }
+      ]
+    },
+    {
+      "id": "ipst-b-falling-around",
+      "track": 11,
+      "order": 2,
+      "mode": "explore",
+      "domains": [
+        2,
+        1
+      ],
+      "tags": [
+        "v = √(GM/r)",
+        "T"
+      ],
+      "title": {
+        "en": "Falling around the Earth",
+        "ru": "Падение вокруг Земли",
+        "th": "ตกรอบโลก"
+      },
+      "brief": {
+        "en": "Soyuz-2.1a takes a crewed spacecraft from Baikonur to the space station's orbit, 420 km up; the launch time is already in the window. An orbit is a fall: gravity pulls the spacecraft towards the Earth's centre all the time, but it moves sideways so fast that the ground curves away beneath it as quickly as it falls. Fly the mission, then work out for the orbit you reach the speed at which falling keeps pace with the curve of the Earth, and the time one revolution takes. Type both in.",
+        "ru": "«Союз-2.1а» выводит пилотируемый корабль с Байконура на орбиту станции высотой 420 км; время старта уже в окне. Орбита — это падение: тяготение всё время тянет корабль к центру Земли, но он движется вбок так быстро, что поверхность изгибается под ним с той же быстротой, с какой он падает. Выполните полёт, а затем для полученной орбиты рассчитайте скорость, при которой падение поспевает за кривизной Земли, и время одного оборота. Введите оба числа.",
+        "th": "Soyuz-2.1a นำยานอวกาศที่มีนักบินอวกาศจากไบโคนูร์ขึ้นสู่วงโคจรของสถานีอวกาศที่ความสูง 420 กม. เวลาปล่อยตั้งไว้ในหน้าต่างการปล่อยแล้ว การโคจรก็คือการตก แรงโน้มถ่วงดึงยานเข้าหาศูนย์กลางโลกตลอดเวลา แต่ยานเคลื่อนที่ไปทางข้างเร็วมากจนผิวโลกโค้งหนีออกไปใต้ยานเร็วพอ ๆ กับที่ยานตกลงมา ให้บินภารกิจนี้ แล้วคำนวณสำหรับวงโคจรที่ได้ว่า อัตราเร็วเท่าใดที่ทำให้การตกไปทันความโค้งของโลก และใช้เวลาเท่าใดในการโคจรครบหนึ่งรอบ พิมพ์คำตอบทั้งสองค่า"
+      },
+      "debrief": {
+        "en": "At 420 km gravity is still about 88 % of its pull on the ground; the crew float because they and their spacecraft fall together. On a circle the pull of gravity is exactly the centripetal force, GMm/r² = mv²/r, so v = √(GM/r) and T = 2πr/v — about 7.66 km/s and 93 minutes here. The mass m cancels: a crewed spacecraft and a small satellite on the same circle move together, as Galileo's falling bodies did.",
+        "ru": "На высоте 420 км тяготение составляет ещё около 88 % земного; экипаж парит потому, что падает вместе с кораблём. На круговой орбите сила тяготения и есть центростремительная сила: GMm/r² = mv²/r, откуда v = √(GM/r) и T = 2πr/v — здесь около 7,66 км/с и 93 мин. Масса m сокращается: пилотируемый корабль и маленький спутник на одной окружности движутся одинаково, как падающие тела у Галилея.",
+        "th": "ที่ความสูง 420 กม. แรงโน้มถ่วงยังมีประมาณ 88 % ของที่ผิวโลก นักบินอวกาศลอยตัวได้เพราะทั้งคนและยานตกไปด้วยกัน บนวงโคจรวงกลม แรงโน้มถ่วงทำหน้าที่เป็นแรงสู่ศูนย์กลางพอดี GMm/r² = mv²/r จึงได้ v = √(GM/r) และ T = 2πr/v ในที่นี้ประมาณ 7.66 กม./วินาที และ 93 นาที มวล m ตัดกันหมดไป ยานที่มีนักบินอวกาศกับดาวเทียมดวงเล็กบนวงโคจรเดียวกันจึงเคลื่อนที่เหมือนกัน เช่นเดียวกับวัตถุที่ตกในการทดลองของกาลิเลโอ"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "soyuz21a",
+          "satelliteId": "crew",
+          "siteId": "baikonur",
+          "orbitId": "iss",
+          "orbit": {
+            "id": "iss",
+            "name": "ISS orbit (420 km, 51.6°)",
+            "perigee": 420000,
+            "apogee": 420000,
+            "inclination": 51.64,
+            "argPerigee": 0,
+            "raanMode": "iss",
+            "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+          },
+          "launchTime": "2026-09-15T23:58:27.984Z",
+          "payloadMass": 7150,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.failure",
+        "setup.dynamics.model",
+        "setup.guidance",
+        "setup.boosterRecovery",
+        "setup.faults"
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "speed",
+          "kind": "answer",
+          "measure": "orbit.speed",
+          "prompt": {
+            "en": "Orbital speed (km/s)",
+            "ru": "Орбитальная скорость (км/с)",
+            "th": "อัตราเร็วในวงโคจร (กม./วินาที)"
+          },
+          "tol": 0.05,
+          "unit": "km/s"
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Time for one revolution (min)",
+            "ru": "Время одного оборота (мин)",
+            "th": "เวลาที่ใช้โคจรครบหนึ่งรอบ (นาที)"
+          },
+          "tol": 1,
+          "unit": "min"
+        }
+      ],
+      "hints": [
+        {
+          "en": "Before flying, try Newton's cannon in the Orbit section's playground: fire faster and faster until the ball no longer comes down.",
+          "ru": "Перед полётом попробуйте «пушку Ньютона» в разделе «Орбита»: стреляйте всё быстрее, пока ядро не перестанет падать на Землю.",
+          "th": "ก่อนบิน ลองใช้ «ปืนใหญ่ของนิวตัน» ในส่วนวงโคจรดู ยิงให้เร็วขึ้นเรื่อย ๆ จนลูกปืนไม่ตกกลับลงมาอีก"
+        },
+        {
+          "en": "On a circle gravity is the centripetal force: GMm/r² = mv²/r, so v = √(GM/r), with GM = 398 600 km³/s² and r = 6 378 km plus the altitude you reached (the result card gives it).",
+          "ru": "На круговой орбите тяготение — центростремительная сила: GMm/r² = mv²/r, откуда v = √(GM/r), где GM = 398 600 км³/с², а r = 6 378 км плюс достигнутая высота (её показывает карточка результата).",
+          "th": "บนวงกลม แรงโน้มถ่วงคือแรงสู่ศูนย์กลาง: GMm/r² = mv²/r จึงได้ v = √(GM/r) โดย GM = 398 600 กม.³/วินาที² และ r = 6 378 กม. บวกความสูงที่ยานไปถึง (ดูได้จากการ์ดผลลัพธ์)"
+        },
+        {
+          "en": "One revolution is the length of the circle over the speed: T = 2πr/v. A check: at 500 km the speed is 7.61 km/s and the revolution takes 94.6 min; lower is faster.",
+          "ru": "Один оборот — длина окружности, делённая на скорость: T = 2πr/v. Для проверки: на высоте 500 км скорость 7,61 км/с, а оборот занимает 94,6 мин; ниже — быстрее.",
+          "th": "เวลาหนึ่งรอบคือเส้นรอบวงหารด้วยอัตราเร็ว: T = 2πr/v ใช้ตรวจสอบได้ว่า ที่ความสูง 500 กม. อัตราเร็วเป็น 7.61 กม./วินาที และโคจรรอบหนึ่งใช้ 94.6 นาที ยิ่งต่ำยิ่งเร็ว"
+        }
+      ],
+      "curriculum": [
+        {
+          "code": "ว 2.2 ม.5/5",
+          "kind": "indicator"
+        },
+        {
+          "code": "ว 2.2 ม.5/6",
+          "kind": "indicator"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,343 @@
+{
+  "format": "orbitlab.lessons",
+  "version": 1,
+  "pack": {
+    "id": "ipst-physics",
+    "title": {
+      "en": "IPST additional physics: gravitation, circular motion and momentum",
+      "ru": "IPST, углублённая физика: тяготение, движение по окружности и импульс",
+      "th": "ฟิสิกส์ (รายวิชาเพิ่มเติม สสวท.): ความโน้มถ่วง การเคลื่อนที่แบบวงกลม และโมเมนตัม"
+    },
+    "audience": {
+      "en": "Grade 10 (M.4), additional physics",
+      "ru": "10 класс (М.4), углублённый курс физики",
+      "th": "ชั้น ม.4 รายวิชาเพิ่มเติมฟิสิกส์"
+    },
+    "framework": {
+      "en": "IPST learning outcomes for additional physics, group 1, 2017 revision (B.E. 2560)",
+      "ru": "Результаты обучения IPST по углублённой физике, раздел 1, редакция 2017 г. (2560 г. буддийской эры)",
+      "th": "ผลการเรียนรู้ รายวิชาเพิ่มเติมวิทยาศาสตร์ ฟิสิกส์ หมวดที่ 1 (ฉบับปรับปรุง พ.ศ. 2560)"
+    },
+    "reviewed": false,
+    "description": {
+      "en": "Matched to group 1 learning outcomes 6, 14, 15 and 17 of grade 10 physics. Sources: IPST, ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th, book pp. 192–197; IPST, ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th, pp. 4–9. The first two lessons are written for this pack; the other two are the app's own lessons, listed again with the outcomes they meet.",
+      "ru": "Соответствует результатам обучения 6, 14, 15 и 17 раздела 1 физики для 10 класса. Источники: IPST, ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th, с. 192–197 издания; IPST, ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th, с. 4–9. Первые два урока написаны для этого набора; два других — уроки самого приложения, приведённые здесь ещё раз с результатами, которым они отвечают.",
+      "th": "สอดคล้องกับผลการเรียนรู้หมวดที่ 1 ข้อ 6, 14, 15 และ 17 ของฟิสิกส์ ม.4 แหล่งที่มา: สสวท., ตัวชี้วัดและสาระการเรียนรู้แกนกลาง กลุ่มสาระการเรียนรู้วิทยาศาสตร์ (ฉบับปรับปรุง พ.ศ. 2560), ipst.ac.th หน้า 192–197 ของเล่ม และ สสวท., ผลการเรียนรู้ สาระฟิสิกส์ หมวดที่ 1, ipst.ac.th หน้า 4–9 สองบทแรกเขียนขึ้นสำหรับชุดนี้ อีกสองบทเป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมผลการเรียนรู้ที่สอดคล้อง"
+    },
+    "contents": [
+      {
+        "id": "ipst-p-geo"
+      },
+      {
+        "id": "ipst-p-starlink"
+      },
+      {
+        "id": "orbit-payload",
+        "curriculum": [
+          {
+            "code": "ฟส ม.4 ผล 14",
+            "kind": "outcome"
+          },
+          {
+            "code": "ฟส ม.4 ผล 15",
+            "kind": "outcome"
+          }
+        ],
+        "note": {
+          "en": "Momentum carried off by the exhaust: the stage pushes gas back and gains momentum forward, and the heavier the payload, the less speed the same exhaust buys it.",
+          "ru": "Импульс, уносимый струёй: ступень отбрасывает газы назад и получает импульс вперёд, и чем тяжелее нагрузка, тем меньшую скорость даёт ей та же масса газов.",
+          "th": "โมเมนตัมที่แก๊สไอเสียพาออกไป: ขั้นจรวดดันแก๊สไปข้างหลังจึงได้โมเมนตัมไปข้างหน้า และยิ่งน้ำหนักบรรทุกหนัก แก๊สปริมาณเท่าเดิมก็ให้อัตราเร็วได้น้อยลง"
+        }
+      },
+      {
+        "id": "fail-engine-out",
+        "curriculum": [
+          {
+            "code": "ฟส ม.4 ผล 14",
+            "kind": "outcome"
+          }
+        ],
+        "note": {
+          "en": "Impulse is force times time: with one engine out the other eight must burn longer to give the stage the same change of momentum.",
+          "ru": "Импульс силы — это сила, умноженная на время: при одном отказавшем двигателе остальные восемь должны работать дольше, чтобы сообщить ступени то же изменение импульса.",
+          "th": "การดลคือแรงคูณเวลา เมื่อเครื่องยนต์ดับไปหนึ่งเครื่อง อีกแปดเครื่องต้องทำงานนานขึ้นเพื่อให้ขั้นจรวดมีการเปลี่ยนโมเมนตัมเท่าเดิม"
+        }
+      }
+    ]
+  },
+  "lessons": [
+    {
+      "id": "ipst-p-geo",
+      "track": 13,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        2
+      ],
+      "tags": [
+        "GEO",
+        "T = 1 436 min"
+      ],
+      "title": {
+        "en": "Why a geostationary satellite stands still",
+        "ru": "Почему геостационарный спутник неподвижен",
+        "th": "ทำไมดาวเทียมค้างฟ้าจึงอยู่นิ่ง"
+      },
+      "brief": {
+        "en": "Proton-M and its Briz-M upper stage carry a light 1 t communications satellite from Baikonur straight into geostationary orbit: a circle about 35 800 km above the equator. The upper stage burns several times over most of a day, so let the time run fast. Once the satellite is in its orbit, work out how long one revolution takes and how fast the satellite moves, and type both in. Then think about why a dish on the ground can point at it and never move.",
+        "ru": "«Протон-М» с разгонным блоком «Бриз-М» выводит лёгкий связной спутник массой 1 т с Байконура прямо на геостационарную орбиту — окружность на высоте около 35 800 км над экватором. Разгонный блок включается несколько раз в течение почти суток, поэтому ускорьте время. Когда спутник выйдет на орбиту, рассчитайте, сколько длится один оборот и с какой скоростью движется спутник, и введите оба числа. Затем подумайте, почему наземная антенна может смотреть на него, не поворачиваясь.",
+        "th": "จรวด Proton-M กับขั้นบน Briz-M นำดาวเทียมสื่อสารขนาดเล็กมวล 1 ตันจากไบโคนูร์ขึ้นสู่วงโคจรค้างฟ้าโดยตรง ซึ่งเป็นวงกลมที่ความสูงประมาณ 35 800 กม. เหนือเส้นศูนย์สูตร ขั้นบนจุดเครื่องหลายครั้งตลอดเวลาเกือบหนึ่งวัน จึงควรเร่งเวลาให้เร็วขึ้น เมื่อดาวเทียมเข้าวงโคจรแล้ว ให้คำนวณว่าการโคจรหนึ่งรอบใช้เวลาเท่าใด และดาวเทียมเคลื่อนที่ด้วยอัตราเร็วเท่าใด แล้วพิมพ์คำตอบทั้งสองค่า จากนั้นลองคิดว่าทำไมจานรับสัญญาณบนพื้นโลกจึงหันไปที่ดาวเทียมได้โดยไม่ต้องขยับเลย"
+      },
+      "debrief": {
+        "en": "Gravity is the centripetal force: GMm/r² = m(2π/T)²r, so T² = 4π²r³/GM. For the geostationary radius, 42 164 km, T is 1 436 minutes — 23 h 56 min, the time the Earth takes to turn once against the stars (24 hours is the solar day, a little longer because the Earth also moves around the Sun). Going round once in the same time, in the plane of the equator and in the same direction, the satellite stays over one point of the equator, and a fixed dish keeps it in view. The flight left the satellite a little below the geostationary height, so its period is a few minutes short and it drifts slowly east; operators use small burns to bring a satellite to its slot and keep it there.",
+        "ru": "Тяготение — центростремительная сила: GMm/r² = m(2π/T)²r, откуда T² = 4π²r³/GM. Для геостационарного радиуса 42 164 км T = 1 436 мин — 23 ч 56 мин, время одного оборота Земли относительно звёзд (24 ч — солнечные сутки, они чуть длиннее, потому что Земля ещё и движется вокруг Солнца). Обращаясь за то же время, в плоскости экватора и в ту же сторону, спутник остаётся над одной точкой экватора, и неподвижная антенна всё время его видит. Полёт оставил спутник немного ниже геостационарной высоты, поэтому его период на несколько минут короче и он медленно дрейфует к востоку; небольшими включениями двигателя спутник приводят в его точку стояния и удерживают в ней.",
+        "th": "แรงโน้มถ่วงคือแรงสู่ศูนย์กลาง GMm/r² = m(2π/T)²r จึงได้ T² = 4π²r³/GM สำหรับรัศมีวงโคจรค้างฟ้า 42 164 กม. จะได้ T = 1 436 นาที หรือ 23 ชั่วโมง 56 นาที ซึ่งเป็นเวลาที่โลกหมุนรอบตัวเองครบหนึ่งรอบเทียบกับดาวฤกษ์ (24 ชั่วโมงคือวันสุริยะ ซึ่งยาวกว่าเล็กน้อยเพราะโลกโคจรรอบดวงอาทิตย์ไปด้วย) เมื่อดาวเทียมโคจรครบรอบในเวลาเท่ากัน อยู่ในระนาบของเส้นศูนย์สูตร และไปในทิศเดียวกับที่โลกหมุน มันจึงอยู่เหนือจุดเดิมบนเส้นศูนย์สูตรเสมอ จานรับสัญญาณที่ติดตั้งอยู่กับที่จึงมองเห็นดาวเทียมได้ตลอดเวลา การบินครั้งนี้ทำให้ดาวเทียมอยู่ต่ำกว่าความสูงของวงโคจรค้างฟ้าเล็กน้อย คาบจึงสั้นกว่าไม่กี่นาทีและดาวเทียมค่อย ๆ เลื่อนไปทางตะวันออก ผู้ควบคุมจึงต้องจุดเครื่องยนต์เล็กน้อยเพื่อนำดาวเทียมไปยังตำแหน่งวงโคจรของมันและรักษาไว้ที่นั่น"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "protonm",
+          "satelliteId": "comsat",
+          "siteId": "baikonur",
+          "orbitId": "geo",
+          "orbit": {
+            "id": "geo",
+            "name": "Geostationary (35 786 km, 0°)",
+            "perigee": 35786000,
+            "apogee": 35786000,
+            "inclination": 0,
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Direct injection into GEO: parking orbit, transfer burn at the node, combined plane change and circularisation at apogee."
+          },
+          "launchTime": "2026-09-15T12:00:00.000Z",
+          "payloadMass": 1000,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.failure",
+        "setup.dynamics.model",
+        "setup.guidance",
+        "setup.boosterRecovery",
+        "setup.faults"
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "equator",
+          "kind": "measure",
+          "measure": "orbit.inclination",
+          "max": 0.5,
+          "label": {
+            "en": "In the plane of the equator (inclination)",
+            "ru": "В плоскости экватора (наклонение)",
+            "th": "อยู่ในระนาบของเส้นศูนย์สูตร (ความเอียง)"
+          }
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Time for one revolution (min)",
+            "ru": "Время одного оборота (мин)",
+            "th": "เวลาที่ใช้โคจรครบหนึ่งรอบ (นาที)"
+          },
+          "tol": 5,
+          "unit": "min"
+        },
+        {
+          "id": "speed",
+          "kind": "answer",
+          "measure": "orbit.speed",
+          "prompt": {
+            "en": "Orbital speed (km/s)",
+            "ru": "Орбитальная скорость (км/с)",
+            "th": "อัตราเร็วในวงโคจร (กม./วินาที)"
+          },
+          "tol": 0.03,
+          "unit": "km/s"
+        }
+      ],
+      "hints": [
+        {
+          "en": "Gravity provides the centripetal force: GMm/r² = mv²/r = m(2π/T)²r. Solve for T and v, with GM = 398 600 km³/s² and r = 6 378 km plus the height reached.",
+          "ru": "Тяготение создаёт центростремительную силу: GMm/r² = mv²/r = m(2π/T)²r. Выразите T и v; GM = 398 600 км³/с², r = 6 378 км плюс достигнутая высота.",
+          "th": "แรงโน้มถ่วงทำหน้าที่เป็นแรงสู่ศูนย์กลาง: GMm/r² = mv²/r = m(2π/T)²r แก้สมการหา T และ v โดย GM = 398 600 กม.³/วินาที² และ r = 6 378 กม. บวกความสูงที่ได้"
+        },
+        {
+          "en": "The Earth turns once against the stars in 23 h 56 min (a sidereal day). A satellite going round in the same time, over the equator, keeps above the same place.",
+          "ru": "Земля совершает оборот относительно звёзд за 23 ч 56 мин (звёздные сутки). Спутник, обращающийся над экватором за то же время, остаётся над одним и тем же местом.",
+          "th": "โลกหมุนรอบตัวเองครบรอบเทียบกับดาวฤกษ์ใน 23 ชั่วโมง 56 นาที (วันดาราคติ) ดาวเทียมที่โคจรเหนือเส้นศูนย์สูตรครบรอบในเวลาเท่ากันจะอยู่เหนือตำแหน่งเดิมเสมอ"
+        },
+        {
+          "en": "Why not 24 hours? In 24 hours the Earth turns a little more than once, because it has also moved along its orbit around the Sun and must turn about 1° more to face the Sun again.",
+          "ru": "Почему не 24 ч? За 24 ч Земля поворачивается чуть больше чем на один оборот: она сдвинулась по орбите вокруг Солнца, и ей нужно довернуться примерно на 1°, чтобы снова встать к Солнцу той же стороной.",
+          "th": "ทำไมไม่ใช่ 24 ชั่วโมง? ใน 24 ชั่วโมงโลกหมุนมากกว่าหนึ่งรอบเล็กน้อย เพราะโลกเคลื่อนไปตามวงโคจรรอบดวงอาทิตย์ด้วย จึงต้องหมุนเพิ่มอีกราว 1° เพื่อหันด้านเดิมเข้าหาดวงอาทิตย์อีกครั้ง"
+        }
+      ],
+      "curriculum": [
+        {
+          "code": "ฟส ม.4 ผล 17",
+          "kind": "outcome"
+        }
+      ]
+    },
+    {
+      "id": "ipst-p-starlink",
+      "track": 13,
+      "order": 2,
+      "mode": "explore",
+      "domains": [
+        2
+      ],
+      "tags": [
+        "F = GMm/r²",
+        "v²/r"
+      ],
+      "title": {
+        "en": "Centripetal force is gravity",
+        "ru": "Центростремительная сила — это тяготение",
+        "th": "แรงสู่ศูนย์กลางคือแรงโน้มถ่วง"
+      },
+      "brief": {
+        "en": "Falcon 9 lifts a stack of 60 Starlink satellites, 15.6 t, from Cape Canaveral to their shell: a circle 550 km up, inclined 53° to the equator. Fly it. On a circle the only force on a satellite is the Earth's gravity, and it is exactly the centripetal force the circle needs. From that, work out the satellites' speed and the time they take to go round once, and type both in.",
+        "ru": "Falcon 9 выводит пакет из 60 спутников Starlink массой 15,6 т с мыса Канаверал на их оболочку — окружность на высоте 550 км с наклонением 53° к экватору. Выполните полёт. На круговой орбите на спутник действует только тяготение Земли, и оно в точности равно центростремительной силе, нужной для движения по окружности. Исходя из этого, рассчитайте скорость спутников и время одного оборота и введите оба числа.",
+        "th": "Falcon 9 นำชุดดาวเทียม Starlink 60 ดวงมวลรวม 15.6 ตันจากแหลมคะแนเวอรัลขึ้นสู่ชั้นวงโคจรของมัน คือวงกลมที่ความสูง 550 กม. ซึ่งเอียง 53° กับเส้นศูนย์สูตร ให้บินภารกิจนี้ บนวงโคจรวงกลม แรงเดียวที่กระทำต่อดาวเทียมคือแรงโน้มถ่วงของโลก และแรงนี้มีขนาดเท่ากับแรงสู่ศูนย์กลางที่การเคลื่อนที่แบบวงกลมต้องการพอดี จากข้อนี้ ให้คำนวณอัตราเร็วของดาวเทียมและเวลาที่ใช้โคจรครบหนึ่งรอบ แล้วพิมพ์คำตอบทั้งสองค่า"
+      },
+      "debrief": {
+        "en": "Gravity at 550 km is still about 85 % of what it is on the ground: the satellites are not beyond gravity but falling around the Earth at about 7.6 km/s, and g = GM/r² ≈ 8.3 m/s² there is exactly v²/r. The mass of a satellite cancels from GMm/r² = mv²/r, so a single satellite and the whole 15.6 t stack go round at the same speed. The 53° shell takes them over every latitude from 53° S to 53° N, Thailand included.",
+        "ru": "На высоте 550 км тяготение составляет ещё около 85 % земного: спутники не вышли из поля тяготения, а падают вокруг Земли со скоростью около 7,6 км/с, и g = GM/r² ≈ 8,3 м/с² там в точности равно v²/r. Масса спутника сокращается в равенстве GMm/r² = mv²/r, поэтому один спутник и весь пакет массой 15,6 т обращаются с одной и той же скоростью. Оболочка с наклонением 53° проводит их над всеми широтами от 53° ю. ш. до 53° с. ш., в том числе над Таиландом.",
+        "th": "ที่ความสูง 550 กม. แรงโน้มถ่วงยังมีประมาณ 85 % ของที่ผิวโลก ดาวเทียมจึงไม่ได้พ้นแรงโน้มถ่วง แต่กำลังตกรอบโลกด้วยอัตราเร็วประมาณ 7.6 กม./วินาที และ g = GM/r² ≈ 8.3 ม./วินาที² ที่ความสูงนั้นมีค่าเท่ากับ v²/r พอดี มวลของดาวเทียมตัดกันหมดไปในสมการ GMm/r² = mv²/r ดาวเทียมดวงเดียวกับชุดดาวเทียมหนัก 15.6 ตันจึงโคจรด้วยอัตราเร็วเท่ากัน ชั้นวงโคจรที่เอียง 53° พาดาวเทียมผ่านทุกละติจูดตั้งแต่ 53° ใต้ถึง 53° เหนือ รวมทั้งประเทศไทย"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "falcon9",
+          "satelliteId": "starlink",
+          "siteId": "cape",
+          "orbitId": "starlink",
+          "orbit": {
+            "id": "starlink",
+            "name": "Starlink shell (550 km, 53°)",
+            "perigee": 550000,
+            "apogee": 550000,
+            "inclination": 53,
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "First-generation Starlink shell."
+          },
+          "launchTime": "2026-09-15T12:00:00.000Z",
+          "payloadMass": 15600,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.failure",
+        "setup.dynamics.model",
+        "setup.guidance",
+        "setup.boosterRecovery",
+        "setup.faults"
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "speed",
+          "kind": "answer",
+          "measure": "orbit.speed",
+          "prompt": {
+            "en": "Orbital speed (km/s)",
+            "ru": "Орбитальная скорость (км/с)",
+            "th": "อัตราเร็วในวงโคจร (กม./วินาที)"
+          },
+          "tol": 0.05,
+          "unit": "km/s"
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Time for one revolution (min)",
+            "ru": "Время одного оборота (мин)",
+            "th": "เวลาที่ใช้โคจรครบหนึ่งรอบ (นาที)"
+          },
+          "tol": 0.5,
+          "unit": "min"
+        }
+      ],
+      "hints": [
+        {
+          "en": "Newton's law of gravitation, F = GMm/r², set equal to the centripetal force mv²/r: the satellite's own mass m cancels.",
+          "ru": "Приравняйте силу тяготения Ньютона F = GMm/r² центростремительной силе mv²/r: масса спутника m сокращается.",
+          "th": "ให้แรงโน้มถ่วงตามกฎของนิวตัน F = GMm/r² เท่ากับแรงสู่ศูนย์กลาง mv²/r มวล m ของดาวเทียมจะตัดกันหมดไป"
+        },
+        {
+          "en": "v = √(GM/r), with GM = 398 600 km³/s² and r = 6 378 km plus the height reached; then T = 2πr/v.",
+          "ru": "v = √(GM/r), где GM = 398 600 км³/с², а r = 6 378 км плюс достигнутая высота; затем T = 2πr/v.",
+          "th": "v = √(GM/r) โดย GM = 398 600 กม.³/วินาที² และ r = 6 378 กม. บวกความสูงที่ได้ แล้ว T = 2πr/v"
+        },
+        {
+          "en": "A check: g = GM/r² at 550 km is about 8.3 m/s². Your v²/r must give the same — mind the units (km and m).",
+          "ru": "Для проверки: g = GM/r² на высоте 550 км около 8,3 м/с². Ваше v²/r должно дать то же — следите за единицами (км и м).",
+          "th": "ใช้ตรวจสอบ: g = GM/r² ที่ความสูง 550 กม. ประมาณ 8.3 ม./วินาที² ค่า v²/r ของนักเรียนต้องได้เท่ากัน ระวังหน่วย (กม. กับ ม.)"
+        }
+      ],
+      "curriculum": [
+        {
+          "code": "ฟส ม.4 ผล 6",
+          "kind": "outcome"
+        },
+        {
+          "code": "ฟส ม.4 ผล 17",
+          "kind": "outcome"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,421 @@
+{
+  "format": "orbitlab.lessons",
+  "version": 1,
+  "pack": {
+    "id": "rtaf-academy",
+    "title": {
+      "en": "Royal Thai Air Force Academy: space flight dynamics and control",
+      "ru": "Академия ВВС Таиланда: динамика космического полёта и управление",
+      "th": "โรงเรียนนายเรืออากาศ: พลศาสตร์การบินอวกาศและระบบควบคุม"
+    },
+    "audience": {
+      "en": "Cadets, BEng Aeronautical Engineering, years 4–5",
+      "ru": "Курсанты, бакалавриат по авиационной технике, 4–5 курсы",
+      "th": "นักเรียนนายเรืออากาศ หลักสูตรวิศวกรรมศาสตรบัณฑิต สาขาวิชาวิศวกรรมอากาศยาน ชั้นปีที่ 4–5"
+    },
+    "framework": {
+      "en": "Navaminda Kasatriyadhiraj Royal Thai Air Force Academy, BEng Aeronautical Engineering (2025 revision): programme learning outcomes and course descriptions",
+      "ru": "Академия ВВС Таиланда им. Навамина Кашатрияттирата, бакалавриат по авиационной технике (редакция 2025 г.): результаты обучения по программе и описания дисциплин",
+      "th": "โรงเรียนนายเรืออากาศนวมินทกษัตริยาธิราช หลักสูตรวิศวกรรมศาสตรบัณฑิต สาขาวิชาวิศวกรรมอากาศยาน (หลักสูตรปรับปรุง พ.ศ. 2568): ผลลัพธ์การเรียนรู้ของหลักสูตรและคำอธิบายรายวิชา"
+    },
+    "reviewed": false,
+    "description": {
+      "en": "Matched to PLO4 (flight mechanics and automatic control) and PLO7 (space engineering; calculating the motion of objects in space) and to the course descriptions of วอ 462, 478, 526, 528 and 529, EE 316 (Electrical Engineering 2025) and วก 433 (Mechanical Engineering 2020). Sources: the academy's public programme documents linked from nkrafa.rtaf.mi.th/curriculum (Aeronautical Engineering 2025, PDF pp. 18 and 118–123; Electrical Engineering 2025, PDF p. 109) and its self-declaration for Mechanical Engineering 2020 to the Council of Engineers (coe.or.th, pp. 34–35). The week-by-week course specifications are not public, so the match is to the descriptions only. The first two lessons are written for this pack; the others are the app's own lessons, listed again with the codes they meet.",
+      "ru": "Соответствует PLO4 (механика полёта и автоматическое управление) и PLO7 (космическая техника; расчёт движения тел в космосе), а также описаниям дисциплин วอ 462, 478, 526, 528 и 529, EE 316 (программа по электротехнике 2025 г.) и วก 433 (программа по машиностроению 2020 г.). Источники: открытые документы программ академии, на которые ссылается nkrafa.rtaf.mi.th/curriculum (авиационная техника 2025 г., с. 18 и 118–123 PDF; электротехника 2025 г., с. 109 PDF), и её самодекларация по программе машиностроения 2020 г. для Инженерного совета Таиланда (coe.or.th, с. 34–35). Рабочие программы дисциплин по неделям не опубликованы, поэтому соответствие установлено только по описаниям. Первые два урока написаны для этого набора; остальные — уроки самого приложения, приведённые здесь ещё раз с кодами, которым они отвечают.",
+      "th": "สอดคล้องกับ PLO4 (กลศาสตร์การบินและระบบควบคุมอัตโนมัติ) และ PLO7 (วิศวกรรมอวกาศ การคำนวณการเคลื่อนที่ของวัตถุในอวกาศ) และคำอธิบายรายวิชา วอ 462, 478, 526, 528 และ 529, EE 316 (หลักสูตรวิศวกรรมไฟฟ้า พ.ศ. 2568) และ วก 433 (หลักสูตรวิศวกรรมเครื่องกล พ.ศ. 2563) แหล่งที่มา: เอกสารหลักสูตรที่เผยแพร่ของโรงเรียนนายเรืออากาศ ซึ่งเชื่อมโยงจาก nkrafa.rtaf.mi.th/curriculum (หลักสูตรวิศวกรรมอากาศยาน พ.ศ. 2568 หน้า PDF 18 และ 118–123 หลักสูตรวิศวกรรมไฟฟ้า พ.ศ. 2568 หน้า PDF 109) และคำรับรองตนเองหลักสูตรวิศวกรรมเครื่องกล พ.ศ. 2563 ที่ยื่นต่อสภาวิศวกร (coe.or.th หน้า 34–35) รายละเอียดของรายวิชา (มคอ.3) รายสัปดาห์ไม่ได้เผยแพร่ การจับคู่จึงอิงคำอธิบายรายวิชาเท่านั้น สองบทแรกเขียนขึ้นสำหรับชุดนี้ บทอื่นเป็นบทเรียนเดิมของโปรแกรมที่นำมาจัดไว้ในชุดนี้พร้อมรหัสที่สอดคล้อง"
+    },
+    "contents": [
+      {
+        "id": "rtaf-napa1-sso"
+      },
+      {
+        "id": "rtaf-elements"
+      },
+      {
+        "id": "ctl-inspector",
+        "curriculum": [
+          {
+            "code": "NKRAFA วอ 462",
+            "kind": "course"
+          },
+          {
+            "code": "NKRAFA EE 316",
+            "kind": "course"
+          },
+          {
+            "code": "NKRAFA วก 433",
+            "kind": "course"
+          },
+          {
+            "code": "NKRAFA PLO4",
+            "kind": "outcome"
+          }
+        ],
+        "note": {
+          "en": "Frequency response on a real autopilot: the crossover and the phase margin read from the Bode plot at max-Q (วอ 462: root locus, frequency response, stability in the frequency domain).",
+          "ru": "Частотные характеристики настоящего автомата стабилизации: частота среза и запас по фазе по ЛАЧХ и ЛФЧХ на max-Q (วอ 462: корневой годограф, частотные характеристики, устойчивость в частотной области).",
+          "th": "ผลตอบสนองเชิงความถี่ของระบบรักษาท่าทางจริง: ความถี่ครอสโอเวอร์และเฟสมาร์จินจาก Bode plot ที่ max-Q (วอ 462: วิธีทางเดินราก ผลตอบสนองเชิงความถี่ เสถียรภาพในโดเมนความถี่)"
+        }
+      },
+      {
+        "id": "ctl-margins",
+        "curriculum": [
+          {
+            "code": "NKRAFA วอ 462",
+            "kind": "course"
+          },
+          {
+            "code": "NKRAFA EE 316",
+            "kind": "course"
+          },
+          {
+            "code": "NKRAFA วก 433",
+            "kind": "course"
+          },
+          {
+            "code": "NKRAFA PLO4",
+            "kind": "outcome"
+          }
+        ],
+        "note": {
+          "en": "Compensator design to margins: two gains chosen so that the loop keeps 30° of phase and 6 dB of gain at max-Q.",
+          "ru": "Синтез регулятора по запасам: два коэффициента, при которых на max-Q контур сохраняет 30° по фазе и 6 дБ по амплитуде.",
+          "th": "การออกแบบตัวชดเชยตามค่ามาร์จิน: เลือกเกนสองค่าให้ลูปมีเฟสมาร์จิน 30° และเกนมาร์จิน 6 dB ที่ max-Q"
+        }
+      },
+      {
+        "id": "adv-docking",
+        "curriculum": [
+          {
+            "code": "NKRAFA วอ 478",
+            "kind": "course"
+          },
+          {
+            "code": "NKRAFA วอ 528",
+            "kind": "course"
+          },
+          {
+            "code": "NKRAFA วอ 529",
+            "kind": "course"
+          }
+        ],
+        "note": {
+          "en": "Rendezvous in orbit, one of the topics of วอ 478 and วอ 528, and station docking, one of วอ 529's.",
+          "ru": "Сближение на орбите — одна из тем วอ 478 и วอ 528, стыковка со станцией — одна из тем วอ 529.",
+          "th": "การนัดพบในวงโคจร ซึ่งเป็นหัวข้อหนึ่งของ วอ 478 และ วอ 528 และการเชื่อมต่อกับสถานี ซึ่งเป็นหัวข้อหนึ่งของ วอ 529"
+        }
+      }
+    ]
+  },
+  "lessons": [
+    {
+      "id": "rtaf-napa1-sso",
+      "track": 14,
+      "order": 1,
+      "mode": "engineer",
+      "domains": [
+        2
+      ],
+      "tags": [
+        "J₂",
+        "SSO",
+        "NAPA-1"
+      ],
+      "title": {
+        "en": "NAPA-1's ride: the inclination J₂ asks for",
+        "ru": "Как летел NAPA-1: наклонение, которого требует J₂",
+        "th": "เส้นทางของ NAPA-1: ความเอียงที่ J₂ กำหนด"
+      },
+      "brief": {
+        "en": "On 3 September 2020 a Vega from Kourou (flight VV16) carried NAPA-1, the Royal Thai Air Force's first satellite, among a rideshare of small satellites into a sun-synchronous orbit. Here Vega-C flies a 1.15 t rideshare dispenser to the app's sun-synchronous orbit: 600 km, its plane crossing the equator northbound at 10:30 local solar time. That height is the app's, not the one NAPA-1 was released at. Choose the launch time that puts the plane where it is asked for, fly, and type in the inclination at which J₂ turns the plane 360° a year, and the orbit's period. Only the launch time may be changed.",
+        "ru": "3 сентября 2020 г. ракета Vega из Куру (полёт VV16) вывела на солнечно-синхронную орбиту NAPA-1 — первый спутник Королевских ВВС Таиланда — в числе других малых спутников попутного запуска. Здесь Vega-C выводит диспенсер попутной нагрузки массой 1,15 т на солнечно-синхронную орбиту приложения: 600 км, восходящий узел в 10:30 по местному солнечному времени. Эта высота — орбиты приложения, а не та, на которой был отделён NAPA-1. Выберите время старта, при котором плоскость окажется там, где требуется, выполните полёт и введите наклонение, при котором J₂ поворачивает плоскость на 360° в год, и период орбиты. Изменять можно только время старта.",
+        "th": "เมื่อวันที่ 3 กันยายน 2020 จรวด Vega จากคูรู (เที่ยวบิน VV16) นำ NAPA-1 ดาวเทียมดวงแรกของกองทัพอากาศไทย ขึ้นสู่วงโคจรสัมพันธ์กับดวงอาทิตย์พร้อมดาวเทียมขนาดเล็กดวงอื่นในการปล่อยร่วม ในบทนี้ Vega-C นำชุดปล่อยดาวเทียมร่วมมวล 1.15 ตันขึ้นสู่วงโคจรสัมพันธ์กับดวงอาทิตย์ของโปรแกรม คือความสูง 600 กม. ระนาบตัดเส้นศูนย์สูตรขณะขึ้นเหนือเวลา 10:30 น. ตามเวลาสุริยคติท้องถิ่น ความสูงนี้เป็นของวงโคจรในโปรแกรม ไม่ใช่ความสูงที่ปล่อย NAPA-1 จริง ให้เลือกเวลาปล่อยที่ทำให้ระนาบอยู่ตามที่กำหนด บินภารกิจ แล้วพิมพ์ความเอียงที่ทำให้ J₂ หมุนระนาบครบ 360° ต่อปี และคาบของวงโคจร เปลี่ยนได้เฉพาะเวลาปล่อยเท่านั้น"
+      },
+      "debrief": {
+        "en": "For a circular orbit, matching J₂'s regression to the Sun's mean motion gives cos i = −2 (dΩ/dt) a^(7/2) / (3 J₂ R² √μ): at 600 km i ≈ 97.79°, retrograde. The higher the orbit, the weaker J₂'s grip and the further past 90° the plane must lean (about 98.6° at 800 km). A rideshare satellite gets the plane and the local time of the dispenser that carries it, and keeps them, because J₂ does the turning without fuel.",
+        "ru": "Для круговой орбиты из равенства прецессии от J₂ среднему движению Солнца следует cos i = −2 (dΩ/dt) a^(7/2) / (3 J₂ R² √μ): на 600 км i ≈ 97,79°, орбита обратная. Чем выше орбита, тем слабее действие J₂ и тем дальше за 90° должна быть наклонена плоскость (около 98,6° на 800 км). Спутник попутного запуска получает плоскость и местное время диспенсера, который его несёт, и сохраняет их: поворот плоскости выполняет J₂ без затрат топлива.",
+        "th": "สำหรับวงโคจรวงกลม เมื่อให้อัตราการหมุนควงของโหนดจาก J₂ เท่ากับการเคลื่อนที่เฉลี่ยของดวงอาทิตย์ จะได้ cos i = −2 (dΩ/dt) a^(7/2) / (3 J₂ R² √μ) ที่ 600 กม. i ≈ 97.79° ซึ่งเป็นวงโคจรถอยหลัง ยิ่งวงโคจรสูง อิทธิพลของ J₂ ยิ่งอ่อน ระนาบจึงต้องเอียงเกิน 90° มากขึ้น (ประมาณ 98.6° ที่ 800 กม.) ดาวเทียมที่ไปกับการปล่อยร่วมจะได้ระนาบและเวลาท้องถิ่นตามชุดปล่อยที่พามันไป และรักษาไว้ได้เพราะ J₂ หมุนระนาบให้โดยไม่ต้องใช้เชื้อเพลิง"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "vegac",
+          "satelliteId": "cubesats",
+          "siteId": "kourou",
+          "orbitId": "sso",
+          "orbit": {
+            "id": "sso",
+            "name": "Sun-synchronous (600 km)",
+            "perigee": 600000,
+            "apogee": 600000,
+            "inclination": "sso",
+            "argPerigee": 0,
+            "raanMode": "ltan",
+            "ltan": 10.5,
+            "description": "Retrograde near-polar orbit whose plane precesses 360° per year under J2, keeping a constant local solar time (LTAN 10:30)."
+          },
+          "launchTime": "2026-09-15T12:00:00.000Z",
+          "payloadMass": 1150,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.failure",
+        "setup.dynamics.model",
+        "setup.guidance",
+        "setup.boosterRecovery",
+        "setup.faults"
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "inclination",
+          "kind": "answer",
+          "measure": "orbit.inclination",
+          "prompt": {
+            "en": "Sun-synchronous inclination at this height (°)",
+            "ru": "Солнечно-синхронное наклонение на этой высоте (°)",
+            "th": "ความเอียงของวงโคจรสัมพันธ์กับดวงอาทิตย์ที่ความสูงนี้ (°)"
+          },
+          "tol": 0.05,
+          "unit": "°"
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Period (min)",
+            "ru": "Период обращения (мин)",
+            "th": "คาบการโคจร (นาที)"
+          },
+          "tol": 0.2,
+          "unit": "min"
+        },
+        {
+          "id": "node",
+          "kind": "measure",
+          "measure": "orbit.raanError",
+          "max": 0.5,
+          "label": {
+            "en": "The plane crosses the equator at 10:30 (node error)",
+            "ru": "Плоскость пересекает экватор в 10:30 (ошибка по узлу)",
+            "th": "ระนาบตัดเส้นศูนย์สูตรเวลา 10:30 น. (ความคลาดของโหนด)"
+          }
+        }
+      ],
+      "hints": [
+        {
+          "en": "The plane must turn 360° in 365.2422 days: dΩ/dt = 2π / (365.2422 × 86 400 s) ≈ 1.991 × 10⁻⁷ rad/s, eastward.",
+          "ru": "Плоскость должна поворачиваться на 360° за 365,2422 сут: dΩ/dt = 2π / (365,2422 · 86 400 с) ≈ 1,991 · 10⁻⁷ рад/с, к востоку.",
+          "th": "ระนาบต้องหมุนครบ 360° ใน 365.2422 วัน: dΩ/dt = 2π / (365.2422 × 86 400 วินาที) ≈ 1.991 × 10⁻⁷ rad/s ไปทางตะวันออก"
+        },
+        {
+          "en": "J₂ turns a circular orbit's plane at dΩ/dt = −(3/2) J₂ (R/a)² n cos i, with n = √(μ/a³), J₂ = 1.0826 × 10⁻³, R = 6 378.137 km, μ = 398 600.4 km³/s² and a = R + 600 km. Solve for cos i: it is negative.",
+          "ru": "J₂ поворачивает плоскость круговой орбиты со скоростью dΩ/dt = −(3/2) J₂ (R/a)² n cos i, где n = √(μ/a³), J₂ = 1,0826 · 10⁻³, R = 6 378,137 км, μ = 398 600,4 км³/с², a = R + 600 км. Выразите cos i: он отрицателен.",
+          "th": "J₂ หมุนระนาบของวงโคจรวงกลมด้วยอัตรา dΩ/dt = −(3/2) J₂ (R/a)² n cos i โดย n = √(μ/a³), J₂ = 1.0826 × 10⁻³, R = 6 378.137 กม., μ = 398 600.4 กม.³/วินาที² และ a = R + 600 กม. แก้สมการหา cos i ซึ่งจะได้ค่าลบ"
+        },
+        {
+          "en": "For the launch time, use the setup panel's \"Next window\"; the verdict above the Launch button says how far the plane would be missed.",
+          "ru": "Время старта даёт кнопка «Ближайшее окно» на панели настройки; заключение над кнопкой «Пуск» показывает, на сколько промахнётся плоскость.",
+          "th": "สำหรับเวลาปล่อย ใช้ปุ่ม «หน้าต่างถัดไป» ในแผงตั้งค่า และข้อสรุปเหนือปุ่มปล่อยจรวดจะบอกว่าระนาบจะคลาดไปเท่าใด"
+        }
+      ],
+      "curriculum": [
+        {
+          "code": "NKRAFA วอ 478",
+          "kind": "course"
+        },
+        {
+          "code": "NKRAFA วอ 526",
+          "kind": "course"
+        },
+        {
+          "code": "NKRAFA PLO7",
+          "kind": "outcome"
+        }
+      ]
+    },
+    {
+      "id": "rtaf-elements",
+      "track": 14,
+      "order": 2,
+      "mode": "engineer",
+      "domains": [
+        2
+      ],
+      "tags": [
+        "a, e",
+        "vis-viva"
+      ],
+      "title": {
+        "en": "Elements and speed of a transfer orbit",
+        "ru": "Элементы и скорость переходной орбиты",
+        "th": "องค์ประกอบวงโคจรและอัตราเร็วของวงโคจรถ่ายโอน"
+      },
+      "brief": {
+        "en": "Falcon 9 puts a 4.15 t communications satellite from Cape Canaveral into a geostationary transfer orbit. Fly it. From the perigee and apogee heights the flight actually reached (in the result card), work out the semi-major axis, the eccentricity and the period, and, with the vis-viva equation, the speed at perigee, where the flight is graded just after the second stage's burn. The tolerances are tight: work with the reached heights, not the planned ones.",
+        "ru": "Falcon 9 выводит связной спутник массой 4,15 т с мыса Канаверал на геопереходную орбиту. Выполните полёт. По высотам перигея и апогея, действительно достигнутым в полёте (они указаны в карточке результата), рассчитайте большую полуось, эксцентриситет и период, а по интегралу энергии (формуле vis-viva) — скорость в перигее, где полёт оценивается сразу после включения второй ступени. Допуски жёсткие: считайте по достигнутым высотам, а не по расчётным.",
+        "th": "Falcon 9 นำดาวเทียมสื่อสารมวล 4.15 ตันจากแหลมคะแนเวอรัลเข้าสู่วงโคจรถ่ายโอนค้างฟ้า ให้บินภารกิจนี้ แล้วใช้ความสูงจุดใกล้โลกและจุดไกลโลกที่การบินทำได้จริง (ดูจากการ์ดผลลัพธ์) คำนวณกึ่งแกนเอก ความเยื้องศูนย์กลาง และคาบ และใช้สมการ vis-viva คำนวณอัตราเร็วที่จุดใกล้โลก ซึ่งเป็นจุดที่ประเมินผลการบินทันทีหลังการจุดเครื่องของขั้นที่ 2 ค่าที่ยอมให้คลาดเคลื่อนมีน้อย จึงต้องใช้ความสูงที่ทำได้จริง ไม่ใช่ความสูงตามแผน"
+      },
+      "debrief": {
+        "en": "Two numbers fix the ellipse's size and shape, a and e; the energy per unit mass, −μ/2a, and vis-viva, v² = μ(2/r − 1/a), follow from a alone. At perigee the satellite moves at about 10.2 km/s, some 2.4 km/s faster than a circle at that height would need; at apogee it will crawl at about 1.6 km/s, and the satellite's own engine has to add about 1.8 km/s there to circularise and remove the inclination. These are the constants of motion and the time-and-position problem of วอ 478 and วอ 528.",
+        "ru": "Размер и форму эллипса задают два числа, a и e; удельная энергия −μ/2a и интеграл энергии v² = μ(2/r − 1/a) определяются одной a. В перигее спутник движется со скоростью около 10,2 км/с — примерно на 2,4 км/с быстрее, чем требовалось бы для круговой орбиты на этой высоте; в апогее он будет ползти со скоростью около 1,6 км/с, и собственному двигателю спутника придётся добавить там около 1,8 км/с, чтобы скруглить орбиту и убрать наклонение. Это интегралы движения и задача о времени и положении на орбите из курсов วอ 478 и วอ 528.",
+        "th": "ขนาดและรูปร่างของวงรีกำหนดด้วยตัวเลขสองตัวคือ a และ e พลังงานต่อหน่วยมวล −μ/2a และสมการ vis-viva v² = μ(2/r − 1/a) ขึ้นกับ a เพียงตัวเดียว ที่จุดใกล้โลก ดาวเทียมเคลื่อนที่ด้วยอัตราเร็วประมาณ 10.2 กม./วินาที เร็วกว่าที่วงโคจรวงกลมที่ความสูงนั้นต้องการราว 2.4 กม./วินาที ส่วนที่จุดไกลโลกจะเคลื่อนที่ช้าเพียงประมาณ 1.6 กม./วินาที และเครื่องยนต์ของดาวเทียมเองต้องเพิ่มความเร็วอีกราว 1.8 กม./วินาทีที่นั่นเพื่อทำให้วงโคจรเป็นวงกลมและลดความเอียงให้หมดไป เรื่องเหล่านี้คือค่าคงตัวของการเคลื่อนที่และปัญหาเวลากับตำแหน่งในวิชา วอ 478 และ วอ 528"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "falcon9",
+          "satelliteId": "comsat",
+          "siteId": "cape",
+          "orbitId": "gto",
+          "orbit": {
+            "id": "gto",
+            "name": "Geostationary transfer orbit",
+            "perigee": 250000,
+            "apogee": 35786000,
+            "inclination": "site",
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Elliptical transfer with apogee at geostationary altitude; the satellite circularises with its own propulsion."
+          },
+          "launchTime": "2026-09-15T12:00:00.000Z",
+          "payloadMass": 4150,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.failure",
+        "setup.dynamics.model",
+        "setup.guidance",
+        "setup.boosterRecovery",
+        "setup.faults"
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "a",
+          "kind": "answer",
+          "measure": "orbit.semiMajorAxis",
+          "prompt": {
+            "en": "Semi-major axis a (km)",
+            "ru": "Большая полуось a (км)",
+            "th": "กึ่งแกนเอก a (กม.)"
+          },
+          "tol": 10,
+          "unit": "km"
+        },
+        {
+          "id": "e",
+          "kind": "answer",
+          "measure": "orbit.eccentricity",
+          "prompt": {
+            "en": "Eccentricity e",
+            "ru": "Эксцентриситет e",
+            "th": "ความเยื้องศูนย์กลาง e"
+          },
+          "tol": 0.002
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Period (min)",
+            "ru": "Период обращения (мин)",
+            "th": "คาบการโคจร (นาที)"
+          },
+          "tolPct": 0.5,
+          "unit": "min"
+        },
+        {
+          "id": "speed",
+          "kind": "answer",
+          "measure": "orbit.speed",
+          "prompt": {
+            "en": "Speed at perigee, from vis-viva (km/s)",
+            "ru": "Скорость в перигее по интегралу энергии (км/с)",
+            "th": "อัตราเร็วที่จุดใกล้โลกจากสมการ vis-viva (กม./วินาที)"
+          },
+          "tol": 0.02,
+          "unit": "km/s"
+        }
+      ],
+      "hints": [
+        {
+          "en": "r_p = R + h_p and r_a = R + h_a with R = 6 378.137 km; a = (r_p + r_a)/2 and e = (r_a − r_p)/(r_a + r_p).",
+          "ru": "r_п = R + h_п и r_а = R + h_а, R = 6 378,137 км; a = (r_п + r_а)/2, e = (r_а − r_п)/(r_а + r_п).",
+          "th": "r_p = R + h_p และ r_a = R + h_a โดย R = 6 378.137 กม. แล้ว a = (r_p + r_a)/2 และ e = (r_a − r_p)/(r_a + r_p)"
+        },
+        {
+          "en": "T = 2π√(a³/μ), μ = 398 600.4 km³/s²; vis-viva at perigee: v_p = √(μ (2/r_p − 1/a)).",
+          "ru": "T = 2π√(a³/μ), μ = 398 600,4 км³/с²; интеграл энергии в перигее: v_п = √(μ (2/r_п − 1/a)).",
+          "th": "T = 2π√(a³/μ) โดย μ = 398 600.4 กม.³/วินาที² และสมการ vis-viva ที่จุดใกล้โลก: v_p = √(μ (2/r_p − 1/a))"
+        },
+        {
+          "en": "A check on the speed: as for any ellipse at perigee, it lies between the circular speed √(μ/r_p) and the escape speed √(2μ/r_p).",
+          "ru": "Проверка скорости: как у любого эллипса в перигее, она между круговой √(μ/r_п) и параболической √(2μ/r_п).",
+          "th": "ตรวจสอบอัตราเร็ว: เช่นเดียวกับวงรีทุกวงที่จุดใกล้โลก ค่านี้ต้องอยู่ระหว่างอัตราเร็ววงกลม √(μ/r_p) กับอัตราเร็วหลุดพ้น √(2μ/r_p)"
+        }
+      ],
+      "curriculum": [
+        {
+          "code": "NKRAFA วอ 478",
+          "kind": "course"
+        },
+        {
+          "code": "NKRAFA วอ 528",
+          "kind": "course"
+        },
+        {
+          "code": "NKRAFA PLO7",
+          "kind": "outcome"
+        }
+      ]
+    }
+  ]
+}
