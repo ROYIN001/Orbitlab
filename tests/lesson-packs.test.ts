@@ -12,12 +12,15 @@
  * tests/heavy/lesson-packs-sixdof.test.ts.
  *
  * Tolerances: the lessons' own, from the research (fixed before any flight)
- * except four, set after seeing the flights and said where they are used —
+ * except two, set after seeing the flight and said where they are used —
  * P1's period (5 min, so both the computed and the textbook sidereal-day
- * answers pass), S2's navigation bound (heavy test), and R1's period (0.4
- * min) and R2's semi-major axis (20 km), widened from the research's 0.2 min
- * and 10 km after measuring how the osculating elements a late frame grades
- * swing under J₂ (the last describe below).
+ * answers pass) and S2's navigation bound (heavy test). R2's graded perigee
+ * speed (±0.02 km/s) is not in the research's R2: the pack's first version
+ * added it. R1's period (0.2 min) and R2's semi-major axis (10 km) were
+ * widened, and R2's perigee speed dropped, for a while, when the grader read
+ * the orbit at the frame it graded on; since the orbit is read at the grading
+ * end (src/lessons/measures.ts, T03 review) they are back as they were (the
+ * last describe below holds them graded late).
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
@@ -209,7 +212,7 @@ describe('each point-mass pack lesson, flown as solved and flown wrong', () => {
     expect(gradeLesson(l, sim, wrong).verdict).toBe('fail');
   });
 
-  it('A1 Kepler\'s third law: a, T and e from the reached heights pass; a from the planned 250 × 35 786 km fails graded at the flight\'s end, as the brief warns', () => {
+  it('A1 Kepler\'s third law: a, T and e from the reached heights pass; a from the planned 250 × 35 786 km fails, as the brief warns', () => {
     const l = lesson('ipst-a-kepler3');
     const sim = fly(l);
     const { hp, ha } = heights(sim);
@@ -273,16 +276,15 @@ describe('each point-mass pack lesson, flown as solved and flown wrong', () => {
     expect(wrong.criteria.find((c) => c.id === 'node')!.state).toBe('fail');
   });
 
-  it('R2 the elements: a, e and T from the reached heights pass, and vis-viva gives the speed after the burn; planned heights fail', () => {
+  it('R2 elements and vis-viva: a, e, T and the perigee speed from the reached heights pass; planned heights and the circular speed fail', () => {
     const l = lesson('rtaf-elements');
     const sim = fly(l);
     const { hp, ha } = heights(sim);
     const o = ellipse(hp, ha);
-    const solved = { a: o.a, e: o.e, period: o.period };
+    const solved = { a: o.a, e: o.e, period: o.period, speed: o.vp };
     expect(gradeLesson(l, sim, solved).verdict, why(l, sim, solved)).toBe('pass');
     expect(gradeLesson(l, sim, { ...solved, a: ellipse(250, 35786).a }).verdict).toBe('fail');
-    // the hint's check: vis-viva at perigee against the speed just after the burn
-    expect(Math.abs(o.vp - MEASURES['orbit.speed'].read(sim)!)).toBeLessThan(0.02);
+    expect(gradeLesson(l, sim, { ...solved, speed: Math.sqrt(MU / (R + hp)) }).verdict).toBe('fail');
   });
 });
 
@@ -308,13 +310,15 @@ describe('the instructor\'s check of a pack lesson', () => {
 
 /**
  * A live page grades a flight at the first frame that shows its end
- * (src/lessons/grader.ts `gradeShown`), and its orbit measures are the
- * osculating ones of that frame. Under time warp the frame can come minutes
- * late, and under J₂ the osculating elements swing with the point of the orbit
- * (measured: a GTO's a by +16 km 300 s after insertion, 24 334-24 379 km over
- * an orbit; an SSO's period 96.33-96.72 min). The tolerances of 12.1 and
- * 14.2 (a), 14.1 (period) were set after that measurement so that the worked
- * answers pass graded that late; this holds them to it.
+ * (src/lessons/grader.ts `gradeShown`). Under time warp the frame can come
+ * minutes late, and under J₂ the osculating elements swing with the point of
+ * the orbit (measured: a GTO's a by +16 km 300 s after insertion, 24 334-24 379
+ * km over an orbit; an SSO's period 96.33-96.72 min). The orbit measures read
+ * the state the flight's end event left it in (src/lessons/measures.ts; T03
+ * review), so the worked answers pass at the research's tolerances however
+ * late they are graded, and the planned orbit fails however late
+ * (tests/lesson-grading-end.test.ts holds the same for built-in lessons and
+ * for a page flown live).
  */
 describe('each worked solution, graded as late as a warped page may grade it', () => {
   /** Grade the flight again after it has coasted on `lag` s past its end, as a late frame would. */
@@ -334,29 +338,28 @@ describe('each worked solution, graded as late as a warped page may grade it', (
       const sim = fly(l);
       const { hp, ha } = heights(sim);
       const o = ellipse(hp, ha);
-      expect(lateVerdicts(l, sim, { a: o.a, e: o.e, period: o.period }, lags), id).toEqual(pass(lags));
+      expect(lateVerdicts(l, sim, { a: o.a, e: o.e, period: o.period, speed: o.vp }, lags), id).toEqual(pass(lags));
     }
   });
 
   /**
-   * The other side of grading a late frame (review, 2026-10-01), held here so
-   * it cannot be forgotten: the planned 250 × 35 786 km orbit's a is 34 km
-   * above the reached one at insertion, but the GTO's osculating a rises by up
-   * to 17 km in the minutes after perigee, so the planned answers pass when
-   * graded 145–710 s late in 12.1 (25 km) and 240–585 s late in 14.2 (20 km),
-   * measured at 5 s steps — and again for some minutes one revolution
-   * (10½ h) later. A page warped at 1 000× grades up to 500 s late (the strip is
-   * graded every 0.5 s of real time, src/main.ts), so there the briefs'
-   * "use the reached heights" is not enforced. When the orbit measures read
-   * the state at the grading end (src/lessons/measures.ts, `at`), this fails:
-   * then put back the research's tolerances (14.1's period 0.2 min, 14.2's a
-   * 10 km) and drop this case.
+   * The other side of grading a late frame (review, 2026-10-01). When the
+   * orbit measures read the frame the page graded on, the planned 250 × 35 786
+   * km orbit, 34 km above the reached one in a at insertion, passed graded
+   * 145–710 s late in 12.1 and 240–585 s late in 14.2 (measured at 5 s steps),
+   * as the GTO's osculating a rose by up to 17 km after perigee. This case held
+   * that limit (fail at the end, pass 300 s late) so that it would fail the day
+   * the grader read the orbit at the grading end; it did, and now holds the
+   * planned orbit failing at every 5 s across those windows and well past them.
    */
-  it('12.1 and 14.2: the planned orbit fails at the end, and passes 300 s late (a known limit of the grader)', () => {
+  it('12.1 and 14.2: the planned orbit fails at the end and however late it is graded', () => {
     const p = ellipse(250, 35786);
+    const lags = Array.from({ length: 181 }, (_, k) => k * 5);
     for (const id of ['ipst-a-kepler3', 'rtaf-elements']) {
       const l = lesson(id);
-      expect(lateVerdicts(l, fly(l), { a: p.a, e: p.e, period: p.period }, [0, 300]), id).toEqual([[0, 'fail'], [300, 'pass']]);
+      const sim = fly(l);
+      const o = ellipse(heights(sim).hp, heights(sim).ha);
+      expect(lateVerdicts(l, sim, { a: p.a, e: p.e, period: p.period, speed: o.vp }, lags), id).toEqual(lags.map((lag) => [lag, 'fail']));
     }
   });
 

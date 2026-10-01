@@ -93,9 +93,7 @@ export const RTAF_ACADEMY: PackSource = {
           prompt: { en: 'Sun-synchronous inclination at this height (°)', ru: 'Солнечно-синхронное наклонение на этой высоте (°)', th: 'ความเอียงของวงโคจรสัมพันธ์กับดวงอาทิตย์ที่ความสูงนี้ (°)' },
         },
         {
-          // 0.4 min, not the research's 0.2: set after measuring that the osculating period a live page grades
-          // swings by 0.39 min (96.33-96.72) with the point of the orbit it grades at
-          id: 'period', kind: 'answer', measure: 'orbit.period', tol: 0.4, unit: 'min',
+          id: 'period', kind: 'answer', measure: 'orbit.period', tol: 0.2, unit: 'min',
           prompt: { en: 'Period (min)', ru: 'Период обращения (мин)', th: 'คาบการโคจร (นาที)' },
         },
         {
@@ -112,11 +110,11 @@ export const RTAF_ACADEMY: PackSource = {
     {
       id: 'rtaf-elements', track: 14, order: 2, mode: 'engineer', domains: [2], tags: ['a, e', 'vis-viva'],
       curriculum: [{ code: 'NKRAFA วอ 478', kind: 'course' }, { code: 'NKRAFA วอ 528', kind: 'course' }, { code: 'NKRAFA PLO7', kind: 'outcome' }],
-      title: { en: 'Elements of a transfer orbit', ru: 'Элементы переходной орбиты', th: 'องค์ประกอบของวงโคจรถ่ายโอน' },
+      title: { en: 'Elements and speed of a transfer orbit', ru: 'Элементы и скорость переходной орбиты', th: 'องค์ประกอบวงโคจรและอัตราเร็วของวงโคจรถ่ายโอน' },
       brief: {
-        en: 'Falcon 9 puts a 4.15 t communications satellite from Cape Canaveral into a geostationary transfer orbit. Fly it. From the perigee and apogee heights the flight actually reached at insertion — the event log\'s line "Target orbit achieved" — work out the semi-major axis, the eccentricity and the period, and check them against the perigee speed by the vis-viva equation. The tolerances are tight: work with the reached heights, not the planned ones, and not the ones on screen later, which J₂ makes drift.',
-        ru: 'Falcon 9 выводит связной спутник массой 4,15 т с мыса Канаверал на геопереходную орбиту. Выполните полёт. По высотам перигея и апогея, действительно достигнутым при выведении (строка журнала событий «Целевая орбита достигнута»), рассчитайте большую полуось, эксцентриситет и период и проверьте их по скорости в перигее, вычисленной по интегралу энергии (формуле vis-viva). Допуски жёсткие: считайте по достигнутым высотам, а не по расчётным и не по тем, что позже показывает экран, — их смещает J₂.',
-        th: 'Falcon 9 นำดาวเทียมสื่อสารมวล 4.15 ตันจากแหลมคะแนเวอรัลเข้าสู่วงโคจรถ่ายโอนค้างฟ้า ให้บินภารกิจนี้ แล้วใช้ความสูงจุดใกล้โลกและจุดไกลโลกที่การบินทำได้จริงขณะเข้าวงโคจร (บรรทัด «ถึงวงโคจรเป้าหมาย» ในบันทึกเหตุการณ์) คำนวณกึ่งแกนเอก ความเยื้องศูนย์กลาง และคาบ แล้วตรวจสอบกับอัตราเร็วที่จุดใกล้โลกซึ่งคำนวณจากสมการ vis-viva ค่าที่ยอมให้คลาดเคลื่อนมีน้อย จึงต้องใช้ความสูงที่ทำได้จริง ไม่ใช่ความสูงตามแผน และไม่ใช่ค่าที่แสดงบนจอภายหลังซึ่ง J₂ ทำให้เลื่อนไป',
+        en: 'Falcon 9 puts a 4.15 t communications satellite from Cape Canaveral into a geostationary transfer orbit. Fly it. From the perigee and apogee heights the flight actually reached at insertion — the event log\'s line "Target orbit achieved" — work out the semi-major axis, the eccentricity and the period, and, with the vis-viva equation, the speed at perigee, where the flight is graded just after the second stage\'s burn. The tolerances are tight: work with the reached heights, not the planned ones, and not the ones on screen later, which J₂ makes drift.',
+        ru: 'Falcon 9 выводит связной спутник массой 4,15 т с мыса Канаверал на геопереходную орбиту. Выполните полёт. По высотам перигея и апогея, действительно достигнутым при выведении (строка журнала событий «Целевая орбита достигнута»), рассчитайте большую полуось, эксцентриситет и период, а по интегралу энергии (формуле vis-viva) — скорость в перигее, где полёт оценивается сразу после включения второй ступени. Допуски жёсткие: считайте по достигнутым высотам, а не по расчётным и не по тем, что позже показывает экран, — их смещает J₂.',
+        th: 'Falcon 9 นำดาวเทียมสื่อสารมวล 4.15 ตันจากแหลมคะแนเวอรัลเข้าสู่วงโคจรถ่ายโอนค้างฟ้า ให้บินภารกิจนี้ แล้วใช้ความสูงจุดใกล้โลกและจุดไกลโลกที่การบินทำได้จริงขณะเข้าวงโคจร (บรรทัด «ถึงวงโคจรเป้าหมาย» ในบันทึกเหตุการณ์) คำนวณกึ่งแกนเอก ความเยื้องศูนย์กลาง และคาบ และใช้สมการ vis-viva คำนวณอัตราเร็วที่จุดใกล้โลก ซึ่งเป็นจุดที่ประเมินผลการบินทันทีหลังการจุดเครื่องของขั้นที่ 2 ค่าที่ยอมให้คลาดเคลื่อนมีน้อย จึงต้องใช้ความสูงที่ทำได้จริง ไม่ใช่ความสูงตามแผน และไม่ใช่ค่าที่แสดงบนจอภายหลังซึ่ง J₂ ทำให้เลื่อนไป',
       },
       debrief: {
         en: 'Two numbers fix the ellipse\'s size and shape, a and e; the energy per unit mass, −μ/2a, and vis-viva, v² = μ(2/r − 1/a), follow from a alone. At perigee the satellite moves at about 10.2 km/s, some 2.4 km/s faster than a circle at that height would need; at apogee it will crawl at about 1.6 km/s, and the satellite\'s own engine has to add about 1.8 km/s there to circularise and remove the inclination. Under J₂ the osculating elements on screen swing by tens of kilometres around the orbit while their mean values hold: the elements are taken at one instant, here insertion. These are the constants of motion and the time-and-position problem of วอ 478 and วอ 528.',
@@ -128,9 +126,7 @@ export const RTAF_ACADEMY: PackSource = {
       criteria: [
         { id: 'orbit', kind: 'outcome', is: 'target' },
         {
-          // 20 km, not the research's 10: set after measuring how the osculating a a live page grades drifts
-          // with the frame it grades at (up to +16 km 300 s after insertion); the planned orbit's a is 34 km off
-          id: 'a', kind: 'answer', measure: 'orbit.semiMajorAxis', tol: 20, unit: 'km',
+          id: 'a', kind: 'answer', measure: 'orbit.semiMajorAxis', tol: 10, unit: 'km',
           prompt: { en: 'Semi-major axis a (km)', ru: 'Большая полуось a (км)', th: 'กึ่งแกนเอก a (กม.)' },
         },
         {
@@ -141,11 +137,15 @@ export const RTAF_ACADEMY: PackSource = {
           id: 'period', kind: 'answer', measure: 'orbit.period', tolPct: 0.5, unit: 'min',
           prompt: { en: 'Period (min)', ru: 'Период обращения (мин)', th: 'คาบการโคจร (นาที)' },
         },
+        {
+          id: 'speed', kind: 'answer', measure: 'orbit.speed', tol: 0.02, unit: 'km/s',
+          prompt: { en: 'Speed at perigee, from vis-viva (km/s)', ru: 'Скорость в перигее по интегралу энергии (км/с)', th: 'อัตราเร็วที่จุดใกล้โลกจากสมการ vis-viva (กม./วินาที)' },
+        },
       ],
       hints: [
         { en: 'r_p = R + h_p and r_a = R + h_a with R = 6 378.137 km; a = (r_p + r_a)/2 and e = (r_a − r_p)/(r_a + r_p).', ru: 'r_п = R + h_п и r_а = R + h_а, R = 6 378,137 км; a = (r_п + r_а)/2, e = (r_а − r_п)/(r_а + r_п).', th: 'r_p = R + h_p และ r_a = R + h_a โดย R = 6 378.137 กม. แล้ว a = (r_p + r_a)/2 และ e = (r_a − r_p)/(r_a + r_p)' },
-        { en: 'T = 2π√(a³/μ), μ = 398 600.4 km³/s². The answer comes in seconds: divide by 60.', ru: 'T = 2π√(a³/μ), μ = 398 600,4 км³/с². Ответ получится в секундах — разделите на 60.', th: 'T = 2π√(a³/μ) โดย μ = 398 600.4 กม.³/วินาที² คำตอบที่ได้มีหน่วยเป็นวินาที ให้หารด้วย 60' },
-        { en: 'A check with vis-viva: v_p = √(μ (2/r_p − 1/a)) should match the speed the telemetry shows just after the burn, about 10.2 km/s, and lie between the circular √(μ/r_p) and the escape speed √(2μ/r_p).', ru: 'Проверка по интегралу энергии: v_п = √(μ (2/r_п − 1/a)) должна совпасть со скоростью, которую телеметрия показывает сразу после включения, — около 10,2 км/с — и лежать между круговой √(μ/r_п) и параболической √(2μ/r_п).', th: 'ตรวจสอบด้วยสมการ vis-viva: v_p = √(μ (2/r_p − 1/a)) ควรตรงกับอัตราเร็วที่ข้อมูลทางไกลแสดงทันทีหลังการจุดเครื่อง ประมาณ 10.2 กม./วินาที และอยู่ระหว่างอัตราเร็ววงกลม √(μ/r_p) กับอัตราเร็วหลุดพ้น √(2μ/r_p)' },
+        { en: 'T = 2π√(a³/μ), μ = 398 600.4 km³/s²; vis-viva at perigee: v_p = √(μ (2/r_p − 1/a)).', ru: 'T = 2π√(a³/μ), μ = 398 600,4 км³/с²; интеграл энергии в перигее: v_п = √(μ (2/r_п − 1/a)).', th: 'T = 2π√(a³/μ) โดย μ = 398 600.4 กม.³/วินาที² และสมการ vis-viva ที่จุดใกล้โลก: v_p = √(μ (2/r_p − 1/a))' },
+        { en: 'A check on the speed: as for any ellipse at perigee, it lies between the circular speed √(μ/r_p) and the escape speed √(2μ/r_p).', ru: 'Проверка скорости: как у любого эллипса в перигее, она между круговой √(μ/r_п) и параболической √(2μ/r_п).', th: 'ตรวจสอบอัตราเร็ว: เช่นเดียวกับวงรีทุกวงที่จุดใกล้โลก ค่านี้ต้องอยู่ระหว่างอัตราเร็ววงกลม √(μ/r_p) กับอัตราเร็วหลุดพ้น √(2μ/r_p)' },
       ],
     },
   ],
