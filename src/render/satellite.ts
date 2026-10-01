@@ -9,6 +9,7 @@ import type { SatelliteSpec } from '../types';
 import { clamp01, smoothstep } from './noise';
 import { buildCrewDragon } from './dragon';
 import { buildApollo } from './apollo';
+import { buildInstrumentModule, IM_LENGTH, IM_NEST } from './vostok';
 import { bellGeometry } from './liveries';
 import { cellPanel, FOIL_TILE, RADIATOR_TILE, spacecraftMaterials, tiledBox, tiledCylinder, type SpacecraftMaterials } from './spacecraft-surfaces';
 import type { ApolloState } from '../physics/sim/apollo';
@@ -22,6 +23,11 @@ export interface SatelliteView {
   setJettisoned?(j: { tower: boolean } | undefined): void;
   /** C01: Apollo's transposition, docking and extraction, at mission time `t` */
   setApollo?(state: ApolloState | undefined, t: number, separated: boolean): void;
+  /**
+   * C01: Vostok: where its sphere sits on the instrument module, along the model's Y: the sphere's pole on
+   * the module's side, the point render/escape.ts draws the pair from once the return begins.
+   */
+  junctionY?: number;
 }
 
 interface Hinge {
@@ -80,6 +86,7 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
   const slides: Slide[] = [];
   /** parts gone the moment deployment starts (Mercury's escape tower) */
   const shed: THREE.Object3D[] = [];
+  let junctionY: number | undefined;
   const mats = spacecraftMaterials();
   // gold blanket on the bus, and on the smaller parts that were plain gold
   const foil = mats.foil, gold = mats.foil;
@@ -324,17 +331,20 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       // Vostok 3KA: the 2.3 m descent sphere, covered in ablative (dark), with
       // its hatch and window, on the instrument module — two cones base to
       // base, 2.43 m across — and its antennas.
+      // (the module is render/vostok.ts's, drawn the same through the return and on its own)
       const ablative = new THREE.MeshStandardMaterial({ color: 0x6b6a66, roughness: 0.85, metalness: 0.05 });
       const bottles = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.45, metalness: 0.5 });
-      const moduleH = 2.25, sphereR = 1.15;
-      const lower = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, 0.6, moduleH * 0.55, 28), bottles);
-      lower.position.y = -h / 2 + moduleH * 0.275;
-      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.9, w / 2, moduleH * 0.45, 28), dark);
-      upper.position.y = -h / 2 + moduleH * 0.55 + moduleH * 0.225;
-      g.add(lower, upper);
+      const sphereR = 1.15;
+      const im = buildInstrumentModule().group;
+      // its engine down the rocket's axis, its cradle up at the sphere, as it left Blok E; turned engine first for
+      // the retro-fire by render/rocket.ts (render/vostok.ts `VOSTOK_RETRO_TURN`)
+      im.rotation.x = Math.PI;
+      im.position.y = -h / 2 + IM_LENGTH;
+      g.add(im);
       const sphere = new THREE.Mesh(new THREE.SphereGeometry(sphereR, 36, 24), ablative);
-      sphere.position.y = -h / 2 + moduleH + sphereR - 0.1;
+      sphere.position.y = -h / 2 + IM_LENGTH + sphereR - IM_NEST;
       g.add(sphere);
+      junctionY = sphere.position.y - sphereR;
       const glass = new THREE.MeshStandardMaterial({ color: 0x14171d, roughness: 0.1, metalness: 0.8 });
       for (const [y, rz, size] of [[0.2, 0, 0.22], [-0.35, 1.9, 0.3]] as const) {
         const port = new THREE.Mesh(new THREE.CircleGeometry(size, 20), glass);
@@ -428,5 +438,5 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
     }
   };
   setDeploy(0);
-  return { group: g, height: h, setDeploy };
+  return { group: g, height: h, setDeploy, ...(junctionY !== undefined ? { junctionY } : {}) };
 }

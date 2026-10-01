@@ -97,7 +97,7 @@ export const SATELLITE_LIMITS = {
 const CLASS_CD = 2.2;
 
 const SATELLITE_FIELDS = ['id', 'kind', 'name', 'mass', 'typicalOrbit', 'description', 'crewed', 'cargoShip', 'propulsion', 'size', 'area', 'cd', 'cr', 'derivedFrom',
-  'exposed', 'carriers', 'descent', 'staysAttached', 'crossSection'];
+  'exposed', 'carriers', 'descent', 'staysAttached', 'crossSection', 'separationDelay'];
 
 /**
  * Everything wrong with a custom satellite, or an empty list. `raw` is
@@ -161,10 +161,13 @@ export function satelliteSpecProblems(raw: unknown): SatelliteSpecIssue[] {
       if (length !== undefined && nose !== undefined && nose > length) c.add('exposed.noseLength', `must not be longer than the whole (${nose} > ${length})`);
     }
   }
-  if (raw.descent !== undefined && (raw.descent !== 'mercury' || origin?.descent !== raw.descent)) {
+  // Mercury's from a lob, Vostok's from orbit (C01): a copy keeps its original's
+  if (raw.descent !== undefined && ((raw.descent !== 'mercury' && raw.descent !== 'vostok') || origin?.descent !== raw.descent)) {
     c.add('descent', `only a satellite derived from one that comes home on its own parachutes keeps that descent (got ${JSON.stringify(raw.descent)})`);
   }
   c.boolean(raw, 'staysAttached', '');
+  // the seconds from the cut-off to the payload's release (C01: Vostok's ten), as its original's or any sane delay
+  if (raw.separationDelay !== undefined) c.number(raw, 'separationDelay', '', 0, 60);
   if (raw.staysAttached === true && !origin?.staysAttached) c.add('staysAttached', 'only a satellite derived from one that rides the last stage into orbit does so');
   if (raw.carriers !== undefined) {
     const known = new Set(ALL_VEHICLES.map((v) => v.id));

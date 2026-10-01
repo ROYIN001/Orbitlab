@@ -10,8 +10,8 @@ import { describe, expect, it } from 'vitest';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, VEHICLES, vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
 import { satelliteById } from '../src/data/satellites';
-import { DEG, G0, R_EARTH } from '../src/physics/constants';
-import { gmst, julianDate } from '../src/physics/orbital';
+import { DEG, G0, MU_EARTH, R_EARTH } from '../src/physics/constants';
+import { gmst, julianDate, planeNormal, raanFromLaunch } from '../src/physics/orbital';
 import { add, cross, dot, norm, normalize, scale, sub, v3 } from '../src/physics/vec3';
 import { moonState, R_MOON } from '../src/physics/lunar/ephemeris';
 import { eciToSelenographic, selenographicToEci } from '../src/physics/lunar/orientation';
@@ -20,10 +20,12 @@ import { APOLLO11 } from '../src/data/apollo11';
 import { Simulation } from '../src/physics/simulation';
 import { guidanceForVehicle } from '../src/physics/defaults';
 import { supportsRigid } from '../src/physics/rigid/config';
+import { physicalApsides } from '../src/physics/rigid/orbit-prediction';
 import { validateConfigInput } from '../src/config/validation';
 import { WATCH_MISSIONS, watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
 import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
 import { expectFlownMr3, flyMr3 } from './mr3-harness';
+import { expectFlownVostok1, flyVostok1 } from './vostok1-harness';
 import { captureFrame } from '../src/physics/frame';
 import { autoWarp, flightEnding, watchBeat, watchReadout } from '../src/ui/watch-logic';
 import { entryGlow } from '../src/render/apollo-cm';
@@ -52,7 +54,8 @@ describe('historical vehicles', () => {
         for (const b of st.boosters ?? []) expect(b.propellantMass).toBeGreaterThan(b.dryMass);
       }
     }
-    // burn times against the published ones: strap-ons 116–120 s, cores 295–301 s, Blok E 365 s
+    // burn times against the flown ones: strap-ons 116–120 s, cores 295–301 s (Vostok-K's from its
+    // ignition 2.5 s before liftoff to about T+300 s), Blok E about 375 s (T+300 to T+676, ESA)
     const sputnik = vehicleById('r7sputnik'), vostok = vehicleById('vostokk');
     const b = (v: typeof sputnik) => v.stages[0].boosters![0];
     expect(burn(b(sputnik).propellantMass, b(sputnik).engine.thrustVac, b(sputnik).engine.ispVac)).toBeGreaterThan(110);
@@ -60,7 +63,9 @@ describe('historical vehicles', () => {
     expect(burn(sputnik.stages[0].propellantMass, sputnik.stages[0].engine.thrustVac, sputnik.stages[0].engine.ispVac)).toBeGreaterThan(285);
     expect(burn(sputnik.stages[0].propellantMass, sputnik.stages[0].engine.thrustVac, sputnik.stages[0].engine.ispVac)).toBeLessThan(310);
     const e = vostok.stages[1];
-    expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 365)).toBeLessThan(10);
+    expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 375)).toBeLessThan(3);
+    expect(Math.abs(burn(b(vostok).propellantMass, b(vostok).engine.thrustVac, b(vostok).engine.ispVac) - 2.5 - 118)).toBeLessThan(2);
+    expect(Math.abs(burn(vostok.stages[0].propellantMass, vostok.stages[0].engine.thrustVac, vostok.stages[0].engine.ispVac) - 2.5 - 302)).toBeLessThan(4);
     // the S-IC: five F-1s from ignition 2.5 s before liftoff to the centre engine's
     // shutdown at T+135.2 s, four to the LOX running out at T+161.63 s (AS-506): the
     // FER's flow and load are one consumption record, so this holds by construction
@@ -116,6 +121,88 @@ describe('the flights they are here for, point-mass', () => {
     });
 });
 
+describe('Vostok-1\'s plane', () => {
+  it('is the one through Gagarin\'s Start at liftoff, the pad where it really is, and Vostok-K holds it', () => {
+    // the pad's 45.920° N is geodetic: on WGS-84 it is 45.728° geocentric, 21 km south of where the app's
+    // convention (every site's latitude placed as geocentric) puts it; liftoff 09:06:59.7 Moscow time
+    const s = watchMissionSettings('vostok1');
+    const pad = siteById('baikonur').pads!.find((p) => p.id === s.padId)!;
+    const f = 1 / 298.257223563, geocentric = Math.atan((1 - f) ** 2 * Math.tan(pad.latitude * DEG));
+    expect(geocentric / DEG).toBeCloseTo(45.728, 3);
+    const lst = pad.longitude * DEG + gmst(julianDate(new Date('1961-04-12T06:06:59.700Z')));
+    const node = raanFromLaunch(geocentric, lst, 64.95 * DEG);
+    expect(s.orbit.raanMode).toBe('fixed');
+    expect(s.orbit.raan!).toBeCloseTo(node / DEG, 3);
+    // the pad lies in it, northbound: the plane's normal is square to the pad
+    expect(Math.abs(dot(planeNormal(64.95 * DEG, s.orbit.raan! * DEG),
+      v3(Math.cos(geocentric) * Math.cos(lst), Math.cos(geocentric) * Math.sin(lst), Math.sin(geocentric))))).toBeLessThan(1e-5);
+    // the closed loop flies into it (the plane through wherever the rocket is, otherwise)
+    expect(vehicleById('vostokk').targetPlane).toBe(true);
+  });
+});
+
+describe('Vostok-1\'s over-burn, point-mass', () => {
+  // Baturin (Novaya Gazeta, 11 April 2021): the radio command to shut the core down did not pass, and the
+  // backup time mark stopped the core 22.0 m/s fast and Blok E ran 2.4 s long, 25.43 m/s in all — 327 km of apogee where 230 km was planned. The
+  // guidance aims at the planned orbit (`OrbitSpec.aim`) and Blok E burns the excess on (`backupCutoff`).
+  // Both orbits are the lowest and highest heights reached (`OrbitSpec.extremes`): measured on the next
+  // revolution under J2, as the flight is cut off and judged on them.
+  const toCutoff = (orbit: ReturnType<typeof watchMissionSettings>['orbit']) => {
+    const s = watchMissionSettings('vostok1');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    // on through the engine's tail-off
+    const seco = () => sim.events.find((e) => e.key === 'evt.seco');
+    while (!sim.isFailed() && sim.state.t < 800 && !(seco() && sim.state.t > seco()!.t + 5)) sim.step(sim.suggestedDt());
+    const el = sim.state.elements, extremes = physicalApsides({ r: sim.state.r, v: sim.state.v })!;
+    const rp = R_EARTH + el.periapsisAlt, a = R_EARTH + (el.periapsisAlt + el.apoapsisAlt) / 2;
+    return { sim, seco: seco()!.t, el, extremes, vPerigee: Math.sqrt(MU_EARTH * (2 / rp - 1 / a)), left: sim.vehicle.stages[1].propellant };
+  };
+
+  it('aims at the planned 168 × 230 km and is cut off on the backup 25.4 m/s later, in the flown 168 × 314 km', { timeout: 120_000 }, () => {
+    const s = watchMissionSettings('vostok1');
+    expect(s.orbit.aim?.apogee).toBe(230e3);
+    const flown = toCutoff(s.orbit);
+    const planned = toCutoff({ ...s.orbit, backupCutoff: undefined });
+    const log = flown.sim.events.map((e) => `${e.t.toFixed(1)}:${e.key}`).join(' ');
+    // the planned cut-off: the orbit the guidance was set for
+    expect(Math.abs(planned.extremes.periapsisAlt - 168e3), log).toBeLessThan(3e3);
+    expect(Math.abs(planned.extremes.apoapsisAlt - 230e3), log).toBeLessThan(6e3);
+    expect(planned.sim.events.some((e) => e.key === 'evt.backupCutoff')).toBe(false);
+    // the backup: 25.4 m/s more, logged, and held to the flown orbit
+    const backup = flown.sim.events.find((e) => e.key === 'evt.backupCutoff');
+    expect(backup, log).toBeDefined();
+    expect(Number(backup!.params!.dv)).toBeCloseTo(25.4, 1);
+    expect(backup!.t).toBeCloseTo(flown.seco, 6);
+    // 2.4 s flown long on Blok E alone (Baturin; the core's 0.46 s is flown here too): about 3 s and 50 kg
+    expect(flown.seco - planned.seco).toBeGreaterThan(2);
+    expect(flown.seco - planned.seco).toBeLessThan(4);
+    expect(planned.left - flown.left).toBeGreaterThan(40);
+    expect(planned.left - flown.left).toBeLessThan(60);
+    // the speed at the perigee, where both were cut off
+    expect(Math.abs(flown.vPerigee - planned.vPerigee - 25.43), log).toBeLessThan(1);
+    expect(Math.abs(flown.extremes.periapsisAlt - 168e3), log).toBeLessThan(3e3);
+    expect(flown.extremes.apoapsisAlt, log).toBeGreaterThan(311e3);
+    expect(flown.extremes.apoapsisAlt, log).toBeLessThan(320e3);
+    // the conic of the cut-off's instant, at 63° N, reads its apogee 18 km under the highest point reached
+    expect(Math.abs(flown.extremes.apoapsisAlt - flown.el.apoapsisAlt - 18e3), log).toBeLessThan(2e3);
+    expect(flown.sim.events.some((e) => e.key === 'evt.targetOrbit'), log).toBe(true);
+    // in the plane it was launched in, held through the climb: the node where the pad put it at liftoff (the
+    // conic of the cut-off's instant reads 0.04° east of it), not 0.58° east as with the plane left free
+    expect(Math.abs(flown.el.raan / DEG - s.orbit.raan!), log).toBeLessThan(0.1);
+    expect(Math.abs(flown.el.i / DEG - 64.95), log).toBeLessThan(0.02);
+  });
+});
+
+describe('Vostok-1 home, point-mass', () => {
+  it('fires the TDU-1 on time, loses its instrument module late, ejects Gagarin at 7 km and lands the sphere by the Volga', { timeout: 300_000 }, () => {
+    expectFlownVostok1(flyVostok1('pointMass'));
+  });
+});
+
 describe('Mercury-Redstone 3, point-mass', () => {
   it('lobs Freedom 7 to 187 km and brings it down in the Atlantic under its parachutes, as flown', { timeout: 300_000 }, () => {
     expectFlownMr3(flyMr3('pointMass'));
@@ -146,6 +233,56 @@ describe('Mercury-Redstone 3 in the viewer', () => {
     const order = ['capsuleCutoff', 'capsuleSep', 'retroFire', 'capsuleEntry', 'capsuleDrogue', 'capsuleMain', 'capsuleSplash'].map((b) => beats.indexOf(b));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(ending).toBe('splashdown');
+  });
+});
+
+describe('Vostok-1 in the viewer', () => {
+  it('does not stop in orbit: it tells the way home beat by beat and ends on Gagarin\'s landing', { timeout: 300_000 }, () => {
+    const s = watchMissionSettings('vostok1');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    const beats: string[] = [];
+    const warps = new Map<string, Set<number>>();
+    let ending: string | null = null;
+    let endT = 0;
+    while (!sim.isFailed() && sim.state.t < 8000 && !ending) {
+      sim.step(sim.suggestedDt());
+      const frame = captureFrame(sim);
+      const beat = watchBeat(frame, sim.events);
+      if (beats[beats.length - 1] !== beat) beats.push(beat);
+      if (!warps.has(beat)) warps.set(beat, new Set());
+      warps.get(beat)!.add(autoWarp(frame, beat, sim.events));
+      ending = flightEnding(frame, sim.events);
+      endT = frame.t;
+    }
+    // the burn and the spin it left, ten minutes joined, the straps and the cables, the module breaking up in
+    // the entry, the hatch and the seat, the sphere's braking parachute, Gagarin's main and his reserve, the
+    // sphere down with him still in the air, his descent and his landing
+    const order = ['vostokOrbit', 'vostokRetro', 'vostokSpin', 'vostokCoast', 'vostokSeparation', 'vostokApart', 'vostokEntry',
+      'vostokModuleBurn', 'vostokEjection', 'vostokDrogue', 'vostokPilotMain', 'vostokPilotReserve', 'vostokSphereDown',
+      'vostokPilotDescent', 'vostokLanding']
+      .map((b) => beats.indexOf(b));
+    expect(order.every((i) => i >= 0), beats.join(' ')).toBe(true);
+    expect([...order].sort((a, b) => a - b), beats.join(' ')).toEqual(order);
+    // the sphere's main opens seconds from Gagarin's, either side of it
+    expect(beats.indexOf('vostokMain')).toBeGreaterThan(beats.indexOf('vostokEjection'));
+    expect(beats.indexOf('vostokMain')).toBeLessThan(beats.indexOf('vostokSphereDown'));
+    expect(ending).toBe('splashdown');
+    expect(sim.state.abort?.capsule).toBe('vostok');
+    // the end waits for Gagarin, minutes after the sphere, and a few seconds more
+    const at = (key: string) => sim.events.find((e) => e.key === key)!.t;
+    expect(at('evt.pilotLanding') - at('evt.capsuleLanding')).toBeGreaterThan(60);
+    expect(endT).toBeGreaterThanOrEqual(at('evt.pilotLanding') + 10);
+    expect(endT).toBeLessThan(at('evt.pilotLanding') + 12);
+    // the hour in orbit quickly, the minute before the retro-fire slowly
+    expect([...warps.get('vostokOrbit')!].sort((a, b) => a - b)).toEqual([5, 100]);
+    // the straps and the cables live; Gagarin's minutes under his canopies quickly, his last metres live
+    expect([...warps.get('vostokSeparation')!]).toEqual([1]);
+    expect([...warps.get('vostokPilotDescent')!].sort((a, b) => a - b)).toEqual([1, 5, 20]);
+    expect([...warps.get('vostokLanding')!]).toEqual([1]);
   });
 });
 
@@ -507,5 +644,62 @@ describe('the flown injection, propagated', () => {
     expect(Math.abs(norm(p.rel.r) - APOLLO11.siteRadius - want.alt)).toBeLessThan(300 * 1852);
     expect(Math.abs(p.t - want.t)).toBeLessThan(15 * 60);
     expect(Math.abs(eciToSelenographic(p.rel.r, jd0 + p.t / 86400).lon - want.lon)).toBeLessThan(5);
+  });
+});
+
+describe('Vostok-1 as the flight reports it, point-mass', () => {
+  it('states the orbit it is judged on at insertion, and the air the return flies in under its canopies', { timeout: 300_000 }, () => {
+    const s = watchMissionSettings('vostok1');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    let canopy = 0, worst = 0, windSeen = 0, ground = 0, groundAir = 0;
+    while (!sim.isFailed() && sim.state.t < 8000 && sim.state.status !== 'landed') {
+      sim.step(sim.suggestedDt());
+      const flight = sim.escape.flight, st = sim.state;
+      if (!flight || st.status !== 'abort') continue;
+      // (from the step after the touchdown, whose state still carries the speed it hit the ground at)
+      if (flight.landed) { if (ground++ > 0) groundAir = Math.max(groundAir, st.airspeed); continue; }
+      // under the sphere's main, below 3 km: the Saratov wind is several metres a second there
+      if (!(st.abort?.phase === 'main' && st.abort.main >= 1 && st.altitude < 3000)) continue;
+      canopy++;
+      const air = flight.airVelocity(flight.state, st.t);
+      worst = Math.max(worst, Math.abs(st.airspeed - norm(air)));
+      // the speed over the ground, the Earth's turning (Ω⊕, rad/s) taken out
+      windSeen = Math.max(windSeen, Math.abs(st.airspeed - norm(sub(st.v, cross(v3(0, 0, 7.2921159e-5), st.r)))));
+    }
+    const log = sim.events.map((e) => `${e.t.toFixed(1)}:${e.key}`).join(' ');
+    // C01: one orbit at the cut-off, the extremes it is judged on (168 × 315 km), not the conic of the instant beside
+    // it (168 × 297 km at 63° N)
+    const parking = sim.events.find((e) => e.key === 'evt.parkingOrbit')!, target = sim.events.find((e) => e.key === 'evt.targetOrbit')!;
+    expect(parking.t, log).toBeCloseTo(target.t, 6);
+    expect(parking.params!.ap).toBe(target.params!.ap);
+    expect(parking.params!.pe).toBe(target.params!.pe);
+    expect(Number(parking.params!.ap)).toBeGreaterThan(311);
+    // the airspeed, q and Mach shown are the air the sphere flies in, the wind measured that morning (C01), which
+    // the ground-relative speed is not: metres a second apart under the main
+    expect(canopy, log).toBeGreaterThan(50);
+    expect(worst).toBeLessThan(0.1);
+    expect(windSeen).toBeGreaterThan(1);
+    // and on the steppe, waiting for its pilot, the sphere is in no airstream
+    expect(ground, log).toBeGreaterThan(10);
+    expect(groundAir).toBeLessThan(1e-6);
+  });
+
+  it('is auto-tuned onto its orbit: the over-burn is how the flight was meant to leave it, not a missed insertion', { timeout: 300_000 }, async () => {
+    const { autotune } = await import('../src/physics/autotune');
+    const s = watchMissionSettings('vostok1');
+    const out = autotune({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'),
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    });
+    // every candidate that flew the over-burn into 168 × 314 km passes the insertion screen
+    const overBurnt = out.results.filter((r) => r.loftAltitude === 0 && r.reason !== 'suborbital:evt.outOfPropellant');
+    expect(overBurnt.length).toBeGreaterThan(10);
+    for (const r of overBurnt) expect(r.reason, `${r.kickAngle} ${r.maxTurnRate}`).toBe('ok');
+    expect(out.best?.missionOnTarget, JSON.stringify(out.best?.missionMisses)).toBe(true);
   });
 });

@@ -25,7 +25,7 @@
  * telemetry panel stays live on purpose, since it charts the whole flight.
  */
 import type { Simulation, SimStatus, DescentPhase, Debris, DebrisVisual, Losses } from './simulation';
-import type { AbortState } from './sim/types';
+import type { AbortState, CrewState } from './sim/types';
 import type { RendezvousState } from './sim/rendezvous';
 import type { ApolloState } from './sim/apollo';
 import type { AscentPhase } from './guidance';
@@ -133,6 +133,16 @@ export interface DebrisFrame {
    * the impact must not show the impact coordinates.
    */
   impact?: { lat: number; lon: number };
+  /** C01: a crew member on his own parachutes: how far each canopy is open, and whether he is still in his seat */
+  crew?: CrewState;
+  /**
+   * C01: a body heated by its entry (Vostok-1's instrument module and its
+   * pieces): the heat flux at its stagnation point, W/m², its temperature, K,
+   * whether it is melting away, and what is left of its mass, 0–1
+   */
+  entry?: { heatFlux: number; temperature: number; ablating: boolean; massFraction: number };
+  /** C01: a piece of the body with this id, which broke up */
+  fragmentOf?: number;
 }
 
 /**
@@ -467,6 +477,10 @@ export function captureFrame(sim: Simulation): VisualFrame {
     recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed, target: d.recovery.target, missDistance: d.recovery.missDistance,
       landingBurn: !!d.recovery.landingStarted } : undefined,
     impact: d.impact ? { lat: d.impact.lat, lon: d.impact.lon } : undefined,
+    ...(d.crew ? { crew: { ...d.crew } } : {}),
+    ...(d.entry ? { entry: { heatFlux: d.entry.heatFlux, temperature: d.entry.temperature, ablating: d.entry.ablating,
+      massFraction: d.entry.initialMass > 0 ? Math.max(0, Math.min(1, d.mass / d.entry.initialMass)) : 1 } } : {}),
+    ...(d.fragmentOf !== undefined ? { fragmentOf: d.fragmentOf } : {}),
   }));
   return {
     t: s.t,
@@ -577,6 +591,18 @@ const lerpVec = (a: Vec3, b: Vec3, u: number): Vec3 => ({
 });
 
 /**
+ * A point on the turning ground between `a` and `b`, `u` of the way: turned
+ * about the Earth's axis (+z) through `u` of the angle between them, its
+ * height along z blended (exact for a point carried round with the Earth).
+ */
+function turnWithEarth(a: Vec3, b: Vec3, u: number): Vec3 {
+  const da = Math.atan2(b.y, b.x) - Math.atan2(a.y, a.x);
+  const d = da > Math.PI ? da - 2 * Math.PI : da < -Math.PI ? da + 2 * Math.PI : da;
+  const ra = Math.hypot(a.x, a.y), rb = Math.hypot(b.x, b.y), lon = Math.atan2(a.y, a.x) + d * u, rr = ra + (rb - ra) * u;
+  return { x: rr * Math.cos(lon), y: rr * Math.sin(lon), z: a.z + (b.z - a.z) * u };
+}
+
+/**
  * Deep copy of a frame, down to every sub-object a consumer could write to.
  *
  * The recording is append-only and must stay that way, but nothing in the type
@@ -625,7 +651,23 @@ function blendRendezvous(a: RendezvousState | undefined, b: RendezvousState | un
 
 /** A deep copy of an abort's state. */
 export function cloneAbort(a: AbortState): AbortState {
-  return { ...a, motors: { ...a.motors }, ...(a.rocketLost ? { rocketLost: { r: clone(a.rocketLost.r), t: a.rocketLost.t } } : {}) };
+  return { ...a, motors: { ...a.motors }, ...(a.rocketLost ? { rocketLost: { r: clone(a.rocketLost.r), t: a.rocketLost.t } } : {}),
+    ...(a.tether ? { tether: { sphere: clone(a.tether.sphere), module: clone(a.tether.module) } } : {}) };
+}
+
+/** A deep copy of a debris frame's own sub-objects (its `visual` is shared, immutable data). */
+function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
+  return {
+    ...d,
+    rigid: cloneRigidTelemetry(d.rigid),
+    r: clone(d.r),
+    v: clone(d.v),
+    dir: clone(d.dir),
+    recovery: d.recovery ? { ...d.recovery } : undefined,
+    impact: d.impact ? { ...d.impact } : undefined,
+    ...(d.crew ? { crew: { ...d.crew } } : {}),
+    ...(d.entry ? { entry: { ...d.entry } } : {}),
+  };
 }
 
 export function cloneFrame(f: VisualFrame): VisualFrame {
@@ -643,15 +685,7 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
     losses: { ...f.losses },
     stages: f.stages.map((s) => ({ ...s })),
     boosters: f.boosters.map((b) => ({ ...b })),
-    debris: f.debris.map((d) => ({
-      ...d,
-      rigid: cloneRigidTelemetry(d.rigid),
-      r: clone(d.r),
-      v: clone(d.v),
-      dir: clone(d.dir),
-      recovery: d.recovery ? { ...d.recovery } : undefined,
-      impact: d.impact ? { ...d.impact } : undefined,
-    })),
+    debris: f.debris.map(cloneDebrisFrame),
   };
 }
 
@@ -679,9 +713,26 @@ function blendAbort(a: AbortState | undefined, b: AbortState | undefined, u: num
   if (!a || !b) return cloneAbort((u < 0.5 ? a : b) ?? (a ?? b)!);
   const near = cloneAbort(u < 0.5 ? a : b);
   if (a.body !== b.body) return near;
+  // C01: the retro-rockets (Mercury's, Vostok's TDU-1) blend like the other motors; they were once dropped here,
+  // which put the TDU-1's plume out between stored frames ten seconds apart
+  const retro = a.motors.retro !== undefined || b.motors.retro !== undefined ? { retro: mix(a.motors.retro ?? 0, b.motors.retro ?? 0, u) } : {};
+  const tether = a.tether && b.tether ? { tether: { sphere: lerpVec(a.tether.sphere, b.tether.sphere, u), module: lerpVec(a.tether.module, b.tether.module, u) } } : {};
   return { ...near, drogue: mix(a.drogue, b.drogue, u), main: mix(a.main, b.main, u),
+    ...(a.pilot !== undefined && b.pilot !== undefined ? { pilot: mix(a.pilot, b.pilot, u) } : {}),
+    ...(a.heatFlux !== undefined && b.heatFlux !== undefined ? { heatFlux: mix(a.heatFlux, b.heatFlux, u) } : {}),
+    ...tether,
     motors: { main: mix(a.motors.main, b.motors.main, u), control: mix(a.motors.control, b.motors.control, u),
-      fairing: mix(a.motors.fairing, b.motors.fairing, u), softLanding: mix(a.motors.softLanding, b.motors.softLanding, u) } };
+      fairing: mix(a.motors.fairing, b.motors.fairing, u), softLanding: mix(a.motors.softLanding, b.motors.softLanding, u), ...retro } };
+}
+
+/** C01: a crew member's canopies and an entry's heat between two frames; the discrete flags from the earlier one. */
+function blendDebrisExtras(d: DebrisFrame, o: DebrisFrame, u: number): Pick<DebrisFrame, 'crew' | 'entry'> {
+  const out: Pick<DebrisFrame, 'crew' | 'entry'> = {};
+  if (d.crew) out.crew = o.crew ? { ...d.crew, stabiliser: mix(d.crew.stabiliser, o.crew.stabiliser, u), main: mix(d.crew.main, o.crew.main, u),
+    reserve: mix(d.crew.reserve, o.crew.reserve, u) } : { ...d.crew };
+  if (d.entry) out.entry = o.entry ? { ...d.entry, heatFlux: mix(d.entry.heatFlux, o.entry.heatFlux, u),
+    temperature: mix(d.entry.temperature, o.entry.temperature, u), massFraction: mix(d.entry.massFraction, o.entry.massFraction, u) } : { ...d.entry };
+  return out;
 }
 
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
@@ -727,8 +778,14 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     const other = b.debris.find((x) => x.id === d.id);
     const rec = d.recovery ? { ...d.recovery } : undefined;
     const imp = d.impact ? { ...d.impact } : undefined;
+    if (other && !other.alive && !d.alive && (other.r.x !== d.r.x || other.r.y !== d.r.y || other.r.z !== d.r.z)) {
+      // C01: a body lying on the ground in both frames that the tracker carries round with the Earth (Gagarin,
+      // his seat and his hatch beside the sphere, while the recording takes a frame every 30 s): turned with it
+      // between them, not left where the earlier frame had it in space. One that stays put in both is as it was.
+      return { ...cloneDebrisFrame(d), r: turnWithEarth(d.r, other.r, u) };
+    }
     if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
-      return { ...d, rigid: cloneRigidTelemetry(d.rigid), r: clone(d.r), v: clone(d.v), dir: clone(d.dir), recovery: rec, impact: imp };
+      return cloneDebrisFrame(d);
     }
     const rigid = interpolateRigidTelemetry(d.rigid, other.rigid, u);
     return {
@@ -740,6 +797,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
       recovery: rec,
       impact: imp,
+      ...blendDebrisExtras(d, other, u),
     };
   });
   const rigid = interpolateRigidTelemetry(a.rigid,b.rigid,u);

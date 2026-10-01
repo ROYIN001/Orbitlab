@@ -11,10 +11,11 @@
 import { APOLLO_AT_MOON } from '../physics/sim/apollo';
 import type { VisualFrame } from '../physics/frame';
 import type { DescentPhase, SimEvent } from '../physics/simulation';
-import type { EscapePhase } from '../physics/rigid/escape';
+import { VOSTOK_CAPSULE, type EscapePhase } from '../physics/rigid/escape';
 import { RAD } from '../physics/constants';
 import { t } from '../i18n';
 import { rendezvousBurnName } from './names';
+import { crewAloft, heightNearFlight, vostokLandings } from './watch-logic';
 
 export interface PlannedEvent {
   t: number;
@@ -156,8 +157,15 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       }
       titleKey = 'hud.status.orbit';
       detailKey = frame.payloadSeparated ? 'phase.detail.deployed' : 'phase.detail.orbit';
-      params.ap = fmtAlt(frame.elements.apoapsisAlt);
-      params.pe = fmtAlt(frame.elements.periapsisAlt);
+      {
+        // The orbit the flight was judged on, where that was its lowest and highest heights rather than the
+        // conic of the instant (six-DOF; Vostok-1's `extremes`): the conic at a 63° N insertion reads the
+        // apogee 18 km low and swings by tens of kilometres round the orbit, beside an event log that gives
+        // the judged figures (review of the Vostok-1 work, finding 23)
+        const judged = latestJudgedOrbit(frame, events);
+        params.ap = fmtAlt(judged?.ap ?? frame.elements.apoapsisAlt);
+        params.pe = fmtAlt(judged?.pe ?? frame.elements.periapsisAlt);
+      }
       params.inc = (frame.elements.i * RAD).toFixed(2);
       break;
     case 'descent':
@@ -174,8 +182,31 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       params.alt = (frame.altitude / 1000).toFixed(1);
       params.speed = frame.airspeed.toFixed(0);
       params.g = frame.gLoad.toFixed(1);
+      // C01: Vostok-1 from orbit: the retro-fire, the ten minutes still joined to the instrument module
+      if (frame.abort?.kind === 'return' && frame.abort.capsule === 'vostok' && frame.abort.phase === 'fall') {
+        // from the pressurising command, 2.2 s before the engine lights, to the end of its thrust
+        const a = frame.abort;
+        if ((a.motors.retro ?? 0) > 0 || frame.t - a.t0 < VOSTOK_CAPSULE.retro!.burn) titleKey = 'hud.vostok.retro';
+        else if (frame.abort.joint === 'joined' || frame.abort.joint === 'tethered') titleKey = 'hud.vostok.joined';
+      }
+      // C01: Vostok-1's sphere on the ground while Gagarin is still on his parachutes: his height above the ground
+      if (frame.note === 'vostokSphereDown') {
+        const pilot = crewAloft(frame);
+        titleKey = 'hud.vostok.sphereDown';
+        detailKey = 'phase.detail.vostokSphereDown';
+        params.alt = pilot ? Math.max(0, heightNearFlight(frame, pilot.r)).toFixed(0) : '0';
+      }
       break;
     case 'landed':
+      if (frame.abort?.kind === 'return' && frame.abort.capsule === 'vostok') {
+        // C01: Vostok-1 on the steppe, not in the sea: the sphere and the pilot down, and how far apart
+        const km = vostokLandings(frame, events).pilot?.km ?? null;
+        titleKey = 'hud.vostok.landed';
+        detailKey = km !== null ? 'phase.detail.vostokLanded' : 'phase.detail.vostokSphereLanded';
+        params.km = km !== null ? km.toFixed(2) : '—';
+        params.g = frame.abort.maxG.toFixed(1);
+        break;
+      }
       if (frame.abort) {
         // the crew's descent module, down after an abort — or a capsule home as planned (C01)
         const planned = frame.abort.kind === 'return';
@@ -213,6 +244,17 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
 }
 
 /** A distance for the rendezvous narration: kilometres to 2 decimals from 1 km out, metres inside. */
+/** The apsides, m, of the latest final-orbit verdict at or before the frame, when it gave judged ones. */
+function latestJudgedOrbit(frame: VisualFrame, events: readonly SimEvent[]): { pe: number; ap: number } | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.t > frame.t + 1e-6 || (e.key !== 'evt.targetOrbit' && e.key !== 'evt.offTargetOrbit')) continue;
+    const pe = Number(e.params?.peAltM), ap = Number(e.params?.apAltM);
+    return Number.isFinite(pe) && Number.isFinite(ap) ? { pe, ap } : null;
+  }
+  return null;
+}
+
 export function rendezvousRange(m: number): { range: string; unit: string } {
   return m >= 1000 ? { range: (m / 1000).toFixed(m >= 100e3 ? 0 : 2), unit: t('rv.unit.km') } : { range: m.toFixed(0), unit: t('rv.unit.m') };
 }
@@ -277,6 +319,8 @@ export function eventLabel(key: string, params?: Record<string, string | number>
  * Moon, in lunar orbit, coming down to the Moon or on it.
  */
 export function statusKey(frame: VisualFrame): string {
+  // C01: Vostok-1's planned way home from orbit is flown as the escape's return, and is no launch abort
+  if (frame.status === 'abort' && frame.abort?.kind === 'return' && frame.abort.capsule === 'vostok') return 'hud.status.vostokReturn';
   const ap = frame.apollo;
   if (ap?.phase === 'splashdown') return 'hud.status.splashdown';
   if (ap && frame.status === 'orbit') {

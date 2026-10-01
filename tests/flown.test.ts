@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { compareEvents, recentFlown, simPayloadOrbit, type FlownRecord } from '../src/ui/flown';
 import { fmtDelta, fmtMissionTime } from '../src/ui/flown-view';
-import { WATCH_MISSIONS, historicalFor, isHistorical, watchMissionSettings } from '../src/ui/watch-missions';
+import { WATCH_MISSIONS, historicalFor, isHistorical, watchMissionById, watchMissionSettings } from '../src/ui/watch-missions';
 import type { SimEvent } from '../src/physics/sim/types';
 
 const ev = (t: number, key: string, params?: SimEvent['params']): SimEvent => ({ t, key, severity: 'info', ...(params ? { params } : {}) });
@@ -51,6 +51,21 @@ describe('the real flight beside the model', () => {
     expect(recentFlown(RECORD, EVENTS, 210)?.key).toBe('evt.boosterSep');
     expect(recentFlown(RECORD, EVENTS, 260)).toBeNull();
     expect(recentFlown(RECORD, EVENTS, 722)).toMatchObject({ key: 'evt.stageSep', n: 2 });
+  });
+
+  it('measures each difference from the one real time it shows', () => {
+    // C01: Gagarin down at 10:55 officially (the 108 minutes the narration gives), 10:53 in OKB-1's report (the
+    // end card gives both): the row shows 10:55 and the difference is the model's time less that
+    const vostok = watchMissionById('vostok1')!.flown!;
+    const pilot = (t: number) => compareEvents(vostok, [{ ...ev(t, 'evt.pilotLanding') }]).find((r) => r.key === 'evt.pilotLanding')!;
+    expect(pilot(6629)).toMatchObject({ real: 6480, approx: true, sim: 6629, delta: 149 });
+    expect(pilot(6420).delta).toBe(-60);
+    // and so for every row of every flight: the difference is between the two times beside it
+    for (const m of WATCH_MISSIONS) {
+      if (!m.flown) continue;
+      const events = m.flown.events.map((f, i) => ev(f.t + 7 * (i + 1), f.key));
+      for (const r of compareEvents(m.flown, events)) if (r.sim !== null) expect(r.delta, `${m.id} ${r.key}`).toBeCloseTo(r.sim - r.real, 9);
+    }
   });
 
   it('writes mission times and differences', () => {

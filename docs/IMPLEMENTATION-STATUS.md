@@ -288,7 +288,10 @@ measured node on those days ([PHYSICS.md §13](PHYSICS.md)) — done; (2) Crew D
 Watch's end card, the real events on the telemetry charts, and the dockings timed; and a lone
 first stage's drone-ship reserve sized for its return, found on Demo-2 — done;
 (4) Sputnik 1 and Vostok 1 on the first R-7s (8K71PS, 8K72K), vehicles of historical flights
-kept out of the fleet matrix and held to their own flights — done; (5) Mercury-Redstone 3 from LC-5,
+kept out of the fleet matrix and held to their own flights, and Vostok 1 flown on from its orbit to
+Gagarin on the ground — the TDU-1's retro-fire at its flown time, the instrument module broken up on its
+own, the sphere and Gagarin each down on their own parachutes in the wind measured that morning, the
+sphere within a kilometre of its place in six-DOF, the app's model, and within about 4 km in point-mass as the app steps it ([PHYSICS.md §13.6](PHYSICS.md)) — done; (5) Mercury-Redstone 3 from LC-5,
 the Mercury capsule flown home on its own after a suborbital cut-off (retros, drogue, main,
 splashdown), within 11–16 km of Freedom 7's splashdown in both models, flown from LC-5 itself — done; (6) Apollo 11 on
 Saturn V, the whole mission to the Moon and back, in seven steps: (6a) the Saturn V to the parking

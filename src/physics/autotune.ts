@@ -96,16 +96,33 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
   // candidate worth ranking, whatever happens downstream. `residual` is
   // reported so a near miss is visible instead of being scored as a clean
   // success, and `autotuneToTarget` below flies the survivors to completion.
-  const res = orbitResiduals(sim.plan.target, s.elements);
+  //
+  // C01: what the insertion is held to is what the flight is meant to leave. A
+  // flight whose cut-off command did not pass (`OrbitSpec.backupCutoff`,
+  // Vostok-1) is aimed at the orbit planned (`OrbitSpec.aim`, 168 × 230 km)
+  // and burns on past it by design; `evt.parkingOrbit` comes after the
+  // backup's cut-off, so it is held to the orbit it was flown into, the
+  // mission's own (168 × 314 km). Against the aim every candidate that flew
+  // the over-burn read 'insertion', and only the lofted ones that never
+  // reached the cut-off command, ending at 228 km, passed. And an orbit
+  // measured on its extremes (`OrbitSpec.extremes`) is read on them
+  // (`judgedElements`), not on the conic of the cut-off's instant, 18 km
+  // under the extreme apogee at 63° N. Every other flight: the plan's
+  // insertion orbit and the conic, as before.
+  const overrun = !!sim.cfg.orbit.backupCutoff;
+  const insPe = overrun ? sim.plan.target.perigee : sim.plan.insertionAltitude;
+  const insAp = overrun ? sim.plan.target.apogee : sim.plan.insertionApoapsis;
+  const el = sim.cfg.orbit.extremes && s.status !== 'failed' ? sim.burns.judgedElements(s.elements) : s.elements;
+  const res = orbitResiduals(sim.plan.target, el);
   const planned = orbitResiduals(
     sim.plan.target,
-    { periapsisAlt: sim.plan.insertionAltitude, apoapsisAlt: sim.plan.insertionApoapsis, i: sim.plan.ascentInclination, raan: 0, e: 0 },
+    { periapsisAlt: insPe, apoapsisAlt: insAp, i: sim.plan.ascentInclination, raan: 0, e: 0 },
   );
   // The ascent is judged against the orbit the PLAN asked it to reach, not
   // against the mission's final orbit: a parking orbit is supposed to differ
   // from a geostationary transfer.
-  const insertionOk = Math.abs(s.elements.periapsisAlt - sim.plan.insertionAltitude) < Math.max(20e3, 0.1 * sim.plan.insertionAltitude)
-    && Math.abs(s.elements.apoapsisAlt - sim.plan.insertionApoapsis) < Math.max(30e3, 0.15 * sim.plan.insertionApoapsis);
+  const insertionOk = Math.abs(el.periapsisAlt - insPe) < Math.max(20e3, 0.1 * insPe)
+    && Math.abs(el.apoapsisAlt - insAp) < Math.max(30e3, 0.15 * insAp);
   let reason = reached ? 'ok' : `${s.note}:${lastFail?.key ?? ''}`;
   if (reached && s.maxQ.value > sim.vehicleSpec.maxQ) reason = 'maxQ';
   else if (reached && minAltCL < 80e3) reason = 'dip';

@@ -124,10 +124,12 @@ export function validateRigidCommand(command: RigidCommand): void {
 /**
  * The R-7s flown on Soyuz-2.1a's accepted trim allowance (see
  * `ascentAngleLimit`): Soyuz-2.1a itself and the historical 8K71PS and 8K72K
- * (C01), the same core and strap-ons with the same chambers and verniers.
- * Soyuz-2.1b keeps the 35 % its own results were taken at.
+ * (C01), the same core and strap-ons with the same chambers and verniers —
+ * the lessons' `vostok8k72k` and Vostok-1's own `vostokk`. Soyuz-2.1b keeps
+ * the 35 % its own results were taken at; `r7sputnik` too, for now (its
+ * six-DOF kick was chosen at 35 %).
  */
-const R7_TRIM_SHARE_VEHICLES: ReadonlySet<string> = new Set(['soyuz21a', 'sputnik8k71ps', 'vostok8k72k']);
+const R7_TRIM_SHARE_VEHICLES: ReadonlySet<string> = new Set(['soyuz21a', 'sputnik8k71ps', 'vostok8k72k', 'vostokk']);
 
 export class RigidRuntime {
   command: RigidCommand = { mode: 'auto', rates: v3(), throttle: 1 };

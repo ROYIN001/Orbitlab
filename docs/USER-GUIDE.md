@@ -55,9 +55,12 @@ from it. The flight itself carries on in Launch.
   only with the flight's wind, and passing the speed of sound can wear a cloud of condensation
   round the fairing in humid air. The camera cuts to a stage flying home for its entry and
   landing and comes back to the rocket afterwards; **Follow the booster** / **Follow the
-  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship is
-  down in the water, a card offers to keep watching, watch again, pick another launch, or plan a
-  mission of your own.
+  rocket** takes it there or back at any time. On Vostok-1, once Gagarin has ejected, the camera
+  stays on the sphere to its landing and then goes to him; **Follow Gagarin** / **Follow the
+  capsule** switches between them at any time. When the rocket reaches orbit, or the flight is
+  home — the ship down in the water, the crew on the ground; for Vostok-1, Gagarin on the steppe,
+  with where and when the sphere and he each came down — a card offers to keep watching, watch
+  again, pick another launch, or plan a mission of your own.
 - **Explore** — the mission builder below, lighter: the same simulation and the same
   physics as Engineer, with the settings an engineer tunes computed and shown instead of
   asked for (see **Explore** below).
@@ -1662,6 +1665,21 @@ it gives the flown times. The model lights the descent
 45 s before Eagle did and lifts off 43 s earlier, both for the same reason — its orbit keeps its shape
 where the real one was pulled about by the Moon's uneven gravity — and from each keeps the flown timeline
 to a few minutes.
+
+Vostok 1 does not stop in orbit. Its 168 × 314 km orbit is higher than planned, as Gagarin's was:
+the radio command to shut the core down never got through, so the core stopped late on a backup
+and Blok E burned on too long. Watch follows him once round the Earth. Over Africa at 10:25 Moscow
+time the ship is turned for braking and the TDU-1 engine fires for about 40 seconds; its fuel runs
+out a second early, the command to separate never comes, and the sphere and the instrument module
+fall together, tumbling, for ten minutes until heat sensors on the hull fire the straps at 10:36.
+The instrument module glows and breaks apart beside the sphere, which falls into the air like a
+cannonball at up to 9 g. Seven kilometres up the hatch blows off and Gagarin ejects on his seat;
+the empty sphere lands on its own parachutes at 10:48, and while it lies on the steppe the phase line
+under the clock counts down Gagarin's height as he follows under two canopies, drifting east in the
+wind measured that morning at Saratov. The card names both landings. Three of the real flight's
+figures the model cannot match: the ejection at 10:42, and Gagarin down by 10:55 and 1.5 km from the
+sphere. In the model he ejects at 10:44 and lands at 10:57, 5.5 km away; [PHYSICS.md
+§13.6](PHYSICS.md) says why.
 
 Mercury-Redstone 3 never went into orbit: the Redstone burns for two and a half minutes and
 throws Freedom 7 on a 15-minute arc, 187 km up and 487 km down range. Ten seconds after the

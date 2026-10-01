@@ -224,12 +224,48 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // Vostok 1, 12 April 1961, from Site 1/5: Yuri Gagarin, once round the
   // Earth, 168 × 314 km at 64.95° (GCAT; 181 × 327 km in the older figures).
   // Strap-ons T+119 s, shroud T+156 s, Blok A off and Blok E lit T+300 s,
-  // Blok E off T+676 s (ESA).
+  // Blok E off T+676 s, the spacecraft off ten seconds later (ESA). The orbit
+  // planned was 168 × 230 km (Baturin 2021; Kommersant gives 180 × 235): the
+  // radio command to shut the core down did not pass, the backup time mark
+  // stopped the core 22.0 m/s fast and Blok E ran 2.4 s long, 25.43 m/s in
+  // all (`aim`, `backupCutoff`; docs/PHYSICS.md §13.6). Both orbits are the
+  // least and greatest heights the reports give
+  // (`extremes`): GCAT's are 181 × 327 km "from the Earth's surface" (OKB-1's
+  // report; the FAI record file) less 13 km, over a 6,378 km radius, and its
+  // period, 89.34 min, is the one those extremes fly under J2 (OKB-1: 89.44 min
+  // on a 6,371 km Earth). Home: the TDU-1's pressurising command at 10:25:04.2 Moscow time,
+  // T+4,684.2 s (OKB-1's preliminary report of 3 May 1961; Baturin, Novaya
+  // Gazeta 2021), and the descent flown from there (`VOSTOK_CAPSULE`,
+  // src/physics/rigid/escape.ts; docs/PHYSICS.md §13.6), in the wind Saratov
+  // measured that morning (`SARATOV_1961_04_12`, src/data/measured-winds.ts).
   { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok1', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
-    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free' }, launchTime: '1961-04-12T06:07:00Z',
+    // The plane: the one through the pad at liftoff, 09:06:59.7 Moscow time (06:06:59.7 UTC), at 64.95°, held
+    // fixed in space by Vostok-K's guidance (`targetPlane`, src/data/vehicles.ts). The pad as it really lies:
+    // Gagarin's Start's 45.920° N is geodetic, 45.728° geocentric on WGS-84 (the app places every site's
+    // latitude as geocentric, which would put it 21 km north); with 63.342° E and GMST 291.957° at liftoff
+    // (`gmst`), the northbound node is 326.653° from the equinox of date (`raanFromLaunch`;
+    // tests/historical-vehicles.test.ts recomputes it). The rocket itself still lifts off from the site as the
+    // app places it and is steered the 13 km across onto that plane. Left free, the closed loop re-aims its
+    // plane through wherever the rocket has got to: the node drifted 0.8° east during the climb, and the
+    // sphere came down 28–32 km across the track from its place (docs/PHYSICS.md §13.6).
+    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'fixed', raan: 326.653, deorbit: { time: 4684.2, wind: 'saratov-1961-04-12' },
+      aim: { apogee: 230e3 }, backupCutoff: { dv: 25.43 }, extremes: true }, launchTime: '1961-04-12T06:07:00Z',
     flown: { events: [
-      { key: 'evt.boosterSep', t: 119 }, { key: 'evt.fairingSep', t: 156 }, { key: 'evt.meco', t: 300 },
-      { key: 'evt.seco', t: 676 },
+      // the core's cut-off is quoted rounded (Zak gives 299 s; on the December 1960 flight its command was due at
+      // T+308–309 s); the spacecraft's separation is ESA's "ten seconds later"
+      { key: 'evt.boosterSep', t: 119 }, { key: 'evt.fairingSep', t: 156 }, { key: 'evt.meco', t: 300, approx: true },
+      { key: 'evt.seco', t: 676 }, { key: 'evt.payloadSep', t: 686, approx: true },
+      // the TDU-1's launch command, its fuel out and the timer's cut-off, to a tenth of a second (OKB-1's report;
+      // Lisov and Afanasyev; Baturin); the straps over the Mediterranean at 10:36, the cables a few seconds on
+      // (Siddiqi 2015), the ejection at 10:42 and the sphere on the ground at 10:48, each to the minute (the
+      // report; Zak, RussianSpaceWeb)
+      { key: 'evt.tduFire', t: 4686.4 }, { key: 'evt.retroShortfall', t: 4726.4 }, { key: 'evt.retroCutoff', t: 4728.2 },
+      { key: 'evt.vostokStraps', t: 5340, approx: true }, { key: 'evt.vostokSeparation', t: 5344, approx: true },
+      { key: 'evt.ejection', t: 5700, approx: true }, { key: 'evt.capsuleLanding', t: 6060, approx: true },
+      // Gagarin on the ground at 10:55 (the 108 minutes) officially, the time the narration gives and the one
+      // the difference is measured from; 10:53 by OKB-1's preliminary report, which the end card gives beside
+      // it (`watch.end.vostokFact`)
+      { key: 'evt.pilotLanding', t: 6480, approx: true },
     ], orbit: { perigee: 168, apogee: 314, inclination: 64.95 } },
     titleKey: 'watch.mission.vostok1', blurbKey: 'watch.mission.vostok1Blurb', payloadKey: 'watch.payload.vostok1' },
   // Mercury-Redstone 3, 5 May 1961: Alan Shepard in Freedom 7, lobbed from

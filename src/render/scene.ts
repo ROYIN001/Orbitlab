@@ -183,6 +183,8 @@ const ATMO_FRAG = /* glsl */ `
 const FOG_OFF_NEAR = 1e9;
 const FOG_OFF_FAR = 2e9;
 
+/** The key light's shadow biases at the pad (`SceneManager.setShadowFocus`). */
+const SHADOW_BIAS = { depth: -0.0008, normal: 0.6 };
 /** Full-sun intensity of the key light (outside the Earth's shadow). */
 const SUN_INTENSITY = 3.3;
 
@@ -377,8 +379,8 @@ export class SceneManager {
     this.sun = new THREE.DirectionalLight(0xfff4e0, SUN_INTENSITY);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
-    this.sun.shadow.bias = -0.0008;
-    this.sun.shadow.normalBias = 0.6;
+    this.sun.shadow.bias = SHADOW_BIAS.depth;
+    this.sun.shadow.normalBias = SHADOW_BIAS.normal;
     this.scene.add(this.sun);
     this.scene.add(this.sun.target);
     // Fill light is near-neutral: a saturated blue ambient at this strength
@@ -714,11 +716,18 @@ export class SceneManager {
   /**
    * Restrict the shadow map to a small region (the pad) so a 2048² map still
    * produces crisp shadows at a site that is 6000 km from the scene origin.
+   *
+   * @param bias the shadow's depth bias (of the shadow camera's 0–1 depth) and
+   *        normal bias (m), when not the pad's: its -0.0008 is 3.5 m or more of
+   *        the 4.4 km or more the shadow camera spans, which a tower's shadow
+   *        does not notice and a man's 1.8 m does (C01: Vostok-1 on the steppe)
    */
-  setShadowFocus(pos: THREE.Vector3, radius: number, enabled: boolean): void {
+  setShadowFocus(pos: THREE.Vector3, radius: number, enabled: boolean, bias: { depth: number; normal: number } = SHADOW_BIAS): void {
     this.shadowPos.copy(pos);
     this.shadowRadius = radius;
     this.shadowOn = enabled;
+    this.sun.shadow.bias = bias.depth;
+    this.sun.shadow.normalBias = bias.normal;
   }
 
   /**

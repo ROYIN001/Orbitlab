@@ -12,10 +12,20 @@
  *
  * - prelaunch / ascent / orbital burn: every simulation step, capped at 10 Hz
  *   (steps drop to 0.02 s near cut-off and a 50 Hz recording of the last
- *   seconds of a Soyuz ascent buys nothing a 10 Hz one does not).
+ *   seconds of a Soyuz ascent buys nothing a 10 Hz one does not). C01: a
+ *   flight that goes on to its return from orbit (`OrbitSpec.deorbit`,
+ *   Vostok-1) records its powered flight above 140 km every second
+ *   (`RETURNING_VACUUM_INTERVAL`).
  * - atmospheric coast (below 140 km): every 2 s.
+ * - a return from orbit with its module and its pilot's own descent (C01:
+ *   Vostok-1, `vostokInterval`): every second through the retro-fire, every
+ *   2 s while the pair spins above 100 km, four times a second through the
+ *   entry to 20 km, twice a second from there until the sphere's main
+ *   parachute is open, every second under it, and every 5 s while the sphere
+ *   waits on the ground for the pilot.
  * - orbital coast: every 10 s while a burn is less than two minutes away,
- *   every 30 s otherwise.
+ *   every 30 s otherwise; every second in the last ten before a return's
+ *   retro sequence (C01).
  * - always the frame on both sides of any step that emitted an event, so every
  *   event time is the timestamp of a stored frame (see `advance`).
  *
@@ -28,11 +38,14 @@
  * now adds the separately measured rigid telemetry maps. Packed rotation storage
  * is counted separately. These estimates exclude browser/render/simulation heap;
  * `maxFrames` bounds ordinary frames, not protected events.
- * On overflow the *coast* frames are thinned first and ascent frames only if
- * there is no coast left to give, because what a user scrubs back to is
- * liftoff, max Q and staging, not the 143rd minute of a parking orbit. Event
- * frames are never thinned at all, so seeking to a callout is exact however
- * hard the recording has been squeezed.
+ * On overflow the *coast* frames are thinned first, down to one a minute
+ * (`MAX_THINNED_GAP`); then the dense flight to a frame a second
+ * (`DENSE_THINNED_GAP`); then the coast below a frame a minute, because what a
+ * user scrubs back to is liftoff, max Q and staging, not the 143rd minute of a
+ * parking orbit; only when the coast has nothing left to give, any frame whose
+ * going leaves no gap over a minute and no phase without its last frame; and
+ * only then without that floor. Event frames are never thinned at all, so
+ * seeking to a callout is exact however hard the recording has been squeezed.
  *
  * Live stepping (roadmap T02; owner decision 2, 2026-09-29): a point-mass flight
  * is flown in the whole steps `Simulation.suggestedDt` asks for, never in steps
@@ -64,11 +77,66 @@ import { AttitudeTrack, type AttitudeWindow } from './attitude-track';
 const RETRO_EVENT_WINDOW_S = 30;
 import { quatRotate } from '../physics/rigid/math';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
+import type { AbortState } from '../physics/sim/types';
 
 /** Altitude below which a coast is still an atmospheric one, m. */
 const ATMOSPHERIC_CEILING = 140e3;
 /** Fastest recording rate in mission time, s. */
 const DENSE_INTERVAL = 0.1;
+/**
+ * C01: the cadence, s, of the powered flight above 140 km of a flight that
+ * goes on to its return from orbit (`OrbitSpec.deorbit`, Vostok-1), where in
+ * vacuum nothing changes but the steering: some 490 frames for Blok E's burn
+ * where 0.1 s took 4,900, which in six-DOF, each frame carrying the spent
+ * strap-ons and core as rigid bodies (23 kB), were 115 MB of the recording
+ * before the return's own 2,100 frames. Staging and the cut-off are event
+ * frames, kept to the step whatever the cadence.
+ */
+const RETURNING_VACUUM_INTERVAL = 1;
+/**
+ * The widest gap between stored frames that thinning a coast or an orbit may
+ * open, s (`FlightRecorder.thin`): a minute, 3.6° of a low orbit, whose chord
+ * passes 3 km inside the arc. Rigid frames are blended in straight lines, and
+ * the six-DOF Vostok-1 recording, thinned ten times when its return had not
+ * been fitted in, kept 13 frames of its orbit: 55 minutes between two, which
+ * replayed the spacecraft held still, and a trail through the Earth.
+ */
+const MAX_THINNED_GAP = 60;
+/**
+ * The widest gap thinning the powered flight and the entry may open before
+ * the coast gives up its last minute-a-frame, s: a frame a second still
+ * scrubs through liftoff, max Q and every staging (their own frames are
+ * event frames, never thinned), where the flight's 0.1 s cadence is there
+ * for the live view.
+ */
+const DENSE_THINNED_GAP = 1;
+
+/**
+ * C01: the cadence of a return from orbit with its instrument module on
+ * (Vostok-1, `AbortState.joint`), s. Every second through the TDU-1's burn;
+ * every 2 s above 100 km, where the pair spins at 30°/s (60° a frame, which
+ * an attitude blend still turns the right way), the straps and the cables
+ * part (event frames, kept to the step) and the heating is still a
+ * twentieth of its peak; four times a second through the entry, the
+ * module's break-up at 78 km and the peak of the deceleration, to 20 km (the
+ * rate the rotation tracks themselves keep at the least, `AttitudeTrack`);
+ * twice a second through the subsonic fall, the hatch, the ejection (event
+ * frames) and the sphere's parachutes opening; every second under its main;
+ * and every 5 s while it lies on the ground waiting for its pilot, who comes
+ * down at 5 m/s under a canopy long open. About 2,100 frames from the
+ * retro-fire to Gagarin on the ground, where 0.1 s below 140 km and on to his
+ * landing would be some 13,000, and this flight's first cadence (0.2 s from
+ * 140 km to the main, a second on the ground) took 3,900: in six-DOF, at
+ * 25–28 kB a frame, the most of a recording that ran past its ceiling ten
+ * times.
+ */
+export function vostokInterval(a: AbortState, altitude: number): number {
+  if ((a.motors.retro ?? 0) > 0) return 1;
+  if (a.phase === 'landed') return 5;
+  if (a.phase === 'main' && a.main >= 1) return 1;
+  if (altitude >= 100e3) return 2;
+  return altitude >= 20e3 ? 0.25 : 0.5;
+}
 
 /**
  * Retained heap of one stored frame, bytes, fitted to a measurement rather than
@@ -145,7 +213,14 @@ function frameBytes(frame: VisualFrame): number {
 const DEFAULT_MAX_FRAMES = 12000;
 /** About 101 MB at the largest measured reference shape, before rotation tracks
  * and other application memory. Event boundaries survive compaction; dense
- * rotation history is independent of this ordinary visual-frame ceiling. */
+ * rotation history is independent of this ordinary visual-frame ceiling.
+ * C01: Vostok-1 to Gagarin on the ground, the longest six-DOF recording and
+ * the heaviest shape (the spent stages, then the return's sphere, module
+ * pieces, hatch, seat and pilot: 23–28 kB a frame), stays under it untouched
+ * (`RETURNING_VACUUM_INTERVAL`, `vostokInterval`): 4,726 frames, 98.8 MB
+ * estimated, 7.6 MB of rotation tracks besides, no thinning, where its first
+ * cadence ran past the ceiling ten times and peaked at 140 MB
+ * (tests/heavy/vostok1-recording.test.ts). */
 const RIGID_MAX_FRAMES = 6000;
 
 export interface RecorderStats {
@@ -414,10 +489,13 @@ export class FlightRecorder implements RecordingSource {
    * loose fields rather than a frame so the live step loop can ask the question
    * without paying for a snapshot it may not keep.
    */
-  private interval(status: SimStatus, t: number, altitude: number, nextBurnTime: number, range = Infinity, burning = false): number {
+  private interval(status: SimStatus, t: number, altitude: number, nextBurnTime: number, range = Infinity, burning = false, abort?: AbortState): number {
+    // C01: a return from orbit to come (Vostok-1), and when its retro sequence starts
+    const deorbit = this.sim?.cfg.orbit.deorbit?.time;
     switch (status) {
-      case 'prelaunch':
       case 'ascent':
+        return deorbit !== undefined && altitude >= ATMOSPHERIC_CEILING ? RETURNING_VACUUM_INTERVAL : DENSE_INTERVAL;
+      case 'prelaunch':
       case 'burn':
       case 'failed':
         return DENSE_INTERVAL;
@@ -429,6 +507,8 @@ export class FlightRecorder implements RecordingSource {
         if (range < 30e3) return 5;
         return nextBurnTime > t && nextBurnTime - t < 120 ? 5 : 30;
       case 'abort':
+        // C01: a return from orbit that leaves its module and its pilot (Vostok-1)
+        if (abort?.joint !== undefined) return vostokInterval(abort, altitude);
         // An escape: dense in the air, sparse on a ballistic arc above it.
         return altitude < ATMOSPHERIC_CEILING ? DENSE_INTERVAL : 10;
       case 'coast':
@@ -438,6 +518,12 @@ export class FlightRecorder implements RecordingSource {
         // C01: Apollo flies its own burns in orbit, the injection for the Moon and the service engine's
         // (more than a kilonewton: not the S-IVB's hydrogen vent, a hundred newtons for hours)
         if (burning) return 1;
+        // C01: Vostok's retro sequence is a burn to come too; and the last orbit frame before it is the one a
+        // replay holds across the change to the returning spacecraft, so it is a second (or the orbit's step) before it
+        if (deorbit !== undefined && deorbit > t) {
+          if (deorbit - t <= 10) return 1;
+          if (deorbit - t < 120) return 10;
+        }
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
       case 'descent':
         // A returning ship: sparse on its coast above the air, dense from the entry on.
@@ -448,7 +534,7 @@ export class FlightRecorder implements RecordingSource {
   }
 
   private intervalOf(f: VisualFrame): number {
-    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn' || (f.status === 'orbit' && f.thrust > 1e3));
+    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn' || (f.status === 'orbit' && f.thrust > 1e3), f.abort);
   }
 
   /**
@@ -643,7 +729,7 @@ export class FlightRecorder implements RecordingSource {
     else if (!transitioned && preIsHead && fired) this.store(pre, true);
     const s = sim.state;
     const headNow = this.last;
-    const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn' || (s.status === 'orbit' && s.thrust > 1e3)) - 1e-9;
+    const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn' || (s.status === 'orbit' && s.thrust > 1e3), s.abort) - 1e-9;
     if (dueAfter || fired) this.store(captureFrame(sim), fired);
     if (fired) this.pullEvents();
     return used;
@@ -742,15 +828,30 @@ export class FlightRecorder implements RecordingSource {
    * where every frame is an event frame.
    */
   private decimate(): void {
-    if (this.thin((f) => (f.status === 'coast' || f.status === 'orbit') && !this.keep.has(f))) return;
+    // The coast and the orbit first, to a frame a minute; then the dense flight, but only to a frame a second,
+    // which still shows liftoff, max Q and staging as they happened; then the coast below a frame a minute (a
+    // long parking orbit or a coast to the Moon is where the frames are); then anything that leaves no gap over
+    // a minute; and only then anything at all, so the ceiling stays a bound
+    const coasting = (f: VisualFrame) => (f.status === 'coast' || f.status === 'orbit') && !this.keep.has(f);
+    if (this.thin(coasting, MAX_THINNED_GAP)) return;
+    if (this.thin((f) => !coasting(f) && !this.keep.has(f), DENSE_THINNED_GAP)) return;
+    if (this.thin(coasting)) return;
+    if (this.thin((f) => !this.keep.has(f), MAX_THINNED_GAP)) return;
     if (this.thin((f) => !this.keep.has(f))) return;
     // Every frame is an event boundary: raise the ceiling rather than spin on
     // every push. Needs ~12 000 events in one mission to happen.
     this.maxFrames = Math.ceil(this.maxFrames * 1.5);
   }
 
-  /** Drop every other frame matching `thinnable`; true when anything went. */
-  private thin(thinnable: (f: VisualFrame) => boolean): boolean {
+  /**
+   * Drop every other frame matching `thinnable`; true when anything went.
+   * With a `gap`, s, a frame goes only if the frames either side of it, as
+   * kept, are no further apart than that, and the last frame of a phase
+   * (the next one's status another) stays: a replay holds a rigid frame
+   * across a change of configuration (`interpolateFrames`), so the frame
+   * before the change is the one it holds.
+   */
+  private thin(thinnable: (f: VisualFrame) => boolean, gap = Infinity): boolean {
     const kept: VisualFrame[] = [];
     let dropped = 0;
     const last = this.stored.length - 1;
@@ -764,7 +865,9 @@ export class FlightRecorder implements RecordingSource {
       // *candidates* go rather than alternate indices — a run of protected
       // frames in the middle no longer flips which half of the coast survives.
       if (i > 0 && i < last && f.t < recent && thinnable(f)) {
-        if (seen++ % 2 === 1) { dropped++; continue; }
+        const next = this.stored[i + 1];
+        const spared = gap !== Infinity && (next.t - kept[kept.length - 1].t > gap || next.status !== f.status);
+        if (seen++ % 2 === 1 && !spared) { dropped++; continue; }
       }
       kept.push(f);
     }
