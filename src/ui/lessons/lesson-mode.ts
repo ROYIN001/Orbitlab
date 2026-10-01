@@ -70,6 +70,7 @@ import type { Worksheet } from '../../worksheets/types';
 import type { LessonToolsHost } from '../../lessons/mcp-tools';
 import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
+import { keepUnits } from '../keep-units';
 import { PanelLocks } from './locks';
 // T01/T02: small, and on the page that is open anyway (a lazy chunk of them split the dictionaries off the main one)
 import { renderAuthor } from './author-view';
@@ -902,8 +903,9 @@ export class LessonMode implements LessonToolsHost {
     head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: group })),
       el('h2', undefined, localText(lesson.title)));
     if (item?.curriculum.length) head.append(this.codeChips(item.curriculum));
-    head.append(el('p', 'lesson-brief', localText(lesson.brief)));
-    for (let i = 0; i < hints; i++) head.append(el('p', 'lesson-hint', `💡 ${localText(lesson.hints[i])}`));
+    // W: a lesson's own figures stay with their units on a phone (a pack's "3.5 m²", a debrief's "5 400 times")
+    head.append(el('p', 'lesson-brief', keepUnits(localText(lesson.brief))));
+    for (let i = 0; i < hints; i++) head.append(el('p', 'lesson-hint', `💡 ${keepUnits(localText(lesson.hints[i]))}`));
     return head;
   }
 
@@ -992,7 +994,7 @@ export class LessonMode implements LessonToolsHost {
     }
     if (flown && g?.final && (g.verdict === 'pass' || g.verdict === 'passedWithHelp')) {
       status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
-      if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+      if (lesson.debrief) status.append(el('p', 'lesson-debrief', keepUnits(localText(lesson.debrief))));
     } else if (flown && g?.final && g.verdict === 'fail') {
       const onlyAnswers = !g.lockBroken.length && g.criteria.every((cg) => cg.state !== 'fail' || lesson.criteria.find((c) => c.id === cg.id)?.kind === 'answer');
       const key = g.criteria.some((cg) => cg.revealed) ? 'lesson.strip.revealed' : onlyAnswers ? 'lesson.strip.answersWrong' : 'lesson.strip.fail';
@@ -1043,7 +1045,7 @@ export class LessonMode implements LessonToolsHost {
       status.append(this.caseData(c, c.sheet), this.caseForm(a, lesson, c.sheet, g));
       if (g.verdict === 'pass' || g.verdict === 'passedWithHelp') {
         status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
-        if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+        if (lesson.debrief) status.append(el('p', 'lesson-debrief', keepUnits(localText(lesson.debrief))));
       } else if (g.verdict === 'fail') {
         status.append(el('p', 'lesson-note fail', t(g.criteria.some((x) => x.revealed) ? 'lesson.strip.revealed' : 'lesson.strip.answersWrong')));
       }
@@ -1152,7 +1154,7 @@ export class LessonMode implements LessonToolsHost {
     if (shown && !stale) {
       if (g.verdict === 'pass' || g.verdict === 'passedWithHelp') {
         status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
-        if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+        if (lesson.debrief) status.append(el('p', 'lesson-debrief', keepUnits(localText(lesson.debrief))));
       } else if (g.verdict === 'fail') {
         const onlyAnswers = !g.lockBroken.length && g.criteria.every((cg) => cg.state !== 'fail' || lesson.criteria.find((c) => c.id === cg.id)?.kind === 'answer');
         status.append(el('p', 'lesson-note fail', t(g.criteria.some((cg) => cg.revealed) ? 'lesson.strip.revealed' : onlyAnswers ? 'lesson.strip.answersWrong' : 'lesson.design.strip.fail')));

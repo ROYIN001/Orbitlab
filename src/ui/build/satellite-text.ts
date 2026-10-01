@@ -14,6 +14,7 @@ import { RAD } from '../../physics/constants';
 import type { Fig, FieldUnit, SatLevel, SatText, SatValue } from '../../design/satellite-model';
 import { el, hhmm, num, sci } from '../orbit/dom';
 import { unbroken } from './figures';
+import { keepUnits } from '../keep-units';
 
 /** A distance, m, in m or km with the decimals its size needs. */
 function distance(v: number): string {
@@ -111,17 +112,8 @@ export function fieldUnitText(u: FieldUnit): string {
   }
 }
 
-/**
- * A sentence's numbers kept with their units on a narrow screen (task W,
- * Phase 4's last check: on a 375 px phone the Russian notes read
- * "потоке 1361 | Вт/м²" and "0,0189 м²/ | кг"). A number the sentence
- * itself writes was free to end a line, and a unit with a slash broke after
- * the slash. So the space after a digit becomes a no-break space, and a
- * slash between two letters takes a word joiner (U+2060), which nothing
- * shows. Both leave the text as it reads and as it copies.
- */
-export const keepUnits = (s: string): string =>
-  s.replace(/(\d) (?=\S)/g, '$1 ').replace(/(?<=[^\s\d/])\/(?=[^\s\d/])/g, '/⁠');
+/** Numbers kept with their units (task W); shared with the lesson strip, so in src/ui/keep-units.ts. */
+export { keepUnits };
 
 const sayValue = (v: SatValue): string => (typeof v === 'string' ? v : 'key' in v ? t(v.key) : sayFig(v));
 

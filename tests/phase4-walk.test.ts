@@ -14,10 +14,17 @@
  *   letters ("м²/кг", "W/m²", "Мбит/с") carries a word joiner, so no line
  *   ends after it. A slash between digits (a repeat cycle "15/1") and every
  *   other space are left as they are.
+ * - The lesson strip keeps a lesson's own figures with their units the same
+ *   way: in pack lesson 13.4 (ipst-p-solar-power) the brief's "3.5 m²" and
+ *   the debrief's "5 400 times" no longer part at a line's end, and no digit
+ *   in its brief, hints or debrief is followed by a breaking space. The
+ *   designer's sentences and the strip use the same function.
  */
 import { describe, expect, it } from 'vitest';
 import { setLang, t, tCount } from '../src/i18n';
 import { keepUnits } from '../src/ui/build/satellite-text';
+import { keepUnits as stripKeepUnits } from '../src/ui/keep-units';
+import PHYSICS_PACK from '../public/lessons/packs/ipst-physics.orbitlab-lesson.json?raw';
 
 const NBSP = ' ';
 const say = (s: string): string => s.split(NBSP).join(' ');
@@ -55,5 +62,26 @@ describe('the satellite designer\'s sentences keep numbers with their units (W)'
     // the expected string was mistyped at the first run (it left "F10.7 140" with a plain space, against the rule above); corrected after it
     expect(keepUnits('the 15/1 orbit, F10.7 140, Ap 15')).toBe(`the 15/1${NBSP}orbit, F10.7${NBSP}140, Ap 15`);
     expect(keepUnits('no numbers here / at all')).toBe('no numbers here / at all');
+  });
+});
+
+describe('the lesson strip keeps a lesson\'s figures with their units (W)', () => {
+  const pack = JSON.parse(PHYSICS_PACK) as {
+    lessons: { id: string; brief: Record<string, string>; debrief: Record<string, string>; hints: Record<string, string>[] }[];
+  };
+  const lesson = pack.lessons.find((l) => l.id === 'ipst-p-solar-power')!;
+  it('is the designer\'s rule, from the module the strip imports', () => {
+    expect(stripKeepUnits).toBe(keepUnits);
+  });
+  it('binds 13.4\'s "3.5 m²" and "5 400 times", in every language, and leaves no digit before a breaking space', () => {
+    expect(keepUnits(lesson.brief.en)).toContain(`3.5${NBSP}m²`);
+    expect(keepUnits(lesson.debrief.en)).toContain(`5${NBSP}400${NBSP}times`);
+    for (const lang of ['en', 'ru', 'th']) {
+      for (const text of [lesson.brief[lang], lesson.debrief[lang], ...lesson.hints.map((h) => h[lang])]) {
+        expect(text).toBeTruthy();
+        expect(keepUnits(text)).not.toMatch(/\d /);
+        expect(say(keepUnits(text)).replace(/\u2060/g, '')).toBe(text);
+      }
+    }
   });
 });
