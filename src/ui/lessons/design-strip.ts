@@ -7,9 +7,10 @@
 import { t } from '../../i18n';
 import { SATELLITE_FIELDS } from '../../design/satellite-model';
 import type { MissionRequirements } from '../../design/requirements';
+import { DESIGN_WINDOW_DAYS } from '../../design/design-lesson-key';
 import { STATION_KEY } from '../orbit/applications-panel';
 import { localText } from '../../lessons/text';
-import type { CriterionGrade, DesignCriterion, DesignKey } from '../../lessons/types';
+import type { CriterionGrade, DesignCriterion, DesignKey, DesignMeasureId } from '../../lessons/types';
 import { boundDigits, designMeasureName, designNumber, designUnitText, designValueText } from './design-text';
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
@@ -51,15 +52,31 @@ export function designBoundText(c: DesignCriterion): string {
   return `≥ ${n(c.min ?? 0)}${unit}`;
 }
 
+/**
+ * Why a checked design has no figure for a measure, in words — a "—" beside
+ * a cross says nothing: no camera; a view past the horizon, so no swath;
+ * the requirements' place not seen once in the window; outside the low
+ * region the 25-year rule is for; no wheel with this attitude control.
+ */
+export function notApplicableText(m: DesignMeasureId, key: DesignKey): string {
+  const has = (x: DesignMeasureId): boolean => typeof key.values[x] === 'number';
+  if (m === 'sat.gsd' || ((m === 'sat.swath' || m === 'sat.revisitMax') && !has('sat.gsd'))) return t('lesson.design.na.noCamera');
+  if (m === 'sat.swath' || (m === 'sat.revisitMax' && !has('sat.swath'))) return t('lesson.design.na.horizon');
+  if (m === 'sat.revisitMax') return t('lesson.design.na.notSeen', { days: DESIGN_WINDOW_DAYS });
+  if (m === 'sat.disposal25y') return t('lesson.design.na.notLow');
+  if (m === 'sat.wheelMargin') return t('lesson.design.na.noWheel');
+  return '—';
+}
+
 /** One criterion as a chip: its name, its bound, the design's figure once checked, and its mark. */
 export function designChip(c: DesignCriterion, g: CriterionGrade | undefined, key: DesignKey | null, stale: boolean): HTMLElement {
   const state = g && !stale ? g.state : 'pending';
   const chip = el('div', `lesson-crit ${state}${stale && g ? ' stale' : ''}`);
   chip.dataset.criterion = c.id;
   chip.append(el('span', 'lesson-crit-name', designCriterionName(c)));
-  const value = g && key ? designValueText(c.measure, g.value, {
+  const value = !g || !key ? '' : g.value === null && !key.refused ? notApplicableText(c.measure, key) : designValueText(c.measure, g.value, {
     capped: c.measure === 'sat.lifetime' && key.lifetimeCapped, ...(typeof g.value === 'number' ? { digits: boundDigits(c, g.value) } : {}),
-  }) : '';
+  });
   const mark = state === 'pass' ? '✓' : state === 'fail' ? '✗' : t('lesson.crit.pending');
   chip.append(el('span', 'lesson-crit-value', [designBoundText(c), value, mark].filter(Boolean).join(' · ')));
   return chip;

@@ -21,7 +21,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEG } from '../src/physics/constants';
 import {
-  SATELLITE_FIELDS, designDateJd, designFigures, designFromTemplate, designHandoff, withChoice, withSso, withValue,
+  SATELLITE_FIELDS, designDateJd, designFigures, designFromTemplate, designHandoff, withCamera, withChoice, withSso, withValue,
 } from '../src/design/satellite-model';
 import { lifetimeSpacecraft } from '../src/design/satellite-area';
 import { designOrbit } from '../src/design/satellite-handoff';
@@ -40,6 +40,7 @@ import {
 import { isDesignDate, lessonFileText, lessonFileVersion, parseLessonFile, readDesignLesson, type FileIssue } from '../src/lessons/lesson-file';
 import { designRecord } from '../src/lessons/progress';
 import { boundDigits, designValueText } from '../src/ui/lessons/design-text';
+import { notApplicableText } from '../src/ui/lessons/design-strip';
 import type { DesignCriterion, DesignKey, DesignLesson, DesignMeasureId } from '../src/lessons/types';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
 import type { MissionRequirements } from '../src/design/requirements';
@@ -253,6 +254,20 @@ describe('a figure shown beside its bound (the strip)', () => {
     expect(boundDigits({ id: 'c', kind: 'design', measure: 'sat.mass', target: 10.5, tol: 0.5 }, 10.9999)).toBe(2);
     expect(boundDigits({ id: 'c', kind: 'design', measure: 'sat.mass', target: 10.5, tol: 0.5 }, 11.0001)).toBe(4);
   });
+});
+
+describe('a figure that does not apply, in words (the strip)', () => {
+  it('says why: no camera, the place not seen in the window, not a low orbit', () => {
+    const l = lesson([{ id: 'c1', kind: 'design', measure: 'sat.revisitMax', max: 7 }, { id: 'c2', kind: 'design', measure: 'sat.gsd', max: 5 }], { requirements: BANGKOK });
+    // NAPA-2's 20 km swath does not see Bangkok by day once in the 30 days (PAIRS above)
+    const unseen = keyFor(l, napa);
+    expect(unseen.values['sat.revisitMax']).toBeNull();
+    expect(notApplicableText('sat.revisitMax', unseen)).toBe('not seen once in 30 days');
+    const blind = keyFor(l, withCamera(napa, false));
+    expect([notApplicableText('sat.revisitMax', blind), notApplicableText('sat.gsd', blind), notApplicableText('sat.swath', blind)]).toEqual(['no camera', 'no camera', 'no camera']);
+    expect(notApplicableText('sat.disposal25y', { values: { 'sat.disposal25y': null }, lockBroken: [] })).toBe('not a low orbit: the rule is for low orbits');
+    expect(notApplicableText('sat.mass', { values: {}, lockBroken: [] })).toBe('—');
+  }, 60_000);
 });
 
 describe('the lesson file (T01)', () => {
