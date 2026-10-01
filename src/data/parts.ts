@@ -294,18 +294,21 @@ export const ENGINE_PARTS: readonly EnginePart[] = [
       sources: ['https://web.archive.org/web/20160320132115/http://kbhmisaeva.ru/main.php?id=53', 'http://www.lpre.de/kbhm/index.htm', 'https://en.wikipedia.org/wiki/S5.92'],
       note: 'KB KhimMash (2016 archive), lpre.de and en.wikipedia agree.' } },
   // --- Proton-M / Briz-M
-  { id: 'rd276', kind: 'engine', family: 'hypergolic', name: 'RD-276', thrustSL: 1745 * kN, thrustVac: 1915 * kN, ispSL: 288, ispVac: 316, minThrottle: 0.6,
-    source: UNCITED,
+  // NPO Energomash's RD-276 (2026-10-01, flight-profile audit): 1 831.9 / 1 671.1 kN and
+  // 315.8 / 288 s; the MPG gives 11.0 / 10.0 MN for the six. It was 1 915 / 1 745 kN,
+  // and 1 745 kN is 178 tf, the RD-275's vacuum thrust.
+  { id: 'rd276', kind: 'engine', family: 'hypergolic', name: 'RD-276', thrustSL: 1671.053 * kN, thrustVac: 1831.882 * kN, ispSL: 288, ispVac: 315.8, minThrottle: 0.6,
+    source: "NPO Energomash, RD-276 (engine.space, as quoted by en.wikipedia): 1 831.9 / 1 671.1 kN, 315.8 / 288 s; ILS, Proton Mission Planner's Guide Rev. 7, §A.2.1: 11.0 MN in vacuum, 10.0 MN at sea level for six",
     mass: { kg: 1120, basis: 'published', what: 'dry, one engine (six on the stage); 1 360 kg filled',
       sources: ['https://web.archive.org/web/20191209163452/http://engine.space/dejatelnost/engines/rd-276/', 'http://engine.space/dejatelnost/engines/rd-276/', 'http://www.lpre.de/energomash/RD-253/index.htm', 'https://en.wikipedia.org/wiki/RD-253'],
       note: 'Energomash (2019 archive). lpre.de and the en.wikipedia RD-253 infobox give 1 070 kg for the same engine (RD-275M, 14D14M); the maker’s newer figure is used.' } },
-  { id: 'rd0210', kind: 'cluster', family: 'hypergolic', name: 'RD-0210/0211', thrustSL: 500 * kN, thrustVac: 582 * kN, ispSL: 280, ispVac: 327,
-    source: UNCITED, note: 'three RD-0210 and one RD-0211, flown as four engines with one set of figures',
+  { id: 'rd0210', kind: 'cluster', family: 'hypergolic', name: 'RD-0210/0211', thrustSL: 500 * kN, thrustVac: 582 * kN, ispSL: 280, ispVac: 326.5,
+    source: "KBKhA (2015 archive, via en.wikipedia and russianspaceweb): RD-0210/0211 582 kN (59.36 tf), 326.5 s; the sea-level pair is a placeholder (air-lit). ILS gives 2.4 MN for the stage, a sensitivity: the MPG's timeline closes on 582 kN", note: 'three RD-0210 and one RD-0211, flown as four engines with one set of figures',
     mass: { kg: 566, basis: 'published', what: 'engine mass, one RD-0210 or RD-0211 (one figure for both); four on the stage, 2 264 kg',
       sources: ['https://web.archive.org/web/20150815142815/http://www.kbkha.ru/?p=8&cat=8&prod=33', 'https://en.wikipedia.org/wiki/RD-0210'],
       note: 'KBKhA (2015 archive) and en.wikipedia agree.' } },
   { id: 'rd0213', kind: 'lumped', family: 'hypergolic', name: 'RD-0213 + RD-0214', thrustSL: 520 * kN, thrustVac: 613.8 * kN, ispSL: 280, ispVac: 325,
-    source: UNCITED, note: 'the RD-0213 main engine and the RD-0214 vernier block as one entry, count 1',
+    source: "KBKhA (2015 archive, via en.wikipedia and russianspaceweb): RD-0213 582 kN, 326.5 s; RD-0214 30.9 kN, 293 s; ILS 583 + 31 kN. The sea-level pair is a placeholder (air-lit)", note: 'the RD-0213 main engine and the RD-0214 vernier block as one entry, count 1',
     mass: { kg: 640, basis: 'published', what: 'the RD-0212 block as this lumped entry carries it: one RD-0213 main engine (550 kg) and one four-chamber RD-0214 vernier (90 kg)',
       sources: ['https://web.archive.org/web/20150815142815/http://www.kbkha.ru/?p=8&cat=8&prod=33', 'https://kbkha.ru/deyatel-nost/raketnye-dvigateli-dlya-kosmicheskoy-otrasli/raketnye-dvigateli-ao-kbha/dvigatelnyj-blok-rd0212-osnovnoj-dvigatel-rd0213-rulevoj-dvigatel-rd0214/', 'https://en.wikipedia.org/wiki/RD-0210', 'https://en.wikipedia.org/wiki/RD-0214'],
       note: 'The sum of KBKhA’s two figures (2015 archive); en.wikipedia gives the same 550 and 90 kg. The current kbkha.ru page gives no number.' } },
@@ -626,14 +629,16 @@ export const STAGE_BODIES: readonly StageBodyPart[] = [
   // boosters would invent a staging event Proton does not have. Instead the
   // stage carries its real diameter and the vehicle carries a `dragArea`
   // override (src/data/vehicles.ts).
-  { id: 'p1', stageId: 'p1', name: 'First stage (6× RD-276)', dryMass: 30600, propellantMass: 419400, diameter: 4.1, length: 21.2,
-    engine: { part: 'rd276', count: 6 }, source: `${UNCITED}; diameter: audit item B23` },
-  { id: 'p2', stageId: 'p2', name: 'Second stage', dryMass: 11000, propellantMass: 156100, diameter: 4.1, length: 17,
-    engine: { part: 'rd0210', count: 4 }, source: UNCITED },
-  { id: 'p3', stageId: 'p3', name: 'Third stage', dryMass: 3500, propellantMass: 46600, diameter: 4.1, length: 6.5,
-    engine: { part: 'rd0213', count: 1 }, source: UNCITED },
+  // Proton-M's loads as ILS publishes them (2026-10-01, flight-profile audit); the
+  // first two were Proton-K's, 419 400 and 156 100 kg (russianspaceweb).
+  { id: 'p1', stageId: 'p1', name: 'First stage (6× RD-276)', dryMass: 30600, propellantMass: 428300, diameter: 4.1, length: 21.2,
+    engine: { part: 'rd276', count: 6 }, source: "ILS, Proton Mission Planner's Guide Rev. 7, §A.2.1: dry about 30 600 kg, propellant about 428 300 kg; diameter: audit item B23" },
+  { id: 'p2', stageId: 'p2', name: 'Second stage', dryMass: 11000, propellantMass: 157300, diameter: 4.1, length: 17,
+    engine: { part: 'rd0210', count: 4 }, source: "ILS, Proton Mission Planner's Guide Rev. 7, §A.2.2: 11 000 + 157 300 kg" },
+  { id: 'p3', stageId: 'p3', name: 'Third stage', dryMass: 3500, propellantMass: 46562, diameter: 4.1, length: 6.5,
+    engine: { part: 'rd0213', count: 1 }, source: "ILS, Proton Mission Planner's Guide Rev. 7, §A.2.3: 3 500 + 46 562 kg" },
   { id: 'brizm', stageId: 'brizm', name: 'Briz-M', dryMass: 2370, propellantMass: 19800, diameter: 4.0, length: 2.6,
-    engine: { part: 's598m', count: 1 }, source: UNCITED, note: 'Proton-M and Angara-A5' },
+    engine: { part: 's598m', count: 1 }, source: "ILS, Breeze M page: inert 2 370 kg, propellant 19 800 kg, 14D30 19.62 kN (the Proton Mission Planner's Guide Rev. 7, §A.3, gives 2 500 kg dry in 2009)", note: 'Proton-M and Angara-A5' },
   { id: 'urm1core', stageId: 'urm1core', name: 'URM-1 core', dryMass: 9000, propellantMass: 128800, diameter: 2.9, length: 25.7,
     engine: { part: 'rd191', count: 1 }, source: UNCITED, note: 'the same URM-1 module as the strap-on body urm1' },
   { id: 'urm2', stageId: 'urm2', name: 'URM-2', dryMass: 4000, propellantMass: 35800, diameter: 3.6, length: 6.9,

@@ -361,11 +361,19 @@ export class AscentMonitor {
    * trajectory — rather than a break-up several minutes after a reported
    * insertion. Nothing is rescued by continuing: the same flight with the
    * engines left running is the one that broke up.
+   *
+   * A weak final stage closing the orbit inside the ascent (the Briz-M under
+   * Proton-M's published loads, 2026-10-01) is the same case and is held to the
+   * same floor: the 7.15 t crew ship burned from 225 km down to 61 km on it and
+   * broke up at 7.6 kPa.
    */
   abandonInsertion(q: number, vz: number): boolean {
     const s = this.sim.state;
     if (s.payloadSeparated || !s.liftoff) return false;
-    if (s.status !== 'burn' && s.status !== 'coast') return false;
+    const vehicle = this.sim.vehicle;
+    const finalStageAscent = s.status === 'ascent' && this.sim.plan.weakFinalStage && !this.sim.plan.suborbitalAim
+      && vehicle.activeIndex > 0 && vehicle.activeIndex === vehicle.lastLauncherIndex;
+    if (s.status !== 'burn' && s.status !== 'coast' && !finalStageAscent) return false;
     const el = s.elements;
     if (!(el.e < 1) || el.periapsisAlt >= ORBIT_INSERTION_FLOOR) return false;
     if (!(q >= FAIRING_Q_LIMIT && vz < 0)) return false;

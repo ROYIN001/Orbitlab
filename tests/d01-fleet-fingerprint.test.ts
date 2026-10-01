@@ -40,6 +40,12 @@
  * cut-offs and the stored pitch programme (they were 'deef4d6e49a74ea0',
  * '487ada8595699387' and '62c11ccc40646589'). The other 24 rows, unchanged,
  * show that the new mechanisms change no other vehicle.
+ *
+ * Re-recorded a third time for Proton-M on ILS's and Energomash's published
+ * data (2026-10-01, the flight-profile audit): `protonm/leo/50` and
+ * `protonm/gto/50` (they were '76fae19e6ec959b6' and 'bb6e24576d031e4c'). The
+ * LEO row, a known failure, now ends `insertionAbandoned` at the floor instead
+ * of breaking up (`AscentMonitor.abandonInsertion`). The other 25 are unchanged.
  */
 import { describe, expect, it } from 'vitest';
 import { VEHICLES } from '../src/data/vehicles';
@@ -49,7 +55,7 @@ import { FingerprintSampler } from './flex-golden-harness';
 export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
   'soyuz21a/leo/50': 'd90cb1ce6c496984',
   'soyuz21b/leo/50': '4983ea1c31ef47bc',
-  'protonm/leo/50': '76fae19e6ec959b6',
+  'protonm/leo/50': '44f2777c1b1d8fc8',
   'angaraa5/leo/50': '7cea61f34555f892',
   'falcon9/leo/50': '8504537bbd7ef7e5',
   'falconheavy/leo/50': '9d7255f795d6d88b',
@@ -68,7 +74,7 @@ export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
   'sputnik8k71ps/leo/50': '78195a7baaf7e849',
   'vostok8k72k/leo/50': '4e37c2c9a626ebd9',
   'saturnv/leo/50': '6216e2d36a22f147',
-  'protonm/gto/50': 'bb6e24576d031e4c',
+  'protonm/gto/50': '0a7cfde12d3d2250',
   'soyuz21b/gto/50': 'd1f368b68b92d7bf',
   'ariane64/gto/50': '5f39c0051d6adb58',
   'vegac/sso/50': 'c6c598e3d8ea5910',

@@ -116,6 +116,11 @@ lands on a published time. *Derived*: computed from published figures by stated 
 | Saturn V (AS-506) | S-IC load 2,102,829 kg, dry 164,995 kg | derived | FER Table 5-2, Table 20-9; the 27.9 t the model burns on the pad from its T−2.5 s start (measured: it moves if the fleet's start rule does) | liftoff 2,898.9 t against 2,899.0; the LOX out at T+161.40 s against 161.63 is by construction, not a result | 2026-10-01 |
 | Saturn V (AS-506) | S-II load 439,005 kg, start T+165.72 s | input / derived | FER Table 6-2; the build-up's 593 kg at full flow (Table 20-9, Table 2-2). Its dry mass, 49,179 kg, keeps Table 20-9's gross: the two readings of the S-II (Table 6-2's flowmeter, Table 20-9's mass summary, 2.9 t apart) are a sensitivity (S-IVB cut-off +7 s) | the S-II's cut-off time is by construction too (one flowmeter record) | 2026-10-01 |
 | Saturn V (AS-506) | S-IVB: 1,795 kg of the 107,095 kg load carried as dry mass | estimate | "the two burns use 105.3 t" | the TLI leftover is not yet judged against Table 20-9's 2,559 kg | 2026-09 |
+| Proton-M | RD-276 1,831.9 / 1,671.1 kN, 315.8 s; loads 428,300 / 157,300 / 46,562 kg; RD-0210 326.5 s | input | NPO Energomash; ILS Proton Mission Planner's Guide Rev. 7 §A.2 (the first two loads were Proton-K's) | T-14R: every row in tolerance in both models; the MPG's acceleration ratio a(110.7 s)/a(7 s) 2.405 against 2.40 | 2026-10-01 |
+| Proton-M | fairing T+348.2 s | input | MPG Table 2.3.1-1 | T-14R's 347 s is the same operator's callout, a weak check | 2026-10-01 |
+| Proton-M | stage 2 lit as stage 1 runs dry; stage 3 0.7 / 2.4 s; Briz-M 0.1 s | construction / input | the MPG's hot staging (119.0 → 123.4 s) is not flown; MPG Table 2.3.1-1 for the others | — | 2026-10-01 |
+| Proton-M | `dragArea` 25 m², for the whole flight | derived | π·2.05² + 6·π·0.8² = 25.3 m² | dropping it at staging measured at 1 m/s or less | 2026-09 |
+| Proton-M | kick 6° at 0.3 °/s, pitch limit 25°, loft 150 km | estimate / construction | generic, set by hand; the loft is the fleet's rule for a hand-over under 0.4 g, its figure Angara-A5's | — | 2026-09 |
 | Mercury-Redstone | pitch floor, 3° kick falling 0.34 °/s | fitted | both models cut off on the flown arc (PHYSICS.md, C01) | — | 2026-09 |
 | crewed Soyuz | 3 s from a strap-on's strike to the loss of the vehicle | fitted | MS-10's T+118.6 → 121.6 s (`COLLISION_TO_LOSS`) | — | 2026-09 |
 
@@ -1018,11 +1023,19 @@ The code is in `tests/validation/reference-data.ts`. The pinned disagreements ar
 
 | milestone | unit | published | point mass | six-DOF | tolerance |
 | --- | --- | ---: | ---: | ---: | ---: |
-| maxQ time | s | 62.0 | 50.4 (−19 %) ✗ | 50.5 (−19 %) ✗ | ±6.2 |
-| sep12 time | s | 120.0 | 111.6 (−7 %) | 111.4 (−7 %) | ±12.0 |
-| sep23 time | s | 327.0 | 327.6 (0 %) | 327.7 (0 %) | ±32.7 |
-| fairing time | s | 347.0 | 174.6 (−50 %) ✗✗ | 151.0 (−56 %) ✗✗ | ±34.7 |
-| sep3b time | s | 582.0 | 572.6 (−2 %) | 572.9 (−2 %) | ±58.2 |
+| maxQ time | s | 62.0 | 58.4 (−6 %) | 58.1 (−6 %) | ±6.2 |
+| sep12 time | s | 120.0 | 118.5 (−1 %) | 118.4 (−1 %) | ±12.0 |
+| sep23 time | s | 327.0 | 335.7 (+3 %) | 335.7 (+3 %) | ±32.7 |
+| fairing time | s | 347.0 | 348.3 (0 %) | 348.2 (0 %) | ±34.7 |
+| sep3b time | s | 582.0 | 580.3 (0 %) | 580.3 (0 %) | ±58.2 |
+
+Re-measured 2026-10-01, when Proton-M took Energomash's RD-276 and ILS's stage loads in place of
+Proton-K's, and its fairing the Mission Planner's Guide's T+348.2 s (the flight-profile audit,
+[history/audit-2026-10-01-flight-profile.md](history/audit-2026-10-01-flight-profile.md)). The
+fairing row now agrees by construction (the same operator's callout). Max Q and the first
+separation moved onto the flight with the published engines: they were 50.4 s and 111.6 s, the
+RD-276 having been 4.5 % strong and the first stage 8.9 t light. The MPG's own acceleration
+trace is a check: a(110.7 s)/a(7 s) is 2.40 in it, 2.405 now and 2.585 before.
 
 **Falcon Heavy Arabsat-6A (planned)**
 
@@ -1133,7 +1146,6 @@ where the free-molecular heating falls to 1 135 W/m²:
 | vehicle | model, point mass / six-DOF | published |
 | --- | --- | --- |
 | Atlas V | 157 s / 151 s | 205 s |
-| Proton-M | 175 s / 151 s | 347 s (after second-stage separation) |
 | Angara-A5 | 302 s / 256 s | 340 s |
 | Falcon Heavy | 205 s / 165 s | 247 s |
 | H3, six-DOF only | 176 s | 210 s |
@@ -1151,7 +1163,9 @@ cannot say whether the real stages burn longer or coast before separating.
 **F16. H-IIA's SRB-A separation comes at T+107 s against 124 s as flown (−14 %), and SECO at
 T+760 s against 916 s (−17 %).** MECO agrees within 2 %.
 
-Max Q is early on Proton-M (−19 %) and Falcon Heavy (−30 %), the same pattern as Falcon 9 (F3).
+Max Q is early on Falcon Heavy (−30 %), the same pattern as Falcon 9 (F3); Proton-M's (−19 %)
+moved inside its tolerance (−6 %) on the published engines. Proton-M's fairing now flies the
+MPG's T+348.2 s; on the placard it went at 175 s.
 Atlas V's max Q is inside its tolerance.
 
 None of these was fitted. Each is a single flight, so there is nothing to hold out, and fitting
@@ -2427,11 +2441,12 @@ drawn), Saturn V 90.15 m. Bound 1e-12 m, fixed before the first comparison. **Me
 **Findings, not filled in.** The old file recorded no source for many figures, and the parts say
 so (`UNCITED`) rather than borrow one:
 
-- 27 of 55 engine parts (29 before the RD-107A and RD-108A took Arianespace's figures on
-  2026-10-01, §3), and 5 more solid motors that cite only their peak-to-mean thrust ratio;
-- 25 of 49 stage bodies (26 of 50 before F11 gave Falcon Heavy's core a source for its
-  propellant, and the two Soyuz-2 cores became one on 2026-10-01; Falcon Heavy's 28 000 kg dry
-  mass is still an estimate), and Proton-M's first stage cites only its diameter;
+- 24 of 55 engine parts (29 before the RD-107A and RD-108A took Arianespace's figures and the
+  RD-276, RD-0210 and RD-0213 Energomash's and KBKhA's on 2026-10-01, §3 and the
+  flight-profile audit), and 5 more solid motors that cite only their peak-to-mean thrust ratio;
+- 22 of 49 stage bodies (26 of 50 before F11 gave Falcon Heavy's core a source for its
+  propellant, the two Soyuz-2 cores became one and Proton-M's three stages and the Briz-M took
+  ILS's figures on 2026-10-01; Falcon Heavy's 28 000 kg dry mass is still an estimate);
 - 5 of 14 strap-on bodies (7 before F11, 6 before Soyuz-2's strap-ons took Arianespace's figures);
 - 13 of 17 fairings.
 

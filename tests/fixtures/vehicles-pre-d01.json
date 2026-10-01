@@ -525,7 +525,8 @@
    "diameter": 4.35,
    "length": 15,
    "mass": 2000,
-   "sepAltitude": 120000
+   "sepAltitude": 120000,
+   "sepTime": 348.2
   },
   "guidanceDefaults": {
    "kickAngle": 6,
@@ -554,16 +555,16 @@
     "engine": {
      "count": 6,
      "ispSL": 288,
-     "ispVac": 316,
+     "ispVac": 315.8,
      "minThrottle": 0.6,
      "name": "RD-276",
-     "thrustSL": 1745000,
-     "thrustVac": 1915000
+     "thrustSL": 1671053,
+     "thrustVac": 1831882
     },
     "id": "p1",
     "length": 21.2,
     "name": "First stage (6× RD-276)",
-    "propellantMass": 419400
+    "propellantMass": 428300
    },
    {
     "color": "#d9d9d9",
@@ -572,7 +573,7 @@
     "engine": {
      "count": 4,
      "ispSL": 280,
-     "ispVac": 327,
+     "ispVac": 326.5,
      "name": "RD-0210/0211",
      "thrustSL": 500000,
      "thrustVac": 582000
@@ -581,7 +582,7 @@
     "ignitionDelay": 0,
     "length": 17,
     "name": "Second stage",
-    "propellantMass": 156100,
+    "propellantMass": 157300,
     "sepDelay": 0
    },
    {
@@ -597,11 +598,11 @@
      "thrustVac": 613800
     },
     "id": "p3",
-    "ignitionDelay": 1,
+    "ignitionDelay": 2.4,
     "length": 6.5,
     "name": "Third stage",
-    "propellantMass": 46600,
-    "sepDelay": 1
+    "propellantMass": 46562,
+    "sepDelay": 0.7
    },
    {
     "color": "#d8d8d8",
@@ -622,7 +623,7 @@
     "name": "Briz-M",
     "propellantMass": 19800,
     "restartable": true,
-    "sepDelay": 2
+    "sepDelay": 0.1
    }
   ]
  },

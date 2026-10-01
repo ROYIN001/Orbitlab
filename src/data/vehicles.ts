@@ -88,7 +88,7 @@ const SOYUZ_21A_PROGRAMME: [number, number][] = [
   [26, 82.77], [28.5, 81.53], [31, 80.14], [36, 76.96], [41, 73.68], [46, 69.97], [51, 66.3], [56, 62.8], [61, 59.32], [66, 55.93],
   [71, 52.66], [76, 49.85], [81, 47.1], [86, 44.61], [91, 42.2], [96, 40.14], [118, 35.14], [128, 28.14], [210, 16], [285, 10], [285.1, 10],
 ];
-/** Briz-M, on Proton-M and Angara-A5. */
+/** Briz-M as Angara-A5 installs it (Proton-M installs its own, with the MPG's separation delay). */
 const briz = (): StageSpec => stageSpec('brizm', { restartable: true, sepDelay: 2, ignitionDelay: 3, color: '#d8d8d8' });
 /** Falcon 9's second stage, on Falcon 9 and Falcon Heavy. */
 const f9Stage2 = (): StageSpec => stageSpec('s2', { restartable: true, sepDelay: 3, ignitionDelay: 4, color: '#f2f2f2', accentColor: '#222' });
@@ -236,7 +236,11 @@ export const VEHICLES: VehicleSpec[] = [
   {
     id: 'protonm', name: 'Proton-M / Briz-M', country: 'RU', manufacturer: 'Khrunichev',
     height: 58.2, payloadLEO: 23000, payloadGTO: 6920,
-    fairing: fairingSpec('protonm', { sepAltitude: 120e3, color: '#e8e8e8' }),
+    // The fairing goes at T+348.2 s (ILS, Proton Mission Planner's Guide Rev. 7,
+    // Table 2.3.1-1: "340 to 350 s", timed to land in its impact area, the heat
+    // flux under 1 135 W/m² after it); on the heating placard it went at
+    // T+175 s, half the time.
+    fairing: fairingSpec('protonm', { sepAltitude: 120e3, sepTime: 348.2, color: '#e8e8e8' }),
     stages: [
       // The first stage is 4.1 m, its core, not the 7.4 m span across the six
       // outboard tanks (audit item B23; the body in src/data/parts.ts). With
@@ -246,16 +250,24 @@ export const VEHICLES: VehicleSpec[] = [
       // below instead — the first use of a field that had been declared and set
       // by nothing (audit item B39).
       stageSpec('p1', { color: '#d9d9d9', accentColor: '#7a7a7a' }),
+      // Stage 2 is lit "through the lattice" before stage 1 is let go (preliminary
+      // thrust at 119.0 s, separation at 123.4 s, the MPG); the model lights it
+      // as stage 1 runs dry, a construction for the hot staging it does not fly.
       stageSpec('p2', { sepDelay: 0, ignitionDelay: 0, color: '#d9d9d9' }),
-      stageSpec('p3', { sepDelay: 1, ignitionDelay: 1, color: '#d9d9d9' }),
-      briz(),
+      // stage 2 off at 334.5 s, separated at 335.2 s, stage 3's main engine at
+      // 337.6 s (MPG Table 2.3.1-1)
+      stageSpec('p3', { sepDelay: 0.7, ignitionDelay: 2.4, color: '#d9d9d9' }),
+      // the Briz-M separates 0.1 s after the third stage's verniers stop (588.3 /
+      // 588.4 s, the MPG); Angara-A5 keeps the shared 2 s
+      stageSpec('brizm', { restartable: true, sepDelay: 0.1, ignitionDelay: 3, color: '#d8d8d8' }),
     ],
     sites: ['baikonur'], maxQ: 40e3, maxAccel: 55,
     // The 4.1 m core plus six 1.6 m outboard tanks, as a reference area rather
-    // than as a circle around the span (audit item B23). It is dropped once the
-    // first stage separates in the sense that matters — the override is only
-    // ever wider than what is left above it — and the fairing (4.35 m,
-    // 14.9 m^2) is inside it too.
+    // than as a circle around the span (audit item B23; π·2.05² + 6·π·0.8² =
+    // 25.3 m², derived). `VehicleModel.frontalArea()` returns it for the whole
+    // flight, the upper stages too; dropping it to the 14.9 m² fairing at the
+    // first stage's separation was measured at 1 m/s or less at the next two
+    // separations (flight-profile audit, 2026-10-01), so it is left on.
     dragArea: 25,
     // Heavy and draggy: it needs a fast pitch-over or it climbs too steeply and
     // falls back through the atmosphere.

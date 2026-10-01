@@ -637,3 +637,303 @@ Dated record: where it disagrees with the documents above, the documents above a
 - SSO rating: MHI gives 3.3 t at 800 km and 5.1 t at 500 km (Table 2.1-1, Fig. 2.4-1), and JAXA's English page about 4 t / 3.8 t at 800 km. vehicles.ts carries payloadSSO 3600 (source not stated). The model rates > 4.1 t at 600 km (PHYSICS §6b). Not examined here.
 - For a later tier-A pass: F15's planned altitude and inertial velocity at nine events (same orbit, but a 2009 vehicle with SRB-A2) and MHI's GTO typical altitude/velocity figures are the only state points found. No H-IIA pitch programme was found.
 
+
+## The critic's verdict
+
+One skeptic over all eight reports, re-checking the arithmetic and opening the most consequential sources. Its implementation order is the order the changes were made in.
+
+**Status.** The core Saturn V proposals are already in HEAD as commit `1890d7d`. The Vostok lesson-text fix is in as `49769e8`. Nothing was edited during this review.
+
+**Sources I opened myself:**
+- NG GEM 63 datasheet (text extracted)
+- AVUG Rev 11, Fig. 1.4.1-4 and §3.2.7.5.2
+- ILS Proton MPG Rev 7: Table 2.3.1-1 and §A.2
+- Falcon User's Guide 2025: stage table and Tables 10-3/10-4
+- Electron PUG v8.0, pp. 12–15
+- ESA, "Ariane 6: what's it made of"
+- JAXA SRB-A3 page
+- FAI Gagarin records file, p. 7 (scanned; read as an image)
+- FER AS-506 Table 20-9 (OCR)
+
+**Working files** are in `(the session scratchpad) `:
+- `arith.py`: all mass-closure and F/(g0·Isp) checks
+- `solid.py`: the solid-motor profile analysis
+- `*.txt`: extracted source text
+
+---
+
+### 1. Saturn V (saturnv506)
+
+Applied in `1890d7d`: the F-1, the S-IC and S-II loads and dry masses, the S-II ignition delay, the re-referenced events, the EMR role, the pitch programme, the register, PHYSICS.md and the test pin.
+
+**Accepted**
+- **F-1 at 6,886.2 / 7,914.6 kN (derived).**
+  - 2,071,295 kg ÷ 780.22 engine-s = 2,654.76 kg/s, giving 6,886.1 / 7,914.4 kN. The 0.1–0.2 kN difference is only the rounding of the flow.
+  - Independent support: Table 20-9 (which I read) gives S-IC mainstage propellant of 2,069,957 kg, plus 598 kg of inboard tail-off and expended propellant. That is 2,070,555 kg, 0.04 % from the Table 5-2 reconstruction.
+- **S-IC dry 164,995 kg.** 164,381 + 614. Table 20-9 confirms the 164,381 kg at separation.
+- **S-IC load 2,102,829 kg (derived).** It closes against the published ignition mass less the 39.3 t build-up, to 11.4 t, which is the difference in pad burn.
+- **S-II 439,005 / 49,179 kg** and **ignition delay 3.42 s**: accepted with the caveats under "Revised".
+- **Events and jettisons re-referenced.** The applied mixture shift is at t = 332.32 s, not 332.28 s, because it came from 498.04 s. That is 0.04 s and doesn't matter.
+- **EMR shift at 427 s, role changed to input.**
+- **Pitch programme (input).**
+  - I re-derived the Earth-rotation term: 0.004178 × sin 72.058° × cos 28.608° = 0.003490 °/s, against the auditor's 0.003495. The 0.1 % difference is immaterial.
+- **PHYSICS.md §13.8 and the T+200 s test pin.**
+
+**Revised (register wording; the data stay)**
+- **S-IC LOX depletion is not a prediction.**
+  - The flow is consumption ÷ engine-seconds up to the flown OECO, and the load is that same consumption. So the model empties at 161.63 s less the 0.3 s release offset by arithmetic identity.
+  - The commit message and the register row both say "OECO T+161.40 s against 161.63 (a prediction)". Drop OECO time as a result.
+  - The real checks are the OECO state, max Q, S-IVB cut-off and the orbit.
+- **S-II cut-off time is near-identity as well.** Table 6-2 (consumption) and Table 6-1/Fig. 6-3 (flow) are one flowmeter reconstruction. The register's "S-II cut-off +0.1 / −0.2 s" should not be listed as a result.
+- **The S-II dry mass mixes two readings.**
+  - Its gross comes from Table 20-9 (443,236 kg loaded), but its load and residual come from Table 6-2.
+  - The 807 kg between 49,179 kg and the itemised 48,372 kg (36,158 + 572 + 3,663 + 3,982 + 609 + 3,388) belongs to neither reading.
+  - Table 20-9's own S-II at separation (43,436 kg, stage only) implies about 7.0 t left over, against the model's about 4.2 t.
+  - Record this as the two-readings sensitivity. Don't correct it.
+- **The pad term depends on the start rule.** The 27.9 t is the model's own burn from T−2.5 s (`simulation.ts`, `ignT = -2.5`). If that fleet rule changes, the liftoff mass moves silently. Say so in the register.
+- **The 3.42 s ignores the model's start ramp.** The 1 s ramp (`LIQUID_STARTUP_S`, which scales flow too) means full flow effectively starts about 0.5 s after 165.72 s. This doesn't matter given the point above about S-II cut-off.
+- **The S-IVB 1,795 kg unusable estimate** was proposed as a register row and the commit leaves it out. Add it.
+- **Minor role overlap.** D5-15560-6 Table B-III supplies both the range angle used in the frame conversion and the FPA/altitude checks. The angle is at most about 1.7° by T+204 s, so the overlap is weak. Record it.
+- **Ring jettison 4,591 → 3,982 kg.** Don't move the 609 kg into dry mass: that would carry it to S-II cut-off, which is worse than now. If it's done at all, add a separate 609 kg `interstage` jettison at about t = 0.38 s (166.1 − 165.72). Table 20-9 shows the ullage propellant gone by mainstage. The effect is about 1 m/s.
+
+**Optional / deferred**
+- J-2 sea-level placeholders 420.4 / 361.0 kN: the arithmetic is right, there is no flight effect, and they are vacuum-only. Lowest priority.
+- S-IVB 107,095 / 13,963 kg: defer until the TLI leftover is measured against the 2,559 kg.
+
+**Shared parts:** none. saturnv506 uses inline specs (F1_AS506, J2_SII, J2_SIVB) and literal stages. The fleet `saturnv` (parts f1/j2/sic/sii/sivb) is untouched.
+
+---
+
+### 2. Vostok-K (fleet `vostok8k72k` and historical `vostokk`)
+
+**Accepted**
+- **Blok E propellant 7,780 → 6,335 kg** (high). The 7.78 t was the gross mass entered as propellant. Also fix the comments in `parts.ts` above `blokE` and in the `vehicles.ts` Vostok header.
+- **Strap-ons 3,710 / 39,590 kg** (medium-high).
+- **Core 93,600 kg.**
+- **RD107_1959 and RD108_1959 to Energomash** (high).
+  - 102 tf = 1,000.28 kN and 83 tf = 813.95 kN; 96 tf = 941.44 kN and 76 tf = 745.31 kN.
+  - The published pairs are 0.5–0.6 % inconsistent (326.1 vs 324.5 kg/s; 305.0 vs 306.7 kg/s) because the tf figures are integers. That is inside the 2 % pair rule. Record that thrust-SL derived from the vacuum flow would be 817.9 / 741.1 kN.
+- **Rename and re-value the fleet parts** rd107-8d74k and rd108-8d75k. No side table keys on these names; grep finds them only in `parts.ts`.
+- **Fairing diameter 2.7 m.**
+- **Watch-mission SECO and payload-separation events** (low).
+- **Register rows.**
+- **Lesson brief and PHYSICS.md §13.6 attribution**: already applied in `49769e8`.
+
+**Revised**
+- **Lesson datum, 181 × 327 → 168 × 314 km.** Accepted, but on a corrected basis.
+  - The FAI page says "a period of revolution of 89:34 minutes". Read as 89 min 34 s, that fits 181 × 327 km on the model's 6,378 km sphere (89.59 min Keplerian). So the auditor's argument alone doesn't settle it.
+  - The deciding third source is TASS's preliminary 175 × 302 km at 89.1 min. That pair fits only a reference radius of about 6,368 km (nodal period 89.17 min at 6,371 km, 89.05 at 6,365 km, 89.31 at 6,378 km). So the Soviet heights were measured above the local surface, 10–13 km below the 6,378 km sphere.
+  - That is consistent with GCAT's 168 × 314 km and with reading "89,34" as decimal minutes (89.36 nodal at 6,365 km).
+  - Record "89 min 34 s / 181 × 327" as the losing reading.
+  - Change the criteria and the brief together. The lesson's period answer is graded against the model's own orbit.
+
+**Shared parts**
+- blokE, blokBVGD-8k72k, blokA-8k72k, rd107-8d74k, rd108-8d75k and the vostok8k72k fairing are used only by the fleet `vostok8k72k`. What moves with them: lesson adv-vostok, the fleet matrix, `tests/design-build-tour.test.ts`, the d01 fixture, and the fleet and six-DOF fingerprints.
+- The two -8k72k bodies are `variantOf` the Soyuz-2 bodies but carry their own numbers, so Soyuz is unaffected.
+- RD107_1959 and RD108_1959 are used only by `vostokk`.
+
+---
+
+### 3. Falcon 9 (shares s2, mvac, merlin1d and `f9Stage2()` with Falcon Heavy)
+
+**Accepted**
+- **Second stage 4,000 / 107,500 kg, with its source** (medium). Falcon Heavy moves with it.
+- **`f9Stage2` ignition delay 4 → 8** (medium). I checked the guide: LEO sample MECO 145, separation 148, SES-1 156 s; GTO 147, 151, 158 s. Falcon Heavy moves with it.
+- **fleet-defaults label "MECO + 11 s"** (high). The old "MECO + 7 s" is at `tests/fleet-defaults.test.ts:762` and `docs/PHYSICS.md:1680`, with no source.
+- **Minimum throttle 0.570 / 0.638** (medium). The guide says "190,000 lbf to 108,300 lbf sea level" and "220,500 to 140,679". First measure Falcon Heavy's side-booster landings at LZ-1 and LZ-2 and the six-DOF landing burn: a 57 % floor against 40 % changes the landing thrust-to-weight.
+- **Source strings.**
+- **Register rows** (bucket fitted by selection, maxAccel, reserves, droneShipReserve constants, fairing). High confidence.
+- **"33 kPa" text fixes.** Verified at `docs/PHYSICS.md:1686`, `1691` and `vehicles.ts:305`.
+
+**Revised**
+- **Merlin 1D sea-level Isp 287.5 s.** Keep 282 s and record the 1.95 % inconsistency instead. 287.5 s mixes a 2013 Isp with 2016–18 thrust, and only `droneShipReserve` reads it.
+- **Stage-1 acceleration hold at 37 m/s².** Defer. The value comes from the check set (the webcast trace) and needs a new mechanism. If adopted, label it "derived from the check set" and demote the GPS III SV01 and Bangabandhu-1 MECO rows to dependent. Until then, keep 45 m/s² registered as an estimate.
+
+---
+
+### 4. Atlas V 551 (every part here is used by Atlas V only)
+
+**Accepted**
+- **CCB dry 21,054 → 23,848 kg, with its source** (high). Verified in Fig. 1.4.1-4:
+  - booster inert 21,351 kg
+  - C-ISA 2,212 kg "(Includes ISA, Aft Stub Adapter & Boattail)"
+  - cylindrical ISA 285 kg
+  - §3.2.7.5.2 says the frangible joint sits inside the boattail, which stays with the booster.
+  - The "ISA" inside the C-ISA is the Centaur conical ISA, so the 285 kg is not double-counted.
+- **RD-180 and RL10C-1 sources.**
+- **GEM 63 peak factor 1.331**, and the source moved to NG DS-26. Verified: 49,300 / 44,200 kg, 97.6 s, 370,835 lbf.
+- **Burn-time pins 94 → 97.6 s** in `tests/data-consistency.test.ts`, the design-budget test and VALIDATION.md §8 (high). 94 s is the AJ-60A's burn time.
+- **Centaur separation delay 3 → 6 s** (high).
+- **Centaur dry 2,247 kg** (verified).
+- **Fairing 3,799 kg**: the PLF's 3,524 kg plus the CFLR's 275 kg (verified).
+- **Add a GEM-63-era check flight** (ViaSat-3 F2 or KA-01) and note Juno's hardware, before any structure work (medium).
+- **The 2.5 g hold before PLF jettison** and **the 4.6 g phase before BECO**, as new mechanisms off by default (medium, published).
+- **The timed core throttle-down held to SRB burnout** (low).
+  - The 0.6 level goes back to the initial commit `de6ae33` with no source, the same origin as Falcon 9's bucket.
+  - BECO and the 5.0 g onset depend on it, so they must stay checks.
+- **GEM jettison construction** (low): only after choosing the reference flight, and registered. Note that `sepDelay` counts from the model's own burnout, so it goes stale whenever the GEM data change.
+
+**Revised**
+- **GEM 63 thrust.** Use 1,239.1 kN vacuum (44,200 / 97.6 × g0 × 279 = 1,239.07) and 1,124.7 kN at sea level. The report's 1,239.3 / 1,124.9 are slightly off.
+
+**Rejected**
+- **Fairing time 204.9 s on the catalogue vehicle.**
+  - Juno is an AJ-60A flight; the catalogue vehicle flies GEM 63s.
+  - The PLF time ends the 2.5 g hold, so it directly sets BECO.
+  - Use the adopted GEM-era reference flight's time (184.8–194.1 s), or keep the placard and pin it.
+
+**Shared parts:** ccb, rd180, centaur3, rl10c1, gem63 (engine and body) and the atlasv551 fairing. gem63xl and rl10c11 are Vulcan's own variants with their own numbers and are unaffected.
+
+---
+
+### 5. Proton-M
+
+**Accepted**
+- **RD-276 at 1,831.882 / 1,671.053 kN and 315.8 s, with its source** (high).
+  - The MPG gives 10.0 MN at sea level and 11.0 MN in vacuum for six engines. Six of the proposed engine gives 10,026 / 10,991 kN.
+  - The old 1,745 kN equals 178 tf, the RD-275's vacuum thrust.
+- **Loads 428,300 / 157,300 / 46,562 kg, with sources** (high). Verified in MPG §A.2.1–A.2.3.
+- **RD-0210 at 326.5 s, keeping 582 kN.**
+- **RD-0210 and RD-0213 source strings.**
+- **Briz-M source**: keep 2,370 kg. The MPG gives 2,500 kg, which I verified.
+- **Fairing time 348.2 s** (high). Verified: Table 2.3.1-1, and "340 to 350 s … 121 to 125 km or more".
+- **Stage-3 separation 0.7 s / ignition 2.4 s** (low).
+- **Briz separation 0.1 s on Proton only** (low). Write it as an inline `stageSpec('brizm', …)` and leave `briz()` alone.
+- **The dragArea comment.**
+- **Register rows.**
+- **RD-0213 sea-level 528.8 kN** (optional). It has no flight effect; only the identity fixture moves.
+
+**Rejected**
+- **Fairing length 15.255 m.** The `protonm` fairing part is shared with Angara-A5, whose fairing is not the PLF-BR-15255. The change is geometry only and would move Angara's six-DOF. Split the part first if it's wanted.
+
+**Shared parts:** rd276, rd0210, rd0213 and p1–p3 are Proton only. The brizm body, `briz()` and the protonm fairing are shared with Angara-A5; only the rejected length change would have touched Angara.
+
+---
+
+### 6. Ariane 64
+
+**Accepted**
+- **Add the VA268 reference flight first** (high).
+- **Fairing 2,600 kg** (high).
+- **Upper-stage separation delay 6 s** (high) and **ignition delay 8 s** (medium).
+- **Fairing time 191 s as a construction**, registered. VA268's 194 s stays a check.
+- **LLPM propellant 154,000 kg.** ESA confirms "almost 154 tonnes".
+- **LLPM dry 23,000 kg** (medium). ESA confirms "23000kg without propellants". It is surprising against Ariane 5's EPC (about 14.7 t dry for 170 t) and has one source; the CNES totals give it some support.
+- **padBurnS 4.5 s.** It only takes from the liquid core, so the solids are unaffected: 4.5 × 324.1 = 1,458 kg.
+- **Vulcain 2.1 at 1,371 kN / 432 s** (medium).
+- **Vulcain sea-level pair 1,000 kN / 314.6 s** (low). The arithmetic is right. ESA's own "138 tonnes of thrust" (1,353 kN in vacuum) is another reading.
+- **P120C source note.**
+- **Register rows**, without the P120C head row.
+
+**Revised**
+- **LLPM cut-off at 457 s.** Keep it, but reword the basis.
+  - The kits put main-stage separation at 463–466 s on A62 and A64 alike, across CSO-3, Galileo and Amazon Leo.
+  - A cut-off time that doesn't depend on the mission, on an unthrottled stage, means the stop is at a fixed propellant level. So `cutoffAt` is effectively the usable load built from the clock.
+  - The residual it leaves (3.77 t at the data-sheet flow, 1.48 t at ESA's 329 kg/s) depends on the flow reading. ESA's own "154 t consumed in 468 s" implies close to zero.
+  - Pin the residual as a disagreement, not a prediction. Land it only together with the load and padBurnS.
+
+**Rejected**
+- **Upper-stage propellant 33,000 kg.** ESA says the upper stage holds "30 tonnes" (verified), eoPortal 31 t, DLR 33 t, and there is no third source. Keep 31,000 kg, cite eoPortal, and record 30 / 33 t as sensitivities. The 6,000 kg dry mass goes in only with that decision.
+- **New P120C variant with peak factor 1.307.**
+  - The model's solid profile is thrust = mean · pf · exp(−pf·c·t/T).
+  - Over 0–40 s, pf 1.52 gives a mean of 3,796 kN in vacuum and pf 1.307 gives 3,428 kN. The real motor starts at about 3,720 kN and rises to 4,500 kN, so it averages more than either.
+  - So the change fixes one instant (liftoff) and makes the first minute's impulse about 10 % worse. That matches the probe's −9 km at booster separation (77.7 against 87.1 km).
+  - 1.52 also has a basis: ArianeGroup's Ariane 6 maximum over its mean, 4,500 / 2,983 kN = 1.51.
+  - Keep 1.52 with that basis, and pin the +16 % liftoff thrust as a structural gap.
+
+**Shared parts:** the **p120c engine is shared with Vega-C** (stage body p120c; burn-time pin `vegac/p120c` 135.7 s). The auditor's variant approach would have protected Vega-C, and with the head change rejected nothing touches it. vulcain21, vinci, llpm, ulpm and the ariane64 fairing are Ariane only.
+
+**Not yet measured:** the fleet matrix (`ariane64/iss/90` already fails), the computed ratings, the GTO reference mission with its core cut-off pin, and six-DOF.
+
+---
+
+### 7. Electron (every part here is used by Electron only; rutherford-vac is a variant with its own numbers)
+
+**Accepted**
+- **Rutherford 24.91 kN at sea level** (high). The PUG says "5600 LBF Sea Level (Per Engine)".
+- **Rutherford 27.47 kN in vacuum (derived)** (medium), with 343 s labelled an estimate. The physics-core list drops "Rutherford 2.6 %".
+- **Rutherford source and comment.**
+- **Kick Stage dry 40 kg** and **fairing 44 kg** (high, verified).
+- **Second-stage separation 4 s / ignition 3 s** (medium) and **Kick Stage separation 4 s** (high).
+- **Fairing time 184 s** (low).
+- **Register rows and the F7 text.**
+- **Second stage 2,000 kg** (input; the PUG says "approximately 2,000 kg"). Land it only with:
+  - the 150 kg Curie-load estimate in the register, and
+  - the fleet-defaults "Electron, 200 kg to SSO" reference and the rating re-flown, with the failure pinned as a finding. It must not be hidden.
+
+---
+
+### 8. H-IIA 202
+
+**Accepted**
+- **SRB-A body 10,600 / 64,900 kg** (high). JAXA confirms 64.9 / 66.0 t and 98 / 116 s.
+- **SRB-A3 thrust 1,841.8 kN vacuum / 1,721.0 kN sea level** (derived).
+- **SRB-A3 peak factor 1.368** (medium).
+  - It is 15 % strong at liftoff.
+  - Over 0–40 s it gives a mean of 2,207 kN, against 2,322 kN from inverting MHI Fig. 2.3-7. pf 1.22 gives only 2,068 kN, so 1.368 is the closer of the two.
+  - Pin the liftoff overshoot.
+- **Second-stage separation delay 8 s** (high).
+- **Fairing time 245 s, and fix the comment.** In `staging.ts` the published time returns before the placard is ever checked, so the comment's claim that the placard fires first is wrong. Also fix the `vehicles.ts` header ("H-IIA 202 250 s").
+- **LE-5B-2 at 446.6 s.**
+- **Source strings.**
+- **Burn-time pin 100 → 98 s.**
+- **PHYSICS.md §6a published column.**
+- **Register rows.**
+- **Long-burn motor for F50** (medium). Make it a separate vehicle or configuration so the fleet `h2a202` keeps the high-pressure motor; the fleet-defaults GTO windows would fail at 115 / 123 s otherwise.
+
+**Deferred**
+- **Tabulated SRB-A3 thrust.** It needs a new mechanism and uses up the trace as an input. The arithmetic checks: the table's impulse is 180,060 kN·s, about 64,743 kg.
+
+**Shared parts:** srba3 and srba are H-IIA only. H3's `srb3` engine and body carry their own numbers. However, the `srb3` body's note ("the SRB-A3 casing's masses") becomes false; per the auditor, 8,700 / 66,800 kg are SRB-3 figures. Fix the note.
+
+---
+
+### Implementation order
+
+1. **Proton-M**: RD-276, the three loads, RD-0210 at 326.5 s, fairing at 348.2 s, sources, register.
+2. **Vostok-K**: Blok E 6,335 kg, the strap-ons and core, fairing 2.7 m, Energomash engines on `vostokk`, fleet engine renames. Then the lesson datum, on the TASS basis above.
+3. **Atlas V data**: CCB 23,848 kg, GEM 63 at 97.6 s (1,239.1 kN, pf 1.331), Centaur 2,247 kg, separation 6 s, CFLR, burn-time pins, sources. Then the GEM-era check flight.
+4. **H-IIA**: high-pressure SRB-A3 body and engine, separation 8 s, fairing 245 s and comment, LE-5B-2, pins, sources, the srb3 note.
+5. **Documentation and register only**, with no flight effect:
+   - Falcon 9 register, sources, "MECO + 11 s" label, the 33 kPa text
+   - Saturn V register corrections (prediction vs identity, the S-IVB 1,795 kg row, the pad-term note)
+   - Proton dragArea comment
+6. **Electron**: the published data, landed with the moved performance pins and the Curie-load register row.
+7. **Falcon 9 and Falcon Heavy**: second-stage masses, ignition delay 8 s, minimum throttles. Only after Falcon Heavy and the six-DOF landings are measured.
+8. **Ariane 64**:
+   - VA268 first
+   - fairing 2.6 t and the upper-stage delays
+   - core 23 / 154 t together with the 457 s cut-off and padBurnS 4.5
+   - the Vulcain pair
+   - not the P120C head.
+
+   Do this only after the fleet matrix, ratings, GTO reference and six-DOF are measured. The altitude shortfall (74 vs 87 km at booster separation; 156 vs 265 km at core separation) belongs to a Tier-A guidance fit, with VA268 held out.
+9. **Low-value leftovers**:
+   - Saturn V: the S-IVB load against the TLI leftover, the 609 kg ullage propellant as a jettison, the J-2 placeholders
+   - Proton: stage-3 delays, Briz 0.1 s, RD-0213 sea-level thrust
+   - Vostok watch-mission events
+10. **New mechanisms, off by default, each measured on its own**:
+    - H-IIA long-burn configuration for F50
+    - Atlas timed throttle, 2.5 g hold and 4.6 g phase
+    - GEM jettison time and two jettison groups
+    - SRB-A3 thrust table
+    - Falcon 9 stage-1 acceleration hold
+    - Proton verniers and hot staging
+    - a solid profile that rises then falls, fed from a published curve
+
+---
+
+### What the auditors missed
+
+1. **Saturn V register.** OECO time and S-II cut-off time are recorded as predictions but are near-identities. The S-IVB estimate row is missing. The S-II dry mass mixes two readings. The pad term depends on the T−2.5 s start rule.
+2. **Ariane's P120C head change makes the early impulse worse**, as argued above. The Ariane fleet matrix and ratings were not measured.
+3. **Vostok's datum needs a third source.** "89:34 minutes" has two readings, and TASS's 175 × 302 km at 89.1 min decides between them.
+4. **Vulcan's GEM 63XL, on the same NG datasheet**: 53,400 / 48,000 kg and 87.3 s (mean about 1,504 kN in vacuum). The model has 5,177 + 47,853 kg and burns 89.7 s at 1,460 kN.
+5. **`R7_TRIM_SHARE_VEHICLES` in `src/physics/rigid/runtime.ts:130`.** Its comment says it covers the historical C01 8K71PS and 8K72K, but the set lists the fleet ids (`sputnik8k71ps`, `vostok8k72k`). So `vostokk` and `r7sputnik` fly on the 35 % trim share.
+6. **The H3 `srb3` note** becomes false once SRB-A3 changes.
+7. **`src/data/vehicles.ts` header** still says "Soyuz-2.1a and 2.1b 157 s" and "H-IIA 202 250 s". Soyuz-2.1a now flies 153.3 s.
+8. **Every parts change moves the shared fixtures**: `tests/fixtures/vehicles-pre-d01.json`, the d01 fleet fingerprint and the heavy six-DOF fingerprints. No auditor flew six-DOF, so plan a heavy-suite run for each vehicle.
+9. **Older documents behind current figures.**
+   - Atlas: AVUG Rev 11 (2010) predates the GEM 63 and RL10C-1 era, so the 500-series booster inert mass is from the AJ-60A configuration.
+   - Electron: the PUG v8.0 text dates from 2020 ("130 Rutherfords flown as of July 2020").
+   - Both are minor provenance caveats.
