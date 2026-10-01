@@ -1634,7 +1634,7 @@ export class LessonMode implements LessonToolsHost {
       openLesson: () => {
         const l = this.active?.lesson;
         if (!l) return null;
-        return { n: lessonNumber(l), title: localText(l.title), sets: isDesignLesson(l) ? 'design' : isFlightLesson(l) ? 'mission' : 'none' };
+        return { id: l.id, n: lessonNumber(l), title: localText(l.title), sets: isDesignLesson(l) ? 'design' : isFlightLesson(l) ? 'mission' : 'none' };
       },
     }, this.content);
   }

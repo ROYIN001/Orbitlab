@@ -53,9 +53,10 @@ export interface AuthorHost {
   /**
    * W: the lesson open now, its number and title, and what it sets: a flight lesson the setup panel's mission, a
    * design lesson the bench's design. The page says so where it takes them, or a teacher who tried a pack lesson
-   * writes from its mission or design unawares. Null when none is open.
+   * writes from its mission or design unawares. Null when none is open. Its id tells the lesson being written, tried
+   * with "Try it now", from another: that one's mission or design is the teacher's own.
    */
-  openLesson?(): { n: string; title: string; sets: 'mission' | 'design' | 'none' } | null;
+  openLesson?(): { id: string; n: string; title: string; sets: 'mission' | 'design' | 'none' } | null;
 }
 
 const STORE = 'orbitlab.author.draft';
@@ -334,7 +335,8 @@ class AuthorView {
     const time = m.launchTime.toISOString().slice(0, 16).replace('T', ' ');
     box.append(el('p', 'ws-what', t('lesson.author.missionLine', { vehicle, satellite, site, orbit, time, mass: Math.round(m.payloadMass).toLocaleString(getLang()) })));
     const open = this.host.openLesson?.() ?? null;
-    if (open?.sets === 'mission') box.append(el('p', 'lesson-note warn', t('lesson.author.lessonOpen', { n: open.n, title: open.title })));
+    // not for the lesson written here and tried with "Try it now": its mission is the teacher's (review of W)
+    if (open?.sets === 'mission' && open.id !== this.draft.id.trim()) box.append(el('p', 'lesson-note warn', t('lesson.author.lessonOpen', { n: open.n, title: open.title })));
     if (m.dynamics?.model === 'sixDof') box.append(el('p', 'lesson-note fail', t('lesson.author.sixDof')));
     return box;
   }
@@ -576,7 +578,7 @@ class AuthorView {
       date: desk.date, level: levelName(desk.level),
     })));
     const open = this.host.openLesson?.() ?? null;
-    if (open?.sets === 'design') box.append(el('p', 'lesson-note warn', t('lesson.design.author.lessonOpen', { n: open.n, title: open.title })));
+    if (open?.sets === 'design' && open.id !== this.designDraft.id.trim()) box.append(el('p', 'lesson-note warn', t('lesson.design.author.lessonOpen', { n: open.n, title: open.title })));
     return box;
   }
 
