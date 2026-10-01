@@ -115,9 +115,11 @@ describe('the authoring page\'s writer (T01)', () => {
     const d = { ...draft(), title: { en: '', ru: '', th: 'วงโคจรแรกของเรา' }, brief: { ...emptyText(), ru: 'Выведите Falcon 9.' } };
     const { lesson: l, issues } = draftLesson(d, lesson('orbit-first').mission, KNOWN_EVENTS);
     expect(l!.title).toEqual({ en: 'วงโคจรแรกของเรา', th: 'วงโคจรแรกของเรา' });
-    expect(issues.map((i) => `${i.where}:${i.code}:${i.detail}`)).toEqual([
-      'title:translation:en=th', 'brief:translation:en=ru', 'lesson (class-first-orbit).title:translation:ru', 'lesson (class-first-orbit).brief:translation:th',
-    ]);
+    // and only that: the reader's "no Russian title, the English one is shown" would call the Thai title English
+    expect(issues.map((i) => `${i.where}:${i.code}:${i.detail}`)).toEqual(['title:translation:en=th', 'brief:translation:en=ru']);
+    // a text given in English and not in Thai still says so
+    const partial = draftLesson({ ...draft(), title: { en: 'Our first orbit', ru: 'Наша первая орбита', th: '' } }, lesson('orbit-first').mission, KNOWN_EVENTS);
+    expect(partial.issues.map((i) => `${i.where}:${i.code}:${i.detail}`)).toEqual(['lesson (class-first-orbit).title:translation:th']);
   });
 
   it('refuses what the reader refuses, and says why', () => {

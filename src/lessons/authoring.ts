@@ -144,8 +144,10 @@ export function draftLesson(draft: LessonDraft, mission: MissionDocument, knownE
   const refused = issues.some((i) => i.level === 'error');
   const read: FileIssue[] = [];
   const lesson = readLesson(raw, 'lesson', read);
-  // a language missing from a text is the file's usual warning; one standing in for English is said above
-  issues.push(...read);
+  // a language missing from a text is the file's usual warning; one standing in for English is said above, and
+  // for that text the reader's "no Russian text: the English one is shown" would name as English what is Thai
+  const stoodIn = issues.filter((i) => i.code === 'translation' && i.detail?.startsWith('en=')).map((i) => `.${i.where}`);
+  issues.push(...read.filter((i) => !(i.code === 'translation' && stoodIn.some((w) => i.where.endsWith(w)))));
   if (lesson && knownEvents) issues.push(...eventIssues(lesson, 'lesson', knownEvents));
   return { lesson: refused ? null : lesson, issues };
 }
