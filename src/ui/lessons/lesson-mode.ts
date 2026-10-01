@@ -994,6 +994,9 @@ export class LessonMode implements LessonToolsHost {
     title.append(el('span', 'lesson-glyph', '✎'), document.createTextNode(` ${t('lesson.page.title')}`));
     this.page.setAttribute('aria-label', t('lesson.page.title'));
     this.pageBar.replaceChildren(title, tabs, back);
+    // on a phone the tabs are one row that scrolls sideways (lessons.css): the open one is brought into it
+    const current = tabs.querySelector<HTMLElement>('a[aria-current="page"]');
+    if (current && tabs.scrollWidth > tabs.clientWidth) tabs.scrollLeft = Math.max(0, current.offsetLeft - tabs.offsetLeft - 12);
     const saveNote = this.pageView === 'test' ? this.saveNote('span') : null;
     if (saveNote) { saveNote.setAttribute('role', 'status'); this.pageBar.append(saveNote); }
   }

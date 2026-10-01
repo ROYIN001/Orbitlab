@@ -341,9 +341,10 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
   .lessons-page-body button.author-remove { grid-column: 3; grid-row: 1; }
   .author-crit-fields { grid-column: 2 / -1; grid-row: 2; }
   .author-crit-fields > select { max-width: 100%; }
-  /* five tabs: their own rows under the back button, not a column beside it */
-  .lessons-page-tabs { flex: 1 1 100%; order: 2; gap: 2px; }
-  .lessons-page-tabs a { padding: 5px 9px; font-size: 13px; }
+  /* five tabs: one row under the back button that scrolls sideways inside itself, not two or three
+     rows of a bar that stays pinned to the top (in Russian it took a third of a 812 px screen) */
+  .lessons-page-tabs { flex: 1 1 100%; order: 2; gap: 2px; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .lessons-page-tabs a { padding: 5px 9px; font-size: 13px; white-space: nowrap; flex: none; }
   .recheck-criteria thead { display: none; }
   .recheck-criteria tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
   .recheck-criteria td { padding: 0; }
