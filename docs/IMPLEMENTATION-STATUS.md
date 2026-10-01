@@ -206,9 +206,10 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 9 858 tests in 243 files, 20 to 30 minutes on four cores
-(measured 2026-10-01 at 120a4f0; on a machine shared with other work the run took 50 minutes, and
-the two tests that ran past their time limits under that load passed alone). Among it:
+`npm test` runs the regular suite (vitest): 9 868 tests in 244 files, 20 to 30 minutes on four cores
+(measured 2026-10-01 at the end of Phase 4: 1 615 s with nothing else running; on a machine shared
+with other work a run took 50 minutes, and tests that ran past their time limits under that load
+passed alone). Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
