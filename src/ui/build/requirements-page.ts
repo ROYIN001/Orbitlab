@@ -296,7 +296,8 @@ export class RequirementsPage {
     const start = el('div', 'bsat-fields');
     const tpl = select(`${P}template`, REQ_TEMPLATES.map((id) => ({ value: id, label: t(TEMPLATE_TEXT[id]?.name ?? id) })), f.template,
       (v) => this.set({ template: v }, true));
-    start.append(field(t('build.req.f.template'), tpl, 'bx-field bsat-field'));
+    // the templates' names are long ("Съёмочный спутник класса THEOS-2"): the menu takes the group's width, as the life's do
+    start.append(field(t('build.req.f.template'), tpl, 'bx-field bsat-field brq-wide'));
     const target = select(`${P}target`, REQ_TARGETS.map((id) => ({ value: id, label: TARGET_NAME(id) })), f.target,
       (v) => this.set({ target: v as TargetId }, true));
     start.append(field(t('build.req.f.target'), target, 'bx-field bsat-field'));
