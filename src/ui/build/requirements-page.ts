@@ -37,7 +37,7 @@ import type { SatelliteDesign } from '../../design/satellite-spec';
 import { TEMPLATE_TEXT, designFigures, newSatelliteId, type Fig } from '../../design/satellite-model';
 import { wetMass } from '../../design/satellite-area';
 import {
-  MAX_ROWS, REQ_TARGETS, REQ_TEMPLATES, aperturePoints, benchDesign, benchNow, candidateCycles, compareWithBench, cycleRange, cycleText, disposalState,
+  MAX_ROWS, REQ_TARGETS, REQ_TEMPLATES, apertureCrossing, aperturePoints, benchDesign, benchNow, candidateCycles, compareWithBench, cycleRange, cycleText, disposalState,
   errorKey, lifeState, lifetimeKey, lifetimePoints, lifetimeRequestFor, limitsOf, missionRequirements, otherNode, requirementsProblems,
   restoreForm, revisitWindowOf, runCost, standing, templateDesign, tradeOptionsFor, type CompareLine, type ReqIssue, type ReqNumberField, type RequirementsForm,
   type Standing, type TargetId,
@@ -751,11 +751,10 @@ export class RequirementsPage {
     ];
     if (down) lifeKey.push([COLOURS.rule, t('build.req.chart.life25', { years: num(down.years, down.years % 1 ? 1 : 0) }), true]);
     const cam = r.template.payload!;
-    const apPts = aperturePoints(r.rows);
-    const over = apPts.find((p) => p.aperture > cam.aperture);
-    const apRead = [over
-      ? t('build.req.chart.apertureOver', { h: fig(over.altitude, 'm'), d: fig(cam.aperture, 'm') })
-      : t('build.req.chart.apertureUnder', { d: fig(cam.aperture, 'm') })];
+    const cross = apertureCrossing(r.rows, cam.aperture);
+    const apRead = [cross.kind === 'from'
+      ? t('build.req.chart.apertureOver', { h: fig(cross.altitude, 'm'), d: fig(cam.aperture, 'm') })
+      : t(cross.kind === 'all' ? 'build.req.chart.apertureAll' : 'build.req.chart.apertureUnder', { d: fig(cam.aperture, 'm') })];
     this.charts.replaceChildren(
       title,
       el('p', 'bx-note', t('build.req.chart.lead')),

@@ -2936,6 +2936,7 @@ export const en: Record<string, string> = {
   'build.req.chart.apertureTemplate': 'the template\'s, {d}',
   'build.req.chart.apertureOver': 'From {h} up, the GSD needs a larger aperture than the template\'s {d}.',
   'build.req.chart.apertureUnder': 'Every orbit here needs an aperture no larger than the template\'s {d}.',
+  'build.req.chart.apertureAll': 'Every orbit here needs a larger aperture than the template\'s {d}.',
   // --- end of D07 ---
   'watch.beat.countdown': 'Countdown',
   'watch.beat.liftoff': 'Liftoff',

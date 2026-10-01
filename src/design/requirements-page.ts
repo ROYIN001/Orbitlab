@@ -475,6 +475,21 @@ export function aperturePoints(rows: readonly TradeRow[]): { altitude: number; a
   return rows.map((r) => ({ altitude: r.altitude, aperture: r.aperture })).sort((a, b) => a.altitude - b.altitude);
 }
 
+/**
+ * Where the aperture the GSD needs passes the template's: the line through the
+ * origin (1.22·λ·h/GSD) crosses it at h = D·h₀/a₀ for any row. `under`: no row
+ * needs more than the template's; `all`: every row does (the crossing is below
+ * the lowest); else `from` that altitude, m — not the first row past it, which
+ * the cycles' spacing sets, while the chart's line crosses here.
+ */
+export function apertureCrossing(rows: readonly TradeRow[], templateAperture: number):
+  { kind: 'under' } | { kind: 'all' } | { kind: 'from'; altitude: number } {
+  if (!rows.some((r) => r.aperture > templateAperture)) return { kind: 'under' };
+  if (rows.every((r) => r.aperture > templateAperture)) return { kind: 'all' };
+  const r = rows[0];
+  return { kind: 'from', altitude: (templateAperture * r.altitude) / r.aperture };
+}
+
 // ─── the row opened on the bench ────────────────────────────────────────────
 
 export type BenchDesign =

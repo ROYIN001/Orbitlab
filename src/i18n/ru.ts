@@ -2915,6 +2915,7 @@ export const ru: Record<string, string> = {
   'build.req.chart.apertureTemplate': 'у шаблона: {d}',
   'build.req.chart.apertureOver': 'Начиная с {h}, для заданного разрешения нужна апертура больше, чем у шаблона ({d}).',
   'build.req.chart.apertureUnder': 'Всем орбитам здесь хватает апертуры шаблона ({d}).',
+  'build.req.chart.apertureAll': 'Всем орбитам здесь нужна апертура больше, чем у шаблона ({d}).',
   // --- end of D07 ---
   'watch.beat.countdown': 'Обратный отсчёт',
   'watch.beat.liftoff': 'Старт',

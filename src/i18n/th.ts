@@ -2916,6 +2916,7 @@ export const th: Record<string, string> = {
   'build.req.chart.apertureTemplate': 'ของแม่แบบ {d}',
   'build.req.chart.apertureOver': 'ตั้งแต่ {h} ขึ้นไป GSD ต้องการช่องรับแสงที่ใหญ่กว่าของแม่แบบ ({d})',
   'build.req.chart.apertureUnder': 'ทุกวงโคจรในนี้ต้องการช่องรับแสงไม่ใหญ่กว่าของแม่แบบ ({d})',
+  'build.req.chart.apertureAll': 'ทุกวงโคจรในนี้ต้องการช่องรับแสงที่ใหญ่กว่าของแม่แบบ ({d})',
   // --- end of D07 ---
   'watch.beat.countdown': 'นับถอยหลัง',
   'watch.beat.liftoff': 'ทะยานขึ้น',

@@ -48,7 +48,7 @@ import { levelActivity } from '../src/orbit/satellite-air';
 import { powerAtWorstBeta, requiredDataRate, requiredEirp, txPowerForEirp, focalLengthForGsd } from '../src/design/requirement-inverses';
 import { REQUIREMENTS, repeatCycles, tradePlane, tradeRow, type TradeRow } from '../src/design/requirement-trades';
 import {
-  DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TEMPLATES, RUNS_PER_SEARCH, benchNow, SECONDS_PER_LIFETIME_RUN, SECONDS_PER_LIFETIME_RUN_YEAR, SECONDS_PER_ROW_DAY, aperturePoints, benchDesign, candidateCycles, compareWithBench,
+  DEFAULT_FORM, MAX_ROWS, REQUIREMENT_LIMITS, REQ_TEMPLATES, RUNS_PER_SEARCH, apertureCrossing, benchNow, SECONDS_PER_LIFETIME_RUN, SECONDS_PER_LIFETIME_RUN_YEAR, SECONDS_PER_ROW_DAY, aperturePoints, benchDesign, candidateCycles, compareWithBench,
   disposalState, errorKey, gbitToBits, lifeState, lifetimePoints, lifetimeRequestFor, missionRequirements, otherNode, requirementsProblems,
   REVISIT_WINDOW_DAYS, restoreForm, revisitWindowOf, runCost, standing, targetOf, templateDesign, tradeOptionsFor, type RequirementsForm,
 } from '../src/design/requirements-page';
@@ -281,6 +281,20 @@ describe('what the lifetime, disposal and binds columns say (D07)', () => {
     const pts = aperturePoints(rows);
     expect(pts[0].altitude).toBeLessThan(pts[1].altitude);
     expect(rel(pts[0].aperture / pts[0].altitude, pts[1].aperture / pts[1].altitude)).toBeLessThanOrEqual(1e-12);
+  });
+
+  // added in review: the chart's sentence named the first row past the template's aperture (720 km for THEOS-2 at
+  // 0.5 m), not where the line crosses it: D·GSD/(1.22·λ) = 0.9 × 0.5 / (1.22 × 550 nm) = 670.6 km
+  it('says where the aperture the GSD needs passes the template\'s', () => {
+    const tpl = templateDesign('theos2');
+    const req = missionRequirements(DEFAULT_FORM);
+    const opts = tradeOptionsFor(tpl, DEFAULT_FORM, JD0, null);
+    const rows = [{ revs: 15, days: 1 }, { revs: 14, days: 1 }, { revs: 13, days: 1 }].map((c) => tradeRow(req, tpl, c, opts)!);
+    const cross = apertureCrossing(rows, 0.9);
+    expect(cross.kind).toBe('from');
+    expect(Math.abs((cross as { altitude: number }).altitude - (0.9 * 0.5) / (1.22 * 550e-9))).toBeLessThanOrEqual(1e-6);
+    expect(apertureCrossing(rows, 100)).toEqual({ kind: 'under' });
+    expect(apertureCrossing(rows, 0.01)).toEqual({ kind: 'all' });
   });
 });
 
