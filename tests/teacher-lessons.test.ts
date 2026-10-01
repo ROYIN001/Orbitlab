@@ -18,7 +18,7 @@
  *   each of the three languages, with no placeholder left.
  */
 import { describe, expect, it } from 'vitest';
-import { allLessons, AUTHOR_TRACK, BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, BUILTIN_LESSON_IDS, lessonNumber, numberTeacherLessons, takeLessons } from '../src/lessons/catalog';
+import { allLessons, AUTHOR_TRACK, BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, BUILTIN_LESSON_IDS, lessonNumber, lessonsWithFiles, numberTeacherLessons, takeLessons } from '../src/lessons/catalog';
 import { setLang, t } from '../src/i18n';
 import { localText } from '../src/lessons/text';
 import { draftLesson, newDraft, type LessonDraft } from '../src/lessons/authoring';
@@ -62,6 +62,24 @@ describe('a teacher\'s lessons are numbered in the order they are written (I2, i
     expect(numbers(two, ['class-c', 'class-a', 'class-b', 'class-d'])).toEqual(['9.1', '9.2', '9.3', '9.4']);
     // the lessons kept are not changed
     expect(file.map((l) => l.order)).toEqual([1, 1, 1]);
+  });
+
+  // ADDED BY THE REVIEW (criterion fixed before the run, exact): the checking tab put a lesson file's lessons
+  // before the ones this browser keeps, so with the numbering above a kept 9.2 opened again there read 9.1
+  it('gives a teacher\'s lessons the catalogue\'s numbers on the check too, a file opened there in the version it gives', () => {
+    const a = written('class-a', 'First'), b = written('class-b', 'Second');
+    const kept = [a, b];
+    const opened = [readBack([{ ...written('class-b', 'Second, as sent') }, written('class-x', 'New')]), readBack([written('class-x', 'New, second file')])];
+    // the files' lessons first, as the check used to put them: class-b would be 9.1
+    const filesFirst = [...opened.flat().filter((l, i, all) => all.findIndex((x) => x.id === l.id) === i), ...kept.filter((l) => !opened.flat().some((x) => x.id === l.id))];
+    expect(numbers(allLessons(filesFirst), ['class-b', 'class-a'])).toEqual(['9.1', '9.3']);
+    const check = lessonsWithFiles(kept, opened);
+    expect(check.map((l) => l.id)).toEqual(['class-a', 'class-b', 'class-x']);
+    expect(numbers(allLessons(check), ['class-a', 'class-b', 'class-x'])).toEqual(['9.1', '9.2', '9.3']);
+    expect(numbers(allLessons(check), ['class-a', 'class-b'])).toEqual(numbers(allLessons(kept), ['class-a', 'class-b']));
+    // the version the file gives, the first file's for a lesson two files give
+    expect(localText(check[1].title)).toBe('Second, as sent');
+    expect(localText(check[2].title)).toBe('New');
   });
 
   it('keeps the number a file gives a lesson in another track, and the built-in lessons\' numbers', () => {

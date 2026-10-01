@@ -90,6 +90,20 @@ export function takeLessons(kept: readonly CatalogLesson[], added: readonly Cata
 }
 
 /**
+ * The lessons a check of results files holds its records to (the lessons
+ * page's checking tab, src/ui/lessons/check-view.ts): those this browser
+ * keeps, each in its place in the version a lesson file opened there gives
+ * it, then the files' other lessons, the first file's first. So a teacher's
+ * lesson has the catalogue's number on the check too (task I2's review: with
+ * the files' lessons put first, a kept 9.2 opened again on the check read 9.1).
+ */
+export function lessonsWithFiles(kept: readonly CatalogLesson[], files: readonly (readonly CatalogLesson[])[]): CatalogLesson[] {
+  const added: CatalogLesson[] = [];
+  for (const f of files) for (const l of f) if (!added.some((x) => x.id === l.id)) added.push(l);
+  return takeLessons(kept, added).lessons;
+}
+
+/**
  * The teacher's lessons (the author track) numbered 1, 2, 3… in the order
  * they are kept: each file's in the order they are written in it, the files
  * in the order they were opened (task I2, item 2). The writer writes each

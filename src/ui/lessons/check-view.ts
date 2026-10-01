@@ -9,7 +9,7 @@
  * check saves as CSV. Everything stays on this computer.
  */
 import { getLang, t, tCount } from '../../i18n';
-import { allLessons, lessonNumber } from '../../lessons/catalog';
+import { allLessons, lessonNumber, lessonsWithFiles } from '../../lessons/catalog';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import { RESULTS_FILE_EXTENSION, verifyResults, type RecheckField, type ResultsFile } from '../../lessons/progress';
 import { collectRecords, recheckCsv, statusCounts, type CheckStatus, type CriterionCheck, type RecordCheck, type ResultsCheck } from '../../lessons/recheck';
@@ -76,12 +76,9 @@ class CheckView {
 
   applyLanguage(): void { this.render(); }
 
-  /** Every lesson the check can hold a record to: the files' first, then the catalogue's. */
+  /** Every lesson the check can hold a record to: the files' version of each, in the catalogue's order, so with its number (`lessonsWithFiles`). */
   private lessons(): CatalogLesson[] {
-    const out: CatalogLesson[] = [];
-    for (const f of this.lessonFiles) for (const l of f.lessons) if (!out.some((x) => x.id === l.id)) out.push(l);
-    for (const l of this.host.customLessons()) if (!out.some((x) => x.id === l.id)) out.push(l);
-    return out;
+    return lessonsWithFiles(this.host.customLessons(), this.lessonFiles.map((f) => f.lessons));
   }
 
   render(): void {
