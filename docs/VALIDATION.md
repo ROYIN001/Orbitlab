@@ -3188,7 +3188,8 @@ before **Fly it**. A mission file is version 3 only when it carries such a satel
 
   Each flight ends at the separation, and the orbit is the last frame's, measured again for this
   section at 120a4f0 (the integration's report had given the perigees as 519.9 and 620.9 km); the
-  inclinations are 0.0005° and 0.0002° from the designs'. The mission file is version 3 and reads
+  inclinations are 0.00045° and 0.00021° below the designs' (97.51559° against 97.51604°, 97.87032°
+  against 97.87052°). The mission file is version 3 and reads
   back equal with no issue, and the flight records the spec. Of 300 random sound designs, those
   inside the drag range pass the spec's checker and the rest are refused only on their area. The
   browser journey separates at the same T+3 321 s (again on 2026-10-01 for this section).
