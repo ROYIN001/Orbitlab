@@ -1561,7 +1561,8 @@ design handed in, on the day and at the solar activity it was graded at. Each re
   can only be flown again approximately.
 
 The check says whether each file changed after it was saved, its times are UTC, and **Save as CSV**
-keeps it. A teacher's lessons keep their catalogue numbers here. Every flight you watch is the
+keeps it. A teacher's lessons keep their catalogue numbers here, and over WebMCP `check_results`
+runs the same check. Every flight you watch is the
 flight the simulator flies without drawing it, so the same launch ends in the same orbit at any time
 warp or frame rate; an Abort or a TORU command takes effect at the simulation's next step (at most a
 tenth of a second later low in the atmosphere, up to a second on a far approach), and the picture
