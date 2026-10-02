@@ -19,59 +19,76 @@ const normalize = (text) => text.replace(/\s+/g, ' ').trim();
 export default async function preflight(t) {
   for (const [viewport, lang] of [['desktop', 'en'], ['mobile', 'en'], ['mobile', 'ru'], ['mobile', 'th']]) {
     const mobile = viewport === 'mobile';
-    const app = await t.open({ hash: '#/launch/explore', viewport, lang, touch: mobile, guide: true });
-    const { page } = app;
     const where = `${viewport}/${lang}`;
-    await checkGuide(t, app, where, mobile);
-    const configured = await app.mcp('configure_mission', MISSION);
-    if (!t.check(configured.ok && configured.feasibility.cause === 'overCapacity' && configured.feasibility.offWindow,
-      `${where}: did not configure the combined warning: ${JSON.stringify(configured.feasibility)}`)) continue;
-    await page.evaluate(() => document.fonts.ready);
-    await checkVisible(t, app, where, configured.feasibility.text);
-
-    // The longest translation must also fit a narrow, short phone.
-    if (lang === 'ru') {
-      await page.setViewportSize({ width: 320, height: 568 });
-      await checkVisible(t, app, `${where}/320×568`, configured.feasibility.text);
-    }
-
-    const launch = page.locator('#setup .launch-button');
-    await launch.focus();
-    t.check(await launch.evaluate((el) => document.activeElement === el), `${where}: Launch does not take keyboard focus`);
-    const cdp = await app.context.newCDPSession(page);
-    const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
-    const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '#setup .launch-button' });
-    const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
-    const description = normalize(nodes[0]?.description?.value ?? '');
-    t.check(description.includes(normalize(configured.feasibility.text)), `${where}: Launch's accessible description omits part of the warning: ${description}`);
-    await cdp.detach();
-
-    // Off-window is the first suggested fix; activation must actually change
-    // the launch time and clear that warning, while retaining the others.
-    const windowFix = page.locator('#setup .verdict-fixes .fix').first();
-    await windowFix.scrollIntoViewIfNeeded();
-    const activated = mobile
-      ? await press(t, app, windowFix, 'touch', `${where}: next window`)
-      : await keyOn(t, app, windowFix, 'Enter', `${where}: next window`);
-    if (activated) {
-      const repaired = await t.until(() => page.evaluate(() => {
-        const panel = window.orbitlab.panel;
-        const verdict = panel.feasibility();
-        return !verdict.offWindow && {
-          launchTime: panel.state.launchTime.toISOString(),
-          failureMode: panel.state.failure.mode,
-          verdict,
-        };
-      }), { timeoutMs: 20_000 });
-      if (t.check(repaired, `${where}: next window did not resolve the plane warning`)) {
-        t.check(Date.parse(repaired.launchTime) !== Date.parse(MISSION.launchTimeIso) && repaired.failureMode === 'engineOut'
-          && repaired.verdict.cause === 'overCapacity', `${where}: next window changed an unrelated mission choice: ${JSON.stringify(repaired)}`);
-        await checkVisible(t, app, `${where}/repaired`, repaired.verdict.text);
+    let step = 'open the app';
+    try {
+      const app = await t.open({ hash: '#/launch/explore', viewport, lang, touch: mobile, guide: true });
+      const { page } = app;
+      step = 'advance the guide';
+      await checkGuide(t, app, where, mobile);
+      step = 'configure the combined warning';
+      const configured = await app.mcp('configure_mission', MISSION);
+      if (!t.check(configured.ok && configured.feasibility.cause === 'overCapacity' && configured.feasibility.offWindow,
+        `${where}: did not configure the combined warning: ${JSON.stringify(configured.feasibility)}`)) {
+        await app.shot(`${viewport}-${lang}-configuration-failed`);
+        await app.context.close();
+        continue;
       }
+      step = 'read the full warning';
+      await page.evaluate(() => document.fonts.ready);
+      await checkVisible(t, app, where, configured.feasibility.text);
+
+      // The longest translation must also fit a narrow, short phone.
+      if (lang === 'ru') {
+        await page.setViewportSize({ width: 320, height: 568 });
+        await checkVisible(t, app, `${where}/320×568`, configured.feasibility.text);
+      }
+
+      step = 'check keyboard focus and accessible description';
+      const launch = page.locator('#setup .launch-button');
+      await launch.focus();
+      t.check(await launch.evaluate((el) => document.activeElement === el), `${where}: Launch does not take keyboard focus`);
+      const cdp = await app.context.newCDPSession(page);
+      const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
+      const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '#setup .launch-button' });
+      const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
+      const description = normalize(nodes[0]?.description?.value ?? '');
+      t.check(description.includes(normalize(configured.feasibility.text)), `${where}: Launch's accessible description omits part of the warning: ${description}`);
+      await cdp.detach();
+
+      // Off-window is the first suggested fix; activation must actually change
+      // the launch time and clear that warning, while retaining the others.
+      step = 'apply the next-window fix';
+      const windowFix = page.locator('#setup .verdict-fixes .fix').first();
+      await windowFix.scrollIntoViewIfNeeded();
+      const activated = mobile
+        ? await press(t, app, windowFix, 'touch', `${where}: next window`)
+        : await keyOn(t, app, windowFix, 'Enter', `${where}: next window`);
+      if (activated) {
+        const repaired = await t.until(() => page.evaluate(() => {
+          const panel = window.orbitlab.panel;
+          const verdict = panel.feasibility();
+          return !verdict.offWindow && {
+            launchTime: panel.state.launchTime.toISOString(),
+            failureMode: panel.state.failure.mode,
+            verdict,
+          };
+        }), { timeoutMs: 20_000 });
+        if (t.check(repaired, `${where}: next window did not resolve the plane warning`)) {
+          t.check(Date.parse(repaired.launchTime) !== Date.parse(MISSION.launchTimeIso) && repaired.failureMode === 'engineOut'
+            && repaired.verdict.cause === 'overCapacity', `${where}: next window changed an unrelated mission choice: ${JSON.stringify(repaired)}`);
+          await checkVisible(t, app, `${where}/repaired`, repaired.verdict.text);
+        }
+      }
+      step = 'capture the result and check page errors';
+      await app.shot(`${viewport}-${lang}`);
+      app.checkErrors();
+      await app.context.close();
+    } catch (error) {
+      // Keep the failed context open for the runner's screenshots and cleanup.
+      const detail = String(error?.message ?? error).split('\n').map((line) => line.trim()).filter(Boolean).join(' | ');
+      throw new Error(`${where}: ${step}: ${detail.slice(0, 3000)}`, { cause: error });
     }
-    await app.shot(`${viewport}-${lang}`);
-    app.checkErrors();
-    await app.context.close();
   }
 }
 

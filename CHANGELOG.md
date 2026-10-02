@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Startup: retry a rejected GPU preference without reducing rendering settings; show localized recovery steps, reload and technical details when WebGL 2 is unavailable, and prevent flight actions before startup completes. Worksheet-export failures now identify the case and action in deployment diagnostics.
 - Stage 2: full preflight explanations on phone and keyboard, clearly labeled first-mission tips, described mobile navigation, teacher pages loaded on demand, and language-free ratings/readiness workers; Stage 1 findings retained in docs/stage1-2026-10-02.
 - Top bar: the "FLIGHT SIMULATOR" tag and its build stamp are gone from the Launch Engineer top bar (the build commit stays in the About dialog and the footer).
 - Physics: Soyuz-2.1b/Fregat with 4 t reaches the 600 km sun-synchronous orbit from Plesetsk in six-DOF: 597.8 × 602.3 km at T+6 448 s, where it ended off target at T+12 234 s. Under J2 its parking orbit's apex comes out 619.0 km, and the six-DOF planner lowered it before circularising, which turned the Fregat retrograde and back on attitude gas it did not have. When that apex is outside the band the orbit is judged on and the circularisation is the last burn, the circularisation now goes first and the apex is lowered after it, with one turn. A tank running dry no longer re-plans the coast. Electron reaches the same orbit 39–45 minutes sooner. The point mass's "off target" there came from the launch time (RAAN), not the orbit. VALIDATION.md §3.

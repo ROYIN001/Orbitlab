@@ -172,6 +172,10 @@ npm run snapshots  # refresh the bundled data snapshots in public/data/ (needs t
 Requires Node.js 22 (the version CI and the deploy use; Vite 8 needs 20.19+ or 22.12+) and a
 browser with WebGL 2.
 
+If the 3-D view cannot start, the page offers recovery steps and technical details.
+For Edge, check `edge://gpu`: WebGL2 must be available even when the graphics
+acceleration setting is already enabled. See the [startup help](docs/USER-GUIDE.md#when-the-3-d-view-cannot-start).
+
 ### Browser tests
 
 Short journeys through the production build in a real Chromium (`tests/browser/`), served under
@@ -192,7 +196,8 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `mobile-smoke` | ✓ | At 390×844, the Thai placement test and the Russian Orbit engineer page do not scroll sideways, and every section/level link is on screen with an accessible name in the page's language |
 | `launch-explore` | ✓ | Falcon 9 configured, launched and warped to its 500 km orbit; the CSV export is over 1 MB and covers the flight |
 | `pwa-offline` | | The service worker precaches the app, a mission flies offline, and a new deploy is offered as a reload |
-| `case-worksheet-exports` | | The three case worksheets and their keys downloaded as HTML and DOCX, in Thai and Russian, through the page's own controls |
+| `case-worksheet-exports` | ✓ | The three case worksheets and their keys downloaded as HTML and DOCX, in Thai and Russian, through the page's own controls |
+| `webgl-startup` | ✓ | Rejected GPU preference recovers with the same rendering settings; unavailable WebGL shows Thai recovery guidance and keyboard reload; unrelated startup errors remain distinct |
 | `satellite` | ✓ | In the satellite designer, NAPA-2's cells put on wings and its array changed, the figures following, saved and reloaded; sent to Orbit, whose lifetime dialog takes the design's own mass and drag area; Fly it gives the Launch section's verdict before the click ("Not flyable as set" on Soyuz-2.1a) and offers the rockets that can fly it; Electron, picked among them, flies the design to payload separation, and the Launch panel's verdict is the one shown |
 | `requirements` | | The requirements page from the bench: Bangkok at 0.5 m and 5 days, a run stopped and run again in the workers, a row the bench cannot take saying why, a row that meets every requirement opened on the bench and set beside it; then a Thai phone, the orbits as cards |
 | `recheck` | ✓ | The Chromium half of the instructor's re-check: the committed results files checked in the page's re-check worker through `check_results`, held to Node's answer under the engine tolerances fixed before the first run, and each measure's largest difference printed |

@@ -1,5 +1,5 @@
 /**
- * The browser-journey harness: one Chromium, a fresh context per page the
+ * The browser-journey harness: one Chromium per journey, a fresh context per page the
  * journey opens, the app's WebMCP tools reachable from the test as
  * `app.mcp(name, input)`, and failures collected rather than thrown so a
  * journey reports everything that went wrong in one run.

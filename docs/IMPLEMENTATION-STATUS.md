@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-10-02. This file states the current position only; how it was reached is in the
+Updated 2026-10-03. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -14,6 +14,12 @@ steps under a pre-flight light, with the guidance computed and shown rather than
 failures as challenges, and a card at the end of the flight; `src/ui/explore.ts`) and Engineer
 (every guidance parameter, the six-DOF flight controls, telemetry and CSV export). English,
 Russian and Thai throughout.
+
+Startup retries a rejected high-performance GPU request with the browser's
+default preference, preserving the requested rendering attributes. Unavailable
+WebGL 2 gets localized recovery instructions and a reload action; unrelated
+startup failures retain their own diagnosis. Flight controls wait for successful
+startup. Browser- or driver-disabled WebGL still needs device-side recovery.
 
 Stage 2 of the October improvement pass makes the core journey clearer: full preflight
 explanations remain visible in Explore, the Launch button exposes them to assistive technology,

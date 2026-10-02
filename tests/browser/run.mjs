@@ -38,39 +38,43 @@ export async function runJourneys({ names = [], smoke = false, base = null, dist
   const distDir = base ? null : resolve(dist);
   const shotsDir = shots ? resolve(shots) : null;
   console.log(`browser journeys against ${url}: ${picked.map((j) => j.name).join(', ')}`);
-  let browser = await launchBrowser();
   const results = [];
   const started = Date.now();
   try {
     for (const { name, mod } of picked) {
-      if (!browser.isConnected()) browser = await launchBrowser();
-      const t = createJourney({ name, browser, base: url, server, distDir, shots: shotsDir });
-      const t0 = Date.now();
-      console.log(`▶ ${name}`);
-      const limit = mod.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-      let timer;
+      // Contexts isolate storage, but still share Chromium's GPU process.
+      // Give each journey fresh browser state; a failure is never retried.
+      const browser = await launchBrowser();
       try {
-        await Promise.race([
-          mod.default(t),
-          new Promise((_, no) => { timer = setTimeout(() => no(new Error(`timed out after ${limit / 1000} s`)), limit); }),
-        ]);
-      } catch (e) {
-        t.fail(`threw: ${e?.stack ?? e}`);
+        const t = createJourney({ name, browser, base: url, server, distDir, shots: shotsDir });
+        const t0 = Date.now();
+        console.log(`▶ ${name}`);
+        const limit = mod.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+        let timer;
+        try {
+          await Promise.race([
+            mod.default(t),
+            new Promise((_, no) => { timer = setTimeout(() => no(new Error(`timed out after ${limit / 1000} s`)), limit); }),
+          ]);
+        } catch (e) {
+          t.fail(`threw: ${e?.stack ?? e}`);
+        } finally {
+          clearTimeout(timer);
+        }
+        if (t.failures.length) {
+          const saved = await t.shotAll();
+          if (saved.length) console.log(`  screenshots: ${saved.join(', ')}`);
+        }
+        await t.close();
+        const seconds = (Date.now() - t0) / 1000;
+        results.push({ name, failures: t.failures, seconds });
+        console.log(`${t.failures.length ? '✗' : '✓'} ${name} (${seconds.toFixed(1)} s)`);
+        if (process.env.GITHUB_ACTIONS) for (const f of t.failures) console.log(`::error title=browser journey ${name}::${String(f).split('\n')[0]}`);
       } finally {
-        clearTimeout(timer);
+        await browser.close().catch(() => {});
       }
-      if (t.failures.length) {
-        const saved = await t.shotAll();
-        if (saved.length) console.log(`  screenshots: ${saved.join(', ')}`);
-      }
-      await t.close();
-      const seconds = (Date.now() - t0) / 1000;
-      results.push({ name, failures: t.failures, seconds });
-      console.log(`${t.failures.length ? '✗' : '✓'} ${name} (${seconds.toFixed(1)} s)`);
-      if (process.env.GITHUB_ACTIONS) for (const f of t.failures) console.log(`::error title=browser journey ${name}::${String(f).split('\n')[0]}`);
     }
   } finally {
-    await browser.close().catch(() => {});
     await server?.close();
   }
   const failed = results.filter((r) => r.failures.length);

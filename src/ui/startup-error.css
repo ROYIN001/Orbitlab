@@ -1,0 +1,6 @@
+.scene-loading.startup-error { display: block; overflow: auto; text-align: left; touch-action: pan-y; }
+.startup-error > div { max-width: 38rem; margin: auto; }
+.startup-error h2 { margin-top: 0; color: var(--text); }
+.startup-error li { margin-bottom: .6em; }
+.startup-error details { margin-top: 1em; overflow-wrap: anywhere; }
+.startup-error summary { cursor: pointer; }
