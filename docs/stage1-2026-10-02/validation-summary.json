@@ -1,0 +1,132 @@
+{
+  "sourceCommit": "91ee372e222e3c0496c57f6590e1ccece03a9079",
+  "recordedAt": "2026-10-02T17:30:58.867467+00:00",
+  "existingRegressionRuns": [
+    {
+      "command": "npx vitest run tests/design-sizing.test.ts tests/design-ratings.test.ts --maxWorkers=1 --reporter=verbose",
+      "exitCode": 0,
+      "filesPassed": 2,
+      "testsPassed": 12,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "npx vitest run tests/d06-satellite-model.test.ts tests/d06-satellite-templates.test.ts tests/d06-satellite-launch.test.ts tests/d06-build-orbit-handoff.test.ts --maxWorkers=1 --reporter=verbose",
+      "exitCode": 0,
+      "filesPassed": 4,
+      "testsPassed": 55,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "portableDiagnosticRun": {
+    "command": "ORBITLAB_AUDIT_DIR=/workspace/orbitlab-env/stage1/portable npx vitest run --config scripts/audit-stage1/vitest.config.ts --reporter=verbose",
+    "exitCode": 0,
+    "collectorsCompleted": 2,
+    "filesPassed": 2,
+    "runnerTestsPassed": 2,
+    "durationSeconds": 9.52,
+    "meaning": "Collection completed; scientific acceptance remains separately evaluated"
+  },
+  "ratingComparisons": {
+    "ratings": {
+      "soyuz21a payloadLEO": {
+        "published": 7430,
+        "computed": 8140,
+        "ratio": 1.096,
+        "flights": 7,
+        "ms": 1460,
+        "converged": true,
+        "cause": "noInsertion"
+      },
+      "falcon9 payloadLEO": {
+        "published": 22800,
+        "computed": 20031,
+        "ratio": 0.879,
+        "flights": 9,
+        "ms": 1321,
+        "converged": true,
+        "cause": "noInsertion"
+      },
+      "longmarch2d payloadLEO": {
+        "published": 3500,
+        "computed": 3165,
+        "ratio": 0.904,
+        "flights": 6,
+        "ms": 288,
+        "converged": true,
+        "cause": "noInsertion"
+      },
+      "vegac payloadLEO": {
+        "published": 3300,
+        "computed": 4330,
+        "ratio": 1.312,
+        "flights": 9,
+        "ms": 1281,
+        "converged": true,
+        "cause": "noInsertion"
+      },
+      "ariane64 payloadLEO": {
+        "published": 21600,
+        "computed": 26274,
+        "ratio": 1.216,
+        "flights": 9,
+        "ms": 3189,
+        "converged": true,
+        "cause": "noInsertion"
+      },
+      "electron payloadLEO": {
+        "published": 300,
+        "computed": 315,
+        "ratio": 1.05,
+        "flights": 9,
+        "ms": 852,
+        "converged": true,
+        "cause": "noInsertion"
+      },
+      "falcon9 payloadGTO": {
+        "published": 8300,
+        "computed": 6832,
+        "ratio": 0.823,
+        "flights": 9,
+        "ms": 1389,
+        "converged": true,
+        "cause": "burnsAfterInsertion"
+      },
+      "ariane64 payloadGTO": {
+        "published": 11500,
+        "computed": 13328,
+        "ratio": 1.159,
+        "flights": 9,
+        "ms": 2353,
+        "converged": true,
+        "cause": "burnsAfterInsertion"
+      }
+    },
+    "accuracyBoundFraction": 0.25,
+    "referenceComparisonsMet": 7,
+    "referenceComparisonsMissed": 1
+  },
+  "note": "Existing tests explicitly expect Vega-C to miss its accuracy bound and sized baseline flights not to insert. Audit probes collect observations with no new accuracy assertions. Runner exit 0 is not scientific validation success.",
+  "humanParticipantsObserved": 0,
+  "fullDefaultSuiteRun": false,
+  "heavySuiteRun": false,
+  "sixDofFleetSuiteRun": false,
+  "browserDiagnosticRun": {
+    "command": "node scripts/audit-stage1/ux.mjs",
+    "exitCode": 0,
+    "contexts": 4,
+    "configuredMissionCases": 12,
+    "executionFailures": 0,
+    "pageErrors": 0,
+    "deviceScaleFactor": 0.5,
+    "meaning": "Automated interactions and geometry measurements, not participant observation"
+  },
+  "performanceCollection": {
+    "command": "node scripts/stage1-baseline.mjs --out /workspace/orbitlab-env/stage1/performance",
+    "exitCode": 0,
+    "samples": 12,
+    "uncaughtPageErrors": 0,
+    "deviceScaleFactor": 1
+  }
+}

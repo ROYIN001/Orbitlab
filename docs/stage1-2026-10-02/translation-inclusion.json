@@ -1,0 +1,34 @@
+{
+  "scope": "Search for literal home.title strings in production bundles; evidence of UI translation inclusion, not a size-attribution estimate",
+  "phrases": {
+    "en": "Watch a real rocket fly to space",
+    "ru": "Посмотрите, как настоящая ракета летит в космос",
+    "th": "ชมจรวดจริงเดินทางสู่อวกาศ"
+  },
+  "results": [
+    {
+      "asset": "index-oAY3KFGe.js",
+      "homeTitleTranslationsPresent": {
+        "en": true,
+        "ru": true,
+        "th": true
+      }
+    },
+    {
+      "asset": "ratings.worker-B5dKkf-R.js",
+      "homeTitleTranslationsPresent": {
+        "en": true,
+        "ru": true,
+        "th": true
+      }
+    },
+    {
+      "asset": "readiness.worker-BSINHvA5.js",
+      "homeTitleTranslationsPresent": {
+        "en": true,
+        "ru": true,
+        "th": true
+      }
+    }
+  ]
+}

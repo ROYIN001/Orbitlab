@@ -12,8 +12,9 @@ simulator), **Orbit** (orbits, orbit changes and what satellites do) and **Build
 rocket and a satellite). Each section has the same three **levels** — Watch, Explore and
 Engineer — and the top bar has a tab for each section. The current tab carries its level as a
 badge; pressing any tab opens the menu of that section's levels, so a section and a level are
-picked together. On a phone the switch is one button that opens a table of every section and
-level. The ORBITLAB name at the left of the bar goes back to the landing page. A tab marked with
+picked together. On a phone the switch is one button that opens a scrollable list of every
+section and level, with a short description of what each offers. The ORBITLAB name at the left
+of the bar goes back to the landing page. A tab marked with
 a dot is a section still to come (Campaign, roadmap phase 6): its menu lists what the roadmap
 brings to it. In Thai the launch section's first level is called รับชม (watching), the other
 sections' first level พื้นฐาน (the basics), and the second level ทดลอง everywhere.
@@ -86,6 +87,11 @@ site whose range-safety corridor reaches the plane (or an inclination this one c
 the heaviest payload the verdict passes (found by bisection, the insertion flown where the
 budget calls it marginal), and for a stack that the flown insertion probe says does not
 reach orbit, the auto-tuner. None is offered during a lesson.
+
+The full preflight explanation stays visible, including combined cautions; the Launch button
+also exposes it as its accessible description. The first-use guide is a separate sequence of
+three tips. **Next tip** changes the guidance text; the setup's **Next** moves between Rocket,
+Payload and Orbit without replacing the mission.
 
 The **guidance** is the vehicle's own pitch programme — the pitch-over altitude, the kick and
 its duration, the pitch-program rate, the gravity-turn ceiling, the loft — the one

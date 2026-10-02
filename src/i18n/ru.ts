@@ -4269,6 +4269,7 @@ export const ru: Record<string, string> = {
   'assess.vehicleAlt': 'Фотография ракеты-носителя',
   'lesson.page.title': 'Уроки и входной тест',
   'lesson.page.back': 'Вернуться в симулятор',
+  'lesson.page.loadFailed': 'Не удалось загрузить эту страницу. Перезагрузите её и попробуйте снова.',
   'lesson.page.lessons': 'Уроки',
   'lesson.page.test': 'Входной тест',
   'lesson.author.tab': 'Составить сценарий',

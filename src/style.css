@@ -369,7 +369,6 @@ body[data-lesson-reveal~="setup.guidance"] #setup[data-experience="learning"] :i
 .status-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .status-title { font: 600 14px/1.35 var(--display); }
 #setup[data-experience="learning"] .status-note .status-dot { width: 11px; height: 11px; margin-top: 4px; flex: none; box-shadow: 0 0 10px currentColor; }
-#setup[data-experience="learning"] .status-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
 #setup[data-experience="learning"] .launch-note { display: none; }
 .verdict-fixes { display: flex; flex-wrap: wrap; gap: 6px; margin: -2px 0 10px; }
 .verdict-fixes:empty { display: none; }

@@ -3,10 +3,11 @@
  * engineer page, and the instructor's tabs (the Thai results check, the
  * Russian scenario writer; T01/T02) fit the screen — the document never
  * scrolls sideways (a strip of tabs that scrolls inside itself is fine) — and
- * the section switch, on a phone one button that opens a table of sections ×
- * levels (src/ui/section-nav.ts), has an accessible name in the page's
- * language, and once opened every one of its links is on the screen with a
- * name of its own in that language (audit 2026-09-27, "ภาษาและมือถือ";
+ * the section switch, on a phone one button that opens a scrollable list of
+ * sections × levels (src/ui/section-nav.ts), has an accessible name in the
+ * page's language. Every route has a localized name and description, can be
+ * reached using Tab, and scrolls into view when focused. Escape closes the
+ * list and restores the switch's focus (audit 2026-09-27, "ภาษาและมือถือ";
  * owner, 2026-10-01).
  *
  * The names are Chromium's own computed accessible names (the DevTools
@@ -61,7 +62,7 @@ export default async function mobileSmoke(t) {
     t.check(overflow.scrollWidth <= overflow.clientWidth && overflow.scrolledX === 0,
       `${where}: the document scrolls sideways — ${overflow.scrollWidth} px wide in a ${overflow.clientWidth} px viewport, scrolls to x=${overflow.scrolledX}; sticking out: ${overflow.out.join(', ') || 'nothing found outside a clipping box'}`);
 
-    // 2. the switch's button has a name in the page's language, and opens the table
+    // 2. the switch's button has a name in the page's language, and opens the list
     const cdp = await app.context.newCDPSession(page);
     const axOf = async (selector) => {
       const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
@@ -80,25 +81,43 @@ export default async function mobileSmoke(t) {
     }
     await page.tap('#section-nav .nav-sheet-btn');
     const opened = await page.waitForFunction(() => document.getElementById('nav-sheet')?.hidden === false, null, { timeout: 5_000 }).then(() => true, () => false);
-    if (t.check(opened, `${where}: tapping the section switch did not open the table`)) {
-      // 3. every link of the table is on the screen and named, in the page's language, uniquely
-      const hrefs = await page.$$eval('#nav-sheet a', (as) => as.map((a) => {
-        const r = a.getBoundingClientRect();
-        return { href: a.getAttribute('href'), onScreen: r.width > 0 && r.left >= -1 && r.right <= document.documentElement.clientWidth + 1 && r.bottom <= innerHeight + 1, left: Math.round(r.left), right: Math.round(r.right) };
-      }));
-      t.check(hrefs.length >= 9, `${where}: the table has ${hrefs.length} links`);
-      for (const h of hrefs) t.check(h.onScreen, `${where}: the table's link to ${h.href} is not on the screen (${h.left}–${h.right} px of ${await page.evaluate(() => document.documentElement.clientWidth)})`);
+    if (t.check(opened, `${where}: tapping the section switch did not open the list`)) {
+      // 3. native keyboard navigation reveals every route in the scrolling list.
+      const hrefs = await page.$$eval('#nav-sheet a', (as) => as.map((a) => a.getAttribute('href')));
+      t.check(hrefs.length === 9 && new Set(hrefs).size === 9, `${where}: the list has ${hrefs.length} links (${new Set(hrefs).size} unique)`);
+      await page.focus('#section-nav .nav-sheet-btn');
+      for (const href of hrefs) {
+        await page.keyboard.press('Tab');
+        const focused = await page.evaluate(() => {
+          const a = document.activeElement;
+          const r = a.getBoundingClientRect();
+          const sheet = document.getElementById('nav-sheet').getBoundingClientRect();
+          return {
+            href: a.getAttribute('href'),
+            onScreen: r.width > 0 && r.left >= -1 && r.right <= document.documentElement.clientWidth + 1
+              && r.top >= Math.max(0, sheet.top) - 1 && r.bottom <= Math.min(innerHeight, sheet.bottom) + 1,
+          };
+        });
+        t.check(focused.href === href, `${where}: Tab should reach ${href}, focused ${focused.href}`);
+        t.check(focused.onScreen, `${where}: focused link ${href} did not scroll fully into view`);
+      }
       const names = [];
       for (const [i, ax] of (await axOf('#nav-sheet a')).entries()) {
         const name = (ax?.name?.value ?? '').trim();
-        const link = `the table's link to ${hrefs[i]?.href}`;
+        const description = (ax?.description?.value ?? '').trim();
+        const link = `the list's link to ${hrefs[i]}`;
         names.push(name);
         if (!t.check(ax && !ax.ignored && ax.role?.value === 'link', `${where}: ${link} is not exposed as a link (role ${ax?.role?.value}, ignored ${ax?.ignored})`)) continue;
         if (!t.check(name !== '', `${where}: ${link} has no accessible name`)) continue;
         t.check(p.script.test(name), `${where}: ${link} is named "${name}", not in the page's language (${p.lang})`);
+        t.check(p.script.test(description), `${where}: ${link} has no localized accessible description ("${description}")`);
       }
-      t.check(new Set(names).size === names.length, `${where}: the table's links share a name: ${names.join(' | ')}`);
+      t.check(new Set(names).size === names.length, `${where}: the list's links share a name: ${names.join(' | ')}`);
       t.log(`${p.lang} switch "${buttonName}": ${names.join(', ')}`);
+      await page.keyboard.press('Escape');
+      t.check(await page.evaluate(() => document.getElementById('nav-sheet').hidden
+        && document.activeElement === document.querySelector('#section-nav .nav-sheet-btn')),
+      `${where}: Escape did not close the list and restore focus to its opener`);
     }
     await app.shot(p.shot ?? p.lang);
     app.checkErrors();

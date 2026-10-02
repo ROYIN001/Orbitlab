@@ -1,0 +1,651 @@
+{
+  "sha": "91ee372e222e3c0496c57f6590e1ccece03a9079",
+  "launchTime": "2026-09-15T12:00:00.000Z",
+  "dynamics": {
+    "model": "pointMass",
+    "wind": "calm",
+    "seed": 20260919
+  },
+  "sizing": [
+    {
+      "requestIndex": 0,
+      "payloadKg": 1000,
+      "siteId": "kourou",
+      "orbit": {
+        "id": "leo",
+        "name": "Low Earth orbit (500 km)",
+        "perigee": 500000,
+        "apogee": 500000,
+        "inclination": "site",
+        "argPerigee": 0,
+        "raanMode": "free",
+        "description": "Generic circular LEO at the minimum inclination of the launch site."
+      },
+      "variation": {
+        "extraDvMps": 0
+      },
+      "designDvMps": 9049.487239168326,
+      "liftoffKg": 31582.532161920735,
+      "heightM": 22.17336555059883,
+      "engines": [
+        17,
+        2
+      ],
+      "fairing": {
+        "mass": 800,
+        "diameter": 2.6,
+        "length": 5,
+        "sepAltitude": 115000
+      },
+      "probe": {
+        "reachesOrbit": false,
+        "tInsertion": -1,
+        "bestPerigee": -1239978.1730189286,
+        "apoapsis": 250401.66445590928,
+        "endedWith": "evt.outOfPropellant",
+        "dvLeft": 7.414812333924097
+      }
+    },
+    {
+      "requestIndex": 0,
+      "payloadKg": 1000,
+      "siteId": "kourou",
+      "orbit": {
+        "id": "leo",
+        "name": "Low Earth orbit (500 km)",
+        "perigee": 500000,
+        "apogee": 500000,
+        "inclination": "site",
+        "argPerigee": 0,
+        "raanMode": "free",
+        "description": "Generic circular LEO at the minimum inclination of the launch site."
+      },
+      "variation": {
+        "extraDvMps": 220
+      },
+      "designDvMps": 9269.487239168326,
+      "liftoffKg": 34592.99656647442,
+      "heightM": 23.234600608497743,
+      "engines": [
+        19,
+        2
+      ],
+      "fairing": {
+        "mass": 800,
+        "diameter": 2.6,
+        "length": 5,
+        "sepAltitude": 115000
+      },
+      "probe": {
+        "reachesOrbit": false,
+        "tInsertion": -1,
+        "bestPerigee": -534855.4490976846,
+        "apoapsis": 223845.21543993056,
+        "endedWith": "evt.outOfPropellant",
+        "dvLeft": 8.772409557100636
+      }
+    },
+    {
+      "requestIndex": 0,
+      "payloadKg": 1000,
+      "siteId": "kourou",
+      "orbit": {
+        "id": "leo",
+        "name": "Low Earth orbit (500 km)",
+        "perigee": 500000,
+        "apogee": 500000,
+        "inclination": "site",
+        "argPerigee": 0,
+        "raanMode": "free",
+        "description": "Generic circular LEO at the minimum inclination of the launch site."
+      },
+      "variation": {
+        "extraDvMps": 500
+      },
+      "designDvMps": 9549.487239168326,
+      "liftoffKg": 38945.40141083982,
+      "heightM": 24.76895948224069,
+      "engines": [
+        21,
+        2
+      ],
+      "fairing": {
+        "mass": 800,
+        "diameter": 2.6,
+        "length": 5,
+        "sepAltitude": 115000
+      },
+      "probe": {
+        "reachesOrbit": true,
+        "tInsertion": 454.7399999999857,
+        "bestPerigee": 167030.0687251864,
+        "apoapsis": 432126.0900833532,
+        "endedWith": "",
+        "dvLeft": 9.020284572011795
+      }
+    },
+    {
+      "requestIndex": 0,
+      "payloadKg": 1000,
+      "siteId": "kourou",
+      "orbit": {
+        "id": "leo",
+        "name": "Low Earth orbit (500 km)",
+        "perigee": 500000,
+        "apogee": 500000,
+        "inclination": "site",
+        "argPerigee": 0,
+        "raanMode": "free",
+        "description": "Generic circular LEO at the minimum inclination of the launch site."
+      },
+      "variation": {
+        "extraDvMps": 0,
+        "fairing": null
+      },
+      "designDvMps": 9049.487239168326,
+      "liftoffKg": 27137.977944947044,
+      "heightM": 14.407467684627008,
+      "engines": [
+        15,
+        2
+      ],
+      "fairing": null,
+      "probe": {
+        "reachesOrbit": false,
+        "tInsertion": -1,
+        "bestPerigee": -164159.3857610831,
+        "apoapsis": 210389.19744986854,
+        "endedWith": "evt.outOfPropellant",
+        "dvLeft": 9.321705375635794
+      }
+    },
+    {
+      "requestIndex": 0,
+      "payloadKg": 1000,
+      "siteId": "kourou",
+      "orbit": {
+        "id": "leo",
+        "name": "Low Earth orbit (500 km)",
+        "perigee": 500000,
+        "apogee": 500000,
+        "inclination": "site",
+        "argPerigee": 0,
+        "raanMode": "free",
+        "description": "Generic circular LEO at the minimum inclination of the launch site."
+      },
+      "variation": {
+        "extraDvMps": 100,
+        "fairing": null
+      },
+      "designDvMps": 9149.487239168326,
+      "liftoffKg": 28365.842952001243,
+      "heightM": 14.840272751607493,
+      "engines": [
+        16,
+        2
+      ],
+      "fairing": null,
+      "probe": {
+        "reachesOrbit": true,
+        "tInsertion": 415.1799999999871,
+        "bestPerigee": 162141.40140114632,
+        "apoapsis": 201474.5777194323,
+        "endedWith": "",
+        "dvLeft": 9.357595546699043
+      }
+    },
+    {
+      "requestIndex": 0,
+      "payloadKg": 1000,
+      "siteId": "kourou",
+      "orbit": {
+        "id": "leo",
+        "name": "Low Earth orbit (500 km)",
+        "perigee": 500000,
+        "apogee": 500000,
+        "inclination": "site",
+        "argPerigee": 0,
+        "raanMode": "free",
+        "description": "Generic circular LEO at the minimum inclination of the launch site."
+      },
+      "variation": {
+        "extraDvMps": 200,
+        "fairing": null
+      },
+      "designDvMps": 9249.487239168326,
+      "liftoffKg": 29658.93340490611,
+      "heightM": 15.296078560725492,
+      "engines": [
+        16,
+        2
+      ],
+      "fairing": null,
+      "probe": {
+        "reachesOrbit": true,
+        "tInsertion": 428.1699999999862,
+        "bestPerigee": 180948.64192966837,
+        "apoapsis": 202768.07243535854,
+        "endedWith": "",
+        "dvLeft": 90.47551461092976
+      }
+    },
+    {
+      "requestIndex": 1,
+      "payloadKg": 8000,
+      "siteId": "baikonur",
+      "orbit": {
+        "id": "iss",
+        "name": "ISS orbit (420 km, 51.6°)",
+        "perigee": 420000,
+        "apogee": 420000,
+        "inclination": 51.64,
+        "argPerigee": 0,
+        "raanMode": "iss",
+        "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+      },
+      "variation": {
+        "extraDvMps": 0
+      },
+      "designDvMps": 9268.627479534662,
+      "liftoffKg": 142750.23595356694,
+      "heightM": 41.496316888903706,
+      "engines": [
+        1,
+        3
+      ],
+      "fairing": {
+        "mass": 1400,
+        "diameter": 4.07,
+        "length": 12,
+        "sepAltitude": 115000
+      },
+      "probe": {
+        "reachesOrbit": false,
+        "tInsertion": -1,
+        "bestPerigee": -5550904.349476497,
+        "apoapsis": 76633.8364079129,
+        "endedWith": "evt.insertionAbandoned",
+        "dvLeft": 3896.4656834679854
+      }
+    },
+    {
+      "requestIndex": 2,
+      "payloadKg": 3000,
+      "siteId": "vandenberg",
+      "orbit": {
+        "id": "sso",
+        "name": "Sun-synchronous (600 km)",
+        "perigee": 600000,
+        "apogee": 600000,
+        "inclination": "sso",
+        "argPerigee": 0,
+        "raanMode": "ltan",
+        "ltan": 10.5,
+        "description": "Retrograde near-polar orbit whose plane precesses 360° per year under J2, keeping a constant local solar time (LTAN 10:30)."
+      },
+      "variation": {
+        "extraDvMps": 0
+      },
+      "designDvMps": 9520.887505719726,
+      "liftoffKg": 62566.53234588248,
+      "heightM": 37.498865311731954,
+      "engines": [
+        1,
+        1,
+        1
+      ],
+      "fairing": {
+        "mass": 1400,
+        "diameter": 4.07,
+        "length": 12,
+        "sepAltitude": 115000
+      },
+      "probe": {
+        "reachesOrbit": false,
+        "tInsertion": -1,
+        "bestPerigee": -3453934.6129030352,
+        "apoapsis": 91473.85456709098,
+        "endedWith": "evt.outOfPropellant",
+        "dvLeft": 3.775381826085278
+      }
+    }
+  ],
+  "fairingTimeline": [
+    {
+      "key": "evt.ignition",
+      "t": -2.50000000000002,
+      "params": {
+        "stage": "17× Rutherford"
+      },
+      "altitudeM": 9.999999999068677,
+      "fairingAttached": true,
+      "orbit": {
+        "a": 3194556.235733003,
+        "e": 0.9965674507954027,
+        "i": 0.09143779951198232,
+        "raan": 0.5530357019464652,
+        "argp": 4.71238898038469,
+        "nu": 3.141592653589793,
+        "energy": -62387451.086541854,
+        "h": 2954095532.0279503,
+        "apoapsisAlt": 9.999999999068677,
+        "periapsisAlt": -6367171.528533992,
+        "period": 1796.9119092157741,
+        "u": 1.5707963267948966
+      }
+    },
+    {
+      "key": "evt.meco",
+      "t": 180.89999999999398,
+      "params": {
+        "stage": "17× Rutherford",
+        "n": 1
+      },
+      "altitudeM": 72847.7888039276,
+      "fairingAttached": true,
+      "orbit": {
+        "a": 3603007.2165767187,
+        "e": 0.7971615047453853,
+        "i": 0.09221346029644135,
+        "raan": 0.4329931832933667,
+        "argp": 4.909692195753357,
+        "nu": 3.097895216456872,
+        "energy": -55314965.782765955,
+        "h": 22880746927.247128,
+        "apoapsisAlt": 97048.87095149793,
+        "periapsisAlt": -5647308.4377980605,
+        "period": 2152.329104871262,
+        "u": 1.7244021050306433
+      }
+    },
+    {
+      "key": "evt.stageSep",
+      "t": 182.89999999999387,
+      "params": {
+        "stage": "17× Rutherford",
+        "n": 1,
+        "alt": 74,
+        "speed": 3606
+      },
+      "altitudeM": 73989.32648321893,
+      "fairingAttached": true,
+      "orbit": {
+        "a": 3605425.7783794077,
+        "e": 0.7960018300595703,
+        "i": 0.09221402793452069,
+        "raan": 0.4329534189252638,
+        "argp": 4.910038111188198,
+        "nu": 3.098635980496892,
+        "energy": -55277859.8564253,
+        "h": 22946354078.843822,
+        "apoapsisAlt": 97214.29611336719,
+        "periapsisAlt": -5642636.739354552,
+        "period": 2154.4966335992003,
+        "u": 1.7254887845055045
+      }
+    },
+    {
+      "key": "evt.ignition",
+      "t": 184.89999999999375,
+      "params": {
+        "stage": "2× Rutherford Vacuum"
+      },
+      "altitudeM": 75161.66717844084,
+      "fairingAttached": true,
+      "orbit": {
+        "a": 3605403.7241495014,
+        "e": 0.7960123558593591,
+        "i": 0.09221401923738168,
+        "raan": 0.4329540224818451,
+        "argp": 4.910034580881025,
+        "nu": 3.099741090813962,
+        "energy": -55278197.990715735,
+        "h": 22945759143.13515,
+        "apoapsisAlt": 97212.63643385284,
+        "periapsisAlt": -5642679.18813485,
+        "period": 2154.47686518861,
+        "u": 1.7265903645154008
+      }
+    },
+    {
+      "key": "evt.fairingSep",
+      "t": 273.399999999991,
+      "params": {
+        "alt": 117
+      },
+      "altitudeM": 116673.71908037923,
+      "fairingAttached": false,
+      "orbit": {
+        "a": 3836013.835448474,
+        "e": 0.6963033374734477,
+        "i": 0.0923011390884482,
+        "raan": 0.42723034859852416,
+        "argp": 4.967969566132318,
+        "nu": 3.1010569935476586,
+        "energy": -51955031.824513614,
+        "h": 28066014045.709213,
+        "apoapsisAlt": 128906.07166556735,
+        "periapsisAlt": -5213152.400768619,
+        "period": 2364.45595180514,
+        "u": 1.78584125250039
+      }
+    },
+    {
+      "key": "evt.outOfPropellant",
+      "t": 415.399999999991,
+      "params": {
+        "ap": 251,
+        "pe": -1222
+      },
+      "altitudeM": 188545.51246112864,
+      "fairingAttached": false,
+      "orbit": {
+        "a": 5883348.74571849,
+        "e": 0.12666084417989304,
+        "i": 0.09230948971953849,
+        "raan": 0.4268755581586973,
+        "argp": 5.410676337833398,
+        "nu": 2.779197128718118,
+        "energy": -33875302.912314594,
+        "h": 48036267078.8662,
+        "apoapsisAlt": 250401.66445590928,
+        "periapsisAlt": -1239978.1730189286,
+        "period": 4491.049786558786,
+        "u": 1.9066881593719298
+      }
+    }
+  ],
+  "fullMission": {
+    "request": {
+      "payloadKg": 1000,
+      "extraDvMps": 500,
+      "siteId": "kourou",
+      "perigeeKm": 500,
+      "apogeeKm": 500
+    },
+    "mission": {
+      "onTarget": false,
+      "misses": [
+        {
+          "param": "apogee",
+          "achieved": 457929.05721500143,
+          "target": 500000
+        },
+        {
+          "param": "perigee",
+          "achieved": 171775.3584081577,
+          "target": 500000
+        }
+      ],
+      "endStatus": "orbit",
+      "t": -1
+    }
+  },
+  "vegac": {
+    "publishedLEOKg": 3300,
+    "publishedSSOKg": 2300,
+    "rating": {
+      "payloadLEO": {
+        "kg": 4330,
+        "failsAtKg": 4371.120452880859,
+        "ceilingKg": 10458.0078125,
+        "orbit": {
+          "rating": "LEO",
+          "siteId": "kourou",
+          "from": "convention",
+          "orbit": {
+            "id": "custom",
+            "name": "Custom orbit",
+            "perigee": 200000,
+            "apogee": 200000,
+            "inclination": "site",
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Set perigee, apogee, inclination, argument of perigee and RAAN yourself."
+          }
+        },
+        "flights": 9,
+        "converged": true,
+        "failCause": "noInsertion"
+      },
+      "payloadGTO": {
+        "kg": 113,
+        "failsAtKg": 126.53350830078125,
+        "ceilingKg": 3239.2578125,
+        "orbit": {
+          "rating": "GTO",
+          "siteId": "kourou",
+          "from": "convention",
+          "orbit": {
+            "id": "gto",
+            "name": "Geostationary transfer orbit",
+            "perigee": 250000,
+            "apogee": 35786000,
+            "inclination": "site",
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Elliptical transfer with apogee at geostationary altitude; the satellite circularises with its own propulsion."
+          }
+        },
+        "flights": 3,
+        "converged": true,
+        "failCause": "burnBudget"
+      },
+      "flights": 12,
+      "elapsedMs": 1156.05611,
+      "estimate": true
+    },
+    "ssoRef": {
+      "rating": "LEO",
+      "siteId": "kourou",
+      "from": "ratingOrbits",
+      "orbit": {
+        "id": "custom",
+        "name": "Custom orbit",
+        "perigee": 700000,
+        "apogee": 700000,
+        "inclination": 98.2,
+        "argPerigee": 0,
+        "raanMode": "free",
+        "description": "Set perigee, apogee, inclination, argument of perigee and RAAN yourself."
+      }
+    },
+    "ssoProbes": [
+      {
+        "kg": 2300,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 2400,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 2906,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 3000,
+        "ok": false,
+        "flew": true,
+        "cause": "burnsAfterInsertion"
+      },
+      {
+        "kg": 3300,
+        "ok": false,
+        "flew": true,
+        "cause": "noInsertion"
+      },
+      {
+        "kg": 2800,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 3050,
+        "ok": false,
+        "flew": true,
+        "cause": "burnsAfterInsertion"
+      },
+      {
+        "kg": 2925,
+        "ok": false,
+        "flew": true,
+        "cause": "burnsAfterInsertion"
+      },
+      {
+        "kg": 2862,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 2893,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 2909,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 2917,
+        "ok": false,
+        "flew": true,
+        "cause": "burnsAfterInsertion"
+      },
+      {
+        "kg": 2913,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 2915,
+        "ok": true,
+        "flew": true,
+        "cause": "margin"
+      },
+      {
+        "kg": 2916,
+        "ok": false,
+        "flew": true,
+        "cause": "burnsAfterInsertion"
+      }
+    ],
+    "ssoBracket": {
+      "deliveredKg": 2915,
+      "failsAtKg": 2916,
+      "ratioToPublished": 1.267391304347826
+    }
+  }
+}

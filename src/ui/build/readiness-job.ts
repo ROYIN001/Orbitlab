@@ -13,11 +13,12 @@
  * catalogue by identity (`isCatalogueEntry`), and a copy that crossed into
  * the worker would be reviewed as a vehicle of one's own.
  *
- * The worker has no reader's language: the review's one text, the verdict's,
- * comes back in English and the caller says it again (`readinessVerdict`).
+ * The worker returns language-free message descriptions. This runner localizes
+ * them in the reader's current language, without repeating the review.
  */
 import type { VehicleSpec } from '../../types';
-import { readiness, type Readiness, type ReadinessMission } from '../../design/readiness';
+import { readiness, localizeReadiness, type Readiness, type ReadinessMission } from '../../design/readiness';
+import type { ReadinessAssessment } from '../../design/readiness-core';
 import { isCatalogueEntry } from '../../design/warnings';
 
 export interface ReadinessRequest {
@@ -28,7 +29,7 @@ export interface ReadinessRequest {
 }
 
 export type ReadinessReply =
-  | { id: number; type: 'result'; result: Readiness }
+  | { id: number; type: 'result'; result: ReadinessAssessment }
   | { id: number; type: 'error'; message: string };
 
 const superseded = (): DOMException => new DOMException('Superseded', 'AbortError');
@@ -80,7 +81,7 @@ export class ReadinessRunner {
         const waiting = this.waiting;
         if (!waiting || waiting.id !== data.id) return;
         this.waiting = null;
-        if (data.type === 'result') waiting.resolve(data.result);
+        if (data.type === 'result') waiting.resolve(localizeReadiness(data.result));
         else waiting.reject(new Error(data.message));
       };
       w.onerror = (e) => {

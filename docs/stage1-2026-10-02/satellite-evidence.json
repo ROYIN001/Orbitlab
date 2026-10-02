@@ -1,0 +1,831 @@
+{
+  "head": "91ee372e222e3c0496c57f6590e1ccece03a9079",
+  "recordedAt": "2026-10-02T17:28:48.039Z",
+  "node": "v22.23.3",
+  "method": "Vitest probe reading current cores and using existing d06-satellite-launch recorder path; descriptive reproduction, not new acceptance thresholds",
+  "budgets": [
+    {
+      "template": "comsat",
+      "inputs": {
+        "design": {
+          "id": "stage1-comsat",
+          "name": "comsat",
+          "template": "comsat",
+          "kind": "comsat",
+          "orbit": {
+            "perigee": 35786000,
+            "apogee": 35786000,
+            "sso": false,
+            "inclination": 0
+          },
+          "lifeYears": 15,
+          "power": {
+            "payloadW": 8000,
+            "busW": 1000,
+            "arrayArea": 45,
+            "mount": "tracking",
+            "batteryWh": 15000,
+            "dod": 0.8,
+            "cellEff": 0.295,
+            "Id": 0.77,
+            "degPerYear": 0.005,
+            "regulation": "PPT",
+            "batteryEff": 0.9
+          },
+          "adcs": {
+            "mode": "threeAxis",
+            "inertia": [
+              14300,
+              5730,
+              14300
+            ],
+            "pointingDeg": 0.1,
+            "wheelH": 50,
+            "residualDipole": 10,
+            "cpOffset": 0.5
+          },
+          "comms": {
+            "txPowerW": 100,
+            "frequency": 12000000000,
+            "txAntennaD": 2.5,
+            "lineLoss": 1,
+            "dataRate": 30000000,
+            "requiredEbN0": 5.52,
+            "station": "bangkok",
+            "minElDeg": 10,
+            "rxAntennaD": 11.28,
+            "rxNoiseK": 189.7,
+            "losses": 2
+          },
+          "payload": null,
+          "bus": {
+            "dryMass": 3025,
+            "size": {
+              "width": 2.5,
+              "height": 5,
+              "depth": 2.5
+            },
+            "cd": 2.2,
+            "cr": 1.3
+          },
+          "propulsion": {
+            "thrust": 490,
+            "isp": 321,
+            "propellant": 2475,
+            "insertionDv": 1836.5
+          }
+        },
+        "jd": 2461314.5,
+        "activity": "ECSS moderate"
+      },
+      "outputs": {
+        "region": "geo",
+        "dv": {
+          "plan": "graveyard",
+          "engine": true,
+          "insertion": {
+            "value": 1836.5,
+            "unit": "m/s"
+          },
+          "dragMakeupPerYear": {
+            "value": 0,
+            "unit": "m/s/yr"
+          },
+          "nsskPerYear": {
+            "value": 45.6131001589372,
+            "unit": "m/s/yr"
+          },
+          "ewskPerYear": {
+            "value": 1.33,
+            "unit": "m/s/yr"
+          },
+          "stationKeepingPerYear": {
+            "value": 46.9431001589372,
+            "unit": "m/s/yr"
+          },
+          "stationKeeping": {
+            "value": 704.146502384058,
+            "unit": "m/s"
+          },
+          "disposal": {
+            "value": 9.124825783090726,
+            "unit": "m/s"
+          },
+          "required": {
+            "value": 2549.7713281671486,
+            "unit": "m/s"
+          },
+          "available": {
+            "value": 1881.9518097306934,
+            "unit": "m/s"
+          },
+          "margin": {
+            "value": -667.8195184364552,
+            "unit": "m/s"
+          },
+          "propellantNeeded": {
+            "value": 3053.237312998466,
+            "unit": "kg"
+          },
+          "graveyardRise": {
+            "value": 251384.29752066114,
+            "unit": "m"
+          }
+        },
+        "warnings": [
+          {
+            "key": "build.sat.warn.dv",
+            "level": "warn",
+            "values": {
+              "available": {
+                "value": 1881.9518097306934,
+                "unit": "m/s"
+              },
+              "required": {
+                "value": 2549.7713281671486,
+                "unit": "m/s"
+              },
+              "short": {
+                "value": 667.8195184364552,
+                "unit": "m/s"
+              }
+            }
+          }
+        ]
+      },
+      "scientificAcceptance": "negative margin is an existing design shortfall, not a passed mission requirement"
+    },
+    {
+      "template": "weather",
+      "inputs": {
+        "design": {
+          "id": "stage1-weather",
+          "name": "weather",
+          "template": "weather",
+          "kind": "weather",
+          "orbit": {
+            "perigee": 35786000,
+            "apogee": 35786000,
+            "sso": false,
+            "inclination": 0
+          },
+          "lifeYears": 10,
+          "power": {
+            "payloadW": 1500,
+            "busW": 600,
+            "arrayArea": 12,
+            "mount": "tracking",
+            "batteryWh": 4000,
+            "dod": 0.8,
+            "cellEff": 0.295,
+            "Id": 0.77,
+            "degPerYear": 0.005,
+            "regulation": "PPT",
+            "batteryEff": 0.9
+          },
+          "adcs": {
+            "mode": "threeAxis",
+            "inertia": [
+              2440,
+              1200,
+              2440
+            ],
+            "pointingDeg": 0.05,
+            "wheelH": 30,
+            "residualDipole": 5,
+            "cpOffset": 0.4
+          },
+          "comms": {
+            "txPowerW": 20,
+            "frequency": 1700000000,
+            "txAntennaD": 1.2,
+            "lineLoss": 1,
+            "dataRate": 31000000,
+            "requiredEbN0": 5.52,
+            "station": "bangkok",
+            "minElDeg": 10,
+            "rxAntennaD": 11.28,
+            "rxNoiseK": 189.7,
+            "losses": 2
+          },
+          "payload": null,
+          "bus": {
+            "dryMass": 1044,
+            "size": {
+              "width": 2,
+              "height": 3.5,
+              "depth": 2
+            },
+            "cd": 2.2,
+            "cr": 1.3
+          },
+          "propulsion": {
+            "thrust": 400,
+            "isp": 315,
+            "propellant": 756,
+            "insertionDv": 1836.5
+          }
+        },
+        "jd": 2461314.5,
+        "activity": "ECSS moderate"
+      },
+      "outputs": {
+        "region": "geo",
+        "dv": {
+          "plan": "graveyard",
+          "engine": true,
+          "insertion": {
+            "value": 1836.5,
+            "unit": "m/s"
+          },
+          "dragMakeupPerYear": {
+            "value": 0,
+            "unit": "m/s/yr"
+          },
+          "nsskPerYear": {
+            "value": 45.6131001589372,
+            "unit": "m/s/yr"
+          },
+          "ewskPerYear": {
+            "value": 1.33,
+            "unit": "m/s/yr"
+          },
+          "stationKeepingPerYear": {
+            "value": 46.9431001589372,
+            "unit": "m/s/yr"
+          },
+          "stationKeeping": {
+            "value": 469.431001589372,
+            "unit": "m/s"
+          },
+          "disposal": {
+            "value": 9.207715128370808,
+            "unit": "m/s"
+          },
+          "required": {
+            "value": 2315.1387167177427,
+            "unit": "m/s"
+          },
+          "available": {
+            "value": 1682.7138578391975,
+            "unit": "m/s"
+          },
+          "margin": {
+            "value": -632.4248588785451,
+            "unit": "m/s"
+          },
+          "propellantNeeded": {
+            "value": 949.2770206453515,
+            "unit": "kg"
+          },
+          "graveyardRise": {
+            "value": 253678.16091954024,
+            "unit": "m"
+          }
+        },
+        "warnings": [
+          {
+            "key": "build.sat.warn.dv",
+            "level": "warn",
+            "values": {
+              "available": {
+                "value": 1682.7138578391975,
+                "unit": "m/s"
+              },
+              "required": {
+                "value": 2315.1387167177427,
+                "unit": "m/s"
+              },
+              "short": {
+                "value": 632.4248588785451,
+                "unit": "m/s"
+              }
+            }
+          }
+        ]
+      },
+      "scientificAcceptance": "negative margin is an existing design shortfall, not a passed mission requirement"
+    },
+    {
+      "template": "science",
+      "inputs": {
+        "design": {
+          "id": "stage1-science",
+          "name": "science",
+          "template": "science",
+          "kind": "science",
+          "orbit": {
+            "perigee": 800000,
+            "apogee": 800000,
+            "sso": false,
+            "inclination": 90
+          },
+          "lifeYears": 5,
+          "power": {
+            "payloadW": 1000,
+            "busW": 800,
+            "arrayArea": 16,
+            "mount": "tracking",
+            "batteryWh": 4500,
+            "dod": 0.3,
+            "cellEff": 0.295,
+            "Id": 0.77,
+            "degPerYear": 0.005,
+            "regulation": "PPT",
+            "batteryEff": 0.9
+          },
+          "adcs": {
+            "mode": "threeAxis",
+            "inertia": [
+              8210,
+              2810,
+              8210
+            ],
+            "pointingDeg": 0.01,
+            "wheelH": 30,
+            "residualDipole": 5,
+            "cpOffset": 0.3
+          },
+          "comms": {
+            "txPowerW": 10,
+            "frequency": 2200000000,
+            "txAntennaD": 0.5,
+            "lineLoss": 1,
+            "dataRate": 2000000,
+            "requiredEbN0": 5.52,
+            "station": "bangkok",
+            "minElDeg": 10,
+            "rxAntennaD": 11.28,
+            "rxNoiseK": 189.7,
+            "losses": 2
+          },
+          "payload": null,
+          "bus": {
+            "dryMass": 2484,
+            "size": {
+              "width": 2.5,
+              "height": 5.5,
+              "depth": 2.5
+            },
+            "cd": 2.2,
+            "cr": 1.3
+          },
+          "propulsion": {
+            "thrust": 22,
+            "isp": 225,
+            "propellant": 216
+          }
+        },
+        "jd": 2461314.5,
+        "activity": "ECSS moderate"
+      },
+      "outputs": {
+        "region": "leo",
+        "dv": {
+          "plan": "reentry",
+          "engine": true,
+          "insertion": {
+            "value": 0,
+            "unit": "m/s"
+          },
+          "dragMakeupPerYear": {
+            "value": 0.2639990355462842,
+            "unit": "m/s/yr"
+          },
+          "nsskPerYear": {
+            "value": 0,
+            "unit": "m/s/yr"
+          },
+          "ewskPerYear": {
+            "value": 0,
+            "unit": "m/s/yr"
+          },
+          "stationKeepingPerYear": {
+            "value": 0.2639990355462842,
+            "unit": "m/s/yr"
+          },
+          "stationKeeping": {
+            "value": 1.319995177731421,
+            "unit": "m/s"
+          },
+          "disposal": {
+            "value": 208.28954257974783,
+            "unit": "m/s"
+          },
+          "required": {
+            "value": 209.60953775747925,
+            "unit": "m/s"
+          },
+          "available": {
+            "value": 183.98120744298248,
+            "unit": "m/s"
+          },
+          "margin": {
+            "value": -25.628330314496765,
+            "unit": "m/s"
+          },
+          "propellantNeeded": {
+            "value": 244.68461325573045,
+            "unit": "kg"
+          },
+          "graveyardRise": null
+        },
+        "warnings": [
+          {
+            "key": "build.sat.warn.dv",
+            "level": "warn",
+            "values": {
+              "available": {
+                "value": 183.98120744298248,
+                "unit": "m/s"
+              },
+              "required": {
+                "value": 209.60953775747925,
+                "unit": "m/s"
+              },
+              "short": {
+                "value": 25.628330314496765,
+                "unit": "m/s"
+              }
+            }
+          }
+        ]
+      },
+      "scientificAcceptance": "negative margin is an existing design shortfall, not a passed mission requirement"
+    }
+  ],
+  "flights": [
+    {
+      "template": "napa2",
+      "inputs": {
+        "design": {
+          "id": "stage1-napa2",
+          "name": "napa2",
+          "template": "napa2",
+          "kind": "science",
+          "orbit": {
+            "perigee": 520000,
+            "apogee": 540000,
+            "inclination": 97.516,
+            "sso": true,
+            "ltan": 22.5
+          },
+          "lifeYears": 3,
+          "bus": {
+            "dryMass": 10,
+            "size": {
+              "width": 0.2,
+              "height": 0.1,
+              "depth": 0.3405
+            },
+            "cd": 2.2,
+            "cr": 1.3
+          },
+          "power": {
+            "payloadW": 4,
+            "busW": 4,
+            "arrayArea": 0.068,
+            "mount": "body",
+            "batteryWh": 40,
+            "dod": 0.3,
+            "cellEff": 0.295,
+            "Id": 0.77,
+            "degPerYear": 0.005,
+            "regulation": "PPT",
+            "batteryEff": 0.9
+          },
+          "propulsion": null,
+          "adcs": {
+            "mode": "threeAxis",
+            "inertia": [
+              0.105,
+              0.13,
+              0.0417
+            ],
+            "pointingDeg": 1,
+            "wheelH": 0.015,
+            "residualDipole": 0.02,
+            "cpOffset": 0.02
+          },
+          "comms": {
+            "txPowerW": 1,
+            "frequency": 8380000000,
+            "txAntennaD": 0,
+            "lineLoss": 0.4,
+            "dataRate": 12500000,
+            "requiredEbN0": 5.52,
+            "station": "bangkok",
+            "minElDeg": 10,
+            "rxAntennaD": 11.28,
+            "rxNoiseK": 189.7,
+            "losses": 2
+          },
+          "payload": {
+            "focalLength": 0.58,
+            "pixelPitch": 0.0000055,
+            "pixels": 4096,
+            "aperture": 0.095,
+            "bits": 10,
+            "wavelength": 5.5e-7
+          }
+        },
+        "from": "2026-10-01T12:00:00.000Z",
+        "vehicle": "electron",
+        "site": "mahia",
+        "mission": {
+          "format": "orbitlab.mission",
+          "version": 3,
+          "mission": {
+            "vehicleId": "electron",
+            "satelliteId": "stage1-napa2",
+            "siteId": "mahia",
+            "satelliteSpec": {
+              "id": "stage1-napa2",
+              "kind": "science",
+              "name": "napa2",
+              "mass": 10,
+              "typicalOrbit": "custom",
+              "description": "",
+              "size": {
+                "width": 0.2,
+                "height": 0.1,
+                "depth": 0.3405
+              },
+              "crossSection": "box",
+              "area": 0.061075000000000004,
+              "cd": 2.2,
+              "cr": 1.3
+            },
+            "orbitId": "custom",
+            "orbit": {
+              "id": "custom",
+              "name": "Custom orbit",
+              "perigee": 520000,
+              "apogee": 540000,
+              "inclination": "sso",
+              "argPerigee": 0,
+              "raanMode": "ltan",
+              "description": "Set perigee, apogee, inclination, argument of perigee and RAAN yourself.",
+              "ltan": 22.5
+            },
+            "launchTime": "2026-10-01T21:59:56.851Z",
+            "payloadMass": 10,
+            "guidanceOverrides": {},
+            "failure": {
+              "mode": "none",
+              "time": 60,
+              "stage": 0
+            },
+            "boosterRecovery": false,
+            "dynamics": {
+              "model": "pointMass",
+              "wind": "calm",
+              "seed": 20260919
+            }
+          }
+        },
+        "launchTime": "2026-10-01T21:59:56.851Z",
+        "launchJd": 2461315.41663022,
+        "headless": true,
+        "recorderAdvanceSeconds": 5
+      },
+      "outputs": {
+        "status": "orbit",
+        "payloadSeparated": true,
+        "separationTime": 3321.4594157203746,
+        "desired": {
+          "perigeeKm": 520,
+          "apogeeKm": 540,
+          "inclinationDegrees": 97.51603862807669,
+          "nodeDegrees": 348.14574849323424
+        },
+        "actual": {
+          "perigeeKm": 519.371283504338,
+          "apogeeKm": 537.0402936471831,
+          "inclinationDegrees": 97.51559289036776,
+          "nodeDegrees": 345.37740160076163,
+          "meanLocalTimeHours": 22.315443540501818,
+          "massKg": 10
+        },
+        "errors": {
+          "perigeeKm": -0.6287164956619963,
+          "apogeeKm": -2.9597063528168945,
+          "inclinationDegrees": -0.00044573770892501426,
+          "uncorrectedNodeDegrees": -2.768346892472656,
+          "equationOfTimeDegrees": 2.6216174356016415,
+          "equationOfTimeMinutes": 10.486469742406566,
+          "correctedNodeResidualDegrees": -0.14672945687101455
+        },
+        "existingTestBound": {
+          "apsidesKm": 30,
+          "inclinationDegrees": 0.3,
+          "nodeResidualAfterEquationOfTimeDegrees": 0.3
+        },
+        "uncorrectedNodeWithin03Degrees": false
+      },
+      "scientificAcceptance": "existing test checks node after subtracting equation of time; it does not require preserving design mean LTAN"
+    },
+    {
+      "template": "theos2",
+      "inputs": {
+        "design": {
+          "id": "stage1-theos2",
+          "name": "theos2",
+          "template": "theos2",
+          "kind": "earthObs",
+          "orbit": {
+            "perigee": 621000,
+            "apogee": 621000,
+            "inclination": 97.871,
+            "sso": true,
+            "ltan": 22.25
+          },
+          "lifeYears": 10,
+          "bus": {
+            "dryMass": 385,
+            "size": {
+              "width": 1,
+              "height": 1.6,
+              "depth": 1
+            },
+            "cd": 2.2,
+            "cr": 1.3
+          },
+          "power": {
+            "payloadW": 150,
+            "busW": 250,
+            "arrayArea": 3.5,
+            "mount": "tracking",
+            "batteryWh": 1200,
+            "dod": 0.3,
+            "cellEff": 0.295,
+            "Id": 0.77,
+            "degPerYear": 0.005,
+            "regulation": "PPT",
+            "batteryEff": 0.9
+          },
+          "propulsion": {
+            "thrust": 4,
+            "isp": 223,
+            "propellant": 40
+          },
+          "adcs": {
+            "mode": "threeAxis",
+            "inertia": [
+              126,
+              70.8,
+              126
+            ],
+            "pointingDeg": 0.05,
+            "wheelH": 12,
+            "residualDipole": 1,
+            "cpOffset": 0.1
+          },
+          "comms": {
+            "txPowerW": 10,
+            "frequency": 8200000000,
+            "txAntennaD": 0.15,
+            "lineLoss": 1,
+            "dataRate": 140000000,
+            "requiredEbN0": 5.52,
+            "station": "bangkok",
+            "minElDeg": 10,
+            "rxAntennaD": 11.28,
+            "rxNoiseK": 189.7,
+            "losses": 2
+          },
+          "payload": {
+            "focalLength": 16.1,
+            "pixelPitch": 0.000013,
+            "pixels": 20600,
+            "aperture": 0.9,
+            "bits": 12,
+            "wavelength": 5.5e-7
+          }
+        },
+        "from": "2026-10-01T12:00:00.000Z",
+        "vehicle": "vegac",
+        "site": "kourou",
+        "mission": {
+          "format": "orbitlab.mission",
+          "version": 3,
+          "mission": {
+            "vehicleId": "vegac",
+            "satelliteId": "stage1-theos2",
+            "siteId": "kourou",
+            "satelliteSpec": {
+              "id": "stage1-theos2",
+              "kind": "earthObs",
+              "name": "theos2",
+              "mass": 425,
+              "typicalOrbit": "custom",
+              "description": "",
+              "size": {
+                "width": 1,
+                "height": 1.6,
+                "depth": 1
+              },
+              "crossSection": "box",
+              "area": 3.85,
+              "cd": 2.2,
+              "cr": 1.3,
+              "propulsion": {
+                "thrust": 4,
+                "isp": 223,
+                "propellantFraction": 0.09411764705882353
+              }
+            },
+            "orbitId": "custom",
+            "orbit": {
+              "id": "custom",
+              "name": "Custom orbit",
+              "perigee": 621000,
+              "apogee": 621000,
+              "inclination": "sso",
+              "argPerigee": 0,
+              "raanMode": "ltan",
+              "description": "Set perigee, apogee, inclination, argument of perigee and RAAN yourself.",
+              "ltan": 22.25
+            },
+            "launchTime": "2026-10-02T01:29:17.411Z",
+            "payloadMass": 425,
+            "guidanceOverrides": {},
+            "failure": {
+              "mode": "none",
+              "time": 60,
+              "stage": 0
+            },
+            "boosterRecovery": false,
+            "dynamics": {
+              "model": "pointMass",
+              "wind": "calm",
+              "seed": 20260919
+            }
+          }
+        },
+        "launchTime": "2026-10-02T01:29:17.411Z",
+        "launchJd": 2461315.562007072,
+        "headless": true,
+        "recorderAdvanceSeconds": 5
+      },
+      "outputs": {
+        "status": "orbit",
+        "payloadSeparated": true,
+        "separationTime": 3189.38454168198,
+        "desired": {
+          "perigeeKm": 621,
+          "apogeeKm": 621,
+          "inclinationDegrees": 97.8705243078301,
+          "nodeDegrees": 344.5390388092155
+        },
+        "actual": {
+          "perigeeKm": 620.5553259680513,
+          "apogeeKm": 623.0705620758431,
+          "inclinationDegrees": 97.87031578329895,
+          "nodeDegrees": 341.7087886680583,
+          "meanLocalTimeHours": 22.061316657256178,
+          "massKg": 425
+        },
+        "errors": {
+          "perigeeKm": -0.4446740319486707,
+          "apogeeKm": 2.070562075843103,
+          "inclinationDegrees": -0.00020852453115772373,
+          "uncorrectedNodeDegrees": -2.8302501411572387,
+          "equationOfTimeDegrees": 2.633245587567144,
+          "equationOfTimeMinutes": 10.532982350268576,
+          "correctedNodeResidualDegrees": -0.197004553590095
+        },
+        "existingTestBound": {
+          "apsidesKm": 30,
+          "inclinationDegrees": 0.3,
+          "nodeResidualAfterEquationOfTimeDegrees": 0.3
+        },
+        "uncorrectedNodeWithin03Degrees": false
+      },
+      "scientificAcceptance": "existing test checks node after subtracting equation of time; it does not require preserving design mean LTAN"
+    }
+  ],
+  "directNode": {
+    "input": {
+      "date": "2026-10-01T12:00:00.000Z",
+      "jd": 2461315,
+      "ltanHours": 22.5
+    },
+    "output": {
+      "designMeanSunNodeDegrees": 347.735097999999,
+      "launchTrueSunNodeDegrees": 345.14695186496414,
+      "launchMinusDesignDegrees": -2.5881461350348904,
+      "launchNodeAsMeanTimeHours": 22.327456924331003
+    }
+  },
+  "annualEquationOfTimeDailySamples": {
+    "min": {
+      "date": "2026-02-11T12:00:00.000Z",
+      "minutes": -14.198567023187811
+    },
+    "max": {
+      "date": "2026-11-03T12:00:00.000Z",
+      "minutes": 16.447924646078928
+    }
+  }
+}

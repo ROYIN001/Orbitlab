@@ -74,9 +74,6 @@ import { keepUnits } from '../keep-units';
 import { nameForFile } from '../file-name';
 import { decimal, measureText, unitAfter } from './measure-text';
 import { PanelLocks } from './locks';
-// T01/T02: small, and on the page that is open anyway (a lazy chunk of them split the dictionaries off the main one)
-import { renderAuthor } from './author-view';
-import { renderCheck } from './check-view';
 import './lessons.css';
 
 export interface LessonHost {
@@ -217,6 +214,8 @@ export class LessonMode implements LessonToolsHost {
   private readonly pageBar = el('header', 'lessons-page-bar');
   private readonly content = el('div', 'dialog-body lessons-page-body');
   private pageView: PageView | null = null;
+  /** An older import may finish after leaving a page and opening it again. */
+  private pageRevision = 0;
   private assessmentView: { applyLanguage(): void } | null = null;
   private assessmentModule: Promise<typeof import('./assessment-view')> | null = null;
   private notice: { level: 'ok' | 'warn' | 'error'; text: string; details: string[] } | null = null;
@@ -1355,7 +1354,9 @@ export class LessonMode implements LessonToolsHost {
       return;
     }
     this.pageView = view;
+    this.pageRevision++;
     this.assessmentView = null;
+    this.content.removeAttribute('aria-busy');
     // the section switch's level links (src/ui/section-nav.ts); its root says which one is the route
     const switcher = document.getElementById('section-nav');
     const nav = document.querySelectorAll<HTMLAnchorElement>('#section-nav a[data-mode]');
@@ -1380,8 +1381,8 @@ export class LessonMode implements LessonToolsHost {
     this.paintPageBar();
     if (view === 'catalog') this.renderCatalog();
     else if (view === 'test') void this.showAssessment();
-    else if (view === 'author') this.showAuthor();
-    else if (view === 'check') this.showCheck();
+    else if (view === 'author') void this.showAuthor();
+    else if (view === 'check') void this.showCheck();
     else void this.showWorksheets();
     this.page.scrollTo(0, 0);
   }
@@ -1620,9 +1621,42 @@ export class LessonMode implements LessonToolsHost {
     }, this.content);
   }
 
+  /** Load an optional instructor page only when opened, keeping navigation responsive. */
+  private async loadInstructorPage<T>(view: 'author' | 'check', load: () => Promise<T>,
+    render: (module: T) => { applyLanguage(): void }): Promise<void> {
+    const revision = this.pageRevision;
+    const current = (): boolean => this.pageView === view && this.pageRevision === revision;
+    const loading = (): void => {
+      const note = el('p', 'lesson-note', t('data.loading'));
+      note.setAttribute('role', 'status');
+      this.content.replaceChildren(note);
+    };
+    this.assessmentView = { applyLanguage: loading };
+    this.content.setAttribute('aria-busy', 'true');
+    loading();
+    try {
+      const module = await load();
+      if (current()) this.assessmentView = render(module);
+    } catch {
+      if (!current()) return;
+      const failed = (): void => {
+        const note = el('p', 'lesson-note fail', t('lesson.page.loadFailed'));
+        note.setAttribute('role', 'alert');
+        const reload = el('button', undefined, t('pwa.reload'));
+        reload.type = 'button';
+        reload.addEventListener('click', () => location.reload());
+        this.content.replaceChildren(note, reload);
+      };
+      this.assessmentView = { applyLanguage: failed };
+      failed();
+    } finally {
+      if (current()) this.content.removeAttribute('aria-busy');
+    }
+  }
+
   /** T01: the authoring tab, on the setup panel's mission as it stands. */
-  private showAuthor(): void {
-    this.assessmentView = renderAuthor({
+  private showAuthor(): Promise<void> {
+    return this.loadInstructorPage('author', () => import('./author-view'), (module) => module.renderAuthor({
       mission: () => this.host.mission?.() ?? null,
       knownEvents: () => KNOWN_EVENTS,
       reservedIds: () => this.packLessonIds(),
@@ -1636,12 +1670,14 @@ export class LessonMode implements LessonToolsHost {
         if (!l) return null;
         return { id: l.id, n: lessonNumber(l), title: localText(l.title), sets: isDesignLesson(l) ? 'design' : isFlightLesson(l) ? 'mission' : 'none' };
       },
-    }, this.content);
+    }, this.content));
   }
 
   /** T02: the checking tab, with the teacher's lessons this browser's catalogue already has. */
-  private showCheck(): void {
-    this.assessmentView = renderCheck({ customLessons: () => [...this.progressData.customLessons, ...packLessons(this.packs)] }, this.content);
+  private showCheck(): Promise<void> {
+    return this.loadInstructorPage('check', () => import('./check-view'), (module) => module.renderCheck({
+      customLessons: () => [...this.progressData.customLessons, ...packLessons(this.packs)],
+    }, this.content));
   }
 
   /** The open case lesson's sheet, from its frozen data, in the language on screen; the key only once it gives nothing away. */

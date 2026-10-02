@@ -58,7 +58,7 @@
  * rating at the default resolution; tests/design-ratings.test.ts records its
  * own runtime.
  *
- * DOM-free except for the verdict's text, which it builds and discards. SI.
+ * Language-free and DOM-free: only the verdict's decision is needed. SI.
  */
 import type { MissionConfig, OrbitSpec, VehicleSpec } from '../types';
 import { RATING_ORBITS, isCatalogueVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
@@ -71,7 +71,7 @@ import { inertialLaunchAzimuth, visViva } from '../physics/orbital';
 import { ascentInclinationFor, earthRotationCredit, launchDirection, planMission, resolveTarget, type MissionPlan } from '../physics/mission';
 import { idealDeltaV } from '../physics/vehicle';
 import { probeInsertion } from '../physics/autotune';
-import { missionVerdict } from '../config/verdict';
+import { assessMission } from '../config/verdict-core';
 
 export type RatingClass = 'LEO' | 'GTO';
 
@@ -181,7 +181,7 @@ export function delivers(spec: VehicleSpec, ref: RatingOrbitRef, payloadKg: numb
   let plan: MissionPlan | null = null;
   try { plan = planMission(cfg, site, spec); } catch { plan = null; }
   const inclinationDeg = resolveTarget(ref.orbit, site, launchTime).inclination * RAD;
-  const verdictWith = (insertion: ReturnType<typeof probeInsertion> | null) => missionVerdict({
+  const verdictWith = (insertion: ReturnType<typeof probeInsertion> | null) => assessMission({
     spec: rated, site, orbit: ref.orbit, satellite,
     payloadMass: payloadKg, inclinationDeg, plan, insertion, failureMode: 'none', siteReassigned: false,
   });

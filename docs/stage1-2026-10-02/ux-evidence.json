@@ -1,0 +1,1725 @@
+{
+  "recordedAt": "2026-10-02T17:28:42.586Z",
+  "build": {
+    "version": "0.1.0",
+    "commit": "91ee372",
+    "builtAt": "2026-10-02T14:19:01.192Z",
+    "data": {
+      "spaceWeather": "2026-09-26T20:00:00.000Z",
+      "satellites": "2026-09-26T16:10:54.609Z",
+      "earthOrientation": "2026-09-24T00:00:00Z"
+    }
+  },
+  "browser": "151.0.7922.173",
+  "renderScale": 0.5,
+  "methodology": "Fresh contexts; first-use guide retained. Real guide/menu clicks or taps. Feasibility inputs configured programmatically with WebMCP, not observed beginner behavior. Clipping is measured from DOM geometry; no human success rates or usability thresholds are inferred.",
+  "cases": [
+    {
+      "viewport": "desktop",
+      "lang": "en",
+      "guide": {
+        "before": {
+          "help": {
+            "step": "Step 1 of 3",
+            "title": "Choose a mission",
+            "text": "In Mission setup, choose a Quick start example. It fills the vehicle, payload, orbit and launch time for you. You can still edit the settings before launch."
+          },
+          "setupStep": "1",
+          "visibleSetupSteps": [
+            "1"
+          ]
+        },
+        "afterGuideNext": {
+          "help": {
+            "step": "Step 2 of 3",
+            "title": "Read the preflight check",
+            "text": "Fix invalid fields and read the feasibility warning. An infeasible mission can still be launched as an experiment. For a constrained orbital plane, check the launch window too."
+          },
+          "setupStep": "1",
+          "visibleSetupSteps": [
+            "1"
+          ]
+        },
+        "afterSetupNext": {
+          "help": {
+            "step": "Step 2 of 3",
+            "title": "Read the preflight check",
+            "text": "Fix invalid fields and read the feasibility warning. An infeasible mission can still be launched as an experiment. For a constrained orbital plane, check the launch window too."
+          },
+          "setupStep": "2",
+          "visibleSetupSteps": [
+            "2"
+          ]
+        }
+      },
+      "menu": {
+        "links": [
+          {
+            "text": "▷WatchReal launches, narrated from the pad to orbit.",
+            "ariaLabel": "Launch · Watch",
+            "href": "#/launch/watch",
+            "description": "Real launches, narrated from the pad to orbit."
+          },
+          {
+            "text": "◎ExploreSet up a mission in three steps; the guidance is worked out for you.",
+            "ariaLabel": "Launch · Explore",
+            "href": "#/launch/explore",
+            "description": "Set up a mission in three steps; the guidance is worked out for you."
+          },
+          {
+            "text": "⌬EngineerEvery guidance parameter, six-DOF flight and the full telemetry.",
+            "ariaLabel": "Launch · Engineer",
+            "href": "#/launch/engineer",
+            "description": "Every guidance parameter, six-DOF flight and the full telemetry."
+          }
+        ],
+        "visibleDescriptions": [
+          "Real launches, narrated from the pad to orbit.",
+          "Set up a mission in three steps; the guidance is worked out for you.",
+          "Every guidance parameter, six-DOF flight and the full telemetry."
+        ]
+      },
+      "feasibility": [
+        {
+          "id": "over-capacity",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "none",
+            "orbitId": "leo",
+            "payloadMassKg": 30000
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "overCapacity",
+              "offWindow": false,
+              "text": "Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 30000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "leo",
+                "perigeeKm": 500,
+                "apogeeKm": 500,
+                "inclinationInput": "site",
+                "resolvedInclinationDeg": 28.612000000000002,
+                "argPerigeeDeg": 0,
+                "raanMode": "free",
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "none",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5.",
+            "title": "Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5.",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 36,
+            "scrollHeight": 36,
+            "clientWidth": 237,
+            "scrollWidth": 237,
+            "clippedVertically": false,
+            "rect": {
+              "x": 50,
+              "y": 561.5,
+              "width": 237,
+              "height": 36
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Lighten the payload until it flies",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        },
+        {
+          "id": "corridor",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "none",
+            "orbitId": "polar",
+            "payloadMassKg": 1000
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "corridor",
+              "offWindow": false,
+              "text": "Inclination 90.0° is outside the range-safety corridor of Cape Canaveral SLC-40 (28.5–57.7°): this launch would not be licensed."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 1000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "polar",
+                "perigeeKm": 800,
+                "apogeeKm": 800,
+                "inclinationInput": 90,
+                "resolvedInclinationDeg": 90,
+                "argPerigeeDeg": 0,
+                "raanMode": "free",
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "none",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Inclination 90.0° is outside the range-safety corridor of Cape Canaveral SLC-40 (28.5–57.7°): this launch would not be licensed.",
+            "title": "Inclination 90.0° is outside the range-safety corridor of Cape Canaveral SLC-40 (28.5–57.7°): this launch would not be licensed.",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 72,
+            "scrollHeight": 72,
+            "clientWidth": 237,
+            "scrollWidth": 237,
+            "clippedVertically": false,
+            "rect": {
+              "x": 50,
+              "y": 525.5,
+              "width": 237,
+              "height": 72
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Launch from Vandenberg SFB",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        },
+        {
+          "id": "combined-warning",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "engineOut",
+            "orbitId": "iss",
+            "payloadMassKg": 30000,
+            "inclinationDeg": 90,
+            "raanMode": "fixed",
+            "raanDeg": 180
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "overCapacity",
+              "offWindow": true,
+              "text": "Failure armed: One engine out. Outside the launch window: the expected RAAN misses the requested plane by 68.5°. Choose Next window, or fly the experiment; reaching another plane will be reported as off target. Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 30000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "custom",
+                "perigeeKm": 420,
+                "apogeeKm": 420,
+                "inclinationInput": 90,
+                "resolvedInclinationDeg": 90,
+                "argPerigeeDeg": 0,
+                "raanMode": "fixed",
+                "raanDeg": 180,
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "engineOut",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Failure armed: One engine out. Outside the launch window: the expected RAAN misses the requested plane by 68.5°. Choose Next window, or fly the experiment; reaching another plane will be reported as off target. Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5.",
+            "title": "Failure armed: One engine out. Outside the launch window: the expected RAAN misses the requested plane by 68.5°. Choose Next window, or fly the experiment; reaching another plane will be reported as off target. Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5.",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 72,
+            "scrollHeight": 144,
+            "clientWidth": 237,
+            "scrollWidth": 237,
+            "clippedVertically": true,
+            "rect": {
+              "x": 50,
+              "y": 469.5,
+              "width": 237,
+              "height": 72
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Move to the next launch window (2026-10-02 16:33 UTC)",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              },
+              {
+                "text": "Lighten the payload until it flies",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        }
+      ],
+      "actions": [
+        {
+          "label": "guide-next",
+          "ok": true
+        },
+        {
+          "label": "setup-next",
+          "ok": true
+        },
+        {
+          "label": "section-menu",
+          "ok": true
+        },
+        {
+          "label": "feasibility-over-capacity",
+          "ok": true
+        },
+        {
+          "label": "feasibility-corridor",
+          "ok": true
+        },
+        {
+          "label": "feasibility-combined-warning",
+          "ok": true
+        }
+      ],
+      "errors": [],
+      "screenshots": [
+        "/workspace/orbitlab-env/stage1/ux/ux-desktop-en-guide-next.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-desktop-en-navigation.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-desktop-en-over-capacity.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-desktop-en-corridor.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-desktop-en-combined-warning.png"
+      ],
+      "devicePixelRatio": 0.5
+    },
+    {
+      "viewport": "mobile",
+      "lang": "en",
+      "guide": {
+        "before": {
+          "help": {
+            "step": "Step 1 of 3",
+            "title": "Choose a mission",
+            "text": "In Mission setup, choose a Quick start example. It fills the vehicle, payload, orbit and launch time for you. You can still edit the settings before launch."
+          },
+          "setupStep": "1",
+          "visibleSetupSteps": [
+            "1"
+          ]
+        },
+        "afterGuideNext": {
+          "help": {
+            "step": "Step 2 of 3",
+            "title": "Read the preflight check",
+            "text": "Fix invalid fields and read the feasibility warning. An infeasible mission can still be launched as an experiment. For a constrained orbital plane, check the launch window too."
+          },
+          "setupStep": "1",
+          "visibleSetupSteps": [
+            "1"
+          ]
+        },
+        "afterSetupNext": {
+          "help": {
+            "step": "Step 2 of 3",
+            "title": "Read the preflight check",
+            "text": "Fix invalid fields and read the feasibility warning. An infeasible mission can still be launched as an experiment. For a constrained orbital plane, check the launch window too."
+          },
+          "setupStep": "2",
+          "visibleSetupSteps": [
+            "2"
+          ]
+        }
+      },
+      "menu": {
+        "links": [
+          {
+            "text": "Watch",
+            "ariaLabel": "Launch · Watch",
+            "href": "#/launch/watch",
+            "description": null
+          },
+          {
+            "text": "Explore",
+            "ariaLabel": "Launch · Explore",
+            "href": "#/launch/explore",
+            "description": null
+          },
+          {
+            "text": "Engineer",
+            "ariaLabel": "Launch · Engineer",
+            "href": "#/launch/engineer",
+            "description": null
+          },
+          {
+            "text": "Basics",
+            "ariaLabel": "Orbit · Basics",
+            "href": "#/orbit/watch",
+            "description": null
+          },
+          {
+            "text": "Explore",
+            "ariaLabel": "Orbit · Explore",
+            "href": "#/orbit/explore",
+            "description": null
+          },
+          {
+            "text": "Engineer",
+            "ariaLabel": "Orbit · Engineer",
+            "href": "#/orbit/engineer",
+            "description": null
+          },
+          {
+            "text": "Basics",
+            "ariaLabel": "Build · Basics",
+            "href": "#/build/watch",
+            "description": null
+          },
+          {
+            "text": "Explore",
+            "ariaLabel": "Build · Explore",
+            "href": "#/build/explore",
+            "description": null
+          },
+          {
+            "text": "Engineer",
+            "ariaLabel": "Build · Engineer",
+            "href": "#/build/engineer",
+            "description": null
+          }
+        ],
+        "visibleDescriptions": [
+          "Coming in roadmap phase 6"
+        ]
+      },
+      "feasibility": [
+        {
+          "id": "over-capacity",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "none",
+            "orbitId": "leo",
+            "payloadMassKg": 30000
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "overCapacity",
+              "offWindow": false,
+              "text": "Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 30000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "leo",
+                "perigeeKm": 500,
+                "apogeeKm": 500,
+                "inclinationInput": "site",
+                "resolvedInclinationDeg": 28.612000000000002,
+                "argPerigeeDeg": 0,
+                "raanMode": "free",
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "none",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5.",
+            "title": "Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5.",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 36,
+            "scrollHeight": 36,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": false,
+            "rect": {
+              "x": 48,
+              "y": 649.5,
+              "width": 313,
+              "height": 36
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Lighten the payload until it flies",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        },
+        {
+          "id": "corridor",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "none",
+            "orbitId": "polar",
+            "payloadMassKg": 1000
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "corridor",
+              "offWindow": false,
+              "text": "Inclination 90.0° is outside the range-safety corridor of Cape Canaveral SLC-40 (28.5–57.7°): this launch would not be licensed."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 1000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "polar",
+                "perigeeKm": 800,
+                "apogeeKm": 800,
+                "inclinationInput": 90,
+                "resolvedInclinationDeg": 90,
+                "argPerigeeDeg": 0,
+                "raanMode": "free",
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "none",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Inclination 90.0° is outside the range-safety corridor of Cape Canaveral SLC-40 (28.5–57.7°): this launch would not be licensed.",
+            "title": "Inclination 90.0° is outside the range-safety corridor of Cape Canaveral SLC-40 (28.5–57.7°): this launch would not be licensed.",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 54,
+            "scrollHeight": 54,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": false,
+            "rect": {
+              "x": 48,
+              "y": 631.5,
+              "width": 313,
+              "height": 54
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Launch from Vandenberg SFB",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        },
+        {
+          "id": "combined-warning",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "engineOut",
+            "orbitId": "iss",
+            "payloadMassKg": 30000,
+            "inclinationDeg": 90,
+            "raanMode": "fixed",
+            "raanDeg": 180
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "overCapacity",
+              "offWindow": true,
+              "text": "Failure armed: One engine out. Outside the launch window: the expected RAAN misses the requested plane by 68.5°. Choose Next window, or fly the experiment; reaching another plane will be reported as off target. Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 30000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "custom",
+                "perigeeKm": 420,
+                "apogeeKm": 420,
+                "inclinationInput": 90,
+                "resolvedInclinationDeg": 90,
+                "argPerigeeDeg": 0,
+                "raanMode": "fixed",
+                "raanDeg": 180,
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "engineOut",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Failure armed: One engine out. Outside the launch window: the expected RAAN misses the requested plane by 68.5°. Choose Next window, or fly the experiment; reaching another plane will be reported as off target. Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5.",
+            "title": "Failure armed: One engine out. Outside the launch window: the expected RAAN misses the requested plane by 68.5°. Choose Next window, or fly the experiment; reaching another plane will be reported as off target. Payload 30,000 kg exceeds the 22,800 kg LEO capability of Falcon 9 Block 5.",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 72,
+            "scrollHeight": 108,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": true,
+            "rect": {
+              "x": 48,
+              "y": 557.5,
+              "width": 313,
+              "height": 72
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Move to the next launch window (2026-10-02 16:33 UTC)",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              },
+              {
+                "text": "Lighten the payload until it flies",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        }
+      ],
+      "actions": [
+        {
+          "label": "guide-next",
+          "ok": true
+        },
+        {
+          "label": "setup-next",
+          "ok": true
+        },
+        {
+          "label": "section-menu",
+          "ok": true
+        },
+        {
+          "label": "feasibility-over-capacity",
+          "ok": true
+        },
+        {
+          "label": "feasibility-corridor",
+          "ok": true
+        },
+        {
+          "label": "feasibility-combined-warning",
+          "ok": true
+        }
+      ],
+      "errors": [],
+      "screenshots": [
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-en-guide-next.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-en-navigation.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-en-over-capacity.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-en-corridor.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-en-combined-warning.png"
+      ],
+      "devicePixelRatio": 0.5
+    },
+    {
+      "viewport": "mobile",
+      "lang": "ru",
+      "guide": {
+        "before": {
+          "help": {
+            "step": "Шаг 1 из 3",
+            "title": "Выберите миссию",
+            "text": "В настройках миссии выберите пример быстрого старта. Он заполнит носитель, полезную нагрузку, орбиту и время пуска. До запуска настройки можно изменить."
+          },
+          "setupStep": "1",
+          "visibleSetupSteps": [
+            "1"
+          ]
+        },
+        "afterGuideNext": {
+          "help": {
+            "step": "Шаг 2 из 3",
+            "title": "Проверьте готовность",
+            "text": "Исправьте недопустимые значения и прочитайте предупреждение о выполнимости. Невыполнимую миссию можно запустить как эксперимент. Если задана плоскость орбиты, проверьте окно пуска."
+          },
+          "setupStep": "1",
+          "visibleSetupSteps": [
+            "1"
+          ]
+        },
+        "afterSetupNext": {
+          "help": {
+            "step": "Шаг 2 из 3",
+            "title": "Проверьте готовность",
+            "text": "Исправьте недопустимые значения и прочитайте предупреждение о выполнимости. Невыполнимую миссию можно запустить как эксперимент. Если задана плоскость орбиты, проверьте окно пуска."
+          },
+          "setupStep": "2",
+          "visibleSetupSteps": [
+            "2"
+          ]
+        }
+      },
+      "menu": {
+        "links": [
+          {
+            "text": "Просмотр",
+            "ariaLabel": "Запуск · Просмотр",
+            "href": "#/launch/watch",
+            "description": null
+          },
+          {
+            "text": "Исследование",
+            "ariaLabel": "Запуск · Исследование",
+            "href": "#/launch/explore",
+            "description": null
+          },
+          {
+            "text": "Инженер",
+            "ariaLabel": "Запуск · Инженер",
+            "href": "#/launch/engineer",
+            "description": null
+          },
+          {
+            "text": "Основы",
+            "ariaLabel": "Орбита · Основы",
+            "href": "#/orbit/watch",
+            "description": null
+          },
+          {
+            "text": "Исследование",
+            "ariaLabel": "Орбита · Исследование",
+            "href": "#/orbit/explore",
+            "description": null
+          },
+          {
+            "text": "Инженер",
+            "ariaLabel": "Орбита · Инженер",
+            "href": "#/orbit/engineer",
+            "description": null
+          },
+          {
+            "text": "Основы",
+            "ariaLabel": "Конструктор · Основы",
+            "href": "#/build/watch",
+            "description": null
+          },
+          {
+            "text": "Исследование",
+            "ariaLabel": "Конструктор · Исследование",
+            "href": "#/build/explore",
+            "description": null
+          },
+          {
+            "text": "Инженер",
+            "ariaLabel": "Конструктор · Инженер",
+            "href": "#/build/engineer",
+            "description": null
+          }
+        ],
+        "visibleDescriptions": [
+          "Появится на этапе 6 плана"
+        ]
+      },
+      "feasibility": [
+        {
+          "id": "over-capacity",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "none",
+            "orbitId": "leo",
+            "payloadMassKg": 30000
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "overCapacity",
+              "offWindow": false,
+              "text": "Нагрузка 30 000 кг превышает паспортные 22 800 кг на НОО для «Falcon 9 Block 5»."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 30000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "leo",
+                "perigeeKm": 500,
+                "apogeeKm": 500,
+                "inclinationInput": "site",
+                "resolvedInclinationDeg": 28.612000000000002,
+                "argPerigeeDeg": 0,
+                "raanMode": "free",
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "none",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Нагрузка 30 000 кг превышает паспортные 22 800 кг на НОО для «Falcon 9 Block 5».",
+            "title": "Нагрузка 30 000 кг превышает паспортные 22 800 кг на НОО для «Falcon 9 Block 5».",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 36,
+            "scrollHeight": 36,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": false,
+            "rect": {
+              "x": 48,
+              "y": 649.5,
+              "width": 313,
+              "height": 36
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Облегчить нагрузку до выполнимой",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        },
+        {
+          "id": "corridor",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "none",
+            "orbitId": "polar",
+            "payloadMassKg": 1000
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "corridor",
+              "offWindow": false,
+              "text": "Наклонение 90.0° вне коридора безопасности космодрома Мыс Канаверал, SLC-40 (28.5–57.7°): такой пуск не разрешён."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 1000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "polar",
+                "perigeeKm": 800,
+                "apogeeKm": 800,
+                "inclinationInput": 90,
+                "resolvedInclinationDeg": 90,
+                "argPerigeeDeg": 0,
+                "raanMode": "free",
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "none",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Наклонение 90.0° вне коридора безопасности космодрома Мыс Канаверал, SLC-40 (28.5–57.7°): такой пуск не разрешён.",
+            "title": "Наклонение 90.0° вне коридора безопасности космодрома Мыс Канаверал, SLC-40 (28.5–57.7°): такой пуск не разрешён.",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 54,
+            "scrollHeight": 54,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": false,
+            "rect": {
+              "x": 48,
+              "y": 631.5,
+              "width": 313,
+              "height": 54
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Перенести старт: База Космических сил Ванденберг",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        },
+        {
+          "id": "combined-warning",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "engineOut",
+            "orbitId": "iss",
+            "payloadMassKg": 30000,
+            "inclinationDeg": 90,
+            "raanMode": "fixed",
+            "raanDeg": 180
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "overCapacity",
+              "offWindow": true,
+              "text": "Задана нештатная ситуация: Отказ одного двигателя. Вне окна пуска: ожидаемая долгота восходящего узла отличается от целевой на 68.5°. Выберите следующее окно или продолжите эксперимент; выход в другую плоскость будет отмечен как отклонение от цели. Нагрузка 30 000 кг превышает паспортные 22 800 кг на НОО для «Falcon 9 Block 5»."
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 30000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "custom",
+                "perigeeKm": 420,
+                "apogeeKm": 420,
+                "inclinationInput": 90,
+                "resolvedInclinationDeg": 90,
+                "argPerigeeDeg": 0,
+                "raanMode": "fixed",
+                "raanDeg": 180,
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "engineOut",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "Задана нештатная ситуация: Отказ одного двигателя. Вне окна пуска: ожидаемая долгота восходящего узла отличается от целевой на 68.5°. Выберите следующее окно или продолжите эксперимент; выход в другую плоскость будет отмечен как отклонение от цели. Нагрузка 30 000 кг превышает паспортные 22 800 кг на НОО для «Falcon 9 Block 5».",
+            "title": "Задана нештатная ситуация: Отказ одного двигателя. Вне окна пуска: ожидаемая долгота восходящего узла отличается от целевой на 68.5°. Выберите следующее окно или продолжите эксперимент; выход в другую плоскость будет отмечен как отклонение от цели. Нагрузка 30 000 кг превышает паспортные 22 800 кг на НОО для «Falcon 9 Block 5».",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 72,
+            "scrollHeight": 144,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": true,
+            "rect": {
+              "x": 48,
+              "y": 557.5,
+              "width": 313,
+              "height": 72
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "Перенести на ближайшее окно (2026-10-02 16:33 UTC)",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              },
+              {
+                "text": "Облегчить нагрузку до выполнимой",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        }
+      ],
+      "actions": [
+        {
+          "label": "guide-next",
+          "ok": true
+        },
+        {
+          "label": "setup-next",
+          "ok": true
+        },
+        {
+          "label": "section-menu",
+          "ok": true
+        },
+        {
+          "label": "feasibility-over-capacity",
+          "ok": true
+        },
+        {
+          "label": "feasibility-corridor",
+          "ok": true
+        },
+        {
+          "label": "feasibility-combined-warning",
+          "ok": true
+        }
+      ],
+      "errors": [],
+      "screenshots": [
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-ru-guide-next.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-ru-navigation.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-ru-over-capacity.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-ru-corridor.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-ru-combined-warning.png"
+      ],
+      "devicePixelRatio": 0.5
+    },
+    {
+      "viewport": "mobile",
+      "lang": "th",
+      "guide": {
+        "before": {
+          "help": {
+            "step": "ขั้นตอน 1 จาก 3",
+            "title": "เลือกภารกิจ",
+            "text": "เลือกตัวอย่างในส่วนเริ่มต้นอย่างรวดเร็วของแผงตั้งค่าภารกิจ ระบบจะกรอกจรวด สัมภาระ วงโคจร และเวลาปล่อยให้ คุณยังปรับค่าได้ก่อนปล่อยจรวด"
+          },
+          "setupStep": "1",
+          "visibleSetupSteps": [
+            "1"
+          ]
+        },
+        "afterGuideNext": {
+          "help": {
+            "step": "ขั้นตอน 2 จาก 3",
+            "title": "อ่านผลตรวจสอบก่อนปล่อย",
+            "text": "แก้ช่องที่กรอกไม่ถูกต้องและอ่านคำเตือนเรื่องความเป็นไปได้ คุณยังปล่อยภารกิจที่เกินขีดความสามารถเพื่อทดลองได้ หากกำหนดระนาบวงโคจร ให้ตรวจหน้าต่างปล่อยด้วย"
+          },
+          "setupStep": "1",
+          "visibleSetupSteps": [
+            "1"
+          ]
+        },
+        "afterSetupNext": {
+          "help": {
+            "step": "ขั้นตอน 2 จาก 3",
+            "title": "อ่านผลตรวจสอบก่อนปล่อย",
+            "text": "แก้ช่องที่กรอกไม่ถูกต้องและอ่านคำเตือนเรื่องความเป็นไปได้ คุณยังปล่อยภารกิจที่เกินขีดความสามารถเพื่อทดลองได้ หากกำหนดระนาบวงโคจร ให้ตรวจหน้าต่างปล่อยด้วย"
+          },
+          "setupStep": "2",
+          "visibleSetupSteps": [
+            "2"
+          ]
+        }
+      },
+      "menu": {
+        "links": [
+          {
+            "text": "รับชม",
+            "ariaLabel": "ปล่อยจรวด · รับชม",
+            "href": "#/launch/watch",
+            "description": null
+          },
+          {
+            "text": "ทดลอง",
+            "ariaLabel": "ปล่อยจรวด · ทดลอง",
+            "href": "#/launch/explore",
+            "description": null
+          },
+          {
+            "text": "วิศวกร",
+            "ariaLabel": "ปล่อยจรวด · วิศวกร",
+            "href": "#/launch/engineer",
+            "description": null
+          },
+          {
+            "text": "พื้นฐาน",
+            "ariaLabel": "วงโคจร · พื้นฐาน",
+            "href": "#/orbit/watch",
+            "description": null
+          },
+          {
+            "text": "ทดลอง",
+            "ariaLabel": "วงโคจร · ทดลอง",
+            "href": "#/orbit/explore",
+            "description": null
+          },
+          {
+            "text": "วิศวกร",
+            "ariaLabel": "วงโคจร · วิศวกร",
+            "href": "#/orbit/engineer",
+            "description": null
+          },
+          {
+            "text": "พื้นฐาน",
+            "ariaLabel": "สร้าง · พื้นฐาน",
+            "href": "#/build/watch",
+            "description": null
+          },
+          {
+            "text": "ทดลอง",
+            "ariaLabel": "สร้าง · ทดลอง",
+            "href": "#/build/explore",
+            "description": null
+          },
+          {
+            "text": "วิศวกร",
+            "ariaLabel": "สร้าง · วิศวกร",
+            "href": "#/build/engineer",
+            "description": null
+          }
+        ],
+        "visibleDescriptions": [
+          "จะมาในระยะที่ 6 ของแผนงาน"
+        ]
+      },
+      "feasibility": [
+        {
+          "id": "over-capacity",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "none",
+            "orbitId": "leo",
+            "payloadMassKg": 30000
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "overCapacity",
+              "offWindow": false,
+              "text": "น้ำหนักบรรทุก 30,000 กก. เกินพิกัด 22,800 กก. สู่วงโคจรต่ำของ Falcon 9 Block 5"
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 30000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "leo",
+                "perigeeKm": 500,
+                "apogeeKm": 500,
+                "inclinationInput": "site",
+                "resolvedInclinationDeg": 28.612000000000002,
+                "argPerigeeDeg": 0,
+                "raanMode": "free",
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "none",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "น้ำหนักบรรทุก 30,000 กก. เกินพิกัด 22,800 กก. สู่วงโคจรต่ำของ Falcon 9 Block 5",
+            "title": "น้ำหนักบรรทุก 30,000 กก. เกินพิกัด 22,800 กก. สู่วงโคจรต่ำของ Falcon 9 Block 5",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 36,
+            "scrollHeight": 36,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": false,
+            "rect": {
+              "x": 48,
+              "y": 649.5,
+              "width": 313,
+              "height": 36
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "ลดน้ำหนักบรรทุกจนบินได้",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        },
+        {
+          "id": "corridor",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "none",
+            "orbitId": "polar",
+            "payloadMassKg": 1000
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "corridor",
+              "offWindow": false,
+              "text": "ความเอียง 90.0° อยู่นอกระเบียงความปลอดภัยการบินของ แหลมคานาเวอรัล SLC-40 (28.5–57.7°): การปล่อยเช่นนี้จะไม่ได้รับอนุญาต"
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 1000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "polar",
+                "perigeeKm": 800,
+                "apogeeKm": 800,
+                "inclinationInput": 90,
+                "resolvedInclinationDeg": 90,
+                "argPerigeeDeg": 0,
+                "raanMode": "free",
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "none",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "ความเอียง 90.0° อยู่นอกระเบียงความปลอดภัยการบินของ แหลมคานาเวอรัล SLC-40 (28.5–57.7°): การปล่อยเช่นนี้จะไม่ได้รับอนุญาต",
+            "title": "ความเอียง 90.0° อยู่นอกระเบียงความปลอดภัยการบินของ แหลมคานาเวอรัล SLC-40 (28.5–57.7°): การปล่อยเช่นนี้จะไม่ได้รับอนุญาต",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 54,
+            "scrollHeight": 54,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": false,
+            "rect": {
+              "x": 48,
+              "y": 631.5,
+              "width": 313,
+              "height": 54
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "ปล่อยจาก ฐานทัพอวกาศแวนเดนเบิร์ก",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        },
+        {
+          "id": "combined-warning",
+          "input": {
+            "vehicleId": "falcon9",
+            "siteId": "cape",
+            "satelliteId": "cubesats",
+            "launchTimeIso": "2026-10-02T12:00:00Z",
+            "boosterRecovery": false,
+            "failureMode": "engineOut",
+            "orbitId": "iss",
+            "payloadMassKg": 30000,
+            "inclinationDeg": 90,
+            "raanMode": "fixed",
+            "raanDeg": 180
+          },
+          "setupMethod": "WebMCP configure_mission",
+          "response": {
+            "ok": true,
+            "notices": [],
+            "feasibility": {
+              "level": "fail",
+              "cause": "overCapacity",
+              "offWindow": true,
+              "text": "ตั้งสถานการณ์ขัดข้องไว้: เครื่องยนต์ดับหนึ่งเครื่อง นอกหน้าต่างการปล่อย: ค่า RAAN ที่คาดว่าจะได้ต่างจากระนาบเป้าหมาย 68.5° เลือกหน้าต่างถัดไปหรือทดลองบินต่อได้ หากได้คนละระนาบจะรายงานว่าไม่ตรงเป้าหมาย น้ำหนักบรรทุก 30,000 กก. เกินพิกัด 22,800 กก. สู่วงโคจรต่ำของ Falcon 9 Block 5"
+            },
+            "config": {
+              "vehicleId": "falcon9",
+              "customVehicle": null,
+              "satelliteId": "cubesats",
+              "customSatellite": null,
+              "siteId": "cape",
+              "payloadMassKg": 30000,
+              "launchTimeIso": "2026-10-02T12:00:00.000Z",
+              "orbit": {
+                "id": "custom",
+                "perigeeKm": 420,
+                "apogeeKm": 420,
+                "inclinationInput": 90,
+                "resolvedInclinationDeg": 90,
+                "argPerigeeDeg": 0,
+                "raanMode": "fixed",
+                "raanDeg": 180,
+                "suborbital": false
+              },
+              "boosterRecovery": false,
+              "recoveryPlan": null,
+              "dynamics": {
+                "model": "sixDof",
+                "wind": "calm",
+                "seed": 20260919
+              },
+              "failure": {
+                "mode": "engineOut",
+                "timeS": 60,
+                "stageIndex": 0
+              },
+              "guidance": {
+                "pitchOverAltitudeM": 200,
+                "kickAngleDeg": 3.5,
+                "kickDurationS": 8,
+                "maxTurnRateDegS": 0.3,
+                "loftAltitudeKm": 0,
+                "gravityTurnEndKm": 65,
+                "parkingAltitudeKm": 0,
+                "pitchMaxDeg": 35,
+                "pitchMinDeg": -15,
+                "slewRateDegS": 3,
+                "maxAccelMs2": 0,
+                "maxTimeToGoS": 1500
+              }
+            }
+          },
+          "measurement": {
+            "originalText": "ตั้งสถานการณ์ขัดข้องไว้: เครื่องยนต์ดับหนึ่งเครื่อง นอกหน้าต่างการปล่อย: ค่า RAAN ที่คาดว่าจะได้ต่างจากระนาบเป้าหมาย 68.5° เลือกหน้าต่างถัดไปหรือทดลองบินต่อได้ หากได้คนละระนาบจะรายงานว่าไม่ตรงเป้าหมาย น้ำหนักบรรทุก 30,000 กก. เกินพิกัด 22,800 กก. สู่วงโคจรต่ำของ Falcon 9 Block 5",
+            "title": "ตั้งสถานการณ์ขัดข้องไว้: เครื่องยนต์ดับหนึ่งเครื่อง นอกหน้าต่างการปล่อย: ค่า RAAN ที่คาดว่าจะได้ต่างจากระนาบเป้าหมาย 68.5° เลือกหน้าต่างถัดไปหรือทดลองบินต่อได้ หากได้คนละระนาบจะรายงานว่าไม่ตรงเป้าหมาย น้ำหนักบรรทุก 30,000 กก. เกินพิกัด 22,800 กก. สู่วงโคจรต่ำของ Falcon 9 Block 5",
+            "lineClamp": "4",
+            "overflow": "hidden",
+            "clientHeight": 72,
+            "scrollHeight": 90,
+            "clientWidth": 313,
+            "scrollWidth": 313,
+            "clippedVertically": true,
+            "rect": {
+              "x": 48,
+              "y": 575.5,
+              "width": 313,
+              "height": 72
+            },
+            "verdictClass": "status-note fail",
+            "repairActions": [
+              {
+                "text": "เลื่อนไปหน้าต่างการปล่อยถัดไป (2026-10-02 16:33 UTC)",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              },
+              {
+                "text": "ลดน้ำหนักบรรทุกจนบินได้",
+                "title": "",
+                "disabled": false,
+                "visible": true
+              }
+            ],
+            "launchDisabled": false
+          }
+        }
+      ],
+      "actions": [
+        {
+          "label": "guide-next",
+          "ok": true
+        },
+        {
+          "label": "setup-next",
+          "ok": true
+        },
+        {
+          "label": "section-menu",
+          "ok": true
+        },
+        {
+          "label": "feasibility-over-capacity",
+          "ok": true
+        },
+        {
+          "label": "feasibility-corridor",
+          "ok": true
+        },
+        {
+          "label": "feasibility-combined-warning",
+          "ok": true
+        }
+      ],
+      "errors": [],
+      "screenshots": [
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-th-guide-next.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-th-navigation.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-th-over-capacity.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-th-corridor.png",
+        "/workspace/orbitlab-env/stage1/ux/ux-mobile-th-combined-warning.png"
+      ],
+      "devicePixelRatio": 0.5
+    }
+  ],
+  "failures": []
+}
