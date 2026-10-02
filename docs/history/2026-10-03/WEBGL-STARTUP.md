@@ -59,6 +59,16 @@ not proof of the intermittent failure's underlying cause. CI annotations now
 also retain the condensed Playwright actionability log when signed failure
 artifact downloads are inaccessible.
 
+The next PR run, 37073349169, passed the export journey but failed later in
+`stage2-preflight` with `page.evaluate: Target crashed`. Its three unit-test
+shards, typecheck and build passed. The browser runner had reused one Chromium
+and GPU process across all journeys. Each journey now owns a fresh browser,
+closed after its screenshots and context cleanup, so unrelated journeys do
+not inherit that process's accumulated state. This does not retry or suppress
+failed journeys, and it does not establish that resource exhaustion caused
+the reported crash. A journey can still use multiple contexts and reloads
+inside its browser, including the offline/service-worker checks.
+
 ## Checks
 
 The focused renderer, translation and architecture suites cover the fallback,
