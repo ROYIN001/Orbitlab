@@ -12,7 +12,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const smoke = false;
+// This journey has blocked Pages deployments; exercise it before merging too.
+export const smoke = true;
 export const timeoutMs = 600_000;
 
 const SOURCE = fileURLToPath(new URL('../../../', import.meta.url));

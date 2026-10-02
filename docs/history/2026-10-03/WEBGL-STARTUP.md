@@ -41,7 +41,8 @@ intermittent timeout cause was not established.
 The journey now uses the current “Hide tips” label, identifies the case and
 action in the CI error's first line, and puts complete failure details and
 screenshots in CI's existing artifact directory. Its timeouts and assertions
-are unchanged.
+are unchanged. It also joins the pull-request smoke suite so a repeat of this
+deployment blocker is checked before merge.
 
 ## Checks
 
