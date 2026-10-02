@@ -1,0 +1,58 @@
+[
+  {
+    "profile": "desktop",
+    "visit": "cold",
+    "n": 3,
+    "medianAppReadyS": 23.59690000000037,
+    "rangeAppReadyS": [
+      22.973300000000744,
+      32.69780000000075
+    ],
+    "medianFCPS": 0.372,
+    "medianSampledLCPS": 2.052,
+    "medianRafCallbacksPerS": 0.4644207280259333,
+    "pageErrors": 0
+  },
+  {
+    "profile": "desktop",
+    "visit": "warm",
+    "n": 3,
+    "medianAppReadyS": 29.557900000000373,
+    "rangeAppReadyS": [
+      29.042200000001117,
+      35.181
+    ],
+    "medianFCPS": 7.284,
+    "medianSampledLCPS": 7.964,
+    "medianRafCallbacksPerS": 0.39025913206369034,
+    "pageErrors": 0
+  },
+  {
+    "profile": "phone-viewport",
+    "visit": "cold",
+    "n": 3,
+    "medianAppReadyS": 16.6755,
+    "rangeAppReadyS": [
+      16.302699999999255,
+      18.200900000000374
+    ],
+    "medianFCPS": 0.328,
+    "medianSampledLCPS": 1.092,
+    "medianRafCallbacksPerS": 0.9137426900584796,
+    "pageErrors": 0
+  },
+  {
+    "profile": "phone-viewport",
+    "visit": "warm",
+    "n": 3,
+    "medianAppReadyS": 21.086400000000374,
+    "rangeAppReadyS": [
+      19.44410000000149,
+      23.543800000000743
+    ],
+    "medianFCPS": 3.656,
+    "medianSampledLCPS": 4.208,
+    "medianRafCallbacksPerS": 0.8710042679209127,
+    "pageErrors": 0
+  }
+]
