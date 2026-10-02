@@ -946,6 +946,7 @@ export class SetupPanel {
     } else this.fixesEl = null;
     const launch = this.el('button', 'launch-button');
     launch.type = 'button';
+    launch.setAttribute('aria-describedby', 'mission-note');
     launch.appendChild(this.el('span', 'arrow', '↗'));
     launch.appendChild(this.el('span', 'launch-label', t(this.running ? 'setup.relaunch' : 'setup.launchMission')));
     launch.appendChild(this.el('span', 'key-hint', 'SPACE'));
@@ -2328,8 +2329,6 @@ export class SetupPanel {
     note.className = `status-note ${v.level}`;
     const text = note.querySelector<HTMLElement>('.status-text');
     if (text) text.textContent = v.text;
-    // Explore clamps the sentence to a few lines under its title; all of it is the tooltip
-    if (text && this.experience === 'learning') text.title = v.text;
     const title = note.querySelector('.status-title');
     if (title) title.textContent = t(VERDICT_LIGHT[v.level]);
     this.updateFixes(v);

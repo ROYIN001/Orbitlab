@@ -22,7 +22,7 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 
 /* A tab per section, the current one underlined and carrying its level as a
    badge; every tab opens the menu of its section's levels. On a phone the
-   switch is one button that opens a table of sections × levels instead. */
+   switch is one button that opens a scrollable list grouped by section. */
 #topbar { position: relative; z-index: 46; } /* the menus open over the lessons page (z-index 45) */
 .topbar-nav { display: flex; align-items: stretch; align-self: stretch; gap: 8px; min-width: 0; }
 .section-nav { display: flex; align-items: stretch; min-width: 0; }
@@ -75,15 +75,18 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 }
 .nav-sheet-btn[aria-expanded='true'] { border-color: var(--accent-line); }
 .nav-sheet-here { display: flex; align-items: center; gap: 6px; }
-.nav-sheet { left: 12px; right: 12px; gap: 4px; }
-.nav-sheet-row { display: grid; grid-template-columns: 84px repeat(3, minmax(0, 1fr)); gap: 4px; align-items: stretch; }
-.nav-sheet-name { align-self: center; padding: 0 4px; font-size: 13px; font-weight: 500; }
+.nav-sheet { left: 12px; right: 12px; gap: 8px; max-height: calc(100dvh - 130px); overflow-y: auto; overscroll-behavior: contain; }
+.nav-sheet-row { display: grid; gap: 4px; }
+.nav-sheet-name { margin: 0; padding: 2px 4px; font-size: 13px; font-weight: 500; }
 .nav-cell {
-  min-width: 0; padding: 8px 6px; border: 1px solid var(--line); border-radius: 8px;
+  display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: baseline; gap: 8px;
+  min-width: 0; min-height: 44px; padding: 8px 6px; border: 1px solid var(--line); border-radius: 8px;
   background: var(--panel3); color: #a9b7c8; text-decoration: none; font-size: 13px;
 }
+.nav-cell .mode-glyph { display: none; }
+.nav-cell .nav-level-name { overflow-wrap: anywhere; }
 .nav-cell[aria-current='page'] { background: var(--accent-weak); border-color: var(--accent-line); color: var(--accent); }
-.nav-cell-future { grid-column: 2 / 5; display: grid; gap: 4px; justify-items: start; }
+.nav-cell-future { grid-template-columns: auto 1fr; justify-items: start; }
 
 /* The labels of the workspace's top-bar tools give way to the switch first
    (their names stay as the tooltip and the accessible name); a Russian label

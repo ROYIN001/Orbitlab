@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-10-01. This file states the current position only; how it was reached is in the
+Updated 2026-10-02. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -14,6 +14,14 @@ steps under a pre-flight light, with the guidance computed and shown rather than
 failures as challenges, and a card at the end of the flight; `src/ui/explore.ts`) and Engineer
 (every guidance parameter, the six-DOF flight controls, telemetry and CSV export). English,
 Russian and Thai throughout.
+
+Stage 2 of the October improvement pass makes the core journey clearer: full preflight
+explanations remain visible in Explore, the Launch button exposes them to assistive technology,
+the first-use guide labels its independent sequence as tips, and the phone section switch
+includes descriptions of each level. Ratings and readiness workers compute language-free
+results, localized on the page; teacher authoring and result-checking pages load on demand.
+The earlier measurements and unresolved scientific findings remain in
+[the Stage 1 baseline](stage1-2026-10-02/README.md).
 
 Since S01 this is the **Launch** section of three ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)):
 the top bar switches the section (Launch, Orbit, Build) and the level (Watch, Explore, Engineer),

@@ -4270,6 +4270,7 @@ export const th: Record<string, string> = {
   'assess.vehicleAlt': 'ภาพถ่ายจรวดนำส่ง',
   'lesson.page.title': 'บทเรียนและแบบทดสอบวัดความรู้',
   'lesson.page.back': 'กลับไปที่โปรแกรมจำลอง',
+  'lesson.page.loadFailed': 'ไม่สามารถโหลดหน้านี้ได้ โปรดโหลดหน้าใหม่แล้วลองอีกครั้ง',
   'lesson.page.lessons': 'บทเรียน',
   'lesson.page.test': 'แบบทดสอบวัดความรู้',
   'lesson.author.tab': 'เขียนสถานการณ์',

@@ -5,7 +5,7 @@
  * On a wide screen every section is a tab; the current one carries its level
  * as a badge, and pressing any tab opens the menu of that section's levels, so
  * a section and a level are picked together. On a phone the whole switch is
- * one button, the current section and level, that opens a table of every
+ * one button, the current section and level, that opens a list of every
  * section and its levels. Both are drawn and CSS shows one (src/ui/modes.css).
  * The levels are plain links to their route, so Back and opening in a new tab
  * work as before; a section still to come is a tab whose menu says what is
@@ -20,7 +20,7 @@ import { hashForRoute, route, type AppLevel, type AppRoute, type AppSection, APP
 import { FUTURE_PLANS, LEVEL_GLYPHS, NAV_SECTIONS, levelDescKey, levelNameKey, type FutureSection, type NavEntry } from './section-nav-model';
 import { el } from './orbit/dom';
 
-/** What is open: a tab's menu (by section) or, on a phone, the table. */
+/** What is open: a tab's menu (by section) or, on a phone, the list. */
 type Open = NavEntry['id'] | 'sheet' | null;
 
 export class SectionNav {
@@ -87,8 +87,8 @@ export class SectionNav {
     this.root.replaceChildren(this.tabs(), this.sheet());
   }
 
-  /** The level links of one section, as a menu's rows or a table's cells. */
-  private levelLink(section: AppSection, level: AppLevel, cls: string, withDesc: boolean): HTMLAnchorElement {
+  /** Every route includes its purpose, visually and in the accessible description. */
+  private levelLink(section: AppSection, level: AppLevel, cls: string): HTMLAnchorElement {
     const a = el('a', cls);
     a.href = hashForRoute(route(section, level));
     a.dataset.section = section;
@@ -97,11 +97,12 @@ export class SectionNav {
     // the section is in the name: the same level names repeat in every section
     a.setAttribute('aria-label', `${t(sectionKey(section))} · ${name}`);
     if (this.shown.section === section && this.shown.mode === level) a.setAttribute('aria-current', 'page');
-    if (withDesc) {
-      const glyph = el('span', 'mode-glyph', LEVEL_GLYPHS[level]);
-      glyph.setAttribute('aria-hidden', 'true');
-      a.append(glyph, el('span', 'nav-level-name', name), el('span', 'nav-level-desc', t(levelDescKey(section, level))));
-    } else a.append(name);
+    const glyph = el('span', 'mode-glyph', LEVEL_GLYPHS[level]);
+    glyph.setAttribute('aria-hidden', 'true');
+    const description = el('span', 'nav-level-desc', t(levelDescKey(section, level)));
+    description.id = `${cls}-${section}-${level}-description`;
+    a.setAttribute('aria-describedby', description.id);
+    a.append(glyph, el('span', 'nav-level-name', name), description);
     return a;
   }
 
@@ -155,7 +156,7 @@ export class SectionNav {
       if (s.future) menu.append(this.futureList(s.id as FutureSection));
       else {
         menu.append(el('p', 'nav-menu-head', t('nav.levelsOf', { section: name })));
-        for (const l of APP_LEVELS) menu.append(this.levelLink(s.id as AppSection, l, 'nav-level', true));
+        for (const l of APP_LEVELS) menu.append(this.levelLink(s.id as AppSection, l, 'nav-level'));
       }
       tab.append(btn, menu);
       row.append(tab);
@@ -163,7 +164,7 @@ export class SectionNav {
     return row;
   }
 
-  /** The phone: one button, and the table of sections × levels it opens. */
+  /** The phone: one button, and a scrollable list grouped by section. */
   private sheet(): HTMLElement {
     const wrap = el('div', 'nav-sheet-wrap');
     const btn = el('button', 'nav-sheet-btn');
@@ -193,13 +194,17 @@ export class SectionNav {
     for (const entry of NAV_SECTIONS) {
       const row = el('div', 'nav-sheet-row');
       if (entry.id === s) row.dataset.current = '';
-      row.append(el('span', 'nav-sheet-name', t(entry.nameKey)));
+      const heading = el('h3', 'nav-sheet-name', t(entry.nameKey));
+      heading.id = `nav-sheet-${entry.id}`;
+      row.setAttribute('role', 'group');
+      row.setAttribute('aria-labelledby', heading.id);
+      row.append(heading);
       if (entry.future) {
         const cell = el('span', 'nav-cell nav-cell-future');
         cell.append(el('span', 'nav-future-tag', t('nav.future')), el('span', 'nav-level-desc', t('nav.future.phase', { n: FUTURE_PLANS[entry.id as FutureSection].phase })));
         row.append(cell);
       } else {
-        for (const l of APP_LEVELS) row.append(this.levelLink(entry.id as AppSection, l, 'nav-cell', false));
+        for (const l of APP_LEVELS) row.append(this.levelLink(entry.id as AppSection, l, 'nav-cell'));
       }
       sheet.append(row);
     }

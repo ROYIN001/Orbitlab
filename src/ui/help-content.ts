@@ -22,11 +22,11 @@ interface HelpCopy {
 /** Localized help content lives together so additions must cover every language. */
 export const HELP_COPY: Record<Lang, HelpCopy> = {
   en: {
-    button: 'Help', guideLabel: 'First mission guide', progress: 'Step {step} of 3',
-    previous: 'Back', next: 'Next', done: 'Got it', skip: 'Skip guide', more: 'Open Help',
+    button: 'Help', guideLabel: 'First mission tips', progress: 'Tip {step} of 3',
+    previous: 'Previous tip', next: 'Next tip', done: 'Got it', skip: 'Hide tips', more: 'Open Help',
     title: 'Your first flight',
-    intro: 'Set a mission, watch the flight, then inspect what happened. The simulator stays available while you read the three-step guide.',
-    restart: 'Show the three-step guide again',
+    intro: 'Set a mission, watch the flight, then inspect what happened. These three tips explain the journey; reading the next tip does not change your mission settings.',
+    restart: 'Show the three tips again',
     steps: [
       { title: 'Choose a mission', text: 'In Mission setup, choose a Quick start example. It fills the vehicle, payload, orbit and launch time for you. You can still edit the settings before launch.' },
       { title: 'Read the preflight check', text: 'Fix invalid fields and read the feasibility warning. An infeasible mission can still be launched as an experiment. For a constrained orbital plane, check the launch window too.' },
@@ -49,11 +49,11 @@ export const HELP_COPY: Record<Lang, HelpCopy> = {
     ],
   },
   ru: {
-    button: 'Помощь', guideLabel: 'Подсказки для первого полёта', progress: 'Шаг {step} из 3',
-    previous: 'Назад', next: 'Далее', done: 'Понятно', skip: 'Пропустить', more: 'Открыть помощь',
+    button: 'Помощь', guideLabel: 'Подсказки для первого полёта', progress: 'Подсказка {step} из 3',
+    previous: 'Предыдущая подсказка', next: 'Следующая подсказка', done: 'Понятно', skip: 'Скрыть подсказки', more: 'Открыть помощь',
     title: 'Первый полёт',
-    intro: 'Задайте миссию, наблюдайте за полётом и изучите результат. Краткие подсказки из трёх шагов не блокируют работу симулятора.',
-    restart: 'Снова показать три шага',
+    intro: 'Задайте миссию, наблюдайте за полётом и изучите результат. Три подсказки объясняют этот путь; переход к следующей подсказке не меняет настройки миссии.',
+    restart: 'Снова показать три подсказки',
     steps: [
       { title: 'Выберите миссию', text: 'В настройках миссии выберите пример быстрого старта. Он заполнит носитель, полезную нагрузку, орбиту и время пуска. До запуска настройки можно изменить.' },
       { title: 'Проверьте готовность', text: 'Исправьте недопустимые значения и прочитайте предупреждение о выполнимости. Невыполнимую миссию можно запустить как эксперимент. Если задана плоскость орбиты, проверьте окно пуска.' },
@@ -76,11 +76,11 @@ export const HELP_COPY: Record<Lang, HelpCopy> = {
     ],
   },
   th: {
-    button: 'วิธีใช้', guideLabel: 'คำแนะนำภารกิจแรก', progress: 'ขั้นตอน {step} จาก 3',
-    previous: 'ย้อนกลับ', next: 'ถัดไป', done: 'เข้าใจแล้ว', skip: 'ข้ามคำแนะนำ', more: 'เปิดวิธีใช้',
+    button: 'วิธีใช้', guideLabel: 'คำแนะนำภารกิจแรก', progress: 'คำแนะนำ {step} จาก 3',
+    previous: 'คำแนะนำก่อนหน้า', next: 'คำแนะนำถัดไป', done: 'เข้าใจแล้ว', skip: 'ซ่อนคำแนะนำ', more: 'เปิดวิธีใช้',
     title: 'เริ่มภารกิจแรก',
-    intro: 'ตั้งค่าภารกิจ ดูการบิน แล้วตรวจผลที่เกิดขึ้น คุณยังใช้งานโปรแกรมได้ระหว่างอ่านคำแนะนำสามขั้นตอน',
-    restart: 'แสดงคำแนะนำสามขั้นตอนอีกครั้ง',
+    intro: 'ตั้งค่าภารกิจ ดูการบิน แล้วตรวจผลที่เกิดขึ้น คำแนะนำสามข้อนี้อธิบายสิ่งที่ต้องทำ การอ่านคำแนะนำถัดไปจะไม่เปลี่ยนการตั้งค่าภารกิจ',
+    restart: 'แสดงคำแนะนำสามข้ออีกครั้ง',
     steps: [
       { title: 'เลือกภารกิจ', text: 'เลือกตัวอย่างในส่วนเริ่มต้นอย่างรวดเร็วของแผงตั้งค่าภารกิจ ระบบจะกรอกจรวด สัมภาระ วงโคจร และเวลาปล่อยให้ คุณยังปรับค่าได้ก่อนปล่อยจรวด' },
       { title: 'อ่านผลตรวจสอบก่อนปล่อย', text: 'แก้ช่องที่กรอกไม่ถูกต้องและอ่านคำเตือนเรื่องความเป็นไปได้ คุณยังปล่อยภารกิจที่เกินขีดความสามารถเพื่อทดลองได้ หากกำหนดระนาบวงโคจร ให้ตรวจหน้าต่างปล่อยด้วย' },

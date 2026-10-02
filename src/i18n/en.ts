@@ -4293,6 +4293,7 @@ export const en: Record<string, string> = {
   'assess.vehicleAlt': 'A photograph of a launch vehicle',
   'lesson.page.title': 'Lessons and the placement test',
   'lesson.page.back': 'Back to the simulator',
+  'lesson.page.loadFailed': 'This page could not be loaded. Reload and try again.',
   'lesson.page.lessons': 'Lessons',
   'lesson.page.test': 'Placement test',
   'lesson.author.tab': 'Write a scenario',
