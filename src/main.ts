@@ -12,7 +12,9 @@ import { ComparePanel } from './ui/compare';
 import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
 import { assessMissionResult } from './ui/result-content';
 import { enableChartExport } from './ui/chart-export';
-import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, saveStoredMission } from './config/mission-file';
+import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, parseMissionDocument, saveStoredMission } from './config/mission-file';
+import { flownMission } from './lessons/progress';
+import { WorkDialog } from './ui/workspace-dialog';
 import { SceneManager, loadEarthTextures, type EarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
@@ -93,7 +95,7 @@ import { ToruControls } from './ui/toru-controls';
 import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
-import { BUILD, stampDocument } from './build-info';
+import { BUILD, appBuildId, stampDocument } from './build-info';
 import { DEVELOPER, versionLabel } from './credits';
 import { showStartupError } from './ui/startup-error';
 
@@ -396,6 +398,7 @@ class App {
   mapCanvas: HTMLCanvasElement;
   obCanvas: HTMLCanvasElement;
   private aboutDialog: AboutDialog;
+  private workDialog: WorkDialog;
   /** S04: offline (the default) or online, and where datasets come from under it */
   private dataMode: DataMode = loadDataMode();
   /** R02: online answers kept so a source is not asked more often than it allows (CelesTrak: every two hours) */
@@ -589,6 +592,36 @@ class App {
       pickerFooter: () => this.soundtrackPanel.render(),
     });
     this.aboutDialog = new AboutDialog(document.getElementById('about-dialog') as HTMLDialogElement);
+    this.workDialog = new WorkDialog(document.getElementById('work-dialog') as HTMLDialogElement, {
+      capture: () => {
+        const sim = this.tel.exportSource();
+        if (!sim?.telemetry.length) return null;
+        const clock = this.player.live ? this.recorder.clock : this.player.cursor;
+        const frame = this.player.live ? this.recorder.recordNow() : this.player.frame();
+        return {
+          label: `${sim.vehicleSpec.name} · ${sim.cfg.launchTime.toISOString()}`,
+          mission: flownMission(sim.cfg), telemetry: sim.telemetry, events: sim.events,
+          actions: sim.actions, app: appBuildId(), t: sim.state.t, clock,
+          status: frame?.status ?? sim.state.status, complete: sim.done && clock >= sim.state.t - 1e-6,
+        };
+      },
+      restoreMission: (document) => {
+        const restored = parseMissionDocument(document, this.panel.missionState());
+        if (!restored.usable || restored.issues.length) { this.workDialog.report('work.restoreFailed'); return false; }
+        this.goLive(); this.playing = false; this.workspace.adopt();
+        this.panel.restoreMission(restored.state);
+        this.go(route('launch', 'explore'));
+        this.workDialog.close();
+        return true;
+      },
+      isBusy: () => this.playing && !this.sim?.done,
+      onImported: () => {
+        // A shared-mission query or lesson hash must not overwrite restored
+        // browser work when startup runs again.
+        history.replaceState(null, '', `${location.pathname}#/home`);
+        location.reload();
+      },
+    });
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
       plan: this.cameraPlan,
       isAuto: () => this.autoCamera,
@@ -1108,6 +1141,7 @@ class App {
     (document.getElementById('lang-select') as HTMLSelectElement).value = getLang();
     // the topbar opens the tab last left open; the footer's credit line opens the maker's credit
     document.getElementById('btn-about')!.addEventListener('click', (e) => this.aboutDialog.open(e.currentTarget as HTMLElement));
+    document.getElementById('btn-work')!.addEventListener('click', (e) => this.workDialog.open(e.currentTarget as HTMLElement));
     document.getElementById('footer-about')!.addEventListener('click', (e) => this.aboutDialog.open(e.currentTarget as HTMLElement, 'about'));
     document.getElementById('btn-camera-plan')!.addEventListener('click', (e) => this.cameraDialog.open(e.currentTarget as HTMLElement));
     // No panel drawer: the narrow layout stacks the panels in reading order
@@ -1230,6 +1264,7 @@ class App {
     // the dialogs rebuild their body from the dictionaries when opened; an
     // open one has to be rebuilt now
     if (this.aboutDialog.isOpen) this.aboutDialog.applyLanguage();
+    if (this.workDialog.isOpen) this.workDialog.applyLanguage();
     if (this.cameraDialog.isOpen) this.cameraDialog.applyLanguage();
     // applyStatic() rewrote the play button's title from its data-i18n-title,
     // which loses the pause/play state and the live-flight hint

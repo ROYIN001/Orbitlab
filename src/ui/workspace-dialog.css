@@ -1,0 +1,6 @@
+#work-dialog { width: min(900px, calc(100vw - 24px)); }
+.work-content, .work-content [role="tabpanel"] { min-width: 0; }
+.work-tabs { display: flex; gap: 6px; overflow-x: auto; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.work-tabs button { flex: 1 0 auto; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--panel2); color: var(--text); }
+.work-tabs [aria-selected="true"] { border-color: var(--accent); color: var(--accent); }
+.work-content [hidden] { display: none !important; }

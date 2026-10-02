@@ -2,7 +2,7 @@
  * Run the browser journeys (tests/browser/journeys/*.mjs) against the
  * production build and exit non-zero if any failed.
  *
- *   node tests/browser/run.mjs [--smoke] [--base URL] [--dist DIR] [--shots DIR] [journey …]
+ *   node tests/browser/run.mjs [--smoke] [--shard=N/M] [--list] [--base URL] [--dist DIR] [--shots DIR] [journey …]
  *
  * With no `--base`, `DIR` (default `dist`) is served under `/Orbitlab/` on a
  * free port (tests/browser/serve.mjs); build it first. `--smoke` keeps the
@@ -15,15 +15,16 @@ import { resolve, join, basename } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { serve } from './serve.mjs';
 import { launchBrowser, createJourney, DEFAULT_TIMEOUT_MS } from './harness.mjs';
+import { selectShard } from './shard.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const journeyDir = join(here, 'journeys');
 
-export async function runJourneys({ names = [], smoke = false, base = null, dist = 'dist', shots = 'tests/browser/screenshots' } = {}) {
+export async function runJourneys({ names = [], smoke = false, shard = null, list = false, base = null, dist = 'dist', shots = 'tests/browser/screenshots' } = {}) {
   const all = readdirSync(journeyDir).filter((f) => f.endsWith('.mjs')).sort();
   const unknown = names.filter((n) => !all.includes(`${n.replace(/\.mjs$/, '')}.mjs`));
   if (unknown.length) throw new Error(`no journey named ${unknown.join(', ')} (have: ${all.map((f) => basename(f, '.mjs')).join(', ')})`);
-  const picked = [];
+  let picked = [];
   for (const file of all) {
     const name = basename(file, '.mjs');
     if (names.length && !names.some((n) => n.replace(/\.mjs$/, '') === name)) continue;
@@ -32,6 +33,11 @@ export async function runJourneys({ names = [], smoke = false, base = null, dist
     picked.push({ name, mod });
   }
   if (!picked.length) throw new Error('no journeys selected');
+  picked = selectShard(picked, shard);
+  if (list) {
+    console.log(picked.map(journey => journey.name).join('\n'));
+    return { results: [], ok: true };
+  }
 
   const server = base ? null : await serve({ root: dist });
   const url = base ?? server.url;
@@ -89,6 +95,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--smoke') opts.smoke = true;
+    else if (a === '--list') opts.list = true;
+    else if (a.startsWith('--shard=')) opts.shard = a.slice('--shard='.length);
     else if (a === '--base') opts.base = args[++i];
     else if (a === '--dist') opts.dist = args[++i];
     else if (a === '--shots') opts.shots = args[++i];

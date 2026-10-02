@@ -1,0 +1,20 @@
+.experiment-notebook { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.experiment-notebook h2 { margin-top: 0; }
+.experiment-actions { display: flex; flex-wrap: wrap; align-items: end; gap: .65rem; margin: 1rem 0; }
+.experiment-actions label { display: grid; gap: .35rem; min-width: 0; flex: 1 1 12rem; }
+.experiment-notebook select, .experiment-notebook input, .experiment-notebook textarea { width: 100%; max-width: 100%; box-sizing: border-box; font: inherit; color: inherit; background: var(--panel, #101620); border: 1px solid var(--line, #465468); border-radius: .35rem; padding: .65rem; }
+.experiment-notebook textarea { resize: vertical; min-height: 6rem; }
+.experiment-notebook textarea[readonly] { opacity: .85; }
+.experiment-field { display: grid; gap: .4rem; margin: .85rem 0; }
+.experiment-message { min-height: 1.5em; }
+.experiment-run { border-left: 3px solid var(--line, #465468); padding-left: .8rem; margin: 1rem 0; }
+.experiment-run p { margin: .4rem 0; }
+.experiment-notices { padding-left: 1.3rem; }
+.experiment-notices li { margin: .6rem 0; }
+.experiment-table { overflow-x: auto; max-width: 100%; margin: 1rem 0; }
+.experiment-table table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+.experiment-table th, .experiment-table td { text-align: start; padding: .6rem; border-bottom: 1px solid var(--line, #465468); }
+.experiment-table td { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.experiment-notebook pre { max-height: 18rem; max-width: 100%; overflow: auto; font-size: .8rem; white-space: pre; }
+.experiment-notebook :focus-visible { outline: 2px solid var(--accent, #68baf0); outline-offset: 3px; }
+@media (max-width: 520px) { .experiment-actions .btn { flex: 1 1 10rem; } .experiment-table th, .experiment-table td { padding: .5rem .35rem; } }

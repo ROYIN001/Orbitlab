@@ -86,6 +86,10 @@ any academy, and no service or academy name or emblem is used without written pe
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
   explains it in one line, next to the mission clock and the latest callout, and the camera
   follows a per-phase programme you can set yourself — identically live and in replay.
+- **My work** (▤ in the top bar): an experiment notebook for predictions, captured flights,
+  input comparisons and conclusions; model limits with a reproducible validation report;
+  offline classroom preparation; and project backups with a preview before replacement.
+  Available in English, Russian and Thai. [How to use it](docs/USER-GUIDE.md#my-work).
 - **About dialog** (ⓘ in the top bar, on every page, and the footer's credit line): an About
   tab with the version, the maker, the licences and the disclaimer, and a Physics & sources tab
   with a localized summary of the model, the data sources and the credits.
@@ -164,6 +168,7 @@ npm run dev        # http://localhost:5173
 npm test           # physics, mission and tool tests (vitest)
 npm run test:heavy # the delivered-orbit matrix with wind (about 15 minutes)
 npm run test:browser # the build in a real browser (see Browser tests below)
+npm run validate:science # record regression results and published-reference comparisons separately
 npm run typecheck  # tsc --noEmit
 npm run build      # typecheck, then a static site in dist/
 npm run snapshots  # refresh the bundled data snapshots in public/data/ (needs the network)
@@ -197,6 +202,10 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `launch-explore` | ✓ | Falcon 9 configured, launched and warped to its 500 km orbit; the CSV export is over 1 MB and covers the flight |
 | `pwa-offline` | | The service worker precaches the app, a mission flies offline, and a new deploy is offered as a reload |
 | `case-worksheet-exports` | ✓ | The three case worksheets and their keys downloaded as HTML and DOCX, in Thai and Russian, through the page's own controls |
+| `workspace-navigation` | ✓ | Lazy loading, keyboard tabs and Escape, recovery after a failed module request, mobile layout and first-use offline |
+| `experiment-notebook` | ✓ | Real flight and replay observations, single-variable comparison, conclusions, export, keyboard restore and mobile languages |
+| `project-backups` | ✓ | Download, non-mutating import preview, keep/replace choices, reload of restored state and rejected malformed/oversized files |
+| `classroom-preparation` | ✓ | Offline lesson launch, missing-cache detection, exact-version repair and preservation of waiting updates |
 | `webgl-startup` | ✓ | Rejected GPU preference recovers with the same rendering settings; unavailable WebGL shows Thai recovery guidance and keyboard reload; unrelated startup errors remain distinct |
 | `satellite` | ✓ | In the satellite designer, NAPA-2's cells put on wings and its array changed, the figures following, saved and reloaded; sent to Orbit, whose lifetime dialog takes the design's own mass and drag area; Fly it gives the Launch section's verdict before the click ("Not flyable as set" on Soyuz-2.1a) and offers the rockets that can fly it; Electron, picked among them, flies the design to payload separation, and the Launch panel's verdict is the one shown |
 | `requirements` | | The requirements page from the bench: Bangkok at 0.5 m and 5 days, a run stopped and run again in the workers, a row the bench cannot take saying why, a row that meets every requirement opened on the bench and set beside it; then a Thai phone, the orbits as cards |
@@ -204,11 +213,11 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `lesson-packs` | ✓ | The five lesson packs precached and listed with their codes and draft notice; lesson 12.1 flown live from its pack and graded a pass; design lesson 13.4 failing as it starts and passing with the worked design handed in |
 
 A failed journey leaves screenshots in `tests/browser/screenshots/` (uploaded as an artifact in CI).
-Without a GPU the scene is drawn in software at about two frames a second, so the smoke set, six
-journeys since Phase 4, takes about ten minutes (623.5 s on 2026-10-01, on a shared four-core
-machine). `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
+Without a GPU, Chromium draws the scene in software and long flight journeys can take several
+minutes. Each journey gets a fresh Chromium process to isolate GPU failures. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
 another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
-leaves the CSS layout unchanged). Pull requests and branch pushes run the smoke set; the deploy
+leaves the CSS layout unchanged). Pull requests and branch pushes partition the sorted smoke set across two jobs
+(`--shard=1/2` and `--shard=2/2`, inspect with `--list`); the deploy
 runs every journey on the build it publishes, after checking the freshly fetched data snapshots with
 `tests/data-provider.test.ts`, `tests/satellite-catalogue.test.ts`, `tests/earth-orientation.test.ts`
 and `tests/activity.test.ts`.

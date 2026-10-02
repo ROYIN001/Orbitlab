@@ -29,6 +29,14 @@ results, localized on the page; teacher authoring and result-checking pages load
 The earlier measurements and unresolved scientific findings remain in
 [the Stage 1 baseline](stage1-2026-10-02/README.md).
 
+Stages 3–4 add **My work** in the top bar: a prediction-and-comparison notebook, model limits
+and local validation-report viewing, classroom offline readiness and version-safe repair,
+and combined project backups with explicit collection replacement and recovery. Pack pages
+show source provenance and pending teacher/native-language review. The new tooling does not
+certify the physics or mark the outstanding Stage 1 scientific discrepancies as resolved.
+See [the implementation record](history/2026-10-03/STAGE3-4.md) and
+[the review checklist](LESSON-REVIEW-CHECKLIST.md).
+
 Since S01 this is the **Launch** section of three ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)):
 the top bar switches the section (Launch, Orbit, Build) and the level (Watch, Explore, Engineer),
 at `#/<section>/<level>`; the old `#/watch`, `#/explore` and `#/engineer` open Launch and are

@@ -20,6 +20,12 @@ on:
 permissions:
   contents: read
 
+# Push and pull-request events for the same branch validate the same change.
+# Keep the newest run; the independent Pages deployment has its own group.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
@@ -80,6 +86,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -92,10 +102,11 @@ jobs:
           name: dist
           path: dist
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser:smoke
+      - run: node --test tests/browser/shard.test.mjs
+      - run: npm run test:browser:smoke -- --shard=${{ matrix.shard }}/2
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-smoke-screenshots
+          name: browser-smoke-screenshots-${{ matrix.shard }}
           path: tests/browser/screenshots/
           if-no-files-found: ignore

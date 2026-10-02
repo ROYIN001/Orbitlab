@@ -74,6 +74,8 @@ import { keepUnits } from '../keep-units';
 import { nameForFile } from '../file-name';
 import { decimal, measureText, unitAfter } from './measure-text';
 import { PanelLocks } from './locks';
+import { PACK_REVIEWS } from '../../lessons/review';
+import { renderPackReview } from './review-details';
 import './lessons.css';
 
 export interface LessonHost {
@@ -1584,6 +1586,8 @@ export class LessonMode implements LessonToolsHost {
       group.append(meta);
       // the roadmap's validation of a pack is the owner's review: until then it says so
       if (!p.pack.reviewed) group.append(el('p', 'lesson-pack-draft', t('lesson.pack.draft')));
+      const review = PACK_REVIEWS[p.pack.id];
+      if (review) group.append(renderPackReview(review));
       const about = el('details', 'lesson-pack-about');
       about.append(el('summary', undefined, t('lesson.pack.about')));
       if (p.pack.description) about.append(el('p', undefined, keepUnits(localText(p.pack.description))));

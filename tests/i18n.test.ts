@@ -19,6 +19,7 @@
  * glossary at the end of that file is the source of truth for the wording.
  */
 import { describe, expect, it } from 'vitest';
+import { createScanner, SyntaxKind } from 'typescript/unstable/ast';
 import { en } from '../src/i18n/en';
 import { ru } from '../src/i18n/ru';
 import { th } from '../src/i18n/th';
@@ -33,6 +34,95 @@ import { ExploreStore, STORE_TEXTS } from '../src/ui/build/explore-store';
 const SRC = import.meta.glob('../src/**/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const HTML = import.meta.glob('../index.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const I18N = import.meta.glob('../src/i18n/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const I18N_MODULES = import.meta.glob('../src/i18n/*.ts', { eager: true }) as Record<string, Record<string, unknown>>;
+
+interface DictionaryDeclaration {
+  path: string;
+  name: string;
+  members: ({ key: string; value: string } | { spread: string })[];
+  imports: Map<string, { path: string; name: string }>;
+}
+interface DictionaryEntry { key: string; value: string; declaration: string }
+
+/** Read declared objects, not lines: comments, escaped strings, several entries
+ * on a line, and EN/RU/TH objects in one file must not confuse duplicate checks.
+ * Use the repository's pinned TypeScript scanner; unsupported dictionary syntax
+ * fails explicitly rather than silently skipping entries.
+ */
+function dictionaryDeclarations(files: Record<string, string>): DictionaryDeclaration[] {
+  const declarations: DictionaryDeclaration[] = [];
+  for (const [path, source] of Object.entries(files)) {
+    const scanner = createScanner(true, undefined, source);
+    const tokens: { kind: SyntaxKind; text: string; value: string }[] = [];
+    while (scanner.scan() !== SyntaxKind.EndOfFile) tokens.push({ kind: scanner.getToken(), text: scanner.getTokenText(), value: scanner.getTokenValue() });
+    const imports = new Map<string, { path: string; name: string }>();
+    // Comments and string values must not be mistaken for named imports.
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].text !== 'import' || tokens[i + 1]?.kind !== SyntaxKind.OpenBraceToken) continue;
+      const names: { name: string; local: string }[] = [];
+      let at = i + 2;
+      while (tokens[at] && tokens[at].kind !== SyntaxKind.CloseBraceToken) {
+        if (tokens[at].kind !== SyntaxKind.Identifier) throw new Error(`${path}: unsupported dictionary import`);
+        const name = tokens[at++].text;
+        let local = name;
+        if (tokens[at]?.text === 'as') {
+          if (tokens[++at]?.kind !== SyntaxKind.Identifier) throw new Error(`${path}: unsupported dictionary alias`);
+          local = tokens[at++].text;
+        }
+        names.push({ name, local });
+        if (tokens[at]?.kind === SyntaxKind.CommaToken) at++;
+        else if (tokens[at]?.kind !== SyntaxKind.CloseBraceToken) throw new Error(`${path}: unsupported dictionary import`);
+      }
+      const specifier = tokens[at + 2];
+      if (tokens[at + 1]?.text !== 'from' || specifier?.kind !== SyntaxKind.StringLiteral || !specifier.value.startsWith('./')) throw new Error(`${path}: expected a relative dictionary import`);
+      for (const { name, local } of names) imports.set(local, { path: `${path.slice(0, path.lastIndexOf('/') + 1)}${specifier.value.slice(2)}.ts`, name });
+    }
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].text !== 'export' || tokens[i + 1]?.text !== 'const') continue;
+      const name = tokens[i + 2]?.text;
+      if (!name || !/^(en|ru|th|[A-Za-z_$][\w$]*(En|Ru|Th))$/.test(name)) throw new Error(`${path}: unrecognised exported dictionary ${name}`);
+      i += 3;
+      while (tokens[i] && tokens[i].kind !== SyntaxKind.EqualsToken) i++;
+      i++;
+      // The pure IIFE lets language-free workers discard the composed object.
+      const wrapped = tokens.slice(i, i + 5).map(token => token.text).join('') === '(()=>(';
+      if (wrapped) i += 5;
+      if (tokens[i]?.kind !== SyntaxKind.OpenBraceToken) throw new Error(`${path}#${name}: expected an object literal or its pure IIFE`);
+      const members: DictionaryDeclaration['members'] = [];
+      i++;
+      while (tokens[i] && tokens[i].kind !== SyntaxKind.CloseBraceToken) {
+        if (tokens[i].kind === SyntaxKind.DotDotDotToken && tokens[i + 1]?.kind === SyntaxKind.Identifier) {
+          members.push({ spread: tokens[i + 1].text }); i += 2;
+        } else if (tokens[i].kind === SyntaxKind.StringLiteral && tokens[i + 1]?.kind === SyntaxKind.ColonToken
+          && [SyntaxKind.StringLiteral, SyntaxKind.NoSubstitutionTemplateLiteral].includes(tokens[i + 2]?.kind)) {
+          members.push({ key: tokens[i].value, value: tokens[i + 2].value }); i += 3;
+        } else throw new Error(`${path}#${name}: unsupported dictionary entry near ${tokens[i].text}`);
+        if (tokens[i]?.kind === SyntaxKind.CommaToken) i++;
+        else if (tokens[i]?.kind !== SyntaxKind.CloseBraceToken) throw new Error(`${path}#${name}: unsupported dictionary value`);
+      }
+      if (!tokens[i]) throw new Error(`${path}#${name}: unterminated dictionary`);
+      if (wrapped && tokens.slice(i + 1, i + 5).map(token => token.text).join('') !== '))()') throw new Error(`${path}#${name}: unsupported dictionary wrapper`);
+      declarations.push({ path, name, members, imports });
+    }
+  }
+  return declarations;
+}
+
+/** Preserve every declaration through spreads: an overwritten key must still
+ * be visible to QA even when JavaScript's final object contains it only once.
+ */
+function dictionaryEntries(declarations: DictionaryDeclaration[], declaration: DictionaryDeclaration, stack: string[] = []): DictionaryEntry[] {
+  const id = `${declaration.path}#${declaration.name}`;
+  if (stack.includes(id)) throw new Error(`Cyclic dictionary spread: ${[...stack, id].join(' → ')}`);
+  return declaration.members.flatMap(member => {
+    if ('key' in member) return [{ ...member, declaration: id }];
+    const imported = declaration.imports.get(member.spread) ?? { path: declaration.path, name: member.spread };
+    const component = declarations.find(row => row.path === imported.path && row.name === imported.name);
+    if (!component) throw new Error(`${id}: unresolved dictionary spread ${member.spread}`);
+    return dictionaryEntries(declarations, component, [...stack, id]);
+  });
+}
+const DECLARATIONS = dictionaryDeclarations(I18N);
 
 /** Everything that can hold a call site: the app source plus the markup. */
 const SOURCES: ReadonlyArray<readonly [string, string]> = [
@@ -179,6 +269,24 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^assess\.confidence\.(guess|unsure|sure)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.confidence.${c}`)' },
   { pattern: /^assess\.level\.(beginner|basic|strong)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.level.${s.level}`)' },
   { pattern: /^ws\.format\.(html|docx)$/, from: 'ui/lessons/worksheet-view.ts: t(`ws.format.${k}`)' },
+  // Stage 3/4: feature dictionaries compose into each language; these are the
+  // exact runtime unions/registries used by their cited renderers.
+  { pattern: /^work\.(notebook|validation|classroom|backups)$/, from: 'ui/workspace-content.ts TABS / applyLanguage: t(`work.${tab}`)' },
+  { pattern: /^projects\.section\.(mission|designs|progress|notebook)$/, from: 'ui/projects/projects-panel.ts render: t(`projects.section.${section}`); projects/archive.ts PROJECT_SECTIONS' },
+  { pattern: /^projects\.error\.(invalid|oversize|newer|storage|changed|pending|rollback|recoveryConflict)$/, from: 'ui/projects/projects-panel.ts failure: `projects.error.${error.code}`; projects/archive.ts ProjectErrorCode' },
+  { pattern: /^lesson\.review\.(pending|reviewed)$/, from: 'ui/lessons/review-details.ts: t(`lesson.review.${packReviewStatus(review)}`)' },
+  { pattern: /^lesson\.review\.language\.(en|ru|th)$/, from: 'ui/lessons/review-details.ts: t(`lesson.review.language.${language}`)' },
+  { pattern: /^lesson\.review\.(bookPages|pdfPages|section)$/, from: 'ui/lessons/review-details.ts: t(`lesson.review.${source.locator.kind}`); lessons/review.ts CurriculumSource' },
+  { pattern: /^lesson\.review\.source\.(ipst|earthGuide|physics1|physics3|nkrafa|aero2025|aero2020|electrical2025|mechanical2020|fgos06|fgos04|mai|bauman)$/, from: 'lessons/review.ts source(): `lesson.review.source.${title}`; PACK_REVIEWS source calls' },
+  { pattern: /^exp\.notice\.(missingTrial|noChange|multipleChanges|wrongVariable|differentBuild|differentActions|incomplete|differentHorizon|differentStatus|windInactive)$/, from: 'ui/experiments/notebook.ts: t(`exp.notice.${notice}`); experiments/notebook.ts ComparisonNotice' },
+  { pattern: /^classroom\.pack\.(ipst-basic|ipst-earth-space|ipst-physics|rtaf-academy|ru-24-05-06)$/, from: 'ui/classroom/classroom-panel.ts: t(`classroom.pack.${id}`); lessons/packs.ts BUNDLED_PACKS' },
+  { pattern: /^classroom\.data\.(space-weather|satellites|earth-orientation)$/, from: 'ui/classroom/classroom-panel.ts DATASETS: t(`classroom.data.${id}`)' },
+  { pattern: /^classroom\.error\.(unsupported|uncontrolled|timeout|storage|download|version)$/, from: 'ui/classroom/classroom-panel.ts: t(`classroom.error.${result.error}`); classroom/readiness.ts ClassroomError and pwa/offline-protocol.ts OfflineFailure' },
+  { pattern: /^validation\.issue\.(SCI-01|SCI-02|SCI-03|CONTENT-01)$/, from: 'ui/validation/validation-panel.ts: t(`validation.issue.${issue.id}`); validation/report.ts KNOWN_SCIENTIFIC_DISCREPANCIES' },
+  { pattern: /^validation\.(yes|no)$/, from: 'ui/validation/validation-panel.ts reportView: t(`validation.${p.workingTreeDirty ? "yes" : "no"}`) and sourceStable' },
+  { pattern: /^validation\.runner\.(passed|failed|incomplete)$/, from: 'ui/validation/validation-panel.ts runnerView: t(`validation.runner.${runner.status}`)' },
+  { pattern: /^validation\.reference\.(met|missed|inconclusive)$/, from: 'ui/validation/validation-panel.ts reportView: t(`validation.reference.${row.status}`)' },
+  { pattern: /^validation\.error\.(size|json|structure)$/, from: 'ui/validation/validation-panel.ts openFile: `validation.error.${error.code}`; validation/read-report.ts ReportReadErrorCode' },
   // G05: the Monte Carlo window's dispersions and states.
   { pattern: /^mc\.q\.(thrust|isp|propellant|dryMass|density|wind|imu)(\.about)?$/, from: 'ui/monte-carlo.ts chrome: t(`mc.q.${key}`), t(`mc.q.${key}.about`)' },
   { pattern: /^mc\.(progress|state)\.(running|done|stopped|failed)$/, from: 'ui/monte-carlo.ts render: t(`mc.progress.${job.state}`), t(`mc.state.${job.state}`)' },
@@ -217,26 +325,46 @@ describe('dictionary parity', () => {
     }
   });
 
-  it('declares each key exactly once per file', () => {
-    for (const [path, text] of Object.entries(I18N)) {
-      const seen = new Set<string>();
+  it('declares each key exactly once per language object, including composed spreads', () => {
+    for (const declaration of DECLARATIONS) {
+      const entries = dictionaryEntries(DECLARATIONS, declaration);
+      const seen = new Map<string, string>();
       const dupes: string[] = [];
-      for (const m of text.matchAll(/^ {2}'([^']+)':/gm)) {
-        if (seen.has(m[1])) dupes.push(m[1]);
-        seen.add(m[1]);
+      for (const entry of entries) {
+        if (seen.has(entry.key)) dupes.push(`${entry.key}: ${seen.get(entry.key)} + ${entry.declaration}`);
+        seen.set(entry.key, entry.declaration);
       }
-      expect({ path, dupes }).toEqual({ path, dupes: [] });
+      expect({ dictionary: `${declaration.path}#${declaration.name}`, dupes }).toEqual({ dictionary: `${declaration.path}#${declaration.name}`, dupes: [] });
     }
   });
 
-  it('parses the same number of entries out of each file as the module exports', () => {
-    // Guards the regex the duplicate check relies on: if a value ever spans
-    // two lines the scan above would quietly stop seeing keys.
-    for (const [name, dict] of Object.entries({ en, ru, th })) {
-      const text = I18N[`../src/i18n/${name}.ts`];
-      expect({ name, n: [...text.matchAll(/^ {2}'([^']+)':/gm)].length })
-        .toEqual({ name, n: Object.keys(dict).length });
+  it('parses every component and composed dictionary exactly as its module exports it', () => {
+    for (const declaration of DECLARATIONS) {
+      const entries = dictionaryEntries(DECLARATIONS, declaration);
+      const runtime = I18N_MODULES[declaration.path][declaration.name];
+      expect(runtime, `${declaration.path}#${declaration.name}`).toBeTypeOf('object');
+      expect(entries.length, `${declaration.path}#${declaration.name}`).toBe(Object.keys(runtime as object).length);
+      expect(Object.fromEntries(entries.map(entry => [entry.key, entry.value]))).toEqual(runtime);
     }
+  });
+
+  it('keeps scanner coverage for inline keys, escaped values, language objects and spread collisions', () => {
+    const declarations = dictionaryDeclarations({
+      '../src/i18n/feature.ts': `export const featureEn = { 'a': 'first', 'b': 'it\\'s fine' }; // 'ignored': 'comment'
+        export const featureRu = { 'a': 'первый', 'b': 'хорошо' };`,
+      '../src/i18n/en.ts': `import { featureEn as shared } from './feature';
+        // import { missing as shared } from './fake';
+        export const en = /* @__PURE__ */ (() => ({ ...shared, 'a': 'overwritten', 'c': 'third' }))();`,
+    });
+    const component = declarations.find(row => row.name === 'featureEn')!;
+    expect(dictionaryEntries(declarations, component).map(row => row.key)).toEqual(['a', 'b']);
+    expect(dictionaryEntries(declarations, component)[1].value).toBe("it's fine");
+    const composed = dictionaryEntries(declarations, declarations.find(row => row.name === 'en')!);
+    expect(composed.map(row => row.key)).toEqual(['a', 'b', 'a', 'c']);
+    expect(composed.filter(row => row.key === 'a').map(row => row.declaration)).toEqual(['../src/i18n/feature.ts#featureEn', '../src/i18n/en.ts#en']);
+    expect(() => dictionaryDeclarations({ 'bad.ts': `export const en = { 'key': 'one' + 'two' };` })).toThrow('unsupported dictionary value');
+    expect(() => dictionaryEntries(dictionaryDeclarations({ 'bad.ts': `export const en = { ...missing };` }),
+      dictionaryDeclarations({ 'bad.ts': `export const en = { ...missing };` })[0])).toThrow('unresolved dictionary spread');
   });
 
   it('has no empty, padded or double-spaced values', () => {
@@ -349,12 +477,11 @@ describe('call sites', () => {
   it('reads the source tree it is supposed to scan', () => {
     // A glob that silently matches nothing would make every check below pass.
     expect(SOURCES.length).toBeGreaterThan(20);
-    expect(Object.keys(I18N).sort()).toEqual([
-      '../src/i18n/en.ts',
-      '../src/i18n/index.ts',
-      '../src/i18n/ru.ts',
-      '../src/i18n/th.ts',
-    ]);
+    expect(Object.keys(I18N).sort()).toEqual(Object.keys(I18N_MODULES).sort());
+    expect(Object.keys(I18N).sort()).toEqual([...new Set(['../src/i18n/index.ts', ...DECLARATIONS.map(row => row.path)])].sort());
+    for (const name of ['en', 'ru', 'th']) {
+      expect(DECLARATIONS.filter(row => row.path === `../src/i18n/${name}.ts` && row.name === name)).toHaveLength(1);
+    }
   });
 
   it('resolves every t() key and data-i18n attribute in the source', () => {

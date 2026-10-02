@@ -1,0 +1,19 @@
+.validation-panel { display: grid; gap: 12px; min-width: 0; }
+.validation-panel :is(h2, h3, h4, p) { margin: 0; }
+.validation-panel p, .validation-panel li { line-height: 1.5; overflow-wrap: anywhere; }
+.validation-panel a { color: var(--accent, #64c9ee); text-underline-offset: 3px; }
+.validation-card { display: grid; gap: 10px; min-width: 0; padding: 14px; border: 1px solid var(--line, #354454); border-radius: 8px; }
+.validation-code { font-family: var(--font-mono, monospace); font-size: .86rem; overflow-wrap: anywhere; }
+.validation-issues, .validation-reference-list { display: grid; gap: 14px; margin: 0; padding-left: 20px; }
+.validation-issues li p { margin-block: 4px; }
+.validation-reference-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+.validation-reference-list li p { grid-column: 1 / -1; font-size: .9rem; }
+.validation-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.validation-actions button { min-height: 44px; }
+.validation-note { color: var(--text-dim, #a9bac9); font-size: .9rem; }
+.validation-notice { border-left: 3px solid var(--accent, #64c9ee); padding-left: 10px; }
+.validation-status:empty { display: none; }
+.validation-runner { display: grid; gap: 4px; }
+.validation-report-details summary { cursor: pointer; padding-block: 10px; }
+.validation-report-details :is(p, ul) { margin-top: 10px; }
+@media (max-width: 440px) { .validation-reference-list li { grid-template-columns: 1fr; } }
