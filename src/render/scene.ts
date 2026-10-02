@@ -8,6 +8,7 @@
  * renders identically to the live run.
  */
 import * as THREE from 'three';
+import { createWebGLRenderer } from './webgl-renderer';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { PhysicalSky } from './atmosphere';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -314,7 +315,7 @@ export class SceneManager {
     // composer's own 4x target (see the end of this constructor). Asking for
     // both would allocate a multisample buffer for the canvas that nothing ever
     // draws into.
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
+    this.renderer = createWebGLRenderer({ canvas, antialias: false, logarithmicDepthBuffer: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;

@@ -12,6 +12,7 @@
  * physics is `position / 1e6`.
  */
 import * as THREE from 'three';
+import { createWebGLRenderer } from './webgl-renderer';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
@@ -166,7 +167,7 @@ export class OrbitView {
   private reach = 0;
 
   constructor(private readonly canvas: HTMLCanvasElement, textures: Promise<EarthTextures> | null) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    this.renderer = createWebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, ORBIT_VIEW_MAX_PIXEL_RATIO));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.setClearColor(0x05080d, 1);

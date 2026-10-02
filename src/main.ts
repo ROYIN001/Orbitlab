@@ -95,6 +95,7 @@ import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
 import { BUILD, stampDocument } from './build-info';
 import { DEVELOPER, versionLabel } from './credits';
+import { showStartupError } from './ui/startup-error';
 
 /** The viewer's own choice of glow, remembered between visits. */
 const GLOW_STORAGE_KEY = 'orbitlab.glow';
@@ -1126,6 +1127,7 @@ class App {
    * owns its own keyboard entirely.
    */
   private onKey(e: KeyboardEvent): void {
+    if (!this.started) return;
     if (this.aboutDialog.isOpen || this.cameraDialog.isOpen) return;
     if (document.body.dataset.lessonsPage) return; // E03: the lessons page owns the keyboard
     // O01: the Orbit section's playground has its own clock
@@ -1357,6 +1359,7 @@ class App {
 
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
+    if (!this.scene) return;
     this.flightNo++;
     this.audio.reset();
     // every new flight drops the broadcast; `startWatch` puts its own back after launching
@@ -1536,7 +1539,7 @@ class App {
   }
 
   launch(cfg: MissionConfig): void {
-    if (!this.panel.isValid()) return;
+    if (!this.started || !this.panel.isValid()) return;
     this.preview(cfg);
     this.playing = true;
     this.panel.setRunning(true);
@@ -1544,7 +1547,7 @@ class App {
   }
 
   reset(): void {
-    if (!this.panel.isValid()) return;
+    if (!this.started || !this.panel.isValid()) return;
     this.preview(this.panel.getConfig());
   }
 
@@ -2216,12 +2219,5 @@ onNotationChange(() => app.applyLanguage());
 // half-initialised).
 app.init().then(() => registerMcpTools(app)).catch((err) => {
   console.error(err);
-  const el = document.getElementById('loading-text');
-  if (el) {
-    // Drop the i18n hook, or the next language change puts "Loading textures…"
-    // back over the error message (audit B38).
-    el.removeAttribute('data-i18n');
-    el.textContent = t('misc.webglFailed', { error: (err as Error).message });
-  }
-  document.getElementById('loading')?.classList.remove('hidden');
+  showStartupError(err);
 });

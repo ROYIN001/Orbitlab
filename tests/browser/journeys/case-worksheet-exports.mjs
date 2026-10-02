@@ -48,14 +48,17 @@ export default async function caseWorksheetExports(t) {
       page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
       const pageRecord = { case: id, uncaughtErrors: errors, consoleErrors, screenshot: null };
       evidence.pages.push(pageRecord);
+      let step = 'open the lesson catalogue';
       try {
         await page.goto(`${t.base}#/lessons`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
         await page.waitForSelector('#loading.hidden', { state: 'attached', timeout: 120_000 });
+        step = 'select English and dismiss the first-mission tips';
         await page.locator('#lang-select').selectOption('en');
-        const skip = page.getByRole('button', { name: 'Skip guide', exact: true });
+        const skip = page.getByRole('button', { name: 'Hide tips', exact: true });
         if (await skip.isVisible()) await skip.click();
         assert.equal(await page.locator('#btn-data-mode').getAttribute('data-mode'), 'offline', 'fresh QA context should use bundled offline data');
         // the track's own card: the packs below the tracks (T03) list the same lesson again under their codes
+        step = `open lesson ${number}`;
         const card = page.locator('.lesson-tracks .lesson-card-item').filter({ has: page.locator('b').filter({ hasText: new RegExp(`^${number.replace('.', '\\.')} `) }) });
         await card.waitFor({ state: 'visible', timeout: 120_000 });
         assert.equal(await card.count(), 1, `one track card for lesson ${number}`);
@@ -63,20 +66,25 @@ export default async function caseWorksheetExports(t) {
         // page busy past the 45 s default, so the click gets the same budget as the waits around it
         await card.click({ timeout: 120_000 });
         await page.waitForSelector(`body[data-lesson="case-${id}"] .lesson-case-answers`, { timeout: 120_000 });
+        step = 'reveal the answers';
         await page.getByRole('button', { name: 'Show the answers', exact: true }).click();
         await page.locator('.lesson-case-working').first().waitFor({ state: 'visible' });
         act(id, `opened lesson ${number} and revealed QA answers through its button`);
+        step = 'open the worksheet';
         await page.getByRole('button', { name: 'Worksheet', exact: true }).click();
         await page.locator('.ws-case').waitFor({ state: 'visible' });
 
         for (const lang of ['th', 'ru']) {
+          step = `select ${lang}`;
           await page.locator('#lang-select').selectOption(lang);
           assert.equal(await page.locator('html').getAttribute('lang'), lang);
           assert.match(await page.locator('.ws-case .ws-what').innerText(), new RegExp(number.replace('.', '\\.')));
           for (const format of ['html', 'docx']) {
+            step = `select ${format} export`;
             await page.locator('.ws-form select').selectOption(format);
             for (const key of [false, true]) {
               const expected = `orbitlab-case-${id}${key ? '-key' : ''}-${lang}.${format}`;
+              step = `download ${expected}`;
               const button = page.locator(key ? '.ws-case .ws-actions button:not(.lesson-primary)' : '.ws-case .ws-actions button.lesson-primary');
               assert.equal(await button.count(), 1, `one ${key ? 'key' : 'worksheet'} export button`);
               const [download] = await Promise.all([
@@ -96,15 +104,23 @@ export default async function caseWorksheetExports(t) {
             }
           }
         }
+        step = 'capture the export controls';
         await page.locator('.ws-case').scrollIntoViewIfNeeded();
         const screenshot = `${id}-export-controls.png`;
         await page.screenshot({ path: join(out, screenshot) });
         pageRecord.screenshot = screenshot;
         assert.equal(errors.length, 0, `${id}: uncaught page errors: ${errors.join(' | ')}`);
       } catch (error) {
-        evidence.error = { case: id, message: String(error?.stack ?? error) };
-        try { await page.screenshot({ path: join(out, `${id}-failure.png`), fullPage: true }); } catch { /* original error is retained */ }
-        throw error;
+        evidence.error = { case: id, step, message: String(error?.stack ?? error) };
+        // This journey owns its browser contexts, so the runner's shotAll()
+        // cannot see them. Save failure evidence where CI uploads screenshots.
+        const failureDir = t.shots ?? out;
+        mkdirSync(failureDir, { recursive: true });
+        writeFileSync(join(failureDir, `case-worksheet-${id}-failure.json`), JSON.stringify(evidence, null, 2) + '\n');
+        try { await page.screenshot({ path: join(failureDir, `case-worksheet-${id}-failure.png`), fullPage: true }); } catch { /* original error is retained */ }
+        // CI annotations retain the first line: include the case and action,
+        // while the cause and evidence file keep Playwright's full call log.
+        throw new Error(`${id}: ${step}: ${String(error?.message ?? error).split('\n')[0]}`, { cause: error });
       } finally {
         saveManifest();
         await context.close();

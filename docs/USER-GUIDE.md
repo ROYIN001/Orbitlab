@@ -5,6 +5,22 @@ you while it flies — written for a student rather than for a contributor. If y
 equations and the sources behind them, that is [docs/PHYSICS.md](PHYSICS.md); this guide
 sticks to what you see on screen and what it means.
 
+## When the 3-D view cannot start
+
+Orbitlab needs WebGL 2. If the preferred GPU cannot create a context, it lets the
+browser choose a GPU with the same rendering settings. If neither works, the
+startup screen offers browser recovery steps, **Reload page**, and expandable
+technical details. Launch controls stay inactive until startup succeeds.
+
+In Microsoft Edge, check `edge://gpu` → **Graphics Feature Status** → **WebGL2**.
+Enabling graphics acceleration in Settings alone does not guarantee WebGL is
+available. If WebGL2 is disabled or unavailable, check **Problems Detected** on
+that page; it can identify a driver or browser policy blocking it. Update Edge
+at `edge://settings/help`, close other 3-D tabs, and restart the browser. If needed,
+try a current Firefox or Chrome. Driver or managed-device policy problems may
+need the device's administrator. A website cannot enable WebGL that the browser
+has disabled.
+
 ## 0. Three sections, three levels
 
 Orbitlab is being grown into one space program in three **sections**: **Launch** (this

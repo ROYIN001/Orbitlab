@@ -172,6 +172,10 @@ npm run snapshots  # refresh the bundled data snapshots in public/data/ (needs t
 Requires Node.js 22 (the version CI and the deploy use; Vite 8 needs 20.19+ or 22.12+) and a
 browser with WebGL 2.
 
+If the 3-D view cannot start, the page offers recovery steps and technical details.
+For Edge, check `edge://gpu`: WebGL2 must be available even when the graphics
+acceleration setting is already enabled. See the [startup help](docs/USER-GUIDE.md#when-the-3-d-view-cannot-start).
+
 ### Browser tests
 
 Short journeys through the production build in a real Chromium (`tests/browser/`), served under
