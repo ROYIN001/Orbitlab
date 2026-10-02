@@ -4,9 +4,9 @@ A reader using Microsoft Edge on a desktop reported “Error creating WebGL
 context.” Graphics acceleration was already enabled; Edge's Graphics Feature
 Status reported WebGL2 disabled or unavailable. Their Problems Detected report
 then identified: “GPU process was unable to boot: GPU process crashed too many
-times with software GL. Disabled Features: all.” Browser restart, updates and
-device-side graphics troubleshooting are needed; the specific cause of those
-GPU process crashes is not established by that report.
+times with software GL. Disabled Features: all.” The reader confirmed that
+restarting the computer restored Edge; Chrome also worked. The specific cause
+of those GPU process crashes is not established by that report.
 
 Three.js uses WebGL 2. This exact message occurs when both the requested
 attributes and Three's attribute-free diagnostic probe fail. Stage 2 changed
@@ -42,7 +42,22 @@ The journey now uses the current “Hide tips” label, identifies the case and
 action in the CI error's first line, and puts complete failure details and
 screenshots in CI's existing artifact directory. Its timeouts and assertions
 are unchanged. It also joins the pull-request smoke suite so a repeat of this
-deployment blocker is checked before merge.
+deployment blocker is checked before merge. PR run 37070737313 identified a
+repeat at Iridium's “Show the answers” button. All three unit-test shards,
+typecheck and build passed; the export journey blocked browser smoke.
+
+Iridium alone opens a continuously rendered 3-D view while the long lesson
+strip scrolls. Its export test used full device pixel ratio, whereas the
+browser harness normally halves it for software WebGL runners. The export
+journey now honors that same `RENDER_SCALE` setting (`BROWSER_SCALE=1` still
+requests full resolution). This changes only test rendering; the 24 document
+downloads, normal pointer actions, assertions and timeouts remain intact.
+Local CPU-throttled clicks succeeded. In a two-CPU comparison, opening Iridium
+through the answer form took 26.25 seconds at scale 1 and 9.49 seconds at 0.5;
+the normal reveal clicks both succeeded. This is a consistent runner setup,
+not proof of the intermittent failure's underlying cause. CI annotations now
+also retain the condensed Playwright actionability log when signed failure
+artifact downloads are inaccessible.
 
 ## Checks
 

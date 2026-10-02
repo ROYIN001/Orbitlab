@@ -11,6 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { RENDER_SCALE } from '../harness.mjs';
 
 // This journey has blocked Pages deployments; exercise it before merging too.
 export const smoke = true;
@@ -27,7 +28,7 @@ export default async function caseWorksheetExports(t) {
   const sources = ['src/worksheets/cases.ts', 'src/worksheets/html.ts', 'src/worksheets/docx.ts', 'src/ui/lessons/worksheet-view.ts', 'src/i18n/en.ts', 'src/i18n/th.ts', 'src/i18n/ru.ts'];
   const evidence = {
     startedAtUTC: new Date().toISOString(), sourceSha, eventSha: process.env.GITHUB_SHA ?? null,
-    node: process.version, chromium: t.browser.version(), base: t.base,
+    node: process.version, chromium: t.browser.version(), renderScale: RENDER_SCALE, base: t.base,
     sourceHashes: Object.fromEntries(sources.map((p) => [p, sha(readFileSync(join(SOURCE, p)))])),
     builtIndexSha256: t.distDir ? sha(readFileSync(join(t.distDir, 'index.html'))) : null,
     scope: '3 cases × 2 languages × worksheet/key × HTML/DOCX = 24 actual browser downloads; intentionally revealed QA answers, not learner passes or document visual acceptance.',
@@ -40,7 +41,9 @@ export default async function caseWorksheetExports(t) {
 
   try {
     for (const { id, number } of CASES) {
-      const context = await t.browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1, locale: 'en-GB', acceptDownloads: true });
+      // Match the harness's software-WebGL scale; BROWSER_SCALE=1 still
+      // produces full-resolution captures without changing CSS hit-testing.
+      const context = await t.browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: RENDER_SCALE, locale: 'en-GB', acceptDownloads: true });
       const page = await context.newPage();
       page.setDefaultTimeout(45_000);
       const errors = [];
@@ -119,9 +122,10 @@ export default async function caseWorksheetExports(t) {
         mkdirSync(failureDir, { recursive: true });
         writeFileSync(join(failureDir, `case-worksheet-${id}-failure.json`), JSON.stringify(evidence, null, 2) + '\n');
         try { await page.screenshot({ path: join(failureDir, `case-worksheet-${id}-failure.png`), fullPage: true }); } catch { /* original error is retained */ }
-        // CI annotations retain the first line: include the case and action,
-        // while the cause and evidence file keep Playwright's full call log.
-        throw new Error(`${id}: ${step}: ${String(error?.message ?? error).split('\n')[0]}`, { cause: error });
+        // CI annotations retain the first line. Keep the actionability log
+        // readable there too when artifact downloads are unavailable.
+        const detail = String(error?.message ?? error).split('\n').map((line) => line.trim()).filter(Boolean).join(' | ');
+        throw new Error(`${id}: ${step}: ${detail.slice(0, 3000)}`, { cause: error });
       } finally {
         saveManifest();
         await context.close();
