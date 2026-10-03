@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * Where the user's designs are kept (roadmap S05): the rocket builders of
  * Phase 3 save vehicles here, the satellite builder of Phase 4 satellites
@@ -111,7 +112,7 @@ const isRecord = (d: unknown): d is DesignRecord => isObj(d) && typeof d.id === 
   && typeof d.updated === 'string' && designProblems(d.kind, d.name, d.design) === null;
 
 /**
- * Designs kept in this browser's localStorage, under one key. A storage that
+ * Designs kept in this browser's workspaceStorage(), under one key. A storage that
  * refuses (a private window, a policy) makes `list` empty and `save` reject
  * with `unavailable`; a full one rejects with `full`: a design is someone's
  * work, and losing it silently is the one thing this must not do. A record
@@ -119,7 +120,7 @@ const isRecord = (d: unknown): d is DesignRecord => isObj(d) && typeof d.id === 
  * deleted.
  */
 export class LocalDesignStore implements DesignStore {
-  constructor(private readonly storage: () => DesignStorage = () => localStorage,
+  constructor(private readonly storage: () => DesignStorage = () => workspaceStorage(),
     private readonly now: () => Date = () => new Date(),
     private readonly newId: () => string = () => `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`) {}
 

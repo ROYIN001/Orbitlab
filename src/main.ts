@@ -15,6 +15,8 @@ import { enableChartExport } from './ui/chart-export';
 import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, parseMissionDocument, saveStoredMission } from './config/mission-file';
 import { flownMission } from './lessons/progress';
 import { WorkDialog } from './ui/workspace-dialog';
+import { AppProfiles } from './ui/profiles/app-profiles';
+import { initializeWorkspace, workspaceStorage } from './workspace/session';
 import { SceneManager, loadEarthTextures, type EarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
@@ -399,6 +401,7 @@ class App {
   obCanvas: HTMLCanvasElement;
   private aboutDialog: AboutDialog;
   private workDialog: WorkDialog;
+  private profiles: AppProfiles;
   /** S04: offline (the default) or online, and where datasets come from under it */
   private dataMode: DataMode = loadDataMode();
   /** R02: online answers kept so a source is not asked more often than it allows (CelesTrak: every two hours) */
@@ -592,6 +595,12 @@ class App {
       pickerFooter: () => this.soundtrackPanel.render(),
     });
     this.aboutDialog = new AboutDialog(document.getElementById('about-dialog') as HTMLDialogElement);
+    this.profiles = new AppProfiles(
+      document.getElementById('profile-dialog') as HTMLDialogElement,
+      document.getElementById('btn-profile') as HTMLButtonElement,
+      document.getElementById('profile-storage-notice')!,
+      () => this.lessons?.recordedLessons(),
+    );
     this.workDialog = new WorkDialog(document.getElementById('work-dialog') as HTMLDialogElement, {
       capture: () => {
         const sim = this.tel.exportSource();
@@ -618,8 +627,7 @@ class App {
       onImported: () => {
         // A shared-mission query or lesson hash must not overwrite restored
         // browser work when startup runs again.
-        history.replaceState(null, '', `${location.pathname}#/home`);
-        location.reload();
+        this.profiles.reloadAfterImport();
       },
     });
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
@@ -659,6 +667,9 @@ class App {
     });
     // E03: a lesson loads its mission through the panel (previewed by its onChange) and grades the flight at the head
     this.lessons = new LessonMode({
+      profileName: () => this.profiles.name(),
+      manageProfiles: (opener) => this.profiles.open(opener),
+      resetLearning: (opener, lessonId) => this.profiles.openReset(opener, lessonId),
       // a lesson flies in the launch section; the page closes onto the route under it
       go: (mode) => this.go(mode === 'home' ? HOME_ROUTE : route('launch', mode)),
       // a case lesson (track 6) works in the Orbit section's Real satellites
@@ -874,7 +885,7 @@ class App {
     this.debrisView = new DebrisView(this.scene);
     this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line, this.frames.group, this.ghost.line, this.twilight.mesh);
     this.ghost.line.visible = false;
-    this.cams.attach(this.viewport);
+    this.cams.attach(this.glCanvas, { isActive: () => !this.sceneCovered });
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(this.viewport);
     this.watchPixelRatio();
@@ -1107,7 +1118,6 @@ class App {
     document.querySelectorAll<HTMLButtonElement>('.cam-btn').forEach((b) => {
       b.addEventListener('click', () => this.setCamera(b.dataset.cam as CameraMode));
     });
-    document.getElementById('btn-reset-cam')!.addEventListener('click', () => { this.cams.reset(); });
     this.glowBtn = document.getElementById('btn-glow') as HTMLButtonElement;
     this.glowBtn.addEventListener('click', () => {
       // `bindControls` runs before `init` builds the scene, and the loading
@@ -1118,7 +1128,7 @@ class App {
       // remembered for the next visit.
       this.glow.settle();
       this.setGlow(!this.scene.bloomEnabled);
-      try { localStorage.setItem(GLOW_STORAGE_KEY, this.scene.bloomEnabled ? 'on' : 'off'); } catch { /* preference is optional */ }
+      try { workspaceStorage().setItem(GLOW_STORAGE_KEY, this.scene.bloomEnabled ? 'on' : 'off'); } catch { /* preference is optional */ }
     });
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
     this.framesMenu = new FramesMenu(document.getElementById('btn-frames') as HTMLButtonElement, (groups) => this.frames.setShown(groups));
@@ -1265,6 +1275,7 @@ class App {
     // open one has to be rebuilt now
     if (this.aboutDialog.isOpen) this.aboutDialog.applyLanguage();
     if (this.workDialog.isOpen) this.workDialog.applyLanguage();
+    this.profiles.applyLanguage();
     if (this.cameraDialog.isOpen) this.cameraDialog.applyLanguage();
     // applyStatic() rewrote the play button's title from its data-i18n-title,
     // which loses the pause/play state and the live-flight hint
@@ -1601,7 +1612,7 @@ class App {
       return;
     }
     let stored: string | null = null;
-    try { stored = localStorage.getItem(GLOW_STORAGE_KEY); } catch { /* storage blocked */ }
+    try { stored = workspaceStorage().getItem(GLOW_STORAGE_KEY); } catch { /* storage blocked */ }
     if (stored === 'on' || stored === 'off') {
       this.glow.settle();
       this.setGlow(stored === 'on');
@@ -2235,24 +2246,29 @@ class App {
   }
 }
 
-initLang();
-stampDocument();
-initNotation();
-// U06: every chart the app draws can be saved as a PNG
-enableChartExport();
-const app = new App();
-// U07: a notation chosen in the Engineer mode (or changed with the language)
-// relabels everything the language does.
-onNotationChange(() => app.applyLanguage());
-// exposed for automated testing / console experiments
-(window as unknown as { orbitlab: App }).orbitlab = app;
-// WebMCP tools (src/mcp.ts): optional, never blocks startup on failure.
-// Registered only once `init()` resolves — `App.preview`/`launch` reach
-// `this.scene`/`this.debrisView`, which init() assigns and which do not
-// exist before it (review minor: a mission-mutating tool call during texture
-// load would otherwise throw a TypeError out of the tool and leave the app
-// half-initialised).
-app.init().then(() => registerMcpTools(app)).catch((err) => {
+async function bootstrap(): Promise<void> {
+  await initializeWorkspace();
+  initLang();
+  stampDocument();
+  initNotation();
+  // U06: every chart the app draws can be saved as a PNG
+  enableChartExport();
+  const app = new App();
+  // U07: a notation chosen in the Engineer mode (or changed with the language)
+  // relabels everything the language does.
+  onNotationChange(() => app.applyLanguage());
+  // exposed for automated testing / console experiments
+  (window as unknown as { orbitlab: App }).orbitlab = app;
+  // WebMCP tools (src/mcp.ts): optional, never blocks startup on failure.
+  // Registered only once `init()` resolves — `App.preview`/`launch` reach
+  // `this.scene`/`this.debrisView`, which init() assigns and which do not
+  // exist before it (review minor: a mission-mutating tool call during texture
+  // load would otherwise throw a TypeError out of the tool and leave the app
+  // half-initialised).
+  await app.init();
+  registerMcpTools(app);
+}
+void bootstrap().catch((err) => {
   console.error(err);
   showStartupError(err);
 });

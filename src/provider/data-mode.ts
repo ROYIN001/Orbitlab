@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * Offline or online (roadmap S04): whether the app may reach the internet.
  * The owner's choice (2026-09-26) makes offline the default — a fresh install
@@ -18,11 +19,11 @@ export interface DataModeStore { getItem(key: string): string | null; setItem(ke
 
 export function loadDataMode(store?: DataModeStore): DataMode {
   try {
-    const value = (store ?? localStorage).getItem(DATA_MODE_KEY);
+    const value = (store ?? workspaceStorage()).getItem(DATA_MODE_KEY);
     return DATA_MODES.includes(value as DataMode) ? value as DataMode : DEFAULT_DATA_MODE;
   } catch { return DEFAULT_DATA_MODE; }
 }
 
 export function saveDataMode(mode: DataMode, store?: DataModeStore): void {
-  try { (store ?? localStorage).setItem(DATA_MODE_KEY, mode); } catch { /* preference is optional */ }
+  try { (store ?? workspaceStorage()).setItem(DATA_MODE_KEY, mode); } catch { /* preference is optional */ }
 }

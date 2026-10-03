@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * A student's progress through the lessons and the placement test (roadmap
  * E03), kept in the browser's storage and exported as a results file for the
@@ -292,7 +293,7 @@ function readLessonProgress(value: unknown): LessonProgress {
 export function loadProgress(store?: KeyValueStore): ProgressData {
   let raw: string | null = null;
   try {
-    raw = (store ?? localStorage).getItem(PROGRESS_STORAGE_KEY);
+    raw = (store ?? workspaceStorage()).getItem(PROGRESS_STORAGE_KEY);
     if (!raw) return emptyProgress();
     const data = JSON.parse(raw) as unknown;
     if (!isRecord(data) || data.version !== 1) return recovering(emptyProgress(), raw);
@@ -317,7 +318,7 @@ export function loadProgress(store?: KeyValueStore): ProgressData {
  */
 export function saveProgress(data: ProgressData, store?: KeyValueStore): boolean {
   try {
-    const target = store ?? localStorage;
+    const target = store ?? workspaceStorage();
     if (recoverySource.has(data)) {
       const raw = recoverySource.get(data);
       if (raw == null) return false;

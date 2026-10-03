@@ -204,7 +204,8 @@ export class Rendezvous {
     const b = this.plan?.burns.find((x) => x.id === id);
     const dv = this.solved.get(id) ?? (b ? norm(b.dv) : 0);
     const mass = this.mass();
-    return (mass * dv) / SPACECRAFT.mainThrust;
+    const exhaustSpeed = SPACECRAFT.mainIsp * G0;
+    return mass * -Math.expm1(-dv / exhaustSpeed) / (SPACECRAFT.mainThrust / exhaustSpeed);
   }
 
   private mass(): number {
@@ -240,11 +241,7 @@ export class Rendezvous {
       }
       case 'burn': this.stepBurn(dt); break;
       case 'capture': case 'docked': this.stepDocked(dt); break;
-      case 'aborted': {
-        const next = rk4Step(0, { r: s.r, v: s.v }, dt, (_t, r) => gravityJ2(r));
-        s.r = next.r; s.v = next.v; s.t += dt;
-        break;
-      }
+      case 'aborted': this.coast(dt); break;
       default: this.stepApproach(dt);
     }
     this.sync();
@@ -317,27 +314,65 @@ export class Rendezvous {
   private stepBurn(dt: number): void {
     const sim = this.sim, s = sim.state;
     const mass = this.mass();
-    const a = SPACECRAFT.mainThrust / mass;
-    const h = Math.min(dt, this.burnLeft / a);
-    const accel = scale(this.burnDir, a);
-    const next = rk4Step(0, { r: s.r, v: s.v }, h, (_t, r) => add(gravityJ2(r), accel));
-    s.r = next.r; s.v = next.v;
-    if (dt > h) {
-      const rest = rk4Step(0, { r: s.r, v: s.v }, dt - h, (_t, r) => gravityJ2(r));
-      s.r = rest.r; s.v = rest.v;
+    const exhaustSpeed = SPACECRAFT.mainIsp * G0;
+    const flow = SPACECRAFT.mainThrust / exhaustSpeed;
+    // Constant thrust/Isp, no drag: dv = ve * log(m0 / m1). The tank,
+    // not the planned impulse, also limits how long this step can be powered.
+    const wantedTime = mass * -Math.expm1(-this.burnLeft / exhaustSpeed) / flow;
+    const tankTime = this.propellant / flow;
+    const h = Math.min(dt, wantedTime, tankTime);
+    const used = h >= tankTime ? this.propellant : flow * h;
+    if (h > 0) {
+      const next = rk4Step(0, { r: s.r, v: s.v }, h, (time, r) =>
+        add(gravityJ2(r), scale(this.burnDir, SPACECRAFT.mainThrust / (mass - flow * time))));
+      s.r = next.r; s.v = next.v;
     }
-    s.t += dt;
-    this.burnLeft -= a * h;
-    this.propellant = Math.max(0, this.propellant - (SPACECRAFT.mainThrust / (SPACECRAFT.mainIsp * G0)) * h);
-    s.thrust = SPACECRAFT.mainThrust; s.throttle = 1;
-    if (this.burnLeft <= 1e-3 || this.propellant <= 0) {
+    this.burnLeft = Math.max(0, this.burnLeft + exhaustSpeed * Math.log1p(-used / mass));
+    this.propellant = Math.max(0, this.propellant - used);
+    s.t += h;
+    if (dt > h) this.coast(dt - h);
+    s.thrust = h === dt && h > 0 ? SPACECRAFT.mainThrust : 0;
+    s.throttle = s.thrust > 0 ? 1 : 0;
+    if (this.burnLeft <= 1e-9) {
       const b = this.plan!.burns[this.burnIndex];
       sim.event('evt.rendezvousBurnDone', 'info', { burn: b.id });
       this.burnIndex++;
       this.phase = 'coast';
       s.thrust = 0; s.throttle = 0;
       if (b.kind === 'brake') this.startApproach();
+    } else if (this.propellant <= 0) this.fuelDepleted();
+  }
+
+  /** An unmet impulse/approach must not be reported as a successful burn.
+   * The end-of-step event clock follows the existing recorder contract. */
+  private fuelDepleted(): void {
+    if (this.phase === 'aborted') return;
+    this.phase = 'aborted';
+    this.manualMode = false;
+    this.toru = null;
+    const s = this.sim.state;
+    s.status = 'orbit';
+    s.note = 'rendezvousFuelDepleted';
+    s.thrust = 0; s.throttle = 0;
+    this.sim.event('evt.rendezvousFuelDepleted', 'fail');
+  }
+
+  /** Free fall after an aborted approach retains attitude and angular
+   * momentum. Fixed estimated inertia is the current rendezvous model's
+   * quasi-steady approximation; there is no unmodelled control torque. */
+  private coast(dt: number): void {
+    const s = this.sim.state;
+    if (this.body) {
+      const result = integrateRigidStep(s.t, this.body, dt, (_t, body) => ({
+        mass: this.mass(), inertiaBody: INERTIA, forceECI: v3(), momentBody: v3(), externalAccelerationECI: gravityJ2(body.r),
+      }));
+      this.body = result.state;
+      s.r = result.state.r; s.v = result.state.v;
+    } else {
+      const next = rk4Step(0, { r: s.r, v: s.v }, dt, (_t, r) => gravityJ2(r));
+      s.r = next.r; s.v = next.v;
     }
+    s.t += dt;
   }
 
   // ------------------------------------------------------------ the approach
@@ -502,14 +537,27 @@ export class Rendezvous {
       clamp(I[0] * 0.5 * (rateWanted.x - body.omegaBody.x), -SPACECRAFT.torque, SPACECRAFT.torque),
       clamp(I[1] * 0.5 * (rateWanted.y - body.omegaBody.y), -SPACECRAFT.torque, SPACECRAFT.torque),
       clamp(I[2] * 0.5 * (rateWanted.z - body.omegaBody.z), -SPACECRAFT.torque, SPACECRAFT.torque));
-    const result = integrateRigidStep(s.t, body, dt, (_t, st) => ({
-      mass, inertiaBody: INERTIA, forceECI, momentBody: torque, externalAccelerationECI: gravityJ2(st.r),
-    }));
-    this.body = result.state;
-    s.r = result.state.r; s.v = result.state.v; s.t += dt;
-    const used = (Math.abs(fx) + Math.abs(fy) + Math.abs(fz) + (Math.abs(torque.x) + Math.abs(torque.y) + Math.abs(torque.z)) / 3) / (SPACECRAFT.thrusterIsp * G0);
-    this.propellant = Math.max(0, this.propellant - used * dt);
+    // Preserve the existing equivalent-thruster flow model (3 m effective
+    // torque arm). All requested forces/torques share the same finite tank.
+    const flow = (Math.abs(fx) + Math.abs(fy) + Math.abs(fz) + (Math.abs(torque.x) + Math.abs(torque.y) + Math.abs(torque.z)) / 3) / (SPACECRAFT.thrusterIsp * G0);
+    const tankTime = flow > 0 ? this.propellant / flow : Infinity;
+    const h = Math.min(dt, tankTime);
+    const used = h >= tankTime ? this.propellant : flow * h;
+    if (h > 0) {
+      const t = s.t;
+      const result = integrateRigidStep(t, body, h, (time, st) => ({
+        mass: mass - flow * (time - t), inertiaBody: INERTIA, forceECI, momentBody: torque, externalAccelerationECI: gravityJ2(st.r),
+      }));
+      this.body = result.state;
+      s.r = result.state.r; s.v = result.state.v;
+    }
+    this.propellant = Math.max(0, this.propellant - used);
+    s.t += h;
+    if (dt > h) this.coast(dt - h);
     s.thrust = 0; s.throttle = 0;
+    // Once the probe has captured, the mechanism no longer needs an RCS
+    // manoeuvre. Empty fuel must not cancel an already successful capture.
+    if (this.propellant <= 0 && this.inApproach) this.fuelDepleted();
   }
 
   // ------------------------------------------------------------ contact and docking
@@ -586,7 +634,7 @@ export class Rendezvous {
     s.dir = quatRotate(q, v3(1, 0, 0));
     s.mass = this.mass();
     // in free fall but for the main engine (a few hundredths of a g); the thrusters' pushes are smaller still
-    s.gLoad = this.phase === 'burn' ? SPACECRAFT.mainThrust / s.mass / G0 : 0;
+    s.gLoad = this.phase === 'burn' ? s.thrust / s.mass / G0 : 0;
     const sc = sim.vehicle.stages.find((x) => x.spec.isSpacecraft);
     if (sc) sc.propellant = this.propellant;
     s.rigid = this.telemetry(q);

@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /** Experiment evidence is plain JSON: frozen flown inputs, command journal and
  * observed figures, never a claim that a two-run comparison proves causation. */
 import { MISSION_FORMAT, MISSION_FORMAT_VERSION, type MissionDocument } from '../config/mission-file';
@@ -157,7 +158,7 @@ export function loadNotebook(store?: Pick<NotebookStore, 'getItem'>): { data: No
   const empty: NotebookData = { version: 1, experiments: [] };
   let revision: string | null = null;
   try {
-    const raw = (store ?? localStorage).getItem(NOTEBOOK_STORAGE_KEY);
+    const raw = (store ?? workspaceStorage()).getItem(NOTEBOOK_STORAGE_KEY);
     revision = raw;
     if (raw === null) return { data: empty, status: 'empty', revision: null };
     const data = raw.length <= NOTEBOOK_MAX_BYTES ? validateNotebookData(JSON.parse(raw)) : null;
@@ -167,14 +168,14 @@ export function loadNotebook(store?: Pick<NotebookStore, 'getItem'>): { data: No
 
 export function saveNotebook(data: NotebookData, store?: Pick<NotebookStore, 'setItem'>): boolean {
   if (!validateNotebookData(data)) return false;
-  try { (store ?? localStorage).setItem(NOTEBOOK_STORAGE_KEY, JSON.stringify(data)); return true; } catch { return false; }
+  try { (store ?? workspaceStorage()).setItem(NOTEBOOK_STORAGE_KEY, JSON.stringify(data)); return true; } catch { return false; }
 }
 
 /** Refuse a stale editor's write. localStorage has no cross-tab transaction:
  * this catches changes visible before a save, not simultaneous writers. */
 export function saveNotebookRevision(data: NotebookData, revision: string | null, store?: NotebookStore): 'saved' | 'changed' | 'unavailable' {
   try {
-    const target = store ?? localStorage;
+    const target = store ?? workspaceStorage();
     if (target.getItem(NOTEBOOK_STORAGE_KEY) !== revision) return 'changed';
     return saveNotebook(data, target) ? 'saved' : 'unavailable';
   } catch { return 'unavailable'; }

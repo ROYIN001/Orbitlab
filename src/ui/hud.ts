@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * Head-up display.
  *
@@ -174,7 +175,7 @@ interface Row {
 /** `localStorage`, or null where it is blocked (a private window throws here). */
 function safeStorage(): ModeStore | null {
   try {
-    return window.localStorage;
+    return workspaceStorage();
   } catch {
     return null;
   }
@@ -956,7 +957,7 @@ export class Hud {
     // separated there is no active stage, and the card must say so rather than
     // keep naming the stage that just left.
     this.set('c.stage', active && stages
-      ? `${frame.activeStageIndex + 1}/${stages.length} · ${(frame.throttle * 100).toFixed(0)} %`
+      ? `${frame.activeStageIndex + 1}/${stages.length} · ${t('hud.shortThrottle')} ${(frame.throttle * 100).toFixed(0)} %`
       : '—');
     this.set('c.dv', `${frame.dvRemaining.toFixed(0)} m/s`);
     this.updateTicker(frame.t, events);

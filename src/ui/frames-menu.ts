@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * The Frames menu by the camera buttons (roadmap E01): which reference frames
  * the 3-D view draws (src/render/frames.ts). Every frame is off until chosen;
@@ -49,7 +50,7 @@ function groupSymbols(group: FrameGroup, n: Notation): string {
 
 export function loadFrameGroups(store?: Pick<Storage, 'getItem'>): FrameGroup[] {
   try {
-    const raw = (store ?? localStorage).getItem(FRAMES_STORAGE_KEY);
+    const raw = (store ?? workspaceStorage()).getItem(FRAMES_STORAGE_KEY);
     const list = raw ? JSON.parse(raw) as unknown : [];
     return Array.isArray(list) ? FRAME_GROUPS.filter((g) => list.includes(g)) : [];
   } catch { return []; }
@@ -141,7 +142,7 @@ export class FramesMenu {
 
   private toggle(group: FrameGroup, on: boolean): void {
     if (on) this.shown.add(group); else this.shown.delete(group);
-    try { localStorage.setItem(FRAMES_STORAGE_KEY, JSON.stringify(this.groups)); } catch { /* the choice is optional */ }
+    try { workspaceStorage().setItem(FRAMES_STORAGE_KEY, JSON.stringify(this.groups)); } catch { /* the choice is optional */ }
     this.reflect();
     this.onChange(this.groups);
   }

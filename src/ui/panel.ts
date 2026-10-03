@@ -63,7 +63,7 @@ import { FLEX_DEFAULTS } from '../physics/rigid/flex';
 import type { ControlConfig, NavigationConfig } from '../types';
 import { aidingFor, imuFor, IMU_KEYS, NAV_FIELD_KEYS, NAV_GRADES } from '../physics/nav/config';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_DEFAULTS, controlFieldKey, controlValue, type ControlChannelKey } from '../physics/rigid/control-config';
-import { getNotationPreference, notationFor, setNotationPreference, type NotationPreference } from './notation';
+import { getNotation, setNotationPreference, type NotationPreference } from './notation';
 import { PROFILE_IDS, rendezvousAvailable, type RendezvousProfileId } from '../physics/rendezvous/profiles';
 import { PORT_IDS, type PortId } from '../physics/rendezvous/ports';
 import type { ControlFaultKind, ControlFaultSpec, ControlFaultsConfig } from '../types';
@@ -1491,14 +1491,13 @@ export class SetupPanel {
   }
 
   // --- U07: the flight-dynamics notation (Engineer mode) -------------------------
-  /** ISO 1151 or ГОСТ 20058-80, or by language; a preference, not a mission setting. */
+  /** Show the effective standard; the implicit default follows the language. */
   private notationSection(): HTMLElement {
     const section = this.el('section', 'config-section notation-section');
     section.append(this.select('setup.notation', [
-      { value: 'auto', label: t('setup.notation.auto', { standard: notationFor(getLang(), 'auto') === 'gost' ? 'ГОСТ 20058-80' : 'ISO 1151' }) },
       { value: 'iso', label: t('setup.notation.iso') },
       { value: 'gost', label: t('setup.notation.gost') },
-    ], getNotationPreference(), (value) => setNotationPreference(value as NotationPreference)));
+    ], getNotation(), (value) => setNotationPreference(value as NotationPreference)));
     section.append(this.el('p', 'field-note', t('setup.notation.note')));
     // A display preference: never disabled by a running mission.
     section.querySelector('select')!.disabled = false;

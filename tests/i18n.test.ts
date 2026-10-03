@@ -74,7 +74,11 @@ function dictionaryDeclarations(files: Record<string, string>): DictionaryDeclar
         else if (tokens[at]?.kind !== SyntaxKind.CloseBraceToken) throw new Error(`${path}: unsupported dictionary import`);
       }
       const specifier = tokens[at + 2];
-      if (tokens[at + 1]?.text !== 'from' || specifier?.kind !== SyntaxKind.StringLiteral || !specifier.value.startsWith('./')) throw new Error(`${path}: expected a relative dictionary import`);
+      if (tokens[at + 1]?.text !== 'from' || specifier?.kind !== SyntaxKind.StringLiteral || !/^\.\.?\//.test(specifier.value)) throw new Error(`${path}: expected a relative dictionary import`);
+      // Helpers outside the dictionary directory (for example profile storage)
+      // are not dictionary declarations. A spread of such a binding still fails
+      // when the composition resolver cannot find its declared dictionary.
+      if (specifier.value.startsWith('../')) continue;
       for (const { name, local } of names) imports.set(local, { path: `${path.slice(0, path.lastIndexOf('/') + 1)}${specifier.value.slice(2)}.ts`, name });
     }
     for (let i = 0; i < tokens.length; i++) {

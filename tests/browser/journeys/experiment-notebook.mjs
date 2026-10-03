@@ -6,6 +6,7 @@
  */
 import assert from 'node:assert/strict';
 import { keyOn } from '../harness.mjs';
+import { workspaceValue } from '../workspace-storage.mjs';
 
 export const smoke = true;
 export const timeoutMs = 240_000;
@@ -41,7 +42,7 @@ export default async function notebook(t) {
     throw new Error(`Baseline rejected: ${JSON.stringify(diagnostic)}`);
   }
   await notebook.getByRole('button', { name: 'Save current flight as trial', exact: true }).waitFor();
-  let stored = await page.evaluate(() => JSON.parse(localStorage.getItem('orbitlab.experiments.v1')));
+  let stored = await workspaceValue(page, 'orbitlab.experiments.v1');
   const baseline = stored.experiments[0].baseline;
   assert.equal(baseline.mission.mission.payloadMass, 1000, 'frozen evidence uses flown payload, not edited panel value');
   assert.equal(baseline.clock, 20, 'capture follows replay cursor');
@@ -54,7 +55,7 @@ export default async function notebook(t) {
   assert.match(await notebook.innerText(), /partial results/);
   assert.equal(await notebook.getByLabel('Prediction — what will change, and why?', { exact: true }).getAttribute('readonly'), '');
   await notebook.getByLabel('4. Conclusion — does the evidence support your prediction? What remains uncertain?', { exact: true }).fill('No variable changed; this does not test the prediction.');
-  stored = await page.evaluate(() => JSON.parse(localStorage.getItem('orbitlab.experiments.v1')));
+  stored = await workspaceValue(page, 'orbitlab.experiments.v1');
   assert.match(stored.experiments[0].conclusion, /No variable changed/);
   await notebook.getByRole('button', { name: 'Remove trial and conclusion', exact: true }).click();
   await page.keyboard.press('Escape');
@@ -71,7 +72,7 @@ export default async function notebook(t) {
   assert.match(comparison, /Changed inputs: 1/);
   assert.doesNotMatch(comparison, /No mission input changed|More than one input changed|The input you selected did not change/);
   await notebook.getByLabel('4. Conclusion — does the evidence support your prediction? What remains uncertain?', { exact: true }).fill('Payload was the only input changed. These early partial results do not yet establish the final outcome.');
-  stored = await page.evaluate(() => JSON.parse(localStorage.getItem('orbitlab.experiments.v1')));
+  stored = await workspaceValue(page, 'orbitlab.experiments.v1');
   assert.equal(stored.experiments[0].trial.mission.mission.payloadMass, 1100);
   assert.equal(stored.experiments[0].baseline.mission.mission.payloadMass, 1000);
   const [download] = await Promise.all([page.waitForEvent('download'), notebook.getByRole('button', { name: 'Download notebook', exact: true }).click()]);

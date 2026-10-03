@@ -108,6 +108,9 @@ a { color: var(--accent); }
 .brand-name { font: 700 21px/1 var(--display); letter-spacing: -0.6px; color: #f3f7fb; }
 .brand-name span { font-weight: 400; color: #a5b2c3; margin-left: -3px; }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
+.profile-button { min-width: 0; }
+.quiet-btn.profile-button #profile-label { display: inline-block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-storage-notice { margin: 8px 16px; padding: 10px 14px; border-left: 3px solid #d4a453; background: #e0a0300d; font-size: 13px; }
 .quiet-btn {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 13px; color: #b9c5d3; padding: 7px 10px; border-radius: 7px;
@@ -400,12 +403,10 @@ body[data-lesson] .verdict-fixes { display: none; }
   flex: 1;
   min-height: 320px;
   background: #0a1620;
-  /* audit B30: the browser must not turn a drag into a page zoom or a
-     pull-to-refresh. Only #viewport — the 2-D map overlay still needs its
-     own gestures. */
-  touch-action: none;
 }
-#gl { display: block; width: 100%; height: 100%; }
+/* Gesture ownership belongs to the scene canvas. Build/Orbit text overlays
+   keep native scrolling even when they cover the same viewport. */
+#gl { display: block; width: 100%; height: 100%; touch-action: none; }
 .overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
 #viewport:fullscreen { border-radius: 0; }
 

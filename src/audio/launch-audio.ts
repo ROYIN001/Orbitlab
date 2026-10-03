@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * The app's side of the sound (roadmap V01): each frame, find what the
  * listener at the camera hears — the vehicle and any stage flying home, at
@@ -26,10 +27,10 @@ const STORE_KEY = 'orbitlab.sound';
 const RETURN_BURN_THRUST = 1.5e6;
 
 export function loadSoundPreference(store?: Pick<Storage, 'getItem'>): boolean {
-  try { return (store ?? localStorage).getItem(STORE_KEY) === 'on'; } catch { return false; }
+  try { return (store ?? workspaceStorage()).getItem(STORE_KEY) === 'on'; } catch { return false; }
 }
 export function saveSoundPreference(on: boolean, store?: Pick<Storage, 'setItem'>): void {
-  try { (store ?? localStorage).setItem(STORE_KEY, on ? 'on' : 'off'); } catch { /* storage off */ }
+  try { (store ?? workspaceStorage()).setItem(STORE_KEY, on ? 'on' : 'off'); } catch { /* storage off */ }
 }
 
 const dist = (a: Vec3, b: Vec3): number => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);

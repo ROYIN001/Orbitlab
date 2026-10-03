@@ -1,0 +1,5 @@
+/* Visible owner context does not wait for the profile dialog chunk. */
+.lesson-profile-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.lesson-profile-context strong { overflow-wrap: anywhere; }
+.lesson-profile-button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.lessons-page-bar .lesson-profile-context { flex: 1 1 100%; font-size: .84rem; }

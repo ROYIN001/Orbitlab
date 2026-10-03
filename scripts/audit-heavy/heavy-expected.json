@@ -1,8 +1,9 @@
 {
-  "schema": 1,
-  "sourceInventorySha256": "597c8c26e8ed07eddd127db72f02b138ec49074211e42d3ad49ad6e33999fced",
-  "note": "Expected names only, not test results. Collected inventory for original heavy suite; no test/assertion changes.",
+  "schema": 2,
+  "sourceInventorySha256": "58e7cd2fe9b2511fefb56bd2765f2cf636be357a86e960a1a14129bec9120bd6",
+  "note": "Reviewed expected names only, never test results. Reconciled all 33 discovered heavy files / 257 cases: 11 cases from six previously missing files; existing MS-10 case title follows its current 3.57 s assertion. Generate collection with Vitest list --no-staticParse; review any later drift instead of silently updating this manifest. No test bodies, tolerances or assertions changed.",
   "files": [
+    "tests/heavy/custom-satellite-sixdof.test.ts",
     "tests/heavy/delivered-falcon-wind.test.ts",
     "tests/heavy/delivered-reduced-flux.test.ts",
     "tests/heavy/delivered-soyuz-wind.test.ts",
@@ -14,8 +15,11 @@
     "tests/heavy/flex-fleet-3.test.ts",
     "tests/heavy/flex-fleet-4.test.ts",
     "tests/heavy/flex-golden.test.ts",
+    "tests/heavy/historical-docking.test.ts",
     "tests/heavy/history-sixdof.test.ts",
+    "tests/heavy/lesson-packs-sixdof.test.ts",
     "tests/heavy/lessons-sixdof.test.ts",
+    "tests/heavy/mercury-redstone.test.ts",
     "tests/heavy/monte-carlo-falcon9-igm.test.ts",
     "tests/heavy/monte-carlo-falcon9-navigation.test.ts",
     "tests/heavy/monte-carlo-falcon9-peg.test.ts",
@@ -29,16 +33,26 @@
     "tests/heavy/soyuz-aborts.test.ts",
     "tests/heavy/starship-flight5.test.ts",
     "tests/heavy/validation-falcon9.test.ts",
-    "tests/heavy/validation-timelines.test.ts"
+    "tests/heavy/validation-timelines.test.ts",
+    "tests/heavy/vostok1-recording.test.ts",
+    "tests/heavy/vostok1-return.test.ts"
   ],
   "assertions": [
     {
-      "file": "tests/heavy/delivered-falcon-wind.test.ts",
-      "name": "six-DOF delivered orbit: Falcon 9 in wind > Falcon 9 / quasi-steady / fixed 5 m/s"
+      "file": "tests/heavy/custom-satellite-sixdof.test.ts",
+      "name": "custom satellites (D06): identical six-DOF flights > flies a copy of comsat exactly as comsat, six-DOF"
+    },
+    {
+      "file": "tests/heavy/custom-satellite-sixdof.test.ts",
+      "name": "custom satellites (D06): identical six-DOF flights > flies a copy of crew exactly as crew, six-DOF"
     },
     {
       "file": "tests/heavy/delivered-falcon-wind.test.ts",
       "name": "six-DOF delivered orbit: Falcon 9 in wind > Falcon 9 / quasi-steady / fixed 10 m/s"
+    },
+    {
+      "file": "tests/heavy/delivered-falcon-wind.test.ts",
+      "name": "six-DOF delivered orbit: Falcon 9 in wind > Falcon 9 / quasi-steady / fixed 5 m/s"
     },
     {
       "file": "tests/heavy/delivered-falcon-wind.test.ts",
@@ -62,19 +76,7 @@
     },
     {
       "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > soyuz21b/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > soyuz21b/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > protonm/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > protonm/leo/25 reaches its target on IGM"
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > angaraa5/leo/25 reaches its target on IGM"
     },
     {
       "file": "tests/heavy/explicit-fleet-1.test.ts",
@@ -82,23 +84,7 @@
     },
     {
       "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > angaraa5/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falcon9/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falcon9/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falconheavy/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falconheavy/leo/25 reaches its target on IGM"
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > atlasv551/leo/25 reaches its target on IGM"
     },
     {
       "file": "tests/heavy/explicit-fleet-1.test.ts",
@@ -106,19 +92,43 @@
     },
     {
       "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > atlasv551/leo/25 reaches its target on IGM"
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falcon9/leo/25 reaches its target on IGM"
     },
     {
       "file": "tests/heavy/explicit-fleet-1.test.ts",
-      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > vulcan/leo/25 reaches its target on PEG"
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falcon9/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falconheavy/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falconheavy/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > protonm/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > protonm/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > soyuz21b/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > soyuz21b/leo/25 reaches its target on PEG"
     },
     {
       "file": "tests/heavy/explicit-fleet-1.test.ts",
       "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > vulcan/leo/25 reaches its target on IGM"
     },
     {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > ariane64/leo/25 reaches its target on PEG"
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > vulcan/leo/25 reaches its target on PEG"
     },
     {
       "file": "tests/heavy/explicit-fleet-2.test.ts",
@@ -126,55 +136,7 @@
     },
     {
       "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > vegac/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > vegac/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch3be/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch3be/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h2a202/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h2a202/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch5/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch5/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h3/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h3/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > pslvxl/leo/25 reaches its target on PEG"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > pslvxl/leo/25 reaches its target on IGM"
-    },
-    {
-      "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > electron/leo/25 reaches its target on PEG"
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > ariane64/leo/25 reaches its target on PEG"
     },
     {
       "file": "tests/heavy/explicit-fleet-2.test.ts",
@@ -182,27 +144,67 @@
     },
     {
       "file": "tests/heavy/explicit-fleet-2.test.ts",
-      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > starship/leo/25 reaches its target on PEG"
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > electron/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h2a202/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h2a202/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h3/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h3/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch3be/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch3be/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch5/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch5/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > pslvxl/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > pslvxl/leo/25 reaches its target on PEG"
     },
     {
       "file": "tests/heavy/explicit-fleet-2.test.ts",
       "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > starship/leo/25 reaches its target on IGM"
     },
     {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > starship/leo/25 reaches its target on PEG"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > vegac/leo/25 reaches its target on IGM"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > vegac/leo/25 reaches its target on PEG"
+    },
+    {
       "file": "tests/heavy/falcon-heavy-returns.test.ts",
       "name": "six-DOF Falcon Heavy returns > lands both side boosters on LZ-1 and LZ-2 and the core on the drone ship"
-    },
-    {
-      "file": "tests/heavy/flex-fleet-1.test.ts",
-      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > soyuz21a/iss (crew) reaches the station orbit as a flexible vehicle"
-    },
-    {
-      "file": "tests/heavy/flex-fleet-1.test.ts",
-      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > soyuz21b/leo/25 reaches its target as a flexible vehicle"
-    },
-    {
-      "file": "tests/heavy/flex-fleet-1.test.ts",
-      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > protonm/leo/25 reaches its target as a flexible vehicle"
     },
     {
       "file": "tests/heavy/flex-fleet-1.test.ts",
@@ -213,16 +215,16 @@
       "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > falcon9/leo/25 reaches its target as a flexible vehicle"
     },
     {
-      "file": "tests/heavy/flex-fleet-2.test.ts",
-      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > falconheavy/leo/25 reaches its target as a flexible vehicle"
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > protonm/leo/25 reaches its target as a flexible vehicle"
     },
     {
-      "file": "tests/heavy/flex-fleet-2.test.ts",
-      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > atlasv551/leo/25 reaches its target as a flexible vehicle"
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > soyuz21a/iss (crew) reaches the station orbit as a flexible vehicle"
     },
     {
-      "file": "tests/heavy/flex-fleet-2.test.ts",
-      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > vulcan/leo/25 reaches its target as a flexible vehicle"
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > soyuz21b/leo/25 reaches its target as a flexible vehicle"
     },
     {
       "file": "tests/heavy/flex-fleet-2.test.ts",
@@ -230,7 +232,27 @@
     },
     {
       "file": "tests/heavy/flex-fleet-2.test.ts",
+      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > atlasv551/leo/25 reaches its target as a flexible vehicle"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > falconheavy/leo/25 reaches its target as a flexible vehicle"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
       "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > vegac/leo/25 reaches its target as a flexible vehicle"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > vulcan/leo/25 reaches its target as a flexible vehicle"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > h2a202/leo/25 reaches its target as a flexible vehicle"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > h3/leo/25 reaches its target as a flexible vehicle"
     },
     {
       "file": "tests/heavy/flex-fleet-3.test.ts",
@@ -245,16 +267,8 @@
       "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > longmarch5/leo/25 reaches its target as a flexible vehicle"
     },
     {
-      "file": "tests/heavy/flex-fleet-3.test.ts",
-      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > h2a202/leo/25 reaches its target as a flexible vehicle"
-    },
-    {
-      "file": "tests/heavy/flex-fleet-3.test.ts",
-      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > h3/leo/25 reaches its target as a flexible vehicle"
-    },
-    {
       "file": "tests/heavy/flex-fleet-4.test.ts",
-      "name": "flexible vehicles (roadmap P05): PSLV, Electron, Starship > pslvxl/leo/25 reaches its target as a flexible vehicle"
+      "name": "flexible Falcon 9 between integration steps > delivers the same orbit at 0.01 s and 0.005 s"
     },
     {
       "file": "tests/heavy/flex-fleet-4.test.ts",
@@ -262,11 +276,15 @@
     },
     {
       "file": "tests/heavy/flex-fleet-4.test.ts",
-      "name": "flexible vehicles (roadmap P05): PSLV, Electron, Starship > starship/leo/25 reaches its target as a flexible vehicle"
+      "name": "flexible vehicles (roadmap P05): PSLV, Electron, Starship > pslvxl/leo/25 reaches its target as a flexible vehicle"
     },
     {
       "file": "tests/heavy/flex-fleet-4.test.ts",
-      "name": "flexible Falcon 9 between integration steps > delivers the same orbit at 0.01 s and 0.005 s"
+      "name": "flexible vehicles (roadmap P05): PSLV, Electron, Starship > starship/leo/25 reaches its target as a flexible vehicle"
+    },
+    {
+      "file": "tests/heavy/flex-golden.test.ts",
+      "name": "six-DOF missions without the flexible-body options > angaraa5 flies its mission exactly as recorded"
     },
     {
       "file": "tests/heavy/flex-golden.test.ts",
@@ -277,8 +295,16 @@
       "name": "six-DOF missions without the flexible-body options > soyuz21a flies its mission exactly as recorded"
     },
     {
-      "file": "tests/heavy/flex-golden.test.ts",
-      "name": "six-DOF missions without the flexible-body options > angaraa5 flies its mission exactly as recorded"
+      "file": "tests/heavy/historical-docking.test.ts",
+      "name": "historical flights to the station > soyuzMs16 docks close to the real docking"
+    },
+    {
+      "file": "tests/heavy/historical-docking.test.ts",
+      "name": "historical flights to the station > soyuzMs25 docks close to the real docking"
+    },
+    {
+      "file": "tests/heavy/history-sixdof.test.ts",
+      "name": "historical missions as rigid bodies > Apollo 11: the S-IVB relights for the translunar injection"
     },
     {
       "file": "tests/heavy/history-sixdof.test.ts",
@@ -289,8 +315,16 @@
       "name": "historical missions as rigid bodies > Vostok-1 reaches its 181 × 327 km orbit"
     },
     {
-      "file": "tests/heavy/history-sixdof.test.ts",
-      "name": "historical missions as rigid bodies > Apollo 11: the S-IVB relights for the translunar injection"
+      "file": "tests/heavy/lesson-packs-sixdof.test.ts",
+      "name": "pack ru-24-05-06, the six-DOF lessons > S1 margins at max-Q: the crossover and phase margin read off the inspector pass, the gain margin holds 6 dB; a misread phase margin fails"
+    },
+    {
+      "file": "tests/heavy/lesson-packs-sixdof.test.ts",
+      "name": "pack ru-24-05-06, the six-DOF lessons > S2 inertial navigation without GNSS: as set the error passes 1 000 m; the star tracker, or a navigation-grade unit, keeps it inside; MEMS with the star tracker does not"
+    },
+    {
+      "file": "tests/heavy/lesson-packs-sixdof.test.ts",
+      "name": "pack ru-24-05-06, the six-DOF lessons > S3 a stuck rate gyro: with the FDIR on unit 1 is isolated and the uncrewed Soyuz reaches orbit; as set the vehicle breaks up and the lesson fails"
     },
     {
       "file": "tests/heavy/lessons-sixdof.test.ts",
@@ -321,6 +355,10 @@
       "name": "round 2: the six-DOF lessons, solved > 4.4 bending and the notch filter: with the filter on the rocket flies through max-Q"
     },
     {
+      "file": "tests/heavy/mercury-redstone.test.ts",
+      "name": "six-DOF Mercury-Redstone 3 > lobs Freedom 7 to 187 km and brings it down in the Atlantic under its parachutes, as flown"
+    },
+    {
       "file": "tests/heavy/monte-carlo-falcon9-igm.test.ts",
       "name": "Monte Carlo insertion accuracy (roadmap G05) > falcon9 igm: 40 dispersed runs, each counted and each loss named"
     },
@@ -342,59 +380,15 @@
     },
     {
       "file": "tests/heavy/navigation-burns.test.ts",
-      "name": "Falcon 9 to its reference orbit on a tactical and a MEMS navigation > tactical: the burns align and the target orbit is reached, gas to spare"
-    },
-    {
-      "file": "tests/heavy/navigation-burns.test.ts",
       "name": "Falcon 9 to its reference orbit on a tactical and a MEMS navigation > mems: the burns align and the target orbit is reached, gas to spare"
     },
     {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > takes the 100 objects the selection names"
+      "file": "tests/heavy/navigation-burns.test.ts",
+      "name": "Falcon 9 to its reference orbit on a tactical and a MEMS navigation > tactical: the burns align and the target orbit is reached, gas to spare"
     },
     {
       "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23 Cluster 13 Assembly 4"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 509 Transit VA-1"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 987 OSO 2"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 2168 Kosmos-118"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 2763 Vostok-2M (N07) Stage 3"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 4119 Meteor"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 4958 S70-4 Drag Sphere"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 5328 Vostok-2M (N22) Stage 3"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 7417 Kosmos-673"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 7753 Kosmos-3M 21-279 Stage 2"
-    },
-    {
-      "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 9390 Vostok-2M (N47) Stage 3"
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 10 days ahead: inside the window as fixed"
     },
     {
       "file": "tests/heavy/reentry-agencies.test.ts",
@@ -630,6 +624,10 @@
     },
     {
       "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 2168 Kosmos-118"
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
       "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21868 H-I-24F Stage 2"
     },
     {
@@ -663,6 +661,10 @@
     {
       "file": "tests/heavy/reentry-agencies.test.ts",
       "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 22998 BREMSAT"
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23 Cluster 13 Assembly 4"
     },
     {
       "file": "tests/heavy/reentry-agencies.test.ts",
@@ -750,6 +752,10 @@
     },
     {
       "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 2763 Vostok-2M (N07) Stage 3"
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
       "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 27829 Delta 298"
     },
     {
@@ -758,27 +764,43 @@
     },
     {
       "file": "tests/heavy/reentry-agencies.test.ts",
-      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 10 days ahead: inside the window as fixed"
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 4119 Meteor"
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 4958 S70-4 Drag Sphere"
     },
     {
       "file": "tests/heavy/reentry-agencies.test.ts",
       "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 5 days ahead: inside the window as fixed"
     },
     {
-      "file": "tests/heavy/rendezvous.test.ts",
-      "name": "each profile, to Rassvet > twoOrbit docks on the flight's timeline"
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 509 Transit VA-1"
     },
     {
-      "file": "tests/heavy/rendezvous.test.ts",
-      "name": "each profile, to Rassvet > fourOrbit docks on the flight's timeline"
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 5328 Vostok-2M (N22) Stage 3"
     },
     {
-      "file": "tests/heavy/rendezvous.test.ts",
-      "name": "each profile, to Rassvet > twoDay docks on the flight's timeline"
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 7417 Kosmos-673"
     },
     {
-      "file": "tests/heavy/rendezvous.test.ts",
-      "name": "each port, on the two-orbit profile > rassvet"
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 7753 Kosmos-3M 21-279 Stage 2"
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 9390 Vostok-2M (N47) Stage 3"
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 987 OSO 2"
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > takes the 100 objects the selection names"
     },
     {
       "file": "tests/heavy/rendezvous.test.ts",
@@ -790,7 +812,23 @@
     },
     {
       "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each port, on the two-orbit profile > rassvet"
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
       "name": "each port, on the two-orbit profile > zvezdaAft"
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each profile, to Rassvet > fourOrbit docks on the flight's timeline"
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each profile, to Rassvet > twoDay docks on the flight's timeline"
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each profile, to Rassvet > twoOrbit docks on the flight's timeline"
     },
     {
       "file": "tests/heavy/rendezvous.test.ts",
@@ -798,11 +836,27 @@
     },
     {
       "file": "tests/heavy/screening-filter.test.ts",
-      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > iss"
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > decaying"
     },
     {
       "file": "tests/heavy/screening-filter.test.ts",
-      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > sso700"
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > eccentric"
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > falling"
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > geo"
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > gto"
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > iss"
     },
     {
       "file": "tests/heavy/screening-filter.test.ts",
@@ -814,27 +868,7 @@
     },
     {
       "file": "tests/heavy/screening-filter.test.ts",
-      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > gto"
-    },
-    {
-      "file": "tests/heavy/screening-filter.test.ts",
-      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > transfer"
-    },
-    {
-      "file": "tests/heavy/screening-filter.test.ts",
-      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > geo"
-    },
-    {
-      "file": "tests/heavy/screening-filter.test.ts",
-      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > decaying"
-    },
-    {
-      "file": "tests/heavy/screening-filter.test.ts",
       "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > reentering"
-    },
-    {
-      "file": "tests/heavy/screening-filter.test.ts",
-      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > falling"
     },
     {
       "file": "tests/heavy/screening-filter.test.ts",
@@ -842,27 +876,27 @@
     },
     {
       "file": "tests/heavy/screening-filter.test.ts",
-      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > eccentric"
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > sso700"
     },
     {
-      "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > has one row for every catalogue vehicle"
-    },
-    {
-      "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > soyuz21a/leo/50 flies its first 160 s in six-DOF exactly as recorded"
-    },
-    {
-      "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > soyuz21b/leo/50 flies its first 160 s in six-DOF exactly as recorded"
-    },
-    {
-      "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > protonm/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > transfer"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
       "name": "six-DOF fingerprints of the catalogue > angaraa5/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > ariane64/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > atlasv551/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > electron/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
@@ -874,19 +908,15 @@
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > atlasv551/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+      "name": "six-DOF fingerprints of the catalogue > h2a202/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > vulcan/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+      "name": "six-DOF fingerprints of the catalogue > h3/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > ariane64/leo/50 flies its first 160 s in six-DOF exactly as recorded"
-    },
-    {
-      "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > vegac/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+      "name": "six-DOF fingerprints of the catalogue > has one row for every catalogue vehicle"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
@@ -898,15 +928,11 @@
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > h2a202/leo/50 flies its first 160 s in six-DOF exactly as recorded"
-    },
-    {
-      "file": "tests/heavy/sixdof-fingerprint.test.ts",
       "name": "six-DOF fingerprints of the catalogue > longmarch5/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > h3/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+      "name": "six-DOF fingerprints of the catalogue > protonm/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
@@ -914,11 +940,15 @@
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > electron/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+      "name": "six-DOF fingerprints of the catalogue > saturnv/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > starship/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+      "name": "six-DOF fingerprints of the catalogue > soyuz21a/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > soyuz21b/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
@@ -926,19 +956,27 @@
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > starship/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > vegac/leo/50 flies its first 160 s in six-DOF exactly as recorded"
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
       "name": "six-DOF fingerprints of the catalogue > vostok8k72k/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/sixdof-fingerprint.test.ts",
-      "name": "six-DOF fingerprints of the catalogue > saturnv/leo/50 flies its first 160 s in six-DOF exactly as recorded"
-    },
-    {
-      "file": "tests/heavy/soyuz-aborts.test.ts",
-      "name": "Soyuz MS-10: a strap-on strikes the core > aborts on the fairing motors three seconds after the strap-ons separate and lands the crew"
+      "name": "six-DOF fingerprints of the catalogue > vulcan/leo/50 flies its first 160 s in six-DOF exactly as recorded"
     },
     {
       "file": "tests/heavy/soyuz-aborts.test.ts",
       "name": "Soyuz 18a: a stage separation half-fails > releases the spacecraft for a ballistic entry and lands the crew in the Altai, as in 1975"
+    },
+    {
+      "file": "tests/heavy/soyuz-aborts.test.ts",
+      "name": "Soyuz MS-10: a strap-on strikes the core > aborts on the fairing motors 3.57 s after the strap-ons separate and lands the crew"
     },
     {
       "file": "tests/heavy/starship-flight5.test.ts",
@@ -946,7 +984,7 @@
     },
     {
       "file": "tests/heavy/validation-falcon9.test.ts",
-      "name": "Falcon 9 against webcast telemetry (six-DOF) > has a disagreement list for every reference flight and nothing else"
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > bangabandhu1"
     },
     {
       "file": "tests/heavy/validation-falcon9.test.ts",
@@ -954,7 +992,11 @@
     },
     {
       "file": "tests/heavy/validation-falcon9.test.ts",
-      "name": "Falcon 9 against webcast telemetry (six-DOF) > ssoA"
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > gps3sv01"
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > has a disagreement list for every reference flight and nothing else"
     },
     {
       "file": "tests/heavy/validation-falcon9.test.ts",
@@ -962,23 +1004,11 @@
     },
     {
       "file": "tests/heavy/validation-falcon9.test.ts",
-      "name": "Falcon 9 against webcast telemetry (six-DOF) > bangabandhu1"
-    },
-    {
-      "file": "tests/heavy/validation-falcon9.test.ts",
-      "name": "Falcon 9 against webcast telemetry (six-DOF) > gps3sv01"
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > ssoA"
     },
     {
       "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > has a disagreement list for every reference and nothing else"
-    },
-    {
-      "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > soyuzMs25"
-    },
-    {
-      "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > electronNtt"
+      "name": "published launch timelines (six-DOF) > angaraF2"
     },
     {
       "file": "tests/heavy/validation-timelines.test.ts",
@@ -990,23 +1020,7 @@
     },
     {
       "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > pslvC52"
-    },
-    {
-      "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > h3F3"
-    },
-    {
-      "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > h2aF50"
-    },
-    {
-      "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > vegaVV25"
-    },
-    {
-      "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > protonT14R"
+      "name": "published launch timelines (six-DOF) > electronNtt"
     },
     {
       "file": "tests/heavy/validation-timelines.test.ts",
@@ -1014,7 +1028,43 @@
     },
     {
       "file": "tests/heavy/validation-timelines.test.ts",
-      "name": "published launch timelines (six-DOF) > angaraF2"
+      "name": "published launch timelines (six-DOF) > h2aF50"
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > h3F3"
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > has a disagreement list for every reference and nothing else"
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > progressMs19"
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > protonT14R"
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > pslvC52"
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > soyuzMs25"
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > vegaVV25"
+    },
+    {
+      "file": "tests/heavy/vostok1-recording.test.ts",
+      "name": "six-DOF Vostok-1 recorded > keeps the whole flight under the frame ceiling and its memory, the orbit and the way home at their own cadence"
+    },
+    {
+      "file": "tests/heavy/vostok1-return.test.ts",
+      "name": "six-DOF Vostok-1 > flies Gagarin once round the Earth and brings him and the sphere down by the Volga, as flown"
     }
   ]
 }

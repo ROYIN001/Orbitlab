@@ -73,7 +73,7 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
         }
         await t.close();
         const seconds = (Date.now() - t0) / 1000;
-        results.push({ name, failures: t.failures, seconds });
+        results.push({ name, failures: t.failures, seconds, browserVersion: browser.version() });
         console.log(`${t.failures.length ? '✗' : '✓'} ${name} (${seconds.toFixed(1)} s)`);
         if (process.env.GITHUB_ACTIONS) for (const f of t.failures) console.log(`::error title=browser journey ${name}::${String(f).split('\n')[0]}`);
       } finally {

@@ -10,7 +10,8 @@
  *   - each chunk in dist/assets named after its prefix, the hash dropped:
  *     `index-*.js`, `index-*.css`, `i18n-*.js`, every `<name>.worker-*.js` …
  *     when budgets.json names that group;
- *   - `other chunks`: every other *.js and *.css in dist/assets, together;
+ *   - `other chunks`: every other *.js and *.css in dist/assets (including
+ *     nested directories and names without the usual hash), together;
  *   - `precache`: every file the service worker downloads on install, read
  *     back from the manifest the build writes into dist/sw.js
  *     (src/pwa/manifest.ts, `injectPrecacheManifest`).
@@ -26,7 +27,7 @@
  * Plain Node, no dependencies.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -45,8 +46,17 @@ function fail(message) {
 
 /** `index-C_bwFgA7.js` → `index-*.js`; `monte-carlo.worker-DA3Ow2wV.js` → `monte-carlo.worker-*.js`. */
 function chunkGroup(file) {
-  const m = /^(.+)-[\w-]{8}\.(js|css)$/.exec(file);
+  const m = /^(.+)-[\w-]{8}\.(js|css)$/.exec(basename(file));
   return m ? `${m[1]}-*.${m[2]}` : null;
+}
+
+/** Count every emitted JS/CSS file once, including names the chunk matcher does not recognise. */
+function assetFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const file = join(dir, entry.name);
+    if (entry.isDirectory()) return assetFiles(file);
+    return /\.(js|css)$/.test(entry.name) ? [file] : [];
+  }).sort();
 }
 
 /** The precache manifest written into the built worker, parsed back. */
@@ -65,18 +75,17 @@ const budgets = Object.fromEntries(
   Object.entries(JSON.parse(readFileSync(budgetsPath, 'utf8'))).filter(([key]) => !key.startsWith('_')),
 );
 for (const [group, ceiling] of Object.entries(budgets)) {
-  if (typeof ceiling !== 'number' || !(ceiling > 0)) fail(`budgets.json: "${group}" must be a positive number of kB`);
+  if (typeof ceiling !== 'number' || !Number.isFinite(ceiling) || !(ceiling > 0)) fail(`budgets.json: "${group}" must be a finite positive number of kB`);
 }
 
 if (!existsSync(ASSETS) || !existsSync(join(DIST, 'sw.js'))) fail('dist/ is missing or incomplete: run `npx vite build` first');
 
 // chunk groups
 const sizes = new Map();
-for (const file of readdirSync(ASSETS).sort()) {
+for (const file of assetFiles(ASSETS)) {
   const group = chunkGroup(file);
-  if (!group) continue;
-  const key = group in budgets ? group : OTHER;
-  sizes.set(key, (sizes.get(key) ?? 0) + statSync(join(ASSETS, file)).size);
+  const key = group && group in budgets ? group : OTHER;
+  sizes.set(key, (sizes.get(key) ?? 0) + statSync(file).size);
 }
 
 // precache total

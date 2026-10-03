@@ -11,6 +11,8 @@
  * which is kept in this browser (IndexedDB) and never leaves it.
  */
 import type { WatchMissionId } from '../ui/watch-missions';
+import { workspaceOwner, registerWorkspaceFlush } from '../workspace/storage';
+import { trackKey } from '../workspace/media';
 
 export interface Soundtrack {
   /** the audio, relative to the page, or an object URL */
@@ -69,7 +71,7 @@ export function soundtrackAction(o: {
 const DB = 'orbitlab-soundtracks';
 const STORE = 'tracks';
 
-interface StoredTrack { id: string; blob: Blob; t0: number; name: string }
+interface StoredTrack { id: string; blob: Blob; t0: number; name: string; profileId?: string; missionId?: string }
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -112,16 +114,37 @@ async function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRe
   });
 }
 
+const pendingMedia = new Set<Promise<void>>();
+const visitTracks = new Map<string, StoredTrack>();
+let flushRegistered = false;
+function trackWrite(promise: Promise<void>): Promise<void> {
+  if (!flushRegistered) {
+    registerWorkspaceFlush(async () => { await Promise.all([...pendingMedia]); });
+    flushRegistered = true;
+  }
+  pendingMedia.add(promise);
+  void promise.then(() => pendingMedia.delete(promise), () => pendingMedia.delete(promise));
+  return promise;
+}
 export async function saveUserSoundtrack(id: WatchMissionId, file: Blob, name: string, t0: number): Promise<void> {
-  await tx('readwrite', (s) => s.put({ id, blob: file, t0, name } satisfies StoredTrack));
+  const owner = workspaceOwner(), key = owner ? trackKey(owner.profileId, id) : id;
+  const value: StoredTrack = { id: key, blob: file, t0, name, ...(owner ? { profileId: owner.profileId, missionId: id } : {}) };
+  if (owner && !owner.durable) { visitTracks.set(key, value); return; }
+  await trackWrite(tx('readwrite', (s) => { owner?.assert(); return s.put(value); }).then(() => { owner?.assert(); }));
 }
-
 export async function loadUserSoundtrack(id: WatchMissionId): Promise<StoredTrack | null> {
-  try { return (await tx<StoredTrack | undefined>('readonly', (s) => s.get(id))) ?? null; } catch { return null; }
+  try {
+    const owner = workspaceOwner(false), key = owner ? trackKey(owner.profileId, id) : id;
+    if (owner && !owner.durable) return visitTracks.get(key) ?? null;
+    const value = (await tx<StoredTrack | undefined>('readonly', (s) => s.get(key))) ?? null;
+    owner?.assert();
+    return value && (!owner || value.profileId === owner.profileId) ? value : null;
+  } catch { return null; }
 }
-
 export async function removeUserSoundtrack(id: WatchMissionId): Promise<void> {
-  await tx('readwrite', (s) => s.delete(id));
+  const owner = workspaceOwner(), key = owner ? trackKey(owner.profileId, id) : id;
+  if (owner && !owner.durable) { visitTracks.delete(key); return; }
+  await trackWrite(tx('readwrite', (s) => { owner?.assert(); return s.delete(key); }).then(() => { owner?.assert(); }));
 }
 
 /** The soundtrack a viewer launch plays: the user's own recording first, else the bundled one, else none. */

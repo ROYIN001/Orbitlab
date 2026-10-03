@@ -1,14 +1,14 @@
 name: CI
 
 on:
-  # a change to Markdown files only (README, CHANGELOG, docs/*.md) skips CI, except the two documents the
-  # app and the tests read; anything else under docs/ (evidence JSON, pictures) still runs it
+  # Markdown-only changes skip CI except documents consumed by the app/tests.
   pull_request:
     paths:
       - '**'
       - '!**/*.md'
-      - 'docs/ROADMAP-PART2-3.md'     # read by tests/section-plan.test.ts
-      - 'docs/SIXDOF-VEHICLE-DATA.md' # bundled by src/ui/dialogs.ts
+      - 'docs/ROADMAP-PART2-3.md'
+      - 'docs/SIXDOF-VEHICLE-DATA.md'
+      - 'docs/history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md'
   push:
     branches-ignore: [main, gh-pages]
     paths:
@@ -16,35 +16,64 @@ on:
       - '!**/*.md'
       - 'docs/ROADMAP-PART2-3.md'
       - 'docs/SIXDOF-VEHICLE-DATA.md'
+      - 'docs/history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md'
 
 permissions:
   contents: read
 
-# Push and pull-request events for the same branch validate the same change.
-# Keep the newest run; the independent Pages deployment has its own group.
 concurrency:
   group: ci-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  typecheck:
+  plan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.3
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
+      - run: node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs
+      - run: node scripts/verification/create-plan.mjs ci
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-plan
+          path: |
+            tests/browser/artifacts/verification/plan.json
+            tests/browser/artifacts/verification/collection.json
+          if-no-files-found: error
 
-  # the default suite (tests/heavy and tests/sixdof-fleet excluded by vite.config.ts) split three ways
-  test:
+  typecheck:
+    needs: plan
     runs-on: ubuntu-latest
-    # watch-missions.test.ts alone takes 12-16 min on a shared runner and sits in one shard
-    # with the other long files (build-catalogue-matrix, rigid-recovery, ballistic); 20 min
-    # left no margin for the runner's ~2x speed swing
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-plan
+          path: tests/browser/artifacts/verification
+      - run: node scripts/verification/run-command.mjs typecheck -- npm run typecheck
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence-typecheck
+          path: tests/browser/artifacts/verification/typecheck.report.json
+          if-no-files-found: warn
+
+  # Preserve all three default-suite shards; collection + union detects omissions and skips.
+  test:
+    needs: plan
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -54,36 +83,53 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.3
           cache: npm
       - run: npm ci
-      - run: npx vitest run --shard=${{ matrix.shard }}/3
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-plan
+          path: tests/browser/artifacts/verification
+      - run: node scripts/verification/run-vitest.mjs unit-${{ matrix.shard }}of3
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence-unit-${{ matrix.shard }}
+          path: tests/browser/artifacts/verification/unit-${{ matrix.shard }}of3.*
+          if-no-files-found: warn
 
-  # the production build (the typecheck runs in its own job), kept as an artifact for browser-smoke
   build:
+    needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.3
           cache: npm
       - run: npm ci
-      - run: npx vite build
-      - if: hashFiles('scripts/bundle-budget.mjs') != ''
-        run: node scripts/bundle-budget.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-plan
+          path: tests/browser/artifacts/verification
+      - run: node scripts/verification/run-command.mjs build -- npx vite build
+      - run: node scripts/bundle-budget.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
-          retention-days: 3
           if-no-files-found: error
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence-build
+          path: tests/browser/artifacts/verification/build.report.json
+          if-no-files-found: warn
 
-  # The app in a real browser (tests/browser/): the smoke journeys on the build job's dist,
-  # served under /Orbitlab/ as GitHub Pages serves it. The deploy runs the full set.
+  # Both smoke shards inspect the exact build, retaining a fresh Chromium per journey.
   browser-smoke:
-    needs: build
+    needs: [plan, build]
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -94,19 +140,64 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.3
           cache: npm
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-plan
+          path: tests/browser/artifacts/verification
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-evidence-build
+          path: tests/browser/artifacts/verification
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
       - run: npx playwright install --with-deps chromium
-      - run: node --test tests/browser/shard.test.mjs
-      - run: npm run test:browser:smoke -- --shard=${{ matrix.shard }}/2
+      - run: node scripts/verification/run-browser.mjs browser-${{ matrix.shard }}of2
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence-browser-${{ matrix.shard }}
+          path: tests/browser/artifacts/verification/browser-${{ matrix.shard }}of2.report.json
+          if-no-files-found: warn
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: browser-smoke-screenshots-${{ matrix.shard }}
           path: tests/browser/screenshots/
           if-no-files-found: ignore
+
+  verify:
+    needs: [plan, typecheck, test, build, browser-smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-plan
+          path: tests/browser/artifacts/verification
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ci-evidence-*
+          path: tests/browser/artifacts/verification/results
+          merge-multiple: true
+      - if: always()
+        run: node scripts/verification/aggregate.mjs tests/browser/artifacts/verification/plan.json tests/browser/artifacts/verification/results tests/browser/artifacts/verification/union.json
+        env:
+          VERIFICATION_JOB_RESULTS: '{"plan":"${{ needs.plan.result }}","typecheck":"${{ needs.typecheck.result }}","test":"${{ needs.test.result }}","build":"${{ needs.build.result }}","browser":"${{ needs.browser-smoke.result }}"}'
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-verification-union
+          path: tests/browser/artifacts/verification/union.json
+          if-no-files-found: warn

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEG, G0, OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
-import { cross, norm, scale, sub, v3, type Vec3 } from '../src/physics/vec3';
+import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../src/physics/vec3';
 import { pointExitFlowMoment, RigidRuntime, targetAttitude, windScenario, type SnapshotProvider } from '../src/physics/rigid/runtime';
 import { windVelocityENU } from '../src/physics/rigid/aero';
 import { atmosphere } from '../src/physics/atmosphere';
@@ -61,6 +61,18 @@ describe('rigid runtime integration boundaries', () => {
       const y = quatRotate(q, v3(0, 1, 0)), z = quatRotate(q, v3(0, 0, 1));
       expect(norm(sub(cross(nose, y), z))).toBeLessThan(1e-12);
     }
+  });
+
+  it.each([1e-4, 1e-6, 1e-7])('keeps an orthonormal target basis when the roll reference is almost parallel (%s)', (offset) => {
+    const nose = normalize(v3(0.73, -0.44, 0.29));
+    const across = normalize(v3(0.44, 0.73, 0));
+    const reference = add(scale(nose, 3), scale(across, offset));
+    const q = targetAttitude(nose, reference);
+    const x = quatRotate(q, v3(1, 0, 0)), y = quatRotate(q, v3(0, 1, 0)), z = quatRotate(q, v3(0, 0, 1));
+    expect(norm(sub(x, nose))).toBeLessThan(1e-12);
+    expect(Math.abs(dot(x, z))).toBeLessThan(1e-12);
+    expect(norm(sub(cross(x, y), z))).toBeLessThan(1e-12);
+    expect(dot(z, across)).toBeGreaterThan(1 - 1e-12);
   });
 
   it('subtracts Earth rotation and uses a bounded, deterministic shear profile', () => {

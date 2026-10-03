@@ -7,6 +7,7 @@
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { putWorkspaceFixture, workspaceBytes } from '../workspace-storage.mjs';
 
 export const smoke = true;
 // About 155 s on the shared software-WebGL runner: leave CI headroom for
@@ -42,13 +43,13 @@ function savedWork() {
 }
 
 async function putFixture(page, data) {
-  await page.evaluate(({ keys, data, sentinel }) => {
-    for (const [section, key] of Object.entries(keys)) localStorage.setItem(key, JSON.stringify(data[section]));
+  await putWorkspaceFixture(page, Object.fromEntries(Object.entries(KEYS).map(([section, key]) => [key, JSON.stringify(data[section])])));
+  await page.evaluate((sentinel) => {
     localStorage.setItem(sentinel, 'unrelated browser data must stay private');
-  }, { keys: KEYS, data, sentinel: SENTINEL });
+  }, SENTINEL);
 }
 
-const browserBytes = (page) => page.evaluate((keys) => Object.fromEntries(keys.map((key) => [key, localStorage.getItem(key)])), [...Object.values(KEYS), JOURNAL, SENTINEL]);
+const browserBytes = (page) => workspaceBytes(page, [...Object.values(KEYS), JOURNAL], [SENTINEL]);
 
 async function openBackups(page) {
   await page.locator('#btn-work').click();

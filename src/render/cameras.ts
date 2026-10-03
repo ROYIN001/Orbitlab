@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Vec3 } from '../physics/vec3';
 import { damp, fbm1s } from './noise';
+import { isCameraInputTarget, wheelZoomFactor, type CameraInputOptions } from './gestures';
 
 export type CameraMode = 'exterior' | 'onboard' | 'space' | 'map';
 
@@ -107,12 +108,13 @@ export class CameraController {
   private spaceInit = false;
 
   /**
-   * Mouse and touch input on the viewport.
+   * Mouse and touch input on the scene's surface. Callers should attach to
+   * the Launch canvas and supply isActive when another page covers it.
    *
-   * `touch-action: none` on #viewport (src/style.css) stops the browser from
-   * turning a drag into a page zoom or a pull-to-refresh, which also means
-   * every gesture reaches this listener — including taps on the camera tabs and
-   * the tool buttons that float over the scene. Three rules follow from that:
+   * `touch-action: none` on the canvas (src/style.css) stops the browser from
+   * turning a drag into a page zoom or a pull-to-refresh. The older container
+   * attachment remains supported, where controls can also bubble input into
+   * this listener. Three rules follow from that:
    *
    * - a press that lands on a control inside the viewport is left alone, and in
    *   particular the pointer is NOT captured: capturing it on every
@@ -125,16 +127,15 @@ export class CameraController {
    *   without that the view jumps by however far the remaining finger travelled
    *   during the pinch.
    */
-  attach(el: HTMLElement): void {
-    // `.scene-ui` is the overlay layer that carries the camera tabs, the HUD,
-    // the ticker and the narration band; the generic selectors cover anything
-    // interactive a later redesign puts inside the viewport. The landing page
-    // is a page, not a viewer: its wheel scrolls it and its drags select text,
-    // neither of them turns or zooms the scene behind it.
-    const isControl = (target: EventTarget | null): boolean => {
-      const node = target as HTMLElement | null;
-      return !!node && typeof node.closest === 'function'
-        && !!node.closest('button, select, input, label, a, .scene-ui, .home-screen');
+  attach(el: HTMLElement, options: CameraInputOptions = {}): void {
+    const isActive = options.isActive ?? (() => true);
+    const owns = (event: Event): boolean => isActive() && isCameraInputTarget(event, el);
+    const cancelInput = (): void => {
+      const ids = [...this.pointers.keys()];
+      this.pointers.clear();
+      this.dragging = false;
+      this.pinchDist = 0;
+      for (const id of ids) try { el.releasePointerCapture(id); } catch { /* pointer already gone */ }
     };
     const zoomBy = (factor: number): void => {
       if (this.mode === 'exterior') this.zoom = Math.max(0.35, Math.min(this.maxZoom, this.zoom * factor));
@@ -147,7 +148,7 @@ export class CameraController {
       return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
     };
     el.addEventListener('pointerdown', (e) => {
-      if (isControl(e.target)) return;
+      if (!owns(e)) return;
       if (this.mode === 'map' || this.mode === 'onboard') return;
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -165,6 +166,7 @@ export class CameraController {
       try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
     });
     el.addEventListener('pointermove', (e) => {
+      if (!isActive()) { cancelInput(); return; }
       const p = this.pointers.get(e.pointerId);
       if (p) { p.x = e.clientX; p.y = e.clientY; }
       if (this.pointers.size >= 2) {
@@ -214,10 +216,13 @@ export class CameraController {
     // true and the scene rotating under a mouse that was no longer pressed.
     el.addEventListener('lostpointercapture', stop);
     el.addEventListener('wheel', (e) => {
-      if (isControl(e.target)) return;
+      if (!owns(e)) return;
       if (this.mode === 'map' || this.mode === 'onboard') return;
-      zoomBy(e.deltaY > 0 ? 1.12 : 0.89);
+      const factor = wheelZoomFactor(e, el.clientHeight);
+      if (factor === null) return;
+      zoomBy(factor);
       e.preventDefault();
+      e.stopPropagation();
     }, { passive: false });
   }
 

@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * The landing page: the first thing a visitor sees, and the way into
  * everything else.
@@ -87,7 +88,7 @@ export class HomeScreen {
   constructor(private root: HTMLElement, private host: HomeHost, private stage: HomeStage) {
     this.root.classList.add('home-screen');
     try {
-      const city = localStorage.getItem(CITY_STORAGE_KEY);
+      const city = workspaceStorage().getItem(CITY_STORAGE_KEY);
       if (city && STATIONS.some((s) => s.id === city)) this.stage.city = city;
     } catch { /* the guess from the time zone stands */ }
     this.render();
@@ -246,7 +247,7 @@ export class HomeScreen {
     }
     select.addEventListener('change', () => {
       this.stage.setCity(select.value);
-      try { localStorage.setItem(CITY_STORAGE_KEY, select.value); } catch { /* lasts the tab */ }
+      try { workspaceStorage().setItem(CITY_STORAGE_KEY, select.value); } catch { /* lasts the tab */ }
       this.paintStation();
     });
     head.append(el('span', 'home-iss-over', t('home.iss.city')), select);

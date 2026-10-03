@@ -5,123 +5,19 @@ on:
     branches: [codex/audit-acceptance]
     paths:
       - .github/workflows/heavy-audit.yml
-      - scripts/audit-heavy/heavy-expected.json
-      - scripts/audit-heavy/run-heavy-file.mjs
-      - scripts/audit-heavy/check-heavy-union.mjs
+      - .github/workflows/heavy.yml
+      - scripts/audit-heavy/**
+      - scripts/verification/**
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  heavy:
-    name: Heavy / ${{ matrix.case }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      max-parallel: 6
-      matrix:
-        include:
-          - case: delivered-falcon-wind
-            file: tests/heavy/delivered-falcon-wind.test.ts
-          - case: delivered-reduced-flux
-            file: tests/heavy/delivered-reduced-flux.test.ts
-          - case: delivered-soyuz-wind
-            file: tests/heavy/delivered-soyuz-wind.test.ts
-          - case: explicit-fleet-1
-            file: tests/heavy/explicit-fleet-1.test.ts
-          - case: explicit-fleet-2
-            file: tests/heavy/explicit-fleet-2.test.ts
-          - case: falcon-heavy-returns
-            file: tests/heavy/falcon-heavy-returns.test.ts
-          - case: flex-fleet-1
-            file: tests/heavy/flex-fleet-1.test.ts
-          - case: flex-fleet-2
-            file: tests/heavy/flex-fleet-2.test.ts
-          - case: flex-fleet-3
-            file: tests/heavy/flex-fleet-3.test.ts
-          - case: flex-fleet-4
-            file: tests/heavy/flex-fleet-4.test.ts
-          - case: flex-golden
-            file: tests/heavy/flex-golden.test.ts
-          - case: history-sixdof
-            file: tests/heavy/history-sixdof.test.ts
-          - case: lessons-sixdof
-            file: tests/heavy/lessons-sixdof.test.ts
-          - case: monte-carlo-falcon9-igm
-            file: tests/heavy/monte-carlo-falcon9-igm.test.ts
-          - case: monte-carlo-falcon9-navigation
-            file: tests/heavy/monte-carlo-falcon9-navigation.test.ts
-          - case: monte-carlo-falcon9-peg
-            file: tests/heavy/monte-carlo-falcon9-peg.test.ts
-          - case: monte-carlo-falcon9-standard
-            file: tests/heavy/monte-carlo-falcon9-standard.test.ts
-          - case: monte-carlo-soyuz21b
-            file: tests/heavy/monte-carlo-soyuz21b.test.ts
-          - case: navigation-burns
-            file: tests/heavy/navigation-burns.test.ts
-          - case: reentry-agencies
-            file: tests/heavy/reentry-agencies.test.ts
-          - case: rendezvous
-            file: tests/heavy/rendezvous.test.ts
-          - case: screening-filter
-            file: tests/heavy/screening-filter.test.ts
-          - case: sixdof-fingerprint
-            file: tests/heavy/sixdof-fingerprint.test.ts
-          - case: soyuz-aborts
-            file: tests/heavy/soyuz-aborts.test.ts
-          - case: starship-flight5
-            file: tests/heavy/starship-flight5.test.ts
-          - case: validation-falcon9
-            file: tests/heavy/validation-falcon9.test.ts
-          - case: validation-timelines
-            file: tests/heavy/validation-timelines.test.ts
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.22.2
-          cache: npm
-      - run: npm ci
-      - name: Run the assigned file with original assertions and timeouts
-        run: node scripts/audit-heavy/run-heavy-file.mjs "${{ matrix.file }}"
-      - name: Preserve results even after a failed test
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: heavy-${{ matrix.case }}
-          path: heavy-results/
-          if-no-files-found: warn
-          retention-days: 14
-
-  coverage:
-    name: Verify all 27 files and 246 cases
-    needs: heavy
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.22.2
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: heavy-*
-          path: collected-heavy
-          merge-multiple: true
-      - name: Require exact coverage, one source and one runtime
-        if: always()
-        run: node scripts/audit-heavy/check-heavy-union.mjs collected-heavy heavy-union.json
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: heavy-coverage-union
-          path: heavy-union.json
-          if-no-files-found: error
-          retention-days: 14
+  audit:
+    # Preserve the audit's six concurrent jobs and generous job ceiling; original test timeouts apply.
+    uses: ./.github/workflows/heavy.yml
+    with:
+      suite: heavy
+      heavy_timeout: 360
+      max_parallel: 6
