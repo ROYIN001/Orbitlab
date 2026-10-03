@@ -114,6 +114,9 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 }
 @media (max-width: 640px) {
   #topbar { padding-bottom: 8px; row-gap: 8px; }
+  /* Keep every tool reachable on narrow phones. The six icons and language
+     select can exceed a whole 320 px row, so wrap within the brand's space. */
+  .topbar-right { flex: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
   .topbar-nav { min-height: 0; position: static; }
   .section-nav { flex: 1; }
   .nav-tabs { display: none; }

@@ -182,20 +182,24 @@ describe('classroom offline readiness', () => {
 describe('classroom page readiness', () => {
   afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
-  const browser = (registration: boolean, storageDenied = false): void => {
+  const browser = (registration: boolean, storageDenied = false, waiting = false) => {
     const worker = {
       postMessage(_data: unknown, ports: MessagePort[]) {
         ports[0].postMessage({ resources: { complete: true, pageMatches: true, version: manifest.version } });
       },
     };
+    const update = waiting ? { state: 'installed', postMessage: vi.fn() } : null;
+    const installed = { active: worker, waiting: update,
+      update: vi.fn(async () => { installed.waiting = null; }) };
     vi.stubEnv('PROD', true);
     vi.stubGlobal('window', { isSecureContext: true });
     vi.stubGlobal('document', { querySelector: () => ({ src: SCRIPT }) });
     vi.stubGlobal('navigator', {
       onLine: false,
-      serviceWorker: { controller: worker, getRegistration: async () => registration ? { active: worker, waiting: null } : undefined },
+      serviceWorker: { controller: worker, getRegistration: async () => registration ? installed : undefined },
       storage: { async estimate() { if (storageDenied) throw new Error('denied'); return { quota: 100, usage: 20 }; } },
     });
+    return installed;
   };
 
   it('requires an active registration even while an unregistered worker controls the old tab', async () => {
@@ -211,5 +215,25 @@ describe('classroom page readiness', () => {
     expect(result.error).toBeUndefined();
     expect(result.resources?.complete).toBe(true);
     expect(result.storage.unavailable).toBe(true);
+  });
+
+  it('prepares the active cache without superseding an already waiting update', async () => {
+    const registration = browser(true, false, true);
+    const waiting = registration.waiting!;
+    const result = await checkClassroom(true);
+    expect(result.error).toBeUndefined();
+    expect(result.resources?.complete).toBe(true);
+    expect(result.waiting).toBe(true);
+    expect(registration.waiting).toBe(waiting);
+    expect(waiting.postMessage).not.toHaveBeenCalled();
+    expect(registration.update).not.toHaveBeenCalled();
+  });
+
+  it('does not leave background update jobs behind a successful preparation', async () => {
+    const registration = browser(true);
+    const result = await checkClassroom(true);
+    expect(result.error).toBeUndefined();
+    expect(result.resources?.complete).toBe(true);
+    expect(registration.update).not.toHaveBeenCalled();
   });
 });

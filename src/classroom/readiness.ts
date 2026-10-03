@@ -60,12 +60,10 @@ export async function checkClassroom(prepare = false): Promise<ClassroomReadines
   try {
     const sw = navigator.serviceWorker;
     let registration = await sw.getRegistration();
-    if (prepare) {
-      registration ??= await sw.register('./sw.js');
-      // An update installs alongside the current cache. The user chooses its
-      // reload through the existing PWA update offer; preparation never does.
-      void registration.update().catch(() => {});
-    }
+    // Preparation verifies/repairs the active version. Deployment checks
+    // belong to register.ts: a parallel update job here can supersede a
+    // waiting worker while we are reporting its readiness.
+    if (prepare) registration ??= await sw.register('./sw.js');
     result.waiting = !!registration?.waiting;
     if (!prepare && !sw.controller) return { ...result, error: 'uncontrolled' };
     const active = prepare ? await controller(sw) : sw.controller!;

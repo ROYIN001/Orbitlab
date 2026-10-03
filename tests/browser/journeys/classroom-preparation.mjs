@@ -112,11 +112,51 @@ export default async function classroomPreparation(t) {
     const original = readFileSync(join(t.distDir, 'sw.js'), 'utf8');
     t.server.override('sw.js', `${original}\n// classroom update ${Date.now()}\n`);
     try {
-      await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
-      await page.waitForFunction(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting, null, { timeout: 60_000 });
+      await page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.getRegistration();
+        window.__classroomRegistration = registration;
+        const ids = new WeakMap();
+        let nextId = 0;
+        const worker = (value) => {
+          if (!value) return null;
+          if (!ids.has(value)) ids.set(value, ++nextId);
+          return { id: ids.get(value), state: value.state };
+        };
+        window.__classroomUpdateEvents = [];
+        window.__classroomUpdateState = (event) => {
+          const state = { event, controller: worker(navigator.serviceWorker.controller),
+            active: worker(registration.active), waiting: worker(registration.waiting), installing: worker(registration.installing) };
+          if (window.__classroomUpdateEvents.length < 20) window.__classroomUpdateEvents.push(state);
+          return state;
+        };
+        navigator.serviceWorker.addEventListener('controllerchange', () => window.__classroomUpdateState('controllerchange'));
+        registration.addEventListener('updatefound', () => {
+          const installing = registration.installing;
+          window.__classroomUpdateState('updatefound');
+          installing?.addEventListener('statechange', () => window.__classroomUpdateState(`worker-${installing.state}`));
+        });
+        window.__classroomUpdateState('before-update');
+      });
+      await page.evaluate(() => window.__classroomRegistration.update());
+      // Await the resolved state of the live registration. The async
+      // waitForFunction predicate used here previously returned too early.
+      const installed = await t.until(() => page.evaluate(() => window.__classroomRegistration.waiting?.state === 'installed'
+        && !window.__classroomRegistration.installing), { timeoutMs: 60_000, intervalMs: 100 });
+      if (!installed) throw new Error('the update did not finish installing as a waiting worker');
+      await page.evaluate(() => {
+        window.__classroomBeforePrepare = { controller: navigator.serviceWorker.controller,
+          waiting: window.__classroomRegistration.waiting };
+        window.__classroomUpdateState('before-prepare');
+      });
       await prepare();
+      t.log('update lifecycle', JSON.stringify(await page.evaluate(() => {
+        window.__classroomUpdateState('after-prepare');
+        return window.__classroomUpdateEvents;
+      })));
       t.check(/update is waiting/.test(await page.textContent('#classroom-preparation')), 'a waiting update was not explained');
-      t.check(await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting), 'preparation activated an update without the reload action');
+      t.check(await page.evaluate(() => window.__classroomRegistration.waiting?.state === 'installed'), 'preparation did not preserve the installed waiting update');
+      t.check(await page.evaluate(() => navigator.serviceWorker.controller === window.__classroomBeforePrepare.controller), 'preparation changed the active service worker');
+      t.check(await page.evaluate(() => window.__classroomRegistration.waiting === window.__classroomBeforePrepare.waiting), 'preparation replaced the waiting service worker');
     } finally { t.server.override('sw.js', null); }
   }
   await app.shot('verified');

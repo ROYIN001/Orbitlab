@@ -7,7 +7,8 @@ maintenance. It preserves the existing physics and rendering settings.
 ## Delivered behavior
 
 - A lazy-loaded My work dialog offers Experiments, Model limits, Prepare a class and Backups
-  in English, Russian and Thai, with keyboard tabs and mobile layouts.
+  in English, Russian and Thai, with keyboard tabs and mobile layouts. The tool bar wraps
+  at narrow phone widths so its controls and language selector remain reachable at 320 px.
 - Notebook entries retain predictions, chosen variables, complete flown mission inputs,
   manual commands, build provenance, displayed observation time and conclusions. Comparisons
   flag mismatched conditions. Restoring a mission does not claim to restore its trajectory.
@@ -19,6 +20,9 @@ maintenance. It preserves the existing physics and rendering settings.
 - Classroom preparation inspects the active service worker and actual cached responses,
   checks the current page against that version and repairs only matching SHA-256 content.
   It neither activates a waiting update nor downloads resources from a different app version.
+  Preparation leaves deployment checks to the existing updater, so it does not start a
+  competing update job. Browser checks wait for an installed waiting worker and verify
+  both its identity and the active controller remain unchanged.
 - Project archives include four named saved collections. Strict validation precedes a preview
   with Keep existing defaults and explicit whole-collection replacement. A recovery journal
   retains prior values and refuses to overwrite observed later edits. Restoring reloads Home
