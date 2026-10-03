@@ -1,5 +1,7 @@
 # R1 small UI changes / งานเล็กที่ผู้ใช้อนุญาต
 
+Delivery: the R1 application merged through [PR71](https://github.com/ROYIN001/Orbitlab/pull/71), and the browser reload correction through [PR72](https://github.com/ROYIN001/Orbitlab/pull/72). [Final Pages 37103651001](https://github.com/ROYIN001/Orbitlab/actions/runs/37103651001) verified and published exact source `472645fd57062c79d50c567028de220145006861`. See [integration](R1-integration.md) for CI/deployment identities and limitations. Local checks below retain their original source/time context; R2–R7 other work remains planned.
+
 Date: 2026-10-03. Starting main: `523b44e`. Implementation authorization: R1 plus small changes; no authorization inferred for the whole R2/R4 programme.
 
 ## Implemented
@@ -14,7 +16,7 @@ Date: 2026-10-03. Starting main: `523b44e`. Implementation authorization: R1 plu
 - `npx vitest run tests/notation.test.ts tests/i18n.test.ts`: 2 files / 28 tests passed after removing orphan keys and teaching the dictionary scanner to distinguish helper imports outside the dictionary directory. Dictionary composition, key/placeholder parity and source call-site checks are retained.
 - Production `notation-defaults` browser journey: passed using actual EN/RU/TH language controls, implicit defaults, explicit GOST override and reload. No flight simulation or Max-Q correctness is inferred from this UI test.
 - R1.3 production browser journey verified that the reset-camera button is absent and canvas controls continue to work. See [R1.3 report](R1.3-gestures.md).
-- Overall final source build/budget/CI remains part of the integration report. Bootstrap/chunk grouping growth was accounted for explicitly in budgets; the corrected-physics production build and all bundle gates now pass. Current-candidate CI/release acceptance remains pending.
+- Overall final source build/budget/CI remains part of the integration report. Bootstrap/chunk grouping growth was accounted for explicitly in budgets; the corrected-physics production build and all bundle gates now pass. Complete current-source CI and final Pages acceptance passed; exact delivery evidence is linked above. These UI checks do not validate every vehicle throttle programme.
 
 ## Handoff: still planned
 
