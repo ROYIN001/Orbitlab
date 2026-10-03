@@ -36,10 +36,13 @@ export const RENDER_SCALE = Number(process.env.BROWSER_SCALE) || 0.5;
 
 export const DEFAULT_TIMEOUT_MS = 180_000;
 
-/** A reload is ready when the new document and app are ready. A full window
- * load additionally waits for unrelated media and is not the asserted state. */
-export async function reloadDocument(page, action, ready = () => page.waitForSelector('#loading.hidden', { state: 'attached', timeout: 120_000 })) {
-  await Promise.all([page.waitForEvent('domcontentloaded', { timeout: 60_000 }), action()]);
+/** Explicit document/app waits own the reload; do not add click's separate
+ * navigation barrier. Click still checks actionability at its usual deadline. */
+export async function reloadDocument(page, control, ready = () => page.waitForSelector('#loading.hidden', { state: 'attached', timeout: 120_000 })) {
+  await Promise.all([
+    page.waitForEvent('domcontentloaded', { timeout: 60_000 }),
+    control.click({ noWaitAfter: true }),
+  ]);
   await ready();
 }
 

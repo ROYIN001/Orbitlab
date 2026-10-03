@@ -66,7 +66,9 @@ export default async function pwaOffline(t) {
     await page.waitForSelector('#pwa-toast .pwa-toast-action', { timeout: 60_000 });
     await app.shot('update');
     const before = await page.evaluate(() => navigator.serviceWorker.controller.scriptURL);
-    await Promise.all([page.waitForEvent('load', { timeout: 60_000 }), page.click('#pwa-toast .pwa-toast-action')]);
+    // PWA acceptance deliberately keeps its full-load wait; the click must
+    // not introduce an earlier independent navigation deadline.
+    await Promise.all([page.waitForEvent('load', { timeout: 60_000 }), page.click('#pwa-toast .pwa-toast-action', { noWaitAfter: true })]);
     await app.ready();
     t.log('reloaded onto the new version', before !== null);
   } finally {
