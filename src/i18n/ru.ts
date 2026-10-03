@@ -1,4 +1,13 @@
-export const ru: Record<string, string> = {
+import { workspaceRu } from './workspace';
+import { projectsRu } from './projects';
+import { reviewRu } from './review';
+import { experimentsRu } from './experiments';
+import { classroomRu } from './classroom';
+import { validationRu } from './validation';
+
+// Plain-data assembly: language-free workers may discard this dictionary.
+export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+  ...workspaceRu, ...projectsRu, ...reviewRu, ...experimentsRu, ...classroomRu, ...validationRu,
   'setup.dynamics.title': 'Модель полёта',
   'setup.dynamics.model': 'Модель',
   'setup.dynamics.sixDof': 'Полная модель 6DOF',
@@ -4849,4 +4858,4 @@ export const ru: Record<string, string> = {
   'lesson.author.lessonOpen': 'Урок {n} «{title}» всё ещё открыт, поэтому здесь его миссия, а не ваша. Чтобы взять свою, сначала выйдите из урока кнопкой «Выйти из урока» на его панели.',
   'lesson.design.author.lessonOpen': 'Урок {n} «{title}» всё ещё открыт, поэтому здесь его проект спутника, а не ваш. Чтобы взять свой, сначала выйдите из урока кнопкой «Выйти из урока» на его панели.',
   // --- end of W ---
-};
+}))();

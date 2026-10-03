@@ -16,6 +16,7 @@
     "test:browser:smoke": "node tests/browser/run.mjs --smoke",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "validate:science": "node --experimental-strip-types scripts/validation-report.mjs",
     "snapshots": "node --experimental-strip-types scripts/refresh-snapshots.ts",
     "shots": "node --experimental-strip-types scripts/shots.ts",
     "icons": "node scripts/icons.mjs",

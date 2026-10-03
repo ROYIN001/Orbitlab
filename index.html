@@ -72,6 +72,9 @@
             <span id="data-mode-label">Offline</span>
           </button>
           <button id="btn-help" class="quiet-btn" type="button"></button>
+          <button id="btn-work" class="quiet-btn" type="button" data-i18n-title="work.title" data-i18n-aria-label="work.title">
+            <span aria-hidden="true">▤</span><span data-i18n="work.title">My work</span>
+          </button>
           <!-- About: the maker's credit, and the physics and its sources (ui/dialogs.ts AboutDialog) -->
           <button id="btn-about" class="quiet-btn" type="button" data-i18n-aria-label="about.button" data-i18n-title="about.button">
             <span aria-hidden="true">ⓘ</span><span data-i18n="about.button">About</span>
@@ -193,6 +196,7 @@
       </footer>
 
       <dialog id="about-dialog" class="dialog"></dialog>
+      <dialog id="work-dialog" class="dialog"></dialog>
       <dialog id="camera-dialog" class="dialog"></dialog>
     </div>
     <script type="module" src="./src/main.ts"></script>

@@ -28,6 +28,7 @@
  */
 
 import { onDemand, type PrecacheManifest } from './manifest';
+import type { OfflineReply, OfflineResources } from './offline-protocol';
 export type { PrecacheEntry, PrecacheManifest } from './manifest';
 
 /** The parts of `CacheStorage` / `Cache` the worker uses. */
@@ -61,6 +62,8 @@ export const DATA_CACHE = 'orbitlab-data';
 export const MANIFEST_KEY = '__precache-manifest.json';
 /** The message the page sends to move onto a waiting worker. */
 export const SKIP_WAITING = 'orbitlab:skip-waiting';
+export const OFFLINE_CHECK = 'orbitlab:offline-check';
+export const OFFLINE_PREPARE = 'orbitlab:offline-prepare';
 
 export const precacheName = (version: string): string => `${PRECACHE_PREFIX}${version}`;
 
@@ -97,8 +100,86 @@ export function routeFor(url: URL, mode: string, scope: URL, precached: Readonly
 
 async function readManifest(cache: CacheLike, scope: URL): Promise<PrecacheManifest | null> {
   const hit = await cache.match(new URL(MANIFEST_KEY, scope).href);
-  if (!hit) return null;
+  if (!hit?.ok) return null;
   try { return await hit.json() as PrecacheManifest; } catch { return null; }
+}
+
+async function contentRevision(body: ArrayBuffer): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', body);
+  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+
+/** Inspect the controlling worker's cache, including every resource and its completion marker. */
+export async function offlineResources(scope: SwScope, manifest: PrecacheManifest, pageScript: string): Promise<OfflineResources> {
+  const base = new URL(scope.registration.scope);
+  const exists = (await scope.caches.keys()).includes(precacheName(manifest.version));
+  const cache = exists ? await scope.caches.open(precacheName(manifest.version)) : null;
+  const installed = cache ? await readManifest(cache, base) : null;
+  const resources: OfflineResources = {
+    version: manifest.version, complete: false,
+    pageMatches: manifest.entries.some((entry) => new URL(entry.url, base).href === pageScript),
+    total: manifest.entries.length, cached: 0, bytes: 0, missing: [], dates: {}, packs: {},
+  };
+  for (const entry of manifest.entries) {
+    const hit = await cache?.match(new URL(entry.url, base).href);
+    if (!hit?.ok) { resources.missing.push(entry.url); continue; }
+    const body = await hit.arrayBuffer();
+    // Public URLs are mutable across deploys. A completion marker does not
+    // prove that an install racing a deployment received the right bytes.
+    if (await contentRevision(body) !== entry.revision) { resources.missing.push(entry.url); continue; }
+    resources.cached++;
+    resources.bytes += body.byteLength;
+    if (entry.url.startsWith('data/') || entry.url.startsWith('lessons/packs/')) {
+      try {
+        const data = JSON.parse(new TextDecoder().decode(body));
+        if (entry.url.startsWith('data/')) resources.dates[entry.url] = typeof data.asOf === 'string' ? data.asOf : null;
+        if (data.pack && typeof data.pack.id === 'string' && typeof data.pack.title?.en === 'string' && Array.isArray(data.pack.contents)) {
+          resources.packs[data.pack.id] = { title: data.pack.title, count: data.pack.contents.length };
+        }
+      } catch { resources.missing.push(entry.url); }
+    }
+  }
+  resources.complete = resources.pageMatches && resources.missing.length === 0 &&
+    installed?.version === manifest.version && JSON.stringify(installed.entries) === JSON.stringify(manifest.entries);
+  return resources;
+}
+
+/**
+ * Repair only missing files of the active version. A deployment can replace
+ * an unhashed public URL: prove its content revision before putting it in the
+ * active cache. Failed downloads leave every existing cached response intact.
+ * This never activates a waiting worker or prunes another version's cache.
+ */
+export async function prepareOffline(scope: SwScope, manifest: PrecacheManifest, pageScript: string): Promise<OfflineReply> {
+  let resources: OfflineResources;
+  try { resources = await offlineResources(scope, manifest, pageScript); }
+  catch { return { error: 'storage' }; }
+  if (!resources.pageMatches) return { resources, error: 'version' };
+  if (resources.complete) return { resources };
+  const base = new URL(scope.registration.scope);
+  try {
+    const cache = await scope.caches.open(precacheName(manifest.version));
+    const installed = await readManifest(cache, base);
+    const trusted = installed?.version === manifest.version && JSON.stringify(installed.entries) === JSON.stringify(manifest.entries);
+    for (const entry of manifest.entries) {
+      const path = entry.url;
+      if (trusted && !resources.missing.includes(path)) continue;
+      let response: Response;
+      try {
+        // With a missing completion marker, prove existing bytes too before
+        // accepting them as a fully installed version.
+        const kept = !resources.missing.includes(path) ? await cache.match(new URL(path, base).href) : undefined;
+        response = kept ?? await scope.fetch(new URL(path, base).href, { cache: 'reload' });
+        if (!response.ok) return { resources, error: 'download' };
+      } catch { return { resources, error: 'download' }; }
+      const revision = await contentRevision(await response.clone().arrayBuffer());
+      if (revision !== entry.revision) return { resources, error: 'version' };
+      await cache.put(new URL(path, base).href, response);
+    }
+    // Only a fully repaired manifest earns its completion marker.
+    await cache.put(new URL(MANIFEST_KEY, base).href, new Response(JSON.stringify(manifest), { headers: { 'content-type': 'application/json' } }));
+    return { resources: await offlineResources(scope, manifest, pageScript) };
+  } catch { return { resources, error: 'storage' }; }
 }
 
 /**
@@ -217,7 +298,7 @@ export async function respond(scope: SwScope, manifest: PrecacheManifest, reques
 
 interface InstallEvent { waitUntil(p: Promise<unknown>): void }
 interface FetchEvent { request: Request; respondWith(r: Promise<Response>): void }
-interface MessageEvent { data: unknown }
+interface MessageEvent { data: unknown; ports?: Array<{ postMessage(message: OfflineReply): void }>; waitUntil?(p: Promise<unknown>): void }
 
 export function installServiceWorker(scope: SwScope, manifest: PrecacheManifest): void {
   const precached = new Set(manifest.entries.map((e) => e.url));
@@ -231,6 +312,15 @@ export function installServiceWorker(scope: SwScope, manifest: PrecacheManifest)
   }) as Listener);
   scope.addEventListener('message', ((event: MessageEvent) => {
     if (event.data === SKIP_WAITING) void scope.skipWaiting();
+    const request = event.data as { type?: string; pageScript?: string } | null;
+    const port = event.ports?.[0];
+    if (!port || !request || typeof request.pageScript !== 'string' ||
+      (request.type !== OFFLINE_CHECK && request.type !== OFFLINE_PREPARE)) return;
+    const work = request.type === OFFLINE_PREPARE
+      ? prepareOffline(scope, manifest, request.pageScript)
+      : offlineResources(scope, manifest, request.pageScript).then((resources): OfflineReply => ({ resources }));
+    const reply = work.then((result) => port.postMessage(result), () => port.postMessage({ error: 'storage' }));
+    event.waitUntil?.(reply);
   }) as Listener);
   scope.addEventListener('fetch', ((event: FetchEvent) => {
     if (event.request.method !== 'GET') return;

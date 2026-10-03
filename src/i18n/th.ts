@@ -1,4 +1,13 @@
-export const th: Record<string, string> = {
+import { workspaceTh } from './workspace';
+import { projectsTh } from './projects';
+import { reviewTh } from './review';
+import { experimentsTh } from './experiments';
+import { classroomTh } from './classroom';
+import { validationTh } from './validation';
+
+// Plain-data assembly: language-free workers may discard this dictionary.
+export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+  ...workspaceTh, ...projectsTh, ...reviewTh, ...experimentsTh, ...classroomTh, ...validationTh,
   'setup.dynamics.title': 'แบบจำลองการบิน',
   'setup.dynamics.model': 'แบบจำลอง',
   'setup.dynamics.sixDof': 'หกองศาอิสระเต็มรูปแบบ (6-DOF)',
@@ -4850,4 +4859,4 @@ export const th: Record<string, string> = {
   'lesson.author.lessonOpen': 'บทเรียน {n} «{title}» ยังเปิดอยู่ ภารกิจนี้จึงเป็นของบทเรียน ไม่ใช่ของคุณ หากต้องการใช้ภารกิจของคุณเอง ให้ออกจากบทเรียนก่อนด้วยปุ่ม «ออกจากบทเรียน» บนแถบบทเรียน',
   'lesson.design.author.lessonOpen': 'บทเรียน {n} «{title}» ยังเปิดอยู่ แบบดาวเทียมนี้จึงเป็นของบทเรียน ไม่ใช่ของคุณ หากต้องการใช้แบบของคุณเอง ให้ออกจากบทเรียนก่อนด้วยปุ่ม «ออกจากบทเรียน» บนแถบบทเรียน',
   // --- end of W ---
-};
+}))();

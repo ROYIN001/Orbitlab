@@ -395,3 +395,16 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
   .recheck-criteria td:first-child { grid-column: 1 / -1; font-weight: 600; }
   .recheck-criteria td[data-label]::before { content: attr(data-label) ': '; font-family: var(--sans); color: var(--muted); }
 }
+
+/* Source provenance and human review remain separate from automated grades. */
+.lesson-review { margin: 10px 0; font-size: 13px; overflow-wrap: anywhere; }
+.lesson-review p { margin: 6px 0; }
+.lesson-review-duration { color: var(--muted); }
+.lesson-review summary { cursor: pointer; color: var(--lesson); line-height: 1.5; padding: 5px 0; }
+.lesson-review details { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.lesson-review dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 5px 12px; }
+.lesson-review dt, .lesson-review dd { margin: 0; }
+.lesson-review dd { color: var(--muted); }
+.lesson-review ul { padding-left: 20px; }
+.lesson-review li { margin: 6px 0; }
+.lesson-review a { color: var(--accent); text-decoration: underline; }

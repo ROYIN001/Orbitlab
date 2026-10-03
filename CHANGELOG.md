@@ -6,6 +6,8 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Stages 3–4: My work adds an experiment notebook with flown-input provenance, model limits and reproducible validation reports, offline classroom checks/repair, and project backups with strict import previews and recovery. Lesson packs show their sources and pending human-review status.
+
 - Startup: retry a rejected GPU preference without reducing rendering settings; show localized recovery steps, reload and technical details when WebGL 2 is unavailable, and prevent flight actions before startup completes. Worksheet-export failures now identify the case and action in deployment diagnostics.
 - Stage 2: full preflight explanations on phone and keyboard, clearly labeled first-mission tips, described mobile navigation, teacher pages loaded on demand, and language-free ratings/readiness workers; Stage 1 findings retained in docs/stage1-2026-10-02.
 - Top bar: the "FLIGHT SIMULATOR" tag and its build stamp are gone from the Launch Engineer top bar (the build commit stays in the About dialog and the footer).

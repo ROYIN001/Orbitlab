@@ -154,6 +154,51 @@ the Kp index, from NOAA), which the orbit lifetime and re-entry read; the satell
 (CelesTrak); and the Earth's orientation (the IERS), which is always the bundled copy because the
 IERS cannot be read from a page.
 
+## My work
+
+Open **▤ My work** in the top bar (Thai: **งานของฉัน**). The four tabs work locally on this
+device. Use the left/right arrow keys, Home or End to switch tabs with the keyboard.
+
+**Experiments.** Write a prediction before capturing the first trial and choose the input you
+intend to change. Fly a mission, pause or choose a replay time, then record the observation.
+The notebook captures the mission actually flown, the commands, build and displayed time;
+changing the setup panel after launch does not rewrite that record. Fly a second trial and
+compare the recorded inputs and observed results before writing a conclusion. Warnings identify
+extra changed inputs, different builds, commands or observation times, and unfinished runs.
+A comparison is an observation, not a proof of causation. Restoring a trial opens its mission
+setup; it does not restore a running simulation or a saved trajectory. Keep a downloaded copy
+or include the notebook in a project backup; browser storage can be cleared or refused.
+
+**Model limits.** Read known findings alongside their historical source commit. A green
+regression test means the recorded assertion passed, not that every scientific quantity is
+accurate. For a current report, a developer can run `npm run validate:science` and open the
+resulting `validation-report.json` here. The report distinguishes test execution from the eight
+published-reference checks and records its commit, source digest and whether source changed
+while it ran. Uploaded reports are unverified local files. The listed investigations and the
+lesson packs' teacher/native-language reviews remain pending until their evidence is recorded.
+
+**Prepare a class.** Select a lesson pack and choose **Prepare** while online. This checks the
+active offline app, its cached resources and the selected lessons, and shows the dates of the
+bundled datasets. Missing resources are repaired only with bytes matching that version.
+A newer waiting update is left waiting; use the normal update prompt to switch versions.
+After preparation, disconnect the network and try opening the lesson on each classroom
+computer. Readiness describes this browser's current cache, not a guarantee that the browser
+will retain it indefinitely. Music, remote fonts and fresh online data are not classroom cache
+requirements. If readiness is incomplete, read the reported reason and check again online.
+
+**Backups.** Download a project archive containing the saved mission, saved designs, lesson
+progress/custom lessons and experiment notebook. Unsaved drafts and the current running flight
+are not included. Importing a file first shows a preview and changes nothing. Each collection
+defaults to **Keep existing**; explicitly choose **Replace** only for the collections to restore.
+Replacement affects the whole selected collection. Export your current work first if you want
+to keep both. Applying the restore reloads the app on Home so every panel reads the restored
+state. Invalid, incompatible or oversized archives are rejected before writes.
+
+If storage fails partway through, a local recovery journal supports restoring the previous
+values. Newer changes detected during recovery are preserved and reported as a conflict. Close
+other Orbitlab tabs before importing: browser storage does not offer an atomic transaction
+across tabs. Keep the downloaded backup outside the browser as well.
+
 **Installing Orbitlab and using it offline.** The published site can be installed as an app
 (Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
 and iPad: *Share → Add to Home Screen*), and once it has been opened online it works with no
@@ -1540,7 +1585,7 @@ source: open it with **Open lesson file…** and bring NAPA-2's power margin up 
 group each: IPST basic science (M.5–M.6), IPST Earth, astronomy and space (M.6), IPST additional
 physics (M.4–M.6), the Royal Thai Air Force Academy's cadets, and Russia's speciality 24.05.06
 (flight vehicle control systems). Each says who it is for and which curriculum it follows, and
-**About this pack and its sources** names its sources and offers **Save the pack file**. Every pack
+**About this pack and its sources** names its sources and offers **Save the pack file**. Its review details identify learning goals, source pages, unmeasured classroom duration and pending teacher/native-language review; automated checks do not count as that review. Every pack
 is a **draft awaiting review by Orbitlab's owner**: its curriculum codes and wording have not yet
 been checked against the curriculum, and the page says so; use it with that in mind. A pack holds
 lessons of its own (numbered by pack: 11.x IPST basic, 12.x Earth and space, 13.x physics, 14.x

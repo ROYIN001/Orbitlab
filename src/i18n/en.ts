@@ -1,4 +1,13 @@
-export const en: Record<string, string> = {
+import { workspaceEn } from './workspace';
+import { projectsEn } from './projects';
+import { reviewEn } from './review';
+import { experimentsEn } from './experiments';
+import { classroomEn } from './classroom';
+import { validationEn } from './validation';
+
+// Plain-data assembly: language-free workers may discard this dictionary.
+export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+  ...workspaceEn, ...projectsEn, ...reviewEn, ...experimentsEn, ...classroomEn, ...validationEn,
   'setup.dynamics.title': 'Flight model',
   'setup.dynamics.model': 'Model',
   'setup.dynamics.sixDof': 'Full 6-DOF',
@@ -4873,4 +4882,4 @@ export const en: Record<string, string> = {
   'lesson.author.lessonOpen': 'Lesson {n}, "{title}", is still open, so this is its mission, not yours. To write from your own, leave the lesson first: "Leave the lesson" on its strip.',
   'lesson.design.author.lessonOpen': 'Lesson {n}, "{title}", is still open, so this is its design, not yours. To write from your own, leave the lesson first: "Leave the lesson" on its strip.',
   // --- end of W ---
-};
+}))();

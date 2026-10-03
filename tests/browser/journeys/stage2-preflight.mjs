@@ -26,6 +26,10 @@ export default async function preflight(t) {
       const { page } = app;
       step = 'advance the guide';
       await checkGuide(t, app, where, mobile);
+      if (mobile) {
+        step = 'check the toolbar on a narrow phone';
+        await checkNarrowToolbar(t, app, where, lang);
+      }
       step = 'configure the combined warning';
       const configured = await app.mcp('configure_mission', MISSION);
       if (!t.check(configured.ok && configured.feasibility.cause === 'overCapacity' && configured.feasibility.offWindow,
@@ -90,6 +94,33 @@ export default async function preflight(t) {
       throw new Error(`${where}: ${step}: ${detail.slice(0, 3000)}`, { cause: error });
     }
   }
+}
+
+async function checkNarrowToolbar(t, app, where, lang) {
+  const { page } = app;
+  const size = page.viewportSize();
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => document.fonts.ready);
+  const controls = await page.evaluate(() => {
+    scrollTo(0, 0);
+    return ['btn-lessons', 'btn-data-mode', 'btn-help', 'btn-work', 'btn-about', 'btn-camera-plan', 'lang-select'].map((id) => {
+      const el = document.getElementById(id);
+      const r = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return {
+        id, left: r.left, right: r.right,
+        onScreen: r.width > 0 && r.height > 0 && r.left >= 0 && r.right <= document.documentElement.clientWidth
+          && r.top >= 0 && r.bottom <= innerHeight,
+        hit: hit === el || el.contains(hit),
+      };
+    });
+  });
+  for (const control of controls) {
+    t.check(control.onScreen && control.hit,
+      `${where}/320×568: toolbar control #${control.id} is outside the screen or covered (${Math.round(control.left)}–${Math.round(control.right)} px)`);
+  }
+  await app.shot(`mobile-${lang}-toolbar-320`);
+  await page.setViewportSize(size);
 }
 
 async function checkGuide(t, app, where, mobile) {
