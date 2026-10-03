@@ -103,8 +103,13 @@ export function finishReport(report, start, code, signal, root = ROOT) {
   }
   return report;
 }
+const escapeWorkflowData = text => String(text).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+const escapeWorkflowProperty = text => escapeWorkflowData(text).replace(/:/g, '%3A').replace(/,/g, '%2C');
 export function annotate(message, title = 'verification failed') {
-  const escape = text => String(text).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
-  if (process.env.GITHUB_ACTIONS) console.error(`::error title=${escape(title)}::${escape(message)}`);
+  if (process.env.GITHUB_ACTIONS) console.error(`::error title=${escapeWorkflowProperty(title)}::${escapeWorkflowData(message)}`);
   else console.error(`${title}: ${message}`);
+}
+export function notice(message, title = 'Verification metadata') {
+  if (process.env.GITHUB_ACTIONS) console.log(`::notice title=${escapeWorkflowProperty(title)}::${escapeWorkflowData(message)}`);
+  else console.log(`${title}: ${message}`);
 }

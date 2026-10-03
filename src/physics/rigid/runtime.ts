@@ -102,9 +102,10 @@ export function targetAttitude(nose: Vec3, sideReference: Vec3): Quat {
   }
   z = normalize(z);
   const y = normalize(cross(z, x));
-  // The projection can lose orthogonality when the reference is almost
-  // parallel to x. Reconstruct z from the unit cross axes before conversion.
-  z = normalize(cross(x, y));
+  // Cancellation in a nearly parallel projection can exceed the unchanged
+  // quatFromMatrix orthogonality limit. Preserve the original valid-basis
+  // arithmetic; reconstruct z only when its x projection fails that limit.
+  if (Math.abs(dot(x, z)) > 1e-10) z = normalize(cross(x, y));
   return quatFromBasis(x, y, z);
 }
 

@@ -51,9 +51,6 @@ const FORBIDDEN_TOKENS = ['document.', 'window.', 'localStorage', 'navigator.', 
 /** `rule:path` -> why it is tolerated today. At most five entries. */
 const ALLOWED: Record<string, string> = {
   'import:config/verdict.ts': 'the verdict formats its own localized sentence; the text should move to ui/ once the verdict returns keys',
-  'dom:config/mission-file.ts': 'autosave defaults to localStorage but takes an injected store, which is what tests and workers pass',
-  'dom:design/design-store.ts': 'the design library defaults to localStorage behind an injectable DesignStorage factory',
-  'dom:provider/data-mode.ts': 'the offline/online preference defaults to localStorage but takes an injected store',
   'dom:physics/monte-carlo-job.ts': 'sizes the worker pool from navigator.hardwareConcurrency behind a typeof guard, falls back to 2',
 };
 

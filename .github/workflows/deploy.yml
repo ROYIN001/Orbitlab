@@ -66,6 +66,9 @@ jobs:
         run: npm ci
       - if: steps.coordinate.outputs.proceed == 'true'
         run: node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs
+      - name: Repository hygiene preflight
+        if: steps.coordinate.outputs.proceed == 'true'
+        run: npx vitest run tests/repo-hygiene.test.ts
       - if: steps.coordinate.outputs.proceed == 'true'
         run: node scripts/verification/create-plan.mjs pages
       - if: always() && steps.coordinate.outputs.proceed == 'true'

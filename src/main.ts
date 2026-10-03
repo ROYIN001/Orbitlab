@@ -733,9 +733,9 @@ class App {
     this.sectionNav.show(this.route);
   }
 
-  /** O01, Phase 3: the Orbit playground and the Build screen are drawn over the whole scene, which need not be drawn under them. */
+  /** Opaque section and lesson pages cover the scene while the flight continues. */
   private get sceneCovered(): boolean {
-    return this.route.section === 'orbit' || this.route.section === 'build' || (this.mode === 'home' && this.homeCovers);
+    return !!document.body.dataset.lessonsPage || this.route.section === 'orbit' || this.route.section === 'build' || (this.mode === 'home' && this.homeCovers);
   }
 
   /** The landing page and the viewer: no workspace, the scene is the page. */
@@ -2232,7 +2232,7 @@ class App {
     // rather than the live object: everything they read — clock, state vector,
     // ground track, debris, event log — is the frame on screen.
     if (this.sceneCovered) {
-      // the Orbit playground or the Build screen covers the scene: the flight flies on, undrawn
+      // an opaque page covers the scene: the flight flies on, undrawn
     } else if (this.camMode === 'map') {
       this.map.draw(view.sim, sim.site.latitude, sim.site.longitude, Math.max(0, this.sbHeight));
     } else {

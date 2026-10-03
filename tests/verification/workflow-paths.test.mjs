@@ -74,3 +74,16 @@ test('scheduled and manual Pages refresh keep their full unfiltered entry points
   assert.deepEqual(eventPaths(pages, 'schedule'), []);
   assert.deepEqual(eventPaths(pages, 'workflow_dispatch'), []);
 });
+
+test('cheap repository hygiene runs before collection or downstream expensive gates', () => {
+  for (const source of [ci, pages]) {
+    const verify = source.indexOf('run: node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs');
+    const hygiene = source.indexOf('name: Repository hygiene preflight');
+    const command = source.indexOf('run: npx vitest run tests/repo-hygiene.test.ts');
+    const collect = source.indexOf('run: node scripts/verification/create-plan.mjs');
+    assert.ok(verify >= 0 && hygiene > verify && command > hygiene && collect > command);
+    assert.ok(source.indexOf('run: npm ci') < verify);
+  }
+  assert.match(pages, /name: Repository hygiene preflight\n        if: steps\.coordinate\.outputs\.proceed == 'true'\n        run: npx vitest run tests\/repo-hygiene\.test\.ts/);
+  assert.deepEqual(eventPaths(ci, 'pull_request'), eventPaths(pages, 'push'));
+});

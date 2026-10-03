@@ -1,6 +1,6 @@
 /** Lazy My Work shell, keyboard navigation, failure recovery and first-open offline. */
 import assert from 'node:assert/strict';
-import { keyOn } from '../harness.mjs';
+import { keyOn, reloadDocument } from '../harness.mjs';
 
 export const smoke = true;
 export const timeoutMs = 240_000;
@@ -90,8 +90,7 @@ export default async function workspaceNavigation(t) {
   await failed.page.unroute(CHUNK);
   const reload = failed.page.getByRole('button', { name: 'Reload page', exact: true });
   if (await reload.count()) {
-    await Promise.all([failed.page.waitForEvent('load'), reload.click()]);
-    await failed.ready();
+    await reloadDocument(failed.page, () => reload.click(), failed.ready);
     await failed.page.locator('#btn-work').click();
   } else {
     await failed.page.getByRole('button', { name: 'Try again', exact: true }).click();

@@ -37,6 +37,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs
+      - name: Repository hygiene preflight
+        run: npx vitest run tests/repo-hygiene.test.ts
       - run: node scripts/verification/create-plan.mjs ci
       - if: always()
         uses: actions/upload-artifact@v4

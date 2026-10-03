@@ -68,6 +68,7 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
           clearTimeout(timer);
         }
         if (t.failures.length) {
+          await t.diagnose();
           const saved = await t.shotAll();
           if (saved.length) console.log(`  screenshots: ${saved.join(', ')}`);
         }
@@ -75,7 +76,12 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
         const seconds = (Date.now() - t0) / 1000;
         results.push({ name, failures: t.failures, seconds, browserVersion: browser.version() });
         console.log(`${t.failures.length ? '✗' : '✓'} ${name} (${seconds.toFixed(1)} s)`);
-        if (process.env.GITHUB_ACTIONS) for (const f of t.failures) console.log(`::error title=browser journey ${name}::${String(f).split('\n')[0]}`);
+        if (process.env.GITHUB_ACTIONS) for (const f of t.failures) {
+          // Keep the selector, source line and Playwright action log available
+          // through annotations even when artifact/log downloads are unavailable.
+          const message = String(f).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+          console.log(`::error title=browser journey ${name}::${message}`);
+        }
       } finally {
         await browser.close().catch(() => {});
       }

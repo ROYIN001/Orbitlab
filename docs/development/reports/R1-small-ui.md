@@ -14,7 +14,7 @@ Date: 2026-10-03. Starting main: `523b44e`. Implementation authorization: R1 plu
 - `npx vitest run tests/notation.test.ts tests/i18n.test.ts`: 2 files / 28 tests passed after removing orphan keys and teaching the dictionary scanner to distinguish helper imports outside the dictionary directory. Dictionary composition, key/placeholder parity and source call-site checks are retained.
 - Production `notation-defaults` browser journey: passed using actual EN/RU/TH language controls, implicit defaults, explicit GOST override and reload. No flight simulation or Max-Q correctness is inferred from this UI test.
 - R1.3 production browser journey verified that the reset-camera button is absent and canvas controls continue to work. See [R1.3 report](R1.3-gestures.md).
-- Overall final source build/budget/CI remains part of the integration report. Earlier production build passed; a subsequent budget gate identified bootstrap/chunk grouping growth which the integrator is addressing before release.
+- Overall final source build/budget/CI remains part of the integration report. Bootstrap/chunk grouping growth was accounted for explicitly in budgets; the corrected-physics production build and all bundle gates now pass. Current-candidate CI/release acceptance remains pending.
 
 ## Handoff: still planned
 

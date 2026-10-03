@@ -121,7 +121,50 @@ export default async function gestureOwnership(t) {
   await page.mouse.move(launchPoint.x + 25, launchPoint.y + 10);
   await page.mouse.up();
   assert.notEqual((await camera())[2], dragBefore[2], 'Launch canvas primary drag still rotates');
+
+  const visibleDraws = await launchDrawCalls(page);
+  assert.ok(visibleDraws > 0, 'the visible Launch scene issues real WebGL draws');
+  await page.locator('#btn-lessons').click();
+  await page.locator('.lessons-page:not([hidden])').waitFor({ state: 'visible' });
+  await settle();
+  assert.equal(await page.evaluate(() => document.body.dataset.lessonsPage), 'catalog');
+  assert.ok(await page.locator('#gl').evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return !!document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('.lessons-page');
+  }), 'the opaque lesson catalog covers the Launch canvas');
+  const coveredDraws = await launchDrawCalls(page);
+  assert.equal(coveredDraws, 0, 'the covered Launch scene issues no WebGL draws');
+  await page.locator('.lessons-page-back').click();
+  await page.locator('.lessons-page').waitFor({ state: 'hidden' });
+  await settle();
+  const resumedDraws = await launchDrawCalls(page);
+  assert.ok(resumedDraws > 0, 'Launch rendering resumes when the lessons page closes');
+  t.log(`Launch WebGL draws over four animation frames: visible=${visibleDraws}, covered=${coveredDraws}, resumed=${resumedDraws}`);
   app.checkErrors();
+}
+
+/** Count calls to the production #gl context, then restore its methods.
+ * Positive samples on both sides ensure zero is not a stopped renderer. */
+async function launchDrawCalls(page) {
+  return page.evaluate(async () => {
+    const gl = window.orbitlab.scene.renderer.getContext();
+    if (gl.canvas.id !== 'gl') throw new Error('draw probe is not attached to the Launch context');
+    let calls = 0;
+    const originals = new Map();
+    try {
+      for (const method of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced']) {
+        const original = gl[method];
+        if (typeof original !== 'function') continue;
+        originals.set(method, original);
+        gl[method] = function (...args) { calls++; return original.apply(this, args); };
+      }
+      if (originals.size < 2) throw new Error('Launch WebGL draw methods could not be observed');
+      for (let i = 0; i < 4; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
+      return calls;
+    } finally {
+      for (const [method, original] of originals) gl[method] = original;
+    }
+  });
 }
 
 async function exposedPoint(page, selector) {

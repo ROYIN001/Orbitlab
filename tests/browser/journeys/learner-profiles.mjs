@@ -1,6 +1,7 @@
 /** Profile identity, A/B separation, scoped reset, last-profile chooser and localized keyboard UI. */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { reloadDocument } from '../harness.mjs';
 
 export const smoke = true;
 export const timeoutMs = 480_000;
@@ -32,8 +33,7 @@ const activeRecord = (page) => page.evaluate(() => {
   return JSON.parse(localStorage.getItem(`orbitlab.profile.v1.${id}`));
 });
 async function reloadAfter(app, action) {
-  await Promise.all([app.page.waitForEvent('load'), action()]);
-  await app.ready();
+  await reloadDocument(app.page, action, app.ready);
 }
 async function createLearner(app, name) {
   const dialog = app.page.locator('#profile-dialog');
@@ -76,7 +76,7 @@ export default async function learnerProfiles(t) {
     record.values['orbitlab.author.draft'] = JSON.stringify({ sentinel: 'A-owned draft' });
     localStorage.setItem(key, JSON.stringify(record));
   }, fixture.lessons[0]);
-  await page.reload(); await app.ready();
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 }); await app.ready();
   t.log('A renamed; valid custom lesson, history and author draft loaded');
   assert.match(await page.locator('.lesson-catalog').innerText(), /A personal lesson/);
   await page.locator('.lesson-assess button').click();

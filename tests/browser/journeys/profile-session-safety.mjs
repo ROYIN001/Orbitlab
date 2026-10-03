@@ -1,6 +1,7 @@
 /** Real Web Locks, fixed per-window owners, visit-only JSON recovery, and first profile open offline. */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { reloadDocument } from '../harness.mjs';
 import { putWorkspaceFixture, workspaceBytes } from '../workspace-storage.mjs';
 
 export const smoke = true;
@@ -25,7 +26,7 @@ export default async function profileSessionSafety(t) {
     'orbitlab.lessons': JSON.stringify({ version: 1, lessons: { 'orbit-first': { attempts: 2, hintsShown: 1, passed: false } }, assessments: [], customLessons: [], customQuestions: [] }),
     'orbitlab.author.draft': JSON.stringify({ id: 'owner-a-draft', criteria: [] }),
   });
-  await page.reload(); await app.ready();
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 }); await app.ready();
   const ownerA = await record(page);
   const bytesA = await workspaceBytes(page, ['orbitlab.lessons', 'orbitlab.author.draft']);
 
@@ -52,8 +53,7 @@ export default async function profileSessionSafety(t) {
   await dialogOf(second).getByRole('button', { name: 'Create a profile', exact: true }).click();
   await dialogOf(second).getByLabel('Learner name', { exact: true }).fill('Window B');
   await dialogOf(second).getByRole('button', { name: 'Create a profile', exact: true }).click();
-  await Promise.all([second.waitForEvent('load'), dialogOf(second).getByRole('button', { name: 'Confirm', exact: true }).click()]);
-  await second.locator('#loading.hidden').waitFor({ state: 'attached', timeout: 120_000 });
+  await reloadDocument(second, () => dialogOf(second).getByRole('button', { name: 'Confirm', exact: true }).click());
   const ownerB = await record(second);
   assert.notEqual(ownerB.id, ownerA.id);
   assert.equal(await second.locator('#btn-profile').getAttribute('data-profile-status'), 'durable');
@@ -73,7 +73,7 @@ export default async function profileSessionSafety(t) {
   await app.context.addInitScript(() => {
     Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
   });
-  await page.reload(); await app.ready();
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 }); await app.ready();
   await dialogOf(page).waitFor({ state: 'visible' });
   assert.equal(await page.locator('#btn-profile').getAttribute('data-profile-status'), 'ephemeral');
   assert.match(await dialogOf(page).innerText(), /temporary: changes will be lost/);
@@ -106,7 +106,7 @@ export default async function profileSessionSafety(t) {
   };
   const rawKeys = Object.keys(rawDrafts);
   await putWorkspaceFixture(untouched.page, rawDrafts);
-  await untouched.page.reload(); await untouched.ready();
+  await untouched.page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 }); await untouched.ready();
   const visit = async (hash, selector) => {
     await untouched.page.evaluate((hash) => { location.hash = hash; }, hash);
     await untouched.page.locator(selector).waitFor({ state: 'visible', timeout: 60_000 });

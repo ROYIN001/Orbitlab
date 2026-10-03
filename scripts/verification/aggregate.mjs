@@ -2,7 +2,66 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { selectShard } from '../../tests/browser/shard.mjs';
-import { annotate, assertionKey, DEFAULT_OUT, readJSON, runtime, same, sha256, sourceIdentity, walk, workflow, writeJSON } from './lib.mjs';
+import { annotate, assertionKey, DEFAULT_OUT, notice, readJSON, runtime, same, sha256, sourceIdentity, walk, workflow, writeJSON } from './lib.mjs';
+
+// Metadata only: this never changes union acceptance, coverage, or the stored evidence.
+export function verificationMetadata(plan, result, reports = []) {
+  reports = Array.isArray(reports) ? reports.filter(report => report && typeof report === 'object') : [];
+  const gates = Array.isArray(plan?.gates) ? plan.gates.filter(gate => gate && typeof gate === 'object') : [];
+  const equal = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
+  const hash = (value, lengths = [64]) => typeof value === 'string' && lengths.includes(value.length) && /^[a-f\d]+$/i.test(value) ? value : null;
+  const count = value => Number.isSafeInteger(value) && value >= 0 ? value : null;
+  const completed = report => report?.state === 'finished' && report.finishedAt && Number.isFinite(report.elapsedMs) && report.elapsedMs >= 0 && !report.signal;
+  const identity = report => {
+    const gate = gates.find(gate => gate.id === report.id);
+    return plan?.schema === 1 && gate && report.schema === 1 && report.kind === gate.kind
+      && reports.filter(other => other.id === report.id).length === 1
+      && report.planSha256 === sha256(JSON.stringify(plan))
+      && equal(report.source, plan.source) && equal(report.runtime, plan.runtime) && equal(report.workflow, plan.workflow);
+  };
+  const refreshed = reports.find(report => report.id === 'snapshot-check');
+  const build = reports.find(report => report.id === 'build');
+  const validBuild = build && identity(build) && completed(build) && build.ok === true && build.exit === 0
+    && hash(build.dist?.sha256) && Array.isArray(build.dist.files) && build.dist.files.some(file => file?.file === 'index.html') && build.dist.files.some(file => file?.file === 'sw.js')
+    && (plan.mode === 'pages'
+      ? refreshed && identity(refreshed) && completed(refreshed) && refreshed.ok === true && refreshed.exit === 0 && equal(build.snapshots, refreshed.snapshots)
+      : equal(build.snapshots, plan.snapshots));
+  const browserReports = reports.filter(report => {
+    if (report.kind !== 'browser' || !validBuild || !identity(report) || !completed(report) || ![0, 1].includes(report.exit)) return false;
+    const gate = gates.find(gate => gate.id === report.id);
+    const versions = report.browserRuntime?.actualVersions;
+    let selected;
+    try { selected = selectShard(plan.suites.browser.names, gate.shard); }
+    catch { return false; }
+    return report.shard === gate.shard && equal(report.snapshots, plan.snapshots)
+      && equal(report.dist, build.dist) && equal(report.artifactSnapshots, build.snapshots)
+      && hash(report.browserRuntime?.configuredExecutableSha256) && Array.isArray(versions) && versions.length === 1
+      && typeof versions[0] === 'string' && versions[0].length <= 64 && /^\d+(?:\.\d+)+$/.test(versions[0])
+      && Array.isArray(report.journeys) && report.journeys.length > 0
+      && report.journeys.every(journey => journey?.browserVersion === versions[0])
+      && equal(report.journeys.map(journey => journey.name), selected);
+  });
+  const suites = {};
+  for (const suite of ['unit', 'heavy', 'sixdof-fleet', 'browser']) {
+    const coverage = result.coverage?.[suite];
+    if (!coverage) continue;
+    suites[suite] = {
+      expected: count(coverage.expected), unique: count(coverage.unique),
+      missing: count(coverage.missing?.length), unexpected: count(coverage.unexpected?.length), duplicate: count(coverage.duplicates?.length),
+      nonpassing: suite === 'browser'
+        ? reports.filter(report => gates.some(gate => gate.id === report.id && gate.kind === 'browser'))
+          .reduce((total, report) => total + (Array.isArray(report.journeys) ? report.journeys : [])
+            .filter(journey => !Array.isArray(journey?.failures) || journey.failures.length > 0 || !Number.isFinite(journey.seconds)).length, 0)
+        : count(coverage.failed?.length),
+    };
+  }
+  return {
+    ok: result.ok === true,
+    sourceCommit: hash(plan?.source?.commit, [40, 64]), sourceSha256: hash(plan?.source?.sha256),
+    suites, actualBrowserVersions: [...new Set(browserReports.flatMap(report => report.browserRuntime.actualVersions))].sort().slice(0, 8),
+    distSha256: validBuild ? build.dist.sha256 : null,
+  };
+}
 
 export function verifyUnion(plan, reports, jobResults = {}) {
   const issues = [];
@@ -84,6 +143,7 @@ export function aggregate(planFile, resultsDir, output, { emit = true } = {}) {
   catch (error) {
     const result = { schema: 1, generatedAt: new Date().toISOString(), ok: false, mode: 'unknown', source: { commit: process.env.GITHUB_SHA ?? null }, coverage: {}, duration: [], issues: [{ id: 'plan', message: `Missing or unreadable collection plan: ${error.message}` }] };
     writeJSON(output, result);
+    if (emit) notice(JSON.stringify(verificationMetadata(null, result)));
     if (emit) annotate(result.issues[0].message, 'Verification failed');
     if (emit && process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Verification: failed\n\n${result.issues[0].message}\n\n`);
     return result;
@@ -114,6 +174,7 @@ export function aggregate(planFile, resultsDir, output, { emit = true } = {}) {
   result.issues.push(...issues);
   result.ok = result.issues.length === 0;
   writeJSON(output, result);
+  if (emit) notice(JSON.stringify(verificationMetadata(plan, result, reports)));
   if (emit) for (const issue of result.issues) annotate(issue.message, issue.id);
   const lines = [`### Verification: ${result.ok ? 'passed' : 'failed'}`, '', `Source: \`${result.source.commit}\` · mode: ${result.mode}`, '', '| Gate | Seconds | Result |', '|---|---:|---|', ...result.duration.map(gate => `| ${gate.id} | ${Number.isFinite(gate.elapsedMs) ? (gate.elapsedMs / 1000).toFixed(1) : '?'} | ${gate.ok ? 'passed' : 'failed/incomplete'} |`), '', ...Object.entries(result.coverage).map(([suite, coverage]) => `${suite}: ${coverage.unique}/${coverage.expected} unique cases; ${coverage.missing.length} missing, ${coverage.duplicates.length} duplicate.`), '', ...result.issues.map(issue => `- ${issue.id}: ${issue.message}`), ''];
   if (emit && process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));

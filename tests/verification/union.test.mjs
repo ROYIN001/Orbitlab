@@ -3,8 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
-import { verifyUnion, aggregate } from '../../scripts/verification/aggregate.mjs';
-import { discoverFiles, readJSON, runtime, sha256, snapshots, sourceIdentity, workflow, writeJSON } from '../../scripts/verification/lib.mjs';
+import { verifyUnion, aggregate, verificationMetadata } from '../../scripts/verification/aggregate.mjs';
+import { discoverFiles, notice, readJSON, runtime, sha256, snapshots, sourceIdentity, workflow, writeJSON } from '../../scripts/verification/lib.mjs';
 import { selectShard } from '../browser/shard.mjs';
 
 function fixture(mode = 'ci') {
@@ -34,6 +34,116 @@ function fixture(mode = 'ci') {
   });
   return { plan, reports };
 }
+
+function metadataFixture(mode = 'ci') {
+  const { plan, reports } = fixture(mode);
+  Object.assign(plan.source, { commit: 'a'.repeat(40), sha256: 'b'.repeat(64) });
+  for (const report of reports) {
+    report.source = structuredClone(plan.source);
+    report.planSha256 = sha256(JSON.stringify(plan));
+    if (report.dist) report.dist.sha256 = 'c'.repeat(64);
+    if (report.browserRuntime) report.browserRuntime.configuredExecutableSha256 = 'd'.repeat(64);
+  }
+  return { plan, reports };
+}
+
+test('successful metadata preserves exact union counts/identity without changing stored evidence', () => {
+  const { plan, reports } = metadataFixture('pages');
+  const result = verifyUnion(plan, reports);
+  const before = structuredClone(result);
+  assert.equal(result.ok, true);
+  assert.deepEqual(verificationMetadata(plan, result, reports), {
+    ok: true, sourceCommit: 'a'.repeat(40), sourceSha256: 'b'.repeat(64),
+    suites: {
+      unit: { expected: 3, unique: 3, missing: 0, unexpected: 0, duplicate: 0, nonpassing: 0 },
+      browser: { expected: 5, unique: 5, missing: 0, unexpected: 0, duplicate: 0, nonpassing: 0 },
+    },
+    actualBrowserVersions: ['151.0.0.0'], distSha256: 'c'.repeat(64),
+  });
+  assert.deepEqual(result, before);
+});
+
+test('failed metadata retains missing/unexpected/duplicate/nonpassing counts and actual browser identity', () => {
+  const { plan, reports } = metadataFixture();
+  reports[2].assertions = [
+    { ...plan.suites.unit.assertions[0], status: 'failed' },
+    { ...plan.suites.unit.assertions[0], status: 'pending' },
+    { file: 'tests/a.test.ts', name: 'outsider', status: 'passed' },
+  ];
+  reports[3].assertions = [];
+  reports[4].assertions = [];
+  reports[5].journeys[0].failures = ['private error payload https://example.invalid/secret'];
+  reports[5].ok = false;
+  reports[5].exit = 1;
+  const result = verifyUnion(plan, reports);
+  const before = structuredClone(result);
+  const metadata = verificationMetadata(plan, result, reports);
+  assert.equal(metadata.ok, false);
+  assert.deepEqual(metadata.suites.unit, { expected: 3, unique: 2, missing: 2, unexpected: 1, duplicate: 1, nonpassing: 2 });
+  assert.deepEqual(metadata.suites.browser, { expected: 5, unique: 5, missing: 0, unexpected: 0, duplicate: 0, nonpassing: 1 });
+  assert.equal(metadata.sourceCommit, plan.source.commit);
+  assert.equal(metadata.sourceSha256, plan.source.sha256);
+  assert.equal(metadata.distSha256, 'c'.repeat(64));
+  assert.deepEqual(metadata.actualBrowserVersions, ['151.0.0.0']);
+  assert.ok(!JSON.stringify(metadata).includes('private error'));
+  assert.ok(!JSON.stringify(metadata).includes('https://'));
+  assert.deepEqual(result, before);
+});
+
+test('metadata never presents mixed/incomplete browser/build provenance as validated identity', () => {
+  const mutations = [
+    reports => { reports.find(report => report.id === 'build').source.sha256 = 'e'.repeat(64); },
+    reports => { reports.push(structuredClone(reports.find(report => report.id === 'build'))); },
+    reports => { delete reports.find(report => report.id === 'build').finishedAt; },
+    reports => { for (const report of reports.filter(report => report.kind === 'browser')) report.workflow.attempt = '2'; },
+    reports => { for (const report of reports.filter(report => report.kind === 'browser')) report.artifactSnapshots.sha256 = 'mixed'; },
+    reports => { for (const report of reports.filter(report => report.kind === 'browser')) report.browserRuntime.actualVersions = ['151.0.0.0', '150.0.0.0']; },
+    reports => { for (const report of reports.filter(report => report.kind === 'browser')) delete report.journeys[0].browserVersion; },
+  ];
+  for (const mutate of mutations) {
+    const { plan, reports } = metadataFixture();
+    mutate(reports);
+    const result = verifyUnion(plan, reports);
+    assert.equal(result.ok, false);
+    assert.deepEqual(verificationMetadata(plan, result, reports).actualBrowserVersions, []);
+  }
+  const { plan, reports } = metadataFixture();
+  reports[5].source.sha256 = 'e'.repeat(64);
+  reports[5].journeys[0].failures = ['failed with bad provenance'];
+  assert.equal(verificationMetadata(plan, verifyUnion(plan, reports), reports).suites.browser.nonpassing, 1);
+});
+
+test('metadata is bounded and allowlisted even for malformed or payload-bearing evidence', () => {
+  const { plan, reports } = metadataFixture();
+  const result = verifyUnion(plan, reports);
+  plan.source.commit = 'https://example.invalid/private';
+  plan.source.sha256 = 'private\n::error::payload';
+  result.coverage['private-suite-name'] = result.coverage.unit;
+  const metadata = verificationMetadata(plan, result, reports);
+  assert.equal(metadata.sourceCommit, null);
+  assert.equal(metadata.sourceSha256, null);
+  assert.equal(metadata.distSha256, null);
+  const encoded = JSON.stringify(metadata);
+  assert.ok(encoded.length < 2048);
+  assert.ok(!encoded.includes('private'));
+  assert.doesNotThrow(() => verificationMetadata({ schema: 1, gates: 'malformed' }, { ok: false, coverage: {} }, [null, {}]));
+});
+
+test('workflow notice escapes message data and annotation properties onto one line', () => {
+  const previous = process.env.GITHUB_ACTIONS;
+  const original = console.log;
+  const lines = [];
+  try {
+    process.env.GITHUB_ACTIONS = 'true';
+    console.log = value => lines.push(value);
+    notice('50%\r\n::error::payload', 'metadata,:\r\n');
+    assert.deepEqual(lines, ['::notice title=metadata%2C%3A%0D%0A::50%25%0D%0A::error::payload']);
+  } finally {
+    console.log = original;
+    if (previous === undefined) delete process.env.GITHUB_ACTIONS;
+    else process.env.GITHUB_ACTIONS = previous;
+  }
+});
 
 test('all default cases and journeys pass exactly once on the same artifact', () => {
   const { plan, reports } = fixture();
@@ -128,6 +238,60 @@ test('the file-backed aggregate rejects tampered raw artifacts and writes failur
     assert.ok(result.issues.some(issue => issue.message.includes('Raw result identity')));
     assert.equal(JSON.parse(readFileSync(resolve(dir, 'union.json'), 'utf8')).ok, false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('the final aggregate emits exactly one API-readable metadata notice on success and failure', () => {
+  const dir = mkdtempSync(resolve(tmpdir(), 'orbitlab-metadata-notice-'));
+  const previous = process.env.GITHUB_ACTIONS;
+  const originalLog = console.log;
+  const originalError = console.error;
+  try {
+    process.env.GITHUB_ACTIONS = 'true';
+    console.error = () => {};
+    const { plan, reports } = metadataFixture();
+    Object.assign(plan, { source: sourceIdentity(), runtime: runtime(), workflow: workflow(), snapshots: snapshots() });
+    for (const failed of [false, true]) {
+      const lines = [];
+      console.log = value => lines.push(value);
+      for (const report of reports) {
+        Object.assign(report, { source: plan.source, runtime: plan.runtime, workflow: plan.workflow, snapshots: plan.snapshots, planSha256: sha256(JSON.stringify(plan)) });
+        if (report.kind === 'vitest') {
+          report.workerRuntime = [{ node: plan.runtime.node, v8: plan.runtime.v8, platform: plan.runtime.platform, arch: plan.runtime.arch }];
+          const raw = '{"success":true}\n';
+          report.rawSha256 = sha256(raw);
+          writeFileSync(resolve(dir, `${report.id}.vitest.json`), raw);
+        }
+        if (report.kind === 'browser') report.artifactSnapshots = plan.snapshots;
+      }
+      if (failed) {
+        reports[5].journeys[0].failures = ['fixture failure'];
+        reports[5].ok = false;
+        reports[5].exit = 1;
+      }
+      for (const report of reports) writeJSON(resolve(dir, `${report.id}.report.json`), report);
+      writeJSON(resolve(dir, 'plan.json'), plan);
+      const result = aggregate(resolve(dir, 'plan.json'), dir, resolve(dir, 'union.json'));
+      assert.equal(result.ok, !failed);
+      const notices = lines.filter(line => line.startsWith('::notice '));
+      assert.equal(notices.length, 1);
+      const metadata = JSON.parse(notices[0].split('::').slice(2).join('::'));
+      assert.deepEqual(metadata, verificationMetadata(plan, result, reports));
+      assert.equal(metadata.sourceCommit, plan.source.commit);
+      assert.equal(metadata.sourceSha256, plan.source.sha256);
+      assert.equal(metadata.suites.unit.unique, 3);
+      assert.equal(metadata.suites.browser.nonpassing, failed ? 1 : 0);
+      assert.deepEqual(metadata.actualBrowserVersions, ['151.0.0.0']);
+      assert.equal(metadata.distSha256, 'c'.repeat(64));
+      assert.deepEqual(readJSON(resolve(dir, 'union.json')), result);
+      assert.ok(notices[0].length < 2048);
+    }
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+    if (previous === undefined) delete process.env.GITHUB_ACTIONS;
+    else process.env.GITHUB_ACTIONS = previous;
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('a missing collection plan still leaves structured failure evidence', () => {

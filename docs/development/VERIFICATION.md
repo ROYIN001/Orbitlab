@@ -8,6 +8,7 @@ Use Node 22.23.3 and `npm ci`. Freeze source before collecting/running a plan. O
 
 ```sh
 node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs
+npx vitest run tests/repo-hygiene.test.ts
 node scripts/verification/create-plan.mjs ci
 node scripts/verification/run-command.mjs typecheck -- npm run typecheck
 node scripts/verification/run-command.mjs build -- npx vite build
@@ -37,9 +38,15 @@ Select `sixdof-fleet` or `both` for those collections. Every discovered file get
 - `collection.json`: timing and failure metadata even if collection fails. Any source/snapshot edit during collection invalidates the plan.
 - `*.report.json`: gate completion, command, duration, source/runtime/data identity. Vitest gates include raw-result SHA-256, exact assertions and observed child/worker runtimes. Browser gates record configured executable checksum, actual launched versions per journey, full failures and the exact dist/data identity.
 - `*.vitest.json` / `*.runtime.jsonl`: preserved raw assertions and observed runtimes. An interrupted run stays incomplete and cannot pass aggregation.
-- `union.json`: file/case/journey union, missing/unexpected/duplicate/non-passing cases, gate issues and durations. Failures produce GitHub annotations and a readable job summary. Screenshots remain separate failure artifacts.
+- `union.json`: file/case/journey union, missing/unexpected/duplicate/non-passing cases, gate issues and durations. Each final aggregation also emits one bounded `Verification metadata` notice; failures retain their error annotations and readable job summary. Screenshots remain separate failure artifacts.
 
 Refreshed `public/data/` has its own file manifest instead of being part of the code inventory. This does not exempt it from snapshot validation. App/test-consumed Markdown is explicitly included in source provenance and workflow triggers. Source changing during execution, mixed artifacts, missing or skipped cases, wrong assignments, missing raw reports and failed workflow jobs all block the union. Pages rehashes the final downloaded dist again before upload.
+
+### API-readable final metadata
+
+During PR71 CI run `37096708399`, the GitHub run/job/check metadata API remained readable while log and artifact downloads returned Azure blob HTTP 403. The final notice makes a compact result available through the check-run annotations API without requiring those blob downloads: `ok`, planned source commit/inventory SHA-256, each enabled suite's expected/unique/missing/unexpected/duplicate/nonpassing counts, actual launched Chromium versions from reports with matching provenance, and the validated build-dist manifest SHA-256. Missing or invalid identity is represented by `null` or an empty versions array, never by a substitute checkout SHA or a guessed browser version. A missing plan still emits one failed notice with unknown identity.
+
+The notice contains only allowlisted hashes, numeric counts and numeric browser versions, stays below 2 KiB, and escapes workflow annotation data/properties. Browser nonpassing counts include failed or incomplete reported journeys; missing journeys retain the union's missing count. Failure payloads, raw assertions, file inventories, screenshots, secrets and download URLs remain outside the notice. This improves visibility only: stored union fields, exact coverage/provenance checks, required downloads, assertions and release gates remain unchanged. API-readable metadata does not waive inspection of the full artifacts when that evidence is required.
 
 ## Change-to-check map
 
@@ -51,13 +58,13 @@ These are early checks; the complete PR/release gates still run. Expand domain c
 | Gesture/camera/layout | Camera gesture tests; wheel over scrollable panels vs scene; form/timeline ownership | Gesture journey, TH/EN/RU widths and active/replay/paused modes; relevant zoom/touch/manual checks, full browser release |
 | i18n/toolbar/panels | Translation parity and changed dialogs; 320 px RU overflow; 1024×700 when layout changes | All supported languages/breakpoint boundaries; actual click/focus journeys |
 | CSV/worksheet/download | Register download listener before actual click; inspect the produced file | Existing worksheet/project exports and browser release, without blind retries |
-| Shared physics/propulsion/rendezvous | Failed-before-fixed invariant, zero/partial fuel, timestep convergence; worker/replay boundary if changed | Affected vehicle/mission/wind/reference tests and relevant heavy/fleet cases on the frozen candidate; scientific misses reported separately from test-process success |
+| Shared physics/propulsion/rendezvous | Failed-before-fixed invariant, zero/partial fuel, timestep convergence; worker/replay boundary if changed; include `rigid-flex-golden.test.ts` whenever shared rigid runtime/targetAttitude changes | Affected vehicle/mission/wind/reference tests and relevant heavy/fleet cases on the frozen candidate; scientific misses reported separately from test-process success; preserve historical arithmetic as well as invariant checks |
 | PWA/build/snapshots | Type/build/budget; snapshot schema readers; exact cache/worker state | Full browser on the actual release dist with refreshed snapshots; provenance and publish guards |
 | Verification/workflows/inventory | Node verification tests, browser shard tests, actionlint; collect reviewed heavy cases without flights | Current-candidate CI final union; Pages final union/artifact guard; real enabled scientific workflow evidence before claiming its runtime coverage |
 
 ## CI, publishing and measurement
 
-CI retains three default Vitest shards and two smoke shards, plus typecheck/build/budget and a final `verify` job. CI PR/push and Pages main-push share the existing Markdown-only exemption: progress/report Markdown does not retrigger numerical/browser/redeploy gates, while all non-Markdown changes and three consumed Markdown inputs stay gated:
+CI retains three default Vitest shards and two smoke shards, plus typecheck/build/budget and a final `verify` job. CI/Pages plan jobs run a separately named repository-hygiene preflight after Node verification and before collection/downstream jobs. The same seven cheap hygiene cases remain in the complete default suite; repeating this subset is deliberate early feedback, not a reduction of final coverage. CI PR/push and Pages main-push share the existing Markdown-only exemption: progress/report Markdown does not retrigger numerical/browser/redeploy gates, while all non-Markdown changes and three consumed Markdown inputs stay gated:
 
 - `docs/ROADMAP-PART2-3.md` (section/plan tests)
 - `docs/SIXDOF-VEHICLE-DATA.md` (bundled app dossier)
@@ -70,3 +77,8 @@ The third path closes a pre-existing CI/provenance omission found during the con
 Pages starts default unit shards independently of snapshot refresh/build, then runs two full browser shards against the same refreshed artifact. All gates aggregate before the sole publisher queue. Code and refresh runs have separate concurrency groups; a same-SHA scheduled refresh yields to an active code release, and the publisher checks main's tip immediately before deployment. A newer main code run supersedes an older code run. Branch CI's existing latest-run policy is preserved.
 
 Do not claim a speedup from job topology. Compare at least 3–5 comparable real runs using collection/gate/job/run duration, queue time, runner variability and source/scope. Record median/p90 feedback/release time, duplicate run minutes and escaped regressions. A failed run is evidence of its failure, not a successful validation attempt.
+
+
+## Observed preflight omission and correction
+
+PR71 candidate `f2d7e4804b7b6664b63b8cceb8bb4d0c1842e802`, CI run `37096708399`, first exposed the tracked `docs/development/PLAN.docx` policy violation in unit shard3 after **6m38s of job elapsed time** (test step **6m27s**), while other expensive unit/browser jobs were running. `tests/repo-hygiene.test.ts` already requires binary evidence packets under docs to live in Release assets. The fix removes the tracked Word file and preserves the requested document as a release deliverable; no exception or relaxed test is added. Moving these seven cheap existing policy checks into the plan preflight prevents this class of known repository-policy failure from launching downstream gates. Those timing observations describe that failed run only and are not a measured workflow speedup.

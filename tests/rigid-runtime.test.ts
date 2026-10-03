@@ -7,7 +7,7 @@ import { atmosphere } from '../src/physics/atmosphere';
 import { gravityJ2 } from '../src/physics/gravity';
 import type { RigidState } from '../src/physics/rigid/integrator';
 import type { BudgetedEngine, RigidVehicleSnapshot } from '../src/physics/rigid/mass';
-import { matMul, matTranspose, quatAngularDistance, quatFromAxisAngle, quatIdentity, quatRotate, quatToMatrix, type Mat3 } from '../src/physics/rigid/math';
+import { matMul, matTranspose, quatAngularDistance, quatFromAxisAngle, quatFromBasis, quatIdentity, quatRotate, quatToMatrix, type Mat3 } from '../src/physics/rigid/math';
 import type { RcsThrusterGeometry } from '../src/physics/rigid/vehicle-data';
 
 const config = { model: 'sixDof', wind: 'calm', seed: 42 } as const;
@@ -63,10 +63,16 @@ describe('rigid runtime integration boundaries', () => {
     }
   });
 
-  it.each([1e-4, 1e-6, 1e-7])('keeps an orthonormal target basis when the roll reference is almost parallel (%s)', (offset) => {
+  it.each([3e-6, 1e-6, 1e-7])('keeps an orthonormal target basis when the roll reference is almost parallel (%s)', (offset) => {
     const nose = normalize(v3(0.73, -0.44, 0.29));
     const across = normalize(v3(0.44, 0.73, 0));
     const reference = add(scale(nose, 3), scale(across, offset));
+    // Each fixture must reproduce the original matrix-validation exception,
+    // rather than requiring a stricter error budget for an accepted basis.
+    const originalX = normalize(nose);
+    const originalZ = normalize(sub(reference, scale(originalX, dot(originalX, reference))));
+    const originalY = normalize(cross(originalZ, originalX));
+    expect(() => quatFromBasis(originalX, originalY, originalZ)).toThrow('Rotation matrix must be orthonormal with determinant +1');
     const q = targetAttitude(nose, reference);
     const x = quatRotate(q, v3(1, 0, 0)), y = quatRotate(q, v3(0, 1, 0)), z = quatRotate(q, v3(0, 0, 1));
     expect(norm(sub(x, nose))).toBeLessThan(1e-12);

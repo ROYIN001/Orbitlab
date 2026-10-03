@@ -14,7 +14,7 @@
  *   export default async function (t) { … }
  * where `t` is the object `createJourney` returns.
  */
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const VIEWPORTS = {
@@ -35,6 +35,34 @@ const CHROMIUM_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-un
 export const RENDER_SCALE = Number(process.env.BROWSER_SCALE) || 0.5;
 
 export const DEFAULT_TIMEOUT_MS = 180_000;
+
+/** A reload is ready when the new document and app are ready. A full window
+ * load additionally waits for unrelated media and is not the asserted state. */
+export async function reloadDocument(page, action, ready = () => page.waitForSelector('#loading.hidden', { state: 'attached', timeout: 120_000 })) {
+  await Promise.all([page.waitForEvent('domcontentloaded', { timeout: 60_000 }), action()]);
+  await ready();
+}
+
+async function pageDiagnostics(page, pendingRequests) {
+  if (page.isClosed()) return { closed: true };
+  let timer;
+  const state = await Promise.race([
+    page.evaluate(() => ({
+      readyState: document.readyState, visibility: document.visibilityState, hash: location.hash,
+      appReady: !!document.querySelector('#loading.hidden'), fonts: document.fonts.status,
+      fontFaces: [...document.fonts].map((font) => ({ family: font.family, status: font.status })),
+      openDialogs: [...document.querySelectorAll('dialog[open]')].map((dialog) => dialog.id),
+      focus: document.activeElement?.id || document.activeElement?.tagName,
+      canvases: [...document.querySelectorAll('canvas')].map((canvas) => {
+        const style = getComputedStyle(canvas), box = canvas.getBoundingClientRect();
+        return { id: canvas.id, width: canvas.width, height: canvas.height, cssWidth: box.width, cssHeight: box.height,
+          display: style.display, visibility: style.visibility };
+      }),
+    })).catch((error) => ({ evaluationError: String(error.message).split('\n')[0] })),
+    new Promise((resolve) => { timer = setTimeout(() => resolve({ evaluationTimedOut: true }), 5_000); }),
+  ]).finally(() => clearTimeout(timer));
+  return { ...state, pendingRequests: [...pendingRequests.values()] };
+}
 
 /** The app's language (`src/i18n/index.ts`) and the browser locale that goes with it. */
 const LOCALES = { en: 'en-GB', ru: 'ru-RU', th: 'th-TH' };
@@ -95,6 +123,13 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
       await context.addInitScript(initScript, { lang, guide });
       const page = await context.newPage();
       const errors = [];
+      const pendingRequests = new Map();
+      page.on('request', (request) => {
+        const url = new URL(request.url());
+        pendingRequests.set(request, `${url.origin}${url.pathname}`); // no queries or fragments in CI diagnostics
+      });
+      page.on('requestfinished', (request) => pendingRequests.delete(request));
+      page.on('requestfailed', (request) => pendingRequests.delete(request));
       page.on('pageerror', (e) => errors.push(e.message));
       const app = {
         context, page, errors,
@@ -108,9 +143,10 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
           if (!shots) return null;
           mkdirSync(shots, { recursive: true });
           const path = join(shots, `${name}-${label}.png`);
-          await page.screenshot({ path });
+          await page.screenshot({ path, animations: 'disabled' });
           return path;
         },
+        diagnostics: () => pageDiagnostics(page, pendingRequests),
         /** Fail on any uncaught page error so far. */
         checkErrors: () => t.check(errors.length === 0, `page errors: ${errors.join(' | ')}`),
       };
@@ -138,6 +174,17 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
         try { out.push(await app.shot(apps.length > 1 ? `${label}-${i + 1}` : label)); } catch { /* the page may be gone */ }
       }
       return out.filter(Boolean);
+    },
+
+    /** Preserve readiness/resource state without turning diagnostics into a new assertion. */
+    async diagnose() {
+      const data = await Promise.all(apps.map((app) => app.diagnostics()));
+      t.log('failure diagnostics:', JSON.stringify(data));
+      if (shots) {
+        mkdirSync(shots, { recursive: true });
+        writeFileSync(join(shots, `${name}-diagnostics.json`), `${JSON.stringify(data, null, 2)}\n`);
+      }
+      return data;
     },
 
     async close() {
