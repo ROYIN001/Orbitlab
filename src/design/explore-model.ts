@@ -738,7 +738,7 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const knownIn = (parts: readonly { id: string }[]) => (id: unknown): boolean => typeof id === 'string' && parts.some((p) => p.id === id);
 const isEnginePart = knownIn(ENGINE_PARTS), isStageBody = knownIn(STAGE_BODIES), isBoosterBody = knownIn(BOOSTER_BODIES);
 const isFairingPart = knownIn(FAIRING_PARTS), isSite = knownIn(SITES);
-const isEngine = (v: unknown): boolean => isObj(v) && isEnginePart(v.part) && isNum(v.count);
+const isEngine = (v: unknown): boolean => isObj(v) && isEnginePart(v.part) && (v.count === null || isNum(v.count));
 const isRatings = (v: unknown): boolean => v === null
   || (isObj(v) && typeof v.signature === 'string' && isNum(v.payloadLEO) && isNum(v.payloadGTO) && (v.payloadSSO === undefined || isNum(v.payloadSSO)));
 
@@ -750,15 +750,15 @@ function isDraft(v: unknown, edit: (e: Obj) => boolean): boolean {
 
 const isRemixEdit = (e: Obj): boolean => isObj(e.base)
   && ((e.base.kind === 'catalogue' && typeof e.base.id === 'string' && isCatalogueVehicle(e.base.id)) || (e.base.kind === 'design' && isObj(e.base.spec)))
-  && Array.isArray(e.stages) && e.stages.every((s) => isObj(s) && isNum(s.stretch) && (s.engine === undefined || isEngine(s.engine)))
+  && Array.isArray(e.stages) && e.stages.every((s) => isObj(s) && (s.stretch === null || isNum(s.stretch)) && (s.engine === undefined || isEngine(s.engine)))
   && Array.isArray(e.removedGroups) && e.removedGroups.every(isNum)
-  && Array.isArray(e.addedGroups) && e.addedGroups.every((g) => isObj(g) && isBoosterBody(g.body) && isNum(g.count))
+  && Array.isArray(e.addedGroups) && e.addedGroups.every((g) => isObj(g) && isBoosterBody(g.body) && (g.count === null || isNum(g.count)))
   && (e.fairing === null || isFairingPart(e.fairing));
 
 const isPartsEdit = (e: Obj): boolean => Array.isArray(e.sites) && e.sites.every(isSite)
   && Array.isArray(e.stages) && e.stages.every((s) => isObj(s) && isEngine(s.engine) && (s.install === undefined || isObj(s.install)) && isObj(s.body)
     && ((s.body.kind === 'catalogue' && isStageBody(s.body.id)) || (s.body.kind === 'own' && isObj(s.body.body))))
-  && Array.isArray(e.groups) && e.groups.every((g) => isObj(g) && isBoosterBody(g.body) && isNum(g.count) && (g.install === undefined || isObj(g.install)))
+  && Array.isArray(e.groups) && e.groups.every((g) => isObj(g) && isBoosterBody(g.body) && (g.count === null || isNum(g.count)) && (g.install === undefined || isObj(g.install)))
   && (e.fairing === null || (isObj(e.fairing) && isFairingPart(e.fairing.part))) && (e.keep === undefined || isObj(e.keep));
 
 /**
@@ -777,7 +777,8 @@ export function restoreKeptDrafts(text: string | null): KeptDrafts | null {
   const { state: s, defaults: names } = raw;
   if (!EXPLORE_MODES.includes(s.mode as ExploreMode) || !isDraft(s.remix, isRemixEdit) || !isDraft(s.parts, isPartsEdit)) return null;
   if (typeof names.remix !== 'string' || typeof names.parts !== 'string') return null;
-  const draft = <E>(d: Obj): Draft<E> => ({ ...(d as unknown as Draft<E>), payloadKg: d.payloadKg === null ? Number.NaN : (d.payloadKg as number) });
+  const numericFields = new Set(['payloadKg', 'count', 'stretch', 'dryMass', 'propellantMass', 'diameter', 'length']);
+  const draft = <E>(d: Obj): Draft<E> => JSON.parse(JSON.stringify(d), (key: string, value: unknown) => value === null && numericFields.has(key) ? Number.NaN : value) as Draft<E>;
   const state: ExploreState = { mode: s.mode as ExploreMode, remix: draft<RemixEdit>(s.remix as Obj), parts: draft<PartsEdit>(s.parts as Obj) };
   try {
     // what the page will do with them first; anything this version cannot build or refuse by name is not taken

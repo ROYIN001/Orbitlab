@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../../workspace/storage';
 /**
  * The Build section (roadmap Phase 3, D01–D05; docs/ROADMAP-PART2-3.md).
  *
@@ -188,7 +189,7 @@ export class BuildScreen {
     root.replaceChildren(this.grid, this.exploreRoot, this.engineerRoot);
     this.exploreRoot.append(this.exploreBar);
     this.engineerRoot.append(this.engineerBar);
-    try { if (localStorage.getItem(CRAFT_STORE) === 'satellite') this.craft = 'satellite'; } catch { /* storage blocked: the rocket */ }
+    try { if (workspaceStorage().getItem(CRAFT_STORE) === 'satellite') this.craft = 'satellite'; } catch { /* storage blocked: the rocket */ }
     // The launch scene's camera takes every press on the viewport and captures
     // the pointer to drag with it (src/render/cameras.ts), which would steal the
     // click from a part of the drawing. The scene is covered here; keep the press.
@@ -382,7 +383,7 @@ export class BuildScreen {
 
   private rememberCraft(c: BuildCraft): void {
     this.craft = c;
-    try { localStorage.setItem(CRAFT_STORE, c); } catch { /* storage blocked: kept for this visit */ }
+    try { workspaceStorage().setItem(CRAFT_STORE, c); } catch { /* storage blocked: kept for this visit */ }
   }
 
   /**

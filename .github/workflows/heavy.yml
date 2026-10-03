@@ -1,14 +1,11 @@
-# The slow suites, off the pull-request gate: tests/heavy (complete six-DOF flights, about 2 h 30 min of
-# runner time, one job per file so that no job nears its limit) and
-# tests/sixdof-fleet (the fleet acceptance matrix flown in six-DOF, about 2 h 40 min) are excluded from
-# `npm test` by vite.config.ts and would hold every PR for hours, so they run here on a schedule
-# (heavy weekly, sixdof-fleet monthly) or on demand from the Actions tab.
+# Complete six-DOF flight suites stay separate from the default PR suite.
+# All entry points use one discovery, reviewed heavy inventory and exact-source union.
 name: Heavy suites
 
 on:
   schedule:
-    - cron: '7 20 * * 0'   # heavy: Sunday 20:07 UTC (Monday 03:07 Bangkok)
-    - cron: '7 20 1 * *'   # sixdof-fleet: the 1st of each month, 20:07 UTC
+    - cron: '7 20 * * 0'
+    - cron: '7 20 1 * *'
   workflow_dispatch:
     inputs:
       suite:
@@ -16,65 +13,161 @@ on:
         type: choice
         options: [heavy, sixdof-fleet, both]
         default: heavy
+  workflow_call:
+    inputs:
+      suite:
+        type: string
+        required: true
+      heavy_timeout:
+        type: number
+        default: 60
+      max_parallel:
+        type: number
+        default: 33
 
 permissions:
   contents: read
 
 jobs:
-  # every file in tests/heavy/*.test.ts, listed at run time: the suite flown in one job ran past an hour
-  # (monte-carlo-falcon9-standard alone takes 37 min on a runner), so each file gets a job of its own
-  heavy-files:
-    if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '7 20 * * 0') ||
-      (github.event_name == 'workflow_dispatch' && (inputs.suite == 'heavy' || inputs.suite == 'both'))
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     outputs:
-      files: ${{ steps.list.outputs.files }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: list
-        run: echo "files=$(ls tests/heavy/*.test.ts | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
-
-  heavy:
-    needs: heavy-files
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        file: ${{ fromJSON(needs.heavy-files.outputs.files) }}
+      heavy: ${{ steps.list.outputs.heavy }}
+      fleet: ${{ steps.list.outputs.fleet }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.3
           cache: npm
       - run: npm ci
-      - run: npx vitest run --config vitest.heavy.config.ts ${{ matrix.file }}
+      - run: node --test tests/verification/*.test.mjs
+      - name: Collect all requested files and cases without executing flights
+        env:
+          REQUESTED_SUITE: ${{ inputs.suite }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          suite="$REQUESTED_SUITE"
+          if [ -z "$suite" ]; then
+            if [ "$EVENT_SCHEDULE" = '7 20 1 * *' ]; then suite=sixdof-fleet; else suite=heavy; fi
+          fi
+          node scripts/verification/create-plan.mjs "$suite"
+      - id: list
+        run: |
+          node --input-type=module - <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs';
+          const plan = JSON.parse(readFileSync('tests/browser/artifacts/verification/plan.json', 'utf8'));
+          appendFileSync(process.env.GITHUB_OUTPUT, `heavy=${JSON.stringify(plan.suites.heavy?.files ?? [])}\nfleet=${JSON.stringify(plan.suites['sixdof-fleet']?.files ?? [])}\n`);
+          NODE
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-plan
+          path: |
+            tests/browser/artifacts/verification/plan.json
+            tests/browser/artifacts/verification/collection.json
+          if-no-files-found: error
+
+  heavy:
+    needs: plan
+    if: needs.plan.outputs.heavy != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.heavy_timeout || 60 }}
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ inputs.max_parallel || 33 }}
+      matrix:
+        file: ${{ fromJSON(needs.plan.outputs.heavy) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: scientific-plan
+          path: tests/browser/artifacts/verification
+      - run: node scripts/audit-heavy/run-heavy-file.mjs "${{ matrix.file }}"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-heavy-${{ strategy.job-index }}
+          path: tests/browser/artifacts/verification/heavy-*
+          if-no-files-found: warn
+          retention-days: 14
 
   sixdof-fleet:
-    if: >-
-      (github.event_name == 'schedule' && github.event.schedule == '7 20 1 * *') ||
-      (github.event_name == 'workflow_dispatch' && (inputs.suite == 'sixdof-fleet' || inputs.suite == 'both'))
+    needs: plan
+    if: needs.plan.outputs.fleet != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
-        # every file in tests/sixdof-fleet/*.test.ts, one job each; add a line here when a file is added there
-        file:
-          - tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts
-          - tests/sixdof-fleet/dedicated.test.ts
-          - tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts
-          - tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts
-          - tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts
-          - tests/sixdof-fleet/wind.test.ts
+        file: ${{ fromJSON(needs.plan.outputs.fleet) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.3
           cache: npm
       - run: npm ci
-      - run: npx vitest run --config vitest.sixdof-fleet.config.ts ${{ matrix.file }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: scientific-plan
+          path: tests/browser/artifacts/verification
+      - name: Execute this discovered fleet file
+        env:
+          TEST_FILE: ${{ matrix.file }}
+        run: |
+          name="$(basename "$TEST_FILE" .test.ts)"
+          node scripts/verification/run-vitest.mjs "sixdof-fleet-$name"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-fleet-${{ strategy.job-index }}
+          path: tests/browser/artifacts/verification/sixdof-fleet-*
+          if-no-files-found: warn
+          retention-days: 14
+
+  coverage:
+    needs: [plan, heavy, sixdof-fleet]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: scientific-plan
+          path: tests/browser/artifacts/verification
+      - if: needs.plan.outputs.heavy != '[]'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: scientific-heavy-*
+          path: tests/browser/artifacts/verification/results
+          merge-multiple: true
+      - if: needs.plan.outputs.fleet != '[]'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: scientific-fleet-*
+          path: tests/browser/artifacts/verification/results
+          merge-multiple: true
+      - if: always()
+        run: node scripts/verification/aggregate.mjs tests/browser/artifacts/verification/plan.json tests/browser/artifacts/verification/results tests/browser/artifacts/verification/union.json
+        env:
+          VERIFICATION_JOB_RESULTS: '{"plan":"${{ needs.plan.result }}","heavy":"${{ needs.heavy.result }}","sixdof-fleet":"${{ needs.sixdof-fleet.result }}"}'
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-verification-union
+          path: tests/browser/artifacts/verification/union.json
+          if-no-files-found: warn

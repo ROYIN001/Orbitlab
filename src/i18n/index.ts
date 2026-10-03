@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 import { en } from './en';
 import { ru } from './ru';
 import { th } from './th';
@@ -12,7 +13,7 @@ export function getLang(): Lang {
 }
 export function setLang(l: Lang): void {
   current = l;
-  try { localStorage.setItem('orbitlab.lang', l); } catch { /* ignore */ }
+  try { workspaceStorage().setItem('orbitlab.lang', l); } catch { /* ignore */ }
   document.documentElement.lang = l;
   for (const fn of listeners) fn(l);
 }
@@ -22,7 +23,7 @@ export function onLangChange(fn: (l: Lang) => void): void {
 export function initLang(): void {
   let l: Lang = 'en';
   try {
-    const stored = localStorage.getItem('orbitlab.lang') as Lang | null;
+    const stored = workspaceStorage().getItem('orbitlab.lang') as Lang | null;
     if (stored && DICTS[stored]) l = stored;
     else {
       const nav = (navigator.language || 'en').slice(0, 2);

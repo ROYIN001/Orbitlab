@@ -1,0 +1,30 @@
+.profile-dialog { width: min(720px, calc(100vw - 24px)); max-height: calc(100dvh - 28px); }
+.profile-dialog .dialog-body { min-width: 0; padding: 24px; overflow: auto; overscroll-behavior: contain; }
+.profile-content { display: grid; gap: 14px; }
+.profile-content p, .profile-content h3 { margin: 0; }
+.profile-local-note { color: var(--muted, #9babbc); font-size: .88rem; }
+.profile-current-name, .profile-chooser-note { font-weight: 600; overflow-wrap: anywhere; }
+.profile-list { display: grid; gap: 12px; list-style: none; padding: 0; margin: 0; }
+.profile-list-row { border: 1px solid var(--line, #344454); border-radius: 10px; padding: 14px; min-width: 0; }
+.profile-list-name { overflow-wrap: anywhere; }
+.profile-current-tag { margin-inline-start: 10px; color: var(--accent, #ffc857); font-size: .8rem; }
+.profile-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.profile-actions button, .profile-content > button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; min-height: 38px; }
+.profile-primary { border-color: var(--accent, #ffc857); }
+.profile-danger { border-color: #de7b82; color: #ffc7ca; }
+.profile-danger-text { color: #ffc7ca; }
+.profile-warning { border-inline-start: 3px solid #d4a453; padding: 8px 12px; background: #e0a0300d; }
+.profile-counts { border: 1px solid var(--line, #344454); border-radius: 8px; padding: 12px; }
+.profile-counts h3 { font-size: .9rem; }
+.profile-counts dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 14px; margin: 10px 0 0; }
+.profile-counts dt { overflow-wrap: anywhere; }
+.profile-counts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.profile-content label { display: grid; gap: 8px; min-width: 0; }
+.profile-content input, .profile-content select { width: 100%; min-width: 0; box-sizing: border-box; min-height: 40px; }
+.profile-name-form { display: grid; gap: 14px; }
+.profile-status { min-height: 1.4em; margin-bottom: 0; overflow-wrap: anywhere; }
+.profile-error { color: #ffc7ca; }
+@media (max-width: 480px) {
+  .profile-dialog .dialog-body { padding: 20px 14px; }
+  .profile-actions > button { flex: 1 1 140px; }
+}

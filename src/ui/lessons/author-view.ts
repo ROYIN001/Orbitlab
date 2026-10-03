@@ -1,3 +1,5 @@
+import { rememberNumericText, rememberedNumericText } from '../../workspace/numeric-drafts';
+import { workspaceStorage, registerWorkspaceFlush } from '../../workspace/storage';
 /**
  * The lessons page's authoring tab (`#/lessons/author`; roadmap T01, Phase 4
  * map §4.1): the instructor turns the mission on the setup panel into a
@@ -87,26 +89,20 @@ const shown = (v: number | undefined): string => (v === undefined ? '' : String(
 
 function loadDraft(): LessonDraft {
   try {
-    const raw = JSON.parse(localStorage.getItem(STORE) ?? 'null') as LessonDraft | null;
+    const raw = JSON.parse(workspaceStorage().getItem(STORE) ?? 'null') as LessonDraft | null;
     if (raw && typeof raw.id === 'string' && Array.isArray(raw.criteria)) return { ...newDraft(), ...raw };
   } catch { /* a convenience only */ }
   return newDraft(lessonIdFrom('', `lesson-${stamp()}`));
 }
-function saveDraft(d: LessonDraft): void {
-  try { localStorage.setItem(STORE, JSON.stringify(d)); } catch { /* a convenience only */ }
-}
 function loadDesignDraft(): DesignLessonDraft {
   try {
-    const raw = JSON.parse(localStorage.getItem(DESIGN_STORE) ?? 'null') as DesignLessonDraft | null;
+    const raw = JSON.parse(workspaceStorage().getItem(DESIGN_STORE) ?? 'null') as DesignLessonDraft | null;
     if (raw && typeof raw.id === 'string' && Array.isArray(raw.criteria)) return { ...newDesignDraft(), ...raw };
   } catch { /* a convenience only */ }
   return newDesignDraft(lessonIdFrom('', `design-${stamp()}`));
 }
-function saveDesignDraft(d: DesignLessonDraft): void {
-  try { localStorage.setItem(DESIGN_STORE, JSON.stringify(d)); } catch { /* a convenience only */ }
-}
 function loadKind(): AuthorKind {
-  try { return localStorage.getItem(KIND_STORE) === 'design' ? 'design' : 'flight'; } catch { return 'flight'; }
+  try { return workspaceStorage().getItem(KIND_STORE) === 'design' ? 'design' : 'flight'; } catch { return 'flight'; }
 }
 /** The writer's lock groups in the satellite designer's own words. */
 const GROUP_KEY: Record<DesignLockGroup, string> = {
@@ -174,6 +170,8 @@ class AuthorView {
   /** T01: the design lesson's draft, and which of the two the page writes */
   private designDraft = loadDesignDraft();
   private kind: AuthorKind = loadKind();
+  /** Only actual edits may replace a stored draft; a fallback may represent newer or unreadable data. */
+  private readonly pending = new Set<AuthorKind | 'kind'>();
   private idEdited = false;
   private readonly issuesBox = el('div', 'author-issues');
   private readonly result = el('div', 'author-result');
@@ -182,6 +180,25 @@ class AuthorView {
 
   constructor(private readonly host: AuthorHost, private readonly container: HTMLElement) {
     this.idEdited = this.editedId();
+    const detachFlush = registerWorkspaceFlush(() => this.savePending(true));
+    if (typeof window !== 'undefined') window.addEventListener('pagehide', (event) => { if (!event.persisted) detachFlush(); });
+  }
+
+  private savePending(strict = false): void {
+    for (const key of this.pending) {
+      try {
+        workspaceStorage().setItem(key === 'kind' ? KIND_STORE : key === 'design' ? DESIGN_STORE : STORE,
+          key === 'kind' ? this.kind : JSON.stringify(key === 'design' ? this.designDraft : this.draft));
+        this.pending.delete(key);
+      } catch (error) { if (strict) throw error; }
+    }
+  }
+
+  /** Structural edits rebuild controls, but ordinary rendering never saves fallback data. */
+  private renderChanged(): void {
+    this.pending.add(this.kind);
+    this.savePending();
+    this.render();
   }
 
   /** An id the page made (from the English title, or a stamp while there is none) follows the title; a typed one stays. */
@@ -204,7 +221,7 @@ class AuthorView {
     else body.append(this.missionBox(), this.textsBox(), this.locksBox(), this.criteriaBox());
     body.append(this.issuesBox, this.actions, this.result);
     this.container.replaceChildren(body);
-    this.update();
+    this.update(false);
   }
 
   /** T01: what the students do — fly a mission, or design a satellite. */
@@ -220,7 +237,8 @@ class AuthorView {
       r.addEventListener('change', () => {
         if (!r.checked) return;
         this.kind = k;
-        try { localStorage.setItem(KIND_STORE, k); } catch { /* a convenience only */ }
+        this.pending.add('kind');
+        this.savePending();
         this.idEdited = this.editedId();
         this.result.replaceChildren();
         this.render();
@@ -232,17 +250,16 @@ class AuthorView {
   }
 
   /** The draft changed: keep it, check it, and say what the reader finds. */
-  private update(): void {
+  private update(changed = true): void {
+    if (changed) { this.pending.add(this.kind); this.savePending(); }
     let lesson: CatalogLesson | null = null;
     let issues: FileIssue[] = [];
     let none: string | null = null;
     if (this.kind === 'design') {
-      saveDesignDraft(this.designDraft);
       const desk = this.host.designDesk?.() ?? null;
       if (desk) ({ lesson, issues } = draftDesignLesson(this.designDraft, desk, this.host.reservedIds?.()));
       else none = t('lesson.design.author.deskNone');
     } else {
-      saveDraft(this.draft);
       const mission = this.host.mission();
       if (mission) ({ lesson, issues } = draftLesson(this.draft, missionDocument(mission), this.host.knownEvents(), this.host.reservedIds?.()));
       else none = t('lesson.author.missionNone');
@@ -273,7 +290,7 @@ class AuthorView {
       else this.draft = newDraft(lessonIdFrom('', `lesson-${stamp()}`));
       this.idEdited = false;
       this.result.replaceChildren();
-      this.render();
+      this.renderChanged();
     });
     this.actions.replaceChildren(
       button(t('lesson.author.save'), () => this.saveFile(), true),
@@ -427,7 +444,7 @@ class AuthorView {
     }
     const reset = el('button', undefined, t('lesson.author.locksDefault'));
     reset.type = 'button';
-    reset.addEventListener('click', () => { d.locked = [...DEFAULT_LOCKS]; this.render(); });
+    reset.addEventListener('click', () => { d.locked = [...DEFAULT_LOCKS]; this.renderChanged(); });
     box.append(list, reset);
     return box;
   }
@@ -442,7 +459,7 @@ class AuthorView {
     d.criteria.forEach((c, i) => box.append(this.criterionRow(c, i)));
     const add = el('button', undefined, `+ ${t('lesson.author.add')}`);
     add.type = 'button';
-    add.addEventListener('click', () => { d.criteria.push({ kind: 'measure', measure: 'orbit.apogee', target: 'mission', tol: 10 }); this.render(); });
+    add.addEventListener('click', () => { d.criteria.push({ kind: 'measure', measure: 'orbit.apogee', target: 'mission', tol: 10 }); this.renderChanged(); });
     const endField = el('label', 'ws-field author-end');
     const end = el('input');
     end.type = 'text';
@@ -455,13 +472,14 @@ class AuthorView {
     return box;
   }
 
-  private numberInput(label: string, value: number | undefined, set: (v: number | undefined) => void): HTMLElement {
+  private numberInput(label: string, value: number | undefined, set: (v: number | undefined) => void, key: string): HTMLElement {
     const field = el('label', 'author-num');
     const input = el('input');
     input.type = 'text';
     input.inputMode = 'decimal';
-    input.value = shown(value);
-    input.addEventListener('input', () => { set(readNumber(input.value) ?? undefined); this.update(); });
+    const scope = `author:${this.kind}:${this.texts().id}`;
+    input.value = rememberedNumericText(scope, key, value ?? Number.NaN) ?? shown(value);
+    input.addEventListener('input', () => { const next = readNumber(input.value) ?? undefined; rememberNumericText(scope, key, input.value, next ?? Number.NaN); set(next); this.update(); });
     field.append(el('span', undefined, label), input);
     return field;
   }
@@ -479,7 +497,7 @@ class AuthorView {
         : k === 'measure' ? { kind: 'measure', measure: 'orbit.apogee', target: 'mission', tol: 10 }
         : k === 'answer' ? { kind: 'answer', measure: 'orbit.period', tol: 0.5, prompt: emptyText() }
         : { kind: 'event', key: '', present: true };
-      this.render();
+      this.renderChanged();
     });
     row.append(kind);
     const fields = el('div', 'author-crit-fields');
@@ -490,7 +508,7 @@ class AuthorView {
         const unit = MEASURES[m].unit;
         s.append(new Option(`${t(`lesson.measure.${m}`)}${unit ? `, ${unitText(unit)}` : ''}`, m, false, m === current));
       }
-      s.addEventListener('change', () => { set(s.value as MeasureId); this.update(); });
+      s.addEventListener('change', () => { set(s.value as MeasureId); this.renderChanged(); });
       return s;
     };
     switch (c.kind) {
@@ -513,14 +531,14 @@ class AuthorView {
           if (b === 'min') c.min = 0;
           else if (b === 'max') c.max = 0;
           else if (b === 'range') { c.min = 0; c.max = 0; } else if (b === 'target') { c.target = 0; c.tol = 1; } else { c.target = 'mission'; c.tol = 10; }
-          this.render();
+          this.renderChanged();
         });
-        fields.append(measureSelect(c.measure, (m) => { c.measure = m; this.render(); }), mode);
+        fields.append(measureSelect(c.measure, (m) => { c.measure = m; }), mode);
         const b = boundMode(c);
-        if (b === 'min' || b === 'range') fields.append(this.numberInput(t('lesson.author.min', { unit }), c.min, (v) => { c.min = v; }));
-        if (b === 'max' || b === 'range') fields.append(this.numberInput(t('lesson.author.max', { unit }), c.max, (v) => { c.max = v; }));
-        if (b === 'target') fields.append(this.numberInput(t('lesson.author.target', { unit }), typeof c.target === 'number' ? c.target : undefined, (v) => { c.target = v; }));
-        if (b === 'target' || b === 'mission') fields.append(this.numberInput(t('lesson.author.tol', { unit }), c.tol, (v) => { c.tol = v; }));
+        if (b === 'min' || b === 'range') fields.append(this.numberInput(t('lesson.author.min', { unit }), c.min, (v) => { c.min = v; }, `${i}:min`));
+        if (b === 'max' || b === 'range') fields.append(this.numberInput(t('lesson.author.max', { unit }), c.max, (v) => { c.max = v; }, `${i}:max`));
+        if (b === 'target') fields.append(this.numberInput(t('lesson.author.target', { unit }), typeof c.target === 'number' ? c.target : undefined, (v) => { c.target = v; }, `${i}:target`));
+        if (b === 'target' || b === 'mission') fields.append(this.numberInput(t('lesson.author.tol', { unit }), c.tol, (v) => { c.tol = v; }, `${i}:tol`));
         break;
       }
       case 'answer': {
@@ -531,10 +549,10 @@ class AuthorView {
         how.append(new Option(t('lesson.author.tolAbs', { unit }), 'abs', false, !pct), new Option(t('lesson.author.tolPct'), 'pct', false, pct));
         how.addEventListener('change', () => {
           if (how.value === 'pct') { c.tolPct = c.tolPct ?? 5; delete c.tol; } else { c.tol = c.tol ?? 1; delete c.tolPct; }
-          this.render();
+          this.renderChanged();
         });
-        fields.append(measureSelect(c.measure, (m) => { c.measure = m; this.render(); }), how,
-          this.numberInput(pct ? t('lesson.author.tolPct') : t('lesson.author.tol', { unit }), pct ? c.tolPct : c.tol, (v) => { if (pct) c.tolPct = v; else c.tol = v; }));
+        fields.append(measureSelect(c.measure, (m) => { c.measure = m; }), how,
+          this.numberInput(pct ? t('lesson.author.tolPct') : t('lesson.author.tol', { unit }), pct ? c.tolPct : c.tol, (v) => { if (pct) c.tolPct = v; else c.tol = v; }, `${i}:${pct ? "tolPct" : "tol"}`));
         fields.append(this.textRow(t('lesson.author.prompt'), c.prompt, false, () => this.update()));
         break;
       }
@@ -559,7 +577,7 @@ class AuthorView {
     remove.type = 'button';
     remove.title = t('lesson.author.remove');
     remove.setAttribute('aria-label', `${t('lesson.author.remove')}: ${t('lesson.author.criterionN', { n: i + 1 })}`);
-    remove.addEventListener('click', () => { d.criteria.splice(i, 1); this.render(); });
+    remove.addEventListener('click', () => { d.criteria.splice(i, 1); this.renderChanged(); });
     row.append(fields, remove);
     return row;
   }
@@ -606,7 +624,7 @@ class AuthorView {
     d.criteria.forEach((c, i) => box.append(this.designCriterionRow(c, i)));
     const add = el('button', undefined, `+ ${t('lesson.author.add')}`);
     add.type = 'button';
-    add.addEventListener('click', () => { d.criteria.push({ kind: 'design', measure: 'sat.batteryDod', max: 30 }); this.render(); });
+    add.addEventListener('click', () => { d.criteria.push({ kind: 'design', measure: 'sat.batteryDod', max: 30 }); this.renderChanged(); });
     box.append(add);
     return box;
   }
@@ -620,7 +638,7 @@ class AuthorView {
     kind.append(new Option(t('lesson.design.author.crit.design'), 'design', false, c.kind === 'design'), new Option(t('lesson.design.author.crit.answer'), 'answer', false, c.kind === 'answer'));
     kind.addEventListener('change', () => {
       d.criteria[i] = kind.value === 'design' ? { kind: 'design', measure: c.measure, min: 0 } : { kind: 'answer', measure: c.measure, tolPct: 5, prompt: emptyText() };
-      this.render();
+      this.renderChanged();
     });
     row.append(kind);
     const fields = el('div', 'author-crit-fields');
@@ -634,7 +652,7 @@ class AuthorView {
       c.measure = measure.value as DesignMeasureId;
       // the 25-year rule is a yes (1) or a no (0): a bound kept from another measure ("at least 0") would pass every design
       if (c.kind === 'design' && c.measure === 'sat.disposal25y') { delete c.max; delete c.target; delete c.tol; c.min = 1; }
-      this.render();
+      this.renderChanged();
     });
     fields.append(measure);
     const unit = designUnitText(c.measure);
@@ -648,15 +666,15 @@ class AuthorView {
         if (b === 'min') c.min = 0;
         else if (b === 'max') c.max = 0;
         else if (b === 'range') { c.min = 0; c.max = 0; } else { c.target = 0; c.tol = 1; }
-        this.render();
+        this.renderChanged();
       });
       fields.append(mode);
       const b = designBoundMode(c);
-      if (b === 'min' || b === 'range') fields.append(this.numberInput(t('lesson.author.min', { unit }), c.min, (v) => { c.min = v; }));
-      if (b === 'max' || b === 'range') fields.append(this.numberInput(t('lesson.author.max', { unit }), c.max, (v) => { c.max = v; }));
+      if (b === 'min' || b === 'range') fields.append(this.numberInput(t('lesson.author.min', { unit }), c.min, (v) => { c.min = v; }, `${i}:min`));
+      if (b === 'max' || b === 'range') fields.append(this.numberInput(t('lesson.author.max', { unit }), c.max, (v) => { c.max = v; }, `${i}:max`));
       if (b === 'target') {
-        fields.append(this.numberInput(t('lesson.author.target', { unit }), c.target, (v) => { c.target = v; }),
-          this.numberInput(t('lesson.author.tol', { unit }), c.tol, (v) => { c.tol = v; }));
+        fields.append(this.numberInput(t('lesson.author.target', { unit }), c.target, (v) => { c.target = v; }, `${i}:target`),
+          this.numberInput(t('lesson.author.tol', { unit }), c.tol, (v) => { c.tol = v; }, `${i}:tol`));
       }
     } else {
       const pct = c.tolPct !== undefined;
@@ -665,16 +683,16 @@ class AuthorView {
       how.append(new Option(t('lesson.author.tolAbs', { unit }), 'abs', false, !pct), new Option(t('lesson.author.tolPct'), 'pct', false, pct));
       how.addEventListener('change', () => {
         if (how.value === 'pct') { c.tolPct = c.tolPct ?? 5; delete c.tol; } else { c.tol = c.tol ?? 1; delete c.tolPct; }
-        this.render();
+        this.renderChanged();
       });
-      fields.append(how, this.numberInput(pct ? t('lesson.author.tolPct') : t('lesson.author.tol', { unit }), pct ? c.tolPct : c.tol, (v) => { if (pct) c.tolPct = v; else c.tol = v; }));
+      fields.append(how, this.numberInput(pct ? t('lesson.author.tolPct') : t('lesson.author.tol', { unit }), pct ? c.tolPct : c.tol, (v) => { if (pct) c.tolPct = v; else c.tol = v; }, `${i}:${pct ? "tolPct" : "tol"}`));
       fields.append(this.textRow(t('lesson.author.prompt'), c.prompt, false, () => this.update()));
     }
     const remove = el('button', 'author-remove', '✕');
     remove.type = 'button';
     remove.title = t('lesson.author.remove');
     remove.setAttribute('aria-label', `${t('lesson.author.remove')}: ${t('lesson.author.criterionN', { n: i + 1 })}`);
-    remove.addEventListener('click', () => { d.criteria.splice(i, 1); this.render(); });
+    remove.addEventListener('click', () => { d.criteria.splice(i, 1); this.renderChanged(); });
     row.append(fields, remove);
     return row;
   }

@@ -1,3 +1,4 @@
+import { workspaceStorage, registerWorkspaceFlush } from '../../workspace/storage';
 /**
  * The satellite on the Build section's desk (roadmap D06; Phase 4 map §2.7,
  * track B): the one design the Explore level's satellite designer and the
@@ -74,6 +75,7 @@ export class SatelliteWorkspace {
   private readonly listeners = new Set<(what: 'design' | 'figures') => void>();
   private settle: ReturnType<typeof setTimeout> | null = null;
   private keep: ReturnType<typeof setTimeout> | null = null;
+  private draftDirty = false;
   private dateShown: DesignDate;
   /** the vehicle "Fly it" launches on: a catalogue id, or null for the Launch section's own (the default) */
   private vehicle: string | null = null;
@@ -84,13 +86,14 @@ export class SatelliteWorkspace {
 
   constructor() {
     let kept: string | null = null;
-    try { kept = localStorage.getItem(SATELLITE_DRAFT_KEY); } catch { /* storage blocked: start on the first template */ }
+    try { kept = workspaceStorage().getItem(SATELLITE_DRAFT_KEY); } catch { /* storage blocked: start on the first template */ }
     const name = defaultNameFor(FIRST_TEMPLATE);
     const restored = restoreKeptSatellite(kept);
     this.draft = restored ?? { design: designFromTemplate(FIRST_TEMPLATE, newSatelliteId(), name), recordId: null, defaultName: name };
     this.dateShown = restored?.date ?? todayDesignDate();
     // written once the page is being left too, so a change made just before a reload is kept
     addEventListener('pagehide', () => this.write());
+    registerWorkspaceFlush(() => this.write(true));
   }
 
   get design(): SatelliteDesign { return this.draft.design; }
@@ -263,15 +266,19 @@ export class SatelliteWorkspace {
   }
 
   private queueKeep(): void {
+    if (this.lesson) return;
+    this.draftDirty = true;
     if (this.keep !== null) clearTimeout(this.keep);
     this.keep = setTimeout(() => this.write(), KEEP_MS);
   }
 
-  private write(): void {
+  private write(strict = false): void {
+    if (!this.draftDirty) return;
     if (this.keep !== null) clearTimeout(this.keep);
     this.keep = null;
-    // a lesson's design is the lesson's: the draft kept is the student's own, put aside (`enterLesson`)
-    if (this.lesson) return;
-    try { localStorage.setItem(SATELLITE_DRAFT_KEY, keptSatelliteText({ ...this.draft, date: this.dateShown })); } catch { /* full or blocked: Save says so */ }
+    // A pending personal edit still belongs to the put-aside desk during a lesson; never persist the lesson's temporary design.
+    const personal = this.lesson ? this.aside : { draft: this.draft, date: this.dateShown };
+    if (!personal) return;
+    try { workspaceStorage().setItem(SATELLITE_DRAFT_KEY, keptSatelliteText({ ...personal.draft, date: personal.date })); this.draftDirty = false; } catch (error) { if (strict) throw error; /* transitions must keep this workspace open on failure */ }
   }
 }

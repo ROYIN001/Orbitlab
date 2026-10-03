@@ -3,76 +3,305 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  # R02: every day the site is built again with fresh data snapshots (satellites, space weather),
-  # fetched at build time and deployed with it, never committed; the committed ones are the baseline
-  # 17:43 UTC is 00:43 Bangkok: the refreshed data is live before the Thai school day, and the slot is
-  # quieter than 03:xx UTC (scheduled runs at 03:17 were measured starting up to 6.5 h late)
+    # Progress/report Markdown does not rebuild an already validated application.
+    # Keep app/test-consumed Markdown gated, with the same policy as CI.
+    paths:
+      - '**'
+      - '!**/*.md'
+      - 'docs/ROADMAP-PART2-3.md'
+      - 'docs/SIXDOF-VEHICLE-DATA.md'
+      - 'docs/history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md'
   schedule:
     - cron: '43 17 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
+# Refreshes cannot cancel a code release. New main code supersedes old code;
+# the publisher itself has one queue and checks main's tip immediately before deploy.
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name == 'schedule' && 'refresh' || 'code' }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 10
+    outputs:
+      proceed: ${{ steps.coordinate.outputs.proceed }}
+    steps:
+      - id: coordinate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tip = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
+            if (tip.data.commit.sha !== context.sha) {
+              core.notice('Skip stale Pages source; only main tip can publish.');
+              core.setOutput('proceed', 'false');
+              return;
+            }
+            if (context.eventName === 'schedule') {
+              const runs = await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: 'deploy.yml', per_page: 100 });
+              const active = runs.data.workflow_runs.some(run => run.id !== context.runId && run.head_sha === context.sha && run.event !== 'schedule' && ['queued', 'in_progress', 'waiting', 'pending', 'requested'].includes(run.status));
+              if (active) {
+                core.notice('Skip refresh: a code release for this source is active.');
+                core.setOutput('proceed', 'false');
+                return;
+              }
+            }
+            core.setOutput('proceed', 'true');
+      - if: steps.coordinate.outputs.proceed == 'true'
+        uses: actions/checkout@v4
+      - if: steps.coordinate.outputs.proceed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - if: steps.coordinate.outputs.proceed == 'true'
+        run: npm ci
+      - if: steps.coordinate.outputs.proceed == 'true'
+        run: node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs
+      - name: Repository hygiene preflight
+        if: steps.coordinate.outputs.proceed == 'true'
+        run: npx vitest run tests/repo-hygiene.test.ts
+      - if: steps.coordinate.outputs.proceed == 'true'
+        run: node scripts/verification/create-plan.mjs pages
+      - if: always() && steps.coordinate.outputs.proceed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-plan
+          path: |
+            tests/browser/artifacts/verification/plan.json
+            tests/browser/artifacts/verification/collection.json
+          if-no-files-found: error
+
+  typecheck:
+    needs: plan
+    if: needs.plan.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.23.3
           cache: npm
       - run: npm ci
-      # a scheduled run only refreshes the data: its code was tested when it merged (the snapshot tests, the build
-      # and the journeys below still run)
-      - if: github.event_name != 'schedule'
-        run: npm test
-      # the tests ran on the committed snapshots; the build takes fresh ones (a source that fails keeps its baseline)
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-plan
+          path: tests/browser/artifacts/verification
+      - run: node scripts/verification/run-command.mjs typecheck -- npm run typecheck
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-evidence-typecheck
+          path: tests/browser/artifacts/verification/typecheck.report.json
+          if-no-files-found: warn
+
+  # Default unit gates and snapshot/build start independently on the same source.
+  # Scheduled refreshes also run all default shards, rather than inheriting an old pass.
+  test:
+    needs: plan
+    if: needs.plan.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-plan
+          path: tests/browser/artifacts/verification
+      - run: node scripts/verification/run-vitest.mjs unit-${{ matrix.shard }}of3
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-evidence-unit-${{ matrix.shard }}
+          path: tests/browser/artifacts/verification/unit-${{ matrix.shard }}of3.*
+          if-no-files-found: warn
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-plan
+          path: tests/browser/artifacts/verification
       - run: npm run snapshots
-      # ...so the fresh ones are checked again before they ship: the tests that read each snapshot's schema and
-      # contents (space weather, the satellite catalogue, the Earth's orientation, and the solar activity built on them)
-      - run: npx vitest run tests/data-provider.test.ts tests/satellite-catalogue.test.ts tests/earth-orientation.test.ts tests/activity.test.ts
-      - run: npm run build
-      # the build that deploys, in a real browser: every journey in tests/browser/journeys/
+      - name: Validate the refreshed data before building
+        run: node scripts/verification/run-command.mjs snapshot-check -- npx vitest run tests/data-provider.test.ts tests/satellite-catalogue.test.ts tests/earth-orientation.test.ts tests/activity.test.ts
+      - run: node scripts/verification/run-command.mjs build -- npm run build
+      - run: node scripts/bundle-budget.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pages-dist
+          path: dist/
+          if-no-files-found: error
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-evidence-build
+          path: tests/browser/artifacts/verification/build.report.json
+          if-no-files-found: warn
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-evidence-snapshots
+          path: tests/browser/artifacts/verification/snapshot-check.report.json
+          if-no-files-found: warn
+
+  # Every journey runs once in two shards on this run's refreshed dist artifact.
+  browser:
+    needs: [plan, build]
+    if: needs.plan.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-plan
+          path: tests/browser/artifacts/verification
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-evidence-build
+          path: tests/browser/artifacts/verification
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-dist
+          path: dist
       - run: npx playwright install --with-deps chromium
-      - run: node tests/browser/run.mjs
+      - run: node scripts/verification/run-browser.mjs browser-${{ matrix.shard }}of2
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-evidence-browser-${{ matrix.shard }}
+          path: tests/browser/artifacts/verification/browser-${{ matrix.shard }}of2.report.json
+          if-no-files-found: warn
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: browser-journey-screenshots
+          name: browser-journey-screenshots-${{ matrix.shard }}
           path: tests/browser/screenshots/
           if-no-files-found: ignore
-      # re-running an old run would put an older main back on the site: deploy only main's current tip
-      # (for workflow_dispatch and schedule runs github.sha is main's tip already)
-      - name: Deploy only main's tip
-        run: |
-          git fetch --depth=1 origin main
-          tip="$(git rev-parse FETCH_HEAD)"
-          if [ "$GITHUB_SHA" != "$tip" ]; then
-            echo "::error title=deploy skipped::this run is not main's tip ($GITHUB_SHA, main is $tip): an old run was re-run; deploy skipped — use workflow_dispatch instead"
-            exit 1
-          fi
+
+  verify:
+    needs: [plan, typecheck, test, build, browser]
+    if: always() && needs.plan.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-plan
+          path: tests/browser/artifacts/verification
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pages-evidence-*
+          path: tests/browser/artifacts/verification/results
+          merge-multiple: true
+      - if: always()
+        run: node scripts/verification/aggregate.mjs tests/browser/artifacts/verification/plan.json tests/browser/artifacts/verification/results tests/browser/artifacts/verification/union.json
+        env:
+          VERIFICATION_JOB_RESULTS: '{"plan":"${{ needs.plan.result }}","typecheck":"${{ needs.typecheck.result }}","test":"${{ needs.test.result }}","build":"${{ needs.build.result }}","browser":"${{ needs.browser.result }}"}'
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-verification-union
+          path: tests/browser/artifacts/verification/union.json
+          if-no-files-found: warn
+
+  publish:
+    needs: [plan, verify]
+    if: needs.plan.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: pages-publisher
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.3
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-dist
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-evidence-build
+          path: tests/browser/artifacts/verification
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-verification-union
+          path: tests/browser/artifacts/verification
+      - run: node scripts/verification/check-publish.mjs
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
+      - name: Deploy only main's tip, with code releases ahead of refreshes
+        id: guard
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tip = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
+            if (tip.data.commit.sha !== context.sha) throw new Error(`Stale deployment source ${context.sha}; main is ${tip.data.commit.sha}. Use workflow_dispatch for current main.`);
+            if (context.eventName === 'schedule') {
+              const runs = await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: 'deploy.yml', per_page: 100 });
+              const active = runs.data.workflow_runs.some(run => run.id !== context.runId && run.head_sha === context.sha && run.event !== 'schedule' && ['queued', 'in_progress', 'waiting', 'pending', 'requested'].includes(run.status));
+              if (active) {
+                core.notice('Code release for this source became active; refresh will not publish.');
+                core.setOutput('publish', 'false');
+                return;
+              }
+            }
+            core.setOutput('publish', 'true');
       - id: deployment
+        if: steps.guard.outputs.publish == 'true'
         uses: actions/deploy-pages@v4

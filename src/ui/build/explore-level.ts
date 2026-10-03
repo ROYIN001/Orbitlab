@@ -1,3 +1,5 @@
+import { rememberNumericText, rememberedNumericText } from '../../workspace/numeric-drafts';
+import { workspaceStorage, registerWorkspaceFlush } from '../../workspace/storage';
 /**
  * The Build section's Explore level (roadmap D02 "remix a real rocket", D03
  * "build from parts"; docs/ROADMAP-PART2-3.md).
@@ -131,7 +133,7 @@ export function select(key: string, options: { value: string; label: string; gro
  * number box's would. `digits` fixes how many decimals a value is shown with.
  */
 export function numberBox(key: string, value: number,
-  o: { min: number; max: number; step: number; show?: (v: number) => number; read?: (n: number) => number; digits?: number },
+  o: { min: number; max: number; step: number; show?: (v: number) => number; read?: (n: number) => number; digits?: number; rawScope?: string },
   onChange: (v: number) => void): HTMLInputElement {
   const show = o.show ?? ((v: number) => v), read = o.read ?? ((n: number) => n);
   // the language when the box is read or written: a box kept across a language switch follows it
@@ -143,12 +145,14 @@ export function numberBox(key: string, value: number,
   box.autocomplete = 'off';
   box.spellcheck = false;
   box.dataset.k = key;
-  box.value = Number.isFinite(value) ? text(show(value)) : '';
+  box.value = rememberedNumericText(o.rawScope, key, value) ?? (Number.isFinite(value) ? text(show(value)) : '');
   // an empty or half-typed box is NaN, which the model refuses by name
   const typed = (): void => {
     const n = parseTyped(box.value, getLang());
     box.setAttribute('aria-invalid', String(box.value.trim() !== '' && !Number.isFinite(n)));
-    onChange(Number.isFinite(n) ? read(n) : Number.NaN);
+    const next = Number.isFinite(n) ? read(n) : Number.NaN;
+    rememberNumericText(o.rawScope, key, box.value, next);
+    onChange(next);
   };
   box.addEventListener('input', typed);
   box.addEventListener('keydown', (e) => {
@@ -181,6 +185,7 @@ export class ExploreLevel {
   private refreshQueued = 0;
   private drawQueued = 0;
   private keepQueued: ReturnType<typeof setTimeout> | null = null;
+  private draftDirty = false;
 
   private readonly head = el('header', 'bs-panel bx-head');
   private readonly stagePanel = el('div', 'bs-stage bx-stage');
@@ -209,7 +214,7 @@ export class ExploreLevel {
     };
     // the drafts this browser kept from the last visit, where the student left them (not saved designs: those are Save's)
     let kept: string | null = null;
-    try { kept = localStorage.getItem(DRAFTS_KEY); } catch { /* storage blocked: start on the first designs */ }
+    try { kept = workspaceStorage().getItem(DRAFTS_KEY); } catch { /* storage blocked: start on the first designs */ }
     const restored = restoreKeptDrafts(kept);
     if (restored) {
       this.state = restored.state;
@@ -217,6 +222,7 @@ export class ExploreLevel {
     }
     // written once the page is being left too, so a change made just before a reload is kept
     addEventListener('pagehide', () => this.keepDrafts());
+    registerWorkspaceFlush(() => this.keepDrafts(true));
     this.stack = new StackSvg((ref) => this.pickPart(ref));
     this.picker = new VehiclePicker(pickerEntries(VEHICLES), (id) => this.pickBase(id), 'bx-picker-select');
     this.store = new ExploreStore({
@@ -243,7 +249,7 @@ export class ExploreLevel {
     this.controls.setAttribute('aria-labelledby', 'bx-controls-title');
     this.figures.setAttribute('aria-labelledby', 'bx-figures-title');
     this.root.append(this.head, this.stagePanel, this.controls, this.checks, this.figures, this.store.root);
-    this.compute();
+    this.compute(false);
     this.ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => this.queueDrawing()) : null;
     this.ro?.observe(this.draw);
   }
@@ -299,20 +305,22 @@ export class ExploreLevel {
 
   /** Keep the drafts in this browser a moment after the last change. */
   private queueKeep(): void {
+    this.draftDirty = true;
     if (this.keepQueued !== null) clearTimeout(this.keepQueued);
     this.keepQueued = setTimeout(() => this.keepDrafts(), KEEP_MS);
   }
 
-  private keepDrafts(): void {
+  private keepDrafts(strict = false): void {
+    if (!this.draftDirty) return;
     if (this.keepQueued !== null) clearTimeout(this.keepQueued);
     this.keepQueued = null;
-    try { localStorage.setItem(DRAFTS_KEY, keptDraftsText({ state: this.state, defaults: this.defaultNames })); } catch { /* full or blocked: Save says so */ }
+    try { workspaceStorage().setItem(DRAFTS_KEY, keptDraftsText({ state: this.state, defaults: this.defaultNames })); this.draftDirty = false; } catch (error) { if (strict) throw error; /* timer/pagehide saves remain best effort; transitions must keep this workspace open on failure */ }
   }
 
   // ─── the model ────────────────────────────────────────────────────────────
 
-  private compute(): void {
-    this.queueKeep();
+  private compute(keep = true): void {
+    if (keep) this.queueKeep();
     this.result = designResult(this.state);
     const payload = activeDraft(this.state).payloadKg;
     this.said = this.result.ok ? designChecks(this.result.spec, payload) : [];
@@ -329,6 +337,7 @@ export class ExploreLevel {
 
   /** The draft on screen changed its values: new figures, drawing and checks, once a frame. */
   private changed(): void {
+    this.queueKeep();
     this.flyMessage = null;
     // what the last ratings run said was about the design before this change
     if (!this.ratingsJob) this.ratingsMessage = null;
@@ -495,7 +504,7 @@ export class ExploreLevel {
     name.value = d.name;
     name.dataset.k = 'name';
     name.addEventListener('input', () => { activeDraft(this.state).name = name.value; this.changed(); });
-    const payload = numberBox('payload', d.payloadKg, { min: 1, max: 500000, step: 1 }, (v) => { activeDraft(this.state).payloadKg = v; this.changed(); });
+    const payload = numberBox('payload', d.payloadKg, { min: 1, max: 500000, step: 1, rawScope: `rocket:${d.id}` }, (v) => { activeDraft(this.state).payloadKg = v; this.changed(); });
     const unit = el('span', 'bx-unit', t('u.kg'));
     const payloadRow = el('span', 'bx-with-unit');
     payloadRow.append(payload, unit);
@@ -751,7 +760,7 @@ export class ExploreLevel {
       out.push(field(t('build.ex.engine'), s));
     }
     const stepper = el('div', 'bx-stepper');
-    const box = numberBox(`${key}:count`, count, { min: 1, max: PART_LIMITS.engineCount, step: 1 }, (n) => onCount(n));
+    const box = numberBox(`${key}:count`, count, { min: 1, max: PART_LIMITS.engineCount, step: 1, rawScope: `rocket:${activeDraft(this.state).id}` }, (n) => onCount(n));
     box.setAttribute('aria-label', t('build.ex.count'));
     const minus = button('bs-step', '−', () => { box.value = String(Math.max(1, (Number(box.value) || 1) - 1)); onCount(Number(box.value)); });
     const plus = button('bs-step', '+', () => { box.value = String(Math.min(PART_LIMITS.engineCount, (Number(box.value) || 0) + 1)); onCount(Number(box.value)); });
@@ -875,7 +884,7 @@ export class ExploreLevel {
       return { value: b.id, label: `${vehicle.name}: ${localized(`stage.${vehicle.id}.${b.stageId}.name`, b.name)} (${engineLine({ count: b.engine.count, name: enginePart(b.engine.part).name })})` };
     });
     const body = select(`${key}:body`, opts, g.body, (v) => { g.body = v; this.changed(); });
-    const count = numberBox(`${key}:count`, g.count, { min: 1, max: MAX_BOOSTERS_PER_GROUP, step: 1 }, (n) => { g.count = n; this.changed(); });
+    const count = numberBox(`${key}:count`, g.count, { min: 1, max: MAX_BOOSTERS_PER_GROUP, step: 1, rawScope: `rocket:${activeDraft(this.state).id}` }, (n) => { g.count = n; this.changed(); });
     const rm = button('watch-btn', t('build.ex.strapOns.remove'), remove);
     rm.dataset.k = `${key}:remove`;
     li.append(field(t('build.ex.strapOns.body'), body), field(t('build.ex.strapOns.count'), count, 'bx-field bx-count'), rm);
@@ -970,7 +979,7 @@ export class ExploreLevel {
       const own = st.body.body;
       const grid = el('div', 'bx-own');
       const num4 = (k: 'dryMass' | 'propellantMass' | 'diameter' | 'length', labelKey: string, unit: string, max: number, step: number): HTMLElement => {
-        const box = numberBox(`stage:${i}:${k}`, own[k], { min: 0, max, step }, (v) => { own[k] = v; this.changed(); });
+        const box = numberBox(`stage:${i}:${k}`, own[k], { min: 0, max, step, rawScope: `rocket:${activeDraft(this.state).id}` }, (v) => { own[k] = v; this.changed(); });
         const row = el('span', 'bx-with-unit');
         row.append(box, el('span', 'bx-unit', unit));
         return field(t(labelKey), row);

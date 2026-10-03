@@ -76,9 +76,16 @@ import { decimal, measureText, unitAfter } from './measure-text';
 import { PanelLocks } from './locks';
 import { PACK_REVIEWS } from '../../lessons/review';
 import { renderPackReview } from './review-details';
+import { registerWorkspaceFlush, workspaceStorage } from '../../workspace/storage';
+import { profileContextText as profileText } from '../profiles/context-text';
+import { lessonTransitionFlush } from './profile-progress';
 import './lessons.css';
 
 export interface LessonHost {
+  /** Fixed learner identity for this window; profile changes reconstruct the workspace. */
+  profileName?(): string;
+  manageProfiles?(opener: HTMLElement): void;
+  resetLearning?(opener: HTMLElement, lessonId?: string): void;
   /** go to a workspace mode (of the launch section, S01) */
   go(mode: AppMode): void;
   /** S01: back to the section and level the page was opened over; without it, `go` to the level */
@@ -252,10 +259,15 @@ export class LessonMode implements LessonToolsHost {
     (document.getElementById('app') ?? document.body).append(this.page);
     window.addEventListener('hashchange', () => this.route());
     window.addEventListener('resize', () => this.placePage());
+    window.addEventListener('orbitlab-profile-name-changed', () => this.applyLanguage());
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.pageView && !e.defaultPrevented) { e.preventDefault(); this.closePage(); }
     });
     this.applyLanguage();
+    const detachFlush = registerWorkspaceFlush(lessonTransitionFlush(() => this.saved, () => this.save(), () => t('lesson.save.failed')));
+    // This owner stays fixed for the document lifetime. A switch flushes
+    // before reload; a cached document keeps the same epoch-checked owner.
+    window.addEventListener('pagehide', (event) => { if (!event.persisted) detachFlush(); });
   }
 
   // ─── the catalogue and progress ──────────────────────────────────────────
@@ -308,13 +320,23 @@ export class LessonMode implements LessonToolsHost {
     return this.progressData;
   }
 
-  private save(): void {
+  /** Saved-history selector for profile reset, in the UI's current language. */
+  recordedLessons(): { id: string; title: string }[] {
+    const catalogue = this.catalogue();
+    return Object.keys(this.progressData.lessons).map((id) => {
+      const lesson = catalogue.find((item) => item.id === id);
+      return { id, title: lesson ? `${lessonNumber(lesson)} ${localText(lesson.title)}` : id };
+    });
+  }
+
+  private save(): boolean {
     const saved = saveProgress(this.progressData);
     const changed = saved !== this.saved;
     this.saved = saved;
     this.paintButton();
     if (changed && this.pageView === 'catalog') this.renderCatalog();
     if (changed && this.pageView) this.paintPageBar();
+    return saved;
   }
 
   /** Whether the progress is being kept, in a line the strip and the catalogue show (audit 2026-09-27 A19). */
@@ -1413,6 +1435,8 @@ export class LessonMode implements LessonToolsHost {
     title.append(el('span', 'lesson-glyph', '✎'), document.createTextNode(` ${t('lesson.page.title')}`));
     this.page.setAttribute('aria-label', t('lesson.page.title'));
     this.pageBar.replaceChildren(title, tabs, back);
+    const profile = this.profileContext(false);
+    if (profile) this.pageBar.append(profile);
     // on a phone the tabs are one row that scrolls sideways (lessons.css): the open one is brought into it
     const current = tabs.querySelector<HTMLElement>('a[aria-current="page"]');
     if (current && tabs.scrollWidth > tabs.clientWidth) tabs.scrollLeft = Math.max(0, current.offsetLeft - tabs.offsetLeft - 12);
@@ -1464,14 +1488,17 @@ export class LessonMode implements LessonToolsHost {
     if (saveNote) bar.append(saveNote);
     body.append(bar);
 
-    const nameRow = el('label', 'lesson-student');
-    const name = el('input');
-    name.type = 'text';
-    name.autocomplete = 'name';
-    try { name.value = localStorage.getItem(STUDENT_KEY) ?? ''; } catch { /* optional */ }
-    name.addEventListener('change', () => { try { localStorage.setItem(STUDENT_KEY, name.value.trim()); } catch { /* optional */ } });
-    nameRow.append(el('span', undefined, t('lesson.catalog.student')), name);
-    body.append(nameRow);
+    const profile = this.profileContext(true);
+    if (profile) body.append(profile);
+    else {
+      const nameRow = el('label', 'lesson-student');
+      const name = el('input');
+      name.type = 'text'; name.autocomplete = 'name';
+      try { name.value = workspaceStorage()?.getItem(STUDENT_KEY) ?? ''; } catch { /* optional */ }
+      name.addEventListener('change', () => { try { workspaceStorage()?.setItem(STUDENT_KEY, name.value.trim()); } catch { /* optional */ } });
+      nameRow.append(el('span', undefined, t('lesson.catalog.student')), name);
+      body.append(nameRow);
+    }
 
     if (this.notice) {
       const n = el('div', `lesson-file-notice ${this.notice.level}`);
@@ -1766,16 +1793,42 @@ export class LessonMode implements LessonToolsHost {
   }
 
   private async exportResults(): Promise<void> {
-    let student = '';
-    try { student = localStorage.getItem(STUDENT_KEY) ?? ''; } catch { /* optional */ }
-    await this.loadAssessment();
-    const summary = this.assessmentResult();
-    const file = await resultsFile(this.progressData, new Date(), student || undefined,
+    // Capture owner, history and catalogue before the first await. An export
+    // belongs to its starting learner even if a transition is requested later.
+    let student = this.host.profileName?.() ?? '';
+    if (!student) try { student = workspaceStorage()?.getItem(STUDENT_KEY) ?? ''; } catch { /* optional */ }
+    const snapshot = structuredClone(this.progressData);
+    const catalogue = structuredClone(this.ownCatalogue());
+    const exportedAt = new Date();
+    const module = await this.loadAssessment();
+    const summary = module.latestResult(snapshot, catalogue);
+    const file = await resultsFile(snapshot, exportedAt, student || undefined,
       summary ? { kind: summary.kind, percent: summary.result.percent, areas: summary.result.domains, start: summary.result.start } : undefined);
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
     // W: a Thai name keeps its vowels and tones («สมชาย ใจดี», not "สมชาย-ใจด")
     const who = nameForFile(student);
     downloadBlob(new Blob([`${JSON.stringify(file, null, 2)}\n`], { type: 'application/json' }), `orbitlab${who ? `-${who}` : ''}-${stamp}${RESULTS_FILE_EXTENSION}`);
+  }
+
+  private profileContext(withReset: boolean): HTMLElement | null {
+    if (!this.host.profileName) return null;
+    const row = el('div', 'lesson-profile-context');
+    row.append(el('strong', undefined, profileText('active', { name: this.host.profileName() })));
+    if (this.host.manageProfiles) {
+      const manage = el('button', 'lesson-profile-button', profileText('title'));
+      manage.type = 'button';
+      manage.dataset.profileAction = 'manage';
+      manage.addEventListener('click', () => this.host.manageProfiles?.(manage));
+      row.append(manage);
+    }
+    if (withReset && this.host.resetLearning) {
+      const reset = el('button', 'lesson-profile-button', profileText('reset'));
+      reset.type = 'button';
+      reset.dataset.profileAction = 'reset';
+      reset.addEventListener('click', () => this.host.resetLearning?.(reset));
+      row.append(reset);
+    }
+    return row;
   }
 }
 

@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * Flight-dynamics notation (roadmap U07): the symbols, body axes and signs of
  * ISO 1151 (with ISO 80000 for the Mach number) or of ГОСТ 20058-80, chosen by
@@ -80,7 +81,7 @@ export function getNotation(): Notation { return notationFor(getLang(), preferen
 /** Read the stored choice (an Engineer-mode setting; absent: follow the language). */
 export function initNotation(store?: Pick<Storage, 'getItem'>): void {
   try {
-    const value = (store ?? localStorage).getItem(NOTATION_STORAGE_KEY);
+    const value = (store ?? workspaceStorage()).getItem(NOTATION_STORAGE_KEY);
     preference = NOTATION_PREFERENCES.includes(value as NotationPreference) ? value as NotationPreference : 'auto';
   } catch { preference = 'auto'; }
   last = getNotation();
@@ -89,7 +90,7 @@ export function initNotation(store?: Pick<Storage, 'getItem'>): void {
 export function setNotationPreference(pref: NotationPreference, store?: Pick<Storage, 'setItem'>): void {
   if (!NOTATION_PREFERENCES.includes(pref)) throw new RangeError('Unknown notation');
   preference = pref;
-  try { (store ?? localStorage).setItem(NOTATION_STORAGE_KEY, pref); } catch { /* preference is optional */ }
+  try { (store ?? workspaceStorage()).setItem(NOTATION_STORAGE_KEY, pref); } catch { /* preference is optional */ }
   notify();
 }
 

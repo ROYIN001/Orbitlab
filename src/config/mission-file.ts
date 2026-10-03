@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * The mission as a document (roadmap U01): a link that carries the whole
  * setup, a `.orbitlab.json` file that can be saved and opened again, and the
@@ -414,12 +415,12 @@ export function readMissionFileText(text: string): unknown {
 export const MISSION_STORE_KEY = 'orbitlab.mission';
 
 export function saveStoredMission(state: MissionState, store?: Pick<Storage, 'setItem'>): void {
-  try { (store ?? localStorage).setItem(MISSION_STORE_KEY, JSON.stringify(missionDocument(state))); } catch { /* storage off or full */ }
+  try { (store ?? workspaceStorage()).setItem(MISSION_STORE_KEY, JSON.stringify(missionDocument(state))); } catch { /* storage off or full */ }
 }
 
 export function loadStoredMission(store?: Pick<Storage, 'getItem'>): unknown {
   try {
-    const text = (store ?? localStorage).getItem(MISSION_STORE_KEY);
+    const text = (store ?? workspaceStorage()).getItem(MISSION_STORE_KEY);
     return text ? JSON.parse(text) : null;
   } catch { return null; }
 }

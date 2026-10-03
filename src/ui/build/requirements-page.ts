@@ -1,3 +1,4 @@
+import { workspaceStorage, registerWorkspaceFlush } from '../../workspace/storage';
 /**
  * The requirements page (roadmap D07, docs/ROADMAP-PART2-3.md; Phase 4 map
  * §3): "Start from requirements" at the Build section's Engineer level, with
@@ -209,11 +210,13 @@ export class RequirementsPage {
   private readonly apertureCanvas = el('canvas');
   private readonly ro: ResizeObserver | null;
   private drawQueued = 0;
+  private formPending = false;
 
   constructor(private readonly ws: SatelliteWorkspace, private readonly host: RequirementsPageHost) {
     let kept: string | null = null;
-    try { kept = localStorage.getItem(FORM_KEY); } catch { /* storage blocked: the default form */ }
+    try { kept = workspaceStorage().getItem(FORM_KEY); } catch { /* storage blocked: the default form */ }
     this.form = restoreForm(kept);
+    registerWorkspaceFlush(() => this.keepForm(true));
     this.results.setAttribute('aria-labelledby', 'brq-results-title');
     this.charts.setAttribute('aria-labelledby', 'brq-charts-title');
     this.root.append(this.head, this.formPanel, this.results, this.charts);
@@ -234,10 +237,17 @@ export class RequirementsPage {
 
   private set(patch: Partial<RequirementsForm>, redraw = false): void {
     this.form = { ...this.form, ...patch };
-    try { localStorage.setItem(FORM_KEY, JSON.stringify(this.form)); } catch { /* full or blocked: kept for this visit */ }
+    this.formPending = true;
+    this.keepForm();
     if (redraw) this.renderForm();
     else this.renderRun();
     this.renderStale();
+  }
+
+  private keepForm(strict = false): void {
+    if (!this.formPending) return;
+    try { workspaceStorage().setItem(FORM_KEY, JSON.stringify(this.form)); this.formPending = false; }
+    catch (error) { if (strict) throw error; /* retry this actual edit before a profile transition */ }
   }
 
   private render(): void {
@@ -267,7 +277,7 @@ export class RequirementsPage {
   private numberField(f: ReqNumberField, labelKey: string, unit: string, value: number, step: number, onChange: (v: number) => void,
     more: { placeholder?: string; hint?: string; hintKey?: string } = {}): HTMLElement {
     const [min, max] = limitsOf(f);
-    const box = numberBox(`${P}${f}`, value, { min, max, step }, onChange);
+    const box = numberBox(`${P}${f}`, value, { min, max, step, rawScope: 'requirements' }, onChange);
     box.dataset.field = f;
     if (more.placeholder !== undefined) box.placeholder = more.placeholder;
     const row = el('span', 'bx-with-unit');

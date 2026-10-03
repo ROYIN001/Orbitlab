@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 /**
  * Which face of the application is showing.
  *
@@ -134,7 +135,7 @@ export function initialRoute(hash: string, store?: ModeStore): AppRoute {
  */
 export function loadRoute(store?: ModeStore): AppRoute | null {
   try {
-    const s = store ?? localStorage;
+    const s = store ?? workspaceStorage();
     const mode = s.getItem(MODE_STORAGE_KEY);
     if (!isMode(mode)) return null;
     if (mode === 'home') return HOME_ROUTE;
@@ -145,7 +146,7 @@ export function loadRoute(store?: ModeStore): AppRoute | null {
 
 export function saveRoute(r: AppRoute, store?: ModeStore): void {
   try {
-    const s = store ?? localStorage;
+    const s = store ?? workspaceStorage();
     s.setItem(MODE_STORAGE_KEY, r.mode);
     // the landing page belongs to no section: the last one is kept for the section links
     if (r.section !== null) s.setItem(SECTION_STORAGE_KEY, r.section);

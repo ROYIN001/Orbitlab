@@ -22,6 +22,7 @@ import { buildStarField } from './stars';
 import { R_EARTH } from '../physics/constants';
 import { gmst, sunDirectionEci } from '../physics/orbital';
 import { equalTimeCuts, hitsEarth, stateAt, type Orbit } from '../orbit/kepler';
+import { isCameraInputTarget, wheelZoomFactor } from './gestures';
 
 /** metres to scene units (thousands of km) */
 const S = 1e-6;
@@ -223,8 +224,15 @@ export class OrbitView {
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     canvas.addEventListener('pointermove', (e) => this.onMove(e));
-    for (const type of ['pointerup', 'pointercancel', 'pointerleave'] as const) canvas.addEventListener(type, (e) => this.onUp(e));
-    canvas.addEventListener('wheel', (e) => { e.preventDefault(); this.zoom(Math.exp(e.deltaY * 0.001)); }, { passive: false });
+    for (const type of ['pointerup', 'pointercancel', 'pointerleave', 'lostpointercapture'] as const) canvas.addEventListener(type, (e) => this.onUp(e));
+    canvas.addEventListener('wheel', (e) => {
+      if (!isCameraInputTarget(e, canvas)) return;
+      const factor = wheelZoomFactor(e, canvas.clientHeight);
+      if (factor === null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.zoom(factor);
+    }, { passive: false });
     canvas.addEventListener('dblclick', () => this.frameOrbit());
     canvas.addEventListener('keydown', (e) => this.onKey(e));
   }
@@ -525,7 +533,9 @@ export class OrbitView {
     this.el = Math.max(-1.45, Math.min(1.45, this.el + dy * 0.006));
   }
   private onDown(e: PointerEvent): void {
-    this.canvas.setPointerCapture(e.pointerId);
+    if (!isCameraInputTarget(e, this.canvas) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    this.canvas.focus({ preventScroll: true });
+    try { this.canvas.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.pointers.size === 2) this.pinch = this.spread();
   }
@@ -542,13 +552,15 @@ export class OrbitView {
   }
   private onUp(e: PointerEvent): void {
     this.pointers.delete(e.pointerId);
-    this.pinch = 0;
+    this.pinch = this.pointers.size >= 2 ? this.spread() : 0;
+    try { this.canvas.releasePointerCapture(e.pointerId); } catch { /* pointer already gone */ }
   }
   private spread(): number {
     const [a, b] = [...this.pointers.values()];
     return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
   }
   private onKey(e: KeyboardEvent): void {
+    if (!isCameraInputTarget(e, this.canvas) || e.ctrlKey || e.metaKey || e.altKey) return;
     const step = e.shiftKey ? 40 : 12;
     if (e.key === 'ArrowLeft') this.rotate(step, 0);
     else if (e.key === 'ArrowRight') this.rotate(-step, 0);

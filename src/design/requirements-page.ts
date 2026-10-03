@@ -206,7 +206,7 @@ export function restoreForm(text: string | null): RequirementsForm {
   try { raw = JSON.parse(text); } catch { return out; }
   if (!raw || typeof raw !== 'object') return out;
   const r = raw as Record<string, unknown>;
-  const num = (k: keyof RequirementsForm): void => { if (typeof r[k] === 'number' && Number.isFinite(r[k])) (out as unknown as Record<string, unknown>)[k] = r[k]; };
+  const num = (k: keyof RequirementsForm): void => { if (r[k] === null) (out as unknown as Record<string, unknown>)[k] = Number.NaN; else if (typeof r[k] === 'number' && Number.isFinite(r[k])) (out as unknown as Record<string, unknown>)[k] = r[k]; };
   for (const k of ['lat', 'lon', 'gsd', 'revisitDays', 'ltan', 'inclination', 'lifeYears', 'dataGbit', 'minElDeg', 'tiltDeg', 'minDays'] as const) num(k);
   if (r.maxDays === null || (typeof r.maxDays === 'number' && Number.isFinite(r.maxDays))) out.maxDays = r.maxDays as number | null;
   if (typeof r.template === 'string' && REQ_TEMPLATES.includes(r.template)) out.template = r.template;

@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../../workspace/storage';
 import { t } from '../../i18n';
 import {
   PROJECT_FILE_EXTENSION, PROJECT_MAX_BYTES, PROJECT_RECOVERY_KEY, PROJECT_SECTIONS, ProjectError,
@@ -23,7 +24,7 @@ export class ProjectsPanel {
   private pendingRecovery = false;
   private fileName = '';
 
-  constructor(private readonly host: ProjectsHost, private readonly storage: () => ProjectStorage = () => localStorage) {
+  constructor(private readonly host: ProjectsHost, private readonly storage: () => ProjectStorage = () => workspaceStorage()) {
     this.root.id = 'project-backups';
     this.root.setAttribute('aria-labelledby', 'project-backups-title');
   }

@@ -42,7 +42,7 @@ export function numberField(ws: SatelliteWorkspace, f: SatelliteField, keyPrefix
   const v = valueAt(d, f.path);
   const scale = SHOWN[f.unit];
   const box = numberBox(`${keyPrefix}${f.path}`, typeof v === 'number' ? v : Number.NaN, {
-    min: f.min * scale, max: f.max * scale, step: f.step, show: (x) => x * scale, read: (n) => n / scale,
+    rawScope: `satellite:${d.id}`, min: f.min * scale, max: f.max * scale, step: f.step, show: (x) => x * scale, read: (n) => n / scale,
   }, (next) => ws.change(withValue(ws.design, f.path, f.integer && Number.isFinite(next) ? Math.round(next) : next)));
   box.dataset.path = f.path;
   // a node the design does not fix is flown at 0 (`designOrbit`): the empty box says so

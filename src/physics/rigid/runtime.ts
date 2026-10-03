@@ -101,7 +101,12 @@ export function targetAttitude(nose: Vec3, sideReference: Vec3): Quat {
     z = sub(reference, scale(x, dot(x, reference)));
   }
   z = normalize(z);
-  return quatFromBasis(x, normalize(cross(z, x)), z);
+  const y = normalize(cross(z, x));
+  // Cancellation in a nearly parallel projection can exceed the unchanged
+  // quatFromMatrix orthogonality limit. Preserve the original valid-basis
+  // arithmetic; reconstruct z only when its x projection fails that limit.
+  if (Math.abs(dot(x, z)) > 1e-10) z = normalize(cross(x, y));
+  return quatFromBasis(x, y, z);
 }
 
 /** Declared educational weather, ENU m/s, reproducible at any integration step. */

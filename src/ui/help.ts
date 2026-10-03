@@ -1,3 +1,4 @@
+import { workspaceStorage } from '../workspace/storage';
 import { getLang, onLangChange } from '../i18n';
 import { Modal } from './dialogs';
 import { HELP_COPY } from './help-content';
@@ -12,7 +13,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, classN
 }
 
 function store(): GuideStore | null {
-  try { return window.localStorage; } catch { return null; }
+  try { return workspaceStorage(); } catch { return null; }
 }
 
 class HelpDialog extends Modal {

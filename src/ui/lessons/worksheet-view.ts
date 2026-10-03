@@ -1,3 +1,5 @@
+import { rememberNumericText, rememberedNumericText } from '../../workspace/numeric-drafts';
+import { workspaceStorage, registerWorkspaceFlush } from '../../workspace/storage';
 /**
  * The lessons page's Worksheets tab (roadmap E05): make printable sheets from
  * the flight on screen — the open lesson's, or any mission's — for a class,
@@ -44,12 +46,9 @@ interface Form { students: string; classCode: string; flightCount: number; bankC
 function loadForm(): Form {
   const fallback: Form = { students: '', classCode: String(1000 + Math.floor(Math.random() * 9000)), flightCount: 6, bankCount: 4, domains: [...DOMAINS], format: 'html' };
   try {
-    const raw = JSON.parse(localStorage.getItem(STORE) ?? 'null') as Partial<Form> | null;
+    const raw = JSON.parse(workspaceStorage().getItem(STORE) ?? 'null') as Partial<Form> | null;
     return raw ? { ...fallback, ...raw } : fallback;
   } catch { return fallback; }
-}
-function saveForm(f: Form): void {
-  try { localStorage.setItem(STORE, JSON.stringify(f)); } catch { /* a convenience only */ }
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
@@ -101,8 +100,20 @@ const dataUrl = (p: Picture): string => {
 class WorksheetView {
   private form = loadForm();
   private status = '';
+  private pending = false;
 
-  constructor(private readonly host: WorksheetHost, private readonly container: HTMLElement) {}
+  constructor(private readonly host: WorksheetHost, private readonly container: HTMLElement) {
+    const detachFlush = registerWorkspaceFlush(() => this.savePending(true));
+    if (typeof window !== 'undefined') window.addEventListener('pagehide', (event) => { if (!event.persisted) detachFlush(); });
+  }
+
+  private save(): void { this.pending = true; this.savePending(); }
+
+  private savePending(strict = false): void {
+    if (!this.pending) return;
+    try { workspaceStorage().setItem(STORE, JSON.stringify(this.form)); this.pending = false; }
+    catch (error) { if (strict) throw error; }
+  }
 
   applyLanguage(): void { this.render(); }
 
@@ -177,25 +188,26 @@ class WorksheetView {
     const students = el('textarea');
     students.rows = 6;
     students.value = this.form.students;
-    students.addEventListener('input', () => { this.form.students = students.value; saveForm(this.form); });
+    students.addEventListener('input', () => { this.form.students = students.value; this.save(); });
     const field = (label: string, control: HTMLElement, cls = '') => { const l = el('label', `ws-field ${cls}`); l.append(el('span', undefined, label), control); grid.append(l); };
     field(t('ws.students'), students, 'wide');
     const code = el('input');
     code.value = this.form.classCode;
-    code.addEventListener('input', () => { this.form.classCode = code.value; saveForm(this.form); });
+    code.addEventListener('input', () => { this.form.classCode = code.value; this.save(); });
     field(t('ws.classCode'), code);
-    const number = (value: number, max: number, set: (v: number) => void) => {
+    const number = (key: string, value: number, max: number, set: (v: number) => void) => {
       const input = el('input');
-      input.type = 'number'; input.min = '0'; input.max = String(max); input.value = String(value);
-      input.addEventListener('change', () => { set(Math.max(0, Math.min(max, Math.round(Number(input.value) || 0)))); saveForm(this.form); });
+      input.type = 'text'; input.inputMode = 'numeric'; input.value = rememberedNumericText('worksheets', key, value) ?? String(value);
+      input.addEventListener('input', () => rememberNumericText('worksheets', key, input.value, value));
+      input.addEventListener('change', () => { const next = Math.max(0, Math.min(max, Math.round(Number(input.value) || 0))); rememberNumericText('worksheets', key, input.value, next); set(next); this.save(); });
       return input;
     };
-    field(t('ws.flightCount'), number(this.form.flightCount, 11, (v) => { this.form.flightCount = v; }));
-    field(t('ws.bankCount'), number(this.form.bankCount, 12, (v) => { this.form.bankCount = v; }));
+    field(t('ws.flightCount'), number('flightCount', this.form.flightCount, 11, (v) => { this.form.flightCount = v; }));
+    field(t('ws.bankCount'), number('bankCount', this.form.bankCount, 12, (v) => { this.form.bankCount = v; }));
     const format = el('select');
     for (const k of ['html', 'docx'] as const) { const o = el('option', undefined, t(`ws.format.${k}`)); o.value = k; format.append(o); }
     format.value = this.form.format;
-    format.addEventListener('change', () => { this.form.format = format.value as Form['format']; saveForm(this.form); });
+    format.addEventListener('change', () => { this.form.format = format.value as Form['format']; this.save(); });
     field(t('ws.format'), format);
     const areas = el('div', 'ws-areas');
     for (const d of DOMAINS) {
@@ -205,7 +217,7 @@ class WorksheetView {
       input.checked = this.form.domains.includes(d);
       input.addEventListener('change', () => {
         this.form.domains = DOMAINS.filter((x) => (x === d ? input.checked : this.form.domains.includes(x)));
-        saveForm(this.form);
+        this.save();
       });
       box.append(input, document.createTextNode(` ${d} · ${t(`assess.domain.${d}`)}`));
       areas.append(box);

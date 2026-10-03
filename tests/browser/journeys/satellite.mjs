@@ -18,6 +18,8 @@
  * drives one.
  */
 // 34–47 s here on a shared 4-core machine (software WebGL), so part of the smoke run
+import { workspaceValue } from '../workspace-storage.mjs';
+
 export const smoke = true;
 export const timeoutMs = 300_000;
 
@@ -112,7 +114,7 @@ export default async function satellite(t) {
   }), { timeoutMs: 30_000 });
   t.check(panelSays?.level === 'ok' && panelSays.text === saidBefore,
     `the Launch section's verdict (${panelSays?.level}: ${panelSays?.text}) is not the one Fly it gave (ok: ${saidBefore})`);
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('orbitlab.mission') ?? 'null'));
+  const stored = await workspaceValue(page, 'orbitlab.mission');
   t.check(stored?.version === 3 && stored.mission.vehicleId === 'electron' && stored.mission.satelliteSpec?.name === 'Journey NAPA-2',
     `the Launch section's mission is not the design on Electron (v3): ${JSON.stringify(stored?.mission ?? null).slice(0, 300)}`);
   t.check(Math.abs((stored?.mission?.satelliteSpec?.area ?? 0) - AREA) < 1e-12, 'the mission does not carry the design\'s drag area');
