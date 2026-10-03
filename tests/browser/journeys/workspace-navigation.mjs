@@ -90,7 +90,7 @@ export default async function workspaceNavigation(t) {
   await failed.page.unroute(CHUNK);
   const reload = failed.page.getByRole('button', { name: 'Reload page', exact: true });
   if (await reload.count()) {
-    await reloadDocument(failed.page, () => reload.click(), failed.ready);
+    await reloadDocument(failed.page, reload, failed.ready);
     await failed.page.locator('#btn-work').click();
   } else {
     await failed.page.getByRole('button', { name: 'Try again', exact: true }).click();

@@ -2,7 +2,7 @@
 
 วันที่: 2026-10-03 UTC. ฐาน main: `523b44eca0e31fd84fd4a3faa4e1b883428288ee`. Branch: `codex/r1-profiles-foundations`.
 
-สถานะปัจจุบัน: implementation รวมแล้ว; กำลังปิด acceptance / final source / CI. **ยังไม่รายงานว่า merge หรือเผยแพร่สำเร็จ** จนมีหลักฐาน GitHub จริง. อ่าน [PROGRESS.md](../PROGRESS.md) และรายงานรายแพ็กเกจก่อนเริ่มงานต่อ.
+สถานะปัจจุบัน: [PR #71](https://github.com/ROYIN001/Orbitlab/pull/71) ผ่าน required CI และ merge แล้วที่ `5eb18a27fbf579159e3351545216c801b26c7df5` เวลา 05:44:01 UTC. **ยังไม่เผยแพร่ R1 บนเว็บไซต์**: Pages ปฏิเสธหนึ่ง browser journey ตามหลักฐานด้านล่าง; การแก้ test wait อยู่ใน [รายงาน navigation follow-up](R1-release-navigation.md). อ่าน [PROGRESS.md](../PROGRESS.md) และรายงานรายแพ็กเกจก่อนเริ่มงานต่อ.
 
 ## ขอบเขตที่ผู้ใช้อนุญาตและสิ่งที่ส่งมอบ
 
@@ -15,7 +15,7 @@
 | R1.5 / U13 | discovery/union ของ tests, source/runtime/snapshot/dist identity, Pages gates ขนานและ publisher guard; [workflow](R1.5-workflows.md), [verification guide](../VERIFICATION.md) |
 | งานเล็ก U08/U09/U16 | เอาปุ่มรีเซ็ตกล้องที่ผู้ใช้ระบุออก ซ่อนตัวเลือกตามภาษาแต่คง implicit default/explicit override และระบุ percentage ว่า command ทั้ง full/compact HUD/onboard; [small UI](R1-small-ui.md) |
 
-แผนหลัก [PLAN.md](../PLAN.md) เวอร์ชัน 1.2 บันทึก authorization ใหม่. [Word release asset](https://github.com/ROYIN001/Orbitlab/releases/download/development-plan-v1.2/Orbitlab-Development-Plan-TH.docx) รอเผยแพร่หลัง acceptance; repository policy ห้ามเก็บ DOCX ใต้ docs จึงเก็บไฟล์นอก checkout สำหรับ upload. SHA-256 `c15a3550627c2fa9d6d79341a748a22cbd75e7cb1ca86875a4b217609979768d` ตรงกับสำเนาเดิม. DOCX ตรวจ OOXML/เนื้อหาครบทุกข้อเสนอและทุกระยะแล้ว แต่ไม่ได้ render ด้วย Microsoft Word.
+แผนหลัก [PLAN.md](../PLAN.md) เวอร์ชัน 1.2 บันทึก authorization ใหม่. [ดาวน์โหลด Word ที่ตรวจแล้ว](https://raw.githubusercontent.com/ROYIN001/Orbitlab/f2d7e4804b7b6664b63b8cceb8bb4d0c1842e802/docs/development/PLAN.docx) เป็นสำเนาสาธารณะเดิมที่ตรึง commit; current main ไม่มี tracked DOCX ตาม repository policy. ดาวน์โหลดจริงแบบไม่ใช้ authentication ตรงกับต้นฉบับ **83,293 bytes**, SHA-256 `c15a3550627c2fa9d6d79341a748a22cbd75e7cb1ca86875a4b217609979768d`; Markdown SHA-256 `b37252efdb27fe62e6fcd031c2cfc7aaf4b847ad192a298ddf05033ae52d63dc`. DOCX ตรวจ OOXML/zip และ U01–U16 / A01–A05 ครบ R0–R7 แล้ว แต่ไม่ได้ render ด้วย Microsoft Word. การ upload Release asset ยังติด restricted network ที่ `uploads.github.com`; ใช้ลิงก์ที่ดาวน์โหลดได้จริงนี้เป็น handoff ไม่อ้างว่า Release ถูกเผยแพร่แล้ว.
 
 ## สัญญาที่คนรับช่วงต้องรักษา
 
@@ -42,9 +42,10 @@
 | Fuel/runtime/session/replay/named heavy | 124 selected tests ผ่านหลัง conditional basis repair: 4 unchanged goldens + 87 focused + 10 named heavy + 23 session/replay; hashes สุดท้ายตรวจตรงกับ R1.4 report แล้ว |
 | Verification infrastructure | 59 Node checks ผ่านรวม repo-hygiene preflight และ bounded metadata notices; actionlint ทั้ง 4 workflows ผ่าน |
 | Type/build/budget | corrected application source `npm run build` และ budget พร้อม build-log guard ผ่าน; 69 files precached, manifest `0880ee57146283`; committed candidate / remote dist ต้องตรวจแยก |
-| PR / required CI / merge / Pages | PR #71 เปิดแล้ว; initial CI 37096708399 ล้มและ union ปฏิเสธตามกฎ; กำลังแก้ candidate จึงยังไม่ merge/Pages |
+| PR / required CI / merge | PR #71 merged หลัง CI 37099583981 ผ่านครบ 10,079 unit cases / 18 smoke journeys |
+| Pages | Run 37100771200 ล้มเฉพาะ project-backups implicit navigation wait; 10,079 unit cases ผ่าน, 20 full journeys ครบโดย 1 nonpassing; publisher skipped ตามกฎ |
 
-Initial CI failure evidence: tracked DOCX violates existing hygiene; three removed DOM dependencies leave stale exemptions; unconditional attitude-basis reconstruction changes normal-flight arithmetic and four historical fingerprints; browser profile-session-safety/project-backups/workspace-navigation exceed step deadlines. Each is investigated and recorded; no golden rewrite, test omission or policy exception is used. Artifact blob downloads returned storage 403, so annotations/job metadata establish failure but raw union counts, dist digest and CI Chromium version are not independently claimed for that run.
+Initial CI failure evidence (historical run 37096708399): tracked DOCX violated existing hygiene; three removed DOM dependencies left stale exemptions; unconditional attitude-basis reconstruction changed normal-flight arithmetic and four historical fingerprints; browser profile-session-safety/project-backups/workspace-navigation exceeded step deadlines. Corrections were verified before PR71 merged; no golden rewrite, test omission or policy exception was used. Artifact blob downloads returned storage 403, so annotations/job metadata establish those initial failures but raw union counts, dist digest and CI Chromium version are not independently claimed for that historical run.
 
 Policy correction verified locally: `npm test -- tests/repo-hygiene.test.ts tests/architecture.test.ts` **2 files / 15 tests passed** (3.64 s). Removed exactly the obsolete `dom:config/mission-file.ts`, `dom:design/design-store.ts` and `dom:provider/data-mode.ts` exemptions after confirming their persistence now goes through workspaceStorage; the remaining two exemptions and all architecture guards are unchanged. Preflight retains all existing tests in the default inventory. `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` **53 passed / 0 skipped** after preflight correction; final metadata-notice source then passed **59/59**, with all four workflows passing actionlint.
 
@@ -52,9 +53,19 @@ Measured small rendering correction: the opaque lesson catalogue covered the lau
 
 Corrected affected browser batch: **3/3 passed** on manifest `0880ee57146283`, actual launched Chromium **151.0.7922.173**, Node **22.23.3**, render scale **0.5**. Profile-session-safety **163.805 s**, project-backups **137.860 s**, workspace-navigation **83.610 s**. Phase changes wait for DOMContentLoaded and existing app-ready state; screenshots disable CSS animation while retaining font readiness and visible UI capture. All original assertions, click deadlines, required journeys and backup actions remain. Project-backups' exact initial timeout selector was unavailable behind artifact/log storage 403 and was not reproduced locally; no unsupported cause or forced-click fix is claimed. Failure diagnostics now record bounded document/font/request/canvas state, and annotations retain the escaped full selector/action log/stack.
 
+## GitHub acceptance and release identities
+
+Corrected candidate `0fff61e47dc1afea735a9e1624153f4f6f2fa135` passed [PR CI 37099583981](https://github.com/ROYIN001/Orbitlab/actions/runs/37099583981), attempt 1, on synthetic PR checkout `893386211fd48a9d14119453186c583d53bb74aa`. Its source inventory matches the frozen candidate: **1,039 files**, SHA-256 `184ae552d57f374c5f338f2807a433871638f0aecf3aeb86bed341c8e90f7f3b`. Final metadata notice reports `ok=true`, **10,079/10,079 unit cases** and **18/18 smoke journeys**; missing/unexpected/duplicate/nonpassing are all zero. Actual remote Chromium **153.0.8010.12**, distinct from local **151.0.7922.173**. CI dist manifest SHA-256 `398ba7a77648f784df2bd2ac51a526e5f68560c0546b80fbd7a8f915e67c7247`. All required PR jobs passed before normal squash merge; no admin override was used.
+
+[First Pages run 37100771200](https://github.com/ROYIN001/Orbitlab/actions/runs/37100771200), attempt 1, tested exact merged source `5eb18a27fbf579159e3351545216c801b26c7df5` with the same inventory hash. Refresh/validation/build/budget, typecheck and all units passed. Full coverage was **20/20 unique journeys**, no missing/unexpected/duplicate cases, but `project-backups` was nonpassing: the click finished, then Playwright's implicit scheduled-navigation barrier timed out. Final aggregate failed and publisher was skipped; **no deployment was created for this SHA**. Actual Chromium **153.0.8010.12**; refreshed dist SHA-256 `7f51ef68846babbbf476062f0b80c42292b5f44e567224e13ee7bf6a5b69f441` is a failed-release artifact, not a published one.
+
+Evidence above was read from GitHub run/job/check-annotation APIs. One bounded final metadata notice provides the verified union/digest/version facts without claiming raw Azure artifacts were downloaded. Full source/runtime/refreshed-snapshot/dist guards ran inside workflows; signed artifact/log downloads from this environment still return storage HTTP 403. Local and CI/release dist hashes differ because build stamps and refreshed data differ; they are not claimed to be byte-identical.
+
+See [release-navigation follow-up](R1-release-navigation.md) for the concrete correction and its next candidate evidence. All publication status must come from a successful exact-source Pages run and deployment record, not this initial failed run or PR success alone.
+
 ## ขนาดไฟล์และข้อจำกัดด้านประสิทธิภาพ
 
-Corrected-physics production checkpoint: initial index **2572.8 kB**, CSS **166.2 kB**, offline precache **15729.8 kB** อยู่ใต้เพดานเดิมของ precache **15783 kB**. Index allowance เปลี่ยน **2572→2573 kB (+1 kB)** สำหรับ ownership/bootstrap/pending-only checks; shared catalog ที่ Rolldown แยกเป็น i18n/lesson-file/catalog ถูกนับแยกทุกไฟล์ ไม่มีไฟล์หายจาก budget. ปรับ lazy-feature ceilings ตามเหตุผลใน `budgets.json`; combined JS+other allowance เพิ่ม **19.5 kB (0.20%)**, worker ทุกตัวใช้เพดานเดิม.
+Final local corrected-application checkpoint (manifest `0880ee57146283`): initial index **2572.9 kB**, CSS **166.2 kB**, offline precache **15729.9 kB** อยู่ใต้เพดานเดิมของ precache **15783 kB**. Index allowance เปลี่ยน **2572→2573 kB (+1 kB)** สำหรับ ownership/bootstrap/pending-only checks; shared catalog ที่ Rolldown แยกเป็น i18n/lesson-file/catalog ถูกนับแยกทุกไฟล์ ไม่มีไฟล์หายจาก budget. ปรับ lazy-feature ceilings ตามเหตุผลใน `budgets.json`; combined JS+other allowance เพิ่ม **19.5 kB (0.20%)**, worker ทุกตัวใช้เพดานเดิม.
 
 การเพิ่ม profile functionality มีต้นทุน code; ไม่อ้างว่า startup bytes หรือ workflow เร็วขึ้นจากการจัดกลุ่ม chunk. เมนู/backup/strict import/media ownership management โหลดเมื่อจำเป็นและอยู่ใน offline precache. ต้องเก็บ 3–5 comparable workflow runs ก่อนสรุปการลดเวลา.
 

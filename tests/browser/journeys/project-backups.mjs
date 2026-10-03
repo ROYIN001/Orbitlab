@@ -8,6 +8,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { putWorkspaceFixture, workspaceBytes } from '../workspace-storage.mjs';
+import { reloadDocument } from '../harness.mjs';
 
 export const smoke = true;
 // About 155 s on the shared software-WebGL runner: leave CI headroom for
@@ -131,10 +132,7 @@ export default async function projectBackups(t) {
   // without location.reload would appear successful while retaining models.
   assert.equal(new URL(page.url()).search, '');
   await page.evaluate(() => { window.__projectBeforeReload = true; });
-  const reloaded = page.waitForEvent('domcontentloaded', { timeout: 60_000 });
-  await page.locator('#btn-project-apply').click();
-  await reloaded;
-  await app.ready();
+  await reloadDocument(page, page.locator('#btn-project-apply'), app.ready);
   assert.equal(await page.evaluate(() => window.__projectBeforeReload), undefined, 'Restore really reloaded the document even though the home hash was unchanged');
   assert.equal(new URL(page.url()).search, '');
   assert.equal(new URL(page.url()).hash, '#/home');
@@ -177,10 +175,7 @@ export default async function projectBackups(t) {
     address.searchParams.set('m', m); address.searchParams.set('scenario', scenario); address.searchParams.set('lesson', 'orbit-first');
     history.replaceState(null, '', address);
   }, { m, scenario });
-  const queryReloaded = page.waitForEvent('domcontentloaded', { timeout: 60_000 });
-  await page.locator('#btn-project-apply').click();
-  await queryReloaded;
-  await app.ready();
+  await reloadDocument(page, page.locator('#btn-project-apply'), app.ready);
   assert.equal(new URL(page.url()).search, '', 'mission/scenario/lesson share parameters cannot replay over restored data');
   assert.equal(new URL(page.url()).hash, '#/home');
   const afterQueryRestore = await browserBytes(page);

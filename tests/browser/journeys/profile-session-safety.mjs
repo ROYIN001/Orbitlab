@@ -53,7 +53,7 @@ export default async function profileSessionSafety(t) {
   await dialogOf(second).getByRole('button', { name: 'Create a profile', exact: true }).click();
   await dialogOf(second).getByLabel('Learner name', { exact: true }).fill('Window B');
   await dialogOf(second).getByRole('button', { name: 'Create a profile', exact: true }).click();
-  await reloadDocument(second, () => dialogOf(second).getByRole('button', { name: 'Confirm', exact: true }).click());
+  await reloadDocument(second, dialogOf(second).getByRole('button', { name: 'Confirm', exact: true }));
   const ownerB = await record(second);
   assert.notEqual(ownerB.id, ownerA.id);
   assert.equal(await second.locator('#btn-profile').getAttribute('data-profile-status'), 'durable');

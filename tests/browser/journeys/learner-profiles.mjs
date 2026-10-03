@@ -32,8 +32,8 @@ const activeRecord = (page) => page.evaluate(() => {
   const id = sessionStorage.getItem('orbitlab.profiles.selected.v1');
   return JSON.parse(localStorage.getItem(`orbitlab.profile.v1.${id}`));
 });
-async function reloadAfter(app, action) {
-  await reloadDocument(app.page, action, app.ready);
+async function reloadAfter(app, control) {
+  await reloadDocument(app.page, control, app.ready);
 }
 async function createLearner(app, name) {
   const dialog = app.page.locator('#profile-dialog');
@@ -41,14 +41,14 @@ async function createLearner(app, name) {
   await dialog.getByLabel('Learner name', { exact: true }).fill(name);
   await dialog.getByRole('button', { name: 'Create a profile', exact: true }).click();
   assert.match(await dialog.innerText(), /Live flights are not restored/);
-  await reloadAfter(app, () => dialog.getByRole('button', { name: 'Confirm', exact: true }).click());
+  await reloadAfter(app, dialog.getByRole('button', { name: 'Confirm', exact: true }));
   assert.match(await app.page.locator('#btn-profile').getAttribute('aria-label'), new RegExp(name));
 }
 async function switchLearner(app, name) {
   await app.page.locator('#btn-profile').click();
   const row = app.page.locator('.profile-list-row').filter({ has: app.page.locator('strong', { hasText: name }) });
   await row.getByRole('button', { name: 'Open this workspace', exact: true }).click();
-  await reloadAfter(app, () => app.page.locator('#profile-dialog').getByRole('button', { name: 'Confirm', exact: true }).click());
+  await reloadAfter(app, app.page.locator('#profile-dialog').getByRole('button', { name: 'Confirm', exact: true }));
 }
 
 export default async function learnerProfiles(t) {
@@ -105,7 +105,7 @@ export default async function learnerProfiles(t) {
   await page.locator('.lesson-catalog [data-profile-action="reset"]').click();
   await dialog.getByLabel('Records to remove', { exact: true }).selectOption('exams');
   assert.match(await dialog.locator('.profile-counts').innerText(), /Tests\s+1/);
-  await reloadAfter(app, () => dialog.getByRole('button', { name: 'Delete these records', exact: true }).click());
+  await reloadAfter(app, dialog.getByRole('button', { name: 'Delete these records', exact: true }));
   let progress = JSON.parse((await activeRecord(page)).values['orbitlab.lessons']);
   assert.equal(progress.assessments.length, 0);
   assert.equal(progress.lessons['orbit-first'].attempts, 2);
@@ -113,7 +113,7 @@ export default async function learnerProfiles(t) {
   await page.evaluate(() => { location.hash = '#/lessons'; });
   await page.locator('.lesson-catalog [data-profile-action="reset"]').click();
   assert.match(await dialog.locator('.profile-counts').innerText(), /Lessons with history\s+1/);
-  await reloadAfter(app, () => dialog.getByRole('button', { name: 'Delete these records', exact: true }).click());
+  await reloadAfter(app, dialog.getByRole('button', { name: 'Delete these records', exact: true }));
   progress = JSON.parse((await activeRecord(page)).values['orbitlab.lessons']);
   assert.deepEqual(progress.lessons, {});
   assert.equal(progress.customLessons.length, 1);
@@ -162,7 +162,7 @@ export default async function learnerProfiles(t) {
   await dialog.getByLabel('Import destination', { exact: true }).waitFor();
   assert.equal(await dialog.getByLabel('Import destination', { exact: true }).inputValue(), '', 'backup import defaults to a new learner');
   await dialog.getByLabel('Name for the new learner', { exact: true }).fill('Learner A copy');
-  await reloadAfter(app, () => dialog.getByRole('button', { name: 'Import the reviewed file', exact: true }).click());
+  await reloadAfter(app, dialog.getByRole('button', { name: 'Import the reviewed file', exact: true }));
   const imported = await activeRecord(page);
   assert.notEqual(imported.id, before.id);
   assert.equal(imported.values['orbitlab.author.draft'], before.values['orbitlab.author.draft']);
@@ -179,7 +179,7 @@ export default async function learnerProfiles(t) {
   await dialog.locator('.profile-list-row').first().waitFor();
   t.log('Binary audio validated, exported and explicitly restored to a separate owner');
   await dialog.locator('.profile-list-row').filter({ hasText: 'Learner A copy' }).getByRole('button', { name: 'Delete profile', exact: true }).click();
-  await reloadAfter(app, () => dialog.getByRole('button', { name: 'Delete this learner and their work', exact: true }).click());
+  await reloadAfter(app, dialog.getByRole('button', { name: 'Delete this learner and their work', exact: true }));
   await dialog.waitFor({ state: 'visible' });
   assert.equal(await page.evaluate(() => sessionStorage.getItem('orbitlab.profiles.selected.v1')), '', 'active deletion does not select another learner silently');
   const audioOwners = await page.evaluate(() => new Promise((resolve, reject) => {
@@ -193,7 +193,7 @@ export default async function learnerProfiles(t) {
   assert.equal(audioOwners.filter((id) => id === imported.id).length, 0);
   assert.equal(audioOwners.filter((id) => id === before.id).length, 1, 'deleting the copy preserves the original learner’s audio');
   await dialog.locator('.profile-list-row').filter({ hasText: 'Learner A' }).getByRole('button', { name: 'Open this workspace', exact: true }).click();
-  await reloadAfter(app, () => dialog.getByRole('button', { name: 'Confirm', exact: true }).click());
+  await reloadAfter(app, dialog.getByRole('button', { name: 'Confirm', exact: true }));
   await page.locator('#btn-profile').click();
   const bRow = dialog.locator('.profile-list-row').filter({ hasText: 'Learner B' });
   await bRow.getByRole('button', { name: 'Delete profile', exact: true }).click();
@@ -202,7 +202,7 @@ export default async function learnerProfiles(t) {
   await dialog.locator('.profile-list-row').filter({ hasText: 'Learner B' }).waitFor({ state: 'detached' });
   await dialog.locator('.profile-list-row').getByRole('button', { name: 'Delete profile', exact: true }).click();
   assert.match(await dialog.innerText(), /choose or create a learner explicitly/);
-  await reloadAfter(app, () => dialog.getByRole('button', { name: 'Delete this learner and their work', exact: true }).click());
+  await reloadAfter(app, dialog.getByRole('button', { name: 'Delete this learner and their work', exact: true }));
   await dialog.waitFor({ state: 'visible' });
   await page.keyboard.press('Escape');
   assert.equal(await dialog.evaluate((element) => element.open), true, 'last-profile deletion requires an explicit learner choice');
