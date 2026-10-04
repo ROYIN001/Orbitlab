@@ -30,6 +30,11 @@ import { missionStage, setupCollapsed, type MissionStage } from './ui/flight-lif
 import { MISSION_SOURCE_KEY, missionSource } from './ui/mission-source';
 import { FIRST_LAUNCH, quickstartMission } from './ui/quickstart';
 import { MISSION_STEPS, MISSION_STEP_KEY, missionSteps, stepActionable, type MissionStep } from './ui/mission-steps';
+import { resultSuggestion, type ResultSettingContext, type ResultSuggestion } from './ui/result-actions';
+import type { ResultCause } from './ui/result-content';
+import { orbitClassOf, ratedPayload } from './config/verdict-core';
+import { launchWindows } from './physics/mission';
+import { siteById } from './data/sites';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { ExploreDebrief } from './ui/explore-debrief';
@@ -504,7 +509,10 @@ class App {
 
   constructor() {
     this.helpGuide = new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
-    this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time), onShowSetting: (field) => this.showSetting(field) });
+    this.result = new MissionResult(document.getElementById('mission-result')!, {
+      onSeek: time => this.seek(time), onShowSetting: (field) => this.showSetting(field),
+      suggestion: (cause, ctx) => this.resultSuggestionFor(cause, ctx), onApplySuggestion: (s) => this.applySuggestion(s),
+    });
     this.flown = new FlownPanel(document.getElementById('flown-result')!);
     this.toruControls = new ToruControls(document.getElementById('toru-controls')!, (cmd) => {
       if (this.mode === 'engineer' && this.player.live) this.session?.commandToru(cmd);
@@ -1498,6 +1506,54 @@ class App {
       const first = card.querySelector<HTMLElement>('button, [href]');
       (first ?? card).focus({ preventScroll: true });
     }
+  }
+
+  /** R3.5: the suggestion worked out for this flight, by its cause: the card asks on every frame it shows */
+  private suggestionMemo: { key: string; value: ResultSuggestion | null } = { key: '', value: null };
+
+  /**
+   * R3.5: the change to try next for the flight on screen, from what was
+   * flown (`sim.cfg`), never the setup's draft: the vehicle's published rating
+   * for the orbit's class, and the launch window nearest the time flown.
+   */
+  private resultSuggestionFor(cause: ResultCause, ctx: ResultSettingContext): ResultSuggestion | null {
+    const sim = this.sim;
+    if (!sim) return null;
+    const key = `${this.flightNo}|${cause}|${ctx.outcomeTime}|${ctx.events.length}`;
+    if (key === this.suggestionMemo.key) return this.suggestionMemo.value;
+    const cfg = sim.cfg;
+    let value: ResultSuggestion | null = null;
+    try {
+      value = resultSuggestion(cause, {
+        ...ctx, failureMode: cfg.failure.mode, payloadMass: cfg.payloadMassOverride ?? sim.satellite.mass,
+        ratedPayload: ratedPayload(sim.vehicleSpec, orbitClassOf(cfg.orbit)).cap || null, launchTime: cfg.launchTime,
+        nearestWindow: () => {
+          const from = new Date(cfg.launchTime.getTime() - 12 * 3600e3);
+          const windows = launchWindows(cfg.orbit, siteById(cfg.siteId), from, 3);
+          let best: Date | null = null;
+          for (const w of windows) if (!best || Math.abs(w.time.getTime() - cfg.launchTime.getTime()) < Math.abs(best.getTime() - cfg.launchTime.getTime())) best = w.time;
+          return best;
+        },
+      });
+    } catch (err) { console.error(err); }
+    this.suggestionMemo = { key, value };
+    return value;
+  }
+
+  /**
+   * R3.5: a suggestion applied, on purpose: a new mission (the setup's own
+   * New mission — the flight just flown is left as it was recorded) with the
+   * one setting changed, previewed, and the field shown.
+   */
+  private applySuggestion(s: ResultSuggestion): void {
+    this.panel.backToSetup();
+    const st = this.panel.state;
+    if (s.field === 'setup.failureMode') st.failure = { ...st.failure, mode: 'none' };
+    else if (s.field === 'setup.payloadMass') st.payloadMass = s.after;
+    else st.launchTime = new Date(s.after.getTime());
+    this.panel.applyExternalEdit();
+    this.reset();
+    requestAnimationFrame(() => { this.panel.focusField(s.field); });
   }
 
   /**

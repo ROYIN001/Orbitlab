@@ -6,7 +6,8 @@
  * own configuration) and lands on the failure field — changing nothing.
  * The steps under the mission's name follow it: Launch before, Result after,
  * Orbit struck through (the flight did not reach one), Result's chip taking
- * the focus to the result card.
+ * the focus to the result card. The result suggests the nominal flight, as
+ * before → after; applying it starts a new mission with only that changed.
  */
 import { press } from '../harness.mjs';
 
@@ -50,6 +51,25 @@ export default async function r3ResultSetting(t) {
   t.check(before === null || after === before, `showing the setting changed it (${before} → ${after})`);
   t.check(after === 'prematureSep', `the field shows ${after}, not the failure that was flown`);
   await app.shot('result-show-setting');
+
+  // the suggestion: before → after, applied on purpose to a new mission
+  const suggest = page.locator('#mission-result .mission-result-suggest');
+  if (!t.check(await suggest.isVisible(), 'the result suggests nothing for the failure that struck')) return;
+  t.check(await suggest.getAttribute('data-field') === 'setup.failureMode', `the suggestion changes ${await suggest.getAttribute('data-field')}`);
+  const said = await suggest.textContent() ?? '';
+  t.check(/Premature stage separation → Nominal flight/.test(said), `the suggestion does not show before → after: "${said}"`);
+  const apply = suggest.locator('.mission-result-apply');
+  await apply.scrollIntoViewIfNeeded();
+  await press(t, app, apply, 'mouse', 'Apply to a new mission');
+  const applied = await t.until(() => page.evaluate(() => {
+    const field = document.querySelector('#setup [data-field="setup.failureMode"]');
+    return document.body.dataset.flightStage === 'setup' && !!field && !field.disabled && field.value === 'none';
+  }), { timeoutMs: 10_000 });
+  t.check(applied, 'applying did not start a new mission with the nominal flight');
+  const vehicle = await page.locator('#setup [data-field="setup.payloadMass"]').first().inputValue().catch(() => null);
+  t.check(vehicle !== null, 'the new mission lost the payload field');
+  t.check(await t.until(async () => (await current()) === 'launch', { timeoutMs: 5000 }), `after applying the steps stand at ${await current()}, not Launch`);
+  await app.shot('result-suggestion-applied');
   app.checkErrors();
   await app.context.close();
 }

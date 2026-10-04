@@ -26,6 +26,11 @@
 .mission-result .mission-result-next { padding-top: 8px; border-top: 1px solid var(--line); }
 .mission-result :is(.mission-result-review, .mission-result-setting) { margin-top: 6px; height: auto; white-space: normal; }
 .mission-result .mission-result-setting { margin-left: 6px; }
+/* R3.5: the change to try next, before → after, applied on purpose */
+.mission-result-suggest { margin-top: 10px; padding: 9px 11px; border: 1px solid var(--accent-line, #3c6a78); border-radius: 7px; }
+.mission-result-suggest p { margin: 0; }
+.mission-result-suggest .mission-result-basis { margin-top: 3px; font-size: 12px; color: var(--muted); }
+.mission-result .mission-result-apply { margin-top: 7px; height: auto; white-space: normal; }
 @media (max-width: 640px) {
   .mission-result { padding: 14px; }
   .mission-result th, .mission-result td { padding: 7px 6px; }

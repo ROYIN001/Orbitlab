@@ -44,10 +44,61 @@ export interface ResultSettingContext {
   outcomeTime: number;
 }
 
+/** Whether a failure armed in the setup struck before the outcome. */
+export function failureFired(ctx: ResultSettingContext): boolean {
+  return ctx.failureArmed && ctx.events.some((e) => FAILURE_EVENTS.has(e.key) && e.t <= ctx.outcomeTime + 1e-6);
+}
+
 /** The setup field to show for a result, or null when no single setting answers it. */
 export function resultSetting(cause: ResultCause, ctx: ResultSettingContext): string | null {
   if (cause === 'target') return null;
-  const fired = ctx.failureArmed && ctx.events.some((e) => FAILURE_EVENTS.has(e.key) && e.t <= ctx.outcomeTime + 1e-6);
-  if (fired) return 'setup.failureMode';
+  if (failureFired(ctx)) return 'setup.failureMode';
   return CAUSE_FIELD[cause] ?? null;
+}
+
+/**
+ * R3.5: a change to try next, shown as before → after and applied only when
+ * the user presses for it — to a new mission, so the flight that was flown
+ * keeps its configuration. Each is backed by a figure the app already holds,
+ * never invented:
+ *
+ * - a failure armed in the setup that struck: the nominal flight;
+ * - out of propellant or never off the pad, carrying more than the vehicle's
+ *   published rating for the orbit's class: that rating;
+ * - in the right orbit but the wrong plane: the launch window nearest the
+ *   time flown (`launchWindows`, the panel's own).
+ *
+ * Anything else — a payload within its rating that still ran dry, an orbit
+ * with no plane to aim at — has no suggestion: the setting is shown instead.
+ */
+export type ResultSuggestion =
+  | { field: 'setup.failureMode'; before: string; after: 'none' }
+  | { field: 'setup.payloadMass'; before: number; after: number }
+  | { field: 'setup.launchTime'; before: Date; after: Date };
+
+export interface SuggestionContext extends ResultSettingContext {
+  /** the mode flown */
+  failureMode: string;
+  /** kg flown */
+  payloadMass: number;
+  /** the vehicle's published rating for the orbit's class, kg; null when it has none */
+  ratedPayload: number | null;
+  launchTime: Date;
+  /** the launch window nearest the time flown, worked out only when asked for; null when the orbit has no plane to aim at */
+  nearestWindow: () => Date | null;
+}
+
+export function resultSuggestion(cause: ResultCause, ctx: SuggestionContext): ResultSuggestion | null {
+  if (cause === 'target') return null;
+  if (failureFired(ctx)) return { field: 'setup.failureMode', before: ctx.failureMode, after: 'none' };
+  if ((cause === 'fuel' || cause === 'liftoff') && ctx.ratedPayload !== null && ctx.ratedPayload > 0
+    && ctx.payloadMass > ctx.ratedPayload + 0.5) {
+    return { field: 'setup.payloadMass', before: ctx.payloadMass, after: Math.floor(ctx.ratedPayload) };
+  }
+  if (cause === 'window') {
+    const after = ctx.nearestWindow();
+    // a window within a minute of the time flown is not a different time to try
+    if (after && Math.abs(after.getTime() - ctx.launchTime.getTime()) > 60_000) return { field: 'setup.launchTime', before: ctx.launchTime, after };
+  }
+  return null;
 }
