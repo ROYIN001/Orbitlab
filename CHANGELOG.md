@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- R2: Launch Engineer gives the setup column's width to the scene once a flight is launched (⚙ Setup shows the frozen configuration, New mission reopens it); a picked camera view is kept across phases until Cinematic, and Watch gains the view tabs; clustered timeline events open a chooser with exact T+ times; telemetry card presets (Flight, Dynamics, Orbit, custom); the HUD shows the engines' actual level beside the throttle command; the notation moves to the telemetry panel; a phone keeps a compact flight bar while reading the charts.
 - Stages 3–4: My work adds an experiment notebook with flown-input provenance, model limits and reproducible validation reports, offline classroom checks/repair, and project backups with strict import previews and recovery. Lesson packs show their sources and pending human-review status.
 
 - Startup: retry a rejected GPU preference without reducing rendering settings; show localized recovery steps, reload and technical details when WebGL 2 is unavailable, and prevent flight actions before startup completes. Worksheet-export failures now identify the case and action in deployment diagnostics.

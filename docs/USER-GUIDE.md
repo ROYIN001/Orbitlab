@@ -871,6 +871,13 @@ Press **Launch**. The mission starts on the pad, T‑10 s.
 
 ## 2. What you're looking at
 
+In the Engineer mode, launching hands the mission setup's column to the picture: the setup is
+put away for the flight and **⚙ Setup** beside the playback buttons shows it again — read-only,
+because a flight keeps the configuration it was launched with — with *Relaunch* and *New
+mission* in it. Pausing or replaying does not bring it back; *New mission* does. On a phone a
+small bar at the bottom of the screen keeps the clock, live/replay and play/pause in reach
+while you scroll through the charts.
+
 Four camera views, switchable from the tabs above the viewport or keys `1`–`4`:
 
 - **Exterior** — a chase camera that follows the stack; drag to orbit it, scroll/pinch to
@@ -881,7 +888,7 @@ Four camera views, switchable from the tabs above the viewport or keys `1`–`4`
 - **Map** — a 2-D ground track with the predicted orbit, the target orbit, the day/night
   terminator, and where spent stages came down.
 
-The small buttons beside the camera tabs open the **Frames** menu (below), reset the view,
+The small buttons beside the camera tabs open the **Frames** menu (below),
 toggle the **glow** (the bloom around the plume, the ignition flash and the city lights) and go
 full screen. If the picture falls below about 24 frames per second the glow is switched off for
 a few seconds as a test: it stays off only if that made the picture faster, and comes back
@@ -959,7 +966,11 @@ after the glow's own test; `?sky=gradient` in the address forces it.
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
 upper stage, coast, burn, deployment, orbit — in live flight and in replay alike. Picking a
-camera yourself overrides the sequence until the next phase begins.
+view yourself (a camera tab, or `1`–`4`) keeps it through every later phase; **Cinematic**,
+beside the camera tabs, hands the camera back to the sequence at the view it has for the
+current phase. The viewer (Watch) has the same tabs and Cinematic. A stage flown home cannot
+be followed from the onboard view or the map, so following one from those views switches to
+the exterior view.
 
 Top right of the picture is the **telemetry card**, and it is a window: drag it anywhere in
 the viewport by the header strip along its top, resize it from the grip in its bottom-right
@@ -1020,7 +1031,9 @@ once at real-time speed:
 - The **timeline** under the playback controls covers the recording from T‑10 s to now.
   Drag it, click anywhere on it, or use `←`/`→` (±5 s, or ±30 s with Shift) and `Home`/`End`
   to move the cursor. Every marker on the bar is a recorded event — hover for its time,
-  click to jump straight to it.
+  click to jump straight to it. Events too close together to fit share one marker marked
+  “+N”; clicking it opens a list of them by name and exact T+ time — pick one with the mouse,
+  a tap, or the arrow keys and `Enter` (`Escape` closes it).
 - Moving the cursor behind the recording head drops you into **replay**: the 3-D view, HUD,
   map, onboard overlay and phase narration all rewind together to that instant, because they
   are all driven from the same recorded snapshot. Nothing is re-simulated — scrubbing back
@@ -1048,6 +1061,14 @@ once at real-time speed:
 
 The right-hand panel (bottom, on a phone) covers the whole recorded flight with a playhead
 that follows the timeline cursor; **Ascent** zooms every chart to liftoff → parking orbit.
+In the Engineer mode, **Cards** at the top of the panel picks what it shows: every card, or
+the **Flight** (altitude, speed, dynamic pressure, g, flight plan), **Dynamics** (dynamic
+pressure, g, pitch, mass, Δv budget) or **Orbit** (apsides, Δv, altitude, flight plan, spent
+stages) set; **Choose cards** ticks them one by one (a *Custom* set). The choice is kept for
+the learner using this device. The clock, the playback and flight controls and the event log
+are never hidden by it. The HUD's *Engine level (actual)* row gives what the core and the
+strap-ons are really running at — after each engine's limits and programme, such as a
+Soyuz-2's strap-ons stepping down to 81 % — beside the *Throttle command* the guidance gives.
 
 - **Charts**: altitude, inertial speed, dynamic pressure, g-load, apoapsis/periapsis, Δv
   remaining, commanded pitch and mass, each with its event markers (max Q, MECO, fairing,
@@ -1184,7 +1205,8 @@ CSV export adds the same quantities, per sample. The physics is in PHYSICS.md §
 ## 8. Notation
 
 Rates and angles are written in **ISO 1151** in English and Thai and in **ГОСТ 20058-80** in
-Russian; the Engineer mode's setup can fix either (*Flight-dynamics notation*). The two differ
+Russian; the Engineer mode's telemetry panel can fix either (*Flight-dynamics notation*), also
+during a flight. The two differ
 in more than letters: ISO's body y axis points to the right and z to the belly, ГОСТ's y to the
 top and z to the right, so the pitch rate is q in one and ωz in the other, and a nose-right yaw
 is positive in ISO (r) but negative in ГОСТ (ωy). Everything follows the choice — the telemetry
