@@ -140,6 +140,7 @@ export class EngineerLevel {
       launchTime: () => this.host.launchTime(),
       fly: (doc) => this.host.fly(doc),
       rated: (spec) => this.rated(spec),
+      showPart: (ref) => this.showPart(ref),
     });
     this.sizing = new SizingPanel({
       openInBuilder: (spec, payloadKg) => this.host.openInExplore(spec, payloadKg),
@@ -407,6 +408,16 @@ export class EngineerLevel {
     }
     const role = t(p.kind === 'fairing' ? 'build.label.fairing' : 'build.label.interstage', { n: 1 });
     return { lines: [role], name: role };
+  }
+
+  /** R3.4: a review row about one part: select it on the drawing, bring the drawing into view and focus its label. */
+  private showPart(ref: string): void {
+    if (!benchPart(this.bench.spec, ref)) return;
+    this.part = ref;
+    this.renderPartCard();
+    this.renderDrawing();
+    this.preview.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    this.drawing.focusLabel(ref);
   }
 
   /** A part picked on the drawing (its shape or its label): its card, and the facility that examines it. */

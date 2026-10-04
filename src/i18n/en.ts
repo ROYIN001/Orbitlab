@@ -2008,6 +2008,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.eng.preview.interstage': 'An interstage is drawn from the stages it joins; it carries no figures of its own.',
   'build.eng.preview.toStand': 'Fire it on the test stand',
   'build.eng.preview.toTunnel': 'Open the wind tunnel',
+  'build.eng.review.showPart': 'Show the part',
   'build.eng.src.explore': '{name} (open in Explore)',
   'build.eng.src.gone': 'That design is no longer there to test, so the test facilities are back on {name}.',
   'build.eng.tabs': 'Test facilities and design tools',

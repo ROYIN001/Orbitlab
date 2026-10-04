@@ -1984,6 +1984,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.eng.preview.interstage': 'Межступенчатый отсек строится по соединяемым ступеням и не имеет собственных характеристик.',
   'build.eng.preview.toStand': 'Испытать на огневом стенде',
   'build.eng.preview.toTunnel': 'Открыть аэродинамическую трубу',
+  'build.eng.review.showPart': 'Показать деталь',
   'build.eng.src.explore': '{name} (из режима «Исследование»)',
   'build.eng.src.gone': 'Этого проекта больше нет, поэтому испытания снова идут на ракете {name}.',
   'build.eng.tabs': 'Испытания и проектирование',

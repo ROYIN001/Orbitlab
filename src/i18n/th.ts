@@ -1985,6 +1985,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.eng.preview.interstage': 'ส่วนต่อระหว่างขั้นวาดจากขั้นที่เชื่อมต่อ ไม่มีตัวเลขของตัวเอง',
   'build.eng.preview.toStand': 'จุดเครื่องยนต์บนแท่นทดสอบ',
   'build.eng.preview.toTunnel': 'เปิดอุโมงค์ลม',
+  'build.eng.review.showPart': 'ชี้ชิ้นส่วน',
   'build.eng.src.explore': '{name} (เปิดอยู่ในระดับทดลอง)',
   'build.eng.src.gone': 'ไม่มีแบบนั้นให้ทดสอบแล้ว จึงกลับมาทดสอบ {name} แทน',
   'build.eng.tabs': 'การทดสอบและเครื่องมือออกแบบ',
