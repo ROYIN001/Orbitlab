@@ -12,6 +12,7 @@
  */
 import type { SatelliteKind, SatelliteSpec } from '../types';
 import type { MissionDocument } from '../config/mission-file';
+import { parseDesignRef, type DesignRef } from '../design/design-ref';
 import { elementsFromState, type OrbitalElements } from '../physics/orbital';
 import { v3 } from '../physics/vec3';
 import { spacecraftFor } from '../physics/propagator/spacecraft';
@@ -60,6 +61,12 @@ export interface OrbitHandoff {
     vehicleName: string;
     /** mission time of the state, s after T−0 */
     missionTime: number;
+    /**
+     * R3.1: the user's design it flew (or, sent from Build, the design placed
+     * in its orbit), with its saved revision — absent when it was a catalogue
+     * craft. Optional, so a hand-off without it reads as before.
+     */
+    design?: DesignRef;
   };
 }
 
@@ -192,6 +199,8 @@ export function parseHandoff(raw: unknown): OrbitHandoff | null {
   if (p !== null && (!isObj(p) || !positive(p.thrust) || !positive(p.isp) || !finite(p.propellantMass) || p.propellantMass < 0)) return null;
   if (!isObj(origin) || typeof origin.vehicleName !== 'string' || !finite(origin.missionTime)) return null;
   if (origin.mission !== null && !isObj(origin.mission)) return null;
+  // R3.1: a design named but unreadable is refused, not shown as some other design
+  if (parseDesignRef(origin.design) === 'invalid') return null;
   const h = raw as unknown as OrbitHandoff;
   const el = handoffElements(h);
   if (!(el.e < 1) || !(el.periapsisAlt > HANDOFF_MIN_PERIGEE)) return null;

@@ -781,6 +781,9 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'ctx.source.lesson': 'บทเรียน',
   'ctx.source.design': 'แบบของคุณ',
   'ctx.source.catalogue': 'จรวดจากแคตตาล็อก',
+  'ctx.design.saved': "{name} บันทึกเมื่อ {date}",
+  'ctx.design.edited': "{name} แก้ไขหลังบันทึกเมื่อ {date}",
+  'ctx.design.unsaved': "{name} ยังไม่ได้บันทึก",
   'ctx.steps': 'ขั้นของภารกิจ',
   'ctx.step.build': 'สร้าง',
   'ctx.step.check': 'ตรวจ',
@@ -1152,6 +1155,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'handoff.none': 'ยังไม่มีวงโคจร ให้ส่งยานเข้าสู่วงโคจรในส่วนปล่อยจรวด แล้วกด "บินต่อในวงโคจร" เพื่อนำวงโคจรมาที่นี่',
   'handoff.notInOrbit': 'ยานบนหน้าจอยังไม่เข้าสู่วงโคจร วงโคจรจะส่งต่อมาที่นี่ได้เมื่อจุดใกล้โลกที่สุดสูงกว่า 100 กม.',
   'handoff.mass': 'มวลยานอวกาศ',
+  'handoff.design': "แบบ: {design}",
   'handoff.propellant': 'เชื้อเพลิงของยานเองที่เหลือ',
   // O01: the orbit playground (src/ui/orbit/)
   'pg.title': 'สนามทดลองวงโคจร',

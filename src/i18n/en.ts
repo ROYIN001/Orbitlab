@@ -797,6 +797,9 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'ctx.source.lesson': 'lesson',
   'ctx.source.design': 'your design',
   'ctx.source.catalogue': 'catalogue rocket',
+  'ctx.design.saved': "{name}, saved {date}",
+  'ctx.design.edited': "{name}, changed since saved {date}",
+  'ctx.design.unsaved': "{name}, not saved",
   'ctx.steps': 'Mission steps',
   'ctx.step.build': 'Build',
   'ctx.step.check': 'Check',
@@ -1175,6 +1178,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'handoff.none': 'No orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.',
   'handoff.notInOrbit': 'The flight on screen is not in orbit yet: an orbit is handed on once its perigee is above 100 km.',
   'handoff.mass': 'Spacecraft mass',
+  'handoff.design': "Design: {design}",
   'handoff.propellant': 'Its own propellant left',
   // O01: the orbit playground (src/ui/orbit/)
   'pg.title': 'Orbit playground',

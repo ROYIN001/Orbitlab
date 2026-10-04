@@ -132,6 +132,14 @@ export default async function r3BenchDrawings(t) {
       }), { timeoutMs: 5000 }), 'Show its settings did not land on the third stage\'s card');
       await app.shot('explore-show-settings');
     }
+    // R3.1: the remix flown unsaved says so beside the mission's name
+    const flyBtn = page.locator('.bx-controls [data-k="fly"], [data-k="fly"]:visible').first();
+    if (t.check(await t.until(() => flyBtn.isVisible(), { timeoutMs: 10_000 }), 'the Explore builder has no Fly it')) {
+      await flyBtn.scrollIntoViewIfNeeded();
+      await press(t, app, flyBtn, 'mouse', 'Fly it (remix)');
+      t.check(await t.until(async () => /your design · .+, not saved/.test(await page.locator('#mission-eyebrow').textContent() ?? ''), { timeoutMs: 15_000 }),
+        `the flown remix is not named as an unsaved design: "${await page.locator('#mission-eyebrow').textContent()}"`);
+    }
   }
   app.checkErrors();
   await app.context.close();

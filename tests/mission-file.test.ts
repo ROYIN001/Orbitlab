@@ -444,3 +444,18 @@ describe('a historical flight in a mission file (C01: Vostok-1)', () => {
     expect(validateConfigInput(back.state)).toEqual([]);
   });
 });
+
+describe('R3.1 the stored mission keeps the design it flies beside the mission', () => {
+  it('writes the reference at the top level, and the parser reads the mission exactly as without it', () => {
+    const kept = new Map<string, string>();
+    const store = { setItem: (k: string, v: string) => { kept.set(k, v); }, getItem: (k: string) => kept.get(k) ?? null };
+    const design = { kind: 'vehicle' as const, name: 'My rocket', recordId: 'd1', revision: '2026-10-04T12:30:00.000Z', edited: false, specId: 'v-1' };
+    saveStoredMission(everything(), store, design);
+    const withRef = loadStoredMission(store) as Record<string, unknown>;
+    expect(withRef.design).toEqual(design);
+    saveStoredMission(everything(), store);
+    const without = loadStoredMission(store) as Record<string, unknown>;
+    expect(without.design).toBeUndefined();
+    expect(parseMissionDocument(withRef, fallback())).toEqual(parseMissionDocument(without, fallback()));
+  });
+});

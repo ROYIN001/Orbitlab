@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- R3.1 (design revision): a mission flown from Build, and its orbit handed on to Orbit, say which of your designs it is and which version — when it was saved, changed since, or not saved.
 - R3.3 (diagrams): the satellite bench's Power, Radio and Camera tabs each draw a diagram from their own figures — the time in the Earth's shadow, the link to the ground station and its margin, the camera's footprint and detail.
 - R3.3 (stowed pose): the satellite bench draws a design with wings stowed for launch as well as deployed, with the fold stated as an assumption, and shows the satellite's body axes.
 - R3.5 (second part): a result suggests one change as before → after, applied to a new mission only when you press for it; Orbit's orbit list separates *Continue from a flight* from *Place an orbit directly* and says which one is on screen; a check about one part in the Explore builder has *Show its settings*.

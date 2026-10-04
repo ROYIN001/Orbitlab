@@ -815,7 +815,9 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
 
 Above the scene, the line over the mission's name says where the mission comes from — a
 catalogue rocket, your design, a lesson, the launch Watch prepared, the first-launch template or
-a copy to try — and under the name, at Explore and Engineer, are its steps: **Build › Check ›
+a copy to try; for your design it also says which one and which version: its name and when it
+was saved, *changed since saved* when you changed it after saving, or *not saved* (the same
+words follow it into the Orbit section) — and under the name, at Explore and Engineer, are its steps: **Build › Check ›
 Launch › Result › Orbit**, the one it is at in bold. Build opens the Build section, Check the
 verdict in the setup before launch, Result the result card once the flight has ended, and Orbit
 continues in the Orbit section once the flight is in orbit (struck through when it ended out of

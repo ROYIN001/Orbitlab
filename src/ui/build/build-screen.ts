@@ -58,6 +58,9 @@ import { RequirementsPage } from './requirements-page';
 import type { MissionDocument } from '../../config/mission-file';
 import type { OrbitHandoff } from '../../orbit/handoff';
 import type { LaunchMissionNow } from './satellite-fly';
+import { designRefFor, type DesignRef } from '../../design/design-ref';
+import { LocalDesignStore, type DesignKind, type DesignRecord } from '../../design/design-store';
+import { launchSpecId } from '../../design/satellite-launch';
 import './build.css';
 
 export interface BuildScreenHost {
@@ -66,6 +69,12 @@ export interface BuildScreenHost {
   launchTime?(): Date;
   /** hand a design to the Launch section as a mission document and open it at `level`; false when it could not take it */
   flyDesign?(doc: MissionDocument, level: AppLevel): boolean;
+  /**
+   * R3.1: the design just flown, with its saved revision. It follows
+   * `flyDesign` as soon as the saved record has been read (the store is
+   * asynchronous); the Launch section keeps it while its mission flies that design.
+   */
+  designFlown?(ref: DesignRef): void;
   /**
    * D06 (Phase 4 map §2.6 a): hand a designed satellite to the Orbit section
    * in its own orbit, with no launch, as the S03 hand-off
@@ -410,6 +419,50 @@ export class BuildScreen {
   }
 
   /** The one satellite both levels work on, made the first time either is wanted. */
+  /** R3.1: a design handed to Launch, then the reference to it once its saved record has been read. */
+  private fly(doc: MissionDocument, level: AppLevel): boolean {
+    const ok = this.host.flyDesign?.(doc, level) ?? false;
+    if (ok) void this.flownRef(doc).then((ref) => { if (ref) this.host.designFlown?.(ref); }, () => { /* no reference: the mission flies all the same */ });
+    return ok;
+  }
+
+  /** R3.1: "Send to Orbit": the designed satellite in its orbit, with the reference to the design and its revision. */
+  private toOrbit(h: OrbitHandoff, level: AppLevel): void {
+    const ws = this.workspace();
+    void this.refFor('satellite', { name: ws.design.name, recordId: ws.recordId, design: ws.design }, launchSpecId(ws.design))
+      .catch(() => null)
+      .then((ref) => this.host.toOrbit?.(ref ? { ...h, origin: { ...h.origin, design: ref } } : h, level));
+  }
+
+  /**
+   * R3.1: the design a flown mission carries — a designed satellite (the
+   * satellite workspace's design, by its spec id), else a designed rocket (the
+   * Explore builder's) — or null for catalogue craft.
+   */
+  private async flownRef(doc: MissionDocument): Promise<DesignRef | null> {
+    const m = doc.mission;
+    if (m.satelliteSpec && this.satWorkspace && launchSpecId(this.satWorkspace.design) === m.satelliteSpec.id) {
+      const ws = this.satWorkspace;
+      return this.refFor('satellite', { name: ws.design.name, recordId: ws.recordId, design: ws.design }, m.satelliteSpec.id);
+    }
+    const cur = this.explore?.flying() ?? null;
+    if (m.vehicleSpec && cur && cur.spec.id === m.vehicleSpec.id) {
+      return this.refFor('vehicle', { name: cur.name, recordId: cur.recordId, design: cur.spec }, m.vehicleSpec.id);
+    }
+    return null;
+  }
+
+  private async refFor(kind: DesignKind, current: { name: string; recordId: string | null; design: unknown }, specId: string): Promise<DesignRef> {
+    let record: DesignRecord | null = null;
+    if (current.recordId !== null) {
+      try { record = await this.designs.get(current.recordId); } catch { record = null; }
+    }
+    return designRefFor(kind, current, specId, record);
+  }
+
+  /** R3.1: the saved designs, read for a flown design's revision */
+  private readonly designs = new LocalDesignStore();
+
   private workspace(): SatelliteWorkspace {
     if (!this.satWorkspace) {
       const ws = new SatelliteWorkspace();
@@ -468,9 +521,9 @@ export class BuildScreen {
   private ensureSatellite(): SatelliteLevel {
     if (!this.satLevel) {
       this.satLevel = new SatelliteLevel(this.workspace(), {
-        toOrbit: (h) => this.host.toOrbit?.(h, 'explore'),
+        toOrbit: (h) => this.toOrbit(h, 'explore'),
         launchMission: () => this.launchMission(),
-        fly: (doc) => this.host.flyDesign?.(doc, 'explore') ?? false,
+        fly: (doc) => this.fly(doc, 'explore'),
         // a rocket imported in the satellite designer opens in the rocket designer
         openRocket: (record, message) => {
           this.setCraft('rocket');
@@ -496,7 +549,7 @@ export class BuildScreen {
       this.satBench = new SatelliteBench(this.workspace(), {
         toExplore: () => { this.setCraft('satellite'); this.host.go(route('build', 'explore')); },
         launchMission: () => this.launchMission(),
-        fly: (doc) => this.host.flyDesign?.(doc, 'engineer') ?? false,
+        fly: (doc) => this.fly(doc, 'engineer'),
         // D07: "Start from requirements", and where a design opened from a row came from
         toRequirements: () => this.host.go(route('build', 'engineer', 'requirements')),
         origin: (designId) => (this.reqOrigin?.designId === designId ? this.reqOrigin : null),
@@ -516,7 +569,7 @@ export class BuildScreen {
         exploreDesign: () => this.explore?.design() ?? null,
         rateExploreDesign: (spec) => this.explore?.adoptRatings(spec),
         launchTime: () => this.host.launchTime?.() ?? new Date(),
-        fly: (doc) => this.host.flyDesign?.(doc, 'engineer') ?? false,
+        fly: (doc) => this.fly(doc, 'engineer'),
         openInExplore: (spec, payloadKg) => {
           this.ensureExplore().openDesign(spec, payloadKg);
           this.host.go(route('build', 'explore'));
@@ -534,7 +587,7 @@ export class BuildScreen {
     if (!this.explore) {
       this.explore = new ExploreLevel({
         launchTime: () => this.host.launchTime?.() ?? new Date(),
-        fly: (doc) => this.host.flyDesign?.(doc, 'explore') ?? false,
+        fly: (doc) => this.fly(doc, 'explore'),
         // D06: a satellite file imported in the rocket designer opens in the satellite designer
         openSatellite: (record, message) => {
           this.setCraft('satellite');

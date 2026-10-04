@@ -109,14 +109,22 @@ export class Narration {
   /** R3.5: where the mission comes from, said in its eyebrow ("MISSION · your design") */
   private sourceKey: string | null = null;
 
-  setSource(key: string | null): void {
-    if (key === this.sourceKey) return;
+  /** R3.1: which design, which revision (src/ui/design-ref-text.ts), said after the source; worded on each render, so it follows the language */
+  private sourceDetail: { signature: string; text: () => string } | null = null;
+
+  setSource(key: string | null, detail: { signature: string; text: () => string } | null = null): void {
+    if (key === this.sourceKey && (detail?.signature ?? '') === (this.sourceDetail?.signature ?? '')) return;
     this.sourceKey = key;
+    this.sourceDetail = detail;
     this.renderEyebrow();
   }
 
   private renderEyebrow(): void {
-    if (this.missionEyebrow) this.missionEyebrow.textContent = this.sourceKey ? `${t('narr.mission')} · ${t(this.sourceKey)}` : t('narr.mission');
+    if (!this.missionEyebrow) return;
+    const parts = [t('narr.mission')];
+    if (this.sourceKey) parts.push(t(this.sourceKey));
+    if (this.sourceDetail) parts.push(this.sourceDetail.text());
+    this.missionEyebrow.textContent = parts.join(' · ');
   }
 
   applyLanguage(): void {

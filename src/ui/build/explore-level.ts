@@ -270,6 +270,13 @@ export class ExploreLevel {
     this.visible = false;
   }
 
+  /** R3.1: the design on screen as "Fly it" flies it — its spec, name and the saved record it is — or null while it is refused. */
+  flying(): { spec: VehicleSpec; name: string; recordId: string | null } | null {
+    if (!this.result.ok) return null;
+    const d = activeDraft(this.state);
+    return { spec: this.result.spec, name: d.name.trim() || this.result.spec.name, recordId: d.recordId };
+  }
+
   /**
    * The design on screen as the vehicle it flies, its name and payload, for
    * the Engineer level's test facilities (D04); null while it is refused.

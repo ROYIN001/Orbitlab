@@ -779,6 +779,9 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'ctx.source.lesson': 'урок',
   'ctx.source.design': 'ваш проект',
   'ctx.source.catalogue': 'ракета из каталога',
+  'ctx.design.saved': "{name}, сохранён {date}",
+  'ctx.design.edited': "{name}, изменён после сохранения {date}",
+  'ctx.design.unsaved': "{name}, не сохранён",
   'ctx.steps': 'Этапы миссии',
   'ctx.step.build': 'Сборка',
   'ctx.step.check': 'Проверка',
@@ -1151,6 +1154,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'handoff.none': 'Орбиты пока нет. Выведите аппарат на орбиту в разделе «Запуск» и нажмите «Продолжить на орбите», чтобы перенести её сюда.',
   'handoff.notInOrbit': 'Аппарат на экране ещё не на орбите: орбита передаётся сюда, когда её перигей выше 100 км.',
   'handoff.mass': 'Масса космического аппарата',
+  'handoff.design': "Проект: {design}",
   'handoff.propellant': 'Остаток собственного топлива',
   // O01: the orbit playground (src/ui/orbit/)
   'pg.title': 'Интерактивная орбита',
