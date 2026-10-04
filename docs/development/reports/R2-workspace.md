@@ -4,7 +4,7 @@
 - แผน: R2.1–R2.4 ใน [PLAN.md](../PLAN.md); ความต้องการ U02, U03, U08 (ต่อจาก R1), U09 (ต่อจาก R1), U10, U11, U16 (ส่วน UI), A04, A05
 - ฐาน: `main` ที่ `fbefa18b3aa34a1a00332bfb63c432fe11a4777c`; branch `claude/funny-turing-vr4jbm`
 - การอนุญาต: ผู้ใช้สั่ง “เริ่มทำในระยะที่ 2” และ “ทำต่อเลย” เมื่อ 2026-10-04 (ไม่รวม R3–R7)
-- สถานะ: implementation และ focused local checks เสร็จ; **ยังไม่ได้เปิด PR, ไม่ได้ merge และไม่ได้เผยแพร่** CI/Pages เต็มต้องรันบน candidate ก่อน merge ตามข้อ 10.2
+- สถานะ: implementation และ local checks เสร็จ; PR/CI/merge บันทึกใน [PROGRESS.md](../PROGRESS.md) — CI ต้องผ่านบน candidate ก่อน merge ตามข้อ 10.2
 
 ## การตัดสินใจที่ยังรอ (D08) และสมมติฐานที่ใช้
 
@@ -61,8 +61,11 @@ Local: Node 22.22.0 (แผนระบุ 22.23.3), Chromium **141.0.7390.37** 
 - `npx tsc --noEmit`: ผ่าน
 - unit ใหม่: `tests/timeline-chooser.test.ts` (4), `tests/camera-policy.test.ts` (7), `tests/engine-levels.test.ts` (4), `tests/flight-lifecycle.test.ts` (2), `tests/telemetry-layout.test.ts` (5) — ผ่านทั้งหมด
 - `tests/i18n.test.ts`, `tests/camera-gestures.test.ts`, `tests/workspace-profiles.test.ts`: ผ่าน (i18n จับ key ที่ไม่มี call site ได้หนึ่งครั้งระหว่างพัฒนาและแก้แล้ว)
-- full default unit suite: ดูส่วน “ผลชุดเต็ม” ด้านล่าง
-- browser journey ใหม่ `tests/browser/journeys/r2-flight-shell.mjs` บน production build: ดูผลด้านล่าง; ใช้ปุ่มจริง (mouse/keyboard/touch) และอ่านสถานะจาก WebMCP
+- full default unit suite (`npx vitest run`, หนึ่ง process บน 4 cores): **10,095 passed / 1 failed จาก 10,096 (279 files)** — case ที่ล้มคือ `tests/rigid-controls.test.ts` ซึ่งเกิดจากร่างแรกของ R2.1 (ทำช่อง manual throttle ว่างใต้ autopilot); ยกเลิกการเปลี่ยนนั้นแล้วรันไฟล์ซ้ำ **3/3 ผ่าน** ไม่ได้แก้ test
+- `tests/repo-hygiene.test.ts` 9/9, `tests/hud-layout.test.ts` 24/24, `tests/bundle-budget.test.ts` + `tests/budget.test.ts` 18/18 ผ่าน
+- `npx vite build` + `node scripts/bundle-budget.mjs`: index JS เกิน 12.2 kB (2585.2/2573) และ index CSS เกิน 0.6 kB (169.6/169) จากฟีเจอร์ R2 บนหน้าจอแรกของ Launch; ปรับ ceiling เป็น 2588 / 170 kB พร้อมเหตุผลใน `budgets.json` `_notes` ตามกติกา; worker และ precache ceilings ไม่เปลี่ยน; หลังปรับ budget **ok**
+- browser บน production `dist/` (Chromium 141 local): `node tests/browser/run.mjs --dist dist r2-flight-shell notation-defaults gesture-ownership watch-controls mobile-smoke workspace-navigation` → **6/6 journeys ผ่าน, 585.7 s** (r2-flight-shell 232.2 s, watch-controls 145.6 s, workspace-navigation 84.5 s, mobile-smoke 68.2 s, gesture-ownership 29.5 s, notation-defaults 23.8 s); journey เดิมผ่านโดยไม่แก้ selector (`notation-section` ย้ายไป telemetry แล้ว)
+- รอบสุดท้าย r2-flight-shell รวม R2.3: preset Orbit ซ่อน q/แสดง apsides, ติ๊ก mass → Custom, reload แล้วคงค่า, All กลับครบ, clock/playback/event log ไม่หาย; จอ 1024×700 EN, 320×740 RU, 390×844 TH ระหว่างบินไม่เลื่อนแนวนอนและปุ่ม play/⚙ Setup/clock อยู่ในจอ; แถว engine อ่านได้ `core 58 % · strap-ons 58 %` ช่วงเครื่องยนต์กำลังเร่งตอน ignition (ค่าจริงต่างจาก command)
 
 ผลรอบก่อนเพิ่ม R2.3 (production build ของ commit `2613159`): **1/1 journey ผ่าน**, 153.4 s — setup ซ่อนและ scene ขยาย, ⚙ Setup แสดง/ซ่อน config ที่ disable, notation เปลี่ยนกลางบิน, HUD แสดง `core 100 % · strap-ons 100 %` (ช่วงต้นของ Soyuz-2.1a ยังไม่ถึง programme step จึงไม่ได้พิสูจน์ค่า 81 %), view `space` อยู่ข้าม T+148 s และ Cinematic คืน `exterior`, chooser เปิด/ลูกศรไม่ seek/Enter seek ไปเวลาที่บันทึกตรงตัว/Escape คืน focus, Watch `onboard` อยู่ข้าม T+150 s, โทรศัพท์ 390 px มี flight bar ที่ play/pause ได้และไม่เลื่อนด้านข้าง
 
