@@ -14,6 +14,9 @@ export default async function r3ResultSetting(t) {
   const { page } = app;
   const set = await app.mcp('configure_mission', { vehicleId: 'falcon9', siteId: 'cape', orbitId: 'leo', failureMode: 'prematureSep', failureTimeS: 20 });
   if (!t.check(set.ok, `configure_mission: ${JSON.stringify(set).slice(0, 200)}`)) return;
+  // the mission's source beside its name: a catalogue rocket set up here
+  t.check(await t.until(async () => /catalogue rocket/.test(await page.locator('#mission-eyebrow').textContent() ?? ''), { timeoutMs: 5000 }),
+    `the mission eyebrow does not say where the mission comes from: "${await page.locator('#mission-eyebrow').textContent()}"`);
   const launched = await app.mcp('launch_mission', {});
   if (!t.check(launched.ok, `launch_mission: ${JSON.stringify(launched)}`)) return;
   await app.mcp('control_playback', { action: 'warp', warp: 10 });

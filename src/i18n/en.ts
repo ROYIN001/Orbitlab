@@ -787,6 +787,10 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'orbit.custom.desc': 'Set perigee, apogee, inclination, argument of perigee and RAAN yourself.',
   // viewport narration
   'narr.mission': 'MISSION',
+  'ctx.source.viewer': 'from Watch',
+  'ctx.source.lesson': 'lesson',
+  'ctx.source.design': 'your design',
+  'ctx.source.catalogue': 'catalogue rocket',
   'narr.latestEvent': 'Latest flight event',
   'narr.standby': 'Vehicle standing by on the pad.',
   'clock.countdown': 'LAUNCH COUNTDOWN',

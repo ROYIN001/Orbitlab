@@ -27,6 +27,7 @@ import { RecoverySceneryView } from './render/recovery';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
 import { CameraPolicy } from './render/camera-policy';
 import { missionStage, setupCollapsed, type MissionStage } from './ui/flight-lifecycle';
+import { MISSION_SOURCE_KEY, missionSource } from './ui/mission-source';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { ExploreDebrief } from './ui/explore-debrief';
@@ -1321,6 +1322,9 @@ class App {
 
   private updateMissionName(): void {
     const cfg = this.panel.state;
+    // R3.5: whose mission this is, beside its name
+    this.narration.setSource(MISSION_SOURCE_KEY[missionSource({ origin: this.workspace.origin, lesson: !!document.body.dataset.lesson,
+      customVehicle: !!cfg.vehicleSpec, customSatellite: !!cfg.satelliteSpec })]);
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
     this.narration.setMission(missionVehicle(cfg).name,
