@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- R3 (package 1): the Build Engineer bench draws the vehicle on the bench to scale from the spec it tests, with each part's figures and a way onto the test stand; the satellite bench draws the design (bus, wings or cells, dish, camera, engine) with its assumptions stated; readiness rows about one part point at it; the Orbit hand-off and comparison reference record the mission flown rather than the setup draft.
 - R2: Launch Engineer gives the setup column's width to the scene once a flight is launched (⚙ Setup shows the frozen configuration, New mission reopens it); a picked camera view is kept across phases until Cinematic, and Watch gains the view tabs; clustered timeline events open a chooser with exact T+ times; telemetry card presets (Flight, Dynamics, Orbit, custom); the HUD shows the engines' actual level beside the throttle command; the notation moves to the telemetry panel; a phone keeps a compact flight bar while reading the charts.
 - Stages 3–4: My work adds an experiment notebook with flown-input provenance, model limits and reproducible validation reports, offline classroom checks/repair, and project backups with strict import previews and recovery. Lesson packs show their sources and pending human-review status.
 
