@@ -47,6 +47,14 @@ Local: Node 22.22.0, Chromium 141.0.7390.37, software WebGL, render scale 0.5
 - full default unit suite (`npx vitest run`): **10,113 passed / 10,113 (283 files)**
 - browser บน production `dist/` ของ source นี้: `r3-bench-drawings gesture-ownership requirements satellite launch-explore workspace-navigation profile-session-safety` → **7/7 ผ่าน, 485.0 s** (satellite 40.3 s ครอบคลุม Send to Orbit/Fly it ที่ใช้ handoff; launch-explore 106.3 s บินถึงวงโคจรและ export CSV; profile-session-safety 158.0 s รวม Build routes)
 
+## การเผยแพร่ครั้งแรกล้ม (precache budget) และการแก้
+
+- R3 merge ผ่าน [PR #75](https://github.com/ROYIN001/Orbitlab/pull/75) (CI 37172156819 เขียวทั้งหมด) ที่ `7ddab75dfac7add18c93f7adf5058133ee3f45f2`
+- [Pages 37172926281](https://github.com/ROYIN001/Orbitlab/actions/runs/37172926281) **ล้ม**ที่ bundle budget ของ build: precache **15787.4 kB > 15783 kB (+4.4 kB)** หลัง refresh data snapshots ของวันนั้น ขณะที่ CI ใช้ snapshots ที่ commit ไว้วัดได้ 15778.7 kB (เหลือ 4.3 kB) — unit 3 shards และ typecheck ผ่าน; browser/publish ถูกข้าม เว็บไซต์ยังเป็นรุ่น R2 (`da67341`)
+- สาเหตุ: โค้ด R2/R3 (~24 kB) ใช้ headroom ของ precache จนเกือบหมด และ CI ตรวจ budget ด้วย snapshots เก่าจึงไม่เห็น; ไม่ใช่ flake
+- แก้: ceiling precache = 15787.4 kB + 2 % (16103 kB) ตามธรรมเนียมเดิมของไฟล์ พร้อมเหตุผลใน `budgets.json` `_notes`; ไม่เปลี่ยน ceiling อื่น
+- ข้อสังเกตกระบวนการ: PR CI ไม่สามารถจับ precache ที่โตตาม data refresh ได้ ควรให้ headroom ของ precache ไม่ต่ำกว่าการเติบโตของ snapshots รายวัน (เสนอเป็นงาน T)
+
 ## ข้อจำกัดและงานที่เหลือ
 
 - **R3.5 ยังไม่ทำ:** Home “ลองปล่อยครั้งแรก” แบบ editable template, compact mission context (Build→Check→Launch→Result→Orbit), Watch→สำเนาทดลอง, result→typed edit พร้อม before/after, การพาไป field ใน parts builder
