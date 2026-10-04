@@ -72,6 +72,36 @@ async function pageDiagnostics(page, pendingRequests) {
   return { ...state, pendingRequests: [...pendingRequests.values()] };
 }
 
+/**
+ * What the browser's processes are doing, read through the browser process so
+ * it answers while a page's main thread is blocked (page diagnostics then time
+ * out): the CPU seconds each kind of process used over three seconds — a busy
+ * GPU process is slow software rendering, nothing busy is a hang — and the
+ * GPU's feature status.
+ */
+async function browserDiagnostics(browser) {
+  let session = null;
+  try {
+    session = await browser.newBrowserCDPSession();
+    const sample = async () => (await session.send('SystemInfo.getProcessInfo')).processInfo;
+    const before = await sample();
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+    const after = await sample();
+    const cpuSeconds = {};
+    for (const p of after) {
+      const used = p.cpuTime - (before.find((q) => q.id === p.id)?.cpuTime ?? 0);
+      cpuSeconds[p.type] = Math.round(((cpuSeconds[p.type] ?? 0) + used) * 100) / 100;
+    }
+    const { gpu } = await session.send('SystemInfo.getInfo');
+    return { cpuSecondsOver3s: cpuSeconds, processes: after.map((p) => p.type),
+      gpu: { featureStatus: gpu.featureStatus, devices: gpu.devices.map((d) => `${d.vendorString} ${d.deviceString} ${d.driverVersion}`.trim()) } };
+  } catch (error) {
+    return { browserError: String(error?.message ?? error).split('\n')[0] };
+  } finally {
+    await session?.detach().catch(() => {});
+  }
+}
+
 /** The app's language (`src/i18n/index.ts`) and the browser locale that goes with it. */
 const LOCALES = { en: 'en-GB', ru: 'ru-RU', th: 'th-TH' };
 
@@ -188,9 +218,11 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
     async diagnose() {
       const data = await Promise.all(apps.map((app) => app.diagnostics()));
       t.log('failure diagnostics:', JSON.stringify(data));
+      const processes = await browserDiagnostics(browser);
+      t.log('browser diagnostics:', JSON.stringify(processes));
       if (shots) {
         mkdirSync(shots, { recursive: true });
-        writeFileSync(join(shots, `${name}-diagnostics.json`), `${JSON.stringify(data, null, 2)}\n`);
+        writeFileSync(join(shots, `${name}-diagnostics.json`), `${JSON.stringify({ pages: data, browser: processes }, null, 2)}\n`);
       }
       return data;
     },
