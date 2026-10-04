@@ -46,6 +46,11 @@ import { ReviewPanel } from './review-panel';
 import { StagingPanel } from './staging-panel';
 import { SizingPanel } from './sizing-panel';
 import type { ReviewChoice } from '../../design/review-model';
+import type { DrawnPart } from '../../design/exploded';
+import { benchPart, type BenchPartFacts } from '../../design/bench-part';
+import { stageName } from '../names';
+import { StackSvg, type StackLabel } from './stack-svg';
+import { mass } from './figures';
 import './engineer.css';
 
 /** A design the Explore level has on screen. */
@@ -110,6 +115,15 @@ export class EngineerLevel {
   private loadSeq = 0;
 
   private readonly head = el('header', 'bs-panel be-head');
+  /** R3.2: the vehicle on the bench, drawn from the spec the facilities test */
+  private readonly preview = el('section', 'bs-panel be-preview');
+  private readonly drawBox = el('div', 'be-draw');
+  private readonly partCard = el('div', 'be-partcard');
+  private readonly drawing = new StackSvg((ref) => this.pickPart(ref));
+  private explode = 0;
+  private part: string | null = null;
+  private drawQueued = 0;
+  private readonly drawObserver: ResizeObserver | null;
   private readonly tabBar = el('div', 'be-tabs');
   private readonly panels = {} as Record<EngineerTab, HTMLElement>;
   private readonly coming = el('section', 'bs-panel be-coming');
@@ -144,7 +158,11 @@ export class EngineerLevel {
       this.panels[k] = panel;
     }
     this.coming.setAttribute('aria-labelledby', 'be-coming-title');
-    this.root.append(this.head, this.tabBar, ...TABS.map((k) => this.panels[k]), this.coming);
+    this.drawBox.append(this.drawing.root);
+    this.partCard.setAttribute('aria-live', 'polite');
+    this.drawObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => this.queueDrawing()) : null;
+    this.drawObserver?.observe(this.drawBox);
+    this.root.append(this.head, this.preview, this.tabBar, ...TABS.map((k) => this.panels[k]), this.coming);
     this.setBench(this.bench);
   }
 
@@ -251,6 +269,9 @@ export class EngineerLevel {
   /** `choice`: the whole mission the readiness review starts on (the sizing page's); otherwise it keeps what fits. */
   private setBench(b: BenchVehicle, choice?: ReviewChoice): void {
     this.bench = b;
+    // a part picked on the previous vehicle names nothing on this one
+    if (this.part && !benchPart(b.spec, this.part)) this.part = null;
+    if (this.visible) this.renderPreview();
     this.stand.setVehicle(b.spec, b.name);
     this.tunnel.setVehicle(b.spec, b.name, b.payloadKg);
     this.review.setVehicle(b.spec, b.name, b.payloadKg, choice);
@@ -301,6 +322,7 @@ export class EngineerLevel {
     this.picker.render();
     this.picker.set(this.sourceId);
     this.renderHead();
+    this.renderPreview();
     this.renderTabs();
     this.renderComing();
     this.stand.render();
@@ -328,6 +350,100 @@ export class EngineerLevel {
       side.append(msg);
     }
     this.head.replaceChildren(text, side);
+  }
+
+  // ─── R3.2: the bench drawing ───────────────────────────────────────────────
+
+  /** The drawing and its controls; the SVG itself is laid out for its box on the next frame. */
+  private renderPreview(): void {
+    const head = el('div', 'be-preview-head');
+    const title = el('h2', 'bx-h2', t('build.eng.preview.title', { name: this.bench.name }));
+    title.id = 'be-preview-title';
+    const modes = el('div', 'be-preview-modes');
+    modes.setAttribute('role', 'group');
+    modes.setAttribute('aria-label', t('build.eng.preview.view'));
+    for (const [value, key] of [[0, 'build.eng.preview.stacked'], [1, 'build.eng.preview.apart']] as const) {
+      const b = button('be-mode', t(key), () => { this.explode = value; this.renderPreview(); });
+      b.setAttribute('aria-pressed', String(this.explode === value));
+      modes.append(b);
+    }
+    head.append(title, modes);
+    this.preview.setAttribute('aria-labelledby', 'be-preview-title');
+    this.renderPartCard();
+    const body = el('div', 'be-preview-body');
+    body.append(this.drawBox, this.partCard);
+    this.preview.replaceChildren(head, body, el('p', 'bx-note', t('build.eng.preview.note')));
+    this.queueDrawing();
+  }
+
+  private queueDrawing(): void {
+    if (this.drawQueued || !this.visible) return;
+    this.drawQueued = requestAnimationFrame(() => { this.drawQueued = 0; this.renderDrawing(); });
+  }
+
+  private renderDrawing(): void {
+    if (!this.visible) return;
+    const w = this.drawBox.clientWidth, h = this.drawBox.clientHeight;
+    if (w < 10 || h < 10) return;
+    const spec = this.bench.spec;
+    this.drawing.render({
+      spec, explode: this.explode, selected: this.part, highlight: null,
+      label: (p) => this.partLabel(p), title: t('build.drawing.title', { name: spec.name }),
+    }, w, h);
+  }
+
+  private partLabel(p: DrawnPart): StackLabel {
+    const spec = this.bench.spec;
+    const st = spec.stages[p.stageIndex];
+    const engine = (count: number, name: string): string => (count > 1 ? `${count} × ${name}` : name);
+    if (p.kind === 'stage') {
+      const role = t('build.label.stage', { n: p.stageIndex + 1 });
+      return { lines: [role, engine(st.engine.count, st.engine.name)], name: `${role}: ${stageName(spec, st.id, st.name)}` };
+    }
+    if (p.kind === 'booster') {
+      const b = st.boosters?.[p.group];
+      const role = t('build.label.boosters', { n: b?.count ?? 1 });
+      return { lines: b ? [role, engine(b.engine.count, b.engine.name)] : [role], name: role };
+    }
+    const role = t(p.kind === 'fairing' ? 'build.label.fairing' : 'build.label.interstage', { n: 1 });
+    return { lines: [role], name: role };
+  }
+
+  /** A part picked on the drawing (its shape or its label): its card, and the facility that examines it. */
+  private pickPart(ref: string): void {
+    this.part = this.part === ref ? null : ref;
+    this.renderPartCard();
+    this.renderDrawing();
+    if (this.part) this.drawing.focusLabel(this.part);
+  }
+
+  private renderPartCard(): void {
+    const f: BenchPartFacts | null = this.part ? benchPart(this.bench.spec, this.part) : null;
+    if (!f) {
+      this.partCard.replaceChildren(el('p', 'bx-note', t('build.eng.preview.pick')));
+      return;
+    }
+    const spec = this.bench.spec;
+    const name = f.kind === 'stage' ? stageName(spec, spec.stages[f.stageIndex].id, spec.stages[f.stageIndex].name)
+      : f.kind === 'booster' ? t('build.label.boosters', { n: f.units })
+      : t(f.kind === 'fairing' ? 'build.label.fairing' : 'build.label.interstage', { n: 1 });
+    const rows: Array<[string, string]> = [];
+    const metres = (v: number): string => `${v.toFixed(v < 10 ? 2 : 1)} ${t('u.m')}`;
+    if (f.lengthM !== null) rows.push([t('build.eng.preview.length'), metres(f.lengthM)]);
+    if (f.diameterM !== null) rows.push([t('build.eng.preview.diameter'), metres(f.diameterM)]);
+    if (f.dryKg !== null) rows.push([t('build.eng.preview.dry'), mass(f.dryKg)]);
+    if (f.propellantKg !== null) rows.push([t('build.eng.preview.propellant'), mass(f.propellantKg)]);
+    if (f.engine) rows.push([t('build.eng.preview.engine'), f.engine.count > 1 ? `${f.engine.count} × ${f.engine.name}` : f.engine.name]);
+    if (f.kind === 'interstage') rows.push(['', t('build.eng.preview.interstage')]);
+    const dl = el('dl', 'be-partfacts');
+    for (const [k, v] of rows) dl.append(el('dt', undefined, k), el('dd', undefined, v));
+    const go = f.facility === 'stand'
+      ? button('watch-btn be-part-go', t('build.eng.preview.toStand'), () => {
+        if (this.stand.selectEngine(f.ref)) this.setTab('stand', true);
+      })
+      : button('watch-btn be-part-go', t('build.eng.preview.toTunnel'), () => this.setTab('tunnel', true));
+    const h = el('h3', 'bx-h3', name);
+    this.partCard.replaceChildren(h, dl, go);
   }
 
   private renderTabs(): void {

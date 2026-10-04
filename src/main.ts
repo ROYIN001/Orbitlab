@@ -956,7 +956,8 @@ class App {
       frame: f, satellite: sat, payloadMass: sim.cfg.payloadMassOverride ?? sat.mass,
       spacecraftStage: own && spec ? { dryMass: spec.dryMass, propellant: own.propellantFraction * spec.propellantMass } : null,
       vehicleName: sim.vehicleSpec.name,
-      mission: missionDocument(this.panel.missionState()),
+      // R3.1: what was flown, not the setup panel's draft — the hand-off describes this flight
+      mission: flownMission(sim.cfg),
       label: t('life.start', { sat: satelliteName(sat), pe: (el.periapsisAlt / 1000).toFixed(0), ap: (el.apoapsisAlt / 1000).toFixed(0),
         inc: (el.i * RAD).toFixed(1), t: f.t.toFixed(0) }),
     });
@@ -987,7 +988,8 @@ class App {
     const label = [sim.vehicleSpec.name, law ? law.toUpperCase() : t('cmp.standard'),
       ...(faults ? [t('cmp.faults', { n: faults })] : []), sim.cfg.launchTime.toISOString().slice(0, 16).replace('T', ' ')].join(' · ');
     return referenceFromFlight({
-      label, mission: missionDocument(this.panel.missionState()), launchJd: julianDate(sim.cfg.launchTime),
+      // R3.1: the reference is the flight on screen, so its mission is the one flown
+      label, mission: flownMission(sim.cfg), launchJd: julianDate(sim.cfg.launchTime),
       telemetry: sim.telemetry, events: sim.events,
       path: this.recorder.frames.filter((f) => f.status !== 'prelaunch'),
     });

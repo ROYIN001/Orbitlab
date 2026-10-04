@@ -47,6 +47,16 @@ import { attitudeRows, cameraRows, dvRows, eclipseRows, linkRows, massRows, orbi
 import { figureTable, keepUnits, satTextList, sayFig } from './satellite-text';
 import type { SatelliteWorkspace } from './satellite-workspace';
 import { SatelliteFly, type SatelliteFlyHost } from './satellite-fly';
+import { PART_TAB, satelliteDrawing, type DrawingAssumption, type SatellitePart } from '../../design/satellite-drawing';
+
+/** R3.3: each assumption the drawing makes, worded. */
+const ASSUMPTION_KEY: Record<DrawingAssumption, string> = {
+  wings: 'build.sat.preview.assume.wings', bodyCells: 'build.sat.preview.assume.bodyCells',
+  bodyCellsExceed: 'build.sat.preview.assume.bodyCellsExceed', spinner: 'build.sat.preview.assume.spinner',
+  antennaFace: 'build.sat.preview.assume.antennaFace', cameraFace: 'build.sat.preview.assume.cameraFace',
+  engineFace: 'build.sat.preview.assume.engineFace',
+};
+import { renderSatelliteSvg } from './satellite-svg';
 import './satellite.css';
 
 export interface SatelliteBenchHost extends SatelliteFlyHost {
@@ -117,6 +127,11 @@ export class SatelliteBench {
   /** "Fly it" in the Launch section, under the tabs (the integration of D06, map §2.6 c) */
   private readonly flySection = el('section', 'bs-panel bsb-fly');
   private readonly flyBox: SatelliteFly;
+  /** R3.3: the design drawn from the same object its figures come from */
+  private readonly preview = el('section', 'bs-panel bsb-preview');
+  private readonly drawBox = el('div', 'bsb-draw');
+  private readonly drawSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  private drawQueued = 0;
 
   constructor(private readonly ws: SatelliteWorkspace, private readonly host: SatelliteBenchHost) {
     this.tabBar.setAttribute('role', 'tablist');
@@ -124,7 +139,10 @@ export class SatelliteBench {
     this.panel.setAttribute('role', 'tabpanel');
     this.flyBox = new SatelliteFly(this.ws, { launchMission: () => this.host.launchMission(), fly: (doc) => this.host.fly(doc) }, P);
     this.flySection.append(this.flyBox.root);
-    this.root.append(this.head, this.tabBar, this.panel, this.flySection);
+    this.drawSvg.setAttribute('class', 'bsb-svg');
+    this.drawBox.append(this.drawSvg);
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.queueDrawing()).observe(this.drawBox);
+    this.root.append(this.head, this.preview, this.tabBar, this.panel, this.flySection);
     this.ws.subscribe(() => {
       if (!this.visible) return;
       if (this.shapeOf() !== this.shape) this.rebuild();
@@ -163,6 +181,7 @@ export class SatelliteBench {
     this.shape = this.shapeOf();
     this.keepFocus(() => {
       this.renderHead();
+      this.renderPreview();
       this.renderTabs();
       this.renderPanel();
     });
@@ -174,6 +193,7 @@ export class SatelliteBench {
       refreshControls(this.panel, this.ws.design, (p) => this.ws.locked(p));
       // not under the student's hands: a date half typed in the head's box stays as it is
       if (!this.head.contains(document.activeElement)) this.renderHead();
+      this.renderPreview();
       this.renderResults();
     });
   }
@@ -204,6 +224,76 @@ export class SatelliteBench {
     side.append(field(t('build.sat.bench.level'), level, 'bx-field bsb-level'), designDateField(this.ws, P));
     if (this.ws.lessonDesk) side.append(el('p', 'bx-note small bsat-lesson-note', t('lesson.design.deskNote')));
     this.head.replaceChildren(text, side);
+  }
+
+  // ─── R3.3: the drawing ───────────────────────────────────────────────────
+
+  /** The part the open tab is about, highlighted in the drawing (none for lifetime). */
+  private tabPart(): SatellitePart | null {
+    if (this.tab === 'lifetime') return null;
+    return (Object.keys(PART_TAB) as SatellitePart[]).find((p) => PART_TAB[p] === this.tab) ?? null;
+  }
+
+  private renderPreview(): void {
+    const result = satelliteDrawing(this.ws.design);
+    const title = el('h2', 'bx-h2', t('build.sat.preview.title'));
+    title.id = `${P}preview-title`;
+    this.preview.setAttribute('aria-labelledby', title.id);
+    if (!result.ok) {
+      // a draft being typed: say so rather than keep the last good picture as if it were this design
+      const msg = el('p', 'bx-note bsb-preview-invalid', t('build.sat.preview.invalid'));
+      msg.setAttribute('role', 'status');
+      this.preview.replaceChildren(title, msg);
+      return;
+    }
+    const g = result.drawing;
+    const parts = el('div', 'bsb-preview-parts');
+    parts.setAttribute('role', 'group');
+    parts.setAttribute('aria-label', t('build.sat.preview.parts'));
+    const active = this.tabPart();
+    for (const part of g.parts) {
+      const b = button('be-mode bsb-part', this.partText(part, g), () => this.setTab(PART_TAB[part], false));
+      b.dataset.k = `${P}part-${part}`;
+      b.setAttribute('aria-pressed', String(part === active));
+      parts.append(b);
+    }
+    const notes = el('ul', 'bsb-assumptions');
+    for (const a of g.assumptions) notes.append(el('li', a === 'bodyCellsExceed' ? 'warn' : undefined, t(ASSUMPTION_KEY[a])));
+    const body = el('div', 'bsb-preview-body');
+    const side = el('div', 'bsb-preview-side');
+    side.append(parts, el('p', 'bx-note small', t('build.sat.preview.note')), notes);
+    body.append(this.drawBox, side);
+    this.preview.replaceChildren(title, body);
+    this.queueDrawing();
+  }
+
+  private partText(part: SatellitePart, g: Extract<ReturnType<typeof satelliteDrawing>, { ok: true }>['drawing']): string {
+    const m = (v: number): string => `${num(v, v < 1 ? 2 : 1)} ${t('u.m')}`;
+    switch (part) {
+      case 'bus': return t('build.sat.preview.bus', { w: m(g.bus.width), h: m(g.bus.height), d: m(g.bus.depth) });
+      case 'arrays': return t(g.wings ? 'build.sat.preview.wings' : g.cells?.mount === 'spinner' ? 'build.sat.preview.spinCells' : 'build.sat.preview.bodyCells',
+        { a: num(g.wings ? g.wings.area * 2 : g.cells?.area ?? 0, 2) });
+      case 'antenna': return t('build.sat.preview.dish', { d: m(g.antenna!.diameter) });
+      case 'camera': return t('build.sat.preview.aperture', { d: m(g.camera!.aperture) });
+      case 'engine': return t('build.sat.preview.engine', { f: num(g.engine!.thrust, g.engine!.thrust < 10 ? 2 : 0) });
+    }
+  }
+
+  private queueDrawing(): void {
+    if (this.drawQueued || !this.visible) return;
+    this.drawQueued = requestAnimationFrame(() => { this.drawQueued = 0; this.renderDrawing(); });
+  }
+
+  private renderDrawing(): void {
+    if (!this.visible || !this.drawBox.isConnected) return;
+    const result = satelliteDrawing(this.ws.design);
+    const w = this.drawBox.clientWidth, h = this.drawBox.clientHeight;
+    if (!result.ok || w < 10 || h < 10) return;
+    renderSatelliteSvg(this.drawSvg, result.drawing, { width: w, height: h }, {
+      highlight: this.tabPart(),
+      title: t('build.sat.preview.drawingTitle', { name: this.ws.design.name.trim() || '—' }),
+      pick: (part) => this.setTab(PART_TAB[part], false),
+    });
   }
 
   private renderTabs(): void {
