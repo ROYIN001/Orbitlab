@@ -72,6 +72,27 @@ export default async function r3BenchDrawings(t) {
   const cameraButtons = await page.locator('.bsb-part[data-k$="part-camera"]').count();
   t.check(hasCamera === cameraButtons, 'the camera drawn and the camera listed disagree');
   t.check(await page.locator('.bsb-assumptions li').count() > 0, 'the drawing lists no assumptions');
+  // R3.3: the subsystem diagrams under the figures, drawn from them
+  await press(t, app, page.locator('#bsb-tab-power'), 'mouse', 'Power tab (diagram)');
+  t.check(await t.until(async () => (await page.locator('.bsb-results .sdg-fig-eclipse').count()) === 1, { timeoutMs: 10_000 }), 'the Power tab has no sunlight/shadow diagram');
+  t.check(/min/.test(await page.locator('.bsb-results .sdg-fig-eclipse figcaption').textContent() ?? ''), 'the shadow diagram does not say its minutes');
+  await page.locator('.bsb-results .sdg-fig-eclipse').scrollIntoViewIfNeeded();
+  await app.shot('satellite-bench-eclipse');
+  await page.locator('#bsb-tab-radio').scrollIntoViewIfNeeded();
+  await press(t, app, page.locator('#bsb-tab-radio'), 'mouse', 'Radio tab (diagram)');
+  t.check(await t.until(async () => (await page.locator('.bsb-results .sdg-fig-link').count()) === 1, { timeoutMs: 10_000 }), 'the Radio tab has no link diagram');
+  t.check(/dB/.test(await page.locator('.bsb-results .sdg-fig-link figcaption').textContent() ?? ''), 'the link diagram does not say its margin');
+  await page.locator('.bsb-results .sdg-fig-link').scrollIntoViewIfNeeded();
+  await app.shot('satellite-bench-link');
+  await page.locator('#bsb-tab-camera').scrollIntoViewIfNeeded();
+  await press(t, app, page.locator('#bsb-tab-camera'), 'mouse', 'Camera tab (diagram)');
+  const hasCam = (await page.locator('.bsat-cam-toggle, .bsb-svg [data-part="camera"]').count()) > 0;
+  const camDiagram = await t.until(async () => (await page.locator('.bsb-results .sdg-fig-footprint').count()) === 1, { timeoutMs: 5000 });
+  t.check(camDiagram === hasCam || camDiagram, 'the Camera tab\'s footprint does not follow the design\'s camera');
+  if (camDiagram) { await page.locator('.bsb-results .sdg-fig-footprint').scrollIntoViewIfNeeded(); await app.shot('satellite-bench-footprint'); }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('.bsb-preview').scrollIntoViewIfNeeded();
+
   // R3.3: the body axes, and a design with wings drawn stowed for launch
   t.check(await page.locator('.bsb-svg .sd-axes').count() === 1, 'the drawing has no body axes');
   // NAPA-2 carries body cells: give it tracking wings (Power tab) so it has something to fold

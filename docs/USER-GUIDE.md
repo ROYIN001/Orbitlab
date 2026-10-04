@@ -722,7 +722,14 @@ figure (how many wings, where each part sits), the drawing assumes and lists the
 under it. The open tab's subsystem is highlighted; each part's button opens its tab. A design with
 wings can be drawn **Deployed** or **Stowed for launch** — the wings folded flat against the bus's
 sides (the folds are an assumption, said under the picture) — and the corner shows the body axes:
-+Z at the Earth, +X along the velocity. While a
++Z at the Earth, +X along the velocity.
+
+Under the numbers of three tabs is a diagram drawn from those same numbers: on **Power**, the
+orbit seen from above with the arc it spends in the Earth's shadow on the design date (and, dashed,
+on the year's worst day) and the minutes each comes to; on **Radio**, the satellite over the ground
+station at the slant range the link is worked at, its beam and whether the margin clears the 3 dB
+floor; on **Camera**, the field of view down to the ground, its swath and the ground sample
+distance, height and swath to one scale. While a
 figure is being typed and is not a number yet, the drawing says so rather than showing the old
 one.
 

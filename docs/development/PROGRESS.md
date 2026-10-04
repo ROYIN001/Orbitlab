@@ -22,6 +22,7 @@ Updated: 2026-10-04 UTC. R2 merged through [PR #74](https://github.com/ROYIN001/
 | R3.1–R3.4 (package 1) | Verified; merged; published | Flown-input provenance (hypothesis, defensive), Engineer bench rocket drawing + part card, satellite schematic with stated assumptions, readiness rows that point at their part; S/B/I | [R3 report](reports/R3-design-views.md) |
 | R3.5 | Verified; merged; published | Result → Show the setting and before/after suggestions (applied to a new mission), mission source and Build›Check›Launch›Result›Orbit steps, Home first-launch template, Watch copy to try, Orbit continue-vs-place labels, Explore builder Show its settings; I | [R3.5 report](reports/R3.5-journey.md); design ID/revision (schema change) remains |
 | R3.3 (stowed pose, axes) | Verified; merged; published | Satellite drawn stowed for launch (wings folded, stated assumption) and its body axes; B | [R3 report](reports/R3-design-views.md); [PR #78](https://github.com/ROYIN001/Orbitlab/pull/78), CI 37198590545, [Pages 37199666485](https://github.com/ROYIN001/Orbitlab/actions/runs/37199666485) at `f30590e`; sunlight/link/footprint diagrams remain |
+| R3.3 (subsystem diagrams) | Implemented on branch; in PR | Sunlight/shadow, link and camera-footprint diagrams drawn from the bench's own figures (no new physics); B | [R3 report](reports/R3-design-views.md) |
 | R4–R7 | Planned | As described in PLAN.md | No implementation claimed or inferred authorization |
 
 ## Integration and verification rules

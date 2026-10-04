@@ -58,6 +58,9 @@ const ASSUMPTION_KEY: Record<DrawingAssumption, string> = {
   stowedPanels: 'build.sat.preview.assume.stowedPanels',
 };
 import { renderSatelliteSvg } from './satellite-svg';
+import { eclipseFigure, footprintFigure, linkFigure } from './satellite-diagrams-svg';
+import { eclipseDiagram, footprintDiagram, linkDiagram } from '../../design/satellite-diagrams';
+import { LINK_MARGIN_THRESHOLD } from '../../orbit/link';
 import './satellite.css';
 
 export interface SatelliteBenchHost extends SatelliteFlyHost {
@@ -424,6 +427,9 @@ export class SatelliteBench {
       if (rows.length) parts.push(figureTable(rows));
       const texts = this.texts(d, fig);
       if (texts.length) parts.push(satTextList(texts));
+      // R3.3: the tab's diagram, drawn from the same figures as the table above it
+      const diagram = this.diagram(fig);
+      if (diagram) parts.push(diagram);
     }
     if (this.tab === 'lifetime') parts.push(this.lifetimeBox(fig, issues.length > 0));
     if (stale && !issues.length) {
@@ -433,6 +439,13 @@ export class SatelliteBench {
     }
     results.classList.toggle('stale', stale || issues.length > 0);
     results.replaceChildren(...parts);
+  }
+
+  private diagram(fig: SatelliteFigures): HTMLElement | null {
+    if (this.tab === 'power') return eclipseFigure(eclipseDiagram(fig));
+    if (this.tab === 'radio') return linkFigure(linkDiagram(fig, LINK_MARGIN_THRESHOLD));
+    if (this.tab === 'camera') { const c = footprintDiagram(fig); return c ? footprintFigure(c) : null; }
+    return null;
   }
 
   private rows(fig: SatelliteFigures): Row[] {

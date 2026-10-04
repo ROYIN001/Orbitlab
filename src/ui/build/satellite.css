@@ -183,3 +183,24 @@
   .bsb-preview-body { grid-template-columns: minmax(0, 1fr); }
   .bsb-draw { height: 200px; }
 }
+
+/* R3.3: the subsystem diagrams under a tab's figures (src/ui/build/satellite-diagrams-svg.ts) */
+.sdg { margin: 12px 0 0; padding: 10px; border: 1px solid var(--line2); border-radius: 8px; background: var(--panel2); }
+.sdg svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+.sdg figcaption { margin-top: 6px; font-size: 12px; line-height: 1.55; color: var(--muted); }
+.sdg-ray { fill: none; stroke: #e8c25a; stroke-width: 1.4; }
+.sdg-label { font-size: 11px; fill: #c9d6e2; }
+.sdg-shadow { fill: rgba(0, 0, 0, 0.3); }
+.sdg-earth { fill: #24426e; stroke: #6ec8ff; stroke-width: 1; }
+.sdg-orbit { fill: none; stroke: #e8c25a; stroke-width: 2; }
+.sdg-eclipse { fill: none; stroke: #7d8c99; stroke-width: 5; }
+.sdg-worst { fill: none; stroke: #8aa0b2; stroke-width: 1.4; stroke-dasharray: 4 3; }
+.sdg-ground { fill: #2f4a3a; }
+.sdg-groundline { stroke: #5a7d68; stroke-width: 2; }
+.sdg-station { fill: none; stroke: #c9d6e2; stroke-width: 1.6; }
+.sdg-sat { fill: #8b7a4a; stroke: #e8d9a8; stroke-width: 1; }
+.sdg-beam { fill: rgba(110, 200, 255, 0.18); stroke: #6ec8ff; stroke-width: 1; }
+.sdg-beam.short { fill: rgba(230, 120, 90, 0.18); stroke: #e6785a; }
+.sdg-range { stroke: #c9d6e2; stroke-width: 1; stroke-dasharray: 3 3; }
+.sdg-fov { fill: rgba(110, 200, 255, 0.16); stroke: #6ec8ff; stroke-width: 1; }
+.sdg-swath { stroke: #e8c25a; stroke-width: 2.5; }

@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- R3.3 (diagrams): the satellite bench's Power, Radio and Camera tabs each draw a diagram from their own figures — the time in the Earth's shadow, the link to the ground station and its margin, the camera's footprint and detail.
 - R3.3 (stowed pose): the satellite bench draws a design with wings stowed for launch as well as deployed, with the fold stated as an assumption, and shows the satellite's body axes.
 - R3.5 (second part): a result suggests one change as before → after, applied to a new mission only when you press for it; Orbit's orbit list separates *Continue from a flight* from *Place an orbit directly* and says which one is on screen; a check about one part in the Explore builder has *Show its settings*.
 - R3.5 (first part): Home's *Try a launch yourself* opens Explore on a first-launch template that says what it uses and keeps your saved mission until you change it; Watch's end card offers a copy of the launch to try; the line over the mission's name says where it came from and the steps under it (Build › Check › Launch › Result › Orbit) take you to each; a result with a recorded cause has *Show the setting*.
