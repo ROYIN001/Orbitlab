@@ -42,7 +42,7 @@ import { onEllipsoid } from '../render/datum';
 import { VOSTOK_IM } from '../physics/sim/module-entry';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { Debris, TelemetrySample } from '../physics/sim/types';
-import { symbolText } from './notation';
+import { getNotation, setNotationPreference, symbolText, type NotationPreference } from './notation';
 import { EquationsPanel } from './equations';
 import type { EquationLevel } from './equations-model';
 import type { VisualFrame } from '../physics/frame';
@@ -199,6 +199,30 @@ export class TelemetryPanel {
     this.build();
   }
 
+  /**
+   * U07 / R2.1: the flight-dynamics notation, a display preference. It lives
+   * here rather than in the mission setup, which gives way to the scene once a
+   * flight is launched, so the standard can be changed during a flight. The
+   * Engineer level's only (modes.css). It never touches the flight's inputs:
+   * symbols, axes and signs are relabelled from the same recorded values.
+   */
+  private notationControl(): HTMLElement {
+    const box = el('div', 'tel-display notation-section');
+    const label = el('label', 'tel-display-field');
+    const select = el('select') as HTMLSelectElement;
+    for (const [value, key] of [['iso', 'setup.notation.iso'], ['gost', 'setup.notation.gost']] as const) {
+      const option = el('option', undefined, t(key)) as HTMLOptionElement;
+      option.value = value;
+      select.append(option);
+    }
+    select.value = getNotation();
+    select.addEventListener('change', () => setNotationPreference(select.value as NotationPreference));
+    label.append(el('span', undefined, t('setup.notation')), select);
+    box.append(label);
+    box.title = t('setup.notation.note');
+    return box;
+  }
+
   build(): void {
     const r = this.root;
     r.setAttribute('aria-label', t('a11y.telemetryPanel'));
@@ -223,6 +247,7 @@ export class TelemetryPanel {
     }
     head.append(toggle);
     r.append(head);
+    r.append(this.notationControl());
     // E02: charts or the live equations.
     const views = el('div', 'tel-view-toggle');
     views.setAttribute('role', 'group');

@@ -478,6 +478,10 @@ body[data-lesson] .verdict-fixes { display: none; }
 }
 .cam-btn:hover { color: #fff; }
 .cam-btn.active { background: #2f4049; color: #fff; }
+/* R2.2: Cinematic hands the view back to the camera programme; set apart
+   from the four views because it chooses who picks the view, not a view. */
+.cam-btn.cam-auto { margin-left: 3px; border-left: 1px solid rgba(103, 132, 138, 0.35); border-radius: 0 5px 5px 0; }
+.cam-btn.cam-auto.active { background: var(--accent-weak); color: var(--accent); }
 
 .camera-tools { display: flex; flex-direction: column; gap: 8px; flex: none; position: relative; }
 .tool-btn {
@@ -1328,3 +1332,50 @@ canvas.chart:focus-visible { outline: 1px solid var(--accent-line); outline-offs
 .tl-chooser-item.sev-fail { border-left-color: var(--fail); }
 .tl-chooser-time { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .tl-chooser-name { overflow-wrap: anywhere; }
+
+/* ── R2.1: the Engineer shell through the mission lifecycle ──────────────────
+   `body[data-setup='collapsed']` is written by main.ts (src/ui/flight-lifecycle.ts)
+   at the Engineer level once a flight is launched: the setup column gives its
+   width to the scene, which the renderer's ResizeObserver follows (the canvas
+   is resized, never stretched). Pausing or replaying stays in flight; the
+   setup comes back with New mission, or on request with the ⚙ Setup button. */
+body[data-setup='collapsed'] #setup { display: none; }
+body[data-setup='collapsed'] .workspace { grid-template-columns: minmax(0, 1fr) 330px; }
+.setup-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.setup-toggle[aria-expanded='true'] { border-color: var(--accent-line); color: var(--accent); }
+.tel-display { margin: 10px 0 0; }
+.tel-display-field { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.tel-display-field select { height: 30px; font-size: 12.5px; }
+/* the notation is the Engineer level's (U07) */
+body:not([data-mode='engineer']) .tel-display { display: none; }
+@media (max-width: 1400px) {
+  body[data-setup='collapsed'] .workspace { grid-template-columns: minmax(0, 1fr) 300px; }
+}
+@media (max-width: 1180px) {
+  body[data-setup='collapsed'] .workspace { grid-template-columns: minmax(0, 1fr); }
+  body[data-setup='collapsed'] :is(.flight-column, #telemetry) { grid-column: 1; }
+  .setup-toggle span:last-child { display: none; }
+}
+@media (max-width: 1180px) and (min-width: 861px) {
+  #telemetry > .tel-display { order: 0; }
+}
+
+/* A04: a phone's flight bar, fixed to the bottom while the page scrolls past
+   the playback controls (main.ts syncMobileFlightBar). Never on a wider screen,
+   where the controls do not scroll away. */
+.mobile-flight-bar { display: none; }
+@media (max-width: 860px) {
+  .mobile-flight-bar[data-active='true'] {
+    position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 40;
+    display: flex; align-items: center; gap: 12px; padding: 6px 10px;
+    background: rgba(16, 22, 32, 0.96); border: 1px solid var(--line2); border-radius: 12px;
+    box-shadow: 0 -6px 24px rgba(8, 12, 19, 0.6);
+  }
+  .mobile-flight-bar .play-btn { flex: none; min-width: 44px; min-height: 40px; }
+  .mfb-clock { font: 600 17px var(--mono); }
+  .mfb-mode { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ok); }
+  .mobile-flight-bar[data-replay='true'] .mfb-mode { color: var(--warn); }
+  .mfb-up { margin-left: auto; font-size: 12.5px; padding: 8px 4px; }
+  /* the bar must not cover the end of the page */
+  body:is([data-mode='engineer'], [data-mode='explore']):is([data-flight-stage='flight'], [data-flight-stage='analysis'])[data-section='launch'] #app { padding-bottom: 64px; }
+}

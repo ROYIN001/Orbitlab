@@ -25,6 +25,8 @@ import { TrailLine, OrbitLine } from './render/lines';
 import { LaunchPadView } from './render/launchpad';
 import { RecoverySceneryView } from './render/recovery';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
+import { CameraPolicy } from './render/camera-policy';
+import { missionStage, setupCollapsed, type MissionStage } from './ui/flight-lifecycle';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { ExploreDebrief } from './ui/explore-debrief';
@@ -380,9 +382,14 @@ class App {
    *  recording must not make the live flight sprint) */
   replayWarp = 1;
   camMode: CameraMode = 'exterior';
-  /** per-phase camera programme and its master switch */
+  /** per-phase camera programme */
   cameraPlan: CameraPlan = { ...DEFAULT_CAMERA_PLAN };
-  autoCamera = true;
+  /** R2.2: whether the programme or the user directs the view (src/render/camera-policy.ts) */
+  readonly camPolicy = new CameraPolicy();
+  /** R2.1: the mission lifecycle the shell shows, and whether the setup is shown on request */
+  private stage: MissionStage = 'setup';
+  private setupPeek = false;
+  private setupShown: boolean | null = null;
   /** mission time to fast-forward to, or null when not fast-forwarding */
   fastForwardTo: number | null = null;
   lastFrame = performance.now();
@@ -632,13 +639,13 @@ class App {
     });
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
       plan: this.cameraPlan,
-      isAuto: () => this.autoCamera,
-      setAuto: (on) => { this.autoCamera = on; },
+      isAuto: () => this.camPolicy.cinematic,
+      setAuto: (on) => { if (on) this.resumeCinematic(); else { this.camPolicy.setCinematic(false); this.updateCameraOwner(); } },
       onChange: (phase, mode) => {
         this.cameraPlan[phase] = mode;
         // Apply straight away when it is the phase we are in, so the dialog is
         // a live preview rather than a form to submit.
-        if (this.autoCamera && this.lastPhase === phase) this.setCamera(mode);
+        if (this.camPolicy.cinematic && this.lastPhase === phase) this.showCamera(mode);
       },
     });
     this.dataDialog = new DataDialog({
@@ -1115,9 +1122,16 @@ class App {
       if (this.mode !== 'engineer' || !this.player.live || !this.abortArmed(this.shown)) return;
       this.session?.commandAbort();
     });
-    document.querySelectorAll<HTMLButtonElement>('.cam-btn').forEach((b) => {
+    document.querySelectorAll<HTMLButtonElement>('.cam-btn[data-cam]').forEach((b) => {
       b.addEventListener('click', () => this.setCamera(b.dataset.cam as CameraMode));
     });
+    document.getElementById('btn-cinematic')!.addEventListener('click', () => this.resumeCinematic());
+    // R2.1: the setup, once it has given way to the scene, is shown again on request
+    document.getElementById('btn-setup')!.addEventListener('click', () => this.toggleSetupPeek());
+    document.querySelector('.mobile-workspace-nav a[href="#setup"]')?.addEventListener('click', () => {
+      if (!this.setupPeek && setupCollapsed(this.mode, this.stage, false)) this.toggleSetupPeek();
+    });
+    document.getElementById('mfb-play')!.addEventListener('click', () => this.togglePlay());
     this.glowBtn = document.getElementById('btn-glow') as HTMLButtonElement;
     this.glowBtn.addEventListener('click', () => {
       // `bindControls` runs before `init` builds the scene, and the loading
@@ -1296,10 +1310,114 @@ class App {
       this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(missionSatellite(cfg)));
   }
 
+  /**
+   * The user's choice of view (a camera tab, keys 1–4, WebMCP): shown now and
+   * kept across phase changes until Cinematic is chosen again (R2.2).
+   */
   setCamera(mode: CameraMode): void {
+    this.showCamera(this.camPolicy.choose(mode));
+    this.updateCameraOwner();
+  }
+
+  /** R2.2: hand the view back to the camera programme, at the view it has for this instant. */
+  resumeCinematic(): void {
+    this.showCamera(this.camPolicy.resume(this.plannedView(), this.camMode));
+    this.updateCameraOwner();
+  }
+
+  /** The programme's view for the frame on screen, or null when it has none (a lost vehicle). */
+  private plannedView(): CameraMode | null {
+    const frame = this.shown;
+    if (!frame) return null;
+    if (this.focusDebrisId !== null && frame.debris.some((d) => d.id === this.focusDebrisId)) return 'exterior';
+    const phase = flightPhase(frame);
+    if (!phase) return null;
+    return (this.lean ? WATCH_CAMERA_PLAN : this.cameraPlan)[phase];
+  }
+
+  /** The Cinematic button and the dialog's switch say who directs the view. */
+  private updateCameraOwner(): void {
+    const on = this.camPolicy.cinematic;
+    const btn = document.getElementById('btn-cinematic');
+    btn?.classList.toggle('active', on);
+    btn?.setAttribute('aria-pressed', String(on));
+    document.getElementById('camera-tabs')?.setAttribute('data-owner', this.camPolicy.owner);
+    const box = document.getElementById('auto-camera') as HTMLInputElement | null;
+    if (box) box.checked = on;
+  }
+
+  /**
+   * R2.1: show the shell for the mission's lifecycle. Cheap enough for every
+   * frame: it reads two flags and writes the DOM only when something changed.
+   */
+  private syncLifecycle(): void {
+    const stage = missionStage({ launched: this.panel.isRunning(), done: !!this.sim?.done });
+    if (stage !== this.stage) {
+      // a new flight, or the explicit way back to the setup, closes a setup shown on request
+      if (stage === 'setup' || this.stage === 'setup') this.setupPeek = false;
+      this.stage = stage;
+      document.body.dataset.flightStage = stage;
+    }
+    const collapsed = setupCollapsed(this.mode, stage, this.setupPeek);
+    if (collapsed !== (this.setupShown === false)) {
+      const setup = document.getElementById('setup')!;
+      // The focus must not be left inside a panel that is about to disappear
+      // (Launch pressed with the keyboard): it goes to the control that brings it back.
+      const toggle = document.getElementById('btn-setup') as HTMLButtonElement;
+      const focusInside = collapsed && setup.contains(document.activeElement);
+      this.setupShown = !collapsed;
+      document.body.dataset.setup = collapsed ? 'collapsed' : 'shown';
+      if (focusInside) toggle.focus({ preventScroll: true });
+    }
+    const toggle = document.getElementById('btn-setup') as HTMLButtonElement;
+    const offer = this.mode === 'engineer' && stage !== 'setup';
+    if (toggle.hidden === offer) toggle.hidden = !offer;
+    const expanded = String(offer && this.setupPeek);
+    if (toggle.getAttribute('aria-expanded') !== expanded) toggle.setAttribute('aria-expanded', expanded);
+    this.syncMobileFlightBar(stage);
+  }
+
+  /** R2.1: show the collapsed setup (read-only in flight, with Relaunch and New mission), or hide it again. */
+  toggleSetupPeek(): void {
+    if (this.mode !== 'engineer' || this.stage === 'setup') return;
+    this.setupPeek = !this.setupPeek;
+    this.syncLifecycle();
+    if (this.setupPeek) document.getElementById('setup')!.focus({ preventScroll: true });
+  }
+
+  /**
+   * A04 / R2.1: on a phone the whole page scrolls, so the playback controls
+   * leave the screen while the charts are read. A compact bar keeps the clock,
+   * live/replay and play/pause at the bottom of the screen meanwhile.
+   */
+  private syncMobileFlightBar(stage: MissionStage): void {
+    const bar = document.getElementById('mobile-flight-bar')!;
+    const show = stage !== 'setup' && (this.mode === 'engineer' || this.mode === 'explore') && !this.sceneCovered;
+    if (bar.dataset.active !== String(show)) bar.dataset.active = String(show);
+    if (!show) return;
+    const clock = document.getElementById('clock')?.textContent ?? '';
+    const clockEl = document.getElementById('mfb-clock')!;
+    if (clockEl.textContent !== clock) clockEl.textContent = clock;
+    const live = this.player.live;
+    const mode = live ? t('tl.live') : t('ctl.replay');
+    const modeEl = document.getElementById('mfb-mode')!;
+    if (modeEl.textContent !== mode) { modeEl.textContent = mode; bar.dataset.replay = String(!live); }
+    const running = live ? this.playing : this.player.playing;
+    const play = document.getElementById('mfb-play') as HTMLButtonElement;
+    const glyph = running ? '❚❚' : '▶';
+    if (play.textContent !== glyph) {
+      play.textContent = glyph;
+      const label = t(running ? 'ctl.pause' : 'ctl.play');
+      play.title = label;
+      play.setAttribute('aria-label', label);
+    }
+  }
+
+  /** Put `mode` on screen. Automation calls this directly; it does not change who owns the view. */
+  private showCamera(mode: CameraMode): void {
     this.camMode = mode;
     this.cams.mode = mode;
-    document.querySelectorAll<HTMLButtonElement>('.cam-btn').forEach((b) => {
+    document.querySelectorAll<HTMLButtonElement>('.cam-btn[data-cam]').forEach((b) => {
       const on = b.dataset.cam === mode;
       b.classList.toggle('active', on);
       b.setAttribute('aria-pressed', String(on));
@@ -1448,6 +1566,9 @@ class App {
     this.trailIdx = -1;
     this.wasLive = true;
     this.lastPhase = null;
+    // R2.2: each launch in the viewer starts under its camera programme. The
+    // workspace keeps the owner across previews, as it kept its programme switch.
+    if (this.lean) { this.camPolicy.reset(); this.updateCameraOwner(); }
     // `updateVisuals` only writes the Live button when the mode *changes*, and
     // a fresh mission starts live — so the initial state has to be set here or
     // the button stays enabled until the first replay round trip.
@@ -1751,6 +1872,7 @@ class App {
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);
       this.toruControls.update(this.shown, this.player.live, this.mode === 'engineer');
     }
+    this.syncLifecycle();
     if (this.loopInspector.isOpen) {
       this.loopInspector.update(this.shown, this.recorder.frames, this.player.cursor, this.player.live,
         this.player.live ? this.playing : this.player.playing, this.simView?.sim.telemetry ?? []);
@@ -1860,8 +1982,8 @@ class App {
    * Follow the camera sequence.
    *
    * Frame-driven like the rest of the app, so it switches identically while
-   * replaying. A manual choice is never undone here — it simply lasts until
-   * the next phase change, which is how the Codex version behaved.
+   * replaying. A manual choice is never undone here: since R2.2 it lasts
+   * across phase changes until the user chooses Cinematic (`camPolicy`).
    */
   /**
    * Point the viewer's camera at the rocket or at a stage flying home (see
@@ -1874,7 +1996,8 @@ class App {
     this.focusDebrisId = next;
     this.focusDownT = -1;
     const phase = flightPhase(frame);
-    this.setCamera(next !== null ? 'exterior' : phase ? WATCH_CAMERA_PLAN[phase] : this.camMode);
+    const view = this.camPolicy.onTarget(next !== null ? 'other' : 'vehicle', phase ? WATCH_CAMERA_PLAN[phase] : null, this.camMode);
+    if (view) this.showCamera(view);
     this.cams.reset();
   }
 
@@ -1925,10 +2048,11 @@ class App {
     // The phases are the vehicle's: while a stage flown home is being
     // followed, they say nothing about where the camera should be.
     if (this.focusDebrisId !== null && frame.debris.some((d) => d.id === this.focusDebrisId)) return;
-    // The viewer always directs its own camera; the workspace follows the
-    // user's programme and its on/off switch.
-    if (this.lean) this.setCamera(WATCH_CAMERA_PLAN[phase]);
-    else if (this.autoCamera) this.setCamera(this.cameraPlan[phase]);
+    // R2.2: the programme (the viewer's own, or the workspace's per-phase
+    // plan) directs the view only while it owns the camera; a view the user
+    // picked is kept until they choose Cinematic again.
+    const view = this.camPolicy.onPhase((this.lean ? WATCH_CAMERA_PLAN : this.cameraPlan)[phase]);
+    if (view) this.showCamera(view);
   }
 
   private updateVisuals(dt: number): void {
