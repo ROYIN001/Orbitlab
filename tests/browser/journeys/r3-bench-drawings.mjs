@@ -11,6 +11,9 @@
  *   no camera drawn, and an unusable figure being typed says so instead of
  *   keeping a stale picture.
  *
+ * - R3.5: in the Explore builder, a check about one part ("Show its
+ *   settings") brings that part's card into view with its first control focused.
+ *
  * Screenshots are kept for the owner's review of the drawings.
  */
 import { press } from '../harness.mjs';
@@ -69,6 +72,26 @@ export default async function r3BenchDrawings(t) {
   const cameraButtons = await page.locator('.bsb-part[data-k$="part-camera"]').count();
   t.check(hasCamera === cameraButtons, 'the camera drawn and the camera listed disagree');
   t.check(await page.locator('.bsb-assumptions li').count() > 0, 'the drawing lists no assumptions');
+
+  // R3.5: Explore's remix of Electron: the kick stage's check leads to its card
+  await page.evaluate(() => { location.hash = '#/build/explore'; });
+  // the Build section keeps the craft last open: back to the rocket
+  const rocketTab = page.locator('[data-k="craft:rocket"]:visible');
+  if (await rocketTab.count()) await rocketTab.first().click();
+  const remix = page.locator('#bx-picker-select');
+  if (t.check(await remix.waitFor({ timeout: 30_000 }).then(() => true).catch(() => false), 'the Explore builder has no vehicle picker')) {
+    await remix.selectOption('electron');
+    const settings = page.locator('.bx-checks .bd-say-show[data-target="stage:2"]');
+    if (t.check(await t.until(async () => (await settings.count()) > 0, { timeoutMs: 30_000 }), 'Electron\'s kick-stage check has no "Show its settings"')) {
+      await settings.first().scrollIntoViewIfNeeded();
+      await press(t, app, settings.first(), 'mouse', 'Show its settings');
+      t.check(await t.until(() => page.evaluate(() => {
+        const card = document.querySelector('.bx-controls [data-ref="stage:2"]');
+        return !!card && card.classList.contains('bx-pointed') && card.contains(document.activeElement);
+      }), { timeoutMs: 5000 }), 'Show its settings did not land on the third stage\'s card');
+      await app.shot('explore-show-settings');
+    }
+  }
   app.checkErrors();
   await app.context.close();
 }

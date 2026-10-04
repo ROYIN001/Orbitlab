@@ -2556,6 +2556,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.ex.maxStages': 'At most 6 stages.',
   'build.ex.checks': 'Before it flies',
   'build.ex.checks.clear': 'No warnings: nothing here stops it flying.',
+  'build.ex.showSettings': 'Show its settings',
   'build.ex.refusedKept': 'The drawing and the figures still show the last rocket the builder could make.',
   'build.ex.estimates': 'What is estimated or assumed',
   'build.ex.detail': 'Technical detail (in English)',

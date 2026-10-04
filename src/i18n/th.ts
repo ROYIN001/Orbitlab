@@ -2533,6 +2533,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.ex.maxStages': 'ได้ไม่เกิน 6 ท่อน',
   'build.ex.checks': 'ก่อนขึ้นบิน',
   'build.ex.checks.clear': 'ไม่มีคำเตือน ไม่มีอะไรขัดขวางการบิน',
+  'build.ex.showSettings': 'ดูค่าของชิ้นนี้',
   'build.ex.refusedKept': 'ภาพวาดและตัวเลขยังแสดงจรวดลำล่าสุดที่ประกอบได้',
   'build.ex.estimates': 'สิ่งที่เป็นค่าประมาณหรือค่าตั้งต้น',
   'build.ex.detail': 'รายละเอียดทางเทคนิค (ภาษาอังกฤษ)',

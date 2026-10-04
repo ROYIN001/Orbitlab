@@ -2532,6 +2532,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.ex.maxStages': 'Не более 6 ступеней.',
   'build.ex.checks': 'Перед полётом',
   'build.ex.checks.clear': 'Предупреждений нет: ничто здесь не мешает полёту.',
+  'build.ex.showSettings': 'Показать его параметры',
   'build.ex.refusedKept': 'На чертеже и в таблице пока показана последняя ракета, которую удалось собрать.',
   'build.ex.estimates': 'Что здесь оценено или принято по умолчанию',
   'build.ex.detail': 'Техническая подробность (по-английски)',

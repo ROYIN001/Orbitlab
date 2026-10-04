@@ -44,7 +44,7 @@ import type { DrawnPart } from '../../design/exploded';
 import { stageTable, throttledCore } from '../../design/stage-table';
 import { pickerEntries } from '../../design/vehicle-picker';
 import { fairingOf } from '../../design/vehicle-parts';
-import { refusalText, type DesignText } from '../../design/warning-text';
+import { refusalText, subjectRef, type DesignText } from '../../design/warning-text';
 import { handoffDocument } from '../../design/build-handoff';
 import { decimalMark, parseTyped, stepTyped, typedText } from '../../design/number-entry';
 import type { RatingClass } from '../../design/ratings';
@@ -590,7 +590,7 @@ export class ExploreLevel {
     if (!this.result.ok) {
       parts.push(designTextList([refusalText(this.result.refusal)]), el('p', 'bx-note', t('build.ex.refusedKept')));
     } else {
-      parts.push(this.said.length ? designTextList(this.said) : el('p', 'bx-clear', t('build.ex.checks.clear')));
+      parts.push(this.said.length ? this.checkList() : el('p', 'bx-clear', t('build.ex.checks.clear')));
       const site = siteById(this.result.spec.sites[0]);
       const est = estimateTexts(this.result, site.country);
       if (est.length) {
@@ -598,6 +598,36 @@ export class ExploreLevel {
       }
     }
     this.checksBody.replaceChildren(...parts);
+  }
+
+  /**
+   * R3.5: the checks, each one about a part with the way to that part's
+   * settings in the builder — its card brought into view and its first
+   * control focused. Nothing is changed for the user.
+   */
+  private checkList(): HTMLUListElement {
+    const list = designTextList(this.said);
+    this.said.forEach((d, k) => {
+      if (!d.subject) return;
+      const ref = subjectRef(d.subject);
+      const show = el('button', 'bd-say-show', t('build.ex.showSettings'));
+      show.type = 'button';
+      show.dataset.k = `show:${k}`;
+      show.dataset.target = ref;
+      show.addEventListener('click', () => this.showCard(ref));
+      list.children[k]?.append(show);
+    });
+    return list;
+  }
+
+  /** R3.5: a part's card in the builder, in view, its first control focused. */
+  private showCard(ref: string): void {
+    const card = this.controls.querySelector<HTMLElement>(`[data-ref="${CSS.escape(ref)}"]`);
+    if (!card) return;
+    card.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+    card.querySelector<HTMLElement>('select:not(:disabled), input:not(:disabled), button:not(:disabled)')?.focus({ preventScroll: true });
+    card.classList.add('bx-pointed');
+    setTimeout(() => card.classList.remove('bx-pointed'), 2400);
   }
 
   private renderRatings(): void {

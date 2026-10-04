@@ -76,6 +76,8 @@
 
 .bx-card { padding: 12px; border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); scroll-margin-top: 10px; }
 .bx-card > * + * { margin-top: 10px; }
+/* R3.5: a check's "Show its settings" lands here */
+.bx-card.bx-pointed { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-weak); transition: box-shadow 0.2s; }
 .bx-card .bx-h3 + * { margin-top: 0; }
 .bx-card.flash { animation: bx-flash 1.2s ease-out; }
 @keyframes bx-flash { from { box-shadow: 0 0 0 2px var(--accent); } to { box-shadow: 0 0 0 2px transparent; } }
