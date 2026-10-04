@@ -106,6 +106,7 @@
 }
 .pg-handoff .eyebrow { color: var(--accent); letter-spacing: 1.6px; }
 .pg-handoff-label, .pg-handoff-empty { margin: 6px 0 8px; font-size: 13px; line-height: 1.5; color: #c9d6e2; }
+.pg-handoff-kind { margin: -4px 0 8px; font-size: 12px; line-height: 1.5; color: var(--muted); }
 .pg-handoff .pg-dl { margin-bottom: 0; }
 .pg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .pg-actions .watch-btn { padding: 8px 14px; font-size: 13px; }

@@ -72,6 +72,12 @@ export default async function satellite(t) {
   // send it to the Orbit section; its lifetime dialog takes the design's mass and area
   await page.click(`${grid} [data-k="sx:toOrbit"]`);
   t.check(await t.until(async () => (await page.evaluate(() => location.hash)) === '#/orbit/explore'), 'Send to Orbit did not open the Orbit section');
+  // R3.5: a design is placed in its orbit directly, and the Orbit section says so
+  t.check(await t.until(async () => /Placed directly/.test((await page.locator('.pg-handoff-kind').textContent().catch(() => '')) ?? ''), { timeoutMs: 15_000 }),
+    'the Orbit section does not say the design was placed directly');
+  const placedGroup = await page.evaluate(() => [...document.querySelectorAll('optgroup')].map((g) => [g.label, [...g.querySelectorAll('option')].map((o) => o.value)]));
+  t.check(placedGroup.some(([label, values]) => label === 'Place an orbit directly' && values[0] === 'handoff')
+    && !placedGroup.some(([label]) => label === 'Continue from a flight'), `the design is not among the orbits placed directly: ${JSON.stringify(placedGroup)}`);
   const life = page.locator('button:visible', { hasText: 'Orbit lifetime' }).first();
   if (!t.check(await life.waitFor({ timeout: 30_000 }).then(() => true).catch(() => false), 'no lifetime button in the Orbit section')) return;
   await life.click();

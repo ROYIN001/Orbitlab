@@ -951,14 +951,25 @@ export class OrbitPlayground {
   private renderPresetSelect(): void {
     const sel = this.presetSelect;
     if (!sel) return;
-    const opts: [string, string][] = PLAYGROUND_PRESET_IDS.map((id) => [id, t(`orbit.${id}.name`)]);
-    if (this.handoff) opts.unshift([HANDOFF, t(this.fromDesign() ? 'build.sat.orbit.from' : 'pg.preset.handoff')]);
-    opts.push([CUSTOM, t('pg.preset.custom')]);
-    sel.replaceChildren(...opts.map(([v, label]) => {
+    const option = ([v, label]: [string, string]): HTMLOptionElement => {
       const o = el('option', undefined, label);
       o.value = v;
       return o;
-    }));
+    };
+    const group = (label: string, opts: [string, string][]): HTMLOptGroupElement => {
+      const g = el('optgroup');
+      g.label = label;
+      g.append(...opts.map(option));
+      return g;
+    };
+    // R3.5: carrying on from a flight and putting a craft in an orbit are different things, and say so
+    const placed: [string, string][] = PLAYGROUND_PRESET_IDS.map((id) => [id, t(`orbit.${id}.name`)]);
+    placed.push([CUSTOM, t('pg.preset.custom')]);
+    const groups: HTMLOptGroupElement[] = [];
+    if (this.handoff && !this.fromDesign()) groups.push(group(t('pg.group.continue'), [[HANDOFF, t('pg.preset.handoff')]]));
+    else if (this.handoff) placed.unshift([HANDOFF, t('build.sat.orbit.from')]);
+    groups.push(group(t('pg.group.place'), placed));
+    sel.replaceChildren(...groups);
     sel.value = this.presetId;
   }
 
@@ -1108,6 +1119,8 @@ export class OrbitPlayground {
     }
     // W: a designed satellite's orbit keeps its figures with their units ("540 | km" broke at 1440 px)
     box.append(el('p', 'pg-handoff-label', keepUnits(h.label)));
+    // R3.5: a continuation or an orbit placed directly, in words
+    box.append(el('p', 'pg-handoff-kind', t(this.fromDesign() ? 'pg.handoff.designNote' : 'pg.handoff.flightNote')));
     const dl = el('dl', 'pg-dl');
     // O03: as it is now — lighter by whatever the plans flown from it burned
     const kg = t('u.kg'), craft = this.launchCraft;
