@@ -36,7 +36,13 @@ export type MissionOrigin =
   /** the featured launch the landing page and the viewers open on */
   | 'demo'
   /** a launch picked in the Watch viewer */
-  | 'watch';
+  | 'watch'
+  /**
+   * R3.5: Home's first-launch template, opened on purpose: like a viewer's
+   * mission it is not stored until it is changed, so the stored mission is
+   * safe, but entering a workspace mode keeps it rather than restoring.
+   */
+  | 'template';
 
 /** What the page opens on: `stored` falls back to `default` when there is no stored copy. */
 export type StartupMission = 'link' | 'demo' | 'stored' | 'default';
@@ -65,7 +71,7 @@ export class WorkspaceMission {
    * A viewer is about to load its mission into the panel. Until `loaded` is
    * called with the result, a preview of it does not count as a change.
    */
-  viewing(origin: 'demo' | 'watch'): void {
+  viewing(origin: Exclude<MissionOrigin, 'workspace'>): void {
     this.currentOrigin = origin;
     this.loadedDoc = null;
   }
@@ -101,6 +107,7 @@ export class WorkspaceMission {
    */
   entering(o: { doc: string; stored: boolean; underway: boolean }): boolean {
     if (this.settle(o.doc)) return false;
+    if (this.currentOrigin === 'template') return false;
     return o.stored && !o.underway;
   }
 }

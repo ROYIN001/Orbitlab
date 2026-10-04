@@ -100,6 +100,8 @@ export interface SetupCallbacks {
   onExperience?: (mode: ExperienceMode) => void;
   /** G05: open the Monte Carlo window on the mission as set here. */
   onMonteCarlo?: (opener: HTMLElement) => void;
+  /** R3.5: the first-launch template's "back to my mission": the stored mission, in its place */
+  onBackToMine?: () => void;
 }
 
 interface SetupState {
@@ -215,6 +217,8 @@ export class SetupPanel {
   private scrollEl: HTMLElement | null = null;
   /** Explore: the set-up step on screen */
   private step: 1 | 2 | 3 = 1;
+  /** R3.5: the first-launch template's note, while the template is not yet the user's */
+  private template: { uses: string; stored: boolean; copyOf?: string } | null = null;
   /** Explore: what the last fix did, until the next edit */
   private fixMessage = '';
   private readonly fieldInputs = new Map<string, { input: HTMLInputElement; error: HTMLElement }>();
@@ -363,6 +367,88 @@ export class SetupPanel {
     this.cb.onReset();
   }
 
+  /**
+   * R3.5: bring one setup field into view and focus it (a result's "show the
+   * setting"): the Explore step it is on, a collapsed section it is in. Read-only
+   * while a flight exists, as every field is. False when the field is not on
+   * this level's panel.
+   */
+  focusField(key: string): boolean {
+    const find = (): HTMLElement | null => this.root.querySelector<HTMLElement>(`[data-field="${CSS.escape(key)}"]`);
+    let field = find();
+    const pane = field?.closest<HTMLElement>('.explore-step');
+    if (field && pane?.hidden && pane.dataset.step) {
+      this.step = Number(pane.dataset.step) as 1 | 2 | 3;
+      this.render();
+      field = find();
+    }
+    if (!field) return false;
+    for (let d = field.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true;
+    field.scrollIntoView({ block: 'center' });
+    const label = field.closest<HTMLElement>('label') ?? field;
+    // a frozen (disabled) control cannot take the focus: its label does, so a keyboard user lands on it too
+    if ((field as HTMLInputElement).disabled && label !== field) { label.tabIndex = -1; label.focus({ preventScroll: true }); }
+    else field.focus({ preventScroll: true });
+    label.classList.add('field-pointed');
+    setTimeout(() => label.classList.remove('field-pointed'), 2400);
+    return true;
+  }
+
+  /**
+   * R3.5: Home's first-launch template is in the panel. The note says what it
+   * uses — read off the panel now, as loaded — and, when the user has a saved
+   * mission, that it is kept until this one is changed, with the way back to
+   * it. Null takes the note away (the template became the user's mission).
+   */
+  showTemplate(on: { stored: boolean; copyOf?: string } | null): void {
+    if (!on) {
+      if (!this.template) return;
+      this.template = null;
+      this.root.querySelector('.template-note')?.remove();
+      return;
+    }
+    const s = this.state;
+    const num = (v: number, digits = 0): string => v.toLocaleString(getLang(), { maximumFractionDigits: digits });
+    const uses = t('setup.template.uses', {
+      vehicle: missionVehicle(s).name, site: siteName(siteById(s.siteId)), payload: num(s.payloadMass),
+      satellite: satelliteName(missionSatellite(s)), pe: num(s.orbit.perigee / 1000), ap: num(s.orbit.apogee / 1000),
+      // the inclination the flight will aim at: a preset's "the site's lowest" as a number
+      inc: num(resolveTarget(s.orbit, siteById(s.siteId), s.launchTime).inclination * RAD, 1),
+    });
+    this.template = { uses, stored: on.stored, copyOf: on.copyOf };
+    this.render();
+  }
+
+  /** The note `showTemplate` keeps at the top of the setup. */
+  private templateNote(): HTMLElement | null {
+    const tp = this.template;
+    // in flight the setup gives way to what is flying; the note comes back with it
+    if (!tp || this.running) return null;
+    const note = this.el('aside', 'template-note');
+    note.setAttribute('aria-labelledby', 'template-note-title');
+    // Home's first-launch template, or a copy of a Watch launch (which stays as it is there)
+    const title = this.el('strong', undefined, tp.copyOf ? t('setup.template.copyTitle', { mission: tp.copyOf }) : t('setup.template.title'));
+    title.id = 'template-note-title';
+    note.dataset.kind = tp.copyOf ? 'copy' : 'first';
+    note.append(title, this.el('p', undefined, tp.uses));
+    if (tp.copyOf) note.append(this.el('p', 'field-note', t('setup.template.copyKept')));
+    note.append(this.el('p', 'field-note', t('setup.template.change', { launch: t('setup.launchMission') })));
+    const actions = this.el('div', 'template-note-actions');
+    if (tp.stored) {
+      note.append(this.el('p', 'field-note', t('setup.template.kept')));
+      const back = this.el('button', 'template-back', t('setup.template.back'));
+      back.type = 'button';
+      back.addEventListener('click', () => this.cb.onBackToMine?.());
+      actions.append(back);
+    }
+    const close = this.el('button', 'template-close', t('setup.template.close'));
+    close.type = 'button';
+    close.addEventListener('click', () => this.showTemplate(null));
+    actions.append(close);
+    note.append(actions);
+    return note;
+  }
+
   setRunning(r: boolean): void {
     if (r) this.cancelTune();
     this.running = r;
@@ -500,6 +586,7 @@ export class SetupPanel {
     lab.appendChild(this.el('span', undefined, label));
     const sel = this.el('select');
     sel.setAttribute('aria-label', label);
+    sel.dataset.field = labelKey; // R3.5: found by key, never by its translated label
     for (const o of options) {
       const op = this.el('option', undefined, o.label);
       op.value = o.value;
@@ -520,6 +607,7 @@ export class SetupPanel {
     inp.value = this.fieldDrafts.get(labelKey) ?? String(+value.toFixed(3));
     inp.step = String(step);
     inp.setAttribute('aria-label', t(labelKey));
+    inp.dataset.field = labelKey;
     const def = Object.values(GUIDANCE_FIELDS).find((f) => `setup.${f.key}` === labelKey);
     const stored = def ? guidanceLimits(def.key, missionVehicle(this.state)) : null;
     const limits = def && stored
@@ -717,6 +805,8 @@ export class SetupPanel {
     // panel used to carry a second switch for it, which did the same thing.
     // R2.1: the notation, a display preference, moved to the telemetry panel,
     // which stays on screen in flight while this panel gives way to the scene.
+    const template = this.templateNote();
+    if (template) scroll.prepend(template);
     into(1).appendChild(this.quickstartSection());
     into(1).appendChild(this.historicalSection());
     if (!learning) scroll.appendChild(this.share.section());
@@ -892,6 +982,7 @@ export class SetupPanel {
       }
       this.updateValidation();
     });
+    timeInp.dataset.field = 'setup.launchTime';
     this.registerField('setup.launchTime', timeInp, timeLab);
     s3.appendChild(timeLab);
     const winBox = this.el('div', 'windows');

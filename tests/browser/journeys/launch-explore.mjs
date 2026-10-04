@@ -4,6 +4,8 @@
  * reports the orbit, then export the whole flight as CSV — more than 1 MB,
  * as the audit's export was (live-evidence.json: orbitlab_falcon9_leo.csv,
  * 1 308 674 bytes) — and check the file is this flight's, to the end.
+ * Then the mission's Orbit step carries the orbit on into the Orbit section,
+ * which says it is a continued flight, not an orbit placed directly (R3.5).
  */
 export const smoke = true;
 export const timeoutMs = 360_000;
@@ -82,6 +84,19 @@ export default async function launchExplore(t) {
       `the CSV event log has ${logged.length} events (the flight has ${logBefore.totalCount}–${logAfter.totalCount}), target orbit ${logged.includes('evt.targetOrbit') ? 'present' : 'missing'}`);
   }
   t.check(await page.evaluate(() => location.hash) === '#/launch/explore', 'the page left Explore');
+
+  // R3.5: the Orbit step, then the Orbit section's words for a continued flight
+  const orbitStep = page.locator('#mission-steps [data-step="orbit"] button');
+  if (t.check(await t.until(() => orbitStep.isVisible(), { timeoutMs: 5000 }), 'the steps offer no way on to Orbit for a flight in orbit')) {
+    await orbitStep.click();
+    t.check(await t.until(async () => (await page.evaluate(() => location.hash)) === '#/orbit/explore', { timeoutMs: 15_000 }), 'the Orbit step did not open the Orbit section');
+    const kind = page.locator('.pg-handoff-kind');
+    t.check(await t.until(async () => /Where the flight got to/.test((await kind.textContent().catch(() => '')) ?? ''), { timeoutMs: 15_000 }),
+      'the Orbit section does not say the orbit is the flight carried on');
+    const groups = await page.evaluate(() => [...document.querySelectorAll('optgroup')].map((g) => [g.label, [...g.querySelectorAll('option')].map((o) => o.value)]));
+    t.check(groups.some(([label, values]) => label === 'Continue from a flight' && values.join() === 'handoff'), `the picker does not set the flight apart: ${JSON.stringify(groups)}`);
+    t.check(groups.some(([label, values]) => label === 'Place an orbit directly' && values.includes('custom') && !values.includes('handoff')), `the placed orbits are not grouped apart: ${JSON.stringify(groups)}`);
+  }
   app.checkErrors();
 }
 

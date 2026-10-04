@@ -29,6 +29,8 @@ export interface WatchHost {
   setWarp(warp: number): void;
   /** leave for the mission builder with the current mission loaded */
   explore(): void;
+  /** R3.5: Explore on a copy of this launch to change, the launch here kept as it is */
+  tryCopy?(id: WatchMissionId): void;
   /** S03: hand the orbit reached on to the Orbit section */
   continueInOrbit?(): void;
   /** point the camera at a stage flying home, or back at the rocket; C01: at Vostok-1's pilot, or back at the capsule */
@@ -502,6 +504,7 @@ export class WatchView {
     button('watch.end.other', 'watch-btn', () => this.openPicker());
     // S03: an orbit reached, or the station's, can be carried on in the Orbit section
     if ((ending === 'orbit' || ending === 'docked') && this.host.continueInOrbit) button('handoff.continue', 'watch-btn', () => this.host.continueInOrbit?.());
+    if (id && this.host.tryCopy) button('watch.end.copy', 'watch-btn', () => this.host.tryCopy?.(id));
     button('watch.end.explore', 'watch-btn link', () => this.host.explore());
     card.append(actions);
     card.hidden = false;

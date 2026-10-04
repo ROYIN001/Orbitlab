@@ -158,6 +158,18 @@ describe('the rules (A1)', () => {
     expect(ws.entering({ doc: 'edited', stored: true, underway: false })).toBe(false); // changed: the user's now
     expect(ws.origin).toBe('workspace');
   });
+
+  it('R3.5: Home\'s first-launch template stores nothing until it is changed, and entering a workspace mode keeps it', () => {
+    const ws = new WorkspaceMission();
+    ws.viewing('template');
+    expect(ws.persists('t')).toBe(false); // being loaded
+    ws.loaded('t');
+    expect(ws.persists('t')).toBe(false); // opened, not changed: the stored mission is safe
+    expect(ws.entering({ doc: 't', stored: true, underway: false })).toBe(false); // asked for: not swapped back
+    expect(ws.origin).toBe('template');
+    expect(ws.persists('t2')).toBe(true); // the first change makes it the user's
+    expect(ws.origin).toBe('workspace');
+  });
 });
 
 describe('journeys (A1)', () => {

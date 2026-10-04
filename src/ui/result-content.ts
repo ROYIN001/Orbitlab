@@ -14,7 +14,7 @@ export interface ResultInput {
   events: readonly SimEvent[];
   debris: readonly Pick<Debris, 'name' | 'createdAt' | 'recovery' | 'outcome'>[];
   plan: { target: ResolvedTarget };
-  cfg: { boosterRecovery: boolean };
+  cfg: { boosterRecovery: boolean; failure?: { mode: string } };
 }
 
 export interface ResultMetric {

@@ -1,0 +1,75 @@
+/**
+ * R3.5: a flight's result points at the setting worth looking at, by its typed
+ * cause. A Falcon 9 flown with a premature separation armed in the setup ends
+ * failed by that separation; its result offers "Show the setting", which at
+ * the Engineer level brings back the collapsed setup (read-only, the flight's
+ * own configuration) and lands on the failure field — changing nothing.
+ * The steps under the mission's name follow it: Launch before, Result after,
+ * Orbit struck through (the flight did not reach one), Result's chip taking
+ * the focus to the result card. The result suggests the nominal flight, as
+ * before → after; applying it starts a new mission with only that changed.
+ */
+import { press } from '../harness.mjs';
+
+export const timeoutMs = 300_000;
+
+export default async function r3ResultSetting(t) {
+  const app = await t.open({ hash: '#/launch/engineer' });
+  const { page } = app;
+  const set = await app.mcp('configure_mission', { vehicleId: 'falcon9', siteId: 'cape', orbitId: 'leo', failureMode: 'prematureSep', failureTimeS: 20 });
+  if (!t.check(set.ok, `configure_mission: ${JSON.stringify(set).slice(0, 200)}`)) return;
+  // the mission's source beside its name: a catalogue rocket set up here
+  t.check(await t.until(async () => /catalogue rocket/.test(await page.locator('#mission-eyebrow').textContent() ?? ''), { timeoutMs: 5000 }),
+    `the mission eyebrow does not say where the mission comes from: "${await page.locator('#mission-eyebrow').textContent()}"`);
+  const current = () => page.locator('#mission-steps [aria-current="step"]').getAttribute('data-step').catch(() => null);
+  t.check(await t.until(async () => (await current()) === 'launch', { timeoutMs: 5000 }), `before launch the steps stand at ${await current()}, not Launch`);
+  const launched = await app.mcp('launch_mission', {});
+  if (!t.check(launched.ok, `launch_mission: ${JSON.stringify(launched)}`)) return;
+  await app.mcp('control_playback', { action: 'warp', warp: 10 });
+  const button = page.locator('#mission-result .mission-result-setting');
+  const shown = await t.until(() => button.isVisible(), { timeoutMs: 180_000, intervalMs: 1000 });
+  const state = await app.mcp('read_flight_state');
+  if (!t.check(shown, `no "Show the setting" on the result (status ${state.frame?.status} at T+${state.cursorTimeS?.toFixed(0)} s)`)) return;
+  t.check(await t.until(async () => (await current()) === 'result', { timeoutMs: 5000 }), `after the flight the steps stand at ${await current()}, not Result`);
+  t.check(await page.locator('#mission-steps [data-step="orbit"]').getAttribute('data-state') === 'off', 'a flight that failed short of orbit still offers Orbit');
+  await press(t, app, page.locator('#mission-steps [data-step="result"] button'), 'mouse', 'the Result step');
+  t.check(await page.evaluate(() => !!document.getElementById('mission-result')?.contains(document.activeElement)), 'the Result step did not take the focus to the result');
+  t.check(await button.getAttribute('data-field') === 'setup.failureMode', `the result points at ${await button.getAttribute('data-field')}, not the armed failure`);
+  t.check(await page.evaluate(() => document.body.dataset.setup) === 'collapsed', 'the setup was not collapsed in flight');
+  const before = await page.locator('#setup [data-field="setup.failureMode"]').evaluate((el) => el.value).catch(() => null);
+  await button.scrollIntoViewIfNeeded();
+  await press(t, app, button, 'mouse', 'Show the setting');
+  const pointed = await t.until(() => page.evaluate(() => {
+    const field = document.querySelector('#setup [data-field="setup.failureMode"]');
+    const label = field?.closest('label');
+    return !!field && document.body.dataset.setup === 'shown' && !!label?.classList.contains('field-pointed')
+      && (document.activeElement === field || document.activeElement === label);
+  }), { timeoutMs: 5000 });
+  t.check(pointed, 'Show the setting did not open the setup on the failure field');
+  t.check(await page.locator('#setup [data-field="setup.failureMode"]').isDisabled(), 'the flown configuration became editable');
+  const after = await page.locator('#setup [data-field="setup.failureMode"]').evaluate((el) => el.value);
+  t.check(before === null || after === before, `showing the setting changed it (${before} → ${after})`);
+  t.check(after === 'prematureSep', `the field shows ${after}, not the failure that was flown`);
+  await app.shot('result-show-setting');
+
+  // the suggestion: before → after, applied on purpose to a new mission
+  const suggest = page.locator('#mission-result .mission-result-suggest');
+  if (!t.check(await suggest.isVisible(), 'the result suggests nothing for the failure that struck')) return;
+  t.check(await suggest.getAttribute('data-field') === 'setup.failureMode', `the suggestion changes ${await suggest.getAttribute('data-field')}`);
+  const said = await suggest.textContent() ?? '';
+  t.check(/Premature stage separation → Nominal flight/.test(said), `the suggestion does not show before → after: "${said}"`);
+  const apply = suggest.locator('.mission-result-apply');
+  await apply.scrollIntoViewIfNeeded();
+  await press(t, app, apply, 'mouse', 'Apply to a new mission');
+  const applied = await t.until(() => page.evaluate(() => {
+    const field = document.querySelector('#setup [data-field="setup.failureMode"]');
+    return document.body.dataset.flightStage === 'setup' && !!field && !field.disabled && field.value === 'none';
+  }), { timeoutMs: 10_000 });
+  t.check(applied, 'applying did not start a new mission with the nominal flight');
+  const vehicle = await page.locator('#setup [data-field="setup.payloadMass"]').first().inputValue().catch(() => null);
+  t.check(vehicle !== null, 'the new mission lost the payload field');
+  t.check(await t.until(async () => (await current()) === 'launch', { timeoutMs: 5000 }), `after applying the steps stand at ${await current()}, not Launch`);
+  await app.shot('result-suggestion-applied');
+  app.checkErrors();
+  await app.context.close();
+}

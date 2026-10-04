@@ -2,9 +2,19 @@ import { getLang, onLangChange, t } from '../i18n';
 import { RAD } from '../physics/constants';
 import { assessMissionResult, RESULT_COPY, type ResultInput, type ResultMetric } from './result-content';
 import { aeroAngles } from './notation';
+import { resultSetting, type ResultSettingContext, type ResultSuggestion } from './result-actions';
+import type { ResultCause } from './result-content';
 import './mission-result.css';
 
-export interface MissionResultOptions { onSeek?: (time: number) => void }
+export interface MissionResultOptions {
+  onSeek?: (time: number) => void;
+  /** R3.5: show the setup field (a dictionary key) worth looking at for this result */
+  onShowSetting?: (field: string) => void;
+  /** R3.5: the change to try next for this result (src/ui/result-actions.ts `resultSuggestion`), or null */
+  suggestion?: (cause: ResultCause, ctx: ResultSettingContext) => ResultSuggestion | null;
+  /** R3.5: apply it, to a new mission */
+  onApplySuggestion?: (s: ResultSuggestion) => void;
+}
 
 /** Inline post-flight summary. Call with the displayed frame-backed view. */
 export class MissionResult {
@@ -25,6 +35,14 @@ export class MissionResult {
   private readonly recoveryNote = document.createElement('p');
   private readonly next = document.createElement('p');
   private readonly review = document.createElement('button');
+  private readonly setting = document.createElement('button');
+  private settingField: string | null = null;
+  /** R3.5: the change to try next, before → after, and the press that applies it */
+  private readonly suggest = document.createElement('div');
+  private readonly suggestText = document.createElement('p');
+  private readonly suggestBasis = document.createElement('p');
+  private readonly suggestApply = document.createElement('button');
+  private suggested: ResultSuggestion | null = null;
 
   constructor(private readonly host: HTMLElement, private readonly options: MissionResultOptions = {}) {
     host.classList.add('mission-result');
@@ -71,8 +89,20 @@ export class MissionResult {
     this.review.className = 'btn mission-result-review';
     this.review.hidden = !options.onSeek;
     this.review.addEventListener('click', () => this.options.onSeek?.(this.reviewTime));
+    this.setting.type = 'button';
+    this.setting.className = 'btn mission-result-setting';
+    this.setting.hidden = true;
+    this.setting.addEventListener('click', () => { if (this.settingField) this.options.onShowSetting?.(this.settingField); });
+    this.suggest.className = 'mission-result-suggest';
+    this.suggest.hidden = true;
+    this.suggestText.className = 'mission-result-change';
+    this.suggestBasis.className = 'mission-result-basis';
+    this.suggestApply.type = 'button';
+    this.suggestApply.className = 'btn mission-result-apply';
+    this.suggestApply.addEventListener('click', () => { if (this.suggested) this.options.onApplySuggestion?.(this.suggested); });
+    this.suggest.append(this.suggestText, this.suggestBasis, this.suggestApply);
     host.replaceChildren(this.heading, this.status, this.detail, this.aeroWarnings, this.times, wrap,
-      this.deltaNote, this.payload, this.iss, this.recovery, this.recoveryNote, this.next, this.review);
+      this.deltaNote, this.payload, this.iss, this.recovery, this.recoveryNote, this.next, this.review, this.setting, this.suggest);
     onLangChange(() => { if (this.last) this.update(this.last); });
   }
 
@@ -123,7 +153,39 @@ export class MissionResult {
     this.recoveryNote.textContent = copy.separate;
     this.next.textContent = `${copy.next}: ${copy.cause[model.cause].next}`;
     this.reviewTime = model.reviewTime;
+    // R3.5: the setting the typed cause points at, if one does
+    const settingCtx: ResultSettingContext = { failureArmed: !!input.cfg.failure && input.cfg.failure.mode !== 'none', events: input.events, outcomeTime: model.outcomeTime };
+    const field = this.options.onShowSetting ? resultSetting(model.cause, settingCtx) : null;
+    this.showSuggestion(this.options.onApplySuggestion ? this.options.suggestion?.(model.cause, settingCtx) ?? null : null);
+    this.settingField = field;
+    this.setting.hidden = !field;
+    if (field) {
+      this.setting.dataset.field = field;
+      this.setting.textContent = t('result.showSetting', { field: t(field) });
+    }
     this.review.textContent = `${copy.review} (T+${model.reviewTime.toFixed(1)} s)`;
+  }
+
+  /** R3.5: the change to try next, as before → after, with what it rests on. */
+  private showSuggestion(s: ResultSuggestion | null): void {
+    this.suggested = s;
+    this.suggest.hidden = !s;
+    if (!s) return;
+    this.suggest.dataset.field = s.field;
+    const kg = (v: number): string => `${v.toLocaleString(getLang(), { maximumFractionDigits: 0 })} ${t('u.kg')}`;
+    const utc = (d: Date): string => `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+    let before: string, after: string, basis: string;
+    if (s.field === 'setup.failureMode') {
+      before = t(`setup.fail.${s.before}`); after = t('setup.fail.none'); basis = t('result.suggest.basisFailure');
+    } else if (s.field === 'setup.payloadMass') {
+      before = kg(s.before); after = kg(s.after); basis = t('result.suggest.basisPayload', { cap: kg(s.after) });
+    } else {
+      before = utc(s.before); after = utc(s.after); basis = t('result.suggest.basisWindow');
+    }
+    this.suggestText.replaceChildren(Object.assign(document.createElement('strong'), { textContent: `${t('result.suggest.title')} · ` }),
+      document.createTextNode(`${t(s.field)}: ${before} → ${after}`));
+    this.suggestBasis.textContent = `${basis} ${t('result.suggest.kept')}`;
+    this.suggestApply.textContent = t('result.suggest.apply');
   }
 
   private number(value: number | null, metric: ResultMetric, signed = false): string {

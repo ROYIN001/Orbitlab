@@ -93,6 +93,16 @@ export function subjectOf(where: { stage?: number; group?: number; booster?: num
   return null;
 }
 
+/**
+ * R3.5: the builder's card a subject is about (the Explore parts builder's
+ * `data-ref`): a stage's own card, the strap-ons' card (every group is on it),
+ * the fairing's. Decided from the typed subject, never the sentence.
+ */
+export function subjectRef(subject: TextSubject): string {
+  if (subject.kind === 'stage') return `stage:${subject.n - 1}`;
+  return subject.kind === 'strapOns' ? 'strapons' : 'fairing';
+}
+
 // ─── warnings ───────────────────────────────────────────────────────────────
 
 /**

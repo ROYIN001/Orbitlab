@@ -27,6 +27,14 @@ import { RecoverySceneryView } from './render/recovery';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
 import { CameraPolicy } from './render/camera-policy';
 import { missionStage, setupCollapsed, type MissionStage } from './ui/flight-lifecycle';
+import { MISSION_SOURCE_KEY, missionSource } from './ui/mission-source';
+import { FIRST_LAUNCH, quickstartMission } from './ui/quickstart';
+import { MISSION_STEPS, MISSION_STEP_KEY, missionSteps, stepActionable, type MissionStep } from './ui/mission-steps';
+import { resultSuggestion, type ResultSettingContext, type ResultSuggestion } from './ui/result-actions';
+import type { ResultCause } from './ui/result-content';
+import { orbitClassOf, ratedPayload } from './config/verdict-core';
+import { launchWindows } from './physics/mission';
+import { siteById } from './data/sites';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { ExploreDebrief } from './ui/explore-debrief';
@@ -440,6 +448,8 @@ class App {
    * which the page stores, or one a viewer prepared, which it does not.
    */
   private readonly workspace = new WorkspaceMission();
+  /** R3.5: the Watch launch the template in the panel is a copy of; null for Home's first-launch template */
+  private templateCopyOf: string | null = null;
   /** the start-up mission is in the panel: entering the workspace may restore the stored one from now on */
   private started = false;
   private wasLive = true;
@@ -499,7 +509,10 @@ class App {
 
   constructor() {
     this.helpGuide = new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
-    this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
+    this.result = new MissionResult(document.getElementById('mission-result')!, {
+      onSeek: time => this.seek(time), onShowSetting: (field) => this.showSetting(field),
+      suggestion: (cause, ctx) => this.resultSuggestionFor(cause, ctx), onApplySuggestion: (s) => this.applySuggestion(s),
+    });
     this.flown = new FlownPanel(document.getElementById('flown-result')!);
     this.toruControls = new ToruControls(document.getElementById('toru-controls')!, (cmd) => {
       if (this.mode === 'engineer' && this.player.live) this.session?.commandToru(cmd);
@@ -543,6 +556,7 @@ class App {
       onChange: (cfg) => { if (!this.playing) this.preview(cfg); },
       onExperience: (experience) => this.go(route('launch', experience === 'advanced' ? 'engineer' : 'explore')),
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
+      onBackToMine: () => this.continueMission(),
     });
     this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig(), missionState: () => this.panel.missionState() });
     // P08: a run clicked in the Monte Carlo window opens in the setup panel as one dispersed flight —
@@ -564,6 +578,7 @@ class App {
       openLessons: () => this.lessons.openCatalog(),
       lastMission: () => missionSummary(loadStoredMission()),
       continueMission: () => this.continueMission(),
+      tryFirstLaunch: () => this.tryFirstLaunch(),
     }, this.homeStage);
     this.buildScreen = new BuildScreen(document.getElementById('build-screen')!, {
       go: (r) => this.go(r),
@@ -612,6 +627,7 @@ class App {
       togglePlay: () => this.togglePlay(),
       setWarp: (warp) => this.setWarp(warp),
       explore: () => this.go(route('launch', 'explore')),
+      tryCopy: (id) => this.tryWatchCopy(id),
       continueInOrbit: () => this.continueInOrbit(),
       follow: (target) => { this.watchFollow = target === 'capsule' ? 'rocket' : target; },
       pickerFooter: () => this.soundtrackPanel.render(),
@@ -1049,7 +1065,7 @@ class App {
   }
 
   /** A1: a viewer's launch into the panel, held as the viewer's until it is changed. */
-  private loadViewerMission(origin: 'demo' | 'watch', mission: Parameters<SetupPanel['loadMission']>[0]): void {
+  private loadViewerMission(origin: 'demo' | 'watch' | 'template', mission: Parameters<SetupPanel['loadMission']>[0]): void {
     this.workspace.viewing(origin);
     this.panel.loadMission(mission);
     this.workspace.loaded(this.missionDoc());
@@ -1074,6 +1090,38 @@ class App {
       this.applyStoredMission(stored);
     }
     this.go(route('launch', loadExperience() === 'advanced' ? 'engineer' : 'explore'));
+  }
+
+  /**
+   * R3.5 (A01): Home's "try a launch yourself" — Explore on the first-launch
+   * template, which says what it uses. Opening it stores nothing: the stored
+   * mission stays as it was until the template is changed, and the note offers
+   * the way back to it.
+   */
+  private tryFirstLaunch(): void {
+    this.openTemplate(quickstartMission(FIRST_LAUNCH), null);
+  }
+
+  /**
+   * R3.5: Watch's "Try this launch yourself" — Explore on a fresh copy of the
+   * launch's settings, held as Home's template is. The launch in Watch is
+   * built from its definition each time, so changing the copy cannot change it.
+   */
+  private tryWatchCopy(id: WatchMissionId): void {
+    const m = watchMissionById(id);
+    this.openTemplate(watchMissionSettings(id), m ? t(m.titleKey) : id);
+  }
+
+  /** A template (Home's, or a copy of a Watch launch) in Explore, with its note. */
+  private openTemplate(mission: Parameters<SetupPanel['loadMission']>[0], copyOf: string | null): void {
+    this.goLive(); this.playing = false;
+    this.templateCopyOf = copyOf;
+    this.go(route('launch', 'explore'));
+    this.loadViewerMission('template', mission);
+    // the first-use guide's first step is to pick a Quick start example: this is as good
+    this.helpGuide.missionGiven();
+    this.panel.showTemplate({ stored: loadStoredMission() !== null, ...(copyOf ? { copyOf } : {}) });
+    this.updateMissionName();
   }
 
   /**
@@ -1321,6 +1369,11 @@ class App {
 
   private updateMissionName(): void {
     const cfg = this.panel.state;
+    // the first-launch template's note goes once the template is the user's mission
+    if (this.workspace.origin !== 'template') this.panel.showTemplate(null);
+    // R3.5: whose mission this is, beside its name
+    this.narration.setSource(MISSION_SOURCE_KEY[missionSource({ origin: this.workspace.origin, lesson: !!document.body.dataset.lesson,
+      customVehicle: !!cfg.vehicleSpec, customSatellite: !!cfg.satelliteSpec, copyOf: this.templateCopyOf !== null })]);
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
     this.narration.setMission(missionVehicle(cfg).name,
@@ -1390,6 +1443,131 @@ class App {
     const expanded = String(offer && this.setupPeek);
     if (toggle.getAttribute('aria-expanded') !== expanded) toggle.setAttribute('aria-expanded', expanded);
     this.syncMobileFlightBar(stage);
+    this.syncSteps(stage);
+  }
+
+  /** R3.5: the steps' last painted state, and when the setup's validity was last read */
+  private stepsKey = '';
+  private stepsValid = { at: -Infinity, valid: true };
+
+  /**
+   * R3.5: the mission's steps under its name (src/ui/mission-steps.ts), at the
+   * workspace levels. Called every frame: the setup's validity is read a few
+   * times a second, and the list is rebuilt only when what it shows changed.
+   */
+  private syncSteps(stage: MissionStage): void {
+    const list = document.getElementById('mission-steps');
+    if (!list) return;
+    const shown = !this.lean && this.route.section === 'launch';
+    if (shown && stage === 'setup') {
+      const now = performance.now();
+      if (now - this.stepsValid.at > 250) this.stepsValid = { at: now, valid: this.panel.isValid() };
+    }
+    const valid = this.stepsValid.valid;
+    const inOrbit = stage !== 'setup' && handoffAvailable(this.shown);
+    const key = shown ? `${stage}|${valid}|${inOrbit}|${getLang()}` : 'hidden';
+    if (key === this.stepsKey) return;
+    this.stepsKey = key;
+    list.hidden = !shown;
+    if (!shown) return;
+    list.setAttribute('aria-label', t('ctx.steps'));
+    const states = missionSteps({ stage, valid, inOrbit });
+    list.replaceChildren(...MISSION_STEPS.map((step) => {
+      const li = document.createElement('li');
+      li.dataset.step = step;
+      li.dataset.state = states[step];
+      const label = t(MISSION_STEP_KEY[step]);
+      if (stepActionable(step, { stage, inOrbit })) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.addEventListener('click', () => this.goToStep(step));
+        li.append(b);
+      } else li.textContent = label;
+      if (states[step] === 'current') li.setAttribute('aria-current', 'step');
+      return li;
+    }));
+  }
+
+  /** R3.5: a step's chip pressed. */
+  private goToStep(step: MissionStep): void {
+    if (step === 'build') this.go(route('build', this.lastLevel()));
+    else if (step === 'orbit') this.continueInOrbit();
+    else if (step === 'check') {
+      const note = document.getElementById('mission-note');
+      if (!note) return;
+      note.tabIndex = -1;
+      note.scrollIntoView({ block: 'center' });
+      note.focus({ preventScroll: true });
+    } else if (step === 'result') {
+      const card = document.getElementById('mission-result');
+      if (!card || card.hidden) return;
+      card.scrollIntoView({ block: 'nearest' });
+      const first = card.querySelector<HTMLElement>('button, [href]');
+      (first ?? card).focus({ preventScroll: true });
+    }
+  }
+
+  /** R3.5: the suggestion worked out for this flight, by its cause: the card asks on every frame it shows */
+  private suggestionMemo: { key: string; value: ResultSuggestion | null } = { key: '', value: null };
+
+  /**
+   * R3.5: the change to try next for the flight on screen, from what was
+   * flown (`sim.cfg`), never the setup's draft: the vehicle's published rating
+   * for the orbit's class, and the launch window nearest the time flown.
+   */
+  private resultSuggestionFor(cause: ResultCause, ctx: ResultSettingContext): ResultSuggestion | null {
+    const sim = this.sim;
+    if (!sim) return null;
+    const key = `${this.flightNo}|${cause}|${ctx.outcomeTime}|${ctx.events.length}`;
+    if (key === this.suggestionMemo.key) return this.suggestionMemo.value;
+    const cfg = sim.cfg;
+    let value: ResultSuggestion | null = null;
+    try {
+      value = resultSuggestion(cause, {
+        ...ctx, failureMode: cfg.failure.mode, payloadMass: cfg.payloadMassOverride ?? sim.satellite.mass,
+        ratedPayload: ratedPayload(sim.vehicleSpec, orbitClassOf(cfg.orbit)).cap || null, launchTime: cfg.launchTime,
+        nearestWindow: () => {
+          const from = new Date(cfg.launchTime.getTime() - 12 * 3600e3);
+          const windows = launchWindows(cfg.orbit, siteById(cfg.siteId), from, 3);
+          let best: Date | null = null;
+          for (const w of windows) if (!best || Math.abs(w.time.getTime() - cfg.launchTime.getTime()) < Math.abs(best.getTime() - cfg.launchTime.getTime())) best = w.time;
+          return best;
+        },
+      });
+    } catch (err) { console.error(err); }
+    this.suggestionMemo = { key, value };
+    return value;
+  }
+
+  /**
+   * R3.5: a suggestion applied, on purpose: a new mission (the setup's own
+   * New mission — the flight just flown is left as it was recorded) with the
+   * one setting changed, previewed, and the field shown.
+   */
+  private applySuggestion(s: ResultSuggestion): void {
+    this.panel.backToSetup();
+    const st = this.panel.state;
+    if (s.field === 'setup.failureMode') st.failure = { ...st.failure, mode: 'none' };
+    else if (s.field === 'setup.payloadMass') st.payloadMass = s.after;
+    else st.launchTime = new Date(s.after.getTime());
+    this.panel.applyExternalEdit();
+    this.reset();
+    requestAnimationFrame(() => { this.panel.focusField(s.field); });
+  }
+
+  /**
+   * R3.5: a result's "show the setting": the setup shown (at the Engineer level
+   * the collapsed column comes back, read-only while the flight exists) and the
+   * field brought into view and focused. Nothing is changed for the user.
+   */
+  private showSetting(field: string): void {
+    if (this.mode === 'engineer' && this.stage !== 'setup' && !this.setupPeek) {
+      this.setupPeek = true;
+      this.syncLifecycle();
+    }
+    // after the column is laid out again
+    requestAnimationFrame(() => { this.panel.focusField(field); });
   }
 
   /** R2.1: show the collapsed setup (read-only in flight, with Relaunch and New mission), or hide it again. */

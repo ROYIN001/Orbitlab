@@ -106,9 +106,22 @@ export class Narration {
     this.missionName.append(sep, document.createTextNode(this.payloadName));
   }
 
+  /** R3.5: where the mission comes from, said in its eyebrow ("MISSION · your design") */
+  private sourceKey: string | null = null;
+
+  setSource(key: string | null): void {
+    if (key === this.sourceKey) return;
+    this.sourceKey = key;
+    this.renderEyebrow();
+  }
+
+  private renderEyebrow(): void {
+    if (this.missionEyebrow) this.missionEyebrow.textContent = this.sourceKey ? `${t('narr.mission')} · ${t(this.sourceKey)}` : t('narr.mission');
+  }
+
   applyLanguage(): void {
     this.eventLabel.textContent = t('narr.latestEvent');
-    if (this.missionEyebrow) this.missionEyebrow.textContent = t('narr.mission');
+    this.renderEyebrow();
     this.shown = { label: '', title: '', detail: '', event: '', clock: '', ctx: '', state: '' };
     this.renderMissionName();
   }
