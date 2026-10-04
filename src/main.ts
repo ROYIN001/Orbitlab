@@ -31,6 +31,8 @@ import { MISSION_SOURCE_KEY, missionSource } from './ui/mission-source';
 import { FIRST_LAUNCH, quickstartMission } from './ui/quickstart';
 import { MISSION_STEPS, MISSION_STEP_KEY, missionSteps, stepActionable, type MissionStep } from './ui/mission-steps';
 import { resultSuggestion, type ResultSettingContext, type ResultSuggestion } from './ui/result-actions';
+import { parseDesignRef, refFlies, type DesignRef } from './design/design-ref';
+import { designRefSignature, designRefText } from './ui/design-ref-text';
 import type { ResultCause } from './ui/result-content';
 import { orbitClassOf, ratedPayload } from './config/verdict-core';
 import { launchWindows } from './physics/mission';
@@ -450,6 +452,8 @@ class App {
   private readonly workspace = new WorkspaceMission();
   /** R3.5: the Watch launch the template in the panel is a copy of; null for Home's first-launch template */
   private templateCopyOf: string | null = null;
+  /** R3.1: the user's design the panel's mission flies, with its revision; dropped once the mission flies something else */
+  private designRef: DesignRef | null = null;
   /** the start-up mission is in the panel: entering the workspace may restore the stored one from now on */
   private started = false;
   private wasLive = true;
@@ -595,6 +599,8 @@ class App {
         this.go(route('launch', level));
         return true;
       },
+      // R3.1: which design that was, and its revision, once Build has read its saved record
+      designFlown: (ref) => this.designFlown(ref),
       // D06 (the integration): "Fly it" on the Launch section's own vehicle, from its site, after its launch time
       launchMission: () => {
         const m = this.panel.missionState();
@@ -968,7 +974,7 @@ class App {
     // a payload with an engine flies as the vehicle's last stage: its dry mass and what the frame says is left
     const own = f.stages.find((st) => st.isSpacecraft);
     const spec = own ? sim.vehicle.stages[own.index]?.spec : undefined;
-    return handoffFromFlight({
+    const h = handoffFromFlight({
       frame: f, satellite: sat, payloadMass: sim.cfg.payloadMassOverride ?? sat.mass,
       spacecraftStage: own && spec ? { dryMass: spec.dryMass, propellant: own.propellantFraction * spec.propellantMass } : null,
       vehicleName: sim.vehicleSpec.name,
@@ -977,6 +983,10 @@ class App {
       label: t('life.start', { sat: satelliteName(sat), pe: (el.periapsisAlt / 1000).toFixed(0), ap: (el.apoapsisAlt / 1000).toFixed(0),
         inc: (el.i * RAD).toFixed(1), t: f.t.toFixed(0) }),
     });
+    // R3.1: the design this flight flew, and its revision — when the flight on screen is that design's
+    const ref = this.designRef;
+    if (ref && refFlies(ref, sim.cfg)) h.origin.design = ref;
+    return h;
   }
 
   /** P07: the orbit on screen, carried on for years in the lifetime dialog. */
@@ -1071,11 +1081,30 @@ class App {
     this.workspace.loaded(this.missionDoc());
   }
 
+  /** R3.1: the design reference, while the panel's mission still flies that design. */
+  private currentDesignRef(): DesignRef | null {
+    if (this.designRef && !refFlies(this.designRef, this.panel.state)) this.designRef = null;
+    return this.designRef;
+  }
+
+  /** R3.1: Build says which design "Fly it" handed over, and its revision. */
+  private designFlown(ref: DesignRef): void {
+    if (!refFlies(ref, this.panel.state)) return;
+    this.designRef = ref;
+    if (this.workspace.origin === 'workspace') saveStoredMission(this.panel.missionState(), undefined, ref);
+    this.updateMissionName();
+  }
+
   /** The stored mission into the panel, as the user's; the notice says what could not be used. */
   private applyStoredMission(stored: unknown): void {
     this.workspace.adopt();
     const parsed = this.panel.share.apply(stored, 'stored');
     if (!parsed.usable) this.preview(this.panel.getConfig());
+    // R3.1: the design it flew and its revision, kept beside the mission; one that cannot be read is not shown
+    const ref = parseDesignRef(stored && typeof stored === 'object' ? (stored as { design?: unknown }).design : undefined);
+    this.designRef = ref && ref !== 'invalid' && refFlies(ref, this.panel.state) ? ref : null;
+    if (this.designRef) saveStoredMission(this.panel.missionState(), undefined, this.designRef);
+    this.updateMissionName();
   }
 
   /**
@@ -1372,8 +1401,11 @@ class App {
     // the first-launch template's note goes once the template is the user's mission
     if (this.workspace.origin !== 'template') this.panel.showTemplate(null);
     // R3.5: whose mission this is, beside its name
-    this.narration.setSource(MISSION_SOURCE_KEY[missionSource({ origin: this.workspace.origin, lesson: !!document.body.dataset.lesson,
-      customVehicle: !!cfg.vehicleSpec, customSatellite: !!cfg.satelliteSpec, copyOf: this.templateCopyOf !== null })]);
+    const source = missionSource({ origin: this.workspace.origin, lesson: !!document.body.dataset.lesson,
+      customVehicle: !!cfg.vehicleSpec, customSatellite: !!cfg.satelliteSpec, copyOf: this.templateCopyOf !== null });
+    // R3.1: and, for the user's design, which one and which revision
+    const ref = source === 'design' ? this.currentDesignRef() : null;
+    this.narration.setSource(MISSION_SOURCE_KEY[source], ref ? { signature: designRefSignature(ref), text: () => designRefText(ref) } : null);
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
     this.narration.setMission(missionVehicle(cfg).name,
@@ -1722,7 +1754,7 @@ class App {
     // The workspace's mission outlives the tab (roadmap U01): every edit, from
     // the panel or over WebMCP, previews. The viewer's prepared launches do
     // not replace it until they are changed (audit 2026-09-27 A1).
-    if (this.workspace.persists(this.missionDoc())) saveStoredMission(this.panel.missionState());
+    if (this.workspace.persists(this.missionDoc())) saveStoredMission(this.panel.missionState(), undefined, this.currentDesignRef());
     this.playing = false;
     this.panel.setRunning(false);
     this.fastForwardTo = null;

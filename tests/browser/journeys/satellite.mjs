@@ -72,6 +72,9 @@ export default async function satellite(t) {
   // send it to the Orbit section; its lifetime dialog takes the design's mass and area
   await page.click(`${grid} [data-k="sx:toOrbit"]`);
   t.check(await t.until(async () => (await page.evaluate(() => location.hash)) === '#/orbit/explore'), 'Send to Orbit did not open the Orbit section');
+  // R3.1: the hand-off names the saved design and its revision
+  t.check(await t.until(async () => /Journey NAPA-2, saved /.test((await page.locator('.pg-handoff-design').textContent().catch(() => '')) ?? ''), { timeoutMs: 15_000 }),
+    `the Orbit section does not name the saved design: "${await page.locator('.pg-handoff-design').textContent().catch(() => '')}"`);
   // R3.5: a design is placed in its orbit directly, and the Orbit section says so
   t.check(await t.until(async () => /Placed directly/.test((await page.locator('.pg-handoff-kind').textContent().catch(() => '')) ?? ''), { timeoutMs: 15_000 }),
     'the Orbit section does not say the design was placed directly');
@@ -124,6 +127,11 @@ export default async function satellite(t) {
   t.check(stored?.version === 3 && stored.mission.vehicleId === 'electron' && stored.mission.satelliteSpec?.name === 'Journey NAPA-2',
     `the Launch section's mission is not the design on Electron (v3): ${JSON.stringify(stored?.mission ?? null).slice(0, 300)}`);
   t.check(Math.abs((stored?.mission?.satelliteSpec?.area ?? 0) - AREA) < 1e-12, 'the mission does not carry the design\'s drag area');
+  // R3.1: the mission says which design it flies and which revision, and keeps it with the stored mission
+  t.check(await t.until(async () => /your design · Journey NAPA-2, saved /.test(await page.locator('#mission-eyebrow').textContent() ?? ''), { timeoutMs: 10_000 }),
+    `the mission does not name the design and its revision: "${await page.locator('#mission-eyebrow').textContent()}"`);
+  const kept = await t.until(async () => { const s2 = await workspaceValue(page, 'orbitlab.mission'); return s2?.design?.recordId && s2.design.name === 'Journey NAPA-2' && !s2.design.edited ? s2.design : null; }, { timeoutMs: 10_000 });
+  t.check(!!kept && /^\d{4}-\d{2}-\d{2}T/.test(kept.revision), `the stored mission does not keep the design's revision: ${JSON.stringify(kept)}`);
 
   const launched = await app.mcp('launch_mission', {});
   if (!t.check(launched.ok && launched.config?.customSatellite?.name === 'Journey NAPA-2', `launch_mission: ${JSON.stringify(launched).slice(0, 300)}`)) return;

@@ -17,6 +17,7 @@
  * loop that runs only while it is on screen; a flight left running in the
  * Launch section carries on underneath.
  */
+import { designRefText } from '../design-ref-text';
 import { t, getLang } from '../../i18n';
 import { MU_EARTH, R_EARTH, RAD } from '../../physics/constants';
 import { julianDate } from '../../physics/orbital';
@@ -1121,6 +1122,8 @@ export class OrbitPlayground {
     box.append(el('p', 'pg-handoff-label', keepUnits(h.label)));
     // R3.5: a continuation or an orbit placed directly, in words
     box.append(el('p', 'pg-handoff-kind', t(this.fromDesign() ? 'pg.handoff.designNote' : 'pg.handoff.flightNote')));
+    // R3.1: the user's design it is, and which revision
+    if (h.origin.design) box.append(el('p', 'pg-handoff-design', t('handoff.design', { design: designRefText(h.origin.design) })));
     const dl = el('dl', 'pg-dl');
     // O03: as it is now — lighter by whatever the plans flown from it burned
     const kg = t('u.kg'), craft = this.launchCraft;

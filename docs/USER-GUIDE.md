@@ -722,7 +722,14 @@ figure (how many wings, where each part sits), the drawing assumes and lists the
 under it. The open tab's subsystem is highlighted; each part's button opens its tab. A design with
 wings can be drawn **Deployed** or **Stowed for launch** — the wings folded flat against the bus's
 sides (the folds are an assumption, said under the picture) — and the corner shows the body axes:
-+Z at the Earth, +X along the velocity. While a
++Z at the Earth, +X along the velocity.
+
+Under the numbers of three tabs is a diagram drawn from those same numbers: on **Power**, the
+orbit seen from above with the arc it spends in the Earth's shadow on the design date (and, dashed,
+on the year's worst day) and the minutes each comes to; on **Radio**, the satellite over the ground
+station at the slant range the link is worked at, its beam and whether the margin clears the 3 dB
+floor; on **Camera**, the field of view down to the ground, its swath and the ground sample
+distance, height and swath to one scale. While a
 figure is being typed and is not a number yet, the drawing says so rather than showing the old
 one.
 
@@ -808,7 +815,9 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
 
 Above the scene, the line over the mission's name says where the mission comes from — a
 catalogue rocket, your design, a lesson, the launch Watch prepared, the first-launch template or
-a copy to try — and under the name, at Explore and Engineer, are its steps: **Build › Check ›
+a copy to try; for your design it also says which one and which version: its name and when it
+was saved, *changed since saved* when you changed it after saving, or *not saved* (the same
+words follow it into the Orbit section) — and under the name, at Explore and Engineer, are its steps: **Build › Check ›
 Launch › Result › Orbit**, the one it is at in bold. Build opens the Build section, Check the
 verdict in the setup before launch, Result the result card once the flight has ended, and Orbit
 continues in the Orbit section once the flight is in orbit (struck through when it ended out of

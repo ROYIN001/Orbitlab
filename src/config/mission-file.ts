@@ -9,6 +9,7 @@ import { workspaceStorage } from '../workspace/storage';
  * WebMCP, and a value it rejects goes back to its default (the rest of the
  * mission is kept) with an issue naming the field, for the page to show.
  */
+import type { DesignRef } from '../design/design-ref';
 import type { DynamicsConfig, FailureConfig, GuidanceParams, MissionConfig, OrbitSpec, RecoveryPlan, SatelliteSpec, VehicleSpec } from '../types';
 import { ALL_VEHICLES } from '../data/vehicles';
 import { SATELLITES } from '../data/satellites';
@@ -47,6 +48,8 @@ export type MissionState = ConfigInput & { orbitId: string };
 export interface MissionDocument {
   format: typeof MISSION_FORMAT;
   version: number;
+  /** R3.1: the user's design the mission flies and its revision, when it is one (beside `mission`, which the parser reads alone) */
+  design?: DesignRef;
   mission: {
     vehicleId: string; satelliteId: string; siteId: string;
     /** a custom vehicle, whose id is `vehicleId` (version 2, S02) */
@@ -414,8 +417,14 @@ export function readMissionFileText(text: string): unknown {
 
 export const MISSION_STORE_KEY = 'orbitlab.mission';
 
-export function saveStoredMission(state: MissionState, store?: Pick<Storage, 'setItem'>): void {
-  try { (store ?? workspaceStorage()).setItem(MISSION_STORE_KEY, JSON.stringify(missionDocument(state))); } catch { /* storage off or full */ }
+/**
+ * @param design R3.1: the user's design the mission flies, with its revision
+ *   (src/design/design-ref.ts), kept at the document's top level beside
+ *   `mission` — the parser reads `mission` only, so it changes nothing for it
+ */
+export function saveStoredMission(state: MissionState, store?: Pick<Storage, 'setItem'>, design?: DesignRef | null): void {
+  const doc = design ? { ...missionDocument(state), design } : missionDocument(state);
+  try { (store ?? workspaceStorage()).setItem(MISSION_STORE_KEY, JSON.stringify(doc)); } catch { /* storage off or full */ }
 }
 
 export function loadStoredMission(store?: Pick<Storage, 'getItem'>): unknown {

@@ -60,12 +60,29 @@ Local: Node 22.22.0, Chromium 141.0.7390.37, software WebGL, render scale 0.5
 - `satelliteDrawing()` มี `stowed` สำหรับแบบที่มีปีก: แต่ละปีกพับเป็นแผงกว้างเท่าความลึกของ bus จำนวน `ceil(span / depth)` แผง หนา 3 ซม. แนบด้านข้าง (assumption `stowedPanels` ที่แสดงใต้ภาพ เพราะแบบไม่ให้ทั้งสองค่า) พร้อม extent ของท่าพับ; body/spinner cells, จาน, กล้อง และเครื่องยนต์วาดเหมือนเดิมทั้งสองท่า
 - satellite bench มีปุ่ม Deployed / Stowed for launch (เฉพาะแบบที่มีปีก); ภาพมีแกน +X (ตามความเร็ว), +Z (ชี้โลก), +Y (ออกจากหน้ากระดาษ) ที่มุม และบอกเป็นธรรมเนียมของภาพใต้ภาพ (ไม่ใช่ assumption ของแบบ — bus เปล่ายังไม่มี assumption ตาม test เดิม)
 - หลักฐาน: `tests/satellite-drawing.test.ts` +1 (ทุก template: แผงพอคลุม span, ท่าพับไม่กว้างกว่าท่ากาง, ไม่มี stowed เมื่อไม่มีปีก) ผ่าน; `tests/i18n.test.ts` ผ่าน; `r3-bench-drawings` เปลี่ยน NAPA-2 เป็น tracking wings ที่ Power tab → Stowed พับทุกปีก ไม่มีปีกกางค้าง → Deployed กางกลับ, มีแกน — ผ่าน 15.9 s
-- ยังไม่มี: diagram sunlight/eclipse, antenna pointing, camera footprint
+
+### R3.3 ต่อ: diagram ของ subsystem
+
+- `src/design/satellite-diagrams.ts` (pure) อ่านเฉพาะ `SatelliteFigures` ชุดเดียวกับตาราง (ไม่มีฟิสิกส์ของตัวเองตาม PLAN): `eclipseDiagram` (สัดส่วนรอบในเงา วันนี้/วันที่แย่ที่สุด, นาที, β), `linkDiagram` (slant range, beamwidth, margin เทียบเกณฑ์ `LINK_MARGIN_THRESHOLD` 3 dB), `footprintDiagram` (altitude, FOV, swath, GSD, diffraction, ตัวจำกัด) — ไม่มีกล้อง → null
+- `src/ui/build/satellite-diagrams-svg.ts` วาดใต้ตารางของแท็บ Power / Radio / Camera พร้อม caption (HTML แปลได้, ภาพ aria-hidden): วงโคจรมองจากบนกับแถบเงาโลกและส่วนโค้งในเงา (เส้นประ = วันที่เงายาวที่สุดของปี) — สัดส่วนรอบตามจริง ระยะไม่ตามมาตราส่วน; ดาวเทียมเหนือสถานีภาคพื้นพร้อมลำคลื่นตาม beamwidth จริง (ไม่มี beam แคบ → วงกว้าง) สีบอกว่าผ่านเกณฑ์หรือไม่; footprint ของกล้องที่ความสูงและ swath ใช้มาตราส่วนเดียวกัน (กว้างเกินภาพ → บอกว่าตัดขอบ)
+- figures ที่ stale/ไม่ถูกต้อง: diagram ใช้ snapshot เดียวกับตาราง จึงอยู่ใต้สถานะ stale เดียวกัน
+- หลักฐาน: `tests/satellite-diagrams.test.ts` 2 (ทุก template: ค่าทุกตัวใน diagram เท่ากับ figure, เงา + แดด = period, worst ≥ วันนี้; ไม่มีกล้อง → ไม่มี footprint) ผ่าน; `r3-bench-drawings` เปิด Power/Radio/Camera แล้วพบ diagram และ caption บอกนาที/dB — ผ่าน 18.6 s; ระหว่างพัฒนา class ของ figure ซ้ำกับส่วนโค้ง (`sdg-eclipse`) จึงแยกเป็น `sdg-fig-*`, และส่วนโค้งในเงามองไม่เห็นบนแถบเงา จึงปรับสี
+- bundle budget: index JS 2616.6 / CSS 175.7 / i18n 1718.2 kB → ceiling 2619 / 177 / 1720 kB พร้อมเหตุผล; precache 15817.5 (16103) ok
+
+## R3.1 ต่อ: design ID/revision จาก Build → Launch → Orbit
+
+- **ตัวตนของแบบ:** record ที่บันทึกใน design store (`id`) และ revision คือเวลาบันทึกล่าสุด (`updated`) ที่ทุกการบันทึกเขียนอยู่แล้ว — **ไม่เพิ่ม field ใน store หรือไฟล์ของแบบ**; แบบที่บินโดยแก้หลังบันทึกบอกว่า `edited`, แบบที่ไม่เคยบันทึกไม่มี revision (ไม่แอบอ้างเป็นรุ่นที่บันทึก)
+- `src/design/design-ref.ts` (pure): `designRefFor` (เทียบเนื้อหาแบบด้วย canonical JSON), `refFlies` (ยังบินแบบนี้อยู่ไหม จาก spec id ของยาน/ดาวเทียม custom), `parseDesignRef` (ค่าที่อ่านไม่ได้ → `'invalid'` และถูกปฏิเสธ ไม่แสดงเป็นแบบอื่น)
+- **Build:** ทุกทางที่ "Fly it" ส่งแบบ (rocket Explore/Engineer, satellite Explore/Engineer) ผ่าน `BuildScreen.fly`: ส่งภารกิจทันที แล้วส่ง reference ตามหลังเมื่ออ่าน record เสร็จ (store เป็น async); "Send to Orbit" แนบ reference ใน hand-off
+- **Launch:** เก็บ reference ไว้ตราบที่ภารกิจยังบินแบบนั้น (เลือกยานอื่น → หายไป); eyebrow “MISSION · your design · <ชื่อ>, saved <วันเวลา>” / “changed since saved …” / “not saved”; บันทึกไว้ที่ top level ของ stored mission (`MissionDocument.design`) ข้าง `mission` ซึ่ง parser อ่านเฉพาะ `mission` — ไฟล์/ที่เก็บเดิมอ่านได้เหมือนเดิม, build เก่าที่อ่านเอกสารใหม่แค่ไม่เห็น field นี้; reload แล้ว reference กลับมาถ้ายังบินแบบนั้น
+- **Orbit:** `OrbitHandoff.origin.design` (optional, version เดิม 1 — hand-off ที่ไม่มีอ่านได้เหมือนเดิม; มีแต่อ่านไม่ได้ → `parseHandoff` ปฏิเสธทั้ง hand-off); Continue in Orbit แนบเมื่อเที่ยวบินบนจอ (`sim.cfg`) บินแบบนั้น; กล่อง hand-off แสดง “Design: …”
+- หลักฐาน: `tests/design-ref.test.ts` 6 (saved/edited/unsaved, record ที่ไม่ใช่ของแบบหรือถูกลบ → unsaved, canonical compare, refFlies, parse ปฏิเสธ 10 รูปแบบ, hand-off มี/ไม่มี/อ่านไม่ได้), `tests/mission-file.test.ts` +1 (เอกสารที่มี design parse ได้เท่ากับไม่มี); `satellite` journey: Send to Orbit แสดง “Journey NAPA-2, saved …”, Fly it แสดงใน eyebrow และ stored mission เก็บ revision — ผ่าน 42.6 s; `r3-bench-drawings`: Fly it remix ที่ไม่ได้บันทึก → “not saved” — ผ่าน 25.8 s
+- ขอบเขต: ไฟล์ mission ที่ export (Share) ยังไม่ใส่ reference; Engineer rocket bench ที่บินยานจาก catalogue/saved record โดยไม่ผ่าน Explore draft ไม่ระบุ reference (ไม่เดา)
 
 ## ข้อจำกัดและงานที่เหลือ
 
 - **R3.5 ยังไม่ทำ:** Home “ลองปล่อยครั้งแรก” แบบ editable template, compact mission context (Build→Check→Launch→Result→Orbit), Watch→สำเนาทดลอง, result→typed edit พร้อม before/after, การพาไป field ใน parts builder
-- R3.1 ยังไม่มี versioned envelope ใหม่ที่เก็บ design ID/revision ใน handoff; ใช้ `orbitlab.handoff` v1 เดิม
-- R3.3 ยังไม่มีภาพ stowed/deployed แยก และ diagram sunlight/eclipse, antenna pointing, camera footprint, attitude axes
+- R3.1: design ID/revision ทำแล้วแบบ backward-compatible (ดูหัวข้อ R3.1 ต่อ); export mission file ยังไม่ใส่ reference
+- R3.3: stowed/deployed, axes และ diagram sunlight/link/footprint ทำแล้ว (ดูหัวข้อ R3.3 ต่อ); ภาพยังเป็น schematic ที่รอผู้ใช้ตรวจ
 - ภาพดาวเทียมเป็น schematic ไม่ใช่แบบโรงงาน; ภาพจรวดใช้ geometry เดิมของ `explodedView` (outline/interstage ที่ derived ตาม D01)
 - G3 ยังไม่ผ่านจนกว่า R3.5 เสร็จและผู้ใช้ตรวจภาพ
