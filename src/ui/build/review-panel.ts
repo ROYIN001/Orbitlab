@@ -47,6 +47,8 @@ export interface ReviewHost {
   fly(doc: MissionDocument): boolean;
   /** payload ratings computed here for the vehicle on the bench: the level keeps them with it */
   rated(spec: VehicleSpec): void;
+  /** R3.4: point at the part a row is about on the bench's drawing */
+  showPart?(ref: string): void;
 }
 
 const SECTION_KEY: Record<ChecklistSectionId, string> = {
@@ -335,6 +337,15 @@ export class ReviewPanel {
       body.append(sayText(row.text));
     } else body.append(this.verdictText);
     li.append(tag, body);
+    // R3.4: a row about one part points at it on the drawing (the edit itself is the designer's, not done here)
+    if (row.target && this.host.showPart) {
+      const target = row.target;
+      const show = el('button', 'bd-say-show', t('build.eng.review.showPart')) as HTMLButtonElement;
+      show.type = 'button';
+      show.dataset.target = target;
+      show.addEventListener('click', () => this.host.showPart?.(target));
+      li.append(show);
+    }
     if (row.text?.detail) {
       const more = el('details', 'bd-say-detail');
       more.append(el('summary', undefined, t('build.ex.detail')));

@@ -107,6 +107,19 @@ export class StandPanel {
     this.render();
   }
 
+  /**
+   * R3.2: put the engines of one stage or strap-on group of the vehicle on the
+   * bench on the stand (a part picked on the bench's drawing), loaded as it
+   * flies them. False when the bench vehicle has no engines at `key`.
+   */
+  selectEngine(key: string): boolean {
+    const e = this.engines.find((x) => x.key === key);
+    if (!e) return false;
+    this.choose(e);
+    this.render();
+    return true;
+  }
+
   show(): void {
     this.visible = true;
     this.renderOutput();

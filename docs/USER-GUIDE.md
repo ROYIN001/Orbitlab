@@ -512,6 +512,13 @@ The level is called **Design and test**. The rocket chosen under **Launch vehicl
 every tab: a real rocket, the design open in Explore (listed as "(open in Explore)", once Explore
 has been opened in this session), a saved design, or a launcher sized here.
 
+**The vehicle on the bench** is drawn to scale above the facilities, from the same figures
+they test — the design as it is now, not the catalogue rocket it started from. *Stacked* and
+*Apart* switch the view; pick a part by its shape or its label (keyboard too) for its length,
+diameter, masses and engines, and *Fire it on the test stand* puts that stage's engines on
+the stand. In the readiness review, a row about one part has *Show the part*, which picks it
+on the drawing.
+
 - **Test stand.** Pick an engine: one on the rocket (each stage, or one strap-on of each group) or
   any engine in the parts catalogue. Set how many, how much propellant, the throttle, and if you
   like **Shut it down early**. Choose where it fires: a vacuum chamber, sea level, or a launch
@@ -697,6 +704,14 @@ ascending node of a plane that is not sun-synchronous, on Power, and the wavelen
 diffraction limit is worked at, 0.55 µm unless you change it, an estimate, on Camera), **What they
 give**, and **Where these numbers come from**. **Solar activity for the air** chooses one of
 ECSS's fixed levels for the air's drag.
+
+Above the tabs, the satellite is drawn from the design itself: the bus to its edges, the array
+as two wings (tracking), cells on the body or round it (spinner), the dish and the camera's
+aperture, and an engine when it has one — nothing it does not have. Where the design gives no
+figure (how many wings, where each part sits), the drawing assumes and lists the assumption
+under it. The open tab's subsystem is highlighted; each part's button opens its tab. While a
+figure is being typed and is not a number yet, the drawing says so rather than showing the old
+one.
 
 **Lifetime** runs the Orbit section's lifetime analysis (the mean-element method) on the design's
 orbit, mass and drag area, from the design date, for the design life plus 25 years, at the level

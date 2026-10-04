@@ -145,3 +145,34 @@
   .bsb-design { margin-top: 10px; }
   .bsb-panel { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ── R3.3: the satellite drawn from the design (src/ui/build/satellite-svg.ts) ── */
+
+.bsb-preview { display: flex; flex-direction: column; gap: 8px; }
+.bsb-preview .bx-h2 { margin: 0; }
+.bsb-preview-body { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(240px, 1fr); gap: 12px 18px; align-items: start; }
+.bsb-draw { position: relative; height: 240px; min-width: 0; }
+.bsb-svg { display: block; width: 100%; height: 100%; }
+.bsb-preview-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.bsb-preview-parts { display: flex; flex-wrap: wrap; gap: 6px; }
+.bsb-part { border: 1px solid var(--line2); }
+.bsb-assumptions { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.bsb-assumptions li.warn { color: var(--warn); }
+.bsb-preview-invalid { color: var(--warn); }
+.sd-bus { fill: #c9b06b; stroke: #8f7a3e; stroke-width: 1; }
+.sd-wing { fill: #24426e; stroke: #6ec8ff; stroke-width: 1; }
+.sd-cells { fill: #24426e; stroke: #6ec8ff; stroke-width: 1; opacity: 0.9; }
+.sd-cellline { stroke: #6ec8ff; stroke-width: 0.6; opacity: 0.6; }
+.sd-yoke { stroke: #9aa7b6; stroke-width: 1.5; }
+.sd-dish { fill: #dfe6ee; stroke: #8b98a8; stroke-width: 1; }
+.sd-barrel { fill: #3a4452; stroke: #9aa7b6; stroke-width: 1; }
+.sd-lens { fill: #6ec8ff; }
+.sd-engine { fill: #7d8794; stroke: #b9c3cf; stroke-width: 1; }
+.sd-earth { font-size: 11px; fill: var(--muted); }
+.sd-part { cursor: pointer; transition: opacity 0.15s; }
+.sd-part.dim { opacity: 0.45; }
+.sd-part.hi :is(rect, path, ellipse) { stroke: var(--accent); stroke-width: 2; }
+@media (max-width: 720px) {
+  .bsb-preview-body { grid-template-columns: minmax(0, 1fr); }
+  .bsb-draw { height: 200px; }
+}

@@ -218,3 +218,28 @@
   .be-compare .be-diff { display: none; }
   .be-diff-in { display: block; font-weight: 400; color: var(--muted); }
 }
+
+/* ── R3.2: the vehicle on the bench, drawn ───────────────────────────────── */
+
+.be-preview { display: flex; flex-direction: column; gap: 8px; }
+.be-preview-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.be-preview-head .bx-h2 { margin: 0; }
+.be-preview-modes { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--line2); border-radius: 7px; }
+.be-mode { padding: 4px 10px; border-radius: 5px; font-size: 12.5px; color: #a7b5c7; }
+.be-mode[aria-pressed='true'] { background: var(--accent-weak); color: var(--accent); }
+.be-preview-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); gap: 12px; align-items: start; }
+.be-draw { position: relative; height: 300px; min-width: 0; }
+.be-draw .bs-svg { display: block; width: 100%; height: 100%; }
+.be-partcard { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.be-partcard .bx-h3 { margin: 0; }
+.be-partfacts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+.be-partfacts dt { color: var(--muted); }
+.be-partfacts dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.be-part-go { align-self: flex-start; }
+@media (max-width: 720px) {
+  .be-preview-body { grid-template-columns: minmax(0, 1fr); }
+  .be-draw { height: 260px; }
+}
+/* R3.4: a review row about one part points at it on the drawing */
+.bd-say-show { display: inline-block; margin: 6px 0 0; padding: 3px 9px; border: 1px solid var(--accent-line); border-radius: 6px; font-size: 12px; color: var(--accent); white-space: nowrap; }
+.bd-say-show:hover { background: var(--accent-weak); }

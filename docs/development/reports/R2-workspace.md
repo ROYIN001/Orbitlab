@@ -4,7 +4,7 @@
 - แผน: R2.1–R2.4 ใน [PLAN.md](../PLAN.md); ความต้องการ U02, U03, U08 (ต่อจาก R1), U09 (ต่อจาก R1), U10, U11, U16 (ส่วน UI), A04, A05
 - ฐาน: `main` ที่ `fbefa18b3aa34a1a00332bfb63c432fe11a4777c`; branch `claude/funny-turing-vr4jbm`
 - การอนุญาต: ผู้ใช้สั่ง “เริ่มทำในระยะที่ 2” และ “ทำต่อเลย” เมื่อ 2026-10-04 (ไม่รวม R3–R7)
-- สถานะ: implementation และ local checks เสร็จ; PR/CI/merge บันทึกใน [PROGRESS.md](../PROGRESS.md) — CI ต้องผ่านบน candidate ก่อน merge ตามข้อ 10.2
+- สถานะ: **verified; merged; published** — [PR #74](https://github.com/ROYIN001/Orbitlab/pull/74) CI 37168554643 ผ่าน, squash-merge ที่ `da6734160a510cd87cc7fdb4df3ec4eba9319313`, [Pages 37169459230](https://github.com/ROYIN001/Orbitlab/actions/runs/37169459230) ผ่านทุก gate และ deploy source นั้นเมื่อ 2026-10-04T02:17:28Z (รายละเอียดใน [PROGRESS.md](../PROGRESS.md)); D08 ยังรอผู้ใช้ตรวจ
 
 ## การตัดสินใจที่ยังรอ (D08) และสมมติฐานที่ใช้
 

@@ -165,6 +165,30 @@ export interface ChecklistRow {
   level: ReadinessLevel;
   /** what the row says, as a key and its numbers; the verdict's row has none (its text is the verdict's own) */
   text: DesignText | null;
+  /**
+   * R3.4: the piece of hardware the row is about, as a ref of the bench's
+   * drawing (src/design/exploded.ts: 'stage:1', 'booster:0:1', 'fairing'),
+   * so the review can point at it. Decided from the item's typed fields,
+   * never from its words; absent when the row is about the whole vehicle.
+   */
+  target?: string;
+}
+
+/**
+ * R3.4: the part a design warning or readiness item is about, from its
+ * stage, strap-on group, validator path or code — or null when it concerns
+ * the vehicle or the mission as a whole (Δv, a missing plan, the verdict).
+ */
+export function readinessTarget(item: { code: string; stage?: number; booster?: number; path?: string }): string | null {
+  const path = item.path ?? '';
+  const booster = /^stages\[(\d+)\]\.boosters\[(\d+)\]/.exec(path);
+  if (booster) return `booster:${booster[1]}:${booster[2]}`;
+  const stage = /^stages\[(\d+)\]/.exec(path);
+  if (stage) return `stage:${stage[1]}`;
+  if (path.startsWith('fairing') || item.code === 'upperWiderThanFairing') return 'fairing';
+  if (item.booster !== undefined && item.booster >= 0) return `booster:${item.stage ?? 0}:${item.booster}`;
+  if (item.stage !== undefined && item.stage >= 0) return `stage:${item.stage}`;
+  return null;
 }
 
 export interface ChecklistSection {
@@ -212,7 +236,10 @@ export function checklist(spec: VehicleSpec, r: Readiness): ChecklistSection[] {
   const design = byStep('design');
   const specItems = design.filter((i) => i.code === 'invalid');
   const refused = specItems.length > 0 || design.some((i) => i.code === 'vacuumEngineOnPad');
-  const warned = (i: ReadinessItem): ChecklistRow => ({ level: i.level, text: warningText(i as unknown as DesignWarning) });
+  const warned = (i: ReadinessItem): ChecklistRow => {
+    const target = readinessTarget(i);
+    return { level: i.level, text: warningText(i as unknown as DesignWarning), ...(target ? { target } : {}) };
+  };
   const notReached = [say('build.eng.review.notReached', 'info')];
 
   const sections: Record<ChecklistSectionId, ChecklistRow[]> = {
@@ -221,7 +248,7 @@ export function checklist(spec: VehicleSpec, r: Readiness): ChecklistSection[] {
   };
   if (specItems.length) sections.design = notReached;
   else {
-    const rows = [...design.map(warned), ...(refused ? [] : exploreChecks(spec).map((c) => ({ level: c.level, text: exploreCheckText(c) }) as ChecklistRow))];
+    const rows = [...design.map(warned), ...(refused ? [] : exploreChecks(spec).map((c) => ({ level: c.level, text: exploreCheckText(c), target: `stage:${c.stage}` }) as ChecklistRow))];
     rows.sort((a, b) => RANK[b.level] - RANK[a.level]);
     sections.design = rows.length ? rows : [say('build.eng.review.design.ok', 'ok')];
   }
