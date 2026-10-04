@@ -1379,3 +1379,15 @@ body:not([data-mode='engineer']) .tel-display { display: none; }
   /* the bar must not cover the end of the page */
   body:is([data-mode='engineer'], [data-mode='explore']):is([data-flight-stage='flight'], [data-flight-stage='analysis'])[data-section='launch'] #app { padding-bottom: 64px; }
 }
+
+/* R2.3: the Engineer panel's card presets (src/ui/telemetry-layout.ts) */
+.tel-cards { margin: 8px 0 10px; }
+.tel-cards-choose { margin: 6px 0 0; padding: 4px 10px; }
+.tel-cards-choose summary { font-size: 12px; }
+.tel-cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
+.tel-cards-grid .checkbox { margin: 4px 0; font-size: 12px; }
+#telemetry:not(.simple-charts) .card-off { display: none !important; }
+#telemetry.simple-charts .tel-cards, body:not([data-mode='engineer']) .tel-cards { display: none; }
+@media (max-width: 1180px) and (min-width: 861px) {
+  #telemetry > .tel-cards { order: 0; }
+}

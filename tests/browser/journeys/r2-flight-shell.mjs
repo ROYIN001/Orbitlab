@@ -26,8 +26,10 @@ const RESPOND_MS = 20_000;
 
 export default async function r2FlightShell(t) {
   await engineer(t);
+  await cards(t);
   await watch(t);
   await phone(t);
+  await narrow(t);
 }
 
 async function engineer(t) {
@@ -160,6 +162,34 @@ async function chooser(t, app) {
   }
 }
 
+/** R2.3: a preset hides and shows cards, a card can be added, and the choice survives a reload. */
+async function cards(t) {
+  const app = await t.open({ hash: '#/launch/engineer' });
+  const { page } = app;
+  const visible = (id) => page.locator(`#telemetry canvas.chart[data-chart="${id}"]`).isVisible();
+  const preset = page.locator('#telemetry .tel-cards select');
+  await preset.waitFor();
+  t.check(await visible('q') && await visible('apsides'), 'every card is not shown by default');
+  await preset.selectOption('orbit');
+  t.check(await t.until(async () => !(await visible('q')) && await visible('apsides'), { timeoutMs: 5000 }), 'the Orbit preset did not hide q and show the apsides');
+  t.check(await page.locator('#btn-play').isVisible() && await page.locator('#clock').isVisible(), 'a preset hid the clock or the playback controls');
+  t.check(await page.locator('#telemetry .events').isVisible(), 'a preset hid the event log');
+  await page.locator('#telemetry .tel-cards-choose summary').click();
+  await page.locator('#telemetry .tel-cards-grid input[data-card="mass"]').check();
+  t.check(await t.until(() => visible('mass'), { timeoutMs: 5000 }), 'ticking a card did not show it');
+  t.check(await preset.inputValue() === 'custom', 'ticking a card did not make the layout Custom');
+  await app.shot('engineer-cards-custom');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await app.ready();
+  await page.locator('#telemetry .tel-cards select').waitFor();
+  t.check(await page.locator('#telemetry .tel-cards select').inputValue() === 'custom' && await visible('mass') && !(await visible('q')),
+    'the card choice did not survive a reload');
+  await page.locator('#telemetry .tel-cards select').selectOption('all');
+  t.check(await t.until(() => visible('q'), { timeoutMs: 5000 }), 'All cards did not bring q back');
+  app.checkErrors();
+  await app.context.close();
+}
+
 async function watch(t) {
   const app = await t.open({ hash: '#/launch/watch' });
   const { page } = app;
@@ -201,4 +231,25 @@ async function phone(t) {
   t.check(overflow <= 1, `the phone page scrolls sideways by ${overflow} px`);
   app.checkErrors();
   await app.context.close();
+}
+
+/** A short laptop and a narrow Russian phone in flight: nothing scrolls sideways, the controls stay reachable. */
+async function narrow(t) {
+  for (const [viewport, lang, label] of [[{ width: 1024, height: 700 }, 'en', 'laptop-1024'], [{ width: 320, height: 740 }, 'ru', 'phone-320-ru'], [{ width: 390, height: 844 }, 'th', 'phone-390-th']]) {
+    const app = await t.open({ hash: '#/launch/engineer', viewport, lang, touch: viewport.width < 600 });
+    const { page } = app;
+    await page.locator('#setup .launch-button').waitFor();
+    await app.mcp('launch_mission', {});
+    t.check(await t.until(() => page.evaluate(() => document.body.dataset.setup === 'collapsed'), { timeoutMs: RESPOND_MS }), `${label}: the setup did not collapse`);
+    await page.waitForTimeout(800);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    t.check(overflow <= 1, `${label}: the page scrolls sideways by ${overflow} px`);
+    for (const sel of ['#btn-play', '#btn-setup', '#clock']) {
+      const b = await page.locator(sel).boundingBox();
+      t.check(b && b.x >= 0 && b.x + b.width <= viewport.width + 1, `${label}: ${sel} is off screen (${JSON.stringify(b)})`);
+    }
+    await app.shot(`flight-${label}`);
+    app.checkErrors();
+    await app.context.close();
+  }
 }

@@ -1,6 +1,6 @@
 # Orbitlab development progress / สถานะงานตามแผน
 
-Updated: 2026-10-03 UTC. Plan: [PLAN.md](PLAN.md), version 1.2; human copy: [verified Word download](https://raw.githubusercontent.com/ROYIN001/Orbitlab/f2d7e4804b7b6664b63b8cceb8bb4d0c1842e802/docs/development/PLAN.docx). [PR #71](https://github.com/ROYIN001/Orbitlab/pull/71) merged at `5eb18a27fbf579159e3351545216c801b26c7df5`; [PR #72](https://github.com/ROYIN001/Orbitlab/pull/72) subsequently merged the harness correction; [Pages 37103651001](https://github.com/ROYIN001/Orbitlab/actions/runs/37103651001) published exact source `472645fd57062c79d50c567028de220145006861` to [the website](https://royin001.github.io/Orbitlab/) at 2026-10-03T06:55:10Z. Starting main: `523b44eca0e31fd84fd4a3faa4e1b883428288ee`.
+Updated: 2026-10-04 UTC (R2 started on the owner's instruction; branch `claude/funny-turing-vr4jbm`, not yet merged). Plan: [PLAN.md](PLAN.md), version 1.2; human copy: [verified Word download](https://raw.githubusercontent.com/ROYIN001/Orbitlab/f2d7e4804b7b6664b63b8cceb8bb4d0c1842e802/docs/development/PLAN.docx). [PR #71](https://github.com/ROYIN001/Orbitlab/pull/71) merged at `5eb18a27fbf579159e3351545216c801b26c7df5`; [PR #72](https://github.com/ROYIN001/Orbitlab/pull/72) subsequently merged the harness correction; [Pages 37103651001](https://github.com/ROYIN001/Orbitlab/actions/runs/37103651001) published exact source `472645fd57062c79d50c567028de220145006861` to [the website](https://royin001.github.io/Orbitlab/) at 2026-10-03T06:55:10Z. Starting main: `523b44eca0e31fd84fd4a3faa4e1b883428288ee`.
 
 ผู้ใช้อนุญาต R1 และงานเล็กที่แก้ไม่มาก รวมเปิด PR/merge main หลังตรวจเรียบร้อยแล้ว ให้ผู้รับช่วงอ่านตารางนี้และรายงานแต่ละงานก่อนแก้ไข ห้ามทำซ้ำส่วนที่เสร็จหรืออ้างว่าระยะอื่นเสร็จตามไปด้วย
 
@@ -15,7 +15,11 @@ Updated: 2026-10-03 UTC. Plan: [PLAN.md](PLAN.md), version 1.2; human copy: [ver
 | U08 (small R2.2 subset) | Verified; merged; published | Remove visible reset-camera control; keep internal framing | [Small UI report](reports/R1-small-ui.md); full Watch CameraPolicy remains R2.2 |
 | U09 (small R2.1 subset) | Verified; merged; published | Hide Auto option; implicit language default, preserve explicit ISO/GOST | [Small UI report](reports/R1-small-ui.md); layout/lifecycle remains R2.1 |
 | U16 (small R2.1 subset) | Verified; merged; published | Label HUD/onboard percentage as throttle command | [Small UI report](reports/R1-small-ui.md); actual per-engine readouts/profile validation remain R2/R4 |
-| R2–R7 other work | Planned | As described in PLAN.md | No implementation claimed or inferred authorization |
+| R2.1 | Implemented locally; not merged | Engineer lifecycle (setup→flight→analysis), setup collapses after launch, notation in telemetry panel, U16 actual engine-level readout, phone flight bar; U + I | [R2 report](reports/R2-workspace.md); D08 layout assumptions await owner review |
+| R2.2 | Implemented locally; not merged | CameraPolicy: manual view kept across phases, Cinematic, Watch view tabs, follow-target fallback; C + I | [R2 report](reports/R2-workspace.md) |
+| R2.3 (first step) | Implemented locally; not merged | Telemetry card presets All/Flight/Dynamics/Orbit/Custom, profile-owned; U | [R2 report](reports/R2-workspace.md); dock/resize/reorder and Docking preset remain |
+| R2.4 | Implemented locally; not merged | Timeline event chooser for clustered events; V | [R2 report](reports/R2-workspace.md) |
+| R3–R7 other work | Planned | As described in PLAN.md | No implementation claimed or inferred authorization |
 
 ## Integration and verification rules
 

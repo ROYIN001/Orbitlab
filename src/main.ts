@@ -390,6 +390,21 @@ class App {
   private stage: MissionStage = 'setup';
   private setupPeek = false;
   private setupShown: boolean | null = null;
+  /** the shell elements the per-frame lifecycle sync writes, looked up once */
+  private shellEls: { setup: HTMLElement; toggle: HTMLButtonElement; bar: HTMLElement; clock: HTMLElement | null;
+    barClock: HTMLElement; barMode: HTMLElement; barPlay: HTMLButtonElement } | null = null;
+
+  private get shell(): NonNullable<App['shellEls']> {
+    return this.shellEls ??= {
+      setup: document.getElementById('setup')!,
+      toggle: document.getElementById('btn-setup') as HTMLButtonElement,
+      bar: document.getElementById('mobile-flight-bar')!,
+      clock: document.getElementById('clock'),
+      barClock: document.getElementById('mfb-clock')!,
+      barMode: document.getElementById('mfb-mode')!,
+      barPlay: document.getElementById('mfb-play') as HTMLButtonElement,
+    };
+  }
   /** mission time to fast-forward to, or null when not fast-forwarding */
   fastForwardTo: number | null = null;
   lastFrame = performance.now();
@@ -1359,17 +1374,15 @@ class App {
       document.body.dataset.flightStage = stage;
     }
     const collapsed = setupCollapsed(this.mode, stage, this.setupPeek);
+    const { setup, toggle } = this.shell;
     if (collapsed !== (this.setupShown === false)) {
-      const setup = document.getElementById('setup')!;
       // The focus must not be left inside a panel that is about to disappear
       // (Launch pressed with the keyboard): it goes to the control that brings it back.
-      const toggle = document.getElementById('btn-setup') as HTMLButtonElement;
       const focusInside = collapsed && setup.contains(document.activeElement);
       this.setupShown = !collapsed;
       document.body.dataset.setup = collapsed ? 'collapsed' : 'shown';
       if (focusInside) toggle.focus({ preventScroll: true });
     }
-    const toggle = document.getElementById('btn-setup') as HTMLButtonElement;
     const offer = this.mode === 'engineer' && stage !== 'setup';
     if (toggle.hidden === offer) toggle.hidden = !offer;
     const expanded = String(offer && this.setupPeek);
@@ -1382,7 +1395,7 @@ class App {
     if (this.mode !== 'engineer' || this.stage === 'setup') return;
     this.setupPeek = !this.setupPeek;
     this.syncLifecycle();
-    if (this.setupPeek) document.getElementById('setup')!.focus({ preventScroll: true });
+    if (this.setupPeek) this.shell.setup.focus({ preventScroll: true });
   }
 
   /**
@@ -1391,19 +1404,16 @@ class App {
    * live/replay and play/pause at the bottom of the screen meanwhile.
    */
   private syncMobileFlightBar(stage: MissionStage): void {
-    const bar = document.getElementById('mobile-flight-bar')!;
+    const { bar, clock: clockSrc, barClock: clockEl, barMode: modeEl, barPlay: play } = this.shell;
     const show = stage !== 'setup' && (this.mode === 'engineer' || this.mode === 'explore') && !this.sceneCovered;
     if (bar.dataset.active !== String(show)) bar.dataset.active = String(show);
     if (!show) return;
-    const clock = document.getElementById('clock')?.textContent ?? '';
-    const clockEl = document.getElementById('mfb-clock')!;
+    const clock = clockSrc?.textContent ?? '';
     if (clockEl.textContent !== clock) clockEl.textContent = clock;
     const live = this.player.live;
     const mode = live ? t('tl.live') : t('ctl.replay');
-    const modeEl = document.getElementById('mfb-mode')!;
     if (modeEl.textContent !== mode) { modeEl.textContent = mode; bar.dataset.replay = String(!live); }
     const running = live ? this.playing : this.player.playing;
-    const play = document.getElementById('mfb-play') as HTMLButtonElement;
     const glyph = running ? '❚❚' : '▶';
     if (play.textContent !== glyph) {
       play.textContent = glyph;
