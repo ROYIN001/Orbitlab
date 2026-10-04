@@ -28,7 +28,8 @@ export type DrawingAssumption =
   | 'spinner' // cells round a cylinder of the bus's size
   | 'antennaFace' // the dish on the Earth-facing face
   | 'cameraFace' // the camera's aperture on the Earth-facing face
-  | 'engineFace'; // the engine on the face opposite the Earth
+  | 'engineFace' // the engine on the face opposite the Earth
+  | 'stowedPanels'; // R3.3: stowed, each wing folded into panels as wide as the bus is deep, against its side
 
 export interface SatelliteDrawing {
   /** the body's edges, m */
@@ -48,7 +49,17 @@ export interface SatelliteDrawing {
   assumptions: DrawingAssumption[];
   /** the drawing's extent, m: wings and bus across, dish/camera/engine included down and up */
   extent: { width: number; height: number };
+  /**
+   * R3.3: the satellite as it rides to orbit, wings folded: each wing's panels
+   * (as wide as the bus is deep, so they lie against its side face) and the
+   * stowed extent. Null without wings: body and spinner cells, the dish, the
+   * camera and the engine are drawn the same either way.
+   */
+  stowed: { panelsPerWing: number; panelThickness: number; extent: { width: number; height: number } } | null;
 }
+
+/** m, a folded panel's thickness as drawn (stated with the stowed assumption; the design gives none) */
+export const STOWED_PANEL_THICKNESS = 0.03;
 
 export type SatelliteDrawingResult =
   | { ok: true; drawing: SatelliteDrawing }
@@ -105,10 +116,18 @@ export function satelliteDrawing(d: SatelliteDesign): SatelliteDrawingResult {
   const below = Math.max(antenna ? antenna.diameter / 3 : 0, camera ? camera.aperture : 0);
   const above = engine ? Math.min(height, width) * 0.35 : 0;
   const across = Math.max(width + (wings ? 2 * wings.span + 2 * 0.08 * width : 0), antenna?.diameter ?? 0);
+  let stowed: SatelliteDrawing['stowed'] = null;
+  if (wings) {
+    const panelsPerWing = Math.max(1, Math.ceil(wings.span / depth - 1e-9));
+    const stack = 2 * panelsPerWing * STOWED_PANEL_THICKNESS;
+    stowed = { panelsPerWing, panelThickness: STOWED_PANEL_THICKNESS,
+      extent: { width: Math.max(width + stack, antenna?.diameter ?? 0), height: height + below + above } };
+    assumptions.push('stowedPanels');
+  }
   return {
     ok: true,
     drawing: { bus: { width, height, depth }, wings, cells, antenna, camera, engine, parts, assumptions,
-      extent: { width: across, height: height + below + above } },
+      extent: { width: across, height: height + below + above }, stowed },
   };
 }
 

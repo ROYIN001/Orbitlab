@@ -27,7 +27,7 @@
 - array=0 / ไม่มี engine / ไม่มีกล้อง / ไม่มีจาน → ไม่วาดชิ้นนั้น; tracking/body/spinner วาดต่างกันจริง
 - ค่าใช้ไม่ได้ระหว่างพิมพ์ (NaN, ติดลบ) → ข้อความ “drawing waits for usable figures” แทนภาพเก่า
 - `src/ui/build/satellite-svg.ts` วาดด้านหน้าตามสัดส่วน + scale bar + ทิศโลก; แท็บที่เปิดอยู่ highlight subsystem; ปุ่มของแต่ละชิ้นเปิดแท็บ (power/propulsion/attitude/radio/camera); assumptions แสดงใต้ภาพ
-- ยังไม่มีภาพ deployed/stowed แยก และ diagram sunlight/link/footprint/axes (เหลือใน R3.3 ต่อ)
+- ยังไม่มีภาพ deployed/stowed แยก และ diagram sunlight/link/footprint/axes (เหลือใน R3.3 ต่อ) — **ภายหลัง:** stowed และ axes เพิ่มแล้ว (ดูหัวข้อ R3.3 ต่อ)
 
 ### R3.4 — readiness พาไปที่ชิ้นต้นเหตุ (A03)
 
@@ -54,6 +54,13 @@ Local: Node 22.22.0, Chromium 141.0.7390.37, software WebGL, render scale 0.5
 - สาเหตุ: โค้ด R2/R3 (~24 kB) ใช้ headroom ของ precache จนเกือบหมด และ CI ตรวจ budget ด้วย snapshots เก่าจึงไม่เห็น; ไม่ใช่ flake
 - แก้: ceiling precache = 15787.4 kB + 2 % (16103 kB) ตามธรรมเนียมเดิมของไฟล์ พร้อมเหตุผลใน `budgets.json` `_notes`; ไม่เปลี่ยน ceiling อื่น
 - ข้อสังเกตกระบวนการ: PR CI ไม่สามารถจับ precache ที่โตตาม data refresh ได้ ควรให้ headroom ของ precache ไม่ต่ำกว่าการเติบโตของ snapshots รายวัน (เสนอเป็นงาน T)
+
+## R3.3 ต่อ: ท่าพับเก็บสำหรับการปล่อย และแกนของตัวดาวเทียม
+
+- `satelliteDrawing()` มี `stowed` สำหรับแบบที่มีปีก: แต่ละปีกพับเป็นแผงกว้างเท่าความลึกของ bus จำนวน `ceil(span / depth)` แผง หนา 3 ซม. แนบด้านข้าง (assumption `stowedPanels` ที่แสดงใต้ภาพ เพราะแบบไม่ให้ทั้งสองค่า) พร้อม extent ของท่าพับ; body/spinner cells, จาน, กล้อง และเครื่องยนต์วาดเหมือนเดิมทั้งสองท่า
+- satellite bench มีปุ่ม Deployed / Stowed for launch (เฉพาะแบบที่มีปีก); ภาพมีแกน +X (ตามความเร็ว), +Z (ชี้โลก), +Y (ออกจากหน้ากระดาษ) ที่มุม และบอกเป็นธรรมเนียมของภาพใต้ภาพ (ไม่ใช่ assumption ของแบบ — bus เปล่ายังไม่มี assumption ตาม test เดิม)
+- หลักฐาน: `tests/satellite-drawing.test.ts` +1 (ทุก template: แผงพอคลุม span, ท่าพับไม่กว้างกว่าท่ากาง, ไม่มี stowed เมื่อไม่มีปีก) ผ่าน; `tests/i18n.test.ts` ผ่าน; `r3-bench-drawings` เปลี่ยน NAPA-2 เป็น tracking wings ที่ Power tab → Stowed พับทุกปีก ไม่มีปีกกางค้าง → Deployed กางกลับ, มีแกน — ผ่าน 15.9 s
+- ยังไม่มี: diagram sunlight/eclipse, antenna pointing, camera footprint
 
 ## ข้อจำกัดและงานที่เหลือ
 

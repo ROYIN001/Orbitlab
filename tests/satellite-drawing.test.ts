@@ -61,4 +61,17 @@ describe('R3.3 satellite drawing', () => {
     expect(g.antenna?.diameter).toBe(1.7);
     expect(g.camera?.aperture).toBe(0.42);
   });
+
+  it('R3.3 stowed: only wings fold, into panels as wide as the bus is deep, and the stowed drawing is narrower', () => {
+    for (const tpl of SATELLITE_TEMPLATES) {
+      const g = draw(fresh(tpl.id));
+      if (!g.wings) { expect(g.stowed).toBeNull(); expect(g.assumptions).not.toContain('stowedPanels'); continue; }
+      const st = g.stowed!;
+      expect(st.panelsPerWing).toBe(Math.max(1, Math.ceil(g.wings.span / g.bus.depth - 1e-9)));
+      expect(st.panelsPerWing * g.bus.depth).toBeGreaterThanOrEqual(g.wings.span - 1e-9);
+      expect(st.extent.width).toBeLessThanOrEqual(g.extent.width + 1e-9);
+      expect(st.extent.height).toBe(g.extent.height);
+      expect(g.assumptions).toContain('stowedPanels');
+    }
+  });
 });

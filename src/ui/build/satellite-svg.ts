@@ -36,17 +36,20 @@ const PART_NAME: Record<SatellitePart, string> = {
 };
 
 export function renderSatelliteSvg(root: SVGSVGElement, g: SatelliteDrawing, box: { width: number; height: number },
-  opts: { highlight: SatellitePart | null; title: string; pick?: (part: SatellitePart) => void }): void {
+  opts: { highlight: SatellitePart | null; title: string; pick?: (part: SatellitePart) => void; pose?: 'deployed' | 'stowed' }): void {
   const W = Math.max(200, Math.round(box.width)), H = Math.max(160, Math.round(box.height));
   root.setAttribute('viewBox', `0 0 ${W} ${H}`);
   root.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   root.setAttribute('role', 'img');
   root.setAttribute('aria-label', opts.title);
   root.replaceChildren();
-  const s = Math.min((W - 2 * PAD) / g.extent.width, (H - 2 * PAD - FOOT) / g.extent.height);
+  // R3.3: stowed, the wings are folded against the bus's sides; nothing else changes
+  const stowed = opts.pose === 'stowed' ? g.stowed : null;
+  const extent = stowed ? stowed.extent : g.extent;
+  const s = Math.min((W - 2 * PAD) / extent.width, (H - 2 * PAD - FOOT) / extent.height);
   const cx = W / 2;
   const above = g.engine ? Math.min(g.bus.height, g.bus.width) * 0.35 : 0;
-  const busTop = PAD + above * s + ((H - 2 * PAD - FOOT) - g.extent.height * s) / 2;
+  const busTop = PAD + above * s + ((H - 2 * PAD - FOOT) - extent.height * s) / 2;
   const bw = g.bus.width * s, bh = g.bus.height * s;
   const busLeft = cx - bw / 2, busBottom = busTop + bh;
   const cls = (part: SatellitePart, base: string): string => `${base} sd-part${opts.highlight === part ? ' hi' : opts.highlight ? ' dim' : ''}`;
@@ -59,8 +62,18 @@ export function renderSatelliteSvg(root: SVGSVGElement, g: SatelliteDrawing, box
     return node;
   };
 
-  // the array first, behind the bus
-  if (g.wings) {
+  // the array first, behind the bus: stowed, each wing's panels folded flat against its side
+  if (g.wings && stowed) {
+    const group = svg('g', {}, cls('arrays', 'sd-arrays'));
+    const tk = Math.max(1.5, stowed.panelThickness * s), wh = g.wings.height * s;
+    for (const side of [-1, 1]) {
+      for (let k = 0; k < stowed.panelsPerWing; k++) {
+        const x0 = side < 0 ? busLeft - (k + 1) * tk : busLeft + bw + k * tk;
+        group.append(svg('rect', { x: f1(x0), y: f1(busTop + (bh - wh) / 2), width: f1(tk), height: f1(wh) }, 'sd-wing sd-folded'));
+      }
+    }
+    root.append(tag(group, 'arrays'));
+  } else if (g.wings) {
     const gap = 0.08 * g.bus.width * s, span = g.wings.span * s, wh = g.wings.height * s;
     const group = svg('g', {}, cls('arrays', 'sd-arrays'));
     for (const side of [-1, 1]) {
@@ -116,8 +129,18 @@ export function renderSatelliteSvg(root: SVGSVGElement, g: SatelliteDrawing, box
     root.append(tag(group, 'camera'));
   }
 
+  // R3.3: the body axes, in the corner: +X along the velocity, +Z at the Earth, +Y out of the page
+  const ax = svg('g', { 'aria-hidden': 'true' }, 'sd-axes');
+  const ox = W - PAD - 34, oy = PAD + 8, L = 22;
+  ax.append(svg('path', { d: `M${f1(ox)},${f1(oy)}H${f1(ox + L)}M${f1(ox + L - 4)},${f1(oy - 3)}L${f1(ox + L)},${f1(oy)}L${f1(ox + L - 4)},${f1(oy + 3)}` }));
+  ax.append(svg('path', { d: `M${f1(ox)},${f1(oy)}V${f1(oy + L)}M${f1(ox - 3)},${f1(oy + L - 4)}L${f1(ox)},${f1(oy + L)}L${f1(ox + 3)},${f1(oy + L - 4)}` }));
+  ax.append(svg('circle', { cx: f1(ox), cy: f1(oy), r: 3 }));
+  const axLabel = (text: string, x: number, y: number): SVGTextElement => { const n = svg('text', { x: f1(x), y: f1(y) }); n.textContent = text; return n; };
+  ax.append(axLabel('+X', ox + L + 2, oy + 3), axLabel('+Z', ox + 4, oy + L + 8), axLabel('+Y', ox - 18, oy - 3));
+  root.append(ax);
+
   // the Earth's direction and a scale bar
-  const metres = scaleBarLength(g.extent.width);
+  const metres = scaleBarLength(extent.width);
   const len = metres * s;
   const y = H - 8;
   const foot = svg('g', { 'aria-hidden': 'true' }, 'bs-scale');

@@ -55,6 +55,7 @@ const ASSUMPTION_KEY: Record<DrawingAssumption, string> = {
   bodyCellsExceed: 'build.sat.preview.assume.bodyCellsExceed', spinner: 'build.sat.preview.assume.spinner',
   antennaFace: 'build.sat.preview.assume.antennaFace', cameraFace: 'build.sat.preview.assume.cameraFace',
   engineFace: 'build.sat.preview.assume.engineFace',
+  stowedPanels: 'build.sat.preview.assume.stowedPanels',
 };
 import { renderSatelliteSvg } from './satellite-svg';
 import './satellite.css';
@@ -129,6 +130,9 @@ export class SatelliteBench {
   private readonly flyBox: SatelliteFly;
   /** R3.3: the design drawn from the same object its figures come from */
   private readonly preview = el('section', 'bs-panel bsb-preview');
+  /** R3.3: the drawing's pose, deployed as it flies or stowed as it is launched */
+  private pose: 'deployed' | 'stowed' = 'deployed';
+  private poseBox: HTMLElement | null = null;
   private readonly drawBox = el('div', 'bsb-draw');
   private readonly drawSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   private drawQueued = 0;
@@ -257,11 +261,26 @@ export class SatelliteBench {
       b.setAttribute('aria-pressed', String(part === active));
       parts.append(b);
     }
+    // R3.3: deployed, as it flies; stowed, as it rides to orbit (only wings fold)
+    if (g.stowed) {
+      const poses = el('div', 'bsb-poses');
+      poses.setAttribute('role', 'group');
+      poses.setAttribute('aria-label', t('build.sat.preview.pose'));
+      for (const [pose, key] of [['deployed', 'build.sat.preview.deployed'], ['stowed', 'build.sat.preview.stowed']] as const) {
+        const b = button('be-mode bsb-pose', t(key), () => { this.pose = pose; this.renderPreview(); });
+        b.dataset.k = `${P}pose-${pose}`;
+        b.setAttribute('aria-pressed', String(this.pose === pose));
+        poses.append(b);
+      }
+      this.poseBox = poses;
+    } else this.poseBox = null;
     const notes = el('ul', 'bsb-assumptions');
     for (const a of g.assumptions) notes.append(el('li', a === 'bodyCellsExceed' ? 'warn' : undefined, t(ASSUMPTION_KEY[a])));
+    // the axes in the corner are a convention of the drawing, not a figure of the design: said all the same
+    notes.append(el('li', 'axes', t('build.sat.preview.assume.axes')));
     const body = el('div', 'bsb-preview-body');
     const side = el('div', 'bsb-preview-side');
-    side.append(parts, el('p', 'bx-note small', t('build.sat.preview.note')), notes);
+    side.append(...(this.poseBox ? [this.poseBox] : []), parts, el('p', 'bx-note small', t('build.sat.preview.note')), notes);
     body.append(this.drawBox, side);
     this.preview.replaceChildren(title, body);
     this.queueDrawing();
@@ -293,6 +312,7 @@ export class SatelliteBench {
       highlight: this.tabPart(),
       title: t('build.sat.preview.drawingTitle', { name: this.ws.design.name.trim() || '—' }),
       pick: (part) => this.setTab(PART_TAB[part], false),
+      pose: this.pose,
     });
   }
 
