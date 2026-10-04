@@ -27,7 +27,7 @@ D08 (wireframe/layout) ยังไม่ได้รับคำยืนยั
 - canvas ถูก resize จริงโดย `ResizeObserver` เดิม (ไม่ยืดด้วย CSS): วัดได้ viewport 638 → 940 px, canvas backing 318 → 469 px ที่ 1280×800 render scale 0.5
 - notation (ISO/GOST) ย้ายจาก setup ไป telemetry panel (`.tel-display.notation-section`) เปลี่ยนได้ระหว่างบิน; ค่า implicit ตามภาษาและ override เดิมจาก R1 ไม่เปลี่ยน; class `notation-section` คงไว้ให้ journey `notation-defaults` เดิม
 - **U16:** `src/ui/engine-levels.ts` (ใหม่, pure) อ่าน `effectiveThrottle` ของ stage/booster ที่ burning จาก frame ที่แสดงอยู่ แล้ว HUD เพิ่มแถว “Engine level (actual)” เช่น `core 100 % · strap-ons 81 %` ข้างแถว “Throttle command”; live/replay อ่าน frame เดียวกัน ไม่อ่าน manual input
-- ช่อง throttle ใน 6-DOF panel เปลี่ยนชื่อเป็น “Manual throttle command (%)” และเมื่ออยู่ใต้ autopilot แสดงว่าง + placeholder “set by autopilot” แทนค่า manual ที่ค้าง; panel นี้ปิด (collapsed) อัตโนมัติขณะ autopilot เพราะช่องถูก disable อยู่แล้ว และเปิดเมื่อเป็น manual หรือผู้ใช้เปิดเอง (จำการเลือกของผู้ใช้)
+- ช่อง throttle ใน 6-DOF panel เปลี่ยนชื่อเป็น “Manual throttle command (%)” (ค่าที่ใช้เมื่อสลับเป็น manual ไม่ใช่ค่า autopilot สด; ค่าจริงอ่านจากแถว HUD); ร่างแรกที่ทำให้ช่องว่างใต้ autopilot ถูกยกเลิกเพราะขัดกับ `tests/rigid-controls.test.ts` ที่กำหนดให้ replay แสดง command ที่บันทึกไว้ — ไม่ได้แก้ test นั้น; panel นี้ปิด (collapsed) อัตโนมัติขณะ autopilot เพราะช่องถูก disable อยู่แล้ว และเปิดเมื่อเป็น manual หรือผู้ใช้เปิดเอง (จำการเลือกของผู้ใช้)
 - **A04:** `#mobile-flight-bar` (≤860 px) แสดงนาฬิกา, LIVE/REPLAY และ play/pause ค้างด้านล่างขณะเลื่อนดูกราฟ ใช้ `togglePlay()` เดิม ไม่เพิ่มเส้นทางคำสั่งใหม่
 - คง `Space` (playback) / `Shift+Space` (live), ไม่แตะ recorder/frame/CSV schema
 
