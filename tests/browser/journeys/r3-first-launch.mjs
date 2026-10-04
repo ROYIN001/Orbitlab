@@ -10,6 +10,8 @@
  * - The template changed (a WebMCP edit, as a panel edit) is the user's
  *   mission: the note goes, the eyebrow says a catalogue rocket, and it is
  *   the one stored.
+ * - Watch's end card offers "Try this launch yourself": Explore on a copy of
+ *   that launch, said to be one, the saved mission still kept.
  */
 import { press } from '../harness.mjs';
 
@@ -70,6 +72,23 @@ export default async function r3FirstLaunch(t) {
     `the changed template is not the user's mission: "${await eyebrow()}"`);
   await home();
   t.check(/900/.test(await resumeText() ?? ''), `the changed template was not stored: "${await resumeText()}"`);
+
+  // a copy of a Watch launch (Soyuz T-10's pad abort: a short flight to its end card)
+  await page.evaluate(() => { location.hash = '#/launch/watch'; });
+  const pick = page.locator('.watch-picker .watch-mission[data-mission="soyuzT10"]');
+  if (!(await pick.isVisible().catch(() => false))) await page.locator('.watch-missions-btn').click().catch(() => {});
+  await pick.waitFor({ timeout: 15_000 });
+  await press(t, app, pick, 'mouse', 'the Soyuz T-10 launch');
+  await app.mcp('control_playback', { action: 'warp', warp: 100 });
+  const copy = page.locator('.watch-end .watch-btn', { hasText: 'Try this launch yourself' });
+  if (!t.check(await t.until(() => copy.isVisible(), { timeoutMs: 120_000, intervalMs: 500 }), 'the Watch end card has no "Try this launch yourself"')) return;
+  await press(t, app, copy, 'mouse', 'Try this launch yourself');
+  t.check(await t.until(async () => (await page.locator('#setup .template-note[data-kind="copy"]').count()) > 0, { timeoutMs: 15_000 }), 'the copy opened without its note');
+  t.check(/Soyuz/.test(await page.locator('#setup .template-note').textContent() ?? ''), 'the copy\'s note does not name its rocket');
+  t.check(await t.until(async () => /a copy to try/.test(await eyebrow() ?? ''), { timeoutMs: 5000 }), `the eyebrow does not say it is a copy: "${await eyebrow()}"`);
+  await app.shot('watch-copy');
+  await home();
+  t.check(/900/.test(await resumeText() ?? ''), `opening the copy replaced the saved mission: "${await resumeText()}"`);
   app.checkErrors();
   await app.context.close();
 }

@@ -442,6 +442,8 @@ class App {
    * which the page stores, or one a viewer prepared, which it does not.
    */
   private readonly workspace = new WorkspaceMission();
+  /** R3.5: the Watch launch the template in the panel is a copy of; null for Home's first-launch template */
+  private templateCopyOf: string | null = null;
   /** the start-up mission is in the panel: entering the workspace may restore the stored one from now on */
   private started = false;
   private wasLive = true;
@@ -616,6 +618,7 @@ class App {
       togglePlay: () => this.togglePlay(),
       setWarp: (warp) => this.setWarp(warp),
       explore: () => this.go(route('launch', 'explore')),
+      tryCopy: (id) => this.tryWatchCopy(id),
       continueInOrbit: () => this.continueInOrbit(),
       follow: (target) => { this.watchFollow = target === 'capsule' ? 'rocket' : target; },
       pickerFooter: () => this.soundtrackPanel.render(),
@@ -1087,12 +1090,29 @@ class App {
    * the way back to it.
    */
   private tryFirstLaunch(): void {
+    this.openTemplate(quickstartMission(FIRST_LAUNCH), null);
+  }
+
+  /**
+   * R3.5: Watch's "Try this launch yourself" — Explore on a fresh copy of the
+   * launch's settings, held as Home's template is. The launch in Watch is
+   * built from its definition each time, so changing the copy cannot change it.
+   */
+  private tryWatchCopy(id: WatchMissionId): void {
+    const m = watchMissionById(id);
+    this.openTemplate(watchMissionSettings(id), m ? t(m.titleKey) : id);
+  }
+
+  /** A template (Home's, or a copy of a Watch launch) in Explore, with its note. */
+  private openTemplate(mission: Parameters<SetupPanel['loadMission']>[0], copyOf: string | null): void {
     this.goLive(); this.playing = false;
+    this.templateCopyOf = copyOf;
     this.go(route('launch', 'explore'));
-    this.loadViewerMission('template', quickstartMission(FIRST_LAUNCH));
-    // the first-use guide's first step is to pick a Quick start example: this is one
+    this.loadViewerMission('template', mission);
+    // the first-use guide's first step is to pick a Quick start example: this is as good
     this.helpGuide.missionGiven();
-    this.panel.showTemplate({ stored: loadStoredMission() !== null });
+    this.panel.showTemplate({ stored: loadStoredMission() !== null, ...(copyOf ? { copyOf } : {}) });
+    this.updateMissionName();
   }
 
   /**
@@ -1344,7 +1364,7 @@ class App {
     if (this.workspace.origin !== 'template') this.panel.showTemplate(null);
     // R3.5: whose mission this is, beside its name
     this.narration.setSource(MISSION_SOURCE_KEY[missionSource({ origin: this.workspace.origin, lesson: !!document.body.dataset.lesson,
-      customVehicle: !!cfg.vehicleSpec, customSatellite: !!cfg.satelliteSpec })]);
+      customVehicle: !!cfg.vehicleSpec, customSatellite: !!cfg.satelliteSpec, copyOf: this.templateCopyOf !== null })]);
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
     this.narration.setMission(missionVehicle(cfg).name,

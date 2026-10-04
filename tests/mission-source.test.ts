@@ -11,5 +11,7 @@ describe('R3.5 mission source', () => {
     expect(missionSource({ ...base, origin: 'demo', customVehicle: true })).toBe('viewer');
     expect(missionSource({ ...base, lesson: true, origin: 'watch' })).toBe('lesson');
     expect(missionSource({ ...base, origin: 'template' })).toBe('template');
+    expect(missionSource({ ...base, origin: 'template', copyOf: true })).toBe('copy');
+    expect(missionSource({ ...base, copyOf: true })).toBe('catalogue'); // changed: the user's own
   });
 });

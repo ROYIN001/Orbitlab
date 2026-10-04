@@ -218,7 +218,7 @@ export class SetupPanel {
   /** Explore: the set-up step on screen */
   private step: 1 | 2 | 3 = 1;
   /** R3.5: the first-launch template's note, while the template is not yet the user's */
-  private template: { uses: string; stored: boolean } | null = null;
+  private template: { uses: string; stored: boolean; copyOf?: string } | null = null;
   /** Explore: what the last fix did, until the next edit */
   private fixMessage = '';
   private readonly fieldInputs = new Map<string, { input: HTMLInputElement; error: HTMLElement }>();
@@ -400,7 +400,7 @@ export class SetupPanel {
    * mission, that it is kept until this one is changed, with the way back to
    * it. Null takes the note away (the template became the user's mission).
    */
-  showTemplate(on: { stored: boolean } | null): void {
+  showTemplate(on: { stored: boolean; copyOf?: string } | null): void {
     if (!on) {
       if (!this.template) return;
       this.template = null;
@@ -415,7 +415,7 @@ export class SetupPanel {
       // the inclination the flight will aim at: a preset's "the site's lowest" as a number
       inc: num(resolveTarget(s.orbit, siteById(s.siteId), s.launchTime).inclination * RAD, 1),
     });
-    this.template = { uses, stored: on.stored };
+    this.template = { uses, stored: on.stored, copyOf: on.copyOf };
     this.render();
   }
 
@@ -426,9 +426,13 @@ export class SetupPanel {
     if (!tp || this.running) return null;
     const note = this.el('aside', 'template-note');
     note.setAttribute('aria-labelledby', 'template-note-title');
-    const title = this.el('strong', undefined, t('setup.template.title'));
+    // Home's first-launch template, or a copy of a Watch launch (which stays as it is there)
+    const title = this.el('strong', undefined, tp.copyOf ? t('setup.template.copyTitle', { mission: tp.copyOf }) : t('setup.template.title'));
     title.id = 'template-note-title';
-    note.append(title, this.el('p', undefined, tp.uses), this.el('p', 'field-note', t('setup.template.change', { launch: t('setup.launchMission') })));
+    note.dataset.kind = tp.copyOf ? 'copy' : 'first';
+    note.append(title, this.el('p', undefined, tp.uses));
+    if (tp.copyOf) note.append(this.el('p', 'field-note', t('setup.template.copyKept')));
+    note.append(this.el('p', 'field-note', t('setup.template.change', { launch: t('setup.launchMission') })));
     const actions = this.el('div', 'template-note-actions');
     if (tp.stored) {
       note.append(this.el('p', 'field-note', t('setup.template.kept')));
