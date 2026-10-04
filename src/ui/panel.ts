@@ -63,7 +63,6 @@ import { FLEX_DEFAULTS } from '../physics/rigid/flex';
 import type { ControlConfig, NavigationConfig } from '../types';
 import { aidingFor, imuFor, IMU_KEYS, NAV_FIELD_KEYS, NAV_GRADES } from '../physics/nav/config';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_DEFAULTS, controlFieldKey, controlValue, type ControlChannelKey } from '../physics/rigid/control-config';
-import { getNotation, setNotationPreference, type NotationPreference } from './notation';
 import { PROFILE_IDS, rendezvousAvailable, type RendezvousProfileId } from '../physics/rendezvous/profiles';
 import { PORT_IDS, type PortId } from '../physics/rendezvous/ports';
 import type { ControlFaultKind, ControlFaultSpec, ControlFaultsConfig } from '../types';
@@ -716,7 +715,8 @@ export class SetupPanel {
     if (learning) scroll.prepend(this.flightSummary(vehicle));
     // The level itself is chosen in the top bar only (src/ui/app-mode.ts): the
     // panel used to carry a second switch for it, which did the same thing.
-    if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
+    // R2.1: the notation, a display preference, moved to the telemetry panel,
+    // which stays on screen in flight while this panel gives way to the scene.
     into(1).appendChild(this.quickstartSection());
     into(1).appendChild(this.historicalSection());
     if (!learning) scroll.appendChild(this.share.section());
@@ -1487,20 +1487,6 @@ export class SetupPanel {
     if (s.failure.mode !== 'none') row(t('setup.challenge.title'), t(`setup.fail.${s.failure.mode}`));
     if (s.dynamics?.model === 'sixDof') row(t('setup.weather'), t(`setup.dynamics.${s.dynamics.wind}`));
     section.append(box, this.el('p', 'field-note', t('setup.flying.note')));
-    return section;
-  }
-
-  // --- U07: the flight-dynamics notation (Engineer mode) -------------------------
-  /** Show the effective standard; the implicit default follows the language. */
-  private notationSection(): HTMLElement {
-    const section = this.el('section', 'config-section notation-section');
-    section.append(this.select('setup.notation', [
-      { value: 'iso', label: t('setup.notation.iso') },
-      { value: 'gost', label: t('setup.notation.gost') },
-    ], getNotation(), (value) => setNotationPreference(value as NotationPreference)));
-    section.append(this.el('p', 'field-note', t('setup.notation.note')));
-    // A display preference: never disabled by a running mission.
-    section.querySelector('select')!.disabled = false;
     return section;
   }
 

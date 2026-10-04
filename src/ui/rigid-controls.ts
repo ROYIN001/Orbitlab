@@ -10,14 +10,19 @@ const RATE_SYMBOL: Record<RateKey, Quantity> = { roll: 'rollRate', pitch: 'pitch
 
 interface Copy { title:string; mode:string; auto:string; manual:string; throttle:string; roll:string; pitch:string; yaw:string; zero:string; help:string; replay:string; rates:string; limit:string; envelope:string; fuel:string; history:string }
 const COPY: Record<Lang, Copy> = {
-  en: { title:'6-DOF flight controls', mode:'Flight control', auto:'Autopilot', manual:'Manual rates', throttle:'Throttle (%)', roll:'Roll rate (°/s)', pitch:'Pitch rate (°/s)', yaw:'Yaw rate (°/s)', zero:'Stop rotation command', help:'Manual commands request rotation rates; actuators have finite authority. Zero rates asks the controller to brake. Returning to Autopilot resumes mission guidance. 0% throttle shuts engines down; only restartable stages can relight after a delay.', replay:'Replay: controls are read-only. Return to Live to control the flight.', rates:'Measured roll / pitch / yaw', limit:'Actuator limit reached', envelope:'Outside estimated aerodynamic model range', fuel:'RCS propellant', history:'Detailed rotation is outside the retained replay window; the displayed attitude is approximate.' },
-  th: { title:'ควบคุมการบิน 6-DOF', mode:'วิธีควบคุมการบิน', auto:'นำร่องอัตโนมัติ', manual:'สั่งอัตราหมุนเอง', throttle:'คันเร่ง (%)', roll:'อัตราโรล (°/วินาที)', pitch:'อัตราพิตช์ (°/วินาที)', yaw:'อัตรายอว์ (°/วินาที)', zero:'สั่งหยุดหมุน', help:'คำสั่งมือกำหนดอัตราหมุน ระบบขับมีขีดจำกัด ค่าศูนย์สั่งให้ระบบเบรกการหมุน เปลี่ยนกลับเป็นอัตโนมัติเพื่อให้นำร่องตามภารกิจ คันเร่ง 0% ดับเครื่องยนต์ จุดใหม่ได้หลังหน่วงเวลาเฉพาะขั้นที่รองรับ', replay:'กำลังย้อนดู: อ่านค่าได้ กลับไปโหมดสดเพื่อบังคับการบิน', rates:'อัตราโรล / พิตช์ / ยอว์ที่วัดได้', limit:'ระบบขับถึงขีดจำกัด', envelope:'อยู่นอกช่วงแบบจำลองอากาศพลศาสตร์โดยประมาณ', fuel:'เชื้อเพลิง RCS', history:'ช่วงนี้อยู่นอกข้อมูลการหมุนที่เก็บไว้ ท่าทางที่แสดงเป็นค่าประมาณ' },
-  ru: { title:'Управление полётом 6DOF', mode:'Режим управления', auto:'Автопилот', manual:'Ручные угловые скорости', throttle:'Тяга (%)', roll:'Крен (°/с)', pitch:'Тангаж (°/с)', yaw:'Рыскание (°/с)', zero:'Команда остановить вращение', help:'Ручные команды задают угловые скорости; исполнительные органы имеют пределы. Нулевая скорость включает торможение. Автопилот возвращает наведение по миссии. Тяга 0% выключает двигатели; повторный запуск с задержкой доступен только подходящим ступеням.', replay:'Повтор: доступен только просмотр. Вернитесь к прямому эфиру для управления.', rates:'Измеренные скорости крена / тангажа / рыскания', limit:'Достигнут предел исполнительного органа', envelope:'Вне диапазона приближённой аэродинамической модели', fuel:'Топливо РСУ', history:'Вращение вне сохранённого диапазона повтора; ориентация показана приблизительно.' },
+  en: { title:'6-DOF flight controls', mode:'Flight control', auto:'Autopilot', manual:'Manual rates', throttle:'Manual throttle command (%)', roll:'Roll rate (°/s)', pitch:'Pitch rate (°/s)', yaw:'Yaw rate (°/s)', zero:'Stop rotation command', help:'Manual commands request rotation rates; actuators have finite authority. Zero rates asks the controller to brake. Returning to Autopilot resumes mission guidance. 0% throttle shuts engines down; only restartable stages can relight after a delay.', replay:'Replay: controls are read-only. Return to Live to control the flight.', rates:'Measured roll / pitch / yaw', limit:'Actuator limit reached', envelope:'Outside estimated aerodynamic model range', fuel:'RCS propellant', history:'Detailed rotation is outside the retained replay window; the displayed attitude is approximate.' },
+  th: { title:'ควบคุมการบิน 6-DOF', mode:'วิธีควบคุมการบิน', auto:'นำร่องอัตโนมัติ', manual:'สั่งอัตราหมุนเอง', throttle:'คำสั่งคันเร่งแบบสั่งเอง (%)', roll:'อัตราโรล (°/วินาที)', pitch:'อัตราพิตช์ (°/วินาที)', yaw:'อัตรายอว์ (°/วินาที)', zero:'สั่งหยุดหมุน', help:'คำสั่งมือกำหนดอัตราหมุน ระบบขับมีขีดจำกัด ค่าศูนย์สั่งให้ระบบเบรกการหมุน เปลี่ยนกลับเป็นอัตโนมัติเพื่อให้นำร่องตามภารกิจ คันเร่ง 0% ดับเครื่องยนต์ จุดใหม่ได้หลังหน่วงเวลาเฉพาะขั้นที่รองรับ', replay:'กำลังย้อนดู: อ่านค่าได้ กลับไปโหมดสดเพื่อบังคับการบิน', rates:'อัตราโรล / พิตช์ / ยอว์ที่วัดได้', limit:'ระบบขับถึงขีดจำกัด', envelope:'อยู่นอกช่วงแบบจำลองอากาศพลศาสตร์โดยประมาณ', fuel:'เชื้อเพลิง RCS', history:'ช่วงนี้อยู่นอกข้อมูลการหมุนที่เก็บไว้ ท่าทางที่แสดงเป็นค่าประมาณ' },
+  ru: { title:'Управление полётом 6DOF', mode:'Режим управления', auto:'Автопилот', manual:'Ручные угловые скорости', throttle:'Ручная команда тяги (%)', roll:'Крен (°/с)', pitch:'Тангаж (°/с)', yaw:'Рыскание (°/с)', zero:'Команда остановить вращение', help:'Ручные команды задают угловые скорости; исполнительные органы имеют пределы. Нулевая скорость включает торможение. Автопилот возвращает наведение по миссии. Тяга 0% выключает двигатели; повторный запуск с задержкой доступен только подходящим ступеням.', replay:'Повтор: доступен только просмотр. Вернитесь к прямому эфиру для управления.', rates:'Измеренные скорости крена / тангажа / рыскания', limit:'Достигнут предел исполнительного органа', envelope:'Вне диапазона приближённой аэродинамической модели', fuel:'Топливо РСУ', history:'Вращение вне сохранённого диапазона повтора; ориентация показана приблизительно.' },
 };
 
 /** Rate commands remain distinct from measured angular velocity. */
 export class RigidControls {
   private command: RigidCommand = { mode:'auto', rates:{x:0,y:0,z:0}, throttle:1 };
+  /** R2.1: the user's own open/closed choice; null follows the command (open in manual, closed under the autopilot) */
+  private open: boolean | null = null;
+  private details: HTMLDetailsElement | null = null;
+  /** what the panel last opened/closed itself to, so a toggle away from it is the user's */
+  private autoOpen = false;
   private live = true;
   private last?: RigidTelemetry;
   private controls: Array<HTMLInputElement | HTMLSelectElement | HTMLButtonElement> = [];
@@ -34,7 +39,7 @@ export class RigidControls {
     onNotationChange(()=>this.render());
     this.render();
   }
-  reset():void { this.command={mode:'auto',rates:{x:0,y:0,z:0},throttle:1}; this.last=undefined; this.host.hidden=true; this.render(); }
+  reset():void { this.open=null; this.command={mode:'auto',rates:{x:0,y:0,z:0},throttle:1}; this.last=undefined; this.host.hidden=true; this.render(); }
   private emit():void {
     if(!this.live)return;
     this.onCommand({...this.command,rates:{...this.command.rates}});
@@ -48,7 +53,11 @@ export class RigidControls {
     this.controls=[];
     this.inputs.clear();
     const heading=document.createElement('summary'); heading.textContent=copy.title;
-    const details=document.createElement('details'); details.open=true; details.append(heading);
+    const details=document.createElement('details'); details.append(heading);
+    // R2.1: under the autopilot the manual commands are disabled; collapsed, they
+    // leave the height to the scene, one click away (the mode selector is inside)
+    this.autoOpen=this.command.mode==='manual'; details.open=this.open ?? this.autoOpen; this.details=details;
+    details.addEventListener('toggle',()=>{ if(this.open!==null || details.open!==this.autoOpen) this.open=details.open; });
     const help=document.createElement('p'); help.textContent=copy.help;
     const fields=document.createElement('div'); fields.className='rigid-control-fields';
     const mode=document.createElement('select'); mode.setAttribute('aria-label',copy.mode);
@@ -87,6 +96,7 @@ export class RigidControls {
     if(recorded.commandRatesBody && recorded.commandThrottle!==undefined) {
       if(this.live) this.command={mode:recorded.controlMode,rates:{...recorded.commandRatesBody},throttle:recorded.commandThrottle};
       if(this.modeInput) this.modeInput.value=recorded.controlMode;
+      if(this.details && this.open===null && this.autoOpen!==(recorded.controlMode==='manual')) { this.autoOpen=recorded.controlMode==='manual'; this.details.open=this.autoOpen; }
       for(const[key,input]of this.inputs) if(!this.live || document.activeElement!==input) {
         input.value=String(key==='throttle'?recorded.commandThrottle*100:bodyRates(recorded.commandRatesBody)[key as RateKey]*RAD);
       }

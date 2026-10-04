@@ -42,7 +42,9 @@ import { onEllipsoid } from '../render/datum';
 import { VOSTOK_IM } from '../physics/sim/module-entry';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { Debris, TelemetrySample } from '../physics/sim/types';
-import { symbolText } from './notation';
+import { getNotation, setNotationPreference, symbolText, type NotationPreference } from './notation';
+import { CARD_IDS, TELEMETRY_LAYOUT_KEY, choosePreset, parseTelemetryLayout, serializeTelemetryLayout, toggleCard, visibleCards, type CardId, type PresetId, type TelemetryLayout } from './telemetry-layout';
+import { workspaceStorage } from '../workspace/storage';
 import { EquationsPanel } from './equations';
 import type { EquationLevel } from './equations-model';
 import type { VisualFrame } from '../physics/frame';
@@ -115,9 +117,23 @@ function trace(): Trace {
   return { x: [], y: [] };
 }
 
+/** R2.3: the learner's card choice (a profile-owned preference); every card when unreadable. */
+function loadTelemetryLayout(): TelemetryLayout {
+  try {
+    return parseTelemetryLayout(workspaceStorage().getItem(TELEMETRY_LAYOUT_KEY));
+  } catch {
+    return parseTelemetryLayout(null);
+  }
+}
+
 export class TelemetryPanel {
   private root: HTMLElement;
   private charts: Record<string, HTMLCanvasElement> = {};
+  /** R2.3: the cards the Engineer panel shows, and the elements of each card */
+  private layout: TelemetryLayout = loadTelemetryLayout();
+  private cardEls = new Map<CardId, HTMLElement[]>();
+  private cardBoxes = new Map<CardId, HTMLInputElement>();
+  private presetSelect: HTMLSelectElement | null = null;
   private losses!: HTMLElement;
   private plan!: HTMLElement;
   private debris!: HTMLElement;
@@ -199,6 +215,90 @@ export class TelemetryPanel {
     this.build();
   }
 
+  /**
+   * U07 / R2.1: the flight-dynamics notation, a display preference. It lives
+   * here rather than in the mission setup, which gives way to the scene once a
+   * flight is launched, so the standard can be changed during a flight. The
+   * Engineer level's only (modes.css). It never touches the flight's inputs:
+   * symbols, axes and signs are relabelled from the same recorded values.
+   */
+  /**
+   * R2.3: the presets (Flight / Dynamics / Orbit, or every card) and the card
+   * choice. The Engineer level's only (style.css); Explore shows one picked
+   * chart. The panel's clock, flight commands and event log are not cards.
+   */
+  private cardsControl(): HTMLElement {
+    const box = el('div', 'tel-cards');
+    const label = el('label', 'tel-display-field');
+    const select = el('select') as HTMLSelectElement;
+    const names: ReadonlyArray<readonly [PresetId, string]> = [['all', t('tel.cards.all')], ['flight', t('tel.cards.flight')],
+      ['dynamics', t('tel.cards.dynamics')], ['orbit', t('tel.cards.orbit')], ['custom', t('tel.cards.custom')]];
+    for (const [value, text] of names) {
+      const option = el('option', undefined, text) as HTMLOptionElement;
+      option.value = value;
+      select.append(option);
+    }
+    select.addEventListener('change', () => this.setLayout(choosePreset(this.layout, select.value as PresetId)));
+    this.presetSelect = select;
+    label.append(el('span', undefined, t('tel.cards')), select);
+    const choose = el('details', 'tel-cards-choose') as HTMLDetailsElement;
+    choose.append(el('summary', undefined, t('tel.cards.choose')));
+    const grid = el('div', 'tel-cards-grid');
+    this.cardBoxes.clear();
+    for (const card of CARD_IDS) {
+      const row = el('label', 'checkbox');
+      const input = el('input') as HTMLInputElement;
+      input.type = 'checkbox';
+      input.dataset.card = card;
+      input.addEventListener('change', () => this.setLayout(toggleCard(this.layout, card, input.checked)));
+      this.cardBoxes.set(card, input);
+      row.append(input, el('span', undefined, this.cardName(card)));
+      grid.append(row);
+    }
+    choose.append(grid);
+    box.append(label, choose);
+    return box;
+  }
+
+  private cardName(card: CardId): string {
+    if (card === 'losses') return t('tel.losses');
+    if (card === 'plan') return t('tel.plan');
+    if (card === 'debris') return t('tel.debris');
+    return chartTitle(card);
+  }
+
+  private setLayout(layout: TelemetryLayout): void {
+    this.layout = layout;
+    try { workspaceStorage().setItem(TELEMETRY_LAYOUT_KEY, serializeTelemetryLayout(layout)); } catch { /* storage off: this page keeps it */ }
+    this.applyLayout();
+    // a card brought back is drawn from the frame on screen at once
+    if (this.view) this.update(this.view, this.cursor);
+  }
+
+  private applyLayout(): void {
+    const shown = visibleCards(this.layout);
+    for (const [card, els] of this.cardEls) for (const node of els) node.classList.toggle('card-off', !shown.has(card));
+    if (this.presetSelect && this.presetSelect.value !== this.layout.preset) this.presetSelect.value = this.layout.preset;
+    for (const [card, input] of this.cardBoxes) input.checked = shown.has(card);
+  }
+
+  private notationControl(): HTMLElement {
+    const box = el('div', 'tel-display notation-section');
+    const label = el('label', 'tel-display-field');
+    const select = el('select') as HTMLSelectElement;
+    for (const [value, key] of [['iso', 'setup.notation.iso'], ['gost', 'setup.notation.gost']] as const) {
+      const option = el('option', undefined, t(key)) as HTMLOptionElement;
+      option.value = value;
+      select.append(option);
+    }
+    select.value = getNotation();
+    select.addEventListener('change', () => setNotationPreference(select.value as NotationPreference));
+    label.append(el('span', undefined, t('setup.notation')), select);
+    box.append(label);
+    box.title = t('setup.notation.note');
+    return box;
+  }
+
   build(): void {
     const r = this.root;
     r.setAttribute('aria-label', t('a11y.telemetryPanel'));
@@ -223,6 +323,9 @@ export class TelemetryPanel {
     }
     head.append(toggle);
     r.append(head);
+    r.append(this.notationControl());
+    this.cardEls.clear();
+    r.append(this.cardsControl());
     // E02: charts or the live equations.
     const views = el('div', 'tel-view-toggle');
     views.setAttribute('role', 'group');
@@ -283,6 +386,7 @@ export class TelemetryPanel {
       c.dataset.chart = id;
       r.append(c);
       this.charts[id] = c;
+      this.cardEls.set(id, [c]);
       c.setAttribute('role', 'img');
       c.setAttribute('aria-label', `${chartTitle(id)} ${t('tel.chart.noData')}`);
     }
@@ -298,15 +402,17 @@ export class TelemetryPanel {
     // `headCls` exists for the event log alone: at the two-column breakpoint the
     // panel is a ~300 px scrolling strip, and the log needs a class its heading
     // shares so flex `order` can lift the pair to the top of it (style.css).
-    const mk = (titleKey: string, cls: string, headCls?: string): HTMLElement => {
-      r.append(el('h3', headCls ? `section ${headCls}` : 'section', t(titleKey)));
+    const mk = (titleKey: string, cls: string, headCls?: string, card?: CardId): HTMLElement => {
+      const head = el('h3', headCls ? `section ${headCls}` : 'section', t(titleKey));
+      r.append(head);
       const box = el('div', cls);
       r.append(box);
+      if (card) this.cardEls.set(card, [head, box]);
       return box;
     };
-    this.losses = mk('tel.losses', 'list info');
-    this.plan = mk('tel.plan', 'list info plan');
-    this.debris = mk('tel.debris', 'list info');
+    this.losses = mk('tel.losses', 'list info', undefined, 'losses');
+    this.plan = mk('tel.plan', 'list info plan', undefined, 'plan');
+    this.debris = mk('tel.debris', 'list info', undefined, 'debris');
     r.append(this.compareHost);
     this.events = mk('tel.events', 'events', 'events-head');
     this.eventsEmpty = el('div', 'events-empty', t('tel.noEvents'));
@@ -342,6 +448,7 @@ export class TelemetryPanel {
     this.shownEvents = 0;
     this.shownEventItems.length = 0;
     this.markPicked();
+    this.applyLayout();
     if (this.view) this.update(this.view, this.cursor);
   }
 

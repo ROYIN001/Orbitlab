@@ -7,7 +7,7 @@ export const WORKSPACE_KEYS = [
   'orbitlab.project-import.recovery.v1', 'orbitlab.import.quarantine.v1', 'orbitlab.dataMode', 'orbitlab.homeCity',
   'orbitlab.hudLayout', 'orbitlab.hudMode', 'orbitlab.sound', 'orbitlab.experience',
   'orbitlab.mode', 'orbitlab.section', 'orbitlab.frames', 'orbitlab.notation',
-  'orbitlab.guide.v1', 'orbitlab.lang', 'orbitlab.glow',
+  'orbitlab.guide.v1', 'orbitlab.lang', 'orbitlab.glow', 'orbitlab.telemetryLayout',
 ] as const;
 export function isWorkspaceKey(key: string): boolean {
   return (WORKSPACE_KEYS as readonly string[]).includes(key)

@@ -38,8 +38,10 @@
  *   leftwards from its anchor, which stays on the true time either way.
  *
  * Chips that would overlap collapse into one of them, which shows a "+N"
- * count, lists the whole group in its tooltip, and steps through the group's
- * times on repeated clicks. Which one leads is decided by severity class and
+ * count and lists the whole group in its tooltip. Clicking it opens the event
+ * chooser (R2.4, `./timeline-chooser.ts`): every member by name and exact
+ * recorded T+ time, chosen by pointer, touch or keyboard, instead of stepping
+ * through the group with repeated clicks. Which one leads is decided by severity class and
  * only then by time (`SEVERITY_RANK`), so the bar summarises a successful
  * mission with "Target orbit", not with the debris impact that happened to be
  * the earliest member of the cluster.
@@ -51,6 +53,7 @@ import { fmtTime } from './hud';
 import { localizeEventParams } from './names';
 import { eventLabel } from './phase';
 import { TimeAxis } from './timeaxis';
+import { chooserEntries, chooserFocusMove } from './timeline-chooser';
 
 /** Minimum clear space between two rendered chips before they collapse, px. */
 const MIN_GAP = 6;
@@ -108,8 +111,6 @@ interface Chip {
   sig: string;
   /** events this chip stands for when it is a cluster lead */
   members: SimEvent[];
-  /** which member the next click on a cluster seeks to */
-  cycle: number;
 }
 
 export class Timeline {
@@ -149,6 +150,22 @@ export class Timeline {
   private group: Chip[] = [];
   private tickTimes: number[] = [];
   private tickEls: HTMLElement[] = [];
+  /**
+   * R2.4: the open event chooser and the cluster chip it belongs to. The list
+   * is a child of `<body>` with fixed position, because the bar and the
+   * playback panel both clip their overflow.
+   */
+  private chooser: HTMLElement | null = null;
+  private chooserChip: Chip | null = null;
+  /** the event the chooser had focus on, kept across a refill while recording */
+  private chooserFocus: SimEvent | null = null;
+  private readonly chooserOutside = (e: PointerEvent): void => {
+    const target = e.target as Node | null;
+    if (!this.chooser || !target) return;
+    if (this.chooser.contains(target) || this.chooserChip?.el.contains(target)) return;
+    this.closeChooser(false);
+  };
+  private readonly chooserReposition = (): void => { this.placeChooser(); };
 
   constructor(root: HTMLElement, cb: TimelineCallbacks) {
     this.root = root;
@@ -262,6 +279,7 @@ export class Timeline {
 
   /** Drop every chip (a new mission). */
   reset(): void {
+    this.closeChooser(false);
     this.events = [];
     this.chips = [];
     this.bar.replaceChildren(this.brk, this.playhead);
@@ -295,11 +313,14 @@ export class Timeline {
       const el = document.createElement('button');
       el.className = `tl-chip sev-${ev.severity}`;
       el.type = 'button';
-      const chip: Chip = { el, event: ev, label: eventLabel(ev.key, this.evParams(ev)), width: -1, sig: '', members: [ev], cycle: 0 };
+      const chip: Chip = { el, event: ev, label: eventLabel(ev.key, this.evParams(ev)), width: -1, sig: '', members: [ev] };
       el.addEventListener('click', () => this.chipClick(chip));
       return chip;
     });
-    for (const old of existing.values()) old.el.remove();
+    for (const old of existing.values()) {
+      if (old === this.chooserChip) this.closeChooser(false);
+      old.el.remove();
+    }
     // Match keyboard traversal to occurrence order as well as visual placement.
     for (let i = this.chips.length - 1; i >= 0; i--) {
       const el = this.chips[i].el;
@@ -333,19 +354,164 @@ export class Timeline {
 
   /**
    * Clicking a chip seeks to its event. A cluster lead stands for several
-   * events, so repeated clicks step through them — otherwise the collapsed
-   * members would be unreachable by pointer (their own handlers can never fire:
-   * `.collapsed` is `display: none`).
+   * events, so it opens the chooser listing them all instead (R2.4); clicking
+   * it again closes the list.
    */
   private chipClick(c: Chip): void {
-    const m = c.members;
-    if (m.length > 1) {
-      const i = c.cycle % m.length;
-      c.cycle = (c.cycle + 1) % m.length;
-      this.cb.onSeek(m[i].t);
+    if (c.members.length > 1) {
+      if (this.chooserChip === c) this.closeChooser(true);
+      else this.openChooser(c);
       return;
     }
+    this.closeChooser(false);
     this.cb.onSeek(c.event.t);
+  }
+
+  /** Whether the event chooser is open (for the shell and the tests). */
+  get chooserOpen(): boolean {
+    return this.chooser !== null;
+  }
+
+  private openChooser(chip: Chip): void {
+    this.closeChooser(false);
+    const list = document.createElement('div');
+    list.className = 'tl-chooser';
+    list.setAttribute('role', 'menu');
+    list.addEventListener('keydown', (e) => this.chooserKey(e));
+    document.body.append(list);
+    this.chooser = list;
+    this.chooserChip = chip;
+    this.chooserFocus = null;
+    chip.el.setAttribute('aria-expanded', 'true');
+    this.fillChooser();
+    this.placeChooser();
+    const items = this.chooserItems();
+    (items.find((b) => b.getAttribute('aria-current') === 'time') ?? items[0])?.focus({ preventScroll: true });
+    document.addEventListener('pointerdown', this.chooserOutside, true);
+    window.addEventListener('resize', this.chooserReposition);
+    window.addEventListener('scroll', this.chooserReposition, true);
+  }
+
+  /** Close the list; `refocus` hands focus back to the chip it opened from. */
+  closeChooser(refocus: boolean): void {
+    const list = this.chooser;
+    const chip = this.chooserChip;
+    if (!list) return;
+    this.chooser = null;
+    this.chooserChip = null;
+    this.chooserFocus = null;
+    document.removeEventListener('pointerdown', this.chooserOutside, true);
+    window.removeEventListener('resize', this.chooserReposition);
+    window.removeEventListener('scroll', this.chooserReposition, true);
+    list.remove();
+    if (chip) {
+      chip.el.setAttribute('aria-expanded', 'false');
+      if (refocus && chip.el.isConnected && !chip.el.classList.contains('collapsed')) chip.el.focus({ preventScroll: true });
+    }
+  }
+
+  private chooserItems(): HTMLButtonElement[] {
+    return this.chooser ? [...this.chooser.querySelectorAll<HTMLButtonElement>('.tl-chooser-item')] : [];
+  }
+
+  /** (Re)write the list from the chip's current members, keeping the focused event. */
+  private fillChooser(): void {
+    const list = this.chooser;
+    const chip = this.chooserChip;
+    if (!list || !chip) return;
+    const active = document.activeElement;
+    const hadFocus = active instanceof HTMLElement && list.contains(active);
+    const entries = chooserEntries(chip.members, this.cursorT);
+    list.setAttribute('aria-label', t('tl.chooser.label', { n: entries.length }));
+    const head = document.createElement('p');
+    head.className = 'tl-chooser-head';
+    head.textContent = t('tl.chooser.label', { n: entries.length });
+    head.setAttribute('aria-hidden', 'true');
+    const rows: HTMLElement[] = [head];
+    let focusEl: HTMLButtonElement | null = null;
+    for (const { event, current } of entries) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `tl-chooser-item sev-${event.severity}`;
+      b.setAttribute('role', 'menuitem');
+      b.tabIndex = -1;
+      if (current) b.setAttribute('aria-current', 'time');
+      const time = document.createElement('span');
+      time.className = 'tl-chooser-time';
+      time.textContent = fmtTime(event.t);
+      const name = document.createElement('span');
+      name.className = 'tl-chooser-name';
+      name.textContent = eventLabel(event.key, this.evParams(event));
+      b.title = t(event.key, this.evParams(event));
+      b.append(time, name);
+      b.addEventListener('click', () => {
+        this.closeChooser(true);
+        this.cb.onSeek(event.t); // the event's own recorded instant
+      });
+      b.addEventListener('focus', () => { this.chooserFocus = event; });
+      if (event === this.chooserFocus) focusEl = b;
+      rows.push(b);
+    }
+    list.replaceChildren(...rows);
+    if (hadFocus) (focusEl ?? this.chooserItems()[0])?.focus({ preventScroll: true });
+  }
+
+  /** Mark the row the cursor is at, without rebuilding the list. */
+  private markChooserCurrent(): void {
+    const chip = this.chooserChip;
+    if (!chip) return;
+    const entries = chooserEntries(chip.members, this.cursorT);
+    const items = this.chooserItems();
+    for (let i = 0; i < items.length && i < entries.length; i++) {
+      const on = entries[i].current;
+      if (on !== (items[i].getAttribute('aria-current') === 'time')) {
+        if (on) items[i].setAttribute('aria-current', 'time'); else items[i].removeAttribute('aria-current');
+      }
+    }
+  }
+
+  /** Over the chip, or under it when the window has no room above. */
+  private placeChooser(): void {
+    const list = this.chooser;
+    const chip = this.chooserChip;
+    if (!list || !chip) return;
+    const rect = chip.el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) { this.closeChooser(false); return; }
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+    const vh = window.innerHeight;
+    const w = list.offsetWidth;
+    const h = list.offsetHeight;
+    const left = Math.min(Math.max(8, rect.left), Math.max(8, vw - w - 8));
+    const above = rect.top - h - 6;
+    const top = above >= 8 || rect.bottom + 6 + h > vh ? Math.max(8, above) : rect.bottom + 6;
+    list.style.left = `${Math.round(left)}px`;
+    list.style.top = `${Math.round(top)}px`;
+  }
+
+  /**
+   * The list's own keys. None of them reaches the app's shortcuts: an arrow
+   * here moves through the list, it does not seek the flight or switch the
+   * camera, and Space/Enter activate the focused row as any button does.
+   */
+  private chooserKey(e: KeyboardEvent): void {
+    e.stopPropagation();
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      this.closeChooser(true);
+      return;
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      this.closeChooser(true);
+      return;
+    }
+    const items = this.chooserItems();
+    const index = items.indexOf(document.activeElement as HTMLButtonElement);
+    const next = chooserFocusMove(e.key, index, items.length);
+    if (next !== null) {
+      e.preventDefault();
+      items[next].focus({ preventScroll: true });
+    }
   }
 
   /** Per-frame update: cursor, head and mode. */
@@ -392,6 +558,7 @@ export class Timeline {
       this.modeLabel.textContent = live ? t('tl.live') : t('ctl.replay');
     }
     this.layout(axisMoved);
+    if (this.chooser) this.markChooserCurrent();
   }
 
   /**
@@ -464,9 +631,18 @@ export class Timeline {
       if (lead.sig === sig) return;
       lead.sig = sig;
       lead.members = group.map((m) => m.event);
-      lead.cycle = 0; // the first click lands on the event the chip is labelled with
       lead.el.textContent = count > 1 ? `${lead.label} +${count - 1}` : lead.label;
       lead.el.classList.toggle('cluster', count > 1);
+      // R2.4: a cluster opens the chooser, a single chip seeks
+      if (count > 1) {
+        lead.el.setAttribute('aria-haspopup', 'menu');
+        lead.el.setAttribute('aria-expanded', String(lead === this.chooserChip));
+      } else {
+        lead.el.removeAttribute('aria-haspopup');
+        lead.el.removeAttribute('aria-expanded');
+        if (lead === this.chooserChip) this.closeChooser(false);
+      }
+      if (lead === this.chooserChip) { this.fillChooser(); this.placeChooser(); }
       // The tooltip carries the exact T+ time of every event in the cluster.
       let title = '';
       for (const m of group) title += `${m.label} · ${fmtTime(m.event.t)}\n${t(m.event.key, this.evParams(m.event))}\n`;
@@ -512,6 +688,7 @@ export class Timeline {
           lead.el.classList.add('collapsed');
           lead.el.classList.remove('flip');
           lead.sig = '';   // it is no longer a lead: force a rewrite if it becomes one again
+          if (lead === this.chooserChip) this.closeChooser(false);
           lead = c;
           show(c);
         } else {

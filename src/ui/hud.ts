@@ -47,6 +47,7 @@ import { workspaceStorage } from '../workspace/storage';
  * machine; what is left here is the drawing and the pointer plumbing.
  */
 import type { SimEvent } from '../physics/simulation';
+import { engineLevels, formatEngineLevels } from './engine-levels';
 import type { VisualFrame } from '../physics/frame';
 import type { VehicleSpec } from '../types';
 import { t } from '../i18n';
@@ -106,7 +107,7 @@ const TICKER_ROWS = 4;
  * laptop showed throttle, thrust and mass and hid altitude, speed, apoapsis,
  * periapsis and Δv: the primary instruments of a launch simulator.
  */
-const PRIMARY_ROWS = ['altitude', 'speed', 'vertical', 'q', 'apoapsis', 'periapsis', 'inclination', 'dv', 'stage', 'throttle'] as const;
+const PRIMARY_ROWS = ['altitude', 'speed', 'vertical', 'q', 'apoapsis', 'periapsis', 'inclination', 'dv', 'stage', 'throttle', 'engines'] as const;
 /** Secondary detail; the first thing to go when the viewport is short. */
 const SECONDARY_ROWS = ['thrust', 'mass', 'g', 'pitch', 'airspeed', 'mach', 'raan', 'period', 'downrange', 'latlon', 'warp'] as const;
 
@@ -826,6 +827,7 @@ export class Hud {
   private row(id: string, labelKey: string): [HTMLElement, HTMLElement] {
     const key = el('span', 'k');
     const value = el('span', 'v');
+    value.dataset.row = id; // the browser journeys read a row by its id
     this.rows[id] = { key, value, labelKey, shown: '' };
     return [key, value];
   }
@@ -926,6 +928,8 @@ export class Hud {
     const active = stages && frame.activeStageIndex < stages.length ? stages[frame.activeStageIndex] : null;
     this.set('stage', active && stages && this.vehicle ? `${frame.activeStageIndex + 1}/${stages.length} ${stageName(this.vehicle, active.id, active.name)}` : '—');
     this.set('throttle', `${(frame.throttle * 100).toFixed(0)} %`);
+    // U16: what the engines actually run at, from the same frame as the command
+    this.set('engines', formatEngineLevels(engineLevels(frame), { core: t('hud.engines.core'), boosters: t('hud.engines.boosters') }));
     this.set('thrust', `${(frame.thrust / 1000).toFixed(0)} kN`);
     this.set('mass', `${(frame.mass / 1000).toFixed(1)} t`);
     this.set('g', `${frame.gLoad.toFixed(2)} g`);
