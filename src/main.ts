@@ -29,6 +29,7 @@ import { CameraPolicy } from './render/camera-policy';
 import { missionStage, setupCollapsed, type MissionStage } from './ui/flight-lifecycle';
 import { MISSION_SOURCE_KEY, missionSource } from './ui/mission-source';
 import { FIRST_LAUNCH, quickstartMission } from './ui/quickstart';
+import { MISSION_STEPS, MISSION_STEP_KEY, missionSteps, stepActionable, type MissionStep } from './ui/mission-steps';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { ExploreDebrief } from './ui/explore-debrief';
@@ -1434,6 +1435,69 @@ class App {
     const expanded = String(offer && this.setupPeek);
     if (toggle.getAttribute('aria-expanded') !== expanded) toggle.setAttribute('aria-expanded', expanded);
     this.syncMobileFlightBar(stage);
+    this.syncSteps(stage);
+  }
+
+  /** R3.5: the steps' last painted state, and when the setup's validity was last read */
+  private stepsKey = '';
+  private stepsValid = { at: -Infinity, valid: true };
+
+  /**
+   * R3.5: the mission's steps under its name (src/ui/mission-steps.ts), at the
+   * workspace levels. Called every frame: the setup's validity is read a few
+   * times a second, and the list is rebuilt only when what it shows changed.
+   */
+  private syncSteps(stage: MissionStage): void {
+    const list = document.getElementById('mission-steps');
+    if (!list) return;
+    const shown = !this.lean && this.route.section === 'launch';
+    if (shown && stage === 'setup') {
+      const now = performance.now();
+      if (now - this.stepsValid.at > 250) this.stepsValid = { at: now, valid: this.panel.isValid() };
+    }
+    const valid = this.stepsValid.valid;
+    const inOrbit = stage !== 'setup' && handoffAvailable(this.shown);
+    const key = shown ? `${stage}|${valid}|${inOrbit}|${getLang()}` : 'hidden';
+    if (key === this.stepsKey) return;
+    this.stepsKey = key;
+    list.hidden = !shown;
+    if (!shown) return;
+    list.setAttribute('aria-label', t('ctx.steps'));
+    const states = missionSteps({ stage, valid, inOrbit });
+    list.replaceChildren(...MISSION_STEPS.map((step) => {
+      const li = document.createElement('li');
+      li.dataset.step = step;
+      li.dataset.state = states[step];
+      const label = t(MISSION_STEP_KEY[step]);
+      if (stepActionable(step, { stage, inOrbit })) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.addEventListener('click', () => this.goToStep(step));
+        li.append(b);
+      } else li.textContent = label;
+      if (states[step] === 'current') li.setAttribute('aria-current', 'step');
+      return li;
+    }));
+  }
+
+  /** R3.5: a step's chip pressed. */
+  private goToStep(step: MissionStep): void {
+    if (step === 'build') this.go(route('build', this.lastLevel()));
+    else if (step === 'orbit') this.continueInOrbit();
+    else if (step === 'check') {
+      const note = document.getElementById('mission-note');
+      if (!note) return;
+      note.tabIndex = -1;
+      note.scrollIntoView({ block: 'center' });
+      note.focus({ preventScroll: true });
+    } else if (step === 'result') {
+      const card = document.getElementById('mission-result');
+      if (!card || card.hidden) return;
+      card.scrollIntoView({ block: 'nearest' });
+      const first = card.querySelector<HTMLElement>('button, [href]');
+      (first ?? card).focus({ preventScroll: true });
+    }
   }
 
   /**

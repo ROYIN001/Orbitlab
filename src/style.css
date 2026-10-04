@@ -467,6 +467,19 @@ body[data-lesson] .verdict-fixes { display: none; }
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
 }
 .mission-title h2 span { color: #668194; margin: 0 6px; }
+/* R3.5: Build → Check → Launch → Result → Orbit under the mission's name (src/ui/mission-steps.ts) */
+.mission-steps { display: flex; flex-wrap: wrap; gap: 2px; margin: 5px 0 0; padding: 0; list-style: none;
+  font: 10.5px/1 var(--display); letter-spacing: 0.4px; color: #7f97a8; }
+.mission-steps li { display: flex; align-items: center; }
+.mission-steps li + li::before { content: '›'; margin: 0 4px; color: #4d6273; }
+.mission-steps li, .mission-steps button { padding: 0; }
+/* the title band lets presses through to the scene (drag to orbit the camera); the chips take theirs */
+.mission-steps button { pointer-events: auto; color: inherit; font: inherit; letter-spacing: inherit; text-decoration: underline dotted; text-underline-offset: 2px;
+  padding: 2px 3px; border-radius: 4px; }
+.mission-steps button:hover, .mission-steps button:focus-visible { color: #d8eef8; background: rgba(12, 27, 34, 0.6); }
+.mission-steps [data-state="done"] { color: #8fb8a6; }
+.mission-steps [data-state="current"] { color: #e3f4ff; font-weight: 600; }
+.mission-steps [data-state="off"] { color: #4d6273; text-decoration: line-through; }
 .sim-state {
   display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 9px;
   border: 1px solid rgba(78, 115, 114, 0.45); border-radius: 6px;
@@ -1128,6 +1141,7 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .scene-ui { padding: 12px; gap: 8px; }
   .scene-top::before, .scene-bottom::before { left: -12px; right: -12px; }
   .mission-title h2 { font-size: 14px; }
+  .mission-steps { font-size: 9.5px; }
   .sim-state { font-size: 9px; height: 22px; padding: 0 7px; }
   .cam-btn { padding: 5px 7px; font-size: 12px; }
   .cam-btn span:last-child { font-size: 11px; }

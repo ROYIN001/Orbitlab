@@ -47,6 +47,7 @@ export default async function r3FirstLaunch(t) {
   t.check(await note.locator('.template-back').isVisible(), 'a user with a saved mission is not offered the way back to it');
   t.check(await t.until(async () => /first-launch template/.test(await eyebrow() ?? ''), { timeoutMs: 5000 }),
     `the eyebrow does not say it is the template: "${await eyebrow()}"`);
+  t.check(await page.locator('#mission-steps [aria-current="step"]').getAttribute('data-step') === 'launch', 'the template is not shown ready to launch in the steps');
   await app.shot('first-launch-template');
   await home();
   t.check(/1,234/.test(await resumeText() ?? ''), `opening the template replaced the saved mission: "${await resumeText()}"`);

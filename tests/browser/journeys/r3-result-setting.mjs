@@ -4,6 +4,9 @@
  * failed by that separation; its result offers "Show the setting", which at
  * the Engineer level brings back the collapsed setup (read-only, the flight's
  * own configuration) and lands on the failure field — changing nothing.
+ * The steps under the mission's name follow it: Launch before, Result after,
+ * Orbit struck through (the flight did not reach one), Result's chip taking
+ * the focus to the result card.
  */
 import { press } from '../harness.mjs';
 
@@ -17,6 +20,8 @@ export default async function r3ResultSetting(t) {
   // the mission's source beside its name: a catalogue rocket set up here
   t.check(await t.until(async () => /catalogue rocket/.test(await page.locator('#mission-eyebrow').textContent() ?? ''), { timeoutMs: 5000 }),
     `the mission eyebrow does not say where the mission comes from: "${await page.locator('#mission-eyebrow').textContent()}"`);
+  const current = () => page.locator('#mission-steps [aria-current="step"]').getAttribute('data-step').catch(() => null);
+  t.check(await t.until(async () => (await current()) === 'launch', { timeoutMs: 5000 }), `before launch the steps stand at ${await current()}, not Launch`);
   const launched = await app.mcp('launch_mission', {});
   if (!t.check(launched.ok, `launch_mission: ${JSON.stringify(launched)}`)) return;
   await app.mcp('control_playback', { action: 'warp', warp: 10 });
@@ -24,6 +29,10 @@ export default async function r3ResultSetting(t) {
   const shown = await t.until(() => button.isVisible(), { timeoutMs: 180_000, intervalMs: 1000 });
   const state = await app.mcp('read_flight_state');
   if (!t.check(shown, `no "Show the setting" on the result (status ${state.frame?.status} at T+${state.cursorTimeS?.toFixed(0)} s)`)) return;
+  t.check(await t.until(async () => (await current()) === 'result', { timeoutMs: 5000 }), `after the flight the steps stand at ${await current()}, not Result`);
+  t.check(await page.locator('#mission-steps [data-step="orbit"]').getAttribute('data-state') === 'off', 'a flight that failed short of orbit still offers Orbit');
+  await press(t, app, page.locator('#mission-steps [data-step="result"] button'), 'mouse', 'the Result step');
+  t.check(await page.evaluate(() => !!document.getElementById('mission-result')?.contains(document.activeElement)), 'the Result step did not take the focus to the result');
   t.check(await button.getAttribute('data-field') === 'setup.failureMode', `the result points at ${await button.getAttribute('data-field')}, not the armed failure`);
   t.check(await page.evaluate(() => document.body.dataset.setup) === 'collapsed', 'the setup was not collapsed in flight');
   const before = await page.locator('#setup [data-field="setup.failureMode"]').evaluate((el) => el.value).catch(() => null);
