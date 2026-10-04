@@ -56,6 +56,11 @@ async function pageDiagnostics(page, pendingRequests) {
       fontFaces: [...document.fonts].map((font) => ({ family: font.family, status: font.status })),
       openDialogs: [...document.querySelectorAll('dialog[open]')].map((dialog) => dialog.id),
       focus: document.activeElement?.id || document.activeElement?.tagName,
+      // start-up's steps (src/main.ts markStartup), ms after this document's navigation began: which one a slow load waited on
+      startup: Object.fromEntries(performance.getEntriesByType('mark').filter((m) => m.name.startsWith('orbitlab:'))
+        .map((m) => [m.name.slice('orbitlab:'.length), Math.round(m.startTime)])),
+      navigation: (() => { const n = performance.getEntriesByType('navigation')[0]; return n ? { domContentLoaded: Math.round(n.domContentLoadedEventEnd), load: Math.round(n.loadEventEnd), type: n.type } : null; })(),
+      sinceNavigation: Math.round(performance.now()),
       canvases: [...document.querySelectorAll('canvas')].map((canvas) => {
         const style = getComputedStyle(canvas), box = canvas.getBoundingClientRect();
         return { id: canvas.id, width: canvas.width, height: canvas.height, cssWidth: box.width, cssHeight: box.height,

@@ -922,6 +922,7 @@ class App {
 
   async init(): Promise<void> {
     const tex = await (this.earthTextures ??= loadEarthTextures(base));
+    markStartup('textures');
     this.scene = new SceneManager(this.glCanvas, tex);
     this.restoreGlow();
     // V02: `?sky=gradient` keeps the old sky, for comparison or a GPU the trial misjudges
@@ -935,6 +936,7 @@ class App {
     this.watchPixelRatio();
     this.resize();
     document.getElementById('loading')!.classList.add('hidden');
+    markStartup('ready');
     // A mission link opens the workspace on its mission; otherwise the landing
     // page and the viewer open on the featured launch standing on its pad in
     // daylight, and the workspace on the mission it held when it was closed.
@@ -2592,8 +2594,20 @@ class App {
   }
 }
 
+/**
+ * Start-up's steps as performance marks (`orbitlab:<step>`), read by the
+ * browser journeys' failure diagnostics (tests/browser/harness.mjs): when a
+ * reload is slow, they say which step it waited on. Marks only — nothing
+ * depends on them.
+ */
+function markStartup(step: string): void {
+  try { performance.mark(`orbitlab:${step}`); } catch { /* no performance API */ }
+}
+
 async function bootstrap(): Promise<void> {
+  markStartup('bootstrap');
   await initializeWorkspace();
+  markStartup('workspace');
   initLang();
   stampDocument();
   initNotation();
@@ -2611,6 +2625,7 @@ async function bootstrap(): Promise<void> {
   // exist before it (review minor: a mission-mutating tool call during texture
   // load would otherwise throw a TypeError out of the tool and leave the app
   // half-initialised).
+  markStartup('app');
   await app.init();
   registerMcpTools(app);
 }

@@ -22,8 +22,8 @@ Updated: 2026-10-04 UTC. R2 merged through [PR #74](https://github.com/ROYIN001/
 | R3.1–R3.4 (package 1) | Verified; merged; published | Flown-input provenance (hypothesis, defensive), Engineer bench rocket drawing + part card, satellite schematic with stated assumptions, readiness rows that point at their part; S/B/I | [R3 report](reports/R3-design-views.md) |
 | R3.5 | Verified; merged; published | Result → Show the setting and before/after suggestions (applied to a new mission), mission source and Build›Check›Launch›Result›Orbit steps, Home first-launch template, Watch copy to try, Orbit continue-vs-place labels, Explore builder Show its settings; I | [R3.5 report](reports/R3.5-journey.md); design ID/revision (schema change) remains |
 | R3.3 (stowed pose, axes) | Verified; merged; published | Satellite drawn stowed for launch (wings folded, stated assumption) and its body axes; B | [R3 report](reports/R3-design-views.md); [PR #78](https://github.com/ROYIN001/Orbitlab/pull/78), CI 37198590545, [Pages 37199666485](https://github.com/ROYIN001/Orbitlab/actions/runs/37199666485) at `f30590e`; sunlight/link/footprint diagrams remain |
-| R3.3 (subsystem diagrams) | Implemented on branch; in PR | Sunlight/shadow, link and camera-footprint diagrams drawn from the bench's own figures (no new physics); B | [R3 report](reports/R3-design-views.md) |
-| R3.1 (design ID/revision) | Implemented on branch; PR after #80 | Saved design id + last save as revision through Fly it / Send to Orbit / stored mission / mission name / Orbit hand-off, backward compatible; S/I | [R3 report](reports/R3-design-views.md) |
+| R3.3 (subsystem diagrams) | Verified; merged ([PR #80](https://github.com/ROYIN001/Orbitlab/pull/80)); **not yet published** (see below) | Sunlight/shadow, link and camera-footprint diagrams drawn from the bench's own figures (no new physics); B | [R3 report](reports/R3-design-views.md) |
+| R3.1 (design ID/revision) | Verified; merged ([PR #80](https://github.com/ROYIN001/Orbitlab/pull/80), CI 37218178884); **not yet published** (see below) | Saved design id + last save as revision through Fly it / Send to Orbit / stored mission / mission name / Orbit hand-off, backward compatible; S/I | [R3 report](reports/R3-design-views.md) |
 | R4–R7 | Planned | As described in PLAN.md | No implementation claimed or inferred authorization |
 
 ## Integration and verification rules
@@ -57,6 +57,12 @@ Word is not tracked in current main. Its existing immutable public copy was down
 - An earlier push run (37167209431, `559e9f3`) failed only its bundle-budget step; the ceilings were then raised with written reasons before the PR head. Its three unit shards passed. A later push run (37168065402) was cancelled by the PR run, not failed.
 - [Pages 37169459230](https://github.com/ROYIN001/Orbitlab/actions/runs/37169459230), attempt 1, passed plan, snapshot refresh/validation, build and budget, typecheck, three unit shards, two full browser shards and verify; the publisher's main-tip guard and `deploy-pages` succeeded at 2026-10-04T02:17:28Z for exact source `da67341`.
 - Open for the owner: D08 layout assumptions (see [R2 report](reports/R2-workspace.md)); R2.3 dock/resize/reorder; U16 CSV columns and Max-Q programme physics (R4).
+
+## PR #80 publication blocked by `learner-profiles` / การเผยแพร่ PR #80 ถูกกันโดย `learner-profiles`
+
+- [Pages 37219398466](https://github.com/ROYIN001/Orbitlab/actions/runs/37219398466) for `7662ead` (PR #80) **failed**: 10,139/10,139 unit cases and 23/24 browser journeys passed; `learner-profiles` timed out (120 s) waiting for `#loading.hidden` after the reload that deletes the active learner (`learner-profiles.mjs:182`). Its diagnostics, taken ~3 s later, show the app ready: the reloaded document's start-up took over 120 s where every reload takes ~20 s. The site stays at `f30590e`.
+- This is the second time this journey has failed this way (PR #76's first CI attempt failed at a deletion reload too). Per the owner's rule it is treated as a real bug, not a flake: locally it passed 4/4, each reload 19–29 s, including this one (20.8 s); the failure screenshot artifact cannot be fetched from this environment (network policy).
+- Next step taken: start-up now leaves performance marks (`orbitlab:bootstrap/workspace/app/textures/ready`), and the journeys' failure diagnostics print them with the navigation timing, so a recurrence names the step start-up waited on (workspace locks, Earth textures or scene). Locally a fresh load reaches `ready` in 2.5 s (workspace 0.3 s, textures 1.4 s). No timeout is relaxed and no test is skipped.
 
 ## R3.5 delivery / ผลส่งมอบ R3.5
 
