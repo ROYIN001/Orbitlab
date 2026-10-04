@@ -19,8 +19,8 @@ Updated: 2026-10-04 UTC. R2 merged through [PR #74](https://github.com/ROYIN001/
 | R2.2 | Verified; merged; published | CameraPolicy: manual view kept across phases, Cinematic, Watch view tabs, follow-target fallback; C + I | [R2 report](reports/R2-workspace.md) |
 | R2.3 (first step) | Verified; merged; published | Telemetry card presets All/Flight/Dynamics/Orbit/Custom, profile-owned; U | [R2 report](reports/R2-workspace.md); dock/resize/reorder and Docking preset remain |
 | R2.4 | Verified; merged; published | Timeline event chooser for clustered events; V | [R2 report](reports/R2-workspace.md) |
-| R3.1–R3.4 (package 1) | Implemented locally; in PR | Flown-input provenance (hypothesis, defensive), Engineer bench rocket drawing + part card, satellite schematic with stated assumptions, readiness rows that point at their part; S/B/I | [R3 report](reports/R3-design-views.md) |
-| R3.5 | Planned (authorized) | Journey integration: first-launch template, mission context, Watch copy, result→typed edit | Next R3 package |
+| R3.1–R3.4 (package 1) | Verified; merged; publish pending (see R3 delivery) | Flown-input provenance (hypothesis, defensive), Engineer bench rocket drawing + part card, satellite schematic with stated assumptions, readiness rows that point at their part; S/B/I | [R3 report](reports/R3-design-views.md) |
+| R3.5 (first part) | Implemented locally; in PR | Result → Show the setting (typed cause), mission source eyebrow, Home first-launch template, Watch copy to try, Build›Check›Launch›Result›Orbit steps; I | [R3.5 report](reports/R3.5-journey.md); before/after suggested changes, parts-builder fields, design revision remain |
 | R4–R7 | Planned | As described in PLAN.md | No implementation claimed or inferred authorization |
 
 ## Integration and verification rules

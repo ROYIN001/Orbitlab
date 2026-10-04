@@ -43,8 +43,13 @@ lessons (section 18), which a teacher can now write and check.
 
 - **Home** — the landing page, a page you scroll (the wheel scrolls it; it does not move the
   scene). Its first screen is the featured rocket on its pad: **Watch a launch** plays the
-  featured flight (Soyuz to the space station) straight away, **Start with a lesson** opens the
-  lessons. Below it, one at a time, are the ways in — Watch, Explore, Engineer, the lessons and
+  featured flight (Soyuz to the space station) straight away, **Try a launch yourself** opens
+  Explore on a first-launch template (Falcon 9 from Cape Canaveral with 1,000 kg of small
+  satellites to low Earth orbit) with a note saying what it uses, and **Start with a lesson**
+  opens the lessons. Opening the template does not replace the mission you saved: that is kept
+  until you change the template, and the note has **Back to my mission**. Watch's end card has
+  the same for the launch you watched — **Try this launch yourself** gives you a copy of it to
+  change; the launch in Watch stays as it is. Below it, one at a time, are the ways in — Watch, Explore, Engineer, the lessons and
   the Orbit section — each with a picture of it in the language you chose and a button that
   takes you there. At the end is the Earth with the International Space Station where it is
   now, and for the city you pick, when it next passes over and when you can next see it with
@@ -792,6 +797,16 @@ returns.
 ## 1. Set up a mission
 
 The left-hand panel (top of the page on a phone) builds a `MissionConfig` in three steps.
+
+Above the scene, the line over the mission's name says where the mission comes from — a
+catalogue rocket, your design, a lesson, the launch Watch prepared, the first-launch template or
+a copy to try — and under the name, at Explore and Engineer, are its steps: **Build › Check ›
+Launch › Result › Orbit**, the one it is at in bold. Build opens the Build section, Check the
+verdict in the setup before launch, Result the result card once the flight has ended, and Orbit
+continues in the Orbit section once the flight is in orbit (struck through when it ended out of
+orbit). When a flight's result has a cause the simulator recorded — a failure you armed that
+happened, a missed launch window, too little propellant — its card has **Show the setting**,
+which opens the setup on that field (read-only while the flight is there) without changing it.
 
 1. **Vehicle & site.** Pick a launch vehicle from the dropdown — the card underneath shows
    its height, liftoff mass and thrust, thrust-to-weight ratio, stage count and rated
