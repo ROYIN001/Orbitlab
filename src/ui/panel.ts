@@ -100,6 +100,8 @@ export interface SetupCallbacks {
   onExperience?: (mode: ExperienceMode) => void;
   /** G05: open the Monte Carlo window on the mission as set here. */
   onMonteCarlo?: (opener: HTMLElement) => void;
+  /** R3.5: the first-launch template's "back to my mission": the stored mission, in its place */
+  onBackToMine?: () => void;
 }
 
 interface SetupState {
@@ -215,6 +217,8 @@ export class SetupPanel {
   private scrollEl: HTMLElement | null = null;
   /** Explore: the set-up step on screen */
   private step: 1 | 2 | 3 = 1;
+  /** R3.5: the first-launch template's note, while the template is not yet the user's */
+  private template: { uses: string; stored: boolean } | null = null;
   /** Explore: what the last fix did, until the next edit */
   private fixMessage = '';
   private readonly fieldInputs = new Map<string, { input: HTMLInputElement; error: HTMLElement }>();
@@ -388,6 +392,57 @@ export class SetupPanel {
     label.classList.add('field-pointed');
     setTimeout(() => label.classList.remove('field-pointed'), 2400);
     return true;
+  }
+
+  /**
+   * R3.5: Home's first-launch template is in the panel. The note says what it
+   * uses — read off the panel now, as loaded — and, when the user has a saved
+   * mission, that it is kept until this one is changed, with the way back to
+   * it. Null takes the note away (the template became the user's mission).
+   */
+  showTemplate(on: { stored: boolean } | null): void {
+    if (!on) {
+      if (!this.template) return;
+      this.template = null;
+      this.root.querySelector('.template-note')?.remove();
+      return;
+    }
+    const s = this.state;
+    const num = (v: number, digits = 0): string => v.toLocaleString(getLang(), { maximumFractionDigits: digits });
+    const uses = t('setup.template.uses', {
+      vehicle: missionVehicle(s).name, site: siteName(siteById(s.siteId)), payload: num(s.payloadMass),
+      satellite: satelliteName(missionSatellite(s)), pe: num(s.orbit.perigee / 1000), ap: num(s.orbit.apogee / 1000),
+      // the inclination the flight will aim at: a preset's "the site's lowest" as a number
+      inc: num(resolveTarget(s.orbit, siteById(s.siteId), s.launchTime).inclination * RAD, 1),
+    });
+    this.template = { uses, stored: on.stored };
+    this.render();
+  }
+
+  /** The note `showTemplate` keeps at the top of the setup. */
+  private templateNote(): HTMLElement | null {
+    const tp = this.template;
+    // in flight the setup gives way to what is flying; the note comes back with it
+    if (!tp || this.running) return null;
+    const note = this.el('aside', 'template-note');
+    note.setAttribute('aria-labelledby', 'template-note-title');
+    const title = this.el('strong', undefined, t('setup.template.title'));
+    title.id = 'template-note-title';
+    note.append(title, this.el('p', undefined, tp.uses), this.el('p', 'field-note', t('setup.template.change', { launch: t('setup.launchMission') })));
+    const actions = this.el('div', 'template-note-actions');
+    if (tp.stored) {
+      note.append(this.el('p', 'field-note', t('setup.template.kept')));
+      const back = this.el('button', 'template-back', t('setup.template.back'));
+      back.type = 'button';
+      back.addEventListener('click', () => this.cb.onBackToMine?.());
+      actions.append(back);
+    }
+    const close = this.el('button', 'template-close', t('setup.template.close'));
+    close.type = 'button';
+    close.addEventListener('click', () => this.showTemplate(null));
+    actions.append(close);
+    note.append(actions);
+    return note;
   }
 
   setRunning(r: boolean): void {
@@ -746,6 +801,8 @@ export class SetupPanel {
     // panel used to carry a second switch for it, which did the same thing.
     // R2.1: the notation, a display preference, moved to the telemetry panel,
     // which stays on screen in flight while this panel gives way to the scene.
+    const template = this.templateNote();
+    if (template) scroll.prepend(template);
     into(1).appendChild(this.quickstartSection());
     into(1).appendChild(this.historicalSection());
     if (!learning) scroll.appendChild(this.share.section());

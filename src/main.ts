@@ -28,6 +28,7 @@ import { CameraController, type CameraMode, type CamPhase } from './render/camer
 import { CameraPolicy } from './render/camera-policy';
 import { missionStage, setupCollapsed, type MissionStage } from './ui/flight-lifecycle';
 import { MISSION_SOURCE_KEY, missionSource } from './ui/mission-source';
+import { FIRST_LAUNCH, quickstartMission } from './ui/quickstart';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { ExploreDebrief } from './ui/explore-debrief';
@@ -544,6 +545,7 @@ class App {
       onChange: (cfg) => { if (!this.playing) this.preview(cfg); },
       onExperience: (experience) => this.go(route('launch', experience === 'advanced' ? 'engineer' : 'explore')),
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
+      onBackToMine: () => this.continueMission(),
     });
     this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig(), missionState: () => this.panel.missionState() });
     // P08: a run clicked in the Monte Carlo window opens in the setup panel as one dispersed flight —
@@ -565,6 +567,7 @@ class App {
       openLessons: () => this.lessons.openCatalog(),
       lastMission: () => missionSummary(loadStoredMission()),
       continueMission: () => this.continueMission(),
+      tryFirstLaunch: () => this.tryFirstLaunch(),
     }, this.homeStage);
     this.buildScreen = new BuildScreen(document.getElementById('build-screen')!, {
       go: (r) => this.go(r),
@@ -1050,7 +1053,7 @@ class App {
   }
 
   /** A1: a viewer's launch into the panel, held as the viewer's until it is changed. */
-  private loadViewerMission(origin: 'demo' | 'watch', mission: Parameters<SetupPanel['loadMission']>[0]): void {
+  private loadViewerMission(origin: 'demo' | 'watch' | 'template', mission: Parameters<SetupPanel['loadMission']>[0]): void {
     this.workspace.viewing(origin);
     this.panel.loadMission(mission);
     this.workspace.loaded(this.missionDoc());
@@ -1075,6 +1078,21 @@ class App {
       this.applyStoredMission(stored);
     }
     this.go(route('launch', loadExperience() === 'advanced' ? 'engineer' : 'explore'));
+  }
+
+  /**
+   * R3.5 (A01): Home's "try a launch yourself" — Explore on the first-launch
+   * template, which says what it uses. Opening it stores nothing: the stored
+   * mission stays as it was until the template is changed, and the note offers
+   * the way back to it.
+   */
+  private tryFirstLaunch(): void {
+    this.goLive(); this.playing = false;
+    this.go(route('launch', 'explore'));
+    this.loadViewerMission('template', quickstartMission(FIRST_LAUNCH));
+    // the first-use guide's first step is to pick a Quick start example: this is one
+    this.helpGuide.missionGiven();
+    this.panel.showTemplate({ stored: loadStoredMission() !== null });
   }
 
   /**
@@ -1322,6 +1340,8 @@ class App {
 
   private updateMissionName(): void {
     const cfg = this.panel.state;
+    // the first-launch template's note goes once the template is the user's mission
+    if (this.workspace.origin !== 'template') this.panel.showTemplate(null);
     // R3.5: whose mission this is, beside its name
     this.narration.setSource(MISSION_SOURCE_KEY[missionSource({ origin: this.workspace.origin, lesson: !!document.body.dataset.lesson,
       customVehicle: !!cfg.vehicleSpec, customSatellite: !!cfg.satelliteSpec })]);

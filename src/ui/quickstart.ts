@@ -7,6 +7,8 @@ import { DEFAULT_FAILURE } from '../physics/defaults';
 import { launchWindows } from '../physics/mission';
 
 export type QuickstartId = 'leo' | 'iss' | 'gto';
+/** R3.5: the mission Home's "try a launch yourself" opens, as a template to change */
+export const FIRST_LAUNCH: QuickstartId = 'leo';
 export interface QuickstartMission extends ConfigInput { orbitId: string }
 
 export function quickstartMission(id: QuickstartId, from: Date = new Date()): QuickstartMission {

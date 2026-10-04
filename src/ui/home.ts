@@ -37,6 +37,8 @@ export interface HomeHost {
   lastMission(): MissionSummary | null;
   /** A1: open the launch workspace, at the level last used, on that mission */
   continueMission(): void;
+  /** R3.5 (A01): Explore on the first-launch template, the stored mission kept until it is changed */
+  tryFirstLaunch(): void;
 }
 
 /** A chapter of the page: one face of the app, its picture beside it (in SHOWCASE_FACES' order). */
@@ -155,7 +157,8 @@ export class HomeScreen {
     play.append(glyph, label);
     play.addEventListener('click', () => this.host.watch(FEATURED_WATCH_MISSION));
     const actions = el('div', 'home-actions');
-    actions.append(play, this.button('home-secondary', t('home.hero.lessons'), 'lessons', () => this.host.openLessons()));
+    actions.append(play, this.button('home-secondary', t('home.hero.try'), 'try', () => this.host.tryFirstLaunch()),
+      this.button('home-secondary', t('home.hero.lessons'), 'lessons', () => this.host.openLessons()));
     inner.append(el('span', 'eyebrow home-eyebrow', t('home.eyebrow')), title, el('p', 'home-lead', t('home.lead')), actions);
     const resume = this.resumeCard();
     if (resume) inner.append(resume);

@@ -227,6 +227,14 @@ details[open] summary { margin-bottom: 4px; }
 .share-notice p { margin: 0; }
 .share-notice ul { margin: 4px 0 0; padding-left: 18px; color: var(--muted); }
 .share-notice-close { position: absolute; top: 4px; right: 6px; font-size: 16px; line-height: 1; color: var(--muted); }
+/* R3.5: Home's first-launch template says what it uses (src/ui/panel.ts showTemplate) */
+.template-note { margin: 12px 18px 0; padding: 10px 12px; border-radius: 7px; font-size: 12px; line-height: 1.55;
+  border: 1px solid var(--accent-line); background: var(--panel2); }
+.template-note strong { display: block; font-size: 13px; color: var(--accent); }
+.template-note p { margin: 4px 0 0; }
+.template-note-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.template-note-actions button { font-size: 12px; padding: 5px 10px; border: 1px solid var(--line2); border-radius: 6px; background: var(--panel); }
+.template-note-actions button:hover { border-color: var(--accent-line); }
 /* Explore computes the guidance and shows it (src/ui/explore.ts). Its fields
    and the auto-tuner are built at both levels and stay folded away in Explore
    unless one of them is invalid, or a lesson asks the student to change them
