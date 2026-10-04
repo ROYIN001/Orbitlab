@@ -24,7 +24,8 @@
 .mission-result td { font-family: var(--mono); white-space: nowrap; }
 .mission-result .mission-result-miss { color: var(--warn); font-weight: 600; text-decoration: underline dotted; text-underline-offset: 3px; }
 .mission-result .mission-result-next { padding-top: 8px; border-top: 1px solid var(--line); }
-.mission-result .mission-result-review { margin-top: 6px; height: auto; white-space: normal; }
+.mission-result :is(.mission-result-review, .mission-result-setting) { margin-top: 6px; height: auto; white-space: normal; }
+.mission-result .mission-result-setting { margin-left: 6px; }
 @media (max-width: 640px) {
   .mission-result { padding: 14px; }
   .mission-result th, .mission-result td { padding: 7px 6px; }

@@ -2,9 +2,14 @@ import { getLang, onLangChange, t } from '../i18n';
 import { RAD } from '../physics/constants';
 import { assessMissionResult, RESULT_COPY, type ResultInput, type ResultMetric } from './result-content';
 import { aeroAngles } from './notation';
+import { resultSetting } from './result-actions';
 import './mission-result.css';
 
-export interface MissionResultOptions { onSeek?: (time: number) => void }
+export interface MissionResultOptions {
+  onSeek?: (time: number) => void;
+  /** R3.5: show the setup field (a dictionary key) worth looking at for this result */
+  onShowSetting?: (field: string) => void;
+}
 
 /** Inline post-flight summary. Call with the displayed frame-backed view. */
 export class MissionResult {
@@ -25,6 +30,8 @@ export class MissionResult {
   private readonly recoveryNote = document.createElement('p');
   private readonly next = document.createElement('p');
   private readonly review = document.createElement('button');
+  private readonly setting = document.createElement('button');
+  private settingField: string | null = null;
 
   constructor(private readonly host: HTMLElement, private readonly options: MissionResultOptions = {}) {
     host.classList.add('mission-result');
@@ -71,8 +78,12 @@ export class MissionResult {
     this.review.className = 'btn mission-result-review';
     this.review.hidden = !options.onSeek;
     this.review.addEventListener('click', () => this.options.onSeek?.(this.reviewTime));
+    this.setting.type = 'button';
+    this.setting.className = 'btn mission-result-setting';
+    this.setting.hidden = true;
+    this.setting.addEventListener('click', () => { if (this.settingField) this.options.onShowSetting?.(this.settingField); });
     host.replaceChildren(this.heading, this.status, this.detail, this.aeroWarnings, this.times, wrap,
-      this.deltaNote, this.payload, this.iss, this.recovery, this.recoveryNote, this.next, this.review);
+      this.deltaNote, this.payload, this.iss, this.recovery, this.recoveryNote, this.next, this.review, this.setting);
     onLangChange(() => { if (this.last) this.update(this.last); });
   }
 
@@ -123,6 +134,16 @@ export class MissionResult {
     this.recoveryNote.textContent = copy.separate;
     this.next.textContent = `${copy.next}: ${copy.cause[model.cause].next}`;
     this.reviewTime = model.reviewTime;
+    // R3.5: the setting the typed cause points at, if one does
+    const field = this.options.onShowSetting
+      ? resultSetting(model.cause, { failureArmed: !!input.cfg.failure && input.cfg.failure.mode !== 'none', events: input.events, outcomeTime: model.outcomeTime })
+      : null;
+    this.settingField = field;
+    this.setting.hidden = !field;
+    if (field) {
+      this.setting.dataset.field = field;
+      this.setting.textContent = t('result.showSetting', { field: t(field) });
+    }
     this.review.textContent = `${copy.review} (T+${model.reviewTime.toFixed(1)} s)`;
   }
 

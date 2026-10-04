@@ -502,6 +502,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'aero.scope.vehicle': 'tracked vehicle',
   'aero.scope.debris': 'detached body',
   'result.aeroWarning.vehicle': 'Model limitation: the tracked vehicle exceeded the estimated aerodynamic range at T+{time} s (α {alpha}°, β {beta}°). Treat aerodynamic conclusions for this flight as estimates.',
+  'result.showSetting': 'Show the setting: {field}',
   'result.aeroWarning.debris': 'Model limitation: a detached body exceeded the estimated aerodynamic range at T+{time} s (α {alpha}°, β {beta}°). This warning concerns that body’s motion or recovery; the payload-orbit assessment is separate.',
   'evt.burnComplete': 'Burn complete: {pe} × {ap} km, i = {inc}°',
   'evt.targetOrbit': 'Target orbit achieved: {pe} × {ap} km, i = {inc}°, RAAN {raan}°, period {period} min',

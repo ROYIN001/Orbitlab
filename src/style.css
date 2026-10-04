@@ -1391,3 +1391,6 @@ body:not([data-mode='engineer']) .tel-display { display: none; }
 @media (max-width: 1180px) and (min-width: 861px) {
   #telemetry > .tel-cards { order: 0; }
 }
+
+/* R3.5: a setup field a flight's result points at (src/ui/panel.ts focusField) */
+label.field-pointed { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }

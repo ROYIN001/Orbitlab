@@ -363,6 +363,33 @@ export class SetupPanel {
     this.cb.onReset();
   }
 
+  /**
+   * R3.5: bring one setup field into view and focus it (a result's "show the
+   * setting"): the Explore step it is on, a collapsed section it is in. Read-only
+   * while a flight exists, as every field is. False when the field is not on
+   * this level's panel.
+   */
+  focusField(key: string): boolean {
+    const find = (): HTMLElement | null => this.root.querySelector<HTMLElement>(`[data-field="${CSS.escape(key)}"]`);
+    let field = find();
+    const pane = field?.closest<HTMLElement>('.explore-step');
+    if (field && pane?.hidden && pane.dataset.step) {
+      this.step = Number(pane.dataset.step) as 1 | 2 | 3;
+      this.render();
+      field = find();
+    }
+    if (!field) return false;
+    for (let d = field.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true;
+    field.scrollIntoView({ block: 'center' });
+    const label = field.closest<HTMLElement>('label') ?? field;
+    // a frozen (disabled) control cannot take the focus: its label does, so a keyboard user lands on it too
+    if ((field as HTMLInputElement).disabled && label !== field) { label.tabIndex = -1; label.focus({ preventScroll: true }); }
+    else field.focus({ preventScroll: true });
+    label.classList.add('field-pointed');
+    setTimeout(() => label.classList.remove('field-pointed'), 2400);
+    return true;
+  }
+
   setRunning(r: boolean): void {
     if (r) this.cancelTune();
     this.running = r;
@@ -500,6 +527,7 @@ export class SetupPanel {
     lab.appendChild(this.el('span', undefined, label));
     const sel = this.el('select');
     sel.setAttribute('aria-label', label);
+    sel.dataset.field = labelKey; // R3.5: found by key, never by its translated label
     for (const o of options) {
       const op = this.el('option', undefined, o.label);
       op.value = o.value;
@@ -520,6 +548,7 @@ export class SetupPanel {
     inp.value = this.fieldDrafts.get(labelKey) ?? String(+value.toFixed(3));
     inp.step = String(step);
     inp.setAttribute('aria-label', t(labelKey));
+    inp.dataset.field = labelKey;
     const def = Object.values(GUIDANCE_FIELDS).find((f) => `setup.${f.key}` === labelKey);
     const stored = def ? guidanceLimits(def.key, missionVehicle(this.state)) : null;
     const limits = def && stored
@@ -892,6 +921,7 @@ export class SetupPanel {
       }
       this.updateValidation();
     });
+    timeInp.dataset.field = 'setup.launchTime';
     this.registerField('setup.launchTime', timeInp, timeLab);
     s3.appendChild(timeLab);
     const winBox = this.el('div', 'windows');

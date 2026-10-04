@@ -499,7 +499,7 @@ class App {
 
   constructor() {
     this.helpGuide = new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
-    this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
+    this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time), onShowSetting: (field) => this.showSetting(field) });
     this.flown = new FlownPanel(document.getElementById('flown-result')!);
     this.toruControls = new ToruControls(document.getElementById('toru-controls')!, (cmd) => {
       if (this.mode === 'engineer' && this.player.live) this.session?.commandToru(cmd);
@@ -1390,6 +1390,20 @@ class App {
     const expanded = String(offer && this.setupPeek);
     if (toggle.getAttribute('aria-expanded') !== expanded) toggle.setAttribute('aria-expanded', expanded);
     this.syncMobileFlightBar(stage);
+  }
+
+  /**
+   * R3.5: a result's "show the setting": the setup shown (at the Engineer level
+   * the collapsed column comes back, read-only while the flight exists) and the
+   * field brought into view and focused. Nothing is changed for the user.
+   */
+  private showSetting(field: string): void {
+    if (this.mode === 'engineer' && this.stage !== 'setup' && !this.setupPeek) {
+      this.setupPeek = true;
+      this.syncLifecycle();
+    }
+    // after the column is laid out again
+    requestAnimationFrame(() => { this.panel.focusField(field); });
   }
 
   /** R2.1: show the collapsed setup (read-only in flight, with Relaunch and New mission), or hide it again. */
