@@ -719,7 +719,10 @@ Above the tabs, the satellite is drawn from the design itself: the bus to its ed
 as two wings (tracking), cells on the body or round it (spinner), the dish and the camera's
 aperture, and an engine when it has one — nothing it does not have. Where the design gives no
 figure (how many wings, where each part sits), the drawing assumes and lists the assumption
-under it. The open tab's subsystem is highlighted; each part's button opens its tab. While a
+under it. The open tab's subsystem is highlighted; each part's button opens its tab. A design with
+wings can be drawn **Deployed** or **Stowed for launch** — the wings folded flat against the bus's
+sides (the folds are an assumption, said under the picture) — and the corner shows the body axes:
++Z at the Earth, +X along the velocity. While a
 figure is being typed and is not a number yet, the drawing says so rather than showing the old
 one.
 
