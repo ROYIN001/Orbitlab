@@ -72,6 +72,26 @@ export default async function r3BenchDrawings(t) {
   const cameraButtons = await page.locator('.bsb-part[data-k$="part-camera"]').count();
   t.check(hasCamera === cameraButtons, 'the camera drawn and the camera listed disagree');
   t.check(await page.locator('.bsb-assumptions li').count() > 0, 'the drawing lists no assumptions');
+  // R3.3: the body axes, and a design with wings drawn stowed for launch
+  t.check(await page.locator('.bsb-svg .sd-axes').count() === 1, 'the drawing has no body axes');
+  // NAPA-2 carries body cells: give it tracking wings (Power tab) so it has something to fold
+  await press(t, app, page.locator('#bsb-tab-power'), 'mouse', 'Power tab');
+  const mount = page.locator('[data-k="sb:mount"]');
+  if (await mount.count()) await mount.selectOption('tracking');
+  const stowBtn = page.locator('.bsb-pose[data-k$="pose-stowed"]');
+  await t.until(async () => (await stowBtn.count()) > 0, { timeoutMs: 5000 });
+  if (t.check(await stowBtn.count() > 0, 'a design with wings has no stowed pose')) {
+    const deployedWidth = await page.evaluate(() => document.querySelector('.bsb-svg [data-part="arrays"]')?.getBBox().width ?? 0);
+    await press(t, app, stowBtn, 'mouse', 'Stowed for launch');
+    t.check(await t.until(async () => (await page.locator('.bsb-svg .sd-folded').count()) > 0, { timeoutMs: 5000 }), 'Stowed did not fold the wings');
+    t.check(await page.locator('.bsb-svg .sd-wing:not(.sd-folded)').count() === 0, 'a wing stayed open when stowed');
+    t.check(await stowBtn.getAttribute('aria-pressed') === 'true', 'Stowed is not pressed');
+    const stowedWidth = await page.evaluate(() => document.querySelector('.bsb-svg [data-part="arrays"]')?.getBBox().width ?? 0);
+    t.log(`array width drawn: deployed ${deployedWidth.toFixed(0)} px, stowed ${stowedWidth.toFixed(0)} px`);
+    await app.shot('satellite-bench-stowed');
+    await press(t, app, page.locator('.bsb-pose[data-k$="pose-deployed"]'), 'mouse', 'Deployed');
+    t.check(await t.until(async () => (await page.locator('.bsb-svg .sd-folded').count()) === 0, { timeoutMs: 5000 }), 'Deployed did not open the wings again');
+  }
 
   // R3.5: Explore's remix of Electron: the kick stage's check leads to its card
   await page.evaluate(() => { location.hash = '#/build/explore'; });
