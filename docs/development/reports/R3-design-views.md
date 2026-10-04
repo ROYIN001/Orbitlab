@@ -44,7 +44,8 @@ Local: Node 22.22.0, Chromium 141.0.7390.37, software WebGL, render scale 0.5
 - `npx vite build` + bundle budget: index JS 2598.7 kB, CSS 172.3 kB, i18n 1700.7 kB เกิน ceiling เดิม → ปรับเป็น 2600 / 173 / 1702 kB พร้อมเหตุผลใน `budgets.json` `_notes`; precache 15778.7 kB อยู่ใต้ ceiling เดิม; หลังปรับ **ok**
 - browser `r3-bench-drawings` (ใหม่) บน production `dist/`: **1/1 ผ่าน** (16.7 s) — Electron บน bench, เลือก Stage 2 → การ์ด ≥4 ตัวเลข → stand tab, Apart ไม่ทำชิ้นหาย, review ของ Electron แสดง “Show the part” ที่ `stage:2` (weakUpperStage ของ Curie) และเลือกชิ้นนั้นบนภาพ, satellite bench วาด NAPA-2 6U, Power tab highlight array, ปุ่มชิ้นเปิดแท็บ, ภาพกับรายการกล้องตรงกัน, มี assumptions
 - ระหว่างพัฒนา journey พบ SVG `position:absolute` ทับการ์ดและแท็บ (`.bs-svg` ของ Watch level) จึงแก้ `.be-draw`/`.bsb-draw` เป็น `position: relative` ก่อนผ่าน
-- ผล full unit suite และ journey ที่เกี่ยวข้องอื่น: บันทึกใน PR
+- full default unit suite (`npx vitest run`): **10,113 passed / 10,113 (283 files)**
+- browser บน production `dist/` ของ source นี้: `r3-bench-drawings gesture-ownership requirements satellite launch-explore workspace-navigation profile-session-safety` → **7/7 ผ่าน, 485.0 s** (satellite 40.3 s ครอบคลุม Send to Orbit/Fly it ที่ใช้ handoff; launch-explore 106.3 s บินถึงวงโคจรและ export CSV; profile-session-safety 158.0 s รวม Build routes)
 
 ## ข้อจำกัดและงานที่เหลือ
 
