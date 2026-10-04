@@ -1,6 +1,6 @@
 # Orbitlab development progress / สถานะงานตามแผน
 
-Updated: 2026-10-04 UTC (R2 started on the owner's instruction; branch `claude/funny-turing-vr4jbm`, not yet merged). Plan: [PLAN.md](PLAN.md), version 1.2; human copy: [verified Word download](https://raw.githubusercontent.com/ROYIN001/Orbitlab/f2d7e4804b7b6664b63b8cceb8bb4d0c1842e802/docs/development/PLAN.docx). [PR #71](https://github.com/ROYIN001/Orbitlab/pull/71) merged at `5eb18a27fbf579159e3351545216c801b26c7df5`; [PR #72](https://github.com/ROYIN001/Orbitlab/pull/72) subsequently merged the harness correction; [Pages 37103651001](https://github.com/ROYIN001/Orbitlab/actions/runs/37103651001) published exact source `472645fd57062c79d50c567028de220145006861` to [the website](https://royin001.github.io/Orbitlab/) at 2026-10-03T06:55:10Z. Starting main: `523b44eca0e31fd84fd4a3faa4e1b883428288ee`.
+Updated: 2026-10-04 UTC. R2 merged through [PR #74](https://github.com/ROYIN001/Orbitlab/pull/74) at `da6734160a510cd87cc7fdb4df3ec4eba9319313` and published; R3 started on the owner's instruction after that merge. Plan: [PLAN.md](PLAN.md), version 1.2; human copy: [verified Word download](https://raw.githubusercontent.com/ROYIN001/Orbitlab/f2d7e4804b7b6664b63b8cceb8bb4d0c1842e802/docs/development/PLAN.docx). [PR #71](https://github.com/ROYIN001/Orbitlab/pull/71) merged at `5eb18a27fbf579159e3351545216c801b26c7df5`; [PR #72](https://github.com/ROYIN001/Orbitlab/pull/72) subsequently merged the harness correction; [Pages 37103651001](https://github.com/ROYIN001/Orbitlab/actions/runs/37103651001) published exact source `472645fd57062c79d50c567028de220145006861` to [the website](https://royin001.github.io/Orbitlab/) at 2026-10-03T06:55:10Z. Starting main: `523b44eca0e31fd84fd4a3faa4e1b883428288ee`.
 
 ผู้ใช้อนุญาต R1 และงานเล็กที่แก้ไม่มาก รวมเปิด PR/merge main หลังตรวจเรียบร้อยแล้ว ให้ผู้รับช่วงอ่านตารางนี้และรายงานแต่ละงานก่อนแก้ไข ห้ามทำซ้ำส่วนที่เสร็จหรืออ้างว่าระยะอื่นเสร็จตามไปด้วย
 
@@ -15,11 +15,13 @@ Updated: 2026-10-04 UTC (R2 started on the owner's instruction; branch `claude/f
 | U08 (small R2.2 subset) | Verified; merged; published | Remove visible reset-camera control; keep internal framing | [Small UI report](reports/R1-small-ui.md); full Watch CameraPolicy remains R2.2 |
 | U09 (small R2.1 subset) | Verified; merged; published | Hide Auto option; implicit language default, preserve explicit ISO/GOST | [Small UI report](reports/R1-small-ui.md); layout/lifecycle remains R2.1 |
 | U16 (small R2.1 subset) | Verified; merged; published | Label HUD/onboard percentage as throttle command | [Small UI report](reports/R1-small-ui.md); actual per-engine readouts/profile validation remain R2/R4 |
-| R2.1 | Implemented locally; not merged | Engineer lifecycle (setup→flight→analysis), setup collapses after launch, notation in telemetry panel, U16 actual engine-level readout, phone flight bar; U + I | [R2 report](reports/R2-workspace.md); D08 layout assumptions await owner review |
-| R2.2 | Implemented locally; not merged | CameraPolicy: manual view kept across phases, Cinematic, Watch view tabs, follow-target fallback; C + I | [R2 report](reports/R2-workspace.md) |
-| R2.3 (first step) | Implemented locally; not merged | Telemetry card presets All/Flight/Dynamics/Orbit/Custom, profile-owned; U | [R2 report](reports/R2-workspace.md); dock/resize/reorder and Docking preset remain |
-| R2.4 | Implemented locally; not merged | Timeline event chooser for clustered events; V | [R2 report](reports/R2-workspace.md) |
-| R3–R7 other work | Planned | As described in PLAN.md | No implementation claimed or inferred authorization |
+| R2.1 | Verified; merged; published | Engineer lifecycle (setup→flight→analysis), setup collapses after launch, notation in telemetry panel, U16 actual engine-level readout, phone flight bar; U + I | [R2 report](reports/R2-workspace.md); D08 layout assumptions await owner review |
+| R2.2 | Verified; merged; published | CameraPolicy: manual view kept across phases, Cinematic, Watch view tabs, follow-target fallback; C + I | [R2 report](reports/R2-workspace.md) |
+| R2.3 (first step) | Verified; merged; published | Telemetry card presets All/Flight/Dynamics/Orbit/Custom, profile-owned; U | [R2 report](reports/R2-workspace.md); dock/resize/reorder and Docking preset remain |
+| R2.4 | Verified; merged; published | Timeline event chooser for clustered events; V | [R2 report](reports/R2-workspace.md) |
+| R3.1–R3.4 (package 1) | Implemented locally; in PR | Flown-input provenance (hypothesis, defensive), Engineer bench rocket drawing + part card, satellite schematic with stated assumptions, readiness rows that point at their part; S/B/I | [R3 report](reports/R3-design-views.md) |
+| R3.5 | Planned (authorized) | Journey integration: first-launch template, mission context, Watch copy, result→typed edit | Next R3 package |
+| R4–R7 | Planned | As described in PLAN.md | No implementation claimed or inferred authorization |
 
 ## Integration and verification rules
 
@@ -44,6 +46,14 @@ Root recorded integration results in [R1 integration report](reports/R1-integrat
 Initial candidate `f2d7e48` failed [CI 37096708399](https://github.com/ROYIN001/Orbitlab/actions/runs/37096708399): tracked DOCX policy, obsolete DOM exemptions, four rigid-flight fingerprints, and three browser timeouts. Those candidate issues were corrected before PR71 merged without policy exceptions, historical golden rewrites or tolerance relaxation. The first release's detailed click log now establishes the remaining navigation-wait problem; it does not prove the cause of every initial timeout.
 
 Word is not tracked in current main. Its existing immutable public copy was downloaded without authentication and verified: **83,293 bytes**, SHA-256 `c15a3550627c2fa9d6d79341a748a22cbd75e7cb1ca86875a4b217609979768d`. Initial upload attempts were rejected by the restricted network; later upload requests returned HTTP 400 Bad Content-Length even with the correct explicit file length. The verified public download is used; no new authentication is requested. The working download above fulfills the human-document handoff while retaining repository hygiene.
+
+## R2 delivery / ผลส่งมอบ R2
+
+- Owner instructions (2026-10-04): start phase 2; open a PR, merge into main when done, and record progress; then continue to phase 3 if R2 merged cleanly.
+- [PR #74](https://github.com/ROYIN001/Orbitlab/pull/74) CI [37168554643](https://github.com/ROYIN001/Orbitlab/actions/runs/37168554643) passed on head `8114481639f6b9f4a1b2e3539cb5c597080d10b4`: plan, build/budget, typecheck, three unit shards, two browser-smoke shards and verify. No review threads. Squash-merged normally (no admin override) at `da6734160a510cd87cc7fdb4df3ec4eba9319313`.
+- An earlier push run (37167209431, `559e9f3`) failed only its bundle-budget step; the ceilings were then raised with written reasons before the PR head. Its three unit shards passed. A later push run (37168065402) was cancelled by the PR run, not failed.
+- [Pages 37169459230](https://github.com/ROYIN001/Orbitlab/actions/runs/37169459230), attempt 1, passed plan, snapshot refresh/validation, build and budget, typecheck, three unit shards, two full browser shards and verify; the publisher's main-tip guard and `deploy-pages` succeeded at 2026-10-04T02:17:28Z for exact source `da67341`.
+- Open for the owner: D08 layout assumptions (see [R2 report](reports/R2-workspace.md)); R2.3 dock/resize/reorder; U16 CSV columns and Max-Q programme physics (R4).
 
 ## Final delivery / ผลส่งมอบสุดท้าย
 
