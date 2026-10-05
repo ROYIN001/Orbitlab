@@ -63,6 +63,7 @@ import type { LessonDesk } from '../build/satellite-workspace';
 import { designLessonKey } from './design-key';
 import { designChip, designCriterionName, levelName, lockName, requirementsBox } from './design-strip';
 import { designValueText } from './design-text';
+import { checkingKeyPart, stripRebuilds } from './strip-progress';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
 import { letterOf } from '../../worksheets/bank-items';
 import type { CaseId, CaseLessonState } from '../../worksheets/case-ids';
@@ -1058,9 +1059,8 @@ export class LessonMode implements LessonToolsHost {
     const g = a.grade;
     const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
     const key = JSON.stringify([getLang(), lesson.id, !!c.sheet, c.failed, g?.verdict, g?.criteria.map((x) => [x.state, x.value, !!x.revealed]), hints, a.answers, a.recorded, this.saved, this.hasRevealed(lesson.id)]);
-    if (key === this.lastStripKey) return;
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
-    if (typing && this.lastStripKey) return;
+    if (!stripRebuilds(this.lastStripKey, key, typing)) return;
     this.lastStripKey = key;
     const head = this.stripHead(lesson, hints);
     const status = el('div', 'lesson-status');
@@ -1108,12 +1108,11 @@ export class LessonMode implements LessonToolsHost {
     const stale = this.designStale(a);
     const shown = !!g && !stale && !d.checking;
     const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
-    const key = JSON.stringify([getLang(), lesson.id, stale, d.keyFor !== null, d.checking ? [d.checking.record, Math.round(d.checking.progress * 100)] : null,
+    const key = JSON.stringify([getLang(), lesson.id, stale, d.keyFor !== null, checkingKeyPart(d.checking),
       d.failed, d.answersFirst, g?.verdict, g?.lockBroken, g?.criteria.map((x) => [x.state, x.value, x.expected, !!x.revealed]), hints, a.answers, a.recorded,
       this.saved, this.hasRevealed(lesson.id)]);
-    if (key === this.lastStripKey) return;
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
-    if (typing && this.lastStripKey) return;
+    if (!stripRebuilds(this.lastStripKey, key, typing)) return;
     this.lastStripKey = key;
     const head = this.stripHead(lesson, hints);
     const crits = el('div', 'lesson-crits');
