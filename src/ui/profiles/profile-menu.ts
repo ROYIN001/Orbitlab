@@ -132,6 +132,11 @@ class ProfileMenuHost {
 
 }
 
+/** Test seam: the storage-facing host without the dialog DOM. */
+export function createProfileMenuHost(repo: WorkspaceRepository, changed: () => void, reload: () => void): ProfileDialogHost {
+  return new ProfileMenuHost(repo, changed, reload).host;
+}
+
 export function createProfileMenu(element: HTMLDialogElement, repo: WorkspaceRepository,
   changed: () => void, reload: () => void, lessons?: () => { id: string; title: string }[] | undefined): ProfileDialog {
   const owner = new ProfileMenuHost(repo, changed, reload, lessons);
