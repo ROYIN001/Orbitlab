@@ -41,10 +41,10 @@ report: docs/development/reports/CO-8-adoption.md
 | #85 | HU-1 step 1 | `8b37d92` | Pages 37328117383 at `8b37d92` failed (`learner-profiles` reload stall, known intermittent); published by 37333861041 |
 | #89 | CO-6 | `2391597` | Published by 37333861041 |
 | #86 | CO-4 step 1 | `d7ee6fb` | Published by 37333861041 at 2026-10-05T15:58:59Z |
-| #91 | CO-5 (Pages shards) | `47f8efa` | Not yet recorded |
-| #88 | CO-2 | `75c8cf4` | Not yet recorded |
-| #87 | CO-7 | `6e0ef23` | Not yet recorded |
-| #90 | CO-3 PR1 | `2275e0d` | Not yet recorded |
+| #91 | CO-5 (Pages shards) | `47f8efa` | Pages 37348596650 at `2275e0d` (17:52:13Z) |
+| #88 | CO-2 | `75c8cf4` | Pages 37348596650 at `2275e0d` (17:52:13Z) |
+| #87 | CO-7 | `6e0ef23` | Pages 37348596650 at `2275e0d` (17:52:13Z) |
+| #90 | CO-3 PR1 | `2275e0d` | Pages 37348596650 at `2275e0d` (17:52:13Z) |
 
 The #87 and #90 rows are placeholders; their SHAs are written in by the records PR after they merge. The CI run ids of the merges are also left for that PR.
 
@@ -103,5 +103,5 @@ Both pass on this branch: repo-hygiene 9/9; verification 62/62. Relative links i
 ## Hand-offs
 
 - Owner: (adoption of the K0–K1 set: done 2026-10-05) answer D-23 "when" again; confirm the D-16 note; say whether `registry.tsv` should be committed.
-- Integration session: record the CI/Pages run ids of all K0 merges and the publication of #91, #88, #87, #90; CO-8 PR2: plan text into `docs/development/plan/`, PLAN.md v2.0 index, banners.
+- Integration session: record the CI run ids of all K0 merges; CO-8 PR2: plan text into `docs/development/plan/`, PLAN.md v2.0 index, banners.
 - K1 (new session, once K0 is verified complete): the F5 fix first, then G2 again.
