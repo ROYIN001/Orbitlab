@@ -38,7 +38,7 @@
  * tests/bundle-budget.test.ts; the check runs only when this file is the
  * command (`node scripts/bundle-budget.mjs`), not when it is imported.
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -147,11 +147,17 @@ function main() {
   const budgets = Object.fromEntries(
     Object.entries(budgetsFile).filter(([key]) => !key.startsWith('_')),
   );
+  // The split is checked when budgets.json names it, as every other group is;
+  // naming any one of its three values without the others is an error, so the
+  // gate cannot be half-configured.
   const limits = precacheLimits(budgetsFile);
-  for (const [name, value] of [[PRECACHE_CODE, limits.code], [PRECACHE_DATA, limits.data], ['_precache_split.dataBaselineKB', limits.dataBaseline]]) {
-    if (typeof value !== 'number' || !Number.isFinite(value) || !(value > 0)) fail(`budgets.json: "${name}" must be a finite positive number of kB`);
+  const splitNamed = [limits.code, limits.data, limits.dataBaseline].some((value) => value !== undefined);
+  if (splitNamed) {
+    for (const [name, value] of [[PRECACHE_CODE, limits.code], [PRECACHE_DATA, limits.data], ['_precache_split.dataBaselineKB', limits.dataBaseline]]) {
+      if (typeof value !== 'number' || !Number.isFinite(value) || !(value > 0)) fail(`budgets.json: "${name}" must be a finite positive number of kB`);
+    }
+    if (!(limits.data > limits.dataBaseline)) fail('budgets.json: the data ceiling must be above _precache_split.dataBaselineKB');
   }
-  if (!(limits.data > limits.dataBaseline)) fail('budgets.json: the data ceiling must be above _precache_split.dataBaselineKB');
   for (const [group, ceiling] of Object.entries(budgets)) {
     if (typeof ceiling !== 'number' || !Number.isFinite(ceiling) || !(ceiling > 0)) fail(`budgets.json: "${group}" must be a finite positive number of kB`);
   }
@@ -176,9 +182,11 @@ function main() {
   });
   const groups = groupPrecache(measured);
   sizes.set(PRECACHE, groups.total);
-  sizes.set(PRECACHE_CODE, groups.code);
-  sizes.set(PRECACHE_DATA, groups.data);
-  const split = checkPrecacheSplit(groups, limits);
+  if (splitNamed) {
+    sizes.set(PRECACHE_CODE, groups.code);
+    sizes.set(PRECACHE_DATA, groups.data);
+  }
+  const split = splitNamed ? checkPrecacheSplit(groups, limits) : { failures: [], warnings: [] };
 
   // the table
   const rows = [];
@@ -209,8 +217,12 @@ function main() {
   console.log(line(head));
   console.log(widths.map((w) => '-'.repeat(w)).join('  '));
   for (const r of rows) console.log(line(r));
-  console.log(`(${manifest.entries.length} files precached, manifest ${manifest.version}; ${fmt(kB(groups.code))} kB code + ${fmt(kB(groups.data))} kB under ${DATA_PREFIX}, data baseline ${fmt(limits.dataBaseline)} kB)`);
-  for (const w of split.warnings) console.log(`WARNING: ${w}`);
+  console.log(`(${manifest.entries.length} files precached, manifest ${manifest.version}${splitNamed ? `; ${fmt(kB(groups.code))} kB code + ${fmt(kB(groups.data))} kB under ${DATA_PREFIX}, data baseline ${fmt(limits.dataBaseline)} kB` : ''})`);
+  for (const w of split.warnings) {
+    console.log(`WARNING: ${w}`);
+    // shown in the run's summary too, not only in the log
+    if (process.env.GITHUB_ACTIONS === 'true') console.log(`::warning title=precache data/::${w}`);
+  }
   for (const f of split.failures) console.error(`bundle budget: ${f}`);
   if (split.failures.length) over = true;
 
@@ -232,4 +244,5 @@ function main() {
   console.log('bundle budget: ok');
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();
+// realpath: the command may name this file through a symlink
+if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) main();

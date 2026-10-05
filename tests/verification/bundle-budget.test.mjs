@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
 
 // Exercise the real standalone CLI with isolated fixture dist files; never alter the app's dist.
-function check(budgets, assets, { log = null } = {}) {
+function check(budgets, assets, { log = null, data = {} } = {}) {
   const dir = mkdtempSync(resolve(tmpdir(), 'orbitlab-budget-'));
   try {
     mkdirSync(resolve(dir, 'scripts'), { recursive: true });
@@ -20,6 +20,12 @@ function check(budgets, assets, { log = null } = {}) {
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, Buffer.alloc(size));
       entries.push({ url: `assets/${file}` });
+    }
+    for (const [file, size] of Object.entries(data)) {
+      const path = resolve(dir, 'dist/data', file);
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, Buffer.alloc(size));
+      entries.push({ url: `data/${file}` });
     }
     const manifest = { version: 'fixture-version', entries };
     writeFileSync(resolve(dir, 'dist/sw.js'), `const manifest = JSON.parse(${JSON.stringify(JSON.stringify(manifest))});\n`);
@@ -90,4 +96,38 @@ test('ineffective dynamic imports still fail even when all sizes fit', () => {
   const result = check({ 'other chunks': 1, precache: 2 }, { 'helper.js': 100 }, { log: 'warning: INEFFECTIVE_DYNAMIC_IMPORT\n' });
   assert.equal(result.code, 1, result.output);
   assert.match(result.output, /INEFFECTIVE_DYNAMIC_IMPORT warning/);
+});
+
+// CO-1 (D-38): the precache split into code and data/ ceilings, through the real CLI.
+const split = (code, data, baseline) => ({ 'other chunks': 1, precache: 10, 'precache code': code, 'precache data/': data, _precache_split: { dataBaselineKB: baseline } });
+
+test('the split counts data/ entries apart from code and passes inside both ceilings', () => {
+  const result = check(split(0.3, 1, 0.5), { 'helper.js': 100 }, { data: { 'satellites.json': 600 } });
+  assert.equal(result.code, 0, result.output);
+  assert.match(result.output, /precache code\s+0\.2\s+0\.3/);
+  assert.match(result.output, /precache data\/\s+0\.6\s+1\.0/);
+  assert.match(result.output, /precache\s+0\.8\s+10\.0/);
+});
+
+test('code over its ceiling fails as the code ceiling, whatever data does', () => {
+  const result = check(split(0.15, 1, 0.5), { 'helper.js': 100 }, { data: { 'satellites.json': 600 } });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /FAIL: code ceiling/);
+  assert.doesNotMatch(result.output, /FAIL: data ceiling/);
+});
+
+test('data over its ceiling fails as the data ceiling; past 80 % of headroom only warns', () => {
+  const over = check(split(1, 1, 0.5), { 'helper.js': 100 }, { data: { 'satellites.json': 1100 } });
+  assert.equal(over.code, 1, over.output);
+  assert.match(over.output, /FAIL: data ceiling/);
+  assert.doesNotMatch(over.output, /FAIL: code ceiling/);
+  const warned = check(split(1, 1, 0.5), { 'helper.js': 100 }, { data: { 'satellites.json': 950 } });
+  assert.equal(warned.code, 0, warned.output);
+  assert.match(warned.output, /WARNING: precache data\//);
+});
+
+test('a half-configured split fails rather than silently dropping its gate', () => {
+  const result = check({ 'other chunks': 1, precache: 10, 'precache code': 1 }, { 'helper.js': 100 });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /precache data\/" must be a finite positive number/);
 });

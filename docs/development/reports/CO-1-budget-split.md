@@ -10,7 +10,7 @@
 | change_kind | quality-improving (gate tooling); the app's output does not change, and nothing under `src/` changed |
 | owner_authorization | 2026-10-05, decision sheet A-1: "D-65 (ก): wave K0 authorized; D-38 (ก)" |
 | base_sha_verified_on | `5f9aa2e` (main tip, "Progress: record the publication of #80, #81 and #82 (#83)") |
-| Branch | `claude/t-co1-s1` (local; not pushed, no PR yet) |
+| Branch / PR | `claude/t-co1-s1`, [PR #84](https://github.com/ROYIN001/Orbitlab/pull/84) |
 | Files | `scripts/bundle-budget.mjs`, `budgets.json`, `tests/bundle-budget.test.ts`, this report, one `CHANGELOG.md` line, one `docs/development/PROGRESS.md` row |
 
 The owner's D-38 (ก) answer: "Split code and data-snapshot ceilings now; #76's +320 kB counts on the data side; #75/#77/#80 raises accepted with named offsets (index → EQ-7, i18n → EQ-6, precache/installed size → EQ-8; CSS approved explicitly); CO-1's data headroom is itself a D-38 approval."
@@ -22,7 +22,7 @@ The owner's D-38 (ก) answer: "Split code and data-snapshot ceilings now; #76's
   - `precache code`: every other entry. That covers chunks, workers, CSS, `index.html`, icons, textures, lessons and the web manifest.
 - Each group has its own ceiling in `budgets.json`. A build over the code ceiling fails with `code ceiling`. A build over the data ceiling fails with `data ceiling`. If the data has used more than 80 % of its headroom, the script prints a `WARNING:` line and does not fail. Headroom runs from the measured baseline in `_precache_split.dataBaselineKB` up to the data ceiling.
 - The `precache` total ceiling stays at 16103 kB, and so does every other group's ceiling. The two new ceilings add up to exactly 16103 kB, so the total is not raised.
-- The pure functions are exported for the unit tests: `groupPrecache`, `checkPrecacheSplit`, `precacheLimits`, `precacheManifest` and `DATA_PREFIX`. The check itself runs only when the file is run as a command, so `node scripts/bundle-budget.mjs [build.log]` and `npm run budget` behave as before. It is still plain Node with no dependencies.
+- The pure functions are exported for the unit tests: `groupPrecache`, `checkPrecacheSplit`, `precacheLimits`, `precacheManifest` and `DATA_PREFIX`. The check itself runs only when the file is run as a command, so `node scripts/bundle-budget.mjs [build.log]` and `npm run budget` run it (also through a symlink: the guard compares real paths). The split is checked when `budgets.json` names it, as every other group is; naming one of its three values without the others fails, so the gate cannot be half-configured. A `budgets.json` without the split (the CLI fixtures of `tests/verification/bundle-budget.test.mjs`) behaves exactly as before. It is still plain Node with no dependencies.
 - PR CI (`ci.yml`) and Pages (`deploy.yml`) both run the same script with the same rule, so the code group gets the same check in both. Only the data group differs, because PR CI uses the committed snapshots and Pages uses refreshed ones. Neither workflow needed a change.
 - `budgets.json` `_notes`: the new `d38` entry records the ruling and the named offsets. The `set` entries for `precache code`, `precache data/` and `precache` record the measured sizes and the reasons. The `groups` note describes the split.
 
@@ -111,6 +111,14 @@ The committed snapshots have not changed since `0cc79d9` (2026-09-28); they were
   - Code +1.0 kB (`index.html`): `FAIL: code ceiling`, exit 1.
 - **`npm run snapshots`** (a refresh from the network): all three sources answered 403 through this container's proxy. The script kept the committed snapshots and made no change. I could not do a refreshed build locally; the refreshed figures above come from Pages logs.
 
+## PR CI, the first failure and its fix
+
+- The first PR CI runs (37254601510 on `1b6b935`, 37254611751 on `47641b9`) failed in `plan`: `node --test tests/verification/*.test.mjs` failed 7 of 59. The existing CLI fixture test `tests/verification/bundle-budget.test.mjs` writes `budgets.json` files without the new keys, and the first version of the script refused any `budgets.json` without them. The author had run only the vitest files; this Node test was missed. The independent second-agent review found the same failure.
+- Fix: the split is enforced when `budgets.json` names it, and a partial split fails. The existing fixture tests are unchanged and pass again, including "nonfinite ceilings cannot disable enforcement", which again fails on the `1e999` ceiling it was written for rather than on a missing key. Four CLI tests were added to that file (data/ counted apart and passing; code over → "code ceiling" only; data over → "data ceiling" only, and 80 % → warning with exit 0; half-configured split fails). Scope note: `tests/verification/bundle-budget.test.mjs` is not in CO-1's listed files; it is the existing CLI test of the same script, so the new cases were added there rather than in a new file. The fixture helper gained an optional `data` argument; no existing case changed.
+- Also from the review: the import guard resolves `argv[1]` with `realpathSync` (run through a symlink it used to exit 0 silently), and on GitHub Actions the 80 % warning is also printed as a `::warning::` annotation so it shows in the run summary.
+- Local after the fix: `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` 63/63; `npx vitest run tests/bundle-budget.test.ts tests/repo-hygiene.test.ts` 17/17; `npm run typecheck` clean; `npm run budget` ok (code 14703.5 / 14704, data 1119.2 / 1399, total 15822.7 / 16103).
+- Second-agent review: confirmed the grouping, the totals, `budgets.json` and `_notes.d38` against the owner's ruling, the tests and the report's numbers (4 of 6 claim areas); CI and Pages were not confirmed because of the failure above, which this fix addresses. The PR CI run on the fixed head is recorded on the PR.
+
 ## Limitations
 
 - The refreshed data sizes are derived from rounded budget tables, not read from `dist/data` in Pages; the artifacts could not be downloaded here (403).
@@ -121,7 +129,6 @@ The committed snapshots have not changed since `0cc79d9` (2026-09-28); they were
 
 ## Handoff
 
-- Open the PR from `claude/t-co1-s1` and record the PR CI run. The code group should print 14703.5 kB there, unless main has moved.
 - After merge, the Pages run (and one cron or dispatch run) must pass the budget with refreshed snapshots. Record its run ID, the `precache code` and `precache data/` lines, and the deployment record in this report and in the PROGRESS row. **Criterion (6) stays open until then.**
 - If Pages fails for a reason other than the budget, for example the `learner-profiles` journey timeout seen in Pages 37219398466 and 37223857005, do not re-run it blindly. Record the journey, the message and the run ID for M-PLATFORM-061 (R7.1), and let the owner choose between one full re-run and waiting for a fix.
 - CO-2 (ceiling review table) can now use the D-38 entry in `budgets.json` `_notes`.
