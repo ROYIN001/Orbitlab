@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- CO-3 (G2 evidence, tests only): the browser harness has named viewport presets for the G2 matrix (laptops, projector, tablet, phones, the 860/1180 px breakpoint edges and emulated 125/150 % zoom), and a new `r2-viewport-matrix` journey checks the Launch Engineer flight at every size in TH/EN/RU with the first-use guide open and closed (no sideways scroll; Abort, play, clock, Live, six-DOF and TORU controls reachable; the event chooser inside the window) and logs the scene's size for the owner's minimum-size decision.
 - CO-7 (D-42): the curriculum pack once named for an air force academy now shows a neutral name, audience and curriculum label in English, Thai and Russian ("Space flight dynamics and control: an institution-level lab"); its id, lessons, progress and source citations are unchanged.
 - Docs (CO-2): PROGRESS, the R3 reports and the implementation status record R2/R3 and gate G3 as GitHub and the owner record them; a close-out report audits #71–#83 (merge, CI, Pages, live) and reviews the R1–R3 budget raises.
 - Tests (#81, #82): when a browser journey fails, its diagnostics print the app's start-up marks (bootstrap, workspace, app, textures, ready) with the navigation timing, and, read through the browser process, the CPU each Chrome process used over 3 s and the GPU's feature status.
