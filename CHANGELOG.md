@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- CO-7 (D-42): the curriculum pack once named for an air force academy now shows a neutral name, audience and curriculum label in English, Thai and Russian ("Space flight dynamics and control: an institution-level lab"); its id, lessons, progress and source citations are unchanged.
 - R3.1 (design revision): a mission flown from Build, and its orbit handed on to Orbit, say which of your designs it is and which version — when it was saved, changed since, or not saved.
 - R3.3 (diagrams): the satellite bench's Power, Radio and Camera tabs each draw a diagram from their own figures — the time in the Earth's shadow, the link to the ground station and its margin, the camera's footprint and detail.
 - R3.3 (stowed pose): the satellite bench draws a design with wings stowed for launch as well as deployed, with the fold stated as an assumption, and shows the satellite's body axes.
