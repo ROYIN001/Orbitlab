@@ -27,6 +27,7 @@ import { RecoverySceneryView } from './render/recovery';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
 import { CameraPolicy } from './render/camera-policy';
 import { missionStage, previewsChange, setupCollapsed, type MissionStage } from './ui/flight-lifecycle';
+import { useFaultNow, type EditFlight } from './ui/edit-window';
 import { MISSION_SOURCE_KEY, missionSource } from './ui/mission-source';
 import { FIRST_LAUNCH, quickstartMission } from './ui/quickstart';
 import { MISSION_STEPS, MISSION_STEP_KEY, missionSteps, stepActionable, type MissionStep } from './ui/mission-steps';
@@ -566,6 +567,8 @@ class App {
       onExperience: (experience) => this.go(route('launch', experience === 'advanced' ? 'engineer' : 'explore')),
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
       onBackToMine: () => this.continueMission(),
+      // D-36.A3: "Use now" in the setup's failures, to the live flight only (the same path as WebMCP's)
+      onApplyNow: (spec) => (this.sim ? useFaultNow(this.sim, spec, this.editFlight(this.stage)) : 'notLive'),
     });
     this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig(), missionState: () => this.panel.missionState() });
     // P08: a run clicked in the Monte Carlo window opens in the setup panel as one dispersed flight —
@@ -1483,6 +1486,14 @@ class App {
     if (toggle.getAttribute('aria-expanded') !== expanded) toggle.setAttribute('aria-expanded', expanded);
     this.syncMobileFlightBar(stage);
     this.syncSteps(stage);
+    this.panel.setEditFlight(this.editFlight(stage), this.sim?.state.t ?? 0);
+  }
+
+  /** D-36.A3: what decides which setup values can still be changed in the flight shown. */
+  private editFlight(stage: MissionStage): EditFlight {
+    const sim = this.sim;
+    return { stage, sixDof: sim?.cfg.dynamics?.model === 'sixDof', live: this.player.live,
+      failed: !sim || sim.done || sim.state.status === 'failed' || !!sim.state.destroyed || sim.isFailed() };
   }
 
   /** R3.5: the steps' last painted state, and when the setup's validity was last read */

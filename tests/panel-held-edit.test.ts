@@ -40,3 +40,40 @@ describe('LUI-01: how a change reaches the app', () => {
     expect(onChange).toHaveBeenCalledWith({ from: 'panel' }, 'replace');
   });
 });
+
+describe('D-36.A3: a failure added in flight is used only when confirmed', () => {
+  const spec = { kind: 'gyroBias', time: 40, units: [1], axis: 'pitch', magnitude: 1 } as const;
+  const flying = (answer: string) => {
+    const made = panel(true);
+    const onApplyNow = vi.fn(() => answer);
+    const p = made.panel as unknown as Record<string, unknown>;
+    p.cb = { ...(p.cb as object), onApplyNow };
+    return { ...made, onApplyNow };
+  };
+
+  it('holds a draft without touching the flight or the setup', () => {
+    const { panel: p, onChange, onApplyNow } = flying('injected');
+    p.draftFault({ ...spec, units: [1] });
+    expect(onApplyNow).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(p.state.dynamics?.controlFaults).toBeUndefined();
+  });
+
+  it('"Use now" sends the draft to the flight, then keeps it in the setup for the next launch', () => {
+    const { panel: p, onChange, onApplyNow } = flying('injected');
+    p.draftFault({ ...spec, units: [1] });
+    expect(p.useFaultNow()).toBe('injected');
+    expect(onApplyNow).toHaveBeenCalledWith(spec);
+    expect(p.state.dynamics?.controlFaults?.faults).toEqual([spec]);
+    expect(onChange).toHaveBeenCalledWith({ from: 'panel' }, 'edit');
+    expect(p.useFaultNow()).toBe('noDraft');
+  });
+
+  it('keeps the draft and the setup as they were when the flight refuses it', () => {
+    const { panel: p, onChange } = flying('notLive');
+    p.draftFault({ ...spec, units: [1] });
+    expect(p.useFaultNow()).toBe('notLive');
+    expect(p.state.dynamics?.controlFaults).toBeUndefined();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});

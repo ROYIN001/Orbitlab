@@ -16,6 +16,8 @@ import { localizeEventParams } from '../src/ui/names';
 import { setLang, t } from '../src/i18n';
 import type { ControlFaultSpec, ControlFaultsConfig, MissionConfig } from '../src/types';
 import { LAUNCH_TIME } from './fleet-harness';
+import { applyAction } from '../src/physics/sim/actions';
+import { useFaultNow } from '../src/ui/edit-window';
 
 const IDENTITY = { w: 1, x: 0, y: 0, z: 0 };
 const engine = (index: number, extra: Partial<EngineActuatorSpec> = {}): EngineActuatorSpec => ({
@@ -317,6 +319,32 @@ describe('accidents re-created (roadmap G08)', () => {
     expect(sim.events.filter((e) => /controlFault|fdir/.test(e.key)).map((e) => e.key)).toEqual(['evt.controlFault', 'evt.fdirImuIsolated']);
     expect(sim.state.rigid!.controlFaults!.units).toEqual(['ok', 'isolated', 'ok']);
     expect(new Simulation(mission('falcon9'), { headless: true }).injectControlFault({ kind: 'gainSign', time: 0 }) ).toBe('injected');
+  }, 60000);
+
+  it('D-36.A3: a failure used now mid-flight is journaled, and the journal re-flies it from the pad as it struck', () => {
+    const cfg = mission('falcon9');
+    const live = { stage: 'flight', sixDof: true, live: true, failed: false } as const;
+    const sim = flyTo(new Simulation(cfg, { headless: true }), 20);
+    const spec: ControlFaultSpec = { kind: 'gyroBias', time: 20, units: [2], axis: 'yaw', magnitude: 3 };
+    // scrubbed back, nothing reaches the flight; live, it goes through the same path as the setup's "Use now"
+    expect(useFaultNow(sim, spec, { ...live, live: false })).toBe('notLive');
+    expect(sim.actions).toEqual([]);
+    expect(useFaultNow(sim, spec, live)).toBe('injected');
+    expect(sim.actions).toEqual([{ t: sim.state.t, kind: 'injectControlFault', spec }]);
+    flyTo(sim, 25);
+    const struck = sim.events.filter((e) => e.key === 'evt.controlFault');
+    expect(struck).toHaveLength(1);
+    // re-fly (as recheck does): the mission it started from, and the journal given at its times
+    const again = new Simulation(sim.cfg, { headless: true });
+    let next = 0;
+    for (;;) {
+      while (next < sim.actions.length && sim.actions[next].t <= again.state.t + 1e-9) applyAction(again, sim.actions[next++]);
+      if (again.state.t >= sim.state.t || again.done) break;
+      again.step(again.suggestedDt());
+    }
+    expect(again.actions).toEqual(sim.actions);
+    expect(again.events.filter((e) => e.key === 'evt.controlFault')).toEqual(struck);
+    expect(again.state.t).toBe(sim.state.t);
   }, 60000);
 
   it('feeds the sensor failures to the navigation, whose attitude drifts with the IMU it reads', () => {

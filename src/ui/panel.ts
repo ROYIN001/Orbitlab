@@ -72,6 +72,7 @@ import type { ExplicitGuidanceConfig } from '../types';
 import { EXPLICIT_FIELD_KEYS } from '../physics/explicit-guidance';
 import { copyMission, type MissionState } from '../config/mission-file';
 import type { SetupChange } from './flight-lifecycle';
+import { editWindow, EDIT_FIELDS, type EditField, type EditFlight } from './edit-window';
 import { configuredDispersion } from '../physics/dispersed-flight'; // P08
 import { propulsionElements } from '../physics/dispersion'; // P08
 import type { DispersedFlightConfig } from '../types'; // P08
@@ -104,6 +105,8 @@ export interface SetupCallbacks {
   onMonteCarlo?: (opener: HTMLElement) => void;
   /** R3.5: the first-launch template's "back to my mission": the stored mission, in its place */
   onBackToMine?: () => void;
+  /** D-36.A3: "Use now" — give a new failure to the flight shown; what it answers ('injected' when taken) */
+  onApplyNow?: (spec: ControlFaultSpec) => string;
 }
 
 interface SetupState {
@@ -198,6 +201,11 @@ export class SetupPanel {
   private cb: SetupCallbacks;
   state: SetupState;
   private running = false;
+  /** D-36.A3: the flight shown (from the app), its mission time, and a failure drafted for it, not yet used */
+  private flight: EditFlight | null = null;
+  private flightT = 0;
+  private flightKey = '';
+  private faultDraft: ControlFaultSpec | null = null;
   private tuning = false;
   private tuneController: AbortController | null = null;
   private tuneMessage = '';
@@ -454,7 +462,44 @@ export class SetupPanel {
   setRunning(r: boolean): void {
     if (r) this.cancelTune();
     this.running = r;
+    this.faultDraft = null;
     this.render();
+  }
+
+  /** D-36.A3: the flight shown changed; the setup is rebuilt only when what can be changed in it changed. */
+  setEditFlight(flight: EditFlight, t: number): void {
+    this.flightT = t;
+    const key = EDIT_FIELDS.map((field) => JSON.stringify(editWindow(field, flight))).join();
+    this.flight = flight;
+    if (key === this.flightKey) return;
+    this.flightKey = key;
+    this.render();
+  }
+
+  /** D-36.A3: the window of one setup value; with no flight known, as `running` says. */
+  private window(field: EditField) {
+    return editWindow(field, this.flight ?? { stage: this.running ? 'analysis' : 'setup', sixDof: false, live: false, failed: false });
+  }
+
+  /** D-36.A3: hold (or drop) a failure for the flight shown. Nothing reaches the flight until "Use now". */
+  draftFault(spec: ControlFaultSpec | null): void {
+    this.faultDraft = spec;
+    this.render();
+  }
+
+  /** D-36.A3: "Use now": the draft goes to the flight, then into the setup's list, flown from the pad next launch. */
+  useFaultNow(): string {
+    const spec = this.faultDraft;
+    if (!spec) return 'noDraft';
+    const answer = this.cb.onApplyNow?.(structuredClone(spec)) ?? 'notLive';
+    if (answer !== 'injected') return answer;
+    this.faultDraft = null;
+    const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
+    const { preset: _preset, ...faults } = dynamics.controlFaults ?? { faults: [] };
+    this.state.dynamics = { ...dynamics, controlFaults: { ...faults, faults: [...faults.faults, spec] } };
+    this.render();
+    this.changed();
+    return answer;
   }
 
   /**
@@ -815,6 +860,7 @@ export class SetupPanel {
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────
     const s1 = this.el('section', 'config-section');
+    s1.dataset.editField = 'vehicle';
     s1.appendChild(this.sectionTitle('01', 'setup.step.vehicle'));
     if (learning) s1.appendChild(this.vehicleCards());
     else {
@@ -869,6 +915,7 @@ export class SetupPanel {
 
     // ── 02 payload ──────────────────────────────────────────────────────────
     const s2 = this.el('section', 'config-section');
+    s2.dataset.editField = 'payload';
     s2.appendChild(this.sectionTitle('02', 'setup.step.payload'));
     // D06: a custom satellite (from a mission file) is offered beside the catalogue until another is picked; its name is the designer's
     const customSat = s.satelliteSpec ? [{ value: s.satelliteSpec.id, label: t('setup.customSat.option', { name: s.satelliteSpec.name }) }] : [];
@@ -899,6 +946,7 @@ export class SetupPanel {
 
     // ── 03 target orbit & launch time ───────────────────────────────────────
     const s3 = this.el('section', 'config-section orbit-section');
+    s3.dataset.editField = 'orbit';
     s3.appendChild(this.sectionTitle('03', 'setup.step.orbit'));
     const pills = this.el('div', 'orbit-presets');
     pills.setAttribute('role', 'group');
@@ -1056,6 +1104,15 @@ export class SetupPanel {
 
     for (const details of root.querySelectorAll<HTMLDetailsElement>('details[data-section]')) {
       if (openDetails.has(details.dataset.section!)) details.open = openDetails.get(details.dataset.section!)!;
+    }
+    // D-36.A3: in flight, a value past its window says how it is changed
+    if (this.running) {
+      for (const section of root.querySelectorAll<HTMLElement>('details[data-section], [data-edit-field]')) {
+        const field = (section.dataset.editField ?? section.dataset.section) as EditField;
+        const w = EDIT_FIELDS.includes(field) ? this.window(field) : null;
+        if (w?.when !== 'locked') continue;
+        section.firstElementChild?.after(this.el('p', 'field-note edit-locked', w.reason === 'notLive' ? t('setup.edit.notLive') : t('setup.edit.locked')));
+      }
     }
     // A RAAN/LTAN control can disappear when its mode changes. A discarded
     // field must not keep an invisible draft error blocking the next mission.
@@ -1914,17 +1971,44 @@ export class SetupPanel {
     clear.addEventListener('click', () => update(undefined));
     buttons.append(add, clear);
     section.append(buttons);
+    if (this.running && this.window('faults').when === 'now') section.append(this.faultDraftBox(vehicle, navigation));
     return section;
   }
 
+  /** D-36.A3: one new failure for the flight shown, held as a draft until "Use now". */
+  private faultDraftBox(vehicle: VehicleSpec, navigation: boolean): HTMLElement {
+    const box = this.el('div', 'fault-draft');
+    box.append(this.el('p', 'field-note', t('setup.edit.draft')));
+    const draft = this.faultDraft;
+    if (!draft) {
+      const add = this.el('button', 'ghost-button', t('setup.faults.add'));
+      add.type = 'button';
+      add.disabled = (this.state.dynamics?.controlFaults?.faults.length ?? 0) >= MAX_FAULTS;
+      add.addEventListener('click', () => this.draftFault({ kind: 'gyroBias', time: Math.ceil(this.flightT), units: [1], axis: 'pitch', magnitude: 1 }));
+      box.append(add);
+      return box;
+    }
+    box.append(this.faultRow(draft, this.state.dynamics?.controlFaults?.faults.length ?? 0, vehicle, navigation, (next) => this.draftFault(next ?? null), true));
+    const use = this.el('button', 'btn fault-use-now', t('setup.edit.useNow'));
+    use.type = 'button';
+    use.addEventListener('click', () => {
+      if (this.useFaultNow() !== 'injected') box.append(this.el('p', 'field-note warn', t('setup.edit.refused')));
+    });
+    box.append(use);
+    return box;
+  }
+
   /** G08: one failure — its kind, time and stage, and what its kind takes. */
-  private faultRow(fault: ControlFaultSpec, index: number, vehicle: VehicleSpec, navigation: boolean, change: (next: ControlFaultSpec | undefined) => void): HTMLElement {
+  private faultRow(fault: ControlFaultSpec, index: number, vehicle: VehicleSpec, navigation: boolean, change: (next: ControlFaultSpec | undefined) => void,
+    draft = false): HTMLElement {
+    // D-36.A3: a draft for the flight shown is editable in flight; the list flown is not
+    const locked = this.running && !draft;
     const row = this.el('div', 'fault-row');
     row.dataset.fault = String(index);
     const head = this.el('div', 'fault-row-head');
     head.append(this.el('strong', undefined, `${index + 1}. ${faultKindName(fault.kind)}`));
     const remove = this.el('button', 'ghost-button fault-remove', '✕');
-    remove.type = 'button'; remove.disabled = this.running;
+    remove.type = 'button'; remove.disabled = locked;
     remove.title = t('setup.faults.remove'); remove.setAttribute('aria-label', t('setup.faults.remove'));
     remove.addEventListener('click', () => change(undefined));
     head.append(remove);
@@ -1946,14 +2030,14 @@ export class SetupPanel {
           g.append(op);
         } else sel.append(op);
       }
-      sel.disabled = this.running;
+      sel.disabled = locked;
       sel.addEventListener('change', () => onChange(sel.value));
       return sel;
     };
     const numberInput = (value: number, limits: readonly [number, number], step: number, onChange: (v: number) => void): HTMLInputElement => {
       const inp = this.el('input');
       inp.type = 'number'; inp.value = String(+value.toFixed(3)); inp.step = String(step);
-      inp.min = String(limits[0]); inp.max = String(limits[1]); inp.disabled = this.running;
+      inp.min = String(limits[0]); inp.max = String(limits[1]); inp.disabled = locked;
       inp.addEventListener('change', () => {
         const v = Number(inp.value);
         if (inp.value.trim() === '' || !Number.isFinite(v)) { inp.value = String(+value.toFixed(3)); return; }
