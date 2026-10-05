@@ -43,11 +43,17 @@ export function sceneMin(h) {
 export async function checkSceneFloor(t, app, preset, state, where) {
   const { width, height } = viewportSize(preset);
   const min = sceneMin(height);
-  const m = await app.page.evaluate(() => {
+  await app.page.evaluate(async () => {
     // the first screen: every scroll container back at its start (an earlier
     // check may have scrolled the workspace or the flight column to a panel)
     window.scrollTo(0, 0);
     for (const n of document.querySelectorAll('*')) if (n.scrollTop) n.scrollTop = 0;
+    // what follows the scroll (the phone's flight bar steps aside on the next
+    // frames, src/main.ts watchBarStrip) settles before the scene is measured
+    for (let i = 0; i < 3; i++) await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => setTimeout(r, 150));
+  });
+  const m = await app.page.evaluate(() => {
     const scene = document.getElementById('viewport');
     const b = scene.getBoundingClientRect();
     const h = document.scrollingElement.clientHeight;

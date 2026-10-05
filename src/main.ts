@@ -424,8 +424,34 @@ class App {
     addEventListener('resize', watch);
   }
 
+  /**
+   * G2 hold (F5): on a phone the first-use guide sits between the top bar and
+   * the scene, and a long hint (Russian at 320×740: 341 px) pushed all but
+   * 137 px of the scene off the first screen. The guide gets the room that
+   * leaves the scene's minimum height on the first screen (the same formula as
+   * `--scene-min` on a desktop) and scrolls inside it.
+   */
+  private fitGuideAboveScene(): void {
+    const guide = document.getElementById('first-use-guide');
+    const top = document.getElementById('topbar');
+    const nav = document.querySelector<HTMLElement>('.mobile-workspace-nav');
+    if (!guide || !top || !nav) return;
+    const phone = matchMedia('(max-width: 860px)');
+    const fit = (): void => {
+      if (!phone.matches) { guide.style.removeProperty('--guide-room'); return; }
+      const sceneMin = Math.min(320, Math.max(200, 0.4 * innerHeight));
+      // the guide's 10 px top margin, the nav under it and 12 px before the scene
+      const room = innerHeight - top.getBoundingClientRect().height - 10 - nav.offsetHeight - 12 - sceneMin;
+      guide.style.setProperty('--guide-room', `${Math.max(96, Math.floor(room))}px`);
+    };
+    fit();
+    addEventListener('resize', fit);
+    new ResizeObserver(fit).observe(top);
+    new ResizeObserver(fit).observe(nav);
+  }
+
   private get shell(): NonNullable<App['shellEls']> {
-    if (!this.shellEls) this.watchBarStrip();
+    if (!this.shellEls) { this.watchBarStrip(); this.fitGuideAboveScene(); }
     return this.shellEls ??= {
       setup: document.getElementById('setup')!,
       toggle: document.getElementById('btn-setup') as HTMLButtonElement,

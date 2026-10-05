@@ -29,6 +29,8 @@
    screen; side by side it is about half that (G2 hold, F5). */
 @media (max-width: 860px) {
   .help-guide { margin: 10px 12px 0; padding: 10px 12px; }
+  /* room left above the scene's minimum height (src/main.ts fitGuideAboveScene) */
+  #first-use-guide { max-height: var(--guide-room, none); overflow-y: auto; }
 }
 @media (max-width: 640px) {
   .help-guide { align-items: stretch; flex-direction: column; gap: 8px; }
