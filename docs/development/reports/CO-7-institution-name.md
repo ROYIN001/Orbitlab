@@ -80,11 +80,11 @@ NKRAFA, RTAF, โรงเรียนนายเรืออากาศ, น�
 | src/lessons/pack-sources/rtaf-academy.ts:42–44 | framework en/ru/th | neutral, points to the description |
 | public/lessons/packs/rtaf-academy.orbitlab-lesson.json:7–9, 14, 17–19 | generated copies | regenerated |
 
-### Displayed identity — NOT changed (outside CO-7's allowed files)
+### Displayed identity — changed by the integration owner (outside CO-7's listed files)
 
 | File:line | Text | Note |
 |---|---|---|
-| src/i18n/classroom.ts:10, 50, 90 | `classroom.pack.rtaf-academy`: "Royal Thai Air Force Academy" / "Академия Королевских ВВС Таиланда" / "โรงเรียนนายเรืออากาศ" | Fallback pack label in the classroom panel (`src/ui/classroom/classroom-panel.ts:62, 96`) when the pack file has not loaded or is missing. Same violation; needs a follow-up with `src/i18n/classroom.ts` in scope. |
+| src/i18n/classroom.ts:10, 50, 90 | `classroom.pack.rtaf-academy`: "Royal Thai Air Force Academy" / "Академия Королевских ВВС Таиланда" / "โรงเรียนนายเรืออากาศ" | Fallback pack label in the classroom panel (`src/ui/classroom/classroom-panel.ts:62, 96`) when the pack file has not loaded or is missing. Same violation, same decision (D-42 (ก)), so it is fixed in this PR rather than left half done (scope note: `src/i18n/classroom.ts` is not in CO-7's listed files): now "Space flight dynamics and control" / "Динамика космического полёта и управление" / "พลศาสตร์การบินอวกาศและระบบควบคุม". `tests/lesson-pack-names.test.ts` gained a case over every `classroom.pack.*` label in EN/RU/TH; it failed on the old labels (5 hits) and passes now. |
 
 ### Source citations — kept (bibliography, per the accepted proposal)
 
@@ -121,6 +121,8 @@ NAPA-2 satellite template were checked and kept.
 | src/lessons/pack-sources/ru-24-05-06.ts:7–8; src/lessons/types.ts:80; ru-24-05-06 JSON:23 | "academy" for other institutions (Mozhaisky) / generic word — not this institution |
 
 ## Tests
+
+- After the classroom label fix: `npx vitest run tests/lesson-pack-names.test.ts tests/i18n.test.ts tests/i18n-counts.test.ts tests/classroom-pwa.test.ts tests/lesson-review.test.ts tests/repo-hygiene.test.ts` 6 files, 59/59 passed; `npm run typecheck` clean. The new classroom-label case failed first on the old labels (5 matches).
 
 Deny-list test first: `tests/lesson-pack-names.test.ts` (new). Displayed
 title/audience/framework of every pack source and every generated pack file,

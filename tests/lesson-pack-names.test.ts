@@ -9,6 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { PACK_SOURCES } from '../src/lessons/pack-sources/index';
+import { classroomEn, classroomRu, classroomTh } from '../src/i18n/classroom';
 
 /**
  * Names that may not appear in a pack's displayed identity, in EN, TH and RU:
@@ -84,5 +85,18 @@ describe('lesson pack names (DEC:D-2, D-42)', () => {
     expect(rtaf.pack.reviewed).toBe(false);
     expect(rtaf.pack.contents.map((c) => c.id)).toEqual(['rtaf-napa1-sso', 'rtaf-elements', 'ctl-inspector', 'ctl-margins', 'adv-docking', 'rtaf-6u-adcs']);
     expect(rtaf.lessons.map((l) => (l as { id: string }).id)).toEqual(['rtaf-napa1-sso', 'rtaf-elements', 'rtaf-6u-adcs']);
+  });
+
+  // the classroom panel's own label for each pack (shown when its file has not loaded)
+  it('no classroom pack label names a service or academy', () => {
+    const found: string[] = [];
+    for (const [lang, dict] of [['en', classroomEn], ['ru', classroomRu], ['th', classroomTh]] as const) {
+      for (const [key, text] of Object.entries(dict)) {
+        const id = key.startsWith('classroom.pack.') ? key.slice('classroom.pack.'.length) : null;
+        if (!id || PERMITTED_PACKS.includes(id)) continue;
+        for (const re of DENIED) if (re.test(text)) found.push(`${key}.${lang} matches ${re}: ${text}`);
+      }
+    }
+    expect(found).toEqual([]);
   });
 });
