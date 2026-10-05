@@ -105,12 +105,16 @@ Two lessons from the sabotage runs:
 | `npm run typecheck` | clean |
 | `npx vitest run tests/repo-hygiene.test.ts` | 9/9 pass |
 | `node tests/browser/run.mjs r2-flight-shell` after the refactor | ✓ 222.5 s on `2275e0d`; ✓ 222.0 s and ✓ 214.9 s on `75c8cf4` (before the refactor, on `75c8cf4`: ✓ 225.2 s) |
-| `node scripts/verification/create-plan.mjs ci` | smoke inventory 18 → 19 journeys (with `r2-shell-smoke`); still 2 browser gates, `browser-1of2` / `browser-2of2` (details below) |
+| `node scripts/verification/create-plan.mjs ci` | smoke inventory 18 → 19 journeys (with `r2-shell-smoke`); still 2 browser gates, `browser-1of2` / `browser-2of2`; `r2-shell-smoke` lands in shard 1 (details below) |
 
 ### CI plan
 
-- Before, on `2275e0d` (clean `origin/main`): `ci: 7 gates; unit 10154 cases, browser 18 cases`.
-- After, on this branch: see the next section, which gives the per-shard assignment.
+- Before, on `2275e0d` (clean `origin/main`, plan written to a scratch directory): `ci: 7 gates; unit 10154 cases, browser 18 cases; collection 93.0 s`.
+- After, on this branch at its commit: `ci: 7 gates; unit 10154 cases, browser 19 cases; collection 93.0 s`. `suites.browser.names` includes `r2-shell-smoke`, and `smoke` is true.
+- Shards (`--smoke --shard=N/2 --list`, assigned by index modulo 2 over the sorted names):
+  - Before: shard 1 had 9 journeys (case-worksheet-exports, experiment-notebook, instructor-loading, learner-profiles, mobile-smoke, profile-session-safety, recheck, stage2-preflight, webgl-startup). Shard 2 had 9.
+  - After: shard 1 has 10 (the same first six, then r2-shell-smoke, satellite, watch-controls, workspace-navigation). Shard 2 has 9 (classroom-preparation, gesture-ownership, launch-explore, lesson-packs, notation-defaults, project-backups, recheck, stage2-preflight, webgl-startup).
+  - Inserting the name moves six journeys across shards. `scripts/verification/*` is not changed: no per-journey PR-shard times were at hand to rebalance against, and the first PR runs give them (KPI-28 step below).
 
 ## Left for the next step
 
