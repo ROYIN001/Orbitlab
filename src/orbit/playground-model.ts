@@ -19,6 +19,8 @@ import type { ManeuverSettings, PlannerKind } from './maneuver-setup';
 import type { HandoffSpacecraft, OrbitHandoff } from './handoff';
 import type { Craft } from './budget';
 import { spacecraftFor } from '../physics/propagator/spacecraft';
+import { stateOnPlan, type Plan } from './maneuvers';
+import { thaiSatelliteById } from '../data/thai-satellites';
 
 /** The time warps the playground offers, orbit seconds per screen second. */
 export const PG_WARPS: readonly number[] = [1, 10, 60, 300, 600, 1800, 3600, 21_600, 86_400];
@@ -114,7 +116,41 @@ export function playgroundLifetimeCraft(handoff: Pick<OrbitHandoff, 'spacecraft'
 export function handoffEntry<A extends { thaiId: string | null }>(was: { mode: 'orbit' | 'sky'; apps: A | null }): {
   leaveSky: boolean; apps: A | null; skyLabel: null;
 } {
-  return { leaveSky: was.mode === 'sky', apps: was.apps && { ...was.apps, thaiId: null }, skyLabel: null };
+  return { leaveSky: was.mode === 'sky', apps: appsOnOrbit(was.apps), skyLabel: null };
+}
+
+/**
+ * M-ORBIT-002: the applications' settings as the playground takes an orbit.
+ * A Thai satellite is named only with the orbit made from it (`thaiId`);
+ * any other orbit — a preset, a slider, the repeat tool, a plan adopted, a
+ * hand-off, a tour step — forgets it, so its published repeat cycle is never
+ * reported for an orbit that is not its own. The rest of the settings stay.
+ */
+export function appsOnOrbit<A extends { thaiId: string | null }>(apps: A | null, thaiId: string | null = null): A | null {
+  return apps && { ...apps, thaiId };
+}
+
+/** The published repeat cycle's revolutions of the Thai satellite the settings name, or null with none named. */
+export function thaiRepeatRevs(apps: { thaiId: string | null } | null): number | null {
+  return (apps?.thaiId ? thaiSatelliteById(apps.thaiId)?.repeat?.revs : null) ?? null;
+}
+
+/**
+ * The orbit flown at `t` s, the time along it, and which of the plan's
+ * segments it is (−1 while spiralling): the start orbit with no plan.
+ * M-ORBIT-003: what the playground's readouts — the Watch tour card's
+ * period among them — describe once a burn has been made.
+ */
+export function flownAt(plan: Plan | null, orbit: Orbit, t: number, j2: boolean): { orbit: Orbit; local: number; index: number } {
+  if (!plan) return { orbit, local: t, index: 0 };
+  const sp = plan.spiral;
+  if (sp && t > sp.t0 && t < sp.t0 + sp.duration) {
+    const s = stateOnPlan(plan, t, j2);
+    return { orbit: orbitFromState(s.r, s.v, orbit.jd0 + t / 86400), local: 0, index: -1 };
+  }
+  let index = 0;
+  plan.segments.forEach((seg, k) => { if (seg.t0 <= t) index = k; });
+  return { orbit: plan.segments[index].orbit, local: t - plan.segments[index].t0, index };
 }
 
 /** How the playground stands for one step of the Watch tour. */
@@ -149,6 +185,21 @@ export function tourSetup(step: TourStep, jd0: number): TourSetup {
 
 /** The altitudes `repeatOrbit` searches between, m. */
 export const REPEAT_SEARCH = { min: 150e3, max: 5000e3 } as const;
+
+/** The repeat tool's fields: N revolutions in D days, whole numbers. */
+export const REPEAT_LIMITS = { revs: { min: 1, max: 500 }, days: { min: 1, max: 60 } } as const;
+
+/**
+ * M-ORBIT-008: a repeat tool field's text as its count, or null when it is
+ * not a whole number in the field's range (0, blank, 14.5, 501…) — a typing
+ * slip, said beside the field, never a question answered "no such orbit".
+ * Digits only, so it does not depend on how decimals are written.
+ */
+export function repeatCount(text: string, field: keyof typeof REPEAT_LIMITS): number | null {
+  if (!/^\s*\d+\s*$/.test(text)) return null;
+  const n = Number(text), { min, max } = REPEAT_LIMITS[field];
+  return n >= min && n <= max ? n : null;
+}
 
 /**
  * The Engineer's repeat-ground-track tool: the circular orbit whose track

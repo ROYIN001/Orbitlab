@@ -31,8 +31,8 @@ import { PLAYGROUND_PRESET_IDS, presetOrbit } from '../../orbit/presets';
 import { TOUR, type TourView } from '../../orbit/tour';
 import { SKY_TOUR, type SkyTourStep } from '../../orbit/sky-tour';
 import {
-  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, handoffEntry, handoffOrbit, linearScale, logScale, orbitPath,
-  playgroundLifetimeCraft, repeatGroundTrack, tourSetup, withApsis, type SliderScale,
+  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, REPEAT_LIMITS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, linearScale,
+  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, thaiRepeatRevs, tourSetup, withApsis, type SliderScale,
 } from '../../orbit/playground-model';
 import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
 import {
@@ -161,7 +161,7 @@ export class OrbitPlayground {
   private readonly clock = el('span', 'pg-clock');
   private readonly date = el('span', 'pg-date');
   /** the readouts that move with the satellite, refreshed a few times a second */
-  private live: { alt?: HTMLElement; speed?: HTMLElement; nu?: HTMLElement; latlon?: HTMLElement; ltan?: HTMLElement } = {};
+  private live: { alt?: HTMLElement; speed?: HTMLElement; period?: HTMLElement; nu?: HTMLElement; latlon?: HTMLElement; ltan?: HTMLElement } = {};
   private fields: Record<string, Field> = {};
   private readonly ro: ResizeObserver | null;
 
@@ -352,6 +352,7 @@ export class OrbitPlayground {
   private loadHandoff(): void {
     if (!this.handoff) return;
     this.orbit = handoffOrbit(this.handoff);
+    this.apps = appsOnOrbit(this.apps);
     this.jd0 = this.orbit.jd0;
     this.presetId = HANDOFF;
     this.time = 0;
@@ -362,8 +363,10 @@ export class OrbitPlayground {
 
   // ─── the model ────────────────────────────────────────────────────────────
 
-  private setOrbit(next: Orbit, presetId: string = CUSTOM): void {
+  /** M-ORBIT-002: `thaiId` names the Thai satellite only when `next` is the orbit made from it. */
+  private setOrbit(next: Orbit, presetId: string = CUSTOM, thaiId: string | null = null): void {
     this.orbit = next;
+    this.apps = appsOnOrbit(this.apps, thaiId);
     this.presetId = presetId;
     this.replan();
     this.syncFields();
@@ -479,6 +482,7 @@ export class OrbitPlayground {
     this.playing = true;
     if (setup.orbit) {
       this.orbit = setup.orbit;
+      this.apps = appsOnOrbit(this.apps);
       this.jd0 = setup.orbit.jd0;
       this.presetId = step.preset ?? CUSTOM;
       this.time = 0;
@@ -617,16 +621,7 @@ export class OrbitPlayground {
 
   /** The orbit flown at `t`, the time along it, and which of the plan's segments it is (−1 while spiralling). */
   private flownAt(t: number): { orbit: Orbit; local: number; index: number } {
-    const p = this.activePlan;
-    if (!p) return { orbit: this.orbit, local: t, index: 0 };
-    const sp = p.spiral;
-    if (sp && t > sp.t0 && t < sp.t0 + sp.duration) {
-      const s = stateOnPlan(p, t, this.j2);
-      return { orbit: orbitFromState(s.r, s.v, this.orbit.jd0 + t / 86400), local: 0, index: -1 };
-    }
-    let index = 0;
-    p.segments.forEach((seg, k) => { if (seg.t0 <= t) index = k; });
-    return { orbit: p.segments[index].orbit, local: t - p.segments[index].t0, index };
+    return flownAt(this.activePlan, this.orbit, t, this.j2);
   }
 
   /** Plan again from the settings, the start orbit and the plan's start time. */
@@ -808,7 +803,7 @@ export class OrbitPlayground {
     const ltan = nodeLocalTime(s.raan, this.orbit.jd0 + this.time / 86400);
     return appsResults(this.appsHost, a, {
       comms: a.kind === 'comms' ? commsReport(a, s) : null,
-      eo: a.kind === 'eo' ? eoReport(a, flown, s, this.j2, thai?.repeat?.revs ?? null, ltan) : null,
+      eo: a.kind === 'eo' ? eoReport(a, flown, s, this.j2, thaiRepeatRevs(a), ltan) : null,
       thai,
     });
   }
@@ -849,14 +844,13 @@ export class OrbitPlayground {
     showThai: (id: string) => {
       const sat = thaiSatelliteById(id);
       if (!sat || !this.apps) return;
-      this.apps = { ...this.apps, thaiId: id };
       this.maneuver = null;
       this.jd0 = julianDate(new Date());
       this.time = 0;
       this.planStart = 0;
       // a low orbit is sun-synchronous only with the bulge turning it; a geostationary one stands still without
       this.j2 = sat.orbit.kind === 'leo';
-      this.setOrbit(thaiOrbit(sat, this.jd0));
+      this.setOrbit(thaiOrbit(sat, this.jd0), CUSTOM, id);
       this.orbitView?.setOrbit(this.orbit, true);
       this.render();
     },
@@ -1073,20 +1067,32 @@ export class OrbitPlayground {
     box.addEventListener('toggle', () => { r.open = box.open; });
     box.append(el('summary', undefined, t('pg.rep.title')));
     const row = el('div', 'pg-tool-row');
-    const input = (label: string, value: number, min: number, max: number, set: (v: number) => void): void => {
+    // M-ORBIT-008: a count that is not a whole number in range is said beside its field and the last good one kept; no search runs on it
+    const bad = new Set<keyof typeof REPEAT_LIMITS>();
+    const input = (label: string, field: keyof typeof REPEAT_LIMITS): void => {
       const wrap = el('label');
       const i = el('input');
-      i.type = 'number'; i.min = String(min); i.max = String(max); i.step = '1'; i.value = String(value);
-      i.addEventListener('change', () => set(Number(i.value)));
-      wrap.append(el('span', undefined, label), i);
+      const { min, max } = REPEAT_LIMITS[field];
+      i.type = 'number'; i.min = String(min); i.max = String(max); i.step = '1'; i.value = String(r[field]);
+      const why = el('span', 'pg-warn pg-field-invalid', t('pg.rep.invalid', { min: num(min), max: num(max) }));
+      why.hidden = true;
+      i.addEventListener('input', () => {
+        const v = repeatCount(i.value, field);
+        if (v === null) bad.add(field); else { bad.delete(field); r[field] = v; }
+        why.hidden = v !== null;
+        i.setAttribute('aria-invalid', String(v === null));
+        go.disabled = bad.size > 0;
+      });
+      wrap.append(el('span', undefined, label), i, why);
       row.append(wrap);
     };
-    input(t('pg.rep.revs'), r.revs, 1, 500, (v) => { r.revs = v; });
-    input(t('pg.rep.days'), r.days, 1, 60, (v) => { r.days = v; });
+    input(t('pg.rep.revs'), 'revs');
+    input(t('pg.rep.days'), 'days');
     const out = el('p', 'pg-tool-out', r.note);
     out.setAttribute('aria-live', 'polite');
     out.classList.toggle('warn', r.warn);
     const go = button('watch-btn primary', t('pg.rep.apply'), () => {
+      if (bad.size > 0) return;
       const found = repeatGroundTrack(r.revs, r.days, r.sso, this.orbit.i);
       if (!found) {
         r.note = t('pg.rep.none');
@@ -1168,9 +1174,9 @@ export class OrbitPlayground {
   private renderFacts(): void {
     const box = this.facts;
     box.replaceChildren();
-    this.live = {};
-    // the Watch level has no side panels: its readouts are the tour card's
+    // the Watch level has no side panels: its readouts are the tour card's, kept live through a burn (M-ORBIT-003)
     if (this.level === 'watch') return;
+    this.live = {};
     if (this.mode === 'sky') { box.append(this.sky.facts()); this.appendComingNext(box); return; }
     if (this.view === 'cannon') { this.renderCannonFacts(box); this.appendComingNext(box); return; }
     if (this.plan && this.maneuver) box.append(planTable(this.maneuverHost, this.plan, this.maneuver, this.time));
@@ -1280,6 +1286,7 @@ export class OrbitPlayground {
     box.replaceChildren();
     box.hidden = this.level !== 'watch';
     if (this.level !== 'watch') return;
+    this.live = {};
     const yours = this.tourIndex === -1 && !!this.handoff;
     const sky = this.skyStep();
     const step = sky ?? TOUR[Math.max(0, this.tourIndex)];
@@ -1320,7 +1327,8 @@ export class OrbitPlayground {
       };
       this.live.alt = stat(t('pg.f.altNow'));
       this.live.speed = stat(t('pg.f.speedNow'));
-      stat(t('pg.f.period')).textContent = span(orbitFacts(this.flownAt(this.time).orbit, this.j2).period);
+      // M-ORBIT-003: a live readout, as a burn changes the orbit flown
+      this.live.period = stat(t('pg.f.period'));
       box.append(stats);
     }
     const nav = el('div', 'pg-tour-nav');
@@ -1368,6 +1376,7 @@ export class OrbitPlayground {
     }
     if (L.alt) L.alt.textContent = `${num(s.alt / 1000)} ${t('u.km')}`;
     if (L.speed) L.speed.textContent = `${num(Math.hypot(s.v.x, s.v.y, s.v.z) / 1000, 3)} ${t('u.kms')}`;
+    if (L.period) L.period.textContent = span(orbitFacts(this.flownAt(this.time).orbit, this.j2).period);
     if (L.nu) L.nu.textContent = `${num(s.nu * RAD, 1)}°`;
     if (L.latlon) L.latlon.textContent = `${num(Math.abs(s.lat * RAD), 2)}° ${s.lat >= 0 ? 'N' : 'S'} · ${num(Math.abs(s.lon * RAD), 2)}° ${s.lon >= 0 ? 'E' : 'W'}`;
     const jd = this.orbit.jd0 + this.time / 86400;
