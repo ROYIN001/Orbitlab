@@ -150,3 +150,14 @@ After the change:
 
 The full `vitest run` did not finish within the 10-minute limit of this
 environment and was not used as evidence; CI runs it.
+
+## Second-agent review and follow-up
+
+An independent review confirmed 5 of 6 checks: every place the pack's identity shows in `src/` and `public/` is neutral (including a device with old cached files: the service worker's content hash treats the old JSON as missing and the neutral label is shown), the pack id, lesson ids, criteria and `reviewed:false` are unchanged, progress is keyed by lesson id (`src/lessons/progress.ts:23, :174, :344`), the review hash is right and no recorded review is invalidated, `--check` passes and the new test fails on base (3 of 5). Applied from its findings:
+
+- **Docs still described the pack by the academy's name** (outside CO-7's listed files, same decision): `README.md:84-85`, `docs/USER-GUIDE.md:1660`, `docs/IMPLEMENTATION-STATUS.md:434` now say "space flight dynamics and control (an institution-level lab for undergraduate aeronautical engineers)".
+- **Wording:** the framework label now says "A published BEng …" (EN) and "Опубликованная программа …" (RU), since "public"/"Открытая" could read as a state or open-enrolment programme. Pack regenerated; `src/lessons/review.ts` hash updated again to `5615561f…b09a`.
+- **Deny-list:** adds the Thai abbreviations `นนอ.` and `นนก.` (none present today).
+- Not changed: the Thai "—" versus EN/RU ":" (the plan's own suggested title), and "แลบ" — the Thai wording goes to HU-3. D-42 (ก) itself reaches `docs/DECISIONS.md` through CO-8.
+- After: `npx vitest run` lesson-pack-names, lesson-review, i18n, lesson-packs, classroom-pwa, repo-hygiene: 6 files, 73/73; `npm run typecheck` clean; `--check` up to date; the pack file is 30 bytes smaller than on base.
+
