@@ -798,12 +798,14 @@ export class OrbitPlayground {
     const a = this.apps;
     if (!a || this.level === 'watch') return null;
     const s = this.stateNow(this.time);
-    const flown = this.flownAt(this.time).orbit;
+    const { orbit: flown, index } = this.flownAt(this.time);
     const thai = a.thaiId ? thaiSatelliteById(a.thaiId) ?? null : null;
     const ltan = nodeLocalTime(s.raan, this.orbit.jd0 + this.time / 86400);
+    // M-ORBIT-002: the Thai satellite's repeat describes its own orbit only, not one a planned burn has left
+    const revs = index === 0 ? thaiRepeatRevs(a) : null;
     return appsResults(this.appsHost, a, {
       comms: a.kind === 'comms' ? commsReport(a, s) : null,
-      eo: a.kind === 'eo' ? eoReport(a, flown, s, this.j2, thaiRepeatRevs(a), ltan) : null,
+      eo: a.kind === 'eo' ? eoReport(a, flown, s, this.j2, revs, ltan) : null,
       thai,
     });
   }
