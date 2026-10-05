@@ -8,6 +8,8 @@ Orbitlab has no tagged release yet.
 
 - Docs (CO-2): PROGRESS, the R3 reports and the implementation status record R2/R3 and gate G3 as GitHub and the owner record them; a close-out report audits #71–#83 (merge, CI, Pages, live) and reviews the R1–R3 budget raises.
 - Tests (#81, #82): when a browser journey fails, its diagnostics print the app's start-up marks (bootstrap, workspace, app, textures, ready) with the navigation timing, and, read through the browser process, the CPU each Chrome process used over 3 s and the GPU's feature status.
+- Launch Engineer (LUI-01): "Use for the next launch" in the loop inspector of a paused flight keeps the flight and its recording and holds the tuning for the next launch, as its message said; it used to throw the paused flight away.
+- Bundle budget (CO-1, D-38): the offline precache is checked as two groups with their own ceilings — the app's code (14704 kB, its size at `5f9aa2e`) and the refreshed data snapshots under `data/` (1399 kB, warning past 80 % of their headroom) — so a daily data refresh can no longer use up the code's room or the reverse; the total stays at 16103 kB and the app is unchanged.
 - R3.1 (design revision): a mission flown from Build, and its orbit handed on to Orbit, say which of your designs it is and which version — when it was saved, changed since, or not saved.
 - R3.3 (diagrams): the satellite bench's Power, Radio and Camera tabs each draw a diagram from their own figures — the time in the Earth's shadow, the link to the ground station and its margin, the camera's footprint and detail.
 - R3.3 (stowed pose): the satellite bench draws a design with wings stowed for launch as well as deployed, with the fold stated as an assumption, and shows the satellite's body axes.

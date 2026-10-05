@@ -26,7 +26,7 @@ import { LaunchPadView } from './render/launchpad';
 import { RecoverySceneryView } from './render/recovery';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
 import { CameraPolicy } from './render/camera-policy';
-import { missionStage, setupCollapsed, type MissionStage } from './ui/flight-lifecycle';
+import { missionStage, previewsChange, setupCollapsed, type MissionStage } from './ui/flight-lifecycle';
 import { MISSION_SOURCE_KEY, missionSource } from './ui/mission-source';
 import { FIRST_LAUNCH, quickstartMission } from './ui/quickstart';
 import { MISSION_STEPS, MISSION_STEP_KEY, missionSteps, stepActionable, type MissionStep } from './ui/mission-steps';
@@ -557,7 +557,12 @@ class App {
     this.panel = new SetupPanel(document.getElementById('setup')!, {
       onLaunch: (cfg) => this.launch(cfg),
       onReset: () => this.reset(),
-      onChange: (cfg) => { if (!this.playing) this.preview(cfg); },
+      // LUI-01: an edit made once launched (the loop inspector's "Use for the
+      // next launch") is held for the next launch, not previewed over the flight
+      onChange: (cfg, change) => {
+        const stage = missionStage({ launched: this.panel.isRunning(), done: !!this.sim?.done });
+        if (previewsChange(stage, this.playing, change)) this.preview(cfg);
+      },
       onExperience: (experience) => this.go(route('launch', experience === 'advanced' ? 'engineer' : 'explore')),
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
       onBackToMine: () => this.continueMission(),
