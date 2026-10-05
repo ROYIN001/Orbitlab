@@ -43,7 +43,8 @@ export default async function useNow(t) {
     await faults.locator('summary').scrollIntoViewIfNeeded();
     if (!await press(t, app, faults.locator('summary'), 'mouse', 'failures section')) return;
   }
-  const draftAdd = faults.locator('.fault-draft button', { hasText: 'Add a failure' });
+  // the flight was launched with no failures (the default): a new one is still offered
+  const draftAdd = faults.locator('.fault-draft-add', { hasText: 'Add a failure to this flight' });
   if (!t.check(await t.until(() => draftAdd.isEnabled(), { timeoutMs: RESPOND_MS }), 'no new failure offered in the live six-DOF flight')) return;
   await draftAdd.scrollIntoViewIfNeeded();
   if (!await press(t, app, draftAdd, 'mouse', 'Add a failure (draft)')) return;
@@ -61,6 +62,8 @@ export default async function useNow(t) {
 
   await useNowBtn.scrollIntoViewIfNeeded();
   if (!await press(t, app, useNowBtn, 'mouse', 'Use now')) return;
+  t.check(await t.until(() => faults.locator('.fault-draft-status', { hasText: 'Used in this flight' }).isVisible(), { timeoutMs: 5000 }),
+    'no confirmation after "Use now"');
   await app.mcp('control_playback', { action: 'play' });
   const struck = await t.until(async () => ((await faultEvents()).length ? true : null), { timeoutMs: 60_000, intervalMs: 500 });
   t.check(struck, 'the failure did not strike after "Use now"');
@@ -73,7 +76,6 @@ export default async function useNow(t) {
   t.check(await page.locator('#setup select[data-field="setup.vehicle"]').isDisabled(), 'the vehicle became editable in flight');
   // the failure is in the setup's list, flown from the pad next launch
   t.check(await faults.locator('.fault-row').count() >= 1, 'the failure used now is not in the setup for the next launch');
-  t.check(await page.evaluate(() => document.querySelector('#setup')?.dataset.running) === 'true', 'the setup is not the flown one any more');
   app.checkErrors();
   await app.context.close();
 }

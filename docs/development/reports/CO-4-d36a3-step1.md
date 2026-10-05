@@ -1,6 +1,6 @@
 # CO-4 — D-36.A3 step 1: "Use now" for a new failure in flight / ใช้ทันที
 
-A CO-4 step for owner decision D-36.A3 (wave K1). The first in-flight value that can still really be adjusted — a new control-system failure in a live six-DOF flight — is editable in ⚙ Setup and takes effect only when the user presses **Use now**. Every other value stays locked in flight.
+A CO-4 step for owner decision D-36.A3 (wave K1). The first in-flight value that can still really be adjusted — a new control-system failure in a live six-DOF flight, including one launched with no failures (fixed after review: `b281be8` offered it only when the flight already carried a list) — is editable in ⚙ Setup and takes effect only when the user presses **Use now**. Every other value stays locked in flight.
 
 ```yaml
 envelope: v2
@@ -44,10 +44,22 @@ D-36.A3 (sheet A-2, with the note): "แก้ไขได้ในค่าท�
 | `npx vitest run tests/edit-window.test.ts tests/control-faults.test.ts tests/i18n.test.ts tests/repo-hygiene.test.ts tests/panel-held-edit.test.ts` | — | 69/69 passed |
 | plus `tests/dynamics-panel.test.ts tests/architecture.test.ts tests/flight-lifecycle.test.ts` | — | 89/89 passed (8 files) |
 | other panel tests: `explore fleet-defaults mcp design-handoff design-readiness d06-satellite-verdict` | — | 289/290 in one run; the one was `d06-satellite-verdict` timing out at 5 s under load; alone 3/3 passed |
+| **After the review fixes:** `tests/panel-held-edit.test.ts` (3 new section tests) | `b281be8`: 2 failed, 6 passed | 8/8 passed |
+| after the fixes: edit-window, control-faults, panel-held-edit, i18n, repo-hygiene, dynamics-panel, architecture, flight-lifecycle | — | 92/92 passed (8 files) |
+| after the fixes: explore, fleet-defaults, mcp, design-handoff, design-readiness, d06-satellite-verdict, instructor-mode | — | 301/301 passed (7 files) |
+| after the fixes: `npm run typecheck`; `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | — | clean; 64/64 passed |
 | `npm run typecheck` | — | clean |
 | `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | — | 64/64 passed |
 
 **Browser journey `tests/browser/journeys/d36a3-use-now.mjs`: written, not yet run** (the machine's CPU was reserved for other browser runs). It launches six-DOF, warps to ~T+30 s, pauses and settles, opens ⚙ Setup, drafts a failure, checks no `evt.controlFault` and the same cursor/recording before confirming, presses Use now, plays until the failure strikes, and checks the recording kept its start and grew, the failure is in the setup's list and the vehicle selector stays disabled. `timeoutMs` 240 s, as `lui01-held-tuning`.
+
+## Second-agent review (b281be8) and the fixes
+
+- **Blocking, fixed:** on `b281be8` the draft was built after `faultsSection()`'s `if (!config) return section;`, so a six-DOF flight launched with no failures (the default) never offered "Add a failure"/"Use now". The draft is now built before that return, in any live six-DOF flight, with or without a list. New unit test (`tests/panel-held-edit.test.ts`, the section built on a minimal fake DOM): on `b281be8` 2 failed ("offers a new failure in a flight launched with none": `expected undefined to be defined`; "beside a list": the same, by the new add button's class), 6 passed; after, 8/8. The journey launches with no failures, so it walks this path.
+- **Focus:** a rebuild restores focus by `aria-label` only; the draft now moves the focus itself — to the draft's first field after "Add a failure to this flight" (its own label, distinct from the list's "Add a failure"), to the same place in the draft after a field change, and back to the add button after Use now.
+- **Status:** one `role="status"` line in the draft, rewritten in place: "The flight did not take this failure." on a refusal, "Used in this flight, and kept in the list for the next launch." after Use now (en/th/ru).
+- **Timing line** under the draft: the live flight takes it on Use now (at once if its time has passed); the next launch flies it at the time entered.
+- **Known edge, not fixed (named):** in the app the flight runs in a worker. `FlightSession.injectControlFault` (`src/session/session.ts` ~251) answers `injected` after the main thread's own checks (six-DOF, valid, not failed/done) and posts `controlFault`; the worker's `Simulation.injectControlFault` repeats those checks on its own, newer state and can still refuse (for example if the vehicle is lost in the frames in flight between the click and the message), and it sends no answer back. The panel has then already put the failure in the setup's list, so the next launch flies it although this flight did not. Waiting for a worker answer needs a protocol change in `src/session/**`, outside this step.
 
 ## Limits and handoff
 

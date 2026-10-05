@@ -206,6 +206,7 @@ export class SetupPanel {
   private flightT = 0;
   private flightKey = '';
   private faultDraft: ControlFaultSpec | null = null;
+  private draftStatus: '' | 'used' | 'refused' = '';
   private tuning = false;
   private tuneController: AbortController | null = null;
   private tuneMessage = '';
@@ -463,6 +464,7 @@ export class SetupPanel {
     if (r) this.cancelTune();
     this.running = r;
     this.faultDraft = null;
+    this.draftStatus = '';
     this.render();
   }
 
@@ -483,8 +485,13 @@ export class SetupPanel {
 
   /** D-36.A3: hold (or drop) a failure for the flight shown. Nothing reaches the flight until "Use now". */
   draftFault(spec: ControlFaultSpec | null): void {
+    const fields = (): HTMLElement[] => Array.from(this.root.querySelector('.fault-draft')?.querySelectorAll<HTMLElement>('select, input, button') ?? []);
+    const before = fields(), at = before.length ? before.indexOf(document.activeElement as HTMLElement) : -1;
     this.faultDraft = spec;
+    this.draftStatus = '';
     this.render();
+    // a rebuild loses the focus (the draft's fields share their labels with the list's): keep it in the draft
+    if (at >= 0) { const after = fields(); after[Math.min(at, after.length - 1)]?.focus(); }
   }
 
   /** D-36.A3: "Use now": the draft goes to the flight, then into the setup's list, flown from the pad next launch. */
@@ -494,6 +501,7 @@ export class SetupPanel {
     const answer = this.cb.onApplyNow?.(structuredClone(spec)) ?? 'notLive';
     if (answer !== 'injected') return answer;
     this.faultDraft = null;
+    this.draftStatus = 'used';
     const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
     const { preset: _preset, ...faults } = dynamics.controlFaults ?? { faults: [] };
     this.state.dynamics = { ...dynamics, controlFaults: { ...faults, faults: [...faults.faults, spec] } };
@@ -1940,7 +1948,13 @@ export class SetupPanel {
       if (preset.vehicleId !== this.state.vehicleId) this.faultPresetVehicle(preset.vehicleId);
       update(next);
     }));
-    if (!config) return section;
+    // D-36.A3: a new failure for the flight shown, whether or not the flight carries any
+    const vehicle = missionVehicle(this.state), navigation = !!this.state.dynamics?.navigation;
+    const draftBox = this.running && this.window('faults').when === 'now' ? this.faultDraftBox(vehicle, navigation) : null;
+    if (!config) {
+      if (draftBox) { section.open = true; section.append(draftBox); }
+      return section;
+    }
     if (config.preset && CONTROL_FAULT_PRESETS[config.preset]) {
       section.append(this.el('p', 'field-note fault-preset-note', t(`setup.faults.presetNote.${config.preset}`)));
       const own = CONTROL_FAULT_PRESETS[config.preset].vehicleId;
@@ -1953,7 +1967,6 @@ export class SetupPanel {
     fdirRow.append(fdirBox, this.el('span', undefined, t('setup.faults.fdir')));
     section.append(fdirRow, this.el('p', 'field-note', t('setup.faults.fdirNote')));
     // The failures.
-    const vehicle = missionVehicle(this.state), navigation = !!this.state.dynamics?.navigation;
     config.faults.forEach((fault, index) => section.append(this.faultRow(fault, index, vehicle, navigation, (next) => {
       const faults = [...current().faults];
       if (next) faults[index] = next; else faults.splice(index, 1);
@@ -1971,30 +1984,40 @@ export class SetupPanel {
     clear.addEventListener('click', () => update(undefined));
     buttons.append(add, clear);
     section.append(buttons);
-    if (this.running && this.window('faults').when === 'now') section.append(this.faultDraftBox(vehicle, navigation));
+    if (draftBox) section.append(draftBox);
     return section;
   }
 
   /** D-36.A3: one new failure for the flight shown, held as a draft until "Use now". */
   private faultDraftBox(vehicle: VehicleSpec, navigation: boolean): HTMLElement {
     const box = this.el('div', 'fault-draft');
-    box.append(this.el('p', 'field-note', t('setup.edit.draft')));
+    box.append(this.el('p', 'field-note', t('setup.edit.draft')), this.el('p', 'field-note', t('setup.edit.timing')));
+    // one status line, said again in place: refused, or used
+    const status = this.el('p', `field-note fault-draft-status${this.draftStatus === 'refused' ? ' warn' : ''}`,
+      this.draftStatus === 'used' ? t('setup.edit.used') : this.draftStatus === 'refused' ? t('setup.edit.refused') : '');
+    status.setAttribute('role', 'status');
     const draft = this.faultDraft;
     if (!draft) {
-      const add = this.el('button', 'ghost-button', t('setup.faults.add'));
+      const add = this.el('button', 'ghost-button fault-draft-add', t('setup.edit.addDraft'));
       add.type = 'button';
       add.disabled = (this.state.dynamics?.controlFaults?.faults.length ?? 0) >= MAX_FAULTS;
-      add.addEventListener('click', () => this.draftFault({ kind: 'gyroBias', time: Math.ceil(this.flightT), units: [1], axis: 'pitch', magnitude: 1 }));
-      box.append(add);
+      add.addEventListener('click', () => {
+        this.draftFault({ kind: 'gyroBias', time: Math.ceil(this.flightT), units: [1], axis: 'pitch', magnitude: 1 });
+        this.root.querySelector<HTMLElement>('.fault-draft select')?.focus();
+      });
+      box.append(add, status);
       return box;
     }
     box.append(this.faultRow(draft, this.state.dynamics?.controlFaults?.faults.length ?? 0, vehicle, navigation, (next) => this.draftFault(next ?? null), true));
     const use = this.el('button', 'btn fault-use-now', t('setup.edit.useNow'));
     use.type = 'button';
     use.addEventListener('click', () => {
-      if (this.useFaultNow() !== 'injected') box.append(this.el('p', 'field-note warn', t('setup.edit.refused')));
+      if (this.useFaultNow() === 'injected') { this.root.querySelector<HTMLElement>('.fault-draft-add')?.focus(); return; }
+      this.draftStatus = 'refused';
+      status.classList.add('warn');
+      status.textContent = t('setup.edit.refused');
     });
-    box.append(use);
+    box.append(use, status);
     return box;
   }
 
