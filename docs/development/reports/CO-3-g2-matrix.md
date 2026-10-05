@@ -53,7 +53,10 @@ context's scale factor. Real zoom on real hardware stays with HU-6.
 
 ## 2. Class A journey `tests/browser/journeys/r2-viewport-matrix.mjs`
 
-Not a smoke journey; `timeoutMs` 720 s (it takes about 417 s here).
+Not a smoke journey; `timeoutMs` 1200 s. The first version took 417 s here alone; this one took 552–575 s
+with sabotage runs alongside (§6); CI runs flight/WebGL journeys about 1.5–2×
+slower than this machine (`r2-flight-shell`: 353.7 s in CI against 178–196 s
+here), so 720 s would not have been enough headroom.
 
 **How it runs.** Four fresh contexts: desktop (no touch, booted in Thai) for
 the 14 sizes from the tablet up, and phone (touch, mobile viewport, booted in
@@ -63,14 +66,17 @@ Soyuz MS to the ISS on the two-orbit profile to its Kurs approach (warp 1000,
 then 50 after T+6000 s; the TORU panel shows from about T+9800 s). Each flight
 is paused, then the page is resized through its group's sizes in TH, EN and RU
 (the language selector's change handler) with the first-use guide open (as on
-a first visit) and then closed (its Skip button). That is 48 size × language ×
+a first visit) and then closed (its Skip button). After each resize the
+journey waits until the root's client size is the preset's and two reads of
+the scene's box agree; if that never happens in 20 reads it fails and stops
+(it does not measure at a wrong size). That is 48 size × language ×
 guide combinations per flight, 96 measurements per flight kind.
 
 **Assertions** (every one at every size, language and guide state):
 
 | # | Assertion | Scope |
 |---|---|---|
-| A1 | No sideways scroll: `document.scrollingElement.scrollWidth <= innerWidth` | both flights |
+| A1 | No sideways scroll: `document.scrollingElement.scrollWidth` ≤ the preset's CSS width (and ≤ the root's `clientWidth`). Not `innerWidth`: in a phone context (`isMobile`) a page that overflows zooms out and `innerWidth` grows with it — measured at 390×844 with 40 px of overflow: `scrollWidth` 430, `innerWidth` 430, `visualViewport.width` 430, root `clientWidth` 390 — so the old `scrollWidth <= innerWidth` could never fail on a phone. Desktop contexts read the same either way. The chooser (A4) and flight bar (A5) are bounded by the root's client size for the same reason. | both flights |
 | A2 | Abort (`#btn-abort`), play/pause (`#btn-play`), clock (`#clock`) and Live/replay (`#btn-live`) are rendered, lie inside the page's width, and are reachable: scrolled into the middle of the window, a press at their centre lands on them (`elementFromPoint`) | six-DOF flight |
 | A3 | The six-DOF control panel (`#rigid-controls summary`) — same test | six-DOF flight |
 | A3 | The TORU panel (`#toru-controls summary`) and its take-over button (`.toru-take`) — same test | Soyuz flight |
@@ -90,37 +96,71 @@ No minimum scene size is asserted; the scene is measured and logged (§3).
 
 **Open findings are explicit, not dropped.** CO-3 does not change app code, so
 three app problems the checks found (F1–F3, §4) are listed in the journey's
-`OPEN_FINDINGS`: a failure of exactly that kind is logged as
-`open finding Fn …` with the place it happened and is not counted; any other
-failure fails the journey. The run summary prints how often each finding was
-seen. R2.1r removes an entry when it fixes the app.
+`OPEN_FINDINGS`. Each entry matches only its documented occurrences — the
+exact check, size, language and guide state, and the exact kind of failure —
+and is logged as `open finding Fn …` instead of counted; any other failure
+fails the journey, including the same failure anywhere else:
 
-### Sabotage: every assertion shown failing
+| Id | Tolerated only at | And only when |
+|---|---|---|
+| F1 | 1366×768 RU guide open: six-DOF panel and TORU panel; 1280×800 TH guide open: TORU take-over button (3 places) | the press at the centre lands on `footer#footer` or an element inside it (the take-over case lands on a `span` in the footer) |
+| F2 | Abort at 320×740 EN and RU, guide open and closed (4 places) | Abort is outside the page's width with its left edge ≥ 0 and its right edge past 320 px (cut off at the right, not moved away or hidden) |
+| F3 | the event-chooser check only, 390×844 RU, guide open and closed (Soyuz flight) | some chip can still be pressed, and every chip that cannot is covered by another `.tl-chip.cluster` |
+
+F3 is consulted only by the chooser check; the reachability checks (A2, A3)
+consult F1 and F2 only. (The first version matched F1 on any footer cover,
+F2 on any Abort outside the page at 320 px, and F3 on every phone
+reachability failure — 84 phone checks it would have hidden; a review found
+this, and the sabotage counts below were redone.) The run summary prints how
+often each finding was seen. R2.1r removes an entry when it fixes the app.
+
+### Sabotage: every assertion shown failing, on desktops and on phones
 
 The journey was wrapped (not committed) so that every page it opens gets an
-injected stylesheet, and run once per set. Failures per run:
+injected stylesheet, and run once per set. These counts replace the first
+version's, which were in effect desktop-only: its F3 entry hid every phone
+reachability failure and its A1 could not fail on a phone (both §2 above), so
+S1's sideways scroll, hidden Abort, covered clock and hidden take-over button
+produced 0 phone failures. Each journey run below was against the current
+journey (exact F1–F3, A1 against the preset width). Per combination there are
+84 desktop and 12 phone measurements per flight (14 or 2 sizes × 3 languages ×
+guide open/closed).
 
-| Set | Injected CSS | What failed (count, all sizes × languages × guide states) |
-|---|---|---|
-| S1 | `body { min-width: calc(100vw + 40px) }` | A1: "the page scrolls sideways (scrollWidth 1320 > innerWidth 1280)" etc. — 168 |
-| S1 | `#btn-abort { display: none }` | A2 Abort: "not rendered (0×0)" — 84 |
-| S1 | `.mission-clock::after` covering the clock | A2 clock: "covered: a press at its centre lands on div.mission-clock" — 84 |
-| S1 | `#toru-controls .toru-take { visibility: hidden }` | A3 TORU button: "not rendered (…, hidden)" — 84 |
-| S1 | `.tl-chooser { min-width: 150vw; max-width: none }` | A4: "the list (8,239 1920×145) leaves the 1280×800 window" — 84 |
-| S1 | `#mobile-flight-bar { display: none }` | A5: "no compact flight bar on screen while the charts are read" — 12 |
-| S2 | `#btn-play { display: none }` | A2 play: "not rendered" — 84 |
-| S2 | `#btn-live { visibility: hidden }` | A2 Live: "not rendered (…, hidden)" — 84 |
-| S2 | `#btn-abort { position: relative; left: -4000px }` | A2 Abort: "outside the page's width" — 84 |
-| S2 | `#rigid-controls { display: none }` | A3 six-DOF: "not rendered" — 84 |
-| S2 | `#toru-controls::after` covering the panel | A3 TORU panel and button: "covered: … lands on section#toru-controls" — 84 + 84 |
-| S2 | `.tl-chooser-item { grid-template-columns: auto 2000px }` | A4: "the list scrolls sideways (2091 > 338)" — 96 |
-| S3 | `#timeline::after` covering the event bar | A4: "a cluster chip is covered — chip 1 … under div.timeline" — 96 |
-| S4 | `.tl-chooser-name { white-space: nowrap; padding-right: 600px }` | A4 rows: "\"จุดเครื่องยนต์\" overflows its row (668 > 323); … tl-chooser-name sticks out of its row" — 96 |
+| Set | Injected CSS | What failed | Desktop | Phone |
+|---|---|---|---|---|
+| S1 | `body { min-width: calc(100vw + 40px) }` | A1: "the page scrolls sideways (scrollWidth 1320 > 1280 px wide …)"; phone "scrollWidth 430 > 390 px wide; clientWidth 390, innerWidth 430" | 168 | 24 |
+| S1 | `#btn-abort { display: none }` | A2 Abort: "not rendered (0×0)" | 84 | 12 |
+| S1 | `.mission-clock::after` covering the clock | A2 clock: "covered: … lands on div.mission-clock" (at 390 px the overflow pushes it out: "outside the page's width (x 293…399 of 390)") | 84 | 12 |
+| S1 | `#toru-controls .toru-take { visibility: hidden }` | A3 TORU button: "not rendered (…, hidden)" | 84 | 12 |
+| S1 | `.tl-chooser { min-width: 150vw; max-width: none }` | A4: "the list … leaves the 1280×800 window". On phones the page, zoomed out by the body overflow, sends the chip press to `canvas#gl` ("cluster chip: a mouse press at its centre lands on canvas#gl"), so the chooser never opens — a failure, but not this one; S5 repeats it alone | 84 | 12 (chip press) |
+| S1 | `#mobile-flight-bar { display: none }` | A5: "no compact flight bar on screen while the charts are read" | — | 12 |
+| S2 | `#btn-play { display: none }` | A2 play: "not rendered" | 84 | 12 |
+| S2 | `#btn-live { visibility: hidden }` | A2 Live: "not rendered (…, hidden)" | 84 | 12 |
+| S2 | `#btn-abort { position: relative; left: -4000px }` | A2 Abort: "outside the page's width (x -3788…-3712 of 320)" — not F2 (left edge < 0) | 84 | 12 |
+| S2 | `#rigid-controls { display: none }` | A3 six-DOF: "not rendered" | 84 | 12 |
+| S2 | `#toru-controls::after` covering the panel | A3 TORU panel and button: "covered: … lands on section#toru-controls" | 84 + 84 | 12 + 12 |
+| S2 | `.tl-chooser-item { grid-template-columns: auto 2000px }` | A4: "the list scrolls sideways (2091 > 338)" | 84 | 12 |
+| S3 | `#timeline::after` covering the event bar | A4: "a cluster chip is covered — chip 1 … under div.timeline" (not F3: the cover is not a chip) | 84 | 12 |
+| S4 | `.tl-chooser-name { white-space: nowrap; padding-right: 600px }` | A4 rows: "\"จุดเครื่องยนต์\" overflows its row (668 > 323); … sticks out of its row" | 84 | 12 |
+| S5 | `.tl-chooser { min-width: 150vw; max-width: none }` alone | A4: "the list (8,86 585×320) leaves the 390×844 window" | 84 | 12 |
+| S6 | `#viewport` animated (its margin never stops changing) | resize: "the layout did not settle at 1280×800 after 20 reads" — the journey stops at the first resize | 1 + the thrown error | — |
 
-Totals: S1 528 failures (724 s), S2 600 (416 s), S3 96 (413 s), S4 96 (566 s);
-every journey run under sabotage failed. The setup steps in the last row of the
+Totals: S1 588 failures (813.8 s), S2 672 (586.6 s), S3 96 (577.3 s), S4 96
+(529.5 s), S5 96 (424.1 s), S6 2 (34.5 s); every journey run under sabotage
+failed. (The first version's totals were S1 528, S2 600, S3 96, S4 96; the
+phone A4 failures were already counted then, the phone A1/A2/A3 ones were
+not.) Open findings under sabotage were logged only at their documented places,
+and only where the sabotage left the original failure in place: S3–S5 logged
+F1 3×, F2 4× (S3: F3 0×, all chips covered), F3 2×; S1 logged F1 2× and F3 2×
+(Abort hidden and the take-over button hidden failed as "not rendered"
+instead); S2 logged F3 2× (the moved Abort and the covered TORU panel failed). The setup steps in the last row of the
 assertion table were not sabotaged separately (each one stops the journey
 outright if it fails).
+
+The matchers were also checked offline against 24 constructed results (the
+documented places pass as F1/F2/F3; the same failure at another language,
+guide state, size or control, a cover that is not the footer or not a chip,
+Abort moved off to the left, a phone reachability failure: all fail).
 
 ## 3. Scene sizes for the minimum-scene-size decision
 
@@ -162,7 +202,7 @@ journey runs produced exactly this table.
 
 | Id | Size, language, guide | What | Evidence |
 |---|---|---|---|
-| F1 | 1366×768 RU guide open (six-DOF panel, TORU panel); 1280×800 TH guide open (TORU take-over button) | The footer is drawn over the bottom of the flight column: a press on the six-DOF panel's heading or the TORU panel lands on `footer#footer`, and scrolling it to the middle of the window does not uncover it. Seen in both journey runs. | journey log; `findings/F1-laptop-1366x768-ru-guideopen-footer-over-sixdof.png` (heading at y 724–748 under the footer) |
+| F1 | 1366×768 RU guide open (six-DOF panel, TORU panel); 1280×800 TH guide open (TORU take-over button) | The footer is drawn over the bottom of the flight column: a press on the six-DOF panel's heading or the TORU panel lands on `footer#footer` (the take-over button: on a `span` inside it), and scrolling it to the middle of the window does not uncover it. Seen in both journey runs. | journey log; `findings/F1-laptop-1366x768-ru-guideopen-footer-over-sixdof.png` (heading at y 724–748 under the footer) |
 | F2 | 320×740 EN and RU, guide open and closed | Abort is cut off at the right edge: x 254…330 (EN) and 275…363 (RU) of 320. The page does not scroll sideways (the row clips it), so A1 passes while Abort is partly unreachable. TH fits. | journey log; `findings/F2-phone-320x740-en-abort-cut-off.png` |
 | F3 | 390×844 RU, guide open and closed (Soyuz flight) | Two cluster chips overlap on the event bar: "Сброс башни САС" (x 76, 130 px wide) lies under "Опорная орбита" (x 110, 120 px wide); the first cannot be pressed at its centre. TH and EN fit. | journey log; `findings/F3-phone-390x844-ru-cluster-chips-overlap.png` |
 | F4 | `zoom150-1366x768` (911×512) RU | The Help button (`#btn-help`) is covered by the top bar's navigation (`span.nav-tab-name`): a press lands on the nav tab. Found by the first draft of the journey (which reopened the guide through Help); not a committed assertion. | `findings/F4-zoom150-1366x768-ru-help-covered.png` |
@@ -208,24 +248,27 @@ retaken in fresh pages (recorded in the manifest's `problems`).
 
 | Command | Result |
 |---|---|
-| `npx vite build` then `node tests/browser/run.mjs --dist dist --shots … r2-viewport-matrix` (run 1) | 1/1 passed, 417.8 s; open findings F1 3×, F2 4×, F3 2× |
-| same (run 2) | 1/1 passed, 416.4 s; identical findings and scene table |
+| `npx vite build` then `node tests/browser/run.mjs --dist dist --shots … r2-viewport-matrix` (run 1, with sabotage S1 running alongside) | 1/1 passed, 552.2 s; open findings F1 3×, F2 4×, F3 2×, each at exactly its documented places |
+| same (run 2, with sabotage S3 running alongside) | 1/1 passed, 575.0 s; identical findings; scene table identical to run 1 and to §3 |
+| First version, before the review fixes (alone) | 417.8 s and 416.4 s |
 | `node tests/browser/run.mjs … r2-flight-shell` (harness change) | 1/1 passed, 177.9 s |
 | `node --test tests/browser/shard.test.mjs tests/verification/*.test.mjs` | 59/59 passed |
 | `npx vitest run tests/repo-hygiene.test.ts` | 9/9 passed |
-| Sabotage runs S1–S4 (§2) | each failed as intended |
+| Sabotage runs S1–S6 (§2) | each failed as intended, on desktops and phones |
 
-**Shard planning.** Journeys are split by index (`index % 2`) in sorted order.
-`r2-viewport-matrix` sorts 15th, joins shard 1 of 2, and moves the ten
-journeys after it (`r3-bench-drawings` … `workspace-navigation`) to the other
-shard. On Pages run 37230585947 (`09cc2f5`) the browser steps took 18.8 min
-(shard 1) and 23.4 min (shard 2) against a 30-minute job timeout. This journey
-adds about 7 minutes on a 4-core machine; per-journey CI times were not
-available here (the run's logs and artifacts are not downloadable from this
-container), so whether either shard comes close to 30 minutes is unverified.
-It must be checked on this PR's CI/Pages run before merge; if a shard gets too
-close, the remedy (e.g. three browser shards) is a workflow change outside
-CO-3's allowed files.
+The new A1 found no sideways scroll on the current app at either phone size
+(scrollWidth equals the preset width everywhere); no new open finding.
+
+**Shard risk: merge #90 only after a third Pages browser shard.** This journey
+cannot be checked on PR CI: PR CI runs the smoke journeys only, and the Pages
+workflow (all journeys, split by index into two browser shards) runs only on
+main. `r2-viewport-matrix` sorts 15th and joins shard 1 of 2. The review's
+projection from Pages run 37230585947 (`09cc2f5`: browser steps 18.8 min on
+shard 1, 23.4 min on shard 2) and CI's ~1.5–2× slowdown on flight/WebGL
+journeys puts **Pages browser shard 1 at about 29.6–36.5 min with this journey,
+against a 30-minute job timeout**. Therefore #90 must merge only after a
+separate T-lane PR adds a third Pages browser shard (being prepared); the
+workflow is outside CO-3's allowed files.
 
 ## 7. Owner checklist (G2) — answers left blank
 
