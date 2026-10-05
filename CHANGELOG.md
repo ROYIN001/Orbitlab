@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Docs (CO-8, draft): DECISIONS records the owner's 80 answers of 2026-10-05, the Merge Desk working method, the K1 authorization and G2 on hold; a new session protocol holds the Merge Desk rules; PROGRESS records the K0 merges and lists the plan v2.0 packages; the docs index lists the development documents. Adoption of plan v2.0 is still pending the owner's approval.
 - Docs (CO-2): PROGRESS, the R3 reports and the implementation status record R2/R3 and gate G3 as GitHub and the owner record them; a close-out report audits #71–#83 (merge, CI, Pages, live) and reviews the R1–R3 budget raises.
 - Tests (#81, #82): when a browser journey fails, its diagnostics print the app's start-up marks (bootstrap, workspace, app, textures, ready) with the navigation timing, and, read through the browser process, the CPU each Chrome process used over 3 s and the GPU's feature status.
 - Release checks: the website's publish run tests the browser journeys in three parallel parts instead of two, so a longer journey fits and the slowest part finishes sooner; the PR checks are unchanged.

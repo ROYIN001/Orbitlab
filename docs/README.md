@@ -16,6 +16,19 @@ Read in this order. Each document assumes the ones before it.
 
 The repository's own [README](../README.md) covers installing, running and the source layout.
 
+## Development: plan, decisions and working method
+
+| Document | What it is |
+|---|---|
+| [development/PLAN.md](development/PLAN.md) | The development plan of record, version 1.2 (Thai). The plan v2.0 draft is waiting for the owner's approval; adopting it is package CO-8 (Adopted: pending owner approval (Merge Desk)). |
+| [DECISIONS.md](DECISIONS.md) | Every owner decision, dated, with the owner's words. Where it and another document disagree, it is right. |
+| [development/SESSION-PROTOCOL.md](development/SESSION-PROTOCOL.md) | How a work session opens, tracks, merges and records its work, including the owner's Merge Desk. |
+| [development/PROGRESS.md](development/PROGRESS.md) | Status of every work package: merged, published, live, with SHAs and runs. |
+| [development/VERIFICATION.md](development/VERIFICATION.md) | What CI and Pages check and what a passing run proves. |
+| [development/reports/](development/reports/) | One report per package: scope, checks run, results, limitations, hand-offs. |
+
+Files that code or tests read (their format must not change): [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md), [SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md) and [history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md](history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md).
+
 ## Records
 
 [history/](history/) keeps the working records the project was built from. They are dated,
