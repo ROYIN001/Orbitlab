@@ -22,7 +22,7 @@ import { PLAYGROUND_PRESET_IDS, SITE_INCLINATION_DEG, presetOrbit } from '../src
 import { TOUR } from '../src/orbit/tour';
 import {
   PG_LIMITS, PG_WARPS, PG_DEFAULT_WARP, REPEAT_LIMITS, SLIDER_STEPS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, linearScale, logScale,
-  repeatCount, repeatGroundTrack, thaiRepeatRevs, tourSetup, withApsis,
+  eoRepeatRevs, repeatCount, repeatGroundTrack, thaiRepeatRevs, tourSetup, withApsis,
 } from '../src/orbit/playground-model';
 import { handoffElements } from '../src/orbit/handoff';
 import { defaultApps, eoReport } from '../src/orbit/applications-setup';
@@ -312,6 +312,34 @@ function methodBody(name: string): string {
   return end < 0 ? rest : rest.slice(0, end + 1);
 }
 
+/** The class member (two-space indent) of `source` that holds the text at `at`. */
+function memberAt(source: string, at: number): string {
+  const members = [...source.slice(0, at).matchAll(/\n {2}(?:(?:private|readonly|async|get|set|static) )*([A-Za-z_]\w*)\s*[(<:=]/g)];
+  return members.length ? members[members.length - 1][1] : '';
+}
+
+/** The members of `source` in which `pattern` occurs, one entry per occurrence. */
+function membersWith(source: string, pattern: RegExp): string[] {
+  return [...source.matchAll(new RegExp(pattern.source, 'g'))].map((m) => memberAt(source, m.index!));
+}
+
+/** The argument lists of every `this.setOrbit(…)` call in `source`, split at their top-level commas. */
+function setOrbitCalls(source: string): string[][] {
+  const calls: string[][] = [];
+  for (const m of source.matchAll(/this\.setOrbit\(/g)) {
+    let depth = 1, k = m.index! + m[0].length, arg = '';
+    const args: string[] = [];
+    for (; depth > 0; k++) {
+      const ch = source[k];
+      if ('([{'.includes(ch)) depth++;
+      if (')]}'.includes(ch)) depth--;
+      if (depth === 0 || (depth === 1 && ch === ',')) { args.push(arg.trim()); arg = ''; } else arg += ch;
+    }
+    calls.push(args);
+  }
+  return calls;
+}
+
 describe('a Thai satellite\'s figures go only with its own orbit (M-ORBIT-002)', () => {
   it('forgets the Thai satellite once the orbit on show is another, and keeps the rest of an application', () => {
     const eo = { ...defaultApps('eo'), stationId: 'moscow' };
@@ -346,9 +374,42 @@ describe('a Thai satellite\'s figures go only with its own orbit (M-ORBIT-002)',
     expect(methodBody('choosePreset')).toMatch(/this\.loadHandoff\(/);
     expect(methodBody('loadHandoff')).toMatch(/appsOnOrbit\(this\.apps/);
     expect(methodBody('applyTourStep')).toMatch(/appsOnOrbit\(this\.apps/);
-    // the Thai satellite is named only with the orbit made from it, and its repeat read only through the rule
-    expect(playgroundSource).not.toMatch(/thaiId: id/);
+    // its repeat is read only through the rule
     expect(playgroundSource).not.toMatch(/repeat\?\.revs/);
+  });
+
+  it('the orbit is replaced only where the Thai satellite is forgotten, and named only with its own orbit (the DOM part)', () => {
+    const writers = /this\.orbit\s*=(?!=)/;
+    const allowed = ['setOrbit', 'loadHandoff', 'applyTourStep'];
+    const found = membersWith(playgroundSource, writers);
+    expect(found.length).toBe(3);
+    for (const m of found) expect(allowed, m).toContain(m);
+    // the check bites: an orbit written straight in choosePreset is caught
+    const mutated = playgroundSource.replace('    this.jd0 = julianDate(new Date());\n    this.time = 0;\n    this.planStart = 0;\n    // a sun-synchronous',
+      '    this.jd0 = julianDate(new Date());\n    this.orbit = presetOrbit(id, this.jd0);\n    this.time = 0;\n    this.planStart = 0;\n    // a sun-synchronous');
+    expect(mutated).not.toBe(playgroundSource);
+    expect(membersWith(mutated, writers)).toContain('choosePreset');
+    // a Thai satellite is set nowhere but through setOrbit's third argument …
+    expect(membersWith(playgroundSource, /\bthaiId\s*[:=](?!=)/)).toEqual(['setOrbit']);
+    // … and the one call that passes it gives the orbit made from that satellite
+    const named = setOrbitCalls(playgroundSource).filter((args) => args.length > 2);
+    expect(named.length).toBe(1);
+    expect(named[0][0]).toMatch(/^thaiOrbit\(sat, /);
+    expect(setOrbitCalls(playgroundSource).length).toBeGreaterThan(5);
+  });
+
+  it('gives the Thai satellite\'s repeat only on its own orbit, with J2 on (the EO report\'s rule)', () => {
+    const shown = appsOnOrbit(defaultApps('eo'), 'theos2')!;
+    expect(eoRepeatRevs(shown, 0, true)).toBe(385);
+    // after a planned burn, and while spiralling, the orbit flown is no longer the satellite's
+    expect(eoRepeatRevs(shown, 1, true)).toBeNull();
+    expect(eoRepeatRevs(shown, 2, true)).toBeNull();
+    expect(eoRepeatRevs(shown, -1, true)).toBeNull();
+    // with J2 off the plane does not turn as the published grid assumes
+    expect(eoRepeatRevs(shown, 0, false)).toBeNull();
+    expect(eoRepeatRevs(appsOnOrbit(shown), 0, true)).toBeNull();
+    expect(eoRepeatRevs(null, 0, true)).toBeNull();
+    expect(methodBody('appsSection')).toMatch(/eoRepeatRevs\(a, index, this\.j2\)/);
   });
 });
 

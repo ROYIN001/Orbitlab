@@ -43,6 +43,8 @@
   orbit; the Thai satellite is named only with its own orbit. `handoffEntry`
   uses it (its tests are unchanged).
 - `thaiRepeatRevs(apps)`: the named satellite's published revolutions, or null.
+- `eoRepeatRevs(apps, flownIndex, j2)`: the repeat the EO report may give
+  (review follow-up).
 - `flownAt(plan, orbit, t, j2)`: moved from the view, unchanged in behaviour.
 - `REPEAT_LIMITS` and `repeatCount(text, field)`: whole numbers only (digits,
   so independent of the decimal format), 1–500 revolutions, 1–60 days.
@@ -51,7 +53,9 @@
 
 - `setOrbit(next, presetId, thaiId = null)` applies `appsOnOrbit`; `showThai`
   passes its id through it; `loadHandoff` and `applyTourStep` forget it too.
-  The EO report reads `thaiRepeatRevs(a)`.
+  The EO report reads `eoRepeatRevs(a, index, this.j2)` (model): the
+  satellite's published repeat only while the orbit flown is its own (segment
+  0, not after a burn nor while spiralling) and with J2 on.
 - The tour card's period is `this.live.period`, updated in `updateLive()`
   (every 0.2 s) from the orbit flown; `renderFacts()` returns at the Watch
   level before it resets the readouts; `renderTour()` resets them instead.
@@ -93,14 +97,27 @@ Tests  9 failed | 37 passed (46)
 
 Passing after (the fix commits `3729a07` and the burn follow-up after it; rerun on the branch head):
 
-- `tests/orbit-playground.test.ts` + `tests/result-slot.test.ts`: 46/46.
+- `tests/orbit-playground.test.ts` + `tests/result-slot.test.ts`: 48/48.
 - With `tests/i18n.test.ts`, `tests/i18n-counts.test.ts`, `tests/repo-hygiene.test.ts`,
   `tests/architecture.test.ts`, `tests/applications.test.ts`, `tests/budget.test.ts`,
   `tests/maneuvers.test.ts`, `tests/maneuver-setup.test.ts`, `tests/orbit-handoff.test.ts`,
   `tests/d06-build-orbit-handoff.test.ts`, `tests/sky-import.test.ts`, `tests/sky-tour.test.ts`,
-  `tests/section-plan.test.ts`, `tests/case-export-race.test.ts`: 16 files, 185/185.
+  `tests/section-plan.test.ts`, `tests/case-export-race.test.ts`: 16 files, 187/187.
 - `npm run typecheck`: clean.
 - `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs`: 64/64.
+
+Second-agent review (0 blocking) follow-ups, in their own commit:
+
+- Every `this.orbit =` in the playground's source is checked to sit in
+  `setOrbit`, `loadHandoff` or `applyTourStep`; the test also writes one into
+  `choosePreset` in a copy of the source and shows the check catches it.
+- `thaiId` is set only in `setOrbit`, and the one `setOrbit` call that passes
+  a Thai satellite gives `thaiOrbit(sat, …)` (replaces the `thaiId: id` text
+  check, which a rename would have passed).
+- `eoRepeatRevs` unit test: index 0 with J2 on gives 385 for THEOS-2; after a
+  burn (1, 2), while spiralling (−1), with J2 off, or with no satellite named,
+  none. `appsSection()` is checked to call it.
+- `runNapaCase()` and `caseInputs()` are commented as public for the test.
 
 No browser journey or build was run (CPU reserved for this session). The
 view wiring is held by source checks in `tests/orbit-playground.test.ts`
@@ -113,8 +130,7 @@ tests.
   "this is where the ISS is at this moment" while the clock runs warped.
   Not in this PR; it stays open under M-ORBIT-003 for FX-3 PR2.
 - A maneuver planned from a Thai satellite's orbit keeps the satellite named
-  (the plan starts from its orbit), but the EO report uses its repeat only
-  while the orbit flown is still the start segment; once a burn is made the
-  repeat is not reported. This branch of `appsSection()` has no unit test
-  (DOM only); adopting the plan forgets the satellite through `setOrbit`.
+  (the plan starts from its orbit); the EO report gives its repeat only on
+  the start segment (`eoRepeatRevs`), and adopting the plan forgets the
+  satellite through `setOrbit`.
 - The `ui/orbit/dom.ts` part of M-BUILD-029 is left for its own change.

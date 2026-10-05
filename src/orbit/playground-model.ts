@@ -136,6 +136,17 @@ export function thaiRepeatRevs(apps: { thaiId: string | null } | null): number |
 }
 
 /**
+ * The repeat cycle the Earth-observation report may give for the orbit
+ * flown: the named Thai satellite's published one only while the orbit flown
+ * is still its own — the plan's start segment (`flownIndex` 0, not after a
+ * burn nor while spiralling, −1) — and with J2 on, which turns its plane the
+ * way the published grid assumes. Otherwise none.
+ */
+export function eoRepeatRevs(apps: { thaiId: string | null } | null, flownIndex: number, j2: boolean): number | null {
+  return flownIndex === 0 && j2 ? thaiRepeatRevs(apps) : null;
+}
+
+/**
  * The orbit flown at `t` s, the time along it, and which of the plan's
  * segments it is (−1 while spiralling): the start orbit with no plan.
  * M-ORBIT-003: what the playground's readouts — the Watch tour card's

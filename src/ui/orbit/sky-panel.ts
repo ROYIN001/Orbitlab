@@ -965,7 +965,10 @@ export class RealSky {
     this.host.refreshFacts();
   }
 
-  /** NAPA-2 from its first element set, as a tumbling box and with B fitted to the set's decay (P2.5). */
+  /**
+   * NAPA-2 from its first element set, as a tumbling box and with B fitted to the set's decay (P2.5).
+   * Public, like `caseInputs()`, only so tests/result-slot.test.ts can run it and read its freshness.
+   */
   async runNapaCase(): Promise<void> {
     const slot = this.results.napaCase;
     const gen = slot.start(this.caseInputs());
@@ -981,6 +984,7 @@ export class RealSky {
     })) this.host.refreshFacts();
   }
 
+  /** The inputs the case studies are kept with (the data mode); public only for tests/result-slot.test.ts. */
   caseInputs(): CaseInputs {
     return { sw: this.host.provider().mode };
   }

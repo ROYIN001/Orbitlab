@@ -32,7 +32,7 @@ import { TOUR, type TourView } from '../../orbit/tour';
 import { SKY_TOUR, type SkyTourStep } from '../../orbit/sky-tour';
 import {
   PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, REPEAT_LIMITS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, linearScale,
-  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, thaiRepeatRevs, tourSetup, withApsis, type SliderScale,
+  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, eoRepeatRevs, tourSetup, withApsis, type SliderScale,
 } from '../../orbit/playground-model';
 import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
 import {
@@ -801,11 +801,10 @@ export class OrbitPlayground {
     const { orbit: flown, index } = this.flownAt(this.time);
     const thai = a.thaiId ? thaiSatelliteById(a.thaiId) ?? null : null;
     const ltan = nodeLocalTime(s.raan, this.orbit.jd0 + this.time / 86400);
-    // M-ORBIT-002: the Thai satellite's repeat describes its own orbit only, not one a planned burn has left
-    const revs = index === 0 ? thaiRepeatRevs(a) : null;
     return appsResults(this.appsHost, a, {
       comms: a.kind === 'comms' ? commsReport(a, s) : null,
-      eo: a.kind === 'eo' ? eoReport(a, flown, s, this.j2, revs, ltan) : null,
+      // M-ORBIT-002: the Thai satellite's repeat describes its own orbit only, not one a planned burn has left
+      eo: a.kind === 'eo' ? eoReport(a, flown, s, this.j2, eoRepeatRevs(a, index, this.j2), ltan) : null,
       thai,
     });
   }
