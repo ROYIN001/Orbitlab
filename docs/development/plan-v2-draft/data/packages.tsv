@@ -1,0 +1,101 @@
+package	home_section	wave	owner	agent_days	pr_estimate	execution_authorized	title	items
+IDSCHEME	S00	-	-	2	0	false	Id scheme and precedence	M-PLATFORM-065 M-PLATFORM-067
+PRINCIPLE	S02	-	-	2	0	false	Principles and not-to-do	M-LAUNCH-074 M-LEARNING-063 M-LEARNING-071 M-ORBIT-036 M-ORBIT-064 M-PHYSICS-063 M-PLATFORM-019 M-PLATFORM-079
+DELIVERED	S03	-	-	0	0	false	Delivered (done) record	M-BUILD-001 M-BUILD-002 M-BUILD-003 M-BUILD-004 M-BUILD-005 M-BUILD-034 M-BUILD-035 M-BUILD-036 M-BUILD-037 M-BUILD-038 M-BUILD-039 M-BUILD-040 M-LAUNCH-001 M-LAUNCH-005 M-LAUNCH-007 M-LAUNCH-009 M-LAUNCH-010 M-LAUNCH-013 M-LAUNCH-016 M-LAUNCH-021 M-LAUNCH-080 M-LAUNCH-083 M-LAUNCH-087 M-LEARNING-039 M-LEARNING-040 M-LEARNING-041 M-LEARNING-048 M-LEARNING-049 M-LEARNING-065 M-ORBIT-048 M-ORBIT-049 M-ORBIT-050 M-ORBIT-051 M-ORBIT-052 M-ORBIT-053 M-ORBIT-054 M-ORBIT-055 M-ORBIT-056 M-ORBIT-057 M-ORBIT-058 M-ORBIT-059 M-ORBIT-060 M-ORBIT-061 M-ORBIT-062 M-ORBIT-063 M-PHYSICS-070 M-PHYSICS-071 M-PHYSICS-072 M-PLATFORM-029 M-PLATFORM-039 M-PLATFORM-040 M-PLATFORM-048 M-PLATFORM-049 M-PLATFORM-076 M-PLATFORM-080
+METRIC	S04	-	-	4.5	0	false	Metrics and budgets	M-LAUNCH-073 M-LEARNING-064 M-PHYSICS-062 M-PLATFORM-024 M-PLATFORM-043
+I-HOOKS	S05	K1-K2	I	2.5	5	false	I-train hooks pseudo-package: one hook PR per lane package touching main.ts/index.html/shared CSS (FX-8, EQ-4, ED-I18N-1, ED-INST-1 About page, R1.6 strings); EQ-2 step 1 (setupViews) is an I PR counted in EQ-2	
+CO-1	S06	K0	T+I (H approves)	0.5	1	false	Split code vs data budget ceilings; rule on the merged raises (#75-#80) under D-38	M-PLATFORM-063
+CO-2	S06	K0	I	1	2	false	Record R2/R3 delivery and G3 (owner 2026-10-04); fix PROGRESS/R2/R3/IMPLEMENTATION-STATUS rows, CHANGELOG #71-#83; re-verify ledger rows touched by #75-#82	M-PLAN-017 M-PLATFORM-064
+CO-3	S06	K0	H+I (Q screenshots)	6	2	false	Gate G2 sign-off: D08 + assumptions A1-A5, R2.4 replay rule, R2 screenshot matrix	M-LAUNCH-017 M-LAUNCH-018 M-LAUNCH-019
+CO-4	S06	K0-K2	I/U (P reviews 032)	13	11	false	R2 correctness and regression series (data loss LUI-01 first)	M-LAUNCH-004 M-LAUNCH-006 M-LAUNCH-008 M-LAUNCH-011 M-LAUNCH-022 M-LAUNCH-025 M-LAUNCH-026 M-LAUNCH-027 M-LAUNCH-032 M-LAUNCH-066 M-PLATFORM-037
+CO-5	S06	K0	Q+T	1.5	1	false	R2 acceptance journey completion and PR-CI smoke slice	M-LAUNCH-020
+CO-6	S06	K0	P+Q	1.5	1	false	Physics evidence baseline on exact main (full heavy + six-DOF fleet + fingerprints)	M-PHYSICS-001
+CO-7	S06	K0	H then L-C	0.5	1	false	P0 institutional naming (D-2) decision and XS fix	M-LEARNING-054
+CO-8	S06	K0	I	2	2	false	Adopt master plan: docs index, tracker/session protocol, banners	M-PLATFORM-075 M-PLATFORM-077
+R0.2r	S07	K1	S (+P,C,U)	4	1	false	Residual domain ADRs: full FlightLifecycle, CameraPolicy, CraftState/Handoff, physical state, DesignPreview, ResultAction	M-PLAN-013
+R0.3r	S07	K1	T+Q	1.5	1	false	Machine-readable change-to-check map and trial	M-PLAN-014
+R0.4	S07	K0-K1	T+Q (P,B,L scenario owners)	30.5	10	false	Equivalence oracles, bitwise harnesses and standing perf gate	M-BUILD-024 M-BUILD-025 M-PHYSICS-002 M-PHYSICS-003 M-PHYSICS-060 M-PLAN-002 M-PLAN-003 M-PLAN-004 M-PLAN-010 M-PLAN-018 M-PLAN-020 M-PLATFORM-041
+DEC	S08	K0-K4	H (I records)	26	0	false	Decision queue	M-BUILD-021 M-LAUNCH-039 M-LEARNING-013 M-LEARNING-072 M-ORBIT-028 M-ORBIT-047 M-PHYSICS-021 M-PHYSICS-027 M-PLAN-005 M-PLAN-006 M-PLAN-007 M-PLAN-008 M-PLATFORM-011 M-PLATFORM-020 M-PLATFORM-032 M-PLATFORM-042 M-PLATFORM-044 M-PLATFORM-052 M-PLATFORM-066 M-PLATFORM-078
+EQ-1	S09	K1	T	1.5	1	false	Precache transfer without re-download (revision-verified)	M-PLATFORM-021
+EQ-10	S09	K2	P	8.5	3	false	E-PHYS-3 pre-R4 six-DOF/point-mass runtime no-op	M-PHYSICS-012 M-PHYSICS-013 M-PHYSICS-014 M-PHYSICS-015
+EQ-11	S09	K2	P	1.5	1	false	E-PHYS-2 lunar memo no-op	M-PHYSICS-011
+EQ-12	S09	K2-K3	I/U	11.5	4	false	Telemetry, formatting and Launch tool jobs	M-LAUNCH-023 M-LAUNCH-036 M-LAUNCH-037 M-LAUNCH-038 M-LAUNCH-084 M-LAUNCH-085
+EQ-13	S09	K3	B	10	4	false	Build efficiency	M-BUILD-014 M-BUILD-026 M-BUILD-027 M-BUILD-028 M-PLAN-029
+EQ-14	S09	K3-K5	owner of each file	14	5	false	Shared code health with identical output	M-LAUNCH-047 M-LAUNCH-048 M-LEARNING-006 M-LEARNING-024 M-PLATFORM-038
+EQ-15	S09	K3	I (+U, Q)	15	5	false	Declared refactor window: three seams out of main.ts before R5.1/R6 (D-62); panel.ts sub-panels after R2 complete	M-PLATFORM-055
+EQ-2	S09	K1-K2	C+I	11	4	false	Render startup and transitions: rebuild cache, prewarm, startup critical path	M-LAUNCH-041 M-LAUNCH-042 M-LAUNCH-049 M-PLAN-001
+EQ-3	S09	K2	I+C	12.5	4	false	Per-frame and covered/static-scene hygiene	M-LAUNCH-024 M-LAUNCH-040 M-LAUNCH-043 M-LAUNCH-044 M-LAUNCH-086
+EQ-4	S09	K2	O (+I main.ts line)	7	2	false	Orbit playground (lazy context, dirty redraw, in-place results)	M-ORBIT-010 M-ORBIT-011 M-ORBIT-012
+EQ-5	S09	K2	O (+I home)	9	3	false	Orbit tools numerics and helpers	M-ORBIT-006 M-ORBIT-013 M-ORBIT-014 M-ORBIT-015 M-ORBIT-016 M-ORBIT-017 M-ORBIT-018 M-PHYSICS-017
+EQ-6	S09	K2	I (+L-C)	8	3	false	Active-language dictionaries, then typed keys	M-LEARNING-036 M-PLATFORM-031
+EQ-7	S09	K2-K5	I	11	4	false	Lazy code loading	M-LAUNCH-045 M-PLATFORM-034 M-PLATFORM-036
+EQ-8	S09	K3	T+I (P review)	5.5	2	false	Workers as ES modules with shared physics chunks	M-BUILD-030 M-PLATFORM-033
+EQ-9	S09	K2	P	1.5	1	false	E-PHYS-1 propagator no-op	M-PHYSICS-010
+FX-1	S10	K1	B	7.5	2	false	Build data safety	M-BUILD-006 M-BUILD-007 M-BUILD-008 M-BUILD-029
+FX-2	S10	K1	L-UI (+L-C bank)	6.5	3	false	Lessons UI and assessment data safety (ex B-LES-1)	M-LEARNING-001 M-LEARNING-002 M-LEARNING-003 M-LEARNING-004 M-LEARNING-027
+FX-3	S10	K1-K2	O	6	2	false	Orbit correctness and feedback (ex B-ORBIT-1)	M-ORBIT-001 M-ORBIT-002 M-ORBIT-003 M-ORBIT-007 M-ORBIT-008 M-ORBIT-029
+FX-4	S10	K2	T+P (O,B,I adopt)	10	3	false	One worker-job runner and honest error feedback (CR:D1)	M-BUILD-010 M-LAUNCH-028 M-ORBIT-004 M-ORBIT-005 M-PLATFORM-035
+FX-5	S10	K1-K2	I/U (P reviews)	6.5	2	false	Launch analysis correctness (displayed vs live, labels, CSV)	M-LAUNCH-029 M-LAUNCH-031 M-LAUNCH-034 M-LAUNCH-035 M-LAUNCH-060
+FX-6	S10	K2	T (+importer owners)	1.5	1	false	Bounded file readers for every importer	M-PLATFORM-016
+FX-7	S10	K1-K2	T (L-UI strings)	4	3	false	PWA update and install UX	M-PLATFORM-022 M-PLATFORM-023 M-PLATFORM-025 M-PLATFORM-026
+FX-8	S10	K1	C (+I, O)	1.5	1	false	WebGL context-loss recovery (data/flight continuity)	M-PLAN-019
+R1.6	S10	K1	L (L-UI strings; T for persist)	24	8	false	Storage hardening	M-LEARNING-005 M-PLAN-031 M-PLATFORM-001 M-PLATFORM-002 M-PLATFORM-003 M-PLATFORM-004 M-PLATFORM-005 M-PLATFORM-006 M-PLATFORM-007 M-PLATFORM-008 M-PLATFORM-009 M-PLATFORM-010 M-PLATFORM-012 M-PLATFORM-013 M-PLATFORM-014 M-PLATFORM-015 M-PLATFORM-018 M-PLATFORM-074
+R2.1r	S11	K2	U+I (C render)	13.5	4	false	R2.1 remainder after D08	M-LAUNCH-002 M-LAUNCH-003 M-PLAN-009 M-PLAN-015
+R2.2r	S11	K2	C+I	2.5	2	false	R2.2 follow-ups	M-LAUNCH-012 M-LAUNCH-061 M-PLAN-021
+R2.3s2	S11	K2-K3	U	8	3	false	R2.3 step 2 dock/resize/reorder	M-LAUNCH-014
+R2.5	S11	K2	Q gate; I/U/C/O fixes	16.5	6	false	Accessibility and Thai typography baseline	M-LAUNCH-050 M-LAUNCH-051 M-LAUNCH-052 M-LAUNCH-053 M-LAUNCH-054 M-LAUNCH-055 M-LAUNCH-056 M-LAUNCH-057 M-LAUNCH-058 M-LAUNCH-059
+R2.6	S11	K2	V (+C, I)	4	1	false	Event jump row and shared seek-to-event API	M-LAUNCH-062
+R3.0	S12	K3	C (+O, I)	4	3	false	R3+ follow-on: render lifecycle and WebGL context budget (plan-added; not a G3 item)	M-LAUNCH-046
+R3.1r	S12	K3	S (+I, L, B)	13.5	7	false	R3+ follow-on: provenance hardening after G3 (DesignRef paths and single writer, design record fields, report link)	M-BUILD-011 M-LAUNCH-030 M-PLAN-028
+R3.2r	S12	K3	B-R/B (P-D engine-layout)	8	5	false	R3+ follow-on: rocket drawing fidelity and bench acceptance rows	M-LAUNCH-076
+R3.3r	S12	K3	B-S/B	8	3	false	R3+ follow-on: satellite views (Watch exploded view, Explore picture) and section x level inventory	M-LAUNCH-081
+R3.4r	S12	K3	B	29	10	false	R3+ follow-on: Build integration (freshness, ratings, targeted edit, localisation, a11y)	M-BUILD-009 M-BUILD-012 M-BUILD-015 M-BUILD-031 M-BUILD-032 M-LAUNCH-065 M-LEARNING-038 M-PLAN-027 M-PLAN-030
+R3.5r	S12	K3-K4	B (+I Home via I-train)	7	3	false	R3+ follow-on: Fly it targets, Home audience cards (HU-1), share links (deferred)	M-BUILD-013 M-BUILD-023 M-LAUNCH-067
+R3.6	S12	K4	B	4	1	false	R3+ follow-on: Build editor depth (D-21)	M-BUILD-022
+R4.1	S13	K1-K3	P-D (+P, Q)	21	7	false	Catalogue and source ledger	M-ORBIT-043 M-PHYSICS-040 M-PHYSICS-041 M-PHYSICS-048 M-PHYSICS-049 M-PLATFORM-070
+R4.2	S13	K4	P-D/P	42	14	false	Per-family pipeline	M-LAUNCH-077 M-LAUNCH-078 M-LAUNCH-079 M-PHYSICS-023 M-PHYSICS-024 M-PHYSICS-042 M-PHYSICS-043 M-PHYSICS-044 M-PHYSICS-045 M-PHYSICS-046 M-PHYSICS-047 M-PHYSICS-052
+R4.2-S	S13	K3	P-D then P	9	3	false	Soyuz subset of R4.2 for G4-S (R4.2 steps 2-4: Max-Q evidence, recorder/CSV actual levels under D-57, Soyuz data fix only if proven); pseudo-package, items stay in R4.2	
+R4.3	S13	K4	P (B for ratings)	45.5	15	false	Shared control, upper stages and known misses	M-BUILD-016 M-BUILD-017 M-BUILD-018 M-BUILD-019 M-BUILD-020 M-ORBIT-046 M-PHYSICS-029 M-PHYSICS-030
+R4.4	S13	K4	P/Q/T (independent reviewer)	13.5	4	false	Fleet acceptance and quality labels	M-LAUNCH-072 M-PHYSICS-050 M-PHYSICS-051 M-PHYSICS-061
+R4.5	S14	K4	P	21.5	7	false	Model-base consistency (propagator, atmosphere, frames, constants)	M-PHYSICS-020 M-PHYSICS-022 M-PHYSICS-025 M-PHYSICS-026 M-PHYSICS-028
+R4.6	S14	K4-K5	O+P	32	11	false	Orbit-tools fidelity	M-ORBIT-019 M-ORBIT-020 M-ORBIT-021 M-ORBIT-022 M-ORBIT-023
+R4.7	S14	K4	C/P-R+P	4	1	false	Rendering fidelity tied to physical state and asset budgets	M-PLAN-016
+R5.1	S15	K5	I/P (U,C via APIs)	8	3	false	ISS mission reachable and continuous	M-ORBIT-024
+R5.2	S15	K5	P	15	5	false	Target orbit and phasing	M-ORBIT-025
+R5.3	S15	K5	P	15	5	false	Approach, contact dynamics	M-ORBIT-026
+R5.4	S15	K5	P-R/B+P (I)	9.5	3	false	Ship/station/port visuals and spacecraft expansion	M-LAUNCH-015 M-ORBIT-027
+R6.1	S15	K6	A (+P,S)	8	3	false	Cockpit scope and systems spec	M-PLAN-022
+R6.2	S15	K6	A (+C,I)	15	5	false	Cockpit view, instruments, audio, force cues	M-PLAN-023
+R6.3	S15	K6	A/Q/L-C	8	3	false	Training missions and user tests	M-PLAN-024
+R8	S15	K6	P+O	47.5	16	false	Moon: generalise C01 (R8.1-R8.5)	M-ORBIT-031 M-ORBIT-032 M-ORBIT-033 M-ORBIT-034 M-ORBIT-035 M-PHYSICS-018
+ED-ASSESS-1	S16	K2	L-C	1.5	1	false	Placement report honesty	M-LEARNING-026
+ED-CLASS-1	S16	K3	L/L-UI	5.5	2	false	Teacher restore and class view; Web Share	M-LAUNCH-069 M-LEARNING-042
+ED-CLASS-2	S16	K3-K4	L-C (+I)	8	3	false	Teacher guide and presentation mode	M-LEARNING-043 M-LEARNING-044
+ED-EVAL	S16	K6	H	16	5	false	Evaluation study and validation paper (deferred)	M-LEARNING-062 M-LEARNING-070
+ED-GAME-1	S16	K4-K6	L-C/L-UI	35	12	false	Challenges and campaign (X01/X02)	M-LEARNING-061 M-LEARNING-073 M-LEARNING-074 M-LEARNING-075
+ED-I18N-1	S16	K1	L-C (I composes)	3	2	false	Decided Thai terms sweep and glossary source	M-LEARNING-029 M-LEARNING-030
+ED-I18N-2	S16	K3	L-C (I composes)	10.5	4	false	Thai spelling, number/date localisation, dead copy	M-LAUNCH-068 M-LEARNING-031 M-LEARNING-034 M-LEARNING-035 M-LEARNING-037
+ED-I18N-3	S16	K4	L-C/L-UI	4	1	false	Glossary at point of use	M-LEARNING-032
+ED-INST-1	S16	K1-K3	L-C+T	15	5	false	Privacy, intranet guide/kit, Thai user guide	M-LEARNING-045 M-LEARNING-046 M-LEARNING-047 M-PLATFORM-073
+ED-INST-2	S16	K5	H+L-C	12	4	false	Pilot, maintainer guide and bus factor	M-LEARNING-056 M-LEARNING-069
+ED-LES-1	S16	K1-K2	L-C (+L-UI)	14	5	false	Lesson integrity	M-LEARNING-007 M-LEARNING-008 M-LEARNING-009 M-LEARNING-010 M-LEARNING-011 M-LEARNING-012
+ED-LES-2	S16	K3	L-UI/L-C	17.5	5	false	Lesson UX and fail-strip explanations	M-LAUNCH-063 M-LEARNING-016 M-LEARNING-017 M-LEARNING-018
+ED-LES-3	S16	K4	L-C/L	13.5	4	false	Attempts, variants, mission-tied worksheets	M-LEARNING-015 M-LEARNING-021 M-LEARNING-022
+ED-MIL-1	S16	K4	O+L-C	24	8	false	Military/SSA track (public sources, consequences only)	M-ORBIT-009 M-ORBIT-037 M-ORBIT-038 M-ORBIT-039
+ED-PACK-1	S16	K3	L-C	8	3	false	Curriculum map and content pipeline	M-LEARNING-025 M-LEARNING-052
+ED-PACK-2	S16	K3-K4	L-C (H confirms)	8	3	false	First pilot pack and research lessons	M-LEARNING-055 M-LEARNING-059
+ED-PED-1	S16	K4	L-C/L-UI	16	5	false	Predict-observe-explain and misconceptions	M-LAUNCH-064 M-LEARNING-019 M-LEARNING-020
+ED-PED-2	S16	K4	L-C	5.5	2	false	Notebook file format and D06/D07 outcomes	M-LEARNING-023 M-LEARNING-060
+ED-PED-3	S16	K4-K6	L-C (+O military tools)	23	8	false	Cadet labs and SDA course	M-LEARNING-057 M-LEARNING-058
+HU-1	S16	K0-K2	H (Q supports)	4	1	false	User study round 1 (merged protocol)	M-LEARNING-050
+HU-2	S16	K1-K3	H	5.5	2	false	Pack review and source re-check	M-LEARNING-053 M-ORBIT-045
+HU-3	S16	K1-K3	H + RU reader	5.5	2	false	Native-speaker review TH/RU	M-LAUNCH-070 M-LEARNING-033
+HU-4	S16	K4	H	4	1	false	User study round 2	M-LEARNING-051
+HU-5	S16	K4	H	4	1	false	Item statistics and editorial sign-off	M-LEARNING-028
+HU-6	S16	K1-K4	H+Q	1.5	1	false	Real-device sessions and feedback intake	M-PLAN-011
+R7.1	S17	each gate	Q/T	32	11	false	Cross-system journeys per gate	M-LAUNCH-071 M-LEARNING-014 M-PLAN-025 M-PLATFORM-051 M-PLATFORM-061
+R7.2	S17	each gate	I/T/L/P	14	5	false	PR/merge/release, tagged releases, rollback, retrospective	M-LEARNING-067 M-LEARNING-068 M-ORBIT-041 M-PLAN-026 M-PLATFORM-047
+R7.3	S17	continuous	T	16	5	false	CI and test infrastructure	M-PHYSICS-064 M-PLATFORM-045 M-PLATFORM-050 M-PLATFORM-053 M-PLATFORM-054 M-PLATFORM-056 M-PLATFORM-057 M-PLATFORM-058 M-PLATFORM-059 M-PLATFORM-060
+R7.4	S17	continuous	T (+I index.html)	10	3	false	Robustness, security and data gates	M-LEARNING-066 M-ORBIT-040 M-ORBIT-044 M-PLATFORM-017 M-PLATFORM-027 M-PLATFORM-028 M-PLATFORM-030
+R7.5	S17	continuous	I (+P physics docs)	7.5	4	false	Docs truth and hygiene	M-BUILD-033 M-ORBIT-030 M-PLATFORM-062 M-PLATFORM-068 M-PLATFORM-069 M-PLATFORM-071 M-PLATFORM-072
+REJECTED	S19	-	-	4	0	false	Rejected / superseded (Appendix C)	M-LAUNCH-033 M-LAUNCH-075 M-LAUNCH-082 M-LEARNING-076 M-ORBIT-042 M-ORBIT-065 M-ORBIT-066 M-PHYSICS-016 M-PHYSICS-053 M-PHYSICS-054 M-PHYSICS-073 M-PLAN-012 M-PLATFORM-046 M-PLATFORM-081 M-PLATFORM-082
