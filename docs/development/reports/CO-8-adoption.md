@@ -70,7 +70,12 @@ Source: the owner's answers from the decision page (one JSON record per key: cho
 - **D-23 "when"** was answered "(ข) ไม่รับ / ต้องการแก้" (not accepted / wants a change) without saying what change. Recorded as such; it is to be asked again before any institutional pilot.
 - **D-16 note** ends mid-word as stored: "ให้คะแนนเป็นระดับตัวเลขพร้อมมีเกณฑ์ผ่าน/ไม่ผ". Recorded exactly as stored; the reading "numeric levels with a pass/fail threshold" is marked as a gloss to confirm.
 - **D-36** was answered "(ก) ยืนยันตามภาพ…" at 01:55Z, before the G2 review; G2 is on HOLD since 14:49Z. Both are recorded; G2 is not signed.
+- **D-36.A3 note** narrows "read-only as built": values that can still really be adjusted stay editable, and only values past their window need a restart. CO-4 step 1 (#86) holds in-flight edits for the next launch; whether each value is still adjustable in flight is a follow-up for CO-4 / G2.
 - **D-55 note** asks for a system test manual before anything goes to the person running tests; it is a condition on R4.4.
+
+## Files outside the S06 allowed list
+
+`CHANGELOG.md` (one line per PR, repository rule) and this report (`docs/development/reports/CO-8-adoption.md`, one report per task under D-25) are not in the CO-8 allowed list; both are added under those rules.
 
 ## Spec items not done in this PR, and why
 
