@@ -186,7 +186,9 @@ export async function prepareOffline(scope: SwScope, manifest: PrecacheManifest,
  * Fill the new version's cache: a file an older cache holds at the same
  * revision is copied from it, everything else is downloaded (past the HTTP
  * cache, so a stale copy cannot be precached). Any failed download fails the
- * install, and the running version stays.
+ * install, and the running version stays. So does a download whose bytes are
+ * not its manifest revision (a deploy landing mid-install), checked as the
+ * repair path checks it: it is never put, and no completion marker is written.
  */
 export async function precache(scope: SwScope, manifest: PrecacheManifest): Promise<void> {
   const base = new URL(scope.registration.scope);
@@ -205,6 +207,8 @@ export async function precache(scope: SwScope, manifest: PrecacheManifest): Prom
     if (kept) { await cache.put(url, kept); return; }
     const response = await scope.fetch(url, { cache: 'reload' });
     if (!response.ok) throw new Error(`precache: ${entry.url} answered ${response.status}`);
+    const revision = await contentRevision(await response.clone().arrayBuffer());
+    if (revision !== entry.revision) throw new Error(`precache: ${entry.url} answered revision ${revision}, not ${entry.revision}`);
     await cache.put(url, response);
   }));
   await cache.put(new URL(MANIFEST_KEY, base).href, new Response(JSON.stringify(manifest), { headers: { 'content-type': 'application/json' } }));
