@@ -1657,7 +1657,7 @@ source: open it with **Open lesson file…** and bring NAPA-2's power margin up 
 
 **Lesson packs.** Below the tracks, **Lesson packs matched to curricula** lists five packs, one
 group each: IPST basic science (M.5–M.6), IPST Earth, astronomy and space (M.6), IPST additional
-physics (M.4–M.6), the Royal Thai Air Force Academy's cadets, and Russia's speciality 24.05.06
+physics (M.4–M.6), space flight dynamics and control (an institution-level lab for undergraduate aeronautical engineers), and Russia's speciality 24.05.06
 (flight vehicle control systems). Each says who it is for and which curriculum it follows, and
 **About this pack and its sources** names its sources and offers **Save the pack file**. Its review details identify learning goals, source pages, unmeasured classroom duration and pending teacher/native-language review; automated checks do not count as that review. Every pack
 is a **draft awaiting review by Orbitlab's owner**: its curriculum codes and wording have not yet

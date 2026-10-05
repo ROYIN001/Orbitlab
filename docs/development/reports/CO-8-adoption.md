@@ -26,7 +26,7 @@ report: docs/development/reports/CO-8-adoption.md
 |---|---|
 | `docs/DECISIONS.md` | New section "Decided 2026-10-05": one row per answer (80), plus the Merge Desk working method, the owner's note on #84, G2 HOLD and the K1 authorization; the D-59 move table (S07 §07.6). The D-3/D-4 deferred row and the "Still open" list now point to the answers. Thai summary line. |
 | `docs/development/SESSION-PROTOCOL.md` | New. §1 Merge Desk (S18 §18.14a) with its exemption; §2 the rules the owner decided (D-65, D-38, D-63, D-25); §3–§7 the protocol of M-PLATFORM-077 (one row per package, two-step status, one CHANGELOG line per PR, 14-day stale branches, "docs touched or N/A", never-do list); the registry.tsv question. |
-| `docs/development/PROGRESS.md` | K0 rows brought up to the merges (CO-1, CO-4 step 1, CO-5 step 0, CO-6 merged; HU-1 step 1, CO-2 added; CO-7 and CO-3 PR1 marked "being merged"; G2 HOLD; CO-8); new "Plan v2.0 package register" (93 rows) above the R1–R3 history. |
+| `docs/development/PROGRESS.md` | K0 rows brought up to the merges (CO-1, CO-4 step 1, CO-5 step 0, CO-6 merged; HU-1 step 1, CO-2 added; CO-7 and CO-3 PR1 merged; G2 HOLD; CO-8); new "Plan v2.0 package register" (93 rows) above the R1–R3 history. |
 | `docs/README.md` | New "Development" table (PLAN, DECISIONS, SESSION-PROTOCOL, PROGRESS, VERIFICATION, reports) and the list of docs that code or tests read. |
 | `CHANGELOG.md` | One line. |
 | this report | New. |
@@ -43,8 +43,8 @@ report: docs/development/reports/CO-8-adoption.md
 | #86 | CO-4 step 1 | `d7ee6fb` | Published by 37333861041 at 2026-10-05T15:58:59Z |
 | #91 | CO-5 (Pages shards) | `47f8efa` | Not yet recorded |
 | #88 | CO-2 | `75c8cf4` | Not yet recorded |
-| #87 | CO-7 | **pending — still being merged** | — |
-| #90 | CO-3 PR1 | **pending — still being merged** | — |
+| #87 | CO-7 | `6e0ef23` | Not yet recorded |
+| #90 | CO-3 PR1 | `2275e0d` | Not yet recorded |
 
 The #87 and #90 rows are placeholders; their SHAs are written in by the records PR after they merge. The CI run ids of the merges are also left for that PR.
 
