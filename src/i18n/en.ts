@@ -727,6 +727,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'startup.acceleration': 'If available, enable hardware acceleration in your browser settings, then restart the browser.',
   'startup.reload': 'Reload page',
   'startup.details': 'Technical details',
+  'startup.glLost': 'The 3-D view is restarting. The flight goes on.',
   'a11y.viewport': 'Interactive 3-D launch scene. Drag to rotate, pinch or scroll to zoom.',
   'a11y.cameraGroup': 'Camera view',
   'a11y.setupPanel': 'Mission setup',

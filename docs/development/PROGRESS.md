@@ -38,6 +38,7 @@ As of 2026-10-04: R2 merged through [PR #74](https://github.com/ROYIN001/Orbitla
 | CO-2 (M-PLAN-017, M-PLATFORM-064, wave K0) | Merged ([PR #88](https://github.com/ROYIN001/Orbitlab/pull/88), `75c8cf4`); published ([Pages 37348596650](https://github.com/ROYIN001/Orbitlab/actions/runs/37348596650) at `2275e0d`, 2026-10-05T17:52:13Z) | Records match GitHub for #71–#83, G3 recorded, ceiling review under D-38; I | [CO-2 report](reports/CO-2-closeout.md) |
 | G2 (CO-3 PR2) | **HOLD — not signed** (owner, 2026-10-05 14:49Z, Merge Desk G2 page) | Owner's note, verbatim: "ให้ฉากแสดงการปล่อยได้ตามมาตรฐานขั้นต่ำในทั้งโหมด ทดลองและวิศวกร พวกเครื่องมืออื่นๆให้ย้ายออไปข้างหรือไม่ก็ไว้ข้างล่างแบบเลื่อนลงไปดูเอง ต้องไม่มาบังพื้นที่หน้าจอหลักและแถบtimeline สถานการณ์สำคัญ" | The flight scene collapses at 1100×650 and at 125–150 % zoom (F5); the F5 fix is first in K1, then G2 is asked again ([DECISIONS](../DECISIONS.md)) |
 | CO-8 (M-PLATFORM-075, M-PLATFORM-077, wave K0) | Merged ([PR #92](https://github.com/ROYIN001/Orbitlab/pull/92), `78d28b1`, docs only, no Pages rebuild); K0–K1 usage set adopted by the owner 2026-10-05 ~18:04Z | DECISIONS rows for the 80 answers of 2026-10-05 and G2, [SESSION-PROTOCOL.md](SESSION-PROTOCOL.md), this file's K0 rows and package register, docs index; I (W drafts) | [CO-8 report](reports/CO-8-adoption.md) |
+| FX-8 (M-PLAN-019, KPI-15, wave K1) | On branch `claude/c-fx8-s1`; not in PR; not merged; not published | WebGL context loss on Launch, Orbit and Home: the loss is accepted (`preventDefault`), a status line (`startup.glLost`, TH/EN/RU) shows while any view is lost, the mission clock and the recording run on; on restore the launch scene re-renders its sky tables, environment probe and shadow map and each renderer gets its clear colour back; render owner | Journey `fx8-context-loss` fails on `origin/main` (11 failures) and passes with the fix; unit test in `tests/webgl-renderer.test.ts`; precache code 14703.8 → 14704.8 kB, over the 14704 kB ceiling (not raised) |
 | R4–R7 | Planned | As described in PLAN.md | No implementation claimed or inferred authorization |
 
 ## Plan v2.0 package register / ทะเบียนแพ็กเกจของแผน v2.0
@@ -80,7 +81,7 @@ Adopted for K0–K1 (owner, 2026-10-05; see [DECISIONS](../DECISIONS.md)). This 
 | FX-5 | K1-K2 | Launch analysis correctness (displayed vs live, labels, CSV) | Planned | K1 part: on K0 verified (owner, 2026-10-05) | — | — | — | — |
 | FX-6 | K2 | Bounded file readers for every importer | Planned | Not authorized (D-65) | — | — | — | — |
 | FX-7 | K1-K2 | PWA update and install UX | Planned | K1 part: on K0 verified (owner, 2026-10-05) | — | — | — | — |
-| FX-8 | K1 | WebGL context-loss recovery (data/flight continuity) | Planned | K1 part: on K0 verified (owner, 2026-10-05) | — | — | — | — |
+| FX-8 | K1 | WebGL context-loss recovery (data/flight continuity) | Implemented on branch `claude/c-fx8-s1`; not in PR | K1 part: on K0 verified (owner, 2026-10-05) | — | — | — | — |
 | R1.6 | K1 | Storage hardening | Planned | K1 part: on K0 verified (owner, 2026-10-05) | — | — | — | — |
 | R2.1r | K2 | R2.1 remainder after D08 | Planned | Not authorized (D-65) | — | — | — | — |
 | R2.2r | K2 | R2.2 follow-ups | Planned | Not authorized (D-65) | — | — | — | — |

@@ -286,7 +286,8 @@ export class PhysicalSky {
   private material: THREE.ShaderMaterial;
   private transmittanceRT: THREE.WebGLRenderTarget;
   private multiRT: THREE.WebGLRenderTarget;
-  private ready = false;
+  /** the tables are filled (FX-8: emptied with a lost context) */
+  ready = false;
 
   constructor(private readonly renderer: THREE.WebGLRenderer, floatType: THREE.TextureDataType = THREE.HalfFloatType) {
     this.transmittanceRT = target(256, 64, floatType);
