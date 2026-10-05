@@ -63,14 +63,23 @@ The message shown at the same time said "Set in the mission setup: flown from th
 | `npx vitest run tests/flight-lifecycle.test.ts tests/panel-held-edit.test.ts tests/dynamics-panel.test.ts` | — | 16/16 passed |
 | `npx vitest run` on the 11 panel / mcp / lifecycle / loop / i18n test files | — | 169/169 passed |
 | `npm run typecheck` | — | clean |
-| `node tests/browser/run.mjs lui01-held-tuning` (Chromium 141, SwiftShader, `npx vite build`) | ✗ 5 failures (above) | ✓ 36 s |
+| `node tests/browser/run.mjs lui01-held-tuning` (Chromium 141, SwiftShader, `npx vite build`), after the settle fix below | ✗ 6 failures (stage, clock T+34.2 s → T-10 s, recording emptied, HUD, timeline, setup reset) | ✓ 3/3 runs (38.6–39.2 s) |
 | regression journeys `r2-flight-shell r3-first-launch r3-result-setting launch-explore workspace-navigation` | — | 5/5 passed (87.7 s, 196.4 s, 125.7 s, 49.1 s, 98.0 s) |
 | `node scripts/bundle-budget.mjs` | ok | ok (index 2620.5 kB, +0.2; precache 15822.9 kB) |
 
 The new journey is not a smoke journey, so PR CI does not run it; Pages runs every journey before publishing. Putting R2 journeys into the PR smoke slice is CO-5.
 
+### Second-agent review (independent session, read-only)
+
+Confirmed 5 of 6: every `onChange` caller is classified right (of the 41 `changed()` call sites only `applyControl` can fire while a flight exists; the other 40 are disabled or guarded); every replace path (Monte Carlo run, work restore, lessons, continue, `openTemplate`, Fly it) still previews; behaviour with no flight and with the clock running is the old guard; Relaunch / New mission fly the held tuning (`getConfig()` carries `dynamics.control`); no recorder, storage or physics change. The sixth was the journey itself:
+
+- **Fixed: the journey raced the pause.** The worker keeps delivering the frames it had in flight for 1–2.5 s after `pause`, so a snapshot taken 500 ms after it could move by itself; the reviewer saw the committed journey fail 2/2 on the branch for that reason, not the fix's (the first green run here had happened to land after the frames arrived). The journey now waits until the cursor and the recording head hold still across two reads a second apart (the cursor can rest a few hundredths of a second past the last stored frame, so equality of the two is not the test), and also compares the timeline's text. Branch 3/3, base still fails.
+- **Coverage left as reasoning, not journey steps:** `openTemplate` and `applySuggestion` during a paused flight (traced by the reviewer, unchanged: replace and `backToSetup` paths), the recorded frame count (covered by the recording's start/head times), and a Relaunch flying the held tuning end to end (covered by reading `getConfig`, not by a test).
+- **Noted, not new code:** `flightReport()` (`src/main.ts:1053`) builds its "open this mission" link from the current setup, not the flown `sim.cfg`, so once a tuning is held the report's link carries the held tuning. On base this already happened whenever the clock ran; the fix makes it reachable from a paused flight too. A minor false-result path, no data loss → handoff below.
+
 ### Handoff
 
 - Contract `previewsChange` → R0.2r FlightLifecycle ADR (M-PLAN-013), owner S, recheck at GK1.
 - Held-tuning persistence across reload → R1.6 (storage), if the owner wants it.
+- Flight report link from the setup instead of the flown config (`main.ts:1053`) → proposed as a new item for R1.6/FX triage (P2, false result), owner I, recheck at GK1.
 - CO-4 steps 2–10 → K1–K2, not authorized yet.

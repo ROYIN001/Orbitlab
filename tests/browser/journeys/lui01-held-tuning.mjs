@@ -25,9 +25,20 @@ export default async function heldTuning(t) {
   const flying = await t.until(async () => (await state()).cursorTimeS > 30, { timeoutMs: 120_000, intervalMs: 500 });
   if (!t.check(flying, 'the six-DOF flight did not fly to T+30 s')) return;
   await app.mcp('control_playback', { action: 'pause' });
-  await page.waitForTimeout(500);
+  // the worker delivers the frames it had in flight for a second or two after
+  // the pause: wait until the cursor and the recording's head hold still across
+  // two reads a second apart before taking the state to compare against
+  let last = null;
+  const settled = await t.until(async () => {
+    const s = await state();
+    const same = last && s.cursorTimeS === last.cursorTimeS && s.headTimeS === last.headTimeS;
+    last = s;
+    return same ? s : null;
+  }, { timeoutMs: RESPOND_MS, intervalMs: 1000 });
+  if (!t.check(settled, `the paused flight did not settle (cursor T+${last?.cursorTimeS} s, head T+${last?.headTimeS} s)`)) return;
   const before = await state();
   const hudBefore = await page.evaluate(() => document.getElementById('hud')?.textContent ?? '');
+  const timelineBefore = await page.evaluate(() => document.getElementById('timeline')?.textContent ?? '');
   t.log(`paused at T+${before.cursorTimeS.toFixed(1)} s, recorded to T+${before.headTimeS.toFixed(1)} s`);
 
   // the 6-DOF flight controls start folded: open them as a person would
@@ -58,6 +69,7 @@ export default async function heldTuning(t) {
   t.check(after.headTimeS === before.headTimeS && after.startTimeS === before.startTimeS,
     `the recording changed: T${before.startTimeS}…T+${before.headTimeS} s → T${after.startTimeS}…T+${after.headTimeS} s`);
   t.check(hudAfter === hudBefore, 'the HUD changed under the paused flight');
+  t.check(await page.evaluate(() => document.getElementById('timeline')?.textContent ?? '') === timelineBefore, 'the timeline changed under the paused flight');
   // the setup holds the tuning: it is flown from the next launch
   const held = await page.evaluate(() => document.querySelector('#setup')?.dataset.running);
   t.check(held === 'true', `the setup is not the flown one any more (running ${held})`);
