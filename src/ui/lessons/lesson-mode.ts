@@ -464,7 +464,7 @@ export class LessonMode implements LessonToolsHost {
     // let the strip say "working out" before the figures take the main thread for a moment
     setTimeout(() => {
       if (state.checking !== job) return;
-      designLessonKey(lesson, snapshot, job.controller.signal, (f) => { job.progress = f; if (this.active === a && state.checking === job) this.checkLine?.set(f); })
+      designLessonKey(lesson, snapshot, job.controller.signal, (f) => this.onCheckTick(a, job, f))
         .then((key) => {
           if (this.active !== a || state.checking !== job) return;
           state.checking = null;
@@ -484,6 +484,16 @@ export class LessonMode implements LessonToolsHost {
           this.paintStrip();
         });
     }, 30);
+  }
+
+  /**
+   * A progress tick of a design check's lifetime run (~100 a check): the
+   * figure is written into the strip in place — the strip is not built again,
+   * so the answer field being typed in keeps its focus and caret (M-LEARNING-001).
+   */
+  private onCheckTick(a: Active, job: NonNullable<DesignState['checking']>, f: number): void {
+    job.progress = f;
+    if (this.active === a && a.design?.checking === job) this.checkLine?.set(f);
   }
 
   /** The design last checked, graded again with the answers as they stand. */
@@ -968,6 +978,7 @@ export class LessonMode implements LessonToolsHost {
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement;
     if (typing && g?.final) return;
     this.lastStripKey = key;
+    this.checkLine = null;
     const lesson = a.lesson;
     const s = this.strip;
     const head = this.stripHead(lesson, hints);
@@ -1064,6 +1075,7 @@ export class LessonMode implements LessonToolsHost {
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
     if (!stripRebuilds(this.lastStripKey, key, typing)) return;
     this.lastStripKey = key;
+    this.checkLine = null;
     const head = this.stripHead(lesson, hints);
     const status = el('div', 'lesson-status');
     if (c.failed) status.append(el('p', 'lesson-note fail', c.failed));

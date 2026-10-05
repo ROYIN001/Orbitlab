@@ -58,13 +58,28 @@ describe('design strip during a check (M-LEARNING-001)', () => {
     expect(stripRebuilds('', 'b', true)).toBe(true);
   });
 
-  it('the progress callback neither forgets the strip key nor builds the strip', () => {
-    const src = Object.values(import.meta.glob('../src/ui/lessons/lesson-mode.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)[0];
-    const call = /designLessonKey\(lesson, snapshot, job\.controller\.signal, \((\w+)\) => \{([^}]*)\}\)/.exec(src);
-    expect(call, 'the design check passes a progress callback').not.toBeNull();
-    const body = call![2];
+  const src = Object.values(import.meta.glob('../src/ui/lessons/lesson-mode.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)[0];
+  /** A method's body in lesson-mode.ts, from its signature to the first line closing it at two spaces. */
+  const methodBody = (name: string): string => {
+    const at = src.indexOf(`  private ${name}(`);
+    expect(at, `lesson-mode.ts has a method ${name}`).toBeGreaterThan(-1);
+    return src.slice(at, src.indexOf('\n  }\n', at));
+  };
+
+  it('the progress callback is onCheckTick, which writes the line in place and neither forgets the strip key nor builds the strip', () => {
+    expect(src).toMatch(/designLessonKey\(lesson, snapshot, job\.controller\.signal, \(f\) => this\.onCheckTick\(a, job, f\)\)/);
+    const body = methodBody('onCheckTick');
+    expect(body).toMatch(/this\.checkLine\?\.set\(f\)/);
     expect(body).not.toMatch(/lastStripKey\s*=/);
-    expect(body).not.toMatch(/paintStrip\(/);
+    expect(body).not.toMatch(/paintStrip\(|paintDesign\(|replaceChildren\(/);
+  });
+
+  it("the design strip's key takes the running check only through checkingKeyPart, with no progress term", () => {
+    const body = methodBody('paintDesign');
+    const key = /const key = JSON\.stringify\(\[([\s\S]*?)\]\);/.exec(body);
+    expect(key, 'paintDesign builds its key').not.toBeNull();
+    expect(key![1]).toContain('checkingKeyPart(d.checking)');
+    expect(key![1]).not.toMatch(/progress/);
   });
 
   it('the progress line is written in place: the same words every tick, announced at most 11 times a check', () => {
