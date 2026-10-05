@@ -33,4 +33,4 @@ Answered by the owner in the decision page (Claude artifact `https://claude.ai/a
 | D-33, D-34 | Confirmed as built. |
 | G3 | Confirmed: "ระยะ3ทำเสร็จหมดแล้ว" covers the R3 screenshot review PROGRESS was waiting on (not D08/G2). |
 
-Still open: sheet A-2 (D-36 layout + A1–A5, D-39) — the owner answers it in the same page after CO-3's screenshots; sheets B, C, D later.
+**Update 2026-10-05:** the owner has answered all 80 answerable items (sheets A-1, A-2, B, C-K2, C-K3, C-K4). The full record, with the 11 answers that differ from the plan's proposal, the 9 owner-choice items and the owner's notes, is in [`OWNER-DECISIONS-2026-10-05.md`](OWNER-DECISIONS-2026-10-05.md). Answers to later-wave questions are decisions for those waves; they do not authorize any work beyond K0 (D-65). Sheet D items are deferred and not yet asked.
