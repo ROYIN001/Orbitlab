@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-10-03. This file states the current position only; how it was reached is in the
+Updated 2026-10-05. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -433,6 +433,24 @@ Phase 4, the satellite builder and instructor mode, on the same branch. No built
 | T02 checking a student's file | done: **Check results** (`#/lessons/check`) opens a class's results files and the teacher's lesson file, flies each point-mass record again in a worker to the time it was graded at, its journaled commands at the same step boundaries, or works a design record's figures out again at its date and solar activity, and says Match, Borderline, Differs or Cannot re-fly with the reason and whether the file changed after it was saved; the check can be saved as CSV. A results file now keeps a flight's grading time, the instant on screen, its commands and the app's build, and a design lesson's design. Underneath, a live point-mass flight is the headless flight bit for bit at any frame rate and warp ([PHYSICS.md](PHYSICS.md) §2n), and a lesson grades the orbit where the flight ended, however late the page grades it. Node and Chromium agree within 1.4e-12 s of grading time and 1.4e-11 m/s on flights and 5.4e-15 relative on designs, against tolerances fixed before the first comparison ([VALIDATION.md](VALIDATION.md) §9) |
 | T03 lesson packs | drafts, awaiting the owner's review: five packs, precached files under `public/lessons/packs/`, listed on the lessons page as groups with their curriculum codes as chips — IPST basic science (M.5–M.6), IPST Earth, astronomy and space (M.6), IPST additional physics (M.4–M.6), space flight dynamics and control (an institution-level lab for undergraduate aeronautical engineers), and Russia's speciality 24.05.06 — with 17 lessons of their own (11.1–15.4: flights, a case and design lessons) and built-in lessons listed again with their codes. Each pack says on the page that it is a draft. Every worked solution passes and a wrong answer fails; two tolerances were set after the flight, and say so ([VALIDATION.md](VALIDATION.md) §9) |
 
+### Development plan v1.2: phases 2 and 3
+
+[PLAN.md](development/PLAN.md) v1.2 sets out phases R1–R7; [PROGRESS.md](development/PROGRESS.md)
+keeps their state. Phases 2 and 3 are merged and published: the site carries `09cc2f5` (Pages run
+37230585947, 2026-10-04), and the owner recorded phase 3 complete on 2026-10-04 (gate G3).
+
+| Item | |
+|---|---|
+| R2.1 Launch Engineer lifecycle | done (#74): setup, flight and analysis; once a flight is launched the setup column gives its width to the scene (⚙ Setup shows the frozen configuration, New mission reopens it); notation in the telemetry panel; the engines' actual level beside the throttle command; a flight bar on a phone. The layout's assumptions (D08) await the owner |
+| R2.2 camera ownership | done (#74): a picked view is kept across phases until Cinematic is chosen; Watch has view tabs; the camera falls back when its follow target is gone |
+| R2.3 telemetry card presets | first step done (#74): All, Flight, Dynamics, Orbit and Custom, kept with the learner's profile; docking, resizing and reordering cards are not done |
+| R2.4 timeline event chooser | done (#74): clustered events open a chooser with their exact T+ times |
+| R3.1 provenance and design reference | done (#75, #80): the Orbit hand-off and the comparison reference take the mission flown, not the setup's draft (a defensive change: no path where the two differ was found); a mission flown from Build, and its orbit handed to Orbit, say which saved design it is and its revision (its last save), "changed since saved" or "not saved", as an optional field (the hand-off stays version 1, older files read as before). The flight report's link still reads the draft, a mission file exported by Share carries no reference, and a stored mission of a newer format version is read as far as this version understands it rather than refused |
+| R3.2 rocket on the Engineer bench | done (#75): the vehicle on the bench drawn to scale from the spec the test stand, wind tunnel and review use, stacked or apart; a part's card with its figures, **Fire it on the test stand** or **Open the wind tunnel** |
+| R3.3 satellite on the bench | done (#75, #78, #80): a schematic from the design (bus, wings or body cells, dish, camera, engine) with its assumptions named, deployed or stowed for launch, with the body axes; the Power, Radio and Camera tabs draw the time in shadow, the link to the ground station and the camera's footprint from the tab's own figures. The Explore designer draws no picture |
+| R3.4 readiness points at the part | done (#75, #77): a readiness row about one part has **Show the part**, chosen by stage, booster, path and code, not by its text; a check about one part in the Explore builder has **Show its settings** |
+| R3.5 the journey | done (#77): Home's **Try a launch yourself** (a first-launch template), Watch's copy to try, the mission's source over its name and the Build › Check › Launch › Result › Orbit steps, **Show the setting** on a result and a before → after suggestion for the three causes with figures behind them (applied to a new mission only), and Orbit's *Continue from a flight* / *Place an orbit directly* |
+
 ## Known limitations
 
 - The orbit playground (O01) carries an orbit by Kepler's equation and J2's secular drift to
@@ -570,12 +588,12 @@ Phase 4, the satellite builder and instructor mode, on the same branch. No built
   - A low orbit's end of life is always budgeted as a controlled re-entry; the Δv budget has no "decay within 25 years".
   - The drag make-up holds the Sun and the season at the design date (±30 % over a year) and averages the indices, not the density.
   - TM-113111's arcjet row is missed by 0.11 kg, unexplained; Hull's 25-year curve is checked from one side only.
-  - A design names one ground station and has no argument of perigee (taken as 0); the designer draws no picture of it.
+  - A design names one ground station and has no argument of perigee (taken as 0); the satellite bench draws it as a schematic with named assumptions (R3.3), the Explore designer draws no picture of it.
   - The receiving station is NASA's 11.28 m dish, so link rates come out far above a school station's (28 Gbit/s from 10 W).
   - The geostationary templates' default place (the node at 0°) is below Bangkok's horizon, so their data a day is 0.
   - The bench's lifetime runs at a fixed ECSS level, while the Orbit section's lifetime dialog starts on the Sun as measured.
   - The design date is kept with the unsaved design only, not with a saved one, and its box shows the browser's date format.
-  - While the figures are worked out again (about 180 ms) the checks read the new design against the old figures.
+  - While the figures are worked out again (about 180 ms) the checks read the new design against the old figures; a known limitation accepted with phase 3 (G3), not fixed.
   - The Orbit section tells a design's hand-off from a flight's by its having no mission and no vehicle: a heuristic.
   - The pointing loss holds inside the main beam only, and the design lets the pointing error run to 180°.
   - Some bad inputs to the cores are taken quietly: an infinite β gives no eclipse, and a tiny step can hold a page.
