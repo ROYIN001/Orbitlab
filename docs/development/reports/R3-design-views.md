@@ -4,7 +4,7 @@
 - แผน: R3.1–R3.4 ใน [PLAN.md](../PLAN.md); ความต้องการ U04, U05 (บางส่วน), A03
 - ฐาน: `main` ที่ `da6734160a510cd87cc7fdb4df3ec4eba9319313` (หลัง R2 merge, [PR #74](https://github.com/ROYIN001/Orbitlab/pull/74))
 - การอนุญาต: ผู้ใช้สั่ง “เมื่อระยะ 2 merge เข้า main โดยไม่มีปัญหา ทำระยะที่ 3 ต่อได้เลย” (2026-10-04)
-- สถานะ: implementation และ local checks ของ package นี้; R3.5 (journey integration) เป็น package ถัดไป — ไม่อ้างว่า R3/G3 ครบ
+- สถานะ: merge ผ่าน [PR #75](https://github.com/ROYIN001/Orbitlab/pull/75) ที่ `7ddab75` (CI 37172156819); Pages 37172926281 ล้มที่ precache budget จึงเผยแพร่หลัง [PR #76](https://github.com/ROYIN001/Orbitlab/pull/76) โดย Pages 37193082491 ที่ `1d5b76b`; งานต่อ R3.5 (#77), R3.3 (#78, #80) และ R3.1 design ID/revision (#80) merge และเผยแพร่แล้ว ล่าสุด [Pages 37230585947](https://github.com/ROYIN001/Orbitlab/actions/runs/37230585947) ที่ `09cc2f5` (live) — **G3 ส่งมอบ 2026-10-04** ตามคำเจ้าของ (“ระยะ3ทำเสร็จหมดแล้ว”) พร้อมข้อจำกัดที่รับ (ดูท้ายรายงาน)
 
 ## สิ่งที่ทำ
 
@@ -81,8 +81,8 @@ Local: Node 22.22.0, Chromium 141.0.7390.37, software WebGL, render scale 0.5
 
 ## ข้อจำกัดและงานที่เหลือ
 
-- **R3.5 ยังไม่ทำ:** Home “ลองปล่อยครั้งแรก” แบบ editable template, compact mission context (Build→Check→Launch→Result→Orbit), Watch→สำเนาทดลอง, result→typed edit พร้อม before/after, การพาไป field ใน parts builder
+- **R3.5 ทำแล้วใน [PR #77](https://github.com/ROYIN001/Orbitlab/pull/77)** ([R3.5 report](R3.5-journey.md)): Home “ลองปล่อยครั้งแรก” แบบ editable template, compact mission context (Build→Check→Launch→Result→Orbit), Watch→สำเนาทดลอง, result→typed edit พร้อม before/after, การพาไป field ใน parts builder
 - R3.1: design ID/revision ทำแล้วแบบ backward-compatible (ดูหัวข้อ R3.1 ต่อ); export mission file ยังไม่ใส่ reference
 - R3.3: stowed/deployed, axes และ diagram sunlight/link/footprint ทำแล้ว (ดูหัวข้อ R3.3 ต่อ); ภาพยังเป็น schematic ที่รอผู้ใช้ตรวจ
 - ภาพดาวเทียมเป็น schematic ไม่ใช่แบบโรงงาน; ภาพจรวดใช้ geometry เดิมของ `explodedView` (outline/interstage ที่ derived ตาม D01)
-- G3 ยังไม่ผ่านจนกว่า R3.5 เสร็จและผู้ใช้ตรวจภาพ
+- G3 ส่งมอบ 2026-10-04 (คำเจ้าของ “ระยะ3ทำเสร็จหมดแล้ว”; เจ้าของยืนยัน 2026-10-05 ว่าครอบคลุมการตรวจภาพของ R3 แต่ไม่ใช่ D08/G2); ข้อจำกัดที่รับพร้อม G3: ระหว่างคำนวณ figures ใหม่ (~180 ms) checks อ่านแบบใหม่เทียบ figures เก่า (M-BUILD-015); mission ที่ version ใหม่กว่าถูกอ่านเป็น usable แทนการปฏิเสธ (M-PLAN-031); Explore satellite designer ยังไม่มีภาพ (M-LAUNCH-081); งานต่อยอดอยู่ใน R3.1r–R3.5r ของแผน v2.0 ([CO-2 report](CO-2-closeout.md))
