@@ -173,16 +173,18 @@ jobs:
           path: tests/browser/artifacts/verification/snapshot-check.report.json
           if-no-files-found: warn
 
-  # Every journey runs once in two shards on this run's refreshed dist artifact.
+  # Every journey runs once in three shards on this run's refreshed dist artifact.
   browser:
     needs: [plan, build]
     if: needs.plan.outputs.proceed == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 45, not 30: the G2 matrix journey (CO-3) runs 7-10 min alone on a 4-core machine,
+    # so the shard holding it can approach 30 min at CI speed; a hang still stops at 45.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -203,12 +205,12 @@ jobs:
           name: pages-dist
           path: dist
       - run: npx playwright install --with-deps chromium
-      - run: node scripts/verification/run-browser.mjs browser-${{ matrix.shard }}of2
+      - run: node scripts/verification/run-browser.mjs browser-${{ matrix.shard }}of3
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pages-evidence-browser-${{ matrix.shard }}
-          path: tests/browser/artifacts/verification/browser-${{ matrix.shard }}of2.report.json
+          path: tests/browser/artifacts/verification/browser-${{ matrix.shard }}of3.report.json
           if-no-files-found: warn
       - if: failure()
         uses: actions/upload-artifact@v4
