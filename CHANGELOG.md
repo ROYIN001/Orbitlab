@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Storage (R1.6 PR2): one damaged learner profile, or one made by a newer version of the app, no longer hides every profile in the chooser or makes Export all and audio export fail; it is listed with an explanation and its stored data is kept unchanged, and you can save a copy of it, or delete it after confirming.
 - Storage (R1.6 PR1): a damaged learner profile no longer keeps its lock and leaves other tabs read-only; a failed clean-up at start (an interrupted profile deletion or an unreadable old record) no longer puts every profile into visit-only mode, it is retried at the next start with a notice; and typing in a number box still works after 1,000 boxes are remembered (the oldest is forgotten instead).
 - Docs: DECISIONS records the owner's follow-up answers of 2026-10-05 — D-23 (a second maintainer is not a condition), the D-16 note (pass/fail threshold), D-36.A3 (in-flight edits take effect on confirm), registry.tsv (commit it) and HUF-D02 (stays a build-or-not question).
 - Tests (CO-5): pull requests now run a short check of the Launch Engineer flight screen (`r2-shell-smoke`, about 40 s): launching folds the setup and widens the scene, pausing stays in flight, the six-DOF and TORU controls can be reached, and the event chooser opens on a 390 px Thai phone and fits the screen; the full R2 journey still runs before publishing.

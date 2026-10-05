@@ -1,5 +1,5 @@
 import { parseWorkspaceArchive, workspaceImportWarnings, WORKSPACE_FORMAT, WORKSPACE_MAX_BYTES, WorkspaceError, type WorkspaceRepository, type WorkspaceArchive } from '../../workspace/repository';
-import { ProfileDialog, type ProfileDialogHost, type ProfileDialogSnapshot, type ProfileCounts } from './profile-dialog';
+import { ProfileDialog, type ProfileDialogHost, type ProfileDialogSnapshot, type ProfileCounts, type ProfileItem, type UnreadableProfileItem } from './profile-dialog';
 import { downloadBlob } from '../download';
 
 /** Backup/readout adapters are loaded with the menu, not during app startup. */
@@ -33,7 +33,16 @@ class ProfileMenuHost {
         await this.repo.prepareChange();
         this.download(this.repo.exportProfile(id));
       },
-      exportAll: async () => { await this.repo.prepareChange(); this.download(this.repo.exportAll()); },
+      exportAll: async () => {
+        await this.repo.prepareChange();
+        const skipped = this.repo.listWithStatus().filter((row) => row.state !== 'ok').length;
+        this.download(this.repo.exportAll());
+        return { skipped };
+      },
+      exportRaw: async (id) => {
+        const raw = this.repo.rawProfile(id);
+        downloadBlob(new Blob([raw], { type: 'application/json' }), `Orbitlab-${new Date().toISOString().slice(0, 10)}-stored-profile-${id}.json`);
+      },
       previewImport: async (file) => {
         const raw = await this.archiveText(file);
         const archive = await parseWorkspaceArchive(raw);
@@ -57,11 +66,13 @@ class ProfileMenuHost {
       },
       exportMedia: async (id) => {
         if (this.repo.status !== 'durable') throw new WorkspaceError('locked');
-        const profile = this.repo.list().find((p) => p.id === (id ?? this.repo.binding?.profileId));
-        if (!profile) throw new WorkspaceError('missing');
+        const target = id ?? this.repo.binding?.profileId;
+        if (!target) throw new WorkspaceError('missing');
+        // Only the target is read; audio of an unreadable profile can still be saved before a delete.
+        const profile = this.repo.profileRow(target);
         await this.repo.prepareChange();
         const { exportProfileMediaArchive } = await import('../../workspace/media-archive');
-        const blob = await exportProfileMediaArchive(profile.id, profile.name);
+        const blob = await exportProfileMediaArchive(profile.id, profile.name ?? profile.id);
         downloadBlob(blob, `Orbitlab-${new Date().toISOString().slice(0, 10)}.orbitlab-audio`);
       },
       previewMedia: async (file) => {
@@ -114,15 +125,17 @@ class ProfileMenuHost {
   }
 
   private snapshot(): ProfileDialogSnapshot {
-    let profiles: ProfileDialogSnapshot['profiles'] = [];
+    const profiles: ProfileItem[] = [], unreadable: UnreadableProfileItem[] = [];
     try {
-      profiles = this.repo.list().map((p) => ({ ...p,
-        counts: this.counts(this.repo.read(p.id).values, p.counts),
-      }));
+      for (const row of this.repo.listWithStatus()) {
+        if (row.state !== 'ok') { unreadable.push({ id: row.id, state: row.state, name: row.name }); continue; }
+        const { state: _state, ...p } = row;
+        profiles.push({ ...p, counts: this.counts(this.repo.read(p.id).values, p.counts) });
+      }
     } catch { /* The chooser explains inaccessible storage; never overwrite it. */ }
     const activeId = this.name() && this.repo.binding?.valid ? this.repo.binding.profileId : null;
     const lessons = activeId ? this.recordedLessons?.() ?? [] : [];
-    return { profiles, activeId, lessons, status: activeId ? this.repo.status : 'chooser' };
+    return { profiles, unreadable, activeId, lessons, status: activeId ? this.repo.status : 'chooser' };
   }
 
   private download(archive: WorkspaceArchive): void {

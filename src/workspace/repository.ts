@@ -17,6 +17,8 @@ export interface ProfileCounts { lessons: number; assessments: number; designs: 
 export interface ProfileSummary {
   id: string; name: string; createdAt: string; updatedAt: string; revision: number; epoch: number; counts: ProfileCounts;
 }
+/** A catalogue row. An unreadable or newer record is reported, never rewritten (M-PLATFORM-004). */
+export type ProfileListRow = (ProfileSummary & { state: 'ok' }) | { id: string; state: 'unreadable' | 'newer'; name?: string };
 interface ProfileRecord { version: 1; id: string; name: string; createdAt: string; updatedAt: string; revision: number; epoch: number; values: Record<string, string> }
 interface Catalog { version: 1; profiles: Record<string, { deleting?: boolean }>; legacyId: string; mediaMigrated: boolean }
 export interface WorkspaceArchive {
@@ -280,7 +282,32 @@ export class WorkspaceRepository {
     this.ephemeral = { [id]: record }; this.fallbackCatalog = { version: 1, profiles: { [id]: {} }, legacyId: id, mediaMigrated: true };
     this.status = 'ephemeral'; this.binding = new WorkspaceBinding(this, record, true);
   }
-  list(): ProfileSummary[] { return Object.entries(this.catalog().profiles).filter(([, row]) => !row.deleting).map(([id]) => summary(this.read(id))); }
+  /** Readable profiles only; an unreadable row no longer hides the others (see listWithStatus). */
+  list(): ProfileSummary[] {
+    return this.listWithStatus().flatMap((row) => { if (row.state !== 'ok') return []; const { state: _state, ...profile } = row; return [profile]; });
+  }
+  listWithStatus(): ProfileListRow[] {
+    return Object.entries(this.catalog().profiles).filter(([, row]) => !row.deleting).map(([id]) => this.profileRow(id));
+  }
+  /** Reads only this owner. A record that cannot be parsed, is missing or is newer becomes a row with that state; its bytes are not touched. */
+  profileRow(id: string): ProfileListRow {
+    const entry = this.catalog().profiles[id];
+    if (!entry || entry.deleting) throw new WorkspaceError('missing');
+    try { return { ...summary(this.read(id)), state: 'ok' }; } catch (error) {
+      if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
+      let name: string | undefined;
+      try { const raw: unknown = JSON.parse(this.rawProfile(id)); if (ownRecord(raw) && typeof raw.name === 'string' && raw.name.trim()) name = raw.name.trim().slice(0, 100); } catch { /* no name */ }
+      return { id, state: error.code === 'newer' ? 'newer' : 'unreadable', name };
+    }
+  }
+  /** The stored bytes exactly as kept, for a backup of a record this version cannot read. */
+  rawProfile(id: string): string {
+    const entry = this.catalog().profiles[id];
+    if (!entry || entry.deleting) throw new WorkspaceError('missing');
+    const raw = this.ephemeral ? (this.ephemeral[id] ? JSON.stringify(this.ephemeral[id]) : null) : this.storage.getItem(profileStorageKey(id));
+    if (raw === null) throw new WorkspaceError('missing');
+    return raw;
+  }
   active(): ProfileSummary | null { return this.binding ? summary(this.read(this.binding.profileId)) : null; }
   registerFlush(flush: () => void | Promise<void>): () => void { this.flushers.add(flush); return () => this.flushers.delete(flush); }
   async prepareChange(): Promise<void> {
@@ -326,7 +353,8 @@ export class WorkspaceRepository {
     const active = this.binding?.profileId === id;
     try {
       await this.withOwner(id, () => this.withCatalog(async () => {
-        const catalog = this.catalog(); this.read(id);
+        // An unreadable or newer record can be deleted, but only by this explicit, user-confirmed call.
+        const catalog = this.catalog(); this.profileRow(id);
         catalog.profiles[id] = { deleting: true }; this.saveCatalog(catalog);
         if (active) {
           this.binding?.invalidate(); this.status = 'chooser';
