@@ -45,11 +45,12 @@ export function rememberNumericText(scope: string | undefined, key: string, text
     if (!Object.hasOwn(data.fields, id)) return;
     delete data.fields[id];
   } else {
+    const keys = Object.keys(data.fields);
     if (!Object.hasOwn(data.fields, id)) {
-      // Full: evict the oldest remembered fields (insertion order) instead of refusing the new one.
-      const keys = Object.keys(data.fields);
+      // Full: evict the least recently typed field instead of refusing the new one.
       for (let i = 0; i <= keys.length - 1000; i++) delete data.fields[keys[i]];
-    }
+    } else if (keys.length >= 1000) delete data.fields[id]; // at the cap only: re-typing moves the field to the newest end
+    // Below the cap the order is left alone, so stored bytes change only where a field is evicted or moved at the cap.
     data.fields[id] = { text, value: Number.isFinite(value) ? value : null };
   }
   cache.pending = true;

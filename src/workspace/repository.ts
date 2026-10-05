@@ -240,7 +240,7 @@ export class WorkspaceRepository {
             for (const [key, value] of Object.entries(original.values)) {
               if (this.storage.getItem(key) === value) this.storage.removeItem(key);
             }
-          } catch { this.notices.push('legacy-cleanup-pending'); }
+          } catch { if (!this.notices.includes('legacy-cleanup-pending')) this.notices.push('legacy-cleanup-pending'); }
         }
       });
       let selected: string | null = null;
