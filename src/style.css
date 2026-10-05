@@ -751,6 +751,9 @@ body[data-lesson] .verdict-fixes { display: none; }
 .narration .latest-event p.success { color: var(--ok); }
 .narration .latest-event p.warn { color: var(--warn); }
 .narration .latest-event p.fail { color: var(--fail); }
+/* G2 hold (F5): in a short scene (main.ts SHORT_SCENE_PX) the narration keeps
+   the phase name and gives the rest of the picture back */
+#viewport[data-short='true'] .narration :is(.phase-detail, .latest-event) { display: none; }
 .scene-hint { font-size: 10px; letter-spacing: 1px; color: #91a6b8; text-align: right; max-width: 190px; }
 
 /* Onboard mode: the canvas covers the whole viewport (its porthole mask is

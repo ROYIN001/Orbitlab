@@ -18,6 +18,10 @@
  *   them — the tools that do not fit go beside or below, reached by scrolling;
  * - S4 otherwise (the stacked layout up to 860 px, or the guide open): the
  *   timeline is reachable — scrolled to, a press at its centre lands on it.
+ * - S5 a scene under SHORT_SCENE px tall shows the narration's phase name
+ *   only: its prose and latest-event line (which covered half of a 260 px
+ *   scene) are not drawn over the picture.
+
  *
  * The minimum is the proposal on the G2 review page (the owner decides; D-36:
  * "minimum scene height measured at 1100×650 and 1280×720"): 40 % of the
@@ -26,6 +30,9 @@
  * formula as `--scene-min` in src/style.css.
  */
 import { viewportSize } from './harness.mjs';
+
+/** Under this scene height the narration keeps its phase name only (src/main.ts SHORT_SCENE_PX). */
+export const SHORT_SCENE = 380;
 
 /** The proposed minimum scene height (CSS px) in a window `h` CSS px high: clamp(200px, 40vh, 320px). */
 export function sceneMin(h) {
@@ -67,10 +74,13 @@ export async function checkSceneFloor(t, app, preset, state, where) {
         }
       }
     }
-    return { w: Math.round(b.width), h: Math.round(b.height), visible: Math.round(visible), y: Math.round(b.top), misses };
+    const prose = [...scene.querySelectorAll('.narration .phase-detail, .narration .latest-event')]
+      .filter((n) => n.getClientRects().length > 0 && getComputedStyle(n).visibility !== 'hidden').map((n) => n.className);
+    return { w: Math.round(b.width), h: Math.round(b.height), visible: Math.round(visible), y: Math.round(b.top), misses, prose };
   });
   t.check(m.h >= min - 0.5, `${where}: the scene is ${m.w}×${m.h}, under the minimum height ${Math.round(min)} px (S1)`);
   t.check(m.visible >= min - 0.5, `${where}: only ${m.visible} px of the scene (y ${m.y}, ${m.h} px tall) is on the first screen, under the minimum ${Math.round(min)} px (S1)`);
+  if (m.h < SHORT_SCENE) t.check(m.prose.length === 0, `${where}: the scene is ${m.h} px tall but the narration still draws ${m.prose.join(', ')} over it (S5)`);
   t.check(m.misses.length === 0, `${where}: something covers the scene — a press at ${m.misses.join(', ')} (S2)`);
   const stacked = width <= 860;
   if (!stacked && state === 'closed') {

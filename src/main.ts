@@ -1205,6 +1205,9 @@ class App {
   resize(): void {
     const w = this.viewport.clientWidth, h = this.viewport.clientHeight;
     if (w <= 0 || h <= 0) return;
+    // G2 hold (F5): a short scene keeps the picture, not the narration's prose
+    const short = String(h < SHORT_SCENE_PX);
+    if (this.viewport.dataset.short !== short) this.viewport.dataset.short = short;
     this.scene.resize(w, h);
     this.trail.setResolution(w, h);
     this.predicted.setResolution(w, h);
@@ -2626,6 +2629,13 @@ class App {
  * reload is slow, they say which step it waited on. Marks only — nothing
  * depends on them.
  */
+/**
+ * G2 hold (F5): under this height (CSS px) the scene's narration shows the
+ * phase name only; its prose and latest-event line would cover the picture
+ * (at 1100x650 they took over half of a 260 px scene).
+ */
+const SHORT_SCENE_PX = 380;
+
 function markStartup(step: string): void {
   try { performance.mark(`orbitlab:${step}`); } catch { /* no performance API */ }
 }
