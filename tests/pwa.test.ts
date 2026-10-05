@@ -62,7 +62,11 @@ function fakeScope(server: Record<string, string>, online = { on: true }) {
 }
 
 const manifestOf = (files: Record<string, string>): PrecacheManifest =>
-  precacheManifest(Object.entries(files).map(([url, body]) => ({ url, revision: REVISIONS.get(body)! })));
+  precacheManifest(Object.entries(files).map(([url, body]) => {
+    const revision = REVISIONS.get(body);
+    if (revision === undefined) throw new Error(`manifestOf: no revision for the fixture body of ${url}`);
+    return { url, revision };
+  }));
 
 const serverOf = (files: Record<string, string>) => Object.fromEntries(Object.entries(files).map(([u, b]) => [SCOPE + u, b]));
 
@@ -178,6 +182,35 @@ describe('service worker (U03)', () => {
     await precache(sw, m2);
     expect(await (await next.match(`${SCOPE}assets/index-b.js`))!.text()).toBe('main v2');
     expect(await next.match(`${SCOPE}${MANIFEST_KEY}`)).toBeDefined();
+  });
+
+  it('does not carry wrong bytes forward from an older cache: it downloads that file again, verified (FX-7 step 0)', async () => {
+    // a cache installed before the revision check holds other bytes under
+    // the same revision and a completion marker
+    const server = serverOf(V1);
+    const sw = fakeScope(server);
+    const m1 = manifestOf(V1), m2 = manifestOf(V2);
+    await precache(sw, m1);
+    await (await sw.caches.open(precacheName(m1.version))).put(`${SCOPE}textures/earth.jpg`, new Response('EARTH from another build'));
+    Object.assign(server, serverOf(V2));
+    sw.fetched.length = 0;
+    await precache(sw, m2);
+    expect(sw.fetched.sort()).toEqual([`${SCOPE}assets/index-b.js`, `${SCOPE}index.html`, `${SCOPE}textures/earth.jpg`]);
+    const next = await sw.caches.open(precacheName(m2.version)) as FakeCache;
+    expect(await (await next.match(`${SCOPE}textures/earth.jpg`))!.text()).toBe('EARTH');
+  });
+
+  it('fails the install when a wrong copy in an older cache cannot be replaced by a matching download', async () => {
+    const server = serverOf(V1);
+    const sw = fakeScope(server);
+    const m1 = manifestOf(V1), m2 = manifestOf(V2);
+    await precache(sw, m1);
+    await (await sw.caches.open(precacheName(m1.version))).put(`${SCOPE}textures/earth.jpg`, new Response('EARTH from another build'));
+    Object.assign(server, serverOf(V2), { [`${SCOPE}textures/earth.jpg`]: 'EARTH from another build' });
+    await expect(precache(sw, m2)).rejects.toThrow(/earth\.jpg/);
+    const next = await sw.caches.open(precacheName(m2.version)) as FakeCache;
+    expect(next.store.has(`${SCOPE}textures/earth.jpg`)).toBe(false);
+    expect(next.store.has(`${SCOPE}${MANIFEST_KEY}`)).toBe(false);
   });
 
   it('installs a new deploy beside the old one, downloading only what changed, then drops the old one', async () => {
