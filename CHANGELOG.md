@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Release checks: the website's publish run tests the browser journeys in three parallel parts instead of two, so a longer journey fits and the slowest part finishes sooner; the PR checks are unchanged.
 - Launch Engineer (LUI-01): "Use for the next launch" in the loop inspector of a paused flight keeps the flight and its recording and holds the tuning for the next launch, as its message said; it used to throw the paused flight away.
 - Bundle budget (CO-1, D-38): the offline precache is checked as two groups with their own ceilings — the app's code (14704 kB, its size at `5f9aa2e`) and the refreshed data snapshots under `data/` (1399 kB, warning past 80 % of their headroom) — so a daily data refresh can no longer use up the code's room or the reverse; the total stays at 16103 kB and the app is unchanged.
 - R3.1 (design revision): a mission flown from Build, and its orbit handed on to Orbit, say which of your designs it is and which version — when it was saved, changed since, or not saved.
