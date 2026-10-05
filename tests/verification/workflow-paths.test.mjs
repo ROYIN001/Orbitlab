@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { test } from 'node:test';
 import { posix, ROOT, sourceIdentity, walk } from '../../scripts/verification/lib.mjs';
+import { browserGates } from '../../scripts/verification/create-plan.mjs';
 
 const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pages = readFileSync('.github/workflows/deploy.yml', 'utf8');
@@ -90,9 +91,8 @@ test('cheap repository hygiene runs before collection or downstream expensive ga
 
 test('each workflow runs exactly the browser shards its plan creates', () => {
   // create-plan.mjs: PR CI runs the smoke journeys in two shards, Pages every journey in three
-  const plan = readFileSync('scripts/verification/create-plan.mjs', 'utf8');
-  assert.match(plan, /const browserShards = mode === 'pages' \? 3 : 2;/);
-  for (const [source, name, shards] of [[ci, 'browser-smoke', 2], [pages, 'browser', 3]]) {
+  for (const [source, name, shards, mode] of [[ci, 'browser-smoke', 2, 'ci'], [pages, 'browser', 3, 'pages']]) {
+    assert.deepEqual(browserGates(mode).map((gate) => [gate.id, gate.shard]), Array.from({ length: shards }, (_, i) => [`browser-${i + 1}of${shards}`, `${i + 1}/${shards}`]));
     const start = source.indexOf(`\n  ${name}:\n`);
     assert.ok(start >= 0, `Missing ${name} job`);
     const job = source.slice(start, source.indexOf('\n  verify:\n', start));

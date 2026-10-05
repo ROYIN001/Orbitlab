@@ -3,6 +3,13 @@ import { pathToFileURL } from 'node:url';
 import { appendFileSync } from 'node:fs';
 import { annotate, assertionKey, browserInventory, collectCases, DEFAULT_OUT, readJSON, runtime, same, sha256, snapshots, sourceIdentity, workflow, writeJSON } from './lib.mjs';
 
+// PR CI runs the smoke journeys in two shards; Pages runs every journey in three (CO-5:
+// two full shards measured 18.8 and 23.4 min of a 30 min job at 5f9aa2e, Pages 37230585947).
+export function browserGates(mode) {
+  const shards = mode === 'pages' ? 3 : 2;
+  return Array.from({ length: shards }, (_, i) => ({ id: `browser-${i + 1}of${shards}`, kind: 'browser', suite: 'browser', shard: `${i + 1}/${shards}` }));
+}
+
 export async function createPlan(mode, out = DEFAULT_OUT) {
   if (!['ci', 'pages', 'heavy', 'sixdof-fleet', 'both'].includes(mode)) throw new Error(`Unknown verification mode ${mode}`);
   const suites = {};
@@ -20,10 +27,7 @@ export async function createPlan(mode, out = DEFAULT_OUT) {
       gates.push({ id: 'typecheck', kind: 'command' }, { id: 'build', kind: 'build' });
       if (mode === 'pages') gates.push({ id: 'snapshot-check', kind: 'command' });
       for (let shard = 1; shard <= 3; shard++) gates.push({ id: `unit-${shard}of3`, kind: 'vitest', suite: 'unit', shard: `${shard}/3` });
-      // PR CI runs the smoke journeys in two shards; Pages runs every journey in three (CO-5:
-      // two full shards measured 18.8 and 23.4 min of a 30 min job at 5f9aa2e, Pages 37230585947).
-      const browserShards = mode === 'pages' ? 3 : 2;
-      for (let shard = 1; shard <= browserShards; shard++) gates.push({ id: `browser-${shard}of${browserShards}`, kind: 'browser', suite: 'browser', shard: `${shard}/${browserShards}` });
+      gates.push(...browserGates(mode));
     } else {
       for (const suite of mode === 'both' ? ['heavy', 'sixdof-fleet'] : [mode]) {
         suites[suite] = collectCases(suite, resolve(out, `${suite}-collected.json`));
