@@ -33,7 +33,7 @@ title, so no learner's record moves.
 | Field | Lang | Before | After |
 |---|---|---|---|
 | title | en | Royal Thai Air Force Academy: space flight dynamics and control | Space flight dynamics and control: an institution-level lab |
-| title | th | โรงเรียนนายเรืออากาศ: พลศาสตร์การบินอวกาศและระบบควบคุม | พลศาสตร์การบินอวกาศและระบบควบคุม — แลบระดับสถาบัน |
+| title | th | โรงเรียนนายเรืออากาศ: พลศาสตร์การบินอวกาศและระบบควบคุม | พลศาสตร์การบินอวกาศและระบบควบคุม — ห้องปฏิบัติการระดับสถาบัน |
 | title | ru | Академия ВВС Таиланда: динамика космического полёта и управление | Динамика космического полёта и управление: лаборатория вузовского уровня |
 | audience | en | Cadets, BEng Aeronautical Engineering, years 4–5 | Undergraduates in aeronautical engineering (BEng), years 4–5 |
 | audience | th | นักเรียนนายเรืออากาศ หลักสูตรวิศวกรรมศาสตรบัณฑิต สาขาวิชาวิศวกรรมอากาศยาน ชั้นปีที่ 4–5 | นักศึกษาปริญญาตรี สาขาวิชาวิศวกรรมอากาศยาน ชั้นปีที่ 4–5 |
@@ -42,16 +42,16 @@ title, so no learner's record moves.
 | framework | th | โรงเรียนนายเรืออากาศนวมินทกษัตริยาธิราช หลักสูตรวิศวกรรมศาสตรบัณฑิต สาขาวิชาวิศวกรรมอากาศยาน (หลักสูตรปรับปรุง พ.ศ. 2568): ผลลัพธ์การเรียนรู้ของหลักสูตรและคำอธิบายรายวิชา | หลักสูตรวิศวกรรมศาสตรบัณฑิต สาขาวิชาวิศวกรรมอากาศยาน ที่เผยแพร่สาธารณะ (หลักสูตรปรับปรุง พ.ศ. 2568): ผลลัพธ์การเรียนรู้ของหลักสูตรและคำอธิบายรายวิชา (แหล่งที่มาอยู่ในคำอธิบายชุดบทเรียน) |
 | framework | ru | Академия ВВС Таиланда им. Навамина Кашатрияттирата, бакалавриат по авиационной технике (редакция 2025 г.): результаты обучения по программе и описания дисциплин | Открытая программа бакалавриата по авиационной технике (редакция 2025 г.): результаты обучения по программе и описания дисциплин (источники — в описании набора) |
 
-The Thai title is the plan's suggested wording. **HU-3 (a native Thai reader)
-should check the Thai wording**, in particular "แลบ" (vs "ห้องปฏิบัติการ") and
-"นักศึกษาปริญญาตรี" for the audience.
+The Thai title uses "ห้องปฏิบัติการ" (the owner's choice on the Merge Desk,
+2026-10-05, replacing the plan's "แลบ"). **HU-3 (a native Thai reader) should
+still check the Thai wording**, in particular "นักศึกษาปริญญาตรี" for the audience.
 
 ### Generated JSON
 
 `public/lessons/packs/rtaf-academy.orbitlab-lesson.json`: 9 lines changed
 (hunks at lines 7–9, 12–14, 17–19: `pack.title`, `pack.audience`,
 `pack.framework` × en/ru/th). Nothing else in the file changed. New SHA-256
-`67d9c2c3999cf5d387d414f55d240915c0cabe1a7cf6d370fc5e3cbde4e96cf0`
+`af5009209decd06ca41902821a950cf64c7643f350704a300065a002726c8297`
 (was `325e3843…896b`). `scripts/lesson-packs.ts --check`: all five packs
 "up to date".
 
@@ -156,8 +156,8 @@ environment and was not used as evidence; CI runs it.
 An independent review confirmed 5 of 6 checks: every place the pack's identity shows in `src/` and `public/` is neutral (including a device with old cached files: the service worker's content hash treats the old JSON as missing and the neutral label is shown), the pack id, lesson ids, criteria and `reviewed:false` are unchanged, progress is keyed by lesson id (`src/lessons/progress.ts:23, :174, :344`), the review hash is right and no recorded review is invalidated, `--check` passes and the new test fails on base (3 of 5). Applied from its findings:
 
 - **Docs still described the pack by the academy's name** (outside CO-7's listed files, same decision): `README.md:84-85`, `docs/USER-GUIDE.md:1660`, `docs/IMPLEMENTATION-STATUS.md:434` now say "space flight dynamics and control (an institution-level lab for undergraduate aeronautical engineers)".
-- **Wording:** the framework label now says "A published BEng …" (EN) and "Опубликованная программа …" (RU), since "public"/"Открытая" could read as a state or open-enrolment programme. Pack regenerated; `src/lessons/review.ts` hash updated again to `5615561f…b09a`.
+- **Wording:** the framework label now says "A published BEng …" (EN) and "Опубликованная программа …" (RU), since "public"/"Открытая" could read as a state or open-enrolment programme. Pack regenerated; `src/lessons/review.ts` hash updated again to `5615561f…b09a`, and once more to `af500920…8297` for the Thai "ห้องปฏิบัติการ" title.
 - **Deny-list:** adds the Thai abbreviations `นนอ.` and `นนก.` (none present today).
-- Not changed: the Thai "—" versus EN/RU ":" (the plan's own suggested title), and "แลบ" — the Thai wording goes to HU-3. D-42 (ก) itself reaches `docs/DECISIONS.md` through CO-8.
+- Not changed: the Thai "—" versus EN/RU ":" (the plan's own suggested title), and the rest of the Thai wording, which goes to HU-3 ("แลบ" became "ห้องปฏิบัติการ" at the owner's request). D-42 (ก) itself reaches `docs/DECISIONS.md` through CO-8.
 - After: `npx vitest run` lesson-pack-names, lesson-review, i18n, lesson-packs, classroom-pwa, repo-hygiene: 6 files, 73/73; `npm run typecheck` clean; `--check` up to date; the pack file is 30 bytes smaller than on base.
 
