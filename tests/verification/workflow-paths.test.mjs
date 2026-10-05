@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { test } from 'node:test';
 import { posix, ROOT, sourceIdentity, walk } from '../../scripts/verification/lib.mjs';
+import { browserGates } from '../../scripts/verification/create-plan.mjs';
 
 const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
 const pages = readFileSync('.github/workflows/deploy.yml', 'utf8');
@@ -86,4 +87,18 @@ test('cheap repository hygiene runs before collection or downstream expensive ga
   }
   assert.match(pages, /name: Repository hygiene preflight\n        if: steps\.coordinate\.outputs\.proceed == 'true'\n        run: npx vitest run tests\/repo-hygiene\.test\.ts/);
   assert.deepEqual(eventPaths(ci, 'pull_request'), eventPaths(pages, 'push'));
+});
+
+test('each workflow runs exactly the browser shards its plan creates', () => {
+  // create-plan.mjs: PR CI runs the smoke journeys in two shards, Pages every journey in three
+  for (const [source, name, shards, mode] of [[ci, 'browser-smoke', 2, 'ci'], [pages, 'browser', 3, 'pages']]) {
+    assert.deepEqual(browserGates(mode).map((gate) => [gate.id, gate.shard]), Array.from({ length: shards }, (_, i) => [`browser-${i + 1}of${shards}`, `${i + 1}/${shards}`]));
+    const start = source.indexOf(`\n  ${name}:\n`);
+    assert.ok(start >= 0, `Missing ${name} job`);
+    const job = source.slice(start, source.indexOf('\n  verify:\n', start));
+    const list = Array.from({ length: shards }, (_, i) => i + 1).join(', ');
+    assert.ok(job.includes(`        shard: [${list}]`), `browser matrix should be [${list}]`);
+    assert.ok(job.includes(`run: node scripts/verification/run-browser.mjs browser-\${{ matrix.shard }}of${shards}`));
+    assert.ok(job.includes(`browser-\${{ matrix.shard }}of${shards}.report.json`));
+  }
 });
