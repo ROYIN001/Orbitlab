@@ -274,13 +274,38 @@ export async function press(t, app, locator, how, what) {
   const box = await locator.boundingBox();
   if (!box) { t.fail(`${what}: not visible for a ${how} press`); return false; }
   const x = box.x + box.width / 2, y = box.y + box.height / 2;
-  const hit = await locator.evaluate((el, [px, py]) => {
-    const top = document.elementFromPoint(px, py);
-    return top && (el === top || el.contains(top)) ? null : (top ? `${top.tagName.toLowerCase()}${top.id ? `#${top.id}` : ''}.${[...top.classList].join('.')}` : 'nothing');
-  }, [x, y]);
+  const hit = await hitAt(locator, x, y);
   if (hit) { t.fail(`${what}: a ${how} press at its centre lands on ${hit}`); return false; }
   if (how === 'touch') await app.page.touchscreen.tap(x, y);
   else await app.page.mouse.click(x, y);
+  return true;
+}
+
+/** null when the point (viewport px) lands on `locator`'s element or inside it, else what it lands on. */
+function hitAt(locator, x, y) {
+  return locator.evaluate((el, [px, py]) => {
+    const top = document.elementFromPoint(px, py);
+    return top && (el === top || el.contains(top)) ? null : (top ? `${top.tagName.toLowerCase()}${top.id ? `#${top.id}` : ''}.${[...top.classList].join('.')}` : 'nothing');
+  }, [x, y]);
+}
+
+/**
+ * Whether a person could reach `locator` without pressing it: scrolled into
+ * view, its box lies inside the viewport and a press at its centre would land
+ * on it (not on something covering it). Records the failure and resolves to
+ * false when not.
+ */
+export async function reachable(t, app, locator, what) {
+  await locator.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
+  const box = await locator.boundingBox();
+  if (!box || box.width === 0 || box.height === 0) { t.fail(`${what}: not on screen`); return false; }
+  const vp = app.page.viewportSize();
+  if (box.x < -1 || box.y < -1 || box.x + box.width > vp.width + 1 || box.y + box.height > vp.height + 1) {
+    t.fail(`${what}: outside the ${vp.width}×${vp.height} viewport (${JSON.stringify(box)})`);
+    return false;
+  }
+  const hit = await hitAt(locator, box.x + box.width / 2, box.y + box.height / 2);
+  if (hit) { t.fail(`${what}: a press at its centre would land on ${hit}`); return false; }
   return true;
 }
 
