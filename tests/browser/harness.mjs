@@ -20,7 +20,38 @@ import { join } from 'node:path';
 export const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
   mobile: { width: 390, height: 844 },
+  // CO-3 (M-LAUNCH-019): the G2 screenshot and layout matrix. Sizes are the
+  // page's CSS viewport (the area under the browser's own toolbars).
+  'laptop-1280x800': { width: 1280, height: 800 },
+  'laptop-1366x768': { width: 1366, height: 768 },
+  'desktop-1920x1080': { width: 1920, height: 1080 },
+  'laptop-1100x650': { width: 1100, height: 650 },
+  'projector-1280x720': { width: 1280, height: 720 },
+  'tablet-768x1024': { width: 768, height: 1024 },
+  'phone-390x844': { width: 390, height: 844 },
+  'phone-320x740': { width: 320, height: 740 },
+  // either side of the layout's breakpoints (max-width 860 px and 1180 px)
+  'edge-860x800': { width: 860, height: 800 },
+  'edge-861x800': { width: 861, height: 800 },
+  'edge-1180x800': { width: 1180, height: 800 },
+  'edge-1181x800': { width: 1181, height: 800 },
+  // Browser zoom on a laptop screen, emulated: at zoom z the page lays out in
+  // a CSS viewport of the screen size divided by z (to the nearest pixel)
+  // and draws z device pixels per CSS pixel, so `zoom` multiplies the
+  // context's deviceScaleFactor (RENDER_SCALE × z). Layout depends on the CSS
+  // size only; the factor changes the canvas resolution and `resolution` queries.
+  'zoom125-1280x800': { width: 1024, height: 640, zoom: 1.25 },
+  'zoom150-1280x800': { width: 853, height: 533, zoom: 1.5 },
+  'zoom125-1366x768': { width: 1093, height: 614, zoom: 1.25 },
+  'zoom150-1366x768': { width: 911, height: 512, zoom: 1.5 },
 };
+
+/** A preset name or a size: `{ width, height, zoom }` (zoom 1 unless the preset says otherwise). */
+export function viewportSize(viewport) {
+  const size = typeof viewport === 'string' ? VIEWPORTS[viewport] : viewport;
+  if (!size) throw new Error(`unknown viewport preset "${viewport}"`);
+  return { width: size.width, height: size.height, zoom: size.zoom ?? 1 };
+}
 
 /** Software WebGL (ANGLE on SwiftShader): the CI runners and containers have no GPU. */
 const CHROMIUM_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
@@ -148,14 +179,13 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
 
     /**
      * Open the app in a new context: `hash` the route (`#/launch/watch`),
-     * `viewport` a preset name or a size, `lang` en/ru/th, `touch` a touch
+     * `viewport` a preset name (VIEWPORTS) or a size, `lang` en/ru/th, `touch` a touch
      * screen, `guide` true to leave the first-visit tour on.
      */
     async open({ hash = '', viewport = 'desktop', lang = 'en', touch = false, guide = false, contextOptions = {} } = {}) {
-      const size = typeof viewport === 'string' ? VIEWPORTS[viewport] : viewport;
-      if (!size) throw new Error(`unknown viewport preset "${viewport}"`);
+      const { zoom, ...size } = viewportSize(viewport);
       const context = await browser.newContext({
-        viewport: size, deviceScaleFactor: RENDER_SCALE, locale: LOCALES[lang] ?? lang, hasTouch: touch, isMobile: touch && size.width < 600,
+        viewport: size, deviceScaleFactor: RENDER_SCALE * zoom, locale: LOCALES[lang] ?? lang, hasTouch: touch, isMobile: touch && size.width < 600,
         ...contextOptions,
       });
       await context.addInitScript(initScript, { lang, guide });

@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- CO-3 (G2 evidence, tests only): the browser harness has named viewport presets for the G2 matrix (laptops, projector, tablet, phones, the 860/1180 px breakpoint edges and emulated 125/150 % zoom), and a new `r2-viewport-matrix` journey checks the Launch Engineer flight at every size in TH/EN/RU with the first-use guide open and closed (no sideways scroll; Abort, play, clock, Live, six-DOF and TORU controls reachable; the event chooser inside the window) and logs the scene's size for the owner's minimum-size decision.
 - R3.1 (design revision): a mission flown from Build, and its orbit handed on to Orbit, say which of your designs it is and which version — when it was saved, changed since, or not saved.
 - R3.3 (diagrams): the satellite bench's Power, Radio and Camera tabs each draw a diagram from their own figures — the time in the Earth's shadow, the link to the ground station and its margin, the camera's footprint and detail.
 - R3.3 (stowed pose): the satellite bench draws a design with wings stowed for launch as well as deployed, with the fold stated as an assumption, and shows the satellite's body axes.
