@@ -18,7 +18,7 @@ export interface ProfileSummary {
   id: string; name: string; createdAt: string; updatedAt: string; revision: number; epoch: number; counts: ProfileCounts;
 }
 /** A catalogue row. An unreadable or newer record is reported, never rewritten (M-PLATFORM-004). */
-export type ProfileListRow = (ProfileSummary & { state: 'ok' }) | { id: string; state: 'unreadable' | 'newer'; name?: string };
+export type ProfileListRow = (ProfileSummary & { state: 'ok' }) | { id: string; state: 'unreadable' | 'newer' | 'missing'; name?: string };
 interface ProfileRecord { version: 1; id: string; name: string; createdAt: string; updatedAt: string; revision: number; epoch: number; values: Record<string, string> }
 interface Catalog { version: 1; profiles: Record<string, { deleting?: boolean }>; legacyId: string; mediaMigrated: boolean }
 export interface WorkspaceArchive {
@@ -295,8 +295,10 @@ export class WorkspaceRepository {
     if (!entry || entry.deleting) throw new WorkspaceError('missing');
     try { return { ...summary(this.read(id)), state: 'ok' }; } catch (error) {
       if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
-      let name: string | undefined;
-      try { const raw: unknown = JSON.parse(this.rawProfile(id)); if (ownRecord(raw) && typeof raw.name === 'string' && raw.name.trim()) name = raw.name.trim().slice(0, 100); } catch { /* no name */ }
+      let name: string | undefined, raw: string | null = null;
+      try { raw = this.rawProfile(id); } catch { /* a catalogue row without stored bytes */ }
+      if (raw === null) return { id, state: 'missing' };
+      try { const data: unknown = JSON.parse(raw); if (ownRecord(data) && typeof data.name === 'string' && data.name.trim()) name = data.name.trim().slice(0, 100); } catch { /* no name */ }
       return { id, state: error.code === 'newer' ? 'newer' : 'unreadable', name };
     }
   }

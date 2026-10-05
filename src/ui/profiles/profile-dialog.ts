@@ -10,7 +10,7 @@ export interface ProfileCounts {
 }
 export interface ProfileItem { id: string; name: string; counts: ProfileCounts }
 /** A stored profile this version cannot read: shown with an explanation, kept byte for byte until the user decides. */
-export interface UnreadableProfileItem { id: string; state: 'unreadable' | 'newer'; name?: string }
+export interface UnreadableProfileItem { id: string; state: 'unreadable' | 'newer' | 'missing'; name?: string }
 export interface ProfileDialogSnapshot {
   profiles: readonly ProfileItem[];
   unreadable?: readonly UnreadableProfileItem[];
@@ -31,7 +31,8 @@ export interface ProfileDialogHost {
   prepareChange(action: ProfileChange): Promise<boolean | void> | boolean | void;
   reload?(): void;
   /** `skipped` counts stored profiles left out because this version cannot read them. */
-  exportAll?(): Promise<{ skipped: number } | void> | { skipped: number } | void;
+  /** `exported: false` when nothing readable was left to export (no file was downloaded). */
+  exportAll?(): Promise<{ skipped: number; exported?: boolean } | void> | { skipped: number; exported?: boolean } | void;
   exportRaw?(profileId: string): Promise<void> | void;
   exportMedia?(profileId?: string): Promise<void> | void;
   importMedia?(file: File, profileId: string, mode: 'keep' | 'replace'): Promise<void> | void;
@@ -64,12 +65,14 @@ function errorReason(error: unknown): string {
   };
   return messages[code] ? text(messages[code]) : error instanceof Error ? error.message : String(error);
 }
+const rowText = (profile: UnreadableProfileItem): ProfileTextKey =>
+  profile.state === 'newer' ? 'rowNewer' : profile.state === 'missing' ? 'rowMissing' : 'rowUnreadable';
 
 /** Native modal with explicit destructive scopes and a chooser after active/last-profile deletion. */
 export class ProfileDialog extends Modal {
   private screen: Screen = { kind: 'list' };
   private busy = false;
-  private message: { key: 'error' | 'backupDone' | 'backupPartial' | 'mediaDone'; reason?: string } | null = null;
+  private message: { key: 'error' | 'backupDone' | 'backupPartial' | 'backupNoneReadable' | 'mediaDone'; reason?: string } | null = null;
 
   constructor(dialog: HTMLDialogElement, private readonly host: ProfileDialogHost) {
     super(dialog);
@@ -203,11 +206,11 @@ export class ProfileDialog extends Modal {
     }
     for (const profile of snapshot.unreadable ?? []) {
       const row = node('li', 'profile-list-row profile-unreadable-row'); row.dataset.profileId = profile.id;
-      row.append(node('strong', 'profile-list-name', profile.name ?? text('unreadableName')),
-        node('p', 'profile-warning', text(profile.state === 'newer' ? 'rowNewer' : 'rowUnreadable')));
-      const remove = this.button('delete', () => this.go({ kind: 'deleteUnreadable', id: profile.id }), 'profile-danger-text');
+      row.append(node('strong', 'profile-list-name', profile.name ?? text('unreadableName')), node('p', 'profile-warning', text(rowText(profile))));
+      const remove = this.rowButton('delete', profile, () => this.go({ kind: 'deleteUnreadable', id: profile.id }), 'profile-danger-text');
       remove.disabled ||= readonly;
-      row.append(this.actions(this.button('exportRaw', () => void this.saveRaw(profile.id)), remove)); list.append(row);
+      const buttons = profile.state === 'missing' ? [remove] : [this.rowButton('exportRaw', profile, () => void this.saveRaw(profile.id)), remove];
+      row.append(this.actions(...buttons)); list.append(row);
     }
     if (!snapshot.profiles.length && !snapshot.unreadable?.length) content.append(node('p', undefined, text('empty')));
     content.append(list);
@@ -251,7 +254,7 @@ export class ProfileDialog extends Modal {
       if (profile!.id === snapshot.activeId) content.append(node('p', 'profile-warning', text('deleteActive')));
       content.append(this.button('backup', () => void this.backup(profile!.id)));
       content.append(node('p', 'profile-warning', text('jsonMedia')));
-      if (this.host.exportMedia) content.append(this.button('exportMedia', () => void this.exportAudio(profile!.id)));
+      this.mediaExport(content, snapshot, profile!.id);
     }
     const confirm = this.button(deleting ? 'deleteConfirm' : 'confirm', () => {
       if (screen.kind === 'create') void this.run(() => this.host.create(screen.name), 'create');
@@ -324,9 +327,25 @@ export class ProfileDialog extends Modal {
     content.append(this.actions(this.button('back', () => this.go({ kind: 'list' }))));
   }
   private async backupAll(): Promise<void> {
-    let skipped = 0;
-    const screen = this.screen; await this.run(async () => { skipped = (await this.host.exportAll?.())?.skipped ?? 0; }); this.screen = screen;
-    if (!this.message) this.message = { key: skipped ? 'backupPartial' : 'backupDone' }; this.render();
+    const out: { result?: { skipped: number; exported?: boolean } | void } = {};
+    const screen = this.screen; await this.run(async () => { out.result = await this.host.exportAll?.(); }); this.screen = screen;
+    const result = out.result;
+    if (!this.message) this.message = { key: result?.exported === false ? 'backupNoneReadable' : result?.skipped ? 'backupPartial' : 'backupDone' };
+    this.render();
+  }
+  /** A row action whose accessible name and focus key include the profile, so rows can be told apart. */
+  private rowButton(key: ProfileTextKey, profile: UnreadableProfileItem, action: () => void, kind = ''): HTMLButtonElement {
+    const button = this.button(key, action, kind);
+    button.setAttribute('aria-label', text('rowAction', { action: text(key), name: profile.name ?? text('unreadableName') }));
+    button.dataset.profileFocus = `${key}:${profile.id}`;
+    return button;
+  }
+  /** Audio export only reads media; it needs real (not visit-only) storage, never the owner lock. */
+  private mediaExport(content: HTMLElement, snapshot: ProfileDialogSnapshot, id: string): void {
+    if (!this.host.exportMedia) return;
+    const button = this.button('exportMedia', () => void this.exportAudio(id));
+    if (snapshot.status === 'ephemeral') { button.disabled = true; content.append(button, node('p', undefined, text('mediaUnavailable'))); }
+    else content.append(button);
   }
   private async saveRaw(id: string): Promise<void> {
     const screen = this.screen; await this.run(() => this.host.exportRaw?.(id)); this.screen = screen;
@@ -338,9 +357,9 @@ export class ProfileDialog extends Modal {
     const profile = screen.kind === 'deleteUnreadable' ? snapshot.unreadable?.find((item) => item.id === screen.id) : undefined;
     if (!profile) { this.screen = { kind: 'list' }; this.list(content, snapshot, readonly); return; }
     content.append(node('h3', undefined, text('deleteUnreadableTitle', { name: profile.name ?? text('unreadableName') })),
-      node('p', 'profile-warning', text(profile.state === 'newer' ? 'rowNewer' : 'rowUnreadable')),
-      node('p', 'profile-warning', text('deleteUnreadableLead')), this.button('exportRaw', () => void this.saveRaw(profile.id)));
-    if (this.host.exportMedia) content.append(this.button('exportMedia', () => void this.exportAudio(profile.id)));
+      node('p', 'profile-warning', text(rowText(profile))), node('p', 'profile-warning', text('deleteUnreadableLead')));
+    if (profile.state !== 'missing') content.append(this.button('exportRaw', () => void this.saveRaw(profile.id)));
+    this.mediaExport(content, snapshot, profile.id);
     const confirm = this.button('deleteUnreadableConfirm', () => void this.run(() => this.host.remove(profile.id), 'delete'), 'profile-danger');
     confirm.disabled ||= readonly;
     content.append(this.actions(this.button('cancel', () => this.go({ kind: 'list' })), confirm));

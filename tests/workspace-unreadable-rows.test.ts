@@ -80,7 +80,7 @@ describe('R1.6 PR2: one unreadable or newer profile no longer hides the others (
   });
   it('the menu exports all healthy profiles, reports the skipped ones, saves raw copies, and audio export does not throw', async () => {
     const env = await threeProfiles(LEGACY_PROFILE_ID), r = await env.repo().initialize(), host = createProfileMenuHost(r, () => {}, () => {});
-    expect(await host.exportAll!()).toEqual({ skipped: 2 });
+    expect(await host.exportAll!()).toEqual({ skipped: 2, exported: true });
     expect(JSON.parse(await calls.downloads[0].blob.text()).profiles.map((p: { id: string }) => p.id)).toEqual([LEGACY_PROFILE_ID]);
     await host.exportRaw!(env.broken.id);
     expect(await calls.downloads[1].blob.text()).toBe(env.disk.values.get(env.brokenKey));
@@ -105,5 +105,34 @@ describe('R1.6 PR2: one unreadable or newer profile no longer hides the others (
     expect(env.disk.values.has(env.brokenKey)).toBe(false); expect(env.deleted).toEqual([env.broken.id]);
     expect(r.listWithStatus().map((row) => row.id)).toEqual([LEGACY_PROFILE_ID, env.future.id]);
     expect(r.binding!.getItem('orbitlab.mission')).toBe('healthy work'); r.close();
+  });
+  it('review: audio export reads media from the chooser and fails only in visit-only mode', async () => {
+    const env = await threeProfiles(''), r = await env.repo().initialize(), host = createProfileMenuHost(r, () => {}, () => {});
+    expect(r.status).toBe('chooser');
+    await expect(host.exportMedia!(LEGACY_PROFILE_ID)).resolves.toBeUndefined();
+    await expect(host.exportMedia!(env.broken.id)).resolves.toBeUndefined();
+    expect(calls.media).toEqual([`${LEGACY_PROFILE_ID}:Learner 1`, `${env.broken.id}:${env.broken.id}`]);
+    env.unchanged(); r.close();
+    const visit = await new WorkspaceRepository(env.disk.store, env.session.store).initialize();
+    expect(visit.status).toBe('ephemeral');
+    await expect(createProfileMenuHost(visit, () => {}, () => {}).exportMedia!(visit.binding!.profileId)).rejects.toThrow('locked');
+    expect(calls.media).toHaveLength(2); env.unchanged();
+  });
+  it('review: Export all with no readable profile downloads nothing and reports it', async () => {
+    const env = await threeProfiles(''), legacyKey = profileStorageKey(LEGACY_PROFILE_ID);
+    env.disk.values.set(legacyKey, env.disk.values.get(legacyKey)!.slice(0, -5));
+    const r = await env.repo().initialize(), host = createProfileMenuHost(r, () => {}, () => {});
+    expect(await host.exportAll!()).toEqual({ skipped: 3, exported: false });
+    expect(calls.downloads).toHaveLength(0); env.unchanged(); r.close();
+  });
+  it('review: a catalogue row whose record is gone is its own state, has no raw copy, and can be deleted', async () => {
+    const env = await threeProfiles(LEGACY_PROFILE_ID);
+    env.disk.values.delete(env.brokenKey);
+    const r = await env.repo().initialize(), host = createProfileMenuHost(r, () => {}, () => {});
+    expect(r.profileRow(env.broken.id)).toEqual({ id: env.broken.id, state: 'missing' });
+    expect(host.snapshot().unreadable?.map((row) => row.state)).toEqual(['missing', 'newer']);
+    expect(() => r.rawProfile(env.broken.id)).toThrow('missing');
+    await r.delete(env.broken.id);
+    expect(r.listWithStatus().map((row) => row.id)).toEqual([LEGACY_PROFILE_ID, env.future.id]); r.close();
   });
 });

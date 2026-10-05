@@ -35,9 +35,11 @@ class ProfileMenuHost {
       },
       exportAll: async () => {
         await this.repo.prepareChange();
-        const skipped = this.repo.listWithStatus().filter((row) => row.state !== 'ok').length;
+        const rows = this.repo.listWithStatus(), skipped = rows.filter((row) => row.state !== 'ok').length;
+        // Nothing readable: no empty file, only the guidance to save a copy of each row.
+        if (skipped && skipped === rows.length) return { skipped, exported: false };
         this.download(this.repo.exportAll());
-        return { skipped };
+        return { skipped, exported: true };
       },
       exportRaw: async (id) => {
         const raw = this.repo.rawProfile(id);
@@ -65,7 +67,9 @@ class ProfileMenuHost {
         else this.applyLanguage();
       },
       exportMedia: async (id) => {
-        if (this.repo.status !== 'durable') throw new WorkspaceError('locked');
+        // Reading media needs no owner lock (R1 locks guard writes), so the chooser and a read-only
+        // second tab can save audio too; visit-only mode has no real catalogue to name the owner.
+        if (this.repo.status === 'ephemeral') throw new WorkspaceError('locked');
         const target = id ?? this.repo.binding?.profileId;
         if (!target) throw new WorkspaceError('missing');
         // Only the target is read; audio of an unreadable profile can still be saved before a delete.
