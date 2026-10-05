@@ -155,8 +155,9 @@ export async function openChooser(t, app, { how = 'mouse', label = 'engineer' } 
   const cluster = page.locator('.tl-chip.cluster:not(.collapsed)').first();
   const found = await t.until(async () => (await cluster.count()) > 0 && cluster.isVisible(), { timeoutMs: RESPOND_MS });
   if (!t.check(found, 'no clustered events on the bar')) return null;
-  // on a phone the bar can sit below the fold, under the compact flight bar: bring it up as a person would
-  await cluster.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
+  // on a phone the bar can sit below the fold, under the compact flight bar: bring it up as a person
+  // would. On desktop it is not scrolled, so press() still fails when the event bar is off screen.
+  if (how === 'touch') await cluster.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
   if (label) await app.shot(`${label}-timeline-before-chooser`);
   if (!await press(t, app, cluster, how, 'cluster chip')) return null;
   const list = page.locator('.tl-chooser');

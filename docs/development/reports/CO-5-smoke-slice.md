@@ -30,7 +30,7 @@ PR CI runs only the browser journeys that export `smoke = true` (`scripts/verifi
 - **`tests/browser/journeys/r2-flight-shell.mjs`**: three steps move out of `engineer()` and `chooser()` into exported helpers. The smoke journey imports them, so no code is copied:
   - `launchFolds(t, app)`: the real Launch button, then the setup folds, the setup panel is hidden, the scene and canvas grow by more than 200 px, and the scene has at least 60 % of the workspace width. These are the same checks as before.
   - `pauseStaysInFlight(t, app)`: pause, then two animation frames, then check the flight stage, that the setup is still folded, and that the flight is not playing. The two frames are needed (see the sabotage table). The last two checks are new to the full journey too.
-  - `openChooser(t, app, { how, label })`: find a cluster chip, scroll it to the middle of the window, press it (mouse or touch), and check that the chooser opens with at least 2 events and that the chip is marked expanded. Screenshots are skipped when `label` is null; that saves the smoke slice about 7 s of software-rendered captures (measured 3.7 s + 3.1 s). The full journey still takes them.
+  - `openChooser(t, app, { how, label })`: find a cluster chip, scroll it to the middle of the window on touch only (on desktop it is not scrolled, so `r2-flight-shell` at 1280×800 still fails when the event bar is off screen, as before; second-agent review), press it (mouse or touch), and check that the chooser opens with at least 2 events and that the chip is marked expanded. Screenshots are skipped when `label` is null; that saves the smoke slice about 7 s of software-rendered captures (measured 3.7 s + 3.1 s). The full journey still takes them.
 - **`tests/browser/harness.mjs`**: a new `reachable(t, app, locator, what)` scrolls an element into view and checks that it lies inside the viewport and that a press at its centre would land on it, without pressing. `press` now shares the hit test (`hitAt`) with it, and its behaviour is unchanged.
 
 No app code, no other journey, and no verification script changed. The CI shard count stays at 2 (below).
@@ -51,11 +51,11 @@ Not asserted (as the spec requires): the `mfb-play` name and the Soyuz 81 % engi
 
 ### Limits of 3b
 
-The TORU check is a guard against the panel being removed, hidden by CSS or pushed off screen in the flight column. It does not prove reach at the real approach, for two reasons:
+The TORU check is a guard against the panel being removed, hidden by CSS or pushed off screen in the flight column. It does not prove reach at the real approach:
 
 - At the approach, the six-DOF panel is hidden. In the slice it is still shown.
 - With the six-DOF panel also hidden (the `hide-rigid` sabotage, and a probe that hid it on purpose), the take-over button's centre lands on a `span` in `footer#footer`. This is CO-3's open finding F1 (footer drawn over the bottom of the flight column, `docs/development/reports/CO-3-g2-matrix.md`).
-- In a live approach at 1280×800 and at 1024×700 (EN, guide closed), the button was reachable after `scrollIntoViewIfNeeded` (local probe, not committed).
+- For context only: in a live approach at 1280×800 and at 1024×700 (EN, guide closed), a local probe (not committed) found the button reachable after `scrollIntoViewIfNeeded`; that is not a test result.
 
 Real reach at the approach is covered on Pages by `r2-viewport-matrix` (CO-3, A3).
 

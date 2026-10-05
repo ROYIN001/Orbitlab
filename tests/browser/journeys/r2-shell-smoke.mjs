@@ -10,8 +10,11 @@
  *   (`#rigid-controls`) of the flight on screen, and the TORU panel
  *   (`#toru-controls`) where the app shows it. A live approach takes about
  *   85 s of flying on a 4-core machine, too long for this slice, so the TORU
- *   panel is shown the way the app shows it at the approach (its `hidden`
- *   attribute dropped), measured in the same task and hidden again.
+ *   panel's `hidden` attribute is dropped, the panel measured in the same task
+ *   and hidden again. At a real approach the app also hides `#rigid-controls`;
+ *   this check keeps that panel showing, so it guards against TORU being
+ *   removed, hidden by CSS or pushed off screen, not reach at the approach
+ *   (that is `r2-viewport-matrix` on Pages; CO-3 finding F1).
  * - R2.4: on a 390 px Thai phone, the event chooser opens from a cluster
  *   chip by touch and fits the screen; the page does not scroll sideways.
  *
@@ -87,7 +90,7 @@ async function thaiPhone(t) {
   t.check(await page.evaluate(() => document.documentElement.lang) === 'th', 'the page is not in Thai');
   const launched = await app.mcp('launch_mission', {});
   t.check(launched.ok, `launch_mission on a phone: ${JSON.stringify(launched)}`);
-  t.check(await t.until(() => page.evaluate(() => document.body.dataset.setup === 'collapsed'), { timeoutMs: RESPOND_MS }), 'the phone did not collapse the setup');
+  if (!t.check(await t.until(() => page.evaluate(() => document.body.dataset.setup === 'collapsed'), { timeoutMs: RESPOND_MS }), 'the phone did not collapse the setup')) return;
   // ignition and liftoff are a cluster on a 390 px bar from T+0: skip the countdown
   await app.mcp('control_playback', { action: 'warp', warp: 10 });
   const state = () => app.mcp('read_flight_state');
