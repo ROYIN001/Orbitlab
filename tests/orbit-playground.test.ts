@@ -362,14 +362,17 @@ describe('the Watch tour\'s period is the orbit flown now (M-ORBIT-003)', () => 
     expect(isPlan(plan)).toBe(true);
     if (!isPlan(plan)) return;
     const geo = { ...start, a: R_EARTH + 35_786e3, e: 0 };
-    const before = flownAt(plan, start, 0, setup.j2);
-    expect(before.index).toBe(0);
-    expect(orbitFacts(before.orbit).period).toBeCloseTo(orbitFacts(start).period, 6);
+    // between the burns: the transfer ellipse, longer than the LEO's period and shorter than a day
+    const period = (o: typeof start) => orbitFacts(o, setup.j2).period;
+    const between = flownAt(plan, start, (plan.burns[0].t + plan.burns[1].t) / 2, setup.j2);
+    expect(between.index).toBe(1);
+    expect(period(between.orbit)).toBeGreaterThan(period(start) + 3600);
+    expect(period(between.orbit)).toBeLessThan(period(geo) - 3600);
     const t = plan.burns[1].t + 60;
     const after = flownAt(plan, start, t, setup.j2);
     expect(after.index).toBe(plan.segments.length - 1);
     // within 1 s of a sidereal day: the circle at 35 786 km, not the LEO the step started on
-    expect(Math.abs(orbitFacts(after.orbit).period - orbitFacts(geo).period)).toBeLessThan(1);
+    expect(Math.abs(period(after.orbit) - period(geo))).toBeLessThan(1);
     expect(after.local).toBeCloseTo(t - plan.segments[after.index].t0, 6);
     // no plan: the orbit itself
     expect(flownAt(null, start, 1234, false)).toEqual({ orbit: start, local: 1234, index: 0 });
