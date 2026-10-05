@@ -32,17 +32,39 @@ it could not fly.
   `BUILD_RATING_OPTIONS = { timeBudgetMs: Infinity, maxFlights: 40 }`
   (`src/ui/build/ratings-budget.ts`). The result no longer depends on device
   speed; a slow device waits longer with the existing progress line and Stop.
-  The bisection order and `src/design/ratings.ts` are unchanged (its default
-  budget still serves the validation scripts, which already pass `Infinity`).
+  The bisection order is unchanged (the default 8 s budget of
+  `computedRatings` still serves its other callers; the validation scripts
+  already pass `Infinity`).
+- **The 40-flight limit cannot bind in practice.** Each rating is a
+  bisection to 0.5 % of the ceiling, at most about 9 flights per orbit, so at
+  most about 18 in all (the reviewer measured at most 18 across the 21
+  catalogue vehicles). The "not finished" path is therefore defensive: it
+  covers a stop that should not happen (and the time-budget variant, which
+  the Build search no longer uses), so no rating that did not converge can
+  ever be stored or shown as one.
+- **Fallback without a module worker (review should-fix 1).** The search used
+  to run there in one synchronous call; with no time budget that blocks the
+  page for the whole search (reviewer's measurement: up to 18 flights / 8.9 s
+  on the review machine across the 21 catalogue vehicles; likely 30–45 s on a
+  slow tablet) and Stop could not be pressed. `src/design/ratings.ts` now
+  offers `ratingsSearch`, the same search as a generator that pauses after
+  every probe flight (same flights, same order, same result; `computedRatings`
+  runs it to the end). The fallback in `ratings-job.ts` steps it one flight
+  per `setTimeout(0)`, so the progress line is drawn and Stop cancels between
+  flights. Each flight still blocks for its own 7–95 ms (`probeInsertion`).
+  No file under `src/physics/**` changed.
 - **Unconverged is not a rating.** Pure helpers in `src/ui/build/ratings-job.ts`:
   `unfinishedRatings(res)` (null when both ratings converged, else `stoppedBy`,
   flights, and the payloads delivered so far), `ratingsRecord(signature, res)`
   (null for an unfinished search) and `unfinishedRatingsText(u)`. The Explore
   level stores `draft.ratings` only from `ratingsRecord`; the review panel calls
   `host.rated` only when the search finished. An unfinished search shows
-  "Not finished: the search stopped at its limit of N test flights … at least
-  X kg … not kept as the ratings" (EN/TH/RU; a time-limit variant for
-  completeness). Both ratings or neither: a converged LEO beside a stopped GTO
+  "Not finished: the search stopped at its limit of N test flights. To low
+  orbit: X kg (found). To geostationary transfer orbit: at least Y kg, not
+  found exactly / not found. Neither is kept as a rating." (EN/TH/RU; a
+  time-limit variant for completeness). A converged rating is said as found,
+  an unconverged one with a delivered payload as "at least", one with none as
+  "not found". Both ratings or neither: a converged LEO beside a stopped GTO
   is not stored either.
 - **Stored format unchanged.** No field added to `RatingsRecord` or any
   persisted record (schema rule 9 not triggered). Not touched: `src/physics/**`.
@@ -66,8 +88,12 @@ every call (a slow device), the base search stops unconverged.
 
 Passing after:
 
-- `tests/build-ratings-unfinished.test.ts` 3/3; with `tests/i18n.test.ts` and
-  `tests/repo-hygiene.test.ts`: 3 files, 31 tests passed.
+- `tests/build-ratings-unfinished.test.ts` 5/5 after review (adds: a
+  converged rating beside an unconverged one is said as found; without a
+  worker, Stop after the first flight rejects with `AbortError` and no further
+  flight is flown; the two-search test has a 60 s timeout). With
+  `tests/design-ratings.test.ts`, `tests/i18n.test.ts` and
+  `tests/repo-hygiene.test.ts`: 4 files, 38 tests passed.
 - `tests/design-ratings.test.ts`, `build-screen`, `explore`,
   `design-explore-model`, `design-review-model`, `design-explore-drafts`:
   63/63 (two long tests timed out once under parallel CPU load and passed on
@@ -79,10 +105,8 @@ Passing after:
 
 ## Left open
 
-- Ratings stored before this fix carry no `converged` flag, so a stored 0 or
-  lower bound cannot be told apart (plan v2.0 S10, stored-data item 4). Their handling ("computed
-  by an earlier version, recompute") needs B's exact bound and the owner's
-  sign-off; not in this PR.
-- Without a module worker the uncapped-in-time search runs on the main thread
-  (at most 40 flights, about 0.3–4 s on a laptop), as before but no longer cut
-  at 8 s.
+- **KPI-14 for M-BUILD-006 is partial after this PR:** ratings stored before
+  it carry no `converged` flag, so a stored 0 or lower bound cannot be told
+  apart (plan v2.0 S10, stored-data item 4). The "computed by an earlier version,
+  recompute" label is a follow-up that needs the owner's sign-off and
+  possibly a reader-first PR (schema rule 9).

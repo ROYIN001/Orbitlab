@@ -12,7 +12,7 @@
 import { describe, expect, it } from 'vitest';
 import { vehicleById } from '../src/data/vehicles';
 import { computedRatings } from '../src/design/ratings';
-import { BUILD_RATING_OPTIONS, ratingsRecord, unfinishedRatings, unfinishedRatingsText } from '../src/ui/build/ratings-job';
+import { BUILD_RATING_OPTIONS, ratingsRecord, runRatingsJob, unfinishedRatings, unfinishedRatingsText } from '../src/ui/build/ratings-job';
 
 const electron = vehicleById('electron');
 
@@ -33,8 +33,31 @@ describe('an unconverged ratings search is not a rating (M-BUILD-006)', () => {
     expect(ratingsRecord('sig', res)).toBeNull();
     const u = unfinishedRatings(res)!;
     expect(u).toMatchObject({ stoppedBy: 'flightBudget', flights: 3 });
-    expect(u.leoAtLeastKg).toBe(res.payloadLEO.kg);
-    expect(unfinishedRatingsText(u)).toMatch(/3 test flights/);
+    expect(u.leo).toEqual({ kg: res.payloadLEO.kg, converged: false });
+    expect(u.gto).toEqual({ kg: 0, converged: false });
+    const text = unfinishedRatingsText(u);
+    expect(text).toMatch(/3 test flights/);
+    expect(text).toMatch(/at least/);
+    expect(text).toMatch(/transfer orbit: not found/);
+    expect(text).not.toMatch(/unknown/);
+  });
+
+  it('a rating that did converge beside one that did not is said as found, not "at least"', () => {
+    const text = unfinishedRatingsText({ stoppedBy: 'flightBudget', flights: 12, leo: { kg: 300, converged: true }, gto: { kg: 0, converged: false } });
+    expect(text).toMatch(/low orbit: 300 kg \(found\)\./);
+    expect(text).not.toMatch(/at least|unknown/);
+  });
+
+  it('without a worker, the search runs a flight at a time and Stop ends it', async () => {
+    expect(typeof Worker).toBe('undefined'); // node: the fallback runs
+    const controller = new AbortController();
+    const seen: number[] = [];
+    const job = runRatingsJob(structuredClone(electron), controller.signal, (_rating, flights) => {
+      seen.push(flights);
+      controller.abort();
+    });
+    await expect(job).rejects.toMatchObject({ name: 'AbortError' });
+    expect(seen).toEqual([1]);
   });
 
   it('D-67 (a): the Build search has no wall-time budget, and a converged result is kept unchanged', () => {
@@ -47,5 +70,5 @@ describe('an unconverged ratings search is not a rating (M-BUILD-006)', () => {
     expect([slow.payloadLEO.kg, slow.payloadGTO.kg]).toEqual([fast.payloadLEO.kg, fast.payloadGTO.kg]);
     expect(ratingsRecord('sig', slow)).toEqual({ signature: 'sig', payloadLEO: slow.payloadLEO.kg, payloadGTO: slow.payloadGTO.kg });
     expect(BUILD_RATING_OPTIONS.maxFlights).toBe(40);
-  });
+  }, 60_000);
 });
