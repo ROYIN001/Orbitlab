@@ -30,3 +30,26 @@ export function missionStage(s: { launched: boolean; done: boolean }): MissionSt
 export function setupCollapsed(mode: string, stage: MissionStage, peek: boolean): boolean {
   return mode === 'engineer' && stage !== 'setup' && !peek;
 }
+
+/**
+ * How a change reached the setup. `edit`: a setting changed — one of the
+ * setup's own fields, or the loop inspector's "Use for the next launch".
+ * `replace`: the whole mission was replaced on purpose — a template, a launch
+ * picked in a viewer, a saved or Monte Carlo mission restored.
+ */
+export type SetupChange = 'edit' | 'replace';
+
+/**
+ * LUI-01: whether a change to the setup rebuilds the pad preview.
+ *
+ * The preview builds a new simulation, so it replaces whatever flight is
+ * shown. Nothing previews over a running clock. While setting up, every
+ * change previews (roadmap U01). Once launched — flying, paused, replaying, or
+ * finished in `analysis` — an edit is held in the setup as the configuration
+ * of the next launch (Relaunch, New mission): the flight and its recording are
+ * not touched. A mission replaced on purpose is a new mission in any stage.
+ */
+export function previewsChange(stage: MissionStage, playing: boolean, change: SetupChange): boolean {
+  if (playing) return false;
+  return change === 'replace' || stage === 'setup';
+}

@@ -71,6 +71,7 @@ import { faultKindName } from './fault-names';
 import type { ExplicitGuidanceConfig } from '../types';
 import { EXPLICIT_FIELD_KEYS } from '../physics/explicit-guidance';
 import { copyMission, type MissionState } from '../config/mission-file';
+import type { SetupChange } from './flight-lifecycle';
 import { configuredDispersion } from '../physics/dispersed-flight'; // P08
 import { propulsionElements } from '../physics/dispersion'; // P08
 import type { DispersedFlightConfig } from '../types'; // P08
@@ -90,7 +91,8 @@ export {
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
   onReset: () => void;
-  onChange?: (cfg: MissionConfig) => void;
+  /** A change to the mission: `edit` for a setting, `replace` for a whole mission loaded on purpose (LUI-01). */
+  onChange?: (cfg: MissionConfig, change: SetupChange) => void;
   /**
    * The user asked for the other layout from inside the panel ("Adjust in the
    * Engineer mode" under Explore's computed guidance). The app owns the mode —
@@ -519,7 +521,7 @@ export class SetupPanel {
     this.state.dynamics = defaultDynamics(missionVehicle(this.state));
     this.tuneMessage = '';
     this.applyExternalEdit();
-    this.cb.onChange?.(this.getConfig());
+    this.cb.onChange?.(this.getConfig(), 'replace');
   }
 
   isRunning(): boolean {
@@ -549,7 +551,7 @@ export class SetupPanel {
     if (!mission.rendezvous) this.state.rendezvous = undefined;
     this.tuneMessage = '';
     this.applyExternalEdit();
-    this.cb.onChange?.(this.getConfig());
+    this.cb.onChange?.(this.getConfig(), 'replace');
   }
 
   /** Show the learning or the advanced layout (set by the app's mode). */
@@ -734,7 +736,7 @@ export class SetupPanel {
       }
     }
     this.refresh();
-    if (this.isValid()) this.cb.onChange?.(this.getConfig());
+    if (this.isValid()) this.cb.onChange?.(this.getConfig(), 'edit');
     // The site notice is news about the edit that has just been painted, not a
     // state of the mission: clearing it here is what stops it masking every
     // later verdict for the rest of the session.
@@ -2487,7 +2489,7 @@ export class SetupPanel {
         this.state.guidanceOverrides = { ...best.guidance };
         this.tunedFor = this.missionSignature();
         this.tuneMessage = t('setup.tune.verified', { kick: best.kickAngle, rate: best.maxTurnRate, loft: best.loftAltitude / 1000 });
-        this.cb.onChange?.(this.getConfig());
+        this.cb.onChange?.(this.getConfig(), 'edit');
       } else this.tuneMessage = t('setup.tune.noTarget');
     } catch (error) {
       if (this.tuneController === controller) {
