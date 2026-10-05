@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- CO-7 (D-42): the curriculum pack once named for an air force academy now shows a neutral name, audience and curriculum label in English, Thai and Russian ("Space flight dynamics and control: an institution-level lab"); its id, lessons, progress and source citations are unchanged.
 - Docs (CO-2): PROGRESS, the R3 reports and the implementation status record R2/R3 and gate G3 as GitHub and the owner record them; a close-out report audits #71–#83 (merge, CI, Pages, live) and reviews the R1–R3 budget raises.
 - Tests (#81, #82): when a browser journey fails, its diagnostics print the app's start-up marks (bootstrap, workspace, app, textures, ready) with the navigation timing, and, read through the browser process, the CPU each Chrome process used over 3 s and the GPU's feature status.
 - Release checks: the website's publish run tests the browser journeys in three parallel parts instead of two, so a longer journey fits and the slowest part finishes sooner; the PR checks are unchanged.

@@ -81,8 +81,8 @@ any academy, and no service or academy name or emblem is used without written pe
   file or a link, and re-checks the class's results files on their own computer, each flight flown
   again with the student's commands. No accounts, and nothing about a student leaves the device; a
   `?scenario=` link carries the lesson, and like any address it reaches the server that serves the app.
-- **Lesson packs** matched to curricula: IPST's science and physics courses (Thailand), the Royal
-  Thai Air Force Academy's programme and Russia's speciality 24.05.06, drafts awaiting review.
+- **Lesson packs** matched to curricula: IPST's science and physics courses (Thailand), a space
+  flight dynamics and control lab for undergraduate aeronautical engineers and Russia's speciality 24.05.06, drafts awaiting review.
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
   explains it in one line, next to the mission clock and the latest callout, and the camera
   follows a per-phase programme you can set yourself — identically live and in replay.

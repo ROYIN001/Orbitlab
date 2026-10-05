@@ -83,7 +83,7 @@ export const PACK_REVIEWS: Readonly<Record<string, PackReview>> = {
   },
   'rtaf-academy': {
     ...common(), packId: 'rtaf-academy',
-    contentSha256: '325e3843dc968e08a55f280e203f62ff7facf305c429f9b8c1f824a06156896b',
+    contentSha256: 'af5009209decd06ca41902821a950cf64c7643f350704a300065a002726c8297',
     objectiveKey: 'lesson.review.objective.rtaf-academy',
     sources: [
       source('nkrafa', 'https://nkrafa.rtaf.mi.th/curriculum'),
