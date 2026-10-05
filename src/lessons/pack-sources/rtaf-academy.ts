@@ -12,6 +12,12 @@
  * 2020 Aeronautical programme. R4 (a calibrated six-DOF step test) was not in
  * this stage's task. Worked solutions: tests/lesson-packs.test.ts (flights)
  * and tests/lesson-packs-design.test.ts (designs).
+ *
+ * The pack's displayed identity (title, audience, framework) carries no
+ * service or academy name (DEC:D-2; plan v2.0 D-42 (ก), CO-7): the name comes
+ * back only when written permission is recorded in docs/DECISIONS.md. The id
+ * `rtaf-academy`, the lesson ids and the source citations (the description
+ * and the curriculum codes) are unchanged; tests/lesson-pack-names.test.ts.
  */
 import {
   ALL_LOCKS, PACK_DESIGN_DATE, PACK_DESIGN_LEVEL, POINT_MASS, designFrom, designLocksBut, locksBut, missionDoc, type PackSource,
@@ -29,19 +35,19 @@ export const RTAF_ACADEMY: PackSource = {
   pack: {
     id: 'rtaf-academy',
     title: {
-      en: 'Royal Thai Air Force Academy: space flight dynamics and control',
-      ru: 'Академия ВВС Таиланда: динамика космического полёта и управление',
-      th: 'โรงเรียนนายเรืออากาศ: พลศาสตร์การบินอวกาศและระบบควบคุม',
+      en: 'Space flight dynamics and control: an institution-level lab',
+      ru: 'Динамика космического полёта и управление: лаборатория вузовского уровня',
+      th: 'พลศาสตร์การบินอวกาศและระบบควบคุม — ห้องปฏิบัติการระดับสถาบัน',
     },
     audience: {
-      en: 'Cadets, BEng Aeronautical Engineering, years 4–5',
-      ru: 'Курсанты, бакалавриат по авиационной технике, 4–5 курсы',
-      th: 'นักเรียนนายเรืออากาศ หลักสูตรวิศวกรรมศาสตรบัณฑิต สาขาวิชาวิศวกรรมอากาศยาน ชั้นปีที่ 4–5',
+      en: 'Undergraduates in aeronautical engineering (BEng), years 4–5',
+      ru: 'Студенты бакалавриата по авиационной технике, 4–5 курсы',
+      th: 'นักศึกษาปริญญาตรี สาขาวิชาวิศวกรรมอากาศยาน ชั้นปีที่ 4–5',
     },
     framework: {
-      en: 'Navaminda Kasatriyadhiraj Royal Thai Air Force Academy, BEng Aeronautical Engineering (2025 revision): programme learning outcomes and course descriptions',
-      ru: 'Академия ВВС Таиланда им. Навамина Кашатрияттирата, бакалавриат по авиационной технике (редакция 2025 г.): результаты обучения по программе и описания дисциплин',
-      th: 'โรงเรียนนายเรืออากาศนวมินทกษัตริยาธิราช หลักสูตรวิศวกรรมศาสตรบัณฑิต สาขาวิชาวิศวกรรมอากาศยาน (หลักสูตรปรับปรุง พ.ศ. 2568): ผลลัพธ์การเรียนรู้ของหลักสูตรและคำอธิบายรายวิชา',
+      en: 'A published BEng Aeronautical Engineering programme (2025 revision): programme learning outcomes and course descriptions (sources in the pack description)',
+      ru: 'Опубликованная программа бакалавриата по авиационной технике (редакция 2025 г.): результаты обучения по программе и описания дисциплин (источники — в описании набора)',
+      th: 'หลักสูตรวิศวกรรมศาสตรบัณฑิต สาขาวิชาวิศวกรรมอากาศยาน ที่เผยแพร่สาธารณะ (หลักสูตรปรับปรุง พ.ศ. 2568): ผลลัพธ์การเรียนรู้ของหลักสูตรและคำอธิบายรายวิชา (แหล่งที่มาอยู่ในคำอธิบายชุดบทเรียน)',
     },
     reviewed: false,
     description: {
