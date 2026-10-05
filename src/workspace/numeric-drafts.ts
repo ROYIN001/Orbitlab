@@ -39,8 +39,19 @@ export function rememberedNumericText(scope: string | undefined, key: string, va
 export function rememberNumericText(scope: string | undefined, key: string, text: string, value: number): void {
   if (!scope) return;
   const storage = workspaceStorage(), cache = cached(storage), data = cache.data, id = fieldKey(scope, key);
-  if (id.length > 400 || text.length > 1000 || (!Object.hasOwn(data.fields, id) && Object.keys(data.fields).length >= 1000)) throw new Error('Numeric draft text limit reached');
-  data.fields[id] = { text, value: Number.isFinite(value) ? value : null };
+  // Never throw to the caller: the model must still receive the typed number. Caps stay 1,000 fields × 1,000 characters.
+  if (id.length > 400 || text.length > 1000) {
+    // Too long to remember: forget any older text for this field so it cannot be restored as current.
+    if (!Object.hasOwn(data.fields, id)) return;
+    delete data.fields[id];
+  } else {
+    if (!Object.hasOwn(data.fields, id)) {
+      // Full: evict the oldest remembered fields (insertion order) instead of refusing the new one.
+      const keys = Object.keys(data.fields);
+      for (let i = 0; i <= keys.length - 1000; i++) delete data.fields[keys[i]];
+    }
+    data.fields[id] = { text, value: Number.isFinite(value) ? value : null };
+  }
   cache.pending = true;
   try { storage.setItem(KEY, JSON.stringify(data)); cache.pending = false; } catch { /* transition hook retries strictly and keeps this visit open on failure */ }
 }

@@ -221,20 +221,26 @@ export class WorkspaceRepository {
         const catalog = this.catalog();
         for (const [id, entry] of Object.entries(catalog.profiles)) {
           if (!entry.deleting) continue;
-          const release = await this.hold(id);
-          if (!release) continue;
-          try { await this.finishDelete(id, catalog); } finally { release(); }
+          // A failed retry keeps its tombstone (and media) for the next start; other owners still open durably.
+          try {
+            const release = await this.hold(id);
+            if (!release) continue;
+            try { await this.finishDelete(id, catalog); } finally { release(); }
+          } catch { if (!this.notices.includes('profile-delete-pending')) this.notices.push('profile-delete-pending'); }
         }
         if (!catalog.mediaMigrated) {
           try { await this.media.migrate(catalog.legacyId); catalog.mediaMigrated = true; this.saveCatalog(catalog); }
           catch { this.notices.push('media-migration-pending'); }
         }
         // Remove only unchanged originals after the authoritative destination/catalogue commit.
+        // An unreadable owner record keeps its bytes and the originals; cleanup is retried at the next start.
         if (catalog.profiles[catalog.legacyId] && !catalog.profiles[catalog.legacyId].deleting) {
-          const original = this.read(catalog.legacyId);
-          for (const [key, value] of Object.entries(original.values)) {
-            if (this.storage.getItem(key) === value) this.storage.removeItem(key);
-          }
+          try {
+            const original = this.read(catalog.legacyId);
+            for (const [key, value] of Object.entries(original.values)) {
+              if (this.storage.getItem(key) === value) this.storage.removeItem(key);
+            }
+          } catch { this.notices.push('legacy-cleanup-pending'); }
         }
       });
       let selected: string | null = null;
@@ -246,8 +252,10 @@ export class WorkspaceRepository {
         try { this.session.setItem(PROFILE_SELECTED_KEY, selected); } catch { this.notices.push('selection-not-persisted'); }
       }
       if (!selected || !catalog.profiles[selected] || catalog.profiles[selected].deleting) { this.status = 'chooser'; return this; }
-      const release = await this.hold(selected), record = this.read(selected);
-      this.release = release; this.status = release ? 'durable' : 'locked';
+      // Own the lock before reading so the failure path below releases it (an unreadable record must not hold it).
+      const release = await this.hold(selected); this.release = release;
+      const record = this.read(selected);
+      this.status = release ? 'durable' : 'locked';
       this.binding = new WorkspaceBinding(this, record, !!release);
       return this;
     } catch (error) {
