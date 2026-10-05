@@ -38,7 +38,7 @@ import { mass } from './figures';
 import { sayText, saySubject } from './design-text';
 import { field, numberBox, select } from './explore-level';
 import { ReadinessRunner } from './readiness-job';
-import { runRatingsJob } from './ratings-job';
+import { runRatingsJob, unfinishedRatings, unfinishedRatingsText } from './ratings-job';
 
 export interface ReviewHost {
   /** the Launch section's launch time: the review's mission starts from it */
@@ -396,6 +396,13 @@ export class ReviewPanel {
     }).then((res) => {
       if (this.spec !== spec) return;
       this.ratingsJob = null;
+      // an unfinished search is said as such and does not rate the vehicle (M-BUILD-006, D-67)
+      const unfinished = unfinishedRatings(res);
+      if (unfinished) {
+        this.ratingsMessage = { level: 'error', text: unfinishedRatingsText(unfinished) };
+        this.renderOut();
+        return;
+      }
       this.ratingsMessage = { level: 'ok', text: t('build.eng.review.rated', {
         n: res.flights, leo: res.payloadLEO.kg > 0 ? mass(res.payloadLEO.kg) : t('build.ex.ratings.nothing'),
         gto: res.payloadGTO.kg > 0 ? mass(res.payloadGTO.kg) : t('build.ex.ratings.nothing'),

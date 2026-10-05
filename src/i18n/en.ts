@@ -2584,6 +2584,8 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.ex.ratings.done': 'Computed in {n} test flights.',
   'build.ex.ratings.stopped': 'Stopped: the ratings were not computed.',
   'build.ex.ratings.failed': 'The ratings could not be computed.',
+  'build.ex.ratings.unfinished.flights': 'Not finished: the search stopped at its limit of {n} test flights before the ratings were found. It delivered at least {leo} to low orbit and {gto} to the transfer orbit. These are not kept as the ratings.',
+  'build.ex.ratings.unfinished.time': 'Not finished: the search ran out of time after {n} test flights, before the ratings were found. It delivered at least {leo} to low orbit and {gto} to the transfer orbit. These are not kept as the ratings.',
   'build.ex.figNote': 'Ideal figures with {payload} of payload: vacuum Isp, full throttle, no gravity or drag losses. They are estimates, worked out from the catalogue\'s rounded figures.',
   'build.ex.fly.title': 'Fly it in the Launch section',
   'build.ex.fly': 'Fly it',
