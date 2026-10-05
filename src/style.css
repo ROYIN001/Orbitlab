@@ -1052,17 +1052,13 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
    picture any more, it is a strip *under* it, and the two rows of that grid are
    the whole workspace height between them. Three things follow.
 
-   1. The flight column CONTAINS its children. It did not: `.viewport` carries a
-      320 px floor and `.playback` is 149 px of controls, so the column's
-      content was 481 px inside a grid row that is 269 px at 1024x700 — and the
-      overflow was `visible`, so the playback panel painted 84.7 px down over
-      the telemetry strip. Measured there: `.playback` y 404–553.3 over `.events`
-      y 465.8–597.8, which put the scrubber, the Live button, the mission clock
-      and the warp select on top of 64 % of the event log, and the Telemetry
-      heading and its range toggle under the panel as well. The picture is the
-      flexible child (`flex: 1 1 0`, no floor here), so it gives up height to the
-      controls rather than pushing them out of the column, and `overflow: hidden`
-      makes that structural instead of arithmetical.
+   1. The flight column CONTAINS its children. It did not: the playback panel
+      once painted 84.7 px down over the telemetry strip at 1024x700. The
+      picture then gave up height to the controls instead (`flex: 1 1 0`, no
+      floor here) — down to 2 px on a short window (F5). Both are now the
+      `.flight-stage` block below: the picture keeps `--scene-min`, the
+      column scrolls to the panels under the stage, and the strip gives way
+      first.
    2. The strip is capped as a FRACTION of the window, not at a flat 300 px.
       Its 300 px was what left the column 269 px in the first place; at this
       width the two rows are competing for the same short screen, and a strip
@@ -1082,8 +1078,6 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
    below 861 px, where the panel stops scrolling internally and the whole page
    scrolls instead. */
 @media (max-width: 1180px) and (min-width: 861px) {
-  .flight-column { overflow: hidden; }
-  .flight-column > .viewport { flex: 1 1 0; min-height: 0; }
   #telemetry { --strip-h: min(300px, 27vh); max-height: var(--strip-h); }
   .camera-tools { flex-direction: row; }
   #telemetry > * { order: 3; }
@@ -1101,6 +1095,48 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
      down. The log keeps its own 240 px box in the three-column layout, where
      the panel is a full-height column and there is room for it. */
   .events { min-height: 88px; max-height: calc(var(--strip-h) - 95px); }
+}
+
+/* G2 hold (F5): the launch scene keeps a minimum height on every desktop.
+
+   Owner, 2026-10-05: "ให้ฉากแสดงการปล่อยได้ตามมาตรฐานขั้นต่ำในทั้งโหมด ทดลองและวิศวกร
+   พวกเครื่องมืออื่นๆให้ย้ายออไปข้างหรือไม่ก็ไว้ข้างล่างแบบเลื่อนลงไปดูเอง ต้องไม่มาบังพื้นที่
+   หน้าจอหลักและแถบtimeline สถานการณ์สำคัญ". Measured before this (CO-3 report §3): at
+   1100x650, at 125-150 % zoom and between 861 and 1180 px the picture was what
+   was left after the guide, the playback row, the six-DOF and TORU panels and
+   the telemetry strip, down to 2 px; above 1180 px those panels hung out of
+   the column under the footer (F1).
+
+   The picture and the playback row with the key-events timeline are one
+   block, `.flight-stage`. On a desktop it never gets less than `--scene-min`
+   of picture plus its own controls; the panels after it in the column (the
+   six-DOF and TORU controls, the result tables) take what is left and,
+   when nothing is left, the column scrolls to them. Between 861 and 1180 px
+   the telemetry strip under the column does the same: the workspace's first
+   row is at least the stage, the strip gets the rest, and when there is no
+   rest the workspace scrolls down to it. On a tall screen nothing moves.
+
+   `--scene-min` is the proposal on the G2 review page (the owner decides the
+   number; tests/browser/journeys/r2-scene-floor.mjs holds the same formula):
+   40 % of the window's height, at least 200 px, and never more than the
+   320 px floor the scene already had above 1180 px and on phones.
+   `--stage-min` adds the playback row (150 px; 174 px with the achieved-speed
+   line) and the 12 px gap. `contain: size` keeps the canvas's own pixel size
+   out of the stage's minimum: the stage is as small as its floor allows,
+   whatever resolution the renderer last drew at. Phones (up to 860 px) and
+   the lean modes keep their layouts: there the stage is `display: contents`. */
+.flight-stage { display: contents; }
+@media (min-width: 861px) {
+  :root { --scene-min: clamp(200px, 40vh, 320px); --stage-min: calc(var(--scene-min) + 186px); }
+  .workspace { grid-template-rows: minmax(var(--stage-min), 1fr); overflow-y: auto; }
+  .flight-column { overflow-y: auto; }
+  .flight-stage { display: flex; flex-direction: column; gap: 12px; flex: 1 1 0; }
+  .flight-stage > .viewport { flex: 1 1 0; min-height: var(--scene-min); contain: size; }
+  body:is([data-mode='home'], [data-mode='watch']) .flight-stage { display: contents; }
+  body:is([data-mode='home'], [data-mode='watch']) .workspace { overflow: hidden; }
+}
+@media (max-width: 1180px) and (min-width: 861px) {
+  .workspace { grid-template-rows: minmax(var(--stage-min), 1fr) auto; }
 }
 
 @media (max-width: 860px) {

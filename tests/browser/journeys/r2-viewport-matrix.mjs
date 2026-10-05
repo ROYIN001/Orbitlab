@@ -27,10 +27,15 @@
  * - A4 the event chooser opened from a cluster chip lies inside the window and
  *   its rows do not overflow sideways;
  * - A5 on a phone, the compact flight bar shows while the charts are read.
- * The scene's size is logged at each step (a table for the owner's G2
- * decision on a minimum scene size); no minimum is asserted.
+ * - S1–S4 (six-DOF flight; tests/browser/scene-floor.mjs, the G2 hold of
+ *   2026-10-05 and finding F5): the scene keeps its minimum height on the
+ *   first screen, nothing covers it, and on a desktop with the guide closed
+ *   the key-events timeline, play/pause and the clock are wholly on the first
+ *   screen. r2-viewport-scene-floor makes the same checks on Explore.
+ * The scene's size is logged at each step.
  */
 import { press, viewportSize } from '../harness.mjs';
+import { checkSceneFloor } from '../scene-floor.mjs';
 
 // 7–10 min here; CI runs flight/WebGL journeys ~1.5–2× slower
 export const timeoutMs = 1_200_000;
@@ -117,6 +122,8 @@ async function sixDofFlight(t, app, group, presets, { scenes, open }) {
     for (const [what, sel] of Object.entries(PLAYBACK)) await reachable(t, app, sel, `${where}: ${what} (${sel})`, open);
     await reachable(t, app, '#rigid-controls summary', `${where}: six-DOF controls`, open);
     if (group === 'phone') await phoneBar(t, app, where);
+    // G2 hold (F5): the scene's minimum and nothing over it or the timeline (S1–S4)
+    await checkSceneFloor(t, app, preset, state, where);
     const scene = await sceneSize(app);
     (scenes[`${preset} ${lang.toUpperCase()}`] ??= {})[state] = scene;
     t.log(`${where}: scene ${scene.w}×${scene.h} (${scene.share} % of the window), first screen: ${await firstScreen(app)}`);

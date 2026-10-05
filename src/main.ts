@@ -404,7 +404,28 @@ class App {
   private shellEls: { setup: HTMLElement; toggle: HTMLButtonElement; bar: HTMLElement; clock: HTMLElement | null;
     barClock: HTMLElement; barMode: HTMLElement; barPlay: HTMLButtonElement } | null = null;
 
+  /**
+   * G2 hold (F5): whether the scene reaches into the strip at the bottom of the
+   * window where a phone's flight bar sits. The bar is fixed there; while the
+   * picture is under it, the bar would cover the scene, so it waits until the
+   * page has scrolled the scene up out of that strip.
+   */
+  private sceneUnderBar = false;
+  private watchBarStrip(): void {
+    const scene = document.getElementById('viewport');
+    let seen: IntersectionObserver | undefined;
+    // the bar: 8 px from the bottom, 52 px tall at most; 72 px leaves a margin
+    const watch = (): void => {
+      seen?.disconnect();
+      seen = new IntersectionObserver(([e]) => { this.sceneUnderBar = e.isIntersecting; }, { rootMargin: `-${Math.max(0, innerHeight - 72)}px 0px 0px` });
+      if (scene) seen.observe(scene);
+    };
+    watch();
+    addEventListener('resize', watch);
+  }
+
   private get shell(): NonNullable<App['shellEls']> {
+    if (!this.shellEls) this.watchBarStrip();
     return this.shellEls ??= {
       setup: document.getElementById('setup')!,
       toggle: document.getElementById('btn-setup') as HTMLButtonElement,
@@ -1624,7 +1645,7 @@ class App {
    */
   private syncMobileFlightBar(stage: MissionStage): void {
     const { bar, clock: clockSrc, barClock: clockEl, barMode: modeEl, barPlay: play } = this.shell;
-    const show = stage !== 'setup' && (this.mode === 'engineer' || this.mode === 'explore') && !this.sceneCovered;
+    const show = stage !== 'setup' && (this.mode === 'engineer' || this.mode === 'explore') && !this.sceneCovered && !this.sceneUnderBar;
     if (bar.dataset.active !== String(show)) bar.dataset.active = String(show);
     if (!show) return;
     const clock = clockSrc?.textContent ?? '';

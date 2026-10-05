@@ -23,7 +23,14 @@
 .help-dialog .help-glossary dt { margin-top: 14px; font-size: 14px; color: var(--accent); }
 .help-dialog .help-glossary dd { margin: 3px 0 0; font-size: 13.5px; line-height: 1.75; color: #b8c8d9; }
 .help-dialog .help-restart { margin-top: 24px; }
+/* The guide sits above the scene: it stacks its buttons under the text only on
+   a phone. Between 641 and 860 px (a tablet, a laptop at 150 % zoom) a stacked
+   guide was 208 px tall at 853x533 and left 205 px of the scene on the first
+   screen; side by side it is about half that (G2 hold, F5). */
 @media (max-width: 860px) {
-  .help-guide { align-items: stretch; flex-direction: column; gap: 8px; margin: 10px 12px 0; padding: 10px 12px; }
+  .help-guide { margin: 10px 12px 0; padding: 10px 12px; }
+}
+@media (max-width: 640px) {
+  .help-guide { align-items: stretch; flex-direction: column; gap: 8px; }
   .help-guide-actions { max-width: none; justify-content: flex-start; }
 }
