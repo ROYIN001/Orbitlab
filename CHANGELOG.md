@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Lessons (FX-2 PR1, M-LEARNING-001): while a design lesson's check runs, the answer you are typing keeps its field, focus and caret — the progress figure is now written in place instead of rebuilding the strip about 100 times a check, and screen readers hear it in 10 % steps.
 - Docs: DECISIONS records the owner's follow-up answers of 2026-10-05 — D-23 (a second maintainer is not a condition), the D-16 note (pass/fail threshold), D-36.A3 (in-flight edits take effect on confirm), registry.tsv (commit it) and HUF-D02 (stays a build-or-not question).
 - Tests (CO-5): pull requests now run a short check of the Launch Engineer flight screen (`r2-shell-smoke`, about 40 s): launching folds the setup and widens the scene, pausing stays in flight, the six-DOF and TORU controls can be reached, and the event chooser opens on a 390 px Thai phone and fits the screen; the full R2 journey still runs before publishing.
 - Docs (CO-8): DECISIONS records the owner's 80 answers of 2026-10-05, the Merge Desk working method, the K1 authorization and G2 on hold; a new session protocol holds the Merge Desk rules; PROGRESS records the K0 merges and lists the plan v2.0 packages; the docs index lists the development documents. Adoption of plan v2.0 is still pending the owner's approval.
