@@ -24,7 +24,7 @@ The G2 matrix journey of CO-3 (#90, `r2-viewport-matrix`) adds about 417 s on a 
 ## What changes
 
 - `scripts/verification/create-plan.mjs`: the Pages plan creates three browser gates (`browser-1of3…3of3`). PR CI keeps two smoke gates.
-- `.github/workflows/deploy.yml`: the Pages `browser` matrix is `[1, 2, 3]` and runs `browser-${shard}of3`. The timeout is unchanged at 30 min.
+- `.github/workflows/deploy.yml`: the Pages `browser` matrix is `[1, 2, 3]` and runs `browser-${shard}of3`. The job timeout goes from 30 to 45 min. This is a hang-guard, not a test tolerance. The fixed G2 matrix journey ran 552–575 s on this machine under load (417 s quiet). At the CI slowdown measured for flight journeys (up to 2×), the shard holding it projects to about 28–30 min, too close to 30. No journey's own timeout or assertion changes.
 - `tests/verification/workflow-paths.test.mjs`: a new test checks that each workflow runs exactly the browser shards its plan creates (CI: 2 smoke; Pages: 3). It passes, and fails when the Pages matrix is set back to `[1, 2]` (checked by hand, not committed).
 - `docs/development/VERIFICATION.md`: "two full browser shards" becomes three.
 
@@ -36,6 +36,7 @@ Journeys are assigned as before (`tests/browser/shard.mjs`, index modulo the sha
 |---|---|---|---|
 | Now, 24 journeys in 3 shards | ~17.7 min | ~13.9 min | ~10.5 min |
 | With #90's matrix journey at a CI-worst 835 s | ~16.3 min | ~18.4 min | ~21.3 min |
+| With the fixed journey at 575 s × 2 (1150 s) | ~16.3 min | ~18.4 min | ~26.5 min |
 
 The six journeys whose individual times were not in the log are counted at their shard's average. These figures are a projection, not a measurement; the first Pages run after merge measures them. Even before #90, the longest Pages browser job drops from 23.4 min to about 18 min. It uses one more runner per Pages run, which adds no runner minutes for the same journeys.
 
