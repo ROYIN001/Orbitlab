@@ -62,12 +62,16 @@ function fakeScope(server: Record<string, string>, online = { on: true }) {
 }
 
 const manifestOf = (files: Record<string, string>): PrecacheManifest =>
-  precacheManifest(Object.entries(files).map(([url, body]) => ({ url, revision: String(body.length) + body })));
+  precacheManifest(Object.entries(files).map(([url, body]) => ({ url, revision: REVISIONS.get(body)! })));
 
 const serverOf = (files: Record<string, string>) => Object.fromEntries(Object.entries(files).map(([u, b]) => [SCOPE + u, b]));
 
 const V1 = { 'index.html': '<html>v1</html>', 'assets/index-a.js': 'main v1', 'assets/flight.worker-a.js': 'worker v1', 'textures/earth.jpg': 'EARTH' };
 const V2 = { 'index.html': '<html>v2</html>', 'assets/index-b.js': 'main v2', 'assets/flight.worker-a.js': 'worker v1', 'textures/earth.jpg': 'EARTH' };
+// The build's revision of each body: the first 16 hex digits of its SHA-256 (vite.config.ts)
+const REVISIONS = new Map(await Promise.all([...Object.values(V1), ...Object.values(V2)].map(async (body) => [body,
+  [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body)))]
+    .map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 16)] as const)));
 
 describe('precache manifest (U03)', () => {
   it('orders its entries, leaves out the worker, maps and dotfiles, and versions by content', () => {
@@ -142,10 +146,48 @@ describe('service worker (U03)', () => {
     await expect(precache(fakeScope(server), manifestOf(V1))).rejects.toThrow(/earth/);
   });
 
-  it('installs a new deploy beside the old one, downloading only what changed, then drops the old one', async () => {
-    const sw = fakeScope({ ...serverOf(V1), ...serverOf(V2) });
+  it('fails the install when a download answers other bytes than its revision, so no cache holds a mix of versions (FX-7 step 0)', async () => {
+    // a deploy lands mid-install: the server already answers v2's index.html
+    // under v1's manifest
+    const sw = fakeScope({ ...serverOf(V1), [`${SCOPE}index.html`]: V2['index.html'] });
+    const m1 = manifestOf(V1);
+    await expect(precache(sw, m1)).rejects.toThrow(/index\.html/);
+    const cache = await sw.caches.open(precacheName(m1.version)) as FakeCache;
+    expect(cache.store.has(`${SCOPE}index.html`)).toBe(false);
+    expect(cache.store.has(`${SCOPE}${MANIFEST_KEY}`)).toBe(false);
+    for (const response of cache.store.values()) expect(await response.clone().text()).not.toBe(V2['index.html']);
+  });
+
+  it('keeps the running version whole when an update download answers other bytes, and installs once the bytes match', async () => {
+    const server = serverOf(V1);
+    const sw = fakeScope(server);
     const m1 = manifestOf(V1), m2 = manifestOf(V2);
     await precache(sw, m1);
+    Object.assign(server, serverOf(V2)); // the next deploy
+    const running = [...(await sw.caches.open(precacheName(m1.version)) as FakeCache).store.keys()].sort();
+    server[`${SCOPE}assets/index-b.js`] = 'main v3';
+    await expect(precache(sw, m2)).rejects.toThrow(/index-b\.js/);
+    const old = await sw.caches.open(precacheName(m1.version)) as FakeCache;
+    expect([...old.store.keys()].sort()).toEqual(running);
+    expect(await (await old.match(`${SCOPE}index.html`))!.text()).toBe('<html>v1</html>');
+    const next = await sw.caches.open(precacheName(m2.version)) as FakeCache;
+    expect(next.store.has(`${SCOPE}assets/index-b.js`)).toBe(false);
+    expect(next.store.has(`${SCOPE}${MANIFEST_KEY}`)).toBe(false);
+    // the deploy settles: the same manifest now installs, with the same bytes as before the fix
+    server[`${SCOPE}assets/index-b.js`] = 'main v2';
+    await precache(sw, m2);
+    expect(await (await next.match(`${SCOPE}assets/index-b.js`))!.text()).toBe('main v2');
+    expect(await next.match(`${SCOPE}${MANIFEST_KEY}`)).toBeDefined();
+  });
+
+  it('installs a new deploy beside the old one, downloading only what changed, then drops the old one', async () => {
+    // V1 is installed while V1 is served; then V2 is deployed (index.html
+    // changes under the same URL, so V1 must not be installed from V2's server)
+    const server = serverOf(V1);
+    const sw = fakeScope(server);
+    const m1 = manifestOf(V1), m2 = manifestOf(V2);
+    await precache(sw, m1);
+    Object.assign(server, serverOf(V2));
     sw.fetched.length = 0;
     await precache(sw, m2);
     expect(sw.fetched.sort()).toEqual([`${SCOPE}assets/index-b.js`, `${SCOPE}index.html`]);
