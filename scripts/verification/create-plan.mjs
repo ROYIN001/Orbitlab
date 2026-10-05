@@ -20,7 +20,10 @@ export async function createPlan(mode, out = DEFAULT_OUT) {
       gates.push({ id: 'typecheck', kind: 'command' }, { id: 'build', kind: 'build' });
       if (mode === 'pages') gates.push({ id: 'snapshot-check', kind: 'command' });
       for (let shard = 1; shard <= 3; shard++) gates.push({ id: `unit-${shard}of3`, kind: 'vitest', suite: 'unit', shard: `${shard}/3` });
-      for (let shard = 1; shard <= 2; shard++) gates.push({ id: `browser-${shard}of2`, kind: 'browser', suite: 'browser', shard: `${shard}/2` });
+      // PR CI runs the smoke journeys in two shards; Pages runs every journey in three (CO-5:
+      // two full shards measured 18.8 and 23.4 min of a 30 min job at 5f9aa2e, Pages 37230585947).
+      const browserShards = mode === 'pages' ? 3 : 2;
+      for (let shard = 1; shard <= browserShards; shard++) gates.push({ id: `browser-${shard}of${browserShards}`, kind: 'browser', suite: 'browser', shard: `${shard}/${browserShards}` });
     } else {
       for (const suite of mode === 'both' ? ['heavy', 'sixdof-fleet'] : [mode]) {
         suites[suite] = collectCases(suite, resolve(out, `${suite}-collected.json`));
