@@ -94,7 +94,7 @@ log ของ job (`/actions/jobs/{id}/logs`) อ่านไม่ได้ (bl
 | #71 (R1) | other chunks / author / catalog split | other 701 → 765 (+64); author 26 → 26.5; catalog 2,245 → i18n 1,690 + lesson-file 347 + catalog 180 (−28); workspace-content 53 → 35 (−18) | other 763.861; author 26.097; i18n 1,685.006 | profile storage/archive/session, whole-workspace UI | offset ในตัวตาม `_notes`: −28 (catalog) −18 (workspace) → JS รวม +19.5 kB (9,773 → 9,792.5) ไม่ใช่แพ็กเกจ identical-output → **KPI-30** |
 | #74 (R2) | index JS / CSS | 2,573 → 2,588 (+15); 169 → 170 (+1) | 2,585.2; 169.6 | Engineer lifecycle shell, camera policy, event chooser, card presets, engine-level readout, phone flight bar | ไม่มีในคำตอบ D-38 → **KPI-30** (index: EQ-7 เป็นผู้สมัคร; CSS ไม่ได้รับอนุมัติแยก) |
 | #75 (R3 pkg 1) | index / CSS / i18n | 2,588 → 2,600 (+12); 170 → 173 (+3); 1,690 → 1,702 (+12) | 2,598.7; 172.3; 1,700.7 | bench drawing + part card (R3.2), satellite schematic (R3.3), readiness targets (R3.4) | EQ-7 / CSS อนุมัติ / EQ-6 |
-| #76 | precache | 15,783 → 16,103 (+320) | 15,787.4 (Pages 37172926281, data refresh) | ไม่มีฟีเจอร์: ข้อมูลที่ refresh ทำให้เกิน | ฝั่งข้อมูล (CO-1); ขนาดที่ติดตั้ง → EQ-8 |
+| #76 | precache | 15,783 → 16,103 (+320) | 15,787.4 (Pages 37172926281, data refresh) | ไม่มีฟีเจอร์ใหม่ใน #76: ฟีเจอร์ R2/R3 (index JS/CSS และ i18n รวมราว 24 kB) ใช้ headroom จนหมด แล้วข้อมูลที่ refresh ในวันนั้นดันให้เกิน (`budgets.json` `_notes.set.precache`); ตัวเลข 15,787.4 > 15,783 อ้างจาก `_notes` และ PROGRESS เพราะ annotation ของ GitHub แสดงแค่ exit code 1 | ฝั่งข้อมูล (CO-1); ขนาดที่ติดตั้ง → EQ-8 |
 | #77 ส่วน 1 (R3.5) | index / CSS / i18n | 2,600 → 2,608 (+8); 173 → 175 (+2); 1,702 → 1,707 (+5) | 2,605.8; 173.9; 1,705.1 | Show the setting, mission source, first-launch template, Watch copy, steps | EQ-7 / CSS อนุมัติ / EQ-6 |
 | #77 ส่วน 2 | index / CSS / i18n | 2,608 → 2,612 (+4); 0; 1,707 → 1,711 (+4) | 2,610.0; —; 1,708.9 | suggestion before → after, Orbit grouping, Show its settings | EQ-7 / — / EQ-6 |
 | #78 (R3.3 stowed) | — | ไม่แก้ `budgets.json` | — | (รวมอยู่ในโน้ต R3.3 ของ #80) | — |
@@ -178,3 +178,11 @@ log ของ job (`/actions/jobs/{id}/logs`) อ่านไม่ได้ (bl
 
 - แก้เฉพาะ Markdown ที่ไม่มีโค้ดหรือเทสต์อ่าน: `docs/ROADMAP-PART2-3.md`, `docs/SIXDOF-VEHICLE-DATA.md`, `docs/history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md` ไม่ถูกแตะ (CI และ Pages จึงข้ามตาม path filter)
 - `npx vitest run tests/repo-hygiene.test.ts` (vitest 5.0.1, ในเครื่อง): **9/9 ผ่าน** (1 ไฟล์)
+
+## การตรวจของ agent ตัวที่สอง (2026-10-05)
+
+ตรวจครบทุกแถว: ตาราง audit 13/13 แถว (merge SHA, head SHA, CI ทุก run และ attempt, Pages, deployment 7 รายการ) และตารางเพดาน 11/11 แถว ตรงกับ GitHub API และประวัติ git ของ `budgets.json`; การแก้ PROGRESS, รายงาน, IMPLEMENTATION-STATUS และ CHANGELOG เป็นจริง ไม่ปน merged/published/live สิ่งที่แก้ตามผลตรวจ:
+- PROGRESS เขียนว่างานที่เหลือ "ย้ายไปแผน v2.0" ซึ่งยังเป็นร่างที่ยังไม่อยู่บน main แก้เป็น "เสนอไว้ในร่างแผน v2.0 (ยังไม่รับรอง; CO-8 รับรอง)" — คำตอบของเจ้าของ (G3, D-65, D-38) จะตามรอยได้จาก repo เมื่อ CO-8 ลง DECISIONS.md
+- แถว #76 ในตารางเพดานบอกเหตุทั้งสองอย่าง (ฟีเจอร์ R2/R3 ใช้ headroom หมด แล้วข้อมูลที่ refresh ดันให้เกิน)
+- ข้อจำกัดที่คงอยู่: "live" อ้างจาก deployment record 6846305019 เท่านั้น (อ่าน `build-info.json` ของเว็บจากที่นี่ไม่ได้)
+
