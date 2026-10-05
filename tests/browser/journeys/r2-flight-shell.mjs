@@ -17,6 +17,10 @@
  *   scrolled down to the charts.
  *
  * Screenshots of each layout state are kept for the D08 layout review.
+ *
+ * The launch fold, the pause and the opening of the chooser are exported for
+ * the PR smoke slice (`r2-shell-smoke.mjs`, CO-5), which runs them in under a
+ * minute; this journey runs them as part of the whole flight.
  */
 import { press } from '../harness.mjs';
 
@@ -36,30 +40,15 @@ async function engineer(t) {
   const app = await t.open({ hash: '#/launch/engineer' });
   const { page } = app;
   const state = () => app.mcp('read_flight_state');
-  const box = (sel) => page.locator(sel).boundingBox();
 
   await page.locator('#setup .launch-button').waitFor();
   t.check(await page.locator('#btn-setup').isHidden(), 'the ⚙ Setup button is offered before any launch');
   t.check(await page.locator('#telemetry .notation-section select').count() === 1, 'the notation selector is not in the telemetry panel');
   t.check(await page.locator('#setup .notation-section').count() === 0, 'the notation selector is still in the setup panel');
-  const before = { viewport: await box('#viewport'), canvas: await page.evaluate(() => document.getElementById('gl').width) };
   await app.shot('engineer-setup-1280');
 
   // launch with the real button
-  if (!await press(t, app, page.locator('#setup .launch-button'), 'mouse', 'Launch')) return;
-  const collapsed = await t.until(() => page.evaluate(() => document.body.dataset.setup === 'collapsed' && document.body.dataset.flightStage === 'flight'), { timeoutMs: RESPOND_MS });
-  t.check(collapsed, 'launching did not collapse the setup into the flight stage');
-  t.check(await page.locator('#setup').isHidden(), 'the setup panel is still on screen in flight');
-  // the renderer follows the new size on its next frames
-  const grown = await t.until(async () => {
-    const v = await box('#viewport');
-    const c = await page.evaluate(() => document.getElementById('gl').width);
-    return v && v.width > before.viewport.width + 200 && c > before.canvas ? { v, c } : null;
-  }, { timeoutMs: RESPOND_MS, intervalMs: 250 });
-  t.check(grown, `the scene did not take the setup's width (viewport ${before.viewport.width} px, canvas ${before.canvas} px before)`);
-  if (grown) t.log(`scene ${before.viewport.width.toFixed(0)} → ${grown.v.width.toFixed(0)} px; canvas ${before.canvas} → ${grown.c} px`);
-  const workspace = await box('.workspace');
-  if (grown && workspace) t.check(grown.v.width / workspace.width >= 0.6, `the scene has ${(100 * grown.v.width / workspace.width).toFixed(0)} % of the workspace width, below the 60 % layout target`);
+  if (!await launchFolds(t, app)) return;
   t.check(await page.locator('#btn-setup').isVisible(), 'no ⚙ Setup button in flight');
   t.check(await page.locator('#btn-abort').isVisible(), 'Abort is not reachable in flight');
   await app.shot('engineer-flight-1280');
@@ -99,8 +88,7 @@ async function engineer(t) {
   await press(t, app, page.locator('#btn-cinematic'), 'mouse', 'Cinematic');
   t.check(await page.locator('#btn-cinematic').getAttribute('aria-pressed') === 'true', 'Cinematic is not marked on');
   t.log(`Cinematic gives ${(await state()).camera} at T+${(await state()).cursorTimeS.toFixed(0)} s`);
-  await app.mcp('control_playback', { action: 'pause' });
-  t.check(await page.evaluate(() => document.body.dataset.flightStage) === 'flight', 'pausing left the flight stage');
+  await pauseStaysInFlight(t, app);
 
   // R2.4: the event chooser
   await chooser(t, app);
@@ -118,20 +106,73 @@ async function engineer(t) {
   await app.context.close();
 }
 
-async function chooser(t, app) {
+/**
+ * R2.1 / U11: launch with the real Launch button; the setup folds away and the
+ * scene takes its width (the renderer resizes the canvas, nothing is
+ * stretched). Resolves to false only when the button could not be pressed.
+ */
+export async function launchFolds(t, app) {
+  const { page } = app;
+  const box = (sel) => page.locator(sel).boundingBox();
+  const before = { viewport: await box('#viewport'), canvas: await page.evaluate(() => document.getElementById('gl').width) };
+  if (!await press(t, app, page.locator('#setup .launch-button'), 'mouse', 'Launch')) return false;
+  const collapsed = await t.until(() => page.evaluate(() => document.body.dataset.setup === 'collapsed' && document.body.dataset.flightStage === 'flight'), { timeoutMs: RESPOND_MS });
+  t.check(collapsed, 'launching did not collapse the setup into the flight stage');
+  t.check(await page.locator('#setup').isHidden(), 'the setup panel is still on screen in flight');
+  // the renderer follows the new size on its next frames
+  const grown = await t.until(async () => {
+    const v = await box('#viewport');
+    const c = await page.evaluate(() => document.getElementById('gl').width);
+    return v && v.width > before.viewport.width + 200 && c > before.canvas ? { v, c } : null;
+  }, { timeoutMs: RESPOND_MS, intervalMs: 250 });
+  t.check(grown, `the scene did not take the setup's width (viewport ${before.viewport.width} px, canvas ${before.canvas} px before)`);
+  if (grown) t.log(`scene ${before.viewport.width.toFixed(0)} → ${grown.v.width.toFixed(0)} px; canvas ${before.canvas} → ${grown.c} px`);
+  const workspace = await box('.workspace');
+  if (grown && workspace) t.check(grown.v.width / workspace.width >= 0.6, `the scene has ${(100 * grown.v.width / workspace.width).toFixed(0)} % of the workspace width, below the 60 % layout target`);
+  return true;
+}
+
+/** R2.1: pausing keeps the flight stage and the folded setup; nothing restarts. */
+export async function pauseStaysInFlight(t, app) {
+  const { page } = app;
+  await app.mcp('control_playback', { action: 'pause' });
+  // the shell follows the lifecycle once a frame (src/main.ts syncLifecycle): read it after two
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+  t.check(await page.evaluate(() => document.body.dataset.flightStage) === 'flight', 'pausing left the flight stage');
+  t.check(await page.evaluate(() => document.body.dataset.setup) === 'collapsed', 'pausing brought the setup back');
+  const s = await app.mcp('read_flight_state');
+  t.check(s.hasMission && !s.playing, `the flight is not paused (mission ${s.hasMission}, playing ${s.playing})`);
+}
+
+/**
+ * R2.4: a cluster chip on the event bar opens the chooser listing its events.
+ * `how` is the pointer (mouse or touch); `label` names the screenshots (null:
+ * none, which saves the smoke slice about 7 s of software-rendered captures). The
+ * chip and the list, or null when the chooser did not open.
+ */
+export async function openChooser(t, app, { how = 'mouse', label = 'engineer' } = {}) {
   const { page } = app;
   const cluster = page.locator('.tl-chip.cluster:not(.collapsed)').first();
   const found = await t.until(async () => (await cluster.count()) > 0 && cluster.isVisible(), { timeoutMs: RESPOND_MS });
-  if (!t.check(found, 'no clustered events on the bar after staging')) return;
-  await app.shot('engineer-timeline-before-chooser');
-  await press(t, app, cluster, 'mouse', 'cluster chip');
+  if (!t.check(found, 'no clustered events on the bar')) return null;
+  // on a phone the bar can sit below the fold, under the compact flight bar: bring it up as a person would
+  await cluster.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
+  if (label) await app.shot(`${label}-timeline-before-chooser`);
+  if (!await press(t, app, cluster, how, 'cluster chip')) return null;
   const list = page.locator('.tl-chooser');
-  if (!t.check(await t.until(() => list.isVisible(), { timeoutMs: 5000 }), 'the cluster chip did not open the chooser')) return;
-  const items = list.locator('.tl-chooser-item');
-  const n = await items.count();
+  if (!t.check(await t.until(() => list.isVisible(), { timeoutMs: 5000 }), 'the cluster chip did not open the chooser')) return null;
+  const n = await list.locator('.tl-chooser-item').count();
   t.check(n >= 2, `the chooser lists ${n} events`);
   t.check(await cluster.getAttribute('aria-expanded') === 'true', 'the chip is not marked expanded');
-  await app.shot('engineer-timeline-chooser');
+  if (label) await app.shot(`${label}-timeline-chooser`);
+  return { cluster, list };
+}
+
+async function chooser(t, app) {
+  const { page } = app;
+  const opened = await openChooser(t, app);
+  if (!opened) return;
+  const { list } = opened;
   // arrows move within the list and do not seek
   const cursor0 = (await app.mcp('read_flight_state')).cursorTimeS;
   const focused0 = await page.evaluate(() => document.activeElement?.className ?? '');
