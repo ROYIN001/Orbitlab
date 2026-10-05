@@ -37,10 +37,23 @@ export async function checkSceneFloor(t, app, preset, state, where) {
   const { width, height } = viewportSize(preset);
   const min = sceneMin(height);
   const m = await app.page.evaluate(() => {
-    const b = document.getElementById('viewport').getBoundingClientRect();
+    // the first screen: every scroll container back at its start (an earlier
+    // check may have scrolled the workspace or the flight column to a panel)
+    window.scrollTo(0, 0);
+    for (const n of document.querySelectorAll('*')) if (n.scrollTop) n.scrollTop = 0;
+    const scene = document.getElementById('viewport');
+    const b = scene.getBoundingClientRect();
     const h = document.scrollingElement.clientHeight;
-    const top = Math.max(0, b.top);
-    const bottom = Math.min(h, b.bottom);
+    // the part of the scene inside the window and inside every box that clips it
+    let top = Math.max(0, b.top);
+    let bottom = Math.min(h, b.bottom);
+    for (let p = scene.parentElement; p && p !== document.body; p = p.parentElement) {
+      const o = getComputedStyle(p);
+      if (o.overflowY === 'visible' && o.overflowX === 'visible') continue;
+      const c = p.getBoundingClientRect();
+      top = Math.max(top, c.top);
+      bottom = Math.min(bottom, c.bottom);
+    }
     const visible = Math.max(0, bottom - top);
     // S2: five points inside the visible part of the scene, inset by a tenth
     const misses = [];
