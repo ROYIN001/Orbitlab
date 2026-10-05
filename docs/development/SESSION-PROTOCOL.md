@@ -2,12 +2,11 @@
 
 How every work session on Orbitlab opens, tracks, merges and records its work. It carries package M-PLATFORM-077 of the plan v2.0 draft (CO-8) and the owner's Merge Desk instruction of 2026-10-05 (plan S18 §18.14a).
 
-**Status.** Adopted: pending owner approval (Merge Desk).
-Plan v2.0 is not adopted yet: the owner still has to approve the K0 usage set (S01, S05, S06, S08 set A, S18) for gate GCO. Until then PLAN.md v1.2 stays the plan of record, and this file binds only where it repeats something the owner has already decided:
+**Status.** Adopted for waves K0–K1 (usage set S01, S05, S06, S08 set A, S18): owner, 2026-10-05 ~18:04Z, chat answer "รับรอง (แนะนำ)" to the question asking whether to adopt that set; other sections are adopted gate by gate. The adopted text is on the plan branch (`docs/development/plan-v2-draft/`); bringing it into `docs/development/plan/` is CO-8 PR2. This file is in force:
 
 - §1 (Merge Desk) is the owner's own instruction of 2026-10-05 and is in force now ([DECISIONS](../DECISIONS.md), row "working method").
 - §2 repeats D-65, D-38, D-63 and D-25 as the owner answered them on 2026-10-05 ([DECISIONS](../DECISIONS.md)).
-- §3–§7 take effect when the owner approves adoption. The approval's date and words then go into the line above.
+- §3–§7 are in force from the adoption above (waves K0–K1).
 
 Where this file and code or GitHub disagree, code and GitHub are right. Where it and [DECISIONS.md](../DECISIONS.md) disagree, DECISIONS is right.
 

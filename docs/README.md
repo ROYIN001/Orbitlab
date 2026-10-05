@@ -20,7 +20,7 @@ The repository's own [README](../README.md) covers installing, running and the s
 
 | Document | What it is |
 |---|---|
-| [development/PLAN.md](development/PLAN.md) | The development plan of record, version 1.2 (Thai). The plan v2.0 draft is waiting for the owner's approval; adopting it is package CO-8 (Adopted: pending owner approval (Merge Desk)). |
+| [development/PLAN.md](development/PLAN.md) | The development plan of record, version 1.2 (Thai). Plan v2.0's usage set for waves K0–K1 (S01, S05, S06, S08 set A, S18) was adopted by the owner on 2026-10-05 (CO-8); its text comes into `docs/development/plan/` in CO-8 PR2, and PLAN.md v1.2 stays the record for anything v2.0 has not yet replaced. |
 | [DECISIONS.md](DECISIONS.md) | Every owner decision, dated, with the owner's words. Where it and another document disagree, it is right. |
 | [development/SESSION-PROTOCOL.md](development/SESSION-PROTOCOL.md) | How a work session opens, tracks, merges and records its work, including the owner's Merge Desk. |
 | [development/PROGRESS.md](development/PROGRESS.md) | Status of every work package: merged, published, live, with SHAs and runs. |

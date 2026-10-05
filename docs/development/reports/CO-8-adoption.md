@@ -11,14 +11,14 @@ items: [M-PLATFORM-075, M-PLATFORM-077]
 change_kind: docs   # Markdown that no code or test reads
 execution_authorized: true   # wave K0, D-65 (ก)
 owner_authorization: {date: 2026-10-05, quote: "D-65 (ก): wave K0 authorized", scope: "wave K0 (answer sheet A-1)"}
-adoption: "Adopted: pending owner approval (Merge Desk)"
+adoption: "K0–K1 usage set adopted by the owner, 2026-10-05 ~18:04Z (chat)"
 base_sha_verified_on: {sha: 75c8cf4, date: 2026-10-05}
 report: docs/development/reports/CO-8-adoption.md
 ```
 
 ## Status
 
-**Adopted: pending owner approval (Merge Desk).** The owner has not yet approved "adopt v2.0". Gate GCO needs the owner to approve the K0 usage set of the plan (S01, S05, S06, S08 set A, S18) and CO-8 to merge, with v2.0 marked adopted for K0–K1. This PR is written so that nothing in it claims adoption. It records what the owner has already decided, and it marks every adoption step as pending. When the owner approves, the approval's date and words replace the "pending" lines in SESSION-PROTOCOL.md, PROGRESS.md, docs/README.md and this report, in this PR or a records PR, and the Merge Desk card is updated.
+**Adopted for waves K0–K1 (usage set S01, S05, S06, S08 set A, S18): owner, 2026-10-05 ~18:04Z, chat answer "รับรอง (แนะนำ)" to the question asking whether to adopt that set; other sections are adopted gate by gate. The adopted text is on the plan branch (`docs/development/plan-v2-draft/`); bringing it into `docs/development/plan/` is CO-8 PR2.** The draft of this PR marked adoption as pending; after the owner's answer the pending lines in SESSION-PROTOCOL.md, PROGRESS.md, docs/README.md, DECISIONS.md and this report were replaced with this record. Gate GCO needs this approval and CO-8 merged.
 
 ## What this PR changes
 
@@ -81,15 +81,15 @@ Source: the owner's answers from the decision page (one JSON record per key: cho
 
 | CO-8 spec item | Done? | Why |
 |---|---|---|
-| PLAN.md v1.2 → v2.0 at the same path, as an index page with S02–S19 split under `docs/development/plan/` (and `$F` tables under `plan/data/`) | No | That *is* the adoption, and the owner has not approved it. Copying the plan into main now would present the draft as the plan of record. It goes in as soon as the owner approves (each file < 1 MB, no new `ALLOWED` entry, per the spec's size note). |
+| PLAN.md v1.2 → v2.0 at the same path, as an index page with S02–S19 split under `docs/development/plan/` (and `$F` tables under `plan/data/`) | No (PR2) | The owner adopted the K0–K1 usage set on 2026-10-05 after this PR was drafted. Bringing the plan text into main is a large docs-only change of its own; it goes in CO-8 PR2 (each file < 1 MB, no new `ALLOWED` entry, per the spec's size note), with the banners. |
 | DECISIONS expanded to D-28…D-66 with "proposed"/"decided" | Partly | Every id the owner answered is recorded as decided. The ids nobody answered (D-28…D-32 record-only rows, D-52, D-66 and the rest of sheet D) are not added: D-28…D-32 restate existing records and belong with the adopted plan; sheet D has not been asked. |
 | D-59 row with the move table | Yes | In DECISIONS. |
 | PROGRESS rewritten as one row per package (93 rows) with lifecycle columns; R1–R3 history under it | Partly | The 93-row register is added with the spec's columns, and the R1–R3 history is kept below it. The old v1.2 status table stays on top until adoption, so nothing reads as adopted. CI run ids are left for the records PR. |
-| SESSION-PROTOCOL.md | Yes | §1–§2 bind now (owner's own words); §3–§7 take effect on adoption. |
-| `docs/README.md` with PLAN v2.0 first | Partly | The development section, DECISIONS, the protocol and the docs that code reads are listed. PLAN.md is listed as v1.2 with v2.0 pending, because v2.0 is not in main. The "four modes" wording of the USER-GUIDE row is unchanged; it changes with the adoption PR after the guide is checked. |
+| SESSION-PROTOCOL.md | Yes | §1–§2 are the owner's own words; §3–§7 are in force from the K0–K1 adoption (2026-10-05). |
+| `docs/README.md` with PLAN v2.0 first | Partly | The development section, DECISIONS, the protocol and the docs that code reads are listed. PLAN.md is listed as v1.2 with the K0–K1 adoption noted; v2.0 comes first once its text is in main (PR2). |
 | `registry.tsv` proposal | Asked | Written as an open question to the owner in SESSION-PROTOCOL; not committed. |
 | `.github/pull_request_template.md` | No | The spec gives it to lane T in the same train; not in this lane's write set. |
-| PR2: banners (S19 App D) | No | The spec makes PR2 a separate PR after PR1 merges; the banners say documents are replaced by v2.0, which would claim adoption. |
+| PR2: banners (S19 App D) | No (PR2) | The spec makes PR2 a separate PR after PR1 merges, together with the plan text in `docs/development/plan/`. |
 | Step 4: KPI-31 re-check and the first lifecycle timestamp | No | After merge, by definition. |
 | `ROADMAP-PART2-3.md`, `SIXDOF-VEHICLE-DATA.md`, `T03-CURRICULA-RESEARCH.md` | Not touched | Forbidden by the spec. |
 
@@ -102,6 +102,6 @@ Both pass on this branch: repo-hygiene 9/9; verification 62/62. Relative links i
 
 ## Hand-offs
 
-- Owner: approve adoption of the K0 usage set (Merge Desk), or say what to change; answer D-23 "when" again; confirm the D-16 note; say whether `registry.tsv` should be committed.
-- Integration session: after #87 and #90 merge, write their SHAs into PROGRESS (rows and register) and the CI/Pages run ids of all K0 merges; after the adoption approval, PLAN.md v2.0 + `docs/development/plan/`, then PR2 (banners).
+- Owner: (adoption of the K0–K1 set: done 2026-10-05) answer D-23 "when" again; confirm the D-16 note; say whether `registry.tsv` should be committed.
+- Integration session: record the CI/Pages run ids of all K0 merges and the publication of #91, #88, #87, #90; CO-8 PR2: plan text into `docs/development/plan/`, PLAN.md v2.0 index, banners.
 - K1 (new session, once K0 is verified complete): the F5 fix first, then G2 again.
