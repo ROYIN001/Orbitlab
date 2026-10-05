@@ -72,3 +72,22 @@ describe('unfinished literal numeric work', () => {
     expect(JSON.parse(repo.binding!.getItem('orbitlab.import.quarantine.v1')!).entries).toContainEqual({ key: 'orbitlab.mission', raw: original }); repo.close();
   });
 });
+
+describe('R1.6 PR1: numeric draft cap (M-LEARNING-005)', () => {
+  it('keeps typing effective after 1,000 remembered fields and stays within the 1,000 fields × 1,000 characters cap', async () => {
+    const { repo } = await bound(); let model = Number.NaN;
+    // The callers remember the literal text first, then hand the number to the model.
+    const typed = (scope: string, key: string, text: string): void => { const n = Number(text); rememberNumericText(scope, key, text, n); model = n; };
+    for (let i = 0; i < 1000; i++) rememberNumericText('fill', `f${i}`, `${i}.0`, i);
+    expect(() => typed('rocket:new', 'payload', '1500')).not.toThrow(); expect(model).toBe(1500);
+    expect(rememberedNumericText('rocket:new', 'payload', 1500)).toBe('1500');
+    let fields = JSON.parse(repo.binding!.getItem('orbitlab.numeric-drafts.v1')!).fields as Record<string, unknown>;
+    expect(Object.keys(fields)).toHaveLength(1000); expect(fields['fill\u0000f0']).toBeUndefined(); expect(fields['fill\u0000f999']).toBeDefined();
+    const long = `1${'0'.repeat(1000)}`;
+    expect(() => typed('rocket:new', 'payload', long)).not.toThrow(); expect(model).toBe(Number(long));
+    fields = JSON.parse(repo.binding!.getItem('orbitlab.numeric-drafts.v1')!).fields as Record<string, { text: string }>;
+    expect(Object.keys(fields).length).toBeLessThanOrEqual(1000);
+    expect(Object.values(fields).every((field) => (field as { text: string }).text.length <= 1000)).toBe(true);
+    expect(() => typed(`s${'x'.repeat(400)}`, 'payload', '7')).not.toThrow(); expect(model).toBe(7); repo.close();
+  });
+});
