@@ -10,7 +10,8 @@
  * of wiring — the progress callback — is checked in the source.
  */
 import { describe, expect, it } from 'vitest';
-import { checkingKeyPart, stripRebuilds } from '../src/ui/lessons/strip-progress';
+import { t } from '../src/i18n';
+import { CheckProgressLine, checkAnnouncedText, checkProgressText, checkingKeyPart, stripRebuilds } from '../src/ui/lessons/strip-progress';
 
 /** The design strip's key as `paintDesign` builds it, with only the running check varying. */
 const stripKey = (progress: number, record = false): string =>
@@ -64,5 +65,33 @@ describe('design strip during a check (M-LEARNING-001)', () => {
     const body = call![2];
     expect(body).not.toMatch(/lastStripKey\s*=/);
     expect(body).not.toMatch(/paintStrip\(/);
+  });
+
+  it('the progress line is written in place: the same words every tick, announced at most 11 times a check', () => {
+    const writes = { shown: 0, status: 0 };
+    const sink = (k: keyof typeof writes) => {
+      let text: string | null = '';
+      return { get textContent() { return text; }, set textContent(v: string | null) { writes[k]++; text = v; } };
+    };
+    const shown = sink('shown');
+    const status = sink('status');
+    const line = new CheckProgressLine(shown, status);
+    line.set(0);
+    expect(shown.textContent).toBe(t('lesson.design.strip.checking'));
+    expect(status.textContent).toBe(t('lesson.design.strip.checking'));
+    const announced = new Set<string>([status.textContent!]);
+    for (const p of TICKS) {
+      line.set(p);
+      // the figure seen is the one the strip always showed
+      expect(shown.textContent).toBe(t('lesson.design.strip.lifetime', { p: Math.round(p * 100) }));
+      announced.add(status.textContent!);
+    }
+    expect(writes.shown).toBe(101);
+    expect(writes.status).toBeLessThanOrEqual(11);
+    expect(announced.size).toBeLessThanOrEqual(11);
+    expect(status.textContent).toBe(t('lesson.design.strip.lifetime', { p: 100 }));
+    expect(checkAnnouncedText(0.37)).toBe(t('lesson.design.strip.lifetime', { p: 30 }));
+    expect(checkAnnouncedText(0.04)).toBe(t('lesson.design.strip.checking'));
+    expect(checkProgressText(0.04)).toBe(t('lesson.design.strip.lifetime', { p: 4 }));
   });
 });

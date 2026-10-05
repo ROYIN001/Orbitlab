@@ -63,7 +63,7 @@ import type { LessonDesk } from '../build/satellite-workspace';
 import { designLessonKey } from './design-key';
 import { designChip, designCriterionName, levelName, lockName, requirementsBox } from './design-strip';
 import { designValueText } from './design-text';
-import { checkingKeyPart, stripRebuilds } from './strip-progress';
+import { CheckProgressLine, checkingKeyPart, stripRebuilds } from './strip-progress';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
 import { letterOf } from '../../worksheets/bank-items';
 import type { CaseId, CaseLessonState } from '../../worksheets/case-ids';
@@ -232,6 +232,8 @@ export class LessonMode implements LessonToolsHost {
   /** whether the last save reached the browser's storage; null before the first (audit 2026-09-27 A19) */
   private saved: boolean | null = null;
   private lastStripKey = '';
+  /** the progress line of the design check under way, in the strip built last (M-LEARNING-001) */
+  private checkLine: CheckProgressLine | null = null;
   /** what the Orbit section was last told of the case lesson open */
   private orbitKey = 'null';
   /** E05: the lesson each flight was flown in, for its worksheet's title */
@@ -462,7 +464,7 @@ export class LessonMode implements LessonToolsHost {
     // let the strip say "working out" before the figures take the main thread for a moment
     setTimeout(() => {
       if (state.checking !== job) return;
-      designLessonKey(lesson, snapshot, job.controller.signal, (f) => { job.progress = f; this.lastStripKey = ''; this.paintStrip(); })
+      designLessonKey(lesson, snapshot, job.controller.signal, (f) => { job.progress = f; if (this.active === a && state.checking === job) this.checkLine?.set(f); })
         .then((key) => {
           if (this.active !== a || state.checking !== job) return;
           state.checking = null;
@@ -1114,6 +1116,7 @@ export class LessonMode implements LessonToolsHost {
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
     if (!stripRebuilds(this.lastStripKey, key, typing)) return;
     this.lastStripKey = key;
+    this.checkLine = null;
     const head = this.stripHead(lesson, hints);
     const crits = el('div', 'lesson-crits');
     for (const c of lesson.criteria) if (c.kind === 'design') crits.append(designChip(c, g?.criteria.find((x) => x.id === c.id), d.key, stale || !!d.checking));
@@ -1124,9 +1127,15 @@ export class LessonMode implements LessonToolsHost {
     if (shown && g.lockBroken.length) status.append(el('p', 'lesson-note fail', t('lesson.design.strip.lockBroken', { fields: g.lockBroken.map(lockName).join(', ') })));
     if (shown && d.key?.refused) status.append(el('p', 'lesson-note fail', t('lesson.design.strip.refused')));
     if (d.checking) {
+      // written in place as the run goes (M-LEARNING-001): the figure seen every tick, the live region each 10 %
+      const shownLine = el('span');
+      shownLine.setAttribute('aria-hidden', 'true');
+      const said = el('span', 'sr-only');
+      said.setAttribute('role', 'status');
+      this.checkLine = new CheckProgressLine(shownLine, said);
+      this.checkLine.set(d.checking.progress);
       const line = el('p', 'lesson-note');
-      line.setAttribute('role', 'status');
-      line.textContent = d.checking.progress > 0 ? t('lesson.design.strip.lifetime', { p: Math.round(d.checking.progress * 100) }) : t('lesson.design.strip.checking');
+      line.append(shownLine, said);
       status.append(line);
     } else if (d.failed) status.append(el('p', 'lesson-note fail', d.failed));
     else if (!d.keyFor) status.append(el('p', 'lesson-note', t('lesson.design.strip.notChecked')));
