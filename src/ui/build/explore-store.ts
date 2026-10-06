@@ -28,7 +28,7 @@ import { button, el } from '../orbit/dom';
 
 export interface ExploreStoreHost<K extends DesignKind = 'vehicle'> {
   /** the design on screen (a vehicle, or a satellite), its name, and the record it was saved as or opened from; null when it cannot be kept */
-  current(): { spec: DesignKinds[K]; name: string; recordId: string | null } | null;
+  current(): { spec: DesignKinds[K]; name: string; recordId: string | null; ratingsFinal?: boolean } | null;
   /** the design on screen was saved as `record` */
   saved(recordId: string, name: string): void;
   /** open a kept or imported design */
@@ -123,13 +123,22 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     if (!cur) return;
     const keep = !asNew && cur.recordId !== null && this.list.some((d) => d.id === cur.recordId);
     try {
-      const rec = await this.store.save({ kind: this.kind, name: cur.name, design: cur.spec, ...(keep ? { id: cur.recordId! } : {}) } as DesignInput<K>);
+      const rec = await this.store.save({ kind: this.kind, name: cur.name, design: cur.spec, ...(keep ? { id: cur.recordId! } : {}), ...(cur.ratingsFinal ? { ratingsFinal: true } : {}) } as DesignInput<K>);
       this.host.saved(rec.id, rec.name);
       this.message = { level: 'ok', text: t('build.ex.store.saved', { name: rec.name }) };
     } catch (error) {
       this.message = this.failure(error);
     }
     await this.refresh();
+  }
+
+  /** A kept rocket's ratings computed again: kept, not a design edit (D-75); null when they could not be. */
+  async rerate(id: string, design: DesignKinds['vehicle']): Promise<DesignRecord<'vehicle'> | null> {
+    let rec: DesignRecord<'vehicle'> | null = null;
+    // not kept: said as any failed save is, and tried again at the next open
+    try { rec = await this.store.rerate(id, design); } catch (error) { this.say(this.failure(error)); }
+    if (rec) await this.refresh();
+    return rec;
   }
 
   private async openRecord(id: string): Promise<void> {
@@ -145,7 +154,7 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     if (!rec) { this.renaming = null; this.say({ level: 'error', text: t('build.ex.store.notFound') }); await this.refresh(); return; }
     try {
       // the design keeps its name in step with the record's: the Launch section shows the vehicle's, the Orbit section the satellite's
-      const saved = await this.store.save({ id, kind: rec.kind, name: trimmed, design: { ...rec.design, name: trimmed } } as DesignInput);
+      const saved = await this.store.save({ id, kind: rec.kind, name: trimmed, design: { ...rec.design, name: trimmed }, ...(rec.ratingsFinal ? { ratingsFinal: true } : {}) } as DesignInput);
       this.renaming = null;
       this.message = { level: 'ok', text: t('build.ex.store.renamed', { name: saved.name }) };
       const cur = this.host.current();
