@@ -12,31 +12,33 @@
  *   window's CSS height, and at least that much of it is on the first screen;
  * - S2 nothing covers the scene: a press at five points inside its visible
  *   part lands inside #viewport;
- * - S3 wider than 860 px with the guide closed: the key-events timeline
- *   (#timeline), play/pause and the clock are wholly on the first screen,
+ * - S3 wider than 860 px with the guide closed, where the scene's minimum and
+ *   its playback row (186 px) fit under the top of the stage: the key-events
+ *   timeline (#timeline), play/pause and the clock are wholly on the first screen,
  *   inside every box that clips them, and a press at their centre lands on
  *   them — the tools that do not fit go beside or below, reached by scrolling;
- * - S4 otherwise (the stacked layout up to 860 px, or the guide open): the
- *   timeline is reachable — scrolled to, a press at its centre lands on it.
+ * - S4 otherwise (the stacked layout up to 860 px, the guide open, or a window
+ *   too short for both): the timeline is reachable — scrolled to, a press at
+ *   its centre lands on it.
  * - S5 a scene under SHORT_SCENE px tall shows the narration's phase name
  *   only: its prose and latest-event line (which covered half of a 260 px
  *   scene) are not drawn over the picture.
 
  *
- * The minimum is the proposal on the G2 review page (the owner decides; D-36:
- * "minimum scene height measured at 1100×650 and 1280×720"): 40 % of the
- * window's height, never less than 200 px and never asked to exceed 320 px —
- * the floor the scene already had above 1180 px and on phones. It is the same
- * formula as `--scene-min` in src/style.css.
+ * The minimum is the owner's answer on the G2 card (2026-10-06, option b):
+ * 50 % of the window's height, never less than 240 px and never asked to
+ * exceed 400 px, on phones too. The owner accepted that on a short window the
+ * playback row then sits below the first screen, reached by scrolling (S3 →
+ * S4). It is the same formula as `--scene-min` in src/style.css.
  */
 import { viewportSize } from './harness.mjs';
 
 /** Under this scene height the narration keeps its phase name only (src/main.ts SHORT_SCENE_PX). */
 export const SHORT_SCENE = 380;
 
-/** The proposed minimum scene height (CSS px) in a window `h` CSS px high: clamp(200px, 40vh, 320px). */
+/** The minimum scene height (CSS px) in a window `h` CSS px high: clamp(240px, 50vh, 400px). */
 export function sceneMin(h) {
-  return Math.min(320, Math.max(200, 0.4 * h));
+  return Math.min(400, Math.max(240, 0.5 * h));
 }
 
 /** S1–S4 at one size, language and guide state; returns the scene's box. */
@@ -82,14 +84,17 @@ export async function checkSceneFloor(t, app, preset, state, where) {
     }
     const prose = [...scene.querySelectorAll('.narration .phase-detail, .narration .latest-event')]
       .filter((n) => n.getClientRects().length > 0 && getComputedStyle(n).visibility !== 'hidden').map((n) => n.className);
-    return { w: Math.round(b.width), h: Math.round(b.height), visible: Math.round(visible), y: Math.round(b.top), misses, prose };
+    const stage = document.querySelector('.flight-stage')?.getBoundingClientRect();
+    return { w: Math.round(b.width), h: Math.round(b.height), visible: Math.round(visible), y: Math.round(b.top), misses, prose, stageTop: stage ? stage.top : b.top, winH: h };
   });
   t.check(m.h >= min - 0.5, `${where}: the scene is ${m.w}×${m.h}, under the minimum height ${Math.round(min)} px (S1)`);
   t.check(m.visible >= min - 0.5, `${where}: only ${m.visible} px of the scene (y ${m.y}, ${m.h} px tall) is on the first screen, under the minimum ${Math.round(min)} px (S1)`);
   if (m.h < SHORT_SCENE) t.check(m.prose.length === 0, `${where}: the scene is ${m.h} px tall but the narration still draws ${m.prose.join(', ')} over it (S5)`);
   t.check(m.misses.length === 0, `${where}: something covers the scene — a press at ${m.misses.join(', ')} (S2)`);
   const stacked = width <= 860;
-  if (!stacked && state === 'closed') {
+  // the playback row under the scene: 174 px with the achieved-speed line, plus the 12 px gap
+  const fits = m.stageTop + min + 186 <= m.winH + 0.5;
+  if (!stacked && state === 'closed' && fits) {
     for (const [what, sel] of [['timeline', '#timeline'], ['play/pause', '#btn-play'], ['clock', '#clock']]) {
       const r = await onFirstScreen(app, sel);
       t.check(r === null, `${where}: the ${what} (${sel}) is not wholly on the first screen — ${r} (S3)`);
