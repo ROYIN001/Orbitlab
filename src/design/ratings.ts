@@ -228,6 +228,20 @@ function ceiling(spec: VehicleSpec, ref: RatingOrbitRef, launchTime: Date): numb
  * comment). Estimates; `flights` and `elapsedMs` say what they cost.
  */
 export function computedRatings(spec: VehicleSpec, opts: RatingOptions = {}): ComputedRatings {
+  const search = ratingsSearch(spec, opts);
+  for (;;) {
+    const step = search.next();
+    if (step.done) return step.value;
+  }
+}
+
+/**
+ * The same search, paused after every probe flight: the same flights in the
+ * same order, so the same result. A caller without a worker runs it a flight
+ * at a time and lets the screen draw and Stop be pressed between flights
+ * (src/ui/build/ratings-job.ts); `elapsedMs` then includes the pauses.
+ */
+export function* ratingsSearch(spec: VehicleSpec, opts: RatingOptions = {}): Generator<void, ComputedRatings, void> {
   const now = opts.now ?? (() => performance.now());
   const t0 = now();
   const budget = opts.timeBudgetMs ?? 8000;
@@ -236,7 +250,7 @@ export function computedRatings(spec: VehicleSpec, opts: RatingOptions = {}): Co
   const launchTime = opts.launchTime ?? DEFAULT_LAUNCH;
   const orbits = ratingOrbits(spec);
   let flights = 0;
-  const rate = (ref: RatingOrbitRef): ComputedRating => {
+  const rate = function* (ref: RatingOrbitRef): Generator<void, ComputedRating, void> {
     const ceil = ceiling(spec, ref, launchTime);
     let used = 0;
     let lo = 0;
@@ -262,6 +276,7 @@ export function computedRatings(spec: VehicleSpec, opts: RatingOptions = {}): Co
     let stop = outOfBudget();
     if (stop) return result(false, stop);
     const empty = tryAt(0);
+    yield;
     if (!empty.ok) {
       hi = 0;
       failCause = empty.cause;
@@ -273,12 +288,13 @@ export function computedRatings(spec: VehicleSpec, opts: RatingOptions = {}): Co
       if (stop) return result(false, stop);
       const mid = (lo + hi) / 2;
       const r = tryAt(mid);
+      yield;
       if (r.ok) lo = mid;
       else { hi = mid; failCause = r.cause; }
     }
     return result(true);
   };
-  const payloadLEO = rate(orbits.LEO);
-  const payloadGTO = rate(orbits.GTO);
+  const payloadLEO = yield* rate(orbits.LEO);
+  const payloadGTO = yield* rate(orbits.GTO);
   return { payloadLEO, payloadGTO, flights, elapsedMs: now() - t0, estimate: true };
 }
