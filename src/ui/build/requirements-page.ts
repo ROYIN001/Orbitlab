@@ -719,7 +719,10 @@ export class RequirementsPage {
     this.host.opened({ designId: b.design.id, cycle, altitude: row.altitude });
   }
 
-  /** M-BUILD-007: "Save it, then open": the bench's design kept in its record, then the row opened; what went wrong said under the row. */
+  /**
+   * M-BUILD-007: "Save it, then open": the bench's design the question was about (the student's own, a lesson's put
+   * aside again) kept in its record, then the row opened; what went wrong said under the row.
+   */
   private async saveThenOpen(row: TradeRow): Promise<void> {
     const failed = await this.host.designs().saveFirst();
     if (!failed) return this.openRow(row, true);

@@ -165,10 +165,22 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     return this.message.level === 'error' ? this.message.text : null;
   }
 
-  /** M-BUILD-007: "Save it, then open": the design on screen kept in its own record (the list read first, so it is found). */
-  async saveFirst(): Promise<string | null> {
+  /**
+   * M-BUILD-007: "Save it, then open": the design the question was about — the one opening `rec` (or a requirements
+   * row) would replace — put back on screen, as the student may have looked at another since (the other rocket draft,
+   * the lesson's design), then kept in its own record (the list read first, so it is found). Nothing to lose, nothing saved.
+   */
+  async saveFirst(rec?: DesignRecord<K>): Promise<string | null> {
+    if (!this.host.replacing(rec)) return null;
     await this.refresh();
     return this.save(false);
+  }
+
+  /** M-BUILD-007: the question's "Save it, then open" for record `id`; a record gone meanwhile is said by `openRecord`. */
+  private async saveThenOpen(id: string): Promise<void> {
+    const rec = await this.store.get(id);
+    if (rec && isDesignOf(rec, this.kind) && await this.saveFirst(rec)) return;
+    await this.openRecord(id, true);
   }
 
   /**
@@ -378,8 +390,8 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     text.append(meta);
     li.append(text);
     if (this.opening === d.id) {
-      li.append(askReplace(d.name, 'ask:', () => void this.saveFirst().then((failed) => { if (!failed) void this.openRecord(d.id, true); }),
-        () => void this.openRecord(d.id, true), () => { this.opening = null; this.focusNext = `open:${d.id}`; this.render(); }));
+      li.append(askReplace(d.name, 'ask:', () => void this.saveThenOpen(d.id), () => void this.openRecord(d.id, true),
+        () => { this.opening = null; this.focusNext = `open:${d.id}`; this.render(); }));
       return li;
     }
     const row = el('div', 'bx-store-row');
