@@ -121,13 +121,13 @@ The owner answered all 80 answerable items of the plan v2.0 draft's answer sheet
 | R0 contract or work | State | Text today | ADR or new home | When |
 |---|---|---|---|---|
 | LearnerRepository / ProfileWorkspace | Done (R1.1/R1.2) | PROGRESS "Storage ADR" line; `reports/R1.1-storage.md`, `R1.2-profiles-ui.md` | `docs/development/adr/README.md` index pointing at the existing text | K1 |
-| FlightLifecycle | Partial | `src/ui/flight-lifecycle.ts`; `reports/R2-workspace.md` §R2.1 | ADR-FlightLifecycle | K1, before R3.1r/R5.1 |
-| CameraPolicy | Built (R2.2) | `src/render/camera-policy.ts`; R2 report §R2.2; `tests/camera-policy.test.ts` | ADR-CameraPolicy (as built) | K1 |
+| FlightLifecycle | ADR written (R0.2r) | `src/ui/flight-lifecycle.ts`; `reports/R2-workspace.md` §R2.1 | [ADR-FlightLifecycle](development/adr/flight-lifecycle.md) | K1, before R3.1r/R5.1 |
+| CameraPolicy | ADR written (R0.2r) | `src/render/camera-policy.ts`; R2 report §R2.2; `tests/camera-policy.test.ts` | [ADR-CameraPolicy](development/adr/camera-policy.md) (as built) | K1 |
 | GestureOwnership | Done (R1.3) | `reports/R1.3-gestures.md`; `render/gestures.ts` | Index pointing at the existing text | K1 |
-| CraftState/Handoff (envelope) | v1 (+ optional `origin.design` from #80) | `src/orbit/handoff.ts` | ADR-Handoff (v1 + DesignRef as shipped) | K1, before R3.1r and R5.1 |
-| CraftState (physics state) | None | — | ADR-CraftState in R5.2 PR1 | With R5.2 |
-| DesignPreview | Partial (R3 package 1, #78, #80) | `reports/R3-design-views.md` | ADR-DesignPreview | K1 |
-| ResultAction | Partial (#75, #77) | `readinessTarget()` in `review-model.ts`; `src/ui/result-actions.ts` | ADR-ResultAction | K1 |
+| CraftState/Handoff (envelope) | ADR written (R0.2r): v1 (+ optional `origin.design` from #80) | `src/orbit/handoff.ts` | [ADR-Handoff](development/adr/handoff.md) (v1 + DesignRef as shipped) | K1, before R3.1r and R5.1 |
+| CraftState (physics state) | None (not in R0.2r; see the [ADR index](development/adr/README.md)) | — | ADR-CraftState in R5.2 PR1 | With R5.2 |
+| DesignPreview | ADR written (R0.2r); contract partial (R3 package 1, #78, #80) | `reports/R3-design-views.md` | [ADR-DesignPreview](development/adr/design-preview.md) | K1 |
+| ResultAction | ADR written (R0.2r); contract partial (#75, #77) | `readinessTarget()` in `review-model.ts`; `src/ui/result-actions.ts` | [ADR-ResultAction](development/adr/result-action.md) | K1 |
 | VerificationManifest | Done (R1.5) | VERIFICATION.md; `reports/R1.5-workflows.md` | Index; R7.3 adds the EQ, `--compare` and D-64 rules to VERIFICATION | — |
 | input/derived/estimated/fitted/reference split (PLAN R0.2) | No table yet | — | ADR typing every field; vehicle data in the R4.1 ledger | K1–K3 |
 | Results of PLAN R0.1 | See S07 §07.1 | — | R1.3 (done), R4.1, CO-3, M-BUILD-024, CO-6 | K0–K3 |
