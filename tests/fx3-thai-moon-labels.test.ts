@@ -12,11 +12,13 @@
  * M-ORBIT-029 (D-11, docs/DECISIONS.md): the Moon is labelled "Apollo 11's
  * week only (DE441 table)" where it is shown — Watch's Apollo 11 flight,
  * the only flight that draws it (main.ts places it while the frame carries
- * `apollo`) — and README no longer says the Moon is not modelled at all. No
- * Orbit tool reads the Moon's ephemeris (D-11: none until L01).
+ * `apollo`). No Orbit tool reads the Moon's ephemeris (D-11: none until L01).
+ * README's sentence is not tested here: README is a Markdown file CI skips,
+ * and a test may not import one unless it is gated
+ * (tests/verification/workflow-paths.test.mjs); the plan leaves document
+ * text to R7.5's tests.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import readme from '../README.md?raw';
 import playgroundSource from '../src/ui/orbit/playground.ts?raw';
 import { en } from '../src/i18n/en';
 import { ru } from '../src/i18n/ru';
@@ -195,12 +197,6 @@ describe('M-ORBIT-029: the Moon is Apollo 11\'s week only (D-11)', () => {
       expect(shown, lang).toContain(apollo);
       expect(shown, lang).not.toBe(english);
     }
-  });
-
-  it('README says the Moon is modelled for Apollo 11\'s week only, not that it is not modelled', () => {
-    const prose = readme.replace(/\s+/g, ' ');
-    expect(prose.includes('the Moon itself is not modelled'), 'README: "the Moon itself is not modelled"').toBe(false);
-    expect(prose.includes('Apollo 11\'s week only, from JPL\'s DE441 table'), 'README: "Apollo 11\'s week only, from JPL\'s DE441 table"').toBe(true);
   });
 
   it('no Orbit tool reads the Moon\'s ephemeris (D-11: none until L01)', () => {
