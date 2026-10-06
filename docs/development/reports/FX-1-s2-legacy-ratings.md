@@ -122,7 +122,7 @@ raised here.
 ## Left open
 
 - **index-*.js ceiling.** #104 raises precache code and i18n, not the index
-  chunk's own 2622 kB ceiling. This change goes over it by 1.1 kB; the owner
+  chunk's own 2622 kB ceiling. This change goes over it by 1.3 kB (1.1 kB before the review follow-ups); the owner
   or the budget package decides (raise it under the K1 allowance, or another
   offset).
 - **Kept drafts.** Ratings in the browser's kept drafts (restored at page
@@ -136,3 +136,66 @@ raised here.
   as an edit (e.g. ratings computed by hand and not saved); this package
   keeps the record and the screen equal after a recompute and leaves that
   rule to R3.1r (M-PLAN-028).
+
+## Review follow-ups (D-25 second review: approve with should-fixes)
+
+Commits `afcde27` (tests, failing first) and `317abda` (fix), added on top of
+the earlier commits; nothing was amended.
+
+- **Ratings only for the record's own vehicle (should-fix 1).**
+  `recomputeKeptRatings` writes nothing unless the search's signature is
+  `ratingsSignature(record.design)`. Before this, on the fallback without a
+  worker, a learner could open B while A's search was still stopping and then
+  edit B; the search for the edited spec was then written into record B,
+  marked final.
+- **Save-time mark tested (should-fix 2).** The rule moved from
+  `ExploreLevel` into `FinalRatings` (`src/ui/build/ratings-job.ts`):
+  `add` (a finished search, the review), `opened` (a record with
+  `ratingsFinal === true` hands the mark to the ratings it opens with) and
+  `onSave`. `onSave` marks computed ratings only when they are known final,
+  marks published ones and none, and does not mark a remix base's carried
+  ratings or a refused design. Unit tests cover each case and the hand-off.
+  The journey now also saves and renames the recomputed design and checks
+  that it keeps the mark.
+- **A failed store write is said (should-fix 3).** If `rerate` throws (full
+  or blocked storage), the store panel shows its usual failure message, the
+  record stays unmarked and the next open tries again.
+  `recomputeKeptRatings` treats a rejected write as unfinished.
+- **Nit.** A test covers `rerate`'s own design check (a negative or NaN
+  rating is refused and nothing is written).
+- **Safe-direction costs, stated.** On a device where the search never
+  finishes (Stop pressed every time, or a search that ends unfinished), every
+  open searches again. Nothing unfinished is ever written, so this is the
+  safe direction, and it is kept as is. The known-final set lives in memory
+  only, so after a reload ratings restored from the kept drafts are not known
+  final and a save leaves the record unmarked. Save-as-new during a search
+  likewise leaves the copy unmarked. Both cost an extra search at a later
+  open, never a wrong value.
+
+Failing first (`afcde27` against `f48cd4f`'s code):
+
+```
+× ratings searched for another vehicle (the design edited during the search) are not written into the record
+× a store that cannot write leaves the record unmarked, to be tried again
+× Save marks the record final only for ratings known final, or none of the design's own
+× a kept record's mark is handed to the ratings it opens with, and only a mark that is there
+AssertionError: expected 'recomputed' to be 'unfinished'
+Error: full
+TypeError: FinalRatings is not a constructor
+Tests  4 failed | 9 passed (13)
+```
+
+The two other new tests pass on that code: the `rerate` check and Rename
+keeping the mark. They guard code that was already right.
+
+After: `tests/build-legacy-ratings.test.ts` 13/13. With the affected suites
+(design-store, explore-model, explore-drafts, build-ratings-unfinished,
+design-ref, build-screen, design-ratings, repo-hygiene, i18n,
+project-archive, workspace-*): 17 files, 192 tests passed. Typecheck clean.
+Verification and shard tests 64/64. Journey `build-legacy-ratings` passed
+(26.4 s).
+
+Budget after the follow-ups: precache code 14708.7 kB (+1.7 over the base's
+14707.0), i18n 1721.0 kB (0), index-*.js 2623.3 kB (+1.7; over its 2622 kB
+ceiling by 1.3 kB). Under #104's K1 allowance, code (≤ 14714) and i18n
+(≤ 1725) pass; the index ceiling is still open (above).
