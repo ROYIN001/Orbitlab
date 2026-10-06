@@ -1,4 +1,4 @@
-import type { Lang } from '../i18n';
+import { tFor, type Lang } from '../i18n';
 import { orbitResiduals, type OrbitMissParam, type ResolvedTarget } from '../physics/mission';
 import { RAD } from '../physics/constants';
 import type { Debris, SimEvent, SimState } from '../physics/simulation';
@@ -26,8 +26,8 @@ export interface ResultMetric {
   /** M-LAUNCH-031: outside the band on the set the verdict was judged on (`judged`), not on the displayed orbit. */
   outside: boolean | null;
   /** The value the recorded verdict was judged on, at `judgedTime`; null when the record does not carry it. */
-  judged: number | null;
-  judgedDelta: number | null;
+  judged?: number | null;
+  judgedDelta?: number | null;
 }
 
 export interface MissionResultModel {
@@ -38,8 +38,8 @@ export interface MissionResultModel {
   reviewTime: number;
   metrics: ResultMetric[];
   /** M-LAUNCH-031: when the verdict was judged (null for a failure), and whether on the physical apsides. */
-  judgedTime: number | null;
-  judgedBasis: 'physical' | 'osculating' | null;
+  judgedTime?: number | null;
+  judgedBasis?: 'physical' | 'osculating' | null;
   recovery: RecoveryResult;
   payloadSeparated: boolean;
   issPlaneOnly: boolean;
@@ -169,6 +169,14 @@ interface ResultCopy {
   free: string; unavailable: string; deltaNote: string; displayed: string; assessed: string;
   next: string; review: string; booster: string; separate: string; pendingPayload: string; iss: string; outside: string;
 }
+
+/** M-LAUNCH-031: a row shows the judged value and delta when the record has them, the displayed value then as `now`. */
+export const resultRow = (m: ResultMetric): { value: number | null; delta: number | null; now: number | null } => m.judged == null
+  ? { value: m.actual, delta: m.delta, now: null } : { value: m.judged, delta: m.judgedDelta ?? null, now: m.actual };
+
+/** "Judged at T+… s (basis)", or '' when no row was judged. */
+export const judgedNote = (r: MissionResultModel, lang: Lang): string => r.judgedTime == null || r.metrics.every(m => m.judged == null)
+  ? '' : tFor(lang, r.judgedBasis === 'physical' ? 'result.judged.physical' : 'result.judged.osculating', { time: r.judgedTime.toFixed(1) });
 
 export const RESULT_COPY: Record<Lang, ResultCopy> = {
   en: {
