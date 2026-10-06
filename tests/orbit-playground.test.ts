@@ -21,10 +21,14 @@ import {
 import { PLAYGROUND_PRESET_IDS, SITE_INCLINATION_DEG, presetOrbit } from '../src/orbit/presets';
 import { TOUR } from '../src/orbit/tour';
 import {
-  PG_LIMITS, PG_WARPS, PG_DEFAULT_WARP, SLIDER_STEPS, handoffEntry, handoffOrbit, linearScale, logScale, repeatGroundTrack, tourSetup, withApsis,
+  PG_LIMITS, PG_WARPS, PG_DEFAULT_WARP, REPEAT_LIMITS, SLIDER_STEPS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, linearScale, logScale,
+  eoRepeatRevs, repeatCount, repeatGroundTrack, thaiRepeatRevs, tourSetup, withApsis,
 } from '../src/orbit/playground-model';
 import { handoffElements } from '../src/orbit/handoff';
-import { defaultApps } from '../src/orbit/applications-setup';
+import { defaultApps, eoReport } from '../src/orbit/applications-setup';
+import { defaultSettings, makePlan } from '../src/orbit/maneuver-setup';
+import { isPlan } from '../src/orbit/maneuvers';
+import playgroundSource from '../src/ui/orbit/playground.ts?raw';
 import { trackSpans } from '../src/ui/orbit/ground-track';
 import { ballAt, framing } from '../src/ui/orbit/cannon-view';
 import { BUILT_ITEMS, SECTION_PLANS } from '../src/ui/section-plan';
@@ -296,5 +300,176 @@ describe('a flight handed on while the real satellites are showing (audit 2026-0
     const eo = { ...defaultApps('eo'), stationId: 'moscow', thaiId: 'theos2' };
     expect(handoffEntry({ mode: 'orbit', apps: eo }).apps).toEqual({ ...eo, thaiId: null });
     expect(handoffEntry({ mode: 'orbit', apps: null }).apps).toBeNull();
+  });
+});
+
+/** The text of one member of the playground's DOM part, from its signature to the next member's. */
+function methodBody(name: string): string {
+  const start = playgroundSource.search(new RegExp(`\\n  (private |readonly )?${name}[(:]`));
+  expect(start, name).toBeGreaterThan(0);
+  const rest = playgroundSource.slice(start + 1);
+  const end = rest.slice(1).search(/\n  (\/\*\*|private |readonly |get |[a-zA-Z]+\()/);
+  return end < 0 ? rest : rest.slice(0, end + 1);
+}
+
+/** The class member (two-space indent) of `source` that holds the text at `at`. */
+function memberAt(source: string, at: number): string {
+  const members = [...source.slice(0, at).matchAll(/\n {2}(?:(?:private|readonly|async|get|set|static) )*([A-Za-z_]\w*)\s*[(<:=]/g)];
+  return members.length ? members[members.length - 1][1] : '';
+}
+
+/** The members of `source` in which `pattern` occurs, one entry per occurrence. */
+function membersWith(source: string, pattern: RegExp): string[] {
+  return [...source.matchAll(new RegExp(pattern.source, 'g'))].map((m) => memberAt(source, m.index!));
+}
+
+/** The argument lists of every `this.setOrbit(…)` call in `source`, split at their top-level commas. */
+function setOrbitCalls(source: string): string[][] {
+  const calls: string[][] = [];
+  for (const m of source.matchAll(/this\.setOrbit\(/g)) {
+    let depth = 1, k = m.index! + m[0].length, arg = '';
+    const args: string[] = [];
+    for (; depth > 0; k++) {
+      const ch = source[k];
+      if ('([{'.includes(ch)) depth++;
+      if (')]}'.includes(ch)) depth--;
+      if (depth === 0 || (depth === 1 && ch === ',')) { args.push(arg.trim()); arg = ''; } else arg += ch;
+    }
+    calls.push(args);
+  }
+  return calls;
+}
+
+describe('a Thai satellite\'s figures go only with its own orbit (M-ORBIT-002)', () => {
+  it('forgets the Thai satellite once the orbit on show is another, and keeps the rest of an application', () => {
+    const eo = { ...defaultApps('eo'), stationId: 'moscow' };
+    const shown = appsOnOrbit(eo, 'theos2')!;
+    expect(shown.thaiId).toBe('theos2');
+    // showThai, then choosePreset (or a slider, the repeat tool, a plan adopted): another orbit
+    const after = appsOnOrbit(shown)!;
+    expect(after.thaiId).toBeNull();
+    expect(after).toEqual({ ...shown, thaiId: null });
+    expect(shown.thaiId).toBe('theos2');
+    expect(appsOnOrbit(null)).toBeNull();
+    // the same Thai satellite chosen again: the same settings, so the same report
+    expect(appsOnOrbit(shown, 'theos2')).toEqual(shown);
+  });
+
+  it('after a preset, the Earth-observation report no longer uses THEOS-2\'s repeat cycle', () => {
+    const shown = appsOnOrbit(defaultApps('eo'), 'theos2')!;
+    expect(thaiRepeatRevs(shown)).toBe(385);
+    const after = appsOnOrbit(shown)!;
+    expect(thaiRepeatRevs(after)).toBeNull();
+    expect(thaiRepeatRevs(null)).toBeNull();
+    const sso = presetOrbit('sso', JD), s = stateAt(sso, 0, true);
+    const report = eoReport(after, sso, s, true, thaiRepeatRevs(after), 10.5);
+    expect(report).toEqual(eoReport(after, sso, s, true, null, 10.5));
+    expect(report).not.toEqual(eoReport(after, sso, s, true, 385, 10.5));
+  });
+
+  it('every way the playground takes another orbit goes through it (the DOM part)', () => {
+    // setOrbit serves choosePreset, the sliders, the repeat tool, a plan adopted and a real satellite brought in
+    expect(methodBody('setOrbit')).toMatch(/appsOnOrbit\(this\.apps/);
+    expect(methodBody('choosePreset')).toMatch(/this\.setOrbit\(/);
+    expect(methodBody('choosePreset')).toMatch(/this\.loadHandoff\(/);
+    expect(methodBody('loadHandoff')).toMatch(/appsOnOrbit\(this\.apps/);
+    expect(methodBody('applyTourStep')).toMatch(/appsOnOrbit\(this\.apps/);
+    // its repeat is read only through the rule
+    expect(playgroundSource).not.toMatch(/repeat\?\.revs/);
+  });
+
+  it('the orbit is replaced only where the Thai satellite is forgotten, and named only with its own orbit (the DOM part)', () => {
+    const writers = /this\.orbit\s*=(?!=)/;
+    const allowed = ['setOrbit', 'loadHandoff', 'applyTourStep'];
+    const found = membersWith(playgroundSource, writers);
+    expect(found.length).toBe(3);
+    for (const m of found) expect(allowed, m).toContain(m);
+    // the check bites: an orbit written straight in choosePreset is caught
+    const mutated = playgroundSource.replace('    this.jd0 = julianDate(new Date());\n    this.time = 0;\n    this.planStart = 0;\n    // a sun-synchronous',
+      '    this.jd0 = julianDate(new Date());\n    this.orbit = presetOrbit(id, this.jd0);\n    this.time = 0;\n    this.planStart = 0;\n    // a sun-synchronous');
+    expect(mutated).not.toBe(playgroundSource);
+    expect(membersWith(mutated, writers)).toContain('choosePreset');
+    // a Thai satellite is set nowhere but through setOrbit's third argument …
+    expect(membersWith(playgroundSource, /\bthaiId\s*[:=](?!=)/)).toEqual(['setOrbit']);
+    // … and the one call that passes it gives the orbit made from that satellite
+    const named = setOrbitCalls(playgroundSource).filter((args) => args.length > 2);
+    expect(named.length).toBe(1);
+    expect(named[0][0]).toMatch(/^thaiOrbit\(sat, /);
+    expect(setOrbitCalls(playgroundSource).length).toBeGreaterThan(5);
+  });
+
+  it('gives the Thai satellite\'s repeat only on its own orbit, with J2 on (the EO report\'s rule)', () => {
+    const shown = appsOnOrbit(defaultApps('eo'), 'theos2')!;
+    expect(eoRepeatRevs(shown, 0, true)).toBe(385);
+    // after a planned burn, and while spiralling, the orbit flown is no longer the satellite's
+    expect(eoRepeatRevs(shown, 1, true)).toBeNull();
+    expect(eoRepeatRevs(shown, 2, true)).toBeNull();
+    expect(eoRepeatRevs(shown, -1, true)).toBeNull();
+    // with J2 off the plane does not turn as the published grid assumes
+    expect(eoRepeatRevs(shown, 0, false)).toBeNull();
+    expect(eoRepeatRevs(appsOnOrbit(shown), 0, true)).toBeNull();
+    expect(eoRepeatRevs(null, 0, true)).toBeNull();
+    expect(methodBody('appsSection')).toMatch(/eoRepeatRevs\(a, index, this\.j2\)/);
+  });
+});
+
+describe('the Watch tour\'s period is the orbit flown now (M-ORBIT-003)', () => {
+  const step = TOUR.find((s) => s.id === 'hohmann')!;
+  const setup = tourSetup(step, JD);
+  const start = setup.orbit!;
+  const plan = makePlan({ ...defaultSettings(setup.maneuver!.kind, start), ...setup.maneuver! }, start, 0, setup.j2);
+
+  it('flies the Hohmann step past burn 2 onto the geostationary orbit\'s period', () => {
+    expect(isPlan(plan)).toBe(true);
+    if (!isPlan(plan)) return;
+    const geo = { ...start, a: R_EARTH + 35_786e3, e: 0 };
+    // between the burns: the transfer ellipse, longer than the LEO's period and shorter than a day
+    const period = (o: typeof start) => orbitFacts(o, setup.j2).period;
+    const between = flownAt(plan, start, (plan.burns[0].t + plan.burns[1].t) / 2, setup.j2);
+    expect(between.index).toBe(1);
+    expect(period(between.orbit)).toBeGreaterThan(period(start) + 3600);
+    expect(period(between.orbit)).toBeLessThan(period(geo) - 3600);
+    const t = plan.burns[1].t + 60;
+    const after = flownAt(plan, start, t, setup.j2);
+    expect(after.index).toBe(plan.segments.length - 1);
+    // within 1 s of a sidereal day: the circle at 35 786 km, not the LEO the step started on
+    expect(Math.abs(period(after.orbit) - period(geo))).toBeLessThan(1);
+    expect(after.local).toBeCloseTo(t - plan.segments[after.index].t0, 6);
+    // no plan: the orbit itself
+    expect(flownAt(null, start, 1234, false)).toEqual({ orbit: start, local: 1234, index: 0 });
+  });
+
+  it('the tour card keeps its period a live readout, and a burn made does not drop its readouts (the DOM part)', () => {
+    expect(methodBody('renderTour')).toMatch(/this\.live\.period = stat\(/);
+    expect(methodBody('updateLive')).toMatch(/if \(L\.period\) L\.period\.textContent = /);
+    // renderFacts runs on each burn made: at the Watch level it returns before it forgets the tour card's readouts
+    const facts = methodBody('renderFacts');
+    expect(facts.indexOf('this.level === \'watch\'')).toBeGreaterThan(0);
+    expect(facts.indexOf('this.level === \'watch\'')).toBeLessThan(facts.indexOf('this.live = {}'));
+  });
+});
+
+describe('the repeat tool takes only whole numbers in range (M-ORBIT-008)', () => {
+  it('refuses 0, blank, NaN, 14.5, 501 revolutions and 61 days', () => {
+    expect(REPEAT_LIMITS).toEqual({ revs: { min: 1, max: 500 }, days: { min: 1, max: 60 } });
+    for (const bad of ['0', '', ' ', 'abc', 'NaN', '14.5', '1e2', '-3', '501']) expect(repeatCount(bad, 'revs'), bad).toBeNull();
+    for (const bad of ['0', '61', '2.5', '']) expect(repeatCount(bad, 'days'), bad).toBeNull();
+  });
+
+  it('takes a valid count as it is, and the answer to it is the same as before', () => {
+    expect(repeatCount('143', 'revs')).toBe(143);
+    expect(repeatCount(' 10 ', 'days')).toBe(10);
+    expect(repeatCount('500', 'revs')).toBe(500);
+    expect(repeatCount('60', 'days')).toBe(60);
+    expect(repeatCount('1', 'revs')).toBe(1);
+    expect(repeatGroundTrack(repeatCount('143', 'revs')!, repeatCount('10', 'days')!, true, 0)).toEqual(repeatGroundTrack(143, 10, true, 0));
+  });
+
+  it('says so beside the field, and "no orbit" only for a valid N and D (the DOM part)', () => {
+    const tool = methodBody('repeatTool');
+    expect(tool).toMatch(/repeatCount\(/);
+    expect(tool).toMatch(/pg\.rep\.invalid/);
+    expect(tool).not.toMatch(/Number\(i\.value\)/);
+    for (const dict of [en, ru, th]) expect((dict as Record<string, string>)['pg.rep.invalid']).toMatch(/\{min\}.*\{max\}/s);
   });
 });

@@ -107,6 +107,7 @@
         <aside id="setup" class="panel setup" tabindex="-1"></aside>
 
         <section class="flight-column">
+          <div class="flight-stage">
           <div id="viewport" class="panel viewport">
             <canvas id="gl"></canvas>
             <canvas id="map" class="overlay hidden"></canvas>
@@ -135,6 +136,8 @@
                 <button id="btn-glow" class="tool-btn active" type="button" aria-pressed="true" data-i18n-title="ctl.glow"><span aria-hidden="true">✦</span></button>
                 <button id="btn-sound" class="tool-btn" type="button" aria-pressed="false" data-i18n-title="ctl.sound" data-i18n-aria-label="ctl.sound"><span aria-hidden="true">♪</span></button>
                 <button id="btn-fullscreen" class="tool-btn" type="button" data-i18n-title="ctl.fullscreen"><span aria-hidden="true">⛶</span></button>
+                <!-- G2 compact: a short scene folds the floating telemetry card into this button (src/main.ts foldHud) -->
+                <button class="tool-btn hud-fold" type="button" aria-controls="hud" aria-expanded="false" data-i18n-aria-label="hud.card">▤</button>
               </div>
               </div>
               <div class="scene-fill">
@@ -188,6 +191,7 @@
             </div>
             <small id="achieved-warp" hidden></small>
           </section>
+          </div>
           <section id="mission-result" class="panel" hidden></section>
           <section id="flown-result" class="panel" hidden></section>
           <section id="rigid-controls" class="panel" hidden></section>

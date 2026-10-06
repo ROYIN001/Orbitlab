@@ -155,7 +155,9 @@ function initScript({ lang, guide }) {
     return JSON.parse(JSON.stringify(await tool.execute(input)));
   };
   try {
-    if (!guide) localStorage.setItem('orbitlab.guide.v1', 'done');
+    // the app hides the guide for 'dismissed' only (src/ui/help-state.ts); the
+    // first boot moves this key into the learner's workspace (F7, CO-3 report)
+    if (!guide) localStorage.setItem('orbitlab.guide.v1', 'dismissed');
     if (lang && !localStorage.getItem('orbitlab.lang')) localStorage.setItem('orbitlab.lang', lang);
   } catch { /* storage off: the app falls back to its defaults */ }
 }
@@ -220,6 +222,8 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
       };
       apps.push(app);
       await app.goto(hash);
+      // F7: a journey that did not ask for the first-use guide must not run under it
+      if (!guide) t.check(await page.locator('#first-use-guide').isHidden(), 'the first-use guide is open although the journey opened the app with guide: false');
       return app;
     },
 
