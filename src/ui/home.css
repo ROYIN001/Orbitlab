@@ -69,8 +69,8 @@
   padding: 6px 2px; font-size: 13px; letter-spacing: 0.4px; color: var(--muted);
 }
 .home-cue:hover { color: var(--accent); }
-/* the arrow, in the accent, bobs three times and then rests (with less motion asked for, it only rests) */
-.home-cue-arrow { display: inline-block; font-size: 16px; color: var(--accent); }
+/* the arrow bobs three times and then rests (with less motion asked for, it only rests) */
+.home-cue-arrow { display: inline-block; font-size: 16px; }
 @media (prefers-reduced-motion: no-preference) { .home-cue-arrow { animation: home-cue 1.8s ease-in-out 3; } }
 @keyframes home-cue { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 
