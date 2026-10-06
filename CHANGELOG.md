@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- FX-1 s2 (M-BUILD-006; owner, 2026-10-06, option b): a rocket design saved before FX-1 PR1 has its payload ratings computed again when it is opened in Build (in the background, with the usual progress line and Stop), since they may be a cut-off figure; a finished search replaces them without counting as a design edit (D-75), and one that does not finish changes nothing and is tried again next time.
 - FX-1 PR1 (M-BUILD-006, D-67): Build computes payload ratings with a 40-flight limit and no time limit, so a slow device gets the same ratings instead of a cut-off lower figure (which Launch read as "cannot fly"); a search that did not finish is never kept as the rating, and without a worker the search now shows its progress and can be stopped.
 - Docs: DECISIONS records the owner's follow-up answers of 2026-10-05 — D-23 (a second maintainer is not a condition), the D-16 note (pass/fail threshold), D-36.A3 (in-flight edits take effect on confirm), registry.tsv (commit it) and HUF-D02 (stays a build-or-not question).
 - Tests (CO-5): pull requests now run a short check of the Launch Engineer flight screen (`r2-shell-smoke`, about 40 s): launching folds the setup and widens the scene, pausing stays in flight, the six-DOF and TORU controls can be reached, and the event chooser opens on a 390 px Thai phone and fits the screen; the full R2 journey still runs before publishing.
