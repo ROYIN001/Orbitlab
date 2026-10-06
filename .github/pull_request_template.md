@@ -19,6 +19,6 @@
 - [ ] Docs updated where they describe the change (README, IMPLEMENTATION-STATUS, USER-GUIDE)
 - [ ] Probe and scratch files deleted; no evidence binaries committed (no tracked file over 1 MB outside public/)
 - [ ] Session notes under docs/history/<date>/ when the session produced findings
-- [ ] One line added to CHANGELOG.md
+- [ ] One fragment file added under changes/ (CHANGELOG line + PROGRESS row; see changes/README.md)
 - [ ] Targeted tests run and named above
 - [ ] For a UI change, the affected browser journey passes
