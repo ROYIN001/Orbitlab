@@ -13,7 +13,7 @@ export const timeoutMs = 300_000;
 /** Inject faults before Three or the application can request a context. */
 function inject({ failure, lang }) {
   localStorage.setItem('orbitlab.lang', lang);
-  localStorage.setItem('orbitlab.guide.v1', 'done');
+  localStorage.setItem('orbitlab.guide.v1', 'dismissed');
   const tools = new Map();
   navigator.modelContext = { registerTool: (tool) => tools.set(tool.name, tool) };
   window.__mcp = async (name, input = {}) => {

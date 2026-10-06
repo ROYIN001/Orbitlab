@@ -22,7 +22,7 @@
  * steps the full journey runs (exported from `r2-flight-shell.mjs`).
  */
 import { reachable } from '../harness.mjs';
-import { launchFolds, pauseStaysInFlight, openChooser } from './r2-flight-shell.mjs';
+import { launchFolds, pauseStaysInFlight, pausedFlightSettles, openChooser } from './r2-flight-shell.mjs';
 
 export const smoke = true;
 export const timeoutMs = 90_000;
@@ -99,14 +99,7 @@ async function thaiPhone(t) {
   // which closes an open chooser by design (src/ui/timeline.ts). Pause, and let
   // the frames the worker still had in flight arrive (CO-4), before pressing.
   await app.mcp('control_playback', { action: 'pause' });
-  let last = null;
-  const settled = await t.until(async () => {
-    const s = await state();
-    const same = last && s.cursorTimeS === last.cursorTimeS && s.headTimeS === last.headTimeS;
-    last = s;
-    return same;
-  }, { timeoutMs: RESPOND_MS, intervalMs: 500 });
-  if (!t.check(settled, `the paused phone flight did not settle (cursor T+${last?.cursorTimeS} s, head T+${last?.headTimeS} s)`)) return;
+  if (!await pausedFlightSettles(t, app)) return;
   const opened = await openChooser(t, app, { how: 'touch', label: null });
   if (opened) {
     const fit = await opened.list.evaluate((list) => {
