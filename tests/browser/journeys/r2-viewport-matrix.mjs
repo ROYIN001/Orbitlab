@@ -57,15 +57,10 @@ const PLAYBACK = { abort: '#btn-abort', play: '#btn-play', clock: '#clock', live
  * that may consult the entry; `match(what, r)` gets that check's place and
  * its structured result.
  */
-const F1_AT = new Set([
-  'desktop laptop-1366x768 RU guide open: six-DOF controls',
-  'desktop laptop-1366x768 RU guide open (TORU): TORU controls',
-  'desktop laptop-1280x800 TH guide open (TORU): TORU take-over button',
-]);
 const F2_AT = new Set(['EN', 'RU'].flatMap((l) => ['open', 'closed'].map((g) => `phone phone-320x740 ${l} guide ${g}: abort (#btn-abort)`)));
+// F1 (the footer covered the bottom of the flight column) closed with the G2
+// hold's F5 layout: the flight column scrolls, and no run since has seen it.
 const OPEN_FINDINGS = [
-  { id: 'F1', site: 'reachable', what: 'the footer covers the bottom of the flight column',
-    match: (what, r) => F1_AT.has(what) && r.kind === 'covered' && r.inFooter },
   { id: 'F2', site: 'reachable', what: 'Abort is cut off at the right edge of a 320 px phone',
     match: (what, r) => F2_AT.has(what) && r.kind === 'outside' && r.width === 320 && r.x0 >= 0 && r.x1 > r.width },
   { id: 'F3', site: 'chooser', what: 'cluster chips overlap on a phone\'s event bar',

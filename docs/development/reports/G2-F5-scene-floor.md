@@ -126,17 +126,34 @@ They run in:
 |---|---|
 | S1–S4 on `06abb1f` (Explore + Engineer, first version of the journey) | **162 failures**: 150 S1 (scene under the minimum), 12 S2 (phone bar over the scene at 860×800 and 853×533 in Explore) |
 | after the layout change, before the guide change | 6 failures: S1 at 853×533 with the guide open (205 px visible against 213), Explore and Engineer × 3 languages |
-| this PR | 0 failures (511.7 s, both levels in one journey) |
+| after the guide change (Explore journey) | 0 failures (511.7 s, both levels in one journey) |
+| matrix with the scroll-reset helper | 8 failures, all phones with the guide open: S1 at 320×740 TH/EN/RU (137–258 px of the scene on the first screen against 296), S2 at 320×740 and 390×844 (the flight bar over the scene's foot) |
+| this PR | 0 failures: `r2-viewport-matrix` 1044.2 s, `r2-viewport-scene-floor` 615.7 s |
 
 The matrix and the Explore journey runs on the final split are listed under
 *Tests run*.
 
+## Phones with the guide open
+
+The matrix's phone sizes found two more places where the scene lost its
+minimum, both with the first-use guide open:
+
+- the guide sits between the top bar and the scene, and a long hint pushed the
+  scene down (Russian at 320×740: the guide 341 px tall, 137 px of the scene on
+  the first screen). The guide now gets the room that leaves the scene's
+  minimum height on the first screen (`fitGuideAboveScene` in `src/main.ts`,
+  the same formula as `--scene-min`, at least 96 px) and scrolls inside it;
+- the check scrolled back to the top and pressed at once, while the phone's
+  flight bar steps aside a frame later. The check now waits three frames and
+  150 ms after scrolling, as a reader's scroll would.
+
 ## Budget line
 
-Precache code +1.0 kB (CSS +0.6 kB, JS +0.3 kB, HTML +0.1 kB). With #95 merged
-first, 14 701.1 → about 14 702.1 kB, under the **unchanged** 14 704 kB ceiling.
+Precache code +1.8 kB (14 703.8 → 14 705.6 kB on `06abb1f`; the phone guide
+fit is about 0.8 kB of it). With #95 merged first (−2.65 kB), about
+14 703.0 kB, under the **unchanged** 14 704 kB ceiling.
 That is no raise. #95 is the named offset, and D-38 needs no approval because
-nothing is raised. Without #95, this PR is 0.8 kB over and fails
+nothing is raised. Without #95, this PR is 1.6 kB over and fails
 `npm run budget`. Merge order: #95, then this PR.
 
 ## Pages shard estimate
@@ -149,9 +166,9 @@ after `r2-viewport-matrix` and lands in shard 3. Estimate from Pages
 |---|---|
 | 1 | about 690 |
 | 2 | about 1110, plus the matrix's extra checks |
-| 3 | about 865 plus this journey (about 250 s here, 1.5–2× in CI) |
+| 3 | about 865 plus this journey (616 s on this busy machine; less on a CI runner) |
 
-So shard 3 should take about 21–23 min, against the 45-min job limit (CO-5).
+So shard 3 should take at most about 25 min, against the 45-min job limit (CO-5).
 `r2-flight-shell` and `r2-viewport-matrix` stay in different shards.
 
 ## Tests run
@@ -160,8 +177,8 @@ See the PR body for the final list with counts.
 
 ## Open findings after this PR
 
-- **F1** (the footer over the flight column): fixed if the matrix sees it no
-  more. The `OPEN_FINDINGS` entry is removed only when that is shown.
+- **F1** (the footer over the flight column): fixed. Two full matrix runs on
+  this branch did not see it, so its `OPEN_FINDINGS` entry is removed.
 - F2, F3, F4, F6 and F7 are unchanged and out of scope.
 
 Docs touched: N/A (USER-GUIDE does not describe the flight layout's sizes).
