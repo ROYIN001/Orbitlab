@@ -9,7 +9,8 @@
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import { ratingsSearch, type ComputedRating, type ComputedRatings, type RatingClass } from '../../design/ratings';
-import type { RatingsRecord } from '../../design/explore-model';
+import type { RatingsRecord, RatingsSource } from '../../design/explore-model';
+import type { DesignRecord, DesignStore } from '../../design/design-store';
 import { mass } from './figures';
 import { BUILD_RATING_OPTIONS } from './ratings-budget';
 
@@ -46,6 +47,35 @@ export function unfinishedRatingsText(u: UnfinishedRatings): string {
       { orbit: t(orbit), kg: kg > 0 ? mass(kg) : t('build.ex.ratings.nothing') });
   return t(u.stoppedBy === 'timeBudget' ? 'build.ex.ratings.unfinished.time' : 'build.ex.ratings.unfinished.flights',
     { n: u.flights, leo: part('build.ex.ratings.leo', u.leo), gto: part('build.ex.ratings.gto', u.gto) });
+}
+
+/**
+ * Whether a kept design's ratings are to be computed again when it is opened
+ * (FX-1 s2; owner, 2026-10-06, "คำนวณใหม่ให้อัตโนมัติเมื่อเปิดแบบจรวด"): they
+ * open as computed ones, and the record does not say they are final — it was
+ * kept before only a finished search was kept (FX-1 PR1), so they may be a
+ * lower bound or 0 kg.
+ */
+export function ratingsNeedRecompute(record: Pick<DesignRecord, 'ratingsFinal'>, opened: RatingsSource): boolean {
+  return opened === 'computed' && record.ratingsFinal !== true;
+}
+
+/**
+ * Compute a kept design's ratings again when it needs it (`run`: the search,
+ * its finished result as a record, or null). A finished search replaces the
+ * kept ratings and marks the record, in one write that is not a design edit
+ * (D-75, `DesignStore.rerate`); an unfinished, stopped or failed one leaves
+ * the record as it was, so the next open tries again.
+ */
+export async function recomputeKeptRatings(record: DesignRecord<'vehicle'>, opened: RatingsSource,
+  run: () => Promise<RatingsRecord | null>, store: Pick<DesignStore, 'rerate'>): Promise<'final' | 'recomputed' | 'unfinished'> {
+  if (!ratingsNeedRecompute(record, opened)) return 'final';
+  const r = await run().catch(() => null);
+  if (!r) return 'unfinished';
+  // the design as the page flies it with these ratings (explore-model.ts `remixResult`)
+  const { payloadSSO: _kept, ...design } = record.design;
+  const rated = await store.rerate(record.id, { ...design, payloadLEO: r.payloadLEO, payloadGTO: r.payloadGTO, ...(r.payloadSSO !== undefined ? { payloadSSO: r.payloadSSO } : {}) });
+  return rated ? 'recomputed' : 'unfinished';
 }
 
 export type RatingsReply =
