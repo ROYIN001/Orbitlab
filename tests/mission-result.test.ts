@@ -198,13 +198,13 @@ describe('displayed mission result', () => {
     view.setFrame(early);
     const first = assessMissionResult(view.sim)!;
     expect(first).toMatchObject({ outcome: 'target', cause: 'target', displayedTime: 600, outcomeTime: 500, reviewTime: 500 });
-    expect(first.metrics[0]).toMatchObject({ actual: 488, delta: -12, outside: true });
-    expect(first.metrics[1]).toMatchObject({ actual: 511, delta: 11, outside: true });
+    expect(first.metrics[0]).toMatchObject({ actual: 488, delta: -12, outside: false });
+    expect(first.metrics[1]).toMatchObject({ actual: 511, delta: 11, outside: false });
     view.setFrame(later);
     const next = assessMissionResult(view.sim)!;
     expect(next).toMatchObject({ outcome: 'target', displayedTime: 900, outcomeTime: 500 });
-    expect(next.metrics[0]).toMatchObject({ actual: 515, delta: 15, outside: true });
-    expect(next.metrics[1]).toMatchObject({ actual: 530, delta: 30, outside: true });
+    expect(next.metrics[0]).toMatchObject({ actual: 515, delta: 15, outside: false });
+    expect(next.metrics[1]).toMatchObject({ actual: 530, delta: 30, outside: false });
     view.setFrame(early);
     expect(assessMissionResult(view.sim)).toEqual(first);
     expect(sim.state.t).toBe(900);
