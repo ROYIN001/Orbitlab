@@ -145,6 +145,27 @@ export async function pauseStaysInFlight(t, app) {
 }
 
 /**
+ * The worker delivers the frames it had in flight for a second or two after
+ * a pause (as lui01-held-tuning found), and each new recorded frame re-runs
+ * the event bar's layout, which can regroup its cluster chips. A press aimed
+ * at a cluster chip during that window can land on a chip that no longer
+ * leads a cluster when the click arrives, and seek instead of opening the
+ * chooser — the `r2-shell-smoke` failure on PR #95's CI. Wait until the
+ * cursor and the recording's head hold still across two reads a second apart.
+ */
+export async function pausedFlightSettles(t, app) {
+  let last = null;
+  const settled = await t.until(async () => {
+    const s = await app.mcp('read_flight_state');
+    const same = last && s.cursorTimeS === last.cursorTimeS && s.headTimeS === last.headTimeS;
+    last = s;
+    return same ? s : null;
+  }, { timeoutMs: RESPOND_MS, intervalMs: 1000 });
+  if (!t.check(settled, `the paused flight did not settle (cursor T+${last?.cursorTimeS} s, head T+${last?.headTimeS} s)`)) return null;
+  return settled;
+}
+
+/**
  * R2.4: a cluster chip on the event bar opens the chooser listing its events.
  * `how` is the pointer (mouse or touch); `label` names the screenshots (null:
  * none, which saves the smoke slice about 7 s of software-rendered captures). The
@@ -161,7 +182,15 @@ export async function openChooser(t, app, { how = 'mouse', label = 'engineer' } 
   if (label) await app.shot(`${label}-timeline-before-chooser`);
   if (!await press(t, app, cluster, how, 'cluster chip')) return null;
   const list = page.locator('.tl-chooser');
-  if (!t.check(await t.until(() => list.isVisible(), { timeoutMs: 5000 }), 'the cluster chip did not open the chooser')) return null;
+  if (!await t.until(() => list.isVisible(), { timeoutMs: 5000 })) {
+    // what the chip was when the press arrived: a chip that stopped leading a
+    // cluster seeks instead of opening the list (src/ui/timeline.ts chipClick)
+    const chip = await cluster.evaluate((el) => ({ connected: el.isConnected, classes: el.className, expanded: el.getAttribute('aria-expanded'), title: el.title }))
+      .catch((e) => ({ gone: String(e.message).split('\n')[0] }));
+    const s = await app.mcp('read_flight_state').catch(() => null);
+    t.fail(`the cluster chip did not open the chooser (chip now ${JSON.stringify(chip)}; cursor T+${s?.cursorTimeS} s, head T+${s?.headTimeS} s, playing ${s?.playing})`);
+    return null;
+  }
   const n = await list.locator('.tl-chooser-item').count();
   t.check(n >= 2, `the chooser lists ${n} events`);
   t.check(await cluster.getAttribute('aria-expanded') === 'true', 'the chip is not marked expanded');

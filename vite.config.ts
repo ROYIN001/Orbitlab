@@ -5,6 +5,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectPrecacheManifest, precacheManifest } from './src/pwa/manifest.ts';
+import { stripHtmlComments } from './scripts/html-comments.mjs';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
@@ -34,6 +35,21 @@ const buildStamp = {
  * (src/pwa/sw-core.ts). Build only: the dev server never registers a worker
  * (src/pwa/register.ts), so nothing here touches `vite` in development.
  */
+/**
+ * The page's source comments stay in index.html and leave the built page,
+ * which every visitor downloads and the app precaches (D-38 offset for the G2
+ * layout fix, F5: about 2.6 kB of the precache code group). Nothing reads a
+ * comment node: every comment sits between elements (scripts/html-comments.mjs,
+ * tests/verification/html-comments.test.mjs).
+ */
+function htmlCommentsPlugin(): Plugin {
+  return {
+    name: 'orbitlab-html-comments',
+    apply: 'build',
+    transformIndexHtml: { order: 'pre', handler: stripHtmlComments },
+  };
+}
+
 function pwaPlugin(): Plugin {
   let config: ResolvedConfig;
   const files = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
@@ -91,7 +107,7 @@ function pwaPlugin(): Plugin {
 // sub-path (https://<user>.github.io/Orbitlab/).
 export default defineConfig({
   base: './',
-  plugins: [pwaPlugin()],
+  plugins: [htmlCommentsPlugin(), pwaPlugin()],
   define: { __ORBITLAB_BUILD__: JSON.stringify(buildStamp) },
   build: {
     target: 'es2022',
