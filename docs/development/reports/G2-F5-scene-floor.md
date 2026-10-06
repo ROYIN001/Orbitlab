@@ -128,7 +128,9 @@ They run in:
 | after the layout change, before the guide change | 6 failures: S1 at 853×533 with the guide open (205 px visible against 213), Explore and Engineer × 3 languages |
 | after the guide change (Explore journey) | 0 failures (511.7 s, both levels in one journey) |
 | matrix with the scroll-reset helper | 8 failures, all phones with the guide open: S1 at 320×740 TH/EN/RU (137–258 px of the scene on the first screen against 296), S2 at 320×740 and 390×844 (the flight bar over the scene's foot) |
+| S5 (the short scene's narration) on `dc955a2`, before the compaction | **50 failures**, all S5: Explore scenes of 229–373 px still drawing the phase detail and latest event (514.9 s) |
 | this PR | 0 failures: `r2-viewport-matrix` 1044.2 s, `r2-viewport-scene-floor` 615.7 s |
+| matrix again after removing the F1 entry | 0 failures (965.3 s) |
 
 The matrix and the Explore journey runs on the final split are listed under
 *Tests run*.
