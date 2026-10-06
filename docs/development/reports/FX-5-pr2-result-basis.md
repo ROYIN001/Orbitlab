@@ -128,6 +128,14 @@ Files: `src/ui/result-content.ts`, `src/ui/mission-result.ts`,
 `tests/mission-result.test.ts`, `tests/mission-result-view.test.ts`,
 `changes/claude-u-fx5-s3.md` (CHANGELOG and PROGRESS fragment), this report.
 
+Size (merged with main `339b80e`, `npx vite build && node scripts/bundle-budget.mjs`):
+precache code 14722.8 kB against main's 14720.3 kB and the 14721 kB ceiling,
+over by 1.8 kB (FAIL). Measured per commit on `03d7353`: the model +1.5 kB
+(`result-content.ts` is bundled twice, into the `lesson-file` chunk and the
+`recheck` worker, +0.77 kB each), the view +0.96 kB (i18n +0.6 kB for the two
+lines in three languages, code +0.35 kB). `index-*.css` unchanged (177.0 kB).
+A ceiling raise or an offset needs the owner's decision (D-38).
+
 ## Checks (this branch)
 
 - `npm run typecheck`: clean.
