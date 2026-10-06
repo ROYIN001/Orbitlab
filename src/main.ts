@@ -425,29 +425,33 @@ class App {
   }
 
   /**
-   * G2 hold (F5): on a phone the first-use guide sits between the top bar and
-   * the scene, and a long hint (Russian at 320×740: 341 px) pushed all but
-   * 137 px of the scene off the first screen. The guide gets the room that
-   * leaves the scene's minimum height on the first screen (the same formula as
-   * `--scene-min` on a desktop) and scrolls inside it.
+   * G2 hold (F5): the first-use guide sits between the top bar and the scene,
+   * and a long hint pushed the scene off the first screen (Russian at 320×740:
+   * 137 px of it; at 911×512, 150 % zoom, 250 px against 256). The guide gets
+   * the room that leaves the scene's minimum height (the same formula as
+   * `--scene-min`) on the first screen, above the footer on a desktop, and
+   * scrolls inside it.
    */
   private fitGuideAboveScene(): void {
     const guide = document.getElementById('first-use-guide');
     const top = document.getElementById('topbar');
-    const nav = document.querySelector<HTMLElement>('.mobile-workspace-nav');
-    if (!guide || !top || !nav) return;
-    const phone = matchMedia('(max-width: 860px)');
+    const foot = document.getElementById('footer');
+    if (!guide || !top || !foot) return;
+    const desktop = matchMedia('(min-width: 861px)');
     const fit = (): void => {
-      if (!phone.matches) { guide.style.removeProperty('--guide-room'); return; }
+      const g = guide.getBoundingClientRect();
+      if (!g.height) return;
       const sceneMin = Math.min(400, Math.max(240, 0.5 * innerHeight));
-      // the guide's 10 px top margin, the nav under it and 12 px before the scene
-      const room = innerHeight - top.getBoundingClientRect().height - 10 - nav.offsetHeight - 12 - sceneMin;
+      // what lies between the guide and the scene (the phone's nav, gaps) does not depend on the guide's height
+      const below = this.viewport.getBoundingClientRect().top - g.bottom;
+      const end = desktop.matches ? foot.getBoundingClientRect().top : innerHeight;
+      const room = end - g.top - below - sceneMin;
       guide.style.setProperty('--guide-room', `${Math.max(96, Math.floor(room))}px`);
     };
     fit();
     addEventListener('resize', fit);
     new ResizeObserver(fit).observe(top);
-    new ResizeObserver(fit).observe(nav);
+    new ResizeObserver(fit).observe(guide);
   }
 
   private get shell(): NonNullable<App['shellEls']> {

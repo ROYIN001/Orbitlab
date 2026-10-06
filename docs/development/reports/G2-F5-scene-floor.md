@@ -131,6 +131,9 @@ They run in:
 | S5 (the short scene's narration) on `dc955a2`, before the compaction | **50 failures**, all S5: Explore scenes of 229–373 px still drawing the phase detail and latest event (514.9 s) |
 | this PR | 0 failures: `r2-viewport-matrix` 1044.2 s, `r2-viewport-scene-floor` 615.7 s |
 | matrix again after removing the F1 entry | 0 failures (965.3 s) |
+| owner's answer (2026-10-06, option b): the checks moved to 50 % of the window (240–400 px), run on the 40 % build | **97 failures**, all S1 |
+| 50 % in the app, first run | 1 failure: 911×512 (150 % zoom) RU with the guide open, 250 px of the scene above the footer against 256 |
+| the guide's room measured on a desktop too | 0 failures: `r2-viewport-scene-floor` 436.6 s, `r2-viewport-matrix` 842.4 s; Engineer 1100×650 now 1072×325, 150 % zoom 883×256 |
 
 The matrix and the Explore journey runs on the final split are listed under
 *Tests run*.
@@ -185,3 +188,13 @@ See the PR body for the final list with counts.
 - F2, F3, F4, F6 and F7 are unchanged and out of scope.
 
 Docs touched: N/A (USER-GUIDE does not describe the flight layout's sizes).
+
+## The owner's answer (2026-10-06)
+
+On the G2 card the owner chose a minimum of 50 % of the window's height
+(240–400 px, phones included) over 40 %, knowing that on a short window the
+playback row then sits below the first screen. S3 therefore applies where
+the stage (the minimum plus the 186 px playback row) fits under the top of the
+stage; elsewhere S4 holds. The telemetry strip at 861–1180 px stays as it is;
+the overlays inside a short scene go compact in a follow-up PR; G2 is signed
+after those, on a new screenshot set.
