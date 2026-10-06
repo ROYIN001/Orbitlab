@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Tests: the PR smoke check's phone step (`r2-shell-smoke`) no longer fails now and then on CI's slow software renderer. Its wait for a paused flight now reads the flight after the app has drawn a frame, so the event bar on screen matches what it reads; before, a frame drawn between the check and the tap could move the cluster chip from under the finger. A new smoke journey (`r2-chooser-late-frame`) reproduces that frame on purpose. App unchanged.
 - Offline app (FX-7 step 0, M-PLATFORM-022): installing an update now checks every downloaded file against its revision in the precache manifest, as the offline repair already did; a file that answers other bytes (a deploy landing mid-install) fails the install and the running version stays, so the offline cache never holds a mix of versions.
 - Launch (G2 hold, F5): the flight scene keeps a minimum height in Explore and Engineer on short and zoomed laptop screens (it shrank to 2–95 px at 1100×650 and at 125–150 % zoom); the key-events timeline, play/pause and the clock stay on the first screen, the six-DOF/TORU panels and the telemetry strip move below the scene and are reached by scrolling, and a phone's flight bar no longer covers the scene.
 - Docs (GK0): K0's KPI values and retrospective are recorded, and PROGRESS shows CO-5 step 1 (#93) as published.
