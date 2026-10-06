@@ -126,7 +126,7 @@ first (`tests/mission-result-view.test.ts`, 3 failing: helpers missing),
 Files: `src/ui/result-content.ts`, `src/ui/mission-result.ts`,
 `src/i18n/en.ts`, `src/i18n/th.ts`, `src/i18n/ru.ts`,
 `tests/mission-result.test.ts`, `tests/mission-result-view.test.ts`,
-`CHANGELOG.md`, `docs/development/PROGRESS.md`, this report.
+`changes/claude-u-fx5-s3.md` (CHANGELOG and PROGRESS fragment), this report.
 
 ## Checks (this branch)
 
