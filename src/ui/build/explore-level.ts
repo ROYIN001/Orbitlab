@@ -52,7 +52,7 @@ import {
   DEFAULT_GROUP, EXPLORE_MODES, STRETCH_RANGE, activeDraft, asOwnBody, designChecks, designResult, draftFromSpec, estimateTexts, fitEngine,
   keptDraftsText, newDesignId, newStage, partOrigins, partsDraft, partsEngineOptions, ratingsSignature, remixBase, remixDraft, remixEngineOptions,
   restoreKeptDrafts,
-  type DesignResult, type Draft, type EngineOptions, type ExploreMode, type ExploreState, type PartsEdit, type PartsStage, type RemixEdit,
+  type DesignResult, type Draft, type EngineOptions, type ExploreMode, type ExploreState, type PartsEdit, type PartsStage, type RatingsRecord, type RemixEdit,
 } from '../../design/explore-model';
 import { localized, siteName, stageName } from '../names';
 import { Field, button, el, num } from '../orbit/dom';
@@ -61,7 +61,7 @@ import { VehiclePicker } from './vehicle-picker';
 import { figuresView, mass } from './figures';
 import { designTextList } from './design-text';
 import { ExploreStore } from './explore-store';
-import { ratingsRecord, runRatingsJob, unfinishedRatings, unfinishedRatingsText } from './ratings-job';
+import { FinalRatings, ratingsRecord, recomputeKeptRatings, runRatingsJob, unfinishedRatings, unfinishedRatingsText } from './ratings-job';
 import './explore.css';
 
 export interface ExploreHost {
@@ -174,7 +174,9 @@ export class ExploreLevel {
   private view: View = 'assembled';
   private sixDof = false;
   /** a ratings search running: for which draft and which vehicle (its signature), and how far it has got */
-  private ratingsJob: { controller: AbortController; draft: object; signature: string; rating: RatingClass | null; flights: number } | null = null;
+  private ratingsJob: { controller: AbortController; draft: object; signature: string; rating: RatingClass | null; flights: number; settled?: Promise<unknown> } | null = null;
+  /** ratings known final (FX-1 s2): a finished search's, the review's, or a kept design's whose record says so; a save marks the record */
+  private readonly finalRatings = new FinalRatings();
   private ratingsMessage: { level: 'ok' | 'error'; text: string } | null = null;
   private flyMessage: string | null = null;
   /** the default names given in the language they were given in, so a language switch can give them again */
@@ -226,7 +228,7 @@ export class ExploreLevel {
     this.stack = new StackSvg((ref) => this.pickPart(ref));
     this.picker = new VehiclePicker(pickerEntries(VEHICLES), (id) => this.pickBase(id), 'bx-picker-select');
     this.store = new ExploreStore({
-      current: () => (this.result.ok ? { spec: this.result.spec, name: activeDraft(this.state).name.trim(), recordId: activeDraft(this.state).recordId } : null),
+      current: () => (this.result.ok ? { spec: this.result.spec, name: activeDraft(this.state).name.trim(), recordId: activeDraft(this.state).recordId, ratingsFinal: this.ratingsFinal() } : null),
       saved: (recordId, name) => {
         const d = activeDraft(this.state);
         d.recordId = recordId;
@@ -295,7 +297,9 @@ export class ExploreLevel {
    */
   adoptRatings(spec: VehicleSpec): void {
     if (!this.result.ok || ratingsSignature(this.result.spec) !== ratingsSignature(spec)) return;
-    activeDraft(this.state).ratings = { signature: ratingsSignature(spec), payloadLEO: spec.payloadLEO, payloadGTO: spec.payloadGTO };
+    const record = { signature: ratingsSignature(spec), payloadLEO: spec.payloadLEO, payloadGTO: spec.payloadGTO };
+    activeDraft(this.state).ratings = record;
+    this.finalRatings.add(record);
     this.compute();
     if (this.visible) this.refresh();
   }
@@ -436,9 +440,22 @@ export class ExploreLevel {
     this.state.mode = opened.mode;
     this.selected = null;
     this.shown = undefined as unknown as Built;
+    const running = this.ratingsJob?.settled;
     this.reshaped();
     this.store.render();
     this.root.closest('.build-screen')?.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
+    if (!this.result.ok) return;
+    this.finalRatings.opened(record, opened.draft.ratings);
+    // ratings kept before only a finished search was kept are searched again, in the background, with the
+    // usual progress line and Stop (FX-1 s2; owner, 2026-10-06); a search for the design shown before ends first
+    const source = this.result.ratings;
+    void (running ?? Promise.resolve()).then(() => recomputeKeptRatings(record, source,
+      () => (activeDraft(this.state) === opened.draft ? this.computeRatings() : Promise.resolve(null)), this.store));
+  }
+
+  /** The design on screen's ratings are final, or none of its own: a record saved with it is marked so (FX-1 s2). */
+  private ratingsFinal(): boolean {
+    return this.finalRatings.onSave(this.result.ok ? this.result.ratings : null, activeDraft(this.state).ratings);
   }
 
   private pickPart(ref: string): void {
@@ -675,7 +692,7 @@ export class ExploreLevel {
       line.append(stop);
       parts.push(line);
     } else if (r && (r.ratings === 'none' || r.ratings === 'base')) {
-      const go = button('watch-btn', t('build.ex.ratings.compute'), () => this.computeRatings());
+      const go = button('watch-btn', t('build.ex.ratings.compute'), () => void this.computeRatings());
       go.dataset.k = 'ratings-go';
       parts.push(go);
     }
@@ -687,17 +704,18 @@ export class ExploreLevel {
     box.replaceChildren(...parts);
   }
 
-  private computeRatings(): void {
-    if (!this.result.ok || this.ratingsJob) return;
+  /** Search the design on screen's ratings; the finished ones it kept, or null. */
+  private computeRatings(): Promise<RatingsRecord | null> {
+    if (!this.result.ok || this.ratingsJob) return Promise.resolve(null);
     const draft = activeDraft(this.state);
     const spec = structuredClone(this.result.spec);
     const signature = this.result.signature;
     const controller = new AbortController();
-    const job = { controller, draft: draft as object, signature, rating: 'LEO' as RatingClass | null, flights: 0 };
+    const job: NonNullable<ExploreLevel['ratingsJob']> = { controller, draft: draft as object, signature, rating: 'LEO', flights: 0 };
     this.ratingsJob = job;
     this.ratingsMessage = null;
     this.renderRatings();
-    runRatingsJob(spec, controller.signal, (rating, flights) => {
+    const settled = runRatingsJob(spec, controller.signal, (rating, flights) => {
       job.rating = rating;
       job.flights = flights;
       if (this.ratingsJob === job) this.keepFocus(() => this.renderRatings());
@@ -705,17 +723,21 @@ export class ExploreLevel {
       // an unfinished search is said as such and nothing of it is kept (M-BUILD-006, D-67)
       const record = ratingsRecord(signature, res);
       const unfinished = unfinishedRatings(res);
-      if (record) draft.ratings = record;
+      if (record) { draft.ratings = record; this.finalRatings.add(record); }
       this.ratingsMessage = unfinished ? { level: 'error', text: unfinishedRatingsText(unfinished) }
         : { level: 'ok', text: t('build.ex.ratings.done', { n: res.flights }) };
+      return record;
     }).catch((error: unknown) => {
       const cancelled = error instanceof DOMException && error.name === 'AbortError';
       this.ratingsMessage = { level: cancelled ? 'ok' : 'error', text: t(cancelled ? 'build.ex.ratings.stopped' : 'build.ex.ratings.failed') };
+      return null;
     }).finally(() => {
       if (this.ratingsJob === job) this.ratingsJob = null;
       this.compute();
       this.refresh();
     });
+    job.settled = settled;
+    return settled;
   }
 
   private renderFly(): void {

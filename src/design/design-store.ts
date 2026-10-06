@@ -20,6 +20,7 @@ import type { VehicleSpec } from '../types';
 import { vehicleSpecProblems, vehicleSpecText } from '../config/vehicle-spec';
 import { satelliteDesignProblems, satelliteDesignText } from '../config/satellite-design';
 import type { SatelliteDesign } from './satellite-spec';
+import { canonicalJson } from './design-ref';
 
 /**
  * What a design is of: a rocket (Phase 3's builders) or a satellite (D06,
@@ -58,6 +59,14 @@ export interface DesignRecord<K extends DesignKind = DesignKind> {
   created: string;
   updated: string;
   design: DesignKinds[K];
+  /**
+   * A rocket's payload ratings are final: kept by a build that keeps only a
+   * finished search (FX-1 PR1, M-BUILD-006), or there are none of its own.
+   * Absent on a record kept before: its ratings are computed again when it is
+   * opened (FX-1 s2; owner, 2026-10-06). Beside the design, not in it, so the
+   * design and its file are as they were; an older build ignores it.
+   */
+  ratingsFinal?: true;
 }
 
 /** A record of any kind as one of kind `kind`, or not: its design is then that kind's (the store checked it on the way in). */
@@ -68,7 +77,7 @@ export function isDesignOf<K extends DesignKind>(record: DesignRecord, kind: K):
 export type DesignSummary = Pick<DesignRecord, 'id' | 'kind' | 'name' | 'created' | 'updated'>;
 
 /** A design to save: a new one (no id) or a change to one kept already. */
-export type DesignInput<K extends DesignKind = DesignKind> = Pick<DesignRecord<K>, 'kind' | 'name' | 'design'> & { id?: string };
+export type DesignInput<K extends DesignKind = DesignKind> = Pick<DesignRecord<K>, 'kind' | 'name' | 'design' | 'ratingsFinal'> & { id?: string };
 
 export type DesignStoreErrorCode = 'unavailable' | 'full' | 'invalid' | 'notFound' | 'collection';
 /** Why a store could not do what it was asked; `message` says it to a person. */
@@ -85,6 +94,13 @@ export interface DesignStore {
   get(id: string): Promise<DesignRecord | null>;
   /** keep a new design, or a change to one; rejects with a `DesignStoreError` */
   save<K extends DesignKind>(input: DesignInput<K>): Promise<DesignRecord<K>>;
+  /**
+   * A rocket's ratings computed again, and nothing else (D-75: not a design
+   * edit): the design kept with `design`'s ratings, marked final, its revision
+   * (`updated`) unchanged. null, and nothing written, when no rocket is kept
+   * by that id or `design` differs from it in more than its ratings.
+   */
+  rerate(id: string, design: DesignKinds['vehicle']): Promise<DesignRecord<'vehicle'> | null>;
   /** false when there was nothing by that id */
   remove(id: string): Promise<boolean>;
 }
@@ -174,9 +190,19 @@ export class LocalDesignStore implements DesignStore {
     if (input.id !== undefined && !existing) throw new DesignStoreError('notFound', `No design ${input.id} is kept here.`);
     const record = {
       id: existing?.id ?? this.newId(), kind: input.kind, name: input.name.trim(),
-      created: existing?.created ?? at, updated: at, design: clone(input.design),
+      created: existing?.created ?? at, updated: at, design: clone(input.design), ...(input.ratingsFinal ? { ratingsFinal: true } : {}),
     } as DesignRecord<K>;
     this.write(existing ? designs.map((d) => (d === existing ? record : d)) : [...designs, record]);
+    return clone(record);
+  }
+
+  async rerate(id: string, design: DesignKinds['vehicle']): Promise<DesignRecord<'vehicle'> | null> {
+    const designs = this.raw(true);
+    const existing = designs.find((d): d is DesignRecord<'vehicle'> => isRecord(d) && d.id === id && d.kind === 'vehicle');
+    const bare = ({ payloadLEO: _l, payloadGTO: _g, payloadSSO: _s, ...rest }: DesignKinds['vehicle']): string => canonicalJson(rest);
+    if (!existing || PROBLEMS.vehicle(design) !== null || bare(existing.design) !== bare(design)) return null;
+    const record: DesignRecord<'vehicle'> = { ...existing, design: clone(design), ratingsFinal: true };
+    this.write(designs.map((d) => (d === existing ? record : d)));
     return clone(record);
   }
 
