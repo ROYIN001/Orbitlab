@@ -3766,6 +3766,8 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'eq.control.check': 'the rate command against K_θ·e',
   'eq.none.noStep': 'No integrated flight step at this instant: on the pad, or an orbit propagated analytically.',
   'eq.none.noAir': 'No air to act on at this height.',
+  'eq.none.stillAir': 'At rest in the air: no airflow over the vehicle.',
+  'eq.none.noRecord': 'This replayed instant carries no equation record.',
   'eq.none.noStage': 'No stage burning propellant.',
   'eq.none.prelaunch': 'Before liftoff.',
   'eq.none.enginesOff': 'Engines off.',

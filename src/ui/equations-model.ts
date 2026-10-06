@@ -57,6 +57,20 @@ function check(left: number, right: number, tolerance: number, floor = 1e-9): Ch
 }
 const none = (id: EquationId, reason: string): Equation => ({ id, available: false, reason, values: {} });
 const integrated = (e: EomRecord | undefined): e is EomRecord => !!e && (e.integrator === 'rigid' || e.integrator === 'pointMass');
+/**
+ * M-LAUNCH-060: why there is no air term at this instant, from the frame's state, not "no air at this height" for
+ * every case. On the pad and after a landing the vehicle is at rest in the air (`stillAir`; a wind on the pad is
+ * not flown before liftoff, `prelaunch`); a frame without the equation record has nothing to substitute
+ * (`noRecord`, only where the term needs the record); otherwise air at rest about the vehicle, or none at all.
+ */
+function airReason(frame: VisualFrame, needsRecord: boolean): string {
+  if (frame.status === 'landed') return 'eq.none.stillAir';
+  if (!frame.liftoff || frame.status === 'prelaunch') return frame.airspeed > 1 ? 'eq.none.prelaunch' : 'eq.none.stillAir';
+  const e = frame.eom;
+  if (needsRecord && !e) return 'eq.none.noRecord';
+  const rho = e ? e.density : atmosphere(Math.max(0, frame.altitude)).rho, V = e ? e.airspeed : frame.airspeed;
+  return rho > 0 && !(V > 1) ? 'eq.none.stillAir' : 'eq.none.noAir';
+}
 
 /** Newton's second law along the flight: m·a = F + F_A + m·g, against the step's measured mean acceleration. */
 function newton(e: EomRecord | undefined): Equation {
@@ -80,8 +94,8 @@ function dynamicPressure(e: EomRecord | undefined, frame: VisualFrame): Equation
 }
 
 /** Drag along the airflow and lift across it; in six-DOF the axial and normal coefficients of the vehicle's tables. */
-function drag(e: EomRecord | undefined): Equation {
-  if (!integrated(e) || !(e.dynamicPressure > 0) || !(e.airspeed > 1)) return none('drag', 'eq.none.noAir');
+function drag(e: EomRecord | undefined, frame: VisualFrame): Equation {
+  if (!integrated(e) || !(e.dynamicPressure > 0) || !(e.airspeed > 1)) return none('drag', airReason(frame, true));
   const force = scale(e.aeroAccel, e.mass), air = scale(e.airVelocity, 1 / e.airspeed);
   const D = -dot(force, air), L = norm(sub(force, scale(air, -D))), qS = e.dynamicPressure * e.referenceArea;
   const values: Record<string, number> = { q: e.dynamicPressure, S: e.referenceArea, D, L, cd: D / qS, cl: L / qS };
@@ -150,7 +164,7 @@ function gravityEquation(e: EomRecord | undefined, frame: VisualFrame): Equation
 /** α and β from the velocity relative to the air in the standard's body axes. */
 function aeroAngleEquation(frame: VisualFrame, n: Notation): Equation {
   const rigid = frame.rigid, V = frame.airspeed;
-  if (!rigid || !(V > 1) || !(frame.q > 0)) return none('aeroAngles', rigid ? 'eq.none.noAir' : 'eq.none.sixDof');
+  if (!rigid || !(V > 1) || !(frame.q > 0)) return none('aeroAngles', rigid ? airReason(frame, false) : 'eq.none.sixDof');
   const { alpha, beta } = aeroAngles(rigid.angleOfAttack, rigid.sideslip);
   const along = V * Math.cos(alpha) * Math.cos(beta), across = V * Math.sin(beta), normal = V * Math.sin(alpha) * Math.cos(beta);
   // ISO (u, v, w): v to the right, w to the belly; ГОСТ (V_x, V_y, V_z): V_y to the top, V_z to the right.
@@ -218,7 +232,7 @@ export function equations(frame: VisualFrame, ctx: EquationContext, level: Equat
     switch (id) {
       case 'newton': return newton(e);
       case 'dynamicPressure': return dynamicPressure(e, frame);
-      case 'drag': return drag(e);
+      case 'drag': return drag(e, frame);
       case 'rocket': return rocket(e, frame, ctx);
       case 'budget': return budget(e, frame, ctx);
       case 'pressureThrust': return pressureThrust(e);
