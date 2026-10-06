@@ -69,7 +69,9 @@
   padding: 6px 2px; font-size: 13px; letter-spacing: 0.4px; color: var(--muted);
 }
 .home-cue:hover { color: var(--accent); }
-.home-cue-arrow { display: inline-block; font-size: 16px; animation: home-cue 1.8s ease-in-out infinite; }
+/* the arrow, in the accent, bobs three times and then rests (with less motion asked for, it only rests) */
+.home-cue-arrow { display: inline-block; font-size: 16px; color: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .home-cue-arrow { animation: home-cue 1.8s ease-in-out 3; } }
 @keyframes home-cue { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 
 .home-block-title { margin: 0 0 8px; font: 600 clamp(24px, 2.6vw, 32px)/1.2 var(--display); letter-spacing: -0.5px; }
@@ -192,9 +194,8 @@
   .home-iss-row { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* less motion asked for: the faces stand still where they are, the arrow does not bob */
+/* less motion asked for: the faces stand still where they are */
 @media (prefers-reduced-motion: reduce) {
-  .home-cue-arrow { animation: none; }
   .home-play { transition: none; }
   .home-play:hover { transform: none; }
   .home-feature-text, .home-shot { transform: none; will-change: auto; }
