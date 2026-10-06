@@ -18,6 +18,7 @@ import { WorkDialog } from './ui/workspace-dialog';
 import { AppProfiles } from './ui/profiles/app-profiles';
 import { initializeWorkspace, workspaceStorage } from './workspace/session';
 import { SceneManager, loadEarthTextures, type EarthTextures } from './render/scene';
+import { unseen } from './render/webgl-renderer';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
@@ -2354,7 +2355,7 @@ class App {
     const scene = this.scene;
     const view = this.simView;
     if (!sim || !this.rocket || !this.pad || !view) {
-      if (!this.sceneCovered) scene.render();
+      if (!this.sceneCovered && !unseen()) scene.render();
       return;
     }
     // One frame snapshot drives every view this tick: the live head when the
@@ -2649,8 +2650,8 @@ class App {
     // another wave), so they are handed a frame-backed view of this mission
     // rather than the live object: everything they read — clock, state vector,
     // ground track, debris, event log — is the frame on screen.
-    if (this.sceneCovered) {
-      // an opaque page covers the scene: the flight flies on, undrawn
+    if (this.sceneCovered || unseen()) {
+      // an opaque page, a modal dialog or a hidden tab covers the scene: the flight flies on, undrawn
     } else if (this.camMode === 'map') {
       this.map.draw(view.sim, sim.site.latitude, sim.site.longitude, Math.max(0, this.sbHeight));
     } else {
