@@ -74,7 +74,8 @@ export default async function fx3CatalogueRetry(t) {
     if (loading) await app.shot(`${c.lang}-loading`);
     const ready = await t.until(async () => {
       const text = await card.innerText();
-      return text.includes(c.alt) && !text.includes(c.loading) && !text.includes(c.failed) && (await retry.count()) === 0;
+      // the readouts' labels are set in capitals (playground.css): innerText gives them so
+      return text.toLowerCase().includes(c.alt.toLowerCase()) && !text.includes(c.loading) && !text.includes(c.failed) && (await retry.count()) === 0;
     }, { timeoutMs: 60_000, intervalMs: 250 });
     t.check(ready, `${c.lang}: after Try again the card does not show the ISS's readouts: ${(await card.innerText()).replace(/\s+/g, ' ').slice(0, 300)}`);
     await app.shot(`${c.lang}-ready`);
