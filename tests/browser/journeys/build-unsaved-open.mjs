@@ -34,8 +34,8 @@ async function changedRocket(t, page) {
   const all = await t.until(async () => { const d = await kept(page); return d.length > before ? d : null; }, { timeoutMs: 30_000 });
   const rec = all?.find((d) => d.kind === 'vehicle' && d.design.derivedFrom === 'electron');
   if (!t.check(rec, 'the Electron remix was not saved')) return null;
-  await page.fill(`${ROCKET} [data-k="stretch:0:1"]`, '120');
-  await page.press(`${ROCKET} [data-k="stretch:0:1"]`, 'Tab');
+  await page.fill(`${ROCKET} [data-k="stretch:0:0"]`, '120');
+  await page.press(`${ROCKET} [data-k="stretch:0:0"]`, 'Tab');
   await page.waitForTimeout(500);
   return rec;
 }
@@ -93,7 +93,7 @@ export default async function buildUnsavedOpen(t) {
   // the rocket designer: asked, and "Open without saving" puts the saved design back
   const rec = await changedRocket(t, page);
   if (!rec) return;
-  const stretch = page.locator(`${ROCKET} [data-k="stretch:0:1"]`);
+  const stretch = page.locator(`${ROCKET} [data-k="stretch:0:0"]`);
   await page.click(`${ROCKET} [data-k="open:${rec.id}"]`);
   const rocketAsk = page.locator(`${ROCKET} .bx-store [role="alert"]`);
   const rocketAsked = await rocketAsk.waitFor({ timeout: 5_000 }).then(() => true, () => false);
