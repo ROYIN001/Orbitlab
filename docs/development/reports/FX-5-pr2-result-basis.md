@@ -103,6 +103,13 @@ Commits on `claude/u-fx5-s3` (from `03d7353`): `e33d38a` tests first, `9c7091e`
 model, `4237d8e` the four approved assertions, then the view: `c567ca6` tests
 first (`tests/mission-result-view.test.ts`, 3 failing: helpers missing),
 `8e96294` the view, `b0cfb50` reuse of `mv.point.now` for the secondary label.
+Review 1: `2af6923` test first (the rounding probe: target 51.6°, displayed
+51.904°, recorded inc 51.9; failed before), `2f3ad0b` fix: an off-target
+verdict whose rounded params show no miss keeps the displayed orbit's flags.
+Review 2, after the owner's answer of 2026-10-06T20:09Z (card
+`fx5-031-budget` rev 2, option a: `report.ts` and `explore-debrief.ts`
+allowed, code ceiling up to +3 kB for this work): `0801b20` tests first (2
+failing), `0955271` the fix.
 
 - Model (`src/ui/result-content.ts`): `outside` is flagged from the judged
   set; `judged`, `judgedDelta`, `judgedTime`, `judgedBasis` ('physical' when
@@ -111,30 +118,34 @@ first (`tests/mission-result-view.test.ts`, 3 failing: helpers missing),
   `tests/explore.test.ts` type-check unchanged.
 - View (`src/ui/mission-result.ts`, helpers `resultRow`, `judgedNote` in
   `src/ui/result-content.ts`): each row's value and delta are the judged ones
-  when the record has them, with "now …" (the displayed / cursor orbit) under
+  when the record has them, with "Orbit at the displayed time: …" under
   the value; a line "Judged at T+… s (physical apsides | osculating orbit)".
   Without a judged value (a failure, or a record that lacks it) the row shows
   the displayed orbit as before.
 - i18n: `result.judged.physical`, `result.judged.osculating` in
-  `src/i18n/en.ts`, `th.ts`, `ru.ts`; the secondary label reuses
-  `mv.point.now`.
-- Not changed: the flight report (`src/ui/report.ts`) and the Explore debrief
-  (`src/ui/explore-debrief.ts`) still print the displayed value beside the
-  judged `outside` flag (see the open question in the step 3 report to the
-  coordinator).
+  `src/i18n/en.ts`, `th.ts`, `ru.ts`; the secondary label is the table's own
+  caption (`RESULT_COPY.orbitTable`, "Orbit at the displayed time"), which
+  reads right in a replay ("now" did not).
+- The flight report (`src/ui/report.ts`) and the Explore debrief
+  (`src/ui/explore-debrief.ts`) use the same `resultRow`: the report's value
+  and difference are the judged ones, with the displayed orbit under the value
+  and the "Judged at" line; the debrief's number is the judged one
+  (`debriefValue`). Before, both printed the displayed number beside the
+  judged flag.
 
 Files: `src/ui/result-content.ts`, `src/ui/mission-result.ts`,
-`src/i18n/en.ts`, `src/i18n/th.ts`, `src/i18n/ru.ts`,
-`tests/mission-result.test.ts`, `tests/mission-result-view.test.ts`,
+`src/ui/report.ts`, `src/ui/explore-debrief.ts`, `src/i18n/en.ts`,
+`src/i18n/th.ts`, `src/i18n/ru.ts`, `tests/mission-result.test.ts`,
+`tests/mission-result-view.test.ts`, `tests/report.test.ts` (one new test),
 `changes/claude-u-fx5-s3.md` (CHANGELOG and PROGRESS fragment), this report.
 
-Size (merged with main `339b80e`, `npx vite build && node scripts/bundle-budget.mjs`):
-precache code 14722.8 kB against main's 14720.3 kB and the 14721 kB ceiling,
-over by 1.8 kB (FAIL). Measured per commit on `03d7353`: the model +1.5 kB
+Size (merged with main `93200a3`, `npx vite build && node scripts/bundle-budget.mjs`):
+precache code 14723.0 kB against main's 14720.3 kB, +2.7 kB, inside the owner's
+raise to 14724 kB for this work (budgets.json is raised by the coordinator in
+this PR). Measured per commit on `03d7353`: the model +1.5 kB
 (`result-content.ts` is bundled twice, into the `lesson-file` chunk and the
-`recheck` worker, +0.77 kB each), the view +0.96 kB (i18n +0.6 kB for the two
-lines in three languages, code +0.35 kB). `index-*.css` unchanged (177.0 kB).
-A ceiling raise or an offset needs the owner's decision (D-38).
+`recheck` worker), the view +0.96 kB (i18n +0.6 kB), review 2 about +0.2 kB.
+`index-*.css` unchanged (177.0 kB).
 
 ## Checks (this branch)
 
