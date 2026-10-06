@@ -75,7 +75,7 @@ npm run typecheck                          clean (exit 0)
 node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs   64 passed, 0 failed
 ```
 
- Browser journeys (`pwa-offline`, `classroom-preparation`) were **not** run in this session (CPU reserved); PR CI runs them. EO-PWA-1 was not run (no build).
+Browser journeys, run later on this branch's build: `pwa-offline` passed (92.6 s). `classroom-preparation` was not counted: on this container it fails identically on main (an offline repair reported ready) and passes in Pages 37387979381, so it says nothing about this change. EO-PWA-1 was not run.
 
 ## Size and memory
 
