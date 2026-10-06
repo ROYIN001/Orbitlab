@@ -1263,6 +1263,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'pg.rep.sso': 'Sun-synchronous',
   'pg.rep.apply': 'Find the orbit',
   'pg.rep.none': 'No circular orbit between 150 and 5 000 km repeats like that.',
+  'pg.rep.invalid': 'Enter a whole number from {min} to {max}.',
   'pg.rep.found': '{revs} revolutions in {days} days: {alt} km up, inclined {i}°.',
   'pg.handoff.load': 'Show this orbit',
   'pg.next': 'Coming next in Orbit',
