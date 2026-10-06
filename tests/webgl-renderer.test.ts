@@ -5,6 +5,7 @@ import { createWebGLRenderer, WebGLContextError } from '../src/render/webgl-rend
 const { construct } = vi.hoisted(() => ({ construct: vi.fn() }));
 vi.mock('three', () => ({
   WebGLRenderer: vi.fn(function (options: WebGLRendererParameters) { return construct(options); }),
+  Color: class { r = 0; g = 0; b = 0; },
 }));
 
 const unavailable = 'THREE.WebGLRenderer: Error creating WebGL context.';
@@ -94,5 +95,51 @@ describe('WebGL context recovery', () => {
     expect(canvas.getContext).toBe(original);
     expect(remove).toHaveBeenCalledExactlyOnceWith('webglcontextcreationerror', expect.any(Function));
     expect(construct).not.toHaveBeenCalled();
+  });
+});
+
+describe('WebGL context loss (FX-8)', () => {
+  it('accepts a lost context, says so while it is lost, and restores the clear colour with it', () => {
+    type Note = { id?: string; textContent: string; className?: string; attrs: Record<string, string>; setAttribute(k: string, v: string): void; remove(): void };
+    const nodes: Note[] = [];
+    const find = (id: string) => nodes.find((n) => n.id === id) ?? null;
+    vi.useFakeTimers();
+    vi.stubGlobal('document', {
+      body: { appendChild: (n: Note) => { nodes.push(n); return n; } },
+      getElementById: find,
+      createElement: (): Note => ({ textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, remove() { nodes.splice(nodes.indexOf(this), 1); } }),
+    });
+    try {
+      const sky = { r: 0.02, g: 0.03, b: 0.05 };
+      const three = {
+        getClearColor: vi.fn((c: object) => Object.assign(c, sky)), getClearAlpha: () => 0.5, setClearColor: vi.fn(),
+      };
+      construct.mockImplementation(() => three);
+      const one = fakeCanvas(() => context), two = fakeCanvas(() => context);
+      createWebGLRenderer({ canvas: one });
+      createWebGLRenderer({ canvas: two });
+      const lost = new Event('webglcontextlost', { cancelable: true });
+      one.dispatchEvent(lost);
+      two.dispatchEvent(new Event('webglcontextlost', { cancelable: true }));
+      expect(lost.defaultPrevented).toBe(true);
+      const note = find('gl-lost')!;
+      expect(note.attrs.role).toBe('status');
+      // in the page empty first, so the text that follows is announced
+      expect(note.textContent).toBe('');
+      vi.advanceTimersByTime(0);
+      expect(note.textContent).toBe('The 3-D view is restarting. The flight goes on.');
+      one.dispatchEvent(new Event('webglcontextrestored'));
+      expect(three.setClearColor).toHaveBeenCalledWith(expect.objectContaining(sky), 0.5);
+      // the other view is still lost; long enough lost, the line asks for a reload
+      expect(find('gl-lost')).toBe(note);
+      vi.advanceTimersByTime(20_000);
+      expect(note.textContent).toBe('Close other tabs using 3-D graphics, then reload this page.');
+      two.dispatchEvent(new Event('webglcontextrestored'));
+      expect(find('gl-lost')).toBeNull();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 });
