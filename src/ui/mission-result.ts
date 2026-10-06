@@ -1,6 +1,6 @@
 import { getLang, onLangChange, t } from '../i18n';
 import { RAD } from '../physics/constants';
-import { assessMissionResult, RESULT_COPY, type ResultInput, type ResultMetric } from './result-content';
+import { assessMissionResult, judgedNote, RESULT_COPY, resultRow, type ResultInput, type ResultMetric } from './result-content';
 import { aeroAngles } from './notation';
 import { resultSetting, type ResultSettingContext, type ResultSuggestion } from './result-actions';
 import type { ResultCause } from './result-content';
@@ -25,6 +25,7 @@ export class MissionResult {
   private readonly detail = document.createElement('p');
   private readonly aeroWarnings = document.createElement('aside');
   private readonly times = document.createElement('p');
+  private readonly judged = document.createElement('p');
   private readonly caption = document.createElement('caption');
   private readonly headers: HTMLTableCellElement[] = [];
   private readonly cells: HTMLTableCellElement[][] = [];
@@ -53,7 +54,7 @@ export class MissionResult {
     this.status.className = 'mission-result-status';
     this.status.setAttribute('role', 'status');
     this.status.setAttribute('aria-live', 'polite');
-    this.times.className = 'mission-result-note';
+    this.times.className = this.judged.className = 'mission-result-note';
     this.aeroWarnings.className = 'mission-result-warning';
     this.aeroWarnings.setAttribute('role', 'note');
     this.deltaNote.className = 'mission-result-note';
@@ -101,7 +102,7 @@ export class MissionResult {
     this.suggestApply.className = 'btn mission-result-apply';
     this.suggestApply.addEventListener('click', () => { if (this.suggested) this.options.onApplySuggestion?.(this.suggested); });
     this.suggest.append(this.suggestText, this.suggestBasis, this.suggestApply);
-    host.replaceChildren(this.heading, this.status, this.detail, this.aeroWarnings, this.times, wrap,
+    host.replaceChildren(this.heading, this.status, this.detail, this.aeroWarnings, this.times, this.judged, wrap,
       this.deltaNote, this.payload, this.iss, this.recovery, this.recoveryNote, this.next, this.review, this.setting, this.suggest);
     onLangChange(() => { if (this.last) this.update(this.last); });
   }
@@ -131,18 +132,24 @@ export class MissionResult {
       return paragraph;
     }));
     this.times.textContent = `${copy.assessed} T+${model.outcomeTime.toFixed(1)} s · ${copy.displayed} T+${model.displayedTime.toFixed(1)} s`;
+    // M-LAUNCH-031: each row's primary number is the one the verdict was judged on; the displayed orbit is secondary
+    this.judged.textContent = judgedNote(model, getLang());
+    this.judged.hidden = !this.judged.textContent;
     this.caption.textContent = copy.orbitTable;
     [copy.parameter, copy.target, copy.actual, copy.delta].forEach((text, index) => { this.headers[index].textContent = text; });
     model.metrics.forEach((metric, row) => {
       const cells = this.cells[row];
       cells[0].textContent = copy.metric[metric.key];
       cells[1].textContent = metric.target === null ? copy.free : this.number(metric.target, metric);
-      cells[2].textContent = this.number(metric.actual, metric);
-      cells[3].textContent = this.number(metric.delta, metric, true);
+      const shown = resultRow(metric);
+      cells[2].textContent = this.number(shown.value, metric);
+      if (shown.now !== null) cells[2].append(document.createElement('br'),
+        Object.assign(document.createElement('small'), { textContent: `${copy.orbitTable}: ${this.number(shown.now, metric)}` }));
+      cells[3].textContent = this.number(shown.delta, metric, true);
       cells[3].classList.toggle('mission-result-miss', metric.outside === true);
       cells[3].setAttribute('aria-label', `${cells[3].textContent}${metric.outside ? `; ${copy.outside}` : ''}`);
-      cells[2].title = metric.actual === null ? copy.unavailable : '';
-      cells[3].title = metric.delta === null ? copy.unavailable : '';
+      cells[2].title = shown.value === null ? copy.unavailable : '';
+      cells[3].title = shown.delta === null ? copy.unavailable : '';
     });
     this.deltaNote.textContent = copy.deltaNote;
     this.payload.textContent = copy.pendingPayload;

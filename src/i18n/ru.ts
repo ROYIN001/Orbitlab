@@ -491,6 +491,8 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'aero.scope.debris': 'отделившееся тело',
   'result.aeroWarning.vehicle': 'Ограничение модели: отслеживаемый аппарат вышел за расчётный диапазон аэродинамики в T+{time} с (α {alpha}°, β {beta}°). Аэродинамические выводы для этого полёта следует считать оценочными.',
   'result.showSetting': 'Показать параметр: {field}',
+  'result.judged.physical': 'Оценено в T+{time} с (физические апсиды)',
+  'result.judged.osculating': 'Оценено в T+{time} с (оскулирующая орбита)',
   'result.suggest.title': "Попробуйте дальше",
   'result.suggest.basisFailure': "Та же миссия без заданного вами отказа.",
   'result.suggest.basisPayload': "{cap} — паспортная грузоподъёмность ракеты для орбиты этого типа.",

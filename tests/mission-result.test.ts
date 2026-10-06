@@ -144,10 +144,32 @@ describe('displayed mission result', () => {
     const result = assessMissionResult(input)!;
     expect(result.outcome).toBe('target');
     expect(result.cause).toBe('target');
-    expect(result.metrics[0]).toMatchObject({ actual: 370, delta: -30, outside: true });
-    expect(result.metrics[1]).toMatchObject({ actual: 445, delta: 45, outside: true });
-    expect(result.metrics[3].outside).toBe(true);
+    expect(result.metrics[0]).toMatchObject({ actual: 370, delta: -30, outside: false });
+    expect(result.metrics[1]).toMatchObject({ actual: 445, delta: 45, outside: false });
+    expect(result.metrics[3].outside).toBe(false);
     expect(result.outcomeTime).toBe(500);
+  });
+
+  it('flags a row from the set the verdict was judged on, and keeps the osculating value beside it (M-LAUNCH-031)', () => {
+    const input = fixture();
+    input.state.t = 6000;
+    input.state.elements.periapsisAlt = 370e3;
+    input.state.elements.apoapsisAlt = 445e3;
+    input.events = [{ t: 500, key: 'evt.offTargetOrbit', severity: 'warn',
+      params: { pe: 369, ap: 401, inc: 51.6, peAltM: 369250, apAltM: 401e3 } }];
+    const missed = assessMissionResult(input)!;
+    expect(missed.judgedTime).toBe(500);
+    expect(missed.judgedBasis).toBe('physical');
+    // Perigee missed on the judged 369.25 km; the apogee, judged at 401 km, did not, though it reads 445 km now.
+    expect(missed.metrics[0]).toMatchObject({ judged: 369.25, outside: true });
+    expect(missed.metrics[0].judgedDelta).toBeCloseTo(-30.75, 9);
+    expect(missed.metrics[1]).toMatchObject({ judged: 401, judgedDelta: 1, outside: false, actual: 445 });
+    input.events = [{ t: 500, key: 'evt.targetOrbit', severity: 'success',
+      params: { pe: 399, ap: 401, peAltM: 399e3, apAltM: 401e3 } }];
+    const reached = assessMissionResult(input)!;
+    expect(reached.outcome).toBe('target');
+    expect(reached.metrics.filter(row => row.target !== null).every(row => row.outside === false)).toBe(true);
+    expect(reached.metrics[0]).toMatchObject({ judged: 399, actual: 370 });
   });
 
   it('moves completed-result metrics with the replay cursor without changing the recorded outcome or the live orbit', () => {
@@ -176,13 +198,13 @@ describe('displayed mission result', () => {
     view.setFrame(early);
     const first = assessMissionResult(view.sim)!;
     expect(first).toMatchObject({ outcome: 'target', cause: 'target', displayedTime: 600, outcomeTime: 500, reviewTime: 500 });
-    expect(first.metrics[0]).toMatchObject({ actual: 488, delta: -12, outside: true });
-    expect(first.metrics[1]).toMatchObject({ actual: 511, delta: 11, outside: true });
+    expect(first.metrics[0]).toMatchObject({ actual: 488, delta: -12, outside: false });
+    expect(first.metrics[1]).toMatchObject({ actual: 511, delta: 11, outside: false });
     view.setFrame(later);
     const next = assessMissionResult(view.sim)!;
     expect(next).toMatchObject({ outcome: 'target', displayedTime: 900, outcomeTime: 500 });
-    expect(next.metrics[0]).toMatchObject({ actual: 515, delta: 15, outside: true });
-    expect(next.metrics[1]).toMatchObject({ actual: 530, delta: 30, outside: true });
+    expect(next.metrics[0]).toMatchObject({ actual: 515, delta: 15, outside: false });
+    expect(next.metrics[1]).toMatchObject({ actual: 530, delta: 30, outside: false });
     view.setFrame(early);
     expect(assessMissionResult(view.sim)).toEqual(first);
     expect(sim.state.t).toBe(900);

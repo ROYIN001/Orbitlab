@@ -7,7 +7,7 @@
  * data from the page. The base for E05's worksheets.
  */
 import { getLang, t, type Lang } from '../i18n';
-import { RESULT_COPY, type MissionResultModel, type ResultMetric } from './result-content';
+import { judgedNote, RESULT_COPY, resultRow, type MissionResultModel, type ResultMetric } from './result-content';
 import type { SimEvent } from '../physics/simulation';
 import type { MissionPlan } from '../physics/mission';
 import type { TelemetrySample } from '../physics/sim/types';
@@ -174,10 +174,14 @@ export function buildFlightReport(input: ReportInput): string {
   else {
     res += `<p class="outcome" data-outcome="${result.outcome}">${esc(copy.outcome[result.outcome])}</p><p>${esc(copy.cause[result.cause].detail)}</p>`;
     res += `<p class="meta">${esc(`${copy.assessed} T+${numberIn(lang, result.outcomeTime)} ${t('u.s')}`)}</p>`;
+    const judged = judgedNote(result, lang); // M-LAUNCH-031: the numbers below are the ones the verdict was judged on
+    if (judged) res += `<p class="meta">${esc(judged)}</p>`;
     res += `<table><thead><tr><th>${esc(copy.parameter)}</th><th class="num">${esc(copy.target)}</th><th class="num">${esc(copy.actual)}</th><th class="num">${esc(copy.delta)}</th></tr></thead><tbody>`;
     for (const m of result.metrics) {
+      const shown = resultRow(m);
       res += `<tr><th scope="row">${esc(copy.metric[m.key])}</th><td class="num">${esc(m.target === null ? copy.free : metricText(lang, m.target, m))}</td>`
-        + `<td class="num">${esc(metricText(lang, m.actual, m))}</td><td class="num${m.outside ? ' miss' : ''}">${esc(metricText(lang, m.delta, m, true))}</td></tr>`;
+        + `<td class="num">${esc(metricText(lang, shown.value, m))}${shown.now === null ? '' : `<br><small>${esc(`${copy.orbitTable}: ${metricText(lang, shown.now, m)}`)}</small>`}</td>`
+        + `<td class="num${m.outside ? ' miss' : ''}">${esc(metricText(lang, shown.delta, m, true))}</td></tr>`;
     }
     res += `</tbody></table><p class="note">${esc(copy.deltaNote)}</p>`;
     if (flight.cfg.boosterRecovery) res += `<p>${esc(`${copy.booster}: ${copy.recovery[result.recovery]}`)}</p>`;

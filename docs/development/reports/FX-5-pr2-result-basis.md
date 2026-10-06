@@ -89,47 +89,63 @@ New tests:
 
 precache code is now 14713.3 kB on main `c41bf4a`.
 
-## M-LAUNCH-031: the result row's basis (HELD, not in this branch)
+## M-LAUNCH-031: the result row's basis (done in FX-5 step 3, branch `claude/u-fx5-s3`)
 
-The fix cannot be made inside the approval. Done on the local side branch
-`claude/u-fx5-s2-031-held` to find out:
+Done under the two owner approvals of 2026-10-06: card `fx5-031-assert`
+option a (the three `outside` lines in 'keeps recorded success separate from
+subsequent osculating-orbit drift') and card `fx5-031-more` option a
+("อนุญาตทั้งสองอย่าง (เฉพาะ outside ใน 4 บรรทัดนี้ + ไฟล์ result-content.ts)":
+the four `outside` lines 201, 202, 206, 207 in the replay-cursor test, and
+`src/ui/result-content.ts`). No other existing assertion changed; physics not
+touched; no CSS added.
 
-1. Tests first (`a78933e`): a new test that a row's `outside` follows the
-   judged set (recorded completion params `peAltM`/`apAltM`/`pe`/`ap`/`inc`/
-   `raan`) and carries the judged value and its difference beside the
-   osculating one; plus the three approved lines, changed only in `outside`
-   (`actual`/`delta` unchanged):
+Commits on `claude/u-fx5-s3` (from `03d7353`): `e33d38a` tests first, `9c7091e`
+model, `4237d8e` the four approved assertions, then the view: `c567ca6` tests
+first (`tests/mission-result-view.test.ts`, 3 failing: helpers missing),
+`8e96294` the view, `b0cfb50` reuse of `mv.point.now` for the secondary label.
+Review 1: `2af6923` test first (the rounding probe: target 51.6°, displayed
+51.904°, recorded inc 51.9; failed before), `2f3ad0b` fix: an off-target
+verdict whose rounded params show no miss keeps the displayed orbit's flags.
+Review 2, after the owner's answer of 2026-10-06T20:09Z (card
+`fx5-031-budget` rev 2, option a: `report.ts` and `explore-debrief.ts`
+allowed, code ceiling up to +3 kB for this work): `0801b20` tests first (2
+failing), `0955271` the fix.
 
-   ```diff
-   -    expect(result.metrics[0]).toMatchObject({ actual: 370, delta: -30, outside: true });
-   -    expect(result.metrics[1]).toMatchObject({ actual: 445, delta: 45, outside: true });
-   -    expect(result.metrics[3].outside).toBe(true);
-   +    expect(result.metrics[0]).toMatchObject({ actual: 370, delta: -30, outside: false });
-   +    expect(result.metrics[1]).toMatchObject({ actual: 445, delta: 45, outside: false });
-   +    expect(result.metrics[3].outside).toBe(false);
-   ```
+- Model (`src/ui/result-content.ts`): `outside` is flagged from the judged
+  set; `judged`, `judgedDelta`, `judgedTime`, `judgedBasis` ('physical' when
+  the completion event carries `peAltM`/`apAltM`). The new fields are optional
+  in the types so existing fixtures in `tests/report.test.ts` and
+  `tests/explore.test.ts` type-check unchanged.
+- View (`src/ui/mission-result.ts`, helpers `resultRow`, `judgedNote` in
+  `src/ui/result-content.ts`): each row's value and delta are the judged ones
+  when the record has them, with "Orbit at the displayed time: …" under
+  the value; a line "Judged at T+… s (physical apsides | osculating orbit)".
+  Without a judged value (a failure, or a record that lacks it) the row shows
+  the displayed orbit as before.
+- i18n: `result.judged.physical`, `result.judged.osculating` in
+  `src/i18n/en.ts`, `th.ts`, `ru.ts`; the secondary label is the table's own
+  caption (`RESULT_COPY.orbitTable`, "Orbit at the displayed time"), which
+  reads right in a replay ("now" did not).
+- The flight report (`src/ui/report.ts`) and the Explore debrief
+  (`src/ui/explore-debrief.ts`) use the same `resultRow`: the report's value
+  and difference are the judged ones, with the displayed orbit under the value
+  and the "Judged at" line; the debrief's number is the judged one
+  (`debriefValue`). Before, both printed the displayed number beside the
+  judged flag.
 
-   Before the model change: 2 failed | 15 passed.
-2. Model (`025b44a`, `src/ui/result-content.ts`): `outside` from the judged
-   set (a target verdict is inside on every row; an off-target one is graded
-   by `orbitResiduals` on the recorded numbers, the displayed orbit filling a
-   number the event does not carry); new `judged`, `judgedDelta`,
-   `judgedTime`, `judgedBasis` ('physical' when the event carries
-   `peAltM`/`apAltM`). `actual`/`delta` stay the displayed orbit.
-   After it: 1 failed | 16 passed. The failure is the test
-   `moves completed-result metrics with the replay cursor without changing the
-   recorded outcome or the live orbit`, lines 201, 202, 206 and 207 on that
-   branch (`outside: true` beside `outcome: 'target'` judged on 500 × 500 km
-   for a 500 km target). Those four assertions lock the same contradiction
-   and are not in the approval, so they were not touched and the work stops
-   here.
+Files: `src/ui/result-content.ts`, `src/ui/mission-result.ts`,
+`src/ui/report.ts`, `src/ui/explore-debrief.ts`, `src/i18n/en.ts`,
+`src/i18n/th.ts`, `src/i18n/ru.ts`, `tests/mission-result.test.ts`,
+`tests/mission-result-view.test.ts`, `tests/report.test.ts` (one new test),
+`changes/claude-u-fx5-s3.md` (CHANGELOG and PROGRESS fragment), this report.
 
-Also outside the allowed files: `outside` is computed in
-`src/ui/result-content.ts` (`assessMissionResult`), and the result copy
-(`RESULT_COPY`, where "judged at T+x (physical apsides)" would go) lives there
-too, not in `src/i18n`. The view part (`src/ui/mission-result.ts`,
-`explore-debrief.ts`) is not written. Physics is not touched on either
-branch.
+Size (merged with main `93200a3`, `npx vite build && node scripts/bundle-budget.mjs`):
+precache code 14723.0 kB against main's 14720.3 kB, +2.7 kB, inside the owner's
+raise to 14724 kB for this work (budgets.json is raised by the coordinator in
+this PR). Measured per commit on `03d7353`: the model +1.5 kB
+(`result-content.ts` is bundled twice, into the `lesson-file` chunk and the
+`recheck` worker), the view +0.96 kB (i18n +0.6 kB), review 2 about +0.2 kB.
+`index-*.css` unchanged (177.0 kB).
 
 ## Checks (this branch)
 

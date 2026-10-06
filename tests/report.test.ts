@@ -70,6 +70,21 @@ const RESULT: MissionResultModel = {
 const FIGURE = { title: 'Altitude <h>', src: 'data:image/png;base64,AAAA' };
 
 describe('flight report (U06)', () => {
+  it('shows the judged value and difference beside its flag, the displayed orbit as secondary (M-LAUNCH-031 review)', () => {
+    const judged: MissionResultModel = { ...RESULT, outcome: 'offTarget', cause: 'shape', judgedTime: 500, judgedBasis: 'physical',
+      metrics: [
+        { key: 'perigee', target: 400, actual: 400, delta: 0, unit: 'km', outside: true, judged: 369.2, judgedDelta: -30.8 },
+        { key: 'apogee', target: 400, actual: 445, delta: 45, unit: 'km', outside: false, judged: 401, judgedDelta: 1 },
+        RESULT.metrics[2], RESULT.metrics[3],
+      ] };
+    const html = buildFlightReport({ flight: flight(), result: judged, figures: [], link: null, generatedAt: new Date() });
+    expect(html).toContain('<td class="num miss">-30.8 km</td>');
+    expect(html).toContain('<td class="num">+1.0 km</td>');
+    expect(html).not.toContain('+45.0 km');
+    expect(html).toContain('Orbit at the displayed time: 445.0 km');
+    expect(html).toContain('Judged at T+500.0 s (physical apsides)');
+  });
+
   it('is one self-contained document: no scripts, nothing fetched', () => {
     const html = buildFlightReport({ flight: flight(), result: RESULT, figures: [FIGURE], link: null, generatedAt: new Date('2026-10-01T15:00:00Z') });
     expect(html.startsWith('<!doctype html>')).toBe(true);
