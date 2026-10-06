@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { assessMissionResult, judgedNote, resultRow, type ResultInput } from '../src/ui/result-content';
+import { debriefValue } from '../src/ui/explore-debrief';
 import { DEG, R_EARTH } from '../src/physics/constants';
 
 function drifted(params?: Record<string, number>): ResultInput {
@@ -86,5 +87,12 @@ describe('mission result view (M-LAUNCH-031)', () => {
     input.events[0].severity = 'warn';
     const model = assessMissionResult(input)!;
     expect(model.metrics[3]).toMatchObject({ key: 'raan', judged: null, outside: true });
+  });
+
+  it('the Explore debrief shows the judged number its flag was judged on (review)', () => {
+    const model = assessMissionResult(drifted({ pe: 399, ap: 401, peAltM: 399e3, apAltM: 401e3 }))!;
+    expect(debriefValue(model.metrics[1], model.metrics[1].actual)).toBe('445 km');
+    expect(debriefValue(model.metrics[1])).toBe('401 km');
+    expect(debriefValue(assessMissionResult(drifted())!.metrics[1])).toBe('445 km');
   });
 });
