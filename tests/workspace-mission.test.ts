@@ -81,10 +81,11 @@ class Page {
   }
 
   private applyStored(stored: unknown): void {
-    this.ws.adopt();
+    this.ws.restoring();
     const parsed = parseMissionDocument(stored, this.panel);
     if (parsed.usable) this.panel = parsed.state;
     this.preview();
+    if (this.ws.restored(this.doc(), !parsed.issues.length)) saveStoredMission(this.panel, this.storage);
   }
 
   go(mode: Mode): void {
@@ -169,6 +170,29 @@ describe('the rules (A1)', () => {
     expect(ws.origin).toBe('template');
     expect(ws.persists('t2')).toBe(true); // the first change makes it the user's
     expect(ws.origin).toBe('workspace');
+  });
+});
+
+describe('the rules: a stored mission read with issues is held (M-PLAN-031)', () => {
+  it('stores nothing while it is read, nothing while it is unchanged, and the first change', () => {
+    const ws = new WorkspaceMission();
+    ws.restoring();
+    expect(ws.persists('s')).toBe(false); // being read
+    expect(ws.restored('s', false)).toBe(false);
+    expect(ws.persists('s')).toBe(false);
+    expect(ws.origin).toBe('workspace');
+    expect(ws.persists('s2')).toBe(true);
+    expect(ws.persists('s')).toBe(true); // changed once: the user's from then on
+  });
+
+  it('a clean read is stored at once, and any other mission the user takes on ends the hold', () => {
+    const ws = new WorkspaceMission();
+    ws.restoring();
+    expect(ws.restored('s', true)).toBe(true);
+    expect(ws.persists('s')).toBe(true);
+    ws.restoring(); ws.restored('s', false);
+    ws.adopt(); // a link, a file, a lesson
+    expect(ws.persists('s')).toBe(true);
   });
 });
 
@@ -303,6 +327,14 @@ describe('a stored mission this version cannot keep whole is read, not written o
     expect(storage.map.get('orbitlab.mission')).toBe(bytes);
     page.edit((m) => { m.payloadMass = 900; });
     expect(page.stored()).toEqual({ ...usersMission(), payloadMass: 900 });
+  });
+
+  it('a document none of which is usable is not written over by the mission the page falls back to', () => {
+    const { storage, bytes } = storedAs({ format: 'orbitlab.mission', version: 99, mission: 'a layout this version cannot read' });
+    const page = new Page(storage, 'engineer');
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    page.edit((m) => Object.assign(m, usersMission()));
+    expect(page.stored()).toEqual(usersMission());
   });
 
   it('a mission of this version is restored as before', () => {
