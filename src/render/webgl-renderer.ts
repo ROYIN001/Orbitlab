@@ -88,6 +88,8 @@ function lostNote(canvas: HTMLCanvasElement, on: boolean): void {
   const note = old ?? document.body.appendChild(document.createElement('p'));
   note.id = 'gl-lost';
   note.className = 'pwa-toast gl-lost';
+  // above the update toast, and never in the way of a press (no rule in style.css: its ceiling is full)
+  note.setAttribute('style', 'margin:0;pointer-events:none;bottom:70px');
   note.setAttribute('role', 'status');
   const say = (key: string) => () => { note.textContent = t(key); };
   setTimeout(say('startup.glLost'));
