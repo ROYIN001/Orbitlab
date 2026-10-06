@@ -12,12 +12,12 @@ change_kind: bug-fix; failing regressions committed first
 owner_authorization: {date: 2026-10-05, quote: "เมื่อทำการ merge แล้วตรวจสอบว่าทุกอย่างเรียบร้อยแล้วในระยะ K0 ให้เริ่มทำระยะ K1 ในเซสชั่นใหม่ต่อได้เลยครับ ใช้ model opus5.5 high", scope: "wave K1 (D-65)"}
 decisions_used: [D-75 ("A rating-only recompute does not count as a design edit; design identity follows the parts."), D-63]
 plan: plan v2.0 S10 §10.4 (FX-1), row M-BUILD-007; §10.12 (numeric-drafts after M-LEARNING-005, merged)
-base_sha_verified_on: {sha: bdbfeff, date: 2026-10-06, recheck: "origin/main 6fea83f adds only records and a workflow (no src, no budgets.json): the base and the size baseline hold"}
+base_sha_verified_on: {sha: bdbfeff, date: 2026-10-06, recheck: "review round: origin/main 095806a adds 1a7960e (R1.6 PR 2b: src/main.ts, src/ui/workspace-mission.ts), records and a workflow; no file of this branch; `git merge-tree` with it is clean, and the size is measured against a build of 095806a"}
 branch: claude/b-fx1-s3
 files: [src/ui/build/explore-store.ts, src/ui/build/explore-level.ts, src/ui/build/satellite-workspace.ts, src/ui/build/satellite-level.ts, src/ui/build/requirements-page.ts, src/ui/build/build-screen.ts, src/i18n/en.ts, src/i18n/th.ts, src/i18n/ru.ts, tests/build-unsaved-open.test.ts, tests/browser/journeys/build-unsaved-open.mjs]
 not_touched: [src/design/**, src/physics/**, stored formats (design store, kept drafts), CSS, budgets.json, existing tests]
-failing_before_fix: [unit tests/build-unsaved-open.test.ts 13 of 15 on bdbfeff, journey build-unsaved-open on bdbfeff]
-size: {precache_code_kB: "14723.0 → 14727.1 (+4.1; ceiling 14724, over by 3.1)", index_js_kB: "2629.1 → 2632.4 (+3.3; ceiling 2632, over by 0.4)", i18n_js_kB: "1723.4 → 1724.3 (+0.9; ok)", index_css_kB: "177.0 → 177.0"}
+failing_before_fix: [unit tests/build-unsaved-open.test.ts 13 of 15 on bdbfeff, journey build-unsaved-open on bdbfeff, review round — 3 more unit tests and a journey step on f00b288 (commit 46ed9a7)]
+size: {against: "origin/main 095806a, and this branch merged onto it", precache_code_kB: "14723.3 → 14727.6 (+4.3; ceiling 14724, over by 3.6)", index_js_kB: "2629.4 → 2632.8 (+3.4; ceiling 2632, over by 0.8)", i18n_js_kB: "1723.4 → 1724.3 (+0.9; ok)", index_css_kB: "177.0 → 177.0", review_round: "+0.2 kB code"}
 review: second agent (P1, storage-adjacent) before merge; budget needs the owner
 ```
 
@@ -114,7 +114,7 @@ Vitest runs in `node` (no DOM), so the unit tests run the store's and the requir
 
 ### After the fix
 
-- `npx vitest run tests/build-unsaved-open.test.ts`: 15/15.
+- `npx vitest run tests/build-unsaved-open.test.ts`: 15/15 (18/18 after the review round below).
 - Related files (19 files, 223 tests, all pass): `build-unsaved-open`, `i18n`, `i18n-counts`, `d06-satellite-date`, `workspace-draft-flush`, `d06-build-orbit-handoff`, `d06-custom-satellite`, `architecture`, `build-legacy-ratings`, `d07-requirements-page`, `design-explore-drafts`, `phase4-walk`, `repo-hygiene`, `design-lessons`, `design-ref`, `design-store`, `explore`, `design-strip-progress`, `lessons-ui-core`. The full suite was not run locally (shared 4-CPU machine); CI runs it.
 - `npm run -s typecheck`: clean.
 - `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs`: 66/66.
@@ -123,7 +123,7 @@ Vitest runs in `node` (no DOM), so the unit tests run the store's and the requir
 
 ## Size
 
-`npx vite build; node scripts/bundle-budget.mjs`, against a build of `bdbfeff` on the same machine:
+`npx vite build; node scripts/bundle-budget.mjs`, against a build of `bdbfeff` on the same machine (first round; the review round's figures against `origin/main` are below):
 
 | Group | `bdbfeff` | this branch | change | ceiling |
 |---|---|---|---|---|
@@ -133,3 +133,49 @@ Vitest runs in `node` (no DOM), so the unit tests run the store's and the requir
 | `index-*.css` | 177.0 kB | 177.0 kB | 0 | 177 |
 
 The budget check fails on precache code and `index-*.js`. `budgets.json` is not edited: the owner decides (raise for FX-1's data-safety work, as D-38's second round did for the FX-1 follow-up, or ask for a smaller fix). About 200 source lines added.
+
+## Review round (blocking finding on `f00b288`)
+
+**The finding (correct).** The question stays on screen while the student looks at another design, and its "Save it, then open" saved whatever design was on screen when it was clicked, not the design the question was about:
+
+- Rocket designer: the remix untouched, the parts draft changed. Open on a parts record brings the parts draft on screen and asks. The student clicks the Remix tab (`setMode` redraws the store; the question stays), then "Save it, then open": the untouched remix was saved as a new record, and the open replaced the changed parts draft, unsaved.
+- Satellite designer, during a lesson: the question parks the lesson. The lesson strip's "open the design" (`resumeLesson`) before the answer, then Save: the lesson's design was kept as one of the student's records, and the open that followed parked the lesson again and replaced the student's own unsaved design.
+- The requirements page went through the same `saveFirst()`.
+
+**Failing first** (commit `46ed9a7`, test-only; three unit tests and a journey step), on `f00b288`'s `src/`:
+
+```
+× "Save it, then open" keeps the student's own design, though the lesson's was brought back before the answer (review of f00b288)
+× "Save, then open" keeps the student's own design, though the lesson's was brought back before the answer (review of f00b288)
+× "Save, then open" keeps the draft the question was about, though the other draft was shown before the answer (review of f00b288)
+AssertionError: the lesson's design kept as one of the student's: expected [ 'slesson' ] to not include 'slesson'
+AssertionError: the lesson's design kept as one of the student's: expected [ 'slesson' ] to not include 'slesson'
+AssertionError: the untouched remix was saved in place of the changed parts design: expected 'd4' to be null
+      Tests  3 failed | 15 passed (18)
+
+[build-unsaved-open] FAIL: "Save it, then open" did not keep the parts design the question was about: ["My NAPA-2 (6U CubeSat)","My THEOS-2-class imager","Electron remix","My rocket"]
+✗ build-unsaved-open (57.4 s)
+```
+
+The journey step: save a parts design, rename it, Open it from the Remix tab (asked; the parts draft on screen), click the Remix tab, then "Save it, then open": the parts record must hold the new name. On `f00b288` the record kept its old name ("My rocket").
+
+Before that, commit `1cdb5cf` (test-only) fixed the journey itself: closing the "ready offline" note for the owner's screenshot took the keyboard from the question, so when the note had appeared by then, the Escape that follows went to the page ("Escape did not close the question") and the journey stopped before the rocket part. The keyboard now goes back to the control that had it before the shot. No assertion changed.
+
+**The fix** (commit `02a2d59`, the reviewer's first option). `ExploreStore.saveFirst(rec?)` first calls the designer's `replacing(rec)`, which puts the asked-about design back on screen: the rocket draft of the record's kind, or (satellite) the student's own design with a resumed lesson parked again. Then it saves, as before. When `replacing` says there is nothing to lose (never saved, as it started), nothing is saved and the open goes ahead. The store's question now calls `saveThenOpen(id)`, which fetches the record it asked about and passes it; a record deleted meanwhile is said by `openRecord` ("not found") and nothing is saved or opened. The requirements page passes no record (the bench is the student's own satellite). "Open without saving" was already right: the open replaces the draft of the record's kind, and parks a resumed lesson again. About 20 source lines in `explore-store.ts` (most of them comments), and a comment in `requirements-page.ts`; the branch is now about 215 source lines added.
+
+**Checks after the fix.**
+
+- `npx vitest run tests/build-unsaved-open.test.ts`: 18/18. The 19 related files above: 226/226.
+- `npm run -s typecheck`: clean. `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs`: 66/66.
+- Journeys: `build-unsaved-open` (38 s), `build-legacy-ratings`, `requirements`, `satellite`: 4/4 pass.
+
+**Size** against a build of `origin/main` `095806a`, and of this branch merged onto it (`git merge-tree`, clean), same machine:
+
+| Group | `origin/main` | merged | change | ceiling |
+|---|---|---|---|---|
+| precache code | 14723.3 kB | 14727.6 kB | +4.3 kB | 14724 (over by 3.6) |
+| `index-*.js` | 2629.4 kB | 2632.8 kB | +3.4 kB | 2632 (over by 0.8) |
+| `i18n-*.js` | 1723.4 kB | 1724.3 kB | +0.9 kB | 1725 (ok) |
+| `index-*.css` | 177.0 kB | 177.0 kB | 0 | 177 |
+
+This round adds about 0.2 kB of code. `budgets.json` is not edited: the owner decides, as above.
