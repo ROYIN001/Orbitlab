@@ -751,9 +751,29 @@ body[data-lesson] .verdict-fixes { display: none; }
 .narration .latest-event p.success { color: var(--ok); }
 .narration .latest-event p.warn { color: var(--warn); }
 .narration .latest-event p.fail { color: var(--fail); }
-/* G2 hold (F5): in a short scene (main.ts SHORT_SCENE_PX) the narration keeps
-   the phase name and gives the rest of the picture back */
-#viewport[data-short='true'] .narration :is(.phase-detail, .latest-event) { display: none; }
+/* G2 hold (F5) and G2 compact (the owner's answer on the G2 card,
+   2026-10-06: "ฉากเตี้ยกว่า 380 px: ย่อป้ายให้เหลือบรรทัดเดียว และพับการ์ด
+   เทเลเมทรีเป็นปุ่ม"). In a short scene (main.ts SHORT_SCENE_PX; `data-short`
+   is on #viewport only) every label is one line: the narration keeps its
+   eyebrow and phase name, side by side, the name at 80 %, and drops
+   its prose; the mission title is the eyebrow and vehicle /
+   payload on one line cut with an ellipsis, its step chips give way; the
+   ticker keeps its newest callout. (The hide rule's `:is()` carries the
+   specificity of its `#ticker` argument, so the inline rule below cannot
+   bring back the step chips; `overflow: hidden` lets the title, a flex item,
+   shrink to its ellipsis.) The camera tabs and the tool buttons share one
+   row, the buttons at 80 % so that the row still leaves the tabs one line
+   in a 714 px Russian scene, and a floating telemetry card folds into the tool button
+   `.hud-fold` (main.ts foldHud), which opens it over the scene (`data-hud`)
+   until it is pressed again or the scene changes size. A docked card is not
+   over the scene, so its button stays away. */
+[data-short=true] :is(.phase-detail, .latest-event, .mission-steps, .scene-hint, #ticker > :not(:last-child)),
+[data-short=true]:not([data-hud]) #hud,
+.hud-fold:not([data-short=true]:has(#hud) *) { display: none; }
+[data-short=true] .mission-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+[data-short=true] :is(.mission-title, .narration) > * { display: inline; margin-right: 8px; }
+[data-short=true] .camera-tools { flex-direction: row; }
+[data-short=true] :is(.tool-btn, .phase-title) { zoom: 0.8; }
 .scene-hint { font-size: 10px; letter-spacing: 1px; color: #91a6b8; text-align: right; max-width: 190px; }
 
 /* Onboard mode: the canvas covers the whole viewport (its porthole mask is
