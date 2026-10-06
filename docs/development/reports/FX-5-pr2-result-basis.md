@@ -65,6 +65,30 @@ Test Files  4 passed (4)
 Tests  50 passed (50)
 ```
 
+
+### Second-agent review (2026-10-06) and what changed
+
+The physics-lane review of #113 found two wrong reasons. Tests were written first, and they failed on the reviewed code:
+
+1. **Frames with no record were said to have no record, even in vacuum.** The orbit, escape and rendezvous paths never write `eom`. So a live orbit frame's drag row said there was "no record", where "no air" is correct.
+   - Now `noAir` is given when the air is too thin to push: q = ½ρV² below 1 Pa. At 400 km and 7.6 km/s, q is about 1e-4 Pa. The atmosphere model's density is never exactly 0 above the pad, so a threshold is needed.
+   - `noRecord` is kept for air that does push, such as an abort through dense air.
+   - The text no longer says "replayed", because live frames lack the record too.
+2. **A landed six-DOF vehicle in a wind was labelled "still air".** Its airspeed is the scenario wind. Landed frames now go through the same airspeed check as flown frames: they get `stillAir` at 1 m/s or less, and `noRecord` above that.
+
+Wording, as the reviewer suggested:
+- EN "At rest relative to the air".
+- TH "ยาน" (vehicle) instead of "จรวด" (rocket), because capsules use this panel too.
+- The `noRecord` text in all three languages now says that the air moves past the vehicle, but no flight step computed its force.
+
+New tests:
+- orbit frame → `noAir`;
+- live escape in dense air → `noRecord`;
+- landed in a 6 m/s wind → `noRecord`;
+- a flown frame at 0.5 m/s in real air → `stillAir`.
+
+precache code is now 14713.3 kB on main `c41bf4a`.
+
 ## M-LAUNCH-031: the result row's basis (HELD, not in this branch)
 
 The fix cannot be made inside the approval. Done on the local side branch

@@ -186,6 +186,33 @@ describe('why the panel has no air term (M-LAUNCH-060)', () => {
     expect(reasons(replayed).drag).toMatchObject({ available: false, reason: 'eq.none.noRecord' });
   });
 
+  it('says there is no air in orbit, live or replayed, not that the record is missing', () => {
+    // stepOrbit, the escape and rendezvous never write a record: a frame in vacuum has no air to blame on it.
+    const orbit: VisualFrame = { ...cloneFrame(flying), status: 'orbit', altitude: 400_000, airspeed: 7600 };
+    delete orbit.eom;
+    expect(reasons(orbit).drag).toMatchObject({ available: false, reason: 'eq.none.noAir' });
+  });
+
+  it('says a live escape through dense air has no record, not that there is no air', () => {
+    const escape: VisualFrame = { ...cloneFrame(flying), status: 'abort', altitude: 5000, airspeed: 200 };
+    delete escape.eom;
+    expect(reasons(escape).drag).toMatchObject({ available: false, reason: 'eq.none.noRecord' });
+  });
+
+  it('says a landed vehicle in a wind has no record, not that the air is still', () => {
+    // Six-DOF after landing: the airspeed is the scenario wind, and α and β read it.
+    const landed: VisualFrame = { ...cloneFrame(flying), status: 'landed', altitude: 0, airspeed: 6 };
+    delete landed.eom;
+    expect(reasons(landed).drag).toMatchObject({ available: false, reason: 'eq.none.noRecord' });
+  });
+
+  it('says the air is still about a flown vehicle that has no airspeed', () => {
+    const hover = cloneFrame(flying);
+    hover.eom = { ...hover.eom!, airspeed: 0.5 };
+    expect(hover.eom.density).toBeGreaterThan(0);
+    expect(reasons(hover).drag).toMatchObject({ available: false, reason: 'eq.none.stillAir' });
+  });
+
   it('still says there is no air where there is none', () => {
     const high = cloneFrame(flying);
     high.eom = { ...high.eom!, density: 0, dynamicPressure: 0 };
