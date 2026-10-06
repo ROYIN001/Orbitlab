@@ -135,6 +135,20 @@ The owner answered all 80 answerable items of the plan v2.0 draft's answer sheet
 | PLAN R0.3 shared-file owners and workflow history | In PLAN §6 and §9.1 | PLAN v1.2 | S18 (lanes and hotspots; §18.16 history) | CO-8 |
 | R0 oracles | None | — | Catalogue S07 §07.5 recorded on the CO-6 base (R0.4) | K1, each before the first user |
 
+## Decided 2026-10-06 (K1 decision page)
+
+The owner answered the K1 decision page (Claude artifact `https://claude.ai/artifact/BFqSxYHUWXcp1JeBVpisZL`, collection `answers`) on 2026-10-06 between 04:00Z and 04:04Z. The Thai answer is the option text as the page showed it, quoted verbatim.
+
+| Date | Id | Decision | Reason | Where it lands |
+|---|---|---|---|---|
+| 2026-10-06 | D-38 (K1 allowance) | For wave K1, bug-fix and data-safety packages (D-63) may raise precache code by at most +10 kB (14704→14714) and `i18n-*.js` by at most +5 kB (1720→1725); every PR states its measured delta, EQ-7 (code) and EQ-6 (strings) are the named offsets, GK1 reports the amount used and the ceilings ratchet back. — "อนุมัติงบเพิ่มสำหรับทั้งคลื่น K1: โค้ดไม่เกิน +10 kB และข้อความแปลไม่เกิน +5 kB" | Owner's answer, card `d38-k1-allowance` (rev 3), option a, as recommended. Replaces a card per PR. | `budgets.json` (this PR); every K1 bug-fix PR; GK1 KPI report. |
+| 2026-10-06 | G2 (minimum scene) | The launch scene's minimum height is 50 % of the window's height, 240–400 px, phones included; on a short window the playback row may sit below the first screen. — "50% ของความสูงจอ (240–400 px)" | Owner's answer, card `g2-f5`, question `floor`, option b (the page recommended 40 %). | #101 (`b2215da`): `--scene-min`, `tests/browser/scene-floor.mjs`. |
+| 2026-10-06 | G2 (telemetry 861–1180 px) | The Engineer telemetry strip at 861–1180 px stays as built (its top part on the first screen). — "เหมือนตอนนี้: เห็นส่วนบนของแถบข้อมูลบนจอแรก" | Card `g2-f5`, question `telemetry`, option keep (the page recommended moving it below). | No change. |
+| 2026-10-06 | G2 (short scene) | A scene under 380 px keeps its labels to one line and folds the telemetry card behind a button. — "ฉากเตี้ยกว่า 380 px: ย่อป้ายให้เหลือบรรทัดเดียว และพับการ์ดเทเลเมทรีเป็นปุ่ม" | Card `g2-f5`, question `overlay`, option compact, as recommended. | #103. |
+| 2026-10-06 | G2 (signature) | G2 is signed after the answers above are built, on a new screenshot set. — "ทำตามคำตอบข้างบนให้ครบก่อน แล้วส่งภาพชุดใหม่ให้เซ็น" | Card `g2-f5`, question `sign`, option after, as recommended. | New G2 card after #103; G2 stays HOLD until then. |
+| 2026-10-06 | CO-8 (step 2 scope) | CO-8 step 2 brings in only the approved plan v2.0 sections (S01, S05, S06, S08 set A, S18) under `docs/development/plan/`, marked "for K0–K1"; PLAN.md v2.0 becomes an index saying which parts are approved and which are draft; `registry.tsv` is kept; the "superseded" banners on the old documents wait until the whole plan is approved. — "นำเข้าเฉพาะส่วนที่รับรองแล้ว ป้ายรอไว้ก่อน" | Owner's answer, card `co8-banners`, option a, as recommended. | CO-8 PR2. |
+| 2026-10-06 | FX-1 (legacy ratings) | Payload ratings saved before FX-1 (no completion mark) are recomputed automatically when the design is opened. — "คำนวณใหม่ให้อัตโนมัติเมื่อเปิดแบบจรวด" | Owner's answer, card `fx1-legacy-ratings`, option b (the page recommended a label with a recompute button). The page stated the cost: several seconds of work on opening, and the learner's value changes without a command. | FX-1 follow-up PR after #99. |
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
