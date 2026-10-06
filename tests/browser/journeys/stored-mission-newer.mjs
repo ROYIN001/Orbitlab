@@ -61,7 +61,7 @@ export default async function storedMissionNewer(t) {
   const edit = await app.mcp('configure_mission', { payloadMassKg: 900 });
   t.check(edit.ok, `configure_mission (edit): ${JSON.stringify(edit).slice(0, 200)}`);
   const edited = await t.until(async () => { const s = JSON.parse((await raw()) ?? 'null'); return s?.mission?.payloadMass === 900 ? s : null; }, { timeoutMs: 10_000 });
-  t.check(edited && edited.version <= 3, `the user's edit was not stored: ${(await raw())?.slice(0, 160)}`);
+  t.check(edited && edited.version === saved.version, `the user's edit was not stored: ${(await raw())?.slice(0, 160)}`);
 
   // a mission of this version, restored as before
   const current = await raw();
