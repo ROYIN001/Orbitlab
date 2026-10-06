@@ -71,6 +71,7 @@ export class AppProfiles {
     const key = conflict ? 'chooser' : this.repo.status === 'ephemeral' ? 'ephemeral' : this.repo.status === 'locked' ? 'locked'
       : this.repo.notices.includes('storage-write-failed') ? 'storageWriteFailed'
       : this.repo.notices.includes('media-migration-pending') ? 'mediaMigrationPending'
+      : this.repo.notices.includes('media-collisions-kept') ? 'mediaCollisionsKept'
       : this.repo.notices.length ? 'recoveryNotice' : null;
     this.notice.hidden = key === null;
     this.notice.textContent = key ? profileText(key) : '';

@@ -27,7 +27,8 @@ export interface WorkspaceArchive {
   media: { included: false; reason: 'separate-binary-export' };
 }
 export interface ImportOptions { targetId?: string; mode?: 'keep' | 'replace'; name?: string }
-export interface WorkspaceMedia { migrate(profileId: string): Promise<void>; delete(profileId: string): Promise<void> }
+/** `migrate` may resolve with the number of legacy recordings it left in place because the owner already had one (D-68). */
+export interface WorkspaceMedia { migrate(profileId: string): Promise<number | void>; delete(profileId: string): Promise<void> }
 const noMedia: WorkspaceMedia = { migrate: async () => {}, delete: async () => {} };
 const ownRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const bytes = (text: string): number => new TextEncoder().encode(text).byteLength;
@@ -235,8 +236,11 @@ export class WorkspaceRepository {
           } catch { if (!this.notices.includes('profile-delete-pending')) this.notices.push('profile-delete-pending'); }
         }
         if (!catalog.mediaMigrated) {
-          try { await this.media.migrate(catalog.legacyId); catalog.mediaMigrated = true; this.saveCatalog(catalog); }
-          catch { this.notices.push('media-migration-pending'); }
+          // Collisions stay in place, unowned (D-68); the migration is still done, so no later start walks the store again.
+          try {
+            const kept = await this.media.migrate(catalog.legacyId); catalog.mediaMigrated = true; this.saveCatalog(catalog);
+            if (kept) this.notices.push('media-collisions-kept');
+          } catch { this.notices.push('media-migration-pending'); }
         }
         // Remove only unchanged originals after the authoritative destination/catalogue commit.
         // An unreadable owner record keeps its bytes and the originals; cleanup is retried at the next start.
