@@ -50,7 +50,7 @@ interface StoreUnderTest<K extends DesignKind> {
   opening?: string | null;
   openRecord(id: string, sure?: boolean): Promise<unknown>;
   save(asNew: boolean): Promise<string | null | void>;
-  saveFirst(): Promise<string | null>;
+  saveFirst(rec?: DesignRecord<K>): Promise<string | null>;
   unsaved(rec?: DesignRecord<K>): Promise<boolean>;
   render: ReturnType<typeof vi.fn>;
 }
@@ -106,6 +106,13 @@ const asVehicle = (rec: DesignRecord | null): DesignRecord<'vehicle'> => {
   if (!rec || !isDesignOf(rec, 'vehicle')) throw new Error('a kept rocket');
   return rec;
 };
+
+/** Every design of `kind` that `designs` keeps, read in full. */
+const everyKept = async (designs: LocalDesignStore, kind: DesignKind): Promise<DesignRecord[]> =>
+  Promise.all((await designs.list(kind)).map(async (d) => (await designs.get(d.id))!));
+
+/** A lesson's desk on THEOS-2 (T01). */
+const desk = (): LessonDesk => ({ start: designFromTemplate('theos2', 'slesson', 'Lesson start'), date: '2026-03-20', level: 'high', locked: ['orbit'] });
 
 /** The same design with another array area: a change a student makes. */
 const withArray = (d: SatelliteDesign, area: number): SatelliteDesign => ({ ...d, power: { ...d.power, arrayArea: area } });
@@ -225,7 +232,7 @@ describe('M-BUILD-007: a requirements row opened on the bench', () => {
       result: { template: tpl, req, jd: JD0, rows: [rowA, rowB], lifetime: null, formKey: '' },
       opened: null, refused: null, asking: null,
       renderResults: vi.fn(), results: { querySelector: () => null },
-    }) as { openRow(row: typeof rowA, sure?: boolean): Promise<void> | void; asking: string | null };
+    }) as { openRow(row: typeof rowA, sure?: boolean): Promise<void> | void; saveThenOpen(row: typeof rowA): Promise<void>; asking: string | null };
     return { page, opened, satStore };
   }
 
@@ -247,6 +254,30 @@ describe('M-BUILD-007: a requirements row opened on the bench', () => {
     expect(page.asking).toBeNull();
   }, 60_000);
 
+  it('"Save it, then open" keeps the student\'s own design, though the lesson\'s was brought back before the answer (review of f00b288)', async () => {
+    const ws = new SatelliteWorkspace();
+    const designs = storeWith(memory());
+    const { page, opened } = pageOf(ws, designs);
+    ws.change(withArray(ws.design, 0.42));
+    const own = ws.design.id;
+    ws.enterLesson(desk());
+    ws.change(withArray(ws.design, 0.88));
+    await page.openRow(rowA);
+    expect(page.asking).toBe('15/1');
+    // the lesson strip's "open the design", before the answer
+    ws.resumeLesson();
+    expect(ws.lessonDesk).not.toBeNull();
+
+    await page.saveThenOpen(rowA);
+    const saved = await everyKept(designs, 'satellite');
+    expect(saved.map((r) => (r.design as SatelliteDesign).id), 'the lesson\'s design kept as one of the student\'s').not.toContain('slesson');
+    expect(saved.map((r) => [(r.design as SatelliteDesign).id, (r.design as SatelliteDesign).power.arrayArea])).toEqual([[own, 0.42]]);
+    expect(opened).toHaveBeenCalledTimes(1);
+    // the lesson's design is still aside, as the student left it
+    ws.resumeLesson();
+    expect(ws.design.power.arrayArea).toBe(0.88);
+  }, 60_000);
+
   it('opens a row over an untouched row design, or an untouched template, without asking', async () => {
     const ws = new SatelliteWorkspace();
     const { page, opened } = pageOf(ws, storeWith(memory()));
@@ -260,7 +291,6 @@ describe('M-BUILD-007: a requirements row opened on the bench', () => {
 });
 
 describe('M-BUILD-007: a design lesson\'s design is put aside, not replaced', () => {
-  const desk = (): LessonDesk => ({ start: designFromTemplate('theos2', 'slesson', 'Lesson start'), date: '2026-03-20', level: 'high', locked: ['orbit'] });
 
   it('opening a saved design during a lesson puts the lesson\'s design aside; back at the lesson, it is there as the student left it', async () => {
     const designs = storeWith(memory());
@@ -313,6 +343,33 @@ describe('M-BUILD-007: a design lesson\'s design is put aside, not replaced', ()
     expect(ws.lessonDesk).toBeNull();
     expect(ws.design).toEqual(own);
     (ws as unknown as { resumeLesson(): void }).resumeLesson();
+    expect(ws.design.power.arrayArea).toBe(0.88);
+  }, 60_000);
+
+  it('"Save, then open" keeps the student\'s own design, though the lesson\'s was brought back before the answer (review of f00b288)', async () => {
+    const designs = storeWith(memory());
+    const kept = await designs.save({ kind: 'satellite', name: 'Kept NAPA-2', design: designFromTemplate('napa2', 'skept', 'Kept NAPA-2') });
+    const ws = new SatelliteWorkspace();
+    const s = satelliteStore(ws, designs);
+    ws.change(withArray(ws.design, 0.42));
+    const own = ws.design.id;
+    ws.enterLesson(desk());
+    ws.change(withArray(ws.design, 0.88));
+    await s.openRecord(kept.id);
+    expect(s.opening).toBe(kept.id);
+    // the lesson strip's "open the design", before the answer
+    ws.resumeLesson();
+    expect(ws.lessonDesk).not.toBeNull();
+
+    // the answer, as the question's "Save it, then open" gives it
+    expect(await s.saveFirst(kept)).toBeNull();
+    const saved = (await everyKept(designs, 'satellite')).filter((r) => r.id !== kept.id);
+    expect(saved.map((r) => (r.design as SatelliteDesign).id), 'the lesson\'s design kept as one of the student\'s').not.toContain('slesson');
+    expect(saved.map((r) => [(r.design as SatelliteDesign).id, (r.design as SatelliteDesign).power.arrayArea])).toEqual([[own, 0.42]]);
+    await s.openRecord(kept.id, true);
+    expect(ws.recordId).toBe(kept.id);
+    // the lesson's design is still aside, as the student left it
+    ws.resumeLesson();
     expect(ws.design.power.arrayArea).toBe(0.88);
   }, 60_000);
 });
@@ -414,6 +471,28 @@ describe('M-BUILD-007: opening a saved rocket over the rocket designer\'s draft'
     expect(level.result.ok && resaved.design).toEqual(level.result.ok ? level.result.spec : null);
     expect((await designs.list('vehicle')).length).toBe(3);
     expect(await s.unsaved(f)).toBe(false);
+  });
+
+  it('"Save, then open" keeps the draft the question was about, though the other draft was shown before the answer (review of f00b288)', async () => {
+    const { designs, p } = await kept();
+    const state = fresh();
+    state.parts.edit.groups = [{ ...DEFAULT_GROUP }];
+    const { level, host, open } = rocketLevel(state);
+    const parts = specOf({ ...state, mode: 'parts' });
+    const s = storeOf('vehicle', designs, host);
+    await s.openRecord(p.id);
+    expect(s.opening).toBe(p.id);
+    // the student looks at the untouched remix before answering
+    level.setMode('remix');
+
+    // the answer, as the question's "Save it, then open" gives it
+    expect(await s.saveFirst(p)).toBeNull();
+    expect(state.remix.recordId, 'the untouched remix was saved in place of the changed parts design').toBeNull();
+    expect(state.parts.recordId).not.toBeNull();
+    expect(asVehicle(await designs.get(state.parts.recordId!)).design).toEqual(parts);
+    expect((await designs.list('vehicle')).length).toBe(4);
+    await s.openRecord(p.id, true);
+    expect(open).toHaveBeenCalledTimes(1);
   });
 });
 

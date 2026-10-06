@@ -9,8 +9,11 @@
  * "Save it, then open" keeps B's change in its record and opens A; A, as
  * saved, gives way to B at once. Rocket: save an Electron remix, stretch its
  * first stage, Open it again: asked, "Open without saving" puts the saved one
- * back, and opened once more it opens at once. Then the question in Thai and
- * Russian, each with a screenshot for the owner.
+ * back, and opened once more it opens at once. The answer is about the draft
+ * the question was about: a parts design saved, then renamed, Opened from the
+ * remix, the remix shown again before "Save it, then open": the parts design
+ * is the one kept (review of f00b288). Then the question in Thai and Russian,
+ * each with a screenshot for the owner.
  */
 import { workspaceValue } from '../workspace-storage.mjs';
 
@@ -116,6 +119,22 @@ export default async function buildUnsavedOpen(t) {
     await page.click(`${ROCKET} [data-k="open:${rec.id}"]`);
     await page.waitForTimeout(500);
     t.check(await rocketAsk.count() === 0, 'asked about a rocket with nothing unsaved');
+  }
+
+  // the remix shown again before the answer: "Save it, then open" keeps the parts design the question was about
+  await page.click(`${ROCKET} [data-k="mode:parts"]`);
+  const ids = (await kept(page)).map((d) => d.id);
+  await page.click(`${ROCKET} [data-k="store:save"]`);
+  const parts = await t.until(async () => (await kept(page)).find((d) => !ids.includes(d.id)), { timeoutMs: 30_000 });
+  if (!t.check(parts, 'the parts design was not saved')) return;
+  await page.fill(`${ROCKET} [data-k="name"]`, 'Parts, renamed');
+  await page.click(`${ROCKET} [data-k="mode:remix"]`);
+  await page.click(`${ROCKET} [data-k="open:${parts.id}"]`);
+  if (t.check(await rocketAsk.waitFor({ timeout: 5_000 }).then(() => true, () => false), 'opening the renamed parts design did not ask')) {
+    await page.click(`${ROCKET} [data-k="mode:remix"]`);
+    await page.click(`${ROCKET} [data-k="ask:save"]`);
+    t.check(await t.until(async () => (await kept(page)).some((d) => d.id === parts.id && d.name === 'Parts, renamed'), { timeoutMs: 15_000 }),
+      `"Save it, then open" did not keep the parts design the question was about: ${JSON.stringify((await kept(page)).map((d) => d.name))}`);
   }
   app.checkErrors();
 
