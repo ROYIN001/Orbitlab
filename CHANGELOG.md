@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Tests (F7): the browser harness now stores the first-use guide as `dismissed`, the value the app hides it for, so journeys that open the app without the guide no longer run under it, and every such journey checks the guide is hidden after start-up.
 - Tests: the phone step of the PR smoke check (`r2-shell-smoke`) waits a full second for a paused flight to settle before opening the event list, and reports what the chip and the flight were if the list does not open.
 - Build (D-38 offset for the G2 layout fix): the published page leaves out the source comments of `index.html` (2.65 kB less for every visitor and in the offline copy); what the page shows and does is unchanged.
 - Docs: DECISIONS records the owner's follow-up answers of 2026-10-05 — D-23 (a second maintainer is not a condition), the D-16 note (pass/fail threshold), D-36.A3 (in-flight edits take effect on confirm), registry.tsv (commit it) and HUF-D02 (stays a build-or-not question).
