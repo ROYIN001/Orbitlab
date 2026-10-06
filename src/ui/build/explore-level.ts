@@ -61,7 +61,7 @@ import { VehiclePicker } from './vehicle-picker';
 import { figuresView, mass } from './figures';
 import { designTextList } from './design-text';
 import { ExploreStore } from './explore-store';
-import { runRatingsJob } from './ratings-job';
+import { ratingsRecord, runRatingsJob, unfinishedRatings, unfinishedRatingsText } from './ratings-job';
 import './explore.css';
 
 export interface ExploreHost {
@@ -702,8 +702,12 @@ export class ExploreLevel {
       job.flights = flights;
       if (this.ratingsJob === job) this.keepFocus(() => this.renderRatings());
     }).then((res) => {
-      draft.ratings = { signature, payloadLEO: res.payloadLEO.kg, payloadGTO: res.payloadGTO.kg };
-      this.ratingsMessage = { level: 'ok', text: t('build.ex.ratings.done', { n: res.flights }) };
+      // an unfinished search is said as such and nothing of it is kept (M-BUILD-006, D-67)
+      const record = ratingsRecord(signature, res);
+      const unfinished = unfinishedRatings(res);
+      if (record) draft.ratings = record;
+      this.ratingsMessage = unfinished ? { level: 'error', text: unfinishedRatingsText(unfinished) }
+        : { level: 'ok', text: t('build.ex.ratings.done', { n: res.flights }) };
     }).catch((error: unknown) => {
       const cancelled = error instanceof DOMException && error.name === 'AbortError';
       this.ratingsMessage = { level: cancelled ? 'ok' : 'error', text: t(cancelled ? 'build.ex.ratings.stopped' : 'build.ex.ratings.failed') };
