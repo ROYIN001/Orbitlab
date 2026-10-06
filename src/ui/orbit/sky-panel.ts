@@ -162,7 +162,6 @@ export class RealSky {
   readonly reentry = { mass: 1000, area: 5, cd: 2.2, from: 'decay' as DragFrom, open: false };
   /** the re-entry prediction running, to stop it */
   private reentryAbort: AbortController | null = null;
-  private napaCase: { box: Reentry; fitted: Reentry | null; b: number | null; actual: number } | null = null;
 
   /**
    * The results, each with the inputs it was found from (audit 2026-09-27 A4,
@@ -184,6 +183,8 @@ export class RealSky {
       ...(i.file ? [t('result.file', { file: i.file.replace(/#\d+$/, '') })] : []),
     ]),
     caseStudy: new ResultSlot<CaseInputs, { rows: { name: string; missionKey: string; p: Reentry; actual: number }[]; sun: SunSource }>(),
+    /** M-ORBIT-002: NAPA-2's case, kept with the data mode it ran in as the Long March one is */
+    napaCase: new ResultSlot<CaseInputs, { box: Reentry; fitted: Reentry | null; b: number | null; actual: number }>(),
   };
   /** A14: only the latest catalogue request may answer */
   private readonly loads = new Latest();
@@ -964,20 +965,27 @@ export class RealSky {
     this.host.refreshFacts();
   }
 
-  /** NAPA-2 from its first element set, as a tumbling box and with B fitted to the set's decay (P2.5). */
-  private async runNapaCase(): Promise<void> {
+  /**
+   * NAPA-2 from its first element set, as a tumbling box and with B fitted to the set's decay (P2.5).
+   * Public, like `caseInputs()`, only so tests/result-slot.test.ts can run it and read its freshness.
+   */
+  async runNapaCase(): Promise<void> {
+    const slot = this.results.napaCase;
+    const gen = slot.start(this.caseInputs());
+    this.host.refreshFacts();
     const { series } = await this.sun();
+    if (!slot.current(gen)) return;
     const el = elementsFromRecord(NAPA2.elements);
     const b = ballisticFromDecayRate(el, series);
-    this.napaCase = {
+    if (slot.accept(gen, {
       box: predictReentry(el, { mass: NAPA2.mass, area: tumblingBoxArea(NAPA2.size), cd: 2.2 }, series, 3000),
       fitted: b === null ? null : predictReentry(el, craftOfB(b), series, 3000),
       b, actual: Date.parse(`${NAPA2.decay}T12:00:00Z`) / 86400000 + 2440587.5,
-    };
-    this.host.refreshFacts();
+    })) this.host.refreshFacts();
   }
 
-  private caseInputs(): CaseInputs {
+  /** The inputs the case studies are kept with (the data mode); public only for tests/result-slot.test.ts. */
+  caseInputs(): CaseInputs {
     return { sw: this.host.provider().mode };
   }
 
@@ -1094,11 +1102,13 @@ export class RealSky {
   private napaCaseBlock(): HTMLElement {
     const box = el('div', 'pg-reentry-case');
     box.append(el('h3', 'pg-case-title', t('reentry.napa.title')), el('p', 'pg-tool-lead', t('reentry.napa.lead')));
-    const c = this.napaCase;
-    if (!c) {
-      box.append(button('watch-btn', t('reentry.napa.run'), () => { void this.runNapaCase(); }));
-      return box;
-    }
+    const slot = this.results.napaCase;
+    const fresh = slot.status(this.caseInputs());
+    // run again when the data mode has changed since (its space weather may differ)
+    if (slot.state !== 'running' && (!slot.result || fresh === 'stale')) box.append(button('watch-btn', t('reentry.napa.run'), () => { void this.runNapaCase(); }));
+    if (slot.state === 'running') box.append(el('p', 'pg-tool-out', t('reentry.running')));
+    const c = slot.result;
+    if (!c) return box;
     const day = (jd: number) => dateOf(jd).toISOString().slice(0, 10);
     const err = (p: Reentry) => { const x = ((p.jd! - p.from) / (c.actual - p.from) - 1) * 100; return `${x >= 0 ? '+' : '−'}${num(Math.abs(x), 0)}`; };
     const ol = el('ol', 'pg-conj-list');
@@ -1112,7 +1122,11 @@ export class RealSky {
     };
     row(t('reentry.napa.box', { b: bText((2.2 * tumblingBoxArea(NAPA2.size)) / NAPA2.mass) }), c.box);
     if (c.b !== null) row(t('reentry.napa.fitted', { b: bText(c.b) }), c.fitted);
-    box.append(ol, el('p', 'pg-tool-out', t('reentry.napa.actual', { date: NAPA2.decay, days: num(c.actual - c.box.from, 0) })), el('p', 'pg-note', t('reentry.napa.lesson')), el('p', 'pg-note', t('reentry.napa.source')));
+    const result = el('div', 'pg-result');
+    result.append(ol);
+    if (fresh === 'stale') box.append(el('p', 'pg-warn pg-result-stale', t('result.staleData')));
+    markFreshness(result, fresh);
+    box.append(result, el('p', 'pg-tool-out', t('reentry.napa.actual', { date: NAPA2.decay, days: num(c.actual - c.box.from, 0) })), el('p', 'pg-note', t('reentry.napa.lesson')), el('p', 'pg-note', t('reentry.napa.source')));
     return box;
   }
 
