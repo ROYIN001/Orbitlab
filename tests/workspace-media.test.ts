@@ -4,10 +4,11 @@ import { migrateLegacyMedia, deleteProfileMedia } from '../src/workspace/media-o
 import { previewMediaArchive, exportProfileMediaArchive, importProfileMediaArchive, MEDIA_MAX_BYTES } from '../src/workspace/media-archive';
 import { bindWorkspaceStorage } from '../src/workspace/storage';
 import { saveUserSoundtrack, loadUserSoundtrack, removeUserSoundtrack } from '../src/audio/soundtrack';
-import { WorkspaceRepository, type WorkspaceLocks } from '../src/workspace/repository';
+import { WorkspaceRepository, LEGACY_PROFILE_ID, PROFILE_CATALOG_KEY, type WorkspaceLocks, type WorkspaceMedia } from '../src/workspace/repository';
 
-/** A transactional IndexedDB test double, retaining Blob bytes and running request callbacks before commit. */
-function database() {
+/** A transactional IndexedDB test double, retaining Blob bytes and running request callbacks before commit.
+ * `refusePut` makes a put fail and abort its transaction, as a quota error does in a browser. */
+function database(refusePut?: (value: Record<string, unknown>) => boolean) {
   const rows = new Map<string, Record<string, unknown>>();
   vi.stubGlobal('indexedDB', { open() {
     const request = { result: { close() {}, transaction(_store: string, mode: string) {
@@ -29,7 +30,10 @@ function database() {
       const store = {
         transaction: tx,
         get: (key: string) => request(() => working.get(key)),
-        put: (value: Record<string, unknown>) => request(() => { working.set(value.id as string, value); return value.id; }),
+        put: (value: Record<string, unknown>) => request(() => {
+          if (refusePut?.(value)) { tx.abort(); return undefined; }
+          working.set(value.id as string, value); return value.id;
+        }),
         delete: (key: string) => request(() => { working.delete(key); return undefined; }),
         getAll: () => request(() => [...working.values()]), count: () => request(() => working.size),
         openCursor() {
@@ -77,6 +81,63 @@ describe('owned user recordings and separate binary archives', () => {
     rows.set('A:soyuzIss', { id: 'A:soyuzIss', profileId: 'A', missionId: 'soyuzIss', blob: new Blob(['owned']), t0: 2, name: 'owned' });
     await expect(migrateLegacyMedia('A')).rejects.toThrow(); expect(rows.size).toBe(2);
     expect(await (rows.get('soyuzIss')!.blob as Blob).text()).toBe('legacy');
+  });
+  it('M-PLATFORM-010 (D-68): moves the non-colliding legacy recordings one by one and leaves the colliding original in place, unowned', async () => {
+    const rows = database();
+    const legacy = (id: string, text: string) => ({ id, blob: new Blob([text]), t0: 60, name: `${text}.mp3` });
+    rows.set('apollo11', legacy('apollo11', 'apollo'));
+    rows.set('soyuzIss', legacy('soyuzIss', 'legacy'));
+    rows.set('artemis1', legacy('artemis1', 'artemis'));
+    rows.set('A:soyuzIss', { id: 'A:soyuzIss', profileId: 'A', missionId: 'soyuzIss', blob: new Blob(['owned']), t0: 2, name: 'owned.mp3' });
+    rows.set('B:apollo11', { id: 'B:apollo11', profileId: 'B', missionId: 'apollo11', blob: new Blob(['other']), t0: 3, name: 'other.mp3' });
+    const original = rows.get('soyuzIss'), owned = rows.get('A:soyuzIss'), other = rows.get('B:apollo11');
+    await expect(migrateLegacyMedia('A')).resolves.toBe(1);
+    const mine = await profileMedia('A');
+    expect(mine.map((track) => track.missionId).sort()).toEqual(['apollo11', 'artemis1', 'soyuzIss']);
+    expect(mine.find((track) => track.missionId === 'apollo11')).toMatchObject({ id: 'A:apollo11', profileId: 'A', t0: 60, name: 'apollo.mp3' });
+    expect(await (rows.get('A:apollo11')!.blob as Blob).text()).toBe('apollo');
+    expect(await (rows.get('A:artemis1')!.blob as Blob).text()).toBe('artemis');
+    expect(rows.has('apollo11')).toBe(false); expect(rows.has('artemis1')).toBe(false);
+    // Neither colliding copy is deleted, rewritten or given an owner; another learner's audio is untouched.
+    expect(rows.get('soyuzIss')).toBe(original); expect(rows.get('soyuzIss')!.profileId).toBeUndefined();
+    expect(rows.get('A:soyuzIss')).toBe(owned); expect(rows.get('B:apollo11')).toBe(other);
+    expect(await (rows.get('soyuzIss')!.blob as Blob).text()).toBe('legacy');
+    expect(await (rows.get('A:soyuzIss')!.blob as Blob).text()).toBe('owned');
+    expect(rows.size).toBe(5);
+    await expect(migrateLegacyMedia('A')).resolves.toBe(1); expect(rows.size).toBe(5); expect(rows.get('soyuzIss')).toBe(original);
+  });
+  it('M-PLATFORM-010 (D-68): one failed move keeps that original and does not undo the others; a retry moves the rest', async () => {
+    let refuse = true;
+    const rows = database((value) => refuse && value.id === 'A:artemis1');
+    rows.set('apollo11', { id: 'apollo11', blob: new Blob(['apollo']), t0: 1, name: 'apollo.mp3' });
+    rows.set('artemis1', { id: 'artemis1', blob: new Blob(['artemis']), t0: 2, name: 'artemis.mp3' });
+    rows.set('vostok1', { id: 'vostok1', blob: new Blob(['vostok']), t0: 3, name: 'vostok.mp3' });
+    await expect(migrateLegacyMedia('A')).rejects.toThrow();
+    expect([...rows.keys()].sort()).toEqual(['A:apollo11', 'A:vostok1', 'artemis1']);
+    expect(await (rows.get('artemis1')!.blob as Blob).text()).toBe('artemis');
+    refuse = false;
+    await expect(migrateLegacyMedia('A')).resolves.toBe(0);
+    expect([...rows.keys()].sort()).toEqual(['A:apollo11', 'A:artemis1', 'A:vostok1']);
+  });
+  it('M-PLATFORM-010 (D-68): a start with one colliding recording finishes the migration, says so once and does not walk the media store again', async () => {
+    const rows = database();
+    rows.set('apollo11', { id: 'apollo11', blob: new Blob(['apollo']), t0: 1, name: 'apollo.mp3' });
+    rows.set('soyuzIss', { id: 'soyuzIss', blob: new Blob(['legacy']), t0: 60, name: 'legacy.mp3' });
+    rows.set('artemis1', { id: 'artemis1', blob: new Blob(['artemis']), t0: 2, name: 'artemis.mp3' });
+    const own = trackKey(LEGACY_PROFILE_ID, 'soyuzIss');
+    rows.set(own, { id: own, profileId: LEGACY_PROFILE_ID, missionId: 'soyuzIss', blob: new Blob(['owned']), t0: 2, name: 'owned.mp3' });
+    let runs = 0;
+    const media: WorkspaceMedia = { migrate: async (id) => { runs++; return migrateLegacyMedia(id); }, delete: deleteProfileMedia };
+    const storage = localMemory(), session = localMemory();
+    const first = await new WorkspaceRepository(storage, session, locks, media).initialize();
+    expect(first.status).toBe('durable'); expect(runs).toBe(1);
+    expect(JSON.parse(storage.getItem(PROFILE_CATALOG_KEY)!).mediaMigrated).toBe(true);
+    expect(first.notices).toEqual(['media-collisions-kept']);
+    expect((await profileMedia(LEGACY_PROFILE_ID)).map((track) => track.missionId).sort()).toEqual(['apollo11', 'artemis1', 'soyuzIss']);
+    expect(await (rows.get('soyuzIss')!.blob as Blob).text()).toBe('legacy'); expect(await (rows.get(own)!.blob as Blob).text()).toBe('owned');
+    first.close();
+    const next = await new WorkspaceRepository(storage, session, locks, media).initialize();
+    expect(runs).toBe(1); expect(next.notices).toEqual([]); expect(rows.size).toBe(4); next.close();
   });
   it('uses captured profile IDs for user upload/load/removal and does not touch another owner with the same mission/name', async () => {
     database(); const storage = localMemory(), session = localMemory(), repo = await new WorkspaceRepository(storage, session, locks).initialize();
