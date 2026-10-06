@@ -8,7 +8,7 @@ import { LifetimeDialog } from './ui/lifetime';
 import { handoffAvailable, handoffFromFlight, type OrbitHandoff } from './orbit/handoff';
 import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
 import { SoundtrackPanel } from './ui/soundtrack-panel';
-import { ComparePanel } from './ui/compare';
+import { ComparePanel, flightOnScreen } from './ui/compare';
 import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
 import { assessMissionResult } from './ui/result-content';
 import { enableChartExport } from './ui/chart-export';
@@ -592,7 +592,7 @@ class App {
       () => this.continueInOrbit());
     this.compare = new ComparePanel({
       currentAsReference: () => this.currentAsReference(),
-      current: () => this.tel.exportSource(),
+      current: () => flightOnScreen(this.player.live, this.tel.exportSource(), this.simView?.sim ?? null),
       onReference: (ref) => { this.tel.setReference(ref); this.ghostJd = NaN; },
     });
     this.tel.compareHost.append(this.compare.root);

@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Launch (FX-5, M-LAUNCH-029): in a replay, the Compare table's "This flight" column now shows the flight at the timeline cursor and changes as you scrub, like the HUD and the telemetry charts; it used to show the live run's latest figures. During the live flight the table is unchanged.
 - Launch (G2 hold, F5): the flight scene keeps a minimum height in Explore and Engineer on short and zoomed laptop screens (it shrank to 2–95 px at 1100×650 and at 125–150 % zoom); the key-events timeline, play/pause and the clock stay on the first screen, the six-DOF/TORU panels and the telemetry strip move below the scene and are reached by scrolling, and a phone's flight bar no longer covers the scene.
 - Docs (GK0): K0's KPI values and retrospective are recorded, and PROGRESS shows CO-5 step 1 (#93) as published.
 - Tests (F7): the browser harness now stores the first-use guide as `dismissed`, the value the app hides it for, so journeys that open the app without the guide no longer run under it, and every such journey checks the guide is hidden after start-up.
