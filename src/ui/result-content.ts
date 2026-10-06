@@ -23,7 +23,11 @@ export interface ResultMetric {
   actual: number | null;
   delta: number | null;
   unit: 'km' | 'deg';
+  /** M-LAUNCH-031: outside the band on the set the verdict was judged on (`judged`), not on the displayed orbit. */
   outside: boolean | null;
+  /** The value the recorded verdict was judged on, at `judgedTime`; null when the record does not carry it. */
+  judged: number | null;
+  judgedDelta: number | null;
 }
 
 export interface MissionResultModel {
@@ -33,6 +37,9 @@ export interface MissionResultModel {
   outcomeTime: number;
   reviewTime: number;
   metrics: ResultMetric[];
+  /** M-LAUNCH-031: when the verdict was judged (null for a failure), and whether on the physical apsides. */
+  judgedTime: number | null;
+  judgedBasis: 'physical' | 'osculating' | null;
   recovery: RecoveryResult;
   payloadSeparated: boolean;
   issPlaneOnly: boolean;
@@ -70,16 +77,40 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
   const elements = state.elements;
   const residual = orbitResiduals(target, elements, true);
   const misses = new Set(residual.misses.map(miss => miss.param));
-  const metric = (key: OrbitMissParam, wanted: number | null, actual: number, delta: number | null, unit: 'km' | 'deg'): ResultMetric => ({
-    key, target: finite(wanted), actual: finite(actual), delta: finite(delta), unit,
-    outside: wanted === null ? null : misses.has(key),
-  });
+  // M-LAUNCH-031: the verdict's own numbers, as its completion event recorded them (the physical apsides when
+  // they differ from the conic, `apAltM`/`peAltM`). A row is flagged from them, never from the drift since: a
+  // target reached is inside the band on every row it was judged on.
+  const p = outcome === 'failed' ? undefined : completed!.params;
+  const num = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
+  const judgedValue: Record<OrbitMissParam, number | null> = {
+    perigee: num(p?.peAltM) !== null ? num(p?.peAltM)! / 1000 : num(p?.pe),
+    apogee: num(p?.apAltM) !== null ? num(p?.apAltM)! / 1000 : num(p?.ap),
+    inclination: num(p?.inc), raan: num(p?.raan),
+  };
+  const judgedMisses = outcome !== 'offTarget' ? misses : new Set(orbitResiduals(target, {
+    ...elements,
+    periapsisAlt: judgedValue.perigee !== null ? judgedValue.perigee * 1000 : elements.periapsisAlt,
+    apoapsisAlt: judgedValue.apogee !== null ? judgedValue.apogee * 1000 : elements.apoapsisAlt,
+    i: judgedValue.inclination !== null ? judgedValue.inclination / RAD : elements.i,
+    raan: judgedValue.raan !== null ? judgedValue.raan / RAD : elements.raan,
+  }, true).misses.map(miss => miss.param));
+  const metric = (key: OrbitMissParam, wanted: number | null, actual: number, delta: number | null, unit: 'km' | 'deg'): ResultMetric => {
+    const judged = outcome === 'failed' ? null : judgedValue[key];
+    const judgedDelta = judged === null || wanted === null ? null
+      : key === 'raan' ? ((judged - wanted) % 360 + 540) % 360 - 180 : judged - wanted;
+    return { key, target: finite(wanted), actual: finite(actual), delta: finite(delta), unit,
+      outside: wanted === null ? null : outcome === 'target' ? false : judgedMisses.has(key),
+      judged: finite(judged), judgedDelta: finite(judgedDelta) };
+  };
   const metrics = [
     metric('perigee', target.perigee / 1000, elements.periapsisAlt / 1000, residual.perigee / 1000, 'km'),
     metric('apogee', target.apogee / 1000, elements.apoapsisAlt / 1000, residual.apogee / 1000, 'km'),
     metric('inclination', target.inclination * RAD, elements.i * RAD, residual.inclination, 'deg'),
     metric('raan', target.raan === null ? null : target.raan * RAD, elements.raan * RAD, residual.raan, 'deg'),
   ];
+  const judgedTime = outcome === 'failed' ? null : outcomeTime;
+  const judgedBasis = outcome === 'failed' ? null
+    : num(p?.peAltM) !== null || num(p?.apAltM) !== null ? 'physical' as const : 'osculating' as const;
 
   let cause: ResultCause = outcome === 'target' ? 'target' : 'incomplete';
   let reviewTime = outcomeTime;
@@ -115,7 +146,7 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
     else recovery = 'flying';
   }
   return {
-    outcome, cause, displayedTime: state.t, outcomeTime, reviewTime, metrics, recovery,
+    outcome, cause, displayedTime: state.t, outcomeTime, reviewTime, metrics, judgedTime, judgedBasis, recovery,
     payloadSeparated: state.payloadSeparated, issPlaneOnly: target.raanMode === 'iss',
     aeroWarnings: events.flatMap(event => {
       const p = event.params;
