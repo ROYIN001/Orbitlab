@@ -21,6 +21,12 @@ const SAT = '.bsat-grid:not([hidden])';
 const ROCKET = '.bx-grid:not([hidden])';
 
 const kept = async (page) => (await workspaceValue(page, DESIGNS))?.designs ?? [];
+/** A screenshot of the question for the owner: in the middle of the window, the "ready offline" note closed. */
+async function shotOf(app, question, label) {
+  await app.page.locator('#pwa-toast .pwa-toast-close').click({ timeout: 1000 }).catch(() => {});
+  await question.evaluate((n) => n.scrollIntoView({ block: 'center' }));
+  await app.shot(label);
+}
 const focusKey = (page) => page.evaluate(() => document.activeElement?.dataset?.k ?? null);
 
 /** The rocket designer with an Electron remix saved and then stretched; the saved record. */
@@ -70,7 +76,7 @@ export default async function buildUnsavedOpen(t) {
   if (!asked) return;
   t.check(/not saved/.test(await ask.innerText()), `the question does not say the changes are not saved: ${await ask.innerText()}`);
   t.check(await focusKey(page) === 'ask:save', `the keyboard is not on "Save it, then open": ${await focusKey(page)}`);
-  await app.shot('ask-en');
+  await shotOf(app, ask, 'ask-en');
 
   // Escape keeps the design on screen as it is
   await page.keyboard.press('Escape');
@@ -118,8 +124,7 @@ export default async function buildUnsavedOpen(t) {
     if (!t.check(await q.waitFor({ timeout: 5_000 }).then(() => true, () => false), `${lang}: no question`)) continue;
     const text = await q.innerText();
     t.check(script.test(text) && !/not saved/.test(text), `${lang}: the question is not translated: ${text}`);
-    await q.scrollIntoViewIfNeeded();
-    await other.shot(`ask-${lang}`);
+    await shotOf(other, q, `ask-${lang}`);
     other.checkErrors();
   }
 }
