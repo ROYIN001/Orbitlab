@@ -1119,18 +1119,21 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
    row is at least the stage, the strip gets the rest, and when there is no
    rest the workspace scrolls down to it. On a tall screen nothing moves.
 
-   `--scene-min` is the proposal on the G2 review page (the owner decides the
-   number; tests/browser/journeys/r2-scene-floor.mjs holds the same formula):
-   40 % of the window's height, at least 200 px, and never more than the
-   320 px floor the scene already had above 1180 px and on phones.
+   `--scene-min` is the owner's answer on the G2 card (2026-10-06, option b;
+   tests/browser/scene-floor.mjs holds the same formula): 50 % of the
+   window's height, at least 240 px, and never asked to exceed 400 px. On a
+   short window the playback row may then sit below the first screen, reached
+   by scrolling; the owner chose that over a smaller picture.
    `--stage-min` adds the playback row (150 px; 174 px with the achieved-speed
    line) and the 12 px gap. `contain: size` keeps the canvas's own pixel size
    out of the stage's minimum: the stage is as small as its floor allows,
    whatever resolution the renderer last drew at. Phones (up to 860 px) and
-   the lean modes keep their layouts: there the stage is `display: contents`. */
+   the lean modes keep their layouts: there the stage is `display: contents`;
+   on phones the picture keeps the same floor. */
+:root { --scene-min: clamp(240px, 50vh, 400px); }
 .flight-stage { display: contents; }
 @media (min-width: 861px) {
-  :root { --scene-min: clamp(200px, 40vh, 320px); --stage-min: calc(var(--scene-min) + 186px); }
+  :root { --stage-min: calc(var(--scene-min) + 186px); }
   .workspace { grid-template-rows: minmax(var(--stage-min), 1fr); overflow-y: auto; }
   .flight-column { overflow-y: auto; }
   .flight-stage { display: flex; flex-direction: column; gap: 12px; flex: 1 1 0; }
@@ -1163,6 +1166,7 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
      mission setup panel below it. The whole page scrolls at this width, so a
      column that grows to fit its controls costs nothing. */
   .flight-column { order: 0; height: auto; min-height: max(420px, 66vh); flex: none; }
+  .viewport { min-height: var(--scene-min); }
   #setup { order: 1; }
   #telemetry { order: 2; max-height: none; }
   .setup-scroll { overflow: visible; }

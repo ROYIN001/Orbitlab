@@ -439,7 +439,7 @@ class App {
     const phone = matchMedia('(max-width: 860px)');
     const fit = (): void => {
       if (!phone.matches) { guide.style.removeProperty('--guide-room'); return; }
-      const sceneMin = Math.min(320, Math.max(200, 0.4 * innerHeight));
+      const sceneMin = Math.min(400, Math.max(240, 0.5 * innerHeight));
       // the guide's 10 px top margin, the nav under it and 12 px before the scene
       const room = innerHeight - top.getBoundingClientRect().height - 10 - nav.offsetHeight - 12 - sceneMin;
       guide.style.setProperty('--guide-room', `${Math.max(96, Math.floor(room))}px`);
