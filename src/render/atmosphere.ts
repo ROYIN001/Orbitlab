@@ -327,6 +327,11 @@ export class PhysicalSky {
     this.ready = true;
   }
 
+  /** FX-8: fill the tables again (a lost context took them). */
+  invalidate(): void {
+    this.ready = false;
+  }
+
   /**
    * Point the pass at this frame: the camera (its matrices, and its position
    * in ECI metres) and the sun.
