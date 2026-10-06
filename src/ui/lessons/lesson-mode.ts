@@ -63,6 +63,7 @@ import type { LessonDesk } from '../build/satellite-workspace';
 import { designLessonKey } from './design-key';
 import { designChip, designCriterionName, levelName, lockName, requirementsBox } from './design-strip';
 import { designValueText } from './design-text';
+import { CheckProgressLine, checkingKeyPart, stripRebuilds } from './strip-progress';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
 import { letterOf } from '../../worksheets/bank-items';
 import type { CaseId, CaseLessonState } from '../../worksheets/case-ids';
@@ -231,6 +232,8 @@ export class LessonMode implements LessonToolsHost {
   /** whether the last save reached the browser's storage; null before the first (audit 2026-09-27 A19) */
   private saved: boolean | null = null;
   private lastStripKey = '';
+  /** the progress line of the design check under way, in the strip built last (M-LEARNING-001) */
+  private checkLine: CheckProgressLine | null = null;
   /** what the Orbit section was last told of the case lesson open */
   private orbitKey = 'null';
   /** E05: the lesson each flight was flown in, for its worksheet's title */
@@ -461,7 +464,7 @@ export class LessonMode implements LessonToolsHost {
     // let the strip say "working out" before the figures take the main thread for a moment
     setTimeout(() => {
       if (state.checking !== job) return;
-      designLessonKey(lesson, snapshot, job.controller.signal, (f) => { job.progress = f; this.lastStripKey = ''; this.paintStrip(); })
+      designLessonKey(lesson, snapshot, job.controller.signal, (f) => this.onCheckTick(a, job, f))
         .then((key) => {
           if (this.active !== a || state.checking !== job) return;
           state.checking = null;
@@ -481,6 +484,16 @@ export class LessonMode implements LessonToolsHost {
           this.paintStrip();
         });
     }, 30);
+  }
+
+  /**
+   * A progress tick of a design check's lifetime run (~100 a check): the
+   * figure is written into the strip in place — the strip is not built again,
+   * so the answer field being typed in keeps its focus and caret (M-LEARNING-001).
+   */
+  private onCheckTick(a: Active, job: NonNullable<DesignState['checking']>, f: number): void {
+    job.progress = f;
+    if (this.active === a && a.design?.checking === job) this.checkLine?.set(f);
   }
 
   /** The design last checked, graded again with the answers as they stand. */
@@ -965,6 +978,7 @@ export class LessonMode implements LessonToolsHost {
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement;
     if (typing && g?.final) return;
     this.lastStripKey = key;
+    this.checkLine = null;
     const lesson = a.lesson;
     const s = this.strip;
     const head = this.stripHead(lesson, hints);
@@ -1058,10 +1072,10 @@ export class LessonMode implements LessonToolsHost {
     const g = a.grade;
     const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
     const key = JSON.stringify([getLang(), lesson.id, !!c.sheet, c.failed, g?.verdict, g?.criteria.map((x) => [x.state, x.value, !!x.revealed]), hints, a.answers, a.recorded, this.saved, this.hasRevealed(lesson.id)]);
-    if (key === this.lastStripKey) return;
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
-    if (typing && this.lastStripKey) return;
+    if (!stripRebuilds(this.lastStripKey, key, typing)) return;
     this.lastStripKey = key;
+    this.checkLine = null;
     const head = this.stripHead(lesson, hints);
     const status = el('div', 'lesson-status');
     if (c.failed) status.append(el('p', 'lesson-note fail', c.failed));
@@ -1108,13 +1122,13 @@ export class LessonMode implements LessonToolsHost {
     const stale = this.designStale(a);
     const shown = !!g && !stale && !d.checking;
     const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
-    const key = JSON.stringify([getLang(), lesson.id, stale, d.keyFor !== null, d.checking ? [d.checking.record, Math.round(d.checking.progress * 100)] : null,
+    const key = JSON.stringify([getLang(), lesson.id, stale, d.keyFor !== null, checkingKeyPart(d.checking),
       d.failed, d.answersFirst, g?.verdict, g?.lockBroken, g?.criteria.map((x) => [x.state, x.value, x.expected, !!x.revealed]), hints, a.answers, a.recorded,
       this.saved, this.hasRevealed(lesson.id)]);
-    if (key === this.lastStripKey) return;
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
-    if (typing && this.lastStripKey) return;
+    if (!stripRebuilds(this.lastStripKey, key, typing)) return;
     this.lastStripKey = key;
+    this.checkLine = null;
     const head = this.stripHead(lesson, hints);
     const crits = el('div', 'lesson-crits');
     for (const c of lesson.criteria) if (c.kind === 'design') crits.append(designChip(c, g?.criteria.find((x) => x.id === c.id), d.key, stale || !!d.checking));
@@ -1125,9 +1139,15 @@ export class LessonMode implements LessonToolsHost {
     if (shown && g.lockBroken.length) status.append(el('p', 'lesson-note fail', t('lesson.design.strip.lockBroken', { fields: g.lockBroken.map(lockName).join(', ') })));
     if (shown && d.key?.refused) status.append(el('p', 'lesson-note fail', t('lesson.design.strip.refused')));
     if (d.checking) {
+      // written in place as the run goes (M-LEARNING-001): the figure seen every tick, the live region each 10 %
+      const shownLine = el('span');
+      shownLine.setAttribute('aria-hidden', 'true');
+      const said = el('span', 'sr-only');
+      said.setAttribute('role', 'status');
+      this.checkLine = new CheckProgressLine(shownLine, said);
+      this.checkLine.set(d.checking.progress);
       const line = el('p', 'lesson-note');
-      line.setAttribute('role', 'status');
-      line.textContent = d.checking.progress > 0 ? t('lesson.design.strip.lifetime', { p: Math.round(d.checking.progress * 100) }) : t('lesson.design.strip.checking');
+      line.append(shownLine, said);
       status.append(line);
     } else if (d.failed) status.append(el('p', 'lesson-note fail', d.failed));
     else if (!d.keyFor) status.append(el('p', 'lesson-note', t('lesson.design.strip.notChecked')));
