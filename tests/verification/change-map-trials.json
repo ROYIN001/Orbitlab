@@ -1,0 +1,476 @@
+{
+ "about": "R0.3r trial (S05 G0 close-out checklist): historical regressions and the checks that caught, or would catch, them. `files` are the changed paths of the PR/commit (GitHub REST pulls/{n}/files or git show); the trial uses them without tests/** so a test cannot select itself. `culprits` are the paths the regression lived in.",
+ "trials": [
+  {
+   "id": "pr63",
+   "title": "#63 Soyuz-2 real flight (hot staging, payload sections)",
+   "source": "PR #63, merge c109f98",
+   "files": [
+    "CHANGELOG.md",
+    "budgets.json",
+    "docs/FLIGHT-PROFILE-METHOD.md",
+    "docs/IMPLEMENTATION-STATUS.md",
+    "docs/PHYSICS.md",
+    "docs/README.md",
+    "docs/SIXDOF-ACCEPTANCE.md",
+    "docs/SIXDOF-VEHICLE-DATA.md",
+    "docs/VALIDATION.md",
+    "docs/history/audit-2026-10-01-flight-profile.md",
+    "src/config/mission-file.ts",
+    "src/config/satellite-spec.ts",
+    "src/config/validation.ts",
+    "src/config/vehicle-spec.ts",
+    "src/data/parts.ts",
+    "src/data/satellites.ts",
+    "src/data/vehicles.ts",
+    "src/design/exploded.ts",
+    "src/design/ratings.ts",
+    "src/design/vehicle-parts.ts",
+    "src/i18n/en.ts",
+    "src/i18n/ru.ts",
+    "src/i18n/th.ts",
+    "src/lessons/assessment/bank/failures.ts",
+    "src/lessons/assessment/bank/rockets.ts",
+    "src/lessons/assessment/flights.json",
+    "src/lessons/builtin/track2.ts",
+    "src/lessons/builtin/track5.ts",
+    "src/lessons/grader.ts",
+    "src/main.ts",
+    "src/physics/defaults.ts",
+    "src/physics/eom.ts",
+    "src/physics/explicit-guidance.ts",
+    "src/physics/frame.ts",
+    "src/physics/guidance.ts",
+    "src/physics/mission.ts",
+    "src/physics/rendezvous/profiles.ts",
+    "src/physics/rigid/escape.ts",
+    "src/physics/rigid/mass.ts",
+    "src/physics/sim/abort.ts",
+    "src/physics/sim/debris.ts",
+    "src/physics/sim/failures.ts",
+    "src/physics/sim/rigid-link.ts",
+    "src/physics/sim/staging.ts",
+    "src/physics/sim/types.ts",
+    "src/physics/simulation.ts",
+    "src/physics/vehicle.ts",
+    "src/render/debris.ts",
+    "src/render/escape.ts",
+    "src/render/rocket.ts",
+    "src/render/soyuz.ts",
+    "src/replay/recorder.ts",
+    "src/types.ts",
+    "src/ui/fairing-fit.ts",
+    "src/ui/flown.ts",
+    "src/ui/panel.ts",
+    "tests/d01-fleet-fingerprint.test.ts",
+    "tests/d01-vehicles-identity.test.ts",
+    "tests/d06-satellite-spec.test.ts",
+    "tests/d06-satellites-identity.test.ts",
+    "tests/design-exploded.test.ts",
+    "tests/design-interstages.test.ts",
+    "tests/design-ratings.test.ts",
+    "tests/design-sizing.test.ts",
+    "tests/design-static-fire.test.ts",
+    "tests/dynamics-panel.test.ts",
+    "tests/engine-transients.test.ts",
+    "tests/explore.test.ts",
+    "tests/fixtures/recheck/expected.json",
+    "tests/fixtures/recheck/results.orbitlab-results.json",
+    "tests/fixtures/vehicles-pre-d01.json",
+    "tests/fleet-defaults.test.ts",
+    "tests/flex-golden-harness.ts",
+    "tests/heavy/sixdof-fingerprint.test.ts",
+    "tests/heavy/soyuz-aborts.test.ts",
+    "tests/heavy/validation-timelines.test.ts",
+    "tests/historical-vehicles.test.ts",
+    "tests/launch-abort.test.ts",
+    "tests/lessons-round2.test.ts",
+    "tests/mission.test.ts",
+    "tests/parts.test.ts",
+    "tests/physics-core.test.ts",
+    "tests/r7-sequence.test.ts",
+    "tests/recheck-fixture-build.ts",
+    "tests/rendezvous.test.ts",
+    "tests/replay.test.ts",
+    "tests/rigid-event-boundary.test.ts",
+    "tests/rigid-mass.test.ts",
+    "tests/rigid-partition.test.ts",
+    "tests/rigid-sensitivity.test.ts",
+    "tests/rigid-soyuz-programme.test.ts",
+    "tests/soyuz-render.test.ts",
+    "tests/validation/reference-data.ts",
+    "tests/validation/timelines.test.ts"
+   ],
+   "expect": [
+    {
+     "check": "commands:budget",
+     "culprits": [
+      "src/render/soyuz.ts"
+     ],
+     "evidence": "CI 36884215504: build job failed at `node scripts/bundle-budget.mjs`; passed in 36884357092"
+    },
+    {
+     "check": "browser:case-worksheet-exports",
+     "culprits": [
+      "src/lessons/builtin/track2.ts"
+     ],
+     "evidence": "Pages 36886828921 at c109f98: journey case-worksheet-exports, locator.click timeout 45 s"
+    },
+    {
+     "check": "heavy:tests/heavy/soyuz-aborts.test.ts",
+     "culprits": [
+      "src/physics/rigid/escape.ts"
+     ],
+     "evidence": "Guards the three real Soyuz aborts the PR reproduces (would catch a regression of them)"
+    },
+    {
+     "check": "unit:tests/r7-sequence.test.ts",
+     "culprits": [
+      "src/physics/sim/staging.ts"
+     ],
+     "evidence": "Guards the hot-staging command sequence (would catch)"
+    }
+   ]
+  },
+  {
+   "id": "pr64",
+   "title": "#64 six-DOF burn planner, Soyuz-2.1b SSO from Plesetsk",
+   "source": "PR #64, merge 717a1ef",
+   "files": [
+    "CHANGELOG.md",
+    "docs/IMPLEMENTATION-STATUS.md",
+    "docs/PHYSICS.md",
+    "docs/SIXDOF-VEHICLE-DATA.md",
+    "docs/VALIDATION.md",
+    "docs/history/2026-10-01-soyuz21b-sso-burn-order.md",
+    "src/physics/sim/burns.ts",
+    "tests/rigid-orbit-planning.test.ts",
+    "tests/sixdof-fleet/dedicated.test.ts"
+   ],
+   "expect": [
+    {
+     "check": "unit:tests/rigid-orbit-planning.test.ts",
+     "culprits": [
+      "src/physics/sim/burns.ts"
+     ],
+     "evidence": "Two of the four new tests fail on the old planner (PR #64 body)"
+    },
+    {
+     "check": "sixdof-fleet:tests/sixdof-fleet/dedicated.test.ts",
+     "culprits": [
+      "src/physics/sim/burns.ts"
+     ],
+     "evidence": "The Plesetsk SSO mission row; evt.burnAlignmentTimeout on main before the fix"
+    },
+    {
+     "check": "heavy:tests/heavy/monte-carlo-soyuz21b.test.ts",
+     "culprits": [
+      "src/physics/sim/burns.ts"
+     ],
+     "evidence": "Caught the first version: Soyuz-2.1b Monte Carlo perigee 3σ 9.1 km against 8 km (docs/history/2026-10-01-soyuz21b-sso-burn-order.md)"
+    }
+   ]
+  },
+  {
+   "id": "pr68",
+   "title": "#68 Stage 2: faster workers, mobile mission setup",
+   "source": "PR #68, merge f2d2678",
+   "files": [
+    "CHANGELOG.md",
+    "README.md",
+    "budgets.json",
+    "docs/IMPLEMENTATION-STATUS.md",
+    "docs/USER-GUIDE.md",
+    "docs/history/2026-10-02/STAGE2.md",
+    "docs/stage1-2026-10-02/README.md",
+    "docs/stage1-2026-10-02/beginner-study.md",
+    "docs/stage1-2026-10-02/performance-summary.json",
+    "docs/stage1-2026-10-02/performance.json",
+    "docs/stage1-2026-10-02/rocket-evidence.json",
+    "docs/stage1-2026-10-02/satellite-evidence.json",
+    "docs/stage1-2026-10-02/study-results-template.csv",
+    "docs/stage1-2026-10-02/translation-inclusion.json",
+    "docs/stage1-2026-10-02/ux-evidence.json",
+    "docs/stage1-2026-10-02/validation-summary.json",
+    "scripts/audit-stage1/rocket.test.ts",
+    "scripts/audit-stage1/satellite.test.ts",
+    "scripts/audit-stage1/ux.mjs",
+    "scripts/audit-stage1/vitest.config.ts",
+    "scripts/stage1-baseline.mjs",
+    "src/config/verdict-core.ts",
+    "src/config/verdict.ts",
+    "src/design/ratings.ts",
+    "src/design/readiness-core.ts",
+    "src/design/readiness.ts",
+    "src/i18n/en.ts",
+    "src/i18n/ru.ts",
+    "src/i18n/th.ts",
+    "src/style.css",
+    "src/ui/build/readiness-job.ts",
+    "src/ui/build/readiness.worker.ts",
+    "src/ui/help-content.ts",
+    "src/ui/lessons/lesson-mode.ts",
+    "src/ui/modes.css",
+    "src/ui/panel.ts",
+    "src/ui/section-nav.ts",
+    "tests/browser/journeys/instructor-loading.mjs",
+    "tests/browser/journeys/mobile-smoke.mjs",
+    "tests/browser/journeys/stage2-preflight.mjs",
+    "tests/verdict-localization.test.ts",
+    "tests/worker-language-boundary.test.ts"
+   ],
+   "expect": [
+    {
+     "check": "browser:case-worksheet-exports",
+     "culprits": [
+      "src/ui/lessons/lesson-mode.ts"
+     ],
+     "evidence": "Pages 37066834767 at f2d2678: journey case-worksheet-exports, locator.click timeout 45 s"
+    },
+    {
+     "check": "browser:stage2-preflight",
+     "culprits": [
+      "src/ui/panel.ts"
+     ],
+     "evidence": "The PR's own preflight journey (later caught #70's RU overflow)"
+    },
+    {
+     "check": "unit:tests/verdict-localization.test.ts",
+     "culprits": [
+      "src/config/verdict-core.ts"
+     ],
+     "evidence": "Language-free verdict crossing the worker boundary"
+    },
+    {
+     "check": "unit:tests/worker-language-boundary.test.ts",
+     "culprits": [
+      "src/ui/build/readiness.worker.ts"
+     ],
+     "evidence": "Worker bundles stay language-free (74 % smaller workers)"
+    },
+    {
+     "check": "commands:budget",
+     "culprits": [
+      "src/design/ratings.ts"
+     ],
+     "evidence": "PR reduced budgets.json ceilings; budget guards them"
+    }
+   ]
+  },
+  {
+   "id": "pr70",
+   "title": "#70 experiment notebooks, classroom preparation, project recovery",
+   "source": "PR #70, merge 523b44e",
+   "files": [
+    ".github/workflows/ci.yml",
+    "CHANGELOG.md",
+    "README.md",
+    "budgets.json",
+    "docs/IMPLEMENTATION-STATUS.md",
+    "docs/LESSON-REVIEW-CHECKLIST.md",
+    "docs/USER-GUIDE.md",
+    "docs/history/2026-10-03/STAGE3-4.md",
+    "index.html",
+    "package.json",
+    "scripts/validation-collect.test.ts",
+    "scripts/validation-report.mjs",
+    "scripts/validation-vitest.config.ts",
+    "src/classroom/readiness.ts",
+    "src/experiments/notebook.ts",
+    "src/i18n/classroom.ts",
+    "src/i18n/en.ts",
+    "src/i18n/experiments.ts",
+    "src/i18n/projects.ts",
+    "src/i18n/review.ts",
+    "src/i18n/ru.ts",
+    "src/i18n/th.ts",
+    "src/i18n/validation.ts",
+    "src/i18n/workspace.ts",
+    "src/lessons/review.ts",
+    "src/main.ts",
+    "src/projects/archive.ts",
+    "src/projects/validation.ts",
+    "src/pwa/offline-protocol.ts",
+    "src/pwa/sw-core.ts",
+    "src/ui/classroom/classroom-panel.ts",
+    "src/ui/classroom/classroom.css",
+    "src/ui/experiments/notebook.css",
+    "src/ui/experiments/notebook.ts",
+    "src/ui/lessons/lesson-mode.ts",
+    "src/ui/lessons/lessons.css",
+    "src/ui/lessons/review-details.ts",
+    "src/ui/modes.css",
+    "src/ui/projects/projects-panel.ts",
+    "src/ui/projects/projects.css",
+    "src/ui/validation/validation-panel.ts",
+    "src/ui/validation/validation.css",
+    "src/ui/workspace-content.ts",
+    "src/ui/workspace-dialog.css",
+    "src/ui/workspace-dialog.ts",
+    "src/ui/workspace-host.ts",
+    "src/validation/read-report.ts",
+    "src/validation/report.ts",
+    "tests/browser/journeys/classroom-preparation.mjs",
+    "tests/browser/journeys/experiment-notebook.mjs",
+    "tests/browser/journeys/project-backups.mjs",
+    "tests/browser/journeys/stage2-preflight.mjs",
+    "tests/browser/journeys/workspace-navigation.mjs",
+    "tests/browser/run.mjs",
+    "tests/browser/shard.mjs",
+    "tests/browser/shard.test.mjs",
+    "tests/classroom-pwa.test.ts",
+    "tests/experiment-notebook.test.ts",
+    "tests/i18n.test.ts",
+    "tests/lesson-review.test.ts",
+    "tests/project-archive.test.ts",
+    "tests/project-recovery-conflicts.test.ts",
+    "tests/validation-read-report.test.ts",
+    "tests/validation-report.test.ts"
+   ],
+   "expect": [
+    {
+     "check": "browser:classroom-preparation",
+     "culprits": [
+      "src/classroom/readiness.ts",
+      "src/pwa/sw-core.ts"
+     ],
+     "evidence": "CI 37080233899 browser-smoke (2): \"preparation activated an update without the reload action\", \"a waiting update was not explained\""
+    },
+    {
+     "check": "browser:stage2-preflight",
+     "culprits": [
+      "src/i18n/ru.ts",
+      "src/ui/modes.css"
+     ],
+     "evidence": "CI 37080233899 browser-smoke (1): \"mobile/ru/320×568: the warning makes the document scroll sideways\""
+    },
+    {
+     "check": "unit:tests/classroom-pwa.test.ts",
+     "culprits": [
+      "src/classroom/readiness.ts"
+     ],
+     "evidence": "Two classroom regressions failed before the update-job fix (PR #70 body)"
+    }
+   ]
+  },
+  {
+   "id": "r2-lui01",
+   "title": "R2 regression LUI-01 (M-LAUNCH-027): \"Use for the next launch\" discarded a paused flight",
+   "source": "fixed by CO-4 step 1, PR #86 (d7ee6fb); files where the defect lived",
+   "files": [
+    "CHANGELOG.md",
+    "docs/development/PROGRESS.md",
+    "docs/development/reports/CO-4-r2-fixes.md",
+    "src/main.ts",
+    "src/ui/flight-lifecycle.ts",
+    "src/ui/panel.ts",
+    "tests/browser/journeys/lui01-held-tuning.mjs",
+    "tests/flight-lifecycle.test.ts",
+    "tests/panel-held-edit.test.ts"
+   ],
+   "expect": [
+    {
+     "check": "unit:tests/flight-lifecycle.test.ts",
+     "culprits": [
+      "src/ui/flight-lifecycle.ts"
+     ],
+     "evidence": "previewsChange contract; fails on 5f9aa2e"
+    },
+    {
+     "check": "unit:tests/panel-held-edit.test.ts",
+     "culprits": [
+      "src/ui/panel.ts"
+     ],
+     "evidence": "panel change kind; fails on 5f9aa2e"
+    },
+    {
+     "check": "browser:lui01-held-tuning",
+     "culprits": [
+      "src/ui/panel.ts"
+     ],
+     "evidence": "Journey fails on 5f9aa2e: the paused flight left the flight stage"
+    }
+   ]
+  },
+  {
+   "id": "r3-ratings",
+   "title": "R3 regression M-BUILD-006: an unfinished payload-rating search stored as the rating",
+   "source": "fixed by FX-1 PR1, PR #99 (c1aae45); files where the defect lived",
+   "files": [
+    "CHANGELOG.md",
+    "docs/development/PROGRESS.md",
+    "docs/development/reports/FX-1-pr1-payload-rating.md",
+    "src/design/ratings.ts",
+    "src/i18n/en.ts",
+    "src/i18n/ru.ts",
+    "src/i18n/th.ts",
+    "src/ui/build/explore-level.ts",
+    "src/ui/build/review-panel.ts",
+    "tests/build-ratings-unfinished.test.ts"
+   ],
+   "expect": [
+    {
+     "check": "unit:tests/build-ratings-unfinished.test.ts",
+     "culprits": [
+      "src/ui/build/explore-level.ts"
+     ],
+     "evidence": "Written failing first on main (FX-1 PR1)"
+    },
+    {
+     "check": "browser:build-legacy-ratings",
+     "culprits": [
+      "src/ui/build/review-panel.ts"
+     ],
+     "evidence": "FX-1 s2 journey for ratings kept before the fix"
+    }
+   ]
+  },
+  {
+   "id": "r3-release-budget",
+   "title": "R3 package 1 release blocked by the precache budget",
+   "source": "PR #75 (7ddab75); fixed by #76",
+   "files": [
+    "CHANGELOG.md",
+    "budgets.json",
+    "docs/USER-GUIDE.md",
+    "docs/development/PROGRESS.md",
+    "docs/development/reports/R2-workspace.md",
+    "docs/development/reports/R3-design-views.md",
+    "src/design/bench-part.ts",
+    "src/design/review-model.ts",
+    "src/design/satellite-drawing.ts",
+    "src/i18n/en.ts",
+    "src/i18n/ru.ts",
+    "src/i18n/th.ts",
+    "src/main.ts",
+    "src/ui/build/engineer-level.ts",
+    "src/ui/build/engineer.css",
+    "src/ui/build/review-panel.ts",
+    "src/ui/build/satellite-bench.ts",
+    "src/ui/build/satellite-svg.ts",
+    "src/ui/build/satellite.css",
+    "src/ui/build/stand-panel.ts",
+    "tests/bench-part.test.ts",
+    "tests/browser/journeys/r3-bench-drawings.mjs",
+    "tests/readiness-target.test.ts",
+    "tests/satellite-drawing.test.ts"
+   ],
+   "expect": [
+    {
+     "check": "commands:budget",
+     "culprits": [
+      "src/ui/build/satellite-bench.ts"
+     ],
+     "evidence": "Pages 37172926281 at 7ddab75: build job failed at `node scripts/bundle-budget.mjs`"
+    },
+    {
+     "check": "browser:r3-bench-drawings",
+     "culprits": [
+      "src/ui/build/engineer-level.ts"
+     ],
+     "evidence": "R3 bench journey (would catch a bench drawing regression)"
+    }
+   ]
+  }
+ ]
+}
