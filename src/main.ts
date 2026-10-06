@@ -1234,11 +1234,21 @@ class App {
     // G2 hold (F5): a short scene keeps the picture, not the narration's prose
     const short = String(h < SHORT_SCENE_PX);
     if (this.viewport.dataset.short !== short) this.viewport.dataset.short = short;
+    this.foldHud(false); // G2 compact: a card opened from the fold does not outlive the size it was opened at
     this.scene.resize(w, h);
     this.trail.setResolution(w, h);
     this.predicted.setResolution(w, h);
     this.target.setResolution(w, h);
     this.frames.setResolution(w, h);
+  }
+
+  /**
+   * G2 compact: open, or fold again, the telemetry card that a short scene
+   * folds into its tool button (style.css reads `data-hud` there only).
+   */
+  private foldHud(open: boolean): void {
+    this.viewport.toggleAttribute('data-hud', open);
+    (this.viewport.querySelector('.hud-fold') as HTMLElement).ariaExpanded = String(open);
   }
 
   /** Warp that the on-screen selector is currently editing. */
@@ -1296,6 +1306,7 @@ class App {
       try { workspaceStorage().setItem(GLOW_STORAGE_KEY, this.scene.bloomEnabled ? 'on' : 'off'); } catch { /* preference is optional */ }
     });
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
+    this.viewport.querySelector('.hud-fold')!.addEventListener('click', () => this.foldHud(!this.viewport.hasAttribute('data-hud')));
     this.framesMenu = new FramesMenu(document.getElementById('btn-frames') as HTMLButtonElement, (groups) => this.frames.setShown(groups));
     this.frames.setShown(this.framesMenu.groups);
     // V01: sound, off until asked for; a choice kept from an earlier visit
