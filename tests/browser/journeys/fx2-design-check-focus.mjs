@@ -9,8 +9,23 @@
  * re-check fixture's `class-theos` (tests/fixtures/recheck/), which asks for
  * `sat.lifetime` and has one typed answer (the swath).
  *
- * Written 2026-10-05 for FX-2 PR1; its first run is pending (the integration
- * session runs the browser journeys). Not smoke: it waits on a worker run.
+ * The lifetime run is made long on purpose. As the fixture has it (THEOS-2
+ * at 621 km, ECSS "moderate", horizon life + 25 = 35 years) the satellite
+ * comes down after 18 years, so the run stops at about 51 % and the whole
+ * check is over in some 0.3–0.7 s in the browser — less than the time it
+ * takes to click the field and type into it while the figures hold the main
+ * thread. The journey then caught one or two readings, or none before the
+ * end ("finished; seen 1"), on the pre-merge head 18d82ce as on the merge of
+ * origin/main alike: a race in the journey, not a change in the app. The
+ * lesson copy below flies the run at ECSS "low" and puts an upper bound of
+ * 200 years on the lifetime, which makes the horizon 201 years (lifetimeHorizon
+ * in src/design/design-lesson-key.ts) and keeps the satellite up for all of
+ * it: a full run of ~100 ticks, about four times as long (measured in Node:
+ * 1.1 s and 50 ticks before, 4.7 s and 99 ticks after). What the journey
+ * asks is unchanged: three distinct progress readings while the field keeps
+ * its element, value and caret.
+ *
+ * Written 2026-10-05 for FX-2 PR1. Not smoke: it waits on a worker run.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -24,7 +39,13 @@ export default async function fx2DesignCheckFocus(t) {
   const scenario = JSON.parse(readFileSync(SCENARIO, 'utf8'));
   const lesson = scenario.lessons.find((l) => l.id === LESSON_ID);
   if (!t.check(lesson?.criteria?.some((c) => c.measure === 'sat.lifetime'), `${LESSON_ID} in the fixture no longer asks for the lifetime`)) return;
-  const file = { ...scenario, lessons: [lesson] };
+  // a long lifetime run (see above): low activity, and a 200-year bound that sets the run's horizon
+  const longRun = {
+    ...lesson,
+    level: 'low',
+    criteria: lesson.criteria.map((c) => (c.measure === 'sat.lifetime' ? { ...c, max: 200 } : c)),
+  };
+  const file = { ...scenario, lessons: [longRun] };
 
   const app = await t.open({ hash: '#/lessons', viewport: 'desktop' });
   const { page } = app;
