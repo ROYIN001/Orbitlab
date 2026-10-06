@@ -1,4 +1,4 @@
-import { parseWorkspaceArchive, workspaceImportWarnings, WORKSPACE_FORMAT, WORKSPACE_MAX_BYTES, WorkspaceError, type WorkspaceRepository, type WorkspaceArchive } from '../../workspace/repository';
+import { parseWorkspaceArchive, workspaceArchiveText, workspaceImportWarnings, WORKSPACE_FORMAT, WORKSPACE_MAX_BYTES, WorkspaceError, type WorkspaceRepository, type WorkspaceArchive } from '../../workspace/repository';
 import { ProfileDialog, type ProfileDialogHost, type ProfileDialogSnapshot, type ProfileCounts, type ProfileItem, type UnreadableProfileItem } from './profile-dialog';
 import { downloadBlob } from '../download';
 
@@ -144,7 +144,7 @@ class ProfileMenuHost {
 
   private download(archive: WorkspaceArchive): void {
     const date = archive.exportedAt.slice(0, 10);
-    downloadBlob(new Blob([JSON.stringify(archive, null, 2) + '\n'], { type: 'application/json' }), `Orbitlab-${date}.orbitlab-workspace.json`);
+    downloadBlob(new Blob([workspaceArchiveText(archive)], { type: 'application/json' }), `Orbitlab-${date}.orbitlab-workspace.json`);
   }
 
 }
