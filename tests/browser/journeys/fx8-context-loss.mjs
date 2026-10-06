@@ -15,9 +15,14 @@ export const timeoutMs = 600_000;
 // wall clock, and two flights a minute apart could straddle one.
 const MISSION = { vehicleId: 'falcon9', siteId: 'cape', orbitId: 'leo', launchTimeIso: '2026-09-20T12:00:00Z' };
 const WARP = 10;
-/** the flight loses its context from here, and both flights are compared up to here, s after liftoff */
-const LOSE_AT_S = 12;
-const COMPARE_TO_S = 90;
+/**
+ * The flight loses its context from here, s after liftoff: the camera is more
+ * than 30 km from the pad, so the shadow map is no longer drawn every frame
+ * (`setShadowFocus`) and has to be primed again after a restore. Both flights
+ * are compared up to COMPARE_TO_S.
+ */
+const LOSE_AT_S = 120;
+const COMPARE_TO_S = 160;
 /** how long a context stays lost, ms of wall time */
 const LOST_MS = 4000;
 
@@ -72,14 +77,22 @@ function helpers() {
 }
 
 /** Lose the view's context, run `during` while it is lost, restore it, and check it draws as before. */
-async function loseAndRestore(t, app, which, during) {
+async function loseAndRestore(t, app, which, during, { still, go } = {}) {
   const { page } = app;
   const warnings = app.glWarnings;
+  // the pictures are taken with the flight paused (`still`), so they do not drift apart
+  await still?.();
   const before = await page.evaluate((w) => window.__fx8.look(w), which);
+  if (which === 'launch') await page.evaluate(() => { window.__fx8.env = window.orbitlab.scene.envRT; });
+  await go?.();
   t.check(before.spread > 2, `${which}: the view was blank before the loss (${JSON.stringify({ mean: before.mean, spread: before.spread })})`);
   if (!t.check(await page.evaluate((w) => window.__fx8.lose(w), which), `${which}: no WEBGL_lose_context`)) return false;
   const lost = await t.until(() => page.evaluate(() => window.__fx8.state.lost), { timeoutMs: 10_000 });
   if (!t.check(lost, `${which}: the context was not lost`)) return false;
+  // from the loss on: every WebGL error of the restore and of the frames after it counts
+  warnings.length = 0;
+  // A regression guard: three's own listener calls preventDefault as well, so
+  // this fails only if both stop accepting the loss.
   t.check(await page.evaluate(() => window.__fx8.state.prevented), `${which}: the context loss was not accepted (no preventDefault): the browser will not restore it`);
   const notice = await t.until(() => page.evaluate(() => window.__fx8.status()), { timeoutMs: 5000 });
   t.check(notice, `${which}: no status line while the 3-D view is lost`);
@@ -92,19 +105,32 @@ async function loseAndRestore(t, app, which, during) {
   const drawing = await t.until(async () => (await page.evaluate((w) => window.__fx8.frame(w), which)) > firstFrame + 2, { timeoutMs: 30_000, intervalMs: 250 });
   t.check(drawing, `${which}: the renderer does not draw after the restore`);
   t.check(await t.until(async () => !(await page.evaluate(() => window.__fx8.status())), { timeoutMs: 10_000 }), `${which}: the status line stays after the restore`);
-  warnings.length = 0;
   // a few frames for the scene to settle (the sky tables, the environment probe, the shadow map)
   await page.waitForTimeout(1500);
+  await still?.();
   const after = await page.evaluate((w) => window.__fx8.look(w), which);
+  // the probe is drawn once per sky, not every frame: it has to be drawn again into the new context
+  if (which === 'launch') {
+    t.check(await page.evaluate(() => window.orbitlab.scene.envRT !== window.__fx8.env), 'launch: the environment probe was not rebuilt after the restore');
+    // the shadow map, sampled whether or not it is drawn each frame (`shadowOn`), has a texture in the new context
+    const shadow = await page.evaluate(() => {
+      const s = window.orbitlab.scene, map = s.sun.shadow.map;
+      return { drawnEachFrame: s.shadowOn, primed: !map || !!s.renderer.properties.get(map.texture).__webglTexture };
+    });
+    t.log(`launch: shadow map drawn each frame: ${shadow.drawnEachFrame}`);
+    t.check(shadow.primed, 'launch: the shadow map was not drawn into the restored context');
+  }
+  await go?.();
   t.log(`${which}: luminance before ${before.mean.toFixed(1)} ± ${before.spread.toFixed(1)}, after ${after.mean.toFixed(1)} ± ${after.spread.toFixed(1)}`);
   t.check(after.spread > 2, `${which}: the view is blank after the restore (mean ${after.mean.toFixed(1)}, spread ${after.spread.toFixed(1)})`);
   // the same picture, give or take how far it moved: a lost table or probe is far darker
   const ratio = (after.mean + 1) / (before.mean + 1);
-  t.check(ratio > 0.6 && ratio < 1.6, `${which}: the restored picture is not the one drawn before (mean luminance ${before.mean.toFixed(1)} → ${after.mean.toFixed(1)})`);
-  // the half of the pixels that changed least: they should not have changed much
+  t.check(ratio > 0.85 && ratio < 1.2, `${which}: the restored picture is not the one drawn before (mean luminance ${before.mean.toFixed(1)} → ${after.mean.toFixed(1)})`);
+  // three pixels in four barely changed: a part of the picture gone dark shows here
   const deltas = before.pixels.map((v, k) => Math.abs(v - after.pixels[k])).sort((a, b) => a - b);
-  const median = deltas[deltas.length >> 1];
-  t.check(median < 40, `${which}: the restored picture differs from the one before (median pixel change ${median} of 255)`);
+  const p75 = deltas[deltas.length * 3 >> 2];
+  t.log(`${which}: pixel change median ${deltas[deltas.length >> 1]}, 75th percentile ${p75}, 90th ${deltas[deltas.length * 9 / 10 | 0]}`);
+  t.check(p75 < 12, `${which}: the restored picture differs from the one before (75th percentile pixel change ${p75} of 255)`);
   // the orbit views' space is their own clear colour, not black
   if (which !== 'launch') t.check(Math.abs(after.dark - before.dark) < 2, `${which}: the background changed after the restore (luminance ${before.dark.toFixed(1)} → ${after.dark.toFixed(1)})`);
   t.check(warnings.length === 0, `${which}: WebGL errors after the restore: ${[...new Set(warnings)].slice(0, 3).join(' | ')}`);
@@ -114,7 +140,14 @@ async function loseAndRestore(t, app, which, during) {
 async function openApp(t, hash, contextOptions = {}) {
   const app = await t.open({ hash, contextOptions });
   app.glWarnings = [];
-  app.page.on('console', (m) => { if (/GL_INVALID|WebGL: INVALID|GL ERROR/i.test(m.text())) app.glWarnings.push(m.text()); });
+  app.page.on('console', (m) => {
+    const text = m.text();
+    // Harmless, and the only error a restore may raise: a target made in the
+    // lost context (the old environment probe) is disposed after the restore,
+    // and three asks the new context to delete the old context's texture.
+    if (text === 'WebGL: INVALID_OPERATION: delete: object does not belong to this context') return;
+    if (/GL_INVALID|WebGL: INVALID|GL ERROR/i.test(text)) app.glWarnings.push(text);
+  });
   await app.page.evaluate(helpers);
   return app;
 }
@@ -165,6 +198,11 @@ async function launch(t, reference) {
   const app = await openApp(t, '#/launch/explore');
   const { page } = app;
   const csv = await flyTo(t, app, 'Launch', async () => {
+    const still = async () => {
+      await app.mcp('control_playback', { action: 'pause' });
+      await page.waitForTimeout(1500);
+    };
+    const go = () => app.mcp('control_playback', { action: 'play' });
     await loseAndRestore(t, app, 'launch', async () => {
       const a = await state(app);
       await page.waitForTimeout(LOST_MS);
@@ -172,7 +210,7 @@ async function launch(t, reference) {
       t.log(`launch: while lost, T+${a.cursorTimeS.toFixed(1)} → T+${b.cursorTimeS.toFixed(1)} s, recorded to T+${a.headTimeS.toFixed(1)} → T+${b.headTimeS.toFixed(1)} s`);
       t.check(b.playing && b.cursorTimeS > a.cursorTimeS + 1, `launch: the mission clock stopped while the context was lost (T+${a.cursorTimeS} → T+${b.cursorTimeS} s)`);
       t.check(b.headTimeS > a.headTimeS + 1, `launch: the recording stopped while the context was lost (T+${a.headTimeS} → T+${b.headTimeS} s)`);
-    });
+    }, { still, go });
   });
   if (csv && reference) {
     const lost = upTo(csv), kept = upTo(reference);
