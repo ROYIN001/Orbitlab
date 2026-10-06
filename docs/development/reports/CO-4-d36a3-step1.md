@@ -51,7 +51,7 @@ D-36.A3 (sheet A-2, with the note): "แก้ไขได้ในค่าท�
 | `npm run typecheck` | — | clean |
 | `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | — | 64/64 passed |
 
-**Browser journey `tests/browser/journeys/d36a3-use-now.mjs`: written, not yet run** (the machine's CPU was reserved for other browser runs). It launches six-DOF, warps to ~T+30 s, pauses and settles, opens ⚙ Setup, drafts a failure, checks no `evt.controlFault` and the same cursor/recording before confirming, presses Use now, plays until the failure strikes, and checks the recording kept its start and grew, the failure is in the setup's list and the vehicle selector stays disabled. `timeoutMs` 240 s, as `lui01-held-tuning`.
+**Browser journey `tests/browser/journeys/d36a3-use-now.mjs`: run after the review (see below).** It launches six-DOF, warps to ~T+30 s, pauses and settles, opens ⚙ Setup, drafts a failure, checks no `evt.controlFault` and the same cursor/recording before confirming, presses Use now, plays until the failure strikes, and checks the recording kept its start and grew, the failure is in the setup's list and the vehicle selector stays disabled. `timeoutMs` 240 s, as `lui01-held-tuning`.
 
 ## Second-agent review (b281be8) and the fixes
 
@@ -60,6 +60,16 @@ D-36.A3 (sheet A-2, with the note): "แก้ไขได้ในค่าท�
 - **Status:** one `role="status"` line in the draft, rewritten in place: "The flight did not take this failure." on a refusal, "Used in this flight, and kept in the list for the next launch." after Use now (en/th/ru).
 - **Timing line** under the draft: the live flight takes it on Use now (at once if its time has passed); the next launch flies it at the time entered.
 - **Known edge, not fixed (named):** in the app the flight runs in a worker. `FlightSession.injectControlFault` (`src/session/session.ts` ~251) answers `injected` after the main thread's own checks (six-DOF, valid, not failed/done) and posts `controlFault`; the worker's `Simulation.injectControlFault` repeats those checks on its own, newer state and can still refuse (for example if the vehicle is lost in the frames in flight between the click and the message), and it sends no answer back. The panel has then already put the failure in the setup's list, so the next launch flies it although this flight did not. Waiting for a worker answer needs a protocol change in `src/session/**`, outside this step.
+
+## Browser run and the paused cursor
+
+The coordinator's first browser run of `7016e05` failed once: `FAIL: the flight changed before "Use now": T-10…T+33.91 s → T-10…T+33.91 s` — start and head equal, so the cursor had moved (the message did not print it; it does now, with the mode).
+
+- **Probed:** 4 runs on `7016e05` + probes, reading the paused flight every second for 4 s, after ⚙ Setup and after the draft: the cursor never moved (for example 34.08 s with the head at 34.01 s, through every probe). Opening ⚙ Setup, the failures section and the draft does not move it; no app path snaps a paused live cursor to the head (`goLive`/`seek` are not reached from these controls).
+- **Cause (not reproduced on this machine, the only path left):** the live cursor is the worker's live instant (`RecordingMirror.recordNow`), which runs ahead of the last stored frame (34.08 vs 34.01 above). After the pause the worker still answers up to two outstanding `advance` requests (`MAX_OUTSTANDING`, `src/session/session.ts`); an answer cut short by its wall-clock budget on a starved worker moves the live instant by a step or two without storing a frame. The journey's settle (two equal reads 1 s apart) cannot tell a starved worker from an idle one, and the coordinator's machine was busy. This is the design (frames already flown are kept, as the LUI-01 report records), not an app bug.
+- **Fix (journey only):** the settle now also waits until the session has no request outstanding (`window.orbitlab.session.pendingAdvance.size === 0`, read as other journeys read `window.orbitlab`; the journey fails loudly if that cannot be read). The equality check on the cursor is kept exactly.
+- **After:** `npm run build`, then `CHROMIUM=/opt/pw-browsers/chromium node tests/browser/run.mjs d36a3-use-now lui01-held-tuning`: ✓ d36a3-use-now (98.1 s), ✓ lui01-held-tuning (96.2 s), 2/2 passed; one more single run of d36a3-use-now also passed (101.1 s).
+- **Follow-up:** `lui01-held-tuning` has the same two-read settle and could flake the same way on a busy machine; not changed here.
 
 ## Limits and handoff
 

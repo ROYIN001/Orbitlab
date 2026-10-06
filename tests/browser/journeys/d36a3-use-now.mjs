@@ -22,18 +22,27 @@ export default async function useNow(t) {
   const flying = await t.until(async () => (await state()).cursorTimeS > 30, { timeoutMs: 120_000, intervalMs: 500 });
   if (!t.check(flying, 'the six-DOF flight did not fly to T+30 s')) return;
   await app.mcp('control_playback', { action: 'pause' });
-  // the worker delivers the frames it had in flight for a second or two after
-  // the pause: wait until the cursor and the head hold still across two reads
+  // The worker still answers the time it was asked for before the pause (up to
+  // two `advance` requests, src/session/session.ts MAX_OUTSTANDING), and each
+  // answer moves the live instant — the cursor — even when it stores no new
+  // frame. On a busy machine the worker can be starved for more than a second
+  // between those answers, so two equal reads are not enough: also wait until
+  // the session has no request outstanding.
+  const outstanding = () => page.evaluate(() => {
+    const pending = window.orbitlab?.session?.pendingAdvance;
+    return pending instanceof Set ? pending.size : null;
+  });
+  if (!t.check(await outstanding() !== null, 'cannot read the session\'s outstanding requests (window.orbitlab.session.pendingAdvance)')) return;
   let last = null;
   const settled = await t.until(async () => {
     const s = await state();
-    const same = last && s.cursorTimeS === last.cursorTimeS && s.headTimeS === last.headTimeS;
+    const same = last && s.cursorTimeS === last.cursorTimeS && s.headTimeS === last.headTimeS && await outstanding() === 0;
     last = s;
     return same ? s : null;
   }, { timeoutMs: RESPOND_MS, intervalMs: 1000 });
-  if (!t.check(settled, `the paused flight did not settle (cursor T+${last?.cursorTimeS} s, head T+${last?.headTimeS} s)`)) return;
+  if (!t.check(settled, `the paused flight did not settle (cursor T+${last?.cursorTimeS} s, head T+${last?.headTimeS} s, outstanding ${await outstanding()})`)) return;
   const before = await state();
-  t.log(`paused at T+${before.cursorTimeS.toFixed(1)} s, recorded to T+${before.headTimeS.toFixed(1)} s`);
+  t.log(`paused at T+${before.cursorTimeS} s, recorded to T+${before.headTimeS} s`);
 
   // ⚙ Setup, the failures section, a new failure drafted for this flight
   if (!await press(t, app, page.locator('#btn-setup'), 'mouse', '⚙ Setup')) return;
@@ -57,7 +66,8 @@ export default async function useNow(t) {
   const drafted = await state();
   t.check((await faultEvents()).length === 0, 'a failure struck before "Use now" was pressed');
   t.check(drafted.headTimeS === before.headTimeS && drafted.startTimeS === before.startTimeS && drafted.cursorTimeS === before.cursorTimeS,
-    `the flight changed before "Use now": T${before.startTimeS}…T+${before.headTimeS} s → T${drafted.startTimeS}…T+${drafted.headTimeS} s`);
+    `the flight changed before "Use now": T${before.startTimeS}…T+${before.headTimeS} s, cursor T+${before.cursorTimeS} s (${before.mode}) → `
+    + `T${drafted.startTimeS}…T+${drafted.headTimeS} s, cursor T+${drafted.cursorTimeS} s (${drafted.mode})`);
   t.check(await page.locator('#setup select[data-field="setup.vehicle"]').isDisabled(), 'the vehicle is editable in flight');
 
   await useNowBtn.scrollIntoViewIfNeeded();
