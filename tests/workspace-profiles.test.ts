@@ -173,3 +173,43 @@ describe('profile-owned browser workspace', () => {
     expect(env.session.values.get(PROFILE_SELECTED_KEY)).toBe(''); reopened.close();
   });
 });
+
+describe('R1.6 PR1: start-up error paths keep the lock contract and durable profiles (M-PLATFORM-001/002)', () => {
+  const tombstoned = (env: ReturnType<typeof setup>) => JSON.parse(env.disk.values.get(PROFILE_CATALOG_KEY)!).profiles[LEGACY_PROFILE_ID]?.deleting;
+  it('M-PLATFORM-001: releases the owner lock when the selected record is truncated, keeping its bytes', async () => {
+    const env = setup(), first = await env.repo().initialize(), other = await first.create('Other'); first.close(); await tick();
+    const key = profileStorageKey(other.id), original = env.disk.values.get(key)!, truncated = original.slice(0, -12);
+    env.disk.values.set(key, truncated); env.session.values.set(PROFILE_SELECTED_KEY, other.id);
+    const broken = await env.repo().initialize();
+    expect(broken.status).toBe('ephemeral'); expect(broken.notices).toContain('invalid');
+    broken.binding!.setItem('orbitlab.mission', 'visit only'); expect(env.disk.values.get(key)).toBe(truncated);
+    // The record is restored while the first tab is still open: another tab must own it, not stay read-only.
+    env.disk.values.set(key, original);
+    const second = await env.repo().initialize();
+    expect(second.status).toBe('durable'); second.binding!.setItem('orbitlab.mission', 'saved'); second.close(); broken.close();
+  });
+  it('M-PLATFORM-002: a rejecting tombstone retry keeps the tombstone and still opens a healthy profile durably at every start', async () => {
+    const env = setup(); let calls = 0;
+    const media: WorkspaceMedia = { migrate: async () => {}, delete: async () => { calls++; throw new Error('media denied'); } };
+    const r = await env.repo(media).initialize(), healthy = await r.create('Healthy');
+    r.binding!.setItem('orbitlab.mission', 'doomed'); await expect(r.delete(LEGACY_PROFILE_ID)).rejects.toThrow(); await tick();
+    const recordBytes = env.disk.values.get(profileStorageKey(LEGACY_PROFILE_ID));
+    env.session.values.set(PROFILE_SELECTED_KEY, healthy.id);
+    for (const run of [1, 2]) {
+      const next = await env.repo(media).initialize();
+      expect(next.status).toBe('durable'); expect(next.active()?.id).toBe(healthy.id);
+      expect(tombstoned(env)).toBe(true); expect(env.disk.values.get(profileStorageKey(LEGACY_PROFILE_ID))).toBe(recordBytes);
+      expect(next.notices.length).toBeGreaterThan(0);
+      next.binding!.setItem('orbitlab.mission', `saved ${run}`); next.close(); await tick();
+    }
+    expect(calls).toBe(3); expect(JSON.parse(env.disk.values.get(profileStorageKey(healthy.id))!).values['orbitlab.mission']).toBe('saved 2');
+  });
+  it('M-PLATFORM-002: an unreadable legacy record does not send a healthy selected profile into visit-only mode', async () => {
+    const env = setup(), r = await env.repo().initialize(), healthy = await r.create('Healthy'); r.close(); await tick();
+    const key = profileStorageKey(LEGACY_PROFILE_ID), truncated = env.disk.values.get(key)!.slice(0, -12);
+    env.disk.values.set(key, truncated); env.session.values.set(PROFILE_SELECTED_KEY, healthy.id);
+    const next = await env.repo().initialize();
+    expect(next.status).toBe('durable'); expect(next.active()?.id).toBe(healthy.id); expect(next.notices.length).toBeGreaterThan(0);
+    expect(env.disk.values.get(key)).toBe(truncated); next.close();
+  });
+});
