@@ -46,7 +46,7 @@ export function createWebGLRenderer(options: RendererOptions): WebGLRenderer {
     const renderer = new WebGLRenderer({ ...options, powerPreference: 'high-performance' });
     // FX-8: a lost context is accepted, so the browser may give it back; three
     // then rebuilds its state, all but the clear colour. The flight runs on
-    // meanwhile, and a line says the view paused.
+    // meanwhile, and a line says the view is restarting.
     const clear = new Color();
     let alpha = 1;
     canvas.addEventListener('webglcontextlost', (e) => {
@@ -73,18 +73,23 @@ export function createWebGLRenderer(options: RendererOptions): WebGLRenderer {
 }
 
 const lost = new Set<HTMLCanvasElement>();
+let later: ReturnType<typeof setTimeout> | undefined;
 
-/** FX-8: the status line shown while any 3-D view has lost its context. */
+/**
+ * FX-8: the status line shown while any 3-D view has lost its context. It goes
+ * in empty and is filled a moment later, so a screen reader announces it; a
+ * context still lost after 20 s asks for a reload.
+ */
 function lostNote(canvas: HTMLCanvasElement, on: boolean): void {
   if (on) lost.add(canvas); else lost.delete(canvas);
-  let note = document.getElementById('gl-lost');
-  if (!lost.size) { note?.remove(); return; }
-  if (!note) {
-    note = document.createElement('p');
-    note.id = 'gl-lost';
-    note.className = 'pwa-toast gl-lost';
-    note.setAttribute('role', 'status');
-    document.body.append(note);
-  }
-  note.textContent = t('startup.glLost');
+  const old = document.getElementById('gl-lost');
+  clearTimeout(later);
+  if (!lost.size) { old?.remove(); return; }
+  const note = old ?? document.body.appendChild(document.createElement('p'));
+  note.id = 'gl-lost';
+  note.className = 'pwa-toast gl-lost';
+  note.setAttribute('role', 'status');
+  const say = (key: string) => () => { note.textContent = t(key); };
+  setTimeout(say('startup.glLost'));
+  later = setTimeout(say('startup.closeTabs'), 20_000);
 }

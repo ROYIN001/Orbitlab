@@ -330,9 +330,9 @@ export class SceneManager {
     canvas.addEventListener('webglcontextrestored', () => {
       this.envKey = -1;
       this.shadowPrimed = false;
-      if (this.physicalSky) this.physicalSky.ready = false;
+      this.physicalSky?.invalidate();
     });
-    this.camera =new THREE.PerspectiveCamera(50, 1, 0.5, 5e9);
+    this.camera = new THREE.PerspectiveCamera(50, 1, 0.5, 5e9);
     this.camera.up.set(0, 0, 1);
     // attached once and never detached, so the USE_FOG define never flips
     this.scene.fog = this.fog;

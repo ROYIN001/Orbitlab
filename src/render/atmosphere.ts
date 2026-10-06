@@ -286,8 +286,7 @@ export class PhysicalSky {
   private material: THREE.ShaderMaterial;
   private transmittanceRT: THREE.WebGLRenderTarget;
   private multiRT: THREE.WebGLRenderTarget;
-  /** the tables are filled (FX-8: emptied with a lost context) */
-  ready = false;
+  private ready = false;
 
   constructor(private readonly renderer: THREE.WebGLRenderer, floatType: THREE.TextureDataType = THREE.HalfFloatType) {
     this.transmittanceRT = target(256, 64, floatType);
@@ -326,6 +325,11 @@ export class PhysicalSky {
     pass(TRANSMITTANCE_FRAG, this.transmittanceRT, {});
     pass(MULTISCATTER_FRAG, this.multiRT, { uTransmittance: { value: this.transmittanceRT.texture } });
     this.ready = true;
+  }
+
+  /** FX-8: fill the tables again (a lost context took them). */
+  invalidate(): void {
+    this.ready = false;
   }
 
   /**

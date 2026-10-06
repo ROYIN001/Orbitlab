@@ -100,12 +100,14 @@ describe('WebGL context recovery', () => {
 
 describe('WebGL context loss (FX-8)', () => {
   it('accepts a lost context, says so while it is lost, and restores the clear colour with it', () => {
-    type Note = { id?: string; textContent?: string; className?: string; attrs: Record<string, string>; setAttribute(k: string, v: string): void; remove(): void };
-    const nodes = new Map<string, Note>();
+    type Note = { id?: string; textContent: string; className?: string; attrs: Record<string, string>; setAttribute(k: string, v: string): void; remove(): void };
+    const nodes: Note[] = [];
+    const find = (id: string) => nodes.find((n) => n.id === id) ?? null;
+    vi.useFakeTimers();
     vi.stubGlobal('document', {
-      body: { append: (n: Note) => { nodes.set(n.id!, n); } },
-      getElementById: (id: string) => nodes.get(id) ?? null,
-      createElement: (): Note => ({ attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, remove() { nodes.delete(this.id!); } }),
+      body: { appendChild: (n: Note) => { nodes.push(n); return n; } },
+      getElementById: find,
+      createElement: (): Note => ({ textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, remove() { nodes.splice(nodes.indexOf(this), 1); } }),
     });
     try {
       const sky = { r: 0.02, g: 0.03, b: 0.05 };
@@ -120,17 +122,24 @@ describe('WebGL context loss (FX-8)', () => {
       one.dispatchEvent(lost);
       two.dispatchEvent(new Event('webglcontextlost', { cancelable: true }));
       expect(lost.defaultPrevented).toBe(true);
-      const note = nodes.get('gl-lost')!;
+      const note = find('gl-lost')!;
       expect(note.attrs.role).toBe('status');
+      // in the page empty first, so the text that follows is announced
+      expect(note.textContent).toBe('');
+      vi.advanceTimersByTime(0);
       expect(note.textContent).toBe('The 3-D view is restarting. The flight goes on.');
       one.dispatchEvent(new Event('webglcontextrestored'));
       expect(three.setClearColor).toHaveBeenCalledWith(expect.objectContaining(sky), 0.5);
-      // the other view is still lost
-      expect(nodes.get('gl-lost')).toBe(note);
+      // the other view is still lost; long enough lost, the line asks for a reload
+      expect(find('gl-lost')).toBe(note);
+      vi.advanceTimersByTime(20_000);
+      expect(note.textContent).toBe('Close other tabs using 3-D graphics, then reload this page.');
       two.dispatchEvent(new Event('webglcontextrestored'));
-      expect(nodes.has('gl-lost')).toBe(false);
+      expect(find('gl-lost')).toBeNull();
+      expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.unstubAllGlobals();
+      vi.useRealTimers();
     }
   });
 });
