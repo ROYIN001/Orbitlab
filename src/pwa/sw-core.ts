@@ -4,7 +4,10 @@
  *
  * Every file the build emits (the page, its scripts, every Web Worker's
  * bundle, the textures, the icons) is precached at install, listed in a
- * manifest the build writes into `sw.js` (`vite.config.ts`, `pwaPlugin`). A
+ * manifest the build writes into `sw.js` (`vite.config.ts`, `pwaPlugin`). The
+ * first install takes the files the page has just downloaded from the
+ * browser's HTTP cache, each checked against its revision, instead of
+ * downloading them a second time (EQ-1). A
  * new deploy is a new manifest, so a new worker, which installs next to the
  * running one — copying every file whose revision has not changed from the
  * old cache rather than downloading it again — and waits; the page offers to
@@ -27,7 +30,7 @@
  * entry that hands it the real `self`.
  */
 
-import { onDemand, type PrecacheManifest } from './manifest';
+import { onDemand, type PrecacheEntry, type PrecacheManifest } from './manifest';
 import type { OfflineReply, OfflineResources } from './offline-protocol';
 export type { PrecacheEntry, PrecacheManifest } from './manifest';
 
@@ -183,14 +186,41 @@ export async function prepareOffline(scope: SwScope, manifest: PrecacheManifest,
 }
 
 /**
+ * How many files an install fetches, verifies and stores at once (EQ-1): each
+ * is held in memory while its revision is checked, and on a first visit most
+ * come from the HTTP cache together, so they are taken a few at a time.
+ */
+const PRECACHE_CONCURRENCY = 6;
+
+/**
+ * One file as its manifest revision says it is (EQ-1). First the copy the
+ * browser already holds: on a first visit the page has just downloaded most
+ * of the files, and `force-cache` hands them over without the network (a file
+ * it does not hold is downloaded as usual). A copy whose bytes are not the
+ * revision (an earlier visit's, a refusal kept) is never used: the file is
+ * downloaded again past the HTTP cache, and that download is checked the same
+ * way, as the repair path checks it.
+ */
+async function fetchVerified(scope: SwScope, url: string, entry: PrecacheEntry): Promise<Response> {
+  const held = await scope.fetch(url, { cache: 'force-cache' });
+  if (held.ok && await contentRevision(await held.clone().arrayBuffer()) === entry.revision) return held;
+  const response = await scope.fetch(url, { cache: 'reload' });
+  if (!response.ok) throw new Error(`precache: ${entry.url} answered ${response.status}`);
+  const revision = await contentRevision(await response.clone().arrayBuffer());
+  if (revision !== entry.revision) throw new Error(`precache: ${entry.url} answered revision ${revision}, not ${entry.revision}`);
+  return response;
+}
+
+/**
  * Fill the new version's cache: a file an older cache holds at the same
- * revision is copied from it, everything else is downloaded (past the HTTP
- * cache, so a stale copy cannot be precached). Any failed download fails the
+ * revision is copied from it, everything else is fetched by `fetchVerified`
+ * (a copy the browser holds when its bytes are the revision, else a download
+ * past the HTTP cache), a few files at a time. Any failed download fails the
  * install, and the running version stays. So does a download whose bytes are
- * not its manifest revision (a deploy landing mid-install), checked as the
- * repair path checks it: it is never put, and no completion marker is written.
- * A file copied from an older cache is checked the same way, and downloaded
- * instead when its bytes differ.
+ * not its manifest revision (a deploy landing mid-install): it is never put,
+ * no completion marker is written, and no further file is started. A file
+ * copied from an older cache is checked the same way, and fetched instead
+ * when its bytes differ.
  */
 export async function precache(scope: SwScope, manifest: PrecacheManifest): Promise<void> {
   const base = new URL(scope.registration.scope);
@@ -202,18 +232,19 @@ export async function precache(scope: SwScope, manifest: PrecacheManifest): Prom
     const oldManifest = await readManifest(old, base);
     for (const e of oldManifest?.entries ?? []) reusable.set(`${e.url}|${e.revision}`, old);
   }
-  await Promise.all(manifest.entries.map(async (entry) => {
-    const url = new URL(entry.url, base).href;
-    const old = reusable.get(`${entry.url}|${entry.revision}`);
-    const kept = old ? await old.match(url) : undefined;
-    // a cache installed before this check can hold other bytes: download those
-    if (kept && await contentRevision(await kept.clone().arrayBuffer()) === entry.revision) { await cache.put(url, kept); return; }
-    const response = await scope.fetch(url, { cache: 'reload' });
-    if (!response.ok) throw new Error(`precache: ${entry.url} answered ${response.status}`);
-    const revision = await contentRevision(await response.clone().arrayBuffer());
-    if (revision !== entry.revision) throw new Error(`precache: ${entry.url} answered revision ${revision}, not ${entry.revision}`);
-    await cache.put(url, response);
-  }));
+  const queue = [...manifest.entries];
+  let failed = false;
+  const fill = async (): Promise<void> => {
+    for (let entry = queue.shift(); entry && !failed; entry = queue.shift()) {
+      const url = new URL(entry.url, base).href;
+      const old = reusable.get(`${entry.url}|${entry.revision}`);
+      const kept = old ? await old.match(url) : undefined;
+      // a cache installed before this check can hold other bytes: fetch those
+      if (kept && await contentRevision(await kept.clone().arrayBuffer()) === entry.revision) await cache.put(url, kept);
+      else await cache.put(url, await fetchVerified(scope, url, entry));
+    }
+  };
+  await Promise.all(Array.from({ length: PRECACHE_CONCURRENCY }, () => fill().catch((error: unknown) => { failed = true; throw error; })));
   await cache.put(new URL(MANIFEST_KEY, base).href, new Response(JSON.stringify(manifest), { headers: { 'content-type': 'application/json' } }));
 }
 
