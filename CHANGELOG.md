@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Launch (G2 hold, compact short scene): when the flight scene is under 380 px tall, its labels are one line each (mission title with an ellipsis, phase name in smaller type, the newest callout only), the camera tabs and tool buttons share one row, and the floating telemetry card folds into a tool button that opens it (mouse or keyboard, announced as expanded or collapsed) until it is pressed again or the scene is resized; taller scenes are unchanged.
 - Launch (G2 hold, F5): the flight scene keeps a minimum height in Explore and Engineer on short and zoomed laptop screens (it shrank to 2–95 px at 1100×650 and at 125–150 % zoom); the key-events timeline, play/pause and the clock stay on the first screen, the six-DOF/TORU panels and the telemetry strip move below the scene and are reached by scrolling, and a phone's flight bar no longer covers the scene.
 - Tests: the phone step of the PR smoke check (`r2-shell-smoke`) waits a full second for a paused flight to settle before opening the event list, and reports what the chip and the flight were if the list does not open.
 - Build (D-38 offset for the G2 layout fix): the published page leaves out the source comments of `index.html` (2.65 kB less for every visitor and in the offline copy); what the page shows and does is unchanged.

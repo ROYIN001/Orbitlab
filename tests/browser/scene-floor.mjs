@@ -48,14 +48,15 @@ export const SHORT_SCENE = 380;
 /**
  * S6(a): the most of a short scene's area the overlays may cover together,
  * from the measurements in docs/development/reports/G2-compact-overlay.md.
- * Before the compact layout they covered 21-53 % of a short scene (the card,
- * a three-line title, the tool column); after it 10-18 % of every short scene
- * at least NARROW_SCENE px wide, so a quarter is the ceiling there, with room
- * for a longer title or callout: three quarters of the picture clear. A
- * narrower short scene (601 px: Explore at 150 % zoom on 1366x768, the only
- * one in the matrices) cannot hold the Russian camera tabs and the tool row
- * on one line; the tabs wrap to two rows and the overlays cover 21-30 %
- * (41-53 % before), so it is held to a third.
+ * Before the compact layout they covered 18-34 % of a short scene at least
+ * NARROW_SCENE px wide (the card, a three-line title, the tool column), and
+ * 38-53 % of a narrower one; after it 10-18 % of every short scene at least
+ * NARROW_SCENE px wide, so a quarter is the ceiling there, with room for a
+ * longer title or callout: three quarters of the picture clear. The narrower
+ * short scenes in the matrices, 601 px (Explore at 150 % zoom on 1366x768)
+ * and a 320x740 phone, cannot hold the Russian camera tabs and the tools on
+ * one line; the tabs wrap and the overlays cover 20-31 %, so they are held
+ * to a third.
  */
 export const SHORT_OVERLAY_SHARE = 0.25;
 export const NARROW_OVERLAY_SHARE = 1 / 3;
