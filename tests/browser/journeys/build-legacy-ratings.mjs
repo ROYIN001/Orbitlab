@@ -7,7 +7,7 @@
  * mark); reload and open it. The page opens at once, the ratings search runs
  * with its progress line and Stop, and the record ends up with the finished
  * ratings and the mark, its revision (`updated`) unchanged (D-75). Opened
- * again, it is not searched again.
+ * again, it is not searched again; saved and renamed, it keeps the mark.
  */
 import { putWorkspaceFixture, workspaceValue } from '../workspace-storage.mjs';
 
@@ -59,4 +59,20 @@ export default async function buildLegacyRatings(t) {
   t.check(await page.locator('[data-k="ratings-stop"]').count() === 0, 'a design with final ratings was searched again');
   const after = (await workspaceValue(page, DESIGNS))?.designs?.[0];
   t.check(JSON.stringify(after) === JSON.stringify(rerated), 'opening a final design wrote to it');
+
+  // Save keeps the mark the record opened with (the ratings are known final), and so does Rename
+  await page.click('[data-k="store:save"]');
+  const resaved = await t.until(async () => {
+    const d = (await workspaceValue(page, DESIGNS))?.designs?.[0];
+    return d && d.updated !== rerated.updated ? d : null;
+  }, { timeoutMs: 30_000 });
+  t.check(resaved?.ratingsFinal === true, 'Save dropped the mark of a design whose ratings are final');
+  await page.click(`[data-k="rename:${legacy.id}"]`);
+  await page.fill(`[data-k="renameTo:${legacy.id}"]`, 'Renamed Electron');
+  await page.click(`[data-k="renameOk:${legacy.id}"]`);
+  const renamed = await t.until(async () => {
+    const d = (await workspaceValue(page, DESIGNS))?.designs?.[0];
+    return d?.name === 'Renamed Electron' ? d : null;
+  }, { timeoutMs: 30_000 });
+  t.check(renamed?.ratingsFinal === true, 'Rename dropped the mark');
 }

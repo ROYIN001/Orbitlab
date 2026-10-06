@@ -61,7 +61,7 @@ import { VehiclePicker } from './vehicle-picker';
 import { figuresView, mass } from './figures';
 import { designTextList } from './design-text';
 import { ExploreStore } from './explore-store';
-import { ratingsRecord, recomputeKeptRatings, runRatingsJob, unfinishedRatings, unfinishedRatingsText } from './ratings-job';
+import { FinalRatings, ratingsRecord, recomputeKeptRatings, runRatingsJob, unfinishedRatings, unfinishedRatingsText } from './ratings-job';
 import './explore.css';
 
 export interface ExploreHost {
@@ -176,7 +176,7 @@ export class ExploreLevel {
   /** a ratings search running: for which draft and which vehicle (its signature), and how far it has got */
   private ratingsJob: { controller: AbortController; draft: object; signature: string; rating: RatingClass | null; flights: number; settled?: Promise<unknown> } | null = null;
   /** ratings known final (FX-1 s2): a finished search's, the review's, or a kept design's whose record says so; a save marks the record */
-  private readonly finalRatings = new WeakSet<RatingsRecord>();
+  private readonly finalRatings = new FinalRatings();
   private ratingsMessage: { level: 'ok' | 'error'; text: string } | null = null;
   private flyMessage: string | null = null;
   /** the default names given in the language they were given in, so a language switch can give them again */
@@ -445,7 +445,7 @@ export class ExploreLevel {
     this.store.render();
     this.root.closest('.build-screen')?.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
     if (!this.result.ok) return;
-    if (record.ratingsFinal && opened.draft.ratings) this.finalRatings.add(opened.draft.ratings);
+    this.finalRatings.opened(record, opened.draft.ratings);
     // ratings kept before only a finished search was kept are searched again, in the background, with the
     // usual progress line and Stop (FX-1 s2; owner, 2026-10-06); a search for the design shown before ends first
     const source = this.result.ratings;
@@ -455,9 +455,7 @@ export class ExploreLevel {
 
   /** The design on screen's ratings are final, or none of its own: a record saved with it is marked so (FX-1 s2). */
   private ratingsFinal(): boolean {
-    if (!this.result.ok) return false;
-    const r = activeDraft(this.state).ratings;
-    return this.result.ratings === 'computed' ? !!r && this.finalRatings.has(r) : this.result.ratings !== 'base';
+    return this.finalRatings.onSave(this.result.ok ? this.result.ratings : null, activeDraft(this.state).ratings);
   }
 
   private pickPart(ref: string): void {

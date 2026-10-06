@@ -9,7 +9,7 @@
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import { ratingsSearch, type ComputedRating, type ComputedRatings, type RatingClass } from '../../design/ratings';
-import type { RatingsRecord, RatingsSource } from '../../design/explore-model';
+import { ratingsSignature, type RatingsRecord, type RatingsSource } from '../../design/explore-model';
 import type { DesignRecord, DesignStore } from '../../design/design-store';
 import { mass } from './figures';
 import { BUILD_RATING_OPTIONS } from './ratings-budget';
@@ -71,11 +71,30 @@ export async function recomputeKeptRatings(record: DesignRecord<'vehicle'>, open
   run: () => Promise<RatingsRecord | null>, store: Pick<DesignStore, 'rerate'>): Promise<'final' | 'recomputed' | 'unfinished'> {
   if (!ratingsNeedRecompute(record, opened)) return 'final';
   const r = await run().catch(() => null);
-  if (!r) return 'unfinished';
+  // ratings of another vehicle (the design edited while the search ran) are not this record's
+  if (!r || r.signature !== ratingsSignature(record.design)) return 'unfinished';
   // the design as the page flies it with these ratings (explore-model.ts `remixResult`)
   const { payloadSSO: _kept, ...design } = record.design;
-  const rated = await store.rerate(record.id, { ...design, payloadLEO: r.payloadLEO, payloadGTO: r.payloadGTO, ...(r.payloadSSO !== undefined ? { payloadSSO: r.payloadSSO } : {}) });
+  const rated = await store.rerate(record.id, { ...design, payloadLEO: r.payloadLEO, payloadGTO: r.payloadGTO, ...(r.payloadSSO !== undefined ? { payloadSSO: r.payloadSSO } : {}) })
+    .catch(() => null);
   return rated ? 'recomputed' : 'unfinished';
+}
+
+/**
+ * Which ratings on screen are known final (FX-1 s2): a finished search's, the
+ * readiness review's, or those a kept record opened with when it carried the
+ * mark. Held in memory only: ratings restored from the browser's kept drafts
+ * are not known final, and a record saved with them is searched again.
+ */
+export class FinalRatings {
+  private readonly known = new WeakSet<RatingsRecord>();
+  add(r: RatingsRecord | null): void { if (r) this.known.add(r); }
+  /** a kept record opened with ratings `r`: final when the record says so */
+  opened(record: Pick<DesignRecord, 'ratingsFinal'>, r: RatingsRecord | null): void { if (record.ratingsFinal === true) this.add(r); }
+  /** whether a record saved now, with ratings of source `source` (null: nothing built), is marked final */
+  onSave(source: RatingsSource | null, r: RatingsRecord | null): boolean {
+    return source === 'computed' ? !!r && this.known.has(r) : source === 'published' || source === 'none';
+  }
 }
 
 export type RatingsReply =

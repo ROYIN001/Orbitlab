@@ -135,7 +135,8 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
   /** A kept rocket's ratings computed again: kept, not a design edit (D-75); null when they could not be. */
   async rerate(id: string, design: DesignKinds['vehicle']): Promise<DesignRecord<'vehicle'> | null> {
     let rec: DesignRecord<'vehicle'> | null = null;
-    try { rec = await this.store.rerate(id, design); } catch { /* not kept: tried again at the next open */ }
+    // not kept: said as any failed save is, and tried again at the next open
+    try { rec = await this.store.rerate(id, design); } catch (error) { this.say(this.failure(error)); }
     if (rec) await this.refresh();
     return rec;
   }
