@@ -170,9 +170,13 @@ export class WorkspaceRepository {
     const now = new Date().toISOString();
     return { version: 1, id, name: checkedName(name), createdAt: now, updatedAt: now, revision: 0, epoch: 0, values: clone(values) };
   }
+  /** Throws `missing` unless the catalogue lists this profile and it is not being deleted. */
+  private listed(id: string): void {
+    const entry = this.catalog().profiles[id];
+    if (!entry || entry.deleting) throw new WorkspaceError('missing');
+  }
   read(id: string): ProfileRecord {
-    const catalog = this.catalog();
-    if (!catalog.profiles[id] || catalog.profiles[id].deleting) throw new WorkspaceError('missing');
+    this.listed(id);
     const record = this.ephemeral ? this.ephemeral[id] : parseRecord(this.storage.getItem(profileStorageKey(id)));
     if (!record || record.id !== id) throw new WorkspaceError('missing');
     return clone(record);
@@ -284,15 +288,14 @@ export class WorkspaceRepository {
   }
   /** Readable profiles only; an unreadable row no longer hides the others (see listWithStatus). */
   list(): ProfileSummary[] {
-    return this.listWithStatus().flatMap((row) => { if (row.state !== 'ok') return []; const { state: _state, ...profile } = row; return [profile]; });
+    return this.listWithStatus().flatMap(({ state, ...profile }) => state === 'ok' ? [profile as ProfileSummary] : []);
   }
   listWithStatus(): ProfileListRow[] {
     return Object.entries(this.catalog().profiles).filter(([, row]) => !row.deleting).map(([id]) => this.profileRow(id));
   }
   /** Reads only this owner. A record that cannot be parsed, is missing or is newer becomes a row with that state; its bytes are not touched. */
   profileRow(id: string): ProfileListRow {
-    const entry = this.catalog().profiles[id];
-    if (!entry || entry.deleting) throw new WorkspaceError('missing');
+    this.listed(id);
     try { return { ...summary(this.read(id)), state: 'ok' }; } catch (error) {
       if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
       let name: string | undefined, raw: string | null = null;
@@ -304,8 +307,7 @@ export class WorkspaceRepository {
   }
   /** The stored bytes exactly as kept, for a backup of a record this version cannot read. */
   rawProfile(id: string): string {
-    const entry = this.catalog().profiles[id];
-    if (!entry || entry.deleting) throw new WorkspaceError('missing');
+    this.listed(id);
     const raw = this.ephemeral ? (this.ephemeral[id] ? JSON.stringify(this.ephemeral[id]) : null) : this.storage.getItem(profileStorageKey(id));
     if (raw === null) throw new WorkspaceError('missing');
     return raw;

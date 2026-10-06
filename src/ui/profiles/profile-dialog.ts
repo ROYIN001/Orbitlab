@@ -65,14 +65,16 @@ function errorReason(error: unknown): string {
   };
   return messages[code] ? text(messages[code]) : error instanceof Error ? error.message : String(error);
 }
-const rowText = (profile: UnreadableProfileItem): ProfileTextKey =>
-  profile.state === 'newer' ? 'rowNewer' : profile.state === 'missing' ? 'rowMissing' : 'rowUnreadable';
+const rowText = (profile: UnreadableProfileItem): string =>
+  text(profile.state === 'newer' ? 'rowNewer' : profile.state === 'missing' ? 'rowMissing' : 'rowUnreadable');
+const rowName = (profile: UnreadableProfileItem): string => profile.name ?? text('unreadableName');
+type MessageKey = 'error' | 'backupDone' | 'backupPartial' | 'backupNoneReadable' | 'mediaDone';
 
 /** Native modal with explicit destructive scopes and a chooser after active/last-profile deletion. */
 export class ProfileDialog extends Modal {
   private screen: Screen = { kind: 'list' };
   private busy = false;
-  private message: { key: 'error' | 'backupDone' | 'backupPartial' | 'backupNoneReadable' | 'mediaDone'; reason?: string } | null = null;
+  private message: { key: MessageKey; reason?: string } | null = null;
 
   constructor(dialog: HTMLDialogElement, private readonly host: ProfileDialogHost) {
     super(dialog);
@@ -129,14 +131,16 @@ export class ProfileDialog extends Modal {
       this.message = { key: 'error', reason: errorReason(error) };
     } finally { this.busy = false; this.render(); }
   }
-  private async backup(id?: string): Promise<void> {
+  /** Export without leaving the screen; `done` picks the status line from the host's result. */
+  private async keep<T>(task: () => T | Promise<T>, done: (result?: T) => MessageKey = () => 'backupDone'): Promise<void> {
     if (this.busy) return;
-    const screen = this.screen;
-    await this.run(() => this.host.exportBackup(id));
+    const screen = this.screen; let result: T | undefined;
+    await this.run(async () => { result = await task(); });
     this.screen = screen;
-    if (!this.message) this.message = { key: 'backupDone' };
+    this.message ??= { key: done(result) };
     this.render();
   }
+  private backup(id?: string): void { void this.keep(() => this.host.exportBackup(id)); }
   private counts(counts: Partial<ProfileCounts>): HTMLElement {
     const box = node('section', 'profile-counts');
     box.append(node('h3', undefined, text('countsTitle')));
@@ -171,12 +175,13 @@ export class ProfileDialog extends Modal {
     else if (this.screen.kind === 'backups') this.backups(content, snapshot, readonly);
     else if (this.screen.kind === 'import') this.importForm(content, snapshot, readonly);
     else if (this.screen.kind === 'media') this.mediaConfirmation(content, snapshot, readonly);
-    else if (this.screen.kind === 'deleteUnreadable') this.unreadableConfirmation(content, snapshot, readonly);
     else this.confirmation(content, snapshot, readonly);
     const status = node('p', `profile-status${this.message?.key === 'error' ? ' profile-error' : ''}`);
     status.setAttribute('role', this.message?.key === 'error' ? 'alert' : 'status');
     status.setAttribute('aria-live', 'polite');
-    status.textContent = this.busy ? text('busy') : this.message ? text(this.message.key, { reason: this.message.reason ?? '' }) : '';
+    const key = this.message?.key;
+    status.textContent = this.busy ? text('busy') : key ? text(key, { reason: this.message!.reason ?? '' })
+      + (key === 'backupPartial' || key === 'backupNoneReadable' ? ' ' + text('backupEach') : '') : '';
     this.body.replaceChildren(title, content, status);
     const close = this.el.querySelector<HTMLButtonElement>('.dialog-close');
     if (close) close.disabled = !this.canClose();
@@ -206,10 +211,11 @@ export class ProfileDialog extends Modal {
     }
     for (const profile of snapshot.unreadable ?? []) {
       const row = node('li', 'profile-list-row profile-unreadable-row'); row.dataset.profileId = profile.id;
-      row.append(node('strong', 'profile-list-name', profile.name ?? text('unreadableName')), node('p', 'profile-warning', text(rowText(profile))));
+      const missing = profile.state === 'missing';
+      row.append(node('strong', 'profile-list-name', rowName(profile)), node('p', 'profile-warning', missing ? rowText(profile) : `${rowText(profile)} ${text('rowKept')}`));
       const remove = this.rowButton('delete', profile, () => this.go({ kind: 'deleteUnreadable', id: profile.id }), 'profile-danger-text');
       remove.disabled ||= readonly;
-      const buttons = profile.state === 'missing' ? [remove] : [this.rowButton('exportRaw', profile, () => void this.saveRaw(profile.id)), remove];
+      const buttons = missing ? [remove] : [this.rowButton('exportRaw', profile, () => this.saveRaw(profile.id)), remove];
       row.append(this.actions(...buttons)); list.append(row);
     }
     if (!snapshot.profiles.length && !snapshot.unreadable?.length) content.append(node('p', undefined, text('empty')));
@@ -240,19 +246,27 @@ export class ProfileDialog extends Modal {
       else this.go({ kind: 'create', name });
     }); content.append(form);
   }
+  /** Switch, create and delete; `deleteUnreadable` is the delete of a record this version cannot read:
+   *  explicit, with its state explained and copies offered first (S10 §10.1 rule 2). */
   private confirmation(content: HTMLElement, snapshot: ProfileDialogSnapshot, readonly: boolean): void {
     const screen = this.screen;
-    if (screen.kind !== 'switch' && screen.kind !== 'delete' && screen.kind !== 'create') return;
-    const profile = screen.kind === 'create' ? null : snapshot.profiles.find((item) => item.id === screen.id);
-    if (screen.kind !== 'create' && !profile) { this.screen = { kind: 'list' }; this.list(content, snapshot, readonly); return; }
-    const name = screen.kind === 'create' ? screen.name : profile!.name;
-    content.append(node('h3', undefined, text(`${screen.kind}Title`, { name })));
-    const deleting = screen.kind === 'delete';
+    if (screen.kind !== 'switch' && screen.kind !== 'delete' && screen.kind !== 'create' && screen.kind !== 'deleteUnreadable') return;
+    const kind = screen.kind === 'deleteUnreadable' ? 'delete' : screen.kind;
+    const broken = screen.kind === 'deleteUnreadable' ? snapshot.unreadable?.find((item) => item.id === screen.id) : undefined;
+    const profile = screen.kind === 'create' || screen.kind === 'deleteUnreadable' ? null : snapshot.profiles.find((item) => item.id === screen.id);
+    if (screen.kind !== 'create' && !profile && !broken) { this.screen = { kind: 'list' }; this.list(content, snapshot, readonly); return; }
+    const name = screen.kind === 'create' ? screen.name : broken ? rowName(broken) : profile!.name;
+    content.append(node('h3', undefined, text(`${kind}Title`, { name })));
+    if (broken) content.append(node('p', 'profile-warning', rowText(broken)));
+    const deleting = kind === 'delete';
     content.append(node('p', deleting ? 'profile-warning' : '', text(deleting ? 'deleteLead' : 'transition')));
-    if (deleting) {
+    if (broken) {
+      if (broken.state !== 'missing') content.append(this.button('exportRaw', () => this.saveRaw(broken.id)));
+      this.mediaExport(content, snapshot, broken.id);
+    } else if (deleting) {
       content.append(this.counts(profile!.counts));
       if (profile!.id === snapshot.activeId) content.append(node('p', 'profile-warning', text('deleteActive')));
-      content.append(this.button('backup', () => void this.backup(profile!.id)));
+      content.append(this.button('backup', () => this.backup(profile!.id)));
       content.append(node('p', 'profile-warning', text('jsonMedia')));
       this.mediaExport(content, snapshot, profile!.id);
     }
@@ -294,7 +308,7 @@ export class ProfileDialog extends Modal {
     content.append(this.counts({
       ...(screen.scope !== 'exams' ? { lessons: screen.oneLesson ? Number(!!screen.lessonId && snapshot.lessons?.some((item) => item.id === screen.lessonId)) : active.counts.lessons } : {}),
       ...(screen.scope !== 'learning' ? { assessments: active.counts.assessments } : {}),
-    }), node('p', 'profile-warning', text('resetEffects')), this.button('backup', () => void this.backup(active.id)));
+    }), node('p', 'profile-warning', text('resetEffects')), this.button('backup', () => this.backup(active.id)));
     const confirm = this.button('resetConfirm', () => void this.run(() => this.host.reset(screen.scope, screen.oneLesson ? screen.lessonId : undefined), 'reset'), 'profile-danger');
     confirm.disabled ||= readonly || (screen.oneLesson && !snapshot.lessons?.some((item) => item.id === screen.lessonId));
     content.append(this.actions(this.button('cancel', () => this.go({ kind: 'list' })), confirm));
@@ -309,16 +323,16 @@ export class ProfileDialog extends Modal {
   private backups(content: HTMLElement, snapshot: ProfileDialogSnapshot, readonly: boolean): void {
     content.append(node('h3', undefined, text('backups')), node('p', 'profile-warning', text('jsonMedia')));
     const current = snapshot.activeId;
-    const single = this.button('exportProfile', () => void this.backup(current ?? undefined));
+    const single = this.button('exportProfile', () => this.backup(current ?? undefined));
     // A JSON snapshot also lets a visit-only or locked reader preserve the
     // scoped data it can read. It never enables a durable mutation or media write.
     single.disabled ||= !current;
     content.append(single);
     if (this.host.exportAll) {
-      const all = this.button('exportAll', () => void this.backupAll()); all.disabled ||= readonly; content.append(all);
+      const all = this.button('exportAll', () => this.backupAll()); all.disabled ||= readonly; content.append(all);
     }
     if (this.host.exportMedia) {
-      const media = this.button('exportMedia', () => void this.exportAudio(current ?? undefined)); media.disabled ||= !current || readonly; content.append(media);
+      const media = this.button('exportMedia', () => this.exportAudio(current ?? undefined)); media.disabled ||= !current || readonly; content.append(media);
     }
     if (this.host.previewImport && this.host.importBackup) content.append(this.filePicker('importBackup', '.json,application/json', (file) => void this.preview(file), readonly));
     if (this.host.importMedia) content.append(this.filePicker('importMedia', '.orbitlab-audio,application/octet-stream', (file) => {
@@ -326,48 +340,26 @@ export class ProfileDialog extends Modal {
     }, !current || readonly));
     content.append(this.actions(this.button('back', () => this.go({ kind: 'list' }))));
   }
-  private async backupAll(): Promise<void> {
-    const out: { result?: { skipped: number; exported?: boolean } | void } = {};
-    const screen = this.screen; await this.run(async () => { out.result = await this.host.exportAll?.(); }); this.screen = screen;
-    const result = out.result;
-    if (!this.message) this.message = { key: result?.exported === false ? 'backupNoneReadable' : result?.skipped ? 'backupPartial' : 'backupDone' };
-    this.render();
+  private backupAll(): void {
+    void this.keep(() => this.host.exportAll?.(), (result) =>
+      result?.exported === false ? 'backupNoneReadable' : result?.skipped ? 'backupPartial' : 'backupDone');
   }
   /** A row action whose accessible name and focus key include the profile, so rows can be told apart. */
   private rowButton(key: ProfileTextKey, profile: UnreadableProfileItem, action: () => void, kind = ''): HTMLButtonElement {
     const button = this.button(key, action, kind);
-    button.setAttribute('aria-label', text('rowAction', { action: text(key), name: profile.name ?? text('unreadableName') }));
+    button.setAttribute('aria-label', `${text(key)}: ${rowName(profile)}`);
     button.dataset.profileFocus = `${key}:${profile.id}`;
     return button;
   }
   /** Audio export only reads media; it needs real (not visit-only) storage, never the owner lock. */
   private mediaExport(content: HTMLElement, snapshot: ProfileDialogSnapshot, id: string): void {
     if (!this.host.exportMedia) return;
-    const button = this.button('exportMedia', () => void this.exportAudio(id));
+    const button = this.button('exportMedia', () => this.exportAudio(id));
     if (snapshot.status === 'ephemeral') { button.disabled = true; content.append(button, node('p', undefined, text('mediaUnavailable'))); }
     else content.append(button);
   }
-  private async saveRaw(id: string): Promise<void> {
-    const screen = this.screen; await this.run(() => this.host.exportRaw?.(id)); this.screen = screen;
-    if (!this.message) this.message = { key: 'backupDone' }; this.render();
-  }
-  /** Delete of a record this version cannot read: explicit, with copies offered first (S10 §10.1 rule 2). */
-  private unreadableConfirmation(content: HTMLElement, snapshot: ProfileDialogSnapshot, readonly: boolean): void {
-    const screen = this.screen;
-    const profile = screen.kind === 'deleteUnreadable' ? snapshot.unreadable?.find((item) => item.id === screen.id) : undefined;
-    if (!profile) { this.screen = { kind: 'list' }; this.list(content, snapshot, readonly); return; }
-    content.append(node('h3', undefined, text('deleteUnreadableTitle', { name: profile.name ?? text('unreadableName') })),
-      node('p', 'profile-warning', text(rowText(profile))), node('p', 'profile-warning', text('deleteUnreadableLead')));
-    if (profile.state !== 'missing') content.append(this.button('exportRaw', () => void this.saveRaw(profile.id)));
-    this.mediaExport(content, snapshot, profile.id);
-    const confirm = this.button('deleteUnreadableConfirm', () => void this.run(() => this.host.remove(profile.id), 'delete'), 'profile-danger');
-    confirm.disabled ||= readonly;
-    content.append(this.actions(this.button('cancel', () => this.go({ kind: 'list' })), confirm));
-  }
-  private async exportAudio(id?: string): Promise<void> {
-    const screen = this.screen; await this.run(() => this.host.exportMedia?.(id)); this.screen = screen;
-    if (!this.message) this.message = { key: 'backupDone' }; this.render();
-  }
+  private saveRaw(id: string): void { void this.keep(() => this.host.exportRaw?.(id)); }
+  private exportAudio(id?: string): void { void this.keep(() => this.host.exportMedia?.(id)); }
   private async preview(file: File): Promise<void> {
     if (!this.host.previewImport || this.busy) return;
     this.busy = true; this.message = null; this.render();
@@ -408,7 +400,7 @@ export class ProfileDialog extends Modal {
         mode.value = screen.options.mode; mode.addEventListener('change', () => { screen.options.mode = mode.value as 'keep' | 'replace'; this.render(); });
         modeLabel.append(mode); content.append(modeLabel);
         if (screen.options.mode === 'replace') content.append(node('p', 'profile-warning', text('replaceWarning')),
-          this.button('backup', () => void this.backup(screen.options.targetId)));
+          this.button('backup', () => this.backup(screen.options.targetId)));
       }
     }
     const confirm = this.button('importConfirm', () => {
@@ -431,7 +423,7 @@ export class ProfileDialog extends Modal {
     for (const [value, key] of [['keep', 'keep'], ['replace', 'replace']] as const) { const option = node('option', undefined, text(key)); option.value = value; mode.append(option); }
     mode.value = screen.mode; mode.addEventListener('change', () => { screen.mode = mode.value as 'keep' | 'replace'; this.render(); });
     modeLabel.append(mode); content.append(modeLabel);
-    if (this.host.exportMedia) content.append(this.button('exportMedia', () => void this.exportAudio(screen.profileId)));
+    if (this.host.exportMedia) content.append(this.button('exportMedia', () => this.exportAudio(screen.profileId)));
     const confirm = this.button('confirm', () => void this.run(async () => {
       await this.host.importMedia?.(screen.file, screen.profileId, screen.mode);
       this.message = { key: 'mediaDone' };

@@ -2,6 +2,8 @@ import { parseWorkspaceArchive, workspaceImportWarnings, WORKSPACE_FORMAT, WORKS
 import { ProfileDialog, type ProfileDialogHost, type ProfileDialogSnapshot, type ProfileCounts, type ProfileItem, type UnreadableProfileItem } from './profile-dialog';
 import { downloadBlob } from '../download';
 
+const fileName = (suffix: string): string => `Orbitlab-${new Date().toISOString().slice(0, 10)}${suffix}`;
+
 /** Backup/readout adapters are loaded with the menu, not during app startup. */
 class ProfileMenuHost {
   readonly host: ProfileDialogHost;
@@ -42,8 +44,7 @@ class ProfileMenuHost {
         return { skipped, exported: true };
       },
       exportRaw: async (id) => {
-        const raw = this.repo.rawProfile(id);
-        downloadBlob(new Blob([raw], { type: 'application/json' }), `Orbitlab-${new Date().toISOString().slice(0, 10)}-stored-profile-${id}.json`);
+        downloadBlob(new Blob([this.repo.rawProfile(id)], { type: 'application/json' }), fileName(`-stored-profile-${id}.json`));
       },
       previewImport: async (file) => {
         const raw = await this.archiveText(file);
@@ -77,7 +78,7 @@ class ProfileMenuHost {
         await this.repo.prepareChange();
         const { exportProfileMediaArchive } = await import('../../workspace/media-archive');
         const blob = await exportProfileMediaArchive(profile.id, profile.name ?? profile.id);
-        downloadBlob(blob, `Orbitlab-${new Date().toISOString().slice(0, 10)}.orbitlab-audio`);
+        downloadBlob(blob, fileName('.orbitlab-audio'));
       },
       previewMedia: async (file) => {
         const { previewMediaArchive } = await import('../../workspace/media-archive');
@@ -132,9 +133,8 @@ class ProfileMenuHost {
     const profiles: ProfileItem[] = [], unreadable: UnreadableProfileItem[] = [];
     try {
       for (const row of this.repo.listWithStatus()) {
-        if (row.state !== 'ok') { unreadable.push({ id: row.id, state: row.state, name: row.name }); continue; }
-        const { state: _state, ...p } = row;
-        profiles.push({ ...p, counts: this.counts(this.repo.read(p.id).values, p.counts) });
+        if (row.state !== 'ok') unreadable.push(row);
+        else profiles.push({ ...row, counts: this.counts(this.repo.read(row.id).values, row.counts) });
       }
     } catch { /* The chooser explains inaccessible storage; never overwrite it. */ }
     const activeId = this.name() && this.repo.binding?.valid ? this.repo.binding.profileId : null;
