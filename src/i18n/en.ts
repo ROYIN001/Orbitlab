@@ -1476,7 +1476,8 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'use.thai.ids': 'International designator',
   'use.thai.status': 'Status',
   'use.thai.sources': 'Sources',
-  'use.thai.nominal': 'The orbit is the catalogue\'s as of {date}: its shape, not where the satellite is now. Following real satellites comes with the Orbit section\'s next phase.',
+  'use.thai.nominal': 'The orbit is the catalogue\'s as of {date}: its shape, not where the satellite is now.',
+  'use.thai.inSky': 'Show in Real satellites',
   'use.dir.n': 'north',
   'use.dir.ne': 'north-east',
   'use.dir.e': 'east',
@@ -3644,6 +3645,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'flown.docked': 'Docking',
   'flown.note': '≈ marks a planned, rounded or secondary figure. The model flies its own guidance, not the flown one, so the times differ; the sources are in the physics notes, §13.',
   'watch.real': 'Real flight: {event} at {real} (here {model})',
+  'watch.moonScope': 'The Moon: Apollo 11\'s week only (DE441 table)',
   // --- G03 ---
   'loop.button': 'Attitude-loop inspector',
   'loop.title': 'Attitude-loop inspector',
