@@ -343,3 +343,23 @@ describe('orbit lifetime: the result is shown with what it was made from (A5)', 
     expect(d).not.toContain('The Moon');
   });
 });
+
+describe('RealSky: NAPA-2\'s case is kept with the data mode it ran in (M-ORBIT-002)', () => {
+  it('is fresh in the mode it ran in, and stale, not current, once the mode changes', async () => {
+    const offline = new SlowProvider('offline');
+    const { sky, use } = skyWith(offline);
+    const slot = sky.results.napaCase;
+    expect(slot.status(sky.caseInputs())).toBe('none');
+    const run = sky.runNapaCase();
+    expect(slot.state).toBe('running');
+    for (const a of offline.asked.filter((x) => x.id === 'spaceWeather')) a.answer.reject(new Error('offline'));
+    await run;
+    expect(slot.state).toBe('done');
+    expect(slot.inputs).toEqual({ sw: 'offline' });
+    expect(slot.result!.box.jd).not.toBeNull();
+    expect(slot.status(sky.caseInputs())).toBe('fresh');
+    use(new SlowProvider('online'));
+    expect(slot.status(sky.caseInputs())).toBe('stale');
+    expect(slot.changed(sky.caseInputs())).toEqual(['sw']);
+  }, 30_000);
+});
