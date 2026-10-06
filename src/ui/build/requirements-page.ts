@@ -50,6 +50,7 @@ import { field, numberBox, select } from './explore-level';
 import { toggle } from './satellite-controls';
 import { keepUnits, sayFig } from './satellite-text';
 import type { SatelliteWorkspace } from './satellite-workspace';
+import { askReplace, type ExploreStore } from './explore-store';
 import './requirements.css';
 
 export interface RequirementsPageHost {
@@ -57,6 +58,8 @@ export interface RequirementsPageHost {
   toBench(): void;
   /** a row was opened: its design is on the workspace; show it on the bench, and say where it came from */
   opened(origin: { designId: string; cycle: string; altitude: number }): void;
+  /** M-BUILD-007: the saved satellites, which say whether the bench's design has unsaved changes, and save it */
+  designs(): ExploreStore<'satellite'>;
 }
 
 /** Where this browser keeps the form: a convenience only (a blocked storage starts on the default). */
@@ -199,6 +202,8 @@ export class RequirementsPage {
   private opened: Opened | null = null;
   /** the row the bench could not take, and why: said in that row, under its button */
   private refused: { cycle: string; text: string } | null = null;
+  /** M-BUILD-007: the row asked about before its design replaces a bench design with unsaved changes */
+  private asking: string | null = null;
   /** the cycles the form tries, kept while the boxes they follow are unchanged: 30-day cycles take some 0.1 s to find, at every key typed */
   private cyclesKept: { key: string; cycles: RepeatCycle[] } | null = null;
   private readonly head = el('header', 'bs-panel brq-head');
@@ -662,13 +667,20 @@ export class RequirementsPage {
         tr.append(cell);
       });
       body.append(tr);
-      // why the bench could not take it, on a line of its own under the row
-      if (this.refused?.cycle === cycleText(row)) {
+      // why the bench could not take it, or the question before it replaces unsaved changes, on a line of its own under the row
+      const cycle = cycleText(row);
+      let why: HTMLElement | null = null;
+      if (this.refused?.cycle === cycle) {
+        why = el('span', 'brq-refused bx-msg-error', this.refused.text);
+        why.setAttribute('role', 'status');
+      } else if (this.asking === cycle) {
+        why = askReplace(t('build.req.designName', { cycle, h: fig(row.altitude, 'm') }), `${P}ask:`, () => void this.saveThenOpen(row),
+          () => void this.openRow(row, true), () => { this.asking = null; this.renderResults(); this.focus(`${P}open:${cycle}`); });
+      }
+      if (why) {
         const line = el('tr', 'brq-refused-row');
         const td = el('td');
         td.colSpan = COLUMNS.length;
-        const why = el('span', 'brq-refused bx-msg-error', this.refused.text);
-        why.setAttribute('role', 'status');
         td.append(why);
         line.append(td);
         body.append(line);
@@ -681,23 +693,44 @@ export class RequirementsPage {
 
   // ─── a row on the bench ───────────────────────────────────────────────────
 
-  private openRow(row: TradeRow): void {
+  /** Put a row's design on the bench; asked first when the bench's design has unsaved changes, unless `sure` (M-BUILD-007). */
+  private async openRow(row: TradeRow, sure = false): Promise<void> {
     const r = this.result;
     if (!r) return;
     const cycle = cycleText(row);
     const name = t('build.req.designName', { cycle, h: fig(row.altitude, 'm') });
     const b = benchDesign(r.template, row, r.req, r.jd, r.req.activity, newSatelliteId(), name);
+    this.asking = null;
     if (!b.ok) {
       this.refused = { cycle, text: t(b.key, { field: b.field ? t(b.field) : '' }) };
       this.renderResults();
       return;
     }
-    this.opened = { cycle, altitude: row.altitude, lines: compareWithBench(row, r.req, r.template, b), txRaised: b.txRaised, design: b.design };
     this.refused = null;
+    if (!sure && await this.host.designs().unsaved()) {
+      this.asking = cycle;
+      this.renderResults();
+      this.focus(`${P}ask:save`);
+      return;
+    }
+    this.opened = { cycle, altitude: row.altitude, lines: compareWithBench(row, r.req, r.template, b), txRaised: b.txRaised, design: b.design };
     // the bench reads the air at the level the table was worked out for, as the lifetime search did
-    this.ws.setLevel(r.req.activity);
-    this.ws.replace({ design: b.design, recordId: null, defaultName: '' });
+    this.ws.replace({ design: b.design, recordId: null, defaultName: '' }, r.req.activity);
     this.host.opened({ designId: b.design.id, cycle, altitude: row.altitude });
+  }
+
+  /** M-BUILD-007: "Save it, then open": the bench's design kept in its record, then the row opened; what went wrong said under the row. */
+  private async saveThenOpen(row: TradeRow): Promise<void> {
+    const failed = await this.host.designs().saveFirst();
+    if (!failed) return this.openRow(row, true);
+    this.asking = null;
+    this.refused = { cycle: cycleText(row), text: failed };
+    this.renderResults();
+  }
+
+  /** The keyboard to the control `key` (a cycle's "15/1" needs no escaping inside the quotes). */
+  private focus(key: string): void {
+    this.results.querySelector<HTMLElement>(`[data-k="${key}"]`)?.focus();
   }
 
   /** The row last opened beside what the bench gives for its design: each figure both show, and why the ones that differ differ. */

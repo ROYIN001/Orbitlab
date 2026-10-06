@@ -23,6 +23,7 @@ import {
   readDesignFileText, type DesignInput, type DesignKind, type DesignKinds, type DesignRecord, type DesignStore, type DesignStoreErrorCode, type DesignSummary,
 } from '../../design/design-store';
 import { MISSION_FORMAT } from '../../config/mission-file';
+import { canonicalJson } from '../../design/design-ref';
 import { downloadBlob } from '../download';
 import { button, el } from '../orbit/dom';
 
@@ -35,6 +36,12 @@ export interface ExploreStoreHost<K extends DesignKind = 'vehicle'> {
   open(record: DesignRecord<K>): void;
   /** the record the design on screen belongs to was deleted */
   forgotten(recordId: string): void;
+  /**
+   * M-BUILD-007: the design opening `record` (or a requirements row) would replace, put on screen so Save keeps it —
+   * the rocket draft of the record's kind, the student's own satellite with a lesson's put aside — or null when it
+   * was never saved and is as it started
+   */
+  replacing(record?: DesignRecord<K>): { design: unknown; recordId: string | null } | null;
   /**
    * an imported file held the other kind of design (a satellite in the rocket
    * designer, or a rocket in the satellite's): kept, and opened where it
@@ -61,6 +68,29 @@ const FILE_INVALID: Record<DesignKind, string> = { vehicle: 'build.ex.store.file
 
 type Message = { level: 'ok' | 'warn' | 'error'; text: string; extra?: string };
 
+/** A design as kept, its payload ratings aside: they are computed, not drawn (D-75). */
+const drawn = ({ payloadLEO: _l, payloadGTO: _g, payloadSSO: _s, ...d }: Record<string, unknown>): string => canonicalJson(d);
+
+/**
+ * M-BUILD-007: the question before a design with changes no saved record keeps gives way to `name`: save it
+ * first, open without saving, or keep it (Cancel, Escape). The buttons' keys start with `key`.
+ */
+export function askReplace(name: string, key: string, save: () => void, open: () => void, cancel: () => void): HTMLElement {
+  const row = el('div', 'bx-store-row');
+  const ask = el('span', 'bx-confirm', t('build.ex.store.confirmOpen', { name }));
+  ask.setAttribute('role', 'alert');
+  const b = (k: string, cls: string, text: string, fn: () => void): HTMLButtonElement => {
+    const x = button(`watch-btn${cls}`, text, fn);
+    x.dataset.k = key + k;
+    return x;
+  };
+  row.append(ask, b('save', ' primary', t('build.ex.store.saveOpen'), save), b('open', ' danger', t('build.ex.store.openAnyway'), open),
+    b('cancel', '', t('build.ex.store.cancel'), cancel));
+  // Escape keeps the design, as Cancel does
+  row.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); } });
+  return row;
+}
+
 const STORE_ERROR_KEY: Record<DesignStoreErrorCode, string> = {
   unavailable: 'build.ex.store.unavailable',
   full: 'build.ex.store.full',
@@ -77,6 +107,8 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
   /** the record being renamed, or asked about before it is deleted */
   private renaming: string | null = null;
   private deleting: string | null = null;
+  /** M-BUILD-007: the record asked about before it opens over unsaved changes */
+  private opening: string | null = null;
   /** the control the keyboard goes to once the list is drawn again (a `data-k`) */
   private focusNext: string | null = null;
   private readonly fileInput = el('input');
@@ -117,10 +149,10 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     return { level: 'error', text: t('build.ex.store.unavailable') };
   }
 
-  /** Save the design on screen: as a change to its record, or as a new one. */
-  async save(asNew: boolean): Promise<void> {
+  /** Save the design on screen: as a change to its record, or as a new one. What went wrong, or null once it is kept. */
+  async save(asNew: boolean): Promise<string | null> {
     const cur = this.host.current();
-    if (!cur) return;
+    if (!cur) { this.say({ level: 'error', text: t(this.texts.invalid) }); return this.message!.text; }
     const keep = !asNew && cur.recordId !== null && this.list.some((d) => d.id === cur.recordId);
     try {
       const rec = await this.store.save({ kind: this.kind, name: cur.name, design: cur.spec, ...(keep ? { id: cur.recordId! } : {}), ...(cur.ratingsFinal ? { ratingsFinal: true } : {}) } as DesignInput<K>);
@@ -130,6 +162,24 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
       this.message = this.failure(error);
     }
     await this.refresh();
+    return this.message.level === 'error' ? this.message.text : null;
+  }
+
+  /** M-BUILD-007: "Save it, then open": the design on screen kept in its own record (the list read first, so it is found). */
+  async saveFirst(): Promise<string | null> {
+    await this.refresh();
+    return this.save(false);
+  }
+
+  /**
+   * M-BUILD-007: whether opening `rec` (or a requirements row) would replace a design with changes no saved record
+   * keeps: its record is gone, or differs from it in more than its ratings (D-75), or it was never saved and changed.
+   */
+  async unsaved(rec?: DesignRecord<K>): Promise<boolean> {
+    const own = this.host.replacing(rec);
+    if (!own) return false;
+    const kept = own.recordId === null ? null : await this.store.get(own.recordId).catch(() => null);
+    return !kept || !own.design || drawn(kept.design as never) !== drawn(own.design as never);
   }
 
   /** A kept rocket's ratings computed again: kept, not a design edit (D-75); null when they could not be. */
@@ -141,10 +191,20 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     return rec;
   }
 
-  private async openRecord(id: string): Promise<void> {
+  /** Open a kept design; asked first over unsaved changes, unless `sure` (M-BUILD-007). Whether it was opened. */
+  async openRecord(id: string, sure = false): Promise<boolean> {
     const rec = await this.store.get(id);
-    if (!rec || !isDesignOf(rec, this.kind)) { this.say({ level: 'error', text: t('build.ex.store.notFound') }); await this.refresh(); return; }
+    this.opening = null;
+    if (!rec || !isDesignOf(rec, this.kind)) { this.say({ level: 'error', text: t('build.ex.store.notFound') }); await this.refresh(); return false; }
+    if (!sure && await this.unsaved(rec)) {
+      this.opening = id;
+      this.renaming = this.deleting = null;
+      this.focusNext = 'ask:save';
+      this.render();
+      return false;
+    }
     this.host.open(rec);
+    return true;
   }
 
   private async rename(id: string, name: string): Promise<void> {
@@ -228,9 +288,10 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
         this.host.other?.(rec, text);
         return;
       }
-      this.message = { level: newer ? 'warn' : 'ok', text: `${t('build.ex.store.imported', { name: rec.name })}${newerText}` };
+      // kept either way; opened at once, or asked first over unsaved changes (M-BUILD-007)
       await this.refresh();
-      this.host.open(rec);
+      const opened = await this.openRecord(rec.id);
+      this.say({ level: newer ? 'warn' : 'ok', text: `${t(opened ? 'build.ex.store.imported' : 'build.ex.store.saved', { name: rec.name })}${newerText}` });
     } catch (error) {
       this.say(this.failure(error));
     }
@@ -316,6 +377,11 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     if (d.id === currentId) meta.append(` · ${t('build.ex.store.current')}`);
     text.append(meta);
     li.append(text);
+    if (this.opening === d.id) {
+      li.append(askReplace(d.name, 'ask:', () => void this.saveFirst().then((failed) => { if (!failed) void this.openRecord(d.id, true); }),
+        () => void this.openRecord(d.id, true), () => { this.opening = null; this.focusNext = `open:${d.id}`; this.render(); }));
+      return li;
+    }
     const row = el('div', 'bx-store-row');
     if (this.deleting === d.id) {
       const yes = button('watch-btn danger', t('build.ex.store.yesDelete'), () => void this.remove(d.id, d.name));
