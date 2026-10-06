@@ -45,14 +45,14 @@ function storeWith(storage: DesignStorage): LocalDesignStore {
 }
 
 /** What the tests read of a store made from its prototype: its methods, and the question it asks (`opening`). */
-type StoreUnderTest<K extends DesignKind> = ExploreStore<K> & {
+interface StoreUnderTest<K extends DesignKind> {
   opening?: string | null;
   openRecord(id: string, sure?: boolean): Promise<unknown>;
+  save(asNew: boolean): Promise<string | null | void>;
   saveFirst(): Promise<string | null>;
   unsaved(rec?: DesignRecord<K>): Promise<boolean>;
   render: ReturnType<typeof vi.fn>;
-  message: { level: string; text: string } | null;
-};
+}
 
 /** An ExploreStore over `designs` without its page: everything but the drawing. */
 function storeOf<K extends DesignKind>(kind: K, designs: LocalDesignStore, host: ExploreStoreHost<K>): StoreUnderTest<K> {
@@ -324,7 +324,11 @@ describe('M-BUILD-007: opening a saved rocket over the rocket designer\'s draft'
     partsState.parts.edit.sites = ['vandenberg'];
     const p = asVehicle(await designs.save({ kind: 'vehicle', name: 'My parts', design: specOf(partsState) }));
     expect(draftFromSpec(p.design, p.id).mode).toBe('parts');
-    return { designs, e, p };
+    const falcon = fresh();
+    falcon.remix.edit.stages[1].stretch = 1.2;
+    const f = asVehicle(await designs.save({ kind: 'vehicle', name: 'My Falcon 9', design: specOf(falcon) }));
+    expect([draftFromSpec(e.design, e.id).mode, draftFromSpec(f.design, f.id).mode]).toEqual(['remix', 'remix']);
+    return { designs, e, p, f };
   }
 
   it('opens at once over a remix of a catalogue rocket with nothing changed', async () => {
@@ -349,28 +353,29 @@ describe('M-BUILD-007: opening a saved rocket over the rocket designer\'s draft'
   it('opens at once over a kept design as kept — a remix and a parts design — and over one whose ratings alone differ (D-75)', async () => {
     const { designs, e, p } = await kept();
     for (const rec of [e, p]) {
+      // the draft opened from `rec`, which opening `rec` again replaces (CHANGED BEFORE THE FIX: the first version
+      // opened the record of the other kind, which replaces the other draft and so rightly asks nothing)
       const o = draftFromSpec(rec.design, rec.id);
       const state = fresh();
       if (o.mode === 'remix') state.remix = o.draft; else { state.parts = o.draft; state.mode = 'parts'; }
       const { level, host, open, changed } = rocketLevel(state);
       expect(level.result.ok).toBe(true);
-      const other = rec === e ? p : e;
       const s = storeOf('vehicle', designs, host);
-      await s.openRecord(other.id);
+      await s.openRecord(rec.id);
       expect(open, rec.name).toHaveBeenCalledTimes(1);
-      // ratings searched again for it: a rating is computed, not drawn
+      // ratings searched again for it: a rating is computed, not drawn; nor is the payload the figures are read at kept
       activeDraft(state).ratings = { signature: level.result.ok ? level.result.signature : '', payloadLEO: 321, payloadGTO: 54 };
+      activeDraft(state).payloadKg += 100;
       changed();
       expect(level.result.ok && level.result.spec.payloadLEO).toBe(321);
-      await s.openRecord(other.id);
+      await s.openRecord(rec.id);
       expect(open, rec.name).toHaveBeenCalledTimes(2);
       // a part changed is an edit
-      activeDraft(state).payloadKg += 0; // the payload is not part of what is kept
       if (o.mode === 'remix') state.remix.edit.stages[0].stretch = 0.9; else state.parts.edit.sites = ['cape'];
       changed();
-      await s.openRecord(other.id);
+      await s.openRecord(rec.id);
       expect(open, rec.name).toHaveBeenCalledTimes(2);
-      expect(s.opening).toBe(other.id);
+      expect(s.opening).toBe(rec.id);
     }
   });
 
@@ -390,7 +395,8 @@ describe('M-BUILD-007: opening a saved rocket over the rocket designer\'s draft'
   });
 
   it('"Save, then open" keeps the changed draft in its own record, then opens', async () => {
-    const { designs, e, p } = await kept();
+    // CHANGED BEFORE THE FIX: the first version opened the parts record `p`, which does not replace this remix
+    const { designs, e, f } = await kept();
     const o = draftFromSpec(e.design, e.id);
     const state = fresh();
     if (o.mode !== 'remix') throw new Error('a remix');
@@ -399,12 +405,12 @@ describe('M-BUILD-007: opening a saved rocket over the rocket designer\'s draft'
     const { level, host, open, changed } = rocketLevel(state);
     changed();
     const s = storeOf('vehicle', designs, host);
-    await s.openRecord(p.id);
+    await s.openRecord(f.id);
     expect(open).not.toHaveBeenCalled();
     expect(await s.saveFirst()).toBeNull();
     const resaved = asVehicle(await designs.get(e.id));
     expect(level.result.ok && resaved.design).toEqual(level.result.ok ? level.result.spec : null);
-    expect((await designs.list('vehicle')).length).toBe(2);
-    expect(await s.unsaved(p)).toBe(false);
+    expect((await designs.list('vehicle')).length).toBe(3);
+    expect(await s.unsaved(f)).toBe(false);
   });
 });
