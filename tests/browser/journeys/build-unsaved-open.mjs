@@ -21,13 +21,18 @@ const SAT = '.bsat-grid:not([hidden])';
 const ROCKET = '.bx-grid:not([hidden])';
 
 const kept = async (page) => (await workspaceValue(page, DESIGNS))?.designs ?? [];
-/** A screenshot of the question for the owner: in the middle of the window, the "ready offline" note closed. */
+const focusKey = (page) => page.evaluate(() => document.activeElement?.dataset?.k ?? null);
+/**
+ * A screenshot of the question for the owner: in the middle of the window, the "ready offline" note closed, and the
+ * keyboard back where it was (closing the note took it, so Escape after the shot went to the page, not the question).
+ */
 async function shotOf(app, question, label) {
+  const k = await focusKey(app.page);
   await app.page.locator('#pwa-toast .pwa-toast-close').click({ timeout: 1000 }).catch(() => {});
+  if (k) await question.locator('xpath=..').locator(`[data-k="${k}"]`).focus().catch(() => {});
   await question.evaluate((n) => n.scrollIntoView({ block: 'center' }));
   await app.shot(label);
 }
-const focusKey = (page) => page.evaluate(() => document.activeElement?.dataset?.k ?? null);
 
 /** The rocket designer with an Electron remix saved and then stretched; the saved record. */
 async function changedRocket(t, page) {
