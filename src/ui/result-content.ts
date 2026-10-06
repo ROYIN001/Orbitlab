@@ -87,13 +87,16 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
     apogee: num(p?.apAltM) !== null ? num(p?.apAltM)! / 1000 : num(p?.ap),
     inclination: num(p?.inc), raan: num(p?.raan),
   };
-  const judgedMisses = outcome !== 'offTarget' ? misses : new Set(orbitResiduals(target, {
+  // An off-target verdict whose recorded (rounded: 1 km, 0.01°, 0.1°) numbers fall back inside the band keeps the
+  // unrounded flags of the displayed orbit, as before (review).
+  const judgedOff = outcome !== 'offTarget' ? misses : new Set(orbitResiduals(target, {
     ...elements,
     periapsisAlt: judgedValue.perigee !== null ? judgedValue.perigee * 1000 : elements.periapsisAlt,
     apoapsisAlt: judgedValue.apogee !== null ? judgedValue.apogee * 1000 : elements.apoapsisAlt,
     i: judgedValue.inclination !== null ? judgedValue.inclination / RAD : elements.i,
     raan: judgedValue.raan !== null ? judgedValue.raan / RAD : elements.raan,
   }, true).misses.map(miss => miss.param));
+  const judgedMisses = judgedOff.size ? judgedOff : misses;
   const metric = (key: OrbitMissParam, wanted: number | null, actual: number, delta: number | null, unit: 'km' | 'deg'): ResultMetric => {
     const judged = outcome === 'failed' ? null : judgedValue[key];
     const judgedDelta = judged === null || wanted === null ? null
