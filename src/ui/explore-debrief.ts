@@ -14,7 +14,7 @@
  */
 import { getLang, onLangChange, t } from '../i18n';
 import type { Simulation } from '../physics/simulation';
-import { assessMissionResult, RESULT_COPY, type MissionResultModel } from './result-content';
+import { assessMissionResult, RESULT_COPY, resultRow, type MissionResultModel, type ResultMetric } from './result-content';
 import { debriefModel } from './explore';
 import { fmtTime } from './hud';
 
@@ -35,6 +35,10 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   if (text !== undefined) e.textContent = text;
   return e;
 };
+
+/** A row's number: by default the one its `outside` flag was judged on (M-LAUNCH-031), else the displayed one. */
+export const debriefValue = (m: ResultMetric, v = resultRow(m).value): string =>
+  v === null ? '—' : m.unit === 'deg' ? `${v.toFixed(1)}°` : `${Math.round(v).toLocaleString(getLang())} km`;
 
 const LOSS_KEY = { gravity: 'tel.loss.gravity', drag: 'tel.loss.drag', steering: 'tel.loss.steering' } as const;
 
@@ -116,9 +120,8 @@ export class ExploreDebrief {
     const metrics = el('dl', 'debrief-metrics');
     if (result.outcome !== 'failed') for (const m of result.metrics) {
       if (m.key === 'raan' || m.target === null) continue;
-      const fmt = (v: number | null): string => v === null ? '—' : m.unit === 'deg' ? `${v.toFixed(1)}°` : `${Math.round(v).toLocaleString(getLang())} km`;
-      const dd = el('dd', m.outside ? 'outside' : undefined, fmt(m.actual));
-      dd.append(el('small', undefined, ` · ${copy.target} ${fmt(m.target)}`));
+      const dd = el('dd', m.outside ? 'outside' : undefined, debriefValue(m));
+      dd.append(el('small', undefined, ` · ${copy.target} ${debriefValue(m, m.target)}`));
       metrics.append(el('dt', undefined, copy.metric[m.key]), dd);
     }
     if (metrics.childElementCount) card.append(metrics);
