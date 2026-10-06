@@ -404,7 +404,58 @@ class App {
   private shellEls: { setup: HTMLElement; toggle: HTMLButtonElement; bar: HTMLElement; clock: HTMLElement | null;
     barClock: HTMLElement; barMode: HTMLElement; barPlay: HTMLButtonElement } | null = null;
 
+  /**
+   * G2 hold (F5): whether the scene reaches into the strip at the bottom of the
+   * window where a phone's flight bar sits. The bar is fixed there; while the
+   * picture is under it, the bar would cover the scene, so it waits until the
+   * page has scrolled the scene up out of that strip.
+   */
+  private sceneUnderBar = false;
+  private watchBarStrip(): void {
+    const scene = document.getElementById('viewport');
+    let seen: IntersectionObserver | undefined;
+    // the bar: 8 px from the bottom, 52 px tall at most; 72 px leaves a margin
+    const watch = (): void => {
+      seen?.disconnect();
+      seen = new IntersectionObserver(([e]) => { this.sceneUnderBar = e.isIntersecting; }, { rootMargin: `-${Math.max(0, innerHeight - 72)}px 0px 0px` });
+      if (scene) seen.observe(scene);
+    };
+    watch();
+    addEventListener('resize', watch);
+  }
+
+  /**
+   * G2 hold (F5): the first-use guide sits between the top bar and the scene,
+   * and a long hint pushed the scene off the first screen (Russian at 320×740:
+   * 137 px of it; at 911×512, 150 % zoom, 250 px against 256). The guide gets
+   * the room that leaves the scene's minimum height (the same formula as
+   * `--scene-min`) on the first screen, above the footer on a desktop, and
+   * scrolls inside it.
+   */
+  private fitGuideAboveScene(): void {
+    const guide = document.getElementById('first-use-guide');
+    const top = document.getElementById('topbar');
+    const foot = document.getElementById('footer');
+    if (!guide || !top || !foot) return;
+    const desktop = matchMedia('(min-width: 861px)');
+    const fit = (): void => {
+      const g = guide.getBoundingClientRect();
+      if (!g.height) return;
+      const sceneMin = Math.min(400, Math.max(240, 0.5 * innerHeight));
+      // what lies between the guide and the scene (the phone's nav, gaps) does not depend on the guide's height
+      const below = this.viewport.getBoundingClientRect().top - g.bottom;
+      const end = desktop.matches ? foot.getBoundingClientRect().top : innerHeight;
+      const room = end - g.top - below - sceneMin;
+      guide.style.setProperty('--guide-room', `${Math.max(96, Math.floor(room))}px`);
+    };
+    fit();
+    addEventListener('resize', fit);
+    new ResizeObserver(fit).observe(top);
+    new ResizeObserver(fit).observe(guide);
+  }
+
   private get shell(): NonNullable<App['shellEls']> {
+    if (!this.shellEls) { this.watchBarStrip(); this.fitGuideAboveScene(); }
     return this.shellEls ??= {
       setup: document.getElementById('setup')!,
       toggle: document.getElementById('btn-setup') as HTMLButtonElement,
@@ -1184,6 +1235,9 @@ class App {
   resize(): void {
     const w = this.viewport.clientWidth, h = this.viewport.clientHeight;
     if (w <= 0 || h <= 0) return;
+    // G2 hold (F5): a short scene keeps the picture, not the narration's prose
+    const short = String(h < SHORT_SCENE_PX);
+    if (this.viewport.dataset.short !== short) this.viewport.dataset.short = short;
     this.scene.resize(w, h);
     this.trail.setResolution(w, h);
     this.predicted.setResolution(w, h);
@@ -1624,7 +1678,7 @@ class App {
    */
   private syncMobileFlightBar(stage: MissionStage): void {
     const { bar, clock: clockSrc, barClock: clockEl, barMode: modeEl, barPlay: play } = this.shell;
-    const show = stage !== 'setup' && (this.mode === 'engineer' || this.mode === 'explore') && !this.sceneCovered;
+    const show = stage !== 'setup' && (this.mode === 'engineer' || this.mode === 'explore') && !this.sceneCovered && !this.sceneUnderBar;
     if (bar.dataset.active !== String(show)) bar.dataset.active = String(show);
     if (!show) return;
     const clock = clockSrc?.textContent ?? '';
@@ -2605,6 +2659,13 @@ class App {
  * reload is slow, they say which step it waited on. Marks only — nothing
  * depends on them.
  */
+/**
+ * G2 hold (F5): under this height (CSS px) the scene's narration shows the
+ * phase name only; its prose and latest-event line would cover the picture
+ * (at 1100x650 they took over half of a 260 px scene).
+ */
+const SHORT_SCENE_PX = 380;
+
 function markStartup(step: string): void {
   try { performance.mark(`orbitlab:${step}`); } catch { /* no performance API */ }
 }
