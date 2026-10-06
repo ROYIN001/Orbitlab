@@ -11,7 +11,7 @@ change_kind: bug-fix (layout); tests added first
 owner_authorization: {date: 2026-10-05, quote: "เมื่อทำการ merge แล้วตรวจสอบว่าทุกอย่างเรียบร้อยแล้วในระยะ K0 ให้เริ่มทำระยะ K1 ในเซสชั่นใหม่ต่อได้เลยครับ ใช้ model opus5.5 high", scope: "wave K1 (D-65)"}
 owner_instruction: {date: 2026-10-05T14:49Z, where: "Merge Desk G2 page (HOLD)", quote: "ให้ฉากแสดงการปล่อยได้ตามมาตรฐานขั้นต่ำในทั้งโหมด ทดลองและวิศวกร พวกเครื่องมืออื่นๆให้ย้ายออไปข้างหรือไม่ก็ไว้ข้างล่างแบบเลื่อนลงไปดูเอง ต้องไม่มาบังพื้นที่หน้าจอหลักและแถบtimeline สถานการณ์สำคัญ"}
 base_sha_verified_on: {sha: 06abb1f, date: 2026-10-05}
-depends_on: "#95 (D-38 offset: built index.html without comments, −2.65 kB) — merge it first"
+depends_on: "#95 (D-38 offset: built index.html without comments, −2.65 kB) — merged as 76fb8d0"
 ```
 
 ## Drift recorded
@@ -152,8 +152,9 @@ minimum, both with the first-use guide open:
 ## Budget line
 
 Precache code +1.8 kB (14 703.8 → 14 705.6 kB on `06abb1f`; the phone guide
-fit is about 0.8 kB of it). With #95 merged first (−2.65 kB), about
-14 703.0 kB, under the **unchanged** 14 704 kB ceiling.
+fit is about 0.8 kB of it). With #95 merged first (−2.65 kB), measured
+14 703.0 kB on this branch merged with `76fb8d0`, under the **unchanged**
+14 704 kB ceiling; `i18n-*.js` 1719.0 of 1720 kB.
 That is no raise. #95 is the named offset, and D-38 needs no approval because
 nothing is raised. Without #95, this PR is 1.6 kB over and fails
 `npm run budget`. Merge order: #95, then this PR.
