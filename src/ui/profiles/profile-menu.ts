@@ -1,6 +1,8 @@
 import { parseWorkspaceArchive, workspaceImportWarnings, WORKSPACE_FORMAT, WORKSPACE_MAX_BYTES, WorkspaceError, type WorkspaceRepository, type WorkspaceArchive } from '../../workspace/repository';
-import { ProfileDialog, type ProfileDialogHost, type ProfileDialogSnapshot, type ProfileCounts } from './profile-dialog';
+import { ProfileDialog, type ProfileDialogHost, type ProfileDialogSnapshot, type ProfileCounts, type ProfileItem, type UnreadableProfileItem } from './profile-dialog';
 import { downloadBlob } from '../download';
+
+const fileName = (suffix: string): string => `Orbitlab-${new Date().toISOString().slice(0, 10)}${suffix}`;
 
 /** Backup/readout adapters are loaded with the menu, not during app startup. */
 class ProfileMenuHost {
@@ -33,7 +35,17 @@ class ProfileMenuHost {
         await this.repo.prepareChange();
         this.download(this.repo.exportProfile(id));
       },
-      exportAll: async () => { await this.repo.prepareChange(); this.download(this.repo.exportAll()); },
+      exportAll: async () => {
+        await this.repo.prepareChange();
+        const rows = this.repo.listWithStatus(), skipped = rows.filter((row) => row.state !== 'ok').length;
+        // Nothing readable: no empty file, only the guidance to save a copy of each row.
+        if (skipped && skipped === rows.length) return { skipped, exported: false };
+        this.download(this.repo.exportAll());
+        return { skipped, exported: true };
+      },
+      exportRaw: async (id) => {
+        downloadBlob(new Blob([this.repo.rawProfile(id)], { type: 'application/json' }), fileName(`-stored-profile-${id}.json`));
+      },
       previewImport: async (file) => {
         const raw = await this.archiveText(file);
         const archive = await parseWorkspaceArchive(raw);
@@ -56,13 +68,17 @@ class ProfileMenuHost {
         else this.applyLanguage();
       },
       exportMedia: async (id) => {
-        if (this.repo.status !== 'durable') throw new WorkspaceError('locked');
-        const profile = this.repo.list().find((p) => p.id === (id ?? this.repo.binding?.profileId));
-        if (!profile) throw new WorkspaceError('missing');
+        // Reading media needs no owner lock (R1 locks guard writes), so the chooser and a read-only
+        // second tab can save audio too; visit-only mode has no real catalogue to name the owner.
+        if (this.repo.status === 'ephemeral') throw new WorkspaceError('locked');
+        const target = id ?? this.repo.binding?.profileId;
+        if (!target) throw new WorkspaceError('missing');
+        // Only the target is read; audio of an unreadable profile can still be saved before a delete.
+        const profile = this.repo.profileRow(target);
         await this.repo.prepareChange();
         const { exportProfileMediaArchive } = await import('../../workspace/media-archive');
-        const blob = await exportProfileMediaArchive(profile.id, profile.name);
-        downloadBlob(blob, `Orbitlab-${new Date().toISOString().slice(0, 10)}.orbitlab-audio`);
+        const blob = await exportProfileMediaArchive(profile.id, profile.name ?? profile.id);
+        downloadBlob(blob, fileName('.orbitlab-audio'));
       },
       previewMedia: async (file) => {
         const { previewMediaArchive } = await import('../../workspace/media-archive');
@@ -114,15 +130,16 @@ class ProfileMenuHost {
   }
 
   private snapshot(): ProfileDialogSnapshot {
-    let profiles: ProfileDialogSnapshot['profiles'] = [];
+    const profiles: ProfileItem[] = [], unreadable: UnreadableProfileItem[] = [];
     try {
-      profiles = this.repo.list().map((p) => ({ ...p,
-        counts: this.counts(this.repo.read(p.id).values, p.counts),
-      }));
+      for (const row of this.repo.listWithStatus()) {
+        if (row.state !== 'ok') unreadable.push(row);
+        else profiles.push({ ...row, counts: this.counts(this.repo.read(row.id).values, row.counts) });
+      }
     } catch { /* The chooser explains inaccessible storage; never overwrite it. */ }
     const activeId = this.name() && this.repo.binding?.valid ? this.repo.binding.profileId : null;
     const lessons = activeId ? this.recordedLessons?.() ?? [] : [];
-    return { profiles, activeId, lessons, status: activeId ? this.repo.status : 'chooser' };
+    return { profiles, unreadable, activeId, lessons, status: activeId ? this.repo.status : 'chooser' };
   }
 
   private download(archive: WorkspaceArchive): void {
@@ -130,6 +147,11 @@ class ProfileMenuHost {
     downloadBlob(new Blob([JSON.stringify(archive, null, 2) + '\n'], { type: 'application/json' }), `Orbitlab-${date}.orbitlab-workspace.json`);
   }
 
+}
+
+/** Test seam: the storage-facing host without the dialog DOM. */
+export function createProfileMenuHost(repo: WorkspaceRepository, changed: () => void, reload: () => void): ProfileDialogHost {
+  return new ProfileMenuHost(repo, changed, reload).host;
 }
 
 export function createProfileMenu(element: HTMLDialogElement, repo: WorkspaceRepository,

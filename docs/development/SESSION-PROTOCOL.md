@@ -45,13 +45,19 @@ Where this file and code or GitHub disagree, code and GitHub are right. Where it
 ## 3. One row per package (PROGRESS)
 
 - [PROGRESS.md](PROGRESS.md) holds one row per work package (or one issue per package, if the owner prefers issues) with: package, lifecycle, authorized by / date, merge SHA, CI run, Pages run, scientific acceptance. The R1–R3 history stays under the table.
-- A package's PR edits **only its own row**, in the PR that merges. The rest of the file belongs to the integration session.
-- **Step 1, in the merging PR:** the row says what is true the moment it merges — "merged, waiting for publish" — with the PR number and CI run. If the PR is not merged, the text never reaches main.
+- A package's PR does **not** edit PROGRESS.md (owner, 2026-10-06; see §4). It writes its row in its own fragment file under `changes/`, and the integration session's records PR moves it into the table. The file belongs to the integration session.
+- **Step 1, in the merging PR's fragment:** the row says what is true the moment it merges — "merged, waiting for publish" — with the PR number and CI run. If the PR is not merged, the fragment never reaches main.
 - **Step 2, within one working day after Pages:** one Markdown-only records PR for everything published that day: squash SHA, Pages run, deployment and "published". If Pages fails, the row stays "merged, waiting for publish" with the failed run's number.
 
-## 4. One CHANGELOG line per PR
+## 4. One fragment file per PR (CHANGELOG line and PROGRESS row)
 
-Every PR adds one line to `CHANGELOG.md` in its own diff. On a conflict, rebase (and, under §1's exemption, keep both sides' lines).
+Owner's choice, 2026-10-06 (decision card option "ใช้ไฟล์ย่อย", confirmed in chat: "ยืนยันครับ ใช้ไฟล์ย่อยได้เลย"). Measured that day: 78 of 80 catch-up merges of main into `claude/*` branches since 2026-10-04 conflicted, and only 2 of them in code; `CHANGELOG.md` conflicted 73 times and `PROGRESS.md` 46 times, because every PR wrote at the top of both.
+
+- A work PR does **not** edit `CHANGELOG.md` or `docs/development/PROGRESS.md`. It adds one new file, `changes/<branch-name with / replaced by ->.md`, in the format of [changes/README.md](../../changes/README.md): its one CHANGELOG line and its PROGRESS row. A new file per branch cannot conflict.
+- The integration session's records PR (lane I) folds every fragment on main into `CHANGELOG.md` (newest first, under Unreleased) and `PROGRESS.md`, adds the merge SHA and Pages run, and deletes the fragments it folded, in the same diff.
+- Open PRs move to a fragment the next time they need a sync with main.
+- `budgets.json` may follow the same pattern later if it starts conflicting; not yet.
+- §1's exemption still covers a sync whose only conflicts are in `CHANGELOG.md` or `PROGRESS.md` (an older branch), with both sides kept.
 
 ## 5. Branches
 
@@ -66,7 +72,7 @@ Every PR adds one line to `CHANGELOG.md` in its own diff. On a conflict, rebase 
 - the package, step and change type, and the owner's authorization with its date;
 - the tests actually run, with counts; the failing-before result or the before/after table;
 - the budget line: unchanged / lowered / raise with the four D-38 parts;
-- its PROGRESS row and CHANGELOG line;
+- its fragment file under `changes/` (its CHANGELOG line and PROGRESS row);
 - reviewers: second agent (P0/P1, physics, storage), owner (anything visual), science reviewer (realism), as "confirmed N of M".
 
 ## 7. Never

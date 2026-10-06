@@ -1,5 +1,5 @@
 /** Source-level rendering regressions. No WebGL pixel/appearance claims. */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { buildStarField } from '../src/render/stars';
 import { OrbitView } from '../src/render/orbit-view';
@@ -7,6 +7,8 @@ import { ORBIT_VIEW_MAX_PIXEL_RATIO } from '../src/render/sharpness';
 import { SceneManager } from '../src/render/scene';
 import { R_EARTH } from '../src/physics/constants';
 
+// OrbitView.render skips drawing while the page is unseen (render/webgl-renderer.ts `unseen`): a visible page
+beforeEach(() => vi.stubGlobal('document', { hidden: false, querySelector: () => null }));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('shared Launch/Orbit star field', () => {
@@ -131,6 +133,16 @@ describe('shared Launch/Orbit star field', () => {
     expect(ratio).toBe(1.25);
     expect(stars.material.uniforms.uPixelRatio.value).toBe(1.25);
     expect(renderer.setPixelRatio).toHaveBeenCalledTimes(2);
+    expect(renderer.render).toHaveBeenCalledTimes(4);
+    // a hidden tab or an open modal dialog: nothing is drawn, and the next visible frame draws again
+    vi.stubGlobal('document', { hidden: true, querySelector: () => null });
+    view.render();
+    vi.stubGlobal('document', { hidden: false, querySelector: (q: string) => (q === 'dialog.dialog[open]' ? {} : null) });
+    view.render();
+    expect(renderer.render).toHaveBeenCalledTimes(4);
+    vi.stubGlobal('document', { hidden: false, querySelector: () => null });
+    view.render();
+    expect(renderer.render).toHaveBeenCalledTimes(5);
     stars.geometry.dispose(); stars.material.dispose(); earthMat.dispose();
   });
 });
