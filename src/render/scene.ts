@@ -325,6 +325,13 @@ export class SceneManager {
     // PCFShadowMap with a console warning on every renderer build
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
+    // FX-8: a restored context re-uploads the scene, but what was drawn into a
+    // target only once is gone: the probe, the shadow map, the sky's tables
+    canvas.addEventListener('webglcontextrestored', () => {
+      this.envKey = -1;
+      this.shadowPrimed = false;
+      this.physicalSky?.invalidate();
+    });
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.5, 5e9);
     this.camera.up.set(0, 0, 1);
     // attached once and never detached, so the USE_FOG define never flips
