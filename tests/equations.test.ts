@@ -148,3 +148,48 @@ describe('the equations panel\'s numbers', () => {
     expect(mid.eom).not.toBe(a.eom);
   });
 });
+
+describe('why the panel has no air term (M-LAUNCH-060)', () => {
+  // One frame per state the panel is asked about: the reason is chosen from the
+  // frame, not from "not integrated or ≤ 1 m/s", which said "no air at this
+  // height" on the pad, after a landing and in a replay frame without a record.
+  const sim = new Simulation(mission('sixDof'), { headless: true });
+  const pad = captureFrame(sim);
+  while (sim.state.t < 30) sim.step(sim.suggestedDt());
+  const flying = captureFrame(sim);
+  const reasons = (frame: VisualFrame) => {
+    const list = equations(frame, context(sim), 'engineer', 'iso');
+    return { drag: byId(list, 'drag'), angles: byId(list, 'aeroAngles') };
+  };
+
+  it('says the air is still on the pad, before liftoff, and that a wind there is not flown yet', () => {
+    expect(pad.status).toBe('prelaunch');
+    const calm: VisualFrame = { ...cloneFrame(pad), airspeed: 0, q: 0 };
+    expect(reasons(calm).drag).toMatchObject({ available: false, reason: 'eq.none.stillAir' });
+    expect(reasons(calm).angles).toMatchObject({ available: false, reason: 'eq.none.stillAir' });
+    // The crosswind mission: the wind blows over the pad, and α and β read it, but no step has flown it.
+    const windy: VisualFrame = { ...cloneFrame(pad), airspeed: 5 };
+    expect(reasons(windy).drag).toMatchObject({ available: false, reason: 'eq.none.prelaunch' });
+  });
+
+  it('says the air is still after a landing', () => {
+    const landed: VisualFrame = { ...cloneFrame(flying), status: 'landed', airspeed: 0, q: 0 };
+    landed.eom = { ...landed.eom!, airspeed: 0, dynamicPressure: 0 };
+    const { drag, angles } = reasons(landed);
+    expect(drag).toMatchObject({ available: false, reason: 'eq.none.stillAir' });
+    expect(angles).toMatchObject({ available: false, reason: 'eq.none.stillAir' });
+  });
+
+  it('says a replayed frame carries no record, not that there is no air', () => {
+    const replayed = cloneFrame(flying);
+    delete replayed.eom;
+    expect(reasons(replayed).drag).toMatchObject({ available: false, reason: 'eq.none.noRecord' });
+  });
+
+  it('still says there is no air where there is none', () => {
+    const high = cloneFrame(flying);
+    high.eom = { ...high.eom!, density: 0, dynamicPressure: 0 };
+    expect(reasons(high).drag).toMatchObject({ available: false, reason: 'eq.none.noAir' });
+    expect(reasons(flying).drag.available).toBe(true);
+  });
+});
