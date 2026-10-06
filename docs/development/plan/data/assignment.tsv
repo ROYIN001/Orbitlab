@@ -1,0 +1,430 @@
+mid	status	priority	effort	kind	home_section	package	wave	owner	alias_of	title	notes
+M-PLATFORM-065	open	P0	XS	decision	S00	IDSCHEME	-	-		Unambiguous id scheme for the master plan (document prefixes: PLAN-R/U/D/A, DEC-, RM-, DP-, RW-, CR-, M-…)	
+M-PLATFORM-067	open	P1	S	process	S00	IDSCHEME	-	-		One status source per kind and one precedence rule: PROGRESS.md for plan tasks, IMPLEMENTATION-STATUS for app capabilities, master plan for 	
+M-LAUNCH-074	partial	P2	XS	principle	S02	PRINCIPLE	-	-		Product principles and won't-do list for Launch/UX (task-first, phone one-task, offline/weak devices first, honest data, no accounts/analyti	
+M-LEARNING-063	partial	P1	XS	principle	S02	PRINCIPLE	-	-		Pedagogy principles and not-to-do list for the master plan (POE, cause from the record, formative default, one variable per experiment, curr	
+M-LEARNING-071	done	-	-	principle	S02	PRINCIPLE	-	-		Guardrails kept: no accounts, servers, LMS/xAPI/SCORM, analytics or telemetry; no fourth language or per-institution fork; no wholesale doc 	
+M-ORBIT-036	partial	P1	XS	principle	S02	PRINCIPLE	-	-		Military/security content principle (public cited sources, consequences not operations) and the D-2 naming conflict of the rtaf-academy pack	
+M-ORBIT-064	done	-	-	principle	S02	PRINCIPLE	-	-		Scope principle: the Earth-Moon system, no planets; Moon stays inside the Orbit plan	
+M-PHYSICS-063	partial	P1	XS	principle	S02	PRINCIPLE	-	-		Physics rules carried into the master plan: validate before build, game/pedagogy layers import only types from src/physics, named sources, m	
+M-PLATFORM-019	done	-	XS	principle	S02	PRINCIPLE	-	-		Local-first data principles: everything a user makes is a versioned file; no accounts, servers or analytics; offline implementation always p	
+M-PLATFORM-079	done	-	XS	principle	S02	PRINCIPLE	-	-		Engineering principles and won’t-do list for the master plan (three.js only runtime dependency, DOM-free cores, one way per concern, no auto	
+M-BUILD-001	done	P1	L	architecture	S03	DELIVERED	-	-		R3.1 Versioned hand-off envelopes and provenance (design, configured mission, synthetic orbit, flight continuation, targeted edit)	done 2026-10-04 (v1.2 R3.1: flown inputs, hand-off v1 + optional DesignRef; #75 #80; Pages 37230585947 @09cc2f5; owner: R3 complete); residual -> M-PLAN-028 (R3.1r), M-PLAN-025 (R7.1 cursor/fuel journey), M-PHYSICS-028 (LTAN, R4.5)
+M-BUILD-002	done	P1	L	feature	S03	DELIVERED	-	-		R3.2 Engineer rocket preview from the design's own geometry (SVG first; assemble/explode, dimensions, part → field)	done 2026-10-04 (v1.2 R3.2: bench SVG, Stacked/Apart, part cards; #75; journey r3-bench-drawings); residual acceptance rows -> M-LAUNCH-076 (R3.2r)
+M-BUILD-003	done	P1	L	feature	S03	DELIVERED	-	-		R3.3 Satellite picture and subsystem diagrams from SatelliteDesign (assumptions labelled) (Build Watch exploded views and Explore picture -> M-LAUNCH-081)	done 2026-10-04 (v1.2 R3.3: schematic #75, stowed pose/axes #78, eclipse/link/footprint #80); residual -> M-LAUNCH-081 (R3.3r: Watch exploded view, Explore picture), M-BUILD-015 (freshness test)
+M-BUILD-004	done	P1	L	feature	S03	DELIVERED	-	-		R3.4 Build integration: previews in the Engineer shells, readiness issues as typed targets that focus the cause field (A03)	done 2026-10-04 (v1.2 R3.4: typed readinessTarget, Show the part #75, Show its settings + focusField #77); residual -> M-PLAN-030 (R3.4r), M-BUILD-015, M-BUILD-031
+M-BUILD-005	done	P2	M	feature	S03	DELIVERED	-	-		R3.5 Journey integration and Gate G3 (Build→Check→Launch→Result→Edit→Orbit), Build-specific acceptance rows	done 2026-10-04 (v1.2 R3.5: template, Watch copy, mission source/steps, result actions #77; design name+revision #80; journeys r3-first-launch, r3-result-setting); residual -> M-PLAN-025 (r3-g3-loop), M-PLAN-030, M-LAUNCH-063
+M-BUILD-034	done	-	-	feature	S03	DELIVERED	-	-		Parts catalogue extracted from vehicles; 21 vehicles re-expressed on it and fly identically (D01)	
+M-BUILD-035	done	-	-	feature	S03	DELIVERED	-	-		Remix a real rocket: stretch, swap/re-count engines, strap-ons, fairing; an unchanged remix flies identically (D02)	
+M-BUILD-036	done	-	-	feature	S03	DELIVERED	-	-		Parts builder at Explore with live Δv, T/W, plain warnings, ratings by flying, save/export/import, Fly it (D03 Explore face)	
+M-BUILD-037	done	-	-	feature	S03	DELIVERED	-	-		Test facilities: static fire, wind tunnel, flight readiness review (D04)	
+M-BUILD-038	done	-	-	feature	S03	DELIVERED	-	-		Parametric sizing and Lagrange optimal staging (D05)	
+M-BUILD-039	done	-	-	feature	S03	DELIVERED	-	-		Design store kept unreadable (newer/satellite) records through save and remove (B-01, the only P1 of the 09-30 audit)	
+M-BUILD-040	done	-	-	feature	S03	DELIVERED	-	-		Inspector Auto Tune off the main thread (audit A17)	
+M-LAUNCH-001	done	-	-	feature	S03	DELIVERED	-	-		R2.1 Setup/Flight/Analysis lifecycle state; setup collapses on launch (U11); scene widens; renderer resize kept	
+M-LAUNCH-005	done	-	-	feature	S03	DELIVERED	-	-		Notation control moved into in-flight telemetry; per-language default (U09/D06); stored auto/invalid migrated	
+M-LAUNCH-007	done	-	-	feature	S03	DELIVERED	-	-		A04 phone flight bar keeps clock, live/replay and play/pause on screen while reading charts	
+M-LAUNCH-009	done	-	-	feature	S03	DELIVERED	-	-		Two clocks, Space/Shift+Space kept; focused lists and native controls do not send flight commands	
+M-LAUNCH-010	done	-	-	feature	S03	DELIVERED	-	-		CameraPolicy: Watch/Launch pick and keep a view; Cinematic restores automation; fallback for unseeable target; no visible camera reset (U03,	
+M-LAUNCH-013	done	-	-	feature	S03	DELIVERED	-	-		R2.3 step 1: telemetry card presets Flight/Dynamics/Orbit/All/Custom, profile-owned, versioned; controls never hideable	
+M-LAUNCH-016	done	-	-	feature	S03	DELIVERED	-	-		R2.4 timeline event chooser for clustered events: names + exact T+, keyboard, focus, Escape, live growth (A05)	
+M-LAUNCH-021	done	P0	XS	docs	S03	DELIVERED	-	-		"Record R2 merge, CI and deploy runs in PROGRESS.md and the R2 report (status still says ""not merged"")"	done 2026-10-04 (PROGRESS on 5f9aa2e lists R2.1-R2.4 verified/merged/published; R2-workspace.md status verified/merged/published; Pages 37169459230)
+M-LAUNCH-080	done	-	-	feature	S03	DELIVERED	-	-		Section x level shell and routes (#/<section>/<level>), custom vehicles in missions with one resolver and id-keyed rules	
+M-LAUNCH-083	done	-	-	perf	S03	DELIVERED	-	-		Attitude Auto-Tune in a worker with cancel; Monte Carlo pool ends cleanly	
+M-LAUNCH-087	done	-	-	ux	S03	DELIVERED	-	-		Phone section/level names visible (one button opening a named sections x levels sheet, 44 px links)	
+M-LEARNING-039	done	-	-	feature	S03	DELIVERED	-	-		T02 Check results: teacher re-flies student results files within pre-fixed tolerances (Match/Borderline/Differs/Cannot re-fly) + CSV	
+M-LEARNING-040	done	-	-	feature	S03	DELIVERED	-	-		T01 Write a scenario: teacher authors flight/design lessons, shares as file or ?scenario= link; per-profile drafts	
+M-LEARNING-041	done	-	-	feature	S03	DELIVERED	-	-		Classroom backups (S15): profile/project archives carry progress, custom lessons/questions; strict import preview; offline classroom readine	
+M-LEARNING-048	done	-	-	feature	S03	DELIVERED	-	-		Case worksheets and graded case lessons 6.1-6.3 (Iridium-Cosmos, CZ-5B, THEOS-2)	
+M-LEARNING-049	done	-	-	decision	S03	DELIVERED	-	-		"Reveal-lock policy D-6: ""passed with help"" verdict + clear revealed answers; per-lesson reset"	
+M-LEARNING-065	done	-	-	decision	S03	DELIVERED	-	-		Licence and credits: Apache-2.0 code, CC BY 4.0 content, NOTICE.md data credits, CITATION.cff, README section, About link	
+M-ORBIT-048	done	-	-	feature	S03	DELIVERED	-	-		Orbit playground: elements, 3-D, ground track, Kepler's laws, Newton's cannon, Watch tours	
+M-ORBIT-049	done	-	-	feature	S03	DELIVERED	-	-		Maneuver planner: Hohmann..Edelbaum, deorbit, Lambert and porkchop	
+M-ORBIT-050	done	-	-	feature	S03	DELIVERED	-	-		Continue in orbit with own propellant; lifetime as an Orbit tool	
+M-ORBIT-051	done	-	-	feature	S03	DELIVERED	-	-		Applications: GEO comms (look angles, footprint, latency, link budget), SSO imaging, Thai satellites	
+M-ORBIT-052	done	-	-	architecture	S03	DELIVERED	-	-		Orbit hand-off (DOM-free, versioned, parseHandoff refuses unsound input)	
+M-ORBIT-053	done	-	-	feature	S03	DELIVERED	-	-		SGP4/SDP4 in TypeScript held to AIAA 2006-6753	
+M-ORBIT-054	done	-	-	feature	S03	DELIVERED	-	-		Offline GP snapshot, scheduled refresh (cron 17:43 UTC) and TLE/OMM import	
+M-ORBIT-055	done	-	-	feature	S03	DELIVERED	-	-		Passes over the user's location with refraction and brightness	
+M-ORBIT-056	done	-	-	realism	S03	DELIVERED	-	-		Position uncertainty growing with element-set age	
+M-ORBIT-057	done	-	-	architecture	S03	DELIVERED	-	-		Data provider online/offline with dated snapshots, 8 s timeout and per-dataset fallback; CelesTrak at most every 2 h; SWPC space weather; Sp	
+M-ORBIT-058	done	-	-	feature	S03	DELIVERED	-	-		SSA: conjunctions with Pc, CDM reading (CCSDS 508.0-B-1, NASA CARA), whole-catalogue screening in a worker, encounter plane	
+M-ORBIT-059	done	-	-	feature	S03	DELIVERED	-	-		Overflight timing of public imaging satellites with sourced instrument geometry	
+M-ORBIT-060	done	-	-	feature	S03	DELIVERED	-	-		Uncontrolled re-entry prediction (Long March 5B case study)	
+M-ORBIT-061	done	-	-	feature	S03	DELIVERED	-	-		Map display of military-track results and Watch tour on real satellites; five of eight military-track bullets covered	
+M-ORBIT-062	done	-	-	feature	S03	DELIVERED	-	-		Satellite designer and requirements-driven design (D06/D07) with plumbing (kind satellite, mission file v3, Send to Orbit, Fly it)	
+M-ORBIT-063	done	-	-	decision	S03	DELIVERED	-	-		PR #38 Apollo 11 merged as C01 with MSC-00171 regression tests (decision D-11)	
+M-PHYSICS-070	done	P3	XS	process	S03	DELIVERED	-	-		PR #36 (F14 fairing rule for Proton-M/Angara-A5, Proton published stage masses, abandonInsertion) merged; D-12 split decision superseded	
+M-PHYSICS-071	done	P3	XS	realism	S03	DELIVERED	-	-		Soyuz-2.1a six-DOF pitch runaway after booster separation (alpha 11.7 deg, aeroEnvelopeExceeded at T+124 on a crewed flight) fixed with a st	
+M-PHYSICS-072	done	P3	XS	realism	S03	DELIVERED	-	-		Phase 2.5 physics delivered: space weather feeds lifetime density, full NRLMSISE-00 with daily indices, IERS UT1-UTC and polar motion, balli	
+M-PLATFORM-029	done	-	XS	decision	S03	DELIVERED	-	-		Soundtrack out of the install precache on the public site, precached in the intranet build (D-7)	
+M-PLATFORM-039	done	-	S	perf	S03	DELIVERED	-	-		Worker bundles carry no translation dictionaries (Stage 2)	
+M-PLATFORM-040	done	-	S	process	S03	DELIVERED	-	-		Honest dynamic imports and the bundle-budget gate in CI and deploy	
+M-PLATFORM-048	done	-	S	feature	S03	DELIVERED	-	-		Build stamp in the app, build-info.json and SHA256SUMS in dist	
+M-PLATFORM-049	done	-	M	process	S03	DELIVERED	-	-		Deploy guards and scheduled science runs: main-tip guard (LS-01), browser smoke on pushes, weekly heavy and monthly six-DOF fleet, semi-live	
+M-PLATFORM-076	done	-	S	docs	S03	DELIVERED	-	-		Repository basics and fixed public facts: PR template, repo-hygiene test, LICENSE/NOTICE/CITATION/CHANGELOG, README Node 22 and 18 WebMCP to	
+M-PLATFORM-080	done	-	S	process	S03	DELIVERED	-	-		September merge queue (#41, #36, #38) and the REMAINING-WORK top-1 item	
+M-LAUNCH-073	open	P2	S	metric	S04	METRIC	-	-		UX and performance metrics for Launch/Home: time-to-first-result, unaided completion, 0 overflow at listed viewports, precache and first-loa	
+M-LEARNING-064	open	P2	XS	metric	S04	METRIC	-	-		Learning metrics measurable without analytics (time to first result on own phone, unaided task completion, explaining a failure cause, POE f	
+M-PHYSICS-062	partial	P2	XS	process	S04	METRIC	-	-		Physics exit metrics for the master plan (R4 waves): vehicles timelined 12->18/21, ratings within +-25 % 7->8/8 (>=6 within 15 %), sized lau	
+M-PLATFORM-024	partial	P2	XS	decision	S04	METRIC	-	-		One budget rule and the size targets: ceilings ratchet down; any raise needs a measured reason and an offset plan; precache, index and i18n 	
+M-PLATFORM-043	partial	P2	S	metric	S04	METRIC	-	-		Platform metrics table for the master plan (precache, index, i18n, worker bytes, PR CI and release minutes, .git growth, owner time, open/st	
+M-PLATFORM-063	open	P0	XS	bug	S06	CO-1	K0	T+I (H approves)		Release blocked by data growth: the budget gate in PR CI measures committed snapshots, the Pages build measures refreshed ones — R3 package 	
+M-PLAN-017	open	P0	XS	process	S06	CO-2	K0	I (W)		Release drift after the ledgers (as of da67341): R3 package 1 Pages 37172926281 failed at precache budget (15,787.4 > 15,783 kB), later fixed by #76 (1d5b76b); live now 09cc2f5 (Pages 37230585947) - re-verify on main 5f9aa2e the ledger rows touched by #75-#83 and record R2/R3 delivery [=exec M-GAP-001, outcome M-NEW-001]	delta table re-based on 5f9aa2e/09cc2f5 = refresh/r3-audit.tsv (58 rows; column final_package/final_status = assignment.tsv, provisional_package = audit-time label only)
+M-PLATFORM-064	partial	P0	XS	process	S06	CO-2	K0	I		R2 and R3-package-1 close-out evidence: record CI/deploy runs, review the R2 +15 kB index raise under the budget rule, fix the stale R3 stat	still stale on 5f9aa2e: PROGRESS R3.5 and R3.3-stowed rows, Open lines 77/86, no G3 row; R3-design-views.md:7,:88; R3.5-journey.md:7,:81; IMPLEMENTATION-STATUS (:573, :578); record owner statement and G3
+M-LAUNCH-017	partial	P2	XS	decision	S06	CO-3	K0	H+I (Q screenshots)		R2.4 replay rule: may the chooser list events after the replay cursor? (owner ruling)	
+M-LAUNCH-018	open	P0	S	decision	S06	CO-3	K0	H+I (Q screenshots)		Gate G2 and decision D08: owner confirms layout wireframe, presets, minimum scene size and assumptions A1-A5; screenshot sign-off	
+M-LAUNCH-019	open	P1	M	test	S06	CO-3	K0	H+I (Q screenshots)		Device/viewport/browser matrix for the Launch shell: 1366x768, 1920x1080, 768x1024, 1100x650, 1280x720 projector, zoom 125/150 %, 860/861 an	
+M-LAUNCH-004	partial	P1	S	feature	S06	CO-4	K1-K2	I/U (P reviews 032)		U16 UI completion: actual engine level in compact HUD and onboard overlay, thrust kN kept visible, live/replay check at the Soyuz 81 % step	
+M-LAUNCH-006	open	P3	XS	ux	S06	CO-4	K1-K2	I/U (P reviews 032)		"Notation: visible ""use language default"" reset after an explicit ISO/GOST choice"	
+M-LAUNCH-008	open	P1	XS	bug	S06	CO-4	K1-K2	I/U (P reviews 032)		Phone flight bar play button has no accessible name while paused and is not relabelled on language change	
+M-LAUNCH-011	open	P1	XS	bug	S06	CO-4	K1-K2	I/U (P reviews 032)		"Stale camera-dialog copy contradicts R2.2 ownership (""a manual choice lasts until the next phase"")"	
+M-LAUNCH-022	open	P1	S	perf-identical	S06	CO-4	K1-K2	I/U (P reviews 032)		Do not paint, describe or snapshot telemetry charts that are hidden (Engineer card presets and Explore non-picked charts)	
+M-LAUNCH-025	open	P1	M	bug	S06	CO-4	K1-K2	I/U (P reviews 032)		Language/notation change fan-out: mid-flight notation change runs full applyLanguage (rebuilds hidden setup, telemetry incl. the select in u	
+M-LAUNCH-026	open	P3	XS	quality	S06	CO-4	K1-K2	I/U (P reviews 032)		Merge R2 duplicate CSS media blocks and split hide rules; fix orphan notation doc comment	
+M-LAUNCH-027	open	P0	S	bug	S06	CO-4	K0	I/U (P reviews 032)		Use for the next launch in the loop inspector while a live flight is paused destroys the flight and its recording	CO-4 step-1 reproducer also drives #77 panel-reload paths openTemplate (5f9aa2e:src/main.ts:1147) and applySuggestion (:1582) with a paused live flight; guard still main.ts:560
+M-LAUNCH-032	open	P1	XS	bug	S06	CO-4	K1-K2	I/U (P reviews 032)		Dispersed-flight toggle creates point-mass dynamics for custom vehicles (defaultDynamics(vehicleId) vs missionVehicle) - and optional shared	
+M-LAUNCH-066	open	P2	XS	bug	S06	CO-4	K1-K2	I/U (P reviews 032)		"PWA ""ready offline"" toast overlaps the phone flight bar and bottom controls"	
+M-PLATFORM-037	open	P2	S	perf	S06	CO-4	K1-K2	I/U (P reviews 032)		Startup runs applyLanguage() over components already rendered in the same language (SetupPanel, Telemetry, hidden Orbit/Build) (NEW-bundle-2	
+M-LAUNCH-020	partial	P1	S	test	S06	CO-5	K0	Q+T		R2 acceptance journey completion and a PR-CI smoke slice: TORU/6-DOF reachability, chooser at 320/390 px in TH/RU, touch tabs and keys 1-4, 	
+M-PHYSICS-001	open	P0	S	test	S06	CO-6	K0	P+Q		Physics evidence baseline on current main: full heavy suite + six-DOF fleet + fingerprints on exact da67341, before any physics package	
+M-LEARNING-054	open	P0	XS	decision	S06	CO-7	K0	H then L-C		RTAF Academy / NKRAFA (and NAPA) naming in the shipped rtaf-academy pack conflicts with D-2 - obtain written permission or neutralise the ti	
+M-PLATFORM-075	open	P2	XS	docs	S06	CO-8	K0	I		Rebuild docs/README.md index around the master plan (development/, DECISIONS, history records, consumed files)	
+M-PLATFORM-077	partial	P2	S	process	S06	CO-8	K0	I		Backlog tracker and session protocol: one GitHub Issue (or master-plan row) per open item, SESSION-PROTOCOL.md, 14-day stale-branch rule, CH	
+M-PLAN-013	open	P1	M	architecture	S07	R0.2r	K1	S (+P,C,U)		Residual R0.2 ADRs: FlightLifecycle (mission/live clock/display cursor legs), CameraPolicy (as built), CraftState/Handoff, physical-state schema, DesignPreview, ResultAction; valid/invalid/legacy examples	ADRs record as-built contracts (handoff v1 + optional DesignRef, typed cause -> field) before R3.1r and R5.1
+M-PLAN-014	open	P2	S	process	S07	R0.3r	K1	T+Q		Machine-readable change-to-check map with a trial that selects the tests that caught #63/#64/#68/#70 and the R2/R3 regressions; unknown impact falls back to the full relevant suite	
+M-BUILD-024	partial	P1	M	test	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Build browser journey for the rocket side (remix, parts builder, ratings with Stop, Engineer review/test stand) and fake-Worker tests for ra	
+M-BUILD-025	open	P2	S	perf	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Add a Build scenario to the perf baseline (enter Build, Explore edits, ratings run, satellite page typing, Engineer tabs) to gate R3 preview	
+M-PHYSICS-002	open	P1	S	test	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Record bitwise characterisation harnesses at base (Cowell propagator cases, Apollo 11 point-mass fingerprint, deriv-call counter, MSIS call-	
+M-PHYSICS-003	open	P1	S	perf	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Flight-worker cost baseline: CPU profile of a six-DOF flight in the worker (requested 100x warp achieves only ~8.3x), feeding D-27 and the P	
+M-PHYSICS-060	open	P1	M	test	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Decision D-3/D-4 and tolerance-tier goldens: pin Node 22 (hash stays the gate), decimated [t,r,v]+events tolerance fixtures (1 m / 1 mm/s / 	
+M-PLAN-002	open	P2	S	test	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Resolve the warm-vs-cold startup contradiction (Stage 1: warm slower in 6/6 pairs; perf baseline: warm interactive 6.6 s vs cold 16.4 s) with one harness, Pages-like cache headers and n>=5	
+M-PLAN-003	open	P1	M	test	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Mission-length memory budget: JS heap, recording bytes, GPU memory (renderer.info), WebGL context count, forced context-loss journey (Soyuz MS and Falcon 9 full missions)	
+M-PLAN-004	open	P2	S	test	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Input-latency KPI (Event Timing / INP proxy) for setup edits, play/pause, scrub, camera wheel at 4x CPU throttle	
+M-PLAN-010	open	P1	S	test	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		SHA-256 digests at base for numerics without fingerprints: passes/overflights (249 Skyfield events), eclipse/power, applications, M03 re-entry jobs, Apollo phases; never re-recorded by an EQ PR	
+M-PLAN-018	open	P1	M	test	S07	R0.4	K1	Q (+T harness, C render probe)		Equivalence-oracle kit for identical-output UI/render/export/storage work: fixed-seed readPixels hash + draw-count probe (R1.3 technique), DOM snapshot diff, byte-identical CSV/DOCX/HTML export and storage-record diff; each oracle sabotage-proven [=M-GAP-003, M-NEW-004]	
+M-PLAN-020	open	P2	S	test	S07	R0.4	K1	T		Budget tooling: gzip/brotli columns, an initial-load group (index+i18n+lesson-file+catalog+css) and a texture group in scripts/bundle-budget.mjs so startup bytes ratchet like code bytes [=M-GAP-002, M-NEW-020]	
+M-PLATFORM-041	partial	P1	M	test	S07	R0.4	K0-K1	T+Q (P,B,L scenario owners)		Standing performance gate in the repo: perf-baseline script as scripts/perf, hardware-independent budgets (bytes, contexts, shader programs,	
+M-BUILD-021	open	P2	XS	decision	S08	DEC	K0-K4	H (I records)		Engineer face of the parts builder (roadmap D03 at Engineer): decide (D-21) — declare done at Explore, or build typed guidance/maxQ/maxAccel	
+M-LAUNCH-039	deferred	P3	XS	decision	S08	DEC	K0-K4	H (I records)		touch-action:none on #gl (pinch on scene cannot zoom/scroll the page); keep, re-evaluate with device evidence	
+M-LEARNING-013	open	P3	XS	decision	S08	DEC	K0-K4	H (I records)		Formative vs summative use: answer keys live on the device; results checksum detects accidents, not forgery - decide scope before classroom 	
+M-LEARNING-072	open	P2	XS	decision	S08	DEC	K0-K4	H (I records)		Decision D-16: challenge scoring (recommended: pass/fail + margin in app, lesson-style progress, nothing beyond local storage, paper judge k	
+M-ORBIT-028	open	P1	XS	decision	S08	DEC	K0-K4	H (I records)		Owner decision PLAN-D07: realism target for the ISS mission (fixed historical ephemeris vs live snapshot with age/uncertainty; reference mis	
+M-ORBIT-047	open	P2	S	decision	S08	DEC	K0-K4	H (I records)		Decide which satellite templates are feasible starters vs intentional trade-off teaching cases (comms -668, weather -632, science -26 m/s ma	
+M-PHYSICS-021	open	P1	XS	decision	S08	DEC	K0-K4	H (I records)		Owner decision D-10: thermosphere model (port NRLMSIS 2.1 under NRL terms, or keep NRLMSISE-00 and show the measured early bias at the numbe	
+M-PHYSICS-027	open	P3	XS	decision	S08	DEC	K0-K4	H (I records)		Owner call: solar constant 1361 W/m2 (power, IAU 2015) vs 1367 W/m2 (propagator SRP P_SUN=4.56e-6)	
+M-PLAN-005	open	P1	XS	decision	S08	DEC	K0-K4	H (I records)		Quality-tier policy: existing GlowGovernor silently drops bloom then physical sky below 24 fps; opt-in low-graphics; D-27 point-mass default; rule: no new automatic quality reduction	
+M-PLAN-006	open	P1	XS	decision	S08	DEC	K0-K4	H (I records)		Target device classes and per-class performance budgets (low-end Android, iPhone, school iPad, Chromebook, Windows/Edge iGPU, desktop) and which are gating vs reported	
+M-PLAN-007	open	P1	XS	decision	S08	DEC	K0-K4	H (I records)		Name the independent science reviewer (R4.4) and the second-agent reviewer; formally close G0 with the residual ADR list	
+M-PLAN-008	open	P0	XS	decision	S08	DEC	K0-K4	H (I records)		"Execution authorization under PLAN v2.0: earlier R3 authorization (R3.5 ""planned (authorized)"") is suspended until the owner re-authorizes per package; owner requirement 5"	R3 lane closed 2026-10-04 (owner: R3 complete); earlier instructions do not authorize R4 or any v2.0 package (PROGRESS row 27); per-package authorization still required
+M-PLATFORM-011	deferred	P3	M	decision	S08	DEC	K0-K4	H (I records)		Visit-only mode when Web Locks or sessionStorage are unavailable (older Safari/WebViews) — keep the ADR; measure before refining (B10)	
+M-PLATFORM-020	deferred	P3	L	decision	S08	DEC	K0-K4	H (I records)		Optional online backend for scores or shared designs (behind DesignStore, PDPA-safe) — decide later	
+M-PLATFORM-032	open	P1	XS	decision	S08	DEC	K0-K4	H (I records)		Decide the supported browser baseline (module workers, class static blocks): Chrome/Edge ≥94, Safari ≥16.4, Firefox ≥114	
+M-PLATFORM-042	open	P2	S	decision	S08	DEC	K0-K4	H (I records)		Measure on real phones and decide the default flight model for narrow devices (D-27) without silently lowering realism	
+M-PLATFORM-044	open	P2	S	decision	S08	DEC	K0-K4	H (I records)		Node line decision (D-3/D-4), runtime-pin test and fingerprint failures that name the runtime — keep exact hashes as the gate	
+M-PLATFORM-052	open	P3	S	decision	S08	DEC	K0-K4	H (I records)		DOM unit-test layer decision (D-18): happy-dom/jsdom vs browser-only (54 of 91 ui files never imported by tests)	
+M-PLATFORM-066	partial	P1	S	docs	S08	DEC	K0-K4	H (I records)		One decision register: merge PLAN §4.1 D01-D09 and DECISIONS D-1..D-27 under one DEC- namespace; list open, deferred and deviated decisions 	
+M-PLATFORM-078	open	P2	XS	decision	S08	DEC	K0-K4	H (I records)		AI-code governance and second maintainer (D-23/D-25): PR size cap, independent second-agent review, owner reads physics/data diffs	
+M-PLATFORM-021	open	P1	S	perf	S09	EQ-1	K1	T		"First visit downloads ~9.3 MB twice: the service-worker precache fetches every file with cache:""reload"", bypassing the copies the page just "	
+M-PHYSICS-012	open	P1	M	perf	S09	EQ-10	K2	P		Six-DOF integrator/runtime: remove temporaries and duplicate pure calls under exact expression order (finiteness checks as && chains, cached	
+M-PHYSICS-013	open	P2	S	perf	S09	EQ-10	K2	P		Point-mass forces: inline v - Omega x r as the literal expansion, keep addScaled/rk4Step forms, density() computes rho without the full atmo	
+M-PHYSICS-014	open	P3	S	perf	S09	EQ-10	K2	P		simulation.ts derived state: skip elementsFromState in updateDerived only when s.r/s.v are the same object references, one-entry atmosphere 	
+M-PHYSICS-015	open	P3	S	quality	S09	EQ-10	K2	P		Identical-value constants/helpers de-duplication: TWO_PI, DEG, the six same-form clamps, lerpVec -> vec3.lerp, density.ts DEG -> import RAD,	+ DEG (satellite-diagrams-svg.ts:13) and clamp01 (satellite-diagrams.ts:33; differs on -0, test first; design/ must not import render/) [R3CR-02]
+M-PHYSICS-011	open	P2	S	perf	S09	EQ-11	K2	P		Lunar/Apollo: small exact-jd memo for moonState, sunState, precessionFromJ2000 and moonBodyToEci (frozen results), position-only lunisolar v	
+M-LAUNCH-023	open	P2	M	perf-identical	S09	EQ-12	K2-K3	I/U		Telemetry pass memo when paused/unchanged, layout-read batching, binary-search window and cached first-flex index	+ MissionResult suggestion DOM rebuilt every 0.5 s although the memo returns the same object (mission-result.ts:170-189) [R3CR-10]
+M-LAUNCH-036	open	P2	S	perf-identical	S09	EQ-12	K2-K3	I/U		Shared ui/format.ts: cached Intl formatters keyed by language+options, and explicit-mode time formatters; decide one clock-rounding contract	+ 5 R3 local formatters (satellite-diagrams-svg.ts:23, panel.ts:411 not equal to dom.num, mission-result.ts:175, design-ref-text.ts:13, satellite-svg.ts:149) and a second utc() copy [R3CR-02]
+M-LAUNCH-037	open	P3	S	quality	S09	EQ-12	K2-K3	I/U		Shared canvas sizing helper (per-site fallback, DPR cap 3) and named colour tokens for charts; do not merge tick algorithms	
+M-LAUNCH-038	open	P3	S	quality	S09	EQ-12	K2-K3	I/U		Single CHART_DEFS table for live telemetry, report charts and reference series (becomes the R2.3 card registry); share engine-level formatti	
+M-LAUNCH-084	open	P2	S	perf-identical	S09	EQ-12	K2-K3	I/U		"Explore ""reduce payload"" fix runs a bisection of test flights on the main thread"	
+M-LAUNCH-085	open	P3	S	perf-identical	S09	EQ-12	K2-K3	I/U		Tuning tab recomputes margins for up to 120 linear models every 200 ms	
+M-BUILD-014	open	P2	M	perf	S09	EQ-13	K3	B		Main-thread insertion probe in satellite Fly it (up to 0.5 s per vehicle) — run the verdict probe in the existing readiness worker	
+M-BUILD-026	open	P3	S	efficiency	S09	EQ-13	K3	B		Build panels: shared keepFocus helper and one coalesced rAF per panel for chart redraws (test stand, wind tunnel, staging)	+ skip bench/satellite preview rebuild when the drawing key is unchanged (satellite-bench.ts:245,:311; engineer-level.ts:275,:326) [R3CR-08]
+M-BUILD-027	open	P3	S	efficiency	S09	EQ-13	K3	B		Build CSS: merge only exactly identical rule blocks; choose one robust visually-hidden class (deliberate small a11y fix)	+ .sd-axes path/circle identical rules in satellite.css [R3CR-06]
+M-BUILD-028	open	P3	S	efficiency	S09	EQ-13	K3	B		Build screen renders while hidden at startup and on language change (stack SVG of the Watch level, picker) — render on show instead	
+M-PLAN-029	open	P3	S	perf-identical	S09	EQ-13	K3	B		One home for Build drawing helpers with identical output: svg()/NS/f1 (3 copies), shared stackLabel that keeps each caller's output (sizing: booster = role {n:1}, no engine line; Engineer: booster name = role) with a unit test over every vehicle x DrawnPart that Watch/Explore/sizing/Engineer labels are byte-identical (renaming the Engineer booster to match Watch is M-PLAN-027, a separate quality-improving PR), engineLine (6 copies; not remix.ts), benchPart derived from partCard, one partRef syntax module; interstage dimensions/sources on the bench card is a separate quality decision [R3CR-01/03/04]	
+M-LAUNCH-047	open	P3	S	perf-identical	S09	EQ-14	K3-K5	owner of each file		Apollo CM parachutes: merge same-material gores per canopy (84 -> ~10 meshes); do not switch to the shared Canopy (different look)	
+M-LAUNCH-048	open	P3	S	quality	S09	EQ-14	K3-K5	owner of each file		Render helper dedupe: share gridFinTexture (identical), parameterised strut segments, canopyStripes cache with ownership, cacheOnce helper	
+M-LEARNING-006	open	P3	S	refactor	S09	EQ-14	K2	owner of each file		Export helpers: de-duplicate CSV/escape/download/file-name code while keeping each variant's options byte-for-byte (D12)	
+M-LEARNING-024	partial	P3	L	architecture	S09	EQ-14	K3-K5	owner of each file		Built-in lessons, worksheets and question banks as data files read through the same parser as teacher files (byte-identical migration)	
+M-PLATFORM-038	open	P3	S	refactor	S09	EQ-14	K3-K5	owner of each file		About 28 local el() DOM helpers in src/ui (D4) — migrate only when a file is already being edited	svg() copies handled in M-PLAN-029 (EQ-13), not here
+M-PLATFORM-055	open	P3	XL	architecture	S09	EQ-15	K3	I (+U panel.ts; Q oracles)		Declared refactor window: extract route/data-mode/hand-off controllers from main.ts and sub-panels from panel.ts; SectionModule lifecycle (i	fold re-anchored: seams before R5.1/R6 (D-62 re-asked on 5f9aa2e, main.ts 2,635 lines)
+M-LAUNCH-041	open	P1	M	perf-identical	S09	EQ-2	K1-K2	C+I		Launch/preview rebuild: keep immutable heavy inputs (livery canvases, pad terrain geometry, recovery scenery, keyed materials, trail buffers	
+M-LAUNCH-042	open	P2	S	perf-identical	S09	EQ-2	K1-K2	C+I		Prewarm the light-set shader variants a flight can reach (pad floodlights hidden after 55 km, engine light gone after abort/Apollo CM) so co	
+M-LAUNCH-049	open	P3	S	quality	S09	EQ-2	K1-K2	C+I		Scene construction helpers: targetOrbitState(plan), replaceView(old, make) keeping add order, table-driven Apollo blocks	
+M-PLAN-001	open	P1	M	perf-identical	S09	EQ-2	K1-K2	C+I		Startup critical path with identical pixels: overlap texture fetch/decode, script evaluation and renderer creation; parallel shader compile (KHR_parallel_shader_compile / three.js compileAsync); off-thread decode only wi	use #81 start-up marks (orbitlab:bootstrap/workspace/app/textures/ready) as measurement points; no speed-up claimed
+M-LAUNCH-024	open	P2	S	perf-identical	S09	EQ-3	K2	I+C		Per-frame DOM and allocation hygiene in frame()/updateVisuals and the R2 shell/chooser	+ #77 idle work: syncSteps polls panel.isValid() at 4 Hz on setup (main.ts:1492-1525) [R3CR-09]. Replacing the poll with a version counter is NOT identical-output (chip may update sooner; a missed writer leaves it stale): separate quality-improving PR outside the EQ-3 identical-output PR; proof = list every writer of panel state/validity (language change, Build store spec edit, profile switch, MCP configure_mission, applySuggestion, ...) with one test per writer that the version bumps, plus a sabotage test (remove one bump -> a test fails); counter stays 0 over 10 s idle. The 2 Hz result-card suggestion rebuild belongs to M-LAUNCH-023
+M-LAUNCH-040	open	P2	M	perf-identical	S09	EQ-3	K2	I+C		While Orbit/Build/lesson pages cover a running flight, skip only frame-pure visual writes (keep every integrator, timer, audio and camera da	
+M-LAUNCH-043	open	P2	S	perf-identical	S09	EQ-3	K2	I+C		Exhaust trails: scalar wind fast path (windy 6-DOF) and skip recompute/upload when inputs are exactly unchanged (paused)	
+M-LAUNCH-044	open	P3	S	perf-identical	S09	EQ-3	K2	I+C		TrailLine/OrbitLine: skip buffer rewrite when points and origin are unchanged (dirty flag, write in onBeforeRender)	
+M-LAUNCH-086	partial	P2	M	perf-tradeoff	S09	EQ-3	K2	I+C		Idle and low-end rendering: draw only when something changed on static scenes; opt-in low-graphics mode offered on sustained slow frames	
+M-ORBIT-010	open	P1	S	perf	S09	EQ-4	K2	O (+I main.ts line)		Create the Orbit playground's OrbitView (second WebGL context) only when the playground is shown	
+M-ORBIT-011	open	P2	M	perf	S09	EQ-4	K2	O (+I main.ts line)		Dirty-flag redraw for porkchop (always), paused ground track and (optional) paused 3-D view; cached colour strings	
+M-ORBIT-012	open	P2	S	perf	S09	EQ-4	K2	O (+I main.ts line)		Applications results: update values in place instead of replacing the section 5 times per second; compute track overlay once per frame	
+M-ORBIT-006	open	P2	S	perf	S09	EQ-5	K2	O (+I home)		Long March 5B and NAPA-2 re-entry case studies run on the main thread (about 1.3 s and 0.6 s freezes, no Stop)	
+M-ORBIT-013	open	P2	S	perf	S09	EQ-5	K2	O (+I home)		Passes and look angles: precompute station ECEF/ENU by value, compute the Sun direction and EOP/GMST once per sample	
+M-ORBIT-014	open	P2	XS	perf	S09	EQ-5	K2	O (+I home)		findPasses/findPassesOf: memoise the elevation function by exact jd within one call	
+M-ORBIT-015	open	P3	XS	perf	S09	EQ-5	K2	O (+I home)		collisionProbability: precomputed cos/sin tables, hoisted per-ring log, iterative Math.max	
+M-ORBIT-016	open	P3	XS	perf	S09	EQ-5	K2	O (+I home)		Screening ephemeris cache: cache grid times only (no mid-run flush at 100k entries)	
+M-ORBIT-017	open	P3	S	refactor	S09	EQ-5	K2	O (+I home)		One shared encounter-plane basis/covariance helper for encounter-plane.ts and conjunction.ts (keep both sigma formulas)	
+M-ORBIT-018	open	P3	S	refactor	S09	EQ-5	K2	O (+I home)		One shared golden-section helper for conjunction/passes/coverage/eclipse/requirement-inverses (comparator and stop rule passed verbatim)	
+M-PHYSICS-017	open	P2	S	perf	S09	EQ-5	K2	O (+I home)		Home page: compute the ISS next-pass list off the render frame (idle callback or existing worker), with `now` captured at request time	
+M-LEARNING-036	open	P3	M	architecture	S09	EQ-6	K2	I (+L-C)		Typed i18n keys (Key type from en.ts; ru/th typed) - per-language dictionary loading is the bundle group's P1	
+M-PLATFORM-031	open	P1	M	perf	S09	EQ-6	K2	I (+L-C)		Load only the active language’s dictionary (plus English fallback): split each feature dictionary per language (P1)	
+M-LAUNCH-045	open	P2	S	perf-identical	S09	EQ-7	K2-K3	I		Map view: compute orbital elements once per draw, memo predicted orbit on exact state, cache static layers at device-pixel size; lazy shared	
+M-PLATFORM-034	open	P2	S	perf	S09	EQ-7	K2	I		Load WebMCP tools, Monte Carlo window, lifetime dialog and report code on demand (P3, safe part)	
+M-PLATFORM-036	deferred	P2	L	perf	S09	EQ-7	K4-K5	I		Load the Build and Orbit sections on first use (proxy with queued calls, idle preload) (P3 heavy part, ENG-K12)	
+M-BUILD-030	partial	P3	S	efficiency	S09	EQ-8	K3	T+I (P review)		Ratings worker: keep one warm worker between rating runs (terminate only on Stop); later merge ratings + readiness workers on the shared job	
+M-PLATFORM-033	open	P2	M	perf	S09	EQ-8	K3	T+I (P review)		Twelve worker bundles each embed their own copy of the physics core: build workers as ES modules with shared chunks (P2)	
+M-PHYSICS-010	open	P1	S	perf	S09	EQ-9	K2	P		Cowell propagator: FSAL reuse of the 7th Dormand-Prince stage, preallocated stage sums in the same order, msisInput year cache, exact-jd mem	
+M-BUILD-006	open	P1	S	bug	S10	FX-1	K1	B		Ratings search stopped by its 8 s time or flight budget is shown and stored as a real rating (0 kg or a lower bound), and Launch Explore the	
+M-BUILD-007	open	P1	S	bug	S10	FX-1	K1	B		Opening a saved design or a requirements row replaces the unsaved bench / design-lesson design without asking	
+M-BUILD-008	open	P2	XS	bug	S10	FX-1	K1	B		"Newer-version design file: message claims unknown parts ""were left out"" while any unknown field makes the whole file refused; record the for"	
+M-BUILD-029	open	P2	M	bug	S10	FX-1	K1	B		Locale decimal comma in number inputs outside Build (Launch panel, lifetime dialog, Orbit Field): reproduce in RU, then use the shared numbe	
+M-LEARNING-001	open	P1	S	bug	S10	FX-2	K1	L-UI (+L-C bank)		Design-lesson strip: progress ticks rebuild the whole strip and destroy the input/button the student is using (P28)	
+M-LEARNING-002	open	P3	S	refactor	S10	FX-2	K1	L-UI (+L-C bank)		Shared answer-form builder for the flight, design and case lesson strips (D10, identical-output refactor)	
+M-LEARNING-003	open	P2	XS	bug	S10	FX-2	K1	L-UI (+L-C bank)		Worksheet count fields: the number shown can differ from the number used to generate sheets (B7 + NEW-storage-4)	
+M-LEARNING-004	open	P2	S	bug	S10	FX-2	K1	L-UI (+L-C bank)		Worksheet/author views: one flusher and retained view per tab open; an older failed save can overwrite newer edits; random class code change	
+M-LEARNING-027	open	P2	S	architecture	S10	FX-2	K1	L-UI (+L-C bank)		Version the placement bank and keep complete attempt history (attempts currently regraded against the current bank)	
+M-ORBIT-001	open	P1	XS	bug	S10	FX-3	K1-K2	O		"Thai satellites panel: stale ""tracking comes with the next phase"" copy; link to Real satellites (Thai group); THEOS-2A check"	
+M-ORBIT-002	open	P1	S	bug	S10	FX-3	K1-K2	O		Applications keep stale Thai-satellite identity/repeat grid after preset or slider change; NAPA-2 case not marked stale on data-mode change	
+M-ORBIT-003	open	P1	S	bug	S10	FX-3	K1-K2	O		"Watch tour shows the LEO period after a Hohmann burn to GEO; sky step says ""ISS is here now"" while warp shows ""Not now"""	
+M-ORBIT-007	open	P2	S	ux	S10	FX-3	K1-K2	O		Catalogue load state: Watch tour real-satellite steps blank while loading/failed; no Retry after a failed load; online mode fetches once per	
+M-ORBIT-008	open	P2	XS	bug	S10	FX-3	K1-K2	O		"Repeat-ground-track tool accepts invalid input (0, empty, 14.5 revolutions) and answers ""no circular orbit"""	
+M-ORBIT-029	partial	P2	XS	bug	S10	FX-3	K1-K2	O		"D-11 compliance: label the Moon ""Apollo 11 week only (DE441)"" where shown; fix README ""the Moon itself is not modelled"""	
+M-BUILD-010	open	P3	S	bug	S10	FX-4	K2	T+P (O,B,I adopt)		Ratings worker failing to load rejects with a bare error; give a clear retry/reload message (no blanket main-thread fallback)	
+M-LAUNCH-028	open	P1	S	bug	S10	FX-4	K2	T+P (O,B,I adopt)		"Physics worker and preview failures are swallowed to console: show a localized ""flight stopped / could not prepare"" status with Retry and a "	
+M-ORBIT-004	open	P1	S	bug	S10	FX-4	K2	T+P (O,B,I adopt)		"Screening/re-entry worker failures shown as ""Screening stopped"" or silently cleared (AbortError not separated from real errors)"	
+M-ORBIT-005	open	P1	S	bug	S10	FX-4	K2	T+P (O,B,I adopt)		"Re-entry/lifetime/altitude inline (no-worker) fallback runs synchronously: Stop impossible and a cancelled run can resolve as a truncated ""f"	
+M-PLATFORM-035	open	P1	M	bug	S10	FX-4	K2	T+P (O,B,I adopt)		One worker-job contract: shared runner for all 12 jobs, pre-aborted signals honoured, inline fallbacks never resolve a truncated result as f	
+M-LAUNCH-029	open	P2	S	bug	S10	FX-5	K1-K2	I/U (P reviews)		"Compare table ""current"" column reads the live simulation, not the displayed (cursor) frame"	
+M-LAUNCH-031	open	P1	S	bug	S10	FX-5	K1-K2	I/U (P reviews)		"Mission result table shows osculating apsides flagged ""outside"" beside a ""target reached"" verdict judged on J2 physical apsides"	also_in=R4.3(S13): physics half - judged set uses physical apsides in both models and every verdict path (R4.3 PR 4, P) | home FX-5(S10): UI part
+M-LAUNCH-034	open	P2	XS	bug	S10	FX-5	K2	I/U (P reviews)		Monte Carlo CSV: use shared downloadBlob (5 s revoke), quote \r, decide formula-injection guard	
+M-LAUNCH-035	open	P3	S	ux	S10	FX-5	K1-K2	I/U (P reviews)		"Monte Carlo ""failed"" state has no style; attitude auto-tune progress has no percentage"	
+M-LAUNCH-060	open	P2	S	bug	S10	FX-5	K1-K2	I/U (P reviews)		"Equations panel says ""No air to act on at this height"" on the pad, after landing and when no step is recorded"	
+M-PLATFORM-016	open	P2	S	bug	S10	FX-6	K2	T (+importer owners)		Importers of mission/design/flight/lesson/results/validation files read any size into memory (shared bounded reader)	
+M-PLATFORM-022	open	P2	S	bug	S10	FX-7	K2	T (L-UI strings)		"Daily data-only deploys change the service-worker version and show the ""update ready — Reload"" toast every day, also mid-lesson"	
+M-PLATFORM-023	partial	P2	S	ux	S10	FX-7	K2	T (L-UI strings)		Download-size transparency on first visit: say how big the offline install is, respect Data Saver, and let the install wait until the page i	
+M-PLATFORM-025	open	P3	XS	ux	S10	FX-7	K2	T (L-UI strings)		Web app manifest has no lang, Thai name, screenshots or shortcuts; no robots.txt/sitemap	
+M-PLATFORM-026	open	P3	XS	ux	S10	FX-7	K2	T (L-UI strings)		No public/404.html: path-style links (/Orbitlab/orbit/engineer) land on GitHub’s 404	
+M-PLAN-019	open	P1	S	bug	S10	FX-8	K1	C (+I main.ts hook, O orbit-view)		No webglcontextlost/webglcontextrestored handler anywhere in src/: recover renderer and GPU resources while simulation and recording continue; forced-loss journey (WEBGL_lose_context); KPI-15 [=M-GAP-007, M-NEW-008]; satisfies the handler half of M-LAUNCH-046	
+M-LEARNING-005	open	P2	XS	bug	S10	R1.6	K1	L (L-UI strings; T for persist)		Numeric drafts: after 1000 remembered fields (or a 1000-character text) typing into any new numeric field silently does nothing (B6)	
+M-PLAN-031	open	P1	S	bug	S10	R1.6	K1	S+I		"Stored/imported mission with version > MISSION_FORMAT_VERSION is read as usable and overwritten on restore; fallback-reset fields are persisted; failing test first [R3CR-13]; misses PLAN v1.2 R3.1 ""newer unsupported state is rejected"" (accepted limit with G3)"	
+M-PLATFORM-001	open	P1	XS	bug	S10	R1.6	K1	L (L-UI strings; T for persist)		Selected profile that cannot be read keeps its owner lock until the page closes (B1)	
+M-PLATFORM-002	open	P1	S	bug	S10	R1.6	K1	L (L-UI strings; T for persist)		One failing startup housekeeping step (tombstone media delete, catalog quota, unreadable legacy record) sends every startup into visit-only 	
+M-PLATFORM-003	open	P1	XS	perf	S10	R1.6	K1	L (L-UI strings; T for persist)		Startup re-reads and deep-clones the whole legacy profile on every launch although migration cleanup is finished (NEW-storage-2)	
+M-PLATFORM-004	open	P1	S	bug	S10	R1.6	K1	L (L-UI strings; T for persist)		"One damaged or newer-format profile empties the profile chooser (""No learner profiles yet"") and breaks Export all and audio export (B3)"	
+M-PLATFORM-005	open	P2	S	perf	S10	R1.6	K1	L (L-UI strings; T for persist)		Profile dialog re-parses every profile about four times per render (P8)	
+M-PLATFORM-006	open	P1	XS	perf	S10	R1.6	K1	L (L-UI strings; T for persist)		Showing the profile name parses the learner’s whole lessons/designs/experiments JSON (NEW-storage-1)	
+M-PLATFORM-007	open	P1	M	perf	S10	R1.6	K1	L (L-UI strings; T for persist)		Repository re-parses, validates and deep-clones the whole profile on every getItem/setItem (per keystroke) — parse cache keyed on the exact 	
+M-PLATFORM-008	open	P2	XS	bug	S10	R1.6	K1	L (L-UI strings; T for persist)		Export checks the size of compact JSON but downloads pretty JSON: an export near 8 MB can be a backup that cannot be restored; export also d	
+M-PLATFORM-009	open	P3	XS	bug	S10	R1.6	K1	L (L-UI strings; T for persist)		Latent hazard: repository.delete() in visit-only mode would delete the real profile’s IndexedDB media (UI blocks it today) (B4)	
+M-PLATFORM-010	open	P2	M	bug	S10	R1.6	K1	L (L-UI strings; T for persist)		"Legacy media migration aborts entirely on one colliding recording: non-colliding recordings stay invisible, ""reload to retry"" can never succ"	
+M-PLATFORM-012	open	P2	XS	refactor	S10	R1.6	K1	L (L-UI strings; T for persist)		Two copies of the soundtrack IndexedDB open/transaction code (soundtrack.ts vs workspace/media.ts) (D2)	
+M-PLATFORM-013	open	P3	XS	perf	S10	R1.6	K1	L (L-UI strings; T for persist)		Media export reads every profile’s track metadata instead of a key range (P27)	
+M-PLATFORM-014	open	P3	S	refactor	S10	R1.6	K1	L (L-UI strings; T for persist)		Duplicate isRecord/validId/clone helpers across workspace and ~12 other modules (D3)	+ canonicalJson (design-ref.ts:45-52) = sortKeys/sameSpec (explore-model.ts:388-391), isObj copy [R3CR-05]
+M-PLATFORM-015	partial	P3	S	architecture	S10	R1.6	K1	L (L-UI strings; T for persist)		Storage registry residuals: localStorage still referenced outside the workspace adapters with no test confining it; no per-key owner/schema/	
+M-PLATFORM-018	open	P2	S	feature	S10	R1.6	K1	L (L-UI strings; T for persist)		Ask the browser to keep learner data (navigator.storage.persist) and warn iPad/iPhone users about 7-day eviction unless installed — with a b	
+M-PLATFORM-074	open	P1	S	docs	S10	R1.6	K1	L (L-UI strings; T for persist)		Document R1 learner profiles, reset, archives and backups in README, USER-GUIDE and IMPLEMENTATION-STATUS	
+M-LAUNCH-002	partial	P1	M	ux	S11	R2.1r	K2	U+I (C render)		R2.1 remainder: compact command/playback band, Analysis-stage layout, short-viewport case (U02, 1100x650 squeeze)	
+M-LAUNCH-003	partial	P2	M	ux	S11	R2.1r	K2	U+I (C render)		Telemetry grouped summary-first with details on demand	
+M-PLAN-009	open	P3	S	ux	S11	R2.1r	K2	U+I (C render)		Long six-DOF flight feedback: show achieved warp honestly with time-to-next-event at the achieved rate; no fake speed-up	
+M-PLAN-015	open	P2	M	realism	S11	R2.1r	K2	U+I (C render)		Six-DOF held coast: interpolate the picture between physics samples (visual only) so a 1x coast does not freeze 10 s then jump; physics digests unchanged	
+M-LAUNCH-012	open	P3	XS	ux	S11	R2.2r	K2	C+I		Camera fallback is silent: no on-screen notice when the chosen view cannot show the target	
+M-LAUNCH-061	open	P3	XS	ux	S11	R2.2r	K2	C+I		"Watch soundtrack/import options always open: fold into a closed ""advanced sound options"" block"	
+M-PLAN-021	open	P2	S	quality	S11	R2.2r	K2	C (+I hook, L-UI strings)		Apply the quality-reduction policy D-43 to GlowGovernor (today silently drops bloom then physical sky below 24 fps): announce with one-tap undo or opt-in, never silent; low-graphics mode opt-in only [=M-GAP-011 impl, M-NEW-017]	
+M-LAUNCH-014	open	P2	L	feature	S11	R2.3s2	K2-K3	U		"R2.3 step 2: dock/resize/reorder by extending hudlayout.ts, keyboard alternatives, clamping on resize/zoom, explicit ""reset layout"" (incl. s"	
+M-LAUNCH-050	open	P1	S	quality	S11	R2.5	K2	Q gate; I/U/C/O fixes		Automated accessibility checks (axe-core, owner-approved devDependency) on main routes in EN/TH; fix serious/critical	
+M-LAUNCH-051	open	P2	S	a11y	S11	R2.5	K2	Q gate; I/U/C/O fixes		Text contrast (--dim 4.2/3.9:1) and labels <=10 px fail WCAG AA	+ #77 .mission-steps text 10.5/9.5 px and off colour ~2.9:1
+M-LAUNCH-052	open	P2	S	a11y	S11	R2.5	K2	Q gate; I/U/C/O fixes		Touch targets below 24 px (.hud-btn 21x18, scene tools, play) on coarse pointers	+ #77 .mission-steps chips ~14.5 px and .bd-say-show ~20 px: >=24 px or WCAG spacing exception
+M-LAUNCH-053	open	P2	S	a11y	S11	R2.5	K2	Q gate; I/U/C/O fixes		Event ticker live region rebuilt wholesale on every event (screen readers repeat rows)	
+M-LAUNCH-054	open	P2	S	a11y	S11	R2.5	K2	Q gate; I/U/C/O fixes		prefers-reduced-motion ignored by launch scene camera easing, shake and Orbit animation	
+M-LAUNCH-055	open	P2	XS	a11y	S11	R2.5	K2	Q gate; I/U/C/O fixes		"App page landmarks: no h1, no skip link, no noscript, html lang=""en"" until JS runs"	
+M-LAUNCH-056	open	P2	S	bug	S11	R2.5	K2	Q gate; I/U/C/O fixes		SetupPanel.render() restores focus only for elements with aria-label, so buttons lose keyboard focus	+ #77 template-note buttons (panel.ts:403-449) and focusField re-render (:376-401)
+M-LAUNCH-057	open	P2	S	bug	S11	R2.5	K2	Q gate; I/U/C/O fixes		Debrief and Watch end cards are role=dialog without focus move, announcement or Escape	"+ #77 Watch end-card ""Try this launch yourself"" button"
+M-LAUNCH-058	open	P1	M	a11y	S11	R2.5	K2	Q gate; I/U/C/O fixes		Thai typography and narrow-screen fit: :lang(th) line-height/letter-spacing/line-break rules on system fonts, no clipped vowels/tones, tab-s	
+M-LAUNCH-059	partial	P3	S	ux	S11	R2.5	K2	Q gate; I/U/C/O fixes		Numeric entry on touch: inputmode=decimal everywhere and coarse/fine steppers on orbit sliders	
+M-LAUNCH-062	open	P2	M	feature	S11	R2.6	K2	V (+C, I)		"Event jump row (Liftoff, Max-Q, staging, fairing, insertion, landing, failure) with camera choice, also on Watch; ""show me"" for failed lesso"	
+M-LAUNCH-046	open	P2	M	perf-tradeoff	S12	R3.0	K3	C (+O, I)		WebGL context budget: OrbitView.dispose(), release HomeGlobe/Orbit 3-D contexts under pressure keeping decoded textures, longer term one sha	
+M-BUILD-011	open	P2	M	ux	S12	R3.1r	K3	S (+L design-store.ts, B UI)		Saved design keeps the vehicle, not how it was made: remix stretches reset to 100 %, payload and satellite design date not saved	
+M-LAUNCH-030	partial	P2	S	bug	S12	R3.1r	K3	I (via I-train; seam 2 if D-62)		Report link, reference label and Continue-in-Orbit hand-off read the panel draft instead of the flown configuration (sim.cfg)	
+M-PLAN-028	open	P2	L	bug	S12	R3.1r	K3	I (+B bench source, S schema/fixtures)		DesignRef follow-on: single writer of orbitlab.mission (Fly it 3->2 writes, startup 2->1, identical final bytes), match by bench source not spec id, DesignRef on Share link/file and Engineer record Fly it + build stamp, fixtures of every shipped form, property test that every app-made ref parses; acceptance row: does a rating-only change count as an edit (owner) [R3CR-13..16, M-BUILD-001 residual]	
+M-LAUNCH-076	open	P2	L	realism	S12	R3.2r	K3	B-R/B		Rocket drawings fidelity: published heights (Vega-C, PSLV-XL, Atlas V 551), strap-on groups, octaweb drawn for a re-counted s1, swapped engi	+ M-BUILD-002 residual acceptance rows (exact sizes for custom/remix/sized, part->tab/field for interstage/fairing, invalid/stale with revision, CO-3 screenshots)
+M-LAUNCH-081	partial	P3	L	architecture	S12	R3.3r	K3	B-S/B (+I/W section-plan.ts, ROADMAP)		Per-level content gaps in the section matrix: Orbit Explore challenges, Build Watch satellite exploded views	+ Explore satellite designer picture (v1.2 R3.3 names Explore/Engineer; known limit accepted with G3); conditional ADCS pointing PR scoped at GK1, not counted
+M-BUILD-009	open	P3	S	bug	S12	R3.4r	K3	B		Single ratings slot per draft: a late result for a vehicle no longer on screen overwrites valid ratings of the one on screen (B-19 race), pl	
+M-BUILD-012	open	P3	S	ux	S12	R3.4r	K3	B		Ratings computed in the Engineer review for a saved design are not written back to it	
+M-BUILD-015	open	P2	M	architecture	S12	R3.4r	K3	B		Figures/checks freshness contract: satellite checks read the new design against old figures for ~180 ms; readiness/ratings carry the checked	v1.2 R3.4 criterion known limit accepted with G3 (not done); scope narrowed: renderChecks() vs possibly stale figures (glance/figures already show stale); + freshness test with sabotage from M-BUILD-003
+M-BUILD-031	open	P2	M	ux	S12	R3.4r	K3	B		"Build/satellite responsive and localisation gaps: chart ticks use ""."" in every language, ISO launch time, English validator/store/source-not"	"+ R3 bench part-card metres toFixed (RU ""12.50 м""), #77 ISO UTC suggestion time; previews at 320/390 px"
+M-BUILD-032	open	P3	S	ux	S12	R3.4r	K3	B		Satellite/requirements UX and honesty residuals: requirements time estimate ~2.5× high; 400-row cap (THEOS-2 26-day case 28 s); Fly it offer	
+M-LAUNCH-065	deferred	P3	L	ux	S12	R3.4r	K3	B		One task per phone screen (Setup/View/Results tabs) for Orbit and Build Engineer; Build Engineer lead too long on phones	
+M-LEARNING-038	open	P3	M	ux	S12	R3.4r	K3	B	M-BUILD-031 (count once)	Build/satellite phone layout and localisation gaps (validator/store details English-only, pack design names untranslated, RU 360 px tab rows	
+M-PLAN-027	open	P1	XS	bug	S12	R3.4r	K1-K2	B		Shipped a11y regression (live on 09cc2f5), first B-lane PR, needs no EQ-13; R3 bench a11y regressions: keyboard focus lost after Stacked/Apart (engineer-level.ts:367) and Deployed/Stowed (satellite-bench.ts:273); showPart smooth-scrolls ignoring reduced motion (:419); booster accessible name differs from Watch/Explore (:407) [R3CR-03]	
+M-PLAN-030	open	P2	M	feature	S12	R3.4r	K3	B (+I panel.ts focus via I-train)		Targeted-edit follow-on after G3: readiness and result actions focus the cause field, not the first control of the card (explore-level.ts:635), in rocket and satellite builders; satellite readiness rows get typed targets; ambiguous causes offer evidenced alternatives [M-BUILD-004/005 residual of v1.2 R3.4 text, accepted with G3]	
+M-BUILD-013	open	P2	S	ux	S12	R3.5r	K3	B		"Explore ""Fly it"" always targets the 500 km preset from the first site and names the payload ""CubeSat rideshare dispenser"" whatever its mass"	
+M-BUILD-023	deferred	P3	M	feature	S12	R3.5r	K4	B (+S codec)		Share designs and challenge results as ?d= links (8 kB cap, file fallback; owner decides the LINE ~2 kB limit)	
+M-LAUNCH-067	partial	P2	S	feature	S12	R3.5r	K3	I (Home via I-train; waits HU-1, D-8)		First-visit path: Home start cards per audience with time estimates linking existing routes; decision D-8	
+M-BUILD-022	open	P3	M	feature	S12	R3.6	K4	B		Builder completeness: stretch/re-engine strap-on groups in the remix UI; custom strap-on bodies in the parts builder	
+M-ORBIT-043	partial	P2	M	feature	S13	R4.1	K1-K3	P-D (+P, Q)		Data provenance: in-app Sources page generated from data and a test that every numeric record has a source URL or an estimate flag (unsource	
+M-PHYSICS-040	open	P1	L	process	S13	R4.1	K1-K3	P-D (+P, Q)		R4 entry: catalogue and source ledger for all 25 ids plus the R0 physics-programme audit and an item-by-item recheck of the 1 October flight	folds: VALIDATION F6 (Falcon 9 fixed parking 200/250 km vs 164-207 km flown; PSLV-XL F12 same assumption) as a declared guidance-assumption ledger row, no code | folds: recheck of 1-Oct audit missed #5 R7_TRIM_SHARE_VEHICLES (vostokk applied in 1084ffe; r7sputnik residual -> M-PHYSICS-030)
+M-PHYSICS-041	open	P2	XS	docs	S13	R4.1	K3	P-D (+P, Q)		Physics honesty quick fixes in code text: RIGID_DATA_ASSUMPTIONS still says slosh and flexibility are omitted (P05 shipped them); Vulcan gui	
+M-PHYSICS-048	partial	P3	M	realism	S13	R4.1	K1-K3	P-D (+P, Q)		Proton-M / Angara-A5 (and Soyuz-2.1b) LEO rows always carry the 22 t kick stage: add a sourced Briz-less LEO reference configuration	
+M-PHYSICS-049	partial	P2	M	test	S13	R4.1	K1-K3	P-D (+P, Q)		Timeline comparison for the six never-compared vehicles (LM-2D, LM-3B/E, LM-5, Vulcan, Soyuz-2.1b, Starship Flight 5): data-only TimelineRef	
+M-PLATFORM-070	open	P3	XS	docs	S13	R4.1	K3	P-D (+P, Q)	M-PHYSICS-041	"Stale code comments: Vulcan guidance comment (vehicles.ts) and RIGID_DATA_ASSUMPTIONS ""slosh and structural flexibility omitted"""	
+M-LAUNCH-077	open	P2	M	realism	S13	R4.2	K4	P-D/P	M-PHYSICS-042	PSLV-XL and H3 loft profiles fitted on multiple flights (one vehicle per PR)	
+M-LAUNCH-078	partial	P2	S	realism	S13	R4.2	K4	P-D/P	M-PHYSICS-043 (+071 done)	Soyuz-2.1a 6-DOF pitch release (done) and Vulcan parking orbit 250x500 km	
+M-LAUNCH-079	open	P2	M	realism	S13	R4.2	K4	P-D/P	M-PHYSICS-044	Falcon 9 6-DOF booster recovery via a coast attitude-control mode (not more gas)	
+M-PHYSICS-023	open	P2	S	realism	S13	R4.2	K4	P-D/P		Point-mass ascent flies spherical gravity while six-DOF uses J2 (~0.5 % g, ~8 m/s per 500 s): state the offset in every two-model comparison	
+M-PHYSICS-024	open	P2	M	realism	S13	R4.2	K4	P-D/P		Launch uses a spherical equatorial-radius Earth for ground track, impact points and sites; Orbit uses WGS-84 (~0.19 deg / 21 km at Baikonur/	path (a) R4.2: display mapping = inverse of the spherical placement + honest datum label, physics unchanged | path (b) also_in=R4.5(S14): WGS-84 pad placement inside the R4.5 re-baseline under D-51 with a named fleet re-record | never a display-only geodetic conversion
+M-PHYSICS-042	open	P2	L	realism	S13	R4.2	K4	P-D/P		PSLV-XL (29 % slow at separation) and H3 (far flatter) ascent profiles: sourced loft/programme fitted on multiple flights with held-out chec	
+M-PHYSICS-043	open	P3	M	realism	S13	R4.2	K4	P-D/P		Vulcan ascent inserts ~137 x 1016-1200 km against a planned 250 x 500 km parking orbit; nothing bounds the parking orbit in tests	
+M-PHYSICS-044	open	P2	M	realism	S13	R4.2	K4	P-D/P		Falcon 9 six-DOF first-stage recovery: cold gas exhausted before T+180 s, outcome depends on separation state - solve with a coast attitude-	
+M-PHYSICS-045	open	P3	M	realism	S13	R4.2	K4	P-D/P		Falcon Heavy cores cut off 11-13 % early (core throttle depth unpublished); Atlas V and Falcon Heavy fairings come off 17-27 % early	
+M-PHYSICS-046	open	P3	M	realism	S13	R4.2	K4	P-D/P		Electron second stage burns ~25 % short; PUG throttle (~70 % mean) cannot be expressed in the data model	
+M-PHYSICS-047	open	P3	L	realism	S13	R4.2	K4	P-D/P		Starship Flight 5 ship lands ~6 min early and 15-25 deg short; the single heavy test window is too wide to catch it	
+M-PHYSICS-052	open	P2	M	realism	S13	R4.2	K3	P-D/P		U16 physics part: per-variant Max-Q/throttle evidence (configured q threshold vs measured peak q vs structural limit) and recorder/CSV actua	also_in=R4.2-S(S13): Soyuz steps - Max-Q evidence, recorder/CSV actual core/booster columns under D-57, Soyuz data fix only if proven (K3, G4-S input) | falcon9 q-triggered bucket (RA c#2) stays in R4.2 (K4)
+M-BUILD-016	open	P2	L	realism	S13	R4.3	K4	P (B for ratings)		Ratings of kick-stage / upper-stage vehicles: fly the planned burns (Vega-C LEO 31 % high, Ariane 64 16–22 % high, GTO post-insertion burns 	
+M-BUILD-017	open	P2	M	realism	S13	R4.3	K4	P (B for ratings)		Δv budget/flight model: each strap-on group at its own Isp and ignition time (PSLV air-lit), core throttle share beside strap-ons (Falcon He	
+M-BUILD-018	open	P2	L	realism	S13	R4.3	K4	P (B for ratings)		Sizing that reaches orbit at the designed Δv (+≤100 m/s): fairing carried to jettison, loss allowance from fleet median, upper-stage T/W; pl	
+M-BUILD-019	open	P3	M	realism	S13	R4.3	K4	P (B for ratings)		Own-rocket six-DOF gaps: single-engine stage with own id has no roll control, R-7 verniers give no thrust, generic thrusters do not scale wi	
+M-BUILD-020	open	P3	S	realism	S13	R4.3	K4	P (B for ratings)		Plausibility check for custom stages: propellant volume vs body size (tankLength exists) — new warning	
+M-ORBIT-046	open	P2	L	realism	S13	R4.3	K4	P (B for ratings)		One satellite model contract and its known misses: D06 simplifications, D07-vs-D06 sizing disagreement, TM-113111 arcjet row, propagator Sun	
+M-PHYSICS-029	open	P2	M	realism	S13	R4.3	K4	P (B for ratings)		G02: in-orbit burn planning and steering fly on the navigation estimate (Simulation.knownState) as the owner decided on 2026-09-24	
+M-PHYSICS-030	open	P2	L	realism	S13	R4.3	K4	P (B for ratings)		Unexplained Monte Carlo (G05) failures: Falcon 9 q-placard break-ups with east wind, Soyuz-2.1b q-alpha break-ups and propellant exhaustion 	folds: named case 'R-7 trim share' (1-Oct audit missed #5): r7sputnik flies a 35 % trim share vs 65 % for the R-7s in R7_TRIM_SHARE_VEHICLES (rigid/runtime.ts:137 on da67341); measure first (S13 13.7)
+M-LAUNCH-072	partial	P2	M	principle	S13	R4.4	K4	P/Q/T (independent reviewer)		Honest labels at the number (experimental, estimate, planned vs flown, not graded, model tolerance) tied by test to Known limitations	its PR adds docs/IMPLEMENTATION-STATUS.md to the consumed-Markdown path filters of .github/workflows/ci.yml and deploy.yml, and to S18 18.8 / S19 App D
+M-PHYSICS-050	open	P2	S	test	S13	R4.4	K4	P/Q/T (independent reviewer)		Six-DOF fleet gate does not fly Saturn V's accepted rows (and lists no soyuz21a rows)	
+M-PHYSICS-051	open	P3	M	test	S13	R4.4	K4	P/Q/T (independent reviewer)		Six-DOF aerodynamic coefficients compared with NACA TR 1048 / NASA TR R-474 cone-cylinder data at M=2-4, alpha <= 20 deg (no fitting); misma	
+M-PHYSICS-061	partial	P2	M	docs	S13	R4.4	K4	P/Q/T (independent reviewer)		Validation manifest and citable report generated from tests: per-module entries (reference, tolerance, result, date, source digest), shown i	
+M-PHYSICS-020	open	P2	L	realism	S14	R4.5	K4	P		Long-term propagator realism: Sun (and Moon) on one of-date ephemeris (removes the 0.45 deg / up to 11 s SRP shadow-edge offset), MU_MOON = 	
+M-PHYSICS-022	open	P3	M	realism	S14	R4.5	K4	P		Atmosphere above ~86-100 km differs between Launch (Vallado exponential table) and lifetime/re-entry (NRLMSISE-00): make answers consistent 	
+M-PHYSICS-025	open	P3	M	realism	S14	R4.5	K4	P		Wind model limited to 0-12 km (8 m/s east, shear, gusts) and absent from point-mass outside Monte Carlo: sourced opt-in upper-wind profile	
+M-PHYSICS-026	open	P3	S	realism	S14	R4.5	K4	P		propagateKepler hyperbolic/parabolic fallback is a crude 2nd-order 10 s chain: replace with an analytic universal-variable solution before a	
+M-PHYSICS-028	open	P2	M	realism	S14	R4.5	K4	P		LTAN convention: satellite designer aims the node at the mean Sun, Launch at the true Sun (flown node errors -2.77/-2.83 deg for NAPA-2/THEO	
+M-ORBIT-019	open	P2	M	realism	S14	R4.6	K4	O+P		Second-order J2 (J2^2, J4 secular) in the playground repeat/SSO solver only	
+M-ORBIT-020	open	P2	M	realism	S14	R4.6	K4	O+P		Lambert solver: 48 of 120 boundary cases return null without proof that no solution exists	
+M-ORBIT-021	open	P3	L	realism	S14	R4.6	K5	O+P		Finite-burn option in the maneuver planner (gravity loss beside the impulsive plan); out-of-plane rendezvous target	
+M-ORBIT-022	open	P3	L	realism	S14	R4.6	K4	O+P		Opt-in numerical (Cowell) propagation in Orbit Engineer alongside Kepler/SGP4	
+M-ORBIT-023	open	P2	L	realism	S14	R4.6	K4	O+P		Re-entry/lifetime prediction accuracy: first-set criterion missed (33/66 within 20 %), two-set 79 % vs 80 % target, spheres 8-23 % early (NR	
+M-PLAN-016	open	P3	M	realism	S14	R4.7	K4	C/P-R+P		Rendering-fidelity audit against physical state (plume vs ambient pressure, lighting/terminator, staging debris, orientation/scale) and per-phase asset budgets (R3/R5/R6) inside the precache ceiling	
+M-ORBIT-024	open	P1	L	feature	S15	R5.1	K5	I/P (U,C via APIs)		R5.1 Make the existing Soyuz MS rendezvous/docking mission reachable and continuous; separate verdicts for insertion/rendezvous/capture/hard	
+M-ORBIT-025	open	P1	XL	realism	S15	R5.2	K5	P		R5.2 ISS target orbit/phasing from a fixed-epoch reference state with provenance, then optional live ephemeris (SGP4/TEME frame contract)	
+M-ORBIT-026	open	P1	XL	realism	S15	R5.3	K5	P		R5.3 Approach, fuel, sensing and contact dynamics (soft capture -> hooks -> hard dock, free drift, combined body)	
+M-LAUNCH-015	deferred	P3	S	feature	S15	R5.4	K5	P-R/B+P (I)		Docking telemetry preset	
+M-ORBIT-027	open	P2	L	feature	S15	R5.4	K5	P-R/B+P (I)		R5.4 Ship/station/port visuals consistent with the contact model; Progress/Dragon expansion after the first validated mission	
+M-PLAN-022	open	P2	L	feature	S15	R6.1	K6	A (+P systems, S schema)		PLAN R6.1 cockpit vehicle scope and systems specification (power/engine/navigation/audio fidelity, input devices) after D-37 (=PLAN:D09) [=M-GAP-014, M-NEW-013]	
+M-PLAN-023	open	P2	XL	feature	S15	R6.2	K6	A (+C render, I routes)		PLAN R6.2 cockpit view, instruments, audio and force cues; comfort options separate from physics; asset budget per D-50 [=M-GAP-015, M-NEW-014]	
+M-PLAN-024	open	P2	L	feature	S15	R6.3	K6	A/Q/L-C (+H users)		PLAN R6.3 astronaut training missions and user testing (HU); EVA a separate scope [=M-GAP-016, M-NEW-015]	
+M-ORBIT-031	partial	P3	M	realism	S15	R8	K6	P+O		L01 General Moon ephemeris (Meeus ch.47 or embedded DE440 Chebyshev span) held to a Horizons fixture; gate for any Orbit Moon tool	
+M-ORBIT-032	partial	P3	L	realism	S15	R8	K6	P+O		L02 Central-body switching, lunar J2 and higher harmonics; frozen lunar orbits stay frozen	
+M-ORBIT-033	partial	P3	XL	feature	S15	R8	K6	P+O		L03 Getting there: TLI, free return, Chandrayaan phasing loops, LOI, NRHO planner (takes over C05)	
+M-ORBIT-034	partial	P3	XL	feature	S15	R8	K6	P+O		L04/L05 Lunar powered descent and return (TEI, lunar-return and skip entry, Artemis I) as general tools	
+M-ORBIT-035	open	P3	M	feature	S15	R8	K6	P+O		Chandrayaan-1 on PSLV-XL as a lunar Watch mission	
+M-PHYSICS-018	deferred	P3	S	perf	S15	R8	K6	P+O		Apollo golden-section searches (coastToPerilune, coastToPerigee, loiPitch) with exact phi and one evaluation per iteration	
+M-LEARNING-026	partial	P2	S	ux	S16	ED-ASSESS-1	K2	L-C		Placement test report: show denominators, call it placement not a grade, soften level words; then decide on more items or an adaptive second	
+M-LAUNCH-069	open	P3	S	feature	S16	ED-CLASS-1	K3	L/L-UI		Share files from phones with the Web Share API (feature-detected) beside download/link	
+M-LEARNING-042	partial	P2	M	feature	S16	ED-CLASS-1	K3	L/L-UI		Teacher-side restore and class view: merge a student archive per pass (not whole-collection replace), class aggregate table, iOS storage-evi	
+M-LEARNING-043	open	P2	M	docs	S16	ED-CLASS-2	K3-K4	L-C (+I)		Thai teacher guide (~10 pages) + Russian lab manual skeleton + anonymised lecturer feedback form	
+M-LEARNING-044	open	P3	M	feature	S16	ED-CLASS-2	K3-K4	L-C (+I)		Presentation mode for projectors (?present=1): hide panels, large text (>= 22 px at 1280x720), one chart + full viewport	
+M-LEARNING-062	deferred	P3	L	metric	S16	ED-EVAL	K6	H		Evaluation study from results files (scripts/analyse-results.ts: checksum verify, pre/post gain, item statistics; EVALUATION report)	
+M-LEARNING-070	deferred	P3	L	docs	S16	ED-EVAL	K6	H		Validation paper (venue D-24) based on the citable validation report	
+M-LEARNING-061	deferred	P3	L	feature	S16	ED-GAME-1	K4-K6	L-C/L-UI		"Capstone path ""From Sputnik to the Moon"" with notebook portfolio export and flown-missions timeline on Home"	
+M-LEARNING-073	open	P2	L	feature	S16	ED-GAME-1	K4-K6	L-C/L-UI		X01 challenges: Thai-context Orbit challenges (THEOS-2 pass over Bangkok, GEO slot over Thailand, flood-mapping swath, repeat track) + schoo	
+M-LEARNING-074	open	P3	M	feature	S16	ED-GAME-1	K4-K6	L-C/L-UI		"Launch challenges (heaviest payload from Sriharikota, ISS plane window, engine-out survival, droneship landing, Electron SSO) + ""Highlights"""	
+M-LEARNING-075	deferred	P3	XL	feature	S16	ED-GAME-1	K4-K6	L-C/L-UI		X02 campaign from the first orbit (1957) to the Moon	
+M-LEARNING-029	open	P1	S	bug	S16	ED-I18N-1	K1	L-C (I composes)		Apply decided Thai terms D5 (guidance = การนำวิถี, navigation = การนำร่อง) everywhere + deny-list test	
+M-LEARNING-030	open	P2	S	docs	S16	ED-I18N-1	K1	L-C (I composes)		docs/GLOSSARY.md as the single EN/TH/RU source (moved from PHYSICS.md) with GNC rows (guidance, navigation, PEG, IGM, margins, notch)	
+M-LAUNCH-068	open	P3	M	feature	S16	ED-I18N-2	K3	L-C (I composes index.html/home)		Home Build chapter with pictures and localized (TH/RU) share previews; decision D-26	
+M-LEARNING-031	open	P3	M	bug	S16	ED-I18N-2	K3	L-C (I composes)		Other Thai term spellings: stage (ท่อน vs ขั้น), fairing, telemetry, payload, apogee/perigee, max-Q	
+M-LEARNING-034	open	P3	S	bug	S16	ED-I18N-2	K3	L-C (I composes)		Number and date localisation in learning/Build/Orbit text: chart ticks with locale decimal, Buddhist-era vs Gregorian years mixed on one pag	"+ #77 ISO ""YYYY-MM-DD HH:MM UTC"" in the result suggestion (D-46 inventory)"
+M-LEARNING-035	partial	P3	XS	bug	S16	ED-I18N-2	K3	L-C (I composes)		"Static <html lang=""en""> and English-only social previews for a Thai audience"	
+M-LEARNING-037	open	P3	XS	docs	S16	ED-I18N-2	K3	L-C (I composes)		"Dead ""under construction"" copy: plan.orbit.lead (""Nothing on this page works yet"") and lesson.comingSoon"	
+M-LEARNING-032	open	P2	M	feature	S16	ED-I18N-3	K4	L-C/L-UI		Glossary at point of use: term chips/abbr with tap-to-define one-sentence Thai definitions, generated from GLOSSARY.md	
+M-LEARNING-045	open	P2	S	docs	S16	ED-INST-1	K1-K3	L-C+T		Closed-network install guide EN/TH + serve:dist script + intranet-subpath offline journey	
+M-LEARNING-046	partial	P2	M	process	S16	ED-INST-1	K1-K3	L-C+T		Intranet classroom kit + offline rehearsal on actual school devices (dist + chosen packs + teacher guide; USB/shared-folder result collectio	
+M-LEARNING-047	partial	P1	S	docs	S16	ED-INST-1	K1-K3	L-C+T		"Privacy / PDPA statement and ""what Orbitlab keeps on this device"" inventory in three languages"	
+M-PLATFORM-073	open	P2	L	docs	S16	ED-INST-1	K1-K3	L-C+T		USER-GUIDE is English-only and unreachable from the app: Thai guide and an in-app link	
+M-LEARNING-056	deferred	P2	L	process	S16	ED-INST-2	K5	H+L-C		Pilot deployment at one institution from the release zip (install <= 30 min by a non-owner; data refresh once; log in docs/history/pilot-<si	
+M-LEARNING-069	open	P2	M	process	S16	ED-INST-2	K5	H+L-C		Maintainer guide + second maintainer (bus factor two before month 12; D-23)	
+M-LEARNING-007	open	P2	M	bug	S16	ED-LES-1	K1-K2	L-C (+L-UI)		Lesson 2.4: grade the Monte Carlo choice from recorded set evidence (complete 20-run set, chosen run is the extreme-perigee one)	
+M-LEARNING-008	partial	P2	S	bug	S16	ED-LES-1	K1-K2	L-C (+L-UI)		Lesson 4.3 and six-DOF lessons: brief must state the graded window; decide whether to grade the 2 deg amplitude and 8 s hold; use or drop th	
+M-LEARNING-009	open	P2	M	test	S16	ED-LES-1	K1-K2	L-C (+L-UI)		Lesson tolerance and rubric honesty audit: every numeric tolerance >= the model's recorded error; ungraded steps labelled; uncertainty shown	
+M-LEARNING-010	open	P3	S	bug	S16	ED-LES-1	K1-K2	L-C (+L-UI)		Grader never ends a crewed failed flight that ends on escape-system parachutes (lessons without endEvent)	
+M-LEARNING-011	partial	P3	S	bug	S16	ED-LES-1	K1-K2	L-C (+L-UI)		Pack-lesson listing and id edge cases (WebMCP/check page before packs load; teacher file reusing a pack id)	
+M-LEARNING-012	open	P2	S	bug	S16	ED-LES-1	K1-K2	L-C (+L-UI)		"Event log ""Target orbit achieved ... period N min"" gives away answers in pack lessons 11.2, 12.2, 13.1, 13.2"	
+M-LAUNCH-063	partial	P2	L	feature	S16	ED-LES-2	K3	L-UI/L-C (+I/U mission-result.ts)		"Debrief that diagnoses the cause from the flight (time + number), ""view that moment"", one next experiment; lesson fail strip too"	
+M-LEARNING-016	open	P2	M	feature	S16	ED-LES-2	K3	L-UI/L-C		"Lesson metadata (minutes, prerequisite, device, audience) on cards + ""<= 10 min"" filter; grey out desktop-only lessons on phones; phone less"	
+M-LEARNING-017	open	P2	S	feature	S16	ED-LES-2	K3	L-UI/L-C		Show me on a failed timed criterion: seek the timeline to the moment (max-Q, max-g, abort, insertion) and switch to the exterior camera	
+M-LEARNING-018	partial	P2	M	feature	S16	ED-LES-2	K3	L-UI/L-C		Lesson fail strip explains itself: value vs bound vs moment per failed criterion, debrief also after a fail, diagnosed cause from the shared	
+M-LEARNING-015	open	P3	S	feature	S16	ED-LES-3	K4	L-C/L		Per-attempt evidence: keep a bounded attempt history (not only last + first pass); record flights without typed answers	
+M-LEARNING-021	open	P3	L	feature	S16	ED-LES-3	K4	L-C/L		"Lesson variants (seeded payload/altitude/time variants) with per-variant reveal lock and practice vs submit; new-variant retry after ""show a"	
+M-LEARNING-022	open	P3	M	feature	S16	ED-LES-3	K4	L-C/L		Worksheets tied to the lesson's mission (questions reflect the lesson, not a generic flight)	
+M-ORBIT-009	open	P2	M	feature	S16	ED-MIL-1	K4	O+L-C		Military/SSA results: CSV export with input provenance; persist imported element/CDM files per profile	
+M-ORBIT-037	open	P2	L	feature	S16	ED-MIL-1	K4	O+L-C		GNSS geometry and DOP over a place (conceptual, geometry only; no jamming/spoofing simulation)	
+M-ORBIT-038	partial	P3	L	feature	S16	ED-MIL-1	K4	O+L-C		ASAT debris case studies 2007 (FY-1C) and 2021 (Cosmos 1408): consequences only, Gabbard diagram, lifetimes, conjunctions	
+M-ORBIT-039	partial	P2	M	feature	S16	ED-MIL-1	K4	O+L-C		HADR imaging-revisit scenario over Thai provinces (flood presets) using overflights and requirements tools	
+M-LEARNING-025	partial	P3	M	process	S16	ED-PACK-1	K3	L-C		Content pipeline: general lesson lint (npm run check:lesson), CONTRIBUTING-CONTENT, pack-submission issue template, account-free submission	
+M-LEARNING-052	partial	P2	M	docs	S16	ED-PACK-1	K3	L-C		Curriculum map (docs/CURRICULUM-MAP.md: IPST M.4-6 + academy syllabi) anchored to the catalogue by a test; >= 2 lessons per mapped outcome	
+M-LEARNING-055	open	P1	M	decision	S16	ED-PACK-2	K3-K4	L-C (H confirms)		Reconfirm D-13/D-14 (first pilot GISTDA/Thai Space Consortium; first pack = Thai satellites on Orbit) and build that phone-safe first pack w	
+M-LEARNING-059	open	P3	M	feature	S16	ED-PACK-2	K3-K4	L-C (H confirms)		Write the remaining research lessons A5 (ISS passes over Bangkok, new frozen case), P4 (six-DOF thrust off CoM), R4 (state feedback, heavy c	
+M-LAUNCH-064	deferred	P3	M	pedagogy	S16	ED-PED-1	K4	L-C/L-UI		"Optional ""predict"" chip on Explore before Launch, compared with the outcome"	
+M-LEARNING-019	open	P2	L	feature	S16	ED-PED-1	K4	L-C/L-UI		Predict-observe-explain (POE) criteria: kind:predict (answered before Launch, frozen) and kind:explain (free text, not auto-graded)	
+M-LEARNING-020	open	P3	M	feature	S16	ED-PED-1	K4	L-C/L-UI		Misconception bank surfaced after a failed lesson or wrong prediction	
+M-LEARNING-023	partial	P3	M	feature	S16	ED-PED-2	K4	L-C		Experiment notebook: finish D-5 (checksummed .orbitlab-notebook.json file, attach to a lesson, embed in the HTML report, reject a two-change	
+M-LEARNING-060	open	P3	S	docs	S16	ED-PED-2	K4	L-C		D06/D07 learning outcomes document (eclipse/DoD, station-keeping, GSD, link margin, drag/lifetime, requirements->trade) with POE lesson skel	
+M-LEARNING-057	partial	P3	L	feature	S16	ED-PED-3	K4-K6	L-C (+O military tools)		Cadet control-system labs (G01-G08: Bode at max-Q, margins, notch, INS/Kalman, PEG/IGM, Monte Carlo) Russian-first with a lab-report section	
+M-LEARNING-058	deferred	P3	XL	feature	S16	ED-PED-3	K4-K6	L-C (+O military tools)		"Cadet course ""Space domain awareness basics"" (8 chapters: conjunction, overflight, re-entry, DOP, debris, HADR, NAPA-2 lifetime, capstone)"	
+M-LEARNING-050	partial	P1	M	process	S16	HU-1	K0-K2	H (Q supports)		Human-evidence track H1: merge the two study protocols and run user-study round 1 (5-6 people: Thai students + cadets, own phones), with sto	
+M-LEARNING-053	open	P1	M	decision	S16	HU-2	K1-K3	H		T03 lesson packs: owner review and confirmations (code format, numbering, progress exclusion, per-lesson tolerances/payloads/named cases), t	
+M-ORBIT-045	open	P2	S	process	S16	HU-2	K1-K3	H		Re-check lesson-pack and academy sources from a reachable network; obtain missing source documents	
+M-LAUNCH-070	open	P2	S	docs	S16	HU-3	K1-K3	H + RU reader		Thai-first, phone-first 3-step help checked by a Thai reader	
+M-LEARNING-033	open	P2	M	process	S16	HU-3	K1-K3	H + RU reader		Native-speaker review of Thai and Russian texts (24 lessons, 157 questions, packs, cases, Build) + fix Thai guillemets	
+M-LEARNING-051	open	P3	M	process	S16	HU-4	K4	H		User-study round 2 (5-6 new people on own phones) + native RU/TH copy PR	
+M-LEARNING-028	open	P3	M	test	S16	HU-5	K4	H		Question-bank item statistics (difficulty/discrimination) and human editorial sign-off of the 157-question bank	
+M-PLAN-011	open	P3	S	process	S16	HU-6	K1-K4	H+Q		"Offline ""report a problem"" path: composes a text with build stamp, route, language and device (no telemetry, no network) for the owner; needs privacy decision"	
+M-LAUNCH-071	partial	P3	L	feature	S17	R7.1	each gate	Q/T		Lean no-WebGL path: Explore and lessons usable on lab machines without WebGL/GPU	
+M-LEARNING-014	open	P3	L	test	S17	R7.1	each gate	Q/T		Teacher re-check: re-fly six-DOF flights and case lessons; compare a non-V8 engine; long-coast drift and TORU across engines	
+M-PLAN-025	open	P2	M	process	S17	R7.1	each gate	Q/T		PLAN R7.1 made standing: one cross-system journey (Build->Launch->Orbit->lesson->export) on the frozen candidate of every gate [=M-GAP-017, M-NEW-018]	+ r3-g3-loop scope from M-BUILD-001/005 residuals (one candidate, cursor + remaining propellant with sabotage, Satellite Engineer save/open/send-to-Orbit, lesson lock/return position)
+M-PLATFORM-051	partial	P2	L	test	S17	R7.1	each gate	Q/T		Remaining regression journeys (S10 audit routes, Orbit playground/maneuvers/screening, lesson 1.1 in Thai on a phone to the graded strip, fu	
+M-PLATFORM-061	open	P2	M	test	S17	R7.1	each gate	Q/T		"Root causes of intermittent export-click timeouts and ""Target crashed"" in browser CI"	+ learner-profiles reload stall (Pages 37219398466, 37223857005); #81 start-up marks + #82 browser-process CPU diagnostics in place; cause not established
+M-LEARNING-067	partial	P2	M	process	S17	R7.2	each gate	I/T/L/P		Release 1.0 for institutions: semver tag, GitHub Release with dist zip + SHA256SUMS + build-info, CHANGELOG catch-up (#71-#74), optional Zen	
+M-LEARNING-068	partial	P3	S	process	S17	R7.2	each gate	I/T/L/P		Second hosting mirror + written rollback rule for institutions	
+M-ORBIT-041	open	P3	M	feature	S17	R7.2	each gate	I/T/L/P		Offline data refresh kit for an installed dist (USB): refresh snapshots with --dist, restamp sw.js revisions, SHA256SUMS and build-info	
+M-PLAN-026	open	P2	XS	process	S17	R7.2	each gate	I/T (+H)		PLAN R7.2 made standing: gate retrospective, re-estimate from delivered PR counts, handoff lists re-checked, KPI row in PROGRESS [=M-GAP-018, M-NEW-019]	
+M-PLATFORM-047	open	P2	M	process	S17	R7.2	each gate	I/T/L/P		Tagged releases: release.yml with dist.zip (intranet build with audio) + SHA256SUMS + CHANGELOG section; stable channel, rollback rule and a	
+M-PHYSICS-064	open	P3	XS	test	S17	R7.3	continuous	T		Architecture test: pedagogy/game modules (challenges, campaign, scores, diagnosis) may import only types from src/physics	
+M-PLATFORM-045	partial	P2	M	process	S17	R7.3	continuous	T		Faster PR feedback with identical coverage: measure median/p90, fast change-to-check subset, test-module cache, incremental typecheck, rebal	
+M-PLATFORM-050	open	P3	S	process	S17	R7.3	continuous	T		A failing scheduled heavy/fleet run opens an issue automatically; path-filtered validation trigger for src/physics/rigid/** and src/data/** 	
+M-PLATFORM-053	partial	P3	M	process	S17	R7.3	continuous	T		Tooling gaps: lint/format, dead-export check, dependency update bot, SHA-pinned actions, axe accessibility checks	
+M-PLATFORM-054	open	P2	XS	test	S17	R7.3	continuous	T		Fitness test pinning module sizes (main.ts, panel.ts) and listing the guards that must exist as tests	fitness baseline on the Day-0 SHA (main.ts 2,635 / panel.ts 2,517 lines on 5f9aa2e)
+M-PLATFORM-056	open	P3	S	architecture	S17	R7.3	continuous	T		Physics/orbit/design cores type-check without the DOM lib; i18n split into a pure dictionary module and a DOM-touching index	
+M-PLATFORM-057	open	P3	XS	test	S17	R7.3	continuous	T		vite.config.ts and scripts/*.ts are never type-checked	
+M-PLATFORM-058	open	P3	XS	test	S17	R7.3	continuous	T		Tests print kilobytes of JSON to stdout unconditionally (rigid-recovery)	
+M-PLATFORM-059	open	P3	S	test	S17	R7.3	continuous	T		"WebMCP tool results typed unknown; tests use ""as any"" ~63 times"	
+M-PLATFORM-060	partial	P3	S	architecture	S17	R7.3	continuous	T		Architecture-test residuals: session core|mirror import rule still narrowed; lessons/game import only physics types	
+M-LEARNING-066	open	P3	XS	test	S17	R7.4	continuous	T (+I index.html)		Credits completeness: tests/credits.test.ts (everything in public/ has a credit) + in-app Physics sources list includes Orbit/Build sources	
+M-ORBIT-040	partial	P2	S	process	S17	R7.4	continuous	T (+I index.html)		Snapshot staleness gate: red refresh step (not a blocked deploy) when asOf is older than N days; baseline-age test; in-app age warning	
+M-ORBIT-044	partial	P3	S	process	S17	R7.4	continuous	T (+I index.html)		Data licences: credits test for NOTICE.md and settle NRLMSIS 2.1 / Cosmos 1408 / Wikimedia terms before use	
+M-PLATFORM-017	open	P2	S	test	S17	R7.4	continuous	T (+I index.html)		Fuzz test for every student/teacher file parser (mission, design, lesson, results, TLE/OMM, CDM, archives)	
+M-PLATFORM-027	open	P2	M	architecture	S17	R7.4	continuous	T (+I index.html)		Content-Security-Policy meta tag, written threat model, and CSP-violation counting in browser journeys	
+M-PLATFORM-028	partial	P2	XS	test	S17	R7.4	continuous	T (+I index.html)		Offline mode sends no outside request — assert it in a browser journey (static-first/intranet principle)	
+M-PLATFORM-030	open	P2	XS	test	S17	R7.4	continuous	T (+I index.html)		pwa-offline journey’s tune.worker check also matches attitude-tune.worker, so a missing tune worker still passes	
+M-BUILD-033	open	P3	XS	docs	S17	R7.5	continuous	I (+P physics docs)		"Stale Build statements in IMPLEMENTATION-STATUS / code comments: ""dry below engines has no warning"" (it warns), ""a rating takes 1–2 s"" (Aria"	
+M-ORBIT-030	open	P3	XS	docs	S17	R7.5	continuous	I (+P physics docs)		"Re-scope ROADMAP Phase 5 text as ""generalise #38"" and retire the C05 name in code comments (keep ids parsed by tests)"	
+M-PLATFORM-062	open	P3	S	process	S17	R7.5	continuous	I (+P physics docs)		Move the PR #41 evidence packet (docs/audit-2026-09-29: 387 files, 18 MB) out of the docs tree, retire the three codex/audit-acceptance work	
+M-PLATFORM-068	open	P2	XS	risk	S17	R7.5	continuous	I (+P physics docs)		"ROADMAP-PART2-3.md is parsed by tests and drives the in-app ""coming next"" lists — keep its format; fix the Orbit list missing X01 challenges"	
+M-PLATFORM-069	open	P2	S	docs	S17	R7.5	continuous	I (+P physics docs)		Docs truth pass: stale facts in IMPLEMENTATION-STATUS, README, USER-GUIDE, PHYSICS (fleet counts, test counts, G05, Watch flights, max-Q sen	
+M-PLATFORM-071	open	P2	S	test	S17	R7.5	continuous	I (+P physics docs)		Doc-number and link consistency tests (test/tool/vehicle/flight/Node counts tied to source; links checked; in-app experimental labels vs Kno	
+M-PLATFORM-072	open	P3	S	docs	S17	R7.5	continuous	I (+P physics docs)		PHYSICS.md and VALIDATION.md: add a table of contents (no docs site; chapter split only if needed)	
+M-LAUNCH-033	rejected	P3	S	perf-identical	S19	REJECTED	-	-		Partial re-render of SetupPanel on toggles	
+M-LAUNCH-075	superseded	-	-	decision	S19	REJECTED	-	-		Gate all UX redesign on user-test round 1 (no Home/mobile redesign before it)	
+M-LAUNCH-082	superseded	-	-	feature	S19	REJECTED	-	-		"Orbit/Build ""in development"" screens listing roadmap items"	
+M-LEARNING-076	superseded	-	-	decision	S19	REJECTED	-	-		"Panel resolution 11-08 ""keep the permanent reveal lock until S15 + variants"""	
+M-ORBIT-042	deferred	P3	M	feature	S19	REJECTED	-	-		Launch Library 2 dataset for upcoming/past launches	
+M-ORBIT-065	superseded	-	-	wont-do	S19	REJECTED	-	-		No D06/D07 UI before learning outcomes; months 4-6 only D06a + NAPA-2 template	
+M-ORBIT-066	superseded	-	-	docs	S19	REJECTED	-	-		Umbrella limitation rows merged into specific items	
+M-PHYSICS-016	rejected	P3	XS	quality	S19	REJECTED	-	-		RK4 variants (rk4Step, cislunar, navigation, explicit guidance, return guidance, J2 coasts): do NOT consolidate; optional comment documentin	
+M-PHYSICS-053	superseded	P2	L	realism	S19	REJECTED	-	-		Kick-stage/upper-stage ratings (Vega-C LEO 31 % high, Ariane 64 16-22 % high, GTO post-insertion burns impulsive) - merged into the Build gr	
+M-PHYSICS-054	superseded	P2	L	realism	S19	REJECTED	-	-		Sized launchers reach orbit at design dv + <= 100 m/s (0/3 today), fairing rule D-9 - merged into the Build group item	
+M-PHYSICS-073	superseded	P3	XS	decision	S19	REJECTED	-	-		"Conflict ""guidance refits only after the tolerance tier"" (PSLV/H3 loft, Soyuz pitch, Vulcan parking)"	
+M-PLAN-012	rejected	P3	S	process	S19	REJECTED	-	-		Reuse PR unit results on Pages when tree, lockfile and runtime are identical: rejected because the Pages build refreshes data snapshots so input identity cannot be proven (PLAN 9.2.9, R1.5)	
+M-PLATFORM-046	superseded	-	XS	process	S19	REJECTED	-	-		Scheduled deploys skip npm test because code was tested at merge (INF-11 proposal)	
+M-PLATFORM-081	superseded	-	XS	process	S19	REJECTED	-	-		Triage of REMAINING-WORK findings (1 P1, 53 P2, 110 P3)	
+M-PLATFORM-082	superseded	-	XS	process	S19	REJECTED	-	-		Machine cost of accepting PR #36 (heavy 25 min + fleet 2 h 40 min) before merge	
