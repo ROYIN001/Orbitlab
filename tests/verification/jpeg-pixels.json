@@ -1,0 +1,23 @@
+{
+  "_note": "RGBA SHA-256 (jpeg-js) and metadata SHA-256 of these JPEGs as decoded from bdbfeff, before their lossless re-encode (T-offset); written by node scripts/jpeg-identical.mjs --base bdbfeff --record public/textures/earth_atmos_4096.jpg public/textures/earth_clouds_4096.jpg public/textures/earth_lights_4096.jpg",
+  "files": {
+    "public/textures/earth_atmos_4096.jpg": {
+      "width": 4096,
+      "height": 2048,
+      "rgbaSha256": "be527d655f407b3e4a5b72aea42fd9d36dca3b325ad5fd3c57cea4050e060e13",
+      "metadataSha256": "8b5529a1e4121ba760ec0dae0472a54d1ff3ade4de6363acbd0af60023d80ae5"
+    },
+    "public/textures/earth_clouds_4096.jpg": {
+      "width": 4096,
+      "height": 2048,
+      "rgbaSha256": "a0ebfabd1174c54752eddc2e81f457a152d2c639fb458e28101719fbd488dd11",
+      "metadataSha256": "fc1b6d54ade8e73296bf3831aaf5fde3ea61661c2f894636208008e4ba64d812"
+    },
+    "public/textures/earth_lights_4096.jpg": {
+      "width": 4096,
+      "height": 2048,
+      "rgbaSha256": "117ae0fcd6ec4442f6e945b4c68ce4555002e2cb95dc65b418b93e4585fdcc6f",
+      "metadataSha256": "8b5529a1e4121ba760ec0dae0472a54d1ff3ade4de6363acbd0af60023d80ae5"
+    }
+  }
+}
