@@ -26,6 +26,7 @@ import type { SatelliteDesign } from '../src/design/satellite-spec';
 import { DEFAULT_GROUP, activeDraft, designResult, draftFromSpec, partsDraft, remixDraft, type ExploreState } from '../src/design/explore-model';
 import { DEFAULT_FORM, missionRequirements, templateDesign, tradeOptionsFor } from '../src/design/requirements-page';
 import { tradeRow } from '../src/design/requirement-trades';
+import { setLang } from '../src/i18n';
 import { ExploreStore, STORE_TEXTS, type ExploreStoreHost } from '../src/ui/build/explore-store';
 import { ExploreLevel } from '../src/ui/build/explore-level';
 import { RequirementsPage } from '../src/ui/build/requirements-page';
@@ -75,7 +76,8 @@ function satelliteStore(ws: SatelliteWorkspace, designs: LocalDesignStore): Stor
 
 /** The rocket designer's level without its page: its drafts, the design they make, and its store's host. */
 function rocketLevel(state: ExploreState) {
-  const level = Object.assign(Object.create(ExploreLevel.prototype), { state, result: designResult(state) }) as {
+  // the default names `fresh()` gives, which a language switch would give again
+  const level = Object.assign(Object.create(ExploreLevel.prototype), { state, result: designResult(state), defaultNames: { remix: 'My Falcon 9', parts: 'My parts' } }) as {
     state: ExploreState; result: ReturnType<typeof designResult>; setMode(m: 'remix' | 'parts'): void;
     replacing(rec?: DesignRecord<'vehicle'>): { design: unknown; recordId: string | null } | null;
   };
@@ -412,5 +414,41 @@ describe('M-BUILD-007: opening a saved rocket over the rocket designer\'s draft'
     expect(level.result.ok && resaved.design).toEqual(level.result.ok ? level.result.spec : null);
     expect((await designs.list('vehicle')).length).toBe(3);
     expect(await s.unsaved(f)).toBe(false);
+  });
+});
+
+describe('M-BUILD-007: a name typed is a change; a default name given again in another language is not', () => {
+  it('in the satellite designer', async () => {
+    const designs = storeWith(memory());
+    const kept = await designs.save({ kind: 'satellite', name: 'Kept THEOS-2', design: designFromTemplate('theos2', 'skept', 'Kept THEOS-2') });
+    const ws = new SatelliteWorkspace();
+    const s = satelliteStore(ws, designs);
+    ws.rename('My own satellite');
+    await s.openRecord(kept.id);
+    expect(s.opening).toBe(kept.id);
+    expect(ws.design.name).toBe('My own satellite');
+    // a new template's default name, given again in Thai, is still the default
+    const fresh = new SatelliteWorkspace();
+    vi.stubGlobal('document', { documentElement: {} });
+    try {
+      setLang('th');
+      fresh.syncName();
+      expect(fresh.design.name).not.toMatch(/^My /);
+      expect(await satelliteStore(fresh, designs).unsaved()).toBe(false);
+    } finally { setLang('en'); }
+  }, 60_000);
+
+  it('in the rocket designer', async () => {
+    const designs = storeWith(memory());
+    const electron: ExploreState = { ...fresh(), remix: remixDraft('electron', 'my-electron', 'My Electron') };
+    const e = asVehicle(await designs.save({ kind: 'vehicle', name: 'My Electron', design: specOf(electron) }));
+    const state = fresh();
+    const { host, open, changed } = rocketLevel(state);
+    state.remix.name = 'Falcon 9, my way';
+    changed();
+    const s = storeOf('vehicle', designs, host);
+    await s.openRecord(e.id);
+    expect(open).not.toHaveBeenCalled();
+    expect(s.opening).toBe(e.id);
   });
 });
