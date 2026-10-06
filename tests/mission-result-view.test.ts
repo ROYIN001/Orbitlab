@@ -59,4 +59,32 @@ describe('mission result view (M-LAUNCH-031)', () => {
     expect(lost.metrics.every(m => resultRow(m).now === null)).toBe(true);
     expect(judgedNote(lost, 'en')).toBe('');
   });
+
+  it('flags the missed row of an off-target verdict whose recorded params round it back inside (review)', () => {
+    const input = drifted({ pe: 400, ap: 400, inc: 51.9 });
+    input.state.t = 500;
+    input.state.elements.periapsisAlt = 400e3;
+    input.state.elements.apoapsisAlt = 400e3;
+    input.state.elements.i = 51.904 * DEG;
+    input.events[0].key = 'evt.offTargetOrbit';
+    input.events[0].severity = 'warn';
+    const model = assessMissionResult(input)!;
+    expect(model.outcome).toBe('offTarget');
+    expect(model.metrics[2]).toMatchObject({ key: 'inclination', outside: true });
+    expect(model.metrics.filter(m => m.outside).map(m => m.key)).toEqual(['inclination']);
+  });
+
+  it('flags the RAAN row from the displayed plane when the verdict recorded no RAAN', () => {
+    const input = drifted({ pe: 400, ap: 400, inc: 51.6 });
+    input.state.t = 500;
+    input.state.elements.periapsisAlt = 400e3;
+    input.state.elements.apoapsisAlt = 400e3;
+    input.state.elements.raan = 5 * DEG;
+    input.plan.target.raanMode = 'fixed';
+    input.plan.target.raan = 0;
+    input.events[0].key = 'evt.offTargetOrbit';
+    input.events[0].severity = 'warn';
+    const model = assessMissionResult(input)!;
+    expect(model.metrics[3]).toMatchObject({ key: 'raan', judged: null, outside: true });
+  });
 });
