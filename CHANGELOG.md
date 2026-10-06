@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Docs (CO-8 step 2): the plan v2.0 sections the owner approved for waves K0–K1 (S01, S05, S06, S08 set A, S18) and the plan's tables are now in `docs/development/plan/`, copied unchanged from the plan branch; a new index lists all twenty sections as approved or draft and PLAN.md points to it; `docs/development/registry.tsv` lists the plan's 429 items with their package and status. No banner is added to older documents (owner, 2026-10-06).
 - Launch (G2 hold, F5): the flight scene keeps a minimum height in Explore and Engineer on short and zoomed laptop screens (it shrank to 2–95 px at 1100×650 and at 125–150 % zoom); the key-events timeline, play/pause and the clock stay on the first screen, the six-DOF/TORU panels and the telemetry strip move below the scene and are reached by scrolling, and a phone's flight bar no longer covers the scene.
 - Docs (GK0): K0's KPI values and retrospective are recorded, and PROGRESS shows CO-5 step 1 (#93) as published.
 - Tests (F7): the browser harness now stores the first-use guide as `dismissed`, the value the app hides it for, so journeys that open the app without the guide no longer run under it, and every such journey checks the guide is hidden after start-up.

@@ -1,0 +1,24 @@
+item	home_package	executed_adjacent_to	order	reason
+M-PLATFORM-037	CO-4	M-LAUNCH-025 (CO-4)	same I PR as 025, before 006	startup duplicate applyLanguage and the notation fan-out share code (identical-output part first, bug part in next PR)
+M-LAUNCH-022	CO-4	M-LAUNCH-024 (EQ-3)	022 in CO-4; 024 R2-introduced per-frame parts (syncLifecycle, chooser) may ride as the next EQ PR of the same I/U train	R2 per-frame costs removed together, oracle shared
+M-LAUNCH-038	EQ-12	M-LAUNCH-014 (R2.3s2)	PR1 of the R2.3s2 series (CHART_DEFS registry, identical charts)	registry is the card registry R2.3 step 2 needs
+M-LAUNCH-023	EQ-12	M-LAUNCH-014 (R2.3s2)	PR after the R2.3s2 feature PR, once show/hide API is frozen	memo must target the final layout API
+M-LAUNCH-041 M-LAUNCH-042 M-LAUNCH-049	EQ-2	M-LAUNCH-046 (R3.0)	before R3.0 and before any 3-D preview in R3.2r/R3.3r	previews reuse the cache instead of adding another copy
+M-BUILD-026 M-BUILD-027 M-BUILD-028 M-BUILD-014 M-PLAN-029	EQ-13	R3.4r	first PR(s) of the B lane before R3.4r/R3.2r/R3.3r feature PRs	same files rewritten by R3.4r
+M-LEARNING-002	FX-2	M-LEARNING-001 (FX-2)	after 001, same L-UI lane	shared answer-form builder after the caret fix
+M-LEARNING-006	EQ-14	M-LAUNCH-034 (FX-5)	export-helper dedupe (byte oracle) before any CSV formula guard	guard is byte-changing; dedupe first keeps it one change
+M-PLATFORM-012 M-PLATFORM-013 M-PLATFORM-014 M-PLATFORM-015	R1.6	R1.6c/d	inside R1.6, before R6 audio	soundtrack DB dedupe before cockpit audio
+M-PHYSICS-015	EQ-10	M-PHYSICS-020 (R4.5)	strictly before the R4.5 re-baseline	same-value constants consolidated with bit-identical proof first
+M-LAUNCH-045	EQ-7	M-PHYSICS-026 (R4.5)	shared propagateKepler tail before universal-variable Kepler	one tail, then the realism change
+M-PHYSICS-010	EQ-9	M-PHYSICS-020 (R4.5), M-ORBIT-022/023 (R4.6)	before	propagator no-op before realism changes on the same file
+M-PHYSICS-012 M-PHYSICS-013 M-PHYSICS-014	EQ-10	R4.2, R4.3	before any R4.2/R4.3 PR touching rigid/runtime.ts, simulation.ts, sim/forces.ts	E before F
+M-PHYSICS-011	EQ-11	R5.2, R8	before	lunar memo before lunar/ISS work
+M-LAUNCH-047 M-LAUNCH-048	EQ-14	R5.4	first PR of R5.4	render helpers rewritten by R5.4
+M-PLATFORM-054	R7.3	EQ-15	fitness test lands before the refactor window	pins module sizes and guard list the window must keep
+M-PLATFORM-055	EQ-15	R5.1	three seams before R5.1/R6 and before any R3+ follow-on PR growing main.ts beyond a hook (D-62); panel.ts sub-panels/SectionModule after 'R2 complete'	R5.1 and R6 build on the seams; R3.5 landed in #77/#80 without them (main.ts 2,635 lines on 5f9aa2e)
+M-LEARNING-036	EQ-6	M-PLATFORM-031 (EQ-6)	step 2 after the per-language split	typed keys after split
+M-BUILD-030	EQ-8	M-PLATFORM-035 (FX-4)	after the runner	worker reuse uses the job runner
+M-PHYSICS-052	R4.2	M-LAUNCH-004 (CO-4)	reuses ui/engine-levels.ts from R2/CO-4	one engine-level helper
+M-PLAN-013	R0.2r	R3.1r, R5.1, R5.2	FlightLifecycle/CameraPolicy/Handoff/DesignPreview/ResultAction ADRs in K1-K2 record the as-built contracts (handoff v1 + optional DesignRef, typed cause -> field) before R3.1r and R5.1; CraftState physical-state ADR moved out of R0.2r: just-in-time as PR1 (docs) of R5.2, counted in R5.2, before its realism PRs	ADRs written when their consumer is next, not all up front
+M-PLATFORM-038	EQ-14	any package	only inside files already being edited	no standalone churn PRs
+M-PLAN-028	R3.1r	M-PLAN-031 (R1.6 PR 2b: stored mission newer-version overwrite)	after R1.6 step b and after M-PLAN-031 (PR 2b); the single-writer PR and PR 2b touch the same restore path (mission-share.ts:71 -> panel.ts:552 -> main.ts:560 -> main.ts:1759)	one write path, one EO-STO-1 oracle
