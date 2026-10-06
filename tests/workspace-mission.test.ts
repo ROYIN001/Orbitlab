@@ -252,6 +252,70 @@ describe('journeys (A1)', () => {
   });
 });
 
+/** M-PLAN-031: a stored document this version cannot keep whole, as raw bytes in the page's storage. */
+function storedAs(doc: unknown) {
+  const storage = memoryStorage();
+  const bytes = JSON.stringify(doc);
+  storage.setItem('orbitlab.mission', bytes);
+  return { storage, bytes };
+}
+const usersDoc = () => JSON.parse(JSON.stringify(missionDocument(usersMission())));
+
+describe('a stored mission this version cannot keep whole is read, not written over (M-PLAN-031)', () => {
+  const newer = () => {
+    const doc = usersDoc();
+    return { ...doc, version: 99, future: { kept: true }, mission: { ...doc.mission, futureSetting: 7 } };
+  };
+  const reset = () => {
+    const doc = usersDoc();
+    return { ...doc, mission: { ...doc.mission, payloadMass: -1 } };
+  };
+
+  it('a newer version\'s mission: the page starts on it in Engineer and its bytes stay as they were', () => {
+    const { storage, bytes } = storedAs(newer());
+    const page = new Page(storage, 'engineer');
+    expect(page.panel).toEqual(usersMission()); // read as far as this version understands it
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    page.preview(); // a flight reset on its pad, a resize: no edit
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+  });
+
+  it('a newer version\'s mission brought back on entering the workspace keeps its bytes until the user changes it', () => {
+    const { storage, bytes } = storedAs(newer());
+    const page = new Page(storage, 'home');
+    page.go('explore');
+    expect(page.panel).toEqual(usersMission());
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    // the user's own edit is what replaces it
+    page.edit((m) => { m.payloadMass = 1200; });
+    expect(storage.map.get('orbitlab.mission')).not.toBe(bytes);
+    expect(page.stored()).toEqual({ ...usersMission(), payloadMass: 1200 });
+  });
+
+  it('a mission with settings put back to their defaults is read, and not saved as if valid until it is edited', () => {
+    const { storage, bytes } = storedAs(reset());
+    expect(parseMissionDocument(reset(), usersMission()).issues.map((i) => i.field)).toContain('setup.payloadMass');
+    const page = new Page(storage, 'engineer');
+    expect(page.panel.vehicleId).toBe('falcon9');
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    page.go('home');
+    page.go('engineer');
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    page.edit((m) => { m.payloadMass = 900; });
+    expect(page.stored()).toEqual({ ...usersMission(), payloadMass: 900 });
+  });
+
+  it('a mission of this version is restored as before', () => {
+    const storage = withUsersMission();
+    const before = storage.map.get('orbitlab.mission');
+    const page = new Page(storage, 'engineer');
+    expect(page.panel).toEqual(usersMission());
+    expect(storage.map.get('orbitlab.mission')).toBe(before);
+    page.edit((m) => { m.payloadMass = 1100; });
+    expect(page.stored()).toEqual({ ...usersMission(), payloadMass: 1100 });
+  });
+});
+
 describe('the "continue" card\'s summary (A1)', () => {
   it('reads the vehicle, the payload and the orbit off a stored document', () => {
     const storage = withUsersMission();
