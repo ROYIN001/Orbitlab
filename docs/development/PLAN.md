@@ -1,5 +1,8 @@
 # แผนพัฒนา Orbitlab: ฟิสิกส์ ประสบการณ์ใช้งาน และภารกิจอวกาศ
 
+> **Plan v2.0 index: [plan/README.md](plan/README.md).** The sections of plan v2.0 the owner approved for waves K0–K1 (S01, S05, S06, S08 set A, S18; owner, 2026-10-05) are in [`plan/`](plan/), and the index lists every section S00–S19 with its status. For anything v2.0 has not yet replaced, version 1.2 below remains the record. (CO-8 step 2, 2026-10-06.)\
+> **ดัชนีแผน v2.0:** ส่วนที่เจ้าของรับรอง "ใช้สำหรับ K0–K1" อยู่ใน `plan/` เรื่องที่ v2.0 ยังไม่ได้แทน ให้ใช้ฉบับ 1.2 ด้านล่าง
+
 เวอร์ชันเอกสาร: 1.2 — 3 ตุลาคม 2026\
 ฐานที่ตรวจ: `ROYIN001/Orbitlab`, `main`, commit `523b44eca0e31fd84fd4a3faa4e1b883428288ee`\
 สถานะ: **ผู้ใช้อนุญาต R1 และงานเล็กที่ระบุใน PROGRESS.md แล้ว; R2–R7 ส่วนอื่นยังเป็นแผน**
