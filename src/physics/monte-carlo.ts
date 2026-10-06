@@ -13,6 +13,7 @@ import { elementsFromState } from './orbital';
 import { RAD } from './constants';
 import { ORBIT_INSERTION_FLOOR } from './mission';
 import { physicalApsides } from './rigid/orbit-prediction';
+import { csvText } from '../csv-text';
 import {
   cloneDispersions, DEFAULT_DISPERSIONS, drawDispersion, PROPULSION_KEYS, propulsionElements, validDispersions,
   type DispersionDraw, type DispersionKey, type DispersionSettings, type DrawnRun,
@@ -345,8 +346,6 @@ function slotColumn(slot: DrawSlot): string {
   return `${slot.element}_${slot.key}_pct`;
 }
 const fixed = (v: number, digits: number): string => (Number.isFinite(v) ? v.toFixed(digits) : '');
-/** A text field, quoted when it holds a comma, a quote or a line break. */
-const csvText = (v: string): string => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 /** Every run, one row: how it ended, its orbits at the cut-off and at the end, and what it drew (as the deviation it flew: %, m/s). */
 export function monteCarloCsv(runs: readonly MonteCarloRun[], layout: readonly DrawSlot[], settings: Readonly<DispersionSettings>): string {
   const orbitHead = (p: MeasurePoint) => [`${p}_perigee_km`, `${p}_apogee_km`, `${p}_inclination_deg`, `${p}_dv_left_ms`, `${p}_time_s`];

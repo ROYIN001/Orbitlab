@@ -48,6 +48,7 @@ import { Simulation } from '../physics/simulation';
 import { applyAction, readActions, type FlightAction } from '../physics/sim/actions';
 import { parseMissionDocument } from '../config/mission-file';
 import { appBuildId } from '../build-info';
+import { csvText } from '../csv-text';
 import { allLessons } from './catalog';
 import { defaultMissionState, missionConfigFromState } from './config';
 import { flightEnded, gradeShown, regradeAnswers, type RevealedAnswers } from './grader';
@@ -600,11 +601,6 @@ export function statusCounts(check: ResultsCheck): Record<CheckStatus, number> {
 
 // ─── the check as a spreadsheet ─────────────────────────────────────────────
 
-/** A cell: quoted when it holds a separator, a quote or a line break; a leading =, +, - or @ is kept as text (no formula). */
-const csvText = (v: string): string => {
-  const safe = /^[=+\-@]/.test(v) ? `'${v}` : v;
-  return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
-};
 /** A measure's unit, a flight's (`MEASURES`) or a design's (`DESIGN_MEASURES`). */
 export const measureUnit = (m: MeasureId | DesignMeasureId): string => (m in MEASURES ? MEASURES[m as MeasureId].unit : DESIGN_MEASURES[m as DesignMeasureId].unit);
 const num = (v: number | null | undefined): string => (v === null || v === undefined || !Number.isFinite(v) ? '' : String(v));
