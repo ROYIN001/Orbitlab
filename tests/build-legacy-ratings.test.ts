@@ -19,7 +19,7 @@ import { computedRatings } from '../src/design/ratings';
 import { LocalDesignStore, isDesignOf, type DesignRecord, type DesignStorage } from '../src/design/design-store';
 import { designRefFor } from '../src/design/design-ref';
 import { designResult, draftFromSpec, partsDraft, ratingsSignature, remixDraft, type ExploreState, type RatingsRecord } from '../src/design/explore-model';
-import { BUILD_RATING_OPTIONS, ratingsNeedRecompute, ratingsRecord, recomputeKeptRatings } from '../src/ui/build/ratings-job';
+import { BUILD_RATING_OPTIONS, FinalRatings, ratingsNeedRecompute, ratingsRecord, recomputeKeptRatings } from '../src/ui/build/ratings-job';
 import type { VehicleSpec } from '../src/types';
 
 /** An Electron remix kept before FX-1 PR1 with what an unfinished search left: a LEO lower bound, and no GTO. */
@@ -158,5 +158,78 @@ describe('ratings kept before FX-1 PR1 are computed again when the design is ope
     const rec = asVehicle(await s.save({ kind: 'vehicle', name: 'My Electron', design: legacy(), ratingsFinal: true }));
     const edited = asVehicle(await s.save({ id: rec.id, kind: 'vehicle', name: 'My Electron', design: { ...rec.design, maxQ: 40000 } }));
     expect(edited.ratingsFinal).toBeUndefined();
+  });
+});
+
+describe('review follow-ups (D-25)', () => {
+  it('ratings searched for another vehicle (the design edited during the search) are not written into the record', async () => {
+    const storage = memory();
+    const s = storeWith(storage);
+    const rec = asVehicle(await s.save({ kind: 'vehicle', name: 'My Electron', design: legacy() }));
+    const open = opened(rec);
+    const edited = ratingsSignature({ ...rec.design, maxQ: 40000 });
+    expect(edited).not.toBe(open.signature);
+    const writes = storage.writes;
+    const outcome = await recomputeKeptRatings(rec, open.ratings, async () => ({ signature: edited, payloadLEO: 150, payloadGTO: 40 }), s);
+    expect(outcome).toBe('unfinished');
+    expect(storage.writes).toBe(writes);
+    const kept = asVehicle(await s.get(rec.id));
+    expect(kept).toEqual(rec);
+    expect(kept.ratingsFinal).toBeUndefined();
+  });
+
+  it('a store that cannot write leaves the record unmarked, to be tried again', async () => {
+    const s = storeWith(memory());
+    const rec = asVehicle(await s.save({ kind: 'vehicle', name: 'My Electron', design: legacy() }));
+    const open = opened(rec);
+    const full = { rerate: () => Promise.reject(new Error('full')) };
+    const outcome = await recomputeKeptRatings(rec, open.ratings, async () => ({ signature: open.signature, payloadLEO: 150, payloadGTO: 40 }), full);
+    expect(outcome).toBe('unfinished');
+    expect(asVehicle(await s.get(rec.id)).ratingsFinal).toBeUndefined();
+  });
+
+  it('rerate refuses ratings the store would not take as a design (its own check), and writes nothing', async () => {
+    const storage = memory();
+    const s = storeWith(storage);
+    const rec = asVehicle(await s.save({ kind: 'vehicle', name: 'My Electron', design: legacy() }));
+    const writes = storage.writes;
+    expect(await s.rerate(rec.id, { ...rec.design, payloadLEO: -1 })).toBeNull();
+    expect(await s.rerate(rec.id, { ...rec.design, payloadGTO: Number.NaN })).toBeNull();
+    expect(storage.writes).toBe(writes);
+  });
+
+  it('Save marks the record final only for ratings known final, or none of the design\'s own', () => {
+    const final = new FinalRatings();
+    const unknown = { signature: 's', payloadLEO: 120, payloadGTO: 0 };
+    const finished = { signature: 's', payloadLEO: 315, payloadGTO: 137 };
+    final.add(finished);
+    expect(final.onSave('computed', unknown)).toBe(false);
+    expect(final.onSave('computed', finished)).toBe(true);
+    expect(final.onSave('computed', null)).toBe(false);
+    expect(final.onSave('base', null)).toBe(false);
+    expect(final.onSave('published', null)).toBe(true);
+    expect(final.onSave('none', null)).toBe(true);
+    expect(final.onSave(null, null)).toBe(false);
+  });
+
+  it('a kept record\'s mark is handed to the ratings it opens with, and only a mark that is there', async () => {
+    const s = storeWith(memory());
+    const marked = asVehicle(await s.save({ kind: 'vehicle', name: 'My Electron', design: legacy(), ratingsFinal: true }));
+    const unmarked = asVehicle(await s.save({ kind: 'vehicle', name: 'My Electron', design: legacy() }));
+    const final = new FinalRatings();
+    const a = draftFromSpec(marked.design, marked.id).draft.ratings;
+    const b = draftFromSpec(unmarked.design, unmarked.id).draft.ratings;
+    expect(a).not.toBeNull();
+    final.opened(marked, a);
+    final.opened(unmarked, b);
+    expect(final.onSave('computed', a)).toBe(true);
+    expect(final.onSave('computed', b)).toBe(false);
+  });
+
+  it('a rename keeps the mark (the store keeps what it is given)', async () => {
+    const s = storeWith(memory());
+    const rec = asVehicle(await s.save({ kind: 'vehicle', name: 'My Electron', design: legacy(), ratingsFinal: true }));
+    const renamed = asVehicle(await s.save({ id: rec.id, kind: 'vehicle', name: 'Renamed', design: { ...rec.design, name: 'Renamed' }, ...(rec.ratingsFinal ? { ratingsFinal: true } : {}) }));
+    expect(renamed.ratingsFinal).toBe(true);
   });
 });
