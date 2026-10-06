@@ -27,10 +27,15 @@
  * - A4 the event chooser opened from a cluster chip lies inside the window and
  *   its rows do not overflow sideways;
  * - A5 on a phone, the compact flight bar shows while the charts are read.
- * The scene's size is logged at each step (a table for the owner's G2
- * decision on a minimum scene size); no minimum is asserted.
+ * - S1–S4 (six-DOF flight; tests/browser/scene-floor.mjs, the G2 hold of
+ *   2026-10-05 and finding F5): the scene keeps its minimum height on the
+ *   first screen, nothing covers it, and on a desktop with the guide closed
+ *   the key-events timeline, play/pause and the clock are wholly on the first
+ *   screen. r2-viewport-scene-floor makes the same checks on Explore.
+ * The scene's size is logged at each step.
  */
 import { press, viewportSize } from '../harness.mjs';
+import { checkSceneFloor } from '../scene-floor.mjs';
 
 // 7–10 min here; CI runs flight/WebGL journeys ~1.5–2× slower
 export const timeoutMs = 1_200_000;
@@ -52,15 +57,10 @@ const PLAYBACK = { abort: '#btn-abort', play: '#btn-play', clock: '#clock', live
  * that may consult the entry; `match(what, r)` gets that check's place and
  * its structured result.
  */
-const F1_AT = new Set([
-  'desktop laptop-1366x768 RU guide open: six-DOF controls',
-  'desktop laptop-1366x768 RU guide open (TORU): TORU controls',
-  'desktop laptop-1280x800 TH guide open (TORU): TORU take-over button',
-]);
 const F2_AT = new Set(['EN', 'RU'].flatMap((l) => ['open', 'closed'].map((g) => `phone phone-320x740 ${l} guide ${g}: abort (#btn-abort)`)));
+// F1 (the footer covered the bottom of the flight column) closed with the G2
+// hold's F5 layout: the flight column scrolls, and no run since has seen it.
 const OPEN_FINDINGS = [
-  { id: 'F1', site: 'reachable', what: 'the footer covers the bottom of the flight column',
-    match: (what, r) => F1_AT.has(what) && r.kind === 'covered' && r.inFooter },
   { id: 'F2', site: 'reachable', what: 'Abort is cut off at the right edge of a 320 px phone',
     match: (what, r) => F2_AT.has(what) && r.kind === 'outside' && r.width === 320 && r.x0 >= 0 && r.x1 > r.width },
   { id: 'F3', site: 'chooser', what: 'cluster chips overlap on a phone\'s event bar',
@@ -117,6 +117,8 @@ async function sixDofFlight(t, app, group, presets, { scenes, open }) {
     for (const [what, sel] of Object.entries(PLAYBACK)) await reachable(t, app, sel, `${where}: ${what} (${sel})`, open);
     await reachable(t, app, '#rigid-controls summary', `${where}: six-DOF controls`, open);
     if (group === 'phone') await phoneBar(t, app, where);
+    // G2 hold (F5): the scene's minimum and nothing over it or the timeline (S1–S4)
+    await checkSceneFloor(t, app, preset, state, where);
     const scene = await sceneSize(app);
     (scenes[`${preset} ${lang.toUpperCase()}`] ??= {})[state] = scene;
     t.log(`${where}: scene ${scene.w}×${scene.h} (${scene.share} % of the window), first screen: ${await firstScreen(app)}`);
