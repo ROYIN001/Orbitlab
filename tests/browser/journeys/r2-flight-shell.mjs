@@ -152,11 +152,23 @@ export async function pauseStaysInFlight(t, app) {
  * leads a cluster when the click arrives, and seek instead of opening the
  * chooser — the `r2-shell-smoke` failure on PR #95's CI. Wait until the
  * cursor and the recording's head hold still across two reads a second apart.
+ *
+ * Each read is taken in an animation frame, after the app's own frame has run
+ * (callbacks run in the order they were requested, and the app requests its
+ * next frame at the end of the current one). The worker's replies move the
+ * head between frames, but the live cursor and the event bar only follow it
+ * in a frame (src/main.ts updateVisuals), and on CI's software GPU a frame
+ * can take longer than the second between reads: two equal reads taken
+ * between frames passed while the bar was still laid out for an older head,
+ * and the frame that drew the new head moved the chip from under the press
+ * (smoke-chooser-race; `r2-chooser-late-frame` reproduces it).
  */
 export async function pausedFlightSettles(t, app) {
   let last = null;
   const settled = await t.until(async () => {
-    const s = await app.mcp('read_flight_state');
+    const s = await app.page.evaluate(() => new Promise((done) => {
+      requestAnimationFrame(() => done(window.__mcp('read_flight_state')));
+    }));
     const same = last && s.cursorTimeS === last.cursorTimeS && s.headTimeS === last.headTimeS;
     last = s;
     return same ? s : null;
