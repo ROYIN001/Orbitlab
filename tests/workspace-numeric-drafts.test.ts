@@ -72,3 +72,40 @@ describe('unfinished literal numeric work', () => {
     expect(JSON.parse(repo.binding!.getItem('orbitlab.import.quarantine.v1')!).entries).toContainEqual({ key: 'orbitlab.mission', raw: original }); repo.close();
   });
 });
+
+describe('R1.6 PR1: numeric draft cap (M-LEARNING-005)', () => {
+  it('keeps typing effective after 1,000 remembered fields and stays within the 1,000 fields × 1,000 characters cap', async () => {
+    const { repo } = await bound(); let model = Number.NaN;
+    // The callers remember the literal text first, then hand the number to the model.
+    const typed = (scope: string, key: string, text: string): void => { const n = Number(text); rememberNumericText(scope, key, text, n); model = n; };
+    // Seed 1,000 remembered fields before the first cached read (one write instead of 1,000 full rewrites).
+    const seeded: Record<string, { text: string; value: number }> = {};
+    for (let i = 0; i < 1000; i++) seeded[`fill\u0000f${i}`] = { text: `${i}.0`, value: i };
+    repo.binding!.setItem('orbitlab.numeric-drafts.v1', JSON.stringify({ v: 1, fields: seeded }));
+    expect(() => typed('rocket:new', 'payload', '1500')).not.toThrow(); expect(model).toBe(1500);
+    expect(rememberedNumericText('rocket:new', 'payload', 1500)).toBe('1500');
+    let fields = JSON.parse(repo.binding!.getItem('orbitlab.numeric-drafts.v1')!).fields as Record<string, unknown>;
+    expect(Object.keys(fields)).toHaveLength(1000); expect(fields['fill\u0000f0']).toBeUndefined(); expect(fields['fill\u0000f999']).toBeDefined();
+    const long = `1${'0'.repeat(1000)}`;
+    expect(() => typed('rocket:new', 'payload', long)).not.toThrow(); expect(model).toBe(Number(long));
+    fields = JSON.parse(repo.binding!.getItem('orbitlab.numeric-drafts.v1')!).fields as Record<string, { text: string }>;
+    expect(Object.keys(fields).length).toBeLessThanOrEqual(1000);
+    expect(Object.values(fields).every((field) => (field as { text: string }).text.length <= 1000)).toBe(true);
+    expect(() => typed(`s${'x'.repeat(400)}`, 'payload', '7')).not.toThrow(); expect(model).toBe(7); repo.close();
+  });
+  it('at the cap, re-typing a field moves it to the newest end so the least recently typed field is evicted', async () => {
+    const { repo } = await bound(), seeded: Record<string, { text: string; value: number }> = {};
+    for (let i = 0; i < 1000; i++) seeded[`fill\u0000f${i}`] = { text: `${i}.0`, value: i };
+    repo.binding!.setItem('orbitlab.numeric-drafts.v1', JSON.stringify({ v: 1, fields: seeded }));
+    rememberNumericText('fill', 'f0', '0.50', 0.5); rememberNumericText('rocket:new', 'payload', '12', 12);
+    const keys = Object.keys(JSON.parse(repo.binding!.getItem('orbitlab.numeric-drafts.v1')!).fields);
+    expect(keys).toHaveLength(1000); expect(keys).not.toContain('fill\u0000f1'); expect(keys.slice(-2)).toEqual(['fill\u0000f0', 'rocket:new\u0000payload']);
+    repo.close();
+  });
+  it('below the cap, re-typing a field keeps the stored order (bytes change only in the field itself)', async () => {
+    const { repo } = await bound();
+    rememberNumericText('a', 'x', '1', 1); rememberNumericText('b', 'y', '2', 2); rememberNumericText('a', 'x', '1.0', 1);
+    expect(repo.binding!.getItem('orbitlab.numeric-drafts.v1')).toBe('{"v":1,"fields":{"a\\u0000x":{"text":"1.0","value":1},"b\\u0000y":{"text":"2","value":2}}}');
+    repo.close();
+  });
+});

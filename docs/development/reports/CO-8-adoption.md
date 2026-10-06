@@ -105,3 +105,29 @@ Both pass on this branch: repo-hygiene 9/9; verification 62/62. Relative links i
 - Owner: (adoption of the K0–K1 set: done 2026-10-05) answer D-23 "when" again; confirm the D-16 note; say whether `registry.tsv` should be committed.
 - Integration session: record the CI run ids of all K0 merges; CO-8 PR2: plan text into `docs/development/plan/`, PLAN.md v2.0 index, banners.
 - K1 (new session, once K0 is verified complete): the F5 fix first, then G2 again.
+
+## Step 2 (PR2): plan v2.0 K0–K1 text into main
+
+```yaml
+step: PR2 (docs; records only, no app code)
+owner_answer: {date: 2026-10-06, where: "K1 decision page, card co8-banners, option a", quote: "นำเข้าเฉพาะส่วนที่รับรองแล้ว ป้ายรอไว้ก่อน"}
+source: {branch: claude/hopeful-allen-1o0vmh, commit: 3e18dbc5d8746054bca97598e3703e0e0a967fb7, path: docs/development/plan-v2-draft/}
+```
+
+The owner chose option (a): bring in only the approved parts, keep `registry.tsv`, and leave the "superseded" banners on older documents until the whole plan is approved. So this step adds no banner.
+
+| File | Change |
+|---|---|
+| `docs/development/plan/S01-executive-summary.md`, `S05-structure-waves-gates.md`, `S06-closeout.md`, `S18-execution-model.md` | Copied from the plan branch. A two-line note at the top gives the approval and the source commit; the plan text under it is byte-identical to the source. |
+| `docs/development/plan/S08-decisions-set-A.md` | Set A of S08 only: the nine decisions `decisions.tsv` puts in batch A (D-33, D-34, D-36, D-38, D-39, D-42, D-59, D-63, D-65) with the section's front matter, the §08.5 answering rules and answer sheets A-1 and A-2. The note at the top lists the source line ranges kept; an HTML comment marks each cut. |
+| `docs/development/plan/data/` | The plan's five tables (`$F`) the approved sections cite: `assignment.tsv`, `packages.tsv`, `decisions.tsv`, `kpis.tsv`, `folds.tsv`, unchanged. Ledgers, `WRITER-GUIDE.md`, `measure.mjs` and the timeline stay on the plan branch. |
+| `docs/development/plan/README.md` | The v2.0 index: S00–S19 (and the header), each approved for K0–K1 (local copy) or draft (plan branch on GitHub), with the approval. |
+| `docs/development/PLAN.md` | A pointer to the index at the top; the v1.2 text is unchanged, so its history stays readable and it stays the record for anything v2.0 has not replaced. |
+| `docs/development/registry.tsv` | The register the owner kept: one row per plan item (429) with `mid`, `package`, `status`, `wave`, `home_section`, `alias_of`, `title`, taken from `data/assignment.tsv` in the same order. At the path the plan and the owner's answer name. |
+| `docs/README.md`, `CHANGELOG.md`, `PROGRESS.md` | Index rows, one line, one row. |
+
+No relative link in the copied plan text needed fixing: the five sections contain no Markdown links (paths appear as code, e.g. `$F/packages.tsv`).
+
+Checks: `npx vitest run tests/repo-hygiene.test.ts` 9/9; `node --test tests/verification/*.test.mjs` 64/64; the relative links in the changed Markdown files resolve (124 checked; the repository has no link checker of its own). Largest file added: `plan/S18-execution-model.md`, 117,631 bytes.
+
+Not done here: the banners (S19 App D), until the owner approves the whole plan; no DECISIONS row was added for the 2026-10-06 answer, which is quoted here, in the index and in PROGRESS.

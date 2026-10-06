@@ -119,6 +119,15 @@ export class ComparePanel {
   }
 }
 
+/**
+ * M-LAUNCH-029: the flight the table reads. While live, the live run, as
+ * before; in replay, the frame-backed view at the cursor, like the HUD and the
+ * telemetry panel, so the column moves when the user scrubs.
+ */
+export function flightOnScreen<T>(live: boolean, liveRun: T | null, atCursor: T | null): T | null {
+  return live ? liveRun : atCursor;
+}
+
 export function figureLabel(f: ComparedFigure): string {
   if (f.key.startsWith('event:')) return t('cmp.row.event', { event: eventLabel(f.key.slice(6), {}) });
   switch (f.key) {

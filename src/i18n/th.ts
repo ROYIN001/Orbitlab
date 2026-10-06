@@ -1241,6 +1241,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'pg.rep.sso': 'สัมพันธ์กับดวงอาทิตย์',
   'pg.rep.apply': 'หาวงโคจร',
   'pg.rep.none': 'ไม่มีวงโคจรวงกลมระหว่าง 150 ถึง 5 000 กม. ที่ซ้ำรอยแบบนั้น',
+  'pg.rep.invalid': 'ใส่จำนวนเต็มตั้งแต่ {min} ถึง {max}',
   'pg.rep.found': '{revs} รอบใน {days} วัน: ความสูง {alt} กม. ความเอียง {i}°',
   'pg.handoff.load': 'แสดงวงโคจรนี้',
   'pg.next': 'สิ่งที่จะมีในส่วนวงโคจรต่อไป',
