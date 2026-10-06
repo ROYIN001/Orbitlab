@@ -505,7 +505,6 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'result.showSetting': 'Show the setting: {field}',
   'result.judged.physical': 'Judged at T+{time} s (physical apsides)',
   'result.judged.osculating': 'Judged at T+{time} s (osculating orbit)',
-  'result.now': 'Now: {value}',
   'result.suggest.title': "Try next",
   'result.suggest.basisFailure': "The same mission without the failure you armed.",
   'result.suggest.basisPayload': "{cap} is the vehicle's published payload for this kind of orbit.",

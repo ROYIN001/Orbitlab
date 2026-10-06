@@ -493,7 +493,6 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'result.showSetting': 'ดูค่าที่เกี่ยวข้อง: {field}',
   'result.judged.physical': 'ตัดสินที่ T+{time} วินาที (จุดใกล้/ไกลโลกจริง)',
   'result.judged.osculating': 'ตัดสินที่ T+{time} วินาที (วงโคจรออสคิวเลติง)',
-  'result.now': 'ขณะนี้: {value}',
   'result.suggest.title': "ลองต่อ",
   'result.suggest.basisFailure': "ภารกิจเดิมโดยไม่มีความขัดข้องที่คุณตั้งไว้",
   'result.suggest.basisPayload': "{cap} คือน้ำหนักบรรทุกที่ผู้ผลิตระบุสำหรับวงโคจรประเภทนี้",

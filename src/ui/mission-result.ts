@@ -144,7 +144,7 @@ export class MissionResult {
       const shown = resultRow(metric);
       cells[2].textContent = this.number(shown.value, metric);
       if (shown.now !== null) cells[2].append(document.createElement('br'),
-        Object.assign(document.createElement('small'), { textContent: t('result.now', { value: this.number(shown.now, metric) }) }));
+        Object.assign(document.createElement('small'), { textContent: `${t('mv.point.now')} ${this.number(shown.now, metric)}` }));
       cells[3].textContent = this.number(shown.delta, metric, true);
       cells[3].classList.toggle('mission-result-miss', metric.outside === true);
       cells[3].setAttribute('aria-label', `${cells[3].textContent}${metric.outside ? `; ${copy.outside}` : ''}`);

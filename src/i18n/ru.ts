@@ -493,7 +493,6 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'result.showSetting': 'Показать параметр: {field}',
   'result.judged.physical': 'Оценено в T+{time} с (физические апсиды)',
   'result.judged.osculating': 'Оценено в T+{time} с (оскулирующая орбита)',
-  'result.now': 'Сейчас: {value}',
   'result.suggest.title': "Попробуйте дальше",
   'result.suggest.basisFailure': "Та же миссия без заданного вами отказа.",
   'result.suggest.basisPayload': "{cap} — паспортная грузоподъёмность ракеты для орбиты этого типа.",

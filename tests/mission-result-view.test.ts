@@ -8,7 +8,6 @@
 import { describe, expect, it } from 'vitest';
 import { assessMissionResult, judgedNote, resultRow, type ResultInput } from '../src/ui/result-content';
 import { DEG, R_EARTH } from '../src/physics/constants';
-import { tFor } from '../src/i18n';
 
 function drifted(params?: Record<string, number>): ResultInput {
   return {
@@ -45,7 +44,6 @@ describe('mission result view (M-LAUNCH-031)', () => {
       const note = judgedNote(model, lang);
       expect(note).toContain('500.0');
       expect(note).not.toBe(judgedNote(model, 'en'));
-      expect(tFor(lang, 'result.now', { value: 'x' })).not.toBe(tFor('en', 'result.now', { value: 'x' }));
     }
   });
 
