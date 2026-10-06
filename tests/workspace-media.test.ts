@@ -75,11 +75,11 @@ describe('owned user recordings and separate binary archives', () => {
     await migrateLegacyMedia('A'); expect(rows.size).toBe(2);
     await deleteProfileMedia('A'); expect(rows.has('A:soyuzIss')).toBe(false); expect(rows.has('B:soyuzIss')).toBe(true);
   });
-  it('aborts legacy migration on a destination collision without discarding either original', async () => {
+  it('leaves a colliding legacy recording in place, unowned, without discarding either original (D-68)', async () => {
     const rows = database();
     rows.set('soyuzIss', { id: 'soyuzIss', blob: new Blob(['legacy']), t0: 60, name: 'legacy' });
     rows.set('A:soyuzIss', { id: 'A:soyuzIss', profileId: 'A', missionId: 'soyuzIss', blob: new Blob(['owned']), t0: 2, name: 'owned' });
-    await expect(migrateLegacyMedia('A')).rejects.toThrow(); expect(rows.size).toBe(2);
+    await expect(migrateLegacyMedia('A')).resolves.toBe(1); expect(rows.size).toBe(2);
     expect(await (rows.get('soyuzIss')!.blob as Blob).text()).toBe('legacy');
   });
   it('M-PLATFORM-010 (D-68): moves the non-colliding legacy recordings one by one and leaves the colliding original in place, unowned', async () => {
