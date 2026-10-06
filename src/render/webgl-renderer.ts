@@ -10,6 +10,16 @@ export class WebGLContextError extends Error {
   }
 }
 
+/**
+ * Nothing drawn now could be seen: the tab is hidden, or one of the app's modal
+ * dialogs (src/ui/dialogs.ts `Modal`, class `dialog`: the profile chooser,
+ * About, …) holds the page under its dark backdrop. The views skip their
+ * drawing then, and only that: the flight and its recording go on. Not
+ * `:modal`, which Chrome 94 (D-40) does not know; the loop inspector is a
+ * non-modal `<dialog>` without the class, and the scene stays drawn beside it.
+ */
+export const unseen = (): boolean => document.hidden || !!document.querySelector('dialog.dialog[open]');
+
 type RendererOptions = Omit<WebGLRendererParameters, 'canvas' | 'context' | 'powerPreference'> & {
   canvas: HTMLCanvasElement;
 };
