@@ -6,6 +6,7 @@ Orbitlab has no tagged release yet.
 
 ## Unreleased
 
+- Docs (GK0): K0's KPI values and retrospective are recorded, and PROGRESS shows CO-5 step 1 (#93) as published.
 - Tests (F7): the browser harness now stores the first-use guide as `dismissed`, the value the app hides it for, so journeys that open the app without the guide no longer run under it, and every such journey checks the guide is hidden after start-up.
 - Tests: the phone step of the PR smoke check (`r2-shell-smoke`) waits a full second for a paused flight to settle before opening the event list, and reports what the chip and the flight were if the list does not open.
 - Build (D-38 offset for the G2 layout fix): the published page leaves out the source comments of `index.html` (2.65 kB less for every visitor and in the offline copy); what the page shows and does is unchanged.
