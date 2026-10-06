@@ -9,8 +9,8 @@ lane: U (+Q for the journeys)
 items: [M-LAUNCH-002 (short-viewport case), M-LAUNCH-018 (G2 evidence)]
 change_kind: layout (CSS + minimal JS); tests added first
 owner_instruction: {date: 2026-10-06, where: "G2 card, question 'labels overlaid inside the scene when the scene is short'", option: compact, quote: "ฉากเตี้ยกว่า 380 px: ย่อป้ายให้เหลือบรรทัดเดียว และพับการ์ดเทเลเมทรีเป็นปุ่ม"}
-base: claude/u-r2.1r-f5-s1 at a4ecb09 (PR #101, not merged)
-depends_on: "#101 (G2/F5 scene floor; `data-short` on #viewport)"
+base: main after #101 (b2215da); built on #101 at a4ecb09
+depends_on: "#101 (merged as b2215da)"
 ```
 
 ## What was wrong
