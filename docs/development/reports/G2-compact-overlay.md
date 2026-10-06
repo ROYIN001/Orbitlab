@@ -73,11 +73,12 @@ whenever the scene is under 380 px:
 | `r2-viewport-scene-floor`, this branch | 1 failure, the same S1 as on the base (458.0 s) |
 | `r2-viewport-matrix`, this branch | 1 failure, the same S1 as on the base (691.1 s) |
 | `r2-shell-smoke`, this branch | passed (43.7 s) |
+| all three after merging #101's head `9b2d8ce` (the guide's room on a desktop) | 0 failures: `r2-viewport-scene-floor` 276.5 s, `r2-viewport-matrix` 585.4 s, `r2-shell-smoke` 44.2 s; precache code 14703.9 / 14704 kB |
 
 The S1 failure fails on the base in both journeys too. It is not from this
 change: at 911×512 (150 % zoom on 1366×768), in Russian with the first-use
 guide open, the scene starts at y 226 and 250 px of it is on the first screen,
-against a minimum of 256 px. It is an open question for #101.
+against a minimum of 256 px. #101 fixed it (`ebb27ec`, the guide's room on a desktop); with #101's head merged it passes.
 
 ## Overlay share in short scenes
 
@@ -136,8 +137,6 @@ scene's size, at 1100×650 and at 911×512 (150 % zoom on 1366×768).
 
 ## Open questions
 
-- The S1 failure above (Russian, guide open, 911×512) is on the base as well,
-  for #101.
 - `H` still cycles the card's mode while it is folded, and nothing is seen
   until the button opens it. Should `H` open the fold in a short scene?
 - The tool buttons are in a row as asked. In a 601 px scene, a column would
