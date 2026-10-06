@@ -12,7 +12,7 @@
  * physics is `position / 1e6`.
  */
 import * as THREE from 'three';
-import { createWebGLRenderer } from './webgl-renderer';
+import { createWebGLRenderer, unseen } from './webgl-renderer';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
@@ -498,6 +498,7 @@ export class OrbitView {
   }
 
   render(): void {
+    if (unseen()) return;
     // Moving the window between displays can change DPR without changing the
     // canvas's CSS box. Refresh here too: ResizeObserver alone does not catch it.
     const pr = Math.min(window.devicePixelRatio || 1, ORBIT_VIEW_MAX_PIXEL_RATIO);
