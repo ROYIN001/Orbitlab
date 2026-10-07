@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-10-05. This file states the current position only; how it was reached is in the
+Updated 2026-10-07. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -433,6 +433,17 @@ Phase 4, the satellite builder and instructor mode, on the same branch. No built
 | T02 checking a student's file | done: **Check results** (`#/lessons/check`) opens a class's results files and the teacher's lesson file, flies each point-mass record again in a worker to the time it was graded at, its journaled commands at the same step boundaries, or works a design record's figures out again at its date and solar activity, and says Match, Borderline, Differs or Cannot re-fly with the reason and whether the file changed after it was saved; the check can be saved as CSV. A results file now keeps a flight's grading time, the instant on screen, its commands and the app's build, and a design lesson's design. Underneath, a live point-mass flight is the headless flight bit for bit at any frame rate and warp ([PHYSICS.md](PHYSICS.md) §2n), and a lesson grades the orbit where the flight ended, however late the page grades it. Node and Chromium agree within 1.4e-12 s of grading time and 1.4e-11 m/s on flights and 5.4e-15 relative on designs, against tolerances fixed before the first comparison ([VALIDATION.md](VALIDATION.md) §9) |
 | T03 lesson packs | drafts, awaiting the owner's review: five packs, precached files under `public/lessons/packs/`, listed on the lessons page as groups with their curriculum codes as chips — IPST basic science (M.5–M.6), IPST Earth, astronomy and space (M.6), IPST additional physics (M.4–M.6), space flight dynamics and control (an institution-level lab for undergraduate aeronautical engineers), and Russia's speciality 24.05.06 — with 17 lessons of their own (11.1–15.4: flights, a case and design lessons) and built-in lessons listed again with their codes. Each pack says on the page that it is a draft. Every worked solution passes and a wrong answer fails; two tolerances were set after the flight, and say so ([VALIDATION.md](VALIDATION.md) §9) |
 
+### Learner profiles: plan v1.2 phase 1 (R1), hardened in R1.6
+
+Phase 1's learner profiles are merged and published (#71, #72). R1.6, their storage hardening, is
+wave K1 work under way. How to use them is in the [user guide](USER-GUIDE.md#learner-profiles).
+
+| Item | |
+|---|---|
+| R1.1 local learner workspace | done (#71, #72): up to 40 learners in one browser, each in one localStorage record that holds all of that learner's saved work, drafts and personal settings, with their launch recordings in IndexedDB under the learner's id; the learner open is chosen per browser tab; work saved before profiles becomes the first learner, and the originals are removed only after the copy is verified. Create, rename, switch (pending edits saved, then the page reloads on Home), delete (an interrupted delete finishes at the next start), and resets of learning, tests, both or one lesson (D-33) that keep personal lessons, designs, the mission and the notebook. JSON backups of one learner or all, 8 MB a file, previewed before import, with a new learner by default and Keep existing by default for an existing one; old `orbitlab.project` files still import. Recordings in a separate binary file of up to 128 MB and 100 recordings. Values an import cannot use are kept inert as recovery data. A Web Lock per learner makes a second tab on the same learner read-only; without storage or Web Locks a tab is visit-only ([R1.1 report](development/reports/R1.1-storage.md)) |
+| R1.2 profile window and learner context | done (#71, #72): the ◉ button and its window in three languages, the learner's name on the lessons pages, confirmations that say what a switch, reset or delete does, a backup offered before each, and the chooser after deleting the open or the last learner ([R1.2 report](development/reports/R1.2-profiles-ui.md)) |
+| R1.6 storage hardening (wave K1) | under way. Merged: #97 (a learner that cannot be read no longer keeps its lock; a failed clean-up at start no longer sends every learner to visit-only; past 1,000 remembered number fields the oldest is forgotten instead of new typing being lost), #114 (a learner that cannot be read, or was saved by a newer version, stays listed with its bytes untouched, a copy of its stored data and delete, instead of emptying the list; Export all saves the readable learners and says that others were left out; audio export reads only its learner), #122 (a stored mission of a newer version, or with a setting reset, is no longer written over when restored), #124 (a backup near 8 MB is saved in the form the import accepts; visit-only mode refuses delete). Still planned in R1.6: fewer re-reads of the profile record, the one-by-one transfer of pre-profile recordings (D-68), and asking the browser to keep the data, with a warning for iPhone and iPad |
+
 ### Development plan v1.2: phases 2 and 3
 
 [PLAN.md](development/PLAN.md) v1.2 sets out phases R1–R7; [PROGRESS.md](development/PROGRESS.md)
@@ -652,6 +663,27 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
   - The design names stored in the pack files are not translated.
   - A build from before T03b refuses a case lesson with the CZ-5B sheet's storm question as invalid, not as newer (unreleased builds only).
   - R6's brief says the wheel cannot hold the momentum built up over an orbit, while the rule it gives uses a quarter orbit.
+- Learner profiles (R1) separate work on one device; they are not accounts. There is no sign-in,
+  anyone using the device can open any learner, and nothing is synchronised: work moves between
+  devices only as backup files. All learners share the browser's storage for the site, which can
+  be smaller than the caps (40 learners, 8 MB per JSON backup, 128 MB per audio file); a refused
+  save is reported as such. The app does not yet ask the browser to keep its data
+  (`navigator.storage.persist()`, M-PLATFORM-018, planned), so Safari on iPhone and iPad may erase
+  it after seven days of browsing without a visit unless Orbitlab is on the Home Screen; the user
+  guide says to keep backups.
+- A browser without Web Locks (older Safari, some in-app browsers) or with its storage refused gets
+  only the visit-only workspace: the work lasts until the page closes and can be exported, but
+  nothing is stored (B10; kept as designed and to be measured before any change, M-PLATFORM-011).
+  If the learner selected in a tab cannot itself be read, that tab opens visit-only and stays so
+  on reload; only a new tab reaches the list with that learner's copy and delete, and not even a
+  new tab when it is the device's only learner and the first one (R1.6-FU-SEL, open).
+- A learner's JSON record and their recordings are separate stores, not one transaction: an
+  interrupted delete finishes at the next start. Recordings are not in the JSON backup. One
+  pre-profile recording that collides with a recording the first learner already owns stops the
+  transfer of all of them: all are kept, none is shown, and reloading does not finish it
+  (M-PLATFORM-010; D-68 moves them one by one, planned). A version of the app from before profiles
+  cannot read profile records, and a tab of it left open can still write the old keys, which this
+  version ignores.
 - Phase 4's Russian and Thai texts, the lesson packs' among them, have not been read by a native speaker.
 - D01's fingerprints (27 point-mass flights, 21 six-DOF) are exact hashes of floating-point
   flights: a Node or V8 upgrade could change them with no change to the code, as it could the older
