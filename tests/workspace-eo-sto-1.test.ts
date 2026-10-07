@@ -11,7 +11,10 @@ import { describe, expect, it } from 'vitest';
 import { WORKSPACE_KEYS, type RawStorage } from '../src/workspace/registry';
 import { LEGACY_PROFILE_ID, PROFILE_CATALOG_KEY, profileStorageKey } from '../src/workspace/repository';
 import { emptyProgress } from '../src/lessons/progress';
+import * as missionFile from '../src/config/mission-file';
 import { missionDocument } from '../src/config/mission-file';
+import * as designRef from '../src/design/design-ref';
+import * as workspaceMission from '../src/ui/workspace-mission';
 import { handoffFromState, parseHandoff } from '../src/orbit/handoff';
 import { FIRST_LAUNCH, quickstartMission } from '../src/ui/quickstart';
 import { CURRENT, FROM, PRE77_MISSION, attempt, differential, flownDesign, storedValue, type Entry, type Impl, type Step, type World } from './eo-sto/harness';
@@ -201,5 +204,16 @@ describe('EO-STO-1: every step stores what main (23ede7f) stores', () => {
     const sabotaged: Impl = { ...CURRENT, make: (storage, ...rest) => CURRENT.make(reordered(storage), ...rest) };
     const { diff } = await differential(STARTS_TABS_WRITES, sabotaged);
     expect(diff).toMatch(/^step 2 "first start: the originals move into a learner": localStorage\["orbitlab\.profiles\.catalog\.v1"\] differs at character \d+:\n  src\/workspace: \{"profiles"/);
+  });
+
+  it('reports a difference that is only the order of the keys in the stored mission document (§10.3.1)', async () => {
+    // the plan's sabotage on the mission's own write path: "Fly it" stores `design` ahead of the mission (mission-file.ts saveStoredMission)
+    const saveStoredMission: typeof missionFile.saveStoredMission = (state, store, design) => {
+      const doc = design ? { design, ...missionFile.missionDocument(state) } : missionFile.missionDocument(state);
+      try { store?.setItem(missionFile.MISSION_STORE_KEY, JSON.stringify(doc)); } catch { /* storage off or full */ }
+    };
+    const sabotaged = { ...CURRENT, mission: { ...missionFile, ...designRef, ...workspaceMission, saveStoredMission } };
+    const { diff } = await differential(MISSION_PATHS, sabotaged);
+    expect(diff).toMatch(/^step 6 "Build: "Fly it" stores the design and its revision": localStorage\["orbitlab\.profile\.v1\.legacy-v1"\] differs at character \d+:\n  src\/workspace: .*\{\\"design\\":\{/);
   });
 });
