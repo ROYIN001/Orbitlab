@@ -1100,6 +1100,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'share.notice.reset': 'Mission loaded from {source}, but these settings could not be used and are back at their defaults:',
   'share.notice.unusable': 'Nothing in {source} could be used as a mission: it is not an Orbitlab mission or it is damaged. The current mission is unchanged.',
   'share.notice.newer': 'it was saved by a newer version of Orbitlab, so anything this version does not know is left out',
+  'share.notice.held': 'This mission is kept as it was stored until you change it; your first edit saves it in this app\'s format.',
   // U03: the offline app
   'pwa.offlineReady': 'Orbitlab is ready to work offline.',
   'pwa.updateReady': 'A new version of Orbitlab is ready.',

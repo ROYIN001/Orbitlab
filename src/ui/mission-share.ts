@@ -19,7 +19,8 @@ export interface MissionShareHost {
 /** Where a mission came from, for the notice: a design handed over by the Build section is 'build' (Phase 3, D02, D03). */
 export type MissionSource = 'link' | 'file' | 'stored' | 'build';
 
-interface Notice { level: 'ok' | 'warn' | 'error'; text: string; details: string[] }
+/** `held`: the stored mission is kept as stored until changed (M-PLAN-031), which the notice says too. */
+interface Notice { level: 'ok' | 'warn' | 'error'; text: string; details: string[]; held?: boolean }
 
 /** The label of the setting an issue names, in the panel's own words. */
 export function missionIssueLabel(issue: MissionIssue): string {
@@ -46,7 +47,7 @@ export function missionNotice(parsed: ParsedMission, source: MissionSource): Not
     return source === 'stored' ? null : { level: 'ok', text: t('share.notice.loaded', { source: from }), details: [] };
   }
   const details = [...(newer ? [t('share.notice.newer')] : []), ...fields];
-  return { level: 'warn', text: t('share.notice.reset', { source: from }), details };
+  return { level: 'warn', text: t('share.notice.reset', { source: from }), details, held: source === 'stored' };
 }
 
 export class MissionShare {
@@ -71,6 +72,11 @@ export class MissionShare {
     if (parsed.usable) this.host.restoreMission(parsed.state);
     this.setNotice(missionNotice(parsed, source));
     return parsed;
+  }
+
+  /** The stored mission is no longer held: the notice stops saying it is. */
+  release(): void {
+    if (this.notice?.held) this.setNotice({ ...this.notice, held: false });
   }
 
   setNotice(notice: Notice | null): void {
@@ -139,6 +145,11 @@ export class MissionShare {
         list.append(li);
       }
       el.append(list);
+    }
+    if (this.notice.held) {
+      const held = document.createElement('p');
+      held.textContent = t('share.notice.held');
+      el.append(held);
     }
     const close = document.createElement('button');
     close.type = 'button';
