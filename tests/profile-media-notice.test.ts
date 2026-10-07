@@ -29,17 +29,18 @@ class ElementStub {
  * learner "Ada" (legacy-v1) has her own recording for a mission that also has an original upload, and the device
  * has a second learner "Boris". This start finishes the move and leaves that one original in place.
  */
-async function start(selected: string): Promise<{ notice: ElementStub; repo: WorkspaceRepository; profiles: AppProfiles }> {
+async function start(selected: string, legacy = record(LEGACY_PROFILE_ID, 'Ada'), notices = ['media-collisions-kept']):
+  Promise<{ notice: ElementStub; repo: WorkspaceRepository; profiles: AppProfiles }> {
   vi.stubGlobal('window', { addEventListener() {} });
   vi.stubGlobal('document', { documentElement: {}, createElement: () => new ElementStub() });
   const storage = localMemory({
     [PROFILE_CATALOG_KEY]: JSON.stringify({ version: 1, profiles: { [LEGACY_PROFILE_ID]: {}, boris: {} }, legacyId: LEGACY_PROFILE_ID, mediaMigrated: false }),
-    [profileStorageKey(LEGACY_PROFILE_ID)]: record(LEGACY_PROFILE_ID, 'Ada'),
+    [profileStorageKey(LEGACY_PROFILE_ID)]: legacy,
     [profileStorageKey('boris')]: record('boris', 'Boris'),
   });
   const repo = await new WorkspaceRepository(storage, localMemory({ [PROFILE_SELECTED_KEY]: selected }), locks,
     { migrate: async () => 1, delete: async () => {} }).initialize();
-  expect(repo.notices).toEqual(['media-collisions-kept']);
+  expect(repo.notices).toEqual(notices);
   current = repo;
   const notice = new ElementStub();
   const profiles = new AppProfiles({} as HTMLDialogElement, new ElementStub() as unknown as HTMLButtonElement, notice as unknown as HTMLElement);
@@ -63,5 +64,11 @@ describe('legacy audio left in place (M-PLATFORM-010, D-68): the status line nam
     expect(repo.status).toBe('chooser'); expect(repo.binding).toBeNull();
     expect(notice.hidden).toBe(false);
     expect(notice.textContent).toBe('For missions where Ada already had their own audio, the original uploaded audio was not moved. Both copies are kept; Ada’s own audio is used.');
+  });
+  it('shows the general recovery notice, never an empty name, when the first learner’s record cannot be read', async () => {
+    const { notice, repo } = await start('boris', '{broken', ['media-collisions-kept', 'legacy-cleanup-pending']);
+    expect(repo.mediaCollisionOwner).toBe(LEGACY_PROFILE_ID);
+    expect(notice.hidden).toBe(false);
+    expect(notice.textContent).toBe('Saved data or the learner selection needs attention. Existing records have been kept; review a backup or reload before changing them.');
   });
 });
