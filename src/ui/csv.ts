@@ -20,6 +20,7 @@ import { PLANE_OF } from '../physics/rigid/linear';
 import { aeroAngles, bodyRates, getNotation, type Notation } from './notation';
 import { LOOP_AXES, loopLimiterNames, loopView, triple } from './loop-view';
 import type { TelemetrySample } from '../physics/sim/types';
+import { csvText } from '../csv-text';
 
 const RIGID_COLUMNS = ['recording_schema_version', 'rigid_model_version', 'rigid_data_revision',
   'rigid_mass_flow_model', 'rigid_wind_profile_json', 'rigid_wind_seed', 'rigid_integration_max_step_s', 'rigid_flow_derivative_max_step_s',
@@ -46,8 +47,7 @@ function rigidColumns(value: RigidTelemetry | undefined): string[] {
     value.sideslip, value.aeroWithinEnvelope, value.rawQuaternionNormError];
   return entries.map(value => {
     if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toPrecision(12);
-    const text = String(value);
-    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    return csvText(String(value));
   });
 }
 
@@ -97,8 +97,7 @@ function flexColumns(value: RigidTelemetry | undefined): string[] {
     b?.loadRatio ?? '', b?.loadStationX ?? '', flex.notch?.centerHz ?? ''];
   return entries.map(value => {
     if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toPrecision(9);
-    const text = String(value);
-    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    return csvText(String(value));
   });
 }
 

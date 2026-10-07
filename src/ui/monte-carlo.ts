@@ -23,6 +23,7 @@ import { MonteCarloJob } from '../physics/monte-carlo-job';
 import { dispersedRunMission } from '../physics/monte-carlo'; // P08
 import type { McpMonteCarloHost } from '../mcp';
 import { copyMission, type MissionState } from '../config/mission-file';
+import { downloadBlob } from './download';
 import './monte-carlo.css';
 
 export interface MonteCarloWindowHost {
@@ -370,12 +371,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
   private downloadCsv(): void {
     const job = this.job;
     if (!job) return;
-    const blob = new Blob([job.csv()], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `orbitlab_montecarlo_${job.cfg.vehicleId}_${job.cfg.orbit.id}_seed${job.mc.seed}.csv`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    downloadBlob(new Blob([job.csv()], { type: 'text/csv' }), `orbitlab_montecarlo_${job.cfg.vehicleId}_${job.cfg.orbit.id}_seed${job.mc.seed}.csv`);
   }
 
   // --- rendering ---
