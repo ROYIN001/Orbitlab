@@ -8,7 +8,7 @@
 import { t } from '../../i18n';
 import { DEG, RAD } from '../../physics/constants';
 import type { AppLevel } from '../app-mode';
-import { linearScale, logScale } from '../../orbit/playground-model';
+import { linearScale, logScale, thaiInSky } from '../../orbit/playground-model';
 import {
   APP_KINDS, STATIONS, stationOf, type AppKind, type AppSettings, type CommsReport, type EoReport,
 } from '../../orbit/applications-setup';
@@ -23,6 +23,8 @@ export interface AppsHost {
   change(patch: Partial<AppSettings>): void;
   /** put a Thai satellite's catalogue orbit in the playground */
   showThai(id: string): void;
+  /** M-ORBIT-001: Real satellites, on the Thai group with this satellite picked */
+  showInSky(id: string): void;
 }
 
 const KIND_KEY: Record<AppKind, string> = { comms: 'use.kind.comms', eo: 'use.kind.eo', thai: 'use.kind.thai' };
@@ -241,6 +243,8 @@ export function appsResults(host: AppsHost, a: AppSettings, ctx: { comms: CommsR
       src.append(li);
     }
     box.append(el('h3', 'pg-sub', t('use.thai.sources')), src, el('p', 'pg-note', t('use.thai.nominal', { date: THAI_SATELLITES_AS_OF })));
+    // M-ORBIT-001: where it is now is Real satellites' (not NAPA-2's: it has re-entered)
+    if (thaiInSky(s.id)) box.append(button('watch-btn', t('use.thai.inSky'), () => host.showInSky(s.id)));
   }
   return box;
 }

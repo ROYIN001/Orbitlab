@@ -135,6 +135,8 @@ export class WatchView {
   private beatText: HTMLElement;
   /** C01: what the real flight did at the moment just passed */
   private realLine: HTMLElement;
+  /** D-11 (M-ORBIT-029): while the Moon is drawn, how far it is modelled — Apollo 11's week only */
+  private moonNote: HTMLElement;
   private realShown = '';
   private lastEvents: readonly SimEvent[] = [];
   private clockValue: HTMLElement;
@@ -159,6 +161,10 @@ export class WatchView {
     this.realLine = el('p', 'watch-real');
     this.realLine.hidden = true;
     this.caption.append(this.beatLabel, this.beatText, this.realLine);
+    // outside the caption's live region: a standing label, not news; styled here (the CSS is at its budget)
+    this.moonNote = el('p', 'watch-moon');
+    this.moonNote.hidden = true;
+    Object.assign(this.moonNote.style, { margin: '-8px 0 0', fontSize: '12.5px', color: '#9fb3c4', textShadow: '0 1px 10px rgba(0, 0, 0, 0.7)' });
 
     const stats = el('div', 'watch-stats');
     this.clockValue = el('span', 'watch-num');
@@ -209,7 +215,7 @@ export class WatchView {
     const bar = el('div', 'watch-bar');
     bar.append(stats, controls);
     const bottom = el('div', 'watch-bottom');
-    bottom.append(this.caption, bar);
+    bottom.append(this.caption, this.moonNote, bar);
 
     this.picker = el('section', 'watch-card watch-picker');
     this.picker.hidden = true;
@@ -347,6 +353,9 @@ export class WatchView {
       this.realLine.textContent = real;
       this.realLine.hidden = !real;
     }
+    // the Moon is drawn exactly while the frame carries Apollo's state (main.ts, scene.setMoon)
+    const moonDrawn = !!frame?.apollo;
+    if (moonDrawn === this.moonNote.hidden) this.moonNote.hidden = !moonDrawn;
     const clock = frame ? fmtClock(frame.t) : fmtClock(-10);
     // above the ground, so the pad reads 0 rather than the site's elevation
     const subject = state.subject;
@@ -628,6 +637,7 @@ export class WatchView {
     if (!this.picker.hidden) this.renderPicker();
     if (!this.endCard.hidden && this.endFrame) this.showEnd(this.endFrame.frame, this.endFrame.ending, this.endFrame.summary);
     this.milestoneEyebrow.textContent = t('watch.parking.eyebrow');
+    this.moonNote.textContent = t('watch.moonScope');
     this.milestoneClose.setAttribute('aria-label', t('watch.pick.close'));
     this.milestoneClose.title = t('watch.pick.close');
     // the note's sentence is rewritten on the next update
