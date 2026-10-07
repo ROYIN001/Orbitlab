@@ -1,0 +1,7 @@
+## CHANGELOG
+
+- Docs (R1.6 PR11, M-PLATFORM-074): the user guide has a new "Learner profiles" section: what each learner keeps; creating, switching, resetting (four scopes) and deleting learners; learners the app cannot read, which stay listed with a copy of their stored data and delete; JSON and audio backups with their limits (40 learners, 8 MB, 128 MB and 100 recordings, 1,000 number fields); read-only and visit-only tabs; and the iPhone/iPad seven-day warning. The README has a feature bullet and the two profile journeys, and IMPLEMENTATION-STATUS has rows for R1.1, R1.2 and R1.6 and their known limitations. Every number was checked against the code.
+
+## PROGRESS
+
+| R1.6 PR11 (M-PLATFORM-074, P1 docs, wave K1) | In PR; not merged; not published | `docs/USER-GUIDE.md` § Learner profiles (switch, reset scopes, delete, unreadable/newer/missing rows with save-a-copy and delete, Export all skipping them, JSON and audio export/import, read-only and visit-only meaning, iPhone/iPad warning, limits); `README.md` feature bullet, `learner-profiles` and `profile-session-safety` journey rows, `src/workspace/` layout line; `docs/IMPLEMENTATION-STATUS.md` R1.1/R1.2/R1.6 rows and three known-limitation bullets (B10/M-PLATFORM-011, R1.6-FU-SEL, M-PLATFORM-010, M-PLATFORM-018). Each limit and file name checked against the source (file:line in the report); docs only, build output identical to main (manifest `06ee5948a70060`); L | [R1.6 PR11 report](reports/R1.6-pr11-profile-docs.md) |
