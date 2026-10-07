@@ -129,6 +129,8 @@ export class WorkspaceBinding implements RawStorage {
 export class WorkspaceRepository {
   status: WorkspaceStatus = 'chooser';
   readonly notices: string[] = [];
+  /** The learner whose own recordings kept legacy originals in place at this start (D-68), or null. */
+  mediaCollisionOwner: string | null = null;
   binding: WorkspaceBinding | null = null;
   private release: (() => void) | null = null;
   private ephemeral: Record<string, ProfileRecord> | null = null;
@@ -239,7 +241,7 @@ export class WorkspaceRepository {
           // Collisions stay in place, unowned (D-68); the migration is still done, so no later start walks the store again.
           try {
             const kept = await this.media.migrate(catalog.legacyId); catalog.mediaMigrated = true; this.saveCatalog(catalog);
-            if (kept) this.notices.push('media-collisions-kept');
+            if (kept) { this.notices.push('media-collisions-kept'); this.mediaCollisionOwner = catalog.legacyId; }
           } catch { this.notices.push('media-migration-pending'); }
         }
         // Remove only unchanged originals after the authoritative destination/catalogue commit.
