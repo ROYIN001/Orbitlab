@@ -410,6 +410,7 @@ export class BuildScreen {
       this.reqPage = new RequirementsPage(this.workspace(), {
         toBench: () => { this.rememberCraft('satellite'); this.host.go(route('build', 'engineer')); },
         opened: (origin) => { this.reqOrigin = origin; this.rememberCraft('satellite'); this.host.go(route('build', 'engineer')); },
+        designs: () => this.ensureSatellite().store,
       });
       this.engineerRoot.append(this.reqPage.root);
     }
@@ -488,6 +489,8 @@ export class BuildScreen {
 
   /** T01: back to the lesson's design where the student left it, at its level. */
   showDesignLesson(level: 'explore' | 'engineer'): void {
+    // M-BUILD-007: the lesson's design, put aside when the student opened one of their own over it, back on the desk
+    this.satWorkspace?.resumeLesson();
     this.rememberCraft('satellite');
     // the route closes the lessons page over it; the same route shown already is drawn again, with the satellite on it
     const shown = this.visible && this.level === level && !this.page;

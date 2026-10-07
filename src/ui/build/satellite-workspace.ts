@@ -35,10 +35,14 @@ import {
 } from '../../design/satellite-model';
 import type { SatelliteDesign } from '../../design/satellite-spec';
 import { DEFAULT_ACTIVITY_LEVEL, type EcssLevel } from '../../orbit/satellite-air';
+import { canonicalJson } from '../../design/design-ref';
 
 /** How long after the last change the figures are worked out, and the draft written, ms. */
 const SETTLE_MS = 180;
 const KEEP_MS = 400;
+
+/** A design as compared with how it was put on the desk: a default name aside, which follows the interface language. */
+const bare = (d: SatelliteDraft): string => canonicalJson({ ...d.design, name: d.design.name === d.defaultName ? '' : d.design.name });
 
 /** A template's default name in the interface language: "My NAPA-2 (6U CubeSat)". */
 export const defaultNameFor = (templateId: string): string => t('build.sat.defaultName', { template: t(TEMPLATE_TEXT[templateId]?.name ?? templateId) });
@@ -82,6 +86,10 @@ export class SatelliteWorkspace {
   /** T01: the design lesson open on the desk, and the student's own design, date and level it put aside */
   private lesson: LessonDesk | null = null;
   private aside: { draft: SatelliteDraft; date: DesignDate; level: EcssLevel } | null = null;
+  /** M-BUILD-007: a lesson's desk put aside while the student's own design was opened over it, until `resumeLesson` */
+  private parked: { lesson: LessonDesk; draft: SatelliteDraft } | null = null;
+  /** M-BUILD-007: the student's own design as it was put on the desk (a template's, a requirements row's), `bare` */
+  private pristine: string;
   private replaced = 0;
 
   constructor() {
@@ -91,6 +99,8 @@ export class SatelliteWorkspace {
     const restored = restoreKeptSatellite(kept);
     this.draft = restored ?? { design: designFromTemplate(FIRST_TEMPLATE, newSatelliteId(), name), recordId: null, defaultName: name };
     this.dateShown = restored?.date ?? todayDesignDate();
+    // a draft kept by this browser is as it started when it is still its template's
+    this.pristine = bare({ design: designFromTemplate(this.draft.design.template, this.draft.design.id, ''), recordId: null, defaultName: '' });
     // written once the page is being left too, so a change made just before a reload is kept
     addEventListener('pagehide', () => this.write());
     registerWorkspaceFlush(() => this.write(true));
@@ -126,11 +136,12 @@ export class SatelliteWorkspace {
    * draft this browser keeps is left as it is, so a reload in the middle of
    * a lesson brings the student's own design back — until `leaveLesson`.
    */
-  enterLesson(desk: LessonDesk): void {
+  enterLesson(desk: LessonDesk, draft: SatelliteDraft = { design: structuredClone(desk.start), recordId: null, defaultName: desk.start.name }): void {
+    this.parked = null;
     if (!this.lesson) this.aside = { draft: this.draft, date: this.dateShown, level: this.level };
     this.lesson = desk;
     this.replaced++;
-    this.draft = { design: structuredClone(desk.start), recordId: null, defaultName: desk.start.name };
+    this.draft = draft;
     this.dateShown = desk.date;
     this.level = desk.level;
     this.workOut();
@@ -142,8 +153,33 @@ export class SatelliteWorkspace {
     if (this.lesson) this.enterLesson(this.lesson);
   }
 
+  /** T01, M-BUILD-007: back to the lesson's design put aside when the student's own was opened over it, as it was left. */
+  resumeLesson(): void {
+    if (this.parked) this.enterLesson(this.parked.lesson, this.parked.draft);
+  }
+
+  /** M-BUILD-007: a lesson's desk put aside (`resumeLesson` brings it back), the student's own design on the desk; whether there was one. */
+  private park(): boolean {
+    if (!this.lesson || !this.aside) return false;
+    this.parked = { lesson: this.lesson, draft: this.draft };
+    ({ draft: this.draft, date: this.dateShown, level: this.level } = this.aside);
+    this.lesson = this.aside = null;
+    this.replaced++;
+    return true;
+  }
+
+  /**
+   * M-BUILD-007: the student's own design another would replace, put on the desk (a lesson's put aside first),
+   * or null when it was never saved and is as it was put there.
+   */
+  own(): SatelliteDraft | null {
+    if (this.park()) { this.workOut(); this.tell('design'); }
+    return this.draft.recordId === null && bare(this.draft) === this.pristine ? null : this.draft;
+  }
+
   /** Close the lesson's desk: the student's own design, date and level back. */
   leaveLesson(): void {
+    this.parked = null;
     if (!this.lesson) return;
     this.lesson = null;
     this.replaced++;
@@ -191,8 +227,15 @@ export class SatelliteWorkspace {
     this.tell('design');
   }
 
-  /** Another design altogether (a template, a saved or imported record): figures at once. */
-  replace(draft: SatelliteDraft): void {
+  /**
+   * Another design altogether (a template, a saved or imported record, a requirements row, read at `level`): figures
+   * at once. It takes the student's own design's place: a lesson's is put aside (M-BUILD-007).
+   */
+  replace(draft: SatelliteDraft, level?: EcssLevel): void {
+    this.park();
+    if (level) this.level = level;
+    // a saved design is compared with its record; one never saved, with itself as it came
+    this.pristine = draft.recordId === null ? bare(draft) : '';
     this.replaced++;
     this.draft = draft;
     this.queueKeep();
