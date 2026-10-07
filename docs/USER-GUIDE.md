@@ -274,8 +274,9 @@ only be deleted. These rows still count toward the 40 learners.
 **Profile backups** (Thai: **ข้อมูลสำรองโปรไฟล์**) keep a learner's work outside the browser, or
 move it to another device.
 - **Export this learner's workspace** saves one file, `Orbitlab-<date>.orbitlab-workspace.json`,
-  with everything the learner keeps except recordings. It works in a read-only or visit-only tab
-  too (below), so the work done there can be kept.
+  with everything the learner keeps except recordings. It works in a visit-only tab too (below),
+  so the work done during the visit can be kept. In a read-only tab it saves the learner's work as
+  stored, which is what the other tab has saved, not changes made in the read-only tab.
 - **Export all learner profiles** saves every learner in one such file. Learners whose data
   cannot be read are left out, and the window says so: save a copy of each from the list. If no
   learner can be read, no file is made.
@@ -299,8 +300,9 @@ move it to another device.
 
 **Two tabs on one learner: read-only.** When a learner is already open in another tab, a second
 tab opens that learner read-only and says so. Nothing changed there is saved; rename, delete,
-reset, import, Export all and the audio buttons are off. It can export the learner's workspace,
-open another learner or create one. Close the other tab, then reload, to work normally.
+reset, import, Export all and the audio buttons are off. It can export the learner's workspace as
+stored (what the other tab saved, without this tab's changes), open another learner or create one.
+Close the other tab, then reload, to work normally.
 
 **Visit-only (temporary) mode.** When the browser refuses Orbitlab's storage (site data blocked,
 for example), when it lacks the Web Locks that keep two tabs from writing over each other (older
