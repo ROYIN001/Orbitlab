@@ -34,13 +34,27 @@
  * group named in budgets.json has no file, or the log shows the warning.
  * Ceilings only ratchet down: see budgets.json's `_notes`.
  *
+ * Reported only, after that table (M-PLAN-020): no ceilings and never part of
+ * the verdict, so the gate's lines, messages and exit code stay as they were.
+ *   - gzip and brotli columns for every group: each file compressed alone at
+ *     each format's maximum level (gzip -9, brotli quality 11), as a server
+ *     sends it; JPEG, PNG and other already-compressed media at raw size;
+ *   - `initial load`: dist/index.html and every script, module preload,
+ *     preload and stylesheet it links (today the index, i18n, lesson-file,
+ *     download and catalog chunks and the index CSS): what a first visit
+ *     downloads before the app runs;
+ *   - `textures`: every file under dist/textures/, precached or not.
+ *
  * Plain Node, no dependencies. The pure parts are exported for
- * tests/bundle-budget.test.ts; the check runs only when this file is the
- * command (`node scripts/bundle-budget.mjs`), not when it is imported.
+ * tests/bundle-budget.test.ts and tests/verification/bundle-budget-report.test.mjs;
+ * the check runs only when this file is the command
+ * (`node scripts/bundle-budget.mjs`), not when it is imported.
  */
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { promisify } from 'node:util';
+import { brotliCompress, constants as zlibConstants, gzip } from 'node:zlib';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
@@ -68,13 +82,22 @@ function chunkGroup(file) {
   return m ? `${m[1]}-*.${m[2]}` : null;
 }
 
-/** Count every emitted JS/CSS file once, including names the chunk matcher does not recognise. */
-function assetFiles(dir) {
+/** Count every emitted JS/CSS file once (or every file `pattern` matches), including names the chunk matcher does not recognise. */
+function assetFiles(dir, pattern = /\.(js|css)$/) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const file = join(dir, entry.name);
-    if (entry.isDirectory()) return assetFiles(file);
-    return /\.(js|css)$/.test(entry.name) ? [file] : [];
+    if (entry.isDirectory()) return assetFiles(file, pattern);
+    return pattern.test(entry.name) ? [file] : [];
   }).sort();
+}
+
+/** Prints rows under a head, each column padded: the columns in `left` align left, the others right. */
+function printTable(head, rows, left) {
+  const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
+  const line = (r) => r.map((c, i) => (left.includes(i) ? c.padEnd(widths[i]) : c.padStart(widths[i]))).join('  ').trimEnd();
+  console.log(line(head));
+  console.log(widths.map((w) => '-'.repeat(w)).join('  '));
+  for (const r of rows) console.log(line(r));
 }
 
 /** The precache manifest written into the built worker, parsed back. */
@@ -139,7 +162,81 @@ export function checkPrecacheSplit(groups, limits) {
   return { failures, warnings };
 }
 
-function main() {
+// Reported only (M-PLAN-020): no ceilings, never part of the verdict.
+const INITIAL_LOAD = 'initial load';
+const TEXTURES = 'textures';
+/** Already-compressed formats: a server sends them as they are, so their gzip and brotli size is their raw size. */
+const PRECOMPRESSED = /\.(?:jpe?g|png|gif|webp|avif|woff2?|mp3|ogg|m4a|mp4|webm)$/i;
+const LOADED_RELS = ['modulepreload', 'preload', 'stylesheet'];
+
+/**
+ * The initial load: the page itself, then every script, module preload,
+ * preload and stylesheet it links, as paths under dist/ in the page's order.
+ * Commented-out tags, inline scripts, data: URLs, other origins, and the
+ * manifest and icons (fetched beside the start, not before it) are left out.
+ */
+export function initialLoad(html) {
+  const paths = ['index.html'];
+  const tags = html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<(script|link)\b((?:[^>"']|"[^"]*"|'[^']*')*)>/gi);
+  for (const [, name, body] of tags) {
+    const attrs = {};
+    for (const [, key, ...values] of body.matchAll(/([^\s=>"'/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+)))?/g)) {
+      attrs[key.toLowerCase()] ??= values.find((value) => value !== undefined) ?? '';
+    }
+    const url = name.toLowerCase() === 'script' ? attrs.src
+      : (attrs.rel ?? '').toLowerCase().split(/\s+/).some((rel) => LOADED_RELS.includes(rel)) ? attrs.href : undefined;
+    if (!url || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(url)) continue;
+    const path = url.replace(/[?#].*$/, '').replace(/^(?:\.?\/)+/, '');
+    if (path && !paths.includes(path)) paths.push(path);
+  }
+  return paths;
+}
+
+const gzipAsync = promisify(gzip);
+const brotliAsync = promisify(brotliCompress);
+const BROTLI_MAX = { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: zlibConstants.BROTLI_MAX_QUALITY } };
+
+/** One file's bytes { raw, gzip, brotli }: compressed alone at each format's maximum level; precompressed media at raw size. */
+async function transferSizes(path) {
+  const bytes = readFileSync(path);
+  if (PRECOMPRESSED.test(path)) return { raw: bytes.length, gzip: bytes.length, brotli: bytes.length };
+  const [gz, br] = await Promise.all([gzipAsync(bytes, { level: 9 }), brotliAsync(bytes, BROTLI_MAX)]);
+  return { raw: bytes.length, gzip: gz.length, brotli: br.length };
+}
+
+/** Sums each group's files (group → paths, in order); every file is measured once, however many groups list it. */
+async function measureGroups(groups, measure = transferSizes) {
+  const cache = new Map();
+  const sizeOf = (path) => {
+    if (!cache.has(path)) cache.set(path, measure(path));
+    return cache.get(path);
+  };
+  const measured = await Promise.all([...groups].map(([, paths]) => Promise.all(paths.map(sizeOf))));
+  return [...groups.keys()].map((group, i) => {
+    const sum = (key) => measured[i].reduce((total, sizes) => total + sizes[key], 0);
+    return { group, files: measured[i].length, raw: sum('raw'), gzip: sum('gzip'), brotli: sum('brotli') };
+  });
+}
+
+/** The report-only table: the gate's groups that have files, in its order, then the initial load and the textures. */
+async function printReport(budgets, members) {
+  const groups = new Map([...Object.keys(budgets), ...members.keys()].filter((group) => members.has(group)).map((group) => [group, members.get(group)]));
+  const page = join(DIST, 'index.html');
+  const linked = existsSync(page) ? initialLoad(readFileSync(page, 'utf8')) : [];
+  const isFile = (path) => existsSync(join(DIST, path)) && statSync(join(DIST, path)).isFile();
+  const present = linked.filter(isFile), missing = linked.filter((path) => !isFile(path));
+  groups.set(INITIAL_LOAD, present.map((path) => join(DIST, path)));
+  const textures = join(DIST, TEXTURES);
+  groups.set(TEXTURES, existsSync(textures) ? assetFiles(textures, /(?:)/) : []);
+  const rows = (await measureGroups(groups)).map(({ group, files, raw, gzip: gz, brotli: br }) => (files
+    ? [group, String(files), fmt(kB(raw)), fmt(kB(gz)), fmt(kB(br))]
+    : [group, '0', 'absent', '', '']));
+  console.log('report only, no ceilings (M-PLAN-020): each file compressed alone, gzip -9 and brotli q11; JPEG, PNG and other compressed media at raw size');
+  printTable(['group', 'files', 'raw kB', 'gzip kB', 'brotli kB'], rows, [0]);
+  console.log(`(${INITIAL_LOAD}: ${present.join(', ') || 'none'}${missing.length ? `; not in dist/: ${missing.join(', ')}` : ''})`);
+}
+
+async function main() {
 
   const budgetsPath = join(ROOT, 'budgets.json');
   if (!existsSync(budgetsPath)) fail('budgets.json is missing');
@@ -166,10 +263,12 @@ function main() {
 
   // chunk groups
   const sizes = new Map();
+  const members = new Map(); // the files behind each group, for the report only
   for (const file of assetFiles(ASSETS)) {
     const group = chunkGroup(file);
     const key = group && group in budgets ? group : OTHER;
     sizes.set(key, (sizes.get(key) ?? 0) + statSync(file).size);
+    members.set(key, [...(members.get(key) ?? []), file]);
   }
 
   // precache: the total, and the same entries as code and data/
@@ -185,6 +284,12 @@ function main() {
   if (splitNamed) {
     sizes.set(PRECACHE_CODE, groups.code);
     sizes.set(PRECACHE_DATA, groups.data);
+  }
+  const paths = (entries) => entries.map(({ url }) => join(DIST, url));
+  members.set(PRECACHE, paths(measured));
+  if (splitNamed) {
+    members.set(PRECACHE_CODE, paths(measured.filter(({ url }) => !url.startsWith(DATA_PREFIX))));
+    members.set(PRECACHE_DATA, paths(measured.filter(({ url }) => url.startsWith(DATA_PREFIX))));
   }
   const split = splitNamed ? checkPrecacheSplit(groups, limits) : { failures: [], warnings: [] };
 
@@ -211,12 +316,7 @@ function main() {
       over = true;
     }
   }
-  const head = ['group', 'size kB', 'budget kB', 'overrun kB', ''];
-  const widths = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
-  const line = (r) => r.map((c, i) => (i === 0 || i === 4 ? c.padEnd(widths[i]) : c.padStart(widths[i]))).join('  ').trimEnd();
-  console.log(line(head));
-  console.log(widths.map((w) => '-'.repeat(w)).join('  '));
-  for (const r of rows) console.log(line(r));
+  printTable(['group', 'size kB', 'budget kB', 'overrun kB', ''], rows, [0, 4]);
   console.log(`(${manifest.entries.length} files precached, manifest ${manifest.version}${splitNamed ? `; ${fmt(kB(groups.code))} kB code + ${fmt(kB(groups.data))} kB under ${DATA_PREFIX}, data baseline ${fmt(limits.dataBaseline)} kB` : ''})`);
   for (const w of split.warnings) {
     console.log(`WARNING: ${w}`);
@@ -225,6 +325,13 @@ function main() {
   }
   for (const f of split.failures) console.error(`bundle budget: ${f}`);
   if (split.failures.length) over = true;
+
+  // reported only: a failure to measure is printed, never turned into a verdict
+  try {
+    await printReport(budgets, members);
+  } catch (error) {
+    console.log(`report only: not measured (${error instanceof Error ? error.message : error})`);
+  }
 
   // the build log
   let ineffective = 0;
@@ -245,4 +352,4 @@ function main() {
 }
 
 // realpath: the command may name this file through a symlink
-if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) main();
+if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) await main();
