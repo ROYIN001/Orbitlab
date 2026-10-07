@@ -4,4 +4,4 @@
 
 ## PROGRESS
 
-| CI single run per PR (owner request, 2026-10-07) | In PR; not merged | `.github/workflows/ci.yml`: `push` trigger replaced by `workflow_dispatch`; `pull_request` trigger, path filter, jobs and check names unchanged; no site, test or physics change | this PR |
+| CI single run per PR (owner request, 2026-10-07) | In PR; not merged | `.github/workflows/ci.yml`: `push` trigger replaced by `workflow_dispatch`; `tests/verification/workflow-paths.test.mjs` now asserts CI has no push trigger; `pull_request` trigger, path filter, jobs and check names unchanged; no site, test or physics change | this PR |

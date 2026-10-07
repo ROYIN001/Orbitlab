@@ -36,16 +36,18 @@ function selected(paths, file) {
   return matches;
 }
 
-test('CI PR, branch push and Pages main push use the same ordered Markdown policy', () => {
+test('CI PR and Pages main push use the same ordered Markdown policy', () => {
   const expected = ['**', '!**/*.md', ...consumed];
   assert.deepEqual(eventPaths(ci, 'pull_request'), expected);
-  assert.deepEqual(eventPaths(ci, 'push'), expected);
+  // CI runs once per PR: no branch push trigger, only an unfiltered manual entry point.
+  assert.doesNotMatch(ci, /^  push:/m);
+  assert.deepEqual(eventPaths(ci, 'workflow_dispatch'), []);
   assert.deepEqual(eventPaths(pages, 'push'), expected);
   assert.match(pages, /push:\n    branches: \[main\]/);
 });
 
 test('reports alone skip while all consumed Markdown and non-Markdown evidence remain gated', () => {
-  for (const paths of [eventPaths(ci, 'pull_request'), eventPaths(ci, 'push'), eventPaths(pages, 'push')]) {
+  for (const paths of [eventPaths(ci, 'pull_request'), eventPaths(pages, 'push')]) {
     for (const file of ['README.md', 'docs/development/PROGRESS.md', 'docs/development/reports/released.md']) assert.equal(selected(paths, file), false, file);
     for (const file of [...consumed, 'src/physics/sim/rendezvous.ts', 'public/data/satellites.json', 'docs/history/live-evidence.json', 'docs/plot.png', '.github/workflows/deploy.yml']) assert.equal(selected(paths, file), true, file);
     assert.equal(['docs/development/reports/released.md', 'src/main.ts'].some(file => selected(paths, file)), true, 'Mixed source/report commit remains gated');
