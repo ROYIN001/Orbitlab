@@ -1,0 +1,7 @@
+## CHANGELOG
+
+- Tests (R1.6 PR3, EO-STO-1): a new differential check runs the same storage steps (start-up, typing, two tabs, a full disk, damaged and newer records, learners, backups, visit-only, and the mission's template, design and hand-off paths) against the app's learner storage and against a copy of today's, and fails on the first stored byte, return value or error that differs; new fixtures check that missions and hand-offs saved before #77/#80 still read as they did, and that a build from before #80 reads today's saved mission. No app change.
+
+## PROGRESS
+
+| R1.6 PR3 (M-PLATFORM-007 part 1: EO-STO-1; S10 §10.3.1 legacy readers; wave K1) | In PR; not merged; not published | Tests only (quality-improving): `tests/eo-sto/ref/workspace/` is main's `src/workspace/{repository,registry,archive}.ts` at 23ede7f byte for byte (same blob ids); `tests/eo-sto/harness.ts` runs one step list against both and compares localStorage, each tab's session, results and error codes, status, notices, binding and media calls after every step; `tests/workspace-eo-sto-1.test.ts` has 4 sequences (incl. the §10.3.1 template, "Fly it"/restore with `design`, hand-off, read-only second tab) plus a kept key-order sabotage; `tests/workspace-legacy-readers.test.ts` checks pre-#77/#80 bytes and da67341's verbatim readers (`tests/eo-sto/da67341/`). Sabotage in `repository.ts` (not committed) reported the first differing step and key; the build is unchanged | [R1.6 PR3 report](reports/R1.6-pr3-eo-sto-1.md) |
