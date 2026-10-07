@@ -96,7 +96,8 @@ export class SatelliteLevel {
   private readonly controls = el('section', 'bs-panel bsat-controls');
   private readonly checks = el('section', 'bs-panel bsat-checks');
   private readonly figures = el('section', 'bs-panel bsat-figures');
-  private readonly store: ExploreStore<'satellite'>;
+  /** the saved satellites; the requirements page asks it about the bench's design too (M-BUILD-007) */
+  readonly store: ExploreStore<'satellite'>;
   /** "Fly it" in the Launch section (the integration of D06, map §2.6 c) */
   private readonly flyBox: SatelliteFly;
 
@@ -104,7 +105,8 @@ export class SatelliteLevel {
     this.store = new ExploreStore<'satellite'>({
       current: () => (this.ws.worked().issues.length ? null : { spec: this.ws.design, name: this.ws.design.name.trim(), recordId: this.ws.recordId }),
       saved: (recordId, name) => { this.ws.saved(recordId, name); this.renderHead(); },
-      open: (record) => this.open(record),
+      open: (record) => this.put(record),
+      replacing: () => this.ws.own(),
       forgotten: (recordId) => { if (this.ws.recordId === recordId) this.ws.saved(null); },
       other: (record, message) => { if (isDesignOf(record, 'vehicle')) this.host.openRocket(record, message); },
     }, undefined, 'satellite', STORE_TEXTS.satellite);
@@ -134,11 +136,15 @@ export class SatelliteLevel {
     this.visible = false;
   }
 
-  /** A kept or imported satellite design, opened here, and what the store says of it (a file imported in the rocket designer). */
+  /** A satellite file imported in the rocket designer, opened here as Open does (asked first over unsaved changes), and what the store says of it. */
   open(record: DesignRecord<'satellite'>, message?: string): void {
+    void this.store.openRecord(record.id).then((opened) => { if (opened && message) this.store.announce('warn', message); });
+  }
+
+  /** A kept or imported satellite design, on the desk. */
+  private put(record: DesignRecord<'satellite'>): void {
     this.orbitMessage = null;
     this.ws.replace({ design: structuredClone(record.design), recordId: record.id, defaultName: '' });
-    if (message) this.store.announce('warn', message);
     if (this.visible) this.root.closest('.build-screen')?.scrollTo({ top: 0 });
   }
 

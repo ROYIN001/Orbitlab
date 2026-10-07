@@ -1,5 +1,5 @@
 import { rememberNumericText, rememberedNumericText } from '../../workspace/numeric-drafts';
-import { workspaceStorage, registerWorkspaceFlush } from '../../workspace/storage';
+import { workspaceStorage, registerWorkspaceFlush, keptForWorkspace } from '../../workspace/storage';
 /**
  * The lessons page's Worksheets tab (roadmap E05): make printable sheets from
  * the flight on screen — the open lesson's, or any mission's — for a class,
@@ -102,9 +102,14 @@ class WorksheetView {
   private status = '';
   private pending = false;
 
-  constructor(private readonly host: WorksheetHost, private readonly container: HTMLElement) {
-    const detachFlush = registerWorkspaceFlush(() => this.savePending(true));
-    if (typeof window !== 'undefined') window.addEventListener('pagehide', (event) => { if (!event.persisted) detachFlush(); });
+  constructor(private host: WorksheetHost, private container: HTMLElement) {
+    registerWorkspaceFlush(() => this.savePending(true));
+  }
+
+  /** A later opening of the tab: the same form, unsaved edits and class code included, on the page anew. */
+  reopen(host: WorksheetHost, container: HTMLElement): this {
+    this.host = host; this.container = container; this.status = '';
+    return this;
   }
 
   private save(): void { this.pending = true; this.savePending(); }
@@ -262,7 +267,7 @@ class WorksheetView {
 }
 
 export function renderWorksheets(host: WorksheetHost, container: HTMLElement): { applyLanguage(): void } {
-  const view = new WorksheetView(host, container);
+  const view = keptForWorkspace(WorksheetView, () => new WorksheetView(host, container)).reopen(host, container);
   view.render();
   return view;
 }

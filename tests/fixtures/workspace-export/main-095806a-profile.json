@@ -1,0 +1,28 @@
+{
+  "format": "orbitlab.workspace",
+  "version": 1,
+  "exportedAt": "2026-10-06T08:30:00.000Z",
+  "profiles": [
+    {
+      "id": "legacy-v1",
+      "name": "Learner 1",
+      "createdAt": "2026-10-06T08:30:00.000Z",
+      "updatedAt": "2026-10-06T08:30:00.000Z",
+      "revision": 7,
+      "epoch": 0,
+      "values": {
+        "orbitlab.student": "สมชาย ใจดี",
+        "orbitlab.mission": "{\"format\":\"orbitlab.mission\",\"version\":3,\"mission\":{\"name\":\"ภารกิจ \\\"ทดสอบ\\\" \\\\ 🚀\",\"target\":\"LEO\",\"note\":\"line 1\\nline 2 end\\ttab\"}}",
+        "orbitlab.lessons": "{\"version\":1,\"lessons\":{\"intro\":{\"attempts\":2,\"best\":0.75}},\"assessments\":[],\"customLessons\":[],\"customQuestions\":[]}",
+        "orbitlab.designs": "{\"version\":1,\"designs\":[{\"name\":\"Союз-2.1б\",\"stages\":3}]}",
+        "orbitlab.build.satellite.v1": "{\"v\":99,\"future\":\"preserved\"}",
+        "orbitlab.notation": "gost",
+        "orbitlab.lang": "th"
+      }
+    }
+  ],
+  "media": {
+    "included": false,
+    "reason": "separate-binary-export"
+  }
+}
