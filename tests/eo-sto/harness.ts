@@ -1,32 +1,43 @@
 /**
  * EO-STO-1, the differential storage oracle (plan S10 §10.1 rule 3, §10.3 PR 3).
  *
- * One sequence of storage operations runs twice: against the repository in
- * src/workspace, and against tests/eo-sto/ref/workspace, a byte-for-byte copy
- * of main's src/workspace/{repository,registry,archive}.ts at 23ede7f (what the
- * app stores today; the modules those files import from outside the folder
- * re-export the live ones). After every step the oracle compares, byte for
- * byte: every key and value on the shared disk (localStorage), each tab's
- * sessionStorage, the step's return value or error code, each tab's status,
- * notices and binding, and the media calls.
+ * One sequence of storage operations runs twice: against the code in src/,
+ * and against tests/eo-sto/ref/, byte-for-byte copies of main's files at
+ * 23ede7f (what the app stores today): src/workspace/{repository,registry,
+ * archive}.ts for the repository, and src/config/mission-file.ts,
+ * src/design/design-ref.ts and src/ui/workspace-mission.ts for the page's
+ * mission, which decide when `orbitlab.mission` is written and its bytes. The
+ * modules those files import from outside the copies re-export the live ones.
+ * After every step the oracle compares, byte for byte: every key and value on
+ * the shared disk (localStorage), each tab's sessionStorage, the step's return
+ * value or error code, each tab's status, notices and binding, and the media
+ * calls.
  *
  * An identical-output PR runs it unchanged and leaves ref/ alone. A PR whose
  * stored bytes move here is not identical-output (S07 stop rule) and has to
  * say so; its review decides about ref/.
  *
  * `MissionPage` is src/main.ts's mission store and restore (the §10.3.1 paths)
- * played over a profile's storage, so the same sequences cover them.
+ * played over a profile's storage with each side's mission code, so the same
+ * sequences cover them. It plays main.ts's order of calls; main.ts itself and
+ * the hand-off to Orbit (in memory only) are not copied.
  */
 import { vi } from 'vitest';
 import * as live from '../../src/workspace/repository';
 import * as ref from './ref/workspace/repository';
 import type { RawStorage } from '../../src/workspace/registry';
-import { loadStoredMission, missionDocument, parseMissionDocument, saveStoredMission, type MissionState } from '../../src/config/mission-file';
+import * as liveMissionFile from '../../src/config/mission-file';
+import * as refMissionFile from './ref/config/mission-file';
+import type { MissionState } from '../../src/config/mission-file';
 import { orbitById } from '../../src/data/orbits';
 import { DEFAULT_FAILURE } from '../../src/physics/defaults';
 import { defaultDynamics } from '../../src/physics/rigid/config';
-import { designRefFor, parseDesignRef, refFlies, type DesignRef } from '../../src/design/design-ref';
-import { WorkspaceMission, startupMission, type MissionOrigin } from '../../src/ui/workspace-mission';
+import * as liveDesignRef from '../../src/design/design-ref';
+import * as refDesignRef from './ref/design/design-ref';
+import type { DesignRef } from '../../src/design/design-ref';
+import * as liveWorkspaceMission from '../../src/ui/workspace-mission';
+import * as refWorkspaceMission from './ref/ui/workspace-mission';
+import type { MissionOrigin, WorkspaceMission } from '../../src/ui/workspace-mission';
 import { handoffDocument } from '../../src/design/build-handoff';
 import { partsDraft, partsResult } from '../../src/design/explore-model';
 
@@ -41,16 +52,31 @@ export interface Repo {
   exportProfile(id?: string): unknown; exportAll(): unknown; importProfiles(text: string): Promise<unknown>;
   importArchive(text: string, options?: { targetId?: string; mode?: 'keep' | 'replace'; name?: string }): Promise<unknown>;
 }
+/** The mission's origin rules, which both copies of WorkspaceMission have. */
+export type MissionRules = Pick<WorkspaceMission, 'origin' | 'viewing' | 'loaded' | 'adopt' | 'restoring' | 'restored' | 'persists' | 'entering'>;
+/** The page's mission code, which both copies have: mission-file.ts, design-ref.ts and workspace-mission.ts. */
+export interface MissionCode {
+  loadStoredMission: typeof liveMissionFile.loadStoredMission; saveStoredMission: typeof liveMissionFile.saveStoredMission;
+  missionDocument: typeof liveMissionFile.missionDocument; parseMissionDocument: typeof liveMissionFile.parseMissionDocument;
+  designRefFor: typeof liveDesignRef.designRefFor; parseDesignRef: typeof liveDesignRef.parseDesignRef; refFlies: typeof liveDesignRef.refFlies;
+  startupMission: typeof liveWorkspaceMission.startupMission; WorkspaceMission: new () => MissionRules;
+}
+export const LIVE_MISSION: MissionCode = { ...liveMissionFile, ...liveDesignRef, ...liveWorkspaceMission };
+const REF_MISSION: MissionCode = { ...refMissionFile, ...refDesignRef, ...refWorkspaceMission };
 export interface Impl {
   name: string;
   make(storage: RawStorage, session: RawStorage, locks: live.WorkspaceLocks | undefined, media: live.WorkspaceMedia, ids: () => string): Repo;
   archiveText(archive: unknown): string;
+  /** what the page writes and restores the mission with */
+  mission: MissionCode;
 }
 export const CURRENT: Impl = {
   name: 'src/workspace', make: (...a) => new live.WorkspaceRepository(...a), archiveText: (a) => live.workspaceArchiveText(a as live.WorkspaceArchive),
+  mission: LIVE_MISSION,
 };
 export const REFERENCE: Impl = {
   name: 'ref 23ede7f', make: (...a) => new ref.WorkspaceRepository(...a), archiveText: (a) => ref.workspaceArchiveText(a as ref.WorkspaceArchive),
+  mission: REF_MISSION,
 };
 
 /** A Storage double (insertion-ordered, with `key`/`length`); `deny` makes writes of one key fail as a full quota does. */
@@ -97,10 +123,10 @@ export class World {
   }
   repo(name: string): Repo { return this.tabs.get(name)!.repo!; }
   binding(name: string): Binding { return this.repo(name).binding!; }
-  /** The tab's page, started on its profile's storage the way main.ts starts (Home when `lean`). */
+  /** The tab's page, started on its profile's storage the way main.ts starts (Home when `lean`), with this side's mission code. */
   page(name: string, lean = false): MissionPage {
     const tab = this.tabs.get(name)!;
-    return tab.page ??= new MissionPage(tab.repo!.binding!, lean);
+    return tab.page ??= new MissionPage(tab.repo!.binding!, lean, this.impl.mission);
   }
 }
 
@@ -179,20 +205,21 @@ export const FROM = new Date('2026-09-25T06:00:00Z');
  * settings (run once on da67341's source; the probe is not kept).
  */
 export const PRE77_MISSION = '{"format":"orbitlab.mission","version":2,"mission":{"vehicleId":"falcon9","satelliteId":"cubesats","siteId":"cape","orbitId":"leo","orbit":{"id":"leo","name":"Low Earth orbit (500 km)","perigee":500000,"apogee":500000,"inclination":"site","argPerigee":0,"raanMode":"free","description":"Generic circular LEO at the minimum inclination of the launch site."},"launchTime":"2026-09-25T06:00:00.000Z","payloadMass":1000,"guidanceOverrides":{"kickAngle":4.5},"failure":{"mode":"thrustLoss","time":95,"stage":1},"boosterRecovery":true,"recoveryPlan":{"core":{"kind":"droneShip"}},"dynamics":{"model":"sixDof","wind":"shear","seed":4242}}}';
-/** What Build's "Fly it" hands over: a parts design as a mission document (build-handoff.ts), and its reference as Build makes it (build-screen.ts). */
-export function flownDesign(): { doc: unknown; design: DesignRef } {
+/** What Build's "Fly it" hands over: a parts design as a mission document (build-handoff.ts), and its reference as Build makes it (build-screen.ts, with `m`'s designRefFor). */
+export function flownDesign(m: MissionCode = LIVE_MISSION): { doc: unknown; design: DesignRef } {
   const draft = partsDraft('parts-t1', 'Parts'), r = partsResult(draft);
   if (!r.ok) throw new Error('the parts design was refused');
   return { doc: JSON.parse(JSON.stringify(handoffDocument(r.spec, 5000, FROM))),
-    design: designRefFor('vehicle', { name: 'Parts', recordId: 'd-parts', design: draft }, r.spec.id, { id: 'd-parts', updated: '2026-10-04T12:30:00.000Z', design: draft }) };
+    design: m.designRefFor('vehicle', { name: 'Parts', recordId: 'd-parts', design: draft }, r.spec.id, { id: 'd-parts', updated: '2026-10-04T12:30:00.000Z', design: draft }) };
 }
 /**
  * The panel's mission, the page's stored copy (`orbitlab.mission`) and the
  * design reference beside it. Writes go through `store`, a profile's binding,
  * and fail silently there as `saveStoredMission` lets them (a read-only tab).
+ * Every read, write and origin rule is `m`'s: the live code, or 23ede7f's copy.
  */
 export class MissionPage {
-  readonly ws = new WorkspaceMission();
+  readonly ws: MissionRules;
   /** the panel's constructor default: the ISS crew launch */
   panel: MissionState = {
     vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbitId: 'iss', orbit: { ...orbitById('iss') },
@@ -201,21 +228,22 @@ export class MissionPage {
   };
   designRef: DesignRef | null = null;
   /** start-up [1002-1008]: the stored mission in a workspace mode, the viewer's launch on Home */
-  constructor(readonly store: RawStorage, lean: boolean) {
-    const stored = loadStoredMission(store);
-    const start = startupMission({ link: false, lean, stored: stored !== null });
+  constructor(readonly store: RawStorage, lean: boolean, readonly m: MissionCode = LIVE_MISSION) {
+    this.ws = new m.WorkspaceMission();
+    const stored = m.loadStoredMission(store);
+    const start = m.startupMission({ link: false, lean, stored: stored !== null });
     if (start === 'demo') this.viewer('demo', this.panel);
     else if (start === 'stored') this.applyStored(stored);
     else { this.ws.adopt(); this.preview(); }
   }
-  doc(): string { return JSON.stringify(missionDocument(this.panel)); }
+  doc(): string { return JSON.stringify(this.m.missionDocument(this.panel)); }
   /** [1144-1147] */
   private currentRef(): DesignRef | null {
-    if (this.designRef && !refFlies(this.designRef, this.panel)) this.designRef = null;
+    if (this.designRef && !this.m.refFlies(this.designRef, this.panel)) this.designRef = null;
     return this.designRef;
   }
   /** every panel change previews [1836] */
-  preview(): void { if (this.ws.persists(this.doc())) saveStoredMission(this.panel, this.store, this.currentRef()); }
+  preview(): void { if (this.ws.persists(this.doc())) this.m.saveStoredMission(this.panel, this.store, this.currentRef()); }
   /** loadViewerMission [1137-1141] */
   viewer(origin: Exclude<MissionOrigin, 'workspace'>, mission: MissionState): void {
     this.ws.viewing(origin);
@@ -226,16 +254,16 @@ export class MissionPage {
   /** applyStoredMission [1158-1173]; `share.apply` previews through the panel's change */
   applyStored(stored: unknown): void {
     this.ws.restoring();
-    const parsed = parseMissionDocument(stored, this.panel);
+    const parsed = this.m.parseMissionDocument(stored, this.panel);
     if (parsed.usable) this.panel = parsed.state;
     this.preview();
-    const r = parseDesignRef(stored && typeof stored === 'object' ? (stored as { design?: unknown }).design : undefined);
-    this.designRef = r && r !== 'invalid' && refFlies(r, this.panel) ? r : null;
-    if (this.ws.restored(this.doc(), !parsed.issues.length)) saveStoredMission(this.panel, this.store, this.designRef);
+    const r = this.m.parseDesignRef(stored && typeof stored === 'object' ? (stored as { design?: unknown }).design : undefined);
+    this.designRef = r && r !== 'invalid' && this.m.refFlies(r, this.panel) ? r : null;
+    if (this.ws.restored(this.doc(), !parsed.issues.length)) this.m.saveStoredMission(this.panel, this.store, this.designRef);
   }
   /** entering Explore or Engineer, the launch on its pad: restoreWorkspaceMission [1226-1232] */
   enter(): void {
-    const stored = loadStoredMission(this.store);
+    const stored = this.m.loadStoredMission(this.store);
     if (this.ws.entering({ doc: this.doc(), stored: stored !== null, underway: false })) this.applyStored(stored);
   }
   /** Home's "try a launch yourself" and Watch's copy: openTemplate [1209-1218], in Explore */
@@ -244,14 +272,14 @@ export class MissionPage {
   edit(change: (m: MissionState) => void): void { change(this.panel); this.preview(); }
   /** Build's "Fly it" [648-657], then `designFlown` once Build has read the saved record [1150-1155] */
   flyIt(doc: unknown, design: DesignRef): boolean {
-    const parsed = parseMissionDocument(doc, this.panel);
+    const parsed = this.m.parseMissionDocument(doc, this.panel);
     if (!parsed.usable) return false;
     this.panel = parsed.state; this.preview();
-    saveStoredMission(this.panel, this.store);
+    this.m.saveStoredMission(this.panel, this.store);
     this.enter();
-    if (!refFlies(design, this.panel)) return true;
+    if (!this.m.refFlies(design, this.panel)) return true;
     this.designRef = design;
-    if (this.ws.origin === 'workspace') saveStoredMission(this.panel, this.store, design);
+    if (this.ws.origin === 'workspace') this.m.saveStoredMission(this.panel, this.store, design);
     return true;
   }
 }

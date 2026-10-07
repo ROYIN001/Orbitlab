@@ -1,18 +1,18 @@
 /**
- * EO-STO-1 (plan S10 §10.3 PR 3): the repository's stored bytes, return values
- * and error codes are main's at 23ede7f on every step of these sequences: first
- * start and later starts, typing, two tabs, outside writes, a full disk,
- * damaged and newer records, learners, reset, backups, visit-only — and the
- * §10.3.1 mission paths (the first-launch template, `MissionDocument.design`
- * on "Fly it" and on restore, `OrbitHandoff.origin.design`), each also in a
- * second, read-only tab. The harness and the reference copy are in tests/eo-sto/.
+ * EO-STO-1 (plan S10 §10.3 PR 3): the stored bytes, return values and error
+ * codes of the repository and of the page's mission code are main's at 23ede7f
+ * on every step of these sequences: first start and later starts, typing, two
+ * tabs, outside writes, a full disk, damaged and newer records, learners,
+ * reset, backups, visit-only — and the §10.3.1 mission paths (the first-launch
+ * template, `MissionDocument.design` on "Fly it" and on restore,
+ * `OrbitHandoff.origin.design`), each also in a second, read-only tab. The
+ * harness and the reference copies are in tests/eo-sto/.
  */
 import { describe, expect, it } from 'vitest';
 import { WORKSPACE_KEYS, type RawStorage } from '../src/workspace/registry';
 import { LEGACY_PROFILE_ID, PROFILE_CATALOG_KEY, profileStorageKey } from '../src/workspace/repository';
 import { emptyProgress } from '../src/lessons/progress';
 import * as missionFile from '../src/config/mission-file';
-import { missionDocument } from '../src/config/mission-file';
 import * as designRef from '../src/design/design-ref';
 import * as workspaceMission from '../src/ui/workspace-mission';
 import { handoffFromState, parseHandoff } from '../src/orbit/handoff';
@@ -118,6 +118,14 @@ const VISIT_ONLY: Step[] = [
   ['a catalogue that cannot be read', (w) => { w.disk.values.set(PROFILE_CATALOG_KEY, '{"version":1'); return w.open('D'); }],
 ];
 
+/**
+ * `orbitlab.mission` as 23ede7f stores it after Home's template is changed, and
+ * after "Fly it": the reference run's bytes, printed once (the probe is not
+ * kept); this branch's src/ is 23ede7f's. They also hold the template, parts
+ * and catalogue content the copies are given, which EO-STO-1 takes live.
+ */
+const TEMPLATE_MISSION = '{"format":"orbitlab.mission","version":2,"mission":{"vehicleId":"falcon9","satelliteId":"cubesats","siteId":"cape","orbitId":"leo","orbit":{"id":"leo","name":"Low Earth orbit (500 km)","perigee":500000,"apogee":500000,"inclination":"site","argPerigee":0,"raanMode":"free","description":"Generic circular LEO at the minimum inclination of the launch site."},"launchTime":"2026-09-25T06:00:00.000Z","payloadMass":1200,"guidanceOverrides":{},"failure":{"mode":"none","time":60,"stage":0},"boosterRecovery":false,"dynamics":{"model":"sixDof","wind":"calm","seed":20260919}}}';
+const FLOWN_MISSION = '{"format":"orbitlab.mission","version":2,"mission":{"vehicleId":"parts-t1","satelliteId":"cubesats","siteId":"cape","vehicleSpec":{"id":"parts-t1","name":"Parts","country":"US","manufacturer":"","height":72.39399999999999,"payloadLEO":0,"payloadGTO":0,"fairing":{"mass":1900,"diameter":5.2,"length":13.1,"sepAltitude":115000},"stages":[{"id":"s1","name":"First stage (9× Merlin 1D)","dryMass":22200,"propellantMass":410900,"engine":{"name":"Merlin 1D","count":9,"thrustSL":845000,"thrustVac":914000,"ispSL":282,"ispVac":311,"minThrottle":0.4},"diameter":3.66,"length":42},{"id":"s2","name":"Second stage (Merlin Vacuum)","dryMass":4300,"propellantMass":108000,"engine":{"name":"Merlin Vacuum","count":1,"thrustSL":700000,"thrustVac":981000,"ispSL":250,"ispVac":348,"minThrottle":0.4,"vacuumOnly":true},"diameter":3.66,"length":15}],"sites":["cape"],"maxQ":40000,"maxAccel":50},"orbitId":"leo","orbit":{"id":"leo","name":"Low Earth orbit (500 km)","perigee":500000,"apogee":500000,"inclination":"site","argPerigee":0,"raanMode":"free","description":"Generic circular LEO at the minimum inclination of the launch site."},"launchTime":"2026-09-25T06:00:00.000Z","payloadMass":5000,"guidanceOverrides":{},"failure":{"mode":"none","time":60,"stage":0},"boosterRecovery":false,"dynamics":{"model":"pointMass","wind":"calm","seed":20260919}},"design":{"kind":"vehicle","name":"Parts","specId":"parts-t1","recordId":"d-parts","revision":"2026-10-04T12:30:00.000Z","edited":false}}';
 const design = flownDesign(), template = () => quickstartMission(FIRST_LAUNCH, FROM);
 const mission = (w: World, tab: string) => w.binding(tab).getItem('orbitlab.mission');
 /** §10.3.1: the page's mission over the learner's storage, in the owning tab and in a read-only one. */
@@ -127,18 +135,19 @@ const MISSION_PATHS: Step[] = [
   ['Home: the first-launch template; nothing is stored', (w) => { w.page('A').template(template()); return w.page('A').ws.origin; }],
   ['entering Engineer keeps the template, and the stored mission', (w) => { w.page('A').enter(); return w.page('A').ws.origin; }],
   ['the template changed: now it is stored', (w) => { w.page('A').edit((m) => { m.payloadMass = 1200; }); return w.page('A').ws.origin; }],
-  ['Build: "Fly it" stores the design and its revision', (w) => w.page('A').flyIt(design.doc, design.design)],
+  ['Build: "Fly it" stores the design and its revision', (w) => { const flown = flownDesign(w.impl.mission); return w.page('A').flyIt(flown.doc, flown.design); }],
   ['reload: start-up restores the mission with its design', async (w) => [await w.open('A'), w.page('A').designRef]],
   ['"Continue in Orbit": the hand-off carries the design, in memory only', (w) => {
     const p = w.page('A'), h = handoffFromState({ r: { x: 7e6, y: 0, z: 0 }, v: { x: 0, y: 7546, z: 0 }, jd: 2461318.5,
       spacecraft: { mass: 1000, area: 4, cd: 2.2, cr: 1.3, kind: 'earthObs', propulsion: null }, label: 'Parts in LEO' });
-    h.origin = { mission: missionDocument(p.panel), vehicleName: 'Parts', missionTime: 600, ...(p.designRef ? { design: p.designRef } : {}) };
+    h.origin = { mission: p.m.missionDocument(p.panel), vehicleName: 'Parts', missionTime: 600, ...(p.designRef ? { design: p.designRef } : {}) };
     return parseHandoff(JSON.parse(JSON.stringify(h)))?.origin.design ?? null;
   }],
   ['a second tab on the learner opens Engineer, read-only', async (w) => [await w.open('B'), w.page('B').designRef]],
   ['read-only: template, Engineer, a change, "Fly it"', (w) => {
     const p = w.page('B'); p.template(template()); p.enter(); p.edit((m) => { m.payloadMass = 900; });
-    return [p.flyIt(design.doc, design.design), p.ws.origin];
+    const flown = flownDesign(w.impl.mission);
+    return [p.flyIt(flown.doc, flown.design), p.ws.origin];
   }],
   ['read-only, from Home: template, Explore', async (w) => { await w.open('B'); const p = w.page('B', true); p.template(template()); p.enter(); return p.ws.origin; }],
 ];
@@ -183,10 +192,12 @@ describe('EO-STO-1: every step stores what main (23ede7f) stores', () => {
     for (const step of ['the first tab opens Engineer on it', 'Home: the first-launch template; nothing is stored',
       'entering Engineer keeps the template, and the stored mission']) expect(kept(step), step).toBe(PRE77_MISSION);
     expect(JSON.parse(kept('the template changed: now it is stored')!).mission.payloadMass).toBe(1200);
+    expect(kept('the template changed: now it is stored')).toBe(TEMPLATE_MISSION);
     // #80: "Fly it" stores the design beside the mission; start-up restores both, the same bytes
     const flown = kept('Build: "Fly it" stores the design and its revision')!;
     expect(JSON.parse(flown).design).toEqual(design.design);
     expect(kept('reload: start-up restores the mission with its design')).toBe(flown);
+    expect(flown).toBe(FLOWN_MISSION);
     expect(at(current, '"Continue in Orbit": the hand-off carries the design, in memory only').result).toBe(JSON.stringify(design.design));
     // the hand-off and the read-only tab store nothing
     const after = at(current, 'reload: start-up restores the mission with its design').disk;
