@@ -81,10 +81,11 @@ class Page {
   }
 
   private applyStored(stored: unknown): void {
-    this.ws.adopt();
+    this.ws.restoring();
     const parsed = parseMissionDocument(stored, this.panel);
     if (parsed.usable) this.panel = parsed.state;
     this.preview();
+    if (this.ws.restored(this.doc(), !parsed.issues.length)) saveStoredMission(this.panel, this.storage);
   }
 
   go(mode: Mode): void {
@@ -172,6 +173,29 @@ describe('the rules (A1)', () => {
   });
 });
 
+describe('the rules: a stored mission read with issues is held (M-PLAN-031)', () => {
+  it('stores nothing while it is read, nothing while it is unchanged, and the first change', () => {
+    const ws = new WorkspaceMission();
+    ws.restoring();
+    expect(ws.persists('s')).toBe(false); // being read
+    expect(ws.restored('s', false)).toBe(false);
+    expect(ws.persists('s')).toBe(false);
+    expect(ws.origin).toBe('workspace');
+    expect(ws.persists('s2')).toBe(true);
+    expect(ws.persists('s')).toBe(true); // changed once: the user's from then on
+  });
+
+  it('a clean read is stored at once, and any other mission the user takes on ends the hold', () => {
+    const ws = new WorkspaceMission();
+    ws.restoring();
+    expect(ws.restored('s', true)).toBe(true);
+    expect(ws.persists('s')).toBe(true);
+    ws.restoring(); ws.restored('s', false);
+    ws.adopt(); // a link, a file, a lesson
+    expect(ws.persists('s')).toBe(true);
+  });
+});
+
 describe('journeys (A1)', () => {
   it('the audit\'s: Falcon 9 in Engineer → Home → reload → Engineer gives the Falcon 9 back, whole', () => {
     const storage = withUsersMission();
@@ -249,6 +273,78 @@ describe('journeys (A1)', () => {
     expect(storage.map.size).toBe(0);
     page.edit((m) => Object.assign(m, quickstartMission('leo', FROM), { dynamics: defaultDynamics('falcon9') }));
     expect(page.stored()?.vehicleId).toBe('falcon9');
+  });
+});
+
+/** M-PLAN-031: a stored document this version cannot keep whole, as raw bytes in the page's storage. */
+function storedAs(doc: unknown) {
+  const storage = memoryStorage();
+  const bytes = JSON.stringify(doc);
+  storage.setItem('orbitlab.mission', bytes);
+  return { storage, bytes };
+}
+const usersDoc = () => JSON.parse(JSON.stringify(missionDocument(usersMission())));
+
+describe('a stored mission this version cannot keep whole is read, not written over (M-PLAN-031)', () => {
+  const newer = () => {
+    const doc = usersDoc();
+    return { ...doc, version: 99, future: { kept: true }, mission: { ...doc.mission, futureSetting: 7 } };
+  };
+  const reset = () => {
+    const doc = usersDoc();
+    return { ...doc, mission: { ...doc.mission, payloadMass: -1 } };
+  };
+
+  it('a newer version\'s mission: the page starts on it in Engineer and its bytes stay as they were', () => {
+    const { storage, bytes } = storedAs(newer());
+    const page = new Page(storage, 'engineer');
+    expect(page.panel).toEqual(usersMission()); // read as far as this version understands it
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    page.preview(); // a flight reset on its pad, a resize: no edit
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+  });
+
+  it('a newer version\'s mission brought back on entering the workspace keeps its bytes until the user changes it', () => {
+    const { storage, bytes } = storedAs(newer());
+    const page = new Page(storage, 'home');
+    page.go('explore');
+    expect(page.panel).toEqual(usersMission());
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    // the user's own edit is what replaces it
+    page.edit((m) => { m.payloadMass = 1200; });
+    expect(storage.map.get('orbitlab.mission')).not.toBe(bytes);
+    expect(page.stored()).toEqual({ ...usersMission(), payloadMass: 1200 });
+  });
+
+  it('a mission with settings put back to their defaults is read, and not saved as if valid until it is edited', () => {
+    const { storage, bytes } = storedAs(reset());
+    expect(parseMissionDocument(reset(), usersMission()).issues.map((i) => i.field)).toContain('setup.payloadMass');
+    const page = new Page(storage, 'engineer');
+    expect(page.panel.vehicleId).toBe('falcon9');
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    page.go('home');
+    page.go('engineer');
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    page.edit((m) => { m.payloadMass = 900; });
+    expect(page.stored()).toEqual({ ...usersMission(), payloadMass: 900 });
+  });
+
+  it('a document none of which is usable is not written over by the mission the page falls back to', () => {
+    const { storage, bytes } = storedAs({ format: 'orbitlab.mission', version: 99, mission: 'a layout this version cannot read' });
+    const page = new Page(storage, 'engineer');
+    expect(storage.map.get('orbitlab.mission')).toBe(bytes);
+    page.edit((m) => Object.assign(m, usersMission()));
+    expect(page.stored()).toEqual(usersMission());
+  });
+
+  it('a mission of this version is restored as before', () => {
+    const storage = withUsersMission();
+    const before = storage.map.get('orbitlab.mission');
+    const page = new Page(storage, 'engineer');
+    expect(page.panel).toEqual(usersMission());
+    expect(storage.map.get('orbitlab.mission')).toBe(before);
+    page.edit((m) => { m.payloadMass = 1100; });
+    expect(page.stored()).toEqual({ ...usersMission(), payloadMass: 1100 });
   });
 });
 

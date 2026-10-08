@@ -1,5 +1,5 @@
 import { rememberNumericText, rememberedNumericText } from '../../workspace/numeric-drafts';
-import { workspaceStorage, registerWorkspaceFlush } from '../../workspace/storage';
+import { workspaceStorage, registerWorkspaceFlush, keptForWorkspace } from '../../workspace/storage';
 /**
  * The lessons page's authoring tab (`#/lessons/author`; roadmap T01, Phase 4
  * map §4.1): the instructor turns the mission on the setup panel into a
@@ -178,10 +178,15 @@ class AuthorView {
   private readonly actions = el('div', 'author-actions');
   private lesson: CatalogLesson | null = null;
 
-  constructor(private readonly host: AuthorHost, private readonly container: HTMLElement) {
+  constructor(private host: AuthorHost, private container: HTMLElement) {
     this.idEdited = this.editedId();
-    const detachFlush = registerWorkspaceFlush(() => this.savePending(true));
-    if (typeof window !== 'undefined') window.addEventListener('pagehide', (event) => { if (!event.persisted) detachFlush(); });
+    registerWorkspaceFlush(() => this.savePending(true));
+  }
+
+  /** A later opening of the tab: the same drafts, unsaved edits included, on the page anew. */
+  reopen(host: AuthorHost, container: HTMLElement): this {
+    this.host = host; this.container = container; this.result.replaceChildren();
+    return this;
   }
 
   private savePending(strict = false): void {
@@ -711,7 +716,7 @@ function lockText(key: LockKey): string {
 }
 
 export function renderAuthor(host: AuthorHost, container: HTMLElement): { applyLanguage(): void } {
-  const view = new AuthorView(host, container);
+  const view = keptForWorkspace(AuthorView, () => new AuthorView(host, container)).reopen(host, container);
   view.render();
   return view;
 }
