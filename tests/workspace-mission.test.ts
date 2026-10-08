@@ -13,6 +13,8 @@ import { defaultDynamics } from '../src/physics/rigid/config';
 import { quickstartMission } from '../src/ui/quickstart';
 import { FEATURED_WATCH_MISSION, watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
 import { WorkspaceMission, missionSummary, startupMission } from '../src/ui/workspace-mission';
+import { missionNotice } from '../src/ui/mission-share';
+import { t } from '../src/i18n';
 
 const FROM = new Date('2026-09-25T06:00:00Z');
 type Mode = 'home' | 'watch' | 'explore' | 'engineer' | 'orbit' | 'build';
@@ -364,5 +366,50 @@ describe('the "continue" card\'s summary (A1)', () => {
     expect(missionSummary(null)).toBeNull();
     expect(missionSummary({ format: 'something else', mission: {} })).toBeNull();
     expect(missionSummary({ ...doc, mission: { ...doc.mission, payloadMass: 'heavy' } })).toBeNull();
+  });
+});
+
+describe('the notice says a held stored mission is kept as stored until changed (r16-2b-notice, M-PLAN-031)', () => {
+  const HELD = 'This mission is kept as it was stored until you change it; your first edit saves it in this app\'s format.';
+  const newer = () => {
+    const doc = usersDoc();
+    return { ...doc, version: 99, mission: { ...doc.mission, futureSetting: 7 } };
+  };
+  const reset = () => {
+    const doc = usersDoc();
+    return { ...doc, mission: { ...doc.mission, payloadMass: -1 } };
+  };
+  /** the restore as src/main.ts applyStoredMission does it: whether it is held, and its notice */
+  const restore = (doc: unknown) => {
+    const ws = new WorkspaceMission();
+    ws.restoring();
+    const parsed = parseMissionDocument(doc, usersMission());
+    ws.restored('s', !parsed.issues.length);
+    return { ws, parsed, notice: missionNotice(parsed, 'stored') };
+  };
+
+  it('a held restore (newer version, settings reset) carries the line; the first edit ends the hold', () => {
+    expect(t('share.notice.held')).toBe(HELD);
+    for (const doc of [newer(), reset()]) {
+      const { ws, parsed, notice } = restore(doc);
+      expect(ws.held).toBe(true);
+      expect(notice).toMatchObject({ level: 'warn', held: true });
+      // a link or a file is stored at once in this app's format: never held
+      expect(missionNotice(parsed, 'link')?.held).toBeFalsy();
+      expect(missionNotice(parsed, 'file')?.held).toBeFalsy();
+      expect(ws.persists('s')).toBe(false);
+      expect(ws.held).toBe(true);
+      expect(ws.persists('s2')).toBe(true);
+      expect(ws.held).toBe(false);
+    }
+  });
+
+  it('a clean restore does not carry it, nor a document none of which could be shown', () => {
+    const clean = restore(usersDoc());
+    expect(clean.ws.held).toBe(false);
+    expect(clean.notice).toBeNull();
+    const unusable = restore({ format: 'orbitlab.mission', version: 99, mission: 'a layout this version cannot read' });
+    expect(unusable.notice).toMatchObject({ level: 'error' });
+    expect(unusable.notice?.held).toBeFalsy();
   });
 });

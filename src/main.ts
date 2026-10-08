@@ -1834,6 +1834,7 @@ class App {
     // the panel or over WebMCP, previews. The viewer's prepared launches do
     // not replace it until they are changed (audit 2026-09-27 A1).
     if (this.workspace.persists(this.missionDoc())) saveStoredMission(this.panel.missionState(), undefined, this.currentDesignRef());
+    if (!this.workspace.held) this.panel.share.release();
     this.playing = false;
     this.panel.setRunning(false);
     this.fastForwardTo = null;
