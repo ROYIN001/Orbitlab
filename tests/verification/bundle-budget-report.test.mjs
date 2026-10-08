@@ -31,7 +31,8 @@ function budget(budgets, files, { notPrecached = [], log = null } = {}) {
       writeFileSync(resolve(dir, 'fixture-build.log'), log);
       args.push(resolve(dir, 'fixture-build.log'));
     }
-    const result = spawnSync(process.execPath, args, { cwd: dir, encoding: 'utf8' });
+    // Without GITHUB_ACTIONS: on CI the gate also prints `::warning` annotations, which the expected text leaves out.
+    const result = spawnSync(process.execPath, args, { cwd: dir, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: '' } });
     return { code: result.status, stdout: result.stdout, stderr: result.stderr, output: result.stdout + result.stderr };
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
