@@ -1,6 +1,6 @@
 ## CHANGELOG
 
-- Build (R0.4, M-PLAN-020): `npm run budget` also prints a report-only table with no ceilings: raw, gzip and brotli kB for every group, an `initial load` group read from `dist/index.html` (the page and every script, module preload and stylesheet it links: 5070.5 kB raw, 1430.7 kB gzip today) and a `textures` group (3789.4 kB, sent as it is); `budgets.json` and the pass/fail verdict are unchanged.
+- Build (R0.4, M-PLAN-020): `npm run budget` also prints a report-only table with no ceilings: raw, gzip and brotli kB for every group, an `initial load` group read from `dist/index.html` (the page and every script, module preload and stylesheet it links: 5074.6 kB raw, 1431.5 kB gzip on main `3e15303`) and a `textures` group (3789.4 kB, sent as it is); `budgets.json` and the pass/fail verdict are unchanged.
 
 ## PROGRESS
 
