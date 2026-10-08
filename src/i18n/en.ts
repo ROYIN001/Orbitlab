@@ -2638,7 +2638,8 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.ex.store.fileFormat': 'This file is not an Orbitlab design, so nothing was imported.',
   'build.ex.store.fileMission': 'This is a mission file, not a design: open it in the Launch section, under "Share & save the mission".',
   'build.ex.store.fileInvalid': 'The rocket in this file is not one this version can fly, so nothing was imported.',
-  'build.ex.store.fileNewer': 'It was saved by a newer version of Orbitlab: anything this version does not know was left out.',
+  'build.ex.store.fileNewer': 'It was saved by a newer version of Orbitlab, and this version read every part of its design.',
+  'build.ex.store.fileNewerFields': 'This file was saved by a newer version of Orbitlab, and its design has parts this version does not know ({fields}), so nothing was imported. Open it in a newer Orbitlab.',
   // --- D06 track B: the satellite builder (build.sat.*) ---
   'build.sat.tpl.napa2': 'NAPA-2 (6U CubeSat)',
   'build.sat.tpl.napa2.about': 'The Royal Thai Air Force\'s second Earth-observation satellite, a 6U CubeSat: its published 10 kg and size, the orbit it flew, no engine and cells on its body. Its loads, battery, radio and camera are estimates.',
