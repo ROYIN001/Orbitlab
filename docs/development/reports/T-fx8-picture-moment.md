@@ -314,3 +314,16 @@ I could not refute the root cause or the proposed fix. I read the code at 3e1530
 5. With pictures of the same moment, the true change is p75 0-2, so the unchanged limit of 12 is now very loose. Under the sky sabotage, p75 was 1 and only the mean-ratio check caught it. The fix does not tighten the check, though it now could.
 6. The claim that pausing does not stop warp-10 steps already sent is described as "not the cause". That is too strong: those steps add +2-5 s and are needed for the late cluster. It is latency by design (the worker catches up time that had already passed), not a hidden app bug, but the report should describe it as a contributing factor.
 7. The experiment's fix worktree is at /home/user/Orbitlab/.claude/worktrees/wf_7d72c966-75e-5. That is inside the checkout declared read-only. Check whether the workflow created it on purpose.
+
+## Run of the committed branch (2026-10-08)
+
+`npx vite build && CHROMIUM=/opt/pw-browsers/chromium node tests/browser/run.mjs fx8-context-loss` on `d73f576` (the loss pinned at T+133 plus the fix) passed in 149.1 s:
+
+| Case | Lost window | Pictures at | Luminance before → after | Pixel change (p75 / p90) |
+|---|---|---|---|---|
+| In-flight Launch | T+133.4 → T+137.9 s | T+133.37 and T+133.37 s | 30.2 ± 35.0 → 30.6 ± 37.5 | 2 / 5 |
+| Orbit | — | — | — | 3 / 15 |
+| Home-page Launch | — | — | — | 0 |
+| Home | — | — | — | 0 |
+
+Every in-flight Launch picture matched, and so did the 330 telemetry rows to T+160 s, compared with the reference flight.
