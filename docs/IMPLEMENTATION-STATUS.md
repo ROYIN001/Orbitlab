@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-10-07. This file states the current position only; how it was reached is in the
+Updated 2026-10-08. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -441,8 +441,8 @@ wave K1 work under way. How to use them is in the [user guide](USER-GUIDE.md#lea
 | Item | |
 |---|---|
 | R1.1 local learner workspace | done (#71, #72): up to 40 learners in one browser, each in one localStorage record that holds all of that learner's saved work, drafts and personal settings, with their launch recordings in IndexedDB under the learner's id; the learner open is chosen per browser tab; work saved before profiles becomes the first learner, and the originals are removed only after the copy is verified. Create, rename, switch (pending edits saved, then the page reloads on Home), delete (an interrupted delete finishes at the next start), and resets of learning, tests, both or one lesson (D-33) that keep personal lessons, designs, the mission and the notebook. JSON backups of one learner or all, 8 MB a file, previewed before import, with a new learner by default and Keep existing by default for an existing one; old `orbitlab.project` files still import. Recordings in a separate binary file of up to 128 MB and 100 recordings. Values an import cannot use are kept inert as recovery data. A Web Lock per learner makes a second tab on the same learner read-only; without storage or Web Locks a tab is visit-only ([R1.1 report](development/reports/R1.1-storage.md)) |
-| R1.2 profile window and learner context | done (#71, #72): the ◉ button and its window in three languages, the learner's name on the lessons pages, confirmations that say what a switch, reset or delete does, a backup offered before each, and the chooser after deleting the open or the last learner ([R1.2 report](development/reports/R1.2-profiles-ui.md)) |
-| R1.6 storage hardening (wave K1) | under way. Merged: #97 (a learner that cannot be read no longer keeps its lock; a failed clean-up at start no longer sends every learner to visit-only; past 1,000 remembered number fields the oldest is forgotten instead of new typing being lost), #114 (a learner that cannot be read, or was saved by a newer version, stays listed with its bytes untouched, a copy of its stored data and delete, instead of emptying the list; Export all saves the readable learners and says that others were left out; audio export reads only its learner), #122 (a stored mission of a newer version, or with a setting reset, is no longer written over when restored), #124 (a backup near 8 MB is saved in the form the import accepts; visit-only mode refuses delete). Still planned in R1.6: fewer re-reads of the profile record, the one-by-one transfer of pre-profile recordings (D-68), and asking the browser to keep the data, with a warning for iPhone and iPad |
+| R1.2 profile window and learner context | done (#71, #72): the ◉ button and its window in three languages, the learner's name on the lessons pages, confirmations that say what a switch, reset or delete does, a backup offered before a reset, a delete or a replacing import, and the chooser after deleting the open or the last learner ([R1.2 report](development/reports/R1.2-profiles-ui.md)) |
+| R1.6 storage hardening (wave K1) | under way. Merged: #97 (a learner that cannot be read no longer keeps its lock; a failed clean-up at start no longer sends every learner to visit-only; past 1,000 remembered number fields the oldest is forgotten instead of new typing being lost), #114 (a learner that cannot be read, or was saved by a newer version, stays listed with its bytes untouched, a copy of its stored data and delete, instead of emptying the list; Export all saves the readable learners and says that others were left out; audio export reads only its learner), #122 (a stored mission of a newer version, or with a setting reset, is no longer written over when restored), #124 (a backup near 8 MB is saved in the form the import accepts; visit-only mode refuses delete), #132 (tests only: a differential storage harness and fixtures for older readers), #138 (the held stored mission's notice says it is kept as stored until you change it), #139 (pre-profile recordings move to the first learner one at a time; one that collides stays in place, unowned, with a one-time notice naming the first learner; D-68). Still planned in R1.6: fewer re-reads of the profile record, and asking the browser to keep the data, with a warning for iPhone and iPad |
 
 ### Development plan v1.2: phases 2 and 3
 
@@ -678,10 +678,12 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
   on reload; only a new tab reaches the list with that learner's copy and delete, and not even a
   new tab when it is the device's only learner and the first one (R1.6-FU-SEL, open).
 - A learner's JSON record and their recordings are separate stores, not one transaction: an
-  interrupted delete finishes at the next start. Recordings are not in the JSON backup. One
-  pre-profile recording that collides with a recording the first learner already owns stops the
-  transfer of all of them: all are kept, none is shown, and reloading does not finish it
-  (M-PLATFORM-010; D-68 moves them one by one, planned). A version of the app from before profiles
+  interrupted delete finishes at the next start. Recordings are not in the JSON backup.
+  Pre-profile recordings move to the first learner one at a time (D-68, #139). One whose launch
+  already has a recording of the first learner's own stays where it was, unowned: both copies are
+  kept, the learner's own plays, and a notice naming the first learner is shown at that start only.
+  Nothing in the app lists, exports or deletes that original afterwards (M-PLATFORM-010; a "keep
+  both or choose" action is not built). A version of the app from before profiles
   cannot read profile records, and a tab of it left open can still write the old keys, which this
   version ignores.
 - Phase 4's Russian and Thai texts, the lesson packs' among them, have not been read by a native speaker.

@@ -236,6 +236,10 @@ learner's name.
 **The first learner.** The first time a version with profiles starts, the work an earlier version
 saved in this browser becomes the first learner, named after the name typed on the lessons page (or
 **Learner 1**). The earlier copies are removed only after the new copy has been checked.
+Recordings given to launches move to the first learner one at a time. Where the first learner
+already has a recording of their own for the same launch, the older one is not moved: both are
+kept, the learner's own one plays, and at that start a line under the top bar says so, naming the
+first learner. If the move is interrupted, the line asks you to reload to finish it.
 
 **Create, rename and switch.** **Create a profile** asks for a name of up to 80 characters; two
 learners may have the same name. The browser holds up to 40 learners. **Open this workspace**
@@ -311,9 +315,9 @@ Orbitlab opens a temporary workspace and says that changes will be lost when the
 starts from a copy of the learner's saved work when that can be read, and writes nothing to the
 device. Switching, creating, deleting, resetting, importing and audio are off, but **Export this
 learner's workspace** saves what was done during the visit. If the cause is a learner whose data
-cannot be read, reloading the tab opens the same learner again. A new tab shows the list of
-learners, where that learner can be copied or deleted, unless it is the device's only learner and
-the first one, which a new tab opens directly.
+cannot be read, reloading the tab tries the same learner again, so the tab stays visit-only. A new
+tab shows the list of learners, where that learner can be copied or deleted, unless it is the
+device's only learner and the first one, which a new tab opens directly.
 
 **On iPhone and iPad.** Safari may erase a website's stored data, every learner's work included,
 when the site has not been opened during seven days of Safari use. Orbitlab added to the Home
