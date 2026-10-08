@@ -32,7 +32,7 @@ import { TOUR, type TourView } from '../../orbit/tour';
 import { SKY_TOUR, type SkyTourStep } from '../../orbit/sky-tour';
 import {
   PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, REPEAT_LIMITS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, linearScale,
-  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, eoRepeatRevs, tourSetup, withApsis, type SliderScale,
+  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, eoRepeatRevs, thaiInSky, tourSetup, withApsis, type SliderScale,
 } from '../../orbit/playground-model';
 import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
 import {
@@ -855,6 +855,18 @@ export class OrbitPlayground {
       this.orbitView?.setOrbit(this.orbit, true);
       this.render();
     },
+    // M-ORBIT-001: the same satellite where it is now, in real time, as a case lesson opens one
+    showInSky: (id: string) => {
+      const f = thaiInSky(id);
+      if (!f) return;
+      this.enterSkyNow();
+      this.sky.showForTour(f.group, f.satnum);
+      if (this.view !== '3d' && this.view !== 'track') this.view = '3d';
+      this.warp = 1;
+      this.playing = true;
+      this.render();
+      this.resize();
+    },
   };
 
   /** O03: the spacecraft chosen for the budget, with an engine; null with none. */
@@ -1299,6 +1311,9 @@ export class OrbitPlayground {
       el('p', 'pg-tour-text', yours ? t(this.fromDesign() ? 'build.sat.orbit.tourText' : 'pg.tour.yours.text', { label: this.handoff!.label }) : t(step.textKey)),
     );
     if (sky) {
+      // M-ORBIT-007: the catalogue not in yet — loading, or why not and Try again (the panel saying so is hidden here)
+      const state = this.sky.loadState();
+      if (state) { state.style.margin = '12px 0 0'; box.append(state); }
       // P2.5: a real satellite's readouts, and what the step adds
       const now = this.sky.liveNow();
       if (now) {

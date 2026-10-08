@@ -31,11 +31,26 @@ export default async function storedMissionNewer(t) {
   const saved = await t.until(async () => { const s = JSON.parse((await raw()) ?? 'null'); return s?.mission?.payloadMass === 1234 ? s : null; }, { timeoutMs: 10_000 });
   if (!t.check(saved, 'the configured mission was not stored')) return;
 
+  // Start-up is over once the scene draws again (its frame count, as render-idle
+  // reads it). `#loading.hidden` comes earlier: init (src/main.ts) sets it before
+  // the start-up mission is loaded, and on a software GPU the next frame then
+  // waits about 8 s for the GPU process (textures, shader programs) while the page
+  // itself is idle. A click made in that time spends it in Playwright's
+  // "stable" check, inside the click's own 30 s.
+  const frames = () => page.evaluate(() => window.orbitlab.scene.renderer.info.render.frame);
+  const drawing = async () => {
+    // two frames: the first may be start-up's own, drawn before that wait
+    for (let k = 0; k < 2; k++) {
+      const before = await frames();
+      if (!await t.until(async () => (await frames()) > before, { timeoutMs: 60_000 })) return false;
+    }
+    return true;
+  };
   const reload = async (hash) => {
     await page.evaluate((h) => { location.hash = h; }, hash);
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 });
     await app.ready();
-    await page.waitForTimeout(1000);
+    t.check(await drawing(), `the scene did not draw after reloading on ${hash}`);
   };
   const notice = async () => (await page.locator('.share-notice').first().textContent()) ?? '';
   const HELD = /kept as it was stored until you change it; your first edit saves it in this app's format/;
