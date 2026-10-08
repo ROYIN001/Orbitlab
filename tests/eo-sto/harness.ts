@@ -75,7 +75,8 @@ export const CURRENT: Impl = {
   mission: LIVE_MISSION,
 };
 export const REFERENCE: Impl = {
-  name: 'ref 23ede7f', make: (...a) => new ref.WorkspaceRepository(...a), archiveText: (a) => ref.workspaceArchiveText(a as ref.WorkspaceArchive),
+  // ref's media interface predates `migrate` resolving with a count (R1.6 PR7, D-68); ref awaits it and ignores the value.
+  name: 'ref 23ede7f', make: (s, ss, l, m, ids) => new ref.WorkspaceRepository(s, ss, l, m as ref.WorkspaceMedia, ids), archiveText: (a) => ref.workspaceArchiveText(a as ref.WorkspaceArchive),
   mission: REF_MISSION,
 };
 

@@ -12,6 +12,7 @@ export const PROFILE_CONTEXT_TEXT = {
     "reset": "Reset learning or tests",
     "storageWriteFailed": "The last change was not saved. Keep this page open, free some storage space, and export a backup of your saved work.",
     "mediaMigrationPending": "Your original uploaded audio has been kept, but its transfer to this profile is unfinished. Reload to retry the transfer.",
+    "mediaCollisionsKept": "For missions where {name} already had their own audio, the original uploaded audio was not moved. Both copies are kept; {name}’s own audio is used.",
     "recoveryNotice": "Saved data or the learner selection needs attention. Existing records have been kept; review a backup or reload before changing them.",
     "moduleFailed": "The learner menu could not load. Reload the page to try again."
   },
@@ -25,6 +26,7 @@ export const PROFILE_CONTEXT_TEXT = {
     "reset": "รีเซ็ตประวัติการเรียนหรือผลสอบ",
     "storageWriteFailed": "การเปลี่ยนแปลงล่าสุดยังบันทึกไม่ได้ โปรดเปิดหน้านี้ค้างไว้ เพิ่มพื้นที่จัดเก็บ และส่งออกข้อมูลสำรองของงานที่บันทึกแล้ว",
     "mediaMigrationPending": "ยังเก็บเสียงที่อัปโหลดเดิมไว้ แต่ย้ายเข้าโปรไฟล์นี้ไม่เสร็จ โปรดโหลดหน้าเว็บใหม่เพื่อลองย้ายอีกครั้ง",
+    "mediaCollisionsKept": "สำหรับภารกิจที่ {name} มีเสียงของตัวเองอยู่แล้ว เสียงที่อัปโหลดเดิมไม่ได้ย้ายเข้าโปรไฟล์ ยังเก็บไว้ทั้งสองไฟล์ และใช้เสียงของ {name} เอง",
     "recoveryNotice": "ข้อมูลที่บันทึกหรือการเลือกผู้เรียนต้องตรวจสอบ โดยยังเก็บข้อมูลเดิมไว้ โปรดตรวจข้อมูลสำรองหรือโหลดใหม่ก่อนเปลี่ยนแปลงข้อมูล",
     "moduleFailed": "โหลดเมนูผู้เรียนไม่สำเร็จ กรุณาโหลดหน้าเว็บใหม่เพื่อลองอีกครั้ง"
   },
@@ -38,6 +40,7 @@ export const PROFILE_CONTEXT_TEXT = {
     "reset": "Сбросить историю уроков или тестов",
     "storageWriteFailed": "Последнее изменение не сохранено. Не закрывайте страницу, освободите место и экспортируйте копию сохранённых работ.",
     "mediaMigrationPending": "Исходное загруженное аудио сохранено, но его перенос в профиль не завершён. Перезагрузите страницу для повторной попытки.",
+    "mediaCollisionsKept": "Для миссий, где у учащегося «{name}» уже было своё аудио, исходное загруженное аудио не перенесено. Сохранены обе копии; используется аудио учащегося «{name}».",
     "recoveryNotice": "Сохранённые данные или выбор учащегося требуют внимания. Записи сохранены; проверьте резервную копию или перезагрузите страницу перед изменениями.",
     "moduleFailed": "Не удалось загрузить меню учащихся. Перезагрузите страницу и повторите попытку."
   }
