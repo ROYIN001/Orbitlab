@@ -40,6 +40,7 @@ import type { MissionDocument } from '../../config/mission-file';
 import type { PropellantFamily } from '../../physics/rigid/vehicle-data';
 import { linearScale } from '../../orbit/playground-model';
 import { isDesignOf, type DesignRecord } from '../../design/design-store';
+import { canonicalJson } from '../../design/design-ref';
 import type { DrawnPart } from '../../design/exploded';
 import { stageTable, throttledCore } from '../../design/stage-table';
 import { pickerEntries } from '../../design/vehicle-picker';
@@ -236,6 +237,7 @@ export class ExploreLevel {
         this.queueKeep();
       },
       open: (record) => this.openRecord(record),
+      replacing: (record) => this.replacing(record),
       forgotten: (recordId) => {
         for (const d of [this.state.remix, this.state.parts]) if (d.recordId === recordId) d.recordId = null;
         this.queueKeep();
@@ -429,8 +431,21 @@ export class ExploreLevel {
 
   /** A kept or imported rocket design, opened here (a rocket file imported in the satellite designer, D06), and what the store says of it. */
   openSaved(record: DesignRecord<'vehicle'>, message?: string): void {
-    this.openRecord(record);
-    if (message) this.store.announce('warn', message);
+    // asked first over unsaved changes, as Open is (M-BUILD-007)
+    void this.store.openRecord(record.id).then((opened) => { if (opened && message) this.store.announce('warn', message); });
+  }
+
+  /**
+   * M-BUILD-007: the draft `record` opens over (the one of its kind, remix or parts), put on screen, as the store
+   * compares it with its record; null when it was never saved and is as it started, its default name too (nothing to lose).
+   */
+  private replacing(record?: DesignRecord<'vehicle'>): { design: VehicleSpec | null; recordId: string | null } | null {
+    const mode = record ? draftFromSpec(record.design, record.id).mode : this.state.mode;
+    const d = this.state[mode], base = (d.edit as RemixEdit).base;
+    const start = base ? base.kind === 'catalogue' && remixDraft(base.id, '', '').edit : partsDraft('', '').edit;
+    if (d.recordId === null && d.name === this.defaultNames[mode] && canonicalJson(d.edit) === canonicalJson(start)) return null;
+    this.setMode(mode);
+    return { design: this.result.ok ? this.result.spec : null, recordId: d.recordId };
   }
 
   private openRecord(record: DesignRecord<'vehicle'>): void {

@@ -1,4 +1,4 @@
-/** One IndexedDB transaction owns each media migration/delete. Profile JSON and media are separate stores. */
+/** One IndexedDB transaction owns each media delete and each legacy track move (D-68). Profile JSON and media are separate stores. */
 export const MEDIA_DATABASE = 'orbitlab-soundtracks';
 export const MEDIA_STORE = 'tracks';
 export interface ProfileTrack { id: string; profileId: string; missionId: string; blob: Blob; t0: number; name: string }

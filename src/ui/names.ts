@@ -108,11 +108,16 @@ export function rendezvousBurnName(id: string): string {
   return n ? t('rv.burn.n', { n: n[1] }) : localized(`rv.burn.${id}`, id);
 }
 
+/** M-LEARNING-012: params the open lesson asks the student to work out (`answerEventParams`), printed "?". */
+let withheld: readonly string[] = [];
+export function withholdEventParams(keys: readonly string[]): void { withheld = keys; }
+
 export function localizeEventParams(
   vehicle: VehicleSpec | null,
   params?: Record<string, string | number>,
 ): Record<string, string | number> | undefined {
   if (!params) return params;
+  const hide = withheld.filter((k) => k in params);
   const sat = typeof params.satId === 'string' ? satelliteNameById(params.satId) : null;
   const hardware = (v: string | number | undefined): string | null =>
     typeof v !== 'string' ? null : sat ?? (vehicle ? stageNameByLabel(vehicle, v) : null);
@@ -140,7 +145,7 @@ export function localizeEventParams(
     && (name === null || name === params.name)
     && (kind === null || kind === params.kind) && commandMode === null && abortMode === null && envelopeScope === null && testAxis === null
     && faultKind === null && fdirReason === null && params.engine === undefined && params.jet === undefined && params.units === undefined
-    && burn === null && profile === null && port === null) return params;
+    && burn === null && profile === null && port === null && !hide.length) return params;
   const out = { ...params };
   if (stage !== null) out.stage = stage;
   if (name !== null) out.name = name;
@@ -181,6 +186,7 @@ export function localizeEventParams(
   if (params.engine !== undefined) out.engine = params.engine === 'all' ? t('fault.all') : String(params.engine).split(',').join(', ');
   if (params.jet !== undefined) out.jet = params.jet === 'all' ? t('fault.all') : String(params.jet).split(',').join(', ');
   if (params.units !== undefined) out.units = params.units === 'all' ? t('fault.all') : String(params.units).split(',').join(', ');
+  for (const k of hide) out[k] = '?';
   return out;
 }
 const TEST_AXIS = { roll: 'loop.axis.roll', pitch: 'loop.axis.pitch', yaw: 'loop.axis.yaw' } as const;

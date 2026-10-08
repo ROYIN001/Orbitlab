@@ -77,23 +77,23 @@ export const TRACK2: readonly unknown[] = [
       { id: 'dv', kind: 'measure', measure: 'dvLeft', min: 20 },
     ],
     hints: [
-      { en: 'The setting is in the Engineer mode\'s setup: Ascent guidance: PEG and IGM → Upper-stage guidance.', ru: 'Настройка — в режиме «Инженер»: «Наведение на участке выведения: PEG и IGM» → «Наведение верхних ступеней».', th: 'ค่านี้อยู่ในการตั้งค่าของโหมดวิศวกร: การนำทางขาขึ้น: PEG และ IGM → การนำทางของขั้นบน' },
+      { en: 'The setting is in the Engineer mode\'s setup: Ascent guidance: PEG and IGM → Upper-stage guidance.', ru: 'Настройка — в режиме «Инженер»: «Наведение на участке выведения: PEG и IGM» → «Наведение верхних ступеней».', th: 'ค่านี้อยู่ในการตั้งค่าของโหมดวิศวกร: การนำวิถีขาขึ้น: PEG และ IGM → การนำวิถีของขั้นบน' },
       { en: 'Either law works; the event log says when it took over and how long it expected to burn (t_go).', ru: 'Подходит любой закон; журнал событий покажет, когда он включился и сколько, по его расчёту, осталось работать (t_go).', th: 'ใช้กฎใดก็ได้ บันทึกเหตุการณ์จะบอกว่ารับช่วงเมื่อใดและคาดว่าจะเผาไหม้อีกนานเท่าใด (t_go)' },
       { en: 'Compare the Δv left at the end with and without it: the difference is what the standard steering wasted.', ru: 'Сравните остаток Δv в конце с явным наведением и без него: разница — то, что стандартное управление потратило впустую.', th: 'เปรียบเทียบ Δv ที่เหลือตอนท้ายเมื่อใช้และไม่ใช้ ผลต่างคือสิ่งที่การบังคับทิศมาตรฐานสิ้นเปลืองไป' },
     ],
   },
   {
     id: 'guid-nav', track: 2, order: 3, mode: 'engineer', domains: [4, 6], tags: ['G02', 'INS'],
-    title: { en: 'Inertial navigation without GNSS', ru: 'Инерциальная навигация без ГНСС', th: 'การนำทางเฉื่อยโดยไม่มี GNSS' },
+    title: { en: 'Inertial navigation without GNSS', ru: 'Инерциальная навигация без ГНСС', th: 'การนำร่องเฉื่อยโดยไม่มี GNSS' },
     brief: {
       en: 'Six-DOF Falcon 9. The satellite navigation receiver is out for the whole ascent: the navigation has only its inertial unit, and the one fitted is a cheap MEMS unit. Keep the navigation\'s position error within 500 m up to the first stage\'s cut-off (MECO). GNSS stays off; choose the inertial unit.',
       ru: 'Falcon 9 в шестистепенной модели. Приёмник спутниковой навигации не работает на всём участке выведения: у навигационной системы есть только инерциальный блок, и установлен дешёвый МЭМС-блок. Удержите ошибку навигации по положению в пределах 500 м до выключения первой ступени (MECO). ГНСС остаётся выключенной; выберите инерциальный блок.',
-      th: 'Falcon 9 แบบหกองศาอิสระ เครื่องรับนำทางด้วยดาวเทียมใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำทางมีเพียงหน่วยวัดเฉื่อย และที่ติดตั้งไว้เป็นหน่วย MEMS ราคาถูก จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำทางให้อยู่ภายใน 500 ม. จนถึงการดับเครื่องขั้นที่หนึ่ง (MECO) ให้ GNSS ปิดอยู่เหมือนเดิม และเลือกหน่วยวัดเฉื่อย',
+      th: 'Falcon 9 แบบหกองศาอิสระ เครื่องรับนำร่องด้วยดาวเทียมใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำร่องมีเพียงหน่วยวัดเฉื่อย และที่ติดตั้งไว้เป็นหน่วย MEMS ราคาถูก จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำร่องให้อยู่ภายใน 500 ม. จนถึงการดับเครื่องขั้นที่หนึ่ง (MECO) ให้ GNSS ปิดอยู่เหมือนเดิม และเลือกหน่วยวัดเฉื่อย',
     },
     debrief: {
       en: 'Without fixes, an accelerometer bias b grows into a position error of ½bt² and a gyro error tilts the whole navigation frame, so the error grows faster than linearly: at MECO about 1.7 km with the MEMS unit, 0.3 km with a tactical fibre-optic unit, a few tens of metres with navigation-grade ring-laser gyros. With GNSS the Kalman filter holds all three to metres.',
       ru: 'Без внешних коррекций смещение нуля акселерометра b даёт ошибку положения ½bt², а ошибка гироскопа наклоняет весь навигационный базис, поэтому ошибка растёт быстрее линейной: к MECO — около 1,7 км с МЭМС-блоком, 0,3 км с тактическим волоконно-оптическим и несколько десятков метров с навигационными лазерными гироскопами. С ГНСС фильтр Калмана удерживает все три в пределах метров.',
-      th: 'หากไม่มีการแก้ไขจากภายนอก ไบแอสของมาตรความเร่ง b จะกลายเป็นความคลาดเคลื่อนตำแหน่ง ½bt² และความคลาดของไจโรทำให้กรอบนำทางทั้งหมดเอียง ความคลาดเคลื่อนจึงโตเร็วกว่าเชิงเส้น ที่ MECO ประมาณ 1.7 กม. สำหรับ MEMS 0.3 กม. สำหรับไจโรใยแก้วนำแสงเกรดยุทธวิธี และไม่กี่สิบเมตรสำหรับไจโรเลเซอร์เกรดนำทาง เมื่อมี GNSS ตัวกรองคาลมานรักษาทั้งสามไว้ในระดับเมตร',
+      th: 'หากไม่มีการแก้ไขจากภายนอก ไบแอสของมาตรความเร่ง b จะกลายเป็นความคลาดเคลื่อนตำแหน่ง ½bt² และความคลาดของไจโรทำให้กรอบนำร่องทั้งหมดเอียง ความคลาดเคลื่อนจึงโตเร็วกว่าเชิงเส้น ที่ MECO ประมาณ 1.7 กม. สำหรับ MEMS 0.3 กม. สำหรับไจโรใยแก้วนำแสงเกรดยุทธวิธี และไม่กี่สิบเมตรสำหรับไจโรเลเซอร์เกรดนำร่อง เมื่อมี GNSS ตัวกรองคาลมานรักษาทั้งสามไว้ในระดับเมตร',
     },
     mission: missionDoc({
       vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 10000, orbitId: 'leo',
@@ -104,7 +104,7 @@ export const TRACK2: readonly unknown[] = [
     criteria: [
       {
         id: 'gnss', kind: 'hook', hook: 'gnssOff',
-        label: { en: 'No satellite navigation', ru: 'Без спутниковой навигации', th: 'ไม่มีการนำทางด้วยดาวเทียม' },
+        label: { en: 'No satellite navigation', ru: 'Без спутниковой навигации', th: 'ไม่มีการนำร่องด้วยดาวเทียม' },
       },
       { id: 'error', kind: 'measure', measure: 'nav.positionError', max: 500 },
       { id: 'flying', kind: 'outcome', is: 'survived' },
@@ -112,7 +112,7 @@ export const TRACK2: readonly unknown[] = [
     hints: [
       { en: 'Navigation (INS / GNSS) → IMU grade. The telemetry shows the position error as it grows.', ru: '«Навигация (БИНС / ГНСС)» → «Класс БИНС». Телеметрия показывает, как растёт ошибка положения.', th: 'การนำร่อง (INS / GNSS) → เกรดของ IMU ข้อมูลทางไกลแสดงความคลาดเคลื่อนตำแหน่งขณะที่โตขึ้น' },
       { en: 'A bias of 0.001 g held for 150 s alone gives ½·0.0098·150² ≈ 110 m; the MEMS preset used here has a larger bias; actual MEMS units vary in performance.', ru: 'Одно лишь смещение 0,001 g за 150 с даёт ½·0,0098·150² ≈ 110 м; у выбранной здесь модели МЭМС-блока смещение больше; характеристики реальных МЭМС-блоков различаются.', th: 'ไบแอส 0.001 g เพียงอย่างเดียวนาน 150 วินาทีให้ ½·0.0098·150² ≈ 110 ม. แบบจำลอง MEMS ที่เลือกในบทนี้มีไบแอสมากกว่านี้ ส่วนอุปกรณ์ MEMS จริงมีสมรรถนะแตกต่างกัน' },
-      { en: 'The tactical grade is enough; the navigation grade is better still — and dearer.', ru: 'Тактического класса достаточно; навигационный — ещё лучше, но и дороже.', th: 'เกรดยุทธวิธีเพียงพอ เกรดนำทางดียิ่งกว่า แต่แพงกว่าด้วย' },
+      { en: 'The tactical grade is enough; the navigation grade is better still — and dearer.', ru: 'Тактического класса достаточно; навигационный — ещё лучше, но и дороже.', th: 'เกรดยุทธวิธีเพียงพอ เกรดนำร่องดียิ่งกว่า แต่แพงกว่าด้วย' },
     ],
   },
   {
