@@ -333,6 +333,104 @@ describe('service worker (U03)', () => {
   });
 });
 
+describe('precache transfer without a second download (EQ-1, M-PLATFORM-021)', () => {
+  /**
+   * The browser's HTTP cache in front of the fake server. `held` is what the
+   * page has just downloaded (an `undefined` value is a refusal it kept). A
+   * request whose cache mode lets the browser answer from it gets that copy
+   * without the network; one past it ('reload', 'no-store', 'no-cache') goes
+   * to the server, and only those reach `network`.
+   */
+  function browserScope(server: Record<string, string>, held: Map<string, string | undefined>) {
+    const sw = fakeScope(server);
+    const network: Array<{ url: string; cache: RequestCache | undefined }> = [];
+    const answer = (body: string | undefined) => body === undefined ? new Response('missing', { status: 404 }) : new Response(body, { status: 200 });
+    sw.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const mode = init?.cache;
+      if (mode !== 'reload' && mode !== 'no-store' && mode !== 'no-cache' && held.has(url)) return answer(held.get(url));
+      network.push({ url, cache: mode });
+      if (mode !== 'no-store') held.set(url, server[url]);
+      return answer(server[url]);
+    };
+    return Object.assign(sw, { network });
+  }
+
+  const revisionOf = async (body: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body)))]
+    .map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
+
+  it('reuses on a first visit the copies the page has just downloaded, verified, and downloads only the rest', async () => {
+    // the page loaded these before its worker installs; the physics worker has not run yet
+    const held = new Map<string, string | undefined>(['index.html', 'assets/index-a.js', 'textures/earth.jpg'].map((u) => [SCOPE + u, V1[u as keyof typeof V1]]));
+    const sw = browserScope(serverOf(V1), held);
+    const m = manifestOf(V1);
+    await precache(sw, m);
+    expect(sw.network.map((r) => r.url)).toEqual([`${SCOPE}assets/flight.worker-a.js`]);
+    const cache = await sw.caches.open(precacheName(m.version)) as FakeCache;
+    for (const [url, body] of Object.entries(V1)) expect(await (await cache.match(SCOPE + url))!.text()).toBe(body);
+    expect(await cache.match(`${SCOPE}${MANIFEST_KEY}`)).toBeDefined();
+  });
+
+  it('downloads again, past the HTTP cache, a held copy that is not its revision or was refused, and verifies the download', async () => {
+    // v1's index.html is still held from an earlier visit, and a refusal of
+    // v2's script was kept; the texture held is the right one
+    const held = new Map<string, string | undefined>([
+      [`${SCOPE}index.html`, V1['index.html']], [`${SCOPE}assets/index-b.js`, undefined], [`${SCOPE}textures/earth.jpg`, 'EARTH'],
+    ]);
+    const sw = browserScope(serverOf(V2), held);
+    const m2 = manifestOf(V2);
+    await precache(sw, m2);
+    const past = sw.network.filter((r) => r.cache === 'reload').map((r) => r.url).sort();
+    expect(past).toEqual([`${SCOPE}assets/index-b.js`, `${SCOPE}index.html`]);
+    expect(sw.network.map((r) => r.url)).not.toContain(`${SCOPE}textures/earth.jpg`);
+    const cache = await sw.caches.open(precacheName(m2.version)) as FakeCache;
+    for (const [url, body] of Object.entries(V2)) expect(await (await cache.match(SCOPE + url))!.text()).toBe(body);
+    expect(await cache.match(`${SCOPE}${MANIFEST_KEY}`)).toBeDefined();
+  });
+
+  it('fails the install when the held copy and the download past the HTTP cache are both other bytes, and the running version stays', async () => {
+    const server = serverOf(V1);
+    const sw = browserScope(server, new Map());
+    const m1 = manifestOf(V1), m2 = manifestOf(V2);
+    await precache(sw, m1);
+    const running = [...(await sw.caches.open(precacheName(m1.version)) as FakeCache).store.keys()].sort();
+    // v2 is deployed, then a third deploy lands mid-install: the browser
+    // holds v1's index.html and the server already answers another one
+    Object.assign(server, serverOf(V2), { [`${SCOPE}index.html`]: '<html>v3</html>' });
+    await expect(precache(sw, m2)).rejects.toThrow(/index\.html/);
+    expect(sw.network.filter((r) => r.url === `${SCOPE}index.html`).map((r) => r.cache)).toContain('reload');
+    const next = await sw.caches.open(precacheName(m2.version)) as FakeCache;
+    expect(next.store.has(`${SCOPE}index.html`)).toBe(false);
+    expect(next.store.has(`${SCOPE}${MANIFEST_KEY}`)).toBe(false);
+    const old = await sw.caches.open(precacheName(m1.version)) as FakeCache;
+    expect([...old.store.keys()].sort()).toEqual(running);
+    expect(await (await old.match(`${SCOPE}index.html`))!.text()).toBe('<html>v1</html>');
+  });
+
+  it('holds only a few files in memory at once: at most six are fetched, verified and stored together', async () => {
+    const files = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`assets/chunk-${i}.js`, `chunk ${i}`]));
+    const m = precacheManifest(await Promise.all(Object.entries(files).map(async ([url, body]) => ({ url, revision: await revisionOf(body) }))));
+    const sw = fakeScope(serverOf(files));
+    const cache = await sw.caches.open(precacheName(m.version)) as FakeCache;
+    let open = 0, peak = 0;
+    const fetch = sw.fetch;
+    sw.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      peak = Math.max(peak, ++open);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      return fetch(input, init);
+    };
+    const put = cache.put.bind(cache);
+    cache.put = async (r: RequestInfo | URL, response: Response) => {
+      if (!String(r).endsWith(MANIFEST_KEY)) open--;
+      return put(r, response);
+    };
+    await precache(sw, m);
+    expect(peak).toBeLessThanOrEqual(6);
+    expect(peak).toBeGreaterThan(1);
+    expect(cache.store.size).toBe(21);
+  });
+});
+
 describe('the build (U03)', () => {
   it('emits sw.js with every script, Web Worker bundle, texture and icon in its manifest', async () => {
     const result = await build({ logLevel: 'silent', build: { write: false } }) as Rollup.RollupOutput | Rollup.RollupOutput[];
