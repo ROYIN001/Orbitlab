@@ -62,7 +62,8 @@ function helpers() {
       const mean = lum.reduce((a, b) => a + b, 0) / lum.length;
       const spread = Math.sqrt(lum.reduce((a, b) => a + (b - mean) ** 2, 0) / lum.length);
       const dark = [...lum].sort((a, b) => a - b)[lum.length / 10 | 0];
-      return { mean, spread, dark, pixels: lum.map((v) => Math.round(v)) };
+      // the flight time of the frame on the canvas, for the Launch flight
+      return { mean, spread, dark, pixels: lum.map((v) => Math.round(v)), t: window.orbitlab.shown?.t ?? null };
     },
     lose(which) {
       const r = window.__fx8.renderer(which);
@@ -89,7 +90,7 @@ function helpers() {
 async function loseAndRestore(t, app, which, during, { still, go } = {}) {
   const { page } = app;
   const warnings = app.glWarnings;
-  // the pictures are taken with the flight paused (`still`), so they do not drift apart
+  // the pictures are taken with the flight paused (`still`), and of one flight time, so they do not drift apart
   await still?.();
   const before = await page.evaluate((w) => window.__fx8.look(w), which);
   if (which === 'launch') await page.evaluate(() => { window.__fx8.env = window.orbitlab.scene.envRT; });
@@ -116,8 +117,12 @@ async function loseAndRestore(t, app, which, during, { still, go } = {}) {
   t.check(await t.until(async () => !(await page.evaluate(() => window.__fx8.status())), { timeoutMs: 10_000 }), `${which}: the status line stays after the restore`);
   // a few frames for the scene to settle (the sky tables, the environment probe, the shadow map)
   await page.waitForTimeout(1500);
-  await still?.();
+  await still?.(before.t);
   const after = await page.evaluate((w) => window.__fx8.look(w), which);
+  if (still) {
+    t.log(`${which}: pictures at T+${before.t?.toFixed(2)} and T+${after.t?.toFixed(2)} s`);
+    t.check(before.t !== null && Math.abs(after.t - before.t) < 0.01, `${which}: the two pictures show different moments of the flight (T+${before.t} and T+${after.t} s)`);
+  }
   // the probe is drawn once per sky, not every frame: it has to be drawn again into the new context
   if (which === 'launch') {
     t.check(await page.evaluate(() => window.orbitlab.scene.envRT !== window.__fx8.env), 'launch: the environment probe was not rebuilt after the restore');
@@ -209,11 +214,22 @@ async function launch(t, reference) {
   const app = await openApp(t, '#/launch/explore');
   const { page } = app;
   const csv = await flyTo(t, app, 'Launch', async () => {
-    const still = async () => {
+    // The flight plays on through the loss (its clock and its recording must
+    // run on), and the picture changes as it flies: from T+135 s, where the
+    // dynamic pressure drops under 500 Pa and the load relief lets go, the
+    // stack pitches over from 20° to 6° above the horizon in 4 s. So the after
+    // picture is taken back at the before picture's flight time, from the
+    // recording, by the restored context.
+    const still = async (at) => {
       await app.mcp('control_playback', { action: 'pause' });
+      if (at != null) await app.mcp('seek', { timeS: at });
       await page.waitForTimeout(1500);
     };
-    const go = () => app.mcp('control_playback', { action: 'play' });
+    // back to the head (if the picture was taken behind it) and on
+    const go = async () => {
+      await app.mcp('control_playback', { action: 'live' });
+      await app.mcp('control_playback', { action: 'play' });
+    };
     await loseAndRestore(t, app, 'launch', async () => {
       const a = await state(app);
       await page.waitForTimeout(LOST_MS);
