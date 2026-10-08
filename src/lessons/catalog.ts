@@ -37,7 +37,7 @@ export interface Track { id: number; title: LocalText; note: LocalText }
 export const TRACKS: readonly Track[] = [
   { id: 1, title: { en: 'Orbital mechanics', ru: 'Орбитальная механика', th: 'กลศาสตร์วงโคจร' },
     note: { en: 'Explore · point mass', ru: 'Исследование · материальная точка', th: 'ทดลอง · จุดมวล' } },
-  { id: 2, title: { en: 'Guidance and navigation', ru: 'Наведение и навигация', th: 'การนำวิถีและการนำทาง' },
+  { id: 2, title: { en: 'Guidance and navigation', ru: 'Наведение и навигация', th: 'การนำวิถีและการนำร่อง' },
     note: { en: 'Engineer · mostly six-DOF', ru: 'Инженер · в основном 6 степеней свободы', th: 'วิศวกร · ส่วนใหญ่ 6-DOF' } },
   { id: 3, title: { en: 'Failures', ru: 'Отказы', th: 'ความผิดปกติ' },
     note: { en: 'Failure scenarios', ru: 'Аварийные ситуации', th: 'สถานการณ์ขัดข้อง' } },
