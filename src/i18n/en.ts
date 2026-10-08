@@ -1512,6 +1512,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'sky.lead': 'Satellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.',
   'sky.loading': 'Loading the element sets…',
   'sky.failed': 'The element sets could not be loaded: {reason}',
+  'sky.retry': 'Try again',
   'sky.group': 'Group',
   'sky.group.stations': 'Space stations',
   'sky.group.thai': 'Thailand\'s satellites',

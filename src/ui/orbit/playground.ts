@@ -1311,6 +1311,9 @@ export class OrbitPlayground {
       el('p', 'pg-tour-text', yours ? t(this.fromDesign() ? 'build.sat.orbit.tourText' : 'pg.tour.yours.text', { label: this.handoff!.label }) : t(step.textKey)),
     );
     if (sky) {
+      // M-ORBIT-007: the catalogue not in yet — loading, or why not and Try again (the panel saying so is hidden here)
+      const state = this.sky.loadState();
+      if (state) { state.style.margin = '12px 0 0'; box.append(state); }
       // P2.5: a real satellite's readouts, and what the step adds
       const now = this.sky.liveNow();
       if (now) {
