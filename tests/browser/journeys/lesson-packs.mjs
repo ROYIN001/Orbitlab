@@ -4,7 +4,8 @@
  * each as a group with its curriculum codes and a draft's notice, and a
  * point-mass pack lesson (12.1, Kepler's third law on a transfer orbit:
  * Falcon 9 to GTO, about 550 s of flight) opened from its card is flown live,
- * answered from the result's heights and graded a pass. Then (T03b) a pack's
+ * answered from the result's heights and graded a pass; its event log prints
+ * "?" for the period it asks for (M-LEARNING-012). Then (T03b) a pack's
  * design lesson (13.4: a THEOS-2-class imager's cells and battery) opened
  * from its card fails as it starts and passes with the worked design handed
  * in. tests/lesson-packs.test.ts and tests/lesson-packs-design.test.ts work
@@ -63,6 +64,9 @@ export default async function lessonPacks(t) {
   const insertion = events.events.find((e) => e.key === 'evt.targetOrbit');
   if (!t.check(insertion, 'no "Target orbit achieved" in the event log')) return;
   const hp = Number(insertion.params.pe), ha = Number(insertion.params.ap);
+  // M-LEARNING-012: 12.1 asks for the period, so the event log the student reads prints "?" for it, and the heights as they are
+  const logLine = await page.evaluate(() => [...document.querySelectorAll('.events > div')].map((d) => d.textContent ?? '').find((s) => s.includes('Target orbit achieved')) ?? '');
+  t.check(/period \? min/.test(logLine) && logLine.includes(`${hp} × ${ha} km`), `the event log's "Target orbit achieved" line: ${logLine}`);
   const MU = 398600.4418, R = 6378.137, rp = R + hp, ra = R + ha, a = (rp + ra) / 2;
   const answers = [a.toFixed(1), (2 * Math.PI * Math.sqrt(a ** 3 / MU) / 60).toFixed(2), ((ra - rp) / (ra + rp)).toFixed(4)];
   const inputs = page.locator('.lesson-answers input');
