@@ -842,7 +842,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'ctl.camera.cinematic': 'Cinematic',
   'ctl.camera.cinematicTitle': 'Let the camera programme choose the view at every phase. Picking a view yourself keeps it until you choose this again.',
   'cam.eyebrow': 'DIRECT YOUR FLIGHT',
-  'cam.intro': 'Choose a view for each flight phase. A manual choice lasts until the next phase begins.',
+  'cam.intro': 'Choose a view for each flight phase. A manual choice lasts until you pick Cinematic.',
   'cam.phase.pad': 'Launchpad & liftoff',
   'cam.phase.ascent': 'Atmospheric ascent',
   'cam.phase.staging': 'Stage separation',
