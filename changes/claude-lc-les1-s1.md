@@ -1,6 +1,6 @@
 ## CHANGELOG
 
-- Lessons (ED-LES-1 s1, M-LEARNING-012): while a lesson that asks the student to work out the orbit's period is open (pack lessons 11.2, 12.2, 13.1 and 13.2, and the other lessons with that answer), the "Target orbit achieved" line in the event log, HUD ticker, narration and timeline shows "?" in place of the period, which used to give the answer away; the heights and the plane are shown as before; with no lesson open, or in a lesson that does not ask for the period, the line is unchanged; no new strings.
+- Lessons (ED-LES-1 s1, M-LEARNING-012): while a lesson that asks the student to work out the orbit's period is open (pack lessons 11.2, 12.2, 13.1 and 13.2, and the other lessons with that answer), every "Target orbit achieved" event line (event log, HUD ticker, narration, timeline, and the flight report and worksheet printed meanwhile) shows "?" in place of the period, which used to give the answer away; the heights and the plane are shown as before; with no lesson open, or in a lesson that does not ask for the period, new lines are unchanged (lines already on screen keep "?" until the log is redrawn); no new strings.
 
 ## PROGRESS
 
