@@ -20,6 +20,9 @@
  * - A viewer's mission is never stored while it is the one the viewer loaded;
  *   the first change to it (a panel edit, a quick start, a WebMCP edit) makes
  *   it the user's, stored from then on (`WorkspaceMission.persists`).
+ * - A stored mission read with issues (a newer version's, settings put back to
+ *   their defaults, or none of it usable) is held: not stored over until the
+ *   user changes it (M-PLAN-031; `restoring`, `restored`).
  * - Entering Explore or Engineer while the panel holds a viewer's mission that
  *   is not flying and has not been changed brings the stored mission back
  *   (`WorkspaceMission.entering`). One that is flying — the launch the user
@@ -62,6 +65,8 @@ export class WorkspaceMission {
   private currentOrigin: MissionOrigin = 'workspace';
   /** the viewer's mission as it was loaded; null while it is being loaded */
   private loadedDoc: string | null = null;
+  /** M-PLAN-031: the stored mission as read, not to be stored over unchanged; '' while it is being read */
+  private heldDoc: string | null = null;
 
   get origin(): MissionOrigin {
     return this.currentOrigin;
@@ -85,6 +90,27 @@ export class WorkspaceMission {
   adopt(): void {
     this.currentOrigin = 'workspace';
     this.loadedDoc = null;
+    this.heldDoc = null;
+  }
+
+  /** The stored mission is about to be read into the panel: nothing is stored until `restored`. */
+  restoring(): void {
+    this.adopt();
+    this.heldDoc = '';
+  }
+
+  /**
+   * The stored mission is in the panel as `doc`: whether to store it now. One
+   * read with issues is held, its bytes kept, until the user changes it.
+   */
+  restored(doc: string, clean: boolean): boolean {
+    this.heldDoc = clean ? null : doc;
+    return clean;
+  }
+
+  /** Whether the stored mission is held: being read, or read with issues and not changed since (r16-2b-notice). */
+  get held(): boolean {
+    return this.heldDoc !== null;
   }
 
   /** Whether the panel holds the user's mission, a changed viewer's mission becoming the user's. */
@@ -95,6 +121,8 @@ export class WorkspaceMission {
 
   /** A preview of `doc`: whether the page should store it. */
   persists(doc: string): boolean {
+    if (this.heldDoc === '' || doc === this.heldDoc) return false;
+    this.heldDoc = null;
     return this.settle(doc);
   }
 

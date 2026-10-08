@@ -27,7 +27,8 @@ export interface WorkspaceArchive {
   media: { included: false; reason: 'separate-binary-export' };
 }
 export interface ImportOptions { targetId?: string; mode?: 'keep' | 'replace'; name?: string }
-export interface WorkspaceMedia { migrate(profileId: string): Promise<void>; delete(profileId: string): Promise<void> }
+/** `migrate` may resolve with the number of legacy recordings it left in place because the owner already had one (D-68). */
+export interface WorkspaceMedia { migrate(profileId: string): Promise<number | void>; delete(profileId: string): Promise<void> }
 const noMedia: WorkspaceMedia = { migrate: async () => {}, delete: async () => {} };
 const ownRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const bytes = (text: string): number => new TextEncoder().encode(text).byteLength;
@@ -128,6 +129,8 @@ export class WorkspaceBinding implements RawStorage {
 export class WorkspaceRepository {
   status: WorkspaceStatus = 'chooser';
   readonly notices: string[] = [];
+  /** The learner whose own recordings kept legacy originals in place at this start (D-68), or null. */
+  mediaCollisionOwner: string | null = null;
   binding: WorkspaceBinding | null = null;
   private release: (() => void) | null = null;
   private ephemeral: Record<string, ProfileRecord> | null = null;
@@ -235,8 +238,11 @@ export class WorkspaceRepository {
           } catch { if (!this.notices.includes('profile-delete-pending')) this.notices.push('profile-delete-pending'); }
         }
         if (!catalog.mediaMigrated) {
-          try { await this.media.migrate(catalog.legacyId); catalog.mediaMigrated = true; this.saveCatalog(catalog); }
-          catch { this.notices.push('media-migration-pending'); }
+          // Collisions stay in place, unowned (D-68); the migration is still done, so no later start walks the store again.
+          try {
+            const kept = await this.media.migrate(catalog.legacyId); catalog.mediaMigrated = true; this.saveCatalog(catalog);
+            if (kept) { this.notices.push('media-collisions-kept'); this.mediaCollisionOwner = catalog.legacyId; }
+          } catch { this.notices.push('media-migration-pending'); }
         }
         // Remove only unchanged originals after the authoritative destination/catalogue commit.
         // An unreadable owner record keeps its bytes and the originals; cleanup is retried at the next start.
@@ -353,6 +359,8 @@ export class WorkspaceRepository {
     delete catalog.profiles[id]; this.saveCatalog(catalog);
   }
   async delete(id: string): Promise<void> {
+    // A visit-only copy keeps the saved profile's real id, and media is the real store: never delete there (M-PLATFORM-009).
+    if (this.ephemeral) throw new WorkspaceError('locked');
     await this.prepareChange();
     const active = this.binding?.profileId === id;
     try {
@@ -389,16 +397,17 @@ export class WorkspaceRepository {
     });
     binding.invalidate();
   }
+  /** A fresh object (`read()` copies). The 8 MB limit applies to the text a backup saves: `workspaceArchiveText`. */
   exportProfile(id = this.binding?.profileId): WorkspaceArchive {
     if (!id) throw new WorkspaceError('missing');
     const record = this.read(id);
-    return checkedExport({ format: WORKSPACE_FORMAT, version: 1, exportedAt: new Date().toISOString(),
-      profiles: [{ id: record.id, name: record.name, createdAt: record.createdAt, updatedAt: record.updatedAt, revision: record.revision, epoch: record.epoch, values: record.values }], media: { included: false, reason: 'separate-binary-export' } });
+    return { format: WORKSPACE_FORMAT, version: 1, exportedAt: new Date().toISOString(),
+      profiles: [{ id: record.id, name: record.name, createdAt: record.createdAt, updatedAt: record.updatedAt, revision: record.revision, epoch: record.epoch, values: record.values }], media: { included: false, reason: 'separate-binary-export' } };
   }
   exportAll(): WorkspaceArchive {
-    return checkedExport({ format: WORKSPACE_FORMAT, version: 1, exportedAt: new Date().toISOString(),
+    return { format: WORKSPACE_FORMAT, version: 1, exportedAt: new Date().toISOString(),
       profiles: this.list().map((p) => { const r = this.read(p.id); return { id: r.id, name: r.name, createdAt: r.createdAt, updatedAt: r.updatedAt, revision: r.revision, epoch: r.epoch, values: r.values }; }),
-      media: { included: false, reason: 'separate-binary-export' } });
+      media: { included: false, reason: 'separate-binary-export' } };
   }
   /** Restore multiple archived owners as NEW identities; no existing profile is replaced. Catalogue publication is one atomic write. */
   async importProfiles(text: string): Promise<ProfileSummary[]> {
@@ -455,10 +464,17 @@ export class WorkspaceRepository {
   }
   close(): void { this.binding?.invalidate(); this.release?.(); this.release = null; }
 }
-function checkedExport(archive: WorkspaceArchive): WorkspaceArchive {
-  const text = JSON.stringify(archive);
-  if (text.length > WORKSPACE_MAX_BYTES || bytes(text) > WORKSPACE_MAX_BYTES) throw new WorkspaceError('oversize');
-  return clone(archive);
+const fitsImport = (text: string): boolean => text.length <= WORKSPACE_MAX_BYTES && bytes(text) <= WORKSPACE_MAX_BYTES;
+/**
+ * The exact text a backup saves, checked against the import limit once (M-PLATFORM-008): the indented form as before,
+ * or the compact form when only that fits, so every file the app writes can be restored.
+ */
+export function workspaceArchiveText(archive: WorkspaceArchive): string {
+  const pretty = JSON.stringify(archive, null, 2) + '\n';
+  if (fitsImport(pretty)) return pretty;
+  const compact = JSON.stringify(archive);
+  if (fitsImport(compact)) return compact;
+  throw new WorkspaceError('oversize');
 }
 /** The strict legacy reader stays outside initial startup chunks. */
 export async function parseWorkspaceArchive(text: string): Promise<WorkspaceArchive> {

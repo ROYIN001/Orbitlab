@@ -56,6 +56,9 @@ type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.isArray(v);
 const describe = (v: unknown): string => (typeof v === 'number' ? String(v) : v === null ? 'null' : Array.isArray(v) ? 'an array' : typeof v);
 
+/** What an issue says of a field this version does not know (D-22: a newer design file with one is refused, and names it). */
+export const NOT_A_FIELD = 'is not a field of this version';
+
 class Checker {
   readonly issues: VehicleSpecIssue[] = [];
 
@@ -65,7 +68,7 @@ class Checker {
 
   /** Fields the version knows; anything else is reported. */
   known(o: Obj, path: string, fields: readonly string[]): void {
-    for (const key of Object.keys(o)) if (!fields.includes(key)) this.add(`${path}${path ? '.' : ''}${key}`, 'is not a field of this version');
+    for (const key of Object.keys(o)) if (!fields.includes(key)) this.add(`${path}${path ? '.' : ''}${key}`, NOT_A_FIELD);
   }
 
   number(o: Obj, key: string, path: string, min: number, max: number, opts: { optional?: boolean; exclusiveMin?: boolean; integer?: boolean } = {}): number | undefined {

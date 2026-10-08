@@ -136,6 +136,20 @@ export function thaiRepeatRevs(apps: { thaiId: string | null } | null): number |
 }
 
 /**
+ * M-ORBIT-001: where Real satellites shows a Thai satellite — the catalogue's
+ * Thai group, the satellite picked by its catalogue number — or null for one
+ * that has re-entered (NAPA-2: the catalogue's element sets are of objects
+ * still up) or an unknown id. The group asks for exactly the ones still up
+ * (`THAI_NORAD_IDS`, src/provider/satellites.ts, not imported here: two
+ * workers take this module); tests/fx3-thai-moon-labels.test.ts holds the two
+ * lists together.
+ */
+export function thaiInSky(id: string): { group: 'thai'; satnum: number } | null {
+  const s = thaiSatelliteById(id);
+  return s && !s.reentered ? { group: 'thai', satnum: s.norad } : null;
+}
+
+/**
  * The repeat cycle the Earth-observation report may give for the orbit
  * flown: the named Thai satellite's published one only while the orbit flown
  * is still its own — the plan's start segment (`flownIndex` 0, not after a

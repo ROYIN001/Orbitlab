@@ -34,6 +34,13 @@ export class AppProfiles {
     catch { return ''; }
   }
 
+  /** Whose own audio kept legacy originals in place (D-68): not necessarily the open learner. '' when unknown. */
+  private collisionOwner(): string {
+    const id = this.repo.mediaCollisionOwner;
+    try { return id ? this.repo.profileRow(id).name ?? '' : ''; }
+    catch { return ''; }
+  }
+
   private load(): Promise<ProfileDialog> {
     if (this.dialog) return Promise.resolve(this.dialog);
     if (!this.loading) this.loading = import('./profile-menu').then(({ createProfileMenu }) => {
@@ -67,13 +74,14 @@ export class AppProfiles {
     this.button.title = label;
     this.button.setAttribute('aria-label', label);
     this.button.dataset.profileStatus = this.repo.status;
-    const conflict = !this.repo.binding?.valid && this.repo.status === 'durable';
+    const conflict = !this.repo.binding?.valid && this.repo.status === 'durable', owner = this.collisionOwner();
     const key = conflict ? 'chooser' : this.repo.status === 'ephemeral' ? 'ephemeral' : this.repo.status === 'locked' ? 'locked'
       : this.repo.notices.includes('storage-write-failed') ? 'storageWriteFailed'
       : this.repo.notices.includes('media-migration-pending') ? 'mediaMigrationPending'
+      : owner ? 'mediaCollisionsKept'
       : this.repo.notices.length ? 'recoveryNotice' : null;
     this.notice.hidden = key === null;
-    this.notice.textContent = key ? profileText(key) : '';
+    this.notice.textContent = key ? profileText(key, { name: owner }) : '';
     if (this.dialog?.isOpen) this.dialog.applyLanguage();
   }
 

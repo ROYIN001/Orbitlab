@@ -40,7 +40,8 @@ import { awaitingAnswers, flightEnded, flightStarted, gradeShown, regradeAnswers
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
 import { FlightLessons } from '../../lessons/flight-lessons';
 import { draftValue, submittedAnswers, type AnswerDrafts } from '../../lessons/answer-drafts';
-import { MEASURES } from '../../lessons/measures';
+import { MEASURES, answerEventParams } from '../../lessons/measures';
+import { withholdEventParams } from '../names';
 import { localText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue, type ParsedLessonFile } from '../../lessons/lesson-file';
 import { SCENARIO_LINK_MAX, SCENARIO_PARAM, readScenarioParam, scenarioLink } from '../../lessons/scenario-link';
@@ -607,9 +608,10 @@ export class LessonMode implements LessonToolsHost {
     return !!a && caseAnswersOpen(a.grade, !!this.progressData.lessons[a.lesson.id]?.passed);
   }
 
-  /** Tell the Orbit section which case lesson is open, if any, and whether its answers may be shown there yet. */
+  /** Tell the Orbit section which case lesson is open, if any, and whether its answers may be shown there yet; the event log, what the open lesson asks for. */
   private tellOrbit(): void {
     const a = this.active;
+    withholdEventParams(a && isFlightLesson(a.lesson) ? answerEventParams(a.lesson) : []);
     const state: CaseLessonState | null = a && isCaseLesson(a.lesson) ? { case: a.lesson.case, answersOpen: this.caseAnswersOpen(a) } : null;
     const key = JSON.stringify(state);
     if (key === this.orbitKey) return;

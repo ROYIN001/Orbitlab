@@ -15,7 +15,7 @@ export async function initializeWorkspace(): Promise<WorkspaceRepository> {
   const locks: WorkspaceLocks | undefined = available && typeof navigator !== 'undefined' && navigator.locks
     ? { request: (name, options, callback) => navigator.locks.request(name, options, callback) } : undefined;
   repository = new WorkspaceRepository(storage, session, locks, {
-    migrate: async (profileId) => { const { migrateLegacyMedia } = await import('./media-ownership'); await migrateLegacyMedia(profileId); },
+    migrate: async (profileId) => { const { migrateLegacyMedia } = await import('./media-ownership'); return migrateLegacyMedia(profileId); },
     delete: async (profileId) => { const { deleteProfileMedia } = await import('./media-ownership'); await deleteProfileMedia(profileId); },
   });
   await repository.initialize();
