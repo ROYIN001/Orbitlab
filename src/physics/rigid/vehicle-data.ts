@@ -10,11 +10,19 @@ import { engineLayout } from '../../data/engine-layout';
 import { VEHICLES, vehicleDataId } from '../../data/vehicles';
 
 export const RIGID_DATA_REVISION = 'estimated-components-2026-09-19-v1';
+/**
+ * What every snapshot built from these data assumes (tests/rigid-data-assumptions.test.ts).
+ * A snapshot's liquids sit settled in their tanks; roadmap P05 adds slosh
+ * (slosh.ts) and the first bending mode (bending.ts) on top of it, coupled in
+ * flex.ts, when `RigidRuntimeOptions.flex` asks for them (`DynamicsConfig.flex`,
+ * Engineer mode, six-DOF). The wording changed, not the data: RIGID_DATA_REVISION stays.
+ */
 export const RIGID_DATA_ASSUMPTIONS = [
   'Estimated cylinder/tank mass distributions; not measured vehicle CG or inertia.',
   'Geometry follows the displayed stage/adapter layout, not the rounded manufacturer height.',
   'Legacy thrust/propellant totals retained; finite TVC/RCS and aerodynamics are estimates.',
-  'Quasi-steady variable mass; internal flow, slosh and structural flexibility omitted.',
+  'Quasi-steady variable mass; internal flow omitted.',
+  'Liquids settled; slosh and first bending mode are a runtime option (P05, rigid/flex.ts), off by default.',
 ] as const;
 
 export interface BoosterPlacement {

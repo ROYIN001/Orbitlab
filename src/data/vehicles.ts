@@ -468,32 +468,25 @@ export const VEHICLES: VehicleSpec[] = [
     ],
     sites: ['cape', 'vandenberg'], maxQ: 45e3, maxAccel: 49,
     maxQThrottle: { qStart: 25e3, qEnd: 25e3, throttle: 0.7 },
-    // Centaur V has a thrust-to-weight near 0.3, so the booster has to hand over
-    // climbing — but with the audited 481.7 t first stage (B21, in
-    // src/data/parts.ts) the booster now burns 309 s instead of 276 s, and a
-    // 150 km loft on top of that is more than the Centaur can hold:
-    // vulcan/iss/50 flattened and broke up at T+1233 s. Measured over kick 1.5-6 deg x rate 0.3/0.45 x loft 0-250 km x
-    // pitch ceiling 25/35 deg (96 guidance points x 9 fleet rows), 80 km is the
-    // loft that takes every row the vehicle has the delta-v for: leo and iss at
-    // 25 % and 50 %, all three GTO rows, insertion T+999-1182 s. The two 90 %
-    // rows stay lost at every point in that grid, which is why they are still
-    // KNOWN_GUIDANCE_FAILURES rather than a tuning gap.
-    //
-    // `parkingAltitude: 250e3` is the other half, and it is a statement about
-    // the stage rather than a fitted constant. The library default asks every
-    // vehicle for a 200 km parking orbit; Centaur V is a high-energy hydrogen
-    // stage that arrives fast and shallow, and aimed at 200 km it cut off on the
-    // apoapsis with the perigee still at 137-150 km — 50-60 km under the orbit
-    // it had been asked for, on every one of the 96 guidance points swept. Aimed
-    // at 250 km, which is where ULA's own low-orbit insertions sit, it closes
-    // the transfer it was given: measured 238-250 x 497 km. The 9-row matrix is
-    // unchanged by it (leo/iss 25-50 % and all three GTO rows accepted) and the
-    // ascent auto-tuner, which grades a candidate against the orbit the PLAN
-    // asked for, stops reporting every point in its grid as an insertion miss.
     // Centaur V lights at 0.27-0.3 g under a near-rated payload and cannot hold
     // altitude at any attitude, so the core has to hand it a high, climbing
-    // arc: 40° of pitch authority and a 150 km loft. At 30° / 80 km the 90 %
-    // LEO and ISS rows fell back into the air with 3.4-3.6 km/s aboard.
+    // arc: 40° of pitch authority, a 150 km loft and a 3° kick (it was 30° /
+    // 80 km / 1.5°). Before this program and the guidance-law fixes in
+    // docs/PHYSICS.md ("Guidance defects"), the 90 % LEO and ISS rows broke up
+    // with 2.7-2.9 km/s aboard. Now all nine Vulcan rows of the fleet matrix
+    // (leo, iss and gto at 25/50/90 %; sso is outside the Cape's range-safety
+    // window) reach their orbits, and KNOWN_GUIDANCE_FAILURES in
+    // tests/fleet-harness.ts is empty.
+    //
+    // `parkingAltitude: 250e3` plans the insertion at 250 km x the target's
+    // apogee instead of the library's 200 km, because ULA's own low-orbit
+    // insertions sit near 250 km. The ascent does not fly that orbit yet.
+    // Measured at 5055370 (point mass, tests/fleet-harness.ts `flyCase`): the
+    // leo and iss rows at 25 % and 50 % cut off at about 136 x 1 010-1 300 km,
+    // leo/90 at 134 x 538 km, iss/90 at 242 x 412 km and the gto rows at
+    // 316-392 x 1 990 km; one or two later burns then reach the target orbit
+    // (LEO and ISS by T+1.1-2.3 h). Bounding the parking orbit in a test is
+    // open work: M-PHYSICS-043 (R4.2).
     guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 40, loftAltitude: 150e3, parkingAltitude: 250e3 },
     notes: 'Methalox first stage with up to six solids; Centaur V is a long-coast hydrogen upper stage.',
   },
