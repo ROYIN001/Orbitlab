@@ -148,16 +148,16 @@ export const RU_24_05_06: PackSource = {
     {
       id: 'ru-bins-astro', track: 15, order: 2, mode: 'engineer', domains: [4], tags: ['БИНС', 'G02'],
       curriculum: [{ code: 'ФГОС 24.05.06 ОПК-7', kind: 'competence' }],
-      title: { en: 'Inertial navigation with star-tracker correction, without GNSS', ru: 'БИНС с астрокоррекцией без ГНСС', th: 'การนำทางเฉื่อยที่แก้ไขด้วยตัวจับดาว โดยไม่มี GNSS' },
+      title: { en: 'Inertial navigation with star-tracker correction, without GNSS', ru: 'БИНС с астрокоррекцией без ГНСС', th: 'การนำร่องเฉื่อยที่แก้ไขด้วยตัวจับดาว โดยไม่มี GNSS' },
       brief: {
         en: 'Soyuz-2.1a flown six-DOF. The GNSS receiver is out for the whole ascent: the navigation rests on a tactical-grade strapdown inertial unit (fibre-optic gyros), and its star tracker is switched off. Keep the navigation\'s position error within 1 000 m up to the third stage\'s cut-off, when the spacecraft reaches its parking orbit. GNSS stays off; switch the star-tracker correction on, or choose the inertial unit\'s grade.',
         ru: '«Союз-2.1а» в шестистепенной модели. Приёмник ГНСС не работает на всём участке выведения: навигация опирается на бесплатформенную инерциальную навигационную систему (БИНС) тактического класса с волоконно-оптическими гироскопами, а звёздный датчик выключен. Удержите ошибку навигации по положению в пределах 1 000 м до выключения двигателя третьей ступени, когда корабль выходит на опорную орбиту. ГНСС остаётся выключенной; включите астрокоррекцию по звёздному датчику или выберите класс БИНС.',
-        th: 'Soyuz-2.1a บินแบบหกองศาอิสระ เครื่องรับ GNSS ใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำทางจึงอาศัยหน่วยวัดเฉื่อยแบบติดตรึงเกรดยุทธวิธี (ไจโรใยแก้วนำแสง) และตัวจับดาวถูกปิดอยู่ จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำทางให้อยู่ภายใน 1 000 ม. จนถึงการดับเครื่องของขั้นที่ 3 เมื่อยานเข้าสู่วงโคจรพัก ให้ GNSS ปิดอยู่เหมือนเดิม แล้วเปิดการแก้ไขด้วยตัวจับดาว หรือเลือกเกรดของหน่วยวัดเฉื่อย',
+        th: 'Soyuz-2.1a บินแบบหกองศาอิสระ เครื่องรับ GNSS ใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำร่องจึงอาศัยหน่วยวัดเฉื่อยแบบติดตรึงเกรดยุทธวิธี (ไจโรใยแก้วนำแสง) และตัวจับดาวถูกปิดอยู่ จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำร่องให้อยู่ภายใน 1 000 ม. จนถึงการดับเครื่องของขั้นที่ 3 เมื่อยานเข้าสู่วงโคจรพัก ให้ GNSS ปิดอยู่เหมือนเดิม แล้วเปิดการแก้ไขด้วยตัวจับดาว หรือเลือกเกรดของหน่วยวัดเฉื่อย',
       },
       debrief: {
         en: 'Without external fixes an inertial unit\'s error grows faster than linearly: an accelerometer bias b gives ½bt², and gyro drift tilts the navigation frame, so the thrust acceleration is projected along the wrong axes. A star tracker, which sees stars from 150 km up, measures the attitude and bounds that tilt: in this flight the error at the third stage\'s cut-off is about 3 km without it and about 0.8 km with it. A navigation-grade unit without the star tracker gives about 0.4 km; with GNSS fixes the Kalman filter holds the error to a few metres.',
         ru: 'Без внешних коррекций ошибка БИНС растёт быстрее линейной: смещение нуля акселерометра b даёт ½bt², а дрейф гироскопов наклоняет навигационный базис, и ускорение от тяги проецируется не на те оси. Звёздный датчик, который видит звёзды начиная с высоты 150 км, измеряет ориентацию и ограничивает этот наклон: в этом полёте ошибка к выключению третьей ступени без него около 3 км, а с ним — около 0,8 км. БИНС навигационного класса без звёздного датчика даёт около 0,4 км; с коррекцией по ГНСС фильтр Калмана удерживает ошибку в пределах нескольких метров.',
-        th: 'หากไม่มีการแก้ไขจากภายนอก ความคลาดเคลื่อนของระบบนำทางเฉื่อยจะโตเร็วกว่าเชิงเส้น ไบแอสของมาตรความเร่ง b ทำให้เกิด ½bt² และการลอยของไจโรทำให้กรอบนำทางเอียง ความเร่งจากแรงขับจึงถูกฉายลงบนแกนที่ผิด ตัวจับดาวซึ่งเห็นดาวได้ตั้งแต่ความสูง 150 กม. ขึ้นไป วัดท่าทางของยานและจำกัดการเอียงนั้นไว้ ในเที่ยวบินนี้ความคลาดเคลื่อนเมื่อขั้นที่ 3 ดับเครื่องประมาณ 3 กม. ถ้าไม่มีตัวจับดาว และประมาณ 0.8 กม. ถ้ามี หน่วยวัดเฉื่อยเกรดนำทางที่ไม่มีตัวจับดาวให้ประมาณ 0.4 กม. ส่วนเมื่อมีการแก้ไขจาก GNSS ตัวกรองคาลมานรักษาความคลาดเคลื่อนไว้ไม่กี่เมตร',
+        th: 'หากไม่มีการแก้ไขจากภายนอก ความคลาดเคลื่อนของระบบนำร่องเฉื่อยจะโตเร็วกว่าเชิงเส้น ไบแอสของมาตรความเร่ง b ทำให้เกิด ½bt² และการลอยของไจโรทำให้กรอบนำร่องเอียง ความเร่งจากแรงขับจึงถูกฉายลงบนแกนที่ผิด ตัวจับดาวซึ่งเห็นดาวได้ตั้งแต่ความสูง 150 กม. ขึ้นไป วัดท่าทางของยานและจำกัดการเอียงนั้นไว้ ในเที่ยวบินนี้ความคลาดเคลื่อนเมื่อขั้นที่ 3 ดับเครื่องประมาณ 3 กม. ถ้าไม่มีตัวจับดาว และประมาณ 0.8 กม. ถ้ามี หน่วยวัดเฉื่อยเกรดนำร่องที่ไม่มีตัวจับดาวให้ประมาณ 0.4 กม. ส่วนเมื่อมีการแก้ไขจาก GNSS ตัวกรองคาลมานรักษาความคลาดเคลื่อนไว้ไม่กี่เมตร',
       },
       mission: soyuz({ navigation: { grade: 'tactical', gnss: false, starTracker: false } }),
       locked: [...ALL_LOCKS],
@@ -165,7 +165,7 @@ export const RU_24_05_06: PackSource = {
       criteria: [
         {
           id: 'gnss', kind: 'hook', hook: 'gnssOff',
-          label: { en: 'No satellite navigation', ru: 'Без спутниковой навигации', th: 'ไม่มีการนำทางด้วยดาวเทียม' },
+          label: { en: 'No satellite navigation', ru: 'Без спутниковой навигации', th: 'ไม่มีการนำร่องด้วยดาวเทียม' },
         },
         { id: 'error', kind: 'measure', measure: 'nav.positionError', max: NAV_BOUND_M },
         { id: 'flying', kind: 'outcome', is: 'survived' },
@@ -173,7 +173,7 @@ export const RU_24_05_06: PackSource = {
       hints: [
         { en: 'In the setup panel: Navigation (INS / GNSS) → Star tracker. The attitude-loop inspector\'s Navigation tab draws the position error as it grows.', ru: 'На панели настройки: «Навигация (БИНС / ГНСС)» → «Звёздный датчик». Как растёт ошибка координат, показывает вкладка «Навигация» инспектора контура стабилизации.', th: 'ในแผงตั้งค่า: «การนำร่อง (INS / GNSS)» → «ตัวจับดาว (star tracker)» ส่วนความคลาดของตำแหน่งที่ค่อย ๆ เพิ่มขึ้น ดูได้ในแท็บ «การนำร่อง» ของตัวตรวจลูปควบคุมท่าทาง' },
         { en: 'The star tracker corrects the attitude, not the position: it helps by keeping the frame the accelerometers are read in from tilting.', ru: 'Звёздный датчик корректирует ориентацию, а не положение: он помогает тем, что не даёт наклониться базису, в котором интегрируются показания акселерометров.', th: 'ตัวจับดาวแก้ไขท่าทาง ไม่ได้แก้ไขตำแหน่ง มันช่วยโดยไม่ให้กรอบที่ใช้อ่านค่ามาตรความเร่งเอียง' },
-        { en: 'A navigation-grade unit (ring-laser gyros) is another answer — and a dearer one.', ru: 'БИНС навигационного класса (лазерные гироскопы) — тоже решение, но более дорогое.', th: 'หน่วยวัดเฉื่อยเกรดนำทาง (ไจโรเลเซอร์วงแหวน) ก็เป็นอีกคำตอบหนึ่ง แต่ราคาแพงกว่า' },
+        { en: 'A navigation-grade unit (ring-laser gyros) is another answer — and a dearer one.', ru: 'БИНС навигационного класса (лазерные гироскопы) — тоже решение, но более дорогое.', th: 'หน่วยวัดเฉื่อยเกรดนำร่อง (ไจโรเลเซอร์วงแหวน) ก็เป็นอีกคำตอบหนึ่ง แต่ราคาแพงกว่า' },
       ],
     },
     {

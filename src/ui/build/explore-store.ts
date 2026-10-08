@@ -282,7 +282,9 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
       const fileInvalid = kind === 'vehicle' || kind === 'satellite' ? FILE_INVALID[kind] : this.texts.fileInvalid;
       this.say({
         level: 'error',
-        text: t(isMission ? 'build.ex.store.fileMission' : invalid ? fileInvalid : 'build.ex.store.fileFormat'),
+        // M-BUILD-008 (D-22): a newer file with fields this version does not know is refused whole, and names them
+        text: invalid?.fields ? t('build.ex.store.fileNewerFields', { fields: invalid.fields.join(', ') })
+          : t(isMission ? 'build.ex.store.fileMission' : invalid ? fileInvalid : 'build.ex.store.fileFormat'),
         ...(invalid?.detail ? { extra: invalid.detail } : {}),
       });
       return;
