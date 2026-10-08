@@ -20,6 +20,11 @@
 > **ยังค้าง (รอคุณ)**
 > - PR #129 ของคุณเอง (CI รันครั้งเดียวต่อ PR)
 > - branch ที่พักไว้ 2 ตัว (หัวข้อ 5): D-36.A3 ที่คุณเลื่อนไป K2 และ R4.1 ที่ยังทำไม่เสร็จ
+> - เทสต์ `fx8-context-loss` ที่ล้มเป็นบางรอบบน main (5 ใน 13 รอบ)
+>   - หาสาเหตุได้แล้ว: เป็นบั๊กของเทสต์ ไม่ใช่ของแอป (หัวข้อ 9)
+>   - วิธีแก้อยู่บน branch `claude/t-fx8-picture-moment-s1`
+>   - รอคุณตัดสินว่าการแก้นี้นับเป็นการเปลี่ยน assertion หรือไม่
+>   - ต้องรันแบบ Pages เพื่อยืนยันก่อน merge
 >
 > **ขอบเขต K1 ที่ยังไม่ได้ทำ**
 > - ดูตารางในหัวข้อ 7 ส่วนที่ใหญ่ที่สุดคือ R1.6 PR4–5, PR8–10, R0.4 ส่วนที่เหลือ และ EQ-2
@@ -98,6 +103,7 @@ Before opening a PR from any of these, merge `origin/main` in and re-measure the
 | Branch | Item | Kind | Status |
 |---|---|---|---|
 | `claude/i-co4-d36a3-s1` | D-36.A3 step 1: in-flight edits with a confirm step | feature | **Deferred to K2 by the owner** (card `r16-pr2-budget` b). It was CSS +0.2 kB over and code +7.1 kB. Parked; not reviewed against current main. |
+| `claude/t-fx8-picture-moment-s1` | `fx8-context-loss` root cause (test bug; see §9) | test fix | Failing-first commit plus fix, and a report with the full evidence. The fix was run locally only. Needs a Pages-mode run and the owner's call on the changed-assertion question before a PR. |
 | `claude/pd-r41-s1` | R4.1 M-PHYSICS-041 / M-PLATFORM-070: stale "slosh/flex omitted" text | bug fix | **Unfinished WIP**, interrupted by a usage limit. It holds a failing test plus an uncommitted fix, committed as WIP. Not reviewed. |
 
 ## 6. Records
@@ -145,11 +151,18 @@ Two points from those merges:
 
 ## 9. Known issues and follow-ups
 
-- **Pages browser shards failed twice on main** (2026-10-07). Both were superseded by green runs; the cause of each is not yet found.
-  - Run 37570915922 at `4de951f`: `fx8-context-loss` failed in shard 2. It passed in every later run.
-  - Run 37548907257 at `23ede7f`: shard 3 failed. The journey is named in job 112560299535's log.
-
-  Investigate both to a root cause before trusting the shard.
+- **`fx8-context-loss` failed in 5 of 13 Pages runs on main: the cause is found, the fix is on a branch.** It is a test bug, not an app bug, with confidence about 0.88. An evidence sweep, three independent investigators and a local experiment reached this, and two skeptics could not refute it. The full report is `docs/development/reports/T-fx8-picture-moment.md` on branch `claude/t-fx8-picture-moment-s1`.
+  - **Failing runs.** 37536297987 (`6fea83f`), 37548907257 (`23ede7f`, the shard 3 failure), 37570915922 (`4de951f`), 37745862803 (`a74494f`) and 37748125764 (`04a1188`). Each failed only in the first, in-flight Launch case: "the restored picture differs from the one before" (75th percentile pixel change 13–19 against the limit of 12).
+  - **The restore is correct.** Shown the same moment of the flight, the restored context draws the same picture (p75 0–1).
+  - **What the test does wrong.** It takes the "before" picture paused at the loss time (`tests/browser/journeys/fx8-context-loss.mjs:84-85` on `3e15303`). It then plays on through the loss (`:87`) and takes the "after" picture about 5 s of flight later (`:110-111`).
+  - **Why only some runs fail.** The loss time is not controlled: it is the first warp-10 poll past T+120, and pending worker steps carry it 4–15 s further. When it lands after about T+131.8, the window crosses the six-DOF load-relief release at 500 Pa near T+135 (`src/physics/simulation.ts:1022`, `:1109`; `src/i18n/en.ts:4140`). The stack then pitches over from 20° to 6° in 4 s, so the picture really changes. A flight with no loss at all fails the same comparison (p75 15–20).
+  - **Things that play no part.** Shard, region, runner image, commit and the journeys run before it.
+  - **Proposed fix (test only, on the branch).** The case seeks back so the "after" picture is taken at the before picture's flight time (`window.orbitlab.shown.t`), and checks that both pictures show the same moment. No threshold moves, and the clock and recording checks are unchanged.
+  - **Failing first** (`50f9362`). The loss is pinned at T+133. It failed 5/5 locally on `3e15303` with CI's signature, and passes at p75 0–2 with the fix (`d73f576`). It still fails a restore that skips the sky tables.
+  - **Before merging:**
+    - Get a Pages-mode run for CI evidence. PR CI runs only smoke journeys, so it never runs fx8.
+    - Get the owner's answer on whether comparing against a picture replayed at the same moment counts as a changed assertion (SESSION-PROTOCOL §1 step 3).
+  - **Until it merges.** A Pages run on main can still fail on this journey. Check the first Launch case's "while lost, T+a" value: a ≳ 131.8 is this cause, not a regression.
 - **Start-up performance on CI's software GPU** (found while fixing #133):
   - `#loading` hides before the first frame, and Home draws no frame for about 8 s afterwards (`src/main.ts:995`).
   - "Continue" then costs 9–18 s of shader compiles (`prewarm`, `src/main.ts:2006`).
