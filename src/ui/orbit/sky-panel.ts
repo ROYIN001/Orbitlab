@@ -227,6 +227,31 @@ export class RealSky {
     );
   }
 
+  /**
+   * M-ORBIT-007: after a failed load, the catalogue asked for again — through
+   * the data provider, so CelesTrak's two-hour rule and the snapshot behind it
+   * hold. Nothing while a load is out or once the catalogue is in.
+   */
+  retry(): void {
+    if (this.status.state !== 'failed') return;
+    this.load();
+    this.host.refresh();
+  }
+
+  /**
+   * M-ORBIT-007: what the catalogue's state is while it is not in — loading,
+   * or why it could not be loaded and a button to try again — for the panel
+   * and for the Watch tour's card, shown without the panel; null once it is in.
+   */
+  loadState(): HTMLElement | null {
+    const st = this.status;
+    if (st.state === 'ready') return null;
+    if (st.state !== 'failed') return el('p', 'pg-note', t('sky.loading'));
+    const box = el('div');
+    box.append(el('p', 'pg-warn', t('sky.failed', { reason: st.reason })), button('watch-btn', t('sky.retry'), () => this.retry()));
+    return box;
+  }
+
   /** The catalogue is in, or could not be had: loaded first if it is not. */
   ready(): Promise<void> {
     this.load();
@@ -488,9 +513,8 @@ export class RealSky {
   controls(): HTMLElement {
     const box = el('section', 'pg-sky');
     box.append(el('p', 'pg-lead', t('sky.lead')));
-    const st = this.status;
-    if (st.state === 'loading' || st.state === 'idle') { box.append(el('p', 'pg-note', t('sky.loading'))); }
-    if (st.state === 'failed') box.append(el('p', 'pg-warn', t('sky.failed', { reason: st.reason })));
+    const state = this.loadState();
+    if (state) box.append(state);
 
     const pick = el('label', 'pg-preset');
     pick.append(el('span', undefined, t('sky.group')));

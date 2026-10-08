@@ -1156,13 +1156,19 @@ class App {
 
   /** The stored mission into the panel, as the user's; the notice says what could not be used. */
   private applyStoredMission(stored: unknown): void {
-    this.workspace.adopt();
-    const parsed = this.panel.share.apply(stored, 'stored');
-    if (!parsed.usable) this.preview(this.panel.getConfig());
-    // R3.1: the design it flew and its revision, kept beside the mission; one that cannot be read is not shown
-    const ref = parseDesignRef(stored && typeof stored === 'object' ? (stored as { design?: unknown }).design : undefined);
-    this.designRef = ref && ref !== 'invalid' && refFlies(ref, this.panel.state) ? ref : null;
-    if (this.designRef) saveStoredMission(this.panel.missionState(), undefined, this.designRef);
+    // M-PLAN-031: a newer version's mission, or one with settings reset, is read but not stored over until changed
+    this.workspace.restoring();
+    try {
+      const parsed = this.panel.share.apply(stored, 'stored');
+      if (!parsed.usable) this.preview(this.panel.getConfig());
+      // R3.1: the design it flew and its revision, kept beside the mission; one that cannot be read is not shown
+      const ref = parseDesignRef(stored && typeof stored === 'object' ? (stored as { design?: unknown }).design : undefined);
+      this.designRef = ref && ref !== 'invalid' && refFlies(ref, this.panel.state) ? ref : null;
+      if (this.workspace.restored(this.missionDoc(), !parsed.issues.length)) saveStoredMission(this.panel.missionState(), undefined, this.designRef);
+    } catch (e) {
+      this.workspace.restored(this.missionDoc(), false); // keep the stored bytes, but let the first real edit be saved
+      throw e;
+    }
     this.updateMissionName();
   }
 
