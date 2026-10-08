@@ -17,8 +17,8 @@ import { workspaceStorage } from '../workspace/storage';
  * runs it against fake storage.
  */
 import type { VehicleSpec } from '../types';
-import { vehicleSpecProblems, vehicleSpecText } from '../config/vehicle-spec';
-import { satelliteDesignProblems, satelliteDesignText } from '../config/satellite-design';
+import { NOT_A_FIELD as NOT_A_VEHICLE_FIELD, vehicleSpecProblems, vehicleSpecText } from '../config/vehicle-spec';
+import { NOT_A_FIELD as NOT_A_SATELLITE_FIELD, satelliteDesignProblems, satelliteDesignText } from '../config/satellite-design';
 import type { SatelliteDesign } from './satellite-spec';
 import { canonicalJson } from './design-ref';
 
@@ -257,15 +257,27 @@ export function designFileName(record: Pick<DesignRecord, 'name' | 'kind'>): str
 export interface ParsedDesign {
   /** the design to keep, or null when nothing in the file could be used */
   input: DesignInput | null;
-  /** what could not be used, or that the file is newer than this version */
-  issues: { code: 'format' | 'newerVersion' | 'invalid'; detail?: string }[];
+  /**
+   * what could not be used, or that the file is newer than this version; a newer file refused for fields of its
+   * design this version does not know names them (`fields`, D-22)
+   */
+  issues: { code: 'format' | 'newerVersion' | 'invalid'; detail?: string; fields?: string[] }[];
+}
+
+/** D-22: the fields of a design this version does not know, as its kind's check names them; [] when it knows them all. */
+function unknownFields(kind: DesignKind, design: unknown): string[] {
+  const issues = kind === 'vehicle' ? vehicleSpecProblems(design) : satelliteDesignProblems(design);
+  const notAField = kind === 'vehicle' ? NOT_A_VEHICLE_FIELD : NOT_A_SATELLITE_FIELD;
+  return issues.filter((i) => i.message === notAField).map((i) => i.path);
 }
 
 /**
  * Read a design file: its format and version, then the design itself, held to
  * the same check the store applies. A design is all or nothing — half a
  * rocket is not a rocket — so a problem refuses it whole and says why. A newer
- * file is read as far as this version understands it, and says so.
+ * file (D-22) is taken when this version knows every field of its design, and
+ * says it is newer; a field it does not know refuses the file whole, and the
+ * refusal names each such field.
  */
 export function parseDesignDocument(raw: unknown): ParsedDesign {
   if (!isObj(raw) || raw.format !== DESIGN_FORMAT || typeof raw.version !== 'number' || !Number.isInteger(raw.version) || raw.version < 1) {
@@ -273,7 +285,10 @@ export function parseDesignDocument(raw: unknown): ParsedDesign {
   }
   const issues: ParsedDesign['issues'] = raw.version > DESIGN_FORMAT_VERSION ? [{ code: 'newerVersion' }] : [];
   const problem = designProblems(raw.kind, raw.name, raw.design);
-  if (problem) return { input: null, issues: [...issues, { code: 'invalid', detail: problem }] };
+  if (problem) {
+    const fields = issues.length && DESIGN_KINDS.includes(raw.kind as DesignKind) ? unknownFields(raw.kind as DesignKind, raw.design) : [];
+    return { input: null, issues: [...issues, { code: 'invalid', detail: problem, ...(fields.length ? { fields } : {}) }] };
+  }
   return { input: inputOf(raw.kind as DesignKind, (raw.name as string).trim(), clone(raw.design)), issues };
 }
 
