@@ -327,3 +327,11 @@ I could not refute the root cause or the proposed fix. I read the code at 3e1530
 | Home | — | — | — | 0 |
 
 Every in-flight Launch picture matched, and so did the 330 telemetry rows to T+160 s, compared with the reference flight.
+
+## Addendum: a 14th run (2026-10-08)
+
+After the 13-run table was built, Pages run 37852660960 at `0b466c1` (the merge of #120) failed this journey too, in browser (1). The cause is the same: the loss began at a = 131.6 and the 75th percentile pixel change was 13. #140's push then cancelled the run, so GitHub shows it as "cancelled".
+
+The count is now 6 failures in 14 runs. The pass/fail line falls between a = 131.5 (pass, `339b80e`, p75 9) and a = 131.6 (this failure), not at 131.8 as stated above.
+
+To get CI evidence before merging: PR CI runs only smoke journeys, and Deploy to GitHub Pages builds only main's tip (`deploy.yml:42-46`), so neither can run this journey on the branch. Dispatch "Audit browser acceptance" (`workflow_dispatch`, all journeys in one 35-minute job) on the branch, or agree with the owner that the local runs plus the first post-merge Pages run are the evidence.
