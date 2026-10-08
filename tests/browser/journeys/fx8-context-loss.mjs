@@ -16,12 +16,21 @@ export const timeoutMs = 600_000;
 const MISSION = { vehicleId: 'falcon9', siteId: 'cape', orbitId: 'leo', launchTimeIso: '2026-09-20T12:00:00Z' };
 const WARP = 10;
 /**
- * The flight loses its context from here, s after liftoff: the camera is more
- * than 30 km from the pad, so the shadow map is no longer drawn every frame
- * (`setShadowFocus`) and has to be primed again after a restore. Both flights
- * are compared up to COMPARE_TO_S.
+ * The flight loses its context here, s after liftoff: the camera is more than
+ * 30 km from the pad, so the shadow map is no longer drawn every frame
+ * (`setShadowFocus`) and has to be primed again after a restore; and the
+ * restore falls in the fastest change of the ascent's picture: at T+135 s the
+ * dynamic pressure drops under 500 Pa, the load relief lets go, and the stack
+ * pitches over from 20° to 6° above the horizon in 4 s. Both flights are
+ * compared up to COMPARE_TO_S.
  */
-const LOSE_AT_S = 120;
+const LOSE_AT_S = 133;
+/**
+ * At warp 10 the flight runs on past the poll that sees a time (each frame asks
+ * the worker for up to 5 s, and two asks may still be out): the last LEAD_S
+ * before LOSE_AT_S are flown at warp 1, so the loss lands within a frame of it.
+ */
+const LEAD_S = 25;
 const COMPARE_TO_S = 160;
 /** how long a context stays lost, ms of wall time */
 const LOST_MS = 4000;
@@ -160,10 +169,12 @@ async function flyTo(t, app, label, midway) {
   if (!t.check(launched.ok && launched.playing, `${label}: launch_mission: ${JSON.stringify(launched).slice(0, 200)}`)) return null;
   await app.mcp('control_playback', { action: 'warp', warp: WARP });
   if (midway) {
-    if (!t.check(await t.until(async () => (await state(app)).cursorTimeS > LOSE_AT_S, { timeoutMs: 180_000, intervalMs: 500 }),
-      `${label}: the flight did not reach T+${LOSE_AT_S} s`)) return null;
-    // real time through the loss, so the picture before it and after it is nearly the same
+    if (!t.check(await t.until(async () => (await state(app)).cursorTimeS > LOSE_AT_S - LEAD_S, { timeoutMs: 180_000, intervalMs: 500 }),
+      `${label}: the flight did not reach T+${LOSE_AT_S - LEAD_S} s`)) return null;
+    // real time to the loss and through it
     await app.mcp('control_playback', { action: 'warp', warp: 1 });
+    if (!t.check(await t.until(async () => (await state(app)).cursorTimeS >= LOSE_AT_S, { timeoutMs: 60_000, intervalMs: 100 }),
+      `${label}: the flight did not reach T+${LOSE_AT_S} s`)) return null;
     await midway();
     await app.mcp('control_playback', { action: 'warp', warp: WARP });
   }
