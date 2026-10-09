@@ -270,7 +270,8 @@ export class SatelliteBench {
       poses.setAttribute('role', 'group');
       poses.setAttribute('aria-label', t('build.sat.preview.pose'));
       for (const [pose, key] of [['deployed', 'build.sat.preview.deployed'], ['stowed', 'build.sat.preview.stowed']] as const) {
-        const b = button('be-mode bsb-pose', t(key), () => { this.pose = pose; this.renderPreview(); });
+        // M-PLAN-027: the redraw replaces the buttons; the keyboard stays on the one pressed
+        const b = button('be-mode bsb-pose', t(key), () => { this.pose = pose; this.renderPreview(); this.preview.querySelector<HTMLElement>(`[data-k="${P}pose-${pose}"]`)?.focus(); });
         b.dataset.k = `${P}pose-${pose}`;
         b.setAttribute('aria-pressed', String(this.pose === pose));
         poses.append(b);

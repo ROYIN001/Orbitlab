@@ -88,7 +88,7 @@ const LOCK_KEY: Record<string, string> = {
 };
 
 const narrow = (): boolean => typeof matchMedia === 'function' && matchMedia('(max-width: 860px)').matches;
-const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 /**
  * Where this browser keeps the drafts on screen between visits
  * (explore-model.ts `keptDraftsText`): a convenience of this browser only —
