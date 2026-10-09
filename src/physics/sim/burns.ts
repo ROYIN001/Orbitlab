@@ -834,6 +834,10 @@ export class BurnSequencer {
       // they differ from the frame's osculating ones (six-DOF). The result
       // panel's displayed-time metrics separately follow the replay frame.
       ...(el !== elements ? { apAltM: el.apoapsisAlt, peAltM: el.periapsisAlt } : {}),
+      // M-LAUNCH-031: every number the verdict was judged on, unrounded, so the
+      // result table re-judges exactly what this did (the rounded ones above
+      // can fall back inside the band). Recorded only; nothing reads them in flight.
+      apJudgedM: el.apoapsisAlt, peJudgedM: el.periapsisAlt, incJudgedRad: el.i, raanJudgedRad: el.raan,
       // `res.misses` is deliberately NOT put on the event. It used to be
       // joined into an English `miss` clause here — built inside
       // `orbitResiduals`, in physics — and no dictionary in en/ru/th declared

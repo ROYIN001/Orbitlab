@@ -339,6 +339,8 @@ export class AscentMonitor {
       // Preserve the apsides judged at cut-off. Displayed-time metrics follow
       // the frame's own apsides as the ship falls back into the air.
       apAltM: el.apoapsisAlt, peAltM: el.periapsisAlt,
+      // M-LAUNCH-031: the judged numbers unrounded, as on an orbit's verdict (burns.ts)
+      apJudgedM: el.apoapsisAlt, peJudgedM: el.periapsisAlt, incJudgedRad: el.i, raanJudgedRad: el.raan,
     });
     // C01: a capsule flight separates its capsule and flies it home; a ship flies itself
     if (this.sim.satellite.descent) {
