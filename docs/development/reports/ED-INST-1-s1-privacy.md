@@ -5,7 +5,7 @@
 > - ทำหน้า "ความเป็นส่วนตัว" สามภาษา (ไทยก่อน แล้วอังกฤษ รัสเซีย) เป็นไฟล์ `public/privacy.html` เปิดจากปุ่ม About ได้ และเปิดได้ตอนออฟไลน์
 > - รายการในหน้านี้ไล่จากโค้ดจริง: key ใน localStorage, sessionStorage, IndexedDB, Cache Storage และ host ทุกตัวที่แอปติดต่อ ไม่มี analytics หรือ telemetry ในโค้ดเลย
 > - มีเทสต์ที่ล้มทันทีถ้าโค้ดเพิ่ม key, ฐานข้อมูล, cache, host หรือช่องทางส่งข้อมูลใหม่โดยไม่ได้เขียนไว้ในหน้านี้
-> - ไม่ได้ขึ้นเพดานขนาดใด ๆ แต่หน้านี้ใช้ที่ใน precache code ไป 19.9 kB (เหลือ 6.1 kB จาก 26.0 kB) มีทางเลือกให้คุณตัดสินในหัวข้อ 6
+> - ไม่ได้ขึ้นเพดานขนาดใด ๆ แต่หน้านี้ใช้ที่ใน precache code ไป 20.9 kB (เหลือ 5.1 kB จาก 26.0 kB) มีทางเลือกให้คุณตัดสินในหัวข้อ 6
 > - **ห้าม merge จนกว่าคุณอนุมัติข้อความ** จุดที่ต้องยืนยันอยู่ในหัวข้อ 6 (ช่องทางติดต่อ ข้อความเชิงกฎหมาย คำว่า formative ป้ายลิงก์ และการใช้ที่ precache)
 
 - **Package:** ED-INST-1, item M-LEARNING-047 (P1, docs + feature), lane L-C (+T), wave K1.
@@ -75,9 +75,9 @@ Measured with `npx vite build && node scripts/bundle-budget.mjs` (kB of 1000 B):
 | `i18n-*.js` | 1726.4 | 1726.6 (+160 B: three one-word labels) | 1727 | 424 B |
 | `index-*.css` | 177.0 | 177.0 (no CSS) | 177 | 0 |
 | other chunks | 770.4 | 770.4 | 771 | 0.6 |
-| precache code | 14698.0 | 14717.9 (+19.9: the page 19.7, the rest the link and labels) | 14724 | 6.1 |
+| precache code | 14698.0 | 14718.9 (+20.9: the page 20.7, the rest the link and labels) | 14724 | 5.1 |
 
-No ceiling is raised. The page takes 19.9 of the 26.0 kB precache-code room that every K1 code PR shares: this is the owner's call (6, question 3).
+No ceiling is raised. The page takes 20.9 of the 26.0 kB precache-code room that every K1 code PR shares: this is the owner's call (6, question 3).
 
 ## 4. Tests
 
@@ -85,9 +85,21 @@ No ceiling is raised. The page takes 19.9 of the 26.0 kB precache-code room that
   - Shown failing: adding `orbitlab.newThing` to `WORKSPACE_KEYS` fails two cases ("technical list misses orbitlab.newThing", and the unknown-string case).
 - `tests/browser/journeys/privacy-offline.mjs` (new): the page is in the precache; offline, for Thai, English and Russian, About's link points to `privacy.html#<lang>` and opens the statement (not the app) with that section's heading shown. Passed locally (Chromium 1194, 38 s). With the old route (`navigate` → `page`) it fails: "th: the link opened the app instead of the statement".
 - `scripts/verification/change-map.json`: a `privacy-statement` rule (page, About, `src/pwa/**` → build, the unit test and the journey) and an additive `privacy-inventory` rule (`src/**`, `index.html` → the unit test). `node --test tests/verification/change-map.test.mjs`: 14/14.
-- Typecheck clean; the full results are in the PR.
+- `npx tsc --noEmit` clean. `npx vitest run` passed 312 files and 10,354 tests on `25de8fa`. After the review fixes, which changed only the page text and the inventory test, `tests/privacy-inventory.test.ts` was re-run (7/7) and so were the build, the budget and the `privacy-offline` journey. `pwa-offline` also passes with the new route. `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs`: 93/93.
 
 No existing test, assertion, tolerance or golden was changed.
+
+## 4a. Second-agent review
+
+A second agent reviewed commit `25de8fa` against the code. It found **no blocking findings** and confirmed 17 of 17 claims, including the routing change being safe (only `privacy.html` changes route) and the three languages stating the same facts. It made seven non-blocking findings:
+
+1. Fixed: a recording from before profiles that could not be moved into one (D-68) is not deleted with any profile. The tables now say it stays until site data is cleared.
+2. Fixed: reopening a closed tab can restore `sessionStorage`. The tables now say so; this matters on shared computers.
+3. Fixed: the WebMCP tools also operate the app, not only read it. The text now says so.
+4. **For the owner** (question 2): "by email" has no address, because the repository has none.
+5. Fixed: a link to a lesson the teacher wrote carries the lesson text. The text now says so.
+6. Fixed: the test now checks every `caches.open(` argument in the two files that open caches. A cache with a new name fails it.
+7. Recorded as a known gap: the test catches a new outside host only through the dataset lists and the `fetch(` file list. A new `img.src`/`<link>`/`<script>` to an outside host, or a new outside URL fetched from one of the four allowed files, would pass. Every `img.src` today is same-origin. Closing the gap needs an allowlist of citation-only hosts, which is left for later.
 
 ## 5. Not done here
 
@@ -99,7 +111,8 @@ No existing test, assertion, tolerance or golden was changed.
 
 1. **The text** in Thai, English and Russian: approve, or note changes.
 2. **Contact channel.** (a) GitHub Issues only; (b) add an email address you choose; (c) add the institution's contact for its own pilots.
-3. **Delivery and precache room.** (a) precached page, +19.9 kB precache code, 6.1 kB left for the rest of K1; (b) not precached (on demand, like the landing pictures): 0 kB, but offline only after it was opened once online; (c) (a) now, and a later D-38 raise with a named offset if the room runs out.
+3. **Delivery and precache room.** (a) precached page, +20.9 kB precache code, 5.1 kB left for the rest of K1; (b) not precached (on demand, like the landing pictures): 0 kB, but offline only after it was opened once online; (c) (a) now, and a later D-38 raise with a named offset if the room runs out.
+   **Collision to weigh:** the owner's one-time K1 allowance of 2026-10-09 (card q03 B: index +2 kB, i18n +2 kB, CSS +1 kB, other chunks +1 kB; precache code not raised) lets those groups grow by up to 6 kB. All of that growth also counts in precache code. With this page, precache code has 5.1 kB left, so the allowance could not be used in full unless the page is not precached (b) or precache code is raised (c).
 4. **Legal claims (not checked by a lawyer).**
    - L1 "PDPA gives the right to access, correct and erase your data … you do it yourself": the page names no data controller and does not say the developer is not one. Keep, or add a sentence after legal advice.
    - L2 "Learners under 20 should use the app with a parent's or teacher's knowledge": 20 is the Thai age of majority; PDPA s. 20 sets consent rules for minors (guardian alone under 10). (a) keep as advice; (b) remove; (c) reword after advice.

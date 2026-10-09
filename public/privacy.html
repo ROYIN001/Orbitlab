@@ -26,15 +26,15 @@ code{font-size:.85em;overflow-wrap:anywhere}
 <table>
 <tr><th>ข้อมูล</th><th>เก็บนานแค่ไหน · ลบอย่างไร</th></tr>
 <tr><td>โปรไฟล์ <code>orbitlab.profile.v1.*</code> และรายชื่อ <code>orbitlab.profiles.catalog.v1</code>: ชื่อ ประวัติบทเรียน คำตอบและคะแนน แบบยาน ภารกิจ สมุดทดลอง รายชื่อนักเรียนและรหัสชั้นในใบงาน การตั้งค่า เช่น ภาษาและเมือง</td><td>จนกว่าจะลบ: "ลบโปรไฟล์" ลบทั้งหมดของคนนั้น "รีเซ็ตประวัติ" ลบเฉพาะประวัติบทเรียนหรือแบบทดสอบ</td></tr>
-<tr><td>โปรไฟล์ที่แท็บนี้ใช้ <code>orbitlab.profiles.selected.v1</code></td><td>หายเมื่อปิดแท็บ</td></tr>
-<tr><td>เสียงที่คุณเพิ่มเอง <code>orbitlab-soundtracks</code></td><td>ลบพร้อมโปรไฟล์ของเจ้าของ</td></tr>
+<tr><td>โปรไฟล์ที่แท็บนี้ใช้ <code>orbitlab.profiles.selected.v1</code></td><td>หายเมื่อปิดแท็บ แต่การเปิดแท็บที่ปิดไปกลับมาอาจคืนค่านี้</td></tr>
+<tr><td>เสียงที่คุณเพิ่มเอง <code>orbitlab-soundtracks</code></td><td>ลบพร้อมโปรไฟล์ของเจ้าของ เสียงจากรุ่นเก่าที่ย้ายเข้าโปรไฟล์ไม่ได้อยู่จนกว่าจะล้างข้อมูลเว็บไซต์</td></tr>
 <tr><td>ตัวแอปและข้อมูลสำหรับออฟไลน์ <code>orbitlab-precache-*</code> <code>orbitlab-runtime</code> <code>orbitlab-data</code> <code>orbitlab-recent-answers</code> ไม่มีข้อมูลส่วนตัว</td><td>รุ่นเก่าลบเอง ที่เหลือจนกว่าจะล้างข้อมูลเว็บไซต์</td></tr>
 </table>
 <p>ลบทุกอย่าง: ล้างข้อมูลเว็บไซต์ของ Orbitlab ในการตั้งค่าเบราว์เซอร์ หน้าต่างส่วนตัวลบทุกอย่างเมื่อปิด Safari บน iPhone/iPad อาจลบข้อมูลของเว็บที่ไม่ได้เปิดราว 7 วันถ้าไม่ได้เพิ่มไว้ที่หน้าจอโฮม จึงควรส่งออกไฟล์สำรองเป็นระยะ</p>
 <p>เครื่องที่ใช้ร่วมกันในโรงเรียน: ให้แต่ละคนใช้บัญชีหรือโปรไฟล์เบราว์เซอร์ของตัวเอง หรือส่งออกไฟล์สำรองแล้วลบโปรไฟล์เมื่อเลิกใช้ ใช้ชื่อเล่นหรือรหัสแทนชื่อจริงได้</p>
-<p>ผู้ช่วย AI ที่คุณติดตั้งในเบราว์เซอร์ (ถ้ามี) ใช้เครื่องมือ WebMCP ของ Orbitlab อ่านความคืบหน้าและผลแบบทดสอบของโปรไฟล์ที่เปิดอยู่ได้ และส่งต่อตามนโยบายของผู้ให้บริการผู้ช่วยนั้น</p>
+<p>ผู้ช่วย AI ที่คุณติดตั้งในเบราว์เซอร์ (ถ้ามี) ใช้เครื่องมือ WebMCP ของ Orbitlab อ่านความคืบหน้าและผลแบบทดสอบของโปรไฟล์ที่เปิดอยู่และสั่งงานแอปได้ และส่งต่อตามนโยบายของผู้ให้บริการผู้ช่วยนั้น</p>
 <h3>อินเทอร์เน็ต</h3>
-<p>ตัวแอปโหลดจาก GitHub Pages ซึ่งอาจบันทึกที่อยู่ IP ชนิดเบราว์เซอร์ และเวลาตามนโยบายของ GitHub โหมดออนไลน์ (ปิดอยู่โดยค่าเริ่มต้น) ขอข้อมูลจาก <code>services.swpc.noaa.gov</code> <code>celestrak.org</code> และฟอนต์จาก <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code> คำขอไม่มีชื่อ งาน หรือคะแนน แต่เซิร์ฟเวอร์เห็นที่อยู่ IP ลิงก์ภารกิจหรือบทเรียนที่คัดลอกมีค่าตั้งอยู่ในลิงก์ ไม่มีชื่อหรือคะแนน</p>
+<p>ตัวแอปโหลดจาก GitHub Pages ซึ่งอาจบันทึกที่อยู่ IP ชนิดเบราว์เซอร์ และเวลาตามนโยบายของ GitHub โหมดออนไลน์ (ปิดอยู่โดยค่าเริ่มต้น) ขอข้อมูลจาก <code>services.swpc.noaa.gov</code> <code>celestrak.org</code> และฟอนต์จาก <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code> คำขอไม่มีชื่อ งาน หรือคะแนน แต่เซิร์ฟเวอร์เห็นที่อยู่ IP ลิงก์ภารกิจหรือบทเรียนที่คัดลอกมีค่าตั้ง (และเนื้อหาบทเรียนที่คุณเขียนเอง) อยู่ในลิงก์ ไม่มีชื่อหรือคะแนน</p>
 <h3>ไฟล์ที่ส่งออก</h3>
 <p>ไฟล์ที่ดาวน์โหลดอยู่ในโฟลเดอร์ดาวน์โหลด นอกการควบคุมของ Orbitlab ไฟล์สำรองและไฟล์ผลการเรียนมีชื่อและคะแนน การลบโปรไฟล์ไม่ลบไฟล์เหล่านี้ ไฟล์ที่ส่งให้ครูหรือโรงเรียนอยู่ในความดูแลของผู้รับ</p>
 <h3>คะแนน รายงานปัญหา และสิทธิของคุณ</h3>
@@ -53,15 +53,15 @@ code{font-size:.85em;overflow-wrap:anywhere}
 <table>
 <tr><th>Data</th><th>How long · how to delete</th></tr>
 <tr><td>Profile <code>orbitlab.profile.v1.*</code> and list <code>orbitlab.profiles.catalog.v1</code>: name, lesson history, answers and scores, designs, missions, notes, worksheet student list and class code, settings such as language and city</td><td>Until deleted: "Delete profile" removes all of that learner; "Reset records" only lesson or test history</td></tr>
-<tr><td>This tab's profile <code>orbitlab.profiles.selected.v1</code></td><td>Gone when the tab closes</td></tr>
-<tr><td>Audio you added <code>orbitlab-soundtracks</code></td><td>Deleted with its owner's profile</td></tr>
+<tr><td>This tab's profile <code>orbitlab.profiles.selected.v1</code></td><td>Ends when the tab closes, but reopening a closed tab can restore it</td></tr>
+<tr><td>Audio you added <code>orbitlab-soundtracks</code></td><td>Deleted with its owner's profile; an older recording that could not be moved into a profile stays until site data is cleared</td></tr>
 <tr><td>The app and offline data <code>orbitlab-precache-*</code> <code>orbitlab-runtime</code> <code>orbitlab-data</code> <code>orbitlab-recent-answers</code>, no personal data</td><td>Old versions removed; the rest until site data is cleared</td></tr>
 </table>
 <p>Delete everything: clear Orbitlab's site data in the browser settings. A private window deletes everything when closed. Safari on iPhone/iPad may delete data of a site not opened for about 7 days unless added to the Home Screen, so export a backup now and then.</p>
 <p>Shared school computers: give each learner their own account or browser profile, or export a backup and delete the profile when done. A nickname or code can replace a real name.</p>
-<p>An AI assistant you installed in the browser (if any) can read the open profile's progress and test results through Orbitlab's WebMCP tools, and passes them on under its provider's policy.</p>
+<p>An AI assistant you installed in the browser (if any) can read the open profile's progress and test results and operate the app through Orbitlab's WebMCP tools, and passes them on under its provider's policy.</p>
 <h3>Internet</h3>
-<p>The app is loaded from GitHub Pages, which may log IP address, browser type and time under GitHub's policy. Online mode (off by default) fetches from <code>services.swpc.noaa.gov</code>, <code>celestrak.org</code> and fonts from <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code>. Requests carry no names, work or scores, but the servers see your IP address. A copied mission or lesson link carries its settings, no names or scores.</p>
+<p>The app is loaded from GitHub Pages, which may log IP address, browser type and time under GitHub's policy. Online mode (off by default) fetches from <code>services.swpc.noaa.gov</code>, <code>celestrak.org</code> and fonts from <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code>. Requests carry no names, work or scores, but the servers see your IP address. A copied mission or lesson link carries its settings (and the text of a lesson you wrote), no names or scores.</p>
 <h3>Exported files</h3>
 <p>Downloaded files sit in the downloads folder, outside Orbitlab's control. Backups and results files contain the name and scores. Deleting a profile does not delete them. A file given to a teacher or school is in the receiver's care.</p>
 <h3>Scores, problem reports and your rights</h3>
@@ -80,15 +80,15 @@ code{font-size:.85em;overflow-wrap:anywhere}
 <table>
 <tr><th>Данные</th><th>Сколько хранится · как удалить</th></tr>
 <tr><td>Профиль <code>orbitlab.profile.v1.*</code> и список <code>orbitlab.profiles.catalog.v1</code>: имя, история уроков, ответы и баллы, конструкции, миссии, записи, список учащихся и код класса в рабочих листах, настройки (язык, город и др.)</td><td>До удаления: «Удалить профиль» удаляет всё этого учащегося; «Сбросить записи» — только историю уроков или тестов</td></tr>
-<tr><td>Профиль этой вкладки <code>orbitlab.profiles.selected.v1</code></td><td>Исчезает при закрытии вкладки</td></tr>
-<tr><td>Добавленное вами аудио <code>orbitlab-soundtracks</code></td><td>Удаляется вместе с профилем владельца</td></tr>
+<tr><td>Профиль этой вкладки <code>orbitlab.profiles.selected.v1</code></td><td>Сбрасывается при закрытии вкладки, но повторное открытие закрытой вкладки может его вернуть</td></tr>
+<tr><td>Добавленное вами аудио <code>orbitlab-soundtracks</code></td><td>Удаляется вместе с профилем владельца; старая запись, не перенесённая в профиль, — до очистки данных сайта</td></tr>
 <tr><td>Приложение и данные для офлайна <code>orbitlab-precache-*</code> <code>orbitlab-runtime</code> <code>orbitlab-data</code> <code>orbitlab-recent-answers</code>, без личных данных</td><td>Старые версии удаляются; остальное — пока не очищены данные сайта</td></tr>
 </table>
 <p>Удалить всё: очистите данные сайта Orbitlab в настройках браузера. Приватное окно удаляет всё при закрытии. Safari на iPhone/iPad может удалить данные сайта, не открывавшегося около 7 дней, если он не добавлен на экран «Домой», поэтому иногда экспортируйте резервную копию.</p>
 <p>Общие компьютеры в школе: дайте каждому свою учётную запись или профиль браузера либо экспортируйте копию и удалите профиль после работы. Вместо имени можно указать псевдоним или код.</p>
-<p>Установленный вами в браузере ИИ-ассистент (если есть) может через инструменты WebMCP Orbitlab читать прогресс и результаты тестов открытого профиля и передаёт их по правилам своего поставщика.</p>
+<p>Установленный вами в браузере ИИ-ассистент (если есть) может через инструменты WebMCP Orbitlab читать прогресс и результаты тестов открытого профиля, управлять приложением и передаёт их по правилам своего поставщика.</p>
 <h3>Интернет</h3>
-<p>Приложение загружается с GitHub Pages, где по правилам GitHub могут записываться IP-адрес, тип браузера и время. Онлайн-режим (по умолчанию выключен) запрашивает данные у <code>services.swpc.noaa.gov</code>, <code>celestrak.org</code> и шрифты у <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code>. В запросах нет имён, работ и баллов, но серверы видят ваш IP-адрес. Скопированная ссылка на миссию или урок содержит их настройки, без имён и баллов.</p>
+<p>Приложение загружается с GitHub Pages, где по правилам GitHub могут записываться IP-адрес, тип браузера и время. Онлайн-режим (по умолчанию выключен) запрашивает данные у <code>services.swpc.noaa.gov</code>, <code>celestrak.org</code> и шрифты у <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code>. В запросах нет имён, работ и баллов, но серверы видят ваш IP-адрес. Скопированная ссылка на миссию или урок содержит их настройки (а для вашего урока — его текст), без имён и баллов.</p>
 <h3>Экспортируемые файлы</h3>
 <p>Загруженные файлы лежат в папке загрузок, вне контроля Orbitlab. Копии и файлы результатов содержат имя и баллы. Удаление профиля их не удаляет. За файл, переданный учителю или школе, отвечает получатель.</p>
 <h3>Баллы, сообщения о проблемах и ваши права</h3>

@@ -103,6 +103,12 @@ describe('privacy statement (M-LEARNING-047): the page names what the code store
       expect(names.length, file).toBeGreaterThan(0);
       for (const n of names as string[]) expect(['DB', 'MEDIA_DATABASE'], `${file} opens ${n}`).toContain(n);
     }
+    // every cache the code opens is one the page names (a template-literal name would slip past the string scan)
+    for (const file of ['src/provider/data-provider.ts', 'src/pwa/sw-core.ts']) {
+      const names = [...SRC.find((x) => x.file === file)!.text.matchAll(/caches\.open\(([\w.]+(?:\([\w.]*\))?)\)/g)].map((m) => m[1].trim());
+      expect(names.length, file).toBeGreaterThan(0);
+      for (const n of names) expect(['precacheName(manifest.version)', 'RUNTIME_CACHE', 'DATA_CACHE', 'CacheStorageRecent.NAME', /* an older precache, read for reuse */ 'name'], `${file} opens cache ${n}`).toContain(n);
+    }
     expect(SRC.find((x) => x.file === 'src/audio/soundtrack.ts')!.raw).toContain(`const DB = '${MEDIA_DATABASE}'`);
   });
 
