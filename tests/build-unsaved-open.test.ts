@@ -692,6 +692,29 @@ describe('M-BUILD-007 (FX-1 s5): the rocket designer\'s vehicle picker, "Start a
     expect(untouched.state.parts.payloadKg).toBe(400);
   });
 
+  it('"Save it, then open" for a sized launcher keeps the parts design asked about, though the remix was shown before the answer (review of s5)', async () => {
+    const designs = storeWith(memory());
+    const sized: ExploreState = { ...fresh(), mode: 'parts' };
+    sized.parts.edit.sites = ['vandenberg'];
+    const spec = specOf(sized);
+    const state = fresh();
+    state.parts.edit.groups = [{ ...DEFAULT_GROUP }];
+    const { level } = rocketDesigner(state, designs);
+    const asked = specOf({ ...state, mode: 'parts' });
+    level.openDesign(spec, 500);
+    await settle();
+    expect(level.asking).not.toBeNull();
+    // the student looks at the untouched remix before answering
+    (level as unknown as { setMode(m: 'remix' | 'parts'): void }).setMode('remix');
+    await level.answer('save');
+    await settle();
+    const all = await everyKept(designs, 'vehicle');
+    expect(all.map((d) => d.design), 'the parts design asked about was not the one kept').toEqual([asked]);
+    expect(level.state.remix.recordId).toBeNull();
+    expect(level.state.parts.edit.sites).toEqual(['vandenberg']);
+    expect(level.state.mode).toBe('parts');
+  });
+
   it('a question left open is about its draft only: once Open replaced that draft, "Open without saving" replaces nothing', async () => {
     const designs = storeWith(memory());
     const e = asVehicle(await designs.save({ kind: 'vehicle', name: 'My Electron', design: specOf({ ...fresh(), remix: remixDraft('electron', 'my-electron', 'My Electron') }) }));
