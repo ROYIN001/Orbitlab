@@ -88,7 +88,7 @@ const LOCK_KEY: Record<string, string> = {
 };
 
 const narrow = (): boolean => typeof matchMedia === 'function' && matchMedia('(max-width: 860px)').matches;
-const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 /**
  * Where this browser keeps the drafts on screen between visits
  * (explore-model.ts `keptDraftsText`): a convenience of this browser only —
@@ -189,6 +189,8 @@ export class ExploreLevel {
   private drawQueued = 0;
   private keepQueued: ReturnType<typeof setTimeout> | null = null;
   private draftDirty = false;
+  /** M-BUILD-007 (FX-1 s5): the draft a new start would replace, which the store compares and, asked to, saves */
+  private target: ExploreMode | null = null;
 
   private readonly head = el('header', 'bs-panel bx-head');
   private readonly stagePanel = el('div', 'bs-stage bx-stage');
@@ -379,35 +381,22 @@ export class ExploreLevel {
     this.store.render();
   }
 
-  /** A new remix of catalogue vehicle `id` (the picker; a design base is the one already on screen). */
-  private pickBase(id: string): void {
+  /** A new remix of catalogue vehicle `id` (the picker, where a design base is the one already on screen; `again`, "Start again"). */
+  private pickBase(id: string, again?: boolean): void {
     const d = this.state.remix;
-    if (d.edit.base.kind === 'catalogue' ? d.edit.base.id === id : d.edit.base.spec.id === id) return;
+    if (!again && (d.edit.base.kind === 'catalogue' ? d.edit.base.id === id : d.edit.base.spec.id === id)) return;
     if (!VEHICLES.some((v) => v.id === id)) return;
     const name = t('build.ex.remixName', { name: vehicleById(id).name });
-    this.defaultNames.remix = name;
-    this.state.remix = remixDraft(id, newDesignId(name), name);
-    this.selected = null;
-    this.reshaped();
-    this.store.render();
+    this.begin({ mode: 'remix', draft: remixDraft(id, newDesignId(name), name) }, true);
   }
 
   /** Start the mode's design again from its beginning. */
   private startOver(): void {
-    if (this.state.mode === 'remix') {
-      const base = remixBase(this.state.remix.edit.base);
-      const id = VEHICLES.some((v) => v.id === base.id) ? base.id : base.derivedFrom ?? 'falcon9';
-      const name = t('build.ex.remixName', { name: vehicleById(id).name });
-      this.defaultNames.remix = name;
-      this.state.remix = remixDraft(id, newDesignId(name), name);
-    } else {
-      const name = t('build.ex.partsName');
-      this.defaultNames.parts = name;
-      this.state.parts = partsDraft(newDesignId(name), name);
-    }
-    this.selected = null;
-    this.reshaped();
-    this.store.render();
+    const base = remixBase(this.state.remix.edit.base);
+    const id = VEHICLES.some((v) => v.id === base.id) ? base.id : base.derivedFrom ?? 'falcon9';
+    if (this.state.mode === 'remix') return this.pickBase(id, true);
+    const name = t('build.ex.partsName');
+    this.begin({ mode: 'parts', draft: partsDraft(newDesignId(name), name) }, true);
   }
 
   /**
@@ -419,14 +408,28 @@ export class ExploreLevel {
   openDesign(spec: VehicleSpec, payloadKg: number): void {
     const opened = draftFromSpec(spec, null);
     opened.draft.payloadKg = payloadKg;
-    if (opened.mode === 'remix') this.state.remix = opened.draft;
-    else this.state.parts = opened.draft;
-    this.state.mode = opened.mode;
-    this.selected = null;
-    this.shown = undefined as unknown as Built;
-    this.compute();
-    if (this.visible) this.reshaped();
-    this.store.render();
+    this.begin(opened, false);
+  }
+
+  /**
+   * M-BUILD-007 (FX-1 s5): a new design (the picker's, "Start again"'s with its default name, `named`, or a sized
+   * launcher) on screen in place of the draft of its kind, as the store says: at once when that draft was never
+   * saved and is as it started, or is as kept; else asked first, as Open is.
+   */
+  private begin({ mode, draft }: { mode: ExploreMode; draft: Draft<RemixEdit> | Draft<PartsEdit> }, named: boolean): void {
+    const d = this.state[mode];
+    const go = (): void => {
+      if (named) this.defaultNames[mode] = draft.name;
+      Object.assign(this.state, { [mode]: draft, mode });
+      this.selected = null;
+      this.shown = undefined as unknown as Built;
+      this.reshaped();
+      this.store.render();
+    };
+    this.target = mode;
+    // the picker shows the remix's own vehicle again until the answer
+    this.rebuild();
+    void this.store.start(draft.name, () => this.state[mode] === d, go);
   }
 
   /** A kept or imported rocket design, opened here (a rocket file imported in the satellite designer, D06), and what the store says of it. */
@@ -440,7 +443,7 @@ export class ExploreLevel {
    * compares it with its record; null when it was never saved and is as it started, its default name too (nothing to lose).
    */
   private replacing(record?: DesignRecord<'vehicle'>): { design: VehicleSpec | null; recordId: string | null } | null {
-    const mode = record ? draftFromSpec(record.design, record.id).mode : this.state.mode;
+    const mode = record ? draftFromSpec(record.design, record.id).mode : this.target ?? this.state.mode;
     const d = this.state[mode], base = (d.edit as RemixEdit).base;
     const start = base ? base.kind === 'catalogue' && remixDraft(base.id, '', '').edit : partsDraft('', '').edit;
     if (d.recordId === null && d.name === this.defaultNames[mode] && canonicalJson(d.edit) === canonicalJson(start)) return null;

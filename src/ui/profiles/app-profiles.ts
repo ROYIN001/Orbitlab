@@ -29,8 +29,10 @@ export class AppProfiles {
     if (this.repo.status !== 'durable') queueMicrotask(() => this.open());
   }
 
+  /** The record's name alone: no lessons, designs or experiments are parsed for it (M-PLATFORM-006). */
   name(): string {
-    try { return this.repo.active()?.name ?? ''; }
+    const id = this.repo.binding?.profileId;
+    try { return id ? this.repo.read(id).name : ''; }
     catch { return ''; }
   }
 
