@@ -51,6 +51,7 @@ import { benchPart, type BenchPartFacts } from '../../design/bench-part';
 import { stageName } from '../names';
 import { StackSvg, type StackLabel } from './stack-svg';
 import { mass } from './figures';
+import { reducedMotion } from './explore-level';
 import './engineer.css';
 
 /** A design the Explore level has on screen. */
@@ -364,7 +365,8 @@ export class EngineerLevel {
     modes.setAttribute('role', 'group');
     modes.setAttribute('aria-label', t('build.eng.preview.view'));
     for (const [value, key] of [[0, 'build.eng.preview.stacked'], [1, 'build.eng.preview.apart']] as const) {
-      const b = button('be-mode', t(key), () => { this.explode = value; this.renderPreview(); });
+      // M-PLAN-027: the redraw replaces the buttons; the keyboard stays on the one pressed
+      const b = button('be-mode', t(key), () => { this.explode = value; this.renderPreview(); this.preview.querySelectorAll<HTMLElement>('.be-mode')[value].focus(); });
       b.setAttribute('aria-pressed', String(this.explode === value));
       modes.append(b);
     }
@@ -404,7 +406,8 @@ export class EngineerLevel {
     if (p.kind === 'booster') {
       const b = st.boosters?.[p.group];
       const role = t('build.label.boosters', { n: b?.count ?? 1 });
-      return { lines: b ? [role, engine(b.engine.count, b.engine.name)] : [role], name: role };
+      // named as Watch and Explore name it (M-PLAN-027)
+      return { lines: b ? [role, engine(b.engine.count, b.engine.name)] : [role], name: b ? `${role}: ${stageName(spec, b.id, b.name)}` : role };
     }
     const role = t(p.kind === 'fairing' ? 'build.label.fairing' : 'build.label.interstage', { n: 1 });
     return { lines: [role], name: role };
@@ -416,7 +419,8 @@ export class EngineerLevel {
     this.part = ref;
     this.renderPartCard();
     this.renderDrawing();
-    this.preview.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // M-PLAN-027: at once when the reader asked for reduced motion
+    this.preview.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
     this.drawing.focusLabel(ref);
   }
 
