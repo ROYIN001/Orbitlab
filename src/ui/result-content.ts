@@ -98,7 +98,8 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
     raan: exact.raan ?? (judgedValue.raan !== null ? judgedValue.raan / RAD : elements.raan),
   }, true).misses.map(miss => miss.param));
   // An older record's rounded numbers (1 km, 0.01°, 0.1°) can fall back inside the band; such an off-target verdict
-  // keeps the unrounded flags of the displayed orbit, as before (review). An exact record never falls back.
+  // keeps the unrounded flags of the displayed orbit, as before (review). An exact record never falls back: one that
+  // misses nothing was vetoed (a burn it could not finish, `evt.insufficientDv`), and flags no row on purpose.
   const isExact = exact.pe !== null && exact.ap !== null && exact.i !== null && exact.raan !== null;
   const judgedMisses = judgedOff.size || isExact ? judgedOff : misses;
   const metric = (key: OrbitMissParam, wanted: number | null, actual: number, delta: number | null, unit: 'km' | 'deg'): ResultMetric => {
