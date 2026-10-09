@@ -95,8 +95,10 @@ class ProfileMenuHost {
     };
   }
 
+  /** The open learner's name from its record alone; the counts are not parsed for it (M-PLATFORM-006). */
   name(): string {
-    try { return this.repo.active()?.name ?? ''; }
+    const id = this.repo.binding?.profileId;
+    try { return id ? this.repo.read(id).name : ''; }
     catch { return ''; }
   }
 
@@ -132,12 +134,15 @@ class ProfileMenuHost {
   private snapshot(): ProfileDialogSnapshot {
     const profiles: ProfileItem[] = [], unreadable: UnreadableProfileItem[] = [];
     try {
-      for (const row of this.repo.listWithStatus()) {
+      // One read per row (M-PLATFORM-005): the row's values give the counts.
+      for (const { values, ...row } of this.repo.rows()) {
         if (row.state !== 'ok') unreadable.push(row);
-        else profiles.push({ ...row, counts: this.counts(this.repo.read(row.id).values, row.counts) });
+        else profiles.push({ ...row, counts: this.counts(values!, row.counts) });
       }
     } catch { /* The chooser explains inaccessible storage; never overwrite it. */ }
-    const activeId = this.name() && this.repo.binding?.valid ? this.repo.binding.profileId : null;
+    // A readable row of the open learner is its name; otherwise read it as before.
+    const own = this.repo.binding?.profileId, named = profiles.some((p) => p.id === own) || !!this.name();
+    const activeId = named && this.repo.binding?.valid ? this.repo.binding.profileId : null;
     const lessons = activeId ? this.recordedLessons?.() ?? [] : [];
     return { profiles, unreadable, activeId, lessons, status: activeId ? this.repo.status : 'chooser' };
   }
