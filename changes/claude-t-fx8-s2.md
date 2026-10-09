@@ -1,0 +1,7 @@
+## CHANGELOG
+
+- Tests (FX-8, fx8-context-loss): the in-flight Launch case of the context-loss journey no longer fails in about 40% of Pages runs. It compared the picture before the loss with one taken about 5 s of flight later; when the loss fell after about T+131.5 s, that window crossed the load-relief pitch-over near T+135 s and the picture really changed. The after picture is now taken at the before picture's flight time (seek back in the recording), a new check confirms both pictures show the same moment, and the loss is pinned at T+133 s (just before the pitch-over) with a guard that fails if it lands past T+136 s. No threshold moved and no check was removed; test only. Owner approved this as a changed assertion (decision card q01, option A, 2026-10-09).
+
+## PROGRESS
+
+| FX-8 test fix (fx8-context-loss picture moment, wave K1) | In PR; not merged; not published | Test only, `tests/browser/journeys/fx8-context-loss.mjs`: after picture at the before picture's flight time, same-moment check added, loss pinned at T+133 s with LEAD_S 25 and a T+136 s guard; thresholds (p75 < 12, mean ratio) unchanged. Diagnosis fits all 14 Pages runs (6 failures at a = 131.6–134.5, p75 13–19). Failing first `50f9362` failed locally 2/2, fix passed 2/2 (p75 1, 3); "Audit browser acceptance" run on the branch in the report. Owner approval: decision card q01 option A, 2026-10-09 | [T-fx8-picture-moment report](reports/T-fx8-picture-moment.md) |

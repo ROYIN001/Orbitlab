@@ -1,13 +1,13 @@
 # fx8-context-loss: the in-flight Launch case compared two moments of the flight
 
-Date: 2026-10-08. Main at the time: `3e15303`. Branch: `claude/t-fx8-picture-moment-s1`, not merged.
+Date: 2026-10-08, updated 2026-10-09. Main at the time: `3e15303`. Branch: `claude/t-fx8-picture-moment-s1`, carried on as `claude/t-fx8-s2` with main (`b2f6d26`) merged in.
 
 | | |
 |---|---|
 | Finding | **A test bug, not an app bug.** Confidence about 0.88. |
 | How it was reached | An evidence sweep over 13 Pages runs, three independent investigators, a local experiment, and two skeptics who tried to refute it. Neither could. |
-| Owner decision needed | Whether comparing against a picture replayed at the same moment counts as a "changed assertion" under SESSION-PROTOCOL §1 step 3. |
-| CI evidence needed | A Pages-mode run: PR CI runs only the smoke journeys, so it never runs this one. |
+| Owner decision | **Answered 2026-10-09** (decision card q01, option A): it is a changed assertion, approved, with an "Audit browser acceptance" run on the branch before merge. See [Owner decision](#owner-decision-2026-10-09). |
+| CI evidence | "Audit browser acceptance" dispatched on `claude/t-fx8-s2`; result below. |
 | Paths below | Paths under `/tmp/claude-0/…` and `scratchpad/…` were the session's scratch area, and it no longer exists. The test and the fix are this branch's two commits: `50f9362` (failing first) and `d73f576` (the fix). Every CI log named here can be fetched again by its job id. |
 
 ## Finding
@@ -335,3 +335,17 @@ After the 13-run table was built, Pages run 37852660960 at `0b466c1` (the merge 
 The count is now 6 failures in 14 runs. The pass/fail line falls between a = 131.5 (pass, `339b80e`, p75 9) and a = 131.6 (this failure), not at 131.8 as stated above.
 
 To get CI evidence before merging: PR CI runs only smoke journeys, and Deploy to GitHub Pages builds only main's tip (`deploy.yml:42-46`), so neither can run this journey on the branch. Dispatch "Audit browser acceptance" (`workflow_dispatch`, all journeys in one 35-minute job) on the branch, or agree with the owner that the local runs plus the first post-merge Pages run are the evidence.
+
+## Owner decision (2026-10-09)
+
+Decision page https://claude.ai/artifact/Jsyu693aoFBx9rXZv7Rc5Q, card q01, answered 2026-10-09T22:24:57Z, option A, verbatim: "อนุมัติเป็นการเปลี่ยน assertion และรัน "Audit browser acceptance" บน branch ก่อน merge" ("approve as a changed assertion, and run "Audit browser acceptance" on the branch before merge"); the option's stated effect: "รันราว 35 นาที ครบทุก journey แล้ว Pages เลิกล้มเพราะ test นี้".
+
+This answers open questions 1 and 2. Open question 3 (keep the T+133 pin) is kept as recommended, and the guard check `a.cursorTimeS < LOSE_AT_S + 3` recommended in "Proposed fix" step 5 is now in the test (`claude/t-fx8-s2`), so a run whose loss overshoots past the pitch-over fails visibly instead of passing silently.
+
+Independent re-check (2026-10-09): all 14 Pages runs fit the diagnosis (6 failures with a = 131.6–134.5 and p75 13–19; 8 passes with a ≤ 131.5). Locally the failing-first commit failed 2/2 and the fix passed 2/2 (p75 1 and 3).
+
+**Known weakness.** With the sky-table restore removed (`this.physicalSky?.invalidate()`, `src/render/scene.ts:333`), the fixed test still fails, but only on the mean-ratio check: p75 was 3, under the limit of 12. The p75 limit is loose for a same-moment comparison; tightening it would be another changed assertion and is left to the owner.
+
+## CI evidence: Audit browser acceptance on the branch
+
+(filled in below once the run finishes)

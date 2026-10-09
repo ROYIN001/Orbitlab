@@ -232,6 +232,8 @@ async function launch(t, reference) {
     };
     await loseAndRestore(t, app, 'launch', async () => {
       const a = await state(app);
+      // past the pitch-over the pictures barely change, and the case would pass without testing it
+      t.check(a.cursorTimeS < LOSE_AT_S + 3, `launch: the loss came at T+${a.cursorTimeS} s, after the pitch-over it is pinned before (T+${LOSE_AT_S} s)`);
       await page.waitForTimeout(LOST_MS);
       const b = await state(app);
       t.log(`launch: while lost, T+${a.cursorTimeS.toFixed(1)} → T+${b.cursorTimeS.toFixed(1)} s, recorded to T+${a.headTimeS.toFixed(1)} → T+${b.headTimeS.toFixed(1)} s`);
