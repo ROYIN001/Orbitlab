@@ -269,8 +269,9 @@ export class WorkspaceRepository {
       let record: ProfileRecord;
       try { record = this.read(selected); } catch (error) {
         // An unreadable, newer or missing selection opens the chooser, where its row offers a copy and delete (R1.6-FU-SEL).
+        // A catalogue that turned unreadable meanwhile throws here and still goes visit-only.
         if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
-        release?.(); this.release = null; this.notices.push(error.code);
+        this.catalog(); release?.(); this.release = null; this.notices.push(error.code);
         try { this.session.setItem(PROFILE_SELECTED_KEY, ''); } catch { this.notices.push('selection-not-persisted'); }
         this.status = 'chooser'; return this;
       }

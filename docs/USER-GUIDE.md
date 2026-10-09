@@ -310,8 +310,8 @@ Close the other tab, then reload, to work normally.
 
 **Visit-only (temporary) mode.** When the browser refuses Orbitlab's storage (site data blocked,
 for example), when it lacks the Web Locks that keep two tabs from writing over each other (older
-browsers and some apps' built-in browsers), or when the list of learners itself cannot be opened at
-start, Orbitlab opens a temporary workspace and says that changes will be lost when the page
+browsers and some apps' built-in browsers), or when the list of learners or the saved data cannot be
+opened at start, Orbitlab opens a temporary workspace and says that changes will be lost when the page
 closes. It starts from a copy of the learner's saved work when that can be read, and writes
 nothing to the device. Switching, creating, deleting, resetting, importing and audio are off, but
 **Export this learner's workspace** saves what was done during the visit. When only the chosen

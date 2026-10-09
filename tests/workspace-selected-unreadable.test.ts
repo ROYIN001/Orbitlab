@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RawStorage } from '../src/workspace/registry';
-import { LEGACY_PROFILE_ID, PROFILE_SELECTED_KEY, WorkspaceRepository, profileStorageKey,
+import { LEGACY_PROFILE_ID, PROFILE_CATALOG_KEY, PROFILE_SELECTED_KEY, WorkspaceRepository, profileStorageKey,
   type WorkspaceLocks } from '../src/workspace/repository';
 
 function memory() {
@@ -61,6 +61,23 @@ describe('R1.6-FU-SEL: an unreadable, newer or missing selected learner opens th
       expect(healthy.status).toBe('durable'); expect(healthy.binding!.getItem('orbitlab.mission')).toBe('healthy work'); healthy.close();
     });
   }
+  it('review: other errors at the read step still open visit-only, and release the lock', async () => {
+    const env = await selectedDamaged('unreadable', false), key = profileStorageKey(env.id), getItem = env.disk.store.getItem;
+    env.disk.values.set(key, JSON.stringify({ ...JSON.parse(env.disk.values.get(profileStorageKey(LEGACY_PROFILE_ID))!), id: env.id }));
+    env.disk.store.getItem = (k) => { if (k === key) throw new DOMException('denied', 'SecurityError'); return getItem(k); };
+    const r = await env.repo().initialize();
+    expect(r.status).toBe('ephemeral'); expect(r.notices).toContain('storage');
+    await tick(); expect(env.locks.held.size).toBe(0); r.close();
+    // The catalogue turns newer while the owner lock is awaited: visit-only, not an empty chooser.
+    env.disk.store.getItem = getItem; env.disk.values.set(key, 'cut');
+    const locks = env.locks as unknown as { request: Locks['request'] }, request = locks.request.bind(env.locks);
+    locks.request = async (name, options, run) => {
+      if (name.startsWith('orbitlab-profile-owner-v1:')) env.disk.values.set(PROFILE_CATALOG_KEY, '{"version":2,"profiles":{}}');
+      return request(name, options, run);
+    };
+    const raced = await env.repo().initialize();
+    expect(raced.status).toBe('ephemeral'); expect(raced.notices).toContain('newer'); raced.close();
+  });
   it('the device\'s only learner, unreadable, in a new tab: the chooser with its row, which can be deleted', async () => {
     const env = await selectedDamaged('unreadable', true), key = profileStorageKey(LEGACY_PROFILE_ID), bytes = env.disk.values.get(key);
     env.session.values.clear();
