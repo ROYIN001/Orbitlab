@@ -1,7 +1,0 @@
-## CHANGELOG
-
-- Verification (R0.3r, M-PLAN-014): a machine-readable change-to-check map, `scripts/verification/change-map.json`, and `node scripts/verification/select-checks.mjs <base>..<head>`, which prints the unit files, browser journeys, heavy and six-DOF fleet files, typecheck, build and budget a change needs; a path with no domain rule selects the full set; a trial shows it selects the tests that caught #63, #64, #68, #70 and regressions from R2 and R3; no workflow, app or test change.
-
-## PROGRESS
-
-| R0.3r (M-PLAN-014, lanes T+Q, wave K1) | In PR; not merged; not published | The prose change-to-check map is now data: 33 glob rules over the plan's existing check names. An unmatched path falls back to the full set (298 unit files, 33 journeys, 33 heavy, 6 fleet). `select-checks.mjs` takes a git range or a file list. `tests/verification/change-map.test.mjs` (14 node tests) checks that every tracked `src/**` file is covered (0 of 560 on the fallback), that the fallback works and the Markdown exemption holds, and replays 7 trials (#63, #64, #68, #70, R2 LUI-01, R3 M-BUILD-006, R3 #75 budget). Each culprit path alone selects the check that caught it, from CI/Pages runs 36884215504, 36886828921, 37066834767, 37080233899 and 37172926281. Removing any of 8 rules made the tests fail (local sabotage, not committed). Not wired into CI | [R0.3r report](reports/R0.3r-change-map.md) |
