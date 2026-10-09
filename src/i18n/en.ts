@@ -890,6 +890,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'about.disclaimer': 'Orbitlab is a personal educational project by a Thai Air Force cadet studying at a military space academy, built from public sources. It is not a product of the Royal Thai Air Force or of any academy, and no service or academy name or emblem is used without written permission.',
   'about.link.notice': 'Third-party credits',
   'about.link.cite': 'How to cite',
+  'about.link.privacy': 'Privacy',
   // telemetry panel
   'tel.eyebrow': 'FLIGHT TELEMETRY',
   'tel.range': 'Chart range',

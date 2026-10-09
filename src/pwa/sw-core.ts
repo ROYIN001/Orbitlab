@@ -71,7 +71,7 @@ export const OFFLINE_PREPARE = 'orbitlab:offline-prepare';
 export const precacheName = (version: string): string => `${PRECACHE_PREFIX}${version}`;
 
 /** Hosts whose responses are kept for offline use as they are fetched. */
-const RUNTIME_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+export const RUNTIME_HOSTS: readonly string[] = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 /**
  * S04: the hosts the online datasets come from. Written out here rather than
  * imported from src/provider/datasets.ts: the worker must stay one classic
@@ -85,15 +85,17 @@ export type Route = 'page' | 'precache' | 'runtime' | 'data' | 'network';
 /**
  * How a GET is answered: the page itself (any navigation inside the scope,
  * whatever its query — a mission link carries one) from the precached
- * `index.html`; a precached file from the cache; a font, or a file of the
- * app's fetched on demand, by stale-while-revalidate; an online dataset
+ * `index.html`, except a navigation to another precached `.html` page (the
+ * privacy statement), which is that page; a precached file from the cache; a
+ * font, or a file of the app's fetched on demand, by stale-while-revalidate; an online dataset
  * network-first, from its last answer when the network fails (S04);
  * everything else from the network.
  */
 export function routeFor(url: URL, mode: string, scope: URL, precached: ReadonlySet<string>): Route {
   if (url.origin === scope.origin && url.pathname.startsWith(scope.pathname)) {
-    if (mode === 'navigate') return 'page';
     const path = url.pathname.slice(scope.pathname.length);
+    // a static page of the build (public/privacy.html, M-LEARNING-047) opens as itself, not as the app
+    if (mode === 'navigate') return path !== 'index.html' && path.endsWith('.html') && precached.has(path) ? 'precache' : 'page';
     if (precached.has(path)) return 'precache';
     return onDemand(path) ? 'runtime' : 'network';
   }
