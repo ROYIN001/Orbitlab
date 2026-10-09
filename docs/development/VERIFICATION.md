@@ -63,6 +63,17 @@ These are early checks; the complete PR/release gates still run. Expand domain c
 | PWA/build/snapshots | Type/build/budget; snapshot schema readers; exact cache/worker state | Full browser on the actual release dist with refreshed snapshots; provenance and publish guards |
 | Verification/workflows/inventory | Node verification tests, browser shard tests, actionlint; collect reviewed heavy cases without flights | Current-candidate CI final union; Pages final union/artifact guard; real enabled scientific workflow evidence before claiming its runtime coverage |
 
+### Machine-readable map (R0.3r)
+
+The table above is also kept as data in [`scripts/verification/change-map.json`](../../scripts/verification/change-map.json). Each rule matches changed paths by glob and names the checks they need: commands (`typecheck`, `build`, `budget`, `node-verification`), unit vitest files, browser journeys (names in `tests/browser/journeys/`), heavy files and six-DOF fleet files. A changed path selects the union of its rules. A changed test selects itself. A path matched by no domain rule has unknown impact and selects the full set. Markdown keeps the CI exemption, except the three consumed files listed below.
+
+```sh
+node scripts/verification/select-checks.mjs origin/main..HEAD          # changes since the merge base
+node scripts/verification/select-checks.mjs --files src/ui/panel.ts    # or name the paths; --json for data
+```
+
+The selection is early feedback. It does not replace the CI/Pages plans, and it is not wired into any workflow. `tests/verification/change-map.test.mjs` checks that every tracked `src/**` file is covered and that the full-set fallback works. It also replays the historical regressions in `tests/verification/change-map-trials.json`: #63, #64, #68, #70, R2 LUI-01 and two from R3. A new src area should get its own rule. Until it has one, it runs the full set. Trial results: [R0.3r report](reports/R0.3r-change-map.md).
+
 ## CI, publishing and measurement
 
 CI retains three default Vitest shards and two smoke shards, plus typecheck/build/budget and a final `verify` job. CI/Pages plan jobs run a separately named repository-hygiene preflight after Node verification and before collection/downstream jobs. The same seven cheap hygiene cases remain in the complete default suite; repeating this subset is deliberate early feedback, not a reduction of final coverage. CI PR/push and Pages main-push share the existing Markdown-only exemption: progress/report Markdown does not retrigger numerical/browser/redeploy gates, while all non-Markdown changes and three consumed Markdown inputs stay gated:

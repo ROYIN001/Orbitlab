@@ -1,0 +1,227 @@
+{
+  "schema": 1,
+  "about": "R0.3r (M-PLAN-014): machine-readable change-to-check map. A changed path selects the union of the checks of every rule whose `paths` glob matches it (and no `exclude` glob does). A path matched only by `additive` rules, or by no rule, has unknown impact and selects the full set (`fallback`). Early feedback only: the complete PR/Pages gates still run. Read by scripts/verification/select-checks.mjs; prose in docs/development/VERIFICATION.md.",
+  "suites": {
+    "commands": "typecheck (npm run typecheck), build (npx vite build), budget (node scripts/bundle-budget.mjs, after build), node-verification (node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs)",
+    "unit": "vitest files discovered by discoverFiles('unit') in scripts/verification/lib.mjs",
+    "browser": "journey names in tests/browser/journeys/*.mjs, run by tests/browser/run.mjs",
+    "heavy": "files discovered by discoverFiles('heavy')",
+    "sixdof-fleet": "files discovered by discoverFiles('sixdof-fleet')"
+  },
+  "fallback": { "all": true, "reason": "Plan S18: if the impact is unknown, run the full set." },
+  "sets": {
+    "app-build": ["typecheck", "build", "budget"],
+    "flight-journeys": ["launch-explore", "r2-shell-smoke", "r2-flight-shell", "r2-chooser-late-frame", "r3-result-setting", "watch-controls", "experiment-notebook"],
+    "layout-journeys": ["mobile-smoke", "stage2-preflight", "r2-viewport-matrix", "r2-viewport-scene-floor", "r2-shell-smoke", "workspace-navigation", "notation-defaults"],
+    "workspace-journeys": ["workspace-navigation", "project-backups", "experiment-notebook", "classroom-preparation", "learner-profiles", "profile-session-safety"],
+    "export-journeys": ["case-worksheet-exports", "launch-explore", "project-backups"]
+  },
+  "rules": [
+    {
+      "id": "always-repo-hygiene",
+      "additive": true,
+      "why": "Repository policy applies to every tracked file (sizes, binaries under docs, .only, workflows).",
+      "paths": ["**"],
+      "checks": { "unit": ["tests/repo-hygiene.test.ts"] }
+    },
+    {
+      "id": "app-build",
+      "additive": true,
+      "why": "Any app source can change the bundle: #63 failed bundle-budget in CI 36884215504; R3 #75 needed #76 for the precache ceiling.",
+      "paths": ["src/**", "index.html", "docs/SIXDOF-VEHICLE-DATA.md"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/architecture.test.ts", "tests/bundle-budget.test.ts"] }
+    },
+    {
+      "id": "changed-tests-run-themselves",
+      "why": "A changed test file is selected itself.",
+      "paths": ["tests/**/*.test.ts", "tests/browser/journeys/*.mjs", "tests/verification/*.test.mjs", "tests/browser/shard.test.mjs"],
+      "self": true
+    },
+    {
+      "id": "toolchain-and-public",
+      "why": "Dependencies, build/test configuration, budgets and shipped public assets reach every gate.",
+      "paths": ["package.json", "package-lock.json", "tsconfig.json", "vite.config.ts", "vitest.heavy.config.ts", "vitest.sixdof-fleet.config.ts", "budgets.json", "public/**"],
+      "all": true
+    },
+    {
+      "id": "composition-root",
+      "why": "src/main.ts wires every mode; every unit test and journey can see it.",
+      "paths": ["src/main.ts", "src/types.ts", "src/vite-env.d.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["*"], "browser": ["*"] }
+    },
+    {
+      "id": "physics-shared",
+      "why": "VERIFICATION.md: shared physics/propulsion/rendezvous need affected vehicle/mission tests plus relevant heavy and six-DOF fleet runs (#63 Soyuz, #64 burn order).",
+      "paths": ["src/physics/**", "src/data/**", "src/config/vehicle-spec.ts", "src/config/validation.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["*"], "heavy": ["*"], "sixdof-fleet": ["*"], "browser": ["@flight-journeys", "satellite", "recheck"] }
+    },
+    {
+      "id": "session-worker",
+      "why": "Flight worker boundary and live stepping.",
+      "paths": ["src/session/**"],
+      "checks": { "unit": ["tests/session.test.ts", "tests/live-stepping.test.ts", "tests/flight-lifecycle.test.ts", "tests/replay.test.ts", "tests/rigid-runtime.test.ts", "tests/rigid-replay.test.ts", "tests/monte-carlo-job-failures.test.ts", "tests/worker-language-boundary.test.ts"], "browser": ["@flight-journeys", "pwa-offline", "render-idle", "fx8-context-loss"] }
+    },
+    {
+      "id": "replay",
+      "why": "Recorder/player feed every chart, compare and result view.",
+      "paths": ["src/replay/**"],
+      "checks": { "unit": ["tests/replay.test.ts", "tests/rigid-replay.test.ts", "tests/vostok-replay.test.ts", "tests/attitude-track.test.ts", "tests/compare*.test.ts", "tests/chart-*.test.ts", "tests/telemetry-layout.test.ts", "tests/timeline-chooser.test.ts", "tests/live-stepping.test.ts", "tests/flown.test.ts", "tests/mission-result*.test.ts", "tests/report.test.ts"], "heavy": ["tests/heavy/vostok1-recording.test.ts"], "browser": ["@flight-journeys"] }
+    },
+    {
+      "id": "orbit",
+      "why": "Orbit section, satellite designer and requirements (D06/D07).",
+      "paths": ["src/orbit/**", "src/ui/orbit/**", "src/config/satellite-design.ts", "src/config/satellite-spec.ts", "src/provider/**"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/d06-*.test.ts", "tests/d07-*.test.ts", "tests/kepler*.test.ts", "tests/lambert-boundary.test.ts", "tests/sgp4.test.ts", "tests/omm.test.ts", "tests/cdm.test.ts", "tests/conjunction.test.ts", "tests/screening-filter.test.ts", "tests/passes.test.ts", "tests/overflights.test.ts", "tests/visibility.test.ts", "tests/eclipse.test.ts", "tests/imaging.test.ts", "tests/power.test.ts", "tests/link.test.ts", "tests/applications.test.ts", "tests/orbit-*.test.ts", "tests/sky*.test.ts", "tests/real-sky.test.ts", "tests/maneuver*.test.ts", "tests/budget.test.ts", "tests/uncertainty.test.ts", "tests/target-plane.test.ts", "tests/encounter-plane-labels.test.ts", "tests/earth-orientation.test.ts", "tests/reference-frames.test.ts", "tests/satellite-*.test.ts", "tests/ballistic.test.ts", "tests/reentry.test.ts", "tests/propagator.test.ts", "tests/msis.test.ts", "tests/activity.test.ts", "tests/sensors.test.ts", "tests/data-provider.test.ts", "tests/frames-view.test.ts"], "heavy": ["tests/heavy/screening-filter.test.ts", "tests/heavy/custom-satellite-sixdof.test.ts", "tests/heavy/reentry-agencies.test.ts"], "browser": ["satellite", "requirements", "mobile-smoke", "fx8-context-loss"] }
+    },
+    {
+      "id": "design-build",
+      "why": "Build section, ratings/readiness workers and verdicts (#68 workers; R3 M-BUILD-006).",
+      "paths": ["src/design/**", "src/ui/build/**", "src/config/verdict.ts", "src/config/verdict-core.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/design-*.test.ts", "tests/build-*.test.ts", "tests/bench-part.test.ts", "tests/parts*.test.ts", "tests/fairing-rule.test.ts", "tests/readiness-target.test.ts", "tests/recheck-design.test.ts", "tests/panel-verdict.test.ts", "tests/verdict-localization.test.ts", "tests/worker-language-boundary.test.ts", "tests/satellite-*.test.ts", "tests/d06-*.test.ts", "tests/custom-vehicle*.test.ts", "tests/d01-*.test.ts", "tests/mission-result*.test.ts"], "heavy": ["tests/heavy/custom-satellite-sixdof.test.ts"], "browser": ["build-legacy-ratings", "r3-bench-drawings", "satellite", "requirements", "stage2-preflight", "launch-explore", "fx2-design-check-focus"] }
+    },
+    {
+      "id": "mission-file",
+      "why": "Saved/shared mission format and its readers.",
+      "paths": ["src/config/mission-file.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/mission-file.test.ts", "tests/scenario-link.test.ts", "tests/mission-source.test.ts", "tests/config-validation.test.ts", "tests/workspace-mission.test.ts", "tests/design-store.test.ts", "tests/project-*.test.ts"], "browser": ["r3-first-launch", "project-backups", "experiment-notebook", "launch-explore"] }
+    },
+    {
+      "id": "lessons-worksheets",
+      "why": "Lessons, assessment, packs and worksheet exports (#63 Pages 36886828921 and #68 Pages 37066834767: case-worksheet-exports click timeout).",
+      "paths": ["src/lessons/**", "src/ui/lessons/**", "src/worksheets/**"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/lesson*.test.ts", "tests/case-*.test.ts", "tests/teacher-lessons.test.ts", "tests/assessment*.test.ts", "tests/instructor-*.test.ts", "tests/design-lesson*.test.ts", "tests/design-strip-progress.test.ts", "tests/docx-pagination.test.ts", "tests/worksheet*.test.ts", "tests/recheck*.test.ts", "tests/phase4-*.test.ts", "tests/learner-profile-flush.test.ts", "tests/i18n.test.ts"], "heavy": ["tests/heavy/lessons-sixdof.test.ts", "tests/heavy/lesson-packs-sixdof.test.ts"], "browser": ["case-worksheet-exports", "lesson-packs", "fx2-design-check-focus", "instructor-loading", "recheck", "classroom-preparation", "mobile-smoke"] }
+    },
+    {
+      "id": "i18n",
+      "why": "Translation parity and text length: RU at 320 px overflowed in stage2-preflight on #70 (CI 37080233899).",
+      "paths": ["src/i18n/**"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/i18n*.test.ts", "tests/profiles-i18n.test.ts", "tests/verdict-localization.test.ts", "tests/worker-language-boundary.test.ts", "tests/help-content.test.ts", "tests/lesson-pack-names.test.ts", "tests/worksheet-language.test.ts"], "browser": ["@layout-journeys", "case-worksheet-exports", "webgl-startup"] }
+    },
+    {
+      "id": "styles-layout",
+      "why": "Gesture/camera/layout and toolbar rows of VERIFICATION.md: widths, overflow and scene floor.",
+      "paths": ["src/**/*.css"],
+      "checks": { "unit": ["tests/css-motion.test.ts", "tests/hud-layout.test.ts", "tests/telemetry-layout.test.ts"], "browser": ["@layout-journeys", "gesture-ownership"] }
+    },
+    {
+      "id": "launch-ui",
+      "why": "Launch/Explore setup panel, flight shell, HUD, results and exports (R2 LUI-01 in panel.ts/flight-lifecycle.ts).",
+      "paths": ["src/ui/*.ts"],
+      "exclude": ["src/ui/watch*.ts", "src/ui/home*.ts", "src/ui/workspace-*.ts", "src/ui/soundtrack-panel.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/app-mode.test.ts", "tests/camera-*.test.ts", "tests/chart-*.test.ts", "tests/compare*.test.ts", "tests/csv.test.ts", "tests/dynamics-panel.test.ts", "tests/engine-levels.test.ts", "tests/equations.test.ts", "tests/experience.test.ts", "tests/explore.test.ts", "tests/flight-lifecycle.test.ts", "tests/flown.test.ts", "tests/frames-view.test.ts", "tests/help-*.test.ts", "tests/hud-*.test.ts", "tests/launch-abort.test.ts", "tests/live-stepping.test.ts", "tests/control-*.test.ts", "tests/attitude-loop.test.ts", "tests/linear-loop.test.ts", "tests/tune-job.test.ts", "tests/mission-*.test.ts", "tests/monte-carlo*.test.ts", "tests/notation.test.ts", "tests/panel-*.test.ts", "tests/quickstart.test.ts", "tests/report.test.ts", "tests/result-*.test.ts", "tests/section-*.test.ts", "tests/telemetry-layout.test.ts", "tests/timeaxis.test.ts", "tests/timeline-chooser.test.ts", "tests/recovery-panel.test.ts", "tests/rigid-controls.test.ts", "tests/web-fonts.test.ts", "tests/mcp.test.ts", "tests/case-export-race.test.ts", "tests/worksheet-export-race.test.ts", "tests/i18n.test.ts"], "browser": ["@flight-journeys", "@layout-journeys", "@export-journeys", "lui01-held-tuning", "r3-first-launch", "gesture-ownership", "render-idle", "webgl-startup"] }
+    },
+    {
+      "id": "watch",
+      "why": "Watch mode and its mission list.",
+      "paths": ["src/ui/watch*.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/watch-*.test.ts"], "browser": ["watch-controls", "learner-profiles"] }
+    },
+    {
+      "id": "home",
+      "why": "Home page, globe and first launch.",
+      "paths": ["src/ui/home*.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/home-logic.test.ts", "tests/camera-policy.test.ts"], "browser": ["r3-first-launch", "gesture-ownership", "fx8-context-loss", "webgl-startup", "mobile-smoke"] }
+    },
+    {
+      "id": "render",
+      "why": "Three.js scene, cameras and gestures (VERIFICATION.md gesture/camera row).",
+      "paths": ["src/render/**"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/*-render.test.ts", "tests/render-*.test.ts", "tests/camera-*.test.ts", "tests/glow-governor.test.ts", "tests/exhaust-trails.test.ts", "tests/vostok-viewer.test.ts", "tests/webgl-renderer.test.ts", "tests/frames-view.test.ts", "tests/sky.test.ts", "tests/satellite-drawing.test.ts"], "browser": ["gesture-ownership", "render-idle", "fx8-context-loss", "webgl-startup", "r2-viewport-scene-floor", "launch-explore", "r2-shell-smoke", "watch-controls"] }
+    },
+    {
+      "id": "audio",
+      "why": "Launch audio and soundtrack storage.",
+      "paths": ["src/audio/**", "src/ui/soundtrack-panel.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/audio.test.ts", "tests/soundtrack-*.test.ts"], "browser": ["watch-controls", "learner-profiles"] }
+    },
+    {
+      "id": "workspace-profiles",
+      "why": "VERIFICATION.md profile storage/migration/backup/reset row.",
+      "paths": ["src/workspace/**", "src/ui/profiles/**", "src/ui/workspace-*.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/workspace-*.test.ts", "tests/*-profile-flush.test.ts", "tests/profiles-i18n.test.ts", "tests/progress-storage-recovery.test.ts", "tests/project-*.test.ts", "tests/design-store.test.ts", "tests/soundtrack-storage.test.ts"], "browser": ["@workspace-journeys"] }
+    },
+    {
+      "id": "projects-experiments-validation",
+      "why": "My Work dialog: backups, notebook, model limits (#70).",
+      "paths": ["src/projects/**", "src/ui/projects/**", "src/experiments/**", "src/ui/experiments/**", "src/validation/**", "src/ui/validation/**"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/project-*.test.ts", "tests/experiment-notebook.test.ts", "tests/validation-*.test.ts", "tests/workspace-media.test.ts"], "browser": ["project-backups", "experiment-notebook", "workspace-navigation"] }
+    },
+    {
+      "id": "pwa-classroom",
+      "why": "VERIFICATION.md PWA/build row; #70 classroom-preparation waiting-update failure (CI 37080233899).",
+      "paths": ["src/pwa/**", "src/classroom/**", "src/ui/classroom/**", "src/build-info.ts"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/pwa.test.ts", "tests/classroom-pwa.test.ts", "tests/lesson-packs.test.ts"], "browser": ["pwa-offline", "classroom-preparation", "lesson-packs", "workspace-navigation", "webgl-startup"] }
+    },
+    {
+      "id": "app-misc",
+      "why": "WebMCP and credits.",
+      "paths": ["src/mcp.ts", "src/credits.ts"],
+      "checks": { "unit": ["tests/mcp.test.ts"], "browser": ["launch-explore"] }
+    },
+    {
+      "id": "test-harnesses",
+      "why": "Shared unit harnesses, fixtures and validation helpers feed many files and the slow suites.",
+      "paths": ["tests/*.ts", "tests/fixtures/**", "tests/validation/*.ts"],
+      "exclude": ["tests/*.test.ts", "tests/validation/*.test.ts", "tests/**/*.md"],
+      "checks": { "unit": ["*"], "heavy": ["*"], "sixdof-fleet": ["*"] }
+    },
+    {
+      "id": "heavy-support",
+      "why": "Heavy matrices and the reviewed heavy inventory.",
+      "paths": ["tests/heavy/*.ts", "scripts/audit-heavy/**"],
+      "exclude": ["tests/heavy/*.test.ts"],
+      "checks": { "commands": ["node-verification"], "heavy": ["*"] }
+    },
+    {
+      "id": "sixdof-fleet-support",
+      "why": "Fleet case table.",
+      "paths": ["tests/sixdof-fleet/*.ts"],
+      "exclude": ["tests/sixdof-fleet/*.test.ts"],
+      "checks": { "sixdof-fleet": ["*"] }
+    },
+    {
+      "id": "browser-runner",
+      "why": "Journey runner, harness, server, shards and shared journey helpers reach every journey.",
+      "paths": ["tests/browser/*.mjs"],
+      "exclude": ["tests/browser/shard.test.mjs"],
+      "checks": { "commands": ["node-verification", "build"], "browser": ["*"] }
+    },
+    {
+      "id": "verification-workflows",
+      "why": "VERIFICATION.md verification/workflows/inventory row (actionlint is run separately).",
+      "paths": ["scripts/verification/**", "scripts/html-comments.mjs", "tests/verification/**", ".github/**", ".gitattributes", ".gitignore"],
+      "checks": { "commands": ["node-verification"], "unit": ["tests/repo-hygiene.test.ts"] }
+    },
+    {
+      "id": "bundle-budget-script",
+      "why": "The budget checker and its fast half.",
+      "paths": ["scripts/bundle-budget.mjs"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/bundle-budget.test.ts"] }
+    },
+    {
+      "id": "science-validation-scripts",
+      "why": "npm run validate:science collectors and report readers.",
+      "paths": ["scripts/validation-*"],
+      "checks": { "unit": ["tests/validation-*.test.ts"] }
+    },
+    {
+      "id": "consumed-markdown",
+      "why": "The three Markdown files the app or tests read (lib.mjs sourceIdentity, workflow-paths test).",
+      "paths": ["docs/ROADMAP-PART2-3.md", "docs/SIXDOF-VEHICLE-DATA.md", "docs/history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md"],
+      "checks": { "unit": ["tests/section-plan.test.ts", "tests/section-nav-model.test.ts", "tests/lesson-review.test.ts"] }
+    },
+    {
+      "id": "consumed-evidence",
+      "why": "Audit evidence read by a unit test.",
+      "paths": ["docs/history/audit-2026-09-27/live-evidence.json"],
+      "checks": { "unit": ["tests/watch-logic.test.ts"] }
+    },
+    {
+      "id": "markdown-only",
+      "why": "Same Markdown exemption as CI/Pages triggers: other Markdown runs no numerical or browser gate (repository hygiene still applies).",
+      "paths": ["**/*.md", "LICENSE", "CITATION.cff"],
+      "exclude": ["docs/ROADMAP-PART2-3.md", "docs/SIXDOF-VEHICLE-DATA.md", "docs/history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md"],
+      "checks": {}
+    }
+  ]
+}

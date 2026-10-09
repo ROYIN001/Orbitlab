@@ -18,7 +18,7 @@ import { norm, type Vec3 } from '../physics/vec3';
 import type { EventState } from '../physics/simulation';
 import { physicalApsides } from '../physics/rigid/orbit-prediction';
 import { missionSatellite } from '../data/satellites';
-import type { LessonFlight, MeasureId } from './types';
+import type { Lesson, LessonFlight, MeasureId } from './types';
 import { unitText } from './text';
 import { linearModelAt } from '../physics/rigid/linear';
 import { pulseMetrics, type AttitudeTestRecord } from '../physics/rigid/attitude-test';
@@ -233,6 +233,16 @@ export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
 };
 
 export const MEASURE_IDS = Object.keys(MEASURES) as MeasureId[];
+
+/**
+ * The event params that print an answer outright (M-LEARNING-012): "Target
+ * orbit achieved … period N min" is the period to the minute, within the
+ * tolerance of a lesson asking for it (packs' 11.2, 12.2, 13.1, 13.2). Such a
+ * lesson's event lines print "?" for it (src/ui/names.ts `withholdEventParams`).
+ */
+export function answerEventParams(lesson: Pick<Lesson, 'criteria'>): string[] {
+  return lesson.criteria.some((c) => c.kind === 'answer' && c.measure === 'orbit.period') ? ['period'] : [];
+}
 
 /** The value a `target: 'mission'` bound stands for: what the mission's own target orbit asks for. */
 export function missionTarget(flight: LessonFlight, measure: MeasureId): number | null {

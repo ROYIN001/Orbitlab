@@ -191,9 +191,11 @@ computer. Readiness describes this browser's current cache, not a guarantee that
 will retain it indefinitely. Music, remote fonts and fresh online data are not classroom cache
 requirements. If readiness is incomplete, read the reported reason and check again online.
 
-**Backups.** Download a project archive containing the saved mission, saved designs, lesson
-progress/custom lessons and experiment notebook. Unsaved drafts and the current running flight
-are not included. Importing a file first shows a preview and changes nothing. Each collection
+**Backups.** Download a project archive containing the open learner's saved mission, saved
+designs, lesson progress/custom lessons and experiment notebook. Unsaved drafts and the current
+running flight are not included. To keep everything a learner has, drafts and settings too, or
+every learner at once, use the profile backups instead ([Learner profiles](#learner-profiles)).
+Importing a file first shows a preview and changes nothing. Each collection
 defaults to **Keep existing**; explicitly choose **Replace** only for the collections to restore.
 Replacement affects the whole selected collection. Export your current work first if you want
 to keep both. Applying the restore reloads the app on Home so every panel reads the restored
@@ -211,6 +213,124 @@ network at all — the page, the physics and auto-tune workers and the Earth tex
 on the device, and the fonts and the landing page's pictures too once they have loaded. When a new version is published, a note
 at the bottom of the page offers **Reload**; until you press it, the version you have keeps
 running.
+
+## Learner profiles
+
+Several learners can share one computer or tablet and keep their work apart. The **◉** button in
+the top bar, next to **▤ My work**, shows whose work is open (**Learner: …**; Thai:
+**ผู้เรียน: …**) and opens the **Learner profiles** window (Thai: **โปรไฟล์ผู้เรียน**). The lessons
+page has the same button beside the learner's name. Profiles live only in this browser on this
+device. They are not online accounts: there is no sign-in or password, anyone using the device can
+open any learner, and nothing about a learner is sent anywhere. When Orbitlab cannot open a
+learner's work normally, the window opens by itself and says why; when no learner is open, it
+stays open until one is chosen or created.
+
+**What a learner keeps.** Each learner has their own saved mission, saved rockets and satellites,
+lesson history and tests (unfinished ones too), the lessons and questions they imported or wrote,
+the experiment notebook, unsaved drafts (the rocket and satellite builders, the requirements page,
+the scenario writer and the worksheets) and personal settings: the language, the section and
+level, notation, the HUD and telemetry layout, sound, glow and the home city. A recording given to
+a launch under **Launch audio** belongs to the learner too. A lesson results file carries the
+learner's name.
+
+**The first learner.** The first time a version with profiles starts, the work an earlier version
+saved in this browser becomes the first learner, named after the name typed on the lessons page (or
+**Learner 1**). The earlier copies are removed only after the new copy has been checked.
+Recordings given to launches move to the first learner one at a time. Where the first learner
+already has a recording of their own for the same launch, the older one is not moved: both are
+kept, the learner's own one plays, and at that start a line under the top bar says so, naming the
+first learner. If the move is interrupted, the line asks you to reload to finish it.
+
+**Create, rename and switch.** **Create a profile** asks for a name of up to 80 characters; two
+learners may have the same name. The browser holds up to 40 learners. **Open this workspace**
+switches learner after asking: it saves what is being edited, then reloads the page on Home. A
+flight in progress or an open test screen closes; a saved test can be continued later, but a
+flight is not restored. Each browser tab remembers its own learner, so two tabs can have two
+different learners open. A new tab asks which learner to open, unless the only learner on the
+device is the first one, which it opens directly.
+
+**Reset learning or tests** (Thai: **รีเซ็ตประวัติการเรียนหรือผลสอบ**), in the Learner profiles
+window and on the lessons list, removes records of the open learner only. Choose one scope: all
+learning history; all tests, including unfinished ones; both; or one lesson's history (the lessons
+with saved history are listed). The window counts what will go and offers a backup first.
+History, attempts, grades, hints and revealed answers in that scope are removed; designs, the
+mission, the notebook and the learner's own lessons and questions are kept. The page then reloads,
+so a screen left open cannot write the removed records back. A reset is refused, and changes
+nothing, while an earlier project import still needs recovery or when the saved lesson records are
+damaged.
+
+**Delete profile** removes one learner's saved work, settings and recordings from this device and
+keeps every other learner. It shows what the learner has saved and offers a backup and an audio
+export first. After deleting the learner who is open, or the last one, choose or create a learner
+yourself; the app does not pick one. If the recordings cannot be removed at once, the deletion is
+finished the next time Orbitlab starts.
+
+**A learner whose data cannot be read.** A learner saved by a newer version of Orbitlab, or whose
+stored data is damaged, is still listed, with a sentence saying which (with no readable name the
+row is called **Unreadable profile**). Its data is kept on the device exactly as it is; this
+version never rewrites it, and it cannot be opened or renamed here. **Save a copy of the stored
+data** (Thai: **บันทึกสำเนาข้อมูลที่เก็บไว้**) downloads those bytes unchanged
+(`Orbitlab-<date>-stored-profile-<id>.json`), for a newer version or for repair; this version
+cannot import that file. **Delete profile** removes the learner after its own confirmation, which
+offers the copy and the audio export again. A row whose data is no longer on the device at all can
+only be deleted. These rows still count toward the 40 learners.
+
+**Profile backups** (Thai: **ข้อมูลสำรองโปรไฟล์**) keep a learner's work outside the browser, or
+move it to another device.
+- **Export this learner's workspace** saves one file, `Orbitlab-<date>.orbitlab-workspace.json`,
+  with everything the learner keeps except recordings. It works in a visit-only tab too (below),
+  so the work done during the visit can be kept. In a read-only tab it saves the learner's work as
+  stored, which is what the other tab has saved, not changes made in the read-only tab.
+- **Export all learner profiles** saves every learner in one such file. Learners whose data
+  cannot be read are left out, and the window says so: save a copy of each from the list. If no
+  learner can be read, no file is made.
+- A backup file can be at most 8 MB (8,000,000 bytes; a Thai letter takes three of them). It is
+  saved indented, or compact when only that fits, so every file the app saves can be imported
+  again. Work too large even when compact is refused, and nothing is downloaded.
+- **Import a workspace backup** reads such a file, or a project file from **My work** (only the
+  parts it holds), and shows what it contains before anything changes. A file with one learner
+  goes to a new learner (the default; give it a name, and it opens) or into an existing one,
+  where **Keep existing records** is the default and **Replace records present in the file**
+  must be chosen. A file with several learners adds each as a new learner and keeps the existing
+  ones. A file over 8 MB, a file from a newer version, or an import that would make more than 40
+  learners is refused. Records in the file that this version cannot use are kept as recovery
+  data and not used; the preview says how many.
+- **Recordings** have their own file. **Export this learner's uploaded audio** saves
+  `Orbitlab-<date>.orbitlab-audio`, up to 128 MB (128,000,000 bytes) and 100 recordings; the
+  delete confirmation offers it for any learner. **Restore uploaded audio to this learner** puts
+  such a file into the open learner, after showing whose recordings it holds and how many. Keeping
+  the existing recordings is the default; replacing overwrites the recordings of the same
+  launches. Restoring needs a normal tab, not a read-only or visit-only one.
+
+**Two tabs on one learner: read-only.** When a learner is already open in another tab, a second
+tab opens that learner read-only and says so. Nothing changed there is saved; rename, delete,
+reset, import, Export all and the audio buttons are off. It can export the learner's workspace as
+stored (what the other tab saved, without this tab's changes), open another learner or create one.
+Close the other tab, then reload, to work normally.
+
+**Visit-only (temporary) mode.** When the browser refuses Orbitlab's storage (site data blocked,
+for example), when it lacks the Web Locks that keep two tabs from writing over each other (older
+browsers and some apps' built-in browsers), or when the saved data cannot be opened at start,
+Orbitlab opens a temporary workspace and says that changes will be lost when the page closes. It
+starts from a copy of the learner's saved work when that can be read, and writes nothing to the
+device. Switching, creating, deleting, resetting, importing and audio are off, but **Export this
+learner's workspace** saves what was done during the visit. If the cause is a learner whose data
+cannot be read, reloading the tab tries the same learner again, so the tab stays visit-only. A new
+tab shows the list of learners, where that learner can be copied or deleted, unless it is the
+device's only learner and the first one, which a new tab opens directly.
+
+**On iPhone and iPad.** Safari may erase a website's stored data, every learner's work included,
+when the site has not been opened during seven days of Safari use. Orbitlab added to the Home
+Screen (*Share → Add to Home Screen*) is not erased that way. Either way, export a backup regularly
+and keep it outside the browser: clearing the browser's data for the site also removes every
+learner.
+
+**Limits and notices.** A number field keeps what was typed even before it is a number (such as
+`1e-`), for up to 1,000 fields per learner and 1,000 characters each; past 1,000 fields the oldest
+one is forgotten, and the number itself is still used. All learners share the browser's storage
+space for the site, which can be smaller than the limits above. When the browser refuses to save a
+change, a line under the top bar says that the last change was not saved: keep the page open, free
+some space and export a backup.
 
 ## 0a. The Orbit section: the orbit playground
 

@@ -90,6 +90,14 @@ any academy, and no service or academy name or emblem is used without written pe
   input comparisons and conclusions; model limits with a reproducible validation report;
   offline classroom preparation; and project backups with a preview before replacement.
   Available in English, Russian and Thai. [How to use it](docs/USER-GUIDE.md#my-work).
+- **Learner profiles** (◉ in the top bar): up to 40 learners in one browser, each with their own
+  mission, designs, lessons and tests, notebook, drafts, settings and launch recordings. Local
+  only: no accounts, nothing leaves the device. Reset learning, tests, both or one lesson; delete
+  a learner; back up one learner or all as JSON (up to 8 MB a file) and the recordings as a
+  separate file (up to 128 MB). A learner the app cannot read stays listed and untouched, with
+  buttons to save a copy of its stored data or delete it; Export all leaves it out and says so.
+  A second tab on the same learner is read-only, and a browser without storage or Web Locks gets
+  a temporary, visit-only workspace. [How to use it](docs/USER-GUIDE.md#learner-profiles).
 - **About dialog** (ⓘ in the top bar, on every page, and the footer's credit line): an About
   tab with the version, the maker, the licences and the disclaimer, and a Physics & sources tab
   with a localized summary of the model, the data sources and the credits.
@@ -128,8 +136,8 @@ not directly comparable vehicle-to-vehicle, since the reference orbit differs.
 
 The last three are the historical vehicles of roadmap C01, flown in lessons 5.3–5.5 on the
 missions they flew: Sputnik-1 to 215 × 939 km, Vostok-1 to 181 × 327 km, and Apollo 11's
-parking orbit and translunar injection (the Moon itself is not modelled; the injection is
-an apogee raise to 370 000 km).
+parking orbit and translunar injection (the lesson's injection is an apogee raise to 370 000 km;
+the Moon is modelled for Apollo 11's week only, from JPL's DE441 table, in Watch's Apollo 11 flight).
 
 Falcon 9, Falcon Heavy and Starship also support **first-stage recovery** (reserves
 propellant for an entry and landing burn); Soyuz-2.1a, Falcon 9 and Starship support
@@ -205,6 +213,8 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `workspace-navigation` | ✓ | Lazy loading, keyboard tabs and Escape, recovery after a failed module request, mobile layout and first-use offline |
 | `experiment-notebook` | ✓ | Real flight and replay observations, single-variable comparison, conclusions, export, keyboard restore and mobile languages |
 | `project-backups` | ✓ | Download, non-mutating import preview, keep/replace choices, reload of restored state and rejected malformed/oversized files |
+| `learner-profiles` | ✓ | Learner names and focus, A → B → A separation, test-only and learning-only resets that keep personal lessons, JSON and audio backups, a deleted learner's recordings removed and no other's, the chooser after deleting the open and the last learner, Thai and Russian at phone width |
+| `profile-session-safety` | ✓ | Real Web Locks in two windows (the second read-only, yet able to export and to create another learner), visit-only JSON recovery with no stored writes, newer stored bytes kept exactly, the profile window opened offline |
 | `classroom-preparation` | ✓ | Offline lesson launch, missing-cache detection, exact-version repair and preservation of waiting updates |
 | `webgl-startup` | ✓ | Rejected GPU preference recovers with the same rendering settings; unavailable WebGL shows Thai recovery guidance and keyboard reload; unrelated startup errors remain distinct |
 | `satellite` | ✓ | In the satellite designer, NAPA-2's cells put on wings and its array changed, the figures following, saved and reloaded; sent to Orbit, whose lifetime dialog takes the design's own mass and drag area; Fly it gives the Launch section's verdict before the click ("Not flyable as set" on Soyuz-2.1a) and offers the rockets that can fly it; Electron, picked among them, flies the design to payload separation, and the Launch panel's verdict is the one shown |
@@ -549,6 +559,9 @@ src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground
 src/data/thai-satellites.ts  Thailand's satellites, each fact with its source (O04)
 src/provider/   offline and online data: the providers, datasets, snapshots (S04)
 src/data/parts.ts  the parts catalogue the vehicles are assembled from (D01)
+src/workspace/  learner profiles (R1.1): one stored record per learner, the tab's owner lock,
+                the first learner's migration, reset, JSON backups and the audio archive;
+                their window is in src/ui/profiles/
 src/design/     the rocket builder's logic, no DOM: remix, assembly, warnings, budgets,
                 optimal staging, sizing, test stand, wind tunnel, readiness review, ratings
                 (D02–D05); the satellite model, its hand-offs to Orbit and Launch, and the

@@ -138,6 +138,9 @@ const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.i
 const describe = (v: unknown): string => (typeof v === 'number' ? String(v) : v === null ? 'null' : Array.isArray(v) ? 'an array' : typeof v);
 const join = (path: string, key: string): string => `${path}${path ? '.' : ''}${key}`;
 
+/** What an issue says of a field this version does not know (D-22), in the vehicle check's words. */
+export const NOT_A_FIELD = 'is not a field of this version';
+
 class Checker {
   readonly issues: SatelliteDesignIssue[] = [];
 
@@ -147,7 +150,7 @@ class Checker {
 
   /** Fields the version knows; anything else is reported (a field it does not know could change what the design is). */
   known(o: Obj, path: string, fields: readonly string[]): void {
-    for (const key of Object.keys(o)) if (!fields.includes(key)) this.add(join(path, key), 'is not a field of this version');
+    for (const key of Object.keys(o)) if (!fields.includes(key)) this.add(join(path, key), NOT_A_FIELD);
   }
 
   number(o: Obj, key: string, path: string, [min, max]: Bound, opts: { optional?: boolean; integer?: boolean } = {}): number | undefined {

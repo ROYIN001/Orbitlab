@@ -108,6 +108,11 @@ export class WorkspaceMission {
     return clean;
   }
 
+  /** Whether the stored mission is held: being read, or read with issues and not changed since (r16-2b-notice). */
+  get held(): boolean {
+    return this.heldDoc !== null;
+  }
+
   /** Whether the panel holds the user's mission, a changed viewer's mission becoming the user's. */
   private settle(doc: string): boolean {
     if (this.currentOrigin !== 'workspace' && this.loadedDoc !== null && doc !== this.loadedDoc) this.adopt();
