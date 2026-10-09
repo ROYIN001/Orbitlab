@@ -310,14 +310,15 @@ Close the other tab, then reload, to work normally.
 
 **Visit-only (temporary) mode.** When the browser refuses Orbitlab's storage (site data blocked,
 for example), when it lacks the Web Locks that keep two tabs from writing over each other (older
-browsers and some apps' built-in browsers), or when the saved data cannot be opened at start,
-Orbitlab opens a temporary workspace and says that changes will be lost when the page closes. It
-starts from a copy of the learner's saved work when that can be read, and writes nothing to the
-device. Switching, creating, deleting, resetting, importing and audio are off, but **Export this
-learner's workspace** saves what was done during the visit. If the cause is a learner whose data
-cannot be read, reloading the tab tries the same learner again, so the tab stays visit-only. A new
-tab shows the list of learners, where that learner can be copied or deleted, unless it is the
-device's only learner and the first one, which a new tab opens directly.
+browsers and some apps' built-in browsers), or when the list of learners itself cannot be opened at
+start, Orbitlab opens a temporary workspace and says that changes will be lost when the page
+closes. It starts from a copy of the learner's saved work when that can be read, and writes
+nothing to the device. Switching, creating, deleting, resetting, importing and audio are off, but
+**Export this learner's workspace** saves what was done during the visit. When only the chosen
+learner's data cannot be read (damaged, from a newer version of Orbitlab, or gone), Orbitlab
+opens the list of learners instead, with a note that saved data needs attention. That learner's
+row offers a copy of its stored data and delete, and any other learner can be opened. This holds
+on reload too, and when it is the device's only learner.
 
 **On iPhone and iPad.** Safari may erase a website's stored data, every learner's work included,
 when the site has not been opened during seven days of Safari use. Orbitlab added to the Home
