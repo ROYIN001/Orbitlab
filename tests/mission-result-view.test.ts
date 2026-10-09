@@ -75,6 +75,30 @@ describe('mission result view (M-LAUNCH-031)', () => {
     expect(model.metrics.filter(m => m.outside).map(m => m.key)).toEqual(['inclination']);
   });
 
+  it('flags the judged row from the unrounded values on the completion event, whatever the cursor shows (M-LAUNCH-031 residual)', () => {
+    // judged at 51.904° (0.304° off, the band is 0.3°), recorded rounded as 51.9 — back inside the band
+    const input = drifted({ pe: 400, ap: 400, inc: 51.9, raan: 0, peJudgedM: 400e3, apJudgedM: 400e3, incJudgedRad: 51.904 * DEG, raanJudgedRad: 0 });
+    input.events[0].key = 'evt.offTargetOrbit';
+    input.events[0].severity = 'warn';
+    // the cursor, later, shows a drifted orbit: 370 × 445 km, inclination on target
+    const model = assessMissionResult(input)!;
+    expect(model.outcome).toBe('offTarget');
+    expect(model.metrics.filter(m => m.outside).map(m => m.key)).toEqual(['inclination']);
+    expect(model.metrics[2].judged).toBeCloseTo(51.904, 12);
+    expect(model.metrics[0]).toMatchObject({ judged: 400, outside: false, actual: 370 });
+    // the new values are not physical apsides: the basis stays as the record says
+    expect(model.judgedBasis).toBe('osculating');
+  });
+
+  it('an off-target verdict whose unrounded values all sit inside flags no row, not the cursor\'s drift (M-LAUNCH-031 residual)', () => {
+    // a burn that could not be completed vetoes the verdict with every number inside the band
+    const input = drifted({ pe: 400, ap: 400, inc: 51.6, raan: 0, peJudgedM: 400e3, apJudgedM: 400e3, incJudgedRad: 51.6 * DEG, raanJudgedRad: 0 });
+    input.events[0].key = 'evt.offTargetOrbit';
+    input.events[0].severity = 'warn';
+    const model = assessMissionResult(input)!;
+    expect(model.metrics.filter(m => m.outside).map(m => m.key)).toEqual([]);
+  });
+
   it('flags the RAAN row from the displayed plane when the verdict recorded no RAAN', () => {
     const input = drifted({ pe: 400, ap: 400, inc: 51.6 });
     input.state.t = 500;
