@@ -15,7 +15,7 @@
  * is the one kept (review of f00b288). Then the question in Thai and Russian,
  * each with a screenshot for the owner.
  *
- * FX-1 s5: a new start asks the same question, in the designer's head. The
+ * FX-1 s5: a new start asks the same question, in "Your designs". The
  * rocket designer's "Start again" over the renamed parts design: asked, and
  * "Save it, then open" keeps the new name in its record; its vehicle picker
  * over a stretched remix: asked, and Cancel keeps the stretch. The satellite
@@ -146,7 +146,7 @@ export default async function buildUnsavedOpen(t) {
 
   // FX-1 s5: "Start again" over the renamed parts design asks; "Save it, then open" keeps the name, then starts again
   const rocketName = page.locator(`${ROCKET} [data-k="name"]`);
-  const headAsk = page.locator(`${ROCKET} .bx-head [role="alert"]`);
+  const headAsk = page.locator(`${ROCKET} .bx-store [role="alert"]`);
   await page.click(`${ROCKET} [data-k="mode:parts"]`);
   await rocketName.fill('Parts, once more');
   await page.click(`${ROCKET} [data-k="new"]`);
@@ -154,8 +154,8 @@ export default async function buildUnsavedOpen(t) {
   t.check(startAsked, '"Start again" over a renamed design did not ask');
   t.check(await rocketName.inputValue() === 'Parts, once more', `"Start again" replaced the design without asking: "${await rocketName.inputValue()}"`);
   if (startAsked) {
-    t.check(await focusKey(page) === 'head-ask:save', `the keyboard is not on "Save it, then open": ${await focusKey(page)}`);
-    await page.click(`${ROCKET} [data-k="head-ask:save"]`);
+    t.check(await focusKey(page) === 'new:save', `the keyboard is not on "Save it, then open": ${await focusKey(page)}`);
+    await page.click(`${ROCKET} [data-k="new:save"]`);
     t.check(await t.until(async () => (await kept(page)).some((d) => d.id === parts?.id && d.name === 'Parts, once more'), { timeoutMs: 15_000 }),
       `"Save it, then open" did not keep the renamed design: ${JSON.stringify((await kept(page)).map((d) => d.name))}`);
     t.check(await t.until(async () => (await rocketName.inputValue()) !== 'Parts, once more', { timeoutMs: 10_000 }), 'the design did not start again after the save');
@@ -170,7 +170,7 @@ export default async function buildUnsavedOpen(t) {
   t.check(pickAsked, 'the vehicle picker over a stretched remix did not ask');
   t.check(await stretch.inputValue() === '130', `the vehicle picker replaced the stretched remix without asking: ${await stretch.inputValue()} %`);
   if (pickAsked) {
-    await page.click(`${ROCKET} [data-k="head-ask:cancel"]`);
+    await page.click(`${ROCKET} [data-k="new:cancel"]`);
     t.check(await headAsk.count() === 0, 'Cancel did not close the question');
     t.check(await stretch.inputValue() === '130', `Cancel lost the stretch: ${await stretch.inputValue()} %`);
   }
@@ -180,7 +180,7 @@ export default async function buildUnsavedOpen(t) {
   await area.waitFor({ timeout: 30_000 });
   await area.fill('0.55');
   await area.press('Tab');
-  const satHeadAsk = page.locator(`${SAT} .bsat-head [role="alert"]`);
+  const satHeadAsk = page.locator(`${SAT} .bx-store [role="alert"]`);
   const template = page.locator(`${SAT} [data-k="sx:template"]`);
   const was = await template.inputValue();
   await template.selectOption(was === 'napa2' ? 'theos2' : 'napa2');
@@ -188,7 +188,7 @@ export default async function buildUnsavedOpen(t) {
   t.check(tplAsked, 'the template picker over unsaved changes did not ask');
   t.check(await area.inputValue() === '0.55', `the template picker replaced the design without asking: array ${await area.inputValue()}`);
   if (tplAsked) {
-    t.check(await focusKey(page) === 'sx:ask:save', `the keyboard is not on "Save it, then open": ${await focusKey(page)}`);
+    t.check(await focusKey(page) === 'new:save', `the keyboard is not on "Save it, then open": ${await focusKey(page)}`);
     await page.keyboard.press('Escape');
     t.check(await satHeadAsk.count() === 0, 'Escape did not close the question');
     t.check(await area.inputValue() === '0.55' && await template.inputValue() === was, `Escape lost the change: array ${await area.inputValue()}, template ${await template.inputValue()}`);
@@ -198,7 +198,7 @@ export default async function buildUnsavedOpen(t) {
   t.check(againAsked, '"Start again from the template" over unsaved changes did not ask');
   t.check(await area.inputValue() === '0.55', `"Start again from the template" replaced the design without asking: array ${await area.inputValue()}`);
   if (againAsked) {
-    await page.click(`${SAT} [data-k="sx:ask:open"]`);
+    await page.click(`${SAT} [data-k="new:open"]`);
     t.check(await t.until(async () => (await area.inputValue()) !== '0.55', { timeoutMs: 10_000 }), '"Open without saving" did not start again');
   }
   app.checkErrors();

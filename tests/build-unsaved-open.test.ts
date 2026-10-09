@@ -539,6 +539,18 @@ interface Asking {
   answer(choice: 'save' | 'open' | 'cancel'): Promise<void>;
 }
 
+/**
+ * The designer's question, read where it is kept: in its store ("Your designs"), whose buttons answer it —
+ * "Save it, then open", "Open without saving", Cancel (`started(go, save)`).
+ */
+function withQuestion<T extends object>(level: T, store: object): T & Asking {
+  const s = store as { asking?: { name: string } | null; started(go: boolean, save?: boolean): Promise<void> };
+  return Object.defineProperties(level, {
+    asking: { get: () => s.asking ?? null },
+    answer: { value: (choice: 'save' | 'open' | 'cancel') => s.started(choice !== 'cancel', choice === 'save') },
+  }) as T & Asking;
+}
+
 /** Every promise the level's question waits on, settled. */
 const settle = async (): Promise<void> => { await vi.runAllTimersAsync(); };
 
@@ -550,7 +562,7 @@ function rocketDesigner(state: ExploreState, designs: LocalDesignStore) {
   const recompute = (): void => { level.result = designResult(level.state); };
   const level = Object.assign(Object.create(ExploreLevel.prototype), {
     state, result: designResult(state), defaultNames: { remix: 'My Falcon 9', parts: 'My parts' }, visible: false, selected: null,
-    asking: null, compute: recompute, reshaped: recompute,
+    compute: recompute, reshaped: recompute,
   }) as Asking & {
     state: ExploreState; result: ReturnType<typeof designResult>; store: StoreUnderTest<'vehicle'>;
     pickBase(id: string): void; startOver(): void; openDesign(spec: VehicleSpec, payloadKg: number): void;
@@ -569,14 +581,16 @@ function rocketDesigner(state: ExploreState, designs: LocalDesignStore) {
     forgotten: vi.fn(),
     replacing: (rec) => level.replacing(rec),
   });
+  withQuestion(level, level.store);
   return { level, changed: recompute };
 }
 
 /** The satellite designer without its page, its store over `designs`: the template picker and "Start again from the template". */
 function satelliteDesigner(ws: SatelliteWorkspace, designs: LocalDesignStore) {
-  return Object.assign(Object.create(SatelliteLevel.prototype), { ws, store: satelliteStore(ws, designs), orbitMessage: null, visible: false, asking: null }) as Asking & {
+  const store = satelliteStore(ws, designs);
+  return withQuestion(Object.assign(Object.create(SatelliteLevel.prototype), { ws, store, orbitMessage: null, visible: false }) as {
     store: StoreUnderTest<'satellite'>; pickTemplate(id: string): void;
-  };
+  }, store);
 }
 
 const baseOf = (state: ExploreState): unknown => (state.remix.edit as RemixEdit).base;
