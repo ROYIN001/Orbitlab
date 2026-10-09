@@ -159,6 +159,37 @@ The owner answered the K1 decision page (Claude artifact `https://claude.ai/arti
 | 2026-10-07 | R1.6 PR 2b (notice) | Add a line telling the learner that a mission from a newer version is kept as stored until they change it, and that the first edit saves it in this app's format. — "เพิ่ม: 'ภารกิจนี้เก็บไว้ตามเดิม จนกว่าคุณจะแก้ — การแก้ครั้งแรกจะบันทึกเป็นแบบของแอปนี้'" | Owner's answer, card `r16-2b-notice`, option a, 2026-10-07T03:58Z. | Small follow-up PR (strings in TH/EN/RU). |
 | 2026-10-08 | D-38 (K1 final round) | Raise `i18n-*.js` 1725→1727 kB and `index-*.js` 2634→2636 kB for FX-1 s4 (M-BUILD-008), R1.6 PR7 (M-PLATFORM-010) and the R1.6 PR 2c notice only; the precache code ceiling is not raised. — "เพิ่มเพดาน: ข้อความแปล +2 kB (1,725 → 1,727) และก้อนหน้าแรก +2 kB (2,634 → 2,636) เฉพาะ 3 ชิ้นนี้ — เพดานรวมไม่เพิ่ม" | Owner's answer, card `k1-final-budget`, option a (recommended), 2026-10-08T07:20Z. Measured 2635.4 / 1726.4 kB with all three merged. | `budgets.json` in the FX-1 s4 PR; offsets EQ-6 and EQ-7 (K2). |
 
+## Decided 2026-10-09 (K1 decision page 2)
+
+The owner answered every card on the second K1 decision page (Claude artifact `https://claude.ai/artifact/Jsyu693aoFBx9rXZv7Rc5Q`, collections `items` and `answers`) on 2026-10-09 between 22:24Z and 22:30Z. The answers reached the records session by message from the coordinating session and were checked against the page's `answers` collection (option and time of each card). The answer is the option's label and effect as the page showed them, quoted verbatim.
+
+| Time (UTC) | Card | Answer |
+|---|---|---|
+| 2026-10-09T22:24:57.531Z | `q01` (ข้อ 1) ตัวแก้ test fx8-context-loss | A — "อนุมัติเป็นการเปลี่ยน assertion และรัน "Audit browser acceptance" บน branch ก่อน merge" — รันราว 35 นาที ครบทุก journey แล้ว Pages เลิกล้มเพราะ test นี้ |
+| 2026-10-09T22:25:25.027Z | `q02` (ข้อ 2) PR #129: CI รันครั้งเดียวต่อ PR | A — "sync กับ main รัน CI ใหม่ แล้ว merge" — ไม่มี CI ซ้ำซ้อนและไม่มีสัญญาณหลอก แต่ branch ที่ยังไม่มี PR จะไม่มี CI อัตโนมัติ ต้องเปิด PR หรือสั่งรันเอง และข้อความใน S18 §18.6 ต้องแก้ตาม |
+| 2026-10-09T22:25:48.719Z | `q03` (ข้อ 3) นโยบายงบขนาดสำหรับงานที่เหลือของ K1 | B — "วงเงินครั้งเดียวสำหรับงานแก้บั๊กและกันข้อมูลหายที่เหลือของ K1" — i18n +2 kB, index +2 kB, CSS +1 kB, other chunks +1 kB ไม่เพิ่มเพดาน precache code ทุก PR ต้องแจ้งขนาดที่วัดได้ ปรับเพดานลงที่ GK1 (offset: EQ-6/EQ-7 ใน K2 และการรวม CSS ซ้ำของ CO-4 026) |
+| 2026-10-09T22:25:59.849Z | `q03-1` (ข้อ 3.1) เพดาน precache code หลังการบีบภาพใน #126 | B — "ลดพร้อมกันที่ GK1" — ทำ PR เดียวพร้อมการปรับเพดานอื่นของ K1 |
+| 2026-10-09T22:26:12.337Z | `q04` (ข้อ 4) กติกา EO-STO-1 เมื่อไบต์ที่เก็บเปลี่ยนโดยตั้งใจ | B — "อนุญาตเมื่อเป็น PR แก้บั๊กที่การเปลี่ยนไบต์คือตัวการแก้เอง" — ต้องแสดง diff ของไบต์ ให้ผู้ตรวจ storage คนที่สองยืนยัน ตรึงใหม่ใน commit แยก และเขียนไว้ในรายงาน |
+| 2026-10-09T22:27:00.465Z | `q05` (ข้อ 5) CO-4 ขั้น 6–10 อยู่ใน K1 หรือ K2 | B — "ทำ 032 และ 026 ใน K1 ส่วนที่เหลือไป K2" — แก้ผลเท็จก่อน และได้ที่ CSS คืนให้งานอื่น |
+| 2026-10-09T22:27:11.873Z | `q06` (ข้อ 6) R7.1 journey ข้ามระบบ (M-PLAN-025) | A — "อนุญาต M-PLAN-025 ตอนนี้เพื่อใช้ที่ GK1" — GK1 ครบตาม checklist |
+| 2026-10-09T22:27:20.640Z | `q07` (ข้อ 7) M-PLAN-027 การเข้าถึงด้วยแป้นพิมพ์ใน Build ถดถอย (P1) | A — "อนุญาตเฉพาะข้อนี้ใน K1" — ต่อคิวหลัง FX-1 s5 ในเลน B |
+| 2026-10-09T22:27:31.830Z | `q08` (ข้อ 8) ส่วนที่เหลือของ M-LAUNCH-031 | A — "ทำใน K1 หลัง harness M-PHYSICS-002 merge" — harness พิสูจน์ว่าวิถีการบินไม่เปลี่ยน และต้องผ่านผู้ตรวจด้านฟิสิกส์ |
+| 2026-10-09T22:27:55.404Z | `q09` (ข้อ 9) บทเรียนที่ถามคาบวงโคจร | A — "ซ่อนแถว Period (และความเอียงวงโคจรเมื่อบทเรียนถาม) ใน HUD แบบเต็ม เฉพาะตอนบทเรียนเปิดอยู่" — WebMCP คงไว้เพราะ journey ใช้ |
+| 2026-10-09T22:28:00.631Z | `q10` (ข้อ 10) branch pd-r41-s1 (งาน K3 ที่ทำค้างไว้) | A — "ให้ทำให้เสร็จ" — งานเล็กที่แก้ข้อความไม่ตรงความจริง ต่อคิวเมื่อมีช่อง PR ว่าง |
+| 2026-10-09T22:28:35.408Z | `q11` (ข้อ 11) ความคลาดเคลื่อนที่เกิดไปแล้ว | A — "รับทราบทั้งหมด ไม่ revert" — M-LEARNING-027 ตรวจว่าการแก้คลังข้อสอบเป็นแค่ศัพท์ ส่งแพ็ก ru-24-05-06 เข้าคิวตรวจซ้ำของ HU-2 และเคารพเพดาน PR จากนี้ไป |
+| 2026-10-09T22:29:06.406Z | `q12` (ข้อ 12) ยืนยันการอนุมัติเพื่อบันทึกลง DECISIONS | A — "ยืนยันทั้ง 3 ข้อ" — บันทึกลง DECISIONS ตามคำของคุณ |
+| 2026-10-09T22:29:16.524Z | `q13` (ข้อ 13) บีบภาพแบบ progressive | B — "ไม่ทำ" — เพดานที่ตึงคือ index, i18n และ CSS ไม่ใช่ precache code |
+| 2026-10-09T22:29:24.039Z | `q14` (ข้อ 14) branch เก่าที่ merge ไปแล้วราว 40 ตัว | A — "ให้เซสชันลบเฉพาะ branch ที่ PR merge แล้วและตรงกับที่ merge จริง" — ตรวจทีละตัวและเก็บรายชื่อไว้ในบันทึก (GitHub กู้ branch คืนจากหน้า PR ได้) |
+
+Card `q11` covered these variances, as the card listed them: "#123 ทำ M-LAUNCH-034 ซึ่งเป็นงาน K2 ใน K1"; "#139 (ระดับ P2) merge ก่อน R1.6 PR4–5 ที่ผลต้องเหมือนเดิม ซึ่งผิดลำดับตาม D-63"; "#135 แก้คลังข้อสอบก่อน M-LEARNING-027 และเปลี่ยนค่า hash การตรวจที่ตรึงไว้ของแพ็ก ru-24-05-06 (เปลี่ยนเฉพาะศัพท์ D5)"; "เปิด PR พร้อมกันเกินเพดานเมื่อ 7–8 ต.ค.".
+
+Card `q12` A is the owner's confirmation on 2026-10-09 of three approvals given on 2026-10-08:
+- (ก) the Merge Desk approvals of #130, #131 and #132 — "การกด merge #130, #131, #132 บน Merge Desk เมื่อ 8 ต.ค.";
+- (ข) the chat approval "ส่วนที่ทำเสร็จแล้วให้ทำการ merge ให้เรียบร้อยเลย", covering #120, #140 and #141;
+- (ค) the instruction "เดี๋ยวจะส่งงานให้คนอื่นทำต่อ ไม่ต้องทำแล้ว ทำเอกสารสำหรับการส่งมอบงานอย่างเดียวพอ".
+
+Card `q02` A: once #129 merges, CI no longer runs on `push`, so a branch gets CI only through a PR or a manual `workflow_dispatch` run; where plan S18 §18.6 describes the CI trigger, the owner's answer ("ข้อความใน S18 §18.6 ต้องแก้ตาม") supersedes it. The approved plan text itself is not edited here.
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
