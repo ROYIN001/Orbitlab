@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RawStorage } from '../src/workspace/registry';
-import { LEGACY_PROFILE_ID, PROFILE_SELECTED_KEY, WorkspaceRepository, profileStorageKey,
-  type WorkspaceLocks } from '../src/workspace/repository';
+import { LEGACY_PROFILE_ID, PROFILE_SELECTED_KEY, WorkspaceError, WorkspaceRepository, profileStorageKey,
+  type ProfileCounts, type ProfileListRow, type WorkspaceLocks } from '../src/workspace/repository';
 import type { ProfileDialogSnapshot, ProfileItem, UnreadableProfileItem } from '../src/ui/profiles/profile-dialog';
 import { createProfileMenuHost } from '../src/ui/profiles/profile-menu';
 import { AppProfiles } from '../src/ui/profiles/app-profiles';
@@ -43,21 +43,50 @@ async function device(selected: string) {
   return { disk, session, repo };
 }
 
-/** The chooser snapshot as 007b039 built it: listWithStatus(), a second read() per readable row, and active() for the name. */
-function before(r: WorkspaceRepository, snapshot: ProfileDialogSnapshot): ProfileDialogSnapshot {
-  const profiles: ProfileItem[] = [], unreadable: UnreadableProfileItem[] = [];
-  for (const row of r.listWithStatus()) {
-    if (row.state !== 'ok') { unreadable.push(row); continue; }
-    const values = r.read(row.id).values;
-    const data = JSON.parse(values['orbitlab.lessons'] ?? 'null');
-    profiles.push({ ...row, counts: { ...row.counts,
-      drafts: Object.keys(values).filter((key) => /^(orbitlab\.build\.(explore|satellite|requirements)\.v1|orbitlab\.author\.(draft|design|kind)|orbitlab\.worksheets)$/.test(key)).length,
-      customLessons: Array.isArray(data?.customLessons) ? data.customLessons.length : 0,
-      customQuestions: Array.isArray(data?.customQuestions) ? data.customQuestions.length : 0 } });
+/** 007b039's `profileRow()`, inlined so the oracle does not run the code under test (review finding 1). */
+function oldRow(r: WorkspaceRepository, id: string): ProfileListRow {
+  try { const record = r.read(id), { values, version: _v, ...meta } = record; return { ...meta, counts: countsOf(values), state: 'ok' }; } catch (error) {
+    if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
+    let name: string | undefined, raw: string | null = null;
+    try { raw = r.rawProfile(id); } catch { /* none */ }
+    if (raw === null) return { id, state: 'missing' };
+    try { const data = JSON.parse(raw); if (data && typeof data === 'object' && !Array.isArray(data) && typeof data.name === 'string' && data.name.trim()) name = data.name.trim().slice(0, 100); } catch { /* none */ }
+    return { id, state: error.code === 'newer' ? 'newer' : 'unreadable', name };
   }
-  const activeId = r.active()?.name && r.binding?.valid ? r.binding.profileId : null;
+}
+function countsOf(values: Record<string, string>): ProfileCounts {
+  const read = (key: string): Record<string, unknown> => { try { const v = JSON.parse(values[key] ?? 'null'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } };
+  const p = read('orbitlab.lessons'), d = read('orbitlab.designs'), n = read('orbitlab.experiments.v1');
+  return { lessons: p.lessons && typeof p.lessons === 'object' && !Array.isArray(p.lessons) ? Object.keys(p.lessons).length : 0,
+    assessments: Array.isArray(p.assessments) ? p.assessments.length : 0,
+    designs: Array.isArray(d.designs) ? d.designs.length : 0, experiments: Array.isArray(n.experiments) ? n.experiments.length : 0 };
+}
+/** The chooser snapshot as 007b039 built it: a row per catalogue id, a second read() per readable row, and active() for the name. */
+function before(r: WorkspaceRepository, snapshot: ProfileDialogSnapshot, ids: string[]): ProfileDialogSnapshot {
+  const profiles: ProfileItem[] = [], unreadable: UnreadableProfileItem[] = [];
+  try {
+    const rows = ids.map((id) => oldRow(r, id));
+    for (const row of rows) {
+      if (row.state !== 'ok') { unreadable.push(row); continue; }
+      const values = r.read(row.id).values;
+      let data: { customLessons?: unknown; customQuestions?: unknown } | null = null;
+      try { data = JSON.parse(values['orbitlab.lessons'] ?? 'null'); } catch { /* none */ }
+      profiles.push({ ...row, counts: { ...row.counts,
+        drafts: Object.keys(values).filter((key) => /^(orbitlab\.build\.(explore|satellite|requirements)\.v1|orbitlab\.author\.(draft|design|kind)|orbitlab\.worksheets)$/.test(key)).length,
+        customLessons: Array.isArray(data?.customLessons) ? data.customLessons.length : 0,
+        customQuestions: Array.isArray(data?.customQuestions) ? data.customQuestions.length : 0 } });
+    }
+  } catch { profiles.length = 0; unreadable.length = 0; }
+  let name = ''; try { name = r.active()?.name ?? ''; } catch { /* '' */ }
+  const activeId = name && r.binding?.valid ? r.binding.profileId : null;
   return { profiles, unreadable, activeId, lessons: snapshot.lessons, status: activeId ? r.status : 'chooser' };
 }
+const same = (r: WorkspaceRepository, ids: string[]) => {
+  const snapshot = createProfileMenuHost(r, () => {}, () => {}).snapshot();
+  expect(JSON.stringify(snapshot)).toBe(JSON.stringify(before(r, snapshot, ids)));
+  return snapshot;
+};
+const IDS = [LEGACY_PROFILE_ID, 'p-1', 'p-2'];
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); current = null; });
 
@@ -80,8 +109,7 @@ describe('R1.6 PR4: fewer reads and parses, the same results (M-PLATFORM-003/005
       env.disk.reads.length = 0;
       const snapshot = host.snapshot();
       expect(env.disk.reads.length).toBe(1 + 3);
-      expect(snapshot).toEqual(before(r, snapshot));
-      expect(JSON.stringify(snapshot)).toBe(JSON.stringify(before(r, snapshot)));
+      expect(JSON.stringify(snapshot)).toBe(JSON.stringify(before(r, snapshot, IDS)));
       expect(snapshot.profiles.map((p) => p.counts)).toEqual([
         { lessons: 2, assessments: 1, designs: 2, experiments: 0, drafts: 1, customLessons: 2, customQuestions: 0 },
         { lessons: 0, assessments: 0, designs: 0, experiments: 0, drafts: 0, customLessons: 0, customQuestions: 0 },
@@ -93,13 +121,27 @@ describe('R1.6 PR4: fewer reads and parses, the same results (M-PLATFORM-003/005
   it('M-PLATFORM-005: a locked tab and a visit-only tab get the old snapshot', async () => {
     const env = await device(LEGACY_PROFILE_ID), owner = await env.repo().initialize(), locked = await env.repo().initialize();
     expect(locked.status).toBe('locked');
-    const lockedSnapshot = createProfileMenuHost(locked, () => {}, () => {}).snapshot();
-    expect(JSON.stringify(lockedSnapshot)).toBe(JSON.stringify(before(locked, lockedSnapshot)));
+    same(locked, IDS);
     const visit = await new WorkspaceRepository(env.disk.store, env.session.store).initialize();
     expect(visit.status).toBe('ephemeral');
-    const visitSnapshot = createProfileMenuHost(visit, () => {}, () => {}).snapshot();
-    expect(JSON.stringify(visitSnapshot)).toBe(JSON.stringify(before(visit, visitSnapshot)));
+    same(visit, [LEGACY_PROFILE_ID]);
+    // review finding 3: a visit-only row's values are a copy, not the live record
+    (visit.rows()[0].values as Record<string, string>)['orbitlab.lessons'] = 'changed';
+    expect(visit.binding!.getItem('orbitlab.lessons')).toBe(lessons);
     owner.close(); locked.close(); visit.close();
+  });
+
+  it('M-PLATFORM-005 review: the open learner\'s record damaged after start, and another learner that cannot be read at all', async () => {
+    const env = await device(LEGACY_PROFILE_ID), r = await env.repo().initialize();
+    const key = profileStorageKey(LEGACY_PROFILE_ID), good = env.disk.values.get(key)!;
+    env.disk.values.set(key, good.slice(0, -12));
+    expect(same(r, IDS).activeId).toBeNull();
+    env.disk.values.set(key, good);
+    const getItem = env.disk.store.getItem;
+    env.disk.store.getItem = (k) => { if (k === profileStorageKey('p-1')) throw new DOMException('denied', 'SecurityError'); return getItem(k); };
+    const snapshot = same(r, IDS);
+    expect(snapshot.profiles).toEqual([]); expect(snapshot.activeId).toBe(LEGACY_PROFILE_ID);
+    env.disk.store.getItem = getItem; r.close();
   });
 
   it('M-PLATFORM-006: showing the learner\'s name parses no lessons, designs or experiments', async () => {
@@ -112,6 +154,10 @@ describe('R1.6 PR4: fewer reads and parses, the same results (M-PLATFORM-003/005
     const parse = vi.spyOn(JSON, 'parse');
     expect(profiles.name()).toBe('Learner 1');
     expect(parse.mock.calls.filter(([text]) => text === lessons)).toEqual([]);
-    parse.mockRestore(); r.close();
+    parse.mockRestore();
+    // review finding 2: an unreadable open record gives '' as before (no open learner: the chooser cases above, activeId null)
+    const key = profileStorageKey(LEGACY_PROFILE_ID), good = env.disk.values.get(key)!;
+    env.disk.values.set(key, good.slice(0, -12)); expect(profiles.name()).toBe('');
+    env.disk.values.set(key, good); r.close();
   });
 });

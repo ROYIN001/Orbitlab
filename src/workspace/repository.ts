@@ -306,7 +306,8 @@ export class WorkspaceRepository {
   profileRow(id: string): ProfileListRow { this.listed(id); const { values: _values, ...row } = this.row(id); return row as ProfileListRow; }
   private row(id: string): ProfileListRow & { values?: Readonly<Record<string, string>> } {
     const raw = this.raw(id);
-    try { const record = this.stored(id, raw); return { ...summary(record), state: 'ok', values: record.values }; } catch (error) {
+    // A visit-only record is the live one: its values are copied so no caller can change it.
+    try { const record = this.stored(id, raw); return { ...summary(record), state: 'ok', values: this.ephemeral ? clone(record.values) : record.values }; } catch (error) {
       if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
       let name: string | undefined;
       if (raw === null) return { id, state: 'missing' };
