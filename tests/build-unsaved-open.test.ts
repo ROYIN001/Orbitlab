@@ -620,11 +620,13 @@ describe('M-BUILD-007 (FX-1 s5): the rocket designer\'s vehicle picker, "Start a
 
   it('the vehicle picker and "Start again" still start at once over a remix as it started', async () => {
     const { level } = rocketDesigner(fresh(), storeWith(memory()));
+    // the store's answer comes a microtask later (nothing to read: no record)
     level.pickBase('electron');
+    await settle();
     expect(baseOf(level.state)).toEqual({ kind: 'catalogue', id: 'electron' });
     level.startOver();
-    expect(baseOf(level.state)).toEqual({ kind: 'catalogue', id: 'electron' });
     await settle();
+    expect(baseOf(level.state)).toEqual({ kind: 'catalogue', id: 'electron' });
     expect(level.asking).toBeNull();
   });
 
@@ -685,6 +687,7 @@ describe('M-BUILD-007 (FX-1 s5): the rocket designer\'s vehicle picker, "Start a
     // over a parts design as it started, at once
     const untouched = rocketDesigner(fresh(), storeWith(memory())).level;
     untouched.openDesign(spec, 400);
+    await settle();
     expect(untouched.state.mode).toBe('parts');
     expect(untouched.state.parts.payloadKg).toBe(400);
   });
