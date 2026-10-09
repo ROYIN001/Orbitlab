@@ -98,7 +98,8 @@ export class ProfileDialog extends Modal {
   }
 
   override close(): void { if (this.canClose()) super.close(); }
-  private canClose(): boolean { return !this.busy && !!this.host.snapshot().activeId; }
+  /** `close()` and Escape read live; a render passes the snapshot it drew (M-PLATFORM-005). */
+  private canClose(snapshot = this.host.snapshot()): boolean { return !this.busy && !!snapshot.activeId; }
 
   override applyLanguage(): void {
     const focusKey = document.activeElement instanceof HTMLElement && this.el.contains(document.activeElement)
@@ -170,7 +171,7 @@ export class ProfileDialog extends Modal {
     }
     if (this.host.reload && (readonly || !snapshot.activeId)) content.append(this.button('reload', () => this.host.reload?.()));
     if (this.screen.kind === 'list') this.list(content, snapshot, readonly);
-    else if (this.screen.kind === 'name') this.nameForm(content, readonly);
+    else if (this.screen.kind === 'name') this.nameForm(content, snapshot, readonly);
     else if (this.screen.kind === 'reset') this.resetForm(content, snapshot, active, readonly);
     else if (this.screen.kind === 'backups') this.backups(content, snapshot, readonly);
     else if (this.screen.kind === 'import') this.importForm(content, snapshot, readonly);
@@ -184,7 +185,7 @@ export class ProfileDialog extends Modal {
       + (key === 'backupPartial' || key === 'backupNoneReadable' ? ' ' + text('backupEach') : '') : '';
     this.body.replaceChildren(title, content, status);
     const close = this.el.querySelector<HTMLButtonElement>('.dialog-close');
-    if (close) close.disabled = !this.canClose();
+    if (close) close.disabled = !this.canClose(snapshot);
     if (this.busy) this.body.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement>('button,input,select').forEach((item) => { item.disabled = true; });
     if (restoreFocus) {
       // Replacing an async form removes the focused button. Keep Escape in
@@ -227,7 +228,7 @@ export class ProfileDialog extends Modal {
     const backups = this.button('backups', () => this.go({ kind: 'backups' }));
     content.append(this.actions(create, reset, backups));
   }
-  private nameForm(content: HTMLElement, readonly: boolean): void {
+  private nameForm(content: HTMLElement, snapshot: ProfileDialogSnapshot, readonly: boolean): void {
     if (this.screen.kind !== 'name') return;
     const screen = this.screen;
     const form = node('form', 'profile-name-form');
@@ -236,7 +237,7 @@ export class ProfileDialog extends Modal {
     input.autocomplete = 'off'; input.value = screen.value; input.dataset.profileFocus = 'name';
     input.addEventListener('input', () => { screen.value = input.value; }); label.append(input);
     const submit = this.button(screen.id ? 'save' : 'create', () => form.requestSubmit(), 'profile-primary');
-    submit.disabled ||= screen.id ? readonly : this.host.snapshot().status === 'ephemeral';
+    submit.disabled ||= screen.id ? readonly : snapshot.status === 'ephemeral';
     form.append(label, node('p', undefined, text('createLead')), this.actions(this.button('back', () => this.go({ kind: 'list' })), submit));
     form.addEventListener('submit', (event) => {
       event.preventDefault();

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RawStorage } from '../src/workspace/registry';
 import { LEGACY_PROFILE_ID, PROFILE_SELECTED_KEY, WorkspaceRepository, profileStorageKey,
   type WorkspaceLocks } from '../src/workspace/repository';
-import type { ProfileDialogSnapshot } from '../src/ui/profiles/profile-dialog';
+import type { ProfileDialogSnapshot, ProfileItem, UnreadableProfileItem } from '../src/ui/profiles/profile-dialog';
 import { createProfileMenuHost } from '../src/ui/profiles/profile-menu';
 import { AppProfiles } from '../src/ui/profiles/app-profiles';
 
@@ -45,7 +45,7 @@ async function device(selected: string) {
 
 /** The chooser snapshot as 007b039 built it: listWithStatus(), a second read() per readable row, and active() for the name. */
 function before(r: WorkspaceRepository, snapshot: ProfileDialogSnapshot): ProfileDialogSnapshot {
-  const profiles: ProfileDialogSnapshot['profiles'] = [], unreadable: NonNullable<ProfileDialogSnapshot['unreadable']> = [];
+  const profiles: ProfileItem[] = [], unreadable: UnreadableProfileItem[] = [];
   for (const row of r.listWithStatus()) {
     if (row.state !== 'ok') { unreadable.push(row); continue; }
     const values = r.read(row.id).values;
