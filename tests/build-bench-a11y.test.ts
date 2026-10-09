@@ -15,6 +15,7 @@ import { VEHICLES } from '../src/data/vehicles';
 import { explodedView, type DrawnPart } from '../src/design/exploded';
 import { EngineerLevel } from '../src/ui/build/engineer-level';
 import { BuildScreen } from '../src/ui/build/build-screen';
+import { ExploreLevel } from '../src/ui/build/explore-level';
 import type { StackLabel } from '../src/ui/build/stack-svg';
 import type { VehicleSpec } from '../src/types';
 
@@ -22,16 +23,18 @@ const engineerName = (spec: VehicleSpec, p: DrawnPart): string =>
   (Object.assign(Object.create(EngineerLevel.prototype), { bench: { spec } }) as { partLabel(p: DrawnPart): StackLabel }).partLabel(p).name;
 const watchName = (spec: VehicleSpec, p: DrawnPart): string =>
   (Object.assign(Object.create(BuildScreen.prototype), { spec }) as { label(p: DrawnPart): StackLabel }).label(p).name;
+const exploreName = (spec: VehicleSpec, p: DrawnPart): string =>
+  (Object.create(ExploreLevel.prototype) as { label(spec: VehicleSpec, p: DrawnPart): StackLabel }).label(spec, p).name;
 
-describe('M-PLAN-027: the Engineer bench names each drawn part as Watch does', () => {
+describe('M-PLAN-027: the Engineer bench names each drawn part as Watch and Explore do', () => {
   it('every part of every catalogue vehicle, strap-ons included', () => {
     let boosters = 0;
     const differ: string[] = [];
     for (const spec of VEHICLES) {
       for (const p of explodedView(spec).parts) {
         if (p.kind === 'booster') boosters++;
-        const e = engineerName(spec, p), w = watchName(spec, p);
-        if (e !== w) differ.push(`${spec.id} ${p.key}: "${e}" ≠ "${w}"`);
+        const e = engineerName(spec, p), w = watchName(spec, p), x = exploreName(spec, p);
+        if (e !== w || x !== w) differ.push(`${spec.id} ${p.key}: Engineer "${e}", Explore "${x}", Watch "${w}"`);
       }
     }
     expect(boosters, 'no vehicle with strap-ons was drawn').toBeGreaterThan(0);

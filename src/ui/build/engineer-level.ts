@@ -366,7 +366,7 @@ export class EngineerLevel {
     modes.setAttribute('aria-label', t('build.eng.preview.view'));
     for (const [value, key] of [[0, 'build.eng.preview.stacked'], [1, 'build.eng.preview.apart']] as const) {
       // M-PLAN-027: the redraw replaces the buttons; the keyboard stays on the one pressed
-      const b = button('be-mode', t(key), () => { this.explode = value; this.renderPreview(); this.preview.querySelectorAll<HTMLElement>('.be-mode')[value].focus(); });
+      const b = button('be-mode', t(key), () => { this.explode = value; this.renderPreview(); this.preview.querySelectorAll<HTMLElement>('.be-preview-modes .be-mode')[value]?.focus(); });
       b.setAttribute('aria-pressed', String(this.explode === value));
       modes.append(b);
     }
