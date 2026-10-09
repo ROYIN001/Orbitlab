@@ -1,0 +1,105 @@
+{
+ "tliIgnition": "40c340199999999a",
+ "entryInterface": "41256dd35fc22510",
+ "samples": 42373,
+ "stateDigest": "8dbcafdb6d7979d12c8e55c6557ef941f6c8d309896da83776171b2b4b004c8a",
+ "firstSample": [
+  "40c340199999999a",
+  "4158bae85c52471f",
+  "c12c9e4c0e879f0e",
+  "c11f187a3c8404ee",
+  "4093d3c0f6c685ab",
+  "40b94844ada53785",
+  "40b0352b550a64d7"
+ ],
+ "lastSample": [
+  "41256dd35fc22510",
+  "4158b8beeec76b0e",
+  "4114e294c0041e0e",
+  "c1165fc508e2d284",
+  "c09413e3939f2940",
+  "40c0479b1f32e5d2",
+  "40bbc7c56a6cba3b"
+ ],
+ "events": 45,
+ "eventDigest": "513ffe3e1780d65bcd2afb334476e1199a834ec95a793396ac5df480eb2ee60c",
+ "targeting": [
+  [
+   "targetMidcourse",
+   {
+    "x": "40086761215d43be",
+    "y": "c000e7c88b0bdd42",
+    "z": "bff6f5716427d995"
+   }
+  ],
+  [
+   "csiImpulse",
+   {
+    "x": "c02cb9c3ede6d14d",
+    "y": "402124d1df995d4d",
+    "z": "400b9502953180e0"
+   }
+  ],
+  [
+   "cdhImpulse",
+   {
+    "x": "3fc37119475c0393",
+    "y": "4010211a67679b0e",
+    "z": "3ffa89488bf4e2a0"
+   }
+  ],
+  [
+   "interceptImpulse",
+   {
+    "x": "c013a7c998179a7e",
+    "y": "c0155a1749a20753",
+    "z": "c001e2569f3a6318"
+   }
+  ],
+  [
+   "interceptImpulse",
+   {
+    "x": "bfb028e86b1c0a1f",
+    "y": "bfc6966524bf9c53",
+    "z": "bfb2bc7b5f8a9097"
+   }
+  ],
+  [
+   "interceptImpulse",
+   {
+    "x": "0000000000000000",
+    "y": "0000000000000000",
+    "z": "0000000000000000"
+   }
+  ],
+  [
+   "targetEntry",
+   {
+    "x": "c0735e75ebe5f255",
+    "y": "40886fb9ba85288e",
+    "z": "408141111e4f1a50"
+   }
+  ],
+  [
+   "targetEntry",
+   {
+    "x": "c0738a13f54b2b78",
+    "y": "4088746a232e01ff",
+    "z": "4081415a5eda97c9"
+   }
+  ],
+  [
+   "targetEntry",
+   {
+    "x": "3f85b83c336636d1",
+    "y": "bfbc29fa5c274ffd",
+    "z": "bfaf70ca524d5dfb"
+   }
+  ]
+ ],
+ "measures": {
+  "steps": 43790,
+  "moonState": 2309319,
+  "sunState": 1770236
+ }
+}
