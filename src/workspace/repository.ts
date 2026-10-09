@@ -178,11 +178,12 @@ export class WorkspaceRepository {
     const entry = this.catalog().profiles[id];
     if (!entry || entry.deleting) throw new WorkspaceError('missing');
   }
-  read(id: string): ProfileRecord {
-    this.listed(id);
-    const record = this.ephemeral ? this.ephemeral[id] : parseRecord(this.storage.getItem(profileStorageKey(id)));
+  read(id: string): ProfileRecord { this.listed(id); return clone(this.stored(id)); }
+  /** The record itself, not a copy: callers only read it (M-PLATFORM-003/005). */
+  private stored(id: string, raw = this.ephemeral ? null : this.storage.getItem(profileStorageKey(id))): ProfileRecord {
+    const record = this.ephemeral ? this.ephemeral[id] : parseRecord(raw);
     if (!record || record.id !== id) throw new WorkspaceError('missing');
-    return clone(record);
+    return record;
   }
   private write(record: ProfileRecord): void {
     if (this.ephemeral) this.ephemeral[record.id] = clone(record);
@@ -248,7 +249,7 @@ export class WorkspaceRepository {
         // An unreadable owner record keeps its bytes and the originals; cleanup is retried at the next start.
         if (catalog.profiles[catalog.legacyId] && !catalog.profiles[catalog.legacyId].deleting) {
           try {
-            const original = this.read(catalog.legacyId);
+            this.listed(catalog.legacyId); const original = this.stored(catalog.legacyId);
             for (const [key, value] of Object.entries(original.values)) {
               if (this.storage.getItem(key) === value) this.storage.removeItem(key);
             }
@@ -296,16 +297,19 @@ export class WorkspaceRepository {
   list(): ProfileSummary[] {
     return this.listWithStatus().flatMap(({ state, ...profile }) => state === 'ok' ? [profile as ProfileSummary] : []);
   }
-  listWithStatus(): ProfileListRow[] {
-    return Object.entries(this.catalog().profiles).filter(([, row]) => !row.deleting).map(([id]) => this.profileRow(id));
+  listWithStatus(): ProfileListRow[] { return this.rows().map(({ values: _values, ...row }) => row as ProfileListRow); }
+  /** Every catalogue row read once, with a readable row's values for the chooser's counts; the values are not a copy (M-PLATFORM-005). */
+  rows(): (ProfileListRow & { values?: Readonly<Record<string, string>> })[] {
+    return Object.entries(this.catalog().profiles).filter(([, row]) => !row.deleting).map(([id]) => this.row(id));
   }
   /** Reads only this owner. A record that cannot be parsed, is missing or is newer becomes a row with that state; its bytes are not touched. */
-  profileRow(id: string): ProfileListRow {
-    this.listed(id);
-    try { return { ...summary(this.read(id)), state: 'ok' }; } catch (error) {
+  profileRow(id: string): ProfileListRow { this.listed(id); const { values: _values, ...row } = this.row(id); return row as ProfileListRow; }
+  private row(id: string): ProfileListRow & { values?: Readonly<Record<string, string>> } {
+    const raw = this.raw(id);
+    // A visit-only record is the live one: its values are copied so no caller can change it.
+    try { const record = this.stored(id, raw); return { ...summary(record), state: 'ok', values: this.ephemeral ? clone(record.values) : record.values }; } catch (error) {
       if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
-      let name: string | undefined, raw: string | null = null;
-      try { raw = this.rawProfile(id); } catch { /* a catalogue row without stored bytes */ }
+      let name: string | undefined;
       if (raw === null) return { id, state: 'missing' };
       try { const data: unknown = JSON.parse(raw); if (ownRecord(data) && typeof data.name === 'string' && data.name.trim()) name = data.name.trim().slice(0, 100); } catch { /* no name */ }
       return { id, state: error.code === 'newer' ? 'newer' : 'unreadable', name };
@@ -314,9 +318,12 @@ export class WorkspaceRepository {
   /** The stored bytes exactly as kept, for a backup of a record this version cannot read. */
   rawProfile(id: string): string {
     this.listed(id);
-    const raw = this.ephemeral ? (this.ephemeral[id] ? JSON.stringify(this.ephemeral[id]) : null) : this.storage.getItem(profileStorageKey(id));
+    const raw = this.raw(id);
     if (raw === null) throw new WorkspaceError('missing');
     return raw;
+  }
+  private raw(id: string): string | null {
+    return this.ephemeral ? (this.ephemeral[id] ? JSON.stringify(this.ephemeral[id]) : null) : this.storage.getItem(profileStorageKey(id));
   }
   active(): ProfileSummary | null { return this.binding ? summary(this.read(this.binding.profileId)) : null; }
   registerFlush(flush: () => void | Promise<void>): () => void { this.flushers.add(flush); return () => this.flushers.delete(flush); }
