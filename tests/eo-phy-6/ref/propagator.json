@@ -1161,7 +1161,12 @@
     "c021607c2199dfac",
     "befccbd337159365"
    ]
-  }
+  },
+  "mass0-all-forces": [
+   "NaN",
+   "fff0000000000000",
+   "fff0000000000000"
+  ]
  },
  "forceByForce": {
   "gravity+x": [

@@ -11,8 +11,10 @@
  * carried with `untilDown` until it is down; step rejection forced by
  * tolerance 1e-12; a run stopped by `onProgress`; an equatorial orbit with
  * z = 0 and vz = 0 exactly, from +0 and from −0, with gravity, J2 and drag
- * only so it stays in its plane (and `acceleration()` there, in hex, so the
- * sign of a zero is seen even where the samples cannot show it); and the
+ * only so it stays in its plane — the samples cannot show the sign: after
+ * the first stage the sums start from +0 and −0 + (+0) is +0, so the two
+ * runs hash alike today, and the sign is held by `acceleration()` there, in
+ * hex; and the
  * non-finite forces of `mass = 0` and of a NaN input, pinned as they are
  * today (NaN by position) — pinned, not approved: making them an explicit
  * error is a bug-fix PR of its own, not an EQ change. One mean-element case
@@ -23,8 +25,8 @@
  * (c) How many times each Cowell case calls the force model (`deriv`, one
  * `acceleration()` each), counted through a pass-through wrapper on
  * forces.ts. A measure for KPI-11 (EQ-9's FSAL would lower it): reported,
- * and held to nothing but "at least one call per Cowell step, none for the
- * mean elements". Calls above seven a step are rejected steps.
+ * and gated on nothing: an identical-output change that calls the forces
+ * another way must still pass. Calls above seven a step are rejected steps.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { propagate, type OrbitSample, type PropagationOptions, type PropagationResult } from '../../src/physics/propagator/propagate';
@@ -75,7 +77,7 @@ const rEq = R_EARTH + 400e3, vEq = Math.sqrt(MU_EARTH / rEq);
 const EQUATORIAL: ForceModel = { ...NONE, j2: true, drag: true };
 
 function cases(): Case[] {
-  const progress: string[] = [];
+  const progress: string[] = [];  // filled by the run; cases() is called afresh for each test
   return [
     { id: 'leo400-all-30d', ...leo, options: { method: 'cowell', duration: 30 * DAY, forces: ALL_FORCES, spacecraft: SC } },
     { id: 'gto-sun-moon-srp-10d', ...gto, options: { method: 'cowell', duration: 10 * DAY, forces: { ...ALL_FORCES, drag: false }, spacecraft: SC } },
@@ -141,6 +143,8 @@ function equatorialAccelerations(): Record<string, unknown> {
       });
     }
   }
+  // the non-finite force itself: A/m = ∞ in drag and sunlight (NaN by position)
+  out['mass0-all-forces'] = hexDeep(acceleration(leo.r, leo.v, JD, ALL_FORCES, { ...SC, mass: 0 }));
   return out;
 }
 
@@ -166,7 +170,8 @@ function forceByForce(): Record<string, unknown> {
 }
 
 describe('EO-PHY-6 (a): propagate(), bit for bit as on the CO-6 base', () => {
-  it.each(cases().map((c) => [c.id, c] as const))('%s', async (id, c) => {
+  it.each(cases().map((c) => [c.id] as const))('%s', async (id) => {
+    const c = cases().find((x) => x.id === id)!;
     counter.calls = 0;
     const t0 = performance.now();
     const result = propagate(c.r, c.v, JD, c.options);
@@ -209,13 +214,12 @@ describe('EO-PHY-6 (c): deriv calls, a measure (KPI-11), not an equality gate', 
       await writeReference('propagator.json', { cases: runs, acceleration: equatorialAccelerations(), forceByForce: forceByForce() });
       return;
     }
+    if (Object.keys(runs).length === 0) return; // run alone (-t): nothing measured
     const table = Object.entries(runs).map(([id, r]) => ({ id, steps: r.steps, derivCalls: r.derivCalls, base: ref.cases[id].derivCalls, s: +seconds[id].toFixed(2) }));
     console.info(`EO-PHY-6 (c) deriv calls:\n${table.map((r) => `${r.id}\t${r.steps} steps\t${r.derivCalls} calls (base ${r.base})\t${r.s} s`).join('\n')}`);
-    // Cowell calls the force model at least once a step; the mean elements never call it
-    for (const c of cases()) {
-      const r = runs[c.id];
-      if (c.options.method === 'cowell') expect(r.derivCalls, c.id).toBeGreaterThanOrEqual(r.steps);
-      else expect(r.derivCalls, c.id).toBe(0);
-    }
+    // a measure only: an identical-output change may call the forces another way (EQ-9's allocation-free
+    // variant would count 0 here) and must still pass; a count of 0 is only flagged
+    for (const r of table) if (r.base > 0 && r.derivCalls === 0) console.warn(`EO-PHY-6 (c): ${r.id} no longer calls acceleration(); count deriv another way`);
+    expect(table.length).toBe(Object.keys(ref.cases).length);
   });
 });

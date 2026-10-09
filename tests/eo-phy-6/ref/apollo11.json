@@ -1,8 +1,8 @@
 {
  "tliIgnition": "40c340199999999a",
  "entryInterface": "41256dd35fc22510",
- "samples": 42373,
- "stateDigest": "8dbcafdb6d7979d12c8e55c6557ef941f6c8d309896da83776171b2b4b004c8a",
+ "samples": 31011,
+ "stateDigest": "91511c80e8a261c936faccbcd9497f64356b3523b86c2613a0b11716f5eac065",
  "firstSample": [
   "40c340199999999a",
   "4158bae85c52471f",
@@ -13,16 +13,16 @@
   "40b0352b550a64d7"
  ],
  "lastSample": [
-  "41256dd35fc22510",
-  "4158b8beeec76b0e",
-  "4114e294c0041e0e",
-  "c1165fc508e2d284",
-  "c09413e3939f2940",
-  "40c0479b1f32e5d2",
-  "40bbc7c56a6cba3b"
+  "41256dd292f55844",
+  "4158b93f3dd647a7",
+  "4114ae7c409cfe30",
+  "c1168c37b2739149",
+  "c09404d12a3970c6",
+  "40c047b4766b102a",
+  "40bbc78e78ed50cb"
  ],
  "events": 45,
- "eventDigest": "513ffe3e1780d65bcd2afb334476e1199a834ec95a793396ac5df480eb2ee60c",
+ "eventDigest": "330b5fd071b9da23e41467db05be5c5f14f66b7fda9c9c1aa972d3c70ff59355",
  "targeting": [
   [
    "targetMidcourse",

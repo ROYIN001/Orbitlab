@@ -6,10 +6,11 @@
  * The flight is the viewer's (`watchMissionSettings('apollo11')`, calm,
  * seed 1), flown from the pad as tests/historical-vehicles.test.ts flies it,
  * one `step(suggestedDt())` at a time. From the step that relights the S-IVB
- * to the one that logs `evt.entryInterface` it keeps `[t, r, v]` in hex each
- * time the clock passes the next whole second (every step, while steps are
- * longer than a second), and the event log from that step on — key, time and
- * every number of its params, in hex. Both are hashed with SHA-256 apart, so
+ * to the one that logs `evt.entryInterface` it keeps `[t, r, v]` in hex at
+ * the first step past each whole second after the ignition (one sample a
+ * step while steps are longer than a second), and the event log from that
+ * step on — key, time and every number of its params, in hex, the params'
+ * keys sorted so that their order in a literal does not count. Both are hashed with SHA-256 apart, so
  * a mismatch says which one moved. The targeting the flight does on the way
  * (the midcourse corrections, the rendezvous's CSI/CDH/TPI impulses, the
  * entry corridor) is kept call by call, every number in hex: equal hex is
@@ -26,13 +27,13 @@ import { watchMissionSettings } from '../../src/ui/watch-missions';
 import { RECORDING, hex, hexDeep, sha256, writeReference } from './harness';
 import REF from './ref/apollo11.json';
 
-const seen = vi.hoisted(() => ({ targeting: [] as unknown[][], counting: false, moonState: 0, sunState: 0 }));
+const seen = vi.hoisted(() => ({ targeting: [] as unknown[], counting: false, moonState: 0, sunState: 0 }));
 
 /** A pass-through that keeps each call's result (the targeting's answers). */
 function keep<F extends (...args: never[]) => unknown>(name: string, f: F): F {
   return ((...args: Parameters<F>) => {
     const out = f(...args);
-    if (seen.counting) seen.targeting.push([name, out]);
+    if (seen.counting) seen.targeting.push([name, hexDeep(out)]); // hex now: a reused scratch result must not alias
     return out;
   }) as F;
 }
@@ -101,13 +102,14 @@ async function fly(): Promise<Recorded> {
     if (sim.state.t >= next) {
       const { r, v } = sim.state;
       rows.push(JSON.stringify([sim.state.t, r.x, r.y, r.z, v.x, v.y, v.z].map(hex)));
-      next += 1;
+      while (next <= sim.state.t) next += 1;
     }
     if (sim.events.slice(before).some((e) => e.key === 'evt.entryInterface')) break;
   }
   seen.counting = false;
   const seconds = (performance.now() - t0) / 1000;
-  const events = sim.events.slice(from).map((e) => [e.key, hex(e.t), hexDeep(e.params ?? null)]);
+  const sorted = (p: Record<string, unknown> | undefined) => (p ? Object.fromEntries(Object.entries(p).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : null);
+  const events = sim.events.slice(from).map((e) => [e.key, hex(e.t), hexDeep(sorted(e.params))]);
   const entry = sim.events.find((e) => e.key === 'evt.entryInterface')!;
   return {
     tliIgnition: hex(tli),
@@ -118,7 +120,7 @@ async function fly(): Promise<Recorded> {
     lastSample: JSON.parse(rows[rows.length - 1]) as string[],
     events: events.length,
     eventDigest: await sha256(JSON.stringify(events)),
-    targeting: seen.targeting.map(([name, out]) => [name, hexDeep(out)]),
+    targeting: seen.targeting,
     measures: { steps, moonState: seen.moonState, sunState: seen.sunState, seconds: +seconds.toFixed(2) },
   };
 }

@@ -115,8 +115,9 @@ describe('EO-PHY-6 (d): NRLMSISE-00 answers the same whatever came before', () =
   });
 
   it('the check catches a double that leaks one call into the next', () => {
-    let last = 0;
-    const leaky: Density = (i) => { const d = msisPoint(i) * (1 + 1e-15 * Math.sign(last)); last = d; return d; };
+    // it carries the index of the call before into the answer: clean only where the history repeats it
+    let last = -1;
+    const leaky: Density = (i) => { const d = msisPoint(i) * (1 + Number.EPSILON * (last + 1)); last = i; return d; };
     expect(orderDependent(POINTS.length, leaky, histories(POINTS.length, poisonMsis)).length).toBeGreaterThan(0);
   });
 });
