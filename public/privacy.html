@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbitlab · ความเป็นส่วนตัว · Privacy · Конфиденциальность</title>
+<style>
+:root{color-scheme:light dark}
+body{margin:0 auto;max-width:52rem;padding:1rem;font:16px/1.6 system-ui,sans-serif}
+nav a{margin-right:1rem}h2{margin-top:2.5rem}
+table{border-collapse:collapse}th,td{border:1px solid #8888;padding:.3rem .5rem;text-align:left;vertical-align:top}
+code{font-size:.85em;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<nav><a href="#th">ไทย</a><a href="#en">English</a><a href="#ru">Русский</a><a href="./">Orbitlab</a></nav>
+
+<section id="th" lang="th">
+<h2>ความเป็นส่วนตัว: Orbitlab เก็บอะไรไว้ในเครื่องนี้</h2>
+<ul>
+<li>ไม่มีบัญชีผู้ใช้ ไม่มีโฆษณา ไม่ใช้คุกกี้ ไม่มี analytics หรือ telemetry</li>
+<li>ชื่อ งาน และคะแนนอยู่ในเบราว์เซอร์ของเครื่องนี้เท่านั้น ผู้พัฒนาไม่ได้รับ เพราะไม่มีเซิร์ฟเวอร์รับข้อมูล</li>
+<li>ข้อมูลออกจากเครื่องเมื่อคุณส่งออกไฟล์หรือคัดลอกลิงก์แล้วส่งต่อเองเท่านั้น</li>
+<li>โปรไฟล์<strong>ไม่มีรหัสผ่าน</strong> ทุกคนที่ใช้เบราว์เซอร์เดียวกันบนเครื่องนี้เปิด ส่งออก หรือลบได้ทุกโปรไฟล์</li>
+</ul>
+<table>
+<tr><th>ข้อมูล</th><th>เก็บนานแค่ไหน · ลบอย่างไร</th></tr>
+<tr><td>โปรไฟล์ <code>orbitlab.profile.v1.*</code> และรายชื่อ <code>orbitlab.profiles.catalog.v1</code>: ชื่อ ประวัติบทเรียน คำตอบและคะแนน แบบยาน ภารกิจ สมุดทดลอง รายชื่อนักเรียนและรหัสชั้นในใบงาน การตั้งค่า เช่น ภาษาและเมือง</td><td>จนกว่าจะลบ: "ลบโปรไฟล์" ลบทั้งหมดของคนนั้น "รีเซ็ตประวัติ" ลบเฉพาะประวัติบทเรียนหรือแบบทดสอบ</td></tr>
+<tr><td>โปรไฟล์ที่แท็บนี้ใช้ <code>orbitlab.profiles.selected.v1</code></td><td>หายเมื่อปิดแท็บ</td></tr>
+<tr><td>เสียงที่คุณเพิ่มเอง <code>orbitlab-soundtracks</code></td><td>ลบพร้อมโปรไฟล์ของเจ้าของ</td></tr>
+<tr><td>ตัวแอปและข้อมูลสำหรับออฟไลน์ <code>orbitlab-precache-*</code> <code>orbitlab-runtime</code> <code>orbitlab-data</code> <code>orbitlab-recent-answers</code> ไม่มีข้อมูลส่วนตัว</td><td>รุ่นเก่าลบเอง ที่เหลือจนกว่าจะล้างข้อมูลเว็บไซต์</td></tr>
+</table>
+<p>ลบทุกอย่าง: ล้างข้อมูลเว็บไซต์ของ Orbitlab ในการตั้งค่าเบราว์เซอร์ หน้าต่างส่วนตัวลบทุกอย่างเมื่อปิด Safari บน iPhone/iPad อาจลบข้อมูลของเว็บที่ไม่ได้เปิดราว 7 วันถ้าไม่ได้เพิ่มไว้ที่หน้าจอโฮม จึงควรส่งออกไฟล์สำรองเป็นระยะ</p>
+<p>เครื่องที่ใช้ร่วมกันในโรงเรียน: ให้แต่ละคนใช้บัญชีหรือโปรไฟล์เบราว์เซอร์ของตัวเอง หรือส่งออกไฟล์สำรองแล้วลบโปรไฟล์เมื่อเลิกใช้ ใช้ชื่อเล่นหรือรหัสแทนชื่อจริงได้</p>
+<p>ผู้ช่วย AI ที่คุณติดตั้งในเบราว์เซอร์ (ถ้ามี) ใช้เครื่องมือ WebMCP ของ Orbitlab อ่านความคืบหน้าและผลแบบทดสอบของโปรไฟล์ที่เปิดอยู่ได้ และส่งต่อตามนโยบายของผู้ให้บริการผู้ช่วยนั้น</p>
+<h3>อินเทอร์เน็ต</h3>
+<p>ตัวแอปโหลดจาก GitHub Pages ซึ่งอาจบันทึกที่อยู่ IP ชนิดเบราว์เซอร์ และเวลาตามนโยบายของ GitHub โหมดออนไลน์ (ปิดอยู่โดยค่าเริ่มต้น) ขอข้อมูลจาก <code>services.swpc.noaa.gov</code> <code>celestrak.org</code> และฟอนต์จาก <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code> คำขอไม่มีชื่อ งาน หรือคะแนน แต่เซิร์ฟเวอร์เห็นที่อยู่ IP ลิงก์ภารกิจหรือบทเรียนที่คัดลอกมีค่าตั้งอยู่ในลิงก์ ไม่มีชื่อหรือคะแนน</p>
+<h3>ไฟล์ที่ส่งออก</h3>
+<p>ไฟล์ที่ดาวน์โหลดอยู่ในโฟลเดอร์ดาวน์โหลด นอกการควบคุมของ Orbitlab ไฟล์สำรองและไฟล์ผลการเรียนมีชื่อและคะแนน การลบโปรไฟล์ไม่ลบไฟล์เหล่านี้ ไฟล์ที่ส่งให้ครูหรือโรงเรียนอยู่ในความดูแลของผู้รับ</p>
+<h3>คะแนน รายงานปัญหา และสิทธิของคุณ</h3>
+<p>คะแนนในแอปใช้เพื่อพัฒนาการเรียนรู้ (formative) เป็นค่าเริ่มต้น ไม่ใช่คะแนนสอบทางการ แอปไม่ส่งรายงานปัญหาเองและไม่เก็บข้อมูลอัตโนมัติ แจ้งปัญหาเองได้ทาง <a href="https://github.com/ROYIN001/Orbitlab/issues">GitHub</a> หรืออีเมล โดยไม่ต้องใส่ชื่อจริงของผู้เรียน</p>
+<p>พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA) ให้สิทธิเข้าถึง แก้ไข และลบข้อมูลของตน ข้อมูลอยู่ในเครื่องของคุณ จึงทำได้เองทันที: ส่งออกไฟล์สำรอง เปลี่ยนชื่อ ลบโปรไฟล์ หรือรีเซ็ตประวัติ ผู้เรียนอายุต่ำกว่า 20 ปีควรใช้งานโดยผู้ปกครองหรือครูรับทราบ การศึกษาผู้ใช้ของโครงการมีใบยินยอมแยกต่างหาก</p>
+</section>
+
+<section id="en" lang="en">
+<h2>Privacy: what Orbitlab keeps on this device</h2>
+<ul>
+<li>No accounts, no ads, no cookies, no analytics or telemetry.</li>
+<li>Names, work and scores stay in this device's browser. The developer does not receive them: there is no server that receives data.</li>
+<li>Data leaves the device only when you export a file or copy a link and pass it on yourself.</li>
+<li>Profiles have <strong>no password</strong>: anyone using the same browser on this device can open, export or delete every profile.</li>
+</ul>
+<table>
+<tr><th>Data</th><th>How long · how to delete</th></tr>
+<tr><td>Profile <code>orbitlab.profile.v1.*</code> and list <code>orbitlab.profiles.catalog.v1</code>: name, lesson history, answers and scores, designs, missions, notes, worksheet student list and class code, settings such as language and city</td><td>Until deleted: "Delete profile" removes all of that learner; "Reset records" only lesson or test history</td></tr>
+<tr><td>This tab's profile <code>orbitlab.profiles.selected.v1</code></td><td>Gone when the tab closes</td></tr>
+<tr><td>Audio you added <code>orbitlab-soundtracks</code></td><td>Deleted with its owner's profile</td></tr>
+<tr><td>The app and offline data <code>orbitlab-precache-*</code> <code>orbitlab-runtime</code> <code>orbitlab-data</code> <code>orbitlab-recent-answers</code>, no personal data</td><td>Old versions removed; the rest until site data is cleared</td></tr>
+</table>
+<p>Delete everything: clear Orbitlab's site data in the browser settings. A private window deletes everything when closed. Safari on iPhone/iPad may delete data of a site not opened for about 7 days unless added to the Home Screen, so export a backup now and then.</p>
+<p>Shared school computers: give each learner their own account or browser profile, or export a backup and delete the profile when done. A nickname or code can replace a real name.</p>
+<p>An AI assistant you installed in the browser (if any) can read the open profile's progress and test results through Orbitlab's WebMCP tools, and passes them on under its provider's policy.</p>
+<h3>Internet</h3>
+<p>The app is loaded from GitHub Pages, which may log IP address, browser type and time under GitHub's policy. Online mode (off by default) fetches from <code>services.swpc.noaa.gov</code>, <code>celestrak.org</code> and fonts from <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code>. Requests carry no names, work or scores, but the servers see your IP address. A copied mission or lesson link carries its settings, no names or scores.</p>
+<h3>Exported files</h3>
+<p>Downloaded files sit in the downloads folder, outside Orbitlab's control. Backups and results files contain the name and scores. Deleting a profile does not delete them. A file given to a teacher or school is in the receiver's care.</p>
+<h3>Scores, problem reports and your rights</h3>
+<p>Scores in the app are formative by default: for learning, not official grades. The app never sends a problem report by itself and collects nothing automatically. Report problems yourself on <a href="https://github.com/ROYIN001/Orbitlab/issues">GitHub</a> or by email, without learners' real names.</p>
+<p>Thailand's Personal Data Protection Act B.E. 2562 (2019, PDPA) gives the right to access, correct and erase your data. The data is on your device, so you do it yourself at once: export a backup, rename, delete a profile or reset records. Learners under 20 should use the app with a parent's or teacher's knowledge. The project's user studies have their own consent form.</p>
+</section>
+
+<section id="ru" lang="ru">
+<h2>Конфиденциальность: что Orbitlab хранит на этом устройстве</h2>
+<ul>
+<li>Нет учётных записей, рекламы, cookie, аналитики и телеметрии.</li>
+<li>Имена, работы и баллы остаются в браузере этого устройства. Разработчик их не получает: сервера, принимающего данные, нет.</li>
+<li>Данные покидают устройство, только когда вы сами экспортируете файл или копируете ссылку и передаёте её.</li>
+<li>У профилей <strong>нет пароля</strong>: любой, кто пользуется тем же браузером на этом устройстве, может открыть, экспортировать или удалить любой профиль.</li>
+</ul>
+<table>
+<tr><th>Данные</th><th>Сколько хранится · как удалить</th></tr>
+<tr><td>Профиль <code>orbitlab.profile.v1.*</code> и список <code>orbitlab.profiles.catalog.v1</code>: имя, история уроков, ответы и баллы, конструкции, миссии, записи, список учащихся и код класса в рабочих листах, настройки (язык, город и др.)</td><td>До удаления: «Удалить профиль» удаляет всё этого учащегося; «Сбросить записи» — только историю уроков или тестов</td></tr>
+<tr><td>Профиль этой вкладки <code>orbitlab.profiles.selected.v1</code></td><td>Исчезает при закрытии вкладки</td></tr>
+<tr><td>Добавленное вами аудио <code>orbitlab-soundtracks</code></td><td>Удаляется вместе с профилем владельца</td></tr>
+<tr><td>Приложение и данные для офлайна <code>orbitlab-precache-*</code> <code>orbitlab-runtime</code> <code>orbitlab-data</code> <code>orbitlab-recent-answers</code>, без личных данных</td><td>Старые версии удаляются; остальное — пока не очищены данные сайта</td></tr>
+</table>
+<p>Удалить всё: очистите данные сайта Orbitlab в настройках браузера. Приватное окно удаляет всё при закрытии. Safari на iPhone/iPad может удалить данные сайта, не открывавшегося около 7 дней, если он не добавлен на экран «Домой», поэтому иногда экспортируйте резервную копию.</p>
+<p>Общие компьютеры в школе: дайте каждому свою учётную запись или профиль браузера либо экспортируйте копию и удалите профиль после работы. Вместо имени можно указать псевдоним или код.</p>
+<p>Установленный вами в браузере ИИ-ассистент (если есть) может через инструменты WebMCP Orbitlab читать прогресс и результаты тестов открытого профиля и передаёт их по правилам своего поставщика.</p>
+<h3>Интернет</h3>
+<p>Приложение загружается с GitHub Pages, где по правилам GitHub могут записываться IP-адрес, тип браузера и время. Онлайн-режим (по умолчанию выключен) запрашивает данные у <code>services.swpc.noaa.gov</code>, <code>celestrak.org</code> и шрифты у <code>fonts.googleapis.com</code> <code>fonts.gstatic.com</code>. В запросах нет имён, работ и баллов, но серверы видят ваш IP-адрес. Скопированная ссылка на миссию или урок содержит их настройки, без имён и баллов.</p>
+<h3>Экспортируемые файлы</h3>
+<p>Загруженные файлы лежат в папке загрузок, вне контроля Orbitlab. Копии и файлы результатов содержат имя и баллы. Удаление профиля их не удаляет. За файл, переданный учителю или школе, отвечает получатель.</p>
+<h3>Баллы, сообщения о проблемах и ваши права</h3>
+<p>Баллы в приложении по умолчанию формирующие: для обучения, а не официальная оценка. Приложение само не отправляет сообщения о проблемах и ничего не собирает автоматически. Сообщайте о проблемах сами через <a href="https://github.com/ROYIN001/Orbitlab/issues">GitHub</a> или по электронной почте, без настоящих имён учащихся.</p>
+<p>Закон Таиланда о защите персональных данных B.E. 2562 (2019, PDPA) даёт право на доступ к своим данным, их исправление и удаление. Данные на вашем устройстве, поэтому вы делаете это сами и сразу: экспорт копии, переименование, удаление профиля, сброс записей. Учащимся младше 20 лет следует пользоваться приложением с ведома родителей или учителя. У исследований с пользователями есть отдельная форма согласия.</p>
+</section>
+
+<section id="keys">
+<h2>Technical list</h2>
+<p><code>localStorage</code>: <code>orbitlab.profiles.catalog.v1</code>, <code>orbitlab.profile.v1.&lt;id&gt;</code>. <code>sessionStorage</code>: <code>orbitlab.profiles.selected.v1</code>. <code>IndexedDB</code>: <code>orbitlab-soundtracks</code>. <code>Cache Storage</code>: <code>orbitlab-precache-&lt;version&gt;</code>, <code>orbitlab-runtime</code>, <code>orbitlab-data</code>, <code>orbitlab-recent-answers</code>. Keys from versions before profiles move into the first profile and are removed.</p>
+<p>Inside a profile: <code>orbitlab.lessons</code> <code>orbitlab.lessons.recovery.N</code> <code>orbitlab.student</code> <code>orbitlab.worksheets</code> <code>orbitlab.author.draft</code> <code>orbitlab.author.design</code> <code>orbitlab.author.kind</code> <code>orbitlab.mission</code> <code>orbitlab.designs</code> <code>orbitlab.build.explore.v1</code> <code>orbitlab.build.satellite.v1</code> <code>orbitlab.build.requirements.v1</code> <code>orbitlab.build.craft.v1</code> <code>orbitlab.numeric-drafts.v1</code> <code>orbitlab.experiments.v1</code> <code>orbitlab.project-import.recovery.v1</code> <code>orbitlab.import.quarantine.v1</code> <code>orbitlab.dataMode</code> <code>orbitlab.homeCity</code> <code>orbitlab.hudLayout</code> <code>orbitlab.hudMode</code> <code>orbitlab.sound</code> <code>orbitlab.experience</code> <code>orbitlab.mode</code> <code>orbitlab.section</code> <code>orbitlab.frames</code> <code>orbitlab.notation</code> <code>orbitlab.guide.v1</code> <code>orbitlab.lang</code> <code>orbitlab.glow</code> <code>orbitlab.telemetryLayout</code></p>
+<p>2026-10-09 · M-LEARNING-047</p>
+</section>
+</body>
+</html>

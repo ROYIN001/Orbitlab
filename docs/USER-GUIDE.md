@@ -332,6 +332,17 @@ space for the site, which can be smaller than the limits above. When the browser
 change, a line under the top bar says that the last change was not saved: keep the page open, free
 some space and export a backup.
 
+## Privacy: what Orbitlab keeps on this device
+
+The About tab (ⓘ) links the privacy statement (Thai: **ความเป็นส่วนตัว**; Russian:
+**Конфиденциальность**), a page in all three languages that opens offline too. It lists what is
+kept in this browser — the learner profiles, the recordings you added, and the app's offline
+copies — with how long each stays and how to delete it, and every place the app connects to.
+Orbitlab has no accounts, cookies, analytics or telemetry, and it never sends a problem report by
+itself. Lesson and test scores are formative by default. On a shared computer, remember that
+profiles have no password: give each learner their own account or browser profile, or export a
+backup and delete the profile at the end of the session.
+
 ## 0a. The Orbit section: the orbit playground
 
 The Orbit section opens on one orbit and three ways of looking at it. The tabs over the picture
