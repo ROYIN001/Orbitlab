@@ -267,7 +267,15 @@ export class WorkspaceRepository {
       if (!selected || !catalog.profiles[selected] || catalog.profiles[selected].deleting) { this.status = 'chooser'; return this; }
       // Own the lock before reading so the failure path below releases it (an unreadable record must not hold it).
       const release = await this.hold(selected); this.release = release;
-      const record = this.read(selected);
+      let record: ProfileRecord;
+      try { record = this.read(selected); } catch (error) {
+        // An unreadable, newer or missing selection opens the chooser, where its row offers a copy and delete (R1.6-FU-SEL).
+        // A catalogue that turned unreadable meanwhile throws here and still goes visit-only.
+        if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
+        this.catalog(); release?.(); this.release = null; this.notices.push(error.code);
+        try { this.session.setItem(PROFILE_SELECTED_KEY, ''); } catch { this.notices.push('selection-not-persisted'); }
+        this.status = 'chooser'; return this;
+      }
       this.status = release ? 'durable' : 'locked';
       this.binding = new WorkspaceBinding(this, record, !!release);
       return this;

@@ -181,10 +181,11 @@ describe('R1.6 PR1: start-up error paths keep the lock contract and durable prof
     const key = profileStorageKey(other.id), original = env.disk.values.get(key)!, truncated = original.slice(0, -12);
     env.disk.values.set(key, truncated); env.session.values.set(PROFILE_SELECTED_KEY, other.id);
     const broken = await env.repo().initialize();
-    expect(broken.status).toBe('ephemeral'); expect(broken.notices).toContain('invalid');
-    broken.binding!.setItem('orbitlab.mission', 'visit only'); expect(env.disk.values.get(key)).toBe(truncated);
+    // R1.6-FU-SEL (owner, decision card q15 option A, 2026-10-09): the chooser, not visit-only, so the row's copy and delete are reachable.
+    expect(broken.status).toBe('chooser'); expect(broken.notices).toContain('invalid');
+    expect(broken.binding).toBeNull(); expect(env.disk.values.get(key)).toBe(truncated);
     // The record is restored while the first tab is still open: another tab must own it, not stay read-only.
-    env.disk.values.set(key, original);
+    env.disk.values.set(key, original); env.session.values.set(PROFILE_SELECTED_KEY, other.id);
     const second = await env.repo().initialize();
     expect(second.status).toBe('durable'); second.binding!.setItem('orbitlab.mission', 'saved'); second.close(); broken.close();
   });
