@@ -246,8 +246,9 @@ learners may have the same name. The browser holds up to 40 learners. **Open thi
 switches learner after asking: it saves what is being edited, then reloads the page on Home. A
 flight in progress or an open test screen closes; a saved test can be continued later, but a
 flight is not restored. Each browser tab remembers its own learner, so two tabs can have two
-different learners open. A new tab asks which learner to open, unless the only learner on the
-device is the first one, which it opens directly.
+different learners open. A new tab never stops to ask: it opens on the learner whose work was
+saved last, so the site can be used straight away without choosing anyone; **Learner profiles** in
+the top bar switches learner at any time.
 
 **Reset learning or tests** (Thai: **รีเซ็ตประวัติการเรียนหรือผลสอบ**), in the Learner profiles
 window and on the lessons list, removes records of the open learner only. Choose one scope: all
@@ -261,9 +262,9 @@ damaged.
 
 **Delete profile** removes one learner's saved work, settings and recordings from this device and
 keeps every other learner. It shows what the learner has saved and offers a backup and an audio
-export first. After deleting the learner who is open, or the last one, choose or create a learner
-yourself; the app does not pick one. If the recordings cannot be removed at once, the deletion is
-finished the next time Orbitlab starts.
+export first. After deleting the learner who is open, the page reloads on the learner whose work
+was saved last; after deleting the last one, on a new, empty **Learner 1**. If the recordings
+cannot be removed at once, the deletion is finished the next time Orbitlab starts.
 
 **A learner whose data cannot be read.** A learner saved by a newer version of Orbitlab, or whose
 stored data is damaged, is still listed, with a sentence saying which (with no readable name the
@@ -303,7 +304,7 @@ move it to another device.
   launches. Restoring needs a normal tab, not a read-only or visit-only one.
 
 **Two tabs on one learner: read-only.** When a learner is already open in another tab, a second
-tab opens that learner read-only and says so. Nothing changed there is saved; rename, delete,
+tab opens that learner read-only and says so in a line under the top bar. Nothing changed there is saved; rename, delete,
 reset, import, Export all and the audio buttons are off. It can export the learner's workspace as
 stored (what the other tab saved, without this tab's changes), open another learner or create one.
 Close the other tab, then reload, to work normally.
@@ -316,9 +317,11 @@ closes. It starts from a copy of the learner's saved work when that can be read,
 nothing to the device. Switching, creating, deleting, resetting, importing and audio are off, but
 **Export this learner's workspace** saves what was done during the visit. When only the chosen
 learner's data cannot be read (damaged, from a newer version of Orbitlab, or gone), Orbitlab
-opens the list of learners instead, with a note that saved data needs attention. That learner's
-row offers a copy of its stored data and delete, and any other learner can be opened. This holds
-on reload too, and when it is the device's only learner.
+opens another learner instead (the one whose work was saved last, or a new, empty one when no other
+can be read), with a note under the top bar that saved data needs attention. In **Learner
+profiles** that learner's row offers a copy of its stored data and delete. Neither the read-only
+nor the visit-only note covers the page: the Learner profiles window opens only when you press it,
+or in the rare case that no learner can be opened or added at all (40 learners, none readable).
 
 **On iPhone and iPad.** Safari may erase a website's stored data, every learner's work included,
 when the site has not been opened during seven days of Safari use. Orbitlab added to the Home

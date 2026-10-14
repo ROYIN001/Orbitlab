@@ -41,24 +41,25 @@ async function selectedDamaged(state: Damage, only: boolean) {
   return { disk, session, locks, repo, id };
 }
 
-describe('R1.6-FU-SEL: an unreadable, newer or missing selected learner opens the chooser, not visit-only', () => {
+describe('R1.6-FU-SEL: an unreadable, newer or missing selected learner is kept, and the visit opens on a readable one', () => {
   for (const state of ['unreadable', 'newer', 'missing'] as const) {
-    it(`${state}: the chooser lists the row with its state, keeps its bytes, holds no lock, and stays the chooser on reload`, async () => {
+    it(`${state}: the healthy learner opens, the damaged row is listed with its state and its bytes are kept`, async () => {
       const env = await selectedDamaged(state, false), before = new Map(env.disk.values);
       const r = await env.repo().initialize();
-      expect(r.status).toBe('chooser'); expect(r.binding).toBeNull();
+      // Owner, 2026-10-14: the site is usable without choosing; the damaged learner waits in Learner profiles.
+      expect(r.status).toBe('durable'); expect(r.binding!.profileId).toBe(LEGACY_PROFILE_ID);
+      expect(r.binding!.getItem('orbitlab.mission')).toBe('healthy work');
       expect(r.notices).toContain(state === 'unreadable' ? 'invalid' : state);
       expect(r.listWithStatus().map((row) => [row.id, row.state])).toEqual([[LEGACY_PROFILE_ID, 'ok'], [env.id, state]]);
-      await tick(); expect(env.locks.held.size).toBe(0);
+      expect([...env.locks.held]).toEqual([`orbitlab-profile-owner-v1:${LEGACY_PROFILE_ID}`]);
       expect(new Map(env.disk.values)).toEqual(before);
-      expect(env.session.values.get(PROFILE_SELECTED_KEY)).toBe('');
+      expect(env.session.values.get(PROFILE_SELECTED_KEY)).toBe(LEGACY_PROFILE_ID);
+      // The row can be backed up byte for byte (not for a missing record).
+      if (state !== 'missing') expect(r.rawProfile(env.id)).toBe(before.get(profileStorageKey(env.id)));
+      r.close(); await tick(); expect(env.locks.held.size).toBe(0);
       const reload = await env.repo().initialize();
-      expect(reload.status).toBe('chooser'); expect(new Map(env.disk.values)).toEqual(before);
-      // From the chooser the row can be backed up byte for byte (not for a missing record) and the healthy learner opened.
-      if (state !== 'missing') expect(reload.rawProfile(env.id)).toBe(before.get(profileStorageKey(env.id)));
-      await reload.select(LEGACY_PROFILE_ID); r.close(); reload.close(); await tick();
-      const healthy = await env.repo().initialize();
-      expect(healthy.status).toBe('durable'); expect(healthy.binding!.getItem('orbitlab.mission')).toBe('healthy work'); healthy.close();
+      expect(reload.status).toBe('durable'); expect(reload.binding!.profileId).toBe(LEGACY_PROFILE_ID);
+      expect(new Map(env.disk.values)).toEqual(before); reload.close();
     });
   }
   it('review: other errors at the read step still open visit-only, and release the lock', async () => {
@@ -78,15 +79,17 @@ describe('R1.6-FU-SEL: an unreadable, newer or missing selected learner opens th
     const raced = await env.repo().initialize();
     expect(raced.status).toBe('ephemeral'); expect(raced.notices).toContain('newer'); raced.close();
   });
-  it('the device\'s only learner, unreadable, in a new tab: the chooser with its row, which can be deleted', async () => {
+  it('the device\'s only learner, unreadable, in a new tab: a new learner opens; the unreadable row is kept and can be deleted', async () => {
     const env = await selectedDamaged('unreadable', true), key = profileStorageKey(LEGACY_PROFILE_ID), bytes = env.disk.values.get(key);
     env.session.values.clear();
     const r = await env.repo().initialize();
-    expect(r.status).toBe('chooser');
-    expect(r.listWithStatus()).toEqual([{ id: LEGACY_PROFILE_ID, state: 'unreadable', name: undefined }]);
-    expect(env.disk.values.get(key)).toBe(bytes);
-    const reload = await env.repo().initialize(); expect(reload.status).toBe('chooser'); r.close();
+    expect(r.status).toBe('durable'); expect(r.binding!.profileId).toBe('p-1');
+    expect(r.binding!.getItem('orbitlab.mission')).toBeNull();
+    expect(r.listWithStatus().map((row) => [row.id, row.state, row.name])).toEqual([[LEGACY_PROFILE_ID, 'unreadable', undefined], ['p-1', 'ok', 'Learner 1']]);
+    expect(env.disk.values.get(key)).toBe(bytes); r.close(); await tick();
+    // The next start opens the same new learner; no second one is made.
+    const reload = await env.repo().initialize(); expect(reload.binding!.profileId).toBe('p-1');
     await reload.delete(LEGACY_PROFILE_ID);
-    expect(env.disk.values.has(key)).toBe(false); expect(reload.listWithStatus()).toEqual([]); reload.close();
+    expect(env.disk.values.has(key)).toBe(false); expect(reload.listWithStatus().map((row) => row.id)).toEqual(['p-1']); reload.close();
   });
 });

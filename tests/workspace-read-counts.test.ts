@@ -102,10 +102,11 @@ describe('R1.6 PR4: fewer reads and parses, the same results (M-PLATFORM-003/005
     expect(parsed).toBe(3); r.close();
   });
 
-  for (const [label, selected] of [['durable', LEGACY_PROFILE_ID], ['chooser', '']] as const) {
+  // Since 2026-10-14 (owner) a tab with no learner chosen opens on one by itself, so both starts are durable.
+  for (const [label, selected] of [['selected', LEGACY_PROFILE_ID], ['none chosen', '']] as const) {
     it(`M-PLATFORM-005: one snapshot reads the catalogue once and each record once (${label}), and equals the old snapshot`, async () => {
       const env = await device(selected), r = await env.repo().initialize(), host = createProfileMenuHost(r, () => {}, () => {});
-      expect(r.status).toBe(label);
+      expect(r.status).toBe('durable');
       env.disk.reads.length = 0;
       const snapshot = host.snapshot();
       expect(env.disk.reads.length).toBe(1 + 3);

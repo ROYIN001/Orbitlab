@@ -72,7 +72,10 @@ const LEARNERS: Step[] = [
   ['first start on an empty browser', (w) => w.open('A')],
   ['work in the first learner', (w) => [typed(w, 'A', 'orbitlab.lessons', progress()), typed(w, 'A', 'orbitlab.mission', PRE77_MISSION)]],
   ['two more learners, one renamed', async (w) => [await w.repo('A').create('Bea'), await w.repo('A').create('ชัย Чай'), await w.repo('A').rename('a-1', 'Bea R.')]],
-  ['a second tab picks Bea from the chooser', async (w) => [await w.open('B'), await w.repo('B').select('a-1'), await w.open('B')]],
+  // The status of the second tab's first start is not compared: it is the one intended difference from 23ede7f
+  // (owner, 2026-10-14: a start never stops at the chooser, tests/workspace-open-without-choosing.test.ts). The
+  // bytes, the session and the status once Bea is picked are compared as before.
+  ['a second tab picks Bea', async (w) => { await w.open('B'); return [await w.repo('B').select('a-1'), await w.open('B')]; }],
   ['Bea works in the second tab; the first lists the learners', (w) => [typed(w, 'B', 'orbitlab.designs', '{"version":1,"designs":[]}'), w.repo('A').listWithStatus()]],
   ['one record cut short, one from a newer version', (w) => {
     w.disk.values.set(profileStorageKey('a-2'), '{"version":1,"id":"a-2","na');

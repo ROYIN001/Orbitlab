@@ -258,26 +258,42 @@ export class WorkspaceRepository {
       });
       let selected: string | null = null;
       try { selected = this.session.getItem(PROFILE_SELECTED_KEY); } catch { this.notices.push('selection-not-persisted'); }
-      const catalog = this.catalog();
-      // Null on first install selects the migration owner; explicit empty selection means chooser.
-      if (selected === null && Object.keys(catalog.profiles).length === 1 && catalog.profiles[catalog.legacyId]) {
-        selected = catalog.legacyId;
-        try { this.session.setItem(PROFILE_SELECTED_KEY, selected); } catch { this.notices.push('selection-not-persisted'); }
+      let catalog = this.catalog();
+      const listed = (id: string | null): id is string => !!id && !!catalog.profiles[id] && !catalog.profiles[id].deleting;
+      if (listed(selected)) {
+        // Own the lock before reading so the failure path below releases it (an unreadable record must not hold it).
+        const release = await this.hold(selected); this.release = release;
+        try { this.bind(this.read(selected), release); return this; } catch (error) {
+          // An unreadable, newer or missing selection is left as it is: its row in Learner profiles offers a copy and
+          // delete (R1.6-FU-SEL), and the visit opens on another learner below instead of stopping at the chooser.
+          // A catalogue that turned unreadable meanwhile throws here and still goes visit-only.
+          if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
+          this.catalog(); release?.(); this.release = null; this.notices.push(error.code);
+        }
       }
-      if (!selected || !catalog.profiles[selected] || catalog.profiles[selected].deleting) { this.status = 'chooser'; return this; }
-      // Own the lock before reading so the failure path below releases it (an unreadable record must not hold it).
-      const release = await this.hold(selected); this.release = release;
-      let record: ProfileRecord;
-      try { record = this.read(selected); } catch (error) {
-        // An unreadable, newer or missing selection opens the chooser, where its row offers a copy and delete (R1.6-FU-SEL).
-        // A catalogue that turned unreadable meanwhile throws here and still goes visit-only.
-        if (!(error instanceof WorkspaceError) || !['invalid', 'newer', 'missing'].includes(error.code)) throw error;
-        this.catalog(); release?.(); this.release = null; this.notices.push(error.code);
-        try { this.session.setItem(PROFILE_SELECTED_KEY, ''); } catch { this.notices.push('selection-not-persisted'); }
-        this.status = 'chooser'; return this;
+      // No usable learner chosen in this tab (a new tab, a deleted or unreadable learner): the site opens straight away
+      // on the learner whose work was saved last, else on a new one. Choosing is never required to use the site
+      // (owner, 2026-10-14); Learner profiles stays one press away in the top bar. Nothing new is stored to pick it.
+      let pick: ProfileRecord | null = null;
+      for (const id of Object.keys(catalog.profiles).filter(listed)) {
+        let candidate: ProfileRecord;
+        try { candidate = this.stored(id); } catch { continue; } // an unreadable row stays for the user to decide
+        if (!pick || candidate.updatedAt > pick.updatedAt) pick = candidate;
       }
-      this.status = release ? 'durable' : 'locked';
-      this.binding = new WorkspaceBinding(this, record, !!release);
+      const id = pick?.id ?? await this.withCatalog(async () => {
+        catalog = this.catalog();
+        const fresh = this.idFactory();
+        if (Object.keys(catalog.profiles).length >= PROFILE_MAX_COUNT || !validId(fresh) || catalog.profiles[fresh]) return null;
+        this.write(this.record({}, 'Learner 1', fresh));
+        catalog.profiles[fresh] = {};
+        try { this.saveCatalog(catalog); } catch (error) { this.storage.removeItem(profileStorageKey(fresh)); throw error; }
+        return fresh;
+      });
+      // Only when not even a new learner can be added (the profile limit) does the visit open on the chooser.
+      if (!id) { this.status = 'chooser'; return this; }
+      try { this.session.setItem(PROFILE_SELECTED_KEY, id); } catch { this.notices.push('selection-not-persisted'); }
+      const release = await this.hold(id); this.release = release;
+      this.bind(this.read(id), release);
       return this;
     } catch (error) {
       this.release?.(); this.release = null;
@@ -285,6 +301,11 @@ export class WorkspaceRepository {
       // Keep durable bytes untouched, expose a visit-only copy if durable storage cannot initialize.
       this.initializeEphemeral(); return this;
     }
+  }
+  /** Open this learner's workspace: writable when this tab owns it, read-only while another tab does. */
+  private bind(record: ProfileRecord, release: (() => void) | null): void {
+    this.status = release ? 'durable' : 'locked';
+    this.binding = new WorkspaceBinding(this, record, !!release);
   }
   private initializeEphemeral(): void {
     let values: Record<string, string> = {}, name = 'Learner 1', id = 'visit-only';

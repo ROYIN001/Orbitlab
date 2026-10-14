@@ -1,4 +1,4 @@
-/** Profile identity, A/B separation, scoped reset, last-profile chooser and localized keyboard UI. */
+/** Profile identity, A/B separation, scoped reset, a new learner after the last is deleted, and localized keyboard UI. */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { reloadDocument } from '../harness.mjs';
@@ -180,8 +180,11 @@ export default async function learnerProfiles(t) {
   t.log('Binary audio validated, exported and explicitly restored to a separate owner');
   await dialog.locator('.profile-list-row').filter({ hasText: 'Learner A copy' }).getByRole('button', { name: 'Delete profile', exact: true }).click();
   await reloadAfter(app, dialog.getByRole('button', { name: 'Delete this learner and their work', exact: true }));
+  // Owner, 2026-10-14: the reload opens the learner saved last, not the chooser over the page.
+  assert.equal(await dialog.evaluate((element) => element.open), false, 'deleting the open learner does not leave the chooser over the page');
+  assert.notEqual((await activeRecord(page)).id, imported.id, 'the deleted learner is not reopened');
+  await page.locator('#btn-profile').click();
   await dialog.waitFor({ state: 'visible' });
-  assert.equal(await page.evaluate(() => sessionStorage.getItem('orbitlab.profiles.selected.v1')), '', 'active deletion does not select another learner silently');
   const audioOwners = await page.evaluate(() => new Promise((resolve, reject) => {
     const open = indexedDB.open('orbitlab-soundtracks'); open.onerror = () => reject(open.error);
     open.onsuccess = () => {
@@ -192,21 +195,27 @@ export default async function learnerProfiles(t) {
   }));
   assert.equal(audioOwners.filter((id) => id === imported.id).length, 0);
   assert.equal(audioOwners.filter((id) => id === before.id).length, 1, 'deleting the copy preserves the original learner’s audio');
-  await dialog.locator('.profile-list-row').filter({ hasText: 'Learner A' }).getByRole('button', { name: 'Open this workspace', exact: true }).click();
-  await reloadAfter(app, dialog.getByRole('button', { name: 'Confirm', exact: true }));
-  await page.locator('#btn-profile').click();
+  if ((await activeRecord(page)).name !== 'Learner A') {
+    await dialog.locator('.profile-list-row').filter({ hasText: 'Learner A' }).getByRole('button', { name: 'Open this workspace', exact: true }).click();
+    await reloadAfter(app, dialog.getByRole('button', { name: 'Confirm', exact: true }));
+    await page.locator('#btn-profile').click();
+  }
   const bRow = dialog.locator('.profile-list-row').filter({ hasText: 'Learner B' });
   await bRow.getByRole('button', { name: 'Delete profile', exact: true }).click();
   assert.match(await dialog.innerText(), /Other learners are kept/);
   await dialog.getByRole('button', { name: 'Delete this learner and their work', exact: true }).click();
   await dialog.locator('.profile-list-row').filter({ hasText: 'Learner B' }).waitFor({ state: 'detached' });
   await dialog.locator('.profile-list-row').getByRole('button', { name: 'Delete profile', exact: true }).click();
-  assert.match(await dialog.innerText(), /choose or create a learner explicitly/);
+  assert.match(await dialog.innerText(), /on a new, empty learner if none is left/);
   await reloadAfter(app, dialog.getByRole('button', { name: 'Delete this learner and their work', exact: true }));
+  // Owner, 2026-10-14: the site stays usable without choosing; the reload opens a new, empty learner, no chooser over it.
+  assert.equal(await dialog.evaluate((element) => element.open), false, 'the last learner deleted: the site opens without a chooser');
+  const fresh = await activeRecord(page);
+  assert.equal(fresh.name, 'Learner 1'); assert.notEqual(fresh.id, before.id);
+  assert.equal(fresh.values['orbitlab.lessons'], undefined, 'the new learner starts with no work');
+  await page.locator('#btn-profile').click();
   await dialog.waitFor({ state: 'visible' });
-  await page.keyboard.press('Escape');
-  assert.equal(await dialog.evaluate((element) => element.open), true, 'last-profile deletion requires an explicit learner choice');
-  assert.equal(await page.locator('.profile-list-row').count(), 0);
+  assert.equal(await page.locator('.profile-list-row').count(), 1);
   await createLearner(app, 'Learner C');
   assert.notEqual((await activeRecord(page)).id, before.id);
   app.checkErrors();
