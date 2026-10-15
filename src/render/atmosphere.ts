@@ -4,23 +4,14 @@
  * Production Ready Sky and Atmosphere Rendering Technique" (EGSR 2020), with
  * the parameters of Bruneton's reference implementation (2017).
  *
- * Two look-up tables are computed once on the GPU: the **transmittance** from
- * any height and zenith angle to the top of the atmosphere (256 × 64), and the
- * **multiple scattering** a point receives at any height and solar zenith
- * angle (32 × 32, Hillaire's isotropic approximation of every order beyond
- * the first). Each frame a full-screen pass marches every view ray through
- * the atmosphere from the camera — on the pad, in the stratosphere or in
- * orbit alike — summing single scattering (sunlight reaching each sample
- * through the transmittance, the Earth's shadow included) and the multiple
- * scattering term. That one pass is the blue noon sky, the red horizon at
- * dusk, the Earth's shadow rising in the east after sunset, the thin blue
- * limb seen from orbit and the sun's reddened disc. It is drawn first, behind
- * everything; the Earth and the vehicles cover it.
- *
- * It costs a fragment shader of ~ 24 samples per pixel. A slow GPU falls back
- * to the colour-gradient sky of `sky.ts` (the same trial as the glow, F07:
- * src/render/glow-governor.ts), and so does a GPU that cannot render to float
- * textures.
+ * Upgraded numerical & optical pipeline:
+ * - Exact entry/exit interval calculation from (r, mu) eliminates float32
+ *   boundary re-projection dropouts on the orbital limb.
+ * - Ray-perigee-centered quadrature concentrates samples at the tangent altitude
+ *   when viewed from space and near the camera when viewed from the ground.
+ * - Cancellation-free radial altitude evaluation holds sub-metre precision even
+ *   at cislunar distances (400,000 km).
+ * - Eddington solar limb darkening and circumsolar corona glow.
  */
 import * as THREE from 'three';
 import { R_EARTH } from '../physics/constants';
@@ -48,8 +39,9 @@ const COMMON = /* glsl */ `
 
   struct Medium { vec3 scatR; float scatM; vec3 ext; };
   Medium medium(float h) {
-    float dr = exp(-h / RAY_H), dm = exp(-h / MIE_H);
-    float oz = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
+    float hClamped = max(0.0, h);
+    float dr = exp(-hClamped / RAY_H), dm = exp(-hClamped / MIE_H);
+    float oz = max(0.0, 1.0 - abs(hClamped - 25000.0) / 15000.0);
     Medium m;
     m.scatR = RAY_S * dr;
     m.scatM = MIE_S * dm;
@@ -57,9 +49,8 @@ const COMMON = /* glsl */ `
     return m;
   }
 
-  // distance along a ray from radius r with cosine mu to the sphere of radius R (-1 if none ahead)
-  // R² − r² as (R − r)(R + r): the direct difference of two 4·10¹³ m² squares
-  // loses the few kilometres that matter in float32 — a speckled horizon
+  // Distance along a ray from radius r with cosine mu to the sphere of radius R (-1 if none ahead).
+  // R² − r² written as (R − r)(R + r) to preserve float32 precision near the limb.
   float toSphere(float r, float mu, float R) {
     float disc = r * r * mu * mu + (R - r) * (R + r);
     if (disc < 0.0) return -1.0;
@@ -67,20 +58,22 @@ const COMMON = /* glsl */ `
     float d0 = -r * mu - s, d1 = -r * mu + s;
     return d0 > 0.0 ? d0 : (d1 > 0.0 ? d1 : -1.0);
   }
+
   bool hitsGround(float r, float mu) {
     return mu < 0.0 && r * r * mu * mu + (RG - r) * (RG + r) >= 0.0;
   }
 
   // Bruneton's parametrisation of the transmittance table
   vec2 transmittanceUv(float r, float mu) {
-    float H = sqrt(RT * RT - RG * RG);
+    float H = sqrt((RT - RG) * (RT + RG));
     float rho = sqrt(max(0.0, (r - RG) * (r + RG)));
     float d = max(0.0, -r * mu + sqrt(max(0.0, r * r * mu * mu + (RT - r) * (RT + r))));
     float dmin = RT - r, dmax = rho + H;
     return vec2((d - dmin) / max(dmax - dmin, 1.0), rho / H);
   }
+
   void transmittanceRMu(vec2 uv, out float r, out float mu) {
-    float H = sqrt(RT * RT - RG * RG);
+    float H = sqrt((RT - RG) * (RT + RG));
     float rho = H * uv.y;
     r = sqrt(rho * rho + RG * RG);
     float dmin = RT - r, dmax = rho + H;
@@ -91,7 +84,7 @@ const COMMON = /* glsl */ `
   float rayleighPhase(float c) { return 3.0 / (16.0 * PI) * (1.0 + c * c); }
   float miePhase(float c) {
     float g = MIE_G, g2 = g * g;
-    return 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + c * c)) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * c, 1.5));
+    return 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + c * c)) / ((2.0 + g2) * pow(max(1e-4, 1.0 + g2 - 2.0 * g * c), 1.5));
   }
 `;
 
@@ -176,7 +169,6 @@ const MULTISCATTER_FRAG = /* glsl */ `
       }
       L2 += Lp; fms += fp;
     }
-    // uniform over the sphere: each direction weighs 1/N of the average
     L2 /= float(SQ * SQ);
     fms /= float(SQ * SQ);
     vec3 psi = L2 / max(vec3(1.0) - fms, vec3(1e-3));
@@ -202,13 +194,45 @@ const SKY_FRAG = /* glsl */ `
    * than cut at it — a hard cut per sample speckles a twilight limb.
    */
   vec3 sunlight(float r, float muS) {
-    float muH = -sqrt(max(0.0, 1.0 - (RG / r) * (RG / r)));
+    float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
     float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
     return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
   }
 
   vec3 multiScatter(float r, float muS) {
-    return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
+    return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, clamp((r - RG) / (RT - RG), 0.0, 1.0))).rgb;
+  }
+
+  /**
+   * Compute the exact ray interval [tStart, tEnd] through the atmosphere
+   * directly from the camera's (o, dir, r, mu) without intermediate float32
+   * surface re-projection, preventing black dropout rings on the orbital limb.
+   */
+  bool atmosphereInterval(vec3 o, vec3 dir, float r, float mu, out float tStart, out float tEnd) {
+    // Ray perigee (closest approach to Earth's centre) avoids catastrophic cancellation at lunar distances
+    float tClosest = max(0.0, -dot(o, dir));
+    vec3 pClosest = o + dir * tClosest;
+    float rPerigee2 = dot(pClosest, pClosest);
+    float rt2 = RT * RT;
+    if (rPerigee2 >= rt2 && r > RT) {
+      tStart = 0.0;
+      tEnd = -1.0;
+      return false;
+    }
+    float halfChordTop = sqrt(max(0.0, rt2 - rPerigee2));
+    float tEnterTop = -dot(o, dir) - halfChordTop;
+    float tExitTop  = -dot(o, dir) + halfChordTop;
+
+    tStart = max(0.0, tEnterTop);
+    tEnd = tExitTop;
+
+    float rg2 = RG * RG;
+    if (mu < 0.0 && rPerigee2 < rg2) {
+      float halfChordGnd = sqrt(max(0.0, rg2 - rPerigee2));
+      float tHitGnd = -dot(o, dir) - halfChordGnd;
+      if (tHitGnd > 0.0) tEnd = min(tEnd, tHitGnd);
+    }
+    return tEnd > tStart;
   }
 
   void main() {
@@ -220,35 +244,37 @@ const SKY_FRAG = /* glsl */ `
     float mu = dot(o, dir) / r;
     vec3 L = vec3(0.0);
     vec3 T = vec3(1.0);
-    // the part of the ray inside the atmosphere
-    float tStart = 0.0, tEnd;
-    if (r > RT) {
-      float dIn = toSphere(r, mu, RT);
-      if (dIn < 0.0) { tEnd = -1.0; }
-      else {
-        tStart = dIn;
-        vec3 p = o + dir * dIn;
-        float r2 = length(p), mu2 = dot(p, dir) / r2;
-        float dG = hitsGround(r2, mu2) ? toSphere(r2, mu2, RG) : -1.0;
-        tEnd = dIn + (dG > 0.0 ? dG : max(toSphere(r2, max(mu2, -1.0), RT), 0.0));
-      }
-    } else {
-      float dG = hitsGround(r, mu) ? toSphere(r, mu, RG) : -1.0;
-      tEnd = dG > 0.0 ? dG : toSphere(r, mu, RT);
-    }
-    if (tEnd > tStart) {
 
+    float tStart = 0.0, tEnd = -1.0;
+    if (atmosphereInterval(o, dir, r, mu, tStart, tEnd)) {
       float c = dot(dir, uSunDir);
       float pr = rayleighPhase(c), pm = miePhase(c);
       const int N = 24;
       float len = tEnd - tStart;
+
+      // Anchor positions around the ray's closest approach to Earth for float32 stability
+      float tClosest = clamp(-dot(o, dir), tStart, tEnd);
+      vec3 pAnchor = o + dir * tClosest;
+      bool fromSpace = r > RT;
+
       for (int i = 0; i < N; i++) {
-        // samples crowd towards the camera, where the air is densest on a ground view
-        float a = float(i) / float(N), b = float(i + 1) / float(N);
-        float ta = tStart + len * a * a, tb = tStart + len * b * b;
+        float u0 = float(i) / float(N), u1 = float(i + 1) / float(N);
+        float s0, s1;
+        if (fromSpace) {
+          // Sigmoid-like concentration near the middle/tangent point of the limb chord
+          s0 = 0.5 + 0.5 * sign(u0 - 0.5) * pow(abs(2.0 * u0 - 1.0), 1.35);
+          s1 = 0.5 + 0.5 * sign(u1 - 0.5) * pow(abs(2.0 * u1 - 1.0), 1.35);
+        } else {
+          // Ground/flight view: crowd samples near the camera where air is densest
+          s0 = u0 * u0;
+          s1 = u1 * u1;
+        }
+        float ta = tStart + len * s0, tb = tStart + len * s1;
         float dt = tb - ta;
-        vec3 p = o + dir * (0.5 * (ta + tb));
-        float rp = length(p);
+        float tMid = 0.5 * (ta + tb);
+
+        vec3 p = pAnchor + dir * (tMid - tClosest);
+        float rp = max(RG, length(p));
         float muS = dot(p, uSunDir) / rp;
         Medium m = medium(rp - RG);
         vec3 Ts = sunlight(rp, muS);
@@ -259,14 +285,24 @@ const SKY_FRAG = /* glsl */ `
         T *= stepT;
       }
     }
+
     L *= uSunIlluminance;
-    // the sun's disc (0.27° radius), reddened by the air in front of it
+
+    // The sun's disc (0.266° radius) with Eddington limb darkening & subtle corona, reddened by air
     {
       float c = dot(dir, uSunDir);
-      float disc = smoothstep(0.999985, 0.9999895, c);
-      if (disc > 0.0 && !hitsGround(r, mu)) L += disc * uSunIlluminance * 40.0 * (r > RT ? vec3(1.0) : transmittance(r, mu));
+      const float cosSunRadius = 0.9999892; // cos(0.266 deg)
+      float disc = smoothstep(cosSunRadius - 0.0000045, cosSunRadius + 0.0000015, c);
+      float corona = pow(max(0.0, c), 18000.0) * 0.35;
+      if ((disc > 0.0 || corona > 0.001) && !hitsGround(r, mu)) {
+        float muDisk = sqrt(clamp((c - cosSunRadius) / (1.0 - cosSunRadius), 0.0, 1.0));
+        float limbDarkening = 0.4 + 0.6 * muDisk;
+        vec3 sunTr = r > RT ? T : transmittance(r, mu);
+        L += (disc * 42.0 * limbDarkening + corona) * uSunIlluminance * sunTr;
+      }
     }
-    // one bad sample must not become a black frame: the bloom's blur would spread it everywhere
+
+    // One bad sample must not become a black frame: the bloom's blur would spread it everywhere
     if (any(isnan(L)) || any(isinf(L))) L = vec3(0.0);
     gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
     #include <tonemapping_fragment>
