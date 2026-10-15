@@ -213,7 +213,7 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `workspace-navigation` | ✓ | Lazy loading, keyboard tabs and Escape, recovery after a failed module request, mobile layout and first-use offline |
 | `experiment-notebook` | ✓ | Real flight and replay observations, single-variable comparison, conclusions, export, keyboard restore and mobile languages |
 | `project-backups` | ✓ | Download, non-mutating import preview, keep/replace choices, reload of restored state and rejected malformed/oversized files |
-| `learner-profiles` | ✓ | Learner names and focus, A → B → A separation, test-only and learning-only resets that keep personal lessons, JSON and audio backups, a deleted learner's recordings removed and no other's, the chooser after deleting the open and the last learner, Thai and Russian at phone width |
+| `learner-profiles` | ✓ | Learner names and focus, A → B → A separation, test-only and learning-only resets that keep personal lessons, JSON and audio backups, a deleted learner's recordings removed and no other's, a new, empty learner (no chooser) after deleting the open and the last learner, Thai and Russian at phone width |
 | `profile-session-safety` | ✓ | Real Web Locks in two windows (the second read-only, yet able to export and to create another learner), visit-only JSON recovery with no stored writes, newer stored bytes kept exactly, the profile window opened offline |
 | `classroom-preparation` | ✓ | Offline lesson launch, missing-cache detection, exact-version repair and preservation of waiting updates |
 | `webgl-startup` | ✓ | Rejected GPU preference recovers with the same rendering settings; unavailable WebGL shows Thai recovery guidance and keyboard reload; unrelated startup errors remain distinct |

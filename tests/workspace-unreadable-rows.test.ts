@@ -51,7 +51,8 @@ beforeEach(() => { calls.downloads.length = 0; calls.media.length = 0; });
 describe('R1.6 PR2: one unreadable or newer profile no longer hides the others (M-PLATFORM-004)', () => {
   it('listWithStatus() returns every catalogue row with its state; list() keeps only the readable ones', async () => {
     const env = await threeProfiles(''), r = await env.repo().initialize();
-    expect(r.status).toBe('chooser');
+    // Owner, 2026-10-14: no learner chosen opens the readable one by itself, not the chooser.
+    expect(r.status).toBe('durable'); expect(r.binding!.profileId).toBe(LEGACY_PROFILE_ID);
     expect(r.listWithStatus().map((row) => [row.id, row.state, row.name])).toEqual([
       [LEGACY_PROFILE_ID, 'ok', 'Learner 1'], [env.broken.id, 'unreadable', undefined], [env.future.id, 'newer', 'Future'],
     ]);
@@ -106,9 +107,9 @@ describe('R1.6 PR2: one unreadable or newer profile no longer hides the others (
     expect(r.listWithStatus().map((row) => row.id)).toEqual([LEGACY_PROFILE_ID, env.future.id]);
     expect(r.binding!.getItem('orbitlab.mission')).toBe('healthy work'); r.close();
   });
-  it('review: audio export reads media from the chooser and fails only in visit-only mode', async () => {
+  it('review: audio export reads media from a tab with no learner chosen and fails only in visit-only mode', async () => {
     const env = await threeProfiles(''), r = await env.repo().initialize(), host = createProfileMenuHost(r, () => {}, () => {});
-    expect(r.status).toBe('chooser');
+    expect(r.status).toBe('durable');
     await expect(host.exportMedia!(LEGACY_PROFILE_ID)).resolves.toBeUndefined();
     await expect(host.exportMedia!(env.broken.id)).resolves.toBeUndefined();
     expect(calls.media).toEqual([`${LEGACY_PROFILE_ID}:Learner 1`, `${env.broken.id}:${env.broken.id}`]);
@@ -122,6 +123,8 @@ describe('R1.6 PR2: one unreadable or newer profile no longer hides the others (
     const env = await threeProfiles(''), legacyKey = profileStorageKey(LEGACY_PROFILE_ID);
     env.disk.values.set(legacyKey, env.disk.values.get(legacyKey)!.slice(0, -5));
     const r = await env.repo().initialize(), host = createProfileMenuHost(r, () => {}, () => {});
+    // With nothing readable the start opens a new, empty learner (owner, 2026-10-14); deleting it leaves none readable.
+    expect(r.binding!.profileId).toBe('p-3'); await r.delete('p-3');
     expect(await host.exportAll!()).toEqual({ skipped: 3, exported: false });
     expect(calls.downloads).toHaveLength(0); env.unchanged(); r.close();
   });
