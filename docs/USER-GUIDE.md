@@ -1134,10 +1134,13 @@ darkening blue, and the Earth's shadow rising opposite; from orbit a thin bright
 the limb. Launch at dusk or dawn and follow the rocket out of the Earth's shadow into sunlight:
 above about 50 km its exhaust, with almost no air left to hold it in, balloons out over tens of
 kilometres and catches the sun — the "twilight jellyfish" — a pale glowing dome with trailing
-streamers against the darkened sky; pull the exterior camera back with the wheel (above the
-atmosphere it goes out to a couple of hundred kilometres) to see it whole. On a graphics card too
-slow for the scattering sky, the same test as the glow's switches back to the simpler painted sky
-after the glow's own test; `?sky=gradient` in the address forces it.
+streamers against the darkened sky, brighter on the side the sun lights and bluer on the other,
+and brightest, silver-gold, looking towards the sun through it. The exterior camera, a few
+hundred metres from the rocket, is inside the dome and sees it opening out round and behind the
+rocket; pull the camera back with the wheel (above the atmosphere it goes out to a couple of
+hundred kilometres) to see it whole. On a graphics card too slow for the scattering sky, the same
+test as the glow's switches back to the simpler painted sky after the glow's own test;
+`?sky=gradient` in the address forces it.
 
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,

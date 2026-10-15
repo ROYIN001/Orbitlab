@@ -155,8 +155,8 @@ are listed there as drafts awaiting the owner's review.
   it was left, widening and fading with age, and carried by the flight's own wind: the six-DOF
   crosswind or shear, nothing when the flight is calm (the default) or point-mass. So a scrub or a
   replay draws the same trail. What it looks like is the propellant's: solid motors a thick white
-  column that hangs for minutes, kerosene a thin grey one (darker behind a Merlin's gas
-  generator), hydrogen almost nothing but a contrail in humid air, methane little, the
+  column that hangs for minutes, kerosene a thin grey one (darker behind an open-cycle gas
+  generator: Merlin, F-1, RD-0109, RD-0110), hydrogen almost nothing but a contrail in humid air, methane little, the
   hypergolic stages a reddish-brown haze. Separations leave their own puffs: a liquid strap-on
   venting its oxygen (the Korolev cross), a solid booster's separation motors, a stage's
   separation plane. The pad's cloud has a third layer that lingers for minutes, heavier after
