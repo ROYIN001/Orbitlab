@@ -23,6 +23,8 @@ const WARP = 10;
  */
 const LOSE_AT_S = 120;
 const COMPARE_TO_S = 160;
+/** s of mission time before LOSE_AT_S from which the flight goes on in real time */
+const APPROACH_S = 15;
 /** how long a context stays lost, ms of wall time */
 const LOST_MS = 4000;
 
@@ -160,10 +162,17 @@ async function flyTo(t, app, label, midway) {
   if (!t.check(launched.ok && launched.playing, `${label}: launch_mission: ${JSON.stringify(launched).slice(0, 200)}`)) return null;
   await app.mcp('control_playback', { action: 'warp', warp: WARP });
   if (midway) {
-    if (!t.check(await t.until(async () => (await state(app)).cursorTimeS > LOSE_AT_S, { timeoutMs: 180_000, intervalMs: 500 }),
-      `${label}: the flight did not reach T+${LOSE_AT_S} s`)) return null;
+    // The last stretch in real time: at WARP a poll every 500 ms overshoots by
+    // seconds, more on a loaded runner, and the loss landed as late as T+132 s,
+    // where the climbing picture changes faster than the check below allows
+    // for the few seconds the loss lasts (75th percentile 12-13 of 255 there,
+    // 5 at T+124 s).
+    if (!t.check(await t.until(async () => (await state(app)).cursorTimeS > LOSE_AT_S - APPROACH_S, { timeoutMs: 180_000, intervalMs: 500 }),
+      `${label}: the flight did not reach T+${LOSE_AT_S - APPROACH_S} s`)) return null;
     // real time through the loss, so the picture before it and after it is nearly the same
     await app.mcp('control_playback', { action: 'warp', warp: 1 });
+    if (!t.check(await t.until(async () => (await state(app)).cursorTimeS >= LOSE_AT_S, { timeoutMs: 60_000, intervalMs: 100 }),
+      `${label}: the flight did not reach T+${LOSE_AT_S} s`)) return null;
     await midway();
     await app.mcp('control_playback', { action: 'warp', warp: WARP });
   }
