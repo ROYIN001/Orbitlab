@@ -13,7 +13,8 @@
  *
  * What the smoke looks like is the propellant's: solid motors leave the thick
  * white column that hangs for minutes; kerosene a thin grey one, darker behind
- * a Merlin, whose gas generator dumps its fuel-rich exhaust beside the nozzle;
+ * an open-cycle gas generator, whose fuel-rich turbine exhaust leaves beside
+ * the main jet (the Merlin, the F-1, the RD-0109 and RD-0110: exhaust.ts);
  * hydrogen next to nothing but a contrail where its water freezes, in humid
  * air; methane little; the hypergolic stages a reddish-brown haze of NO₂.
  * All of it is visible only in dense air.

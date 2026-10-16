@@ -17,7 +17,8 @@ import { Simulation } from '../src/physics/simulation';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../src/physics/defaults';
 import { captureFrame, type VisualFrame } from '../src/physics/frame';
 import { SITES } from '../src/data/sites';
-import type { DynamicsConfig } from '../src/types';
+import { ENGINE_PARTS, engineSpec } from '../src/data/parts';
+import type { DynamicsConfig, EngineSpec } from '../src/types';
 import type { Vec3 } from '../src/physics/vec3';
 
 const kindOf = (vehicleId: string, stageId: string) => {
@@ -54,6 +55,38 @@ describe('exhaust kinds', () => {
     expect(kindOf('h3', 'srb3')).toBe('solid');
     expect(kindOf('starship', 'superheavy')).toBe('methalox');
     expect(kindOf('longmarch2d', 'cz2d1')).toBe('hypergolic');
+  });
+
+  it('darken behind an open-cycle gas generator only', () => {
+    // fuel-rich turbine exhaust thrown overboard: Merlin, F-1, RD-0109, RD-0110
+    for (const [vehicle, stage] of [['falcon9', 's1'], ['falconheavy', 'core'], ['falconheavy', 'side'], ['saturnv', 'sic'],
+      ['saturnv506', 'sic506'], ['vostok8k72k', 'blokE'], ['vostokk', 'blokE1961'], ['soyuz21a', 'blokI']]) {
+      expect(kindOf(vehicle, stage), `${vehicle} ${stage}`).toBe('keroloxGG');
+    }
+    // oxidiser-rich staged combustion (YF-100, RD-180, RD-191, RD-0124), and the R-7's peroxide-driven turbines
+    for (const [vehicle, stage] of [['longmarch5', 'k3'], ['atlasv551', 'ccb'], ['angaraa5', 'urm1'], ['soyuz21b', 'blokI'],
+      ['soyuz21a', 'blokBVGD'], ['vostokk', 'blokA']]) {
+      expect(kindOf(vehicle, stage), `${vehicle} ${stage}`).toBe('kerolox');
+    }
+  });
+
+  it('know a custom build\'s stage by its engine\'s name, variant letters and all', () => {
+    // a designer's stage gets an id of its own (src/design/assemble.ts), with no propellant entry
+    const custom = (engine: EngineSpec) => exhaustKind({ id: 'stage1-r1', engine });
+    const named = (name: string) => custom({ name, count: 1, thrustSL: 1e5, thrustVac: 1.1e5, ispSL: 300, ispVac: 330 });
+    const expected: Record<string, string> = {
+      'RL10C-1': 'hydrolox', 'LE-5B-3': 'hydrolox', 'LE-7A': 'hydrolox', 'YF-75D': 'hydrolox',
+      'Raptor 2': 'methalox', 'BE-4': 'methalox', 'YF-209': 'methalox',
+      'RD-276': 'hypergolic', 'S5.98M': 'hypergolic', 'YF-21C': 'hypergolic', 'RD-0210/0211': 'hypergolic',
+      'Merlin 1D': 'keroloxGG', 'Rocketdyne F-1': 'keroloxGG',
+      'RD-180': 'kerolox', 'YF-100': 'kerolox', 'RD-0124': 'kerolox',
+    };
+    for (const [name, kind] of Object.entries(expected)) expect(named(name), name).toBe(kind);
+    // every engine part, as the designer installs it: its own family (a gas generator's kerosene darker)
+    for (const part of ENGINE_PARTS) {
+      const kind = custom(engineSpec(part, 1));
+      expect(kind === 'keroloxGG' ? 'kerolox' : kind, `${part.id}: src/render/exhaust.ts's lists should know ${part.name}`).toBe(part.family);
+    }
   });
 
   it('give every launch site a humidity', () => {
