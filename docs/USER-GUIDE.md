@@ -339,7 +339,8 @@ some space and export a backup.
 ## Privacy: what Orbitlab keeps on this device
 
 The About tab (ⓘ) links the privacy statement (Thai: **ความเป็นส่วนตัว**; Russian:
-**Конфиденциальность**), a page in all three languages that opens offline too. It lists what is
+**Конфиденциальность**), a page in all three languages. It loads from the internet the
+first time; after that it opens offline too. It lists what is
 kept in this browser — the learner profiles, the recordings you added, and the app's offline
 copies — with how long each stays and how to delete it, and every place the app connects to.
 Orbitlab has no accounts, cookies, analytics or telemetry, and it never sends a problem report by

@@ -80,13 +80,14 @@ export const RUNTIME_HOSTS: readonly string[] = ['fonts.googleapis.com', 'fonts.
  */
 export const DATA_HOSTS: readonly string[] = ['services.swpc.noaa.gov', 'celestrak.org'];
 
-export type Route = 'page' | 'precache' | 'runtime' | 'data' | 'network';
+export type Route = 'page' | 'precache' | 'runtime' | 'static' | 'data' | 'network';
 
 /**
  * How a GET is answered: the page itself (any navigation inside the scope,
  * whatever its query — a mission link carries one) from the precached
- * `index.html`, except a navigation to another precached `.html` page (the
- * privacy statement), which is that page; a precached file from the cache; a
+ * `index.html`, except a navigation to another `.html` page of the build: a
+ * precached one from the cache, one fetched on demand (the privacy statement)
+ * network-first, from its last copy when the network fails; a precached file from the cache; a
  * font, or a file of the app's fetched on demand, by stale-while-revalidate; an online dataset
  * network-first, from its last answer when the network fails (S04);
  * everything else from the network.
@@ -95,7 +96,10 @@ export function routeFor(url: URL, mode: string, scope: URL, precached: Readonly
   if (url.origin === scope.origin && url.pathname.startsWith(scope.pathname)) {
     const path = url.pathname.slice(scope.pathname.length);
     // a static page of the build (public/privacy.html, M-LEARNING-047) opens as itself, not as the app
-    if (mode === 'navigate') return path !== 'index.html' && path.endsWith('.html') && precached.has(path) ? 'precache' : 'page';
+    if (mode === 'navigate') {
+      if (path === 'index.html' || !path.endsWith('.html')) return 'page';
+      return precached.has(path) ? 'precache' : onDemand(path) ? 'static' : 'page';
+    }
     if (precached.has(path)) return 'precache';
     return onDemand(path) ? 'runtime' : 'network';
   }
@@ -317,6 +321,20 @@ export async function respond(scope: SwScope, manifest: PrecacheManifest, reques
     });
     if (hit) { fresh.catch(() => { /* offline: the cached copy stands */ }); return hit; }
     return fresh;
+  }
+  if (route === 'static') {
+    // Network first, so a changed statement is read at once; its last copy opens it offline.
+    const cache = await scope.caches.open(RUNTIME_CACHE);
+    const key = new URL(url.pathname, url.origin).href;
+    try {
+      const response = await scope.fetch(request);
+      if (response.ok) await cache.put(key, response.clone());
+      return response;
+    } catch (error) {
+      const hit = await cache.match(key);
+      if (hit) return hit;
+      throw error;
+    }
   }
   if (route === 'data') {
     // Network first: online mode asked for the source's current answer. Its

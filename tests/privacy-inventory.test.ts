@@ -3,8 +3,9 @@
  * what Orbitlab keeps on the device and where it connects, and this file holds
  * that list to the code. It fails when the code gains a storage key, a
  * database, a cache, a host or a way to send data that the page does not name,
- * so the statement cannot quietly fall behind the app. The page opening offline
- * in each language is the browser journey `privacy-offline`.
+ * so the statement cannot quietly fall behind the app. The page opening from
+ * About, then offline after one online view, in each language is the browser
+ * journey `privacy-offline`.
  */
 import { describe, expect, it } from 'vitest';
 import PAGE from '../public/privacy.html?raw';
@@ -14,7 +15,7 @@ import { PROFILE_CATALOG_KEY, PROFILE_SELECTED_KEY, profileStorageKey } from '..
 import { MEDIA_DATABASE } from '../src/workspace/media';
 import { CacheStorageRecent } from '../src/provider/data-provider';
 import { DATASETS, DATASET_IDS, DATA_HOSTS as DATASET_HOSTS } from '../src/provider/datasets';
-import { DATA_CACHE, DATA_HOSTS, PRECACHE_PREFIX, RUNTIME_CACHE, RUNTIME_HOSTS, routeFor } from '../src/pwa/sw-core';
+import { DATA_CACHE, DATA_HOSTS, PRECACHE_PREFIX, RUNTIME_CACHE, RUNTIME_HOSTS, respond, routeFor, type SwScope } from '../src/pwa/sw-core';
 import { onDemand, precacheable } from '../src/pwa/manifest';
 import { WEB_FONTS_URL } from '../src/ui/web-fonts';
 
@@ -130,16 +131,55 @@ describe('privacy statement (M-LEARNING-047): the page names what the code store
     expect(PAGE).not.toMatch(/@import|url\(/);
   });
 
-  it('is precached and opens as itself offline, while every other navigation still opens the app', () => {
-    expect(precacheable('privacy.html')).toBe(true);
-    expect(onDemand('privacy.html')).toBe(false);
+  it('is not precached (owner, 2026-10-16): fetched like any page, network first, its last copy kept for offline', async () => {
+    expect(precacheable('privacy.html')).toBe(false);
+    expect(onDemand('privacy.html')).toBe(true);
     const scope = new URL('https://example.github.io/Orbitlab/');
-    const pre = new Set(['index.html', 'privacy.html', 'assets/index-a.js']);
-    expect(routeFor(new URL('privacy.html', scope), 'navigate', scope, pre)).toBe('precache');
-    expect(routeFor(new URL('privacy.html?x=1#th', scope), 'navigate', scope, pre)).toBe('precache');
+    const pre = new Set(['index.html', 'assets/index-a.js']);
+    expect(routeFor(new URL('privacy.html', scope), 'navigate', scope, pre)).toBe('static');
+    expect(routeFor(new URL('privacy.html?x=1#th', scope), 'navigate', scope, pre)).toBe('static');
     expect(routeFor(new URL('index.html', scope), 'navigate', scope, pre)).toBe('page');
     expect(routeFor(new URL('missing.html', scope), 'navigate', scope, pre)).toBe('page');
     expect(routeFor(new URL('assets/index-a.js', scope), 'navigate', scope, pre)).toBe('page');
     expect(routeFor(scope, 'navigate', scope, pre)).toBe('page');
+    expect(routeFor(new URL('?m=zAbc', scope), 'navigate', scope, pre)).toBe('page');
+
+    // the worker's answers, against a fake network and Cache Storage
+    const stores = new Map<string, Map<string, Response>>();
+    const net = { on: true, text: 'v1' };
+    const sw = {
+      registration: { scope: scope.href },
+      caches: {
+        open: async (name: string) => {
+          if (!stores.has(name)) stores.set(name, new Map());
+          const c = stores.get(name)!;
+          const key = (r: RequestInfo | URL) => (typeof r === 'string' ? r : r instanceof URL ? r.href : r.url);
+          return { match: async (r: RequestInfo | URL) => c.get(key(r))?.clone(), put: async (r: RequestInfo | URL, res: Response) => { c.set(key(r), res); } };
+        },
+        keys: async () => [...stores.keys()], delete: async (n: string) => stores.delete(n),
+      },
+      fetch: async () => { if (!net.on) throw new TypeError('offline'); return new Response(net.text, { status: 200 }); },
+      skipWaiting: async () => {}, clients: { claim: async () => {} }, addEventListener: () => {},
+    } as unknown as SwScope;
+    const manifest = { version: 'x', entries: [] };
+    const open = async (q = '') => (await respond(sw, manifest, { url: `${scope.href}privacy.html${q}`, mode: 'navigate', method: 'GET' } as unknown as Request, pre)).text();
+    expect(await open()).toBe('v1');
+    net.text = 'v2';
+    expect(await open('?lang=ru')).toBe('v2'); // a changed statement is read at once, not a stale copy
+    net.on = false;
+    expect(await open()).toBe('v2'); // offline: the last copy
+    expect([...stores.keys()]).toEqual([RUNTIME_CACHE]);
+  });
+
+  it('keeps the sentences the owner held back (legal claims, 2026-10-16) in the file but hidden', () => {
+    const held = [...PAGE.matchAll(/<span hidden data-held="legal">([\s\S]*?)<\/span>/g)].map((m) => m[1]);
+    expect(held.length).toBe(12); // four claims (PDPA and age, receiver, host logs, Safari) in three languages
+    expect(PAGE.match(/data-held/g)?.length).toBe(12);
+    for (const lang of LANGS) {
+      const shown = section(lang).replace(/<span hidden data-held="legal">[\s\S]*?<\/span>/g, '');
+      expect(shown, `#${lang}`).not.toMatch(/PDPA|Safari|GitHub Pages/);
+      for (const name of PER_LANGUAGE) expect(codes(shown), `#${lang} hides ${name}`).toContain(name);
+      expect(shown, `#${lang} contact`).toContain('mailto:royinboeing001@gmail.com');
+    }
   });
 });

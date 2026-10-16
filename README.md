@@ -216,7 +216,7 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `project-backups` | ✓ | Download, non-mutating import preview, keep/replace choices, reload of restored state and rejected malformed/oversized files |
 | `learner-profiles` | ✓ | Learner names and focus, A → B → A separation, test-only and learning-only resets that keep personal lessons, JSON and audio backups, a deleted learner's recordings removed and no other's, a new, empty learner (no chooser) after deleting the open and the last learner, Thai and Russian at phone width |
 | `profile-session-safety` | ✓ | Real Web Locks in two windows (the second read-only, yet able to export and to create another learner), visit-only JSON recovery with no stored writes, newer stored bytes kept exactly, the profile window opened offline |
-| `privacy-offline` | | The privacy statement is precached; offline, About's link opens it (not the app) at the Thai, English and Russian section |
+| `privacy-offline` | | The privacy statement is not precached; About's link opens it (not the app) from the network, then offline from its kept copy at the Thai, English and Russian section, with the held legal sentences hidden |
 | `classroom-preparation` | ✓ | Offline lesson launch, missing-cache detection, exact-version repair and preservation of waiting updates |
 | `webgl-startup` | ✓ | Rejected GPU preference recovers with the same rendering settings; unavailable WebGL shows Thai recovery guidance and keyboard reload; unrelated startup errors remain distinct |
 | `satellite` | ✓ | In the satellite designer, NAPA-2's cells put on wings and its array changed, the figures following, saved and reloaded; sent to Orbit, whose lifetime dialog takes the design's own mass and drag area; Fly it gives the Launch section's verdict before the click ("Not flyable as set" on Soyuz-2.1a) and offers the rockets that can fly it; Electron, picked among them, flies the design to payload separation, and the Launch panel's verdict is the one shown |
@@ -606,14 +606,17 @@ the rest of the app, so it plays offline from the start.
 ## Privacy
 
 What Orbitlab keeps on the device and where it connects, in Thai, English and Russian:
-[public/privacy.html](public/privacy.html), served as `privacy.html` next to the app, precached
-for offline use and linked from the About tab. In short: no accounts, cookies, analytics or
+[public/privacy.html](public/privacy.html), served as `privacy.html` next to the app and linked from
+the About tab. It is not precached (owner, 2026-10-16): it loads from the network like any page, and
+the copy kept once seen opens it offline. In short: no accounts, cookies, analytics or
 telemetry; every learner's name, work and scores stay in this browser (learner profiles have no
 password, so anyone using the same browser can open them); online mode, off by default, contacts
-only NOAA SWPC, CelesTrak and Google Fonts; the site's host (GitHub Pages) may log visits under its
-own policy; data leaves the device only as a file the user exports or a link the user copies.
+only NOAA SWPC, CelesTrak and Google Fonts; problem reports go by GitHub or email, sent by the user;
+data leaves the device only as a file the user exports or a link the user copies.
 `tests/privacy-inventory.test.ts` fails when the code gains a storage key, store, cache, host or
-sending API that the page does not name.
+sending API that the page does not name. The owner held back the page's legal sentences (PDPA
+rights, age, host logs, Safari's 7-day rule) until the site is finished: they stay in the file,
+hidden.
 
 ## Licence and credits
 
