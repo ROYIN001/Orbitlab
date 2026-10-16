@@ -107,7 +107,7 @@ No ceiling is raised and `budgets.json` is untouched. The ceilings above are mai
   - the held legal sentences: there are 12 spans, they are hidden, and every store, host and the email address stay visible.
   - `tests/privacy-inventory.test.ts` and `tests/pwa.test.ts`: 32/32.
 - `scripts/verification/change-map.json`: a `privacy-statement` rule (page, About, `src/pwa/**` → build, the unit test and the journey) and an additive `privacy-inventory` rule (`src/**`, `index.html` → the unit test). `node --test tests/verification/change-map.test.mjs`: 14/14.
-- `npx tsc --noEmit` clean. `npx vitest run` passed 312 files and 10,354 tests on `25de8fa`; the full run on the merged branch of 2026-10-16 is reported in the PR. After the review fixes, which changed only the page text and the inventory test, `tests/privacy-inventory.test.ts` was re-run (7/7) and so were the build, the budget and the `privacy-offline` journey. `pwa-offline` also passes with the new route. `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs`: 93/93.
+- `npx tsc --noEmit` clean. `npx vitest run` passed 312 files and 10,354 tests on `25de8fa`; on the merged branch of 2026-10-16 (main `a667cf4` in, the owner's answers applied) it passed 324 files and 10,435 tests. After the review fixes, which changed only the page text and the inventory test, `tests/privacy-inventory.test.ts` was re-run (7/7) and so were the build, the budget and the `privacy-offline` journey. `pwa-offline` also passes with the new route. `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs`: 93/93.
 
 No existing test, assertion, tolerance or golden was changed.
 
