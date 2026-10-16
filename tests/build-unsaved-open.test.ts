@@ -23,14 +23,15 @@ import { julianDate } from '../src/physics/orbital';
 import { LocalDesignStore, isDesignOf, type DesignKind, type DesignRecord, type DesignStorage } from '../src/design/design-store';
 import { SATELLITE_DRAFT_KEY, designFromTemplate } from '../src/design/satellite-model';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
-import { DEFAULT_GROUP, activeDraft, designResult, draftFromSpec, partsDraft, remixDraft, type ExploreState } from '../src/design/explore-model';
+import { DEFAULT_GROUP, activeDraft, designResult, draftFromSpec, partsDraft, remixDraft, type ExploreState, type RemixEdit } from '../src/design/explore-model';
 import { DEFAULT_FORM, missionRequirements, templateDesign, tradeOptionsFor } from '../src/design/requirements-page';
 import { tradeRow } from '../src/design/requirement-trades';
 import { setLang } from '../src/i18n';
 import { ExploreStore, STORE_TEXTS, type ExploreStoreHost } from '../src/ui/build/explore-store';
 import { ExploreLevel } from '../src/ui/build/explore-level';
 import { RequirementsPage } from '../src/ui/build/requirements-page';
-import { SatelliteWorkspace, type LessonDesk } from '../src/ui/build/satellite-workspace';
+import { SatelliteWorkspace, defaultNameFor, type LessonDesk } from '../src/ui/build/satellite-workspace';
+import { SatelliteLevel } from '../src/ui/build/satellite-level';
 import type { VehicleSpec } from '../src/types';
 
 const JD0 = julianDate(new Date(Date.UTC(2026, 8, 30)));
@@ -529,5 +530,262 @@ describe('M-BUILD-007: a name typed is a change; a default name given again in a
     await s.openRecord(e.id);
     expect(open).not.toHaveBeenCalled();
     expect(s.opening).toBe(e.id);
+  });
+});
+
+/** The question a new start asks before it replaces a design (FX-1 s5), and its three answers. */
+interface Asking {
+  asking: { name: string } | null;
+  answer(choice: 'save' | 'open' | 'cancel'): Promise<void>;
+}
+
+/**
+ * The designer's question, read where it is kept: in its store ("Your designs"), whose buttons answer it —
+ * "Save it, then open", "Open without saving", Cancel (`started(go, save)`).
+ */
+function withQuestion<T extends object>(level: T, store: object): T & Asking {
+  const s = store as { asking?: { name: string } | null; started(go: boolean, save?: boolean): Promise<void> };
+  return Object.defineProperties(level, {
+    asking: { get: () => s.asking ?? null },
+    answer: { value: (choice: 'save' | 'open' | 'cancel') => s.started(choice !== 'cancel', choice === 'save') },
+  }) as T & Asking;
+}
+
+/** Every promise the level's question waits on, settled. */
+const settle = async (): Promise<void> => { await vi.runAllTimersAsync(); };
+
+/**
+ * The rocket designer without its page, its store over `designs`: the vehicle picker (`pickBase`), "Start again"
+ * (`startOver`) and the Engineer level's "open in Explore" (`openDesign`) are its own methods; the drawing is stubbed.
+ */
+function rocketDesigner(state: ExploreState, designs: LocalDesignStore) {
+  const recompute = (): void => { level.result = designResult(level.state); };
+  const level = Object.assign(Object.create(ExploreLevel.prototype), {
+    state, result: designResult(state), defaultNames: { remix: 'My Falcon 9', parts: 'My parts' }, visible: false, selected: null,
+    compute: recompute, reshaped: recompute,
+  }) as Asking & {
+    state: ExploreState; result: ReturnType<typeof designResult>; store: StoreUnderTest<'vehicle'>;
+    pickBase(id: string): void; startOver(): void; openDesign(spec: VehicleSpec, payloadKg: number): void;
+    replacing(rec?: DesignRecord<'vehicle'>): { design: unknown; recordId: string | null } | null;
+  };
+  level.store = storeOf('vehicle', designs, {
+    current: () => (level.result.ok ? { spec: level.result.spec, name: activeDraft(level.state).name, recordId: activeDraft(level.state).recordId } : null),
+    saved: (recordId) => { activeDraft(level.state).recordId = recordId; },
+    // as Open puts a kept design on screen
+    open: (rec) => {
+      const o = draftFromSpec(rec.design, rec.id);
+      if (o.mode === 'remix') level.state.remix = o.draft; else level.state.parts = o.draft;
+      level.state.mode = o.mode;
+      recompute();
+    },
+    forgotten: vi.fn(),
+    replacing: (rec) => level.replacing(rec),
+  });
+  withQuestion(level, level.store);
+  return { level, changed: recompute };
+}
+
+/** The satellite designer without its page, its store over `designs`: the template picker and "Start again from the template". */
+function satelliteDesigner(ws: SatelliteWorkspace, designs: LocalDesignStore) {
+  const store = satelliteStore(ws, designs);
+  return withQuestion(Object.assign(Object.create(SatelliteLevel.prototype), { ws, store, orbitMessage: null, visible: false }) as {
+    store: StoreUnderTest<'satellite'>; pickTemplate(id: string): void;
+  }, store);
+}
+
+const baseOf = (state: ExploreState): unknown => (state.remix.edit as RemixEdit).base;
+
+describe('M-BUILD-007 (FX-1 s5): the rocket designer\'s vehicle picker, "Start again" and a sized launcher ask too', () => {
+  it('the vehicle picker asks before a new remix replaces a changed remix never saved; Cancel keeps it, "Open without saving" replaces it', async () => {
+    const state = fresh();
+    const { level, changed } = rocketDesigner(state, storeWith(memory()));
+    state.remix.edit.stages[0].stretch = 1.2;
+    changed();
+    level.pickBase('electron');
+    await settle();
+    expect(baseOf(level.state), 'the changed remix was replaced without asking').toEqual({ kind: 'catalogue', id: 'falcon9' });
+    expect(level.state.remix.edit.stages[0].stretch).toBe(1.2);
+    expect(level.asking?.name).toBe('Electron remix');
+    await level.answer('cancel');
+    expect(level.asking).toBeNull();
+    expect(level.state.remix.edit.stages[0].stretch).toBe(1.2);
+
+    level.pickBase('electron');
+    await settle();
+    expect(level.asking).not.toBeNull();
+    await level.answer('open');
+    expect(baseOf(level.state)).toEqual({ kind: 'catalogue', id: 'electron' });
+    expect(level.asking).toBeNull();
+  });
+
+  it('the vehicle picker and "Start again" still start at once over a remix as it started', async () => {
+    const { level } = rocketDesigner(fresh(), storeWith(memory()));
+    // the store's answer comes a microtask later (nothing to read: no record)
+    level.pickBase('electron');
+    await settle();
+    expect(baseOf(level.state)).toEqual({ kind: 'catalogue', id: 'electron' });
+    level.startOver();
+    await settle();
+    expect(baseOf(level.state)).toEqual({ kind: 'catalogue', id: 'electron' });
+    expect(level.asking).toBeNull();
+  });
+
+  it('"Start again" asks over a saved design changed since; "Save it, then open" keeps the change in its record, then starts again', async () => {
+    const designs = storeWith(memory());
+    const e = asVehicle(await designs.save({ kind: 'vehicle', name: 'My Electron', design: specOf({ ...fresh(), remix: remixDraft('electron', 'my-electron', 'My Electron') }) }));
+    const o = draftFromSpec(e.design, e.id);
+    if (o.mode !== 'remix') throw new Error('a remix');
+    const state = fresh();
+    state.remix = o.draft;
+    const { level, changed } = rocketDesigner(state, designs);
+    state.remix.edit.stages[0].stretch = 1.1;
+    changed();
+    const edited = specOf(state);
+    level.startOver();
+    await settle();
+    expect(level.state.remix.edit.stages[0].stretch, 'the changed design was started again without asking').toBe(1.1);
+    expect(level.asking?.name).toBe('Electron remix');
+    await level.answer('save');
+    await settle();
+    expect(asVehicle(await designs.get(e.id)).design, 'the change was not kept in its record').toEqual(edited);
+    expect(level.state.remix.recordId).toBeNull();
+    expect(level.state.remix.edit).toEqual(remixDraft('electron', 'x', 'x').edit);
+    expect(level.asking).toBeNull();
+  });
+
+  it('"Start again" starts at once over a design as it was saved', async () => {
+    const designs = storeWith(memory());
+    const e = asVehicle(await designs.save({ kind: 'vehicle', name: 'My Electron', design: specOf({ ...fresh(), remix: remixDraft('electron', 'my-electron', 'My Electron') }) }));
+    const o = draftFromSpec(e.design, e.id);
+    if (o.mode !== 'remix') throw new Error('a remix');
+    const state = fresh();
+    state.remix = o.draft;
+    const { level } = rocketDesigner(state, designs);
+    level.startOver();
+    await settle();
+    expect(level.asking).toBeNull();
+    expect(level.state.remix.recordId).toBeNull();
+  });
+
+  it('a launcher sized on the Engineer level asks before it replaces a changed parts design; "Open without saving" opens it with its payload', async () => {
+    const sized: ExploreState = { ...fresh(), mode: 'parts' };
+    sized.parts.edit.sites = ['vandenberg'];
+    const spec = specOf(sized);
+    expect(draftFromSpec(spec, null).mode).toBe('parts');
+    const state = fresh();
+    state.parts.edit.groups = [{ ...DEFAULT_GROUP }];
+    const { level } = rocketDesigner(state, storeWith(memory()));
+    level.openDesign(spec, 500);
+    await settle();
+    expect(level.state.parts.edit.groups, 'the changed parts design was replaced without asking').toHaveLength(1);
+    expect(level.state.mode, 'the parts design asked about is on screen').toBe('parts');
+    expect(level.asking).not.toBeNull();
+    await level.answer('open');
+    expect(level.state.parts.edit.sites).toEqual(['vandenberg']);
+    expect(level.state.parts.payloadKg).toBe(500);
+
+    // over a parts design as it started, at once
+    const untouched = rocketDesigner(fresh(), storeWith(memory())).level;
+    untouched.openDesign(spec, 400);
+    await settle();
+    expect(untouched.state.mode).toBe('parts');
+    expect(untouched.state.parts.payloadKg).toBe(400);
+  });
+
+  it('"Save it, then open" for a sized launcher keeps the parts design asked about, though the remix was shown before the answer (review of s5)', async () => {
+    const designs = storeWith(memory());
+    const sized: ExploreState = { ...fresh(), mode: 'parts' };
+    sized.parts.edit.sites = ['vandenberg'];
+    const spec = specOf(sized);
+    const state = fresh();
+    state.parts.edit.groups = [{ ...DEFAULT_GROUP }];
+    const { level } = rocketDesigner(state, designs);
+    const asked = specOf({ ...state, mode: 'parts' });
+    level.openDesign(spec, 500);
+    await settle();
+    expect(level.asking).not.toBeNull();
+    // the student looks at the untouched remix before answering
+    (level as unknown as { setMode(m: 'remix' | 'parts'): void }).setMode('remix');
+    await level.answer('save');
+    await settle();
+    const all = await everyKept(designs, 'vehicle');
+    expect(all.map((d) => d.design), 'the parts design asked about was not the one kept').toEqual([asked]);
+    expect(level.state.remix.recordId).toBeNull();
+    expect(level.state.parts.edit.sites).toEqual(['vandenberg']);
+    expect(level.state.mode).toBe('parts');
+  });
+
+  it('a question left open is about its draft only: once Open replaced that draft, "Open without saving" replaces nothing', async () => {
+    const designs = storeWith(memory());
+    const e = asVehicle(await designs.save({ kind: 'vehicle', name: 'My Electron', design: specOf({ ...fresh(), remix: remixDraft('electron', 'my-electron', 'My Electron') }) }));
+    const state = fresh();
+    const { level, changed } = rocketDesigner(state, designs);
+    state.remix.edit.stages[0].stretch = 1.2;
+    changed();
+    level.pickBase('electron');
+    await settle();
+    expect(level.asking).not.toBeNull();
+    // the student answers the store's own question instead: the saved Electron opened without saving
+    await level.store.openRecord(e.id, true);
+    expect(level.state.remix.recordId).toBe(e.id);
+    await level.answer('open');
+    expect(level.state.remix.recordId, 'the design opened since was replaced by the stale question').toBe(e.id);
+  });
+});
+
+describe('M-BUILD-007 (FX-1 s5): the satellite designer\'s template picker and "Start again from the template" ask too', () => {
+  it('the template picker asks before a template replaces a design with unsaved changes; Cancel keeps it, "Open without saving" puts the template on', async () => {
+    const ws = new SatelliteWorkspace();
+    const level = satelliteDesigner(ws, storeWith(memory()));
+    const first = ws.design.template;
+    expect(first).not.toBe('theos2');
+    ws.change(withArray(ws.design, 0.2));
+    level.pickTemplate('theos2');
+    await settle();
+    expect(ws.design.template, 'the changed design was replaced without asking').toBe(first);
+    expect(ws.design.power.arrayArea).toBe(0.2);
+    expect(level.asking?.name).toBe(defaultNameFor('theos2'));
+    await level.answer('cancel');
+    expect(level.asking).toBeNull();
+    expect(ws.design.power.arrayArea).toBe(0.2);
+
+    level.pickTemplate('theos2');
+    await settle();
+    await level.answer('open');
+    expect(ws.design.template).toBe('theos2');
+    expect(ws.recordId).toBeNull();
+  });
+
+  it('"Start again from the template" asks too; "Save it, then open" keeps the design first', async () => {
+    const designs = storeWith(memory());
+    const ws = new SatelliteWorkspace();
+    const level = satelliteDesigner(ws, designs);
+    const template = ws.design.template;
+    const start = ws.design.power.arrayArea;
+    ws.change(withArray(ws.design, 0.33));
+    level.pickTemplate(template);
+    await settle();
+    expect(ws.design.power.arrayArea, 'the changed design was started again without asking').toBe(0.33);
+    expect(level.asking).not.toBeNull();
+    await level.answer('save');
+    await settle();
+    const all = await everyKept(designs, 'satellite');
+    expect(all.map((d) => (d.design as SatelliteDesign).power.arrayArea), 'the change was not kept').toEqual([0.33]);
+    expect(ws.design.power.arrayArea).toBe(start);
+    expect(ws.recordId).toBeNull();
+  });
+
+  it('starts at once over a template as it started, and over a design as it was saved', async () => {
+    const designs = storeWith(memory());
+    const ws = new SatelliteWorkspace();
+    const level = satelliteDesigner(ws, designs);
+    level.pickTemplate('theos2');
+    expect(ws.design.template).toBe('theos2');
+    await level.store.save(false);
+    expect(ws.recordId).not.toBeNull();
+    level.pickTemplate(ws.design.template === 'napa2' ? 'theos2' : 'napa2');
+    await settle();
+    expect(level.asking).toBeNull();
+    expect(ws.recordId).toBeNull();
   });
 });

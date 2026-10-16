@@ -3032,15 +3032,25 @@ multiple-scattering term (32 × 32, Hillaire's isotropic sum of all orders beyon
 ground albedo of 0.3). Every frame each view ray is marched with 24 samples from the camera through
 the atmosphere — single scattering with the Earth's shadow, softened over a quarter of a degree at
 the geometric horizon, plus the multiple-scattering term — and the sun's disc is added through the
-transmittance in front of it. Lengths are metres in float32; the sphere intersections are written as
-(R − r)(R + r) + r²μ² so that the difference of two 4·10¹³ m² squares does not swallow the kilometres
-at the limb. A NaN or infinity from a degenerate ray is zeroed before the bloom can spread it.
+transmittance in front of it, darkened towards its limb (I/I₀ = 0.4 + 0.6 μ, the Eddington
+approximation; the Sun at 550 nm is 0.30 + 0.93 μ − 0.23 μ², Allen's Astrophysical Quantities) with a
+narrow glow round it (0.35 e^(−9000 θ²) of the illuminance, cut 1.5° out). Lengths are metres in
+float32. In the tables the sphere intersections are written as (R − r)(R + r) + r²μ² so that the
+difference of two 4·10¹³ m² squares does not swallow the kilometres at the limb; the view ray's
+stretch inside the atmosphere is found from the camera alone through the ray's perigee, without
+re-projecting its entry point (which, in float32, emptied a share of the limb rays seen from orbit:
+a flickering black ring), and the samples are placed from the ray's lowest point — crowding there
+seen from space, towards the camera from inside the atmosphere. A NaN or infinity from a degenerate
+ray is zeroed before the bloom can spread it.
 
-The twilight "jellyfish" (src/render/twilight-plume.ts) is a billboard behind a thrusting vehicle
-above 45 km, its radius growing 0.45 m per metre of altitude to at most 60 km, lit by the soft
-cylindrical shadow of the Earth at the vehicle (`sunlitAt`, src/render/sky.ts) and weighted by the
-observer's twilight (the sun between about 6° above and 18° below the camera's horizon); it fades out
-for a camera inside it. It is an illustration of the phenomenon, not a plume-expansion model.
+The twilight "jellyfish" (src/render/twilight-plume.ts) is a raymarched axisymmetric cloud behind a
+thrusting vehicle above 45 km — a parabolic envelope with a bright shell, a core near the nozzle, a
+faint interior and noise tendrils — its radius growing 0.45 m per metre of altitude to at most 60 km,
+lit by the soft cylindrical shadow of the Earth at the vehicle (`sunlitAt`, src/render/sky.ts) and by a
+mix of Rayleigh and Cornette–Shanks phase functions, and weighted by the observer's twilight (the sun
+between about 6° above and 18° below the camera's horizon). It fades out right next to the camera and
+is drawn at 40 % brightness while the camera is inside it, so the exterior camera sees it open out
+round the vehicle. It is an illustration of the phenomenon, not a plume-expansion model.
 
 ## 13. Historical missions (roadmap C01)
 

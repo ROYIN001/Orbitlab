@@ -148,10 +148,16 @@ export class SatelliteLevel {
     if (this.visible) this.root.closest('.build-screen')?.scrollTo({ top: 0 });
   }
 
+  /** A template on the desk (the picker, "Start again from the template"): asked first over unsaved changes, as Open is (M-BUILD-007). */
   private pickTemplate(id: string): void {
-    const name = defaultNameFor(id);
-    this.orbitMessage = null;
-    this.ws.replace({ design: designFromTemplate(id, newSatelliteId(), name), recordId: null, defaultName: name });
+    const name = defaultNameFor(id), gen = this.ws.generation;
+    const go = (): void => {
+      this.orbitMessage = null;
+      this.ws.replace({ design: designFromTemplate(id, newSatelliteId(), name), recordId: null, defaultName: name });
+    };
+    if (!this.ws.own()) go();
+    // the picker shows the design's template again until the answer
+    else { this.rebuild(); void this.store.start(name, () => this.ws.generation === gen, go); }
   }
 
   // ─── drawing ──────────────────────────────────────────────────────────────

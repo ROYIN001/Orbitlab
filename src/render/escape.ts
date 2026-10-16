@@ -16,8 +16,7 @@ import type { VisualFrame } from '../physics/frame';
 import { ESCAPE, MERCURY_CAPSULE, SOYUZ_DESCENT, VOSTOK_CAPSULE, type DescentCapsule } from '../physics/rigid/escape';
 import { ogiveProfile } from './liveries';
 import { Plume } from './plume';
-import { CrewedTop, FIN_CENTRE } from './soyuz';
-import { gridFinTexture } from './rocket';
+import { CrewedTop, FIN_CENTRE, gridFinGeometry } from './soyuz';
 import { smoothstep } from './noise';
 import { Canopy, canopyStripes, spentCanopyGeometry } from './canopy';
 import { buildEntryGlow, entryGlow, type EntryGlowView } from './entry-glow';
@@ -91,8 +90,8 @@ export class EscapeView {
       return m;
     };
     const geo = <G extends THREE.BufferGeometry>(g: G): G => { this.geometries.push(g); return g; };
-    const finMaterial = new THREE.MeshStandardMaterial({ map: gridFinTexture(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5, color: 0x9a9da1 });
-    this.materials.push(finMaterial);
+    // the stack's fins' metal (render/rocket.ts), on the same lattice
+    const finMaterial = mat('#9a9da1', 0.6, 0.5);
     const R = fairingRadius, cut = ESCAPE.headBase, headL = fairingLength - cut;
     const cylTop = (noseLength !== undefined ? fairingLength - noseLength : fairingLength * 0.52) - cut;
     // --- the head section: the fairing above the service module, its fins and motors, the tower
@@ -105,8 +104,10 @@ export class EscapeView {
     base.rotation.x = Math.PI / 2;
     this.head.add(base);
     // the lattice fins, folded flat along the fairing, hinged at their top edge
+    // and swinging out, their bottom edges away from the fairing: the stack's
+    // fins (render/soyuz.ts `CrewedTop`), the same size and in the same place
     const finW = R * 0.75, finH = fairingLength * 0.16;
-    const finGeo = geo(new THREE.PlaneGeometry(finW, finH));
+    const finGeo = geo(gridFinGeometry(finW, finH));
     const finY = fairingLength * FIN_CENTRE - cut;
     for (let k = 0; k < 4; k++) {
       const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
@@ -139,29 +140,19 @@ export class EscapeView {
       this.fairingPlumes.push(plume);
       this.head.add(az);
     }
-    // the tower on the fairing's nose, its eight canted nozzles' fire and the control motor's
+    // the tower on the fairing's nose, its eight canted nozzles' fire and the
+    // control motors', each plume hung on its nozzle's exit (`CrewedTop.exits`,
+    // `control`), so it leaves the nozzle along the nozzle's own axis
     this.crewedTop = new CrewedTop(R, headL, (c, metal, rough) => mat(c, metal, rough), finMaterial);
     this.tower = this.crewedTop.tower;
     this.head.add(this.tower);
-    const tw = ESCAPE.tower, nozzleY = tw.truss + tw.motor * 0.72;
-    for (let k = 0; k < 8; k++) {
-      const az = new THREE.Group();
-      az.rotation.y = -(k / 8) * Math.PI * 2;
-      const cant = new THREE.Group();
-      cant.position.set(0.46, nozzleY - 0.15, 0);
-      cant.rotation.z = 0.47;
+    for (const [k, exit] of this.crewedTop.exits.entries()) {
       const plume = new Plume({ radius: 0.11, length: 6, kind: 'solid', seed: 0.05 + k * 0.07 });
-      cant.add(plume.group);
-      az.add(cant);
-      this.tower.add(az);
+      exit.add(plume.group);
       this.mainPlumes.push(plume);
     }
     this.controlPlume = new Plume({ radius: 0.08, length: 2.5, kind: 'solid', seed: 0.9 });
-    const control = new THREE.Group();
-    control.position.set(0.45, tw.truss + tw.motor + tw.cap * 0.3, 0);
-    control.rotation.z = Math.PI / 2;
-    control.add(this.controlPlume.group);
-    this.tower.add(control);
+    this.crewedTop.control.add(this.controlPlume.group);
     this.group.add(this.head);
 
     // --- the descent module: +Y out of its heat shield, its body towards −Y
@@ -326,7 +317,8 @@ export class EscapeView {
     if (a.body === 'head') {
       this.tower.visible = a.mode === 'tower';
       const open = a.finsOpen ? smoothstep(0, 1, (tau - ESCAPE.fairing.finsOpen) / FIN_SWING) : 0;
-      for (const hinge of this.fins) hinge.rotation.z = -open * FIN_OPEN;
+      // about the hinge's +Z, which swings the hanging fin's free edge out, away from the fairing
+      for (const hinge of this.fins) hinge.rotation.z = open * FIN_OPEN;
       for (const plume of this.mainPlumes) plume.update(a.motors.main, p, t);
       this.controlPlume.update(a.motors.control * 0.8, p, t);
       for (const plume of this.fairingPlumes) plume.update(a.motors.fairing, p, t);

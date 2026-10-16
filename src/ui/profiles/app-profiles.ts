@@ -24,13 +24,17 @@ export class AppProfiles {
     });
     window.addEventListener('orbitlab-workspace-storage-error', () => this.applyLanguage());
     this.applyLanguage();
-    // A deleted last/active owner always gets an explicit chooser. Locked or
-    // temporary work is explained before the user starts editing.
-    if (this.repo.status !== 'durable') queueMicrotask(() => this.open());
+    // The landing page is the first thing a visitor sees, never a dialog over it
+    // (owner, 2026-10-14): the workspace opens on a learner by itself, and
+    // read-only or visit-only work is explained by the notice under the top bar.
+    // Only when no learner could be opened at all is the chooser shown.
+    if (this.repo.status === 'chooser') queueMicrotask(() => this.open());
   }
 
+  /** The record's name alone: no lessons, designs or experiments are parsed for it (M-PLATFORM-006). */
   name(): string {
-    try { return this.repo.active()?.name ?? ''; }
+    const id = this.repo.binding?.profileId;
+    try { return id ? this.repo.read(id).name : ''; }
     catch { return ''; }
   }
 

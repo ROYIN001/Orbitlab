@@ -59,9 +59,9 @@ describe('legacy audio left in place (M-PLATFORM-010, D-68): the status line nam
     setLang('ru'); profiles.applyLanguage();
     expect(notice.textContent).toBe('Для миссий, где у учащегося «Ada» уже было своё аудио, исходное загруженное аудио не перенесено. Сохранены обе копии; используется аудио учащегося «Ada».');
   });
-  it('names the first learner on the chooser, where no learner is open', async () => {
+  it('names the first learner in a tab with no learner chosen, which opens on one by itself', async () => {
     const { notice, repo } = await start('');
-    expect(repo.status).toBe('chooser'); expect(repo.binding).toBeNull();
+    expect(repo.status).toBe('durable'); expect(repo.binding).not.toBeNull();
     expect(notice.hidden).toBe(false);
     expect(notice.textContent).toBe('For missions where Ada already had their own audio, the original uploaded audio was not moved. Both copies are kept; Ada’s own audio is used.');
   });

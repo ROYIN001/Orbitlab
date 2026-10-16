@@ -753,9 +753,8 @@ export class RocketView {
     // A crewed R-7 flies its escape tower on the fairing's nose and the
     // tower's lattice fins folded along the fairing.
     if (this.crewed && spec.escapeSystem === 'soyuz') {
-      const finMat = new THREE.MeshStandardMaterial({ map: gridFinTexture(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5, color: 0x9a9da1 });
-      this.materials.push(finMat);
-      this.crewedTop = new CrewedTop(r, f.length, (c, metal, rough) => this.mat(c, metal, rough), finMat);
+      // the fins are lattices of walls (render/soyuz.ts `gridFinGeometry`), drawn in a plain metal
+      this.crewedTop = new CrewedTop(r, f.length, (c, metal, rough) => this.mat(c, metal, rough), this.mat('#9a9da1', 0.6, 0.5));
       g.add(this.crewedTop.tower, this.crewedTop.fins);
     }
     return g;

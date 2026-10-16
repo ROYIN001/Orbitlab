@@ -155,8 +155,8 @@ are listed there as drafts awaiting the owner's review.
   it was left, widening and fading with age, and carried by the flight's own wind: the six-DOF
   crosswind or shear, nothing when the flight is calm (the default) or point-mass. So a scrub or a
   replay draws the same trail. What it looks like is the propellant's: solid motors a thick white
-  column that hangs for minutes, kerosene a thin grey one (darker behind a Merlin's gas
-  generator), hydrogen almost nothing but a contrail in humid air, methane little, the
+  column that hangs for minutes, kerosene a thin grey one (darker behind an open-cycle gas
+  generator: Merlin, F-1, RD-0109, RD-0110), hydrogen almost nothing but a contrail in humid air, methane little, the
   hypergolic stages a reddish-brown haze. Separations leave their own puffs: a liquid strap-on
   venting its oxygen (the Korolev cross), a solid booster's separation motors, a stage's
   separation plane. The pad's cloud has a third layer that lingers for minutes, heavier after
@@ -674,9 +674,9 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
 - A browser without Web Locks (older Safari, some in-app browsers) or with its storage refused gets
   only the visit-only workspace: the work lasts until the page closes and can be exported, but
   nothing is stored (B10; kept as designed and to be measured before any change, M-PLATFORM-011).
-  If the learner selected in a tab cannot itself be read, that tab opens visit-only and stays so
-  on reload; only a new tab reaches the list with that learner's copy and delete, and not even a
-  new tab when it is the device's only learner and the first one (R1.6-FU-SEL, open).
+  If the learner selected in a tab cannot itself be read (damaged, newer or missing), the tab opens
+  the list of learners with that learner's copy and delete instead, on reload too and when it is
+  the device's only learner (R1.6-FU-SEL).
 - A learner's JSON record and their recordings are separate stores, not one transaction: an
   interrupted delete finishes at the next start. Recordings are not in the JSON backup.
   Pre-profile recordings move to the first learner one at a time (D-68, #139). One whose launch

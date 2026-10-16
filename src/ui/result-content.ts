@@ -82,21 +82,26 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
   // target reached is inside the band on every row it was judged on.
   const p = outcome === 'failed' ? undefined : completed!.params;
   const num = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
+  // Newer records carry them unrounded (`peJudgedM`, `apJudgedM`, `incJudgedRad`, `raanJudgedRad`): re-judged from
+  // those, the flags are the verdict's own, to the bit.
+  const exact = { pe: num(p?.peJudgedM), ap: num(p?.apJudgedM), i: num(p?.incJudgedRad), raan: num(p?.raanJudgedRad) };
   const judgedValue: Record<OrbitMissParam, number | null> = {
-    perigee: num(p?.peAltM) !== null ? num(p?.peAltM)! / 1000 : num(p?.pe),
-    apogee: num(p?.apAltM) !== null ? num(p?.apAltM)! / 1000 : num(p?.ap),
-    inclination: num(p?.inc), raan: num(p?.raan),
+    perigee: exact.pe !== null ? exact.pe / 1000 : num(p?.peAltM) !== null ? num(p?.peAltM)! / 1000 : num(p?.pe),
+    apogee: exact.ap !== null ? exact.ap / 1000 : num(p?.apAltM) !== null ? num(p?.apAltM)! / 1000 : num(p?.ap),
+    inclination: exact.i !== null ? exact.i * RAD : num(p?.inc), raan: exact.raan !== null ? exact.raan * RAD : num(p?.raan),
   };
-  // An off-target verdict whose recorded (rounded: 1 km, 0.01°, 0.1°) numbers fall back inside the band keeps the
-  // unrounded flags of the displayed orbit, as before (review).
   const judgedOff = outcome !== 'offTarget' ? misses : new Set(orbitResiduals(target, {
     ...elements,
-    periapsisAlt: judgedValue.perigee !== null ? judgedValue.perigee * 1000 : elements.periapsisAlt,
-    apoapsisAlt: judgedValue.apogee !== null ? judgedValue.apogee * 1000 : elements.apoapsisAlt,
-    i: judgedValue.inclination !== null ? judgedValue.inclination / RAD : elements.i,
-    raan: judgedValue.raan !== null ? judgedValue.raan / RAD : elements.raan,
+    periapsisAlt: exact.pe ?? (judgedValue.perigee !== null ? judgedValue.perigee * 1000 : elements.periapsisAlt),
+    apoapsisAlt: exact.ap ?? (judgedValue.apogee !== null ? judgedValue.apogee * 1000 : elements.apoapsisAlt),
+    i: exact.i ?? (judgedValue.inclination !== null ? judgedValue.inclination / RAD : elements.i),
+    raan: exact.raan ?? (judgedValue.raan !== null ? judgedValue.raan / RAD : elements.raan),
   }, true).misses.map(miss => miss.param));
-  const judgedMisses = judgedOff.size ? judgedOff : misses;
+  // An older record's rounded numbers (1 km, 0.01°, 0.1°) can fall back inside the band; such an off-target verdict
+  // keeps the unrounded flags of the displayed orbit, as before (review). An exact record never falls back: one that
+  // misses nothing was vetoed (a burn it could not finish, `evt.insufficientDv`), and flags no row on purpose.
+  const isExact = exact.pe !== null && exact.ap !== null && exact.i !== null && exact.raan !== null;
+  const judgedMisses = judgedOff.size || isExact ? judgedOff : misses;
   const metric = (key: OrbitMissParam, wanted: number | null, actual: number, delta: number | null, unit: 'km' | 'deg'): ResultMetric => {
     const judged = outcome === 'failed' ? null : judgedValue[key];
     const judgedDelta = judged === null || wanted === null ? null

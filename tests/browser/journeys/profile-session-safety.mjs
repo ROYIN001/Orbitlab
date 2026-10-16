@@ -37,9 +37,15 @@ export default async function profileSessionSafety(t) {
   const second = await popupPromise;
   const secondErrors = [];
   second.on('pageerror', (error) => secondErrors.push(error.message));
-  await dialogOf(second).waitFor({ state: 'visible', timeout: 120_000 });
+  // Owner, 2026-10-14: the landing page is not covered by the dialog; the
+  // notice under the top bar says why the work is read-only.
+  await second.locator('#btn-profile[data-profile-status="locked"]').waitFor({ state: 'attached', timeout: 120_000 });
+  await second.locator('#profile-storage-notice').waitFor({ state: 'visible' });
+  assert.match(await second.locator('#profile-storage-notice').innerText(), /already open in another tab/);
+  assert.equal(await dialogOf(second).evaluate((element) => element.open), false, 'a read-only start does not open Learner profiles');
+  await second.locator('#btn-profile').click();
+  await dialogOf(second).waitFor({ state: 'visible', timeout: 30_000 });
   assert.match(await dialogOf(second).innerText(), /already open in another tab/);
-  assert.equal(await second.locator('#btn-profile').getAttribute('data-profile-status'), 'locked');
   assert.equal(await dialogOf(second).getByRole('button', { name: 'Rename', exact: true }).isDisabled(), true);
   assert.equal(await dialogOf(second).getByRole('button', { name: 'Delete profile', exact: true }).isDisabled(), true);
   const lockedBackup = await downloadWorkspace(second);
@@ -74,8 +80,11 @@ export default async function profileSessionSafety(t) {
     Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
   });
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 }); await app.ready();
-  await dialogOf(page).waitFor({ state: 'visible' });
   assert.equal(await page.locator('#btn-profile').getAttribute('data-profile-status'), 'ephemeral');
+  assert.match(await page.locator('#profile-storage-notice').innerText(), /temporary: changes will be lost/);
+  assert.equal(await dialogOf(page).evaluate((element) => element.open), false, 'a visit-only start does not open Learner profiles');
+  await page.locator('#btn-profile').click();
+  await dialogOf(page).waitFor({ state: 'visible' });
   assert.match(await dialogOf(page).innerText(), /temporary: changes will be lost/);
   assert.equal(await dialogOf(page).getByRole('button', { name: 'Create a profile', exact: true }).isDisabled(), true);
   assert.equal(await dialogOf(page).getByRole('button', { name: 'Reset learning or tests', exact: true }).isDisabled(), true);

@@ -1,0 +1,7 @@
+## CHANGELOG
+
+- Launch (FX-5, M-LAUNCH-031 residual): the mission result no longer flags rows from a drifted orbit when an off-target verdict's rounded numbers fall back inside the band. The completion event (`evt.targetOrbit`/`evt.offTargetOrbit` and the suborbital pair) now also records the judged apsides, inclination and node unrounded (`apJudgedM`, `peJudgedM`, `incJudgedRad`, `raanJudgedRad`; recorded only, flights unchanged), and the result table, report and debrief judge from them. Older records keep the previous fallback.
+
+## PROGRESS
+
+| FX-5 M-LAUNCH-031 residual (wave K1; physics + UI, P lane; owner card q08 A) | In PR; not merged; not published | `src/physics/sim/burns.ts` and `ascent.ts` put the four judged values on the completion event; `src/ui/result-content.ts` re-judges from them (bit-identical to the simulation's `orbitResiduals` on the orbit path). Failing first: 4 new tests (`tests/fx5-031-judged-params.test.ts`, 2 in `tests/mission-result-view.test.ts`) failed on `74b540f`, e.g. flags `[perigee, apogee]` from the cursor where the verdict missed `inclination`. Trajectories unchanged: EO-PHY-6 18/18, D01 fingerprints, rigid-flex golden, and locally heavy `sixdof-fingerprint` + `flex-golden`. No existing assertion changed. Budget: index +0.2 kB, precache code +1.7 kB, no ceiling raised. Second-agent physics review: approve, nits taken. | [FX-5 M-LAUNCH-031 residual report](reports/FX-5-031r-judged-params.md) |

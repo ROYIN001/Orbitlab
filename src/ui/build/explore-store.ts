@@ -109,6 +109,8 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
   private deleting: string | null = null;
   /** M-BUILD-007: the record asked about before it opens over unsaved changes */
   private opening: string | null = null;
+  /** M-BUILD-007 (FX-1 s5): a new start asked about (a vehicle or template picked, "Start again", a sized launcher), while `still` */
+  private asking: { name: string; still: () => boolean; go: () => void } | null = null;
   /** the control the keyboard goes to once the list is drawn again (a `data-k`) */
   private focusNext: string | null = null;
   private readonly fileInput = el('input');
@@ -192,6 +194,29 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     if (!own) return false;
     const kept = own.recordId === null ? null : await this.store.get(own.recordId).catch(() => null);
     return !kept || !own.design || drawn(kept.design as never) !== drawn(own.design as never);
+  }
+
+  /**
+   * M-BUILD-007 (FX-1 s5): a new design, `name`, in place of the one opening nothing would replace (`replacing()`):
+   * `go` at once when nothing would be lost, else once the student answers, as Open asks. The question is dropped
+   * once `still` is false (another design was put there meanwhile).
+   */
+  async start(name: string, still: () => boolean, go: () => void): Promise<void> {
+    // a question left open is dropped: its design may no longer be the one `replacing()` names
+    this.asking = null;
+    if (!await this.unsaved()) return go();
+    this.asking = { name, still, go };
+    this.focusNext = 'new:save';
+    this.render();
+  }
+
+  /** M-BUILD-007: the new start's question answered: "Save it, then open" (`save`), "Open without saving", or Cancel (`go` null). */
+  private async started(go: boolean, save?: boolean): Promise<void> {
+    const a = this.asking;
+    this.asking = null;
+    if (a?.still() && go && !(save && await this.saveFirst())) return a.go();
+    this.focusNext = 'store:save';
+    this.render();
   }
 
   /** A kept rocket's ratings computed again: kept, not a design edit (D-75); null when they could not be. */
@@ -347,13 +372,16 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
       }
     }
 
+    // a new start's question, while the design it is about is there
+    const ask = this.asking?.still() ? askReplace(this.asking.name, 'new:', () => void this.started(true, true), () => void this.started(true), () => void this.started(false))
+      : (this.asking = null);
     const listEl = el('ul', 'bx-store-list');
     if (!this.list.length) listEl.append(el('li', 'bx-store-empty', t('build.ex.store.empty')));
     for (const d of this.list) listEl.append(this.item(d, cur?.recordId ?? null));
     // a redraw replaces the buttons: the keyboard stays where it was, or goes where the action leads
     const active = document.activeElement as HTMLElement | null;
     const was = active && this.root.contains(active) ? active.dataset.k ?? null : null;
-    this.root.replaceChildren(head, actions, status, listEl);
+    this.root.replaceChildren(head, actions, status, ask || '', listEl);
     const key = this.focusNext ?? was;
     this.focusNext = null;
     if (key) this.root.querySelector<HTMLElement>(`[data-k="${CSS.escape(key)}"]`)?.focus();

@@ -14,6 +14,13 @@
  * remix, the remix shown again before "Save it, then open": the parts design
  * is the one kept (review of f00b288). Then the question in Thai and Russian,
  * each with a screenshot for the owner.
+ *
+ * FX-1 s5: a new start asks the same question, in "Your designs". The
+ * rocket designer's "Start again" over the renamed parts design: asked, and
+ * "Save it, then open" keeps the new name in its record; its vehicle picker
+ * over a stretched remix: asked, and Cancel keeps the stretch. The satellite
+ * designer's template picker over a changed array: asked, Escape keeps it;
+ * "Start again from the template": asked, "Open without saving" starts again.
  */
 import { workspaceValue } from '../workspace-storage.mjs';
 
@@ -135,6 +142,64 @@ export default async function buildUnsavedOpen(t) {
     await page.click(`${ROCKET} [data-k="ask:save"]`);
     t.check(await t.until(async () => (await kept(page)).some((d) => d.id === parts.id && d.name === 'Parts, renamed'), { timeoutMs: 15_000 }),
       `"Save it, then open" did not keep the parts design the question was about: ${JSON.stringify((await kept(page)).map((d) => d.name))}`);
+  }
+
+  // FX-1 s5: "Start again" over the renamed parts design asks; "Save it, then open" keeps the name, then starts again
+  const rocketName = page.locator(`${ROCKET} [data-k="name"]`);
+  const headAsk = page.locator(`${ROCKET} .bx-store [role="alert"]`);
+  await page.click(`${ROCKET} [data-k="mode:parts"]`);
+  await rocketName.fill('Parts, once more');
+  await page.click(`${ROCKET} [data-k="new"]`);
+  const startAsked = await headAsk.waitFor({ timeout: 5_000 }).then(() => true, () => false);
+  t.check(startAsked, '"Start again" over a renamed design did not ask');
+  t.check(await rocketName.inputValue() === 'Parts, once more', `"Start again" replaced the design without asking: "${await rocketName.inputValue()}"`);
+  if (startAsked) {
+    t.check(await focusKey(page) === 'new:save', `the keyboard is not on "Save it, then open": ${await focusKey(page)}`);
+    await page.click(`${ROCKET} [data-k="new:save"]`);
+    t.check(await t.until(async () => (await kept(page)).some((d) => d.id === parts?.id && d.name === 'Parts, once more'), { timeoutMs: 15_000 }),
+      `"Save it, then open" did not keep the renamed design: ${JSON.stringify((await kept(page)).map((d) => d.name))}`);
+    t.check(await t.until(async () => (await rocketName.inputValue()) !== 'Parts, once more', { timeoutMs: 10_000 }), 'the design did not start again after the save');
+  }
+  // the vehicle picker over a stretched remix asks; Cancel keeps the stretch
+  await page.click(`${ROCKET} [data-k="mode:remix"]`);
+  await stretch.fill('130');
+  await stretch.press('Tab');
+  await page.waitForTimeout(500);
+  await page.locator('#bx-picker-select').selectOption('falcon9');
+  const pickAsked = await headAsk.waitFor({ timeout: 5_000 }).then(() => true, () => false);
+  t.check(pickAsked, 'the vehicle picker over a stretched remix did not ask');
+  t.check(await stretch.inputValue() === '130', `the vehicle picker replaced the stretched remix without asking: ${await stretch.inputValue()} %`);
+  if (pickAsked) {
+    await page.click(`${ROCKET} [data-k="new:cancel"]`);
+    t.check(await headAsk.count() === 0, 'Cancel did not close the question');
+    t.check(await stretch.inputValue() === '130', `Cancel lost the stretch: ${await stretch.inputValue()} %`);
+  }
+
+  // the satellite designer: the template picker asks, Escape keeps the change; "Start again from the template" asks, "Open without saving" starts again
+  await page.click('[data-k="craft:satellite"]');
+  await area.waitFor({ timeout: 30_000 });
+  await area.fill('0.55');
+  await area.press('Tab');
+  const satHeadAsk = page.locator(`${SAT} .bx-store [role="alert"]`);
+  const template = page.locator(`${SAT} [data-k="sx:template"]`);
+  const was = await template.inputValue();
+  await template.selectOption(was === 'napa2' ? 'theos2' : 'napa2');
+  const tplAsked = await satHeadAsk.waitFor({ timeout: 5_000 }).then(() => true, () => false);
+  t.check(tplAsked, 'the template picker over unsaved changes did not ask');
+  t.check(await area.inputValue() === '0.55', `the template picker replaced the design without asking: array ${await area.inputValue()}`);
+  if (tplAsked) {
+    t.check(await focusKey(page) === 'new:save', `the keyboard is not on "Save it, then open": ${await focusKey(page)}`);
+    await page.keyboard.press('Escape');
+    t.check(await satHeadAsk.count() === 0, 'Escape did not close the question');
+    t.check(await area.inputValue() === '0.55' && await template.inputValue() === was, `Escape lost the change: array ${await area.inputValue()}, template ${await template.inputValue()}`);
+  }
+  await page.click(`${SAT} [data-k="sx:again"]`);
+  const againAsked = await satHeadAsk.waitFor({ timeout: 5_000 }).then(() => true, () => false);
+  t.check(againAsked, '"Start again from the template" over unsaved changes did not ask');
+  t.check(await area.inputValue() === '0.55', `"Start again from the template" replaced the design without asking: array ${await area.inputValue()}`);
+  if (againAsked) {
+    await page.click(`${SAT} [data-k="new:open"]`);
+    t.check(await t.until(async () => (await area.inputValue()) !== '0.55', { timeoutMs: 10_000 }), '"Open without saving" did not start again');
   }
   app.checkErrors();
 

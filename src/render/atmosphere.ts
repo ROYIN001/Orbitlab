@@ -17,6 +17,18 @@
  * limb seen from orbit and the sun's reddened disc. It is drawn first, behind
  * everything; the Earth and the vehicles cover it.
  *
+ * The stretch of a view ray inside the atmosphere is found from the camera
+ * alone, through the ray's perigee (its closest approach to the Earth's
+ * centre), not by re-projecting the point where the ray enters and
+ * intersecting again from there: in float32 that point falls just inside or
+ * just outside the top of the atmosphere at random, and from just outside the
+ * nearer root is the re-entry only metres away — an empty march, a black
+ * ring flickering on the limb seen from orbit. Seen from space the samples
+ * crowd at the ray's lowest point (the perigee of a ray through the limb, the
+ * ground where a ray ends on it); from inside the atmosphere they crowd
+ * towards the camera. The sun's disc is darkened towards its limb and has a
+ * faint glow round it. The details are at `SKY_FRAG`.
+ *
  * It costs a fragment shader of ~ 24 samples per pixel. A slow GPU falls back
  * to the colour-gradient sky of `sky.ts` (the same trial as the glow, F07:
  * src/render/glow-governor.ts), and so does a GPU that cannot render to float
@@ -28,22 +40,35 @@ import { R_EARTH } from '../physics/constants';
 /** Top of the modelled atmosphere, m above the equatorial radius. */
 export const ATMOSPHERE_HEIGHT = 100e3;
 
-/** The atmosphere's constants as GLSL, shared by the three passes (lengths in metres). */
+/**
+ * The atmosphere's constants as GLSL, shared by the three passes (lengths in
+ * metres), and the geometry the passes share.
+ *
+ * - Rayleigh (`RAY_S`, `RAY_H`): scattering at 680/550/440 nm, scale height
+ *   8 km.
+ * - Mie (`MIE_*`): continental aerosol, scattering and extinction, scale
+ *   height 1.2 km, Cornette–Shanks phase with asymmetry 0.8.
+ * - Ozone (`OZONE`): absorption only, a tent 30 km wide centred at 25 km.
+ * - `toSphere(r, mu, R)`: the distance along a ray from radius r with cosine
+ *   mu to the sphere of radius R (−1 if none ahead). R² − r² is written as
+ *   (R − r)(R + r): float32 holds a 4·10¹³ m² square only to the nearest
+ *   4·10⁶ m², and the direct difference of two of them loses the few
+ *   kilometres that matter — a speckled horizon.
+ * - `transmittanceUv` / `transmittanceRMu`: Bruneton's parametrisation of
+ *   the transmittance table, and its inverse.
+ */
 const COMMON = /* glsl */ `
   #ifndef PI
   #define PI 3.141592653589793
   #endif
   const float RG = ${R_EARTH.toFixed(1)};
   const float RT = ${(R_EARTH + ATMOSPHERE_HEIGHT).toFixed(1)};
-  // Rayleigh: scattering at 680/550/440 nm, scale height 8 km
   const vec3 RAY_S = vec3(5.802e-6, 13.558e-6, 33.1e-6);
   const float RAY_H = 8000.0;
-  // Mie: continental aerosol, scale height 1.2 km, asymmetry 0.8
   const float MIE_S = 3.996e-6;
   const float MIE_E = 4.40e-6;
   const float MIE_H = 1200.0;
   const float MIE_G = 0.8;
-  // ozone: absorption only, a tent 30 km wide centred at 25 km
   const vec3 OZONE = vec3(0.650e-6, 1.881e-6, 0.085e-6);
 
   struct Medium { vec3 scatR; float scatM; vec3 ext; };
@@ -57,9 +82,6 @@ const COMMON = /* glsl */ `
     return m;
   }
 
-  // distance along a ray from radius r with cosine mu to the sphere of radius R (-1 if none ahead)
-  // R² − r² as (R − r)(R + r): the direct difference of two 4·10¹³ m² squares
-  // loses the few kilometres that matter in float32 — a speckled horizon
   float toSphere(float r, float mu, float R) {
     float disc = r * r * mu * mu + (R - r) * (R + r);
     if (disc < 0.0) return -1.0;
@@ -71,16 +93,15 @@ const COMMON = /* glsl */ `
     return mu < 0.0 && r * r * mu * mu + (RG - r) * (RG + r) >= 0.0;
   }
 
-  // Bruneton's parametrisation of the transmittance table
   vec2 transmittanceUv(float r, float mu) {
-    float H = sqrt(RT * RT - RG * RG);
+    float H = sqrt((RT - RG) * (RT + RG));
     float rho = sqrt(max(0.0, (r - RG) * (r + RG)));
     float d = max(0.0, -r * mu + sqrt(max(0.0, r * r * mu * mu + (RT - r) * (RT + r))));
     float dmin = RT - r, dmax = rho + H;
     return vec2((d - dmin) / max(dmax - dmin, 1.0), rho / H);
   }
   void transmittanceRMu(vec2 uv, out float r, out float mu) {
-    float H = sqrt(RT * RT - RG * RG);
+    float H = sqrt((RT - RG) * (RT + RG));
     float rho = H * uv.y;
     r = sqrt(rho * rho + RG * RG);
     float dmin = RT - r, dmax = rho + H;
@@ -131,13 +152,19 @@ const SAMPLE_TRANSMITTANCE = /* glsl */ `
   }
 `;
 
+/**
+ * Hillaire 2020, §5.5: the second-order luminance L2 and the transfer f_ms,
+ * integrated over the sphere of directions; every higher order sums as a
+ * geometric series, Psi = L2 / (1 − f_ms). The directions are uniform over
+ * the sphere — equal steps in cos φ, and azimuth over half a turn, the other
+ * half mirroring it about the plane of the sun — so each direction weighs
+ * 1/N of the average. Where a direction ends on the ground, the light the
+ * ground bounces back (albedo 0.3) is added.
+ */
 const MULTISCATTER_FRAG = /* glsl */ `
   ${COMMON}
   ${SAMPLE_TRANSMITTANCE}
   varying vec2 vUv;
-  // Hillaire 2020, §5.5: second-order luminance L2 and the transfer f_ms,
-  // integrated over the sphere of directions; every higher order sums as a
-  // geometric series, Psi = L2 / (1 - f_ms).
   void main() {
     float muS = vUv.x * 2.0 - 1.0;
     float r = RG + vUv.y * (RT - RG);
@@ -168,7 +195,6 @@ const MULTISCATTER_FRAG = /* glsl */ `
         fp += T * integ * S;
         T *= stepT;
       }
-      // light bounced off the ground (albedo 0.3), where the ray ends on it
       if (dG > 0.0) {
         vec3 p = vec3(0.0, 0.0, r) + dir * dG;
         float c = max(0.0, dot(normalize(p), sunDir));
@@ -176,7 +202,6 @@ const MULTISCATTER_FRAG = /* glsl */ `
       }
       L2 += Lp; fms += fp;
     }
-    // uniform over the sphere: each direction weighs 1/N of the average
     L2 /= float(SQ * SQ);
     fms /= float(SQ * SQ);
     vec3 psi = L2 / max(vec3(1.0) - fms, vec3(1e-3));
@@ -184,6 +209,98 @@ const MULTISCATTER_FRAG = /* glsl */ `
   }
 `;
 
+/**
+ * The per-frame pass, in order.
+ *
+ * `sunlight(r, muS)`: sunlight reaching radius r with the sun at cosine muS —
+ * the transmittance, faded out over a quarter of a degree about the
+ * geometric horizon rather than cut at it: a hard cut per sample speckles a
+ * twilight limb.
+ *
+ * The view ray is unprojected on the near plane: at the far one (5·10⁹ m) w
+ * is ~10⁻¹⁰ and the division loses it.
+ *
+ * The ray's stretch of atmosphere, [tStart, tEnd], is solved once from the
+ * camera, about the ray's perigee: tc = −o·dir is the distance to it, rp2 its
+ * squared radius, and RT² − rp2 (RG² − rp2) the squared half-chord of the top
+ * of the atmosphere (of the ground). The squares there are rounded to
+ * ~4·10⁶ m² as toSphere's are, but here that is no worse than the rounding
+ * of the perigee point itself. Replayed in float32 against float64 on the
+ * same inputs (as tests/sky-interval.test.ts does), on rays sweeping the
+ * limb from 13 camera placements: no ray whose perigee is below 60 km comes
+ * out empty from 400 km, 2 000 km, 36 000 km or 400 000 km, and only a ray
+ * passing within ~10 m of the ground may be cut at it. Re-projecting the
+ * entry point emptied or cut short a share of them that depends on the
+ * direction of view: between 0.2 % and 38 % from 400 km, 13 % and 53 % from
+ * 36 000 km, 30 % and 93 % from 400 000 km. The ends of the interval are
+ * within ~7 m from 400 km and 2 000 km, ~20 m from 36 000 km and ~200 m
+ * from 400 000 km, at the top of the atmosphere where the air no longer
+ * counts. The perigee is not clamped to the camera:
+ * from inside the atmosphere a ray looking up has its perigee behind the
+ * camera, and the half-chord must be the one through that point (clamped,
+ * it emptied every ray more than ~10° above the horizon from the pad).
+ *
+ * Where the samples go: seen from space (r > RT) they crowd at the ray's
+ * lowest point, tLow, which is the perigee of a ray through the limb and the
+ * ground at the end of a ray that hits it; from inside the atmosphere they
+ * crowd towards the camera, where the air is densest on a ground view, as
+ * u² does. Either way the fraction u of the 24 steps maps to the offset from
+ * tLow of (u − f)|u − f| · len / f before it and · len / (1 − f) after it,
+ * f being the share of the interval before tLow (0 from inside the
+ * atmosphere) — so the samples split between the two sides as the length
+ * does, crowding quadratically towards tLow on both. Against a float64 march
+ * of 20 000 even steps with the same per-step integration (errors relative
+ * to the ray's brightest channel, or to 0.2 % of the illuminance where the
+ * ray is darker; 28 suns from 60° above to 6° below the lowest point's
+ * horizon), the RMS errors in single-scattered radiance and optical depth
+ * are 0.6 % and 0.7 % on limb rays from orbit (perigee 0–60 km) and 0.2 %
+ * and 0.5 % on rays from orbit that hit the ground (crowding at the start
+ * of the interval instead, as from the ground: 1.8 % and 9.6 %); from the
+ * pad, 10, 30 and 80 km they are 0.2–0.6 % and 0.3–0.4 %.
+ *
+ * Each sample is placed as pLow + dir · offset, its offset measured from
+ * tLow rather than from the camera, so the step lengths come out of small
+ * numbers. The altitudes cannot be better than float32 makes the product of
+ * the camera's position with the ray's direction: within ~1 m of float64
+ * on the visible limb (RMS 0.3 m) from 400 km, ~2 m (0.5 m) from 36 000 km
+ * and ~16 m (5 m) from 400 000 km, where the whole atmosphere is a third of
+ * a pixel across at a 45° field of view. What the anchor buys is that the
+ * error is shared by all the samples of a ray (neighbours differ by under
+ * 2 m at 400 000 km, against up to ~28 m when each sample is placed from
+ * the camera).
+ *
+ * The sun's disc, 0.266° in radius (959.6″ at 1 au), its edge smoothed over
+ * ~0.05° centred on that radius, reddened by the air in front of it: the
+ * transmittance table from inside the atmosphere, and from space the
+ * transmittance T just accumulated along the view ray, which is 1 when the
+ * ray misses the air. It is darkened towards its limb as the Eddington
+ * approximation of a grey atmosphere has it, I(μ) ∝ μ + 2/3, i.e.
+ * I(μ)/I(1) = 0.4 + 0.6 μ, where μ is the cosine of the angle from the
+ * normal of the sun's surface: μ = √(1 − (θ/θ☉)²) for a point θ from the
+ * centre of a disc θ☉ in radius, and since 1 − cos θ ≈ θ²/2,
+ * (cos θ − cos θ☉) / (1 − cos θ☉) is 1 − (θ/θ☉)² to a part in 10⁵. The Sun at
+ * 550 nm is 0.30 + 0.93 μ − 0.23 μ² (Cox (ed.), Allen's Astrophysical
+ * Quantities, 2000): 0.30 at the limb and 0.805 on average, against this
+ * law's 0.4 and 0.8. The centre is 50 × the illuminance, so that the disc's
+ * mean, 0.8 of its centre, is the 40 × of a uniform disc. Past the tone
+ * mapping the darkening shows only where the air has dimmed the disc to a
+ * few per cent, low in a red sky or through the limb from orbit.
+ *
+ * Round it a glow, pow(c, 18000) · 0.35 ≈ 0.35 e^(−9000 θ²) of the
+ * illuminance: 1/e at 0.6° from the centre, cut where it falls below 0.001,
+ * 1.5° out. On the ground it stands in for the solar aureole, the narrow
+ * forward peak of scattering by aerosol that one Cornette–Shanks lobe with
+ * g = 0.8 is far too broad to give; in space it is the glare of the eye or
+ * the lens. With the illuminance scene.ts passes (SKY_ILLUMINANCE, 8) it
+ * peaks at 2.8, over the bloom's threshold of 1.0 only within 0.6° of the
+ * centre, and adds a few per cent to the light the disc gives the bloom.
+ * The exposure is set from the sun's elevation (sky.ts), not metered from
+ * the picture, so neither feeds back into it; the disc peaks at 400, far
+ * under the 6·10⁴ clamp that keeps a half-float target finite.
+ *
+ * One bad sample must not become a black frame: the bloom's blur would
+ * spread it everywhere.
+ */
 const SKY_FRAG = /* glsl */ `
   #include <common>
   ${COMMON}
@@ -196,13 +313,8 @@ const SKY_FRAG = /* glsl */ `
   uniform float uSunIlluminance;
   varying vec2 vUv;
 
-  /**
-   * Sunlight reaching radius r with the sun at cosine muS: the transmittance,
-   * faded out over a quarter of a degree about the geometric horizon rather
-   * than cut at it — a hard cut per sample speckles a twilight limb.
-   */
   vec3 sunlight(float r, float muS) {
-    float muH = -sqrt(max(0.0, 1.0 - (RG / r) * (RG / r)));
+    float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
     float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
     return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
   }
@@ -212,42 +324,35 @@ const SKY_FRAG = /* glsl */ `
   }
 
   void main() {
-    // unproject on the near plane: at the far one (5e9 m) w is ~1e-10 and the division loses it
     vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
     vec3 dir = normalize((uCamToWorld * vec4(v.xyz / v.w, 0.0)).xyz);
     vec3 o = uCamEci;
     float r = max(length(o), RG + 1.0);
-    float mu = dot(o, dir) / r;
+    float tc = -dot(o, dir);
+    float mu = -tc / r;
+    float c = dot(dir, uSunDir);
     vec3 L = vec3(0.0);
     vec3 T = vec3(1.0);
-    // the part of the ray inside the atmosphere
-    float tStart = 0.0, tEnd;
-    if (r > RT) {
-      float dIn = toSphere(r, mu, RT);
-      if (dIn < 0.0) { tEnd = -1.0; }
-      else {
-        tStart = dIn;
-        vec3 p = o + dir * dIn;
-        float r2 = length(p), mu2 = dot(p, dir) / r2;
-        float dG = hitsGround(r2, mu2) ? toSphere(r2, mu2, RG) : -1.0;
-        tEnd = dIn + (dG > 0.0 ? dG : max(toSphere(r2, max(mu2, -1.0), RT), 0.0));
-      }
-    } else {
-      float dG = hitsGround(r, mu) ? toSphere(r, mu, RG) : -1.0;
-      tEnd = dG > 0.0 ? dG : toSphere(r, mu, RT);
-    }
+    vec3 pc = o + dir * tc;
+    float rp2 = dot(pc, pc);
+    float h = sqrt(max(0.0, RT * RT - rp2));
+    float tStart = max(0.0, tc - h), tEnd = tc + h;
+    if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);
     if (tEnd > tStart) {
-
-      float c = dot(dir, uSunDir);
       float pr = rayleighPhase(c), pm = miePhase(c);
       const int N = 24;
       float len = tEnd - tStart;
+      float tLow = r > RT ? clamp(tc, tStart, tEnd) : tStart;
+      vec3 pLow = o + dir * tLow;
+      float f = (tLow - tStart) / len;
+      float kA = len / max(f, 1e-6), kB = len / max(1.0 - f, 1e-6);
+      float sa = tStart - tLow;
       for (int i = 0; i < N; i++) {
-        // samples crowd towards the camera, where the air is densest on a ground view
-        float a = float(i) / float(N), b = float(i + 1) / float(N);
-        float ta = tStart + len * a * a, tb = tStart + len * b * b;
-        float dt = tb - ta;
-        vec3 p = o + dir * (0.5 * (ta + tb));
+        float x = float(i + 1) / float(N) - f;
+        float sb = x * abs(x) * (x < 0.0 ? kA : kB);
+        float dt = sb - sa;
+        vec3 p = pLow + dir * (0.5 * (sa + sb));
+        sa = sb;
         float rp = length(p);
         float muS = dot(p, uSunDir) / rp;
         Medium m = medium(rp - RG);
@@ -260,13 +365,15 @@ const SKY_FRAG = /* glsl */ `
       }
     }
     L *= uSunIlluminance;
-    // the sun's disc (0.27° radius), reddened by the air in front of it
     {
-      float c = dot(dir, uSunDir);
-      float disc = smoothstep(0.999985, 0.9999895, c);
-      if (disc > 0.0 && !hitsGround(r, mu)) L += disc * uSunIlluminance * 40.0 * (r > RT ? vec3(1.0) : transmittance(r, mu));
+      const float SUN_COS = 0.9999892;
+      float disc = smoothstep(SUN_COS - 2e-6, SUN_COS + 2e-6, c);
+      float glow = pow(max(c, 0.0), 18000.0) * 0.35;
+      if ((disc > 0.0 || glow > 0.001) && !hitsGround(r, mu)) {
+        float limb = 0.4 + 0.6 * sqrt(clamp((c - SUN_COS) / (1.0 - SUN_COS), 0.0, 1.0));
+        L += (disc * 50.0 * limb + glow) * uSunIlluminance * (r > RT ? T : transmittance(r, mu));
+      }
     }
-    // one bad sample must not become a black frame: the bloom's blur would spread it everywhere
     if (any(isnan(L)) || any(isinf(L))) L = vec3(0.0);
     gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
     #include <tonemapping_fragment>

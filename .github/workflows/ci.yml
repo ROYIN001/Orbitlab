@@ -9,14 +9,10 @@ on:
       - 'docs/ROADMAP-PART2-3.md'
       - 'docs/SIXDOF-VEHICLE-DATA.md'
       - 'docs/history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md'
-  push:
-    branches-ignore: [main, gh-pages]
-    paths:
-      - '**'
-      - '!**/*.md'
-      - 'docs/ROADMAP-PART2-3.md'
-      - 'docs/SIXDOF-VEHICLE-DATA.md'
-      - 'docs/history/phase4-2026-10-01/T03-CURRICULA-RESEARCH.md'
+  # No push trigger: on a PR branch it started a second run that the PR run
+  # cancelled, leaving red "(push)" checks. A branch without a PR can still
+  # be tested from the Actions tab.
+  workflow_dispatch:
 
 permissions:
   contents: read

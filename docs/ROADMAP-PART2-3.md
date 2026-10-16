@@ -296,7 +296,7 @@ a custom vehicle without one gets the generic behaviour.
 | Pads (the R-7 pads at Baikonur) | the first stage's `profile`, a spec field | follows the spec. |
 | Engine layout (nozzle pattern) | stage id | the catalogue stage's pattern when it keeps a catalogue stage id, else a generic ring from the engine count. **Open for D03:** a custom stage that keeps `s1` but changes its engine count keeps the nine-engine octaweb. |
 | Propellant family and mixture ratio | stage id | as the engine layout: by stage id, else the model's default. |
-| Exhaust colour (Merlin gas generator) | engine name | follows the spec's engine name. |
+| Exhaust colour (propellant family; darker behind an open-cycle gas generator) | stage id, else engine name | the catalogue stage's family by its id; a stage without one by its engine's name (src/render/exhaust.ts). |
 | Fault presets (G08) | a catalogue vehicle each | offered as before; one that belongs to another vehicle says so. |
 
 Checked by tests/custom-vehicle.test.ts and its two six-DOF companions: a deep copy of Falcon 9

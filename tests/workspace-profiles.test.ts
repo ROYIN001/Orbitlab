@@ -66,7 +66,9 @@ describe('profile-owned browser workspace', () => {
     env.disk.values.set('orbitlab.mission', 'new snapshot');
     const retry = await env.repo().initialize();
     expect(retry.list()).toHaveLength(2); expect(retry.read(LEGACY_PROFILE_ID).values['orbitlab.mission']).toBe('new snapshot');
-    expect(retry.read('legacy-recovery-v1').values['orbitlab.mission']).toBe('old snapshot'); expect(retry.status).toBe('chooser'); retry.close();
+    expect(retry.read('legacy-recovery-v1').values['orbitlab.mission']).toBe('old snapshot');
+    // Owner, 2026-10-14: no chooser at start-up; the learner saved last (the migrated one) opens.
+    expect(retry.status).toBe('durable'); expect(retry.binding!.profileId).toBe(LEGACY_PROFILE_ID); retry.close();
   });
   it('isolates all work for duplicate names and fences late saves when switching A → B → A', async () => {
     const env = setup(), a = await env.repo().initialize();
@@ -161,16 +163,18 @@ describe('profile-owned browser workspace', () => {
     const result = await r.importProfiles(JSON.stringify(all));
     expect(result).toHaveLength(2); expect(result.map((p) => p.id)).not.toContain(b.id); expect(r.list()).toHaveLength(4); r.close();
   });
-  it('continues an interrupted media/profile deletion from its tombstone without silently recreating a last owner', async () => {
+  it('continues an interrupted media/profile deletion from its tombstone without silently recreating a last owner\'s work', async () => {
     const env = setup(); let denied = true, deleted = 0;
     const media: WorkspaceMedia = { migrate: async () => {}, delete: async () => { if (denied) throw new Error('media denied'); deleted++; } };
     const r = await env.repo(media).initialize(); r.binding!.setItem('orbitlab.mission', 'deleted work');
     await expect(r.delete(LEGACY_PROFILE_ID)).rejects.toThrow();
     expect(JSON.parse(env.disk.values.get(PROFILE_CATALOG_KEY)!).profiles[LEGACY_PROFILE_ID].deleting).toBe(true); r.close(); await tick();
     denied = false; const reopened = await env.repo(media).initialize();
-    expect(deleted).toBe(1); expect(reopened.status).toBe('chooser'); expect(reopened.list()).toEqual([]);
+    // Owner, 2026-10-14: the site opens on a new, empty learner rather than the chooser; the deleted work stays deleted.
+    expect(deleted).toBe(1); expect(reopened.status).toBe('durable'); expect(reopened.list().map((p) => [p.id, p.name])).toEqual([['p-1', 'Learner 1']]);
+    expect(reopened.binding!.getItem('orbitlab.mission')).toBeNull();
     expect(env.disk.values.has(profileStorageKey(LEGACY_PROFILE_ID))).toBe(false);
-    expect(env.session.values.get(PROFILE_SELECTED_KEY)).toBe(''); reopened.close();
+    expect(env.session.values.get(PROFILE_SELECTED_KEY)).toBe('p-1'); reopened.close();
   });
 });
 
@@ -181,10 +185,11 @@ describe('R1.6 PR1: start-up error paths keep the lock contract and durable prof
     const key = profileStorageKey(other.id), original = env.disk.values.get(key)!, truncated = original.slice(0, -12);
     env.disk.values.set(key, truncated); env.session.values.set(PROFILE_SELECTED_KEY, other.id);
     const broken = await env.repo().initialize();
-    expect(broken.status).toBe('ephemeral'); expect(broken.notices).toContain('invalid');
-    broken.binding!.setItem('orbitlab.mission', 'visit only'); expect(env.disk.values.get(key)).toBe(truncated);
+    // R1.6-FU-SEL: not visit-only, so the row's copy and delete are reachable; since 2026-10-14 (owner) the healthy learner opens.
+    expect(broken.status).toBe('durable'); expect(broken.notices).toContain('invalid');
+    expect(broken.binding!.profileId).toBe(LEGACY_PROFILE_ID); expect(env.disk.values.get(key)).toBe(truncated);
     // The record is restored while the first tab is still open: another tab must own it, not stay read-only.
-    env.disk.values.set(key, original);
+    env.disk.values.set(key, original); env.session.values.set(PROFILE_SELECTED_KEY, other.id);
     const second = await env.repo().initialize();
     expect(second.status).toBe('durable'); second.binding!.setItem('orbitlab.mission', 'saved'); second.close(); broken.close();
   });
