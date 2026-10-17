@@ -72,11 +72,12 @@ export interface Pericynthion { alt: number; t: number; lat: number; lon: number
 
 export const APOLLO11 = {
   /**
-   * The parking orbit the injection was flown from, as the mission's settings aim at it: 183.2 × 186.0 km,
-   * 32.521°, the node 359.624° from the mean equinox of date (FER Table 4-5; docs/PHYSICS.md §13.8). Launched
-   * into another, the injection is worked out for it.
+   * The parking orbit the injection was flown from, as the mission's settings aim at it (src/ui/watch-missions.ts):
+   * 183.2 × 186.0 km, 32.521°, the node 359.624° from the mean equinox of date, launched on an azimuth of 72.058°
+   * (FER Table 4-5; docs/PHYSICS.md §13.8). Launched into another, or at another time, the injection is worked
+   * out for the flight (`ApolloFlight.planInjection`).
    */
-  parking: { perigee: 183.2e3, apogee: 186.0e3, inclination: 32.521, raan: 359.624 },
+  parking: { perigee: 183.2e3, apogee: 186.0e3, inclination: 32.521, argPerigee: 0, raan: 359.624, flightAzimuth: 72.058 },
   /** the CSM and LM docked, at the ejection, kg (MR Table A-I: 96,767.5 lb) */
   dockedMass: 43893.0,
   /** the SLA's panels and its fixed ring, left on the S-IVB with it, kg (1,792 kg; SP-4029) */
