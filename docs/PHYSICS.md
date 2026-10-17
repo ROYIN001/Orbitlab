@@ -3794,6 +3794,16 @@ Journal (AFJ).
 | LOI-1 ignition | 75:49:50.37: 86.7 n mi, 8,250 ft/s, 1.57° S 169.58° W | ORL; MR Table 7-II |
 | Lunar altitudes | above the landing site's radius, 937.17 n mi (1,735.6 km) | MR Table 7-I, 5-IV |
 
+*Only from its own launch.* The injection (`OrbitSpec.injection`) is the one flown, timed and aimed for
+the Moon of range zero, and the Moon's table covers that week only (D-11). `ApolloFlight.begin` flies it
+from Apollo 11's own launch alone: the `apollo11` spacecraft launched within a second of 1969-07-16
+13:32:00 UTC (`RANGE_ZERO_MS`), the rule the flown record's comparison uses (`historicalFor`). Launched at
+another second, or with another spacecraft (another vehicle brings the crew capsule), it is a different
+flight: it logs `evt.lunarProfileOff` and stays in its parking orbit. Until 2026-10 it flew the profile
+anyway: launched on 16 July 2026 it logged a lunar orbit insertion more than 40,000 km from the Moon, and
+the flight never ended. An edit of the orbit on the flown date still keeps the injection (`ownFlight`
+leaves it, tests/config-validation.test.ts).
+
 *The Moon and the Sun.* The simulation's inertial frame is the mean equator and equinox of date (the
 Earth turns by the mean sidereal time), so the ICRF states are precessed to the date by the IAU 1976
 angles (ζ, z, θ: 30.46 years of 46.12″ a year of right ascension in 1969); nutation, nine arc-seconds,
