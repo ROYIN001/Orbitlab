@@ -9,23 +9,24 @@
 > - รอบแก้หลังการตรวจ:
 >   - พื้นโลกได้แสงจากท้องฟ้าสีฟ้าด้วย ไม่ใช่แสงอาทิตย์ที่แดงลงอย่างเดียว น้ำแข็งขั้วโลกตอนแดดสูง 20° จึงไม่เป็นสีชมพูอีก (ยังเหลือสีม่วงอ่อนเล็กน้อยจากโอโซนในแบบจำลอง 3 ความยาวคลื่น)
 >   - ดวงอาทิตย์และแสงจ้ารอบดวงในอวกาศกลับมาสว่างเท่าเดิม (รอบแรกหรี่ลงโดยไม่ได้ตั้งใจ)
->   - แก้ตัวเลขที่ผิดในรายงาน (อัตราส่วนสีจากโอโซน) และปรับเทสต์ให้เข้มขึ้น
+>   - ปรับเทสต์ให้เข้มขึ้น; ตัวเลขอัตราส่วนสีจากโอโซนในรอบแรก (0.87/0.70) ถูกต้อง ที่ผู้ตรวจได้ค่าต่างไปเพราะสคริปต์ตรวจตั้งค่า albedo ค้างไว้ แก้สคริปต์แล้ว (ผู้ตรวจคนที่สามยืนยันการแก้ 10 จาก 10 ข้อ)
+>   - เมฆตอนแดดกลาง ๆ ยังได้แสงอาทิตย์อย่างเดียว จึงอมสีพีชเล็กน้อยข้างพื้นที่ตอนนี้ได้แสงฟ้าด้วย ถ้าต้องการให้เมฆได้แสงฟ้าด้วย บอกได้ในคำถามที่ 1
 > - ความสว่างของอากาศในอวกาศลดจาก 8 เหลือ 3.3 ให้เท่ากับแสงอาทิตย์ที่ส่องพื้นโลก แสงขอบโลกจากวงโคจรจึงบางและหรี่ลงกว่าเดิม
 > - ท้องฟ้าแบบไล่สี (`?sky=gradient`) และภาพที่ฐานปล่อยแหลมคานาเวอรัลเหมือนเดิมทุกพิกเซล (ที่เพลเซตสค์ต่าง 2 พิกเซล ไม่เกิน 3 ระดับ)
 > - บน SwiftShader เฟรมเร็วกว่าเดิม 7–23% เมื่อมองจากวงโคจร ที่ระดับต่ำเท่าเดิมหรือเร็วขึ้นเล็กน้อย ไม่ได้เพิ่มการลดคุณภาพอัตโนมัติใหม่
 > - ขนาดแอปหลัก 2643.2 → 2642.9 kB (เพดาน 2645) ไม่ได้ขึ้นเพดานใด เทสต์ในเบราว์เซอร์ทั้ง 4 ตัวรันใหม่บนบิลด์สุดท้ายแล้วผ่านทั้งหมด
-> - **รอเจ้าของตัดสิน 3 ข้อ:**
+> - **รอเจ้าของตัดสิน 2 ข้อ (ข้อ 3 ตอบแล้ว):**
 >   1. หน้าตาจากวงโคจร: อนุมัติตามที่เป็น หรือให้ขอบโลกสว่างเท่าเดิม หรือให้หมอกบางลง
 >   2. หน้าตาระหว่างไต่ระดับ 12–72 กม.: ตอนนี้พื้นและเมฆจางมากที่ 20–45 กม. เสนอทางผสม (ค) ที่ขอบฟ้าต่อเนื่องและพื้นเข้มขึ้น ภาพอยู่ใน `options/climb-30km.png` และ `climb-12km.png`
->   3. จะแยก PR ให้งานบีบข้อความ shader (ผลลัพธ์เหมือนเดิมทุกตัว) ไปก่อนหรือไม่
+>   3. (ตอบแล้ว) แยก PR ตามที่คุณสั่งในแชท 2026-10-17 "แยกเป็น branch แล้ว เปิด PR ในแต่ละส่วนเลยครับ": งานบีบข้อความ shader อยู่ใน PR #158 และ PR นี้ซ้อนอยู่บนนั้น
 
 - **Request:** the owner's answer 7 of 2026-10-17, on the before/after screenshots of claim 19, verbatim "ทำให้ดูดีและสมจริงขึ้น" (DECISIONS.md, "Decided 2026-10-17 (Argon4 review follow-up, chat)", row "the sky": "The sky change of claim 19 stands, and the sky is to look better and more realistic"). The bending shader waits ("รอไปก่อน") and is not touched.
-- **Base:** `7f991f9` (origin/main `b16b09e` + the owner's decisions commit). Branch `ws/4-sky-aerial-perspective`, from the hand-over patches of `docs/development/handover/2026-10-17/4-sky-aerial-perspective/` (on `claude/bold-johnson-haeu8t`), applied with `git am -3`.
+- **Base:** origin/main `b16b09e` and, under this PR, the compaction PR #158 (`3c8a3e1`). Measurements labelled `7f991f9` were taken on `b16b09e` plus a docs-only decisions commit: the same code. Branch `claude/charming-archimedes-01p1h5-sky` (worked as `ws/4-sky-aerial-perspective`), from the hand-over patches of `docs/development/handover/2026-10-17/4-sky-aerial-perspective/` (on `claude/bold-johnson-haeu8t`), applied with `git am -3`.
 - **Commits:**
-  - `8fd579b` the shaders' text compacted, identical GLSL (kept as handed over);
-  - `842bb83` the aerial perspective (code and tests); `bf610cf` PHYSICS §12 and the user guide; `05c242f` this report and the change fragment (first round; the hand-over's WIP commit is replaced by these);
-  - review round: `56a015e` the ground lit by the sky as well as the sun; `a808e74` the sun's disc and glare keep their brightness in space; `7af05f7` two tests' bounds and name; `8f44bf5` PHYSICS §12 and the user guide; and the commit carrying this report.
-- **Change type:** render (a look change) on top of an identical-output commit; see question 3 about the PR split. It waits for the owner's approval of the look.
+  - `3c8a3e1` the shaders' text compacted, identical GLSL (kept as handed over; its own PR, #158; `3c8a3e1` before the rebase onto main);
+  - `b2647b1` the aerial perspective (code and tests); `ce4a86b` PHYSICS §12 and the user guide; `5209e22` this report and the change fragment (first round; the hand-over's WIP commit is replaced by these);
+  - review round: `b399c99` the ground lit by the sky as well as the sun; `779325f` the sun's disc and glare keep their brightness in space; `7f4e721` two tests' bounds and name; `245cdd5` PHYSICS §12 and the user guide; and the commit carrying this report.
+- **Change type:** render (a look change) on top of an identical-output commit; the identical-output commit is its own PR, #158 (question 3, answered). It waits for the owner's approval of the look.
 
 ## Review round
 
@@ -33,23 +34,27 @@ Two reviewers (a shader lens and a visual lens) read the first round. Each findi
 
 | Finding | Checked | Done |
 |---|---|---|
-| The report's ozone limb ratios, 0.87 and 0.70, are not what `tests/probe/aerial-nadir.probe.ts` prints (blocking: a false number) | Re-ran the probe: R/G 0.833 with the ozone, 0.670 without | Corrected below |
-| The sun in space 2.4× dimmer, its glare much smaller; not in any view or line; the SKY_FRAG comment's figures false above 12 km (should fix) | The sky pass drew the disc and glow with the air's illuminance; `probes/sky/fix/sun-glow.mjs`: disc centre 400 → 165, glow 2.8 → 1.16, over the bloom threshold within 0.61° → 0.23° | Fixed (`a808e74`): the disc and glow take their own illuminance, 8 at every height. `sun-space` now differs from the base only along the limb (23 626 pixels); the comment gives the figures. Views `sun-space`, `sun-limb` added |
+| The report's ozone limb ratios, 0.87 and 0.70, are not what `tests/probe/aerial-nadir.probe.ts` prints (blocking: a false number) | Re-ran the probe: R/G 0.833 with the ozone, 0.670 without. The re-check found these were wrong, not the first round's: the probe's albedo test left its module-level `ALBEDO` at 0.1, so a whole-file run computed the limb with a ground albedo of 0.1 instead of the shader's 0.3. With the probe fixed (it restores 0.3), the whole file gives R/G 0.873 and 0.702 (B/G 1.599 and 1.155), the first round's 0.87 and 0.70 | Restored below (0.87, 0.70) |
+| The sun in space 2.4× dimmer, its glare much smaller; not in any view or line; the SKY_FRAG comment's figures false above 12 km (should fix) | The sky pass drew the disc and glow with the air's illuminance; `probes/sky/fix/sun-glow.mjs`: disc centre 400 → 165, glow 2.8 → 1.16, over the bloom threshold within 0.61° → 0.23° | Fixed (`779325f`): the disc and glow take their own illuminance, 8 at every height. `sun-space` now differs from the base only along the limb (23 626 pixels); the comment gives the figures. Views `sun-space`, `sun-limb` added |
 | Below 72 km the haze is lit 2.4–1.6× brighter than the ground and clouds under it; the 12 and 30 km views hid it behind the pad's terrain patch; INDEX.md misdescribed the 12 km foreground (should fix, both reviewers) | `probes/sky/fix/illum.mjs`: E = 8, 6.98, 5.30 at 12, 30, 45 km (2.42, 2.12, 1.61 × 3.3). No-pad views confirm the wash-out at 30 km | Stated in PHYSICS §12; no-pad views and three options rendered; question 2; INDEX.md corrected |
-| White ground pink at a middle sun: the direct sun reddened, no blue sky light (should fix) | `tests/probe/skylight.probe.ts`: white ground, sun 20° up, blue/red 0.749; the review's pole shot (164, 156, 153) | Fixed (`56a015e`): the sky's irradiance table and `daylight`; 0.889; the ice (167, 161, 163). The faint mauve left is the model's ozone (below, known limits) |
-| The glint not reddened (nit) | Code read | Fixed in `56a015e` |
+| White ground pink at a middle sun: the direct sun reddened, no blue sky light (should fix) | `tests/probe/skylight.probe.ts`: white ground, sun 20° up, blue/red 0.749; the review's pole shot (164, 156, 153) | Fixed (`b399c99`): the sky's irradiance table and `daylight`; 0.889; the ice (167, 161, 163). The faint mauve left is the model's ozone (below, known limits) |
+| The glint not reddened (nit) | Code read | Fixed in `b399c99` |
 | PHYSICS "3·10⁻⁴ at noon" is the float64 integral, not the GPU's table (nit) | — | `sunColour` is now the table over the table at noon: exactly 1 on the GPU. The sentence is gone |
-| The float32 far-end bounds 11–28× the error (nit) | `tests/probe/far-end.probe.ts`: 0.36 m (400 km), 1.44 m (36 000 km) | Bounds 1 m and 4 m (`7af05f7`) |
-| The shell test's origin-and-height loop cannot fail on either; the report said "pinned more strongly" (nit, both) | `atmoMesh.visible` is set only in `setPhysicalSky` | Renamed to what it checks (`7af05f7`); the table below says so |
-| USER-GUIDE "thin bright blue line" (nit) | Limb row (160, 152, 177) | "a thin blue line" (`8f44bf5`), true under any answer to question 1 |
+| The float32 far-end bounds 11–28× the error (nit) | `tests/probe/far-end.probe.ts`: 0.36 m (400 km), 1.44 m (36 000 km) | Bounds 1 m and 4 m (`7f4e721`) |
+| The shell test's origin-and-height loop cannot fail on either; the report said "pinned more strongly" (nit, both) | `atmoMesh.visible` is set only in `setPhysicalSky` | Renamed to what it checks (`7f4e721`); the table below says so |
+| USER-GUIDE "thin bright blue line" (nit) | Limb row (160, 152, 177) | "a thin blue line" (`245cdd5`), true under any answer to question 1 |
 | "The pad identical" holds at the Cape, not at Plesetsk (nit) | `ples-pad-dusk`: 2 pixels, at most 3 levels | Said so below and in the fragment |
+
+## Re-check of the review round
+
+A third agent re-checked the review round's fixes (`b399c99`, `779325f`, `7f4e721`, `245cdd5`, `f09a9b9`): **confirmed 9 of 10** findings resolved, and the new code (the sky-irradiance table and `daylight`, the sun's own `uSunDisc`) sound: texels on both ends of μS and of the height range, reads on texel centres, the table filled after the multiple-scattering table, refilled on context loss and disposed; linear interpolation of the table costs at most 0.082 % of noon's light; the sun's pixels identical to the base; the gradient sky pixel-identical; render tests 4 files, 48 passed; index 2642.9 of 2645 kB. The tenth, the ozone ratios, is resolved above: the first round's figures were right, and the review round's "correction" came from the probe's leaked albedo, now fixed (10 of 10). Its new findings: the probe's leak (fixed, whole-file figures above: limb R/G 0.873 and 0.702; ice G/R 0.927, B/R 0.974, as quoted); stale ocean figures in the `SKY_ILLUMINANCE` comment (now the re-measured (71, 113, 172) at 8, (33, 65, 116) at 3.3, (4, 16, 41) with no haze, as PHYSICS §12 gives them); the clouds' faint peach tint under a middle sun (in the known limits and question 1).
 
 ## What changed for the user
 
 Under the scattering sky (the default where the GPU has float targets):
 
 - **From orbit** the planet is seen through its air: a blue haze over the disc, faint at nadir and thickening towards the limb, where it runs into the sky's own limb glow. Open ocean is deep blue instead of near-black navy; land is paler and bluer than before.
-- **The limb glow from orbit** is thinner and dimmer than before, drawn at the scene's own sun (illuminance 3.3) instead of 8. It has a faint lavender cast at the horizon: the ozone layer takes the green on the long grazing path. With the ozone switched off, the model's red-to-green ratio 0.05° inside the limb would be 0.67 instead of 0.83 (`tests/probe/aerial-nadir.probe.ts`).
+- **The limb glow from orbit** is thinner and dimmer than before, drawn at the scene's own sun (illuminance 3.3) instead of 8. It has a faint lavender cast at the horizon: the ozone layer takes the green on the long grazing path. With the ozone switched off, the model's red-to-green ratio 0.05° inside the limb would be 0.70 instead of 0.87 (`tests/probe/aerial-nadir.probe.ts`, whole file, ground albedo 0.3 as in the shader).
 - **The ground is lit by the sun and the sky:** the direct sun reddened by the air, and the blue sky's own light, so white ground and ice stay near white under a middle sun and redden only where the sun is low on the relief. A level surface keeps the twilight sky's light for a while after its sunset.
 - **From 12–30 km** the distant ground fades into a bright horizon, as from an airliner or a stratospheric balloon. Before, a dark band of globe sat under a bright horizon sky. From 20 to about 45 km the ground and the clouds below read pale and washed out (question 2; `alt-30km-nopad` here, and the visual review's sweep at 20 and 45 km shows the same).
 - **Near the terminator** the ground and the clouds are lit by sunlight reddened and dimmed by the air. Past their sunset they are dark: the night side has no haze, and its clouds are no longer lit grey by the scene's fill lights. City lights near the horizon are orange (the long path takes the blue).
@@ -129,7 +134,7 @@ These are the figures PHYSICS §12 quotes; the test asserts them under 6 %, 2 %,
 
 ## Screenshots
 
-Harness: `/tmp/claude-0/-home-user-Orbitlab/3b29ccd8-c1cf-5357-ad20-eb1820dc21bb/scratchpad/sky-harness/` (README there). It renders the app's `SceneManager` (and, near a pad, its `LaunchPadView`) with the real Earth textures, 1280 × 720, in headless Chromium on SwiftShader. Before is base `7f991f9`, after is this branch at `7af05f7` (the code as it stands). Every pair is the same view at the same moment.
+Harness: `/tmp/claude-0/-home-user-Orbitlab/3b29ccd8-c1cf-5357-ad20-eb1820dc21bb/scratchpad/sky-harness/` (README there). It renders the app's `SceneManager` (and, near a pad, its `LaunchPadView`) with the real Earth textures, 1280 × 720, in headless Chromium on SwiftShader. Before is base `7f991f9`, after is this branch at `7f4e721` (the code as it stands). Every pair is the same view at the same moment.
 
 - PNGs: `/tmp/claude-0/-home-user-Orbitlab/3b29ccd8-c1cf-5357-ad20-eb1820dc21bb/scratchpad/sky-shots/before/` and `.../after/`.
 - Stacked pairs: `.../pairs/`. The owner's options (probes): `.../options/`.
@@ -170,13 +175,13 @@ Known limits, not changed here:
 - The pad's 13 km terrain patch and its 90 km apron are drawn by three's fog, not through the haze. From 12–30 km they show as a teal foreground, with a soft edge where the hazed globe begins (as before, where the globe was unhazed).
 - At dusk from 12–72 km the clouds take the sun's camera-local low-sun tint (`SUN_LOW`, as before) as well as their own `sunColour`, so their reddening is counted partly twice. In `alt-30km-dusk` they read cream-gold, not red.
 - The model's three wavelengths put the ozone's absorption on the 550 nm channel alone. A white surface seen through the air keeps a faint mauve cast: from 400 km, 45° off nadir, the sun 20° up, green at 0.927 of red and blue at 0.974; with the ozone taken out of the sunlight, the view path and the haze (the sky's light on the ice held), 0.976 and 0.951 (`aerial-nadir.probe.ts`). The ice in `pole-400` is (167, 161, 163).
-- The clouds take the sunlight alone, not the sky's light; their tops are dark once the sun has set for them.
+- The clouds take the sunlight alone, not the sky's light; their tops are dark once the sun has set for them. Under a middle sun this tints them faintly peach next to the ground, which now takes the sky's light too: in `pole-400` the brightest 2 % of the disc (the clouds) is (178, 177, 181), blue/red 1.015, before and (171, 163, 163), 0.955, after. Lighting them with `daylight` at the cloud layer's height (the table already has that row) would give blue/red 0.96 instead of 0.89 at a 20° sun and 0.92 instead of 0.75 at 10° (`tests/probe/skylight.probe.ts`), for one more table read; it is a look change, so it is offered under question 1 rather than made.
 
 ## Frame time
 
 `src/render/glow-governor.ts` puts the glow, then the scattering sky, on trial when the smoothed frame time is over 1/24 s. It keeps a cut only if the frames got 15 % faster. Turning the scattering sky off also turns off the aerial perspective and the sky's light on the ground.
 
-**Harness, paired.** Both builds open in one browser, frames alternating A, B, A, B on the same view, so the shared machine's load falls on both alike. Each frame is `SceneManager.render()` (sky, scene, bloom, output) at 1280 × 720, with the GPU finished each time (`pair-time.mjs`). The "after" build is the branch before `a808e74`, which changes only the value of one uniform.
+**Harness, paired.** Both builds open in one browser, frames alternating A, B, A, B on the same view, so the shared machine's load falls on both alike. Each frame is `SceneManager.render()` (sky, scene, bloom, output) at 1280 × 720, with the GPU finished each time (`pair-time.mjs`). The "after" build is the branch before `779325f`, which changes only the value of one uniform.
 
 | View | base ms | after ms | after/base, paired median (quartiles), 16 pairs |
 |---|---|---|---|
@@ -189,7 +194,7 @@ Known limits, not changed here:
 | gradient-limb (`?sky=gradient`) | 869 | 923 | 1.08 (0.99–1.16) |
 
 - The gradient sky draws the same on both builds (0 pixels differ). Its 1.08 is the run's noise: the first round's run paired it at 1.02 (0.97–1.09).
-- **What the sky's light costs** (review round), the branch before and after `56a015e`, 12 pairs: limb-day 0.97 (0.87–1.16), nadir 0.94 (0.85–1.08), alt-30km 1.04 (1.01–1.07). Within the noise from orbit, about 4 % at 30 km.
+- **What the sky's light costs** (review round), the branch before and after `b399c99`, 12 pairs: limb-day 0.97 (0.87–1.16), nadir 0.94 (0.85–1.08), alt-30km 1.04 (1.01–1.07). Within the noise from orbit, about 4 % at 30 km.
 - **What the haze itself costs** (first round, the haze switched off in a probe build, 12 pairs): with/without 1.20 (1.11–1.39) at limb-day, 1.29 (1.18–1.36) at nadir, 1.12 (1.04–1.17) at alt-30km.
 - So on SwiftShader the haze adds 12–29 % to a frame where the globe fills the view. The sky pass no longer marching the inside of the disc saves more than that: from orbit the frame is 7–23 % cheaper than at the base, and at the pad and 12 km it is within a few per cent.
 - **A fresh page's first frame** (programs compiled, the three tables filled, four frames; `first-frame.mjs`, alternating): 5.9, 6.2, 6.2, 6.7 s on the branch, 6.4, 6.4, 6.4, 7.1 s at the base. The new table's pass adds nothing that shows.
@@ -214,9 +219,9 @@ The shared machine's load drifts far more than 10 % between unpaired runs (the s
 
 ## Browser journeys
 
-Against the final build (`npm run build` at `7af05f7`), one at a time, `node tests/browser/run.mjs <journey>` with `CHROMIUM=/opt/pw-browsers/chromium`. The review round changed the shaders and added a table to the pass FX-8 refills on a restored context, so all four were run again.
+Against the final build (`npm run build` at `7f4e721`), one at a time, `node tests/browser/run.mjs <journey>` with `CHROMIUM=/opt/pw-browsers/chromium`. The review round changed the shaders and added a table to the pass FX-8 refills on a restored context, so all four were run again.
 
-| Journey | Review round (this build) | First round (842bb83) | Base `7f991f9` |
+| Journey | Review round (this build) | First round (b2647b1) | Base `7f991f9` |
 |---|---|---|---|
 | fx8-context-loss | **passed** (162 s; the restored scene's luminance within 3.2 of before, e.g. launch 60.0 ± 43.0 → 56.8 ± 40.7, orbit 31.0 → 29.9) | passed (313 s) | — |
 | launch-explore | **passed** (125 s; orbit 501 × 517 km, 28.6°) | passed (213 s) | — |
@@ -227,16 +232,16 @@ The first round's one failure was the machine's load: on the software renderer t
 
 ## Budget
 
-`npm run build && npm run budget` on this branch, as the last build (`7af05f7`; the later commits are docs and records, not bundled): **bundle budget: ok**.
+`npm run build && npm run budget` on this branch, as the last build (`7f4e721`; the later commits are docs and records, not bundled): **bundle budget: ok**.
 
-| | base `7f991f9` | after the compaction `8fd579b` | first round `842bb83` | this branch |
+| | base `7f991f9` | after the compaction `3c8a3e1` | first round `b2647b1` | this branch |
 |---|---|---|---|---|
 | index-*.js (ceiling 2645 kB) | 2643.2 kB | 2638.3 kB | 2641.1 kB | **2642.9 kB** |
 | precache code (ceiling 14 724 kB) | | | 14 708.7 kB | 14 710.5 kB |
 
 - **Budget line: lowered** (index 2643.2 → 2642.9 kB); no ceiling raised; budgets.json unchanged.
-- The aerial perspective with the review round's fixes adds 4.6 kB to the index chunk over the compaction. On the base without the compaction the chunk would be about 2647.8 kB, over its ceiling, so the aerial perspective needs `8fd579b` first.
-- Sizes are the file in `dist/assets` / 1000. The base and `8fd579b` were built into scratch directories in the first round.
+- The aerial perspective with the review round's fixes adds 4.6 kB to the index chunk over the compaction. On the base without the compaction the chunk would be about 2647.8 kB, over its ceiling, so the aerial perspective needs `3c8a3e1` first.
+- Sizes are the file in `dist/assets` / 1000. The base and `3c8a3e1` were built into scratch directories in the first round.
 
 ## Docs touched
 
@@ -248,7 +253,7 @@ The first round's one failure was the machine's load: on the software renderer t
 
 The aerial perspective with the review round's fixes changes **373 source lines** (src/render/atmosphere.ts and scene.ts, 312 added and 61 deleted, of which 191 are not comment lines), under the ~400 of D-25.
 
-The compaction commit `8fd579b` changes 1532 lines (786 + 746) of src/render, all identical output:
+The compaction commit `3c8a3e1` changes 1532 lines (786 + 746) of src/render, all identical output:
 - the comments inside 32 GLSL template strings moved word for word into JS comments;
 - every GLSL line's leading indentation dropped.
 
@@ -260,6 +265,7 @@ Its message records how the identical output was proven: the ASTs compared with 
    - (ก) Approve as it is: the haze and the sky's air at one illuminance, 3.3 in space. Effect: the haze is the sky's own model and meets the sky's glow at the limb. The limb glow from orbit is fainter than before: its brightest row is (160, 152, 177), against (212, 207, 222) before. The sun and its glare are as before.
    - (ข) A brighter limb glow: the sky pass at 8 in space, the haze at 3.3 (`options/limb-day-sky8.png`). Effect: the limb as bright as before, (212, 207, 222). The haze two rows under it is (132, 144, 175), so there is a step at the globe's edge; the sky and the haze no longer share one sun.
    - (ค) A lighter haze over the disc than the model gives, e.g. half (`options/nadir-haze-half.png`, `options/limb-day-haze-half.png`). Effect: crisper ground from orbit: at nadir the ocean is (17, 38, 74) against (29, 58, 106). But the haze two rows under the limb, (84, 95, 125), is darker than the glow over it, (160, 152, 176), and the haze no longer follows the sky's physics.
+   - With any of these, the clouds can also take the sky's light as the ground now does (`daylight` at the cloud layer's height): it takes out most of their faint peach tint under a middle sun (the light on them, blue/red at a 20° sun 0.89 → 0.96, at 10° 0.75 → 0.92, `tests/probe/skylight.probe.ts`; see the known limits), for one more table read. Say if you want it.
    - Proposal: (ก).
 2. **The look in the climb, 12–72 km** (review round). Below 72 km the haze takes the sky's tuned illuminance, 2.4× the scene's sun at 12 km, 2.1× at 30 km, 1.6× at 45 km, while the ground and the clouds under it are lit by the scene's sun. Screenshots with no pad in the scene (the globe itself below): `options/climb-30km.png` and `options/climb-12km.png`, four rows each (before, ก, ข, ค).
    - (ก) Keep it as built. Effect: the horizon is continuous (from 30 km, sky (190, 190, 209), globe 20 rows under the horizon (157, 177, 206)). From 20 to about 45 km the ground and the clouds are pale and washed out: the ocean low in the 30 km view is (87, 120, 171); the variation along rows 370–560 is an RMS of 9.0 on a mean of 158 (before: 13.4 on 41). At 12 km it reads like the view from an airliner.
@@ -267,7 +273,4 @@ Its message records how the identical output was proven: the ASTs compared with 
    - (ค) A blend: the haze's light is the sky's where nothing shows through it and the scene's sun where the ground does, E · (1 − T) + 3.3 · T, T the stretch's transmittance. Effect: no step at the horizon (the globe 20 rows under it (138, 169, 205)); the ground deeper below ((59, 91, 149); RMS 9.7 on 140). In orbit E is 3.3 and nothing changes (`limb-day` 0 pixels differ). The haze's light below 72 km is then neither the sky's nor the ground's sun but a mix chosen for the look; one line in `AERIAL`, rendered here as a probe build and not on the branch.
    - Also considered and not offered: lighting the globe and the clouds at the sky's illuminance below 72 km (one sun everywhere). At 12 km and below that makes the ground 2.4× brighter than the pad's terrain patch and the vehicles, which three lights at 3.3.
    - Proposal: (ค).
-3. **The PR split.** SESSION-PROTOCOL §5 says one change type per PR, and identical output never mixes with another type; D-63 puts identical-output work first in each lane. The compaction (`8fd579b`, identical output) and the aerial perspective (a look change) are on one branch.
-   - (ก) Two PRs: the compaction first, then the aerial perspective on top. Effect: follows §5 and D-63; one more review and merge; the aerial perspective's PR waits for the first (it needs its 4.8 kB).
-   - (ข) One PR with the commits kept separate. Effect: one review; an exception to §5 written in the PR.
-   - Proposal: (ก).
+3. **The PR split.** Answered: the owner in chat, 2026-10-17, "แยกเป็น branch แล้ว เปิด PR ในแต่ละส่วนเลยครับ" (split into branches and open a PR for each part), which is also SESSION-PROTOCOL §5 (identical output never mixes with another type) and D-63 (identical output first in the lane). The compaction is PR #158; this PR is stacked on it and needs its 4.9 kB.

@@ -166,8 +166,8 @@ gl_Position = projectionMatrix * viewMatrix * wp;
  * perspective has to take the sky's illuminance to meet the sky at the
  * horizon and at the limb, and at 8 from orbit its haze, 2.4 times what lights
  * the ground under it, veiled the disc in pale blue (open ocean 40° off the
- * nadir of 400 km, the sun 50° up, came out (86, 128, 184); at the scene's sun
- * (40, 74, 127), and (4, 16, 40) with no haze at all).
+ * nadir of 400 km, the sun 50° up, came out (71, 113, 172); at the scene's sun
+ * (33, 65, 116), and (4, 16, 41) with no haze at all; docs/PHYSICS.md §12).
  */
 const SKY_ILLUMINANCE = 8;
 
