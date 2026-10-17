@@ -42,11 +42,13 @@ const soyuzUncrewed = (dynamics: object) => missionDoc({
 });
 
 /**
- * S2's bound, m (its brief writes it out as 1 000 m): the worked flight's
- * 773 m at SECO plus 25 %, 966 m, rounded up — set after that flight, as the
- * research asks (the heavy test says so).
+ * S2's bound, m (its brief writes it out as 1 500 m): the worked flight's
+ * error at SECO plus 25 %, rounded up — set after that flight, as the
+ * research asks (the heavy test says so). First set from 773 m (966 m, so
+ * 1 000 m); with the IMU's turn-on bias held for the flight (PHYSICS §2h)
+ * the same flight gives 1 184 m (1 480 m, so 1 500 m).
  */
-const NAV_BOUND_M = 1000;
+const NAV_BOUND_M = 1500;
 
 export const RU_24_05_06: PackSource = {
   pack: {
@@ -150,9 +152,9 @@ export const RU_24_05_06: PackSource = {
       curriculum: [{ code: 'ФГОС 24.05.06 ОПК-7', kind: 'competence' }],
       title: { en: 'Inertial navigation with star-tracker correction, without GNSS', ru: 'БИНС с астрокоррекцией без ГНСС', th: 'การนำร่องเฉื่อยที่แก้ไขด้วยตัวจับดาว โดยไม่มี GNSS' },
       brief: {
-        en: 'Soyuz-2.1a flown six-DOF. The GNSS receiver is out for the whole ascent: the navigation rests on a tactical-grade strapdown inertial unit (fibre-optic gyros), and its star tracker is switched off. Keep the navigation\'s position error within 1 000 m up to the third stage\'s cut-off, when the spacecraft reaches its parking orbit. GNSS stays off; switch the star-tracker correction on, or choose the inertial unit\'s grade.',
-        ru: '«Союз-2.1а» в шестистепенной модели. Приёмник ГНСС не работает на всём участке выведения: навигация опирается на бесплатформенную инерциальную навигационную систему (БИНС) тактического класса с волоконно-оптическими гироскопами, а звёздный датчик выключен. Удержите ошибку навигации по положению в пределах 1 000 м до выключения двигателя третьей ступени, когда корабль выходит на опорную орбиту. ГНСС остаётся выключенной; включите астрокоррекцию по звёздному датчику или выберите класс БИНС.',
-        th: 'Soyuz-2.1a บินแบบหกองศาอิสระ เครื่องรับ GNSS ใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำร่องจึงอาศัยหน่วยวัดเฉื่อยแบบติดตรึงเกรดยุทธวิธี (ไจโรใยแก้วนำแสง) และตัวจับดาวถูกปิดอยู่ จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำร่องให้อยู่ภายใน 1 000 ม. จนถึงการดับเครื่องของขั้นที่ 3 เมื่อยานเข้าสู่วงโคจรพัก ให้ GNSS ปิดอยู่เหมือนเดิม แล้วเปิดการแก้ไขด้วยตัวจับดาว หรือเลือกเกรดของหน่วยวัดเฉื่อย',
+        en: 'Soyuz-2.1a flown six-DOF. The GNSS receiver is out for the whole ascent: the navigation rests on a tactical-grade strapdown inertial unit (fibre-optic gyros), and its star tracker is switched off. Keep the navigation\'s position error within 1 500 m up to the third stage\'s cut-off, when the spacecraft reaches its parking orbit. GNSS stays off; switch the star-tracker correction on, or choose the inertial unit\'s grade.',
+        ru: '«Союз-2.1а» в шестистепенной модели. Приёмник ГНСС не работает на всём участке выведения: навигация опирается на бесплатформенную инерциальную навигационную систему (БИНС) тактического класса с волоконно-оптическими гироскопами, а звёздный датчик выключен. Удержите ошибку навигации по положению в пределах 1 500 м до выключения двигателя третьей ступени, когда корабль выходит на опорную орбиту. ГНСС остаётся выключенной; включите астрокоррекцию по звёздному датчику или выберите класс БИНС.',
+        th: 'Soyuz-2.1a บินแบบหกองศาอิสระ เครื่องรับ GNSS ใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำร่องจึงอาศัยหน่วยวัดเฉื่อยแบบติดตรึงเกรดยุทธวิธี (ไจโรใยแก้วนำแสง) และตัวจับดาวถูกปิดอยู่ จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำร่องให้อยู่ภายใน 1 500 ม. จนถึงการดับเครื่องของขั้นที่ 3 เมื่อยานเข้าสู่วงโคจรพัก ให้ GNSS ปิดอยู่เหมือนเดิม แล้วเปิดการแก้ไขด้วยตัวจับดาว หรือเลือกเกรดของหน่วยวัดเฉื่อย',
       },
       debrief: {
         en: 'Without external fixes an inertial unit\'s error grows faster than linearly: an accelerometer bias b gives ½bt², and gyro drift tilts the navigation frame, so the thrust acceleration is projected along the wrong axes. A star tracker, which sees stars from 150 km up, measures the attitude and bounds that tilt: in this flight the error at the third stage\'s cut-off is about 3.4 km without it and about 1.2 km with it. A navigation-grade unit without the star tracker gives about 0.4 km; with GNSS fixes the Kalman filter holds the error to a few metres.',

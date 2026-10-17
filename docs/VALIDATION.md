@@ -4021,13 +4021,14 @@ and `tests/heavy/lesson-packs-sixdof.test.ts`:
   typical wrong answer or wrong flight fails. The tolerances are the research's, fixed before any
   flight, but two, set after seeing the flight and said so in the test: lesson 13.1's period, ±5 min
   where the research had ±2 (the flown 1 432.1 min and the textbook sidereal day, 1 436 min, both
-  pass; 24 hours fails), and lesson 15.2's navigation bound, 1 000 m (the worked flight's 773 m plus
-  25 % is 966 m, rounded up). Lesson 14.2 also grades the perigee speed (±0.02 km/s), which the
-  pack added to the research's R2. For a while 14.1's period and 14.2's semi-major axis were widened
-  (to 0.4 min and 20 km) and the speed dropped, while the grader read the orbit at a late frame;
-  since it reads the end they are as the research set them, and the worked answers pass however
-  late they are graded (up to 1 000 s on the transfer orbit, anywhere on the next revolution of the
-  circles).
+  pass; 24 hours fails), and lesson 15.2's navigation bound, 1 500 m (the worked flight's error plus
+  25 %, rounded up: first 773 m, 966 m, so 1 000 m; since the IMU's turn-on bias stays for the
+  flight 1 184 m, 1 480 m, so 1 500 m). Lesson 14.2 also grades the perigee speed (±0.02 km/s),
+  which the pack added to the research's R2. For a while 14.1's period and 14.2's semi-major
+  axis were widened (to 0.4 min and 20 km) and the speed dropped, while the grader read the orbit
+  at a late frame; since it reads the end they are as the research set them, and the worked
+  answers pass however late they are graded (up to 1 000 s on the transfer orbit, anywhere on the
+  next revolution of the circles).
 - **Flown headless, in review:** 11.1 peaks at 4.588 g, Falcon 9's 45 m/s² limit, with max-Q at
   50.1 s; 11.2 reaches 418 × 418 km; 12.2 and 14.1 reach 599 × 599 km at 97.787°, the node 0.19° off
   in the window, 0.31° launched 120 s late (passes) and 0.81° at 240 s (fails); 13.1 a 35 709 km
@@ -4045,9 +4046,12 @@ and `tests/heavy/lesson-packs-sixdof.test.ts`:
   (2026-10-17, the owner's option (ก); PHYSICS §2h) 15.2's flights give 3 357 m as set, 1 184 m
   with the star tracker, 360 m with a navigation-grade unit, 13 018 m with a MEMS unit and the
   star tracker and 3.1 m with GNSS (2 923, 989, 382, 11 000 and 3.2 m just before it): the star
-  tracker's flight is over the 1 000 m bound and fails, and the bound is the owner's to choose
-  ([report](development/reports/argon4-fu-imu.md)). Lesson 15.3 flies uncrewed, against the research,
-  because a crewed failed flight ends in the escape system's landing, which the grader does not end.
+  tracker's flight was over the 1 000 m bound, and the bound is set again by its own rule, the
+  worked flight plus 25 %, rounded up: 1 500 m, which the star tracker and the navigation-grade
+  unit hold and the tactical unit alone and MEMS with the star tracker do not (the
+  [report](development/reports/argon4-fu-imu.md)'s question 1, option (ก)). Lesson 15.3 flies
+  uncrewed, against the research, because a crewed failed flight ends in the escape system's
+  landing, which the grader does not end.
 
 **The packs' design lessons** (T03b). Each fixes its design date (2026-10-01) and ECSS level
 (moderate) in the file, so no lifetime is run and the grade reproduces on any day. Their bounds were
