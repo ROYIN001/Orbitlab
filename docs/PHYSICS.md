@@ -3081,28 +3081,48 @@ nm and a transmittance of 0.94/0.87/0.77; single scattering alone is 0.075 at 44
 τp/(4μμ☉) = 0.10 for the same Rayleigh optical depth (0.265) before the attenuation of the two
 paths. From orbit this is the blue haze over the disc, thickening towards the limb into the sky's
 own limb glow; from the stratosphere, the distant ground fading into the horizon sky (from 30 km,
-the sun 35° up, the sky just over the horizon came out (204, 200, 215) and the globe just under it
-(20, 38, 67), a dark band; now (196, 192, 209) and (175, 186, 208)); none on the night side, and the
-terminator's twilight from the model. The globe's Fresnel rim, the gradient sky's stand-in for this,
-is off under the scattering sky. The sky pass no longer marches a ray that ends more than 10 km
-inside the Earth's sphere: the opaque globe covers it and carries that haze itself.
+the sun 35° up, the sky 6 rows over the horizon came out (198, 198, 215) and the globe 20 rows
+under it (16, 34, 61), a dark band; now (190, 190, 209) and (157, 177, 206)); none on the night
+side, and the terminator's twilight from the model. The globe's Fresnel rim, the gradient sky's
+stand-in for this, is off under the scattering sky. The sky pass no longer marches a ray that ends
+more than 10 km inside the Earth's sphere: the opaque globe covers it and carries that haze itself.
 
-The globe's ground and the clouds are lit by the sunlight that reaches them through the air,
-relative to the sun overhead there (`sunColour`: the transmittance table over the closed-form
-vertical column, which agrees with the integrated transmittance to 3·10⁻⁴ at noon; with the sun 4°
-up it is 0.52/0.23/0.05 on the ground and 0.77/0.52/0.38 on the cloud tops), so noon is drawn as
-before while a low sun reddens and dims them and a sun below their horizon leaves them dark: the
-clouds of the night side are no longer lit grey by the scene's fill lights.
+The globe's ground is lit by the sun through the air and by the sky (`daylight`), relative to noon:
+(max(cos i, 0)·T☉(μ☉) + E_sky(μ☉)) / (T☉(1) + E_sky(1)), with T☉ the transmittance table (faded
+about the horizon), i the sun's angle to the surface's relief and μ☉ the cosine of its zenith angle
+there. E_sky is the sky's irradiance on a level surface per unit of solar illuminance, ∫ L cos θ dω
+over the upper hemisphere: a third table, 64 × 16 over μ☉ and the height, filled once from the sky's
+own model with 8 × 8 directions spread as cos θ is, each marched to the top of the atmosphere in 16
+steps; against a fine integral (32 × 32 directions, 200 steps) it errs by at most 0.33 % of noon's
+light on the ground and 0.21 % at 9 km (tests/render-aerial.test.ts). Level ground at noon is drawn
+as before. With the reddened sun alone, a white surface with the sun 20° up came out with blue at
+0.749 of red, pink; the blue sky's light brings it to 0.889. Ground past its sunset keeps the
+twilight sky's light, under a thousandth of noon's once the sun is 8° down. The sun glint and the
+clouds take the sunlight alone, `sunColour`, the transmittance table over itself at noon (with the
+sun 4° up 0.52/0.22/0.05 on the ground and 0.77/0.52/0.38 at the cloud tops): noon is drawn as
+before, a low sun reddens and dims them and a sun below their horizon leaves them dark, and the
+clouds of the night side are no longer lit grey by the scene's fill lights. The model's three
+wavelengths put the ozone's absorption on the 550 nm channel alone, so a white surface seen through
+the air keeps a faint mauve cast: from 400 km, 45° off nadir, the sun 20° up, white ground comes out
+with green at 0.927 of red and blue at 0.974, against 0.976 and 0.951 with the ozone taken out of
+the sunlight, the view path and the haze (Arctic ice at 84° N from 400 km, the sun 20° up: (167, 161, 163); (172, 172, 173) before the
+aerial perspective).
 
 The sun's illuminance in the sky's units is 8 on the ground, set so that noon reads like the
 gradient sky it replaced, and falls with the camera's height (the ground factor of
 src/render/sky.ts, from 12 to 72 km) to 3.3 in space, the scene's own sun that lights the globe, the
-clouds and the vehicles; the sky pass and the aerial perspective take the same value, so the haze
-meets the sky at the horizon and at the limb. At 8 from orbit the haze, 2.4 times what lights the
-ground under it, veiled the whole disc in pale blue: open ocean 40° off the nadir of 400 km, the sun
-50° up, came out (86, 128, 184), at 3.3 (40, 74, 127), and (4, 16, 40) with no haze at all. The
-sky's own limb glow seen from orbit is drawn at 3.3 too, so it is dimmer than before: in a daylight
-view of the limb from 400 km its brightest row went from (212, 207, 222) to (161, 153, 177).
+clouds and the vehicles; the sky pass's scattered light and the aerial perspective take the same
+value, so the haze meets the sky at the horizon and at the limb. At 8 from orbit the haze, 2.4 times
+what lights the ground under it, veiled the whole disc in pale blue: open ocean 40° off the nadir of
+400 km, the sun 50° up, came out (71, 113, 172), at 3.3 (33, 65, 116), and (4, 16, 41) with no haze
+at all. Below 72 km the haze keeps the sky's tuning: 8 up to 12 km, 6.98 at 30 km and 5.30 at 45
+km, 2.4, 2.1 and 1.6 times the scene's sun, so from 12 to about 45 km the ground and the clouds under
+it read paler than one sun would make them (from 30 km, the sun 35° up, the ocean in the lower part
+of the view comes out (87, 120, 171), and (54, 77, 119) with the haze at 3.3). The sky's own limb
+glow seen from orbit is drawn at 3.3 too, so it is dimmer than before: in a daylight view of the
+limb from 400 km its brightest row went from (212, 207, 222) to (160, 152, 177). The sun's disc and
+its glow stand for the lens's glare rather than the air's light and keep 8 at every height, as
+before.
 
 The older atmosphere shell (a sphere 110 km up, added over the globe) stays the limb glow of the
 gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets — and is not
