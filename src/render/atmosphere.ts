@@ -4,11 +4,12 @@
  * Production Ready Sky and Atmosphere Rendering Technique" (EGSR 2020), with
  * the parameters of Bruneton's reference implementation (2017).
  *
- * Two look-up tables are computed once on the GPU: the **transmittance** from
- * any height and zenith angle to the top of the atmosphere (256 × 64), and the
- * **multiple scattering** a point receives at any height and solar zenith
+ * Three look-up tables are computed once on the GPU: the **transmittance**
+ * from any height and zenith angle to the top of the atmosphere (256 × 64),
+ * the **multiple scattering** a point receives at any height and solar zenith
  * angle (32 × 32, Hillaire's isotropic approximation of every order beyond
- * the first). Each frame a full-screen pass marches every view ray through
+ * the first), and the **sky's light** on a level surface at any height and
+ * solar zenith angle (64 × 16), which lights the ground with the sun. Each frame a full-screen pass marches every view ray through
  * the atmosphere from the camera — on the pad, in the stratosphere or in
  * orbit alike — summing single scattering (sunlight reaching each sample
  * through the transmittance, the Earth's shadow included) and the multiple
@@ -33,7 +34,8 @@
  * faint glow round it. The details are at `SKY_FRAG`.
  *
  * It costs a fragment shader of ~ 24 samples per pixel, and the globe and the
- * clouds 10 and 6 samples (two table reads each) per pixel they cover. A slow
+ * clouds 10 and 6 samples (two table reads each) per pixel they cover, and
+ * the ground's light four reads more. A slow
  * GPU falls back to the colour-gradient sky of `sky.ts` (the same trial as the
  * glow, F07: src/render/glow-governor.ts), and so does a GPU that cannot
  * render to float textures.
@@ -235,6 +237,56 @@ return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb
 `;
 
 /**
+ * The sky's light on a level surface (the irradiance from the upper
+ * hemisphere) at radius r with the sun at cosine muS, per unit of solar
+ * illuminance: E = ∫ L(ω) cos θ dω, by 8 × 8 directions spread as cos θ is
+ * (sin²θ in equal steps, so each weighs π/64), over half a turn of azimuth —
+ * the other half mirrors it about the plane of the sun — each marched up to
+ * the top of the atmosphere in 16 steps crowding towards the surface, with
+ * the sky pass's model, phase functions and per-step integration.
+ * The table's texels sit on muS = −1…1 and on r = RG…RT, ends included, so
+ * the ground and noon are read exactly (`skyLight` in `AERIAL`). Against a
+ * fine integral of the same model (32 × 32 directions, 200 steps), with the
+ * sun from overhead to 4° below the horizon, it errs by at most 0.33 % of
+ * what noon's sun and sky give on the ground, 0.21 % at the cloud tops' 9 km
+ * (tests/render-aerial.test.ts).
+ */
+const SKYLIGHT_FRAG = /* glsl */ `
+${COMMON}
+${SAMPLE_TRANSMITTANCE}
+${SAMPLE_SKY}
+varying vec2 vUv;
+void main() {
+float muS = (vUv.x * 64.0 - 0.5) / 63.0 * 2.0 - 1.0;
+float r = RG + (vUv.y * 16.0 - 0.5) / 15.0 * (RT - RG);
+vec3 sunDir = vec3(sqrt(max(0.0, 1.0 - muS * muS)), 0.0, muS);
+vec3 E = vec3(0.0);
+const int SQ = 8, N = 16;
+for (int a = 0; a < SQ; a++) for (int b = 0; b < SQ; b++) {
+float u = (float(a) + 0.5) / float(SQ), st = sqrt(u), ph = PI * (float(b) + 0.5) / float(SQ);
+vec3 dir = vec3(st * cos(ph), st * sin(ph), sqrt(1.0 - u));
+float d = max(toSphere(r, dir.z, RT), 0.0);
+float c = dot(dir, sunDir), pr = rayleighPhase(c), pm = miePhase(c);
+vec3 T = vec3(1.0);
+float sa = 0.0;
+for (int i = 0; i < N; i++) {
+float x = float(i + 1) / float(N), sb = x * x * d, dt = sb - sa;
+vec3 p = vec3(0.0, 0.0, r) + dir * (0.5 * (sa + sb));
+sa = sb;
+float rp = length(p), mu = dot(p, sunDir) / rp;
+Medium m = medium(rp - RG);
+vec3 S = (m.scatR * pr + vec3(m.scatM * pm)) * sunlight(rp, mu) + (m.scatR + vec3(m.scatM)) * multiScatter(rp, mu);
+vec3 stepT = exp(-m.ext * dt);
+E += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
+T *= stepT;
+}
+}
+E *= PI / float(SQ * SQ);
+gl_FragColor = vec4(any(isnan(E)) || any(isinf(E)) ? vec3(0.0) : E, 1.0);
+}
+`;
+
+/**
  * The per-frame pass, in order.
  *
  * The view ray is unprojected on the near plane: at the far one (5·10⁹ m) w
@@ -426,11 +478,21 @@ gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
  * everything through.
  *
  * `sunColour(r, muS)`: the sunlight that reaches radius r (the ground, the
- * cloud tops) through the air, relative to the sun overhead there — the
- * light the globe and the clouds were drawn in, so noon is unchanged while a
- * low sun reddens and dims and a set one leaves them dark. Overhead is the
- * vertical column above r in closed form (exponential profiles; the ozone
- * tent, all of it above 10 km, 15 km of it), valid up to the clouds' 9 km.
+ * cloud tops) through the air, relative to the sun overhead there (the same
+ * table read at muS = 1) — the light the globe and the clouds were drawn in,
+ * so noon is unchanged while a low sun reddens and dims and a set one leaves
+ * them dark. The clouds take it whole: their light is three's Lambert
+ * shading, and their reddening at a low sun is the sunlight's.
+ *
+ * `daylight(r, cosN, muS)`: what lights the ground, relative to noon's —
+ * the sun on a surface turned cosN to it, reddened as `sunColour`, and the
+ * sky's light on a level surface (`skyLight`, the table of SKYLIGHT_FRAG),
+ * divided by the two with the sun overhead. Noon on level ground is drawn
+ * as before. With the direct sun alone the ground turned pink at a middle
+ * sun (a white surface with the sun 20° up came out with blue at 0.75 of
+ * red): the blue sky lights it too, and with it the same surface is at 0.89
+ * (tests/render-aerial.test.ts). Ground the sun has left still gets the
+ * twilight sky's light.
  */
 export const AERIAL = /* glsl */ `
 ${COMMON}
@@ -439,6 +501,7 @@ ${SAMPLE_SKY}
 #ifndef AERIAL_N
 #define AERIAL_N 10
 #endif
+uniform sampler2D uSkyLight;
 uniform float uAerial;
 uniform float uSunIlluminance;
 uniform vec3 earthCentre;
@@ -471,8 +534,13 @@ T *= stepT;
 return L;
 }
 vec3 sunColour(float r, float muS) {
-float h = r - RG;
-return sunlight(r, muS) / exp(-(RAY_S * RAY_H * exp(-h / RAY_H) + vec3(MIE_E * MIE_H * exp(-h / MIE_H)) + OZONE * 15000.0));
+return sunlight(r, muS) / sunlight(r, 1.0);
+}
+vec3 skyLight(float r, float muS) {
+return texture2D(uSkyLight, vec2(0.5 + (muS * 0.5 + 0.5) * 63.0, 0.5 + (r - RG) / (RT - RG) * 15.0) / vec2(64.0, 16.0)).rgb;
+}
+vec3 daylight(float r, float cosN, float muS) {
+return (max(cosN, 0.0) * sunlight(r, muS) + skyLight(r, muS)) / (sunlight(r, 1.0) + skyLight(r, 1.0));
 }
 vec3 aerialPerspective(vec3 col, vec3 cam, vec3 dir, float rEnd, vec3 sunDir) {
 vec3 T;
@@ -494,11 +562,13 @@ export class PhysicalSky {
   private material: THREE.ShaderMaterial;
   private transmittanceRT: THREE.WebGLRenderTarget;
   private multiRT: THREE.WebGLRenderTarget;
+  private skyLightRT: THREE.WebGLRenderTarget;
   private ready = false;
 
   constructor(private readonly renderer: THREE.WebGLRenderer, floatType: THREE.TextureDataType = THREE.HalfFloatType) {
     this.transmittanceRT = target(256, 64, floatType);
     this.multiRT = target(32, 32, floatType);
+    this.skyLightRT = target(64, 16, floatType);
     const tri = new THREE.BufferGeometry();
     tri.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
     this.material = new THREE.ShaderMaterial({
@@ -514,7 +584,7 @@ export class PhysicalSky {
     this.mesh.renderOrder = -1000;
   }
 
-  /** Fill the two tables (once). */
+  /** Fill the three tables (once). */
   private precompute(): void {
     const scene = new THREE.Scene();
     const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -532,16 +602,21 @@ export class PhysicalSky {
     };
     pass(TRANSMITTANCE_FRAG, this.transmittanceRT, {});
     pass(MULTISCATTER_FRAG, this.multiRT, { uTransmittance: { value: this.transmittanceRT.texture } });
+    pass(SKYLIGHT_FRAG, this.skyLightRT, { uTransmittance: { value: this.transmittanceRT.texture }, uMultiScatter: { value: this.multiRT.texture } });
     this.ready = true;
   }
 
-  /** The two tables, for the aerial perspective over the globe (`AERIAL`); filled on the first `update`. */
+  /** The tables, for the aerial perspective over the globe and the light on the ground (`AERIAL`); filled on the first `update`. */
   get transmittance(): THREE.Texture {
     return this.transmittanceRT.texture;
   }
 
   get multiScatter(): THREE.Texture {
     return this.multiRT.texture;
+  }
+
+  get skyLight(): THREE.Texture {
+    return this.skyLightRT.texture;
   }
 
   /** FX-8: fill the tables again (a lost context took them). */
@@ -566,6 +641,7 @@ export class PhysicalSky {
   dispose(): void {
     this.transmittanceRT.dispose();
     this.multiRT.dispose();
+    this.skyLightRT.dispose();
     this.material.dispose();
     this.mesh.geometry.dispose();
   }

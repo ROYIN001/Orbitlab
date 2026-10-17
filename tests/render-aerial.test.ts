@@ -14,10 +14,14 @@ import { AERIAL, ATMOSPHERE_HEIGHT } from '../src/render/atmosphere';
 import { R_EARTH } from '../src/physics/constants';
 import type { VisualFrame } from '../src/physics/frame';
 
-const gpu = vi.hoisted(() => ({ floatTargets: true }));
+const gpu = vi.hoisted(() => ({ floatTargets: true, frags: [] as string[] }));
 vi.mock('../src/render/webgl-renderer', () => ({
   createWebGLRenderer: () => ({
-    setPixelRatio() {}, getPixelRatio: () => 1, shadowMap: {}, compile() {}, render() {},
+    setPixelRatio() {}, getPixelRatio: () => 1, shadowMap: {}, compile() {},
+    // the fragment shaders of what is drawn, so the tables' passes can be read
+    render(scene: { children?: { material?: { fragmentShader?: string } }[] }) {
+      for (const c of scene.children ?? []) if (c.material?.fragmentShader) gpu.frags.push(c.material.fragmentShader);
+    },
     setRenderTarget() {}, getRenderTarget: () => null,
     capabilities: { getMaxAnisotropy: () => 1 },
     extensions: { has: (n: string) => gpu.floatTargets && n === 'EXT_color_buffer_float' },
@@ -28,7 +32,7 @@ vi.mock('../src/render/webgl-renderer', () => ({
 
 interface Internals {
   earthMat: THREE.ShaderMaterial;
-  physicalSky: { mesh: THREE.Mesh; transmittance: THREE.Texture; multiScatter: THREE.Texture } | null;
+  physicalSky: { mesh: THREE.Mesh; transmittance: THREE.Texture; multiScatter: THREE.Texture; skyLight: THREE.Texture } | null;
 }
 
 const tex = () => ({ day: new THREE.Texture(), night: new THREE.Texture(), spec: new THREE.Texture(), normal: new THREE.Texture(), clouds: new THREE.Texture() });
@@ -108,6 +112,7 @@ describe('aerial perspective: wired into the globe and the clouds (V02)', () => 
     const u = my.earthMat.uniforms;
     expect(u.uTransmittance.value).toBe(my.physicalSky!.transmittance);
     expect(u.uMultiScatter.value).toBe(my.physicalSky!.multiScatter);
+    expect(u.uSkyLight.value).toBe(my.physicalSky!.skyLight);
     const skyU = (my.physicalSky!.mesh.material as THREE.ShaderMaterial).uniforms;
     expect(skyU.uTransmittance.value).toBe(u.uTransmittance.value);
     expect(skyU.uMultiScatter.value).toBe(u.uMultiScatter.value);
@@ -126,7 +131,7 @@ describe('aerial perspective: wired into the globe and the clouds (V02)', () => 
     expect(frag.indexOf('#define AERIAL_N 6')).toBeGreaterThan(frag.indexOf('#include <common>'));
     expect(frag.indexOf('if (gl_FragColor.a < 0.004) discard;')).toBeGreaterThan(frag.indexOf('#include <opaque_fragment>'));
     expect(frag.indexOf('if (gl_FragColor.a < 0.004) discard;')).toBeLessThan(frag.indexOf('#include <tonemapping_fragment>'));
-    for (const k of ['uTransmittance', 'uMultiScatter', 'uAerial', 'uSunIlluminance', 'earthCentre', 'sunDir']) {
+    for (const k of ['uTransmittance', 'uMultiScatter', 'uSkyLight', 'uAerial', 'uSunIlluminance', 'earthCentre', 'sunDir']) {
       expect(shader.uniforms[k], k).toBe(my.earthMat.uniforms[k]);
     }
     // the cloud sphere the march ends on is the mesh's own
@@ -348,23 +353,27 @@ describe('aerial perspective: the march against an independent integral (float64
 // ------------------------------------------------------------------ sunlight through the air
 
 const SUN_LINES = [
-  'return sunlight(r, muS) / exp(-(RAY_S * RAY_H * exp(-h / RAY_H) + vec3(MIE_E * MIE_H * exp(-h / MIE_H)) + OZONE * 15000.0));',
+  'return sunlight(r, muS) / sunlight(r, 1.0);',
+  'return texture2D(uSkyLight, vec2(0.5 + (muS * 0.5 + 0.5) * 63.0, 0.5 + (r - RG) / (RT - RG) * 15.0) / vec2(64.0, 16.0)).rgb;',
+  'return (max(cosN, 0.0) * sunlight(r, muS) + skyLight(r, muS)) / (sunlight(r, 1.0) + skyLight(r, 1.0));',
 ];
-const EARTH_SUN = 'if (uAerial > 0.5) col = day * (0.09 + 0.95 * max(cosSun, 0.0) * sunColour(RG, cosSunGeo));';
+const EARTH_SUN = 'if (uAerial > 0.5) col = day * (0.09 + 0.95 * daylight(RG, cosSun, cosSunGeo));';
+const EARTH_GLINT = ['vec3 glint = vec3(s * 0.9, s * 0.95, s);', 'if (uAerial > 0.5) glint *= sunColour(RG, cosSunGeo);', 'col += glint;'];
 const CLOUD_SUN = 'gl_FragColor.rgb = aerialPerspective(gl_FragColor.rgb * sunColour(RG + 9000.0, dot(upW, sunDir)), cameraPosition, dirW, RG + 9000.0, sunDir);';
 /** `sunColour`, the table read exactly */
 function sunColour(r: number, muS: number): V {
-  const h = r - RG, s = sunlight(r, muS);
-  return [0, 1, 2].map((k) => s[k] / Math.exp(-(RAY[k] * 8000 * Math.exp(-h / 8000) + MIE_E * 1200 * Math.exp(-h / 1200) + OZONE[k] * 15000))) as V;
+  const s = sunlight(r, muS), noon = sunlight(r, 1);
+  return [0, 1, 2].map((k) => s[k] / noon[k]) as V;
 }
 
 describe('sunlight through the air on the ground and the cloud tops', () => {
   it('stands in the globe\'s and the clouds\' shaders, under the scattering sky only', () => {
     const { sm, my } = build(true);
     const frag = my.earthMat.fragmentShader;
-    for (const line of [...SUN_LINES, EARTH_SUN]) expect(frag, line).toContain(line);
-    // the gradient sky's line is kept as it was, and the patch only replaces it under uAerial
+    for (const line of [...SUN_LINES, EARTH_SUN, ...EARTH_GLINT]) expect(frag, line).toContain(line);
+    // the gradient sky's lines are kept as they were, and the patch only replaces them under uAerial
     expect(frag).toContain('vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));');
+    expect(frag.indexOf(EARTH_GLINT[1])).toBe(frag.indexOf(EARTH_GLINT[0]) + EARTH_GLINT[0].length + 1);
     const shader = { uniforms: {} as Record<string, THREE.IUniform>, fragmentShader: THREE.ShaderLib.lambert.fragmentShader, vertexShader: '' };
     (sm.cloudMesh!.material as THREE.Material).onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
     expect(shader.fragmentShader).toContain(CLOUD_SUN);
@@ -373,7 +382,7 @@ describe('sunlight through the air on the ground and the cloud tops', () => {
   it('leaves noon as it was drawn, reddens a low sun and leaves a set one dark', () => {
     for (const h of [0, 9000]) {
       const noon = sunColour(RG + h, 1);
-      // the closed-form column overhead against the integrated table: a part in a thousand
+      // the same table read overhead: exactly 1
       for (const c of noon) expect(Math.abs(c - 1), `${h} m`).toBeLessThan(2e-3);
       const low = sunColour(RG + h, Math.sin(4 * Math.PI / 180));
       expect(low[0]).toBeGreaterThan(low[1]);
@@ -385,6 +394,167 @@ describe('sunlight through the air on the ground and the cloud tops', () => {
     expect(Math.max(...sunColour(RG, Math.sin(-2 * Math.PI / 180)))).toBe(0);
     expect(sunColour(RG + 9000, Math.sin(-2 * Math.PI / 180))[0]).toBeGreaterThan(0.01);
   });
+});
+
+// ------------------------------------------------------------------ the sky's light on a level surface
+
+const SKYLIGHT_LINES = [
+  'float muS = (vUv.x * 64.0 - 0.5) / 63.0 * 2.0 - 1.0;',
+  'float r = RG + (vUv.y * 16.0 - 0.5) / 15.0 * (RT - RG);',
+  'vec3 sunDir = vec3(sqrt(max(0.0, 1.0 - muS * muS)), 0.0, muS);',
+  'const int SQ = 8, N = 16;',
+  'float u = (float(a) + 0.5) / float(SQ), st = sqrt(u), ph = PI * (float(b) + 0.5) / float(SQ);',
+  'vec3 dir = vec3(st * cos(ph), st * sin(ph), sqrt(1.0 - u));',
+  'float d = max(toSphere(r, dir.z, RT), 0.0);',
+  'float c = dot(dir, sunDir), pr = rayleighPhase(c), pm = miePhase(c);',
+  'float x = float(i + 1) / float(N), sb = x * x * d, dt = sb - sa;',
+  'vec3 p = vec3(0.0, 0.0, r) + dir * (0.5 * (sa + sb));',
+  'float rp = length(p), mu = dot(p, sunDir) / rp;',
+  'vec3 S = (m.scatR * pr + vec3(m.scatM * pm)) * sunlight(rp, mu) + (m.scatR + vec3(m.scatM)) * multiScatter(rp, mu);',
+  'E += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));',
+  'E *= PI / float(SQ * SQ);',
+];
+
+// The tables the passes read, in float64 and read bilinearly as the GPU reads them: the transmittance
+// (here 512 x 128, finer than the GPU's 256 x 64) and MULTISCATTER_FRAG's 32 x 32, ported line by line.
+const H_TOP = Math.sqrt((RT - RG) * (RT + RG));
+function bilerp(tab: V[], w: number, h: number, u: number, v: number): V {
+  const x = Math.min(w - 1, Math.max(0, u * w - 0.5)), y = Math.min(h - 1, Math.max(0, v * h - 0.5));
+  const x0 = Math.floor(x), y0 = Math.floor(y), x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1), fx = x - x0, fy = y - y0;
+  const a = tab[y0 * w + x0], b = tab[y0 * w + x1], c = tab[y1 * w + x0], d = tab[y1 * w + x1];
+  return [0, 1, 2].map((k) => (a[k] * (1 - fx) + b[k] * fx) * (1 - fy) + (c[k] * (1 - fx) + d[k] * fx) * fy) as V;
+}
+let transTab: V[] | null = null;
+function transmittanceT(r: number, mu: number): V {
+  if (!transTab) {
+    transTab = [];
+    for (let j = 0; j < 128; j++) for (let i = 0; i < 512; i++) {
+      const u = (i + 0.5) / 512, rho = H_TOP * (j + 0.5) / 128, rr = Math.sqrt(rho * rho + RG * RG);
+      const dmin = RT - rr, dd = dmin + u * (rho + H_TOP - dmin);
+      transTab.push(transmittance(rr, Math.min(1, Math.max(-1, (H_TOP * H_TOP - rho * rho - dd * dd) / (2 * rr * dd)))));
+    }
+  }
+  const rho = Math.sqrt(Math.max(0, (r - RG) * (r + RG)));
+  const dd = Math.max(0, -r * mu + Math.sqrt(Math.max(0, r * r * mu * mu + (RT - r) * (RT + r))));
+  return bilerp(transTab, 512, 128, (dd - (RT - r)) / Math.max(rho + H_TOP - (RT - r), 1), rho / H_TOP);
+}
+function sunlightT(r: number, muS: number): V {
+  const muH = -Math.sqrt(Math.max(0, (r - RG) * (r + RG)) / (r * r)), vis = smooth(muH - 0.004, muH + 0.004, muS);
+  return vis === 0 ? [0, 0, 0] : transmittanceT(r, Math.max(muS, muH + 0.004)).map((x) => vis * x) as V;
+}
+const hitsGround = (r: number, mu: number) => mu < 0 && r * r * mu * mu + (RG - r) * (RG + r) >= 0;
+function toSphere(r: number, mu: number, R: number): number {
+  const disc = r * r * mu * mu + (R - r) * (R + r);
+  if (disc < 0) return -1;
+  const q = Math.sqrt(disc), d0 = -r * mu - q, d1 = -r * mu + q;
+  return d0 > 0 ? d0 : (d1 > 0 ? d1 : -1);
+}
+let psiTab: V[] | null = null;
+function multiScatter(r: number, muS: number): V {
+  if (!psiTab) {
+    psiTab = [];
+    for (let j = 0; j < 32; j++) for (let i = 0; i < 32; i++) {
+      const mS = (i + 0.5) / 32 * 2 - 1, rr = RG + (j + 0.5) / 32 * (RT - RG), sun: V = [Math.sqrt(Math.max(0, 1 - mS * mS)), 0, mS];
+      const L2: V = [0, 0, 0], fms: V = [0, 0, 0];
+      for (let a = 0; a < 8; a++) for (let b = 0; b < 8; b++) {
+        const th = Math.PI * (a + 0.5) / 8, ph = Math.acos(1 - 2 * (b + 0.5) / 8);
+        const dir: V = [Math.cos(th) * Math.sin(ph), Math.sin(th) * Math.sin(ph), Math.cos(ph)];
+        const dG = hitsGround(rr, dir[2]) ? toSphere(rr, dir[2], RG) : -1, dd = dG > 0 ? dG : toSphere(rr, dir[2], RT);
+        if (dd <= 0) continue;
+        const T: V = [1, 1, 1], dt = dd / 20;
+        for (let q = 0; q < 20; q++) {
+          const t = (q + 0.5) * dt, p: V = [dir[0] * t, dir[1] * t, rr + dir[2] * t], rp = Math.hypot(...p), m = medium(rp - RG);
+          const mu = dot(p, sun) / rp, Ts = hitsGround(rp, mu) ? [0, 0, 0] : transmittanceT(rp, mu);
+          for (let k = 0; k < 3; k++) {
+            const S = m.scatR[k] + m.scatM, stepT = Math.exp(-m.ext[k] * dt), integ = (1 - stepT) / Math.max(m.ext[k], 1e-12);
+            L2[k] += T[k] * integ * S * Ts[k] / (4 * Math.PI);
+            fms[k] += T[k] * integ * S;
+            T[k] *= stepT;
+          }
+        }
+        if (dG > 0) {
+          const p = unit([dir[0] * dG, dir[1] * dG, rr + dir[2] * dG]), c = Math.max(0, dot(p, sun)), Tg = transmittanceT(RG + 1, c);
+          for (let k = 0; k < 3; k++) L2[k] += T[k] * Tg[k] * c * 0.3 / Math.PI;
+        }
+      }
+      psiTab.push([0, 1, 2].map((k) => (L2[k] / 64) / Math.max(1 - fms[k] / 64, 1e-3)) as V);
+    }
+  }
+  return bilerp(psiTab, 32, 32, muS * 0.5 + 0.5, (r - RG) / (RT - RG));
+}
+/**
+ * SKYLIGHT_FRAG's texel at radius r and sun cosine muS, with sq x sq directions and n steps (8 and 16 in the
+ * shader); with many more, the fine integral it is checked against.
+ */
+function skyLight(r: number, muS: number, sq: number, n: number): V {
+  const sun: V = [Math.sqrt(Math.max(0, 1 - muS * muS)), 0, muS], E: V = [0, 0, 0];
+  for (let a = 0; a < sq; a++) for (let b = 0; b < sq; b++) {
+    const u = (a + 0.5) / sq, st = Math.sqrt(u), ph = Math.PI * (b + 0.5) / sq;
+    const dir: V = [st * Math.cos(ph), st * Math.sin(ph), Math.sqrt(1 - u)];
+    const d = Math.max(toSphere(r, dir[2], RT), 0), c = dot(dir, sun), pr = rayleighPhase(c), pm = miePhase(c);
+    const T: V = [1, 1, 1];
+    let sa = 0;
+    for (let i = 0; i < n; i++) {
+      const x = (i + 1) / n, sb = x * x * d, dt = sb - sa, t = 0.5 * (sa + sb);
+      sa = sb;
+      const p: V = [dir[0] * t, dir[1] * t, r + dir[2] * t], rp = Math.hypot(...p), mu = dot(p, sun) / rp;
+      const m = medium(rp - RG), Ts = sunlightT(rp, mu), ms = multiScatter(rp, mu);
+      for (let k = 0; k < 3; k++) {
+        const S = (m.scatR[k] * pr + m.scatM * pm) * Ts[k] + (m.scatR[k] + m.scatM) * ms[k], stepT = Math.exp(-m.ext[k] * dt);
+        E[k] += T[k] * S * (1 - stepT) / Math.max(m.ext[k], 1e-12);
+        T[k] *= stepT;
+      }
+    }
+  }
+  return E.map((x) => Math.PI * x / (sq * sq)) as V;
+}
+/** `daylight` on level ground (cosN = muS), the tables read as the GPU reads them */
+function daylight(r: number, muS: number): V {
+  const s = sunlightT(r, muS), sky = skyLight(r, muS, 8, 16), sn = sunlightT(r, 1), skyN = skyLight(r, 1, 8, 16);
+  return [0, 1, 2].map((k) => (Math.max(muS, 0) * s[k] + sky[k]) / (sn[k] + skyN[k])) as V;
+}
+const ELEVATIONS = [90, 60, 40, 20, 10, 5, 2, 0, -2, -4];
+
+describe('the sky\'s light on a level surface, which lights the ground with the sun', () => {
+  it('is a table the scattering sky fills after the multiple scattering it reads, as replayed here', () => {
+    gpu.frags.length = 0;
+    const { sm } = build(true);
+    at(sm, 400e3);
+    const at8 = gpu.frags.findIndex((f) => f.includes('const int SQ = 8, N = 16;'));
+    expect(at8).toBeGreaterThan(gpu.frags.findIndex((f) => f.includes('const int SQ = 8, N = 20;')));
+    expect(gpu.frags.findIndex((f) => f.includes('const int SQ = 8, N = 20;'))).toBeGreaterThan(-1);
+    for (const line of SKYLIGHT_LINES) expect(gpu.frags[at8], line).toContain(line);
+  });
+
+  it('matches a fine integral of the same model on the ground and at the cloud tops', () => {
+    for (const h of [0, 9000]) {
+      const r = RG + h, ref1 = skyLight(r, 1, 32, 200), sn = sunlightT(r, 1);
+      let worst = 0;
+      for (const el of ELEVATIONS) {
+        const mu = Math.sin(el * Math.PI / 180), got = skyLight(r, mu, 8, 16), ref = skyLight(r, mu, 32, 200);
+        // the error in the light on the ground, as a share of noon's (sun and sky)
+        worst = Math.max(worst, ...[0, 1, 2].map((k) => Math.abs(got[k] - ref[k]) / (sn[k] + ref1[k])));
+      }
+      console.log(`sky light, ${h} m: worst error ${(100 * worst).toFixed(2)} % of noon's light`);
+      // measured: 0.33 % on the ground, 0.21 % at 9 km
+      expect(worst, `${h} m`).toBeLessThan(0.005);
+    }
+  }, 60000);
+
+  it('keeps level ground as it was at noon, white under a middle sun, and dark once the twilight is over', () => {
+    const white = (c: V): V => c.map((x) => 0.09 + 0.95 * x) as V;
+    const noon = daylight(RG, 1);
+    for (const c of noon) expect(c).toBeCloseTo(1, 12);
+    const mu20 = Math.sin(20 * Math.PI / 180);
+    const sunOnly = white(sunColour(RG, mu20).map((x) => x * mu20) as V), withSky = white(daylight(RG, mu20));
+    console.log(`white ground, sun 20 deg up: sun only B/R ${(sunOnly[2] / sunOnly[0]).toFixed(3)}, with the sky ${(withSky[2] / withSky[0]).toFixed(3)}`);
+    // measured: 0.749 with the sun alone, 0.889 with the sky
+    expect(sunOnly[2] / sunOnly[0]).toBeLessThan(0.76);
+    expect(withSky[2] / withSky[0]).toBeGreaterThan(0.88);
+    // the twilight sky still lights the ground a little after sunset, and nothing does once it is over
+    expect(Math.max(...daylight(RG, Math.sin(-2 * Math.PI / 180)))).toBeGreaterThan(0);
+    expect(Math.max(...daylight(RG, Math.sin(-8 * Math.PI / 180)))).toBeLessThan(1e-3);
+  }, 60000);
 });
 
 // ------------------------------------------------------------------ the segment's ends, in float32
