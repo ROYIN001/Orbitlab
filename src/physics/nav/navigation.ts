@@ -6,12 +6,19 @@
  * gyros and accelerometers measure, with their errors (src/physics/nav/sensors.ts)
  * — and integrates them in a strapdown mechanisation in the Earth-centred
  * inertial frame, with the same J2 gravity the simulation flies. An
- * error-state extended Kalman filter carries the covariance of 21 errors —
- * position, velocity, attitude, and the gyros' and accelerometers' biases and
- * scale factors — and corrects
- * the solution with GNSS position and velocity fixes and star-tracker
- * attitudes when they come (Groves, *Principles of GNSS, Inertial, and
- * Multisensor Integrated Navigation Systems*, 2nd ed., §14.2 and §5.2).
+ * error-state extended Kalman filter carries the covariance of 27 errors —
+ * position, velocity, attitude, and the gyros' and accelerometers' turn-on
+ * biases, in-run biases and scale factors — and corrects the solution with
+ * GNSS position and velocity fixes and star-tracker attitudes when they come
+ * (Groves, *Principles of GNSS, Inertial, and Multisensor Integrated
+ * Navigation Systems*, 2nd ed., §14.2 and §5.2).
+ *
+ * Each sensor's bias is the sum of two, in the truth and in the filter alike
+ * (Groves ch. 4 and §14.2): the turn-on bias, drawn at power-up and constant
+ * through the flight (a random constant: no dynamics, no process noise), and
+ * the in-run bias, a first-order Gauss–Markov process of the bias
+ * instability's size with τ = 300 s. Between fixes the filter holds its
+ * estimate of the first and relaxes its estimate of the second with e^(−dt/τ).
  *
  * Errors are true less estimated: δr = r − r̂, δv = v − v̂, and the attitude
  * error φ an ECI rotation with C = (I + [φ×]) Ĉ; the biases and scale factors
@@ -49,7 +56,7 @@ export interface NavigationRecord {
   positionSigma: Vec3;
   velocitySigma: Vec3;
   attitudeSigma: Vec3;
-  /** Gyro bias, rad/s, and accelerometer bias, m/s², true and estimated (body axes). */
+  /** Gyro bias, rad/s, and accelerometer bias, m/s², true and estimated (body axes): turn-on and in-run together. */
   gyroBias: Vec3;
   gyroBiasEstimate: Vec3;
   accelBias: Vec3;
@@ -60,7 +67,8 @@ export interface NavigationRecord {
   innovation: { position?: number; velocity?: number; attitude?: number };
 }
 
-const N = 21, R = 0, V = 3, PHI = 6, BG = 9, BA = 12, SG = 15, SA = 18;
+/** The error state: position, velocity, attitude; the gyros' and accelerometers' turn-on biases, in-run biases, scale factors. */
+const N = 27, R = 0, V = 3, PHI = 6, BG_ON = 9, BA_ON = 12, BG_RUN = 15, BA_RUN = 18, SG = 21, SA = 24;
 /** Velocity process noise per unit of specific force, 1/√s: the filter's tuning margin under thrust. */
 const THRUST_NOISE = 1e-4;
 const axes = (v: Vec3) => [v.x, v.y, v.z];
@@ -101,9 +109,11 @@ export class NavigationSystem {
   private readonly noise: NormalStream;
   private readonly imu: ImuSpec;
   private readonly aiding: AidingSpec;
-  // Truth of the sensors.
-  private gyroBias: Vec3 = v3();
-  private accelBias: Vec3 = v3();
+  // Truth of the sensors: each bias a turn-on part, constant, and an in-run part that wanders.
+  private gyroBiasOn: Vec3 = v3();
+  private gyroBiasRun: Vec3 = v3();
+  private accelBiasOn: Vec3 = v3();
+  private accelBiasRun: Vec3 = v3();
   private gyroScale: Vec3 = v3();
   private accelScale: Vec3 = v3();
   // The solution.
@@ -111,8 +121,10 @@ export class NavigationSystem {
   private r: Vec3 = v3();
   private v: Vec3 = v3();
   private q: Quat = { w: 1, x: 0, y: 0, z: 0 };
-  private bg: Vec3 = v3();
-  private ba: Vec3 = v3();
+  private bgOn: Vec3 = v3();
+  private bgRun: Vec3 = v3();
+  private baOn: Vec3 = v3();
+  private baRun: Vec3 = v3();
   private sg: Vec3 = v3();
   private sa: Vec3 = v3();
   private omega: Vec3 = v3();
@@ -120,8 +132,15 @@ export class NavigationSystem {
   private omegaNoise = 0;
   private readonly P = new Float64Array(N * N);
   private readonly F = new Float64Array(N * N);
-  private readonly Phi = new Float64Array(N * N);
   private readonly work = new Float64Array(N * N);
+  /** Φ's non-zero entries row by row (at most 99 of its 729), and the process noise's diagonal. */
+  private readonly phiRow = new Int32Array(N + 1);
+  private readonly phiCol = new Int32Array(N * N);
+  private readonly phiVal = new Float64Array(N * N);
+  private readonly qd = new Float64Array(N);
+  /** The scalar updates' correction, and the covariance's column they work with. */
+  private readonly dx = new Float64Array(N);
+  private readonly column = new Float64Array(N);
   // The previous update's truth, for the IMU's increments.
   private last?: { t: number; r: Vec3; v: Vec3; q: Quat };
   private nextGnss = -Infinity;
@@ -147,11 +166,14 @@ export class NavigationSystem {
     };
   }
 
-  /** Aligned on the pad: the truth, with the alignment's and the survey's errors, and the sensors' turn-on errors drawn. */
+  /**
+   * Aligned on the pad: the truth, with the alignment's and the survey's errors, and the sensors' errors drawn —
+   * the turn-on biases for the whole flight, the in-run biases from their steady spread.
+   */
   private initialise(t: number, r: Vec3, v: Vec3, q: Quat): void {
     const s = this.sig;
-    this.gyroBias = this.gauss(Math.hypot(s.gTurnOn, s.gInstab));
-    this.accelBias = this.gauss(Math.hypot(s.aTurnOn, s.aInstab));
+    this.gyroBiasOn = this.gauss(s.gTurnOn);
+    this.accelBiasOn = this.gauss(s.aTurnOn);
     this.gyroScale = this.gauss(this.imu.gyroScalePpm * 1e-6);
     this.accelScale = this.gauss(this.imu.accelScalePpm * 1e-6);
     const posSigma = 1, velSigma = 0.01;
@@ -159,13 +181,18 @@ export class NavigationSystem {
     this.r = add(r, this.gauss(posSigma));
     this.v = add(v, this.gauss(velSigma));
     this.q = quatNormalize(quatMultiply(expQ(this.gauss(s.align)), q));
-    this.bg = v3(); this.ba = v3(); this.sg = v3(); this.sa = v3();
+    this.gyroBiasRun = this.gauss(s.gInstab);
+    this.accelBiasRun = this.gauss(s.aInstab);
+    this.bgOn = v3(); this.bgRun = v3(); this.baOn = v3(); this.baRun = v3(); this.sg = v3(); this.sa = v3();
     this.P.fill(0);
-    const diag = [posSigma, posSigma, posSigma, velSigma, velSigma, velSigma, s.align, s.align, s.align,
-      ...Array(3).fill(Math.hypot(s.gTurnOn, s.gInstab)), ...Array(3).fill(Math.hypot(s.aTurnOn, s.aInstab)),
-      ...Array(3).fill(this.imu.gyroScalePpm * 1e-6), ...Array(3).fill(this.imu.accelScalePpm * 1e-6)];
-    diag.forEach((d, i) => { this.P[i * N + i] = Math.max(d * d, 1e-30); });
+    const sigma0: [number, number][] = [[R, posSigma], [V, velSigma], [PHI, s.align], [BG_ON, s.gTurnOn], [BA_ON, s.aTurnOn],
+      [BG_RUN, s.gInstab], [BA_RUN, s.aInstab], [SG, this.imu.gyroScalePpm * 1e-6], [SA, this.imu.accelScalePpm * 1e-6]];
+    for (const [at, d] of sigma0) for (let i = at; i < at + 3; i++) this.P[i * N + i] = Math.max(d * d, 1e-30);
   }
+
+  /** The true biases: turn-on and in-run together. */
+  private get gyroBias(): Vec3 { return add(this.gyroBiasOn, this.gyroBiasRun); }
+  private get accelBias(): Vec3 { return add(this.accelBiasOn, this.accelBiasRun); }
 
   /**
    * What the autopilot reads at `t`: the navigation's attitude and bias-corrected rate. The first
@@ -203,11 +230,21 @@ export class NavigationSystem {
   get rate(): Vec3 { return this.omega; }
   /** 1σ of the white noise in that rate, rad/s: the gyro's random walk over the step it was read over. */
   get rateNoise(): number { return this.omegaNoise; }
+  /**
+   * The turn-on biases alone, true and estimated, with the filter's 1σ of each estimate (body axes; rad/s for the
+   * gyros, m/s² for the accelerometers): how far the filter has told the part that stays from the part that wanders.
+   */
+  get turnOnBiases(): { gyro: Vec3; gyroEstimate: Vec3; gyroSigma: Vec3; accel: Vec3; accelEstimate: Vec3; accelSigma: Vec3 } {
+    const sigma = (at: number) => v3(Math.sqrt(this.P[at * N + at]), Math.sqrt(this.P[(at + 1) * N + at + 1]), Math.sqrt(this.P[(at + 2) * N + at + 2]));
+    return { gyro: { ...this.gyroBiasOn }, gyroEstimate: { ...this.bgOn }, gyroSigma: sigma(BG_ON),
+      accel: { ...this.accelBiasOn }, accelEstimate: { ...this.baOn }, accelSigma: sigma(BA_ON) };
+  }
 
   private propagate(t: number, v: Vec3, q: Quat): void {
     const last = this.last!, dt = t - last.t, s = this.sig;
     // The IMU: the true rotation and the true non-gravitational velocity change (the velocity
-    // less free fall from the last state), with scale factor, bias and noise; the in-run biases wander.
+    // less free fall from the last state), with scale factor, bias and noise; the in-run biases wander
+    // (exactly for any step: decay e^(−dt/τ), and noise that keeps their spread at the instability).
     const dThetaTrue = rotationVector(quatMultiply(conj(last.q), q));
     const dvSfEci = sub(v, freeFall(last.r, last.v, dt).v);
     const dvTrue = quatRotate(conj(quatSlerp(last.q, q, 0.5)), dvSfEci);
@@ -218,17 +255,19 @@ export class NavigationSystem {
     const fault = this.faults?.increment(last.t, t);
     if (fault) { dTheta = add(dTheta, fault.dTheta); dV = add(dV, fault.dV); }
     const decay = Math.exp(-dt / BIAS_CORRELATION_S), drive = Math.sqrt(1 - decay * decay);
-    this.gyroBias = add(scale(this.gyroBias, decay), this.gauss(s.gInstab * drive));
-    this.accelBias = add(scale(this.accelBias, decay), this.gauss(s.aInstab * drive));
+    this.gyroBiasRun = add(scale(this.gyroBiasRun, decay), this.gauss(s.gInstab * drive));
+    this.accelBiasRun = add(scale(this.accelBiasRun, decay), this.gauss(s.aInstab * drive));
     // Strapdown: attitude; the specific force at mid-step; position and velocity as free fall plus it.
-    const dThetaHat = sub(sub(dTheta, scale(this.bg, dt)), mul(this.sg, dTheta)), dVHat = sub(sub(dV, scale(this.ba, dt)), mul(this.sa, dV));
-    // The bias estimates relax as the biases do: the filter's δḃ = −δb/τ holds only if b̂ follows b̂˙ = −b̂/τ.
-    this.bg = scale(this.bg, decay); this.ba = scale(this.ba, decay);
+    const bg = add(this.bgOn, this.bgRun), ba = add(this.baOn, this.baRun);
+    const dThetaHat = sub(sub(dTheta, scale(bg, dt)), mul(this.sg, dTheta)), dVHat = sub(sub(dV, scale(ba, dt)), mul(this.sa, dV));
+    // The estimates follow the model: the turn-on biases' are held, the in-run biases' relax as those biases do
+    // (the filter's δḃ = −δb/τ holds only if b̂ follows b̂˙ = −b̂/τ).
+    this.bgRun = scale(this.bgRun, decay); this.baRun = scale(this.baRun, decay);
     const qMid = quatMultiply(this.q, expQ(scale(dThetaHat, 0.5)));
     const q1 = quatNormalize(quatMultiply(this.q, expQ(dThetaHat)));
     const dvEci = quatRotate(qMid, dVHat), fall = freeFall(this.r, this.v, dt);
     const v1 = add(fall.v, dvEci), r1 = add(fall.r, scale(dvEci, dt / 2));
-    // The covariance, in steps of at most a second: Φ = I + F h, plus Q h.
+    // The covariance, in steps of at most a second: Φ = I + F h, plus Q h. Both parts of a bias enter alike.
     const fb = axes(scale(dVHat, 1 / dt)), wb = axes(scale(dThetaHat, 1 / dt));
     const C = quatToMatrix(qMid), f = axes(scale(dvEci, 1 / dt)), rm = norm(this.r), gg = MU_EARTH / (rm * rm * rm), rh = axes(scale(this.r, 1 / rm));
     const F = this.F;
@@ -238,13 +277,15 @@ export class NavigationSystem {
       set(R + k, V + k, 1);
       for (let j = 0; j < 3; j++) {
         set(V + k, R + j, gg * (3 * rh[k] * rh[j] - (k === j ? 1 : 0)));   // gravity gradient
-        set(V + k, BA + j, -C[k * 3 + j]);                                  // δv̇ = … − C δb_a
-        set(PHI + k, BG + j, -C[k * 3 + j]);                                // φ̇ = −C δb_g
+        set(V + k, BA_ON + j, -C[k * 3 + j]);                               // δv̇ = … − C (δb_a,on + δb_a,run)
+        set(V + k, BA_RUN + j, -C[k * 3 + j]);
+        set(PHI + k, BG_ON + j, -C[k * 3 + j]);                             // φ̇ = −C (δb_g,on + δb_g,run)
+        set(PHI + k, BG_RUN + j, -C[k * 3 + j]);
         set(V + k, SA + j, -C[k * 3 + j] * fb[j]);                          //       − C diag(f) δs_a
         set(PHI + k, SG + j, -C[k * 3 + j] * wb[j]);                        //       − C diag(ω) δs_g
       }
-      set(BG + k, BG + k, -1 / BIAS_CORRELATION_S);
-      set(BA + k, BA + k, -1 / BIAS_CORRELATION_S);
+      set(BG_RUN + k, BG_RUN + k, -1 / BIAS_CORRELATION_S);                // δḃ_run = −δb_run/τ; δḃ_on = 0
+      set(BA_RUN + k, BA_RUN + k, -1 / BIAS_CORRELATION_S);
     }
     // δv̇ = −[f×] φ
     set(V + 0, PHI + 1, f[2]); set(V + 0, PHI + 2, -f[1]);
@@ -252,18 +293,31 @@ export class NavigationSystem {
     set(V + 2, PHI + 0, f[1]); set(V + 2, PHI + 1, -f[0]);
     // The filter's tuning margin under thrust: velocity noise of 10⁻⁴ of the specific force per √s, for
     // what it leaves out (vibration, the step's discretisation, misalignment).
-    const margin = (THRUST_NOISE * norm(dvEci) / dt) ** 2;
-    const qd = [0, 0, 0, s.aVrw ** 2 + margin, s.aVrw ** 2 + margin, s.aVrw ** 2 + margin, s.gArw ** 2, s.gArw ** 2, s.gArw ** 2,
-      ...Array(3).fill(2 * s.gInstab ** 2 / BIAS_CORRELATION_S), ...Array(3).fill(2 * s.aInstab ** 2 / BIAS_CORRELATION_S), 0, 0, 0, 0, 0, 0];
-    const steps = Math.max(1, Math.ceil(dt / 1)), h = dt / steps, P = this.P, Phi = this.Phi, W = this.work;
-    for (let i = 0; i < N * N; i++) Phi[i] = F[i] * h;
-    for (let i = 0; i < N; i++) Phi[i * N + i] += 1;
+    const margin = (THRUST_NOISE * norm(dvEci) / dt) ** 2, qd = this.qd;
+    for (let k = 0; k < 3; k++) {
+      qd[V + k] = s.aVrw ** 2 + margin;
+      qd[PHI + k] = s.gArw ** 2;
+      qd[BG_RUN + k] = 2 * s.gInstab ** 2 / BIAS_CORRELATION_S;
+      qd[BA_RUN + k] = 2 * s.aInstab ** 2 / BIAS_CORRELATION_S;
+    }
+    const steps = Math.max(1, Math.ceil(dt / 1)), h = dt / steps, P = this.P, W = this.work;
+    const row = this.phiRow, col = this.phiCol, val = this.phiVal;
+    let nz = 0;
+    for (let i = 0; i < N; i++) {
+      row[i] = nz;
+      for (let j = 0; j < N; j++) { const a = F[i * N + j] * h + (i === j ? 1 : 0); if (a !== 0) { col[nz] = j; val[nz++] = a; } }
+    }
+    row[N] = nz;
     for (let step = 0; step < steps; step++) {
+      // W = Φ P, then P = W Φᵀ over Φ's non-zero entries: the upper triangle, mirrored, for P is symmetric.
       W.fill(0);
-      for (let i = 0; i < N; i++) for (let k = 0; k < N; k++) { const a = Phi[i * N + k]; if (a === 0) continue; for (let j = 0; j < N; j++) W[i * N + j] += a * P[k * N + j]; }
-      P.fill(0);
-      for (let i = 0; i < N; i++) for (let k = 0; k < N; k++) { const a = W[i * N + k]; if (a === 0) continue; for (let j = 0; j < N; j++) P[i * N + j] += a * Phi[j * N + k]; }
-      qd.forEach((qq, i) => { P[i * N + i] += qq * h; });
+      for (let i = 0; i < N; i++) for (let p = row[i]; p < row[i + 1]; p++) { const a = val[p], k = col[p] * N; for (let j = 0; j < N; j++) W[i * N + j] += a * P[k + j]; }
+      for (let i = 0; i < N; i++) for (let j = i; j < N; j++) {
+        let sum = 0;
+        for (let p = row[j]; p < row[j + 1]; p++) sum += W[i * N + col[p]] * val[p];
+        P[i * N + j] = sum; P[j * N + i] = sum;
+      }
+      for (let i = 0; i < N; i++) P[i * N + i] += qd[i] * h;
     }
     this.q = q1; this.v = v1; this.r = r1; this.t = t;
     this.omega = scale(dThetaHat, 1 / dt);
@@ -274,11 +328,11 @@ export class NavigationSystem {
 
   /** GNSS fixes and star-tracker attitudes that are due, as scalar updates; then the correction folded in. */
   private aid(t: number, r: Vec3, v: Vec3, q: Quat, omegaBody: Vec3): void {
-    const a = this.aiding, x = new Float64Array(N);
+    const a = this.aiding, x = this.dx.fill(0), pi = this.column;
     let updated = false;
     const lost = this.faults?.aidingLost(t);
     const update = (index: number, residual: number, variance: number) => {
-      const P = this.P, S = P[index * N + index] + variance, pi = new Float64Array(N);
+      const P = this.P, S = P[index * N + index] + variance;
       for (let k = 0; k < N; k++) pi[k] = P[k * N + index];
       const z = residual - x[index];
       for (let k = 0; k < N; k++) x[k] += (pi[k] / S) * z;
@@ -312,8 +366,10 @@ export class NavigationSystem {
     this.r = add(this.r, vec(x, R));
     this.v = add(this.v, vec(x, V));
     this.q = quatNormalize(quatMultiply(expQ(vec(x, PHI)), this.q));
-    this.bg = add(this.bg, vec(x, BG));
-    this.ba = add(this.ba, vec(x, BA));
+    this.bgOn = add(this.bgOn, vec(x, BG_ON));
+    this.bgRun = add(this.bgRun, vec(x, BG_RUN));
+    this.baOn = add(this.baOn, vec(x, BA_ON));
+    this.baRun = add(this.baRun, vec(x, BA_RUN));
     this.sg = add(this.sg, vec(x, SG));
     this.sa = add(this.sa, vec(x, SA));
   }
@@ -338,7 +394,7 @@ export class NavigationSystem {
       positionError: inAxes(sub(truth.r, this.r), [rh, sh, wh]), velocityError: inAxes(sub(truth.v, this.v), [rh, sh, wh]),
       attitudeError: inAxes(phi, body),
       positionSigma: sigmaIn(R, [rh, sh, wh]), velocitySigma: sigmaIn(V, [rh, sh, wh]), attitudeSigma: sigmaIn(PHI, body),
-      gyroBias: { ...this.gyroBias }, gyroBiasEstimate: { ...this.bg }, accelBias: { ...this.accelBias }, accelBiasEstimate: { ...this.ba },
+      gyroBias: this.gyroBias, gyroBiasEstimate: add(this.bgOn, this.bgRun), accelBias: this.accelBias, accelBiasEstimate: add(this.baOn, this.baRun),
       gnss: this.status.gnss, starTracker: this.status.star, innovation: { ...this.innovation },
     };
   }

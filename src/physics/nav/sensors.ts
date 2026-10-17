@@ -2,19 +2,21 @@
  * The navigation sensors of roadmap G02: the inertial measurement unit's error
  * model and its grades, the GNSS receiver and the star tracker.
  *
- * Gyro and accelerometer per axis: a turn-on bias, an in-run bias that wanders
- * as a first-order Gauss–Markov process (the "bias instability"), a scale-factor
- * error, and white noise given as angle and velocity random walk. The grades
- * are textbook orders of magnitude (Groves, *Principles of GNSS, Inertial, and
- * Multisensor Integrated Navigation Systems*, 2nd ed., ch. 4): a ring-laser
- * navigation-grade unit, a fibre-optic tactical-grade unit, a MEMS unit.
+ * Gyro and accelerometer per axis: a turn-on bias, drawn at power-up and
+ * constant for the flight; an in-run bias on top of it that wanders as a
+ * first-order Gauss–Markov process (the "bias instability", with
+ * BIAS_CORRELATION_S); a scale-factor error; and white noise given as angle and
+ * velocity random walk (Groves, *Principles of GNSS, Inertial, and Multisensor
+ * Integrated Navigation Systems*, 2nd ed., ch. 4 and §14.2). The grades are
+ * textbook orders of magnitude (Groves ch. 4): a ring-laser navigation-grade
+ * unit, a fibre-optic tactical-grade unit, a MEMS unit.
  */
 export type ImuGrade = 'navigation' | 'tactical' | 'mems';
 export const IMU_GRADES: readonly ImuGrade[] = ['navigation', 'tactical', 'mems'];
 
 /** An IMU's errors, in the units data sheets give them. */
 export interface ImuSpec {
-  /** gyro: turn-on bias, deg/h (1σ); in-run bias instability, deg/h, with its correlation time, s */
+  /** gyro: turn-on bias, deg/h (1σ, constant for the flight); in-run bias instability, deg/h (1σ, correlated over BIAS_CORRELATION_S) */
   gyroBiasDegH: number;
   gyroBiasInstabilityDegH: number;
   /** angle random walk, deg/√h */
@@ -38,7 +40,7 @@ export const IMU_PRESETS: Readonly<Record<ImuGrade, Readonly<ImuSpec>>> = {
   mems: { gyroBiasDegH: 30, gyroBiasInstabilityDegH: 5, gyroArwDegRtH: 0.3, gyroScalePpm: 1000,
     accelBiasUg: 5000, accelBiasInstabilityUg: 200, accelVrwMsRtH: 0.2, accelScalePpm: 2000, alignmentDeg: 0.3 },
 };
-/** Correlation time of the in-run biases, s. */
+/** Correlation time of the in-run biases (the Gauss–Markov process's τ), s. */
 export const BIAS_CORRELATION_S = 300;
 
 /** Accepted ranges of each figure (the panel's and the tools'). */

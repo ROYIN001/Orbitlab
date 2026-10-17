@@ -3976,7 +3976,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'setup.nav.outageEnd': 'GNSS outage until (s)',
   'setup.nav.seed': 'Sensor random seed',
   'nav.none': 'This flight has no navigation system: it knows its true state. Turn one on in the mission setup (Engineer mode, six-DOF: Navigation).',
-  'nav.note': 'True less estimated, against the ±3σ the filter claims (dashed): position and velocity in the true orbit\'s radial, along-track and cross-track axes; attitude in the notation\'s axes. A 21-state error-state Kalman filter (errors of position, velocity, attitude, and the sensors\' biases and scale factors). Air data (the relative wind for the load relief) stay true; planning and steering the in-orbit burns still read the truth.',
+  'nav.note': 'True less estimated, against the ±3σ the filter claims (dashed): position and velocity in the true orbit\'s radial, along-track and cross-track axes; attitude in the notation\'s axes. A 27-state error-state Kalman filter (errors of position, velocity, attitude, and the sensors\' biases — the turn-on part, constant, and the in-run part, wandering — and scale factors). Air data (the relative wind for the load relief) stay true; planning and steering the in-orbit burns still read the truth.',
   'nav.radial': 'radial',
   'nav.along': 'along-track',
   'nav.cross': 'cross-track',
