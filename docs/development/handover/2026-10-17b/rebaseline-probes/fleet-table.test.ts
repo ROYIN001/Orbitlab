@@ -1,0 +1,24 @@
+/** Probe: every point-mass fleet row (allCases), with its exclusion, verdict, orbit, Δv left and insertion time. */
+import { it } from 'vitest';
+import { appendFileSync, writeFileSync } from 'node:fs';
+import {
+  allCases, flyCase, caseKey, acceptanceFailures, achievedElements, insertionTime,
+  SITE_GEOMETRY, BEYOND_CAPABILITY, ARCHITECTURE, KNOWN_GUIDANCE_FAILURES,
+} from '../fleet-harness';
+import { RAD } from '../../src/physics/constants';
+const OUT = process.env.PROBE_OUT ?? 'fleet-table.tsv';
+const [k, n] = (process.env.SHARD ?? '0/1').split('/').map(Number);
+it('fleet table', { timeout: 7_200_000 }, () => {
+  writeFileSync(OUT, '');
+  allCases().forEach((c, idx) => {
+    if (idx % n !== k) return;
+    const key = caseKey(c);
+    const excl = SITE_GEOMETRY[key] ? 'site' : BEYOND_CAPABILITY[key] ? 'capability' : ARCHITECTURE[key] ? 'architecture' : KNOWN_GUIDANCE_FAILURES[key] ? 'guidance' : '';
+    const t0 = Date.now();
+    const sim = flyCase(c);
+    const fails = acceptanceFailures(sim, c);
+    const el = achievedElements(sim);
+    appendFileSync(OUT, [key, excl, fails.length === 0 ? 'OK' : 'no', (el.periapsisAlt / 1e3).toFixed(1), (el.apoapsisAlt / 1e3).toFixed(1),
+      (el.i * RAD).toFixed(2), sim.vehicle.deltaVRemaining().toFixed(0), insertionTime(sim).toFixed(0), fails.join(';'), ((Date.now() - t0) / 1e3).toFixed(0)].join('\t') + '\n');
+  });
+});

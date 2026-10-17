@@ -1,0 +1,2 @@
+moon: 372 rows; 5-pt d/dt(r) vs v worst 2.05e-4 m/s (row 63); trapezoid+correction r(i+1) worst 14.80 m; |r| 357923.2..403957.3 km; series worst 382 km at row 323 (old span 300 km), distance worst 292 km, direction worst 3.14 arcmin
+sun: 372 rows; 5-pt d/dt(r) vs v worst 2.23e-4 m/s (row 31); trapezoid+correction r(i+1) worst 1.93 m; |r| 1.014909..1.016398 AU; series worst 275187 km at row 371 (old span 271333 km), distance worst 5476 km, direction worst 6.23 arcmin
