@@ -4152,3 +4152,70 @@ of about nine; the journeys' under a load of about seventeen.
 When a test fails, its message prints the whole comparison table for that flight. If the change
 behind it is intended, update the disagreement list in the test and the tables and findings here
 in the same commit.
+
+### The re-baseline of 2026-10-17: sites on WGS-84, J2 from the pad to the orbit, and the nozzle
+
+Two decisions of the owner on 2026-10-17 change every flight, and are measured here together
+([DECISIONS.md](DECISIONS.md)). **D-51:** the launch sites on WGS-84 and J2 in the point-mass ascent,
+together ("ทำพร้อมกัน"; plan R4.2 and R4.5, M-PHYSICS-023 and M-PHYSICS-024 path (b)), and the
+point-mass coasts on J2 as well ("ใส่เข้าไปด้วยเอาให้สมจริงที่สุด"), with the burn planning and the
+judging that needs. **The thrust law:** option (ข), F = λ·F_vac − p_a·A_e with flow separation in
+the nozzle, and a vacuum engine lit in the air flown with what its nozzle really gives
+("เอาทางที่ตามหลักฟิสิกส์ของจริงเลยครับ ของจริงเป็นแบบไหน ก็ใช้แบบนั้น"). What changed is in
+[PHYSICS.md](PHYSICS.md) §1, §2 and §4. "Before" is commit 7f991f9 (main b16b09e and the owner's
+decisions); "D-51" its WGS-84, J2 and coast commits alone; "after" both.
+
+**Held to (tests/wgs84-sites.test.ts, tests/nozzle-law.test.ts).** Each site and pad at the WGS-84
+radius of its latitude and altitude to 1 m; the pad's J2 + centrifugal gravity Somigliana's normal
+gravity to 0.01 % (the worst pad, Jiuquan, 5.1 × 10⁻⁶; the old sphere's Plesetsk pad was 0.53 %
+off); every point-mass step's gravity the J2 field; the Δv budget closed to 1 % on it. The thrust
+law against a restatement of the one-dimensional nozzle written in the test (Newton's method on the
+area–Mach relation, the thrust coefficient as the wall pressure integrated over the bell): the code's
+closed-form C_F to 5 × 10⁻⁷ over γ 1.18–1.26 and ε 1–250; the Merlin Vacuum at sea level, at 60 % and
+at 5, 12 and 20 km, and the RL10C-1 at sea level, from their published geometry, to 5 × 10⁻⁴; the
+attached law by hand for RD-180 at 47 % at 10 km and a P120C at its liftoff peak; every catalogue
+engine's sea-level thrust at full throttle to 10⁻⁹ with the flow attached; continuity at the
+separation boundary; never negative, rising with the level, falling with the pressure.
+
+**The fleet (tests/fleet-harness.ts, all 222 point-mass rows, a probe of `allCases` judged by
+`acceptanceFailures`).** Every row that passed before passes after: 156 of 222 accepted and all 131
+gated rows, before, after D-51 alone and after both; none newly accepted. The Δv left on the 131 gated
+rows, on the mean: D-51 −19.6 m/s, the thrust law +3.1 m/s on top of it, both −16.5 m/s (−156 to
++25). By vehicle, both together: Saturn V −61.2, Atlas V −37.3, Angara-A5 −35.8, Falcon 9 −33.8,
+Proton-M −32.4, Falcon Heavy −27.0, Long March 5 −24.0, Starship −24.0, Soyuz-2.1b −21.3, Long March
+3B/E −16.3, Electron −13.6, Vulcan −9.6, H-IIA −9.0, Vega-C −3.4, H3 +0.5, Ariane 64 +2.3, PSLV-XL
++15.6. The law alone moves the solid-boosted vehicles up (PSLV-XL +22.6, Ariane 64 +17.2, Vulcan +7.6:
+the air takes p·A_e off a solid's head-end peak, not a share of it) and the deep-throttled ones down
+(Falcon Heavy −10.2, Falcon 9 −3.2); at full thrust it is the old law exactly, so Saturn V, Long March
+5, Soyuz-2.1b and Electron move by less than a metre a second. The smallest margins after: H-IIA
+iss/90 26 m/s (58 before), Atlas V iss/90 42 (38), Saturn V leo/90 70 (143). Before is judged on the
+conic at the cut-off, after on the physical apsides (M-LAUNCH-031 in point mass since D-51).
+
+**Build ratings (the eight rows of tests/design-ratings.test.ts; ±25 % bound unchanged).** Computed
+against published, before → after: LEO Soyuz-2.1a 8 140 → 7 911 kg (1.096 → 1.065), Falcon 9
+20 031 → 19 842 (0.879 → 0.870), Long March 2D 3 165 → 2 942 (0.904 → 0.841), Vega-C 4 330 → 4 371
+(1.312 → 1.325, the recorded miss), Ariane 64 26 274 → 26 274 (1.216), Electron 315 → 311 (1.050 →
+1.037); GTO Falcon 9 6 832 → 6 756 (0.823 → 0.814), Ariane 64 13 328 → 13 328 (1.159). The same rows
+meet the bound.
+
+SIXDOF_PARAGRAPH
+
+**What does not pass any more, and is not a golden.** Measured before → after (D-51 alone gives the
+same failures): Sputnik-1 reaches 214 × 779 km against the flown 214 × 938 km (before 214 × 937),
+Vostok-1 168 × 260 km against 168 × 314 km (before 168 × 315), both burning to depletion short of it,
+and with them their Watch harnesses, Vostok-1's return (103 km short, against 15 km) and lessons 5.3 and
+5.4; Mercury-Redstone 3, whose capsule comes down 30.8 km from where Freedom 7 did (bound 25 km); Soyuz-2.1a's single burn to a 200 km circle,
+judged on its physical apsides 199.6 × 211.2 km with 6 318 kg (off target; before 198.6 × 200.5), and
+its crew ship's perigee 15.7 km off (bound 10 km); Long March 2D's sun-synchronous delivery, Vega-C's
+AVUM+ first-ignition timing and H-IIA iss/90's retrograde trim (18 km left); the lesson packs' GTO
+lessons (a semi-major axis 41 km from the one the heights give); and four instruments built on the old
+sphere (the corridor sweep's latitude, the tower catch's height, the E02 Δv book's initial speed, the
+LZ-1 divert's "straight down"). The report docs/development/reports/argon4-fu-rebaseline.md lists each
+with its numbers and the owner's choices; none of their bounds is changed.
+
+**Goldens.** Every exact hash of a flight moves, since every pad moved and every engine's thrust law
+changed off full throttle: the 27 point-mass D01 fingerprints, the 21 six-DOF fingerprints, the
+rigid-flex and flex goldens, Apollo 11's EO-PHY-6 record, the T02 re-check fixtures and the lesson
+packs' recorded results; the D01 identity fixture moves for Angara-A5's kick (4° → 3.5°) alone. They
+are re-recorded once, at the end of the Argon4 follow-up (on top of the Apollo work), with each reason
+and old hash beside it; the report lists the old and new values.

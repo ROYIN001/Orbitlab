@@ -19,9 +19,11 @@ any academy, and no service or academy name or emblem is used without written pe
 ## Features
 
 - **Full 3D ascent physics** in an Earth-centered inertial frame: inverse-square gravity
-  (J2 oblateness in orbit), US Standard Atmosphere 1976 with an exponential upper
-  atmosphere, Mach-dependent drag, pressure-dependent thrust and specific impulse,
-  real staging tables, Earth-rotation velocity credit, RK4 integration.
+  with J2 oblateness from the pad to the orbit, launch sites on the WGS-84 ellipsoid,
+  US Standard Atmosphere 1976 with an exponential upper atmosphere read at the height above
+  the ellipsoid, Mach-dependent drag, each engine's thrust from its nozzle (the air's pressure on
+  the nozzle exit at any throttle, and flow separation inside the bell when it runs far
+  below the outside pressure), real staging tables, Earth-rotation velocity credit, RK4 integration.
 - **21 launch vehicles** from 16 launch sites, three of them historical (Sputnik's R-7, Vostok-K and
   Saturn V) — see [Fleet](#fleet) below. Parallel
   boosters (including air-lit ones), hot staging, per-motor solid thrust profiles,
