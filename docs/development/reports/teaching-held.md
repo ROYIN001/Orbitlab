@@ -68,7 +68,7 @@ No ceiling was changed.
   - `?scenario=` is cleared and starts no lesson.
   - It is itself held when the switch is `true`.
 - **Run locally (Chromium 1194):** `teaching-held`, `mobile-smoke`, `profile-session-safety`, `workspace-navigation` ✓. Earlier on this branch, `learner-profiles`, `legacy-media-migration`, `gesture-ownership`, `project-backups` and `stage2-preflight` ✓.
-- **Unit:** the lesson, assessment, teacher-lesson, scenario-link, instructor, case, classroom, pack, worksheet, privacy, architecture and i18n files pass: 24 files, 298 tests. The full `npx vitest run` result is in the PR.
+- **Unit:** the lesson, assessment, teacher-lesson, scenario-link, instructor, case, classroom, pack, worksheet, privacy, architecture and i18n files pass: 24 files, 298 tests. Full `npx vitest run`: 324 files, 10,435 tests passed.
 - `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs`: 93/93. The change map has a new `teaching-held` rule.
 
 ## To show the tools again
