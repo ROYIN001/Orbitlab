@@ -9,6 +9,7 @@
  */
 import { G0, J2_EARTH, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../physics/constants';
 import { atmosphere } from '../physics/atmosphere';
+import { geodeticToCartesian } from '../physics/geodesy';
 import type { EomRecord } from '../physics/eom';
 import type { VisualFrame } from '../physics/frame';
 import { gravity, gravityJ2 } from '../physics/gravity';
@@ -125,7 +126,9 @@ function rocket(e: EomRecord | undefined, frame: VisualFrame, ctx: EquationConte
 function budget(e: EomRecord | undefined, frame: VisualFrame, ctx: EquationContext): Equation {
   if (!frame.liftoff) return none('budget', 'eq.none.prelaunch');
   const losses = e?.losses ?? frame.losses, speed = e?.speedEnd ?? frame.speed;
-  const v0 = OMEGA_EARTH * (R_EARTH + ctx.siteAltitudeM) * Math.cos(ctx.siteLatitudeDeg * Math.PI / 180);
+  // the pad's own speed on the turning Earth, at its distance from the axis on WGS-84 (D-51)
+  const pad = geodeticToCartesian(ctx.siteLatitudeDeg * Math.PI / 180, 0, ctx.siteAltitudeM);
+  const v0 = OMEGA_EARTH * Math.hypot(pad.x, pad.y);
   const net = losses.dvThrust - losses.gravity - losses.drag - losses.steering;
   const values = { ideal: losses.dvThrust, gravity: losses.gravity, drag: losses.drag, steering: losses.steering, net, v0, speed, gain: speed - v0 };
   if (frame.status !== 'ascent' || !e) return { id: 'budget', available: true, values, note: 'eq.note.budgetFrozen' };
@@ -155,10 +158,9 @@ function gravityEquation(e: EomRecord | undefined, frame: VisualFrame): Equation
   const r = e?.r ?? frame.r, rm = norm(r), central = norm(gravity(r)), full = gravityJ2(r), j2 = norm(sub(full, gravity(r)));
   const values = { r: rm, mu: MU_EARTH, central, j2, total: norm(full), latitude: Math.asin(r.z / rm), J2: J2_EARTH };
   if (!e) return { id: 'gravity', available: true, values };
-  // Six-DOF, the point-mass ascent (D-51) and the long coasts fly J2; the analytic Kepler coast a central field.
-  const used = norm(e.gravityAccel), model = e.integrator === 'kepler' ? central : norm(full);
-  return { id: 'gravity', available: true, values: { ...values, used }, check: check(used, model, 1e-9, 1e-9),
-    ...(e.integrator === 'kepler' ? { note: 'eq.note.centralGravity' } : {}) };
+  // Every step flies J2: six-DOF, and since D-51 the point mass from the pad through its coasts.
+  const used = norm(e.gravityAccel);
+  return { id: 'gravity', available: true, values: { ...values, used }, check: check(used, norm(full), 1e-9, 1e-9) };
 }
 
 /** α and β from the velocity relative to the air in the standard's body axes. */

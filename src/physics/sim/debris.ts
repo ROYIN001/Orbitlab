@@ -19,9 +19,10 @@ import type { RigidVehicleSnapshot } from '../rigid/mass';
 import { vehicleDataId } from '../../data/vehicles';
 import type { PartitionedRigidBody } from '../rigid/partition';
 import { createRigidDebris, RETURN_CONTROL_GAINS, RETURN_LANDING_LEVEL, returnPropellant, zoneLabel, type RigidDebrisRuntime } from '../rigid/debris-runtime';
-import { rk4Step } from '../integrator';
+import { rk4Step, rk4Steps } from '../integrator';
+import { gravityJ2 } from '../gravity';
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate } from '../rigid/math';
-import { elementsFromState, eciToLatLon, propagateKepler } from '../orbital';
+import { elementsFromState, eciToLatLon } from '../orbital';
 import type { StageState, BoosterState } from '../vehicle';
 import { targetedRecovery } from '../vehicle';
 import type { Simulation } from '../simulation';
@@ -690,7 +691,7 @@ export class DebrisTracker {
         }
         // A passive body in a lasting orbit only drifts: nothing acts on its
         // rotation there, and control ticks for the rest of a day-long
-        // transfer would cost more than the whole ascent. Hand it to the Kepler
+        // transfer would cost more than the whole ascent. Hand it to the orbit
         // path below, which keeps checking that the orbit lasts; its recorded
         // attitude stays where the rigid body left it.
         if (d.alive && !d.recovery && geodeticHeight(d.r) > 140e3) {
@@ -708,12 +709,13 @@ export class DebrisTracker {
       }
       const alt = geodeticHeight(d.r);
       if (d.outcome === 'orbit') {
-        // Orbital debris is Kepler-propagated — but the outcome has to stay
-        // true. An object promoted with a 121 km perigee decays, and the branch
-        // skipped every touchdown, drag and lifetime test, so it orbited through
-        // the planet forever (audit item B28). Re-check the perigee each step
-        // and hand it back to the drag path when it can no longer stay up.
-        const next = propagateKepler(d.r, d.v, dt);
+        // Orbital debris coasts under J2, as every free flight does since D-51
+        // (it was Kepler) — but the outcome has to stay true. An object
+        // promoted with a 121 km perigee decays, and the branch skipped every
+        // touchdown, drag and lifetime test, so it orbited through the planet
+        // forever (audit item B28). Re-check the perigee each step and hand it
+        // back to the drag path when it can no longer stay up.
+        const next = rk4Steps(0, { r: d.r, v: d.v }, dt, (_t, r) => gravityJ2(r));
         d.r = next.r;
         d.v = next.v;
         const elD = elementsFromState(d.r, d.v);

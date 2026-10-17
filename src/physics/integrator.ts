@@ -40,3 +40,23 @@ export function rk4Step(t: number, s: PointState, dt: number, accel: AccelFn): P
     },
   };
 }
+
+/**
+ * Longest RK4 step of a free coast, s: the step the J2 coast forecasts of the
+ * burn planner and the six-DOF held coast take (rigid/orbit-prediction.ts),
+ * a few centimetres a revolution in low orbit.
+ */
+export const COAST_MAX_STEP_S = 10;
+
+/**
+ * `rk4Step` over `dt` in equal steps of at most `maxStep` s. A step no longer
+ * than `maxStep` is exactly one `rk4Step`, so a powered step is unchanged; a
+ * coast of a minute is six. D-51: what flies the point mass's coasts above
+ * the air, which were Kepler conics before.
+ */
+export function rk4Steps(t: number, s: PointState, dt: number, accel: AccelFn, maxStep = COAST_MAX_STEP_S): PointState {
+  const n = Math.max(1, Math.ceil(dt / maxStep - 1e-9)), h = dt / n;
+  let state = s;
+  for (let k = 0; k < n; k++) state = rk4Step(t + k * h, state, h, accel);
+  return state;
+}

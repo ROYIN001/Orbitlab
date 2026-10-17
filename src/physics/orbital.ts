@@ -5,7 +5,7 @@
  */
 import { MU_EARTH, R_EARTH, OMEGA_EARTH, J2_EARTH, DEG } from './constants';
 import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize } from './vec3';
-import { geodetic, geodeticToCartesian } from './geodesy';
+import { geodeticFast, geodeticToCartesian } from './geodesy';
 
 export interface OrbitalElements {
   /** semi-major axis, m (negative for hyperbolic) */
@@ -258,7 +258,7 @@ export function groundVelocityEci(rEci: Vec3): Vec3 {
  * position and sidereal angle: the inverse of `groundPositionEci`.
  */
 export function eciToLatLon(r: Vec3, theta: number): { lat: number; lon: number; alt: number } {
-  const g = geodetic(r.x, r.y, r.z);
+  const g = geodeticFast(r.x, r.y, r.z);
   const lon = wrapPi(Math.atan2(r.y, r.x) - theta);
   return { lat: g.lat, lon, alt: g.h };
 }
