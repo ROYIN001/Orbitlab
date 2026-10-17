@@ -56,7 +56,7 @@ FP = moves the pinned fingerprints (tests/d01-fleet-fingerprint.test.ts, tests/h
 | 19 | Two atmospheres overlap with the physical sky | **True** | A second ring at 60–110 km, faceted edge, brown band at the terminator | Fixed (disc-only shell) |
 | 20 | Cylindrical shadow, no penumbra, no Moon shadow | True, deliberate | Documented and validated (D06); the edge sits at mid-penumbra; cislunar flight has no SRP. The render's soft edge is deliberate. The visible gap: the craft is drawn lit through the Moon's shadow, 46 of 119 min per lunar orbit | Owner |
 | 21 | Plume not tilted with the gimbals | True, tiny | The resultant exceeds 2° in under 0.3 % of samples; flips and landings are drawn by debris.ts. R4.7 | None |
-| 22 | Bending shader leaves the normals straight | **True** (cosmetic) | 2.9° Falcon 9, 6.5° Starship, ~37° in lesson 4.4's whip; the shadow is of a straight rocket too | See below |
+| 22 | Bending shader leaves the normals straight | **True** (cosmetic) | 2.9° Falcon 9, 6.5° Starship, ~37° in lesson 4.4's whip; the shadow is of a straight rocket too. A correct fix is larger than it looks: the barrels are single-segment (the bend is drawn as a kinked polyline), the GLSL proposed first broke the MeshBasic glow materials, and the shadow needs the bent world position as well | Owner (a look change of ~100+ lines) |
 | 23 | Debris tumble about a fixed axis; booster plume on/off | Partly | The point-mass tumble is decorative (no attitude recorded) and its return records no throttle. Six-DOF throttle is recorded and was ignored | Fixed |
 | 24 | Moon craters painted with fixed shadows | **Not an issue** | The date is fixed; the Sun stands at azimuth 88.6–88.9° (east) for the whole mission; documented (PHYSICS §13.12) | None |
 
@@ -68,7 +68,9 @@ FP = moves the pinned fingerprints (tests/d01-fleet-fingerprint.test.ts, tests/h
 | 1293372 | Apollo 11 flies to the Moon from its own launch only (on another date it logged a lunar orbit insertion 40,000 km from the Moon and never ended) | tests/apollo-own-launch.test.ts |
 | 635c5b4 | Six-DOF control surfaces rest below 10 Pa of effective dynamic pressure (Starship's flaps sat at ±34° for the whole coast) | tests/recovery-return.test.ts, tests/ship-descent.test.ts |
 | aa88406 | Plumes follow the recorded throttle (solid strap-ons, six-DOF returns); a landed stage is not lit | tests/plume-throttle.test.ts |
-| 2b6cca5, e805cb1 | Docs and comments that disagreed with the code | — |
+| f47c4f2 | One atmosphere at the limb under the scattering sky (the old shell kept over the disc only); the gradient sky's colour no longer encoded to sRGB into the linear target (space was (95,104,128) for (10,14,27)) | tests/render-atmo-shell.test.ts |
+| d8fe18f | The shader notes of scene.ts out of the GLSL strings: index chunk 2643.7 kB, under its 2645 kB ceiling (2644.6 before the branch); no ceiling raised | bundle budget |
+| 2b6cca5, e805cb1, b651c22 | Docs and comments that disagreed with the code (throttle and pressure, the sphere convention, grid fins, entry glow, PEG, navigation figures, return misses) | — |
 
 ## For the owner
 
@@ -78,3 +80,5 @@ FP = moves the pinned fingerprints (tests/d01-fleet-fingerprint.test.ts, tests/h
 4. Build accepts a vacuum-only engine on an air-lit strap-on group (pinned by tests/design-warnings.test.ts): refuse?
 5. Apollo 11: should an orbit edit on the flown date also drop the lunar profile? The panel's 13:35:56 window now stays in the parking orbit; widen the one-second rule?
 6. Which feature gaps go on the roadmap: grid-fin Mach table, plume drag, GNSS/tracker gating, RCS pulses, the Moon's shadow in the drawing.
+7. The bending shader (claim 22): fix it now as a visual change (subdivided barrels, a smooth drawn bend, bent normals and shadow), or leave it with R4.7?
+8. The sky change (claim 19) changes every exterior view from orbit; screenshots before and after are with the session's report.
