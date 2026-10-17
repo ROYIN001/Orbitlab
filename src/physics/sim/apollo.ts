@@ -23,7 +23,7 @@ import { elementsFromState } from '../orbital';
 import { targetAttitude } from '../rigid/runtime';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { engineStartupS, engineTailoffS } from '../vehicle';
-import { APOLLO11, DPS, LM_RCS, SM_RCS, SPS } from '../../data/apollo11';
+import { APOLLO11, DPS, LM_RCS, RANGE_ZERO_MS, SM_RCS, SPS } from '../../data/apollo11';
 import { LUNAR_SOI, cislunarStep, coastToPerilune, lunarOrbit, lunisolar, targetMidcourse, type LunarAim } from '../lunar/cislunar';
 import { MU_MOON, moonState, R_MOON } from '../lunar/ephemeris';
 import { eciToSelenographic, selenographicToEci } from '../lunar/orientation';
@@ -235,6 +235,13 @@ export class ApolloFlight {
   begin(): void {
     const inj = this.spec;
     if (!inj || this.started) return;
+    // The injection is the one flown, timed and aimed for the Moon of range zero. Launched at another
+    // second, or with another spacecraft, the flight is a different one and stays in its parking orbit:
+    // flown anyway, it would burn for a Moon that is not there.
+    if (this.sim.satellite.id !== 'apollo11' || Math.abs(this.sim.cfg.launchTime.getTime() - RANGE_ZERO_MS) >= 1000) {
+      this.sim.event('evt.lunarProfileOff', 'info');
+      return;
+    }
     const s = this.sim.state;
     this.a = -MU_EARTH / inj.c3;
     this.started = true;

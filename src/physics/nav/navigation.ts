@@ -222,6 +222,8 @@ export class NavigationSystem {
     this.accelBias = add(scale(this.accelBias, decay), this.gauss(s.aInstab * drive));
     // Strapdown: attitude; the specific force at mid-step; position and velocity as free fall plus it.
     const dThetaHat = sub(sub(dTheta, scale(this.bg, dt)), mul(this.sg, dTheta)), dVHat = sub(sub(dV, scale(this.ba, dt)), mul(this.sa, dV));
+    // The bias estimates relax as the biases do: the filter's δḃ = −δb/τ holds only if b̂ follows b̂˙ = −b̂/τ.
+    this.bg = scale(this.bg, decay); this.ba = scale(this.ba, decay);
     const qMid = quatMultiply(this.q, expQ(scale(dThetaHat, 0.5)));
     const q1 = quatNormalize(quatMultiply(this.q, expQ(dThetaHat)));
     const dvEci = quatRotate(qMid, dVHat), fall = freeFall(this.r, this.v, dt);

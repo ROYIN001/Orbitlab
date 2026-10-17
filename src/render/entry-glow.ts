@@ -4,9 +4,10 @@
  *
  * Its strength is the heating's at the stagnation point, ∝ √ρ·v³ (the
  * Sutton–Graves form, src/physics/sim/entry-heating.ts), on Apollo's scale:
- * 1 at Apollo 11's peak, about 60 km up at 10 km/s. Vostok's sphere peaks
- * near a third of that, about 45 km up at 6 km/s; that is the physics, and it
- * is drawn as it comes (how bright a given strength looks is the drawing's).
+ * 1 about 66 km up at 10 km/s, on Apollo 11's way down to its peak heating near
+ * 57 km (1.8 there before the clip). Vostok's sphere, about 45 km up at 6 km/s,
+ * comes to 0.8; that is the physics, and it is drawn as it comes (how bright a
+ * given strength looks is the drawing's).
  *
  * The glow is pointed along the airflow, never along the body's axes: a body
  * tumbling through the entry — Vostok's sphere and its instrument module,
@@ -22,8 +23,8 @@ import { density } from '../physics/atmosphere';
 
 /**
  * How brightly the air round a body glows, 0..1: as the heating at its stagnation
- * point goes, √ρ·v³ — full at Apollo's peak heating, about 60 km up at 10 km/s,
- * first seen near 100 km (the scale the model's, for the picture).
+ * point goes, √ρ·v³ — full from about 66 km up at 10 km/s, before Apollo's peak
+ * heating, first seen near 100 km (the scale the model's, for the picture).
  */
 export function entryGlow(alt: number, airspeed: number): number {
   if (!(airspeed > 0) || alt > 130e3) return 0;

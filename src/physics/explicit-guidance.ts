@@ -24,8 +24,9 @@
  * - **PEG** carries the velocity to be gained v_go between cycles and corrects
  *   it with a prediction of the cut-off state — here integrated numerically,
  *   J2 gravity and the thrust law together — so its target is met in the
- *   gravity field the flight flies in (the predictor–corrector of the
- *   Shuttle's Unified Powered Flight Guidance).
+ *   gravity field the six-DOF flight flies in (the predictor–corrector of the
+ *   Shuttle's Unified Powered Flight Guidance). The point-mass ascent flies
+ *   spherical gravity until D-51; its cut-off moves by under 0.2 km for that.
  * - **IGM** solves in closed form in a terminal frame at the predicted cut-off
  *   point, with gravity taken as the mean of its value now and at the target,
  *   and the central angle to go estimated from the mean speed; in its last

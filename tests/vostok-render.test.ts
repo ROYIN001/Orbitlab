@@ -155,7 +155,7 @@ describe('Vostok-1\'s bodies in the debris view', () => {
 describe('the entry glow and the hot metal', () => {
   it('is Apollo\'s scale, shared', () => {
     expect(apolloGlow).toBe(entryGlow);
-    // Vostok's sphere near its peak heating, 45 km up at 6 km/s: about a third of Apollo's peak, and nothing in vacuum
+    // Vostok's sphere near its peak heating, 45 km up at 6 km/s: 0.8 of full, and nothing in vacuum
     expect(entryGlow(45e3, 6000)).toBeGreaterThan(0.2);
     expect(entryGlow(45e3, 6000)).toBeLessThan(1);
     expect(entryGlow(200e3, 7800)).toBe(0);

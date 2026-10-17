@@ -1987,7 +1987,9 @@ against the real one, and the orbit the payload was left in. In **Explore** and 
 same table is under the mission result, and the telemetry charts mark the real flight's events in
 orange beside the model's grey ones. A time marked ≈ is a planned, rounded or second-hand figure.
 The table only appears while the settings are the historical flight's own: change the payload,
-the date or the vehicle and it is a different flight. The model flies its own guidance, not the
+the date or the vehicle and it is a different flight. Apollo 11 goes to the Moon only from its own
+launch: on another date or with another spacecraft it stays in its parking orbit, and the event log
+says so. The model flies its own guidance, not the
 real pitch programme, so the times differ by seconds to a minute; why, flight by flight, is in
 [PHYSICS.md §13](PHYSICS.md).
 

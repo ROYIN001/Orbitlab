@@ -164,6 +164,12 @@ are listed there as drafts awaiting the owner's review.
   condensation collar forms at the fairing's shoulder (a ship's, on Starship), strong at humid
   coastal sites and faint over the steppe. Watch names the speed of sound and a solid booster's
   separation. Drawing only; the physics is unchanged.
+- **Plumes follow the recorded engines** (D-70): a stage's plume its effective throttle, and a
+  strap-on's, solid or liquid, its group's (`BoosterFrame.effectiveThrottle`, with a solid's thrust
+  profile: a GEM-63 is drawn at 77 % by burnout; one level per stage, the strongest group's). A
+  stage flown home in six-DOF draws the mean of its lit chambers' throttles (`engineThrottles`), so
+  Falcon 9's landing burn at 40–50 % is shorter and fainter; the point-mass return records no
+  throttle and its bang-bang hoverslam is drawn lit. A landed stage is drawn standing, never lit.
 - **A flight to the station** (roadmap G07, [PHYSICS.md §9.2](PHYSICS.md)): a Soyuz MS (the
   crewed spacecraft on a Soyuz-2.1a) launched to the ISS orbit can fly on to the station and dock — the two-orbit
   (about 3 h, as Soyuz MS-28), four-orbit (about 6 h, as TMA-19M) or two-day (as MS-01)
@@ -579,7 +585,9 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
   them, and the reference diameter includes the strap-ons, as the flight's does. On the test stand
   the Isp stays constant through start-up and tail-off, both estimates, and a solid motor's mean
   thrust reads 0.6–0.9 % high, because the impulse includes the tail-off and the burn time does
-  not.
+  not. In flight as on the stand, a throttle level scales the sea-level pressure loss with the
+  thrust: an engine throttled deep low in the air is up to 14–19 % strong
+  ([PHYSICS.md](PHYSICS.md) §4).
 - Build: the landing page has no Build chapter (one would need new pictures; the owner's call), so
   the top bar is the way in. Designing from parts at the Engineer level (D03's face there) is
   listed as to come, with a link to Explore, where it is. The Russian and Thai texts have not been

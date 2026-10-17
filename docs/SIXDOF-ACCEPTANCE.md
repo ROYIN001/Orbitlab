@@ -484,15 +484,15 @@ only for a body with a target, so the original recovery above flies exactly as b
 
 What the rigid body did that the point mass does not: a base-first stage with fixed fins trims
 at about 3.4° of angle of attack, and the lift of that trim carried a Falcon 9 stage 600 m past
-LZ-1 through the dense air; with the fins steering it lands 0.8 m from the pad's centre. Falcon
+LZ-1 through the dense air; with the fins steering it lands 1.8 m from the pad's centre. Falcon
 Heavy's core arrives at its entry burn with no cold gas (spent on the ascent) and, turned on
 three engines at 70 km, came down 10 km from its ship; turned on the centre engine after
-separation and stationed on the trajectory that leaves, it lands 0.7 m from the deck's centre.
+separation and stationed on the trajectory that leaves, it lands 1.6 m from the deck's centre.
 
 | Test | Result |
 |---|---|
-| tests/rigid-return.test.ts — Falcon 9, Bandwagon-1, first stage → LZ-1 | landed, 0.8 m, strict contact gate, about 60 s |
-| tests/heavy/falcon-heavy-returns.test.ts — Arabsat-6A, side boosters → LZ-1, LZ-2; core → drone ship | landed 0.8 / 0.8 / 0.7 m, about 2.5 min |
+| tests/rigid-return.test.ts — Falcon 9, Bandwagon-1, first stage → LZ-1 | landed, 1.8 m, strict contact gate, about 60 s |
+| tests/heavy/falcon-heavy-returns.test.ts — Arabsat-6A, side boosters → LZ-1, LZ-2; core → drone ship | landed 1.6 / 1.6 / 1.6 m, about 2.5 min |
 | tests/rigid-return.test.ts — Starship, Super Heavy → the Starbase tower's arms | caught 0.3 m off, 2.4 m/s down, 0.45 m/s across, 0.5°, about 50 s |
 
 Super Heavy needed two more: its inner three engines cannot throttle below its weight, so the

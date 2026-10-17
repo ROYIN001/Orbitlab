@@ -100,6 +100,36 @@ describe('the strapdown navigation (roadmap G02)', () => {
     expect(errors(11)).toEqual(errors(11));
     expect(errors(12)).not.toEqual(errors(11));
   });
+
+  /** Free fall at 400 km under J2 (RK4, 0.5 s), the navigation advanced every second until `until`. */
+  function inOrbit(nav: NavigationSystem, until: number): void {
+    let r = v3(R_EARTH + 400e3, 0, 0), v = v3(0, 7670 * Math.cos(0.9), 7670 * Math.sin(0.9)), t = 0;
+    const q = { w: 1, x: 0, y: 0, z: 0 }, h = 0.5;
+    nav.reading(0, r, v, q, v3());
+    while (t < until - 1e-9) {
+      for (let i = 0; i < 2; i++) {
+        const a1 = gravityJ2(r), r2 = add(r, scale(v, h / 2)), v2 = add(v, scale(a1, h / 2)), a2 = gravityJ2(r2);
+        const r3 = add(r, scale(v2, h / 2)), v3_ = add(v, scale(a2, h / 2)), a3 = gravityJ2(r3), r4 = add(r, scale(v3_, h)), v4 = add(v, scale(a3, h));
+        r = add(r, scale(add(add(v, scale(add(v2, v3_), 2)), v4), h / 6)); v = add(v, scale(add(add(a1, scale(add(a2, a3), 2)), gravityJ2(r4)), h / 6));
+      }
+      t += 1;
+      nav.advance(t, r, v, q, v3());
+    }
+  }
+
+  it('carries its bias estimates as the biases themselves wander, so an outage drifts as far as its σ says', () => {
+    // 100 s of fixes estimate the biases; through a 600 s outage they relax towards zero (τ 300 s), as the true biases
+    // do. Estimates held where they were put the filter's position error at many times its σ by the outage's end.
+    let sum = 0, n = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const nav = new NavigationSystem({ imu: IMU_PRESETS.tactical, aiding: { ...AIDING_DEFAULTS, starTracker: false, gnssOutages: [[100, 700]] }, seed });
+      inOrbit(nav, 699);
+      const rec = nav.record()!;
+      expect(rec.gnss).toBe('outage');
+      for (const k of ['x', 'y', 'z'] as const) { sum += (rec.positionError[k] / rec.positionSigma[k]) ** 2; n++; }
+    }
+    expect(sum / n).toBeLessThan(2);
+  }, 30_000);
 });
 
 describe('the navigation settings', () => {
