@@ -259,7 +259,7 @@ Since then `1c3be57` (question 2's (ค)) adds one uniform and changes one line 
 
 ## D-25
 
-The aerial perspective with the review round's fixes changes **373 source lines** (src/render/atmosphere.ts and scene.ts, 312 added and 61 deleted, of which 191 are not comment lines), under the ~400 of D-25.
+The aerial perspective with the review round's fixes changes **373 source lines** (src/render/atmosphere.ts and scene.ts, 312 added and 61 deleted, of which 191 are neither comment nor blank lines), under the ~400 of D-25.
 
 Question 2's (ค), `1c3be57`, changes **33 source lines** in src/render (27 added, 6 deleted), **27 of them comment lines** (`git diff -U0 61c0ace 1c3be57 -- src/render`, a line counted as a comment when it starts with `/**`, `*`, `*/` or `//`). On `ws/sky-q2c` `90e5c3a` was 35 (28 added, 7 deleted), 29 of them comments, by the same count; here the `SKY_ILLUMINANCE` comment's line of figures, re-measured on this branch, stays as it is instead of being replaced. Counted commit by commit, 373 + 33 = **406**, over the ~400 by about 6. The PR's own diff over PR #158 (`git diff 6502e22 HEAD -- src/render`) is 394 lines (333 added, 61 deleted), because the lines the blend replaces were themselves added by the aerial perspective.
 

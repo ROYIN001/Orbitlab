@@ -3135,7 +3135,8 @@ view (the sun 30° up at 12 km, 35° at the others), the ocean low in the view c
 km the globe 20 rows under the horizon is (138, 169, 205) under a sky of (190, 190, 209); it was
 (157, 177, 206) at E alone and (101, 124, 160) at 3.3. Along a ray 0.02° inside the limb from 30 km
 the haze's light is within 9 % of E in red, where T is 0.17, and within 0.02 % in blue. So the first
-rows under the horizon are a little less red than the sky over them: the red falls 25–27 levels over
+rows under the horizon are a little less red than the sky over them, a thin pale-cyan band plainest
+at 12 km: the red falls 25–27 levels over
 the first three rows, against 15–20 at E alone, while green and blue barely differ. In orbit E is 3.3
 too and the blend changes nothing: the views from 400 km are identical to the pixel.
 
