@@ -871,11 +871,11 @@ export class SceneManager {
     const sunElev = this.camUp.normalize().dot(sd);
     const sky = skyState(sunElev, cameraAltitude);
     if (this.physicalSky && this.physicalSkyOn) {
-      // the sky pass and the aerial perspective see one sun (SKY_ILLUMINANCE)
+      // the sky pass and the aerial perspective see one sun (SKY_ILLUMINANCE); the sun's disc and glare keep 8
       const illuminance = SUN_INTENSITY + (SKY_ILLUMINANCE - SUN_INTENSITY) * sky.groundFactor;
       this.aerial.uSunIlluminance.value = illuminance;
       this.camera.updateMatrixWorld();
-      this.physicalSky.update(this.camera, camEci, sd, illuminance);
+      this.physicalSky.update(this.camera, camEci, sd, illuminance, SKY_ILLUMINANCE);
     }
     this.updateEnvironment(sky, sunElev);
     this.orientEnvironment(this.camUp, sd);

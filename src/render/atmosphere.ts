@@ -363,12 +363,17 @@ gl_FragColor = vec4(any(isnan(E)) || any(isinf(E)) ? vec3(0.0) : E, 1.0);
  * 1.5° out. On the ground it stands in for the solar aureole, the narrow
  * forward peak of scattering by aerosol that one Cornette–Shanks lobe with
  * g = 0.8 is far too broad to give; in space it is the glare of the eye or
- * the lens. With the illuminance scene.ts passes (SKY_ILLUMINANCE, 8) it
- * peaks at 2.8, over the bloom's threshold of 1.0 only within 0.6° of the
- * centre, and adds a few per cent to the light the disc gives the bloom.
- * The exposure is set from the sun's elevation (sky.ts), not metered from
- * the picture, so neither feeds back into it; the disc peaks at 400, far
- * under the 6·10⁴ clamp that keeps a half-float target finite.
+ * the lens. The disc and the glow take their own illuminance, uSunDisc, not
+ * the air's: scene.ts passes 8 (SKY_ILLUMINANCE) for them at every height,
+ * while the air's light falls to the scene's own sun, 3.3, in space to meet
+ * the globe's haze. Taken with the air's, the glow in space would peak at
+ * 1.16, over the bloom's threshold of 1.0 within 0.23° of the centre only,
+ * and the glare round the sun would all but go. At 8 it peaks at 2.8, over the
+ * threshold within 0.61°, and adds a few per cent to the light the disc
+ * gives the bloom. The exposure is set from the sun's elevation (sky.ts),
+ * not metered from the picture, so neither feeds back into it; the disc
+ * peaks at 400, far under the 6·10⁴ clamp that keeps a half-float target
+ * finite.
  *
  * One bad sample must not become a black frame: the bloom's blur would
  * spread it everywhere.
@@ -389,6 +394,7 @@ uniform mat4 uCamToWorld;
 uniform vec3 uCamEci;
 uniform vec3 uSunDir;
 uniform float uSunIlluminance;
+uniform float uSunDisc;
 varying vec2 vUv;
 
 void main() {
@@ -440,7 +446,7 @@ float disc = smoothstep(SUN_COS - 2e-6, SUN_COS + 2e-6, c);
 float glow = pow(max(c, 0.0), 18000.0) * 0.35;
 if ((disc > 0.0 || glow > 0.001) && !hitsGround(r, mu)) {
 float limb = 0.4 + 0.6 * sqrt(clamp((c - SUN_COS) / (1.0 - SUN_COS), 0.0, 1.0));
-L += (disc * 50.0 * limb + glow) * uSunIlluminance * (r > RT ? T : transmittance(r, mu));
+L += (disc * 50.0 * limb + glow) * uSunDisc * (r > RT ? T : transmittance(r, mu));
 }
 }
 if (any(isnan(L)) || any(isinf(L))) L = vec3(0.0);
@@ -576,7 +582,7 @@ export class PhysicalSky {
       uniforms: {
         uTransmittance: { value: this.transmittanceRT.texture }, uMultiScatter: { value: this.multiRT.texture },
         uInvProj: { value: new THREE.Matrix4() }, uCamToWorld: { value: new THREE.Matrix4() },
-        uCamEci: { value: new THREE.Vector3() }, uSunDir: { value: new THREE.Vector3(0, 0, 1) }, uSunIlluminance: { value: 20 },
+        uCamEci: { value: new THREE.Vector3() }, uSunDir: { value: new THREE.Vector3(0, 0, 1) }, uSunIlluminance: { value: 20 }, uSunDisc: { value: 20 },
       },
     });
     this.mesh = new THREE.Mesh(tri, this.material);
@@ -626,9 +632,10 @@ export class PhysicalSky {
 
   /**
    * Point the pass at this frame: the camera (its matrices, and its position
-   * in ECI metres) and the sun.
+   * in ECI metres) and the sun — the illuminance of the light the air
+   * scatters, and that of the sun's disc and glow (the same unless given).
    */
-  update(camera: THREE.PerspectiveCamera, camEci: THREE.Vector3, sunDir: THREE.Vector3, illuminance: number): void {
+  update(camera: THREE.PerspectiveCamera, camEci: THREE.Vector3, sunDir: THREE.Vector3, illuminance: number, disc = illuminance): void {
     if (!this.ready) this.precompute();
     const u = this.material.uniforms;
     (u.uInvProj.value as THREE.Matrix4).copy(camera.projectionMatrixInverse);
@@ -636,6 +643,7 @@ export class PhysicalSky {
     (u.uCamEci.value as THREE.Vector3).copy(camEci);
     (u.uSunDir.value as THREE.Vector3).copy(sunDir);
     u.uSunIlluminance.value = illuminance;
+    u.uSunDisc.value = disc;
   }
 
   dispose(): void {

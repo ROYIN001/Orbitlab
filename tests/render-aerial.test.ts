@@ -171,7 +171,11 @@ describe('aerial perspective: wired into the globe and the clouds (V02)', () => 
       at(sm, alt);
       expect(u.uSunIlluminance.value, `${alt} m`).toBeCloseTo(want, 12);
       expect(skyU.uSunIlluminance.value, `${alt} m`).toBe(u.uSunIlluminance.value);
+      // the sun's disc and glare are the lens's, not the air's: 8 at every height, as before
+      expect(skyU.uSunDisc.value, `${alt} m`).toBe(8);
     }
+    const frag = (my.physicalSky!.mesh.material as THREE.ShaderMaterial).fragmentShader;
+    expect(frag).toContain('L += (disc * 50.0 * limb + glow) * uSunDisc * (r > RT ? T : transmittance(r, mu));');
     at(sm, 42e3);
     expect(u.uSunIlluminance.value).toBeGreaterThan(3.3);
     expect(u.uSunIlluminance.value).toBeLessThan(8);
