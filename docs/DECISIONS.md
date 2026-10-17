@@ -242,6 +242,17 @@ The owner, in chat to the ED-INST-1 session, after PR #147: "merge เข้า�
 
 Hidden with them, as the request's "ส่วนอื่น" and the session's question named them: the Worksheets, Write a scenario and Check results pages and their addresses, "Prepare a class" in My work, and the Orbit section's case worksheets. The code stays; `TEACHER_TOOLS = true` shows everything again and un-parks the journeys.
 
+## Decided 2026-10-17 (Argon4 follow-up questions, chat)
+
+The owner answered in chat on 2026-10-17, at about 23:28 UTC, four questions of two Argon4 follow-up reports, asked in chat as ฟ้า 1 and ฟ้า 2 (the sky's questions 1 and 2, PR #159, its report `docs/development/reports/argon4-fu-sky.md`, "Questions for the owner") and IMU 1 and IMU 2 (the IMU's questions 1 and 2, PR #157, [argon4-fu-imu.md](development/reports/argon4-fu-imu.md), "Questions for the owner"), verbatim "ฟ้า1 ก · ฟ้า2 ค · IMU1 ก · IMU2 ข". Each answer is the option of that letter as its report put it, and nothing more. All four are recorded here, in PR #157, which carries this record; PR #159 refers to this section.
+
+| Date | Question | Answer | Where it lands |
+|---|---|---|---|
+| 2026-10-17 | ฟ้า 1: the sky's look from orbit (sky report, question 1) | "ฟ้า1 ก" — option (ก), approve as built: the haze and the sky's air at one illuminance, 3.3 in space; the limb glow from orbit fainter than before (its brightest row (160, 152, 177), against (212, 207, 222)). The extra offered with it in chat, the clouds lit by the sky's light too, was not chosen. | PR #159: `src/render/scene.ts`, `src/render/atmosphere.ts` |
+| 2026-10-17 | ฟ้า 2: the sky's look in the climb, 12–72 km (sky report, question 2) | "ฟ้า2 ค" — option (ค), the blend: the haze's light is the sky's where nothing shows through it and the scene's sun where the ground does, E · (1 − T) + 3.3 · T, T the stretch's transmittance; in orbit E is 3.3 and nothing changes | PR #159: `src/render/atmosphere.ts` (`AERIAL`, the blend), as prepared on `ws/sky-q2c` |
+| 2026-10-17 | IMU 1: lesson 15.2's navigation bound (`ru-bins-astro`; IMU report, question 1) | "IMU1 ก" — option (ก), keep the lesson as designed and set the bound again by the rule it was set with, the worked flight plus 25 %, rounded up: 1 184 m × 1.25 = 1 480 → 1 500 m | PR #157: lesson 15.2's `NAV_BOUND_M` 1 500 m (`src/lessons/pack-sources/ru-24-05-06.ts`, the brief in en, ru and th, the regenerated pack file and its review hash, heavy S2 and the reviewed heavy inventory, VALIDATION T03) |
+| 2026-10-17 | IMU 2: a MEMS unit with GNSS and the star tracker off, over a long coast (IMU report, question 2) | "IMU2 ข" — option (ข), a filter change in a later package (R4.3) with its own consistency test: for example, not taking −[f×]φ from a specific force below its own noise in free fall, and a larger-angle attitude error; the gyro scale factors' columns, which show the same kind of fault, built from a rate the filter trusts | Plan item M-PHYSICS-079 in R4.3 (`docs/development/plan/data/assignment.tsv` and `packages.tsv`, `docs/development/registry.tsv`). The placement only: it waits for its wave's authorization (D-65); until then PHYSICS §2h "A limit" describes the limit. |
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |

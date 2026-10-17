@@ -4049,7 +4049,10 @@ and `tests/heavy/lesson-packs-sixdof.test.ts`:
   tracker's flight was over the 1 000 m bound, and the bound is set again by its own rule, the
   worked flight plus 25 %, rounded up: 1 500 m, which the star tracker and the navigation-grade
   unit hold and the tactical unit alone and MEMS with the star tracker do not (the
-  [report](development/reports/argon4-fu-imu.md)'s question 1, option (ก)). Lesson 15.3 flies
+  [report](development/reports/argon4-fu-imu.md)'s question 1, option (ก), which the owner chose
+  in chat on 2026-10-17, verbatim "IMU1 ก"; [DECISIONS](DECISIONS.md), "Decided 2026-10-17
+  (Argon4 follow-up questions, chat)"). With the 1 500 m bound the heavy file passes, 3 of 3
+  (313.3 s). Lesson 15.3 flies
   uncrewed, against the research, because a crewed failed flight ends in the escape system's
   landing, which the grader does not end.
 

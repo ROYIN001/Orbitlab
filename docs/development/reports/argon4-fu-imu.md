@@ -6,33 +6,37 @@ The owner's decision of 2026-10-17 ([DECISIONS.md](../../DECISIONS.md), "Decided
 (Argon4 review follow-up, chat)", second table, row "IMU turn-on bias"), answer to question 3,
 verbatim "ก.": the turn-on bias is a constant drawn at power-up and the in-run bias a
 Gauss–Markov process on top, in the truth and in the filter. This report covers the two commits
-handed over (checked here), the documentation finished here, and one lesson verdict that flips,
-which waits for the owner.
+handed over (checked here), the documentation finished here, and one lesson verdict that flipped.
+The owner answered its two questions in chat on 2026-10-17, at about 23:28 UTC, in a message that
+also answered two of the sky's, verbatim "ฟ้า1 ก · ฟ้า2 ค · IMU1 ก · IMU2 ข" ([DECISIONS.md](../../DECISIONS.md),
+"Decided 2026-10-17 (Argon4 follow-up questions, chat)"): question 1 (ก), lesson 15.2's bound
+1 500 m, which has landed in this branch, and question 2 (ข), a filter change in a later package,
+placed in R4.3 as plan item M-PHYSICS-079.
 
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 >
 > - **ทำอะไร:** ตามที่คุณเลือกข้อ (ก): ไบแอสของไจโรและมาตรความเร่งแต่ละแกนมีสองส่วน ส่วนแรกคือไบแอสตอนเปิดเครื่อง (turn-on) สุ่มครั้งเดียวตอนเปิดเครื่องแล้วคงที่ตลอดเที่ยวบิน ส่วนที่สองคือไบแอสระหว่างทำงาน (in-run) ที่ลอยเปลี่ยนแบบ Gauss–Markov (τ = 300 วินาที) ซ้อนอยู่ด้านบน ทั้งในค่าจริงของเซนเซอร์และในตัวกรองคาลมาน (จาก 21 เป็น 27 สถานะ) เดิมทั้งสองส่วนรวมเป็นกระบวนการเดียวที่จางลงตาม 300 วินาที ไบแอสตอนเปิดเครื่องจึงหายไปเกือบหมดภายในสิบกว่านาที (ไจโร MEMS เหลือ 4.9 °/ชม. จาก 30 °/ชม. เมื่อผ่านไปหนึ่งชั่วโมง ตอนนี้ยังอยู่ที่ 31.5 °/ชม.)
 > - **ผู้ใช้เห็นอะไร:** เมื่อเปิดระบบนำร่อง (โหมดวิศวกร 6-DOF) โดยไม่มี GNSS ความคลาดเคลื่อนโตขึ้นตามที่หน่วยจริงเป็น: Falcon 9 ที่ SECO ค่ามัธยฐานของ 100 ชุดสุ่ม MEMS 7.4 → 9.3 กม. เกรดยุทธวิธี 0.83 → 0.98 กม. เกรดนำร่อง 76 → 84 ม. (โตขึ้น 27 %, 18 % และ 11 % คลาดได้ราว ± 9–14 %) เมื่อมี GNSS แทบไม่ต่างจากเดิม หมายเหตุในตัวตรวจลูปและคำอธิบายเครื่องมือ MCP บอก 27 สถานะ
-> - **บทเรียน:** สองบทที่บินด้วยระบบนำร่อง (2.3 guid-nav และ 15.2 ru-bins-astro) ตัวเลขในบทสรุปหลังบทเรียนปรับตามผลบินจริงทั้งภาษาอังกฤษ รัสเซีย และไทย ผลผ่าน/ไม่ผ่านไม่เปลี่ยน **ยกเว้นบท 15.2 กรณีเปิดตัวจับดาว: 989 ม. → 1 184 ม. เกินเกณฑ์ 1 000 ม. จึงไม่ผ่าน** เทสต์ heavy S2 จึงล้มหนึ่งข้อ ผมไม่ได้แก้เกณฑ์ บทเรียน หรือเทสต์ รอคุณเลือก (คำถามที่ 1) เหตุผลทางฟิสิกส์: ตัวจับดาวเริ่มเห็นดาวที่ความสูง 150 กม. (T+269.5 วินาที) ก่อนถึงตอนนั้นความคลาดสะสมไปแล้ว 1 053 ม. (เดิม 989 ม.) และบทเรียนวัดค่าสูงสุดตลอดเที่ยวบิน หลังจากนั้นตัวจับดาววัดได้แต่ท่าทาง ไม่เห็นไบแอสของมาตรความเร่ง ไบแอส 500 µg ที่คงอยู่ 524 วินาทีให้ ½bt² ≈ 0.67 กม. ต่อแกนด้วยตัวมันเอง ความคลาดจึงโตกลับเป็น 1 184 ม. ตอนดับเครื่อง ทั้งนี้เกณฑ์ 1 000 ม. ก็ฉิวเฉียดมาตั้งแต่ก่อน: บนฐานเดิมเมื่อเปลี่ยน seed ของเซนเซอร์ ตัวจับดาวผ่านได้เพียง 3 ใน 11 (ตอนนี้ 2 ใน 11) ข้อเสนอของผม: ตั้งเกณฑ์ใหม่ 1 500 ม. ตามกฎเดิมที่ใช้ตั้งเกณฑ์นี้ (ผลบินของคำตอบ + 25 %) ความเร่งด่วน: ตอนนี้ชุดบทเรียน ru-24-05-06 ถูกซ่อนจากหน้าเว็บตามที่คุณตัดสินใจเมื่อ 2026-10-17 (`TEACHER_TOOLS`) บท 15.2 จึงไม่อยู่ในรายการบทเรียน (เปิดได้เฉพาะเมื่อพิมพ์ที่อยู่ `?lesson=ru-bins-astro` เอง) ผลที่เปลี่ยนนี้จึงเห็นได้ตอนนี้เฉพาะในเทสต์ heavy S2 นักเรียนจะเจอเมื่อเปิดชุดบทเรียนกลับมา
-> - **ถ้าคุณตอบ (ก):** เตรียมไว้ก่อนคุณตอบ ยังไม่ใช่การตัดสินใจ: เกณฑ์ของบท 15.2 เป็น 1 500 ม. ตามกฎเดิม (1 184 ม. × 1.25 = 1 480 → 1 500 ม.) คือ `NAV_BOUND_M` ในซอร์สของชุดบทเรียน ตัวเลขในโจทย์ทั้งภาษาอังกฤษ รัสเซีย และไทย ไฟล์ชุดบทเรียนที่สร้างใหม่ด้วยสคริปต์ ชื่อของเทสต์ S2 และตัวเลขในข้อที่ตรวจว่ากรณีตั้งต้นเกินเกณฑ์ (1 000 → 1 500) คำอธิบายหัวไฟล์เทสต์ ชื่อ S2 ในรายการเทสต์ heavy ที่ตรวจแล้ว (`heavy-expected.json`) ค่า hash ของไฟล์ชุดบทเรียนใน `review.ts` ให้ตรงกับไฟล์ที่สร้างใหม่ (การตรวจทานทุกด้านยังรออยู่เหมือนเดิม) และหมายเหตุใน VALIDATION ส่วนบทสรุปหลังบทเรียน คำใบ้ และชื่อบทไม่เปลี่ยน («ประมาณ 1.2 กม. ถ้ามี» ตรงกับผลบินอยู่แล้ว) ผลเทสต์ heavy: ผ่านครบ 3 ข้อ (313.3 วินาที)
-> - **ตรวจแล้ว:** การแยกส่วนไบแอสในค่าจริงและในตัวกรอง การคำนวณ P แบบเบา (sparse) ตรงกับการคูณเมทริกซ์เต็มถึง 10⁻¹⁵ และ P สมมาตรและเป็นบวกตลอด ลำดับการสุ่มตาม seed เทสต์ปกติที่เกี่ยวข้อง 16 ไฟล์ 321 เทสต์ผ่าน (รวมเทสต์ใหม่ที่เพิ่มหลังการตรวจ) heavy 4 ไฟล์: ผ่าน 12 ล้ม 1 (S2 ตามที่รู้)
+> - **บทเรียน:** สองบทที่บินด้วยระบบนำร่อง (2.3 guid-nav และ 15.2 ru-bins-astro) ตัวเลขในบทสรุปหลังบทเรียนปรับตามผลบินจริงทั้งภาษาอังกฤษ รัสเซีย และไทย ผลผ่าน/ไม่ผ่านไม่เปลี่ยน **ยกเว้นบท 15.2 กรณีเปิดตัวจับดาว: 989 ม. → 1 184 ม. เกินเกณฑ์เดิม 1 000 ม. จึงไม่ผ่านเกณฑ์เดิม** เทสต์ heavy S2 จึงล้มหนึ่งข้อ ตอนแรกผมไม่ได้แก้เกณฑ์ บทเรียน หรือเทสต์ แต่ถามคุณก่อน (คำถามที่ 1) เหตุผลทางฟิสิกส์: ตัวจับดาวเริ่มเห็นดาวที่ความสูง 150 กม. (T+269.5 วินาที) ก่อนถึงตอนนั้นความคลาดสะสมไปแล้ว 1 053 ม. (เดิม 989 ม.) และบทเรียนวัดค่าสูงสุดตลอดเที่ยวบิน หลังจากนั้นตัวจับดาววัดได้แต่ท่าทาง ไม่เห็นไบแอสของมาตรความเร่ง ไบแอส 500 µg ที่คงอยู่ 524 วินาทีให้ ½bt² ≈ 0.67 กม. ต่อแกนด้วยตัวมันเอง ความคลาดจึงโตกลับเป็น 1 184 ม. ตอนดับเครื่อง ทั้งนี้เกณฑ์ 1 000 ม. ก็ฉิวเฉียดมาตั้งแต่ก่อน: บนฐานเดิมเมื่อเปลี่ยน seed ของเซนเซอร์ ตัวจับดาวผ่านได้เพียง 3 ใน 11 (ตอนนี้ 2 ใน 11) คุณตอบข้อ (ก) («IMU1 ก» 17 ต.ค. 2569): ตั้งเกณฑ์ใหม่ 1 500 ม. ตามกฎเดิมที่ใช้ตั้งเกณฑ์นี้ (ผลบินของคำตอบ + 25 %) กรณีเปิดตัวจับดาว (1 184 ม.) จึงผ่าน และ S2 ผ่าน ทั้งนี้ชุดบทเรียน ru-24-05-06 ยังถูกซ่อนจากหน้าเว็บตามที่คุณตัดสินใจเมื่อ 2026-10-17 (`TEACHER_TOOLS`) บท 15.2 จึงไม่อยู่ในรายการบทเรียน (เปิดได้เฉพาะเมื่อพิมพ์ที่อยู่ `?lesson=ru-bins-astro` เอง) นักเรียนจะเจอเกณฑ์ใหม่เมื่อเปิดชุดบทเรียนกลับมา
+> - **คำตอบของคุณ (แชต 17 ต.ค. 2569 ราว 23:28 UTC ตามตัวอักษร «ฟ้า1 ก · ฟ้า2 ค · IMU1 ก · IMU2 ข»; บันทึกทั้งสี่ข้อใน DECISIONS หัวข้อ "Decided 2026-10-17 (Argon4 follow-up questions, chat)"):** คำถามที่ 1 ข้อ (ก) ลงใน branch นี้แล้ว (เตรียมไว้ก่อนคุณตอบ แล้วนำเข้ามาเมื่อคุณตอบ): เกณฑ์ของบท 15.2 เป็น 1 500 ม. ตามกฎเดิม (1 184 ม. × 1.25 = 1 480 → 1 500 ม.) คือ `NAV_BOUND_M` ในซอร์สของชุดบทเรียน ตัวเลขในโจทย์ทั้งภาษาอังกฤษ รัสเซีย และไทย ไฟล์ชุดบทเรียนที่สร้างใหม่ด้วยสคริปต์ ชื่อของเทสต์ S2 และตัวเลขในข้อที่ตรวจว่ากรณีตั้งต้นเกินเกณฑ์ (1 000 → 1 500) คำอธิบายหัวไฟล์เทสต์ ชื่อ S2 ในรายการเทสต์ heavy ที่ตรวจแล้ว (`heavy-expected.json`) ค่า hash ของไฟล์ชุดบทเรียนใน `review.ts` ให้ตรงกับไฟล์ที่สร้างใหม่ (การตรวจทานทุกด้านยังรออยู่เหมือนเดิม) และหมายเหตุใน VALIDATION ส่วนบทสรุปหลังบทเรียน คำใบ้ และชื่อบทไม่เปลี่ยน («ประมาณ 1.2 กม. ถ้ามี» ตรงกับผลบินอยู่แล้ว) ผลเทสต์: heavy lesson-packs-sixdof ผ่านครบ 3 ข้อ (313.3 วินาที) เทสต์บทเรียน 4 ไฟล์ผ่าน 52 ข้อ เทสต์ที่อ่านชุดบทเรียนหรือข้อความบทเรียน 14 ไฟล์ผ่าน 169 ข้อ คำถามที่ 2 ข้อ (ข): แก้ตัวกรองในงานภายหลัง (R4.3) พร้อมเทสต์ความสอดคล้องของตัวเอง บันทึกไว้เป็นรายการแผน M-PHYSICS-079 ใน R4.3 (บันทึกตำแหน่งเท่านั้น รอการอนุญาตคลื่นงานตาม D-65) ใน PR นี้ไม่มีการแก้ตัวกรอง
+> - **ตรวจแล้ว:** การแยกส่วนไบแอสในค่าจริงและในตัวกรอง การคำนวณ P แบบเบา (sparse) ตรงกับการคูณเมทริกซ์เต็มถึง 10⁻¹⁵ และ P สมมาตรและเป็นบวกตลอด ลำดับการสุ่มตาม seed เทสต์ปกติที่เกี่ยวข้อง 16 ไฟล์ 321 เทสต์ผ่าน (รวมเทสต์ใหม่ที่เพิ่มหลังการตรวจ) heavy 4 ไฟล์: ผ่าน 12 ล้ม 1 (S2 ตามที่รู้) ก่อนตั้งเกณฑ์ใหม่ หลังตั้งเป็น 1 500 ม. lesson-packs-sixdof ผ่าน 3 จาก 3
 > - **ความเร็วและขนาด:** ตัวกรอง 27 สถานะเร็วกว่าแบบเดิม 21 สถานะราว 35 % ต่อขั้น (16 µs เทียบ 24–26 µs) เพราะคูณเฉพาะช่องที่ไม่เป็นศูนย์ของ Φ ขนาด bundle ไม่ได้ขึ้นเพดาน: index 2 643.2 → 2 644.2 kB จากเพดาน 2 645.0 kB (เหลือ 0.8 kB สำหรับงานท้องฟ้า)
 > - **ผู้ตรวจคนที่สอง:** ตรวจสองมุมมอง (คณิตศาสตร์ และการตรวจตัวเลขทีละข้อ) ไม่พบข้อบกพร่องในโค้ด แต่พบว่าเทสต์ไม่จับกรณีที่ค่าประมาณไบแอส in-run ถูกตรึงไว้แทนที่จะจางลง ผมลองใส่ข้อผิดพลาดนั้นเข้าไปจริงแล้วยืนยันว่าไม่มีเทสต์ใดล้ม จึงเพิ่มเทสต์ที่ตรวจทีละขั้น (จับได้) และเพิ่มขอบล่างให้เทสต์ค่าประมาณไบแอส turn-on ตัวเลขใน PHYSICS ที่ผู้ตรวจทักว่ามาจากตัวอย่างน้อยไป ผมวัดใหม่ด้วย 100 ชุดสุ่ม (เดิม 30) และใช้ค่ามัธยฐานที่ถูกต้อง ผู้ตรวจคนที่สามตรวจการแก้ทั้งหมดซ้ำแล้ว ยืนยันครบ 11 จาก 11 ข้อ
-> - **การ merge:** เทสต์ heavy S2 แดงอยู่จนกว่าคุณตอบคำถามที่ 1 ข้อเสนอ: ใส่การเปลี่ยนแปลงตามคำตอบลงใน PR นี้ก่อน merge เพื่อให้ main เขียวอยู่ การ merge เป็นของคุณ
-> - **รอคุณ:** คำถามที่ 1 (เกณฑ์ของบท 15.2) และคำถามที่ 2 (ข้อจำกัดของ MEMS + GNSS ที่ปิดตัวจับดาวในช่วงไถลนาน)
+> - **การ merge:** การเปลี่ยนแปลงตามคำตอบข้อ 1 อยู่ใน PR นี้แล้ว เทสต์ heavy S2 ผ่าน main จะเขียวอยู่หลัง merge การ merge เป็นของคุณ
+> - **รอคุณ:** ไม่มีคำถามค้างใน PR นี้แล้ว คำถามที่ 1 (เกณฑ์ของบท 15.2) และคำถามที่ 2 (ข้อจำกัดของ MEMS + GNSS ที่ปิดตัวจับดาวในช่วงไถลนาน) ตอบแล้วทั้งคู่ เหลือเพียงการ merge
 
 ```yaml
 package: Argon4 follow-up, workstream 5 (IMU turn-on bias)
 lane: P
-items: []            # the owner's decision of 2026-10-17; no plan item
+items: []            # the owner's decision of 2026-10-17; no plan item (M-PHYSICS-079, placed in R4.3 by the answer to question 2, is a later package's)
 change_kind: physics (navigation model) + lesson text + docs
-owner_authorization: {date: 2026-10-17, quote: "3.ก.", scope: "DECISIONS.md, Decided 2026-10-17 (Argon4 review follow-up, chat), second table, row IMU turn-on bias"}
+owner_authorization: [{date: 2026-10-17, quote: "3.ก.", scope: "DECISIONS.md, Decided 2026-10-17 (Argon4 review follow-up, chat), second table, row IMU turn-on bias"}, {date: 2026-10-17, quote: "IMU1 ก", scope: "DECISIONS.md, Decided 2026-10-17 (Argon4 follow-up questions, chat), row IMU 1: lesson 15.2's bound 1 500 m"}]
 base: 7f991f9 (origin/main b16b09e + the owner's decisions commit)
 failing_before_fix: [tests/navigation.test.ts "keeps each sensor's turn-on bias for the flight" (on the base the biases' spread at 1 500 s is 0.170 and 0.041 of the expected, the bound is 0.9)]
 pinned_fingerprints_moved: none   # navigation is off in every fingerprint and golden
-verdict_flips: [lesson 15.2 ru-bins-astro with the star tracker, pass -> fail against 1 000 m (question 1); if the owner answers (ก), none: against 1 500 m it passes]
+verdict_flips: none with the bounds as shipped   # lesson 15.2 ru-bins-astro with the star tracker went pass -> fail against the old 1 000 m (1 184 m); its bound is 1 500 m by the owner's answer to question 1 ("IMU1 ก", 2026-10-17), against which it passes; every other verdict as on the base
 rollback: {method: revert, data_compat: "no stored-data or file-format change; NavigationRecord keeps its fields and their meaning"}
-reviewers: "second agent (physics): two lenses (math, claims), both 'sound with fixes', 11 findings; a third agent re-checked the fixes (ce0fd07, aac2205, a059c76): confirmed 11 of 11; science reviewer (realism): 0 of 1; owner (question 1): 0 of 1"
+reviewers: "second agent (physics): two lenses (math, claims), both 'sound with fixes', 11 findings; a third agent re-checked the fixes (ce0fd07, aac2205, a059c76): confirmed 11 of 11; science reviewer (realism): 0 of 1; owner: questions 1 and 2 answered in chat, 2026-10-17, \"IMU1 ก\" and \"IMU2 ข\""
 report: docs/development/reports/argon4-fu-imu.md
 ```
 
@@ -51,13 +55,14 @@ report: docs/development/reports/argon4-fu-imu.md
   estimated" rows still show the whole bias (turn-on plus in-run). The CSV has no bias columns.
 - Lessons 2.3 (`guid-nav`) and 15.2 (`ru-bins-astro`) quote their flights' new figures in their
   debriefs. **Lesson 15.2's worked answer, the star tracker, now ends 1 184 m off, over the
-  lesson's 1 000 m bound, and fails** (question 1). Lesson 15.2 is in the ru-24-05-06 pack, which
+  lesson's old 1 000 m bound, which it failed** (question 1). Lesson 15.2 is in the ru-24-05-06 pack, which
   is held back from the site today (`TEACHER_TOOLS = false` in src/ui/held.ts; the owner's
   decision of 2026-10-17, "teaching tools held back": the packs "ซ่อนทั้งชุด"). It is not in the
   catalogue; only a hand-typed `?lesson=ru-bins-astro` address still opens it (the "Copy link"
-  button that makes such addresses is held back too). So for now the flip shows only in heavy S2;
-  students meet it once the packs are shown again. If the owner answers (ก): the bound is 1 500 m,
-  the brief says so in en, ru and th, and the star tracker's 1 184 m passes (question 1).
+  button that makes such addresses is held back too). So the flip showed only in heavy S2. The
+  owner answered question 1 (ก) ("IMU1 ก", chat, 2026-10-17): the bound is 1 500 m, the brief says
+  so in en, ru and th, and the star tracker's 1 184 m passes; students meet the new bound once the
+  packs are shown again.
 
 ## The physics
 
@@ -183,9 +188,10 @@ seed, the figure being the lesson's measure `nav.positionError` (the peak to the
 | 15.2 | GNSS on | 1 000 m | 3.2 m | 3.1 m | fail (GNSS on) → same |
 
 The one flip is the known one, 15.2 with the star tracker. Its margin was 1.1 % on the base.
-Neither the bound, nor the lesson, nor tests/heavy/lesson-packs-sixdof.test.ts is changed: that
-is question 1. If the owner answers (ก): the bound is 1 500 m, and 15.2 with the star tracker
-passes (1 184 m); every other verdict in the table stays as it is.
+The table is against the 1 000 m bound the lesson had. The owner answered question 1 (ก)
+("IMU1 ก", 2026-10-17): the bound is 1 500 m, and 15.2 with the star tracker passes (1 184 m);
+every other verdict in the table stays as it is (as set 3 357 m and MEMS with the star tracker
+13 018 m still fail, the navigation grade's 360 m still passes).
 
 **The sensor seed.** The lessons do not lock the navigation settings, so a student can change the
 sensor seed. Flown closed loop with seeds 1–10 (`lessons.probe.ts`, `NAV_SEEDS`), 15.2 gives:
@@ -224,8 +230,8 @@ from 100 km the flight ends at 1 228 m, from 120 km at 966 m (`lessons.probe.ts`
 
 | File | Result | Time |
 |---|---|---|
-| tests/heavy/lesson-packs-sixdof.test.ts | 2 passed, 1 failed: S2, `expected 'fail' to be 'pass'`, the star tracker's flight 1 184.33 m (as in the earlier agent's notes) | 206 s |
-| the same, if the owner answers (ก) (the bound 1 500 m; branch `ws/imu-q1a`) | 3 passed | 313.3 s |
+| tests/heavy/lesson-packs-sixdof.test.ts, with the 1 000 m bound | 2 passed, 1 failed: S2, `expected 'fail' to be 'pass'`, the star tracker's flight 1 184.33 m (as in the earlier agent's notes) | 206 s |
+| the same, with the bound 1 500 m (answer (ก) to question 1, prepared on `ws/imu-q1a` before the answer; this branch since) | 3 passed | 313.3 s |
 | tests/heavy/lessons-sixdof.test.ts | 7 passed (2.3's tactical answer among them) | 457 s |
 | tests/heavy/navigation-burns.test.ts | 2 passed (tactical and MEMS reach the target orbit; gas to T+480 s 4.8 and 2.2 kg, to the end 18.4 and 12.8 kg) | 127 s |
 | tests/heavy/monte-carlo-falcon9-navigation.test.ts | 1 passed: 20/20 in orbit, 19 on target (run 13 in the wrong plane, the known issue 4), none lost; on target pe 499.65 ± 1.12, ap 501.37 ± 0.82 km, i 28.6154 ± 0.0012° | 1 297 s |
@@ -315,9 +321,8 @@ Also corrected: §2l's Monte Carlo row for the tactical navigation, from this br
 All agree in the three languages. The pack file was regenerated with
 `node --experimental-strip-types scripts/lesson-packs.ts` ("ru-24-05-06: unchanged") and
 `--check` says "up to date"; tests/lesson-packs.test.ts, which compares it, passes. 15.2's debrief
-says the star tracker gives about 1.2 km while its brief asks for 1 000 m: whichever way
-question 1 is answered, that debrief sentence follows the answer. If the owner answers (ก): the
-brief asks for 1 500 m, and the debrief stands as written.
+said the star tracker gives about 1.2 km while its brief asked for 1 000 m. With the owner's
+answer (ก) to question 1 the brief asks for 1 500 m, and the debrief stands as written.
 
 ## Performance (e)
 
@@ -349,11 +354,16 @@ that fly with navigation run a few per cent faster, not slower.
   tests/i18n-counts.test.ts tests/i18n-thai-terms.test.ts tests/profiles-i18n.test.ts
   tests/recheck.test.ts tests/d06-satellite-verdict.test.ts --maxWorkers=2`: 15 files, 306 passed
   (170 s).
-- Heavy, one at a time, `--maxWorkers=1`: the four files above, 12 passed, 1 failed (S2).
+- Heavy, one at a time, `--maxWorkers=1`: the four files above, 12 passed, 1 failed (S2), with
+  the 1 000 m bound.
 - `scripts/lesson-packs.ts` (write and `--check`): unchanged, up to date.
-- If the owner answers (ก), with its change (branch `ws/imu-q1a`): `scripts/lesson-packs.ts`
+- With answer (ก) to question 1's change (prepared on branch `ws/imu-q1a` before the answer, run
+  there; this branch was fast-forwarded to it when the owner answered, so the tree is the one
+  tested): `scripts/lesson-packs.ts`
   wrote ru-24-05-06 and `--check` says up to date; heavy lesson-packs-sixdof, `--maxWorkers=1`:
-  3 passed (313.3 s); `npx vitest run` on the 14 default files that read the packs or
+  3 passed (313.3 s); `npx vitest run tests/lesson-review.test.ts tests/lesson-packs.test.ts
+  tests/lesson-packs-design.test.ts tests/i18n.test.ts --maxWorkers=2`: 4 files, 52 passed;
+  `npx vitest run` on the 14 default files that read the packs or
   the lessons' texts (tests/lesson-packs, lesson-pack-format, lesson-packs-design,
   lesson-pack-names, lesson-event-answers, lesson-grading-end, lesson-review, classroom-pwa,
   phase4-walk, project-archive, i18n, i18n-counts, i18n-thai-terms, profiles-i18n),
@@ -388,7 +398,10 @@ that fly with navigation run a few per cent faster, not slower.
 Commits 1 and 2: 190 changed lines under src/ (124 added, 66 removed: navigation.ts 152,
 sensors.ts 18, the lessons 12, i18n and mcp.ts 8), 74 in tests/navigation.test.ts, 6 in the pack
 file. This session adds documentation, a test comment and this report; the review follow-up
-adds 34 lines and removes 5 in tests/navigation.test.ts, and nothing under src/. Under 400.
+adds 34 lines and removes 5 in tests/navigation.test.ts, and nothing under src/. Question 1's
+change (`b5b1326`, answer (ก)): 18 lines under src/ (10 added, 8 removed: the pack source 16,
+review.ts 2), 8 in the pack file, 19 in tests/heavy/lesson-packs-sixdof.test.ts, 4 in the
+reviewed heavy inventory. Under 400 (208 under src/ in all).
 
 ## Budget
 
@@ -407,7 +420,13 @@ was at the ceiling already, should count on this.
 
 ## Questions for the owner
 
-**1. Lesson 15.2's bound (`ru-bins-astro`, 1 000 m to the third stage's cut-off).** With the
+Both answered. The owner answered in chat on 2026-10-17, at about 23:28 UTC, verbatim
+"ฟ้า1 ก · ฟ้า2 ค · IMU1 ก · IMU2 ข": IMU 1 and IMU 2 are questions 1 and 2 below (ฟ้า 1 and 2 are
+the sky report's, PR #159). All four answers are recorded in [DECISIONS.md](../../DECISIONS.md),
+"Decided 2026-10-17 (Argon4 follow-up questions, chat)". The questions stand below as they were
+asked, each followed by its answer and what landed where.
+
+**1. Lesson 15.2's bound (`ru-bins-astro`, 1 000 m to the third stage's cut-off). Answered: (ก).** With the
 turn-on bias held, the star tracker, the lesson's worked answer, gives 1 184 m and fails; on the
 base it passed by 11 m (989 m). The physics is above: the peak is made before the star tracker
 can see (1 053 m at 150 km, T+269.5 s), and after that a star tracker sees the attitude, not the
@@ -440,8 +459,9 @@ Proposal: **(ก)**. It keeps what the lesson teaches (astro-correction bounds t
 the rule the bound was made by, and the debrief already says what is left (½bt²). It only needs
 your yes to the changed number in S2.
 
-**If the owner answers (ก):** the change is prepared before the answer, one commit on ccd2d30
-(branch `ws/imu-q1a`). `NAV_BOUND_M` is 1 500, its comment giving the rule and both settings
+**Answer: (ก)**, verbatim "IMU1 ก" (chat, 2026-10-17), as proposed. **What landed:** the change
+prepared before the answer, one commit on ccd2d30 (branch `ws/imu-q1a`, `b5b1326`), to which this
+branch was fast-forwarded when the owner answered; it lands in PR #157. `NAV_BOUND_M` is 1 500, its comment giving the rule and both settings
 (773 m → 966 m → 1 000 m; 1 184 m → 1 480 m → 1 500 m). The brief's "1 000 m" is "1 500 m" in en,
 ru and th ("Keep the navigation's position error within 1 500 m up to the third stage's cut-off,
 …"; «Удержите ошибку навигации по положению в пределах 1 500 м до выключения двигателя третьей
@@ -453,10 +473,11 @@ inventory that the heavy workflow's plan compares with the collected names, is c
 file's checksum; and VALIDATION's T03 note gives the new bound and its rule. The pack's
 `contentSha256` in src/lessons/review.ts, which tests/lesson-review.test.ts compares with the
 pack file's bytes, is the regenerated file's (ccd2d30 set it to the file as 008b323 left it);
-every review stays pending. The debrief, the hints and the title stay. Heavy S2 then
-passes: 3 passed (313.3 s).
+every review stays pending. The debrief, the hints and the title stay. Heavy S2 passes: the
+file 3 passed (313.3 s); the 4 lesson files 52 passed and the 14 default files that read the
+packs or the lessons' texts 169 passed ("Tests run").
 
-**2. A MEMS unit with GNSS and the star tracker switched off, over a long coast.** The attitude
+**2. A MEMS unit with GNSS and the star tracker switched off, over a long coast. Answered: (ข).** The attitude
 then drifts by tens of degrees (52° median after 3 000 s at 400 km; 38° of that is the gyros' own
 30 °/h, measured with the accelerometers' errors set to zero), past the filter's small-angle
 error model, and the filter's attitude σ becomes 4–6 times too small ((error/σ)² 20–32 per axis),
@@ -479,14 +500,23 @@ or test, and the star tracker is on by default.
 
 Proposal: **(ก)** now, with (ข) noted for R4.3.
 
+**Answer: (ข)**, verbatim "IMU2 ข" (chat, 2026-10-17); the owner's choice (the proposal was (ก)
+now, with (ข) noted). **What landed:** plan item M-PHYSICS-079 in R4.3
+(`docs/development/plan/data/assignment.tsv`, R4.3's items in `packages.tsv`,
+`docs/development/registry.tsv`): the filter's consistency for MEMS + GNSS without the star
+tracker over long coasts, and the gyro scale-factor columns built from a noisy measured rate,
+with its own consistency test; its notes give this question as its source and the figures above
+(52° median in 3 000 s, (error/σ)² 20–32 per axis; the scale factors' NEES 8.55 of 3). The
+placement only: it waits for its wave's authorization (D-65), and nothing in the filter changes in
+this PR; PHYSICS §2h "A limit" describes the limit meanwhile.
+
 ## Not done here
 
-- The answer to question 1. If the owner answers (ก): its change is the one in question 1's last
-  paragraph, in this tree.
-- Merging. Heavy S2 is red on this branch until question 1 is answered. Proposal: question 1's
-  change lands in this PR before it merges, so main's heavy suite stays green (SESSION-PROTOCOL
-  §5, no new PR in a lane whose main is red); the merge itself is yours (§1). If the owner
-  answers (ก): with its change heavy S2 passes.
+- Question 2's filter change: plan item M-PHYSICS-079 in R4.3, which waits for its wave's
+  authorization (D-65).
+- Merging. Question 1's change is in this PR, as proposed, and heavy S2 passes with it, so main's
+  heavy suite stays green (SESSION-PROTOCOL §5, no new PR in a lane whose main is red); the merge
+  itself is yours (§1).
 - The full default suite: the orchestrator runs it.
 - The navigation Monte Carlo heavy set was not re-run on the base (21 min); §2l's row is the
   branch's, the earlier row (499.76 ± 0.91, 501.39 ± 0.60 km) was the record of an earlier run.
