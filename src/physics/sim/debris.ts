@@ -797,6 +797,9 @@ export class DebrisTracker {
         if (touchdown) {
           d.alive = false;
           d.restT = this.sim.state.t - dt + (k + 1) * h;
+          // Contact ends the burn, latched on through the hoverslam's gaps
+          // (an output: nothing reads it once the body is down).
+          if (d.recovery) d.recovery.burning = false;
           const ll = eciToLatLon(d.r, this.sim.state.theta);
           d.impact = { lat: ll.lat * RAD, lon: ll.lon * RAD };
           const vImpact = vImpactNow;
