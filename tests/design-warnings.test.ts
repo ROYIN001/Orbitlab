@@ -21,8 +21,11 @@ import { Simulation } from '../src/physics/simulation';
 import { planMission } from '../src/physics/mission';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
 import { defaultDynamics } from '../src/physics/rigid/config';
-import { G0 } from '../src/physics/constants';
-import { idealDeltaV, liftoffMass, liftoffThrust } from '../src/physics/vehicle';
+import { G0, P0 } from '../src/physics/constants';
+import { atmosphere } from '../src/physics/atmosphere';
+import { separationPressure } from '../src/physics/nozzle';
+import { engineSpec } from '../src/data/parts';
+import { engineThrustAt, idealDeltaV, liftoffMass, liftoffThrust } from '../src/physics/vehicle';
 import { copyOf } from './custom-vehicle-harness';
 import type { MissionConfig, VehicleSpec } from '../src/types';
 
@@ -82,6 +85,10 @@ describe('design warnings · each on one design and its negation', () => {
     expect(codes(designWarnings({ ...structuredClone(vehicleById('falcon9')) }, PAYLOAD))).toEqual(['invalid']);
   });
 
+  // The air-lit half is the owner's decision of 2026-10-17 ("use real physics"):
+  // a vacuum engine lit in the air is allowed, and flies what its nozzle gives
+  // there (src/physics/nozzle.ts); the builder says so with `vacuumEngineInAir`
+  // rather than refusing it.
   it('vacuumEngineOnPad: a vacuum-only engine lit on the pad, said once, and not for an air-lit strap-on', () => {
     const core = f9();
     core.stages[0].engine.vacuumOnly = true;
@@ -100,6 +107,28 @@ describe('design warnings · each on one design and its negation', () => {
     expect(airLit.stages[0].boosters![0].engine.vacuumOnly).toBeUndefined();
     expect(codes(designWarnings(airLit, 1000))).not.toContain('vacuumEngineOnPad');
     expect(codes(designWarnings(airLit, 1000))).not.toContain('invalid');
+    // ...and the warning that its nozzle runs with the flow separated low in the air
+    const said = find(designWarnings(airLit, 1000), 'vacuumEngineInAir');
+    expect(said).toHaveLength(1);
+    expect(said[0]).toMatchObject({ level: 'warn', stage: 0, booster: 1 });
+    const e = airLit.stages[0].boosters![1].engine, n = airLit.stages[0].boosters![1].count * e.count;
+    expect(said[0].params.thrustVac).toBe(n * e.thrustVac);
+    expect(said[0].params.thrustSL).toBeLessThan(said[0].params.thrustVac);
+    expect(said[0].params.thrustSL).toBeCloseTo(n * engineThrustAt(e, P0, 1), 6);
+    expect(said[0].params.ceilingM).toBeGreaterThan(0);
+    expect(atmosphere(said[0].params.ceilingM).p).toBeCloseTo(separationPressure(e), -1);
+    // not for the ground-lit group, which is not a vacuum engine
+    expect(codes(designWarnings(copyOf('pslvxl'), 1000))).not.toContain('vacuumEngineInAir');
+  });
+
+  it('vacuumEngineInAir: a Merlin Vacuum on an air-lit strap-on, separated below about 15 km', () => {
+    const v = copyOf('pslvxl');
+    v.stages[0].boosters![1].engine = engineSpec('mvac', 1);
+    const w = find(designWarnings(v, 1000), 'vacuumEngineInAir');
+    expect(w).toHaveLength(1);
+    expect(w[0].params.ceilingM / 1e3).toBeGreaterThan(12);
+    expect(w[0].params.ceilingM / 1e3).toBeLessThan(18);
+    expect(w[0].params.thrustSL / w[0].params.thrustVac).toBeLessThan(0.85);
   });
 
   it('noLiftoff: Falcon 9 with its sea-level thrust halved stays on the pad, here and in a 5-s flight', () => {
@@ -252,8 +281,15 @@ describe('design warnings · agree with the flight', () => {
       const peak = new Map<number, number>();
       let guard = 0;
       while (!sim.done && guard++ < 400000 && (sim.state.status === 'prelaunch' || sim.state.status === 'ascent')) {
+        const before = sim.state.t;
         sim.step(sim.suggestedDt());
-        if (sim.state.status === 'ascent') {
+        // The warning is about the steady burn at the lowest level. Steps in a
+        // start-up or a tail-off are left out: at a strap-on burnout the core
+        // returns to full thrust while the strap-ons' thrust decays, a spike a
+        // tenth of a second long whose height depends on where the step falls
+        // on the burnout (Falcon Heavy's read 42.5 or 46.6 m/s² against its 45 as
+        // the thrust law of 2026-10-17 moved its burnout by a step).
+        if (sim.state.status === 'ascent' && !sim.vehicle.inTransient(before) && !sim.vehicle.inTransient(sim.state.t)) {
           const i = sim.vehicle.activeIndex;
           peak.set(i, Math.max(peak.get(i) ?? 0, sim.state.thrust / sim.state.mass));
         }

@@ -26,7 +26,10 @@
  *   published peak is kept as a ratio to it, `peakFactor`; the product is the
  *   published peak within 0.5 % (the table in src/data/parts.ts,
  *   tests/design-static-fire.test.ts). Anywhere between 0 and P0 nobody
- *   publishes a figure: the model blends the two linearly in pressure.
+ *   publishes a figure: the thrust law (src/physics/nozzle.ts) takes
+ *   p·A_e off λ·F_vac, linear in pressure while the flow is attached, and a
+ *   vacuum engine fired in air flies what its nozzle gives with the flow
+ *   separated inside it (`separatedAt` says where).
  * - WHAT IS AN ESTIMATE. The start-up and the tail-off are the fleet's
  *   generic constants unless the engine sets its own (src/physics/vehicle.ts,
  *   `LIQUID_STARTUP_S` …), not published transients, and the model keeps the
@@ -38,7 +41,8 @@ import type { EngineSpec, VehicleSpec } from '../types';
 import { BOOSTER_BODIES, ENGINE_PARTS, STAGE_BODIES, engineSpec, enginePartOf, type EnginePart } from '../data/parts';
 import { G0, P0 } from '../physics/constants';
 import { atmosphere } from '../physics/atmosphere';
-import { TAILOFF_SPAN, engineIsp, engineMassFlow, engineStartupS, engineTailoffS, engineThrust } from '../physics/vehicle';
+import { TAILOFF_SPAN, engineIsp, engineMassFlow, engineStartupS, engineTailoffS, engineThrustAt } from '../physics/vehicle';
+import { nozzleFlow, nozzleModel } from '../physics/nozzle';
 import { staticFire, type StaticFireResult, type StaticFireSample } from './static-fire';
 
 /** An engine on the stand, with the load it is fired with unless the student changes it. */
@@ -164,12 +168,18 @@ export interface StandRun {
   deliveredIsp: number;
   /** total impulse over the burn time, N (a solid's catalogue thrust is this kind of mean) */
   meanThrust: number;
-  /** the model's steady thrust at this pressure and level, N: count × F(p) × level (a solid's mean level, 1) */
+  /** the model's steady thrust at this pressure and level, N: count × F(p, level), the thrust law (a solid's mean level, 1) */
   steadyThrust: number;
-  /** the model's Isp at this pressure, s */
+  /** the model's Isp at this pressure and level, s: it falls with the throttle in air, not in vacuum */
   steadyIsp: number;
   /** propellant left in the tanks after the tail-off, kg */
   leftKg: number;
+  /**
+   * At the steady level, where the flow separates inside the nozzle: the area
+   * ratio at the separation point and the nozzle's own; null while it flows
+   * attached (src/physics/nozzle.ts).
+   */
+  separatedAt: { areaRatio: number; expansionRatio: number } | null;
 }
 
 /**
@@ -186,13 +196,15 @@ export function runStand(engine: EngineSpec, i: StandInputs): StandRun {
     ...(i.cutoffS !== undefined ? { cutoffS: i.cutoffS } : {}),
   });
   const fired = !result.refused && result.propellantUsed > 0;
+  const flow = nozzleFlow(engine, pressurePa, level);
   return {
     pressurePa, level, dt, result,
     deliveredIsp: fired ? result.impulse / (G0 * result.propellantUsed) : Number.NaN,
     meanThrust: fired && result.burnTime > 0 ? result.impulse / result.burnTime : Number.NaN,
-    steadyThrust: i.count * engineThrust(engine, pressurePa) * level,
-    steadyIsp: engineIsp(engine, pressurePa),
+    steadyThrust: i.count * engineThrustAt(engine, pressurePa, level),
+    steadyIsp: engineIsp(engine, pressurePa, level),
     leftKg: fired ? Math.max(0, i.propellantKg - result.propellantUsed) : i.propellantKg,
+    separatedAt: flow.separated ? { areaRatio: flow.separationAreaRatio, expansionRatio: nozzleModel(engine).expansionRatio } : null,
   };
 }
 
@@ -216,8 +228,11 @@ export interface StandRow {
  * The model beside the data, for a firing in `air`. Rows for the other air
  * keep the published figure with no stand value, so a student sees both of
  * the catalogue's operating points whichever one was fired. A throttled
- * liquid engine's thrust is not compared with a full-thrust figure; its Isp
- * is (the model's Isp does not depend on the throttle).
+ * liquid engine's thrust is not compared with a full-thrust figure, and in air
+ * neither is its Isp: the air takes p·A_e off the thrust at every level, so a
+ * throttled engine's Isp in air is below its full-thrust one (owner decision
+ * of 2026-10-17). In vacuum the Isp does not depend on the throttle and is
+ * compared at any level.
  */
 export function standComparison(engine: EngineSpec, count: number, air: StandAir, run: StandRun): StandRow[] {
   const fired = !run.result.refused && run.result.samples.length > 0;
@@ -244,7 +259,7 @@ export function standComparison(engine: EngineSpec, count: number, air: StandAir
   const ispStand = (a: StandAir): number | null => (here(a) ? run.deliveredIsp : null);
   const ispSL = engine.vacuumOnly ? null : engine.ispSL;
   rows.push({ figure: 'ispSL', published: ispSL, ...(engine.vacuumOnly ? { notData: true as const } : {}), stand: ispStand('seaLevel'),
-    difference: diff(ispStand('seaLevel'), ispSL), unit: 's' });
+    difference: diff(ispStand('seaLevel'), ispSL, solid || fullLevel), unit: 's' });
   rows.push({ figure: 'ispVac', published: engine.ispVac, stand: ispStand('vacuum'), difference: diff(ispStand('vacuum'), engine.ispVac), unit: 's' });
   if (air === 'pad') rows.push({ figure: 'ispPad', published: null, stand: ispStand('pad'), difference: null, unit: 's' });
   return rows;

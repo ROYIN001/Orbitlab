@@ -1135,37 +1135,117 @@ healthy ascent peaks at 22–40 kPa against 35–70 kPa placards and never touch
 
 ## 4. Propulsion and mass
 
-For each engine, thrust varies linearly with ambient pressure between sea-level and vacuum
-values, F(p) = F_vac − (F_vac − F_SL) p/p₀, and mass flow is ṁ = F_vac/(g₀ Isp_vac) at full
-throttle. Mass flow is a property of the pump and the injector, not of the ambient pressure —
-thrust is linear in pressure because the nozzle exit term is, while the propellant flow is
-unchanged — so F_vac/(g₀ Isp_vac) and F_SL/(g₀ Isp_SL) are the *same* number, and a data pair
-that says otherwise is over-determined. The model takes the vacuum pair as authoritative (it is
-the pair every source quotes, and the only one a vacuum-only engine has) and **back-solves the
-Isp at every pressure** from Isp(p) = F(p)/(ṁ g₀), so F = ṁ g₀ Isp holds exactly at every
-altitude. The sea-level Isp a ground-lit engine then delivers is within 1 % of the quoted
-`ispSL` for most of the fleet; the exceptions are recorded by a test rather than hidden —
-Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it took
-Arianespace's published pair on 2026-10-01).
+**The thrust law** (`engineThrustAt`, src/physics/nozzle.ts; owner decision of 2026-10-17, option
+(b)). Every thrust in the simulation — ascent, strap-ons, a hot stage, the six-DOF chambers, the
+returning stages and the guidance that plans their burns, the test stand — comes from one function of
+the engine, the ambient pressure and the level λ (the throttle setting × a solid's thrust profile ×
+the start-up or tail-off ramp). An engine's vacuum thrust is ṁ·v_e + p_e·A_e. The level scales the
+mass flow and the chamber pressure, and with the nozzle fixed the exit pressure with them, while the
+exit velocity stays; so the vacuum thrust is λ·F_vac. The air presses on the whole exit area whatever
+the level, and with the flow attached
 
-A throttle level, a solid's thrust profile and the start-up and tail-off ramps scale the whole
-pressure-blended thrust, F = λ·F(p), and the mass flow with it, so the Isp does not depend on the
-level (the test stand says so). With the nozzle flowing full the pressure term would not scale:
-F = λ·F_vac − (F_vac − F_SL)·p/p₀. The model's thrust is therefore high where an engine is
-throttled deep in the air, and a regressive solid's is low at its peak: a Merlin 1D at 40 % at sea
-level gives 338 kN against 297 kN (+14 %), Angara-A5's RD-191 core at 30 % +19 % at 2 km, and a
-P120C at its liftoff peak −2 %. Flown the full-flowing way, a point-mass ascent would end with a few
-metres a second less (Falcon 9 3 m/s, Falcon Heavy 8.5 m/s) or more (the solid-boosted Ariane 6, PSLV,
-Vulcan, H-IIA and H3, 4.5–23 m/s), and Angara-A5 with 25 % of its LEO payload would break up at
-T+202 s until its guidance was set again. Deep-throttle flow may separate in the nozzle, which raises the real thrust above the
-full-flowing figure, so the truth lies between the two. Changing it moves every fingerprint and
-needs the owner (found in the review of 2026-10-17).
+    F = λ·F_vac − p_a·A_e,      ṁ = λ·F_vac/(g₀ Isp_vac)
 
-An engine flagged `vacuumOnly` — every upper- and kick-stage engine that only ever ignites above
-~100 km — has no sea-level operating point at all (an RL10 nozzle would not flow full at sea
-level), and its `thrustSL`/`ispSL` fields are placeholders rather than data. The flag makes the
-model return the vacuum figures at every pressure for those engines, so a future abort or
-suborbital-hop scenario cannot silently fly invented numbers.
+Mass flow is a property of the pump and the injector, not of the ambient pressure, so
+F_vac/(g₀ Isp_vac) and F_SL/(g₀ Isp_SL) are the *same* number at full throttle, and a data pair that
+says otherwise is over-determined. The model takes the vacuum pair as authoritative (it is the pair
+every source quotes, and the only one a vacuum-only engine has) and **back-solves the Isp** at every
+pressure and level, Isp = F/(λ·ṁ g₀), so F = ṁ g₀ Isp holds exactly. For an engine with a sea-level
+operating point the exit area is its own pair's, A_e = (F_vac − F_SL)/p₀, so at λ = 1 and p₀ the law
+gives the catalogue's sea-level thrust exactly. The sea-level Isp a ground-lit engine then delivers is
+within 1 % of the quoted `ispSL` for most of the fleet; the exceptions are recorded by a test rather
+than hidden — Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it
+took Arianespace's published pair on 2026-10-01). In vacuum the Isp does not depend on the level; in
+air it falls as the engine is throttled, which the test stand shows.
+
+Until 2026-10-17 the level scaled the whole pressure-blended thrust, F = λ·[F_vac − (F_vac − F_SL)·p/p₀]:
+the air's share shrank with the throttle, a throttled engine low in the air was too strong (a Merlin 1D
+at 40 % at sea level 338 kN against 297 kN with the flow attached; Angara-A5's RD-191 core at 30 %
++19 % at 2 km) and a regressive solid at its peak a little weak (P120C −2 % at liftoff).
+
+**Separation.** The attached law alone would leave an engine throttled deep at sea level far too
+little thrust — none at all below λ = (F_vac − F_SL)/F_vac, 0.30 for Vulcain 2.1, which is where its
+start-up spends its first instant on the pad — because a nozzle far below ambient does not run full:
+the boundary layer separates inside the bell. Where is from Schmucker's criterion (R. H. Schmucker,
+*Flow processes in overexpanded chemical rocket nozzles, Part 1: Flow separation*, NASA TM-77396,
+1984, eq. 11):
+
+    p_i/p_a = (1.88·M_i − 1)^−0.64
+
+p_i the wall pressure where the separation begins and M_i the wall Mach number there, held at its
+value for M_i = 5 above it (Schmucker: no data above 5). The wall pressure is the one-dimensional
+isentropic pressure of the engine's nozzle at λ times the full-thrust one, from its area ratio ε and
+a ratio of specific heats by propellant (src/data/nozzles.ts: hydrolox 1.26, the value Schmucker uses
+for the SSME; kerolox and methalox 1.22, hypergolic 1.24, solid 1.18, estimates). Downstream of the
+separation the wall sees nearly the ambient pressure — Schmucker §2: it "increases only a little after
+the sharp pressure increase, until it almost reaches the surrounding pressure", and the plateau "is
+practically impossible to determine" — so the nozzle flies as if cut off at the area ratio ε_s where
+the flow separates:
+
+    F = λ·p_c·A_t·C_F,vac(ε_s) − p_a·A_t·ε_s,      floored at 0
+
+with p_c the chamber pressure that closes F_vac = p_c·A_t·C_F,vac(ε) on the engine's own geometry
+(so the vacuum thrust stays the catalogue's) and C_F,vac the ideal vacuum thrust coefficient. It
+meets the attached law where ε_s reaches ε and lies above it once separated, by ∫(p_a − p_w) dA over
+the separated bell. So deep throttle low in the air reads between the attached-flow law and the old
+one, close to the attached law where the separation sits near the exit:
+
+| engine, level, height | old λ·F(p) | attached | flown (separated) |
+|---|---|---|---|
+| Merlin 1D, 40 %, sea level | 338.0 kN | 296.6 kN | 298.9 kN |
+| RD-191, 30 %, sea level | 576 kN | 457 kN | 511 kN |
+| Vulcain 2.1, 50 %, sea level | 480 kN | 275 kN | 442 kN |
+| Merlin Vacuum, 100 %, sea level | 981 kN (its vacuum figure) | 116 kN | 775 kN |
+
+**Qualified sea-level operation stays attached.** The one-dimensional wall pressure understates the
+pressure at the end of a real bell: Schmucker's wall-pressure distribution for the SSME (TM-77396,
+Appendix, Fig. A1) ends at 0.0019·p_c, about twice the one-dimensional value for its ε of 69. With
+the one-dimensional pressure the criterion — like Summerfield's p_sep ≈ 0.25–0.4 p_a — would separate
+Vulcain 2.1 (one-dimensional p_e/p₀ 0.10), YF-77 (0.12), LE-7A (0.14), LE-9 (0.22) and the R-7's
+chambers at full thrust on the pad, which they run with the flow attached every flight: the
+catalogue's sea-level thrust is that point. So an engine with a sea-level pair takes the least factor
+on its wall pressure that keeps (λ = 1, p₀) attached — 1 for most of the fleet; Vulcain 2.1 2.53,
+YF-77 2.14, LE-7A 1.85, the Starship blend 1.35, LE-9 1.26, the R-7's chambers 1.04–1.21,
+RD-0213 1.10 — and such an engine begins to separate as soon as it is throttled at sea level. The
+others begin at λ = k(M_e)·p₀/p_e at sea level, and at that level times p_a/p₀ higher up: Merlin 1D
+0.42, BE-4 0.45, RD-180 0.53, Raptor 2 0.53, RD-191 0.55, RD-276 0.58, YF-100 0.69, F-1 0.72; the solid
+motors 0.31–0.52, below the tail of their profiles. A vacuum engine has no qualified sea-level point
+and takes 1. tests/nozzle-law.test.ts checks every catalogue engine at full thrust at sea level.
+
+**Vacuum engines lit in the air** (owner decision of 2026-10-17: "use real physics: an engine lit in
+the air flies what its nozzle really gives"). An engine flagged `vacuumOnly` has no sea-level
+operating point in the data, and its `thrustSL`/`ispSL` are placeholders the model never reads. Its
+exit area is its published exit diameter, or A_e = ε·F_vac/(p_c·C_F,vac(ε)) from its published ε and
+chamber pressure: the Merlin Vacuum's ε 165 and 9.7 MPa give the 3.3 m nozzle usually quoted. Every
+number has its source or an estimate flag in src/data/nozzles.ts. Lit low in the air the engine flies
+what that nozzle gives — at sea level the Merlin Vacuum 775 kN of its 981 kN (Isp 275 s), the flow
+separating at ε 26 of 165; an RL10C-1 77 of 102 kN; the RD-0124 238 of 294 kN — and above the
+altitude where its exit pressure meets the criterion (about 15 km for the Merlin Vacuum) it runs full.
+Until 2026-10-17 such an engine flew its vacuum thrust at every pressure: a design with Merlin
+Vacuums on strap-ons lit at T+0.5 s flew 981 kN at Isp 348 s from the pad.
+
+A flight reports an engine group running at a steady level with separated flow, once
+(`evt.nozzleSeparation`, with the separation area ratio); the start-up and the tail-off, which every
+engine passes through separated, are not reported. A separated nozzle sees asymmetric side loads
+(Schmucker's Part 2); no sourced criterion for when they break a nozzle was found, so the model flies
+the thrust and does not fail the engine. The builder still refuses a vacuum engine on the pad
+(`vacuumEngineOnPad`) and warns of one on an air-lit strap-on (`vacuumEngineInAir`, with the altitude
+below which it separates and its sea-level thrust); the test stand fires a vacuum engine in air.
+
+The returning stages fly the same law: their burns (src/physics/sim/debris.ts,
+src/physics/rigid/debris-runtime.ts, src/physics/sim/ship-descent.ts) and the return guidance that
+predicts them (src/physics/sim/return-guidance.ts) take the thrust from it and the level for a
+thrust from its inverse (`engineLevelFor`), so the planner and the plant agree. A Monte Carlo thrust
+factor scales the vacuum thrust and keeps the exit area.
+
+What the law leaves out: one γ per propellant family and an ideal C_F; the one-dimensional wall
+pressure with a least factor only where qualification demands it (a real bell's higher end pressure
+would delay separation at deep throttle — Merlin 1D, RD-191, Raptor — so the model separates early,
+on the side of more thrust); ambient pressure on the separated wall, not the plateau below it;
+lumped catalogue entries fly the blend's nozzle (Starship's six engines, landed on as blends); and
+the sea-level pairs the catalogue gives upper-stage solids (Zefiro 9 and 40, HPS3) imply chamber
+pressures no motor runs at (Zefiro 9 35 MPa), which matters only if one is lit low. A custom engine
+the table does not name flies a flagged estimate (`FALLBACK_NOZZLE`).
 
 **Solid motors** quote a *mean* thrust in the data — grain mass divided by the published burn
 time — and fly a regressive ramp on top of it, from a per-motor `peakFactor` (published

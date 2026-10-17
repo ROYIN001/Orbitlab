@@ -139,8 +139,10 @@ function budget(e: EomRecord | undefined, frame: VisualFrame, ctx: EquationConte
 function pressureThrust(e: EomRecord | undefined): Equation {
   if (!e || !(e.vacuumThrust > 0)) return none('pressureThrust', 'eq.none.enginesOff');
   const model = e.vacuumThrust - e.pressure * e.exitArea;
-  return { id: 'pressureThrust', available: true, values: { vac: e.vacuumThrust, p: e.pressure, Ae: e.exitArea, loss: e.pressure * e.exitArea, thrust: model },
-    check: check(e.thrust, model, 1e-9, 1), ...(e.exitArea === 0 ? { note: 'eq.note.vacuumOnly' } : {}) };
+  const values = { vac: e.vacuumThrust, p: e.pressure, Ae: e.exitArea, loss: e.pressure * e.exitArea, thrust: model };
+  // separated flow in a nozzle: the bell beyond the separation sees the outside air, and the thrust is above the formula's
+  if (e.separated) return { id: 'pressureThrust', available: true, values, note: 'eq.note.separated' };
+  return { id: 'pressureThrust', available: true, values, check: check(e.thrust, model, 1e-9, 1), ...(e.exitArea === 0 ? { note: 'eq.note.noExitArea' } : {}) };
 }
 
 /** Vis-viva: the semi-major axis from r and v, and the apsides, against the orbit the app shows. */

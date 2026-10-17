@@ -1,0 +1,279 @@
+/**
+ * The thrust law (src/physics/nozzle.ts, src/data/nozzles.ts): the owner's
+ * decision of 2026-10-17 — option (b) on the throttle and the ambient-pressure
+ * term, and real physics for a vacuum engine lit in the air.
+ *
+ * - Attached flow: F = λ·F_vac − p_a·A_e, the exit-area term whatever the level.
+ * - Every engine with a sea-level operating point gives the catalogue's
+ *   sea-level thrust at full throttle at p₀, with the flow attached.
+ * - Deep throttle low in the air lies between the attached-flow law and the
+ *   old λ·F(p) once the flow separates (separation raises it).
+ * - A vacuum engine at sea level gives its separated thrust, not its vacuum
+ *   thrust and not its placeholder sea-level figure.
+ * - Never negative, rising with the level, falling with the pressure.
+ * - Every number in the nozzle table has a source or an estimate flag.
+ */
+import { describe, expect, it } from 'vitest';
+import { ALL_VEHICLES } from '../src/data/vehicles';
+import { ENGINE_PARTS, engineSpec } from '../src/data/parts';
+import { NOZZLES, NOZZLE_GAMMA, type NozzleFigure } from '../src/data/nozzles';
+import {
+  areaRatioAt, engineLevelFor, engineThrustAt, machAt, nozzleFlow, nozzleModel, pressureRatioAt, schmuckerRatio, separationPressure,
+  vacuumThrustCoefficient,
+} from '../src/physics/nozzle';
+import { engineIsp, engineMassFlow, engineThrustSL } from '../src/physics/vehicle';
+import { atmosphere } from '../src/physics/atmosphere';
+import { P0 } from '../src/physics/constants';
+import type { EngineSpec } from '../src/types';
+
+/** Every engine a built-in vehicle flies (the historical ones too), stage and strap-on, once per name. */
+function fleetEngines(): EngineSpec[] {
+  const out = new Map<string, EngineSpec>();
+  for (const v of ALL_VEHICLES) {
+    for (const st of v.stages) {
+      for (const e of [st.engine, ...(st.boosters ?? []).map((b) => b.engine)]) if (!out.has(e.name)) out.set(e.name, e);
+    }
+  }
+  return [...out.values()];
+}
+const partEngines = (): EngineSpec[] => ENGINE_PARTS.map((p) => engineSpec(p, 1));
+const allEngines = (): EngineSpec[] => [...fleetEngines(), ...partEngines()];
+const groundLit = (e: EngineSpec): boolean => !e.vacuumOnly && e.thrustSL < e.thrustVac;
+const part = (id: string): EngineSpec => engineSpec(id, 1);
+
+describe('one-dimensional nozzle relations', () => {
+  it('inverts the area–Mach relation on the supersonic branch', () => {
+    for (const g of [1.18, 1.22, 1.26]) {
+      for (const a of [1.5, 16, 58.2, 165, 240]) expect(areaRatioAt(machAt(a, g), g)).toBeCloseTo(a, 6);
+    }
+    expect(machAt(1, 1.22)).toBe(1);
+  });
+
+  it('closes the vacuum thrust coefficient at the throat and grows with the area ratio', () => {
+    // at the throat C_F = Γ·√(2γ/(γ+1)) + p*/p_c, with Γ = √γ·(2/(γ+1))^((γ+1)/(2(γ−1)))
+    const g = 1.2, big = Math.sqrt(g) * (2 / (g + 1)) ** ((g + 1) / (2 * (g - 1)));
+    expect(vacuumThrustCoefficient(1, g)).toBeCloseTo(big * Math.sqrt(2 * g / (g + 1)) + (2 / (g + 1)) ** (g / (g - 1)), 9);
+    let last = 0;
+    for (const a of [1, 2, 5, 16, 50, 165, 500]) {
+      const cf = vacuumThrustCoefficient(a, 1.22);
+      expect(cf).toBeGreaterThan(last);
+      last = cf;
+    }
+  });
+
+  it("is Schmucker's criterion (NASA TM-77396, eq. 11), capped at Mach 5 and at 1", () => {
+    expect(schmuckerRatio(4.5)).toBeCloseTo((1.88 * 4.5 - 1) ** -0.64, 12);
+    expect(schmuckerRatio(4.5)).toBeCloseTo(0.276, 3);
+    // Schmucker's own SSME figure, 0.28–0.29 at M_i 4.5, is the same curve
+    expect(schmuckerRatio(4.5)).toBeGreaterThan(0.27);
+    expect(schmuckerRatio(8)).toBe(schmuckerRatio(5));
+    expect(schmuckerRatio(1)).toBe(1);
+  });
+});
+
+describe('the thrust law', () => {
+  it('attached flow: λ·F_vac − p_a·A_e, the exit-area term at any level', () => {
+    // RD-180 at its 47 % floor at 10 km, Merlin 1D at 70 % at sea level, a Raptor at 60 % at 5 km: all attached
+    for (const [id, level, h] of [['rd180', 0.47, 10e3], ['merlin1d', 0.7, 0], ['raptor2', 0.6, 5e3], ['rd191', 1, 0]] as const) {
+      const e = part(id), p = atmosphere(h).p, m = nozzleModel(e);
+      expect(nozzleFlow(e, p, level).separated, id).toBe(false);
+      expect(engineThrustAt(e, p, level), id).toBeCloseTo(level * e.thrustVac - p * m.exitArea, 6);
+      expect(m.exitArea, id).toBeCloseTo((e.thrustVac - e.thrustSL) / P0, 9);
+    }
+    // in vacuum it is λ·F_vac exactly, for every engine
+    for (const e of allEngines()) for (const level of [0.3, 1, 1.5]) expect(engineThrustAt(e, 0, level)).toBe(level * e.thrustVac);
+  });
+
+  it('every engine with a sea-level point gives its catalogue sea-level thrust at full throttle at p₀, attached', () => {
+    const checked: string[] = [];
+    for (const e of allEngines()) {
+      if (!groundLit(e)) continue;
+      const flow = nozzleFlow(e, P0, 1);
+      expect(flow.separated, `${e.name} separates at full thrust at sea level`).toBe(false);
+      expect(flow.thrust / e.thrustSL - 1, e.name).toBeCloseTo(0, 9);
+      expect(engineThrustSL(e) / e.thrustSL - 1, e.name).toBeCloseTo(0, 9);
+      checked.push(e.name);
+    }
+    expect(checked.length).toBeGreaterThan(35);
+  });
+
+  it('keeps the qualified point attached only where the one-dimensional wall pressure needs help, and says which', () => {
+    // The engines whose one-dimensional exit pressure fails Schmucker's
+    // criterion at full thrust at sea level, and so carry a wall factor: the
+    // high-expansion hydrogen engines and the R-7's chambers. Measured on
+    // 2026-10-17; a change to the data that moves an engine in or out of this
+    // list is a change to where it separates when throttled.
+    const helped = [...new Set(allEngines().filter((e) => groundLit(e) && nozzleModel(e).wallFactor > 1).map((e) => e.name))].sort();
+    expect(helped).toEqual(expect.arrayContaining(['LE-7A', 'LE-9', 'Vulcain 2.1', 'YF-77']));
+    for (const name of helped) {
+      const e = allEngines().find((x) => x.name === name)!;
+      // just enough: separation starts at λ = 1 at sea level
+      expect(nozzleFlow(e, P0, 0.999).separated, name).toBe(true);
+      expect(nozzleModel(e).wallFactor, name).toBeLessThan(3);
+    }
+    // a vacuum engine has no qualified sea-level point, and no help
+    for (const e of allEngines()) if (e.vacuumOnly) expect(nozzleModel(e).wallFactor, e.name).toBe(1);
+  });
+
+  it('deep throttle at sea level lies between the attached-flow law and the old λ·F(p) once the flow separates', () => {
+    const cases: [string, number, number][] = [['rd191', 0.3, 0], ['rd191', 0.3, 2e3], ['vulcain21', 0.5, 0], ['le7a', 0.4, 0], ['merlin1d', 0.4, 0],
+      ['raptor2', 0.4, 0], ['le9', 0.63, 0], ['be4', 0.4, 0]];
+    for (const [id, level, h] of cases) {
+      const e = part(id), p = atmosphere(h).p, m = nozzleModel(e);
+      const flow = nozzleFlow(e, p, level);
+      const attached = level * e.thrustVac - p * m.exitArea;
+      const old = level * (e.thrustVac - (e.thrustVac - e.thrustSL) * p / P0);
+      expect(flow.separated, `${id} at ${level} and ${h} m`).toBe(true);
+      expect(flow.thrust, id).toBeGreaterThan(attached);
+      expect(flow.thrust, id).toBeLessThan(old);
+      expect(flow.separationAreaRatio, id).toBeLessThan(m.expansionRatio);
+    }
+    // Angara-A5's core at 30 % at sea level: 11 % below the old figure, not the attached law's 21 %
+    const rd191 = part('rd191');
+    expect(engineThrustAt(rd191, P0, 0.3) / (0.3 * rd191.thrustSL)).toBeGreaterThan(0.85);
+    expect((0.3 * rd191.thrustVac - (rd191.thrustVac - rd191.thrustSL)) / (0.3 * rd191.thrustSL)).toBeLessThan(0.8);
+  });
+
+  it('a vacuum engine at sea level gives its separated thrust: not its vacuum figure, not its placeholder', () => {
+    const mvac = part('mvac'), rl10 = part('rl10c1'), vinci = part('vinci');
+    for (const e of [mvac, rl10, vinci]) {
+      const flow = nozzleFlow(e, P0, 1), m = nozzleModel(e);
+      expect(flow.separated, e.name).toBe(true);
+      expect(flow.thrust, e.name).toBeLessThan(0.85 * e.thrustVac);
+      expect(flow.thrust, e.name).toBeGreaterThan(Math.max(0, e.thrustVac - P0 * m.exitArea));
+      expect(flow.thrust, e.name).not.toBeCloseTo(e.thrustSL, 0);
+      // the flow separates far inside the bell
+      expect(flow.separationAreaRatio / m.expansionRatio, e.name).toBeLessThan(0.3);
+    }
+    // the Merlin Vacuum: its 3.3 m nozzle (from ε 165 and p_c 9.7 MPa) and about 775 kN, Isp about 275 s, at sea level
+    expect(Math.sqrt(4 * nozzleModel(mvac).exitArea / Math.PI)).toBeCloseTo(3.3, 1);
+    expect(engineThrustAt(mvac, P0, 1) / 1e3).toBeGreaterThan(740);
+    expect(engineThrustAt(mvac, P0, 1) / 1e3).toBeLessThan(810);
+    expect(engineIsp(mvac, P0)).toBeLessThan(290);
+    // the RL10C-1's published exit diameter is what it flies
+    expect(nozzleModel(rl10).exitArea).toBeCloseTo(Math.PI * 1.45 ** 2 / 4, 9);
+    // high up the same nozzle runs full: the Merlin Vacuum at 40 km
+    expect(nozzleFlow(mvac, atmosphere(40e3).p, 1).separated).toBe(false);
+  });
+
+  it('is never negative, rises with the level and falls with the pressure, for every engine', () => {
+    for (const e of allEngines()) {
+      let lastP = Infinity;
+      for (const p of [0, 1, 50, 1000, 5000, 20e3, 50e3, P0, 1.1 * P0]) {
+        let lastL = -1;
+        for (const level of [0, 0.001, 0.02, 0.1, 0.2, 0.3, 0.4, 0.5, 0.63, 0.8, 1, 1.25, 1.53]) {
+          const f = engineThrustAt(e, p, level);
+          expect(Number.isFinite(f) && f >= 0, `${e.name} at ${p} Pa, level ${level}: ${f}`).toBe(true);
+          expect(f, `${e.name} at ${p} Pa: falls from level ${level}`).toBeGreaterThanOrEqual(lastL - 1e-6 * e.thrustVac);
+          lastL = f;
+        }
+        const full = engineThrustAt(e, p, 1);
+        expect(full, `${e.name}: rises with the pressure at ${p} Pa`).toBeLessThanOrEqual(lastP + 1e-6 * e.thrustVac);
+        lastP = full;
+      }
+    }
+  });
+
+  it('meets the attached law where the flow separates: no step in thrust at the separation boundary', () => {
+    for (const id of ['rd191', 'merlin1d', 'mvac', 'rl10c1', 'raptor2']) {
+      const e = part(id), m = nozzleModel(e);
+      // the level at which separation reaches the exit at sea level, and either side of it
+      const edge = schmuckerRatio(m.exitMach) * P0 / (m.wallFactor * m.exitPressure);
+      const below = engineThrustAt(e, P0, edge * (1 - 1e-7)), above = engineThrustAt(e, P0, edge * (1 + 1e-7));
+      expect(Math.abs(above - below) / e.thrustVac, id).toBeLessThan(1e-5);
+    }
+  });
+
+  it('the level for a thrust inverts the law, attached or separated', () => {
+    for (const id of ['rd191', 'merlin1d', 'mvac', 'raptor2', 'le7a']) {
+      const e = part(id);
+      for (const p of [0, 30e3, P0]) {
+        for (const level of [0.2, 0.4, 0.7, 1]) {
+          const f = engineThrustAt(e, p, level);
+          if (f > 1e-3 * e.thrustVac) expect(engineLevelFor(e, p, f), `${id} ${p} ${level}`).toBeCloseTo(level, 5);
+        }
+      }
+    }
+    expect(engineLevelFor(part('merlin1d'), P0, 0)).toBe(0);
+  });
+
+  it('the Isp falls with the throttle in air and not in vacuum', () => {
+    const e = part('rd191');
+    expect(engineIsp(e, 0, 0.3)).toBeCloseTo(e.ispVac, 9);
+    expect(engineIsp(e, 0, 1)).toBeCloseTo(e.ispVac, 9);
+    expect(engineIsp(e, P0, 0.3)).toBeLessThan(engineIsp(e, P0, 0.7));
+    expect(engineIsp(e, P0, 0.7)).toBeLessThan(engineIsp(e, P0, 1));
+    // F = λ·ṁ·g₀·Isp at every level
+    expect(engineThrustAt(e, P0, 0.45)).toBeCloseTo(0.45 * engineMassFlow(e) * 9.80665 * engineIsp(e, P0, 0.45), 6);
+  });
+
+  it('separates below the altitude its exit pressure sets, and only there', () => {
+    const mvac = part('mvac');
+    const pSep = separationPressure(mvac);
+    expect(nozzleFlow(mvac, pSep * 1.01, 1).separated).toBe(true);
+    expect(nozzleFlow(mvac, pSep * 0.99, 1).separated).toBe(false);
+    expect(separationPressure(part('merlin1d'), 0.5)).toBeCloseTo(0.5 * separationPressure(part('merlin1d')), 9);
+  });
+
+  it('falls back to a flagged estimate for an engine the table does not know', () => {
+    const custom: EngineSpec = { name: 'my engine', count: 1, thrustSL: 800e3, thrustVac: 900e3, ispSL: 280, ispVac: 315 };
+    const m = nozzleModel(custom);
+    expect(m.basis).toBe('estimate');
+    expect(engineThrustAt(custom, P0, 1)).toBeCloseTo(800e3, 3);
+    const vac: EngineSpec = { ...custom, name: 'my vacuum engine', vacuumOnly: true };
+    expect(nozzleModel(vac).basis).toBe('estimate');
+    expect(engineThrustAt(vac, P0, 1)).toBeLessThan(900e3);
+    expect(nozzleModel(part('mvac')).basis).toBe('data');
+    // equal thrusts: no exit-area term at all
+    expect(engineThrustAt({ ...custom, thrustSL: 900e3 }, P0, 0.4)).toBe(0.4 * 900e3);
+  });
+});
+
+describe('nozzle data (src/data/nozzles.ts)', () => {
+  const figures = (name: string): [string, NozzleFigure][] => {
+    const r = NOZZLES[name];
+    return [['expansionRatio', r.expansionRatio], ['chamberPressure', r.chamberPressure], ['exitDiameter', r.exitDiameter]]
+      .filter((x): x is [string, NozzleFigure] => x[1] !== undefined);
+  };
+
+  it('holds every engine a built-in vehicle or a catalogue part flies', () => {
+    const missing = [...new Set(allEngines().map((e) => e.name))].filter((n) => !Object.prototype.hasOwnProperty.call(NOZZLES, n));
+    expect(missing).toEqual([]);
+  });
+
+  it('every figure has a source or an estimate flag, and is a positive number', () => {
+    for (const name of Object.keys(NOZZLES)) {
+      for (const [field, f] of figures(name)) {
+        expect(f.value > 0 && Number.isFinite(f.value), `${name}.${field}`).toBe(true);
+        const said = 'source' in f ? f.source : f.estimate;
+        expect(typeof said === 'string' && said.length > 10, `${name}.${field} says where it comes from`).toBe(true);
+        expect('source' in f && 'estimate' in f, `${name}.${field} is not both`).toBe(false);
+      }
+    }
+    for (const g of Object.values(NOZZLE_GAMMA)) expect(('source' in g ? g.source : g.estimate).length).toBeGreaterThan(10);
+  });
+
+  it('gives each engine what its kind needs: a vacuum engine its exit size, a sea-level one its ε or chamber pressure', () => {
+    const engines = new Map(allEngines().map((e) => [e.name, e]));
+    for (const [name, r] of Object.entries(NOZZLES)) {
+      const e = engines.get(name);
+      expect(e, `${name} is flown by something`).toBeDefined();
+      if (e!.vacuumOnly) expect(!!r.exitDiameter || (!!r.expansionRatio && !!r.chamberPressure), name).toBe(true);
+      else expect(!!r.expansionRatio || !!r.chamberPressure, name).toBe(true);
+      if (r.exitDiameter) expect(r.exitDiameter.nozzles >= 1 && Number.isInteger(r.exitDiameter.nozzles), name).toBe(true);
+    }
+  });
+
+  it('closes the vacuum thrust with the geometry, so the chamber pressure it flies is near the published one', () => {
+    // where both a published ε and a published p_c exist, the p_c that closes F_vac
+    // with the exit area is within a quarter of the published figure (the exit
+    // area of a sea-level engine is its pair's, the C_F ideal)
+    for (const e of allEngines()) {
+      const r = NOZZLES[e.name];
+      if (!r?.expansionRatio || !r.chamberPressure || !('source' in r.chamberPressure) || !('source' in r.expansionRatio)) continue;
+      const m = nozzleModel(e);
+      expect(Math.abs(m.chamberPressure / r.chamberPressure.value - 1), e.name).toBeLessThan(0.25);
+      expect(pressureRatioAt(m.exitMach, m.gamma) * m.chamberPressure).toBeCloseTo(m.exitPressure, 6);
+    }
+  });
+});

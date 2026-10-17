@@ -4,9 +4,10 @@ import type { DynamicsConfig, StageSpec } from '../../types';
 import type { Debris } from '../simulation';
 import { atmosphere } from '../atmosphere';
 import { tumblingDragCoefficient } from '../aero';
-import { DEG, G0, MU_EARTH, OMEGA_EARTH } from '../constants';
+import { DEG, G0, MU_EARTH, OMEGA_EARTH, P0 } from '../constants';
 import { geodeticHeight } from '../geodesy';
-import { engineMassFlow, engineThrust } from '../vehicle';
+import { engineMassFlow, engineThrustAt } from '../vehicle';
+import { engineLevelFor } from '../nozzle';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { buildDetachedStage, type RigidVehicleSnapshot } from './mass';
 import type { PartitionedRigidBody } from './partition';
@@ -257,7 +258,8 @@ export class RigidDebrisRuntime {
     let nose = coastNose, throttle = 0, engines: number[] = [];
     if ((downward > 0 || this.terminalCoast) && height < 20000) {
       const g = MU_EARTH / norm(this.state.r) ** 2;
-      const thrust = engineThrust(stage.engine, atmosphere(height).p) * this.health(this.centre);
+      const pressure = atmosphere(height).p;
+      const thrust = engineThrustAt(stage.engine, pressure, 1) * this.health(this.centre);
       const deceleration = Math.max(0.1, thrust / this.snapshot.mass - g);
       const stopDistance = Math.max(0, (downward ** 2 - 4) / (2 * deceleration));
       if (rc.landingStarted || contact.tailClearance < 1.15 * stopDistance + 20) {
@@ -270,8 +272,10 @@ export class RigidDebrisRuntime {
         // coasting blind to a single restart.
         const set = this.landingSet === 'one' && !this.terminalCoast ? this.hoverSet(this.snapshot.mass * demandedAcceleration, height) : this.finalSet;
         this.finalSet = set;
-        const setThrust = set === this.centre ? thrust : engineThrust(stage.engine, atmosphere(height).p) * this.health(set);
-        const requestedThrottle = setThrust > 0 ? this.snapshot.mass * demandedAcceleration / setThrust : 0;
+        const lit = this.health(set);
+        const setThrust = set === this.centre ? thrust : engineThrustAt(stage.engine, pressure, 1) * lit;
+        // the level that gives the thrust asked for, through the thrust law (not linear in the level in air)
+        const requestedThrottle = setThrust > 0 ? engineLevelFor(stage.engine, pressure, this.snapshot.mass * demandedAcceleration / lit) : 0;
         const minimumThrottle = stage.engine.minThrottle ?? 1;
         // A low-mass stage cannot hover below minimum thrust. A single latched
         // terminal coast/restart replaces rapid on/off pulses. The final burn
@@ -284,7 +288,7 @@ export class RigidDebrisRuntime {
             // go down as well as up once it is lit (TERMINAL_PLANNED_THROTTLE_FRACTION).
             const planned = minimumThrottle + TERMINAL_PLANNED_THROTTLE_FRACTION * (1 - minimumThrottle);
             const brakingDistance = minimumBurnDistance({ massKg: this.snapshot.mass, propellantKg: rc.propellant,
-              downwardMs: groundDownward, minimumThrustN: setThrust * planned,
+              downwardMs: groundDownward, minimumThrustN: engineThrustAt(stage.engine, pressure, planned) * lit,
               minimumFlowKgS: engineMassFlow(stage.engine) * planned * this.health(set),
               gravityMs2: g + dot(cross(EARTH_RATE, cross(EARTH_RATE, this.state.r)), up),
               dragKgM: 0.5 * density * this.snapshot.aero.referenceArea * this.snapshot.aero.cdMach[0][1],
@@ -342,13 +346,14 @@ export class RigidDebrisRuntime {
     const air = this.runtime.airVelocity(this.state, time), downward = -dot(air, up);
     const height = Math.max(0, geodeticHeight(this.state.r));
     const g = MU_EARTH / norm(this.state.r) ** 2;
-    const perEngine = engineThrust(stage.engine, atmosphere(height).p);
+    const pressure = atmosphere(height).p;
+    const perEngine = engineThrustAt(stage.engine, pressure, 1);
     const one = perEngine * this.health(this.centre);
     const three = perEngine * this.health(this.trio);
     if (!rc.landingStarted) {
       if (!(downward > 0 && height < 20000)) return { nose: this.aeroSteerNose(time, retro), throttle: 0, engines: [] };
       const braking = contact.tailClearance < 1.1 * brakingHeight({ alt: height, surfaceAlt: height - contact.tailClearance, vDown: downward,
-        vTouch: 2, mass: this.snapshot.mass, thrust: (y) => engineThrust(stage.engine, atmosphere(Math.max(0, y)).p) * this.health(this.centre) * RETURN_LANDING_LEVEL,
+        vTouch: 2, mass: this.snapshot.mass, thrust: (y) => engineThrustAt(stage.engine, atmosphere(Math.max(0, y)).p, RETURN_LANDING_LEVEL) * this.health(this.centre),
         flow: engineMassFlow(stage.engine) * this.health(this.centre) * RETURN_LANDING_LEVEL, cd: d.cd, area: d.area, gravity: g }) + 10;
       const divert = !braking && this.divertNeedsTime(time, contact, downward, three, g);
       if (!braking && !divert) return { nose: this.aeroSteerNose(time, retro), throttle: 0, engines: [] };
@@ -363,7 +368,8 @@ export class RigidDebrisRuntime {
       const wanted = add(scale(up, aV), lateral);
       const force = this.snapshot.mass * norm(wanted);
       if (force > 0.95 * one) {
-        return { nose: normalize(wanted), throttle: clamp(force / Math.max(1, three), stage.engine.minThrottle ?? 1, 1), engines: this.trio };
+        const level = engineLevelFor(stage.engine, pressure, force / Math.max(1e-9, this.health(this.trio)));
+        return { nose: normalize(wanted), throttle: clamp(level, stage.engine.minThrottle ?? 1, 1), engines: this.trio };
       }
       this.landingSet = 'one';
     }
@@ -474,7 +480,7 @@ export class RigidDebrisRuntime {
     if (rc.propellant <= 0) { throttle = 0; engines = []; }
     rc.burning = throttle > 0;
     rc.thrustVac = activeEngines * stage.engine.thrustVac * throttle;
-    rc.thrustSL = activeEngines * stage.engine.thrustSL * throttle;
+    rc.thrustSL = activeEngines * engineThrustAt(stage.engine, P0, throttle);
     rc.mdot = activeEngines * engineMassFlow(stage.engine) * throttle;
     return { nose: command.nose, throttle, engines };
   }
@@ -498,17 +504,18 @@ export class RigidDebrisRuntime {
   private hoverSet(force: number, height: number): number[] {
     if (!this.isSuperHeavy) return this.centre;
     const stage = this.options.stage!;
-    const per = engineThrust(stage.engine, atmosphere(Math.max(0, height)).p), minimum = stage.engine.minThrottle ?? 1;
+    const pressure = atmosphere(Math.max(0, height)).p, minimum = stage.engine.minThrottle ?? 1;
+    const per = engineThrustAt(stage.engine, pressure, 1), perMinimum = engineThrustAt(stage.engine, pressure, minimum);
     const sets = [[0, 1, 2], [0, 1], [0]];
     // Keep the engines lit while they can fly the thrust asked for: switching
     // on every small change is a step in thrust and in torque each time.
     const current = sets.findIndex(set => set.length === this.finalSet.length);
     if (current >= 0) {
-      const set = sets[current], lo = per * this.health(set) * minimum, hi = per * this.health(set);
+      const set = sets[current], lo = perMinimum * this.health(set), hi = per * this.health(set);
       if (force >= 0.97 * lo && force <= hi) return set;
       if (force > hi && current > 0) return sets[current - 1];
     }
-    for (const set of sets) if (per * this.health(set) * minimum <= force) return set;
+    for (const set of sets) if (perMinimum * this.health(set) <= force) return set;
     return [0];
   }
   /** Healthy engines among `engines`, as a count. */
@@ -572,7 +579,7 @@ export class RigidDebrisRuntime {
         if (!g.trim && g.dvNeeded < BOOSTBACK_TRIM_DV) g.trim = true;
         // The last metres per second on the centre engine, throttled down so
         // one control step does not overshoot them.
-        const one = engineThrust(stage.engine, atmosphere(Math.max(0, height)).p) * this.health(this.centre) / this.snapshot.mass;
+        const one = engineThrustAt(stage.engine, atmosphere(Math.max(0, height)).p, 1) * this.health(this.centre) / this.snapshot.mass;
         const throttle = g.trim ? clamp(g.dvNeeded / Math.max(1e-6, one * 1.0), minimum, 1) : 1;
         return { nose: g.dir, throttle, engines: g.trim ? this.centre : this.trio };
       }
@@ -589,7 +596,7 @@ export class RigidDebrisRuntime {
           if (!rc.entryFlown) this.raised.push({ key: 'evt.entryBurnStart', severity: 'info', params: { name: d.name } });
           rc.entryFlown = true;
           const thrust = this.health(this.trio)
-            * engineThrust(stage.engine, atmosphere(Math.max(0, height)).p);
+            * engineThrustAt(stage.engine, atmosphere(Math.max(0, height)).p, 1);
           const aT = thrust / this.snapshot.mass;
           const g = this.solution(time, RETURN_REPLAN_S);
           const tau = Math.max(3, (speed - rg.entryTargetSpeed) / Math.max(1, aT));

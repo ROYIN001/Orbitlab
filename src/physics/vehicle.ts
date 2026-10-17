@@ -4,6 +4,9 @@
  */
 import type { VehicleSpec, StageSpec, BoosterGroupSpec, EngineSpec, SatelliteSpec, RecoveryMode, RecoveryPlan, TargetedRecovery } from '../types';
 import { G0, P0 } from './constants';
+import { engineThrustAt, nozzleFlow, nozzleModel } from './nozzle';
+
+export { engineThrustAt } from './nozzle';
 
 export interface BoosterState {
   spec: BoosterGroupSpec;
@@ -158,6 +161,25 @@ export function inTailoff(e: EngineSpec, stopTime: number, t: number): boolean {
   return t - stopTime >= 0 && t - stopTime < TAILOFF_SPAN * engineTailoffS(e) - 1e-9;
 }
 
+/**
+ * Impulse one engine still gives in a tail-off from level `level`, N·s, from
+ * `from` time constants after the shutdown to the end of the decay
+ * (`TAILOFF_SPAN`), at ambient pressure `p`. In vacuum the law is linear in the
+ * level and the integral is closed; in air it is not (the air takes p·A_e at
+ * every level), so it is summed (Simpson, 24 intervals).
+ */
+export function tailoffImpulse(e: EngineSpec, p: number, level: number, tau: number, from = 0): number {
+  if (!(level > 0) || !(from < TAILOFF_SPAN)) return 0;
+  if (!(p > 0)) return level * e.thrustVac * tau * (Math.exp(-from) - Math.exp(-TAILOFF_SPAN));
+  const n = 24, h = (TAILOFF_SPAN - from) / n;
+  let sum = 0;
+  for (let i = 0; i <= n; i++) {
+    const w = i === 0 || i === n ? 1 : i % 2 === 1 ? 4 : 2;
+    sum += w * engineThrustAt(e, p, level * Math.exp(-(from + i * h)));
+  }
+  return sum * h / 3 * tau;
+}
+
 export interface ThrustResult {
   /** total thrust, N */
   thrust: number;
@@ -202,25 +224,34 @@ export interface ThrustResult {
   hotLevel?: number;
   /** any engine currently producing thrust */
   burning: boolean;
+  /**
+   * Engines running at a steady level with the flow separated inside their
+   * nozzles (src/physics/nozzle.ts): the core, a strap-on group by its index,
+   * or the hot stage above. The start-up and the tail-off are left out — every
+   * engine passes through separated flow there, on the pad or not. Absent
+   * when there is none.
+   */
+  separated?: SeparatedEngine[];
+}
+
+/** One engine group running with the flow separated in its nozzles (`ThrustResult.separated`). */
+export interface SeparatedEngine {
+  where: 'core' | 'hot' | number;
+  engine: EngineSpec;
+  /** area ratio at the separation point, and the nozzle's own */
+  areaRatio: number;
+  expansionRatio: number;
 }
 
 /**
- * Sea-level thrust actually used by the model.
- *
- * A `vacuumOnly` engine has no sea-level operating point; its `thrustSL` field
- * is a placeholder kept only so that the type stays uniform. Using it would be
- * using fiction, so the vacuum figure is returned instead and the pressure blend
- * below becomes a no-op for those engines.
+ * Sea-level thrust of one engine at full throttle, N: the thrust law
+ * (src/physics/nozzle.ts) at p₀. For an engine with a sea-level operating
+ * point it is the catalogue's `thrustSL` exactly (attached flow, its qualified
+ * point); for a `vacuumOnly` engine, whose `thrustSL` is a placeholder never
+ * read, it is what its nozzle gives at sea level with the flow separated.
  */
 export function engineThrustSL(e: EngineSpec): number {
-  return e.vacuumOnly ? e.thrustVac : e.thrustSL;
-}
-
-/** Thrust of one engine at ambient pressure p (Pa). */
-export function engineThrust(e: EngineSpec, p: number): number {
-  const f = Math.min(1, Math.max(0, p / P0));
-  const tSL = engineThrustSL(e);
-  return e.thrustVac - (e.thrustVac - tSL) * f;
+  return engineThrustAt(e, P0, 1);
 }
 
 /**
@@ -232,26 +263,28 @@ export function engineThrust(e: EngineSpec, p: number): number {
  * F_SL/(g₀ Isp_SL) are the *same* number, and a data pair that says otherwise is
  * inconsistent. The model takes the vacuum pair as authoritative (it is the one
  * every source quotes for every engine, and the one a vacuum-only engine has at
- * all) and back-solves the sea-level Isp from it — see `engineIsp`.
+ * all) and back-solves the sea-level Isp from it — see `engineIsp`. A level λ
+ * scales it: ṁ(λ) = λ·ṁ.
  */
 export function engineMassFlow(e: EngineSpec): number {
   return e.thrustVac / (G0 * e.ispVac);
 }
 
 /**
- * Isp of one engine at ambient pressure p (Pa), s.
+ * Isp of one engine at ambient pressure p (Pa) and level λ, s.
  *
- * Derived from the thrust the engine delivers at that pressure and the (fixed)
- * mass flow, so that F = ṁ g₀ Isp(p) holds exactly at every altitude. At p = 0
- * this is `ispVac` by construction; at sea level it is thrustSL/(ṁ g₀), which
- * is the Isp the vehicle *delivers* and not necessarily the `ispSL` the data
- * file quotes. `data-consistency` asserts the two agree to 1 % for every
- * ground-lit engine, which is what stops that discrepancy coming back.
+ * Derived from the thrust the law gives and the flow at that level, so that
+ * F = λ·ṁ·g₀·Isp holds exactly at every altitude and level. In vacuum it is
+ * `ispVac` at any level; in air it falls as the engine is throttled, because
+ * the air takes p·A_e whatever the level (separation in the nozzle takes back
+ * part of that loss). At λ = 1 and p₀ it is thrustSL/(ṁ g₀), the Isp the
+ * vehicle *delivers* and not necessarily the `ispSL` the data file quotes;
+ * `data-consistency` asserts the two agree to 1 % for every ground-lit engine.
  */
-export function engineIsp(e: EngineSpec, p: number): number {
+export function engineIsp(e: EngineSpec, p: number, level = 1): number {
   const mdot = engineMassFlow(e);
-  if (mdot <= 0) return e.ispVac;
-  return engineThrust(e, p) / (G0 * mdot);
+  if (mdot <= 0 || !(level > 0)) return e.ispVac;
+  return engineThrustAt(e, p, level) / (G0 * mdot * level);
 }
 
 /** Delivered sea-level Isp, s: what `ispSL` in the data file has to agree with. */
@@ -617,8 +650,10 @@ export class VehicleModel {
       let profile = 1;
       if (e.solid) profile = this.solidProfileFor(st);
       const level = VehicleModel.withinTank(thr * profile * startupFactor(e, t - st.startTime, dt), this.usablePropellant(st), n * engineMassFlow(e), dt);
-      out.thrust += n * engineThrust(e, p) * level;
+      const flow = nozzleFlow(e, p, level);
+      out.thrust += n * flow.thrust;
       out.mdot += n * engineMassFlow(e) * level;
+      if (flow.separated && t - st.startTime >= engineStartupS(e)) VehicleModel.reportSeparated(out, 'core', e, flow.separationAreaRatio);
       out.thrustFullVac += n * e.thrustVac * profile;
       // `* profile` so a solid core's plume follows its own thrust curve
       out.coreThrottle = Math.min(1, level);
@@ -626,7 +661,7 @@ export class VehicleModel {
       out.burning = true;
     } else if (this.coreTailingOff(st, t)) {
       const level = this.coreTailLevel(st, t, dt);
-      out.thrust += n * engineThrust(e, p) * level;
+      out.thrust += n * engineThrustAt(e, p, level);
       out.mdot += n * engineMassFlow(e) * level;
       out.coreThrottle = Math.min(1, level);
       out.coreLevel = level;
@@ -646,10 +681,13 @@ export class VehicleModel {
         const thr = (be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd))) * boosterStepLevel(b.spec, b.commandClock);
         level = VehicleModel.withinTank(thr * profile * startupFactor(be, t - b.startTime, dt), this.usableBoosterPropellant(b), be.count * engineMassFlow(be), dt);
         out.thrustFullVac += nb * be.thrustVac * profile;
+        const flow = nozzleFlow(be, p, level);
+        out.thrust += nb * flow.thrust;
+        if (flow.separated && t - b.startTime >= engineStartupS(be)) VehicleModel.reportSeparated(out, group, be, flow.separationAreaRatio);
       } else if (this.boosterTailingOff(b, t)) {
         level = this.boosterTailLevel(b, t, dt);
+        out.thrust += nb * engineThrustAt(be, p, level);
       } else continue;
-      out.thrust += nb * engineThrust(be, p) * level;
       out.mdot += nb * engineMassFlow(be) * level;
       // The strongest burning group wins: several groups on one stage (H3's
       // SRB-3 pair, Angara's four URM-1s) light and burn out together, so a
@@ -664,13 +702,19 @@ export class VehicleModel {
     if (hot) {
       const he = hot.spec.engine, nh = VehicleModel.enginesRunning(hot);
       const h = this.hotStageLevel(hot, t, throttleCmd, dt);
-      out.thrust += nh * engineThrust(he, p) * h.level;
+      const flow = nozzleFlow(he, p, h.level);
+      out.thrust += nh * flow.thrust;
+      if (flow.separated && h.burning && t - hot.startTime >= engineStartupS(he)) VehicleModel.reportSeparated(out, 'hot', he, flow.separationAreaRatio);
       out.mdot += nh * engineMassFlow(he) * h.level;
       if (h.burning) out.thrustFullVac += nh * he.thrustVac;
       out.hotLevel = h.level;
       if (h.level > 0) out.burning = true;
     }
     return out;
+  }
+
+  private static reportSeparated(out: ThrustResult, where: SeparatedEngine['where'], engine: EngineSpec, areaRatio: number): void {
+    (out.separated ??= []).push({ where, engine, areaRatio, expansionRatio: nozzleModel(engine).expansionRatio });
   }
 
   /**
@@ -782,16 +826,16 @@ export class VehicleModel {
     const e = st.spec.engine;
     const tau = engineTailoffS(e);
     let level: number;
-    let fraction: number;
+    let from: number;
     if (!st.cutoff && !st.burnedOut) {
       level = st.level;
-      fraction = 1 - Math.exp(-TAILOFF_SPAN);
+      from = 0;
     } else if (this.coreTailingOff(st, t)) {
       level = st.stopLevel;
-      fraction = Math.exp(-Math.max(0, t - st.cutoffTime) / tau) - Math.exp(-TAILOFF_SPAN);
+      from = Math.max(0, t - st.cutoffTime) / tau;
     } else return 0;
-    if (!(level > 0) || !(fraction > 0)) return 0;
-    return VehicleModel.enginesRunning(st) * engineThrust(e, p) * level * tau * fraction / mass;
+    if (!(level > 0) || !(from < TAILOFF_SPAN)) return 0;
+    return VehicleModel.enginesRunning(st) * tailoffImpulse(e, p, level, tau, from) / mass;
   }
 
   /** Consume propellant for dt seconds at the given conditions. Returns burnout flags. */
@@ -1174,7 +1218,9 @@ export function liftoffMass(spec: VehicleSpec, payloadMass: number): number {
  * Sea-level liftoff thrust (all ground-lit engines), N.
  *
  * A solid motor's `thrustSL` is its *mean* thrust, so the thrust it actually
- * makes at t = 0 is the head of the regressive profile — `solidProfile(0)`. That
+ * makes at t = 0 is the head of the regressive profile — `solidProfile(0)`,
+ * flown as a level through the thrust law (the air takes p₀·A_e off the peak,
+ * not a share of it). That
  * applies to a solid FIRST STAGE (Vega-C's P120C, PSLV's S139) exactly as it
  * does to a strap-on; the earlier form of this function applied it only to
  * boosters, so every solid-first-stage vehicle reported a liftoff thrust 20 %
@@ -1184,10 +1230,10 @@ export function liftoffMass(spec: VehicleSpec, payloadMass: number): number {
 export function liftoffThrust(spec: VehicleSpec): number {
   const st = spec.stages[0];
   const core = st.engine;
-  let T = core.count * engineThrustSL(core) * (core.solid ? solidProfile(0, core.peakFactor) : 1);
+  let T = core.count * engineThrustAt(core, P0, core.solid ? solidProfile(0, core.peakFactor) : 1);
   for (const b of st.boosters ?? []) {
     if ((b.igniteAt ?? 0) > 0) continue;
-    T += b.count * b.engine.count * engineThrustSL(b.engine) * (b.engine.solid ? solidProfile(0, b.engine.peakFactor) : 1);
+    T += b.count * b.engine.count * engineThrustAt(b.engine, P0, b.engine.solid ? solidProfile(0, b.engine.peakFactor) : 1);
   }
   return T;
 }

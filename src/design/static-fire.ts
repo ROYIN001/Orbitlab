@@ -13,23 +13,24 @@
  * aboard — and every newton-second comes out of the tanks at the Isp the
  * flight delivers at that pressure.
  *
- * Two firings the model would run and the stand refuses:
+ * One firing the model would run and the stand refuses: **a commanded
+ * shutdown of a solid motor.** A solid cannot be shut down, but
+ * `VehicleModel.cutoffStage` does not check `solid`, so the stand does.
  *
- * - **A vacuum-only engine at any pressure above zero.** Such an engine has no
- *   sea-level operating point, so `engineThrustSL` returns its vacuum thrust
- *   and the model would report full vacuum thrust at sea level
- *   (src/physics/vehicle.ts, `engineThrustSL`); its `thrustSL`/`ispSL` fields
- *   are placeholders, not data (src/data/vehicles.ts, "VACUUM-ONLY ENGINES").
- *   It is fired in a vacuum cell (pressure 0) or not at all.
- * - **A commanded shutdown of a solid motor.** A solid cannot be shut down,
- *   but `VehicleModel.cutoffStage` does not check `solid`, so the stand does.
+ * A vacuum engine fires in air too (owner decision of 2026-10-17: what the
+ * nozzle really gives). Until then the stand refused it, because the model
+ * returned its vacuum thrust at every pressure; the thrust law
+ * (src/physics/nozzle.ts) now gives what its nozzle does at sea level, with the
+ * flow separated far inside the bell — the Merlin Vacuum about 775 kN against
+ * 981 kN in vacuum, an Isp of about 275 s.
  *
  * What the stand does not know: start-up and tail-off are the fleet's
  * constants (1.0 s / 0.3 s rise, 0.25 s / 1.0 s decay constant) unless the
  * engine sets `startupS`/`tailoffS`, not per-engine published transients; and
  * a delivered sea-level Isp is back-solved from `thrustSL` and the vacuum
  * mass flow, so it can differ from the `ispSL` a data file quotes (by up to
- * 6.9 % in the catalogue, tests/physics-core.test.ts). Mixture ratio and
+ * 5.0 % in the catalogue, tests/physics-core.test.ts); in air it falls as the
+ * engine is throttled (the air takes p·A_e at every level). Mixture ratio and
  * propellant family are not part of the engine model at all.
  *
  * DOM-free, SI units (N, kg, kg/s, s, Pa).
@@ -70,7 +71,7 @@ export interface StaticFireSample {
   isp: number;
 }
 
-export type StaticFireRefusal = 'vacuumOnlyAtPressure' | 'solidShutdown';
+export type StaticFireRefusal = 'solidShutdown';
 
 export interface StaticFireResult {
   samples: StaticFireSample[];
@@ -115,7 +116,6 @@ export function staticFire(engine: EngineSpec, o: StaticFireOptions): StaticFire
   if (!(o.throttle > 0 && o.throttle <= 1)) throw new RangeError(`throttle must be in (0, 1] (got ${o.throttle})`);
   if (!(o.dt > 0) || !Number.isFinite(o.dt)) throw new RangeError(`dt must be more than 0 (got ${o.dt})`);
   if (o.cutoffS !== undefined && !(o.cutoffS > 0)) throw new RangeError(`cutoffS must be more than 0 (got ${o.cutoffS})`);
-  if (engine.vacuumOnly && o.pressurePa > 0) return refusal('vacuumOnlyAtPressure');
   if (engine.solid && o.cutoffS !== undefined) return refusal('solidShutdown');
 
   // The stand: one stage and nothing else. `VehicleModel` reads the stage's

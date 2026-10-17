@@ -140,8 +140,14 @@ export function drawDispersion(spec: VehicleSpec, settings: Readonly<DispersionS
   return { index, seed, dispersion, draws };
 }
 
+/**
+ * A thrust factor is a deviation of the flow and the chamber pressure: it
+ * scales the vacuum thrust and leaves the nozzle as it is, so the sea-level
+ * thrust moves by the same newtons, not the same share — the exit area
+ * (F_vac − F_SL)/p₀ the thrust law reads (src/physics/nozzle.ts) is kept.
+ */
 function dispersedEngine(e: EngineSpec, f: PropulsionFactors): EngineSpec {
-  return { ...e, thrustSL: e.thrustSL * f.thrust, thrustVac: e.thrustVac * f.thrust, ispSL: e.ispSL * f.isp, ispVac: e.ispVac * f.isp };
+  return { ...e, thrustSL: e.thrustSL + (f.thrust - 1) * e.thrustVac, thrustVac: e.thrustVac * f.thrust, ispSL: e.ispSL * f.isp, ispVac: e.ispVac * f.isp };
 }
 function dispersedBooster(b: BoosterGroupSpec, f: PropulsionFactors | undefined): BoosterGroupSpec {
   return f ? { ...b, dryMass: b.dryMass * f.dryMass, propellantMass: b.propellantMass * f.propellant, engine: dispersedEngine(b.engine, f) } : b;

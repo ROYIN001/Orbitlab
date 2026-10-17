@@ -21,8 +21,11 @@
  * burn: the burn is short, starts a few kilometres up nearly straight down,
  * and its divert takes out what the ballistic point and the burn disagree on.
  */
-import { MU_EARTH, OMEGA_EARTH, P0 } from '../constants';
+import { MU_EARTH, OMEGA_EARTH } from '../constants';
 import { geodeticHeight } from '../geodesy';
+import type { EngineSpec } from '../../types';
+import { engineThrustAt, engineThrustSL } from '../vehicle';
+import { engineLevelFor } from '../nozzle';
 import { type Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled } from '../vec3';
 import { atmosphere } from '../atmosphere';
 import { tumblingDragCoefficient } from '../aero';
@@ -60,9 +63,8 @@ export interface DescentModel {
 }
 
 export interface LandingBurnModel {
-  /** one landing engine's thrust in vacuum and at sea level, N, and its flow, kg/s */
-  thrustVac: number;
-  thrustSL: number;
+  /** the landing engine, whose thrust is the law's (src/physics/nozzle.ts), and one engine's full flow, kg/s */
+  engine: EngineSpec;
   mdot: number;
   /** how many of them there are */
   count: number;
@@ -91,9 +93,9 @@ export function landingEngineCount(thrustSL: number, count: number, mass: number
 }
 
 export interface EntryBurnModel {
-  /** thrust of the entry-burn engines in vacuum and at sea level, N */
-  thrustVac: number;
-  thrustSL: number;
+  /** the entry-burn engine and how many burn: their thrust is `count` times the law's */
+  engine: EngineSpec;
+  count: number;
   /** their propellant flow, kg/s */
   mdot: number;
   /** the burn ends at this airspeed, m/s */
@@ -199,8 +201,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
       const step = entryStep(entry, falling, alt, speed, fuel, e);
       entry = step.state;
       if (step.burn) {
-        const p = Math.min(1, atmosphere(Math.max(0, alt)).p / P0);
-        thrust = e.thrustVac - (e.thrustVac - e.thrustSL) * p;
+        thrust = e.count * engineThrustAt(e.engine, atmosphere(Math.max(0, alt)).p, 1);
         flow = e.mdot;
         // End the burn on its target speed, not up to a whole step past it.
         h = Math.min(h, Math.max(0.02, (speed - e.targetSpeed) / (thrust / mass)), Math.max(0.02, (fuel - e.reserve) / flow));
@@ -210,8 +211,8 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
       const vDown = -dot(air, normalize(r));
       const height = alt - surfaceAlt;
       if (!landingOn && height < 20e3) {
-        const n = lb.engines ? lb.engines(mass) : landingEngineCount(lb.thrustSL, lb.count, mass);
-        const full = (y: number) => n * (lb.thrustVac - (lb.thrustVac - lb.thrustSL) * Math.min(1, atmosphere(Math.max(0, y)).p / P0));
+        const n = lb.engines ? lb.engines(mass) : landingEngineCount(engineThrustSL(lb.engine), lb.count, mass);
+        const full = (y: number) => n * engineThrustAt(lb.engine, atmosphere(Math.max(0, y)).p, 1);
         const g = MU_EARTH / (norm(r) ** 2);
         if (lb.rule === 'vacuum') {
           const stop = Math.max(0, (vDown * vDown - lb.vTouch ** 2) / (2 * Math.max(0.1, full(alt) / mass - g)));
@@ -219,10 +220,11 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
             landingOn = true;
             landingEngines = n;
             const decel = (vDown * vDown - lb.vTouch ** 2) / (2 * Math.max(1, height));
-            landingLevel = Math.max(0, Math.min(1, (mass * (g + decel)) / Math.max(1, full(alt))));
+            // the level that gives that thrust, through the law (not linear in the level in air)
+            landingLevel = Math.max(0, Math.min(1, engineLevelFor(lb.engine, atmosphere(Math.max(0, alt)).p, (mass * (g + decel)) / n)));
           }
         } else {
-          const thrustAt = (y: number) => lb.level * full(y);
+          const thrustAt = (y: number) => n * engineThrustAt(lb.engine, atmosphere(Math.max(0, y)).p, lb.level);
           // Without drag the stop takes longest; only when even that is near
           // is the burn's real braking height worth integrating.
           const rough = (vDown * vDown) / (2 * Math.max(0.1, thrustAt(alt) / mass - g));
@@ -236,8 +238,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
       }
       if (landingOn) {
         if (vDown <= lb.vTouch) return { r, t, landed: true };
-        const p = Math.min(1, atmosphere(Math.max(0, alt)).p / P0);
-        thrust = landingEngines * landingLevel * (lb.thrustVac - (lb.thrustVac - lb.thrustSL) * p);
+        thrust = landingEngines * engineThrustAt(lb.engine, atmosphere(Math.max(0, alt)).p, landingLevel);
         flow = landingEngines * landingLevel * lb.mdot;
       }
     }

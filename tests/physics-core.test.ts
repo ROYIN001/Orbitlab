@@ -15,7 +15,7 @@ import { DEFAULT_GUIDANCE } from '../src/physics/defaults';
 import { orbitById } from '../src/data/orbits';
 import type { MissionConfig, FailureMode, EngineSpec } from '../src/types';
 import { VEHICLES } from '../src/data/vehicles';
-import { solidProfile, deliveredIspSL, engineThrust, engineIsp, engineMassFlow } from '../src/physics/vehicle';
+import { solidProfile, deliveredIspSL, engineThrustAt, engineIsp, engineMassFlow } from '../src/physics/vehicle';
 
 describe('atmosphere (USSA-76 + exponential)', () => {
   it('matches sea level standard values', () => {
@@ -351,8 +351,10 @@ describe('delivered engine performance (B27)', () => {
         for (const e of [st.engine, ...(st.boosters ?? []).map((b) => b.engine)]) {
           const mdot = engineMassFlow(e);
           for (const p of [0, 0.25 * P0, P0]) {
-            expect(engineThrust(e, p) / (mdot * G0), `${v.id} ${e.name} at ${Math.round(p)} Pa`)
-              .toBeCloseTo(engineIsp(e, p), 6);
+            for (const level of [1, 0.6]) {
+              expect(engineThrustAt(e, p, level) / (level * mdot * G0), `${v.id} ${e.name} at ${Math.round(p)} Pa, level ${level}`)
+                .toBeCloseTo(engineIsp(e, p, level), 6);
+            }
           }
           expect(engineIsp(e, 0), `${v.id} ${e.name} vacuum`).toBeCloseTo(e.ispVac, 6);
         }
@@ -394,12 +396,20 @@ describe('delivered engine performance (B27)', () => {
       .toEqual(['Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
   });
 
+  // Until the owner's decision of 2026-10-17 a vacuum-only engine flew its
+  // vacuum thrust at every pressure. Now it flies what its nozzle gives
+  // (src/physics/nozzle.ts): never the placeholder sea-level pair, and never
+  // its vacuum figure in air either.
   it('a vacuum-only engine never uses its placeholder sea-level figures', () => {
     const e: EngineSpec = { name: 'probe', count: 1, thrustSL: 1, thrustVac: 100, ispSL: 1, ispVac: 400, vacuumOnly: true };
-    expect(engineThrust(e, P0)).toBe(100);
-    expect(engineIsp(e, P0)).toBeCloseTo(400, 6);
+    const atSeaLevel = engineThrustAt(e, P0, 1);
+    expect(atSeaLevel).toBeLessThan(100);
+    expect(atSeaLevel).toBeGreaterThan(1);
+    expect(engineThrustAt({ ...e, thrustSL: 50 }, P0, 1)).toBe(atSeaLevel);
+    expect(engineThrustAt(e, 0, 1)).toBe(100);
+    expect(engineIsp(e, 0)).toBeCloseTo(400, 6);
     const real: EngineSpec = { ...e, vacuumOnly: false, thrustSL: 80, ispSL: 320 };
-    expect(engineThrust(real, P0)).toBe(80);
+    expect(engineThrustAt(real, P0, 1)).toBeCloseTo(80, 9);
   });
 });
 
