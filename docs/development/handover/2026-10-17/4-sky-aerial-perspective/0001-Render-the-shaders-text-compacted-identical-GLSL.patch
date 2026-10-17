@@ -1,0 +1,1806 @@
+From c05f9facc427e45d7ff621b52602c335e3a6ed0d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 13:03:20 +0000
+Subject: [PATCH 1/2] Render: the shaders' text compacted, identical GLSL
+
+The index chunk stood at 2643.7 of its 2645 kB ceiling, and the offset
+budgets.json names for it is the text of the /* glsl */ template strings,
+whose comments and indentation ship verbatim. Before the sky work adds
+shader code (owner's answer 7 of 2026-10-17):
+
+- The comments inside the GLSL of entry-glow, orbit-view, plume, smoke,
+  stars, trails and vapour move, word for word, into JS comments above
+  each shader const (scene.ts's were moved in d8fe18f).
+- Every line inside the 32 /* glsl */ templates of src/render loses its
+  leading indentation, scene.ts's four included.
+
+Identical output: each changed file was parsed (oxc, via rolldown's
+parseAst) at 23cb4cf and here, and the ASTs compared without positions,
+with every glsl template's text replaced by its GLSL token stream
+(comments dropped, whitespace collapsed, the end of each preprocessor
+line kept as a token, whitespace at a ${} boundary kept): 11 files, 32
+shaders, 7878 GLSL tokens, identical. The check fails on a changed
+number and on a #include joined to the next line (negative controls).
+A harness rendering SceneManager with the app's Earth textures in
+headless Chromium (SwiftShader) gives pixel-identical frames at 23cb4cf
+and here on 8 views (400 km limb and terminator, nadir, 30 km, 12 km,
+the pad at dusk twice, the gradient sky).
+
+Measured index 2638.9 kB (2643.7 before; 4.8 kB saved), no ceiling
+touched. tsc clean; the 23 render test files pass (261 tests).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ src/render/atmosphere.ts     | 394 +++++++++++++++++------------------
+ src/render/entry-glow.ts     |  91 ++++----
+ src/render/orbit-view.ts     |  32 +--
+ src/render/plume.ts          | 202 +++++++++---------
+ src/render/rocket.ts         |  18 +-
+ src/render/scene.ts          | 196 ++++++++---------
+ src/render/smoke.ts          | 143 +++++++------
+ src/render/stars.ts          |  58 +++---
+ src/render/trails.ts         |  87 ++++----
+ src/render/twilight-plume.ts | 222 ++++++++++----------
+ src/render/vapour.ts         |  89 ++++----
+ 11 files changed, 786 insertions(+), 746 deletions(-)
+
+diff --git a/src/render/atmosphere.ts b/src/render/atmosphere.ts
+index c9aa3c3..4f32c0e 100644
+--- a/src/render/atmosphere.ts
++++ b/src/render/atmosphere.ts
+@@ -58,98 +58,98 @@ export const ATMOSPHERE_HEIGHT = 100e3;
+  *   the transmittance table, and its inverse.
+  */
+ const COMMON = /* glsl */ `
+-  #ifndef PI
+-  #define PI 3.141592653589793
+-  #endif
+-  const float RG = ${R_EARTH.toFixed(1)};
+-  const float RT = ${(R_EARTH + ATMOSPHERE_HEIGHT).toFixed(1)};
+-  const vec3 RAY_S = vec3(5.802e-6, 13.558e-6, 33.1e-6);
+-  const float RAY_H = 8000.0;
+-  const float MIE_S = 3.996e-6;
+-  const float MIE_E = 4.40e-6;
+-  const float MIE_H = 1200.0;
+-  const float MIE_G = 0.8;
+-  const vec3 OZONE = vec3(0.650e-6, 1.881e-6, 0.085e-6);
++#ifndef PI
++#define PI 3.141592653589793
++#endif
++const float RG = ${R_EARTH.toFixed(1)};
++const float RT = ${(R_EARTH + ATMOSPHERE_HEIGHT).toFixed(1)};
++const vec3 RAY_S = vec3(5.802e-6, 13.558e-6, 33.1e-6);
++const float RAY_H = 8000.0;
++const float MIE_S = 3.996e-6;
++const float MIE_E = 4.40e-6;
++const float MIE_H = 1200.0;
++const float MIE_G = 0.8;
++const vec3 OZONE = vec3(0.650e-6, 1.881e-6, 0.085e-6);
+ 
+-  struct Medium { vec3 scatR; float scatM; vec3 ext; };
+-  Medium medium(float h) {
+-    float dr = exp(-h / RAY_H), dm = exp(-h / MIE_H);
+-    float oz = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
+-    Medium m;
+-    m.scatR = RAY_S * dr;
+-    m.scatM = MIE_S * dm;
+-    m.ext = RAY_S * dr + vec3(MIE_E * dm) + OZONE * oz;
+-    return m;
+-  }
++struct Medium { vec3 scatR; float scatM; vec3 ext; };
++Medium medium(float h) {
++float dr = exp(-h / RAY_H), dm = exp(-h / MIE_H);
++float oz = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
++Medium m;
++m.scatR = RAY_S * dr;
++m.scatM = MIE_S * dm;
++m.ext = RAY_S * dr + vec3(MIE_E * dm) + OZONE * oz;
++return m;
++}
+ 
+-  float toSphere(float r, float mu, float R) {
+-    float disc = r * r * mu * mu + (R - r) * (R + r);
+-    if (disc < 0.0) return -1.0;
+-    float s = sqrt(disc);
+-    float d0 = -r * mu - s, d1 = -r * mu + s;
+-    return d0 > 0.0 ? d0 : (d1 > 0.0 ? d1 : -1.0);
+-  }
+-  bool hitsGround(float r, float mu) {
+-    return mu < 0.0 && r * r * mu * mu + (RG - r) * (RG + r) >= 0.0;
+-  }
++float toSphere(float r, float mu, float R) {
++float disc = r * r * mu * mu + (R - r) * (R + r);
++if (disc < 0.0) return -1.0;
++float s = sqrt(disc);
++float d0 = -r * mu - s, d1 = -r * mu + s;
++return d0 > 0.0 ? d0 : (d1 > 0.0 ? d1 : -1.0);
++}
++bool hitsGround(float r, float mu) {
++return mu < 0.0 && r * r * mu * mu + (RG - r) * (RG + r) >= 0.0;
++}
+ 
+-  vec2 transmittanceUv(float r, float mu) {
+-    float H = sqrt((RT - RG) * (RT + RG));
+-    float rho = sqrt(max(0.0, (r - RG) * (r + RG)));
+-    float d = max(0.0, -r * mu + sqrt(max(0.0, r * r * mu * mu + (RT - r) * (RT + r))));
+-    float dmin = RT - r, dmax = rho + H;
+-    return vec2((d - dmin) / max(dmax - dmin, 1.0), rho / H);
+-  }
+-  void transmittanceRMu(vec2 uv, out float r, out float mu) {
+-    float H = sqrt((RT - RG) * (RT + RG));
+-    float rho = H * uv.y;
+-    r = sqrt(rho * rho + RG * RG);
+-    float dmin = RT - r, dmax = rho + H;
+-    float d = dmin + uv.x * (dmax - dmin);
+-    mu = d == 0.0 ? 1.0 : clamp((H * H - rho * rho - d * d) / (2.0 * r * d), -1.0, 1.0);
+-  }
++vec2 transmittanceUv(float r, float mu) {
++float H = sqrt((RT - RG) * (RT + RG));
++float rho = sqrt(max(0.0, (r - RG) * (r + RG)));
++float d = max(0.0, -r * mu + sqrt(max(0.0, r * r * mu * mu + (RT - r) * (RT + r))));
++float dmin = RT - r, dmax = rho + H;
++return vec2((d - dmin) / max(dmax - dmin, 1.0), rho / H);
++}
++void transmittanceRMu(vec2 uv, out float r, out float mu) {
++float H = sqrt((RT - RG) * (RT + RG));
++float rho = H * uv.y;
++r = sqrt(rho * rho + RG * RG);
++float dmin = RT - r, dmax = rho + H;
++float d = dmin + uv.x * (dmax - dmin);
++mu = d == 0.0 ? 1.0 : clamp((H * H - rho * rho - d * d) / (2.0 * r * d), -1.0, 1.0);
++}
+ 
+-  float rayleighPhase(float c) { return 3.0 / (16.0 * PI) * (1.0 + c * c); }
+-  float miePhase(float c) {
+-    float g = MIE_G, g2 = g * g;
+-    return 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + c * c)) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * c, 1.5));
+-  }
++float rayleighPhase(float c) { return 3.0 / (16.0 * PI) * (1.0 + c * c); }
++float miePhase(float c) {
++float g = MIE_G, g2 = g * g;
++return 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + c * c)) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * c, 1.5));
++}
+ `;
+ 
+ const FULLSCREEN_VERT = /* glsl */ `
+-  varying vec2 vUv;
+-  void main() {
+-    vUv = position.xy * 0.5 + 0.5;
+-    gl_Position = vec4(position.xy, 0.0, 1.0);
+-  }
++varying vec2 vUv;
++void main() {
++vUv = position.xy * 0.5 + 0.5;
++gl_Position = vec4(position.xy, 0.0, 1.0);
++}
+ `;
+ 
+ const TRANSMITTANCE_FRAG = /* glsl */ `
+-  ${COMMON}
+-  varying vec2 vUv;
+-  void main() {
+-    float r, mu;
+-    transmittanceRMu(vUv, r, mu);
+-    float d = toSphere(r, mu, RT);
+-    vec3 depth = vec3(0.0);
+-    const int N = 40;
+-    for (int i = 0; i < N; i++) {
+-      float t = (float(i) + 0.5) / float(N) * max(d, 0.0);
+-      float h = sqrt(r * r + t * t + 2.0 * r * mu * t) - RG;
+-      depth += medium(h).ext;
+-    }
+-    vec3 tr = exp(-depth * max(d, 0.0) / float(N));
+-    gl_FragColor = vec4(any(isnan(tr)) ? vec3(0.0) : tr, 1.0);
+-  }
++${COMMON}
++varying vec2 vUv;
++void main() {
++float r, mu;
++transmittanceRMu(vUv, r, mu);
++float d = toSphere(r, mu, RT);
++vec3 depth = vec3(0.0);
++const int N = 40;
++for (int i = 0; i < N; i++) {
++float t = (float(i) + 0.5) / float(N) * max(d, 0.0);
++float h = sqrt(r * r + t * t + 2.0 * r * mu * t) - RG;
++depth += medium(h).ext;
++}
++vec3 tr = exp(-depth * max(d, 0.0) / float(N));
++gl_FragColor = vec4(any(isnan(tr)) ? vec3(0.0) : tr, 1.0);
++}
+ `;
+ 
+ /** The transmittance from radius r and cosine mu to space (the ground blocks it). */
+ const SAMPLE_TRANSMITTANCE = /* glsl */ `
+-  uniform sampler2D uTransmittance;
+-  vec3 transmittance(float r, float mu) {
+-    if (hitsGround(r, mu)) return vec3(0.0);
+-    return texture2D(uTransmittance, transmittanceUv(r, mu)).rgb;
+-  }
++uniform sampler2D uTransmittance;
++vec3 transmittance(float r, float mu) {
++if (hitsGround(r, mu)) return vec3(0.0);
++return texture2D(uTransmittance, transmittanceUv(r, mu)).rgb;
++}
+ `;
+ 
+ /**
+@@ -162,51 +162,51 @@ const SAMPLE_TRANSMITTANCE = /* glsl */ `
+  * ground bounces back (albedo 0.3) is added.
+  */
+ const MULTISCATTER_FRAG = /* glsl */ `
+-  ${COMMON}
+-  ${SAMPLE_TRANSMITTANCE}
+-  varying vec2 vUv;
+-  void main() {
+-    float muS = vUv.x * 2.0 - 1.0;
+-    float r = RG + vUv.y * (RT - RG);
+-    vec3 sunDir = vec3(sqrt(max(0.0, 1.0 - muS * muS)), 0.0, muS);
+-    vec3 L2 = vec3(0.0), fms = vec3(0.0);
+-    const int SQ = 8, N = 20;
+-    for (int a = 0; a < SQ; a++) for (int b = 0; b < SQ; b++) {
+-      float th = PI * (float(a) + 0.5) / float(SQ);
+-      float ph = acos(1.0 - 2.0 * (float(b) + 0.5) / float(SQ));
+-      vec3 dir = vec3(cos(th) * sin(ph), sin(th) * sin(ph), cos(ph));
+-      float mu = dir.z;
+-      float dG = hitsGround(r, mu) ? toSphere(r, mu, RG) : -1.0;
+-      float dT = toSphere(r, mu, RT);
+-      float d = dG > 0.0 ? dG : dT;
+-      if (d <= 0.0) continue;
+-      vec3 T = vec3(1.0), Lp = vec3(0.0), fp = vec3(0.0);
+-      float dt = d / float(N);
+-      for (int i = 0; i < N; i++) {
+-        float t = (float(i) + 0.5) * dt;
+-        vec3 p = vec3(0.0, 0.0, r) + dir * t;
+-        float rp = length(p);
+-        Medium m = medium(rp - RG);
+-        vec3 S = m.scatR + vec3(m.scatM);
+-        vec3 Ts = transmittance(rp, dot(p, sunDir) / rp);
+-        vec3 stepT = exp(-m.ext * dt);
+-        vec3 integ = (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
+-        Lp += T * integ * S * Ts * (1.0 / (4.0 * PI));
+-        fp += T * integ * S;
+-        T *= stepT;
+-      }
+-      if (dG > 0.0) {
+-        vec3 p = vec3(0.0, 0.0, r) + dir * dG;
+-        float c = max(0.0, dot(normalize(p), sunDir));
+-        Lp += T * transmittance(RG + 1.0, c) * c * 0.3 / PI;
+-      }
+-      L2 += Lp; fms += fp;
+-    }
+-    L2 /= float(SQ * SQ);
+-    fms /= float(SQ * SQ);
+-    vec3 psi = L2 / max(vec3(1.0) - fms, vec3(1e-3));
+-    gl_FragColor = vec4(any(isnan(psi)) || any(isinf(psi)) ? vec3(0.0) : psi, 1.0);
+-  }
++${COMMON}
++${SAMPLE_TRANSMITTANCE}
++varying vec2 vUv;
++void main() {
++float muS = vUv.x * 2.0 - 1.0;
++float r = RG + vUv.y * (RT - RG);
++vec3 sunDir = vec3(sqrt(max(0.0, 1.0 - muS * muS)), 0.0, muS);
++vec3 L2 = vec3(0.0), fms = vec3(0.0);
++const int SQ = 8, N = 20;
++for (int a = 0; a < SQ; a++) for (int b = 0; b < SQ; b++) {
++float th = PI * (float(a) + 0.5) / float(SQ);
++float ph = acos(1.0 - 2.0 * (float(b) + 0.5) / float(SQ));
++vec3 dir = vec3(cos(th) * sin(ph), sin(th) * sin(ph), cos(ph));
++float mu = dir.z;
++float dG = hitsGround(r, mu) ? toSphere(r, mu, RG) : -1.0;
++float dT = toSphere(r, mu, RT);
++float d = dG > 0.0 ? dG : dT;
++if (d <= 0.0) continue;
++vec3 T = vec3(1.0), Lp = vec3(0.0), fp = vec3(0.0);
++float dt = d / float(N);
++for (int i = 0; i < N; i++) {
++float t = (float(i) + 0.5) * dt;
++vec3 p = vec3(0.0, 0.0, r) + dir * t;
++float rp = length(p);
++Medium m = medium(rp - RG);
++vec3 S = m.scatR + vec3(m.scatM);
++vec3 Ts = transmittance(rp, dot(p, sunDir) / rp);
++vec3 stepT = exp(-m.ext * dt);
++vec3 integ = (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
++Lp += T * integ * S * Ts * (1.0 / (4.0 * PI));
++fp += T * integ * S;
++T *= stepT;
++}
++if (dG > 0.0) {
++vec3 p = vec3(0.0, 0.0, r) + dir * dG;
++float c = max(0.0, dot(normalize(p), sunDir));
++Lp += T * transmittance(RG + 1.0, c) * c * 0.3 / PI;
++}
++L2 += Lp; fms += fp;
++}
++L2 /= float(SQ * SQ);
++fms /= float(SQ * SQ);
++vec3 psi = L2 / max(vec3(1.0) - fms, vec3(1e-3));
++gl_FragColor = vec4(any(isnan(psi)) || any(isinf(psi)) ? vec3(0.0) : psi, 1.0);
++}
+ `;
+ 
+ /**
+@@ -302,83 +302,83 @@ const MULTISCATTER_FRAG = /* glsl */ `
+  * spread it everywhere.
+  */
+ const SKY_FRAG = /* glsl */ `
+-  #include <common>
+-  ${COMMON}
+-  ${SAMPLE_TRANSMITTANCE}
+-  uniform sampler2D uMultiScatter;
+-  uniform mat4 uInvProj;
+-  uniform mat4 uCamToWorld;
+-  uniform vec3 uCamEci;
+-  uniform vec3 uSunDir;
+-  uniform float uSunIlluminance;
+-  varying vec2 vUv;
++#include <common>
++${COMMON}
++${SAMPLE_TRANSMITTANCE}
++uniform sampler2D uMultiScatter;
++uniform mat4 uInvProj;
++uniform mat4 uCamToWorld;
++uniform vec3 uCamEci;
++uniform vec3 uSunDir;
++uniform float uSunIlluminance;
++varying vec2 vUv;
+ 
+-  vec3 sunlight(float r, float muS) {
+-    float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
+-    float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
+-    return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
+-  }
++vec3 sunlight(float r, float muS) {
++float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
++float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
++return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
++}
+ 
+-  vec3 multiScatter(float r, float muS) {
+-    return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
+-  }
++vec3 multiScatter(float r, float muS) {
++return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
++}
+ 
+-  void main() {
+-    vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
+-    vec3 dir = normalize((uCamToWorld * vec4(v.xyz / v.w, 0.0)).xyz);
+-    vec3 o = uCamEci;
+-    float r = max(length(o), RG + 1.0);
+-    float tc = -dot(o, dir);
+-    float mu = -tc / r;
+-    float c = dot(dir, uSunDir);
+-    vec3 L = vec3(0.0);
+-    vec3 T = vec3(1.0);
+-    vec3 pc = o + dir * tc;
+-    float rp2 = dot(pc, pc);
+-    float h = sqrt(max(0.0, RT * RT - rp2));
+-    float tStart = max(0.0, tc - h), tEnd = tc + h;
+-    if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);
+-    if (tEnd > tStart) {
+-      float pr = rayleighPhase(c), pm = miePhase(c);
+-      const int N = 24;
+-      float len = tEnd - tStart;
+-      float tLow = r > RT ? clamp(tc, tStart, tEnd) : tStart;
+-      vec3 pLow = o + dir * tLow;
+-      float f = (tLow - tStart) / len;
+-      float kA = len / max(f, 1e-6), kB = len / max(1.0 - f, 1e-6);
+-      float sa = tStart - tLow;
+-      for (int i = 0; i < N; i++) {
+-        float x = float(i + 1) / float(N) - f;
+-        float sb = x * abs(x) * (x < 0.0 ? kA : kB);
+-        float dt = sb - sa;
+-        vec3 p = pLow + dir * (0.5 * (sa + sb));
+-        sa = sb;
+-        float rp = length(p);
+-        float muS = dot(p, uSunDir) / rp;
+-        Medium m = medium(rp - RG);
+-        vec3 Ts = sunlight(rp, muS);
+-        vec3 single = m.scatR * pr + vec3(m.scatM * pm);
+-        vec3 S = single * Ts + (m.scatR + vec3(m.scatM)) * multiScatter(rp, muS);
+-        vec3 stepT = exp(-m.ext * dt);
+-        L += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
+-        T *= stepT;
+-      }
+-    }
+-    L *= uSunIlluminance;
+-    {
+-      const float SUN_COS = 0.9999892;
+-      float disc = smoothstep(SUN_COS - 2e-6, SUN_COS + 2e-6, c);
+-      float glow = pow(max(c, 0.0), 18000.0) * 0.35;
+-      if ((disc > 0.0 || glow > 0.001) && !hitsGround(r, mu)) {
+-        float limb = 0.4 + 0.6 * sqrt(clamp((c - SUN_COS) / (1.0 - SUN_COS), 0.0, 1.0));
+-        L += (disc * 50.0 * limb + glow) * uSunIlluminance * (r > RT ? T : transmittance(r, mu));
+-      }
+-    }
+-    if (any(isnan(L)) || any(isinf(L))) L = vec3(0.0);
+-    gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-  }
++void main() {
++vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
++vec3 dir = normalize((uCamToWorld * vec4(v.xyz / v.w, 0.0)).xyz);
++vec3 o = uCamEci;
++float r = max(length(o), RG + 1.0);
++float tc = -dot(o, dir);
++float mu = -tc / r;
++float c = dot(dir, uSunDir);
++vec3 L = vec3(0.0);
++vec3 T = vec3(1.0);
++vec3 pc = o + dir * tc;
++float rp2 = dot(pc, pc);
++float h = sqrt(max(0.0, RT * RT - rp2));
++float tStart = max(0.0, tc - h), tEnd = tc + h;
++if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);
++if (tEnd > tStart) {
++float pr = rayleighPhase(c), pm = miePhase(c);
++const int N = 24;
++float len = tEnd - tStart;
++float tLow = r > RT ? clamp(tc, tStart, tEnd) : tStart;
++vec3 pLow = o + dir * tLow;
++float f = (tLow - tStart) / len;
++float kA = len / max(f, 1e-6), kB = len / max(1.0 - f, 1e-6);
++float sa = tStart - tLow;
++for (int i = 0; i < N; i++) {
++float x = float(i + 1) / float(N) - f;
++float sb = x * abs(x) * (x < 0.0 ? kA : kB);
++float dt = sb - sa;
++vec3 p = pLow + dir * (0.5 * (sa + sb));
++sa = sb;
++float rp = length(p);
++float muS = dot(p, uSunDir) / rp;
++Medium m = medium(rp - RG);
++vec3 Ts = sunlight(rp, muS);
++vec3 single = m.scatR * pr + vec3(m.scatM * pm);
++vec3 S = single * Ts + (m.scatR + vec3(m.scatM)) * multiScatter(rp, muS);
++vec3 stepT = exp(-m.ext * dt);
++L += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
++T *= stepT;
++}
++}
++L *= uSunIlluminance;
++{
++const float SUN_COS = 0.9999892;
++float disc = smoothstep(SUN_COS - 2e-6, SUN_COS + 2e-6, c);
++float glow = pow(max(c, 0.0), 18000.0) * 0.35;
++if ((disc > 0.0 || glow > 0.001) && !hitsGround(r, mu)) {
++float limb = 0.4 + 0.6 * sqrt(clamp((c - SUN_COS) / (1.0 - SUN_COS), 0.0, 1.0));
++L += (disc * 50.0 * limb + glow) * uSunIlluminance * (r > RT ? T : transmittance(r, mu));
++}
++}
++if (any(isnan(L)) || any(isinf(L))) L = vec3(0.0);
++gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++}
+ `;
+ 
+ function target(w: number, h: number, type: THREE.TextureDataType): THREE.WebGLRenderTarget {
+diff --git a/src/render/entry-glow.ts b/src/render/entry-glow.ts
+index dd21bbc..44fc54b 100644
+--- a/src/render/entry-glow.ts
++++ b/src/render/entry-glow.ts
+@@ -59,53 +59,56 @@ const CORE = new THREE.Color(1.0, 0.8, 0.5);
+ const SPOT = new THREE.Color(1.0, 0.5, 0.12);
+ 
+ const GLOW_VERT = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  varying vec3 vLocal;
+-  varying vec3 vNormalW;
+-  varying vec3 vPosW;
+-  void main() {
+-    vLocal = position;
+-    vec4 wp = modelMatrix * vec4(position, 1.0);
+-    vPosW = wp.xyz;
+-    vNormalW = normalize(mat3(modelMatrix) * normal);
+-    gl_Position = projectionMatrix * viewMatrix * wp;
+-    #include <logdepthbuf_vertex>
+-  }
++#include <common>
++#include <logdepthbuf_pars_vertex>
++varying vec3 vLocal;
++varying vec3 vNormalW;
++varying vec3 vPosW;
++void main() {
++vLocal = position;
++vec4 wp = modelMatrix * vec4(position, 1.0);
++vPosW = wp.xyz;
++vNormalW = normalize(mat3(modelMatrix) * normal);
++gl_Position = projectionMatrix * viewMatrix * wp;
++#include <logdepthbuf_vertex>
++}
+ `;
+ 
++/*
++ * GLOW_FRAG.
++ * - uWake < 0.5: a thin glowing layer: the longer the line of sight through it, the brighter (its limb); up the
++ *   flow (+Y) the stagnation point, fading back round the shoulder.
++ * - Otherwise: a column of hot gas: brightest down its middle, soft at its edges, fading to nothing at its end.
++ */
+ const GLOW_FRAG = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_fragment>
+-  uniform vec3 uColor;
+-  uniform vec3 uCore;
+-  uniform float uIntensity;
+-  uniform float uWake;
+-  uniform float uLength;
+-  varying vec3 vLocal;
+-  varying vec3 vNormalW;
+-  varying vec3 vPosW;
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    vec3 n = normalize(vNormalW);
+-    vec3 vd = normalize(cameraPosition - vPosW);
+-    float facing = abs(dot(n, vd));
+-    float w;
+-    vec3 col;
+-    if (uWake < 0.5) {
+-      // a thin glowing layer: the longer the line of sight through it, the brighter (its limb); up the flow (+Y)
+-      // the stagnation point, fading back round the shoulder
+-      float s = normalize(vLocal).y;
+-      w = pow(clamp((s + 0.45) / 1.45, 0.0, 1.0), 2.2) * (0.28 + 0.72 * pow(1.0 - facing, 1.6));
+-      col = mix(uColor, uCore, smoothstep(0.55, 1.0, s));
+-    } else {
+-      // a column of hot gas: brightest down its middle, soft at its edges, fading to nothing at its end
+-      float u = clamp(-vLocal.y / uLength, 0.0, 1.0);
+-      w = pow(1.0 - u, 2.0) * pow(facing, 1.3);
+-      col = uColor;
+-    }
+-    gl_FragColor = vec4(col * uIntensity * w, 1.0);
+-  }
++#include <common>
++#include <logdepthbuf_pars_fragment>
++uniform vec3 uColor;
++uniform vec3 uCore;
++uniform float uIntensity;
++uniform float uWake;
++uniform float uLength;
++varying vec3 vLocal;
++varying vec3 vNormalW;
++varying vec3 vPosW;
++void main() {
++#include <logdepthbuf_fragment>
++vec3 n = normalize(vNormalW);
++vec3 vd = normalize(cameraPosition - vPosW);
++float facing = abs(dot(n, vd));
++float w;
++vec3 col;
++if (uWake < 0.5) {
++float s = normalize(vLocal).y;
++w = pow(clamp((s + 0.45) / 1.45, 0.0, 1.0), 2.2) * (0.28 + 0.72 * pow(1.0 - facing, 1.6));
++col = mix(uColor, uCore, smoothstep(0.55, 1.0, s));
++} else {
++float u = clamp(-vLocal.y / uLength, 0.0, 1.0);
++w = pow(1.0 - u, 2.0) * pow(facing, 1.3);
++col = uColor;
++}
++gl_FragColor = vec4(col * uIntensity * w, 1.0);
++}
+ `;
+ 
+ export interface EntryGlowView {
+diff --git a/src/render/orbit-view.ts b/src/render/orbit-view.ts
+index eeb2f93..8da8356 100644
+--- a/src/render/orbit-view.ts
++++ b/src/render/orbit-view.ts
+@@ -33,12 +33,13 @@ varying vec2 vUv;
+ varying vec3 vNormalW;
+ varying vec3 vPosW;
+ void main() {
+-  vUv = uv;
+-  vNormalW = normalize(mat3(modelMatrix) * normal);
+-  vec4 w = modelMatrix * vec4(position, 1.0);
+-  vPosW = w.xyz;
+-  gl_Position = projectionMatrix * viewMatrix * w;
++vUv = uv;
++vNormalW = normalize(mat3(modelMatrix) * normal);
++vec4 w = modelMatrix * vec4(position, 1.0);
++vPosW = w.xyz;
++gl_Position = projectionMatrix * viewMatrix * w;
+ }`;
++/** EARTH_FRAG's `rim`: a thin blue limb, where the view grazes the atmosphere. */
+ const EARTH_FRAG = /* glsl */ `
+ uniform sampler2D dayMap;
+ uniform sampler2D nightMap;
+@@ -49,17 +50,16 @@ varying vec2 vUv;
+ varying vec3 vNormalW;
+ varying vec3 vPosW;
+ void main() {
+-  vec3 n = normalize(vNormalW);
+-  float ndl = dot(n, sunDir);
+-  float day = smoothstep(-0.08, 0.12, ndl);
+-  vec3 dayCol = hasMaps > 0.5 ? texture2D(dayMap, vUv).rgb : vec3(0.16, 0.34, 0.62);
+-  vec3 nightCol = hasMaps > 0.5 ? texture2D(nightMap, vUv).rgb * vec3(1.0, 0.85, 0.6) : vec3(0.0);
+-  vec3 col = dayCol * (0.1 + 1.05 * max(ndl, 0.0)) * day + nightCol * (1.0 - day) * 0.9 + dayCol * 0.05;
+-  // a thin blue limb, where the view grazes the atmosphere
+-  float rim = pow(1.0 - max(dot(n, normalize(camPos - vPosW)), 0.0), 3.0);
+-  col += vec3(0.25, 0.45, 0.9) * rim * (0.25 + 0.75 * day);
+-  gl_FragColor = vec4(col, 1.0);
+-  #include <colorspace_fragment>
++vec3 n = normalize(vNormalW);
++float ndl = dot(n, sunDir);
++float day = smoothstep(-0.08, 0.12, ndl);
++vec3 dayCol = hasMaps > 0.5 ? texture2D(dayMap, vUv).rgb : vec3(0.16, 0.34, 0.62);
++vec3 nightCol = hasMaps > 0.5 ? texture2D(nightMap, vUv).rgb * vec3(1.0, 0.85, 0.6) : vec3(0.0);
++vec3 col = dayCol * (0.1 + 1.05 * max(ndl, 0.0)) * day + nightCol * (1.0 - day) * 0.9 + dayCol * 0.05;
++float rim = pow(1.0 - max(dot(n, normalize(camPos - vPosW)), 0.0), 3.0);
++col += vec3(0.25, 0.45, 0.9) * rim * (0.25 + 0.75 * day);
++gl_FragColor = vec4(col, 1.0);
++#include <colorspace_fragment>
+ }`;
+ 
+ /** O02: an orbit of a plan drawn beside the one flown — a transfer, the orbit after it, a target's. */
+diff --git a/src/render/plume.ts b/src/render/plume.ts
+index b74e33c..e42cf52 100644
+--- a/src/render/plume.ts
++++ b/src/render/plume.ts
+@@ -12,113 +12,121 @@
+ import * as THREE from 'three';
+ import { P0 } from '../physics/constants';
+ 
++/*
++ * PLUME_VERT.
++ * - k: 0 at the nozzle exit, 1 at the tip.
++ * - `rad *= 1.0 - smoothstep(0.70, 1.0, k) * 0.88`: close the tip.
++ */
+ const PLUME_VERT = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  uniform float uTime;
+-  uniform float uVac;
+-  uniform float uSeed;
+-  uniform float uFlare;
+-  uniform float uTurb;
+-  varying float vK;
+-  varying vec3 vNormalW;
+-  varying vec3 vPosW;
+-  varying float vAng;
+-  void main() {
+-    float k = clamp(-position.y, 0.0, 1.0);   // 0 at the nozzle exit, 1 at the tip
+-    vK = k;
+-    float ang = atan(position.z, position.x);
+-    vAng = ang;
+-    float sea = 1.0 + 0.55 * k - 0.28 * k * k;
+-    float vac = 1.0 + 2.60 * pow(k, 0.55);
+-    float rad = mix(sea, vac, uVac) * uFlare;
+-    rad *= 1.0 - smoothstep(0.70, 1.0, k) * 0.88;              // close the tip
+-    float n = sin(k * 11.0 + uTime * 9.0 + uSeed * 31.0 + ang * 3.0)
+-            * sin(k * 23.0 - uTime * 14.0 + uSeed * 7.0 + ang * 2.0);
+-    rad *= 1.0 + uTurb * n * smoothstep(0.04, 0.55, k) * 0.20;
+-    vec3 p = vec3(position.x * rad, position.y, position.z * rad);
+-    vec3 nrm = normalize(vec3(p.x, 0.22, p.z));
+-    vec4 wp = modelMatrix * vec4(p, 1.0);
+-    vPosW = wp.xyz;
+-    vNormalW = normalize(mat3(modelMatrix) * nrm);
+-    gl_Position = projectionMatrix * viewMatrix * wp;
+-    #include <logdepthbuf_vertex>
+-  }
++#include <common>
++#include <logdepthbuf_pars_vertex>
++uniform float uTime;
++uniform float uVac;
++uniform float uSeed;
++uniform float uFlare;
++uniform float uTurb;
++varying float vK;
++varying vec3 vNormalW;
++varying vec3 vPosW;
++varying float vAng;
++void main() {
++float k = clamp(-position.y, 0.0, 1.0);
++vK = k;
++float ang = atan(position.z, position.x);
++vAng = ang;
++float sea = 1.0 + 0.55 * k - 0.28 * k * k;
++float vac = 1.0 + 2.60 * pow(k, 0.55);
++float rad = mix(sea, vac, uVac) * uFlare;
++rad *= 1.0 - smoothstep(0.70, 1.0, k) * 0.88;
++float n = sin(k * 11.0 + uTime * 9.0 + uSeed * 31.0 + ang * 3.0)
++* sin(k * 23.0 - uTime * 14.0 + uSeed * 7.0 + ang * 2.0);
++rad *= 1.0 + uTurb * n * smoothstep(0.04, 0.55, k) * 0.20;
++vec3 p = vec3(position.x * rad, position.y, position.z * rad);
++vec3 nrm = normalize(vec3(p.x, 0.22, p.z));
++vec4 wp = modelMatrix * vec4(p, 1.0);
++vPosW = wp.xyz;
++vNormalW = normalize(mat3(modelMatrix) * nrm);
++gl_Position = projectionMatrix * viewMatrix * wp;
++#include <logdepthbuf_vertex>
++}
+ `;
+ 
++/*
++ * PLUME_FRAG.
++ * - md, diamonds: shock diamonds: stationary cells just below the nozzle, sea level only.
++ * - Tone-mapped like every other material in the scene (see the note in
++ *   render/scene.ts): the core is deliberately driven past 1.0 so ACES
++ *   blows it out to white and the orange survives only at the edges, which
++ *   is exactly how an exposed camera sees a first-stage plume.
++ */
+ const PLUME_FRAG = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_fragment>
+-  uniform vec3 uCore;
+-  uniform vec3 uEdge;
+-  uniform vec3 uTip;
+-  uniform float uOpacity;
+-  uniform float uMach;
+-  uniform float uMachFreq;
+-  uniform float uTime;
+-  uniform float uSeed;
+-  uniform float uEdgeGain;
+-  varying float vK;
+-  varying vec3 vNormalW;
+-  varying vec3 vPosW;
+-  varying float vAng;
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    float k = vK;
+-    vec3 n = normalize(vNormalW);
+-    vec3 vd = normalize(cameraPosition - vPosW);
+-    float fres = 1.0 - abs(dot(n, vd));
+-    vec3 col = mix(uCore, uEdge, smoothstep(0.0, 0.40, k));
+-    col = mix(col, uTip, smoothstep(0.40, 1.0, k));
+-    // shock diamonds: stationary cells just below the nozzle, sea level only
+-    float md = 0.5 + 0.5 * sin(k * uMachFreq - 0.7 + sin(uTime * 3.0 + uSeed * 9.0) * 0.12);
+-    float diamonds = pow(md, 7.0) * (1.0 - smoothstep(0.03, 0.42, k)) * uMach;
+-    col += vec3(1.0, 0.94, 0.80) * diamonds * 1.8;
+-    float flick = 0.92 + 0.08 * sin(uTime * 31.0 + uSeed * 53.0 + vAng);
+-    float a = uOpacity * (0.16 + uEdgeGain * fres * fres) * (1.0 - smoothstep(0.30, 1.0, k));
+-    a *= smoothstep(0.0, 0.04, k) * flick;
+-    // Tone-mapped like every other material in the scene (see the note in
+-    // render/scene.ts): the core is deliberately driven past 1.0 so ACES
+-    // blows it out to white and the orange survives only at the edges, which
+-    // is exactly how an exposed camera sees a first-stage plume.
+-    gl_FragColor = vec4(col * (1.0 + diamonds * 1.2), 1.0);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-    gl_FragColor.a = clamp(a, 0.0, 1.0);
+-  }
++#include <common>
++#include <logdepthbuf_pars_fragment>
++uniform vec3 uCore;
++uniform vec3 uEdge;
++uniform vec3 uTip;
++uniform float uOpacity;
++uniform float uMach;
++uniform float uMachFreq;
++uniform float uTime;
++uniform float uSeed;
++uniform float uEdgeGain;
++varying float vK;
++varying vec3 vNormalW;
++varying vec3 vPosW;
++varying float vAng;
++void main() {
++#include <logdepthbuf_fragment>
++float k = vK;
++vec3 n = normalize(vNormalW);
++vec3 vd = normalize(cameraPosition - vPosW);
++float fres = 1.0 - abs(dot(n, vd));
++vec3 col = mix(uCore, uEdge, smoothstep(0.0, 0.40, k));
++col = mix(col, uTip, smoothstep(0.40, 1.0, k));
++float md = 0.5 + 0.5 * sin(k * uMachFreq - 0.7 + sin(uTime * 3.0 + uSeed * 9.0) * 0.12);
++float diamonds = pow(md, 7.0) * (1.0 - smoothstep(0.03, 0.42, k)) * uMach;
++col += vec3(1.0, 0.94, 0.80) * diamonds * 1.8;
++float flick = 0.92 + 0.08 * sin(uTime * 31.0 + uSeed * 53.0 + vAng);
++float a = uOpacity * (0.16 + uEdgeGain * fres * fres) * (1.0 - smoothstep(0.30, 1.0, k));
++a *= smoothstep(0.0, 0.04, k) * flick;
++gl_FragColor = vec4(col * (1.0 + diamonds * 1.2), 1.0);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++gl_FragColor.a = clamp(a, 0.0, 1.0);
++}
+ `;
+ 
+ const SMOKE_VERT = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  uniform float uTime;
+-  uniform float uSeed;
+-  varying float vK;
+-  void main() {
+-    float k = clamp(-position.y, 0.0, 1.0);
+-    vK = k;
+-    float ang = atan(position.z, position.x);
+-    float rad = (0.8 + 2.4 * pow(k, 0.7)) * (1.0 + 0.16 * sin(k * 9.0 + uTime * 5.0 + uSeed * 20.0 + ang * 2.0));
+-    vec3 p = vec3(position.x * rad, position.y, position.z * rad);
+-    vec4 wp = modelMatrix * vec4(p, 1.0);
+-    gl_Position = projectionMatrix * viewMatrix * wp;
+-    #include <logdepthbuf_vertex>
+-  }
++#include <common>
++#include <logdepthbuf_pars_vertex>
++uniform float uTime;
++uniform float uSeed;
++varying float vK;
++void main() {
++float k = clamp(-position.y, 0.0, 1.0);
++vK = k;
++float ang = atan(position.z, position.x);
++float rad = (0.8 + 2.4 * pow(k, 0.7)) * (1.0 + 0.16 * sin(k * 9.0 + uTime * 5.0 + uSeed * 20.0 + ang * 2.0));
++vec3 p = vec3(position.x * rad, position.y, position.z * rad);
++vec4 wp = modelMatrix * vec4(p, 1.0);
++gl_Position = projectionMatrix * viewMatrix * wp;
++#include <logdepthbuf_vertex>
++}
+ `;
+ 
+ const SMOKE_FRAG = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_fragment>
+-  uniform vec3 uColor;
+-  uniform float uOpacity;
+-  varying float vK;
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    float a = uOpacity * smoothstep(0.05, 0.35, vK) * (1.0 - smoothstep(0.45, 1.0, vK));
+-    gl_FragColor = vec4(uColor, a);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-  }
++#include <common>
++#include <logdepthbuf_pars_fragment>
++uniform vec3 uColor;
++uniform float uOpacity;
++varying float vK;
++void main() {
++#include <logdepthbuf_fragment>
++float a = uOpacity * smoothstep(0.05, 0.35, vK) * (1.0 - smoothstep(0.45, 1.0, vK));
++gl_FragColor = vec4(uColor, a);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++}
+ `;
+ 
+ /** Unit cylinder with the nozzle exit at y = 0, extending to y = -1. */
+diff --git a/src/render/rocket.ts b/src/render/rocket.ts
+index 790da3c..4218487 100644
+--- a/src/render/rocket.ts
++++ b/src/render/rocket.ts
+@@ -60,20 +60,20 @@ const BEND_SAMPLES = 11;
+ const BEND_VERTEX = /* glsl */`
+ vec4 mvPosition = vec4( transformed, 1.0 );
+ #ifdef USE_BATCHING
+-	mvPosition = batchingMatrix * mvPosition;
++mvPosition = batchingMatrix * mvPosition;
+ #endif
+ #ifdef USE_INSTANCING
+-	mvPosition = instanceMatrix * mvPosition;
++mvPosition = instanceMatrix * mvPosition;
+ #endif
+ vec4 bendWorld = modelMatrix * mvPosition;
+ if ( uBendAmp.x != 0.0 || uBendAmp.y != 0.0 ) {
+-	vec4 bendLocal = uBendInverse * bendWorld;
+-	float u = clamp( ( bendLocal.y - uBendY0 ) / uBendDy, 0.0, ${BEND_SAMPLES - 1}.0 );
+-	int i = int( min( floor( u ), ${BEND_SAMPLES - 2}.0 ) );
+-	float phi = mix( uBendShape[ i ], uBendShape[ i + 1 ], u - float( i ) );
+-	bendLocal.x += uBendAmp.x * phi;
+-	bendLocal.z += uBendAmp.y * phi;
+-	bendWorld = uBendWorld * bendLocal;
++vec4 bendLocal = uBendInverse * bendWorld;
++float u = clamp( ( bendLocal.y - uBendY0 ) / uBendDy, 0.0, ${BEND_SAMPLES - 1}.0 );
++int i = int( min( floor( u ), ${BEND_SAMPLES - 2}.0 ) );
++float phi = mix( uBendShape[ i ], uBendShape[ i + 1 ], u - float( i ) );
++bendLocal.x += uBendAmp.x * phi;
++bendLocal.z += uBendAmp.y * phi;
++bendWorld = uBendWorld * bendLocal;
+ }
+ mvPosition = viewMatrix * bendWorld;
+ gl_Position = projectionMatrix * mvPosition;
+diff --git a/src/render/scene.ts b/src/render/scene.ts
+index cdcdf85..6fd8841 100644
+--- a/src/render/scene.ts
++++ b/src/render/scene.ts
+@@ -24,19 +24,19 @@ import { sharpenEarthTextures } from './sharpness';
+ import { clamp01, hash11, smoothstep } from './noise';
+ 
+ const EARTH_VERT = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  varying vec2 vUv;
+-  varying vec3 vNormalW;
+-  varying vec3 vPosW;
+-  void main() {
+-    vUv = uv;
+-    vNormalW = normalize(mat3(modelMatrix) * normal);
+-    vec4 wp = modelMatrix * vec4(position, 1.0);
+-    vPosW = wp.xyz;
+-    gl_Position = projectionMatrix * viewMatrix * wp;
+-    #include <logdepthbuf_vertex>
+-  }
++#include <common>
++#include <logdepthbuf_pars_vertex>
++varying vec2 vUv;
++varying vec3 vNormalW;
++varying vec3 vPosW;
++void main() {
++vUv = uv;
++vNormalW = normalize(mat3(modelMatrix) * normal);
++vec4 wp = modelMatrix * vec4(position, 1.0);
++vPosW = wp.xyz;
++gl_Position = projectionMatrix * viewMatrix * wp;
++#include <logdepthbuf_vertex>
++}
+ `;
+ /*
+  * Both custom shaders end with the two body chunks three.js appends to every
+@@ -82,66 +82,66 @@ const EARTH_VERT = /* glsl */ `
+  *   glitter wherever the specular map bleeds onto a coast.
+  */
+ const EARTH_FRAG = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_fragment>
+-  uniform sampler2D dayMap;
+-  uniform sampler2D nightMap;
+-  uniform sampler2D specMap;
+-  uniform sampler2D normalMap;
+-  uniform float normalScale;
+-  uniform vec3 sunDir;
+-  uniform vec3 camPos;
+-  uniform float rimGain;
+-  varying vec2 vUv;
+-  varying vec3 vNormalW;
+-  varying vec3 vPosW;
+-  vec3 perturbNormal(vec3 N, vec3 p, vec2 uv, vec3 mapN) {
+-    vec3 q0 = dFdx(p), q1 = dFdy(p);
+-    vec2 st0 = dFdx(uv), st1 = dFdy(uv);
+-    vec3 q1perp = cross(q1, N), q0perp = cross(N, q0);
+-    vec3 T = q1perp * st0.x + q0perp * st1.x;
+-    vec3 B = q1perp * st0.y + q0perp * st1.y;
+-    float det = max(dot(T, T), dot(B, B));
+-    float scale = (det == 0.0) ? 0.0 : inversesqrt(det);
+-    return normalize(T * (mapN.x * scale) + B * (mapN.y * scale) + N * mapN.z);
+-  }
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    vec3 nGeo = normalize(vNormalW);
+-    vec3 mapN = texture2D(normalMap, vUv).xyz * 2.0 - 1.0;
+-    mapN.xy *= normalScale;
+-    vec3 n = normalScale > 0.001 ? perturbNormal(nGeo, vPosW, vUv, mapN) : nGeo;
+-    float cosSunGeo = dot(nGeo, sunDir);
+-    float cosSun = dot(n, sunDir);
+-    float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
+-    vec3 day = texture2D(dayMap, vUv).rgb;
+-    vec3 night = texture2D(nightMap, vUv).rgb;
+-    vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
+-    col = mix(night * 0.55 + day * 0.012, col, dayF);
+-    float spec = texture2D(specMap, vUv).r;
+-    vec3 viewDir = normalize(camPos - vPosW);
+-    vec3 h = normalize(sunDir + viewDir);
+-    float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
+-    col += vec3(s * 0.9, s * 0.95, s);
+-    float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
+-    col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
+-    gl_FragColor = vec4(col, 1.0);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-  }
++#include <common>
++#include <logdepthbuf_pars_fragment>
++uniform sampler2D dayMap;
++uniform sampler2D nightMap;
++uniform sampler2D specMap;
++uniform sampler2D normalMap;
++uniform float normalScale;
++uniform vec3 sunDir;
++uniform vec3 camPos;
++uniform float rimGain;
++varying vec2 vUv;
++varying vec3 vNormalW;
++varying vec3 vPosW;
++vec3 perturbNormal(vec3 N, vec3 p, vec2 uv, vec3 mapN) {
++vec3 q0 = dFdx(p), q1 = dFdy(p);
++vec2 st0 = dFdx(uv), st1 = dFdy(uv);
++vec3 q1perp = cross(q1, N), q0perp = cross(N, q0);
++vec3 T = q1perp * st0.x + q0perp * st1.x;
++vec3 B = q1perp * st0.y + q0perp * st1.y;
++float det = max(dot(T, T), dot(B, B));
++float scale = (det == 0.0) ? 0.0 : inversesqrt(det);
++return normalize(T * (mapN.x * scale) + B * (mapN.y * scale) + N * mapN.z);
++}
++void main() {
++#include <logdepthbuf_fragment>
++vec3 nGeo = normalize(vNormalW);
++vec3 mapN = texture2D(normalMap, vUv).xyz * 2.0 - 1.0;
++mapN.xy *= normalScale;
++vec3 n = normalScale > 0.001 ? perturbNormal(nGeo, vPosW, vUv, mapN) : nGeo;
++float cosSunGeo = dot(nGeo, sunDir);
++float cosSun = dot(n, sunDir);
++float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
++vec3 day = texture2D(dayMap, vUv).rgb;
++vec3 night = texture2D(nightMap, vUv).rgb;
++vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
++col = mix(night * 0.55 + day * 0.012, col, dayF);
++float spec = texture2D(specMap, vUv).r;
++vec3 viewDir = normalize(camPos - vPosW);
++vec3 h = normalize(sunDir + viewDir);
++float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
++col += vec3(s * 0.9, s * 0.95, s);
++float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
++col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
++gl_FragColor = vec4(col, 1.0);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++}
+ `;
+ const ATMO_VERT = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  varying vec3 vNormalW;
+-  varying vec3 vPosW;
+-  void main() {
+-    vNormalW = normalize(mat3(modelMatrix) * normal);
+-    vec4 wp = modelMatrix * vec4(position, 1.0);
+-    vPosW = wp.xyz;
+-    gl_Position = projectionMatrix * viewMatrix * wp;
+-    #include <logdepthbuf_vertex>
+-  }
++#include <common>
++#include <logdepthbuf_pars_vertex>
++varying vec3 vNormalW;
++varying vec3 vPosW;
++void main() {
++vNormalW = normalize(mat3(modelMatrix) * normal);
++vec4 wp = modelMatrix * vec4(position, 1.0);
++vPosW = wp.xyz;
++gl_Position = projectionMatrix * viewMatrix * wp;
++#include <logdepthbuf_vertex>
++}
+ `;
+ /** V02: the sun's illuminance in the scattering sky's units, set so noon reads like the gradient sky it replaces. */
+ const SKY_ILLUMINANCE = 8;
+@@ -165,33 +165,33 @@ const SKY_ILLUMINANCE = 8;
+  *   tone-mapped and encoded first and only then scaled into the buffer.
+  */
+ const ATMO_FRAG = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_fragment>
+-  uniform vec3 sunDir;
+-  uniform vec3 camPos;
+-  uniform float rimGain;
+-  uniform vec3 earthCentre;
+-  uniform float discOnly;
+-  varying vec3 vNormalW;
+-  varying vec3 vPosW;
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    vec3 n = normalize(vNormalW);
+-    vec3 viewDir = normalize(camPos - vPosW);
+-    if (discOnly > 0.5) {
+-      vec3 cr = cross(camPos - earthCentre, viewDir);
+-      if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;
+-    }
+-    float d = max(dot(n, viewDir), 0.0);
+-    float band = pow(1.0 - d, 3.0);
+-    float lit = 0.2 + 0.8 * smoothstep(-0.25, 0.35, dot(n, sunDir));
+-    float sunset = smoothstep(-0.25, 0.05, dot(n, sunDir)) * (1.0 - smoothstep(0.05, 0.4, dot(n, sunDir)));
+-    vec3 col = mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.55, 0.25), sunset * 0.8) * band * lit;
+-    gl_FragColor = vec4(col * rimGain, 1.0);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-    gl_FragColor.a = band * lit * 0.62 * rimGain;
+-  }
++#include <common>
++#include <logdepthbuf_pars_fragment>
++uniform vec3 sunDir;
++uniform vec3 camPos;
++uniform float rimGain;
++uniform vec3 earthCentre;
++uniform float discOnly;
++varying vec3 vNormalW;
++varying vec3 vPosW;
++void main() {
++#include <logdepthbuf_fragment>
++vec3 n = normalize(vNormalW);
++vec3 viewDir = normalize(camPos - vPosW);
++if (discOnly > 0.5) {
++vec3 cr = cross(camPos - earthCentre, viewDir);
++if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;
++}
++float d = max(dot(n, viewDir), 0.0);
++float band = pow(1.0 - d, 3.0);
++float lit = 0.2 + 0.8 * smoothstep(-0.25, 0.35, dot(n, sunDir));
++float sunset = smoothstep(-0.25, 0.05, dot(n, sunDir)) * (1.0 - smoothstep(0.05, 0.4, dot(n, sunDir)));
++vec3 col = mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.55, 0.25), sunset * 0.8) * band * lit;
++gl_FragColor = vec4(col * rimGain, 1.0);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++gl_FragColor.a = band * lit * 0.62 * rimGain;
++}
+ `;
+ 
+ /**
+diff --git a/src/render/smoke.ts b/src/render/smoke.ts
+index 961131b..025d425 100644
+--- a/src/render/smoke.ts
++++ b/src/render/smoke.ts
+@@ -13,79 +13,94 @@
+ import * as THREE from 'three';
+ 
+ const HASH = /* glsl */ `
+-  float h11(float n) { return fract(sin(n * 127.1) * 43758.5453123); }
++float h11(float n) { return fract(sin(n * 127.1) * 43758.5453123); }
+ `;
+ 
+ const BILLBOARD_HEAD = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  attribute float iSeed;
+-  varying vec2 vUv;
+-  varying float vAlpha;
+-  varying vec3 vTint;
++#include <common>
++#include <logdepthbuf_pars_vertex>
++attribute float iSeed;
++varying vec2 vUv;
++varying float vAlpha;
++varying vec3 vTint;
+ ` + HASH;
+ 
++/*
++ * GROUND_VERT's uniforms.
++ * - uT: seconds since first-stage ignition
++ * - uEmitDur: length of the emission window, s
++ * - uLife: puff lifetime, s
++ * - uSpeed: initial outward speed, m/s
++ * - uR0: radius of the trench mouth, m
++ * - uSize: base puff radius, m
++ * - uJetA: trench azimuth in the local frame, rad
++ * - uRise: vertical rise rate, relative to the fast layer
++ * - uGrow: how fast a puff widens, per second of its age
++ * - uDrift: the surface wind that carries the cloud, m/s, pad axes
++ */
+ const GROUND_VERT = BILLBOARD_HEAD + /* glsl */ `
+-  uniform float uT;        // seconds since first-stage ignition
+-  uniform float uEmitDur;  // length of the emission window, s
+-  uniform float uLife;     // puff lifetime, s
+-  uniform float uSpeed;    // initial outward speed, m/s
+-  uniform float uR0;       // radius of the trench mouth, m
+-  uniform float uSize;     // base puff radius, m
+-  uniform float uJetA;     // trench azimuth in the local frame, rad
+-  uniform float uRise;     // vertical rise rate, relative to the fast layer
+-  uniform float uGrow;     // how fast a puff widens, per second of its age
+-  uniform vec3 uDrift;     // the surface wind that carries the cloud, m/s, pad axes
+-  uniform float uOpacity;
+-  uniform vec3 uColor;
+-  uniform vec3 uHot;
+-  void main() {
+-    vUv = uv;
+-    float id = iSeed;
+-    float birth = id * uEmitDur;
+-    float age = uT - birth;
+-    float rnd = h11(id * 57.3 + 3.1);
+-    float rnd2 = h11(id * 91.7 + 8.9);
+-    float rnd3 = h11(id * 23.9 + 1.7);
+-    float life = uLife * (0.7 + 0.6 * rnd3);
+-    float alive = step(0.0, age) * (1.0 - step(life, age));
+-    float ang = uJetA + (rnd - 0.5) * 1.9 + step(0.5, rnd2) * PI;
+-    float spd = uSpeed * (0.45 + 1.0 * rnd2);
+-    float tau = 1.5;
+-    float a = max(age, 0.0);
+-    float rr = uR0 + spd * tau * (1.0 - exp(-a / tau));
+-    float y = 1.5 + uRise * (1.1 + 4.2 * rnd) * pow(a, 1.15) + rr * 0.10;
+-    vec3 centre = vec3(cos(ang) * rr, y, sin(ang) * rr) + uDrift * a;
+-    float size = uSize * (0.55 + 0.9 * rnd) * (1.0 + a * uGrow) * alive;
+-    float fade = smoothstep(0.0, 0.35, a) * (1.0 - smoothstep(life * 0.4, life, a));
+-    vAlpha = fade * uOpacity * alive;
+-    vTint = mix(uHot, uColor, smoothstep(0.0, 1.1, a));
+-    vec4 mv = modelViewMatrix * vec4(centre, 1.0);
+-    mv.xy += position.xy * size;
+-    gl_Position = projectionMatrix * mv;
+-    #include <logdepthbuf_vertex>
+-  }
++uniform float uT;
++uniform float uEmitDur;
++uniform float uLife;
++uniform float uSpeed;
++uniform float uR0;
++uniform float uSize;
++uniform float uJetA;
++uniform float uRise;
++uniform float uGrow;
++uniform vec3 uDrift;
++uniform float uOpacity;
++uniform vec3 uColor;
++uniform vec3 uHot;
++void main() {
++vUv = uv;
++float id = iSeed;
++float birth = id * uEmitDur;
++float age = uT - birth;
++float rnd = h11(id * 57.3 + 3.1);
++float rnd2 = h11(id * 91.7 + 8.9);
++float rnd3 = h11(id * 23.9 + 1.7);
++float life = uLife * (0.7 + 0.6 * rnd3);
++float alive = step(0.0, age) * (1.0 - step(life, age));
++float ang = uJetA + (rnd - 0.5) * 1.9 + step(0.5, rnd2) * PI;
++float spd = uSpeed * (0.45 + 1.0 * rnd2);
++float tau = 1.5;
++float a = max(age, 0.0);
++float rr = uR0 + spd * tau * (1.0 - exp(-a / tau));
++float y = 1.5 + uRise * (1.1 + 4.2 * rnd) * pow(a, 1.15) + rr * 0.10;
++vec3 centre = vec3(cos(ang) * rr, y, sin(ang) * rr) + uDrift * a;
++float size = uSize * (0.55 + 0.9 * rnd) * (1.0 + a * uGrow) * alive;
++float fade = smoothstep(0.0, 0.35, a) * (1.0 - smoothstep(life * 0.4, life, a));
++vAlpha = fade * uOpacity * alive;
++vTint = mix(uHot, uColor, smoothstep(0.0, 1.1, a));
++vec4 mv = modelViewMatrix * vec4(centre, 1.0);
++mv.xy += position.xy * size;
++gl_Position = projectionMatrix * mv;
++#include <logdepthbuf_vertex>
++}
+ `;
+ 
++/*
++ * PUFF_FRAG: tone mapping + sRGB output, exactly as three appends them to a built-in
++ * material (see the note in render/scene.ts) — without this the puffs are
++ * the only grey in the frame that is not tone-mapped and read as charcoal.
++ */
+ const PUFF_FRAG = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_fragment>
+-  uniform sampler2D uMap;
+-  varying vec2 vUv;
+-  varying float vAlpha;
+-  varying vec3 vTint;
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    vec4 t = texture2D(uMap, vUv);
+-    float a = t.a * vAlpha;
+-    if (a < 0.004) discard;
+-    // tone mapping + sRGB output, exactly as three appends them to a built-in
+-    // material (see the note in render/scene.ts) — without this the puffs are
+-    // the only grey in the frame that is not tone-mapped and read as charcoal
+-    gl_FragColor = vec4(vTint * t.rgb, a);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-  }
++#include <common>
++#include <logdepthbuf_pars_fragment>
++uniform sampler2D uMap;
++varying vec2 vUv;
++varying float vAlpha;
++varying vec3 vTint;
++void main() {
++#include <logdepthbuf_fragment>
++vec4 t = texture2D(uMap, vUv);
++float a = t.a * vAlpha;
++if (a < 0.004) discard;
++gl_FragColor = vec4(vTint * t.rgb, a);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++}
+ `;
+ 
+ let puffTex: THREE.Texture | null = null;
+diff --git a/src/render/stars.ts b/src/render/stars.ts
+index 5d4396e..dead341 100644
+--- a/src/render/stars.ts
++++ b/src/render/stars.ts
+@@ -11,37 +11,39 @@ import { hash11 } from './noise';
+ const GAL_POLE = new THREE.Vector3(-0.8677, -0.1978, 0.4560).normalize();
+ 
+ 
++/** STAR_VERT, BACKGROUND_SKY: preserve the sky direction while keeping it behind all scene geometry. */
+ const STAR_VERT = /* glsl */ `
+-  #include <common>
+-  attribute vec3 aColor;
+-  attribute float aSize;
+-  uniform float uPixelRatio;
+-  varying vec3 vCol;
+-  void main() {
+-    vCol = aColor;
+-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+-    #ifdef BACKGROUND_SKY
+-      // Preserve the sky direction while keeping it behind all scene geometry.
+-      gl_Position.z = gl_Position.w;
+-    #endif
+-    gl_PointSize = aSize * uPixelRatio;
+-  }
++#include <common>
++attribute vec3 aColor;
++attribute float aSize;
++uniform float uPixelRatio;
++varying vec3 vCol;
++void main() {
++vCol = aColor;
++gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
++#ifdef BACKGROUND_SKY
++gl_Position.z = gl_Position.w;
++#endif
++gl_PointSize = aSize * uPixelRatio;
++}
+ `;
++/**
++ * STAR_FRAG: Gaussian point spread instead of a hard square: a 1-pixel square is what
++ * made the old field read as graph paper rather than sky.
++ */
+ const STAR_FRAG = /* glsl */ `
+-  #include <common>
+-  uniform float uOpacity;
+-  varying vec3 vCol;
+-  void main() {
+-    vec2 d = gl_PointCoord - vec2(0.5);
+-    // Gaussian point spread instead of a hard square: a 1-pixel square is what
+-    // made the old field read as graph paper rather than sky
+-    float g = exp(-dot(d, d) * 17.0);
+-    float a = g * uOpacity;
+-    if (a < 0.006) discard;
+-    gl_FragColor = vec4(vCol, a);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-  }
++#include <common>
++uniform float uOpacity;
++varying vec3 vCol;
++void main() {
++vec2 d = gl_PointCoord - vec2(0.5);
++float g = exp(-dot(d, d) * 17.0);
++float a = g * uOpacity;
++if (a < 0.006) discard;
++gl_FragColor = vec4(vCol, a);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++}
+ `;
+ 
+ 
+diff --git a/src/render/trails.ts b/src/render/trails.ts
+index bf9003a..72a2bef 100644
+--- a/src/render/trails.ts
++++ b/src/render/trails.ts
+@@ -402,49 +402,54 @@ export class ExhaustTrails {
+ function addV(a: Vec3, b: Vec3): Vec3 { return v(a.x + b.x, a.y + b.y, a.z + b.z); }
+ function cross(a: Vec3, b: Vec3): Vec3 { return v(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
+ 
++/*
++ * VERT.
++ * - iSize: width, length along the column.
++ * - iLook: colour, opacity.
++ * - a: a streak along the column as it is seen: shortened when it points at the eye.
++ */
+ const VERT = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  attribute vec3 iPos;
+-  attribute vec3 iAxis;
+-  attribute vec2 iSize;   // width, length along the column
+-  attribute vec4 iLook;   // colour, opacity
+-  varying vec2 vUv;
+-  varying vec4 vLook;
+-  varying float vStreak;
+-  void main() {
+-    vUv = uv;
+-    vLook = iLook;
+-    vStreak = step(0.5, length(iAxis));
+-    vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
+-    // a streak along the column as it is seen: shortened when it points at the eye
+-    vec3 a = (modelViewMatrix * vec4(iAxis, 0.0)).xyz;
+-    float along = length(a.xy);
+-    vec2 u = along > 1e-4 ? a.xy / along : vec2(1.0, 0.0);
+-    vec2 w = vec2(-u.y, u.x);
+-    float len = max(iSize.x, iSize.y * along);
+-    mv.xy += u * position.x * len + w * position.y * iSize.x;
+-    gl_Position = projectionMatrix * mv;
+-    #include <logdepthbuf_vertex>
+-  }
++#include <common>
++#include <logdepthbuf_pars_vertex>
++attribute vec3 iPos;
++attribute vec3 iAxis;
++attribute vec2 iSize;
++attribute vec4 iLook;
++varying vec2 vUv;
++varying vec4 vLook;
++varying float vStreak;
++void main() {
++vUv = uv;
++vLook = iLook;
++vStreak = step(0.5, length(iAxis));
++vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
++vec3 a = (modelViewMatrix * vec4(iAxis, 0.0)).xyz;
++float along = length(a.xy);
++vec2 u = along > 1e-4 ? a.xy / along : vec2(1.0, 0.0);
++vec2 w = vec2(-u.y, u.x);
++float len = max(iSize.x, iSize.y * along);
++mv.xy += u * position.x * len + w * position.y * iSize.x;
++gl_Position = projectionMatrix * mv;
++#include <logdepthbuf_vertex>
++}
+ `;
+ 
++/** FRAG, t: along a column only the blob's middle: a streak with no gaps between its neighbours; a lone puff whole. */
+ const FRAG = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_fragment>
+-  uniform sampler2D uMap;
+-  uniform float uLight;
+-  varying vec2 vUv;
+-  varying vec4 vLook;
+-  varying float vStreak;
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    // along a column only the blob's middle: a streak with no gaps between its neighbours; a lone puff whole
+-    vec4 t = texture2D(uMap, vec2(0.5 + (vUv.x - 0.5) * mix(1.0, 0.45, vStreak), vUv.y));
+-    float a = t.a * vLook.a;
+-    if (a < 0.004) discard;
+-    gl_FragColor = vec4(vLook.rgb * t.rgb * uLight, a);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-  }
++#include <common>
++#include <logdepthbuf_pars_fragment>
++uniform sampler2D uMap;
++uniform float uLight;
++varying vec2 vUv;
++varying vec4 vLook;
++varying float vStreak;
++void main() {
++#include <logdepthbuf_fragment>
++vec4 t = texture2D(uMap, vec2(0.5 + (vUv.x - 0.5) * mix(1.0, 0.45, vStreak), vUv.y));
++float a = t.a * vLook.a;
++if (a < 0.004) discard;
++gl_FragColor = vec4(vLook.rgb * t.rgb * uLight, a);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++}
+ `;
+diff --git a/src/render/twilight-plume.ts b/src/render/twilight-plume.ts
+index e975964..bf91ed6 100644
+--- a/src/render/twilight-plume.ts
++++ b/src/render/twilight-plume.ts
+@@ -106,17 +106,17 @@ const G = 0.68;
+ const CS_K = (1.5 * (1 - G * G)) / (2 + G * G);
+ 
+ const VERT = /* glsl */ `
+-  uniform vec3 uVehicle;
+-  uniform float uScale;
+-  varying vec3 vPos;
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  void main() {
+-    vec4 w = modelMatrix * vec4(position, 1.0);
+-    vPos = (w.xyz - uVehicle) / uScale;
+-    gl_Position = projectionMatrix * viewMatrix * w;
+-    #include <logdepthbuf_vertex>
+-  }
++uniform vec3 uVehicle;
++uniform float uScale;
++varying vec3 vPos;
++#include <common>
++#include <logdepthbuf_pars_vertex>
++void main() {
++vec4 w = modelMatrix * vec4(position, 1.0);
++vPos = (w.xyz - uVehicle) / uScale;
++gl_Position = projectionMatrix * viewMatrix * w;
++#include <logdepthbuf_vertex>
++}
+ `;
+ 
+ /*
+@@ -154,113 +154,113 @@ const VERT = /* glsl */ `
+  * then capped (CAP).
+  */
+ const FRAG = /* glsl */ `
+-  #include <logdepthbuf_pars_fragment>
+-  uniform float uIntensity, uTime, uExpansion, uScale;
+-  uniform vec3 uVehicle, uAxis, uSun, uUp;
+-  varying vec3 vPos;
++#include <logdepthbuf_pars_fragment>
++uniform float uIntensity, uTime, uExpansion, uScale;
++uniform vec3 uVehicle, uAxis, uSun, uUp;
++varying vec3 vPos;
+ 
+-  float hash13(vec3 p) {
+-    p = fract(p * 0.1031);
+-    p += dot(p, p.zyx + 31.32);
+-    return fract((p.x + p.y) * p.z);
+-  }
+-  float noise3(vec3 x) {
+-    vec3 i = floor(x), f = fract(x);
+-    f = f * f * (3.0 - 2.0 * f);
+-    return mix(
+-      mix(mix(hash13(i), hash13(i + vec3(1, 0, 0)), f.x), mix(hash13(i + vec3(0, 1, 0)), hash13(i + vec3(1, 1, 0)), f.x), f.y),
+-      mix(mix(hash13(i + vec3(0, 0, 1)), hash13(i + vec3(1, 0, 1)), f.x), mix(hash13(i + vec3(0, 1, 1)), hash13(i + vec3(1, 1, 1)), f.x), f.y),
+-      f.z);
+-  }
+-  float erfa(float x) {
+-    x = clamp(x, -3.0, 3.0);
+-    return tanh(x * (1.1284 + 0.1009 * x * x));
+-  }
++float hash13(vec3 p) {
++p = fract(p * 0.1031);
++p += dot(p, p.zyx + 31.32);
++return fract((p.x + p.y) * p.z);
++}
++float noise3(vec3 x) {
++vec3 i = floor(x), f = fract(x);
++f = f * f * (3.0 - 2.0 * f);
++return mix(
++mix(mix(hash13(i), hash13(i + vec3(1, 0, 0)), f.x), mix(hash13(i + vec3(0, 1, 0)), hash13(i + vec3(1, 1, 0)), f.x), f.y),
++mix(mix(hash13(i + vec3(0, 0, 1)), hash13(i + vec3(1, 0, 1)), f.x), mix(hash13(i + vec3(0, 1, 1)), hash13(i + vec3(1, 1, 1)), f.x), f.y),
++f.z);
++}
++float erfa(float x) {
++x = clamp(x, -3.0, 3.0);
++return tanh(x * (1.1284 + 0.1009 * x * x));
++}
+ 
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    vec3 ro = (cameraPosition - uVehicle) / uScale;
+-    vec3 rd = normalize(vPos - ro);
+-    vec3 oc = ro - uAxis * ${BOUND_Z.toFixed(2)};
+-    float b = dot(oc, rd);
+-    float h = b * b - dot(oc, oc) + ${(BOUND_R * BOUND_R).toFixed(4)};
+-    if (h <= 0.0) discard;
+-    h = sqrt(h);
+-    float t0 = max(${NEAR_CUT.toFixed(2)}, -b - h);
+-    float t1 = h - b;
+-    float ra = dot(rd, uAxis);
+-    vec3 rp = rd - ra * uAxis;
+-    vec3 op = ro - dot(ro, uAxis) * uAxis;
+-    float a = max(dot(rp, rp), 1e-6);
+-    float tm = -dot(op, rp) / a;
+-    float d2 = max(dot(op, op) - a * tm * tm, 0.0);
+-    float c2 = dot(op, op) - ${PARA_K.toFixed(2)} * (dot(ro, uAxis) + ${PARA_Z0.toFixed(2)});
+-    b = -a * tm - ${(PARA_K / 2).toFixed(2)} * ra;
+-    h = b * b - a * c2;
+-    if (h <= 0.0) discard;
+-    h = b < 0.0 ? sqrt(h) - b : -sqrt(h) - b;
+-    t0 = max(t0, min(h / a, c2 / h));
+-    t1 = min(t1, max(h / a, c2 / h));
+-    float dt = (t1 - t0) / ${STEPS.toFixed(1)};
+-    if (dt <= 0.0) discard;
+-    float sa = sqrt(2.4 * a);
+-    float wz = 14.4 * dt * abs(ra);
+-    float bands = 0.28 * exp(-wz * wz / 6.0);
+-    float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
++void main() {
++#include <logdepthbuf_fragment>
++vec3 ro = (cameraPosition - uVehicle) / uScale;
++vec3 rd = normalize(vPos - ro);
++vec3 oc = ro - uAxis * ${BOUND_Z.toFixed(2)};
++float b = dot(oc, rd);
++float h = b * b - dot(oc, oc) + ${(BOUND_R * BOUND_R).toFixed(4)};
++if (h <= 0.0) discard;
++h = sqrt(h);
++float t0 = max(${NEAR_CUT.toFixed(2)}, -b - h);
++float t1 = h - b;
++float ra = dot(rd, uAxis);
++vec3 rp = rd - ra * uAxis;
++vec3 op = ro - dot(ro, uAxis) * uAxis;
++float a = max(dot(rp, rp), 1e-6);
++float tm = -dot(op, rp) / a;
++float d2 = max(dot(op, op) - a * tm * tm, 0.0);
++float c2 = dot(op, op) - ${PARA_K.toFixed(2)} * (dot(ro, uAxis) + ${PARA_Z0.toFixed(2)});
++b = -a * tm - ${(PARA_K / 2).toFixed(2)} * ra;
++h = b * b - a * c2;
++if (h <= 0.0) discard;
++h = b < 0.0 ? sqrt(h) - b : -sqrt(h) - b;
++t0 = max(t0, min(h / a, c2 / h));
++t1 = min(t1, max(h / a, c2 / h));
++float dt = (t1 - t0) / ${STEPS.toFixed(1)};
++if (dt <= 0.0) discard;
++float sa = sqrt(2.4 * a);
++float wz = 14.4 * dt * abs(ra);
++float bands = 0.28 * exp(-wz * wz / 6.0);
++float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+ 
+-    float c = dot(rd, uSun);
+-    float light = 0.62 + 0.38 * mix(0.75 * (1.0 + c * c), ${CS_K.toFixed(4)} * (1.0 + c * c) / pow(${(1 + G * G).toFixed(4)} - ${(2 * G).toFixed(2)} * c, 1.5), 0.55);
+-    vec3 col = vec3(0.0);
+-    float alpha = 0.0;
++float c = dot(rd, uSun);
++float light = 0.62 + 0.38 * mix(0.75 * (1.0 + c * c), ${CS_K.toFixed(4)} * (1.0 + c * c) / pow(${(1 + G * G).toFixed(4)} - ${(2 * G).toFixed(2)} * c, 1.5), 0.55);
++vec3 col = vec3(0.0);
++float alpha = 0.0;
+ 
+-    for (int i = 0; i < ${STEPS}; i++) {
+-      float ts = t0 + float(i) * dt;
+-      float t = ts + jitter * dt;
+-      vec3 p = ro + rd * t;
+-      float z = dot(p, uAxis);
+-      if (z < 0.0 || z > 1.84) continue;
+-      float u = clamp(z / 1.8, 0.0, 1.0);
++for (int i = 0; i < ${STEPS}; i++) {
++float ts = t0 + float(i) * dt;
++float t = ts + jitter * dt;
++vec3 p = ro + rd * t;
++float z = dot(p, uAxis);
++if (z < 0.0 || z > 1.84) continue;
++float u = clamp(z / 1.8, 0.0, 1.0);
+ 
+-      float cr = 0.015 + 0.22 * pow(u, 0.72) * (1.0 - 0.55 * u);
+-      float x0 = sa * (ts - tm) / cr;
+-      float core = (erfa(x0 + sa * dt / cr) - erfa(x0)) * 0.8862 * cr / sa * exp(-2.4 * d2 / (cr * cr))
+-                 * (1.0 - smoothstep(0.0, 0.42, u)) * (0.72 + bands * cos(z * 28.9) * exp(-6.5 * u)) * 1.45;
++float cr = 0.015 + 0.22 * pow(u, 0.72) * (1.0 - 0.55 * u);
++float x0 = sa * (ts - tm) / cr;
++float core = (erfa(x0 + sa * dt / cr) - erfa(x0)) * 0.8862 * cr / sa * exp(-2.4 * d2 / (cr * cr))
++* (1.0 - smoothstep(0.0, 0.42, u)) * (0.72 + bands * cos(z * 28.9) * exp(-6.5 * u)) * 1.45;
+ 
+-      vec3 q = p - z * uAxis;
+-      float r = length(q);
+-      float env = 0.02 + uExpansion * 0.96 * pow(u, 0.56) * (1.0 - 0.24 * pow(u, 1.65));
+-      float rho = r / env;
+-      float rest = 0.0;
+-      if (rho < 1.22) {
+-        float e = (rho - 0.9) / mix(0.09, 0.16, u);
+-        float shell = exp(-e * e) * smoothstep(0.0, 0.06, u) * (1.0 - smoothstep(0.52, 1.02, u));
+-        float cavity = (1.0 - smoothstep(0.15, 0.92, rho)) * smoothstep(0.02, 0.14, u) * (1.0 - smoothstep(0.3, 0.95, u)) * 0.16;
+-        vec3 fp = 3.8 * p - uAxis * (1.2 * z + 0.045 * uTime);
+-        float turb = noise3(fp) * 0.65 + noise3(fp * 2.4 + vec3(13.7, 5.2, 0.0) - uAxis * (0.08 * uTime)) * 0.35;
+-        float flutes = smoothstep(0.42, 0.88, noise3(q / max(r, 1e-5) * 3.2 + uAxis * (3.0 * u - 0.03 * uTime)));
+-        e = (rho - 0.76) / 0.26;
+-        float tendrils = flutes * turb * exp(-e * e) * smoothstep(0.12, 0.45, u) * (1.0 - smoothstep(0.68, 1.0, u)) * 0.85;
+-        rest = shell * (0.55 + 0.75 * turb) + cavity + tendrils;
+-      }
+-      float sum = (core + rest * dt) * 1.35;
+-      float dens = sum * smoothstep(${NEAR_CUT.toFixed(2)}, ${NEAR_FADE.toFixed(2)}, t);
+-      if (dens < 0.0005) continue;
++vec3 q = p - z * uAxis;
++float r = length(q);
++float env = 0.02 + uExpansion * 0.96 * pow(u, 0.56) * (1.0 - 0.24 * pow(u, 1.65));
++float rho = r / env;
++float rest = 0.0;
++if (rho < 1.22) {
++float e = (rho - 0.9) / mix(0.09, 0.16, u);
++float shell = exp(-e * e) * smoothstep(0.0, 0.06, u) * (1.0 - smoothstep(0.52, 1.02, u));
++float cavity = (1.0 - smoothstep(0.15, 0.92, rho)) * smoothstep(0.02, 0.14, u) * (1.0 - smoothstep(0.3, 0.95, u)) * 0.16;
++vec3 fp = 3.8 * p - uAxis * (1.2 * z + 0.045 * uTime);
++float turb = noise3(fp) * 0.65 + noise3(fp * 2.4 + vec3(13.7, 5.2, 0.0) - uAxis * (0.08 * uTime)) * 0.35;
++float flutes = smoothstep(0.42, 0.88, noise3(q / max(r, 1e-5) * 3.2 + uAxis * (3.0 * u - 0.03 * uTime)));
++e = (rho - 0.76) / 0.26;
++float tendrils = flutes * turb * exp(-e * e) * smoothstep(0.12, 0.45, u) * (1.0 - smoothstep(0.68, 1.0, u)) * 0.85;
++rest = shell * (0.55 + 0.75 * turb) + cavity + tendrils;
++}
++float sum = (core + rest * dt) * 1.35;
++float dens = sum * smoothstep(${NEAR_CUT.toFixed(2)}, ${NEAR_FADE.toFixed(2)}, t);
++if (dens < 0.0005) continue;
+ 
+-      float lit = smoothstep(-0.85, 0.85, dot(q + (0.5 * z - 0.175) * uAxis, uSun) / max(0.08, env));
+-      vec3 s = mix(vec3(0.48, 0.68, 1.0), vec3(0.76, 0.9, 1.0), clamp(dot(p, uUp) * 0.6 + 0.5, 0.0, 1.0));
+-      s = mix(s, vec3(1.0, 0.85, 0.68), smoothstep(0.72, 1.02, rho) * 0.55 * lit + max(0.0, c) * 0.35);
+-      s = mix(s, vec3(1.0, 0.92, 0.8), clamp(core / (sum + 0.01 * dt), 0.0, 1.0));
+-      col += (1.0 - alpha) * s * mix(0.42, 1.32, lit) * light * dens;
+-      alpha += (1.0 - alpha) * min(1.0, dens * 0.65);
+-    }
+-    col *= uIntensity;
+-    float m = max(col.r, max(col.g, col.b));
+-    if (m < 1e-3) discard;
+-    col *= ${CAP.toFixed(1)} * tanh(min(m / ${CAP.toFixed(1)}, 4.0)) / m;
+-    gl_FragColor = vec4(col, 1.0);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-  }
++float lit = smoothstep(-0.85, 0.85, dot(q + (0.5 * z - 0.175) * uAxis, uSun) / max(0.08, env));
++vec3 s = mix(vec3(0.48, 0.68, 1.0), vec3(0.76, 0.9, 1.0), clamp(dot(p, uUp) * 0.6 + 0.5, 0.0, 1.0));
++s = mix(s, vec3(1.0, 0.85, 0.68), smoothstep(0.72, 1.02, rho) * 0.55 * lit + max(0.0, c) * 0.35);
++s = mix(s, vec3(1.0, 0.92, 0.8), clamp(core / (sum + 0.01 * dt), 0.0, 1.0));
++col += (1.0 - alpha) * s * mix(0.42, 1.32, lit) * light * dens;
++alpha += (1.0 - alpha) * min(1.0, dens * 0.65);
++}
++col *= uIntensity;
++float m = max(col.r, max(col.g, col.b));
++if (m < 1e-3) discard;
++col *= ${CAP.toFixed(1)} * tanh(min(m / ${CAP.toFixed(1)}, 4.0)) / m;
++gl_FragColor = vec4(col, 1.0);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++}
+ `;
+ 
+ /** The plume's radius at an altitude, m: nothing below 45 km, tens of km by 120 km. */
+diff --git a/src/render/vapour.ts b/src/render/vapour.ts
+index 2ac3686..760231b 100644
+--- a/src/render/vapour.ts
++++ b/src/render/vapour.ts
+@@ -73,49 +73,56 @@ export class VapourCone {
+   }
+ }
+ 
++/*
++ * VERT.
++ * - vUv: the lathe's v runs from the trailing edge (0) to the shoulder (1).
++ * - vRim: a sheet is seen edge-on at its silhouette: thicker there.
++ */
+ const VERT = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_vertex>
+-  varying vec2 vUv;
+-  varying float vRim;
+-  void main() {
+-    // the lathe's v runs from the trailing edge (0) to the shoulder (1)
+-    vUv = uv;
+-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+-    vec3 nrm = normalize(normalMatrix * normal);
+-    // a sheet is seen edge-on at its silhouette: thicker there
+-    vRim = 1.0 - abs(dot(nrm, normalize(-mv.xyz)));
+-    gl_Position = projectionMatrix * mv;
+-    #include <logdepthbuf_vertex>
+-  }
++#include <common>
++#include <logdepthbuf_pars_vertex>
++varying vec2 vUv;
++varying float vRim;
++void main() {
++vUv = uv;
++vec4 mv = modelViewMatrix * vec4(position, 1.0);
++vec3 nrm = normalize(normalMatrix * normal);
++vRim = 1.0 - abs(dot(nrm, normalize(-mv.xyz)));
++gl_Position = projectionMatrix * mv;
++#include <logdepthbuf_vertex>
++}
+ `;
+ 
++/*
++ * FRAG.
++ * - along: 1 at the shoulder, 0 at the trailing edge.
++ * - streaks, body, ragged, flicker: dense at the shoulder, ragged and thinning aft; the shock flickers.
++ */
+ const FRAG = /* glsl */ `
+-  #include <common>
+-  #include <logdepthbuf_pars_fragment>
+-  uniform float uStrength;
+-  uniform float uT;
+-  uniform float uLight;
+-  varying vec2 vUv;
+-  varying float vRim;
+-  float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+-  float noise(vec2 p) {
+-    vec2 i = floor(p), f = fract(p);
+-    vec2 u = f * f * (3.0 - 2.0 * f);
+-    return mix(mix(h(i), h(i + vec2(1, 0)), u.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), u.x), u.y);
+-  }
+-  void main() {
+-    #include <logdepthbuf_fragment>
+-    float along = vUv.y;                      // 1 at the shoulder, 0 at the trailing edge
+-    // dense at the shoulder, ragged and thinning aft; the shock flickers
+-    float streaks = noise(vec2(vUv.x * 42.0, along * 3.0 - uT * 6.0)) * 0.6 + noise(vec2(vUv.x * 11.0 + uT * 0.7, along * 7.0)) * 0.4;
+-    float body = smoothstep(0.0, 0.55, along) * (1.0 - smoothstep(0.93, 1.0, along));
+-    float ragged = smoothstep(0.25, 0.75, streaks + along * 0.35);
+-    float flicker = 0.8 + 0.2 * sin(uT * 37.0 + vUv.x * 6.2831);
+-    float a = uStrength * body * ragged * flicker * (0.35 + 0.65 * vRim) * 0.85;
+-    if (a < 0.004) discard;
+-    gl_FragColor = vec4(vec3(0.97, 0.98, 1.0) * uLight, a);
+-    #include <tonemapping_fragment>
+-    #include <colorspace_fragment>
+-  }
++#include <common>
++#include <logdepthbuf_pars_fragment>
++uniform float uStrength;
++uniform float uT;
++uniform float uLight;
++varying vec2 vUv;
++varying float vRim;
++float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
++float noise(vec2 p) {
++vec2 i = floor(p), f = fract(p);
++vec2 u = f * f * (3.0 - 2.0 * f);
++return mix(mix(h(i), h(i + vec2(1, 0)), u.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), u.x), u.y);
++}
++void main() {
++#include <logdepthbuf_fragment>
++float along = vUv.y;
++float streaks = noise(vec2(vUv.x * 42.0, along * 3.0 - uT * 6.0)) * 0.6 + noise(vec2(vUv.x * 11.0 + uT * 0.7, along * 7.0)) * 0.4;
++float body = smoothstep(0.0, 0.55, along) * (1.0 - smoothstep(0.93, 1.0, along));
++float ragged = smoothstep(0.25, 0.75, streaks + along * 0.35);
++float flicker = 0.8 + 0.2 * sin(uT * 37.0 + vUv.x * 6.2831);
++float a = uStrength * body * ragged * flicker * (0.35 + 0.65 * vRim) * 0.85;
++if (a < 0.004) discard;
++gl_FragColor = vec4(vec3(0.97, 0.98, 1.0) * uLight, a);
++#include <tonemapping_fragment>
++#include <colorspace_fragment>
++}
+ `;
+-- 
+2.43.0
+

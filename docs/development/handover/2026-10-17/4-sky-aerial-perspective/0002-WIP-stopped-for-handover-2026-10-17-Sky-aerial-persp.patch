@@ -1,0 +1,1178 @@
+From a7865912bab8a76328f77ccd48812c0c41af853d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 14:03:27 +0000
+Subject: [PATCH 2/2] WIP (stopped for handover 2026-10-17): Sky aerial
+ perspective over the globe: implementation in progress, budget not yet
+ checked
+
+Stopped mid-work when the owner paused the session; see
+docs/development/HANDOVER-ARGON4.md on claude/bold-johnson-haeu8t.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ docs/PHYSICS.md                 |  38 ++-
+ src/render/atmosphere.ts        | 140 +++++++++-
+ src/render/scene.ts             | 104 +++++--
+ tests/render-aerial.test.ts     | 480 ++++++++++++++++++++++++++++++++
+ tests/render-atmo-shell.test.ts | 113 ++------
+ 5 files changed, 743 insertions(+), 132 deletions(-)
+ create mode 100644 tests/render-aerial.test.ts
+
+diff --git a/docs/PHYSICS.md b/docs/PHYSICS.md
+index 524b6dd..2340cc1 100644
+--- a/docs/PHYSICS.md
++++ b/docs/PHYSICS.md
+@@ -3061,12 +3061,40 @@ a flickering black ring), and the samples are placed from the ray's lowest point
+ seen from space, towards the camera from inside the atmosphere. A NaN or infinity from a degenerate
+ ray is zeroed before the bloom can spread it.
+ 
++The globe and its clouds are seen through the same air (aerial perspective, Hillaire 2020 §6). Their
++shaders (src/render/scene.ts, with `AERIAL` from atmosphere.ts) march the view ray from the camera
++to the Earth's sphere — to the cloud layer's sphere, 9 km up, for the clouds — with the same model
++and tables, single scattering with the Earth's shadow plus the multiple-scattering term, and show
++the surface's light dimmed by the transmittance T of that stretch with the light L it scatters in
++added: col·T + L·E, E the sky pass's illuminance. The stretch is solved from the camera through the
++ray's perigee, as the sky's is, and ends on the sphere, not on the meshes' facets (up to ~3 km under
++it), which would scallop the haze at the limb. The globe takes 10 samples and the clouds 6, crowded
++quadratically towards the far end, where the air is densest on any ray that ends on the ground; a
++cloud texel the map leaves clear is dropped before the march. Against an independent fine integral
++of the same single-scattering model (tests/render-aerial.test.ts) the error in the scattered light
++is at most 4.7 % of a ray's brightest channel from 400 km (RMS 1.4 %; the worst rays graze the limb
++with the sun low ahead of them) and 1.6 % from 30 km (RMS 0.6 %), in the transmittance at most
++4.5 % and 1.9 %; for the clouds' six samples 4.6 % and 3.5 %. From orbit this is the blue haze over
++the disc, thickening towards the limb into the sky's own limb glow; from the stratosphere, the
++distant ground fading into the horizon sky, which until then it met at about three times the
++globe's brightness; none on the night side, and the terminator's twilight from the model. The globe's
++Fresnel rim, the gradient sky's stand-in for this, is off under the scattering sky. The sky pass no
++longer marches a ray that ends more than 10 km inside the Earth's sphere: the opaque globe covers it
++and carries that haze itself.
++
++The sun's illuminance in the sky's units is 8 on the ground, set so that noon reads like the
++gradient sky it replaced, and falls with the camera's height (the ground factor of src/render/sky.ts,
++from 12 to 72 km) to 3.3 in space, the scene's own sun that lights the globe, the clouds and the
++vehicles; the sky pass and the aerial perspective take the same value, so the haze meets the sky at
++the horizon and at the limb. At 8 from orbit the haze, 2.4 times what lights the ground under it,
++veiled the whole disc in pale blue.
++
+ The older atmosphere shell (a sphere 110 km up, added over the globe) stays the limb glow of the
+-gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets. Under the
+-scattering sky it is drawn over the Earth's disc only, as the haze towards its limb: a fragment
+-whose view ray passes clear of the R_EARTH sphere is discarded. Until 2026-10-17 it was drawn whole,
+-and from orbit it laid a second, faceted blue ring from 60 to 110 km over the sky's own limb glow,
+-which is gone by about 66 km (a brown band at the terminator). The gradient sky's colour reaches the
++gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets — and is not
++drawn under the scattering sky. Until 2026-10-17 it was drawn whole there, and from orbit it laid a
++second, faceted blue ring from 60 to 110 km over the sky's own limb glow, which is gone by about
++66 km (a brown band at the terminator); it was then cut to the Earth's disc, as the haze towards its
++limb, until the aerial perspective took that over the same day. The gradient sky's colour reaches the
+ linear scene target as the scene's background, which three encodes and clears inside the render with
+ the target bound; set as the renderer's clear colour while the canvas was bound it had been encoded
+ to sRGB, and space came out (95, 104, 128) for the authored (10, 14, 27).
+diff --git a/src/render/atmosphere.ts b/src/render/atmosphere.ts
+index 4f32c0e..a86ed61 100644
+--- a/src/render/atmosphere.ts
++++ b/src/render/atmosphere.ts
+@@ -15,7 +15,10 @@
+  * scattering term. That one pass is the blue noon sky, the red horizon at
+  * dusk, the Earth's shadow rising in the east after sunset, the thin blue
+  * limb seen from orbit and the sun's reddened disc. It is drawn first, behind
+- * everything; the Earth and the vehicles cover it.
++ * everything; the Earth and the vehicles cover it. The globe and its clouds
++ * are then seen through the same air: their shaders march the stretch from
++ * the camera to them with the same model and add what it scatters in, after
++ * dimming them by what it lets through (`AERIAL`, used by scene.ts).
+  *
+  * The stretch of a view ray inside the atmosphere is found from the camera
+  * alone, through the ray's perigee (its closest approach to the Earth's
+@@ -29,7 +32,8 @@
+  * towards the camera. The sun's disc is darkened towards its limb and has a
+  * faint glow round it. The details are at `SKY_FRAG`.
+  *
+- * It costs a fragment shader of ~ 24 samples per pixel. A slow GPU falls back
++ * It costs a fragment shader of ~ 24 samples per pixel, and the globe and the
++ * clouds 10 and 6 samples (two table reads each) per pixel they cover. A slow GPU falls back
+  * to the colour-gradient sky of `sky.ts` (the same trial as the glow, F07:
+  * src/render/glow-governor.ts), and so does a GPU that cannot render to float
+  * textures.
+@@ -210,12 +214,28 @@ gl_FragColor = vec4(any(isnan(psi)) || any(isinf(psi)) ? vec3(0.0) : psi, 1.0);
+ `;
+ 
+ /**
+- * The per-frame pass, in order.
++ * What a point of the air at radius r receives, the sun at cosine muS, shared
++ * by the sky pass and the aerial perspective.
+  *
+  * `sunlight(r, muS)`: sunlight reaching radius r with the sun at cosine muS —
+  * the transmittance, faded out over a quarter of a degree about the
+  * geometric horizon rather than cut at it: a hard cut per sample speckles a
+- * twilight limb.
++ * twilight limb. `multiScatter(r, muS)`: the multiple-scattering table.
++ */
++const SAMPLE_SKY = /* glsl */ `
++uniform sampler2D uMultiScatter;
++vec3 sunlight(float r, float muS) {
++float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
++float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
++return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
++}
++vec3 multiScatter(float r, float muS) {
++return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
++}
++`;
++
++/**
++ * The per-frame pass, in order.
+  *
+  * The view ray is unprojected on the near plane: at the far one (5·10⁹ m) w
+  * is ~10⁻¹⁰ and the division loses it.
+@@ -300,12 +320,18 @@ gl_FragColor = vec4(any(isnan(psi)) || any(isinf(psi)) ? vec3(0.0) : psi, 1.0);
+  *
+  * One bad sample must not become a black frame: the bloom's blur would
+  * spread it everywhere.
++ *
++ * A ray that ends more than 10 km inside the Earth's sphere is not marched:
++ * the globe, opaque and always drawn, covers it, and carries the haze of
++ * that stretch itself (`AERIAL`). Its 128 × 96 facets lie at most ~3 km
++ * under the sphere, so every ray the globe may leave uncovered at its limb
++ * is still marched.
+  */
+ const SKY_FRAG = /* glsl */ `
+ #include <common>
+ ${COMMON}
+ ${SAMPLE_TRANSMITTANCE}
+-uniform sampler2D uMultiScatter;
++${SAMPLE_SKY}
+ uniform mat4 uInvProj;
+ uniform mat4 uCamToWorld;
+ uniform vec3 uCamEci;
+@@ -313,16 +339,6 @@ uniform vec3 uSunDir;
+ uniform float uSunIlluminance;
+ varying vec2 vUv;
+ 
+-vec3 sunlight(float r, float muS) {
+-float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
+-float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
+-return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
+-}
+-
+-vec3 multiScatter(float r, float muS) {
+-return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
+-}
+-
+ void main() {
+ vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
+ vec3 dir = normalize((uCamToWorld * vec4(v.xyz / v.w, 0.0)).xyz);
+@@ -338,6 +354,7 @@ float rp2 = dot(pc, pc);
+ float h = sqrt(max(0.0, RT * RT - rp2));
+ float tStart = max(0.0, tc - h), tEnd = tc + h;
+ if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);
++if (tc > 0.0 && rp2 < (RG - 1e4) * (RG - 1e4)) tEnd = tStart;
+ if (tEnd > tStart) {
+ float pr = rayleighPhase(c), pm = miePhase(c);
+ const int N = 24;
+@@ -381,6 +398,90 @@ gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
+ }
+ `;
+ 
++/**
++ * Aerial perspective (Hillaire 2020, §6), for the shaders of the globe and
++ * its clouds (scene.ts): what the air between the camera and a point of the
++ * ground or of the cloud layer does to that point's light.
++ *
++ * `aerial(o, dir, rEnd, sunDir, T)` marches the view ray from the camera (o,
++ * from the Earth's centre, m) to the sphere of radius rEnd — RG for the
++ * ground, the cloud layer's for the clouds — with the sky pass's model and
++ * per-step integration, and returns the light scattered into it per unit of
++ * solar illuminance, setting T to the stretch's transmittance;
++ * `aerialPerspective` sees a colour through it, col·T + L·uSunIlluminance,
++ * the sky pass's exposure. The stretch is solved from the camera through the
++ * ray's perigee, as the sky pass solves it, and the far end is the ray's
++ * meeting with the sphere, not the fragment: the meshes' facets lie up to
++ * ~2 km (the globe) and ~3 km (the clouds) under their spheres, and ending
++ * there would scallop the haze along the limb. A fragment that the rounding
++ * puts on a ray just clear of the sphere ends at the ray's perigee, where the
++ * two formulas meet.
++ *
++ * The AERIAL_N samples crowd quadratically towards the far end, the densest
++ * air on any ray that ends on the ground, whether the camera is in orbit or
++ * in the air, and are placed from it, as the sky pass places its samples
++ * from its lowest point. A point in the Earth's shadow gets no single
++ * scattering (`sunlight` is 0 there); the terminator's twilight is the
++ * model's own. A ray that never reaches the air adds nothing and lets
++ * everything through.
++ *
++ * `sunColour(r, muS)`: the sunlight that reaches radius r (the ground, the
++ * cloud tops) through the air, relative to the sun overhead there — the
++ * light the globe and the clouds were drawn in, so noon is unchanged while a
++ * low sun reddens and dims and a set one leaves them dark. Overhead is the
++ * vertical column above r in closed form (exponential profiles; the ozone
++ * tent, all of it above 10 km, 15 km of it), valid up to the clouds' 9 km.
++ */
++export const AERIAL = /* glsl */ `
++${COMMON}
++${SAMPLE_TRANSMITTANCE}
++${SAMPLE_SKY}
++#ifndef AERIAL_N
++#define AERIAL_N 10
++#endif
++uniform float uAerial;
++uniform float uSunIlluminance;
++uniform vec3 earthCentre;
++vec3 aerial(vec3 o, vec3 dir, float rEnd, vec3 sunDir, out vec3 T) {
++float tc = -dot(o, dir);
++vec3 pc = o + dir * tc;
++float rp2 = dot(pc, pc);
++float tStart = max(0.0, tc - sqrt(max(0.0, RT * RT - rp2)));
++float tEnd = rp2 < rEnd * rEnd ? tc - sqrt(rEnd * rEnd - rp2) : tc;
++float len = max(tEnd - tStart, 0.0);
++float c = dot(dir, sunDir), pr = rayleighPhase(c), pm = miePhase(c);
++vec3 pEnd = o + dir * tEnd;
++vec3 L = vec3(0.0);
++T = vec3(1.0);
++float sa = -len;
++for (int i = 0; i < AERIAL_N; i++) {
++float x = 1.0 - float(i + 1) / float(AERIAL_N);
++float sb = -x * x * len;
++float dt = sb - sa;
++vec3 p = pEnd + dir * (0.5 * (sa + sb));
++sa = sb;
++float rp = length(p);
++float muS = dot(p, sunDir) / rp;
++Medium m = medium(rp - RG);
++vec3 S = (m.scatR * pr + vec3(m.scatM * pm)) * sunlight(rp, muS) + (m.scatR + vec3(m.scatM)) * multiScatter(rp, muS);
++vec3 stepT = exp(-m.ext * dt);
++L += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
++T *= stepT;
++}
++return L;
++}
++vec3 sunColour(float r, float muS) {
++float h = r - RG;
++return sunlight(r, muS) / exp(-(RAY_S * RAY_H * exp(-h / RAY_H) + vec3(MIE_E * MIE_H * exp(-h / MIE_H)) + OZONE * 15000.0));
++}
++vec3 aerialPerspective(vec3 col, vec3 cam, vec3 dir, float rEnd, vec3 sunDir) {
++vec3 T;
++vec3 L = aerial(cam - earthCentre, dir, rEnd, sunDir, T);
++vec3 seen = col * T + L * uSunIlluminance;
++return any(isnan(seen)) ? col : seen;
++}
++`;
++
+ function target(w: number, h: number, type: THREE.TextureDataType): THREE.WebGLRenderTarget {
+   return new THREE.WebGLRenderTarget(w, h, {
+     type, format: THREE.RGBAFormat, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+@@ -434,6 +535,15 @@ export class PhysicalSky {
+     this.ready = true;
+   }
+ 
++  /** The two tables, for the aerial perspective over the globe (`AERIAL`); filled on the first `update`. */
++  get transmittance(): THREE.Texture {
++    return this.transmittanceRT.texture;
++  }
++
++  get multiScatter(): THREE.Texture {
++    return this.multiRT.texture;
++  }
++
+   /** FX-8: fill the tables again (a lost context took them). */
+   invalidate(): void {
+     this.ready = false;
+diff --git a/src/render/scene.ts b/src/render/scene.ts
+index 6fd8841..448fda4 100644
+--- a/src/render/scene.ts
++++ b/src/render/scene.ts
+@@ -10,7 +10,7 @@
+ import * as THREE from 'three';
+ import { createWebGLRenderer } from './webgl-renderer';
+ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+-import { PhysicalSky } from './atmosphere';
++import { AERIAL, PhysicalSky } from './atmosphere';
+ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+@@ -80,6 +80,13 @@ gl_Position = projectionMatrix * viewMatrix * wp;
+  *   blob over the ocean instead of reading as a glint. It uses the geometric
+  *   normal: a 110-power lobe off a perturbed normal turns the relief into
+  *   glitter wherever the specular map bleeds onto a coast.
++ * - V02: under the scattering sky (uAerial) the ground is seen through the air
++ *   in front of it, with the sky's own model (atmosphere.ts, `AERIAL`): its
++ *   light dimmed by the transmittance of that stretch and the light the
++ *   stretch scatters in added — the blue haze over the disc from orbit,
++ *   thickening into the sky's limb glow at the limb, distant ground fading
++ *   into the horizon from the air, no haze on the night side. The rim is the
++ *   gradient sky's stand-in for that and is off then (rimGain 0).
+  */
+ const EARTH_FRAG = /* glsl */ `
+ #include <common>
+@@ -92,6 +99,7 @@ uniform float normalScale;
+ uniform vec3 sunDir;
+ uniform vec3 camPos;
+ uniform float rimGain;
++${AERIAL}
+ varying vec2 vUv;
+ varying vec3 vNormalW;
+ varying vec3 vPosW;
+@@ -117,6 +125,7 @@ float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
+ vec3 day = texture2D(dayMap, vUv).rgb;
+ vec3 night = texture2D(nightMap, vUv).rgb;
+ vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
++if (uAerial > 0.5) col = day * (0.09 + 0.95 * max(cosSun, 0.0) * sunColour(RG, cosSunGeo));
+ col = mix(night * 0.55 + day * 0.012, col, dayF);
+ float spec = texture2D(specMap, vUv).r;
+ vec3 viewDir = normalize(camPos - vPosW);
+@@ -125,6 +134,7 @@ float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
+ col += vec3(s * 0.9, s * 0.95, s);
+ float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
+ col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
++if (uAerial > 0.5) col = aerialPerspective(col, camPos, -viewDir, RG, sunDir);
+ gl_FragColor = vec4(col, 1.0);
+ #include <tonemapping_fragment>
+ #include <colorspace_fragment>
+@@ -143,17 +153,21 @@ gl_Position = projectionMatrix * viewMatrix * wp;
+ #include <logdepthbuf_vertex>
+ }
+ `;
+-/** V02: the sun's illuminance in the scattering sky's units, set so noon reads like the gradient sky it replaces. */
++/**
++ * V02: the sun's illuminance in the scattering sky's units, set so noon reads
++ * like the gradient sky it replaces — on the ground. Above it, with the
++ * ground factor, it falls to the scene's own sun (SUN_INTENSITY), the light
++ * the globe, the clouds and the vehicles are lit by: the globe's aerial
++ * perspective has to take the sky's illuminance to meet the sky at the
++ * horizon and at the limb, and at 8 from orbit its haze, 2.4 times what lights
++ * the ground under it, veiled the disc in pale blue (open ocean 40° off the
++ * nadir of 400 km came out (85, 127, 184), at the scene's sun (40, 74, 126)).
++ */
+ const SKY_ILLUMINANCE = 8;
+ 
+ /*
+- * ATMO_FRAG, the 110 km shell.
+- * - discOnly: under the scattering sky the shell is kept only over the disc,
+- *   as the haze towards its limb: off it the sky's own limb glow, which is gone
+- *   by 70 km, met a second band out to the shell's faceted 110 km edge. The cut
+- *   is the view ray's perigee against the Earth's sphere, not a threshold on
+- *   dot(n, viewDir): the shell's 96 x 64 facets sit up to 5 km inside its own
+- *   sphere, and that cut would scallop.
++ * ATMO_FRAG, the 110 km shell: the gradient sky's limb glow, not drawn under
++ * the scattering sky (`setPhysicalSky`).
+  * - band: brightest exactly at the silhouette, where the line of sight runs the
+  *   longest way through the shell, and falling away towards the sub-camera
+  *   point. The previous band peaked at d = 0.32 — about 70° in from the limb —
+@@ -170,18 +184,12 @@ const ATMO_FRAG = /* glsl */ `
+ uniform vec3 sunDir;
+ uniform vec3 camPos;
+ uniform float rimGain;
+-uniform vec3 earthCentre;
+-uniform float discOnly;
+ varying vec3 vNormalW;
+ varying vec3 vPosW;
+ void main() {
+ #include <logdepthbuf_fragment>
+ vec3 n = normalize(vNormalW);
+ vec3 viewDir = normalize(camPos - vPosW);
+-if (discOnly > 0.5) {
+-vec3 cr = cross(camPos - earthCentre, viewDir);
+-if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;
+-}
+ float d = max(dot(n, viewDir), 0.0);
+ float band = pow(1.0 - d, 3.0);
+ float lit = 0.2 + 0.8 * smoothstep(-0.25, 0.35, dot(n, sunDir));
+@@ -244,6 +252,25 @@ export interface EarthTextures {
+ /** Strength of the Earth's relief shading (0 disables the whole term). */
+ const RELIEF_STRENGTH = 0.85;
+ 
++/** Height of the cloud layer's sphere above R_EARTH, m. */
++const CLOUD_HEIGHT = 9000;
++
++/**
++ * V02: the clouds seen through the air in front of them, as the globe is
++ * (EARTH_FRAG), patched into their Lambert material once its colour is set.
++ * Under the scattering sky a texel the map leaves clear (alpha under 1/255,
++ * some 40 % of the map) is dropped before the march rather than blended in
++ * at nothing.
++ */
++const CLOUD_AERIAL = /* glsl */ `
++if (uAerial > 0.5) {
++if (gl_FragColor.a < 0.004) discard;
++vec3 dirW = normalize((vec4(-vViewPosition, 0.0) * viewMatrix).xyz);
++vec3 upW = normalize(cameraPosition + dirW * length(vViewPosition) - earthCentre);
++gl_FragColor.rgb = aerialPerspective(gl_FragColor.rgb * sunColour(RG + ${CLOUD_HEIGHT.toFixed(1)}, dot(upW, sunDir)), cameraPosition, dirW, RG + ${CLOUD_HEIGHT.toFixed(1)}, sunDir);
++}
++`;
++
+ export class SceneManager {
+   readonly renderer: THREE.WebGLRenderer;
+   readonly scene = new THREE.Scene();
+@@ -331,6 +358,16 @@ export class SceneManager {
+    */
+   private clearColor = new THREE.Color(0, 0, 0);
+   private clearKey = '';
++  /**
++   * V02: what the aerial perspective reads, shared by the globe's and the
++   * clouds' materials: the scattering sky's two tables (bound once it exists;
++   * a null sampler is three's empty texture), its switch, the sky pass's
++   * illuminance and the Earth's centre under the floating origin.
++   */
++  private aerial = {
++    uTransmittance: { value: null as THREE.Texture | null }, uMultiScatter: { value: null as THREE.Texture | null },
++    uAerial: { value: 0 }, uSunIlluminance: { value: SKY_ILLUMINANCE }, earthCentre: { value: new THREE.Vector3() },
++  };
+ 
+   constructor(canvas: HTMLCanvasElement, tex: EarthTextures) {
+     // `antialias` is a request for a multisampled *default* framebuffer, and
+@@ -375,7 +412,7 @@ export class SceneManager {
+         normalMap: { value: tex.normal ?? flatNormalTexture() },
+         normalScale: { value: tex.normal ? RELIEF_STRENGTH : 0 },
+         sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() },
+-        rimGain: { value: 1 },
++        rimGain: { value: 1 }, ...this.aerial,
+       },
+     });
+     this.earthMesh = new THREE.Mesh(geo, this.earthMat);
+@@ -384,7 +421,13 @@ export class SceneManager {
+       // The cloud map is a greyscale density: white cloud, as opaque as the
+       // map is bright (an alpha map reads the green channel).
+       const cm = new THREE.MeshLambertMaterial({ color: 0xffffff, alphaMap: tex.clouds, transparent: true, opacity: 0.85, depthWrite: false, fog: false });
+-      this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 9000, 96, 64), cm);
++      cm.onBeforeCompile = (shader) => {
++        Object.assign(shader.uniforms, this.aerial, { sunDir: this.earthMat.uniforms.sunDir });
++        shader.fragmentShader = shader.fragmentShader
++          .replace('#include <common>', `#include <common>\n#define AERIAL_N 6\nuniform vec3 sunDir;\n${AERIAL}`)
++          .replace('#include <opaque_fragment>', `#include <opaque_fragment>\n${CLOUD_AERIAL}`);
++      };
++      this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + CLOUD_HEIGHT, 96, 64), cm);
+       this.earthGroup.add(this.cloudMesh);
+     } else {
+       this.cloudMesh = null;
+@@ -394,7 +437,6 @@ export class SceneManager {
+       blending: THREE.AdditiveBlending, side: THREE.FrontSide,
+       uniforms: {
+         sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() }, rimGain: { value: 1 },
+-        earthCentre: { value: new THREE.Vector3() }, discOnly: { value: 0 },
+       },
+     });
+     this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 96, 64), this.atmoMat);
+@@ -522,19 +564,23 @@ export class SceneManager {
+     if (this.glowSupported) {
+       this.physicalSky = new PhysicalSky(this.renderer, THREE.HalfFloatType);
+       this.scene.add(this.physicalSky.mesh);
++      this.aerial.uTransmittance.value = this.physicalSky.transmittance;
++      this.aerial.uMultiScatter.value = this.physicalSky.multiScatter;
+       this.setPhysicalSky(true);
+     }
+   }
+ 
+   /**
+    * V02: the scattering sky, or (off, or no float targets) the gradient of
+-   * sky.ts — whose limb glow the atmosphere shell is, so it is cut to the disc
+-   * only while the scattering sky draws its own.
++   * sky.ts. Under the scattering sky the globe and the clouds are seen through
++   * its air (`AERIAL`), which is also their haze towards the limb, and the
++   * atmosphere shell, the gradient sky's limb glow, is not drawn.
+    */
+   setPhysicalSky(on: boolean): void {
+     this.physicalSkyOn = on && !!this.physicalSky;
+     if (this.physicalSky) this.physicalSky.mesh.visible = this.physicalSkyOn;
+-    this.atmoMat.uniforms.discOnly.value = this.physicalSkyOn ? 1 : 0;
++    this.aerial.uAerial.value = this.physicalSkyOn ? 1 : 0;
++    this.atmoMesh.visible = !this.physicalSkyOn;
+   }
+ 
+   get physicalSkyEnabled(): boolean {
+@@ -802,7 +848,7 @@ export class SceneManager {
+     (this.atmoMat.uniforms.sunDir.value as THREE.Vector3).copy(sd);
+     (this.earthMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
+     (this.atmoMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
+-    (this.atmoMat.uniforms.earthCentre.value as THREE.Vector3).copy(this.earthGroup.position);
++    this.aerial.earthCentre.value.copy(this.earthGroup.position);
+     this.stars.position.copy(this.camera.position);
+ 
+     const camEci = this.camEci.set(
+@@ -810,10 +856,6 @@ export class SceneManager {
+       this.camera.position.y + this.origin.y,
+       this.camera.position.z + this.origin.z,
+     );
+-    if (this.physicalSky && this.physicalSkyOn) {
+-      this.camera.updateMatrixWorld();
+-      this.physicalSky.update(this.camera, camEci, sd, SKY_ILLUMINANCE);
+-    }
+     this.camUp.copy(camEci);
+     // `camUp` becomes the local vertical for the hemisphere light, the
+     // environment probe and the Earth-shine fill, so it must be a unit vector
+@@ -821,6 +863,13 @@ export class SceneManager {
+     if (this.camUp.lengthSq() <= 1) this.camUp.copy(this.zAxis);
+     const sunElev = this.camUp.normalize().dot(sd);
+     const sky = skyState(sunElev, cameraAltitude);
++    if (this.physicalSky && this.physicalSkyOn) {
++      // the sky pass and the aerial perspective see one sun (SKY_ILLUMINANCE)
++      const illuminance = SUN_INTENSITY + (SKY_ILLUMINANCE - SUN_INTENSITY) * sky.groundFactor;
++      this.aerial.uSunIlluminance.value = illuminance;
++      this.camera.updateMatrixWorld();
++      this.physicalSky.update(this.camera, camEci, sd, illuminance);
++    }
+     this.updateEnvironment(sky, sunElev);
+     this.orientEnvironment(this.camUp, sd);
+     this.renderer.toneMappingExposure = sky.exposure;
+@@ -833,7 +882,8 @@ export class SceneManager {
+     this.starsMat.uniforms.uOpacity.value = sky.stars;
+     this.stars.visible = sky.stars > 0.004;
+     const rim = 0.25 + 0.75 * (1 - sky.groundFactor);
+-    this.earthMat.uniforms.rimGain.value = rim;
++    // under the scattering sky the aerial perspective is the globe's limb (EARTH_FRAG)
++    this.earthMat.uniforms.rimGain.value = this.physicalSkyOn ? 0 : rim;
+     this.atmoMat.uniforms.rimGain.value = rim;
+ 
+     // ---------------------------------------------------------- eclipse
+diff --git a/tests/render-aerial.test.ts b/tests/render-aerial.test.ts
+new file mode 100644
+index 0000000..cf3f3a9
+--- /dev/null
++++ b/tests/render-aerial.test.ts
+@@ -0,0 +1,480 @@
++/**
++ * The aerial perspective over the globe and its clouds under the scattering
++ * sky (V02; render/atmosphere.ts `AERIAL`, render/scene.ts). Source-level:
++ * the GLSL lines below must stand in the shaders as written, and the march
++ * is replayed in float64 next to them and checked against an independent
++ * fine integral of the same single-scattering model; the view segment's ends
++ * are replayed in float32 op by op. The constructor and `update` run against
++ * a stand-in renderer with no GL behind it. No WebGL pixel claims.
++ */
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++import * as THREE from 'three';
++import { SceneManager } from '../src/render/scene';
++import { AERIAL, ATMOSPHERE_HEIGHT } from '../src/render/atmosphere';
++import { R_EARTH } from '../src/physics/constants';
++import type { VisualFrame } from '../src/physics/frame';
++
++const gpu = vi.hoisted(() => ({ floatTargets: true }));
++vi.mock('../src/render/webgl-renderer', () => ({
++  createWebGLRenderer: () => ({
++    setPixelRatio() {}, getPixelRatio: () => 1, shadowMap: {}, compile() {}, render() {},
++    setRenderTarget() {}, getRenderTarget: () => null,
++    capabilities: { getMaxAnisotropy: () => 1 },
++    extensions: { has: (n: string) => gpu.floatTargets && n === 'EXT_color_buffer_float' },
++    getDrawingBufferSize: (v: THREE.Vector2) => v.set(64, 32),
++    setClearColor() {},
++  }),
++}));
++
++interface Internals {
++  earthMat: THREE.ShaderMaterial;
++  physicalSky: { mesh: THREE.Mesh; transmittance: THREE.Texture; multiScatter: THREE.Texture } | null;
++}
++
++const tex = () => ({ day: new THREE.Texture(), night: new THREE.Texture(), spec: new THREE.Texture(), normal: new THREE.Texture(), clouds: new THREE.Texture() });
++function build(floatTargets: boolean): { sm: SceneManager; my: Internals } {
++  gpu.floatTargets = floatTargets;
++  const sm = new SceneManager({ addEventListener() {} } as unknown as HTMLCanvasElement, tex());
++  return { sm, my: sm as unknown as Internals };
++}
++/** a frame at `alt` over the equator, the sun at `sun` (ECI) */
++function at(sm: SceneManager, alt: number, sun = { x: 1, y: 0, z: 0 }): void {
++  sm.origin = { x: R_EARTH + alt, y: 0, z: 0 };
++  sm.camera.position.set(0, 0, 0);
++  sm.update({ theta: 0, t: 0 } as VisualFrame, sun, alt);
++}
++
++beforeEach(() => {
++  vi.stubGlobal('window', { devicePixelRatio: 1 });
++  vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => null }) });
++  vi.spyOn(SceneManager.prototype as unknown as { drawMarker(): void }, 'drawMarker').mockImplementation(() => {});
++  vi.spyOn(SceneManager.prototype as unknown as { updateEnvironment(): void }, 'updateEnvironment').mockImplementation(() => {});
++});
++afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
++
++/** The model and the march, as they stand in `AERIAL`. */
++const SHADER_LINES = [
++  'const vec3 RAY_S = vec3(5.802e-6, 13.558e-6, 33.1e-6);',
++  'const float RAY_H = 8000.0;',
++  'const float MIE_S = 3.996e-6;',
++  'const float MIE_E = 4.40e-6;',
++  'const float MIE_H = 1200.0;',
++  'const float MIE_G = 0.8;',
++  'const vec3 OZONE = vec3(0.650e-6, 1.881e-6, 0.085e-6);',
++  'float oz = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);',
++  'float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));',
++  'float vis = smoothstep(muH - 0.004, muH + 0.004, muS);',
++  'return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;',
++  '#define AERIAL_N 10',
++  'float tc = -dot(o, dir);',
++  'vec3 pc = o + dir * tc;',
++  'float rp2 = dot(pc, pc);',
++  'float tStart = max(0.0, tc - sqrt(max(0.0, RT * RT - rp2)));',
++  'float tEnd = rp2 < rEnd * rEnd ? tc - sqrt(rEnd * rEnd - rp2) : tc;',
++  'float len = max(tEnd - tStart, 0.0);',
++  'float c = dot(dir, sunDir), pr = rayleighPhase(c), pm = miePhase(c);',
++  'vec3 pEnd = o + dir * tEnd;',
++  'float sa = -len;',
++  'for (int i = 0; i < AERIAL_N; i++) {',
++  'float x = 1.0 - float(i + 1) / float(AERIAL_N);',
++  'float sb = -x * x * len;',
++  'float dt = sb - sa;',
++  'vec3 p = pEnd + dir * (0.5 * (sa + sb));',
++  'float muS = dot(p, sunDir) / rp;',
++  'Medium m = medium(rp - RG);',
++  'vec3 S = (m.scatR * pr + vec3(m.scatM * pm)) * sunlight(rp, muS) + (m.scatR + vec3(m.scatM)) * multiScatter(rp, muS);',
++  'vec3 stepT = exp(-m.ext * dt);',
++  'L += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));',
++  'T *= stepT;',
++  'vec3 L = aerial(cam - earthCentre, dir, rEnd, sunDir, T);',
++  'vec3 seen = col * T + L * uSunIlluminance;',
++];
++const EARTH_LINE = 'if (uAerial > 0.5) col = aerialPerspective(col, camPos, -viewDir, RG, sunDir);';
++const CLOUD_LINES = [
++  '#define AERIAL_N 6',
++  'uniform vec3 sunDir;',
++  'if (uAerial > 0.5) {',
++  'if (gl_FragColor.a < 0.004) discard;',
++  'vec3 dirW = normalize((vec4(-vViewPosition, 0.0) * viewMatrix).xyz);',
++  'vec3 upW = normalize(cameraPosition + dirW * length(vViewPosition) - earthCentre);',
++];
++
++describe('aerial perspective: wired into the globe and the clouds (V02)', () => {
++  it('stands in the globe shader as replayed below, and reads the sky\'s own tables', () => {
++    const { sm, my } = build(true);
++    const frag = my.earthMat.fragmentShader;
++    for (const line of [...SHADER_LINES, EARTH_LINE]) expect(frag, line).toContain(line);
++    expect(AERIAL).toContain('uniform sampler2D uTransmittance;');
++    const u = my.earthMat.uniforms;
++    expect(u.uTransmittance.value).toBe(my.physicalSky!.transmittance);
++    expect(u.uMultiScatter.value).toBe(my.physicalSky!.multiScatter);
++    const skyU = (my.physicalSky!.mesh.material as THREE.ShaderMaterial).uniforms;
++    expect(skyU.uTransmittance.value).toBe(u.uTransmittance.value);
++    expect(skyU.uMultiScatter.value).toBe(u.uMultiScatter.value);
++    expect(sm.physicalSkyEnabled).toBe(true);
++    expect(u.uAerial.value).toBe(1);
++  });
++
++  it('is patched into the clouds\' material, sharing the globe\'s uniforms', () => {
++    const { sm, my } = build(true);
++    const mat = sm.cloudMesh!.material as THREE.MeshLambertMaterial;
++    const shader = { uniforms: {} as Record<string, THREE.IUniform>, fragmentShader: THREE.ShaderLib.lambert.fragmentShader, vertexShader: THREE.ShaderLib.lambert.vertexShader };
++    mat.onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
++    const frag = shader.fragmentShader;
++    for (const line of [...CLOUD_LINES, ...SHADER_LINES.filter((l) => l !== '#define AERIAL_N 10')]) expect(frag, line).toContain(line);
++    // the model after three's own declarations, the haze once the colour is set and before it is tone-mapped
++    expect(frag.indexOf('#define AERIAL_N 6')).toBeGreaterThan(frag.indexOf('#include <common>'));
++    expect(frag.indexOf('if (gl_FragColor.a < 0.004) discard;')).toBeGreaterThan(frag.indexOf('#include <opaque_fragment>'));
++    expect(frag.indexOf('if (gl_FragColor.a < 0.004) discard;')).toBeLessThan(frag.indexOf('#include <tonemapping_fragment>'));
++    for (const k of ['uTransmittance', 'uMultiScatter', 'uAerial', 'uSunIlluminance', 'earthCentre', 'sunDir']) {
++      expect(shader.uniforms[k], k).toBe(my.earthMat.uniforms[k]);
++    }
++    // the cloud sphere the march ends on is the mesh's own
++    const geo = sm.cloudMesh!.geometry as THREE.SphereGeometry;
++    expect(geo.parameters.radius).toBe(R_EARTH + 9000);
++  });
++
++  it('follows the sky: on with the scattering sky, off under the gradient, which keeps the rim', () => {
++    const { sm, my } = build(true);
++    const u = my.earthMat.uniforms;
++    at(sm, 400e3);
++    expect(u.uAerial.value).toBe(1);
++    expect(u.rimGain.value).toBe(0);
++    sm.setPhysicalSky(false); // the governor's fallback, `?sky=gradient`
++    at(sm, 400e3);
++    expect(u.uAerial.value).toBe(0);
++    expect(u.rimGain.value).toBe(1);
++    at(sm, 2);
++    expect(u.rimGain.value).toBe(0.25);
++    sm.setPhysicalSky(true);
++    at(sm, 2);
++    expect(u.uAerial.value).toBe(1);
++    expect(u.rimGain.value).toBe(0);
++    // no float targets: no tables, no aerial perspective, the gradient's rim
++    const none = build(false);
++    at(none.sm, 400e3);
++    expect(none.my.earthMat.uniforms.uAerial.value).toBe(0);
++    expect(none.my.earthMat.uniforms.uTransmittance.value).toBeNull();
++    expect(none.my.earthMat.uniforms.rimGain.value).toBe(1);
++  });
++
++  it('sees one sun with the sky pass: its tuned noon on the ground, the scene\'s own in space', () => {
++    const { sm, my } = build(true);
++    const skyU = (my.physicalSky!.mesh.material as THREE.ShaderMaterial).uniforms;
++    const u = my.earthMat.uniforms;
++    for (const [alt, want] of [[2, 8], [12e3, 8], [400e3, 3.3], [72e3, 3.3]] as const) {
++      at(sm, alt);
++      expect(u.uSunIlluminance.value, `${alt} m`).toBeCloseTo(want, 12);
++      expect(skyU.uSunIlluminance.value, `${alt} m`).toBe(u.uSunIlluminance.value);
++    }
++    at(sm, 42e3);
++    expect(u.uSunIlluminance.value).toBeGreaterThan(3.3);
++    expect(u.uSunIlluminance.value).toBeLessThan(8);
++    expect(skyU.uSunIlluminance.value).toBe(u.uSunIlluminance.value);
++  });
++});
++
++// ------------------------------------------------------------------ the model, in float64
++
++const RG = R_EARTH, RT = R_EARTH + ATMOSPHERE_HEIGHT;
++type V = [number, number, number];
++const RAY: V = [5.802e-6, 13.558e-6, 33.1e-6], OZONE: V = [0.650e-6, 1.881e-6, 0.085e-6];
++const MIE_S = 3.996e-6, MIE_E = 4.40e-6, MIE_G = 0.8;
++const dot = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
++const madd = (o: V, d: V, t: number): V => [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t];
++const unit = (v: V): V => { const n = Math.hypot(...v); return [v[0] / n, v[1] / n, v[2] / n]; };
++const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
++function medium(h: number): { scatR: V; scatM: number; ext: V } {
++  const dr = Math.exp(-h / 8000), dm = Math.exp(-h / 1200), oz = Math.max(0, 1 - Math.abs(h - 25000) / 15000);
++  return { scatR: RAY.map((s) => s * dr) as V, scatM: MIE_S * dm, ext: RAY.map((s, i) => s * dr + MIE_E * dm + OZONE[i] * oz) as V };
++}
++const rayleighPhase = (c: number) => 3 / (16 * Math.PI) * (1 + c * c);
++const miePhase = (c: number) => { const g2 = MIE_G * MIE_G; return 3 / (8 * Math.PI) * ((1 - g2) * (1 + c * c)) / ((2 + g2) * Math.pow(1 + g2 - 2 * MIE_G * c, 1.5)); };
++/** what the transmittance table holds, integrated finely: radius r, cosine mu, to the top of the atmosphere */
++function transmittance(r: number, mu: number): V {
++  const d = -r * mu + Math.sqrt(Math.max(0, r * r * mu * mu + (RT - r) * (RT + r)));
++  const n = 120, dt = d / n, tau: V = [0, 0, 0];
++  for (let i = 0; i < n; i++) {
++    const t = (i + 0.5) * dt, m = medium(Math.sqrt(r * r + t * t + 2 * r * mu * t) - RG);
++    for (let k = 0; k < 3; k++) tau[k] += m.ext[k] * dt;
++  }
++  return tau.map((x) => Math.exp(-x)) as V;
++}
++/** `sunlight` of the shader, the table read exactly */
++function sunlight(r: number, muS: number): V {
++  const muH = -Math.sqrt(Math.max(0, (r - RG) * (r + RG)) / (r * r));
++  const vis = smooth(muH - 0.004, muH + 0.004, muS);
++  return vis === 0 ? [0, 0, 0] : transmittance(r, Math.max(muS, muH + 0.004)).map((x) => vis * x) as V;
++}
++function segment(o: V, dir: V, rEnd: number): { tStart: number; tEnd: number } {
++  const tc = -dot(o, dir), pc = madd(o, dir, tc), rp2 = dot(pc, pc);
++  return { tStart: Math.max(0, tc - Math.sqrt(Math.max(0, RT * RT - rp2))), tEnd: rp2 < rEnd * rEnd ? tc - Math.sqrt(rEnd * rEnd - rp2) : tc };
++}
++
++/** `aerial`, line by line, single scattering only (the multiple-scattering table read as 0) */
++function aerial(o: V, dir: V, rEnd: number, sun: V, n: number): { L: V; T: V } {
++  const { tStart, tEnd } = segment(o, dir, rEnd);
++  const len = Math.max(tEnd - tStart, 0);
++  const c = dot(dir, sun), pr = rayleighPhase(c), pm = miePhase(c);
++  const pEnd = madd(o, dir, tEnd);
++  const L: V = [0, 0, 0], T: V = [1, 1, 1];
++  let sa = -len;
++  for (let i = 0; i < n; i++) {
++    const x = 1 - (i + 1) / n;
++    const sb = -x * x * len, dt = sb - sa;
++    const p = madd(pEnd, dir, 0.5 * (sa + sb));
++    sa = sb;
++    const rp = Math.hypot(...p), muS = dot(p, sun) / rp, m = medium(rp - RG), Ts = sunlight(rp, muS);
++    for (let k = 0; k < 3; k++) {
++      const S = (m.scatR[k] * pr + m.scatM * pm) * Ts[k], stepT = Math.exp(-m.ext[k] * dt);
++      L[k] += T[k] * S * (1 - stepT) / Math.max(m.ext[k], 1e-12);
++      T[k] *= stepT;
++    }
++  }
++  return { L, T };
++}
++
++/**
++ * The same single scattering integrated independently: the trapezoid rule on
++ * a grid of 1 000 steps packed cubically towards the far end, the optical
++ * depth from the camera summed by the trapezoid rule as well.
++ */
++function integral(o: V, dir: V, rEnd: number, sun: V): { L: V; T: V } {
++  const { tStart, tEnd } = segment(o, dir, rEnd);
++  const L: V = [0, 0, 0], tau: V = [0, 0, 0];
++  const c = dot(dir, sun), pr = rayleighPhase(c), pm = miePhase(c), len = tEnd - tStart;
++  const n = 1000;
++  let prev: { t: number; ext: V; J: V } | null = null;
++  for (let i = 0; i <= n; i++) {
++    const t = tEnd - Math.pow(1 - i / n, 3) * len, p = madd(o, dir, t), rp = Math.hypot(...p);
++    const m = medium(rp - RG), Ts = sunlight(rp, dot(p, sun) / rp);
++    const cur = { t, ext: m.ext, J: [0, 1, 2].map((k) => (m.scatR[k] * pr + m.scatM * pm) * Ts[k]) as V };
++    if (prev) {
++      const dt = cur.t - prev.t;
++      for (let k = 0; k < 3; k++) {
++        const before = tau[k];
++        tau[k] += 0.5 * (prev.ext[k] + cur.ext[k]) * dt;
++        L[k] += 0.5 * (prev.J[k] * Math.exp(-before) + cur.J[k] * Math.exp(-tau[k])) * dt;
++      }
++    }
++    prev = cur;
++  }
++  return { L, T: tau.map((x) => Math.exp(-x)) as V };
++}
++
++/** A camera `alt` over the north pole and a ray `off` degrees from its nadir, towards +x. */
++function view(alt: number, off: number): { o: V; dir: V } {
++  const a = off * Math.PI / 180;
++  return { o: [0, 0, RG + alt], dir: [Math.sin(a), 0, -Math.cos(a)] };
++}
++/**
++ * The sun `el` degrees over the horizon of the point where the ray meets the
++ * ground, `az` degrees round from straight ahead along the ray (0: the sun in
++ * front of the camera, 180: behind it).
++ */
++function sunOver(o: V, dir: V, el: number, az: number): V {
++  const up = unit(madd(o, dir, segment(o, dir, RG).tEnd));
++  const along = madd(dir, up, -dot(dir, up));
++  const fwd = Math.hypot(...along) > 1e-6 ? unit(along) : ([1, 0, 0] as V);
++  const side: V = [up[1] * fwd[2] - up[2] * fwd[1], up[2] * fwd[0] - up[0] * fwd[2], up[0] * fwd[1] - up[1] * fwd[0]];
++  const e = el * Math.PI / 180, z = az * Math.PI / 180;
++  return unit([0, 1, 2].map((k) => Math.cos(e) * (Math.cos(z) * fwd[k] + Math.sin(z) * side[k]) + Math.sin(e) * up[k]) as V);
++}
++
++interface Errors { worstL: number; worstT: number; rmsL: number; rmsT: number }
++/**
++ * L's error relative to the ray's brightest channel (or to 0.2 % of the
++ * illuminance where the ray is darker), T's relative to T (or to 0.02 where
++ * almost nothing gets through).
++ */
++function compare(alt: number, rEnd: number, n: number): Errors {
++  const limb = Math.asin(RG / (RG + alt)) * 180 / Math.PI;
++  let worstL = 0, worstT = 0, sL = 0, sT = 0, k = 0;
++  for (const off of [0, 30, 60, limb - 5, limb - 1, limb - 0.2]) {
++    for (const [el, az] of [[60, 0], [20, 180], [5, 0], [5, 180], [1, 90], [-2, 0]]) {
++      const { o, dir } = view(alt, off);
++      const sun = sunOver(o, dir, el, az);
++      const ref = integral(o, dir, rEnd, sun), got = aerial(o, dir, rEnd, sun, n);
++      const lmax = Math.max(...ref.L, 0.002);
++      const eL = Math.max(...[0, 1, 2].map((c) => Math.abs(got.L[c] - ref.L[c]) / lmax));
++      const eT = Math.max(...[0, 1, 2].map((c) => Math.abs(got.T[c] - ref.T[c]) / Math.max(ref.T[c], 0.02)));
++      worstL = Math.max(worstL, eL); worstT = Math.max(worstT, eT);
++      sL += eL * eL; sT += eT * eT; k++;
++    }
++  }
++  return { worstL, worstT, rmsL: Math.sqrt(sL / k), rmsT: Math.sqrt(sT / k) };
++}
++
++describe('aerial perspective: the march against an independent integral (float64)', () => {
++  // each case integrates 36 rays finely: about 2 s alone, more on a shared machine
++  it('replays a view to the ground from 400 km within a few per cent', () => {
++    const e = compare(400e3, RG, 10);
++    // measured: L worst 4.7 % (a ray 1° inside the limb, the sun 5° up ahead of it), RMS 1.4 %; T worst 4.5 %
++    // (0.2° inside the limb, where under 2 % of the blue gets through), RMS 2.7 %
++    expect(e.worstL).toBeLessThan(0.06);
++    expect(e.rmsL).toBeLessThan(0.02);
++    expect(e.worstT).toBeLessThan(0.06);
++    expect(e.rmsT).toBeLessThan(0.035);
++  }, 30000);
++
++  it('replays a view to the ground from 30 km within a few per cent', () => {
++    const e = compare(30e3, RG, 10);
++    // measured: L worst 1.6 %, RMS 0.6 %; T worst 1.9 %, RMS 0.9 %
++    expect(e.worstL).toBeLessThan(0.03);
++    expect(e.rmsL).toBeLessThan(0.01);
++    expect(e.worstT).toBeLessThan(0.03);
++    expect(e.rmsT).toBeLessThan(0.01);
++  }, 30000);
++
++  it('replays a view to the clouds\' layer from 400 km with the clouds\' six samples', () => {
++    const e = compare(400e3, RG + 9000, 6);
++    // measured: L worst 4.6 %, RMS 2.7 %; T worst 3.5 %, RMS 2.0 %
++    expect(e.worstL).toBeLessThan(0.06);
++    expect(e.rmsL).toBeLessThan(0.035);
++    expect(e.worstT).toBeLessThan(0.05);
++    expect(e.rmsT).toBeLessThan(0.025);
++  }, 30000);
++
++  it('adds no light where the whole stretch is in the Earth\'s shadow, and dims by the same transmittance', () => {
++    const { o, dir } = view(400e3, 20);
++    const sun = sunOver(o, dir, -25, 0);
++    const got = aerial(o, dir, RG, sun, 10), ref = integral(o, dir, RG, sun);
++    expect(Math.max(...got.L)).toBe(0);
++    expect(Math.max(...ref.L)).toBe(0);
++    for (let c = 0; c < 3; c++) expect(got.T[c]).toBeCloseTo(ref.T[c], 2);
++  }, 30000);
++});
++
++// ------------------------------------------------------------------ sunlight through the air
++
++const SUN_LINES = [
++  'return sunlight(r, muS) / exp(-(RAY_S * RAY_H * exp(-h / RAY_H) + vec3(MIE_E * MIE_H * exp(-h / MIE_H)) + OZONE * 15000.0));',
++];
++const EARTH_SUN = 'if (uAerial > 0.5) col = day * (0.09 + 0.95 * max(cosSun, 0.0) * sunColour(RG, cosSunGeo));';
++const CLOUD_SUN = 'gl_FragColor.rgb = aerialPerspective(gl_FragColor.rgb * sunColour(RG + 9000.0, dot(upW, sunDir)), cameraPosition, dirW, RG + 9000.0, sunDir);';
++/** `sunColour`, the table read exactly */
++function sunColour(r: number, muS: number): V {
++  const h = r - RG, s = sunlight(r, muS);
++  return [0, 1, 2].map((k) => s[k] / Math.exp(-(RAY[k] * 8000 * Math.exp(-h / 8000) + MIE_E * 1200 * Math.exp(-h / 1200) + OZONE[k] * 15000))) as V;
++}
++
++describe('sunlight through the air on the ground and the cloud tops', () => {
++  it('stands in the globe\'s and the clouds\' shaders, under the scattering sky only', () => {
++    const { sm, my } = build(true);
++    const frag = my.earthMat.fragmentShader;
++    for (const line of [...SUN_LINES, EARTH_SUN]) expect(frag, line).toContain(line);
++    // the gradient sky's line is kept as it was, and the patch only replaces it under uAerial
++    expect(frag).toContain('vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));');
++    const shader = { uniforms: {} as Record<string, THREE.IUniform>, fragmentShader: THREE.ShaderLib.lambert.fragmentShader, vertexShader: '' };
++    (sm.cloudMesh!.material as THREE.Material).onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
++    expect(shader.fragmentShader).toContain(CLOUD_SUN);
++  });
++
++  it('leaves noon as it was drawn, reddens a low sun and leaves a set one dark', () => {
++    for (const h of [0, 9000]) {
++      const noon = sunColour(RG + h, 1);
++      // the closed-form column overhead against the integrated table: a part in a thousand
++      for (const c of noon) expect(Math.abs(c - 1), `${h} m`).toBeLessThan(2e-3);
++      const low = sunColour(RG + h, Math.sin(4 * Math.PI / 180));
++      expect(low[0]).toBeGreaterThan(low[1]);
++      expect(low[1]).toBeGreaterThan(low[2]);
++      expect(low[2]).toBeLessThan(0.5);
++      expect(Math.max(...sunColour(RG + h, Math.sin(-4 * Math.PI / 180)))).toBe(0);
++    }
++    // the cloud tops see the sun 2° under the ground's horizon (theirs is 3° down)
++    expect(Math.max(...sunColour(RG, Math.sin(-2 * Math.PI / 180)))).toBe(0);
++    expect(sunColour(RG + 9000, Math.sin(-2 * Math.PI / 180))[0]).toBeGreaterThan(0.01);
++  });
++});
++
++// ------------------------------------------------------------------ the segment's ends, in float32
++
++const f = Math.fround;
++const add32 = (a: number, b: number) => f(a + b), mul32 = (a: number, b: number) => f(a * b);
++const dot32 = (a: V, b: V) => add32(add32(mul32(a[0], b[0]), mul32(a[1], b[1])), mul32(a[2], b[2]));
++const madd32 = (o: V, d: V, t: number): V => [add32(o[0], mul32(d[0], t)), add32(o[1], mul32(d[1], t)), add32(o[2], mul32(d[2], t))];
++/** the shader's tEnd and far end, op by op in float32 (no FMA) */
++function end32(o: V, dir: V, rEnd: number): { tEnd: number; pEnd: V } {
++  const tc = -dot32(o, dir), pc = madd32(o, dir, tc), rp2 = dot32(pc, pc), r2 = mul32(f(rEnd), f(rEnd));
++  const tEnd = rp2 < r2 ? add32(tc, -f(Math.sqrt(add32(r2, -rp2)))) : tc;
++  return { tEnd, pEnd: madd32(o, dir, tEnd) };
++}
++
++describe('aerial perspective: the far end in float32', () => {
++  it.each([400e3, 36000e3])('lands on the ground across the disc and up to its edge from %s m', (alt) => {
++    const up = unit([0.37, -0.52, 0.769]), side = unit([up[1], -up[0], 0]);
++    const o = up.map((u) => f(u * (RG + alt))) as V, r = RG + alt;
++    let worstAlt = 0, checked = 0;
++    // perigees from 2 000 km below the surface to 10 m below it: the disc to its very edge
++    for (const depth of [2000e3, 300e3, 50e3, 5e3, 500, 50, 10]) {
++      const sa = (RG - depth) / r, ca = Math.sqrt(1 - sa * sa);
++      const dir = unit([0, 1, 2].map((k) => -ca * up[k] + sa * side[k]) as V).map(f) as V;
++      const { pEnd } = end32(o, dir, RG);
++      worstAlt = Math.max(worstAlt, Math.abs(Math.hypot(...pEnd) - RG));
++      checked++;
++    }
++    expect(checked).toBe(7);
++    // the end is on the sphere to within float32's own metre at 6 400 km, and the ulps of the camera's position
++    expect(worstAlt).toBeLessThan(alt > 1e6 ? 40 : 4);
++  });
++
++  it('meets the perigee where the rounding puts a fragment on a ray just clear of the sphere', () => {
++    const o: V = [0, 0, f(RG + 400e3)];
++    const r = RG + 400e3;
++    // a ray whose perigee is 1 m over the surface: no root, the stretch ends at the perigee
++    const sa = (RG + 1) / r, dir = [f(sa), 0, f(-Math.sqrt(1 - sa * sa))] as V;
++    const { tEnd, pEnd } = end32(o, dir, RG);
++    const tc = -dot32(o, dir);
++    expect(tEnd).toBe(tc);
++    expect(Math.abs(Math.hypot(...pEnd) - RG)).toBeLessThan(5);
++  });
++});
++
++// ------------------------------------------------------------------ the sky pass behind the globe
++
++const SKIP_LINE = 'if (tc > 0.0 && rp2 < (RG - 1e4) * (RG - 1e4)) tEnd = tStart;';
++/** the sky pass's verdict, op by op in float32: true = the ray is not marched */
++function skipped32(o: V, dir: V): boolean {
++  const tc = -dot32(o, dir), pc = madd32(o, dir, tc), rp2 = dot32(pc, pc), k = add32(f(RG), -1e4);
++  return tc > 0 && rp2 < mul32(k, k);
++}
++
++describe('the sky pass leaves the inside of the disc to the globe', () => {
++  it('stands in the sky pass after the interval it shortens', () => {
++    const { my } = build(true);
++    const frag = (my.physicalSky!.mesh.material as THREE.ShaderMaterial).fragmentShader;
++    expect(frag).toContain(SKIP_LINE);
++    expect(frag.indexOf(SKIP_LINE)).toBeGreaterThan(frag.indexOf('if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);'));
++    expect(frag.indexOf(SKIP_LINE)).toBeLessThan(frag.indexOf('if (tEnd > tStart) {'));
++  });
++
++  it('only where the globe\'s mesh covers the ray: its facets lie under 3 km below the sphere', () => {
++    const { sm } = build(true);
++    const geo = sm.earthMesh.geometry as THREE.SphereGeometry;
++    expect([geo.parameters.radius, geo.parameters.widthSegments, geo.parameters.heightSegments]).toEqual([R_EARTH, 128, 96]);
++    const pos = geo.attributes.position, idx = geo.index!;
++    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
++    let deepest = 0;
++    for (let i = 0; i < idx.count; i += 3) {
++      a.fromBufferAttribute(pos, idx.getX(i)); b.fromBufferAttribute(pos, idx.getX(i + 1)); c.fromBufferAttribute(pos, idx.getX(i + 2));
++      n.subVectors(b, a).cross(c.clone().sub(a));
++      if (n.lengthSq() === 0) continue;
++      // the facet's plane comes closest to the centre at |n̂·a|
++      deepest = Math.max(deepest, R_EARTH - Math.abs(n.normalize().dot(a)));
++    }
++    expect(deepest).toBeGreaterThan(1000);
++    expect(deepest).toBeLessThan(3000);
++  });
++
++  it.each([2, 30e3, 400e3, 36000e3])('marches every ray the globe may leave uncovered from %s m, in float32', (alt) => {
++    const up = unit([0.37, -0.52, 0.769]), side = unit([up[1], -up[0], 0]);
++    const o = up.map((u) => f(u * (RG + alt))) as V, r = RG + alt;
++    const ray = (depth: number): V => {
++      const sa = (RG - depth) / r, ca = Math.sqrt(1 - sa * sa);
++      return unit([0, 1, 2].map((k) => -ca * up[k] + sa * side[k]) as V).map(f) as V;
++    };
++    // through the facets' depth and a little past it: marched; well inside the disc: left to the globe
++    for (const depth of [-50e3, -10, 10, 1000, 3000, 9000]) expect(skipped32(o, ray(depth)), `${depth} m`).toBe(false);
++    for (const depth of [11e3, 50e3, 1000e3]) expect(skipped32(o, ray(depth)), `${depth} m`).toBe(true);
++  });
++});
+diff --git a/tests/render-atmo-shell.test.ts b/tests/render-atmo-shell.test.ts
+index 252a18f..35ddba3 100644
+--- a/tests/render-atmo-shell.test.ts
++++ b/tests/render-atmo-shell.test.ts
+@@ -1,8 +1,9 @@
+ /**
+- * The atmosphere shell under the scattering sky, and the gradient sky's
++ * The atmosphere shell, the gradient sky's limb glow, and the gradient sky's
+  * colour (render/scene.ts). The constructor and `update` run against a
+- * stand-in renderer with no GL behind it; the shell's discard is replayed in
+- * float64 and float32 next to the GLSL lines it follows. No WebGL pixel claims.
++ * stand-in renderer with no GL behind it. Under the scattering sky the shell
++ * is not drawn: the globe's aerial perspective is its haze there
++ * (tests/render-aerial.test.ts). No WebGL pixel claims.
+  */
+ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+ import * as THREE from 'three';
+@@ -26,6 +27,7 @@ vi.mock('../src/render/webgl-renderer', () => ({
+ 
+ interface Internals {
+   atmoMat: THREE.ShaderMaterial;
++  earthMat: THREE.ShaderMaterial;
+   physicalSky: { mesh: THREE.Mesh } | null;
+   clearColor: THREE.Color;
+   composer: { passes: unknown[] };
+@@ -48,19 +50,19 @@ beforeEach(() => {
+ });
+ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+ 
+-describe('atmosphere shell: cut to the disc under the scattering sky', () => {
+-  it('follows the sky: disc only while the scattering sky draws, whole under the gradient', () => {
++describe('atmosphere shell: the gradient sky\'s limb glow only', () => {
++  it('follows the sky: not drawn while the scattering sky draws, whole under the gradient', () => {
+     const { sm, my } = build(true);
+-    const u = my.atmoMat.uniforms;
++    const shell = sm.atmoMesh;
+     expect(sm.physicalSkyEnabled).toBe(true);
+     expect(my.physicalSky!.mesh.visible).toBe(true);
+-    expect(u.discOnly.value).toBe(1);
++    expect(shell.visible).toBe(false);
+     sm.setPhysicalSky(false); // the governor's fallback, `?sky=gradient`
+     expect(sm.physicalSkyEnabled).toBe(false);
+     expect(my.physicalSky!.mesh.visible).toBe(false);
+-    expect(u.discOnly.value).toBe(0);
++    expect(shell.visible).toBe(true);
+     sm.setPhysicalSky(true);
+-    expect(u.discOnly.value).toBe(1);
++    expect(shell.visible).toBe(false);
+   });
+ 
+   it('without float targets there is no scattering sky, and none is reported', () => {
+@@ -68,94 +70,35 @@ describe('atmosphere shell: cut to the disc under the scattering sky', () => {
+     expect(my.physicalSky).toBeNull();
+     // it used to start true with no sky to draw, which put the governor on a trial of nothing
+     expect(sm.physicalSkyEnabled).toBe(false);
+-    expect(my.atmoMat.uniforms.discOnly.value).toBe(0);
++    expect(sm.atmoMesh.visible).toBe(true);
+     sm.setPhysicalSky(true);
+     expect(sm.physicalSkyEnabled).toBe(false);
+-    expect(my.atmoMat.uniforms.discOnly.value).toBe(0);
++    expect(sm.atmoMesh.visible).toBe(true);
+   });
+ 
+-  it('is told where the Earth is under the floating origin', () => {
++  it('the globe is told where the Earth is under the floating origin', () => {
+     const { sm, my } = build(true);
+     sm.origin = { x: R_EARTH + 400e3, y: -1234.5, z: 2e5 };
+     sm.camera.position.set(30, -20, 10);
+     sm.update({ theta: 0.3, t: 0 } as VisualFrame, { x: 0, y: 1, z: 0 }, 400e3);
+-    const c = my.atmoMat.uniforms.earthCentre.value as THREE.Vector3;
++    const c = my.earthMat.uniforms.earthCentre.value as THREE.Vector3;
+     expect(c.toArray()).toEqual([-(R_EARTH + 400e3), 1234.5, -2e5]);
++    expect((my.earthMat.uniforms.camPos.value as THREE.Vector3).toArray()).toEqual([30, -20, 10]);
+     expect((my.atmoMat.uniforms.camPos.value as THREE.Vector3).toArray()).toEqual([30, -20, 10]);
+   });
+-});
+-
+-/** The discard, as it stands in ATMO_FRAG. */
+-const SHADER_LINES = [
+-  'uniform vec3 earthCentre;',
+-  'uniform float discOnly;',
+-  'vec3 viewDir = normalize(camPos - vPosW);',
+-  'if (discOnly > 0.5) {',
+-  'vec3 cr = cross(camPos - earthCentre, viewDir);',
+-  `if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;`,
+-];
+-
+-type V = [number, number, number];
+-const sub = (a: V, b: V): V => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+-const cross = (a: V, b: V): V => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+-const dot = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+-const norm = (a: V): V => { const n = Math.sqrt(dot(a, a)); return [a[0] / n, a[1] / n, a[2] / n]; };
+-/** the shader's verdict in float64: true = discarded */
+-const discarded = (camPos: V, vPosW: V, centre: V): boolean => {
+-  const cr = cross(sub(camPos, centre), norm(sub(camPos, vPosW)));
+-  return dot(cr, cr) > R_EARTH * R_EARTH;
+-};
+-/** …and op by op in float32, as the GPU runs it (no FMA) */
+-const f = Math.fround;
+-const discarded32 = (camPos: V, vPosW: V, centre: V): boolean => {
+-  const c32 = camPos.map(f) as V, p32 = vPosW.map(f) as V, e32 = centre.map(f) as V;
+-  const vd = [f(c32[0] - p32[0]), f(c32[1] - p32[1]), f(c32[2] - p32[2])] as V;
+-  const inv = f(1 / f(Math.sqrt(f(f(f(vd[0] * vd[0]) + f(vd[1] * vd[1])) + f(vd[2] * vd[2])))));
+-  const d = vd.map((x) => f(x * inv)) as V;
+-  const o = [f(c32[0] - e32[0]), f(c32[1] - e32[1]), f(c32[2] - e32[2])] as V;
+-  const cr = [f(f(o[1] * d[2]) - f(o[2] * d[1])), f(f(o[2] * d[0]) - f(o[0] * d[2])), f(f(o[0] * d[1]) - f(o[1] * d[0]))];
+-  return f(f(f(cr[0] * cr[0]) + f(cr[1] * cr[1])) + f(cr[2] * cr[2])) > f(R_EARTH * R_EARTH);
+-};
+-
+-/**
+- * A camera at `alt` over the Earth centred at `centre` (the floating origin
+- * puts the camera near 0), and the point where the view ray whose perigee is
+- * `perigee` m above the surface enters the 110-km shell: a fragment's vPosW.
+- */
+-function scene(alt: number, perigee: number, centre: V): { camPos: V; vPosW: V } {
+-  const up = norm([0.37, -0.52, 0.769]), side = norm(cross(up, [0, 0, 1]));
+-  const D = R_EARTH + alt, rp = R_EARTH + perigee, Rs = R_EARTH + 110e3;
+-  const camPos: V = [centre[0] + up[0] * D + 3, centre[1] + up[1] * D - 7, centre[2] + up[2] * D + 1];
+-  const o = sub(camPos, centre), r = Math.sqrt(dot(o, o));
+-  const sa = rp / r, ca = Math.sqrt(1 - sa * sa), oh = norm(o);
+-  const dir = norm([-ca * oh[0] + sa * side[0], -ca * oh[1] + sa * side[1], -ca * oh[2] + sa * side[2]]);
+-  const tc = -dot(o, dir), h = Math.sqrt(Rs * Rs - rp * rp);
+-  return { camPos, vPosW: [camPos[0] + dir[0] * (tc - h), camPos[1] + dir[1] * (tc - h), camPos[2] + dir[2] * (tc - h)] };
+-}
+-
+-describe('atmosphere shell: the discard, replayed', () => {
+-  it('stands in the shell shader as replayed here', () => {
+-    const frag = build(true).my.atmoMat.fragmentShader;
+-    for (const line of SHADER_LINES) expect(frag).toContain(line);
+-  });
+ 
+-  it('drops a ray that clears the Earth and keeps one that meets the disc, at any floating origin', () => {
+-    for (const centre of [[0, 0, 0], [-(R_EARTH + 400e3), 0, 0], [-4.1e6, 3.3e6, -3.9e6]] as V[]) {
+-      for (const alt of [400e3, 2000e3, 35786e3]) {
+-        // the 60-110 km band that doubled the scattering sky's limb, and a ray just over the surface
+-        for (const p of [100e3, 80e3, 60e3, 5e3, 50]) {
+-          const { camPos, vPosW } = scene(alt, p, centre);
+-          expect(discarded(camPos, vPosW, centre)).toBe(true);
+-          expect(discarded32(camPos, vPosW, centre)).toBe(true);
+-        }
+-        // the disc, up to just inside the limb: the shell is its haze there and stays
+-        for (const p of [-50, -5e3, -100e3, -1000e3]) {
+-          const { camPos, vPosW } = scene(alt, p, centre);
+-          expect(discarded(camPos, vPosW, centre)).toBe(false);
+-          expect(discarded32(camPos, vPosW, centre)).toBe(false);
+-        }
+-      }
+-    }
++  it('draws whole: the shell shader carries no cut, and its rim follows the ground factor', () => {
++    const { sm, my } = build(true);
++    const frag = my.atmoMat.fragmentShader;
++    expect(frag).not.toContain('discard');
++    expect(frag).not.toContain('discOnly');
++    for (const line of ['float band = pow(1.0 - d, 3.0);', 'gl_FragColor.a = band * lit * 0.62 * rimGain;']) expect(frag).toContain(line);
++    sm.setPhysicalSky(false);
++    sm.origin = { x: R_EARTH + 400e3, y: 0, z: 0 };
++    sm.camera.position.set(0, 0, 0);
++    sm.update({ theta: 0, t: 0 } as VisualFrame, { x: 1, y: 0, z: 0 }, 400e3);
++    expect(my.atmoMat.uniforms.rimGain.value).toBe(1);
++    expect(my.earthMat.uniforms.rimGain.value).toBe(1);
+   });
+ });
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,231 @@
+From 930cf997cd61c7b723bc8a93528fbf159ec0ce13 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 12:52:36 +0000
+Subject: [PATCH 02/10] D-51 (R4.2, M-PHYSICS-023): J2 in the point-mass ascent
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The second half of the owner's "ทำพร้อมกัน" (docs/DECISIONS.md D-51): the
+point-mass model's RK4 flies gravityJ2, as the six-DOF body, the orbital
+phase and PEG's predictor already did. With the sites on WGS-84 (previous
+commit) the field at a pad, with the Earth's turn, is Somigliana's normal
+gravity to 5 parts in a million; J2 alone on the old sphere pads made it
+worse above ~35° of latitude, which is why the two go together.
+
+- simulation.ts: the point-mass RK4 uses useJ2; the gravity loss is the J2
+  field projected on the velocity (-g.v̂ dt), so dvThrust - losses = Δ|v|
+  still closes; the E02 record carries gravityJ2 for 'pointMass' and
+  'heldCoast', the central field only for the analytic Kepler coast.
+- ship-descent.ts: the point-mass ship's descent field is J2.
+- debris.ts: separated point-mass hardware flies J2, and its descent
+  prediction (descentModel) agrees.
+- equations-model.ts: the gravity row checks the point mass against J2;
+  the central-field note now speaks of the analytic coasts only (en/ru/th).
+
+Not changed (asked, not answered): the exo-atmospheric Kepler coasts stay
+pure conics. IGM keeps its spherical mean gravity.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ src/i18n/en.ts                  |  2 +-
+ src/i18n/ru.ts                  |  2 +-
+ src/i18n/th.ts                  |  2 +-
+ src/physics/sim/debris.ts       | 12 ++++++------
+ src/physics/sim/ship-descent.ts |  4 ++--
+ src/physics/simulation.ts       | 21 ++++++++++++---------
+ src/ui/equations-model.ts       |  6 +++---
+ 7 files changed, 26 insertions(+), 23 deletions(-)
+
+diff --git a/src/i18n/en.ts b/src/i18n/en.ts
+index 7589fc6..ded5ee6 100644
+--- a/src/i18n/en.ts
++++ b/src/i18n/en.ts
+@@ -3791,7 +3791,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.boosters': 'The strap-on boosters\' propellant is not in this stage figure; the line below counts it.',
+   'eq.note.budgetFrozen': 'The book closes when the ascent ends; later burns are not in it.',
+   'eq.note.escape': 'Above escape speed: the path is not an ellipse.',
+-  'eq.note.centralGravity': 'The point-mass ascent and the analytic coasts use the central field; J2 is shown for comparison.',
++  'eq.note.centralGravity': 'The analytic coasts use the central field; J2 is shown for comparison.',
+   'eq.note.flexCoupling': 'With slosh and bending (P05) the rigid-body equation leaves out their coupling, and the residual includes it.',
+   'eq.note.vacuumOnly': 'A vacuum engine: the model gives it no sea-level operating point, so no pressure term.',
+   'eq.note.suborbital': 'Periapsis below the surface: the path is still suborbital.',
+diff --git a/src/i18n/ru.ts b/src/i18n/ru.ts
+index 7100f8e..4e2f647 100644
+--- a/src/i18n/ru.ts
++++ b/src/i18n/ru.ts
+@@ -3767,7 +3767,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.boosters': 'Топливо боковых блоков в эту оценку ступени не входит; строка ниже его учитывает.',
+   'eq.note.budgetFrozen': 'Баланс закрывается в конце выведения; последующие импульсы в него не входят.',
+   'eq.note.escape': 'Скорость выше второй космической: траектория не эллипс.',
+-  'eq.note.centralGravity': 'Выведение материальной точки и аналитические пассивные участки используют центральное поле; J2 показан для сравнения.',
++  'eq.note.centralGravity': 'Аналитические пассивные участки используют центральное поле; J2 показан для сравнения.',
+   'eq.note.flexCoupling': 'С колебаниями топлива и изгибом (P05) уравнение твёрдого тела не учитывает их связь, и она входит в невязку.',
+   'eq.note.vacuumOnly': 'Высотный двигатель: у модели нет для него режима у Земли, поэтому члена с давлением нет.',
+   'eq.note.suborbital': 'Перицентр ниже поверхности: траектория пока суборбитальная.',
+diff --git a/src/i18n/th.ts b/src/i18n/th.ts
+index 4ea624a..0882f78 100644
+--- a/src/i18n/th.ts
++++ b/src/i18n/th.ts
+@@ -3768,7 +3768,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.boosters': 'ตัวเลขของขั้นนี้ไม่รวมเชื้อเพลิงของบูสเตอร์ข้าง บรรทัดล่างนับรวมแล้ว',
+   'eq.note.budgetFrozen': 'งบปิดเมื่อจบช่วงขึ้นบิน การจุดเครื่องครั้งหลังไม่นับรวม',
+   'eq.note.escape': 'เร็วกว่าความเร็วหลุดพ้น: เส้นทางไม่ใช่วงรี',
+-  'eq.note.centralGravity': 'การขึ้นบินแบบจุดมวลและช่วงลอยตัวแบบวิเคราะห์ใช้สนามแบบจุดศูนย์กลาง แสดง J2 ไว้เพื่อเปรียบเทียบ',
++  'eq.note.centralGravity': 'ช่วงลอยตัวแบบวิเคราะห์ใช้สนามแบบจุดศูนย์กลาง แสดง J2 ไว้เพื่อเปรียบเทียบ',
+   'eq.note.flexCoupling': 'เมื่อเปิดการกระฉอกและการโค้งงอ (P05) สมการวัตถุแข็งไม่ได้รวมผลคู่ควบของทั้งสอง ส่วนต่างจึงรวมผลนี้ไว้',
+   'eq.note.vacuumOnly': 'เครื่องยนต์สุญญากาศ: แบบจำลองไม่มีจุดทำงานที่ระดับน้ำทะเลให้ จึงไม่มีเทอมความดัน',
+   'eq.note.suborbital': 'จุดใกล้โลกอยู่ใต้ผิวโลก: เส้นทางยังเป็นแบบซับออร์บิทัล',
+diff --git a/src/physics/sim/debris.ts b/src/physics/sim/debris.ts
+index edbddde..d9c50e2 100644
+--- a/src/physics/sim/debris.ts
++++ b/src/physics/sim/debris.ts
+@@ -291,9 +291,9 @@ export class DebrisTracker {
+   // ------------------------------------------------------------ return
+   /**
+    * What the returning stage's descent looks like to the prediction: its own
+-   * drag and the entry burn it is going to fly. The rigid body carries J2 in
+-   * its gravity, the point-mass debris does not, and the prediction has to
+-   * agree with whichever one is flying.
++   * drag and the entry burn it is going to fly. The rigid body and, since
++   * D-51, the point-mass debris carry J2 in their gravity, and so does the
++   * prediction, which has to agree with whichever one is flying.
+    */
+   descentModel(d: Debris): DescentModel {
+     const rc = d.recovery!;
+@@ -312,7 +312,7 @@ export class DebrisTracker {
+     }
+     const n = e ? entryEngineCount(e, d.mass - rc.propellant, rc.landingReserve) : 0;
+     return {
+-      cd: d.cd, area: d.area, j2: !!this.sim.rigidRuntime,
++      cd: d.cd, area: d.area, j2: true,
+       entry: e ? {
+         thrustVac: n * e.thrustVac, thrustSL: n * e.thrustSL, mdot: (n * e.thrustVac) / (G0 * e.ispVac),
+         targetSpeed: entrySpeedOf(rc), reserve: rc.landingReserve,
+@@ -541,7 +541,7 @@ export class DebrisTracker {
+       const thrust = burning ? thrustOf(level) : 0;
+       const flow = burning ? rc.mdot * level : 0;
+       if (flow > 0) h = Math.min(h, Math.max(1e-3, rc.propellant / flow));
+-      const next = rk4Step(0, { r: d.r, v: d.v }, h, pointMassAcceleration(thrust / d.mass, dir, d.mass, flow, 0, d.area, false, d.cd));
++      const next = rk4Step(0, { r: d.r, v: d.v }, h, pointMassAcceleration(thrust / d.mass, dir, d.mass, flow, 0, d.area, true, d.cd));
+       d.r = next.r;
+       d.v = next.v;
+       d.dir = dir;
+@@ -788,7 +788,7 @@ export class DebrisTracker {
+             rc.burning = false;
+           }
+         }
+-        const next = rk4Step(0, { r: d.r, v: d.v }, h, pointMassAcceleration(thrustAccel, thrustDir, d.mass, 0, 0, d.area, false, d.cd));
++        const next = rk4Step(0, { r: d.r, v: d.v }, h, pointMassAcceleration(thrustAccel, thrustDir, d.mass, 0, 0, d.area, true, d.cd));
+         d.r = next.r;
+         d.v = next.v;
+         if (vAirMag > 1 && d.recovery) d.dir = scale(vAir, -1 / vAirMag);
+diff --git a/src/physics/sim/ship-descent.ts b/src/physics/sim/ship-descent.ts
+index 3e71d65..119d690 100644
+--- a/src/physics/sim/ship-descent.ts
++++ b/src/physics/sim/ship-descent.ts
+@@ -33,7 +33,7 @@ import { geodeticHeight } from '../geodesy';
+ import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
+ import { atmosphere } from '../atmosphere';
+ import { dragCoefficient } from '../aero';
+-import { gravity } from '../gravity';
++import { gravityJ2 } from '../gravity';
+ import { eciToLatLon } from '../orbital';
+ import { engineMassFlow, engineThrust } from '../vehicle';
+ import { atMach, crossflowDragCoefficient, shipDescentAeroTable, type AeroTable } from '../rigid/aero-tables';
+@@ -433,7 +433,7 @@ export class ShipDescent {
+    */
+   pointMassAcceleration(thrustAccel: number, dir: Vec3, mass0: number, mdot: number, t0: number) {
+     return (t: number, r: Vec3, v: Vec3): Vec3 => {
+-      let a = gravity(r);
++      let a = gravityJ2(r);
+       const m = Math.max(1, mass0 - mdot * (t - t0));
+       if (thrustAccel > 0) a = add(a, scale(dir, thrustAccel * mass0 / m));
+       return add(a, this.aeroAcceleration(r, v, dir, m));
+diff --git a/src/physics/simulation.ts b/src/physics/simulation.ts
+index 1d71a2d..98eb641 100644
+--- a/src/physics/simulation.ts
++++ b/src/physics/simulation.ts
+@@ -2,7 +2,8 @@
+  * Launch-to-orbit simulation.
+  *
+  * Frame: Earth-centered inertial (ECI). The legacy point-mass model uses a
+- * slew-limited thrust direction, RK4 and analytic Kepler coasts. Supported
++ * slew-limited thrust direction, RK4 under J2 (D-51) and analytic Kepler
++ * coasts above the air. The sites stand on WGS-84 (src/physics/geodesy.ts). Supported
+  * six-DOF profiles integrate translation and rigid-body rotation under J2,
+  * finite engine/RCS wrenches and estimated aerodynamics. Guidance and control
+  * use a 0.01 s clock; a smaller numerical step refines integration inside that
+@@ -24,7 +25,7 @@ import type { ControlFaultSpec } from '../types';
+ import { siteById, type SiteExtra } from '../data/sites';
+ import { payloadVehicle, missionVehicle, openTopVehicle } from '../data/vehicles';
+ import { missionSatellite } from '../data/satellites';
+-import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
++import { G0, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
+ import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
+ import { atmosphere } from './atmosphere';
+ import { geodeticHeight } from './geodesy';
+@@ -1144,13 +1145,16 @@ export class Simulation {
+     } else if (s.status === 'descent') {
+       next = rk4Step(s.t, { r: s.r, v: s.v }, dt, this.shipDescent.pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t));
+     } else {
+-      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, false, undefined, this.densityFactor));
++      // D-51 (R4.2): the point-mass ascent flies the J2 field the six-DOF body
++      // and the orbit already fly; only the exo-atmospheric Kepler coast above
++      // is still a pure conic.
++      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, true, undefined, this.densityFactor));
+     }
+     // --- ascent losses (evaluated at step start)
+     //
+     // The Δv budget closes only if every term is projected on the SAME axis, and
+-    // the identity that defines it — d|v|/dt = a_T·v̂ − (μ/r²)(r̂·v̂) −
+-    // (D/m)(v̂_air·v̂) — is written in the INERTIAL frame. Measuring the steering
++    // the identity that defines it — d|v|/dt = a_T·v̂ + g·v̂ −
++    // (D/m)(v̂_air·v̂), g the J2 field flown — is written in the INERTIAL frame. Measuring the steering
+     // loss against the air-relative velocity below 100 km (audit item B14) mixed
+     // frames: early in flight v_air is nearly vertical while v is dominated by
+     // the 320–465 m/s of eastward rotation velocity, so cos α read ≈1 against
+@@ -1171,10 +1175,9 @@ export class Simulation {
+       s.losses.gravity -= dot(rigidAccelerations.gravityECI, vHat) * dt;
+       s.losses.drag -= dot(rigidAccelerations.aerodynamicECI, vHat) * dt;
+     } else if (thr.burning && s.status === 'ascent') {
+-      const g = MU_EARTH / (rm * rm);
+       s.losses.dvThrust += thrustAccel * dt;
+-      const sinGamma = vMag > 1 ? dot(s.v, up) / vMag : 1;
+-      s.losses.gravity += g * sinGamma * dt;
++      // the gravity flown (J2, D-51) along the velocity: μ/r²·sin γ before J2
++      s.losses.gravity -= dot(gravityJ2(s.r), vHat) * dt;
+       const cosA = Math.max(-1, Math.min(1, dot(s.dir, vHat)));
+       s.losses.steering += thrustAccel * (1 - cosA) * dt;
+     }
+@@ -1211,7 +1214,7 @@ export class Simulation {
+         ...(rigidAccelerations || held || useKepler ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
+         thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held || useKepler ? v3() : scale(s.dir, thrustAccel),
+         aeroAccel: rigidAccelerations ? { ...rigidAccelerations.aerodynamicECI } : held || useKepler ? v3() : pointDrag,
+-        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : held ? gravityJ2(s.r) : gravity(s.r),
++        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : useKepler && !held ? gravity(s.r) : gravityJ2(s.r),
+         measuredAccel: scale(sub(next.v, s.v), 1 / dt),
+         speedEnd: norm(next.v), losses: { ...s.losses },
+         ...(rigidBefore && s.rigid && rigidAccelerations ? { omega0: { ...rigidBefore.omegaBody }, omega1: { ...s.rigid.omegaBody },
+diff --git a/src/ui/equations-model.ts b/src/ui/equations-model.ts
+index ef74c62..c308d41 100644
+--- a/src/ui/equations-model.ts
++++ b/src/ui/equations-model.ts
+@@ -155,10 +155,10 @@ function gravityEquation(e: EomRecord | undefined, frame: VisualFrame): Equation
+   const r = e?.r ?? frame.r, rm = norm(r), central = norm(gravity(r)), full = gravityJ2(r), j2 = norm(sub(full, gravity(r)));
+   const values = { r: rm, mu: MU_EARTH, central, j2, total: norm(full), latitude: Math.asin(r.z / rm), J2: J2_EARTH };
+   if (!e) return { id: 'gravity', available: true, values };
+-  // Six-DOF and the long coasts fly J2; the point-mass ascent flies a central field.
+-  const used = norm(e.gravityAccel), model = e.integrator === 'pointMass' || e.integrator === 'kepler' ? central : norm(full);
++  // Six-DOF, the point-mass ascent (D-51) and the long coasts fly J2; the analytic Kepler coast a central field.
++  const used = norm(e.gravityAccel), model = e.integrator === 'kepler' ? central : norm(full);
+   return { id: 'gravity', available: true, values: { ...values, used }, check: check(used, model, 1e-9, 1e-9),
+-    ...(e.integrator === 'pointMass' || e.integrator === 'kepler' ? { note: 'eq.note.centralGravity' } : {}) };
++    ...(e.integrator === 'kepler' ? { note: 'eq.note.centralGravity' } : {}) };
+ }
+ 
+ /** α and β from the velocity relative to the air in the standard's body axes. */
+-- 
+2.43.0
+

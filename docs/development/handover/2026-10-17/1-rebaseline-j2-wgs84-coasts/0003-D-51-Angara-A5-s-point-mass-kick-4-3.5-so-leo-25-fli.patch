@@ -1,0 +1,55 @@
+From 1bc5aa0be4b646105686b1a7aee8225a333a7371 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 12:53:42 +0000
+Subject: [PATCH 03/10] =?UTF-8?q?D-51:=20Angara-A5's=20point-mass=20kick?=
+ =?UTF-8?q?=204=C2=B0=20->=203.5=C2=B0,=20so=20leo/25=20flies=20again?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Measured after the two physics commits: on WGS-84 with J2 the stack weighs
+0.31 % more at Plesetsk than the old sphere model had it (9.821 against
+9.791 m/s²; Somigliana's normal gravity is 9.821), and the 4° kick, half a
+degree under the kick that broke every Angara row up (4.5° at 23cb4cf),
+broke `angaraa5/leo/25` up at T+202 s (q 46 kPa). Fleet rows, point mass:
+
+  kick   leo/25          sso/25  gto/25  gto/50  gto/90   (Δv left, m/s)
+  4°     breaks up       3098    3443    2625    1796
+  3.75°  3575            3085    3441    2621    1743
+  3.5°   3632            3028    3311    2619    1738
+  4.5°   every row breaks up
+
+3.5° is half a degree under the new edge, as 4° was under the old, and
+every row that passed at 23cb4cf passes (131 of 131 gated rows; 156 of
+222 accepted, as before). Through the vehicle's own `guidanceDefaults`
+(docs/PHYSICS.md §5.2); the six-DOF kick (8°, guidanceDefaultsSixDof) is
+not touched. The D01 identity fixture is re-recorded for it with the
+other named re-records.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ src/data/vehicles.ts | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/data/vehicles.ts b/src/data/vehicles.ts
+index 00afcd0..99e00ac 100644
+--- a/src/data/vehicles.ts
++++ b/src/data/vehicles.ts
+@@ -349,7 +349,12 @@ export const VEHICLES: VehicleSpec[] = [
+     ],
+     sites: ['plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 50,
+     // Low liftoff T/W with the core throttled to 30 %; lofts so that the URM-2 takes over climbing.
+-    guidanceDefaults: { kickAngle: 4, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
++    // Kick 3.5° (4° until D-51): on WGS-84 with J2 the stack weighs 0.31 % more at Plesetsk than on
++    // the old sphere (9.821 against 9.791 m/s², Somigliana's normal gravity), and the 4° turn, which
++    // sat half a degree under the kick that broke every row up (4.5°), broke leo/25 up at T+202 s.
++    // 3.5° is again half a degree under the new edge (4°) and flies every row that flew before
++    // (docs/VALIDATION.md §10, the D-51 re-baseline).
++    guidanceDefaults: { kickAngle: 3.5, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
+     // As Atlas V: the rigid body cannot hold the angle of attack the point mass
+     // pitches over at, and handed the Briz-M a slower, higher arc — 257 m/s short
+     // of the point mass at SECO to the sun-synchronous orbit, which stopped
+-- 
+2.43.0
+

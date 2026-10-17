@@ -1,0 +1,6 @@
+soyuz21a LEO 8140 / 7430 = 1.096 conv=true | GTO 2368 / 0 = -
+falcon9 LEO 20031 / 22800 = 0.879 conv=true | GTO 6832 / 8300 = 0.823
+longmarch2d LEO 3165 / 3500 = 0.904 conv=true | GTO 0 / 0 = -
+vegac LEO 4330 / 3300 = 1.312 conv=true | GTO 113 / 0 = -
+ariane64 LEO 26274 / 21600 = 1.216 conv=true | GTO 13328 / 11500 = 1.159
+electron LEO 315 / 300 = 1.050 conv=true | GTO 137 / 0 = -

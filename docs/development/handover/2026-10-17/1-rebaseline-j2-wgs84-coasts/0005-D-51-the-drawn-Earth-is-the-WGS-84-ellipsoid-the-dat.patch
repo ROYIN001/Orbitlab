@@ -1,0 +1,988 @@
+From e5c235a118163f26d570bd3fa32e909a9bce650d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 13:18:45 +0000
+Subject: [PATCH 05/10] D-51: the drawn Earth is the WGS-84 ellipsoid; the
+ datum mapping retired
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The scene draws the Earth the flight is flown on (no display-only
+conversion):
+
+- render/earth-shape.ts: ellipsoidGeometry flattens the globe by 1/298.257
+  along the pole; the launch scene's Earth and clouds (scene.ts) and the
+  orbit view's globe use it; the atmosphere's rim shell is flattened too.
+- The physical sky's scattering tables are a spherical shell: it is fed the
+  camera at its height above WGS-84 on its radius, or at Plesetsk (16.9 km
+  inside the old sphere) every ray at or below the horizon met the shell's
+  ground and the sky went black.
+- launchpad.ts places the complex at the WGS-84 pad (groundPositionEci's
+  point), recovery.ts the landing zones, the drone ship, the sea and the
+  steppe at their geodetic latitude and height; their ground is laid on the
+  ellipsoid's normal (geodesy.ts geodeticEnu), so a terrain disc's rim
+  kilometres out lies on the ellipsoid (the radial frame left it ±46 m off
+  at 14 km at 51° N). The vehicle stands on the radius, as flown.
+- render/datum.ts: the Vostok-only mapping onto the drawn sphere is gone;
+  what stays is the landed sphere stood on the drawn ground, and
+  `landReturn` (was onEllipsoid) for the steppe and the shadows.
+- Heights shown or used by the camera, the sky, the audio, the debris list,
+  the followed stage and the glow read geodeticHeight; the rotation credit
+  row is the WGS-84 pad's speed. telemetry's debris rows: every height is
+  above WGS-84 (`fine` keeps the tenth-of-a-kilometre rows of a return).
+- tests/vostok-render.test.ts follows: the return is drawn where it flies,
+  the steppe's fields lie on the WGS-84 ground to 5 cm.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ src/audio/launch-audio.ts   |  7 +++--
+ src/main.ts                 | 35 ++++++++-------------
+ src/physics/geodesy.ts      | 17 +++++++++++
+ src/render/datum.ts         | 51 ++++++++++++-------------------
+ src/render/earth-shape.ts   | 24 +++++++++++++++
+ src/render/launchpad.ts     | 29 +++++++++++-------
+ src/render/orbit-view.ts    |  4 ++-
+ src/render/recovery.ts      | 45 ++++++++++++++-------------
+ src/render/scene.ts         | 25 ++++++++++++---
+ src/render/steppe.ts        | 22 +++++++------
+ src/render/vostok-debris.ts | 11 ++++---
+ src/ui/telemetry.ts         | 35 ++++++++++-----------
+ src/ui/watch-logic.ts       |  2 +-
+ src/ui/watch-missions.ts    | 14 ++++-----
+ tests/vostok-render.test.ts | 61 ++++++++++++++++---------------------
+ 15 files changed, 214 insertions(+), 168 deletions(-)
+ create mode 100644 src/render/earth-shape.ts
+
+diff --git a/src/audio/launch-audio.ts b/src/audio/launch-audio.ts
+index 083faab..f225469 100644
+--- a/src/audio/launch-audio.ts
++++ b/src/audio/launch-audio.ts
+@@ -18,7 +18,8 @@ import { workspaceStorage } from '../workspace/storage';
+ import type { VisualFrame } from '../physics/frame';
+ import type { SimEvent } from '../physics/simulation';
+ import type { Vec3 } from '../physics/vec3';
+-import { OMEGA_EARTH, R_EARTH } from '../physics/constants';
++import { OMEGA_EARTH } from '../physics/constants';
++import { geodeticHeight } from '../physics/geodesy';
+ import { EngineSound, type HeardSource } from './engine-sound';
+ import { EVENT_CUES, SPEED_OF_SOUND_0, retardedTime, toHead, warpGain, type Quat } from './acoustics';
+ 
+@@ -65,8 +66,8 @@ export function headingTo(r: Vec3, listener: Vec3, q: Quat | undefined): Vec3 |
+   return d > 0 ? toHead({ x: dx / d, y: dy / d, z: dz / d }, q) : undefined;
+ }
+ 
+-/** Height of `r` over the ground at elevation `ground` (m above the spherical Earth), m. */
+-const heightOver = (r: Vec3, ground: number): number => Math.hypot(r.x, r.y, r.z) - R_EARTH - ground;
++/** Height of `r` over the ground at elevation `ground` (m above WGS-84, D-51), m. */
++const heightOver = (r: Vec3, ground: number): number => geodeticHeight(r) - ground;
+ 
+ export interface AudioFrameInput {
+   /** mission time on screen, s */
+diff --git a/src/main.ts b/src/main.ts
+index a82caaa..960a3a1 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -98,7 +98,7 @@ import { getNotation, initNotation, onNotationChange } from './ui/notation';
+ import { FramesView } from './render/frames';
+ import { EscapeView } from './render/escape';
+ import { crewViewSize } from './render/cosmonaut';
+-import { drawnFrame, onDrawnSphere, onEllipsoid } from './render/datum';
++import { drawnFrame, landReturn } from './render/datum';
+ import { geodeticHeight } from './physics/geodesy';
+ import { StationView } from './render/station';
+ import { apolloViewSize, buildAscentStage, buildCsm, buildDescentStage, CSM_LENGTH, LM_HEIGHT } from './render/apollo';
+@@ -230,8 +230,7 @@ function vostokPartner(frame: VisualFrame): VisualFrame['debris'][number] | unde
+   for (const d of frame.debris) {
+     const kind = d.visual.kind;
+     if (!d.alive || (kind !== 'instrumentModule' && kind !== 'imFragment')) continue;
+-    // (the drawn frame's heights are over the drawn sphere: render/datum.ts)
+-    if (kind === 'instrumentModule' && norm(d.r) - R_EARTH > 100e3) continue;
++    if (kind === 'instrumentModule' && geodeticHeight(d.r) > 100e3) continue;
+     const m = away(d);
+     if (m < nearest) { nearest = m; best = d; }
+   }
+@@ -514,7 +513,7 @@ class App {
+   /** index of the last recorded frame fed to the trail line */
+   private trailIdx = -1;
+   /** elements the predicted-orbit line was last sampled for (see syncPredicted) */
+-  private predictedShape = { a: NaN, e: NaN, i: NaN, raan: NaN, argp: NaN, ellipsoid: false };
++  private predictedShape = { a: NaN, e: NaN, i: NaN, raan: NaN, argp: NaN };
+   private predictedOn = false;
+   /** 0..1 fade of the predicted-orbit line (see syncPredicted) */
+   private predictedFade = 0;
+@@ -2206,8 +2205,7 @@ class App {
+     }
+     for (let i = this.trailIdx + 1; i <= target; i++) {
+       const f = frames[i];
+-      // (C01: a return on WGS-84 heights where the scene draws it, render/datum.ts)
+-      if (f.status !== 'prelaunch') this.trail.add(onEllipsoid(f) ? onDrawnSphere(f.r) : f.r);
++      if (f.status !== 'prelaunch') this.trail.add(f.r);
+     }
+     this.trailIdx = target;
+     if (live && liveFrame.status !== 'prelaunch') this.trail.add(liveFrame.r);
+@@ -2262,22 +2260,16 @@ class App {
+       return;
+     }
+     const p = this.predictedShape;
+-    // C01: a return flown on WGS-84 heights is drawn on the drawn sphere (render/datum.ts), and so is its conic,
+-    // or the capsule and its trail would run up to 12 km off the line through Vostok-1's entry. The mapping
+-    // reads only the latitude, so the sampled shape stays good while the elements hold.
+-    const ellipsoid = onEllipsoid(frame);
+     const moved = !this.predictedOn
+-      || ellipsoid !== p.ellipsoid
+       || Math.abs(el.a - p.a) > Math.abs(p.a) * 2e-4
+       || Math.abs(el.e - p.e) > 2e-4
+       || Math.abs(el.i - p.i) > 2e-4
+       || Math.abs(el.raan - p.raan) > 2e-4
+       || Math.abs(el.argp - p.argp) > 2e-4;
+     if (!moved) return;
+-    p.a = el.a; p.e = el.e; p.i = el.i; p.raan = el.raan; p.argp = el.argp; p.ellipsoid = ellipsoid;
++    p.a = el.a; p.e = el.e; p.i = el.i; p.raan = el.raan; p.argp = el.argp;
+     this.predictedOn = true;
+-    const pts = sampleOrbit(el, 180);
+-    this.predicted.setPoints(ellipsoid ? pts.map(onDrawnSphere) : pts);
++    this.predicted.setPoints(sampleOrbit(el, 180));
+   }
+ 
+   /**
+@@ -2307,11 +2299,10 @@ class App {
+   private watchSubject(): { altitude: number; speed: number } | undefined {
+     const d = this.focusDebrisId === null ? undefined : this.shown?.debris.find((x) => x.id === this.focusDebrisId);
+     if (!d || !this.sim) return undefined;
+-    const r = Math.hypot(d.r.x, d.r.y, d.r.z);
+     // ω × r with ω along +z, as `groundSpeed` does for the vehicle
+     const vx = d.v.x + OMEGA_EARTH * d.r.y, vy = d.v.y - OMEGA_EARTH * d.r.x;
+-    // C01: Vostok-1's pilot, like the sphere, flies on WGS-84 heights
+-    const h = this.shown && onEllipsoid(this.shown) ? geodeticHeight(d.r) : r - R_EARTH;
++    // above WGS-84, as every flight's heights are (D-51)
++    const h = geodeticHeight(d.r);
+     return { altitude: Math.max(0, h - this.sim.groundElevation(d.r)), speed: d.alive ? Math.hypot(vx, vy, d.v.z) : 0 };
+   }
+ 
+@@ -2373,7 +2364,7 @@ class App {
+     if (this.player.live) this.player.syncLive(shown.t);
+     this.shown = shown;
+     view.setFrame(shown);
+-    // C01: what the scene draws: a return flown on WGS-84 heights moved onto the drawn sphere (render/datum.ts)
++    // C01: what the scene draws: Vostok's sphere at rest stood on the drawn ground (render/datum.ts)
+     const frame = drawnFrame(shown);
+     // G06: the abort is there on a crewed Soyuz, and live until the escape system stands down
+     this.abortBtn.hidden = !sim.escape.fitted;
+@@ -2589,7 +2580,7 @@ class App {
+         height: crew ? crewViewSize(focus.crew) : focus.visual.length, radius: focus.visual.diameter / 2,
+         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: focus.burning ? 0.1 : 0,
+         vDir: norm(focus.v) > 1 ? normalize(focus.v) : f.up,
+-        t: frame.t, phase: 'ascent', agl: norm(focus.r) - R_EARTH - ground,
++        t: frame.t, phase: 'ascent', agl: geodeticHeight(focus.r) - ground,
+       }, dt, R_EARTH);
+     } else {
+       // G06: under a parachute the camera frames the canopy above the capsule,
+@@ -2617,7 +2608,7 @@ class App {
+     const framesView = (this.mode === 'explore' || this.mode === 'engineer') && (this.camMode === 'exterior' || this.camMode === 'space');
+     if (framesView) this.frames.update(frame, scene.camera, this.vehiclePos, this.earthC, sim.plan.azimuthRotating, getNotation(), !focus);
+     else this.frames.group.visible = false;
+-    const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
++    const camAlt = geodeticHeight(v3(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z));
+     // shadows are only worth casting while we are looking at the pad
+     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);
+     // C01: Eagle's shadow on the Moon, from the last kilometres of the descent
+@@ -2626,7 +2617,7 @@ class App {
+     // C01: Vostok-1 over the ground it comes down on (render/steppe.ts): the shadow map kept on the body the camera
+     // follows, so the sphere, Gagarin and their canopies throw their shadows on the fields from the last few hundred
+     // metres, and no map left from the pad, a world away and read in the scene's moved axes, darkens them
+-    if (onEllipsoid(frame) && norm(focusR) - R_EARTH < 30e3) scene.setShadowFocus(this.originV, 40, true, VOSTOK_SHADOW_BIAS);
++    if (landReturn(frame) && geodeticHeight(focusR) < 30e3) scene.setShadowFocus(this.originV, 40, true, VOSTOK_SHADOW_BIAS);
+     // `height` is the size of the object actually being tracked — the stack
+     // now, the spacecraft after payload separation. Without it the space view's
+     // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for
+@@ -2644,7 +2635,7 @@ class App {
+     this.audio.update({
+       t: frame.t, frameAt: (x) => this.player.frameAt(x), events: this.recorder.events,
+       // (the sounds come from the frames as flown: the camera, about the body it is on, put back by that body's
+-      // own place there, for a return drawn off its WGS-84 heights, render/datum.ts)
++      // own place there, for a body drawn off it: Vostok's sphere stood on the ground, render/datum.ts)
+       listener: { x: cam.x + heardFrom.x, y: cam.y + heardFrom.y, z: cam.z + heardFrom.z },
+       warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
+       onboard: this.camMode === 'onboard',
+diff --git a/src/physics/geodesy.ts b/src/physics/geodesy.ts
+index 700bfad..c3ccc21 100644
+--- a/src/physics/geodesy.ts
++++ b/src/physics/geodesy.ts
+@@ -99,3 +99,20 @@ export function geocentricLatitude(lat: number, h = 0): number {
+   const n = A / Math.sqrt(1 - E2 * sl * sl);
+   return Math.atan2((n * (1 - E2) + h) * sl, (n + h) * cl);
+ }
++
++/**
++ * The local east, north and up at geodetic latitude `lat` and longitude `lon`
++ * (rad, in the frame the longitude is counted in): up along the ellipsoid's
++ * normal, which is where the ground faces. The flight's own frame
++ * (`enuFrame`, src/physics/orbital.ts) is the radius's, at most 0.19° from
++ * this; a patch of ground drawn kilometres wide is laid out on this one, or
++ * its rim would stand tens of metres off the ellipsoid.
++ */
++export function geodeticEnu(lat: number, lon: number): { east: Vec3; north: Vec3; up: Vec3 } {
++  const sl = Math.sin(lat), cl = Math.cos(lat), so = Math.sin(lon), co = Math.cos(lon);
++  return {
++    east: { x: -so, y: co, z: 0 },
++    north: { x: -sl * co, y: -sl * so, z: cl },
++    up: { x: cl * co, y: cl * so, z: sl },
++  };
++}
+diff --git a/src/render/datum.ts b/src/render/datum.ts
+index 5e9e111..dac0256 100644
+--- a/src/render/datum.ts
++++ b/src/render/datum.ts
+@@ -1,21 +1,16 @@
+ /**
+- * Where the scene draws a body whose flight reads its heights on the WGS-84
+- * ellipsoid (C01: Vostok-1's return, `DescentCapsule.datum`).
++ * Where the scene draws a return that comes down on land (C01: Vostok-1's,
++ * `DescentCapsule.onLand`).
+  *
+- * The scene's Earth is the 6,378.137 km sphere every other flight is flown on.
+- * The real surface under Vostok-1's track lies lower than that sphere — about
+- * 0.6 km at the retro-fire off Africa, 12.5 km over Saratov — and the return is
+- * flown against it (docs/PHYSICS.md §13.6), so the sphere landed 12.5 km
+- * inside the drawn Earth and Gagarin came down under the ground. The return's
+- * bodies are therefore drawn on the radius through their true position at
+- * their WGS-84 height over the drawn sphere: on the ground when they are on the
+- * ground, at their altitude when they fly. Only the picture moves; the frame
+- * the HUD and the replay read is untouched. The drawn globe's facets lie up to
+- * 1.6 km under that sphere there, so the ground they stand on is drawn on the
+- * sphere itself (render/steppe.ts).
++ * The scene's Earth is the WGS-84 ellipsoid every flight is flown on (D-51:
++ * render/scene.ts flattens the globe by 1/298.257 along the pole, and the
++ * sites, the air and the ground are on it in the physics), so a body is drawn
++ * where it flies. Until D-51 the drawn Earth was the 6,378.137 km sphere and
++ * a return flown on WGS-84 heights was moved onto it here, 12.5 km over
++ * Saratov; that mapping is gone. What is left is the sphere at rest on the
++ * steppe, which the picture stands on the ground: see `onDrawnGround`.
+  */
+ import type { VisualFrame } from '../physics/frame';
+-import { R_EARTH } from '../physics/constants';
+ import { geodeticHeight } from '../physics/geodesy';
+ import { MERCURY_CAPSULE, SOYUZ_DESCENT, VOSTOK_CAPSULE, type DescentCapsule } from '../physics/rigid/escape';
+ import { dot, norm, scale, type Vec3 } from '../physics/vec3';
+@@ -23,18 +18,12 @@ import { quatRotate } from '../physics/rigid/math';
+ 
+ const CAPSULES: Record<DescentCapsule['id'], DescentCapsule> = { soyuz: SOYUZ_DESCENT, mercury: MERCURY_CAPSULE, vostok: VOSTOK_CAPSULE };
+ 
+-/** The frame's bodies fly on WGS-84 heights: a return of a capsule whose datum is the ellipsoid. */
+-export function onEllipsoid(frame: Pick<VisualFrame, 'abort'>): boolean {
++/** The frame is a return of a capsule that comes down on land (Vostok-1's sphere, on the Saratov steppe). */
++export function landReturn(frame: Pick<VisualFrame, 'abort'>): boolean {
+   const a = frame.abort;
+   return !!a && a.body === 'capsule' && !!CAPSULES[a.capsule]?.onLand;
+ }
+ 
+-/** A position at its WGS-84 height over the drawn sphere, on the same radius. */
+-export function onDrawnSphere(r: Vec3): Vec3 {
+-  const n = norm(r);
+-  return n > 1 ? scale(r, (R_EARTH + geodeticHeight(r)) / n) : r;
+-}
+-
+ /**
+  * Where a spherical capsule at rest stands on the drawn ground (C01: Vostok's
+  * sphere on the steppe): its CG, the frame's position, as high over the ground
+@@ -45,7 +34,8 @@ export function onDrawnSphere(r: Vec3): Vec3 {
+  * recording, which takes a frame every 30 s while the sphere waits on the
+  * ground and blends its position along the chord the Earth's turn carries it
+  * round (up to 2.4 m inside it at 51° N). Neither is the ground's, so the
+- * picture stands it on the ground.
++ * picture stands it on the ground: the WGS-84 surface under it, along its
++ * radius (0.19° from the normal at most: a metre of height is a metre there).
+  */
+ function onDrawnGround(frame: VisualFrame, spec: DescentCapsule): Vec3 {
+   const r = frame.r, n = norm(r);
+@@ -55,18 +45,17 @@ function onDrawnGround(frame: VisualFrame, spec: DescentCapsule): Vec3 {
+   const off = R - spec.cgAbove;
+   const q = frame.rigid?.attitudeQ;
+   const lead = q ? dot(quatRotate(q, { x: 1, y: 0, z: 0 }), scale(r, 1 / n)) : -1;
+-  return scale(r, (R_EARTH + R + off * lead) / n);
++  return scale(r, (n - geodeticHeight(r) + R + off * lead) / n);
+ }
+ 
+ /**
+- * The frame as the scene draws it: for a return on the ellipsoid, its body and
+- * its debris moved onto the drawn sphere (`onDrawnSphere`), its sphere once it
+- * is down stood on the drawn ground (`onDrawnGround`); any other frame as it
+- * is. A shallow copy: nothing the frame holds is changed.
++ * The frame as the scene draws it: for a return on land whose sphere is down,
++ * the sphere stood on the drawn ground (`onDrawnGround`); any other frame as
++ * it is. A shallow copy: nothing the frame holds is changed.
+  */
+ export function drawnFrame(frame: VisualFrame): VisualFrame {
+-  if (!onEllipsoid(frame)) return frame;
++  if (!landReturn(frame)) return frame;
+   const spec = CAPSULES[frame.abort!.capsule];
+-  const r = frame.abort!.phase === 'landed' && spec.sphere ? onDrawnGround(frame, spec) : onDrawnSphere(frame.r);
+-  return { ...frame, r, debris: frame.debris.map((d) => ({ ...d, r: onDrawnSphere(d.r) })) };
++  if (frame.abort!.phase !== 'landed' || !spec.sphere) return frame;
++  return { ...frame, r: onDrawnGround(frame, spec) };
+ }
+diff --git a/src/render/earth-shape.ts b/src/render/earth-shape.ts
+new file mode 100644
+index 0000000..e669376
+--- /dev/null
++++ b/src/render/earth-shape.ts
+@@ -0,0 +1,24 @@
++/**
++ * The shape of the drawn Earth: the WGS-84 ellipsoid every flight is flown on
++ * (D-51, src/physics/geodesy.ts), not the 6,378.137 km sphere it was drawn as
++ * before. The launch scene's globe, its clouds and the orbit view's globe are
++ * built here, so the pads, the landing zones and every body stand on the
++ * ground the physics puts them on (tests/wgs84-sites.test.ts).
++ */
++import * as THREE from 'three';
++import { WGS84_F } from '../physics/geodesy';
++
++/**
++ * A globe of equatorial radius `radius` flattened by WGS-84's 1/298.257 along
++ * the geometry's y, which the scenes turn onto the pole (+z): a three.js
++ * sphere, so its uv and its normals are a sphere's, the normals scaled with it.
++ */
++export function ellipsoidGeometry(radius: number, widthSegments: number, heightSegments: number): THREE.SphereGeometry {
++  return new THREE.SphereGeometry(radius, widthSegments, heightSegments).scale(1, 1 - WGS84_F, 1);
++}
++
++/** Radius of a globe from `ellipsoidGeometry(radius, …)`, turned pole to +z, along the unit vector `(x, y, z)`. */
++export function ellipsoidRadius(radius: number, x: number, y: number, z: number): number {
++  const b = radius * (1 - WGS84_F);
++  return (radius * b) / Math.sqrt(b * b * (x * x + y * y) + radius * radius * z * z);
++}
+diff --git a/src/render/launchpad.ts b/src/render/launchpad.ts
+index d0bf571..173c344 100644
+--- a/src/render/launchpad.ts
++++ b/src/render/launchpad.ts
+@@ -9,8 +9,8 @@ import type { SiteExtra } from '../data/sites';
+ import type { VehicleSpec } from '../types';
+ import type { VisualFrame } from '../physics/frame';
+ import type { Vec3 } from '../physics/vec3';
+-import { enuFrame } from '../physics/orbital';
+-import { DEG, R_EARTH } from '../physics/constants';
++import { DEG } from '../physics/constants';
++import { geodeticEnu, geodeticToCartesian } from '../physics/geodesy';
+ import type { SceneManager } from './scene';
+ import { buildPad, type PadBuild, type TowerReturn } from './pads';
+ import { GroundSmoke, PadGlow } from './smoke';
+@@ -76,8 +76,10 @@ export class LaunchPadView {
+   private zAxis = new THREE.Vector3();
+   /** site position in ECI, recomputed in place every frame (no allocation) */
+   private siteVec: Vec3 = { x: 0, y: 0, z: 0 };
+-  private cosLat: number;
+-  private sinLat: number;
++  /** the pad on WGS-84 (D-51), Earth-fixed: its distance from the axis and its height along it, m */
++  private siteAxial: number;
++  private siteZ: number;
++  private latRad: number;
+   private lonRad: number;
+   private siteRadius: number;
+   /** radius used for the shadow frustum, m */
+@@ -89,10 +91,13 @@ export class LaunchPadView {
+    * @param opts.dynamics the flight's physics: its wind, if any, carries the cloud
+    */
+   constructor(site: SiteExtra, vehicle: VehicleSpec, opts: { padId?: string; azimuth?: number; dynamics?: DynamicsConfig } = {}) {
+-    this.cosLat = Math.cos(site.latitude * DEG);
+-    this.sinLat = Math.sin(site.latitude * DEG);
++    // where the physics puts the pad (groundPositionEci): on WGS-84 at its geodetic latitude and its altitude
++    const pad = geodeticToCartesian(site.latitude * DEG, 0, site.altitude);
++    this.siteAxial = pad.x;
++    this.siteZ = pad.z;
++    this.latRad = site.latitude * DEG;
+     this.lonRad = site.longitude * DEG;
+-    this.siteRadius = R_EARTH + site.altitude;
++    this.siteRadius = Math.hypot(pad.x, pad.z);
+     const mat = (color: number, metal = 0.1, rough = 0.7): THREE.MeshStandardMaterial => {
+       const key = `${color}|${metal}|${rough}`;
+       let m = this.matCache.get(key);
+@@ -200,9 +205,9 @@ export class LaunchPadView {
+     // groundPositionEci(lat, lon, alt, theta), inlined so the hot path does
+     // not allocate a Vec3 per rendered frame
+     const lam = this.lonRad + frame.theta;
+-    out.x = this.siteRadius * this.cosLat * Math.cos(lam);
+-    out.y = this.siteRadius * this.cosLat * Math.sin(lam);
+-    out.z = this.siteRadius * this.sinLat;
++    out.x = this.siteAxial * Math.cos(lam);
++    out.y = this.siteAxial * Math.sin(lam);
++    out.z = this.siteZ;
+     return out;
+   }
+ 
+@@ -248,7 +253,9 @@ export class LaunchPadView {
+     const r = this.siteEci(frame);
+     scene.toScene(r, this.tmp);
+     this.group.position.copy(this.tmp);
+-    const { east, north, up } = enuFrame(r);
++    // laid on the ellipsoid's normal (D-51), so the terrain's rim kilometres out lies on the ground; the
++    // vehicle stands on the radius, as the physics flies it, 0.19° from it at 45° (millimetres at its base)
++    const { east, north, up } = geodeticEnu(this.latRad, this.lonRad + frame.theta);
+     this.basis.makeBasis(
+       this.xAxis.set(east.x, east.y, east.z),
+       this.yAxis.set(up.x, up.y, up.z),
+diff --git a/src/render/orbit-view.ts b/src/render/orbit-view.ts
+index eeb2f93..b850143 100644
+--- a/src/render/orbit-view.ts
++++ b/src/render/orbit-view.ts
+@@ -20,6 +20,7 @@ import type { EarthTextures } from './scene';
+ import { ORBIT_VIEW_MAX_PIXEL_RATIO, sharpenEarthTextures } from './sharpness';
+ import { buildStarField } from './stars';
+ import { R_EARTH } from '../physics/constants';
++import { ellipsoidGeometry } from './earth-shape';
+ import { gmst, sunDirectionEci } from '../physics/orbital';
+ import { equalTimeCuts, hitsEarth, stateAt, type Orbit } from '../orbit/kepler';
+ import { isCameraInputTarget, wheelZoomFactor } from './gestures';
+@@ -179,7 +180,8 @@ export class OrbitView {
+       uniforms: { dayMap: { value: null }, nightMap: { value: null }, hasMaps: { value: 0 },
+         sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() } },
+     });
+-    this.earth = new THREE.Mesh(new THREE.SphereGeometry(RE, 96, 64), this.earthMat);
++    // the WGS-84 ellipsoid, as the launch scene's (D-51): flattened along the geometry's y, the pole once turned
++    this.earth = new THREE.Mesh(ellipsoidGeometry(RE, 96, 64), this.earthMat);
+     this.stars.material.uniforms.uPixelRatio.value = this.renderer.getPixelRatio();
+     this.scene.add(this.earth, this.stars);
+     textures?.then((tex) => {
+diff --git a/src/render/recovery.ts b/src/render/recovery.ts
+index bee5e37..3b9b453 100644
+--- a/src/render/recovery.ts
++++ b/src/render/recovery.ts
+@@ -18,13 +18,13 @@ import type { SiteExtra } from '../data/sites';
+ import { landingZonesForSite, type LandingZoneSpec } from '../data/landing-zones';
+ import type { VisualFrame } from '../physics/frame';
+ import type { ReturnTarget } from '../physics/sim/return-guidance';
+-import { enuFrame } from '../physics/orbital';
+ import { DEG, R_EARTH } from '../physics/constants';
+ import type { Vec3 } from '../physics/vec3';
+ import type { SceneManager } from './scene';
+ import { disposeObject } from './dispose';
+ import { smoothstep } from './noise';
+-import { onEllipsoid } from './datum';
++import { landReturn } from './datum';
++import { geodeticEnu, geodeticFast, geodeticToCartesian } from '../physics/geodesy';
+ import { buildSteppe, type SteppeView } from './steppe';
+ 
+ /** Slant range past which a landing zone or a drone ship is not drawn, m. */
+@@ -45,7 +45,12 @@ const LAND_FAR = 30e3;
+ /** The step that ground is re-centred in under the body coming down, m (its fields stay where they lie). */
+ const LAND_STEP = 1000;
+ 
+-/** A local frame on the rotating Earth at a latitude and longitude (rad). */
++/**
++ * A local frame on the rotating Earth at a geodetic latitude and longitude
++ * (rad) and a height above WGS-84 (m), where the physics puts that ground
++ * (D-51), its up along the ellipsoid's normal (`geodeticEnu`), so the ground
++ * laid out in it lies on the ellipsoid to its rim.
++ */
+ class SurfaceAnchor {
+   readonly group = new THREE.Group();
+   private readonly eci: Vec3 = { x: 0, y: 0, z: 0 };
+@@ -55,17 +60,15 @@ class SurfaceAnchor {
+   private readonly ay = new THREE.Vector3();
+   private readonly az = new THREE.Vector3();
+ 
+-  constructor(public lat: number, public lon: number, public radius: number) {}
++  constructor(public lat: number, public lon: number, public height: number) {}
+ 
+   /** Place the frame for the displayed instant; false when it is too far to draw. */
+   place(scene: SceneManager, theta: number): boolean {
+-    const lam = this.lon + theta, r = this.radius;
+-    this.eci.x = r * Math.cos(this.lat) * Math.cos(lam);
+-    this.eci.y = r * Math.cos(this.lat) * Math.sin(lam);
+-    this.eci.z = r * Math.sin(this.lat);
++    const p = geodeticToCartesian(this.lat, this.lon + theta, this.height);
++    this.eci.x = p.x; this.eci.y = p.y; this.eci.z = p.z;
+     scene.toScene(this.eci, this.tmp);
+     this.group.position.copy(this.tmp);
+-    const { east, north, up } = enuFrame(this.eci);
++    const { east, north, up } = geodeticEnu(this.lat, this.lon + theta);
+     this.basis.makeBasis(this.ax.set(east.x, east.y, east.z), this.ay.set(up.x, up.y, up.z), this.az.set(-north.x, -north.y, -north.z));
+     this.group.quaternion.setFromRotationMatrix(this.basis);
+     const near = this.group.position.distanceTo(scene.camera.position) < DRAW_RANGE;
+@@ -218,16 +221,16 @@ export class RecoverySceneryView {
+     };
+     for (const zone of landingZonesForSite(site.id)) {
+       if (zone.kind !== 'pad') continue;
+-      const anchor = new SurfaceAnchor(zone.latitude * DEG, zone.longitude * DEG, R_EARTH + site.altitude);
++      const anchor = new SurfaceAnchor(zone.latitude * DEG, zone.longitude * DEG, site.altitude);
+       anchor.group.add(landingPad(zone, mat));
+       this.group.add(anchor.group);
+       this.pads.push(anchor);
+     }
+-    this.ship = new SurfaceAnchor(0, 0, R_EARTH);
++    this.ship = new SurfaceAnchor(0, 0, 0);
+     this.ship.group.add(droneShip(mat), seaPatch());
+     this.ship.group.visible = false;
+     this.group.add(this.ship.group);
+-    this.sea = new SurfaceAnchor(0, 0, R_EARTH);
++    this.sea = new SurfaceAnchor(0, 0, 0);
+     this.sea.group.add(seaPatch());
+     this.sea.group.visible = false;
+     this.group.add(this.sea.group);
+@@ -249,21 +252,20 @@ export class RecoverySceneryView {
+     if (target) {
+       this.ship.lat = target.lat;
+       this.ship.lon = target.lon;
+-      this.ship.radius = R_EARTH + target.alt;
++      this.ship.height = target.alt;
+       this.ship.place(scene, frame.theta);
+     } else {
+       this.ship.group.visible = false;
+     }
+-    // C01: a return flown on WGS-84 heights comes down on land (Vostok-1, on the Saratov steppe): the fields under
+-    // it, and no sea, through its descent, its landing and after
+-    const onLand = onEllipsoid(frame);
++    // C01: a return that comes down on land (Vostok-1, on the Saratov steppe): the fields under it, and no sea,
++    // through its descent, its landing and after
++    const onLand = landReturn(frame);
+     if (onLand && frame.altitude < LAND_FROM_ALTITUDE) this.placeLand(scene, frame);
+     else if (this.land) this.land.anchor.group.visible = false;
+     // A ship coming home over the sea: open water under it from the belly flop on.
+     const home = !onLand && ((frame.status === 'descent' && frame.altitude < SEA_FROM_ALTITUDE) || frame.status === 'landed');
+     if (home) {
+-      const r = Math.hypot(frame.r.x, frame.r.y, frame.r.z);
+-      this.sea.lat = Math.asin(frame.r.z / r);
++      this.sea.lat = geodeticFast(frame.r.x, frame.r.y, frame.r.z).lat;
+       this.sea.lon = Math.atan2(frame.r.y, frame.r.x) - frame.theta;
+       this.sea.place(scene, frame.theta);
+     } else {
+@@ -272,21 +274,20 @@ export class RecoverySceneryView {
+   }
+ 
+   /**
+-   * The fields under the return's body (the frame's: Vostok's sphere), on the drawn sphere, in a disc held on a
++   * The fields under the return's body (the frame's: Vostok's sphere), on the drawn WGS-84 ground, in a disc held on a
+    * LAND_STEP grid of latitude and longitude, so it follows the sphere down in steps while its fields, laid out
+    * on the ground itself, stay put (render/steppe.ts); faded in with the camera's distance.
+    */
+   private placeLand(scene: SceneManager, frame: VisualFrame): void {
+     if (!this.land) {
+-      const anchor = new SurfaceAnchor(0, 0, R_EARTH);
++      const anchor = new SurfaceAnchor(0, 0, 0);
+       const view = buildSteppe();
+       anchor.group.add(view.group);
+       this.group.add(anchor.group);
+       this.land = { anchor, view };
+     }
+     const { anchor, view } = this.land;
+-    const r = Math.hypot(frame.r.x, frame.r.y, frame.r.z);
+-    const lat = Math.asin(frame.r.z / r);
++    const lat = geodeticFast(frame.r.x, frame.r.y, frame.r.z).lat;
+     let lon = Math.atan2(frame.r.y, frame.r.x) - frame.theta;
+     lon = Math.atan2(Math.sin(lon), Math.cos(lon));
+     const dLat = LAND_STEP / R_EARTH;
+diff --git a/src/render/scene.ts b/src/render/scene.ts
+index cdcdf85..1004079 100644
+--- a/src/render/scene.ts
++++ b/src/render/scene.ts
+@@ -18,6 +18,8 @@ import type { Vec3 } from '../physics/vec3';
+ import type { VisualFrame } from '../physics/frame';
+ import { buildMoon, type MoonView } from './moon';
+ import { R_EARTH } from '../physics/constants';
++import { WGS84_F, geodeticHeight } from '../physics/geodesy';
++import { ellipsoidGeometry } from './earth-shape';
+ import { skyState, type SkyState } from './sky';
+ import { buildStarField } from './stars';
+ import { sharpenEarthTextures } from './sharpness';
+@@ -292,6 +294,8 @@ export class SceneManager {
+   private qz = new THREE.Quaternion();
+   private zAxis = new THREE.Vector3(0, 0, 1);
+   private camEci = new THREE.Vector3();
++  /** the camera as the scattering sky's spherical shell sees it (`update`) */
++  private skyEci = new THREE.Vector3();
+   private camUp = new THREE.Vector3();
+   private hazeColor = new THREE.Color(0.62, 0.68, 0.76);
+   private pmrem: THREE.PMREMGenerator;
+@@ -364,7 +368,11 @@ export class SceneManager {
+     tex.day.colorSpace = THREE.SRGBColorSpace;
+     tex.night.colorSpace = THREE.SRGBColorSpace;
+     sharpenEarthTextures(this.renderer, tex);
+-    const geo = new THREE.SphereGeometry(R_EARTH, 128, 96);
++    // The WGS-84 ellipsoid the flight is flown on (D-51): the sphere flattened
++    // by 1/298.257 along the pole (the geometry's y before `qx` turns it to
++    // +z), 21.4 km under the 6,378.137 km sphere at the poles. The pads, the
++    // landing zones and every body stand where the physics puts them on it.
++    const geo = ellipsoidGeometry(R_EARTH, 128, 96);
+     this.earthMat = new THREE.ShaderMaterial({
+       vertexShader: EARTH_VERT, fragmentShader: EARTH_FRAG,
+       uniforms: {
+@@ -384,7 +392,7 @@ export class SceneManager {
+       // The cloud map is a greyscale density: white cloud, as opaque as the
+       // map is bright (an alpha map reads the green channel).
+       const cm = new THREE.MeshLambertMaterial({ color: 0xffffff, alphaMap: tex.clouds, transparent: true, opacity: 0.85, depthWrite: false, fog: false });
+-      this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 9000, 96, 64), cm);
++      this.cloudMesh = new THREE.Mesh(ellipsoidGeometry(R_EARTH + 9000, 96, 64), cm);
+       this.earthGroup.add(this.cloudMesh);
+     } else {
+       this.cloudMesh = null;
+@@ -397,7 +405,8 @@ export class SceneManager {
+         earthCentre: { value: new THREE.Vector3() }, discOnly: { value: 0 },
+       },
+     });
+-    this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 96, 64), this.atmoMat);
++    // the shell's own axis is the scene's z already (no `qx`): flattened along it
++    this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 96, 64).scale(1, 1, 1 - WGS84_F), this.atmoMat);
+     this.earthGroup.add(this.atmoMesh);
+     this.scene.add(this.earthGroup);
+ 
+@@ -812,7 +821,15 @@ export class SceneManager {
+     );
+     if (this.physicalSky && this.physicalSkyOn) {
+       this.camera.updateMatrixWorld();
+-      this.physicalSky.update(this.camera, camEci, sd, SKY_ILLUMINANCE);
++      // The scattering tables are a spherical shell over the 6,378.137 km
++      // sphere; the air is over WGS-84 (D-51). The sky is computed from the
++      // camera's own height above the ground, on its radius: at Plesetsk the
++      // pad lies 16.9 km inside that sphere, where every ray at or below the
++      // horizon would have met its ground and left the sky black.
++      const n = camEci.length();
++      this.skyEci.copy(camEci);
++      if (n > 1) this.skyEci.multiplyScalar((R_EARTH + geodeticHeight(camEci)) / n);
++      this.physicalSky.update(this.camera, this.skyEci, sd, SKY_ILLUMINANCE);
+     }
+     this.camUp.copy(camEci);
+     // `camUp` becomes the local vertical for the hemisphere light, the
+diff --git a/src/render/steppe.ts b/src/render/steppe.ts
+index e9298ce..7901c91 100644
+--- a/src/render/steppe.ts
++++ b/src/render/steppe.ts
+@@ -2,14 +2,16 @@
+  * The ground under a return that comes down on land (C01: Vostok-1, on the
+  * Saratov steppe), drawn where the scene puts it.
+  *
+- * The scene's Earth is a faceted 6,378.137 km sphere: between its vertices
+- * its flat triangles lie up to about R·Δ²/8 under the sphere, some 1.3 km at
+- * Smelovka (128 × 96 segments; render/scene.ts). The return's bodies are drawn
+- * on that sphere at their WGS-84 heights (render/datum.ts), so on the ground
++ * The scene's Earth is a faceted WGS-84 ellipsoid (D-51): between its
++ * vertices its flat triangles lie up to about R·Δ²/8 under the surface, some
++ * 1.3 km at Smelovka (128 × 96 segments; render/scene.ts). The return's bodies
++ * are drawn where they fly, at their heights above WGS-84, so on the ground
+  * they stood 1.3 km over the drawn globe, and nothing else was drawn there.
+- * This is the ground they come down on: a disc of fields on the 6,378.137 km
+- * sphere itself, curving away with it, and a wider plain round it that fades
+- * into the globe, as the launch pad's terrain does (render/pads.ts).
++ * This is the ground they come down on: a disc of fields on the ellipsoid's
++ * surface itself (render/recovery.ts places it), curving away with it, and a
++ * wider plain round it that fades into the globe, as the launch pad's terrain
++ * does (render/pads.ts). Its curvature is the mean radius's: the ellipsoid's
++ * own differs by under 0.4 %, a few millimetres at the disc's rim.
+  *
+  * The fields are the ground's own and do not move with the disc: their
+  * texture and their shading are laid out by latitude and longitude, so the
+@@ -136,7 +138,7 @@ export function fieldsTexture(): THREE.DataTexture {
+   return t;
+ }
+ 
+-/** A disc on the sphere, X east, Y up, Z south, its rings packed towards the middle. */
++/** A disc on the ground, X east, Y up, Z south, its rings packed towards the middle. */
+ function disc(inner: number, outer: number, segments: number, rings: number, pack: number): THREE.BufferGeometry {
+   const geo = new THREE.RingGeometry(inner, outer, segments, rings);
+   geo.rotateX(-Math.PI / 2);
+@@ -152,9 +154,9 @@ function disc(inner: number, outer: number, segments: number, rings: number, pac
+ }
+ 
+ export interface SteppeView {
+-  /** In a surface frame (render/recovery.ts): X east, Y up, Z south, its origin on the sphere. */
++  /** In a surface frame (render/recovery.ts): X east, Y up, Z south, its origin on the WGS-84 ground. */
+   readonly group: THREE.Group;
+-  /** Lay the fields out for a disc centred at `lat`, `lon` (rad, geocentric, on the rotating Earth). */
++  /** Lay the fields out for a disc centred at `lat`, `lon` (rad, geodetic, on the rotating Earth). */
+   centre(lat: number, lon: number): void;
+   /** 0–1: faded out with the camera's distance. */
+   setOpacity(o: number): void;
+diff --git a/src/render/vostok-debris.ts b/src/render/vostok-debris.ts
+index 7335b81..bd984cd 100644
+--- a/src/render/vostok-debris.ts
++++ b/src/render/vostok-debris.ts
+@@ -12,15 +12,16 @@
+  * - Gagarin, on his seat, then under his canopies (render/cosmonaut.ts).
+  *
+  * Not one of them has an engine's plume or the sunlit flash given to a
+- * stage just let go (render/debris.ts). They are handed over at their WGS-84
+- * height above the drawn Earth (render/datum.ts). Each is drawn round the
++ * stage just let go (render/debris.ts). They are drawn where they fly, above
++ * the drawn WGS-84 Earth (D-51). Each is drawn round the
+  * point its flight carries, its CG (the pilot's: where he touches the
+  * ground), in a group held in the scene's own axes, so the glow can be turned
+  * onto the air the body is moving through whatever its tumble.
+  */
+ import * as THREE from 'three';
+ import type { DebrisFrame } from '../physics/frame';
+-import { OMEGA_EARTH, R_EARTH } from '../physics/constants';
++import { OMEGA_EARTH } from '../physics/constants';
++import { geodeticHeight } from '../physics/geodesy';
+ import { VOSTOK_CAPSULE } from '../physics/rigid/escape';
+ import { VOSTOK_IM, type ModulePiece } from '../physics/sim/module-entry';
+ import { buildEntryGlow, entryGlow, type EntryGlowView } from './entry-glow';
+@@ -184,8 +185,8 @@ export class VostokBody {
+       this.body.quaternion.copy(this.q).multiply(this.qt);
+     }
+     if (this.glow) {
+-      // (its height: the app draws the return's bodies at their WGS-84 height over the drawn sphere, render/datum.ts)
+-      let k = down ? 0 : entryGlow(Math.hypot(r.x, r.y, r.z) - R_EARTH, airspeed);
++      // (its height above WGS-84, as the physics flies it and the scene draws it: D-51)
++      let k = down ? 0 : entryGlow(geodeticHeight(r), airspeed);
+       // a small piece's streak: brighter for its size than a body's shock, and while it melts away
+       if (this.kind === 'imFragment') k = Math.min(1, 1.6 * k + (d.entry?.ablating ? 0.35 : 0));
+       this.glow.set(k, air);
+diff --git a/src/ui/telemetry.ts b/src/ui/telemetry.ts
+index a8e526a..2c7ab70 100644
+--- a/src/ui/telemetry.ts
++++ b/src/ui/telemetry.ts
+@@ -36,9 +36,9 @@ import { getLang, t } from '../i18n';
+ import { fmtTime } from './hud';
+ import { eventLabel } from './phase';
+ import { localizeEventParams, stageNameByLabel } from './names';
+-import { OMEGA_EARTH, R_EARTH, DEG, RAD } from '../physics/constants';
+-import { geodeticHeight } from '../physics/geodesy';
+-import { onEllipsoid } from '../render/datum';
++import { OMEGA_EARTH, DEG, RAD } from '../physics/constants';
++import { geodeticHeight, geodeticToCartesian } from '../physics/geodesy';
++import { landReturn } from '../render/datum';
+ import { VOSTOK_IM } from '../physics/sim/module-entry';
+ import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
+ import type { Debris, TelemetrySample } from '../physics/sim/types';
+@@ -56,20 +56,20 @@ import { referenceWindow, type ReferenceFlight } from '../replay/reference';
+ type Range = 'mission' | 'ascent';
+ 
+ /**
+- * C01: the debris flown on WGS-84 heights in a return on the ellipsoid (render/datum.ts `onEllipsoid`):
+- * Vostok-1's instrument module (src/physics/sim/module-entry.ts), its hatch and the empty seat
+- * (src/physics/sim/fall.ts). Over the steppe at 51° N the 6,378 km sphere lies some 12.5 km above the ground
+- * (render/datum.ts), so the hatch's 7 km and the seat's 4 km read 0 on it.
++ * C01: the bodies a return on land lets go of a few kilometres up (render/datum.ts `landReturn`): Vostok-1's
++ * instrument module (src/physics/sim/module-entry.ts), its hatch and the empty seat (src/physics/sim/fall.ts).
++ * Their rows read to a tenth of a kilometre, as Gagarin's.
+  */
+-const WGS84_BODIES: ReadonlySet<string> = new Set(['instrumentModule', 'hatch', 'seat']);
++const FINE_BODIES: ReadonlySet<string> = new Set(['instrumentModule', 'hatch', 'seat']);
+ 
+ /**
+- * A spent body's height for its row in the list, km: above WGS-84 for a body a return on the ellipsoid flies
+- * there (WGS84_BODIES), above the 6,378.137 km sphere for every other (the stages, Blok E in its orbit).
++ * A spent body's height for its row in the list, km: above WGS-84, as every height the flight reads (D-51;
++ * until then only a return's bodies were, the stages above the 6,378.137 km sphere); `fine` for a body of
++ * FINE_BODIES in a return on land.
+  */
+-export function debrisRowAltitude(d: Pick<Debris, 'r' | 'visual'>, frame: Pick<VisualFrame, 'abort'> | null): { km: number; wgs84: boolean } {
+-  const wgs84 = !!frame && onEllipsoid(frame) && WGS84_BODIES.has(d.visual.kind);
+-  return { km: Math.max(0, (wgs84 ? geodeticHeight(d.r) : Math.hypot(d.r.x, d.r.y, d.r.z) - R_EARTH) / 1000), wgs84 };
++export function debrisRowAltitude(d: Pick<Debris, 'r' | 'visual'>, frame: Pick<VisualFrame, 'abort'> | null): { km: number; fine: boolean } {
++  const fine = !!frame && landReturn(frame) && FINE_BODIES.has(d.visual.kind);
++  return { km: Math.max(0, geodeticHeight(d.r) / 1000), fine };
+ }
+ 
+ // --- P05: two more charts, only for a flight that modelled the flexible body
+@@ -747,7 +747,9 @@ export class TelemetryPanel {
+     // Δv budget — the frame's own loss book-keeping, so it rewinds.
+     const L = view.state.losses;
+     const site = view.site;
+-    const vRot = OMEGA_EARTH * R_EARTH * Math.cos(site.latitude * DEG);
++    // the pad's speed on the turning Earth, from its distance to the axis on WGS-84 (D-51)
++    const pad = geodeticToCartesian(site.latitude * DEG, 0, site.altitude);
++    const vRot = OMEGA_EARTH * Math.hypot(pad.x, pad.y);
+     this.beginRows(this.losses);
+     this.row(this.losses, t('tel.loss.thrust'), `${L.dvThrust.toFixed(0)} m/s`);
+     this.row(this.losses, t('tel.loss.gravity'), `${L.gravity.toFixed(0)} m/s`);
+@@ -784,8 +786,7 @@ export class TelemetryPanel {
+     for (const d of view.debris) {
+       if (!d.crew) continue;
+       any = true;
+-      // above WGS-84, as the rest of Vostok's return is measured: over the steppe at 51° N the 6,378 km sphere
+-      // lies some 11 km above the ground
++      // above WGS-84, as every height is
+       const h = Math.max(0, geodeticHeight(d.r) / 1000);
+       const c = d.crew;
+       const st = c.phase === 'landed' || !d.alive ? t('tel.crew.landed')
+@@ -810,7 +811,7 @@ export class TelemetryPanel {
+       // seat fall from a few kilometres, so to a tenth, as his
+       const alt = debrisRowAltitude(d, this.frame);
+       let v = st;
+-      if (d.alive) v += ` · ${alt.km.toFixed(alt.wgs84 && alt.km < 20 ? 1 : 0)} km`;
++      if (d.alive) v += ` · ${alt.km.toFixed(alt.fine && alt.km < 20 ? 1 : 0)} km`;
+       if (d.impact) v += ` · ${d.impact.lat.toFixed(1)}°, ${d.impact.lon.toFixed(1)}°`;
+       this.row(this.debris, stageNameByLabel(view.vehicleSpec, d.name), v);
+     }
+diff --git a/src/ui/watch-logic.ts b/src/ui/watch-logic.ts
+index b33f496..2c5d65c 100644
+--- a/src/ui/watch-logic.ts
++++ b/src/ui/watch-logic.ts
+@@ -449,7 +449,7 @@ export function crewAloft(frame: VisualFrame): DebrisFrame | null {
+ /**
+  * C01: how high a body close to the flight's own is above the ground, m. The
+  * frame carries the ground's height only under the flight's body
+- * (`altitude − altitudeAGL`, both above WGS-84 on Vostok's return); Gagarin
++ * (`altitude − altitudeAGL`, both above WGS-84, as every flight's); Gagarin
+  * comes down within a few kilometres of the sphere, and the ground there is
+  * taken to be as high.
+  */
+diff --git a/src/ui/watch-missions.ts b/src/ui/watch-missions.ts
+index dd2a5e3..994c970 100644
+--- a/src/ui/watch-missions.ts
++++ b/src/ui/watch-missions.ts
+@@ -241,13 +241,13 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
+   { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok1', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
+     // The plane: the one through the pad at liftoff, 09:06:59.7 Moscow time (06:06:59.7 UTC), at 64.95°, held
+     // fixed in space by Vostok-K's guidance (`targetPlane`, src/data/vehicles.ts). The pad as it really lies:
+-    // Gagarin's Start's 45.920° N is geodetic, 45.728° geocentric on WGS-84 (the app places every site's
+-    // latitude as geocentric, which would put it 21 km north); with 63.342° E and GMST 291.957° at liftoff
+-    // (`gmst`), the northbound node is 326.653° from the equinox of date (`raanFromLaunch`;
+-    // tests/historical-vehicles.test.ts recomputes it). The rocket itself still lifts off from the site as the
+-    // app places it and is steered the 13 km across onto that plane. Left free, the closed loop re-aims its
+-    // plane through wherever the rocket has got to: the node drifted 0.8° east during the climb, and the
+-    // sphere came down 28–32 km across the track from its place (docs/PHYSICS.md §13.6).
++    // Gagarin's Start's 45.920° N is geodetic, 45.728° geocentric on WGS-84, where the app places it since
++    // D-51 (until then on the 6,378.137 km sphere at 45.920° geocentric, 21 km north, and steered the 13 km
++    // across onto this plane); with 63.342° E and GMST 291.957° at liftoff (`gmst`), the northbound node is
++    // 326.653° from the equinox of date (`raanFromLaunch`; tests/historical-vehicles.test.ts recomputes it).
++    // Left free, the closed loop re-aims its plane through wherever the rocket has got to: the node drifted
++    // 0.8° east during the climb, and the sphere came down 28–32 km across the track from its place
++    // (docs/PHYSICS.md §13.6).
+     orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'fixed', raan: 326.653, deorbit: { time: 4684.2, wind: 'saratov-1961-04-12' },
+       aim: { apogee: 230e3 }, backupCutoff: { dv: 25.43 }, extremes: true }, launchTime: '1961-04-12T06:07:00Z',
+     flown: { events: [
+diff --git a/tests/vostok-render.test.ts b/tests/vostok-render.test.ts
+index a0619f2..f1c0774 100644
+--- a/tests/vostok-render.test.ts
++++ b/tests/vostok-render.test.ts
+@@ -1,7 +1,7 @@
+ /**
+  * Vostok-1's return as drawn (C01): the bodies it leaves behind in the debris
+  * view, the entry's glow turned onto the air, Gagarin's canopies, the bodies
+- * put at their WGS-84 heights over the drawn Earth.
++ * drawn where they fly over the drawn WGS-84 Earth (D-51).
+  */
+ import { describe, expect, it, vi } from 'vitest';
+ import * as THREE from 'three';
+@@ -17,8 +17,8 @@ import type { RigidTelemetry } from '../src/physics/rigid/telemetry';
+ import { quatFromAxisAngle, quatRotate } from '../src/physics/rigid/math';
+ import { add, cross, normalize, scale, v3, norm } from '../src/physics/vec3';
+ import { R_EARTH } from '../src/physics/constants';
+-import { geodeticHeight, WGS84_A, WGS84_F } from '../src/physics/geodesy';
+-import { drawnFrame, onDrawnSphere, onEllipsoid } from '../src/render/datum';
++import { geodeticHeight, geodeticToCartesian, WGS84_A, WGS84_F } from '../src/physics/geodesy';
++import { drawnFrame, landReturn } from '../src/render/datum';
+ import { crewViewSize } from '../src/render/cosmonaut';
+ import { entryGlow } from '../src/render/entry-glow';
+ import { entryGlow as apolloGlow } from '../src/render/apollo-cm';
+@@ -171,31 +171,23 @@ describe('the entry glow and the hot metal', () => {
+   });
+ });
+ 
+-describe('the return on WGS-84 heights, drawn on the scene\'s sphere', () => {
++describe('the return drawn where it flies, over the drawn WGS-84 Earth (D-51)', () => {
+   const at = (latDeg: number, h: number) => {
+     // a point at geodetic latitude `latDeg` and height `h` over WGS-84, on the x–z plane
+     const lat = latDeg * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
+     const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
+     return v3((N + h) * Math.cos(lat), 0, (N * (1 - e2) + h) * Math.sin(lat));
+   };
+-  it('puts a body on the real ground on the drawn ground, and one in the air at its height over it', () => {
+-    const ground = at(51.27, 0);
+-    // over Saratov the real surface is some 12.5 km inside the 6,378.137 km sphere
+-    expect(R_EARTH - norm(ground)).toBeGreaterThan(12e3);
+-    expect(Math.abs(norm(onDrawnSphere(ground)) - R_EARTH)).toBeLessThan(0.01);
+-    const up = at(51.27, 2500);
+-    expect(Math.abs(geodeticHeight(up) - 2500)).toBeLessThan(0.01);
+-    expect(Math.abs(norm(onDrawnSphere(up)) - R_EARTH - 2500)).toBeLessThan(0.01);
+-  });
+-  it('moves only a Vostok return and its debris, and leaves the frame it was given alone', () => {
++  it('leaves a flying return and its debris where they are: the drawn ground is the ground they fly over', () => {
++    // over Saratov the real surface is some 12.5 km inside the 6,378.137 km sphere, and so is the drawn one now
++    expect(R_EARTH - norm(at(51.27, 0))).toBeGreaterThan(12e3);
+     const r = at(51.27, 1000);
+-    const frame = { r, debris: [{ r: at(51.27, 3000) }], abort: { body: 'capsule', capsule: 'vostok' } } as unknown as VisualFrame;
+-    const drawn = drawnFrame(frame);
+-    expect(onEllipsoid(frame)).toBe(true);
+-    expect(norm(drawn.r) - R_EARTH).toBeCloseTo(1000, 1);
+-    expect(norm(drawn.debris[0].r) - R_EARTH).toBeCloseTo(3000, 1);
+-    expect(frame.r).toBe(r);
+-    const mercury = { ...frame, abort: { body: 'capsule', capsule: 'mercury' } } as unknown as VisualFrame;
++    const frame = { r, debris: [{ r: at(51.27, 3000) }], abort: { body: 'capsule', capsule: 'vostok', phase: 'main' } } as unknown as VisualFrame;
++    expect(landReturn(frame)).toBe(true);
++    expect(drawnFrame(frame)).toBe(frame);
++    expect(geodeticHeight(drawnFrame(frame).r)).toBeCloseTo(1000, 6);
++    const mercury = { ...frame, abort: { body: 'capsule', capsule: 'mercury', phase: 'landed' } } as unknown as VisualFrame;
++    expect(landReturn(mercury)).toBe(false);
+     expect(drawnFrame(mercury)).toBe(mercury);
+     const ascent = { ...frame, abort: undefined } as unknown as VisualFrame;
+     expect(drawnFrame(ascent)).toBe(ascent);
+@@ -216,13 +208,14 @@ describe('the sphere at rest on the steppe', () => {
+       return { x: t.x, y: t.y, z: t.z, w: t.w };
+     };
+     const frame = { r, debris: [], rigid: { attitudeQ: turned(v3(-up.x, 0, -up.z)) }, abort: { body: 'capsule', capsule: 'vostok', phase: 'landed' } } as unknown as VisualFrame;
+-    expect(norm(drawnFrame(frame).r) - R_EARTH).toBeCloseTo(0.95, 2);
++    // on the drawn ground: the WGS-84 surface (D-51)
++    expect(geodeticHeight(drawnFrame(frame).r)).toBeCloseTo(0.95, 2);
+     // on its side, the CG at the centre's height
+     const side = { ...frame, rigid: { attitudeQ: turned(v3(-up.z, 0, up.x)) } } as unknown as VisualFrame;
+-    expect(norm(drawnFrame(side).r) - R_EARTH).toBeCloseTo(1.15, 2);
++    expect(geodeticHeight(drawnFrame(side).r)).toBeCloseTo(1.15, 2);
+     // still flying, it is drawn at its height
+     const flying = { ...frame, abort: { body: 'capsule', capsule: 'vostok', phase: 'main' } } as unknown as VisualFrame;
+-    expect(norm(drawnFrame(flying).r) - R_EARTH).toBeCloseTo(h, 2);
++    expect(geodeticHeight(drawnFrame(flying).r)).toBeCloseTo(h, 2);
+   });
+ });
+ 
+@@ -277,9 +270,9 @@ describe('the ground Vostok-1 comes down on', () => {
+     return { scene: new THREE.Scene(), camera, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y, p.z) } as unknown as SceneManager;
+   };
+   const baikonur = SITES.find((x) => x.id === 'baikonur')!;
+-  // the sphere at rest near Smelovka, drawn on the drawn sphere (render/datum.ts)
++  // the sphere at rest near Smelovka, on the WGS-84 ground the scene draws (D-51)
+   const lat = 51.27 * Math.PI / 180, lon = 45.98 * Math.PI / 180;
+-  const ground = v3(R_EARTH * Math.cos(lat) * Math.cos(lon), R_EARTH * Math.cos(lat) * Math.sin(lon), R_EARTH * Math.sin(lat));
++  const ground = geodeticToCartesian(lat, lon, 0);
+   const vostok = (status: string, altitude: number) => ({ status, altitude, theta: 0, t: 6640, r: ground, debris: [],
+     abort: { body: 'capsule', capsule: 'vostok', phase: altitude > 0 ? 'main' : 'landed' } }) as unknown as VisualFrame;
+   type Parts = { sea: { group: THREE.Group }; land: { anchor: { group: THREE.Group } } | null };
+@@ -302,7 +295,7 @@ describe('the ground Vostok-1 comes down on', () => {
+     view.dispose();
+   });
+ 
+-  it('puts the fields on the drawn sphere, where the bodies on the ground stand, and not 1.3 km under them', () => {
++  it('puts the fields on the drawn WGS-84 ground, where the bodies on the ground stand, and not 1.3 km under them', () => {
+     const view = new RecoverySceneryView(baikonur);
+     view.update(sceneAt(ground, 30), vostok('landed', 0));
+     const anchor = parts(view).land!.anchor.group;
+@@ -319,7 +312,7 @@ describe('the ground Vostok-1 comes down on', () => {
+       if (!(mesh.material as THREE.MeshStandardMaterial).map) return;
+       meshes++;
+       const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
+-      for (let i = 0; i < pos.count; i++) worst = Math.max(worst, Math.abs(p.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).length() - R_EARTH));
++      for (let i = 0; i < pos.count; i++) worst = Math.max(worst, Math.abs(geodeticHeight(p.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld))));
+     });
+     expect(meshes).toBe(1);
+     expect(worst).toBeLessThan(0.05);
+@@ -426,20 +419,20 @@ describe('the spacecraft turned for its retro-fire', () => {
+ });
+ 
+ describe('the bodies Vostok-1 lets go of, in the telemetry list', () => {
+-  it('reads the hatch, the seat and the module above WGS-84 in the return, Blok E above the sphere', () => {
++  it('reads every body above WGS-84, the hatch, the seat and the module to a tenth in the return', () => {
+     const lat = 51.27 * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
+     const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
+     const r = v3((N + 4000) * Math.cos(lat), 0, (N * (1 - e2) + 4000) * Math.sin(lat));
+     const frame = { abort: { body: 'capsule', capsule: 'vostok' } } as unknown as VisualFrame;
+     for (const kind of ['hatch', 'seat', 'instrumentModule'] as const) {
+       const row = debrisRowAltitude({ r, visual: { kind, diameter: 1, length: 1, color: '#fff' } } as never, frame);
+-      expect(row.wgs84).toBe(true);
++      expect(row.fine).toBe(true);
+       expect(row.km).toBeCloseTo(4, 3);
+     }
+-    // the 6,378 km sphere is 12.5 km over that seat: 0 on it, as the row read before
++    // D-51: a stage too reads its height above WGS-84 (it read 0 there on the 6,378 km sphere, 12.5 km over it)
+     const blokE = debrisRowAltitude({ r, visual: { kind: 'upperStage', diameter: 2.6, length: 3, color: '#fff' } } as never, frame);
+-    expect(blokE.wgs84).toBe(false);
+-    expect(blokE.km).toBe(0);
+-    expect(debrisRowAltitude({ r, visual: { kind: 'seat', diameter: 1, length: 1, color: '#fff' } } as never, null).wgs84).toBe(false);
++    expect(blokE.fine).toBe(false);
++    expect(blokE.km).toBeCloseTo(4, 3);
++    expect(debrisRowAltitude({ r, visual: { kind: 'seat', diameter: 1, length: 1, color: '#fff' } } as never, null).fine).toBe(false);
+   });
+ });
+-- 
+2.43.0
+

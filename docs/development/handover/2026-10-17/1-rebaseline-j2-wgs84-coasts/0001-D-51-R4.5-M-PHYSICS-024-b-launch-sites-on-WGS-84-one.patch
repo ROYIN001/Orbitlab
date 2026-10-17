@@ -1,0 +1,1185 @@
+From a51b11e59b1f61b3950f81c5bb14610c08e02560 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 12:51:34 +0000
+Subject: [PATCH 01/10] D-51 (R4.5, M-PHYSICS-024 b): launch sites on WGS-84,
+ one height datum
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The owner decided on 2026-10-17 ("ทำพร้อมกัน", docs/DECISIONS.md D-51) that
+the launch sites move onto the real Earth shape together with J2 in the
+point-mass ascent (next commit). This commit is the WGS-84 half.
+
+- groundPositionEci places a site at its geodetic latitude and its altitude
+  above the WGS-84 ellipsoid (geodesy.ts geodeticToCartesian): 11.0 km lower
+  in radius at Baikonur, 16.9 km at Plesetsk, 13.2 km at Vostochny, 4.9 km at
+  the Cape. eciToLatLon returns the geodetic latitude and height, so a pad
+  reads back its own latitude.
+- One height rule. The air (density, pressure, wind, tail-off back-pressure),
+  the ground (contact, impact, landing burns, settling, groundElevation) and
+  every height shown (SimState.altitude/lat, events' alt) read the height
+  above WGS-84. Orbit heights (apsides, insertion targets, the closed loop's
+  terminal altitude, the cut-off checks) stay radius - 6,378.137 km (GCAT).
+  The guidance gets the WGS-84 height for its atmospheric gates (pitch-over
+  AGL, gravity-turn hand-over and blend, the explicit laws' engage height).
+- The planner's orbit-plane geometry (azimuth, expected node, launch windows,
+  corridor reach) uses the pad's geocentric latitude (padPlaneLatitude).
+- The hold-down release weighs the stack with the J2 field and the Earth's
+  turn at the pad: Somigliana's normal gravity.
+- DescentCapsule.datum is retired: every return reads WGS-84 heights;
+  VOSTOK_CAPSULE keeps `onLand` for the steppe the scene draws.
+- Apollo: only the air and the sea at the splash move onto WGS-84 (the
+  entry interface stays on the radius its targeting uses).
+
+Every fingerprint moves; the named re-records follow in their own commit.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ src/physics/frame.ts                |  4 +-
+ src/physics/geodesy.ts              | 43 ++++++++++++-----
+ src/physics/gravity.ts              | 13 ++++-
+ src/physics/guidance.ts             | 16 +++++--
+ src/physics/mission.ts              | 21 +++++++--
+ src/physics/nav/navigation.ts       |  5 +-
+ src/physics/orbital.ts              | 23 +++++----
+ src/physics/rigid/debris-runtime.ts | 17 +++----
+ src/physics/rigid/escape.ts         | 38 +++++++--------
+ src/physics/rigid/runtime.ts        | 10 ++--
+ src/physics/sim/abort.ts            |  9 ----
+ src/physics/sim/apollo-entry.ts     |  7 +--
+ src/physics/sim/apollo.ts           | 14 +++---
+ src/physics/sim/ascent.ts           | 15 +++---
+ src/physics/sim/burns.ts            |  3 +-
+ src/physics/sim/debris.ts           | 18 +++----
+ src/physics/sim/forces.ts           |  6 ++-
+ src/physics/sim/rendezvous.ts       |  5 +-
+ src/physics/sim/return-guidance.ts  |  9 ++--
+ src/physics/sim/ship-descent.ts     |  5 +-
+ src/physics/simulation.ts           | 73 +++++++++++++++--------------
+ src/render/datum.ts                 |  2 +-
+ 22 files changed, 210 insertions(+), 146 deletions(-)
+
+diff --git a/src/physics/frame.ts b/src/physics/frame.ts
+index 1b3f315..fd13ecb 100644
+--- a/src/physics/frame.ts
++++ b/src/physics/frame.ts
+@@ -35,7 +35,7 @@ import type { ReturnTarget } from './sim/return-guidance';
+ import { clone } from './vec3';
+ import { propagateKepler } from './orbital';
+ import { atmosphere } from './atmosphere';
+-import { R_EARTH } from './constants';
++import { geodeticHeight } from './geodesy';
+ import { cloneRigidTelemetry, interpolateRigidTelemetry, sameRigidConfiguration, type RigidTelemetry } from './rigid/telemetry';
+ import { quatRotate } from './rigid/math';
+ import { cloneEom, type EomRecord } from './eom';
+@@ -390,7 +390,7 @@ function debrisAnchor(sim: Simulation, d: Debris, layout: StackLayout): number {
+ /** Ambient pressure at a debris item's own altitude (a landing booster at 2 km
+  *  must not draw the vacuum-expanded plume of a second stage at 200 km). */
+ function debrisPressure(r: Vec3): number {
+-  const alt = Math.sqrt(r.x * r.x + r.y * r.y + r.z * r.z) - R_EARTH;
++  const alt = geodeticHeight(r);
+   return alt > 1000e3 ? 0 : atmosphere(Math.max(0, alt)).p;
+ }
+ 
+diff --git a/src/physics/geodesy.ts b/src/physics/geodesy.ts
+index 2b9a3e7..644634a 100644
+--- a/src/physics/geodesy.ts
++++ b/src/physics/geodesy.ts
+@@ -1,17 +1,17 @@
+ /**
+- * The WGS-84 ellipsoid: geodetic latitude and height of a position.
++ * The WGS-84 ellipsoid: where the ground is, and the geodetic latitude and
++ * height of a position.
+  *
+- * The flight's own bookkeeping measures heights from a 6,378.137 km sphere
+- * (`R_EARTH`), which is right where it is used: the ascent and the orbit fly
+- * in radius, and the catalogues' heights are radius less 6,378 km (McDowell,
+- * GCAT, "Orbits"). The air and the ground are not on that sphere. They lie
+- * on the geoid, within a hundred metres of the ellipsoid, which falls below
+- * the sphere by 21.4 km at the poles: 5.4 km at 30° N, 11.1 km at 46° N,
+- * 13.0 km at 51° N. A body that decelerates in the air at those latitudes
+- * meets it some 10 km lower in radius than the sphere would put it. So the
+- * long-term propagator's density (propagator/density.ts) and a return from
+- * orbit that asks for it (`DescentCapsule.datum`, rigid/escape.ts) read
+- * their heights here.
++ * The launch sites stand on it (D-51, plan R4.5: the owner's "ทำพร้อมกัน",
++ * 2026-10-17): a site's latitude is geodetic, its altitude a height above the
++ * ellipsoid (`groundPositionEci`, src/physics/orbital.ts). Every height the
++ * flight reads for the air or the ground is the height above it: the air
++ * lies on the geoid, within about a hundred metres of the ellipsoid, and the
++ * ground with it, and the ellipsoid falls below the 6,378.137 km sphere by
++ * 21.4 km × sin²(latitude): 4.9 km at the Cape, 11.0 km at Baikonur, 13.2 km at
++ * Vostochny, 16.9 km at Plesetsk. Orbit heights — perigee, apogee, the
++ * insertion targets — stay the radius less 6,378.137 km (`R_EARTH`), the
++ * catalogues' convention (McDowell, GCAT, "Orbits"; docs/PHYSICS.md §13.6).
+  *
+  * Heights and latitudes do not depend on the Earth's turn about its axis, so
+  * an inertial position gives the same values as the Earth-fixed one.
+@@ -54,3 +54,22 @@ export function geodeticHeight(r: Vec3): number {
+ export function geodeticLatitude(r: Vec3): number {
+   return geodetic(r.x, r.y, r.z).lat;
+ }
++
++/**
++ * Earth-centred position, m, of a point at geodetic latitude `lat` and
++ * longitude `lon` (rad, the longitude counted in whatever frame the caller
++ * turns it into) and height `h` above the ellipsoid, m.
++ */
++export function geodeticToCartesian(lat: number, lon: number, h: number): Vec3 {
++  const sl = Math.sin(lat), cl = Math.cos(lat);
++  const n = A / Math.sqrt(1 - E2 * sl * sl);
++  const p = (n + h) * cl;
++  return { x: p * Math.cos(lon), y: p * Math.sin(lon), z: (n * (1 - E2) + h) * sl };
++}
++
++/** Geocentric latitude, rad, of the point at geodetic latitude `lat` (rad) and height `h` (m) above the ellipsoid. */
++export function geocentricLatitude(lat: number, h = 0): number {
++  const sl = Math.sin(lat), cl = Math.cos(lat);
++  const n = A / Math.sqrt(1 - E2 * sl * sl);
++  return Math.atan2((n * (1 - E2) + h) * sl, (n + h) * cl);
++}
+diff --git a/src/physics/gravity.ts b/src/physics/gravity.ts
+index 4c929d9..e5d3032 100644
+--- a/src/physics/gravity.ts
++++ b/src/physics/gravity.ts
+@@ -1,4 +1,4 @@
+-import { MU_EARTH, R_EARTH, J2_EARTH } from './constants';
++import { MU_EARTH, R_EARTH, J2_EARTH, OMEGA_EARTH } from './constants';
+ import { Vec3, v3, norm } from './vec3';
+ 
+ /** Point-mass gravitational acceleration. */
+@@ -22,3 +22,14 @@ export function gravityJ2(r: Vec3, mu = MU_EARTH): Vec3 {
+     r.z * f + k * r.z * (five - 3),
+   );
+ }
++
++/**
++ * The gravity a body at rest on the turning Earth feels, m/s²: the J2 field
++ * and the centrifugal term ω²(x, y, 0). On the WGS-84 ellipsoid it is the
++ * normal gravity of Somigliana's formula to a few parts in a million, and it
++ * points along the ellipsoid's normal (tests/wgs84-sites.test.ts).
++ */
++export function effectiveGravityJ2(r: Vec3): Vec3 {
++  const g = gravityJ2(r), w2 = OMEGA_EARTH * OMEGA_EARTH;
++  return v3(g.x + w2 * r.x, g.y + w2 * r.y, g.z);
++}
+diff --git a/src/physics/guidance.ts b/src/physics/guidance.ts
+index 8cd5797..cafdda2 100644
+--- a/src/physics/guidance.ts
++++ b/src/physics/guidance.ts
+@@ -109,10 +109,15 @@ export interface GuidanceInputs {
+   /** Optional Earth-relative trajectory reference for physical wind flight.
+    * Air velocity still governs aerodynamic loads and the q·alpha placard. */
+   vGround?: Vec3;
+-  /** altitude above the pad, m */
++  /** altitude above the pad, m (the height above WGS-84 less the site's) */
+   altitudeAGL: number;
+-  /** altitude above mean radius, m */
++  /** altitude in radius, m: |r| − 6,378.137 km, as the insertion orbit's apsides are counted */
+   altitude: number;
++  /**
++   * height above WGS-84, m, which the air lies on (D-51): the gravity turn's
++   * hand-over and its blend read it; absent, `altitude`
++   */
++  height?: number;
+   /** dynamic pressure, Pa */
+   q: number;
+   /** full-thrust acceleration available (vacuum), m/s^2 */
+@@ -263,8 +268,9 @@ export class AscentGuidance {
+     // enough for the command to be followed (q below ~4 kPa), or at the
+     // altitude ceiling as a fallback.
+     const fixedHandover = p.closedLoopStart !== undefined;
++    const height = inp.height ?? inp.altitude;
+     if (this.phase === 'gravityTurn' && (fixedHandover ? inp.t >= p.closedLoopStart!
+-      : (inp.q < 4000 && inp.altitude > 25e3 && inp.t > 30) || inp.altitude >= p.gravityTurnEnd)) {
++      : (inp.q < 4000 && height > 25e3 && inp.t > 30) || height >= p.gravityTurnEnd)) {
+       this.phase = 'closedLoop';
+     }
+ 
+@@ -525,10 +531,10 @@ export class AscentGuidance {
+           vDir = normalize(add(scale(horiz, Math.cos(pitchMinRad)), scale(up, Math.sin(pitchMinRad))));
+         }
+         // Blend toward the closed-loop command as the atmosphere thins out.
+-        const wQ = inp.t > 30 && inp.altitude > 20e3 ? smoothstep((12000 - inp.q) / 8000) : 0;
++        const wQ = inp.t > 30 && height > 20e3 ? smoothstep((12000 - inp.q) / 8000) : 0;
+         const blendWidth = 20e3;
+         // a hand-over fixed in time (`closedLoopStart`) is not blended in early
+-        const w = fixedHandover ? 0 : Math.max(wQ, smoothstep((inp.altitude - (p.gravityTurnEnd - blendWidth)) / blendWidth));
++        const w = fixedHandover ? 0 : Math.max(wQ, smoothstep((height - (p.gravityTurnEnd - blendWidth)) / blendWidth));
+         if (w > 0) {
+           const cl = closedLoopDir();
+           dir = normalize(add(scale(vDir, 1 - w), scale(cl, w)));
+diff --git a/src/physics/mission.ts b/src/physics/mission.ts
+index c5f1c0a..117abae 100644
+--- a/src/physics/mission.ts
++++ b/src/physics/mission.ts
+@@ -8,6 +8,7 @@ import { missionSatellite } from '../data/satellites';
+ import { rendezvousAvailable, soyuzShipInsertion } from './rendezvous/profiles';
+ import { vehicleDataId } from '../data/vehicles';
+ import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
++import { geocentricLatitude } from './geodesy';
+ import { VehicleModel } from './vehicle';
+ import {
+   circularSpeed, visViva, inertialLaunchAzimuth, rotatingLaunchAzimuth, inclinationForRotatingAzimuth,
+@@ -218,6 +219,18 @@ export function retrogradeOnly(site: SiteExtra): boolean {
+   return site.minInclination > 90;
+ }
+ 
++/**
++ * Latitude of the site's pad for the geometry of the orbit plane, rad: its
++ * geocentric latitude, since the plane passes through the pad and the
++ * Earth's centre. The pads stand on WGS-84 at their geodetic latitude
++ * (D-51), 0.19° further north than this at 45° (Baikonur: 45.965° geodetic,
++ * 45.773° geocentric). The inclination floor below keeps the geodetic one,
++ * which errs high by that much.
++ */
++export function padPlaneLatitude(site: SiteExtra): number {
++  return geocentricLatitude(site.latitude * DEG, site.altitude);
++}
++
+ export function minInclinationFor(site: SiteExtra): number {
+   return Math.max(site.minInclination * DEG, Math.abs(site.latitude) * DEG + 0.05 * DEG);
+ }
+@@ -267,7 +280,7 @@ export function azimuthInWindow(site: SiteExtra, azRad: number): boolean {
+  * plane beyond it may still be flown with a dogleg (`launchDirection`).
+  */
+ export function corridorReach(site: SiteExtra): { lo: number; hi: number } {
+-  const lat = site.latitude * DEG;
++  const lat = padPlaneLatitude(site);
+   const atMin = inclinationForRotatingAzimuth(lat, site.azimuthMin * DEG, CORRIDOR_REFERENCE_SPEED);
+   const atMax = inclinationForRotatingAzimuth(lat, site.azimuthMax * DEG, CORRIDOR_REFERENCE_SPEED);
+   return {
+@@ -356,7 +369,7 @@ export interface LaunchDirection {
+  *   window.
+  */
+ export function launchDirection(site: SiteExtra, inc: number, vOrbit = CORRIDOR_REFERENCE_SPEED, descending?: boolean): LaunchDirection {
+-  const lat = site.latitude * DEG;
++  const lat = padPlaneLatitude(site);
+   const customary = descending ?? (inc > 75 * DEG ? site.descendingForPolar : false);
+   const solution = (descending: boolean) => {
+     const azimuth = rotatingLaunchAzimuth(lat, inc, vOrbit, descending);
+@@ -1028,7 +1041,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
+   const { inc: ascentInclination } = ascentInclinationFor(target, site);
+   const direction = launchDirection(site, ascentInclination, undefined, cfg.orbit.descending);
+   const descending = direction.descending;
+-  const lat = site.latitude * DEG;
++  const lat = padPlaneLatitude(site);
+   const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;
+   const azimuthInertial = cfg.orbit.flightAzimuth !== undefined ? cfg.orbit.flightAzimuth * DEG
+     : inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
+@@ -1206,7 +1219,7 @@ export interface LaunchWindow {
+  * matches the target RAAN. Returns an empty list when RAAN is unconstrained.
+  */
+ export function launchWindows(orbit: OrbitSpec, site: SiteExtra, from: Date, count = 4): LaunchWindow[] {
+-  const lat = site.latitude * DEG;
++  const lat = padPlaneLatitude(site);
+   const lon = site.longitude * DEG;
+   const t0 = resolveTarget(orbit, site, from);
+   if (t0.raan === null) return [];
+diff --git a/src/physics/nav/navigation.ts b/src/physics/nav/navigation.ts
+index a882164..8620387 100644
+--- a/src/physics/nav/navigation.ts
++++ b/src/physics/nav/navigation.ts
+@@ -20,7 +20,8 @@
+  */
+ import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
+ import { gravityJ2 } from '../gravity';
+-import { MU_EARTH, R_EARTH } from '../constants';
++import { MU_EARTH } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { quatFromAxisAngle, quatMultiply, quatNormalize, quatRotate, quatSlerp, quatToMatrix, type Quat } from '../rigid/math';
+ import { BIAS_CORRELATION_S, DEG_PER_HOUR, DEG_PER_ROOT_HOUR, MICRO_G, MS_PER_ROOT_HOUR, NormalStream, type AidingSpec, type ImuSpec } from './sensors';
+ 
+@@ -295,7 +296,7 @@ export class NavigationSystem {
+         axes(dv).forEach((z, k) => update(V + k, z, a.gnssVelocityMs ** 2));
+       }
+     }
+-    const high = norm(r) - R_EARTH >= a.starTrackerMinAltitudeKm * 1000, slow = norm(omegaBody) <= a.starTrackerMaxRateDegS * Math.PI / 180;
++    const high = geodeticHeight(r) >= a.starTrackerMinAltitudeKm * 1000, slow = norm(omegaBody) <= a.starTrackerMaxRateDegS * Math.PI / 180;
+     this.status.star = !a.starTracker ? 'off' : lost?.starTracker ? 'failed' : high && slow ? 'fix' : 'unavailable';
+     if (a.starTracker && !lost?.starTracker && high && slow && t + 1e-9 >= this.nextStar) {
+       this.nextStar = t + 1 / a.starTrackerRateHz;
+diff --git a/src/physics/orbital.ts b/src/physics/orbital.ts
+index 07a3301..97ecdc5 100644
+--- a/src/physics/orbital.ts
++++ b/src/physics/orbital.ts
+@@ -5,6 +5,7 @@
+  */
+ import { MU_EARTH, R_EARTH, OMEGA_EARTH, J2_EARTH, DEG } from './constants';
+ import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize } from './vec3';
++import { geodetic, geodeticToCartesian } from './geodesy';
+ 
+ export interface OrbitalElements {
+   /** semi-major axis, m (negative for hyperbolic) */
+@@ -236,11 +237,15 @@ export function gmst(jd: number): number {
+   return wrap2pi(s * DEG);
+ }
+ 
+-/** ECI position of a ground point (geodetic-ish spherical model). */
++/**
++ * ECI position of a ground point at geodetic latitude `latRad`, longitude
++ * `lonRad` and height `altM` above the WGS-84 ellipsoid (src/physics/geodesy.ts),
++ * with the Earth turned by the sidereal angle `theta`. Until D-51 (R4.5) the
++ * sites stood on the 6,378.137 km sphere at their geodetic latitude taken as
++ * geocentric: 11.0 km too high in radius at Baikonur, 16.9 km at Plesetsk.
++ */
+ export function groundPositionEci(latRad: number, lonRad: number, altM: number, theta: number): Vec3 {
+-  const R = R_EARTH + altM;
+-  const lam = lonRad + theta;
+-  return v3(R * Math.cos(latRad) * Math.cos(lam), R * Math.cos(latRad) * Math.sin(lam), R * Math.sin(latRad));
++  return geodeticToCartesian(latRad, lonRad + theta, altM);
+ }
+ 
+ /** Inertial velocity of a point fixed to the rotating Earth. */
+@@ -248,12 +253,14 @@ export function groundVelocityEci(rEci: Vec3): Vec3 {
+   return cross(v3(0, 0, OMEGA_EARTH), rEci);
+ }
+ 
+-/** Geographic latitude/longitude (rad) from an ECI position and sidereal angle. */
++/**
++ * Geodetic latitude, longitude (rad) and height above WGS-84 (m) from an ECI
++ * position and sidereal angle: the inverse of `groundPositionEci`.
++ */
+ export function eciToLatLon(r: Vec3, theta: number): { lat: number; lon: number; alt: number } {
+-  const rm = norm(r);
+-  const lat = Math.asin(r.z / rm);
++  const g = geodetic(r.x, r.y, r.z);
+   const lon = wrapPi(Math.atan2(r.y, r.x) - theta);
+-  return { lat, lon, alt: rm - R_EARTH };
++  return { lat: g.lat, lon, alt: g.h };
+ }
+ 
+ /** Local East/North/Up unit vectors at an ECI position. */
+diff --git a/src/physics/rigid/debris-runtime.ts b/src/physics/rigid/debris-runtime.ts
+index abc4094..db29e72 100644
+--- a/src/physics/rigid/debris-runtime.ts
++++ b/src/physics/rigid/debris-runtime.ts
+@@ -4,7 +4,8 @@ import type { DynamicsConfig, StageSpec } from '../../types';
+ import type { Debris } from '../simulation';
+ import { atmosphere } from '../atmosphere';
+ import { tumblingDragCoefficient } from '../aero';
+-import { DEG, G0, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
++import { DEG, G0, MU_EARTH, OMEGA_EARTH } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { engineMassFlow, engineThrust } from '../vehicle';
+ import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
+ import { buildDetachedStage, type RigidVehicleSnapshot } from './mass';
+@@ -116,7 +117,7 @@ export function rigidContactMetrics(state: RigidState, snapshot: RigidVehicleSna
+     const projection = sub(radial, scale(axis, dot(radial, axis)));
+     const side = norm(projection) > 1e-12 ? scale(normalize(projection), -radius) : v3();
+     const contactOffset = add(offset, side), point = add(state.r, contactOffset);
+-    return { clearance: norm(point) - R_EARTH - groundElevation(point), point, contactOffset };
++    return { clearance: geodeticHeight(point) - groundElevation(point), point, contactOffset };
+   };
+   const tail = evaluate(0), nose = evaluate(length), lowest = tail.clearance <= nose.clearance ? tail : nose;
+   const omegaI = quatRotate(state.attitudeQ, state.omegaBody);
+@@ -225,7 +226,7 @@ export class RigidDebrisRuntime {
+     if (!this.recoveryEnabled || !rc || !this.options.stage) return { nose: d.dir, throttle: 0, engines: [] };
+     if (rc.target && this.options.returnGuidance) return this.applyCommand(this.returnGuidance(time, contact));
+     const air = this.runtime.airVelocity(this.state, time), speed = norm(air), downward = -dot(air, up);
+-    const height = Math.max(0, norm(this.state.r) - R_EARTH);
++    const height = Math.max(0, geodeticHeight(this.state.r));
+     let throttle = 0, engines: number[] = [];
+     if (downward > 0 && rc.phase === 'coast' && height < 70000) rc.phase = 'entry';
+     if (rc.phase === 'entry') {
+@@ -252,7 +253,7 @@ export class RigidDebrisRuntime {
+     { nose: Vec3; throttle: number; engines: number[] } | undefined {
+     const d = this.debris, rc = d.recovery!, up = normalize(this.state.r), stage = this.options.stage!;
+     const air = this.runtime.airVelocity(this.state, time), downward = -dot(air, up);
+-    const height = Math.max(0, norm(this.state.r) - R_EARTH);
++    const height = Math.max(0, geodeticHeight(this.state.r));
+     let nose = coastNose, throttle = 0, engines: number[] = [];
+     if ((downward > 0 || this.terminalCoast) && height < 20000) {
+       const g = MU_EARTH / norm(this.state.r) ** 2;
+@@ -339,7 +340,7 @@ export class RigidDebrisRuntime {
+     const d = this.debris, rc = d.recovery!, stage = this.options.stage!, rg = this.options.returnGuidance!, target = rc.target!;
+     const up = normalize(this.state.r);
+     const air = this.runtime.airVelocity(this.state, time), downward = -dot(air, up);
+-    const height = Math.max(0, norm(this.state.r) - R_EARTH);
++    const height = Math.max(0, geodeticHeight(this.state.r));
+     const g = MU_EARTH / norm(this.state.r) ** 2;
+     const perEngine = engineThrust(stage.engine, atmosphere(height).p);
+     const one = perEngine * this.health(this.centre);
+@@ -380,7 +381,7 @@ export class RigidDebrisRuntime {
+    */
+   private aeroSteerNose(time: number, retro: Vec3): Vec3 {
+     const table = this.snapshot.aero.table;
+-    const up = normalize(this.state.r), height = norm(this.state.r) - R_EARTH;
++    const up = normalize(this.state.r), height = geodeticHeight(this.state.r);
+     const air = this.runtime.airVelocity(this.state, time), speed = norm(air);
+     const atm = atmosphere(Math.max(0, height));
+     const q = 0.5 * atm.rho * speed * speed;
+@@ -539,7 +540,7 @@ export class RigidDebrisRuntime {
+     const d = this.debris, rc = d.recovery!, stage = this.options.stage!, rg = this.options.returnGuidance!;
+     const up = normalize(this.state.r);
+     const air = this.runtime.airVelocity(this.state, time), speed = norm(air), downward = -dot(air, up);
+-    const height = norm(this.state.r) - R_EARTH;
++    const height = geodeticHeight(this.state.r);
+     const retro = speed > 20 ? scale(air, -1 / speed) : up;
+     const minimum = stage.engine.minThrottle ?? 1;
+     const angleTo = (dir: Vec3) => Math.acos(clamp(dot(d.dir, dir), -1, 1));
+@@ -699,7 +700,7 @@ export class RigidDebrisRuntime {
+         h = Math.min(h, usable / rc.mdot);
+       }
+       if (!(h > 0)) throw new RangeError('Detached body integration made no progress');
+-      const pressure = atmosphere(norm(this.state.r) - R_EARTH).p;
++      const pressure = atmosphere(geodeticHeight(this.state.r)).p;
+       // A targeted stage turns round and boosts back on its engines' gimbals
+       // and keeps its cold gas for the coast that follows.
+       const engineTurn = !!rc?.target && (rc.phase === 'flip' || rc.phase === 'boostback');
+diff --git a/src/physics/rigid/escape.ts b/src/physics/rigid/escape.ts
+index 11432e2..242299e 100644
+--- a/src/physics/rigid/escape.ts
++++ b/src/physics/rigid/escape.ts
+@@ -30,7 +30,7 @@
+  * aerodynamic coefficients are estimates, chosen where the sources give none.
+  */
+ import { atmosphere } from '../atmosphere';
+-import { G0, OMEGA_EARTH, R_EARTH } from '../constants';
++import { G0, OMEGA_EARTH } from '../constants';
+ import { gravityJ2 } from '../gravity';
+ import { geodeticHeight } from '../geodesy';
+ import { stagnationHeatFlux } from '../sim/entry-heating';
+@@ -187,14 +187,14 @@ export interface DescentCapsule {
+    */
+   ejection?: { altitude: number; mass: number; hatch?: number; hatchSpeed?: number; delay?: number; speed?: number; rails?: number };
+   /**
+-   * The height datum of every altitude the return reads: the air and the
+-   * Mach number, the barometric commands, the ground. 'sphere' (the default)
+-   * is the 6,378.137 km sphere the rest of the flight measures from; 'wgs84'
+-   * is the height above the ellipsoid, on which the air and the ground lie
+-   * (src/physics/geodesy.ts). A pad abort or a suborbital arc starts from a
+-   * site placed on the sphere and stays on it.
++   * The return comes down on land, and the scene draws the ground under it
++   * (render/steppe.ts: Vostok-1's, on the Saratov steppe). Every altitude a
++   * return reads — the air and the Mach number, the barometric commands, the
++   * ground — is the height above WGS-84 (src/physics/geodesy.ts), on which
++   * the air, the ground and, since D-51, the launch sites lie. (Until then
++   * `datum: 'wgs84'` asked for it, and only Vostok-1's return did.)
+    */
+-  datum?: 'sphere' | 'wgs84';
++  onLand?: boolean;
+   /** axial drag coefficient against Mach on π(diameter/2)² (default: `CAPSULE_CD`, a bell's) */
+   cd?: readonly (readonly [number, number])[];
+   /**
+@@ -302,13 +302,13 @@ const SPHERE_CD = [[0, 0.45], [0.6, 0.5], [0.8, 0.75], [1.0, 0.95], [1.2, 1.0],
+  * about 10 m/s (Feoktistov §9.6; GCTC; Siddiqi, *Challenge to Apollo*,
+  * 2000). The canopies' drag coefficients are estimates.
+  *
+- * Every altitude of the return is the height above WGS-84 (`datum`): the
+- * air the sphere decelerates in over 30–51° N lies 5–13 km below the
+- * 6,378.137 km sphere the orbit's heights are counted from.
++ * Every altitude of the return is the height above WGS-84, as every
++ * flight's is (D-51): the air the sphere decelerates in over 30–51° N lies
++ * 5–13 km below the 6,378.137 km sphere the orbit's heights are counted from.
+  */
+ export const VOSTOK_CAPSULE: DescentCapsule = {
+   id: 'vostok', mass: 4725, diameter: 2.3, length: 2.3, cgAbove: 0.95, heatShield: 0, heatShieldDelay: 0,
+-  lowAltitude: 0, datum: 'wgs84', sphere: true, cd: SPHERE_CD,
++  lowAltitude: 0, onLand: true, sphere: true, cd: SPHERE_CD,
+   // the pilot chute 1.5 m² (Feoktistov §9.6; GCTC); its drag coefficient and inflation estimated
+   pilot: { area: 1.5, cd: 0.6, inflation: 1.0 },
+   drogue: { area: 18, cd: 0.6, altitude: 4000, maxSpeed: 300, inflation: 1.5, duration: 300 },
+@@ -690,13 +690,9 @@ export class EscapeFlight {
+     if (mode === 'capsule' && capsule.ejection?.hatch !== undefined) { this.status.hatch = true; this.status.pilotAboard = true; }
+   }
+ 
+-  /**
+-   * Height of a point above the return's datum, m: the 6,378.137 km sphere,
+-   * or for a return that asks for it the WGS-84 ellipsoid, on which the air
+-   * and the ground lie (`DescentCapsule.datum`).
+-   */
++  /** Height of a point above the WGS-84 ellipsoid, m, on which the air and the ground lie (D-51). */
+   altitude(r: Vec3): number {
+-    return this.capsule.datum === 'wgs84' && this.mode === 'capsule' ? geodeticHeight(r) : norm(r) - R_EARTH;
++    return geodeticHeight(r);
+   }
+ 
+   /** C01: the retro is a liquid engine on a module of its own (Vostok's TDU-1 on the instrument module) */
+@@ -794,7 +790,7 @@ export class EscapeFlight {
+       return this.altitude(centre) - c.radius - this.env.groundElevation(centre);
+     }
+     const bottom = add(state.r, quatRotate(state.attitudeQ, v3(c.bottomX - c.cgX, 0, 0)));
+-    return norm(bottom) - R_EARTH - this.env.groundElevation(bottom);
++    return this.altitude(bottom) - this.env.groundElevation(bottom);
+   }
+ 
+   /** Advance to `t + dt`. */
+@@ -1013,7 +1009,7 @@ export class EscapeFlight {
+       omegaBody: { x: -this.state.omegaBody.x, y: this.state.omegaBody.y, z: -this.state.omegaBody.z } };
+     this.config = c;
+     s.body = 'capsule'; s.phase = 'fall'; s.finsOpen = false;
+-    this.freedAt = t; this.freedAlt = norm(r) - R_EARTH;
++    this.freedAt = t; this.freedAlt = this.altitude(r);
+     this.log({ key: 'evt.escapeCapsule', severity: 'major', params: { alt: Math.round(this.freedAlt) } }, t);
+   }
+ 
+@@ -1141,7 +1137,7 @@ export class EscapeFlight {
+       // the retropack falls away once the retros are spent (Vostok's instrument module: `tduSequence`)
+       if (!this.tdu && this.config.body === 'capsule' && !this.retroPackOn && this.config.mass > this.capsule.mass - this.capsule.retro.packMass + 1e-6) {
+         this.config = capsuleConfiguration(true, this.capsule, this.capsule.retro.packMass + (this.ejected ? this.capsule.ejection!.mass : 0));
+-        this.log({ key: 'evt.retroPackOff', severity: 'info', params: { alt: Math.round((norm(this.state.r) - R_EARTH) / 1000) } }, t);
++        this.log({ key: 'evt.retroPackOff', severity: 'info', params: { alt: Math.round(this.altitude(this.state.r) / 1000) } }, t);
+       }
+     }
+     // re-evaluate the loads at the accepted state for the specific force
+diff --git a/src/physics/rigid/runtime.ts b/src/physics/rigid/runtime.ts
+index 9b5d099..eb9a6f5 100644
+--- a/src/physics/rigid/runtime.ts
++++ b/src/physics/rigid/runtime.ts
+@@ -2,7 +2,8 @@
+ import type { DynamicsConfig } from '../../types';
+ import { atmosphere } from '../atmosphere';
+ import { dispersedWind, type AirDispersion } from '../dispersion';
+-import { DEG, G0, OMEGA_EARTH, R_EARTH } from '../constants';
++import { DEG, G0, OMEGA_EARTH } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { gravityJ2 } from '../gravity';
+ import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
+ import { allocateEngineGimbals, allocateRcs, createEngineStates, engineWrench, stepEngineActuators, stepRcs, type EngineActuatorSpec, type EngineActuatorState } from './actuators';
+@@ -224,12 +225,13 @@ export class RigidRuntime {
+     this.command = { ...command, rates: { ...command.rates } };
+   }
+ 
+-  windAt(r: Vec3, time: number): Vec3 { return windVelocityECI(this.wind, r, norm(r) - R_EARTH, time); }
++  /** D-51: the wind profile, the air and the 140 km coast gate below read the height above WGS-84 */
++  windAt(r: Vec3, time: number): Vec3 { return windVelocityECI(this.wind, r, geodeticHeight(r), time); }
+   airVelocity(state: Pick<RigidState, 'r' | 'v'>, time: number): Vec3 {
+     return sub(sub(state.v, cross(v3(0, 0, OMEGA_EARTH), state.r)), this.windAt(state.r, time));
+   }
+   private environment(state: RigidState, time: number, snapshot: RigidVehicleSnapshot) {
+-    const atm = atmosphere(norm(state.r) - R_EARTH);
++    const atm = atmosphere(geodeticHeight(state.r));
+     return aerodynamicWrench(snapshot.aero, { density: this.densityFactor === undefined ? atm.rho : atm.rho * this.densityFactor, speedOfSound: atm.a,
+       airVelocityBody: quatInverseRotate(state.attitudeQ, this.airVelocity(state, time)),
+       omegaBody: state.omegaBody, cgBody: snapshot.cg });
+@@ -470,7 +472,7 @@ export class RigidRuntime {
+     // Shape the command with a braking reserve before allocating actual jets.
+     // Recovery has its own guidance and is not an orbital pointing maneuver.
+     // A returning stage's budget stops where its grid fins start to bite.
+-    if (((this.bodyId === 'vehicle' && norm(state.r) - R_EARTH > 140e3)
++    if (((this.bodyId === 'vehicle' && geodeticHeight(state.r) > 140e3)
+       || (this.fuelAwareCoast && !(fins && aeroStart.dynamicPressure > 100))) && this.command.mode === 'auto'
+       && specs.every(engine => engine.maxThrust === 0)) {
+       const budget = fuelAwareCoastRates({ requestedRatesBody: demand.desiredRates, omegaBody: sensed.omegaBody,
+diff --git a/src/physics/sim/abort.ts b/src/physics/sim/abort.ts
+index 747e971..15ac031 100644
+--- a/src/physics/sim/abort.ts
++++ b/src/physics/sim/abort.ts
+@@ -63,15 +63,6 @@ export class LaunchEscape {
+ 
+   constructor(readonly sim: Simulation) {}
+ 
+-  /**
+-   * C01: the flight is a return that measures its heights on the WGS-84
+-   * ellipsoid (Vostok-1, `DescentCapsule.datum`), from the retro sequence to
+-   * the sphere at rest: the simulation's altitude and latitude are then
+-   * geodetic too.
+-   */
+-  get geodetic(): boolean {
+-    return this.flight?.mode === 'capsule' && this.flight.capsule.datum === 'wgs84';
+-  }
+ 
+   /**
+    * The wind the escape and everything it lets go of fly in, ECI, m/s, at
+diff --git a/src/physics/sim/apollo-entry.ts b/src/physics/sim/apollo-entry.ts
+index 07239a4..1f40490 100644
+--- a/src/physics/sim/apollo-entry.ts
++++ b/src/physics/sim/apollo-entry.ts
+@@ -15,6 +15,7 @@
+  */
+ import { density } from '../atmosphere';
+ import { G0, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { gravityJ2 } from '../gravity';
+ import { rk4Step } from '../integrator';
+ import { elementsFromState, gmst, propagateKepler, timeToPeriapsis } from '../orbital';
+@@ -68,7 +69,7 @@ export function airVelocity(r: Vec3, v: Vec3): Vec3 {
+ export function cmAerodynamics(r: Vec3, v: Vec3, bank: number, mass: number, chuteCdA: number): Vec3 {
+   const va = airVelocity(r, v), sp = norm(va);
+   if (sp < 1e-6) return v3();
+-  const rho = density(norm(r) - R_EARTH), q = 0.5 * rho * sp * sp, vh = scale(va, 1 / sp);
++  const rho = density(geodeticHeight(r)), q = 0.5 * rho * sp * sp, vh = scale(va, 1 / sp);
+   const drag = scale(vh, (-q * (CM_AERO.cd * CM_AERO.area + chuteCdA)) / mass);
+   if (chuteCdA > 0) return drag;
+   const up = normalize(r), liftUp = normalize(sub(up, scale(vh, dot(up, vh)))), right = normalize(cross(vh, liftUp));
+@@ -83,7 +84,7 @@ const LOAD_LIMIT = 5;
+ function limited(r: Vec3, v: Vec3, m: number): boolean {
+   const va = airVelocity(r, v), sp = norm(va);
+   if (dot(va, r) >= 0) return false;
+-  const load = (0.5 * density(norm(r) - R_EARTH) * sp * sp * CM_AERO.cd * CM_AERO.area * Math.hypot(1, CM_AERO.ld)) / m / G0;
++  const load = (0.5 * density(geodeticHeight(r)) * sp * sp * CM_AERO.cd * CM_AERO.area * Math.hypot(1, CM_AERO.ld)) / m / G0;
+   return load > LOAD_LIMIT;
+ }
+ 
+@@ -128,7 +129,7 @@ export class EntryGuidance {
+    */
+   private predict(t: number, r: Vec3, v: Vec3, bank: number, mass: number): number {
+     let s = { r, v }, tt = t;
+-    for (let i = 0; i < 1000 && norm(s.r) - R_EARTH > CHUTES.drogueAlt; i++) {
++    for (let i = 0; i < 1000 && geodeticHeight(s.r) > CHUTES.drogueAlt; i++) {
+       const b = limited(s.r, s.v, mass) ? 0 : bank;
+       const n = rk4Step(tt, s, 4, (_t: number, x: Vec3, u: Vec3) => add(gravityJ2(x), cmAerodynamics(x, u, b, mass, 0)));
+       s = { r: n.r, v: n.v }; tt += 4;
+diff --git a/src/physics/sim/apollo.ts b/src/physics/sim/apollo.ts
+index 51f5b0a..094d82e 100644
+--- a/src/physics/sim/apollo.ts
++++ b/src/physics/sim/apollo.ts
+@@ -18,6 +18,7 @@
+  */
+ import type { Simulation } from '../simulation';
+ import { DEG, G0, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { rk4Step } from '../integrator';
+ import { elementsFromState } from '../orbital';
+ import { targetAttitude } from '../rigid/runtime';
+@@ -989,8 +990,8 @@ export class ApolloFlight {
+     // the service module on its own arc, until it breaks up in the air (MR §7.6)
+     if (this.serviceModule) {
+       const n = rk4Step(s.t, this.serviceModule, dt, (t, r, v) => add(add(gravityJ2(r), lunisolar(jd0, t, r)),
+-        norm(r) - R_EARTH < EI_ALT ? cmAerodynamics(r, v, 0, SM_MASS, 0) : v3()));
+-      this.serviceModule = norm(n.r) - R_EARTH > SM_BREAKUP ? { r: n.r, v: n.v } : undefined;
++        geodeticHeight(r) < EI_ALT ? cmAerodynamics(r, v, 0, SM_MASS, 0) : v3()));
++      this.serviceModule = geodeticHeight(n.r) > SM_BREAKUP ? { r: n.r, v: n.v } : undefined;
+     }
+     if (this.phase === 'cmSeparated') {
+       const n = rk4Step(s.t, { r: s.r, v: s.v }, dt, (t, r) => add(gravityJ2(r), lunisolar(jd0, t, r)));
+@@ -1008,8 +1009,8 @@ export class ApolloFlight {
+       }
+       return;
+     }
+-    // the drogues below 24,000 ft, the mains below 10,000 ft
+-    const alt = norm(s.r) - R_EARTH, sp = APOLLO11.splashdown;
++    // the drogues below 24,000 ft, the mains below 10,000 ft (above WGS-84, as the air: D-51)
++    const alt = geodeticHeight(s.r), sp = APOLLO11.splashdown;
+     if (this.phase === 'entry' && alt <= CHUTES.drogueAlt) {
+       this.phase = 'drogues'; s.note = 'drogues'; this.chuteAt.drogue = s.t;
+       vehicle.payloadMass = sp.drogueMass;
+@@ -1033,7 +1034,7 @@ export class ApolloFlight {
+     s.mass = vehicle.totalMass();
+     this.entryState = { bank: (bank * 180) / Math.PI, load, maxLoad: Math.max(this.entryState.maxLoad, load), drogue, main };
+     this.cmState(load);
+-    if (norm(s.r) - R_EARTH <= 0) this.splashdown();
++    if (geodeticHeight(s.r) <= 0) this.splashdown();
+   }
+ 
+   /** The CM's state's other fields: heat shield into the air, or apex up under the parachutes. */
+@@ -1049,7 +1050,8 @@ export class ApolloFlight {
+   /** In the water: at sea level, turning with the Earth from here on, the flight landed. */
+   private splashdown(): void {
+     const s = this.sim.state, jd = this.jd0 + s.t / 86400, p = earthFixed(s.r, jd), a = APOLLO11.splashdown;
+-    s.r = scale(normalize(s.r), R_EARTH);
++    // at sea level on WGS-84 (D-51), where the drawn sea is
++    s.r = scale(s.r, 1 - geodeticHeight(s.r) / norm(s.r));
+     s.v = cross(v3(0, 0, OMEGA_EARTH), s.r);
+     this.splash = { lat: p.lat / DEG, lon: p.lon / DEG, t: s.t };
+     this.phase = 'splashdown';
+diff --git a/src/physics/sim/ascent.ts b/src/physics/sim/ascent.ts
+index 9a361e8..a1696c3 100644
+--- a/src/physics/sim/ascent.ts
++++ b/src/physics/sim/ascent.ts
+@@ -4,6 +4,7 @@
+  */
+ import { MU_EARTH, R_EARTH, RAD } from '../constants';
+ import { norm, type Vec3 } from '../vec3';
++import { geodeticHeight } from '../geodesy';
+ import type { OrbitalElements } from '../orbital';
+ import { orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
+ import { CAPSULE_SEPARATION_DELAY } from './abort';
+@@ -151,7 +152,7 @@ export class AscentMonitor {
+     const s = this.sim.state;
+     if (this.overrun) {
+       this.continueOverrun(el);
+-      if (this.overrun) this.rangeSafety(alt, vz);
++      if (this.overrun) this.rangeSafety(vz);
+       return;
+     }
+     const hIns = this.sim.plan.insertionAltitude;
+@@ -244,7 +245,7 @@ export class AscentMonitor {
+       this.sim.burns.scheduleNextBurn(el);
+       return;
+     }
+-    this.rangeSafety(alt, vz);
++    this.rangeSafety(vz);
+   }
+ 
+   /**
+@@ -293,11 +294,13 @@ export class AscentMonitor {
+     this.finishAscent(el);
+   }
+ 
+-  /** Range safety / loss of vehicle: falling back without thrust below 100 km. */
+-  private rangeSafety(alt: number, vz: number): void {
++  /** Range safety / loss of vehicle: falling back without thrust below 100 km (above WGS-84, D-51). */
++  private rangeSafety(vz: number): void {
+     const s = this.sim.state;
+     const thrusting = s.thrust > 0;
+-    if (!thrusting && !this.sim.staging.stagingInProgress && this.sim.pending.every((p) => p.label !== 'ignition' && p.label !== 'stageSep') && vz < -50 && alt < 100e3 && s.t > 5) {
++    if (!thrusting && !this.sim.staging.stagingInProgress && this.sim.pending.every((p) => p.label !== 'ignition' && p.label !== 'stageSep') && vz < -50 && s.t > 5) {
++      const alt = geodeticHeight(s.r);
++      if (alt >= 100e3) return;
+       if (!this.sim.vehicle.activeHasPropellant() || (this.sim.vehicle.active?.engineFraction ?? 1) === 0) {
+         this.sim.event('evt.rangeSafety', 'fail', { alt: Math.round(alt / 1000) });
+         this.sim.destroy();
+@@ -326,7 +329,7 @@ export class AscentMonitor {
+       this.finishSuborbital(el);
+       return;
+     }
+-    this.rangeSafety(alt, vz);
++    this.rangeSafety(vz);
+   }
+ 
+   /** The suborbital target is reached (or missed): judge it and fly home. */
+diff --git a/src/physics/sim/burns.ts b/src/physics/sim/burns.ts
+index 07b9eff..8f0f15f 100644
+--- a/src/physics/sim/burns.ts
++++ b/src/physics/sim/burns.ts
+@@ -6,6 +6,7 @@
+ import { MU_EARTH, R_EARTH, DEG, RAD } from '../constants';
+ import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween, addScaled } from '../vec3';
+ import { atmosphere } from '../atmosphere';
++import { geodeticHeight } from '../geodesy';
+ import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity, shootJ2Altitude } from '../rigid/orbit-prediction';
+ import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
+ import { desiredVelocity, planeNormalThrough } from '../guidance';
+@@ -112,7 +113,7 @@ export class BurnSequencer {
+    */
+   extremesOf(el: OrbitalElements): OrbitalElements {
+     const s = this.sim.state;
+-    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass);
++    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, geodeticHeight(s.r))).p, s.mass);
+     const apsides = physicalApsides({ r: s.r, v: tail > 0 ? addScaled(s.v, s.dir, tail) : s.v });
+     return apsides ? { ...el, ...apsides } : el;
+   }
+diff --git a/src/physics/sim/debris.ts b/src/physics/sim/debris.ts
+index 18da8ee..edbddde 100644
+--- a/src/physics/sim/debris.ts
++++ b/src/physics/sim/debris.ts
+@@ -4,9 +4,10 @@
+  * Recovered boosters fly their entry and landing burns here.
+  */
+ import type { BoosterGroupSpec, StageSpec, EngineSpec, TargetedRecovery } from '../../types';
+-import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, RAD, DEG } from '../constants';
++import { G0, MU_EARTH, OMEGA_EARTH, RAD, DEG } from '../constants';
+ import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, clone, slerpLimited } from '../vec3';
+ import { atmosphere } from '../atmosphere';
++import { geodeticHeight } from '../geodesy';
+ import { landingZoneById } from '../../data/landing-zones';
+ import { CATCH_HORIZONTAL_SPEED, CATCH_VERTICAL_SPEED } from './return-constants';
+ import { groundPositionEci } from '../orbital';
+@@ -371,7 +372,8 @@ export class DebrisTracker {
+     if (!e) return ENTRY_BURN_TARGET_SPEED;
+     // airspeed at the top of the entry burn, from the energy now (the air
+     // above 70 km takes almost nothing off)
+-    const rNow = norm(d.r), rTop = R_EARTH + ENTRY_BURN_CEILING;
++    // (the ceiling's radius over the ground under the stage: WGS-84, D-51)
++    const rNow = norm(d.r), rTop = rNow - geodeticHeight(d.r) + ENTRY_BURN_CEILING;
+     const v2 = dot(d.v, d.v) + 2 * MU_EARTH * (1 / rTop - 1 / rNow);
+     const top = Math.max(0, Math.sqrt(Math.max(0, v2)) - OMEGA_EARTH * rTop * Math.cos(this.sim.site.latitude * DEG));
+     const propellant = returnPropellant(rc, d.mass, e.ispVac);
+@@ -414,7 +416,7 @@ export class DebrisTracker {
+     const omega = v3(0, 0, OMEGA_EARTH);
+     let t = sim.state.t - dt, remaining = dt;
+     while (remaining > 1e-9 && d.alive) {
+-      const alt = norm(d.r) - R_EARTH;
++      const alt = geodeticHeight(d.r);
+       const up = normalize(d.r);
+       const air = sub(d.v, cross(omega, d.r));
+       const speed = norm(air);
+@@ -547,7 +549,7 @@ export class DebrisTracker {
+       rc.propellant = Math.max(0, rc.propellant - flow * h);
+       t += h;
+       remaining -= h;
+-      const altN = norm(d.r) - R_EARTH;
++      const altN = geodeticHeight(d.r);
+       const ground = sim.groundElevation(d.r);
+       if (target.kind === 'tower' && !rc.catchPassed && altN <= target.alt) this.catchAttempt(d, t);
+       if (!d.alive) break;
+@@ -691,7 +693,7 @@ export class DebrisTracker {
+         // transfer would cost more than the whole ascent. Hand it to the Kepler
+         // path below, which keeps checking that the orbit lasts; its recorded
+         // attitude stays where the rigid body left it.
+-        if (d.alive && !d.recovery && norm(d.r) - R_EARTH > 140e3) {
++        if (d.alive && !d.recovery && geodeticHeight(d.r) > 140e3) {
+           const el = elementsFromState(d.r, d.v);
+           if (el.e < 1 && el.periapsisAlt > 120e3) {
+             d.outcome = 'orbit';
+@@ -704,7 +706,7 @@ export class DebrisTracker {
+         this.stepReturning(d, dt);
+         continue;
+       }
+-      const alt = norm(d.r) - R_EARTH;
++      const alt = geodeticHeight(d.r);
+       if (d.outcome === 'orbit') {
+         // Orbital debris is Kepler-propagated — but the outcome has to stay
+         // true. An object promoted with a 121 km perigee decays, and the branch
+@@ -724,7 +726,7 @@ export class DebrisTracker {
+       for (let k = 0; k < sub_ && d.alive; k++) {
+         let thrustAccel = 0;
+         let thrustDir = d.dir;
+-        const altK = norm(d.r) - R_EARTH;
++        const altK = geodeticHeight(d.r);
+         const vAir = sub(d.v, cross(omega, d.r));
+         const vAirMag = norm(vAir);
+         const up = normalize(d.r);
+@@ -790,7 +792,7 @@ export class DebrisTracker {
+         d.r = next.r;
+         d.v = next.v;
+         if (vAirMag > 1 && d.recovery) d.dir = scale(vAir, -1 / vAirMag);
+-        const altN = norm(d.r) - R_EARTH;
++        const altN = geodeticHeight(d.r);
+         const vImpactNow = norm(sub(d.v, cross(omega, d.r)));
+         const ground = this.sim.groundElevation(d.r);
+         const touchdown = altN <= ground || (altN <= ground + 3 && d.recovery !== undefined && vImpactNow < 12);
+diff --git a/src/physics/sim/forces.ts b/src/physics/sim/forces.ts
+index 35910f9..ec9c78b 100644
+--- a/src/physics/sim/forces.ts
++++ b/src/physics/sim/forces.ts
+@@ -1,5 +1,6 @@
+ /** Point-mass force model shared by powered flight, orbit and debris. */
+ import { OMEGA_EARTH, R_EARTH } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { Vec3, v3, sub, cross, norm, addScaled } from '../vec3';
+ import { atmosphere } from '../atmosphere';
+ import { dragCoefficient, tumblingDragCoefficient } from '../aero';
+@@ -20,8 +21,9 @@ import { gravity, gravityJ2 } from '../gravity';
+ export function pointMassAcceleration(thrustAccel: number, dir: Vec3, mass0: number, mdot: number, t0: number, area: number, useJ2: boolean, cd0?: number,
+   densityFactor?: number) {
+   return (t: number, r: Vec3, v: Vec3): Vec3 => {
+-    const rm = norm(r);
+-    const alt = rm - R_EARTH;
++    // the air is on WGS-84 (D-51), which lies within 21.4 km under the sphere:
++    // above 1000 km over the sphere there is no air to look up
++    const alt = norm(r) - R_EARTH < 1000e3 ? geodeticHeight(r) : Infinity;
+     let a = useJ2 ? gravityJ2(r) : gravity(r);
+     const m = Math.max(1, mass0 - mdot * (t - t0));
+     if (thrustAccel > 0) {
+diff --git a/src/physics/sim/rendezvous.ts b/src/physics/sim/rendezvous.ts
+index 9bbe5ef..b71cbcc 100644
+--- a/src/physics/sim/rendezvous.ts
++++ b/src/physics/sim/rendezvous.ts
+@@ -14,7 +14,8 @@
+  */
+ import type { Simulation } from '../simulation';
+ import { atmosphere } from '../atmosphere';
+-import { G0, OMEGA_EARTH, R_EARTH } from '../constants';
++import { G0, OMEGA_EARTH } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { gravityJ2 } from '../gravity';
+ import { rk4Step } from '../integrator';
+ import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
+@@ -123,7 +124,7 @@ export class Rendezvous {
+     for (const b of this.sim.plan.burns) b.done = true;
+     const s = this.sim.state;
+     // the stage's tail-off, which the cut-off was judged with, is still to come: the spacecraft rides it before it separates
+-    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass);
++    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, geodeticHeight(s.r))).p, s.mass);
+     if (tail > 0) s.v = add(s.v, scale(s.dir, tail));
+     s.status = 'rendezvous';
+     s.note = 'rendezvous';
+diff --git a/src/physics/sim/return-guidance.ts b/src/physics/sim/return-guidance.ts
+index 6e94d86..332d2c9 100644
+--- a/src/physics/sim/return-guidance.ts
++++ b/src/physics/sim/return-guidance.ts
+@@ -21,7 +21,8 @@
+  * burn: the burn is short, starts a few kilometres up nearly straight down,
+  * and its divert takes out what the ballistic point and the burn disagree on.
+  */
+-import { MU_EARTH, OMEGA_EARTH, P0, R_EARTH } from '../constants';
++import { MU_EARTH, OMEGA_EARTH, P0 } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { type Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled } from '../vec3';
+ import { atmosphere } from '../atmosphere';
+ import { tumblingDragCoefficient } from '../aero';
+@@ -166,7 +167,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
+   let entry: EntryState = model.entry ? s.entry ?? 'pending' : 'done';
+   const accel = (rr: Vec3, vv: Vec3, m: number, thrust: number): Vec3 => {
+     let a = model.j2 ? gravityJ2(rr) : gravity(rr);
+-    const alt = norm(rr) - R_EARTH;
++    const alt = geodeticHeight(rr);
+     const air = airVelocity(rr, vv), speed = norm(air);
+     if (alt < 1000e3 && speed > 0.1) {
+       const atm = atmosphere(alt);
+@@ -182,7 +183,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
+   const lb = model.landing;
+   let landingOn = false, landingEngines = 0, landingLevel = 0;
+   while (t < end) {
+-    const alt = norm(r) - R_EARTH;
++    const alt = geodeticHeight(r);
+     let h = alt > 20e3 ? 1 : landingOn ? 0.1 : 0.25;
+     const air = airVelocity(r, v), speed = norm(air);
+     const falling = dot(air, r) < 0;
+@@ -248,7 +249,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
+     const k4v = accel(addScaled(r, k3r, h), addScaled(v, k3v, h), m2, thrust), k4r = addScaled(v, k3v, h);
+     const rNext = add(r, scale(add(add(k1r, scale(k2r, 2)), add(scale(k3r, 2), k4r)), h / 6));
+     const vNext = add(v, scale(add(add(k1v, scale(k2v, 2)), add(scale(k3v, 2), k4v)), h / 6));
+-    const altNext = norm(rNext) - R_EARTH;
++    const altNext = geodeticHeight(rNext);
+     if (altNext <= surfaceAlt) {
+       // Linear in altitude across the last step.
+       const f = alt > altNext ? Math.max(0, Math.min(1, (alt - surfaceAlt) / (alt - altNext))) : 1;
+diff --git a/src/physics/sim/ship-descent.ts b/src/physics/sim/ship-descent.ts
+index 78679dd..3e71d65 100644
+--- a/src/physics/sim/ship-descent.ts
++++ b/src/physics/sim/ship-descent.ts
+@@ -29,6 +29,7 @@
+  * with the drag of that table at the commanded attitude and no lift.
+  */
+ import { DEG, G0, OMEGA_EARTH, R_EARTH } from '../constants';
++import { geodeticHeight } from '../geodesy';
+ import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
+ import { atmosphere } from '../atmosphere';
+ import { dragCoefficient } from '../aero';
+@@ -287,7 +288,7 @@ export class ShipDescent {
+     if (!s.rigid || !snapshot) return s.altitude - surface;
+     // The engines' end of the ship, which is what meets the water upright.
+     const base = add(s.r, quatRotate(s.rigid.attitudeQ, sub(snapshot.activeBase, snapshot.cg)));
+-    return norm(base) - R_EARTH - surface;
++    return geodeticHeight(base) - surface;
+   }
+ 
+   /**
+@@ -420,7 +421,7 @@ export class ShipDescent {
+ 
+   /** Aerodynamic acceleration of the point-mass ship flying nose along `dir`, m/s² (ECI). */
+   aeroAcceleration(r: Vec3, v: Vec3, dir: Vec3, mass: number): Vec3 {
+-    const alt = norm(r) - R_EARTH;
++    const alt = geodeticHeight(r);
+     if (!(alt < 1000e3)) return v3();
+     const atm = atmosphere(alt);
+     return scale(descentAeroForce(this.descentTable(), this.referenceArea, dir, ShipDescent.airVelocity(r, v), atm.rho, atm.a), 1 / Math.max(1, mass));
+diff --git a/src/physics/simulation.ts b/src/physics/simulation.ts
+index ca3b56b..1d71a2d 100644
+--- a/src/physics/simulation.ts
++++ b/src/physics/simulation.ts
+@@ -27,7 +27,7 @@ import { missionSatellite } from '../data/satellites';
+ import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
+ import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
+ import { atmosphere } from './atmosphere';
+-import { geodetic } from './geodesy';
++import { geodeticHeight } from './geodesy';
+ import { dragCoefficient, tumblingDragCoefficient } from './aero';
+ import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
+ import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
+@@ -46,7 +46,7 @@ import { AeroEnvelopeEvents } from './rigid/envelope-events';
+ import { buildRigidVehicle } from './rigid/mass';
+ import { rigidContactMetrics } from './rigid/debris-runtime';
+ import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate, type Quat } from './rigid/math';
+-import { gravity, gravityJ2 } from './gravity';
++import { effectiveGravityJ2, gravity, gravityJ2 } from './gravity';
+ import { runningEngines } from './eom';
+ import { validateDynamics } from './rigid/config';
+ import { rk4Step } from './integrator';
+@@ -286,9 +286,10 @@ export class Simulation {
+     // `gmst0 + OMEGA_EARTH * t` on every step, so only the seed was wrong.)
+     const t0 = -10;
+     this.siteR0 = groundPositionEci(lat, lon, this.site.altitude, theta0 + OMEGA_EARTH * t0);
+-    // Constants for `groundElevation`: the pad as an Earth-fixed unit vector,
+-    // and its 50 km / 250 km fade radii pre-converted to cosines.
+-    this.padEcef = v3(Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon), Math.sin(lat));
++    // Constants for `groundElevation`: the pad as an Earth-fixed unit vector
++    // (the WGS-84 pad's geocentric direction, D-51), and its 50 km / 250 km
++    // fade radii pre-converted to cosines.
++    this.padEcef = normalize(groundPositionEci(lat, lon, 0, 0));
+     this.padCosNear = Math.cos(50e3 / R_EARTH);
+     this.padCosFar = Math.cos(250e3 / R_EARTH);
+     const r = clone(this.siteR0);
+@@ -385,11 +386,11 @@ export class Simulation {
+    * G02: position, velocity, altitude, elements and vertical speed as guidance knows them at a
+    * step's start — the navigation's, or the very same true values without one.
+    */
+-  private navigationView(s: SimState, alt: number, el: OrbitalElements, vz: number): { r: Vec3; v: Vec3; alt: number; el: OrbitalElements; vz: number } {
++  private navigationView(s: SimState, alt: number, height: number, el: OrbitalElements, vz: number): { r: Vec3; v: Vec3; alt: number; height: number; el: OrbitalElements; vz: number } {
+     const nav = this.rigidRuntime?.navigation;
+-    if (!nav?.aligned) return { r: s.r, v: s.v, alt, el, vz };
++    if (!nav?.aligned) return { r: s.r, v: s.v, alt, height, el, vz };
+     const { r, v } = nav.estimate;
+-    return { r, v, alt: norm(r) - R_EARTH, el: elementsFromState(r, v), vz: dot(v, normalize(r)) };
++    return { r, v, alt: norm(r) - R_EARTH, height: geodeticHeight(r), el: elementsFromState(r, v), vz: dot(v, normalize(r)) };
+   }
+   /**
+    * G02: the vehicle's state as its navigation knows it — position, velocity, thrust axis, orbital
+@@ -607,7 +608,7 @@ export class Simulation {
+     // the vehicle's own engines drive the state only while it flies itself (not the escape's capsule, nor on the ground)
+     const own = s.status !== 'abort' && s.status !== 'prelaunch' && s.status !== 'landed' && s.status !== 'failed';
+     const tail = own && st && (st.cutoff || st.burnedOut)
+-      ? this.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass) : 0;
++      ? this.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, geodeticHeight(s.r))).p, s.mass) : 0;
+     return { t: s.t, r: clone(s.r), v: tail > 0 ? addScaled(s.v, s.dir, tail) : clone(s.v) };
+   }
+ 
+@@ -629,7 +630,7 @@ export class Simulation {
+   }
+ 
+   /**
+-   * Height of the ground above the mean sphere at a point, m.
++   * Height of the ground above the WGS-84 ellipsoid at a point, m.
+    *
+    * The launch site's own elevation is the ground only near the pad (and at the
+    * landing zone next to it). A booster that comes down 1500 km downrange of
+@@ -882,11 +883,10 @@ export class Simulation {
+     // exactly 1 g until release (the field used to keep its initial value).
+     s.gLoad = 1;
+     if (s.t >= 0) {
+-      // Local gravity at the pad, not standard gravity: G0 is 0.09 % high at
+-      // Baikonur's radius and the release test is a hold-down release, not a
+-      // convention (audit item B40(8)).
+-      const rmPad = norm(s.r);
+-      const weight = s.mass * (MU_EARTH / (rmPad * rmPad));
++      // Local gravity at the pad, not standard gravity (audit item B40(8)):
++      // the weight on the hold-downs, from the J2 field and the Earth's turn
++      // at the WGS-84 pad, which is the normal gravity there (D-51).
++      const weight = s.mass * norm(effectiveGravityJ2(s.r));
+       if (thr.thrust > weight) {
+         s.status = 'ascent';
+         s.liftoff = true;
+@@ -910,7 +910,10 @@ export class Simulation {
+     const s = this.state;
+     this.engineSchedule();
+     const rm = norm(s.r);
+-    const alt = rm - R_EARTH;
++    // D-51: the air and the ground are on WGS-84 (`alt`, the geodetic height);
++    // the orbit is flown in radius (`radial`, as the apsides are counted).
++    const radial = rm - R_EARTH;
++    const alt = geodeticHeight(s.r);
+     const standard = atmosphere(alt);
+     const atm = this.densityFactor === undefined ? standard : { ...standard, rho: standard.rho * this.densityFactor };
+     const omega = v3(0, 0, OMEGA_EARTH);
+@@ -926,7 +929,7 @@ export class Simulation {
+     const up = normalize(s.r);
+     const vz = dot(s.v, up);
+     // G02: guidance and the cut-off fly on what the navigation knows (the truth without one).
+-    const known = this.navigationView(s, alt, el, vz);
++    const known = this.navigationView(s, radial, alt, el, vz);
+ 
+     // --- steering & throttle command
+     let dirCmd = s.dir;
+@@ -942,7 +945,7 @@ export class Simulation {
+       const cmd = this.guidance.update({
+         requireDownrangeKick: !!this.rigidRuntime,
+         vGround: this.rigidRuntime ? sub(known.v, cross(v3(0, 0, OMEGA_EARTH), known.r)) : undefined,
+-        t: s.t, r: known.r, v: known.v, vAir, altitudeAGL: known.alt - this.site.altitude, altitude: known.alt, q,
++        t: s.t, r: known.r, v: known.v, vAir, altitudeAGL: known.height - this.site.altitude, altitude: known.alt, height: known.height, q,
+         thrustAccelFull: fullThrust.thrustFullVac / mass, isFirstStage: (active?.index ?? 0) === 0,
+         thrustAccel: Math.min(fullThrust.thrust, maxAccel > 0 ? maxAccel * mass : Infinity) / mass,
+         timeToGo: (dv: number) => this.vehicle.burnTimeFor(dv, false, this.plan.weakFinalStage),
+@@ -967,7 +970,7 @@ export class Simulation {
+       if (explicit) {
+         const iy = planeNormalThrough(normalize(known.r), this.plan.ascentInclination, normalize(cross(known.r, known.v)));
+         const steer = explicit.update({ t: s.t, r: known.r, v: known.v, iy, standardDir: cmd.dir,
+-          ready: explicitReady({ closedLoop: cmd.phase === 'closedLoop', burning: s.thrust > 0, activeIndex: active?.index ?? 0, q, altitude: known.alt }),
++          ready: explicitReady({ closedLoop: cmd.phase === 'closedLoop', burning: s.thrust > 0, activeIndex: active?.index ?? 0, q, altitude: known.height }),
+           profile: () => burnProfile(this.vehicle, { excludeWeakFinal: this.plan.weakFinalStage, maxAccel }) });
+         for (const e of explicit.takeEvents()) this.event(e.key, e.key === 'evt.guidanceShort' || e.key === 'evt.guidanceDiverged' ? 'warn' : 'info', e.params);
+         if (steer) {
+@@ -1252,7 +1255,7 @@ export class Simulation {
+     // shut down now still tails off for a moment, and on an upper stage that
+     // is several metres per second — kilometres of apoapsis.
+     const tailDv = s.status === 'ascent' || s.status === 'burn'
+-      ? this.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass) : 0;
++      ? this.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, geodeticHeight(s.r))).p, s.mass) : 0;
+     const judged = this.navigationEnd(s.r, s.v, s.dir);
+     const elJudged = judged.r === s.r ? el2 : elementsFromState(judged.r, judged.v);
+     const elCut = tailDv > 0 ? elementsFromState(judged.r, addScaled(judged.v, judged.dir, tailDv)) : elJudged;
+@@ -1261,7 +1264,7 @@ export class Simulation {
+     else if (s.status === 'burn') this.burns.checkBurn(elCut, tailDv);
+ 
+     // --- ground impact / reentry
+-    const altNew = norm(s.r) - R_EARTH;
++    const altNew = geodeticHeight(s.r);
+     let groundImpact = altNew < this.groundElevation(s.r) - 1;
+     if (this.rigidRuntime?.snapshot && s.rigid && altNew - this.groundElevation(s.r) < 200) {
+       const snapshot = this.rigidRuntime.snapshot;
+@@ -1291,14 +1294,16 @@ export class Simulation {
+   private settleOnSurface(): void {
+     const s = this.state;
+     const up = normalize(s.r);
+-    const surface = R_EARTH + this.groundElevation(s.r);
++    const ground = this.groundElevation(s.r);
++    // Moved along the radius onto the ground on the WGS-84 ellipsoid: within
++    // 0.19° of its normal, a metre of radius is a metre of height.
+     if (s.rigid && this.rigidRuntime?.snapshot) {
+       // The lowest point of the body on the surface: the engines' end, upright.
+       const snapshot = this.rigidRuntime.snapshot;
+       const base = add(s.r, quatRotate(s.rigid.attitudeQ, sub(snapshot.activeBase, snapshot.cg)));
+-      s.r = addScaled(s.r, up, surface - norm(base));
++      s.r = addScaled(s.r, up, ground - geodeticHeight(base));
+     } else {
+-      s.r = scale(up, surface);
++      s.r = addScaled(s.r, up, ground - geodeticHeight(s.r));
+     }
+     s.v = groundVelocityEci(s.r);
+     if (s.rigid) {
+@@ -1359,8 +1364,9 @@ export class Simulation {
+       s.gLoad = norm(result.nonGrav) / G0;
+       s.elements = elementsFromState(s.r, s.v);
+       this.faultOutcome();
+-      if (norm(s.r) - R_EARTH < 80e3) {
+-        this.event('evt.reentry', 'fail', { alt: Math.round((norm(s.r) - R_EARTH) / 1000) });
++      const height = geodeticHeight(s.r);
++      if (height < 80e3) {
++        this.event('evt.reentry', 'fail', { alt: Math.round(height / 1000) });
+         s.status = 'failed'; s.note = 'reentry';
+       }
+       return;
+@@ -1380,7 +1386,7 @@ export class Simulation {
+     // Not zero: drag is still applied below 1000 km, and the g-load readout is
+     // the non-gravitational acceleration, which is exactly that drag.
+     {
+-      const atm = atmosphere(Math.max(0, norm(s.r) - R_EARTH));
++      const atm = atmosphere(Math.max(0, geodeticHeight(s.r)));
+       const vAirO = sub(s.v, cross(v3(0, 0, OMEGA_EARTH), s.r));
+       const vAirO2 = dot(vAirO, vAirO);
+       const cdO = cd === undefined ? dragCoefficient(Math.sqrt(vAirO2) / atm.a) : tumblingDragCoefficient(cd, Math.sqrt(vAirO2) / atm.a);
+@@ -1389,7 +1395,7 @@ export class Simulation {
+     s.elements = elementsFromState(s.r, s.v);
+     const up = normalize(s.r);
+     s.dir = norm(s.v) > 1 ? normalize(s.v) : up;
+-    const alt = norm(s.r) - R_EARTH;
++    const alt = geodeticHeight(s.r);
+     if (alt < 80e3) {
+       this.event('evt.reentry', 'fail', { alt: Math.round(alt / 1000) });
+       s.status = 'failed';
+@@ -1506,11 +1512,9 @@ export class Simulation {
+   /** @internal */
+   updateDerived(): void {
+     const s = this.state;
+-    const rm = norm(s.r);
+-    // C01: a return from orbit on the WGS-84 datum (Vostok-1) reports the height above the ellipsoid, the one
+-    // its air, its barometric commands and its ground are on, and the geodetic latitude
+-    const geo = this.escape.geodetic ? geodetic(s.r.x, s.r.y, s.r.z) : null;
+-    s.altitude = geo ? geo.h : rm - R_EARTH;
++    // D-51: the height above WGS-84, which the air and the ground are on, and the geodetic latitude
++    const ll = eciToLatLon(s.r, s.theta);
++    s.altitude = ll.alt;
+     s.altitudeAGL = s.altitude - this.groundElevation(s.r);
+     const omega = v3(0, 0, OMEGA_EARTH);
+     // C01: an escape or a return in flight reports the air it flies in (`LaunchEscape.windAt`): on Vostok-1's return
+@@ -1525,8 +1529,7 @@ export class Simulation {
+     const atm = atmosphere(Math.max(0, s.altitude));
+     s.q = 0.5 * atm.rho * s.airspeed * s.airspeed;
+     s.mach = s.airspeed / atm.a;
+-    const ll = eciToLatLon(s.r, s.theta);
+-    s.lat = (geo ? geo.lat : ll.lat) * RAD;
++    s.lat = ll.lat * RAD;
+     s.lon = ll.lon * RAD;
+     const lat0 = this.site.latitude * DEG, lon0 = this.site.longitude * DEG;
+     const cosC = Math.sin(lat0) * Math.sin(ll.lat) + Math.cos(lat0) * Math.cos(ll.lat) * Math.cos(ll.lon - lon0);
+diff --git a/src/render/datum.ts b/src/render/datum.ts
+index e88a262..5e9e111 100644
+--- a/src/render/datum.ts
++++ b/src/render/datum.ts
+@@ -26,7 +26,7 @@ const CAPSULES: Record<DescentCapsule['id'], DescentCapsule> = { soyuz: SOYUZ_DE
+ /** The frame's bodies fly on WGS-84 heights: a return of a capsule whose datum is the ellipsoid. */
+ export function onEllipsoid(frame: Pick<VisualFrame, 'abort'>): boolean {
+   const a = frame.abort;
+-  return !!a && a.body === 'capsule' && CAPSULES[a.capsule]?.datum === 'wgs84';
++  return !!a && a.body === 'capsule' && !!CAPSULES[a.capsule]?.onLand;
+ }
+ 
+ /** A position at its WGS-84 height over the drawn sphere, on the same radius. */
+-- 
+2.43.0
+

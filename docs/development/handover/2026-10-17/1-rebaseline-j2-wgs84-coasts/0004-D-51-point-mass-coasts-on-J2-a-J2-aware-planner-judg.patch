@@ -1,0 +1,623 @@
+From 2b16c96620c7dbeb0012f01420503dd98edbd539 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 13:06:44 +0000
+Subject: [PATCH 04/10] D-51: point-mass coasts on J2, a J2-aware planner,
+ judged on physical apsides
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The owner added the coasts to the re-baseline on 2026-10-17 ("ใส่เข้าไปด้วย
+เอาให้สมจริงที่สุด"): one gravity model from the pad to orbit in point mass.
+
+- simulation.ts: the free coast above the air is no longer a Kepler conic;
+  every point-mass step is the J2 RK4 (with the air's drag), in steps of at
+  most 10 s (integrator.ts rk4Steps, COAST_MAX_STEP_S, the step of the
+  planner's forecasts and the six-DOF held coast). A step of 10 s or less is
+  one rk4Step, so powered flight is unchanged. The E02 record calls these
+  steps 'coast' (was 'kepler') and its gravity is J2 everywhere.
+- debris.ts: separated hardware in a lasting orbit coasts under J2 too.
+- burns.ts: the planner flies the J2 coast it now predicts in both models:
+  propagateJ2Coast for every forecast (no propagateKepler left in the
+  plant or the planner), the physical apex check and corrections, the J2
+  periapsis for raise burns, aimed shaping burns (physicalObjective) and the
+  final physical correction, with the delivered impulse counted in point
+  mass as in six-DOF (accountDeliveredDv).
+- judgedElements uses the physical apsides (lowest/highest of the next
+  revolution under J2) in both models, as M-LAUNCH-031 asks; the result
+  screen's basis label follows from the recorded apAltM/peAltM. The fleet
+  harness's achievedElements does the same for point mass.
+- geodesy.ts: geodeticHeight is a one-pass Bowring without trigonometry
+  (4 nm below 2000 km, 0.25 µm to the Moon), nine times faster than the
+  two-pass `geodetic`, which the propagator keeps; eciToLatLon uses its
+  latitude twin, geodeticFast.
+- E02: the central-field note is gone (no step flies it); the Δv budget's
+  initial speed is the WGS-84 pad's.
+
+Fleet (point mass): 131 of 131 gated rows still accepted, 156 of 222 as at
+23cb4cf, now on physical apsides; six fleet flights take 16 % longer.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ src/i18n/en.ts            |  1 -
+ src/i18n/ru.ts            |  1 -
+ src/i18n/th.ts            |  1 -
+ src/physics/eom.ts        |  2 +-
+ src/physics/geodesy.ts    | 30 +++++++++++-
+ src/physics/integrator.ts | 20 ++++++++
+ src/physics/orbital.ts    |  4 +-
+ src/physics/sim/burns.ts  | 97 ++++++++++++++++++---------------------
+ src/physics/sim/debris.ts | 20 ++++----
+ src/physics/simulation.ts | 34 +++++++-------
+ src/ui/equations-model.ts | 12 +++--
+ tests/fleet-harness.ts    |  9 ++--
+ 12 files changed, 136 insertions(+), 95 deletions(-)
+
+diff --git a/src/i18n/en.ts b/src/i18n/en.ts
+index ded5ee6..00be206 100644
+--- a/src/i18n/en.ts
++++ b/src/i18n/en.ts
+@@ -3791,7 +3791,6 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.boosters': 'The strap-on boosters\' propellant is not in this stage figure; the line below counts it.',
+   'eq.note.budgetFrozen': 'The book closes when the ascent ends; later burns are not in it.',
+   'eq.note.escape': 'Above escape speed: the path is not an ellipse.',
+-  'eq.note.centralGravity': 'The analytic coasts use the central field; J2 is shown for comparison.',
+   'eq.note.flexCoupling': 'With slosh and bending (P05) the rigid-body equation leaves out their coupling, and the residual includes it.',
+   'eq.note.vacuumOnly': 'A vacuum engine: the model gives it no sea-level operating point, so no pressure term.',
+   'eq.note.suborbital': 'Periapsis below the surface: the path is still suborbital.',
+diff --git a/src/i18n/ru.ts b/src/i18n/ru.ts
+index 4e2f647..99b19a6 100644
+--- a/src/i18n/ru.ts
++++ b/src/i18n/ru.ts
+@@ -3767,7 +3767,6 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.boosters': 'Топливо боковых блоков в эту оценку ступени не входит; строка ниже его учитывает.',
+   'eq.note.budgetFrozen': 'Баланс закрывается в конце выведения; последующие импульсы в него не входят.',
+   'eq.note.escape': 'Скорость выше второй космической: траектория не эллипс.',
+-  'eq.note.centralGravity': 'Аналитические пассивные участки используют центральное поле; J2 показан для сравнения.',
+   'eq.note.flexCoupling': 'С колебаниями топлива и изгибом (P05) уравнение твёрдого тела не учитывает их связь, и она входит в невязку.',
+   'eq.note.vacuumOnly': 'Высотный двигатель: у модели нет для него режима у Земли, поэтому члена с давлением нет.',
+   'eq.note.suborbital': 'Перицентр ниже поверхности: траектория пока суборбитальная.',
+diff --git a/src/i18n/th.ts b/src/i18n/th.ts
+index 0882f78..bbf6469 100644
+--- a/src/i18n/th.ts
++++ b/src/i18n/th.ts
+@@ -3768,7 +3768,6 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.boosters': 'ตัวเลขของขั้นนี้ไม่รวมเชื้อเพลิงของบูสเตอร์ข้าง บรรทัดล่างนับรวมแล้ว',
+   'eq.note.budgetFrozen': 'งบปิดเมื่อจบช่วงขึ้นบิน การจุดเครื่องครั้งหลังไม่นับรวม',
+   'eq.note.escape': 'เร็วกว่าความเร็วหลุดพ้น: เส้นทางไม่ใช่วงรี',
+-  'eq.note.centralGravity': 'ช่วงลอยตัวแบบวิเคราะห์ใช้สนามแบบจุดศูนย์กลาง แสดง J2 ไว้เพื่อเปรียบเทียบ',
+   'eq.note.flexCoupling': 'เมื่อเปิดการกระฉอกและการโค้งงอ (P05) สมการวัตถุแข็งไม่ได้รวมผลคู่ควบของทั้งสอง ส่วนต่างจึงรวมผลนี้ไว้',
+   'eq.note.vacuumOnly': 'เครื่องยนต์สุญญากาศ: แบบจำลองไม่มีจุดทำงานที่ระดับน้ำทะเลให้ จึงไม่มีเทอมความดัน',
+   'eq.note.suborbital': 'จุดใกล้โลกอยู่ใต้ผิวโลก: เส้นทางยังเป็นแบบซับออร์บิทัล',
+diff --git a/src/physics/eom.ts b/src/physics/eom.ts
+index d947c75..fa95496 100644
+--- a/src/physics/eom.ts
++++ b/src/physics/eom.ts
+@@ -15,7 +15,7 @@ import { engineThrustSL, type StageState } from './vehicle';
+ import type { EngineSpec } from '../types';
+ 
+ /** How the step was integrated. */
+-export type EomIntegrator = 'rigid' | 'pointMass' | 'kepler' | 'heldCoast';
++export type EomIntegrator = 'rigid' | 'pointMass' | 'coast' | 'heldCoast';
+ 
+ export interface EomRecord {
+   /** Step start, s, and length, s. */
+diff --git a/src/physics/geodesy.ts b/src/physics/geodesy.ts
+index 644634a..700bfad 100644
+--- a/src/physics/geodesy.ts
++++ b/src/physics/geodesy.ts
+@@ -45,9 +45,35 @@ export function geodetic(x: number, y: number, z: number): { lat: number; h: num
+   return { lat, h };
+ }
+ 
+-/** Height above the WGS-84 ellipsoid, m, of a position, m. */
++/**
++ * Geodetic latitude (rad) and height above the WGS-84 ellipsoid (m) of an
++ * Earth-centred position (m), for the flight's hot paths: one pass of
++ * Bowring's formula with its sines and cosines taken from the ratios (no
++ * trigonometric call), and the height as p·cos φ + z·sin φ − a·√(1 − e²sin²φ),
++ * which holds at the poles. Measured against the exact inverse of
++ * `geodeticToCartesian` from −30 km to the Moon's distance: the height to
++ * 0.25 µm (4 nm below 2000 km), the latitude to 1e-8 rad. About nine times
++ * faster than `geodetic`, which the long-term propagator keeps.
++ */
++export function geodeticFast(x: number, y: number, z: number): { lat: number; h: number } {
++  const p = Math.sqrt(x * x + y * y);
++  const u = z * A, w = p * B, q = Math.sqrt(u * u + w * w);
++  if (!(q > 0)) return { lat: 0, h: -A };
++  const s = u / q, c = w / q;
++  const Y = z + EP2 * B * s * s * s, X = p - E2 * A * c * c * c, k = Math.sqrt(X * X + Y * Y);
++  const sl = Y / k, cl = X / k;
++  return { lat: Math.atan2(Y, X), h: p * cl + z * sl - A * Math.sqrt(1 - E2 * sl * sl) };
++}
++
++/** Height above the WGS-84 ellipsoid, m, of a position, m (`geodeticFast`'s, without the latitude's atan2). */
+ export function geodeticHeight(r: Vec3): number {
+-  return geodetic(r.x, r.y, r.z).h;
++  const x = r.x, y = r.y, z = r.z, p = Math.sqrt(x * x + y * y);
++  const u = z * A, w = p * B, q = Math.sqrt(u * u + w * w);
++  if (!(q > 0)) return -A;
++  const s = u / q, c = w / q;
++  const Y = z + EP2 * B * s * s * s, X = p - E2 * A * c * c * c, k = Math.sqrt(X * X + Y * Y);
++  const sl = Y / k, cl = X / k;
++  return p * cl + z * sl - A * Math.sqrt(1 - E2 * sl * sl);
+ }
+ 
+ /** Geodetic latitude, rad, of a position, m. */
+diff --git a/src/physics/integrator.ts b/src/physics/integrator.ts
+index c5e622c..5dadac0 100644
+--- a/src/physics/integrator.ts
++++ b/src/physics/integrator.ts
+@@ -40,3 +40,23 @@ export function rk4Step(t: number, s: PointState, dt: number, accel: AccelFn): P
+     },
+   };
+ }
++
++/**
++ * Longest RK4 step of a free coast, s: the step the J2 coast forecasts of the
++ * burn planner and the six-DOF held coast take (rigid/orbit-prediction.ts),
++ * a few centimetres a revolution in low orbit.
++ */
++export const COAST_MAX_STEP_S = 10;
++
++/**
++ * `rk4Step` over `dt` in equal steps of at most `maxStep` s. A step no longer
++ * than `maxStep` is exactly one `rk4Step`, so a powered step is unchanged; a
++ * coast of a minute is six. D-51: what flies the point mass's coasts above
++ * the air, which were Kepler conics before.
++ */
++export function rk4Steps(t: number, s: PointState, dt: number, accel: AccelFn, maxStep = COAST_MAX_STEP_S): PointState {
++  const n = Math.max(1, Math.ceil(dt / maxStep - 1e-9)), h = dt / n;
++  let state = s;
++  for (let k = 0; k < n; k++) state = rk4Step(t + k * h, state, h, accel);
++  return state;
++}
+diff --git a/src/physics/orbital.ts b/src/physics/orbital.ts
+index 97ecdc5..942291e 100644
+--- a/src/physics/orbital.ts
++++ b/src/physics/orbital.ts
+@@ -5,7 +5,7 @@
+  */
+ import { MU_EARTH, R_EARTH, OMEGA_EARTH, J2_EARTH, DEG } from './constants';
+ import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize } from './vec3';
+-import { geodetic, geodeticToCartesian } from './geodesy';
++import { geodeticFast, geodeticToCartesian } from './geodesy';
+ 
+ export interface OrbitalElements {
+   /** semi-major axis, m (negative for hyperbolic) */
+@@ -258,7 +258,7 @@ export function groundVelocityEci(rEci: Vec3): Vec3 {
+  * position and sidereal angle: the inverse of `groundPositionEci`.
+  */
+ export function eciToLatLon(r: Vec3, theta: number): { lat: number; lon: number; alt: number } {
+-  const g = geodetic(r.x, r.y, r.z);
++  const g = geodeticFast(r.x, r.y, r.z);
+   const lon = wrapPi(Math.atan2(r.y, r.x) - theta);
+   return { lat: g.lat, lon, alt: g.h };
+ }
+diff --git a/src/physics/sim/burns.ts b/src/physics/sim/burns.ts
+index 8f0f15f..c2af5a8 100644
+--- a/src/physics/sim/burns.ts
++++ b/src/physics/sim/burns.ts
+@@ -8,7 +8,7 @@ import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween, addScaled
+ import { atmosphere } from '../atmosphere';
+ import { geodeticHeight } from '../geodesy';
+ import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity, shootJ2Altitude } from '../rigid/orbit-prediction';
+-import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
++import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, planeNormal, visViva } from '../orbital';
+ import { desiredVelocity, planeNormalThrough } from '../guidance';
+ import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR, INCLINATION_TOLERANCE } from '../mission';
+ import type { Simulation } from '../simulation';
+@@ -85,24 +85,21 @@ export class BurnSequencer {
+   }
+ 
+   /**
+-   * The orbit a mission is judged on. In six-DOF that is the lowest and
+-   * highest altitude of the next revolution under J2 (`physicalApsides`): the
+-   * osculating apsides of one instant swing several kilometres round the
+-   * orbit, and Vulcan to a 500 km circle in wind shear read 511 × 489 km on an
+-   * orbit whose physical apex its last burn had just put at 500 km. Point-mass
+-   * coasts are Kepler, where the two are the same. Judged, like `el`, on the
+-   * state the engine's tail-off still leaves behind: at a cut-off that is
+-   * metres per second, and Falcon 9's circularisation read 500 × 452 km
+-   * without it.
+-   *
+-   * C01: a mission whose figures are the orbit's lowest and highest heights
+-   * (`OrbitSpec.extremes`, Vostok-1) is judged on them in point-mass too: the
+-   * point-mass orbit is flown under J2 as well (`stepOrbit`), and Vostok cut
+-   * off at 63° N reads 168 × 297 km on the conic of that instant in an orbit
+-   * whose extremes are 168 × 315 km.
++   * The orbit a mission is judged on, in both models (M-LAUNCH-031): the
++   * lowest and highest altitude of the next revolution under J2
++   * (`physicalApsides`). The osculating apsides of one instant swing several
++   * kilometres round the orbit, and Vulcan to a 500 km circle in wind shear
++   * read 511 × 489 km on an orbit whose physical apex its last burn had just
++   * put at 500 km. Since D-51 the point mass flies its coasts under J2 too,
++   * and its conic at the cut-off read 8 of 13 sampled low-orbit rows 10–18 km
++   * off on the orbit they were really in. Judged, like `el`, on the state the
++   * engine's tail-off still leaves behind: at a cut-off that is metres per
++   * second, and Falcon 9's circularisation read 500 × 452 km without it.
++   * (C01: Vostok cut off at 63° N reads 168 × 297 km on the conic of that
++   * instant in an orbit whose extremes are 168 × 315 km.)
+    */
+   judgedElements(el: OrbitalElements): OrbitalElements {
+-    if ((!this.sim.rigidRuntime && !this.sim.cfg.orbit.extremes) || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
++    if (!(el.e < 1) || el.periapsisAlt < 120e3) return el;
+     return this.extremesOf(el);
+   }
+ 
+@@ -160,7 +157,7 @@ export class BurnSequencer {
+    * MAX_FINAL_CORRECTIONS of them.
+    */
+   finalPhysicalCorrection(el: OrbitalElements): BurnPlan | null {
+-    if (!this.sim.rigidRuntime || this.finalCorrections >= MAX_FINAL_CORRECTIONS) return null;
++    if (this.finalCorrections >= MAX_FINAL_CORRECTIONS) return null;
+     const judged = this.judgedElements(el);
+     if (judged === el) return null;
+     const target = this.sim.plan.target, res = orbitResiduals(target, judged, this.sim.raanWasReachable());
+@@ -195,7 +192,7 @@ export class BurnSequencer {
+    */
+   private aimableShape(burn: BurnPlan, el: OrbitalElements): boolean {
+     const target = this.sim.plan.target;
+-    return !!this.sim.rigidRuntime && burn.kind === 'shapeAtApoapsis'
++    return burn.kind === 'shapeAtApoapsis'
+       && Math.abs(target.apogee - target.perigee) < 1e3 && Math.abs(target.inclination - el.i) < 0.5 * INCLINATION_TOLERANCE
+       && this.sim.plan.burns.filter((b) => !b.done).length === 1
+       && this.sim.vehicle.burnTimeFor(burn.dvEstimate, true) < 0.8 * this.maxBurnDurationFor(burn, el);
+@@ -277,7 +274,7 @@ export class BurnSequencer {
+     // kilometres. Never circularize below a perigee that has not been reached.
+     // First raise the actual ballistic apex with a bounded physical impulse.
+     let physicalApex: ReturnType<typeof nextJ2Apsis> = null;
+-    if (this.sim.rigidRuntime && burn.kind !== 'raiseApoapsis' && el.e < 1 && el.periapsisAlt > 120e3) {
++    if (burn.kind !== 'raiseApoapsis' && el.e < 1 && el.periapsisAlt > 120e3) {
+       physicalApex = nextJ2Apsis(s, 'apoapsis', { includeInitial: true });
+       if (!physicalApex) { this.failRigidOrbitPrediction(); return; }
+       const perigee = burn.targetPeriapsis ?? this.sim.plan.target.perigee, apogee = this.sim.plan.target.apogee;
+@@ -375,13 +372,13 @@ export class BurnSequencer {
+         ? Math.min(timeToArgumentOfLatitude(el, 0), timeToArgumentOfLatitude(el, Math.PI))
+         : 0;
+     }
+-    if (this.sim.rigidRuntime && burn.kind === 'raiseApoapsis' && tGo > 0 && el.e > 1e-3 && (el.e > 0.01 || burn.lowering)) {
++    if (burn.kind === 'raiseApoapsis' && tGo > 0 && el.e > 1e-3 && (el.e > 0.01 || burn.lowering)) {
+       const peri = nextJ2Apsis(s, 'periapsis', { includeInitial: true });
+       if (!peri) { this.failRigidOrbitPrediction(); return; }
+       // Keep explicit node/argument choices. Replace only the apsis-timed path.
+       tGo = peri.timeS > el.period - 150 ? 0 : peri.timeS;
+     }
+-    if (this.sim.rigidRuntime && burn.physicalObjective) {
++    if (burn.physicalObjective) {
+       // A final correction is flown at the true extreme of the revolution —
+       // the highest point to lift the lowest, the lowest to bring the highest
+       // down — which on a round J2 orbit need not be the next local apsis.
+@@ -390,7 +387,7 @@ export class BurnSequencer {
+       tGo = burn.kind === 'raiseApoapsis' ? extremes.periapsisTimeS : extremes.apoapsisTimeS;
+     }
+     if (!isFinite(tGo)) tGo = 0;
+-    let at = this.sim.rigidRuntime ? propagateJ2Coast(s, tGo) : propagateKepler(s.r, s.v, tGo);
++    let at = propagateJ2Coast(s, tGo);
+     // Six-DOF, a cut-off just past a suborbital apex (Angara-A5 to low orbit
+     // with its fairing kept to the third stage: SECO at 200.5 km, 1 km after
+     // the 201.6 km apex, perigee -602 km): the next apoapsis is a revolution
+@@ -398,14 +395,14 @@ export class BurnSequencer {
+     // and the mission used to end there with the kick stage full. The apex is
+     // where it is: burn now. Only when the prediction has failed, so every
+     // flight it did not fail is flown as before.
+-    if (!at && this.sim.rigidRuntime && el.periapsisAlt < 0) {
++    if (!at && el.periapsisAlt < 0) {
+       tGo = 0;
+       at = { r: s.r, v: s.v };
+     }
+     if (!at) { this.failRigidOrbitPrediction(); return; }
+     const vDes = desiredVelocity(at.r, at.v, burn.kind, burn.targetApoapsis, burn.targetPeriapsis, burn.targetInclination);
+     let dv = norm(sub(vDes, at.v));
+-    if (this.sim.rigidRuntime && physicalTarget(burn)) {
++    if (physicalTarget(burn)) {
+       const shot = burn.physicalObjective ? this.physicalObjectiveShot(burn, at) : this.physicalApexShot(burn, at);
+       if (!shot) { this.failRigidOrbitPrediction(); return; }
+       const correction = shot.speedMS - norm(at.v);
+@@ -471,11 +468,11 @@ export class BurnSequencer {
+     if (dv < deadband) {
+       burn.done = true;
+       s.currentBurn = null;
+-      const next = this.sim.plan.burns.find((b) => !b.done);
+-      // Six-DOF goes round again with nothing planned: `scheduleNextBurn`
+-      // flies a physical correction if the orbit still misses the band.
+-      if (next || this.sim.rigidRuntime) this.scheduleNextBurn(el);
+-      else this.reachTargetOrbit(el);
++      // On to the next burn, or round again with nothing planned:
++      // `scheduleNextBurn` flies a physical correction if the orbit still
++      // misses the band (six-DOF, and since D-51 the point mass), and ends the
++      // mission otherwise.
++      this.scheduleNextBurn(el);
+       return;
+     }
+     s.nextBurnTime = tStart;
+@@ -483,8 +480,8 @@ export class BurnSequencer {
+     if (this.sim.rigidRuntime) {
+       this.rigidScheduledContext = this.rigidOrbitContext();
+       this.rigidCoastIntervened = false;
+-      if (!this.rigidForecastAt(burn, tStart)) { this.failRigidOrbitPrediction(); return; }
+     }
++    if (!this.rigidForecastAt(burn, tStart)) { this.failRigidOrbitPrediction(); return; }
+     burn.dvEstimate = dv;
+     this.sim.event('evt.burnScheduled', 'info', { kind: burn.kind, dv: Math.round(dv), tgo: Math.round(tStart - s.t), dur: Math.round(tBurnThis) });
+     const stRef = stage;
+@@ -556,10 +553,8 @@ export class BurnSequencer {
+         // Genuine plane change: keep the current line of nodes, rotate to the new inclination.
+         s.burnPlaneNormal = planeNormal(burn.targetInclination, el.raan);
+       } else {
+-        // Small correction: the plane through the apoapsis point closest to the current one.
+-        const tGo = Math.min(timeToApoapsis(el), (isFinite(el.period) ? el.period : 5400) / 2);
+-        const at = this.sim.rigidRuntime ? this.rigidForecastAt(burn, Math.max(s.t, s.nextBurnTime))
+-          : propagateKepler(s.r, s.v, tGo);
++        // Small correction: the plane through the burn's own ignition point, on the J2 coast to it.
++        const at = this.rigidForecastAt(burn, Math.max(s.t, s.nextBurnTime));
+         if (!at) { this.failRigidOrbitPrediction(); return; }
+         const curNormal = normalize(cross(at.r, at.v));
+         s.burnPlaneNormal = planeNormalThrough(normalize(at.r), burn.targetInclination, curNormal);
+@@ -616,7 +611,7 @@ export class BurnSequencer {
+       return;
+     }
+     let complete = false;
+-    if (this.sim.rigidRuntime && physicalTarget(b)) {
++    if (physicalTarget(b)) {
+       complete = this.burnIgnited && !!this.rigidTransfer
+         && this.rigidTransfer.deliveredDv + tailDv >= this.rigidTransfer.requiredDv - 0.01;
+       if (!complete && this.burnIgnited && s.t - s.burnStartTime > (b.maxDuration ?? 300)) {
+@@ -728,17 +723,14 @@ export class BurnSequencer {
+       // A short physical-apex correction deliberately changes the temporary
+       // conic before the original shape burn. Its real delivered impulse is
+       // not a no-op and must not be rejected by the conic progress heuristic.
+-      if (!(this.sim.rigidRuntime && physicalTarget(b))) this.replanRemainingBurns(el, noOpBurn);
+-      // Six-DOF ends through `scheduleNextBurn` too, once the tail-off is
++      if (!physicalTarget(b)) this.replanRemainingBurns(el, noOpBurn);
++      // The mission ends through `scheduleNextBurn` too, once the tail-off is
+       // over, so that an orbit whose physical apsides still miss the band gets
+-      // its correction (`finalPhysicalCorrection`).
+-      if (this.sim.plan.burns.some((x) => !x.done) || this.sim.rigidRuntime) {
+-        s.status = 'coast';
+-        s.note = 'coast';
+-        this.scheduleNextBurn(el);
+-      } else {
+-        this.reachTargetOrbit(el);
+-      }
++      // its correction (`finalPhysicalCorrection`): six-DOF, and since D-51
++      // the point mass.
++      s.status = 'coast';
++      s.note = 'coast';
++      this.scheduleNextBurn(el);
+     }
+   }
+ 
+@@ -889,14 +881,14 @@ export class BurnSequencer {
+       const sign = b.lowering ? -1 : 1;
+       dirCmd = this.rigidAim?.burn === b ? this.rigidAim.direction : norm(s.v) > 1 ? scale(normalize(s.v), sign) : s.dir;
+       s.burnDvRemaining = Math.abs(need);
+-      if (this.sim.rigidRuntime && physicalTarget(b)) {
++      if (physicalTarget(b)) {
+         if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
+           this.rigidTransfer = null; this.burnIgnited = false;
+         }
+         s.burnDvRemaining = this.rigidTransfer
+           ? Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv) : Math.max(0.05, b.dvEstimate);
+       }
+-    } else if (this.sim.rigidRuntime && b.physicalObjective) {
++    } else if (b.physicalObjective) {
+       // A physical perigee correction: along or against the velocity, sized
+       // by J2 shooting at the aligned ignition state like an apex correction.
+       if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
+@@ -920,7 +912,7 @@ export class BurnSequencer {
+     // even if the command swings as the remaining Δv goes to zero.
+     const gate = this.sim.rigidRuntime ? RIGID_BURN_IGNITION_ALIGNMENT : BURN_IGNITION_ALIGNMENT;
+     let aligned = angleBetween(s.dir, dirCmd) < gate;
+-    if (this.sim.rigidRuntime?.command.mode === 'auto' && physicalTarget(b)
++    if ((this.sim.rigidRuntime?.command.mode ?? 'auto') === 'auto' && physicalTarget(b)
+       && !this.rigidTransfer && aligned) {
+       // Solve at the actual aligned ignition state, including any time spent
+       // waiting for attitude. The solution only commands finite thrust.
+@@ -970,8 +962,7 @@ export class BurnSequencer {
+       // of horizon. Propagating to the ignition point first is the whole fix:
+       // attitude is an inertial quantity, so the direction computed there is
+       // the one to hold now.
+-      const at = this.sim.rigidRuntime ? this.rigidForecastAt(nb, s.nextBurnTime)
+-        : propagateKepler(s.r, s.v, Math.max(0, s.nextBurnTime - s.t));
++      const at = this.rigidForecastAt(nb, s.nextBurnTime);
+       if (!at) { this.failRigidOrbitPrediction(); return null; }
+       const vAt = norm(at.v) > 1 ? normalize(at.v) : dirCmd;
+       if (this.rigidAim?.burn === nb) {
+@@ -987,10 +978,10 @@ export class BurnSequencer {
+     return dirCmd;
+   }
+ 
+-  /** Six-DOF transfer burns count the impulse actually delivered along the burn direction. */
++  /** An aimed burn (six-DOF, and the point mass since D-51) counts the impulse actually delivered along its direction. */
+   accountDeliveredDv(propulsionECI: Vec3, burning: boolean, dt: number): void {
+     const s = this.sim.state;
+-    if (this.rigidTransfer && this.sim.rigidRuntime!.command.mode === 'auto' && this.burnIgnited && burning
++    if (this.rigidTransfer && (this.sim.rigidRuntime?.command.mode ?? 'auto') === 'auto' && this.burnIgnited && burning
+       && this.rigidTransfer.burn === s.currentBurn) {
+       this.rigidTransfer.deliveredDv += dot(propulsionECI, this.rigidTransfer.direction) * dt;
+       s.burnDvRemaining = Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv);
+diff --git a/src/physics/sim/debris.ts b/src/physics/sim/debris.ts
+index d9c50e2..ce1631a 100644
+--- a/src/physics/sim/debris.ts
++++ b/src/physics/sim/debris.ts
+@@ -19,9 +19,10 @@ import type { RigidVehicleSnapshot } from '../rigid/mass';
+ import { vehicleDataId } from '../../data/vehicles';
+ import type { PartitionedRigidBody } from '../rigid/partition';
+ import { createRigidDebris, RETURN_CONTROL_GAINS, RETURN_LANDING_LEVEL, returnPropellant, zoneLabel, type RigidDebrisRuntime } from '../rigid/debris-runtime';
+-import { rk4Step } from '../integrator';
++import { rk4Step, rk4Steps } from '../integrator';
++import { gravityJ2 } from '../gravity';
+ import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate } from '../rigid/math';
+-import { elementsFromState, eciToLatLon, propagateKepler } from '../orbital';
++import { elementsFromState, eciToLatLon } from '../orbital';
+ import type { StageState, BoosterState } from '../vehicle';
+ import { targetedRecovery } from '../vehicle';
+ import type { Simulation } from '../simulation';
+@@ -690,7 +691,7 @@ export class DebrisTracker {
+         }
+         // A passive body in a lasting orbit only drifts: nothing acts on its
+         // rotation there, and control ticks for the rest of a day-long
+-        // transfer would cost more than the whole ascent. Hand it to the Kepler
++        // transfer would cost more than the whole ascent. Hand it to the orbit
+         // path below, which keeps checking that the orbit lasts; its recorded
+         // attitude stays where the rigid body left it.
+         if (d.alive && !d.recovery && geodeticHeight(d.r) > 140e3) {
+@@ -708,12 +709,13 @@ export class DebrisTracker {
+       }
+       const alt = geodeticHeight(d.r);
+       if (d.outcome === 'orbit') {
+-        // Orbital debris is Kepler-propagated — but the outcome has to stay
+-        // true. An object promoted with a 121 km perigee decays, and the branch
+-        // skipped every touchdown, drag and lifetime test, so it orbited through
+-        // the planet forever (audit item B28). Re-check the perigee each step
+-        // and hand it back to the drag path when it can no longer stay up.
+-        const next = propagateKepler(d.r, d.v, dt);
++        // Orbital debris coasts under J2, as every free flight does since D-51
++        // (it was Kepler) — but the outcome has to stay true. An object
++        // promoted with a 121 km perigee decays, and the branch skipped every
++        // touchdown, drag and lifetime test, so it orbited through the planet
++        // forever (audit item B28). Re-check the perigee each step and hand it
++        // back to the drag path when it can no longer stay up.
++        const next = rk4Steps(0, { r: d.r, v: d.v }, dt, (_t, r) => gravityJ2(r));
+         d.r = next.r;
+         d.v = next.v;
+         const elD = elementsFromState(d.r, d.v);
+diff --git a/src/physics/simulation.ts b/src/physics/simulation.ts
+index 98eb641..ece8b9d 100644
+--- a/src/physics/simulation.ts
++++ b/src/physics/simulation.ts
+@@ -47,11 +47,11 @@ import { AeroEnvelopeEvents } from './rigid/envelope-events';
+ import { buildRigidVehicle } from './rigid/mass';
+ import { rigidContactMetrics } from './rigid/debris-runtime';
+ import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate, type Quat } from './rigid/math';
+-import { effectiveGravityJ2, gravity, gravityJ2 } from './gravity';
++import { effectiveGravityJ2, gravityJ2 } from './gravity';
+ import { runningEngines } from './eom';
+ import { validateDynamics } from './rigid/config';
+-import { rk4Step } from './integrator';
+-import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, planeNormal, wrapPi } from './orbital';
++import { rk4Step, rk4Steps } from './integrator';
++import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, gmst, julianDate, planeNormal, wrapPi } from './orbital';
+ import { VehicleModel, StageState, engineMassFlow } from './vehicle';
+ import { AscentGuidance, planeNormalThrough } from './guidance';
+ import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
+@@ -1095,7 +1095,10 @@ export class Simulation {
+     const rigidBefore = s.rigid; // E02: the body rates and attitude at the step start
+     const area = this.vehicle.frontalArea();
+     const thrustAccel = thr.thrust / mass;
+-    const useKepler = !thr.burning && alt > 140e3 && s.status !== 'ascent';
++    // A free coast above the air: flown, as every other point-mass step, under
++    // J2 with the air's drag, in RK4 steps of up to COAST_MAX_STEP_S (D-51, the
++    // owner's "ใส่เข้าไปด้วยเอาให้สมจริงที่สุด": they were Kepler conics).
++    const freeCoast = !thr.burning && alt > 140e3 && s.status !== 'ascent';
+     let next: { r: Vec3; v: Vec3 };
+     let rigidGLoad: number | undefined;
+     let rigidAccelerations: { propulsionECI: Vec3; aerodynamicECI: Vec3; gravityECI: Vec3 } | undefined;
+@@ -1140,15 +1143,14 @@ export class Simulation {
+       rigidAccelerations = result.accelerationsStart;
+       this.burns.accountDeliveredDv(result.accelerationsStart.propulsionECI, thr.burning, dt);
+       this.faultOutcome();
+-    } else if (useKepler) {
+-      next = propagateKepler(s.r, s.v, dt);
+     } else if (s.status === 'descent') {
+-      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, this.shipDescent.pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t));
++      next = rk4Steps(s.t, { r: s.r, v: s.v }, dt, this.shipDescent.pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t));
+     } else {
+-      // D-51 (R4.2): the point-mass ascent flies the J2 field the six-DOF body
+-      // and the orbit already fly; only the exo-atmospheric Kepler coast above
+-      // is still a pure conic.
+-      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, true, undefined, this.densityFactor));
++      // D-51 (R4.2): the point mass flies the J2 field the six-DOF body and the
++      // orbit already fly, from the pad through every coast.
++      next = rk4Steps(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, true, undefined, this.densityFactor));
++      // an aimed burn counts the impulse it has delivered along its direction (BurnSequencer.rigidTransfer)
++      if (s.status === 'burn') this.burns.accountDeliveredDv(scale(s.dir, thrustAccel), thr.burning, dt);
+     }
+     // --- ascent losses (evaluated at step start)
+     //
+@@ -1206,15 +1208,15 @@ export class Simulation {
+       const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels, hotEngines ? { stage: hotEngines, level: thr.hotLevel! } : undefined);
+       const pointDrag = vAirMag > 0.1 && atm.rho > 0 && alt < 1000e3 ? scale(vAir, -dragAccel / vAirMag) : v3();
+       s.eom = {
+-        t: s.t, dt, integrator: held ? 'heldCoast' : rigidAccelerations ? 'rigid' : useKepler ? 'kepler' : 'pointMass',
++        t: s.t, dt, integrator: held ? 'heldCoast' : rigidAccelerations ? 'rigid' : freeCoast ? 'coast' : 'pointMass',
+         mass, r: { ...s.r }, v: { ...s.v }, density: atm.rho, soundSpeed: atm.a, pressure: atm.p, airspeed: vAirMag,
+         airVelocity: { ...vAir }, dynamicPressure: q, mach: atm.a > 0 ? vAirMag / atm.a : 0,
+         thrust: thr.thrust, vacuumThrust: engines.vacuumThrust, exitArea: engines.exitArea,
+         referenceArea: rigidAccelerations ? this.rigidRuntime!.snapshot?.aero.referenceArea ?? area : area,
+-        ...(rigidAccelerations || held || useKepler ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
+-        thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held || useKepler ? v3() : scale(s.dir, thrustAccel),
+-        aeroAccel: rigidAccelerations ? { ...rigidAccelerations.aerodynamicECI } : held || useKepler ? v3() : pointDrag,
+-        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : useKepler && !held ? gravity(s.r) : gravityJ2(s.r),
++        ...(rigidAccelerations || held ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
++        thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held ? v3() : scale(s.dir, thrustAccel),
++        aeroAccel: rigidAccelerations ? { ...rigidAccelerations.aerodynamicECI } : held ? v3() : pointDrag,
++        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : gravityJ2(s.r),
+         measuredAccel: scale(sub(next.v, s.v), 1 / dt),
+         speedEnd: norm(next.v), losses: { ...s.losses },
+         ...(rigidBefore && s.rigid && rigidAccelerations ? { omega0: { ...rigidBefore.omegaBody }, omega1: { ...s.rigid.omegaBody },
+diff --git a/src/ui/equations-model.ts b/src/ui/equations-model.ts
+index c308d41..2f71ffb 100644
+--- a/src/ui/equations-model.ts
++++ b/src/ui/equations-model.ts
+@@ -9,6 +9,7 @@
+  */
+ import { G0, J2_EARTH, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../physics/constants';
+ import { atmosphere } from '../physics/atmosphere';
++import { geodeticToCartesian } from '../physics/geodesy';
+ import type { EomRecord } from '../physics/eom';
+ import type { VisualFrame } from '../physics/frame';
+ import { gravity, gravityJ2 } from '../physics/gravity';
+@@ -125,7 +126,9 @@ function rocket(e: EomRecord | undefined, frame: VisualFrame, ctx: EquationConte
+ function budget(e: EomRecord | undefined, frame: VisualFrame, ctx: EquationContext): Equation {
+   if (!frame.liftoff) return none('budget', 'eq.none.prelaunch');
+   const losses = e?.losses ?? frame.losses, speed = e?.speedEnd ?? frame.speed;
+-  const v0 = OMEGA_EARTH * (R_EARTH + ctx.siteAltitudeM) * Math.cos(ctx.siteLatitudeDeg * Math.PI / 180);
++  // the pad's own speed on the turning Earth, at its distance from the axis on WGS-84 (D-51)
++  const pad = geodeticToCartesian(ctx.siteLatitudeDeg * Math.PI / 180, 0, ctx.siteAltitudeM);
++  const v0 = OMEGA_EARTH * Math.hypot(pad.x, pad.y);
+   const net = losses.dvThrust - losses.gravity - losses.drag - losses.steering;
+   const values = { ideal: losses.dvThrust, gravity: losses.gravity, drag: losses.drag, steering: losses.steering, net, v0, speed, gain: speed - v0 };
+   if (frame.status !== 'ascent' || !e) return { id: 'budget', available: true, values, note: 'eq.note.budgetFrozen' };
+@@ -155,10 +158,9 @@ function gravityEquation(e: EomRecord | undefined, frame: VisualFrame): Equation
+   const r = e?.r ?? frame.r, rm = norm(r), central = norm(gravity(r)), full = gravityJ2(r), j2 = norm(sub(full, gravity(r)));
+   const values = { r: rm, mu: MU_EARTH, central, j2, total: norm(full), latitude: Math.asin(r.z / rm), J2: J2_EARTH };
+   if (!e) return { id: 'gravity', available: true, values };
+-  // Six-DOF, the point-mass ascent (D-51) and the long coasts fly J2; the analytic Kepler coast a central field.
+-  const used = norm(e.gravityAccel), model = e.integrator === 'kepler' ? central : norm(full);
+-  return { id: 'gravity', available: true, values: { ...values, used }, check: check(used, model, 1e-9, 1e-9),
+-    ...(e.integrator === 'kepler' ? { note: 'eq.note.centralGravity' } : {}) };
++  // Every step flies J2: six-DOF, and since D-51 the point mass from the pad through its coasts.
++  const used = norm(e.gravityAccel);
++  return { id: 'gravity', available: true, values: { ...values, used }, check: check(used, norm(full), 1e-9, 1e-9) };
+ }
+ 
+ /** α and β from the velocity relative to the air in the standard's body axes. */
+diff --git a/tests/fleet-harness.ts b/tests/fleet-harness.ts
+index eedd568..4a4b893 100644
+--- a/tests/fleet-harness.ts
++++ b/tests/fleet-harness.ts
+@@ -59,13 +59,14 @@ export const RAAN_TOLERANCE_DEG = 1.5;
+  *
+  * `sim.state.elements` is maintained by the simulation; this goes back to
+  * `sim.state.r` / `sim.state.v` so that a bug in the bookkeeping of the cached
+- * elements cannot pass the gate. A six-DOF flight coasts under J2, so its
+- * apsides are the lowest and highest altitude of the next revolution
+- * propagated from that state, not the osculating ellipse of the instant.
++ * elements cannot pass the gate. Every flight coasts under J2 — six-DOF, and
++ * since D-51 the point mass — so its apsides are the lowest and highest
++ * altitude of the next revolution propagated from that state, not the
++ * osculating ellipse of the instant (M-LAUNCH-031, both models).
+  */
+ export function achievedElements(sim: Simulation): ReturnType<typeof elementsFromState> {
+   const el = elementsFromState(sim.state.r, sim.state.v);
+-  if (sim.cfg.dynamics?.model !== 'sixDof' || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
++  if (!(el.e < 1) || el.periapsisAlt < 120e3) return el;
+   const apsides = physicalApsides({ r: sim.state.r, v: sim.state.v });
+   return apsides ? { ...el, ...apsides } : el;
+ }
+-- 
+2.43.0
+

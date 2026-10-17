@@ -1,0 +1,18 @@
+{"kickAngle":3.75} angaraa5/leo/25 excl=n OK pe=497.8 ap=498.0 i=62.97 dv=3575 maxQ=25.4
+{"kickAngle":3.75} angaraa5/leo/50 excl=Y FAIL evt.vehicleLost;evt.structuralFailure;status failed;no evt.targetOrbit pe=-5953.0 ap=15.1 i=62.86 dv=7773 maxQ=45.9
+{"kickAngle":3.75} angaraa5/leo/90 excl=Y FAIL evt.vehicleLost;evt.structuralFailure;status failed;no evt.targetOrbit pe=-6285.0 ap=4.4 i=62.85 dv=7776 maxQ=46.0
+{"kickAngle":3.75} angaraa5/sso/25 excl=n OK pe=597.9 ap=598.0 i=97.79 dv=3085 maxQ=24.4
+{"kickAngle":3.75} angaraa5/sso/50 excl=Y FAIL status failed;no evt.targetOrbit pe=-4665.7 ap=48.4 i=97.91 dv=4868 maxQ=25.5
+{"kickAngle":3.75} angaraa5/sso/90 excl=Y FAIL evt.vehicleLost;evt.structuralFailure;status failed;no evt.targetOrbit pe=-6284.0 ap=7.1 i=96.83 dv=7467 maxQ=46.0
+{"kickAngle":3.75} angaraa5/gto/25 excl=n OK pe=244.3 ap=35743.9 i=62.91 dv=3441 maxQ=24.7
+{"kickAngle":3.75} angaraa5/gto/50 excl=n OK pe=245.4 ap=35715.2 i=62.91 dv=2621 maxQ=24.8
+{"kickAngle":3.75} angaraa5/gto/90 excl=n OK pe=250.1 ap=35722.4 i=62.98 dv=1743 maxQ=25.2
+{"kickAngle":3.25} angaraa5/leo/25 excl=n OK pe=497.9 ap=498.0 i=62.97 dv=3525 maxQ=24.0
+{"kickAngle":3.25} angaraa5/leo/50 excl=Y FAIL status failed;no evt.targetOrbit pe=-1106.2 ap=173.5 i=62.98 dv=2486 maxQ=24.8
+{"kickAngle":3.25} angaraa5/leo/90 excl=Y FAIL evt.vehicleLost;evt.structuralFailure;status failed;no evt.targetOrbit pe=-6168.6 ap=10.2 i=62.93 dv=7090 maxQ=46.1
+{"kickAngle":3.25} angaraa5/sso/25 excl=n OK pe=597.9 ap=598.1 i=97.79 dv=2940 maxQ=23.2
+{"kickAngle":3.25} angaraa5/sso/50 excl=Y FAIL status failed;no evt.targetOrbit pe=-2116.4 ap=165.8 i=97.79 dv=2602 maxQ=23.7
+{"kickAngle":3.25} angaraa5/sso/90 excl=Y FAIL evt.vehicleLost;evt.structuralFailure;status failed;no evt.targetOrbit pe=-5930.1 ap=16.5 i=99.04 dv=5901 maxQ=42.8
+{"kickAngle":3.25} angaraa5/gto/25 excl=n OK pe=250.0 ap=35729.1 i=62.98 dv=3316 maxQ=23.6
+{"kickAngle":3.25} angaraa5/gto/50 excl=n OK pe=245.3 ap=35715.9 i=62.91 dv=2617 maxQ=23.7
+{"kickAngle":3.25} angaraa5/gto/90 excl=n OK pe=249.9 ap=35719.9 i=62.98 dv=1700 maxQ=23.8

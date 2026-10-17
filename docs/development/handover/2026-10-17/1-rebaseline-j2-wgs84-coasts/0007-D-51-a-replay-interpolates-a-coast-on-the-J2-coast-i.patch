@@ -1,0 +1,56 @@
+From ce210eb4b65f78c4bff9e64f34b155637145b220 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 13:39:02 +0000
+Subject: [PATCH 07/10] D-51: a replay interpolates a coast on the J2 coast it
+ was flown on
+
+frame.ts interpolateFrames carried a point-mass coast or orbit between two
+recorded frames on a Kepler arc from the earlier one; since the coasts fly
+J2 that arc misses the later frame by up to tens of metres at the end of a
+60 s high-coast step. It now follows the same J2 coast (rk4Steps over
+gravityJ2, steps of at most 10 s), so the picture meets the flown state.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ src/physics/frame.ts | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/src/physics/frame.ts b/src/physics/frame.ts
+index fd13ecb..b0220a8 100644
+--- a/src/physics/frame.ts
++++ b/src/physics/frame.ts
+@@ -33,7 +33,8 @@ import type { VehicleSpec } from '../types';
+ import type { Vec3 } from './vec3';
+ import type { ReturnTarget } from './sim/return-guidance';
+ import { clone } from './vec3';
+-import { propagateKepler } from './orbital';
++import { rk4Steps } from './integrator';
++import { gravityJ2 } from './gravity';
+ import { atmosphere } from './atmosphere';
+ import { geodeticHeight } from './geodesy';
+ import { cloneRigidTelemetry, interpolateRigidTelemetry, sameRigidConfiguration, type RigidTelemetry } from './rigid/telemetry';
+@@ -694,8 +695,8 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
+  *
+  * Continuous quantities (altitude, speed, dynamic pressure, the classical
+  * elements, the epoch) are blended linearly, angles along the shortest arc and
+- * the body axis by slerp. Position and velocity follow the Kepler solution
+- * propagated from the earlier frame whenever both frames are coasting or in
++ * the body axis by slerp. Position and velocity follow the J2 coast (D-51;
++ * the Kepler solution until then) propagated from the earlier frame whenever both frames are coasting or in
+  * orbit — over a 30 s orbital recording gap a straight line between two states
+  * cuts several kilometres off the arc — and are blended linearly otherwise,
+  * because under thrust or in the atmosphere the two-body solution is not the
+@@ -762,7 +763,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
+   let r: Vec3;
+   let v: Vec3;
+   if (ballistic) {
+-    const p = propagateKepler(a.r, a.v, dt);
++    // on the J2 coast both ends were flown on (D-51: Kepler until then), in steps of at most 10 s
++    const p = rk4Steps(0, { r: a.r, v: a.v }, dt, (_t, x) => gravityJ2(x));
+     r = p.r;
+     v = p.v;
+   } else if ((a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo && !a.rigid)) {
+-- 
+2.43.0
+

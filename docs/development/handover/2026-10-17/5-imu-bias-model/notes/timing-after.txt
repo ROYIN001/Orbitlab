@@ -1,0 +1,9 @@
+
+ RUN  v5.0.1 /tmp/claude-0/-home-user-Orbitlab/d0f723cc-ec9b-5822-8629-118f23360f82/scratchpad/imu
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  13:36:35
+   Duration  329.86s (tests 98%, transform 2%)
+

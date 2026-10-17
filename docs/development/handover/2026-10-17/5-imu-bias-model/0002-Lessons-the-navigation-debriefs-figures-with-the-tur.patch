@@ -1,0 +1,94 @@
+From 043e066f124c99cf1e4c72ea643c411bbfbe8502 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 13:35:01 +0000
+Subject: [PATCH 2/3] Lessons: the navigation debriefs' figures with the
+ turn-on bias held
+
+The debriefs quote the flights' own navigation errors; with the turn-on
+bias constant for the flight (previous commit) they are, flown headless
+on the lessons' own missions and seeds:
+
+- guid-nav (Falcon 9, 500 m to MECO): MEMS 2 021 m (was 1 662),
+  tactical 356 m (337), navigation grade 37 m (38). The debrief said
+  about 1.7 km, 0.3 km and a few tens of metres; now about 2 km, 0.4 km
+  and a few tens of metres (en, ru, th). Verdicts unchanged: MEMS fails,
+  tactical and navigation grade pass. The hint's "a bias of 0.001 g held
+  for 150 s alone gives 110 m" is now what the model does, and stays.
+- ru-bins-astro (Soyuz-2.1a, 1 000 m to the third stage's cut-off):
+  tactical without the star tracker 3 357 m (2 923), with it 1 184 m
+  (989), navigation grade 360 m (382), MEMS with the star tracker
+  13 018 m (11 000), with GNSS 3 m (3). The debrief said about 3 km and
+  0.8 km; now about 3.4 km and 1.2 km (en, ru, th; the pack file
+  regenerated with scripts/lesson-packs.ts). The navigation grade's
+  "about 0.4 km" and GNSS's "a few metres" stand.
+
+The star tracker flight now fails the lesson's 1 000 m bound (1 184 m),
+so tests/heavy/lesson-packs-sixdof.test.ts S2 ("the star tracker ...
+keeps it inside") fails. Neither the bound nor the test is changed here:
+the bound is a teaching choice, left to the owner (numbers in the
+report). A star tracker sees the attitude, not the accelerometers' bias;
+a tactical unit's 500 ug held for the 524 s to the cut-off gives
+1/2 b t^2 = 0.67 km per axis, about 1.2 km in three, by itself.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ public/lessons/packs/ru-24-05-06.orbitlab-lesson.json | 6 +++---
+ src/lessons/builtin/track2.ts                         | 6 +++---
+ src/lessons/pack-sources/ru-24-05-06.ts               | 6 +++---
+ 3 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/public/lessons/packs/ru-24-05-06.orbitlab-lesson.json b/public/lessons/packs/ru-24-05-06.orbitlab-lesson.json
+index 306ae97..686cce5 100644
+--- a/public/lessons/packs/ru-24-05-06.orbitlab-lesson.json
++++ b/public/lessons/packs/ru-24-05-06.orbitlab-lesson.json
+@@ -259,9 +259,9 @@
+         "th": "Soyuz-2.1a บินแบบหกองศาอิสระ เครื่องรับ GNSS ใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำร่องจึงอาศัยหน่วยวัดเฉื่อยแบบติดตรึงเกรดยุทธวิธี (ไจโรใยแก้วนำแสง) และตัวจับดาวถูกปิดอยู่ จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำร่องให้อยู่ภายใน 1 000 ม. จนถึงการดับเครื่องของขั้นที่ 3 เมื่อยานเข้าสู่วงโคจรพัก ให้ GNSS ปิดอยู่เหมือนเดิม แล้วเปิดการแก้ไขด้วยตัวจับดาว หรือเลือกเกรดของหน่วยวัดเฉื่อย"
+       },
+       "debrief": {
+-        "en": "Without external fixes an inertial unit's error grows faster than linearly: an accelerometer bias b gives ½bt², and gyro drift tilts the navigation frame, so the thrust acceleration is projected along the wrong axes. A star tracker, which sees stars from 150 km up, measures the attitude and bounds that tilt: in this flight the error at the third stage's cut-off is about 3 km without it and about 0.8 km with it. A navigation-grade unit without the star tracker gives about 0.4 km; with GNSS fixes the Kalman filter holds the error to a few metres.",
+-        "ru": "Без внешних коррекций ошибка БИНС растёт быстрее линейной: смещение нуля акселерометра b даёт ½bt², а дрейф гироскопов наклоняет навигационный базис, и ускорение от тяги проецируется не на те оси. Звёздный датчик, который видит звёзды начиная с высоты 150 км, измеряет ориентацию и ограничивает этот наклон: в этом полёте ошибка к выключению третьей ступени без него около 3 км, а с ним — около 0,8 км. БИНС навигационного класса без звёздного датчика даёт около 0,4 км; с коррекцией по ГНСС фильтр Калмана удерживает ошибку в пределах нескольких метров.",
+-        "th": "หากไม่มีการแก้ไขจากภายนอก ความคลาดเคลื่อนของระบบนำร่องเฉื่อยจะโตเร็วกว่าเชิงเส้น ไบแอสของมาตรความเร่ง b ทำให้เกิด ½bt² และการลอยของไจโรทำให้กรอบนำร่องเอียง ความเร่งจากแรงขับจึงถูกฉายลงบนแกนที่ผิด ตัวจับดาวซึ่งเห็นดาวได้ตั้งแต่ความสูง 150 กม. ขึ้นไป วัดท่าทางของยานและจำกัดการเอียงนั้นไว้ ในเที่ยวบินนี้ความคลาดเคลื่อนเมื่อขั้นที่ 3 ดับเครื่องประมาณ 3 กม. ถ้าไม่มีตัวจับดาว และประมาณ 0.8 กม. ถ้ามี หน่วยวัดเฉื่อยเกรดนำร่องที่ไม่มีตัวจับดาวให้ประมาณ 0.4 กม. ส่วนเมื่อมีการแก้ไขจาก GNSS ตัวกรองคาลมานรักษาความคลาดเคลื่อนไว้ไม่กี่เมตร"
++        "en": "Without external fixes an inertial unit's error grows faster than linearly: an accelerometer bias b gives ½bt², and gyro drift tilts the navigation frame, so the thrust acceleration is projected along the wrong axes. A star tracker, which sees stars from 150 km up, measures the attitude and bounds that tilt: in this flight the error at the third stage's cut-off is about 3.4 km without it and about 1.2 km with it. A navigation-grade unit without the star tracker gives about 0.4 km; with GNSS fixes the Kalman filter holds the error to a few metres.",
++        "ru": "Без внешних коррекций ошибка БИНС растёт быстрее линейной: смещение нуля акселерометра b даёт ½bt², а дрейф гироскопов наклоняет навигационный базис, и ускорение от тяги проецируется не на те оси. Звёздный датчик, который видит звёзды начиная с высоты 150 км, измеряет ориентацию и ограничивает этот наклон: в этом полёте ошибка к выключению третьей ступени без него около 3,4 км, а с ним — около 1,2 км. БИНС навигационного класса без звёздного датчика даёт около 0,4 км; с коррекцией по ГНСС фильтр Калмана удерживает ошибку в пределах нескольких метров.",
++        "th": "หากไม่มีการแก้ไขจากภายนอก ความคลาดเคลื่อนของระบบนำร่องเฉื่อยจะโตเร็วกว่าเชิงเส้น ไบแอสของมาตรความเร่ง b ทำให้เกิด ½bt² และการลอยของไจโรทำให้กรอบนำร่องเอียง ความเร่งจากแรงขับจึงถูกฉายลงบนแกนที่ผิด ตัวจับดาวซึ่งเห็นดาวได้ตั้งแต่ความสูง 150 กม. ขึ้นไป วัดท่าทางของยานและจำกัดการเอียงนั้นไว้ ในเที่ยวบินนี้ความคลาดเคลื่อนเมื่อขั้นที่ 3 ดับเครื่องประมาณ 3.4 กม. ถ้าไม่มีตัวจับดาว และประมาณ 1.2 กม. ถ้ามี หน่วยวัดเฉื่อยเกรดนำร่องที่ไม่มีตัวจับดาวให้ประมาณ 0.4 กม. ส่วนเมื่อมีการแก้ไขจาก GNSS ตัวกรองคาลมานรักษาความคลาดเคลื่อนไว้ไม่กี่เมตร"
+       },
+       "mission": {
+         "format": "orbitlab.mission",
+diff --git a/src/lessons/builtin/track2.ts b/src/lessons/builtin/track2.ts
+index 9b50099..b7ce0d0 100644
+--- a/src/lessons/builtin/track2.ts
++++ b/src/lessons/builtin/track2.ts
+@@ -91,9 +91,9 @@ export const TRACK2: readonly unknown[] = [
+       th: 'Falcon 9 แบบหกองศาอิสระ เครื่องรับนำร่องด้วยดาวเทียมใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำร่องมีเพียงหน่วยวัดเฉื่อย และที่ติดตั้งไว้เป็นหน่วย MEMS ราคาถูก จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำร่องให้อยู่ภายใน 500 ม. จนถึงการดับเครื่องขั้นที่หนึ่ง (MECO) ให้ GNSS ปิดอยู่เหมือนเดิม และเลือกหน่วยวัดเฉื่อย',
+     },
+     debrief: {
+-      en: 'Without fixes, an accelerometer bias b grows into a position error of ½bt² and a gyro error tilts the whole navigation frame, so the error grows faster than linearly: at MECO about 1.7 km with the MEMS unit, 0.3 km with a tactical fibre-optic unit, a few tens of metres with navigation-grade ring-laser gyros. With GNSS the Kalman filter holds all three to metres.',
+-      ru: 'Без внешних коррекций смещение нуля акселерометра b даёт ошибку положения ½bt², а ошибка гироскопа наклоняет весь навигационный базис, поэтому ошибка растёт быстрее линейной: к MECO — около 1,7 км с МЭМС-блоком, 0,3 км с тактическим волоконно-оптическим и несколько десятков метров с навигационными лазерными гироскопами. С ГНСС фильтр Калмана удерживает все три в пределах метров.',
+-      th: 'หากไม่มีการแก้ไขจากภายนอก ไบแอสของมาตรความเร่ง b จะกลายเป็นความคลาดเคลื่อนตำแหน่ง ½bt² และความคลาดของไจโรทำให้กรอบนำร่องทั้งหมดเอียง ความคลาดเคลื่อนจึงโตเร็วกว่าเชิงเส้น ที่ MECO ประมาณ 1.7 กม. สำหรับ MEMS 0.3 กม. สำหรับไจโรใยแก้วนำแสงเกรดยุทธวิธี และไม่กี่สิบเมตรสำหรับไจโรเลเซอร์เกรดนำร่อง เมื่อมี GNSS ตัวกรองคาลมานรักษาทั้งสามไว้ในระดับเมตร',
++      en: 'Without fixes, an accelerometer bias b grows into a position error of ½bt² and a gyro error tilts the whole navigation frame, so the error grows faster than linearly: at MECO about 2 km with the MEMS unit, 0.4 km with a tactical fibre-optic unit, a few tens of metres with navigation-grade ring-laser gyros. With GNSS the Kalman filter holds all three to metres.',
++      ru: 'Без внешних коррекций смещение нуля акселерометра b даёт ошибку положения ½bt², а ошибка гироскопа наклоняет весь навигационный базис, поэтому ошибка растёт быстрее линейной: к MECO — около 2 км с МЭМС-блоком, 0,4 км с тактическим волоконно-оптическим и несколько десятков метров с навигационными лазерными гироскопами. С ГНСС фильтр Калмана удерживает все три в пределах метров.',
++      th: 'หากไม่มีการแก้ไขจากภายนอก ไบแอสของมาตรความเร่ง b จะกลายเป็นความคลาดเคลื่อนตำแหน่ง ½bt² และความคลาดของไจโรทำให้กรอบนำร่องทั้งหมดเอียง ความคลาดเคลื่อนจึงโตเร็วกว่าเชิงเส้น ที่ MECO ประมาณ 2 กม. สำหรับ MEMS 0.4 กม. สำหรับไจโรใยแก้วนำแสงเกรดยุทธวิธี และไม่กี่สิบเมตรสำหรับไจโรเลเซอร์เกรดนำร่อง เมื่อมี GNSS ตัวกรองคาลมานรักษาทั้งสามไว้ในระดับเมตร',
+     },
+     mission: missionDoc({
+       vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 10000, orbitId: 'leo',
+diff --git a/src/lessons/pack-sources/ru-24-05-06.ts b/src/lessons/pack-sources/ru-24-05-06.ts
+index e70ac76..ccb7f50 100644
+--- a/src/lessons/pack-sources/ru-24-05-06.ts
++++ b/src/lessons/pack-sources/ru-24-05-06.ts
+@@ -155,9 +155,9 @@ export const RU_24_05_06: PackSource = {
+         th: 'Soyuz-2.1a บินแบบหกองศาอิสระ เครื่องรับ GNSS ใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำร่องจึงอาศัยหน่วยวัดเฉื่อยแบบติดตรึงเกรดยุทธวิธี (ไจโรใยแก้วนำแสง) และตัวจับดาวถูกปิดอยู่ จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำร่องให้อยู่ภายใน 1 000 ม. จนถึงการดับเครื่องของขั้นที่ 3 เมื่อยานเข้าสู่วงโคจรพัก ให้ GNSS ปิดอยู่เหมือนเดิม แล้วเปิดการแก้ไขด้วยตัวจับดาว หรือเลือกเกรดของหน่วยวัดเฉื่อย',
+       },
+       debrief: {
+-        en: 'Without external fixes an inertial unit\'s error grows faster than linearly: an accelerometer bias b gives ½bt², and gyro drift tilts the navigation frame, so the thrust acceleration is projected along the wrong axes. A star tracker, which sees stars from 150 km up, measures the attitude and bounds that tilt: in this flight the error at the third stage\'s cut-off is about 3 km without it and about 0.8 km with it. A navigation-grade unit without the star tracker gives about 0.4 km; with GNSS fixes the Kalman filter holds the error to a few metres.',
+-        ru: 'Без внешних коррекций ошибка БИНС растёт быстрее линейной: смещение нуля акселерометра b даёт ½bt², а дрейф гироскопов наклоняет навигационный базис, и ускорение от тяги проецируется не на те оси. Звёздный датчик, который видит звёзды начиная с высоты 150 км, измеряет ориентацию и ограничивает этот наклон: в этом полёте ошибка к выключению третьей ступени без него около 3 км, а с ним — около 0,8 км. БИНС навигационного класса без звёздного датчика даёт около 0,4 км; с коррекцией по ГНСС фильтр Калмана удерживает ошибку в пределах нескольких метров.',
+-        th: 'หากไม่มีการแก้ไขจากภายนอก ความคลาดเคลื่อนของระบบนำร่องเฉื่อยจะโตเร็วกว่าเชิงเส้น ไบแอสของมาตรความเร่ง b ทำให้เกิด ½bt² และการลอยของไจโรทำให้กรอบนำร่องเอียง ความเร่งจากแรงขับจึงถูกฉายลงบนแกนที่ผิด ตัวจับดาวซึ่งเห็นดาวได้ตั้งแต่ความสูง 150 กม. ขึ้นไป วัดท่าทางของยานและจำกัดการเอียงนั้นไว้ ในเที่ยวบินนี้ความคลาดเคลื่อนเมื่อขั้นที่ 3 ดับเครื่องประมาณ 3 กม. ถ้าไม่มีตัวจับดาว และประมาณ 0.8 กม. ถ้ามี หน่วยวัดเฉื่อยเกรดนำร่องที่ไม่มีตัวจับดาวให้ประมาณ 0.4 กม. ส่วนเมื่อมีการแก้ไขจาก GNSS ตัวกรองคาลมานรักษาความคลาดเคลื่อนไว้ไม่กี่เมตร',
++        en: 'Without external fixes an inertial unit\'s error grows faster than linearly: an accelerometer bias b gives ½bt², and gyro drift tilts the navigation frame, so the thrust acceleration is projected along the wrong axes. A star tracker, which sees stars from 150 km up, measures the attitude and bounds that tilt: in this flight the error at the third stage\'s cut-off is about 3.4 km without it and about 1.2 km with it. A navigation-grade unit without the star tracker gives about 0.4 km; with GNSS fixes the Kalman filter holds the error to a few metres.',
++        ru: 'Без внешних коррекций ошибка БИНС растёт быстрее линейной: смещение нуля акселерометра b даёт ½bt², а дрейф гироскопов наклоняет навигационный базис, и ускорение от тяги проецируется не на те оси. Звёздный датчик, который видит звёзды начиная с высоты 150 км, измеряет ориентацию и ограничивает этот наклон: в этом полёте ошибка к выключению третьей ступени без него около 3,4 км, а с ним — около 1,2 км. БИНС навигационного класса без звёздного датчика даёт около 0,4 км; с коррекцией по ГНСС фильтр Калмана удерживает ошибку в пределах нескольких метров.',
++        th: 'หากไม่มีการแก้ไขจากภายนอก ความคลาดเคลื่อนของระบบนำร่องเฉื่อยจะโตเร็วกว่าเชิงเส้น ไบแอสของมาตรความเร่ง b ทำให้เกิด ½bt² และการลอยของไจโรทำให้กรอบนำร่องเอียง ความเร่งจากแรงขับจึงถูกฉายลงบนแกนที่ผิด ตัวจับดาวซึ่งเห็นดาวได้ตั้งแต่ความสูง 150 กม. ขึ้นไป วัดท่าทางของยานและจำกัดการเอียงนั้นไว้ ในเที่ยวบินนี้ความคลาดเคลื่อนเมื่อขั้นที่ 3 ดับเครื่องประมาณ 3.4 กม. ถ้าไม่มีตัวจับดาว และประมาณ 1.2 กม. ถ้ามี หน่วยวัดเฉื่อยเกรดนำร่องที่ไม่มีตัวจับดาวให้ประมาณ 0.4 กม. ส่วนเมื่อมีการแก้ไขจาก GNSS ตัวกรองคาลมานรักษาความคลาดเคลื่อนไว้ไม่กี่เมตร',
+       },
+       mission: soyuz({ navigation: { grade: 'tactical', gnss: false, starTracker: false } }),
+       locked: [...ALL_LOCKS],
+-- 
+2.43.0
+

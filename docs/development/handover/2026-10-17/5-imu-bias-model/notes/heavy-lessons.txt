@@ -1,0 +1,52 @@
+
+ RUN  v5.0.1 /home/user/Orbitlab/.claude/worktrees/agent-a94ed352a7bab863f
+
+ ❯ tests/heavy/lesson-packs-sixdof.test.ts (3 tests | 1 failed) 591077ms
+   ❯ pack ru-24-05-06, the six-DOF lessons (3)
+     × S2 inertial navigation without GNSS: as set the error passes 1 000 m; the star tracker, or a navigation-grade unit, keeps it inside; MEMS with the star tracker does not 327614ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/heavy/lesson-packs-sixdof.test.ts > pack ru-24-05-06, the six-DOF lessons > S2 inertial navigation without GNSS: as set the error passes 1 000 m; the star tracker, or a navigation-grade unit, keeps it inside; MEMS with the star tracker does not
+AssertionError: {"lessonId":"ru-bins-astro","final":true,"verdict":"fail","criteria":[{"id":"gnss","state":"pass","value":null},{"id":"error","state":"fail","value":1184.3297405128724},{"id":"flying","state":"pass","value":null}],"lockBroken":[],"t":524.029999999645}
+-2.5 evt.ignition
+0.0 evt.liftoff
+62.7 evt.maxQ
+113.5 evt.towerJettison
+117.5 evt.boosterBurnout
+117.9 evt.boosterSep
+118.8 evt.debrisSeparated
+118.8 evt.debrisSeparated
+118.9 evt.debrisSeparated
+118.9 evt.debrisSeparated
+153.3 evt.fairingSep
+159.8 evt.debrisSeparated
+160.0 evt.debrisSeparated
+286.4 evt.ignition
+286.7 evt.meco
+287.7 evt.stageSep
+296.1 evt.aftSkirtSep
+298.2 evt.aeroEnvelopeExceeded
+354.8 evt.debrisSeparated
+524.0 evt.seco
+524.0 evt.parkingOrbit: expected 'fail' to be 'pass' // Object.is equality
+
+Expected: "pass"
+Received: "fail"
+
+ ❯ tests/heavy/lesson-packs-sixdof.test.ts:65:56
+     63|     expect(MEASURES['nav.positionError'].read(asSet)!).toBeGreaterThan…
+     64|     const star = fly(l, navigation({ starTracker: true }));
+     65|     expect(gradeLesson(l, star).verdict, why(l, star)).toBe('pass');
+       |                                                        ^
+     66|     const navGrade = fly(l, navigation({ grade: 'navigation' }));
+     67|     expect(gradeLesson(l, navGrade).verdict, why(l, navGrade)).toBe('p…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 9 passed (10)
+   Start at  13:35:22
+   Duration  1292.40s (tests 99%, transform 1%)
+

@@ -1,0 +1,2849 @@
+From 8f68351cac0c919e73f084c8bdda6fd2e58ed3ed Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 17 Oct 2026 14:03:26 +0000
+Subject: [PATCH] WIP (stopped for handover 2026-10-17): Nozzle model
+ (throttle-independent ambient term, flow separation, vacuum engines in air):
+ implementation in progress, not tested
+
+Stopped mid-work when the owner paused the session; see
+docs/development/HANDOVER-ARGON4.md on claude/bold-johnson-haeu8t.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018CKDnUSFqs1bpw8C2bZmPj
+---
+ docs/PHYSICS.md                     | 142 ++++++++++---
+ src/data/nozzles.ts                 | 164 +++++++++++++++
+ src/design/budget.ts                |   4 +-
+ src/design/build-tour.ts            |   6 +-
+ src/design/static-fire.ts           |  24 +--
+ src/design/test-stand.ts            |  33 ++-
+ src/design/warning-text.ts          |   3 +
+ src/design/warnings.ts              |  35 +++-
+ src/i18n/en.ts                      |  17 +-
+ src/i18n/ru.ts                      |  17 +-
+ src/i18n/th.ts                      |  17 +-
+ src/physics/dispersion.ts           |   8 +-
+ src/physics/eom.ts                  |  55 ++---
+ src/physics/nozzle.ts               | 306 ++++++++++++++++++++++++++++
+ src/physics/rigid/debris-runtime.ts |  37 ++--
+ src/physics/rigid/mass.ts           |   8 +-
+ src/physics/sim/debris.ts           |  46 +++--
+ src/physics/sim/return-guidance.ts  |  31 +--
+ src/physics/sim/ship-descent.ts     |  15 +-
+ src/physics/sim/types.ts            |   2 +
+ src/physics/simulation.ts           |  34 +++-
+ src/physics/vehicle.ts              | 120 +++++++----
+ src/ui/build/stand-panel.ts         |  12 +-
+ src/ui/equations-model.ts           |   6 +-
+ tests/data-consistency.test.ts      |   9 +-
+ tests/design-static-fire.test.ts    |  97 ++++++---
+ tests/design-test-stand.test.ts     |  46 ++++-
+ tests/design-warning-text.test.ts   |   1 +
+ tests/design-warnings.test.ts       |  42 +++-
+ tests/equations.test.ts             |  11 +-
+ tests/monte-carlo.test.ts           |  10 +-
+ tests/nozzle-law.test.ts            | 279 +++++++++++++++++++++++++
+ tests/physics-core.test.ts          |  22 +-
+ 33 files changed, 1391 insertions(+), 268 deletions(-)
+ create mode 100644 src/data/nozzles.ts
+ create mode 100644 src/physics/nozzle.ts
+ create mode 100644 tests/nozzle-law.test.ts
+
+diff --git a/docs/PHYSICS.md b/docs/PHYSICS.md
+index 524b6dd..9a38990 100644
+--- a/docs/PHYSICS.md
++++ b/docs/PHYSICS.md
+@@ -1104,37 +1104,117 @@ healthy ascent peaks at 22–40 kPa against 35–70 kPa placards and never touch
+ 
+ ## 4. Propulsion and mass
+ 
+-For each engine, thrust varies linearly with ambient pressure between sea-level and vacuum
+-values, F(p) = F_vac − (F_vac − F_SL) p/p₀, and mass flow is ṁ = F_vac/(g₀ Isp_vac) at full
+-throttle. Mass flow is a property of the pump and the injector, not of the ambient pressure —
+-thrust is linear in pressure because the nozzle exit term is, while the propellant flow is
+-unchanged — so F_vac/(g₀ Isp_vac) and F_SL/(g₀ Isp_SL) are the *same* number, and a data pair
+-that says otherwise is over-determined. The model takes the vacuum pair as authoritative (it is
+-the pair every source quotes, and the only one a vacuum-only engine has) and **back-solves the
+-Isp at every pressure** from Isp(p) = F(p)/(ṁ g₀), so F = ṁ g₀ Isp holds exactly at every
+-altitude. The sea-level Isp a ground-lit engine then delivers is within 1 % of the quoted
+-`ispSL` for most of the fleet; the exceptions are recorded by a test rather than hidden —
+-Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it took
+-Arianespace's published pair on 2026-10-01).
+-
+-A throttle level, a solid's thrust profile and the start-up and tail-off ramps scale the whole
+-pressure-blended thrust, F = λ·F(p), and the mass flow with it, so the Isp does not depend on the
+-level (the test stand says so). With the nozzle flowing full the pressure term would not scale:
+-F = λ·F_vac − (F_vac − F_SL)·p/p₀. The model's thrust is therefore high where an engine is
+-throttled deep in the air, and a regressive solid's is low at its peak: a Merlin 1D at 40 % at sea
+-level gives 338 kN against 297 kN (+14 %), Angara-A5's RD-191 core at 30 % +19 % at 2 km, and a
+-P120C at its liftoff peak −2 %. Flown the full-flowing way, a point-mass ascent would end with a few
+-metres a second less (Falcon 9 3 m/s, Falcon Heavy 8.5 m/s) or more (the solid-boosted Ariane 6, PSLV,
+-Vulcan, H-IIA and H3, 4.5–23 m/s), and Angara-A5 with 25 % of its LEO payload would break up at
+-T+202 s until its guidance was set again. Deep-throttle flow may separate in the nozzle, which raises the real thrust above the
+-full-flowing figure, so the truth lies between the two. Changing it moves every fingerprint and
+-needs the owner (found in the review of 2026-10-17).
+-
+-An engine flagged `vacuumOnly` — every upper- and kick-stage engine that only ever ignites above
+-~100 km — has no sea-level operating point at all (an RL10 nozzle would not flow full at sea
+-level), and its `thrustSL`/`ispSL` fields are placeholders rather than data. The flag makes the
+-model return the vacuum figures at every pressure for those engines, so a future abort or
+-suborbital-hop scenario cannot silently fly invented numbers.
++**The thrust law** (`engineThrustAt`, src/physics/nozzle.ts; owner decision of 2026-10-17, option
++(b)). Every thrust in the simulation — ascent, strap-ons, a hot stage, the six-DOF chambers, the
++returning stages and the guidance that plans their burns, the test stand — comes from one function of
++the engine, the ambient pressure and the level λ (the throttle setting × a solid's thrust profile ×
++the start-up or tail-off ramp). An engine's vacuum thrust is ṁ·v_e + p_e·A_e. The level scales the
++mass flow and the chamber pressure, and with the nozzle fixed the exit pressure with them, while the
++exit velocity stays; so the vacuum thrust is λ·F_vac. The air presses on the whole exit area whatever
++the level, and with the flow attached
++
++    F = λ·F_vac − p_a·A_e,      ṁ = λ·F_vac/(g₀ Isp_vac)
++
++Mass flow is a property of the pump and the injector, not of the ambient pressure, so
++F_vac/(g₀ Isp_vac) and F_SL/(g₀ Isp_SL) are the *same* number at full throttle, and a data pair that
++says otherwise is over-determined. The model takes the vacuum pair as authoritative (it is the pair
++every source quotes, and the only one a vacuum-only engine has) and **back-solves the Isp** at every
++pressure and level, Isp = F/(λ·ṁ g₀), so F = ṁ g₀ Isp holds exactly. For an engine with a sea-level
++operating point the exit area is its own pair's, A_e = (F_vac − F_SL)/p₀, so at λ = 1 and p₀ the law
++gives the catalogue's sea-level thrust exactly. The sea-level Isp a ground-lit engine then delivers is
++within 1 % of the quoted `ispSL` for most of the fleet; the exceptions are recorded by a test rather
++than hidden — Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it
++took Arianespace's published pair on 2026-10-01). In vacuum the Isp does not depend on the level; in
++air it falls as the engine is throttled, which the test stand shows.
++
++Until 2026-10-17 the level scaled the whole pressure-blended thrust, F = λ·[F_vac − (F_vac − F_SL)·p/p₀]:
++the air's share shrank with the throttle, a throttled engine low in the air was too strong (a Merlin 1D
++at 40 % at sea level 338 kN against 297 kN with the flow attached; Angara-A5's RD-191 core at 30 %
+++19 % at 2 km) and a regressive solid at its peak a little weak (P120C −2 % at liftoff).
++
++**Separation.** The attached law alone would leave an engine throttled deep at sea level far too
++little thrust — none at all below λ = (F_vac − F_SL)/F_vac, 0.30 for Vulcain 2.1, which is where its
++start-up spends its first instant on the pad — because a nozzle far below ambient does not run full:
++the boundary layer separates inside the bell. Where is from Schmucker's criterion (R. H. Schmucker,
++*Flow processes in overexpanded chemical rocket nozzles, Part 1: Flow separation*, NASA TM-77396,
++1984, eq. 11):
++
++    p_i/p_a = (1.88·M_i − 1)^−0.64
++
++p_i the wall pressure where the separation begins and M_i the wall Mach number there, held at its
++value for M_i = 5 above it (Schmucker: no data above 5). The wall pressure is the one-dimensional
++isentropic pressure of the engine's nozzle at λ times the full-thrust one, from its area ratio ε and
++a ratio of specific heats by propellant (src/data/nozzles.ts: hydrolox 1.26, the value Schmucker uses
++for the SSME; kerolox and methalox 1.22, hypergolic 1.24, solid 1.18, estimates). Downstream of the
++separation the wall sees nearly the ambient pressure — Schmucker §2: it "increases only a little after
++the sharp pressure increase, until it almost reaches the surrounding pressure", and the plateau "is
++practically impossible to determine" — so the nozzle flies as if cut off at the area ratio ε_s where
++the flow separates:
++
++    F = λ·p_c·A_t·C_F,vac(ε_s) − p_a·A_t·ε_s,      floored at 0
++
++with p_c the chamber pressure that closes F_vac = p_c·A_t·C_F,vac(ε) on the engine's own geometry
++(so the vacuum thrust stays the catalogue's) and C_F,vac the ideal vacuum thrust coefficient. It
++meets the attached law where ε_s reaches ε and lies above it once separated, by ∫(p_a − p_w) dA over
++the separated bell. So deep throttle low in the air reads between the attached-flow law and the old
++one, close to the attached law where the separation sits near the exit:
++
++| engine, level, height | old λ·F(p) | attached | flown (separated) |
++|---|---|---|---|
++| Merlin 1D, 40 %, sea level | 338.0 kN | 296.6 kN | 298.9 kN |
++| RD-191, 30 %, sea level | 576 kN | 457 kN | 511 kN |
++| Vulcain 2.1, 50 %, sea level | 480 kN | 275 kN | 442 kN |
++| Merlin Vacuum, 100 %, sea level | 981 kN (its vacuum figure) | 116 kN | 775 kN |
++
++**Qualified sea-level operation stays attached.** The one-dimensional wall pressure understates the
++pressure at the end of a real bell: Schmucker's wall-pressure distribution for the SSME (TM-77396,
++Appendix, Fig. A1) ends at 0.0019·p_c, about twice the one-dimensional value for its ε of 69. With
++the one-dimensional pressure the criterion — like Summerfield's p_sep ≈ 0.25–0.4 p_a — would separate
++Vulcain 2.1 (one-dimensional p_e/p₀ 0.10), YF-77 (0.12), LE-7A (0.14), LE-9 (0.22) and the R-7's
++chambers at full thrust on the pad, which they run with the flow attached every flight: the
++catalogue's sea-level thrust is that point. So an engine with a sea-level pair takes the least factor
++on its wall pressure that keeps (λ = 1, p₀) attached — 1 for most of the fleet; Vulcain 2.1 2.53,
++YF-77 2.14, LE-7A 1.85, the Starship blend 1.35, LE-9 1.26, the R-7's chambers 1.04–1.21,
++RD-0213 1.10 — and such an engine begins to separate as soon as it is throttled at sea level. The
++others begin at λ = k(M_e)·p₀/p_e at sea level, and at that level times p_a/p₀ higher up: Merlin 1D
++0.42, BE-4 0.45, RD-180 0.53, Raptor 2 0.53, RD-191 0.55, RD-276 0.58, YF-100 0.69, F-1 0.72; the solid
++motors 0.31–0.52, below the tail of their profiles. A vacuum engine has no qualified sea-level point
++and takes 1. tests/nozzle-law.test.ts checks every catalogue engine at full thrust at sea level.
++
++**Vacuum engines lit in the air** (owner decision of 2026-10-17: "use real physics: an engine lit in
++the air flies what its nozzle really gives"). An engine flagged `vacuumOnly` has no sea-level
++operating point in the data, and its `thrustSL`/`ispSL` are placeholders the model never reads. Its
++exit area is its published exit diameter, or A_e = ε·F_vac/(p_c·C_F,vac(ε)) from its published ε and
++chamber pressure: the Merlin Vacuum's ε 165 and 9.7 MPa give the 3.3 m nozzle usually quoted. Every
++number has its source or an estimate flag in src/data/nozzles.ts. Lit low in the air the engine flies
++what that nozzle gives — at sea level the Merlin Vacuum 775 kN of its 981 kN (Isp 275 s), the flow
++separating at ε 26 of 165; an RL10C-1 77 of 102 kN; the RD-0124 238 of 294 kN — and above the
++altitude where its exit pressure meets the criterion (about 15 km for the Merlin Vacuum) it runs full.
++Until 2026-10-17 such an engine flew its vacuum thrust at every pressure: a design with Merlin
++Vacuums on strap-ons lit at T+0.5 s flew 981 kN at Isp 348 s from the pad.
++
++A flight reports an engine group running at a steady level with separated flow, once
++(`evt.nozzleSeparation`, with the separation area ratio); the start-up and the tail-off, which every
++engine passes through separated, are not reported. A separated nozzle sees asymmetric side loads
++(Schmucker's Part 2); no sourced criterion for when they break a nozzle was found, so the model flies
++the thrust and does not fail the engine. The builder still refuses a vacuum engine on the pad
++(`vacuumEngineOnPad`) and warns of one on an air-lit strap-on (`vacuumEngineInAir`, with the altitude
++below which it separates and its sea-level thrust); the test stand fires a vacuum engine in air.
++
++The returning stages fly the same law: their burns (src/physics/sim/debris.ts,
++src/physics/rigid/debris-runtime.ts, src/physics/sim/ship-descent.ts) and the return guidance that
++predicts them (src/physics/sim/return-guidance.ts) take the thrust from it and the level for a
++thrust from its inverse (`engineLevelFor`), so the planner and the plant agree. A Monte Carlo thrust
++factor scales the vacuum thrust and keeps the exit area.
++
++What the law leaves out: one γ per propellant family and an ideal C_F; the one-dimensional wall
++pressure with a least factor only where qualification demands it (a real bell's higher end pressure
++would delay separation at deep throttle — Merlin 1D, RD-191, Raptor — so the model separates early,
++on the side of more thrust); ambient pressure on the separated wall, not the plateau below it;
++lumped catalogue entries fly the blend's nozzle (Starship's six engines, landed on as blends); and
++the sea-level pairs the catalogue gives upper-stage solids (Zefiro 9 and 40, HPS3) imply chamber
++pressures no motor runs at (Zefiro 9 35 MPa), which matters only if one is lit low. A custom engine
++the table does not name flies a flagged estimate (`FALLBACK_NOZZLE`).
+ 
+ **Solid motors** quote a *mean* thrust in the data — grain mass divided by the published burn
+ time — and fly a regressive ramp on top of it, from a per-motor `peakFactor` (published
+diff --git a/src/data/nozzles.ts b/src/data/nozzles.ts
+new file mode 100644
+index 0000000..be71b30
+--- /dev/null
++++ b/src/data/nozzles.ts
+@@ -0,0 +1,164 @@
++/**
++ * The engines' nozzles: what the thrust law needs beyond the thrust and Isp
++ * pair (src/physics/nozzle.ts, owner decision of 2026-10-17 on the throttle,
++ * the ambient-pressure term and vacuum engines lit in the air).
++ *
++ * Keyed by `EngineSpec.name` as the catalogue and the historical vehicles emit
++ * it — the convention of the engine layouts (src/data/engine-layout.ts) and the
++ * exhaust colours — so a spec the physics sees, a dispersed copy of it or a
++ * stage after a mixture shift finds its nozzle without the spec carrying one.
++ * The specs themselves are unchanged (tests/d01-vehicles-identity.test.ts).
++ *
++ * WHAT A RECORD HOLDS, per `count` unit as the thrust is (one engine; one of a
++ * cluster's; the whole of a lumped entry):
++ * - `family`: the propellant, for the ratio of specific heats γ of a one-
++ *   dimensional isentropic nozzle (`NOZZLE_GAMMA`).
++ * - `expansionRatio` ε = A_e/A_t and/or `chamberPressure` p_c at full thrust.
++ * - `exitDiameter` of one nozzle and how many nozzles a count unit has, where
++ *   it is published.
++ *
++ * HOW THE LAW USES THEM. An engine with a sea-level operating point in the data
++ * takes its exit area from its own pair, A_e = (F_vac − F_SL)/p₀ — the exact
++ * full-flow law at sea level, so the catalogue's sea-level thrust is kept to the
++ * newton — and its ε from the record, or, where only p_c is published, the ε
++ * that closes F_vac = p_c·(A_e/ε)·C_F,vac(ε). A vacuum-only engine has no
++ * sea-level pair (its `thrustSL` is a placeholder), so its exit area comes from
++ * the record: the published exit diameter, or A_e = ε·F_vac/(p_c·C_F,vac(ε))
++ * from its published ε and p_c (ideal C_F: a real one is 2–4 % lower, so the
++ * area is that much small). The chamber pressure the law then flies is always
++ * the one that closes F_vac with that geometry, so the vacuum thrust is the
++ * catalogue's exactly.
++ *
++ * PROVENANCE. Every number is a `NozzleFigure`: a published value with its
++ * source, or an `estimate` with the reasoning. tests/nozzle-law.test.ts holds
++ * every engine any built-in vehicle or catalogue part flies to an entry here
++ * and every figure to one of the two. An engine name with no entry (a custom
++ * engine in a mission file) flies `fallbackNozzle` in src/physics/nozzle.ts,
++ * which is an estimate and says so.
++ */
++import type { PropellantFamily } from '../physics/rigid/vehicle-data';
++
++/** A number with where it comes from: a published `source`, or an `estimate` and why. */
++export type NozzleFigure = { value: number; source: string } | { value: number; estimate: string };
++
++export interface NozzleRecord {
++  family: PropellantFamily;
++  /** nozzle area ratio A_e/A_t */
++  expansionRatio?: NozzleFigure;
++  /** chamber pressure at full thrust, Pa */
++  chamberPressure?: NozzleFigure;
++  /** exit diameter of one nozzle, m, and the nozzles in one count unit */
++  exitDiameter?: NozzleFigure & { nozzles: number };
++  note?: string;
++}
++
++/**
++ * γ of the exhaust in a one-dimensional isentropic nozzle, by propellant. One
++ * number per family is the usual preliminary-design simplification; real
++ * exhaust shifts in composition along the nozzle. Hydrolox is the 1.26
++ * Schmucker uses for the SSME (NASA TM-77396, 1984, Appendix); the others are
++ * estimates in the range of frozen-flow exhaust for each family.
++ */
++export const NOZZLE_GAMMA: Readonly<Record<PropellantFamily, NozzleFigure>> = {
++  hydrolox: { value: 1.26, source: 'R. H. Schmucker, Flow processes in overexpanded chemical rocket nozzles, Part 1: Flow separation, NASA TM-77396 (1984), Appendix (SSME, κ = 1.26), https://ntrs.nasa.gov/citations/19840011402' },
++  kerolox: { value: 1.22, estimate: 'frozen-flow exhaust of LOX and kerosene, typically 1.2–1.24' },
++  methalox: { value: 1.22, estimate: 'frozen-flow exhaust of LOX and methane, typically 1.2–1.24' },
++  hypergolic: { value: 1.24, estimate: 'frozen-flow exhaust of N₂O₄ and a hydrazine, typically 1.22–1.26' },
++  solid: { value: 1.18, estimate: 'aluminised composite propellant exhaust with condensed alumina, typically 1.15–1.2' },
++};
++
++const W = 'https://en.wikipedia.org/wiki/';
++const MPa = 1e6;
++
++const RD107 = `${W}RD-107 (family tables, citing lpre.de and NPO Energomash)`;
++const YF20 = `${W}YF-20 (the base engine's infobox)`;
++const EUCASS_LE5B = 'N. Nagao et al., The modified fuel turbopump of 2nd stage engine for H3 launch vehicle, EUCASS 2017-189, Table 1, https://www.eucass.eu/doi/EUCASS2017-189.pdf';
++/** an estimate for a small pressure-fed or kick-stage engine with nothing published */
++const SMALL = 'nothing published: a small vacuum engine of this class, ε in the tens';
++
++export const NOZZLES: Readonly<Record<string, NozzleRecord>> = {
++  // --- R-7 family
++  'RD-107A': { family: 'kerolox', chamberPressure: { value: 6.0 * MPa, source: RD107 } },
++  'RD-108A': { family: 'kerolox', chamberPressure: { value: 5.44 * MPa, source: RD107 } },
++  'RD-107 (8D74)': { family: 'kerolox', chamberPressure: { value: 5.88 * MPa, source: RD107 } },
++  'RD-107 (8D74PS)': { family: 'kerolox', chamberPressure: { value: 5.88 * MPa, source: `${RD107}: the 8D74's figure, taken for the 1957 build` } },
++  'RD-107 (8D74K)': { family: 'kerolox', chamberPressure: { value: 5.88 * MPa, source: `${RD107}: the 8D74's figure, taken for the Vostok build` } },
++  'RD-108 (8D75)': { family: 'kerolox', chamberPressure: { value: 5.10 * MPa, source: RD107 } },
++  'RD-108 (8D75PS)': { family: 'kerolox', chamberPressure: { value: 5.10 * MPa, source: `${RD107}: the 8D75's figure, taken for the 1957 build` } },
++  'RD-108 (8D75K)': { family: 'kerolox', chamberPressure: { value: 5.10 * MPa, source: `${RD107}: the 8D75's figure, taken for the Vostok build` } },
++  'RD-0110': { family: 'kerolox', chamberPressure: { value: 6.8 * MPa, source: `${W}RD-0110 (KBKhA)` },
++    expansionRatio: { value: 30, estimate: 'not published: the ε at which an ideal nozzle gives its 326 s against the RD-107A’s 319 s at ε 19.5 (same family and cycle)' } },
++  'RD-0124': { family: 'kerolox', chamberPressure: { value: 15.69 * MPa, source: 'http://www.lpre.de/kbkha/RD-0124/index.htm' },
++    expansionRatio: { value: 250, estimate: 'not published: the ε at which an ideal nozzle gives its 359 s against the RD-191’s 337.5 s at ε 37 (staged combustion both); four such nozzles fit its 2.4 m envelope' } },
++  'RD-0124A': { family: 'kerolox', chamberPressure: { value: 15.69 * MPa, source: 'http://www.lpre.de/kbkha/RD-0124/index.htm (the RD-0124’s)' },
++    expansionRatio: { value: 250, estimate: 'as the RD-0124, whose nozzles it keeps' } },
++  'RD-0109': { family: 'kerolox', chamberPressure: { value: 5.0 * MPa, source: `${W}RD-0109 (KBKhA)` },
++    expansionRatio: { value: 26, estimate: 'not published: the ε at which an ideal nozzle gives its 323.5 s against the RD-107A’s 319 s at ε 19.5' } },
++  'S5.92': { family: 'hypergolic', chamberPressure: { value: 9.61 * MPa, source: `${W}S5.92` },
++    expansionRatio: { value: 64, estimate: 'not published: the ε at which an ideal nozzle gives its 327 s against the RD-276’s 316 s at ε 26.2' } },
++  // --- Proton, Angara
++  'RD-276': { family: 'hypergolic', expansionRatio: { value: 26.2, source: `${W}RD-275` }, chamberPressure: { value: 16.5 * MPa, source: `${W}RD-275` } },
++  'RD-0210/0211': { family: 'hypergolic', chamberPressure: { value: 14.7 * MPa, source: `${W}RD-0210 (KBKhA)` } },
++  'RD-0213 + RD-0214': { family: 'hypergolic', chamberPressure: { value: 14.7 * MPa, source: `${W}RD-0212 (the RD-0210 family’s figure)` } },
++  'S5.98M': { family: 'hypergolic', chamberPressure: { value: 9.8 * MPa, source: `${W}S5.98M` },
++    expansionRatio: { value: 74, estimate: 'not published: the ε at which an ideal nozzle gives its 328.6 s against the RD-276’s 316 s at ε 26.2' } },
++  'RD-191': { family: 'kerolox', expansionRatio: { value: 37, source: `${W}RD-191` }, chamberPressure: { value: 25.8 * MPa, source: `${W}RD-191` } },
++  // --- Falcon
++  'Merlin 1D': { family: 'kerolox', expansionRatio: { value: 16, source: `${W}Merlin_(rocket_engine) (Merlin 1D)` }, chamberPressure: { value: 9.7 * MPa, source: `${W}Merlin_(rocket_engine) (Aviation Week, 2011)` } },
++  'Merlin Vacuum': { family: 'kerolox', expansionRatio: { value: 165, source: `${W}Merlin_(rocket_engine) (SpaceX Falcon 9 page and Payload User’s Guide, 2015)` },
++    chamberPressure: { value: 9.7 * MPa, source: `${W}Merlin_(rocket_engine): the Merlin 1D’s chamber, which the vacuum engine shares` },
++    note: 'exit diameter 3.30 m from ε and p_c, the 3.3 m usually quoted' },
++  // --- Atlas V, Vulcan
++  'RD-180': { family: 'kerolox', expansionRatio: { value: 36.87, source: `${W}RD-180` }, chamberPressure: { value: 26.7 * MPa, source: `${W}RD-180` } },
++  'GEM-63': { family: 'solid', expansionRatio: { value: 14, estimate: 'a 14:1 fixed carbon-phenolic nozzle by a forum post (rocketryforum.com), not found in Northrop Grumman’s data sheet' } },
++  'GEM-63XL': { family: 'solid', expansionRatio: { value: 14, estimate: 'as the GEM-63' } },
++  'RL10C-1': { family: 'hydrolox', expansionRatio: { value: 130, source: `${W}RL10 (variants table; Aerojet Rocketdyne)` },
++    exitDiameter: { value: 1.45, nozzles: 1, source: `${W}RL10 (variants table)` } },
++  'RL10C-1-1': { family: 'hydrolox', expansionRatio: { value: 155, source: `${W}RL10 (variants table; Aerojet Rocketdyne data sheet)` },
++    exitDiameter: { value: 1.57, nozzles: 1, source: `${W}RL10 (variants table)` } },
++  'BE-4': { family: 'methalox', chamberPressure: { value: 14 * MPa, source: `${W}BE-4 (Ars Technica, 2016-03-09)` } },
++  // --- Ariane 6, Vega-C
++  'Vulcain 2.1': { family: 'hydrolox', chamberPressure: { value: 12.08 * MPa, source: `${W}Vulcain_(rocket_engine) (ESA)` } },
++  'P120C': { family: 'solid', expansionRatio: { value: 16, estimate: 'not published: a large first-stage solid of the P80’s class' } },
++  'Vinci': { family: 'hydrolox', expansionRatio: { value: 240, source: `${W}Vinci_(rocket_engine) (ArianeGroup data sheet)` },
++    chamberPressure: { value: 6.0 * MPa, source: `${W}Vinci_(rocket_engine) (ArianeGroup data sheet)` } },
++  'Zefiro 40': { family: 'solid', expansionRatio: { value: 25, estimate: 'not published: a second-stage solid between the P120C and the Zefiro 9' } },
++  'Zefiro 9': { family: 'solid', expansionRatio: { value: 58, source: 'ESA, Successful first test for Vega’s Zefiro 9 engine (2005-12-28): “the nozzle expansion ratio was reduced from 58 to 16” for the sea-level test, https://www.marsdaily.com/reports/Successful_First_Test_For_Vegas_Zefiro_9_Engine.html' } },
++  'AVUM+ (RD-869)': { family: 'hypergolic', expansionRatio: { value: 60, estimate: SMALL }, chamberPressure: { value: 1.8 * MPa, estimate: 'a pressure-fed engine of this class' } },
++  // --- Long March
++  'YF-77': { family: 'hydrolox', expansionRatio: { value: 49, source: `${W}YF-77` }, chamberPressure: { value: 10.1 * MPa, source: `${W}YF-77` } },
++  'YF-100': { family: 'kerolox', expansionRatio: { value: 35, source: `${W}YF-100` }, chamberPressure: { value: 18 * MPa, source: `${W}YF-100` } },
++  'YF-75D': { family: 'hydrolox', expansionRatio: { value: 80, source: `${W}YF-75D (Nan 2013, IAC-13-C4.1)` }, chamberPressure: { value: 4.1 * MPa, source: `${W}YF-75D (Nan 2013, IAC-13-C4.1)` } },
++  'YF-75': { family: 'hydrolox', expansionRatio: { value: 80, source: `${W}YF-75` }, chamberPressure: { value: 3.76 * MPa, source: `${W}YF-75` },
++    note: 'lumped: the two engines’ total, so the exit area is both nozzles’' },
++  'YF-21C (4× YF-20C)': { family: 'hypergolic', expansionRatio: { value: 12.69, source: `${YF20}, taken for the YF-20C` }, chamberPressure: { value: 7.1 * MPa, source: `${YF20}, taken for the YF-20C` } },
++  'YF-24C (YF-22C + 4× YF-23C)': { family: 'hypergolic', chamberPressure: { value: 7.1 * MPa, source: `${YF20}: the family’s chamber, taken for the YF-22C` } },
++  'YF-25': { family: 'hypergolic', expansionRatio: { value: 12.69, source: `${YF20}, taken for its strap-on version` }, chamberPressure: { value: 7.1 * MPa, source: `${YF20}, taken for its strap-on version` } },
++  // --- Japan
++  'LE-9': { family: 'hydrolox', expansionRatio: { value: 37, source: `${W}LE-9 (MHI Technical Review)` }, chamberPressure: { value: 10.0 * MPa, source: `${W}LE-9` } },
++  'LE-7A': { family: 'hydrolox', expansionRatio: { value: 51.9, source: `${W}LE-7` }, chamberPressure: { value: 12.0 * MPa, source: `${W}LE-7` } },
++  'LE-5B-3': { family: 'hydrolox', expansionRatio: { value: 110, source: EUCASS_LE5B }, chamberPressure: { value: 3.61 * MPa, source: EUCASS_LE5B } },
++  'LE-5B': { family: 'hydrolox', expansionRatio: { value: 110, source: `${EUCASS_LE5B} (LE-5B-2)` }, chamberPressure: { value: 3.58 * MPa, source: `${EUCASS_LE5B} (LE-5B-2)` } },
++  'SRB-3': { family: 'solid', expansionRatio: { value: 12, estimate: 'not published: a strap-on solid of the SRB-A’s class' } },
++  'SRB-A3': { family: 'solid', expansionRatio: { value: 12, estimate: 'not published: a strap-on solid of this class' } },
++  // --- India
++  'S139': { family: 'solid', expansionRatio: { value: 8, estimate: 'not published: an early large first-stage solid' } },
++  'PSOM-XL': { family: 'solid', expansionRatio: { value: 10, estimate: 'not published: a small strap-on solid' } },
++  'Vikas': { family: 'hypergolic', chamberPressure: { value: 5.85 * MPa, source: `${W}Vikas_(rocket_engine) (the upgraded engine’s 58.5 bar)` } },
++  'HPS3': { family: 'solid', expansionRatio: { value: 50, estimate: 'not published: an upper-stage solid' } },
++  'L-2-5': { family: 'hypergolic', expansionRatio: { value: 60, estimate: SMALL }, chamberPressure: { value: 0.9 * MPa, estimate: 'a pressure-fed engine of this class' } },
++  // --- Electron
++  'Rutherford': { family: 'kerolox', expansionRatio: { value: 15, estimate: 'not published: a sea-level kerolox bell, the Merlin 1D’s 16 or a little less' } },
++  'Rutherford Vacuum': { family: 'kerolox', expansionRatio: { value: 60, estimate: SMALL }, chamberPressure: { value: 1.2 * MPa, estimate: 'not published: an electric-pump engine of this size' } },
++  'Curie': { family: 'hypergolic', expansionRatio: { value: 60, estimate: SMALL }, chamberPressure: { value: 1.0 * MPa, estimate: 'a pressure-fed engine of this class' } },
++  // --- Starship
++  'Raptor 2': { family: 'methalox', expansionRatio: { value: 34.34, source: `${W}SpaceX_Raptor (sea-level nozzle)` }, chamberPressure: { value: 30 * MPa, source: `${W}SpaceX_Raptor (Raptor 2)` } },
++  'Raptor 2 / RVac': { family: 'methalox', chamberPressure: { value: 30 * MPa, source: `${W}SpaceX_Raptor (Raptor 2)` },
++    note: 'lumped: a blend of sea-level Raptors and RVacs, so ε is the one that closes the blended pair' },
++  // --- Saturn V, Mercury-Redstone
++  'F-1': { family: 'kerolox', expansionRatio: { value: 16, source: `${W}Rocketdyne_F-1 (NASA F-1 fact sheet)` }, chamberPressure: { value: 7.0 * MPa, source: `${W}Rocketdyne_F-1` } },
++  'Rocketdyne F-1': { family: 'kerolox', expansionRatio: { value: 16, source: `${W}Rocketdyne_F-1 (NASA F-1 fact sheet)` }, chamberPressure: { value: 7.0 * MPa, source: `${W}Rocketdyne_F-1` } },
++  'J-2': { family: 'hydrolox', expansionRatio: { value: 27.5, source: `${W}Rocketdyne_J-2 (NASA J-2 fact sheet)` }, chamberPressure: { value: 5.26 * MPa, source: `${W}Rocketdyne_J-2` } },
++  'Rocketdyne J-2': { family: 'hydrolox', expansionRatio: { value: 27.5, source: `${W}Rocketdyne_J-2 (NASA J-2 fact sheet)` }, chamberPressure: { value: 5.26 * MPa, source: `${W}Rocketdyne_J-2` } },
++  'Rocketdyne A-7': { family: 'kerolox', expansionRatio: { value: 4, estimate: 'not published here: an early alcohol–oxygen sea-level engine, whose sea-level/vacuum thrust of 0.886 fits ε ≈ 4 at about 2 MPa' } },
++};
+diff --git a/src/design/budget.ts b/src/design/budget.ts
+index 00e62c5..53ccee3 100644
+--- a/src/design/budget.ts
++++ b/src/design/budget.ts
+@@ -25,7 +25,7 @@
+  */
+ import type { VehicleSpec } from '../types';
+ import { G0 } from '../physics/constants';
+-import { VehicleModel, engineMassFlow, engineThrust, liftoffThrust, solidProfile } from '../physics/vehicle';
++import { VehicleModel, engineMassFlow, engineThrustAt, liftoffThrust, solidProfile } from '../physics/vehicle';
+ 
+ /**
+  * `parallel`: a first stage burning with its strap-ons, until they run dry.
+@@ -215,7 +215,7 @@ export function vehicleFigures(spec: VehicleSpec, payloadKg: number): VehicleFig
+       ignitionMass += payloadKg;
+       if (i === 1 && spec.fairing) ignitionMass += spec.fairing.mass;
+       const e = st.engine;
+-      const thrust = e.count * engineThrust(e, 0) * (e.solid ? solidProfile(0, e.peakFactor) : 1);
++      const thrust = e.count * engineThrustAt(e, 0, e.solid ? solidProfile(0, e.peakFactor) : 1);
+       tw = thrust / (ignitionMass * G0);
+     }
+     return {
+diff --git a/src/design/build-tour.ts b/src/design/build-tour.ts
+index 533c916..0b23761 100644
+--- a/src/design/build-tour.ts
++++ b/src/design/build-tour.ts
+@@ -22,8 +22,8 @@
+  * gained; an upper stage lights below a thrust-to-weight of 1).
+  */
+ import type { VehicleSpec } from '../types';
+-import { G0 } from '../physics/constants';
+-import { engineThrustSL, solidProfile } from '../physics/vehicle';
++import { G0, P0 } from '../physics/constants';
++import { engineThrustAt, solidProfile } from '../physics/vehicle';
+ import { vehicleById } from '../data/vehicles';
+ import { vehicleFigures, type PhaseBudget } from './budget';
+ import { watchPayload } from './stage-table';
+@@ -98,7 +98,7 @@ export function carriedDv(phases: readonly PhaseBudget[]): number {
+  */
+ export function coreAloneTW(spec: VehicleSpec, liftoffMass: number): number {
+   const e = spec.stages[0].engine;
+-  return (e.count * engineThrustSL(e) * (e.solid ? solidProfile(0, e.peakFactor) : 1)) / (liftoffMass * G0);
++  return (e.count * engineThrustAt(e, P0, e.solid ? solidProfile(0, e.peakFactor) : 1)) / (liftoffMass * G0);
+ }
+ 
+ export interface TourFigure {
+diff --git a/src/design/static-fire.ts b/src/design/static-fire.ts
+index b2e64ec..bcd5d81 100644
+--- a/src/design/static-fire.ts
++++ b/src/design/static-fire.ts
+@@ -13,23 +13,24 @@
+  * aboard — and every newton-second comes out of the tanks at the Isp the
+  * flight delivers at that pressure.
+  *
+- * Two firings the model would run and the stand refuses:
++ * One firing the model would run and the stand refuses: **a commanded
++ * shutdown of a solid motor.** A solid cannot be shut down, but
++ * `VehicleModel.cutoffStage` does not check `solid`, so the stand does.
+  *
+- * - **A vacuum-only engine at any pressure above zero.** Such an engine has no
+- *   sea-level operating point, so `engineThrustSL` returns its vacuum thrust
+- *   and the model would report full vacuum thrust at sea level
+- *   (src/physics/vehicle.ts, `engineThrustSL`); its `thrustSL`/`ispSL` fields
+- *   are placeholders, not data (src/data/vehicles.ts, "VACUUM-ONLY ENGINES").
+- *   It is fired in a vacuum cell (pressure 0) or not at all.
+- * - **A commanded shutdown of a solid motor.** A solid cannot be shut down,
+- *   but `VehicleModel.cutoffStage` does not check `solid`, so the stand does.
++ * A vacuum engine fires in air too (owner decision of 2026-10-17: what the
++ * nozzle really gives). Until then the stand refused it, because the model
++ * returned its vacuum thrust at every pressure; the thrust law
++ * (src/physics/nozzle.ts) now gives what its nozzle does at sea level, with the
++ * flow separated far inside the bell — the Merlin Vacuum about 775 kN against
++ * 981 kN in vacuum, an Isp of about 275 s.
+  *
+  * What the stand does not know: start-up and tail-off are the fleet's
+  * constants (1.0 s / 0.3 s rise, 0.25 s / 1.0 s decay constant) unless the
+  * engine sets `startupS`/`tailoffS`, not per-engine published transients; and
+  * a delivered sea-level Isp is back-solved from `thrustSL` and the vacuum
+  * mass flow, so it can differ from the `ispSL` a data file quotes (by up to
+- * 6.9 % in the catalogue, tests/physics-core.test.ts). Mixture ratio and
++ * 5.0 % in the catalogue, tests/physics-core.test.ts); in air it falls as the
++ * engine is throttled (the air takes p·A_e at every level). Mixture ratio and
+  * propellant family are not part of the engine model at all.
+  *
+  * DOM-free, SI units (N, kg, kg/s, s, Pa).
+@@ -70,7 +71,7 @@ export interface StaticFireSample {
+   isp: number;
+ }
+ 
+-export type StaticFireRefusal = 'vacuumOnlyAtPressure' | 'solidShutdown';
++export type StaticFireRefusal = 'solidShutdown';
+ 
+ export interface StaticFireResult {
+   samples: StaticFireSample[];
+@@ -115,7 +116,6 @@ export function staticFire(engine: EngineSpec, o: StaticFireOptions): StaticFire
+   if (!(o.throttle > 0 && o.throttle <= 1)) throw new RangeError(`throttle must be in (0, 1] (got ${o.throttle})`);
+   if (!(o.dt > 0) || !Number.isFinite(o.dt)) throw new RangeError(`dt must be more than 0 (got ${o.dt})`);
+   if (o.cutoffS !== undefined && !(o.cutoffS > 0)) throw new RangeError(`cutoffS must be more than 0 (got ${o.cutoffS})`);
+-  if (engine.vacuumOnly && o.pressurePa > 0) return refusal('vacuumOnlyAtPressure');
+   if (engine.solid && o.cutoffS !== undefined) return refusal('solidShutdown');
+ 
+   // The stand: one stage and nothing else. `VehicleModel` reads the stage's
+diff --git a/src/design/test-stand.ts b/src/design/test-stand.ts
+index 0d36890..f54e339 100644
+--- a/src/design/test-stand.ts
++++ b/src/design/test-stand.ts
+@@ -26,7 +26,10 @@
+  *   published peak is kept as a ratio to it, `peakFactor`; the product is the
+  *   published peak within 0.5 % (the table in src/data/parts.ts,
+  *   tests/design-static-fire.test.ts). Anywhere between 0 and P0 nobody
+- *   publishes a figure: the model blends the two linearly in pressure.
++ *   publishes a figure: the thrust law (src/physics/nozzle.ts) takes
++ *   p·A_e off λ·F_vac, linear in pressure while the flow is attached, and a
++ *   vacuum engine fired in air flies what its nozzle gives with the flow
++ *   separated inside it (`separatedAt` says where).
+  * - WHAT IS AN ESTIMATE. The start-up and the tail-off are the fleet's
+  *   generic constants unless the engine sets its own (src/physics/vehicle.ts,
+  *   `LIQUID_STARTUP_S` …), not published transients, and the model keeps the
+@@ -38,7 +41,8 @@ import type { EngineSpec, VehicleSpec } from '../types';
+ import { BOOSTER_BODIES, ENGINE_PARTS, STAGE_BODIES, engineSpec, enginePartOf, type EnginePart } from '../data/parts';
+ import { G0, P0 } from '../physics/constants';
+ import { atmosphere } from '../physics/atmosphere';
+-import { TAILOFF_SPAN, engineIsp, engineMassFlow, engineStartupS, engineTailoffS, engineThrust } from '../physics/vehicle';
++import { TAILOFF_SPAN, engineIsp, engineMassFlow, engineStartupS, engineTailoffS, engineThrustAt } from '../physics/vehicle';
++import { nozzleFlow, nozzleModel } from '../physics/nozzle';
+ import { staticFire, type StaticFireResult, type StaticFireSample } from './static-fire';
+ 
+ /** An engine on the stand, with the load it is fired with unless the student changes it. */
+@@ -164,12 +168,18 @@ export interface StandRun {
+   deliveredIsp: number;
+   /** total impulse over the burn time, N (a solid's catalogue thrust is this kind of mean) */
+   meanThrust: number;
+-  /** the model's steady thrust at this pressure and level, N: count × F(p) × level (a solid's mean level, 1) */
++  /** the model's steady thrust at this pressure and level, N: count × F(p, level), the thrust law (a solid's mean level, 1) */
+   steadyThrust: number;
+-  /** the model's Isp at this pressure, s */
++  /** the model's Isp at this pressure and level, s: it falls with the throttle in air, not in vacuum */
+   steadyIsp: number;
+   /** propellant left in the tanks after the tail-off, kg */
+   leftKg: number;
++  /**
++   * At the steady level, where the flow separates inside the nozzle: the area
++   * ratio at the separation point and the nozzle's own; null while it flows
++   * attached (src/physics/nozzle.ts).
++   */
++  separatedAt: { areaRatio: number; expansionRatio: number } | null;
+ }
+ 
+ /**
+@@ -186,13 +196,15 @@ export function runStand(engine: EngineSpec, i: StandInputs): StandRun {
+     ...(i.cutoffS !== undefined ? { cutoffS: i.cutoffS } : {}),
+   });
+   const fired = !result.refused && result.propellantUsed > 0;
++  const flow = nozzleFlow(engine, pressurePa, level);
+   return {
+     pressurePa, level, dt, result,
+     deliveredIsp: fired ? result.impulse / (G0 * result.propellantUsed) : Number.NaN,
+     meanThrust: fired && result.burnTime > 0 ? result.impulse / result.burnTime : Number.NaN,
+-    steadyThrust: i.count * engineThrust(engine, pressurePa) * level,
+-    steadyIsp: engineIsp(engine, pressurePa),
++    steadyThrust: i.count * engineThrustAt(engine, pressurePa, level),
++    steadyIsp: engineIsp(engine, pressurePa, level),
+     leftKg: fired ? Math.max(0, i.propellantKg - result.propellantUsed) : i.propellantKg,
++    separatedAt: flow.separated ? { areaRatio: flow.separationAreaRatio, expansionRatio: nozzleModel(engine).expansionRatio } : null,
+   };
+ }
+ 
+@@ -216,8 +228,11 @@ export interface StandRow {
+  * The model beside the data, for a firing in `air`. Rows for the other air
+  * keep the published figure with no stand value, so a student sees both of
+  * the catalogue's operating points whichever one was fired. A throttled
+- * liquid engine's thrust is not compared with a full-thrust figure; its Isp
+- * is (the model's Isp does not depend on the throttle).
++ * liquid engine's thrust is not compared with a full-thrust figure, and in air
++ * neither is its Isp: the air takes p·A_e off the thrust at every level, so a
++ * throttled engine's Isp in air is below its full-thrust one (owner decision
++ * of 2026-10-17). In vacuum the Isp does not depend on the throttle and is
++ * compared at any level.
+  */
+ export function standComparison(engine: EngineSpec, count: number, air: StandAir, run: StandRun): StandRow[] {
+   const fired = !run.result.refused && run.result.samples.length > 0;
+@@ -244,7 +259,7 @@ export function standComparison(engine: EngineSpec, count: number, air: StandAir
+   const ispStand = (a: StandAir): number | null => (here(a) ? run.deliveredIsp : null);
+   const ispSL = engine.vacuumOnly ? null : engine.ispSL;
+   rows.push({ figure: 'ispSL', published: ispSL, ...(engine.vacuumOnly ? { notData: true as const } : {}), stand: ispStand('seaLevel'),
+-    difference: diff(ispStand('seaLevel'), ispSL), unit: 's' });
++    difference: diff(ispStand('seaLevel'), ispSL, solid || fullLevel), unit: 's' });
+   rows.push({ figure: 'ispVac', published: engine.ispVac, stand: ispStand('vacuum'), difference: diff(ispStand('vacuum'), engine.ispVac), unit: 's' });
+   if (air === 'pad') rows.push({ figure: 'ispPad', published: null, stand: ispStand('pad'), difference: null, unit: 's' });
+   return rows;
+diff --git a/src/design/warning-text.ts b/src/design/warning-text.ts
+index d248bd9..fd6b451 100644
+--- a/src/design/warning-text.ts
++++ b/src/design/warning-text.ts
+@@ -113,6 +113,7 @@ export function subjectRef(subject: TextSubject): string {
+ export const WARNING_KEYS: Readonly<Record<WarningCode, readonly string[]>> = {
+   invalid: ['build.warn.invalid'],
+   vacuumEngineOnPad: ['build.warn.vacuumEngineOnPad'],
++  vacuumEngineInAir: ['build.warn.vacuumEngineInAir'],
+   noLiftoff: ['build.warn.noLiftoff'],
+   lowLiftoffTW: ['build.warn.lowLiftoffTW'],
+   weakUpperStage: ['build.warn.weakUpperStage'],
+@@ -134,6 +135,8 @@ export function warningText(w: DesignWarning): DesignText {
+       return { key: first, level, subject, values: {}, ...(w.path !== undefined ? { detail: w.path } : {}) };
+     case 'vacuumEngineOnPad':
+       return { key: first, level, subject, values: {} };
++    case 'vacuumEngineInAir':
++      return { key: first, level, subject, values: { h: n(p.ceilingM, 'km'), sl: n(p.thrustSL, 'kN'), vac: n(p.thrustVac, 'kN') } };
+     case 'noLiftoff':
+       return { key: first, level, subject: null, values: { thrust: n(p.thrustN, 'kN'), weight: n(p.weightN, 'kN'), tw: n(p.tw, 'tw') } };
+     case 'lowLiftoffTW':
+diff --git a/src/design/warnings.ts b/src/design/warnings.ts
+index d1e80d4..1bb5001 100644
+--- a/src/design/warnings.ts
++++ b/src/design/warnings.ts
+@@ -14,6 +14,7 @@
+  * |---|---|---|---|
+  * | `invalid` | fail | any `vehicleSpecProblems` finding, by path | src/config/vehicle-spec.ts |
+  * | `vacuumEngineOnPad` | fail | a ground-lit engine is `vacuumOnly` | the validator's own rule (`checkEngine`: "cannot be set on an engine that lights on the pad"), restated as a code |
++ * | `vacuumEngineInAir` | warn | an air-lit strap-on group's engine is `vacuumOnly` | the thrust law (src/physics/nozzle.ts): below the altitude whose pressure separates its flow at full thrust, the flight flies the separated thrust and reports `evt.nozzleSeparation` |
+  * | `noLiftoff` | fail | the hold-down never releases: thrust ≤ weight until T+3 s | `Simulation.stepPrelaunch`, replayed (`holdDownRelease`): released when thrust > weight, else `evt.noLiftoff` after T+3 s |
+  * | `lowLiftoffTW` | warn | 1 < T/W < 1.15 | the fleet's floor, tests/data-consistency.test.ts ("thrust-to-weight is between 1.15 and 2.6") |
+  * | `weakUpperStage` | warn | an upper stage lights at under 1.6 m/s² | `planMission`'s `weakFinalStage` (src/physics/mission.ts) |
+@@ -58,10 +59,24 @@ import { siteById } from '../data/sites';
+ import { G0, MU_EARTH, R_EARTH } from '../physics/constants';
+ import { atmosphere } from '../physics/atmosphere';
+ import { guidanceForVehicle } from '../physics/defaults';
+-import { VehicleModel, engineMassFlow, idealDeltaV, liftoffMass, liftoffThrust, solidProfile } from '../physics/vehicle';
++import { VehicleModel, engineMassFlow, engineThrustSL, idealDeltaV, liftoffMass, liftoffThrust, solidProfile } from '../physics/vehicle';
++import { separationPressure } from '../physics/nozzle';
++
++/** The standard atmosphere's altitude of pressure `p`, m (0 at or above sea-level pressure). */
++function altitudeOfPressure(p: number): number {
++  if (!(p > 0) || p >= atmosphere(0).p) return 0;
++  let lo = 0, hi = 120e3;
++  if (atmosphere(hi).p >= p) return hi;
++  for (let i = 0; i < 60; i++) {
++    const mid = (lo + hi) / 2;
++    if (atmosphere(mid).p > p) lo = mid;
++    else hi = mid;
++  }
++  return (lo + hi) / 2;
++}
+ 
+ export type WarningCode =
+-  | 'invalid' | 'vacuumEngineOnPad' | 'noLiftoff' | 'lowLiftoffTW' | 'weakUpperStage'
++  | 'invalid' | 'vacuumEngineOnPad' | 'vacuumEngineInAir' | 'noLiftoff' | 'lowLiftoffTW' | 'weakUpperStage'
+   | 'fixedThrustOverAccel' | 'lowDv' | 'implausibleFraction' | 'upperWiderThanFairing';
+ export type WarningLevel = 'fail' | 'warn';
+ 
+@@ -83,7 +98,7 @@ export interface DesignWarning {
+ /** Each code's level: the table in the module comment. */
+ export const WARNING_LEVEL: Readonly<Record<WarningCode, WarningLevel>> = {
+   invalid: 'fail', vacuumEngineOnPad: 'fail', noLiftoff: 'fail',
+-  lowLiftoffTW: 'warn', weakUpperStage: 'warn', fixedThrustOverAccel: 'warn', lowDv: 'warn',
++  vacuumEngineInAir: 'warn', lowLiftoffTW: 'warn', weakUpperStage: 'warn', fixedThrustOverAccel: 'warn', lowDv: 'warn',
+   implausibleFraction: 'warn', upperWiderThanFairing: 'warn',
+ };
+ 
+@@ -219,6 +234,9 @@ export function holdDownRelease(spec: VehicleSpec, payloadKg: number, padAltitud
+  * - `noLiftoff`: `tw`, `thrustN`, `weightN` (at full tanks, sea level, G0 —
+  *   the fleet's figure) and `releaseTw`, the best the hold-down reached;
+  * - `lowLiftoffTW`: `tw`, `thrustN`, `weightN`, `floor`;
++ * - `vacuumEngineInAir`: `ceilingM` (the altitude below which its flow separates at full thrust, m),
++ *   `thrustSL` and `thrustVac` (the group's, N: at sea level with the flow separated, and in vacuum),
++ *   `igniteAt` (s);
+  * - `weakUpperStage`: `accel`, `floor` (m/s²);
+  * - `fixedThrustOverAccel`: `accel` (at the lowest thrust, at burnout), `limit` (the flight's
+  *   `maxAccel`), `strapOnPhase` (1 at the end of the first stage's strap-on phase, 0 at a
+@@ -252,6 +270,17 @@ export function designWarnings(spec: VehicleSpec, payloadKg: number, siteId?: st
+   if (!release.released) add('noLiftoff', { tw, thrustN, weightN, releaseTw: release.tw }, { stage: 0 });
+   else if (tw < LIFTOFF_TW_FLOOR) add('lowLiftoffTW', { tw, thrustN, weightN, floor: LIFTOFF_TW_FLOOR }, { stage: 0 });
+ 
++  // --- a vacuum engine lit in the air (owner decision of 2026-10-17): allowed,
++  // and the flight flies what its nozzle gives; said here with the altitude
++  // below which its flow separates at full thrust and what it gives at sea level
++  (spec.stages[0].boosters ?? []).forEach((b, g) => {
++    if (!b.engine.vacuumOnly || !((b.igniteAt ?? 0) > 0)) return;
++    const n = b.count * b.engine.count;
++    add('vacuumEngineInAir', {
++      ceilingM: altitudeOfPressure(separationPressure(b.engine)), thrustSL: n * engineThrustSL(b.engine), thrustVac: n * b.engine.thrustVac, igniteAt: b.igniteAt!,
++    }, { stage: 0, booster: g });
++  });
++
+   // --- upper stages: the planner's weak-stage line, for every stage above the first
+   const stages = spec.stages;
+   for (let i = 1; i < stages.length; i++) {
+diff --git a/src/i18n/en.ts b/src/i18n/en.ts
+index 8cd3a11..f1f598d 100644
+--- a/src/i18n/en.ts
++++ b/src/i18n/en.ts
+@@ -480,6 +480,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'evt.towerJettison': 'Launch escape tower jettisoned',
+   'evt.ceco': 'Centre engine cut-off: {stage}, {n} of {total} running',
+   'evt.mixtureShift': 'Mixture ratio shift: {stage}, now {kn} kN',
++  'evt.nozzleSeparation': 'Flow separation in the nozzle: {engine} on {stage} runs with its flow separated at an area ratio of {at} of {eps}, {alt} km up',
+   'evt.stageCutoff': 'Stage {n} engine cutoff ({stage})',
+   'evt.stageSep': 'Stage {n} separation at {alt} km, {speed} m/s',
+   'evt.fairingSep': 'Fairing separation at {alt} km',
+@@ -666,6 +667,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'tl.evt.towerJettison': 'Tower off',
+   'tl.evt.ceco': 'CECO',
+   'tl.evt.mixtureShift': 'Mixture shift',
++  'tl.evt.nozzleSeparation': 'Nozzle flow separation',
+   'tl.evt.stageCutoff': 'Cutoff',
+   'tl.evt.stageSep': 'Stage sep',
+   'tl.evt.fairingSep': 'Fairing',
+@@ -2091,9 +2093,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.eng.stand.bad.propellant': 'Load some propellant: more than nothing and no more than {max}.',
+   'build.eng.stand.bad.cutoff': 'The shutdown time must be more than 0 s.',
+   'build.eng.stand.refused': 'The stand will not fire this',
+-  'build.eng.stand.refuse.vacuumOnly': '{engine} is a vacuum engine. Its nozzle is built for the near-vacuum of space and would not run full in air, so no sea-level figure is published for it and the model has none to fire it with: in air it would report its full vacuum thrust, which is wrong. It fires in the vacuum chamber only.',
+   'build.eng.stand.refuse.solidShutdown': 'A solid motor cannot be shut down: once its grain is lit, it burns until the propellant is gone.',
+-  'build.eng.stand.toVacuum': 'Fire it in the vacuum chamber',
+   'build.eng.stand.letBurn': 'Let it burn to the end',
+   'build.eng.stand.results': 'What the stand measured',
+   'build.eng.stand.impulse': 'Total impulse',
+@@ -2127,11 +2127,12 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.eng.stand.notData': 'not data',
+   'build.eng.stand.note.pad': 'Nobody publishes figures at this pressure: the model scales the thrust between the sea-level and vacuum figures in proportion to the air pressure, and the mass flow stays the same.',
+   'build.eng.stand.note.ispSL': 'The model takes the vacuum thrust and Isp as its data, keeps the mass flow they give at every pressure, and works the sea-level Isp out from the sea-level thrust and that flow. Where the catalogue\'s sea-level pair does not agree with its vacuum pair, the two sea-level Isps differ: the difference is in the data, not in the firing.',
+-  'build.eng.stand.note.throttled': 'The stand fired at {p} % throttle, so its thrust is not set against the full-thrust figures; its Isp is, because the model\'s Isp does not change with the throttle.',
++  'build.eng.stand.note.throttled': 'The stand fired at {p} % throttle, so its thrust is not set against the full-thrust figures. In air neither is its Isp: the air presses on the nozzle exit with the same force at any throttle, so a throttled engine\'s Isp in air is lower than at full thrust. In the vacuum chamber its Isp does not change with the throttle and is compared.',
+   'build.eng.stand.note.solidMean': 'A solid motor\'s catalogue thrust is its mean over its published burn time; the stand\'s mean is its total impulse divided by its burn time.',
+   'build.eng.stand.note.solidPeak': 'The catalogue keeps a solid motor\'s published peak as a ratio to its mean: {f} times. The stand\'s peak comes just after start-up, a little below the published one, because some grain burns while the motor lights.',
+   'build.eng.stand.note.peakVacuum': 'The published peak is a vacuum figure: fire the motor in the vacuum chamber to set the stand\'s beside it.',
+-  'build.eng.stand.note.vacuumOnly': 'A vacuum engine\'s sea-level figures in the data are placeholders, not measurements, and the model never uses them.',
++  'build.eng.stand.note.vacuumOnly': 'A vacuum engine\'s sea-level figures in the data are placeholders, not measurements, and the model never uses them: in air it fires with what its nozzle really gives there, worked out from the nozzle\'s exit area and area ratio.',
++  'build.eng.stand.note.separated': 'At this pressure and throttle the flow separates from the nozzle wall at an area ratio of {at}, short of the nozzle\'s {eps}: beyond that point the bell feels the outside air. That gives more thrust than the nozzle running full would, and a real nozzle running this way takes side loads, which the model does not fly.',
+   'build.eng.stand.plots': 'Thrust, flow and Isp against time',
+   'build.eng.stand.noCurves': 'Nothing was fired, so there are no curves to draw.',
+   'build.eng.stand.transients': 'Start-up and tail-off, close up',
+@@ -2466,7 +2467,8 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.say.fairing': 'Fairing',
+   'build.u.ms2': 'm/s²',
+   'build.warn.invalid': 'Part of this design is outside what the flight model can take, so it cannot fly as it is.',
+-  'build.warn.vacuumEngineOnPad': 'A vacuum engine is lit on the pad. Its nozzle is made for the near-vacuum high up and cannot work in the thick air at sea level: give it an engine made for the pad.',
++  'build.warn.vacuumEngineOnPad': 'A vacuum engine is lit on the pad. Its nozzle is made for the near-vacuum high up: in the thick air at sea level the flow would separate deep inside it, with a fraction of its thrust and side loads it is not built for. Give it an engine made for the pad.',
++  'build.warn.vacuumEngineInAir': 'A vacuum engine is lit in the air. Below about {h} its flow separates inside the nozzle: at sea level it gives {sl} of its {vac} in vacuum, with side loads a real nozzle is not built for. The flight flies what the nozzle gives.',
+   'build.warn.noLiftoff': 'The rocket cannot lift itself off the pad: its engines push {thrust}, but it weighs {weight} (thrust-to-weight {tw}). Add engines or strap-ons, or carry less propellant or payload.',
+   'build.warn.lowLiftoffTW': 'It leaves the pad very slowly: its thrust-to-weight at liftoff is {tw}, below the {floor} of every rocket in the catalogue. Much of its propellant would go into fighting gravity.',
+   'build.warn.weakUpperStage': 'It pushes gently: when it lights, its acceleration is only {accel}, less than the {floor} the flight needs to climb with it. The flight will keep it for burns in orbit, as it does with kick stages.',
+@@ -2487,7 +2489,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.refuse.lumpedRecount': 'This engine entry is not one real engine: the catalogue carries several engines as one entry, so its number is fixed and cannot be changed.',
+   'build.refuse.solidMotor': 'A solid motor is its own casing and propellant: it cannot be swapped for another engine, and a liquid stage cannot take one. Change the whole stage or strap-on instead.',
+   'build.refuse.familyMismatch': 'This engine burns a different propellant from the one its tanks hold. Choose an engine that burns the same.',
+-  'build.refuse.vacuumEngineOnPad': 'A vacuum engine cannot be lit on the pad: its nozzle only works high above the air. The first stage and the strap-ons need engines made for sea level.',
++  'build.refuse.vacuumEngineOnPad': 'A vacuum engine cannot be lit on the pad: at sea level the flow would separate deep inside its nozzle. The first stage and the strap-ons need engines made for sea level.',
+   'build.refuse.tooManyGroups': 'The first stage can carry at most 4 groups of strap-ons.',
+   'build.refuse.outOfLimits': 'The result is beyond what the program can fly: a stage at most 100 m long, 1 000 t dry and 10 000 t of propellant, and the whole rocket at most 200 m tall.',
+   'build.refuse.noStages': 'A rocket needs at least one stage.',
+@@ -3794,7 +3796,8 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.escape': 'Above escape speed: the path is not an ellipse.',
+   'eq.note.centralGravity': 'The point-mass ascent and the analytic coasts use the central field; J2 is shown for comparison.',
+   'eq.note.flexCoupling': 'With slosh and bending (P05) the rigid-body equation leaves out their coupling, and the residual includes it.',
+-  'eq.note.vacuumOnly': 'A vacuum engine: the model gives it no sea-level operating point, so no pressure term.',
++  'eq.note.noExitArea': 'This engine\'s sea-level and vacuum thrusts are the same in the data, so it has no exit-area term.',
++  'eq.note.separated': 'The flow separates inside a nozzle: the bell beyond the separation point feels the outside air, so the thrust is above this formula\'s figure, which assumes the nozzle runs full.',
+   'eq.note.suborbital': 'Periapsis below the surface: the path is still suborbital.',
+   'eq.note.manual': 'Manual rates: the attitude loop is bypassed.',
+   'eq.note.rateLimited': 'The rate is held below K_θ·e by the stopping distance or the rate limit (the attitude-loop inspector shows which).',
+diff --git a/src/i18n/ru.ts b/src/i18n/ru.ts
+index 6d55a0c..cb9221f 100644
+--- a/src/i18n/ru.ts
++++ b/src/i18n/ru.ts
+@@ -468,6 +468,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'evt.towerJettison': 'Сброс башни системы аварийного спасения',
+   'evt.ceco': 'Выключение центрального двигателя: {stage}, работают {n} из {total}',
+   'evt.mixtureShift': 'Смена соотношения компонентов: {stage}, тяга теперь {kn} кН',
++  'evt.nozzleSeparation': 'Отрыв потока в сопле: {engine} ({stage}) работает с отрывом потока при степени расширения {at} из {eps}, высота {alt} км',
+   'evt.stageCutoff': 'Выключение двигателя {n}-й ступени ({stage})',
+   'evt.stageSep': 'Отделение {n}-й ступени на высоте {alt} км, {speed} м/с',
+   'evt.fairingSep': 'Сброс головного обтекателя на высоте {alt} км',
+@@ -653,6 +654,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'tl.evt.towerJettison': 'Сброс башни САС',
+   'tl.evt.ceco': 'Выкл. центр. двигателя',
+   'tl.evt.mixtureShift': 'Смена соотношения',
++  'tl.evt.nozzleSeparation': 'Отрыв потока в сопле',
+   'tl.evt.stageCutoff': 'Отсечка ступени',
+   'tl.evt.stageSep': 'Разделение ступеней',
+   'tl.evt.fairingSep': 'Сброс обтекателя',
+@@ -2067,9 +2069,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.eng.stand.bad.propellant': 'Заправьте топливо: больше нуля и не больше {max}.',
+   'build.eng.stand.bad.cutoff': 'Время выключения должно быть больше 0 с.',
+   'build.eng.stand.refused': 'Стенд не проведёт этот запуск',
+-  'build.eng.stand.refuse.vacuumOnly': '{engine} — высотный двигатель. Его сопло рассчитано на почти полную пустоту космоса и в воздухе не работало бы на расчётном режиме, поэтому характеристик у земли для него не публикуют и в модели их нет: в воздухе она показала бы полную пустотную тягу, а это неверно. Его испытывают только в барокамере.',
+   'build.eng.stand.refuse.solidShutdown': 'Твердотопливный двигатель нельзя выключить: зажжённый заряд горит, пока не выгорит всё топливо.',
+-  'build.eng.stand.toVacuum': 'Испытать в барокамере',
+   'build.eng.stand.letBurn': 'Дать догореть до конца',
+   'build.eng.stand.results': 'Что измерил стенд',
+   'build.eng.stand.impulse': 'Полный импульс',
+@@ -2103,11 +2103,12 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.eng.stand.notData': 'заглушка',
+   'build.eng.stand.note.pad': 'При таком давлении характеристик никто не публикует: модель берёт тягу между значениями у земли и в пустоте пропорционально давлению воздуха, а массовый расход не меняется.',
+   'build.eng.stand.note.ispSL': 'Модель берёт за данные пустотные тягу и удельный импульс, сохраняет заданный ими массовый расход при любом давлении и вычисляет удельный импульс у земли из тяги у земли и этого расхода. Если пара значений у земли в каталоге не согласована с пустотной, два удельных импульса у земли различаются: разница заложена в данных, а не в испытании.',
+-  'build.eng.stand.note.throttled': 'Стенд работал на {p} % тяги, поэтому его тяга не сравнивается с характеристиками на полной тяге; удельный импульс сравнивается, потому что в модели он от уровня тяги не зависит.',
++  'build.eng.stand.note.throttled': 'Стенд работал на {p} % тяги, поэтому его тяга не сравнивается с характеристиками на полной тяге. В воздухе не сравнивается и удельный импульс: воздух давит на срез сопла с одной и той же силой при любом уровне тяги, поэтому на пониженной тяге удельный импульс в воздухе ниже, чем на полной. В барокамере удельный импульс от уровня тяги не зависит и сравнивается.',
+   'build.eng.stand.note.solidMean': 'Каталожная тяга твердотопливного двигателя — это средняя тяга за опубликованное время работы; средняя тяга стенда — полный импульс, делённый на время работы.',
+   'build.eng.stand.note.solidPeak': 'Опубликованную максимальную тягу твердотопливного двигателя каталог хранит как отношение к средней: в {f} раза больше. Максимум на стенде наступает сразу после выхода на режим и чуть ниже опубликованного, потому что часть заряда выгорает, пока двигатель разгорается.',
+   'build.eng.stand.note.peakVacuum': 'Опубликованный максимум — пустотная величина: испытайте двигатель в барокамере, чтобы сравнить с ним показание стенда.',
+-  'build.eng.stand.note.vacuumOnly': 'Значения у земли для высотного двигателя в данных — заглушки, а не измерения, и модель их никогда не использует.',
++  'build.eng.stand.note.vacuumOnly': 'Значения у земли для высотного двигателя в данных — заглушки, а не измерения, и модель их никогда не использует: в воздухе он работает с той тягой, которую там действительно даёт его сопло, рассчитанной по площади среза и степени расширения сопла.',
++  'build.eng.stand.note.separated': 'При этом давлении и уровне тяги поток отрывается от стенки сопла при степени расширения {at}, не дойдя до {eps} у среза: дальше на раструб действует наружный воздух. Тяга при этом больше, чем при безотрывном течении, а настоящее сопло на таком режиме испытывает боковые нагрузки, которых модель не учитывает.',
+   'build.eng.stand.plots': 'Тяга, расход и удельный импульс во времени',
+   'build.eng.stand.noCurves': 'Запуска не было, поэтому и кривых нет.',
+   'build.eng.stand.transients': 'Выход на режим и спад тяги крупным планом',
+@@ -2442,7 +2443,8 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.say.fairing': 'Обтекатель',
+   'build.u.ms2': 'м/с²',
+   'build.warn.invalid': 'Часть проекта выходит за пределы того, что может принять модель полёта, поэтому в таком виде ракета лететь не может.',
+-  'build.warn.vacuumEngineOnPad': 'На старте включается высотный двигатель. Его сопло рассчитано на почти пустое пространство наверху и не может работать в плотном воздухе у земли: поставьте двигатель, предназначенный для старта.',
++  'build.warn.vacuumEngineOnPad': 'На старте включается высотный двигатель. Его сопло рассчитано на почти пустое пространство наверху: в плотном воздухе у земли поток оторвался бы глубоко внутри него, с малой долей тяги и боковыми нагрузками, на которые оно не рассчитано. Поставьте двигатель, предназначенный для старта.',
++  'build.warn.vacuumEngineInAir': 'В воздухе включается высотный двигатель. Ниже примерно {h} поток отрывается внутри сопла: у земли он даёт {sl} из {vac} в пустоте, с боковыми нагрузками, на которые настоящее сопло не рассчитано. В полёте он даёт ту тягу, которую даёт сопло.',
+   'build.warn.noLiftoff': 'Ракета не может оторваться от стартового стола: двигатели дают {thrust}, а весит она {weight} (тяговооружённость {tw}). Добавьте двигатели или боковые блоки либо возьмите меньше топлива или полезной нагрузки.',
+   'build.warn.lowLiftoffTW': 'Ракета уходит со старта очень медленно: тяговооружённость при отрыве {tw} — ниже {floor}, минимума среди ракет каталога. Много топлива уйдёт на борьбу с тяжестью.',
+   'build.warn.weakUpperStage': 'Эта ступень толкает слабо: при включении её ускорение всего {accel}, меньше {floor}, которые нужны полёту, чтобы набирать с ней высоту. Её оставят для включений на орбите, как разгонные блоки.',
+@@ -2463,7 +2465,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.refuse.lumpedRecount': 'Эта запись — не один настоящий двигатель: каталог записывает несколько двигателей одной строкой, поэтому их число задано и изменить его нельзя.',
+   'build.refuse.solidMotor': 'Твердотопливный двигатель — это сам корпус и заряд: его нельзя заменить другим двигателем, и жидкостная ступень его принять не может. Меняйте ступень или боковой блок целиком.',
+   'build.refuse.familyMismatch': 'Этот двигатель работает не на том топливе, что залито в баки. Выберите двигатель на том же топливе.',
+-  'build.refuse.vacuumEngineOnPad': 'Высотный двигатель нельзя включать на старте: его сопло работает только высоко над атмосферой. Первой ступени и боковым блокам нужны двигатели для работы у земли.',
++  'build.refuse.vacuumEngineOnPad': 'Высотный двигатель нельзя включать на старте: у земли поток оторвался бы глубоко внутри его сопла. Первой ступени и боковым блокам нужны двигатели для работы у земли.',
+   'build.refuse.tooManyGroups': 'Первая ступень несёт не более 4 групп боковых блоков.',
+   'build.refuse.outOfLimits': 'Результат выходит за пределы того, что может рассчитать программа: ступень не длиннее 100 м, с сухой массой до 1 000 т и топливом до 10 000 т, вся ракета не выше 200 м.',
+   'build.refuse.noStages': 'У ракеты должна быть хотя бы одна ступень.',
+@@ -3770,7 +3772,8 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.escape': 'Скорость выше второй космической: траектория не эллипс.',
+   'eq.note.centralGravity': 'Выведение материальной точки и аналитические пассивные участки используют центральное поле; J2 показан для сравнения.',
+   'eq.note.flexCoupling': 'С колебаниями топлива и изгибом (P05) уравнение твёрдого тела не учитывает их связь, и она входит в невязку.',
+-  'eq.note.vacuumOnly': 'Высотный двигатель: у модели нет для него режима у Земли, поэтому члена с давлением нет.',
++  'eq.note.noExitArea': 'В данных тяга этого двигателя у Земли и в пустоте одинакова, поэтому члена с площадью среза нет.',
++  'eq.note.separated': 'Поток отрывается внутри сопла: за точкой отрыва на раструб действует наружное давление, поэтому тяга больше, чем по этой формуле, которая предполагает безотрывное течение.',
+   'eq.note.suborbital': 'Перицентр ниже поверхности: траектория пока суборбитальная.',
+   'eq.note.manual': 'Ручные угловые скорости: контур угла отключён.',
+   'eq.note.rateLimited': 'Скорость удерживается ниже K_θ·e тормозным путём или ограничением скорости (какое именно — в инспекторе контура стабилизации).',
+diff --git a/src/i18n/th.ts b/src/i18n/th.ts
+index b71b768..4679097 100644
+--- a/src/i18n/th.ts
++++ b/src/i18n/th.ts
+@@ -468,6 +468,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'evt.towerJettison': 'ปลดหอหนีภัย',
+   'evt.ceco': 'ดับเครื่องยนต์ตัวกลาง: {stage} ทำงาน {n} จาก {total} เครื่อง',
+   'evt.mixtureShift': 'เปลี่ยนอัตราส่วนผสมเชื้อเพลิง: {stage} แรงขับตอนนี้ {kn} kN',
++  'evt.nozzleSeparation': 'การไหลแยกตัวในหัวฉีด: {engine} ของ {stage} ทำงานโดยการไหลแยกตัวจากผนังที่อัตราส่วนพื้นที่ {at} จาก {eps} ที่ความสูง {alt} กม.',
+   'evt.stageCutoff': 'ดับเครื่องยนต์ท่อนที่ {n} ({stage})',
+   'evt.stageSep': 'แยกท่อนที่ {n} ที่ความสูง {alt} กม., {speed} ม./วินาที',
+   'evt.fairingSep': 'สลัดครอบจมูกจรวดที่ความสูง {alt} กม.',
+@@ -653,6 +654,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'tl.evt.towerJettison': 'ปลดหอหนีภัย',
+   'tl.evt.ceco': 'ดับเครื่องตัวกลาง',
+   'tl.evt.mixtureShift': 'เปลี่ยนอัตราส่วนผสม',
++  'tl.evt.nozzleSeparation': 'การไหลแยกตัวในหัวฉีด',
+   'tl.evt.stageCutoff': 'ดับเครื่องท่อนขับ',
+   'tl.evt.stageSep': 'แยกท่อนขับ',
+   'tl.evt.fairingSep': 'สลัดครอบจมูก',
+@@ -2068,9 +2070,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.eng.stand.bad.propellant': 'เติมเชื้อเพลิงให้มากกว่าศูนย์ และไม่เกิน {max}',
+   'build.eng.stand.bad.cutoff': 'เวลาดับเครื่องต้องมากกว่า 0 วินาที',
+   'build.eng.stand.refused': 'แท่นจะไม่จุดทดสอบแบบนี้',
+-  'build.eng.stand.refuse.vacuumOnly': '{engine} เป็นเครื่องยนต์สำหรับสุญญากาศ หัวฉีดออกแบบมาสำหรับสภาพเกือบสุญญากาศในอวกาศ และจะทำงานได้ไม่เต็มที่ในอากาศ จึงไม่มีการเผยแพร่ค่าที่ระดับน้ำทะเล และแบบจำลองก็ไม่มีค่าให้ใช้ ถ้าจุดในอากาศ แบบจำลองจะรายงานแรงขับสุญญากาศเต็มที่ ซึ่งผิด จึงจุดทดสอบได้ในห้องสุญญากาศเท่านั้น',
+   'build.eng.stand.refuse.solidShutdown': 'มอเตอร์เชื้อเพลิงแข็งดับไม่ได้ เมื่อจุดเนื้อเชื้อเพลิงแล้วจะเผาไหม้ไปจนเชื้อเพลิงหมด',
+-  'build.eng.stand.toVacuum': 'จุดทดสอบในห้องสุญญากาศ',
+   'build.eng.stand.letBurn': 'ปล่อยให้เผาไหม้จนหมด',
+   'build.eng.stand.results': 'สิ่งที่แท่นวัดได้',
+   'build.eng.stand.impulse': 'แรงดลรวม',
+@@ -2104,11 +2104,12 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.eng.stand.notData': 'ไม่ใช่ข้อมูลจริง',
+   'build.eng.stand.note.pad': 'ไม่มีใครเผยแพร่ค่าที่ความดันนี้ แบบจำลองปรับแรงขับระหว่างค่าที่ระดับน้ำทะเลกับค่าในสุญญากาศตามสัดส่วนความดันอากาศ ส่วนอัตราการไหลของมวลคงเดิม',
+   'build.eng.stand.note.ispSL': 'แบบจำลองถือแรงขับและแรงดลจำเพาะในสุญญากาศเป็นข้อมูลหลัก ใช้อัตราการไหลของมวลที่ได้จากค่าทั้งสองนี้ที่ทุกความดัน แล้วคำนวณแรงดลจำเพาะที่ระดับน้ำทะเลจากแรงขับที่ระดับน้ำทะเลกับอัตราการไหลนั้น หากคู่ค่าที่ระดับน้ำทะเลในแคตตาล็อกไม่สอดคล้องกับคู่ค่าในสุญญากาศ แรงดลจำเพาะที่ระดับน้ำทะเลทั้งสองค่าจะต่างกัน ผลต่างนี้อยู่ในข้อมูล ไม่ได้เกิดจากการทดสอบ',
+-  'build.eng.stand.note.throttled': 'แท่นจุดทดสอบที่ระดับแรงขับ {p} % จึงไม่นำแรงขับไปเทียบกับค่าที่แรงขับเต็มที่ แต่เทียบแรงดลจำเพาะได้ เพราะในแบบจำลองแรงดลจำเพาะไม่เปลี่ยนตามระดับแรงขับ',
++  'build.eng.stand.note.throttled': 'แท่นจุดทดสอบที่ระดับแรงขับ {p} % จึงไม่นำแรงขับไปเทียบกับค่าที่แรงขับเต็มที่ และในอากาศก็ไม่เทียบแรงดลจำเพาะด้วย เพราะอากาศกดที่ปากท่อหัวฉีดด้วยแรงเท่ากันไม่ว่าระดับแรงขับจะเป็นเท่าใด แรงดลจำเพาะในอากาศเมื่อลดแรงขับจึงต่ำกว่าเมื่อแรงขับเต็มที่ ส่วนในห้องสุญญากาศ แรงดลจำเพาะไม่เปลี่ยนตามระดับแรงขับ จึงนำมาเทียบ',
+   'build.eng.stand.note.solidMean': 'แรงขับของมอเตอร์เชื้อเพลิงแข็งในแคตตาล็อกเป็นค่าเฉลี่ยตลอดเวลาเผาไหม้ที่เผยแพร่ ส่วนค่าเฉลี่ยของแท่นคือแรงดลรวมหารด้วยเวลาเผาไหม้',
+   'build.eng.stand.note.solidPeak': 'แคตตาล็อกเก็บแรงขับสูงสุดที่เผยแพร่ของมอเตอร์เชื้อเพลิงแข็งเป็นอัตราส่วนต่อค่าเฉลี่ย คือ {f} เท่า ค่าสูงสุดบนแท่นเกิดขึ้นทันทีหลังช่วงติดเครื่อง และต่ำกว่าค่าที่เผยแพร่เล็กน้อย เพราะเนื้อเชื้อเพลิงบางส่วนเผาไหม้ไปขณะมอเตอร์กำลังติด',
+   'build.eng.stand.note.peakVacuum': 'ค่าสูงสุดที่เผยแพร่เป็นค่าในสุญญากาศ ให้จุดทดสอบมอเตอร์ในห้องสุญญากาศเพื่อเทียบค่าของแท่นกับค่านั้น',
+-  'build.eng.stand.note.vacuumOnly': 'ค่าที่ระดับน้ำทะเลของเครื่องยนต์สำหรับสุญญากาศในข้อมูลเป็นเพียงค่าสมมุติ ไม่ใช่ค่าวัด และแบบจำลองไม่เคยนำไปใช้',
++  'build.eng.stand.note.vacuumOnly': 'ค่าที่ระดับน้ำทะเลของเครื่องยนต์สำหรับสุญญากาศในข้อมูลเป็นเพียงค่าสมมุติ ไม่ใช่ค่าวัด และแบบจำลองไม่เคยนำไปใช้ เมื่อจุดในอากาศ จะได้แรงขับเท่าที่หัวฉีดให้ได้จริงที่นั่น ซึ่งคำนวณจากพื้นที่ปากท่อและอัตราส่วนพื้นที่ของหัวฉีด',
++  'build.eng.stand.note.separated': 'ที่ความดันและระดับแรงขับนี้ การไหลแยกตัวจากผนังหัวฉีดที่อัตราส่วนพื้นที่ {at} ก่อนถึง {eps} ที่ปากท่อ ส่วนของหัวฉีดหลังจุดนั้นรับอากาศภายนอก แรงขับจึงมากกว่าตอนที่การไหลเต็มหัวฉีด และหัวฉีดจริงที่ทำงานแบบนี้จะรับแรงด้านข้าง ซึ่งแบบจำลองไม่ได้คิดรวม',
+   'build.eng.stand.plots': 'แรงขับ อัตราการไหล และแรงดลจำเพาะตามเวลา',
+   'build.eng.stand.noCurves': 'ไม่ได้จุดทดสอบ จึงไม่มีเส้นกราฟให้แสดง',
+   'build.eng.stand.transients': 'ช่วงติดเครื่องและช่วงแรงขับลด แบบขยาย',
+@@ -2443,7 +2444,8 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.say.fairing': 'ฝาครอบหัวจรวด',
+   'build.u.ms2': 'ม./วินาที²',
+   'build.warn.invalid': 'บางส่วนของแบบนี้เกินกว่าที่แบบจำลองการบินรับได้ จรวดจึงบินในสภาพนี้ไม่ได้',
+-  'build.warn.vacuumEngineOnPad': 'มีเครื่องยนต์สำหรับสุญญากาศถูกจุดบนฐานปล่อย หัวฉีดของเครื่องยนต์นี้ออกแบบมาสำหรับที่สูงซึ่งแทบไม่มีอากาศ จึงทำงานในอากาศหนาแน่นที่ระดับน้ำทะเลไม่ได้ ให้ใช้เครื่องยนต์ที่ออกแบบมาสำหรับจุดบนฐานปล่อย',
++  'build.warn.vacuumEngineOnPad': 'มีเครื่องยนต์สำหรับสุญญากาศถูกจุดบนฐานปล่อย หัวฉีดของเครื่องยนต์นี้ออกแบบมาสำหรับที่สูงซึ่งแทบไม่มีอากาศ ในอากาศหนาแน่นที่ระดับน้ำทะเล การไหลจะแยกตัวลึกเข้าไปในหัวฉีด ได้แรงขับเพียงส่วนหนึ่ง และมีแรงด้านข้างที่หัวฉีดไม่ได้ออกแบบมารับ ให้ใช้เครื่องยนต์ที่ออกแบบมาสำหรับจุดบนฐานปล่อย',
++  'build.warn.vacuumEngineInAir': 'มีเครื่องยนต์สำหรับสุญญากาศถูกจุดในอากาศ ต่ำกว่าประมาณ {h} การไหลจะแยกตัวจากผนังภายในหัวฉีด ที่ระดับน้ำทะเลให้แรงขับ {sl} จาก {vac} ในสุญญากาศ และมีแรงด้านข้างที่หัวฉีดจริงไม่ได้ออกแบบมารับ ในการบินจะได้แรงขับเท่าที่หัวฉีดให้ได้จริง',
+   'build.warn.noLiftoff': 'จรวดยกตัวขึ้นจากฐานปล่อยไม่ได้ เครื่องยนต์ให้แรงขับ {thrust} แต่จรวดหนัก {weight} (แรงขับต่อน้ำหนัก {tw}) ให้เพิ่มเครื่องยนต์หรือบูสเตอร์ หรือบรรทุกเชื้อเพลิงหรือน้ำหนักบรรทุกให้น้อยลง',
+   'build.warn.lowLiftoffTW': 'จรวดออกจากฐานปล่อยช้ามาก แรงขับต่อน้ำหนักขณะทะยานขึ้นเท่ากับ {tw} ต่ำกว่า {floor} ซึ่งเป็นค่าต่ำสุดของจรวดในแคตตาล็อก เชื้อเพลิงจำนวนมากจะหมดไปกับการสู้แรงโน้มถ่วง',
+   'build.warn.weakUpperStage': 'ท่อนนี้ดันเบา เมื่อจุดแล้วมีความเร่งเพียง {accel} น้อยกว่า {floor} ที่การบินต้องใช้เพื่อไต่ระดับด้วยท่อนนี้ การบินจะเก็บท่อนนี้ไว้จุดในวงโคจร เช่นเดียวกับท่อนเร่งส่งท้าย',
+@@ -2464,7 +2466,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'build.refuse.lumpedRecount': 'รายการนี้ไม่ใช่เครื่องยนต์จริงเพียงเครื่องเดียว แคตตาล็อกรวมเครื่องยนต์หลายเครื่องไว้เป็นรายการเดียว จำนวนจึงตายตัวและเปลี่ยนไม่ได้',
+   'build.refuse.solidMotor': 'มอเตอร์เชื้อเพลิงแข็งเป็นทั้งเปลือกและเนื้อเชื้อเพลิงในตัว จึงเปลี่ยนเป็นเครื่องยนต์อื่นไม่ได้ และท่อนเชื้อเพลิงเหลวก็ใส่มอเตอร์นี้ไม่ได้ ให้เปลี่ยนทั้งท่อนหรือทั้งบูสเตอร์แทน',
+   'build.refuse.familyMismatch': 'เครื่องยนต์นี้ใช้เชื้อเพลิงคนละชนิดกับที่บรรจุในถัง ให้เลือกเครื่องยนต์ที่ใช้เชื้อเพลิงชนิดเดียวกัน',
+-  'build.refuse.vacuumEngineOnPad': 'เครื่องยนต์สำหรับสุญญากาศจุดบนฐานปล่อยไม่ได้ เพราะหัวฉีดทำงานได้เฉพาะที่สูงเหนือชั้นบรรยากาศ ท่อนแรกและบูสเตอร์ต้องใช้เครื่องยนต์สำหรับระดับน้ำทะเล',
++  'build.refuse.vacuumEngineOnPad': 'เครื่องยนต์สำหรับสุญญากาศจุดบนฐานปล่อยไม่ได้ เพราะที่ระดับน้ำทะเลการไหลจะแยกตัวลึกเข้าไปในหัวฉีด ท่อนแรกและบูสเตอร์ต้องใช้เครื่องยนต์สำหรับระดับน้ำทะเล',
+   'build.refuse.tooManyGroups': 'ท่อนแรกติดบูสเตอร์ได้ไม่เกิน 4 กลุ่ม',
+   'build.refuse.outOfLimits': 'ผลลัพธ์เกินกว่าที่โปรแกรมคำนวณการบินได้ คือท่อนหนึ่งยาวไม่เกิน 100 ม. มวลแห้งไม่เกิน 1 000 ตัน เชื้อเพลิงไม่เกิน 10 000 ตัน และจรวดทั้งลำสูงไม่เกิน 200 ม.',
+   'build.refuse.noStages': 'จรวดต้องมีอย่างน้อยหนึ่งท่อน',
+@@ -3771,7 +3773,8 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
+   'eq.note.escape': 'เร็วกว่าความเร็วหลุดพ้น: เส้นทางไม่ใช่วงรี',
+   'eq.note.centralGravity': 'การขึ้นบินแบบจุดมวลและช่วงลอยตัวแบบวิเคราะห์ใช้สนามแบบจุดศูนย์กลาง แสดง J2 ไว้เพื่อเปรียบเทียบ',
+   'eq.note.flexCoupling': 'เมื่อเปิดการกระฉอกและการโค้งงอ (P05) สมการวัตถุแข็งไม่ได้รวมผลคู่ควบของทั้งสอง ส่วนต่างจึงรวมผลนี้ไว้',
+-  'eq.note.vacuumOnly': 'เครื่องยนต์สุญญากาศ: แบบจำลองไม่มีจุดทำงานที่ระดับน้ำทะเลให้ จึงไม่มีเทอมความดัน',
++  'eq.note.noExitArea': 'ในข้อมูล แรงขับที่ระดับน้ำทะเลกับในสุญญากาศของเครื่องยนต์นี้เท่ากัน จึงไม่มีเทอมพื้นที่ปากท่อ',
++  'eq.note.separated': 'การไหลแยกตัวจากผนังภายในหัวฉีด ส่วนของหัวฉีดที่อยู่หลังจุดแยกตัวรับความดันอากาศภายนอก แรงขับจึงสูงกว่าค่าตามสูตรนี้ ซึ่งถือว่าการไหลเต็มหัวฉีด',
+   'eq.note.suborbital': 'จุดใกล้โลกอยู่ใต้ผิวโลก: เส้นทางยังเป็นแบบซับออร์บิทัล',
+   'eq.note.manual': 'สั่งอัตราหมุนเอง: ข้ามลูปท่าทาง',
+   'eq.note.rateLimited': 'อัตราหมุนถูกจำกัดให้ต่ำกว่า K_θ·e ด้วยระยะเบรกหรือขีดจำกัดอัตรา (ดูได้ในตัวตรวจลูปควบคุมท่าทาง)',
+diff --git a/src/physics/dispersion.ts b/src/physics/dispersion.ts
+index 57854fe..2bb1635 100644
+--- a/src/physics/dispersion.ts
++++ b/src/physics/dispersion.ts
+@@ -140,8 +140,14 @@ export function drawDispersion(spec: VehicleSpec, settings: Readonly<DispersionS
+   return { index, seed, dispersion, draws };
+ }
+ 
++/**
++ * A thrust factor is a deviation of the flow and the chamber pressure: it
++ * scales the vacuum thrust and leaves the nozzle as it is, so the sea-level
++ * thrust moves by the same newtons, not the same share — the exit area
++ * (F_vac − F_SL)/p₀ the thrust law reads (src/physics/nozzle.ts) is kept.
++ */
+ function dispersedEngine(e: EngineSpec, f: PropulsionFactors): EngineSpec {
+-  return { ...e, thrustSL: e.thrustSL * f.thrust, thrustVac: e.thrustVac * f.thrust, ispSL: e.ispSL * f.isp, ispVac: e.ispVac * f.isp };
++  return { ...e, thrustSL: e.thrustSL + (f.thrust - 1) * e.thrustVac, thrustVac: e.thrustVac * f.thrust, ispSL: e.ispSL * f.isp, ispVac: e.ispVac * f.isp };
+ }
+ function dispersedBooster(b: BoosterGroupSpec, f: PropulsionFactors | undefined): BoosterGroupSpec {
+   return f ? { ...b, dryMass: b.dryMass * f.dryMass, propellantMass: b.propellantMass * f.propellant, engine: dispersedEngine(b.engine, f) } : b;
+diff --git a/src/physics/eom.ts b/src/physics/eom.ts
+index d947c75..7e7fc0d 100644
+--- a/src/physics/eom.ts
++++ b/src/physics/eom.ts
+@@ -7,11 +7,11 @@
+  * live one. A record only: nothing in the physics reads it, and it is not part
+  * of the telemetry.
+  */
+-import { P0 } from './constants';
+ import type { Losses } from './sim/types';
+ import type { Quat } from './rigid/math';
+ import type { Vec3 } from './vec3';
+-import { engineThrustSL, type StageState } from './vehicle';
++import type { StageState } from './vehicle';
++import { engineExitArea, nozzleFlow } from './nozzle';
+ import type { EngineSpec } from '../types';
+ 
+ /** How the step was integrated. */
+@@ -34,10 +34,16 @@ export interface EomRecord {
+   airVelocity: Vec3;
+   dynamicPressure: number;
+   mach: number;
+-  /** Thrust delivered, N; the running engines' vacuum thrust, N, and exit area, m², each at its level. */
++  /**
++   * Thrust delivered, N; the running engines' vacuum thrust at their levels,
++   * N, and their exit area, m², whatever the level (the air presses on the
++   * whole exit at any throttle: the thrust law, src/physics/nozzle.ts).
++   */
+   thrust: number;
+   vacuumThrust: number;
+   exitArea: number;
++  /** a running engine's flow separates inside its nozzle, so the thrust is above vacuumThrust − p·exitArea */
++  separated?: boolean;
+   /** Aerodynamic reference area, m², and the drag coefficient of the point-mass model (absent in six-DOF). */
+   referenceArea: number;
+   dragCoefficient?: number;
+@@ -57,31 +63,30 @@ export interface EomRecord {
+   q1?: Quat;
+ }
+ 
+-/** Nozzle exit area of one engine, m², from its sea-level and vacuum thrust: T = T_vac − p·A_e. */
+-export function engineExitArea(e: EngineSpec): number {
+-  return (e.thrustVac - engineThrustSL(e)) / P0;
+-}
++export { engineExitArea } from './nozzle';
+ 
+-/** Σ n·level·T_vac and Σ n·level·A_e over the active stage's core and boosters, at the levels `VehicleModel.thrust` returned. */
++/**
++ * Σ n·level·T_vac and Σ n·A_e over the active stage's core and boosters at the
++ * levels `VehicleModel.thrust` returned (an engine counts with its whole exit
++ * area once it runs at all), and whether any of them runs with the flow
++ * separated in its nozzle at ambient pressure `pressure`.
++ */
+ export function runningEngines(stage: StageState | null | undefined, coreLevel: number, boosterLevels: readonly number[],
+-  hot?: { stage: StageState; level: number }): { vacuumThrust: number; exitArea: number } {
+-  if (!stage) return { vacuumThrust: 0, exitArea: 0 };
+-  const e = stage.spec.engine, n = e.count * stage.engineFraction;
+-  let vacuumThrust = n * e.thrustVac * coreLevel, exitArea = n * engineExitArea(e) * coreLevel;
+-  stage.boosters.forEach((b, group) => {
+-    const level = boosterLevels[group] ?? 0;
+-    if (!(level > 0)) return;
+-    const nb = b.spec.engine.count * b.spec.count;
+-    vacuumThrust += nb * b.spec.engine.thrustVac * level;
+-    exitArea += nb * engineExitArea(b.spec.engine) * level;
+-  });
++  hot?: { stage: StageState; level: number }, pressure = 0): { vacuumThrust: number; exitArea: number; separated: boolean } {
++  if (!stage) return { vacuumThrust: 0, exitArea: 0, separated: false };
++  let vacuumThrust = 0, exitArea = 0, separated = false;
++  const add = (e: EngineSpec, n: number, level: number): void => {
++    if (!(level > 0) || !(n > 0)) return;
++    vacuumThrust += n * e.thrustVac * level;
++    exitArea += n * engineExitArea(e);
++    if (pressure > 0 && nozzleFlow(e, pressure, level).separated) separated = true;
++  };
++  // the engines the core really runs, as `VehicleModel.enginesRunning` counts them (a partial light-up, `litEngines`)
++  add(stage.spec.engine, (stage.litEngines ? stage.litEngines.length : stage.spec.engine.count) * stage.engineFraction, coreLevel);
++  stage.boosters.forEach((b, group) => add(b.spec.engine, b.spec.engine.count * b.spec.count, boosterLevels[group] ?? 0));
+   // a hot stage lit above it, firing through the truss (`VehicleModel.hotStage`)
+-  if (hot && hot.level > 0) {
+-    const he = hot.stage.spec.engine, nh = he.count * hot.stage.engineFraction;
+-    vacuumThrust += nh * he.thrustVac * hot.level;
+-    exitArea += nh * engineExitArea(he) * hot.level;
+-  }
+-  return { vacuumThrust, exitArea };
++  if (hot) add(hot.stage.spec.engine, (hot.stage.litEngines ? hot.stage.litEngines.length : hot.stage.spec.engine.count) * hot.stage.engineFraction, hot.level);
++  return { vacuumThrust, exitArea, separated };
+ }
+ 
+ const copy = (v: Vec3): Vec3 => ({ x: v.x, y: v.y, z: v.z });
+diff --git a/src/physics/nozzle.ts b/src/physics/nozzle.ts
+new file mode 100644
+index 0000000..49aa2bc
+--- /dev/null
++++ b/src/physics/nozzle.ts
+@@ -0,0 +1,306 @@
++/**
++ * The thrust law: what one engine gives at an ambient pressure and a level
++ * (owner decision of 2026-10-17, option (b): the attached-flow law plus flow
++ * separation; vacuum engines lit in the air fly what their nozzle really
++ * gives). Every thrust in the simulation comes from `engineThrustAt`.
++ *
++ * ATTACHED FLOW. The vacuum thrust is ṁ·v_e + p_e·A_e. At a level λ — a
++ * throttle setting, a solid's thrust profile, the start-up and tail-off — the
++ * mass flow and the chamber pressure scale with λ and the exit velocity does
++ * not, so the exit pressure scales with it too and the vacuum thrust is
++ * λ·F_vac. The air presses on the exit area whatever the level:
++ *
++ *     F = λ·F_vac − p_a·A_e
++ *
++ * At λ = 1 and p₀ it is the catalogue's sea-level thrust exactly, since
++ * A_e = (F_vac − F_SL)/p₀ for an engine with a sea-level pair.
++ *
++ * SEPARATION. Deep throttle low in the air, or a vacuum nozzle lit in it, puts
++ * the wall pressure far below ambient and the boundary layer separates inside
++ * the bell. Where is from Schmucker's criterion (NASA TM-77396, 1984, eq. 11):
++ * separation begins where the wall pressure falls to
++ *
++ *     p_i/p_a = (1.88·M_i − 1)^−0.64,      M_i ≤ 5 (no data above it)
++ *
++ * with M_i the wall Mach number there. The wall pressure is the one-
++ * dimensional isentropic one for the engine's ε and γ (src/data/nozzles.ts),
++ * scaled with λ. Downstream of the separation point the wall sees nearly the
++ * ambient pressure (Schmucker §2: the pressure "increases only a little after
++ * the sharp pressure increase, until it almost reaches the surrounding
++ * pressure"; the plateau "is practically impossible to determine"), so the
++ * nozzle flies as if cut off there:
++ *
++ *     F = λ·p_c·A_t·C_F,vac(ε_s) − p_a·A_t·ε_s
++ *
++ * which equals the attached law at ε_s = ε and lies above it once separated:
++ * the difference is ∫(p_a − p_w) dA over the separated part. Floored at 0 (a
++ * start-up in the first instant, before the chamber has pressure).
++ *
++ * QUALIFIED SEA-LEVEL OPERATION STAYS ATTACHED. The one-dimensional wall
++ * pressure understates the pressure at the end of a real bell: for the SSME,
++ * Schmucker's wall-pressure distribution gives 0.0019·p_c at the exit, about
++ * twice the one-dimensional value for ε 69. With it, the criterion would
++ * separate Vulcain 2.1, LE-7A, YF-77, LE-9 and the R-7's chambers at full
++ * thrust on the pad, which they are qualified to run with the flow attached
++ * (the catalogue's sea-level thrust is that point). So an engine with a
++ * sea-level pair gets the least factor on its wall pressure that keeps
++ * (λ = 1, p₀) attached (`wallFactor`, 1 for most of the fleet, up to 2.5 for
++ * Vulcain 2.1); a vacuum engine, with no sea-level point, gets 1. Checked by
++ * tests/nozzle-law.test.ts over every catalogue engine.
++ *
++ * SIDE LOADS. A separated nozzle sees asymmetric side loads (Schmucker's
++ * Part 2). No sourced criterion for when they break an engine is modelled: the
++ * flight reports the separated flow (`evt.nozzleSeparation`) and flies the
++ * thrust.
++ *
++ * DOM-free, SI units.
++ */
++import { P0 } from './constants';
++import type { EngineSpec } from '../types';
++import { NOZZLES, NOZZLE_GAMMA, type NozzleRecord } from '../data/nozzles';
++
++/** Schmucker's criterion, p_i/p_a at the wall Mach number M (capped at 5, and at 1 below M ≈ 1.06). */
++export function schmuckerRatio(mach: number): number {
++  const m = Math.min(5, Math.max(1, mach));
++  return Math.min(1, (1.88 * m - 1) ** -0.64);
++}
++
++/** Area ratio of isentropic flow at Mach M. */
++export function areaRatioAt(mach: number, gamma: number): number {
++  const k = (gamma + 1) / (2 * (gamma - 1));
++  return (1 / mach) * ((2 / (gamma + 1)) * (1 + ((gamma - 1) / 2) * mach * mach)) ** k;
++}
++
++/** Supersonic Mach number at area ratio a ≥ 1. */
++export function machAt(areaRatio: number, gamma: number): number {
++  if (!(areaRatio > 1)) return 1;
++  let lo = 1, hi = 2;
++  while (areaRatioAt(hi, gamma) < areaRatio && hi < 100) hi *= 2;
++  for (let i = 0; i < 80; i++) {
++    const mid = (lo + hi) / 2;
++    if (areaRatioAt(mid, gamma) < areaRatio) lo = mid;
++    else hi = mid;
++  }
++  return (lo + hi) / 2;
++}
++
++/** Static over stagnation pressure at Mach M. */
++export function pressureRatioAt(mach: number, gamma: number): number {
++  return (1 + ((gamma - 1) / 2) * mach * mach) ** (-gamma / (gamma - 1));
++}
++
++/** Ideal vacuum thrust coefficient of a nozzle of area ratio a: F_vac/(p_c·A_t). */
++export function vacuumThrustCoefficient(areaRatio: number, gamma: number): number {
++  const pr = pressureRatioAt(machAt(areaRatio, gamma), gamma);
++  const big = Math.sqrt(gamma) * (2 / (gamma + 1)) ** ((gamma + 1) / (2 * (gamma - 1)));
++  return big * Math.sqrt((2 * gamma / (gamma - 1)) * (1 - pr ** ((gamma - 1) / gamma))) + Math.max(1, areaRatio) * pr;
++}
++
++/** Where a nozzle's numbers came from. */
++export type NozzleBasis = 'data' | 'estimate';
++
++/** One engine's nozzle as the law flies it, per `count` unit. */
++export interface NozzleModel {
++  /** exit area, m² (0: no pressure term at all — an engine whose two thrusts are equal) */
++  exitArea: number;
++  expansionRatio: number;
++  gamma: number;
++  /** chamber pressure at λ = 1 that closes F_vac with this geometry, Pa */
++  chamberPressure: number;
++  /** one-dimensional exit pressure at λ = 1, Pa, and the exit Mach number */
++  exitPressure: number;
++  exitMach: number;
++  /** factor on the wall pressure in the separation test (see the module comment) */
++  wallFactor: number;
++  /** `data`: src/data/nozzles.ts holds the engine; `estimate`: `fallbackNozzle` */
++  basis: NozzleBasis;
++  /** tabulated over ln(area ratio) from the throat to the exit, for the separated thrust */
++  lnA: Float64Array;
++  /** ln(wallFactor·p_c·p̂/criterion): the ambient pressure over λ at which separation sits at that area */
++  lnSep: Float64Array;
++  /** C_F,vac of the nozzle cut off there */
++  cf: Float64Array;
++}
++
++const TABLE_POINTS = 64;
++
++/** ε that closes F_vac = p_c·(A_e/ε)·C_F,vac(ε), clamped to [1.5, 2000]. */
++function areaRatioFor(thrustVac: number, chamberPressure: number, exitArea: number, gamma: number): number {
++  const f = (eps: number) => chamberPressure * (exitArea / eps) * vacuumThrustCoefficient(eps, gamma);
++  let lo = 1.5, hi = 2000;
++  if (f(lo) <= thrustVac) return lo;
++  if (f(hi) >= thrustVac) return hi;
++  for (let i = 0; i < 80; i++) {
++    const mid = Math.sqrt(lo * hi);
++    if (f(mid) > thrustVac) lo = mid;
++    else hi = mid;
++  }
++  return Math.sqrt(lo * hi);
++}
++
++/**
++ * The nozzle an engine the table does not hold is flown with (a custom engine
++ * in a mission file): an estimate, γ 1.22, and
++ * - with a sea-level pair: its own exit area and the ε that closes F_vac at a
++ *   chamber pressure of 7 MPa;
++ * - vacuum-only: ε 100 at 5 MPa, the exit area following from F_vac.
++ */
++export const FALLBACK_NOZZLE: Readonly<{ gamma: number; chamberPressureSL: number; vacuumExpansionRatio: number; vacuumChamberPressure: number }> = {
++  gamma: 1.22, chamberPressureSL: 7e6, vacuumExpansionRatio: 100, vacuumChamberPressure: 5e6,
++};
++
++function build(e: EngineSpec, record: NozzleRecord | undefined): NozzleModel {
++  const fv = e.thrustVac;
++  const groundLit = !e.vacuumOnly;
++  const gamma = record ? NOZZLE_GAMMA[record.family].value : FALLBACK_NOZZLE.gamma;
++  let exitArea: number;
++  let eps: number;
++  if (groundLit) {
++    exitArea = Math.max(0, (fv - e.thrustSL) / P0);
++    if (exitArea <= 0 || !(fv > 0)) return attachedOnly(gamma, record ? 'data' : 'estimate');
++    if (record?.expansionRatio) eps = record.expansionRatio.value;
++    else eps = areaRatioFor(fv, record?.chamberPressure?.value ?? FALLBACK_NOZZLE.chamberPressureSL, exitArea, gamma);
++  } else {
++    if (!(fv > 0)) return attachedOnly(gamma, record ? 'data' : 'estimate');
++    if (record?.exitDiameter) {
++      exitArea = record.exitDiameter.nozzles * Math.PI * record.exitDiameter.value ** 2 / 4;
++      eps = record.expansionRatio?.value ?? areaRatioFor(fv, record.chamberPressure?.value ?? FALLBACK_NOZZLE.vacuumChamberPressure, exitArea, gamma);
++    } else {
++      eps = record?.expansionRatio?.value ?? FALLBACK_NOZZLE.vacuumExpansionRatio;
++      const pc = record?.chamberPressure?.value ?? FALLBACK_NOZZLE.vacuumChamberPressure;
++      exitArea = eps * fv / (pc * vacuumThrustCoefficient(eps, gamma));
++    }
++  }
++  eps = Math.max(1.5, eps);
++  const throat = exitArea / eps;
++  const chamberPressure = fv / (throat * vacuumThrustCoefficient(eps, gamma));
++  const exitMach = machAt(eps, gamma);
++  const exitPressure = chamberPressure * pressureRatioAt(exitMach, gamma);
++  // the least factor that keeps the qualified sea-level point attached
++  const wallFactor = groundLit ? Math.max(1, (schmuckerRatio(exitMach) * P0 / exitPressure) * (1 + 1e-9)) : 1;
++  const lnA = new Float64Array(TABLE_POINTS), lnSep = new Float64Array(TABLE_POINTS), cf = new Float64Array(TABLE_POINTS);
++  const top = Math.log(eps);
++  for (let i = 0; i < TABLE_POINTS; i++) {
++    const x = (top * i) / (TABLE_POINTS - 1);
++    const a = Math.exp(x), m = machAt(a, gamma);
++    lnA[i] = x;
++    lnSep[i] = Math.log(wallFactor * chamberPressure * pressureRatioAt(m, gamma) / schmuckerRatio(m));
++    cf[i] = vacuumThrustCoefficient(a, gamma);
++  }
++  // the exit point exactly, so the separated law meets the attached one there
++  cf[TABLE_POINTS - 1] = fv / (chamberPressure * throat);
++  return { exitArea, expansionRatio: eps, gamma, chamberPressure, exitPressure, exitMach, wallFactor,
++    basis: record ? 'data' : 'estimate', lnA, lnSep, cf };
++}
++
++function attachedOnly(gamma: number, basis: NozzleBasis): NozzleModel {
++  const empty = new Float64Array(0);
++  return { exitArea: 0, expansionRatio: 1, gamma, chamberPressure: 0, exitPressure: 0, exitMach: 1, wallFactor: 1, basis, lnA: empty, lnSep: empty, cf: empty };
++}
++
++interface CacheEntry { fv: number; fsl: number; vac: boolean; name: string; model: NozzleModel }
++const cache = new WeakMap<EngineSpec, CacheEntry>();
++
++/** The nozzle of one engine (cached per spec object; recomputed if its thrusts change). */
++export function nozzleModel(e: EngineSpec): NozzleModel {
++  const hit = cache.get(e);
++  const vac = e.vacuumOnly === true;
++  if (hit && hit.fv === e.thrustVac && hit.fsl === e.thrustSL && hit.vac === vac && hit.name === e.name) return hit.model;
++  const model = build(e, Object.prototype.hasOwnProperty.call(NOZZLES, e.name) ? NOZZLES[e.name] : undefined);
++  cache.set(e, { fv: e.thrustVac, fsl: e.thrustSL, vac, name: e.name, model });
++  return model;
++}
++
++/** Exit area of one engine, m². */
++export function engineExitArea(e: EngineSpec): number {
++  return nozzleModel(e).exitArea;
++}
++
++/** The flow in one engine's nozzle at ambient pressure p and level λ. */
++export interface NozzleFlow {
++  /** thrust of one engine, N */
++  thrust: number;
++  /** the flow separates inside the nozzle */
++  separated: boolean;
++  /** area ratio at the separation point (the nozzle's own ε when attached) */
++  separationAreaRatio: number;
++}
++
++/** Separated thrust and where it separates; `null` while the flow is attached. */
++function separated(m: NozzleModel, p: number, level: number): { thrust: number; areaRatio: number } | null {
++  if (level * m.wallFactor * m.exitPressure >= schmuckerRatio(m.exitMach) * p) return null;
++  const target = Math.log(p / level);
++  const n = m.lnA.length;
++  let x: number, cf: number;
++  if (target >= m.lnSep[0]) {
++    x = 0; cf = m.cf[0];
++  } else {
++    // lnSep falls monotonically from the throat to the exit
++    let lo = 0, hi = n - 1;
++    while (hi - lo > 1) {
++      const mid = (lo + hi) >> 1;
++      if (m.lnSep[mid] > target) lo = mid;
++      else hi = mid;
++    }
++    const f = (m.lnSep[lo] - target) / (m.lnSep[lo] - m.lnSep[hi]);
++    x = m.lnA[lo] + f * (m.lnA[hi] - m.lnA[lo]);
++    cf = m.cf[lo] + f * (m.cf[hi] - m.cf[lo]);
++  }
++  const throat = m.exitArea / m.expansionRatio, a = Math.exp(x);
++  return { thrust: Math.max(0, level * m.chamberPressure * throat * cf - p * throat * a), areaRatio: a };
++}
++
++/**
++ * THE thrust law: one engine at ambient pressure `p` (Pa) and level `level`
++ * (throttle × solid profile × start-up or tail-off), N.
++ */
++export function engineThrustAt(e: EngineSpec, p: number, level: number): number {
++  if (!(level > 0)) return 0;
++  const fv = e.thrustVac;
++  if (!(p > 0)) return level * fv;
++  const m = nozzleModel(e);
++  if (!(m.exitArea > 0)) return level * fv;
++  const sep = separated(m, p, level);
++  return sep ? sep.thrust : Math.max(0, level * fv - p * m.exitArea);
++}
++
++/** `engineThrustAt` with whether, and where, the flow separates. */
++export function nozzleFlow(e: EngineSpec, p: number, level: number): NozzleFlow {
++  const m = nozzleModel(e);
++  if (!(level > 0)) return { thrust: 0, separated: false, separationAreaRatio: m.expansionRatio };
++  if (!(p > 0) || !(m.exitArea > 0)) return { thrust: level * e.thrustVac, separated: false, separationAreaRatio: m.expansionRatio };
++  const sep = separated(m, p, level);
++  return sep ? { thrust: sep.thrust, separated: true, separationAreaRatio: sep.areaRatio }
++    : { thrust: Math.max(0, level * e.thrustVac - p * m.exitArea), separated: false, separationAreaRatio: m.expansionRatio };
++}
++
++/**
++ * The level at which one engine gives `thrust` at ambient pressure `p`: the
++ * inverse of `engineThrustAt`, which rises monotonically with the level.
++ * Unbounded above (a request above full thrust returns a level above 1, for
++ * the caller to clamp), 0 for no thrust.
++ */
++export function engineLevelFor(e: EngineSpec, p: number, thrust: number): number {
++  if (!(thrust > 0) || !(e.thrustVac > 0)) return 0;
++  const m = nozzleModel(e);
++  const attached = (thrust + Math.max(0, p) * m.exitArea) / e.thrustVac;
++  if (!(p > 0) || !(m.exitArea > 0) || !separated(m, p, attached)) return attached;
++  // separated: the thrust is above the attached law's, so the level is below `attached`
++  let lo = 0, hi = attached;
++  for (let i = 0; i < 50; i++) {
++    const mid = (lo + hi) / 2;
++    if (engineThrustAt(e, p, mid) < thrust) lo = mid;
++    else hi = mid;
++  }
++  return (lo + hi) / 2;
++}
++
++/**
++ * Ambient pressure above which one engine's flow separates in its nozzle at
++ * level λ, Pa: λ·wallFactor·p_e over Schmucker's ratio at the exit. 0 for an
++ * engine with no exit-area term.
++ */
++export function separationPressure(e: EngineSpec, level = 1): number {
++  const m = nozzleModel(e);
++  return m.exitArea > 0 ? (level * m.wallFactor * m.exitPressure) / schmuckerRatio(m.exitMach) : 0;
++}
+diff --git a/src/physics/rigid/debris-runtime.ts b/src/physics/rigid/debris-runtime.ts
+index abc4094..f20c3cc 100644
+--- a/src/physics/rigid/debris-runtime.ts
++++ b/src/physics/rigid/debris-runtime.ts
+@@ -4,8 +4,9 @@ import type { DynamicsConfig, StageSpec } from '../../types';
+ import type { Debris } from '../simulation';
+ import { atmosphere } from '../atmosphere';
+ import { tumblingDragCoefficient } from '../aero';
+-import { DEG, G0, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
+-import { engineMassFlow, engineThrust } from '../vehicle';
++import { DEG, G0, MU_EARTH, OMEGA_EARTH, P0, R_EARTH } from '../constants';
++import { engineMassFlow, engineThrustAt } from '../vehicle';
++import { engineLevelFor } from '../nozzle';
+ import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
+ import { buildDetachedStage, type RigidVehicleSnapshot } from './mass';
+ import type { PartitionedRigidBody } from './partition';
+@@ -256,7 +257,8 @@ export class RigidDebrisRuntime {
+     let nose = coastNose, throttle = 0, engines: number[] = [];
+     if ((downward > 0 || this.terminalCoast) && height < 20000) {
+       const g = MU_EARTH / norm(this.state.r) ** 2;
+-      const thrust = engineThrust(stage.engine, atmosphere(height).p) * this.health(this.centre);
++      const pressure = atmosphere(height).p;
++      const thrust = engineThrustAt(stage.engine, pressure, 1) * this.health(this.centre);
+       const deceleration = Math.max(0.1, thrust / this.snapshot.mass - g);
+       const stopDistance = Math.max(0, (downward ** 2 - 4) / (2 * deceleration));
+       if (rc.landingStarted || contact.tailClearance < 1.15 * stopDistance + 20) {
+@@ -269,8 +271,10 @@ export class RigidDebrisRuntime {
+         // coasting blind to a single restart.
+         const set = this.landingSet === 'one' && !this.terminalCoast ? this.hoverSet(this.snapshot.mass * demandedAcceleration, height) : this.finalSet;
+         this.finalSet = set;
+-        const setThrust = set === this.centre ? thrust : engineThrust(stage.engine, atmosphere(height).p) * this.health(set);
+-        const requestedThrottle = setThrust > 0 ? this.snapshot.mass * demandedAcceleration / setThrust : 0;
++        const lit = this.health(set);
++        const setThrust = set === this.centre ? thrust : engineThrustAt(stage.engine, pressure, 1) * lit;
++        // the level that gives the thrust asked for, through the thrust law (not linear in the level in air)
++        const requestedThrottle = setThrust > 0 ? engineLevelFor(stage.engine, pressure, this.snapshot.mass * demandedAcceleration / lit) : 0;
+         const minimumThrottle = stage.engine.minThrottle ?? 1;
+         // A low-mass stage cannot hover below minimum thrust. A single latched
+         // terminal coast/restart replaces rapid on/off pulses. The final burn
+@@ -283,7 +287,7 @@ export class RigidDebrisRuntime {
+             // go down as well as up once it is lit (TERMINAL_PLANNED_THROTTLE_FRACTION).
+             const planned = minimumThrottle + TERMINAL_PLANNED_THROTTLE_FRACTION * (1 - minimumThrottle);
+             const brakingDistance = minimumBurnDistance({ massKg: this.snapshot.mass, propellantKg: rc.propellant,
+-              downwardMs: groundDownward, minimumThrustN: setThrust * planned,
++              downwardMs: groundDownward, minimumThrustN: engineThrustAt(stage.engine, pressure, planned) * lit,
+               minimumFlowKgS: engineMassFlow(stage.engine) * planned * this.health(set),
+               gravityMs2: g + dot(cross(EARTH_RATE, cross(EARTH_RATE, this.state.r)), up),
+               dragKgM: 0.5 * density * this.snapshot.aero.referenceArea * this.snapshot.aero.cdMach[0][1],
+@@ -341,13 +345,14 @@ export class RigidDebrisRuntime {
+     const air = this.runtime.airVelocity(this.state, time), downward = -dot(air, up);
+     const height = Math.max(0, norm(this.state.r) - R_EARTH);
+     const g = MU_EARTH / norm(this.state.r) ** 2;
+-    const perEngine = engineThrust(stage.engine, atmosphere(height).p);
++    const pressure = atmosphere(height).p;
++    const perEngine = engineThrustAt(stage.engine, pressure, 1);
+     const one = perEngine * this.health(this.centre);
+     const three = perEngine * this.health(this.trio);
+     if (!rc.landingStarted) {
+       if (!(downward > 0 && height < 20000)) return { nose: this.aeroSteerNose(time, retro), throttle: 0, engines: [] };
+       const braking = contact.tailClearance < 1.1 * brakingHeight({ alt: height, surfaceAlt: height - contact.tailClearance, vDown: downward,
+-        vTouch: 2, mass: this.snapshot.mass, thrust: (y) => engineThrust(stage.engine, atmosphere(Math.max(0, y)).p) * this.health(this.centre) * RETURN_LANDING_LEVEL,
++        vTouch: 2, mass: this.snapshot.mass, thrust: (y) => engineThrustAt(stage.engine, atmosphere(Math.max(0, y)).p, RETURN_LANDING_LEVEL) * this.health(this.centre),
+         flow: engineMassFlow(stage.engine) * this.health(this.centre) * RETURN_LANDING_LEVEL, cd: d.cd, area: d.area, gravity: g }) + 10;
+       const divert = !braking && this.divertNeedsTime(time, contact, downward, three, g);
+       if (!braking && !divert) return { nose: this.aeroSteerNose(time, retro), throttle: 0, engines: [] };
+@@ -362,7 +367,8 @@ export class RigidDebrisRuntime {
+       const wanted = add(scale(up, aV), lateral);
+       const force = this.snapshot.mass * norm(wanted);
+       if (force > 0.95 * one) {
+-        return { nose: normalize(wanted), throttle: clamp(force / Math.max(1, three), stage.engine.minThrottle ?? 1, 1), engines: this.trio };
++        const level = engineLevelFor(stage.engine, pressure, force / Math.max(1e-9, this.health(this.trio)));
++        return { nose: normalize(wanted), throttle: clamp(level, stage.engine.minThrottle ?? 1, 1), engines: this.trio };
+       }
+       this.landingSet = 'one';
+     }
+@@ -473,7 +479,7 @@ export class RigidDebrisRuntime {
+     if (rc.propellant <= 0) { throttle = 0; engines = []; }
+     rc.burning = throttle > 0;
+     rc.thrustVac = activeEngines * stage.engine.thrustVac * throttle;
+-    rc.thrustSL = activeEngines * stage.engine.thrustSL * throttle;
++    rc.thrustSL = activeEngines * engineThrustAt(stage.engine, P0, throttle);
+     rc.mdot = activeEngines * engineMassFlow(stage.engine) * throttle;
+     return { nose: command.nose, throttle, engines };
+   }
+@@ -497,17 +503,18 @@ export class RigidDebrisRuntime {
+   private hoverSet(force: number, height: number): number[] {
+     if (!this.isSuperHeavy) return this.centre;
+     const stage = this.options.stage!;
+-    const per = engineThrust(stage.engine, atmosphere(Math.max(0, height)).p), minimum = stage.engine.minThrottle ?? 1;
++    const pressure = atmosphere(Math.max(0, height)).p, minimum = stage.engine.minThrottle ?? 1;
++    const per = engineThrustAt(stage.engine, pressure, 1), perMinimum = engineThrustAt(stage.engine, pressure, minimum);
+     const sets = [[0, 1, 2], [0, 1], [0]];
+     // Keep the engines lit while they can fly the thrust asked for: switching
+     // on every small change is a step in thrust and in torque each time.
+     const current = sets.findIndex(set => set.length === this.finalSet.length);
+     if (current >= 0) {
+-      const set = sets[current], lo = per * this.health(set) * minimum, hi = per * this.health(set);
++      const set = sets[current], lo = perMinimum * this.health(set), hi = per * this.health(set);
+       if (force >= 0.97 * lo && force <= hi) return set;
+       if (force > hi && current > 0) return sets[current - 1];
+     }
+-    for (const set of sets) if (per * this.health(set) * minimum <= force) return set;
++    for (const set of sets) if (perMinimum * this.health(set) <= force) return set;
+     return [0];
+   }
+   /** Healthy engines among `engines`, as a count. */
+@@ -571,7 +578,7 @@ export class RigidDebrisRuntime {
+         if (!g.trim && g.dvNeeded < BOOSTBACK_TRIM_DV) g.trim = true;
+         // The last metres per second on the centre engine, throttled down so
+         // one control step does not overshoot them.
+-        const one = engineThrust(stage.engine, atmosphere(Math.max(0, height)).p) * this.health(this.centre) / this.snapshot.mass;
++        const one = engineThrustAt(stage.engine, atmosphere(Math.max(0, height)).p, 1) * this.health(this.centre) / this.snapshot.mass;
+         const throttle = g.trim ? clamp(g.dvNeeded / Math.max(1e-6, one * 1.0), minimum, 1) : 1;
+         return { nose: g.dir, throttle, engines: g.trim ? this.centre : this.trio };
+       }
+@@ -588,7 +595,7 @@ export class RigidDebrisRuntime {
+           if (!rc.entryFlown) this.raised.push({ key: 'evt.entryBurnStart', severity: 'info', params: { name: d.name } });
+           rc.entryFlown = true;
+           const thrust = this.health(this.trio)
+-            * engineThrust(stage.engine, atmosphere(Math.max(0, height)).p);
++            * engineThrustAt(stage.engine, atmosphere(Math.max(0, height)).p, 1);
+           const aT = thrust / this.snapshot.mass;
+           const g = this.solution(time, RETURN_REPLAN_S);
+           const tau = Math.max(3, (speed - rg.entryTargetSpeed) / Math.max(1, aT));
+diff --git a/src/physics/rigid/mass.ts b/src/physics/rigid/mass.ts
+index 2a16e5e..34f20b6 100644
+--- a/src/physics/rigid/mass.ts
++++ b/src/physics/rigid/mass.ts
+@@ -3,7 +3,7 @@
+ import { shipFlapSurfaces, type ControlSurfaceSpec } from './surfaces';
+ import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../../types';
+ import type { VehicleModel } from '../vehicle';
+-import { engineMassFlow, engineThrust } from '../vehicle';
++import { engineMassFlow, engineThrustAt } from '../vehicle';
+ import { add, scale, sub, v3, type Vec3 } from '../vec3';
+ import { dragCoefficient, tumblingDragCoefficient } from '../aero';
+ import { assertSPD, type Mat3 } from './math';
+@@ -352,7 +352,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
+         { ...reservoir, consumedKg: consumed }));
+     }
+     const budgeted = budgetEngines(chamberGeometry(st.spec.id, st.spec.id, st.spec.engine, st.spec.diameter / 2, base),
+-      engineThrust(st.spec.engine, pressure) * throttle, engineMassFlow(st.spec.engine) * throttle,
++      engineThrustAt(st.spec.engine, pressure, throttle), engineMassFlow(st.spec.engine) * throttle,
+       st.spec.engine.count, st.engineFraction, throttle, st.shutEngines);
+     // Engines left cold (`StageState.litEngines`) make no thrust and burn nothing.
+     if (st.litEngines) coldEngines(budgeted, st.litEngines);
+@@ -368,7 +368,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
+       for (const placement of placements) {
+         components.push(...stageMassComponents(b.spec, boosterPropellant, placement.baseBody, placement.id));
+         engines.push(...budgetEngines(chamberGeometry(placement.id, b.spec.id, b.spec.engine, b.spec.diameter / 2,
+-          placement.baseBody, placement.rotationAboutX), engineThrust(b.spec.engine, pressure) * bt,
++          placement.baseBody, placement.rotationAboutX), engineThrustAt(b.spec.engine, pressure, bt),
+         engineMassFlow(b.spec.engine) * bt, b.spec.engine.count, 1, bt));
+       }
+     });
+@@ -448,7 +448,7 @@ export function buildDetachedStage(vehicleId: string, stage: StageSpec, propella
+     : rcsGeometry(vehicleId, stage);
+   const throttle = propellant > 0 ? op.coreThrottle ?? 0 : 0;
+   const engines = budgetEngines(chamberGeometry(stage.id, stage.id, stage.engine, stage.diameter / 2),
+-    engineThrust(stage.engine, op.pressure ?? 0) * throttle, engineMassFlow(stage.engine) * throttle,
++    engineThrustAt(stage.engine, op.pressure ?? 0, throttle), engineMassFlow(stage.engine) * throttle,
+     stage.engine.count, op.engineFraction ?? 1, throttle);
+   if (op.activeEngineIndices) coldEngines(engines, op.activeEngineIndices);
+   const massFlow = engines.reduce((sum, engine) => sum + engine.massFlowKgS, 0);
+diff --git a/src/physics/sim/debris.ts b/src/physics/sim/debris.ts
+index 18da8ee..0530189 100644
+--- a/src/physics/sim/debris.ts
++++ b/src/physics/sim/debris.ts
+@@ -22,7 +22,8 @@ import { rk4Step } from '../integrator';
+ import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate } from '../rigid/math';
+ import { elementsFromState, eciToLatLon, propagateKepler } from '../orbital';
+ import type { StageState, BoosterState } from '../vehicle';
+-import { targetedRecovery } from '../vehicle';
++import { engineThrustAt, engineThrustSL, targetedRecovery } from '../vehicle';
++import { engineLevelFor } from '../nozzle';
+ import type { Simulation } from '../simulation';
+ import type { Debris, EventSeverity } from './types';
+ import { pointMassAcceleration } from './forces';
+@@ -132,11 +133,26 @@ function setRecoveryEngines(rc: NonNullable<Debris['recovery']>, n: number): voi
+   const e = rc.engine;
+   if (!e) return;
+   const k = Math.max(1, Math.min(e.count, n));
++  rc.engines = k;
+   rc.thrustVac = k * e.thrustVac;
+-  rc.thrustSL = k * e.thrustSL;
++  rc.thrustSL = k * engineThrustSL(e);
+   rc.mdot = (k * e.thrustVac) / (G0 * e.ispVac);
+ }
+ 
++/**
++ * Thrust of a returning stage's burning engines at ambient pressure `p` (Pa)
++ * and level `level`, N: the thrust law (src/physics/nozzle.ts), as the six-DOF
++ * stage and the return guidance fly it.
++ */
++function recoveryThrust(rc: NonNullable<Debris['recovery']>, p: number, level: number): number {
++  return rc.engine && rc.engines ? rc.engines * engineThrustAt(rc.engine, p, level) : level * rc.thrustVac;
++}
++
++/** The level at which a returning stage's burning engines give `thrust` at pressure `p`. */
++function recoveryLevel(rc: NonNullable<Debris['recovery']>, p: number, thrust: number): number {
++  return rc.engine && rc.engines ? engineLevelFor(rc.engine, p, thrust / rc.engines) : thrust / Math.max(1, rc.thrustVac);
++}
++
+ /**
+  * Recovery parameters for a returning stage: a propellant reserve sized by the
+  * rocket equation for a `LANDING_BURN_DV` landing burn, and an entry burn on up
+@@ -154,7 +170,7 @@ function recoveryFor(e: EngineSpec, dryMass: number, propellant: number): NonNul
+ 
+ /** Entry-burn engines: three, or more when three cannot give the empty stage 2.5 g. */
+ function entryEngineCount(e: EngineSpec, dryMass: number, landingReserve: number): number {
+-  return Math.min(e.count, Math.max(3, Math.ceil((2.5 * G0 * (dryMass + landingReserve)) / e.thrustSL)));
++  return Math.min(e.count, Math.max(3, Math.ceil((2.5 * G0 * (dryMass + landingReserve)) / engineThrustSL(e))));
+ }
+ 
+ export class DebrisTracker {
+@@ -303,9 +319,9 @@ export class DebrisTracker {
+       // centre engine alone, timed by its vacuum-stop rule.
+       return {
+         cd: d.cd, area: d.area, j2: true,
+-        entry: { thrustVac: 3 * e.thrustVac, thrustSL: 3 * e.thrustSL, mdot: (3 * e.thrustVac) / (G0 * e.ispVac),
++        entry: { engine: e, count: 3, mdot: (3 * e.thrustVac) / (G0 * e.ispVac),
+           targetSpeed: entrySpeedOf(rc), reserve: rc.landingReserve },
+-        landing: { thrustVac: e.thrustVac, thrustSL: e.thrustSL, mdot: e.thrustVac / (G0 * e.ispVac), count: 1,
++        landing: { engine: e, mdot: e.thrustVac / (G0 * e.ispVac), count: 1,
+           level: RETURN_LANDING_LEVEL, vTouch: touchSpeed(rc.target), engines: () => 1 },
+       };
+     }
+@@ -313,11 +329,11 @@ export class DebrisTracker {
+     return {
+       cd: d.cd, area: d.area, j2: !!this.sim.rigidRuntime,
+       entry: e ? {
+-        thrustVac: n * e.thrustVac, thrustSL: n * e.thrustSL, mdot: (n * e.thrustVac) / (G0 * e.ispVac),
++        engine: e, count: n, mdot: (n * e.thrustVac) / (G0 * e.ispVac),
+         targetSpeed: entrySpeedOf(rc), reserve: rc.landingReserve,
+       } : undefined,
+       landing: e ? {
+-        thrustVac: e.thrustVac, thrustSL: e.thrustSL, mdot: e.thrustVac / (G0 * e.ispVac), count: e.count,
++        engine: e, mdot: e.thrustVac / (G0 * e.ispVac), count: e.count,
+         level: LANDING_PLANNED_THROTTLE, vTouch: touchSpeed(rc.target),
+       } : undefined,
+     };
+@@ -420,8 +436,8 @@ export class DebrisTracker {
+       const speed = norm(air);
+       const retro = speed > 1 ? scale(air, -1 / speed) : up;
+       const vDown = -dot(air, up);
+-      const pressure = Math.min(1, atmosphere(Math.max(0, alt)).p / 101325);
+-      const thrustOf = (level: number) => (rc.thrustVac - (rc.thrustVac - rc.thrustSL) * pressure) * level;
++      const pressure = atmosphere(Math.max(0, alt)).p;
++      const thrustOf = (level: number) => recoveryThrust(rc, pressure, level);
+       let h = Math.min(remaining, alt < 20e3 || rc.phase === 'boostback' || rc.phase === 'flip' ? 0.1 : 0.5);
+       // The last hundred metres of a landing burn in fine steps: the burn
+       // cycles on and off below its engines' minimum thrust, and a tenth of a
+@@ -500,7 +516,7 @@ export class DebrisTracker {
+           } else {
+             rc.phase = 'landing';
+             rc.guidance = undefined;
+-            if (rc.engine) setRecoveryEngines(rc, landingEngineCount(rc.engine.thrustSL, rc.engine.count, d.mass));
++            if (rc.engine) setRecoveryEngines(rc, landingEngineCount(engineThrustSL(rc.engine), rc.engine.count, d.mass));
+             dir = retro;
+           }
+           break;
+@@ -512,7 +528,7 @@ export class DebrisTracker {
+           const minimum = rc.engine?.minThrottle ?? 1;
+           if (!rc.landingStarted && vDown > 0 && alt < 20e3) {
+             const stop = brakingHeight({ alt, surfaceAlt: target.alt, vDown, vTouch: touchSpeed(target), mass: d.mass,
+-              thrust: (y) => (rc.thrustVac - (rc.thrustVac - rc.thrustSL) * Math.min(1, atmosphere(Math.max(0, y)).p / 101325)) * LANDING_PLANNED_THROTTLE,
++              thrust: (y) => recoveryThrust(rc, atmosphere(Math.max(0, y)).p, LANDING_PLANNED_THROTTLE),
+               flow: rc.mdot * LANDING_PLANNED_THROTTLE, cd: d.cd, area: d.area, gravity: gLocal });
+             if (hAgl < 1.1 * stop + 10) {
+               rc.landingStarted = true;
+@@ -525,7 +541,8 @@ export class DebrisTracker {
+             const tgo = (2 * hAgl) / Math.max(1, vDown + vTouch);
+             const aH = landingDivert(d.r, d.v, target, gmst0, t, tgo, aV, LANDING_MAX_TILT);
+             const aCmd = add(scale(up, aV), aH);
+-            const want = (d.mass * norm(aCmd)) / Math.max(1, T);
++            // the level that gives the thrust asked for, through the law
++            const want = T > 0 ? recoveryLevel(rc, pressure, d.mass * norm(aCmd)) : 0;
+             dir = normalize(aCmd);
+             // Below the engine's minimum the stage cannot throttle down any
+             // further: it coasts until the profile asks for thrust again.
+@@ -732,7 +749,6 @@ export class DebrisTracker {
+         if (d.recovery && d.recovery.propellant > 0 && vDown > 0) {
+           const rc = d.recovery;
+           const atm = atmosphere(Math.max(0, altK));
+-          const pressure = Math.min(1, atm.p / 101325);
+           let burn = false;
+           // Entry burn: retrograde below 70 km until the airspeed is something
+           // the structure can take (~1.4 km/s), spending everything above the
+@@ -749,10 +765,10 @@ export class DebrisTracker {
+               // mass that is actually left: a hoverslam is flown with as few
+               // engines as will stop the stage, and three Merlins on an empty
+               // booster is 6 g of deceleration nobody flies.
+-              setRecoveryEngines(rc, Math.ceil((3 * G0 * d.mass) / Math.max(1, rc.engine?.thrustSL ?? rc.thrustSL)));
++              setRecoveryEngines(rc, Math.ceil((3 * G0 * d.mass) / Math.max(1, rc.engine ? engineThrustSL(rc.engine) : rc.thrustSL)));
+             }
+           }
+-          const T = rc.thrustVac - (rc.thrustVac - rc.thrustSL) * pressure;
++          const T = recoveryThrust(rc, atm.p, 1);
+           // Landing burn: a constant-deceleration descent profile (bang-bang
+           // thrust stands in for engine throttling) that reaches ~2 m/s at
+           // touchdown.
+diff --git a/src/physics/sim/return-guidance.ts b/src/physics/sim/return-guidance.ts
+index 6e94d86..ffd25c2 100644
+--- a/src/physics/sim/return-guidance.ts
++++ b/src/physics/sim/return-guidance.ts
+@@ -21,7 +21,10 @@
+  * burn: the burn is short, starts a few kilometres up nearly straight down,
+  * and its divert takes out what the ballistic point and the burn disagree on.
+  */
+-import { MU_EARTH, OMEGA_EARTH, P0, R_EARTH } from '../constants';
++import { MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
++import type { EngineSpec } from '../../types';
++import { engineThrustAt, engineThrustSL } from '../vehicle';
++import { engineLevelFor } from '../nozzle';
+ import { type Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled } from '../vec3';
+ import { atmosphere } from '../atmosphere';
+ import { tumblingDragCoefficient } from '../aero';
+@@ -59,9 +62,8 @@ export interface DescentModel {
+ }
+ 
+ export interface LandingBurnModel {
+-  /** one landing engine's thrust in vacuum and at sea level, N, and its flow, kg/s */
+-  thrustVac: number;
+-  thrustSL: number;
++  /** the landing engine, whose thrust is the law's (src/physics/nozzle.ts), and one engine's full flow, kg/s */
++  engine: EngineSpec;
+   mdot: number;
+   /** how many of them there are */
+   count: number;
+@@ -90,9 +92,9 @@ export function landingEngineCount(thrustSL: number, count: number, mass: number
+ }
+ 
+ export interface EntryBurnModel {
+-  /** thrust of the entry-burn engines in vacuum and at sea level, N */
+-  thrustVac: number;
+-  thrustSL: number;
++  /** the entry-burn engine and how many burn: their thrust is `count` times the law's */
++  engine: EngineSpec;
++  count: number;
+   /** their propellant flow, kg/s */
+   mdot: number;
+   /** the burn ends at this airspeed, m/s */
+@@ -198,8 +200,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
+       const step = entryStep(entry, falling, alt, speed, fuel, e);
+       entry = step.state;
+       if (step.burn) {
+-        const p = Math.min(1, atmosphere(Math.max(0, alt)).p / P0);
+-        thrust = e.thrustVac - (e.thrustVac - e.thrustSL) * p;
++        thrust = e.count * engineThrustAt(e.engine, atmosphere(Math.max(0, alt)).p, 1);
+         flow = e.mdot;
+         // End the burn on its target speed, not up to a whole step past it.
+         h = Math.min(h, Math.max(0.02, (speed - e.targetSpeed) / (thrust / mass)), Math.max(0.02, (fuel - e.reserve) / flow));
+@@ -209,8 +210,8 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
+       const vDown = -dot(air, normalize(r));
+       const height = alt - surfaceAlt;
+       if (!landingOn && height < 20e3) {
+-        const n = lb.engines ? lb.engines(mass) : landingEngineCount(lb.thrustSL, lb.count, mass);
+-        const full = (y: number) => n * (lb.thrustVac - (lb.thrustVac - lb.thrustSL) * Math.min(1, atmosphere(Math.max(0, y)).p / P0));
++        const n = lb.engines ? lb.engines(mass) : landingEngineCount(engineThrustSL(lb.engine), lb.count, mass);
++        const full = (y: number) => n * engineThrustAt(lb.engine, atmosphere(Math.max(0, y)).p, 1);
+         const g = MU_EARTH / (norm(r) ** 2);
+         if (lb.rule === 'vacuum') {
+           const stop = Math.max(0, (vDown * vDown - lb.vTouch ** 2) / (2 * Math.max(0.1, full(alt) / mass - g)));
+@@ -218,10 +219,11 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
+             landingOn = true;
+             landingEngines = n;
+             const decel = (vDown * vDown - lb.vTouch ** 2) / (2 * Math.max(1, height));
+-            landingLevel = Math.max(0, Math.min(1, (mass * (g + decel)) / Math.max(1, full(alt))));
++            // the level that gives that thrust, through the law (not linear in the level in air)
++            landingLevel = Math.max(0, Math.min(1, engineLevelFor(lb.engine, atmosphere(Math.max(0, alt)).p, (mass * (g + decel)) / n)));
+           }
+         } else {
+-          const thrustAt = (y: number) => lb.level * full(y);
++          const thrustAt = (y: number) => n * engineThrustAt(lb.engine, atmosphere(Math.max(0, y)).p, lb.level);
+           // Without drag the stop takes longest; only when even that is near
+           // is the burn's real braking height worth integrating.
+           const rough = (vDown * vDown) / (2 * Math.max(0.1, thrustAt(alt) / mass - g));
+@@ -235,8 +237,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
+       }
+       if (landingOn) {
+         if (vDown <= lb.vTouch) return { r, t, landed: true };
+-        const p = Math.min(1, atmosphere(Math.max(0, alt)).p / P0);
+-        thrust = landingEngines * landingLevel * (lb.thrustVac - (lb.thrustVac - lb.thrustSL) * p);
++        thrust = landingEngines * engineThrustAt(lb.engine, atmosphere(Math.max(0, alt)).p, landingLevel);
+         flow = landingEngines * landingLevel * lb.mdot;
+       }
+     }
+diff --git a/src/physics/sim/ship-descent.ts b/src/physics/sim/ship-descent.ts
+index 78679dd..e29b7a5 100644
+--- a/src/physics/sim/ship-descent.ts
++++ b/src/physics/sim/ship-descent.ts
+@@ -34,7 +34,8 @@ import { atmosphere } from '../atmosphere';
+ import { dragCoefficient } from '../aero';
+ import { gravity } from '../gravity';
+ import { eciToLatLon } from '../orbital';
+-import { engineMassFlow, engineThrust } from '../vehicle';
++import { engineMassFlow, engineThrustAt } from '../vehicle';
++import { engineLevelFor } from '../nozzle';
+ import { atMach, crossflowDragCoefficient, shipDescentAeroTable, type AeroTable } from '../rigid/aero-tables';
+ import { targetAttitude } from '../rigid/runtime';
+ import { quatRotate, type Quat } from '../rigid/math';
+@@ -300,7 +301,7 @@ export class ShipDescent {
+     const n = LANDING_MIN_ENGINES;
+     const brake = brakingHeight({
+       alt: 1000, surfaceAlt: 0, vDown: vDown / 2, vTouch: TOUCHDOWN_SPEED, mass,
+-      thrust: (alt) => n * engineThrust(e, atmosphere(Math.max(0, alt)).p) * LANDING_PLAN_LEVEL,
++      thrust: (alt) => n * engineThrustAt(e, atmosphere(Math.max(0, alt)).p, LANDING_PLAN_LEVEL),
+       flow: n * engineMassFlow(e) * LANDING_PLAN_LEVEL, cd: 1.0, area: this.referenceArea, gravity: g,
+     });
+     return vDown * FLIP_DROP_S + brake + FLIP_MARGIN;
+@@ -401,20 +402,22 @@ export class ShipDescent {
+   private landingCommand(aThrust: Vec3, fuel: boolean, settling: boolean): DescentCommand {
+     const s = this.sim.state, st = this.sim.vehicle.active!;
+     const e = st.spec.engine;
+-    const perEngine = engineThrust(e, atmosphere(Math.max(0, s.altitude)).p);
++    const pressure = atmosphere(Math.max(0, s.altitude)).p;
++    const perEngine = engineThrustAt(e, pressure, 1);
+     const need = s.mass * norm(aThrust);
+     // One more engine when those lit are nearly flat out; one fewer, down to
+     // `LANDING_MIN_ENGINES`, as soon as those lit cannot throttle down to
+     // what is asked — held at their least they would brake harder than the
+     // plan and stop the ship above the water.
+-    const least = e.minThrottle ?? 1;
++    const leastThrust = engineThrustAt(e, pressure, e.minThrottle ?? 1);
+     if (need > 0.9 * this.engines * perEngine && this.engines < SEA_LEVEL_ENGINES.length) this.engines++;
+-    else if (this.engines > (settling ? 1 : LANDING_MIN_ENGINES) && need < 1.1 * least * this.engines * perEngine
++    else if (this.engines > (settling ? 1 : LANDING_MIN_ENGINES) && need < 1.1 * this.engines * leastThrust
+       && need < 0.9 * (this.engines - 1) * perEngine) this.engines--;
+     st.litEngines = ENGINE_SETS[this.engines];
+     // Never quite zero while there is propellant: the engines stay lit at
+     // their least, and the constant-deceleration law asks for more again.
+-    const throttle = fuel ? Math.max(1e-3, Math.min(1, need / (this.engines * perEngine))) : 0;
++    // (the level that gives it, through the thrust law)
++    const throttle = fuel ? Math.max(1e-3, Math.min(1, engineLevelFor(e, pressure, need / this.engines))) : 0;
+     return { nose: normalize(aThrust), belly: null, throttle, slewRate: 15 * DEG };
+   }
+ 
+diff --git a/src/physics/sim/types.ts b/src/physics/sim/types.ts
+index 14e0d04..1fd212c 100644
+--- a/src/physics/sim/types.ts
++++ b/src/physics/sim/types.ts
+@@ -189,6 +189,8 @@ export interface Debris {
+      */
+     engine?: EngineSpec;
+     propellant: number; thrustVac: number; thrustSL: number; mdot: number;
++    /** engines burning (`setRecoveryEngines`): the thrust is this many times the law's for `engine` */
++    engines?: number;
+     burning: boolean; landed: boolean;
+     /** propellant held back for the landing burn, kg */
+     landingReserve: number;
+diff --git a/src/physics/simulation.ts b/src/physics/simulation.ts
+index ca3b56b..ba5a72e 100644
+--- a/src/physics/simulation.ts
++++ b/src/physics/simulation.ts
+@@ -51,7 +51,7 @@ import { runningEngines } from './eom';
+ import { validateDynamics } from './rigid/config';
+ import { rk4Step } from './integrator';
+ import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, planeNormal, wrapPi } from './orbital';
+-import { VehicleModel, StageState, engineMassFlow } from './vehicle';
++import { VehicleModel, StageState, engineMassFlow, type SeparatedEngine } from './vehicle';
+ import { AscentGuidance, planeNormalThrough } from './guidance';
+ import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
+ import { MissionPlan, planMission, RAAN_TOLERANCE } from './mission';
+@@ -592,6 +592,32 @@ export class Simulation {
+   /** Inside `step`: the events it logs are stamped with the state it ends in (`SimEvent.state`). */
+   private stepping = false;
+ 
++  /** Engine groups already reported running with separated flow, by stage or strap-on name and engine. */
++  private separationSaid = new Set<string>();
++
++  /**
++   * An engine group running at a steady level with the flow separated inside
++   * its nozzles (`ThrustResult.separated`, src/physics/nozzle.ts): a vacuum
++   * engine lit low in the air, or an engine throttled deep near the ground.
++   * Said once per group and flight, with where in the nozzle it separates.
++   * The flight flies the separated thrust; the side loads a real nozzle then
++   * sees are not modelled (no sourced criterion for what breaks it).
++   */
++  private reportSeparation(list: readonly SeparatedEngine[]): void {
++    const active = this.vehicle.active;
++    for (const sep of list) {
++      const label = sep.where === 'hot' ? this.vehicle.hotStage()?.spec.name
++        : sep.where === 'core' ? active?.spec.name : active?.boosters[sep.where]?.spec.name;
++      const key = `${label ?? ''}|${sep.engine.name}`;
++      if (this.separationSaid.has(key)) continue;
++      this.separationSaid.add(key);
++      this.event('evt.nozzleSeparation', 'warn', {
++        stage: label ?? '', engine: sep.engine.name, at: Math.round(sep.areaRatio * 10) / 10, eps: Math.round(sep.expansionRatio),
++        alt: Math.round(this.state.altitude / 100) / 10,
++      });
++    }
++  }
++
+   /**
+    * The state an event leaves the flight in (`SimEvent.state`): now, with the
+    * impulse a core already shut down still gives as it dies away added along
+@@ -869,6 +895,7 @@ export class Simulation {
+     if (thr.burning) this.vehicle.consume(s.t, 1, dt);
+     s.thrust = thr.thrust;
+     s.throttle = thr.burning ? 1 : 0;
++    if (thr.separated) this.reportSeparation(thr.separated);
+     s.t = tNew;
+     const theta = this.plan.gmst0 + OMEGA_EARTH * s.t;
+     s.r = groundPositionEci(lat, lon, this.site.altitude, theta);
+@@ -1076,6 +1103,7 @@ export class Simulation {
+       if (dt < dt0) thr = this.vehicle.thrust(s.t, atm.p, throttleCmd, dt);
+     }
+     s.thrust = thr.thrust;
++    if (thr.separated) this.reportSeparation(thr.separated);
+     s.throttle = thr.burning ? throttleCmd : 0;
+     // What the engines are really doing, as opposed to what was commanded.
+     // `captureFrame` used to re-derive this from the spec — a second copy of
+@@ -1197,13 +1225,13 @@ export class Simulation {
+     // Read only; nothing here feeds back into the flight.
+     if (dt > 0 && this.recordEquations) {
+       const hotEngines = thr.hotLevel !== undefined ? this.vehicle.hotStage() : null;
+-      const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels, hotEngines ? { stage: hotEngines, level: thr.hotLevel! } : undefined);
++      const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels, hotEngines ? { stage: hotEngines, level: thr.hotLevel! } : undefined, atm.p);
+       const pointDrag = vAirMag > 0.1 && atm.rho > 0 && alt < 1000e3 ? scale(vAir, -dragAccel / vAirMag) : v3();
+       s.eom = {
+         t: s.t, dt, integrator: held ? 'heldCoast' : rigidAccelerations ? 'rigid' : useKepler ? 'kepler' : 'pointMass',
+         mass, r: { ...s.r }, v: { ...s.v }, density: atm.rho, soundSpeed: atm.a, pressure: atm.p, airspeed: vAirMag,
+         airVelocity: { ...vAir }, dynamicPressure: q, mach: atm.a > 0 ? vAirMag / atm.a : 0,
+-        thrust: thr.thrust, vacuumThrust: engines.vacuumThrust, exitArea: engines.exitArea,
++        thrust: thr.thrust, vacuumThrust: engines.vacuumThrust, exitArea: engines.exitArea, ...(engines.separated ? { separated: true } : {}),
+         referenceArea: rigidAccelerations ? this.rigidRuntime!.snapshot?.aero.referenceArea ?? area : area,
+         ...(rigidAccelerations || held || useKepler ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
+         thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held || useKepler ? v3() : scale(s.dir, thrustAccel),
+diff --git a/src/physics/vehicle.ts b/src/physics/vehicle.ts
+index ae5e909..88e973c 100644
+--- a/src/physics/vehicle.ts
++++ b/src/physics/vehicle.ts
+@@ -4,6 +4,9 @@
+  */
+ import type { VehicleSpec, StageSpec, BoosterGroupSpec, EngineSpec, SatelliteSpec, RecoveryMode, RecoveryPlan, TargetedRecovery } from '../types';
+ import { G0, P0 } from './constants';
++import { engineThrustAt, nozzleFlow, nozzleModel } from './nozzle';
++
++export { engineThrustAt } from './nozzle';
+ 
+ export interface BoosterState {
+   spec: BoosterGroupSpec;
+@@ -158,6 +161,25 @@ export function inTailoff(e: EngineSpec, stopTime: number, t: number): boolean {
+   return t - stopTime >= 0 && t - stopTime < TAILOFF_SPAN * engineTailoffS(e) - 1e-9;
+ }
+ 
++/**
++ * Impulse one engine still gives in a tail-off from level `level`, N·s, from
++ * `from` time constants after the shutdown to the end of the decay
++ * (`TAILOFF_SPAN`), at ambient pressure `p`. In vacuum the law is linear in the
++ * level and the integral is closed; in air it is not (the air takes p·A_e at
++ * every level), so it is summed (Simpson, 24 intervals).
++ */
++export function tailoffImpulse(e: EngineSpec, p: number, level: number, tau: number, from = 0): number {
++  if (!(level > 0) || !(from < TAILOFF_SPAN)) return 0;
++  if (!(p > 0)) return level * e.thrustVac * tau * (Math.exp(-from) - Math.exp(-TAILOFF_SPAN));
++  const n = 24, h = (TAILOFF_SPAN - from) / n;
++  let sum = 0;
++  for (let i = 0; i <= n; i++) {
++    const w = i === 0 || i === n ? 1 : i % 2 === 1 ? 4 : 2;
++    sum += w * engineThrustAt(e, p, level * Math.exp(-(from + i * h)));
++  }
++  return sum * h / 3 * tau;
++}
++
+ export interface ThrustResult {
+   /** total thrust, N */
+   thrust: number;
+@@ -202,25 +224,34 @@ export interface ThrustResult {
+   hotLevel?: number;
+   /** any engine currently producing thrust */
+   burning: boolean;
++  /**
++   * Engines running at a steady level with the flow separated inside their
++   * nozzles (src/physics/nozzle.ts): the core, a strap-on group by its index,
++   * or the hot stage above. The start-up and the tail-off are left out — every
++   * engine passes through separated flow there, on the pad or not. Absent
++   * when there is none.
++   */
++  separated?: SeparatedEngine[];
++}
++
++/** One engine group running with the flow separated in its nozzles (`ThrustResult.separated`). */
++export interface SeparatedEngine {
++  where: 'core' | 'hot' | number;
++  engine: EngineSpec;
++  /** area ratio at the separation point, and the nozzle's own */
++  areaRatio: number;
++  expansionRatio: number;
+ }
+ 
+ /**
+- * Sea-level thrust actually used by the model.
+- *
+- * A `vacuumOnly` engine has no sea-level operating point; its `thrustSL` field
+- * is a placeholder kept only so that the type stays uniform. Using it would be
+- * using fiction, so the vacuum figure is returned instead and the pressure blend
+- * below becomes a no-op for those engines.
++ * Sea-level thrust of one engine at full throttle, N: the thrust law
++ * (src/physics/nozzle.ts) at p₀. For an engine with a sea-level operating
++ * point it is the catalogue's `thrustSL` exactly (attached flow, its qualified
++ * point); for a `vacuumOnly` engine, whose `thrustSL` is a placeholder never
++ * read, it is what its nozzle gives at sea level with the flow separated.
+  */
+ export function engineThrustSL(e: EngineSpec): number {
+-  return e.vacuumOnly ? e.thrustVac : e.thrustSL;
+-}
+-
+-/** Thrust of one engine at ambient pressure p (Pa). */
+-export function engineThrust(e: EngineSpec, p: number): number {
+-  const f = Math.min(1, Math.max(0, p / P0));
+-  const tSL = engineThrustSL(e);
+-  return e.thrustVac - (e.thrustVac - tSL) * f;
++  return engineThrustAt(e, P0, 1);
+ }
+ 
+ /**
+@@ -232,26 +263,28 @@ export function engineThrust(e: EngineSpec, p: number): number {
+  * F_SL/(g₀ Isp_SL) are the *same* number, and a data pair that says otherwise is
+  * inconsistent. The model takes the vacuum pair as authoritative (it is the one
+  * every source quotes for every engine, and the one a vacuum-only engine has at
+- * all) and back-solves the sea-level Isp from it — see `engineIsp`.
++ * all) and back-solves the sea-level Isp from it — see `engineIsp`. A level λ
++ * scales it: ṁ(λ) = λ·ṁ.
+  */
+ export function engineMassFlow(e: EngineSpec): number {
+   return e.thrustVac / (G0 * e.ispVac);
+ }
+ 
+ /**
+- * Isp of one engine at ambient pressure p (Pa), s.
++ * Isp of one engine at ambient pressure p (Pa) and level λ, s.
+  *
+- * Derived from the thrust the engine delivers at that pressure and the (fixed)
+- * mass flow, so that F = ṁ g₀ Isp(p) holds exactly at every altitude. At p = 0
+- * this is `ispVac` by construction; at sea level it is thrustSL/(ṁ g₀), which
+- * is the Isp the vehicle *delivers* and not necessarily the `ispSL` the data
+- * file quotes. `data-consistency` asserts the two agree to 1 % for every
+- * ground-lit engine, which is what stops that discrepancy coming back.
++ * Derived from the thrust the law gives and the flow at that level, so that
++ * F = λ·ṁ·g₀·Isp holds exactly at every altitude and level. In vacuum it is
++ * `ispVac` at any level; in air it falls as the engine is throttled, because
++ * the air takes p·A_e whatever the level (separation in the nozzle takes back
++ * part of that loss). At λ = 1 and p₀ it is thrustSL/(ṁ g₀), the Isp the
++ * vehicle *delivers* and not necessarily the `ispSL` the data file quotes;
++ * `data-consistency` asserts the two agree to 1 % for every ground-lit engine.
+  */
+-export function engineIsp(e: EngineSpec, p: number): number {
++export function engineIsp(e: EngineSpec, p: number, level = 1): number {
+   const mdot = engineMassFlow(e);
+-  if (mdot <= 0) return e.ispVac;
+-  return engineThrust(e, p) / (G0 * mdot);
++  if (mdot <= 0 || !(level > 0)) return e.ispVac;
++  return engineThrustAt(e, p, level) / (G0 * mdot * level);
+ }
+ 
+ /** Delivered sea-level Isp, s: what `ispSL` in the data file has to agree with. */
+@@ -617,8 +650,10 @@ export class VehicleModel {
+       let profile = 1;
+       if (e.solid) profile = this.solidProfileFor(st);
+       const level = VehicleModel.withinTank(thr * profile * startupFactor(e, t - st.startTime, dt), this.usablePropellant(st), n * engineMassFlow(e), dt);
+-      out.thrust += n * engineThrust(e, p) * level;
++      const flow = nozzleFlow(e, p, level);
++      out.thrust += n * flow.thrust;
+       out.mdot += n * engineMassFlow(e) * level;
++      if (flow.separated && t - st.startTime >= engineStartupS(e)) VehicleModel.reportSeparated(out, 'core', e, flow.separationAreaRatio);
+       out.thrustFullVac += n * e.thrustVac * profile;
+       // `* profile` so a solid core's plume follows its own thrust curve
+       out.coreThrottle = Math.min(1, level);
+@@ -626,7 +661,7 @@ export class VehicleModel {
+       out.burning = true;
+     } else if (this.coreTailingOff(st, t)) {
+       const level = this.coreTailLevel(st, t, dt);
+-      out.thrust += n * engineThrust(e, p) * level;
++      out.thrust += n * engineThrustAt(e, p, level);
+       out.mdot += n * engineMassFlow(e) * level;
+       out.coreThrottle = Math.min(1, level);
+       out.coreLevel = level;
+@@ -646,10 +681,13 @@ export class VehicleModel {
+         const thr = (be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd))) * boosterStepLevel(b.spec, b.commandClock);
+         level = VehicleModel.withinTank(thr * profile * startupFactor(be, t - b.startTime, dt), this.usableBoosterPropellant(b), be.count * engineMassFlow(be), dt);
+         out.thrustFullVac += nb * be.thrustVac * profile;
++        const flow = nozzleFlow(be, p, level);
++        out.thrust += nb * flow.thrust;
++        if (flow.separated && t - b.startTime >= engineStartupS(be)) VehicleModel.reportSeparated(out, group, be, flow.separationAreaRatio);
+       } else if (this.boosterTailingOff(b, t)) {
+         level = this.boosterTailLevel(b, t, dt);
++        out.thrust += nb * engineThrustAt(be, p, level);
+       } else continue;
+-      out.thrust += nb * engineThrust(be, p) * level;
+       out.mdot += nb * engineMassFlow(be) * level;
+       // The strongest burning group wins: several groups on one stage (H3's
+       // SRB-3 pair, Angara's four URM-1s) light and burn out together, so a
+@@ -664,7 +702,9 @@ export class VehicleModel {
+     if (hot) {
+       const he = hot.spec.engine, nh = VehicleModel.enginesRunning(hot);
+       const h = this.hotStageLevel(hot, t, throttleCmd, dt);
+-      out.thrust += nh * engineThrust(he, p) * h.level;
++      const flow = nozzleFlow(he, p, h.level);
++      out.thrust += nh * flow.thrust;
++      if (flow.separated && h.burning && t - hot.startTime >= engineStartupS(he)) VehicleModel.reportSeparated(out, 'hot', he, flow.separationAreaRatio);
+       out.mdot += nh * engineMassFlow(he) * h.level;
+       if (h.burning) out.thrustFullVac += nh * he.thrustVac;
+       out.hotLevel = h.level;
+@@ -673,6 +713,10 @@ export class VehicleModel {
+     return out;
+   }
+ 
++  private static reportSeparated(out: ThrustResult, where: SeparatedEngine['where'], engine: EngineSpec, areaRatio: number): void {
++    (out.separated ??= []).push({ where, engine, areaRatio, expansionRatio: nozzleModel(engine).expansionRatio });
++  }
++
+   /**
+    * A burning engine's level over [t, t + dt], never more than the tanks still
+    * hold. Without it a step that runs through the depletion boundary burned
+@@ -782,16 +826,16 @@ export class VehicleModel {
+     const e = st.spec.engine;
+     const tau = engineTailoffS(e);
+     let level: number;
+-    let fraction: number;
++    let from: number;
+     if (!st.cutoff && !st.burnedOut) {
+       level = st.level;
+-      fraction = 1 - Math.exp(-TAILOFF_SPAN);
++      from = 0;
+     } else if (this.coreTailingOff(st, t)) {
+       level = st.stopLevel;
+-      fraction = Math.exp(-Math.max(0, t - st.cutoffTime) / tau) - Math.exp(-TAILOFF_SPAN);
++      from = Math.max(0, t - st.cutoffTime) / tau;
+     } else return 0;
+-    if (!(level > 0) || !(fraction > 0)) return 0;
+-    return VehicleModel.enginesRunning(st) * engineThrust(e, p) * level * tau * fraction / mass;
++    if (!(level > 0) || !(from < TAILOFF_SPAN)) return 0;
++    return VehicleModel.enginesRunning(st) * tailoffImpulse(e, p, level, tau, from) / mass;
+   }
+ 
+   /** Consume propellant for dt seconds at the given conditions. Returns burnout flags. */
+@@ -1174,7 +1218,9 @@ export function liftoffMass(spec: VehicleSpec, payloadMass: number): number {
+  * Sea-level liftoff thrust (all ground-lit engines), N.
+  *
+  * A solid motor's `thrustSL` is its *mean* thrust, so the thrust it actually
+- * makes at t = 0 is the head of the regressive profile — `solidProfile(0)`. That
++ * makes at t = 0 is the head of the regressive profile — `solidProfile(0)`,
++ * flown as a level through the thrust law (the air takes p₀·A_e off the peak,
++ * not a share of it). That
+  * applies to a solid FIRST STAGE (Vega-C's P120C, PSLV's S139) exactly as it
+  * does to a strap-on; the earlier form of this function applied it only to
+  * boosters, so every solid-first-stage vehicle reported a liftoff thrust 20 %
+@@ -1184,10 +1230,10 @@ export function liftoffMass(spec: VehicleSpec, payloadMass: number): number {
+ export function liftoffThrust(spec: VehicleSpec): number {
+   const st = spec.stages[0];
+   const core = st.engine;
+-  let T = core.count * engineThrustSL(core) * (core.solid ? solidProfile(0, core.peakFactor) : 1);
++  let T = core.count * engineThrustAt(core, P0, core.solid ? solidProfile(0, core.peakFactor) : 1);
+   for (const b of st.boosters ?? []) {
+     if ((b.igniteAt ?? 0) > 0) continue;
+-    T += b.count * b.engine.count * engineThrustSL(b.engine) * (b.engine.solid ? solidProfile(0, b.engine.peakFactor) : 1);
++    T += b.count * b.engine.count * engineThrustAt(b.engine, P0, b.engine.solid ? solidProfile(0, b.engine.peakFactor) : 1);
+   }
+   return T;
+ }
+diff --git a/src/ui/build/stand-panel.ts b/src/ui/build/stand-panel.ts
+index d21309b..6fe4795 100644
+--- a/src/ui/build/stand-panel.ts
++++ b/src/ui/build/stand-panel.ts
+@@ -327,16 +327,13 @@ export class StandPanel {
+     const title = el('h2', 'bx-h2', t('build.eng.stand.results'));
+     title.id = 'be-stand-out-title';
+     const parts: HTMLElement[] = [title];
+-    const e = this.choice.engine;
+     const run = this.run;
+     if (this.invalid) {
+       parts.push(this.refusalBox(this.invalid, null));
+     } else if (run?.result.refused) {
+-      const vac = run.result.refused === 'vacuumOnlyAtPressure';
+-      const text = vac ? t('build.eng.stand.refuse.vacuumOnly', { engine: e.name }) : t('build.eng.stand.refuse.solidShutdown');
+-      const fix = vac
+-        ? button('watch-btn primary', t('build.eng.stand.toVacuum'), () => { this.air = 'vacuum'; this.fire(); this.render(); this.focus('air:vacuum'); })
+-        : button('watch-btn primary', t('build.eng.stand.letBurn'), () => { this.cutoffOn = false; this.fire(); this.render(); this.focus('cutoff-on'); });
++      // the one firing the stand refuses: a commanded shutdown of a solid
++      const text = t('build.eng.stand.refuse.solidShutdown');
++      const fix = button('watch-btn primary', t('build.eng.stand.letBurn'), () => { this.cutoffOn = false; this.fire(); this.render(); this.focus('cutoff-on'); });
+       fix.dataset.k = 'fix';
+       parts.push(this.refusalBox(text, fix));
+     } else if (run) {
+@@ -441,6 +438,9 @@ export class StandPanel {
+     } else if (run.level < 1 && !run.result.refused) notes.push(t('build.eng.stand.note.throttled', { p: num(run.level * 100) }));
+     if (this.air === 'seaLevel' && !e.vacuumOnly && !run.result.refused) notes.push(t('build.eng.stand.note.ispSL'));
+     if (e.vacuumOnly) notes.push(t('build.eng.stand.note.vacuumOnly'));
++    if (run.separatedAt && !run.result.refused) {
++      notes.push(t('build.eng.stand.note.separated', { at: num(run.separatedAt.areaRatio, 1), eps: num(run.separatedAt.expansionRatio) }));
++    }
+     return [h, lead, scroll, ...notes.map((n) => el('p', 'bx-note small', n))];
+   }
+ 
+diff --git a/src/ui/equations-model.ts b/src/ui/equations-model.ts
+index ef74c62..7032759 100644
+--- a/src/ui/equations-model.ts
++++ b/src/ui/equations-model.ts
+@@ -136,8 +136,10 @@ function budget(e: EomRecord | undefined, frame: VisualFrame, ctx: EquationConte
+ function pressureThrust(e: EomRecord | undefined): Equation {
+   if (!e || !(e.vacuumThrust > 0)) return none('pressureThrust', 'eq.none.enginesOff');
+   const model = e.vacuumThrust - e.pressure * e.exitArea;
+-  return { id: 'pressureThrust', available: true, values: { vac: e.vacuumThrust, p: e.pressure, Ae: e.exitArea, loss: e.pressure * e.exitArea, thrust: model },
+-    check: check(e.thrust, model, 1e-9, 1), ...(e.exitArea === 0 ? { note: 'eq.note.vacuumOnly' } : {}) };
++  const values = { vac: e.vacuumThrust, p: e.pressure, Ae: e.exitArea, loss: e.pressure * e.exitArea, thrust: model };
++  // separated flow in a nozzle: the bell beyond the separation sees the outside air, and the thrust is above the formula's
++  if (e.separated) return { id: 'pressureThrust', available: true, values, note: 'eq.note.separated' };
++  return { id: 'pressureThrust', available: true, values, check: check(e.thrust, model, 1e-9, 1), ...(e.exitArea === 0 ? { note: 'eq.note.noExitArea' } : {}) };
+ }
+ 
+ /** Vis-viva: the semi-major axis from r and v, and the apsides, against the orbit the app shows. */
+diff --git a/tests/data-consistency.test.ts b/tests/data-consistency.test.ts
+index 2641c22..9436365 100644
+--- a/tests/data-consistency.test.ts
++++ b/tests/data-consistency.test.ts
+@@ -17,10 +17,10 @@ import { RATING_ORBITS, VEHICLES } from '../src/data/vehicles';
+ import { SITES, type SiteExtra } from '../src/data/sites';
+ import { SATELLITES } from '../src/data/satellites';
+ import { ORBIT_PRESETS } from '../src/data/orbits';
+-import { engineMassFlow, liftoffMass, liftoffThrust, solidProfile } from '../src/physics/vehicle';
++import { engineMassFlow, engineThrustAt, liftoffMass, liftoffThrust, solidProfile } from '../src/physics/vehicle';
+ import { circularSpeed, rotatingLaunchAzimuth } from '../src/physics/orbital';
+ import { corridorReach } from '../src/physics/mission';
+-import { G0, DEG, R_EARTH } from '../src/physics/constants';
++import { G0, DEG, P0, R_EARTH } from '../src/physics/constants';
+ import type { EngineSpec, StageSpec, VehicleSpec } from '../src/types';
+ 
+ const siteIds = new Set(SITES.map((s) => s.id));
+@@ -256,8 +256,9 @@ describe('liftoff', () => {
+     const ariane = VEHICLES.find((v) => v.id === 'ariane64')!;
+     const perMotorAsStage = liftoffThrust(vegac);
+     const boosters = ariane.stages[0].boosters![0];
+-    const perMotorAsBooster = boosters.count * boosters.engine.count * boosters.engine.thrustSL
+-      * solidProfile(0, boosters.engine.peakFactor) / boosters.count;
++    // the head of the profile flown as a level through the thrust law (src/physics/nozzle.ts)
++    const perMotorAsBooster = boosters.count * boosters.engine.count
++      * engineThrustAt(boosters.engine, P0, solidProfile(0, boosters.engine.peakFactor)) / boosters.count;
+     expect(perMotorAsStage / perMotorAsBooster, 'same motor, same ignition factor').toBeCloseTo(1, 2);
+   });
+ });
+diff --git a/tests/design-static-fire.test.ts b/tests/design-static-fire.test.ts
+index fb6c385..a775a59 100644
+--- a/tests/design-static-fire.test.ts
++++ b/tests/design-static-fire.test.ts
+@@ -25,20 +25,25 @@ import type { EngineSpec } from '../src/types';
+ const rel = (a: number, b: number): number => Math.abs(a / b - 1);
+ 
+ /**
+- * The effective exhaust velocity G0·Isp(p), N·s/kg, worked out here from the
+- * data rather than taken from the engine model the stand runs on: the thrust
+- * falls linearly from the vacuum figure to the sea-level one as the pressure
+- * rises to P0 (a vacuum-only engine keeps its vacuum figure, since its
+- * sea-level pair is a placeholder), and the mass flow is the vacuum pair's,
+- * thrustVac/(G0·ispVac), at every pressure (src/physics/vehicle.ts documents
+- * that convention; this restates it independently of its code).
++ * The effective exhaust velocity G0·Isp at pressure p and level λ, N·s/kg,
++ * worked out here from the data rather than taken from the engine model the
++ * stand runs on: with the flow attached the thrust is λ·F_vac − p·A_e, the
++ * exit area A_e = (F_vac − F_SL)/P0 from the engine's own pair, and the flow
++ * is λ·thrustVac/(G0·ispVac) (the thrust law, src/physics/nozzle.ts, owner
++ * decision of 2026-10-17; this restates it independently of its code). In
++ * vacuum it is G0·ispVac at any level. A vacuum-only engine is restated in
++ * vacuum only (its sea-level pair is a placeholder), and separated flow — deep
++ * throttle low in the air, the start-up's first instants — is held by
++ * tests/nozzle-law.test.ts, not restated here.
+  */
+-function exhaustVelocity(e: EngineSpec, p: number): number {
+-  const seaLevel = e.vacuumOnly ? e.thrustVac : e.thrustSL;
+-  const thrust = e.thrustVac - (e.thrustVac - seaLevel) * Math.min(1, p / P0);
+-  return thrust / (e.thrustVac / (G0 * e.ispVac));
++function exhaustVelocity(e: EngineSpec, p: number, level = 1): number {
++  const exitArea = e.vacuumOnly ? 0 : (e.thrustVac - e.thrustSL) / P0;
++  return (level * e.thrustVac - p * exitArea) / (level * e.thrustVac / (G0 * e.ispVac));
+ }
+ 
++/** A sample's level λ: its flow over the full flow of its engines. */
++const levelOf = (e: EngineSpec, s: { mdot: number }): number => s.mdot / (e.count * engineMassFlow(e));
++
+ /** Every engine installation in the fleet, once per distinct object, with the propellant it burns and where. */
+ function installations(): { owner: string; engine: EngineSpec; propellant: number; groundLit: boolean }[] {
+   const seen = new Set<EngineSpec>();
+@@ -62,17 +67,22 @@ const p120c = VEHICLES.find((v) => v.id === 'vegac')!.stages[0].engine;
+ const centaurRl10 = VEHICLES.find((v) => v.id === 'atlasv551')!.stages[1].engine;
+ 
+ describe('test stand · refusals and inputs', () => {
+-  it('refuses a vacuum-only engine at any pressure above zero, and fires it in a vacuum cell', () => {
++  // Until the owner's decision of 2026-10-17 ("use real physics") the stand
++  // refused a vacuum-only engine in air, because the model flew its vacuum
++  // thrust at every pressure. It now fires it with what its nozzle gives.
++  it('fires a vacuum-only engine in air with the thrust its nozzle gives there, and in a vacuum cell at its vacuum figure', () => {
+     expect(centaurRl10.vacuumOnly).toBe(true);
+-    for (const p of [1, 1000, P0]) {
+-      const r = staticFire(centaurRl10, { count: 1, propellantKg: 1000, pressurePa: p, throttle: 1, dt: 0.1 });
+-      expect(r.refused).toBe('vacuumOnlyAtPressure');
+-      expect(r.samples).toEqual([]);
+-      expect(r.impulse).toBe(0);
+-    }
+-    const vac = staticFire(centaurRl10, { count: 1, propellantKg: 1000, pressurePa: 0, throttle: 1, dt: 0.1 });
+-    expect(vac.refused).toBeUndefined();
+-    expect(vac.impulse).toBeGreaterThan(0);
++    const steadyThrust = (p: number): number => {
++      const r = staticFire(centaurRl10, { count: 1, propellantKg: 1e4, pressurePa: p, throttle: 1, cutoffS: 10, dt: 0.1 });
++      expect(r.refused).toBeUndefined();
++      return r.samples.find((s) => s.t >= 5)!.thrust;
++    };
++    const vac = steadyThrust(0), high = steadyThrust(1000), sea = steadyThrust(P0);
++    expect(vac).toBe(centaurRl10.thrustVac);
++    expect(high).toBeLessThan(vac);
++    expect(sea).toBeLessThan(0.85 * vac);
++    // not the placeholder sea-level figure either
++    expect(Math.abs(sea / centaurRl10.thrustSL - 1)).toBeGreaterThan(0.05);
+   });
+ 
+   it('refuses to shut a solid motor down, and burns it to depletion otherwise', () => {
+@@ -138,20 +148,27 @@ describe('test stand · the engine model reproduced', () => {
+       if (!groundLit || e.vacuumOnly) continue;
+       const r = staticFire(e, { count: e.count, propellantKg: 1e6, pressurePa: P0, throttle: 1, ...(e.solid ? {} : { cutoffS: 5 }), dt: 0.1 });
+       const s = r.samples[Math.floor(r.samples.length / 2)];
+-      expect(rel(s.isp, exhaustVelocity(e, P0) / G0), `${owner}: the stand is the model`).toBeLessThan(1e-12);
+-      const err = rel(s.isp, e.ispSL);
+-      expect(err, `${owner} ${e.name}: delivers ${s.isp.toFixed(1)} s against a quoted ${e.ispSL} s`).toBeLessThan(0.08);
++      // at the sample's own level: a solid's profile moves it (attached there, far above where it would separate)
++      expect(rel(s.isp, exhaustVelocity(e, P0, levelOf(e, s)) / G0), `${owner}: the stand is the model`).toBeLessThan(1e-12);
++      const delivered = exhaustVelocity(e, P0) / G0;
++      const err = rel(delivered, e.ispSL);
++      expect(err, `${owner} ${e.name}: delivers ${delivered.toFixed(1)} s against a quoted ${e.ispSL} s`).toBeLessThan(0.08);
+       if (err > 0.02) off.push(`${e.name} ${(err * 100).toFixed(1)} %`);
+     }
+     expect([...new Set(off)].sort()).toEqual(['Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
+   });
+ 
+   /**
+-   * Impulse = propellant burned × G0·Isp(p), whatever the step, the pressure,
++   * In vacuum, impulse = propellant burned × G0·Isp_vac, whatever the step,
+    * the engine kind or the part of the burn (start-up, the burn, the depletion
+-   * shutdown and its tail-off): thrust and flow are one level times F(p) and
+-   * ṁ. The invariant of tests/engine-transients.test.ts, through the stand.
+-   * 1e-9 relative, fixed before running (rounding over up to 10⁵ steps).
++   * shutdown and its tail-off): thrust and flow are one level times F_vac and
++   * ṁ. In air the air takes p·A_e at every level (owner decision of
++   * 2026-10-17), so every step's thrust is at least the attached law's at its
++   * level — more where the flow separates, in the start-up's first instants —
++   * and, below full level, no more than the old λ·F(p) (above it, a solid's
++   * head-end peak, it is the attached law exactly), and the firing's Isp is a
++   * little below the full-thrust one. 1e-9 relative where exact, fixed before running
++   * (rounding over up to 10⁵ steps).
+    */
+   it('pays for every newton-second at the delivered Isp, and empties the tank', () => {
+     const cases: [string, EngineSpec, number][] = [
+@@ -165,7 +182,21 @@ describe('test stand · the engine model reproduced', () => {
+       for (const dt of [0.01, 0.1, 0.5]) {
+         const load = 20 * e.count * engineMassFlow(e) + 1234.5;
+         const r = staticFire(e, { count: e.count, propellantKg: load, pressurePa: p, throttle: 1, dt });
+-        expect(rel(r.impulse / r.propellantUsed, exhaustVelocity(e, p)), `${name}, dt ${dt}`).toBeLessThan(1e-9);
++        if (p === 0) expect(rel(r.impulse / r.propellantUsed, exhaustVelocity(e, p)), `${name}, dt ${dt}`).toBeLessThan(1e-9);
++        else {
++          const exitArea = (e.thrustVac - e.thrustSL) / P0;
++          for (const s of r.samples) {
++            const level = levelOf(e, s), floor = e.count * Math.max(0, level * e.thrustVac - p * exitArea);
++            expect(s.thrust, `${name}, dt ${dt}, t ${s.t}: the attached law at its level`).toBeGreaterThanOrEqual(floor * (1 - 1e-9) - 1e-6);
++            // above full level (a solid's head-end peak) the flow is attached and the old law was the lower one
++            const ceiling = level > 1 ? floor : e.count * level * (e.thrustVac - p * exitArea);
++            expect(s.thrust, `${name}, dt ${dt}, t ${s.t}: the old law`).toBeLessThanOrEqual(ceiling * (1 + 1e-9) + 1e-6);
++          }
++          const full = exhaustVelocity(e, p);
++          expect(r.impulse / r.propellantUsed, `${name}, dt ${dt}`).toBeLessThan(full);
++          expect(rel(r.impulse / r.propellantUsed, full), `${name}, dt ${dt}`).toBeLessThan(0.01);
++        }
++        expect(rel(r.impulse, r.samples.reduce((a, s) => a + s.thrust * s.dt, 0)), `${name}, dt ${dt}: impulse`).toBeLessThan(1e-9);
+         expect(load - r.propellantUsed, `${name}, dt ${dt}: tank left`).toBeLessThan(1e-6 * load);
+       }
+     }
+@@ -202,9 +233,13 @@ describe('test stand · the engine model reproduced', () => {
+     }
+   });
+ 
+-  it('flies a throttled burn at the clamped level, with the Isp unchanged', () => {
++  it('flies a throttled burn at the clamped level, with the Isp unchanged in vacuum and lower in air', () => {
+     // Merlin 1D throttles to 0.4 (vehicles.ts); asking for 0.2 gets 0.4, asking
+-    // for 0.7 gets 0.7. The Isp does not depend on throttle in this model.
++    // for 0.7 gets 0.7. In vacuum the Isp does not depend on the throttle; in
++    // air it does (owner decision of 2026-10-17): the air takes p·A_e at any level.
++    const sl = staticFire(merlin, { count: 1, propellantKg: 1e5, pressurePa: P0, throttle: 0.7, cutoffS: 5, dt: 0.1 }).samples.find((x) => x.t >= 2)!;
++    expect(rel(sl.isp, exhaustVelocity(merlin, P0, 0.7) / G0)).toBeLessThan(1e-12);
++    expect(sl.isp).toBeLessThan(exhaustVelocity(merlin, P0) / G0 - 5);
+     expect(merlin.minThrottle).toBeDefined();
+     for (const [cmd, level] of [[0.2, merlin.minThrottle!], [0.7, 0.7]] as const) {
+       const r = staticFire(merlin, { count: 1, propellantKg: 1e5, pressurePa: 0, throttle: cmd, cutoffS: 5, dt: 0.1 });
+diff --git a/tests/design-test-stand.test.ts b/tests/design-test-stand.test.ts
+index 744c118..9e4f126 100644
+--- a/tests/design-test-stand.test.ts
++++ b/tests/design-test-stand.test.ts
+@@ -27,6 +27,7 @@ import { ENGINE_PARTS, STAGE_BODIES, enginePart, engineSpec } from '../src/data/
+ import { VEHICLES, vehicleById } from '../src/data/vehicles';
+ import { SITES } from '../src/data/sites';
+ import { G0, P0 } from '../src/physics/constants';
++import { engineThrustAt } from '../src/physics/vehicle';
+ 
+ const rel = (a: number, b: number): number => Math.abs(a / b - 1);
+ const inputs = (o: Partial<StandInputs> & Pick<StandInputs, 'count' | 'propellantKg'>): StandInputs => ({ air: 'vacuum', padAltitudeM: 0, throttle: 1, ...o });
+@@ -131,14 +132,20 @@ describe('the model beside the data', () => {
+     expect(row('thrustSL').published).toBe(9 * m1d.thrustSL);
+     expect(Math.abs(row('thrustSL').difference!)).toBeLessThan(1e-12);
+     expect(row('thrustVac')).toMatchObject({ published: 9 * m1d.thrustVac, stand: null, difference: null });
+-    // the model's sea-level Isp, from the data: ṁ = F_vac/(g0·Isp_vac), Isp_SL = F_SL/(g0·ṁ) = Isp_vac·F_SL/F_vac
++    // the model's sea-level Isp at full thrust, from the data: ṁ = F_vac/(g0·Isp_vac), Isp_SL = F_SL/(g0·ṁ) = Isp_vac·F_SL/F_vac
+     const isp = m1d.ispVac * m1d.thrustSL / m1d.thrustVac;
+-    expect(rel(row('ispSL').stand!, isp)).toBeLessThan(1e-9);
++    expect(rel(run.steadyIsp, isp)).toBeLessThan(1e-9);
++    expect(run.separatedAt).toBeNull();
+     expect(row('ispSL').published).toBe(m1d.ispSL);
+-    expect(row('ispSL').difference!).toBeCloseTo(isp / m1d.ispSL - 1, 9);
+-    // the invariant the stand's figures rest on: impulse = propellant burned × g0 · Isp
+-    expect(rel(run.result.impulse, run.result.propellantUsed * G0 * isp)).toBeLessThan(1e-9);
+-    expect(rel(run.deliveredIsp, isp)).toBeLessThan(1e-9);
++    expect(row('ispSL').difference!).toBeCloseTo(row('ispSL').stand! / m1d.ispSL - 1, 9);
++    // The firing's Isp, impulse over propellant, is that a little lower: in air
++    // the start-up and the tail-off run at levels below 1, where the air's
++    // p·A_e is a larger share of the thrust (owner decision of 2026-10-17; until
++    // then the Isp did not depend on the level and the two were equal).
++    expect(rel(run.result.impulse, run.result.propellantUsed * G0 * run.deliveredIsp)).toBeLessThan(1e-9);
++    expect(run.deliveredIsp).toBeLessThan(isp);
++    expect(rel(run.deliveredIsp, isp)).toBeLessThan(1e-3);
++    expect(rel(row('ispSL').stand!, run.deliveredIsp)).toBeLessThan(1e-12);
+     expect(run.leftKg).toBeLessThan(1e-6 * s1.propellantKg);
+   });
+ 
+@@ -157,17 +164,36 @@ describe('the model beside the data', () => {
+     expect(Math.abs(rows.find((r) => r.figure === 'ispVac')!.difference!)).toBeLessThan(1e-9);
+   });
+ 
+-  it('refuses a vacuum engine in air, and says its sea-level pair is not data', () => {
++  // Until the owner's decision of 2026-10-17 the stand refused a vacuum engine
++  // in air, because the model gave it its vacuum thrust at every pressure. It
++  // now fires it, with the thrust its nozzle gives there (src/physics/nozzle.ts),
++  // and still says its sea-level pair is not data.
++  it('fires a vacuum engine in air with its nozzle separated, and says its sea-level pair is not data', () => {
+     const s2 = vehicleStandEngines(f9)[1];
+     for (const air of ['seaLevel', 'pad'] as const) {
+       const run = runStand(s2.engine, inputs({ count: 1, propellantKg: s2.propellantKg, air, padAltitudeM: 3 }));
+-      expect(run.result.refused).toBe('vacuumOnlyAtPressure');
++      expect(run.result.refused).toBeUndefined();
++      expect(run.steadyThrust).toBeCloseTo(engineThrustAt(s2.engine, run.pressurePa, 1), 6);
++      expect(run.steadyThrust).toBeLessThan(0.85 * s2.engine.thrustVac);
++      expect(run.separatedAt!.areaRatio).toBeLessThan(run.separatedAt!.expansionRatio);
++      expect(run.deliveredIsp).toBeLessThan(0.85 * s2.engine.ispVac);
+       const rows = standComparison(s2.engine, 1, air, run);
+-      expect(rows.every((r) => r.stand === null && r.difference === null)).toBe(true);
++      expect(rows.every((r) => r.difference === null || r.figure === 'thrustVac' || r.figure === 'ispVac')).toBe(true);
+       expect(rows.filter((r) => r.notData).map((r) => r.figure)).toEqual(['thrustSL', 'ispSL']);
+       expect(rows.find((r) => r.figure === 'thrustSL')!.published).toBeNull();
+     }
+-    expect(runStand(s2.engine, inputs({ count: 1, propellantKg: s2.propellantKg })).result.refused).toBeUndefined();
++    const vacuum = runStand(s2.engine, inputs({ count: 1, propellantKg: s2.propellantKg }));
++    expect(vacuum.result.refused).toBeUndefined();
++    expect(vacuum.separatedAt).toBeNull();
++  });
++
++  it('reports a lower Isp for a throttled engine in air, and the same Isp in vacuum', () => {
++    const at = (throttle: number, air: 'seaLevel' | 'vacuum') => runStand(s1.engine, inputs({ count: 9, propellantKg: s1.propellantKg, throttle, air }));
++    expect(at(0.6, 'vacuum').steadyIsp).toBeCloseTo(at(1, 'vacuum').steadyIsp, 9);
++    expect(at(0.6, 'seaLevel').steadyIsp).toBeLessThan(at(1, 'seaLevel').steadyIsp - 5);
++    // and does not set that Isp against the full-thrust figure
++    const rows = standComparison(s1.engine, 9, 'seaLevel', at(0.6, 'seaLevel'));
++    expect(rows.find((r) => r.figure === 'ispSL')!.difference).toBeNull();
+   });
+ 
+   it('P120C: the published peak from the catalogue, the stand\'s peak beside it, and no shutdown', () => {
+diff --git a/tests/design-warning-text.test.ts b/tests/design-warning-text.test.ts
+index a17dc9c..10341c1 100644
+--- a/tests/design-warning-text.test.ts
++++ b/tests/design-warning-text.test.ts
+@@ -53,6 +53,7 @@ function constructed(): DesignWarning[] {
+     w('implausibleFraction', { fraction: 0.985, min: 0.51, max: 0.97 }, { stage: 1 }),
+     w('implausibleFraction', { fraction: 0.4, min: 0.51, max: 0.97 }, { stage: 0, booster: 0 }),
+     w('upperWiderThanFairing', { stageDiameter: 5.4, fairingDiameter: 4 }, { stage: 1 }),
++    w('vacuumEngineInAir', { ceilingM: 15e3, thrustSL: 7.75e5, thrustVac: 9.81e5, igniteAt: 0.5 }, { stage: 0, booster: 0 }),
+   ];
+ }
+ 
+diff --git a/tests/design-warnings.test.ts b/tests/design-warnings.test.ts
+index f2cb065..a1cf11f 100644
+--- a/tests/design-warnings.test.ts
++++ b/tests/design-warnings.test.ts
+@@ -21,8 +21,11 @@ import { Simulation } from '../src/physics/simulation';
+ import { planMission } from '../src/physics/mission';
+ import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
+ import { defaultDynamics } from '../src/physics/rigid/config';
+-import { G0 } from '../src/physics/constants';
+-import { idealDeltaV, liftoffMass, liftoffThrust } from '../src/physics/vehicle';
++import { G0, P0 } from '../src/physics/constants';
++import { atmosphere } from '../src/physics/atmosphere';
++import { separationPressure } from '../src/physics/nozzle';
++import { engineSpec } from '../src/data/parts';
++import { engineThrustAt, idealDeltaV, liftoffMass, liftoffThrust } from '../src/physics/vehicle';
+ import { copyOf } from './custom-vehicle-harness';
+ import type { MissionConfig, VehicleSpec } from '../src/types';
+ 
+@@ -82,6 +85,10 @@ describe('design warnings · each on one design and its negation', () => {
+     expect(codes(designWarnings({ ...structuredClone(vehicleById('falcon9')) }, PAYLOAD))).toEqual(['invalid']);
+   });
+ 
++  // The air-lit half is the owner's decision of 2026-10-17 ("use real physics"):
++  // a vacuum engine lit in the air is allowed, and flies what its nozzle gives
++  // there (src/physics/nozzle.ts); the builder says so with `vacuumEngineInAir`
++  // rather than refusing it.
+   it('vacuumEngineOnPad: a vacuum-only engine lit on the pad, said once, and not for an air-lit strap-on', () => {
+     const core = f9();
+     core.stages[0].engine.vacuumOnly = true;
+@@ -100,6 +107,28 @@ describe('design warnings · each on one design and its negation', () => {
+     expect(airLit.stages[0].boosters![0].engine.vacuumOnly).toBeUndefined();
+     expect(codes(designWarnings(airLit, 1000))).not.toContain('vacuumEngineOnPad');
+     expect(codes(designWarnings(airLit, 1000))).not.toContain('invalid');
++    // ...and the warning that its nozzle runs with the flow separated low in the air
++    const said = find(designWarnings(airLit, 1000), 'vacuumEngineInAir');
++    expect(said).toHaveLength(1);
++    expect(said[0]).toMatchObject({ level: 'warn', stage: 0, booster: 1 });
++    const e = airLit.stages[0].boosters![1].engine, n = airLit.stages[0].boosters![1].count * e.count;
++    expect(said[0].params.thrustVac).toBe(n * e.thrustVac);
++    expect(said[0].params.thrustSL).toBeLessThan(said[0].params.thrustVac);
++    expect(said[0].params.thrustSL).toBeCloseTo(n * engineThrustAt(e, P0, 1), 6);
++    expect(said[0].params.ceilingM).toBeGreaterThan(0);
++    expect(atmosphere(said[0].params.ceilingM).p).toBeCloseTo(separationPressure(e), -1);
++    // not for the ground-lit group, which is not a vacuum engine
++    expect(codes(designWarnings(copyOf('pslvxl'), 1000))).not.toContain('vacuumEngineInAir');
++  });
++
++  it('vacuumEngineInAir: a Merlin Vacuum on an air-lit strap-on, separated below about 15 km', () => {
++    const v = copyOf('pslvxl');
++    v.stages[0].boosters![1].engine = engineSpec('mvac', 1);
++    const w = find(designWarnings(v, 1000), 'vacuumEngineInAir');
++    expect(w).toHaveLength(1);
++    expect(w[0].params.ceilingM / 1e3).toBeGreaterThan(12);
++    expect(w[0].params.ceilingM / 1e3).toBeLessThan(18);
++    expect(w[0].params.thrustSL / w[0].params.thrustVac).toBeLessThan(0.85);
+   });
+ 
+   it('noLiftoff: Falcon 9 with its sea-level thrust halved stays on the pad, here and in a 5-s flight', () => {
+@@ -252,8 +281,15 @@ describe('design warnings · agree with the flight', () => {
+       const peak = new Map<number, number>();
+       let guard = 0;
+       while (!sim.done && guard++ < 400000 && (sim.state.status === 'prelaunch' || sim.state.status === 'ascent')) {
++        const before = sim.state.t;
+         sim.step(sim.suggestedDt());
+-        if (sim.state.status === 'ascent') {
++        // The warning is about the steady burn at the lowest level. Steps in a
++        // start-up or a tail-off are left out: at a strap-on burnout the core
++        // returns to full thrust while the strap-ons' thrust decays, a spike a
++        // tenth of a second long whose height depends on where the step falls
++        // on the burnout (Falcon Heavy's read 42.5 or 46.6 m/s² against its 45 as
++        // the thrust law of 2026-10-17 moved its burnout by a step).
++        if (sim.state.status === 'ascent' && !sim.vehicle.inTransient(before) && !sim.vehicle.inTransient(sim.state.t)) {
+           const i = sim.vehicle.activeIndex;
+           peak.set(i, Math.max(peak.get(i) ?? 0, sim.state.thrust / sim.state.mass));
+         }
+diff --git a/tests/equations.test.ts b/tests/equations.test.ts
+index 38a78ae..a6f6562 100644
+--- a/tests/equations.test.ts
++++ b/tests/equations.test.ts
+@@ -131,9 +131,16 @@ describe('the equations panel\'s numbers', () => {
+     expect(gost.find((r) => r.axis === 'yaw')!.right).toBeCloseTo(-iso.find((r) => r.axis === 'yaw')!.right, 9);
+   });
+ 
+-  it('marks what does not apply on the second stage above the air, and the vacuum engine', () => {
++  // Until 2026-10-17 a vacuum engine had no exit area in the model and the
++  // panel said so; it now has its nozzle's (the Merlin Vacuum's 8.5 m²), and
++  // above the air the term takes almost nothing (owner decision, src/physics/nozzle.ts).
++  it('marks what does not apply on the second stage above the air, and gives the vacuum engine its exit area', () => {
+     const upper = frames[3].list;
+-    expect(byId(upper, 'pressureThrust').note).toBe('eq.note.vacuumOnly');
++    const pressure = byId(upper, 'pressureThrust');
++    expect(pressure.note).toBeUndefined();
++    expect(pressure.values.Ae).toBeGreaterThan(8);
++    expect(pressure.values.loss).toBeLessThan(1e-3 * pressure.values.vac);
++    expect(pressure.check!.ok).toBe(true);
+     expect(byId(upper, 'rocket').values.isp).toBeGreaterThan(340);
+   });
+ 
+diff --git a/tests/monte-carlo.test.ts b/tests/monte-carlo.test.ts
+index e50aa92..f444d81 100644
+--- a/tests/monte-carlo.test.ts
++++ b/tests/monte-carlo.test.ts
+@@ -78,7 +78,9 @@ describe('the dispersions (roadmap G05)', () => {
+       const f = flown.stages[i];
+       if (st.isSpacecraft) { expect(f).toEqual(st); return; }
+       expect(f.engine.thrustVac).toBeCloseTo(st.engine.thrustVac * 1.02, 6);
+-      expect(f.engine.thrustSL).toBeCloseTo(st.engine.thrustSL * 1.02, 6);
++      // the nozzle is kept: the sea-level thrust moves by the same newtons as the vacuum thrust (owner decision 2026-10-17, src/physics/nozzle.ts)
++      expect(f.engine.thrustSL).toBeCloseTo(st.engine.thrustSL + 0.02 * st.engine.thrustVac, 6);
++      expect(f.engine.thrustVac - f.engine.thrustSL).toBeCloseTo(st.engine.thrustVac - st.engine.thrustSL, 6);
+       expect(f.engine.ispVac).toBeCloseTo(st.engine.ispVac * 0.99, 9);
+       expect(f.propellantMass).toBeCloseTo(st.propellantMass * 1.01, 6);
+       expect(f.dryMass).toBeCloseTo(st.dryMass * 0.98, 6);
+@@ -116,7 +118,11 @@ describe('the dispersions (roadmap G05)', () => {
+     expect(b.vehicleSpec).toBe(a.vehicleSpec); // planned on the nominal vehicle
+     expect(b.plan.insertionAltitude).toBe(a.plan.insertionAltitude);
+     while (a.state.t < 5) { a.step(a.suggestedDt()); b.step(b.suggestedDt()); }
+-    expect(b.state.thrust / a.state.thrust).toBeCloseTo(1.03, 3);
++    // a thrust factor is the chamber's: 3 % more vacuum thrust, the same p·A_e
++    // off it, so near the ground the thrust is up by 3 % × F_vac/F_SL (owner
++    // decision of 2026-10-17, src/physics/nozzle.ts)
++    const merlin = vehicleById('falcon9').stages[0].engine;
++    expect(b.state.thrust / a.state.thrust).toBeCloseTo(1 + 0.03 * merlin.thrustVac / merlin.thrustSL, 3);
+     while (a.state.t < 40) { a.step(a.suggestedDt()); b.step(b.suggestedDt()); }
+     // The same air data 40 s up, 20 % denser: q follows the density (the faster vehicle is higher, and faster, by a little).
+     expect(b.state.q / a.state.q).toBeGreaterThan(1.1);
+diff --git a/tests/nozzle-law.test.ts b/tests/nozzle-law.test.ts
+new file mode 100644
+index 0000000..7b7fcba
+--- /dev/null
++++ b/tests/nozzle-law.test.ts
+@@ -0,0 +1,279 @@
++/**
++ * The thrust law (src/physics/nozzle.ts, src/data/nozzles.ts): the owner's
++ * decision of 2026-10-17 — option (b) on the throttle and the ambient-pressure
++ * term, and real physics for a vacuum engine lit in the air.
++ *
++ * - Attached flow: F = λ·F_vac − p_a·A_e, the exit-area term whatever the level.
++ * - Every engine with a sea-level operating point gives the catalogue's
++ *   sea-level thrust at full throttle at p₀, with the flow attached.
++ * - Deep throttle low in the air lies between the attached-flow law and the
++ *   old λ·F(p) once the flow separates (separation raises it).
++ * - A vacuum engine at sea level gives its separated thrust, not its vacuum
++ *   thrust and not its placeholder sea-level figure.
++ * - Never negative, rising with the level, falling with the pressure.
++ * - Every number in the nozzle table has a source or an estimate flag.
++ */
++import { describe, expect, it } from 'vitest';
++import { ALL_VEHICLES } from '../src/data/vehicles';
++import { ENGINE_PARTS, engineSpec } from '../src/data/parts';
++import { NOZZLES, NOZZLE_GAMMA, type NozzleFigure } from '../src/data/nozzles';
++import {
++  areaRatioAt, engineLevelFor, engineThrustAt, machAt, nozzleFlow, nozzleModel, pressureRatioAt, schmuckerRatio, separationPressure,
++  vacuumThrustCoefficient,
++} from '../src/physics/nozzle';
++import { engineIsp, engineMassFlow, engineThrustSL } from '../src/physics/vehicle';
++import { atmosphere } from '../src/physics/atmosphere';
++import { P0 } from '../src/physics/constants';
++import type { EngineSpec } from '../src/types';
++
++/** Every engine a built-in vehicle flies (the historical ones too), stage and strap-on, once per name. */
++function fleetEngines(): EngineSpec[] {
++  const out = new Map<string, EngineSpec>();
++  for (const v of ALL_VEHICLES) {
++    for (const st of v.stages) {
++      for (const e of [st.engine, ...(st.boosters ?? []).map((b) => b.engine)]) if (!out.has(e.name)) out.set(e.name, e);
++    }
++  }
++  return [...out.values()];
++}
++const partEngines = (): EngineSpec[] => ENGINE_PARTS.map((p) => engineSpec(p, 1));
++const allEngines = (): EngineSpec[] => [...fleetEngines(), ...partEngines()];
++const groundLit = (e: EngineSpec): boolean => !e.vacuumOnly && e.thrustSL < e.thrustVac;
++const part = (id: string): EngineSpec => engineSpec(id, 1);
++
++describe('one-dimensional nozzle relations', () => {
++  it('inverts the area–Mach relation on the supersonic branch', () => {
++    for (const g of [1.18, 1.22, 1.26]) {
++      for (const a of [1.5, 16, 58.2, 165, 240]) expect(areaRatioAt(machAt(a, g), g)).toBeCloseTo(a, 6);
++    }
++    expect(machAt(1, 1.22)).toBe(1);
++  });
++
++  it('closes the vacuum thrust coefficient at the throat and grows with the area ratio', () => {
++    // at the throat C_F = Γ·√(2γ/(γ+1)) + p*/p_c, with Γ = √γ·(2/(γ+1))^((γ+1)/(2(γ−1)))
++    const g = 1.2, big = Math.sqrt(g) * (2 / (g + 1)) ** ((g + 1) / (2 * (g - 1)));
++    expect(vacuumThrustCoefficient(1, g)).toBeCloseTo(big * Math.sqrt(2 * g / (g + 1)) + (2 / (g + 1)) ** (g / (g - 1)), 9);
++    let last = 0;
++    for (const a of [1, 2, 5, 16, 50, 165, 500]) {
++      const cf = vacuumThrustCoefficient(a, 1.22);
++      expect(cf).toBeGreaterThan(last);
++      last = cf;
++    }
++  });
++
++  it("is Schmucker's criterion (NASA TM-77396, eq. 11), capped at Mach 5 and at 1", () => {
++    expect(schmuckerRatio(4.5)).toBeCloseTo((1.88 * 4.5 - 1) ** -0.64, 12);
++    expect(schmuckerRatio(4.5)).toBeCloseTo(0.276, 3);
++    // Schmucker's own SSME figure, 0.28–0.29 at M_i 4.5, is the same curve
++    expect(schmuckerRatio(4.5)).toBeGreaterThan(0.27);
++    expect(schmuckerRatio(8)).toBe(schmuckerRatio(5));
++    expect(schmuckerRatio(1)).toBe(1);
++  });
++});
++
++describe('the thrust law', () => {
++  it('attached flow: λ·F_vac − p_a·A_e, the exit-area term at any level', () => {
++    // RD-180 at its 47 % floor at 10 km, Merlin 1D at 70 % at sea level, a Raptor at 60 % at 5 km: all attached
++    for (const [id, level, h] of [['rd180', 0.47, 10e3], ['merlin1d', 0.7, 0], ['raptor2', 0.6, 5e3], ['rd191', 1, 0]] as const) {
++      const e = part(id), p = atmosphere(h).p, m = nozzleModel(e);
++      expect(nozzleFlow(e, p, level).separated, id).toBe(false);
++      expect(engineThrustAt(e, p, level), id).toBeCloseTo(level * e.thrustVac - p * m.exitArea, 6);
++      expect(m.exitArea, id).toBeCloseTo((e.thrustVac - e.thrustSL) / P0, 9);
++    }
++    // in vacuum it is λ·F_vac exactly, for every engine
++    for (const e of allEngines()) for (const level of [0.3, 1, 1.5]) expect(engineThrustAt(e, 0, level)).toBe(level * e.thrustVac);
++  });
++
++  it('every engine with a sea-level point gives its catalogue sea-level thrust at full throttle at p₀, attached', () => {
++    const checked: string[] = [];
++    for (const e of allEngines()) {
++      if (!groundLit(e)) continue;
++      const flow = nozzleFlow(e, P0, 1);
++      expect(flow.separated, `${e.name} separates at full thrust at sea level`).toBe(false);
++      expect(flow.thrust / e.thrustSL - 1, e.name).toBeCloseTo(0, 9);
++      expect(engineThrustSL(e) / e.thrustSL - 1, e.name).toBeCloseTo(0, 9);
++      checked.push(e.name);
++    }
++    expect(checked.length).toBeGreaterThan(35);
++  });
++
++  it('keeps the qualified point attached only where the one-dimensional wall pressure needs help, and says which', () => {
++    // The engines whose one-dimensional exit pressure fails Schmucker's
++    // criterion at full thrust at sea level, and so carry a wall factor: the
++    // high-expansion hydrogen engines and the R-7's chambers. Measured on
++    // 2026-10-17; a change to the data that moves an engine in or out of this
++    // list is a change to where it separates when throttled.
++    const helped = [...new Set(allEngines().filter((e) => groundLit(e) && nozzleModel(e).wallFactor > 1).map((e) => e.name))].sort();
++    expect(helped).toEqual(expect.arrayContaining(['LE-7A', 'LE-9', 'Vulcain 2.1', 'YF-77']));
++    for (const name of helped) {
++      const e = allEngines().find((x) => x.name === name)!;
++      // just enough: separation starts at λ = 1 at sea level
++      expect(nozzleFlow(e, P0, 0.999).separated, name).toBe(true);
++      expect(nozzleModel(e).wallFactor, name).toBeLessThan(3);
++    }
++    // a vacuum engine has no qualified sea-level point, and no help
++    for (const e of allEngines()) if (e.vacuumOnly) expect(nozzleModel(e).wallFactor, e.name).toBe(1);
++  });
++
++  it('deep throttle at sea level lies between the attached-flow law and the old λ·F(p) once the flow separates', () => {
++    const cases: [string, number, number][] = [['rd191', 0.3, 0], ['rd191', 0.3, 2e3], ['vulcain21', 0.5, 0], ['le7a', 0.4, 0], ['merlin1d', 0.4, 0],
++      ['raptor2', 0.4, 0], ['le9', 0.63, 0], ['be4', 0.4, 0]];
++    for (const [id, level, h] of cases) {
++      const e = part(id), p = atmosphere(h).p, m = nozzleModel(e);
++      const flow = nozzleFlow(e, p, level);
++      const attached = level * e.thrustVac - p * m.exitArea;
++      const old = level * (e.thrustVac - (e.thrustVac - e.thrustSL) * p / P0);
++      expect(flow.separated, `${id} at ${level} and ${h} m`).toBe(true);
++      expect(flow.thrust, id).toBeGreaterThan(attached);
++      expect(flow.thrust, id).toBeLessThan(old);
++      expect(flow.separationAreaRatio, id).toBeLessThan(m.expansionRatio);
++    }
++    // Angara-A5's core at 30 % at sea level: 11 % below the old figure, not the attached law's 21 %
++    const rd191 = part('rd191');
++    expect(engineThrustAt(rd191, P0, 0.3) / (0.3 * rd191.thrustSL)).toBeGreaterThan(0.85);
++    expect((0.3 * rd191.thrustVac - (rd191.thrustVac - rd191.thrustSL)) / (0.3 * rd191.thrustSL)).toBeLessThan(0.8);
++  });
++
++  it('a vacuum engine at sea level gives its separated thrust: not its vacuum figure, not its placeholder', () => {
++    const mvac = part('mvac'), rl10 = part('rl10c1'), vinci = part('vinci');
++    for (const e of [mvac, rl10, vinci]) {
++      const flow = nozzleFlow(e, P0, 1), m = nozzleModel(e);
++      expect(flow.separated, e.name).toBe(true);
++      expect(flow.thrust, e.name).toBeLessThan(0.85 * e.thrustVac);
++      expect(flow.thrust, e.name).toBeGreaterThan(Math.max(0, e.thrustVac - P0 * m.exitArea));
++      expect(flow.thrust, e.name).not.toBeCloseTo(e.thrustSL, 0);
++      // the flow separates far inside the bell
++      expect(flow.separationAreaRatio / m.expansionRatio, e.name).toBeLessThan(0.3);
++    }
++    // the Merlin Vacuum: its 3.3 m nozzle (from ε 165 and p_c 9.7 MPa) and about 775 kN, Isp about 275 s, at sea level
++    expect(Math.sqrt(4 * nozzleModel(mvac).exitArea / Math.PI)).toBeCloseTo(3.3, 1);
++    expect(engineThrustAt(mvac, P0, 1) / 1e3).toBeGreaterThan(740);
++    expect(engineThrustAt(mvac, P0, 1) / 1e3).toBeLessThan(810);
++    expect(engineIsp(mvac, P0)).toBeLessThan(290);
++    // the RL10C-1's published exit diameter is what it flies
++    expect(nozzleModel(rl10).exitArea).toBeCloseTo(Math.PI * 1.45 ** 2 / 4, 9);
++    // high up the same nozzle runs full: the Merlin Vacuum at 40 km
++    expect(nozzleFlow(mvac, atmosphere(40e3).p, 1).separated).toBe(false);
++  });
++
++  it('is never negative, rises with the level and falls with the pressure, for every engine', () => {
++    for (const e of allEngines()) {
++      let lastP = Infinity;
++      for (const p of [0, 1, 50, 1000, 5000, 20e3, 50e3, P0, 1.1 * P0]) {
++        let lastL = -1;
++        for (const level of [0, 0.001, 0.02, 0.1, 0.2, 0.3, 0.4, 0.5, 0.63, 0.8, 1, 1.25, 1.53]) {
++          const f = engineThrustAt(e, p, level);
++          expect(Number.isFinite(f) && f >= 0, `${e.name} at ${p} Pa, level ${level}: ${f}`).toBe(true);
++          expect(f, `${e.name} at ${p} Pa: falls from level ${level}`).toBeGreaterThanOrEqual(lastL - 1e-6 * e.thrustVac);
++          lastL = f;
++        }
++        const full = engineThrustAt(e, p, 1);
++        expect(full, `${e.name}: rises with the pressure at ${p} Pa`).toBeLessThanOrEqual(lastP + 1e-6 * e.thrustVac);
++        lastP = full;
++      }
++    }
++  });
++
++  it('meets the attached law where the flow separates: no step in thrust at the separation boundary', () => {
++    for (const id of ['rd191', 'merlin1d', 'mvac', 'rl10c1', 'raptor2']) {
++      const e = part(id), m = nozzleModel(e);
++      // the level at which separation reaches the exit at sea level, and either side of it
++      const edge = schmuckerRatio(m.exitMach) * P0 / (m.wallFactor * m.exitPressure);
++      const below = engineThrustAt(e, P0, edge * (1 - 1e-7)), above = engineThrustAt(e, P0, edge * (1 + 1e-7));
++      expect(Math.abs(above - below) / e.thrustVac, id).toBeLessThan(1e-5);
++    }
++  });
++
++  it('the level for a thrust inverts the law, attached or separated', () => {
++    for (const id of ['rd191', 'merlin1d', 'mvac', 'raptor2', 'le7a']) {
++      const e = part(id);
++      for (const p of [0, 30e3, P0]) {
++        for (const level of [0.2, 0.4, 0.7, 1]) {
++          const f = engineThrustAt(e, p, level);
++          if (f > 1e-3 * e.thrustVac) expect(engineLevelFor(e, p, f), `${id} ${p} ${level}`).toBeCloseTo(level, 5);
++        }
++      }
++    }
++    expect(engineLevelFor(part('merlin1d'), P0, 0)).toBe(0);
++  });
++
++  it('the Isp falls with the throttle in air and not in vacuum', () => {
++    const e = part('rd191');
++    expect(engineIsp(e, 0, 0.3)).toBeCloseTo(e.ispVac, 9);
++    expect(engineIsp(e, 0, 1)).toBeCloseTo(e.ispVac, 9);
++    expect(engineIsp(e, P0, 0.3)).toBeLessThan(engineIsp(e, P0, 0.7));
++    expect(engineIsp(e, P0, 0.7)).toBeLessThan(engineIsp(e, P0, 1));
++    // F = λ·ṁ·g₀·Isp at every level
++    expect(engineThrustAt(e, P0, 0.45)).toBeCloseTo(0.45 * engineMassFlow(e) * 9.80665 * engineIsp(e, P0, 0.45), 6);
++  });
++
++  it('separates below the altitude its exit pressure sets, and only there', () => {
++    const mvac = part('mvac');
++    const pSep = separationPressure(mvac);
++    expect(nozzleFlow(mvac, pSep * 1.01, 1).separated).toBe(true);
++    expect(nozzleFlow(mvac, pSep * 0.99, 1).separated).toBe(false);
++    expect(separationPressure(part('merlin1d'), 0.5)).toBeCloseTo(0.5 * separationPressure(part('merlin1d')), 9);
++  });
++
++  it('falls back to a flagged estimate for an engine the table does not know', () => {
++    const custom: EngineSpec = { name: 'my engine', count: 1, thrustSL: 800e3, thrustVac: 900e3, ispSL: 280, ispVac: 315 };
++    const m = nozzleModel(custom);
++    expect(m.basis).toBe('estimate');
++    expect(engineThrustAt(custom, P0, 1)).toBeCloseTo(800e3, 3);
++    const vac: EngineSpec = { ...custom, name: 'my vacuum engine', vacuumOnly: true };
++    expect(nozzleModel(vac).basis).toBe('estimate');
++    expect(engineThrustAt(vac, P0, 1)).toBeLessThan(900e3);
++    expect(nozzleModel(part('mvac')).basis).toBe('data');
++    // equal thrusts: no exit-area term at all
++    expect(engineThrustAt({ ...custom, thrustSL: 900e3 }, P0, 0.4)).toBe(0.4 * 900e3);
++  });
++});
++
++describe('nozzle data (src/data/nozzles.ts)', () => {
++  const figures = (name: string): [string, NozzleFigure][] => {
++    const r = NOZZLES[name];
++    return [['expansionRatio', r.expansionRatio], ['chamberPressure', r.chamberPressure], ['exitDiameter', r.exitDiameter]]
++      .filter((x): x is [string, NozzleFigure] => x[1] !== undefined);
++  };
++
++  it('holds every engine a built-in vehicle or a catalogue part flies', () => {
++    const missing = [...new Set(allEngines().map((e) => e.name))].filter((n) => !Object.prototype.hasOwnProperty.call(NOZZLES, n));
++    expect(missing).toEqual([]);
++  });
++
++  it('every figure has a source or an estimate flag, and is a positive number', () => {
++    for (const name of Object.keys(NOZZLES)) {
++      for (const [field, f] of figures(name)) {
++        expect(f.value > 0 && Number.isFinite(f.value), `${name}.${field}`).toBe(true);
++        const said = 'source' in f ? f.source : f.estimate;
++        expect(typeof said === 'string' && said.length > 10, `${name}.${field} says where it comes from`).toBe(true);
++        expect('source' in f && 'estimate' in f, `${name}.${field} is not both`).toBe(false);
++      }
++    }
++    for (const g of Object.values(NOZZLE_GAMMA)) expect(('source' in g ? g.source : g.estimate).length).toBeGreaterThan(10);
++  });
++
++  it('gives each engine what its kind needs: a vacuum engine its exit size, a sea-level one its ε or chamber pressure', () => {
++    const engines = new Map(allEngines().map((e) => [e.name, e]));
++    for (const [name, r] of Object.entries(NOZZLES)) {
++      const e = engines.get(name);
++      expect(e, `${name} is flown by something`).toBeDefined();
++      if (e!.vacuumOnly) expect(!!r.exitDiameter || (!!r.expansionRatio && !!r.chamberPressure), name).toBe(true);
++      else expect(!!r.expansionRatio || !!r.chamberPressure, name).toBe(true);
++      if (r.exitDiameter) expect(r.exitDiameter.nozzles >= 1 && Number.isInteger(r.exitDiameter.nozzles), name).toBe(true);
++    }
++  });
++
++  it('closes the vacuum thrust with the geometry, so the chamber pressure it flies is near the published one', () => {
++    // where both a published ε and a published p_c exist, the p_c that closes F_vac
++    // with the exit area is within a quarter of the published figure (the exit
++    // area of a sea-level engine is its pair's, the C_F ideal)
++    for (const e of allEngines()) {
++      const r = NOZZLES[e.name];
++      if (!r?.expansionRatio || !r.chamberPressure || !('source' in r.chamberPressure) || !('source' in r.expansionRatio)) continue;
++      const m = nozzleModel(e);
++      expect(Math.abs(m.chamberPressure / r.chamberPressure.value - 1), e.name).toBeLessThan(0.25);
++      expect(pressureRatioAt(m.exitMach, m.gamma) * m.chamberPressure).toBeCloseTo(m.exitPressure, 6);
++    }
++  });
++});
+diff --git a/tests/physics-core.test.ts b/tests/physics-core.test.ts
+index 2a23e9c..70242af 100644
+--- a/tests/physics-core.test.ts
++++ b/tests/physics-core.test.ts
+@@ -15,7 +15,7 @@ import { DEFAULT_GUIDANCE } from '../src/physics/defaults';
+ import { orbitById } from '../src/data/orbits';
+ import type { MissionConfig, FailureMode, EngineSpec } from '../src/types';
+ import { VEHICLES } from '../src/data/vehicles';
+-import { solidProfile, deliveredIspSL, engineThrust, engineIsp, engineMassFlow } from '../src/physics/vehicle';
++import { solidProfile, deliveredIspSL, engineThrustAt, engineIsp, engineMassFlow } from '../src/physics/vehicle';
+ 
+ describe('atmosphere (USSA-76 + exponential)', () => {
+   it('matches sea level standard values', () => {
+@@ -351,8 +351,10 @@ describe('delivered engine performance (B27)', () => {
+         for (const e of [st.engine, ...(st.boosters ?? []).map((b) => b.engine)]) {
+           const mdot = engineMassFlow(e);
+           for (const p of [0, 0.25 * P0, P0]) {
+-            expect(engineThrust(e, p) / (mdot * G0), `${v.id} ${e.name} at ${Math.round(p)} Pa`)
+-              .toBeCloseTo(engineIsp(e, p), 6);
++            for (const level of [1, 0.6]) {
++              expect(engineThrustAt(e, p, level) / (level * mdot * G0), `${v.id} ${e.name} at ${Math.round(p)} Pa, level ${level}`)
++                .toBeCloseTo(engineIsp(e, p, level), 6);
++            }
+           }
+           expect(engineIsp(e, 0), `${v.id} ${e.name} vacuum`).toBeCloseTo(e.ispVac, 6);
+         }
+@@ -394,12 +396,20 @@ describe('delivered engine performance (B27)', () => {
+       .toEqual(['Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
+   });
+ 
++  // Until the owner's decision of 2026-10-17 a vacuum-only engine flew its
++  // vacuum thrust at every pressure. Now it flies what its nozzle gives
++  // (src/physics/nozzle.ts): never the placeholder sea-level pair, and never
++  // its vacuum figure in air either.
+   it('a vacuum-only engine never uses its placeholder sea-level figures', () => {
+     const e: EngineSpec = { name: 'probe', count: 1, thrustSL: 1, thrustVac: 100, ispSL: 1, ispVac: 400, vacuumOnly: true };
+-    expect(engineThrust(e, P0)).toBe(100);
+-    expect(engineIsp(e, P0)).toBeCloseTo(400, 6);
++    const atSeaLevel = engineThrustAt(e, P0, 1);
++    expect(atSeaLevel).toBeLessThan(100);
++    expect(atSeaLevel).toBeGreaterThan(1);
++    expect(engineThrustAt({ ...e, thrustSL: 50 }, P0, 1)).toBe(atSeaLevel);
++    expect(engineThrustAt(e, 0, 1)).toBe(100);
++    expect(engineIsp(e, 0)).toBeCloseTo(400, 6);
+     const real: EngineSpec = { ...e, vacuumOnly: false, thrustSL: 80, ispSL: 320 };
+-    expect(engineThrust(real, P0)).toBe(80);
++    expect(engineThrustAt(real, P0, 1)).toBeCloseTo(80, 9);
+   });
+ });
+ 
+-- 
+2.43.0
+
