@@ -8,6 +8,7 @@ import { missionSatellite } from '../data/satellites';
 import { rendezvousAvailable, soyuzShipInsertion } from './rendezvous/profiles';
 import { vehicleDataId } from '../data/vehicles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
+import { geocentricLatitude } from './geodesy';
 import { VehicleModel } from './vehicle';
 import {
   circularSpeed, visViva, inertialLaunchAzimuth, rotatingLaunchAzimuth, inclinationForRotatingAzimuth,
@@ -218,6 +219,18 @@ export function retrogradeOnly(site: SiteExtra): boolean {
   return site.minInclination > 90;
 }
 
+/**
+ * Latitude of the site's pad for the geometry of the orbit plane, rad: its
+ * geocentric latitude, since the plane passes through the pad and the
+ * Earth's centre. The pads stand on WGS-84 at their geodetic latitude
+ * (D-51), 0.19° further north than this at 45° (Baikonur: 45.965° geodetic,
+ * 45.773° geocentric). The inclination floor below keeps the geodetic one,
+ * which errs high by that much.
+ */
+export function padPlaneLatitude(site: SiteExtra): number {
+  return geocentricLatitude(site.latitude * DEG, site.altitude);
+}
+
 export function minInclinationFor(site: SiteExtra): number {
   return Math.max(site.minInclination * DEG, Math.abs(site.latitude) * DEG + 0.05 * DEG);
 }
@@ -267,7 +280,7 @@ export function azimuthInWindow(site: SiteExtra, azRad: number): boolean {
  * plane beyond it may still be flown with a dogleg (`launchDirection`).
  */
 export function corridorReach(site: SiteExtra): { lo: number; hi: number } {
-  const lat = site.latitude * DEG;
+  const lat = padPlaneLatitude(site);
   const atMin = inclinationForRotatingAzimuth(lat, site.azimuthMin * DEG, CORRIDOR_REFERENCE_SPEED);
   const atMax = inclinationForRotatingAzimuth(lat, site.azimuthMax * DEG, CORRIDOR_REFERENCE_SPEED);
   return {
@@ -356,7 +369,7 @@ export interface LaunchDirection {
  *   window.
  */
 export function launchDirection(site: SiteExtra, inc: number, vOrbit = CORRIDOR_REFERENCE_SPEED, descending?: boolean): LaunchDirection {
-  const lat = site.latitude * DEG;
+  const lat = padPlaneLatitude(site);
   const customary = descending ?? (inc > 75 * DEG ? site.descendingForPolar : false);
   const solution = (descending: boolean) => {
     const azimuth = rotatingLaunchAzimuth(lat, inc, vOrbit, descending);
@@ -1028,7 +1041,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const { inc: ascentInclination } = ascentInclinationFor(target, site);
   const direction = launchDirection(site, ascentInclination, undefined, cfg.orbit.descending);
   const descending = direction.descending;
-  const lat = site.latitude * DEG;
+  const lat = padPlaneLatitude(site);
   const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;
   const azimuthInertial = cfg.orbit.flightAzimuth !== undefined ? cfg.orbit.flightAzimuth * DEG
     : inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
@@ -1206,7 +1219,7 @@ export interface LaunchWindow {
  * matches the target RAAN. Returns an empty list when RAAN is unconstrained.
  */
 export function launchWindows(orbit: OrbitSpec, site: SiteExtra, from: Date, count = 4): LaunchWindow[] {
-  const lat = site.latitude * DEG;
+  const lat = padPlaneLatitude(site);
   const lon = site.longitude * DEG;
   const t0 = resolveTarget(orbit, site, from);
   if (t0.raan === null) return [];

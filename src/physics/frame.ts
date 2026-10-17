@@ -35,7 +35,7 @@ import type { ReturnTarget } from './sim/return-guidance';
 import { clone } from './vec3';
 import { propagateKepler } from './orbital';
 import { atmosphere } from './atmosphere';
-import { R_EARTH } from './constants';
+import { geodeticHeight } from './geodesy';
 import { cloneRigidTelemetry, interpolateRigidTelemetry, sameRigidConfiguration, type RigidTelemetry } from './rigid/telemetry';
 import { quatRotate } from './rigid/math';
 import { cloneEom, type EomRecord } from './eom';
@@ -390,7 +390,7 @@ function debrisAnchor(sim: Simulation, d: Debris, layout: StackLayout): number {
 /** Ambient pressure at a debris item's own altitude (a landing booster at 2 km
  *  must not draw the vacuum-expanded plume of a second stage at 200 km). */
 function debrisPressure(r: Vec3): number {
-  const alt = Math.sqrt(r.x * r.x + r.y * r.y + r.z * r.z) - R_EARTH;
+  const alt = geodeticHeight(r);
   return alt > 1000e3 ? 0 : atmosphere(Math.max(0, alt)).p;
 }
 

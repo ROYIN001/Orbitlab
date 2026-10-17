@@ -15,6 +15,7 @@
  */
 import { density } from '../atmosphere';
 import { G0, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { gravityJ2 } from '../gravity';
 import { rk4Step } from '../integrator';
 import { elementsFromState, gmst, propagateKepler, timeToPeriapsis } from '../orbital';
@@ -68,7 +69,7 @@ export function airVelocity(r: Vec3, v: Vec3): Vec3 {
 export function cmAerodynamics(r: Vec3, v: Vec3, bank: number, mass: number, chuteCdA: number): Vec3 {
   const va = airVelocity(r, v), sp = norm(va);
   if (sp < 1e-6) return v3();
-  const rho = density(norm(r) - R_EARTH), q = 0.5 * rho * sp * sp, vh = scale(va, 1 / sp);
+  const rho = density(geodeticHeight(r)), q = 0.5 * rho * sp * sp, vh = scale(va, 1 / sp);
   const drag = scale(vh, (-q * (CM_AERO.cd * CM_AERO.area + chuteCdA)) / mass);
   if (chuteCdA > 0) return drag;
   const up = normalize(r), liftUp = normalize(sub(up, scale(vh, dot(up, vh)))), right = normalize(cross(vh, liftUp));
@@ -83,7 +84,7 @@ const LOAD_LIMIT = 5;
 function limited(r: Vec3, v: Vec3, m: number): boolean {
   const va = airVelocity(r, v), sp = norm(va);
   if (dot(va, r) >= 0) return false;
-  const load = (0.5 * density(norm(r) - R_EARTH) * sp * sp * CM_AERO.cd * CM_AERO.area * Math.hypot(1, CM_AERO.ld)) / m / G0;
+  const load = (0.5 * density(geodeticHeight(r)) * sp * sp * CM_AERO.cd * CM_AERO.area * Math.hypot(1, CM_AERO.ld)) / m / G0;
   return load > LOAD_LIMIT;
 }
 
@@ -128,7 +129,7 @@ export class EntryGuidance {
    */
   private predict(t: number, r: Vec3, v: Vec3, bank: number, mass: number): number {
     let s = { r, v }, tt = t;
-    for (let i = 0; i < 1000 && norm(s.r) - R_EARTH > CHUTES.drogueAlt; i++) {
+    for (let i = 0; i < 1000 && geodeticHeight(s.r) > CHUTES.drogueAlt; i++) {
       const b = limited(s.r, s.v, mass) ? 0 : bank;
       const n = rk4Step(tt, s, 4, (_t: number, x: Vec3, u: Vec3) => add(gravityJ2(x), cmAerodynamics(x, u, b, mass, 0)));
       s = { r: n.r, v: n.v }; tt += 4;

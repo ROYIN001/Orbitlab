@@ -63,15 +63,6 @@ export class LaunchEscape {
 
   constructor(readonly sim: Simulation) {}
 
-  /**
-   * C01: the flight is a return that measures its heights on the WGS-84
-   * ellipsoid (Vostok-1, `DescentCapsule.datum`), from the retro sequence to
-   * the sphere at rest: the simulation's altitude and latitude are then
-   * geodetic too.
-   */
-  get geodetic(): boolean {
-    return this.flight?.mode === 'capsule' && this.flight.capsule.datum === 'wgs84';
-  }
 
   /**
    * The wind the escape and everything it lets go of fly in, ECI, m/s, at

@@ -18,6 +18,7 @@
  */
 import type { Simulation } from '../simulation';
 import { DEG, G0, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { rk4Step } from '../integrator';
 import { elementsFromState } from '../orbital';
 import { targetAttitude } from '../rigid/runtime';
@@ -989,8 +990,8 @@ export class ApolloFlight {
     // the service module on its own arc, until it breaks up in the air (MR §7.6)
     if (this.serviceModule) {
       const n = rk4Step(s.t, this.serviceModule, dt, (t, r, v) => add(add(gravityJ2(r), lunisolar(jd0, t, r)),
-        norm(r) - R_EARTH < EI_ALT ? cmAerodynamics(r, v, 0, SM_MASS, 0) : v3()));
-      this.serviceModule = norm(n.r) - R_EARTH > SM_BREAKUP ? { r: n.r, v: n.v } : undefined;
+        geodeticHeight(r) < EI_ALT ? cmAerodynamics(r, v, 0, SM_MASS, 0) : v3()));
+      this.serviceModule = geodeticHeight(n.r) > SM_BREAKUP ? { r: n.r, v: n.v } : undefined;
     }
     if (this.phase === 'cmSeparated') {
       const n = rk4Step(s.t, { r: s.r, v: s.v }, dt, (t, r) => add(gravityJ2(r), lunisolar(jd0, t, r)));
@@ -1008,8 +1009,8 @@ export class ApolloFlight {
       }
       return;
     }
-    // the drogues below 24,000 ft, the mains below 10,000 ft
-    const alt = norm(s.r) - R_EARTH, sp = APOLLO11.splashdown;
+    // the drogues below 24,000 ft, the mains below 10,000 ft (above WGS-84, as the air: D-51)
+    const alt = geodeticHeight(s.r), sp = APOLLO11.splashdown;
     if (this.phase === 'entry' && alt <= CHUTES.drogueAlt) {
       this.phase = 'drogues'; s.note = 'drogues'; this.chuteAt.drogue = s.t;
       vehicle.payloadMass = sp.drogueMass;
@@ -1033,7 +1034,7 @@ export class ApolloFlight {
     s.mass = vehicle.totalMass();
     this.entryState = { bank: (bank * 180) / Math.PI, load, maxLoad: Math.max(this.entryState.maxLoad, load), drogue, main };
     this.cmState(load);
-    if (norm(s.r) - R_EARTH <= 0) this.splashdown();
+    if (geodeticHeight(s.r) <= 0) this.splashdown();
   }
 
   /** The CM's state's other fields: heat shield into the air, or apex up under the parachutes. */
@@ -1049,7 +1050,8 @@ export class ApolloFlight {
   /** In the water: at sea level, turning with the Earth from here on, the flight landed. */
   private splashdown(): void {
     const s = this.sim.state, jd = this.jd0 + s.t / 86400, p = earthFixed(s.r, jd), a = APOLLO11.splashdown;
-    s.r = scale(normalize(s.r), R_EARTH);
+    // at sea level on WGS-84 (D-51), where the drawn sea is
+    s.r = scale(s.r, 1 - geodeticHeight(s.r) / norm(s.r));
     s.v = cross(v3(0, 0, OMEGA_EARTH), s.r);
     this.splash = { lat: p.lat / DEG, lon: p.lon / DEG, t: s.t };
     this.phase = 'splashdown';

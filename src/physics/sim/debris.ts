@@ -4,9 +4,10 @@
  * Recovered boosters fly their entry and landing burns here.
  */
 import type { BoosterGroupSpec, StageSpec, EngineSpec, TargetedRecovery } from '../../types';
-import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, RAD, DEG } from '../constants';
+import { G0, MU_EARTH, OMEGA_EARTH, RAD, DEG } from '../constants';
 import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, clone, slerpLimited } from '../vec3';
 import { atmosphere } from '../atmosphere';
+import { geodeticHeight } from '../geodesy';
 import { landingZoneById } from '../../data/landing-zones';
 import { CATCH_HORIZONTAL_SPEED, CATCH_VERTICAL_SPEED } from './return-constants';
 import { groundPositionEci } from '../orbital';
@@ -371,7 +372,8 @@ export class DebrisTracker {
     if (!e) return ENTRY_BURN_TARGET_SPEED;
     // airspeed at the top of the entry burn, from the energy now (the air
     // above 70 km takes almost nothing off)
-    const rNow = norm(d.r), rTop = R_EARTH + ENTRY_BURN_CEILING;
+    // (the ceiling's radius over the ground under the stage: WGS-84, D-51)
+    const rNow = norm(d.r), rTop = rNow - geodeticHeight(d.r) + ENTRY_BURN_CEILING;
     const v2 = dot(d.v, d.v) + 2 * MU_EARTH * (1 / rTop - 1 / rNow);
     const top = Math.max(0, Math.sqrt(Math.max(0, v2)) - OMEGA_EARTH * rTop * Math.cos(this.sim.site.latitude * DEG));
     const propellant = returnPropellant(rc, d.mass, e.ispVac);
@@ -414,7 +416,7 @@ export class DebrisTracker {
     const omega = v3(0, 0, OMEGA_EARTH);
     let t = sim.state.t - dt, remaining = dt;
     while (remaining > 1e-9 && d.alive) {
-      const alt = norm(d.r) - R_EARTH;
+      const alt = geodeticHeight(d.r);
       const up = normalize(d.r);
       const air = sub(d.v, cross(omega, d.r));
       const speed = norm(air);
@@ -547,7 +549,7 @@ export class DebrisTracker {
       rc.propellant = Math.max(0, rc.propellant - flow * h);
       t += h;
       remaining -= h;
-      const altN = norm(d.r) - R_EARTH;
+      const altN = geodeticHeight(d.r);
       const ground = sim.groundElevation(d.r);
       if (target.kind === 'tower' && !rc.catchPassed && altN <= target.alt) this.catchAttempt(d, t);
       if (!d.alive) break;
@@ -691,7 +693,7 @@ export class DebrisTracker {
         // transfer would cost more than the whole ascent. Hand it to the Kepler
         // path below, which keeps checking that the orbit lasts; its recorded
         // attitude stays where the rigid body left it.
-        if (d.alive && !d.recovery && norm(d.r) - R_EARTH > 140e3) {
+        if (d.alive && !d.recovery && geodeticHeight(d.r) > 140e3) {
           const el = elementsFromState(d.r, d.v);
           if (el.e < 1 && el.periapsisAlt > 120e3) {
             d.outcome = 'orbit';
@@ -704,7 +706,7 @@ export class DebrisTracker {
         this.stepReturning(d, dt);
         continue;
       }
-      const alt = norm(d.r) - R_EARTH;
+      const alt = geodeticHeight(d.r);
       if (d.outcome === 'orbit') {
         // Orbital debris is Kepler-propagated — but the outcome has to stay
         // true. An object promoted with a 121 km perigee decays, and the branch
@@ -724,7 +726,7 @@ export class DebrisTracker {
       for (let k = 0; k < sub_ && d.alive; k++) {
         let thrustAccel = 0;
         let thrustDir = d.dir;
-        const altK = norm(d.r) - R_EARTH;
+        const altK = geodeticHeight(d.r);
         const vAir = sub(d.v, cross(omega, d.r));
         const vAirMag = norm(vAir);
         const up = normalize(d.r);
@@ -790,7 +792,7 @@ export class DebrisTracker {
         d.r = next.r;
         d.v = next.v;
         if (vAirMag > 1 && d.recovery) d.dir = scale(vAir, -1 / vAirMag);
-        const altN = norm(d.r) - R_EARTH;
+        const altN = geodeticHeight(d.r);
         const vImpactNow = norm(sub(d.v, cross(omega, d.r)));
         const ground = this.sim.groundElevation(d.r);
         const touchdown = altN <= ground || (altN <= ground + 3 && d.recovery !== undefined && vImpactNow < 12);

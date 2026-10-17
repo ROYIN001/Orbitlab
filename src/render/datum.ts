@@ -26,7 +26,7 @@ const CAPSULES: Record<DescentCapsule['id'], DescentCapsule> = { soyuz: SOYUZ_DE
 /** The frame's bodies fly on WGS-84 heights: a return of a capsule whose datum is the ellipsoid. */
 export function onEllipsoid(frame: Pick<VisualFrame, 'abort'>): boolean {
   const a = frame.abort;
-  return !!a && a.body === 'capsule' && CAPSULES[a.capsule]?.datum === 'wgs84';
+  return !!a && a.body === 'capsule' && !!CAPSULES[a.capsule]?.onLand;
 }
 
 /** A position at its WGS-84 height over the drawn sphere, on the same radius. */

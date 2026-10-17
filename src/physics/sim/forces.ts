@@ -1,5 +1,6 @@
 /** Point-mass force model shared by powered flight, orbit and debris. */
 import { OMEGA_EARTH, R_EARTH } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { Vec3, v3, sub, cross, norm, addScaled } from '../vec3';
 import { atmosphere } from '../atmosphere';
 import { dragCoefficient, tumblingDragCoefficient } from '../aero';
@@ -20,8 +21,9 @@ import { gravity, gravityJ2 } from '../gravity';
 export function pointMassAcceleration(thrustAccel: number, dir: Vec3, mass0: number, mdot: number, t0: number, area: number, useJ2: boolean, cd0?: number,
   densityFactor?: number) {
   return (t: number, r: Vec3, v: Vec3): Vec3 => {
-    const rm = norm(r);
-    const alt = rm - R_EARTH;
+    // the air is on WGS-84 (D-51), which lies within 21.4 km under the sphere:
+    // above 1000 km over the sphere there is no air to look up
+    const alt = norm(r) - R_EARTH < 1000e3 ? geodeticHeight(r) : Infinity;
     let a = useJ2 ? gravityJ2(r) : gravity(r);
     const m = Math.max(1, mass0 - mdot * (t - t0));
     if (thrustAccel > 0) {

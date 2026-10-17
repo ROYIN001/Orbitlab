@@ -2,7 +2,8 @@
 import type { DynamicsConfig } from '../../types';
 import { atmosphere } from '../atmosphere';
 import { dispersedWind, type AirDispersion } from '../dispersion';
-import { DEG, G0, OMEGA_EARTH, R_EARTH } from '../constants';
+import { DEG, G0, OMEGA_EARTH } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { gravityJ2 } from '../gravity';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { allocateEngineGimbals, allocateRcs, createEngineStates, engineWrench, stepEngineActuators, stepRcs, type EngineActuatorSpec, type EngineActuatorState } from './actuators';
@@ -224,12 +225,13 @@ export class RigidRuntime {
     this.command = { ...command, rates: { ...command.rates } };
   }
 
-  windAt(r: Vec3, time: number): Vec3 { return windVelocityECI(this.wind, r, norm(r) - R_EARTH, time); }
+  /** D-51: the wind profile, the air and the 140 km coast gate below read the height above WGS-84 */
+  windAt(r: Vec3, time: number): Vec3 { return windVelocityECI(this.wind, r, geodeticHeight(r), time); }
   airVelocity(state: Pick<RigidState, 'r' | 'v'>, time: number): Vec3 {
     return sub(sub(state.v, cross(v3(0, 0, OMEGA_EARTH), state.r)), this.windAt(state.r, time));
   }
   private environment(state: RigidState, time: number, snapshot: RigidVehicleSnapshot) {
-    const atm = atmosphere(norm(state.r) - R_EARTH);
+    const atm = atmosphere(geodeticHeight(state.r));
     return aerodynamicWrench(snapshot.aero, { density: this.densityFactor === undefined ? atm.rho : atm.rho * this.densityFactor, speedOfSound: atm.a,
       airVelocityBody: quatInverseRotate(state.attitudeQ, this.airVelocity(state, time)),
       omegaBody: state.omegaBody, cgBody: snapshot.cg });
@@ -470,7 +472,7 @@ export class RigidRuntime {
     // Shape the command with a braking reserve before allocating actual jets.
     // Recovery has its own guidance and is not an orbital pointing maneuver.
     // A returning stage's budget stops where its grid fins start to bite.
-    if (((this.bodyId === 'vehicle' && norm(state.r) - R_EARTH > 140e3)
+    if (((this.bodyId === 'vehicle' && geodeticHeight(state.r) > 140e3)
       || (this.fuelAwareCoast && !(fins && aeroStart.dynamicPressure > 100))) && this.command.mode === 'auto'
       && specs.every(engine => engine.maxThrust === 0)) {
       const budget = fuelAwareCoastRates({ requestedRatesBody: demand.desiredRates, omegaBody: sensed.omegaBody,
