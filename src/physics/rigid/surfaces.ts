@@ -106,13 +106,23 @@ export function surfaceNeutralMoment(specs: readonly ControlSurfaceSpec[], dynam
 }
 
 /**
+ * Dynamic pressure the surface that meets the most of the stream must see before
+ * the surfaces are moved, Pa (an estimate). Below it — a coast above the air, or a
+ * flap edge-on to the stream — they can give next to no moment, and solving for
+ * the moment asked ran every one of them to a stop (Starship's flaps sat at
+ * ±34° for its whole coast); they rest at zero command, and the jets steer.
+ */
+export const SURFACE_MIN_Q = 10;
+
+/**
  * Deflections that best give `moment` (body, N·m): δ = Bᵀ(BBᵀ + λI)⁻¹M with B
  * the moment each surface gives per radian, then clipped to the travel. Zero
- * at no dynamic pressure, where a fin has nothing to push on.
+ * below `SURFACE_MIN_Q`, where a fin has next to nothing to push on.
  */
 export function allocateSurfaces(specs: readonly ControlSurfaceSpec[], moment: Vec3, dynamicPressure: number,
   sign: SurfaceFlow, cg: Vec3): number[] {
-  if (!specs.length || !(dynamicPressure > 0)) return specs.map(() => 0);
+  const share = specs.reduce((most, _spec, i) => Math.max(most, Math.abs(flowOf(sign, i))), 0);
+  if (!specs.length || !(dynamicPressure * share > SURFACE_MIN_Q)) return specs.map(() => 0);
   const columns = specs.map((spec, i) => cross(sub(spec.positionBody, cg), scale(spec.forceDirectionBody, flowOf(sign, i) * dynamicPressure * spec.forceSlopeM2)));
   // What is asked of the deflections is what the trim drag does not already give.
   if (specs.some((spec) => spec.neutralRad)) moment = sub(moment, surfaceNeutralMoment(specs, dynamicPressure, sign, cg));
