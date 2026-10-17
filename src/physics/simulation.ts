@@ -47,11 +47,11 @@ import { AeroEnvelopeEvents } from './rigid/envelope-events';
 import { buildRigidVehicle } from './rigid/mass';
 import { rigidContactMetrics } from './rigid/debris-runtime';
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate, type Quat } from './rigid/math';
-import { effectiveGravityJ2, gravity, gravityJ2 } from './gravity';
+import { effectiveGravityJ2, gravityJ2 } from './gravity';
 import { runningEngines } from './eom';
 import { validateDynamics } from './rigid/config';
-import { rk4Step } from './integrator';
-import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, planeNormal, wrapPi } from './orbital';
+import { rk4Step, rk4Steps } from './integrator';
+import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, gmst, julianDate, planeNormal, wrapPi } from './orbital';
 import { VehicleModel, StageState, engineMassFlow } from './vehicle';
 import { AscentGuidance, planeNormalThrough } from './guidance';
 import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
@@ -1095,7 +1095,10 @@ export class Simulation {
     const rigidBefore = s.rigid; // E02: the body rates and attitude at the step start
     const area = this.vehicle.frontalArea();
     const thrustAccel = thr.thrust / mass;
-    const useKepler = !thr.burning && alt > 140e3 && s.status !== 'ascent';
+    // A free coast above the air: flown, as every other point-mass step, under
+    // J2 with the air's drag, in RK4 steps of up to COAST_MAX_STEP_S (D-51, the
+    // owner's "ใส่เข้าไปด้วยเอาให้สมจริงที่สุด": they were Kepler conics).
+    const freeCoast = !thr.burning && alt > 140e3 && s.status !== 'ascent';
     let next: { r: Vec3; v: Vec3 };
     let rigidGLoad: number | undefined;
     let rigidAccelerations: { propulsionECI: Vec3; aerodynamicECI: Vec3; gravityECI: Vec3 } | undefined;
@@ -1140,15 +1143,14 @@ export class Simulation {
       rigidAccelerations = result.accelerationsStart;
       this.burns.accountDeliveredDv(result.accelerationsStart.propulsionECI, thr.burning, dt);
       this.faultOutcome();
-    } else if (useKepler) {
-      next = propagateKepler(s.r, s.v, dt);
     } else if (s.status === 'descent') {
-      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, this.shipDescent.pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t));
+      next = rk4Steps(s.t, { r: s.r, v: s.v }, dt, this.shipDescent.pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t));
     } else {
-      // D-51 (R4.2): the point-mass ascent flies the J2 field the six-DOF body
-      // and the orbit already fly; only the exo-atmospheric Kepler coast above
-      // is still a pure conic.
-      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, true, undefined, this.densityFactor));
+      // D-51 (R4.2): the point mass flies the J2 field the six-DOF body and the
+      // orbit already fly, from the pad through every coast.
+      next = rk4Steps(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, true, undefined, this.densityFactor));
+      // an aimed burn counts the impulse it has delivered along its direction (BurnSequencer.rigidTransfer)
+      if (s.status === 'burn') this.burns.accountDeliveredDv(scale(s.dir, thrustAccel), thr.burning, dt);
     }
     // --- ascent losses (evaluated at step start)
     //
@@ -1206,15 +1208,15 @@ export class Simulation {
       const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels, hotEngines ? { stage: hotEngines, level: thr.hotLevel! } : undefined);
       const pointDrag = vAirMag > 0.1 && atm.rho > 0 && alt < 1000e3 ? scale(vAir, -dragAccel / vAirMag) : v3();
       s.eom = {
-        t: s.t, dt, integrator: held ? 'heldCoast' : rigidAccelerations ? 'rigid' : useKepler ? 'kepler' : 'pointMass',
+        t: s.t, dt, integrator: held ? 'heldCoast' : rigidAccelerations ? 'rigid' : freeCoast ? 'coast' : 'pointMass',
         mass, r: { ...s.r }, v: { ...s.v }, density: atm.rho, soundSpeed: atm.a, pressure: atm.p, airspeed: vAirMag,
         airVelocity: { ...vAir }, dynamicPressure: q, mach: atm.a > 0 ? vAirMag / atm.a : 0,
         thrust: thr.thrust, vacuumThrust: engines.vacuumThrust, exitArea: engines.exitArea,
         referenceArea: rigidAccelerations ? this.rigidRuntime!.snapshot?.aero.referenceArea ?? area : area,
-        ...(rigidAccelerations || held || useKepler ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
-        thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held || useKepler ? v3() : scale(s.dir, thrustAccel),
-        aeroAccel: rigidAccelerations ? { ...rigidAccelerations.aerodynamicECI } : held || useKepler ? v3() : pointDrag,
-        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : useKepler && !held ? gravity(s.r) : gravityJ2(s.r),
+        ...(rigidAccelerations || held ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
+        thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held ? v3() : scale(s.dir, thrustAccel),
+        aeroAccel: rigidAccelerations ? { ...rigidAccelerations.aerodynamicECI } : held ? v3() : pointDrag,
+        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : gravityJ2(s.r),
         measuredAccel: scale(sub(next.v, s.v), 1 / dt),
         speedEnd: norm(next.v), losses: { ...s.losses },
         ...(rigidBefore && s.rigid && rigidAccelerations ? { omega0: { ...rigidBefore.omegaBody }, omega1: { ...s.rigid.omegaBody },

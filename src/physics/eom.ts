@@ -15,7 +15,7 @@ import { engineThrustSL, type StageState } from './vehicle';
 import type { EngineSpec } from '../types';
 
 /** How the step was integrated. */
-export type EomIntegrator = 'rigid' | 'pointMass' | 'kepler' | 'heldCoast';
+export type EomIntegrator = 'rigid' | 'pointMass' | 'coast' | 'heldCoast';
 
 export interface EomRecord {
   /** Step start, s, and length, s. */

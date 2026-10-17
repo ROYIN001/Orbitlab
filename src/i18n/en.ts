@@ -3797,7 +3797,6 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'eq.note.boosters': 'The strap-on boosters\' propellant is not in this stage figure; the line below counts it.',
   'eq.note.budgetFrozen': 'The book closes when the ascent ends; later burns are not in it.',
   'eq.note.escape': 'Above escape speed: the path is not an ellipse.',
-  'eq.note.centralGravity': 'The analytic coasts use the central field; J2 is shown for comparison.',
   'eq.note.flexCoupling': 'With slosh and bending (P05) the rigid-body equation leaves out their coupling, and the residual includes it.',
   'eq.note.vacuumOnly': 'A vacuum engine: the model gives it no sea-level operating point, so no pressure term.',
   'eq.note.suborbital': 'Periapsis below the surface: the path is still suborbital.',

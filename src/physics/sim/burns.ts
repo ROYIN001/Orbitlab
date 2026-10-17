@@ -8,7 +8,7 @@ import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween, addScaled 
 import { atmosphere } from '../atmosphere';
 import { geodeticHeight } from '../geodesy';
 import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity, shootJ2Altitude } from '../rigid/orbit-prediction';
-import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
+import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, planeNormal, visViva } from '../orbital';
 import { desiredVelocity, planeNormalThrough } from '../guidance';
 import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR, INCLINATION_TOLERANCE } from '../mission';
 import type { Simulation } from '../simulation';
@@ -85,24 +85,21 @@ export class BurnSequencer {
   }
 
   /**
-   * The orbit a mission is judged on. In six-DOF that is the lowest and
-   * highest altitude of the next revolution under J2 (`physicalApsides`): the
-   * osculating apsides of one instant swing several kilometres round the
-   * orbit, and Vulcan to a 500 km circle in wind shear read 511 × 489 km on an
-   * orbit whose physical apex its last burn had just put at 500 km. Point-mass
-   * coasts are Kepler, where the two are the same. Judged, like `el`, on the
-   * state the engine's tail-off still leaves behind: at a cut-off that is
-   * metres per second, and Falcon 9's circularisation read 500 × 452 km
-   * without it.
-   *
-   * C01: a mission whose figures are the orbit's lowest and highest heights
-   * (`OrbitSpec.extremes`, Vostok-1) is judged on them in point-mass too: the
-   * point-mass orbit is flown under J2 as well (`stepOrbit`), and Vostok cut
-   * off at 63° N reads 168 × 297 km on the conic of that instant in an orbit
-   * whose extremes are 168 × 315 km.
+   * The orbit a mission is judged on, in both models (M-LAUNCH-031): the
+   * lowest and highest altitude of the next revolution under J2
+   * (`physicalApsides`). The osculating apsides of one instant swing several
+   * kilometres round the orbit, and Vulcan to a 500 km circle in wind shear
+   * read 511 × 489 km on an orbit whose physical apex its last burn had just
+   * put at 500 km. Since D-51 the point mass flies its coasts under J2 too,
+   * and its conic at the cut-off read 8 of 13 sampled low-orbit rows 10–18 km
+   * off on the orbit they were really in. Judged, like `el`, on the state the
+   * engine's tail-off still leaves behind: at a cut-off that is metres per
+   * second, and Falcon 9's circularisation read 500 × 452 km without it.
+   * (C01: Vostok cut off at 63° N reads 168 × 297 km on the conic of that
+   * instant in an orbit whose extremes are 168 × 315 km.)
    */
   judgedElements(el: OrbitalElements): OrbitalElements {
-    if ((!this.sim.rigidRuntime && !this.sim.cfg.orbit.extremes) || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
+    if (!(el.e < 1) || el.periapsisAlt < 120e3) return el;
     return this.extremesOf(el);
   }
 
@@ -160,7 +157,7 @@ export class BurnSequencer {
    * MAX_FINAL_CORRECTIONS of them.
    */
   finalPhysicalCorrection(el: OrbitalElements): BurnPlan | null {
-    if (!this.sim.rigidRuntime || this.finalCorrections >= MAX_FINAL_CORRECTIONS) return null;
+    if (this.finalCorrections >= MAX_FINAL_CORRECTIONS) return null;
     const judged = this.judgedElements(el);
     if (judged === el) return null;
     const target = this.sim.plan.target, res = orbitResiduals(target, judged, this.sim.raanWasReachable());
@@ -195,7 +192,7 @@ export class BurnSequencer {
    */
   private aimableShape(burn: BurnPlan, el: OrbitalElements): boolean {
     const target = this.sim.plan.target;
-    return !!this.sim.rigidRuntime && burn.kind === 'shapeAtApoapsis'
+    return burn.kind === 'shapeAtApoapsis'
       && Math.abs(target.apogee - target.perigee) < 1e3 && Math.abs(target.inclination - el.i) < 0.5 * INCLINATION_TOLERANCE
       && this.sim.plan.burns.filter((b) => !b.done).length === 1
       && this.sim.vehicle.burnTimeFor(burn.dvEstimate, true) < 0.8 * this.maxBurnDurationFor(burn, el);
@@ -277,7 +274,7 @@ export class BurnSequencer {
     // kilometres. Never circularize below a perigee that has not been reached.
     // First raise the actual ballistic apex with a bounded physical impulse.
     let physicalApex: ReturnType<typeof nextJ2Apsis> = null;
-    if (this.sim.rigidRuntime && burn.kind !== 'raiseApoapsis' && el.e < 1 && el.periapsisAlt > 120e3) {
+    if (burn.kind !== 'raiseApoapsis' && el.e < 1 && el.periapsisAlt > 120e3) {
       physicalApex = nextJ2Apsis(s, 'apoapsis', { includeInitial: true });
       if (!physicalApex) { this.failRigidOrbitPrediction(); return; }
       const perigee = burn.targetPeriapsis ?? this.sim.plan.target.perigee, apogee = this.sim.plan.target.apogee;
@@ -375,13 +372,13 @@ export class BurnSequencer {
         ? Math.min(timeToArgumentOfLatitude(el, 0), timeToArgumentOfLatitude(el, Math.PI))
         : 0;
     }
-    if (this.sim.rigidRuntime && burn.kind === 'raiseApoapsis' && tGo > 0 && el.e > 1e-3 && (el.e > 0.01 || burn.lowering)) {
+    if (burn.kind === 'raiseApoapsis' && tGo > 0 && el.e > 1e-3 && (el.e > 0.01 || burn.lowering)) {
       const peri = nextJ2Apsis(s, 'periapsis', { includeInitial: true });
       if (!peri) { this.failRigidOrbitPrediction(); return; }
       // Keep explicit node/argument choices. Replace only the apsis-timed path.
       tGo = peri.timeS > el.period - 150 ? 0 : peri.timeS;
     }
-    if (this.sim.rigidRuntime && burn.physicalObjective) {
+    if (burn.physicalObjective) {
       // A final correction is flown at the true extreme of the revolution —
       // the highest point to lift the lowest, the lowest to bring the highest
       // down — which on a round J2 orbit need not be the next local apsis.
@@ -390,7 +387,7 @@ export class BurnSequencer {
       tGo = burn.kind === 'raiseApoapsis' ? extremes.periapsisTimeS : extremes.apoapsisTimeS;
     }
     if (!isFinite(tGo)) tGo = 0;
-    let at = this.sim.rigidRuntime ? propagateJ2Coast(s, tGo) : propagateKepler(s.r, s.v, tGo);
+    let at = propagateJ2Coast(s, tGo);
     // Six-DOF, a cut-off just past a suborbital apex (Angara-A5 to low orbit
     // with its fairing kept to the third stage: SECO at 200.5 km, 1 km after
     // the 201.6 km apex, perigee -602 km): the next apoapsis is a revolution
@@ -398,14 +395,14 @@ export class BurnSequencer {
     // and the mission used to end there with the kick stage full. The apex is
     // where it is: burn now. Only when the prediction has failed, so every
     // flight it did not fail is flown as before.
-    if (!at && this.sim.rigidRuntime && el.periapsisAlt < 0) {
+    if (!at && el.periapsisAlt < 0) {
       tGo = 0;
       at = { r: s.r, v: s.v };
     }
     if (!at) { this.failRigidOrbitPrediction(); return; }
     const vDes = desiredVelocity(at.r, at.v, burn.kind, burn.targetApoapsis, burn.targetPeriapsis, burn.targetInclination);
     let dv = norm(sub(vDes, at.v));
-    if (this.sim.rigidRuntime && physicalTarget(burn)) {
+    if (physicalTarget(burn)) {
       const shot = burn.physicalObjective ? this.physicalObjectiveShot(burn, at) : this.physicalApexShot(burn, at);
       if (!shot) { this.failRigidOrbitPrediction(); return; }
       const correction = shot.speedMS - norm(at.v);
@@ -471,11 +468,11 @@ export class BurnSequencer {
     if (dv < deadband) {
       burn.done = true;
       s.currentBurn = null;
-      const next = this.sim.plan.burns.find((b) => !b.done);
-      // Six-DOF goes round again with nothing planned: `scheduleNextBurn`
-      // flies a physical correction if the orbit still misses the band.
-      if (next || this.sim.rigidRuntime) this.scheduleNextBurn(el);
-      else this.reachTargetOrbit(el);
+      // On to the next burn, or round again with nothing planned:
+      // `scheduleNextBurn` flies a physical correction if the orbit still
+      // misses the band (six-DOF, and since D-51 the point mass), and ends the
+      // mission otherwise.
+      this.scheduleNextBurn(el);
       return;
     }
     s.nextBurnTime = tStart;
@@ -483,8 +480,8 @@ export class BurnSequencer {
     if (this.sim.rigidRuntime) {
       this.rigidScheduledContext = this.rigidOrbitContext();
       this.rigidCoastIntervened = false;
-      if (!this.rigidForecastAt(burn, tStart)) { this.failRigidOrbitPrediction(); return; }
     }
+    if (!this.rigidForecastAt(burn, tStart)) { this.failRigidOrbitPrediction(); return; }
     burn.dvEstimate = dv;
     this.sim.event('evt.burnScheduled', 'info', { kind: burn.kind, dv: Math.round(dv), tgo: Math.round(tStart - s.t), dur: Math.round(tBurnThis) });
     const stRef = stage;
@@ -556,10 +553,8 @@ export class BurnSequencer {
         // Genuine plane change: keep the current line of nodes, rotate to the new inclination.
         s.burnPlaneNormal = planeNormal(burn.targetInclination, el.raan);
       } else {
-        // Small correction: the plane through the apoapsis point closest to the current one.
-        const tGo = Math.min(timeToApoapsis(el), (isFinite(el.period) ? el.period : 5400) / 2);
-        const at = this.sim.rigidRuntime ? this.rigidForecastAt(burn, Math.max(s.t, s.nextBurnTime))
-          : propagateKepler(s.r, s.v, tGo);
+        // Small correction: the plane through the burn's own ignition point, on the J2 coast to it.
+        const at = this.rigidForecastAt(burn, Math.max(s.t, s.nextBurnTime));
         if (!at) { this.failRigidOrbitPrediction(); return; }
         const curNormal = normalize(cross(at.r, at.v));
         s.burnPlaneNormal = planeNormalThrough(normalize(at.r), burn.targetInclination, curNormal);
@@ -616,7 +611,7 @@ export class BurnSequencer {
       return;
     }
     let complete = false;
-    if (this.sim.rigidRuntime && physicalTarget(b)) {
+    if (physicalTarget(b)) {
       complete = this.burnIgnited && !!this.rigidTransfer
         && this.rigidTransfer.deliveredDv + tailDv >= this.rigidTransfer.requiredDv - 0.01;
       if (!complete && this.burnIgnited && s.t - s.burnStartTime > (b.maxDuration ?? 300)) {
@@ -728,17 +723,14 @@ export class BurnSequencer {
       // A short physical-apex correction deliberately changes the temporary
       // conic before the original shape burn. Its real delivered impulse is
       // not a no-op and must not be rejected by the conic progress heuristic.
-      if (!(this.sim.rigidRuntime && physicalTarget(b))) this.replanRemainingBurns(el, noOpBurn);
-      // Six-DOF ends through `scheduleNextBurn` too, once the tail-off is
+      if (!physicalTarget(b)) this.replanRemainingBurns(el, noOpBurn);
+      // The mission ends through `scheduleNextBurn` too, once the tail-off is
       // over, so that an orbit whose physical apsides still miss the band gets
-      // its correction (`finalPhysicalCorrection`).
-      if (this.sim.plan.burns.some((x) => !x.done) || this.sim.rigidRuntime) {
-        s.status = 'coast';
-        s.note = 'coast';
-        this.scheduleNextBurn(el);
-      } else {
-        this.reachTargetOrbit(el);
-      }
+      // its correction (`finalPhysicalCorrection`): six-DOF, and since D-51
+      // the point mass.
+      s.status = 'coast';
+      s.note = 'coast';
+      this.scheduleNextBurn(el);
     }
   }
 
@@ -889,14 +881,14 @@ export class BurnSequencer {
       const sign = b.lowering ? -1 : 1;
       dirCmd = this.rigidAim?.burn === b ? this.rigidAim.direction : norm(s.v) > 1 ? scale(normalize(s.v), sign) : s.dir;
       s.burnDvRemaining = Math.abs(need);
-      if (this.sim.rigidRuntime && physicalTarget(b)) {
+      if (physicalTarget(b)) {
         if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
           this.rigidTransfer = null; this.burnIgnited = false;
         }
         s.burnDvRemaining = this.rigidTransfer
           ? Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv) : Math.max(0.05, b.dvEstimate);
       }
-    } else if (this.sim.rigidRuntime && b.physicalObjective) {
+    } else if (b.physicalObjective) {
       // A physical perigee correction: along or against the velocity, sized
       // by J2 shooting at the aligned ignition state like an apex correction.
       if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
@@ -920,7 +912,7 @@ export class BurnSequencer {
     // even if the command swings as the remaining Δv goes to zero.
     const gate = this.sim.rigidRuntime ? RIGID_BURN_IGNITION_ALIGNMENT : BURN_IGNITION_ALIGNMENT;
     let aligned = angleBetween(s.dir, dirCmd) < gate;
-    if (this.sim.rigidRuntime?.command.mode === 'auto' && physicalTarget(b)
+    if ((this.sim.rigidRuntime?.command.mode ?? 'auto') === 'auto' && physicalTarget(b)
       && !this.rigidTransfer && aligned) {
       // Solve at the actual aligned ignition state, including any time spent
       // waiting for attitude. The solution only commands finite thrust.
@@ -970,8 +962,7 @@ export class BurnSequencer {
       // of horizon. Propagating to the ignition point first is the whole fix:
       // attitude is an inertial quantity, so the direction computed there is
       // the one to hold now.
-      const at = this.sim.rigidRuntime ? this.rigidForecastAt(nb, s.nextBurnTime)
-        : propagateKepler(s.r, s.v, Math.max(0, s.nextBurnTime - s.t));
+      const at = this.rigidForecastAt(nb, s.nextBurnTime);
       if (!at) { this.failRigidOrbitPrediction(); return null; }
       const vAt = norm(at.v) > 1 ? normalize(at.v) : dirCmd;
       if (this.rigidAim?.burn === nb) {
@@ -987,10 +978,10 @@ export class BurnSequencer {
     return dirCmd;
   }
 
-  /** Six-DOF transfer burns count the impulse actually delivered along the burn direction. */
+  /** An aimed burn (six-DOF, and the point mass since D-51) counts the impulse actually delivered along its direction. */
   accountDeliveredDv(propulsionECI: Vec3, burning: boolean, dt: number): void {
     const s = this.sim.state;
-    if (this.rigidTransfer && this.sim.rigidRuntime!.command.mode === 'auto' && this.burnIgnited && burning
+    if (this.rigidTransfer && (this.sim.rigidRuntime?.command.mode ?? 'auto') === 'auto' && this.burnIgnited && burning
       && this.rigidTransfer.burn === s.currentBurn) {
       this.rigidTransfer.deliveredDv += dot(propulsionECI, this.rigidTransfer.direction) * dt;
       s.burnDvRemaining = Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv);
