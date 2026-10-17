@@ -6,10 +6,10 @@ import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/ph
 import { elementsFromState } from '../src/physics/orbital';
 import { gravityJ2 } from '../src/physics/gravity';
 import { R_EARTH } from '../src/physics/constants';
-import { add, norm, scale, v3, type Vec3 } from '../src/physics/vec3';
+import { add, norm, scale, sub, v3, type Vec3 } from '../src/physics/vec3';
 import { quatFromAxisAngle, quatMultiply, quatRotate, type Quat } from '../src/physics/rigid/math';
 import { NavigationSystem, type NavigationRecord } from '../src/physics/nav/navigation';
-import { AIDING_DEFAULTS, DEG_PER_HOUR, IMU_PRESETS, MICRO_G, type ImuSpec } from '../src/physics/nav/sensors';
+import { AIDING_DEFAULTS, BIAS_CORRELATION_S, DEG_PER_HOUR, IMU_PRESETS, MICRO_G, type ImuSpec } from '../src/physics/nav/sensors';
 import { imuFor, navigationProblems, resolveNavigation } from '../src/physics/nav/config';
 import { validateConfigInput } from '../src/config/validation';
 import { buildTelemetryCsv } from '../src/ui/csv';
@@ -172,14 +172,20 @@ describe('the strapdown navigation (roadmap G02)', () => {
     }
     expect(Math.sqrt(gyro / n) / DEG_PER_HOUR).toBeLessThan(0.25 * IMU_PRESETS.tactical.gyroBiasDegH);
     expect(Math.sqrt(accel / n) / MICRO_G).toBeLessThan(0.1 * IMU_PRESETS.tactical.accelBiasUg);
+    // Over the 60 axis draws the mean of (error/σ)² is χ²(60)/60 for a consistent filter, inside [0.51, 1.71] with
+    // 99.9 % probability: below 0.5 the filter's σ would be too large, above 2 too small.
+    expect(gyroZ / n).toBeGreaterThan(0.5);
     expect(gyroZ / n).toBeLessThan(2);
+    expect(accelZ / n).toBeGreaterThan(0.5);
     expect(accelZ / n).toBeLessThan(2);
   }, 60_000);
 
   it('carries its bias estimates as the biases themselves wander, so an outage drifts as far as its σ says', () => {
-    // 100 s of fixes estimate the biases; through a 600 s outage the estimates of the in-run biases relax towards zero
-    // (τ 300 s), as those biases do, and those of the turn-on biases hold, as those do. Estimates held where they were
-    // put the filter's position error at many times its σ by the outage's end.
+    // 100 s of fixes estimate the biases; through a 600 s outage the estimates of the turn-on biases hold, as those
+    // biases do, and those of the in-run biases relax towards zero (τ 300 s), as those do. Turn-on estimates that
+    // relaxed too, or a fix's correction of one part put into the other part's estimate, would leave the position error
+    // at many times its σ by the outage's end (29 and 28 here, against 0.89). Whether the in-run estimates relax is too
+    // small a part of the drift for this test to see (0.90 with them held); the next test checks it step by step.
     let sum = 0, n = 0;
     for (let seed = 1; seed <= 20; seed++) {
       const nav = new NavigationSystem({ imu: IMU_PRESETS.tactical, aiding: { ...AIDING_DEFAULTS, starTracker: false, gnssOutages: [[100, 700]] }, seed });
@@ -190,6 +196,29 @@ describe('the strapdown navigation (roadmap G02)', () => {
     }
     expect(sum / n).toBeLessThan(2);
   }, 30_000);
+
+  it('holds its turn-on bias estimates between fixes, and relaxes its in-run ones with the in-run biases\' e^(−dt/τ)', () => {
+    // The filter's error model, δḃ_on = 0 and δḃ_run = −δb_run/τ, holds only if the estimates follow the biases'
+    // own dynamics. Tactical, GNSS fixes to 100 s and then lost, no star tracker: the same seed flown to 150 s and to
+    // 151 s gives the estimates one step apart with no fix between.
+    const at = (until: number) => {
+      const nav = new NavigationSystem({ imu: IMU_PRESETS.tactical, aiding: { ...AIDING_DEFAULTS, starTracker: false, gnssOutages: [[100, 700]] }, seed: 1 });
+      inOrbit(nav, until);
+      const rec = nav.record()!, on = nav.turnOnBiases;
+      expect(rec.gnss).toBe('outage');
+      return { gyroOn: on.gyroEstimate, accelOn: on.accelEstimate,
+        gyroRun: sub(rec.gyroBiasEstimate, on.gyroEstimate), accelRun: sub(rec.accelBiasEstimate, on.accelEstimate) };
+    };
+    const before = at(150), after = at(151), decay = Math.exp(-1 / BIAS_CORRELATION_S);
+    for (const k of AXES) {
+      // The fixes put an estimate on both parts of every axis (the in-run one 0.1–13 % of the turn-on one here).
+      for (const x of [before.gyroOn, before.accelOn, before.gyroRun, before.accelRun]) expect(x[k]).not.toBe(0);
+      expect(after.gyroOn[k]).toBe(before.gyroOn[k]);
+      expect(after.accelOn[k]).toBe(before.accelOn[k]);
+      expect(after.gyroRun[k] / before.gyroRun[k]).toBeCloseTo(decay, 9);
+      expect(after.accelRun[k] / before.accelRun[k]).toBeCloseTo(decay, 9);
+    }
+  });
 });
 
 describe('the navigation settings', () => {
