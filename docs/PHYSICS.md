@@ -616,7 +616,7 @@ In orbit at 400 km (tests/navigation.test.ts) the filter's σ is the size of its
 1 500 s coast without aiding (tactical, 200 draws: mean (error/σ)² per axis 0.78–1.20 for
 position, velocity and attitude), and with GNSS and the star tracker it tells the two parts of a
 bias apart: in 2 000 s its estimate of the turn-on part is within 0.17 °/h and 25 µg RMS of it
-(of 1 °/h and 500 µg; 120 draws), as its own σ of 0.16 °/h and 24.5 µg says ((error/σ)² 1.10
+(of 1 °/h and 500 µg; 120 draws, of which the test flies 20), as its own σ of 0.16 °/h and 24.5 µg says ((error/σ)² 1.10
 and 1.02). GNSS alone cannot see a gyro's bias in free fall, where the attitude does not reach
 the velocity: after 2 000 s with GNSS only, the filter's σ of a tactical gyro's turn-on bias is
 still 0.999 °/h of its 1 °/h.
