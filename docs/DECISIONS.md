@@ -206,6 +206,19 @@ The owner answered in chat to the ED-INST-1 session (PR #147, M-LEARNING-047) th
 
 Point 4 hides the sentence that the site's host may log visits, which plan S16 lists in M-LEARNING-047's acceptance. Until the owner shows it again, that part of the acceptance is not met (report ED-INST-1-s1-privacy §6).
 
+## Decided 2026-10-17 (teaching tools held back)
+
+The owner, in chat to the ED-INST-1 session, after PR #147: "merge เข้าไปก่อนแล้ว ในส่วนที่เป็นการสอนให้เก็บไว้ก่อนได้มั้ย ให้เหลือแค่ตัวบทเรียนแบบเรียนเองไว้ก่อน ส่วนอื่นยังไม่โชว์ในหน้าเว็บ" (merge it first; keep the teaching part back for now, leaving only the self-study lessons; the rest not shown on the site). The session merged #147 (`5394003`) and asked four follow-up questions; the owner's choices:
+
+| Date | Question | Answer | Where it lands |
+|---|---|---|---|
+| 2026-10-17 | The placement test | "แสดงต่อ" — keep showing it | unchanged |
+| 2026-10-17 | The curriculum lesson packs | "ซ่อนทั้งชุด" — hide the whole section | `src/ui/held.ts` `TEACHER_TOOLS` |
+| 2026-10-17 | "Open a lesson file…", "Export results", "Copy link" | "ซ่อนทั้งสามปุ่ม" — hide all three (scenario links then open nothing) | same switch |
+| 2026-10-17 | The browser journeys of the teacher pages | "ซ่อนสนิท พักเทสต์ไว้" — hide fully, no secret switch; park those tests | `tests/browser/held.mjs`: journeys exporting `held` are listed and not run |
+
+Hidden with them, as the request's "ส่วนอื่น" and the session's question named them: the Worksheets, Write a scenario and Check results pages and their addresses, "Prepare a class" in My work, and the Orbit section's case worksheets. The code stays; `TEACHER_TOOLS = true` shows everything again and un-parks the journeys.
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |

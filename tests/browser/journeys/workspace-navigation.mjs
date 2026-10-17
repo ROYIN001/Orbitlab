@@ -1,6 +1,7 @@
 /** Lazy My Work shell, keyboard navigation, failure recovery and first-open offline. */
 import assert from 'node:assert/strict';
 import { keyOn, reloadDocument } from '../harness.mjs';
+import { TEACHER_TOOLS } from '../held.mjs';
 
 export const smoke = true;
 export const timeoutMs = 240_000;
@@ -48,9 +49,11 @@ export default async function workspaceNavigation(t) {
 
   // Native dialog Escape must not also navigate the page underneath it.
   await page.evaluate(() => { location.hash = '#/lessons'; });
-  await page.locator('.lesson-pack[data-pack="ipst-basic"]').waitFor();
-  assert.equal(await page.locator('.lesson-review[data-review="pending"]').count(), 5);
-  assert.equal(await page.locator('.lesson-pack-draft').count(), 5);
+  if (TEACHER_TOOLS) { // the curriculum packs are held back (owner, 2026-10-17)
+    await page.locator('.lesson-pack[data-pack="ipst-basic"]').waitFor();
+    assert.equal(await page.locator('.lesson-review[data-review="pending"]').count(), 5);
+    assert.equal(await page.locator('.lesson-pack-draft').count(), 5);
+  } else await page.locator('.lesson-card-item').first().waitFor();
   await page.locator('#btn-work').click();
   await page.keyboard.press('Escape');
   assert.equal(new URL(page.url()).hash, '#/lessons', 'closing My Work preserves the underlying lesson route');
@@ -63,7 +66,8 @@ export default async function workspaceNavigation(t) {
   const fit = await page.locator('#work-dialog').evaluate((dialog) => ({ width: dialog.clientWidth, scroll: dialog.scrollWidth }));
   assert.ok(fit.scroll <= fit.width + 2, 'Thai mobile workspace has no horizontal overflow');
   await app.shot('thai-mobile');
-  for (const lang of ['th', 'ru']) {
+  // "Prepare a class" is held back (owner, 2026-10-17)
+  for (const lang of TEACHER_TOOLS ? ['th', 'ru'] : []) {
     if (lang === 'ru') {
       await page.keyboard.press('Escape');
       await page.locator('#lang-select').selectOption(lang);
@@ -116,7 +120,8 @@ export default async function workspaceNavigation(t) {
   await offline.context.setOffline(true);
   await offline.page.locator('#btn-work').click();
   await offline.page.locator('.work-content').waitFor({ state: 'visible' });
-  assert.equal(await offline.page.locator('.work-content [role="tab"]').count(), 4);
+  // four tabs, three while "Prepare a class" is held back (owner, 2026-10-17)
+  assert.equal(await offline.page.locator('.work-content [role="tab"]').count(), TEACHER_TOOLS ? 4 : 3);
   assert.doesNotMatch(await offline.page.locator('#work-dialog').innerText(), /could not load|work\.[a-z]/);
   offline.checkErrors();
 }

@@ -1630,6 +1630,12 @@ a mission file or link carries it and the flight report names it. Untick it to f
 
 ## 18. Lessons and the placement test
 
+> **For now the site shows only the self-study lessons and the placement test.** The teacher pages
+> described in this section (**Worksheets**, **Write a scenario**, **Check results**), the lesson packs,
+> opening a lesson file, exporting results, copying a lesson link, **Prepare a class** in My work and the
+> Orbit section's case worksheets are held back until the site is finished (owner, 2026-10-17). The
+> text below describes them as they will be when they are shown again.
+
 The gold **Lessons** button in the top bar (and **Start with a lesson** on the landing page) opens the
 lessons page: a page of its own over the whole window below the top bar, like a mode, with five
 tabs — **Lessons**, **Placement test**, **Worksheets**, and for teachers **Write a scenario** and

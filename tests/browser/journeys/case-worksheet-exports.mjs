@@ -12,8 +12,11 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RENDER_SCALE } from '../harness.mjs';
+import { HELD_TEACHER } from '../held.mjs';
 
 // This journey has blocked Pages deployments; exercise it before merging too.
+/** Held while the teaching tools are held back (owner, 2026-10-17; tests/browser/held.mjs). */
+export const held = HELD_TEACHER;
 export const smoke = true;
 export const timeoutMs = 600_000;
 

@@ -30,8 +30,11 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
     if (names.length && !names.some((n) => n.replace(/\.mjs$/, '') === name)) continue;
     const mod = await import(pathToFileURL(join(journeyDir, file)).href);
     if (smoke && !names.length && !mod.smoke) continue;
+    // a journey of a part the owner has held back from the page (tests/browser/held.mjs): listed, not run
+    if (mod.held) { console.log(`⏸ ${name}: held, not run: ${mod.held}`); continue; }
     picked.push({ name, mod });
   }
+  if (!picked.length && names.length) return { results: [], ok: true };
   if (!picked.length) throw new Error('no journeys selected');
   picked = selectShard(picked, shard);
   if (list) {
