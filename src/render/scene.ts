@@ -86,7 +86,10 @@ gl_Position = projectionMatrix * viewMatrix * wp;
  *   stretch scatters in added — the blue haze over the disc from orbit,
  *   thickening into the sky's limb glow at the limb, distant ground fading
  *   into the horizon from the air, no haze on the night side. The rim is the
- *   gradient sky's stand-in for that and is off then (rimGain 0).
+ *   gradient sky's stand-in for that and is off then (rimGain 0). The ground
+ *   is lit then by the sun through the air and by the sky (`daylight`), and
+ *   the glint by the sun alone (`sunColour`): both as at noon before, and
+ *   reddened and dimmed by a low sun.
  */
 const EARTH_FRAG = /* glsl */ `
 #include <common>
@@ -125,13 +128,15 @@ float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
 vec3 day = texture2D(dayMap, vUv).rgb;
 vec3 night = texture2D(nightMap, vUv).rgb;
 vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
-if (uAerial > 0.5) col = day * (0.09 + 0.95 * max(cosSun, 0.0) * sunColour(RG, cosSunGeo));
+if (uAerial > 0.5) col = day * (0.09 + 0.95 * daylight(RG, cosSun, cosSunGeo));
 col = mix(night * 0.55 + day * 0.012, col, dayF);
 float spec = texture2D(specMap, vUv).r;
 vec3 viewDir = normalize(camPos - vPosW);
 vec3 h = normalize(sunDir + viewDir);
 float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
-col += vec3(s * 0.9, s * 0.95, s);
+vec3 glint = vec3(s * 0.9, s * 0.95, s);
+if (uAerial > 0.5) glint *= sunColour(RG, cosSunGeo);
+col += glint;
 float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
 col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
 if (uAerial > 0.5) col = aerialPerspective(col, camPos, -viewDir, RG, sunDir);
@@ -361,12 +366,12 @@ export class SceneManager {
   private clearKey = '';
   /**
    * V02: what the aerial perspective reads, shared by the globe's and the
-   * clouds' materials: the scattering sky's two tables (bound once it exists;
+   * clouds' materials: the scattering sky's three tables (bound once it exists;
    * a null sampler is three's empty texture), its switch, the sky pass's
    * illuminance and the Earth's centre under the floating origin.
    */
   private aerial = {
-    uTransmittance: { value: null as THREE.Texture | null }, uMultiScatter: { value: null as THREE.Texture | null },
+    uTransmittance: { value: null as THREE.Texture | null }, uMultiScatter: { value: null as THREE.Texture | null }, uSkyLight: { value: null as THREE.Texture | null },
     uAerial: { value: 0 }, uSunIlluminance: { value: SKY_ILLUMINANCE }, earthCentre: { value: new THREE.Vector3() },
   };
 
@@ -567,6 +572,7 @@ export class SceneManager {
       this.scene.add(this.physicalSky.mesh);
       this.aerial.uTransmittance.value = this.physicalSky.transmittance;
       this.aerial.uMultiScatter.value = this.physicalSky.multiScatter;
+      this.aerial.uSkyLight.value = this.physicalSky.skyLight;
       this.setPhysicalSky(true);
     }
   }
