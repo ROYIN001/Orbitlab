@@ -84,6 +84,22 @@ function gridFinTexture(): THREE.Texture {
   return t;
 }
 
+/**
+ * The level a stage flown home is burning at, 0..1. A six-DOF body records
+ * each chamber's applied throttle — Falcon 9's landing burn runs mostly at
+ * 40–50 % — and the plume follows the mean of the lit ones, as a stage's
+ * follows its effective throttle; none lit is none. The point-mass return
+ * records no throttle, and the gaps in its bang-bang hoverslam are throttling,
+ * drawn lit: 1.
+ */
+function returnThrottle(d: DebrisFrame): number {
+  const chambers = d.rigid?.engineThrottles;
+  if (!chambers) return 1;
+  let sum = 0, lit = 0;
+  for (const id in chambers) if (chambers[id] > 0) { sum += chambers[id]; lit++; }
+  return lit ? sum / lit : 0;
+}
+
 export class DebrisView {
   private items = new Map<number, DebrisItem>();
   private scene: SceneManager;
@@ -355,8 +371,13 @@ export class DebrisView {
       }
       if (item.fins.length || item.legs.length) this.updateRecovery(item, d, t);
       // the landing burn of a booster at 2 km must not draw the vacuum-expanded
-      // plume of a second stage at 200 km: use this object's own air pressure
-      if (item.plume) item.plume.update(d.burning ? 1 : 0, d.pressure ?? pressure, t);
+      // plume of a second stage at 200 km: use this object's own air pressure.
+      // Only while it flies: a stage that has landed is drawn, but not lit,
+      // whatever a recording made before the flag was cleared says.
+      if (item.plume) {
+        const thr = d.alive && d.burning ? returnThrottle(d) : 0;
+        item.plume.update(thr > 0 ? Math.max(0.05, thr) : 0, d.pressure ?? pressure, t);
+      }
       // Freshly separated hardware still catches direct sun even where the sky around it
       // has gone dark (the same reason a booster in real separation footage reads as a
       // bright streak): without it a plain-lit grey cylinder is nearly invisible against

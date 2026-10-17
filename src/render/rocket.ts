@@ -823,7 +823,11 @@ export class RocketView {
           if (!on || !bf) continue;
           this.updateEngineVisual(unit.engines, frame.rigid, unit.group.quaternion);
           unit.frost?.update(sinceLiftoff);
-          const bthr = bf.burning ? (bg.spec.engine.solid ? 1 : Math.max(0.05, bf.effectiveThrottle ?? frame.throttle)) : 0;
+          // A solid too: its thrust profile, startup and steps are in the
+          // recorded level (GEM-63 is at 77 % by burnout). One level for every
+          // group of the stage, the strongest. Frames recorded before the
+          // field draw a solid at 1, a liquid at the command.
+          const bthr = bf.burning ? Math.max(0.05, bf.effectiveThrottle ?? (bg.spec.engine.solid ? 1 : frame.throttle)) : 0;
           unit.plume.update(bthr, pressure, t + u * 0.13);
           unit.vernier?.update(bf.burning ? Math.min(1, bthr + 0.25) : 0, pressure, t + u * 0.13);
           unit.glow.visible = bthr > 0.02;

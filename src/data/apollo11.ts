@@ -11,6 +11,9 @@
 /** h:mm:ss.s as seconds. */
 export const get = (h: number, m: number, s: number): number => h * 3600 + m * 60 + s;
 
+/** Range zero, 1969-07-16 13:32:00 UTC, as a JavaScript time (ms). */
+export const RANGE_ZERO_MS = Date.UTC(1969, 6, 16, 13, 32, 0);
+
 /**
  * The service propulsion system as it flew on Apollo 11: its specific impulse
  * and flow from the lunar orbit insertion, the flight's longest burn — the

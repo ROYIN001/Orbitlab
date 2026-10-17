@@ -206,6 +206,19 @@ The owner answered in chat to the ED-INST-1 session (PR #147, M-LEARNING-047) th
 
 Point 4 hides the sentence that the site's host may log visits, which plan S16 lists in M-LEARNING-047's acceptance. Until the owner shows it again, that part of the acceptance is not met (report ED-INST-1-s1-privacy §6).
 
+## Decided 2026-10-17 (Argon4 review follow-up, chat)
+
+The owner answered the eight questions of the Argon4-review report (docs/history/2026-10-17/ARGON4-REVIEW.md, "For the owner") in chat on 2026-10-17, verbatim "1.ทำพร้อมกัน 2.อธิบายเพิ่มเติม 3.อธิบายเพิ่มเติม 4.อธิบายเพิ่มเติม 5.ถ้าบินได้จริงในทางฟิสิกส์ในอนุญาตให้บินได้แต่คำนวนเส้นทางและค่าต่างๆตามจริง 6.รอไปก่อน 7.ทำให้ดูดีและสมจริงขึ้น 8.ผมจำไม่ได้ว่าควรอยู่ในข้อไหน". The numbers are the chat report's, whose questions 6 and 8 are the notes' questions 7 and 6.
+
+| Date | Id | Decision | Reason | Where it lands |
+|---|---|---|---|---|
+| 2026-10-17 | D-51 (now, together) | J2 in the point-mass ascent (R4.2) and the launch sites on the real Earth shape, WGS-84 (R4.5), are done now and together. — "ทำพร้อมกัน" | Answer to question 1, which proposed doing both at once because J2 alone makes pad gravity worse above about 35° of latitude. Authorizes this pair (D-65); the rest of R4.2 and R4.5 (of-date Sun and Moon, MU_MOON, D-41, D-10) is not included. Whether point-mass coasts also take J2 was asked and not answered. Moves the fingerprints; re-recording follows the named-rerecord rules. | Branch `claude/bold-johnson-haeu8t`. |
+| 2026-10-17 | — (Apollo 11 dates) | A launch the model can really fly is allowed to fly to the Moon, with its trajectory and figures computed for that launch, not replayed. — "ถ้าบินได้จริงในทางฟิสิกส์ในอนุญาตให้บินได้แต่คำนวนเส้นทางและค่าต่างๆตามจริง" | Answer to question 5 (orbit edits on the flown date; the panel's 13:35:56 window). Replaces the one-second rule of 1293372 for launches that can be flown. | `src/physics/sim/apollo.ts`. |
+| 2026-10-17 | — (bending shader) | The bending shader's normals and shadow (claim 22) wait. — "รอไปก่อน" | Answer to question 6. | R4.7. |
+| 2026-10-17 | — (the sky) | The sky change of claim 19 stands, and the sky is to look better and more realistic. — "ทำให้ดูดีและสมจริงขึ้น" | Answer to question 7, on the before/after screenshots. | `src/render/scene.ts`, `src/render/atmosphere.ts`. |
+| 2026-10-17 | — (more explanation) | Questions 2 (the throttle and the ambient-pressure term), 3 (the IMU's turn-on bias) and 4 (vacuum-only engines on air-lit strap-ons): the owner asked for more explanation before deciding. — "อธิบายเพิ่มเติม" | Not decided. | — |
+| 2026-10-17 | — (feature gaps) | The owner does not remember which plan items the feature gaps belong to. — "ผมจำไม่ได้ว่าควรอยู่ในข้อไหน" | Not decided; a proposed placement follows in chat. | — |
+
 ## Decided 2026-10-17 (teaching tools held back)
 
 The owner, in chat to the ED-INST-1 session, after PR #147: "merge เข้าไปก่อนแล้ว ในส่วนที่เป็นการสอนให้เก็บไว้ก่อนได้มั้ย ให้เหลือแค่ตัวบทเรียนแบบเรียนเองไว้ก่อน ส่วนอื่นยังไม่โชว์ในหน้าเว็บ" (merge it first; keep the teaching part back for now, leaving only the self-study lessons; the rest not shown on the site). The session merged #147 (`5394003`) and asked four follow-up questions; the owner's choices:

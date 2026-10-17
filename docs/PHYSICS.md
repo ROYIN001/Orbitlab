@@ -558,8 +558,11 @@ believes (src/physics/nav/).
 **The IMU** (sensors.ts). Per axis, gyros and accelerometers have a turn-on bias, an in-run bias
 that wanders as a first-order Gauss–Markov process (300 s), a scale-factor error and white noise
 (angle and velocity random walk), drawn from the navigation's own seeded stream (it never moves
-the wind's). Three grades, textbook orders of magnitude (Groves, *Principles of GNSS, Inertial,
-and Multisensor Integrated Navigation Systems*, 2nd ed., ch. 4), or custom figures:
+the wind's). As built, the turn-on and in-run biases are one Gauss–Markov process started at
+their combined size, so the turn-on part fades with the 300 s rather than staying for the flight
+(a MEMS gyro's 30 °/h is down to about the in-run 5 °/h in a quarter of an hour). Three grades,
+textbook orders of magnitude (Groves, *Principles of GNSS, Inertial, and Multisensor Integrated
+Navigation Systems*, 2nd ed., ch. 4), or custom figures:
 
 | Grade | Gyro bias | ARW | Accel. bias | VRW | Scale factors | Pad alignment |
 |---|---|---|---|---|---|---|
@@ -582,8 +585,9 @@ attitude (an ECI rotation, C = (I + [φ×]) Ĉ), the gyros' and accelerometers' 
 factors — propagated with Φ = I + F·dt at every step (F carries the gravity gradient, −[f×],
 −Ĉ on the biases and −Ĉ·diag(f), −Ĉ·diag(ω) on the scale factors) and the sensors' noise, plus a
 tuning margin of velocity noise of 10⁻⁴ of the specific force per √s under thrust (vibration, the
-step's discretisation, misalignment). It is corrected by scalar updates and the correction folded
-into the solution:
+step's discretisation, misalignment). The bias estimates relax with the same 300 s between fixes,
+as the error model assumes. It is corrected by scalar updates and the correction folded into the
+solution:
 
 - **GNSS**: position and velocity fixes (5 m, 0.05 m/s, 1 Hz by default), with one outage to set;
 - **star tracker**: attitude (10″, 1 Hz) above 150 km and below 1 °/s of body rate.
@@ -600,8 +604,9 @@ burns (src/physics/sim/burns.ts, the other session's) still read the truth.
 
 **What it shows on Falcon 9 to LEO** (crosswind; tests/navigation.test.ts):
 
-- Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 1.7 per
-  axis, 0.5 % of samples outside 3σ), under 5 m and 0.1 m/s; the orbit it believes in is the true
+- Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 2.2 per
+  axis, 0.5 % of samples outside 3σ; 2.3 and 0.9 % while the bias estimates were held instead of
+  relaxing with the biases, until 2026-10-17), under 5 m and 0.1 m/s; the orbit it believes in is the true
   one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop,
   and the jets' deadband below keeps it off them.
 - A GNSS outage from T+60 s to T+200 s: the error grows to about 130 m and 1.9 m/s, inside the
@@ -1111,6 +1116,19 @@ altitude. The sea-level Isp a ground-lit engine then delivers is within 1 % of t
 `ispSL` for most of the fleet; the exceptions are recorded by a test rather than hidden —
 Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it took
 Arianespace's published pair on 2026-10-01).
+
+A throttle level, a solid's thrust profile and the start-up and tail-off ramps scale the whole
+pressure-blended thrust, F = λ·F(p), and the mass flow with it, so the Isp does not depend on the
+level (the test stand says so). With the nozzle flowing full the pressure term would not scale:
+F = λ·F_vac − (F_vac − F_SL)·p/p₀. The model's thrust is therefore high where an engine is
+throttled deep in the air, and a regressive solid's is low at its peak: a Merlin 1D at 40 % at sea
+level gives 338 kN against 297 kN (+14 %), Angara-A5's RD-191 core at 30 % +19 % at 2 km, and a
+P120C at its liftoff peak −2 %. Flown the full-flowing way, a point-mass ascent would end with a few
+metres a second less (Falcon 9 3 m/s, Falcon Heavy 8.5 m/s) or more (the solid-boosted Ariane 6, PSLV,
+Vulcan, H-IIA and H3, 4.5–23 m/s), and Angara-A5 with 25 % of its LEO payload would break up at
+T+202 s until its guidance was set again. Deep-throttle flow may separate in the nozzle, which raises the real thrust above the
+full-flowing figure, so the truth lies between the two. Changing it moves every fingerprint and
+needs the owner (found in the review of 2026-10-17).
 
 An engine flagged `vacuumOnly` — every upper- and kick-stage engine that only ever ignites above
 ~100 km — has no sea-level operating point at all (an RL10 nozzle would not flow full at sea
@@ -3043,6 +3061,16 @@ a flickering black ring), and the samples are placed from the ray's lowest point
 seen from space, towards the camera from inside the atmosphere. A NaN or infinity from a degenerate
 ray is zeroed before the bloom can spread it.
 
+The older atmosphere shell (a sphere 110 km up, added over the globe) stays the limb glow of the
+gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets. Under the
+scattering sky it is drawn over the Earth's disc only, as the haze towards its limb: a fragment
+whose view ray passes clear of the R_EARTH sphere is discarded. Until 2026-10-17 it was drawn whole,
+and from orbit it laid a second, faceted blue ring from 60 to 110 km over the sky's own limb glow,
+which is gone by about 66 km (a brown band at the terminator). The gradient sky's colour reaches the
+linear scene target as the scene's background, which three encodes and clears inside the render with
+the target bound; set as the renderer's clear colour while the canvas was bound it had been encoded
+to sRGB, and space came out (95, 104, 128) for the authored (10, 14, 27).
+
 The twilight "jellyfish" (src/render/twilight-plume.ts) is a raymarched axisymmetric cloud behind a
 thrusting vehicle above 45 km — a parabolic envelope with a bright shell, a core near the nozzle, a
 faint interior and noise tendrils — its radius growing 0.45 m per metre of altitude to at most 60 km,
@@ -3442,7 +3470,8 @@ mission fixes its plane, the closed loop steers into it, the distance from it an
 brought to zero together. Vostok 1 fixes it (raanMode `fixed`): the plane through the pad at liftoff,
 09:06:59.7 Moscow time, at 64.95°. The pad is taken where it is. The sites stand on the 6,378.137 km
 sphere at their geodetic latitude taken as geocentric, which puts Gagarin's Start 0.193° (21 km) north
-of its geocentric 45.728° on WGS-84. That convention is every mission's and stays; only the plane is
+of its geocentric 45.728° on WGS-84. That convention is every mission's until R4.5 moves the sites onto
+WGS-84 (D-51); only the plane is
 computed from the true pad: its node 326.653° from the equinox of date (GMST 291.957° at liftoff;
 tests/historical-vehicles.test.ts recomputes it), where the plane through the pad as placed has
 326.442°. The rocket lifts off from the pad as placed, 13 km off that plane, and is steered onto it in
@@ -3793,6 +3822,16 @@ Journal (AFJ).
 | Sphere of influence | 61:39:55, 33,822 n mi above the Moon, 186,437 n mi above the Earth, 2,990 ft/s from the Earth, 3,772 ft/s from the Moon | AFJ (PAO); ORL "Equigravisphere" |
 | LOI-1 ignition | 75:49:50.37: 86.7 n mi, 8,250 ft/s, 1.57° S 169.58° W | ORL; MR Table 7-II |
 | Lunar altitudes | above the landing site's radius, 937.17 n mi (1,735.6 km) | MR Table 7-I, 5-IV |
+
+*Only from its own launch.* The injection (`OrbitSpec.injection`) is the one flown, timed and aimed for
+the Moon of range zero, and the Moon's table covers that week only (D-11). `ApolloFlight.begin` flies it
+from Apollo 11's own launch alone: the `apollo11` spacecraft launched within a second of 1969-07-16
+13:32:00 UTC (`RANGE_ZERO_MS`), the rule the flown record's comparison uses (`historicalFor`). Launched at
+another second, or with another spacecraft (another vehicle brings the crew capsule), it is a different
+flight: it logs `evt.lunarProfileOff` and stays in its parking orbit. Until 2026-10 it flew the profile
+anyway: launched on 16 July 2026 it logged a lunar orbit insertion more than 40,000 km from the Moon, and
+the flight never ended. An edit of the orbit on the flown date still keeps the injection (`ownFlight`
+leaves it, tests/config-validation.test.ts).
 
 *The Moon and the Sun.* The simulation's inertial frame is the mean equator and equinox of date (the
 Earth turns by the mean sidereal time), so the ICRF states are precessed to the date by the IAU 1976

@@ -14,7 +14,7 @@ import { siteById } from '../src/data/sites';
 import { flight5Config, flyHome } from './ship-descent-harness';
 import { planMission, SUBORBITAL_CUTOFF_ALTITUDE } from '../src/physics/mission';
 import { ellipseVelocityAt } from '../src/physics/guidance';
-import { allocateSurfaces, shipFlapSurfaces, surfaceAuthority, surfaceFlow, surfaceNeutralMoment, surfaceWrench } from '../src/physics/rigid/surfaces';
+import { SURFACE_MIN_Q, allocateSurfaces, shipFlapSurfaces, surfaceAuthority, surfaceFlow, surfaceNeutralMoment, surfaceWrench } from '../src/physics/rigid/surfaces';
 import { shipDescentAeroTable } from '../src/physics/rigid/aero-tables';
 import {
   bellyFirstAttitude, descentAeroForce, descentAngleOfAttack, ENTRY_ANGLE_OF_ATTACK, BELLYFLOP_ANGLE_OF_ATTACK, SHIP_LANDING_PROPELLANT,
@@ -90,6 +90,14 @@ describe("Starship's flaps", () => {
     const authority = surfaceAuthority(flaps, q, cg, flow);
     expect(authority.x).toBeGreaterThan(0);
     expect(authority.y).toBeGreaterThan(authority.z);
+  });
+
+  it('rest at their trim edge-on to the stream, as in the landing burn, and above the air', () => {
+    // Upright in the landing burn the stream meets them at a few degrees: 460 Pa of it is a few pascals on the plates.
+    const edgeOn = surfaceFlow(flaps, v3(-80, 0, 4));
+    expect(Math.max(...edgeOn) * 460).toBeLessThan(SURFACE_MIN_Q);
+    expect(allocateSurfaces(flaps, v3(2e4, 1e4, 0), 460, edgeOn, cg)).toEqual([0, 0, 0, 0]);
+    expect(allocateSurfaces(flaps, v3(2e4, 1e4, 0), 0.8, surfaceFlow(flaps, v3(0, 0, 80)), cg)).toEqual([0, 0, 0, 0]);
   });
 });
 

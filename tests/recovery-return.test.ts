@@ -21,7 +21,7 @@ import {
   boostbackCommand, brakingHeight, distanceFromTarget, divertAcceleration, entryStep, predictDescent, targetPosition,
   type DescentModel, type ReturnTarget,
 } from '../src/physics/sim/return-guidance';
-import { allocateSurfaces, gridFinSurfaces, stepSurfaces, surfaceWrench } from '../src/physics/rigid/surfaces';
+import { SURFACE_MIN_Q, allocateSurfaces, gridFinSurfaces, stepSurfaces, surfaceWrench } from '../src/physics/rigid/surfaces';
 import { add, dot, norm, normalize, scale, sub, v3 } from '../src/physics/vec3';
 import { DEG, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import { enuFrame, groundPositionEci, groundVelocityEci } from '../src/physics/orbital';
@@ -116,6 +116,12 @@ describe('grid fins', () => {
     // Far beyond their authority they stop at the stops.
     const saturated = allocateSurfaces(fins, v3(0, 1e9, 0), q, 1, cg);
     for (const d of saturated) expect(Math.abs(d)).toBeLessThanOrEqual(20 * DEG + 1e-12);
+  });
+
+  it('rest at zero above the air, where they could only run to their stops', () => {
+    // A coast's residual moment, a few hundred N·m, at the thin air of 120 km and less: they used to slam to ±20°.
+    for (const q of [1e-9, 0.01, 1, SURFACE_MIN_Q]) expect(allocateSurfaces(fins, v3(0, 500, -300), q, 1, cg)).toEqual([0, 0, 0, 0]);
+    expect(allocateSurfaces(fins, v3(0, 500, -300), 2 * SURFACE_MIN_Q, 1, cg).some((d) => d !== 0)).toBe(true);
   });
 
   it('push the other way in a stream from the nose', () => {
