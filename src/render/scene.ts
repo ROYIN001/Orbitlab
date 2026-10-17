@@ -148,12 +148,24 @@ const ATMO_FRAG = /* glsl */ `
   uniform vec3 sunDir;
   uniform vec3 camPos;
   uniform float rimGain;
+  uniform vec3 earthCentre;
+  uniform float discOnly;
   varying vec3 vNormalW;
   varying vec3 vPosW;
   void main() {
     #include <logdepthbuf_fragment>
     vec3 n = normalize(vNormalW);
     vec3 viewDir = normalize(camPos - vPosW);
+    // Under the scattering sky the shell is kept only over the disc, as the
+    // haze towards its limb: off it the sky's own limb glow, which is gone by
+    // 70 km, met a second band out to the shell's faceted 110 km edge. The cut
+    // is the view ray's perigee against the Earth's sphere, not a threshold on
+    // dot(n, viewDir): the shell's 96 x 64 facets sit up to 5 km inside its
+    // own sphere, and that cut would scallop.
+    if (discOnly > 0.5) {
+      vec3 cr = cross(camPos - earthCentre, viewDir);
+      if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;
+    }
     float d = max(dot(n, viewDir), 0.0);
     // Brightest exactly at the silhouette, where the line of sight runs the
     // longest way through the shell, and falling away towards the sub-camera
@@ -304,9 +316,13 @@ export class SceneManager {
   readonly glowSupported: boolean;
   /** V02: the scattering sky, when the GPU can hold its tables */
   private physicalSky: PhysicalSky | null = null;
-  private physicalSkyOn = true;
-  /** clear colour pre-compensated for the output pass's tone mapping */
-  private clearColor = new THREE.Color();
+  /** on only while there is a sky to draw: the constructor turns it on with the sky */
+  private physicalSkyOn = false;
+  /**
+   * sky colour pre-compensated for the output pass's tone mapping: the scene's
+   * background, black (the renderer's own default) until the first `update`
+   */
+  private clearColor = new THREE.Color(0, 0, 0);
   private clearKey = '';
 
   constructor(canvas: HTMLCanvasElement, tex: EarthTextures) {
@@ -369,7 +385,10 @@ export class SceneManager {
     this.atmoMat = new THREE.ShaderMaterial({
       vertexShader: ATMO_VERT, fragmentShader: ATMO_FRAG, transparent: true, depthWrite: false,
       blending: THREE.AdditiveBlending, side: THREE.FrontSide,
-      uniforms: { sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() }, rimGain: { value: 1 } },
+      uniforms: {
+        sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() }, rimGain: { value: 1 },
+        earthCentre: { value: new THREE.Vector3() }, discOnly: { value: 0 },
+      },
     });
     this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 96, 64), this.atmoMat);
     this.earthGroup.add(this.atmoMesh);
@@ -477,7 +496,16 @@ export class SceneManager {
     });
     this.sceneTarget.texture.name = 'orbitlab.scene';
     this.composer = new EffectComposer(this.renderer, this.sceneTarget);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    // The sky colour is the scene's background, not the renderer's clear
+    // colour: three encodes a clear colour for the target bound when it is SET,
+    // and `update` runs with the canvas bound — sRGB numbers in a linear target,
+    // space at (95, 104, 128) for (10, 14, 27). A background is encoded and
+    // cleared inside `render`, with the target bound, so the pass's own clear
+    // would only be a second one.
+    this.scene.background = this.clearColor;
+    const scenePass = new RenderPass(this.scene, this.camera);
+    scenePass.clear = false;
+    this.composer.addPass(scenePass);
     if (this.glowSupported) {
       this.bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, size.x), Math.max(1, size.y)), BLOOM_GROUND, BLOOM_RADIUS, BLOOM_THRESHOLD);
       this.composer.addPass(this.bloomPass);
@@ -487,13 +515,19 @@ export class SceneManager {
     if (this.glowSupported) {
       this.physicalSky = new PhysicalSky(this.renderer, THREE.HalfFloatType);
       this.scene.add(this.physicalSky.mesh);
+      this.setPhysicalSky(true);
     }
   }
 
-  /** V02: the scattering sky, or (off, or no float targets) the gradient of sky.ts. */
+  /**
+   * V02: the scattering sky, or (off, or no float targets) the gradient of
+   * sky.ts — whose limb glow the atmosphere shell is, so it is cut to the disc
+   * only while the scattering sky draws its own.
+   */
   setPhysicalSky(on: boolean): void {
     this.physicalSkyOn = on && !!this.physicalSky;
     if (this.physicalSky) this.physicalSky.mesh.visible = this.physicalSkyOn;
+    this.atmoMat.uniforms.discOnly.value = this.physicalSkyOn ? 1 : 0;
   }
 
   get physicalSkyEnabled(): boolean {
@@ -761,6 +795,7 @@ export class SceneManager {
     (this.atmoMat.uniforms.sunDir.value as THREE.Vector3).copy(sd);
     (this.earthMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
     (this.atmoMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
+    (this.atmoMat.uniforms.earthCentre.value as THREE.Vector3).copy(this.earthGroup.position);
     this.stars.position.copy(this.camera.position);
 
     const camEci = this.camEci.set(
@@ -905,9 +940,11 @@ export class SceneManager {
    * up in the linear buffer with everything else and the output pass ACES-maps
    * it, which lifts the midtones hard: the noon sky came out pale and washed.
    *
-   * So the colour handed to `setClearColor` is the one that ACES maps ONTO the
-   * authored sky, found by inverting the tone curve. Everything else in the
-   * scene is unaffected — it was always tone-mapped, and still is, once.
+   * So the clear colour is the one that ACES maps ONTO the authored sky, found
+   * by inverting the tone curve. Everything else in the scene is unaffected —
+   * it was always tone-mapped, and still is, once. It reaches the target as
+   * `scene.background`, the same object, changed in place (see the composer in
+   * the constructor for why not `setClearColor`).
    */
   private setSkyClearColor(sky: SkyState): void {
     const c = sky.color;
@@ -916,7 +953,6 @@ export class SceneManager {
       this.clearKey = key;
       inverseACES(c, sky.exposure, this.clearColor);
     }
-    this.renderer.setClearColor(this.clearColor, 1);
   }
 
   render(): void {

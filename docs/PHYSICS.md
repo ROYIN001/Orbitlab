@@ -3061,6 +3061,16 @@ a flickering black ring), and the samples are placed from the ray's lowest point
 seen from space, towards the camera from inside the atmosphere. A NaN or infinity from a degenerate
 ray is zeroed before the bloom can spread it.
 
+The older atmosphere shell (a sphere 110 km up, added over the globe) stays the limb glow of the
+gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets. Under the
+scattering sky it is drawn over the Earth's disc only, as the haze towards its limb: a fragment
+whose view ray passes clear of the R_EARTH sphere is discarded. Until 2026-10-17 it was drawn whole,
+and from orbit it laid a second, faceted blue ring from 60 to 110 km over the sky's own limb glow,
+which is gone by about 66 km (a brown band at the terminator). The gradient sky's colour reaches the
+linear scene target as the scene's background, which three encodes and clears inside the render with
+the target bound; set as the renderer's clear colour while the canvas was bound it had been encoded
+to sRGB, and space came out (95, 104, 128) for the authored (10, 14, 27).
+
 The twilight "jellyfish" (src/render/twilight-plume.ts) is a raymarched axisymmetric cloud behind a
 thrusting vehicle above 45 km — a parabolic envelope with a bright shell, a core near the nozzle, a
 faint interior and noise tendrils — its radius growing 0.45 m per metre of altitude to at most 60 km,
