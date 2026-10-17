@@ -97,6 +97,14 @@ are listed there as drafts awaiting the owner's review.
   ([SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md)); point-mass flight for every vehicle as
   the alternative.
   Engines have start-up and tail-off transients, and every cut-off anticipates the tail-off.
+  The Earth is the WGS-84 ellipsoid (D-51, the owner's decision of 2026-10-17, plan R4.2 + R4.5):
+  the sites stand on it at their geodetic latitude and altitude, every height the air and the
+  ground are read at is above it, and the scene draws it; orbit heights stay the radius less
+  6,378.137 km. Both models fly μ/r² + J2 from the pad through every coast to the orbit (the
+  point mass flew the central field and Kepler coasts before), the point-mass burn planner
+  predicts that J2 coast, and every orbit is judged on its physical apsides (M-LAUNCH-031).
+  The point-mass fleet keeps all 131 accepted rows ([PHYSICS.md](PHYSICS.md) §1, §2;
+  [VALIDATION.md](VALIDATION.md) §10).
 - **Threading**: the physics and the flight recorder run in a Web Worker; the page only draws.
   `?physics=inline` (or a browser without module workers) runs them on the main thread, with
   the same flight.

@@ -8,28 +8,55 @@ mission instead, see [docs/USER-GUIDE.md](USER-GUIDE.md).
 
 The vehicle is a point mass with position **r** and velocity **v** in an Earth-centered
 inertial (ECI) frame: +Z along the rotation axis (north), +X toward the vernal equinox at
-the reference epoch. The Earth is a sphere of radius R⊕ = 6 378 137 m rotating at
-ω⊕ = 7.2921159 × 10⁻⁵ rad/s. The Greenwich sidereal angle θ(t) = GMST(t₀) + ω⊕(t − t₀) ties
-ECI to geographic longitude; GMST uses the IAU 1982 polynomial and the Sun direction a
-low-precision solar ephemeris.
+the reference epoch. The Earth is the WGS-84 ellipsoid, equatorial radius a = R⊕ = 6 378 137 m,
+flattening f = 1/298.257223563 (NIMA TR8350.2), rotating at ω⊕ = 7.2921159 × 10⁻⁵ rad/s. The
+Greenwich sidereal angle θ(t) = GMST(t₀) + ω⊕(t − t₀) ties ECI to geographic longitude; GMST uses
+the IAU 1982 polynomial and the Sun direction a low-precision solar ephemeris.
 
-A launch site at latitude φ, longitude λ, altitude h sits at
-**r**ₛ = (R⊕ + h)[cos φ cos(λ+θ), cos φ sin(λ+θ), sin φ] with velocity **v**ₛ = ω⊕ ẑ × **r**ₛ.
-That initial velocity (up to 465 m/s at the equator) is the Earth-rotation credit.
+A launch site at geodetic latitude φ, longitude λ and altitude h above the ellipsoid (the site's
+elevation; the geoid lies within about 100 m of it) sits at
+**r**ₛ = ((N + h) cos φ cos(λ+θ), (N + h) cos φ sin(λ+θ), (N(1 − e²) + h) sin φ), with
+N = a/√(1 − e² sin²φ), e² = f(2 − f), and velocity **v**ₛ = ω⊕ ẑ × **r**ₛ. That initial velocity
+(up to 465 m/s at the equator) is the Earth-rotation credit. Until the owner's decision of
+2026-10-17 (D-51, plan R4.5) the sites stood on the 6 378 137 m sphere at their geodetic latitude
+taken as geocentric: 4.9 km too high in radius at the Cape, 11.0 km at Baikonur, 13.2 km at
+Vostochny, 16.9 km at Plesetsk.
+
+**Heights (one rule, `src/physics/geodesy.ts`).** Every height the flight reads for the air or
+the ground is the geodetic height above WGS-84: the density, pressure and wind, the engines'
+back-pressure, ground contact and landing burns, the site's ground (`groundElevation`), and the
+altitude the HUD, the telemetry and the events show (and the latitude: geodetic). Orbit heights —
+perigee, apogee, the insertion targets, the closed-loop guidance's terminal altitude and the
+cut-off checks — stay the radius less 6 378.137 km, the catalogues' convention (McDowell, GCAT,
+*Orbits*; §13.6, "The height datum"). The planner's orbit-plane geometry from the pad (launch
+azimuth, expected node, launch windows, the corridor's reach) uses the pad's geocentric latitude,
+since the plane passes through the pad and the Earth's centre (45.773° at Baikonur's 45.965°).
+The local vertical the guidance pitches against, and the pad's hold-down attitude, are the
+radius's, at most 0.19° (at 45°) from the ellipsoid's normal; the ground the scene draws is laid
+on the normal.
 
 ## 2. Equations of motion
 
 ```
-d²r/dt² = −μ r/|r|³ (+ J2 term in orbit) + (T/m) û_T − ½ ρ |v_air| C_D(M) A v_air / m
+d²r/dt² = −μ r/|r|³ + J2 term + (T/m) û_T − ½ ρ(h) |v_air| C_D(M) A v_air / m
 ```
 
 - μ = 3.986004418 × 10¹⁴ m³/s².
-- **v**_air = **v** − ω⊕ ẑ × **r** is the velocity relative to the co-rotating atmosphere.
-- The J2 acceleration (Earth oblateness, J2 = 1.08262668 × 10⁻³) is applied in the orbital
-  phase; it drives nodal precession (sun-synchronous orbits, Molniya's critical inclination).
+- **v**_air = **v** − ω⊕ ẑ × **r** is the velocity relative to the co-rotating atmosphere; ρ is
+  read at the height h above WGS-84 (§1).
+- The J2 acceleration (Earth oblateness, J2 = 1.08262668 × 10⁻³) is applied everywhere, from the
+  pad through the ascent, every coast and the orbit (D-51; until 2026-10-17 the point-mass ascent
+  flew the central field and its coasts were Kepler conics). It drives nodal precession
+  (sun-synchronous orbits, Molniya's critical inclination). With the Earth's turn it is the
+  normal gravity of Somigliana's formula at a WGS-84 pad to five parts in a million
+  (tests/wgs84-sites.test.ts); on the old sphere pads J2 made the pad's gravity worse above ~35°,
+  which is why the sites and J2 moved together.
 - Integration: classical fourth-order Runge–Kutta with adaptive steps (0.1 s in the
-  atmosphere, up to 30 s in orbit). Exo-atmospheric unpowered coasts use the analytic
-  Kepler solution. Mass varies linearly inside a step.
+  atmosphere, up to 30 s in orbit). A free coast above the air is the same RK4 under J2 (and
+  drag), in steps of at most 10 s (`rk4Steps`), as the burn planner's forecasts and the six-DOF
+  held coast; it was the analytic Kepler solution until D-51. Mass varies linearly inside a step.
+- The gravity loss in the Δv budget is the J2 field projected on the velocity, −**g**·v̂ dt (it
+  was μ/r² sin γ), so thrust Δv less the losses is the speed gained to 1 %.
 
 ## 2a. Six-DOF flight
 
@@ -59,9 +86,10 @@ it. Two rules keep that affordable and honest over a mission that lasts a day:
   attitude thrusters could stop before the next burn. A burn waits for its attitude as long as
   those thrusters need, not a fixed four minutes.
 
-A six-DOF coast is flown under J2, and there the osculating ellipse of one instant is not the
-orbit: its apsides swing several kilometres round a revolution (a 500 km circle reads anywhere
-from 501 to 515 km of apoapsis). So a six-DOF orbit is **judged on its physical apsides** — the
+Every coast is flown under J2 (six-DOF, and since D-51 the point mass), and there the osculating
+ellipse of one instant is not the orbit: its apsides swing several kilometres round a revolution
+(a 500 km circle reads anywhere from 501 to 515 km of apoapsis). So an orbit is **judged on its
+physical apsides**, in both models (M-LAUNCH-031) — the
 lowest and highest altitude of the next revolution under J2 — when the mission decides it is
 on target, in the event that says so, on the result panel and in the acceptance tests. The
 planner aims at the same orbit. A coast that arrives below the target raises its physical apex
@@ -76,8 +104,10 @@ target (a J2 orbit through the burn point rises and falls by kilometres whatever
 Electron's 600 km sun-synchronous orbit ran 599–624 km after a conic circularisation, 595–602 km
 after an aimed one). A mission about to end with its physical apsides outside the band flies up
 to two such corrections. An aimed burn is flown along the
-velocity direction at the point it is centred on, held still through the burn. Point-mass
-coasts are Kepler, where the two are the same.
+velocity direction at the point it is centred on, held still through the burn. The point-mass
+planner does all of this as six-DOF's does since D-51 (`src/physics/sim/burns.ts`): judged on the
+conic at the cut-off, 8 of 13 sampled low-orbit point-mass rows were 10–18 km off on the orbit
+they were really in.
 
 The point-mass model below remains selectable in the setup, and the fleet acceptance matrix
 (§6b) of the regular test suite flies it; the same matrix flown in six-DOF is recorded in
@@ -1010,11 +1040,12 @@ Since the owner's decision of 2026-09-29 the live point-mass flight is flown in 
 and 60 s in a high coast, so waiting for a whole step would freeze the picture; instead the
 simulation runs up to one step *ahead* of the instant on screen, and the picture is drawn at that
 instant between the two step boundaries around it — by the interpolation a replay seek uses:
-Kepler from the earlier state on a coast or in orbit, a straight blend under thrust. Measured on
-Falcon 9 and Ariane 64 flights, the drawn position half way through a 0.25 s ascent step is at most
-0.26 m from the same step split in ten, and at a boundary the picture moves by at most 2 mm under
-thrust, 8 cm on a coast and 5.9 m at the end of a 30 s orbit step (the J2 the Kepler arc leaves
-out) — nothing a viewer can see. The recording — its frames and its events — ends at the instant
+the J2 coast from the earlier state on a coast or in orbit (a Kepler arc until D-51), a straight
+blend under thrust. Measured on Falcon 9 and Ariane 64 flights before D-51, the drawn position half
+way through a 0.25 s ascent step is at most 0.26 m from the same step split in ten, and at a
+boundary the picture moved by at most 2 mm under thrust, 8 cm on a coast and 5.9 m at the end of a
+30 s orbit step (the J2 the Kepler arc left out, which the J2 interpolation now follows) — nothing
+a viewer can see. The recording — its frames and its events — ends at the instant
 on screen, so nothing shown runs ahead of the picture. A command (the crew's abort, the TORU hand
 controllers) is taken at the simulation's clock, the step boundary at or after the picture, and
 the picture moves on to it (at most one step: 0.1 s in the lower atmosphere); that clock, not the
@@ -1450,7 +1481,7 @@ know. Two consequences worth knowing about:
 | Soyuz-2.1a | stored programme (3.0 if edited) | — (0.30) | 35 | 0 |
 | Soyuz-2.1b / Fregat | stored programme (1.5 if edited) | — (0.30) | 35 | 0 |
 | Proton-M | 6.0 | 0.30 | 25 | 150 |
-| Angara-A5 | 4.0 | 0.30 | 25 | 150 |
+| Angara-A5 | 3.5 (4.0 until D-51) | 0.30 | 25 | 150 |
 | Falcon 9 | 1.5 | 0.30 | 35 | 0 |
 | Falcon Heavy | 1.5 | 0.30 | 25 | 150 |
 | Atlas V 551 | 6.0 | 0.30 | 25 | 150 |
@@ -2663,14 +2694,14 @@ The trajectory is nearly tangent to the top of the air, so where it meets it mov
 for small differences: the published apsides are presumably not osculating Kepler elements at
 the cut-off, and six-DOF's J2 alone moves the entry by about a minute.
 
-Orbital debris is Kepler-propagated for speed, but the classification has to stay true: the
+Orbital debris coasts under J2 (Kepler-propagated until D-51), but the classification has to stay true: the
 perigee is re-checked every step and an object that can no longer stay up is handed back to the
 drag path. The spent launcher stage released at payload separation takes its outcome from the
 orbit it is actually left in rather than being stamped `orbit` unconditionally — off a marginal
 ascent that stamp propagated it on a Kepler arc straight through the planet, for ever.
 
 **Ground reference.** Impact, altitude-above-ground and debris touchdown use the launch site's
-elevation only near the pad and the landing zone, fading to the mean sphere over the first few
+elevation only near the pad and the landing zone, fading to the WGS-84 ellipsoid (sea level) over the first few
 hundred kilometres downrange. Using the pad's elevation as the ground everywhere had a booster
 1500 km downrange of Vostochny landing 250 m up, and it grows with the inland Chinese sites
 (Jiuquan ~1000 m, Taiyuan ~1500 m).
@@ -2936,8 +2967,10 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
 
 ## 10. Assumptions and limitations
 
-- Spherical Earth for altitude and gravity (J2 only as a perturbation); no terrain. Site
-  elevation is honoured near the pad only (§8).
+- The Earth is the WGS-84 ellipsoid for the sites, the air and the ground, and its gravity
+  μ/r² + J2 (no higher harmonics, no geoid: the geoid's ±100 m are taken as the ellipsoid); no
+  terrain. Site elevation is honoured near the pad only (§8). The guidance's local vertical is
+  the radius, 0.19° at most from the ellipsoid's normal (§1).
 - In the point-mass model (selectable): attitude is a commanded direction with a slew-rate
   limit, no rotational dynamics, no aerodynamic lift, no wind. The six-DOF model (§2a, the
   default) has all four, from estimated rather than measured vehicle data.
@@ -2978,7 +3011,6 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     - The heating placard drops Atlas V's and Falcon Heavy's fairings 17–27 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
-  - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.
   - Four engines' quoted sea-level Isp is 2.4–6.9 % away from what their thrust and mass flow
     deliver; the model flies the delivered value (§4).
 
@@ -3356,18 +3388,19 @@ src/physics/rigid/escape.ts, by the same rigid descent as Mercury's (§13.7), wi
 | Landing | the sphere, 2,099 kg (GCAT 2,125), 10.3 m/s | the sphere at 10:48 (the report), about 10 m/s, about 1.5 km from Gagarin (the report; about 4 km by Gagarin's own report, which puts it near the Volga's bank); Gagarin at 10:53 (the report; 10:55 officially, the FAI record file) at 51°16′ N 45°59′ E (the report), where his monument stands at 51°16′14″ N 45°59′50″ E |
 
 *The height datum.* The orbit is flown in radius: GCAT's 168 × 314 km are the radius less 6,378 km
-(McDowell, GCAT's *Orbits*), as the model's heights are on its 6,378.137 km sphere. The air and the
+(McDowell, GCAT's *Orbits*), and the model's orbit heights are the radius less 6,378.137 km. The air and the
 ground are not on that sphere. The atmosphere's heights are above sea level, the geoid, within about
 100 m of the WGS-84 ellipsoid, and the ellipsoid lies 21.4 km × sin²(latitude) below the sphere:
 0.8 km at 11° S where the TDU-1 fires, 5.3 km at 30° N, 11.1 km at 46° N, 12.9 km at 51° N. A
 sphere that decelerates over 30–50° N, flown on the sphere's heights, meets the air some 10 km too
 high and comes down 336 km short (point-mass), some 27 km of landing for each kilometre of datum. So
-the return reads every height above the ellipsoid (`DescentCapsule.datum: 'wgs84'`,
-src/physics/geodesy.ts, the same `geodetic` the long-term propagator's density uses): the air and the Mach number, the
+the return reads every height above the ellipsoid (src/physics/geodesy.ts): the air and the Mach number, the
 barometric commands of the hatch and the parachutes, the ground, the events' altitudes, and the
-simulation's own altitude and (geodetic) latitude from the pressurising command until the sphere is
-at rest. The switch comes at 11.2° S, where the two heights differ by 0.8 km. The ascent and the orbit
-stay on the sphere, and so do Mercury-Redstone 3 and the Soyuz aborts, whose sites are placed on it.
+simulation's own altitude and (geodetic) latitude. Until 2026-10-17 only the return did, from the
+pressurising command at 11.2° S, where the two heights differ by 0.8 km (`DescentCapsule.datum:
+'wgs84'`), while the ascent, the orbit, Mercury-Redstone 3 and the Soyuz aborts stayed on the sphere
+their sites were placed on. Since D-51 (§1) every flight reads its heights above WGS-84 from the pad,
+and the sites stand on it.
 
 *The pitch.* What the sources do not give is the angle of the thrust line: the solar orientation's
 set angle is not published, and the landing turns on it. It is the one number of the return that is
@@ -3468,14 +3501,14 @@ pad (as placed) at liftoff, and the sphere 28 km (six-DOF 32 km) across the trac
 place to the north-west. So Vostok-K carries `targetPlane`, as the Saturn V does (§13.8): when the
 mission fixes its plane, the closed loop steers into it, the distance from it and the speed out of it
 brought to zero together. Vostok 1 fixes it (raanMode `fixed`): the plane through the pad at liftoff,
-09:06:59.7 Moscow time, at 64.95°. The pad is taken where it is. The sites stand on the 6,378.137 km
-sphere at their geodetic latitude taken as geocentric, which puts Gagarin's Start 0.193° (21 km) north
-of its geocentric 45.728° on WGS-84. That convention is every mission's until R4.5 moves the sites onto
-WGS-84 (D-51); only the plane is
-computed from the true pad: its node 326.653° from the equinox of date (GMST 291.957° at liftoff;
-tests/historical-vehicles.test.ts recomputes it), where the plane through the pad as placed has
-326.442°. The rocket lifts off from the pad as placed, 13 km off that plane, and is steered onto it in
-the climb. Measured at 2.51° in the wind, point-mass (six-DOF):
+09:06:59.7 Moscow time, at 64.95°. The pad is taken where it is: Gagarin's Start at its geodetic
+45.920°, geocentric 45.728° on WGS-84, and the plane's node 326.653° from the equinox of date (GMST
+291.957° at liftoff; tests/historical-vehicles.test.ts recomputes it). Until D-51 the sites stood on the
+6,378.137 km sphere at their geodetic latitude taken as geocentric, which put Gagarin's Start 0.193°
+(21 km) north of where it is; only the plane was computed from the true pad (the plane through the pad
+as placed had 326.442°), and the rocket lifted off from the pad as placed, 13 km off that plane, and
+was steered onto it in the climb. Since D-51 the rocket lifts off from the true pad, on the plane.
+Measured at 2.51° in the wind, point-mass (six-DOF), before D-51:
 
 | Plane | Node at the cut-off | Across the track at the landing | Blok E left, cut-off |
 |---|---|---|---|

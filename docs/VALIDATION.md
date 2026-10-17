@@ -4152,3 +4152,48 @@ of about nine; the journeys' under a load of about seventeen.
 When a test fails, its message prints the whole comparison table for that flight. If the change
 behind it is intended, update the disagreement list in the test and the tables and findings here
 in the same commit.
+
+### The D-51 re-baseline: sites on WGS-84, J2 from the pad to the orbit (2026-10-17)
+
+The owner decided on 2026-10-17 to move the launch sites onto WGS-84 and to fly J2 in the
+point-mass ascent together ("ทำพร้อมกัน", [DECISIONS.md](DECISIONS.md) D-51; plan R4.2 and R4.5,
+items M-PHYSICS-023 and M-PHYSICS-024 path (b): "WGS-84 pads with a named fleet re-record; never a
+display-only geodetic conversion"), and added the point-mass coasts the same day ("ใส่เข้าไปด้วย
+เอาให้สมจริงที่สุด"). What changed is in [PHYSICS.md](PHYSICS.md) §1 and §2: the sites at their
+geodetic latitude and altitude on the ellipsoid (11.0 km lower in radius at Baikonur, 16.9 km at
+Plesetsk, 13.2 km at Vostochny, 4.9 km at the Cape); every air and ground height above WGS-84;
+μ/r² + J2 in every point-mass step, coasts included, and a burn planner that predicts that coast;
+every orbit judged on its physical apsides (M-LAUNCH-031); the drawn Earth flattened to match.
+
+**Held to (tests/wgs84-sites.test.ts, every expected number from TR8350.2's constants).** Each
+site and pad at the WGS-84 radius of its latitude and altitude to 1 m; the height at the pad the
+site's altitude; the pad's J2 + centrifugal gravity Somigliana's normal gravity to 0.01 % (worst
+measured 5 × 10⁻⁶; J2 on the old sphere pad at Plesetsk was 0.5 % off); every point-mass step's
+recorded gravity the J2 field; the Δv budget closed to 1 % on it; a point-mass verdict recorded
+on the physical apsides; the drawn globe's vertices on WGS-84 and five launch complexes drawn
+where the vehicle stands on it, to 1 m.
+
+**The fleet (tests/fleet-defaults.test.ts, point mass).** Every row that passed at 23cb4cf still
+passes: 131 of 131 gated rows, 156 of 222 flown rows accepted, before and after, the after on the
+physical apsides. The remaining Δv falls by 19.6 m/s on the mean of the 131 (LEO −20, ISS plane
+−25, GTO −17, SSO −12 m/s), most where the pad dropped furthest or the vehicle is marginal (Saturn V
+−61, Atlas V −39, Angara-A5 −38 on their rows' mean; Atlas V to the ISS plane at 50 %, −159, the
+most). Angara-A5's point-mass kick went from 4° to 3.5° through its `guidanceDefaults` (its leo/25
+row broke up at 4°: the stack weighs 0.31 % more at Plesetsk than the old sphere model had it);
+nothing else was retuned, and no bound or assertion moved. The coasts' J2, the J2-aware planner and
+the physical-apsides verdict together move the 131 rows' remaining Δv by −2.0 m/s on the mean
+(−11 to +22).
+
+**Build ratings (tests/design-ratings.test.ts, ±25 % bound unchanged).** LEO, computed against
+published, before → after: Soyuz-2.1a 8 140 → 7 911 kg (1.096 → 1.065), Falcon 9 20 031 → 19 842
+(0.879 → 0.870), Long March 2D 3 165 → 2 942 (0.904 → 0.841), Vega-C 4 330 → 4 330 (1.312, the
+recorded miss), Ariane 64 26 274 → 25 997 (1.216 → 1.204), Electron 315 → 311 (1.050 → 1.037); GTO
+Falcon 9 6 832 → 6 756 (0.823 → 0.814), Ariane 64 13 328 → 13 328 (1.159). The same rows meet the
+bound.
+
+**Goldens.** Every exact hash of a flight moves, since every pad moved: the 27 point-mass D01
+fingerprints, the 21 six-DOF fingerprints and the whole-mission and flex goldens they name, the
+historical and Watch flights' harnesses, and the T02 re-check fixtures; the D01 identity fixture
+moves for Angara-A5's kick alone. A nozzle model changing every engine's thrust is integrated
+next, and the integration records every golden once, for both changes, with each reason and old
+hash beside it as above; this branch's numbers are the record of the D-51 half.
