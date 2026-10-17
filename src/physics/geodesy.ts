@@ -45,40 +45,39 @@ export function geodetic(x: number, y: number, z: number): { lat: number; h: num
   return { lat, h };
 }
 
+/** The last `heightAt`'s tan φ as Y/X (`geodeticFast` takes its latitude from them). */
+let lastY = 0, lastX = 1;
+
 /**
- * Geodetic latitude (rad) and height above the WGS-84 ellipsoid (m) of an
- * Earth-centred position (m), for the flight's hot paths: one pass of
- * Bowring's formula with its sines and cosines taken from the ratios (no
- * trigonometric call), and the height as p·cos φ + z·sin φ − a·√(1 − e²sin²φ),
- * which holds at the poles. Measured against the exact inverse of
- * `geodeticToCartesian` from −30 km to the Moon's distance: the height to
- * 0.25 µm (4 nm below 2000 km), the latitude to 1e-8 rad. About nine times
- * faster than `geodetic`, which the long-term propagator keeps.
+ * Height above the WGS-84 ellipsoid (m) of an Earth-centred position (m), for
+ * the flight's hot paths: one pass of Bowring's formula with its sines and
+ * cosines taken from the ratios (no trigonometric call), and the height as
+ * p·cos φ + z·sin φ − a·√(1 − e²sin²φ), which holds at the poles. Measured
+ * against the exact inverse of `geodeticToCartesian` from −30 km to the Moon's
+ * distance: the height to 0.25 µm (4 nm below 2000 km), the latitude to 1e-8
+ * rad. About nine times faster than `geodetic`, which the long-term
+ * propagator keeps.
  */
-export function geodeticFast(x: number, y: number, z: number): { lat: number; h: number } {
+function heightAt(x: number, y: number, z: number): number {
   const p = Math.sqrt(x * x + y * y);
   const u = z * A, w = p * B, q = Math.sqrt(u * u + w * w);
-  if (!(q > 0)) return { lat: 0, h: -A };
+  if (!(q > 0)) { lastY = 0; lastX = 1; return -A; }
   const s = u / q, c = w / q;
   const Y = z + EP2 * B * s * s * s, X = p - E2 * A * c * c * c, k = Math.sqrt(X * X + Y * Y);
-  const sl = Y / k, cl = X / k;
-  return { lat: Math.atan2(Y, X), h: p * cl + z * sl - A * Math.sqrt(1 - E2 * sl * sl) };
+  const sl = Y / k;
+  lastY = Y; lastX = X;
+  return p * (X / k) + z * sl - A * Math.sqrt(1 - E2 * sl * sl);
 }
 
-/** Height above the WGS-84 ellipsoid, m, of a position, m (`geodeticFast`'s, without the latitude's atan2). */
+/** Geodetic latitude (rad) and height above WGS-84 (m) of an Earth-centred position (m), as `heightAt` finds them. */
+export function geodeticFast(x: number, y: number, z: number): { lat: number; h: number } {
+  const h = heightAt(x, y, z);
+  return { lat: Math.atan2(lastY, lastX), h };
+}
+
+/** Height above the WGS-84 ellipsoid, m, of a position, m (`heightAt`). */
 export function geodeticHeight(r: Vec3): number {
-  const x = r.x, y = r.y, z = r.z, p = Math.sqrt(x * x + y * y);
-  const u = z * A, w = p * B, q = Math.sqrt(u * u + w * w);
-  if (!(q > 0)) return -A;
-  const s = u / q, c = w / q;
-  const Y = z + EP2 * B * s * s * s, X = p - E2 * A * c * c * c, k = Math.sqrt(X * X + Y * Y);
-  const sl = Y / k, cl = X / k;
-  return p * cl + z * sl - A * Math.sqrt(1 - E2 * sl * sl);
-}
-
-/** Geodetic latitude, rad, of a position, m. */
-export function geodeticLatitude(r: Vec3): number {
-  return geodetic(r.x, r.y, r.z).lat;
+  return heightAt(r.x, r.y, r.z);
 }
 
 /**
