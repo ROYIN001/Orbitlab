@@ -1142,8 +1142,11 @@ is in.
 blue) and by haze (Mie — the white glare round the sun), with the ozone layer's absorption, in a
 round atmosphere 100 km deep. So the colours follow from where the sun is and where the camera is:
 a deep blue overhead at noon paling to the horizon; at dusk a red and orange band under a
-darkening blue, and the Earth's shadow rising opposite; from orbit a thin bright blue line along
-the limb. Launch at dusk or dawn and follow the rocket out of the Earth's shadow into sunlight:
+darkening blue, and the Earth's shadow rising opposite; from orbit a thin blue line along
+the limb. The ground and the clouds are seen through the same air: from orbit a blue haze over the
+planet that thickens towards the horizon, from high in the climb the distant ground fading into the
+horizon sky, the light reddening on the ground and the clouds as the sun sets on them, and no haze
+over the night side. Launch at dusk or dawn and follow the rocket out of the Earth's shadow into sunlight:
 above about 50 km its exhaust, with almost no air left to hold it in, balloons out over tens of
 kilometres and catches the sun — the "twilight jellyfish" — a pale glowing dome with trailing
 streamers against the darkened sky, brighter on the side the sun lights and bluer on the other,
