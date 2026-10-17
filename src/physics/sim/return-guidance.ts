@@ -22,7 +22,7 @@
  * and its divert takes out what the ballistic point and the burn disagree on.
  */
 import { MU_EARTH, OMEGA_EARTH } from '../constants';
-import { geodeticHeight } from '../geodesy';
+import { geodeticEnu, geodeticHeight } from '../geodesy';
 import type { EngineSpec } from '../../types';
 import { engineThrustAt, engineThrustSL } from '../vehicle';
 import { engineLevelFor } from '../nozzle';
@@ -347,10 +347,16 @@ export function boostbackCommand(s: DescentState, model: DescentModel, target: R
  * velocity with the time to go `tgo`, `a = 6·ZEM/t² − 2·ZEV/t`, which in the
  * horizontal plane is `6·Δr/t² − 4·v/t`. The caller bounds its size by the tilt
  * the burn can afford.
+ *
+ * The horizontal plane is the target's own, square to its plumb line, the
+ * WGS-84 normal (D-51): a stage straight above the pad along it is over the
+ * pad. The radius's plane, which this took before the sites moved onto the
+ * ellipsoid, is 0.16° off it at the Cape and read 5.6 m of miss for a stage
+ * 2 km straight above LZ-1 (tests/recovery-return.test.ts).
  */
 export function divertAcceleration(r: Vec3, v: Vec3, target: ReturnTarget, gmst0: number, t: number, tgo: number): Vec3 {
   const at = targetPosition(target, gmst0, t);
-  const up = normalize(r);
+  const up = geodeticEnu(target.lat, target.lon + gmst0 + OMEGA_EARTH * t).up;
   const horizontal = (x: Vec3) => sub(x, scale(up, dot(x, up)));
   const dr = horizontal(sub(at, r));
   const vGround = horizontal(sub(v, cross(OMEGA, r)));
