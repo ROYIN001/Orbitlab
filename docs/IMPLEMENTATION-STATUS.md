@@ -579,7 +579,9 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
   them, and the reference diameter includes the strap-ons, as the flight's does. On the test stand
   the Isp stays constant through start-up and tail-off, both estimates, and a solid motor's mean
   thrust reads 0.6–0.9 % high, because the impulse includes the tail-off and the burn time does
-  not.
+  not. In flight as on the stand, a throttle level scales the sea-level pressure loss with the
+  thrust: an engine throttled deep low in the air is up to 14–19 % strong
+  ([PHYSICS.md](PHYSICS.md) §4).
 - Build: the landing page has no Build chapter (one would need new pictures; the owner's call), so
   the top bar is the way in. Designing from parts at the Engineer level (D03's face there) is
   listed as to come, with a link to Explore, where it is. The Russian and Thai texts have not been

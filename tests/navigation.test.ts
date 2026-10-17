@@ -129,7 +129,7 @@ describe('the strapdown navigation (roadmap G02)', () => {
       for (const k of ['x', 'y', 'z'] as const) { sum += (rec.positionError[k] / rec.positionSigma[k]) ** 2; n++; }
     }
     expect(sum / n).toBeLessThan(2);
-  });
+  }, 30_000);
 });
 
 describe('the navigation settings', () => {

@@ -1112,6 +1112,19 @@ altitude. The sea-level Isp a ground-lit engine then delivers is within 1 % of t
 Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it took
 Arianespace's published pair on 2026-10-01).
 
+A throttle level, a solid's thrust profile and the start-up and tail-off ramps scale the whole
+pressure-blended thrust, F = λ·F(p), and the mass flow with it, so the Isp does not depend on the
+level (the test stand says so). With the nozzle flowing full the pressure term would not scale:
+F = λ·F_vac − (F_vac − F_SL)·p/p₀. The model's thrust is therefore high where an engine is
+throttled deep in the air, and a regressive solid's is low at its peak: a Merlin 1D at 40 % at sea
+level gives 338 kN against 297 kN (+14 %), Angara-A5's RD-191 core at 30 % +19 % at 2 km, and a
+P120C at its liftoff peak −2 %. Flown the full-flowing way, a point-mass ascent would end with a few
+metres a second less (Falcon 9 3 m/s, Falcon Heavy 8.5 m/s) or more (the solid-boosted Ariane 6, PSLV,
+Vulcan, H-IIA and H3, 4.5–23 m/s), and Angara-A5 with 25 % of its LEO payload would break up at
+T+202 s until its guidance was set again. Deep-throttle flow may separate in the nozzle, which raises the real thrust above the
+full-flowing figure, so the truth lies between the two. Changing it moves every fingerprint and
+needs the owner (found in the review of 2026-10-17).
+
 An engine flagged `vacuumOnly` — every upper- and kick-stage engine that only ever ignites above
 ~100 km — has no sea-level operating point at all (an RL10 nozzle would not flow full at sea
 level), and its `thrustSL`/`ispSL` fields are placeholders rather than data. The flag makes the
@@ -3442,7 +3455,8 @@ mission fixes its plane, the closed loop steers into it, the distance from it an
 brought to zero together. Vostok 1 fixes it (raanMode `fixed`): the plane through the pad at liftoff,
 09:06:59.7 Moscow time, at 64.95°. The pad is taken where it is. The sites stand on the 6,378.137 km
 sphere at their geodetic latitude taken as geocentric, which puts Gagarin's Start 0.193° (21 km) north
-of its geocentric 45.728° on WGS-84. That convention is every mission's and stays; only the plane is
+of its geocentric 45.728° on WGS-84. That convention is every mission's until R4.5 moves the sites onto
+WGS-84 (D-51); only the plane is
 computed from the true pad: its node 326.653° from the equinox of date (GMST 291.957° at liftoff;
 tests/historical-vehicles.test.ts recomputes it), where the plane through the pad as placed has
 326.442°. The rocket lifts off from the pad as placed, 13 km off that plane, and is steered onto it in
