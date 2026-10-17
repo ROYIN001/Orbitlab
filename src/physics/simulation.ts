@@ -2,7 +2,8 @@
  * Launch-to-orbit simulation.
  *
  * Frame: Earth-centered inertial (ECI). The legacy point-mass model uses a
- * slew-limited thrust direction, RK4 and analytic Kepler coasts. Supported
+ * slew-limited thrust direction, RK4 under J2 (D-51) and analytic Kepler
+ * coasts above the air. The sites stand on WGS-84 (src/physics/geodesy.ts). Supported
  * six-DOF profiles integrate translation and rigid-body rotation under J2,
  * finite engine/RCS wrenches and estimated aerodynamics. Guidance and control
  * use a 0.01 s clock; a smaller numerical step refines integration inside that
@@ -24,7 +25,7 @@ import type { ControlFaultSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
 import { payloadVehicle, missionVehicle, openTopVehicle } from '../data/vehicles';
 import { missionSatellite } from '../data/satellites';
-import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
+import { G0, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
 import { atmosphere } from './atmosphere';
 import { geodeticHeight } from './geodesy';
@@ -1144,13 +1145,16 @@ export class Simulation {
     } else if (s.status === 'descent') {
       next = rk4Step(s.t, { r: s.r, v: s.v }, dt, this.shipDescent.pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t));
     } else {
-      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, false, undefined, this.densityFactor));
+      // D-51 (R4.2): the point-mass ascent flies the J2 field the six-DOF body
+      // and the orbit already fly; only the exo-atmospheric Kepler coast above
+      // is still a pure conic.
+      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, true, undefined, this.densityFactor));
     }
     // --- ascent losses (evaluated at step start)
     //
     // The Δv budget closes only if every term is projected on the SAME axis, and
-    // the identity that defines it — d|v|/dt = a_T·v̂ − (μ/r²)(r̂·v̂) −
-    // (D/m)(v̂_air·v̂) — is written in the INERTIAL frame. Measuring the steering
+    // the identity that defines it — d|v|/dt = a_T·v̂ + g·v̂ −
+    // (D/m)(v̂_air·v̂), g the J2 field flown — is written in the INERTIAL frame. Measuring the steering
     // loss against the air-relative velocity below 100 km (audit item B14) mixed
     // frames: early in flight v_air is nearly vertical while v is dominated by
     // the 320–465 m/s of eastward rotation velocity, so cos α read ≈1 against
@@ -1171,10 +1175,9 @@ export class Simulation {
       s.losses.gravity -= dot(rigidAccelerations.gravityECI, vHat) * dt;
       s.losses.drag -= dot(rigidAccelerations.aerodynamicECI, vHat) * dt;
     } else if (thr.burning && s.status === 'ascent') {
-      const g = MU_EARTH / (rm * rm);
       s.losses.dvThrust += thrustAccel * dt;
-      const sinGamma = vMag > 1 ? dot(s.v, up) / vMag : 1;
-      s.losses.gravity += g * sinGamma * dt;
+      // the gravity flown (J2, D-51) along the velocity: μ/r²·sin γ before J2
+      s.losses.gravity -= dot(gravityJ2(s.r), vHat) * dt;
       const cosA = Math.max(-1, Math.min(1, dot(s.dir, vHat)));
       s.losses.steering += thrustAccel * (1 - cosA) * dt;
     }
@@ -1211,7 +1214,7 @@ export class Simulation {
         ...(rigidAccelerations || held || useKepler ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
         thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held || useKepler ? v3() : scale(s.dir, thrustAccel),
         aeroAccel: rigidAccelerations ? { ...rigidAccelerations.aerodynamicECI } : held || useKepler ? v3() : pointDrag,
-        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : held ? gravityJ2(s.r) : gravity(s.r),
+        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : useKepler && !held ? gravity(s.r) : gravityJ2(s.r),
         measuredAccel: scale(sub(next.v, s.v), 1 / dt),
         speedEnd: norm(next.v), losses: { ...s.losses },
         ...(rigidBefore && s.rigid && rigidAccelerations ? { omega0: { ...rigidBefore.omegaBody }, omega1: { ...s.rigid.omegaBody },

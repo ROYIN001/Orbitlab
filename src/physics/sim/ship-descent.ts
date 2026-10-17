@@ -33,7 +33,7 @@ import { geodeticHeight } from '../geodesy';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { atmosphere } from '../atmosphere';
 import { dragCoefficient } from '../aero';
-import { gravity } from '../gravity';
+import { gravityJ2 } from '../gravity';
 import { eciToLatLon } from '../orbital';
 import { engineMassFlow, engineThrust } from '../vehicle';
 import { atMach, crossflowDragCoefficient, shipDescentAeroTable, type AeroTable } from '../rigid/aero-tables';
@@ -433,7 +433,7 @@ export class ShipDescent {
    */
   pointMassAcceleration(thrustAccel: number, dir: Vec3, mass0: number, mdot: number, t0: number) {
     return (t: number, r: Vec3, v: Vec3): Vec3 => {
-      let a = gravity(r);
+      let a = gravityJ2(r);
       const m = Math.max(1, mass0 - mdot * (t - t0));
       if (thrustAccel > 0) a = add(a, scale(dir, thrustAccel * mass0 / m));
       return add(a, this.aeroAcceleration(r, v, dir, m));
