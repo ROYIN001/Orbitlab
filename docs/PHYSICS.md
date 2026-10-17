@@ -3061,12 +3061,55 @@ a flickering black ring), and the samples are placed from the ray's lowest point
 seen from space, towards the camera from inside the atmosphere. A NaN or infinity from a degenerate
 ray is zeroed before the bloom can spread it.
 
+The globe and its clouds are seen through the same air (aerial perspective, Hillaire 2020 §6). Their
+shaders (src/render/scene.ts, with `AERIAL` from atmosphere.ts) march the view ray from the camera
+to the Earth's sphere — to the cloud layer's sphere, 9 km up, for the clouds — with the same model
+and tables, single scattering with the Earth's shadow plus the multiple-scattering term, and show
+the surface's light dimmed by the transmittance T of that stretch with the light L it scatters in
+added: col·T + L·E, E the sky pass's illuminance. The stretch is solved from the camera through the
+ray's perigee, as the sky's is, and ends on the sphere, not on the meshes' facets (up to 2.8 km
+under it for the globe, 5.3 km for the clouds), which would scallop the haze at the limb. The globe
+takes 10 samples and the clouds 6, crowded quadratically towards the far end, where the air is
+densest on any ray that ends on the ground; a cloud texel the map leaves clear is dropped before the
+march. Against an independent fine integral of the same single-scattering model
+(tests/render-aerial.test.ts) the error in the scattered light is at most 4.7 % of a ray's brightest
+channel from 400 km (RMS 1.4 %; the worst rays graze the limb with the sun low ahead of them) and
+1.6 % from 30 km (RMS 0.6 %), in the transmittance at most 4.5 % and 1.9 %; for the clouds' six
+samples 4.6 % and 3.5 %. Looking straight down from 400 km with the sun 50° up, the march with the
+multiple-scattering term gives a path reflectance πL/(E cos θ☉) of 0.024/0.052/0.127 at 680/550/440
+nm and a transmittance of 0.94/0.87/0.77; single scattering alone is 0.075 at 440 nm, against
+τp/(4μμ☉) = 0.10 for the same Rayleigh optical depth (0.265) before the attenuation of the two
+paths. From orbit this is the blue haze over the disc, thickening towards the limb into the sky's
+own limb glow; from the stratosphere, the distant ground fading into the horizon sky (from 30 km,
+the sun 35° up, the sky just over the horizon came out (204, 200, 215) and the globe just under it
+(20, 38, 67), a dark band; now (196, 192, 209) and (175, 186, 208)); none on the night side, and the
+terminator's twilight from the model. The globe's Fresnel rim, the gradient sky's stand-in for this,
+is off under the scattering sky. The sky pass no longer marches a ray that ends more than 10 km
+inside the Earth's sphere: the opaque globe covers it and carries that haze itself.
+
+The globe's ground and the clouds are lit by the sunlight that reaches them through the air,
+relative to the sun overhead there (`sunColour`: the transmittance table over the closed-form
+vertical column, which agrees with the integrated transmittance to 3·10⁻⁴ at noon; with the sun 4°
+up it is 0.52/0.23/0.05 on the ground and 0.77/0.52/0.38 on the cloud tops), so noon is drawn as
+before while a low sun reddens and dims them and a sun below their horizon leaves them dark: the
+clouds of the night side are no longer lit grey by the scene's fill lights.
+
+The sun's illuminance in the sky's units is 8 on the ground, set so that noon reads like the
+gradient sky it replaced, and falls with the camera's height (the ground factor of
+src/render/sky.ts, from 12 to 72 km) to 3.3 in space, the scene's own sun that lights the globe, the
+clouds and the vehicles; the sky pass and the aerial perspective take the same value, so the haze
+meets the sky at the horizon and at the limb. At 8 from orbit the haze, 2.4 times what lights the
+ground under it, veiled the whole disc in pale blue: open ocean 40° off the nadir of 400 km, the sun
+50° up, came out (86, 128, 184), at 3.3 (40, 74, 127), and (4, 16, 40) with no haze at all. The
+sky's own limb glow seen from orbit is drawn at 3.3 too, so it is dimmer than before: in a daylight
+view of the limb from 400 km its brightest row went from (212, 207, 222) to (161, 153, 177).
+
 The older atmosphere shell (a sphere 110 km up, added over the globe) stays the limb glow of the
-gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets. Under the
-scattering sky it is drawn over the Earth's disc only, as the haze towards its limb: a fragment
-whose view ray passes clear of the R_EARTH sphere is discarded. Until 2026-10-17 it was drawn whole,
-and from orbit it laid a second, faceted blue ring from 60 to 110 km over the sky's own limb glow,
-which is gone by about 66 km (a brown band at the terminator). The gradient sky's colour reaches the
+gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets — and is not
+drawn under the scattering sky. Until 2026-10-17 it was drawn whole there, and from orbit it laid a
+second, faceted blue ring from 60 to 110 km over the sky's own limb glow, which is gone by about
+66 km (a brown band at the terminator); it was then cut to the Earth's disc, as the haze towards its
+limb, until the aerial perspective took that over the same day. The gradient sky's colour reaches the
 linear scene target as the scene's background, which three encodes and clears inside the render with
 the target bound; set as the renderer's clear colour while the canvas was bound it had been encoded
 to sRGB, and space came out (95, 104, 128) for the authored (10, 14, 27).
