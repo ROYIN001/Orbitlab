@@ -53,6 +53,7 @@ function constructed(): DesignWarning[] {
     w('implausibleFraction', { fraction: 0.985, min: 0.51, max: 0.97 }, { stage: 1 }),
     w('implausibleFraction', { fraction: 0.4, min: 0.51, max: 0.97 }, { stage: 0, booster: 0 }),
     w('upperWiderThanFairing', { stageDiameter: 5.4, fairingDiameter: 4 }, { stage: 1 }),
+    w('vacuumEngineInAir', { ceilingM: 15e3, thrustSL: 7.75e5, thrustVac: 9.81e5, igniteAt: 0.5 }, { stage: 0, booster: 0 }),
   ];
 }
 

@@ -27,6 +27,7 @@ import { ENGINE_PARTS, STAGE_BODIES, enginePart, engineSpec } from '../src/data/
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { SITES } from '../src/data/sites';
 import { G0, P0 } from '../src/physics/constants';
+import { engineThrustAt } from '../src/physics/vehicle';
 
 const rel = (a: number, b: number): number => Math.abs(a / b - 1);
 const inputs = (o: Partial<StandInputs> & Pick<StandInputs, 'count' | 'propellantKg'>): StandInputs => ({ air: 'vacuum', padAltitudeM: 0, throttle: 1, ...o });
@@ -131,14 +132,20 @@ describe('the model beside the data', () => {
     expect(row('thrustSL').published).toBe(9 * m1d.thrustSL);
     expect(Math.abs(row('thrustSL').difference!)).toBeLessThan(1e-12);
     expect(row('thrustVac')).toMatchObject({ published: 9 * m1d.thrustVac, stand: null, difference: null });
-    // the model's sea-level Isp, from the data: ṁ = F_vac/(g0·Isp_vac), Isp_SL = F_SL/(g0·ṁ) = Isp_vac·F_SL/F_vac
+    // the model's sea-level Isp at full thrust, from the data: ṁ = F_vac/(g0·Isp_vac), Isp_SL = F_SL/(g0·ṁ) = Isp_vac·F_SL/F_vac
     const isp = m1d.ispVac * m1d.thrustSL / m1d.thrustVac;
-    expect(rel(row('ispSL').stand!, isp)).toBeLessThan(1e-9);
+    expect(rel(run.steadyIsp, isp)).toBeLessThan(1e-9);
+    expect(run.separatedAt).toBeNull();
     expect(row('ispSL').published).toBe(m1d.ispSL);
-    expect(row('ispSL').difference!).toBeCloseTo(isp / m1d.ispSL - 1, 9);
-    // the invariant the stand's figures rest on: impulse = propellant burned × g0 · Isp
-    expect(rel(run.result.impulse, run.result.propellantUsed * G0 * isp)).toBeLessThan(1e-9);
-    expect(rel(run.deliveredIsp, isp)).toBeLessThan(1e-9);
+    expect(row('ispSL').difference!).toBeCloseTo(row('ispSL').stand! / m1d.ispSL - 1, 9);
+    // The firing's Isp, impulse over propellant, is that a little lower: in air
+    // the start-up and the tail-off run at levels below 1, where the air's
+    // p·A_e is a larger share of the thrust (owner decision of 2026-10-17; until
+    // then the Isp did not depend on the level and the two were equal).
+    expect(rel(run.result.impulse, run.result.propellantUsed * G0 * run.deliveredIsp)).toBeLessThan(1e-9);
+    expect(run.deliveredIsp).toBeLessThan(isp);
+    expect(rel(run.deliveredIsp, isp)).toBeLessThan(1e-3);
+    expect(rel(row('ispSL').stand!, run.deliveredIsp)).toBeLessThan(1e-12);
     expect(run.leftKg).toBeLessThan(1e-6 * s1.propellantKg);
   });
 
@@ -157,17 +164,36 @@ describe('the model beside the data', () => {
     expect(Math.abs(rows.find((r) => r.figure === 'ispVac')!.difference!)).toBeLessThan(1e-9);
   });
 
-  it('refuses a vacuum engine in air, and says its sea-level pair is not data', () => {
+  // Until the owner's decision of 2026-10-17 the stand refused a vacuum engine
+  // in air, because the model gave it its vacuum thrust at every pressure. It
+  // now fires it, with the thrust its nozzle gives there (src/physics/nozzle.ts),
+  // and still says its sea-level pair is not data.
+  it('fires a vacuum engine in air with its nozzle separated, and says its sea-level pair is not data', () => {
     const s2 = vehicleStandEngines(f9)[1];
     for (const air of ['seaLevel', 'pad'] as const) {
       const run = runStand(s2.engine, inputs({ count: 1, propellantKg: s2.propellantKg, air, padAltitudeM: 3 }));
-      expect(run.result.refused).toBe('vacuumOnlyAtPressure');
+      expect(run.result.refused).toBeUndefined();
+      expect(run.steadyThrust).toBeCloseTo(engineThrustAt(s2.engine, run.pressurePa, 1), 6);
+      expect(run.steadyThrust).toBeLessThan(0.85 * s2.engine.thrustVac);
+      expect(run.separatedAt!.areaRatio).toBeLessThan(run.separatedAt!.expansionRatio);
+      expect(run.deliveredIsp).toBeLessThan(0.85 * s2.engine.ispVac);
       const rows = standComparison(s2.engine, 1, air, run);
-      expect(rows.every((r) => r.stand === null && r.difference === null)).toBe(true);
+      expect(rows.every((r) => r.difference === null || r.figure === 'thrustVac' || r.figure === 'ispVac')).toBe(true);
       expect(rows.filter((r) => r.notData).map((r) => r.figure)).toEqual(['thrustSL', 'ispSL']);
       expect(rows.find((r) => r.figure === 'thrustSL')!.published).toBeNull();
     }
-    expect(runStand(s2.engine, inputs({ count: 1, propellantKg: s2.propellantKg })).result.refused).toBeUndefined();
+    const vacuum = runStand(s2.engine, inputs({ count: 1, propellantKg: s2.propellantKg }));
+    expect(vacuum.result.refused).toBeUndefined();
+    expect(vacuum.separatedAt).toBeNull();
+  });
+
+  it('reports a lower Isp for a throttled engine in air, and the same Isp in vacuum', () => {
+    const at = (throttle: number, air: 'seaLevel' | 'vacuum') => runStand(s1.engine, inputs({ count: 9, propellantKg: s1.propellantKg, throttle, air }));
+    expect(at(0.6, 'vacuum').steadyIsp).toBeCloseTo(at(1, 'vacuum').steadyIsp, 9);
+    expect(at(0.6, 'seaLevel').steadyIsp).toBeLessThan(at(1, 'seaLevel').steadyIsp - 5);
+    // and does not set that Isp against the full-thrust figure
+    const rows = standComparison(s1.engine, 9, 'seaLevel', at(0.6, 'seaLevel'));
+    expect(rows.find((r) => r.figure === 'ispSL')!.difference).toBeNull();
   });
 
   it('P120C: the published peak from the catalogue, the stand\'s peak beside it, and no shutdown', () => {

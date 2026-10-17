@@ -24,7 +24,8 @@ import { gravityJ2 } from '../gravity';
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate } from '../rigid/math';
 import { elementsFromState, eciToLatLon } from '../orbital';
 import type { StageState, BoosterState } from '../vehicle';
-import { targetedRecovery } from '../vehicle';
+import { engineThrustAt, engineThrustSL, targetedRecovery } from '../vehicle';
+import { engineLevelFor } from '../nozzle';
 import type { Simulation } from '../simulation';
 import type { Debris, EventSeverity } from './types';
 import { pointMassAcceleration } from './forces';
@@ -134,9 +135,24 @@ function setRecoveryEngines(rc: NonNullable<Debris['recovery']>, n: number): voi
   const e = rc.engine;
   if (!e) return;
   const k = Math.max(1, Math.min(e.count, n));
+  rc.engines = k;
   rc.thrustVac = k * e.thrustVac;
-  rc.thrustSL = k * e.thrustSL;
+  rc.thrustSL = k * engineThrustSL(e);
   rc.mdot = (k * e.thrustVac) / (G0 * e.ispVac);
+}
+
+/**
+ * Thrust of a returning stage's burning engines at ambient pressure `p` (Pa)
+ * and level `level`, N: the thrust law (src/physics/nozzle.ts), as the six-DOF
+ * stage and the return guidance fly it.
+ */
+function recoveryThrust(rc: NonNullable<Debris['recovery']>, p: number, level: number): number {
+  return rc.engine && rc.engines ? rc.engines * engineThrustAt(rc.engine, p, level) : level * rc.thrustVac;
+}
+
+/** The level at which a returning stage's burning engines give `thrust` at pressure `p`. */
+function recoveryLevel(rc: NonNullable<Debris['recovery']>, p: number, thrust: number): number {
+  return rc.engine && rc.engines ? engineLevelFor(rc.engine, p, thrust / rc.engines) : thrust / Math.max(1, rc.thrustVac);
 }
 
 /**
@@ -156,7 +172,7 @@ function recoveryFor(e: EngineSpec, dryMass: number, propellant: number): NonNul
 
 /** Entry-burn engines: three, or more when three cannot give the empty stage 2.5 g. */
 function entryEngineCount(e: EngineSpec, dryMass: number, landingReserve: number): number {
-  return Math.min(e.count, Math.max(3, Math.ceil((2.5 * G0 * (dryMass + landingReserve)) / e.thrustSL)));
+  return Math.min(e.count, Math.max(3, Math.ceil((2.5 * G0 * (dryMass + landingReserve)) / engineThrustSL(e))));
 }
 
 export class DebrisTracker {
@@ -305,9 +321,9 @@ export class DebrisTracker {
       // centre engine alone, timed by its vacuum-stop rule.
       return {
         cd: d.cd, area: d.area, j2: true,
-        entry: { thrustVac: 3 * e.thrustVac, thrustSL: 3 * e.thrustSL, mdot: (3 * e.thrustVac) / (G0 * e.ispVac),
+        entry: { engine: e, count: 3, mdot: (3 * e.thrustVac) / (G0 * e.ispVac),
           targetSpeed: entrySpeedOf(rc), reserve: rc.landingReserve },
-        landing: { thrustVac: e.thrustVac, thrustSL: e.thrustSL, mdot: e.thrustVac / (G0 * e.ispVac), count: 1,
+        landing: { engine: e, mdot: e.thrustVac / (G0 * e.ispVac), count: 1,
           level: RETURN_LANDING_LEVEL, vTouch: touchSpeed(rc.target), engines: () => 1 },
       };
     }
@@ -315,11 +331,11 @@ export class DebrisTracker {
     return {
       cd: d.cd, area: d.area, j2: true,
       entry: e ? {
-        thrustVac: n * e.thrustVac, thrustSL: n * e.thrustSL, mdot: (n * e.thrustVac) / (G0 * e.ispVac),
+        engine: e, count: n, mdot: (n * e.thrustVac) / (G0 * e.ispVac),
         targetSpeed: entrySpeedOf(rc), reserve: rc.landingReserve,
       } : undefined,
       landing: e ? {
-        thrustVac: e.thrustVac, thrustSL: e.thrustSL, mdot: e.thrustVac / (G0 * e.ispVac), count: e.count,
+        engine: e, mdot: e.thrustVac / (G0 * e.ispVac), count: e.count,
         level: LANDING_PLANNED_THROTTLE, vTouch: touchSpeed(rc.target),
       } : undefined,
     };
@@ -423,8 +439,8 @@ export class DebrisTracker {
       const speed = norm(air);
       const retro = speed > 1 ? scale(air, -1 / speed) : up;
       const vDown = -dot(air, up);
-      const pressure = Math.min(1, atmosphere(Math.max(0, alt)).p / 101325);
-      const thrustOf = (level: number) => (rc.thrustVac - (rc.thrustVac - rc.thrustSL) * pressure) * level;
+      const pressure = atmosphere(Math.max(0, alt)).p;
+      const thrustOf = (level: number) => recoveryThrust(rc, pressure, level);
       let h = Math.min(remaining, alt < 20e3 || rc.phase === 'boostback' || rc.phase === 'flip' ? 0.1 : 0.5);
       // The last hundred metres of a landing burn in fine steps: the burn
       // cycles on and off below its engines' minimum thrust, and a tenth of a
@@ -503,7 +519,7 @@ export class DebrisTracker {
           } else {
             rc.phase = 'landing';
             rc.guidance = undefined;
-            if (rc.engine) setRecoveryEngines(rc, landingEngineCount(rc.engine.thrustSL, rc.engine.count, d.mass));
+            if (rc.engine) setRecoveryEngines(rc, landingEngineCount(engineThrustSL(rc.engine), rc.engine.count, d.mass));
             dir = retro;
           }
           break;
@@ -515,7 +531,7 @@ export class DebrisTracker {
           const minimum = rc.engine?.minThrottle ?? 1;
           if (!rc.landingStarted && vDown > 0 && alt < 20e3) {
             const stop = brakingHeight({ alt, surfaceAlt: target.alt, vDown, vTouch: touchSpeed(target), mass: d.mass,
-              thrust: (y) => (rc.thrustVac - (rc.thrustVac - rc.thrustSL) * Math.min(1, atmosphere(Math.max(0, y)).p / 101325)) * LANDING_PLANNED_THROTTLE,
+              thrust: (y) => recoveryThrust(rc, atmosphere(Math.max(0, y)).p, LANDING_PLANNED_THROTTLE),
               flow: rc.mdot * LANDING_PLANNED_THROTTLE, cd: d.cd, area: d.area, gravity: gLocal });
             if (hAgl < 1.1 * stop + 10) {
               rc.landingStarted = true;
@@ -528,7 +544,8 @@ export class DebrisTracker {
             const tgo = (2 * hAgl) / Math.max(1, vDown + vTouch);
             const aH = landingDivert(d.r, d.v, target, gmst0, t, tgo, aV, LANDING_MAX_TILT);
             const aCmd = add(scale(up, aV), aH);
-            const want = (d.mass * norm(aCmd)) / Math.max(1, T);
+            // the level that gives the thrust asked for, through the law
+            const want = T > 0 ? recoveryLevel(rc, pressure, d.mass * norm(aCmd)) : 0;
             dir = normalize(aCmd);
             // Below the engine's minimum the stage cannot throttle down any
             // further: it coasts until the profile asks for thrust again.
@@ -736,7 +753,6 @@ export class DebrisTracker {
         if (d.recovery && d.recovery.propellant > 0 && vDown > 0) {
           const rc = d.recovery;
           const atm = atmosphere(Math.max(0, altK));
-          const pressure = Math.min(1, atm.p / 101325);
           let burn = false;
           // Entry burn: retrograde below 70 km until the airspeed is something
           // the structure can take (~1.4 km/s), spending everything above the
@@ -753,10 +769,10 @@ export class DebrisTracker {
               // mass that is actually left: a hoverslam is flown with as few
               // engines as will stop the stage, and three Merlins on an empty
               // booster is 6 g of deceleration nobody flies.
-              setRecoveryEngines(rc, Math.ceil((3 * G0 * d.mass) / Math.max(1, rc.engine?.thrustSL ?? rc.thrustSL)));
+              setRecoveryEngines(rc, Math.ceil((3 * G0 * d.mass) / Math.max(1, rc.engine ? engineThrustSL(rc.engine) : rc.thrustSL)));
             }
           }
-          const T = rc.thrustVac - (rc.thrustVac - rc.thrustSL) * pressure;
+          const T = recoveryThrust(rc, atm.p, 1);
           // Landing burn: a constant-deceleration descent profile (bang-bang
           // thrust stands in for engine throttling) that reaches ~2 m/s at
           // touchdown.

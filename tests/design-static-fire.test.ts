@@ -25,19 +25,24 @@ import type { EngineSpec } from '../src/types';
 const rel = (a: number, b: number): number => Math.abs(a / b - 1);
 
 /**
- * The effective exhaust velocity G0·Isp(p), N·s/kg, worked out here from the
- * data rather than taken from the engine model the stand runs on: the thrust
- * falls linearly from the vacuum figure to the sea-level one as the pressure
- * rises to P0 (a vacuum-only engine keeps its vacuum figure, since its
- * sea-level pair is a placeholder), and the mass flow is the vacuum pair's,
- * thrustVac/(G0·ispVac), at every pressure (src/physics/vehicle.ts documents
- * that convention; this restates it independently of its code).
+ * The effective exhaust velocity G0·Isp at pressure p and level λ, N·s/kg,
+ * worked out here from the data rather than taken from the engine model the
+ * stand runs on: with the flow attached the thrust is λ·F_vac − p·A_e, the
+ * exit area A_e = (F_vac − F_SL)/P0 from the engine's own pair, and the flow
+ * is λ·thrustVac/(G0·ispVac) (the thrust law, src/physics/nozzle.ts, owner
+ * decision of 2026-10-17; this restates it independently of its code). In
+ * vacuum it is G0·ispVac at any level. A vacuum-only engine is restated in
+ * vacuum only (its sea-level pair is a placeholder), and separated flow — deep
+ * throttle low in the air, the start-up's first instants — is held by
+ * tests/nozzle-law.test.ts, not restated here.
  */
-function exhaustVelocity(e: EngineSpec, p: number): number {
-  const seaLevel = e.vacuumOnly ? e.thrustVac : e.thrustSL;
-  const thrust = e.thrustVac - (e.thrustVac - seaLevel) * Math.min(1, p / P0);
-  return thrust / (e.thrustVac / (G0 * e.ispVac));
+function exhaustVelocity(e: EngineSpec, p: number, level = 1): number {
+  const exitArea = e.vacuumOnly ? 0 : (e.thrustVac - e.thrustSL) / P0;
+  return (level * e.thrustVac - p * exitArea) / (level * e.thrustVac / (G0 * e.ispVac));
 }
+
+/** A sample's level λ: its flow over the full flow of its engines. */
+const levelOf = (e: EngineSpec, s: { mdot: number }): number => s.mdot / (e.count * engineMassFlow(e));
 
 /** Every engine installation in the fleet, once per distinct object, with the propellant it burns and where. */
 function installations(): { owner: string; engine: EngineSpec; propellant: number; groundLit: boolean }[] {
@@ -62,17 +67,22 @@ const p120c = VEHICLES.find((v) => v.id === 'vegac')!.stages[0].engine;
 const centaurRl10 = VEHICLES.find((v) => v.id === 'atlasv551')!.stages[1].engine;
 
 describe('test stand · refusals and inputs', () => {
-  it('refuses a vacuum-only engine at any pressure above zero, and fires it in a vacuum cell', () => {
+  // Until the owner's decision of 2026-10-17 (DECISIONS.md: "the physics as it really is") the stand
+  // refused a vacuum-only engine in air, because the model flew its vacuum
+  // thrust at every pressure. It now fires it with what its nozzle gives.
+  it('fires a vacuum-only engine in air with the thrust its nozzle gives there, and in a vacuum cell at its vacuum figure', () => {
     expect(centaurRl10.vacuumOnly).toBe(true);
-    for (const p of [1, 1000, P0]) {
-      const r = staticFire(centaurRl10, { count: 1, propellantKg: 1000, pressurePa: p, throttle: 1, dt: 0.1 });
-      expect(r.refused).toBe('vacuumOnlyAtPressure');
-      expect(r.samples).toEqual([]);
-      expect(r.impulse).toBe(0);
-    }
-    const vac = staticFire(centaurRl10, { count: 1, propellantKg: 1000, pressurePa: 0, throttle: 1, dt: 0.1 });
-    expect(vac.refused).toBeUndefined();
-    expect(vac.impulse).toBeGreaterThan(0);
+    const steadyThrust = (p: number): number => {
+      const r = staticFire(centaurRl10, { count: 1, propellantKg: 1e4, pressurePa: p, throttle: 1, cutoffS: 10, dt: 0.1 });
+      expect(r.refused).toBeUndefined();
+      return r.samples.find((s) => s.t >= 5)!.thrust;
+    };
+    const vac = steadyThrust(0), high = steadyThrust(1000), sea = steadyThrust(P0);
+    expect(vac).toBe(centaurRl10.thrustVac);
+    expect(high).toBeLessThan(vac);
+    expect(sea).toBeLessThan(0.85 * vac);
+    // not the placeholder sea-level figure either
+    expect(Math.abs(sea / centaurRl10.thrustSL - 1)).toBeGreaterThan(0.05);
   });
 
   it('refuses to shut a solid motor down, and burns it to depletion otherwise', () => {
@@ -138,20 +148,27 @@ describe('test stand · the engine model reproduced', () => {
       if (!groundLit || e.vacuumOnly) continue;
       const r = staticFire(e, { count: e.count, propellantKg: 1e6, pressurePa: P0, throttle: 1, ...(e.solid ? {} : { cutoffS: 5 }), dt: 0.1 });
       const s = r.samples[Math.floor(r.samples.length / 2)];
-      expect(rel(s.isp, exhaustVelocity(e, P0) / G0), `${owner}: the stand is the model`).toBeLessThan(1e-12);
-      const err = rel(s.isp, e.ispSL);
-      expect(err, `${owner} ${e.name}: delivers ${s.isp.toFixed(1)} s against a quoted ${e.ispSL} s`).toBeLessThan(0.08);
+      // at the sample's own level: a solid's profile moves it (attached there, far above where it would separate)
+      expect(rel(s.isp, exhaustVelocity(e, P0, levelOf(e, s)) / G0), `${owner}: the stand is the model`).toBeLessThan(1e-12);
+      const delivered = exhaustVelocity(e, P0) / G0;
+      const err = rel(delivered, e.ispSL);
+      expect(err, `${owner} ${e.name}: delivers ${delivered.toFixed(1)} s against a quoted ${e.ispSL} s`).toBeLessThan(0.08);
       if (err > 0.02) off.push(`${e.name} ${(err * 100).toFixed(1)} %`);
     }
     expect([...new Set(off)].sort()).toEqual(['Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
   });
 
   /**
-   * Impulse = propellant burned × G0·Isp(p), whatever the step, the pressure,
+   * In vacuum, impulse = propellant burned × G0·Isp_vac, whatever the step,
    * the engine kind or the part of the burn (start-up, the burn, the depletion
-   * shutdown and its tail-off): thrust and flow are one level times F(p) and
-   * ṁ. The invariant of tests/engine-transients.test.ts, through the stand.
-   * 1e-9 relative, fixed before running (rounding over up to 10⁵ steps).
+   * shutdown and its tail-off): thrust and flow are one level times F_vac and
+   * ṁ. In air the air takes p·A_e at every level (owner decision of
+   * 2026-10-17), so every step's thrust is at least the attached law's at its
+   * level — more where the flow separates, in the start-up's first instants —
+   * and, below full level, no more than the old λ·F(p) (above it, a solid's
+   * head-end peak, it is the attached law exactly), and the firing's Isp is a
+   * little below the full-thrust one. 1e-9 relative where exact, fixed before running
+   * (rounding over up to 10⁵ steps).
    */
   it('pays for every newton-second at the delivered Isp, and empties the tank', () => {
     const cases: [string, EngineSpec, number][] = [
@@ -165,7 +182,21 @@ describe('test stand · the engine model reproduced', () => {
       for (const dt of [0.01, 0.1, 0.5]) {
         const load = 20 * e.count * engineMassFlow(e) + 1234.5;
         const r = staticFire(e, { count: e.count, propellantKg: load, pressurePa: p, throttle: 1, dt });
-        expect(rel(r.impulse / r.propellantUsed, exhaustVelocity(e, p)), `${name}, dt ${dt}`).toBeLessThan(1e-9);
+        if (p === 0) expect(rel(r.impulse / r.propellantUsed, exhaustVelocity(e, p)), `${name}, dt ${dt}`).toBeLessThan(1e-9);
+        else {
+          const exitArea = (e.thrustVac - e.thrustSL) / P0;
+          for (const s of r.samples) {
+            const level = levelOf(e, s), floor = e.count * Math.max(0, level * e.thrustVac - p * exitArea);
+            expect(s.thrust, `${name}, dt ${dt}, t ${s.t}: the attached law at its level`).toBeGreaterThanOrEqual(floor * (1 - 1e-9) - 1e-6);
+            // above full level (a solid's head-end peak) the flow is attached and the old law was the lower one
+            const ceiling = level > 1 ? floor : e.count * level * (e.thrustVac - p * exitArea);
+            expect(s.thrust, `${name}, dt ${dt}, t ${s.t}: the old law`).toBeLessThanOrEqual(ceiling * (1 + 1e-9) + 1e-6);
+          }
+          const full = exhaustVelocity(e, p);
+          expect(r.impulse / r.propellantUsed, `${name}, dt ${dt}`).toBeLessThan(full);
+          expect(rel(r.impulse / r.propellantUsed, full), `${name}, dt ${dt}`).toBeLessThan(0.01);
+        }
+        expect(rel(r.impulse, r.samples.reduce((a, s) => a + s.thrust * s.dt, 0)), `${name}, dt ${dt}: impulse`).toBeLessThan(1e-9);
         expect(load - r.propellantUsed, `${name}, dt ${dt}: tank left`).toBeLessThan(1e-6 * load);
       }
     }
@@ -202,9 +233,13 @@ describe('test stand · the engine model reproduced', () => {
     }
   });
 
-  it('flies a throttled burn at the clamped level, with the Isp unchanged', () => {
+  it('flies a throttled burn at the clamped level, with the Isp unchanged in vacuum and lower in air', () => {
     // Merlin 1D throttles to 0.4 (vehicles.ts); asking for 0.2 gets 0.4, asking
-    // for 0.7 gets 0.7. The Isp does not depend on throttle in this model.
+    // for 0.7 gets 0.7. In vacuum the Isp does not depend on the throttle; in
+    // air it does (owner decision of 2026-10-17): the air takes p·A_e at any level.
+    const sl = staticFire(merlin, { count: 1, propellantKg: 1e5, pressurePa: P0, throttle: 0.7, cutoffS: 5, dt: 0.1 }).samples.find((x) => x.t >= 2)!;
+    expect(rel(sl.isp, exhaustVelocity(merlin, P0, 0.7) / G0)).toBeLessThan(1e-12);
+    expect(sl.isp).toBeLessThan(exhaustVelocity(merlin, P0) / G0 - 5);
     expect(merlin.minThrottle).toBeDefined();
     for (const [cmd, level] of [[0.2, merlin.minThrottle!], [0.7, 0.7]] as const) {
       const r = staticFire(merlin, { count: 1, propellantKg: 1e5, pressurePa: 0, throttle: cmd, cutoffS: 5, dt: 0.1 });

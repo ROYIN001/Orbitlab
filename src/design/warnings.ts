@@ -14,6 +14,7 @@
  * |---|---|---|---|
  * | `invalid` | fail | any `vehicleSpecProblems` finding, by path | src/config/vehicle-spec.ts |
  * | `vacuumEngineOnPad` | fail | a ground-lit engine is `vacuumOnly` | the validator's own rule (`checkEngine`: "cannot be set on an engine that lights on the pad"), restated as a code |
+ * | `vacuumEngineInAir` | warn | an air-lit strap-on group's engine is `vacuumOnly` and its nozzle separates at sea level | the thrust law (src/physics/nozzle.ts): below the altitude whose pressure separates its flow at full thrust, the flight flies the separated thrust and reports `evt.nozzleSeparation` |
  * | `noLiftoff` | fail | the hold-down never releases: thrust ≤ weight until T+3 s | `Simulation.stepPrelaunch`, replayed (`holdDownRelease`): released when thrust > weight, else `evt.noLiftoff` after T+3 s |
  * | `lowLiftoffTW` | warn | 1 < T/W < 1.15 | the fleet's floor, tests/data-consistency.test.ts ("thrust-to-weight is between 1.15 and 2.6") |
  * | `weakUpperStage` | warn | an upper stage lights at under 1.6 m/s² | `planMission`'s `weakFinalStage` (src/physics/mission.ts) |
@@ -61,10 +62,24 @@ import { effectiveGravityJ2 } from '../physics/gravity';
 import { groundPositionEci } from '../physics/orbital';
 import { norm } from '../physics/vec3';
 import { guidanceForVehicle } from '../physics/defaults';
-import { VehicleModel, engineMassFlow, idealDeltaV, liftoffMass, liftoffThrust, solidProfile } from '../physics/vehicle';
+import { VehicleModel, engineMassFlow, engineThrustSL, idealDeltaV, liftoffMass, liftoffThrust, solidProfile } from '../physics/vehicle';
+import { separationPressure } from '../physics/nozzle';
+
+/** The standard atmosphere's altitude of pressure `p`, m (0 at or above sea-level pressure). */
+function altitudeOfPressure(p: number): number {
+  if (!(p > 0) || p >= atmosphere(0).p) return 0;
+  let lo = 0, hi = 120e3;
+  if (atmosphere(hi).p >= p) return hi;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (atmosphere(mid).p > p) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
 
 export type WarningCode =
-  | 'invalid' | 'vacuumEngineOnPad' | 'noLiftoff' | 'lowLiftoffTW' | 'weakUpperStage'
+  | 'invalid' | 'vacuumEngineOnPad' | 'vacuumEngineInAir' | 'noLiftoff' | 'lowLiftoffTW' | 'weakUpperStage'
   | 'fixedThrustOverAccel' | 'lowDv' | 'implausibleFraction' | 'upperWiderThanFairing';
 export type WarningLevel = 'fail' | 'warn';
 
@@ -86,7 +101,7 @@ export interface DesignWarning {
 /** Each code's level: the table in the module comment. */
 export const WARNING_LEVEL: Readonly<Record<WarningCode, WarningLevel>> = {
   invalid: 'fail', vacuumEngineOnPad: 'fail', noLiftoff: 'fail',
-  lowLiftoffTW: 'warn', weakUpperStage: 'warn', fixedThrustOverAccel: 'warn', lowDv: 'warn',
+  vacuumEngineInAir: 'warn', lowLiftoffTW: 'warn', weakUpperStage: 'warn', fixedThrustOverAccel: 'warn', lowDv: 'warn',
   implausibleFraction: 'warn', upperWiderThanFairing: 'warn',
 };
 
@@ -222,6 +237,9 @@ export function holdDownRelease(spec: VehicleSpec, payloadKg: number, site: Pick
  * - `noLiftoff`: `tw`, `thrustN`, `weightN` (at full tanks, sea level, G0 —
  *   the fleet's figure) and `releaseTw`, the best the hold-down reached;
  * - `lowLiftoffTW`: `tw`, `thrustN`, `weightN`, `floor`;
+ * - `vacuumEngineInAir`: `ceilingM` (the altitude below which its flow separates at full thrust, m),
+ *   `thrustSL` and `thrustVac` (the group's, N: at sea level with the flow separated, and in vacuum),
+ *   `igniteAt` (s);
  * - `weakUpperStage`: `accel`, `floor` (m/s²);
  * - `fixedThrustOverAccel`: `accel` (at the lowest thrust, at burnout), `limit` (the flight's
  *   `maxAccel`), `strapOnPhase` (1 at the end of the first stage's strap-on phase, 0 at a
@@ -254,6 +272,21 @@ export function designWarnings(spec: VehicleSpec, payloadKg: number, siteId?: st
   const release = holdDownRelease(spec, payloadKg, siteById(siteId ?? spec.sites[0]));
   if (!release.released) add('noLiftoff', { tw, thrustN, weightN, releaseTw: release.tw }, { stage: 0 });
   else if (tw < LIFTOFF_TW_FLOOR) add('lowLiftoffTW', { tw, thrustN, weightN, floor: LIFTOFF_TW_FLOOR }, { stage: 0 });
+
+  // --- a vacuum engine lit in the air (owner decision of 2026-10-17): allowed,
+  // and the flight flies what its nozzle gives; said here with the altitude
+  // below which its flow separates at full thrust and what it gives at sea level
+  // — only where it does separate low down: a nozzle that runs full at sea level
+  // (a sea-level bell flagged vacuum-only) has nothing to say
+  (spec.stages[0].boosters ?? []).forEach((b, g) => {
+    if (!b.engine.vacuumOnly || !((b.igniteAt ?? 0) > 0)) return;
+    const ceilingM = altitudeOfPressure(separationPressure(b.engine));
+    if (!(ceilingM > 0)) return;
+    const n = b.count * b.engine.count;
+    add('vacuumEngineInAir', {
+      ceilingM, thrustSL: n * engineThrustSL(b.engine), thrustVac: n * b.engine.thrustVac, igniteAt: b.igniteAt!,
+    }, { stage: 0, booster: g });
+  });
 
   // --- upper stages: the planner's weak-stage line, for every stage above the first
   const stages = spec.stages;

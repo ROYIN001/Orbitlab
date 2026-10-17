@@ -113,6 +113,7 @@ export function subjectRef(subject: TextSubject): string {
 export const WARNING_KEYS: Readonly<Record<WarningCode, readonly string[]>> = {
   invalid: ['build.warn.invalid'],
   vacuumEngineOnPad: ['build.warn.vacuumEngineOnPad'],
+  vacuumEngineInAir: ['build.warn.vacuumEngineInAir'],
   noLiftoff: ['build.warn.noLiftoff'],
   lowLiftoffTW: ['build.warn.lowLiftoffTW'],
   weakUpperStage: ['build.warn.weakUpperStage'],
@@ -134,6 +135,8 @@ export function warningText(w: DesignWarning): DesignText {
       return { key: first, level, subject, values: {}, ...(w.path !== undefined ? { detail: w.path } : {}) };
     case 'vacuumEngineOnPad':
       return { key: first, level, subject, values: {} };
+    case 'vacuumEngineInAir':
+      return { key: first, level, subject, values: { h: n(p.ceilingM, 'km'), sl: n(p.thrustSL, 'kN'), vac: n(p.thrustVac, 'kN') } };
     case 'noLiftoff':
       return { key: first, level, subject: null, values: { thrust: n(p.thrustN, 'kN'), weight: n(p.weightN, 'kN'), tw: n(p.tw, 'tw') } };
     case 'lowLiftoffTW':

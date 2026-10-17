@@ -17,10 +17,10 @@ import { RATING_ORBITS, VEHICLES } from '../src/data/vehicles';
 import { SITES, type SiteExtra } from '../src/data/sites';
 import { SATELLITES } from '../src/data/satellites';
 import { ORBIT_PRESETS } from '../src/data/orbits';
-import { engineMassFlow, liftoffMass, liftoffThrust, solidProfile } from '../src/physics/vehicle';
+import { engineMassFlow, engineThrustAt, liftoffMass, liftoffThrust, solidProfile } from '../src/physics/vehicle';
 import { circularSpeed, rotatingLaunchAzimuth } from '../src/physics/orbital';
 import { corridorReach } from '../src/physics/mission';
-import { G0, DEG, R_EARTH } from '../src/physics/constants';
+import { G0, DEG, P0, R_EARTH } from '../src/physics/constants';
 import type { EngineSpec, StageSpec, VehicleSpec } from '../src/types';
 
 const siteIds = new Set(SITES.map((s) => s.id));
@@ -256,8 +256,9 @@ describe('liftoff', () => {
     const ariane = VEHICLES.find((v) => v.id === 'ariane64')!;
     const perMotorAsStage = liftoffThrust(vegac);
     const boosters = ariane.stages[0].boosters![0];
-    const perMotorAsBooster = boosters.count * boosters.engine.count * boosters.engine.thrustSL
-      * solidProfile(0, boosters.engine.peakFactor) / boosters.count;
+    // the head of the profile flown as a level through the thrust law (src/physics/nozzle.ts)
+    const perMotorAsBooster = boosters.count * boosters.engine.count
+      * engineThrustAt(boosters.engine, P0, solidProfile(0, boosters.engine.peakFactor)) / boosters.count;
     expect(perMotorAsStage / perMotorAsBooster, 'same motor, same ignition factor').toBeCloseTo(1, 2);
   });
 });

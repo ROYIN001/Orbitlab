@@ -7,11 +7,11 @@
  * live one. A record only: nothing in the physics reads it, and it is not part
  * of the telemetry.
  */
-import { P0 } from './constants';
 import type { Losses } from './sim/types';
 import type { Quat } from './rigid/math';
 import type { Vec3 } from './vec3';
-import { engineThrustSL, type StageState } from './vehicle';
+import type { StageState } from './vehicle';
+import { engineExitArea, nozzleFlow } from './nozzle';
 import type { EngineSpec } from '../types';
 
 /** How the step was integrated. */
@@ -34,10 +34,16 @@ export interface EomRecord {
   airVelocity: Vec3;
   dynamicPressure: number;
   mach: number;
-  /** Thrust delivered, N; the running engines' vacuum thrust, N, and exit area, m², each at its level. */
+  /**
+   * Thrust delivered, N; the running engines' vacuum thrust at their levels,
+   * N, and their exit area, m², whatever the level (the air presses on the
+   * whole exit at any throttle: the thrust law, src/physics/nozzle.ts).
+   */
   thrust: number;
   vacuumThrust: number;
   exitArea: number;
+  /** a running engine's flow separates inside its nozzle, so the thrust is above vacuumThrust − p·exitArea */
+  separated?: boolean;
   /** Aerodynamic reference area, m², and the drag coefficient of the point-mass model (absent in six-DOF). */
   referenceArea: number;
   dragCoefficient?: number;
@@ -57,31 +63,30 @@ export interface EomRecord {
   q1?: Quat;
 }
 
-/** Nozzle exit area of one engine, m², from its sea-level and vacuum thrust: T = T_vac − p·A_e. */
-export function engineExitArea(e: EngineSpec): number {
-  return (e.thrustVac - engineThrustSL(e)) / P0;
-}
+export { engineExitArea } from './nozzle';
 
-/** Σ n·level·T_vac and Σ n·level·A_e over the active stage's core and boosters, at the levels `VehicleModel.thrust` returned. */
+/**
+ * Σ n·level·T_vac and Σ n·A_e over the active stage's core and boosters at the
+ * levels `VehicleModel.thrust` returned (an engine counts with its whole exit
+ * area once it runs at all), and whether any of them runs with the flow
+ * separated in its nozzle at ambient pressure `pressure`.
+ */
 export function runningEngines(stage: StageState | null | undefined, coreLevel: number, boosterLevels: readonly number[],
-  hot?: { stage: StageState; level: number }): { vacuumThrust: number; exitArea: number } {
-  if (!stage) return { vacuumThrust: 0, exitArea: 0 };
-  const e = stage.spec.engine, n = e.count * stage.engineFraction;
-  let vacuumThrust = n * e.thrustVac * coreLevel, exitArea = n * engineExitArea(e) * coreLevel;
-  stage.boosters.forEach((b, group) => {
-    const level = boosterLevels[group] ?? 0;
-    if (!(level > 0)) return;
-    const nb = b.spec.engine.count * b.spec.count;
-    vacuumThrust += nb * b.spec.engine.thrustVac * level;
-    exitArea += nb * engineExitArea(b.spec.engine) * level;
-  });
+  hot?: { stage: StageState; level: number }, pressure = 0): { vacuumThrust: number; exitArea: number; separated: boolean } {
+  if (!stage) return { vacuumThrust: 0, exitArea: 0, separated: false };
+  let vacuumThrust = 0, exitArea = 0, separated = false;
+  const add = (e: EngineSpec, n: number, level: number): void => {
+    if (!(level > 0) || !(n > 0)) return;
+    vacuumThrust += n * e.thrustVac * level;
+    exitArea += n * engineExitArea(e);
+    if (pressure > 0 && nozzleFlow(e, pressure, level).separated) separated = true;
+  };
+  // the engines the core really runs, as `VehicleModel.enginesRunning` counts them (a partial light-up, `litEngines`)
+  add(stage.spec.engine, (stage.litEngines ? stage.litEngines.length : stage.spec.engine.count) * stage.engineFraction, coreLevel);
+  stage.boosters.forEach((b, group) => add(b.spec.engine, b.spec.engine.count * b.spec.count, boosterLevels[group] ?? 0));
   // a hot stage lit above it, firing through the truss (`VehicleModel.hotStage`)
-  if (hot && hot.level > 0) {
-    const he = hot.stage.spec.engine, nh = he.count * hot.stage.engineFraction;
-    vacuumThrust += nh * he.thrustVac * hot.level;
-    exitArea += nh * engineExitArea(he) * hot.level;
-  }
-  return { vacuumThrust, exitArea };
+  if (hot) add(hot.stage.spec.engine, (hot.stage.litEngines ? hot.stage.litEngines.length : hot.stage.spec.engine.count) * hot.stage.engineFraction, hot.level);
+  return { vacuumThrust, exitArea, separated };
 }
 
 const copy = (v: Vec3): Vec3 => ({ x: v.x, y: v.y, z: v.z });

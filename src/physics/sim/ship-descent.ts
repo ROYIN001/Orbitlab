@@ -35,7 +35,8 @@ import { atmosphere } from '../atmosphere';
 import { dragCoefficient } from '../aero';
 import { gravityJ2 } from '../gravity';
 import { eciToLatLon } from '../orbital';
-import { engineMassFlow, engineThrust } from '../vehicle';
+import { engineMassFlow, engineThrustAt } from '../vehicle';
+import { engineLevelFor } from '../nozzle';
 import { atMach, crossflowDragCoefficient, shipDescentAeroTable, type AeroTable } from '../rigid/aero-tables';
 import { targetAttitude } from '../rigid/runtime';
 import { quatRotate, type Quat } from '../rigid/math';
@@ -301,7 +302,7 @@ export class ShipDescent {
     const n = LANDING_MIN_ENGINES;
     const brake = brakingHeight({
       alt: 1000, surfaceAlt: 0, vDown: vDown / 2, vTouch: TOUCHDOWN_SPEED, mass,
-      thrust: (alt) => n * engineThrust(e, atmosphere(Math.max(0, alt)).p) * LANDING_PLAN_LEVEL,
+      thrust: (alt) => n * engineThrustAt(e, atmosphere(Math.max(0, alt)).p, LANDING_PLAN_LEVEL),
       flow: n * engineMassFlow(e) * LANDING_PLAN_LEVEL, cd: 1.0, area: this.referenceArea, gravity: g,
     });
     return vDown * FLIP_DROP_S + brake + FLIP_MARGIN;
@@ -402,20 +403,22 @@ export class ShipDescent {
   private landingCommand(aThrust: Vec3, fuel: boolean, settling: boolean): DescentCommand {
     const s = this.sim.state, st = this.sim.vehicle.active!;
     const e = st.spec.engine;
-    const perEngine = engineThrust(e, atmosphere(Math.max(0, s.altitude)).p);
+    const pressure = atmosphere(Math.max(0, s.altitude)).p;
+    const perEngine = engineThrustAt(e, pressure, 1);
     const need = s.mass * norm(aThrust);
     // One more engine when those lit are nearly flat out; one fewer, down to
     // `LANDING_MIN_ENGINES`, as soon as those lit cannot throttle down to
     // what is asked — held at their least they would brake harder than the
     // plan and stop the ship above the water.
-    const least = e.minThrottle ?? 1;
+    const leastThrust = engineThrustAt(e, pressure, e.minThrottle ?? 1);
     if (need > 0.9 * this.engines * perEngine && this.engines < SEA_LEVEL_ENGINES.length) this.engines++;
-    else if (this.engines > (settling ? 1 : LANDING_MIN_ENGINES) && need < 1.1 * least * this.engines * perEngine
+    else if (this.engines > (settling ? 1 : LANDING_MIN_ENGINES) && need < 1.1 * this.engines * leastThrust
       && need < 0.9 * (this.engines - 1) * perEngine) this.engines--;
     st.litEngines = ENGINE_SETS[this.engines];
     // Never quite zero while there is propellant: the engines stay lit at
     // their least, and the constant-deceleration law asks for more again.
-    const throttle = fuel ? Math.max(1e-3, Math.min(1, need / (this.engines * perEngine))) : 0;
+    // (the level that gives it, through the thrust law)
+    const throttle = fuel ? Math.max(1e-3, Math.min(1, engineLevelFor(e, pressure, need / this.engines))) : 0;
     return { nose: normalize(aThrust), belly: null, throttle, slewRate: 15 * DEG };
   }
 

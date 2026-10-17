@@ -22,8 +22,8 @@
  * gained; an upper stage lights below a thrust-to-weight of 1).
  */
 import type { VehicleSpec } from '../types';
-import { G0 } from '../physics/constants';
-import { engineThrustSL, solidProfile } from '../physics/vehicle';
+import { G0, P0 } from '../physics/constants';
+import { engineThrustAt, solidProfile } from '../physics/vehicle';
 import { vehicleById } from '../data/vehicles';
 import { vehicleFigures, type PhaseBudget } from './budget';
 import { watchPayload } from './stage-table';
@@ -98,7 +98,7 @@ export function carriedDv(phases: readonly PhaseBudget[]): number {
  */
 export function coreAloneTW(spec: VehicleSpec, liftoffMass: number): number {
   const e = spec.stages[0].engine;
-  return (e.count * engineThrustSL(e) * (e.solid ? solidProfile(0, e.peakFactor) : 1)) / (liftoffMass * G0);
+  return (e.count * engineThrustAt(e, P0, e.solid ? solidProfile(0, e.peakFactor) : 1)) / (liftoffMass * G0);
 }
 
 export interface TourFigure {
