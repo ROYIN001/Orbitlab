@@ -21,7 +21,8 @@
  * burn: the burn is short, starts a few kilometres up nearly straight down,
  * and its divert takes out what the ballistic point and the burn disagree on.
  */
-import { MU_EARTH, OMEGA_EARTH, P0, R_EARTH } from '../constants';
+import { MU_EARTH, OMEGA_EARTH, P0 } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { type Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled } from '../vec3';
 import { atmosphere } from '../atmosphere';
 import { tumblingDragCoefficient } from '../aero';
@@ -166,7 +167,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
   let entry: EntryState = model.entry ? s.entry ?? 'pending' : 'done';
   const accel = (rr: Vec3, vv: Vec3, m: number, thrust: number): Vec3 => {
     let a = model.j2 ? gravityJ2(rr) : gravity(rr);
-    const alt = norm(rr) - R_EARTH;
+    const alt = geodeticHeight(rr);
     const air = airVelocity(rr, vv), speed = norm(air);
     if (alt < 1000e3 && speed > 0.1) {
       const atm = atmosphere(alt);
@@ -182,7 +183,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
   const lb = model.landing;
   let landingOn = false, landingEngines = 0, landingLevel = 0;
   while (t < end) {
-    const alt = norm(r) - R_EARTH;
+    const alt = geodeticHeight(r);
     let h = alt > 20e3 ? 1 : landingOn ? 0.1 : 0.25;
     const air = airVelocity(r, v), speed = norm(air);
     const falling = dot(air, r) < 0;
@@ -248,7 +249,7 @@ export function predictDescent(s: DescentState, model: DescentModel, surfaceAlt:
     const k4v = accel(addScaled(r, k3r, h), addScaled(v, k3v, h), m2, thrust), k4r = addScaled(v, k3v, h);
     const rNext = add(r, scale(add(add(k1r, scale(k2r, 2)), add(scale(k3r, 2), k4r)), h / 6));
     const vNext = add(v, scale(add(add(k1v, scale(k2v, 2)), add(scale(k3v, 2), k4v)), h / 6));
-    const altNext = norm(rNext) - R_EARTH;
+    const altNext = geodeticHeight(rNext);
     if (altNext <= surfaceAlt) {
       // Linear in altitude across the last step.
       const f = alt > altNext ? Math.max(0, Math.min(1, (alt - surfaceAlt) / (alt - altNext))) : 1;

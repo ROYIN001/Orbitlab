@@ -1,4 +1,4 @@
-import { MU_EARTH, R_EARTH, J2_EARTH } from './constants';
+import { MU_EARTH, R_EARTH, J2_EARTH, OMEGA_EARTH } from './constants';
 import { Vec3, v3, norm } from './vec3';
 
 /** Point-mass gravitational acceleration. */
@@ -21,4 +21,15 @@ export function gravityJ2(r: Vec3, mu = MU_EARTH): Vec3 {
     r.y * f + k * r.y * (five - 1),
     r.z * f + k * r.z * (five - 3),
   );
+}
+
+/**
+ * The gravity a body at rest on the turning Earth feels, m/s²: the J2 field
+ * and the centrifugal term ω²(x, y, 0). On the WGS-84 ellipsoid it is the
+ * normal gravity of Somigliana's formula to a few parts in a million, and it
+ * points along the ellipsoid's normal (tests/wgs84-sites.test.ts).
+ */
+export function effectiveGravityJ2(r: Vec3): Vec3 {
+  const g = gravityJ2(r), w2 = OMEGA_EARTH * OMEGA_EARTH;
+  return v3(g.x + w2 * r.x, g.y + w2 * r.y, g.z);
 }

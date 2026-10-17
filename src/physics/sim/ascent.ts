@@ -4,6 +4,7 @@
  */
 import { MU_EARTH, R_EARTH, RAD } from '../constants';
 import { norm, type Vec3 } from '../vec3';
+import { geodeticHeight } from '../geodesy';
 import type { OrbitalElements } from '../orbital';
 import { orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
 import { CAPSULE_SEPARATION_DELAY } from './abort';
@@ -151,7 +152,7 @@ export class AscentMonitor {
     const s = this.sim.state;
     if (this.overrun) {
       this.continueOverrun(el);
-      if (this.overrun) this.rangeSafety(alt, vz);
+      if (this.overrun) this.rangeSafety(vz);
       return;
     }
     const hIns = this.sim.plan.insertionAltitude;
@@ -244,7 +245,7 @@ export class AscentMonitor {
       this.sim.burns.scheduleNextBurn(el);
       return;
     }
-    this.rangeSafety(alt, vz);
+    this.rangeSafety(vz);
   }
 
   /**
@@ -293,11 +294,13 @@ export class AscentMonitor {
     this.finishAscent(el);
   }
 
-  /** Range safety / loss of vehicle: falling back without thrust below 100 km. */
-  private rangeSafety(alt: number, vz: number): void {
+  /** Range safety / loss of vehicle: falling back without thrust below 100 km (above WGS-84, D-51). */
+  private rangeSafety(vz: number): void {
     const s = this.sim.state;
     const thrusting = s.thrust > 0;
-    if (!thrusting && !this.sim.staging.stagingInProgress && this.sim.pending.every((p) => p.label !== 'ignition' && p.label !== 'stageSep') && vz < -50 && alt < 100e3 && s.t > 5) {
+    if (!thrusting && !this.sim.staging.stagingInProgress && this.sim.pending.every((p) => p.label !== 'ignition' && p.label !== 'stageSep') && vz < -50 && s.t > 5) {
+      const alt = geodeticHeight(s.r);
+      if (alt >= 100e3) return;
       if (!this.sim.vehicle.activeHasPropellant() || (this.sim.vehicle.active?.engineFraction ?? 1) === 0) {
         this.sim.event('evt.rangeSafety', 'fail', { alt: Math.round(alt / 1000) });
         this.sim.destroy();
@@ -326,7 +329,7 @@ export class AscentMonitor {
       this.finishSuborbital(el);
       return;
     }
-    this.rangeSafety(alt, vz);
+    this.rangeSafety(vz);
   }
 
   /** The suborbital target is reached (or missed): judge it and fly home. */

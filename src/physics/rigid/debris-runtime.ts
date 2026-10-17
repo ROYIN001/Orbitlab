@@ -4,7 +4,8 @@ import type { DynamicsConfig, StageSpec } from '../../types';
 import type { Debris } from '../simulation';
 import { atmosphere } from '../atmosphere';
 import { tumblingDragCoefficient } from '../aero';
-import { DEG, G0, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
+import { DEG, G0, MU_EARTH, OMEGA_EARTH } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { engineMassFlow, engineThrust } from '../vehicle';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { buildDetachedStage, type RigidVehicleSnapshot } from './mass';
@@ -116,7 +117,7 @@ export function rigidContactMetrics(state: RigidState, snapshot: RigidVehicleSna
     const projection = sub(radial, scale(axis, dot(radial, axis)));
     const side = norm(projection) > 1e-12 ? scale(normalize(projection), -radius) : v3();
     const contactOffset = add(offset, side), point = add(state.r, contactOffset);
-    return { clearance: norm(point) - R_EARTH - groundElevation(point), point, contactOffset };
+    return { clearance: geodeticHeight(point) - groundElevation(point), point, contactOffset };
   };
   const tail = evaluate(0), nose = evaluate(length), lowest = tail.clearance <= nose.clearance ? tail : nose;
   const omegaI = quatRotate(state.attitudeQ, state.omegaBody);
@@ -225,7 +226,7 @@ export class RigidDebrisRuntime {
     if (!this.recoveryEnabled || !rc || !this.options.stage) return { nose: d.dir, throttle: 0, engines: [] };
     if (rc.target && this.options.returnGuidance) return this.applyCommand(this.returnGuidance(time, contact));
     const air = this.runtime.airVelocity(this.state, time), speed = norm(air), downward = -dot(air, up);
-    const height = Math.max(0, norm(this.state.r) - R_EARTH);
+    const height = Math.max(0, geodeticHeight(this.state.r));
     let throttle = 0, engines: number[] = [];
     if (downward > 0 && rc.phase === 'coast' && height < 70000) rc.phase = 'entry';
     if (rc.phase === 'entry') {
@@ -252,7 +253,7 @@ export class RigidDebrisRuntime {
     { nose: Vec3; throttle: number; engines: number[] } | undefined {
     const d = this.debris, rc = d.recovery!, up = normalize(this.state.r), stage = this.options.stage!;
     const air = this.runtime.airVelocity(this.state, time), downward = -dot(air, up);
-    const height = Math.max(0, norm(this.state.r) - R_EARTH);
+    const height = Math.max(0, geodeticHeight(this.state.r));
     let nose = coastNose, throttle = 0, engines: number[] = [];
     if ((downward > 0 || this.terminalCoast) && height < 20000) {
       const g = MU_EARTH / norm(this.state.r) ** 2;
@@ -339,7 +340,7 @@ export class RigidDebrisRuntime {
     const d = this.debris, rc = d.recovery!, stage = this.options.stage!, rg = this.options.returnGuidance!, target = rc.target!;
     const up = normalize(this.state.r);
     const air = this.runtime.airVelocity(this.state, time), downward = -dot(air, up);
-    const height = Math.max(0, norm(this.state.r) - R_EARTH);
+    const height = Math.max(0, geodeticHeight(this.state.r));
     const g = MU_EARTH / norm(this.state.r) ** 2;
     const perEngine = engineThrust(stage.engine, atmosphere(height).p);
     const one = perEngine * this.health(this.centre);
@@ -380,7 +381,7 @@ export class RigidDebrisRuntime {
    */
   private aeroSteerNose(time: number, retro: Vec3): Vec3 {
     const table = this.snapshot.aero.table;
-    const up = normalize(this.state.r), height = norm(this.state.r) - R_EARTH;
+    const up = normalize(this.state.r), height = geodeticHeight(this.state.r);
     const air = this.runtime.airVelocity(this.state, time), speed = norm(air);
     const atm = atmosphere(Math.max(0, height));
     const q = 0.5 * atm.rho * speed * speed;
@@ -539,7 +540,7 @@ export class RigidDebrisRuntime {
     const d = this.debris, rc = d.recovery!, stage = this.options.stage!, rg = this.options.returnGuidance!;
     const up = normalize(this.state.r);
     const air = this.runtime.airVelocity(this.state, time), speed = norm(air), downward = -dot(air, up);
-    const height = norm(this.state.r) - R_EARTH;
+    const height = geodeticHeight(this.state.r);
     const retro = speed > 20 ? scale(air, -1 / speed) : up;
     const minimum = stage.engine.minThrottle ?? 1;
     const angleTo = (dir: Vec3) => Math.acos(clamp(dot(d.dir, dir), -1, 1));
@@ -699,7 +700,7 @@ export class RigidDebrisRuntime {
         h = Math.min(h, usable / rc.mdot);
       }
       if (!(h > 0)) throw new RangeError('Detached body integration made no progress');
-      const pressure = atmosphere(norm(this.state.r) - R_EARTH).p;
+      const pressure = atmosphere(geodeticHeight(this.state.r)).p;
       // A targeted stage turns round and boosts back on its engines' gimbals
       // and keeps its cold gas for the coast that follows.
       const engineTurn = !!rc?.target && (rc.phase === 'flip' || rc.phase === 'boostback');

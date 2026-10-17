@@ -14,7 +14,8 @@
  */
 import type { Simulation } from '../simulation';
 import { atmosphere } from '../atmosphere';
-import { G0, OMEGA_EARTH, R_EARTH } from '../constants';
+import { G0, OMEGA_EARTH } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { gravityJ2 } from '../gravity';
 import { rk4Step } from '../integrator';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
@@ -123,7 +124,7 @@ export class Rendezvous {
     for (const b of this.sim.plan.burns) b.done = true;
     const s = this.sim.state;
     // the stage's tail-off, which the cut-off was judged with, is still to come: the spacecraft rides it before it separates
-    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass);
+    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, geodeticHeight(s.r))).p, s.mass);
     if (tail > 0) s.v = add(s.v, scale(s.dir, tail));
     s.status = 'rendezvous';
     s.note = 'rendezvous';

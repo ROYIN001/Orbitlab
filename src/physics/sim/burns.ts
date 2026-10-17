@@ -6,6 +6,7 @@
 import { MU_EARTH, R_EARTH, DEG, RAD } from '../constants';
 import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween, addScaled } from '../vec3';
 import { atmosphere } from '../atmosphere';
+import { geodeticHeight } from '../geodesy';
 import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity, shootJ2Altitude } from '../rigid/orbit-prediction';
 import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
 import { desiredVelocity, planeNormalThrough } from '../guidance';
@@ -112,7 +113,7 @@ export class BurnSequencer {
    */
   extremesOf(el: OrbitalElements): OrbitalElements {
     const s = this.sim.state;
-    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass);
+    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, geodeticHeight(s.r))).p, s.mass);
     const apsides = physicalApsides({ r: s.r, v: tail > 0 ? addScaled(s.v, s.dir, tail) : s.v });
     return apsides ? { ...el, ...apsides } : el;
   }

@@ -27,7 +27,8 @@
  */
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { gravityJ2 } from '../gravity';
-import { MU_EARTH, R_EARTH } from '../constants';
+import { MU_EARTH } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { quatFromAxisAngle, quatMultiply, quatNormalize, quatRotate, quatSlerp, quatToMatrix, type Quat } from '../rigid/math';
 import { BIAS_CORRELATION_S, DEG_PER_HOUR, DEG_PER_ROOT_HOUR, MICRO_G, MS_PER_ROOT_HOUR, NormalStream, type AidingSpec, type ImuSpec } from './sensors';
 
@@ -349,7 +350,7 @@ export class NavigationSystem {
         axes(dv).forEach((z, k) => update(V + k, z, a.gnssVelocityMs ** 2));
       }
     }
-    const high = norm(r) - R_EARTH >= a.starTrackerMinAltitudeKm * 1000, slow = norm(omegaBody) <= a.starTrackerMaxRateDegS * Math.PI / 180;
+    const high = geodeticHeight(r) >= a.starTrackerMinAltitudeKm * 1000, slow = norm(omegaBody) <= a.starTrackerMaxRateDegS * Math.PI / 180;
     this.status.star = !a.starTracker ? 'off' : lost?.starTracker ? 'failed' : high && slow ? 'fix' : 'unavailable';
     if (a.starTracker && !lost?.starTracker && high && slow && t + 1e-9 >= this.nextStar) {
       this.nextStar = t + 1 / a.starTrackerRateHz;

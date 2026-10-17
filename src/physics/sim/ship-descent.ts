@@ -29,6 +29,7 @@
  * with the drag of that table at the commanded attitude and no lift.
  */
 import { DEG, G0, OMEGA_EARTH, R_EARTH } from '../constants';
+import { geodeticHeight } from '../geodesy';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { atmosphere } from '../atmosphere';
 import { dragCoefficient } from '../aero';
@@ -287,7 +288,7 @@ export class ShipDescent {
     if (!s.rigid || !snapshot) return s.altitude - surface;
     // The engines' end of the ship, which is what meets the water upright.
     const base = add(s.r, quatRotate(s.rigid.attitudeQ, sub(snapshot.activeBase, snapshot.cg)));
-    return norm(base) - R_EARTH - surface;
+    return geodeticHeight(base) - surface;
   }
 
   /**
@@ -420,7 +421,7 @@ export class ShipDescent {
 
   /** Aerodynamic acceleration of the point-mass ship flying nose along `dir`, m/s² (ECI). */
   aeroAcceleration(r: Vec3, v: Vec3, dir: Vec3, mass: number): Vec3 {
-    const alt = norm(r) - R_EARTH;
+    const alt = geodeticHeight(r);
     if (!(alt < 1000e3)) return v3();
     const atm = atmosphere(alt);
     return scale(descentAeroForce(this.descentTable(), this.referenceArea, dir, ShipDescent.airVelocity(r, v), atm.rho, atm.a), 1 / Math.max(1, mass));

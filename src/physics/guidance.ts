@@ -109,10 +109,15 @@ export interface GuidanceInputs {
   /** Optional Earth-relative trajectory reference for physical wind flight.
    * Air velocity still governs aerodynamic loads and the q·alpha placard. */
   vGround?: Vec3;
-  /** altitude above the pad, m */
+  /** altitude above the pad, m (the height above WGS-84 less the site's) */
   altitudeAGL: number;
-  /** altitude above mean radius, m */
+  /** altitude in radius, m: |r| − 6,378.137 km, as the insertion orbit's apsides are counted */
   altitude: number;
+  /**
+   * height above WGS-84, m, which the air lies on (D-51): the gravity turn's
+   * hand-over and its blend read it; absent, `altitude`
+   */
+  height?: number;
   /** dynamic pressure, Pa */
   q: number;
   /** full-thrust acceleration available (vacuum), m/s^2 */
@@ -263,8 +268,9 @@ export class AscentGuidance {
     // enough for the command to be followed (q below ~4 kPa), or at the
     // altitude ceiling as a fallback.
     const fixedHandover = p.closedLoopStart !== undefined;
+    const height = inp.height ?? inp.altitude;
     if (this.phase === 'gravityTurn' && (fixedHandover ? inp.t >= p.closedLoopStart!
-      : (inp.q < 4000 && inp.altitude > 25e3 && inp.t > 30) || inp.altitude >= p.gravityTurnEnd)) {
+      : (inp.q < 4000 && height > 25e3 && inp.t > 30) || height >= p.gravityTurnEnd)) {
       this.phase = 'closedLoop';
     }
 
@@ -525,10 +531,10 @@ export class AscentGuidance {
           vDir = normalize(add(scale(horiz, Math.cos(pitchMinRad)), scale(up, Math.sin(pitchMinRad))));
         }
         // Blend toward the closed-loop command as the atmosphere thins out.
-        const wQ = inp.t > 30 && inp.altitude > 20e3 ? smoothstep((12000 - inp.q) / 8000) : 0;
+        const wQ = inp.t > 30 && height > 20e3 ? smoothstep((12000 - inp.q) / 8000) : 0;
         const blendWidth = 20e3;
         // a hand-over fixed in time (`closedLoopStart`) is not blended in early
-        const w = fixedHandover ? 0 : Math.max(wQ, smoothstep((inp.altitude - (p.gravityTurnEnd - blendWidth)) / blendWidth));
+        const w = fixedHandover ? 0 : Math.max(wQ, smoothstep((height - (p.gravityTurnEnd - blendWidth)) / blendWidth));
         if (w > 0) {
           const cl = closedLoopDir();
           dir = normalize(add(scale(vDir, 1 - w), scale(cl, w)));

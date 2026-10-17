@@ -30,7 +30,7 @@
  * aerodynamic coefficients are estimates, chosen where the sources give none.
  */
 import { atmosphere } from '../atmosphere';
-import { G0, OMEGA_EARTH, R_EARTH } from '../constants';
+import { G0, OMEGA_EARTH } from '../constants';
 import { gravityJ2 } from '../gravity';
 import { geodeticHeight } from '../geodesy';
 import { stagnationHeatFlux } from '../sim/entry-heating';
@@ -187,14 +187,14 @@ export interface DescentCapsule {
    */
   ejection?: { altitude: number; mass: number; hatch?: number; hatchSpeed?: number; delay?: number; speed?: number; rails?: number };
   /**
-   * The height datum of every altitude the return reads: the air and the
-   * Mach number, the barometric commands, the ground. 'sphere' (the default)
-   * is the 6,378.137 km sphere the rest of the flight measures from; 'wgs84'
-   * is the height above the ellipsoid, on which the air and the ground lie
-   * (src/physics/geodesy.ts). A pad abort or a suborbital arc starts from a
-   * site placed on the sphere and stays on it.
+   * The return comes down on land, and the scene draws the ground under it
+   * (render/steppe.ts: Vostok-1's, on the Saratov steppe). Every altitude a
+   * return reads — the air and the Mach number, the barometric commands, the
+   * ground — is the height above WGS-84 (src/physics/geodesy.ts), on which
+   * the air, the ground and, since D-51, the launch sites lie. (Until then
+   * `datum: 'wgs84'` asked for it, and only Vostok-1's return did.)
    */
-  datum?: 'sphere' | 'wgs84';
+  onLand?: boolean;
   /** axial drag coefficient against Mach on π(diameter/2)² (default: `CAPSULE_CD`, a bell's) */
   cd?: readonly (readonly [number, number])[];
   /**
@@ -302,13 +302,13 @@ const SPHERE_CD = [[0, 0.45], [0.6, 0.5], [0.8, 0.75], [1.0, 0.95], [1.2, 1.0], 
  * about 10 m/s (Feoktistov §9.6; GCTC; Siddiqi, *Challenge to Apollo*,
  * 2000). The canopies' drag coefficients are estimates.
  *
- * Every altitude of the return is the height above WGS-84 (`datum`): the
- * air the sphere decelerates in over 30–51° N lies 5–13 km below the
- * 6,378.137 km sphere the orbit's heights are counted from.
+ * Every altitude of the return is the height above WGS-84, as every
+ * flight's is (D-51): the air the sphere decelerates in over 30–51° N lies
+ * 5–13 km below the 6,378.137 km sphere the orbit's heights are counted from.
  */
 export const VOSTOK_CAPSULE: DescentCapsule = {
   id: 'vostok', mass: 4725, diameter: 2.3, length: 2.3, cgAbove: 0.95, heatShield: 0, heatShieldDelay: 0,
-  lowAltitude: 0, datum: 'wgs84', sphere: true, cd: SPHERE_CD,
+  lowAltitude: 0, onLand: true, sphere: true, cd: SPHERE_CD,
   // the pilot chute 1.5 m² (Feoktistov §9.6; GCTC); its drag coefficient and inflation estimated
   pilot: { area: 1.5, cd: 0.6, inflation: 1.0 },
   drogue: { area: 18, cd: 0.6, altitude: 4000, maxSpeed: 300, inflation: 1.5, duration: 300 },
@@ -690,13 +690,9 @@ export class EscapeFlight {
     if (mode === 'capsule' && capsule.ejection?.hatch !== undefined) { this.status.hatch = true; this.status.pilotAboard = true; }
   }
 
-  /**
-   * Height of a point above the return's datum, m: the 6,378.137 km sphere,
-   * or for a return that asks for it the WGS-84 ellipsoid, on which the air
-   * and the ground lie (`DescentCapsule.datum`).
-   */
+  /** Height of a point above the WGS-84 ellipsoid, m, on which the air and the ground lie (D-51). */
   altitude(r: Vec3): number {
-    return this.capsule.datum === 'wgs84' && this.mode === 'capsule' ? geodeticHeight(r) : norm(r) - R_EARTH;
+    return geodeticHeight(r);
   }
 
   /** C01: the retro is a liquid engine on a module of its own (Vostok's TDU-1 on the instrument module) */
@@ -794,7 +790,7 @@ export class EscapeFlight {
       return this.altitude(centre) - c.radius - this.env.groundElevation(centre);
     }
     const bottom = add(state.r, quatRotate(state.attitudeQ, v3(c.bottomX - c.cgX, 0, 0)));
-    return norm(bottom) - R_EARTH - this.env.groundElevation(bottom);
+    return this.altitude(bottom) - this.env.groundElevation(bottom);
   }
 
   /** Advance to `t + dt`. */
@@ -1013,7 +1009,7 @@ export class EscapeFlight {
       omegaBody: { x: -this.state.omegaBody.x, y: this.state.omegaBody.y, z: -this.state.omegaBody.z } };
     this.config = c;
     s.body = 'capsule'; s.phase = 'fall'; s.finsOpen = false;
-    this.freedAt = t; this.freedAlt = norm(r) - R_EARTH;
+    this.freedAt = t; this.freedAlt = this.altitude(r);
     this.log({ key: 'evt.escapeCapsule', severity: 'major', params: { alt: Math.round(this.freedAlt) } }, t);
   }
 
@@ -1141,7 +1137,7 @@ export class EscapeFlight {
       // the retropack falls away once the retros are spent (Vostok's instrument module: `tduSequence`)
       if (!this.tdu && this.config.body === 'capsule' && !this.retroPackOn && this.config.mass > this.capsule.mass - this.capsule.retro.packMass + 1e-6) {
         this.config = capsuleConfiguration(true, this.capsule, this.capsule.retro.packMass + (this.ejected ? this.capsule.ejection!.mass : 0));
-        this.log({ key: 'evt.retroPackOff', severity: 'info', params: { alt: Math.round((norm(this.state.r) - R_EARTH) / 1000) } }, t);
+        this.log({ key: 'evt.retroPackOff', severity: 'info', params: { alt: Math.round(this.altitude(this.state.r) / 1000) } }, t);
       }
     }
     // re-evaluate the loads at the accepted state for the specific force

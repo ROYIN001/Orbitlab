@@ -1,17 +1,17 @@
 /**
- * The WGS-84 ellipsoid: geodetic latitude and height of a position.
+ * The WGS-84 ellipsoid: where the ground is, and the geodetic latitude and
+ * height of a position.
  *
- * The flight's own bookkeeping measures heights from a 6,378.137 km sphere
- * (`R_EARTH`), which is right where it is used: the ascent and the orbit fly
- * in radius, and the catalogues' heights are radius less 6,378 km (McDowell,
- * GCAT, "Orbits"). The air and the ground are not on that sphere. They lie
- * on the geoid, within a hundred metres of the ellipsoid, which falls below
- * the sphere by 21.4 km at the poles: 5.4 km at 30° N, 11.1 km at 46° N,
- * 13.0 km at 51° N. A body that decelerates in the air at those latitudes
- * meets it some 10 km lower in radius than the sphere would put it. So the
- * long-term propagator's density (propagator/density.ts) and a return from
- * orbit that asks for it (`DescentCapsule.datum`, rigid/escape.ts) read
- * their heights here.
+ * The launch sites stand on it (D-51, plan R4.5: the owner's "ทำพร้อมกัน",
+ * 2026-10-17): a site's latitude is geodetic, its altitude a height above the
+ * ellipsoid (`groundPositionEci`, src/physics/orbital.ts). Every height the
+ * flight reads for the air or the ground is the height above it: the air
+ * lies on the geoid, within about a hundred metres of the ellipsoid, and the
+ * ground with it, and the ellipsoid falls below the 6,378.137 km sphere by
+ * 21.4 km × sin²(latitude): 4.9 km at the Cape, 11.0 km at Baikonur, 13.2 km at
+ * Vostochny, 16.9 km at Plesetsk. Orbit heights — perigee, apogee, the
+ * insertion targets — stay the radius less 6,378.137 km (`R_EARTH`), the
+ * catalogues' convention (McDowell, GCAT, "Orbits"; docs/PHYSICS.md §13.6).
  *
  * Heights and latitudes do not depend on the Earth's turn about its axis, so
  * an inertial position gives the same values as the Earth-fixed one.
@@ -53,4 +53,23 @@ export function geodeticHeight(r: Vec3): number {
 /** Geodetic latitude, rad, of a position, m. */
 export function geodeticLatitude(r: Vec3): number {
   return geodetic(r.x, r.y, r.z).lat;
+}
+
+/**
+ * Earth-centred position, m, of a point at geodetic latitude `lat` and
+ * longitude `lon` (rad, the longitude counted in whatever frame the caller
+ * turns it into) and height `h` above the ellipsoid, m.
+ */
+export function geodeticToCartesian(lat: number, lon: number, h: number): Vec3 {
+  const sl = Math.sin(lat), cl = Math.cos(lat);
+  const n = A / Math.sqrt(1 - E2 * sl * sl);
+  const p = (n + h) * cl;
+  return { x: p * Math.cos(lon), y: p * Math.sin(lon), z: (n * (1 - E2) + h) * sl };
+}
+
+/** Geocentric latitude, rad, of the point at geodetic latitude `lat` (rad) and height `h` (m) above the ellipsoid. */
+export function geocentricLatitude(lat: number, h = 0): number {
+  const sl = Math.sin(lat), cl = Math.cos(lat);
+  const n = A / Math.sqrt(1 - E2 * sl * sl);
+  return Math.atan2((n * (1 - E2) + h) * sl, (n + h) * cl);
 }

@@ -5,6 +5,7 @@
  */
 import { MU_EARTH, R_EARTH, OMEGA_EARTH, J2_EARTH, DEG } from './constants';
 import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize } from './vec3';
+import { geodetic, geodeticToCartesian } from './geodesy';
 
 export interface OrbitalElements {
   /** semi-major axis, m (negative for hyperbolic) */
@@ -236,11 +237,15 @@ export function gmst(jd: number): number {
   return wrap2pi(s * DEG);
 }
 
-/** ECI position of a ground point (geodetic-ish spherical model). */
+/**
+ * ECI position of a ground point at geodetic latitude `latRad`, longitude
+ * `lonRad` and height `altM` above the WGS-84 ellipsoid (src/physics/geodesy.ts),
+ * with the Earth turned by the sidereal angle `theta`. Until D-51 (R4.5) the
+ * sites stood on the 6,378.137 km sphere at their geodetic latitude taken as
+ * geocentric: 11.0 km too high in radius at Baikonur, 16.9 km at Plesetsk.
+ */
 export function groundPositionEci(latRad: number, lonRad: number, altM: number, theta: number): Vec3 {
-  const R = R_EARTH + altM;
-  const lam = lonRad + theta;
-  return v3(R * Math.cos(latRad) * Math.cos(lam), R * Math.cos(latRad) * Math.sin(lam), R * Math.sin(latRad));
+  return geodeticToCartesian(latRad, lonRad + theta, altM);
 }
 
 /** Inertial velocity of a point fixed to the rotating Earth. */
@@ -248,12 +253,14 @@ export function groundVelocityEci(rEci: Vec3): Vec3 {
   return cross(v3(0, 0, OMEGA_EARTH), rEci);
 }
 
-/** Geographic latitude/longitude (rad) from an ECI position and sidereal angle. */
+/**
+ * Geodetic latitude, longitude (rad) and height above WGS-84 (m) from an ECI
+ * position and sidereal angle: the inverse of `groundPositionEci`.
+ */
 export function eciToLatLon(r: Vec3, theta: number): { lat: number; lon: number; alt: number } {
-  const rm = norm(r);
-  const lat = Math.asin(r.z / rm);
+  const g = geodetic(r.x, r.y, r.z);
   const lon = wrapPi(Math.atan2(r.y, r.x) - theta);
-  return { lat, lon, alt: rm - R_EARTH };
+  return { lat: g.lat, lon, alt: g.h };
 }
 
 /** Local East/North/Up unit vectors at an ECI position. */
