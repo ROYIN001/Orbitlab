@@ -14,7 +14,10 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { HELD_TEACHER } from '../held.mjs';
 
+/** Held while the teaching tools are held back (owner, 2026-10-17; tests/browser/held.mjs). */
+export const held = HELD_TEACHER;
 export const smoke = true;
 export const timeoutMs = 300_000;
 

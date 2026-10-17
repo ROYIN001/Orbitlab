@@ -30,6 +30,7 @@
  * the pack's next lesson.
  */
 import { t, tCount, getLang } from '../../i18n';
+import { TEACHER_TOOLS } from '../held';
 import { en } from '../../i18n/en';
 import type { AppMode } from '../app-mode';
 import type { Simulation } from '../../physics/simulation';
@@ -145,9 +146,9 @@ export const WORKSHEETS_HASH = '#/lessons/worksheets';
 export const AUTHOR_HASH = '#/lessons/author';
 export const CHECK_HASH = '#/lessons/check';
 type PageView = 'catalog' | 'test' | 'worksheets' | 'author' | 'check';
-const PAGE_HASHES: ReadonlyArray<readonly [PageView, string]> = [
+const PAGE_HASHES: ReadonlyArray<readonly [PageView, string]> = ([
   ['catalog', LESSONS_HASH], ['test', TEST_HASH], ['worksheets', WORKSHEETS_HASH], ['author', AUTHOR_HASH], ['check', CHECK_HASH],
-];
+] as const).slice(0, TEACHER_TOOLS ? 5 : 2); // the teacher pages are held back (src/ui/held.ts)
 const pageViewOf = (hash: string): PageView | null => PAGE_HASHES.find(([, h]) => h === hash)?.[0] ?? null;
 /** The event keys a flight emits: the dictionary's `evt.*` (tests/i18n.test.ts's family), for a lesson file's warnings (T01). */
 const KNOWN_EVENTS: ReadonlySet<string> = new Set(Object.keys(en).filter((k) => /^evt\.[a-zA-Z]+$/.test(k)));
@@ -692,7 +693,7 @@ export class LessonMode implements LessonToolsHost {
     if (scenario !== null) {
       url.searchParams.delete(SCENARIO_PARAM);
       history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
-      void this.openScenario(scenario);
+      if (TEACHER_TOOLS) void this.openScenario(scenario);
       return;
     }
     const id = url.searchParams.get('lesson');
@@ -1055,8 +1056,8 @@ export class LessonMode implements LessonToolsHost {
       if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id, this.activePack ?? undefined), 'lesson-primary');
     }
     button(t('lesson.strip.catalog'), () => this.openCatalog());
-    if (flown && g?.final) button(t('ws.stripButton'), () => this.navigate(WORKSHEETS_HASH));
-    button(t('lesson.strip.link'), () => void this.copyLink(lesson));
+    if (TEACHER_TOOLS && flown && g?.final) button(t('ws.stripButton'), () => this.navigate(WORKSHEETS_HASH));
+    if (TEACHER_TOOLS) button(t('lesson.strip.link'), () => void this.copyLink(lesson));
     button(t('lesson.strip.exit'), () => this.exit());
     s.replaceChildren(head, crits, status, actions);
   }
@@ -1104,8 +1105,8 @@ export class LessonMode implements LessonToolsHost {
     }
     button(t('lesson.strip.catalog'), () => this.openCatalog());
     button(t('lesson.strip.caseTool'), () => this.host.openCase?.(lesson.case, lesson.mode));
-    button(t('ws.stripButton'), () => this.navigate(WORKSHEETS_HASH));
-    button(t('lesson.strip.link'), () => void this.copyLink(lesson));
+    if (TEACHER_TOOLS) button(t('ws.stripButton'), () => this.navigate(WORKSHEETS_HASH));
+    if (TEACHER_TOOLS) button(t('lesson.strip.link'), () => void this.copyLink(lesson));
     button(t('lesson.strip.exit'), () => this.exit());
     this.strip.replaceChildren(head, status, actions);
   }
@@ -1223,7 +1224,7 @@ export class LessonMode implements LessonToolsHost {
       if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
     }
     button(t('lesson.strip.catalog'), () => this.openCatalog());
-    button(t('lesson.strip.link'), () => void this.copyLink(lesson));
+    if (TEACHER_TOOLS) button(t('lesson.strip.link'), () => void this.copyLink(lesson));
     button(t('lesson.strip.exit'), () => this.exit());
     this.strip.replaceChildren(head, crits, status, actions);
   }
@@ -1446,8 +1447,8 @@ export class LessonMode implements LessonToolsHost {
     back.addEventListener('click', () => this.closePage());
     const tabs = el('nav', 'lessons-page-tabs');
     tabs.setAttribute('aria-label', t('lesson.button'));
-    for (const [view, key, hash] of [['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH], ['worksheets', 'ws.tab', WORKSHEETS_HASH],
-      ['author', 'lesson.author.tab', AUTHOR_HASH], ['check', 'lesson.check.tab', CHECK_HASH]] as const) {
+    for (const [view, key, hash] of ([['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH], ['worksheets', 'ws.tab', WORKSHEETS_HASH],
+      ['author', 'lesson.author.tab', AUTHOR_HASH], ['check', 'lesson.check.tab', CHECK_HASH]] as const).slice(0, TEACHER_TOOLS ? 5 : 2)) {
       const a = el('a', undefined, t(key));
       a.href = hash;
       if (this.pageView === view) a.setAttribute('aria-current', 'page');
@@ -1505,14 +1506,14 @@ export class LessonMode implements LessonToolsHost {
     const exp = el('button', undefined, t('lesson.catalog.export'));
     exp.type = 'button';
     exp.addEventListener('click', () => void this.exportResults());
-    bar.append(open, exp, fileInput);
+    if (TEACHER_TOOLS) bar.append(open, exp, fileInput);
     const saveNote = this.saveNote('span');
     if (saveNote) bar.append(saveNote);
     body.append(bar);
 
     const profile = this.profileContext(true);
     if (profile) body.append(profile);
-    else {
+    else if (TEACHER_TOOLS) { // the name only labels the results file, held back with its export
       const nameRow = el('label', 'lesson-student');
       const name = el('input');
       name.type = 'text'; name.autocomplete = 'name';
@@ -1561,7 +1562,8 @@ export class LessonMode implements LessonToolsHost {
       for (const l of own) col.append(this.lessonCard(l, { advice: advice[l.id], start: summary?.result.start === l.id }));
       grid.append(col);
     }
-    body.append(grid, this.packsSection());
+    body.append(grid);
+    if (TEACHER_TOOLS) body.append(this.packsSection());
     this.content.replaceChildren(body);
   }
 

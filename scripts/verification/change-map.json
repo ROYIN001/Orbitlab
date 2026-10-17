@@ -153,6 +153,12 @@
       "checks": { "commands": ["@app-build"], "unit": ["tests/pwa.test.ts", "tests/classroom-pwa.test.ts", "tests/lesson-packs.test.ts"], "browser": ["pwa-offline", "classroom-preparation", "lesson-packs", "workspace-navigation", "webgl-startup"] }
     },
     {
+      "id": "teaching-held",
+      "why": "Owner, 2026-10-17: the teaching tools are held back behind src/ui/held.ts; teaching-held checks that nothing of them shows and the self-study lessons and placement test still work.",
+      "paths": ["src/ui/held.ts", "src/ui/lessons/**", "src/ui/workspace-content.ts", "tests/browser/held.mjs"],
+      "checks": { "commands": ["@app-build"], "browser": ["teaching-held", "mobile-smoke", "workspace-navigation"] }
+    },
+    {
       "id": "privacy-inventory",
       "additive": true,
       "why": "M-LEARNING-047: tests/privacy-inventory.test.ts scans every source file for storage keys, stores, caches, hosts and sending APIs the privacy page must name.",

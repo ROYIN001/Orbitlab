@@ -212,6 +212,7 @@ node tests/browser/serve.mjs                  # just serve dist/ at http://127.0
 | `pwa-offline` | | The service worker precaches the app, a mission flies offline, and a new deploy is offered as a reload |
 | `case-worksheet-exports` | ✓ | The three case worksheets and their keys downloaded as HTML and DOCX, in Thai and Russian, through the page's own controls |
 | `workspace-navigation` | ✓ | Lazy loading, keyboard tabs and Escape, recovery after a failed module request, mobile layout and first-use offline |
+| `teaching-held` | ✓ | While the teaching tools are held back: two tabs on the lessons page, the instructor pages' addresses open nothing, no packs, lesson-file or export buttons, no "Copy link", a scenario link opens no lesson, no "Prepare a class"; a self-study lesson and the placement test still open |
 | `experiment-notebook` | ✓ | Real flight and replay observations, single-variable comparison, conclusions, export, keyboard restore and mobile languages |
 | `project-backups` | ✓ | Download, non-mutating import preview, keep/replace choices, reload of restored state and rejected malformed/oversized files |
 | `learner-profiles` | ✓ | Learner names and focus, A → B → A separation, test-only and learning-only resets that keep personal lessons, JSON and audio backups, a deleted learner's recordings removed and no other's, a new, empty learner (no chooser) after deleting the open and the last learner, Thai and Russian at phone width |
@@ -335,6 +336,13 @@ The cores are held to published worked examples — SMAD's tables in TU Delft's 
 attitude and end-of-mission chapters, MarCO's link budget, Sentinel-2's and Landsat 8's optics,
 IADC's disposal rule — with the slips found in the sources recorded, and D07 to D06 and O04
 ([docs/VALIDATION.md](docs/VALIDATION.md) §9).
+
+> **Held back for now (owner, 2026-10-17).** The site shows only the self-study lessons and the
+> placement test. The teaching tools below — the worksheets, **Write a scenario**, **Check results**,
+> the lesson packs, opening a lesson file, exporting results, lesson and scenario links, **Prepare a
+> class** and the Orbit section's case worksheets — stay in the code but are not shown. One switch,
+> `TEACHER_TOOLS` in `src/ui/held.ts`, shows them again. Their browser journeys are listed as held and
+> not run until then; `teaching-held` checks that they stay hidden.
 
 The **lessons** page (`#/lessons`, `src/lessons/`) has, beside the lessons, the placement test
 and the worksheets, two pages for teachers (roadmap T01–T02). **Write a scenario** makes a flight

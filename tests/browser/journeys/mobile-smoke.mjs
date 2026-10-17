@@ -1,3 +1,4 @@
+import { TEACHER_TOOLS } from '../held.mjs';
 /**
  * A phone (390×844, touch): the Thai placement test, the Russian Orbit
  * engineer page, and the instructor's tabs (the Thai results check, the
@@ -30,7 +31,8 @@ const PAGES = [
 ];
 
 export default async function mobileSmoke(t) {
-  for (const p of PAGES) {
+  // the instructor pages are held back (owner, 2026-10-17): their two rows wait until they are shown again
+  for (const p of PAGES.filter((row) => TEACHER_TOOLS || !/^#\/lessons\/(?:check|author)$/.test(row.hash))) {
     const app = await t.open({ hash: p.hash, lang: p.lang, viewport: 'mobile', touch: true });
     const { page } = app;
     const where = `${p.what} (${p.hash}, 390×844)`;

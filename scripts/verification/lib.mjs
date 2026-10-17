@@ -71,6 +71,8 @@ export async function browserInventory(smoke = false, root = ROOT) {
   const names = [];
   for (const file of readdirSync(dir).filter(file => file.endsWith('.mjs')).sort()) {
     const mod = await import(pathToFileURL(resolve(dir, file)).href);
+    // a journey of a part the owner has held back from the page is not run (tests/browser/held.mjs, run.mjs)
+    if (mod.held) continue;
     if (!smoke || mod.smoke) names.push(file.slice(0, -4));
   }
   if (!names.length) throw new Error('No browser journeys collected');

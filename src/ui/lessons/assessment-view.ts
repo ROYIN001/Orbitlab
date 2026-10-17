@@ -9,6 +9,7 @@
  * to the same question.
  */
 import { getLang, t } from '../../i18n';
+import { TEACHER_TOOLS } from '../held';
 import { vehicleById } from '../../data/vehicles';
 import { VEHICLE_PHOTOS, type PhotoCredit } from '../../lessons/assessment/photos';
 import { DATASET_IDS, FLIGHT_DATA, questionBank } from '../../lessons/assessment/bank';
@@ -482,7 +483,7 @@ class AssessmentView {
     const start = r.start ? lessons.find((l) => l.id === r.start) : null;
     const buttons: HTMLButtonElement[] = [
       this.button(t('assess.review'), () => this.renderReview(last)),
-      this.button(t('lesson.catalog.export'), () => this.host.exportResults()),
+      ...(TEACHER_TOOLS ? [this.button(t('lesson.catalog.export'), () => this.host.exportResults())] : []),
       this.button(t(nextKind(progress.assessments) === 'post' ? 'assess.startPost' : 'assess.start'), () => this.begin(nextKind(progress.assessments))),
     ];
     if (start) {

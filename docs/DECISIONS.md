@@ -219,6 +219,19 @@ The owner answered the eight questions of the Argon4-review report (docs/history
 | 2026-10-17 | — (more explanation) | Questions 2 (the throttle and the ambient-pressure term), 3 (the IMU's turn-on bias) and 4 (vacuum-only engines on air-lit strap-ons): the owner asked for more explanation before deciding. — "อธิบายเพิ่มเติม" | Not decided. | — |
 | 2026-10-17 | — (feature gaps) | The owner does not remember which plan items the feature gaps belong to. — "ผมจำไม่ได้ว่าควรอยู่ในข้อไหน" | Not decided; a proposed placement follows in chat. | — |
 
+## Decided 2026-10-17 (teaching tools held back)
+
+The owner, in chat to the ED-INST-1 session, after PR #147: "merge เข้าไปก่อนแล้ว ในส่วนที่เป็นการสอนให้เก็บไว้ก่อนได้มั้ย ให้เหลือแค่ตัวบทเรียนแบบเรียนเองไว้ก่อน ส่วนอื่นยังไม่โชว์ในหน้าเว็บ" (merge it first; keep the teaching part back for now, leaving only the self-study lessons; the rest not shown on the site). The session merged #147 (`5394003`) and asked four follow-up questions; the owner's choices:
+
+| Date | Question | Answer | Where it lands |
+|---|---|---|---|
+| 2026-10-17 | The placement test | "แสดงต่อ" — keep showing it | unchanged |
+| 2026-10-17 | The curriculum lesson packs | "ซ่อนทั้งชุด" — hide the whole section | `src/ui/held.ts` `TEACHER_TOOLS` |
+| 2026-10-17 | "Open a lesson file…", "Export results", "Copy link" | "ซ่อนทั้งสามปุ่ม" — hide all three (scenario links then open nothing) | same switch |
+| 2026-10-17 | The browser journeys of the teacher pages | "ซ่อนสนิท พักเทสต์ไว้" — hide fully, no secret switch; park those tests | `tests/browser/held.mjs`: journeys exporting `held` are listed and not run |
+
+Hidden with them, as the request's "ส่วนอื่น" and the session's question named them: the Worksheets, Write a scenario and Check results pages and their addresses, "Prepare a class" in My work, and the Orbit section's case worksheets. The code stays; `TEACHER_TOOLS = true` shows everything again and un-parks the journeys.
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |

@@ -29,7 +29,10 @@
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { HELD_TEACHER } from '../held.mjs';
 
+/** Held while the teaching tools are held back (owner, 2026-10-17; tests/browser/held.mjs). */
+export const held = HELD_TEACHER;
 export const timeoutMs = 180_000;
 
 const SCENARIO = fileURLToPath(new URL('../../fixtures/recheck/scenario.orbitlab-lesson.json', import.meta.url));

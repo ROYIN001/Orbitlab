@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { reloadDocument } from '../harness.mjs';
 import { putWorkspaceFixture, workspaceBytes } from '../workspace-storage.mjs';
+import { TEACHER_TOOLS } from '../held.mjs';
 
 export const smoke = true;
 export const timeoutMs = 420_000;
@@ -126,8 +127,10 @@ export default async function profileSessionSafety(t) {
   await untouched.page.locator('.bsat-grid:not([hidden]) .bsat-summary').waitFor({ state: 'visible' });
   assert.deepEqual(await workspaceBytes(untouched.page, rawKeys), rawDrafts);
   await visit('#/build/engineer/requirements', '.brq-form');
-  await visit('#/lessons/author', '.author');
-  await visit('#/lessons/worksheets', '.ws-page');
+  if (TEACHER_TOOLS) { // the instructor pages are held back (owner, 2026-10-17)
+    await visit('#/lessons/author', '.author');
+    await visit('#/lessons/worksheets', '.ws-page');
+  }
   await untouched.page.locator('#btn-profile').click();
   await dialogOf(untouched.page).waitFor({ state: 'visible' });
   const untouchedBackup = await downloadWorkspace(untouched.page);
