@@ -349,7 +349,12 @@ export const VEHICLES: VehicleSpec[] = [
     ],
     sites: ['plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 50,
     // Low liftoff T/W with the core throttled to 30 %; lofts so that the URM-2 takes over climbing.
-    guidanceDefaults: { kickAngle: 4, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
+    // Kick 3.5° (4° until D-51): on WGS-84 with J2 the stack weighs 0.31 % more at Plesetsk than on
+    // the old sphere (9.821 against 9.791 m/s², Somigliana's normal gravity), and the 4° turn, which
+    // sat half a degree under the kick that broke every row up (4.5°), broke leo/25 up at T+202 s.
+    // 3.5° is again half a degree under the new edge (4°) and flies every row that flew before
+    // (docs/VALIDATION.md §10, the D-51 re-baseline).
+    guidanceDefaults: { kickAngle: 3.5, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
     // As Atlas V: the rigid body cannot hold the angle of attack the point mass
     // pitches over at, and handed the Briz-M a slower, higher arc — 257 m/s short
     // of the point mass at SECO to the sun-synchronous orbit, which stopped
