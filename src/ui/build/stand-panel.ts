@@ -327,16 +327,13 @@ export class StandPanel {
     const title = el('h2', 'bx-h2', t('build.eng.stand.results'));
     title.id = 'be-stand-out-title';
     const parts: HTMLElement[] = [title];
-    const e = this.choice.engine;
     const run = this.run;
     if (this.invalid) {
       parts.push(this.refusalBox(this.invalid, null));
     } else if (run?.result.refused) {
-      const vac = run.result.refused === 'vacuumOnlyAtPressure';
-      const text = vac ? t('build.eng.stand.refuse.vacuumOnly', { engine: e.name }) : t('build.eng.stand.refuse.solidShutdown');
-      const fix = vac
-        ? button('watch-btn primary', t('build.eng.stand.toVacuum'), () => { this.air = 'vacuum'; this.fire(); this.render(); this.focus('air:vacuum'); })
-        : button('watch-btn primary', t('build.eng.stand.letBurn'), () => { this.cutoffOn = false; this.fire(); this.render(); this.focus('cutoff-on'); });
+      // the one firing the stand refuses: a commanded shutdown of a solid
+      const text = t('build.eng.stand.refuse.solidShutdown');
+      const fix = button('watch-btn primary', t('build.eng.stand.letBurn'), () => { this.cutoffOn = false; this.fire(); this.render(); this.focus('cutoff-on'); });
       fix.dataset.k = 'fix';
       parts.push(this.refusalBox(text, fix));
     } else if (run) {
@@ -441,6 +438,9 @@ export class StandPanel {
     } else if (run.level < 1 && !run.result.refused) notes.push(t('build.eng.stand.note.throttled', { p: num(run.level * 100) }));
     if (this.air === 'seaLevel' && !e.vacuumOnly && !run.result.refused) notes.push(t('build.eng.stand.note.ispSL'));
     if (e.vacuumOnly) notes.push(t('build.eng.stand.note.vacuumOnly'));
+    if (run.separatedAt && !run.result.refused) {
+      notes.push(t('build.eng.stand.note.separated', { at: num(run.separatedAt.areaRatio, 1), eps: num(run.separatedAt.expansionRatio) }));
+    }
     return [h, lead, scroll, ...notes.map((n) => el('p', 'bx-note small', n))];
   }
 

@@ -52,7 +52,7 @@ import { runningEngines } from './eom';
 import { validateDynamics } from './rigid/config';
 import { rk4Step, rk4Steps } from './integrator';
 import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, gmst, julianDate, planeNormal, wrapPi } from './orbital';
-import { VehicleModel, StageState, engineMassFlow } from './vehicle';
+import { VehicleModel, StageState, engineMassFlow, type SeparatedEngine } from './vehicle';
 import { AscentGuidance, planeNormalThrough } from './guidance';
 import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
 import { MissionPlan, planMission, RAAN_TOLERANCE } from './mission';
@@ -594,6 +594,32 @@ export class Simulation {
   /** Inside `step`: the events it logs are stamped with the state it ends in (`SimEvent.state`). */
   private stepping = false;
 
+  /** Engine groups already reported running with separated flow, by stage or strap-on name and engine. */
+  private separationSaid = new Set<string>();
+
+  /**
+   * An engine group running at a steady level with the flow separated inside
+   * its nozzles (`ThrustResult.separated`, src/physics/nozzle.ts): a vacuum
+   * engine lit low in the air, or an engine throttled deep near the ground.
+   * Said once per group and flight, with where in the nozzle it separates.
+   * The flight flies the separated thrust; the side loads a real nozzle then
+   * sees are not modelled (no sourced criterion for what breaks it).
+   */
+  private reportSeparation(list: readonly SeparatedEngine[]): void {
+    const active = this.vehicle.active;
+    for (const sep of list) {
+      const label = sep.where === 'hot' ? this.vehicle.hotStage()?.spec.name
+        : sep.where === 'core' ? active?.spec.name : active?.boosters[sep.where]?.spec.name;
+      const key = `${label ?? ''}|${sep.engine.name}`;
+      if (this.separationSaid.has(key)) continue;
+      this.separationSaid.add(key);
+      this.event('evt.nozzleSeparation', 'warn', {
+        stage: label ?? '', engine: sep.engine.name, at: Math.round(sep.areaRatio * 10) / 10, eps: Math.round(sep.expansionRatio),
+        alt: Math.round(this.state.altitude / 100) / 10,
+      });
+    }
+  }
+
   /**
    * The state an event leaves the flight in (`SimEvent.state`): now, with the
    * impulse a core already shut down still gives as it dies away added along
@@ -871,6 +897,7 @@ export class Simulation {
     if (thr.burning) this.vehicle.consume(s.t, 1, dt);
     s.thrust = thr.thrust;
     s.throttle = thr.burning ? 1 : 0;
+    if (thr.separated) this.reportSeparation(thr.separated);
     s.t = tNew;
     const theta = this.plan.gmst0 + OMEGA_EARTH * s.t;
     s.r = groundPositionEci(lat, lon, this.site.altitude, theta);
@@ -1080,6 +1107,7 @@ export class Simulation {
       if (dt < dt0) thr = this.vehicle.thrust(s.t, atm.p, throttleCmd, dt);
     }
     s.thrust = thr.thrust;
+    if (thr.separated) this.reportSeparation(thr.separated);
     s.throttle = thr.burning ? throttleCmd : 0;
     // What the engines are really doing, as opposed to what was commanded.
     // `captureFrame` used to re-derive this from the spec — a second copy of
@@ -1205,13 +1233,13 @@ export class Simulation {
     // Read only; nothing here feeds back into the flight.
     if (dt > 0 && this.recordEquations) {
       const hotEngines = thr.hotLevel !== undefined ? this.vehicle.hotStage() : null;
-      const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels, hotEngines ? { stage: hotEngines, level: thr.hotLevel! } : undefined);
+      const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels, hotEngines ? { stage: hotEngines, level: thr.hotLevel! } : undefined, atm.p);
       const pointDrag = vAirMag > 0.1 && atm.rho > 0 && alt < 1000e3 ? scale(vAir, -dragAccel / vAirMag) : v3();
       s.eom = {
         t: s.t, dt, integrator: held ? 'heldCoast' : rigidAccelerations ? 'rigid' : freeCoast ? 'coast' : 'pointMass',
         mass, r: { ...s.r }, v: { ...s.v }, density: atm.rho, soundSpeed: atm.a, pressure: atm.p, airspeed: vAirMag,
         airVelocity: { ...vAir }, dynamicPressure: q, mach: atm.a > 0 ? vAirMag / atm.a : 0,
-        thrust: thr.thrust, vacuumThrust: engines.vacuumThrust, exitArea: engines.exitArea,
+        thrust: thr.thrust, vacuumThrust: engines.vacuumThrust, exitArea: engines.exitArea, ...(engines.separated ? { separated: true } : {}),
         referenceArea: rigidAccelerations ? this.rigidRuntime!.snapshot?.aero.referenceArea ?? area : area,
         ...(rigidAccelerations || held ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
         thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held ? v3() : scale(s.dir, thrustAccel),

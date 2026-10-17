@@ -21,8 +21,11 @@ import { Simulation } from '../src/physics/simulation';
 import { planMission } from '../src/physics/mission';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
 import { defaultDynamics } from '../src/physics/rigid/config';
-import { G0 } from '../src/physics/constants';
-import { idealDeltaV, liftoffMass, liftoffThrust } from '../src/physics/vehicle';
+import { G0, P0 } from '../src/physics/constants';
+import { atmosphere } from '../src/physics/atmosphere';
+import { nozzleFlow, separationPressure } from '../src/physics/nozzle';
+import { engineSpec } from '../src/data/parts';
+import { engineThrustAt, idealDeltaV, liftoffMass, liftoffThrust } from '../src/physics/vehicle';
 import { copyOf } from './custom-vehicle-harness';
 import type { MissionConfig, VehicleSpec } from '../src/types';
 
@@ -82,6 +85,11 @@ describe('design warnings · each on one design and its negation', () => {
     expect(codes(designWarnings({ ...structuredClone(vehicleById('falcon9')) }, PAYLOAD))).toEqual(['invalid']);
   });
 
+  // The air-lit half is the owner's decision of 2026-10-17 (DECISIONS.md, "the
+  // physics as it really is"):
+  // a vacuum engine lit in the air is allowed, and flies what its nozzle gives
+  // there (src/physics/nozzle.ts); the builder says so with `vacuumEngineInAir`
+  // rather than refusing it.
   it('vacuumEngineOnPad: a vacuum-only engine lit on the pad, said once, and not for an air-lit strap-on', () => {
     const core = f9();
     core.stages[0].engine.vacuumOnly = true;
@@ -100,6 +108,31 @@ describe('design warnings · each on one design and its negation', () => {
     expect(airLit.stages[0].boosters![0].engine.vacuumOnly).toBeUndefined();
     expect(codes(designWarnings(airLit, 1000))).not.toContain('vacuumEngineOnPad');
     expect(codes(designWarnings(airLit, 1000))).not.toContain('invalid');
+    // ...and no `vacuumEngineInAir` for it: flagged vacuum-only, a PSOM-XL keeps
+    // its ε-10 sea-level bell, which runs full at sea level (src/physics/nozzle.ts)
+    const e = airLit.stages[0].boosters![1].engine;
+    expect(nozzleFlow(e, P0, 1).separated).toBe(false);
+    expect(codes(designWarnings(airLit, 1000))).not.toContain('vacuumEngineInAir');
+    // nor for the catalogue's ground-lit group
+    expect(codes(designWarnings(copyOf('pslvxl'), 1000))).not.toContain('vacuumEngineInAir');
+  });
+
+  it('vacuumEngineInAir: a Merlin Vacuum on an air-lit strap-on, separated below about 15 km', () => {
+    const v = copyOf('pslvxl');
+    v.stages[0].boosters![1].engine = engineSpec('mvac', 1);
+    const w = find(designWarnings(v, 1000), 'vacuumEngineInAir');
+    expect(w).toHaveLength(1);
+    expect(w[0]).toMatchObject({ level: 'warn', stage: 0, booster: 1 });
+    const e = v.stages[0].boosters![1].engine, n = v.stages[0].boosters![1].count * e.count;
+    expect(w[0].params.thrustVac).toBe(n * e.thrustVac);
+    expect(w[0].params.thrustSL).toBeCloseTo(n * engineThrustAt(e, P0, 1), 6);
+    expect(w[0].params.thrustSL / w[0].params.thrustVac).toBeLessThan(0.85);
+    // the ceiling is the standard atmosphere's height of the pressure that separates it at full thrust
+    expect(w[0].params.ceilingM / 1e3).toBeGreaterThan(12);
+    expect(w[0].params.ceilingM / 1e3).toBeLessThan(18);
+    expect(atmosphere(w[0].params.ceilingM).p / separationPressure(e) - 1).toBeCloseTo(0, 6);
+    expect(nozzleFlow(e, atmosphere(w[0].params.ceilingM - 100).p, 1).separated).toBe(true);
+    expect(nozzleFlow(e, atmosphere(w[0].params.ceilingM + 100).p, 1).separated).toBe(false);
   });
 
   it('noLiftoff: Falcon 9 with its sea-level thrust halved stays on the pad, here and in a 5-s flight', () => {

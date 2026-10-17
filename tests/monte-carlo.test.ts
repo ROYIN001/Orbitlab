@@ -78,7 +78,9 @@ describe('the dispersions (roadmap G05)', () => {
       const f = flown.stages[i];
       if (st.isSpacecraft) { expect(f).toEqual(st); return; }
       expect(f.engine.thrustVac).toBeCloseTo(st.engine.thrustVac * 1.02, 6);
-      expect(f.engine.thrustSL).toBeCloseTo(st.engine.thrustSL * 1.02, 6);
+      // the nozzle is kept: the sea-level thrust moves by the same newtons as the vacuum thrust (owner decision 2026-10-17, src/physics/nozzle.ts)
+      expect(f.engine.thrustSL).toBeCloseTo(st.engine.thrustSL + 0.02 * st.engine.thrustVac, 6);
+      expect(f.engine.thrustVac - f.engine.thrustSL).toBeCloseTo(st.engine.thrustVac - st.engine.thrustSL, 6);
       expect(f.engine.ispVac).toBeCloseTo(st.engine.ispVac * 0.99, 9);
       expect(f.propellantMass).toBeCloseTo(st.propellantMass * 1.01, 6);
       expect(f.dryMass).toBeCloseTo(st.dryMass * 0.98, 6);
@@ -116,7 +118,11 @@ describe('the dispersions (roadmap G05)', () => {
     expect(b.vehicleSpec).toBe(a.vehicleSpec); // planned on the nominal vehicle
     expect(b.plan.insertionAltitude).toBe(a.plan.insertionAltitude);
     while (a.state.t < 5) { a.step(a.suggestedDt()); b.step(b.suggestedDt()); }
-    expect(b.state.thrust / a.state.thrust).toBeCloseTo(1.03, 3);
+    // a thrust factor is the chamber's: 3 % more vacuum thrust, the same p·A_e
+    // off it, so near the ground the thrust is up by 3 % × F_vac/F_SL (owner
+    // decision of 2026-10-17, src/physics/nozzle.ts)
+    const merlin = vehicleById('falcon9').stages[0].engine;
+    expect(b.state.thrust / a.state.thrust).toBeCloseTo(1 + 0.03 * merlin.thrustVac / merlin.thrustSL, 3);
     while (a.state.t < 40) { a.step(a.suggestedDt()); b.step(b.suggestedDt()); }
     // The same air data 40 s up, 20 % denser: q follows the density (the faster vehicle is higher, and faster, by a little).
     expect(b.state.q / a.state.q).toBeGreaterThan(1.1);

@@ -131,9 +131,16 @@ describe('the equations panel\'s numbers', () => {
     expect(gost.find((r) => r.axis === 'yaw')!.right).toBeCloseTo(-iso.find((r) => r.axis === 'yaw')!.right, 9);
   });
 
-  it('marks what does not apply on the second stage above the air, and the vacuum engine', () => {
+  // Until 2026-10-17 a vacuum engine had no exit area in the model and the
+  // panel said so; it now has its nozzle's (the Merlin Vacuum's 8.5 m²), and
+  // above the air the term takes almost nothing (owner decision, src/physics/nozzle.ts).
+  it('marks what does not apply on the second stage above the air, and gives the vacuum engine its exit area', () => {
     const upper = frames[3].list;
-    expect(byId(upper, 'pressureThrust').note).toBe('eq.note.vacuumOnly');
+    const pressure = byId(upper, 'pressureThrust');
+    expect(pressure.note).toBeUndefined();
+    expect(pressure.values.Ae).toBeGreaterThan(8);
+    expect(pressure.values.loss).toBeLessThan(1e-3 * pressure.values.vac);
+    expect(pressure.check!.ok).toBe(true);
     expect(byId(upper, 'rocket').values.isp).toBeGreaterThan(340);
   });
 

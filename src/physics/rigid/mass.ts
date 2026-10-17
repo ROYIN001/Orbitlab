@@ -3,7 +3,7 @@
 import { shipFlapSurfaces, type ControlSurfaceSpec } from './surfaces';
 import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../../types';
 import type { VehicleModel } from '../vehicle';
-import { engineMassFlow, engineThrust } from '../vehicle';
+import { engineMassFlow, engineThrustAt } from '../vehicle';
 import { add, scale, sub, v3, type Vec3 } from '../vec3';
 import { dragCoefficient, tumblingDragCoefficient } from '../aero';
 import { assertSPD, type Mat3 } from './math';
@@ -352,7 +352,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
         { ...reservoir, consumedKg: consumed }));
     }
     const budgeted = budgetEngines(chamberGeometry(st.spec.id, st.spec.id, st.spec.engine, st.spec.diameter / 2, base),
-      engineThrust(st.spec.engine, pressure) * throttle, engineMassFlow(st.spec.engine) * throttle,
+      engineThrustAt(st.spec.engine, pressure, throttle), engineMassFlow(st.spec.engine) * throttle,
       st.spec.engine.count, st.engineFraction, throttle, st.shutEngines);
     // Engines left cold (`StageState.litEngines`) make no thrust and burn nothing.
     if (st.litEngines) coldEngines(budgeted, st.litEngines);
@@ -368,7 +368,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
       for (const placement of placements) {
         components.push(...stageMassComponents(b.spec, boosterPropellant, placement.baseBody, placement.id));
         engines.push(...budgetEngines(chamberGeometry(placement.id, b.spec.id, b.spec.engine, b.spec.diameter / 2,
-          placement.baseBody, placement.rotationAboutX), engineThrust(b.spec.engine, pressure) * bt,
+          placement.baseBody, placement.rotationAboutX), engineThrustAt(b.spec.engine, pressure, bt),
         engineMassFlow(b.spec.engine) * bt, b.spec.engine.count, 1, bt));
       }
     });
@@ -448,7 +448,7 @@ export function buildDetachedStage(vehicleId: string, stage: StageSpec, propella
     : rcsGeometry(vehicleId, stage);
   const throttle = propellant > 0 ? op.coreThrottle ?? 0 : 0;
   const engines = budgetEngines(chamberGeometry(stage.id, stage.id, stage.engine, stage.diameter / 2),
-    engineThrust(stage.engine, op.pressure ?? 0) * throttle, engineMassFlow(stage.engine) * throttle,
+    engineThrustAt(stage.engine, op.pressure ?? 0, throttle), engineMassFlow(stage.engine) * throttle,
     stage.engine.count, op.engineFraction ?? 1, throttle);
   if (op.activeEngineIndices) coldEngines(engines, op.activeEngineIndices);
   const massFlow = engines.reduce((sum, engine) => sum + engine.massFlowKgS, 0);

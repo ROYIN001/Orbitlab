@@ -189,6 +189,8 @@ export interface Debris {
      */
     engine?: EngineSpec;
     propellant: number; thrustVac: number; thrustSL: number; mdot: number;
+    /** engines burning (`setRecoveryEngines`): the thrust is this many times the law's for `engine` */
+    engines?: number;
     burning: boolean; landed: boolean;
     /** propellant held back for the landing burn, kg */
     landingReserve: number;

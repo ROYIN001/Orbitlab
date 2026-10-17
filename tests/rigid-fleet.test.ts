@@ -220,7 +220,13 @@ describe('six-DOF data for every vehicle', () => {
     const snapshot = buildRigidVehicle(vm, { pressure: 50000, coreThrottle: thrust.coreThrottle, boosterThrottle: thrust.boosterThrottle,
       boosterThrottles: thrust.boosterLevels, time: 40.2 });
     const unit = (prefix: string) => snapshot.engines.find(e => e.id.startsWith(prefix))!.thrustBudgetN;
-    expect(unit('psoma.') / unit('psomg.')).toBeCloseTo(thrust.boosterLevels[1] / thrust.boosterLevels[0], 9);
+    // Each chamber at its own group's level, through the thrust law of the owner's
+    // decision of 2026-10-17 (src/physics/nozzle.ts): with the flow attached,
+    // λ·F_vac − p·A_e, A_e = (F_vac − F_SL)/p₀ — no longer λ times one thrust,
+    // so the ratio of the two chambers is not the ratio of the levels.
+    const e = air.spec.engine, exitArea = (e.thrustVac - e.thrustSL) / 101325;
+    const law = (level: number) => level * e.thrustVac - 50000 * exitArea;
+    expect(unit('psoma.') / unit('psomg.')).toBeCloseTo(law(thrust.boosterLevels[1]) / law(thrust.boosterLevels[0]), 9);
   });
 });
 

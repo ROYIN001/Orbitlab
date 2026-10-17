@@ -25,7 +25,7 @@
  */
 import type { VehicleSpec } from '../types';
 import { G0 } from '../physics/constants';
-import { VehicleModel, engineMassFlow, engineThrust, liftoffThrust, solidProfile } from '../physics/vehicle';
+import { VehicleModel, engineMassFlow, engineThrustAt, liftoffThrust, solidProfile } from '../physics/vehicle';
 
 /**
  * `parallel`: a first stage burning with its strap-ons, until they run dry.
@@ -215,7 +215,7 @@ export function vehicleFigures(spec: VehicleSpec, payloadKg: number): VehicleFig
       ignitionMass += payloadKg;
       if (i === 1 && spec.fairing) ignitionMass += spec.fairing.mass;
       const e = st.engine;
-      const thrust = e.count * engineThrust(e, 0) * (e.solid ? solidProfile(0, e.peakFactor) : 1);
+      const thrust = e.count * engineThrustAt(e, 0, e.solid ? solidProfile(0, e.peakFactor) : 1);
       tw = thrust / (ignitionMass * G0);
     }
     return {
