@@ -4,10 +4,11 @@ import { ProjectsPanel } from './projects/projects-panel';
 import { ClassroomPanel } from './classroom/classroom-panel';
 import { ValidationPanel } from './validation/validation-panel';
 import type { WorkHost } from './workspace-host';
+import { TEACHER_TOOLS } from './held';
 import './workspace-dialog.css';
 
 type Tab = 'notebook' | 'validation' | 'classroom' | 'backups';
-const TABS: Tab[] = ['notebook', 'validation', 'classroom', 'backups'];
+const TABS: Tab[] = (['notebook', 'validation', 'classroom', 'backups'] as Tab[]).filter((tab) => TEACHER_TOOLS || tab !== 'classroom');
 
 /** Loaded on demand, and included in the offline app's precache. */
 export class WorkContent {
@@ -54,7 +55,7 @@ export class WorkContent {
     }
     this.panels.get('notebook')!.append(this.notebook.root);
     this.panels.get('validation')!.append(this.validation.section());
-    this.panels.get('classroom')!.append(this.classroom.section());
+    this.panels.get('classroom')?.append(this.classroom.section());
     this.panels.get('backups')!.append(this.projects.section());
     this.root.append(tabs, ...this.panels.values());
     this.applyLanguage();

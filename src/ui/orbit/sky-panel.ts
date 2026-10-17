@@ -21,6 +21,7 @@
  * lends it its views, its time bar and its two side panels.
  */
 import { t, getLang } from '../../i18n';
+import { TEACHER_TOOLS } from '../held';
 import { RAD } from '../../physics/constants';
 import { julianDate } from '../../physics/orbital';
 import type { AppLevel } from '../app-mode';
@@ -565,7 +566,7 @@ export class RealSky {
     }
 
     if (objs.length) box.append(this.overflightsBlock());
-    if (this.status.state === 'ready') box.append(this.caseSheetsBlock());
+    if (TEACHER_TOOLS && this.status.state === 'ready') box.append(this.caseSheetsBlock());
 
     // a file of one's own: read here, sent nowhere
     const imp = el('div', 'pg-sky-import');
