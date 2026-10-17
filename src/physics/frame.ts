@@ -33,7 +33,8 @@ import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
 import type { ReturnTarget } from './sim/return-guidance';
 import { clone } from './vec3';
-import { propagateKepler } from './orbital';
+import { rk4Steps } from './integrator';
+import { gravityJ2 } from './gravity';
 import { atmosphere } from './atmosphere';
 import { geodeticHeight } from './geodesy';
 import { cloneRigidTelemetry, interpolateRigidTelemetry, sameRigidConfiguration, type RigidTelemetry } from './rigid/telemetry';
@@ -694,8 +695,8 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
  *
  * Continuous quantities (altitude, speed, dynamic pressure, the classical
  * elements, the epoch) are blended linearly, angles along the shortest arc and
- * the body axis by slerp. Position and velocity follow the Kepler solution
- * propagated from the earlier frame whenever both frames are coasting or in
+ * the body axis by slerp. Position and velocity follow the J2 coast (D-51;
+ * the Kepler solution until then) propagated from the earlier frame whenever both frames are coasting or in
  * orbit — over a 30 s orbital recording gap a straight line between two states
  * cuts several kilometres off the arc — and are blended linearly otherwise,
  * because under thrust or in the atmosphere the two-body solution is not the
@@ -762,7 +763,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   let r: Vec3;
   let v: Vec3;
   if (ballistic) {
-    const p = propagateKepler(a.r, a.v, dt);
+    // on the J2 coast both ends were flown on (D-51: Kepler until then), in steps of at most 10 s
+    const p = rk4Steps(0, { r: a.r, v: a.v }, dt, (_t, x) => gravityJ2(x));
     r = p.r;
     v = p.v;
   } else if ((a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo && !a.rigid)) {
