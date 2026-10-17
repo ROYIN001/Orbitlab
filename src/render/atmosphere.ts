@@ -58,98 +58,98 @@ export const ATMOSPHERE_HEIGHT = 100e3;
  *   the transmittance table, and its inverse.
  */
 const COMMON = /* glsl */ `
-  #ifndef PI
-  #define PI 3.141592653589793
-  #endif
-  const float RG = ${R_EARTH.toFixed(1)};
-  const float RT = ${(R_EARTH + ATMOSPHERE_HEIGHT).toFixed(1)};
-  const vec3 RAY_S = vec3(5.802e-6, 13.558e-6, 33.1e-6);
-  const float RAY_H = 8000.0;
-  const float MIE_S = 3.996e-6;
-  const float MIE_E = 4.40e-6;
-  const float MIE_H = 1200.0;
-  const float MIE_G = 0.8;
-  const vec3 OZONE = vec3(0.650e-6, 1.881e-6, 0.085e-6);
+#ifndef PI
+#define PI 3.141592653589793
+#endif
+const float RG = ${R_EARTH.toFixed(1)};
+const float RT = ${(R_EARTH + ATMOSPHERE_HEIGHT).toFixed(1)};
+const vec3 RAY_S = vec3(5.802e-6, 13.558e-6, 33.1e-6);
+const float RAY_H = 8000.0;
+const float MIE_S = 3.996e-6;
+const float MIE_E = 4.40e-6;
+const float MIE_H = 1200.0;
+const float MIE_G = 0.8;
+const vec3 OZONE = vec3(0.650e-6, 1.881e-6, 0.085e-6);
 
-  struct Medium { vec3 scatR; float scatM; vec3 ext; };
-  Medium medium(float h) {
-    float dr = exp(-h / RAY_H), dm = exp(-h / MIE_H);
-    float oz = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
-    Medium m;
-    m.scatR = RAY_S * dr;
-    m.scatM = MIE_S * dm;
-    m.ext = RAY_S * dr + vec3(MIE_E * dm) + OZONE * oz;
-    return m;
-  }
+struct Medium { vec3 scatR; float scatM; vec3 ext; };
+Medium medium(float h) {
+float dr = exp(-h / RAY_H), dm = exp(-h / MIE_H);
+float oz = max(0.0, 1.0 - abs(h - 25000.0) / 15000.0);
+Medium m;
+m.scatR = RAY_S * dr;
+m.scatM = MIE_S * dm;
+m.ext = RAY_S * dr + vec3(MIE_E * dm) + OZONE * oz;
+return m;
+}
 
-  float toSphere(float r, float mu, float R) {
-    float disc = r * r * mu * mu + (R - r) * (R + r);
-    if (disc < 0.0) return -1.0;
-    float s = sqrt(disc);
-    float d0 = -r * mu - s, d1 = -r * mu + s;
-    return d0 > 0.0 ? d0 : (d1 > 0.0 ? d1 : -1.0);
-  }
-  bool hitsGround(float r, float mu) {
-    return mu < 0.0 && r * r * mu * mu + (RG - r) * (RG + r) >= 0.0;
-  }
+float toSphere(float r, float mu, float R) {
+float disc = r * r * mu * mu + (R - r) * (R + r);
+if (disc < 0.0) return -1.0;
+float s = sqrt(disc);
+float d0 = -r * mu - s, d1 = -r * mu + s;
+return d0 > 0.0 ? d0 : (d1 > 0.0 ? d1 : -1.0);
+}
+bool hitsGround(float r, float mu) {
+return mu < 0.0 && r * r * mu * mu + (RG - r) * (RG + r) >= 0.0;
+}
 
-  vec2 transmittanceUv(float r, float mu) {
-    float H = sqrt((RT - RG) * (RT + RG));
-    float rho = sqrt(max(0.0, (r - RG) * (r + RG)));
-    float d = max(0.0, -r * mu + sqrt(max(0.0, r * r * mu * mu + (RT - r) * (RT + r))));
-    float dmin = RT - r, dmax = rho + H;
-    return vec2((d - dmin) / max(dmax - dmin, 1.0), rho / H);
-  }
-  void transmittanceRMu(vec2 uv, out float r, out float mu) {
-    float H = sqrt((RT - RG) * (RT + RG));
-    float rho = H * uv.y;
-    r = sqrt(rho * rho + RG * RG);
-    float dmin = RT - r, dmax = rho + H;
-    float d = dmin + uv.x * (dmax - dmin);
-    mu = d == 0.0 ? 1.0 : clamp((H * H - rho * rho - d * d) / (2.0 * r * d), -1.0, 1.0);
-  }
+vec2 transmittanceUv(float r, float mu) {
+float H = sqrt((RT - RG) * (RT + RG));
+float rho = sqrt(max(0.0, (r - RG) * (r + RG)));
+float d = max(0.0, -r * mu + sqrt(max(0.0, r * r * mu * mu + (RT - r) * (RT + r))));
+float dmin = RT - r, dmax = rho + H;
+return vec2((d - dmin) / max(dmax - dmin, 1.0), rho / H);
+}
+void transmittanceRMu(vec2 uv, out float r, out float mu) {
+float H = sqrt((RT - RG) * (RT + RG));
+float rho = H * uv.y;
+r = sqrt(rho * rho + RG * RG);
+float dmin = RT - r, dmax = rho + H;
+float d = dmin + uv.x * (dmax - dmin);
+mu = d == 0.0 ? 1.0 : clamp((H * H - rho * rho - d * d) / (2.0 * r * d), -1.0, 1.0);
+}
 
-  float rayleighPhase(float c) { return 3.0 / (16.0 * PI) * (1.0 + c * c); }
-  float miePhase(float c) {
-    float g = MIE_G, g2 = g * g;
-    return 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + c * c)) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * c, 1.5));
-  }
+float rayleighPhase(float c) { return 3.0 / (16.0 * PI) * (1.0 + c * c); }
+float miePhase(float c) {
+float g = MIE_G, g2 = g * g;
+return 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + c * c)) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * c, 1.5));
+}
 `;
 
 const FULLSCREEN_VERT = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = position.xy * 0.5 + 0.5;
-    gl_Position = vec4(position.xy, 0.0, 1.0);
-  }
+varying vec2 vUv;
+void main() {
+vUv = position.xy * 0.5 + 0.5;
+gl_Position = vec4(position.xy, 0.0, 1.0);
+}
 `;
 
 const TRANSMITTANCE_FRAG = /* glsl */ `
-  ${COMMON}
-  varying vec2 vUv;
-  void main() {
-    float r, mu;
-    transmittanceRMu(vUv, r, mu);
-    float d = toSphere(r, mu, RT);
-    vec3 depth = vec3(0.0);
-    const int N = 40;
-    for (int i = 0; i < N; i++) {
-      float t = (float(i) + 0.5) / float(N) * max(d, 0.0);
-      float h = sqrt(r * r + t * t + 2.0 * r * mu * t) - RG;
-      depth += medium(h).ext;
-    }
-    vec3 tr = exp(-depth * max(d, 0.0) / float(N));
-    gl_FragColor = vec4(any(isnan(tr)) ? vec3(0.0) : tr, 1.0);
-  }
+${COMMON}
+varying vec2 vUv;
+void main() {
+float r, mu;
+transmittanceRMu(vUv, r, mu);
+float d = toSphere(r, mu, RT);
+vec3 depth = vec3(0.0);
+const int N = 40;
+for (int i = 0; i < N; i++) {
+float t = (float(i) + 0.5) / float(N) * max(d, 0.0);
+float h = sqrt(r * r + t * t + 2.0 * r * mu * t) - RG;
+depth += medium(h).ext;
+}
+vec3 tr = exp(-depth * max(d, 0.0) / float(N));
+gl_FragColor = vec4(any(isnan(tr)) ? vec3(0.0) : tr, 1.0);
+}
 `;
 
 /** The transmittance from radius r and cosine mu to space (the ground blocks it). */
 const SAMPLE_TRANSMITTANCE = /* glsl */ `
-  uniform sampler2D uTransmittance;
-  vec3 transmittance(float r, float mu) {
-    if (hitsGround(r, mu)) return vec3(0.0);
-    return texture2D(uTransmittance, transmittanceUv(r, mu)).rgb;
-  }
+uniform sampler2D uTransmittance;
+vec3 transmittance(float r, float mu) {
+if (hitsGround(r, mu)) return vec3(0.0);
+return texture2D(uTransmittance, transmittanceUv(r, mu)).rgb;
+}
 `;
 
 /**
@@ -162,51 +162,51 @@ const SAMPLE_TRANSMITTANCE = /* glsl */ `
  * ground bounces back (albedo 0.3) is added.
  */
 const MULTISCATTER_FRAG = /* glsl */ `
-  ${COMMON}
-  ${SAMPLE_TRANSMITTANCE}
-  varying vec2 vUv;
-  void main() {
-    float muS = vUv.x * 2.0 - 1.0;
-    float r = RG + vUv.y * (RT - RG);
-    vec3 sunDir = vec3(sqrt(max(0.0, 1.0 - muS * muS)), 0.0, muS);
-    vec3 L2 = vec3(0.0), fms = vec3(0.0);
-    const int SQ = 8, N = 20;
-    for (int a = 0; a < SQ; a++) for (int b = 0; b < SQ; b++) {
-      float th = PI * (float(a) + 0.5) / float(SQ);
-      float ph = acos(1.0 - 2.0 * (float(b) + 0.5) / float(SQ));
-      vec3 dir = vec3(cos(th) * sin(ph), sin(th) * sin(ph), cos(ph));
-      float mu = dir.z;
-      float dG = hitsGround(r, mu) ? toSphere(r, mu, RG) : -1.0;
-      float dT = toSphere(r, mu, RT);
-      float d = dG > 0.0 ? dG : dT;
-      if (d <= 0.0) continue;
-      vec3 T = vec3(1.0), Lp = vec3(0.0), fp = vec3(0.0);
-      float dt = d / float(N);
-      for (int i = 0; i < N; i++) {
-        float t = (float(i) + 0.5) * dt;
-        vec3 p = vec3(0.0, 0.0, r) + dir * t;
-        float rp = length(p);
-        Medium m = medium(rp - RG);
-        vec3 S = m.scatR + vec3(m.scatM);
-        vec3 Ts = transmittance(rp, dot(p, sunDir) / rp);
-        vec3 stepT = exp(-m.ext * dt);
-        vec3 integ = (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
-        Lp += T * integ * S * Ts * (1.0 / (4.0 * PI));
-        fp += T * integ * S;
-        T *= stepT;
-      }
-      if (dG > 0.0) {
-        vec3 p = vec3(0.0, 0.0, r) + dir * dG;
-        float c = max(0.0, dot(normalize(p), sunDir));
-        Lp += T * transmittance(RG + 1.0, c) * c * 0.3 / PI;
-      }
-      L2 += Lp; fms += fp;
-    }
-    L2 /= float(SQ * SQ);
-    fms /= float(SQ * SQ);
-    vec3 psi = L2 / max(vec3(1.0) - fms, vec3(1e-3));
-    gl_FragColor = vec4(any(isnan(psi)) || any(isinf(psi)) ? vec3(0.0) : psi, 1.0);
-  }
+${COMMON}
+${SAMPLE_TRANSMITTANCE}
+varying vec2 vUv;
+void main() {
+float muS = vUv.x * 2.0 - 1.0;
+float r = RG + vUv.y * (RT - RG);
+vec3 sunDir = vec3(sqrt(max(0.0, 1.0 - muS * muS)), 0.0, muS);
+vec3 L2 = vec3(0.0), fms = vec3(0.0);
+const int SQ = 8, N = 20;
+for (int a = 0; a < SQ; a++) for (int b = 0; b < SQ; b++) {
+float th = PI * (float(a) + 0.5) / float(SQ);
+float ph = acos(1.0 - 2.0 * (float(b) + 0.5) / float(SQ));
+vec3 dir = vec3(cos(th) * sin(ph), sin(th) * sin(ph), cos(ph));
+float mu = dir.z;
+float dG = hitsGround(r, mu) ? toSphere(r, mu, RG) : -1.0;
+float dT = toSphere(r, mu, RT);
+float d = dG > 0.0 ? dG : dT;
+if (d <= 0.0) continue;
+vec3 T = vec3(1.0), Lp = vec3(0.0), fp = vec3(0.0);
+float dt = d / float(N);
+for (int i = 0; i < N; i++) {
+float t = (float(i) + 0.5) * dt;
+vec3 p = vec3(0.0, 0.0, r) + dir * t;
+float rp = length(p);
+Medium m = medium(rp - RG);
+vec3 S = m.scatR + vec3(m.scatM);
+vec3 Ts = transmittance(rp, dot(p, sunDir) / rp);
+vec3 stepT = exp(-m.ext * dt);
+vec3 integ = (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
+Lp += T * integ * S * Ts * (1.0 / (4.0 * PI));
+fp += T * integ * S;
+T *= stepT;
+}
+if (dG > 0.0) {
+vec3 p = vec3(0.0, 0.0, r) + dir * dG;
+float c = max(0.0, dot(normalize(p), sunDir));
+Lp += T * transmittance(RG + 1.0, c) * c * 0.3 / PI;
+}
+L2 += Lp; fms += fp;
+}
+L2 /= float(SQ * SQ);
+fms /= float(SQ * SQ);
+vec3 psi = L2 / max(vec3(1.0) - fms, vec3(1e-3));
+gl_FragColor = vec4(any(isnan(psi)) || any(isinf(psi)) ? vec3(0.0) : psi, 1.0);
+}
 `;
 
 /**
@@ -302,83 +302,83 @@ const MULTISCATTER_FRAG = /* glsl */ `
  * spread it everywhere.
  */
 const SKY_FRAG = /* glsl */ `
-  #include <common>
-  ${COMMON}
-  ${SAMPLE_TRANSMITTANCE}
-  uniform sampler2D uMultiScatter;
-  uniform mat4 uInvProj;
-  uniform mat4 uCamToWorld;
-  uniform vec3 uCamEci;
-  uniform vec3 uSunDir;
-  uniform float uSunIlluminance;
-  varying vec2 vUv;
+#include <common>
+${COMMON}
+${SAMPLE_TRANSMITTANCE}
+uniform sampler2D uMultiScatter;
+uniform mat4 uInvProj;
+uniform mat4 uCamToWorld;
+uniform vec3 uCamEci;
+uniform vec3 uSunDir;
+uniform float uSunIlluminance;
+varying vec2 vUv;
 
-  vec3 sunlight(float r, float muS) {
-    float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
-    float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
-    return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
-  }
+vec3 sunlight(float r, float muS) {
+float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
+float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
+return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
+}
 
-  vec3 multiScatter(float r, float muS) {
-    return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
-  }
+vec3 multiScatter(float r, float muS) {
+return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
+}
 
-  void main() {
-    vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
-    vec3 dir = normalize((uCamToWorld * vec4(v.xyz / v.w, 0.0)).xyz);
-    vec3 o = uCamEci;
-    float r = max(length(o), RG + 1.0);
-    float tc = -dot(o, dir);
-    float mu = -tc / r;
-    float c = dot(dir, uSunDir);
-    vec3 L = vec3(0.0);
-    vec3 T = vec3(1.0);
-    vec3 pc = o + dir * tc;
-    float rp2 = dot(pc, pc);
-    float h = sqrt(max(0.0, RT * RT - rp2));
-    float tStart = max(0.0, tc - h), tEnd = tc + h;
-    if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);
-    if (tEnd > tStart) {
-      float pr = rayleighPhase(c), pm = miePhase(c);
-      const int N = 24;
-      float len = tEnd - tStart;
-      float tLow = r > RT ? clamp(tc, tStart, tEnd) : tStart;
-      vec3 pLow = o + dir * tLow;
-      float f = (tLow - tStart) / len;
-      float kA = len / max(f, 1e-6), kB = len / max(1.0 - f, 1e-6);
-      float sa = tStart - tLow;
-      for (int i = 0; i < N; i++) {
-        float x = float(i + 1) / float(N) - f;
-        float sb = x * abs(x) * (x < 0.0 ? kA : kB);
-        float dt = sb - sa;
-        vec3 p = pLow + dir * (0.5 * (sa + sb));
-        sa = sb;
-        float rp = length(p);
-        float muS = dot(p, uSunDir) / rp;
-        Medium m = medium(rp - RG);
-        vec3 Ts = sunlight(rp, muS);
-        vec3 single = m.scatR * pr + vec3(m.scatM * pm);
-        vec3 S = single * Ts + (m.scatR + vec3(m.scatM)) * multiScatter(rp, muS);
-        vec3 stepT = exp(-m.ext * dt);
-        L += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
-        T *= stepT;
-      }
-    }
-    L *= uSunIlluminance;
-    {
-      const float SUN_COS = 0.9999892;
-      float disc = smoothstep(SUN_COS - 2e-6, SUN_COS + 2e-6, c);
-      float glow = pow(max(c, 0.0), 18000.0) * 0.35;
-      if ((disc > 0.0 || glow > 0.001) && !hitsGround(r, mu)) {
-        float limb = 0.4 + 0.6 * sqrt(clamp((c - SUN_COS) / (1.0 - SUN_COS), 0.0, 1.0));
-        L += (disc * 50.0 * limb + glow) * uSunIlluminance * (r > RT ? T : transmittance(r, mu));
-      }
-    }
-    if (any(isnan(L)) || any(isinf(L))) L = vec3(0.0);
-    gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
+void main() {
+vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
+vec3 dir = normalize((uCamToWorld * vec4(v.xyz / v.w, 0.0)).xyz);
+vec3 o = uCamEci;
+float r = max(length(o), RG + 1.0);
+float tc = -dot(o, dir);
+float mu = -tc / r;
+float c = dot(dir, uSunDir);
+vec3 L = vec3(0.0);
+vec3 T = vec3(1.0);
+vec3 pc = o + dir * tc;
+float rp2 = dot(pc, pc);
+float h = sqrt(max(0.0, RT * RT - rp2));
+float tStart = max(0.0, tc - h), tEnd = tc + h;
+if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);
+if (tEnd > tStart) {
+float pr = rayleighPhase(c), pm = miePhase(c);
+const int N = 24;
+float len = tEnd - tStart;
+float tLow = r > RT ? clamp(tc, tStart, tEnd) : tStart;
+vec3 pLow = o + dir * tLow;
+float f = (tLow - tStart) / len;
+float kA = len / max(f, 1e-6), kB = len / max(1.0 - f, 1e-6);
+float sa = tStart - tLow;
+for (int i = 0; i < N; i++) {
+float x = float(i + 1) / float(N) - f;
+float sb = x * abs(x) * (x < 0.0 ? kA : kB);
+float dt = sb - sa;
+vec3 p = pLow + dir * (0.5 * (sa + sb));
+sa = sb;
+float rp = length(p);
+float muS = dot(p, uSunDir) / rp;
+Medium m = medium(rp - RG);
+vec3 Ts = sunlight(rp, muS);
+vec3 single = m.scatR * pr + vec3(m.scatM * pm);
+vec3 S = single * Ts + (m.scatR + vec3(m.scatM)) * multiScatter(rp, muS);
+vec3 stepT = exp(-m.ext * dt);
+L += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
+T *= stepT;
+}
+}
+L *= uSunIlluminance;
+{
+const float SUN_COS = 0.9999892;
+float disc = smoothstep(SUN_COS - 2e-6, SUN_COS + 2e-6, c);
+float glow = pow(max(c, 0.0), 18000.0) * 0.35;
+if ((disc > 0.0 || glow > 0.001) && !hitsGround(r, mu)) {
+float limb = 0.4 + 0.6 * sqrt(clamp((c - SUN_COS) / (1.0 - SUN_COS), 0.0, 1.0));
+L += (disc * 50.0 * limb + glow) * uSunIlluminance * (r > RT ? T : transmittance(r, mu));
+}
+}
+if (any(isnan(L)) || any(isinf(L))) L = vec3(0.0);
+gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
 `;
 
 function target(w: number, h: number, type: THREE.TextureDataType): THREE.WebGLRenderTarget {

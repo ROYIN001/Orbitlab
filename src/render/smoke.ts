@@ -13,79 +13,94 @@
 import * as THREE from 'three';
 
 const HASH = /* glsl */ `
-  float h11(float n) { return fract(sin(n * 127.1) * 43758.5453123); }
+float h11(float n) { return fract(sin(n * 127.1) * 43758.5453123); }
 `;
 
 const BILLBOARD_HEAD = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  attribute float iSeed;
-  varying vec2 vUv;
-  varying float vAlpha;
-  varying vec3 vTint;
+#include <common>
+#include <logdepthbuf_pars_vertex>
+attribute float iSeed;
+varying vec2 vUv;
+varying float vAlpha;
+varying vec3 vTint;
 ` + HASH;
 
+/*
+ * GROUND_VERT's uniforms.
+ * - uT: seconds since first-stage ignition
+ * - uEmitDur: length of the emission window, s
+ * - uLife: puff lifetime, s
+ * - uSpeed: initial outward speed, m/s
+ * - uR0: radius of the trench mouth, m
+ * - uSize: base puff radius, m
+ * - uJetA: trench azimuth in the local frame, rad
+ * - uRise: vertical rise rate, relative to the fast layer
+ * - uGrow: how fast a puff widens, per second of its age
+ * - uDrift: the surface wind that carries the cloud, m/s, pad axes
+ */
 const GROUND_VERT = BILLBOARD_HEAD + /* glsl */ `
-  uniform float uT;        // seconds since first-stage ignition
-  uniform float uEmitDur;  // length of the emission window, s
-  uniform float uLife;     // puff lifetime, s
-  uniform float uSpeed;    // initial outward speed, m/s
-  uniform float uR0;       // radius of the trench mouth, m
-  uniform float uSize;     // base puff radius, m
-  uniform float uJetA;     // trench azimuth in the local frame, rad
-  uniform float uRise;     // vertical rise rate, relative to the fast layer
-  uniform float uGrow;     // how fast a puff widens, per second of its age
-  uniform vec3 uDrift;     // the surface wind that carries the cloud, m/s, pad axes
-  uniform float uOpacity;
-  uniform vec3 uColor;
-  uniform vec3 uHot;
-  void main() {
-    vUv = uv;
-    float id = iSeed;
-    float birth = id * uEmitDur;
-    float age = uT - birth;
-    float rnd = h11(id * 57.3 + 3.1);
-    float rnd2 = h11(id * 91.7 + 8.9);
-    float rnd3 = h11(id * 23.9 + 1.7);
-    float life = uLife * (0.7 + 0.6 * rnd3);
-    float alive = step(0.0, age) * (1.0 - step(life, age));
-    float ang = uJetA + (rnd - 0.5) * 1.9 + step(0.5, rnd2) * PI;
-    float spd = uSpeed * (0.45 + 1.0 * rnd2);
-    float tau = 1.5;
-    float a = max(age, 0.0);
-    float rr = uR0 + spd * tau * (1.0 - exp(-a / tau));
-    float y = 1.5 + uRise * (1.1 + 4.2 * rnd) * pow(a, 1.15) + rr * 0.10;
-    vec3 centre = vec3(cos(ang) * rr, y, sin(ang) * rr) + uDrift * a;
-    float size = uSize * (0.55 + 0.9 * rnd) * (1.0 + a * uGrow) * alive;
-    float fade = smoothstep(0.0, 0.35, a) * (1.0 - smoothstep(life * 0.4, life, a));
-    vAlpha = fade * uOpacity * alive;
-    vTint = mix(uHot, uColor, smoothstep(0.0, 1.1, a));
-    vec4 mv = modelViewMatrix * vec4(centre, 1.0);
-    mv.xy += position.xy * size;
-    gl_Position = projectionMatrix * mv;
-    #include <logdepthbuf_vertex>
-  }
+uniform float uT;
+uniform float uEmitDur;
+uniform float uLife;
+uniform float uSpeed;
+uniform float uR0;
+uniform float uSize;
+uniform float uJetA;
+uniform float uRise;
+uniform float uGrow;
+uniform vec3 uDrift;
+uniform float uOpacity;
+uniform vec3 uColor;
+uniform vec3 uHot;
+void main() {
+vUv = uv;
+float id = iSeed;
+float birth = id * uEmitDur;
+float age = uT - birth;
+float rnd = h11(id * 57.3 + 3.1);
+float rnd2 = h11(id * 91.7 + 8.9);
+float rnd3 = h11(id * 23.9 + 1.7);
+float life = uLife * (0.7 + 0.6 * rnd3);
+float alive = step(0.0, age) * (1.0 - step(life, age));
+float ang = uJetA + (rnd - 0.5) * 1.9 + step(0.5, rnd2) * PI;
+float spd = uSpeed * (0.45 + 1.0 * rnd2);
+float tau = 1.5;
+float a = max(age, 0.0);
+float rr = uR0 + spd * tau * (1.0 - exp(-a / tau));
+float y = 1.5 + uRise * (1.1 + 4.2 * rnd) * pow(a, 1.15) + rr * 0.10;
+vec3 centre = vec3(cos(ang) * rr, y, sin(ang) * rr) + uDrift * a;
+float size = uSize * (0.55 + 0.9 * rnd) * (1.0 + a * uGrow) * alive;
+float fade = smoothstep(0.0, 0.35, a) * (1.0 - smoothstep(life * 0.4, life, a));
+vAlpha = fade * uOpacity * alive;
+vTint = mix(uHot, uColor, smoothstep(0.0, 1.1, a));
+vec4 mv = modelViewMatrix * vec4(centre, 1.0);
+mv.xy += position.xy * size;
+gl_Position = projectionMatrix * mv;
+#include <logdepthbuf_vertex>
+}
 `;
 
+/*
+ * PUFF_FRAG: tone mapping + sRGB output, exactly as three appends them to a built-in
+ * material (see the note in render/scene.ts) — without this the puffs are
+ * the only grey in the frame that is not tone-mapped and read as charcoal.
+ */
 const PUFF_FRAG = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_fragment>
-  uniform sampler2D uMap;
-  varying vec2 vUv;
-  varying float vAlpha;
-  varying vec3 vTint;
-  void main() {
-    #include <logdepthbuf_fragment>
-    vec4 t = texture2D(uMap, vUv);
-    float a = t.a * vAlpha;
-    if (a < 0.004) discard;
-    // tone mapping + sRGB output, exactly as three appends them to a built-in
-    // material (see the note in render/scene.ts) — without this the puffs are
-    // the only grey in the frame that is not tone-mapped and read as charcoal
-    gl_FragColor = vec4(vTint * t.rgb, a);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform sampler2D uMap;
+varying vec2 vUv;
+varying float vAlpha;
+varying vec3 vTint;
+void main() {
+#include <logdepthbuf_fragment>
+vec4 t = texture2D(uMap, vUv);
+float a = t.a * vAlpha;
+if (a < 0.004) discard;
+gl_FragColor = vec4(vTint * t.rgb, a);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
 `;
 
 let puffTex: THREE.Texture | null = null;

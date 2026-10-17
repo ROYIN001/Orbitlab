@@ -106,17 +106,17 @@ const G = 0.68;
 const CS_K = (1.5 * (1 - G * G)) / (2 + G * G);
 
 const VERT = /* glsl */ `
-  uniform vec3 uVehicle;
-  uniform float uScale;
-  varying vec3 vPos;
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  void main() {
-    vec4 w = modelMatrix * vec4(position, 1.0);
-    vPos = (w.xyz - uVehicle) / uScale;
-    gl_Position = projectionMatrix * viewMatrix * w;
-    #include <logdepthbuf_vertex>
-  }
+uniform vec3 uVehicle;
+uniform float uScale;
+varying vec3 vPos;
+#include <common>
+#include <logdepthbuf_pars_vertex>
+void main() {
+vec4 w = modelMatrix * vec4(position, 1.0);
+vPos = (w.xyz - uVehicle) / uScale;
+gl_Position = projectionMatrix * viewMatrix * w;
+#include <logdepthbuf_vertex>
+}
 `;
 
 /*
@@ -154,113 +154,113 @@ const VERT = /* glsl */ `
  * then capped (CAP).
  */
 const FRAG = /* glsl */ `
-  #include <logdepthbuf_pars_fragment>
-  uniform float uIntensity, uTime, uExpansion, uScale;
-  uniform vec3 uVehicle, uAxis, uSun, uUp;
-  varying vec3 vPos;
+#include <logdepthbuf_pars_fragment>
+uniform float uIntensity, uTime, uExpansion, uScale;
+uniform vec3 uVehicle, uAxis, uSun, uUp;
+varying vec3 vPos;
 
-  float hash13(vec3 p) {
-    p = fract(p * 0.1031);
-    p += dot(p, p.zyx + 31.32);
-    return fract((p.x + p.y) * p.z);
-  }
-  float noise3(vec3 x) {
-    vec3 i = floor(x), f = fract(x);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(mix(hash13(i), hash13(i + vec3(1, 0, 0)), f.x), mix(hash13(i + vec3(0, 1, 0)), hash13(i + vec3(1, 1, 0)), f.x), f.y),
-      mix(mix(hash13(i + vec3(0, 0, 1)), hash13(i + vec3(1, 0, 1)), f.x), mix(hash13(i + vec3(0, 1, 1)), hash13(i + vec3(1, 1, 1)), f.x), f.y),
-      f.z);
-  }
-  float erfa(float x) {
-    x = clamp(x, -3.0, 3.0);
-    return tanh(x * (1.1284 + 0.1009 * x * x));
-  }
+float hash13(vec3 p) {
+p = fract(p * 0.1031);
+p += dot(p, p.zyx + 31.32);
+return fract((p.x + p.y) * p.z);
+}
+float noise3(vec3 x) {
+vec3 i = floor(x), f = fract(x);
+f = f * f * (3.0 - 2.0 * f);
+return mix(
+mix(mix(hash13(i), hash13(i + vec3(1, 0, 0)), f.x), mix(hash13(i + vec3(0, 1, 0)), hash13(i + vec3(1, 1, 0)), f.x), f.y),
+mix(mix(hash13(i + vec3(0, 0, 1)), hash13(i + vec3(1, 0, 1)), f.x), mix(hash13(i + vec3(0, 1, 1)), hash13(i + vec3(1, 1, 1)), f.x), f.y),
+f.z);
+}
+float erfa(float x) {
+x = clamp(x, -3.0, 3.0);
+return tanh(x * (1.1284 + 0.1009 * x * x));
+}
 
-  void main() {
-    #include <logdepthbuf_fragment>
-    vec3 ro = (cameraPosition - uVehicle) / uScale;
-    vec3 rd = normalize(vPos - ro);
-    vec3 oc = ro - uAxis * ${BOUND_Z.toFixed(2)};
-    float b = dot(oc, rd);
-    float h = b * b - dot(oc, oc) + ${(BOUND_R * BOUND_R).toFixed(4)};
-    if (h <= 0.0) discard;
-    h = sqrt(h);
-    float t0 = max(${NEAR_CUT.toFixed(2)}, -b - h);
-    float t1 = h - b;
-    float ra = dot(rd, uAxis);
-    vec3 rp = rd - ra * uAxis;
-    vec3 op = ro - dot(ro, uAxis) * uAxis;
-    float a = max(dot(rp, rp), 1e-6);
-    float tm = -dot(op, rp) / a;
-    float d2 = max(dot(op, op) - a * tm * tm, 0.0);
-    float c2 = dot(op, op) - ${PARA_K.toFixed(2)} * (dot(ro, uAxis) + ${PARA_Z0.toFixed(2)});
-    b = -a * tm - ${(PARA_K / 2).toFixed(2)} * ra;
-    h = b * b - a * c2;
-    if (h <= 0.0) discard;
-    h = b < 0.0 ? sqrt(h) - b : -sqrt(h) - b;
-    t0 = max(t0, min(h / a, c2 / h));
-    t1 = min(t1, max(h / a, c2 / h));
-    float dt = (t1 - t0) / ${STEPS.toFixed(1)};
-    if (dt <= 0.0) discard;
-    float sa = sqrt(2.4 * a);
-    float wz = 14.4 * dt * abs(ra);
-    float bands = 0.28 * exp(-wz * wz / 6.0);
-    float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+void main() {
+#include <logdepthbuf_fragment>
+vec3 ro = (cameraPosition - uVehicle) / uScale;
+vec3 rd = normalize(vPos - ro);
+vec3 oc = ro - uAxis * ${BOUND_Z.toFixed(2)};
+float b = dot(oc, rd);
+float h = b * b - dot(oc, oc) + ${(BOUND_R * BOUND_R).toFixed(4)};
+if (h <= 0.0) discard;
+h = sqrt(h);
+float t0 = max(${NEAR_CUT.toFixed(2)}, -b - h);
+float t1 = h - b;
+float ra = dot(rd, uAxis);
+vec3 rp = rd - ra * uAxis;
+vec3 op = ro - dot(ro, uAxis) * uAxis;
+float a = max(dot(rp, rp), 1e-6);
+float tm = -dot(op, rp) / a;
+float d2 = max(dot(op, op) - a * tm * tm, 0.0);
+float c2 = dot(op, op) - ${PARA_K.toFixed(2)} * (dot(ro, uAxis) + ${PARA_Z0.toFixed(2)});
+b = -a * tm - ${(PARA_K / 2).toFixed(2)} * ra;
+h = b * b - a * c2;
+if (h <= 0.0) discard;
+h = b < 0.0 ? sqrt(h) - b : -sqrt(h) - b;
+t0 = max(t0, min(h / a, c2 / h));
+t1 = min(t1, max(h / a, c2 / h));
+float dt = (t1 - t0) / ${STEPS.toFixed(1)};
+if (dt <= 0.0) discard;
+float sa = sqrt(2.4 * a);
+float wz = 14.4 * dt * abs(ra);
+float bands = 0.28 * exp(-wz * wz / 6.0);
+float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
 
-    float c = dot(rd, uSun);
-    float light = 0.62 + 0.38 * mix(0.75 * (1.0 + c * c), ${CS_K.toFixed(4)} * (1.0 + c * c) / pow(${(1 + G * G).toFixed(4)} - ${(2 * G).toFixed(2)} * c, 1.5), 0.55);
-    vec3 col = vec3(0.0);
-    float alpha = 0.0;
+float c = dot(rd, uSun);
+float light = 0.62 + 0.38 * mix(0.75 * (1.0 + c * c), ${CS_K.toFixed(4)} * (1.0 + c * c) / pow(${(1 + G * G).toFixed(4)} - ${(2 * G).toFixed(2)} * c, 1.5), 0.55);
+vec3 col = vec3(0.0);
+float alpha = 0.0;
 
-    for (int i = 0; i < ${STEPS}; i++) {
-      float ts = t0 + float(i) * dt;
-      float t = ts + jitter * dt;
-      vec3 p = ro + rd * t;
-      float z = dot(p, uAxis);
-      if (z < 0.0 || z > 1.84) continue;
-      float u = clamp(z / 1.8, 0.0, 1.0);
+for (int i = 0; i < ${STEPS}; i++) {
+float ts = t0 + float(i) * dt;
+float t = ts + jitter * dt;
+vec3 p = ro + rd * t;
+float z = dot(p, uAxis);
+if (z < 0.0 || z > 1.84) continue;
+float u = clamp(z / 1.8, 0.0, 1.0);
 
-      float cr = 0.015 + 0.22 * pow(u, 0.72) * (1.0 - 0.55 * u);
-      float x0 = sa * (ts - tm) / cr;
-      float core = (erfa(x0 + sa * dt / cr) - erfa(x0)) * 0.8862 * cr / sa * exp(-2.4 * d2 / (cr * cr))
-                 * (1.0 - smoothstep(0.0, 0.42, u)) * (0.72 + bands * cos(z * 28.9) * exp(-6.5 * u)) * 1.45;
+float cr = 0.015 + 0.22 * pow(u, 0.72) * (1.0 - 0.55 * u);
+float x0 = sa * (ts - tm) / cr;
+float core = (erfa(x0 + sa * dt / cr) - erfa(x0)) * 0.8862 * cr / sa * exp(-2.4 * d2 / (cr * cr))
+* (1.0 - smoothstep(0.0, 0.42, u)) * (0.72 + bands * cos(z * 28.9) * exp(-6.5 * u)) * 1.45;
 
-      vec3 q = p - z * uAxis;
-      float r = length(q);
-      float env = 0.02 + uExpansion * 0.96 * pow(u, 0.56) * (1.0 - 0.24 * pow(u, 1.65));
-      float rho = r / env;
-      float rest = 0.0;
-      if (rho < 1.22) {
-        float e = (rho - 0.9) / mix(0.09, 0.16, u);
-        float shell = exp(-e * e) * smoothstep(0.0, 0.06, u) * (1.0 - smoothstep(0.52, 1.02, u));
-        float cavity = (1.0 - smoothstep(0.15, 0.92, rho)) * smoothstep(0.02, 0.14, u) * (1.0 - smoothstep(0.3, 0.95, u)) * 0.16;
-        vec3 fp = 3.8 * p - uAxis * (1.2 * z + 0.045 * uTime);
-        float turb = noise3(fp) * 0.65 + noise3(fp * 2.4 + vec3(13.7, 5.2, 0.0) - uAxis * (0.08 * uTime)) * 0.35;
-        float flutes = smoothstep(0.42, 0.88, noise3(q / max(r, 1e-5) * 3.2 + uAxis * (3.0 * u - 0.03 * uTime)));
-        e = (rho - 0.76) / 0.26;
-        float tendrils = flutes * turb * exp(-e * e) * smoothstep(0.12, 0.45, u) * (1.0 - smoothstep(0.68, 1.0, u)) * 0.85;
-        rest = shell * (0.55 + 0.75 * turb) + cavity + tendrils;
-      }
-      float sum = (core + rest * dt) * 1.35;
-      float dens = sum * smoothstep(${NEAR_CUT.toFixed(2)}, ${NEAR_FADE.toFixed(2)}, t);
-      if (dens < 0.0005) continue;
+vec3 q = p - z * uAxis;
+float r = length(q);
+float env = 0.02 + uExpansion * 0.96 * pow(u, 0.56) * (1.0 - 0.24 * pow(u, 1.65));
+float rho = r / env;
+float rest = 0.0;
+if (rho < 1.22) {
+float e = (rho - 0.9) / mix(0.09, 0.16, u);
+float shell = exp(-e * e) * smoothstep(0.0, 0.06, u) * (1.0 - smoothstep(0.52, 1.02, u));
+float cavity = (1.0 - smoothstep(0.15, 0.92, rho)) * smoothstep(0.02, 0.14, u) * (1.0 - smoothstep(0.3, 0.95, u)) * 0.16;
+vec3 fp = 3.8 * p - uAxis * (1.2 * z + 0.045 * uTime);
+float turb = noise3(fp) * 0.65 + noise3(fp * 2.4 + vec3(13.7, 5.2, 0.0) - uAxis * (0.08 * uTime)) * 0.35;
+float flutes = smoothstep(0.42, 0.88, noise3(q / max(r, 1e-5) * 3.2 + uAxis * (3.0 * u - 0.03 * uTime)));
+e = (rho - 0.76) / 0.26;
+float tendrils = flutes * turb * exp(-e * e) * smoothstep(0.12, 0.45, u) * (1.0 - smoothstep(0.68, 1.0, u)) * 0.85;
+rest = shell * (0.55 + 0.75 * turb) + cavity + tendrils;
+}
+float sum = (core + rest * dt) * 1.35;
+float dens = sum * smoothstep(${NEAR_CUT.toFixed(2)}, ${NEAR_FADE.toFixed(2)}, t);
+if (dens < 0.0005) continue;
 
-      float lit = smoothstep(-0.85, 0.85, dot(q + (0.5 * z - 0.175) * uAxis, uSun) / max(0.08, env));
-      vec3 s = mix(vec3(0.48, 0.68, 1.0), vec3(0.76, 0.9, 1.0), clamp(dot(p, uUp) * 0.6 + 0.5, 0.0, 1.0));
-      s = mix(s, vec3(1.0, 0.85, 0.68), smoothstep(0.72, 1.02, rho) * 0.55 * lit + max(0.0, c) * 0.35);
-      s = mix(s, vec3(1.0, 0.92, 0.8), clamp(core / (sum + 0.01 * dt), 0.0, 1.0));
-      col += (1.0 - alpha) * s * mix(0.42, 1.32, lit) * light * dens;
-      alpha += (1.0 - alpha) * min(1.0, dens * 0.65);
-    }
-    col *= uIntensity;
-    float m = max(col.r, max(col.g, col.b));
-    if (m < 1e-3) discard;
-    col *= ${CAP.toFixed(1)} * tanh(min(m / ${CAP.toFixed(1)}, 4.0)) / m;
-    gl_FragColor = vec4(col, 1.0);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
+float lit = smoothstep(-0.85, 0.85, dot(q + (0.5 * z - 0.175) * uAxis, uSun) / max(0.08, env));
+vec3 s = mix(vec3(0.48, 0.68, 1.0), vec3(0.76, 0.9, 1.0), clamp(dot(p, uUp) * 0.6 + 0.5, 0.0, 1.0));
+s = mix(s, vec3(1.0, 0.85, 0.68), smoothstep(0.72, 1.02, rho) * 0.55 * lit + max(0.0, c) * 0.35);
+s = mix(s, vec3(1.0, 0.92, 0.8), clamp(core / (sum + 0.01 * dt), 0.0, 1.0));
+col += (1.0 - alpha) * s * mix(0.42, 1.32, lit) * light * dens;
+alpha += (1.0 - alpha) * min(1.0, dens * 0.65);
+}
+col *= uIntensity;
+float m = max(col.r, max(col.g, col.b));
+if (m < 1e-3) discard;
+col *= ${CAP.toFixed(1)} * tanh(min(m / ${CAP.toFixed(1)}, 4.0)) / m;
+gl_FragColor = vec4(col, 1.0);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
 `;
 
 /** The plume's radius at an altitude, m: nothing below 45 km, tens of km by 120 km. */
