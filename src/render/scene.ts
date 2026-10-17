@@ -57,6 +57,29 @@ const EARTH_VERT = /* glsl */ `
  * lifts the midtones hard (linear 0.05 leaves as 0.20, 0.30 as 0.66), so the
  * night lights, the limb rim and the specular term are all a fraction of what
  * they were when the shader wrote raw linear values into an sRGB buffer.
+ *
+ * The shaders' notes are out here, not in the GLSL: text in a shader string
+ * ships verbatim.
+ */
+/*
+ * EARTH_FRAG.
+ * - perturbNormal: tangent-space normal perturbation built from screen-space
+ *   derivatives (Mikkelsen's method, the same one three's bump/normal chunks
+ *   use). The sphere carries no tangent attribute and generating one for a
+ *   128x96 globe would double its vertex data for a term that is only ever a
+ *   shading detail.
+ * - Relief. The normal map is a real elevation derivative, so it shades
+ *   mountain ranges and ocean trenches by the sun's own direction — the
+ *   Himalayas, the Andes and the Rockies pick up a terminator shadow instead
+ *   of staying as flat as the photograph they are painted with.
+ * - Day/night (cosSunGeo) is a planet-scale quantity: taking it from the
+ *   perturbed normal would let a hillside flip its own local time and scatter
+ *   city lights across the sunlit side.
+ * - Sun glint off water. Tighter and weaker than it was: tone mapping lifts
+ *   it hard, and a broad pow-48 lobe at the old gain blew out into a haze
+ *   blob over the ocean instead of reading as a glint. It uses the geometric
+ *   normal: a 110-power lobe off a perturbed normal turns the relief into
+ *   glitter wherever the specular map bleeds onto a coast.
  */
 const EARTH_FRAG = /* glsl */ `
   #include <common>
@@ -72,13 +95,6 @@ const EARTH_FRAG = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vNormalW;
   varying vec3 vPosW;
-  /**
-   * Tangent-space normal perturbation built from screen-space derivatives
-   * (Mikkelsen's method, the same one three's bump/normal chunks use). The
-   * sphere carries no tangent attribute and generating one for a 128x96 globe
-   * would double its vertex data for a term that is only ever a shading
-   * detail.
-   */
   vec3 perturbNormal(vec3 N, vec3 p, vec2 uv, vec3 mapN) {
     vec3 q0 = dFdx(p), q1 = dFdy(p);
     vec2 st0 = dFdx(uv), st1 = dFdy(uv);
@@ -92,16 +108,9 @@ const EARTH_FRAG = /* glsl */ `
   void main() {
     #include <logdepthbuf_fragment>
     vec3 nGeo = normalize(vNormalW);
-    // Relief. The normal map is a real elevation derivative, so it shades
-    // mountain ranges and ocean trenches by the sun's own direction — the
-    // Himalayas, the Andes and the Rockies pick up a terminator shadow instead
-    // of staying as flat as the photograph they are painted with.
     vec3 mapN = texture2D(normalMap, vUv).xyz * 2.0 - 1.0;
     mapN.xy *= normalScale;
     vec3 n = normalScale > 0.001 ? perturbNormal(nGeo, vPosW, vUv, mapN) : nGeo;
-    // Day/night is a planet-scale quantity: taking it from the perturbed
-    // normal would let a hillside flip its own local time and scatter city
-    // lights across the sunlit side.
     float cosSunGeo = dot(nGeo, sunDir);
     float cosSun = dot(n, sunDir);
     float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
@@ -112,11 +121,6 @@ const EARTH_FRAG = /* glsl */ `
     float spec = texture2D(specMap, vUv).r;
     vec3 viewDir = normalize(camPos - vPosW);
     vec3 h = normalize(sunDir + viewDir);
-    // Sun glint off water. Tighter and weaker than it was: tone mapping lifts
-    // it hard, and a broad pow-48 lobe at the old gain blew out into a haze
-    // blob over the ocean instead of reading as a glint. It uses the geometric
-    // normal: a 110-power lobe off a perturbed normal turns the relief into
-    // glitter wherever the specular map bleeds onto a coast.
     float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
     col += vec3(s * 0.9, s * 0.95, s);
     float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
@@ -142,6 +146,24 @@ const ATMO_VERT = /* glsl */ `
 /** V02: the sun's illuminance in the scattering sky's units, set so noon reads like the gradient sky it replaces. */
 const SKY_ILLUMINANCE = 8;
 
+/*
+ * ATMO_FRAG, the 110 km shell.
+ * - discOnly: under the scattering sky the shell is kept only over the disc,
+ *   as the haze towards its limb: off it the sky's own limb glow, which is gone
+ *   by 70 km, met a second band out to the shell's faceted 110 km edge. The cut
+ *   is the view ray's perigee against the Earth's sphere, not a threshold on
+ *   dot(n, viewDir): the shell's 96 x 64 facets sit up to 5 km inside its own
+ *   sphere, and that cut would scallop.
+ * - band: brightest exactly at the silhouette, where the line of sight runs the
+ *   longest way through the shell, and falling away towards the sub-camera
+ *   point. The previous band peaked at d = 0.32 — about 70° in from the limb —
+ *   which put a broad additive lobe in the middle of the sunlit disc; once the
+ *   shader was tone-mapped that lobe blew out into a white blob sitting on the
+ *   planet.
+ * - sunset: warm scattering right at the terminator, cool blue elsewhere.
+ * - The rim is additive: the alpha term is the blend weight, so the colour is
+ *   tone-mapped and encoded first and only then scaled into the buffer.
+ */
 const ATMO_FRAG = /* glsl */ `
   #include <common>
   #include <logdepthbuf_pars_fragment>
@@ -156,30 +178,15 @@ const ATMO_FRAG = /* glsl */ `
     #include <logdepthbuf_fragment>
     vec3 n = normalize(vNormalW);
     vec3 viewDir = normalize(camPos - vPosW);
-    // Under the scattering sky the shell is kept only over the disc, as the
-    // haze towards its limb: off it the sky's own limb glow, which is gone by
-    // 70 km, met a second band out to the shell's faceted 110 km edge. The cut
-    // is the view ray's perigee against the Earth's sphere, not a threshold on
-    // dot(n, viewDir): the shell's 96 x 64 facets sit up to 5 km inside its
-    // own sphere, and that cut would scallop.
     if (discOnly > 0.5) {
       vec3 cr = cross(camPos - earthCentre, viewDir);
       if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;
     }
     float d = max(dot(n, viewDir), 0.0);
-    // Brightest exactly at the silhouette, where the line of sight runs the
-    // longest way through the shell, and falling away towards the sub-camera
-    // point. The previous band peaked at d = 0.32 — about 70° in from the limb
-    // — which put a broad additive lobe in the middle of the sunlit disc; once
-    // the shader was tone-mapped that lobe blew out into a white blob sitting
-    // on the planet.
     float band = pow(1.0 - d, 3.0);
     float lit = 0.2 + 0.8 * smoothstep(-0.25, 0.35, dot(n, sunDir));
-    // warm scattering right at the terminator, cool blue elsewhere
     float sunset = smoothstep(-0.25, 0.05, dot(n, sunDir)) * (1.0 - smoothstep(0.05, 0.4, dot(n, sunDir)));
     vec3 col = mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.55, 0.25), sunset * 0.8) * band * lit;
-    // additive rim: the alpha term is the blend weight, so the colour is
-    // tone-mapped and encoded first and only then scaled into the buffer
     gl_FragColor = vec4(col * rimGain, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
