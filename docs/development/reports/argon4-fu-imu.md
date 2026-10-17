@@ -12,10 +12,12 @@ which waits for the owner.
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 >
 > - **ทำอะไร:** ตามที่คุณเลือกข้อ (ก): ไบแอสของไจโรและมาตรความเร่งแต่ละแกนมีสองส่วน ส่วนแรกคือไบแอสตอนเปิดเครื่อง (turn-on) สุ่มครั้งเดียวตอนเปิดเครื่องแล้วคงที่ตลอดเที่ยวบิน ส่วนที่สองคือไบแอสระหว่างทำงาน (in-run) ที่ลอยเปลี่ยนแบบ Gauss–Markov (τ = 300 วินาที) ซ้อนอยู่ด้านบน ทั้งในค่าจริงของเซนเซอร์และในตัวกรองคาลมาน (จาก 21 เป็น 27 สถานะ) เดิมทั้งสองส่วนรวมเป็นกระบวนการเดียวที่จางลงตาม 300 วินาที ไบแอสตอนเปิดเครื่องจึงหายไปเกือบหมดภายในสิบกว่านาที (ไจโร MEMS เหลือ 4.9 °/ชม. จาก 30 °/ชม. เมื่อผ่านไปหนึ่งชั่วโมง ตอนนี้ยังอยู่ที่ 31.5 °/ชม.)
-> - **ผู้ใช้เห็นอะไร:** เมื่อเปิดระบบนำร่อง (โหมดวิศวกร 6-DOF) โดยไม่มี GNSS ความคลาดเคลื่อนโตขึ้นตามที่หน่วยจริงเป็น: Falcon 9 ที่ SECO ค่ามัธยฐานของ 30 ชุดสุ่ม MEMS 7.4 → 9.4 กม. เกรดยุทธวิธี 0.77 → 1.0 กม. เกรดนำร่อง 71 → 83 ม. เมื่อมี GNSS แทบไม่ต่างจากเดิม หมายเหตุในตัวตรวจลูปและคำอธิบายเครื่องมือ MCP บอก 27 สถานะ
-> - **บทเรียน:** สองบทที่บินด้วยระบบนำร่อง (2.3 guid-nav และ 15.2 ru-bins-astro) ตัวเลขในบทสรุปหลังบทเรียนปรับตามผลบินจริงทั้งภาษาอังกฤษ รัสเซีย และไทย ผลผ่าน/ไม่ผ่านไม่เปลี่ยน **ยกเว้นบท 15.2 กรณีเปิดตัวจับดาว: 989 ม. → 1 184 ม. เกินเกณฑ์ 1 000 ม. จึงไม่ผ่าน** เทสต์ heavy S2 จึงล้มหนึ่งข้อ ผมไม่ได้แก้เกณฑ์ บทเรียน หรือเทสต์ รอคุณเลือก (คำถามที่ 1) เหตุผลทางฟิสิกส์: ตัวจับดาวเริ่มเห็นดาวที่ความสูง 150 กม. (T+269.5 วินาที) ก่อนถึงตอนนั้นความคลาดสะสมไปแล้ว 1 053 ม. (เดิม 989 ม.) และบทเรียนวัดค่าสูงสุดตลอดเที่ยวบิน หลังจากนั้นตัวจับดาววัดได้แต่ท่าทาง ไม่เห็นไบแอสของมาตรความเร่ง ไบแอส 500 µg ที่คงอยู่ 524 วินาทีให้ ½bt² ≈ 0.67 กม. ต่อแกนด้วยตัวมันเอง ความคลาดจึงโตกลับเป็น 1 184 ม. ตอนดับเครื่อง ทั้งนี้เกณฑ์ 1 000 ม. ก็ฉิวเฉียดมาตั้งแต่ก่อน: บนฐานเดิมเมื่อเปลี่ยน seed ของเซนเซอร์ ตัวจับดาวผ่านได้เพียง 3 ใน 11 (ตอนนี้ 2 ใน 11) ข้อเสนอของผม: ตั้งเกณฑ์ใหม่ 1 500 ม. ตามกฎเดิมที่ใช้ตั้งเกณฑ์นี้ (ผลบินของคำตอบ + 25 %)
-> - **ตรวจแล้ว:** การแยกส่วนไบแอสในค่าจริงและในตัวกรอง การคำนวณ P แบบเบา (sparse) ตรงกับการคูณเมทริกซ์เต็มถึง 10⁻¹⁵ และ P สมมาตรและเป็นบวกตลอด ลำดับการสุ่มตาม seed เทสต์ปกติที่เกี่ยวข้อง 16 ไฟล์ 320 เทสต์ผ่าน heavy 4 ไฟล์: ผ่าน 12 ล้ม 1 (S2 ตามที่รู้)
+> - **ผู้ใช้เห็นอะไร:** เมื่อเปิดระบบนำร่อง (โหมดวิศวกร 6-DOF) โดยไม่มี GNSS ความคลาดเคลื่อนโตขึ้นตามที่หน่วยจริงเป็น: Falcon 9 ที่ SECO ค่ามัธยฐานของ 100 ชุดสุ่ม MEMS 7.4 → 9.3 กม. เกรดยุทธวิธี 0.83 → 0.98 กม. เกรดนำร่อง 76 → 84 ม. (โตขึ้น 27 %, 18 % และ 11 % คลาดได้ราว ± 9–14 %) เมื่อมี GNSS แทบไม่ต่างจากเดิม หมายเหตุในตัวตรวจลูปและคำอธิบายเครื่องมือ MCP บอก 27 สถานะ
+> - **บทเรียน:** สองบทที่บินด้วยระบบนำร่อง (2.3 guid-nav และ 15.2 ru-bins-astro) ตัวเลขในบทสรุปหลังบทเรียนปรับตามผลบินจริงทั้งภาษาอังกฤษ รัสเซีย และไทย ผลผ่าน/ไม่ผ่านไม่เปลี่ยน **ยกเว้นบท 15.2 กรณีเปิดตัวจับดาว: 989 ม. → 1 184 ม. เกินเกณฑ์ 1 000 ม. จึงไม่ผ่าน** เทสต์ heavy S2 จึงล้มหนึ่งข้อ ผมไม่ได้แก้เกณฑ์ บทเรียน หรือเทสต์ รอคุณเลือก (คำถามที่ 1) เหตุผลทางฟิสิกส์: ตัวจับดาวเริ่มเห็นดาวที่ความสูง 150 กม. (T+269.5 วินาที) ก่อนถึงตอนนั้นความคลาดสะสมไปแล้ว 1 053 ม. (เดิม 989 ม.) และบทเรียนวัดค่าสูงสุดตลอดเที่ยวบิน หลังจากนั้นตัวจับดาววัดได้แต่ท่าทาง ไม่เห็นไบแอสของมาตรความเร่ง ไบแอส 500 µg ที่คงอยู่ 524 วินาทีให้ ½bt² ≈ 0.67 กม. ต่อแกนด้วยตัวมันเอง ความคลาดจึงโตกลับเป็น 1 184 ม. ตอนดับเครื่อง ทั้งนี้เกณฑ์ 1 000 ม. ก็ฉิวเฉียดมาตั้งแต่ก่อน: บนฐานเดิมเมื่อเปลี่ยน seed ของเซนเซอร์ ตัวจับดาวผ่านได้เพียง 3 ใน 11 (ตอนนี้ 2 ใน 11) ข้อเสนอของผม: ตั้งเกณฑ์ใหม่ 1 500 ม. ตามกฎเดิมที่ใช้ตั้งเกณฑ์นี้ (ผลบินของคำตอบ + 25 %) ความเร่งด่วน: ตอนนี้ชุดบทเรียน ru-24-05-06 ถูกซ่อนจากหน้าเว็บตามที่คุณตัดสินใจเมื่อ 2026-10-17 (`TEACHER_TOOLS`) บท 15.2 จึงไม่อยู่ในรายการบทเรียน (เปิดได้เฉพาะเมื่อพิมพ์ที่อยู่ `?lesson=ru-bins-astro` เอง) ผลที่เปลี่ยนนี้จึงเห็นได้ตอนนี้เฉพาะในเทสต์ heavy S2 นักเรียนจะเจอเมื่อเปิดชุดบทเรียนกลับมา
+> - **ตรวจแล้ว:** การแยกส่วนไบแอสในค่าจริงและในตัวกรอง การคำนวณ P แบบเบา (sparse) ตรงกับการคูณเมทริกซ์เต็มถึง 10⁻¹⁵ และ P สมมาตรและเป็นบวกตลอด ลำดับการสุ่มตาม seed เทสต์ปกติที่เกี่ยวข้อง 16 ไฟล์ 321 เทสต์ผ่าน (รวมเทสต์ใหม่ที่เพิ่มหลังการตรวจ) heavy 4 ไฟล์: ผ่าน 12 ล้ม 1 (S2 ตามที่รู้)
 > - **ความเร็วและขนาด:** ตัวกรอง 27 สถานะเร็วกว่าแบบเดิม 21 สถานะราว 35 % ต่อขั้น (16 µs เทียบ 24–26 µs) เพราะคูณเฉพาะช่องที่ไม่เป็นศูนย์ของ Φ ขนาด bundle ไม่ได้ขึ้นเพดาน: index 2 643.2 → 2 644.2 kB จากเพดาน 2 645.0 kB (เหลือ 0.8 kB สำหรับงานท้องฟ้า)
+> - **ผู้ตรวจคนที่สอง:** ตรวจสองมุมมอง (คณิตศาสตร์ และการตรวจตัวเลขทีละข้อ) ไม่พบข้อบกพร่องในโค้ด แต่พบว่าเทสต์ไม่จับกรณีที่ค่าประมาณไบแอส in-run ถูกตรึงไว้แทนที่จะจางลง ผมลองใส่ข้อผิดพลาดนั้นเข้าไปจริงแล้วยืนยันว่าไม่มีเทสต์ใดล้ม จึงเพิ่มเทสต์ที่ตรวจทีละขั้น (จับได้) และเพิ่มขอบล่างให้เทสต์ค่าประมาณไบแอส turn-on ตัวเลขใน PHYSICS ที่ผู้ตรวจทักว่ามาจากตัวอย่างน้อยไป ผมวัดใหม่ด้วย 100 ชุดสุ่ม (เดิม 30) และใช้ค่ามัธยฐานที่ถูกต้อง
+> - **การ merge:** เทสต์ heavy S2 แดงอยู่จนกว่าคุณตอบคำถามที่ 1 ข้อเสนอ: ใส่การเปลี่ยนแปลงตามคำตอบลงใน PR นี้ก่อน merge เพื่อให้ main เขียวอยู่ การ merge เป็นของคุณ
 > - **รอคุณ:** คำถามที่ 1 (เกณฑ์ของบท 15.2) และคำถามที่ 2 (ข้อจำกัดของ MEMS + GNSS ที่ปิดตัวจับดาวในช่วงไถลนาน)
 
 ```yaml
@@ -29,7 +31,7 @@ failing_before_fix: [tests/navigation.test.ts "keeps each sensor's turn-on bias 
 pinned_fingerprints_moved: none   # navigation is off in every fingerprint and golden
 verdict_flips: [lesson 15.2 ru-bins-astro with the star tracker, pass -> fail (question 1)]
 rollback: {method: revert, data_compat: "no stored-data or file-format change; NavigationRecord keeps its fields and their meaning"}
-reviewers: [second agent (physics), owner (question 1)]
+reviewers: "second agent (physics): two lenses (math, claims), both 'sound with fixes', 0 of 1 confirmed until the fixes (the last three commits) are re-checked; science reviewer (realism): 0 of 1; owner (question 1): 0 of 1"
 report: docs/development/reports/argon4-fu-imu.md
 ```
 
@@ -40,14 +42,20 @@ report: docs/development/reports/argon4-fu-imu.md
   in-run part wanders. Before, the whole bias decayed with the in-run part's 300 s, so a MEMS
   gyro's 30 °/h turn-on bias was 4.9 °/h RMS an hour later (now 31.5 °/h; 200 draws). Without
   GNSS the navigation therefore drifts further, as such units really do. Falcon 9 to LEO at SECO,
-  median of 30 draws, base → branch: MEMS 7.4 → 9.4 km, tactical 0.77 → 1.01 km, navigation grade
-  71 → 83 m. With GNSS nothing a user would see changes (consistency 0.94 → 1.00).
+  median of 100 draws, base → branch: MEMS 7.4 → 9.3 km, tactical 0.83 → 0.98 km, navigation
+  grade 76 → 84 m (+27, +18 and +11 %, each ± 9–14 %). With GNSS nothing a user would see changes
+  (consistency 0.97 → 1.03).
 - The inspector's Navigation note (en, ru, th) and `configure_mission`'s description of
   `navigation` say 27 states and name the two parts of a bias. The inspector's "bias true /
   estimated" rows still show the whole bias (turn-on plus in-run). The CSV has no bias columns.
 - Lessons 2.3 (`guid-nav`) and 15.2 (`ru-bins-astro`) quote their flights' new figures in their
   debriefs. **Lesson 15.2's worked answer, the star tracker, now ends 1 184 m off, over the
-  lesson's 1 000 m bound, and fails** (question 1).
+  lesson's 1 000 m bound, and fails** (question 1). Lesson 15.2 is in the ru-24-05-06 pack, which
+  is held back from the site today (`TEACHER_TOOLS = false` in src/ui/held.ts; the owner's
+  decision of 2026-10-17, "teaching tools held back": the packs "ซ่อนทั้งชุด"). It is not in the
+  catalogue; only a hand-typed `?lesson=ru-bins-astro` address still opens it (the "Copy link"
+  button that makes such addresses is held back too). So for now the flip shows only in heavy S2;
+  students meet it once the packs are shown again.
 
 ## The physics
 
@@ -130,6 +138,27 @@ Read line by line against the model above, and probed (probe files under
 
 No defect found; nothing in commit 1 is changed.
 
+**Review follow-up.** Two second-agent reviews (math and claims) found no defect in the code. The
+math review's mutation testing found a gap in the tests, which I checked again with my own probe
+(`fix-mutation.probe.ts`), and by running tests/navigation.test.ts itself with each mutation
+patched in at setup (`fix-mut/setup.ts`, `vitest.fixmut.config.ts`, `MUT=M1|M2|M3`):
+
+| Mutation | Outage test (< 2) | Turn-on test (RMS < 0.25 °/h, 50 µg; (e/σ)² < 2) | New one-step test |
+|---|---|---|---|
+| none | 0.894, passes | 0.146 °/h, 20.4 µg; 0.82, 0.69: passes | passes (in-run ratio e^(−1/300) to 1·10⁻¹³) |
+| M1: in-run estimates held between fixes | 0.897, passes | 0.181 °/h, 29.2 µg; 1.26, 1.42: passes | fails (ratio 1) |
+| M2: turn-on estimates relaxing too | 29.1, fails | 0.80 °/h: fails | fails (a turn-on estimate moves) |
+| M3: a fix's two parts swapped | 27.6, fails | 0.28 °/h: fails | passes |
+
+Before the follow-up nothing caught M1: the in-run estimates are too small a part of the drift for
+the outage test (the base's single bias estimate, held, gave 40.7 there). Commit `ce0fd07` adds a
+deterministic test: GNSS lost from 100 s, no star tracker, the same seed flown to 150 s and to
+151 s; across that step the turn-on estimates stay exactly the same and the in-run estimates
+scale by e^(−1/300) (to 10⁻⁹). It also rewords the outage test's comment to say what that test
+guards (M2, M3), and bounds the turn-on test's (error/σ)² from below at 0.5, so that a σ too large
+fails as well: χ²(60)/60's 99.9 % band is [0.51, 1.71], and seeds 1–120 in six blocks of 20 give
+0.82–1.21 (gyro) and 0.69–1.26 (accelerometers).
+
 ## Lessons that fly with navigation (b)
 
 Two: built-in 2.3 `guid-nav` (src/lessons/builtin/track2.ts; Falcon 9, MEMS, no GNSS, 500 m to
@@ -201,8 +230,11 @@ from 100 km the flight ends at 1 228 m, from 120 km at 966 m (`lessons.probe.ts`
 
 Every figure of the hand-over's WIP text was flown again (`falcon9.probe.ts`, `coast.probe.ts`,
 `testfigures.probe.ts`, `burns.probe.ts`) or removed. The Falcon 9 flights are the test's
-(cape, LEO, crosswind, seed 20260919). The ranges are of 30 more sensor draws flown again through
-each flight's recorded truth: the navigation only, open loop. A draw's errors are what its
+(cape, LEO, crosswind, seed 20260919). The ranges are of 100 more sensor draws flown again through
+each flight's recorded truth: the navigation only, open loop. (First 30 draws, with the median
+taken as the upper of the two middle samples; after the review, 100 draws with interpolated
+medians and the medians' bootstrap standard errors, `fix-falcon9.probe.ts`. The rows below are
+the 100 draws'.) A draw's errors are what its
 sensors make of that trajectory, not of the one it would itself have steered. The flight's own
 draw, replayed so, reproduces its figures exactly (8 059 m and 29.32 m/s, both ways). The WIP
 text's 8.6 km for MEMS was the first sample after SECO, a coast step later; at SECO it is 8.1 km.
@@ -210,25 +242,36 @@ text's 8.6 km for MEMS was the first sample after SECO, a coast step later; at S
 | Figure (Falcon 9 to LEO) | Base 7f991f9 | Branch | WIP text said |
 |---|---|---|---|
 | Tactical + GNSS, this flight: mean (error/σ)², outside 3σ | 2.17, 0.50 % | 1.23, 0 % | 1.2, 0 % |
-| same, 30 draws: mean, outside 3σ | 0.94, 0.19 % | 1.00, 0.09 % | 1.0, 0.1 % |
+| same, 100 draws: mean, outside 3σ | 0.97, 0.19 % | 1.03, 0.39 % | 1.0, 0.1 % |
 | same: largest error; believed − true apoapsis, periapsis | 3.2 m, 0.078 m/s; −169, −6 m | 3.1 m, 0.059 m/s; −269, −5 m | 5 m, 0.1 m/s; 270, 5 m |
 | Outage T+60–200 s, at T+195 s: this flight | 112 m, 1.77 m/s | 42 m, 0.42 m/s | 42 m, 0.4 m/s |
-| same, 30 draws: 10–90 %; RMS; filter σ | 44–180 m; 125 m, 2.07 m/s; 123 m, 1.99 m/s | 43–194 m; 123 m, 2.10 m/s; 129 m, 2.08 m/s | 43–202 m; 124 m, 2.1 m/s; 129 m, 2.1 m/s |
+| same, 100 draws: 10–90 %; RMS; filter σ | 44–189 m; 126 m, 2.08 m/s; 123 m, 1.99 m/s | 38–213 m; 127 m, 2.11 m/s; 129 m, 2.08 m/s | 43–202 m; 124 m, 2.1 m/s; 129 m, 2.1 m/s |
 | MEMS, no GNSS, at SECO: this flight | 11.1 km, 30.8 m/s | 8.1 km, 29.3 m/s | 8.6 km, 30 m/s |
 | same: orbit believed / true | 200 × 552 / 204 × 511 km | 197 × 490 / 199 × 525 km | 197 × 490 / 199 × 525 km |
 | same: attitude before the first star fix → at the end | 1.70° → 17″ | 1.41° (T+248 s) → 28″ | 1.4° → seconds |
-| same, 30 draws: median (10–90 %) | 7.4 km (3.4–11.4), 25 m/s | 9.4 km (5.0–14.7), 35 m/s | 8.3 km (5.4–15), 37 m/s |
+| same, 100 draws: median ± its SE (10–90 %) | 7.36 ± 0.57 km (3.4–12.2), 24.6 m/s | 9.32 ± 0.76 km (4.7–14.3), 36.0 m/s | 8.3 km (5.4–15), 37 m/s |
 | Tactical, no GNSS, at SECO: this flight; apoapsis off | 985 m, 2.86 m/s; +5.8 km | 1 022 m, 3.44 m/s; −2.6 km | 1.0 km, 3.5 m/s; 2.6 km |
-| same, 30 draws: median (10–90 %) | 773 m (487–1 271), 2.8 m/s | 1 013 m (463–1 694), 4.0 m/s | 1.0 km (0.56–1.6), 3.8 m/s |
+| same, 100 draws: median ± its SE (10–90 %) | 825 ± 64 m (450–1 531), 2.88 m/s | 976 ± 61 m (496–1 666), 3.85 m/s | 1.0 km (0.56–1.6), 3.8 m/s |
 | Navigation grade, no GNSS, at SECO: this flight; apoapsis off | 40 m, 0.19 m/s; 0.42 km | 67 m, 0.29 m/s; 0.06 km | 70 m, 0.3 m/s; < 0.1 km |
-| same, 30 draws: median (10–90 %) | 71 m (37–145), 0.28 m/s | 83 m (44–146), 0.35 m/s | 80 m (40–160), 0.34 m/s |
+| same, 100 draws: median ± its SE (10–90 %) | 76 ± 5 m (30–169), 0.30 m/s | 84 ± 4 m (36–179), 0.35 m/s | 80 m (40–160), 0.34 m/s |
 
-In orbit at 400 km (`coast.probe.ts`, `testfigures.probe.ts`): the MEMS gyro bias RMS an hour after
-turn-on 4.9 → 31.5 °/h; GNSS alone in free fall leaves a tactical gyro's turn-on σ at 0.999 °/h of
-1 °/h after 2 000 s; a MEMS unit with GNSS and no star tracker coasting 1 000 / 3 000 s: attitude
-error median 4.1° / 4.9° → 12.6° / 53°, mean (error/σ)² per axis 0.93–1.23 / 1.28–1.64 →
-1.17–2.15 / 20.3–31.9; with the accelerometers' bias and noise set to zero the branch's coast is
-consistent (0.75–1.04 / 0.78–0.99), which is what the text says of its cause. The WIP text's
+The change in the medians, branch over base, with one standard error from the two bootstrap
+errors (unpaired): position +27 ± 14 % (MEMS), +18 ± 12 % (tactical), +11 ± 9 % (navigation
+grade); velocity +46 ± 13 %, +34 ± 12 %, about +17 ± 10 %. The 30 draws had given 17–31 % and
+25–41 %, which PHYSICS quoted until the review; the claims reviewer's own 100 draws gave the same
+as these.
+
+In orbit at 400 km (`coast.probe.ts`, `testfigures.probe.ts`; after the review `fix-coast.probe.ts`
+and `fix-mutation.probe.ts`): the MEMS gyro bias RMS an hour after turn-on 4.9 → 31.5 °/h; GNSS
+alone in free fall leaves a tactical gyro's turn-on σ at 0.999 °/h of 1 °/h after 2 000 s; the
+turn-on estimates with GNSS and the star tracker after 2 000 s, over seeds 1–120, 0.169 °/h and
+24.8 µg RMS against the filter's σ of 0.161 °/h and 24.5 µg ((error/σ)² 1.10, 1.02; the test's
+seeds 1–20, the lowest of six blocks, 0.146 °/h, 20.4 µg, 0.82, 0.69); a MEMS unit with GNSS and
+no star tracker coasting 1 000 / 3 000 s: attitude error median (interpolated) 3.9° / 4.8° →
+12.1° / 52.2°, mean (error/σ)² per axis 0.93–1.23 / 1.28–1.64 → 1.17–2.15 / 20.3–31.9; with the
+accelerometers' bias and noise set to zero the branch's coast drifts 11.7° / 37.9° (the gyros'
+30 °/h: 43.9° RMS expected in three axes at 3 000 s, 41.0° flown) and is consistent (0.75–1.04 /
+0.78–0.99), which is what the text says of its cause. The WIP text's
 "8° in 1 000 s and 25° in 3 000 s" are 30 °/h times the time on one axis, not the errors flown;
 replaced by these.
 
@@ -289,9 +332,12 @@ that fly with navigation run a few per cent faster, not slower.
 
 ## Tests run
 
-- `npx tsc --noEmit`: clean, on the final tree.
+- `npx tsc --noEmit`: clean, on the final tree (and again after the review follow-up).
 - `npx vitest run tests/navigation.test.ts --maxWorkers=2`: 14 passed (122 s); the new
-  turn-on test took 5.9 s, the coast 6.4 s, the estimates 2.1 s.
+  turn-on test took 5.9 s, the coast 6.4 s, the estimates 2.1 s. After the review follow-up
+  (`ce0fd07`): 15 passed (98.7 s; the new one-step test 13 ms).
+- The same file under each of three mutations (`vitest.fixmut.config.ts`, `-t` the four in-orbit
+  bias tests): none, 4 passed; M1, 1 failed (the new test); M2, 3 failed; M3, 2 failed.
 - `npx vitest run tests/control-faults.test.ts tests/mcp.test.ts tests/monte-carlo.test.ts
   tests/mission-file.test.ts tests/session.test.ts tests/lessons-round2.test.ts
   tests/report.test.ts tests/explore.test.ts tests/lesson-packs.test.ts tests/i18n.test.ts
@@ -300,12 +346,17 @@ that fly with navigation run a few per cent faster, not slower.
   (170 s).
 - Heavy, one at a time, `--maxWorkers=1`: the four files above, 12 passed, 1 failed (S2).
 - `scripts/lesson-packs.ts` (write and `--check`): unchanged, up to date.
-- `npm run build && npm run budget`: ok (below).
+- `npm run build && npm run budget`: ok (below); run again on the final tree after the review
+  follow-up, every group the same to 0.1 kB.
 - Probes, under /tmp/claude-0/-home-user-Orbitlab/3b29ccd8-c1cf-5357-ad20-eb1820dc21bb/scratchpad/probes/imu/ (outside the repository, not committed): `covariance.probe.ts`,
   `truth.probe.ts`, `testfigures.probe.ts`, `lessons.probe.ts`, `s2-profile.probe.ts`,
   `falcon9.probe.ts`, `coast.probe.ts`, `burns.probe.ts`, `timing.bench-probe.ts`,
   `debug-replay.probe.ts` (the replay's own check); configs `vitest.base.config.ts`,
-  `vitest.branch.config.ts`, `vitest.both.config.ts`; logs in `logs/`.
+  `vitest.branch.config.ts`, `vitest.both.config.ts`; logs in `logs/`. After the review:
+  `fix-falcon9.probe.ts` (`DRAWS=100`, both trees, 562 s and 760 s), `fix-coast.probe.ts`,
+  `fix-mutation.probe.ts`, `fix-mut/setup.ts` with `vitest.fixmut.config.ts`, `fix-scale.probe.ts`,
+  `lessons.probe.ts` again with `STAR_ALT=100,120` (1 228.1 m and 966.3 m, as before); configs
+  `vitest.fixbase.config.ts`, `vitest.fixbranch.config.ts`; logs `logs/fix-*.txt`.
 
 ## Docs touched
 
@@ -322,7 +373,8 @@ that fly with navigation run a few per cent faster, not slower.
 
 Commits 1 and 2: 190 changed lines under src/ (124 added, 66 removed: navigation.ts 152,
 sensors.ts 18, the lessons 12, i18n and mcp.ts 8), 74 in tests/navigation.test.ts, 6 in the pack
-file. This session adds documentation, a test comment and this report. Under 400.
+file. This session adds documentation, a test comment and this report; the review follow-up
+adds 34 lines and removes 5 in tests/navigation.test.ts, and nothing under src/. Under 400.
 
 ## Budget
 
@@ -347,7 +399,9 @@ base it passed by 11 m (989 m). The physics is above: the peak is made before th
 can see (1 053 m at 150 km, T+269.5 s), and after that a star tracker sees the attitude, not the
 accelerometers' bias, of which a tactical unit's 500 µg alone gives about 0.67 km per axis by the
 cut-off. Nothing was changed; tests/heavy/lesson-packs-sixdof.test.ts S2 fails until this is
-answered.
+answered. How urgent it is: the ru-24-05-06 pack is held back from the site (`TEACHER_TOOLS`,
+your decision of 2026-10-17), so no student meets the lesson from the catalogue today; the
+answer matters for the heavy suite now and for students when the packs are shown again.
 
 - **(ก) Keep the lesson as designed; the bound by the rule it was set with, the worked flight plus
   25 %, rounded up: 1 184 m × 1.25 = 1 480 → 1 500 m.** Effect: with the lesson's own seed the star
@@ -365,23 +419,31 @@ answered.
   assertion's meaning changes); the title "with star-tracker correction" fits less well.
 
 Not offered: grading earlier or a star tracker that sees from lower down. Neither holds 1 000 m
-(above: the peak is made before 150 km, and from 100 km the flight ends at 1 228 m).
+reliably: the peak is made before 150 km (above), and a lower star tracker passes for the
+lesson's seed from 120 km (966 m) but fails from 100 km (1 228 m).
 
 Proposal: **(ก)**. It keeps what the lesson teaches (astro-correction bounds the frame's tilt) and
 the rule the bound was made by, and the debrief already says what is left (½bt²). It only needs
 your yes to the changed number in S2.
 
 **2. A MEMS unit with GNSS and the star tracker switched off, over a long coast.** The attitude
-then drifts by tens of degrees (53° median after 3 000 s at 400 km), past the filter's
-small-angle error model, and the filter's attitude σ becomes 4–6 times too small ((error/σ)² 20–32
-per axis), because the accelerometers' bias and noise, read as specific force, pass for attitude
-information. On the base the drift was smaller (4.9°) because the bias faded. It touches no lesson
+then drifts by tens of degrees (52° median after 3 000 s at 400 km; 38° of that is the gyros' own
+30 °/h, measured with the accelerometers' errors set to zero), past the filter's small-angle
+error model, and the filter's attitude σ becomes 4–6 times too small ((error/σ)² 20–32 per axis),
+because the accelerometers' bias and noise, read as specific force, pass for attitude
+information. On the base the drift was smaller (4.8°) because the bias faded. It touches no lesson
 or test, and the star tracker is on by default.
 
 - **(ก) Leave it, documented (PHYSICS §2h "A limit", done here).**
 - **(ข) A filter change in a later package (R4.3 holds the nearest items, GNSS blackout and
   star-tracker exclusion):** for example, not taking −[f×]φ from a specific force below its own
-  noise in free fall, and a larger-angle attitude error; with its own consistency test.
+  noise in free fall, and a larger-angle attitude error; with its own consistency test. The same
+  kind of fault, older than this change, shows in the gyro scale factors: at rest, F's −Ĉ·diag(ω̂)
+  column is built from a measured rate that is gyro noise alone. MEMS with GNSS and the star
+  tracker at rest at 400 km, 2 000 s, seeds 1001–1100: the gyro scale factors' NEES is 8.55 of 3
+  on the branch and 8.49 on the base, and 2.96 on both with the gyro noise set to zero
+  (`fix-scale.probe.ts`). Building those columns from a rate and a specific force the filter
+  trusts (or zeroing them below the noise) would fix both.
 - **(ค) A note in the setup panel when MEMS, GNSS on and the star tracker off are chosen
   together.** A UI wording change in three languages.
 
@@ -390,6 +452,9 @@ Proposal: **(ก)** now, with (ข) noted for R4.3.
 ## Not done here
 
 - The answer to question 1, and whatever it changes (pack source, pack file, S2, VALIDATION).
+- Merging. Heavy S2 is red on this branch until question 1 is answered. Proposal: question 1's
+  change lands in this PR before it merges, so main's heavy suite stays green (SESSION-PROTOCOL
+  §5, no new PR in a lane whose main is red); the merge itself is yours (§1).
 - The full default suite: the orchestrator runs it.
 - The navigation Monte Carlo heavy set was not re-run on the base (21 min); §2l's row is the
   branch's, the earlier row (499.76 ± 0.91, 501.39 ± 0.60 km) was the record of an earlier run.
