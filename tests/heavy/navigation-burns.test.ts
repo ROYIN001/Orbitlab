@@ -24,7 +24,8 @@ describe('Falcon 9 to its reference orbit on a tactical and a MEMS navigation', 
       const keys = sim.events.map((e) => e.key);
       expect(keys).not.toContain('evt.burnAlignmentTimeout');
       expect(keys).toContain('evt.targetOrbit');
-      // 30 kg on board: 4.4 kg (tactical) and 2.1 kg (MEMS) to T+480 s (the parking orbit); 16.4 and 14.7 kg to the end.
+      // 30 kg on board: 4.8 kg (tactical) and 2.2 kg (MEMS) to T+480 s (the parking orbit); 18.4 and 12.8 kg to the end
+      // (measured 2026-10-17, with the turn-on bias held for the flight).
       expect(gasAt480).toBeLessThan(10);
       expect(sim.rigidRuntime!.consumed.s2).toBeLessThan(25);
     }, 1_800_000);
