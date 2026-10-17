@@ -15,7 +15,10 @@
  * scattering term. That one pass is the blue noon sky, the red horizon at
  * dusk, the Earth's shadow rising in the east after sunset, the thin blue
  * limb seen from orbit and the sun's reddened disc. It is drawn first, behind
- * everything; the Earth and the vehicles cover it.
+ * everything; the Earth and the vehicles cover it. The globe and its clouds
+ * are then seen through the same air: their shaders march the stretch from
+ * the camera to them with the same model and add what it scatters in, after
+ * dimming them by what it lets through (`AERIAL`, used by scene.ts).
  *
  * The stretch of a view ray inside the atmosphere is found from the camera
  * alone, through the ray's perigee (its closest approach to the Earth's
@@ -29,10 +32,11 @@
  * towards the camera. The sun's disc is darkened towards its limb and has a
  * faint glow round it. The details are at `SKY_FRAG`.
  *
- * It costs a fragment shader of ~ 24 samples per pixel. A slow GPU falls back
- * to the colour-gradient sky of `sky.ts` (the same trial as the glow, F07:
- * src/render/glow-governor.ts), and so does a GPU that cannot render to float
- * textures.
+ * It costs a fragment shader of ~ 24 samples per pixel, and the globe and the
+ * clouds 10 and 6 samples (two table reads each) per pixel they cover. A slow
+ * GPU falls back to the colour-gradient sky of `sky.ts` (the same trial as the
+ * glow, F07: src/render/glow-governor.ts), and so does a GPU that cannot
+ * render to float textures.
  */
 import * as THREE from 'three';
 import { R_EARTH } from '../physics/constants';
@@ -210,12 +214,28 @@ gl_FragColor = vec4(any(isnan(psi)) || any(isinf(psi)) ? vec3(0.0) : psi, 1.0);
 `;
 
 /**
- * The per-frame pass, in order.
+ * What a point of the air at radius r receives, the sun at cosine muS, shared
+ * by the sky pass and the aerial perspective.
  *
  * `sunlight(r, muS)`: sunlight reaching radius r with the sun at cosine muS —
  * the transmittance, faded out over a quarter of a degree about the
  * geometric horizon rather than cut at it: a hard cut per sample speckles a
- * twilight limb.
+ * twilight limb. `multiScatter(r, muS)`: the multiple-scattering table.
+ */
+const SAMPLE_SKY = /* glsl */ `
+uniform sampler2D uMultiScatter;
+vec3 sunlight(float r, float muS) {
+float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
+float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
+return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
+}
+vec3 multiScatter(float r, float muS) {
+return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
+}
+`;
+
+/**
+ * The per-frame pass, in order.
  *
  * The view ray is unprojected on the near plane: at the far one (5·10⁹ m) w
  * is ~10⁻¹⁰ and the division loses it.
@@ -300,28 +320,24 @@ gl_FragColor = vec4(any(isnan(psi)) || any(isinf(psi)) ? vec3(0.0) : psi, 1.0);
  *
  * One bad sample must not become a black frame: the bloom's blur would
  * spread it everywhere.
+ *
+ * A ray that ends more than 10 km inside the Earth's sphere is not marched:
+ * the globe, opaque and always drawn, covers it, and carries the haze of
+ * that stretch itself (`AERIAL`). Its 128 × 96 facets lie at most 2.8 km
+ * under the sphere, so every ray the globe may leave uncovered at its limb
+ * is still marched.
  */
 const SKY_FRAG = /* glsl */ `
 #include <common>
 ${COMMON}
 ${SAMPLE_TRANSMITTANCE}
-uniform sampler2D uMultiScatter;
+${SAMPLE_SKY}
 uniform mat4 uInvProj;
 uniform mat4 uCamToWorld;
 uniform vec3 uCamEci;
 uniform vec3 uSunDir;
 uniform float uSunIlluminance;
 varying vec2 vUv;
-
-vec3 sunlight(float r, float muS) {
-float muH = -sqrt(max(0.0, (r - RG) * (r + RG)) / (r * r));
-float vis = smoothstep(muH - 0.004, muH + 0.004, muS);
-return vis * texture2D(uTransmittance, transmittanceUv(r, max(muS, muH + 0.004))).rgb;
-}
-
-vec3 multiScatter(float r, float muS) {
-return texture2D(uMultiScatter, vec2(muS * 0.5 + 0.5, (r - RG) / (RT - RG))).rgb;
-}
 
 void main() {
 vec4 v = uInvProj * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
@@ -338,6 +354,7 @@ float rp2 = dot(pc, pc);
 float h = sqrt(max(0.0, RT * RT - rp2));
 float tStart = max(0.0, tc - h), tEnd = tc + h;
 if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);
+if (tc > 0.0 && rp2 < (RG - 1e4) * (RG - 1e4)) tEnd = tStart;
 if (tEnd > tStart) {
 float pr = rayleighPhase(c), pm = miePhase(c);
 const int N = 24;
@@ -378,6 +395,90 @@ if (any(isnan(L)) || any(isinf(L))) L = vec3(0.0);
 gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
+}
+`;
+
+/**
+ * Aerial perspective (Hillaire 2020, §6), for the shaders of the globe and
+ * its clouds (scene.ts): what the air between the camera and a point of the
+ * ground or of the cloud layer does to that point's light.
+ *
+ * `aerial(o, dir, rEnd, sunDir, T)` marches the view ray from the camera (o,
+ * from the Earth's centre, m) to the sphere of radius rEnd — RG for the
+ * ground, the cloud layer's for the clouds — with the sky pass's model and
+ * per-step integration, and returns the light scattered into it per unit of
+ * solar illuminance, setting T to the stretch's transmittance;
+ * `aerialPerspective` sees a colour through it, col·T + L·uSunIlluminance,
+ * the sky pass's exposure. The stretch is solved from the camera through the
+ * ray's perigee, as the sky pass solves it, and the far end is the ray's
+ * meeting with the sphere, not the fragment: the meshes' facets lie up to
+ * 2.8 km (the globe's 128 × 96) and 5.3 km (the clouds' 96 × 64) under their
+ * spheres, and ending there would scallop the haze along the limb. A fragment that the rounding
+ * puts on a ray just clear of the sphere ends at the ray's perigee, where the
+ * two formulas meet.
+ *
+ * The AERIAL_N samples crowd quadratically towards the far end, the densest
+ * air on any ray that ends on the ground, whether the camera is in orbit or
+ * in the air, and are placed from it, as the sky pass places its samples
+ * from its lowest point. A point in the Earth's shadow gets no single
+ * scattering (`sunlight` is 0 there); the terminator's twilight is the
+ * model's own. A ray that never reaches the air adds nothing and lets
+ * everything through.
+ *
+ * `sunColour(r, muS)`: the sunlight that reaches radius r (the ground, the
+ * cloud tops) through the air, relative to the sun overhead there — the
+ * light the globe and the clouds were drawn in, so noon is unchanged while a
+ * low sun reddens and dims and a set one leaves them dark. Overhead is the
+ * vertical column above r in closed form (exponential profiles; the ozone
+ * tent, all of it above 10 km, 15 km of it), valid up to the clouds' 9 km.
+ */
+export const AERIAL = /* glsl */ `
+${COMMON}
+${SAMPLE_TRANSMITTANCE}
+${SAMPLE_SKY}
+#ifndef AERIAL_N
+#define AERIAL_N 10
+#endif
+uniform float uAerial;
+uniform float uSunIlluminance;
+uniform vec3 earthCentre;
+vec3 aerial(vec3 o, vec3 dir, float rEnd, vec3 sunDir, out vec3 T) {
+float tc = -dot(o, dir);
+vec3 pc = o + dir * tc;
+float rp2 = dot(pc, pc);
+float tStart = max(0.0, tc - sqrt(max(0.0, RT * RT - rp2)));
+float tEnd = rp2 < rEnd * rEnd ? tc - sqrt(rEnd * rEnd - rp2) : tc;
+float len = max(tEnd - tStart, 0.0);
+float c = dot(dir, sunDir), pr = rayleighPhase(c), pm = miePhase(c);
+vec3 pEnd = o + dir * tEnd;
+vec3 L = vec3(0.0);
+T = vec3(1.0);
+float sa = -len;
+for (int i = 0; i < AERIAL_N; i++) {
+float x = 1.0 - float(i + 1) / float(AERIAL_N);
+float sb = -x * x * len;
+float dt = sb - sa;
+vec3 p = pEnd + dir * (0.5 * (sa + sb));
+sa = sb;
+float rp = length(p);
+float muS = dot(p, sunDir) / rp;
+Medium m = medium(rp - RG);
+vec3 S = (m.scatR * pr + vec3(m.scatM * pm)) * sunlight(rp, muS) + (m.scatR + vec3(m.scatM)) * multiScatter(rp, muS);
+vec3 stepT = exp(-m.ext * dt);
+L += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));
+T *= stepT;
+}
+return L;
+}
+vec3 sunColour(float r, float muS) {
+float h = r - RG;
+return sunlight(r, muS) / exp(-(RAY_S * RAY_H * exp(-h / RAY_H) + vec3(MIE_E * MIE_H * exp(-h / MIE_H)) + OZONE * 15000.0));
+}
+vec3 aerialPerspective(vec3 col, vec3 cam, vec3 dir, float rEnd, vec3 sunDir) {
+vec3 T;
+vec3 L = aerial(cam - earthCentre, dir, rEnd, sunDir, T);
+vec3 seen = col * T + L * uSunIlluminance;
+return any(isnan(seen)) ? col : seen;
 }
 `;
 
@@ -432,6 +533,15 @@ export class PhysicalSky {
     pass(TRANSMITTANCE_FRAG, this.transmittanceRT, {});
     pass(MULTISCATTER_FRAG, this.multiRT, { uTransmittance: { value: this.transmittanceRT.texture } });
     this.ready = true;
+  }
+
+  /** The two tables, for the aerial perspective over the globe (`AERIAL`); filled on the first `update`. */
+  get transmittance(): THREE.Texture {
+    return this.transmittanceRT.texture;
+  }
+
+  get multiScatter(): THREE.Texture {
+    return this.multiRT.texture;
   }
 
   /** FX-8: fill the tables again (a lost context took them). */

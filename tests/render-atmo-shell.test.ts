@@ -1,8 +1,9 @@
 /**
- * The atmosphere shell under the scattering sky, and the gradient sky's
+ * The atmosphere shell, the gradient sky's limb glow, and the gradient sky's
  * colour (render/scene.ts). The constructor and `update` run against a
- * stand-in renderer with no GL behind it; the shell's discard is replayed in
- * float64 and float32 next to the GLSL lines it follows. No WebGL pixel claims.
+ * stand-in renderer with no GL behind it. Under the scattering sky the shell
+ * is not drawn: the globe's aerial perspective is its haze there
+ * (tests/render-aerial.test.ts). No WebGL pixel claims.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -26,6 +27,7 @@ vi.mock('../src/render/webgl-renderer', () => ({
 
 interface Internals {
   atmoMat: THREE.ShaderMaterial;
+  earthMat: THREE.ShaderMaterial;
   physicalSky: { mesh: THREE.Mesh } | null;
   clearColor: THREE.Color;
   composer: { passes: unknown[] };
@@ -48,19 +50,37 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-describe('atmosphere shell: cut to the disc under the scattering sky', () => {
-  it('follows the sky: disc only while the scattering sky draws, whole under the gradient', () => {
+describe('atmosphere shell: the gradient sky\'s limb glow only', () => {
+  it('follows the sky: not drawn while the scattering sky draws, whole under the gradient', () => {
     const { sm, my } = build(true);
-    const u = my.atmoMat.uniforms;
+    const shell = sm.atmoMesh;
     expect(sm.physicalSkyEnabled).toBe(true);
     expect(my.physicalSky!.mesh.visible).toBe(true);
-    expect(u.discOnly.value).toBe(1);
+    expect(shell.visible).toBe(false);
     sm.setPhysicalSky(false); // the governor's fallback, `?sky=gradient`
     expect(sm.physicalSkyEnabled).toBe(false);
     expect(my.physicalSky!.mesh.visible).toBe(false);
-    expect(u.discOnly.value).toBe(0);
+    expect(shell.visible).toBe(true);
     sm.setPhysicalSky(true);
-    expect(u.discOnly.value).toBe(1);
+    expect(shell.visible).toBe(false);
+  });
+
+  it('stays off the scattering sky\'s limb at any floating origin and height, as the old cut did', () => {
+    const { sm } = build(true);
+    // the floating origins and heights the disc-only cut was replayed at (its 60-110 km band doubled the sky's limb)
+    for (const centre of [[0, 0, 0], [-(R_EARTH + 400e3), 0, 0], [-4.1e6, 3.3e6, -3.9e6]]) {
+      for (const alt of [400e3, 2000e3, 35786e3]) {
+        for (const physical of [true, false]) {
+          sm.setPhysicalSky(physical);
+          sm.origin = { x: 0 - centre[0], y: 0 - centre[1], z: 0 - centre[2] };
+          sm.camera.position.set(3, -7, 1);
+          sm.update({ theta: 0.3, t: 0 } as VisualFrame, { x: 0, y: 1, z: 0 }, alt);
+          expect(sm.atmoMesh.visible, `${alt} m, centre ${centre}, physical ${physical}`).toBe(!physical);
+          // (+ 0: the group sits at minus the origin, and -0 is not 0 to toEqual)
+          expect(sm.earthGroup.position.toArray().map((v) => v + 0)).toEqual(centre);
+        }
+      }
+    }
   });
 
   it('without float targets there is no scattering sky, and none is reported', () => {
@@ -68,94 +88,35 @@ describe('atmosphere shell: cut to the disc under the scattering sky', () => {
     expect(my.physicalSky).toBeNull();
     // it used to start true with no sky to draw, which put the governor on a trial of nothing
     expect(sm.physicalSkyEnabled).toBe(false);
-    expect(my.atmoMat.uniforms.discOnly.value).toBe(0);
+    expect(sm.atmoMesh.visible).toBe(true);
     sm.setPhysicalSky(true);
     expect(sm.physicalSkyEnabled).toBe(false);
-    expect(my.atmoMat.uniforms.discOnly.value).toBe(0);
+    expect(sm.atmoMesh.visible).toBe(true);
   });
 
-  it('is told where the Earth is under the floating origin', () => {
+  it('the globe is told where the Earth is under the floating origin', () => {
     const { sm, my } = build(true);
     sm.origin = { x: R_EARTH + 400e3, y: -1234.5, z: 2e5 };
     sm.camera.position.set(30, -20, 10);
     sm.update({ theta: 0.3, t: 0 } as VisualFrame, { x: 0, y: 1, z: 0 }, 400e3);
-    const c = my.atmoMat.uniforms.earthCentre.value as THREE.Vector3;
+    const c = my.earthMat.uniforms.earthCentre.value as THREE.Vector3;
     expect(c.toArray()).toEqual([-(R_EARTH + 400e3), 1234.5, -2e5]);
+    expect((my.earthMat.uniforms.camPos.value as THREE.Vector3).toArray()).toEqual([30, -20, 10]);
     expect((my.atmoMat.uniforms.camPos.value as THREE.Vector3).toArray()).toEqual([30, -20, 10]);
   });
-});
 
-/** The discard, as it stands in ATMO_FRAG. */
-const SHADER_LINES = [
-  'uniform vec3 earthCentre;',
-  'uniform float discOnly;',
-  'vec3 viewDir = normalize(camPos - vPosW);',
-  'if (discOnly > 0.5) {',
-  'vec3 cr = cross(camPos - earthCentre, viewDir);',
-  `if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;`,
-];
-
-type V = [number, number, number];
-const sub = (a: V, b: V): V => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const cross = (a: V, b: V): V => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const dot = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const norm = (a: V): V => { const n = Math.sqrt(dot(a, a)); return [a[0] / n, a[1] / n, a[2] / n]; };
-/** the shader's verdict in float64: true = discarded */
-const discarded = (camPos: V, vPosW: V, centre: V): boolean => {
-  const cr = cross(sub(camPos, centre), norm(sub(camPos, vPosW)));
-  return dot(cr, cr) > R_EARTH * R_EARTH;
-};
-/** …and op by op in float32, as the GPU runs it (no FMA) */
-const f = Math.fround;
-const discarded32 = (camPos: V, vPosW: V, centre: V): boolean => {
-  const c32 = camPos.map(f) as V, p32 = vPosW.map(f) as V, e32 = centre.map(f) as V;
-  const vd = [f(c32[0] - p32[0]), f(c32[1] - p32[1]), f(c32[2] - p32[2])] as V;
-  const inv = f(1 / f(Math.sqrt(f(f(f(vd[0] * vd[0]) + f(vd[1] * vd[1])) + f(vd[2] * vd[2])))));
-  const d = vd.map((x) => f(x * inv)) as V;
-  const o = [f(c32[0] - e32[0]), f(c32[1] - e32[1]), f(c32[2] - e32[2])] as V;
-  const cr = [f(f(o[1] * d[2]) - f(o[2] * d[1])), f(f(o[2] * d[0]) - f(o[0] * d[2])), f(f(o[0] * d[1]) - f(o[1] * d[0]))];
-  return f(f(f(cr[0] * cr[0]) + f(cr[1] * cr[1])) + f(cr[2] * cr[2])) > f(R_EARTH * R_EARTH);
-};
-
-/**
- * A camera at `alt` over the Earth centred at `centre` (the floating origin
- * puts the camera near 0), and the point where the view ray whose perigee is
- * `perigee` m above the surface enters the 110-km shell: a fragment's vPosW.
- */
-function scene(alt: number, perigee: number, centre: V): { camPos: V; vPosW: V } {
-  const up = norm([0.37, -0.52, 0.769]), side = norm(cross(up, [0, 0, 1]));
-  const D = R_EARTH + alt, rp = R_EARTH + perigee, Rs = R_EARTH + 110e3;
-  const camPos: V = [centre[0] + up[0] * D + 3, centre[1] + up[1] * D - 7, centre[2] + up[2] * D + 1];
-  const o = sub(camPos, centre), r = Math.sqrt(dot(o, o));
-  const sa = rp / r, ca = Math.sqrt(1 - sa * sa), oh = norm(o);
-  const dir = norm([-ca * oh[0] + sa * side[0], -ca * oh[1] + sa * side[1], -ca * oh[2] + sa * side[2]]);
-  const tc = -dot(o, dir), h = Math.sqrt(Rs * Rs - rp * rp);
-  return { camPos, vPosW: [camPos[0] + dir[0] * (tc - h), camPos[1] + dir[1] * (tc - h), camPos[2] + dir[2] * (tc - h)] };
-}
-
-describe('atmosphere shell: the discard, replayed', () => {
-  it('stands in the shell shader as replayed here', () => {
-    const frag = build(true).my.atmoMat.fragmentShader;
-    for (const line of SHADER_LINES) expect(frag).toContain(line);
-  });
-
-  it('drops a ray that clears the Earth and keeps one that meets the disc, at any floating origin', () => {
-    for (const centre of [[0, 0, 0], [-(R_EARTH + 400e3), 0, 0], [-4.1e6, 3.3e6, -3.9e6]] as V[]) {
-      for (const alt of [400e3, 2000e3, 35786e3]) {
-        // the 60-110 km band that doubled the scattering sky's limb, and a ray just over the surface
-        for (const p of [100e3, 80e3, 60e3, 5e3, 50]) {
-          const { camPos, vPosW } = scene(alt, p, centre);
-          expect(discarded(camPos, vPosW, centre)).toBe(true);
-          expect(discarded32(camPos, vPosW, centre)).toBe(true);
-        }
-        // the disc, up to just inside the limb: the shell is its haze there and stays
-        for (const p of [-50, -5e3, -100e3, -1000e3]) {
-          const { camPos, vPosW } = scene(alt, p, centre);
-          expect(discarded(camPos, vPosW, centre)).toBe(false);
-          expect(discarded32(camPos, vPosW, centre)).toBe(false);
-        }
-      }
-    }
+  it('draws whole: the shell shader carries no cut, and its rim follows the ground factor', () => {
+    const { sm, my } = build(true);
+    const frag = my.atmoMat.fragmentShader;
+    expect(frag).not.toContain('discard');
+    expect(frag).not.toContain('discOnly');
+    for (const line of ['float band = pow(1.0 - d, 3.0);', 'gl_FragColor.a = band * lit * 0.62 * rimGain;']) expect(frag).toContain(line);
+    sm.setPhysicalSky(false);
+    sm.origin = { x: R_EARTH + 400e3, y: 0, z: 0 };
+    sm.camera.position.set(0, 0, 0);
+    sm.update({ theta: 0, t: 0 } as VisualFrame, { x: 1, y: 0, z: 0 }, 400e3);
+    expect(my.atmoMat.uniforms.rimGain.value).toBe(1);
+    expect(my.earthMat.uniforms.rimGain.value).toBe(1);
   });
 });
 
