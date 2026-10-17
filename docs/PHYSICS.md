@@ -3066,7 +3066,7 @@ shaders (src/render/scene.ts, with `AERIAL` from atmosphere.ts) march the view r
 to the Earth's sphere — to the cloud layer's sphere, 9 km up, for the clouds — with the same model
 and tables, single scattering with the Earth's shadow plus the multiple-scattering term, and show
 the surface's light dimmed by the transmittance T of that stretch with the light L it scatters in
-added: col·T + L·E, E the sky pass's illuminance. The stretch is solved from the camera through the
+added: col·T + L·E_h, E_h the haze's light (below). The stretch is solved from the camera through the
 ray's perigee, as the sky's is, and ends on the sphere, not on the meshes' facets (up to 2.8 km
 under it for the globe, 5.3 km for the clouds), which would scallop the haze at the limb. The globe
 takes 10 samples and the clouds 6, crowded quadratically towards the far end, where the air is
@@ -3111,18 +3111,32 @@ aerial perspective).
 The sun's illuminance in the sky's units is 8 on the ground, set so that noon reads like the
 gradient sky it replaced, and falls with the camera's height (the ground factor of
 src/render/sky.ts, from 12 to 72 km) to 3.3 in space, the scene's own sun that lights the globe, the
-clouds and the vehicles; the sky pass's scattered light and the aerial perspective take the same
-value, so the haze meets the sky at the horizon and at the limb. At 8 from orbit the haze, 2.4 times
-what lights the ground under it, veiled the whole disc in pale blue: open ocean 40° off the nadir of
-400 km, the sun 50° up, came out (71, 113, 172), at 3.3 (33, 65, 116), and (4, 16, 41) with no haze
-at all. Below 72 km the haze keeps the sky's tuning: 8 up to 12 km, 6.98 at 30 km and 5.30 at 45
-km, 2.4, 2.1 and 1.6 times the scene's sun, so from 12 to about 45 km the ground and the clouds under
-it read paler than one sun would make them (from 30 km, the sun 35° up, the ocean in the lower part
-of the view comes out (87, 120, 171), and (54, 77, 119) with the haze at 3.3). The sky's own limb
-glow seen from orbit is drawn at 3.3 too, so it is dimmer than before: in a daylight view of the
-limb from 400 km its brightest row went from (212, 207, 222) to (160, 152, 177). The sun's disc and
-its glow stand for the lens's glare rather than the air's light and keep 8 at every height, as
-before.
+clouds and the vehicles; the sky pass's scattered light takes it, and so does the haze where nothing
+shows through the air, so the haze meets the sky at the horizon and at the limb. At 8 from orbit the
+haze, 2.4 times what lights the ground under it, veiled the whole disc in pale blue: open ocean 40°
+off the nadir of 400 km, the sun 50° up, came out (71, 113, 172), at 3.3 (33, 65, 116), and
+(4, 16, 41) with no haze at all. The sky's own limb glow seen from orbit is drawn at 3.3 too, so it
+is dimmer than before: in a daylight view of the limb from 400 km its brightest row went from
+(212, 207, 222) to (160, 152, 177). The sun's disc and its glow stand for the lens's glare rather
+than the air's light and keep 8 at every height, as before.
+
+Below 72 km the sky keeps its tuning: E is 8 up to 12 km, 7.77 at 20 km, 6.98 at 30 km and 5.30 at
+45 km, 2.4, 2.4, 2.1 and 1.6 times the scene's sun. Taken whole by the haze it made the ground and
+the clouds under it read washed out from 20 to about 45 km; taken at 3.3 it left a step under the
+horizon. The haze's light is therefore a blend, E_h = E·(1 − T) + 3.3·T per channel: the sky's light
+where nothing shows through the air, towards the horizon, and the scene's sun where the ground
+shows. This is a look choice, not the model's: below 72 km the haze's light is a mix, neither the
+sky's sun nor the ground's. It is option (ค) of the owner's question on the look in the climb
+(docs/development/reports/argon4-fu-sky.md, question 2), prepared for that choice. With no pad in
+view (the sun 30° up at 12 km, 35° at the others), the ocean low in the view comes out
+(34, 72, 133), (56, 92, 151), (59, 91, 149) and (68, 93, 143) at 12, 20, 30 and 45 km, against
+(69, 109, 161), (89, 127, 175), (87, 120, 171) and (83, 110, 158) with the haze at E alone. From 30
+km the globe 20 rows under the horizon is (138, 169, 205) under a sky of (190, 190, 209); it was
+(157, 177, 206) at E alone and (101, 124, 160) at 3.3. Along a ray 0.02° inside the limb from 30 km
+the haze's light is within 9 % of E in red, where T is 0.17, and within 0.02 % in blue. So the first
+rows under the horizon are a little less red than the sky over them: the red falls 25–27 levels over
+the first three rows, against 15–20 at E alone, while green and blue barely differ. In orbit E is 3.3
+too and the blend changes nothing: the views from 400 km are identical to the pixel.
 
 The older atmosphere shell (a sphere 110 km up, added over the globe) stays the limb glow of the
 gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets — and is not
