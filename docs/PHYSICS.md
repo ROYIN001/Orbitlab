@@ -3082,10 +3082,11 @@ nm and a transmittance of 0.94/0.87/0.77; single scattering alone is 0.075 at 44
 paths. From orbit this is the blue haze over the disc, thickening towards the limb into the sky's
 own limb glow; from the stratosphere, the distant ground fading into the horizon sky (from 30 km,
 the sun 35° up, the sky 6 rows over the horizon came out (198, 198, 215) and the globe 20 rows
-under it (16, 34, 61), a dark band; now (190, 190, 209) and (157, 177, 206)); none on the night
-side, and the terminator's twilight from the model. The globe's Fresnel rim, the gradient sky's
-stand-in for this, is off under the scattering sky. The sky pass no longer marches a ray that ends
-more than 10 km inside the Earth's sphere: the opaque globe covers it and carries that haze itself.
+under it (16, 34, 61), a dark band; now (190, 190, 209) and, with the haze's light below,
+(138, 169, 205)); none on the night side, and the terminator's twilight from the model. The globe's
+Fresnel rim, the gradient sky's stand-in for this, is off under the scattering sky. The sky pass no
+longer marches a ray that ends more than 10 km inside the Earth's sphere: the opaque globe covers it
+and carries that haze itself.
 
 The globe's ground is lit by the sun through the air and by the sky (`daylight`), relative to noon:
 (max(cos i, 0)·T☉(μ☉) + E_sky(μ☉)) / (T☉(1) + E_sky(1)), with T☉ the transmittance table (faded
@@ -3127,7 +3128,7 @@ horizon. The haze's light is therefore a blend, E_h = E·(1 − T) + 3.3·T per 
 where nothing shows through the air, towards the horizon, and the scene's sun where the ground
 shows. This is a look choice, not the model's: below 72 km the haze's light is a mix, neither the
 sky's sun nor the ground's. It is option (ค) of the owner's question on the look in the climb
-(docs/development/reports/argon4-fu-sky.md, question 2), prepared for that choice. With no pad in
+(docs/development/reports/argon4-fu-sky.md, question 2), chosen on 2026-10-17. With no pad in
 view (the sun 30° up at 12 km, 35° at the others), the ocean low in the view comes out
 (34, 72, 133), (56, 92, 151), (59, 91, 149) and (68, 93, 143) at 12, 20, 30 and 45 km, against
 (69, 109, 161), (89, 127, 175), (87, 120, 171) and (83, 110, 158) with the haze at E alone. From 30
