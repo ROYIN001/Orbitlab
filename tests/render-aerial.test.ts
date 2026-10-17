@@ -91,7 +91,8 @@ const SHADER_LINES = [
   'L += T * S * (vec3(1.0) - stepT) / max(m.ext, vec3(1e-12));',
   'T *= stepT;',
   'vec3 L = aerial(cam - earthCentre, dir, rEnd, sunDir, T);',
-  'vec3 seen = col * T + L * uSunIlluminance;',
+  'vec3 hazeLight = uSunIlluminance + (uSceneSun - uSunIlluminance) * T;',
+  'vec3 seen = col * T + L * hazeLight;',
 ];
 const EARTH_LINE = 'if (uAerial > 0.5) col = aerialPerspective(col, camPos, -viewDir, RG, sunDir);';
 const CLOUD_LINES = [
@@ -131,7 +132,7 @@ describe('aerial perspective: wired into the globe and the clouds (V02)', () => 
     expect(frag.indexOf('#define AERIAL_N 6')).toBeGreaterThan(frag.indexOf('#include <common>'));
     expect(frag.indexOf('if (gl_FragColor.a < 0.004) discard;')).toBeGreaterThan(frag.indexOf('#include <opaque_fragment>'));
     expect(frag.indexOf('if (gl_FragColor.a < 0.004) discard;')).toBeLessThan(frag.indexOf('#include <tonemapping_fragment>'));
-    for (const k of ['uTransmittance', 'uMultiScatter', 'uSkyLight', 'uAerial', 'uSunIlluminance', 'earthCentre', 'sunDir']) {
+    for (const k of ['uTransmittance', 'uMultiScatter', 'uSkyLight', 'uAerial', 'uSunIlluminance', 'uSceneSun', 'earthCentre', 'sunDir']) {
       expect(shader.uniforms[k], k).toBe(my.earthMat.uniforms[k]);
     }
     // the cloud sphere the march ends on is the mesh's own
@@ -171,6 +172,8 @@ describe('aerial perspective: wired into the globe and the clouds (V02)', () => 
       at(sm, alt);
       expect(u.uSunIlluminance.value, `${alt} m`).toBeCloseTo(want, 12);
       expect(skyU.uSunIlluminance.value, `${alt} m`).toBe(u.uSunIlluminance.value);
+      // what the haze blends to where the ground shows through (the haze's light, below): the scene's own sun
+      expect(u.uSceneSun.value, `${alt} m`).toBe(3.3);
       // the sun's disc and glare are the lens's, not the air's: 8 at every height, as before
       expect(skyU.uSunDisc.value, `${alt} m`).toBe(8);
     }
@@ -352,6 +355,79 @@ describe('aerial perspective: the march against an independent integral (float64
     expect(Math.max(...ref.L)).toBe(0);
     for (let c = 0; c < 3; c++) expect(got.T[c]).toBeCloseTo(ref.T[c], 2);
   }, 30000);
+});
+
+// ------------------------------------------------------------------ the haze's light
+
+const f32 = Math.fround;
+/**
+ * The haze's light as `aerialPerspective` computes it, E + (S − E)·T, op by
+ * op in float32 (fused into one multiply-add it rounds once instead of twice,
+ * which changes nothing at either end).
+ */
+const hazeLight = (E: number, S: number, T: number) => f32(f32(E) + f32(f32(f32(S) - f32(E)) * f32(T)));
+
+describe('the haze\'s light: the sky\'s where nothing shows through the air, the scene\'s sun where the ground does', () => {
+  it('takes the sky\'s illuminance where T = 0 and the scene\'s sun where T = 1, at every height of the climb', () => {
+    const { sm, my } = build(true);
+    const u = my.earthMat.uniforms;
+    // E from the sky's ground factor: 8 up to 12 km, falling to the scene's sun at 72 km
+    for (const [alt, want] of [[12e3, 8], [20e3, 7.77], [30e3, 6.98], [45e3, 5.30], [60e3, 3.79]] as const) {
+      at(sm, alt);
+      const E = u.uSunIlluminance.value as number, S = u.uSceneSun.value as number;
+      expect(E, `${alt} m`).toBeCloseTo(want, 2);
+      expect(hazeLight(E, S, 0), `${alt} m`).toBe(f32(E));
+      // within one float32 step of 3.3 (2^-22 at 3.3)
+      expect(Math.abs(hazeLight(E, S, 1) - f32(S)), `${alt} m`).toBeLessThanOrEqual(2 ** -22);
+      let last = Infinity;
+      for (let T = 0; T <= 1; T += 1 / 64) {
+        const h = hazeLight(E, S, T);
+        expect(h, `${alt} m, T ${T}`).toBeLessThanOrEqual(last);
+        last = h;
+      }
+    }
+  });
+
+  it('meets the sky at the horizon and is near the scene\'s sun straight down, from 30 km', () => {
+    const { sm, my } = build(true);
+    at(sm, 30e3);
+    const u = my.earthMat.uniforms;
+    const E = u.uSunIlluminance.value as number, S = u.uSceneSun.value as number;
+    const limb = Math.asin(RG / (RG + 30e3)) * 180 / Math.PI;
+    const light = (off: number): V => {
+      const { o, dir } = view(30e3, off);
+      const { T } = aerial(o, dir, RG, sunOver(o, dir, 35, 90), 10);
+      return T.map((t) => hazeLight(E, S, t)) as V;
+    };
+    // measured, E 6.98 and S 3.3: (6.36, 6.90, 6.98) 0.02° inside the limb (under a pixel of the views), where
+    // T is 0.17, 0.02 and 0.0003; (3.51, 3.76, 4.15) at nadir, where T is 0.94, 0.88, 0.77. Taken at E alone,
+    // as the sky pass takes it, the haze's light would be 6.98 in every channel at both
+    const horizon = light(limb - 0.02), down = light(0);
+    for (let c = 0; c < 3; c++) {
+      expect(horizon[c] / E, `horizon, channel ${c}`).toBeGreaterThan(0.9);
+      expect(down[c] / S, `nadir, channel ${c}`).toBeLessThan(1.3);
+      expect(down[c]).toBeGreaterThan(S);
+    }
+    expect(horizon[2] / E).toBeGreaterThan(0.99);
+    // from nadir to the horizon the haze's light rises without a step: the air's transmittance falls smoothly
+    let prev = light(0);
+    for (const off of [10, 30, 50, 65, 75, limb - 5, limb - 2, limb - 1, limb - 0.5, limb - 0.2, limb - 0.02]) {
+      const cur = light(off);
+      for (let c = 0; c < 3; c++) expect(cur[c], `${off}°, channel ${c}`).toBeGreaterThanOrEqual(prev[c]);
+      prev = cur;
+    }
+  }, 30000);
+
+  it('changes nothing in orbit: there the sky\'s illuminance is the scene\'s sun, so the haze is col·T + L·E bit for bit', () => {
+    const { sm, my } = build(true);
+    const u = my.earthMat.uniforms;
+    for (const alt of [72e3, 100e3, 400e3, 35786e3]) {
+      at(sm, alt);
+      const E = u.uSunIlluminance.value as number, S = u.uSceneSun.value as number;
+      expect(E, `${alt} m`).toBe(S);
+      for (const T of [0, 1e-7, 0.016, 0.5, 0.77, 0.94, 1]) expect(hazeLight(E, S, T), `${alt} m, T ${T}`).toBe(f32(E));
+    }
+  });
 });
 
 // ------------------------------------------------------------------ sunlight through the air

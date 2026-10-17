@@ -466,8 +466,8 @@ gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
  * ground, the cloud layer's for the clouds — with the sky pass's model and
  * per-step integration, and returns the light scattered into it per unit of
  * solar illuminance, setting T to the stretch's transmittance;
- * `aerialPerspective` sees a colour through it, col·T + L·uSunIlluminance,
- * the sky pass's exposure. The stretch is solved from the camera through the
+ * `aerialPerspective` sees a colour through it, col·T + L·hazeLight (the
+ * haze's light, below). The stretch is solved from the camera through the
  * ray's perigee, as the sky pass solves it, and the far end is the ray's
  * meeting with the sphere, not the fragment: the meshes' facets lie up to
  * 2.8 km (the globe's 128 × 96) and 5.3 km (the clouds' 96 × 64) under their
@@ -499,6 +499,20 @@ gl_FragColor = vec4(min(L, vec3(6.0e4)), 1.0);
  * red): the blue sky lights it too, and with it the same surface is at 0.89
  * (tests/render-aerial.test.ts). Ground the sun has left still gets the
  * twilight sky's light.
+ *
+ * The haze's light, hazeLight = E·(1 − T) + S·T per channel (written
+ * E + (S − E)·T): E the sky pass's illuminance (uSunIlluminance), S the
+ * scene's own sun (uSceneSun, scene.ts's SUN_INTENSITY, 3.3, what the globe
+ * and the clouds are lit by), T the stretch's transmittance. This is a look
+ * choice, not the model's. Where nothing shows through the air (T → 0,
+ * towards the horizon) the haze takes the sky's light and meets the sky
+ * without a step; where the ground does (T → 1) it takes the light the
+ * ground under it is drawn in. Below 72 km, where E is still the sky's
+ * tuning (8 up to 12 km, 6.98 at 30 km, 5.30 at 45 km), the haze's light is
+ * then a mix, neither the sky's sun nor the ground's: at E alone the ground
+ * and the clouds from 20 to about 45 km read washed out, at S alone a step
+ * showed under the horizon. In orbit E is 3.3 as well, S − E is exactly 0,
+ * and the haze is col·T + L·E, bit for bit what it was.
  */
 export const AERIAL = /* glsl */ `
 ${COMMON}
@@ -510,6 +524,7 @@ ${SAMPLE_SKY}
 uniform sampler2D uSkyLight;
 uniform float uAerial;
 uniform float uSunIlluminance;
+uniform float uSceneSun;
 uniform vec3 earthCentre;
 vec3 aerial(vec3 o, vec3 dir, float rEnd, vec3 sunDir, out vec3 T) {
 float tc = -dot(o, dir);
@@ -551,7 +566,8 @@ return (max(cosN, 0.0) * sunlight(r, muS) + skyLight(r, muS)) / (sunlight(r, 1.0
 vec3 aerialPerspective(vec3 col, vec3 cam, vec3 dir, float rEnd, vec3 sunDir) {
 vec3 T;
 vec3 L = aerial(cam - earthCentre, dir, rEnd, sunDir, T);
-vec3 seen = col * T + L * uSunIlluminance;
+vec3 hazeLight = uSunIlluminance + (uSceneSun - uSunIlluminance) * T;
+vec3 seen = col * T + L * hazeLight;
 return any(isnan(seen)) ? col : seen;
 }
 `;

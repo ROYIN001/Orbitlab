@@ -167,7 +167,9 @@ gl_Position = projectionMatrix * viewMatrix * wp;
  * horizon and at the limb, and at 8 from orbit its haze, 2.4 times what lights
  * the ground under it, veiled the disc in pale blue (open ocean 40° off the
  * nadir of 400 km, the sun 50° up, came out (86, 128, 184); at the scene's sun
- * (40, 74, 127), and (4, 16, 40) with no haze at all).
+ * (40, 74, 127), and (4, 16, 40) with no haze at all). Below 72 km the haze
+ * takes it only where nothing shows through the air, and the scene's sun
+ * where the ground does (`AERIAL`, the haze's light).
  */
 const SKY_ILLUMINANCE = 8;
 
@@ -368,11 +370,13 @@ export class SceneManager {
    * V02: what the aerial perspective reads, shared by the globe's and the
    * clouds' materials: the scattering sky's three tables (bound once it exists;
    * a null sampler is three's empty texture), its switch, the sky pass's
-   * illuminance and the Earth's centre under the floating origin.
+   * illuminance and the scene's own sun (the haze's light blends from one to
+   * the other with the air's transmittance, `AERIAL`), and the Earth's centre
+   * under the floating origin.
    */
   private aerial = {
     uTransmittance: { value: null as THREE.Texture | null }, uMultiScatter: { value: null as THREE.Texture | null }, uSkyLight: { value: null as THREE.Texture | null },
-    uAerial: { value: 0 }, uSunIlluminance: { value: SKY_ILLUMINANCE }, earthCentre: { value: new THREE.Vector3() },
+    uAerial: { value: 0 }, uSunIlluminance: { value: SKY_ILLUMINANCE }, uSceneSun: { value: SUN_INTENSITY }, earthCentre: { value: new THREE.Vector3() },
   };
 
   constructor(canvas: HTMLCanvasElement, tex: EarthTextures) {
@@ -871,7 +875,8 @@ export class SceneManager {
     const sunElev = this.camUp.normalize().dot(sd);
     const sky = skyState(sunElev, cameraAltitude);
     if (this.physicalSky && this.physicalSkyOn) {
-      // the sky pass and the aerial perspective see one sun (SKY_ILLUMINANCE); the sun's disc and glare keep 8
+      // the sky pass's air and the haze where nothing shows through it see one sun (SKY_ILLUMINANCE falling to
+      // SUN_INTENSITY in space); the haze blends to SUN_INTENSITY where the ground shows; the sun's disc and glare keep 8
       const illuminance = SUN_INTENSITY + (SKY_ILLUMINANCE - SUN_INTENSITY) * sky.groundFactor;
       this.aerial.uSunIlluminance.value = illuminance;
       this.camera.updateMatrixWorld();
