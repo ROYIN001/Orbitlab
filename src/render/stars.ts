@@ -11,37 +11,39 @@ import { hash11 } from './noise';
 const GAL_POLE = new THREE.Vector3(-0.8677, -0.1978, 0.4560).normalize();
 
 
+/** STAR_VERT, BACKGROUND_SKY: preserve the sky direction while keeping it behind all scene geometry. */
 const STAR_VERT = /* glsl */ `
-  #include <common>
-  attribute vec3 aColor;
-  attribute float aSize;
-  uniform float uPixelRatio;
-  varying vec3 vCol;
-  void main() {
-    vCol = aColor;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    #ifdef BACKGROUND_SKY
-      // Preserve the sky direction while keeping it behind all scene geometry.
-      gl_Position.z = gl_Position.w;
-    #endif
-    gl_PointSize = aSize * uPixelRatio;
-  }
+#include <common>
+attribute vec3 aColor;
+attribute float aSize;
+uniform float uPixelRatio;
+varying vec3 vCol;
+void main() {
+vCol = aColor;
+gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+#ifdef BACKGROUND_SKY
+gl_Position.z = gl_Position.w;
+#endif
+gl_PointSize = aSize * uPixelRatio;
+}
 `;
+/**
+ * STAR_FRAG: Gaussian point spread instead of a hard square: a 1-pixel square is what
+ * made the old field read as graph paper rather than sky.
+ */
 const STAR_FRAG = /* glsl */ `
-  #include <common>
-  uniform float uOpacity;
-  varying vec3 vCol;
-  void main() {
-    vec2 d = gl_PointCoord - vec2(0.5);
-    // Gaussian point spread instead of a hard square: a 1-pixel square is what
-    // made the old field read as graph paper rather than sky
-    float g = exp(-dot(d, d) * 17.0);
-    float a = g * uOpacity;
-    if (a < 0.006) discard;
-    gl_FragColor = vec4(vCol, a);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
+#include <common>
+uniform float uOpacity;
+varying vec3 vCol;
+void main() {
+vec2 d = gl_PointCoord - vec2(0.5);
+float g = exp(-dot(d, d) * 17.0);
+float a = g * uOpacity;
+if (a < 0.006) discard;
+gl_FragColor = vec4(vCol, a);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
 `;
 
 

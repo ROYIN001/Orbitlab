@@ -24,19 +24,19 @@ import { sharpenEarthTextures } from './sharpness';
 import { clamp01, hash11, smoothstep } from './noise';
 
 const EARTH_VERT = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  varying vec2 vUv;
-  varying vec3 vNormalW;
-  varying vec3 vPosW;
-  void main() {
-    vUv = uv;
-    vNormalW = normalize(mat3(modelMatrix) * normal);
-    vec4 wp = modelMatrix * vec4(position, 1.0);
-    vPosW = wp.xyz;
-    gl_Position = projectionMatrix * viewMatrix * wp;
-    #include <logdepthbuf_vertex>
-  }
+#include <common>
+#include <logdepthbuf_pars_vertex>
+varying vec2 vUv;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+void main() {
+vUv = uv;
+vNormalW = normalize(mat3(modelMatrix) * normal);
+vec4 wp = modelMatrix * vec4(position, 1.0);
+vPosW = wp.xyz;
+gl_Position = projectionMatrix * viewMatrix * wp;
+#include <logdepthbuf_vertex>
+}
 `;
 /*
  * Both custom shaders end with the two body chunks three.js appends to every
@@ -82,66 +82,66 @@ const EARTH_VERT = /* glsl */ `
  *   glitter wherever the specular map bleeds onto a coast.
  */
 const EARTH_FRAG = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_fragment>
-  uniform sampler2D dayMap;
-  uniform sampler2D nightMap;
-  uniform sampler2D specMap;
-  uniform sampler2D normalMap;
-  uniform float normalScale;
-  uniform vec3 sunDir;
-  uniform vec3 camPos;
-  uniform float rimGain;
-  varying vec2 vUv;
-  varying vec3 vNormalW;
-  varying vec3 vPosW;
-  vec3 perturbNormal(vec3 N, vec3 p, vec2 uv, vec3 mapN) {
-    vec3 q0 = dFdx(p), q1 = dFdy(p);
-    vec2 st0 = dFdx(uv), st1 = dFdy(uv);
-    vec3 q1perp = cross(q1, N), q0perp = cross(N, q0);
-    vec3 T = q1perp * st0.x + q0perp * st1.x;
-    vec3 B = q1perp * st0.y + q0perp * st1.y;
-    float det = max(dot(T, T), dot(B, B));
-    float scale = (det == 0.0) ? 0.0 : inversesqrt(det);
-    return normalize(T * (mapN.x * scale) + B * (mapN.y * scale) + N * mapN.z);
-  }
-  void main() {
-    #include <logdepthbuf_fragment>
-    vec3 nGeo = normalize(vNormalW);
-    vec3 mapN = texture2D(normalMap, vUv).xyz * 2.0 - 1.0;
-    mapN.xy *= normalScale;
-    vec3 n = normalScale > 0.001 ? perturbNormal(nGeo, vPosW, vUv, mapN) : nGeo;
-    float cosSunGeo = dot(nGeo, sunDir);
-    float cosSun = dot(n, sunDir);
-    float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
-    vec3 day = texture2D(dayMap, vUv).rgb;
-    vec3 night = texture2D(nightMap, vUv).rgb;
-    vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
-    col = mix(night * 0.55 + day * 0.012, col, dayF);
-    float spec = texture2D(specMap, vUv).r;
-    vec3 viewDir = normalize(camPos - vPosW);
-    vec3 h = normalize(sunDir + viewDir);
-    float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
-    col += vec3(s * 0.9, s * 0.95, s);
-    float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
-    col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
-    gl_FragColor = vec4(col, 1.0);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform sampler2D dayMap;
+uniform sampler2D nightMap;
+uniform sampler2D specMap;
+uniform sampler2D normalMap;
+uniform float normalScale;
+uniform vec3 sunDir;
+uniform vec3 camPos;
+uniform float rimGain;
+varying vec2 vUv;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+vec3 perturbNormal(vec3 N, vec3 p, vec2 uv, vec3 mapN) {
+vec3 q0 = dFdx(p), q1 = dFdy(p);
+vec2 st0 = dFdx(uv), st1 = dFdy(uv);
+vec3 q1perp = cross(q1, N), q0perp = cross(N, q0);
+vec3 T = q1perp * st0.x + q0perp * st1.x;
+vec3 B = q1perp * st0.y + q0perp * st1.y;
+float det = max(dot(T, T), dot(B, B));
+float scale = (det == 0.0) ? 0.0 : inversesqrt(det);
+return normalize(T * (mapN.x * scale) + B * (mapN.y * scale) + N * mapN.z);
+}
+void main() {
+#include <logdepthbuf_fragment>
+vec3 nGeo = normalize(vNormalW);
+vec3 mapN = texture2D(normalMap, vUv).xyz * 2.0 - 1.0;
+mapN.xy *= normalScale;
+vec3 n = normalScale > 0.001 ? perturbNormal(nGeo, vPosW, vUv, mapN) : nGeo;
+float cosSunGeo = dot(nGeo, sunDir);
+float cosSun = dot(n, sunDir);
+float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
+vec3 day = texture2D(dayMap, vUv).rgb;
+vec3 night = texture2D(nightMap, vUv).rgb;
+vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
+col = mix(night * 0.55 + day * 0.012, col, dayF);
+float spec = texture2D(specMap, vUv).r;
+vec3 viewDir = normalize(camPos - vPosW);
+vec3 h = normalize(sunDir + viewDir);
+float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
+col += vec3(s * 0.9, s * 0.95, s);
+float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
+col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
+gl_FragColor = vec4(col, 1.0);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
 `;
 const ATMO_VERT = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  varying vec3 vNormalW;
-  varying vec3 vPosW;
-  void main() {
-    vNormalW = normalize(mat3(modelMatrix) * normal);
-    vec4 wp = modelMatrix * vec4(position, 1.0);
-    vPosW = wp.xyz;
-    gl_Position = projectionMatrix * viewMatrix * wp;
-    #include <logdepthbuf_vertex>
-  }
+#include <common>
+#include <logdepthbuf_pars_vertex>
+varying vec3 vNormalW;
+varying vec3 vPosW;
+void main() {
+vNormalW = normalize(mat3(modelMatrix) * normal);
+vec4 wp = modelMatrix * vec4(position, 1.0);
+vPosW = wp.xyz;
+gl_Position = projectionMatrix * viewMatrix * wp;
+#include <logdepthbuf_vertex>
+}
 `;
 /** V02: the sun's illuminance in the scattering sky's units, set so noon reads like the gradient sky it replaces. */
 const SKY_ILLUMINANCE = 8;
@@ -165,33 +165,33 @@ const SKY_ILLUMINANCE = 8;
  *   tone-mapped and encoded first and only then scaled into the buffer.
  */
 const ATMO_FRAG = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_fragment>
-  uniform vec3 sunDir;
-  uniform vec3 camPos;
-  uniform float rimGain;
-  uniform vec3 earthCentre;
-  uniform float discOnly;
-  varying vec3 vNormalW;
-  varying vec3 vPosW;
-  void main() {
-    #include <logdepthbuf_fragment>
-    vec3 n = normalize(vNormalW);
-    vec3 viewDir = normalize(camPos - vPosW);
-    if (discOnly > 0.5) {
-      vec3 cr = cross(camPos - earthCentre, viewDir);
-      if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;
-    }
-    float d = max(dot(n, viewDir), 0.0);
-    float band = pow(1.0 - d, 3.0);
-    float lit = 0.2 + 0.8 * smoothstep(-0.25, 0.35, dot(n, sunDir));
-    float sunset = smoothstep(-0.25, 0.05, dot(n, sunDir)) * (1.0 - smoothstep(0.05, 0.4, dot(n, sunDir)));
-    vec3 col = mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.55, 0.25), sunset * 0.8) * band * lit;
-    gl_FragColor = vec4(col * rimGain, 1.0);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-    gl_FragColor.a = band * lit * 0.62 * rimGain;
-  }
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform vec3 sunDir;
+uniform vec3 camPos;
+uniform float rimGain;
+uniform vec3 earthCentre;
+uniform float discOnly;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+void main() {
+#include <logdepthbuf_fragment>
+vec3 n = normalize(vNormalW);
+vec3 viewDir = normalize(camPos - vPosW);
+if (discOnly > 0.5) {
+vec3 cr = cross(camPos - earthCentre, viewDir);
+if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;
+}
+float d = max(dot(n, viewDir), 0.0);
+float band = pow(1.0 - d, 3.0);
+float lit = 0.2 + 0.8 * smoothstep(-0.25, 0.35, dot(n, sunDir));
+float sunset = smoothstep(-0.25, 0.05, dot(n, sunDir)) * (1.0 - smoothstep(0.05, 0.4, dot(n, sunDir)));
+vec3 col = mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.55, 0.25), sunset * 0.8) * band * lit;
+gl_FragColor = vec4(col * rimGain, 1.0);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+gl_FragColor.a = band * lit * 0.62 * rimGain;
+}
 `;
 
 /**
