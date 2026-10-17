@@ -65,9 +65,10 @@ describe('atmosphere shell: the gradient sky\'s limb glow only', () => {
     expect(shell.visible).toBe(false);
   });
 
-  it('stays off the scattering sky\'s limb at any floating origin and height, as the old cut did', () => {
+  it('keeps that visibility through `update` at any floating origin and height (the shell\'s 60-110 km band doubled the sky\'s limb)', () => {
     const { sm } = build(true);
-    // the floating origins and heights the disc-only cut was replayed at (its 60-110 km band doubled the sky's limb)
+    // the floating origins and heights the disc-only cut was replayed at; `update` must not turn the shell
+    // back on under the scattering sky, nor off under the gradient (it sets visibility only in setPhysicalSky)
     for (const centre of [[0, 0, 0], [-(R_EARTH + 400e3), 0, 0], [-4.1e6, 3.3e6, -3.9e6]]) {
       for (const alt of [400e3, 2000e3, 35786e3]) {
         for (const physical of [true, false]) {
