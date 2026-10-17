@@ -12,15 +12,16 @@
  * - Gagarin, on his seat, then under his canopies (render/cosmonaut.ts).
  *
  * Not one of them has an engine's plume or the sunlit flash given to a
- * stage just let go (render/debris.ts). They are handed over at their WGS-84
- * height above the drawn Earth (render/datum.ts). Each is drawn round the
+ * stage just let go (render/debris.ts). They are drawn where they fly, above
+ * the drawn WGS-84 Earth (D-51). Each is drawn round the
  * point its flight carries, its CG (the pilot's: where he touches the
  * ground), in a group held in the scene's own axes, so the glow can be turned
  * onto the air the body is moving through whatever its tumble.
  */
 import * as THREE from 'three';
 import type { DebrisFrame } from '../physics/frame';
-import { OMEGA_EARTH, R_EARTH } from '../physics/constants';
+import { OMEGA_EARTH } from '../physics/constants';
+import { geodeticHeight } from '../physics/geodesy';
 import { VOSTOK_CAPSULE } from '../physics/rigid/escape';
 import { VOSTOK_IM, type ModulePiece } from '../physics/sim/module-entry';
 import { buildEntryGlow, entryGlow, type EntryGlowView } from './entry-glow';
@@ -184,8 +185,8 @@ export class VostokBody {
       this.body.quaternion.copy(this.q).multiply(this.qt);
     }
     if (this.glow) {
-      // (its height: the app draws the return's bodies at their WGS-84 height over the drawn sphere, render/datum.ts)
-      let k = down ? 0 : entryGlow(Math.hypot(r.x, r.y, r.z) - R_EARTH, airspeed);
+      // (its height above WGS-84, as the physics flies it and the scene draws it: D-51)
+      let k = down ? 0 : entryGlow(geodeticHeight(r), airspeed);
       // a small piece's streak: brighter for its size than a body's shock, and while it melts away
       if (this.kind === 'imFragment') k = Math.min(1, 1.6 * k + (d.entry?.ablating ? 0.35 : 0));
       this.glow.set(k, air);

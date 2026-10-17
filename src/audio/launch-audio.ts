@@ -18,7 +18,8 @@ import { workspaceStorage } from '../workspace/storage';
 import type { VisualFrame } from '../physics/frame';
 import type { SimEvent } from '../physics/simulation';
 import type { Vec3 } from '../physics/vec3';
-import { OMEGA_EARTH, R_EARTH } from '../physics/constants';
+import { OMEGA_EARTH } from '../physics/constants';
+import { geodeticHeight } from '../physics/geodesy';
 import { EngineSound, type HeardSource } from './engine-sound';
 import { EVENT_CUES, SPEED_OF_SOUND_0, retardedTime, toHead, warpGain, type Quat } from './acoustics';
 
@@ -65,8 +66,8 @@ export function headingTo(r: Vec3, listener: Vec3, q: Quat | undefined): Vec3 | 
   return d > 0 ? toHead({ x: dx / d, y: dy / d, z: dz / d }, q) : undefined;
 }
 
-/** Height of `r` over the ground at elevation `ground` (m above the spherical Earth), m. */
-const heightOver = (r: Vec3, ground: number): number => Math.hypot(r.x, r.y, r.z) - R_EARTH - ground;
+/** Height of `r` over the ground at elevation `ground` (m above WGS-84, D-51), m. */
+const heightOver = (r: Vec3, ground: number): number => geodeticHeight(r) - ground;
 
 export interface AudioFrameInput {
   /** mission time on screen, s */

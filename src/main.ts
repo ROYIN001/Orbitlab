@@ -98,7 +98,7 @@ import { getNotation, initNotation, onNotationChange } from './ui/notation';
 import { FramesView } from './render/frames';
 import { EscapeView } from './render/escape';
 import { crewViewSize } from './render/cosmonaut';
-import { drawnFrame, onDrawnSphere, onEllipsoid } from './render/datum';
+import { drawnFrame, landReturn } from './render/datum';
 import { geodeticHeight } from './physics/geodesy';
 import { StationView } from './render/station';
 import { apolloViewSize, buildAscentStage, buildCsm, buildDescentStage, CSM_LENGTH, LM_HEIGHT } from './render/apollo';
@@ -230,8 +230,7 @@ function vostokPartner(frame: VisualFrame): VisualFrame['debris'][number] | unde
   for (const d of frame.debris) {
     const kind = d.visual.kind;
     if (!d.alive || (kind !== 'instrumentModule' && kind !== 'imFragment')) continue;
-    // (the drawn frame's heights are over the drawn sphere: render/datum.ts)
-    if (kind === 'instrumentModule' && norm(d.r) - R_EARTH > 100e3) continue;
+    if (kind === 'instrumentModule' && geodeticHeight(d.r) > 100e3) continue;
     const m = away(d);
     if (m < nearest) { nearest = m; best = d; }
   }
@@ -514,7 +513,7 @@ class App {
   /** index of the last recorded frame fed to the trail line */
   private trailIdx = -1;
   /** elements the predicted-orbit line was last sampled for (see syncPredicted) */
-  private predictedShape = { a: NaN, e: NaN, i: NaN, raan: NaN, argp: NaN, ellipsoid: false };
+  private predictedShape = { a: NaN, e: NaN, i: NaN, raan: NaN, argp: NaN };
   private predictedOn = false;
   /** 0..1 fade of the predicted-orbit line (see syncPredicted) */
   private predictedFade = 0;
@@ -2206,8 +2205,7 @@ class App {
     }
     for (let i = this.trailIdx + 1; i <= target; i++) {
       const f = frames[i];
-      // (C01: a return on WGS-84 heights where the scene draws it, render/datum.ts)
-      if (f.status !== 'prelaunch') this.trail.add(onEllipsoid(f) ? onDrawnSphere(f.r) : f.r);
+      if (f.status !== 'prelaunch') this.trail.add(f.r);
     }
     this.trailIdx = target;
     if (live && liveFrame.status !== 'prelaunch') this.trail.add(liveFrame.r);
@@ -2262,22 +2260,16 @@ class App {
       return;
     }
     const p = this.predictedShape;
-    // C01: a return flown on WGS-84 heights is drawn on the drawn sphere (render/datum.ts), and so is its conic,
-    // or the capsule and its trail would run up to 12 km off the line through Vostok-1's entry. The mapping
-    // reads only the latitude, so the sampled shape stays good while the elements hold.
-    const ellipsoid = onEllipsoid(frame);
     const moved = !this.predictedOn
-      || ellipsoid !== p.ellipsoid
       || Math.abs(el.a - p.a) > Math.abs(p.a) * 2e-4
       || Math.abs(el.e - p.e) > 2e-4
       || Math.abs(el.i - p.i) > 2e-4
       || Math.abs(el.raan - p.raan) > 2e-4
       || Math.abs(el.argp - p.argp) > 2e-4;
     if (!moved) return;
-    p.a = el.a; p.e = el.e; p.i = el.i; p.raan = el.raan; p.argp = el.argp; p.ellipsoid = ellipsoid;
+    p.a = el.a; p.e = el.e; p.i = el.i; p.raan = el.raan; p.argp = el.argp;
     this.predictedOn = true;
-    const pts = sampleOrbit(el, 180);
-    this.predicted.setPoints(ellipsoid ? pts.map(onDrawnSphere) : pts);
+    this.predicted.setPoints(sampleOrbit(el, 180));
   }
 
   /**
@@ -2307,11 +2299,10 @@ class App {
   private watchSubject(): { altitude: number; speed: number } | undefined {
     const d = this.focusDebrisId === null ? undefined : this.shown?.debris.find((x) => x.id === this.focusDebrisId);
     if (!d || !this.sim) return undefined;
-    const r = Math.hypot(d.r.x, d.r.y, d.r.z);
     // ω × r with ω along +z, as `groundSpeed` does for the vehicle
     const vx = d.v.x + OMEGA_EARTH * d.r.y, vy = d.v.y - OMEGA_EARTH * d.r.x;
-    // C01: Vostok-1's pilot, like the sphere, flies on WGS-84 heights
-    const h = this.shown && onEllipsoid(this.shown) ? geodeticHeight(d.r) : r - R_EARTH;
+    // above WGS-84, as every flight's heights are (D-51)
+    const h = geodeticHeight(d.r);
     return { altitude: Math.max(0, h - this.sim.groundElevation(d.r)), speed: d.alive ? Math.hypot(vx, vy, d.v.z) : 0 };
   }
 
@@ -2373,7 +2364,7 @@ class App {
     if (this.player.live) this.player.syncLive(shown.t);
     this.shown = shown;
     view.setFrame(shown);
-    // C01: what the scene draws: a return flown on WGS-84 heights moved onto the drawn sphere (render/datum.ts)
+    // C01: what the scene draws: Vostok's sphere at rest stood on the drawn ground (render/datum.ts)
     const frame = drawnFrame(shown);
     // G06: the abort is there on a crewed Soyuz, and live until the escape system stands down
     this.abortBtn.hidden = !sim.escape.fitted;
@@ -2589,7 +2580,7 @@ class App {
         height: crew ? crewViewSize(focus.crew) : focus.visual.length, radius: focus.visual.diameter / 2,
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: focus.burning ? 0.1 : 0,
         vDir: norm(focus.v) > 1 ? normalize(focus.v) : f.up,
-        t: frame.t, phase: 'ascent', agl: norm(focus.r) - R_EARTH - ground,
+        t: frame.t, phase: 'ascent', agl: geodeticHeight(focus.r) - ground,
       }, dt, R_EARTH);
     } else {
       // G06: under a parachute the camera frames the canopy above the capsule,
@@ -2617,7 +2608,7 @@ class App {
     const framesView = (this.mode === 'explore' || this.mode === 'engineer') && (this.camMode === 'exterior' || this.camMode === 'space');
     if (framesView) this.frames.update(frame, scene.camera, this.vehiclePos, this.earthC, sim.plan.azimuthRotating, getNotation(), !focus);
     else this.frames.group.visible = false;
-    const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
+    const camAlt = geodeticHeight(v3(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z));
     // shadows are only worth casting while we are looking at the pad
     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);
     // C01: Eagle's shadow on the Moon, from the last kilometres of the descent
@@ -2626,7 +2617,7 @@ class App {
     // C01: Vostok-1 over the ground it comes down on (render/steppe.ts): the shadow map kept on the body the camera
     // follows, so the sphere, Gagarin and their canopies throw their shadows on the fields from the last few hundred
     // metres, and no map left from the pad, a world away and read in the scene's moved axes, darkens them
-    if (onEllipsoid(frame) && norm(focusR) - R_EARTH < 30e3) scene.setShadowFocus(this.originV, 40, true, VOSTOK_SHADOW_BIAS);
+    if (landReturn(frame) && geodeticHeight(focusR) < 30e3) scene.setShadowFocus(this.originV, 40, true, VOSTOK_SHADOW_BIAS);
     // `height` is the size of the object actually being tracked — the stack
     // now, the spacecraft after payload separation. Without it the space view's
     // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for
@@ -2644,7 +2635,7 @@ class App {
     this.audio.update({
       t: frame.t, frameAt: (x) => this.player.frameAt(x), events: this.recorder.events,
       // (the sounds come from the frames as flown: the camera, about the body it is on, put back by that body's
-      // own place there, for a return drawn off its WGS-84 heights, render/datum.ts)
+      // own place there, for a body drawn off it: Vostok's sphere stood on the ground, render/datum.ts)
       listener: { x: cam.x + heardFrom.x, y: cam.y + heardFrom.y, z: cam.z + heardFrom.z },
       warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
       onboard: this.camMode === 'onboard',

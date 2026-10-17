@@ -2,14 +2,16 @@
  * The ground under a return that comes down on land (C01: Vostok-1, on the
  * Saratov steppe), drawn where the scene puts it.
  *
- * The scene's Earth is a faceted 6,378.137 km sphere: between its vertices
- * its flat triangles lie up to about R·Δ²/8 under the sphere, some 1.3 km at
- * Smelovka (128 × 96 segments; render/scene.ts). The return's bodies are drawn
- * on that sphere at their WGS-84 heights (render/datum.ts), so on the ground
+ * The scene's Earth is a faceted WGS-84 ellipsoid (D-51): between its
+ * vertices its flat triangles lie up to about R·Δ²/8 under the surface, some
+ * 1.3 km at Smelovka (128 × 96 segments; render/scene.ts). The return's bodies
+ * are drawn where they fly, at their heights above WGS-84, so on the ground
  * they stood 1.3 km over the drawn globe, and nothing else was drawn there.
- * This is the ground they come down on: a disc of fields on the 6,378.137 km
- * sphere itself, curving away with it, and a wider plain round it that fades
- * into the globe, as the launch pad's terrain does (render/pads.ts).
+ * This is the ground they come down on: a disc of fields on the ellipsoid's
+ * surface itself (render/recovery.ts places it), curving away with it, and a
+ * wider plain round it that fades into the globe, as the launch pad's terrain
+ * does (render/pads.ts). Its curvature is the mean radius's: the ellipsoid's
+ * own differs by under 0.4 %, a few millimetres at the disc's rim.
  *
  * The fields are the ground's own and do not move with the disc: their
  * texture and their shading are laid out by latitude and longitude, so the
@@ -136,7 +138,7 @@ export function fieldsTexture(): THREE.DataTexture {
   return t;
 }
 
-/** A disc on the sphere, X east, Y up, Z south, its rings packed towards the middle. */
+/** A disc on the ground, X east, Y up, Z south, its rings packed towards the middle. */
 function disc(inner: number, outer: number, segments: number, rings: number, pack: number): THREE.BufferGeometry {
   const geo = new THREE.RingGeometry(inner, outer, segments, rings);
   geo.rotateX(-Math.PI / 2);
@@ -152,9 +154,9 @@ function disc(inner: number, outer: number, segments: number, rings: number, pac
 }
 
 export interface SteppeView {
-  /** In a surface frame (render/recovery.ts): X east, Y up, Z south, its origin on the sphere. */
+  /** In a surface frame (render/recovery.ts): X east, Y up, Z south, its origin on the WGS-84 ground. */
   readonly group: THREE.Group;
-  /** Lay the fields out for a disc centred at `lat`, `lon` (rad, geocentric, on the rotating Earth). */
+  /** Lay the fields out for a disc centred at `lat`, `lon` (rad, geodetic, on the rotating Earth). */
   centre(lat: number, lon: number): void;
   /** 0–1: faded out with the camera's distance. */
   setOpacity(o: number): void;

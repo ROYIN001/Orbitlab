@@ -99,3 +99,20 @@ export function geocentricLatitude(lat: number, h = 0): number {
   const n = A / Math.sqrt(1 - E2 * sl * sl);
   return Math.atan2((n * (1 - E2) + h) * sl, (n + h) * cl);
 }
+
+/**
+ * The local east, north and up at geodetic latitude `lat` and longitude `lon`
+ * (rad, in the frame the longitude is counted in): up along the ellipsoid's
+ * normal, which is where the ground faces. The flight's own frame
+ * (`enuFrame`, src/physics/orbital.ts) is the radius's, at most 0.19° from
+ * this; a patch of ground drawn kilometres wide is laid out on this one, or
+ * its rim would stand tens of metres off the ellipsoid.
+ */
+export function geodeticEnu(lat: number, lon: number): { east: Vec3; north: Vec3; up: Vec3 } {
+  const sl = Math.sin(lat), cl = Math.cos(lat), so = Math.sin(lon), co = Math.cos(lon);
+  return {
+    east: { x: -so, y: co, z: 0 },
+    north: { x: -sl * co, y: -sl * so, z: cl },
+    up: { x: cl * co, y: cl * so, z: sl },
+  };
+}

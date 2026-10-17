@@ -9,8 +9,8 @@ import type { SiteExtra } from '../data/sites';
 import type { VehicleSpec } from '../types';
 import type { VisualFrame } from '../physics/frame';
 import type { Vec3 } from '../physics/vec3';
-import { enuFrame } from '../physics/orbital';
-import { DEG, R_EARTH } from '../physics/constants';
+import { DEG } from '../physics/constants';
+import { geodeticEnu, geodeticToCartesian } from '../physics/geodesy';
 import type { SceneManager } from './scene';
 import { buildPad, type PadBuild, type TowerReturn } from './pads';
 import { GroundSmoke, PadGlow } from './smoke';
@@ -76,8 +76,10 @@ export class LaunchPadView {
   private zAxis = new THREE.Vector3();
   /** site position in ECI, recomputed in place every frame (no allocation) */
   private siteVec: Vec3 = { x: 0, y: 0, z: 0 };
-  private cosLat: number;
-  private sinLat: number;
+  /** the pad on WGS-84 (D-51), Earth-fixed: its distance from the axis and its height along it, m */
+  private siteAxial: number;
+  private siteZ: number;
+  private latRad: number;
   private lonRad: number;
   private siteRadius: number;
   /** radius used for the shadow frustum, m */
@@ -89,10 +91,13 @@ export class LaunchPadView {
    * @param opts.dynamics the flight's physics: its wind, if any, carries the cloud
    */
   constructor(site: SiteExtra, vehicle: VehicleSpec, opts: { padId?: string; azimuth?: number; dynamics?: DynamicsConfig } = {}) {
-    this.cosLat = Math.cos(site.latitude * DEG);
-    this.sinLat = Math.sin(site.latitude * DEG);
+    // where the physics puts the pad (groundPositionEci): on WGS-84 at its geodetic latitude and its altitude
+    const pad = geodeticToCartesian(site.latitude * DEG, 0, site.altitude);
+    this.siteAxial = pad.x;
+    this.siteZ = pad.z;
+    this.latRad = site.latitude * DEG;
     this.lonRad = site.longitude * DEG;
-    this.siteRadius = R_EARTH + site.altitude;
+    this.siteRadius = Math.hypot(pad.x, pad.z);
     const mat = (color: number, metal = 0.1, rough = 0.7): THREE.MeshStandardMaterial => {
       const key = `${color}|${metal}|${rough}`;
       let m = this.matCache.get(key);
@@ -200,9 +205,9 @@ export class LaunchPadView {
     // groundPositionEci(lat, lon, alt, theta), inlined so the hot path does
     // not allocate a Vec3 per rendered frame
     const lam = this.lonRad + frame.theta;
-    out.x = this.siteRadius * this.cosLat * Math.cos(lam);
-    out.y = this.siteRadius * this.cosLat * Math.sin(lam);
-    out.z = this.siteRadius * this.sinLat;
+    out.x = this.siteAxial * Math.cos(lam);
+    out.y = this.siteAxial * Math.sin(lam);
+    out.z = this.siteZ;
     return out;
   }
 
@@ -248,7 +253,9 @@ export class LaunchPadView {
     const r = this.siteEci(frame);
     scene.toScene(r, this.tmp);
     this.group.position.copy(this.tmp);
-    const { east, north, up } = enuFrame(r);
+    // laid on the ellipsoid's normal (D-51), so the terrain's rim kilometres out lies on the ground; the
+    // vehicle stands on the radius, as the physics flies it, 0.19° from it at 45° (millimetres at its base)
+    const { east, north, up } = geodeticEnu(this.latRad, this.lonRad + frame.theta);
     this.basis.makeBasis(
       this.xAxis.set(east.x, east.y, east.z),
       this.yAxis.set(up.x, up.y, up.z),

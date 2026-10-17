@@ -18,13 +18,13 @@ import type { SiteExtra } from '../data/sites';
 import { landingZonesForSite, type LandingZoneSpec } from '../data/landing-zones';
 import type { VisualFrame } from '../physics/frame';
 import type { ReturnTarget } from '../physics/sim/return-guidance';
-import { enuFrame } from '../physics/orbital';
 import { DEG, R_EARTH } from '../physics/constants';
 import type { Vec3 } from '../physics/vec3';
 import type { SceneManager } from './scene';
 import { disposeObject } from './dispose';
 import { smoothstep } from './noise';
-import { onEllipsoid } from './datum';
+import { landReturn } from './datum';
+import { geodeticEnu, geodeticFast, geodeticToCartesian } from '../physics/geodesy';
 import { buildSteppe, type SteppeView } from './steppe';
 
 /** Slant range past which a landing zone or a drone ship is not drawn, m. */
@@ -45,7 +45,12 @@ const LAND_FAR = 30e3;
 /** The step that ground is re-centred in under the body coming down, m (its fields stay where they lie). */
 const LAND_STEP = 1000;
 
-/** A local frame on the rotating Earth at a latitude and longitude (rad). */
+/**
+ * A local frame on the rotating Earth at a geodetic latitude and longitude
+ * (rad) and a height above WGS-84 (m), where the physics puts that ground
+ * (D-51), its up along the ellipsoid's normal (`geodeticEnu`), so the ground
+ * laid out in it lies on the ellipsoid to its rim.
+ */
 class SurfaceAnchor {
   readonly group = new THREE.Group();
   private readonly eci: Vec3 = { x: 0, y: 0, z: 0 };
@@ -55,17 +60,15 @@ class SurfaceAnchor {
   private readonly ay = new THREE.Vector3();
   private readonly az = new THREE.Vector3();
 
-  constructor(public lat: number, public lon: number, public radius: number) {}
+  constructor(public lat: number, public lon: number, public height: number) {}
 
   /** Place the frame for the displayed instant; false when it is too far to draw. */
   place(scene: SceneManager, theta: number): boolean {
-    const lam = this.lon + theta, r = this.radius;
-    this.eci.x = r * Math.cos(this.lat) * Math.cos(lam);
-    this.eci.y = r * Math.cos(this.lat) * Math.sin(lam);
-    this.eci.z = r * Math.sin(this.lat);
+    const p = geodeticToCartesian(this.lat, this.lon + theta, this.height);
+    this.eci.x = p.x; this.eci.y = p.y; this.eci.z = p.z;
     scene.toScene(this.eci, this.tmp);
     this.group.position.copy(this.tmp);
-    const { east, north, up } = enuFrame(this.eci);
+    const { east, north, up } = geodeticEnu(this.lat, this.lon + theta);
     this.basis.makeBasis(this.ax.set(east.x, east.y, east.z), this.ay.set(up.x, up.y, up.z), this.az.set(-north.x, -north.y, -north.z));
     this.group.quaternion.setFromRotationMatrix(this.basis);
     const near = this.group.position.distanceTo(scene.camera.position) < DRAW_RANGE;
@@ -218,16 +221,16 @@ export class RecoverySceneryView {
     };
     for (const zone of landingZonesForSite(site.id)) {
       if (zone.kind !== 'pad') continue;
-      const anchor = new SurfaceAnchor(zone.latitude * DEG, zone.longitude * DEG, R_EARTH + site.altitude);
+      const anchor = new SurfaceAnchor(zone.latitude * DEG, zone.longitude * DEG, site.altitude);
       anchor.group.add(landingPad(zone, mat));
       this.group.add(anchor.group);
       this.pads.push(anchor);
     }
-    this.ship = new SurfaceAnchor(0, 0, R_EARTH);
+    this.ship = new SurfaceAnchor(0, 0, 0);
     this.ship.group.add(droneShip(mat), seaPatch());
     this.ship.group.visible = false;
     this.group.add(this.ship.group);
-    this.sea = new SurfaceAnchor(0, 0, R_EARTH);
+    this.sea = new SurfaceAnchor(0, 0, 0);
     this.sea.group.add(seaPatch());
     this.sea.group.visible = false;
     this.group.add(this.sea.group);
@@ -249,21 +252,20 @@ export class RecoverySceneryView {
     if (target) {
       this.ship.lat = target.lat;
       this.ship.lon = target.lon;
-      this.ship.radius = R_EARTH + target.alt;
+      this.ship.height = target.alt;
       this.ship.place(scene, frame.theta);
     } else {
       this.ship.group.visible = false;
     }
-    // C01: a return flown on WGS-84 heights comes down on land (Vostok-1, on the Saratov steppe): the fields under
-    // it, and no sea, through its descent, its landing and after
-    const onLand = onEllipsoid(frame);
+    // C01: a return that comes down on land (Vostok-1, on the Saratov steppe): the fields under it, and no sea,
+    // through its descent, its landing and after
+    const onLand = landReturn(frame);
     if (onLand && frame.altitude < LAND_FROM_ALTITUDE) this.placeLand(scene, frame);
     else if (this.land) this.land.anchor.group.visible = false;
     // A ship coming home over the sea: open water under it from the belly flop on.
     const home = !onLand && ((frame.status === 'descent' && frame.altitude < SEA_FROM_ALTITUDE) || frame.status === 'landed');
     if (home) {
-      const r = Math.hypot(frame.r.x, frame.r.y, frame.r.z);
-      this.sea.lat = Math.asin(frame.r.z / r);
+      this.sea.lat = geodeticFast(frame.r.x, frame.r.y, frame.r.z).lat;
       this.sea.lon = Math.atan2(frame.r.y, frame.r.x) - frame.theta;
       this.sea.place(scene, frame.theta);
     } else {
@@ -272,21 +274,20 @@ export class RecoverySceneryView {
   }
 
   /**
-   * The fields under the return's body (the frame's: Vostok's sphere), on the drawn sphere, in a disc held on a
+   * The fields under the return's body (the frame's: Vostok's sphere), on the drawn WGS-84 ground, in a disc held on a
    * LAND_STEP grid of latitude and longitude, so it follows the sphere down in steps while its fields, laid out
    * on the ground itself, stay put (render/steppe.ts); faded in with the camera's distance.
    */
   private placeLand(scene: SceneManager, frame: VisualFrame): void {
     if (!this.land) {
-      const anchor = new SurfaceAnchor(0, 0, R_EARTH);
+      const anchor = new SurfaceAnchor(0, 0, 0);
       const view = buildSteppe();
       anchor.group.add(view.group);
       this.group.add(anchor.group);
       this.land = { anchor, view };
     }
     const { anchor, view } = this.land;
-    const r = Math.hypot(frame.r.x, frame.r.y, frame.r.z);
-    const lat = Math.asin(frame.r.z / r);
+    const lat = geodeticFast(frame.r.x, frame.r.y, frame.r.z).lat;
     let lon = Math.atan2(frame.r.y, frame.r.x) - frame.theta;
     lon = Math.atan2(Math.sin(lon), Math.cos(lon));
     const dLat = LAND_STEP / R_EARTH;
