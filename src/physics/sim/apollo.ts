@@ -19,19 +19,21 @@
 import type { Simulation } from '../simulation';
 import { DEG, G0, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../constants';
 import { rk4Step } from '../integrator';
-import { elementsFromState } from '../orbital';
+import { elementsFromState, wrap2pi } from '../orbital';
 import { targetAttitude } from '../rigid/runtime';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
-import { engineStartupS, engineTailoffS } from '../vehicle';
+import { VehicleModel, engineStartupS, engineTailoffS } from '../vehicle';
 import { APOLLO11, DPS, LM_RCS, RANGE_ZERO_MS, SM_RCS, SPS } from '../../data/apollo11';
-import { LUNAR_SOI, cislunarStep, coastToPerilune, lunarOrbit, lunisolar, targetMidcourse, type LunarAim } from '../lunar/cislunar';
-import { MU_MOON, moonState, R_MOON } from '../lunar/ephemeris';
+import { LUNAR_SOI, arrivalMiss, cislunarStep, coastToPerilune, lunarOrbit, lunisolar, solve3, targetMidcourse, type LunarAim } from '../lunar/cislunar';
+import { MU_MOON, inEphemerisTable, moonState, R_MOON } from '../lunar/ephemeris';
 import { eciToSelenographic, selenographicToEci } from '../lunar/orientation';
 import { pointMassAcceleration } from './forces';
 import { PoweredDescent, type DescentPhase } from './apollo-descent';
 import { gravityJ2 } from '../gravity';
-import { TliGuidance } from './tli-guidance';
-import { CHUTES, EI_ALT, EntryGuidance, airVelocity, cmAerodynamics, coastToEntryInterface, earthFixed, entryAcceleration, opened, perigeeOfEntry, targetEntry } from './apollo-entry';
+import { TliGuidance, type TliTarget } from './tli-guidance';
+import { planTli, type TliAim } from './tli-target';
+import { CHUTES, EI_ALT, EntryGuidance, airVelocity, cmAerodynamics, coastToEntryInterface, coastToPerigee, earthFixed, entryAcceleration, opened, perigeeOfEntry,
+  targetEntry } from './apollo-entry';
 import { AscentGuidance, apsPoint, brakingAcceleration, cdhImpulse, closingSpeed, csiImpulse, elevation, heightBelow, interceptImpulse,
   STATIONKEEPING_M, type OrbitState } from './apollo-rendezvous';
 
@@ -133,6 +135,15 @@ export interface ApolloState {
 export const TLI_STEP_S = 0.2;
 /** Integration step in the coasts near the Earth, s: a few hundred steps an orbit under J2. */
 export const APOLLO_COAST_STEP_S = 10;
+/**
+ * Another launch's mission, s from its launch: to the flown splashdown, which its timeline keeps, and an hour for
+ * the burns home timed to its own lift-off from the Moon. The Moon's table must hold all of it (`inEphemerisTable`).
+ */
+const MISSION_SPAN_S = APOLLO11.splashdown.t + 3600;
+/** Another launch's injection is flown only if the S-IVB has this much of its flow to spare at the cut-off, s, beyond its tail-off's. */
+const TLI_RESERVE_S = 1;
+/** Another launch's DOI is looked for until this mission time, s: an hour and a half past the flown one, more than a revolution after the CSM's separation. */
+const DOI_WINDOW_END = APOLLO11.doi.t + 5400;
 /** The CSM and LM's release from the S-IVB, m/s (the ejection springs; Apollo 11 Mission Report). */
 export const EXTRACTION_SPEED = 0.3;
 /** The contact probes under the LM's footpads, m (67 in). */
@@ -177,6 +188,14 @@ export class ApolloFlight {
   phase: ApolloPhase = 'parking';
   started = false;
   private a = 0;
+  /** the conic the injection is steered onto (rad), and how much later than the flown restart this one is, s */
+  private conic?: TliTarget;
+  private shift = 0;
+  /** another launch's lift-off from the Moon and docking: how much later than the flown ones they are, s */
+  private lift = 0;
+  private docked = 0;
+  /** another launch than the flown one: its injection, its midcourse correction's aim and its recovery point worked out for it */
+  private computed = false;
   private tli?: ApolloState['tli'];
   private guidance?: TliGuidance;
   /** the vent's impulse over the coast, N·s, for the mass it carries away */
@@ -191,6 +210,11 @@ export class ApolloFlight {
   private csm?: { r: Vec3; v: Vec3 };
   /** the descent engine's burn into the descent orbit: its Δv so far */
   private doiDone = 0;
+  /** when DOI was lit, s, and (another launch's) the LM's distance round its orbit to the site at the last step, rad */
+  private doiAt = APOLLO11.doi.t;
+  private toSite?: number;
+  /** From when the descent's ignition is watched for, s: the half hour before the flown one, or as long after another launch's DOI. */
+  private get pdiWatch(): number { return this.computed ? this.doiAt + (APOLLO11.pdi.t - APOLLO11.doi.t) - 1800 : APOLLO11.pdi.t - 1800; }
   private descent?: PoweredDescent;
   private contact?: number;
   private landed?: { lat: number; lon: number; miss: number; t: number; r: Vec3 };
@@ -203,6 +227,10 @@ export class ApolloFlight {
   private dockAxis?: Vec3;
   private ascentStage?: OrbitState;
   private teiDv?: Vec3;
+  /** another launch's aim at the Earth, its burn home's own (`planTei`), and when its lift-off and its burn home are, s */
+  private homeAim?: { alt: number; time: number; lat: number };
+  private liftoffAt?: number;
+  private teiAt?: number;
   private interfaceAhead?: { fpa: number; t: number };
   private serviceModule?: OrbitState;
   private entryGuidance?: EntryGuidance;
@@ -231,19 +259,26 @@ export class ApolloFlight {
 
   private get jd0(): number { return this.sim.plan.jd0; }
 
-  /** The parking orbit is reached: set the injection's target and its time. */
+  /**
+   * The parking orbit is reached. Apollo 11's own launch — at range zero, into the flown parking orbit — flies
+   * the injection flown, timed and aimed for the Moon of that second. Another launch is another flight (the
+   * owner's decision of 2026-10-17): if the Moon's table holds its whole mission, its injection is worked out
+   * for it once the S-IVB's tail-off is over (`planInjection`); if the table does not, or no injection the S-IVB
+   * can fly is found, it stays in its parking orbit, and says why. With another spacecraft it stays there too.
+   */
   begin(): void {
     const inj = this.spec;
     if (!inj || this.started) return;
-    // The injection is the one flown, timed and aimed for the Moon of range zero. Launched at another
-    // second, or with another spacecraft, the flight is a different one and stays in its parking orbit:
-    // flown anyway, it would burn for a Moon that is not there.
-    if (this.sim.satellite.id !== 'apollo11' || Math.abs(this.sim.cfg.launchTime.getTime() - RANGE_ZERO_MS) >= 1000) {
+    if (this.sim.satellite.id !== 'apollo11') {
+      this.sim.event('evt.lunarProfileOff', 'info');
+      return;
+    }
+    const flown = this.flownLaunch;
+    if (!flown && !(inEphemerisTable(this.jd0) && inEphemerisTable(this.jd0 + MISSION_SPAN_S / 86400))) {
       this.sim.event('evt.lunarProfileOff', 'info');
       return;
     }
     const s = this.sim.state;
-    this.a = -MU_EARTH / inj.c3;
     this.started = true;
     this.phase = 'parking';
     s.note = 'parkingOrbit';
@@ -251,9 +286,27 @@ export class ApolloFlight {
       const k = inj.vent.thrust;
       for (let i = 1; i < k.length; i++) this.ventImpulse += ((k[i][1] + k[i - 1][1]) / 2) * (k[i][0] - k[i - 1][0]);
     }
-    this.sim.schedule(Math.max(s.t, inj.time), 'tliIgnition', () => this.ignite());
-    if (inj.mixture) this.sim.schedule(inj.mixture.t, 'tliMixture', () => this.shiftMixture());
-    const q = inj.sequence;
+    if (flown) this.arm({ c3: inj.c3, e: inj.eccentricity, inc: inj.inclination * DEG, raan: inj.raan * DEG, argp: inj.argPerigee * DEG }, inj.time);
+    else this.sim.schedule(s.t + APOLLO_COAST_STEP_S, 'tliPlan', () => this.planInjection());
+  }
+
+  /** Apollo 11's own launch: at range zero (to the second), into the parking orbit the flight's settings aim at. */
+  private get flownLaunch(): boolean {
+    const o = this.sim.cfg.orbit, p = APOLLO11.parking;
+    return Math.abs(this.sim.cfg.launchTime.getTime() - RANGE_ZERO_MS) < 1000 && o.perigee === p.perigee && o.apogee === p.apogee
+      && o.inclination === p.inclination && o.argPerigee === p.argPerigee && o.raanMode === 'fixed' && o.raan === p.raan
+      && o.flightAzimuth === p.flightAzimuth;
+  }
+
+  /** The injection set: the conic to steer onto and the ignition's time; the restart, the mixture shift and the transposition scheduled. */
+  private arm(conic: TliTarget, at: number): void {
+    const inj = this.spec!, s = this.sim.state;
+    this.conic = conic;
+    this.shift = at - inj.time;
+    this.a = -MU_EARTH / conic.c3;
+    this.sim.schedule(Math.max(s.t, at), 'tliIgnition', () => this.ignite());
+    if (inj.mixture) this.sim.schedule(inj.mixture.t + this.shift, 'tliMixture', () => this.shiftMixture());
+    const q = this.sequence;
     if (q) {
       // the adapter's panels open first, a minute and a half before the CSM backs away
       this.sim.schedule(q.panels, 'slaPanels', () => {
@@ -286,6 +339,69 @@ export class ApolloFlight {
     }
   }
 
+  /** The transposition's times, as long after the restart as the flown ones were. */
+  private get sequence(): ApolloState['sequence'] {
+    const q = this.spec?.sequence, d = this.shift;
+    return q && { panels: q.panels + d, separation: q.separation + d, docking: q.docking + d, extraction: q.extraction + d };
+  }
+
+  /**
+   * The injection worked out for this launch (`planTli`), aimed where the flown midcourse correction aimed (the
+   * perilune's height, time and latitude): its burn's middle within half a revolution of the flown one's, on the
+   * parking orbit propagated as `step` flies it — its vent pushing it and taking its propellant — and on the
+   * restart's operating points, lit half its length before its middle; the conic's perigee as far above the stack
+   * as the flown conic's was above the flown parking orbit. Flown if the burn the steering predicts leaves the
+   * S-IVB the propellant its tail-off burns and `TLI_RESERVE_S` of its flow; if not, or if none is found, the
+   * flight stays in its parking orbit and says why.
+   */
+  private planInjection(): void {
+    const inj = this.spec!, s = this.sim.state, st = this.sim.vehicle.active, jd0 = this.jd0;
+    if (!st || this.phase !== 'parking' || this.conic) return;
+    const t0 = s.t, ventK = inj.vent && this.ventImpulse > 0 ? inj.vent.mass / this.ventImpulse : 0;
+    // the parking orbit as `step` flies it, in its 10-s steps: the vent along the velocity, its propellant spent
+    type Park = { r: Vec3; v: Vec3; m: number };
+    const fly = (t: number, x: Park, h: number): Park => {
+      const vent = this.ventThrust(t), base = pointMassAcceleration(vent / x.m, normalize(x.v), x.m, 0, t, 10, true, 2.2);
+      const n = rk4Step(t, x, h, (tt, r, v) => add(base(tt, r, v), lunisolar(jd0, tt, r)));
+      return { r: n.r, v: n.v, m: x.m - vent * h * ventK };
+    };
+    const states: Park[] = [{ r: s.r, v: s.v, m: this.sim.vehicle.totalMass() }], step = APOLLO_COAST_STEP_S;
+    const park = (t: number): Park => {
+      const k = Math.max(0, Math.floor((t - t0) / step));
+      while (states.length <= k) states.push(fly(t0 + (states.length - 1) * step, states[states.length - 1], step));
+      return t > t0 + k * step ? fly(t0 + k * step, states[k], t - t0 - k * step) : states[k];
+    };
+    const e = st.spec.engine, n = e.count, dMix = inj.mixture ? inj.mixture.t - inj.time : Infinity;
+    const points = [{ from: 0, thrust: (inj.thrustVac ?? e.thrustVac) * n, isp: inj.ispVac ?? e.ispVac }];
+    if (inj.mixture) points.push({ from: dMix, thrust: inj.mixture.thrustVac * n, isp: inj.mixture.ispVac });
+    // the burn's length for the impulse at the flown conic's perigee, by the rocket equation on those points
+    const p = APOLLO11.parking, rpFlown = (-MU_EARTH / inj.c3) * (1 - inj.eccentricity), climb = rpFlown - (R_EARTH + (p.perigee + p.apogee) / 2);
+    const at = park(inj.time);
+    let left = Math.sqrt((2 * MU_EARTH) / (norm(at.r) + climb) + inj.c3) - norm(at.v), m = at.m, length = 0;
+    for (let i = 0; i < points.length && left > 0; i++) {
+      const ve = points[i].isp * G0, mdot = points[i].thrust / ve, span = (points[i + 1]?.from ?? Infinity) - points[i].from;
+      const tt = Math.min(span, (m / mdot) * (1 - Math.exp(-left / ve)));
+      left -= ve * Math.log(m / (m - mdot * tt)); m -= mdot * tt; length += tt;
+    }
+    const mid = inj.time + length / 2, half = Math.PI * Math.sqrt(norm(s.r) ** 3 / MU_EARTH);
+    const aim: TliAim = { perilune: APOLLO11.siteRadius + APOLLO11.mcc2.perilune - R_MOON, time: APOLLO11.mcc2.arrival, lat: APOLLO11.mcc2.lat };
+    const plan = planTli(jd0, park, mid - half, mid + half, climb, length / 2,
+      { points, startupS: engineStartupS(e), tailoffS: engineTailoffS(e), mass: (t) => park(t).m }, aim);
+    // what the S-IVB has left at the cut-off: the steering's prediction, against its tail-off and the reserve
+    const flow = (inj.mixture ? inj.mixture.thrustVac * n / (inj.mixture.ispVac * G0) : points[0].thrust / (points[0].isp * G0));
+    const spare = plan ? st.propellant - (states[0].m - plan.cutoff.m) : 0;
+    const need = VehicleModel.tailoffReserve(e, flow) + TLI_RESERVE_S * flow;
+    if (!plan || spare < need) {
+      this.started = false;
+      this.sim.event(plan ? 'evt.tliPropellant' : 'evt.tliUnsolved', 'warn', plan ? { kg: Math.max(0, Math.round(spare)), need: Math.round(need) } : undefined);
+      return;
+    }
+    this.computed = true;
+    this.arm(plan.target, plan.ignition);
+    this.sim.event('evt.tliPlanned', 'info', { min: Math.round(plan.ignition / 60), c3: +(plan.target.c3 / 1e6).toFixed(3),
+      plane: +((plan.plane * 180) / Math.PI).toFixed(2), kg: Math.round(spare) });
+  }
+
   /** The S-IVB relit, at its second burn's operating point; its steering solved for the whole burn. */
   private ignite(): void {
     const inj = this.spec, st = this.sim.vehicle.active, s = this.sim.state;
@@ -297,13 +413,10 @@ export class ApolloFlight {
     this.sim.event('evt.ignition', 'major', this.sim.stageParams(st));
     this.phase = 'tli';
     s.note = 'tli';
-    const e = st.spec.engine, n = e.count;
+    const e = st.spec.engine, n = e.count, mixAt = (inj.mixture?.t ?? 0) + this.shift;
     const points = [{ from: s.t, thrust: e.thrustVac * n, isp: e.ispVac }];
-    if (inj.mixture && inj.mixture.t > s.t) points.push({ from: inj.mixture.t, thrust: inj.mixture.thrustVac * n, isp: inj.mixture.ispVac });
-    this.guidance = new TliGuidance(
-      { c3: inj.c3, e: inj.eccentricity, inc: inj.inclination * DEG, raan: inj.raan * DEG, argp: inj.argPerigee * DEG },
-      { ignition: s.t, startupS: engineStartupS(e), tailoffS: engineTailoffS(e), points },
-    );
+    if (inj.mixture && mixAt > s.t) points.push({ from: mixAt, thrust: inj.mixture.thrustVac * n, isp: inj.mixture.ispVac });
+    this.guidance = new TliGuidance({ ...this.conic! }, { ignition: s.t, startupS: engineStartupS(e), tailoffS: engineTailoffS(e), points });
     this.guidance.update(s.t, s.r, s.v, this.sim.vehicle.totalMass());
   }
 
@@ -334,12 +447,11 @@ export class ApolloFlight {
    * stack's radius, in its plane, climbing, less the velocity the stack has.
    */
   private fallbackSteering(r: Vec3, v: Vec3): Vec3 {
-    const inj = this.spec!;
-    const i = inj.inclination * DEG, raan = inj.raan * DEG;
+    const { inc: i, raan, e } = this.conic!;
     const n = v3(Math.sin(i) * Math.sin(raan), -Math.sin(i) * Math.cos(raan), Math.cos(i));
     const rIn = sub(r, scale(n, dot(n, r)));
     const rm = norm(r), rHat = normalize(rIn);
-    const h = Math.sqrt(MU_EARTH * this.a * (1 - inj.eccentricity * inj.eccentricity));
+    const h = Math.sqrt(MU_EARTH * this.a * (1 - e * e));
     const speed = Math.sqrt(Math.max(0, MU_EARTH * (2 / rm - 1 / this.a)));
     const vh = Math.min(speed, h / rm);
     const vr = Math.sqrt(Math.max(0, speed * speed - vh * vh));
@@ -402,6 +514,23 @@ export class ApolloFlight {
     if (burning) this.checkCutoff();
     if (sps && (sps.target ? this.lunarCutoff(sps) : sps.done >= sps.dv - 1e-4)) this.endSps();
     if (this.cislunar) this.checkSoi();
+    this.checkSurfaces();
+  }
+
+  /**
+   * A flight off its plan meets what is in its way: the Moon's ground (the landing site's radius) or the Earth's
+   * air below 80 km, as an orbit does (`Simulation.stepOrbit`). The flown flight never comes near either here.
+   */
+  private checkSurfaces(): void {
+    const s = this.sim.state, rel = this.moonRel(s.t, s.r, s.v);
+    if (norm(rel.r) < APOLLO11.siteRadius) {
+      this.sim.event('evt.impact', 'fail', { speed: Math.round(norm(rel.v)) });
+      this.sim.destroy();
+    } else if (norm(s.r) - R_EARTH < 80e3) {
+      this.sim.event('evt.stackReentry', 'fail', { alt: Math.round((norm(s.r) - R_EARTH) / 1000) });
+      s.status = 'failed';
+      s.note = 'reentry';
+    }
   }
 
   /**
@@ -454,7 +583,7 @@ export class ApolloFlight {
       return Math.max(0.2, Math.min(cislunarStep(this.jd0, s.t, s), vr > 0 ? (alt - EI_ALT) / (2 * vr) : 60));
     }
     // the half hour before the descent's ignition, which is timed by the LM's position: a second at a time
-    if (this.phase === 'descentOrbit' && this.sim.state.t > APOLLO11.pdi.t - 1800) return 0.5;
+    if (this.phase === 'descentOrbit' && this.sim.state.t > this.pdiWatch) return 0.5;
     if (this.burning || this.sps) return this.burnStep();
     if (this.sim.vehicle.inTransient(this.sim.state.t)) return TLI_STEP_S;
     if (this.cislunar) return cislunarStep(this.jd0, this.sim.state.t, this.sim.state);
@@ -493,30 +622,47 @@ export class ApolloFlight {
   private planLunarFlight(): void {
     const s = this.sim.state;
     this.perilune = this.predictPerilune(s.t, s);
-    this.sim.schedule(APOLLO11.evasive.t, 'evasive', () => this.evasive());
+    this.sim.schedule(APOLLO11.evasive.t + this.shift, 'evasive', () => this.evasive());
     this.sim.schedule(APOLLO11.mcc2.t, 'midcourse', () => this.midcourse());
     this.sim.schedule(APOLLO11.loi1.t, 'loi', () => this.lunarOrbitInsertion());
     this.sim.schedule(APOLLO11.loi2.t, 'circularize', () => this.circularization());
     this.sim.schedule(APOLLO11.undocking.t, 'undocking', () => this.undock());
-    this.sim.schedule(APOLLO11.doi.t, 'doi', () => {
-      if (this.phase !== 'undocked') return;
-      this.sim.vehicle.payloadMass = APOLLO11.doi.mass;
-      this.phase = 'doi';
-      this.sim.state.note = 'doi';
-      this.doiDone = 0;
-      this.sim.event('evt.doi', 'major', { dv: +APOLLO11.doi.dv.toFixed(1) });
-    });
-    this.sim.schedule(APOLLO11.ascent.t - 3600, 'planLiftoff', () => this.planLiftoff());
-    this.sim.schedule(APOLLO11.csi.t, 'csi', () => this.coellipticInitiation());
-    this.sim.schedule(APOLLO11.cdh.t, 'cdh', () => this.constantHeight());
-    this.sim.schedule(APOLLO11.jettison.t, 'lmJettison', () => this.jettisonAscentStage());
-    this.sim.schedule(APOLLO11.separation.t, 'finalSeparation', () => {
-      if (this.phase === 'csmOrbit') this.sim.event('evt.asSeparation', 'info', { dv: +APOLLO11.separation.dv.toFixed(2) });
-    });
-    this.sim.schedule(APOLLO11.tei.t - 1800, 'planTei', () => this.planTei());
-    this.sim.schedule(APOLLO11.tei.t, 'tei', () => this.transearthInjection());
+    if (!this.computed) this.sim.schedule(APOLLO11.doi.t, 'doi', () => this.descentOrbitInsertion());
+    // another launch's DOI is lit by the LM's place (`stepLunarModule`): if its window closes without it, the LM says so
+    else this.sim.schedule(DOI_WINDOW_END, 'doiWindow', () => { if (this.phase === 'undocked') this.sim.event('evt.burnSkipped', 'warn', { burn: 'DOI' }); });
+    this.sim.schedule(APOLLO11.ascent.t - (this.computed ? 7200 : 3600), 'planLiftoff', () => this.planLiftoff());
+    // another launch's rendezvous and burn home are timed from its own lift-off and docking (`liftoff`, `redock`)
+    if (!this.computed) {
+      this.scheduleRendezvous();
+      this.scheduleSeparation();
+      this.scheduleHome();
+    }
     this.sim.schedule(APOLLO11.mcc5.t, 'mcc5', () => this.returnMidcourse());
     this.sim.schedule(APOLLO11.cmSep.t, 'cmSep', () => this.separateCm());
+  }
+
+  /** CSI and CDH, as long after the lift-off as the flown ones (`lift`: how much later than the flown one it is, s). */
+  private scheduleRendezvous(): void {
+    this.sim.schedule(APOLLO11.csi.t + this.lift, 'csi', () => this.coellipticInitiation());
+    this.sim.schedule(APOLLO11.cdh.t + this.lift, 'cdh', () => this.constantHeight());
+  }
+
+  /** The ascent stage's jettison and the CSM's separation from it, as long after the docking as the flown ones (`docked`). */
+  private scheduleSeparation(): void {
+    this.sim.schedule(APOLLO11.jettison.t + this.docked, 'lmJettison', () => this.jettisonAscentStage());
+    this.sim.schedule(APOLLO11.separation.t + this.docked, 'finalSeparation', () => {
+      if (this.phase === 'csmOrbit') this.sim.event('evt.asSeparation', 'info', { dv: +APOLLO11.separation.dv.toFixed(2) });
+    });
+  }
+
+  /**
+   * The burn home, as long after the lift-off as the flown one: the CSM, whose place round its orbit the lift-off
+   * was timed for, is then where the flown one was, behind the Moon from the Earth (the Moon turning to keep its
+   * face to the Earth, to its librations).
+   */
+  private scheduleHome(): void {
+    this.sim.schedule(APOLLO11.tei.t + this.lift - 1800, 'planTei', () => this.planTei());
+    if (!this.computed) this.sim.schedule(APOLLO11.tei.t, 'tei', () => this.transearthInjection());
   }
 
   // ------------------------------------------------------- the lunar module
@@ -536,6 +682,23 @@ export class ApolloFlight {
     s.note = 'undocked';
     this.sim.event('evt.undocking', 'major');
     this.sim.schedule(APOLLO11.csmSep.t, 'csmSep', () => this.sim.event('evt.separationBurn', 'info', { dv: +APOLLO11.csmSep.dv.toFixed(2) }));
+  }
+
+  /**
+   * DOI: the descent engine against the velocity, to the targeted perilune. The flown flight's at its flown time;
+   * another launch's when the LM is half a revolution and the powered descent's range short of the site (`stepLunarModule`),
+   * its planned Δv the drop from this orbit's speed here to that of the orbit down to the perilune.
+   */
+  private descentOrbitInsertion(): void {
+    if (this.phase !== 'undocked') return;
+    const s = this.sim.state, d = APOLLO11.doi, rel = this.moonRel(s.t, s.r, s.v), r = norm(rel.r);
+    this.sim.vehicle.payloadMass = d.mass;
+    this.phase = 'doi';
+    s.note = 'doi';
+    this.doiDone = 0;
+    this.doiAt = s.t;
+    const dv = this.computed ? norm(rel.v) - Math.sqrt(MU_MOON * (2 / r - 2 / (r + APOLLO11.siteRadius + d.perilune))) : d.dv;
+    this.sim.event('evt.doi', 'major', { dv: +dv.toFixed(1) });
   }
 
   /** The landing site, relative to the Moon's centre, at mission time `t`: on the landing site's radius, turning with the Moon. */
@@ -626,8 +789,16 @@ export class ApolloFlight {
           pe: Math.round((o.rp - APOLLO11.siteRadius) / 100) / 10, dv: +this.doiDone.toFixed(1) });
       }
     }
+    // another launch's DOI: when the LM is half a revolution and the descent's range short of where the site will be
+    // then, the first time after the CSM's separation (within the revolution and a quarter from it)
+    if (this.computed && this.phase === 'undocked' && s.t > APOLLO11.csmSep.t + APOLLO11.csmSep.duration && s.t < DOI_WINDOW_END) {
+      const now = this.moonRel(s.t, s.r, s.v), h = normalize(cross(now.r, now.v)), site = this.siteAt(s.t + APOLLO11.pdi.t - APOLLO11.doi.t).r;
+      const ahead = wrap2pi(Math.atan2(dot(cross(now.r, site), h), dot(now.r, site))), at = Math.PI + APOLLO11.pdi.range / APOLLO11.siteRadius;
+      if (this.toSite !== undefined && this.toSite > at && ahead <= at && ahead > at - 0.5) this.descentOrbitInsertion();
+      this.toSite = ahead;
+    }
     // the descent's ignition, by the distance round the Moon to the site, within the half-revolution before the site
-    if (this.phase === 'descentOrbit' && s.t > APOLLO11.pdi.t - 1800) {
+    if (this.phase === 'descentOrbit' && s.t > this.pdiWatch) {
       const site = this.siteAt(s.t), now = this.moonRel(s.t, s.r, s.v);
       const ahead = dot(cross(now.r, site.r), cross(now.r, now.v)) > 0;
       const range = Math.acos(Math.max(-1, Math.min(1, dot(normalize(now.r), normalize(site.r))))) * APOLLO11.siteRadius;
@@ -649,6 +820,13 @@ export class ApolloFlight {
     const alt = this.groundHeight(rel.r);
     // the probes under three of the footpads reach 67 in (1.7 m) below them: "contact light"
     if (this.contact === undefined && alt <= LM_PROBE) {
+      // faster than 5 m/s over the ground at the contact (the legs were built for 10 ft/s down, 4 ft/s across): not a landing
+      const speed = norm(sub(rel.v, this.siteAt(s.t).v));
+      if (speed > 5) {
+        this.sim.event('evt.impact', 'fail', { speed: Math.round(speed) });
+        this.sim.destroy();
+        return;
+      }
       this.contact = s.t;
       this.sim.event('evt.lunarLanding', 'success');
     }
@@ -708,13 +886,26 @@ export class ApolloFlight {
       const p = scale(add(scale(u, Math.cos(th)), scale(normalize(cross(n, u)), Math.sin(th))), APOLLO11.siteRadius + a.alt);
       return norm(sub(c.r, p)) - a.lead;
     };
-    let x0 = a.t, x1 = a.t + 30, f0 = miss(x0), f1 = miss(x1);
+    let x0 = a.t, x1 = a.t + 30, w = 900;
+    if (this.computed) {
+      // another launch's CSM may be anywhere round its orbit at the flown time: within half a revolution of it, the
+      // first time the CSM, past the insertion's point, draws ahead of it by the planned lead (not the time it closes
+      // to it from behind)
+      w = Math.PI * Math.sqrt(norm(c0.r) ** 3 / MU_MOON);
+      for (let t = a.t - w, f = miss(t); t < a.t + w; t += 120) {
+        const g = miss(t + 120);
+        if (f <= 0 && g > 0) { x0 = t; x1 = t + 120; break; }
+        f = g;
+      }
+    }
+    let f0 = miss(x0), f1 = miss(x1);
     for (let i = 0; i < 10 && Math.abs(f1) > 50; i++) {
       const d = f1 - f0;
       if (!(Math.abs(d) > 1e-6)) break;
-      const x2 = Math.max(a.t - 900, Math.min(a.t + 900, x1 - (f1 * (x1 - x0)) / d));
+      const x2 = Math.max(a.t - w, Math.min(a.t + w, x1 - (f1 * (x1 - x0)) / d));
       x0 = x1; f0 = f1; x1 = x2; f1 = miss(x1);
     }
+    if (this.computed) this.liftoffAt = Math.max(s.t + 1, x1);
     this.sim.schedule(Math.max(s.t + 1, x1), 'lunarLiftoff', () => this.liftoff());
   }
 
@@ -732,6 +923,11 @@ export class ApolloFlight {
     this.phase = 'ascent';
     s.note = 'ascent';
     this.sim.event('evt.lunarLiftoff', 'major');
+    if (this.computed) {
+      this.lift = s.t - a.t;
+      this.scheduleRendezvous();
+      this.scheduleHome();
+    }
   }
 
   /** The ascent engine's cut-off at the insertion's speed: the ascent stage in orbit, weighed as flown. */
@@ -765,7 +961,7 @@ export class ApolloFlight {
     this.sim.vehicle.payloadMass = c.mass;
     s.mass = this.sim.vehicle.totalMass();
     const { l, c: cm } = this.pair();
-    const dv = csiImpulse(this.coastRel, s.t, l, cm, APOLLO11.cdh.t, c.dh, c.dv);
+    const dv = csiImpulse(this.coastRel, s.t, l, cm, APOLLO11.cdh.t + this.lift, c.dh, c.dv);
     if (!dv) { this.sim.event('evt.rendezvousFailed', 'warn'); return; }
     this.startRcs('csi', dv, 'evt.csi', {});
   }
@@ -818,7 +1014,7 @@ export class ApolloFlight {
     } else if (this.phase === 'braking' || this.phase === 'stationkeeping') {
       const range = norm(sub(c0.r, s.r));
       const close = this.phase === 'braking' ? closingSpeed(range)
-        : s.t >= APOLLO11.redocking.t - (STATIONKEEPING_M - DOCKED_RANGE) / DOCKING_SPEED ? DOCKING_SPEED * Math.min(1, (range - DOCKED_RANGE + 0.5) / 2) : 0;
+        : s.t >= APOLLO11.redocking.t + this.lift - (STATIONKEEPING_M - DOCKED_RANGE) / DOCKING_SPEED ? DOCKING_SPEED * Math.min(1, (range - DOCKED_RANGE + 0.5) / 2) : 0;
       const a = brakingAcceleration({ r: s.r, v: s.v }, c0, close, LM_RCS.thrust / mass);
       thrust = norm(a) * mass;
       if (thrust > 1e-6) dir = normalize(a);
@@ -881,6 +1077,10 @@ export class ApolloFlight {
     this.phase = 'redocked';
     s.note = 'redocked';
     this.sim.event('evt.lmDocked', 'success');
+    if (this.computed) {
+      this.docked = s.t - d.t;
+      this.scheduleSeparation();
+    }
   }
 
   /** The ascent stage jettisoned at its flown time, drifting off the CSM's nose; the CSM as weighed after it. */
@@ -903,8 +1103,8 @@ export class ApolloFlight {
       const n = rk4Step(s.t, this.ascentStage, dt, gravity);
       this.ascentStage = { r: n.r, v: n.v };
     }
-    const sep = APOLLO11.separation, rel = this.moonRel(s.t, s.r, s.v);
-    const push = this.phase === 'csmOrbit' && s.t >= sep.t && s.t < sep.t + sep.duration ? scale(normalize(rel.v), -sep.dv / sep.duration) : v3();
+    const sep = APOLLO11.separation, rel = this.moonRel(s.t, s.r, s.v), at = sep.t + this.docked;
+    const push = this.phase === 'csmOrbit' && s.t >= at && s.t < at + sep.duration ? scale(normalize(rel.v), -sep.dv / sep.duration) : v3();
     const next = rk4Step(s.t, { r: s.r, v: s.v }, dt, (t, r) => add(gravity(t, r), push));
     s.r = next.r; s.v = next.v; s.t += dt;
     s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0; s.gLoad = 0;
@@ -931,17 +1131,62 @@ export class ApolloFlight {
    * worked it out: the burn along a fixed direction from its flown ignition
    * that puts the flight's vacuum perigee where the flown entry's was, from
    * the impulse at the burn's middle that does it (itself from the flown size
-   * along the velocity).
+   * along the velocity). Another launch's burn home is timed from its own
+   * lift-off: its time and its size along the velocity are found first —
+   * secant searches, the size for the perigee's time inside the time for its
+   * height — and its entry is aimed at the latitude that burn gives, its
+   * recovery point worked out from where it meets the air (`recoveryPoint`);
+   * with no aim found it makes no burn and says so.
    */
   private planTei(): void {
     if (this.phase !== 'csmOrbit') return;
     // first as an impulse at the burn's middle, then as the burn itself from there
-    const s = this.sim.state, e = APOLLO11.tei, mid = e.t + e.duration / 2;
-    const sm = this.coast(s.t, { r: s.r, v: s.v }, mid), m = moonState(this.jd0 + mid / 86400);
-    const guess = scale(normalize(sub(sm.v, m.v)), e.dv), aim = this.entryAim;
-    const impulse = targetEntry(this.jd0, mid, sm, aim, guess) ?? guess;
-    const st = this.coast(s.t, { r: s.r, v: s.v }, e.t);
-    this.teiDv = targetEntry(this.jd0, e.t, st, aim, impulse, { thrust: SPS.thrust, isp: SPS.isp, mass: e.mass }) ?? impulse;
+    const s = this.sim.state, e = APOLLO11.tei;
+    let aim = this.entryAim;
+    const along = (t: number) => {
+      const mid = t + e.duration / 2, sm = this.coast(s.t, { r: s.r, v: s.v }, mid), m = moonState(this.jd0 + mid / 86400);
+      return { mid, sm, u: normalize(sub(sm.v, m.v)) };
+    };
+    let at = e.t + this.lift, size = e.dv;
+    if (this.computed) {
+      // a secant search, its step halved back towards the last point where the function had a value
+      const secant = (f: (x: number) => number, x0: number, x1: number, tol: number): number => {
+        let f0 = f(x0), f1 = f(x1);
+        for (let i = 0; i < 12 && Math.abs(f1) > tol && Math.abs(f1 - f0) > 1e-9; i++) {
+          let x2 = x1 - (f1 * (x1 - x0)) / (f1 - f0), f2 = f(x2);
+          for (let j = 0; j < 4 && Number.isNaN(f2); j++) { x2 = (x1 + x2) / 2; f2 = f(x2); }
+          x0 = x1; f0 = f1; x1 = x2; f1 = f2;
+        }
+        return Math.abs(f1) <= tol ? x1 : NaN;
+      };
+      const perigee = (t: number, k: number) => {
+        const b = along(t);
+        return coastToPerigee(this.jd0, b.mid, { r: b.sm.r, v: add(b.sm.v, scale(b.u, k)) }, aim.time + 86400);
+      };
+      const sized = (t: number) => {
+        const k = secant((x) => (perigee(t, x)?.t ?? NaN) - aim.time, size, size + 10, 30);
+        if (k > 0) size = k;
+        return k;
+      };
+      // (a second of the burn's time moves the perigee about a hundred kilometres: the aim's own search takes the rest)
+      at = secant((t) => (perigee(t, sized(t))?.alt ?? NaN) - aim.alt, at, at + 60, 100e3);
+      size = sized(at);
+      const p = perigee(at, size);
+      if (!(Math.abs(at - e.t - this.lift) < 900 && at > s.t + 60 && size > 0 && p)) {
+        this.sim.event('evt.burnSkipped', 'warn', { burn: 'TEI' });
+        return;
+      }
+      // its way home in the plane the burn along the velocity leaves on: the entry at the latitude that gives
+      aim = this.homeAim = { ...aim, lat: p.lat };
+      this.teiAt = at;
+      this.sim.schedule(at, 'tei', () => this.transearthInjection());
+    }
+    const b = along(at), guess = scale(b.u, size), impulse = targetEntry(this.jd0, b.mid, b.sm, aim, guess) ?? guess;
+    const st = this.coast(s.t, { r: s.r, v: s.v }, at);
+    const dv = targetEntry(this.jd0, at, st, aim, impulse, { thrust: SPS.thrust, isp: SPS.isp, mass: e.mass });
+    // the flown flight flies its best aim; another launch's only an aim found
+    if (this.computed && !dv) this.sim.event('evt.burnSkipped', 'warn', { burn: 'TEI' });
+    else this.teiDv = dv ?? impulse;
   }
 
   /** The transearth injection at its flown time: the service engine along the aim until its size is in. */
@@ -960,7 +1205,7 @@ export class ApolloFlight {
   private returnMidcourse(): void {
     if (this.phase !== 'transearth') return;
     const s = this.sim.state;
-    const dv = targetEntry(this.jd0, s.t, { r: s.r, v: s.v }, this.entryAim, v3(), { ...SM_RCS, mass: this.sim.vehicle.totalMass() });
+    const dv = targetEntry(this.jd0, s.t, { r: s.r, v: s.v }, this.homeAim ?? this.entryAim, v3(), { ...SM_RCS, mass: this.sim.vehicle.totalMass() });
     if (!dv || norm(dv) < 0.03) { this.sim.event('evt.mccSkipped', 'info'); return; }
     this.startSps('returnMidcourse', normalize(dv), norm(dv), 'transearth', undefined, SM_RCS);
     this.sim.event('evt.transearthMcc', 'major', { dv: +norm(dv).toFixed(2) });
@@ -998,7 +1243,7 @@ export class ApolloFlight {
       this.cmState(0);
       if (norm(s.r) - R_EARTH <= EI_ALT) {
         const a = APOLLO11.splashdown, e = APOLLO11.cmSep;
-        this.entryGuidance = new EntryGuidance(jd0, { lat: a.lat * DEG, lon: a.lon * DEG });
+        this.entryGuidance = new EntryGuidance(jd0, this.computed ? this.recoveryPoint() : { lat: a.lat * DEG, lon: a.lon * DEG });
         vehicle.payloadMass = e.ei;
         s.mass = vehicle.totalMass();
         this.phase = 'entry';
@@ -1034,6 +1279,22 @@ export class ApolloFlight {
     this.entryState = { bank: (bank * 180) / Math.PI, load, maxLoad: Math.max(this.entryState.maxLoad, load), drogue, main };
     this.cmState(load);
     if (norm(s.r) - R_EARTH <= 0) this.splashdown();
+  }
+
+  /**
+   * Another launch's recovery point (rad): as far down range of its entry interface, and as far round from its
+   * heading over the ground there, as Columbia's splash point was from the flown entry interface — the flown
+   * entry's range, flown from where this one meets the air.
+   */
+  private recoveryPoint(): { lat: number; lon: number } {
+    const s = this.sim.state, here = earthFixed(s.r, this.jd0 + s.t / 86400), e = APOLLO11.entryInterface, a = APOLLO11.splashdown;
+    const la = e.lat * DEG, lb = a.lat * DEG, dl = (a.lon - e.lon) * DEG;
+    const arc = Math.acos(Math.sin(la) * Math.sin(lb) + Math.cos(la) * Math.cos(lb) * Math.cos(dl));
+    const up = normalize(s.r), east = normalize(cross(v3(0, 0, 1), up)), north = cross(up, east), va = airVelocity(s.r, s.v);
+    const brg = Math.atan2(dot(va, east), dot(va, north)) - e.heading * DEG
+      + Math.atan2(Math.sin(dl) * Math.cos(lb), Math.cos(la) * Math.sin(lb) - Math.sin(la) * Math.cos(lb) * Math.cos(dl));
+    const lat = Math.asin(Math.sin(here.lat) * Math.cos(arc) + Math.cos(here.lat) * Math.sin(arc) * Math.cos(brg));
+    return { lat, lon: here.lon + Math.atan2(Math.sin(brg) * Math.sin(arc) * Math.cos(here.lat), Math.cos(arc) - Math.sin(here.lat) * Math.sin(lat)) };
   }
 
   /** The CM's state's other fields: heat shield into the air, or apex up under the parachutes. */
@@ -1086,7 +1347,15 @@ export class ApolloFlight {
    */
   private lunarOrbitInsertion(): void {
     if (this.phase !== 'approach' && this.phase !== 'coast') return;
-    const s = this.sim.state, l = APOLLO11.loi1;
+    const s = this.sim.state, l = APOLLO11.loi1, d = norm(this.moonRel(s.t, s.r, s.v).r);
+    // Only on the approach it was planned for: inside the Moon's sphere of influence, the perilune — predicted from
+    // where the flight is now — above the ground, under 1,000 km and due as long after the ignition as the flown one
+    // (within ten minutes). Anywhere else the burn would claim a lunar orbit the flight is not in.
+    const p = this.soiEntered && d < LUNAR_SOI ? this.predictPerilune(s.t, s) : undefined;
+    if (!p || !(p.alt > 0 && p.alt < 1000e3) || Math.abs(p.t - s.t - (APOLLO11.mcc2.arrival - l.t)) > 600) {
+      this.sim.event('evt.burnSkipped', 'warn', { burn: 'LOI', alt: Math.round((d - APOLLO11.siteRadius) / 1e3) });
+      return;
+    }
     this.sim.vehicle.payloadMass = APOLLO11.mass.loi1;
     s.mass = this.sim.vehicle.totalMass();
     const rel = this.moonRel(s.t, s.r, s.v), h = normalize(cross(rel.r, rel.v));
@@ -1099,7 +1368,9 @@ export class ApolloFlight {
     const target: LunarTarget = { ...this.lunarTarget(l.apolune, l.perilune, n), retrograde: true };
     target.pitch = this.loiPitch(rel, target);
     this.startSps('loi', this.lunarSteeringFor(target, l.dv), l.dv, 'lunarOrbit', target);
-    this.sim.event('evt.loi', 'major', { dv: +l.dv.toFixed(1) });
+    // the flown flight's planned Δv; another launch's the drop from its speed here to the orbit's
+    const dv = this.computed ? norm(rel.v) - Math.sqrt(MU_MOON * (2 / norm(rel.r) - 1 / target.a)) : l.dv;
+    this.sim.event('evt.loi', 'major', { dv: +dv.toFixed(1) });
   }
 
   /** Against the in-plane velocity, pitched up (away from the Moon) by `pitch` rad. */
@@ -1160,7 +1431,7 @@ export class ApolloFlight {
     const rel = this.moonRel(s.t, s.r, s.v);
     const target = this.lunarTarget(l.apolune, l.perilune, normalize(cross(rel.r, rel.v)));
     this.startSps('circularize', this.lunarSteeringFor(target, l.dv), l.dv, 'lunarOrbit', target);
-    this.sim.event('evt.circularize', 'major', { dv: +l.dv.toFixed(1) });
+    this.sim.event('evt.circularize', 'major', { dv: +(this.computed ? this.lunarToGo(target).total : l.dv).toFixed(1) });
   }
 
   private lunarSteeringFor(target: LunarTarget, dv: number): Vec3 {
@@ -1221,10 +1492,12 @@ export class ApolloFlight {
   /**
    * The evasive burn, its flown Δv, in the orbit's plane, pointed so that it
    * lowers the pericynthion to the planned height: of the two directions that
-   * do, the one whose arrival is nearer the flown one.
+   * do, the one whose arrival is nearer the flown one. Another launch's is
+   * `evasiveAside`'s.
    */
   private evasive(): void {
     if (this.phase !== 'extracted') return;
+    if (this.computed) { this.evasiveAside(); return; }
     const s = this.sim.state, ev = APOLLO11.evasive;
     const vHat = normalize(s.v), nHat = normalize(cross(s.r, s.v)), side = cross(nHat, vHat);
     const dirAt = (phi: number) => add(scale(vHat, Math.cos(phi)), scale(side, Math.sin(phi)));
@@ -1263,16 +1536,59 @@ export class ApolloFlight {
   }
 
   /**
+   * Another launch's evasive burn, its flown Δv: its injection was aimed at the arrival itself, so the burn is
+   * pointed where it leaves the midcourse correction least to do. The arrival's misses (`arrivalMiss`) are
+   * linear in the burn, m ≈ m₀ + J_e·Δv, and in the correction at its time, J_m: the correction a burn along
+   * the unit d leaves is |J_m⁻¹(m₀ + Δv J_e d)|, the least of it found over the sphere of directions (5°, then
+   * 0.5°). With no Jacobian (a coast that finds no perilune) the burn is along the velocity.
+   */
+  private evasiveAside(): void {
+    const s = this.sim.state, jd0 = this.jd0, dv = APOLLO11.evasive.dv, aim = this.lunarAim, axes = [v3(1, 0, 0), v3(0, 1, 0), v3(0, 0, 1)];
+    const jacobian = (t: number, x: { r: Vec3; v: Vec3 }, h: number): { m: number[]; J: number[][] } | null => {
+      const m = arrivalMiss(jd0, t, x, aim), cols = axes.map((e) => arrivalMiss(jd0, t, { r: x.r, v: add(x.v, scale(e, h)) }, aim));
+      if (!m || cols.some((c) => !c)) return null;
+      return { m, J: [0, 1, 2].map((i) => [0, 1, 2].map((k) => (cols[k]![i] - m[i]) / h)) };
+    };
+    const e = jacobian(s.t, s, 1), at = APOLLO11.mcc2.t, c = e && jacobian(at, this.coast(s.t, { r: s.r, v: s.v }, at), 0.1);
+    let dir = normalize(s.v);
+    const A = e && c ? [0, 1, 2].map((k) => solve3(c.J, e.J.map((row) => row[k]))) : [];
+    const b = e && c ? solve3(c.J, e.m) : null;
+    if (b && A.every((x) => x)) {
+      const left = (u: Vec3) => Math.hypot(...[0, 1, 2].map((i) => b[i] + dv * (A[0]![i] * u.x + A[1]![i] * u.y + A[2]![i] * u.z)));
+      const at2 = (th: number, ph: number) => v3(Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph), Math.cos(th));
+      let best = { th: 0, ph: 0, f: Infinity };
+      const grid = (th0: number, ph0: number, span: number, stepDeg: number) => {
+        const n = Math.round(span / stepDeg), st = stepDeg * DEG;
+        for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++) {
+          const th = th0 + i * st, ph = ph0 + j * st, f = left(at2(th, ph));
+          if (f < best.f) best = { th, ph, f };
+        }
+      };
+      grid(Math.PI / 2, Math.PI, 90, 5);
+      grid(best.th, best.ph, 5, 0.5);
+      dir = at2(best.th, best.ph);
+    }
+    this.startSps('evasive', dir, dv, 'coast');
+    this.sim.event('evt.evasive', 'major', { dv: +dv.toFixed(2) });
+  }
+
+  /** What the midcourse correction aims the arrival at: the pericynthion's height, time and latitude the flown one aimed at. */
+  private get lunarAim(): LunarAim {
+    const m = APOLLO11.mcc2;
+    return { perilune: APOLLO11.siteRadius + m.perilune - R_MOON, time: m.arrival, lat: m.lat };
+  }
+
+  /**
    * The midcourse correction: the impulse that puts the pericynthion at the
    * height aimed at, when and at the latitude the flown one was — flown as a
    * burn along it.
    */
   private midcourse(): void {
     if (this.phase !== 'coast' && this.phase !== 'extracted') return;
-    const s = this.sim.state, m = APOLLO11.mcc2;
+    const s = this.sim.state;
     this.sim.vehicle.payloadMass = APOLLO11.mass.mcc2;
     s.mass = this.sim.vehicle.totalMass();
-    const aim: LunarAim = { perilune: APOLLO11.siteRadius + m.perilune - R_MOON, time: m.arrival, lat: m.lat };
+    const aim = this.lunarAim;
     const dv = targetMidcourse(this.jd0, s.t, { r: s.r, v: s.v }, aim);
     if (!dv || !(norm(dv) > 1e-3)) {
       this.sim.event('evt.mccSkipped', 'warn');
@@ -1295,10 +1611,18 @@ export class ApolloFlight {
     this.sps = undefined;
     this.sim.state.thrust = 0;
     if (b.target) {
+      const s = this.sim.state, rel = this.moonRel(s.t, s.r, s.v), o = lunarOrbit(rel, this.jd0 + s.t / 86400);
+      if (!(o.a > 0 && o.ra < Infinity && o.rp > APOLLO11.siteRadius)) {
+        // not in an orbit about the Moon clear of its ground: the burn is reported for what it left, the flight coasts on
+        this.phase = 'coast';
+        s.note = 'coast';
+        this.perilune = this.predictPerilune(s.t, s);
+        this.sim.event('evt.spsCutoff', 'warn', this.perilune ? { alt: Math.round(this.perilune.alt / 100) / 10 } : undefined);
+        return;
+      }
       // into lunar orbit: its apolune and perilune, above the landing site's radius
       this.phase = b.next;
-      this.sim.state.note = 'lunarOrbit';
-      const s = this.sim.state, rel = this.moonRel(s.t, s.r, s.v), o = lunarOrbit(rel, this.jd0 + s.t / 86400);
+      s.note = 'lunarOrbit';
       this.lunar = { ...this.lunar, ...(b.kind === 'loi' ? { loi: b.done } : { loi2: b.done, circularized: s.t }) };
       this.sim.event('evt.lunarOrbit', 'success', { ap: Math.round((o.ra - APOLLO11.siteRadius) / 100) / 10,
         pe: Math.round((o.rp - APOLLO11.siteRadius) / 100) / 10, dv: +b.done.toFixed(1) });
@@ -1338,11 +1662,13 @@ export class ApolloFlight {
 
   /** The next burn or milestone the flight is timed to, s (0 when none is left). */
   private nextMilestone(t: number): number {
-    const q = this.spec?.sequence;
-    const times = [this.spec?.time ?? 0, q?.panels ?? 0, q?.separation ?? 0, q?.docking ?? 0, q?.extraction ?? 0,
-      APOLLO11.evasive.t, APOLLO11.mcc2.t, APOLLO11.loi1.t, APOLLO11.loi2.t, APOLLO11.undocking.t, APOLLO11.csmSep.t,
-      APOLLO11.doi.t, APOLLO11.pdi.t - 120, APOLLO11.ascent.t - 120, APOLLO11.csi.t, APOLLO11.cdh.t, this.cdhDone && !this.intercept ? APOLLO11.tpi.t - 600 : 0,
-      ...(this.intercept ? [this.intercept - 1500] : []), APOLLO11.jettison.t, APOLLO11.separation.t, APOLLO11.tei.t, APOLLO11.mcc5.t, APOLLO11.cmSep.t, APOLLO11.entryInterface.t - 300];
+    const q = this.sequence;
+    const times = [(this.spec?.time ?? 0) + this.shift, q?.panels ?? 0, q?.separation ?? 0, q?.docking ?? 0, q?.extraction ?? 0,
+      APOLLO11.evasive.t + this.shift, APOLLO11.mcc2.t, APOLLO11.loi1.t, APOLLO11.loi2.t, APOLLO11.undocking.t, APOLLO11.csmSep.t,
+      APOLLO11.doi.t, APOLLO11.pdi.t - 120, (this.liftoffAt ?? APOLLO11.ascent.t) - 120, APOLLO11.csi.t + this.lift, APOLLO11.cdh.t + this.lift,
+      this.cdhDone && !this.intercept ? APOLLO11.tpi.t + this.lift - 600 : 0, ...(this.intercept ? [this.intercept - 1500] : []),
+      APOLLO11.jettison.t + this.docked, APOLLO11.separation.t + this.docked, this.teiAt ?? APOLLO11.tei.t + this.lift, APOLLO11.mcc5.t, APOLLO11.cmSep.t,
+      APOLLO11.entryInterface.t - 300];
     return times.filter((x) => x > t).reduce((a, b) => Math.min(a, b), Infinity) || 0;
   }
 
@@ -1362,11 +1688,11 @@ export class ApolloFlight {
         range: Math.acos(cosang) * APOLLO11.siteRadius, vh: norm(sub(vRel, scale(up, vz))), vz };
     })() : undefined;
     return {
-      phase: this.phase, tliTime: this.spec?.time ?? 0,
+      phase: this.phase, tliTime: (this.spec?.time ?? 0) + this.shift,
       moon: { alt: norm(rel.r) - APOLLO11.siteRadius, speed: norm(rel.v) },
       ...(orbit ? { lunar: { ap: orbit.ra - APOLLO11.siteRadius, pe: orbit.rp - APOLLO11.siteRadius, inc: orbit.inc, ...this.lunar } } : {}),
       next: isFinite(next) ? next : 0,
-      ...(this.spec?.sequence ? { sequence: { ...this.spec.sequence } } : {}),
+      ...(this.sequence ? { sequence: this.sequence } : {}),
       ...(this.tli ? { tli: { ...this.tli } } : {}),
       ...(this.perilune ? { perilune: { ...this.perilune } } : {}),
       ...(this.mcc ? { mcc: { ...this.mcc } } : {}),
