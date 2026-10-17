@@ -291,9 +291,9 @@ export class DebrisTracker {
   // ------------------------------------------------------------ return
   /**
    * What the returning stage's descent looks like to the prediction: its own
-   * drag and the entry burn it is going to fly. The rigid body carries J2 in
-   * its gravity, the point-mass debris does not, and the prediction has to
-   * agree with whichever one is flying.
+   * drag and the entry burn it is going to fly. The rigid body and, since
+   * D-51, the point-mass debris carry J2 in their gravity, and so does the
+   * prediction, which has to agree with whichever one is flying.
    */
   descentModel(d: Debris): DescentModel {
     const rc = d.recovery!;
@@ -312,7 +312,7 @@ export class DebrisTracker {
     }
     const n = e ? entryEngineCount(e, d.mass - rc.propellant, rc.landingReserve) : 0;
     return {
-      cd: d.cd, area: d.area, j2: !!this.sim.rigidRuntime,
+      cd: d.cd, area: d.area, j2: true,
       entry: e ? {
         thrustVac: n * e.thrustVac, thrustSL: n * e.thrustSL, mdot: (n * e.thrustVac) / (G0 * e.ispVac),
         targetSpeed: entrySpeedOf(rc), reserve: rc.landingReserve,
@@ -541,7 +541,7 @@ export class DebrisTracker {
       const thrust = burning ? thrustOf(level) : 0;
       const flow = burning ? rc.mdot * level : 0;
       if (flow > 0) h = Math.min(h, Math.max(1e-3, rc.propellant / flow));
-      const next = rk4Step(0, { r: d.r, v: d.v }, h, pointMassAcceleration(thrust / d.mass, dir, d.mass, flow, 0, d.area, false, d.cd));
+      const next = rk4Step(0, { r: d.r, v: d.v }, h, pointMassAcceleration(thrust / d.mass, dir, d.mass, flow, 0, d.area, true, d.cd));
       d.r = next.r;
       d.v = next.v;
       d.dir = dir;
@@ -788,7 +788,7 @@ export class DebrisTracker {
             rc.burning = false;
           }
         }
-        const next = rk4Step(0, { r: d.r, v: d.v }, h, pointMassAcceleration(thrustAccel, thrustDir, d.mass, 0, 0, d.area, false, d.cd));
+        const next = rk4Step(0, { r: d.r, v: d.v }, h, pointMassAcceleration(thrustAccel, thrustDir, d.mass, 0, 0, d.area, true, d.cd));
         d.r = next.r;
         d.v = next.v;
         if (vAirMag > 1 && d.recovery) d.dir = scale(vAir, -1 / vAirMag);

@@ -155,10 +155,10 @@ function gravityEquation(e: EomRecord | undefined, frame: VisualFrame): Equation
   const r = e?.r ?? frame.r, rm = norm(r), central = norm(gravity(r)), full = gravityJ2(r), j2 = norm(sub(full, gravity(r)));
   const values = { r: rm, mu: MU_EARTH, central, j2, total: norm(full), latitude: Math.asin(r.z / rm), J2: J2_EARTH };
   if (!e) return { id: 'gravity', available: true, values };
-  // Six-DOF and the long coasts fly J2; the point-mass ascent flies a central field.
-  const used = norm(e.gravityAccel), model = e.integrator === 'pointMass' || e.integrator === 'kepler' ? central : norm(full);
+  // Six-DOF, the point-mass ascent (D-51) and the long coasts fly J2; the analytic Kepler coast a central field.
+  const used = norm(e.gravityAccel), model = e.integrator === 'kepler' ? central : norm(full);
   return { id: 'gravity', available: true, values: { ...values, used }, check: check(used, model, 1e-9, 1e-9),
-    ...(e.integrator === 'pointMass' || e.integrator === 'kepler' ? { note: 'eq.note.centralGravity' } : {}) };
+    ...(e.integrator === 'kepler' ? { note: 'eq.note.centralGravity' } : {}) };
 }
 
 /** α and β from the velocity relative to the air in the standard's body axes. */
