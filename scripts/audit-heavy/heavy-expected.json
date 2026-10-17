@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "sourceInventorySha256": "58e7cd2fe9b2511fefb56bd2765f2cf636be357a86e960a1a14129bec9120bd6",
+  "sourceInventorySha256": "8d8644d433990f9e2745d22d5672b5d69afb35e41cd9c198a3120d1eccd7a962",
   "note": "Reviewed expected names only, never test results. Reconciled all 33 discovered heavy files / 257 cases: 11 cases from six previously missing files; existing MS-10 case title follows its current 3.57 s assertion. Generate collection with Vitest list --no-staticParse; review any later drift instead of silently updating this manifest. No test bodies, tolerances or assertions changed.",
   "files": [
     "tests/heavy/custom-satellite-sixdof.test.ts",
@@ -320,7 +320,7 @@
     },
     {
       "file": "tests/heavy/lesson-packs-sixdof.test.ts",
-      "name": "pack ru-24-05-06, the six-DOF lessons > S2 inertial navigation without GNSS: as set the error passes 1 000 m; the star tracker, or a navigation-grade unit, keeps it inside; MEMS with the star tracker does not"
+      "name": "pack ru-24-05-06, the six-DOF lessons > S2 inertial navigation without GNSS: as set the error passes 1 000 m, and the star tracker alone does not bring it inside; a navigation-grade unit keeps it inside; MEMS with the star tracker does not"
     },
     {
       "file": "tests/heavy/lesson-packs-sixdof.test.ts",

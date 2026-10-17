@@ -95,7 +95,7 @@ export const PACK_REVIEWS: Readonly<Record<string, PackReview>> = {
   },
   'ru-24-05-06': {
     ...common(), packId: 'ru-24-05-06',
-    contentSha256: '8cb31e677cb69d022280c54d6535f602ff633152e533afe4bd95fc54e32c60c3',
+    contentSha256: 'bf29f5ded4ab935de7a3077fa2ad184800c73d1bafa8b51ddb08786a66f51ddf',
     objectiveKey: 'lesson.review.objective.ru-24-05-06',
     sources: [
       source('fgos06', 'https://fgosvo.ru/uploadfiles/FGOS%20VO%203++/Spec/24.05.06_C_3_19022024.pdf', 'pdfPages', '11–12'),

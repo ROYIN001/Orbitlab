@@ -15,6 +15,11 @@
  * 966 m, rounded up. Measured on 2026-10-01 at d9d00c3 before the bound was
  * written: 2 951 m with the tactical unit alone, 388 m with a navigation-grade
  * unit alone, 4 740 m with a MEMS unit and the star tracker, 3.2 m with GNSS.
+ * With the IMU's turn-on bias held for the flight (edc4fd6, PHYSICS §2h;
+ * measured on 2026-10-17) the star tracker gives 1 184 m and no longer holds
+ * the bound: it sees the attitude, not the accelerometers' bias. The bound
+ * stays, and the lesson's answer is the navigation-grade unit (360 m); 3 357 m
+ * as set, 13 018 m with a MEMS unit and the star tracker, 3.1 m with GNSS.
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../../src/physics/simulation';
@@ -56,13 +61,15 @@ describe('pack ru-24-05-06, the six-DOF lessons', () => {
     expect(gradeLesson(l, sim, { ...read, wc: read.wc * 1.5 }).verdict).toBe('fail');
   });
 
-  it('S2 inertial navigation without GNSS: as set the error passes 1 000 m; the star tracker, or a navigation-grade unit, keeps it inside; MEMS with the star tracker does not', { timeout: 1_800_000 }, () => {
+  it('S2 inertial navigation without GNSS: as set the error passes 1 000 m, and the star tracker alone does not bring it inside; a navigation-grade unit keeps it inside; MEMS with the star tracker does not', { timeout: 1_800_000 }, () => {
     const l = lesson('ru-bins-astro');
     const asSet = fly(l);
     expect(gradeLesson(l, asSet).verdict, why(l, asSet)).toBe('fail');
     expect(MEASURES['nav.positionError'].read(asSet)!).toBeGreaterThan(1000);
+    // the star tracker bounds the tilt but not the accelerometers' bias
     const star = fly(l, navigation({ starTracker: true }));
-    expect(gradeLesson(l, star).verdict, why(l, star)).toBe('pass');
+    expect(gradeLesson(l, star).verdict, why(l, star)).toBe('fail');
+    expect(MEASURES['nav.positionError'].read(star)!).toBeGreaterThan(1000);
     const navGrade = fly(l, navigation({ grade: 'navigation' }));
     expect(gradeLesson(l, navGrade).verdict, why(l, navGrade)).toBe('pass');
     const mems = fly(l, navigation({ grade: 'mems', starTracker: true }));
