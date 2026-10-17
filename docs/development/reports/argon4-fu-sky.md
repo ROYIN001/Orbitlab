@@ -18,6 +18,9 @@
 > - **รอเจ้าของตัดสิน 2 ข้อ (ข้อ 3 ตอบแล้ว):**
 >   1. หน้าตาจากวงโคจร: อนุมัติตามที่เป็น หรือให้ขอบโลกสว่างเท่าเดิม หรือให้หมอกบางลง
 >   2. หน้าตาระหว่างไต่ระดับ 12–72 กม.: ตอนนี้พื้นและเมฆจางมากที่ 20–45 กม. เสนอทางผสม (ค) ที่ขอบฟ้าต่อเนื่องและพื้นเข้มขึ้น ภาพอยู่ใน `options/climb-30km.png` และ `climb-12km.png`
+>      - ทาง (ค) เตรียมไว้เป็นคอมมิตที่ผ่านเทสต์แล้วบนกิ่ง `ws/sky-q2c` ยังไม่ได้รวม รวมได้ทันทีถ้าเจ้าของเลือก
+>      - ภาพเทียบ ก่อน | (ก) | (ค) ที่ 12, 20, 30, 45 กม. อยู่ใน `sky-shots/q2c/compare-*.png` จากวงโคจรเหมือน (ก) ทุกพิกเซล
+>      - ใต้ขอบฟ้าแถวแรก ๆ สีแดงลดลงเร็วกว่า (ก) เล็กน้อย จึงเห็นแถบฟ้าอมเขียวบาง ๆ ใต้ขอบฟ้า ชัดที่สุดที่ 12 กม.
 >   3. (ตอบแล้ว) แยก PR ตามที่คุณสั่งในแชท 2026-10-17 "แยกเป็น branch แล้ว เปิด PR ในแต่ละส่วนเลยครับ": งานบีบข้อความ shader อยู่ใน PR #158 และ PR นี้ซ้อนอยู่บนนั้น
 
 - **Request:** the owner's answer 7 of 2026-10-17, on the before/after screenshots of claim 19, verbatim "ทำให้ดูดีและสมจริงขึ้น" (DECISIONS.md, "Decided 2026-10-17 (Argon4 review follow-up, chat)", row "the sky": "The sky change of claim 19 stands, and the sky is to look better and more realistic"). The bending shader waits ("รอไปก่อน") and is not touched.
@@ -25,7 +28,8 @@
 - **Commits:**
   - `3c8a3e1` the shaders' text compacted, identical GLSL (kept as handed over; its own PR, #158; `3c8a3e1` before the rebase onto main);
   - `b2647b1` the aerial perspective (code and tests); `ce4a86b` PHYSICS §12 and the user guide; `5209e22` this report and the change fragment (first round; the hand-over's WIP commit is replaced by these);
-  - review round: `b399c99` the ground lit by the sky as well as the sun; `779325f` the sun's disc and glare keep their brightness in space; `7f4e721` two tests' bounds and name; `245cdd5` PHYSICS §12 and the user guide; and the commit carrying this report.
+  - review round: `b399c99` the ground lit by the sky as well as the sun; `779325f` the sun's disc and glare keep their brightness in space; `7f4e721` two tests' bounds and name; `245cdd5` PHYSICS §12 and the user guide; and the commit carrying this report (`f09a9b9`; `35dadab` before the rebase onto PR #158).
+  - question 2's option (ค), prepared for the owner's choice on branch `ws/sky-q2c` on `35dadab`: `90e5c3a` the blend (code and tests), and `25e79c0` its section below and PHYSICS §12's paragraph; cherry-picked here as `1c3be57` and the commit carrying this line.
 - **Change type:** render (a look change) on top of an identical-output commit; the identical-output commit is its own PR, #158 (question 3, answered). It waits for the owner's approval of the look.
 
 ## Review round
@@ -70,7 +74,7 @@ Under the scattering sky (the default where the GPU has float targets):
   - S = (σ_R(h) P_R(θ) + σ_M(h) P_M(θ)) · T☉(h, μ☉) + (σ_R(h) + σ_M(h)) · Ψ(h, μ☉);
   - L += T · S · (1 − e^(−σ_t Δs)) / σ_t, then T ·= e^(−σ_t Δs).
   - T☉ is the transmittance table faded over ±0.004 in μ☉ about the geometric horizon (the sky pass's `sunlight`, now shared); Ψ is the multiple-scattering table (ground albedo 0.3).
-- **The surface seen:** c' = c · T + L · E, E the sky pass's illuminance.
+- **The surface seen:** c' = c · T + L · E, E the sky pass's illuminance. With question 2's option (ค) (`ws/sky-q2c`, below) it is c · T + L · (E + (3.3 − E) · T).
 - **The ground's own light** (`daylight`, review round): (max(cos i, 0) · T☉(μ☉) + E_sky(μ☉)) / (T☉(1) + E_sky(1)), relative to noon, i the sun's angle to the relief.
   - E_sky(r, μ☉) = ∫ L(ω) cos θ dω over the upper hemisphere, per unit of solar illuminance: a third table (`SKYLIGHT_FRAG`, 64 × 16 over μ☉ and the height, texels on both ends), filled once after the multiple-scattering table. 8 × 8 directions spread as cos θ is (sin²θ in equal steps, each weighing π/64) over half a turn of azimuth, each marched to the top of the atmosphere in 16 steps crowding towards the surface, with the sky pass's model.
   - Against a fine integral of the same model (32 × 32 directions, 200 steps), from the sun overhead to 4° below the horizon, it errs by at most 0.33 % of noon's light on the ground and 0.21 % at 9 km (tests/render-aerial.test.ts).
@@ -259,6 +263,62 @@ The compaction commit `3c8a3e1` changes 1532 lines (786 + 746) of src/render, al
 
 Its message records how the identical output was proven: the ASTs compared with each shader's GLSL token stream, and pixel-identical frames at 8 views. Both reviewers re-proved it on this base independently (11 files, 53 templates; a negative control catches the aerial commit). Line count is the wrong measure for it; the reason is written here as D-25 asks.
 
+## Question 2's option (ค), prepared (`ws/sky-q2c`)
+
+Prepared so that (ค) can land at once if the owner chooses it; nothing here answers question 2. Branch `ws/sky-q2c`, on `35dadab`: `90e5c3a` (code and tests) and the commit carrying this section and PHYSICS §12's paragraph. It draws the same pixels as the review round's probe build of (ค) (0 differ at 12 and 30 km).
+
+**The change** (src/render/atmosphere.ts `AERIAL`; src/render/scene.ts):
+
+```glsl
+uniform float uSceneSun;
+vec3 hazeLight = uSunIlluminance + (uSceneSun - uSunIlluminance) * T;
+vec3 seen = col * T + L * hazeLight;
+```
+
+- uSceneSun is SUN_INTENSITY (3.3), set in the uniforms the globe and the clouds share, so the clouds take the blend too.
+- E + (S − E)·T is E·(1 − T) + S·T written so that in orbit, where E = S = 3.3, S − E is exactly 0 and the haze is c · T + L · E bit for bit.
+- The code comment says what it is: a look choice, the haze's light below 72 km a mix, neither the sky's sun nor the ground's, and no change in orbit.
+
+**Tests** (vitest `--maxWorkers=2`, files named):
+- `tests/render-aerial.test.ts`: **25 passed** (22 at `35dadab`).
+  - Changed: the replayed lines; uSceneSun 3.3 at every height and shared with the clouds.
+  - New: the blend's ends in float32 from 12 to 60 km: T = 0 gives E exactly, T = 1 the scene's sun within one float32 step, falling steadily between.
+  - New: from 30 km (E 6.98), along a ray 0.02° inside the limb the haze's light is (6.36, 6.90, 6.98), T (0.17, 0.02, 0.0003); at nadir (3.51, 3.76, 4.15), T (0.94, 0.88, 0.77); it rises without a step from one to the other.
+  - New: in orbit (72 km to 35 786 km) E = S, and the haze's light is E for any T.
+- The render-* files and the files importing atmosphere.ts or scene.ts, 10 files: **97 passed**.
+- The 23 files importing `src/render/`, `tests/architecture.test.ts` and `tests/repo-hygiene.test.ts`: **25 files, 295 passed** (292 at `35dadab`).
+- `npx tsc --noEmit`: clean.
+
+**Budget** (`npm run build && npm run budget`): bundle budget ok. index-*.js 2642.9 → **2643.1 kB** (+110 B; ceiling 2645); precache code 14 710.5 → 14 710.6 kB (ceiling 14 724). No ceiling raised.
+
+**Frame time:** not timed. The change is one multiply-add per fragment of the globe and the clouds, after their 10- and 6-sample marches.
+
+**D-25:** `90e5c3a` changes 35 source lines in src/render (28 added, 7 deleted), of which 29 are comment lines. With the aerial perspective's 373 that makes 408, 8 over the ~400 of D-25. The reason, for the second reviewer to agree or not: the comment lines state that the blend is a look choice and what it does in the climb and in orbit, which is what the owner would be approving.
+
+**Screenshots** (the harness as above, the real Earth textures):
+- PNGs: `/tmp/claude-0/-home-user-Orbitlab/3b29ccd8-c1cf-5357-ad20-eb1820dc21bb/scratchpad/sky-shots/q2c/` for (ค), `.../q2c/built/` for (ก) (`35dadab`), `.../q2c/before/` for the base (`7f991f9`).
+- Side by side, before | (ก) | (ค), full size: `.../q2c/compare-12km.png`, `compare-20km.png`, `compare-30km.png`, `compare-45km.png`.
+- The no-pad views at 20 and 45 km are new: the 30 km view's place, look and sun, the look tipped down by the horizon's dip so that the horizon sits on the same row.
+- Figures: means of columns 600–680 (`probes/sky/q2c/compare.py`, with `compare.log` and `horizon-profile.log` beside it).
+
+| View (E) | Ocean low in the view (row 600): before / (ก) / (ค) | Globe 20 rows under the horizon: (ก) / (ค) | Rows 370–560, mean and detail RMS: (ก) / (ค) |
+|---|---|---|---|
+| `alt-12km-nopad` (8) | (3, 10, 28) / (69, 109, 161) / **(34, 72, 133)** | (163, 188, 206) / (141, 178, 205) | 156, 9.2 / 131, 10.2 |
+| `alt-20km-nopad` (7.77) | (21, 29, 38) / (89, 127, 175) / **(56, 92, 151)** | (168, 191, 210) / (148, 182, 209) | 164, 8.7 / 142, 9.4 |
+| `alt-30km-nopad` (6.98) | (25, 27, 34) / (87, 120, 171) / **(59, 91, 149)** | (157, 177, 206) / (138, 169, 205) | 158, 9.0 / 140, 9.7 |
+| `alt-45km-nopad` (5.30) | (40, 42, 47) / (83, 110, 158) / **(68, 93, 143)** | (138, 160, 195) / (124, 154, 194) | 144, 9.4 / 132, 10.0 |
+| `limb-day`, `nadir` (3.3) | (ค) against (ก): **0 of 921 600 pixels differ** in each | | |
+
+The sky over the horizon is the same in (ก) and (ค) in every row. Isolated bright pixels (the stars) are the same count in both sets (`speckle.log`).
+
+**What the shots show** (each looked at, with 2× crops of the horizon):
+- **The horizon is continuous:** no dark band as before, and no step like (ข)'s. In both (ก) and (ค) the globe's first row under the horizon is 9–14 levels less red than the sky over it.
+- **A thin cyan band under the horizon:** with (ค) the red keeps falling for two more rows, 25–27 levels over the first three rows against 15–20 in (ก). Green falls 2–3 levels more than in (ก), and blue the same. So the haze just under the horizon is a little cyan against the white-pink horizon glow, and the horizon line reads slightly crisper than in (ก). It is plainest at 12 km.
+- **Why the band:** the transmittance is per channel. Red gets through farther (T 0.17 a pixel inside the limb from 30 km, blue 0.0003), so its haze light falls towards 3.3 sooner.
+- **The ground is deeper at every height:** the ocean low in the view is 15–37 levels darker per channel, most at 12–20 km and least at 45 km. The clouds over it show a little more (detail RMS +0.6 to +1.0 on a lower mean).
+- **Still a blue world below:** in all four views the ground near the bottom of the frame is mid-blue. Land is not told from sea in (ก) or in (ค); the coast the base shows at 45 km is not legible in either. The haze's light changed, not the haze itself.
+- No banding, speckles, seams or black pixels in the new shots. From 400 km nothing changes.
+
 ## Questions for the owner
 
 1. **The look from orbit.** The decision needed: approve, or say what to change. Screenshots: `.../sky-shots/pairs/` (`limb-day`, `nadir`, `ocean-40`, `pole-400`, `sun-space`), the alternatives in `.../sky-shots/options/`.
@@ -270,7 +330,7 @@ Its message records how the identical output was proven: the ASTs compared with 
 2. **The look in the climb, 12–72 km** (review round). Below 72 km the haze takes the sky's tuned illuminance, 2.4× the scene's sun at 12 km, 2.1× at 30 km, 1.6× at 45 km, while the ground and the clouds under it are lit by the scene's sun. Screenshots with no pad in the scene (the globe itself below): `options/climb-30km.png` and `options/climb-12km.png`, four rows each (before, ก, ข, ค).
    - (ก) Keep it as built. Effect: the horizon is continuous (from 30 km, sky (190, 190, 209), globe 20 rows under the horizon (157, 177, 206)). From 20 to about 45 km the ground and the clouds are pale and washed out: the ocean low in the 30 km view is (87, 120, 171); the variation along rows 370–560 is an RMS of 9.0 on a mean of 158 (before: 13.4 on 41). At 12 km it reads like the view from an airliner.
    - (ข) The haze at the scene's sun, 3.3, at every height. Effect: the ground and the clouds crisper (the same ocean (54, 77, 119); RMS 9.5 on 110), but a step under the horizon from inside the air: the globe 20 rows under it is (101, 124, 160) under a sky of (190, 190, 209), plainest at 12 km (`options/alt-12km-nopad-haze33.png`).
-   - (ค) A blend: the haze's light is the sky's where nothing shows through it and the scene's sun where the ground does, E · (1 − T) + 3.3 · T, T the stretch's transmittance. Effect: no step at the horizon (the globe 20 rows under it (138, 169, 205)); the ground deeper below ((59, 91, 149); RMS 9.7 on 140). In orbit E is 3.3 and nothing changes (`limb-day` 0 pixels differ). The haze's light below 72 km is then neither the sky's nor the ground's sun but a mix chosen for the look; one line in `AERIAL`, rendered here as a probe build and not on the branch.
+   - (ค) A blend: the haze's light is the sky's where nothing shows through it and the scene's sun where the ground does, E · (1 − T) + 3.3 · T, T the stretch's transmittance. Effect: no step at the horizon (the globe 20 rows under it (138, 169, 205)); the ground deeper below ((59, 91, 149); RMS 9.7 on 140; at 20 and 45 km (56, 92, 151) and (68, 93, 143) against (89, 127, 175) and (83, 110, 158) as built). Under the horizon a thin cyan band, plainest at 12 km. In orbit E is 3.3 and nothing changes (`limb-day` and `nadir`: 0 pixels differ). The haze's light below 72 km is then neither the sky's nor the ground's sun but a mix chosen for the look. Prepared as commits on `ws/sky-q2c`, tested and ready to land if chosen; not merged (section above; images `sky-shots/q2c/compare-*.png`).
    - Also considered and not offered: lighting the globe and the clouds at the sky's illuminance below 72 km (one sun everywhere). At 12 km and below that makes the ground 2.4× brighter than the pad's terrain patch and the vehicles, which three lights at 3.3.
    - Proposal: (ค).
 3. **The PR split.** Answered: the owner in chat, 2026-10-17, "แยกเป็น branch แล้ว เปิด PR ในแต่ละส่วนเลยครับ" (split into branches and open a PR for each part), which is also SESSION-PROTOCOL §5 (identical output never mixes with another type) and D-63 (identical output first in the lane). The compaction is PR #158; this PR is stacked on it and needs its 4.9 kB.
