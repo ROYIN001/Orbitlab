@@ -36,9 +36,9 @@ import { getLang, t } from '../i18n';
 import { fmtTime } from './hud';
 import { eventLabel } from './phase';
 import { localizeEventParams, stageNameByLabel } from './names';
-import { OMEGA_EARTH, R_EARTH, DEG, RAD } from '../physics/constants';
-import { geodeticHeight } from '../physics/geodesy';
-import { onEllipsoid } from '../render/datum';
+import { OMEGA_EARTH, DEG, RAD } from '../physics/constants';
+import { geodeticHeight, geodeticToCartesian } from '../physics/geodesy';
+import { landReturn } from '../render/datum';
 import { VOSTOK_IM } from '../physics/sim/module-entry';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { Debris, TelemetrySample } from '../physics/sim/types';
@@ -56,20 +56,20 @@ import { referenceWindow, type ReferenceFlight } from '../replay/reference';
 type Range = 'mission' | 'ascent';
 
 /**
- * C01: the debris flown on WGS-84 heights in a return on the ellipsoid (render/datum.ts `onEllipsoid`):
- * Vostok-1's instrument module (src/physics/sim/module-entry.ts), its hatch and the empty seat
- * (src/physics/sim/fall.ts). Over the steppe at 51° N the 6,378 km sphere lies some 12.5 km above the ground
- * (render/datum.ts), so the hatch's 7 km and the seat's 4 km read 0 on it.
+ * C01: the bodies a return on land lets go of a few kilometres up (render/datum.ts `landReturn`): Vostok-1's
+ * instrument module (src/physics/sim/module-entry.ts), its hatch and the empty seat (src/physics/sim/fall.ts).
+ * Their rows read to a tenth of a kilometre, as Gagarin's.
  */
-const WGS84_BODIES: ReadonlySet<string> = new Set(['instrumentModule', 'hatch', 'seat']);
+const FINE_BODIES: ReadonlySet<string> = new Set(['instrumentModule', 'hatch', 'seat']);
 
 /**
- * A spent body's height for its row in the list, km: above WGS-84 for a body a return on the ellipsoid flies
- * there (WGS84_BODIES), above the 6,378.137 km sphere for every other (the stages, Blok E in its orbit).
+ * A spent body's height for its row in the list, km: above WGS-84, as every height the flight reads (D-51;
+ * until then only a return's bodies were, the stages above the 6,378.137 km sphere); `fine` for a body of
+ * FINE_BODIES in a return on land.
  */
-export function debrisRowAltitude(d: Pick<Debris, 'r' | 'visual'>, frame: Pick<VisualFrame, 'abort'> | null): { km: number; wgs84: boolean } {
-  const wgs84 = !!frame && onEllipsoid(frame) && WGS84_BODIES.has(d.visual.kind);
-  return { km: Math.max(0, (wgs84 ? geodeticHeight(d.r) : Math.hypot(d.r.x, d.r.y, d.r.z) - R_EARTH) / 1000), wgs84 };
+export function debrisRowAltitude(d: Pick<Debris, 'r' | 'visual'>, frame: Pick<VisualFrame, 'abort'> | null): { km: number; fine: boolean } {
+  const fine = !!frame && landReturn(frame) && FINE_BODIES.has(d.visual.kind);
+  return { km: Math.max(0, geodeticHeight(d.r) / 1000), fine };
 }
 
 // --- P05: two more charts, only for a flight that modelled the flexible body
@@ -747,7 +747,9 @@ export class TelemetryPanel {
     // Δv budget — the frame's own loss book-keeping, so it rewinds.
     const L = view.state.losses;
     const site = view.site;
-    const vRot = OMEGA_EARTH * R_EARTH * Math.cos(site.latitude * DEG);
+    // the pad's speed on the turning Earth, from its distance to the axis on WGS-84 (D-51)
+    const pad = geodeticToCartesian(site.latitude * DEG, 0, site.altitude);
+    const vRot = OMEGA_EARTH * Math.hypot(pad.x, pad.y);
     this.beginRows(this.losses);
     this.row(this.losses, t('tel.loss.thrust'), `${L.dvThrust.toFixed(0)} m/s`);
     this.row(this.losses, t('tel.loss.gravity'), `${L.gravity.toFixed(0)} m/s`);
@@ -784,8 +786,7 @@ export class TelemetryPanel {
     for (const d of view.debris) {
       if (!d.crew) continue;
       any = true;
-      // above WGS-84, as the rest of Vostok's return is measured: over the steppe at 51° N the 6,378 km sphere
-      // lies some 11 km above the ground
+      // above WGS-84, as every height is
       const h = Math.max(0, geodeticHeight(d.r) / 1000);
       const c = d.crew;
       const st = c.phase === 'landed' || !d.alive ? t('tel.crew.landed')
@@ -810,7 +811,7 @@ export class TelemetryPanel {
       // seat fall from a few kilometres, so to a tenth, as his
       const alt = debrisRowAltitude(d, this.frame);
       let v = st;
-      if (d.alive) v += ` · ${alt.km.toFixed(alt.wgs84 && alt.km < 20 ? 1 : 0)} km`;
+      if (d.alive) v += ` · ${alt.km.toFixed(alt.fine && alt.km < 20 ? 1 : 0)} km`;
       if (d.impact) v += ` · ${d.impact.lat.toFixed(1)}°, ${d.impact.lon.toFixed(1)}°`;
       this.row(this.debris, stageNameByLabel(view.vehicleSpec, d.name), v);
     }

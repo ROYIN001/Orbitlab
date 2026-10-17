@@ -449,7 +449,7 @@ export function crewAloft(frame: VisualFrame): DebrisFrame | null {
 /**
  * C01: how high a body close to the flight's own is above the ground, m. The
  * frame carries the ground's height only under the flight's body
- * (`altitude − altitudeAGL`, both above WGS-84 on Vostok's return); Gagarin
+ * (`altitude − altitudeAGL`, both above WGS-84, as every flight's); Gagarin
  * comes down within a few kilometres of the sphere, and the ground there is
  * taken to be as high.
  */

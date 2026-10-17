@@ -20,6 +20,7 @@ import type { EarthTextures } from './scene';
 import { ORBIT_VIEW_MAX_PIXEL_RATIO, sharpenEarthTextures } from './sharpness';
 import { buildStarField } from './stars';
 import { R_EARTH } from '../physics/constants';
+import { ellipsoidGeometry } from './earth-shape';
 import { gmst, sunDirectionEci } from '../physics/orbital';
 import { equalTimeCuts, hitsEarth, stateAt, type Orbit } from '../orbit/kepler';
 import { isCameraInputTarget, wheelZoomFactor } from './gestures';
@@ -179,7 +180,8 @@ export class OrbitView {
       uniforms: { dayMap: { value: null }, nightMap: { value: null }, hasMaps: { value: 0 },
         sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() } },
     });
-    this.earth = new THREE.Mesh(new THREE.SphereGeometry(RE, 96, 64), this.earthMat);
+    // the WGS-84 ellipsoid, as the launch scene's (D-51): flattened along the geometry's y, the pole once turned
+    this.earth = new THREE.Mesh(ellipsoidGeometry(RE, 96, 64), this.earthMat);
     this.stars.material.uniforms.uPixelRatio.value = this.renderer.getPixelRatio();
     this.scene.add(this.earth, this.stars);
     textures?.then((tex) => {

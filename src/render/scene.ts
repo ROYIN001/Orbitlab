@@ -18,6 +18,8 @@ import type { Vec3 } from '../physics/vec3';
 import type { VisualFrame } from '../physics/frame';
 import { buildMoon, type MoonView } from './moon';
 import { R_EARTH } from '../physics/constants';
+import { WGS84_F, geodeticHeight } from '../physics/geodesy';
+import { ellipsoidGeometry } from './earth-shape';
 import { skyState, type SkyState } from './sky';
 import { buildStarField } from './stars';
 import { sharpenEarthTextures } from './sharpness';
@@ -292,6 +294,8 @@ export class SceneManager {
   private qz = new THREE.Quaternion();
   private zAxis = new THREE.Vector3(0, 0, 1);
   private camEci = new THREE.Vector3();
+  /** the camera as the scattering sky's spherical shell sees it (`update`) */
+  private skyEci = new THREE.Vector3();
   private camUp = new THREE.Vector3();
   private hazeColor = new THREE.Color(0.62, 0.68, 0.76);
   private pmrem: THREE.PMREMGenerator;
@@ -364,7 +368,11 @@ export class SceneManager {
     tex.day.colorSpace = THREE.SRGBColorSpace;
     tex.night.colorSpace = THREE.SRGBColorSpace;
     sharpenEarthTextures(this.renderer, tex);
-    const geo = new THREE.SphereGeometry(R_EARTH, 128, 96);
+    // The WGS-84 ellipsoid the flight is flown on (D-51): the sphere flattened
+    // by 1/298.257 along the pole (the geometry's y before `qx` turns it to
+    // +z), 21.4 km under the 6,378.137 km sphere at the poles. The pads, the
+    // landing zones and every body stand where the physics puts them on it.
+    const geo = ellipsoidGeometry(R_EARTH, 128, 96);
     this.earthMat = new THREE.ShaderMaterial({
       vertexShader: EARTH_VERT, fragmentShader: EARTH_FRAG,
       uniforms: {
@@ -384,7 +392,7 @@ export class SceneManager {
       // The cloud map is a greyscale density: white cloud, as opaque as the
       // map is bright (an alpha map reads the green channel).
       const cm = new THREE.MeshLambertMaterial({ color: 0xffffff, alphaMap: tex.clouds, transparent: true, opacity: 0.85, depthWrite: false, fog: false });
-      this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 9000, 96, 64), cm);
+      this.cloudMesh = new THREE.Mesh(ellipsoidGeometry(R_EARTH + 9000, 96, 64), cm);
       this.earthGroup.add(this.cloudMesh);
     } else {
       this.cloudMesh = null;
@@ -397,7 +405,8 @@ export class SceneManager {
         earthCentre: { value: new THREE.Vector3() }, discOnly: { value: 0 },
       },
     });
-    this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 96, 64), this.atmoMat);
+    // the shell's own axis is the scene's z already (no `qx`): flattened along it
+    this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 96, 64).scale(1, 1, 1 - WGS84_F), this.atmoMat);
     this.earthGroup.add(this.atmoMesh);
     this.scene.add(this.earthGroup);
 
@@ -812,7 +821,15 @@ export class SceneManager {
     );
     if (this.physicalSky && this.physicalSkyOn) {
       this.camera.updateMatrixWorld();
-      this.physicalSky.update(this.camera, camEci, sd, SKY_ILLUMINANCE);
+      // The scattering tables are a spherical shell over the 6,378.137 km
+      // sphere; the air is over WGS-84 (D-51). The sky is computed from the
+      // camera's own height above the ground, on its radius: at Plesetsk the
+      // pad lies 16.9 km inside that sphere, where every ray at or below the
+      // horizon would have met its ground and left the sky black.
+      const n = camEci.length();
+      this.skyEci.copy(camEci);
+      if (n > 1) this.skyEci.multiplyScalar((R_EARTH + geodeticHeight(camEci)) / n);
+      this.physicalSky.update(this.camera, this.skyEci, sd, SKY_ILLUMINANCE);
     }
     this.camUp.copy(camEci);
     // `camUp` becomes the local vertical for the hemisphere light, the
