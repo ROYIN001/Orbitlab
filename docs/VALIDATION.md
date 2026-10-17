@@ -4041,7 +4041,12 @@ and `tests/heavy/lesson-packs-sixdof.test.ts`:
   navigation error at the third stage's cut-off is 2 951 m as set, 773 m with the star tracker,
   388 m with a navigation-grade unit, 4 740 m with a MEMS unit and the star tracker, 3.2 m with
   GNSS (15.2); with the FDIR on, unit 1 is voted out at 89 s and the vehicle reaches orbit, with it
-  off the vehicle breaks up at 46 s (15.3). Lesson 15.3 flies uncrewed, against the research,
+  off the vehicle breaks up at 46 s (15.3). Since the IMU's turn-on bias stays for the flight
+  (2026-10-17, the owner's option (ก); PHYSICS §2h) 15.2's flights give 3 357 m as set, 1 184 m
+  with the star tracker, 360 m with a navigation-grade unit, 13 018 m with a MEMS unit and the
+  star tracker and 3.1 m with GNSS (2 923, 989, 382, 11 000 and 3.2 m just before it): the star
+  tracker's flight is over the 1 000 m bound and fails, and the bound is the owner's to choose
+  ([report](development/reports/argon4-fu-imu.md)). Lesson 15.3 flies uncrewed, against the research,
   because a crewed failed flight ends in the escape system's landing, which the grader does not end.
 
 **The packs' design lessons** (T03b). Each fixes its design date (2026-10-01) and ECSS level
