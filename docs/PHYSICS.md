@@ -3943,7 +3943,7 @@ Journal (AFJ).
 
 | | Value | Source |
 |---|---|---|
-| The Moon and the Sun | geocentric states, ICRF, hourly from 1969-07-16 13:00 to 07-24 18:00 TDB; GM 4,902.800066 km³/s² | Horizons, DE441 |
+| The Moon and the Sun | geocentric states, ICRF, hourly from 1969-07-16 13:00 to 08-01 00:00 TDB (372 rows; the first 198, to 07-24 18:00, the one-week table of 2026-09-27 to the bit); GM 4,902.800066 km³/s² | Horizons, DE441 (fetched 2026-09-27 and 2026-10-17) |
 | TDB − UTC | 39.75 s: TT − TAI 32.184 s, TAI − UTC 7.56 s in July 1969 (4.2131700 s + 0.002592 s/day from MJD 39126) | USNO |
 | The Moon's orientation | pole and prime meridian with the 13 periodic terms (physical librations) | IAU/WGCCRE 2009 |
 | SPS | 94.18 kN, 315.1 s, 30.48 kg/s: the flight's own, from LOI-1 — 43,572.8 kg to 32,675.7 kg in 357.53 s for 2,917.5 ft/s (rated 20,500 lbf, 91.19 kN; the propellant utilisation valve, moved to "increase" 76 s into LOI-1, raised the thrust) | MR Table A-I, §8.8; ORL; press kit |
@@ -3955,15 +3955,82 @@ Journal (AFJ).
 | LOI-1 ignition | 75:49:50.37: 86.7 n mi, 8,250 ft/s, 1.57° S 169.58° W | ORL; MR Table 7-II |
 | Lunar altitudes | above the landing site's radius, 937.17 n mi (1,735.6 km) | MR Table 7-I, 5-IV |
 
-*Only from its own launch.* The injection (`OrbitSpec.injection`) is the one flown, timed and aimed for
-the Moon of range zero, and the Moon's table covers that week only (D-11). `ApolloFlight.begin` flies it
-from Apollo 11's own launch alone: the `apollo11` spacecraft launched within a second of 1969-07-16
-13:32:00 UTC (`RANGE_ZERO_MS`), the rule the flown record's comparison uses (`historicalFor`). Launched at
-another second, or with another spacecraft (another vehicle brings the crew capsule), it is a different
-flight: it logs `evt.lunarProfileOff` and stays in its parking orbit. Until 2026-10 it flew the profile
-anyway: launched on 16 July 2026 it logged a lunar orbit insertion more than 40,000 km from the Moon, and
-the flight never ended. An edit of the orbit on the flown date still keeps the injection (`ownFlight`
-leaves it, tests/config-validation.test.ts).
+*Its own launch, or another worked out for it.* Apollo 11's own launch — the `apollo11` spacecraft
+within a second of 1969-07-16 13:32:00 UTC (`RANGE_ZERO_MS`), into the flown parking orbit
+(`APOLLO11.parking`, the watch mission's settings) — flies the injection flown (`OrbitSpec.injection`),
+step for step as before. Any other launch of that spacecraft — another minute, another day, an edited
+orbit — is another flight, and the owner's decision of 2026-10-17 (DECISIONS, "Apollo 11 dates") lets it
+fly to the Moon if the model can really fly it, its trajectory and figures computed for it: its injection
+is worked out in the parking orbit it reached (`planTli`, src/physics/sim/tli-target.ts) and the rest of
+the mission from where the flight then is. It is flown only if (1) the Moon's table holds the whole
+mission (launch to the flown splashdown's mission time plus an hour), (2) the solver converges and (3)
+the S-IVB has the propellant: the cut-off mass the steering predicts leaves the stage its tail-off's
+propellant and one second of its flow. Otherwise it stays in its parking orbit and says why
+(`evt.lunarProfileOff` for another spacecraft or a mission past the table, `evt.tliUnsolved`,
+`evt.tliPropellant`). The one-second rule of 1293372 is now the flown launch's test only.
+
+The aim is the flown midcourse correction's, at the same mission times: the perilune 60.0 n mi above
+the landing site's radius, at 75:53:35 after the launch and 0.17° N. The parking orbit is propagated as
+the flight flies it (J2, the Moon and the Sun, the vent pushing it and taking its mass). The burn's
+length L comes from the rocket equation on the restart's operating points for the impulse at the flown
+conic's perigee height, Δv = √(2μ/r_p + C3_flown) − v; its middle is sought within half a revolution of
+the flown one's. The first guess is the in-plane ellipse with perigee r_p (the stack's radius plus the
+flown conic's perigee's 36.6 km over the flown parking orbit's mean height) that reaches the Moon's distance R at the arrival: e = 1 − r_p/a,
+cos ν = (a(1 − e²)/R − 1)/e, t = (E − e sin E)√(a³/μ); a by bisection for the time of flight, the
+burn's middle where the Moon is ν ahead of the stack. The unknowns are (C3, w, k): the conic's plane is
+one through the Moon's place at the arrival, n = n₀ cos k − m̂ sin k (n₀ the plane through m̂ nearest the
+parking orbit's, turned about m̂ to the one the steering reaches with the least ∫a²,
+12y²/T³ − 12yẏ/T² + 4ẏ²/T for the stack's distance y and speed ẏ across it at the burn's end, T the
+burn), its perigee w round from m̂, its perigee speed √(2μ/r_p + C3). Newton's method, the Jacobian by
+differences, three times: as an impulse and then as the burn `TliGuidance` predicts for its own
+steering (start-up, mixture shift, tail-off), each against the B-plane six hours before the arrival
+(B·T and B·R of the osculating hyperbola about the Moon against the B-vector of the aimed perilune,
+|B| = r_p√(1 + 2μ_☾/(r_p v∞²)), retrograde in the plane nearest the Moon's equator, and the
+hyperbola's perilune time); then the burn against the true perilune, coasted with every force
+(`coastToPerilune`), to 1 km, 3 s and 1 km of latitude. The burn's predicted cut-off, not a
+rocket-equation estimate, is what the propellant gate reads.
+
+From there the computed flight keeps the flown timeline by mission time, each burn aimed for itself: the
+evasive burn has the flown Δv, pointed where it leaves the midcourse correction least to do (the
+arrival's misses linear in it, the least |J_m⁻¹(m₀ + Δv J_e d)| over the sphere of directions d); MCC-2,
+LOI-1 and LOI-2 as for the flown flight; DOI when the LM is half a revolution and the powered descent's
+range short of the site; the lift-off searched within half a revolution for the CSM's lead; CSI, CDH,
+the separation and the burn home timed from its own lift-off and docking; the burn home's time and size
+found by secant searches for the flown entry's vacuum perigee height and time, at the latitude it gives;
+the recovery point the flown entry's range and turn from where this one meets the air. Guards: LOI-1
+fires only inside the sphere of influence with the perilune predicted from there above the ground, under
+1,000 km and due when the flown one was (within ten minutes); a lunar-orbit burn that leaves no orbit
+clear of the ground (a > 0, finite apolune, perilune above the site's radius) ends as a coast, never as a
+lunar orbit with no apolune; a flight that meets the Moon's ground or the Earth's air below 80 km is lost
+there; a burn not found is not flown (`evt.burnSkipped`, LOI, DOI or TEI). Between the burns the
+spacecraft is weighed as the flown one was (*Approximations* below), so only the S-IVB's propellant is budgeted.
+
+Measured, point-mass, calm (probes in docs/development/reports/argon4-fu-apollo.md; MCC-2 and LOI-1 Δv as
+flown; the landing miss from Tranquility Base; the splashdown miss from the flight's own recovery point):
+
+| Launch | TLI | C3, km²/s² | Perilune after TLI | MCC-2 | LOI-1 | Landing | Splashdown | Sun at landing |
+|---|---|---|---|---|---|---|---|---|
+| Flown, 16 July 13:32:00 | flown | −1.390 | 1,310 km, −38 min | 3.98 m/s | 889.3 m/s | 3 m | 5.4 km | 10.7° |
+| 13:35:56 | computed | −1.434 | 179 km, −1.4 min | 4.63 m/s | 888.0 m/s | 3 m | 2.6 km | 10.7° |
+| 14:02 (+30 min) | computed, 367 kg spare | −1.436 | 156 km, −0.7 min | 4.64 m/s | 887.7 m/s | 3 m | 2.0 km | 10.9° |
+| 14:12 (+40 min) | stays: propellant | — | — | — | — | — | — | — |
+| 14:32 (+60 min) | stays: no injection | — | — | — | — | — | — | — |
+| 17 July 13:32 | computed | −1.496 | 189 km, −1.7 min | 4.59 m/s | 885.9 m/s | 3 m | 6.6 km | 22.9° |
+| 18 July 13:32, flown plane | stays: no injection | — | — | — | — | — | — | — |
+| 18 July 13:32, plane through the Moon | computed | −1.565 | 212 km, −2.1 min | 4.61 m/s | 882.3 m/s | 3 m | 6.4 km | 35.1° |
+| 23 July 13:32, plane through the Moon | computed | −1.863 | 169 km, −0.6 min | 4.43 m/s | 861.4 m/s | 3 m | 14.2 km | 83.9° |
+| 24 July 13:32 | stays: past the table | — | — | — | — | — | — | — |
+
+The perilune is aimed at 111 km (60.0 n mi over the site's radius); the flown TLI was aimed with its
+evasive burn and correction in mind. The Moon's place at the arrival is out of the flown parking plane
+(taken at the flown TLI time) by 0.44° for a launch on 16 or 17 July, 1.30° on the 18th and 4.04° on the
+23rd; the solver finds an injection from the flown plane up to 0.89° (the node edited to 0.5°: its conic
+2.96° out of the parking plane, 873 kg spare) and none from 1.30°. "Plane through the Moon" is a parking
+plane through the pad at lift-off and the Moon at the arrival, as the planners' launch azimuth gave one
+(the model's settings do not turn it with the date). The landing keeps the flown
+mission time, so the Sun stands higher over Tranquility Base each day later; the planners kept it at 5°–14°
+by landing elsewhere (sites 3 and 5 for 18 and 21 July; Nature 223, 1969; ALSJ "Sun Angles"), which
+the model does not do (an open question for the owner).
 
 *The Moon and the Sun.* The simulation's inertial frame is the mean equator and equinox of date (the
 Earth turns by the mean sidereal time), so the ICRF states are precessed to the date by the IAU 1976

@@ -325,8 +325,8 @@ splashdown), within 11–16 km of Freedom 7's splashdown in both models, flown f
 Saturn V, the whole mission to the Moon and back, in seven steps: (6a) the Saturn V to the parking
 orbit, with planned engine shutdowns, the mixture shift and the jettisons, LC-39A as in 1969 — done;
 (6b) the S-IVB's restart for the Moon onto the flown conic and the transposition, docking and the
-LM's extraction at the flown times — done; (6c) the Moon in the model — JPL's DE441 Moon and Sun for
-the week, the Moon turned as the IAU turns it, their pull on the flight, the injection aimed at the
+LM's extraction at the flown times — done; (6c) the Moon in the model — JPL's DE441 Moon and Sun from
+16 July to 1 August 1969, the Moon turned as the IAU turns it, their pull on the flight, the injection aimed at the
 flown conic's perigee, the service engine's evasive burn and the midcourse correction worked out as
 the flight's was, to the lunar orbit insertion within 40 km and a metre per second of the flown
 approach, and the Moon drawn — done; (6d) lunar
@@ -346,7 +346,11 @@ minute of the flown time and a few kilometres of the flown point, and the comman
 and the service module drawn — done; (6g) the viewer and the documents — the ascent stage drawn in its
 own shape, the lift-off watched looking down at the descent stage it leaves, the braking and the
 station-keeping from behind Eagle with Columbia ahead, the entry's glow, the station-keeping at 10×, the
-whole flight in about forty minutes of Watch, and the README — done; (7) the fleet acceptance and the
+whole flight in about forty minutes of Watch, and the README — done; (6h) another launch of the spacecraft
+— another minute, day or parking orbit — flown to the Moon and home when the model can fly it, its injection
+and every burn after it worked out for that launch (the owner's decision of 2026-10-17), and otherwise left in
+its parking orbit with the reason; the landing keeps Tranquility Base and the flown mission times
+([PHYSICS.md §13.10](PHYSICS.md)) — done; (7) the fleet acceptance and the
 documents.
 
 Twenty further items are kept for later, once these are done.

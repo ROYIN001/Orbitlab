@@ -1996,9 +1996,13 @@ against the real one, and the orbit the payload was left in. In **Explore** and 
 same table is under the mission result, and the telemetry charts mark the real flight's events in
 orange beside the model's grey ones. A time marked ≈ is a planned, rounded or second-hand figure.
 The table only appears while the settings are the historical flight's own: change the payload,
-the date or the vehicle and it is a different flight. Apollo 11 goes to the Moon only from its own
-launch: on another date or with another spacecraft it stays in its parking orbit, and the event log
-says so. The model flies its own guidance, not the
+the date or the vehicle and it is a different flight. Apollo 11 launched at another time or into
+another parking orbit still goes to the Moon if the model can really fly it: the S-IVB's burn and every
+burn after it are worked out for that launch (the event log says "TLI worked out"), and it lands at
+Tranquility Base at the flown mission times — so a launch days later lands with the Sun higher over the
+site than Eagle had it. If no injection reaches the Moon from that parking orbit, if the S-IVB would run
+short, if the mission would run past 1 August 1969 (the end of the Moon's table) or with another
+spacecraft, it stays in its parking orbit and the event log says why. The model flies its own guidance, not the
 real pitch programme, so the times differ by seconds to a minute; why, flight by flight, is in
 [PHYSICS.md §13](PHYSICS.md).
 
