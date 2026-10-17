@@ -558,8 +558,11 @@ believes (src/physics/nav/).
 **The IMU** (sensors.ts). Per axis, gyros and accelerometers have a turn-on bias, an in-run bias
 that wanders as a first-order Gauss–Markov process (300 s), a scale-factor error and white noise
 (angle and velocity random walk), drawn from the navigation's own seeded stream (it never moves
-the wind's). Three grades, textbook orders of magnitude (Groves, *Principles of GNSS, Inertial,
-and Multisensor Integrated Navigation Systems*, 2nd ed., ch. 4), or custom figures:
+the wind's). As built, the turn-on and in-run biases are one Gauss–Markov process started at
+their combined size, so the turn-on part fades with the 300 s rather than staying for the flight
+(a MEMS gyro's 30 °/h is down to about the in-run 5 °/h in a quarter of an hour). Three grades,
+textbook orders of magnitude (Groves, *Principles of GNSS, Inertial, and Multisensor Integrated
+Navigation Systems*, 2nd ed., ch. 4), or custom figures:
 
 | Grade | Gyro bias | ARW | Accel. bias | VRW | Scale factors | Pad alignment |
 |---|---|---|---|---|---|---|
@@ -582,8 +585,9 @@ attitude (an ECI rotation, C = (I + [φ×]) Ĉ), the gyros' and accelerometers' 
 factors — propagated with Φ = I + F·dt at every step (F carries the gravity gradient, −[f×],
 −Ĉ on the biases and −Ĉ·diag(f), −Ĉ·diag(ω) on the scale factors) and the sensors' noise, plus a
 tuning margin of velocity noise of 10⁻⁴ of the specific force per √s under thrust (vibration, the
-step's discretisation, misalignment). It is corrected by scalar updates and the correction folded
-into the solution:
+step's discretisation, misalignment). The bias estimates relax with the same 300 s between fixes,
+as the error model assumes. It is corrected by scalar updates and the correction folded into the
+solution:
 
 - **GNSS**: position and velocity fixes (5 m, 0.05 m/s, 1 Hz by default), with one outage to set;
 - **star tracker**: attitude (10″, 1 Hz) above 150 km and below 1 °/s of body rate.
@@ -600,8 +604,9 @@ burns (src/physics/sim/burns.ts, the other session's) still read the truth.
 
 **What it shows on Falcon 9 to LEO** (crosswind; tests/navigation.test.ts):
 
-- Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 1.7 per
-  axis, 0.5 % of samples outside 3σ), under 5 m and 0.1 m/s; the orbit it believes in is the true
+- Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 2.2 per
+  axis, 0.5 % of samples outside 3σ; 2.3 and 0.9 % while the bias estimates were held instead of
+  relaxing with the biases, until 2026-10-17), under 5 m and 0.1 m/s; the orbit it believes in is the true
   one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop,
   and the jets' deadband below keeps it off them.
 - A GNSS outage from T+60 s to T+200 s: the error grows to about 130 m and 1.9 m/s, inside the
