@@ -589,7 +589,8 @@ describe('aerial perspective: the far end in float32', () => {
     }
     expect(checked).toBe(7);
     // the end is on the sphere to within float32's own metre at 6 400 km, and the ulps of the camera's position
-    expect(worstAlt).toBeLessThan(alt > 1e6 ? 40 : 4);
+    // (measured: 0.36 m from 400 km, 1.44 m from 36 000 km)
+    expect(worstAlt).toBeLessThan(alt > 1e6 ? 4 : 1);
   });
 
   it('meets the perigee where the rounding puts a fragment on a ray just clear of the sphere', () => {
