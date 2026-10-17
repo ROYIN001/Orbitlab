@@ -190,6 +190,22 @@ Card `q12` A is the owner's confirmation on 2026-10-09 of three approvals given 
 
 Card `q02` A: once #129 merges, CI no longer runs on `push`, so a branch gets CI only through a PR or a manual `workflow_dispatch` run; where plan S18 §18.6 describes the CI trigger, the owner's answer ("ข้อความใน S18 §18.6 ต้องแก้ตาม") supersedes it. The approved plan text itself is not edited here.
 
+## Decided 2026-10-16 (privacy statement, ED-INST-1)
+
+The owner answered in chat to the ED-INST-1 session (PR #147, M-LEARNING-047) the seven points of its report §6, as the session had re-explained them in plain Thai. The owner's words are verbatim; the option is the one the session had listed.
+
+| Date | Point | Answer | Where it lands |
+|---|---|---|---|
+| 2026-10-16 | 1. The privacy statement text (TH/EN/RU) | "อนุมัติ" — approved | `public/privacy.html` |
+| 2026-10-16 | 2. Contact channel for problem reports (D-60) | "ข. อีเมล royinboeing001@gmail.com" — GitHub and this email address | `public/privacy.html`, three languages |
+| 2026-10-16 | 3. Precache the page or load it on demand | "ข. ใช้เน็ตโหลดปกติเลยครับ ดึงประสิทธิภาพออกมาเต็มที่" — not precached: loaded from the network like any page, its copy kept once seen (no precache room used) | `src/pwa/manifest.ts` `ON_DEMAND_PREFIXES`, `src/pwa/sw-core.ts` route `static` |
+| 2026-10-16 | 4. Legal claims L1–L5 (PDPA rights, the under-20 advice, files in the receiver's care, host logs, Safari's 7-day rule) | "เก็บไว้ก่อนยังไม่ต้องโชว์ เดี๋ยวค่อยมาทำตอนตัวเว็บเสร็จทั้งหมดแล้ว แต่ไม่ต้องลบไฟล์แค่ซ่อนไว้ก่อนเฉยๆ" — keep them in the file, hidden, until the whole site is finished | `public/privacy.html` (`hidden data-held="legal"`) |
+| 2026-10-16 | 5. D-49 wording | "ก." — "formative by default: for learning, not official grades" kept | `public/privacy.html` |
+| 2026-10-16 | 6. The WebMCP paragraph | "ก" — kept | `public/privacy.html` |
+| 2026-10-16 | 7. The About link label | "ก." — one word ("ความเป็นส่วนตัว", "Privacy", "Конфиденциальность") | `src/i18n/*.ts` `about.link.privacy` |
+
+Point 4 hides the sentence that the site's host may log visits, which plan S16 lists in M-LEARNING-047's acceptance. Until the owner shows it again, that part of the acceptance is not met (report ED-INST-1-s1-privacy §6).
+
 ## Decided 2026-10-17 (Argon4 review follow-up, chat)
 
 The owner answered the eight questions of the Argon4-review report (docs/history/2026-10-17/ARGON4-REVIEW.md, "For the owner") in chat on 2026-10-17, verbatim "1.ทำพร้อมกัน 2.อธิบายเพิ่มเติม 3.อธิบายเพิ่มเติม 4.อธิบายเพิ่มเติม 5.ถ้าบินได้จริงในทางฟิสิกส์ในอนุญาตให้บินได้แต่คำนวนเส้นทางและค่าต่างๆตามจริง 6.รอไปก่อน 7.ทำให้ดูดีและสมจริงขึ้น 8.ผมจำไม่ได้ว่าควรอยู่ในข้อไหน". The numbers are the chat report's, whose questions 6 and 8 are the notes' questions 7 and 6.

@@ -24,8 +24,10 @@ export interface PrecacheManifest {
  * src/audio/soundtrack.ts), kept whole the first time one plays.
  * Decision D-7, 2026-09-30: the soundtrack is cached at run time on the public
  * site, and precached only by a build with ORBITLAB_PRECACHE_AUDIO=1 (the intranet zip).
+ * The privacy statement (M-LEARNING-047): loaded from the network like any page, kept once
+ * seen; owner, 2026-10-16, "ใช้เน็ตโหลดปกติเลยครับ" (not precached, so it takes no install room).
  */
-export const ON_DEMAND_PREFIXES: readonly string[] = ['home/', 'social/', 'audio/'];
+export const ON_DEMAND_PREFIXES: readonly string[] = ['home/', 'social/', 'audio/', 'privacy.html'];
 export const AUDIO_PREFIX = 'audio/';
 export const onDemand = (path: string): boolean => ON_DEMAND_PREFIXES.some((prefix) => path.startsWith(prefix));
 
