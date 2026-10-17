@@ -54,9 +54,12 @@
 import type { VehicleSpec } from '../types';
 import { vehicleSpecProblems } from '../config/vehicle-spec';
 import { isCatalogueVehicle, vehicleById } from '../data/vehicles';
-import { siteById } from '../data/sites';
-import { G0, MU_EARTH, R_EARTH } from '../physics/constants';
+import { siteById, type SiteExtra } from '../data/sites';
+import { DEG, G0 } from '../physics/constants';
 import { atmosphere } from '../physics/atmosphere';
+import { effectiveGravityJ2 } from '../physics/gravity';
+import { groundPositionEci } from '../physics/orbital';
+import { norm } from '../physics/vec3';
 import { guidanceForVehicle } from '../physics/defaults';
 import { VehicleModel, engineMassFlow, idealDeltaV, liftoffMass, liftoffThrust, solidProfile } from '../physics/vehicle';
 
@@ -171,7 +174,8 @@ export interface HoldDownRelease {
  * stage and its liquid strap-ons lit at T−2.5 s, solids at T+0, air-lit
  * strap-ons not at all), the same 0.1 s step with thrust and propellant taken
  * together, the thrust at the pad's pressure, and the weight under the pad's
- * gravity μ/(R + h)². Released at the first step ending at or after T+0 whose
+ * gravity: the J2 field and the Earth's turn at the WGS-84 pad, Somigliana's
+ * normal gravity (D-51; μ/(R + h)² before). Released at the first step ending at or after T+0 whose
  * mean thrust exceeds the weight at its end; given up at the first step
  * ending after T+3 s. A step ends on T+0 exactly here; the flight's clock,
  * counted up from T−10 s in 0.1 s steps, reaches it a rounding short and
@@ -179,13 +183,12 @@ export interface HoldDownRelease {
  * 0.06 % of the mass of a Falcon 9). tests/design-warnings.test.ts holds the
  * two to the same verdict across the edge of liftoff.
  */
-export function holdDownRelease(spec: VehicleSpec, payloadKg: number, padAltitudeM: number): HoldDownRelease {
+export function holdDownRelease(spec: VehicleSpec, payloadKg: number, site: Pick<SiteExtra, 'latitude' | 'altitude'>): HoldDownRelease {
   const vm = new VehicleModel(spec, payloadKg);
   const st0 = vm.stages[0];
   const groundLitBoosters = st0.boosters.filter((b) => (b.spec.igniteAt ?? 0) <= 0);
-  const pressure = atmosphere(padAltitudeM).p;
-  const r = R_EARTH + padAltitudeM;
-  const gravity = MU_EARTH / (r * r);
+  const pressure = atmosphere(site.altitude).p;
+  const gravity = norm(effectiveGravityJ2(groundPositionEci(site.latitude * DEG, 0, site.altitude, 0)));
   const ignition = st0.spec.engine.solid ? 0 : LIQUID_IGNITION_T;
   let best = 0;
   for (let k = 0; ; k++) {
@@ -248,7 +251,7 @@ export function designWarnings(spec: VehicleSpec, payloadKg: number, siteId?: st
   const thrustN = liftoffThrust(spec);
   const weightN = liftoffMass(spec, payloadKg) * G0;
   const tw = thrustN / weightN;
-  const release = holdDownRelease(spec, payloadKg, siteById(siteId ?? spec.sites[0]).altitude);
+  const release = holdDownRelease(spec, payloadKg, siteById(siteId ?? spec.sites[0]));
   if (!release.released) add('noLiftoff', { tw, thrustN, weightN, releaseTw: release.tw }, { stage: 0 });
   else if (tw < LIFTOFF_TW_FLOOR) add('lowLiftoffTW', { tw, thrustN, weightN, floor: LIFTOFF_TW_FLOOR }, { stage: 0 });
 

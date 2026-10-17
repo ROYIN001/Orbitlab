@@ -217,7 +217,7 @@ describe('design warnings · agree with the flight', () => {
       const tw0 = staticTw(copyOf(id), payload);
       for (let target = 0.9; target < 1.065; target += 0.01) {
         const spec = scaledLiftoff(id, target / tw0);
-        const replay = holdDownRelease(spec, payload, siteById(spec.sites[0]).altitude);
+        const replay = holdDownRelease(spec, payload, siteById(spec.sites[0]));
         const warned = codes(designWarnings(spec, payload)).includes('noLiftoff');
         expect(warned, `${id} at static T/W ${target.toFixed(2)}`).toBe(!replay.released);
         const events = padEvents(spec, payload);
