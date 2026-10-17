@@ -12,7 +12,7 @@
  * here is allowed to keep English in the DOM.
  */
 import type { CameraMode } from '../render/cameras';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { BUILD } from '../build-info';
 import { CITATION_URL, COPYRIGHT_YEAR, NOTICE_URL, REPO_URL, developerLabel, versionLabel } from '../credits';
 import rigidDossierUrl from '../../docs/SIXDOF-VEHICLE-DATA.md?url';
@@ -221,7 +221,9 @@ function aboutPanel(b: HTMLElement): void {
   const lead = el('p', 'about-lead', t('about.lead'));
   lead.append(el('br'), t('about.licenceText'));
   const links = el('ul', 'about-links');
-  links.append(link(REPO_URL, 'GitHub'), link(NOTICE_URL, t('about.link.notice')), link(CITATION_URL, t('about.link.cite')));
+  // M-LEARNING-047: the privacy statement is a static page of the build (public/privacy.html), precached for offline use
+  links.append(link(REPO_URL, 'GitHub'), link(NOTICE_URL, t('about.link.notice')), link(CITATION_URL, t('about.link.cite')),
+    link(new URL(`privacy.html#${getLang()}`, document.baseURI).href, t('about.link.privacy')));
   box.append(mark, title, version, by, lead, links, el('p', 'about-disclaimer', t('about.disclaimer')));
   b.append(box);
 }

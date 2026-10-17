@@ -153,6 +153,19 @@
       "checks": { "commands": ["@app-build"], "unit": ["tests/pwa.test.ts", "tests/classroom-pwa.test.ts", "tests/lesson-packs.test.ts"], "browser": ["pwa-offline", "classroom-preparation", "lesson-packs", "workspace-navigation", "webgl-startup"] }
     },
     {
+      "id": "privacy-inventory",
+      "additive": true,
+      "why": "M-LEARNING-047: tests/privacy-inventory.test.ts scans every source file for storage keys, stores, caches, hosts and sending APIs the privacy page must name.",
+      "paths": ["src/**", "index.html"],
+      "checks": { "unit": ["tests/privacy-inventory.test.ts"] }
+    },
+    {
+      "id": "privacy-statement",
+      "why": "M-LEARNING-047: the privacy page is precached and must open offline as itself, in three languages, from About (src/ui/dialogs.ts) through the service worker's navigation route.",
+      "paths": ["public/privacy.html", "src/ui/dialogs.ts", "src/pwa/**"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/privacy-inventory.test.ts"], "browser": ["privacy-offline"] }
+    },
+    {
       "id": "app-misc",
       "why": "WebMCP and credits.",
       "paths": ["src/mcp.ts", "src/credits.ts"],
