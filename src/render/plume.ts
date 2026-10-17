@@ -12,113 +12,121 @@
 import * as THREE from 'three';
 import { P0 } from '../physics/constants';
 
+/*
+ * PLUME_VERT.
+ * - k: 0 at the nozzle exit, 1 at the tip.
+ * - `rad *= 1.0 - smoothstep(0.70, 1.0, k) * 0.88`: close the tip.
+ */
 const PLUME_VERT = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  uniform float uTime;
-  uniform float uVac;
-  uniform float uSeed;
-  uniform float uFlare;
-  uniform float uTurb;
-  varying float vK;
-  varying vec3 vNormalW;
-  varying vec3 vPosW;
-  varying float vAng;
-  void main() {
-    float k = clamp(-position.y, 0.0, 1.0);   // 0 at the nozzle exit, 1 at the tip
-    vK = k;
-    float ang = atan(position.z, position.x);
-    vAng = ang;
-    float sea = 1.0 + 0.55 * k - 0.28 * k * k;
-    float vac = 1.0 + 2.60 * pow(k, 0.55);
-    float rad = mix(sea, vac, uVac) * uFlare;
-    rad *= 1.0 - smoothstep(0.70, 1.0, k) * 0.88;              // close the tip
-    float n = sin(k * 11.0 + uTime * 9.0 + uSeed * 31.0 + ang * 3.0)
-            * sin(k * 23.0 - uTime * 14.0 + uSeed * 7.0 + ang * 2.0);
-    rad *= 1.0 + uTurb * n * smoothstep(0.04, 0.55, k) * 0.20;
-    vec3 p = vec3(position.x * rad, position.y, position.z * rad);
-    vec3 nrm = normalize(vec3(p.x, 0.22, p.z));
-    vec4 wp = modelMatrix * vec4(p, 1.0);
-    vPosW = wp.xyz;
-    vNormalW = normalize(mat3(modelMatrix) * nrm);
-    gl_Position = projectionMatrix * viewMatrix * wp;
-    #include <logdepthbuf_vertex>
-  }
+#include <common>
+#include <logdepthbuf_pars_vertex>
+uniform float uTime;
+uniform float uVac;
+uniform float uSeed;
+uniform float uFlare;
+uniform float uTurb;
+varying float vK;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+varying float vAng;
+void main() {
+float k = clamp(-position.y, 0.0, 1.0);
+vK = k;
+float ang = atan(position.z, position.x);
+vAng = ang;
+float sea = 1.0 + 0.55 * k - 0.28 * k * k;
+float vac = 1.0 + 2.60 * pow(k, 0.55);
+float rad = mix(sea, vac, uVac) * uFlare;
+rad *= 1.0 - smoothstep(0.70, 1.0, k) * 0.88;
+float n = sin(k * 11.0 + uTime * 9.0 + uSeed * 31.0 + ang * 3.0)
+* sin(k * 23.0 - uTime * 14.0 + uSeed * 7.0 + ang * 2.0);
+rad *= 1.0 + uTurb * n * smoothstep(0.04, 0.55, k) * 0.20;
+vec3 p = vec3(position.x * rad, position.y, position.z * rad);
+vec3 nrm = normalize(vec3(p.x, 0.22, p.z));
+vec4 wp = modelMatrix * vec4(p, 1.0);
+vPosW = wp.xyz;
+vNormalW = normalize(mat3(modelMatrix) * nrm);
+gl_Position = projectionMatrix * viewMatrix * wp;
+#include <logdepthbuf_vertex>
+}
 `;
 
+/*
+ * PLUME_FRAG.
+ * - md, diamonds: shock diamonds: stationary cells just below the nozzle, sea level only.
+ * - Tone-mapped like every other material in the scene (see the note in
+ *   render/scene.ts): the core is deliberately driven past 1.0 so ACES
+ *   blows it out to white and the orange survives only at the edges, which
+ *   is exactly how an exposed camera sees a first-stage plume.
+ */
 const PLUME_FRAG = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_fragment>
-  uniform vec3 uCore;
-  uniform vec3 uEdge;
-  uniform vec3 uTip;
-  uniform float uOpacity;
-  uniform float uMach;
-  uniform float uMachFreq;
-  uniform float uTime;
-  uniform float uSeed;
-  uniform float uEdgeGain;
-  varying float vK;
-  varying vec3 vNormalW;
-  varying vec3 vPosW;
-  varying float vAng;
-  void main() {
-    #include <logdepthbuf_fragment>
-    float k = vK;
-    vec3 n = normalize(vNormalW);
-    vec3 vd = normalize(cameraPosition - vPosW);
-    float fres = 1.0 - abs(dot(n, vd));
-    vec3 col = mix(uCore, uEdge, smoothstep(0.0, 0.40, k));
-    col = mix(col, uTip, smoothstep(0.40, 1.0, k));
-    // shock diamonds: stationary cells just below the nozzle, sea level only
-    float md = 0.5 + 0.5 * sin(k * uMachFreq - 0.7 + sin(uTime * 3.0 + uSeed * 9.0) * 0.12);
-    float diamonds = pow(md, 7.0) * (1.0 - smoothstep(0.03, 0.42, k)) * uMach;
-    col += vec3(1.0, 0.94, 0.80) * diamonds * 1.8;
-    float flick = 0.92 + 0.08 * sin(uTime * 31.0 + uSeed * 53.0 + vAng);
-    float a = uOpacity * (0.16 + uEdgeGain * fres * fres) * (1.0 - smoothstep(0.30, 1.0, k));
-    a *= smoothstep(0.0, 0.04, k) * flick;
-    // Tone-mapped like every other material in the scene (see the note in
-    // render/scene.ts): the core is deliberately driven past 1.0 so ACES
-    // blows it out to white and the orange survives only at the edges, which
-    // is exactly how an exposed camera sees a first-stage plume.
-    gl_FragColor = vec4(col * (1.0 + diamonds * 1.2), 1.0);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-    gl_FragColor.a = clamp(a, 0.0, 1.0);
-  }
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform vec3 uCore;
+uniform vec3 uEdge;
+uniform vec3 uTip;
+uniform float uOpacity;
+uniform float uMach;
+uniform float uMachFreq;
+uniform float uTime;
+uniform float uSeed;
+uniform float uEdgeGain;
+varying float vK;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+varying float vAng;
+void main() {
+#include <logdepthbuf_fragment>
+float k = vK;
+vec3 n = normalize(vNormalW);
+vec3 vd = normalize(cameraPosition - vPosW);
+float fres = 1.0 - abs(dot(n, vd));
+vec3 col = mix(uCore, uEdge, smoothstep(0.0, 0.40, k));
+col = mix(col, uTip, smoothstep(0.40, 1.0, k));
+float md = 0.5 + 0.5 * sin(k * uMachFreq - 0.7 + sin(uTime * 3.0 + uSeed * 9.0) * 0.12);
+float diamonds = pow(md, 7.0) * (1.0 - smoothstep(0.03, 0.42, k)) * uMach;
+col += vec3(1.0, 0.94, 0.80) * diamonds * 1.8;
+float flick = 0.92 + 0.08 * sin(uTime * 31.0 + uSeed * 53.0 + vAng);
+float a = uOpacity * (0.16 + uEdgeGain * fres * fres) * (1.0 - smoothstep(0.30, 1.0, k));
+a *= smoothstep(0.0, 0.04, k) * flick;
+gl_FragColor = vec4(col * (1.0 + diamonds * 1.2), 1.0);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+gl_FragColor.a = clamp(a, 0.0, 1.0);
+}
 `;
 
 const SMOKE_VERT = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  uniform float uTime;
-  uniform float uSeed;
-  varying float vK;
-  void main() {
-    float k = clamp(-position.y, 0.0, 1.0);
-    vK = k;
-    float ang = atan(position.z, position.x);
-    float rad = (0.8 + 2.4 * pow(k, 0.7)) * (1.0 + 0.16 * sin(k * 9.0 + uTime * 5.0 + uSeed * 20.0 + ang * 2.0));
-    vec3 p = vec3(position.x * rad, position.y, position.z * rad);
-    vec4 wp = modelMatrix * vec4(p, 1.0);
-    gl_Position = projectionMatrix * viewMatrix * wp;
-    #include <logdepthbuf_vertex>
-  }
+#include <common>
+#include <logdepthbuf_pars_vertex>
+uniform float uTime;
+uniform float uSeed;
+varying float vK;
+void main() {
+float k = clamp(-position.y, 0.0, 1.0);
+vK = k;
+float ang = atan(position.z, position.x);
+float rad = (0.8 + 2.4 * pow(k, 0.7)) * (1.0 + 0.16 * sin(k * 9.0 + uTime * 5.0 + uSeed * 20.0 + ang * 2.0));
+vec3 p = vec3(position.x * rad, position.y, position.z * rad);
+vec4 wp = modelMatrix * vec4(p, 1.0);
+gl_Position = projectionMatrix * viewMatrix * wp;
+#include <logdepthbuf_vertex>
+}
 `;
 
 const SMOKE_FRAG = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_fragment>
-  uniform vec3 uColor;
-  uniform float uOpacity;
-  varying float vK;
-  void main() {
-    #include <logdepthbuf_fragment>
-    float a = uOpacity * smoothstep(0.05, 0.35, vK) * (1.0 - smoothstep(0.45, 1.0, vK));
-    gl_FragColor = vec4(uColor, a);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform vec3 uColor;
+uniform float uOpacity;
+varying float vK;
+void main() {
+#include <logdepthbuf_fragment>
+float a = uOpacity * smoothstep(0.05, 0.35, vK) * (1.0 - smoothstep(0.45, 1.0, vK));
+gl_FragColor = vec4(uColor, a);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
 `;
 
 /** Unit cylinder with the nozzle exit at y = 0, extending to y = -1. */

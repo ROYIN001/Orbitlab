@@ -59,53 +59,56 @@ const CORE = new THREE.Color(1.0, 0.8, 0.5);
 const SPOT = new THREE.Color(1.0, 0.5, 0.12);
 
 const GLOW_VERT = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  varying vec3 vLocal;
-  varying vec3 vNormalW;
-  varying vec3 vPosW;
-  void main() {
-    vLocal = position;
-    vec4 wp = modelMatrix * vec4(position, 1.0);
-    vPosW = wp.xyz;
-    vNormalW = normalize(mat3(modelMatrix) * normal);
-    gl_Position = projectionMatrix * viewMatrix * wp;
-    #include <logdepthbuf_vertex>
-  }
+#include <common>
+#include <logdepthbuf_pars_vertex>
+varying vec3 vLocal;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+void main() {
+vLocal = position;
+vec4 wp = modelMatrix * vec4(position, 1.0);
+vPosW = wp.xyz;
+vNormalW = normalize(mat3(modelMatrix) * normal);
+gl_Position = projectionMatrix * viewMatrix * wp;
+#include <logdepthbuf_vertex>
+}
 `;
 
+/*
+ * GLOW_FRAG.
+ * - uWake < 0.5: a thin glowing layer: the longer the line of sight through it, the brighter (its limb); up the
+ *   flow (+Y) the stagnation point, fading back round the shoulder.
+ * - Otherwise: a column of hot gas: brightest down its middle, soft at its edges, fading to nothing at its end.
+ */
 const GLOW_FRAG = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_fragment>
-  uniform vec3 uColor;
-  uniform vec3 uCore;
-  uniform float uIntensity;
-  uniform float uWake;
-  uniform float uLength;
-  varying vec3 vLocal;
-  varying vec3 vNormalW;
-  varying vec3 vPosW;
-  void main() {
-    #include <logdepthbuf_fragment>
-    vec3 n = normalize(vNormalW);
-    vec3 vd = normalize(cameraPosition - vPosW);
-    float facing = abs(dot(n, vd));
-    float w;
-    vec3 col;
-    if (uWake < 0.5) {
-      // a thin glowing layer: the longer the line of sight through it, the brighter (its limb); up the flow (+Y)
-      // the stagnation point, fading back round the shoulder
-      float s = normalize(vLocal).y;
-      w = pow(clamp((s + 0.45) / 1.45, 0.0, 1.0), 2.2) * (0.28 + 0.72 * pow(1.0 - facing, 1.6));
-      col = mix(uColor, uCore, smoothstep(0.55, 1.0, s));
-    } else {
-      // a column of hot gas: brightest down its middle, soft at its edges, fading to nothing at its end
-      float u = clamp(-vLocal.y / uLength, 0.0, 1.0);
-      w = pow(1.0 - u, 2.0) * pow(facing, 1.3);
-      col = uColor;
-    }
-    gl_FragColor = vec4(col * uIntensity * w, 1.0);
-  }
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform vec3 uColor;
+uniform vec3 uCore;
+uniform float uIntensity;
+uniform float uWake;
+uniform float uLength;
+varying vec3 vLocal;
+varying vec3 vNormalW;
+varying vec3 vPosW;
+void main() {
+#include <logdepthbuf_fragment>
+vec3 n = normalize(vNormalW);
+vec3 vd = normalize(cameraPosition - vPosW);
+float facing = abs(dot(n, vd));
+float w;
+vec3 col;
+if (uWake < 0.5) {
+float s = normalize(vLocal).y;
+w = pow(clamp((s + 0.45) / 1.45, 0.0, 1.0), 2.2) * (0.28 + 0.72 * pow(1.0 - facing, 1.6));
+col = mix(uColor, uCore, smoothstep(0.55, 1.0, s));
+} else {
+float u = clamp(-vLocal.y / uLength, 0.0, 1.0);
+w = pow(1.0 - u, 2.0) * pow(facing, 1.3);
+col = uColor;
+}
+gl_FragColor = vec4(col * uIntensity * w, 1.0);
+}
 `;
 
 export interface EntryGlowView {

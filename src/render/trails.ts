@@ -402,49 +402,54 @@ export class ExhaustTrails {
 function addV(a: Vec3, b: Vec3): Vec3 { return v(a.x + b.x, a.y + b.y, a.z + b.z); }
 function cross(a: Vec3, b: Vec3): Vec3 { return v(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
 
+/*
+ * VERT.
+ * - iSize: width, length along the column.
+ * - iLook: colour, opacity.
+ * - a: a streak along the column as it is seen: shortened when it points at the eye.
+ */
 const VERT = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  attribute vec3 iPos;
-  attribute vec3 iAxis;
-  attribute vec2 iSize;   // width, length along the column
-  attribute vec4 iLook;   // colour, opacity
-  varying vec2 vUv;
-  varying vec4 vLook;
-  varying float vStreak;
-  void main() {
-    vUv = uv;
-    vLook = iLook;
-    vStreak = step(0.5, length(iAxis));
-    vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
-    // a streak along the column as it is seen: shortened when it points at the eye
-    vec3 a = (modelViewMatrix * vec4(iAxis, 0.0)).xyz;
-    float along = length(a.xy);
-    vec2 u = along > 1e-4 ? a.xy / along : vec2(1.0, 0.0);
-    vec2 w = vec2(-u.y, u.x);
-    float len = max(iSize.x, iSize.y * along);
-    mv.xy += u * position.x * len + w * position.y * iSize.x;
-    gl_Position = projectionMatrix * mv;
-    #include <logdepthbuf_vertex>
-  }
+#include <common>
+#include <logdepthbuf_pars_vertex>
+attribute vec3 iPos;
+attribute vec3 iAxis;
+attribute vec2 iSize;
+attribute vec4 iLook;
+varying vec2 vUv;
+varying vec4 vLook;
+varying float vStreak;
+void main() {
+vUv = uv;
+vLook = iLook;
+vStreak = step(0.5, length(iAxis));
+vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
+vec3 a = (modelViewMatrix * vec4(iAxis, 0.0)).xyz;
+float along = length(a.xy);
+vec2 u = along > 1e-4 ? a.xy / along : vec2(1.0, 0.0);
+vec2 w = vec2(-u.y, u.x);
+float len = max(iSize.x, iSize.y * along);
+mv.xy += u * position.x * len + w * position.y * iSize.x;
+gl_Position = projectionMatrix * mv;
+#include <logdepthbuf_vertex>
+}
 `;
 
+/** FRAG, t: along a column only the blob's middle: a streak with no gaps between its neighbours; a lone puff whole. */
 const FRAG = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_fragment>
-  uniform sampler2D uMap;
-  uniform float uLight;
-  varying vec2 vUv;
-  varying vec4 vLook;
-  varying float vStreak;
-  void main() {
-    #include <logdepthbuf_fragment>
-    // along a column only the blob's middle: a streak with no gaps between its neighbours; a lone puff whole
-    vec4 t = texture2D(uMap, vec2(0.5 + (vUv.x - 0.5) * mix(1.0, 0.45, vStreak), vUv.y));
-    float a = t.a * vLook.a;
-    if (a < 0.004) discard;
-    gl_FragColor = vec4(vLook.rgb * t.rgb * uLight, a);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform sampler2D uMap;
+uniform float uLight;
+varying vec2 vUv;
+varying vec4 vLook;
+varying float vStreak;
+void main() {
+#include <logdepthbuf_fragment>
+vec4 t = texture2D(uMap, vec2(0.5 + (vUv.x - 0.5) * mix(1.0, 0.45, vStreak), vUv.y));
+float a = t.a * vLook.a;
+if (a < 0.004) discard;
+gl_FragColor = vec4(vLook.rgb * t.rgb * uLight, a);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
 `;
