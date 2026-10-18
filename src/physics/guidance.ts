@@ -118,6 +118,11 @@ export interface GuidanceInputs {
    * hand-over and its blend read it; absent, `altitude`
    */
   height?: number;
+  /**
+   * the plumb line, the WGS-84 normal under the vehicle: the vertical rise is
+   * flown along it, off the level pad (D-51); absent, the radius
+   */
+  plumb?: Vec3;
   /** dynamic pressure, Pa */
   q: number;
   /** full-thrust acceleration available (vacuum), m/s^2 */
@@ -483,7 +488,7 @@ export class AscentGuidance {
 
     switch (this.phase) {
       case 'vertical':
-        dir = up;
+        dir = inp.plumb ?? up;
         pitchDeg = 90;
         break;
       case 'pitchProgram': {
