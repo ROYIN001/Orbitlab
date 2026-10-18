@@ -178,7 +178,9 @@ describe('the model beside the data', () => {
       expect(run.separatedAt!.areaRatio).toBeLessThan(run.separatedAt!.expansionRatio);
       expect(run.deliveredIsp).toBeLessThan(0.85 * s2.engine.ispVac);
       const rows = standComparison(s2.engine, 1, air, run);
-      expect(rows.every((r) => r.difference === null || r.figure === 'thrustVac' || r.figure === 'ispVac')).toBe(true);
+      expect(rows.every((r) => r.difference === null)).toBe(true);
+      // an air firing is never set beside a vacuum figure
+      expect(rows.filter((r) => r.figure === 'thrustVac' || r.figure === 'ispVac').every((r) => r.stand === null)).toBe(true);
       expect(rows.filter((r) => r.notData).map((r) => r.figure)).toEqual(['thrustSL', 'ispSL']);
       expect(rows.find((r) => r.figure === 'thrustSL')!.published).toBeNull();
     }
