@@ -1,7 +1,0 @@
-## CHANGELOG
-
-- Privacy (ED-INST-1, M-LEARNING-047): a privacy statement in Thai, English and Russian (`privacy.html`, linked from About) lists everything Orbitlab keeps on the device (learner profiles, added recordings, offline caches) with how long it stays and how to delete it, every host it contacts, and the problem-report channel (GitHub or royinboeing001@gmail.com); text approved by the owner on 2026-10-16, legal sentences held back hidden in the file. It is not precached: it loads from the network like any page, and the copy kept once seen opens it offline (a new service-worker route). `tests/privacy-inventory.test.ts` fails when the code gains a storage key, store, cache, host or sending API the page does not name.
-
-## PROGRESS
-
-| ED-INST-1 step 1 (M-LEARNING-047, wave K1) | In PR; not merged; not published; text approved by the owner 2026-10-16 (DECISIONS "Decided 2026-10-16") | Static trilingual page `public/privacy.html` (on demand, not precached; no script), About link, service-worker route `static` (network first, kept copy offline); inventory test (8 cases), second-agent review (no blocking finding, 17 of 17 claims confirmed), journey `privacy-offline` (online once, then offline in three languages, held sentences hidden); budget: no ceiling raised, `index-*.js` +81 B, `i18n-*.js` +160 B, precache code +0.3 kB | [report](docs/development/reports/ED-INST-1-s1-privacy.md) |
