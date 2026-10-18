@@ -41,6 +41,22 @@ function exhaustVelocity(e: EngineSpec, p: number, level = 1): number {
   return (level * e.thrustVac - p * exitArea) / (level * e.thrustVac / (G0 * e.ispVac));
 }
 
+/**
+ * The helper as it stood before the owner's decision of 2026-10-17 (throttle
+ * and pressure, option (ข)), kept for the assertions below that are kept as they
+ * were: the effective exhaust velocity G0·Isp(p), N·s/kg, worked out here from
+ * the data rather than taken from the engine model the stand runs on: the
+ * thrust falls linearly from the vacuum figure to the sea-level one as the
+ * pressure rises to P0 (a vacuum-only engine keeps its vacuum figure, since its
+ * sea-level pair is a placeholder), and the mass flow is the vacuum pair's,
+ * thrustVac/(G0·ispVac), at every pressure and level.
+ */
+function exhaustVelocityBefore(e: EngineSpec, p: number): number {
+  const seaLevel = e.vacuumOnly ? e.thrustVac : e.thrustSL;
+  const thrust = e.thrustVac - (e.thrustVac - seaLevel) * Math.min(1, p / P0);
+  return thrust / (e.thrustVac / (G0 * e.ispVac));
+}
+
 /** A sample's level λ: its flow over the full flow of its engines. */
 const levelOf = (e: EngineSpec, s: { mdot: number }): number => s.mdot / (e.count * engineMassFlow(e));
 
@@ -67,9 +83,25 @@ const p120c = VEHICLES.find((v) => v.id === 'vegac')!.stages[0].engine;
 const centaurRl10 = VEHICLES.find((v) => v.id === 'atlasv551')!.stages[1].engine;
 
 describe('test stand · refusals and inputs', () => {
-  // Until the owner's decision of 2026-10-17 (DECISIONS.md: "the physics as it really is") the stand
+  // The assertion as it stood before the owner's decision of 2026-10-17
+  // (DECISIONS.md: "the physics as it really is"), kept unchanged: the stand
   // refused a vacuum-only engine in air, because the model flew its vacuum
-  // thrust at every pressure. It now fires it with what its nozzle gives.
+  // thrust at every pressure. It now fires it with what its nozzle gives, so
+  // this fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md. The next test is the decision's.
+  it('refuses a vacuum-only engine at any pressure above zero, and fires it in a vacuum cell', () => {
+    expect(centaurRl10.vacuumOnly).toBe(true);
+    for (const p of [1, 1000, P0]) {
+      const r = staticFire(centaurRl10, { count: 1, propellantKg: 1000, pressurePa: p, throttle: 1, dt: 0.1 });
+      expect(r.refused).toBe('vacuumOnlyAtPressure');
+      expect(r.samples).toEqual([]);
+      expect(r.impulse).toBe(0);
+    }
+    const vac = staticFire(centaurRl10, { count: 1, propellantKg: 1000, pressurePa: 0, throttle: 1, dt: 0.1 });
+    expect(vac.refused).toBeUndefined();
+    expect(vac.impulse).toBeGreaterThan(0);
+  });
+
   it('fires a vacuum-only engine in air with the thrust its nozzle gives there, and in a vacuum cell at its vacuum figure', () => {
     expect(centaurRl10.vacuumOnly).toBe(true);
     const steadyThrust = (p: number): number => {
@@ -142,7 +174,26 @@ describe('test stand · the engine model reproduced', () => {
    * find a different list. Ground-lit engines only (the first stage and its
    * strap-ons), as there: an upper stage's sea-level pair may be a placeholder.
    */
+  // Kept as it stood before the owner's decision of 2026-10-17 (throttle and
+  // pressure, option (ข)): mid-burn a solid runs at its profile's level, where
+  // the decided law's Isp is not the full-thrust one, so this fails until the
+  // owner answers question 11 of docs/development/reports/argon4-fu-rebaseline.md.
+  // The next test reads each sample at its own level.
   it('delivers each ground-lit engine’s sea-level Isp within 8 % of the quoted ispSL, with the three known exceptions', () => {
+    const off: string[] = [];
+    for (const { owner, engine: e, groundLit } of installations()) {
+      if (!groundLit || e.vacuumOnly) continue;
+      const r = staticFire(e, { count: e.count, propellantKg: 1e6, pressurePa: P0, throttle: 1, ...(e.solid ? {} : { cutoffS: 5 }), dt: 0.1 });
+      const s = r.samples[Math.floor(r.samples.length / 2)];
+      expect(rel(s.isp, exhaustVelocityBefore(e, P0) / G0), `${owner}: the stand is the model`).toBeLessThan(1e-12);
+      const err = rel(s.isp, e.ispSL);
+      expect(err, `${owner} ${e.name}: delivers ${s.isp.toFixed(1)} s against a quoted ${e.ispSL} s`).toBeLessThan(0.08);
+      if (err > 0.02) off.push(`${e.name} ${(err * 100).toFixed(1)} %`);
+    }
+    expect([...new Set(off)].sort()).toEqual(['Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
+  });
+
+  it('delivers each ground-lit engine’s sea-level Isp within 8 % of the quoted ispSL, with the three known exceptions, each sample at its own level', () => {
     const off: string[] = [];
     for (const { owner, engine: e, groundLit } of installations()) {
       if (!groundLit || e.vacuumOnly) continue;
@@ -159,6 +210,38 @@ describe('test stand · the engine model reproduced', () => {
   });
 
   /**
+   * Impulse = propellant burned × G0·Isp(p), whatever the step, the pressure,
+   * the engine kind or the part of the burn (start-up, the burn, the depletion
+   * shutdown and its tail-off): thrust and flow are one level times F(p) and
+   * ṁ. The invariant of tests/engine-transients.test.ts, through the stand.
+   * 1e-9 relative, fixed before running (rounding over up to 10⁵ steps).
+   *
+   * Kept as it stood before the owner's decision of 2026-10-17 (throttle and
+   * pressure, option (ข); the stand's "Isp does not depend on the throttle"
+   * changes with it): in air the start-up and the tail-off now run at a lower
+   * Isp, so this fails until the owner answers question 11 of
+   * docs/development/reports/argon4-fu-rebaseline.md. The next test is the
+   * decided law's.
+   */
+  it('pays for every newton-second at the delivered Isp, and empties the tank', () => {
+    const cases: [string, EngineSpec, number][] = [
+      ['Merlin 1D, vacuum', merlin, 0], ['Merlin 1D, sea level', merlin, P0],
+      // between the two, where the pressure blend is not at an end point (added in review)
+      ['Merlin 1D, 40 kPa', merlin, 40e3], ['P120C, 40 kPa', p120c, 40e3],
+      ['P120C, vacuum', p120c, 0], ['P120C, sea level', p120c, P0],
+      ['RL10 (vacuum-only), vacuum', centaurRl10, 0],
+    ];
+    for (const [name, e, p] of cases) {
+      for (const dt of [0.01, 0.1, 0.5]) {
+        const load = 20 * e.count * engineMassFlow(e) + 1234.5;
+        const r = staticFire(e, { count: e.count, propellantKg: load, pressurePa: p, throttle: 1, dt });
+        expect(rel(r.impulse / r.propellantUsed, exhaustVelocityBefore(e, p)), `${name}, dt ${dt}`).toBeLessThan(1e-9);
+        expect(load - r.propellantUsed, `${name}, dt ${dt}: tank left`).toBeLessThan(1e-6 * load);
+      }
+    }
+  });
+
+  /**
    * In vacuum, impulse = propellant burned × G0·Isp_vac, whatever the step,
    * the engine kind or the part of the burn (start-up, the burn, the depletion
    * shutdown and its tail-off): thrust and flow are one level times F_vac and
@@ -170,7 +253,7 @@ describe('test stand · the engine model reproduced', () => {
    * little below the full-thrust one. 1e-9 relative where exact, fixed before running
    * (rounding over up to 10⁵ steps).
    */
-  it('pays for every newton-second at the delivered Isp, and empties the tank', () => {
+  it('pays for every newton-second at the delivered Isp in vacuum, at the law\'s in air, and empties the tank', () => {
     const cases: [string, EngineSpec, number][] = [
       ['Merlin 1D, vacuum', merlin, 0], ['Merlin 1D, sea level', merlin, P0],
       // between the two, where the pressure blend is not at an end point (added in review)

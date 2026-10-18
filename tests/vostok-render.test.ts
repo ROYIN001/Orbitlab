@@ -171,6 +171,46 @@ describe('the entry glow and the hot metal', () => {
   });
 });
 
+// The assertions as they stood before D-51 (the owner's decision of 2026-10-17,
+// the sites on WGS-84), kept: the drawn Earth was the 6,378.137 km sphere and a
+// Vostok return was moved onto it. The branch draws the WGS-84 ellipsoid instead
+// (fd63515) and retired `onDrawnSphere` and `onEllipsoid`, so these read the
+// same quantity through `drawnFrame` and `landReturn`, and fail until the owner
+// answers question 11 of docs/development/reports/argon4-fu-rebaseline.md.
+describe('the return on WGS-84 heights, drawn on the scene\'s sphere', () => {
+  const at = (latDeg: number, h: number) => {
+    // a point at geodetic latitude `latDeg` and height `h` over WGS-84, on the x–z plane
+    const lat = latDeg * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
+    const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
+    return v3((N + h) * Math.cos(lat), 0, (N * (1 - e2) + h) * Math.sin(lat));
+  };
+  // where the scene draws a body of Vostok-1's return (was `onDrawnSphere`)
+  const drawnAt = (r: ReturnType<typeof v3>) =>
+    drawnFrame({ r, debris: [], abort: { body: 'capsule', capsule: 'vostok', phase: 'main' } } as unknown as VisualFrame).r;
+  it('puts a body on the real ground on the drawn ground, and one in the air at its height over it', () => {
+    const ground = at(51.27, 0);
+    // over Saratov the real surface is some 12.5 km inside the 6,378.137 km sphere
+    expect(R_EARTH - norm(ground)).toBeGreaterThan(12e3);
+    expect(Math.abs(norm(drawnAt(ground)) - R_EARTH)).toBeLessThan(0.01);
+    const up = at(51.27, 2500);
+    expect(Math.abs(geodeticHeight(up) - 2500)).toBeLessThan(0.01);
+    expect(Math.abs(norm(drawnAt(up)) - R_EARTH - 2500)).toBeLessThan(0.01);
+  });
+  it('moves only a Vostok return and its debris, and leaves the frame it was given alone', () => {
+    const r = at(51.27, 1000);
+    const frame = { r, debris: [{ r: at(51.27, 3000) }], abort: { body: 'capsule', capsule: 'vostok' } } as unknown as VisualFrame;
+    const drawn = drawnFrame(frame);
+    expect(landReturn(frame)).toBe(true);
+    expect(norm(drawn.r) - R_EARTH).toBeCloseTo(1000, 1);
+    expect(norm(drawn.debris[0].r) - R_EARTH).toBeCloseTo(3000, 1);
+    expect(frame.r).toBe(r);
+    const mercury = { ...frame, abort: { body: 'capsule', capsule: 'mercury' } } as unknown as VisualFrame;
+    expect(drawnFrame(mercury)).toBe(mercury);
+    const ascent = { ...frame, abort: undefined } as unknown as VisualFrame;
+    expect(drawnFrame(ascent)).toBe(ascent);
+  });
+});
+
 describe('the return drawn where it flies, over the drawn WGS-84 Earth (D-51)', () => {
   const at = (latDeg: number, h: number) => {
     // a point at geodetic latitude `latDeg` and height `h` over WGS-84, on the x–z plane
@@ -195,7 +235,33 @@ describe('the return drawn where it flies, over the drawn WGS-84 Earth (D-51)', 
 });
 
 describe('the sphere at rest on the steppe', () => {
+  // Kept as it stood before D-51, the drawn ground being the 6,378.137 km
+  // sphere; it fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md. The next test is the
+  // drawn WGS-84 ground's.
   it('stands on the drawn ground, whatever the recording\'s chord and its touchdown step left it at', () => {
+    const lat = 51.27 * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
+    const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
+    // the sphere's CG 2.4 m under where it rests (0.95 m up, its heavy side down), as between two frames 30 s apart
+    const h = 0.95 - 2.4;
+    const r = v3((N + h) * Math.cos(lat), 0, (N * (1 - e2) + h) * Math.sin(lat));
+    const up = v3(Math.cos(lat), 0, Math.sin(lat));
+    // the attitude that turns body +x, the heavy side, onto `to`
+    const turned = (to: { x: number; y: number; z: number }) => {
+      const t = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), new THREE.Vector3(to.x, to.y, to.z));
+      return { x: t.x, y: t.y, z: t.z, w: t.w };
+    };
+    const frame = { r, debris: [], rigid: { attitudeQ: turned(v3(-up.x, 0, -up.z)) }, abort: { body: 'capsule', capsule: 'vostok', phase: 'landed' } } as unknown as VisualFrame;
+    expect(norm(drawnFrame(frame).r) - R_EARTH).toBeCloseTo(0.95, 2);
+    // on its side, the CG at the centre's height
+    const side = { ...frame, rigid: { attitudeQ: turned(v3(-up.z, 0, up.x)) } } as unknown as VisualFrame;
+    expect(norm(drawnFrame(side).r) - R_EARTH).toBeCloseTo(1.15, 2);
+    // still flying, it is drawn at its height
+    const flying = { ...frame, abort: { body: 'capsule', capsule: 'vostok', phase: 'main' } } as unknown as VisualFrame;
+    expect(norm(drawnFrame(flying).r) - R_EARTH).toBeCloseTo(h, 2);
+  });
+
+  it('stands on the drawn WGS-84 ground, whatever the recording\'s chord and its touchdown step left it at', () => {
     const lat = 51.27 * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
     const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
     // the sphere's CG 2.4 m under where it rests (0.95 m up, its heavy side down), as between two frames 30 s apart
@@ -292,6 +358,36 @@ describe('the ground Vostok-1 comes down on', () => {
     view.update(sceneAt(ground, 30), mercury);
     expect(parts(view).sea.group.visible).toBe(true);
     expect(parts(view).land).toBeNull();
+    view.dispose();
+  });
+
+  // Kept as it stood before D-51, on the drawn 6,378.137 km sphere (its own
+  // ground there, as then); it fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md. The next test is the drawn
+  // WGS-84 ground's.
+  it('puts the fields on the drawn sphere, where the bodies on the ground stand, and not 1.3 km under them', () => {
+    const ground = v3(R_EARTH * Math.cos(lat) * Math.cos(lon), R_EARTH * Math.cos(lat) * Math.sin(lon), R_EARTH * Math.sin(lat));
+    const onSphere = { ...vostok('landed', 0), r: ground } as unknown as VisualFrame;
+    const view = new RecoverySceneryView(baikonur);
+    view.update(sceneAt(ground, 30), onSphere);
+    const anchor = parts(view).land!.anchor.group;
+    anchor.updateMatrixWorld(true);
+    // centred on the step grid within a step of the sphere
+    expect(anchor.position.distanceTo(new THREE.Vector3(ground.x, ground.y, ground.z))).toBeLessThan(1000);
+    let worst = 0, meshes = 0;
+    const p = new THREE.Vector3();
+    anchor.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      // every number finite, the plain's too (three sorts by the bounding sphere, and a NaN blanked the picture)
+      for (const a of Object.values(mesh.geometry.attributes)) expect((a.array as Float32Array).every(Number.isFinite)).toBe(true);
+      if (!(mesh.material as THREE.MeshStandardMaterial).map) return;
+      meshes++;
+      const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) worst = Math.max(worst, Math.abs(p.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld).length() - R_EARTH));
+    });
+    expect(meshes).toBe(1);
+    expect(worst).toBeLessThan(0.05);
     view.dispose();
   });
 
@@ -419,6 +515,27 @@ describe('the spacecraft turned for its retro-fire', () => {
 });
 
 describe('the bodies Vostok-1 lets go of, in the telemetry list', () => {
+  // Kept as it stood before D-51 (the flag `wgs84` is now `fine`): a stage read
+  // its height above the 6,378.137 km sphere, 0 there; it reads it above WGS-84
+  // now, so this fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md. The next test is D-51's.
+  it('reads the hatch, the seat and the module above WGS-84 in the return, Blok E above the sphere', () => {
+    const lat = 51.27 * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
+    const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
+    const r = v3((N + 4000) * Math.cos(lat), 0, (N * (1 - e2) + 4000) * Math.sin(lat));
+    const frame = { abort: { body: 'capsule', capsule: 'vostok' } } as unknown as VisualFrame;
+    for (const kind of ['hatch', 'seat', 'instrumentModule'] as const) {
+      const row = debrisRowAltitude({ r, visual: { kind, diameter: 1, length: 1, color: '#fff' } } as never, frame);
+      expect(row.fine).toBe(true);
+      expect(row.km).toBeCloseTo(4, 3);
+    }
+    // the 6,378 km sphere is 12.5 km over that seat: 0 on it, as the row read before
+    const blokE = debrisRowAltitude({ r, visual: { kind: 'upperStage', diameter: 2.6, length: 3, color: '#fff' } } as never, frame);
+    expect(blokE.fine).toBe(false);
+    expect(blokE.km).toBe(0);
+    expect(debrisRowAltitude({ r, visual: { kind: 'seat', diameter: 1, length: 1, color: '#fff' } } as never, null).fine).toBe(false);
+  });
+
   it('reads every body above WGS-84, the hatch, the seat and the module to a tenth in the return', () => {
     const lat = 51.27 * Math.PI / 180, e2 = WGS84_F * (2 - WGS84_F);
     const N = WGS84_A / Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
