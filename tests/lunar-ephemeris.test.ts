@@ -8,10 +8,11 @@
  * state, propagated, meets the Moon where the Mission Report said it would.
  */
 import { describe, expect, it } from 'vitest';
-import { MOON_1969 } from '../src/data/ephemeris-1969';
+import { MOON_1969, SUN_1969 } from '../src/data/ephemeris-1969';
 import { inEphemerisTable, moonState, precessionFromJ2000, sunState, TDB_MINUS_UTC_1969 } from '../src/physics/lunar/ephemeris';
 import { moonPosition } from '../src/physics/propagator/ephemeris';
 import { eciToSelenographic, moonBodyToEci, selenographicToEci } from '../src/physics/lunar/orientation';
+import { hex, sha256 } from './eo-phy-6/harness';
 
 const utc = (jdTdb: number) => jdTdb - TDB_MINUS_UTC_1969 / 86400;
 const norm = (x: number, y: number, z: number) => Math.hypot(x, y, z);
@@ -82,5 +83,58 @@ describe('which way the Moon faces', () => {
     expect(back.lat).toBeCloseTo(0.67408, 9);
     expect(back.lon).toBeCloseTo(23.47297, 9);
     expect(back.r).toBeCloseTo(1737.4e3, 3);
+  });
+});
+
+describe('the DE441 table, Apollo 11\'s week, packed as integers', () => {
+  // The one-week table (fetched 2026-09-27, 198 rows, to 07-24 18:00 TDB) as it was written out in decimals,
+  // each double as 16 hex digits big-endian, hashed with SHA-256: the packed table must give the same, bit for bit.
+  const ONE_WEEK = {
+    moon: '49c29dba8a750da1d3c62d3d84c15ba4842c9560ace65199e56fb9e62cd4f6a7',
+    sun: '9edeb0e75a6480849115fe7ece90e653d7f5a112c31383eeacf3a79a99662cac',
+  };
+  it('is the one-week table, to the bit', async () => {
+    for (const [T, want] of [[MOON_1969, ONE_WEEK.moon], [SUN_1969, ONE_WEEK.sun]] as const) {
+      expect(T.jd0).toBe(2440419.041666667);
+      expect(T.stepHours).toBe(1);
+      expect(T.count).toBe(198);
+      expect(T.data.length).toBe(198 * 6);
+      expect(await sha256(T.data.map(hex).join(''))).toBe(want);
+    }
+  });
+
+  it('is smooth to its rounding over every hour: the positions\' five-point derivative is the velocity column', () => {
+    // positions to the metre, velocities to 1e-7 km/s: the derivative's own rounding is (1 + 8 + 8 + 1) × 0.5 m / 12 h ≈ 2.1e-4 m/s
+    for (const T of [MOON_1969, SUN_1969]) {
+      const h = T.stepHours * 3600, at = (i: number, c: number) => T.data[i * 6 + c];
+      let worst = 0;
+      for (let i = 2; i < T.count - 2; i++) for (let c = 0; c < 3; c++) {
+        const fd = (at(i - 2, c) - 8 * at(i - 1, c) + 8 * at(i + 1, c) - at(i + 2, c)) / (12 * h);
+        worst = Math.max(worst, Math.abs(fd - at(i, c + 3)) * 1e3);
+      }
+      expect(worst).toBeLessThan(2.1e-4 + 1e-4);
+    }
+  });
+
+  it('keeps the Moon and the Sun at their distances of July 1969, and the series within a few hundred kilometres', () => {
+    for (let i = 0; i < MOON_1969.count; i++) {
+      const k = i * 6, m = norm(MOON_1969.data[k], MOON_1969.data[k + 1], MOON_1969.data[k + 2]);
+      const su = norm(SUN_1969.data[k], SUN_1969.data[k + 1], SUN_1969.data[k + 2]) * 1e3 / 1.495978707e11;
+      expect(m).toBeGreaterThan(356e3);
+      expect(m).toBeLessThan(407e3);
+      expect(su).toBeGreaterThan(1.01);
+      expect(su).toBeLessThan(1.017);
+      if (i % 24 === 0) {
+        const jd = utc(MOON_1969.jd0 + i / 24), st = moonState(jd), p = precessionFromJ2000(jd), q = moonPosition(jd);
+        const r = { x: p[0] * q[0] + p[1] * q[1] + p[2] * q[2], y: p[3] * q[0] + p[4] * q[1] + p[5] * q[2], z: p[6] * q[0] + p[7] * q[1] + p[8] * q[2] };
+        expect(norm(r.x - st.r.x, r.y - st.r.y, r.z - st.r.z)).toBeLessThan(500e3);
+      }
+    }
+    // the table's span, UTC: 16 July 1969 12:59:20 to 24 July 17:59:20
+    const end = MOON_1969.jd0 + (MOON_1969.count - 1) / 24;
+    expect(inEphemerisTable(utc(MOON_1969.jd0))).toBe(true);
+    expect(inEphemerisTable(utc(end))).toBe(true);
+    expect(inEphemerisTable(utc(end) + 1 / 86400)).toBe(false);
+    expect(inEphemerisTable(utc(MOON_1969.jd0) - 1 / 86400)).toBe(false);
   });
 });

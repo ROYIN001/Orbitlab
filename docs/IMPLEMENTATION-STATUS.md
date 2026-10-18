@@ -346,7 +346,13 @@ minute of the flown time and a few kilometres of the flown point, and the comman
 and the service module drawn — done; (6g) the viewer and the documents — the ascent stage drawn in its
 own shape, the lift-off watched looking down at the descent stage it leaves, the braking and the
 station-keeping from behind Eagle with Columbia ahead, the entry's glow, the station-keeping at 10×, the
-whole flight in about forty minutes of Watch, and the README — done; (7) the fleet acceptance and the
+whole flight in about forty minutes of Watch, and the README — done; (6h) another launch of the spacecraft
+— a few minutes later or into another parking orbit — flown to the Moon and home when the model can fly it, its
+injection and every burn after it worked out for that launch (the owner's decision of 2026-10-17), and otherwise
+left in its parking orbit with the reason; the Moon's table holds the week only (D-11, the owner's answer of
+2026-10-18), so this is for launches from 13:32:00 to 13:40:45 UTC on 16 July, and a later one stays in its
+parking orbit; the landing keeps Tranquility Base and the flown mission times
+([PHYSICS.md §13.10](PHYSICS.md)) — done; (7) the fleet acceptance and the
 documents.
 
 Twenty further items are kept for later, once these are done.

@@ -190,7 +190,8 @@ export function targetMidcourse(jd0: number, t0: number, s: CislunarState, aim: 
   return null;
 }
 
-function solve3(A: number[][], b: number[]): number[] | null {
+/** A 3 × 3 linear system by Cramer's rule; null when it is singular. */
+export function solve3(A: number[][], b: number[]): number[] | null {
   const det = (m: number[][]) => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
     + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
   const D = det(A);

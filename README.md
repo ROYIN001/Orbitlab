@@ -138,7 +138,8 @@ not directly comparable vehicle-to-vehicle, since the reference orbit differs.
 The last three are the historical vehicles of roadmap C01, flown in lessons 5.3–5.5 on the
 missions they flew: Sputnik-1 to 215 × 939 km, Vostok-1 to 181 × 327 km, and Apollo 11's
 parking orbit and translunar injection (the lesson's injection is an apogee raise to 370 000 km;
-the Moon is modelled for Apollo 11's week only, from JPL's DE441 table, in Watch's Apollo 11 flight).
+the Moon is modelled for Apollo 11's week only, from JPL's DE441 table, in Watch's Apollo 11 flight
+and in launches of it from 13:32:00 to 13:40:45 UTC on 16 July 1969, whose missions fit in that week).
 
 Falcon 9, Falcon Heavy and Starship also support **first-stage recovery** (reserves
 propellant for an entry and landing burn); Soyuz-2.1a, Falcon 9 and Starship support
