@@ -115,6 +115,25 @@ export class BurnSequencer {
     return apsides ? { ...el, ...apsides } : el;
   }
 
+  /**
+   * The apoapsis a raise burn is cut off on. D-51: the burn that puts a
+   * transfer's apogee on the mission's (geostationary transfer, Molniya,
+   * Tundra) is cut off on the apex the orbit will really reach under J2, as
+   * it is judged (`judgedElements`), once the conic is within 5 % of it: from
+   * near the perigee the conic reads up to 180 km off that apex (Ariane 64 to
+   * a geostationary transfer: 35 720 km on the conic, 35 540 km flown). Every
+   * other raise: the conic of `el`.
+   */
+  apexOf(el: OrbitalElements, b: BurnPlan): number {
+    const target = this.sim.plan.target;
+    if (b.targetApoapsis !== target.apogee || !(target.apogee - target.perigee > 50e3) || !(el.e < 1)
+      || Math.abs(el.apoapsisAlt - target.apogee) > 0.05 * target.apogee) return el.apoapsisAlt;
+    const s = this.sim.state;
+    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, geodeticHeight(s.r))).p, s.mass);
+    const apex = nextJ2Apsis({ r: s.r, v: tail > 0 ? addScaled(s.v, s.dir, tail) : s.v }, 'apoapsis', { includeInitial: true });
+    return apex ? apex.radiusM - R_EARTH : el.apoapsisAlt;
+  }
+
   failRigidOrbitPrediction(): void {
     const s = this.sim.state;
     this.sim.event('evt.burnPredictionUnavailable', 'warn');
@@ -624,7 +643,7 @@ export class BurnSequencer {
       // Completion is judged on the apoapsis itself. The velocity-to-be-gained
       // figure is only meaningful exactly at the periapsis, so it must not be
       // allowed to end the burn.
-      else if (b.lowering ? el.apoapsisAlt <= target + tolA : el.apoapsisAlt >= target - tolA) complete = true;
+      else if (b.lowering ? this.apexOf(el, b) <= target + tolA : this.apexOf(el, b) >= target - tolA) complete = true;
       // Safety: a retrograde apoapsis trim must never dig the periapsis out of
       // the orbit — and never below the insertion floor whatever the target is.
       // The floor half is the same rule as `abandonInsertion`, stated where the

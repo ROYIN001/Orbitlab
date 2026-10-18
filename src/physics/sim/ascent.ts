@@ -113,7 +113,17 @@ export class AscentMonitor {
     if (!this.sim.state.liftoff || alt < 100e3) return false;
     // the orbit the ascent is aimed at (`MissionPlan.aim`, C01: Vostok-1's planned one), else the mission's
     const aim = this.sim.plan.aim ?? this.sim.plan.target;
-    if (orbitResiduals(aim, this.measured(el, aim), this.sim.raanWasReachable(), SINGLE_SHOT_CUTOFF_BAND).onTarget) return true;
+    const judged = this.measured(el, aim);
+    // D-51: a circle under J2 is no circle. Its lowest and highest heights stay
+    // several kilometres apart whatever the speed (198.6 to 206.0 km for
+    // Soyuz-2.1a's 200 km circle from Baikonur), so a quarter of the band on
+    // both of them can never be met. A circular aim is cut off where the
+    // middle of the two reaches the target, inside the full band, as the
+    // planner aims a circular orbit's last burn (`finalPhysicalCorrection`).
+    if (judged !== el && Math.abs(aim.apogee - aim.perigee) < 1e3) {
+      if ((judged.periapsisAlt + judged.apoapsisAlt) / 2 >= (aim.perigee + aim.apogee) / 2
+        && orbitResiduals(aim, judged, this.sim.raanWasReachable()).onTarget) return true;
+    } else if (orbitResiduals(aim, judged, this.sim.raanWasReachable(), SINGLE_SHOT_CUTOFF_BAND).onTarget) return true;
     if (el.periapsisAlt < Math.min(this.sim.plan.insertionAltitude, ASCENT_MIN_PERIAPSIS)) return false;
     const residual = Math.abs(el.apoapsisAlt - this.sim.plan.insertionApoapsis)
       + Math.abs(el.periapsisAlt - this.sim.plan.insertionAltitude);
@@ -134,11 +144,14 @@ export class AscentMonitor {
    * pulls hardest: so its cut-off is decided on the extremes of the next
    * revolution under J2 from the state the cut-off would leave
    * (`BurnSequencer.extremesOf`), once the conic is within 50 km of the aim —
-   * J2 moves them no further than about 20 km from it in low orbit. Every
-   * other mission: the conic.
+   * J2 moves them no further than about 20 km from it in low orbit. D-51:
+   * every mission is judged on those extremes (`judgedElements`), so every
+   * single burn is cut off on them too; on the conic, Soyuz-2.1a with 6 318 kg
+   * to a 200 km circle cut off at 197.9 × 202.9 km and was judged
+   * 199.6 × 211.2 km, off target.
    */
   private measured(el: OrbitalElements, aim: { perigee: number; apogee: number }): OrbitalElements {
-    if (!this.sim.cfg.orbit.extremes || !(el.e < 1)) return el;
+    if (!(el.e < 1)) return el;
     if (el.apoapsisAlt < aim.apogee - 50e3 || el.periapsisAlt < aim.perigee - 50e3) return el;
     return this.sim.burns.extremesOf(el);
   }
