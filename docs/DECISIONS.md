@@ -289,6 +289,18 @@ The owner answered in chat on 2026-10-18, at about 14:38 UTC, the seven question
 The report's questions were reworded after the review round of 2026-10-18 (the version at fd7796c, 11 questions). Questions 1–7 there are the ones answered above, with their numbers updated; question 4 there asks only where the lessons' semi-major axis is read, which answer 4 (ก) already settles (the physical apsides' mean). Not answered by the message above, and asked again: question 5's lesson S2 bound, and questions 8–11.
 
 
+## Decided 2026-10-18 (the re-baseline's further questions, chat)
+
+The owner answered in chat on 2026-10-18, at about 21:00 UTC, the questions asked again above (the re-baseline report at fd7796c, as put in chat that evening: 5's lesson S2 bound, 8, 9, 10 and 11), verbatim "5.ก 8.ใช้ขนาดตามของจริง 9.ตามที่เสนอ คือ นำไปทำเป็นงานต่อไปโดยการปรับค่าใหม่ให้ตรงตามจริง 10.ข 11 ก". The owner did not object to the session applying answers 2 (ก) and 3 (ก) to the cases the review round added under the same headings (Progress MS-19's insertion and VA267's P120C separation under 2; the instruments reading the osculating ellipse under 3), as the session said in chat it would.
+
+| Date | Question | Answer | Where it lands |
+|---|---|---|---|
+| 2026-10-18 | 5, lesson S2's navigation bound (1 000 m; the star-tracker flight now 997.01 m) | "5.ก" — option (ก) of the S2 item as asked in chat: keep the bound at 1 000 m (a later small change can flip S2) | `src/lessons/pack-sources/ru-24-05-06.ts` unchanged |
+| 2026-10-18 | 8, the catalogue's thrust pairs against published exit sizes (Raptor 2, Vulcain 2.1, the F-1) | "8.ใช้ขนาดตามของจริง" — use the real sizes: option (ข), take the published exit where a primary source gives it and let the sea-level thrust follow, engine by engine, each with its source read | the re-baseline PR: `src/data/nozzles.ts` and the engines' catalogue rows, each with its source (or kept, with the reason, where none can be read) |
+| 2026-10-18 | 9, the validation rows the thrust law moves (CRS-16 and Atlas V Juno max-Q, Juno's fairing, GPS III SV01 at T+60, SSO-A max-Q; PSLV-XL's peak-factor-2 counterfactual) | "9.ตามที่เสนอ คือ นำไปทำเป็นงานต่อไปโดยการปรับค่าใหม่ให้ตรงตามจริง" — as proposed: (ก) now, each row recorded as a disagreement with its cause, with (ค), PSLV-XL's counterfactual at a peak factor that keeps the published peak thrust; and (ข), the throttle profiles the published callouts constrain re-derived under the new law, as the next piece of work | the re-baseline PR for (ก) and (ค); (ข) is plan item M-PHYSICS-080 in R4.3, the placement only (D-65) |
+| 2026-10-18 | 10, the guidance's vertical after the pitch-over (the vertical rise on the plumb line, everything after the kick on the radius, 0.19° apart) | "10.ข" — option (ข): fly the whole guidance in the geodetic frame, the programme's lean taken out of the plane, with a full re-measure | the re-baseline PR: the guidance, then the fleet table, the ratings and every golden measured again |
+| 2026-10-18 | 11, the 16 assertions kept as they were, and the fleet gate | "11 ก" — option (ก): in the re-record step retire the 16 and keep the tests beside them that state the decided law; the fleet gate stays on the physical apsides in both models (the proposal for the gate, (ก)) | the re-baseline PR, in the re-record step |
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
