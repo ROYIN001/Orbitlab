@@ -77,6 +77,20 @@ export async function reloadDocument(page, control, ready = () => page.waitForSe
   await ready();
 }
 
+/**
+ * Hold (or let go) the page's animation frames (`initScript`). Best effort:
+ * a closed or navigating page, or one whose main thread does not answer
+ * within 5 s, is screenshotted as it is.
+ */
+async function holdFrames(page, on) {
+  if (page.isClosed()) return;
+  let timer;
+  await Promise.race([
+    page.evaluate((hold) => window.__holdFrames?.(hold), on).catch(() => {}),
+    new Promise((resolve) => { timer = setTimeout(resolve, 5_000); }),
+  ]).finally(() => clearTimeout(timer));
+}
+
 async function pageDiagnostics(page, pendingRequests) {
   if (page.isClosed()) return { closed: true };
   let timer;
@@ -160,6 +174,32 @@ function initScript({ lang, guide }) {
     if (!guide) localStorage.setItem('orbitlab.guide.v1', 'dismissed');
     if (lang && !localStorage.getItem('orbitlab.lang')) localStorage.setItem('orbitlab.lang', lang);
   } catch { /* storage off: the app falls back to its defaults */ }
+  // `window.__holdFrames(true)` keeps the page's animation-frame callbacks
+  // waiting until `__holdFrames(false)`; a callback whose frame comes while
+  // held runs in the first frame after. `app.shot` holds them over a
+  // screenshot (see there). Not held, each callback runs in its own frame.
+  const raf = window.requestAnimationFrame.bind(window);
+  const caf = window.cancelAnimationFrame.bind(window);
+  const live = new Map(); // id → the browser's id
+  const waiting = new Map(); // id → callback, its frame came while held
+  let held = false, ids = 0;
+  const arm = (id, callback) => live.set(id, raf((now) => {
+    live.delete(id);
+    if (held) waiting.set(id, callback);
+    else callback(now);
+  }));
+  window.requestAnimationFrame = (callback) => { const id = ++ids; arm(id, callback); return id; };
+  window.cancelAnimationFrame = (id) => {
+    waiting.delete(id);
+    if (live.has(id)) { caf(live.get(id)); live.delete(id); }
+  };
+  window.__holdFrames = (on) => {
+    held = !!on;
+    if (held) return;
+    const due = [...waiting];
+    waiting.clear();
+    for (const [id, callback] of due) arm(id, callback);
+  };
 }
 
 /**
@@ -208,12 +248,28 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
         goto: async (h = '') => { await page.goto(`${base}${h}`, { waitUntil: 'domcontentloaded', timeout: 120_000 }); await app.ready(); },
         /** Call one of the app's WebMCP tools (src/mcp.ts); throws what the tool throws. */
         mcp: (tool, input = {}) => page.evaluate(([n, i]) => window.__mcp(n, i), [tool, input]),
-        /** A screenshot into the run's directory, if it has one. */
+        /**
+         * A screenshot into the run's directory, if it has one, of the page as
+         * it stands. Its animation frames are held while it is taken, as
+         * `animations: 'disabled'` holds its CSS animations; the canvas keeps
+         * its last frame. A capture waits for compositor frames that hold the
+         * canvas's newest frame, so for all the WebGL work queued before it.
+         * On the runners' software GPU the headless shell lets the landing
+         * page's scene run 5 to 12 frames (seconds) ahead of the GPU, and a
+         * page left drawing queued more frames while the capture waited for
+         * them: 9 to 15 s on a loaded 4-core container, over 30 s on CI
+         * (teaching-held). Held, it waits only for what was already queued.
+         */
         shot: async (label) => {
           if (!shots) return null;
           mkdirSync(shots, { recursive: true });
           const path = join(shots, `${name}-${label}.png`);
-          await page.screenshot({ path, animations: 'disabled' });
+          await holdFrames(page, true);
+          try {
+            await page.screenshot({ path, animations: 'disabled' });
+          } finally {
+            await holdFrames(page, false);
+          }
           return path;
         },
         diagnostics: () => pageDiagnostics(page, pendingRequests),
