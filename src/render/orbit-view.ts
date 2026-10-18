@@ -33,12 +33,13 @@ varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vPosW;
 void main() {
-  vUv = uv;
-  vNormalW = normalize(mat3(modelMatrix) * normal);
-  vec4 w = modelMatrix * vec4(position, 1.0);
-  vPosW = w.xyz;
-  gl_Position = projectionMatrix * viewMatrix * w;
+vUv = uv;
+vNormalW = normalize(mat3(modelMatrix) * normal);
+vec4 w = modelMatrix * vec4(position, 1.0);
+vPosW = w.xyz;
+gl_Position = projectionMatrix * viewMatrix * w;
 }`;
+/** EARTH_FRAG's `rim`: a thin blue limb, where the view grazes the atmosphere. */
 const EARTH_FRAG = /* glsl */ `
 uniform sampler2D dayMap;
 uniform sampler2D nightMap;
@@ -49,17 +50,16 @@ varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vPosW;
 void main() {
-  vec3 n = normalize(vNormalW);
-  float ndl = dot(n, sunDir);
-  float day = smoothstep(-0.08, 0.12, ndl);
-  vec3 dayCol = hasMaps > 0.5 ? texture2D(dayMap, vUv).rgb : vec3(0.16, 0.34, 0.62);
-  vec3 nightCol = hasMaps > 0.5 ? texture2D(nightMap, vUv).rgb * vec3(1.0, 0.85, 0.6) : vec3(0.0);
-  vec3 col = dayCol * (0.1 + 1.05 * max(ndl, 0.0)) * day + nightCol * (1.0 - day) * 0.9 + dayCol * 0.05;
-  // a thin blue limb, where the view grazes the atmosphere
-  float rim = pow(1.0 - max(dot(n, normalize(camPos - vPosW)), 0.0), 3.0);
-  col += vec3(0.25, 0.45, 0.9) * rim * (0.25 + 0.75 * day);
-  gl_FragColor = vec4(col, 1.0);
-  #include <colorspace_fragment>
+vec3 n = normalize(vNormalW);
+float ndl = dot(n, sunDir);
+float day = smoothstep(-0.08, 0.12, ndl);
+vec3 dayCol = hasMaps > 0.5 ? texture2D(dayMap, vUv).rgb : vec3(0.16, 0.34, 0.62);
+vec3 nightCol = hasMaps > 0.5 ? texture2D(nightMap, vUv).rgb * vec3(1.0, 0.85, 0.6) : vec3(0.0);
+vec3 col = dayCol * (0.1 + 1.05 * max(ndl, 0.0)) * day + nightCol * (1.0 - day) * 0.9 + dayCol * 0.05;
+float rim = pow(1.0 - max(dot(n, normalize(camPos - vPosW)), 0.0), 3.0);
+col += vec3(0.25, 0.45, 0.9) * rim * (0.25 + 0.75 * day);
+gl_FragColor = vec4(col, 1.0);
+#include <colorspace_fragment>
 }`;
 
 /** O02: an orbit of a plan drawn beside the one flown — a transfer, the orbit after it, a target's. */

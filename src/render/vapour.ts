@@ -73,49 +73,56 @@ export class VapourCone {
   }
 }
 
+/*
+ * VERT.
+ * - vUv: the lathe's v runs from the trailing edge (0) to the shoulder (1).
+ * - vRim: a sheet is seen edge-on at its silhouette: thicker there.
+ */
 const VERT = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_vertex>
-  varying vec2 vUv;
-  varying float vRim;
-  void main() {
-    // the lathe's v runs from the trailing edge (0) to the shoulder (1)
-    vUv = uv;
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    vec3 nrm = normalize(normalMatrix * normal);
-    // a sheet is seen edge-on at its silhouette: thicker there
-    vRim = 1.0 - abs(dot(nrm, normalize(-mv.xyz)));
-    gl_Position = projectionMatrix * mv;
-    #include <logdepthbuf_vertex>
-  }
+#include <common>
+#include <logdepthbuf_pars_vertex>
+varying vec2 vUv;
+varying float vRim;
+void main() {
+vUv = uv;
+vec4 mv = modelViewMatrix * vec4(position, 1.0);
+vec3 nrm = normalize(normalMatrix * normal);
+vRim = 1.0 - abs(dot(nrm, normalize(-mv.xyz)));
+gl_Position = projectionMatrix * mv;
+#include <logdepthbuf_vertex>
+}
 `;
 
+/*
+ * FRAG.
+ * - along: 1 at the shoulder, 0 at the trailing edge.
+ * - streaks, body, ragged, flicker: dense at the shoulder, ragged and thinning aft; the shock flickers.
+ */
 const FRAG = /* glsl */ `
-  #include <common>
-  #include <logdepthbuf_pars_fragment>
-  uniform float uStrength;
-  uniform float uT;
-  uniform float uLight;
-  varying vec2 vUv;
-  varying float vRim;
-  float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float noise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(h(i), h(i + vec2(1, 0)), u.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), u.x), u.y);
-  }
-  void main() {
-    #include <logdepthbuf_fragment>
-    float along = vUv.y;                      // 1 at the shoulder, 0 at the trailing edge
-    // dense at the shoulder, ragged and thinning aft; the shock flickers
-    float streaks = noise(vec2(vUv.x * 42.0, along * 3.0 - uT * 6.0)) * 0.6 + noise(vec2(vUv.x * 11.0 + uT * 0.7, along * 7.0)) * 0.4;
-    float body = smoothstep(0.0, 0.55, along) * (1.0 - smoothstep(0.93, 1.0, along));
-    float ragged = smoothstep(0.25, 0.75, streaks + along * 0.35);
-    float flicker = 0.8 + 0.2 * sin(uT * 37.0 + vUv.x * 6.2831);
-    float a = uStrength * body * ragged * flicker * (0.35 + 0.65 * vRim) * 0.85;
-    if (a < 0.004) discard;
-    gl_FragColor = vec4(vec3(0.97, 0.98, 1.0) * uLight, a);
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform float uStrength;
+uniform float uT;
+uniform float uLight;
+varying vec2 vUv;
+varying float vRim;
+float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+vec2 i = floor(p), f = fract(p);
+vec2 u = f * f * (3.0 - 2.0 * f);
+return mix(mix(h(i), h(i + vec2(1, 0)), u.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), u.x), u.y);
+}
+void main() {
+#include <logdepthbuf_fragment>
+float along = vUv.y;
+float streaks = noise(vec2(vUv.x * 42.0, along * 3.0 - uT * 6.0)) * 0.6 + noise(vec2(vUv.x * 11.0 + uT * 0.7, along * 7.0)) * 0.4;
+float body = smoothstep(0.0, 0.55, along) * (1.0 - smoothstep(0.93, 1.0, along));
+float ragged = smoothstep(0.25, 0.75, streaks + along * 0.35);
+float flicker = 0.8 + 0.2 * sin(uT * 37.0 + vUv.x * 6.2831);
+float a = uStrength * body * ragged * flicker * (0.35 + 0.65 * vRim) * 0.85;
+if (a < 0.004) discard;
+gl_FragColor = vec4(vec3(0.97, 0.98, 1.0) * uLight, a);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
 `;

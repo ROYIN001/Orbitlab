@@ -60,20 +60,20 @@ const BEND_SAMPLES = 11;
 const BEND_VERTEX = /* glsl */`
 vec4 mvPosition = vec4( transformed, 1.0 );
 #ifdef USE_BATCHING
-	mvPosition = batchingMatrix * mvPosition;
+mvPosition = batchingMatrix * mvPosition;
 #endif
 #ifdef USE_INSTANCING
-	mvPosition = instanceMatrix * mvPosition;
+mvPosition = instanceMatrix * mvPosition;
 #endif
 vec4 bendWorld = modelMatrix * mvPosition;
 if ( uBendAmp.x != 0.0 || uBendAmp.y != 0.0 ) {
-	vec4 bendLocal = uBendInverse * bendWorld;
-	float u = clamp( ( bendLocal.y - uBendY0 ) / uBendDy, 0.0, ${BEND_SAMPLES - 1}.0 );
-	int i = int( min( floor( u ), ${BEND_SAMPLES - 2}.0 ) );
-	float phi = mix( uBendShape[ i ], uBendShape[ i + 1 ], u - float( i ) );
-	bendLocal.x += uBendAmp.x * phi;
-	bendLocal.z += uBendAmp.y * phi;
-	bendWorld = uBendWorld * bendLocal;
+vec4 bendLocal = uBendInverse * bendWorld;
+float u = clamp( ( bendLocal.y - uBendY0 ) / uBendDy, 0.0, ${BEND_SAMPLES - 1}.0 );
+int i = int( min( floor( u ), ${BEND_SAMPLES - 2}.0 ) );
+float phi = mix( uBendShape[ i ], uBendShape[ i + 1 ], u - float( i ) );
+bendLocal.x += uBendAmp.x * phi;
+bendLocal.z += uBendAmp.y * phi;
+bendWorld = uBendWorld * bendLocal;
 }
 mvPosition = viewMatrix * bendWorld;
 gl_Position = projectionMatrix * mvPosition;
