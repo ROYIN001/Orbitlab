@@ -8,6 +8,9 @@
  * flown stays in its parking orbit, and says why: another spacecraft; a mission running past the Moon's table; no
  * injection found from its parking orbit; or none the S-IVB has the propellant for. Before the rule such launches
  * flew the lunar profile anyway and logged a lunar orbit insertion tens of thousands of kilometres from the Moon.
+ * The Moon's table holds Apollo 11's week only (D-11; the owner's answer 8.2 (ข) of 2026-10-18), so the whole
+ * mission fits in it for launches from 13:32:00 to 13:40:45 UTC on 16 July 1969 alone, the parking orbit edited or
+ * not; the cases below that fly, or stop for want of an injection, are launched in that window.
  * The figures: docs/development/reports/argon4-fu-apollo.md.
  */
 import { describe, expect, it } from 'vitest';
@@ -58,9 +61,11 @@ describe('Apollo 11\'s lunar profile: its own launch as flown, another computed 
     ['launched in 2026, outside the Moon\'s table', { launchTime: new Date('2026-07-16T13:32:00Z') }, 'evt.lunarProfileOff'],
     ['launched on 24 July 1969, its mission running past the table\'s end', { launchTime: new Date('1969-07-24T13:32:00Z') }, 'evt.lunarProfileOff'],
     ['flown on another Saturn V with another spacecraft', { vehicleId: 'saturnv', satelliteId: 'crew' }, 'evt.lunarProfileOff'],
-    ['launched an hour late, off the flown node and the S-IVB with less Δv left than an injection takes', { launchTime: at(60) }, 'evt.tliUnsolved'],
-    ['launched forty minutes late, the S-IVB short of propellant for the injection it needs', { launchTime: at(40) }, 'evt.tliPropellant'],
-    ['launched on 20 July 1969 into the flown parking plane, the turn into the Moon\'s plane past the steering\'s yaw', { launchTime: new Date('1969-07-20T13:32:00Z') }, 'evt.tliUnsolved'],
+    ['launched at 13:40:46, a second too late for its mission to end inside the table', { launchTime: new Date('1969-07-16T13:40:46Z') }, 'evt.lunarProfileOff'],
+    ['launched forty minutes late, its mission past the table\'s end', { launchTime: at(40) }, 'evt.lunarProfileOff'],
+    ['launched at range zero for a 29° parking orbit, the ascent off the plane and the S-IVB with less Δv left than an injection takes', { orbit: { inclination: 29 } }, 'evt.tliUnsolved'],
+    ['launched at range zero into a parking plane its node at 1.0°, not 359.6°, the turn into the Moon\'s plane past the steering\'s yaw', { orbit: { raan: 1 } }, 'evt.tliUnsolved'],
+    ['launched at range zero into a 300 km parking orbit, the S-IVB short of propellant for the injection it needs', { orbit: { perigee: 300e3, apogee: 300e3 } }, 'evt.tliPropellant'],
   ] as const) {
     it(`stays in its parking orbit, and says why, when ${name}`, { timeout: 120_000 }, () => {
       const sim = fly(launch(change), 10_500);
@@ -74,6 +79,13 @@ describe('Apollo 11\'s lunar profile: its own launch as flown, another computed 
       }
     });
   }
+
+  it('plans its own injection when launched at 13:40:45, the last second whose mission ends inside the table', { timeout: 120_000 }, () => {
+    const sim = fly(launch({ launchTime: new Date('1969-07-16T13:40:45Z') }), 10_500);
+    expect(sim.apollo.active).toBe(true);
+    expect(sim.events.filter((e) => why.includes(e.key))).toEqual([]);
+    expect(sim.events.filter((e) => e.key === 'evt.tliPlanned')).toHaveLength(1);
+  });
 });
 
 describe('a launch the model can fly: 13:35:56, the setup panel\'s window for the flown plane, computed to the Moon and home', () => {
