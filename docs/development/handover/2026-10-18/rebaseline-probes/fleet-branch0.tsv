@@ -1,0 +1,222 @@
+soyuz21a/leo/25	architecture	no	200.0	505.9	51.60	2817	474	no evt.targetOrbit	1
+soyuz21a/leo/50	architecture	no	200.0	506.1	51.60	1633	491	no evt.targetOrbit	1
+soyuz21a/leo/90	architecture	no	200.0	507.4	51.60	343	522	no evt.targetOrbit	0
+soyuz21a/iss/25	architecture	no	200.0	426.3	51.64	2839	473	no evt.targetOrbit	0
+soyuz21a/iss/50	architecture	no	200.0	426.1	51.64	1655	491	no evt.targetOrbit	0
+soyuz21a/iss/90	architecture	no	200.0	425.9	51.64	365	521	no evt.targetOrbit	0
+soyuz21a/sso/25	site	no	200.0	616.4	97.78	2417	486	no evt.targetOrbit	0
+soyuz21a/sso/50	site	no	200.0	617.6	97.78	1205	504	no evt.targetOrbit	0
+soyuz21a/sso/90	site	no	118.4	215.9	97.76	8	532	status failed;no evt.targetOrbit	0
+soyuz21b/leo/25		OK	493.8	506.3	51.60	3109	570		0
+soyuz21b/leo/50		OK	494.8	505.2	51.60	1569	864		1
+soyuz21b/leo/90	capability	no	-1635.5	127.7	51.60	604	-1	status failed;no evt.targetOrbit	0
+soyuz21b/iss/25		OK	412.8	427.2	51.64	3139	561		0
+soyuz21b/iss/50		OK	414.9	425.1	51.64	1612	854		0
+soyuz21b/iss/90	capability	no	-1637.9	127.7	51.64	605	-1	status failed;no evt.targetOrbit	0
+soyuz21b/sso/25	site	OK	596.7	603.3	97.78	3686	621		0
+soyuz21b/sso/50	site	OK	597.4	602.6	97.79	2377	787		0
+soyuz21b/sso/90	site	OK	597.7	602.3	97.79	878	1123		0
+soyuz21b/gto/25		OK	249.1	35766.7	51.60	2895	554		0
+soyuz21b/gto/50		OK	248.9	35740.6	51.60	2223	559		0
+soyuz21b/gto/90		OK	249.1	35711.4	51.60	1288	643		0
+protonm/leo/25		OK	497.5	502.1	51.63	2974	574		1
+protonm/leo/50	capability	no	-2100.9	181.0	51.60	2578	-1	status failed;no evt.targetOrbit	0
+protonm/leo/90	capability	no	-3391.9	125.2	51.60	1909	-1	status failed;no evt.targetOrbit	0
+protonm/iss/25		OK	417.6	422.3	51.67	3018	574		0
+protonm/iss/50	capability	no	-2101.7	180.9	51.64	2578	-1	status failed;no evt.targetOrbit	0
+protonm/iss/90	capability	no	-3392.3	125.2	51.64	1909	-1	status failed;no evt.targetOrbit	0
+protonm/sso/25	site	no	-1642.6	194.8	97.79	3526	-1	status failed;no evt.targetOrbit	0
+protonm/sso/50	site	no	-2963.8	143.6	97.79	2686	-1	status failed;no evt.targetOrbit	0
+protonm/sso/90	site	no	-3914.1	105.0	97.79	1945	-1	status failed;no evt.targetOrbit	0
+protonm/gto/25		OK	250.1	35635.9	51.60	2885	575		0
+protonm/gto/50		OK	249.2	35675.9	51.60	1816	574		0
+protonm/gto/90		OK	250.2	35634.0	51.60	365	574		0
+angaraa5/leo/25		OK	497.6	502.1	63.00	3555	761		1
+angaraa5/leo/50	capability	no	-5921.5	15.6	62.89	7662	-1	evt.vehicleLost;evt.structuralFailure;status failed;no evt.targetOrbit	0
+angaraa5/leo/90	capability	no	-6285.5	4.3	62.87	7764	-1	evt.vehicleLost;evt.structuralFailure;status failed;no evt.targetOrbit	0
+angaraa5/sso/25		OK	595.2	604.2	97.78	3028	761		0
+angaraa5/sso/50	capability	no	-4270.0	59.9	97.82	4362	-1	status failed;no evt.targetOrbit	0
+angaraa5/sso/90	capability	no	-6278.4	7.4	97.10	7409	-1	evt.vehicleLost;evt.structuralFailure;status failed;no evt.targetOrbit	0
+angaraa5/gto/25		OK	251.5	35934.3	62.97	3455	726		0
+angaraa5/gto/50		OK	260.5	35852.7	62.98	2636	739		0
+angaraa5/gto/90		OK	251.4	35576.9	62.97	1713	761		0
+falcon9/leo/25		OK	500.2	501.6	28.61	2888	492		0
+falcon9/leo/50		OK	500.1	501.6	28.61	1360	511		0
+falcon9/leo/90	capability	no	-57.6	253.7	28.61	10	-1	status failed;no evt.targetOrbit	0
+falcon9/iss/25		OK	418.1	423.2	51.64	2738	496		0
+falcon9/iss/50		OK	418.1	423.2	51.64	1201	515		0
+falcon9/iss/90	capability	no	-625.6	234.0	51.62	6	-1	status failed;no evt.targetOrbit	0
+falcon9/sso/25	site	OK	596.2	605.3	97.78	2964	500		0
+falcon9/sso/50	site	OK	594.7	606.8	97.78	1656	513		0
+falcon9/sso/90	site	OK	592.2	608.4	97.78	208	534		0
+falcon9/gto/25		OK	251.4	35658.3	28.61	1876	495		0
+falcon9/gto/50		OK	252.1	35636.9	28.61	920	501		0
+falcon9/gto/90	capability	no	252.6	25743.2	28.61	0	512	no evt.targetOrbit	0
+falconheavy/leo/25		OK	499.7	501.3	28.61	3121	489		0
+falconheavy/leo/50		OK	499.3	501.1	28.61	1244	537		0
+falconheavy/leo/90	capability	no	-538.0	200.4	28.61	4	-1	status failed;no evt.targetOrbit	0
+falconheavy/iss/25		OK	418.0	423.0	51.64	3002	497		0
+falconheavy/iss/50		OK	417.8	422.7	51.64	1101	546		0
+falconheavy/iss/90	capability	no	-1090.6	199.8	51.63	3	-1	status failed;no evt.targetOrbit	0
+falconheavy/sso/25	site	OK	591.9	608.5	97.78	2509	518		0
+falconheavy/sso/50	site	OK	595.9	603.9	97.79	523	571		0
+falconheavy/sso/90	site	no	-1961.3	269.1	97.78	3	-1	status failed;no evt.targetOrbit	0
+falconheavy/gto/25		OK	247.6	35667.0	28.61	2687	488		0
+falconheavy/gto/50		OK	247.2	35657.4	28.61	1127	507		0
+falconheavy/gto/90	capability	no	200.8	20451.3	28.61	0	538	no evt.targetOrbit	0
+atlasv551/leo/25		OK	499.2	500.9	28.61	4199	670		0
+atlasv551/leo/50		OK	499.2	501.0	28.62	2167	818		0
+atlasv551/leo/90		OK	499.2	500.9	28.62	318	1054		0
+atlasv551/iss/25		OK	416.7	423.5	51.64	4098	693		0
+atlasv551/iss/50		OK	410.9	415.4	51.64	1908	856		0
+atlasv551/iss/90		OK	411.1	415.2	51.64	42	1103		0
+atlasv551/sso/25	site	OK	591.4	608.8	97.79	3492	785		0
+atlasv551/sso/50	site	OK	593.4	601.8	97.79	1646	912		0
+atlasv551/sso/90	site	no	-144.4	478.9	97.79	1	-1	status failed;no evt.targetOrbit	0
+atlasv551/gto/25		OK	246.5	35604.5	28.61	3593	671		0
+atlasv551/gto/50		OK	246.2	35597.8	28.61	2046	728		0
+atlasv551/gto/90		OK	245.7	35584.0	28.61	286	859		0
+vulcan/leo/25		OK	499.3	501.0	28.62	4690	1018		0
+vulcan/leo/50		OK	499.3	500.9	28.62	2799	1128		0
+vulcan/leo/90		OK	499.2	501.1	28.62	1014	1308		0
+vulcan/iss/25		OK	415.8	420.7	51.64	4342	1059		0
+vulcan/iss/50		OK	414.6	419.3	51.64	2523	1164		0
+vulcan/iss/90		OK	414.0	426.0	51.65	591	1377		0
+vulcan/sso/25	site	OK	594.0	601.3	97.79	4451	1091		0
+vulcan/sso/50	site	OK	591.5	608.7	97.78	2695	1193		0
+vulcan/sso/90	site	no	597.3	602.6	97.79	275	1412	insertion at T+1412 s, limit 1400 s	0
+vulcan/gto/25		OK	246.4	35562.8	28.61	3688	1026		0
+vulcan/gto/50		OK	245.6	35560.4	28.61	2380	1075		0
+vulcan/gto/90		OK	246.1	35556.8	28.61	852	1163		0
+ariane64/leo/25		OK	500.0	500.2	5.29	4758	706		0
+ariane64/leo/50		OK	499.9	500.1	5.29	3074	815		0
+ariane64/leo/90		OK	500.0	500.2	5.29	1213	1016		0
+ariane64/iss/25		OK	417.6	422.6	51.64	4562	744		0
+ariane64/iss/50		OK	415.2	424.9	51.64	2814	865		0
+ariane64/iss/90		OK	415.8	424.3	51.63	909	1074		0
+ariane64/sso/25		OK	596.7	603.8	97.79	4678	795		0
+ariane64/sso/50		OK	594.0	606.3	97.79	3141	886		0
+ariane64/sso/90		OK	596.3	603.8	97.79	1512	1019		0
+ariane64/gto/25		OK	246.2	35540.5	5.29	3493	735		0
+ariane64/gto/50		OK	236.8	35545.1	5.29	2252	790		0
+ariane64/gto/90		OK	240.8	35545.0	5.29	793	889		0
+vegac/leo/25		OK	499.9	500.0	5.29	1138	323		0
+vegac/leo/50		OK	499.8	500.0	5.29	759	332		0
+vegac/leo/90		OK	499.6	500.0	5.29	479	348		0
+vegac/iss/25		OK	418.2	421.8	51.62	1162	327		0
+vegac/iss/50		OK	418.2	421.8	51.62	782	336		0
+vegac/iss/90		OK	417.8	422.0	51.62	439	350		0
+vegac/sso/25		OK	590.9	604.9	97.77	1308	332		0
+vegac/sso/50		OK	597.1	602.5	97.77	930	339		0
+vegac/sso/90		OK	596.1	603.3	97.77	506	347		0
+longmarch2d/leo/25	architecture	no	199.7	497.8	41.01	885	284	no evt.targetOrbit	0
+longmarch2d/leo/50	architecture	no	199.9	503.7	41.01	433	287	no evt.targetOrbit	0
+longmarch2d/leo/90	capability	no	-44.0	299.7	41.01	25	-1	status failed;no evt.targetOrbit	0
+longmarch2d/iss/25	architecture	no	199.4	426.4	51.64	859	284	no evt.targetOrbit	0
+longmarch2d/iss/50	architecture	no	199.9	419.6	51.64	411	287	no evt.targetOrbit	0
+longmarch2d/iss/90	capability	no	-150.5	292.6	51.64	26	-1	status failed;no evt.targetOrbit	0
+longmarch2d/sso/25	architecture	no	197.5	608.3	97.78	843	285	no evt.targetOrbit	0
+longmarch2d/sso/50	architecture	no	197.5	604.1	97.78	644	286	no evt.targetOrbit	0
+longmarch2d/sso/90	architecture	no	197.6	610.8	97.78	351	287	no evt.targetOrbit	0
+longmarch3be/leo/25		OK	499.3	501.2	28.50	4043	582		0
+longmarch3be/leo/50		OK	499.3	501.2	28.50	2460	640		0
+longmarch3be/leo/90		OK	499.4	500.9	28.49	794	739		0
+longmarch3be/sso/25	site	OK	597.8	602.8	97.79	3417	632		0
+longmarch3be/sso/50	site	OK	596.2	604.4	97.79	1770	696		0
+longmarch3be/sso/90	site	no	76.1	1784.9	97.79	3	-1	status failed;no evt.targetOrbit	0
+longmarch3be/gto/25		OK	247.3	35642.5	28.50	2849	593		0
+longmarch3be/gto/50		OK	247.6	35638.3	28.50	1733	620		0
+longmarch3be/gto/90		OK	247.3	35631.4	28.50	454	664		0
+h2a202/leo/25		OK	499.1	501.3	30.45	3617	700		0
+h2a202/leo/50		OK	499.0	501.1	30.45	2096	769		0
+h2a202/leo/90		OK	499.6	501.0	30.44	327	894		0
+h2a202/iss/25		OK	418.3	422.0	51.64	3517	711		0
+h2a202/iss/50		OK	418.2	421.8	51.64	1974	782		0
+h2a202/iss/90		OK	411.9	420.0	51.64	26	916		0
+h2a202/sso/25		OK	597.6	602.6	97.79	4368	712		0
+h2a202/sso/50		OK	597.8	602.9	97.79	3511	736		0
+h2a202/sso/90		OK	597.8	602.8	97.79	2406	779		0
+h2a202/gto/25		OK	259.0	35614.5	30.46	2405	711		0
+h2a202/gto/50		OK	259.0	35615.0	30.46	1492	737		0
+h2a202/gto/90		OK	260.8	35606.7	30.46	351	782		0
+longmarch5/leo/25		OK	499.6	500.5	19.66	4395	592		0
+longmarch5/leo/50		OK	499.6	500.6	19.67	2855	685		0
+longmarch5/leo/90		OK	499.6	500.6	19.67	1217	873		0
+longmarch5/iss/25		OK	418.6	421.6	51.64	4271	619		0
+longmarch5/iss/50		OK	418.6	421.5	51.64	2718	717		0
+longmarch5/iss/90		OK	418.3	421.7	51.64	984	926		0
+longmarch5/sso/25	site	OK	597.8	602.4	97.79	4686	655		0
+longmarch5/sso/50	site	OK	597.6	602.7	97.79	3404	716		0
+longmarch5/sso/90	site	OK	597.3	603.1	97.79	1958	829		0
+longmarch5/gto/25		OK	245.8	35567.2	19.67	3108	616		0
+longmarch5/gto/50		OK	246.8	35579.4	19.66	1870	672		0
+longmarch5/gto/90		OK	237.2	35572.6	19.66	475	772		0
+h3/leo/25		OK	499.1	501.2	30.45	5265	601		0
+h3/leo/50		OK	499.1	501.2	30.45	3941	655		0
+h3/leo/90		OK	499.0	501.2	30.45	2451	754		0
+h3/iss/25		OK	418.1	422.1	51.64	5210	613		0
+h3/iss/50		OK	418.2	422.0	51.64	3878	668		0
+h3/iss/90		OK	418.3	421.7	51.64	2363	772		0
+h3/sso/25		OK	597.6	602.8	97.79	5843	641		0
+h3/sso/50		OK	597.6	602.6	97.79	5061	664		0
+h3/sso/90		OK	597.8	602.6	97.79	4062	703		0
+h3/gto/25		OK	246.3	35595.8	30.45	3944	642		0
+h3/gto/50		OK	246.2	35596.3	30.45	3175	663		0
+h3/gto/90		OK	246.8	35591.2	30.45	2202	698		0
+pslvxl/leo/25		OK	499.8	500.4	13.77	1788	573		0
+pslvxl/leo/50		OK	499.8	500.3	13.77	721	727		0
+pslvxl/leo/90	capability	no	-697.6	271.8	13.77	1	-1	status failed;no evt.targetOrbit	0
+pslvxl/iss/25		OK	418.4	421.7	51.64	1655	609		0
+pslvxl/iss/50		OK	418.2	422.0	51.64	569	770		0
+pslvxl/iss/90	capability	no	-1282.3	205.4	51.64	1	-1	status failed;no evt.targetOrbit	0
+pslvxl/sso/25	site	OK	597.5	602.9	97.79	2032	616		0
+pslvxl/sso/50	site	OK	597.2	603.0	97.79	1287	687		0
+pslvxl/sso/90	site	OK	596.9	603.5	97.79	388	813		0
+pslvxl/gto/25		OK	257.0	35558.8	13.78	455	573		0
+pslvxl/gto/50	capability	no	267.2	25863.4	13.78	0	630	no evt.targetOrbit	0
+pslvxl/gto/90	capability	no	262.6	9461.8	13.77	0	723	no evt.targetOrbit	0
+electron/leo/25		OK	492.1	507.7	39.31	2699	422		0
+electron/leo/50		OK	498.4	501.6	39.32	1804	431		0
+electron/leo/90		OK	497.2	500.8	39.34	1031	441		0
+electron/iss/25		OK	415.3	426.3	51.63	2722	424		0
+electron/iss/50		OK	413.8	427.5	51.63	1840	432		0
+electron/iss/90		OK	417.1	421.9	51.64	963	441		0
+electron/sso/25		OK	595.7	604.4	97.78	3197	430		0
+electron/sso/50		OK	592.6	607.5	97.78	2291	436		0
+electron/sso/90		OK	598.2	601.9	97.78	1353	441		0
+starship/leo/25		OK	499.5	501.1	26.05	2391	482		0
+starship/leo/50		OK	499.6	501.1	26.05	1863	488		0
+starship/leo/90		OK	499.8	501.3	26.05	1157	497		0
+starship/sso/25	site	OK	597.4	603.9	97.78	1838	495		0
+starship/sso/50	site	OK	597.4	603.8	97.79	1300	501		0
+starship/sso/90	site	OK	597.3	603.5	97.79	571	511		0
+starship/gto/25		OK	250.7	35628.4	26.05	322	493		0
+starship/gto/50		OK	250.7	35626.8	26.05	149	494		0
+starship/gto/90	capability	no	250.6	29683.7	26.05	0	497	no evt.targetOrbit	0
+sputnik8k71ps/leo/25	architecture	no	199.1	510.2	51.59	210	285	no evt.targetOrbit	0
+sputnik8k71ps/leo/50	architecture	no	199.1	507.4	51.59	166	285	no evt.targetOrbit	0
+sputnik8k71ps/leo/90	architecture	no	199.1	508.6	51.59	95	286	no evt.targetOrbit	0
+sputnik8k71ps/iss/25	architecture	no	198.8	426.8	51.63	233	285	no evt.targetOrbit	0
+sputnik8k71ps/iss/50	architecture	no	198.8	428.2	51.63	188	285	no evt.targetOrbit	0
+sputnik8k71ps/iss/90	architecture	no	198.9	429.5	51.63	117	286	no evt.targetOrbit	0
+sputnik8k71ps/sso/25	site	no	-11.2	276.7	97.74	29	-1	status failed;no evt.targetOrbit	0
+sputnik8k71ps/sso/50	site	no	-126.4	266.3	97.72	30	-1	status failed;no evt.targetOrbit	0
+sputnik8k71ps/sso/90	site	no	-274.2	263.5	97.71	16	-1	status failed;no evt.targetOrbit	0
+vostok8k72k/leo/25	architecture	no	200.0	506.3	51.60	2704	551	no evt.targetOrbit	0
+vostok8k72k/leo/50	architecture	no	200.0	506.7	51.60	1677	602	no evt.targetOrbit	0
+vostok8k72k/leo/90	architecture	no	200.0	506.2	51.60	543	694	no evt.targetOrbit	0
+vostok8k72k/iss/25	architecture	no	200.0	426.3	51.64	2726	548	no evt.targetOrbit	0
+vostok8k72k/iss/50	architecture	no	200.0	426.5	51.64	1699	600	no evt.targetOrbit	0
+vostok8k72k/iss/90	architecture	no	200.0	426.6	51.64	565	692	no evt.targetOrbit	0
+vostok8k72k/sso/25	site	no	200.0	620.3	97.79	2288	595	no evt.targetOrbit	0
+vostok8k72k/sso/50	site	no	200.0	621.7	97.79	1223	652	no evt.targetOrbit	0
+vostok8k72k/sso/90	site	no	200.0	623.1	97.79	35	753	no evt.targetOrbit	0
+saturnv/leo/25		OK	499.1	501.1	28.66	4138	640		0
+saturnv/leo/50		OK	499.2	501.1	28.66	2194	740		0
+saturnv/leo/90		OK	499.6	500.7	28.64	70	938		0
+saturnv/iss/25		OK	417.5	422.7	51.64	4014	658		0
+saturnv/iss/50		OK	417.1	423.2	51.64	2046	762		0
+saturnv/iss/90	capability	no	100.3	366.3	51.64	2	960	status failed;no evt.targetOrbit	0
+saturnv/sso/25	site	OK	597.5	602.4	97.79	3486	710		0
+saturnv/sso/50	site	OK	597.1	602.5	97.79	1451	822		0
+saturnv/sso/90	site	no	-2299.4	62.3	97.79	666	-1	status failed;no evt.targetOrbit	0

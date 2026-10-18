@@ -1,0 +1,28 @@
+/** Probe (rb/hist): Sputnik-1's point-mass flight (r7sputnik), throttle, thrust, mass and acceleration every 10 s. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { vehicleById } from '../../src/data/vehicles';
+import { guidanceForVehicle } from '../../src/physics/defaults';
+import { watchMissionSettings } from '../../src/ui/watch-missions';
+import { norm, dot } from '../../src/physics/vec3';
+it('sputnik throttle', { timeout: 600_000 }, () => {
+  const s = watchMissionSettings('sputnik1');
+  const sim = new Simulation({
+    vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+    payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+    failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+  }, { headless: true });
+  const out: string[] = ['t\th km\tv\tgamma\tmass\tthrust kN\tthrottle\taccel\tq kPa\tpitch'];
+  let next = 0;
+  while (!sim.isFailed() && sim.state.t < 320) {
+    sim.step(sim.suggestedDt());
+    const st = sim.state;
+    if (st.t >= next) {
+      next += 10;
+      const r = norm(st.r), v = norm(st.v), vr = dot(st.r, st.v) / r;
+      out.push([st.t.toFixed(1), (st.altitude / 1e3).toFixed(2), v.toFixed(1), (Math.asin(vr / v) * 180 / Math.PI).toFixed(2), st.mass.toFixed(0), (st.thrust / 1e3).toFixed(1), st.throttle.toFixed(3), (st.thrust / st.mass).toFixed(1), (st.q / 1e3).toFixed(2), (st.pitch ?? NaN).toFixed?.(2)].join('\t'));
+    }
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'sputnik-thr.txt', out.join('\n') + '\n');
+});

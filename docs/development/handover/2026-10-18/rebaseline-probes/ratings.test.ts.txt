@@ -1,0 +1,14 @@
+/** Probe: the Build ratings of tests/design-ratings.test.ts' eight rows, to a file. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { vehicleById } from '../../src/data/vehicles';
+import { computedRatings } from '../../src/design/ratings';
+it('ratings', { timeout: 1_800_000 }, () => {
+  const out: string[] = [];
+  for (const id of ['soyuz21a', 'falcon9', 'longmarch2d', 'vegac', 'ariane64', 'electron']) {
+    const v = vehicleById(id), r = computedRatings(v);
+    out.push([id, 'LEO', r.payloadLEO.kg, v.payloadLEO, (r.payloadLEO.kg / v.payloadLEO).toFixed(3), r.payloadLEO.converged, r.payloadLEO.failCause ?? '',
+      'GTO', r.payloadGTO.kg, v.payloadGTO, v.payloadGTO > 0 ? (r.payloadGTO.kg / v.payloadGTO).toFixed(3) : '-', r.payloadGTO.converged, r.payloadGTO.failCause ?? ''].join('\t'));
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'ratings.tsv', out.join('\n') + '\n');
+});

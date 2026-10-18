@@ -1,0 +1,21 @@
+/** Probe: tests/recovery-return.test.ts' divert case with the stage's velocity built on the radius's up (the test's) and on the WGS-84 normal. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { divertAcceleration, type ReturnTarget } from '../../src/physics/sim/return-guidance';
+import { groundPositionEci, groundVelocityEci, enuFrame } from '../../src/physics/orbital';
+import { geodeticEnu } from '../../src/physics/geodesy';
+import { DEG } from '../../src/physics/constants';
+import { add, dot, norm, scale } from '../../src/physics/vec3';
+it('divert', () => {
+  const GMST0 = 1.234;
+  const CAPE: ReturnTarget = { kind: 'pad', id: 'lz1', lat: 28.48575 * DEG, lon: -80.54294 * DEG, alt: 3, radius: 43 };
+  const r = groundPositionEci(CAPE.lat, CAPE.lon, 2000, GMST0);
+  const radial = enuFrame(r).up, normal = geodeticEnu(CAPE.lat, CAPE.lon + GMST0).up;
+  const vRadial = add(groundVelocityEci(r), scale(radial, -200)), vNormal = add(groundVelocityEci(r), scale(normal, -200));
+  const out = [
+    `angle radial-normal deg ${(Math.acos(dot(radial, normal)) / DEG).toFixed(4)}`,
+    `|divert| with the velocity down the radius ${norm(divertAcceleration(r, vRadial, CAPE, GMST0, 0, 10)).toExponential(4)} m/s2`,
+    `|divert| with the velocity down the WGS-84 normal ${norm(divertAcceleration(r, vNormal, CAPE, GMST0, 0, 10)).toExponential(4)} m/s2`,
+  ];
+  writeFileSync(process.env.PROBE_OUT ?? 'divert.txt', out.join('\n') + '\n');
+});

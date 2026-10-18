@@ -1,0 +1,7 @@
+watch kick 3	undefined x undefined	cut 303.6 h 213.9 r-R 213.9 v 7921.7 gamma 0.11 losses g 1151 d 118 s 937	throttle from 114.0 min 0.00	left 0	boosterSep@115.9 seco@303.6 insufficientDv@303.6 offTargetOrbit@303.6
+watch kick 3.5	214.0 x 935.0	cut 303.6 h 214.0 r-R 214.0 v 7953.8 gamma 0.00 losses g 1132 d 120 s 920	throttle from 114.0 min 0.00	left 3	boosterSep@115.9 seco@303.6 targetOrbit@303.6
+watch kick 4	214.0 x 937.0	cut 303.3 h 214.0 r-R 214.0 v 7954.5 gamma 0.00 losses g 1119 d 122 s 907	throttle from 114.0 min 0.00	left 63	boosterSep@115.9 seco@303.3 targetOrbit@303.3
+watch kick 4.5	214.0 x 933.0	cut 303.1 h 214.0 r-R 214.0 v 7953.6 gamma 0.00 losses g 1112 d 123 s 901	throttle from 114.0 min 0.00	left 93	boosterSep@115.9 seco@303.1 targetOrbit@303.1
+watch kick 5	214.0 x 933.0	cut 303.0 h 214.0 r-R 214.0 v 7953.7 gamma 0.00 losses g 1106 d 124 s 896	throttle from 114.0 min 0.00	left 119	boosterSep@115.9 seco@303.0 targetOrbit@303.0
+watch kick 5.5	214.0 x 938.0	cut 302.9 h 214.0 r-R 214.0 v 7954.9 gamma 0.00 losses g 1100 d 125 s 892	throttle from 114.0 min 0.00	left 139	boosterSep@115.9 seco@302.9 targetOrbit@302.9
+watch kick 6	214.0 x 939.0	cut 302.8 h 214.0 r-R 214.0 v 7955.2 gamma 0.00 losses g 1094 d 126 s 888	throttle from 114.0 min 0.00	left 160	boosterSep@115.9 seco@302.8 targetOrbit@302.8

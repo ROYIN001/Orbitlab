@@ -1,0 +1,40 @@
+/** Probe (rb/instr): the range-safety headings of tests/range-safety.test.ts, the plan's and the test's own (rotatingLaunchAzimuth at 300 km), on the geodetic and on the geocentric latitude; the corridor message's figures. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { siteById } from '../../src/data/sites';
+import { orbitById } from '../../src/data/orbits';
+import { vehicleById } from '../../src/data/vehicles';
+import { launchWindows, planMission, resolveTarget, padPlaneLatitude, corridorReach } from '../../src/physics/mission';
+import { circularSpeed, rotatingLaunchAzimuth } from '../../src/physics/orbital';
+import { guidanceForVehicle, DEFAULT_FAILURE } from '../../src/physics/defaults';
+import { DEG, RAD, R_EARTH } from '../../src/physics/constants';
+import type { MissionConfig, OrbitSpec } from '../../src/types';
+
+const T = new Date(Date.UTC(2026, 8, 22, 3, 0, 0));
+const V300 = circularSpeed(R_EARTH + 300e3);
+function plan(vehicleId: string, siteId: string, orbit: OrbitSpec, mass = 1000) {
+  const site = siteById(siteId), spec = vehicleById(vehicleId);
+  const launchTime = orbit.raanMode === 'free' ? T : launchWindows(orbit, site, T, 1)[0].time;
+  const cfg: MissionConfig = { vehicleId, satelliteId: 'cubesats', siteId, orbit, launchTime, guidance: guidanceForVehicle(spec), guidanceResolved: true,
+    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: mass };
+  return planMission(cfg, site, spec);
+}
+it('headings', () => {
+  const out: string[] = [];
+  const rows: [string, string, string][] = [['h3', 'tanegashima', 'leo'], ['h3', 'tanegashima', 'gto'], ['h2a202', 'tanegashima', 'leo'], ['h2a202', 'tanegashima', 'gto'],
+    ['longmarch3be', 'xichang', 'leo'], ['longmarch3be', 'xichang', 'gto'],
+    ['electron', 'wallops', 'iss'], ['longmarch5', 'wenchang', 'iss'], ['h3', 'tanegashima', 'iss'], ['longmarch2d', 'jiuquan', 'iss'], ['pslvxl', 'sriharikota', 'iss']];
+  for (const [v, siteId, orbitId] of rows) {
+    const site = siteById(siteId), orbit = orbitById(orbitId);
+    const inc = resolveTarget(orbit, site, T).inclination;
+    const p = plan(v, siteId, orbit);
+    const geod = rotatingLaunchAzimuth(site.latitude * DEG, inc, V300, p.descending)! * RAD;
+    const geoc = rotatingLaunchAzimuth(padPlaneLatitude(site), inc, V300, p.descending)! * RAD;
+    out.push(`${v}/${orbitId} from ${siteId}: inc ${(inc * RAD).toFixed(4)}; plan ${(p.azimuthRotating * RAD).toFixed(3)} (${p.descending ? 'S' : 'N'}); test instrument 300 km geodetic ${geod.toFixed(3)}, geocentric ${geoc.toFixed(4)}, its mirror ${(180 - geoc).toFixed(4)}; at the declared minimum ${[false, true].map((d) => (rotatingLaunchAzimuth(padPlaneLatitude(site), site.minInclination * DEG, V300, d)! * RAD).toFixed(3)).join(" / ")}; latitudes ${site.latitude} / ${(padPlaneLatitude(site) * RAD).toFixed(4)}`);
+  }
+  for (const id of ['starbase', 'xichang']) {
+    const s = siteById(id);
+    out.push(`${id}: declared max ${s.maxInclination}; corridorReach hi ${(corridorReach(s).hi * RAD).toFixed(4)} → ${(corridorReach(s).hi * RAD).toFixed(1)}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'headings.txt', out.join('\n') + '\n');
+});

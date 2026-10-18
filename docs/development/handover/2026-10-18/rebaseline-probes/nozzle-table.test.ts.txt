@@ -1,0 +1,46 @@
+/** Probe: the nozzle every engine flies, and the law's figures the docs quote. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { ALL_VEHICLES } from '../../src/data/vehicles';
+import { ENGINE_PARTS, engineSpec } from '../../src/data/parts';
+import { NOZZLES, NOZZLE_SOURCES } from '../../src/data/nozzles';
+import { engineThrustAt, nozzleFlow, nozzleModel, schmuckerRatio, separationPressure } from '../../src/physics/nozzle';
+import { engineIsp } from '../../src/physics/vehicle';
+import { atmosphere } from '../../src/physics/atmosphere';
+import { P0 } from '../../src/physics/constants';
+import type { EngineSpec } from '../../src/types';
+
+const OUT = process.env.PROBE_OUT ?? 'nozzle-table.txt';
+function altitudeOf(p: number): number {
+  if (!(p > 0) || p >= atmosphere(0).p) return 0;
+  let lo = 0, hi = 120e3;
+  for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (atmosphere(m).p > p) lo = m; else hi = m; }
+  return (lo + hi) / 2;
+}
+it('nozzle table', () => {
+  const engines = new Map<string, EngineSpec>();
+  for (const v of ALL_VEHICLES) for (const st of v.stages) for (const e of [st.engine, ...(st.boosters ?? []).map((b) => b.engine)]) {
+    const k = `${e.name}|${e.thrustVac}`; if (!engines.has(k)) engines.set(k, e);
+  }
+  for (const p of ENGINE_PARTS) { const e = engineSpec(p, 1); const k = `${e.name}|${e.thrustVac}`; if (!engines.has(k)) engines.set(k, e); }
+  const lines: string[] = ['name|vac|Fvac kN|eps|eps basis|pc flown MPa|pc record MPa|Ae m2|de m|pe kPa|pe/p0|Me|k(Me)|wallF|lambdaSep SL|F_SL law kN|Isp_SL law s|sep alt @1 km'];
+  for (const e of engines.values()) {
+    const m = nozzleModel(e), r = NOZZLES[e.name];
+    const ps = NOZZLE_SOURCES[e.name]?.expansionRatio; const eb = ps ? ('source' in ps ? 'src' : 'est') : 'derived';
+    const lamSep = m.exitArea > 0 ? schmuckerRatio(m.exitMach) * P0 / (m.wallFactor * m.exitPressure) : NaN;
+    lines.push([e.name, e.vacuumOnly ? 'V' : 'G', (e.thrustVac / 1e3).toFixed(1), m.expansionRatio.toFixed(1), eb, (m.chamberPressure / 1e6).toFixed(2),
+      r?.chamberPressure ? (r.chamberPressure / 1e6).toFixed(2) : '-', m.exitArea.toFixed(4), Math.sqrt(4 * m.exitArea / Math.PI).toFixed(3),
+      (m.exitPressure / 1e3).toFixed(2), (m.exitPressure / P0).toFixed(3), m.exitMach.toFixed(2), schmuckerRatio(m.exitMach).toFixed(3), m.wallFactor.toFixed(3),
+      lamSep.toFixed(3), (engineThrustAt(e, P0, 1) / 1e3).toFixed(1), engineIsp(e, P0).toFixed(1), (altitudeOf(separationPressure(e)) / 1e3).toFixed(1)].join('|'));
+  }
+  lines.push('', 'case|old lambda*F(p) kN|attached kN|law kN|separated|eps_s');
+  const cases: [string, number, number][] = [['merlin1d', 0.4, 0], ['rd191', 0.3, 0], ['rd191', 0.3, 2000], ['vulcain21', 0.5, 0], ['mvac', 1, 0], ['rl10c1', 1, 0],
+    ['rd0124', 1, 0], ['vinci', 1, 0], ['p120c', 1.52, 0], ['raptor2', 0.4, 0], ['le7a', 0.4, 0], ['rd180', 0.47, 10e3], ['merlin1d', 0.7, 0]];
+  for (const [id, level, h] of cases) {
+    const e = engineSpec(id, 1), p = atmosphere(h).p, m = nozzleModel(e), f = nozzleFlow(e, p, level);
+    const sl = e.vacuumOnly ? e.thrustVac : e.thrustSL;
+    const old = level * (e.thrustVac - (e.thrustVac - sl) * Math.min(1, p / P0));
+    lines.push([`${e.name} ${level} @${h} m`, (old / 1e3).toFixed(1), ((level * e.thrustVac - p * m.exitArea) / 1e3).toFixed(1), (f.thrust / 1e3).toFixed(1), f.separated, f.separationAreaRatio.toFixed(1)].join('|'));
+  }
+  writeFileSync(OUT, lines.join('\n') + '\n');
+});

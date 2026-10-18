@@ -1,0 +1,39 @@
+/** Probe (rb/hist): Vostok-1 (the watch mission), the state at its cut-off, at the separation, before the TDU-1 and at 100 km, and the landing. MODELS=pointMass,sixDof. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { flyVostok1, vostok1Miss, vostok1Residual } from '../vostok1-harness';
+import { Simulation } from '../../src/physics/simulation';
+import { vehicleById } from '../../src/data/vehicles';
+import { guidanceForVehicle } from '../../src/physics/defaults';
+import { watchMissionSettings } from '../../src/ui/watch-missions';
+import { norm, dot } from '../../src/physics/vec3';
+import { physicalApsides } from '../../src/physics/rigid/orbit-prediction';
+it('vostok states', { timeout: 3_600_000 }, () => {
+  const out: string[] = [];
+  for (const model of (process.env.MODELS ?? 'pointMass').split(',') as ('pointMass' | 'sixDof')[]) {
+    const s = watchMissionSettings('vostok1');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, model), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model, wind: 'calm', seed: 1 },
+    }, { headless: true });
+    const row = (tag: string) => {
+      const st = sim.state, r = norm(st.r), v = norm(st.v), vr = dot(st.r, st.v) / r;
+      const el = st.elements;
+      out.push(`${model}\t${tag}\tt ${st.t.toFixed(2)}\tlat ${st.lat.toFixed(4)} lon ${st.lon.toFixed(4)} h ${(st.altitude / 1e3).toFixed(3)} r-R ${((r - 6378137) / 1e3).toFixed(3)} v ${v.toFixed(2)} gamma ${(Math.asin(vr / v) * 180 / Math.PI).toFixed(3)}`
+        + `\tosc ${(el.periapsisAlt / 1e3).toFixed(1)}x${(el.apoapsisAlt / 1e3).toFixed(1)} i ${(el.i * 180 / Math.PI).toFixed(3)} raan ${(el.raan * 180 / Math.PI).toFixed(3)} argp ${(el.argp * 180 / Math.PI).toFixed(2)}`);
+    };
+    const marks: [number, string][] = [[4684.1, 'before TDU'], [5300, 'T+5300']];
+    let k = 0, cut = false, sep = false, at100 = false;
+    while (!sim.isFailed() && sim.state.t < 8000 && sim.state.status !== 'landed') {
+      sim.step(sim.suggestedDt());
+      if (!cut && sim.events.some((e) => e.key === 'evt.seco')) { cut = true; row('cutoff'); const p = physicalApsides({ r: sim.state.r, v: sim.state.v }); out.push(`${model}\tphysical at cut-off ${(p!.periapsisAlt / 1e3).toFixed(2)} x ${(p!.apoapsisAlt / 1e3).toFixed(2)}`); }
+      if (!sep && sim.state.payloadSeparated) { sep = true; row('payloadSep'); }
+      while (k < marks.length && sim.state.t >= marks[k][0]) { row(marks[k][1]); k++; }
+      if (!at100 && sim.state.status === 'abort' && sim.state.altitude <= 100e3) { at100 = true; row('100 km'); }
+    }
+    row('end');
+    out.push(`${model}\tevents ${sim.events.filter((e) => /seco|backupCutoff|tduFire|retroShortfall|retroCutoff|vostokStraps|vostokSeparation|hatchOff|capsuleLanding/.test(e.key)).map((e) => `${e.key.slice(4)}@${e.t.toFixed(1)}`).join(' ')}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'vostok-states.txt', out.join('\n') + '\n');
+});

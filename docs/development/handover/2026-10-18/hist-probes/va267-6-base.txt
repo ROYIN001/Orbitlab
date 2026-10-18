@@ -1,0 +1,9 @@
+== ariane64Va267 sixDof failed false; insertion event evt.parkingOrbit {"ap":480,"pe":137,"inc":51.9,"dv":887}; seco@1088.6
+ok   ariane64Va267/boosterSep/time ref    145.0 s  model    137.4 s  ±14.5 s
+ok   ariane64Va267/boosterSep/altitude ref    87.0 km  model   101.0 km  ±14.1 km
+ok   ariane64Va267/fairing/time   ref    191.0 s  model    200.0 s  ±19.1 s
+diff ariane64Va267/fairing/altitude ref   127.0 km  model   159.2 km  ±20.1 km
+ok   ariane64Va267/coreSep/time   ref    463.0 s  model    448.1 s  ±46.3 s
+ok   ariane64Va267/coreSep/altitude ref   265.0 km  model   298.0 km  ±40.8 km
+ok   ariane64Va267/vinci/time     ref    472.0 s  model    454.1 s  ±47.2 s
+ok   ariane64Va267/vinci/altitude ref   269.0 km  model   302.2 km  ±41.4 km

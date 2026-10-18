@@ -1,0 +1,35 @@
+/** Fix probe (from the geodesy review's highorbit probe): point-mass flights to high custom orbits, coast forecasts over 2 days. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { VEHICLES } from '../../src/data/vehicles';
+import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../../src/physics/defaults';
+import { LAUNCH_TIME, achievedElements } from '../fleet-harness';
+it('high orbits', { timeout: 1_800_000 }, () => {
+  const out: string[] = [];
+  const cases: [string, string, number, number, number, number][] = [
+    ['saturnv', 'ksc39a', 1000, 400e3, 380000e3, 28.6],
+    ['saturnv', 'ksc39a', 1000, 380000e3, 380000e3, 28.6],
+    ['falconheavy', 'cape', 1000, 200e3, 200000e3, 28.6],
+    ['falconheavy', 'cape', 1000, 200000e3, 200000e3, 28.6],
+    ['protonm', 'baikonur', 1000, 600e3, 39750e3, 63.4],
+  ];
+  for (const [veh, site, mass, pe, ap, inc] of cases) {
+    const spec = VEHICLES.find((v) => v.id === veh)!;
+    const orbit = { id: 'custom', name: 'custom', perigee: pe, apogee: ap, inclination: inc, argPerigee: 0, raanMode: 'free' as const, description: '' };
+    let line = `${veh} ${pe / 1e3}x${ap / 1e3} km: `;
+    try {
+      const sim = new Simulation({ vehicleId: veh, satelliteId: 'cubesats', siteId: site, orbit, launchTime: LAUNCH_TIME,
+        guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) }, guidanceResolved: true, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: mass }, { headless: true });
+      let guard = 0;
+      try {
+        while (!sim.done && sim.state.t < 30 * 86400 && guard++ < 2000000) sim.step(sim.suggestedDt());
+      } catch (e) { line += `THREW at t=${sim.state.t.toFixed(0)} status ${sim.state.status}: ${(e as Error).message}; `; }
+      const el = sim.state.elements;
+      const keys = sim.events.filter((e) => /burn|target|Orbit|Prediction/.test(e.key)).map((e) => `${Math.round(e.t)}:${e.key}`).join(' ');
+      line += `status ${sim.state.status} t ${sim.state.t.toFixed(0)} conic ${(el.periapsisAlt / 1e3).toFixed(0)}x${(el.apoapsisAlt / 1e3).toFixed(0)} | ${keys}`;
+    } catch (e) { line += `ctor THREW ${(e as Error).message}`; }
+    out.push(line);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'high.txt', out.join('\n') + '\n');
+});

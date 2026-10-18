@@ -1,0 +1,33 @@
+/** Probe: Sputnik-1's point-mass flight, the state at fixed times and at its events (base vs. branch). */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { vehicleById } from '../../src/data/vehicles';
+import { guidanceForVehicle } from '../../src/physics/defaults';
+import { watchMissionSettings, type WatchMissionId } from '../../src/ui/watch-missions';
+import { norm, dot } from '../../src/physics/vec3';
+it('sputnik trace', { timeout: 900_000 }, () => {
+  const out: string[] = [];
+  for (const id of (process.env.IDS ?? 'sputnik1').split(',') as WatchMissionId[]) {
+    const s = watchMissionSettings(id);
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    const marks = [0, 10, 30, 60, 90, 115, 120, 150, 200, 250, 300];
+    let k = 0;
+    const row = (tag: string) => {
+      const st = sim.state, r = norm(st.r), v = norm(st.v), vr = dot(st.r, st.v) / r;
+      out.push([id, tag, st.t.toFixed(1), (st.altitude / 1e3).toFixed(3), ((r - 6378137) / 1e3).toFixed(3), v.toFixed(1), vr.toFixed(1),
+        (Math.asin(vr / v) * 180 / Math.PI).toFixed(2), st.mass.toFixed(0), (st.thrust / 1e3).toFixed(1), (st.losses?.gravity ?? 0).toFixed(1), (st.losses?.drag ?? 0).toFixed(1), (st.losses?.steering ?? 0).toFixed(1)].join('\t'));
+    };
+    let nEv = 0;
+    while (!sim.isFailed() && sim.state.t < 800 && !sim.done) {
+      sim.step(sim.suggestedDt());
+      while (k < marks.length && sim.state.t >= marks[k]) { row(`t${marks[k]}`); k++; }
+      while (nEv < sim.events.length) { const e = sim.events[nEv++]; if (/boosterSep|meco|seco|targetOrbit|liftoff|offTarget/.test(e.key)) row(e.key.slice(4)); }
+    }
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'sputnik-trace.txt', ['id\ttag\tt\talt km\tr-6378 km\tv\tvr\tgamma\tmass\tthrust kN\tgrav loss\tdrag loss\tsteer loss', ...out].join('\n') + '\n');
+});

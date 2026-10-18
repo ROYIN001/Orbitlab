@@ -1,0 +1,32 @@
+/** Probe (rb/hist): tests/rigid-soyuz-programme.test.ts' six-DOF Progress MS: the heights it checks, q and the apsides at separation. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { orbitById } from '../../src/data/orbits';
+import { vehicleById } from '../../src/data/vehicles';
+import { DEFAULT_FAILURE, guidanceForVehicle } from '../../src/physics/defaults';
+import { defaultDynamics } from '../../src/physics/rigid/config';
+import { physicalApsides } from '../../src/physics/rigid/orbit-prediction';
+it('progress six-DOF', { timeout: 3_600_000 }, () => {
+  const dynamics = defaultDynamics('soyuz21a');
+  const sim = new Simulation({
+    vehicleId: 'soyuz21a', satelliteId: 'progress', siteId: 'baikonur', orbit: { ...orbitById('iss'), raanMode: 'free' },
+    launchTime: new Date('2026-09-22T18:00:00Z'),
+    guidance: guidanceForVehicle(vehicleById('soyuz21a'), undefined, dynamics.model), guidanceResolved: true,
+    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, dynamics,
+  } as never, { headless: true });
+  let h288: number | undefined, h183: number | undefined, h118: number | undefined, qMax = 0, throttled = false, maxAngle = 0;
+  while (!sim.isFailed() && !sim.state.payloadSeparated && sim.state.t < 600) {
+    sim.step(sim.suggestedDt());
+    const { t, q, rigid, throttle, thrust } = sim.state;
+    if (h118 === undefined && t >= 117.848) h118 = sim.state.altitude;
+    if (h183 === undefined && t >= 183.2) h183 = sim.state.altitude;
+    if (h288 === undefined && t >= 287.42) h288 = sim.state.altitude;
+    qMax = Math.max(qMax, q);
+    if (thrust > 0 && sim.state.status === 'ascent' && throttle < 0.999) throttled = true;
+    if (rigid && t > 15 && q > 2000) maxAngle = Math.max(maxAngle, Math.hypot(rigid.angleOfAttack, rigid.sideslip) * 180 / Math.PI);
+  }
+  const el = sim.state.elements, p = physicalApsides({ r: sim.state.r, v: sim.state.v });
+  const ev = sim.events.filter((e) => /seco|outOfProp|targetOrbit|offTarget|insufficient/.test(e.key)).map((e) => `${e.key.slice(4)}@${e.t.toFixed(2)}`).join(' ');
+  writeFileSync(process.env.PROBE_OUT ?? 'progress6.txt', `h118 ${(h118! / 1e3).toFixed(2)} h183 ${(h183! / 1e3).toFixed(2)} h288 ${(h288! / 1e3).toFixed(2)} km; qMax ${(qMax / 1e3).toFixed(2)} kPa throttled ${throttled} angle ${maxAngle.toFixed(2)}; ${ev}; at separation t ${sim.state.t.toFixed(2)}: osculating ${(el.periapsisAlt / 1e3).toFixed(1)} x ${(el.apoapsisAlt / 1e3).toFixed(1)} km, physical ${p ? (p.periapsisAlt / 1e3).toFixed(1) + ' x ' + (p.apoapsisAlt / 1e3).toFixed(1) : '-'} km; Blok I left ${sim.vehicle.stages[1].propellant.toFixed(0)} kg\n`);
+});

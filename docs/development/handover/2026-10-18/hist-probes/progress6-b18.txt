@@ -1,0 +1,1 @@
+h118 46.52 h183 97.63 h288 142.24 km; qMax 37.86 kPa throttled false angle 1.71; seco@532.08; at separation t 533.33: osculating 182.3 x 211.4 km, physical 186.2 x 219.7 km; Blok I left 0 kg

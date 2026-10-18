@@ -1,0 +1,15 @@
+import { it } from 'vitest';
+import { VehicleModel } from '../../src/physics/vehicle';
+import { vehicleById } from '../../src/data/vehicles';
+import { nozzleFlow } from '../../src/physics/nozzle';
+it('levels', async () => {
+  const vm = new VehicleModel(vehicleById('pslvxl'), 1000);
+  const [ground, air] = vm.stages[0].boosters;
+  vm.igniteStage(vm.stages[0], 0);
+  vm.igniteBooster(ground, 0);
+  for (let t = 0; t < 40; t += 0.5) vm.consume(t, 1, 0.5);
+  vm.igniteBooster(air, 40);
+  const thrust = vm.thrust(40.2, 50000, 1, 0.01);
+  const e = ground.spec.engine;
+  (await import('node:fs')).writeFileSync(process.env.PROBE_OUT!, JSON.stringify([thrust.boosterLevels, 'ground', nozzleFlow(e, 50000, thrust.boosterLevels[0]), 'air', nozzleFlow(e, 50000, thrust.boosterLevels[1]), e.name, e.thrustVac, e.thrustSL]));
+});

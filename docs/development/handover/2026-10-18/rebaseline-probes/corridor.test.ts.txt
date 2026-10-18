@@ -1,0 +1,28 @@
+/** Probe: the corridor sweep of tests/data-consistency.test.ts on the geodetic and on the geocentric latitude, beside corridorReach. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { SITES, type SiteExtra } from '../../src/data/sites';
+import { circularSpeed, rotatingLaunchAzimuth } from '../../src/physics/orbital';
+import { corridorReach, padPlaneLatitude } from '../../src/physics/mission';
+import { DEG, R_EARTH } from '../../src/physics/constants';
+it('corridor', () => {
+  const vOrb = circularSpeed(R_EARTH + 300e3);
+  const inCorridor = (s: SiteExtra, deg: number): boolean => {
+    const d = ((deg % 360) + 360) % 360, lo = ((s.azimuthMin % 360) + 360) % 360, hi = ((s.azimuthMax % 360) + 360) % 360;
+    return lo <= hi ? d >= lo && d <= hi : d >= lo || d <= hi;
+  };
+  const reach = (s: SiteExtra, latDeg: number): [number, number] => {
+    let lo = NaN, hi = NaN;
+    for (let i = 0; i <= 180; i += 0.05) {
+      const hit = [false, true].some((d) => { const az = rotatingLaunchAzimuth(latDeg * DEG, i * DEG, vOrb, d); return az !== null && inCorridor(s, az / DEG); });
+      if (!hit) continue; if (isNaN(lo)) lo = i; hi = i;
+    }
+    return [lo, hi];
+  };
+  const rows = ['site|lat geodetic|lat geocentric|declared min|declared max|sweep(geodetic) lo..hi|sweep(geocentric) lo..hi|corridorReach lo..hi'];
+  for (const s of SITES) {
+    const gc = padPlaneLatitude(s) / DEG, a = reach(s, s.latitude), b = reach(s, gc), c = corridorReach(s);
+    rows.push([s.id, s.latitude.toFixed(3), gc.toFixed(3), s.minInclination, s.maxInclination, `${a[0].toFixed(2)}..${a[1].toFixed(2)}`, `${b[0].toFixed(2)}..${b[1].toFixed(2)}`, `${(c.lo / DEG).toFixed(3)}..${(c.hi / DEG).toFixed(3)}`].join('|'));
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'corridor.txt', rows.join('\n') + '\n');
+});

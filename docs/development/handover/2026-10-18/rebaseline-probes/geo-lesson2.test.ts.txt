@@ -1,0 +1,23 @@
+/** Probe: lesson ipst-p-geo's flight (tests/lesson-packs.test.ts' fly), its vehicle, verdict events and final orbit. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { lessonConfig } from '../../src/lessons/config';
+import { flightEnded } from '../../src/lessons/grader';
+import { BUNDLED_PACKS, packLessons, packPath, readPackText } from '../../src/lessons/packs';
+import { readFileSync } from 'node:fs';
+it('geo lesson', { timeout: 900_000 }, () => {
+  const packs = BUNDLED_PACKS.map((id) => readPackText(readFileSync(`public/${packPath(id)}`, 'utf8'), packPath(id))!);
+  const out: string[] = [];
+  for (const id of ['ipst-p-geo']) {
+    const l = packLessons(packs).find((x) => x.id === id)! as any;
+    const cfg = lessonConfig(l.mission);
+    const sim = new Simulation(cfg, { headless: true });
+    let guard = 0;
+    while (!flightEnded(l, sim) && !sim.done && sim.state.t < 200_000 && guard++ < 5_000_000) sim.step(sim.suggestedDt());
+    const el = sim.state.elements;
+    out.push(`${id}: ${cfg.vehicleId} from ${cfg.siteId}, t ${sim.state.t.toFixed(0)}, status ${sim.state.status}; conic ${(el.periapsisAlt / 1e3).toFixed(1)} x ${(el.apoapsisAlt / 1e3).toFixed(1)} km; `
+      + sim.events.filter((e) => e.t > 50000).map((e) => `${e.key.slice(4)}@${e.t.toFixed(0)} ${JSON.stringify(e.params ?? {})}`).join(' | ') + ` | dv left ${sim.vehicle.deltaVRemaining().toFixed(1)}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'geo-lesson.txt', out.join('\n') + '\n');
+});

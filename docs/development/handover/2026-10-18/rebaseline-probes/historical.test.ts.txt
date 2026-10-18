@@ -1,0 +1,26 @@
+/** Probe: the historical flights of tests/historical-vehicles.test.ts (point mass), orbit and key events. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { vehicleById } from '../../src/data/vehicles';
+import { guidanceForVehicle } from '../../src/physics/defaults';
+import { WATCH_MISSIONS, watchMissionSettings, type WatchMissionId } from '../../src/ui/watch-missions';
+import { simPayloadOrbit } from '../../src/ui/flown';
+it('historical', { timeout: 900_000 }, () => {
+  const out: string[] = [];
+  for (const id of ['sputnik1', 'vostok1'] as WatchMissionId[]) {
+    const s = watchMissionSettings(id);
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    while (!sim.isFailed() && sim.state.t < 1000 && !sim.events.some((e) => e.key === 'evt.payloadSep' && sim.state.t > e.t + 10)) sim.step(sim.suggestedDt());
+    const m = WATCH_MISSIONS.find((x) => x.id === id)!;
+    const o = simPayloadOrbit(sim.events);
+    const keys = ['evt.boosterSep', 'evt.meco', 'evt.seco', 'evt.stageCutoff', 'evt.targetOrbit', 'evt.offTargetOrbit', 'evt.lowPerigee', 'evt.insufficientDv'];
+    out.push(`${id}: flown ${m.flown!.orbit!.perigee} x ${m.flown!.orbit!.apogee} km; flight ${o ? `${o.perigee.toFixed(1)} x ${o.apogee.toFixed(1)} km i ${o.inclination.toFixed(2)}` : 'none'}; `
+      + sim.events.filter((e) => keys.includes(e.key)).map((e) => `${e.key.slice(4)}@${e.t.toFixed(1)}`).join(' ') + `; dv left ${sim.vehicle.deltaVRemaining().toFixed(0)}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'historical.txt', out.join('\n') + '\n');
+});

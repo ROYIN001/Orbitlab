@@ -1,0 +1,27 @@
+/** Fix probe: tests/rigid-soyuz-programme.test.ts' six-DOF Progress MS flight: the heights it checks and, at payload separation, the osculating and the physical apsides. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { orbitById } from '../../src/data/orbits';
+import { vehicleById } from '../../src/data/vehicles';
+import { DEFAULT_FAILURE, guidanceForVehicle } from '../../src/physics/defaults';
+import { defaultDynamics } from '../../src/physics/rigid/config';
+import { physicalApsides } from '../../src/physics/rigid/orbit-prediction';
+it('progress six-DOF', { timeout: 900_000 }, () => {
+  const dynamics = defaultDynamics('soyuz21a');
+  const sim = new Simulation({
+    vehicleId: 'soyuz21a', satelliteId: 'progress', siteId: 'baikonur', orbit: { ...orbitById('iss'), raanMode: 'free' },
+    launchTime: new Date('2026-09-22T18:00:00Z'),
+    guidance: guidanceForVehicle(vehicleById('soyuz21a'), undefined, dynamics.model), guidanceResolved: true,
+    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, dynamics,
+  } as never, { headless: true });
+  let h288: number | undefined, h183: number | undefined;
+  while (!sim.isFailed() && !sim.state.payloadSeparated && sim.state.t < 600) {
+    sim.step(sim.suggestedDt());
+    if (h183 === undefined && sim.state.t >= 183.2) h183 = sim.state.altitude;
+    if (h288 === undefined && sim.state.t >= 287.42) h288 = sim.state.altitude;
+  }
+  const el = sim.state.elements, p = physicalApsides({ r: sim.state.r, v: sim.state.v });
+  const seco = sim.events.find((e) => e.key === 'evt.seco');
+  writeFileSync(process.env.PROBE_OUT ?? 'progress6.txt', `h183 ${(h183! / 1e3).toFixed(2)} km, h288 ${(h288! / 1e3).toFixed(2)} km; seco t ${seco?.t.toFixed(2)}; at separation t ${sim.state.t.toFixed(2)}: osculating ${(el.periapsisAlt / 1e3).toFixed(1)} x ${(el.apoapsisAlt / 1e3).toFixed(1)} km, physical ${p ? (p.periapsisAlt / 1e3).toFixed(1) + ' x ' + (p.apoapsisAlt / 1e3).toFixed(1) : '-'} km; dv left ${sim.vehicle.deltaVRemaining().toFixed(0)}\n`);
+});

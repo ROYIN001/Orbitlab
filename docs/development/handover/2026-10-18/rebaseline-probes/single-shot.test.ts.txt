@@ -1,0 +1,23 @@
+/** Probe: Soyuz-2.1a single-shot to a 200 km circle from Baikonur (tests/fleet-defaults.test.ts' flyCircular), verdict and both apsides. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { VEHICLES } from '../../src/data/vehicles';
+import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../../src/physics/defaults';
+import { LAUNCH_TIME, achievedElements } from '../fleet-harness';
+it('single shot', { timeout: 600_000 }, () => {
+  const out: string[] = [];
+  for (const mass of [1755, 3510, 6318]) {
+    const spec = VEHICLES.find((v) => v.id === 'soyuz21a')!;
+    const orbit = { id: 'direct', name: 'direct', perigee: 200e3, apogee: 200e3, inclination: 'site' as const, argPerigee: 0, raanMode: 'free' as const, description: '' };
+    const sim = new Simulation({ vehicleId: 'soyuz21a', satelliteId: 'cubesats', siteId: 'baikonur', orbit, launchTime: LAUNCH_TIME,
+      guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) }, guidanceResolved: true, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: mass }, { headless: true });
+    let guard = 0;
+    while (!sim.done && sim.state.t < 3 * 3600 && guard++ < 400000) sim.step(sim.suggestedDt());
+    const el = sim.state.elements, ph = achievedElements(sim);
+    const verdict = sim.events.some((e) => e.key === 'evt.targetOrbit') ? 'target' : sim.events.some((e) => e.key === 'evt.offTargetOrbit') ? 'OFF' : '?';
+    const seco = sim.events.find((e) => e.key === 'evt.seco');
+    out.push(`${mass} kg: ${verdict}; conic ${(el.periapsisAlt / 1e3).toFixed(1)} x ${(el.apoapsisAlt / 1e3).toFixed(1)}; physical ${(ph.periapsisAlt / 1e3).toFixed(1)} x ${(ph.apoapsisAlt / 1e3).toFixed(1)}; seco t ${seco?.t.toFixed(1)}; dv left ${sim.vehicle.deltaVRemaining().toFixed(0)}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'single-shot.txt', out.join('\n') + '\n');
+});

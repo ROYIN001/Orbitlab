@@ -1,0 +1,20 @@
+/** Probe: tests/scenario-link.test.ts' written lesson (Falcon 9 to 500 km): what the grader measures for each criterion. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { BUILTIN_LESSONS } from '../../src/lessons/catalog';
+import { lessonConfig } from '../../src/lessons/config';
+import { flightEnded, gradeLesson } from '../../src/lessons/grader';
+import { draftLesson, newDraft, type LessonDraft } from '../../src/lessons/authoring';
+import { Simulation } from '../../src/physics/simulation';
+const lesson = (id: string) => BUILTIN_LESSONS.find((l) => l.id === id)!;
+it('lesson apogee', { timeout: 900_000 }, () => {
+  const d: LessonDraft = { ...newDraft('class-first-orbit'), title: { en: 'a', ru: 'a', th: 'a' }, brief: { en: 'a', ru: 'a', th: 'a' }, hints: [],
+    criteria: [{ kind: 'outcome', is: 'target' }, { kind: 'measure', measure: 'orbit.apogee', target: 'mission', tol: 5 },
+      { kind: 'answer', measure: 'orbit.period', tol: 0.5, prompt: { en: 'P', ru: 'P', th: 'P' } }, { kind: 'event', key: 'evt.seco', present: true }] };
+  const w = draftLesson(d, lesson('orbit-first').mission).lesson!;
+  const sim = new Simulation(lessonConfig(w.mission), { headless: true });
+  while (!flightEnded(w, sim) && sim.state.t < 20_000) sim.step(sim.suggestedDt());
+  const g = gradeLesson(w, sim);
+  writeFileSync(process.env.PROBE_OUT ?? 'lesson-apogee.txt', JSON.stringify(g.criteria.map((c) => ({ id: c.id, state: c.state, value: (c as any).value, expected: (c as any).expected, tol: (c as any).tol })), null, 0) + '\n'
+    + JSON.stringify(sim.events.filter((e) => /targetOrbit|offTarget/.test(e.key)).map((e) => [e.key, e.params])) + '\n');
+});

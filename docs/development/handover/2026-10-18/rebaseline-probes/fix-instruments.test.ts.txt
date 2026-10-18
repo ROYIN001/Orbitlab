@@ -1,0 +1,36 @@
+/** Fix probe: the fleet-defaults instruments that read the osculating ellipse (sim.state.elements): the conic they read against the physical apsides (achievedElements). */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { VEHICLES } from '../../src/data/vehicles';
+import { orbitById } from '../../src/data/orbits';
+import { siteById } from '../../src/data/sites';
+import { launchWindows } from '../../src/physics/mission';
+import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../../src/physics/defaults';
+import { LAUNCH_TIME, achievedElements } from '../fleet-harness';
+import type { MissionConfig } from '../../src/types';
+function fly(cfg: MissionConfig, maxT: number): Simulation {
+  const sim = new Simulation(cfg, { headless: true });
+  let g = 0; while (!sim.done && sim.state.t < maxT && g++ < 400000) sim.step(sim.suggestedDt());
+  return sim;
+}
+const line = (tag: string, sim: Simulation) => {
+  const el = sim.state.elements, p = achievedElements(sim);
+  const v = sim.events.some((e) => e.key === 'evt.targetOrbit') ? 'target' : 'not target';
+  return `${tag} [t ${sim.state.t.toFixed(0)} ${sim.events.slice(-3).map((e) => e.key).join(",")}]: ${v}; osculating ${(el.periapsisAlt / 1e3).toFixed(1)} x ${(el.apoapsisAlt / 1e3).toFixed(1)} km; physical ${(p.periapsisAlt / 1e3).toFixed(1)} x ${(p.apoapsisAlt / 1e3).toFixed(1)} km`;
+};
+it('instruments', { timeout: 1_800_000 }, () => {
+  const out: string[] = [];
+  out.push(line('soyuz21a + crew 7150 kg, ISS (target 420 x 420, bound 10 km)', fly({
+    vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'),
+    launchTime: launchWindows(orbitById('iss'), siteById('baikonur'), LAUNCH_TIME, 1)[0].time,
+    guidance: { ...DEFAULT_GUIDANCE }, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: 7150,
+  } as MissionConfig, 6 * 3600)));
+  const spec = VEHICLES.find((v) => v.id === 'longmarch2d')!;
+  for (const mass of [325, 650, 1170]) out.push(line(`longmarch2d ${mass} kg SSO (target 600 x 600, bound 15 km)`, fly({
+    vehicleId: 'longmarch2d', satelliteId: 'earthObs', siteId: 'jiuquan', orbit: orbitById('sso'), launchTime: orbitById('sso').raanMode === 'free' ? LAUNCH_TIME : launchWindows(orbitById('sso'), siteById('jiuquan'), LAUNCH_TIME, 1)[0].time,
+    guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) }, guidanceResolved: true,
+    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: mass,
+  } as MissionConfig, 24 * 3600)));
+  writeFileSync(process.env.PROBE_OUT ?? 'instruments.txt', out.join('\n') + '\n');
+});

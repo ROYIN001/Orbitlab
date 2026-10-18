@@ -1,0 +1,17 @@
+/** Fix probe: tests/heavy/history-sixdof.test.ts' six-DOF Vostok-1 (lesson adv-vostok to 181 x 327 km): the osculating orbit at the end, the lesson's physical apogee, the verdict. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { BUILTIN_LESSONS } from '../../src/lessons/catalog';
+import { lessonConfig } from '../../src/lessons/config';
+import { MEASURES } from '../../src/lessons/measures';
+import { defaultDynamics } from '../../src/physics/rigid/config';
+it('vostok six-DOF', { timeout: 1_800_000 }, () => {
+  const lesson = BUILTIN_LESSONS.find((l) => l.id === 'adv-vostok')!;
+  const sim = new Simulation(lessonConfig(lesson.mission, (s) => { s.orbit = { ...s.orbit, apogee: 327e3 }; s.dynamics = defaultDynamics(s.vehicleId); }), { headless: true });
+  let guard = 0;
+  while (!sim.done && sim.state.t < 4000 && guard++ < 20_000_000) sim.step(sim.suggestedDt());
+  const el = sim.state.elements;
+  const verdict = sim.events.some((e) => e.key === 'evt.targetOrbit') ? 'targetOrbit' : sim.events.some((e) => e.key === 'evt.offTargetOrbit') ? 'offTargetOrbit' : '?';
+  writeFileSync(process.env.PROBE_OUT ?? 'vostok6.txt', `status ${sim.state.status}; ${verdict}; osculating ${(el.periapsisAlt / 1e3).toFixed(1)} x ${(el.apoapsisAlt / 1e3).toFixed(1)} km; measures ${(MEASURES['orbit.perigee'].read(sim)!).toFixed(1)} x ${(MEASURES['orbit.apogee'].read(sim)!).toFixed(1)} km\n`);
+});

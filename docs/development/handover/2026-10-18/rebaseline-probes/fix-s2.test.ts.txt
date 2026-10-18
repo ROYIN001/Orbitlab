@@ -1,0 +1,39 @@
+/** Fix probe: S1/S2 lessons at liftoff: tail/nose clearance, the chosen rim side, axis vs radius and normal, each step to T+0.5 s. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { lessonConfig } from '../../src/lessons/config';
+import { packPath, readPackText } from '../../src/lessons/packs';
+import packText from '../../public/lessons/packs/ru-24-05-06.orbitlab-lesson.json?raw';
+import { geodeticFast } from '../../src/physics/geodesy';
+import { rigidContactMetrics } from '../../src/physics/rigid/debris-runtime';
+import { quatRotate } from '../../src/physics/rigid/math';
+import { v3, sub, normalize, dot, norm, cross } from '../../src/physics/vec3';
+it('s2', { timeout: 900_000 }, () => {
+  const PACK = readPackText(packText, packPath('ru-24-05-06'))!;
+  const out: string[] = [];
+  for (const id of ['ru-soyuz-margins', 'ru-bins-astro']) {
+    const l = PACK.lessons.find((x) => x.id === id)! as never as { mission: never };
+    const sim = new Simulation(lessonConfig(l.mission), { headless: true });
+    let n = 0;
+    const log = (tag: string) => {
+      const s = sim.state, rt = sim.rigidRuntime!;
+      if (!(rt.snapshot && s.rigid)) return;
+      const snap = rt.snapshot as never as { cg: never; activeBase: never; aero: { referenceLength: number } };
+      const c = rigidContactMetrics({ r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody } as never,
+        { ...(snap as object), cg: sub(snap.cg, snap.activeBase) } as never, snap.aero.referenceLength, 5.2, (r) => sim.groundElevation(r));
+      const axis = quatRotate(s.rigid.attitudeQ, v3(1, 0, 0)), up = normalize(s.r);
+      const g = geodeticFast(s.r.x, s.r.y, s.r.z), lon = Math.atan2(s.r.y, s.r.x);
+      const nrm = v3(Math.cos(g.lat) * Math.cos(lon), Math.cos(g.lat) * Math.sin(lon), Math.sin(g.lat));
+      const proj = sub(up, v3(axis.x * dot(up, axis), axis.y * dot(up, axis), axis.z * dot(up, axis)));
+      const vrel = sub(s.v, cross(v3(0, 0, 7.292115e-5), s.r));
+      out.push(`${id} ${tag} t ${s.t.toFixed(3)} ${s.status} clr ${(c.clearance * 1000).toFixed(3)} tail ${(c.tailClearance * 1000).toFixed(3)} mm |proj| ${norm(proj).toExponential(2)} vup ${dot(vrel, up).toFixed(4)} axis-rad ${(Math.acos(Math.min(1, dot(axis, up))) * 180 / Math.PI).toFixed(5)} axis-nrm ${(Math.acos(Math.min(1, dot(axis, nrm))) * 180 / Math.PI).toFixed(5)} w ${norm(s.rigid.omegaBody).toExponential(2)}`);
+    };
+    while (!sim.done && sim.state.t < 0.5 && n++ < 100000) {
+      if (sim.state.t > -0.03) log('pre');
+      sim.step(sim.suggestedDt());
+      if (sim.events.some((e) => e.key === 'evt.impact')) { log('IMPACT'); break; }
+    }
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'fix-s2.txt', out.join('\n') + '\n');
+});

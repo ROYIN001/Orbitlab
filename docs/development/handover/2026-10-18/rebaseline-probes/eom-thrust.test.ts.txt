@@ -1,0 +1,31 @@
+/** Probe: the worst |T_vac − p·A_e − T| / T steps of tests/equations.test.ts' F9 ascents, with the record's flags. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { vehicleById } from '../../src/data/vehicles';
+import { orbitById } from '../../src/data/orbits';
+import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../../src/physics/defaults';
+import { LAUNCH_TIME } from '../fleet-harness';
+import type { MissionConfig } from '../../src/types';
+it('eom thrust', { timeout: 600_000 }, () => {
+  const out: string[] = [];
+  for (const model of ['sixDof', 'pointMass'] as const) {
+    const vehicle = vehicleById('falcon9');
+    const cfg = { vehicleId: 'falcon9', satelliteId: 'cubesats', siteId: 'cape', orbit: orbitById('leo'), launchTime: LAUNCH_TIME,
+      guidance: guidanceForVehicle(vehicle, DEFAULT_GUIDANCE, model), guidanceResolved: true, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false,
+      dynamics: model === 'sixDof' ? { model: 'sixDof', wind: 'crosswind', seed: 20260919 } : { model: 'pointMass', wind: 'calm', seed: 1 } } as MissionConfig;
+    const sim = new Simulation(cfg, { headless: true });
+    const bad: string[] = []; let n = 0, sep = 0, worstAtt = 0;
+    while (sim.state.t < 150) {
+      sim.step(sim.suggestedDt());
+      const e = sim.state.eom;
+      if (!e || (e.integrator !== 'rigid' && e.integrator !== 'pointMass')) continue;
+      n++;
+      const r = Math.abs(e.vacuumThrust - e.pressure * e.exitArea - e.thrust) / Math.max(1, e.thrust);
+      if (e.separated) sep++; else worstAtt = Math.max(worstAtt, r);
+      if (r > 1e-12) bad.push(`${model} t ${e.t.toFixed(3)} sep ${!!e.separated} rel ${r.toExponential(2)} T ${e.thrust.toFixed(0)} vac ${e.vacuumThrust.toFixed(0)} p ${e.pressure.toFixed(1)} Ae ${e.exitArea.toFixed(3)} stage ${sim.vehicle.activeIndex}`);
+    }
+    out.push(`${model}: steps ${n}, separated ${sep}, worst attached ${worstAtt.toExponential(2)}, over 1e-12: ${bad.length}`, ...bad.slice(0, 15));
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'eom-thrust.txt', out.join('\n') + '\n');
+});

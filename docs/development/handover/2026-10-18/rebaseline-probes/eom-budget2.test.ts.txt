@@ -1,0 +1,34 @@
+/** Probe: the Δv-book residual of tests/equations.test.ts (six-DOF F9) with the test's sphere v0 and with the pad's own speed. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { vehicleById } from '../../src/data/vehicles';
+import { orbitById } from '../../src/data/orbits';
+import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../../src/physics/defaults';
+import { OMEGA_EARTH, R_EARTH } from '../../src/physics/constants';
+import { norm } from '../../src/physics/vec3';
+import { LAUNCH_TIME } from '../fleet-harness';
+import type { MissionConfig } from '../../src/types';
+it('budget', { timeout: 600_000 }, () => {
+  const out: string[] = [];
+  for (const model of ['sixDof', 'pointMass'] as const) {
+    const vehicle = vehicleById('falcon9');
+    const cfg = { vehicleId: 'falcon9', satelliteId: 'cubesats', siteId: 'cape', orbit: orbitById('leo'), launchTime: LAUNCH_TIME,
+      guidance: guidanceForVehicle(vehicle, DEFAULT_GUIDANCE, model), guidanceResolved: true, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false,
+      dynamics: model === 'sixDof' ? { model: 'sixDof', wind: 'crosswind', seed: 20260919 } : { model: 'pointMass', wind: 'calm', seed: 1 } } as MissionConfig;
+    const sim = new Simulation(cfg, { headless: true });
+    const v0Sphere = OMEGA_EARTH * (R_EARTH + sim.site.altitude) * Math.cos(sim.site.latitude * Math.PI / 180);
+    const v0Pad = norm(sim.state.v);
+    let a = 0, b = 0, ta = 0, tb = 0;
+    while (sim.state.t < 150) {
+      sim.step(sim.suggestedDt());
+      const e = sim.state.eom;
+      if (!e || (e.integrator !== 'rigid' && e.integrator !== 'pointMass')) continue;
+      const l = e.losses, book = l.dvThrust - l.gravity - l.drag - l.steering;
+      const ra = Math.abs(book - (e.speedEnd - v0Sphere)) / Math.max(100, l.dvThrust), rb = Math.abs(book - (e.speedEnd - v0Pad)) / Math.max(100, l.dvThrust);
+      if (ra > a) { a = ra; ta = e.t; } if (rb > b) { b = rb; tb = e.t; }
+    }
+    out.push(`${model}: v0 sphere ${v0Sphere.toFixed(3)} m/s, pad ${v0Pad.toFixed(3)} m/s; worst residual with sphere v0 ${a.toExponential(3)} at t ${ta.toFixed(2)}; with the pad's speed ${b.toExponential(3)} at t ${tb.toFixed(2)}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'eom-budget2.txt', out.join('\n') + '\n');
+});

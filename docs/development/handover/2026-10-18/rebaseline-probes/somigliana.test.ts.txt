@@ -1,0 +1,26 @@
+/** Probe: J2 + centrifugal gravity at every WGS-84 pad against Somigliana (the formula of tests/wgs84-sites.test.ts), and at Plesetsk on the old sphere. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { SITES, siteById } from '../../src/data/sites';
+import { groundPositionEci } from '../../src/physics/orbital';
+import { effectiveGravityJ2 } from '../../src/physics/gravity';
+import { DEG, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../../src/physics/constants';
+import { norm } from '../../src/physics/vec3';
+const A = 6378137, F = 1 / 298.257223563, B = A * (1 - F);
+const somigliana = (lat: number, h: number) => {
+  const s2 = Math.sin(lat) ** 2, m = (OMEGA_EARTH ** 2 * A * A * B) / MU_EARTH;
+  const g0 = (9.7803253359 * (1 + 0.00193185265241 * s2)) / Math.sqrt(1 - 0.00669437999013 * s2);
+  return g0 * (1 - (2 / A) * (1 + F + m - 2 * F * s2) * h + (3 * h * h) / (A * A));
+};
+it('somigliana', () => {
+  let worst = 0, at = '';
+  for (const s of SITES) {
+    const lat = s.latitude * DEG, r = groundPositionEci(lat, s.longitude * DEG, s.altitude, 0.7);
+    const e = Math.abs(norm(effectiveGravityJ2(r)) / somigliana(lat, s.altitude) - 1);
+    if (e > worst) { worst = e; at = s.id; }
+  }
+  const p = siteById('plesetsk'), lat = p.latitude * DEG;
+  const onSphere = { x: (R_EARTH + p.altitude) * Math.cos(lat), y: 0, z: (R_EARTH + p.altitude) * Math.sin(lat) };
+  const old = norm(effectiveGravityJ2(onSphere)) / somigliana(lat, p.altitude) - 1;
+  writeFileSync(process.env.PROBE_OUT ?? 'somigliana.txt', `worst WGS-84 pad ${worst.toExponential(2)} at ${at}\nPlesetsk on the old sphere, J2 + turn against Somigliana ${(old * 100).toFixed(3)} %\n`);
+});

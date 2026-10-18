@@ -1,0 +1,18 @@
+/** Probe: six-DOF Mercury-Redstone 3 and Vostok-1, the numbers the heavy harnesses judge, to a file. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { flyMr3 } from '../mr3-harness';
+import { flyVostok1, vostok1Miss, vostok1Residual } from '../vostok1-harness';
+it('historical six-DOF', { timeout: 3_600_000 }, () => {
+  const out: string[] = [];
+  const m = flyMr3('sixDof');
+  const d2r = Math.PI / 180, lat = 27 + 13.7 / 60, lon = -(75 + 53 / 60);
+  const miss = 6371 * Math.acos(Math.min(1, Math.sin(lat * d2r) * Math.sin(m.state.lat * d2r)
+    + Math.cos(lat * d2r) * Math.cos(m.state.lat * d2r) * Math.cos((m.state.lon - lon) * d2r)));
+  const sp = m.events.find((e) => e.key === 'evt.capsuleSplashdown');
+  out.push(`mr3\tstatus ${m.state.status}\tmiss ${miss.toFixed(2)} km\tdownrange ${(m.state.downrange / 1e3).toFixed(1)} km\tsplash t ${sp?.t.toFixed(1)}\tg ${sp?.params?.g}\tlat ${m.state.lat.toFixed(4)} lon ${m.state.lon.toFixed(4)}`);
+  const v = flyVostok1('sixDof');
+  const r = vostok1Residual(v), dn = v.events.find((e) => e.key === 'evt.capsuleLanding');
+  out.push(`vostok1\tstatus ${v.state.status}\tmiss ${vostok1Miss(v).toFixed(2)} km\talong ${r.along.toFixed(2)}\tcross ${r.cross.toFixed(2)}\tlanding t ${dn?.t.toFixed(1)}\tlat ${v.state.lat.toFixed(4)} lon ${v.state.lon.toFixed(4)}`);
+  writeFileSync(process.env.PROBE_OUT ?? 'hist6dof.txt', out.join('\n') + '\n');
+});

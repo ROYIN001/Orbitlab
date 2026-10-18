@@ -1,0 +1,37 @@
+/** Probe: six-DOF flights from each site latitude, judged as the six-DOF fleet suite judges (tests/sixdof-fleet/cases.ts). */
+import { it } from 'vitest';
+import { appendFileSync, writeFileSync } from 'node:fs';
+import { acceptanceFailures, achievedElements, caseKey, flyCase, insertionTime, type FleetCase } from '../fleet-harness';
+import { vehicleById } from '../../src/data/vehicles';
+import { RAD } from '../../src/physics/constants';
+const OUT = process.env.PROBE_OUT ?? 'sixdof-sites.tsv';
+const [k, n] = (process.env.SHARD ?? '0/1').split('/').map(Number);
+const c = (vehicle: string, site: string, orbit: string, percent: number): FleetCase => {
+  const v = vehicleById(vehicle);
+  const ref = orbit === 'gto' ? v.payloadGTO : orbit === 'sso' && v.payloadSSO ? v.payloadSSO : v.payloadLEO;
+  return { vehicle, site, orbit, percent, mass: Math.round(ref * percent / 100) };
+};
+const CASES: FleetCase[] = [
+  c('protonm', 'baikonur', 'leo', 50),      // Baikonur 45.97°
+  c('angaraa5', 'plesetsk', 'leo', 25),     // Plesetsk 62.93°
+  c('angaraa5', 'vostochny', 'leo', 25),    // Vostochny 51.88° (not a fleet row: Angara's second site)
+  c('soyuz21b', 'vostochny', 'iss', 50),    // Vostochny, the R-7
+  c('falcon9', 'cape', 'leo', 50),          // the Cape 28.56°
+  c('ariane64', 'kourou', 'leo', 50),       // Kourou 5.24°
+  c('vegac', 'kourou', 'sso', 50),          // Kourou, solids
+  c('h2a202', 'tanegashima', 'leo', 50),    // Tanegashima 30.40°
+  c('h3', 'tanegashima', 'sso', 50),
+];
+it('six-DOF sites', { timeout: 7_200_000 }, () => {
+  if (k === 0 && n === 1) writeFileSync(OUT, '');
+  CASES.forEach((fc, idx) => {
+    if (idx % n !== k) return;
+    const t0 = Date.now();
+    const sim = flyCase(fc, 'cubesats', { model: 'sixDof', wind: 'calm', seed: 20260919 });
+    const fails = acceptanceFailures(sim, fc);
+    const el = achievedElements(sim);
+    appendFileSync(OUT, [`${fc.site}:${caseKey(fc)}`, fails.length === 0 ? 'OK' : 'no', (el.periapsisAlt / 1e3).toFixed(1), (el.apoapsisAlt / 1e3).toFixed(1),
+      (el.i * RAD).toFixed(2), sim.vehicle.deltaVRemaining().toFixed(0), insertionTime(sim).toFixed(0), fails.join(';'),
+      JSON.stringify(sim.events.slice(-4).map((e) => e.key)), ((Date.now() - t0) / 1e3).toFixed(0)].join('\t') + '\n');
+  });
+});

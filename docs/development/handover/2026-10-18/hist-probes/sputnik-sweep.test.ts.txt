@@ -1,0 +1,54 @@
+/**
+ * Probe (rb/hist): Sputnik-1 on r7sputnik (the watch mission) and lesson 5.3's sputnik8k71ps, point mass,
+ * swept over the pitch kick (KICKS) with the flight's losses and its throttling. MODE=watch|lesson.
+ */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { vehicleById } from '../../src/data/vehicles';
+import { guidanceForVehicle } from '../../src/physics/defaults';
+import { watchMissionSettings } from '../../src/ui/watch-missions';
+import { simPayloadOrbit } from '../../src/ui/flown';
+import { BUILTIN_LESSONS } from '../../src/lessons/catalog';
+import { lessonConfig } from '../../src/lessons/config';
+import { MEASURES } from '../../src/lessons/measures';
+import { norm, dot } from '../../src/physics/vec3';
+
+it('sputnik sweep', { timeout: 3_600_000 }, () => {
+  const out: string[] = [];
+  const kicks = (process.env.KICKS ?? '3,3.5,4,4.5,5,5.5,6').split(',').map(Number);
+  const mode = process.env.SWEEP ?? 'watch';
+  for (const k of kicks) {
+    let sim: Simulation;
+    if (mode === 'watch') {
+      const s = watchMissionSettings('sputnik1');
+      sim = new Simulation({
+        vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+        payloadMassOverride: s.payloadMass, guidance: { ...guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), kickAngle: k }, guidanceResolved: true,
+        failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+      }, { headless: true });
+    } else {
+      const l = BUILTIN_LESSONS.find((x) => x.id === 'adv-history')!;
+      const cfg = lessonConfig(l.mission, ((st: { payloadMass: number }) => { st.payloadMass = 83.6; }) as never);
+      sim = new Simulation({ ...cfg, guidance: { ...cfg.guidance, kickAngle: k }, guidanceResolved: true }, { headless: true });
+    }
+    let throttleAt: number | undefined, minThr = 1, burnout: number | undefined;
+    let row = '';
+    while (!sim.isFailed() && sim.state.t < 1000 && !sim.done && !sim.events.some((e) => e.key === 'evt.payloadSep' && sim.state.t > e.t + 10)) {
+      sim.step(sim.suggestedDt());
+      const st = sim.state;
+      if (st.thrust > 0 && st.t > 5 && st.throttle < 0.999) { throttleAt ??= st.t; minThr = Math.min(minThr, st.throttle); }
+      if (burnout === undefined && sim.events.some((e) => e.key === 'evt.seco' || e.key === 'evt.meco')) {
+        burnout = st.t;
+        const r = norm(st.r), v = norm(st.v), vr = dot(st.r, st.v) / r;
+        row = `cut ${st.t.toFixed(1)} h ${(st.altitude / 1e3).toFixed(1)} r-R ${((r - 6378137) / 1e3).toFixed(1)} v ${v.toFixed(1)} gamma ${(Math.asin(vr / v) * 180 / Math.PI).toFixed(2)}`
+          + ` losses g ${(st.losses?.gravity ?? 0).toFixed(0)} d ${(st.losses?.drag ?? 0).toFixed(0)} s ${(st.losses?.steering ?? 0).toFixed(0)}`;
+      }
+    }
+    const o = mode === 'watch' ? simPayloadOrbit(sim.events) : null;
+    const pe = mode === 'watch' ? o?.perigee : MEASURES['orbit.perigee'].read(sim), ap = mode === 'watch' ? o?.apogee : MEASURES['orbit.apogee'].read(sim);
+    out.push(`${mode} kick ${k}\t${pe?.toFixed(1)} x ${ap?.toFixed(1)}\t${row}\tthrottle from ${throttleAt?.toFixed(1)} min ${minThr.toFixed(2)}\tleft ${sim.vehicle.stages.map((s) => s.propellant.toFixed(0)).join('/')}`
+      + `\t${sim.events.filter((e) => /boosterSep|seco|targetOrbit|offTarget|insufficientDv|outOfProp/.test(e.key)).map((e) => `${e.key.slice(4)}@${e.t.toFixed(1)}`).join(' ')}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'sputnik-sweep.txt', out.join('\n') + '\n');
+});

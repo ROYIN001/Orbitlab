@@ -1,0 +1,5 @@
+/** Probe: the nozzle table as JSON, to regenerate src/data/nozzles.ts split into numbers and provenance. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { NOZZLES, NOZZLE_GAMMA } from '../../src/data/nozzles';
+it('dump', () => { writeFileSync(process.env.PROBE_OUT ?? 'nozzles.json', JSON.stringify({ NOZZLES, NOZZLE_GAMMA }, null, 1)); });

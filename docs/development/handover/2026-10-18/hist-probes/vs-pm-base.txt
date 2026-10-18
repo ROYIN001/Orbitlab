@@ -1,0 +1,8 @@
+pointMass	cutoff	t 672.32	lat 62.9694 lon 98.2432 h 168.000 r-R 168.000 v 7839.00 gamma -0.002	osc 168.0x289.3 i 64.956 raan 326.692 argp 79.75
+pointMass	physical at cut-off 168.00 x 307.26
+pointMass	payloadSep	t 682.32	lat 63.2121 lon 99.6200 h 168.003 r-R 168.003 v 7841.15 gamma 0.007	osc 168.0x296.7 i 64.956 raan 326.690 argp 79.49
+pointMass	before TDU	t 4684.20	lat -11.2441 lon 9.6889 h 244.430 r-R 243.624 v 7760.62 gamma -0.622	osc 175.2x319.1 i 64.987 raan 326.506 argp 75.50
+pointMass	T+5300	t 5300.20	lat 26.0827 lon 25.5189 h 147.749 r-R 143.642 v 7746.93 gamma -1.746	osc -198.9x254.8 i 64.980 raan 326.503 argp 151.24
+pointMass	100 km	t 5505.45	lat 38.2927 lon 33.0175 h 99.990 r-R 91.820 v 7806.91 gamma -1.955	osc -205.7x252.2 i 64.972 raan 326.496 argp 152.31
+pointMass	end	t 6629.02	lat 51.2770 lon 45.9752 h 0.001 r-R -12.973 v 291.54 gamma 0.000	osc -6373.8x-13.0 i 51.089 raan 275.630 argp 270.00
+pointMass	events backupCutoff@672.3 seco@672.3 tduFire@4686.4 retroShortfall@4726.4 retroCutoff@4728.2 vostokStraps@5340.0 vostokSeparation@5344.0 hatchOff@5854.7 capsuleLanding@6104.9

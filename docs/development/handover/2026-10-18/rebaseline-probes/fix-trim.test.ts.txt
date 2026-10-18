@@ -1,0 +1,31 @@
+/** Fix probe: the retrograde-trim rows of fleet-defaults: at the parking orbit and at each burn completion, the conic of the event and the physical apsides of the state. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { allCases, caseKey, flyCase, acceptanceFailures, achievedElements } from '../fleet-harness';
+import { physicalApsides } from '../../src/physics/rigid/orbit-prediction';
+it('trim', { timeout: 900_000 }, () => {
+  const out: string[] = [];
+  const byKey = new Map(allCases().map((c) => [caseKey(c), c]));
+  for (const key of ['atlasv551/iss/50', 'vulcan/iss/50', 'h2a202/iss/90']) {
+    const c = byKey.get(key)!;
+    let seen = 0;
+    const later: { t: number; tag: string }[] = [];
+    const sim = flyCase(c, undefined, undefined, (s) => {
+      for (const l of later.filter((x) => s.state.t >= x.t)) {
+        const p = physicalApsides({ r: s.state.r, v: s.state.v });
+        out.push(`${key} ${l.tag} +30 s (t ${s.state.t.toFixed(0)}): physical ${p ? (p.periapsisAlt / 1e3).toFixed(1) + ' x ' + (p.apoapsisAlt / 1e3).toFixed(1) : '-'}`);
+        later.splice(later.indexOf(l), 1);
+      }
+      while (seen < s.events.length) {
+        const e = s.events[seen++];
+        if (e.key !== 'evt.burnComplete' && e.key !== 'evt.parkingOrbit') continue;
+        const p = physicalApsides({ r: s.state.r, v: s.state.v });
+        later.push({ t: e.t + 30, tag: `${e.t.toFixed(0)} ${e.key}` });
+        out.push(`${key} ${e.t.toFixed(0)} ${e.key} ${e.params?.kind ?? ''} conic ${e.params?.pe} x ${e.params?.ap} km; physical ${p ? (p.periapsisAlt / 1e3).toFixed(1) + ' x ' + (p.apoapsisAlt / 1e3).toFixed(1) : '-'}`);
+      }
+    });
+    const ph = achievedElements(sim);
+    out.push(`${key} end ${sim.state.t.toFixed(0)} fails [${acceptanceFailures(sim, c).join(';')}] achieved ${(ph.periapsisAlt / 1e3).toFixed(1)} x ${(ph.apoapsisAlt / 1e3).toFixed(1)}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'trim.txt', out.join('\n') + '\n');
+});

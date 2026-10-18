@@ -1,0 +1,7 @@
+sputnik1	flown 214 x 938	sim 214.0 x 937.0 i 65.09	ap err -0.0011	boosterSep -0.5, seco +7.9, payloadSep +3.8	targetOrbit@303.3	left 63 kg
+vostok1	flown 168 x 314	sim 168.0 x 315.0 i 64.96	ap err 0.0032	boosterSep +0.1, fairingSep +0.1, meco +3.1, seco -3.7, payloadSep -3.7	backupCutoff@672.3 targetOrbit@672.3	left 25/98 kg
+l53	verdict pass	pe 214.5 ap 937.0 period 96.18	boosterSep@117.2 seco@286.5 targetOrbit@286.5	left 49 kg
+l53 objectD	status failed	verdict fail
+l54	verdict pass	pe 181.0 ap 324.4 i 64.950 period 89.56	boosterSep@119.2 fairingSep@156.1 meco@302.9 seco@725.0 targetOrbit@725.0	left 30/539 kg
+mr3 pm	status landed	miss 16.39 km	downrange 496.4 km	splash 906.2 g 11.6	lat 27.1400 lon -75.7507	maxQ@73.8 seco@136.3 suborbitalTarget@136.3 payloadSep@146.8 retroFire@308.9 retroFire@313.7 retroFire@318.5 escapeDrogue@568.7 escapeMain@603.9
+vostok1 home pm	status landed	miss 0.70 km	along -0.51	cross -0.48	landing 6104.9	lat 51.2770 lon 45.9752	backupCutoff@672.3 seco@672.3 tduFire@4686.4 hatchOff@5854.7 ejection@5856.7

@@ -1,0 +1,12 @@
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+     × flies the same states, events and targeting 4093ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  tests/eo-phy-6/apollo11.test.ts > EO-PHY-6 (b): Apollo 11 point-mass, TLI to entry, bit for bit as on the CO-6 base > flies the same states, events and targeting
+AssertionError: expected { …(9) } to deeply equal { …(9) }
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+ Test Files  1 passed (1)
+      Tests  8 passed (8)

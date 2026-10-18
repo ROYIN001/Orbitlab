@@ -1,0 +1,81 @@
+/**
+ * Probe (rb/hist): the historical flights in point mass, the numbers their tests judge, to a file.
+ * Sputnik-1 and Vostok-1 to orbit (historical-vehicles), lesson 5.3 and 5.4 (lessons-history),
+ * Mercury-Redstone 3 (mr3-harness) and Vostok-1's return (vostok1-harness).
+ * IDS selects a comma list of: sputnik1, vostok1, l53, l54, mr3, vostokHome (default all).
+ */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { vehicleById } from '../../src/data/vehicles';
+import { guidanceForVehicle } from '../../src/physics/defaults';
+import { WATCH_MISSIONS, watchMissionSettings, type WatchMissionId } from '../../src/ui/watch-missions';
+import { compareEvents, simPayloadOrbit } from '../../src/ui/flown';
+import { BUILTIN_LESSONS } from '../../src/lessons/catalog';
+import { MEASURES } from '../../src/lessons/measures';
+import { lessonConfig } from '../../src/lessons/config';
+import { flightEnded, gradeLesson } from '../../src/lessons/grader';
+import { flyMr3 } from '../mr3-harness';
+import { flyVostok1, vostok1Miss, vostok1Residual } from '../vostok1-harness';
+
+const want = (process.env.IDS ?? 'sputnik1,vostok1,l53,l54,mr3,vostokHome').split(',');
+const out: string[] = [];
+const ev = (sim: Simulation, keys: string[]) => sim.events.filter((e) => keys.includes(e.key)).map((e) => `${e.key.slice(4)}@${e.t.toFixed(1)}`).join(' ');
+
+it('historical point mass', { timeout: 3_600_000 }, () => {
+  for (const id of ['sputnik1', 'vostok1'] as WatchMissionId[]) {
+    if (!want.includes(id)) continue;
+    const s = watchMissionSettings(id);
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    while (!sim.isFailed() && sim.state.t < 1000 && !sim.events.some((e) => e.key === 'evt.payloadSep' && sim.state.t > e.t + 10)) sim.step(sim.suggestedDt());
+    const m = WATCH_MISSIONS.find((x) => x.id === id)!;
+    const o = simPayloadOrbit(sim.events);
+    const rows = compareEvents(m.flown!, sim.events).filter((r) => r.real <= sim.state.t).map((r) => `${r.key.slice(4)} ${r.delta === null ? 'none' : (r.delta! >= 0 ? '+' : '') + r.delta!.toFixed(1)}`).join(', ');
+    out.push(`${id}\tflown ${m.flown!.orbit!.perigee} x ${m.flown!.orbit!.apogee}\tsim ${o ? `${o.perigee.toFixed(1)} x ${o.apogee.toFixed(1)} i ${o.inclination.toFixed(2)}` : 'none'}`
+      + `\tap err ${o ? ((o.apogee - m.flown!.orbit!.apogee) / m.flown!.orbit!.apogee).toFixed(4) : '-'}\t${rows}\t${ev(sim, ['evt.outOfPropellant', 'evt.targetOrbit', 'evt.offTargetOrbit', 'evt.backupCutoff', 'evt.insufficientDv'])}`
+      + `\tleft ${sim.vehicle.stages.map((st) => st.propellant.toFixed(0)).join('/')} kg`);
+  }
+  const lesson = (lid: string) => BUILTIN_LESSONS.find((x) => x.id === lid)!;
+  const flyL = (lid: string, edit?: (s: never) => void) => {
+    const l = lesson(lid);
+    const sim = new Simulation(lessonConfig(l.mission, edit as never), { headless: true });
+    let guard = 0;
+    while (!flightEnded(l, sim) && !sim.done && sim.state.t < 20000 && guard++ < 5_000_000) sim.step(sim.suggestedDt());
+    return { l, sim };
+  };
+  if (want.includes('l53')) {
+    const { l, sim } = flyL('adv-history', ((s: { payloadMass: number }) => { s.payloadMass = 83.6; }) as never);
+    const period = MEASURES['orbit.period'].read(sim)!;
+    const pe = MEASURES['orbit.perigee'].read(sim), ap = MEASURES['orbit.apogee'].read(sim);
+    out.push(`l53\tverdict ${gradeLesson(l, sim, { period }).verdict}\tpe ${pe?.toFixed(1)} ap ${ap?.toFixed(1)} period ${period?.toFixed(2)}\t${ev(sim, ['evt.boosterSep', 'evt.meco', 'evt.seco', 'evt.outOfPropellant', 'evt.targetOrbit', 'evt.offTargetOrbit'])}`
+      + `\tleft ${sim.vehicle.stages.map((st) => st.propellant.toFixed(0)).join('/')} kg`);
+    const d = flyL('adv-history');
+    out.push(`l53 objectD\tstatus ${d.sim.state.status}\tverdict ${gradeLesson(d.l, d.sim, { period }).verdict}`);
+  }
+  if (want.includes('l54')) {
+    const { l, sim } = flyL('adv-vostok', ((s: { orbit: Record<string, unknown> }) => { s.orbit = { ...s.orbit, apogee: 327e3 }; }) as never);
+    const period = MEASURES['orbit.period'].read(sim)!;
+    out.push(`l54\tverdict ${gradeLesson(l, sim, { period }).verdict}\tpe ${MEASURES['orbit.perigee'].read(sim)?.toFixed(1)} ap ${MEASURES['orbit.apogee'].read(sim)?.toFixed(1)} i ${MEASURES['orbit.inclination'].read(sim)?.toFixed(3)} period ${period?.toFixed(2)}`
+      + `\t${ev(sim, ['evt.boosterSep', 'evt.fairingSep', 'evt.meco', 'evt.seco', 'evt.outOfPropellant', 'evt.targetOrbit', 'evt.offTargetOrbit'])}\tleft ${sim.vehicle.stages.map((st) => st.propellant.toFixed(0)).join('/')} kg`);
+  }
+  if (want.includes('mr3')) {
+    const m = flyMr3('pointMass');
+    const d2r = Math.PI / 180, lat = 27 + 13.7 / 60, lon = -(75 + 53 / 60);
+    const miss = 6371 * Math.acos(Math.min(1, Math.sin(lat * d2r) * Math.sin(m.state.lat * d2r)
+      + Math.cos(lat * d2r) * Math.cos(m.state.lat * d2r) * Math.cos((m.state.lon - lon) * d2r)));
+    const sp = m.events.find((e) => e.key === 'evt.capsuleSplashdown');
+    out.push(`mr3 pm\tstatus ${m.state.status}\tmiss ${miss.toFixed(2)} km\tdownrange ${(m.state.downrange / 1e3).toFixed(1)} km\tsplash ${sp?.t.toFixed(1)} g ${sp?.params?.g}\tlat ${m.state.lat.toFixed(4)} lon ${m.state.lon.toFixed(4)}`
+      + `\t${ev(m, ['evt.maxQ', 'evt.seco', 'evt.suborbitalTarget', 'evt.payloadSep', 'evt.retroFire', 'evt.escapeDrogue', 'evt.escapeMain', 'evt.outOfPropellant'])}`);
+  }
+  if (want.includes('vostokHome')) {
+    const v = flyVostok1('pointMass');
+    const r = vostok1Residual(v), dn = v.events.find((e) => e.key === 'evt.capsuleLanding');
+    out.push(`vostok1 home pm\tstatus ${v.state.status}\tmiss ${vostok1Miss(v).toFixed(2)} km\talong ${r.along.toFixed(2)}\tcross ${r.cross.toFixed(2)}\tlanding ${dn?.t.toFixed(1)}\tlat ${v.state.lat.toFixed(4)} lon ${v.state.lon.toFixed(4)}`
+      + `\t${ev(v, ['evt.seco', 'evt.backupCutoff', 'evt.tduFire', 'evt.hatchOff', 'evt.ejection'])}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'hist-pm.txt', out.join('\n') + '\n');
+});

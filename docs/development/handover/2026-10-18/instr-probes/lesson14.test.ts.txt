@@ -1,0 +1,23 @@
+/** Probe (rb/instr): lesson 1.4 (orbit-payload) flown at 500 kg steps of payload: verdict, Δv left (the reserve measure), the outcome. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { BUILTIN_LESSONS } from '../../src/lessons/catalog';
+import { lessonConfig } from '../../src/lessons/config';
+import { flightEnded, gradeLesson } from '../../src/lessons/grader';
+import { MEASURES } from '../../src/lessons/measures';
+
+it('lesson 1.4', { timeout: 1_800_000 }, () => {
+  const l = BUILTIN_LESSONS.find((x) => x.id === 'orbit-payload')!;
+  const out: string[] = [];
+  const masses = (process.env.MASSES ?? '16000,16500,17000,17500,17750,17900,17950,18000,18500,19000,19500').split(',').map(Number);
+  for (const m of masses) {
+    const sim = new Simulation(lessonConfig(l.mission, (s) => { s.payloadMass = m; }), { headless: true });
+    let guard = 0;
+    while (!flightEnded(l, sim) && !sim.done && sim.state.t < 20000 && guard++ < 2_000_000) sim.step(sim.suggestedDt());
+    const g = gradeLesson(l, sim);
+    const verdict = sim.events.find((e) => ['evt.targetOrbit', 'evt.offTargetOrbit'].includes(e.key))?.key ?? sim.state.status;
+    out.push(`${m} kg: grade ${g.verdict} [${g.criteria.map((c) => `${c.id}=${c.state}${c.value != null ? `(${typeof c.value === 'number' ? c.value.toFixed(1) : c.value})` : ''}`).join(' ')}]; ${verdict}; dvLeft ${MEASURES.dvLeft.read(sim)?.toFixed(1)} m/s`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'lesson14.txt', out.join('\n') + '\n');
+});

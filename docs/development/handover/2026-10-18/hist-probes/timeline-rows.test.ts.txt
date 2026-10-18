@@ -1,0 +1,21 @@
+/** Probe (rb/hist): a validation timeline reference flown in one model, its rows and the insertion apsides. REF=id MODEL=pointMass|sixDof. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { flyMission } from '../validation/flight-harness';
+import { TIMELINE_REFERENCES } from '../validation/reference-data';
+import { formatRows, timelineRows } from '../validation/compare';
+it('timeline rows', { timeout: 3_600_000 }, () => {
+  const out: string[] = [];
+  for (const id of (process.env.REF ?? 'progressMs19').split(',')) {
+    for (const model of (process.env.MODELS ?? 'pointMass').split(',') as ('pointMass' | 'sixDof')[]) {
+      const ref = TIMELINE_REFERENCES.find((r) => r.id === id)!;
+      const flown = flyMission(ref.mission, model, { after: ref.after ?? 10 });
+      const rows = timelineRows(ref, flown);
+      const ins = flown.events.find((x) => x.key === 'evt.parkingOrbit' || x.key === 'evt.targetOrbit' || x.key === 'evt.offTargetOrbit');
+      out.push(`== ${id} ${model} failed ${flown.failed}; insertion event ${ins?.key} ${JSON.stringify(ins?.params)}; `
+        + flown.events.filter((e) => /outOfProp|insufficient|seco|offTarget/.test(e.key)).map((e) => `${e.key.slice(4)}@${e.t.toFixed(1)}`).join(' '));
+      out.push(formatRows(rows));
+    }
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'timeline-rows.txt', out.join('\n') + '\n');
+});

@@ -1,0 +1,24 @@
+/** Fix probe: tests/validation/pslv-first-stage.test.ts' three PSLV-XL flights (solid peak factors 1, as shipped, 2): failed?, the events to T+130 s, the ideal delta-v to T+107 s and the PS1 separation speed. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { flyMission } from '../validation/flight-harness';
+import { PSLV_C52 } from '../validation/reference-data';
+import { vehicleById } from '../../src/data/vehicles';
+import type { EngineSpec } from '../../src/types';
+it('pslv', { timeout: 600_000 }, () => {
+  const out: string[] = [];
+  for (const pf of [1, undefined, 2]) {
+    const spec = vehicleById('pslvxl'), ps1 = spec.stages[0], core = ps1.engine, boosters = ps1.boosters!.map((b) => b.engine);
+    const set = (e: EngineSpec) => (pf === undefined ? e : { ...e, peakFactor: pf });
+    ps1.engine = set(core); ps1.boosters!.forEach((b, i) => { b.engine = set(boosters[i]); });
+    try {
+      const f = flyMission(PSLV_C52.mission, 'pointMass', { until: 130 }) as never as { failed: boolean; at: (t: number) => { thrust: number; mass: number; vInertial: number }; eventTime: (k: string) => number | undefined; events?: { t: number; key: string }[]; sim?: { events: { t: number; key: string }[] } };
+      let dv = 0; for (let s = 0; s < 107; s += 0.25) { const x = f.at(s); dv += (x.thrust / x.mass) * 0.25; }
+      const sep = f.eventTime('evt.stageSep');
+      const ev = (f.sim?.events ?? f.events ?? []).map((e) => `${e.t.toFixed(1)}:${e.key}`).join(' ');
+      out.push(`  thrust kN at ` + [0, 5, 20, 24.9, 25.5, 26, 27, 28, 29].map((t) => `${t}:${(f.at(t).thrust / 1e3).toFixed(0)}`).join(' '));
+      out.push(`peak ${pf ?? 'shipped'}: failed ${f.failed}; ideal dv to 107 s ${dv.toFixed(0)} m/s; sep ${sep?.toFixed(1)} s at ${sep !== undefined ? f.at(sep).vInertial.toFixed(0) : '-'} m/s; ${ev}`);
+    } finally { ps1.engine = core; ps1.boosters!.forEach((b, i) => { b.engine = boosters[i]; }); }
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'pslv.txt', out.join('\n') + '\n');
+});

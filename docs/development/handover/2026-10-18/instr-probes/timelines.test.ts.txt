@@ -1,0 +1,43 @@
+/** Probe (rb/instr): Vega-C's AVUM+ first ignition and Electron's fairing jettison on the reference flights of tests/fleet-defaults.test.ts, with the events around them. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { Simulation } from '../../src/physics/simulation';
+import { VEHICLES } from '../../src/data/vehicles';
+import { orbitById } from '../../src/data/orbits';
+import { siteById } from '../../src/data/sites';
+import { launchWindows } from '../../src/physics/mission';
+import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../../src/physics/defaults';
+import { LAUNCH_TIME } from '../fleet-harness';
+import type { MissionConfig } from '../../src/types';
+
+function flyReference(vehicle: string, site: string, orbit: string, satellite: string, mass: number, onStep?: (s: Simulation) => void, maxTime = 2 * 3600): Simulation {
+  const spec = VEHICLES.find((v) => v.id === vehicle)!;
+  const cfg: MissionConfig = {
+    vehicleId: vehicle, satelliteId: satellite, siteId: site, orbit: orbitById(orbit),
+    launchTime: orbitById(orbit).raanMode === 'free' ? LAUNCH_TIME : launchWindows(orbitById(orbit), siteById(site), LAUNCH_TIME, 1)[0].time,
+    guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) }, guidanceResolved: true,
+    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: mass,
+  };
+  const sim = new Simulation(cfg, { headless: true });
+  let guard = 0;
+  while (!sim.done && sim.state.t < maxTime && guard++ < 400000) { sim.step(sim.suggestedDt()); onStep?.(sim); }
+  return sim;
+}
+const ev = (sim: Simulation, from: number, to: number) => sim.events.filter((e) => e.t >= from && e.t <= to)
+  .map((e) => `  ${e.t.toFixed(2)} ${e.key} ${JSON.stringify(e.params ?? {})}`).join('\n');
+
+it('timelines', { timeout: 1_800_000 }, () => {
+  const out: string[] = [];
+  const vega = flyReference('vegac', 'kourou', 'leo', 'cubesats', 1650);
+  const ign = vega.events.filter((e) => e.key === 'evt.ignition');
+  out.push(`vegac ignitions: ${ign.map((e) => `${e.t.toFixed(2)} ${JSON.stringify(e.params)}`).join(' | ')}`);
+  out.push(`vegac events 300-400 s and 2900-3200 s:\n${ev(vega, 300, 400)}\n${ev(vega, 2900, 3200)}`);
+  let fairing: { t: number; alt: number; q: number; heat?: number } | null = null;
+  const el = flyReference('electron', 'mahia', 'sso', 'cubesats', 200, (s) => {
+    if (!fairing && s.events.some((e) => e.key === 'evt.fairingSep')) fairing = { t: s.state.t, alt: s.state.alt ?? 0, q: s.state.q };
+  });
+  const f = el.events.find((e) => e.key === 'evt.fairingSep')!;
+  out.push(`electron fairingSep ${f.t.toFixed(2)} s ${JSON.stringify(f.params)}; state at that step ${JSON.stringify(fairing)}`);
+  out.push(`electron events 120-200 s:\n${ev(el, 120, 200)}`);
+  writeFileSync(process.env.PROBE_OUT ?? 'timelines.txt', out.join('\n') + '\n');
+});

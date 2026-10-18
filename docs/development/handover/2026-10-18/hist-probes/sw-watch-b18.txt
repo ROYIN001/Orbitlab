@@ -1,0 +1,7 @@
+watch kick 3	undefined x undefined	cut 303.6 h 226.6 r-R 213.7 v 7874.5 gamma 0.34 losses g 1182 d 118 s 954	throttle from 114.0 min 0.00	left 0	boosterSep@115.9 seco@303.6 insufficientDv@303.6 offTargetOrbit@303.6
+watch kick 3.5	undefined x undefined	cut 303.6 h 226.8 r-R 213.9 v 7899.5 gamma 0.18 losses g 1163 d 120 s 946	throttle from 114.0 min 0.00	left 0	boosterSep@115.9 seco@303.6 insufficientDv@303.6 offTargetOrbit@303.6
+watch kick 4	undefined x undefined	cut 303.6 h 226.9 r-R 214.0 v 7917.6 gamma 0.07 losses g 1149 d 122 s 940	throttle from 114.0 min 0.00	left 0	boosterSep@115.9 seco@303.6 insufficientDv@303.6 offTargetOrbit@303.6
+watch kick 4.5	undefined x undefined	cut 303.6 h 226.9 r-R 214.0 v 7925.6 gamma 0.01 losses g 1143 d 123 s 937	throttle from 114.0 min 0.00	left 0	boosterSep@115.9 seco@303.6 insufficientDv@303.6 offTargetOrbit@303.6
+watch kick 5	undefined x undefined	cut 303.6 h 227.0 r-R 214.0 v 7934.5 gamma -0.01 losses g 1136 d 124 s 934	throttle from 114.0 min 0.00	left 0	boosterSep@115.9 seco@303.6 insufficientDv@303.6 offTargetOrbit@303.6
+watch kick 5.5	undefined x undefined	cut 303.6 h 227.0 r-R 214.0 v 7942.5 gamma -0.01 losses g 1130 d 125 s 930	throttle from 114.0 min 0.00	left 0	boosterSep@115.9 seco@303.6 insufficientDv@303.6 offTargetOrbit@303.6
+watch kick 6	undefined x undefined	cut 303.6 h 227.0 r-R 214.0 v 7949.9 gamma -0.00 losses g 1124 d 126 s 927	throttle from 114.0 min 0.00	left 0	boosterSep@115.9 seco@303.6 insufficientDv@303.6 offTargetOrbit@303.6

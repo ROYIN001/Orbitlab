@@ -1,0 +1,23 @@
+/** Probe: the WGS-84 figures the docs quote (radius drop per site, geocentric latitude, radial-normal angle). */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { SITES } from '../../src/data/sites';
+import { geocentricLatitude, geodeticEnu, geodeticToCartesian } from '../../src/physics/geodesy';
+import { DEG, R_EARTH } from '../../src/physics/constants';
+import { dot, norm, normalize } from '../../src/physics/vec3';
+it('wgs84 numbers', () => {
+  const out: string[] = ['site|lat|alt m|sphere radius − WGS-84 radius, km|geocentric lat|radial-normal angle deg'];
+  for (const s of SITES) {
+    const r = geodeticToCartesian(s.latitude * DEG, s.longitude * DEG, s.altitude);
+    const ang = Math.acos(Math.min(1, dot(normalize(r), geodeticEnu(s.latitude * DEG, s.longitude * DEG).up))) / DEG;
+    out.push([s.id, s.latitude.toFixed(3), s.altitude, ((R_EARTH + s.altitude - norm(r)) / 1e3).toFixed(2), (geocentricLatitude(s.latitude * DEG, s.altitude) / DEG).toFixed(3), ang.toFixed(4)].join('|'));
+  }
+  let worst = 0, at = 0;
+  for (let lat = 0; lat <= 90; lat += 0.5) {
+    const r = geodeticToCartesian(lat * DEG, 0, 0);
+    const a = Math.acos(Math.min(1, dot(normalize(r), geodeticEnu(lat * DEG, 0).up))) / DEG;
+    if (a > worst) { worst = a; at = lat; }
+  }
+  out.push(`largest radial-normal angle ${worst.toFixed(4)} deg at ${at} deg`);
+  writeFileSync(process.env.PROBE_OUT ?? 'wgs84-numbers.txt', out.join('\n') + '\n');
+});

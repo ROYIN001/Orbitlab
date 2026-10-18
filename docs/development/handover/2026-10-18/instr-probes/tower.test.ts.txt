@@ -1,0 +1,16 @@
+/** Probe: Super Heavy caught by the Starbase tower (tests/recovery-return.test.ts), its height by the sphere and above WGS-84. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { flyWithReturns } from '../return-harness';
+import { orbitById } from '../../src/data/orbits';
+import { landingZoneById } from '../../src/data/landing-zones';
+import { R_EARTH } from '../../src/physics/constants';
+import { geodeticHeight } from '../../src/physics/geodesy';
+import { norm } from '../../src/physics/vec3';
+it('tower', { timeout: 600_000 }, () => {
+  const sim = flyWithReturns({ vehicleId: 'starship', siteId: 'starbase', payload: 15600, orbit: orbitById('leo'),
+    plan: { core: { kind: 'landingZone', zoneId: 'olm' } }, model: 'pointMass' });
+  const b = sim.debris.find((d) => d.recovery)!;
+  writeFileSync(process.env.PROBE_OUT ?? 'tower.txt', `caught ${b.recovery!.caught} outcome ${b.outcome} miss ${b.recovery!.missDistance!.toFixed(2)} m (radius ${landingZoneById('olm').radius})\n`
+    + `height by the sphere (|r| − R_EARTH − site alt) ${(norm(b.r) - R_EARTH - sim.site.altitude).toFixed(2)} m; above WGS-84 less the site's altitude ${(geodeticHeight(b.r) - sim.site.altitude).toFixed(2)} m\n`);
+});

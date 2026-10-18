@@ -1,0 +1,14 @@
+/** Probe: which point-mass fleet rows report evt.nozzleSeparation, and where. */
+import { it } from 'vitest';
+import { writeFileSync } from 'node:fs';
+import { allCases, caseKey, flyCase } from '../fleet-harness';
+it('separation events', { timeout: 3_600_000 }, () => {
+  const out: string[] = [];
+  let rows = 0;
+  for (const c of allCases()) {
+    const sim = flyCase(c);
+    rows++;
+    for (const e of sim.events.filter((x) => x.key === 'evt.nozzleSeparation')) out.push(`${caseKey(c)}\tt ${e.t.toFixed(1)}\t${JSON.stringify(e.params)}`);
+  }
+  writeFileSync(process.env.PROBE_OUT ?? 'separation-events.txt', `rows flown ${rows}, events ${out.length}\n` + out.join('\n') + '\n');
+});
