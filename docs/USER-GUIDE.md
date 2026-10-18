@@ -743,7 +743,9 @@ on the drawing.
   - re-count an engine entry that stands for several engines at once (YF-75, for one);
   - swap or re-count a solid motor (stretch or shrink it instead);
   - put an engine on tanks of another propellant;
-  - put a vacuum-only engine on the first stage, or fire one in air on the test stand;
+  - light a vacuum-only engine on the pad (the first stage or a ground-lit strap-on): at sea level its
+    flow separates in the bell, and the side loads would break a real nozzle (the test stand does fire
+    one in air, to show the thrust it gives there);
   - shut down a solid motor on the test stand;
   - make a rocket past the program's limits (six stages, four strap-on groups, 50 engines to a
     stage);
