@@ -31,9 +31,34 @@ cut-off checks — stay the radius less 6 378.137 km, the catalogues' convention
 *Orbits*; §13.6, "The height datum"). The planner's orbit-plane geometry from the pad (launch
 azimuth, expected node, launch windows, the corridor's reach) uses the pad's geocentric latitude,
 since the plane passes through the pad and the Earth's centre (45.773° at Baikonur's 45.965°).
-The local vertical the guidance pitches against, and the pad's hold-down attitude, are the
-radius's, at most 0.19° (at 45°) from the ellipsoid's normal; the ground the scene draws is laid
-on the normal.
+The pad is level: the stack stands on the plumb line, the ellipsoid's normal (`geodeticUp`), and
+its vertical rise is flown along it. From the pitch-over on, and through a stored pitch programme
+(the R-7's), the local vertical the guidance pitches against is the radius, at most 0.19° (at 45°)
+from the normal. Flying the R-7's programme from the normal too was tried and dropped: at Baikonur
+the normal leans 0.19° to the north of the radius, most of it across a station-plane launch to the
+north-east, and the open-loop programme carried that lean, which cost the six-DOF Progress MS
+10.2 km of perigee (probe fix-progress6: 186.2 → 176.0 km on the physical apsides at separation).
+Holding the radius from the release instead turned the stack 0.19° there, a transient that moved
+the bending-mode frequency tests/linear-loop.test.ts reads off Falcon 9's first seconds outside
+its 5 % bound. Ground contact
+(`rigidContactMetrics`: tilt, the lowest point of the rim, the vertical speed) is measured against
+the normal too. Until a review found it, the pad held the stack on the radius, so the rim of its
+base stood 0.19° off the ground under it, 17 mm at a 5.2 m rim, and the contact check could find
+the crewed Soyuz of lesson S2 inside the ground at T+0.02 s. The ground the scene draws is laid
+on the normal. A few drawn or forecast quantities still use the 6 378 137 m sphere, none of which
+the flight reads: the atmosphere rim's disc test (src/render/scene.ts), the sunlit test of the
+twilight plume (twilight-plume.ts), the map's predicted track (ui/map.ts, a Kepler arc cut at
+|r| < R⊕), the forecast's "above the surface" (|r| > R⊕, 21.4 km above the ellipsoid at the poles)
+and the ship-descent planner's G₀(R/r)² gravity estimate.
+
+**Judging and aiming on the physical apsides (D-51).** A mission is judged on the lowest and
+highest altitude of the next revolution under J2 (§2), in both models, and the cut-offs that set an
+apsis aim at the same figures: a single burn that cannot relight is cut off on them (for a circular
+aim where their middle reaches the target, since a circle under J2 keeps the two kilometres apart),
+and the burn that puts a transfer's apogee on the mission's is cut off on the apex of the next
+revolution once the conic is within 5 % of it. The planner's forecasts run at most two days
+(`MAX_DURATION` in src/physics/rigid/orbit-prediction.ts): a custom orbit whose next apsis is
+further out than that (a 380 000 km apogee) ends its plan with `evt.burnPredictionUnavailable`.
 
 ## 2. Equations of motion
 
@@ -1257,7 +1282,15 @@ chambers at full thrust on the pad, which they run with the flow attached every 
 catalogue's sea-level thrust is that point. So an engine with a sea-level pair takes the least factor
 on its wall pressure that keeps (λ = 1, p₀) attached — 1 for most of the fleet; Vulcain 2.1 2.53,
 YF-77 2.14, LE-7A 1.85, the Starship blend 1.35, LE-9 1.26, the R-7's chambers 1.04–1.28,
-RD-0213 1.10 — and such an engine begins to separate as soon as it is throttled at sea level. The
+RD-0213 1.10 — and such an engine begins to separate as soon as it is throttled at sea level.
+The rule gives 1 to an engine that already passes on the one-dimensional pressure, and so the
+RD-191 takes 1: its onset at p₀ is λ 0.547, and at the 30 % Angara-A5 flies its core at from low
+altitude the model separates it (ε_s 22.1 of 37 at sea level, 27.2 at 2 km; 510.7 against
+457.0 kN attached at sea level). Every Angara-A5 row of the point-mass fleet reports it, at
+0.6 km and ε_s 23.4–23.5. That is the minimal-factor rule's prediction, and it disagrees with a
+qualified operating point (the real core runs there), not a fact of the flight; with one factor
+of 2.4 for every bell the onset at p₀ would be λ 0.23 and the flight would run attached. A vacuum
+engine also takes 1. The
 others begin at λ = k(M_e)·p₀/p_e at sea level, and at that level times p_a/p₀ higher up: Merlin 1D
 0.42, BE-4 0.45, RD-180 0.53, Raptor 2 0.53, RD-191 0.55, RD-276 0.58, YF-100 0.70, F-1 0.72; the
 ground-lit solid motors 0.31–0.53, below the tail of their profiles (the upper-stage Zefiro 9 0.58,

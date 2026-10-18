@@ -107,7 +107,10 @@ are listed there as drafts awaiting the owner's review.
   ground are read at is above it, and the scene draws it; orbit heights stay the radius less
   6,378.137 km. Both models fly μ/r² + J2 from the pad through every coast to the orbit (the
   point mass flew the central field and Kepler coasts before), the point-mass burn planner
-  predicts that J2 coast, and every orbit is judged on its physical apsides (M-LAUNCH-031).
+  predicts that J2 coast, and every orbit is judged on its physical apsides (M-LAUNCH-031); a
+  single burn and a transfer's apogee burn are cut off on them too. The stack stands on the pad
+  along the ellipsoid's normal and rises along it to the pitch-over, and ground contact is
+  measured against it.
   With both changes the point-mass fleet keeps all 131 gated rows (156 of the 222 rows flown are
   accepted, before and after) ([PHYSICS.md](PHYSICS.md) §1, §2, §4;
   [VALIDATION.md](VALIDATION.md) §10).

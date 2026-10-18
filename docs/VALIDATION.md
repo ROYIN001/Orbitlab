@@ -181,6 +181,10 @@ tables with the published masses are under "Data change applied".*
 The flight value is followed by point mass and six-DOF, with the error relative to the flight in
 brackets.
 
+*These tables predate the re-baseline of 2026-10-17 (the last section of §10) and are re-measured
+when the goldens are re-recorded. After it, CRS-16's point-mass max-Q comes at 48.4 s, GPS III SV01's
+six-DOF T+60 speed is 317 m/s and SSO-A's six-DOF max-Q comes at 52.1 s, each outside its band.*
+
 **SpaceX CRS-16** (RTLS)
 
 | milestone | unit | flight | point mass | six-DOF | tolerance |
@@ -710,6 +714,9 @@ the point mass 89.2 km and 166.0 km, with a 197 × 200 km insertion (F8).
 | Vinci first ignition | 472 s | 453.8 s (−4 %) | 454.1 s (−4 %) | ±47.2 s |
 | Vinci ignition altitude | 269 km | 233.8 km (−13 %) | 302.2 km (+12 %) | ±41.4 km |
 
+*Moved by the re-baseline of 2026-10-17, to be re-measured when the goldens are re-recorded:* the
+six-DOF P120C separation altitude is 101.9 km, outside its band.
+
 ### Findings
 
 **F7. Electron's second stage burns about 25 % too short.** The press kit runs it from T+151 s
@@ -908,6 +915,11 @@ went at 42 km against this 2.1a's 45.
 | aft skirt | 296.12 s | 296.12 s | 296.78 s | 296.78 s |
 | insertion | 199.9 × 239.8 / 199.9 × 240.4 km | 200 ± 2 × 242 ± 5 km | 192.8 × 238.1 / 191.9 × 237.4 km | 193 ± 2 × 240 ± 7 km |
 | max Q; largest angle in high q | 37.2 kPa; 1.5° | under 36.3 kPa (SoyCOM, Soyuz-U) | 37.9 kPa; 1.8° | — |
+
+*Moved by the re-baseline of 2026-10-17 (the last section of §10), to be re-measured when the
+goldens are re-recorded:* the cargo insertion now comes out 182.3 × 211.4 km in six-DOF and a 154 km
+perigee in point mass, the Blok I running dry, because the vehicle's data were fitted on the old
+spherical pad.
 
 **Blok I's attitude, re-judged.** The comparison with Starsem's smooth 12° → −10° was wrong:
 Starsem's Fig. 2-4 is its suborbital profile, whose Blok I falls back short of orbit with the
@@ -4189,94 +4201,107 @@ attached law by hand for RD-180 at 47 % at 10 km and a P120C at its liftoff peak
 engine's sea-level thrust at full throttle to 10⁻⁹ with the flow attached; continuity at the
 separation boundary; never negative, rising with the level, falling with the pressure.
 
+**The pad and the cut-offs (after the two reviews of the branch).** The stack stands level on the
+pad, on the ellipsoid's normal, and flies its vertical rise along it; ground contact is measured
+against the normal (until then lesson S2's crewed Soyuz could read 17 mm inside the ground at
+T+0.02 s and end in an abort: the pad held it square to the radius, 0.19° off the ground). A single
+burn that cannot relight and the burn that sets a transfer's apogee are cut off on the physical
+apsides, as the mission is judged. "After" below is 19eb5da, with these.
+
 **The fleet (tests/fleet-harness.ts, all 222 point-mass rows, a probe of `allCases` judged by
 `acceptanceFailures`).** Every row that passed before passes after: 156 of 222 accepted and all 131
-gated rows, before, after D-51 alone and after both; none newly accepted. The Δv left on the 131 gated
-rows, on the mean: D-51 −19.6 m/s, the thrust law +3.1 m/s on top of it, both −16.5 m/s (−156 to
-+25). By vehicle, both together: Saturn V −61.2, Atlas V −37.3, Angara-A5 −35.8, Falcon 9 −33.8,
-Proton-M −32.4, Falcon Heavy −27.0, Long March 5 −24.0, Starship −24.0, Soyuz-2.1b −21.3, Long March
-3B/E −16.3, Electron −13.6, Vulcan −9.6, H-IIA −9.0, Vega-C −3.4, H3 +0.5, Ariane 64 +2.3, PSLV-XL
-+15.6. The law alone moves the solid-boosted vehicles up (PSLV-XL +22.6, Ariane 64 +17.2, Vulcan +7.6:
-the air takes p·A_e off a solid's head-end peak, not a share of it) and the deep-throttled ones down
-(Falcon Heavy −10.2, Falcon 9 −3.2); at full thrust it is the old law exactly, so Saturn V, Long March
-5, Soyuz-2.1b and Electron move by less than a metre a second. The smallest margins after: H-IIA
-iss/90 26 m/s (58 before), Atlas V iss/90 42 (38), Saturn V leo/90 70 (143). Before is judged on the
-conic at the cut-off, after on the physical apsides (M-LAUNCH-031 in point mass since D-51).
+gated rows; none newly accepted. The Δv left on the 131 gated rows, on the mean, −14.1 m/s (−152 to
++26). By vehicle: Atlas V −35.8, Angara-A5 −33.6, Proton-M −29.4, Falcon 9 −26.8, Starship −24.8,
+Falcon Heavy −24.2, Soyuz-2.1b −21.0, Saturn V −15.2, Long March 3B/E −14.2, H-IIA −13.4, Long March
+5 −12.6, Electron −11.1, H3 −8.1, Vulcan −7.3, Vega-C −3.3, Ariane 64 +2.1, PSLV-XL +14.2. The
+smallest margins after: H-IIA iss/90 14 m/s (58 before), Atlas V iss/90 48 (38), Saturn V leo/90 137
+(143). The 37 accepted geostationary transfers end at 35 714.6–35 752.4 km of apogee (35 714.8–
+35 740.2 before); cut off on the conic they had come out 52–180 km lower. Before is judged on the
+conic at the cut-off, after on the physical apsides (M-LAUNCH-031 in point mass since D-51); judged
+on the osculating ellipse of the last instant, as the gate did at the base, the same flights would be
+accepted on 93 of the 222 rows, 63 rows reading a perigee or an apogee 10–28 km off. The
+nine Angara-A5 rows report the RD-191's flow separating at 0.6 km (area ratio 23.4–23.5 of 37) at its
+30 % throttle, a prediction of the wall-factor rule (PHYSICS.md §4).
 
 **Build ratings (the eight rows of tests/design-ratings.test.ts; ±25 % bound unchanged).** Computed
 against published, before → after: LEO Soyuz-2.1a 8 140 → 7 911 kg (1.096 → 1.065), Falcon 9
-20 031 → 19 842 (0.879 → 0.870), Long March 2D 3 165 → 2 942 (0.904 → 0.841), Vega-C 4 330 → 4 371
+20 031 → 19 842 (0.879 → 0.870), Long March 2D 3 165 → 2 987 (0.904 → 0.853), Vega-C 4 330 → 4 371
 (1.312 → 1.325, the recorded miss), Ariane 64 26 274 → 26 274 (1.216), Electron 315 → 311 (1.050 →
 1.037); GTO Falcon 9 6 832 → 6 756 (0.823 → 0.814), Ariane 64 13 328 → 13 328 (1.159). The same rows
 meet the bound.
 
 **Six-DOF (tests/sixdof-fleet/cases.ts' judge, calm air, seed 20260919), one flight per site
 latitude, before → after.** Soyuz-2.1b iss/50 from Baikonur, accepted, Δv left 1 658 → 1 612 m/s;
-Angara-A5 leo/25 from Plesetsk, accepted, 3 631 → 3 472 (D-51 alone 3 413; the law gives back 59);
-Falcon 9 leo/50 from the Cape, accepted, 1 595 → 1 575; Ariane 64 leo/50 from Kourou, accepted,
-3 005 → 3 016; Vega-C sso/50 from Kourou, accepted, 931 → 931; H-IIA leo/50 from Tanegashima,
-accepted, 2 061 → 2 054; H3 sso/50 from Tanegashima, accepted, 4 988 → 4 981. Two that miss their
-target before miss it after, and every one of the nine is in orbit: Soyuz-2.1b to the station orbit
-from Vostochny (not a fleet row; 420.0 × 424.8 → 420.5 × 425.3 km) and Long March 2D from Jiuquan
-(an architecture-excluded row; 196.7 × 603.0 → 194.0 × 607.2 km). The 21 six-DOF fingerprints all
-move (below).
+Angara-A5 leo/25 from Plesetsk, accepted, 3 631 → 3 501; Falcon 9 leo/50 from the Cape, accepted,
+1 595 → 1 575; Ariane 64 leo/50 from Kourou, accepted, 3 005 → 3 016; Vega-C sso/50 from Kourou,
+accepted, 931 → 931; H-IIA leo/50 from Tanegashima, accepted, 2 061 → 2 054; H3 sso/50 from
+Tanegashima, accepted, 4 988 → 4 963. Two that miss their target before miss it after, and every one
+of the nine is in orbit: Soyuz-2.1b to the station orbit from Vostochny (not a fleet row; 420.0 ×
+424.8 → 420.5 × 425.2 km) and Long March 2D from Jiuquan (an architecture-excluded row; 196.7 ×
+603.0 → 195.3 × 606.4 km). The 21 six-DOF fingerprints all move (below).
 
 **The flexible fleet (tests/heavy/flex-fleet-1…4: slosh, the first bending mode and the bending
 filter, in crosswind, judged by `acceptanceFailures` with every shell under 80 % of its allowable).**
-All 19 tests pass before and after. No shell load moves by more than 2 points: Angara-A5 12 → 10 %,
-Starship 44 → 42 %, the rest unchanged to the per cent (Starship's is the highest, Falcon Heavy's 35 %
-next). Angara-A5's mission ends 3 873 → 4 180 s.
+All 19 tests pass before and after. No shell load moves by more than 2 points (Angara-A5 12 → 10 %;
+Starship's 44 % is the highest, Falcon Heavy's 35 % next). Angara-A5's mission ends 3 873 → 4 176 s.
 
-**What does not pass any more, and is not a golden.** Measured before → after, and whether D-51 alone
-gives it (the thrust law alone gives only the last of the lessons below):
-- *Against history* (D-51): Sputnik-1 reaches 214 × 779 km against the flown 214 × 938 km (before
-  214 × 937), and Vostok-1 168 × 260 km against 168 × 314 km (before 168 × 315), both burning to
-  depletion short of it. On WGS-84 Baikonur's pads are 11 km lower in radius than on the sphere, and
-  a vehicle tuned to burn out exactly on the flown orbit from the sphere now climbs 11 km more:
-  Sputnik's R-7 ends with 32 m/s more gravity loss and 35 m/s more steering loss and cuts off
-  41 m/s slow (7 913 against 7 955 m/s), Vostok-K 38 and 21 m/s more and 14 m/s slow. With them go
-  their Watch harnesses, the excluded-vehicle check that Sputnik's dedicated mission succeeds,
-  Vostok-1's return (103 km short, against 15 km), its recording's last orbit frame (17.4 s before the
-  retro sequence, against 10 s), the lessons 5.3 and 5.4 and the grading-end check on 5.4's perigee;
-  and Mercury-Redstone 3, whose capsule comes down 30.8 km from where Freedom 7 did (bound 25 km),
-  all of these flown point-mass. In six-DOF (tests/heavy) Sputnik-1 and Vostok-1 still reach their orbits, Apollo 11's S-IVB still
-  relights for the translunar injection, and Vostok-1's recording and the two Soyuz MS dockings pass
-  as before; but Vostok-1's sphere comes down 14.95 km from its place by Smelovka, 14.90 km short
-  along the track (bounds 15 km and 10 km; before 0.99 km, 0.22 km along), and Freedom 7 26.99 km
-  from its splashdown (bound 25 km; before 11.36 km). The D-51-only tree gives the same two numbers,
-  so the thrust law adds nothing to them.
-- *Single-burn and trim targets now judged on the physical apsides* (D-51): Soyuz-2.1a's single burn
-  to a 200 km circle, judged on its physical apsides 199.6 × 211.2 km with 6 318 kg (off target; before
-  198.6 × 200.5) and its direct-insertion grid (closing within 4.2 and 7.2 km against 3 km); its crew
-  ship's perigee 15.7 km off (bound 10 km); H-IIA iss/90's retrograde trim (18 km left); Long March 2D's
-  sun-synchronous delivery, checked on the osculating elements of one instant; and the lesson packs'
-  GTO lessons, whose worked answer from the reached (physical) heights, a = 24 322.6 km, no longer
-  meets the semi-major axis the measure reads off the osculating ellipse, 24 363.7 km.
-- *Lessons and profiles*: lesson 1.4's 18 t solution keeps 145.8 m/s of Δv (D-51; it fails its
-  reserve); lesson 2.2's standard steering, an engine short, now runs dry with its perigee at 116 km
-  rather than ending in an off-target orbit (the thrust law; the lesson still fails it, as it is
-  meant to, and PEG and IGM still pass it); Vega-C's AVUM+ first ignition and Electron's fairing
-  jettison against the published callout (D-51).
-- *Instruments built on the old sphere* (D-51): the corridor sweep's latitude (Baikonur's reach
-  0.19° off the declared pair, against 0.051°), the tower catch's height (|r| − 6 378 137 m reads
-  −4 068 m; above WGS-84 it is 13.0 m, inside the test's 8–18 m), the E02 Δv book's initial speed
-  (ω·(R⊕ + h)·cos φ is 408.50 m/s; the WGS-84 pad's is 408.81, and with it the book closes to
-  6.0 × 10⁻⁵ against 3.2 × 10⁻³), the LZ-1 divert's "straight down" (the radius, 0.161° off the
-  plumb line: 0.225 m/s² of divert, 1.4 × 10⁻¹¹ down the normal), and the fx5-031 check that a
-  point-mass verdict carries no physical apsides, which since D-51 it does.
+**What does not pass any more, and is not a golden.** Measured before → after, and whether D-51
+alone gives it:
+- *Against history* (D-51): Sputnik-1 reaches 214 × 791 km against the flown 214 × 938 km (before
+  214 × 937), burning to depletion short of it: on WGS-84 Baikonur's pads are 11 km lower in radius
+  than on the sphere, and a vehicle tuned to burn out exactly on the flown orbit from the sphere now
+  climbs 11 km more. With it go its Watch harness, lesson 5.3 and the excluded-vehicle check that
+  Sputnik's dedicated mission succeeds. Vostok-1 reaches its flown 168 × 314 km (168 × 315), but its
+  point-mass return lands 24.9 km from its place (bound 15 km) and its recording's last orbit frame
+  comes 15.9 s before the retro sequence (bound 10 s); Mercury-Redstone 3's capsule comes down 32.4 km
+  from where Freedom 7 did in point mass and 27.73 km in six-DOF (bound 25 km; before 11.36 km in
+  six-DOF). Progress MS-19's point-mass insertion perigee is 154.0 km (193 ± 29.9; before 192) and the
+  six-DOF Progress MS 182.3 km at separation on the osculating ellipse (193 ± 0.5; before 192.8), with
+  the Blok I running dry; Ariane 64 VA267's P120C separates at 101.9 km in six-DOF (87 ± 14.1; before
+  101.0; the D-51-only tree 101.1). In six-DOF, Sputnik-1 still reaches its orbit, Vostok-1's sphere
+  comes down 7.91 km from its place (bounds 15 and 10 km along the track; before 0.99 km), Apollo 11's
+  S-IVB still relights for the translunar injection, and Vostok-1's recording and the two Soyuz MS
+  dockings pass as before.
+- *The thrust law at low throttle and at a solid's peak*: Falcon 9 CRS-16's point-mass max-Q comes at
+  48.4 s (54.0 ± 5.4), Atlas V Juno's at 41.5 s (46.4 ± 4.6; before 41.8) with its fairing at 156.7 s
+  (204.9 ± 20.5); in six-DOF GPS III SV01's T+60 speed is 317 m/s (359 ± 41) and SSO-A's max-Q 52.1 s
+  (58.0 ± 5.8). PSLV-XL with every PS1 solid at a peak factor of 2, a counterfactual
+  tests/validation/pslv-first-stage.test.ts flies, now breaks up at T+29.4 s: the air takes p₀·A_e
+  off a head-end peak rather than a share of it, so a peak of 2 pushes 5 % harder (9 085 against
+  8 625 kN at T+5 s). At its shipped factors PSLV-XL separates PS1 at 1 522 m/s (1 512 before).
+- *Instruments built on the sphere or on the osculating ellipse of one instant* (D-51): the corridor
+  sweep's latitude (Baikonur's reach 0.19° off the declared pair, against 0.051°; within 0.049° with
+  the geocentric latitude), the range-safety heading sweep and its recorded F01 headings and corridor
+  message, the tower catch's height (|r| − 6 378 137 m reads −4 067.8 m; above WGS-84 it is 12.98 m,
+  inside the test's 8–18 m), the E02 Δv book's initial speed (ω·(R⊕ + h)·cos φ is 408.499 m/s; the
+  WGS-84 pad's is 408.813, and with it the book closes to 6.0 × 10⁻⁵ against 3.18 × 10⁻³), the LZ-1
+  divert's "straight down" (the radius, 0.161° off the plumb line), the fx5-031 check that a
+  point-mass verdict carries no physical apsides; and the checks that read the osculating ellipse
+  where the mission is judged on the physical apsides: the crew ship's perigee (404.3 km osculating,
+  412.6 km physical; bound 10 km off 420), Long March 2D's delivery (650 kg: 573.6 km osculating,
+  597.2 km physical; bound 15 km off 600), the quickstart starters, the 200 km single-shot circle's
+  margin (190.9 × 200.0 km osculating at the cut-off, 199.0 × 201.6 km physical), H-IIA iss/90's trim
+  (read on each burn event's conic) and six-DOF Vostok-1 to 181 × 327 km, which is now on target on
+  its physical apsides (181.0 × 324.7 km; 181.0 × 342.6 km and off target before) while its test still
+  reads the osculating 306.4 km and expects the flight off target.
+- *Lessons*: lesson 1.4's 18 t solution keeps 148.1 m/s of Δv (it fails its reserve); the lesson
+  packs' GTO lessons read their semi-major axis off the osculating ellipse (24 405.1 km) while the
+  reached heights are physical (24 364.1 km), and the planned 250 × 35 786 km answer (24 396.1 km)
+  now falls inside the 10 km band that should fail it; Vega-C's AVUM+ first ignition and Electron's
+  fairing jettison against the published callout.
 
 The report docs/development/reports/argon4-fu-rebaseline.md lists each with its numbers and the
-owner's choices; none of their bounds is changed. One more, found and fixed here: the lessons'
-orbit measures (`orbit.perigee`, `orbit.apogee`; src/lessons/measures.ts) and the Monte Carlo final
-orbit took the physical apsides in six-DOF only, so a point-mass Falcon 9 to 500 km read a 510.2 km
-apogee off the osculating ellipse of one instant against the 501.6 km its verdict judged (the
-authoring page's written lesson failed its 5 km band); both now read them in both models.
+owner's choices; none of their bounds is changed. Fixed on the branch: the lessons' orbit measures
+(`orbit.perigee`, `orbit.apogee`; src/lessons/measures.ts) and the Monte Carlo final orbit took the
+physical apsides in six-DOF only, so a point-mass Falcon 9 to 500 km read a 510.2 km apogee off the
+osculating ellipse of one instant against the 501.6 km its verdict judged; both now read them in
+both models.
 
 **Goldens.** Every exact hash of a flight moves, since every pad moved and every engine's thrust law
 changed off full throttle (the start-up and the tail-off of every engine too): the 27 point-mass D01
-fingerprints and the 21 six-DOF fingerprints (each also moves with D-51 alone and again with the law),
-the rigid-flex goldens, Apollo 11's EO-PHY-6 record (event digest 330b5fd0… → 51074bd6… with D-51
-alone, f01c4579… with both), the T02 re-check fixtures, the replay fixture's max-Q instant (T+63.0 →
-63.1 s) and the lesson packs' recorded results; the D01 identity fixture moves for Angara-A5's kick
-(4° → 3.5°) alone. They are re-recorded once, at the end of the Argon4 follow-up (on top of the Apollo
+fingerprints and the 21 six-DOF fingerprints, the rigid-flex and flex goldens, Apollo 11's EO-PHY-6
+record (event digest 330b5fd0… → b561d6ea…), the placement test's recorded flights, the
+direct-insertion grid, the T02 re-check fixtures, the replay fixture's max-Q instant (T+63.0 → 63.1
+s) and the lesson packs' recorded results; the D01 identity fixture moves for Angara-A5's kick (4° →
+3.5°) alone. They are re-recorded once, at the end of the Argon4 follow-up (on top of the Apollo
 work), with each reason and old hash beside it; the report lists the old and new values.
