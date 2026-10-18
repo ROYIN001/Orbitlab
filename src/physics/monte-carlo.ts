@@ -107,9 +107,8 @@ const RUN_TIME_LIMIT_S = 30 * 3600;
 
 function orbitOf(sim: Simulation, physical: boolean): RunOrbit {
   const s = sim.state, el = elementsFromState(s.r, s.v);
-  // the J2 revolution's extremes in six-DOF, and for an orbit stated as its extremes in either model (C01: Vostok-1)
-  const apsides = physical && el.e < 1 && el.periapsisAlt >= 120e3 && (sim.rigidRuntime || sim.cfg.orbit.extremes)
-    ? physicalApsides({ r: s.r, v: s.v }) : null;
+  // the J2 revolution's extremes: every coast is flown under J2, in both models since D-51 (M-LAUNCH-031)
+  const apsides = physical && el.e < 1 && el.periapsisAlt >= 120e3 ? physicalApsides({ r: s.r, v: s.v }) : null;
   const periapsis = apsides?.periapsisAlt ?? el.periapsisAlt, apoapsis = apsides?.apoapsisAlt ?? (el.e < 1 ? el.apoapsisAlt : Infinity);
   return { perigeeKm: periapsis / 1000, apogeeKm: apoapsis / 1000, inclinationDeg: el.i * RAD,
     dvLeft: s.payloadSeparated ? sim.vehicle.spacecraftDeltaV() : sim.vehicle.deltaVRemaining(), t: s.t };

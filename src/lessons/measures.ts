@@ -50,15 +50,16 @@ const finite = (v: number): number | null => (Number.isFinite(v) ? v : null);
 
 /**
  * The orbit the flight is in: at its grading end when `end` is given (the
- * state its end event left it in), else at its head. A six-DOF flight coasts
- * under J2, so its apsides are the lowest and highest altitude of the next
- * revolution rather than the osculating ellipse of one instant (as the fleet
- * acceptance reads them).
+ * state its end event left it in), else at its head. Every flight coasts
+ * under J2 — six-DOF, and since D-51 the point mass — so its apsides are the
+ * lowest and highest altitude of the next revolution rather than the
+ * osculating ellipse of one instant (as the mission's verdict and the fleet
+ * acceptance read them, M-LAUNCH-031).
  */
 export function flightElements(flight: LessonFlight, end?: EventState): OrbitalElements {
   const { r, v } = orbitState(flight, end);
   const el = end ? elementsFromState(r, v) : flight.state.elements;
-  if (flight.cfg.dynamics?.model !== 'sixDof' || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
+  if (!(el.e < 1) || el.periapsisAlt < 120e3) return el;
   try {
     const apsides = physicalApsides({ r, v });
     return apsides ? { ...el, ...apsides } : el;
