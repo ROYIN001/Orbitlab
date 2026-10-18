@@ -213,13 +213,21 @@ describe('mission verdict · range-safety corridor', () => {
    * "Ready to simulate · 7 150 kg of 100 000 kg rated to LEO".
    */
   it('fails a target above the site corridor, for the planner and the verdict alike', () => {
-    for (const [vehicle, siteId, orbit] of [['starship', 'starbase', 'iss'], ['longmarch3be', 'xichang', 'sso']] as const) {
+    // The message quotes the top of the corridor: the inclination the window's
+    // headings reach from the pad, to 0.1°. This read the declared
+    // `maxInclination` (31.8° and 31.0°), which on the sphere was that reach
+    // rounded. On WGS-84 the reach is worked from the pad's geocentric
+    // latitude (D-51), 25.846° at Starbase and 28.086° at Xichang, and is
+    // 31.65° and 30.83° (tests/data-consistency.test.ts holds the declared
+    // figures within 0.2° of it), so the message reads 31.7 and 30.8. The same
+    // quantity on WGS-84, the same exact match: the owner's answer "3.ก" of
+    // 2026-10-18.
+    for (const [vehicle, siteId, orbit, top] of [['starship', 'starbase', 'iss', '31.7'], ['longmarch3be', 'xichang', 'sso', '30.8']] as const) {
       const { plan, verdict } = verdictFor(vehicle, siteId, orbit, 'cubesats');
-      const s = siteById(siteId);
       expect(plan.inclinationReachable, `${vehicle}/${siteId}/${orbit}`).toBe(false);
       expect(verdict.level, `${vehicle}/${siteId}/${orbit}: ${verdict.text}`).toBe('fail');
       expect(verdict.text).toContain('range-safety corridor');
-      expect(verdict.text).toContain(s.maxInclination.toFixed(1));
+      expect(verdict.text).toContain(top);
     }
   });
 

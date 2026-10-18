@@ -1,9 +1,9 @@
 /**
  * M-LAUNCH-031 residual (FX-5, lane P): the verdict's completion event carries
  * the numbers it was judged on, unrounded — `apJudgedM`, `peJudgedM` (m above
- * the equatorial radius, the physical apsides where six-DOF judged on them),
- * `incJudgedRad`, `raanJudgedRad` — beside the rounded `ap`/`pe`/`inc`/`raan`
- * the event line prints. Before, the result table could only re-judge from the
+ * the equatorial radius, the physical apsides, which both models judge on
+ * since D-51), `incJudgedRad`, `raanJudgedRad` — beside the rounded
+ * `ap`/`pe`/`inc`/`raan` the event line prints. Before, the result table could only re-judge from the
  * rounded ones (1 km, 0.01°, 0.1°), and an off-target verdict they rounded back
  * inside fell back to the displayed orbit's flags (#117 review;
  * docs/development/HANDOVER-K1.md §9).
@@ -34,8 +34,17 @@ describe('the completion event keeps the judged numbers unrounded (M-LAUNCH-031 
     // the recorded numbers give the recorded verdict, as the simulation judged it
     const res = orbitResiduals(sim.plan.target, { apoapsisAlt: ap, periapsisAlt: pe, i: inc, raan, e: 0 }, true);
     expect(res.onTarget).toBe(true);
-    // point-mass judges on the conic: no physical apsides, so the basis stays osculating
-    expect(p.apAltM).toBeUndefined();
+    // The basis the verdict was judged on, which the result panel reads off the
+    // event (`apAltM`/`peAltM` present: physical; absent: osculating). Before
+    // D-51 a point-mass flight coasted on Kepler arcs and was judged on its
+    // conic, so the event carried no physical apsides and this asserted
+    // `apAltM` undefined. Since D-51 the point mass coasts under J2 and is
+    // judged on the physical apsides of its next revolution, as six-DOF is,
+    // and its verdict carries them (501 589.8 m of apogee here): the judged
+    // apsides are the physical ones, exactly. The same quantity, the owner's
+    // answer "3.ก" of 2026-10-18.
+    expect(num(p.apAltM)).toBe(ap);
+    expect(num(p.peAltM)).toBe(pe);
   }, 60_000);
 
   it('a suborbital cut-off (Mercury-Redstone 3): inclination and node unrounded too', () => {

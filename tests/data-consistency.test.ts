@@ -19,7 +19,7 @@ import { SATELLITES } from '../src/data/satellites';
 import { ORBIT_PRESETS } from '../src/data/orbits';
 import { engineMassFlow, engineThrustAt, liftoffMass, liftoffThrust, solidProfile } from '../src/physics/vehicle';
 import { circularSpeed, rotatingLaunchAzimuth } from '../src/physics/orbital';
-import { corridorReach } from '../src/physics/mission';
+import { corridorReach, padPlaneLatitude } from '../src/physics/mission';
 import { G0, DEG, P0, R_EARTH } from '../src/physics/constants';
 import type { EngineSpec, StageSpec, VehicleSpec } from '../src/types';
 
@@ -332,6 +332,16 @@ describe('geometry and references', () => {
    * site's published minimum is quoted for a pad that is not exactly at the
    * coordinates used here — Plesetsk declares 62.8 deg at 62.925 deg N — and at
    * those sites the binding limit is the latitude rather than the corridor.
+   *
+   * The sweep starts from the pad's geocentric latitude (`padPlaneLatitude`),
+   * the latitude of the orbit plane through the pad and the Earth's centre.
+   * Until the sites moved onto WGS-84 (D-51) it took the site's geodetic
+   * `latitude`, which on the sphere was the same number; on the ellipsoid the
+   * two are 0.03-0.19° apart, and the geodetic sweep read Baikonur's reach
+   * 0.19° off `corridorReach` against the 0.051° bound below. Measured with the
+   * geocentric latitude, the same quantity on WGS-84 with every bound
+   * unchanged (the owner's answer "3.ก" of 2026-10-18), every site is within
+   * 0.049° of it.
    */
   it('the declared inclination pair is inside the site azimuth corridor', () => {
     const vOrb = circularSpeed(R_EARTH + 300e3);
@@ -346,7 +356,7 @@ describe('geometry and references', () => {
       let lo = NaN; let hi = NaN;
       for (let i = 0; i <= 180; i += 0.05) {
         const hit = [false, true].some((descending) => {
-          const az = rotatingLaunchAzimuth(s.latitude * DEG, i * DEG, vOrb, descending);
+          const az = rotatingLaunchAzimuth(padPlaneLatitude(s), i * DEG, vOrb, descending);
           return az !== null && inCorridor(s, az / DEG);
         });
         if (!hit) continue;

@@ -25,6 +25,7 @@ import { SURFACE_MIN_Q, allocateSurfaces, gridFinSurfaces, stepSurfaces, surface
 import { add, dot, norm, normalize, scale, sub, v3 } from '../src/physics/vec3';
 import { DEG, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import { enuFrame, groundPositionEci, groundVelocityEci } from '../src/physics/orbital';
+import { geodeticEnu, geodeticHeight } from '../src/physics/geodesy';
 import type { MissionConfig, RecoveryPlan } from '../src/types';
 import type { Debris } from '../src/physics/sim/types';
 
@@ -90,7 +91,18 @@ describe('return guidance', () => {
   });
 
   it('diverts towards the target and against the drift over the ground', () => {
-    const s = above(CAPE, 2000, 0, 0, -200);
+    // A stage falling straight down onto the pad, 2 km over it, needs no
+    // divert. "Straight down" is the plumb line: the WGS-84 normal at the pad,
+    // which the stage's position 2 km above it lies on and which the divert's
+    // horizontal plane is square to (D-51). This built the fall along the
+    // radius (`above`, the ENU frame of r), the same line on the sphere and
+    // 0.161° off the plumb line at the Cape on the ellipsoid, and read
+    // 0.225 m/s² of divert for a fall that was not straight down. Down the
+    // normal it reads 1.35 × 10⁻¹¹ m/s². The same quantity on WGS-84, the same
+    // 10⁻⁶ bound: the owner's answer "3.ก" of 2026-10-18.
+    const plumb = geodeticEnu(CAPE.lat, CAPE.lon + GMST0).up;
+    const r0 = groundPositionEci(CAPE.lat, CAPE.lon, 2000, GMST0);
+    const s = { r: r0, v: add(groundVelocityEci(r0), scale(plumb, -200)) };
     expect(norm(divertAcceleration(s.r, s.v, CAPE, GMST0, 0, 10))).toBeLessThan(1e-6);
     const f = enuFrame(s.r);
     const east = add(s.r, scale(f.east, 100));
@@ -260,8 +272,14 @@ describe('point-mass returns', () => {
     expect(booster.outcome).toBe('landed');
     expect(booster.recovery!.missDistance!).toBeLessThan(landingZoneById('olm').radius);
     expect(sim.events.some((e) => e.key === 'evt.boosterCaught')).toBe(true);
-    // Held by the arms, its base 13 m above the launch mount it lifted off from.
-    const height = norm(booster.r) - R_EARTH - sim.site.altitude;
+    // Held by the arms, its base 13 m above the launch mount it lifted off from:
+    // its height above the ground less the site's altitude. That height is
+    // above the WGS-84 ellipsoid, where the pad stands (D-51); this read it as
+    // |r| − 6 378 137 m, the height over the sphere, which at Starbase
+    // (25.997° N) lies 4.08 km above the ellipsoid, so the caught booster read
+    // −4 067.8 m. Above WGS-84 it reads 12.98 m. The same quantity on WGS-84,
+    // the same 8-18 m bounds: the owner's answer "3.ก" of 2026-10-18.
+    const height = geodeticHeight(booster.r) - sim.site.altitude;
     expect(height).toBeGreaterThan(8);
     expect(height).toBeLessThan(18);
   });

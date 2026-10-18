@@ -41,6 +41,7 @@ import { satelliteById } from '../src/data/satellites';
 import {
   azimuthAllowedFor, azimuthInWindow, corridorReach, inclinationCorridor, launchDescendingFor, launchDirection, launchWindows,
   minInclinationFor, planMission, resolveTarget, CORRIDOR_SLACK, DOGLEG_LIMIT_DEG, ascentInclinationFor, retrogradeOnly,
+  padPlaneLatitude,
 } from '../src/physics/mission';
 import { circularSpeed, rotatingLaunchAzimuth, wrapPi } from '../src/physics/orbital';
 import { guidanceForVehicle, DEFAULT_FAILURE } from '../src/physics/defaults';
@@ -59,9 +60,21 @@ function outsideDeg(site: SiteExtra, azRad: number): number {
   return inside ? 0 : Math.min(wrap(lo - deg), wrap(deg - hi));
 }
 
-/** Both launch headings for `inc`, deg — [northbound, southbound] — or [] when the site is above it. */
+/**
+ * Both launch headings for `inc`, rad — [northbound, southbound] — or [] when the site is above it.
+ *
+ * From the pad's geocentric latitude (`padPlaneLatitude`): the plane of the
+ * orbit passes through the pad and the Earth's centre, and that is the
+ * latitude the planner's heading is worked from. Until the pads stood on
+ * WGS-84 (D-51) this took the site's geodetic `latitude`, the same number on
+ * the sphere; on the ellipsoid it is 0.03-0.19° further from the equator, and
+ * the sweep below found 23 disagreements with the planner (Plesetsk's dogleg
+ * "not on the edge" at 102.90°, Palmachim's at 146.90°, …) that were the two
+ * latitudes, not the rule. The same instrument on WGS-84, every bound
+ * unchanged: the owner's answer "3.ก" of 2026-10-18.
+ */
 function headings(site: SiteExtra, inc: number): number[] {
-  return [false, true].map((d) => rotatingLaunchAzimuth(site.latitude * DEG, inc, V300, d))
+  return [false, true].map((d) => rotatingLaunchAzimuth(padPlaneLatitude(site), inc, V300, d))
     .filter((az): az is number => az !== null);
 }
 
@@ -119,7 +132,7 @@ describe('range safety · one rule', () => {
         }
         // ...and the heading the planner picks is the licensed one.
         if (verdict === 'ok' && hit(site, inc)) {
-          const az = rotatingLaunchAzimuth(site.latitude * DEG, inc, V300, launchDescendingFor(site, inc));
+          const az = rotatingLaunchAzimuth(padPlaneLatitude(site), inc, V300, launchDescendingFor(site, inc));
           if (az === null || !azimuthInWindow(site, az)) wrong.push(`${tag}: planner picks the unlicensed heading`);
         }
       }
@@ -139,15 +152,24 @@ describe('range safety · one rule', () => {
 
 describe('range safety · the reported cases', () => {
   /**
-   * Tanegashima's own minimum is a due-east launch: at exactly 30.4° both
-   * headings are 90° to the last bit, and the rounding came out a hair north of
-   * the edge. The `leo`/`gto` presets resolve to 30.45°, whose northbound
-   * heading is 88.07° — outside — and whose southbound one, 91.93°, is inside.
-   * Xichang is the same case at 94°: 85.82° northbound, 94.18° southbound.
+   * Tanegashima's own minimum was a due-east launch: at exactly 30.4° both
+   * headings were 90° to the last bit, and the rounding came out a hair north
+   * of the edge. The `leo`/`gto` presets resolve to 30.45°, whose northbound
+   * heading is outside the 90-190° window and whose southbound one is inside.
+   * Xichang is the same case at 94°.
+   *
+   * The headings are the test's own instrument (`headings`, at 300 km) to two
+   * decimals, which the plan's must match to 0.05°. They were recorded on the
+   * sphere, from the geodetic latitude: 88.07° / 91.93° at Tanegashima and
+   * 85.82° / 94.18° at Xichang. On WGS-84 the pads' geocentric latitudes are
+   * 30.232° and 28.086° (D-51), so 30.4° is no longer due east of Tanegashima
+   * (86.47° / 93.53°: the southbound heading is inside), and the presets fly
+   * 85.97° / 94.03° and 84.67° / 95.33° (the plan: 94.03° and 95.33°). Same
+   * quantity, same 0.05° bound: the owner's answer "3.ก" of 2026-10-18.
    */
   it('a site can fly its own minimum inclination, on a heading its window licenses', () => {
     const cases: [vehicle: string, site: string, heading: number][] = [
-      ['h3', 'tanegashima', 91.93], ['h2a202', 'tanegashima', 91.93], ['longmarch3be', 'xichang', 94.18],
+      ['h3', 'tanegashima', 94.03], ['h2a202', 'tanegashima', 94.03], ['longmarch3be', 'xichang', 95.33],
     ];
     for (const [vehicle, siteId, heading] of cases) {
       const site = siteById(siteId);
@@ -176,12 +198,20 @@ describe('range safety · the reported cases', () => {
    * southbound mirror is inside — which is how Wallops, Tanegashima and Jiuquan
    * really fly these planes. The launch window has to be for that heading too,
    * or the plan flies the right heading into the wrong plane.
+   *
+   * The headings are the test's own instrument at 300 km, to two decimals,
+   * which the plan's must match to 0.05°. They were recorded on the sphere from
+   * the geodetic latitude (129.95°, 141.33°, 136.13°, 126.28°, 142.97°); from
+   * the pads' geocentric latitudes on WGS-84 (D-51) they are 130.15°, 141.37°,
+   * 136.24°, 126.53° and 142.99°, and the plan flies 130.13°, 141.35°, 136.22°,
+   * 126.52° and 142.97°. Same quantity, same bound: the owner's answer "3.ก" of
+   * 2026-10-18.
    */
   it('F01: the ISS plane from Wallops, Wenchang, Tanegashima, Jiuquan and Sriharikota', () => {
     const iss = orbitById('iss');
     const cases: [vehicle: string, site: string, heading: number][] = [
-      ['electron', 'wallops', 129.95], ['longmarch5', 'wenchang', 141.33], ['h3', 'tanegashima', 136.13],
-      ['longmarch2d', 'jiuquan', 126.28], ['pslvxl', 'sriharikota', 142.97],
+      ['electron', 'wallops', 130.15], ['longmarch5', 'wenchang', 141.37], ['h3', 'tanegashima', 136.24],
+      ['longmarch2d', 'jiuquan', 126.53], ['pslvxl', 'sriharikota', 142.99],
     ];
     for (const [vehicle, siteId, heading] of cases) {
       const site = siteById(siteId);

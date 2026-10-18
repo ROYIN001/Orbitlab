@@ -5,7 +5,8 @@ import { orbitById } from '../src/data/orbits';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
 import { captureFrame, cloneFrame, interpolateFrames, type VisualFrame } from '../src/physics/frame';
 import { add, norm, sub } from '../src/physics/vec3';
-import { OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
+import { DEG, OMEGA_EARTH } from '../src/physics/constants';
+import { geodeticToCartesian } from '../src/physics/geodesy';
 import { ENGINEER_EQUATIONS, EXPLORE_EQUATIONS, equations, type Equation, type EquationContext } from '../src/ui/equations-model';
 import type { MissionConfig } from '../src/types';
 import { LAUNCH_TIME } from './fleet-harness';
@@ -24,7 +25,16 @@ describe('the equation record (roadmap E02)', () => {
   for (const model of ['sixDof', 'pointMass'] as const) {
     it(`balances Newton's law, the thrust and the Δv book over a Falcon 9 ascent (${model})`, { timeout: 120_000 }, () => {
       const sim = new Simulation(mission(model), { headless: true });
-      const v0 = OMEGA_EARTH * (R_EARTH + sim.site.altitude) * Math.cos(sim.site.latitude * Math.PI / 180);
+      // The speed the stack has on the pad before it moves, the start of the
+      // Δv book: the Earth's turn times the pad's distance from the axis. The
+      // pad stands on WGS-84 (D-51), at (N + h)·cos φ from the axis; this read
+      // ω(R⊕ + h)·cos φ, the pad on the 6 378 137 m sphere, 408.499 m/s at the
+      // Cape against the pad's own 408.813, and the six-DOF book's residual
+      // read 3.18 × 10⁻³ (6.0 × 10⁻⁵ with the pad's speed; the point mass
+      // 3.31 × 10⁻³ and 6.1 × 10⁻⁴). The same quantity on WGS-84, the same
+      // bounds: the owner's answer "3.ก" of 2026-10-18.
+      const pad = geodeticToCartesian(sim.site.latitude * DEG, 0, sim.site.altitude);
+      const v0 = OMEGA_EARTH * Math.hypot(pad.x, pad.y);
       let steps = 0, worstNewton = 0, worstThrust = 0, worstBudget = 0;
       while (sim.state.t < 150) {
         sim.step(sim.suggestedDt());
