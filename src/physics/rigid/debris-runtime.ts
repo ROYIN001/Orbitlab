@@ -5,7 +5,7 @@ import type { Debris } from '../simulation';
 import { atmosphere } from '../atmosphere';
 import { tumblingDragCoefficient } from '../aero';
 import { DEG, G0, MU_EARTH, OMEGA_EARTH, P0 } from '../constants';
-import { geodeticHeight } from '../geodesy';
+import { geodeticHeight, geodeticUp } from '../geodesy';
 import { engineMassFlow, engineThrustAt } from '../vehicle';
 import { engineLevelFor } from '../nozzle';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
@@ -110,12 +110,15 @@ const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x
  * contact. Landing legs/contact elasticity are outside this disclosed model. */
 export function rigidContactMetrics(state: RigidState, snapshot: RigidVehicleSnapshot,
   length: number, radius: number, groundElevation: (r: Vec3) => number): RigidContact {
+  // D-51: the ground is the ellipsoid, so "down" at a contact is its normal
+  // (`geodeticUp`), not the radius: a base square to the radius on a level pad
+  // has a rim 0.19 degrees off the ground: 17 mm at a 5.2 m rim.
   const axis = quatRotate(state.attitudeQ, v3(1, 0, 0));
-  const up = normalize(state.r), tiltRad = Math.acos(clamp(dot(axis, up), -1, 1));
+  const up = geodeticUp(state.r), tiltRad = Math.acos(clamp(dot(axis, up), -1, 1));
   const evaluate = (x: number) => {
     const offset = quatRotate(state.attitudeQ, sub(v3(x, 0, 0), snapshot.cg));
-    const centre = add(state.r, offset), radial = normalize(centre);
-    const projection = sub(radial, scale(axis, dot(radial, axis)));
+    const centre = add(state.r, offset), vertical = geodeticUp(centre);
+    const projection = sub(vertical, scale(axis, dot(vertical, axis)));
     const side = norm(projection) > 1e-12 ? scale(normalize(projection), -radius) : v3();
     const contactOffset = add(offset, side), point = add(state.r, contactOffset);
     return { clearance: geodeticHeight(point) - groundElevation(point), point, contactOffset };
@@ -124,7 +127,7 @@ export function rigidContactMetrics(state: RigidState, snapshot: RigidVehicleSna
   const omegaI = quatRotate(state.attitudeQ, state.omegaBody);
   const pointVelocity = add(state.v, cross(omegaI, lowest.contactOffset));
   const surfaceVelocity = sub(pointVelocity, cross(EARTH_RATE, lowest.point));
-  const normal = normalize(lowest.point), verticalSpeed = dot(surfaceVelocity, normal);
+  const normal = geodeticUp(lowest.point), verticalSpeed = dot(surfaceVelocity, normal);
   return { r: lowest.point, clearance: lowest.clearance, tailClearance: tail.clearance, tiltRad,
     angularRateRadS: norm(sub(omegaI, EARTH_RATE)), verticalSpeed,
     horizontalSpeed: norm(sub(surfaceVelocity, scale(normal, verticalSpeed))), totalSpeed: norm(surfaceVelocity) };

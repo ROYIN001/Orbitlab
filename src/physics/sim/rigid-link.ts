@@ -17,6 +17,7 @@ import type { RigidState } from '../rigid/integrator';
 import type { RigidTelemetry } from '../rigid/telemetry';
 import { BURN_PREORIENT_TIME } from './constants';
 import { groundPositionEci, groundVelocityEci } from '../orbital';
+import { geodeticUp } from '../geodesy';
 import type { StageState } from '../vehicle';
 import type { Simulation } from '../simulation';
 
@@ -72,7 +73,9 @@ export class RigidLink {
       payloadDiameter: this.sim.satellite.size ? Math.max(this.sim.satellite.size.width, this.sim.satellite.size.depth) : undefined, payloadLength: this.sim.satellite.size?.height,
       coreThrottle: s.coreThrottle, boosterThrottle: s.boosterThrottle, time: s.t, rcsConsumedKgByStage: runtime.consumed });
     const pad = groundPositionEci(this.sim.site.latitude * DEG, this.sim.site.longitude * DEG, this.sim.site.altitude, this.sim.plan.gmst0 + OMEGA_EARTH * s.t);
-    const attitudeQ = targetAttitude(normalize(pad), this.rigidSide());
+    // D-51: the pad is level: the stack stands on the plumb line (the WGS-84
+    // normal, 0.19° from the radius at 45°), its base flat on the ground.
+    const attitudeQ = targetAttitude(geodeticUp(pad), this.rigidSide());
     s.r = add(pad, quatRotate(attitudeQ, snapshot.cg));
     s.v = groundVelocityEci(s.r);
     const rigid = { r: s.r, v: s.v, attitudeQ, omegaBody: quatInverseRotate(attitudeQ, v3(0, 0, OMEGA_EARTH)) };

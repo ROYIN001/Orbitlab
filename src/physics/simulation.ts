@@ -28,7 +28,7 @@ import { missionSatellite } from '../data/satellites';
 import { G0, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
 import { atmosphere } from './atmosphere';
-import { geodeticHeight } from './geodesy';
+import { geodeticHeight, geodeticUp } from './geodesy';
 import { dragCoefficient, tumblingDragCoefficient } from './aero';
 import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
 import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
@@ -902,7 +902,8 @@ export class Simulation {
     const theta = this.plan.gmst0 + OMEGA_EARTH * s.t;
     s.r = groundPositionEci(lat, lon, this.site.altitude, theta);
     s.v = groundVelocityEci(s.r);
-    s.dir = normalize(s.r);
+    // D-51: the pad is level, so the stack stands on the plumb line, the WGS-84 normal.
+    s.dir = geodeticUp(s.r);
     s.mass = this.vehicle.totalMass();
     s.coreThrottle = thr.coreThrottle;
     s.boosterThrottle = thr.boosterThrottle;
@@ -973,7 +974,8 @@ export class Simulation {
       const cmd = this.guidance.update({
         requireDownrangeKick: !!this.rigidRuntime,
         vGround: this.rigidRuntime ? sub(known.v, cross(v3(0, 0, OMEGA_EARTH), known.r)) : undefined,
-        t: s.t, r: known.r, v: known.v, vAir, altitudeAGL: known.height - this.site.altitude, altitude: known.alt, height: known.height, q,
+        t: s.t, r: known.r, v: known.v, vAir, altitudeAGL: known.height - this.site.altitude, altitude: known.alt, height: known.height,
+        plumb: geodeticUp(known.r), q,
         thrustAccelFull: fullThrust.thrustFullVac / mass, isFirstStage: (active?.index ?? 0) === 0,
         thrustAccel: Math.min(fullThrust.thrust, maxAccel > 0 ? maxAccel * mass : Infinity) / mass,
         timeToGo: (dv: number) => this.vehicle.burnTimeFor(dv, false, this.plan.weakFinalStage),
