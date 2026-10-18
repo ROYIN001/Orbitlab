@@ -81,6 +81,19 @@ export function geodeticHeight(r: Vec3): number {
 }
 
 /**
+ * The local vertical at a position (m): the unit normal of the WGS-84
+ * ellipsoid through it, the plumb line a levelled pad stands a vehicle on
+ * (D-51), from the same pass as `heightAt`.
+ */
+export function geodeticUp(r: Vec3): Vec3 {
+  heightAt(r.x, r.y, r.z);
+  const p = Math.sqrt(r.x * r.x + r.y * r.y), k = Math.sqrt(lastX * lastX + lastY * lastY);
+  if (!(p > 0)) return { x: 0, y: 0, z: r.z < 0 ? -1 : 1 };
+  const c = lastX / (k * p);
+  return { x: r.x * c, y: r.y * c, z: lastY / k };
+}
+
+/**
  * Earth-centred position, m, of a point at geodetic latitude `lat` and
  * longitude `lon` (rad, the longitude counted in whatever frame the caller
  * turns it into) and height `h` above the ellipsoid, m.
