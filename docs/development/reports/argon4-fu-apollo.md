@@ -197,6 +197,8 @@ Heavy suites: N/A — no heavy or six-DOF-fleet test flies `ApolloFlight` (tests
 
 No ceiling raised. The first full version of the strings (nine messages with timeline labels) measured i18n 1734.4 kB, 5.4 kB over; the messages were cut to six keys (three reused: `evt.lunarProfileOff` for both begin reasons, `evt.impact`, one `evt.burnSkipped` with the burn's name) and shortened, leaving 106 bytes under the ceiling. The review follow-up (§11) reworded `evt.lunarProfileOff` and `evt.burnSkipped` (+31 B) and dropped two unused event params: the chunk is now 1,728,925 B, 75 B under; flight.worker 574,688 B (574.8 kB before the follow-up, as the review measured). Measured on the worktree with `npm run build` and `node scripts/bundle-budget.mjs` on its log (/tmp/claude-0/-home-user-Orbitlab/3b29ccd8-c1cf-5357-ad20-eb1820dc21bb/scratchpad/probes/apollo/fix/build-fix.txt, budget-fix.log: bundle budget ok, exit 0); index 2639.1 kB.
 
+**Rebased onto main 79d2686** (with #157's lesson texts and #159's sky): the i18n chunk measured 1,729,299 B, 299 B over. Six of this PR's own strings were said in fewer words, the meaning kept (en, ru, th `evt.lunarProfileOff` without the repeated "no translunar injection"; en `evt.tliUnsolved` "No TLI found from this parking orbit"; en, ru `evt.burnSkipped` "off the plan"; en, th `evt.tliPropellant`): 1,728,985 B, 15 B under 1729 kB. Index 2639.9 kB of 2645. No ceiling raised.
+
 ## 7. Docs touched
 
 - docs/PHYSICS.md §13.10: the table's span; "Its own launch, or another worked out for it" replaces "Only from its own launch" (the gate, the aim, the solver's equations, the guards, the sweep's summary table).
