@@ -4,4 +4,4 @@
 
 ## PROGRESS
 
-| Argon4 follow-up 1+2, the re-baseline in the plan (2026-10-18) | In PR; not merged; not published | The owner's "ใส่เข้าไปในแผนแม่บทฉบับใหญ่เลยครับ": R4.2-RB (13 agent-days, 1 PR, authorized and parked) and M-PHYSICS-081 nozzle law, -082 geodetic guidance, -083 published exits, -084 historical vehicles, -085 close-out in R4.2 (42 → 55 agent-days, 14 → 15 PRs). 445 ids, unique; registry equal to assignment. No code or test changed. | [DECISIONS.md](../DECISIONS.md) |
+| Argon4 follow-up 1+2, the re-baseline in the plan (2026-10-18) | In PR; not merged; not published | The owner's "ใส่เข้าไปในแผนแม่บทฉบับใหญ่เลยครับ": R4.2-RB (13 agent-days, 1 PR, authorized and parked) and M-PHYSICS-081 nozzle law, -082 geodetic guidance, -083 published exits, -084 historical vehicles, -085 close-out in R4.2; R4.2-RB carries their estimate, as R4.2-S carries the Soyuz subset's, so R4.2 keeps 42 / 14. 445 ids, unique; registry equal to assignment. No code or test changed. | [DECISIONS.md](../DECISIONS.md) |
