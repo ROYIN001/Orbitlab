@@ -10,7 +10,7 @@ Base: main `5f9aa2e`; live site `09cc2f5` (Pages 37230585947). Drafted 2026-10-0
 |---|---|
 | `sections/HEADER.md`, `sections/S00…S19` | The plan, one file per section (Thai). Start with `S01-executive-summary.md`. |
 | `TIMELINE-TH.md` | Plain-language timeline for the owner (Thai). |
-| `data/*.tsv` | The plan's tables (`$F` in the text): assignment (429 items → package), packages, decisions (D-28…D-75), KPIs, folds. |
+| `data/*.tsv` | The plan's tables (`$F` in the text): assignment (445 items → package; 429 before 2026-10-18), packages, decisions (D-28…D-75), KPIs, folds. |
 | `ledger/` | Unified, de-duplicated work ledgers (`unified-*.jsonl/.md`), the document map and process lessons the plan was built from. |
 | `perf-baseline/` | `measure.mjs` (startup / frame / storage / warp measurements with `--compare`), its README and the result summaries for `fbefa18` and `5f9aa2e`. The README's example paths (`../ol`) point to an exported build outside the repo; adjust them. Package R0.4 brings this tool into `scripts/` properly. |
 
@@ -34,3 +34,5 @@ Answered by the owner in the decision page (Claude artifact `https://claude.ai/a
 | G3 | Confirmed: "ระยะ3ทำเสร็จหมดแล้ว" covers the R3 screenshot review PROGRESS was waiting on (not D08/G2). |
 
 **Update 2026-10-05:** the owner has answered all 80 answerable items (sheets A-1, A-2, B, C-K2, C-K3, C-K4). The full record, with the 11 answers that differ from the plan's proposal, the 9 owner-choice items and the owner's notes, is in [`OWNER-DECISIONS-2026-10-05.md`](OWNER-DECISIONS-2026-10-05.md). Answers to later-wave questions are decisions for those waves; they do not authorize any work beyond K0 (D-65). Sheet D items are deferred and not yet asked.
+
+**Update 2026-10-18:** `data/assignment.tsv` and `data/packages.tsv` are now copies of the plan's tables of PR #166 (445 items, 101 package rows). They add the parked Argon4 re-baseline as pseudo-package R4.2-RB with its items M-PHYSICS-081…085, and 11 other items the owner placed on 2026-10-17/18 (M-PHYSICS-074…080, M-PLAN-032, M-ORBIT-067…069). S13, S14, S15 and S19 carry them in the text. The owner asked for both in chat on 2026-10-18: "ใส่เข้าไปในแผนแม่บทฉบับใหญ่เลยครับ" (put it into the big master plan) and "ใส่ในเนื้อหาร่างแผนแม่บทด้วยครับ" (put it in the draft master plan's text too). R4.2-RB is execution-authorized by the owner's decisions of 2026-10-17 and 2026-10-18, but it stays parked until the owner resumes it.

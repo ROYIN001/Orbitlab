@@ -53,13 +53,14 @@ R3.4r	S12	K3	B	29	10	false	R3+ follow-on: Build integration (freshness, ratings,
 R3.5r	S12	K3-K4	B (+I Home via I-train)	7	3	false	R3+ follow-on: Fly it targets, Home audience cards (HU-1), share links (deferred)	M-BUILD-013 M-BUILD-023 M-LAUNCH-067
 R3.6	S12	K4	B	4	1	false	R3+ follow-on: Build editor depth (D-21)	M-BUILD-022
 R4.1	S13	K1-K3	P-D (+P, Q)	21	7	false	Catalogue and source ledger	M-ORBIT-043 M-PHYSICS-040 M-PHYSICS-041 M-PHYSICS-048 M-PHYSICS-049 M-PLATFORM-070
-R4.2	S13	K4	P-D/P	42	14	false	Per-family pipeline	M-LAUNCH-077 M-LAUNCH-078 M-LAUNCH-079 M-PHYSICS-023 M-PHYSICS-024 M-PHYSICS-042 M-PHYSICS-043 M-PHYSICS-044 M-PHYSICS-045 M-PHYSICS-046 M-PHYSICS-047 M-PHYSICS-052
+R4.2	S13	K4	P-D/P	42	14	false	Per-family pipeline	M-LAUNCH-077 M-LAUNCH-078 M-LAUNCH-079 M-PHYSICS-023 M-PHYSICS-024 M-PHYSICS-042 M-PHYSICS-043 M-PHYSICS-044 M-PHYSICS-045 M-PHYSICS-046 M-PHYSICS-047 M-PHYSICS-052 M-PHYSICS-075 M-PHYSICS-081 M-PHYSICS-082 M-PHYSICS-083 M-PHYSICS-084 M-PHYSICS-085
 R4.2-S	S13	K3	P-D then P	9	3	false	Soyuz subset of R4.2 for G4-S (R4.2 steps 2-4: Max-Q evidence, recorder/CSV actual levels under D-57, Soyuz data fix only if proven); pseudo-package, items stay in R4.2	
-R4.3	S13	K4	P (B for ratings)	45.5	15	false	Shared control, upper stages and known misses	M-BUILD-016 M-BUILD-017 M-BUILD-018 M-BUILD-019 M-BUILD-020 M-ORBIT-046 M-PHYSICS-029 M-PHYSICS-030
-R4.4	S13	K4	P/Q/T (independent reviewer)	13.5	4	false	Fleet acceptance and quality labels	M-LAUNCH-072 M-PHYSICS-050 M-PHYSICS-051 M-PHYSICS-061
-R4.5	S14	K4	P	21.5	7	false	Model-base consistency (propagator, atmosphere, frames, constants)	M-PHYSICS-020 M-PHYSICS-022 M-PHYSICS-025 M-PHYSICS-026 M-PHYSICS-028
+R4.2-RB	S13	K4	P-D/P	13	1	true	The Argon4 re-baseline: D-51 (M-PHYSICS-023, M-PHYSICS-024 path b) with the nozzle law (M-PHYSICS-081), the geodetic guidance (M-PHYSICS-082), the published exits (M-PHYSICS-083), the historical vehicles (M-PHYSICS-084) and the close-out (M-PHYSICS-085), as one validated re-baseline in one PR (D-25 reason in its report); authorized by the owner's decisions of 2026-10-17 and 2026-10-18; parked by the owner 2026-10-18 ("งานใหญ่ให้เก็บไว้ก่อน") on branch claude/charming-archimedes-01p1h5-wip-rebaseline-snapshot, resumed when the owner asks; pseudo-package, items stay in R4.2	
+R4.3	S13	K4	P (B for ratings)	45.5	15	false	Shared control, upper stages and known misses	M-BUILD-016 M-BUILD-017 M-BUILD-018 M-BUILD-019 M-BUILD-020 M-ORBIT-046 M-PHYSICS-029 M-PHYSICS-030 M-PHYSICS-076 M-PHYSICS-077 M-PHYSICS-079 M-PHYSICS-080
+R4.4	S13	K4	P/Q/T (independent reviewer)	13.5	4	false	Fleet acceptance and quality labels	M-LAUNCH-072 M-PHYSICS-050 M-PHYSICS-051 M-PHYSICS-061 M-PHYSICS-074
+R4.5	S14	K4	P	21.5	7	false	Model-base consistency (propagator, atmosphere, frames, constants)	M-PHYSICS-020 M-PHYSICS-022 M-PHYSICS-025 M-PHYSICS-026 M-PHYSICS-028 M-PHYSICS-078
 R4.6	S14	K4-K5	O+P	32	11	false	Orbit-tools fidelity	M-ORBIT-019 M-ORBIT-020 M-ORBIT-021 M-ORBIT-022 M-ORBIT-023
-R4.7	S14	K4	C/P-R+P	4	1	false	Rendering fidelity tied to physical state and asset budgets	M-PLAN-016
+R4.7	S14	K4	C/P-R+P	4	1	false	Rendering fidelity tied to physical state and asset budgets	M-PLAN-016 M-PLAN-032
 R5.1	S15	K5	I/P (U,C via APIs)	8	3	false	ISS mission reachable and continuous	M-ORBIT-024
 R5.2	S15	K5	P	15	5	false	Target orbit and phasing	M-ORBIT-025
 R5.3	S15	K5	P	15	5	false	Approach, contact dynamics	M-ORBIT-026
@@ -67,7 +68,7 @@ R5.4	S15	K5	P-R/B+P (I)	9.5	3	false	Ship/station/port visuals and spacecraft exp
 R6.1	S15	K6	A (+P,S)	8	3	false	Cockpit scope and systems spec	M-PLAN-022
 R6.2	S15	K6	A (+C,I)	15	5	false	Cockpit view, instruments, audio, force cues	M-PLAN-023
 R6.3	S15	K6	A/Q/L-C	8	3	false	Training missions and user tests	M-PLAN-024
-R8	S15	K6	P+O	47.5	16	false	Moon: generalise C01 (R8.1-R8.5)	M-ORBIT-031 M-ORBIT-032 M-ORBIT-033 M-ORBIT-034 M-ORBIT-035 M-PHYSICS-018
+R8	S15	K6	P+O	47.5	16	false	Moon: generalise C01 (R8.1-R8.5)	M-ORBIT-031 M-ORBIT-032 M-ORBIT-033 M-ORBIT-034 M-ORBIT-035 M-PHYSICS-018 M-ORBIT-067 M-ORBIT-068 M-ORBIT-069
 ED-ASSESS-1	S16	K2	L-C	1.5	1	false	Placement report honesty	M-LEARNING-026
 ED-CLASS-1	S16	K3	L/L-UI	5.5	2	false	Teacher restore and class view; Web Share	M-LAUNCH-069 M-LEARNING-042
 ED-CLASS-2	S16	K3-K4	L-C (+I)	8	3	false	Teacher guide and presentation mode	M-LEARNING-043 M-LEARNING-044
