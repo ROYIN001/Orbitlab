@@ -102,9 +102,13 @@ export function stageName(vehicle: VehicleSpec, stageId: string, fallback: strin
  * enum id — and is translated here through the same `tel.burn.*` labels the
  * flight-plan list uses.
  */
-/** A rendezvous burn's name ('dv2' → "Burn 2", 'brake' → "Braking"). */
+/**
+ * A rendezvous burn's name ('dv2' → "Burn 2", 'brake' → "Braking"); Apollo's
+ * LOI, DOI and TEI (`evt.burnSkipped`) by their timeline labels.
+ */
 export function rendezvousBurnName(id: string): string {
   const n = /^dv(\d)$/.exec(id);
+  if (id === 'LOI' || id === 'DOI' || id === 'TEI') return t(`tl.evt.${id.toLowerCase()}`);
   return n ? t('rv.burn.n', { n: n[1] }) : localized(`rv.burn.${id}`, id);
 }
 

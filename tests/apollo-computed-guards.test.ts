@@ -14,6 +14,8 @@ import { guidanceForVehicle } from '../src/physics/defaults';
 import { targetMidcourse } from '../src/physics/lunar/cislunar';
 import { add, normalize, scale } from '../src/physics/vec3';
 import { watchMissionSettings } from '../src/ui/watch-missions';
+import { getLang, setLang, t, tFor, type Lang } from '../src/i18n';
+import { localizeEventParams } from '../src/ui/names';
 
 const s = watchMissionSettings('apollo11');
 
@@ -84,5 +86,25 @@ describe('a computed flight gone wrong stops at a sound state', () => {
     fly(sim, 16_000 + 2 * 86400);
     expect(keys(sim, 'evt.stackReentry')).toHaveLength(1);
     expect(sim.isFailed()).toBe(true);
+  });
+
+  it('names the burn it skipped in the reader\'s language, by the timeline\'s label', () => {
+    // setLang writes document.documentElement.lang; this suite runs without a DOM
+    const g = globalThis as { document?: unknown }, hadDocument = 'document' in g;
+    if (!hadDocument) g.document = { documentElement: {} };
+    const was = getLang();
+    try {
+      for (const lang of ['en', 'ru', 'th'] as Lang[]) {
+        setLang(lang);
+        for (const [id, label] of [['LOI', 'tl.evt.loi'], ['DOI', 'tl.evt.doi'], ['TEI', 'tl.evt.tei']]) {
+          const text = t('evt.burnSkipped', localizeEventParams(null, { burn: id }));
+          expect(text).toContain(tFor(lang, label));
+          if (lang !== 'en') expect(text).not.toContain(id);
+        }
+      }
+    } finally {
+      setLang(was);
+      if (!hadDocument) delete g.document;
+    }
   });
 });

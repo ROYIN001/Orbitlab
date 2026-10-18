@@ -398,8 +398,7 @@ export class ApolloFlight {
     }
     this.computed = true;
     this.arm(plan.target, plan.ignition);
-    this.sim.event('evt.tliPlanned', 'info', { min: Math.round(plan.ignition / 60), c3: +(plan.target.c3 / 1e6).toFixed(3),
-      plane: +((plan.plane * 180) / Math.PI).toFixed(2), kg: Math.round(spare) });
+    this.sim.event('evt.tliPlanned', 'info', { min: Math.round(plan.ignition / 60), c3: +(plan.target.c3 / 1e6).toFixed(3), kg: Math.round(spare) });
   }
 
   /** The S-IVB relit, at its second burn's operating point; its steering solved for the whole burn. */
@@ -1353,7 +1352,7 @@ export class ApolloFlight {
     // (within ten minutes). Anywhere else the burn would claim a lunar orbit the flight is not in.
     const p = this.soiEntered && d < LUNAR_SOI ? this.predictPerilune(s.t, s) : undefined;
     if (!p || !(p.alt > 0 && p.alt < 1000e3) || Math.abs(p.t - s.t - (APOLLO11.mcc2.arrival - l.t)) > 600) {
-      this.sim.event('evt.burnSkipped', 'warn', { burn: 'LOI', alt: Math.round((d - APOLLO11.siteRadius) / 1e3) });
+      this.sim.event('evt.burnSkipped', 'warn', { burn: 'LOI' });
       return;
     }
     this.sim.vehicle.payloadMass = APOLLO11.mass.loi1;

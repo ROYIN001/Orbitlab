@@ -58,9 +58,9 @@ describe('Apollo 11\'s lunar profile: its own launch as flown, another computed 
     ['launched in 2026, outside the Moon\'s table', { launchTime: new Date('2026-07-16T13:32:00Z') }, 'evt.lunarProfileOff'],
     ['launched on 24 July 1969, its mission running past the table\'s end', { launchTime: new Date('1969-07-24T13:32:00Z') }, 'evt.lunarProfileOff'],
     ['flown on another Saturn V with another spacecraft', { vehicleId: 'saturnv', satelliteId: 'crew' }, 'evt.lunarProfileOff'],
-    ['launched an hour late, the flown plane out of the ascent\'s reach', { launchTime: at(60) }, 'evt.tliUnsolved'],
+    ['launched an hour late, off the flown node and the S-IVB with less Δv left than an injection takes', { launchTime: at(60) }, 'evt.tliUnsolved'],
     ['launched forty minutes late, the S-IVB short of propellant for the injection it needs', { launchTime: at(40) }, 'evt.tliPropellant'],
-    ['launched on 20 July 1969 into the flown parking plane, the Moon out of its reach', { launchTime: new Date('1969-07-20T13:32:00Z') }, 'evt.tliUnsolved'],
+    ['launched on 20 July 1969 into the flown parking plane, the turn into the Moon\'s plane past the steering\'s yaw', { launchTime: new Date('1969-07-20T13:32:00Z') }, 'evt.tliUnsolved'],
   ] as const) {
     it(`stays in its parking orbit, and says why, when ${name}`, { timeout: 120_000 }, () => {
       const sim = fly(launch(change), 10_500);
