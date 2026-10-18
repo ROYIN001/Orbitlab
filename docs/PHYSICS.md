@@ -555,20 +555,24 @@ Off by default, and off, the flight knows its true state bit for bit as before. 
 the flown vehicle carries an inertial measurement unit and flies on what its navigation
 believes (src/physics/nav/).
 
-**The IMU** (sensors.ts). Per axis, gyros and accelerometers have a turn-on bias, an in-run bias
-that wanders as a first-order Gauss–Markov process (300 s), a scale-factor error and white noise
-(angle and velocity random walk), drawn from the navigation's own seeded stream (it never moves
-the wind's). As built, the turn-on and in-run biases are one Gauss–Markov process started at
-their combined size, so the turn-on part fades with the 300 s rather than staying for the flight
-(a MEMS gyro's 30 °/h is down to about the in-run 5 °/h in a quarter of an hour). Three grades,
-textbook orders of magnitude (Groves, *Principles of GNSS, Inertial, and Multisensor Integrated
-Navigation Systems*, 2nd ed., ch. 4), or custom figures:
+**The IMU** (sensors.ts). Per axis, gyros and accelerometers have a turn-on bias, drawn at
+power-up and constant for the flight; on top of it an in-run bias that wanders as a first-order
+Gauss–Markov process (the bias instability, τ = 300 s: drawn from its steady spread, it decays
+with e^(−dt/τ) and is driven by the instability times √(1 − e^(−2dt/τ)), which keeps that
+spread); a scale-factor error; and white noise (angle and velocity random walk) — all drawn from
+the navigation's own seeded stream (it never moves the wind's), as Groves models them
+(*Principles of GNSS, Inertial, and Multisensor Integrated Navigation Systems*, 2nd ed., ch. 4
+and §14.2). So the bias keeps its turn-on size for the whole flight: a MEMS gyro's is
+√(30² + 5²) = 30.4 °/h RMS at launch and an hour later (31.5 °/h over 200 draws at 3 600 s), and
+only the 5 °/h of it wanders. Until 2026-10-17 the two were one Gauss–Markov process started at
+their combined size, so the turn-on part faded with the 300 s (4.9 °/h left at 3 600 s). Three
+grades, textbook orders of magnitude (Groves ch. 4), or custom figures:
 
-| Grade | Gyro bias | ARW | Accel. bias | VRW | Scale factors | Pad alignment |
+| Grade | Gyro bias, turn-on / in-run | ARW | Accel. bias, turn-on / in-run | VRW | Scale factors | Pad alignment |
 |---|---|---|---|---|---|---|
-| Navigation (ring-laser) | 0.005 °/h | 0.002 °/√h | 30 µg | 0.01 m/s/√h | 5 / 50 ppm | 0.005° |
-| Tactical (fibre-optic) | 1 °/h | 0.05 °/√h | 500 µg | 0.05 m/s/√h | 100 / 300 ppm | 0.05° |
-| MEMS | 30 °/h | 0.3 °/√h | 5 mg | 0.2 m/s/√h | 1000 / 2000 ppm | 0.3° |
+| Navigation (ring-laser) | 0.005 / 0.002 °/h | 0.002 °/√h | 30 / 10 µg | 0.01 m/s/√h | 5 / 50 ppm | 0.005° |
+| Tactical (fibre-optic) | 1 / 0.3 °/h | 0.05 °/√h | 500 / 50 µg | 0.05 m/s/√h | 100 / 300 ppm | 0.05° |
+| MEMS | 30 / 5 °/h | 0.3 °/√h | 5 / 0.2 mg | 0.2 m/s/√h | 1000 / 2000 ppm | 0.3° |
 
 At every control step the IMU gives the increments since the last one: the rotation Δθ from the
 attitude of its own case (with P05, the bent structure's at its station) and the specific-force
@@ -580,14 +584,20 @@ q̂ ← q̂ ⊗ exp(Δθ̂), then position and velocity as free fall under the s
 at most 0.5 s, so a long held coast is carried exactly) plus the rotated Δv̂. With perfect sensors
 it follows the truth to under a millimetre per second over two minutes of thrust.
 
-**The filter** is an error-state extended Kalman filter of 21 errors — position, velocity,
-attitude (an ECI rotation, C = (I + [φ×]) Ĉ), the gyros' and accelerometers' biases and scale
-factors — propagated with Φ = I + F·dt at every step (F carries the gravity gradient, −[f×],
-−Ĉ on the biases and −Ĉ·diag(f), −Ĉ·diag(ω) on the scale factors) and the sensors' noise, plus a
-tuning margin of velocity noise of 10⁻⁴ of the specific force per √s under thrust (vibration, the
-step's discretisation, misalignment). The bias estimates relax with the same 300 s between fixes,
-as the error model assumes. It is corrected by scalar updates and the correction folded into the
-solution:
+**The filter** is an error-state extended Kalman filter of 27 errors — position, velocity,
+attitude (an ECI rotation, C = (I + [φ×]) Ĉ), and for the gyros and the accelerometers the
+turn-on biases, the in-run biases and the scale factors. The two parts of a bias are modelled as
+they are made (Groves §14.2): the turn-on part a random constant (no dynamics, no process noise;
+1σ at alignment the turn-on figure), the in-run part a Gauss–Markov process (−1/τ, process noise
+2σ²/τ; 1σ the instability). It is propagated with Φ = I + F·dt at every step (F carries the
+gravity gradient, −[f×], −Ĉ on both parts of each bias and −Ĉ·diag(f), −Ĉ·diag(ω) on the scale
+factors) and the sensors' noise, plus a tuning margin of velocity noise of 10⁻⁴ of the specific
+force per √s under thrust (vibration, the step's discretisation, misalignment). P ← Φ P Φᵀ + Q·dt
+is formed over Φ's non-zero entries only (99 of its 729) with the upper triangle mirrored, which
+is the dense product to 10⁻¹⁵ of √(P_ii P_jj) (60 random cases). Between fixes the estimate of a
+turn-on bias is held and that of an in-run bias relaxes with the same 300 s, as the error model
+assumes. It is corrected by scalar updates and the correction folded into the solution (each
+part of a bias into its own estimate):
 
 - **GNSS**: position and velocity fixes (5 m, 0.05 m/s, 1 Hz by default), with one outage to set;
 - **star tracker**: attitude (10″, 1 Hz) above 150 km and below 1 °/s of body rate.
@@ -602,19 +612,58 @@ axis for the tail-off); a coast points prograde by it. Air data (the relative wi
 relief) stay true, as an air-data system would give them; planning and steering the in-orbit
 burns (src/physics/sim/burns.ts, the other session's) still read the truth.
 
-**What it shows on Falcon 9 to LEO** (crosswind; tests/navigation.test.ts):
+In orbit at 400 km (tests/navigation.test.ts) the filter's σ is the size of its errors through a
+1 500 s coast without aiding (tactical, 200 draws: mean (error/σ)² per axis 0.78–1.20 for
+position, velocity and attitude), and with GNSS and the star tracker it tells the two parts of a
+bias apart: in 2 000 s its estimate of the turn-on part is within 0.17 °/h and 25 µg RMS of it
+(of 1 °/h and 500 µg; 120 draws, of which the test flies 20), as its own σ of 0.16 °/h and 24.5 µg says ((error/σ)² 1.10
+and 1.02). GNSS alone cannot see a gyro's bias in free fall, where the attitude does not reach
+the velocity: after 2 000 s with GNSS only, the filter's σ of a tactical gyro's turn-on bias is
+still 0.999 °/h of its 1 °/h.
 
-- Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 2.2 per
-  axis, 0.5 % of samples outside 3σ; 2.3 and 0.9 % while the bias estimates were held instead of
-  relaxing with the biases, until 2026-10-17), under 5 m and 0.1 m/s; the orbit it believes in is the true
-  one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop,
-  and the jets' deadband below keeps it off them.
-- A GNSS outage from T+60 s to T+200 s: the error grows to about 130 m and 1.9 m/s, inside the
-  filter's growing 3σ, and falls back to metres at the first fix.
-- MEMS without GNSS: 12 km and 30 m/s of error by orbit; guidance cuts off on an orbit the
-  navigation believes is 200 × 529 km while the true one is 202 × 511 km. The star tracker, above
-  150 km, brings the attitude error from 1.6° to seconds of arc.
-- Navigation grade without GNSS: 80 m and 0.6 m/s; the apoapsis 1.4 km off.
+**What it shows on Falcon 9 to LEO** (crosswind, seed 20260919; tests/navigation.test.ts flies
+the first three). A flight is one draw of the sensors' errors. The ranges are of 100 more draws
+flown through that flight's truth: the navigation alone, open loop, so a draw's errors are what
+its sensors make of this trajectory (the flight's own draw, replayed so, gives its figures
+exactly).
+
+- Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 1.23 per
+  axis, no sample outside 3σ; over the draws 1.03 and 0.39 %), at most 3.1 m and 0.06 m/s; the
+  orbit it believes in is the true one to 270 m in apoapsis and 5 m in periapsis. Its gyro noise
+  (0.008 °/s per axis at 100 Hz) reaches the rate loop, and the jets' deadband below keeps it off
+  them.
+- A GNSS outage from T+60 s to T+200 s: the error grows to 42 m and 0.42 m/s in this flight
+  (38–213 m and 0.59–3.5 m/s over the draws, 10–90 %; RMS 127 m and 2.1 m/s, as the filter's σ
+  of 129 m and 2.1 m/s says), and is back to 0.6 m at T+225 s.
+- MEMS without GNSS: guidance cuts off on an orbit the navigation believes is 197 × 490 km while
+  the true one is 199 × 525 km. The star tracker, from its first fix above 150 km at T+248 s,
+  brings the attitude error from 1.4° to 28″.
+- Tactical without GNSS: the apoapsis 2.6 km off; navigation grade, 0.06 km.
+
+| At SECO, without GNSS | This flight | 100 draws: median ± its standard error (10–90 %) | The same while the turn-on part faded (to 2026-10-17) |
+|---|---|---|---|
+| MEMS | 8.1 km, 29 m/s | 9.3 ± 0.8 km (4.7–14.3), 36 m/s | 7.4 ± 0.6 km (3.4–12.2), 25 m/s |
+| Tactical | 1.0 km, 3.4 m/s | 0.98 ± 0.06 km (0.50–1.67), 3.9 m/s | 0.83 ± 0.06 km (0.45–1.53), 2.9 m/s |
+| Navigation grade | 67 m, 0.29 m/s | 84 ± 4 m (36–179), 0.35 m/s | 76 ± 5 m (30–169), 0.30 m/s |
+
+(The standard errors are the medians' bootstrap ones.) Held for the flight, the turn-on biases
+make the unaided errors at SECO larger: the median position error by 27 % (MEMS), 18 %
+(tactical) and 11 % (navigation grade), each give or take 9–14 %, and the velocity error by 46 %,
+34 % and about 17 %. That is the direction a held bias gives: integrated twice, a held
+accelerometer bias gives ½bt² and a fading one bτ²(t/τ − 1 + e^(−t/τ)), 0.63 of it at SECO. The
+GNSS-aided figures and the outage are much as before (over the draws a mean normalised error of
+1.03 against 0.97, an outage RMS of 127 against 126 m).
+
+A limit: a MEMS unit with GNSS but without the star tracker, coasting at 400 km, drifts in
+attitude at its gyros' 30 °/h. With the accelerometers' bias and noise set to zero that alone
+gives 11.7° in 1 000 s and 37.9° in 3 000 s (medians of 20 draws), and the filter's σ stays the
+size of the error (mean (error/σ)² per axis 0.75–1.04 and 0.78–0.99). With them the drift goes
+further, to 12.1° and 52.2° (3.9° and 4.8° while the turn-on part faded), and the filter's
+attitude σ falls below its error (mean (error/σ)² per axis 1.2–2.2 at 1 000 s, 20–32 at 3 000 s):
+beyond the small-angle error model, the accelerometers' errors, read as specific force in −[f×]φ,
+pass for attitude information, and the corrections the filter draws from them turn the attitude
+further. With the star tracker, on by default above 150 km, the attitude is measured and the case
+does not arise.
 
 **The jets' rate deadband** (G05's finding). A gyro's white noise reads as rate: over a 10 ms
 step, a tactical gyro's 0.05 °/√h is 1.45·10⁻⁴ rad/s per axis, and the rate loop (3 s⁻¹ times the
@@ -629,18 +678,22 @@ reaction control system has, with a false firing about once a minute. Within it 
 to the nozzles, and in a coast to drift until the attitude error asks for more than the band:
 the attitude holds to about 4σ/k_θ (0.02° tactical, 0.13° MEMS). A slew asks for a hundred times
 the band and fires them as before. On the truth the loop reads no noise and nothing changes.
-Falcon 9 to its reference orbit (500 km, 28.6°; tests/heavy/navigation-burns.test.ts):
+Falcon 9 to its reference orbit (500 km, 28.6°; tests/heavy/navigation-burns.test.ts; measured
+2026-10-17 with the turn-on bias held):
 
-| Grade | Jets at full duty, first minute | 2nd-stage gas to T+480 s | … to the end | Orbit |
+| Grade | Loop samples with a jet at full duty, first minute | 2nd-stage gas to T+480 s | … to the end | Orbit |
 |---|---|---|---|---|
-| truth (no navigation) | 60 % | 7.0 kg | 17.3 kg | 500.3 × 509.8 km, 28.614° |
-| navigation | 44 % | 6.8 kg | 17.2 kg | 500.5 × 510.1 km, 28.614° |
-| tactical | 12 % | 4.4 kg | 16.4 kg | 500.5 × 510.2 km, 28.614° |
-| MEMS | 6 % | 2.1 kg | 14.7 kg | 500.4 × 509.4 km, 28.614° |
+| truth (no navigation) | 54 % | 7.0 kg | 18.8 kg | 500.7 × 509.6 km, 28.613° |
+| navigation | 33 % | 6.9 kg | 19.3 kg | 500.4 × 509.7 km, 28.613° |
+| tactical | 10 % | 4.8 kg | 18.4 kg | 500.7 × 509.9 km, 28.613° |
+| MEMS | 4 % | 2.2 kg | 12.8 kg | 500.6 × 509.4 km, 28.613° |
 
 Before it, the tactical and MEMS flights had used all 30 kg by T+250 s and ended off their target.
 
-**Cost**: within the run-to-run noise (runs with navigation were not slower).
+**Cost**: a navigation step takes about 16 µs (tactical, GNSS and the star tracker at 1 Hz, steps
+of 10 ms; medians of 8 and 10 runs interleaved with the 21-state filter before 2026-10-17, which
+took 24–26 µs), and a navigated Falcon 9 flight to T+120 s 8.2–8.4 s headless against 8.6–9.0 s
+with the old filter.
 
 ## 2i. Failures of the control system, and the FDIR (roadmap G08)
 
@@ -924,7 +977,7 @@ docs/history/PARALLEL-GNC-2026-09.md, G05). The runs that reached their target o
 | Falcon 9, standard, 40 runs | 36 | 33 | 4 | 499.78 ± 1.11 (−0.22) | 501.37 ± 0.84 (+1.37) | 28.6138 ± 0.0006 (+0.0018) |
 | Falcon 9, PEG, 40 | 36 | 33 | 4 | 499.80 ± 1.10 (−0.20) | 501.53 ± 0.83 (+1.53) | 28.6156 ± 0.0009 (+0.0036) |
 | Falcon 9, IGM, 40 | 36 | 33 | 4 | 499.89 ± 1.07 (−0.11) | 501.44 ± 0.81 (+1.44) | 28.6133 ± 0.0001 (+0.0013) |
-| Falcon 9, PEG, tactical navigation, 20 | 20 | 19 | 0 | 499.76 ± 0.91 (−0.24) | 501.39 ± 0.60 (+1.39) | 28.6155 ± 0.0013 (+0.0035) |
+| Falcon 9, PEG, tactical navigation, 20 (turn-on bias held, 2026-10-17) | 20 | 19 | 0 | 499.65 ± 1.12 (−0.35) | 501.37 ± 0.82 (+1.37) | 28.6154 ± 0.0012 (+0.0034) |
 | Soyuz-2.1b, standard, 30 | 24 | 24 | 6 | 494.79 ± 5.18 (−5.21) | 505.20 ± 5.20 (+5.20) | 51.6033 ± 0.0114 (+0.0033) |
 
 Delivered, the orbit is good to a kilometre or so on Falcon 9 and five on Soyuz, whatever the
