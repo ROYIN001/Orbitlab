@@ -27,7 +27,10 @@
  * from its published ε and p_c (ideal C_F: a real one is 2–4 % lower, so the
  * area is that much small). The chamber pressure the law then flies is always
  * the one that closes F_vac with that geometry, so the vacuum thrust is the
- * catalogue's exactly.
+ * catalogue's exactly. So for a ground-lit engine that has an ε, the p_c in
+ * its record is shown and checked against the one it flies
+ * (tests/nozzle-law.test.ts), never flown: the Merlin 1D flies 12.05 MPa for
+ * its published 9.7.
  *
  * PROVENANCE. Every number here has its entry in `NOZZLE_SOURCES` (and each γ
  * in `NOZZLE_GAMMA_SOURCES`), field by field: a published `source`, or an
@@ -102,7 +105,7 @@ export const NOZZLES: Readonly<Record<string, NozzleRecord>> = {
   'RD-0110': { family: 'kerolox', expansionRatio: 30, chamberPressure: 6.8 * MPa },
   'RD-0124': { family: 'kerolox', expansionRatio: 250, chamberPressure: 15.69 * MPa },
   'RD-0124A': { family: 'kerolox', expansionRatio: 250, chamberPressure: 15.69 * MPa },
-  'RD-0109': { family: 'kerolox', expansionRatio: 26, chamberPressure: 5 * MPa },
+  'RD-0109': { family: 'kerolox', expansionRatio: 25.1, chamberPressure: 5 * MPa },
   'S5.92': { family: 'hypergolic', expansionRatio: 64, chamberPressure: 9.61 * MPa },
   // --- Proton, Angara
   'RD-276': { family: 'hypergolic', expansionRatio: 26.2, chamberPressure: 16.5 * MPa },
@@ -380,7 +383,7 @@ export const NOZZLE_SOURCES: Readonly<Record<string, NozzleProvenance>> = {
   },
   // --- Starship
   'Raptor 2': {
-    expansionRatio: { source: 'https://en.wikipedia.org/wiki/SpaceX_Raptor (sea-level nozzle)' },
+    expansionRatio: { source: 'https://en.wikipedia.org/wiki/SpaceX_Raptor (sea-level nozzle). Uncertain: 34.34:1 is the 2019 Raptor’s (FAA, Appendix G exhaust plume calculations (2019), https://www.faa.gov/sites/faa.gov/files/space/stakeholder_engagement/spacex_starship/Appendix_G_Exhaust_Plume_Calculations.pdf: a 34.34:1 chamber nozzle at 3 669.5 psia; search summary); Raptor 2 opened the throat behind the same exit (Everyday Astronaut, Raptor 1 vs Raptor 2), so its ε is lower. The exit this record flies comes from the catalogue’s thrust pair, 1.585 m, against the 1.31 m (25.718 in radius) of FAA, Appendix G (2022), https://www.faa.gov/sites/faa.gov/files/2022-06/AppendixG_ExhaustPlumeCalculations.pdf, also a search summary; the pages themselves could not be opened, 2026-10-18' },
     chamberPressure: { source: 'https://en.wikipedia.org/wiki/SpaceX_Raptor (Raptor 2)' },
   },
   'Raptor 2 / RVac': {
