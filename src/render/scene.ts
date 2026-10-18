@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { createWebGLRenderer } from './webgl-renderer';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { PhysicalSky } from './atmosphere';
+import { AERIAL, PhysicalSky } from './atmosphere';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
@@ -80,6 +80,16 @@ gl_Position = projectionMatrix * viewMatrix * wp;
  *   blob over the ocean instead of reading as a glint. It uses the geometric
  *   normal: a 110-power lobe off a perturbed normal turns the relief into
  *   glitter wherever the specular map bleeds onto a coast.
+ * - V02: under the scattering sky (uAerial) the ground is seen through the air
+ *   in front of it, with the sky's own model (atmosphere.ts, `AERIAL`): its
+ *   light dimmed by the transmittance of that stretch and the light the
+ *   stretch scatters in added — the blue haze over the disc from orbit,
+ *   thickening into the sky's limb glow at the limb, distant ground fading
+ *   into the horizon from the air, no haze on the night side. The rim is the
+ *   gradient sky's stand-in for that and is off then (rimGain 0). The ground
+ *   is lit then by the sun through the air and by the sky (`daylight`), and
+ *   the glint by the sun alone (`sunColour`): both as at noon before, and
+ *   reddened and dimmed by a low sun.
  */
 const EARTH_FRAG = /* glsl */ `
 #include <common>
@@ -92,6 +102,7 @@ uniform float normalScale;
 uniform vec3 sunDir;
 uniform vec3 camPos;
 uniform float rimGain;
+${AERIAL}
 varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vPosW;
@@ -117,14 +128,18 @@ float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
 vec3 day = texture2D(dayMap, vUv).rgb;
 vec3 night = texture2D(nightMap, vUv).rgb;
 vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
+if (uAerial > 0.5) col = day * (0.09 + 0.95 * daylight(RG, cosSun, cosSunGeo));
 col = mix(night * 0.55 + day * 0.012, col, dayF);
 float spec = texture2D(specMap, vUv).r;
 vec3 viewDir = normalize(camPos - vPosW);
 vec3 h = normalize(sunDir + viewDir);
 float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
-col += vec3(s * 0.9, s * 0.95, s);
+vec3 glint = vec3(s * 0.9, s * 0.95, s);
+if (uAerial > 0.5) glint *= sunColour(RG, cosSunGeo);
+col += glint;
 float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
 col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
+if (uAerial > 0.5) col = aerialPerspective(col, camPos, -viewDir, RG, sunDir);
 gl_FragColor = vec4(col, 1.0);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
@@ -143,17 +158,24 @@ gl_Position = projectionMatrix * viewMatrix * wp;
 #include <logdepthbuf_vertex>
 }
 `;
-/** V02: the sun's illuminance in the scattering sky's units, set so noon reads like the gradient sky it replaces. */
+/**
+ * V02: the sun's illuminance in the scattering sky's units, set so noon reads
+ * like the gradient sky it replaces — on the ground. Above it, with the
+ * ground factor, it falls to the scene's own sun (SUN_INTENSITY), the light
+ * the globe, the clouds and the vehicles are lit by: the globe's aerial
+ * perspective has to take the sky's illuminance to meet the sky at the
+ * horizon and at the limb, and at 8 from orbit its haze, 2.4 times what lights
+ * the ground under it, veiled the disc in pale blue (open ocean 40° off the
+ * nadir of 400 km, the sun 50° up, came out (71, 113, 172); at the scene's sun
+ * (33, 65, 116), and (4, 16, 41) with no haze at all; docs/PHYSICS.md §12).
+ * Below 72 km the haze takes it only where nothing shows through the air, and
+ * the scene's sun where the ground does (`AERIAL`, the haze's light).
+ */
 const SKY_ILLUMINANCE = 8;
 
 /*
- * ATMO_FRAG, the 110 km shell.
- * - discOnly: under the scattering sky the shell is kept only over the disc,
- *   as the haze towards its limb: off it the sky's own limb glow, which is gone
- *   by 70 km, met a second band out to the shell's faceted 110 km edge. The cut
- *   is the view ray's perigee against the Earth's sphere, not a threshold on
- *   dot(n, viewDir): the shell's 96 x 64 facets sit up to 5 km inside its own
- *   sphere, and that cut would scallop.
+ * ATMO_FRAG, the 110 km shell: the gradient sky's limb glow, not drawn under
+ * the scattering sky (`setPhysicalSky`).
  * - band: brightest exactly at the silhouette, where the line of sight runs the
  *   longest way through the shell, and falling away towards the sub-camera
  *   point. The previous band peaked at d = 0.32 — about 70° in from the limb —
@@ -170,18 +192,12 @@ const ATMO_FRAG = /* glsl */ `
 uniform vec3 sunDir;
 uniform vec3 camPos;
 uniform float rimGain;
-uniform vec3 earthCentre;
-uniform float discOnly;
 varying vec3 vNormalW;
 varying vec3 vPosW;
 void main() {
 #include <logdepthbuf_fragment>
 vec3 n = normalize(vNormalW);
 vec3 viewDir = normalize(camPos - vPosW);
-if (discOnly > 0.5) {
-vec3 cr = cross(camPos - earthCentre, viewDir);
-if (dot(cr, cr) > ${(R_EARTH * R_EARTH).toFixed(1)}) discard;
-}
 float d = max(dot(n, viewDir), 0.0);
 float band = pow(1.0 - d, 3.0);
 float lit = 0.2 + 0.8 * smoothstep(-0.25, 0.35, dot(n, sunDir));
@@ -243,6 +259,25 @@ export interface EarthTextures {
 
 /** Strength of the Earth's relief shading (0 disables the whole term). */
 const RELIEF_STRENGTH = 0.85;
+
+/** Height of the cloud layer's sphere above R_EARTH, m. */
+const CLOUD_HEIGHT = 9000;
+
+/**
+ * V02: the clouds seen through the air in front of them, as the globe is
+ * (EARTH_FRAG), patched into their Lambert material once its colour is set.
+ * Under the scattering sky a texel the map leaves clear (alpha under 1/255,
+ * some 40 % of the map) is dropped before the march rather than blended in
+ * at nothing.
+ */
+const CLOUD_AERIAL = /* glsl */ `
+if (uAerial > 0.5) {
+if (gl_FragColor.a < 0.004) discard;
+vec3 dirW = normalize((vec4(-vViewPosition, 0.0) * viewMatrix).xyz);
+vec3 upW = normalize(cameraPosition + dirW * length(vViewPosition) - earthCentre);
+gl_FragColor.rgb = aerialPerspective(gl_FragColor.rgb * sunColour(RG + ${CLOUD_HEIGHT.toFixed(1)}, dot(upW, sunDir)), cameraPosition, dirW, RG + ${CLOUD_HEIGHT.toFixed(1)}, sunDir);
+}
+`;
 
 export class SceneManager {
   readonly renderer: THREE.WebGLRenderer;
@@ -331,6 +366,18 @@ export class SceneManager {
    */
   private clearColor = new THREE.Color(0, 0, 0);
   private clearKey = '';
+  /**
+   * V02: what the aerial perspective reads, shared by the globe's and the
+   * clouds' materials: the scattering sky's three tables (bound once it exists;
+   * a null sampler is three's empty texture), its switch, the sky pass's
+   * illuminance and the scene's own sun (the haze's light blends from one to
+   * the other with the air's transmittance, `AERIAL`), and the Earth's centre
+   * under the floating origin.
+   */
+  private aerial = {
+    uTransmittance: { value: null as THREE.Texture | null }, uMultiScatter: { value: null as THREE.Texture | null }, uSkyLight: { value: null as THREE.Texture | null },
+    uAerial: { value: 0 }, uSunIlluminance: { value: SKY_ILLUMINANCE }, uSceneSun: { value: SUN_INTENSITY }, earthCentre: { value: new THREE.Vector3() },
+  };
 
   constructor(canvas: HTMLCanvasElement, tex: EarthTextures) {
     // `antialias` is a request for a multisampled *default* framebuffer, and
@@ -375,7 +422,7 @@ export class SceneManager {
         normalMap: { value: tex.normal ?? flatNormalTexture() },
         normalScale: { value: tex.normal ? RELIEF_STRENGTH : 0 },
         sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() },
-        rimGain: { value: 1 },
+        rimGain: { value: 1 }, ...this.aerial,
       },
     });
     this.earthMesh = new THREE.Mesh(geo, this.earthMat);
@@ -384,7 +431,13 @@ export class SceneManager {
       // The cloud map is a greyscale density: white cloud, as opaque as the
       // map is bright (an alpha map reads the green channel).
       const cm = new THREE.MeshLambertMaterial({ color: 0xffffff, alphaMap: tex.clouds, transparent: true, opacity: 0.85, depthWrite: false, fog: false });
-      this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 9000, 96, 64), cm);
+      cm.onBeforeCompile = (shader) => {
+        Object.assign(shader.uniforms, this.aerial, { sunDir: this.earthMat.uniforms.sunDir });
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', `#include <common>\n#define AERIAL_N 6\nuniform vec3 sunDir;\n${AERIAL}`)
+          .replace('#include <opaque_fragment>', `#include <opaque_fragment>\n${CLOUD_AERIAL}`);
+      };
+      this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + CLOUD_HEIGHT, 96, 64), cm);
       this.earthGroup.add(this.cloudMesh);
     } else {
       this.cloudMesh = null;
@@ -394,7 +447,6 @@ export class SceneManager {
       blending: THREE.AdditiveBlending, side: THREE.FrontSide,
       uniforms: {
         sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() }, rimGain: { value: 1 },
-        earthCentre: { value: new THREE.Vector3() }, discOnly: { value: 0 },
       },
     });
     this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 96, 64), this.atmoMat);
@@ -522,19 +574,24 @@ export class SceneManager {
     if (this.glowSupported) {
       this.physicalSky = new PhysicalSky(this.renderer, THREE.HalfFloatType);
       this.scene.add(this.physicalSky.mesh);
+      this.aerial.uTransmittance.value = this.physicalSky.transmittance;
+      this.aerial.uMultiScatter.value = this.physicalSky.multiScatter;
+      this.aerial.uSkyLight.value = this.physicalSky.skyLight;
       this.setPhysicalSky(true);
     }
   }
 
   /**
    * V02: the scattering sky, or (off, or no float targets) the gradient of
-   * sky.ts — whose limb glow the atmosphere shell is, so it is cut to the disc
-   * only while the scattering sky draws its own.
+   * sky.ts. Under the scattering sky the globe and the clouds are seen through
+   * its air (`AERIAL`), which is also their haze towards the limb, and the
+   * atmosphere shell, the gradient sky's limb glow, is not drawn.
    */
   setPhysicalSky(on: boolean): void {
     this.physicalSkyOn = on && !!this.physicalSky;
     if (this.physicalSky) this.physicalSky.mesh.visible = this.physicalSkyOn;
-    this.atmoMat.uniforms.discOnly.value = this.physicalSkyOn ? 1 : 0;
+    this.aerial.uAerial.value = this.physicalSkyOn ? 1 : 0;
+    this.atmoMesh.visible = !this.physicalSkyOn;
   }
 
   get physicalSkyEnabled(): boolean {
@@ -802,7 +859,7 @@ export class SceneManager {
     (this.atmoMat.uniforms.sunDir.value as THREE.Vector3).copy(sd);
     (this.earthMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
     (this.atmoMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
-    (this.atmoMat.uniforms.earthCentre.value as THREE.Vector3).copy(this.earthGroup.position);
+    this.aerial.earthCentre.value.copy(this.earthGroup.position);
     this.stars.position.copy(this.camera.position);
 
     const camEci = this.camEci.set(
@@ -810,10 +867,6 @@ export class SceneManager {
       this.camera.position.y + this.origin.y,
       this.camera.position.z + this.origin.z,
     );
-    if (this.physicalSky && this.physicalSkyOn) {
-      this.camera.updateMatrixWorld();
-      this.physicalSky.update(this.camera, camEci, sd, SKY_ILLUMINANCE);
-    }
     this.camUp.copy(camEci);
     // `camUp` becomes the local vertical for the hemisphere light, the
     // environment probe and the Earth-shine fill, so it must be a unit vector
@@ -821,6 +874,14 @@ export class SceneManager {
     if (this.camUp.lengthSq() <= 1) this.camUp.copy(this.zAxis);
     const sunElev = this.camUp.normalize().dot(sd);
     const sky = skyState(sunElev, cameraAltitude);
+    if (this.physicalSky && this.physicalSkyOn) {
+      // the sky pass's air and the haze where nothing shows through it see one sun (SKY_ILLUMINANCE falling to
+      // SUN_INTENSITY in space); the haze blends to SUN_INTENSITY where the ground shows; the sun's disc and glare keep 8
+      const illuminance = SUN_INTENSITY + (SKY_ILLUMINANCE - SUN_INTENSITY) * sky.groundFactor;
+      this.aerial.uSunIlluminance.value = illuminance;
+      this.camera.updateMatrixWorld();
+      this.physicalSky.update(this.camera, camEci, sd, illuminance, SKY_ILLUMINANCE);
+    }
     this.updateEnvironment(sky, sunElev);
     this.orientEnvironment(this.camUp, sd);
     this.renderer.toneMappingExposure = sky.exposure;
@@ -833,7 +894,8 @@ export class SceneManager {
     this.starsMat.uniforms.uOpacity.value = sky.stars;
     this.stars.visible = sky.stars > 0.004;
     const rim = 0.25 + 0.75 * (1 - sky.groundFactor);
-    this.earthMat.uniforms.rimGain.value = rim;
+    // under the scattering sky the aerial perspective is the globe's limb (EARTH_FRAG)
+    this.earthMat.uniforms.rimGain.value = this.physicalSkyOn ? 0 : rim;
     this.atmoMat.uniforms.rimGain.value = rim;
 
     // ---------------------------------------------------------- eclipse

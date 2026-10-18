@@ -3114,12 +3114,91 @@ a flickering black ring), and the samples are placed from the ray's lowest point
 seen from space, towards the camera from inside the atmosphere. A NaN or infinity from a degenerate
 ray is zeroed before the bloom can spread it.
 
+The globe and its clouds are seen through the same air (aerial perspective, Hillaire 2020 §6). Their
+shaders (src/render/scene.ts, with `AERIAL` from atmosphere.ts) march the view ray from the camera
+to the Earth's sphere — to the cloud layer's sphere, 9 km up, for the clouds — with the same model
+and tables, single scattering with the Earth's shadow plus the multiple-scattering term, and show
+the surface's light dimmed by the transmittance T of that stretch with the light L it scatters in
+added: col·T + L·E_h, E_h the haze's light (below). The stretch is solved from the camera through the
+ray's perigee, as the sky's is, and ends on the sphere, not on the meshes' facets (up to 2.8 km
+under it for the globe, 5.3 km for the clouds), which would scallop the haze at the limb. The globe
+takes 10 samples and the clouds 6, crowded quadratically towards the far end, where the air is
+densest on any ray that ends on the ground; a cloud texel the map leaves clear is dropped before the
+march. Against an independent fine integral of the same single-scattering model
+(tests/render-aerial.test.ts) the error in the scattered light is at most 4.7 % of a ray's brightest
+channel from 400 km (RMS 1.4 %; the worst rays graze the limb with the sun low ahead of them) and
+1.6 % from 30 km (RMS 0.6 %), in the transmittance at most 4.5 % and 1.9 %; for the clouds' six
+samples 4.6 % and 3.5 %. Looking straight down from 400 km with the sun 50° up, the march with the
+multiple-scattering term gives a path reflectance πL/(E cos θ☉) of 0.024/0.052/0.127 at 680/550/440
+nm and a transmittance of 0.94/0.87/0.77; single scattering alone is 0.075 at 440 nm, against
+τp/(4μμ☉) = 0.10 for the same Rayleigh optical depth (0.265) before the attenuation of the two
+paths. From orbit this is the blue haze over the disc, thickening towards the limb into the sky's
+own limb glow; from the stratosphere, the distant ground fading into the horizon sky (from 30 km,
+the sun 35° up, the sky 6 rows over the horizon came out (198, 198, 215) and the globe 20 rows
+under it (16, 34, 61), a dark band; now (190, 190, 209) and, with the haze's light below,
+(138, 169, 205)); none on the night side, and the terminator's twilight from the model. The globe's
+Fresnel rim, the gradient sky's stand-in for this, is off under the scattering sky. The sky pass no
+longer marches a ray that ends more than 10 km inside the Earth's sphere: the opaque globe covers it
+and carries that haze itself.
+
+The globe's ground is lit by the sun through the air and by the sky (`daylight`), relative to noon:
+(max(cos i, 0)·T☉(μ☉) + E_sky(μ☉)) / (T☉(1) + E_sky(1)), with T☉ the transmittance table (faded
+about the horizon), i the sun's angle to the surface's relief and μ☉ the cosine of its zenith angle
+there. E_sky is the sky's irradiance on a level surface per unit of solar illuminance, ∫ L cos θ dω
+over the upper hemisphere: a third table, 64 × 16 over μ☉ and the height, filled once from the sky's
+own model with 8 × 8 directions spread as cos θ is, each marched to the top of the atmosphere in 16
+steps; against a fine integral (32 × 32 directions, 200 steps) it errs by at most 0.33 % of noon's
+light on the ground and 0.21 % at 9 km (tests/render-aerial.test.ts). Level ground at noon is drawn
+as before. With the reddened sun alone, a white surface with the sun 20° up came out with blue at
+0.749 of red, pink; the blue sky's light brings it to 0.889. Ground past its sunset keeps the
+twilight sky's light, under a thousandth of noon's once the sun is 8° down. The sun glint and the
+clouds take the sunlight alone, `sunColour`, the transmittance table over itself at noon (with the
+sun 4° up 0.52/0.22/0.05 on the ground and 0.77/0.52/0.38 at the cloud tops): noon is drawn as
+before, a low sun reddens and dims them and a sun below their horizon leaves them dark, and the
+clouds of the night side are no longer lit grey by the scene's fill lights. The model's three
+wavelengths put the ozone's absorption on the 550 nm channel alone, so a white surface seen through
+the air keeps a faint mauve cast: from 400 km, 45° off nadir, the sun 20° up, white ground comes out
+with green at 0.927 of red and blue at 0.974, against 0.976 and 0.951 with the ozone taken out of
+the sunlight, the view path and the haze (Arctic ice at 84° N from 400 km, the sun 20° up: (167, 161, 163); (172, 172, 173) before the
+aerial perspective).
+
+The sun's illuminance in the sky's units is 8 on the ground, set so that noon reads like the
+gradient sky it replaced, and falls with the camera's height (the ground factor of
+src/render/sky.ts, from 12 to 72 km) to 3.3 in space, the scene's own sun that lights the globe, the
+clouds and the vehicles; the sky pass's scattered light takes it, and so does the haze where nothing
+shows through the air, so the haze meets the sky at the horizon and at the limb. At 8 from orbit the
+haze, 2.4 times what lights the ground under it, veiled the whole disc in pale blue: open ocean 40°
+off the nadir of 400 km, the sun 50° up, came out (71, 113, 172), at 3.3 (33, 65, 116), and
+(4, 16, 41) with no haze at all. The sky's own limb glow seen from orbit is drawn at 3.3 too, so it
+is dimmer than before: in a daylight view of the limb from 400 km its brightest row went from
+(212, 207, 222) to (160, 152, 177). The sun's disc and its glow stand for the lens's glare rather
+than the air's light and keep 8 at every height, as before.
+
+Below 72 km the sky keeps its tuning: E is 8 up to 12 km, 7.77 at 20 km, 6.98 at 30 km and 5.30 at
+45 km, 2.4, 2.4, 2.1 and 1.6 times the scene's sun. Taken whole by the haze it made the ground and
+the clouds under it read washed out from 20 to about 45 km; taken at 3.3 it left a step under the
+horizon. The haze's light is therefore a blend, E_h = E·(1 − T) + 3.3·T per channel: the sky's light
+where nothing shows through the air, towards the horizon, and the scene's sun where the ground
+shows. This is a look choice, not the model's: below 72 km the haze's light is a mix, neither the
+sky's sun nor the ground's. It is option (ค) of the owner's question on the look in the climb
+(docs/development/reports/argon4-fu-sky.md, question 2), chosen on 2026-10-17. With no pad in
+view (the sun 30° up at 12 km, 35° at the others), the ocean low in the view comes out
+(34, 72, 133), (56, 92, 151), (59, 91, 149) and (68, 93, 143) at 12, 20, 30 and 45 km, against
+(69, 109, 161), (89, 127, 175), (87, 120, 171) and (83, 110, 158) with the haze at E alone. From 30
+km the globe 20 rows under the horizon is (138, 169, 205) under a sky of (190, 190, 209); it was
+(157, 177, 206) at E alone and (101, 124, 160) at 3.3. Along a ray 0.02° inside the limb from 30 km
+the haze's light is within 9 % of E in red, where T is 0.17, and within 0.02 % in blue. So the first
+rows under the horizon are a little less red than the sky over them, a thin pale-cyan band plainest
+at 12 km: the red falls 25–27 levels over
+the first three rows, against 15–20 at E alone, while green and blue barely differ. In orbit E is 3.3
+too and the blend changes nothing: the views from 400 km are identical to the pixel.
+
 The older atmosphere shell (a sphere 110 km up, added over the globe) stays the limb glow of the
-gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets. Under the
-scattering sky it is drawn over the Earth's disc only, as the haze towards its limb: a fragment
-whose view ray passes clear of the R_EARTH sphere is discarded. Until 2026-10-17 it was drawn whole,
-and from orbit it laid a second, faceted blue ring from 60 to 110 km over the sky's own limb glow,
-which is gone by about 66 km (a brown band at the terminator). The gradient sky's colour reaches the
+gradient sky — `?sky=gradient`, the frame-rate fallback, and GPUs without float targets — and is not
+drawn under the scattering sky. Until 2026-10-17 it was drawn whole there, and from orbit it laid a
+second, faceted blue ring from 60 to 110 km over the sky's own limb glow, which is gone by about
+66 km (a brown band at the terminator); it was then cut to the Earth's disc, as the haze towards its
+limb, until the aerial perspective took that over the same day. The gradient sky's colour reaches the
 linear scene target as the scene's background, which three encodes and clears inside the render with
 the target bound; set as the renderer's clear colour while the canvas was bound it had been encoded
 to sRGB, and space came out (95, 104, 128) for the authored (10, 14, 27).
