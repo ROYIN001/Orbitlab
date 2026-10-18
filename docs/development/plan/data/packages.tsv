@@ -67,7 +67,7 @@ R5.4	S15	K5	P-R/B+P (I)	9.5	3	false	Ship/station/port visuals and spacecraft exp
 R6.1	S15	K6	A (+P,S)	8	3	false	Cockpit scope and systems spec	M-PLAN-022
 R6.2	S15	K6	A (+C,I)	15	5	false	Cockpit view, instruments, audio, force cues	M-PLAN-023
 R6.3	S15	K6	A/Q/L-C	8	3	false	Training missions and user tests	M-PLAN-024
-R8	S15	K6	P+O	47.5	16	false	Moon: generalise C01 (R8.1-R8.5)	M-ORBIT-031 M-ORBIT-032 M-ORBIT-033 M-ORBIT-034 M-ORBIT-035 M-PHYSICS-018 M-ORBIT-067
+R8	S15	K6	P+O	47.5	16	false	Moon: generalise C01 (R8.1-R8.5)	M-ORBIT-031 M-ORBIT-032 M-ORBIT-033 M-ORBIT-034 M-ORBIT-035 M-PHYSICS-018 M-ORBIT-067 M-ORBIT-068 M-ORBIT-069
 ED-ASSESS-1	S16	K2	L-C	1.5	1	false	Placement report honesty	M-LEARNING-026
 ED-CLASS-1	S16	K3	L/L-UI	5.5	2	false	Teacher restore and class view; Web Share	M-LAUNCH-069 M-LEARNING-042
 ED-CLASS-2	S16	K3-K4	L-C (+I)	8	3	false	Teacher guide and presentation mode	M-LEARNING-043 M-LEARNING-044
