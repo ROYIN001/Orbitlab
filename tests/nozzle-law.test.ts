@@ -16,7 +16,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_VEHICLES } from '../src/data/vehicles';
 import { ENGINE_PARTS, engineSpec } from '../src/data/parts';
-import { NOZZLES, NOZZLE_GAMMA, type NozzleFigure } from '../src/data/nozzles';
+import { NOZZLES, NOZZLE_GAMMA, NOZZLE_GAMMA_SOURCES, NOZZLE_SOURCES, type Provenance } from '../src/data/nozzles';
 import {
   areaRatioAt, engineLevelFor, engineThrustAt, machAt, nozzleFlow, nozzleModel, pressureRatioAt, schmuckerRatio, separationPressure,
   vacuumThrustCoefficient,
@@ -317,27 +317,43 @@ describe('the thrust law', () => {
 });
 
 describe('nozzle data (src/data/nozzles.ts)', () => {
-  const figures = (name: string): [string, NozzleFigure][] => {
+  const FIELDS = ['expansionRatio', 'chamberPressure', 'exitDiameter'] as const;
+  /** the numbers of one record, by field */
+  const figures = (name: string): [(typeof FIELDS)[number], number][] => {
     const r = NOZZLES[name];
-    return [['expansionRatio', r.expansionRatio], ['chamberPressure', r.chamberPressure], ['exitDiameter', r.exitDiameter]]
-      .filter((x): x is [string, NozzleFigure] => x[1] !== undefined);
+    return FIELDS.map((f) => [f, f === 'exitDiameter' ? r.exitDiameter?.value : r[f]] as [(typeof FIELDS)[number], number | undefined])
+      .filter((x): x is [(typeof FIELDS)[number], number] => x[1] !== undefined);
   };
+  const says = (p: Provenance): string => ('source' in p ? p.source : p.estimate);
 
   it('holds every engine a built-in vehicle or a catalogue part flies', () => {
     const missing = [...new Set(allEngines().map((e) => e.name))].filter((n) => !Object.prototype.hasOwnProperty.call(NOZZLES, n));
     expect(missing).toEqual([]);
   });
 
-  it('every figure has a source or an estimate flag, and is a positive number', () => {
+  it('every number has a source or an estimate flag, and is a positive number; every source has its number', () => {
+    expect(Object.keys(NOZZLE_SOURCES).sort()).toEqual(Object.keys(NOZZLES).sort());
     for (const name of Object.keys(NOZZLES)) {
-      for (const [field, f] of figures(name)) {
-        expect(f.value > 0 && Number.isFinite(f.value), `${name}.${field}`).toBe(true);
-        const said = 'source' in f ? f.source : f.estimate;
-        expect(typeof said === 'string' && said.length > 10, `${name}.${field} says where it comes from`).toBe(true);
-        expect('source' in f && 'estimate' in f, `${name}.${field} is not both`).toBe(false);
+      const p = NOZZLE_SOURCES[name];
+      for (const [field, value] of figures(name)) {
+        expect(value > 0 && Number.isFinite(value), `${name}.${field}`).toBe(true);
+        const f = p[field];
+        expect(f, `${name}.${field} says where it comes from`).toBeDefined();
+        expect(says(f!).length, `${name}.${field} says where it comes from`).toBeGreaterThan(10);
+        expect('source' in f! && 'estimate' in f!, `${name}.${field} is not both`).toBe(false);
       }
+      // no source for a number the record does not hold
+      for (const field of FIELDS) if (p[field]) expect(figures(name).some(([f]) => f === field), `${name}.${field} has a number`).toBe(true);
     }
-    for (const g of Object.values(NOZZLE_GAMMA)) expect(('source' in g ? g.source : g.estimate).length).toBeGreaterThan(10);
+    for (const [family, g] of Object.entries(NOZZLE_GAMMA)) {
+      expect(g > 1 && g < 1.4, family).toBe(true);
+      expect(says(NOZZLE_GAMMA_SOURCES[family as keyof typeof NOZZLE_GAMMA]).length, family).toBeGreaterThan(10);
+    }
+  });
+
+  it("writes the J-2's exit out as its 170.4 in² throat times its ε 27.5", () => {
+    const d = Math.sqrt((4 * 170.4 * 27.5) / Math.PI) * 0.0254;
+    for (const name of ['J-2', 'Rocketdyne J-2']) expect(NOZZLES[name].exitDiameter!.value / d - 1, name).toBeCloseTo(0, 12);
   });
 
   it('gives each engine what its kind needs: a vacuum engine its exit size, a sea-level one its ε or chamber pressure', () => {
@@ -357,9 +373,10 @@ describe('nozzle data (src/data/nozzles.ts)', () => {
     // area of a sea-level engine is its pair's, the C_F ideal)
     for (const e of allEngines()) {
       const r = NOZZLES[e.name];
-      if (!r?.expansionRatio || !r.chamberPressure || !('source' in r.chamberPressure) || !('source' in r.expansionRatio)) continue;
+      const p = NOZZLE_SOURCES[e.name];
+      if (!r?.expansionRatio || !r.chamberPressure || !p.chamberPressure || !('source' in p.chamberPressure) || !p.expansionRatio || !('source' in p.expansionRatio)) continue;
       const m = nozzleModel(e);
-      expect(Math.abs(m.chamberPressure / r.chamberPressure.value - 1), e.name).toBeLessThan(0.25);
+      expect(Math.abs(m.chamberPressure / r.chamberPressure - 1), e.name).toBeLessThan(0.25);
       expect(pressureRatioAt(m.exitMach, m.gamma) * m.chamberPressure).toBeCloseTo(m.exitPressure, 6);
     }
   });
