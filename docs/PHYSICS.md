@@ -4030,8 +4030,8 @@ over Tranquility Base, as Eagle had it. The Moon's place at the arrival is 0.44�
 plane (taken at the flown TLI time); the solver finds an injection with the node edited to 0.5° (its conic
 2.96° out of the parking plane, 873 kg spare) and none with it at 0.7° or more. `evt.tliUnsolved` is the
 solver not converging, and two causes were traced (the report's §4): an ascent into a plane the pad is
-not under at lift-off (29°, the node kept at 359.6°) ends off it, at 29.3°, with less Δv left in the S-IVB
-(3,022 m/s) than the cheapest injection that converged (3,190 m/s), so it is short of propellant whatever
+not under at lift-off (29°, the node kept at 359.6°) ends off it, its node at 342°, with less Δv left in the
+S-IVB (2,978 m/s) than the cheapest injection that converged (3,190 m/s), so it is short of propellant whatever
 the steering; with the node at 0.7° or more the conic must turn 3.3° or more out of the parking plane at
 the ignition, the steering's yaw sits at its ±11.5° limit (0.2 of the thrust) for much of the burn, the
 burn ends far across the conic's plane and the burn pass does not converge — a limit of the model's
