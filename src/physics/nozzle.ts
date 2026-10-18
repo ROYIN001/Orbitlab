@@ -37,11 +37,13 @@
  * start-up in the first instant, before the chamber has pressure).
  *
  * QUALIFIED SEA-LEVEL OPERATION STAYS ATTACHED. The one-dimensional wall
- * pressure understates the pressure at the end of a real bell: for the SSME,
- * Schmucker's wall-pressure distribution gives 0.0019·p_c at the exit, about
- * twice the one-dimensional value for ε 69. With it, the criterion would
- * separate Vulcain 2.1, LE-7A, YF-77, LE-9 and the R-7's chambers at full
- * thrust on the pad, which they are qualified to run with the flow attached
+ * pressure understates the pressure at the end of a real contoured bell (the
+ * flow turning back towards the axis raises it): for the SSME, Schmucker's
+ * wall-pressure distribution gives 0.0019·p_c at the exit, 2.4 times the
+ * one-dimensional 0.00080·p_c for ε 69 at γ 1.26. With the one-dimensional
+ * pressure the criterion would separate Vulcain 2.1, LE-7A, YF-77, LE-9 and
+ * the R-7's chambers at full thrust on the pad, which they are qualified to
+ * run with the flow attached
  * (the catalogue's sea-level thrust is that point). So an engine with a
  * sea-level pair gets the least factor on its wall pressure that keeps
  * (λ = 1, p₀) attached (`wallFactor`, 1 for most of the fleet, up to 2.5 for
@@ -152,22 +154,22 @@ export const FALLBACK_NOZZLE: Readonly<{ gamma: number; chamberPressureSL: numbe
 function build(e: EngineSpec, record: NozzleRecord | undefined): NozzleModel {
   const fv = e.thrustVac;
   const groundLit = !e.vacuumOnly;
-  const gamma = record ? NOZZLE_GAMMA[record.family].value : FALLBACK_NOZZLE.gamma;
+  const gamma = record ? NOZZLE_GAMMA[record.family] : FALLBACK_NOZZLE.gamma;
   let exitArea: number;
   let eps: number;
   if (groundLit) {
     exitArea = Math.max(0, (fv - e.thrustSL) / P0);
     if (exitArea <= 0 || !(fv > 0)) return attachedOnly(gamma, record ? 'data' : 'estimate');
-    if (record?.expansionRatio) eps = record.expansionRatio.value;
-    else eps = areaRatioFor(fv, record?.chamberPressure?.value ?? FALLBACK_NOZZLE.chamberPressureSL, exitArea, gamma);
+    if (record?.expansionRatio) eps = record.expansionRatio;
+    else eps = areaRatioFor(fv, record?.chamberPressure ?? FALLBACK_NOZZLE.chamberPressureSL, exitArea, gamma);
   } else {
     if (!(fv > 0)) return attachedOnly(gamma, record ? 'data' : 'estimate');
     if (record?.exitDiameter) {
       exitArea = record.exitDiameter.nozzles * Math.PI * record.exitDiameter.value ** 2 / 4;
-      eps = record.expansionRatio?.value ?? areaRatioFor(fv, record.chamberPressure?.value ?? FALLBACK_NOZZLE.vacuumChamberPressure, exitArea, gamma);
+      eps = record.expansionRatio ?? areaRatioFor(fv, record.chamberPressure ?? FALLBACK_NOZZLE.vacuumChamberPressure, exitArea, gamma);
     } else {
-      eps = record?.expansionRatio?.value ?? FALLBACK_NOZZLE.vacuumExpansionRatio;
-      const pc = record?.chamberPressure?.value ?? FALLBACK_NOZZLE.vacuumChamberPressure;
+      eps = record?.expansionRatio ?? FALLBACK_NOZZLE.vacuumExpansionRatio;
+      const pc = record?.chamberPressure ?? FALLBACK_NOZZLE.vacuumChamberPressure;
       exitArea = eps * fv / (pc * vacuumThrustCoefficient(eps, gamma));
     }
   }
