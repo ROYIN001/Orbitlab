@@ -253,6 +253,15 @@ The owner answered in chat on 2026-10-17, at about 23:28 UTC, four questions of 
 | 2026-10-17 | IMU 1: lesson 15.2's navigation bound (`ru-bins-astro`; IMU report, question 1) | "IMU1 ก" — option (ก), keep the lesson as designed and set the bound again by the rule it was set with, the worked flight plus 25 %, rounded up: 1 184 m × 1.25 = 1 480 → 1 500 m | PR #157: lesson 15.2's `NAV_BOUND_M` 1 500 m (`src/lessons/pack-sources/ru-24-05-06.ts`, the brief in en, ru and th, the regenerated pack file and its review hash, heavy S2 and the reviewed heavy inventory, VALIDATION T03) |
 | 2026-10-17 | IMU 2: a MEMS unit with GNSS and the star tracker off, over a long coast (IMU report, question 2) | "IMU2 ข" — option (ข), a filter change in a later package (R4.3) with its own consistency test: for example, not taking −[f×]φ from a specific force below its own noise in free fall, and a larger-angle attitude error; the gyro scale factors' columns, which show the same kind of fault, built from a rate the filter trusts | Plan item M-PHYSICS-079 in R4.3 (`docs/development/plan/data/assignment.tsv` and `packages.tsv`, `docs/development/registry.tsv`). The placement only: it waits for its wave's authorization (D-65); until then PHYSICS §2h "A limit" describes the limit. |
 
+## Decided 2026-10-17 (merging the Argon4 follow-up parts, chat)
+
+The owner gave two merge approvals in chat late on 2026-10-17, verbatim:
+
+| Date | Scope | Words | How it is applied |
+|---|---|---|---|
+| 2026-10-17 | PR #157 | "merge  157" | Merged on 2026-10-18 as bb33307 once CI was green on its head 558cf8d. |
+| 2026-10-17 | The other Argon4 follow-up parts, each its own branch and PR (`claude/charming-archimedes-01p1h5-*`) | "งานส่วนอื่นๆ เมื่อเสร็จเรียบร้อยและ CI เขียวแล้ว ให้ merge ได้เลยเช่นกัน" — merge the other parts too, once each is finished and its CI is green | A part counts as finished when its two-agent review is followed up and no owner question it raises changes an earlier owner decision; one that does waits for that answer. #158, #159 and #160 were merged under it. |
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
