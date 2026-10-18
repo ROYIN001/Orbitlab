@@ -79,6 +79,8 @@ import {
   ORBIT_INSERTION_FLOOR, kickStageSink, launchWindows,
 } from '../src/physics/mission';
 import { probeInsertion } from '../src/physics/autotune';
+import { physicalApsides, type PhysicalApsides } from '../src/physics/rigid/orbit-prediction';
+import { LIQUID_TAILOFF_S, SOLID_TAILOFF_S, TAILOFF_SPAN } from '../src/physics/vehicle';
 import type { MissionConfig } from '../src/types';
 import { BUILTIN_LESSONS } from '../src/lessons/catalog';
 import { lessonConfig } from '../src/lessons/config';
@@ -273,23 +275,54 @@ describe('excluded combinations', () => {
    */
   it('a retrograde apsis trim moves the apsis it was aimed at', () => {
     const byKey = new Map(allCases().map((c) => [caseKey(c), c]));
+    // The orbit each burn leaves, read once the engine's tail-off is over (no
+    // engine in the fleet tails off for longer than a solid's).
+    const settle = TAILOFF_SPAN * Math.max(LIQUID_TAILOFF_S, SOLID_TAILOFF_S);
     for (const key of ['atlasv551/iss/50', 'vulcan/iss/50', 'h2a202/iss/90']) {
       const c = byKey.get(key)!;
-      const sim = flyCase(c);
+      const pending: { key: string; t: number }[] = [];
+      const left: { key: string; t: number; apsides: PhysicalApsides | null }[] = [];
+      let seen = 0;
+      const watch = (s: Simulation) => {
+        while (seen < s.events.length) {
+          const e = s.events[seen++];
+          if (e.key === 'evt.parkingOrbit' || e.key === 'evt.burnComplete') pending.push({ key: e.key, t: e.t });
+          // nothing may light before the orbit a burn left has been read
+          if (e.key === 'evt.ignition' && pending.length) left.push({ key: 'ignition before the orbit was read', t: e.t, apsides: null });
+        }
+        while (pending.length && s.state.t >= pending[0].t + settle) {
+          left.push({ ...pending.shift()!, apsides: physicalApsides({ r: s.state.r, v: s.state.v }) });
+        }
+      };
+      const sim = flyCase(c, undefined, undefined, watch);
       const log = `${key}: ` + sim.events.map((e) => `${Math.round(e.t)}:${e.key}`).join(' ');
       expect(acceptanceFailures(sim, c), log).toEqual([]);
+      // the last burn ends the mission inside its own tail-off: coast on to read it
+      for (let guard = 0; pending.length && guard < 1000; guard++) { sim.step(sim.suggestedDt()); watch(sim); }
       // Every completed burn has to leave the orbit measurably closer to the
       // target than the one before it. A burn's DURATION is not the test — the
       // H-IIA's final trim is a legitimate 0.4 s and moves the apogee 14 km —
       // the test is whether the apsis moved.
+      //
+      // The orbit a burn leaves is read on its physical apsides, the lowest and
+      // highest altitude of the next revolution under J2, which is what every
+      // flight is judged on since D-51. This read each event's conic, the
+      // osculating ellipse of the cut-off's instant (`params.ap`/`pe`), which a
+      // point-mass orbit no longer keeps: H-IIA's last trim moved the conic from
+      // 412 × 422 to 412 × 430 km, a residual of 10 → 18 km, on an orbit whose
+      // physical apsides it brought from 409.3 × 412.9 to 411.9 × 420.1 km, a
+      // residual of 17.8 → 8.2 km. The same quantity on the physical apsides,
+      // the same 1 km bound: the owner's answer "3.ก" of 2026-10-18.
+      expect(left.map((x) => x.key), log).toEqual(sim.events
+        .filter((e) => e.key === 'evt.parkingOrbit' || e.key === 'evt.burnComplete').map((e) => e.key));
       const target = resolveTarget(orbitById(c.orbit), siteById(c.site), LAUNCH_TIME);
-      const residual = (e: { params?: Record<string, string | number> }): number =>
-        Math.abs(Number(e.params!.ap) * 1e3 - target.apogee) + Math.abs(Number(e.params!.pe) * 1e3 - target.perigee);
-      const completions = sim.events.filter((e) => e.key === 'evt.burnComplete');
-      let prev = residual(sim.events.find((e) => e.key === 'evt.parkingOrbit')!);
-      for (const [i, e] of completions.entries()) {
-        const now = residual(e);
-        expect(prev - now, `burn ${i} left the residual at ${Math.round(now / 1e3)} km — ${log}`)
+      const residual = (a: PhysicalApsides | null): number => a === null ? Infinity
+        : Math.abs(a.apoapsisAlt - target.apogee) + Math.abs(a.periapsisAlt - target.perigee);
+      expect(left[0].key, log).toBe('evt.parkingOrbit');
+      let prev = residual(left[0].apsides);
+      for (const [i, x] of left.slice(1).entries()) {
+        const now = residual(x.apsides);
+        expect(prev - now, `burn ${i} left the residual at ${(now / 1e3).toFixed(1)} km — ${log}`)
           .toBeGreaterThan(1e3);
         prev = now;
       }
