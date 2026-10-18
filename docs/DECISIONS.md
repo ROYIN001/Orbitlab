@@ -303,6 +303,8 @@ The owner answered in chat on 2026-10-18, at about 21:00 UTC, the questions aske
 
 Later that evening, at about 21:10 UTC, the owner asked in chat, verbatim "มีส่วนไหนที่งานไม่ใหญ่ทำก่อนได้เลย งานใหญ่ให้เก็บไว้ก่อน" (do first whatever is not big; keep the big work for later). The re-baseline (D-51 with the nozzle law, and the answers recorded in the two sections above) is the big work: it is one change that moves every golden, and its only identical-output part, the unwired nozzle module, is over 700 lines. It is parked, not abandoned: its branches are kept (`claude/charming-archimedes-01p1h5-wip-rebaseline-snapshot` and the three parts started that evening, `-wip-rb-guide`, `-wip-rb-hist`, `-wip-rb-instr`), the hand-over on `claude/charming-archimedes-01p1h5` says where each stands, and the answers above take effect when it resumes. This record lands on its own, ahead of it.
 
+At about 21:50 UTC the owner then asked, verbatim "ใส่เข้าไปในแผนแม่บทฉบับใหญ่เลยครับ" (put it into the big master plan). The parked re-baseline is placed in the plan's tables (`docs/development/plan/data/`, `docs/development/registry.tsv`): the pseudo-package R4.2-RB names it, the branch it is parked on and the decisions that authorize it, and its remaining work is five items in R4.2 beside M-PHYSICS-023 and M-PHYSICS-024 — M-PHYSICS-081 (the nozzle law, done on the branch), M-PHYSICS-082 (the geodetic guidance, answer 10), M-PHYSICS-083 (the published exits, answer 8), M-PHYSICS-084 (the historical vehicles, answer 2) and M-PHYSICS-085 (the close-out, answers 1, 3, 5, 9 and 11). It still waits for the owner to resume it.
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
