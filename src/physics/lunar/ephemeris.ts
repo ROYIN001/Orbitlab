@@ -8,10 +8,9 @@
  * (IAU 1976: Lieske et al. 1977); nutation, nine arc-seconds, is left out as
  * the Earth's own rotation leaves it out.
  *
- * From 1969-07-16 13:00 to 08-01 00:00 TDB — Apollo 11's week and the
- * launches it could have flown in the week after — the positions and
- * velocities are JPL's DE441 (`src/data/ephemeris-1969.ts`), interpolated by
- * cubic Hermite between the hourly states: metres. Outside it, the
+ * For Apollo 11's week, 1969-07-16 13:00 to 07-24 18:00 TDB, the positions
+ * and velocities are JPL's DE441 (`src/data/ephemeris-1969.ts`), interpolated
+ * by cubic Hermite between the hourly states: metres. Outside it, the
  * low-precision series of `ephemeris-series.ts` (the lifetime propagator's) — a few hundred kilometres
  * for the Moon — which only the drawing uses.
  */

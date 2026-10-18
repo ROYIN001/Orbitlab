@@ -86,19 +86,20 @@ describe('which way the Moon faces', () => {
   });
 });
 
-describe('the DE441 table, extended to 1 August 1969 for the launches Apollo 11 could have flown', () => {
-  // The one-week table (fetched 2026-09-27, 198 rows, to 07-24 18:00 TDB), each double as 16 hex digits big-endian,
-  // hashed with SHA-256: the extended table's first 198 rows must give the same, bit for bit.
+describe('the DE441 table, Apollo 11\'s week, packed as integers', () => {
+  // The one-week table (fetched 2026-09-27, 198 rows, to 07-24 18:00 TDB) as it was written out in decimals,
+  // each double as 16 hex digits big-endian, hashed with SHA-256: the packed table must give the same, bit for bit.
   const ONE_WEEK = {
     moon: '49c29dba8a750da1d3c62d3d84c15ba4842c9560ace65199e56fb9e62cd4f6a7',
     sun: '9edeb0e75a6480849115fe7ece90e653d7f5a112c31383eeacf3a79a99662cac',
   };
-  it('is the one-week table, to the bit, over the week it held', async () => {
+  it('is the one-week table, to the bit', async () => {
     for (const [T, want] of [[MOON_1969, ONE_WEEK.moon], [SUN_1969, ONE_WEEK.sun]] as const) {
       expect(T.jd0).toBe(2440419.041666667);
       expect(T.stepHours).toBe(1);
-      expect(T.count).toBe(372);
-      expect(await sha256(T.data.slice(0, 198 * 6).map(hex).join(''))).toBe(want);
+      expect(T.count).toBe(198);
+      expect(T.data.length).toBe(198 * 6);
+      expect(await sha256(T.data.map(hex).join(''))).toBe(want);
     }
   });
 
@@ -129,7 +130,7 @@ describe('the DE441 table, extended to 1 August 1969 for the launches Apollo 11 
         expect(norm(r.x - st.r.x, r.y - st.r.y, r.z - st.r.z)).toBeLessThan(500e3);
       }
     }
-    // the table's span, UTC: 16 July 1969 12:59:20 to 31 July 23:59:20
+    // the table's span, UTC: 16 July 1969 12:59:20 to 24 July 17:59:20
     const end = MOON_1969.jd0 + (MOON_1969.count - 1) / 24;
     expect(inEphemerisTable(utc(MOON_1969.jd0))).toBe(true);
     expect(inEphemerisTable(utc(end))).toBe(true);
