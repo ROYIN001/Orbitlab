@@ -18,6 +18,14 @@ export default async function heldTuning(t) {
   const app = await t.open({ hash: '#/launch/engineer' });
   const { page } = app;
   const state = () => app.mcp('read_flight_state');
+  // The live cursor follows the recording's head only when the page draws a
+  // frame (main.ts updateVisuals → player.syncLive). On a software GPU a frame
+  // can take more than a second, so two equal reads a second apart do not show
+  // the flight has settled unless a frame was drawn between them: wait for two
+  // of the page's own frames before each read (the app's frame callback, asked
+  // for in the frame before, runs ahead of ours).
+  const drawn = () => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done(true)))));
+  const stateDrawn = async () => { await drawn(); return state(); };
   await page.locator('#setup .launch-button').waitFor();
   await app.mcp('configure_mission', { physicsModel: 'sixDof' });
   if (!await press(t, app, page.locator('#setup .launch-button'), 'mouse', 'Launch')) return;
@@ -30,13 +38,13 @@ export default async function heldTuning(t) {
   // two reads a second apart before taking the state to compare against
   let last = null;
   const settled = await t.until(async () => {
-    const s = await state();
+    const s = await stateDrawn();
     const same = last && s.cursorTimeS === last.cursorTimeS && s.headTimeS === last.headTimeS;
     last = s;
     return same ? s : null;
   }, { timeoutMs: RESPOND_MS, intervalMs: 1000 });
   if (!t.check(settled, `the paused flight did not settle (cursor T+${last?.cursorTimeS} s, head T+${last?.headTimeS} s)`)) return;
-  const before = await state();
+  const before = await stateDrawn();
   const hudBefore = await page.evaluate(() => document.getElementById('hud')?.textContent ?? '');
   const timelineBefore = await page.evaluate(() => document.getElementById('timeline')?.textContent ?? '');
   t.log(`paused at T+${before.cursorTimeS.toFixed(1)} s, recorded to T+${before.headTimeS.toFixed(1)} s`);
@@ -61,7 +69,7 @@ export default async function heldTuning(t) {
   await page.waitForTimeout(1000);
   await app.shot('lui01-after-use-for-next-launch');
 
-  const after = await state();
+  const after = await stateDrawn();
   const hudAfter = await page.evaluate(() => document.getElementById('hud')?.textContent ?? '');
   t.check(await page.evaluate(() => document.body.dataset.flightStage) === 'flight', 'the paused flight left the flight stage');
   t.check(after.hasMission && after.mode === 'live' && !after.playing, `the flight is not the paused live flight any more (${after.mode}, playing ${after.playing})`);
