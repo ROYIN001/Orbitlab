@@ -97,6 +97,20 @@ are listed there as drafts awaiting the owner's review.
   ([SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md)); point-mass flight for every vehicle as
   the alternative.
   Engines have start-up and tail-off transients, and every cut-off anticipates the tail-off.
+  Every thrust comes from one law of the engine's nozzle (the owner's decision of 2026-10-17):
+  the vacuum thrust times the level less the air's pressure on the exit area at any level, and,
+  where the nozzle runs far below the outside pressure (deep throttle low down, a vacuum engine lit
+  in the air), the flow separating inside the bell by Schmucker's criterion; vacuum engines fly
+  their own exit areas, from published figures or flagged estimates.
+  The Earth is the WGS-84 ellipsoid (D-51, the owner's decision of 2026-10-17, plan R4.2 + R4.5):
+  the sites stand on it at their geodetic latitude and altitude, every height the air and the
+  ground are read at is above it, and the scene draws it; orbit heights stay the radius less
+  6,378.137 km. Both models fly μ/r² + J2 from the pad through every coast to the orbit (the
+  point mass flew the central field and Kepler coasts before), the point-mass burn planner
+  predicts that J2 coast, and every orbit is judged on its physical apsides (M-LAUNCH-031).
+  With both changes the point-mass fleet keeps all 131 gated rows (156 of the 222 rows flown are
+  accepted, before and after) ([PHYSICS.md](PHYSICS.md) §1, §2, §4;
+  [VALIDATION.md](VALIDATION.md) §10).
 - **Threading**: the physics and the flight recorder run in a Web Worker; the page only draws.
   `?physics=inline` (or a browser without module workers) runs them on the main thread, with
   the same flight.
@@ -583,10 +597,12 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
 - Build's test facilities (D04): the wind tunnel's tables are the model's estimates
   (slender-body theory and crossflow), not tunnel data; fins and the nose's shape do not change
   them, and the reference diameter includes the strap-ons, as the flight's does. On the test stand
-  the Isp stays constant through start-up and tail-off, both estimates, and a solid motor's mean
+  the start-up and tail-off are estimates, and a solid motor's mean
   thrust reads 0.6–0.9 % high, because the impulse includes the tail-off and the burn time does
-  not. In flight as on the stand, a throttle level scales the sea-level pressure loss with the
-  thrust: an engine throttled deep low in the air is up to 14–19 % strong
+  not. In flight as on the stand, the thrust law's nozzle is one-dimensional with one γ per
+  propellant; where the flow separates it flies the nozzle cut off at the separation point and
+  not the pressure plateau behind it, and the side loads a separated nozzle takes are not
+  modelled; most vacuum engines' and solid motors' area ratios are estimates, flagged as such
   ([PHYSICS.md](PHYSICS.md) §4).
 - Build: the landing page has no Build chapter (one would need new pictures; the owner's call), so
   the top bar is the way in. Designing from parts at the Engineer level (D03's face there) is

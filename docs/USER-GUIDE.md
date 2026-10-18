@@ -628,7 +628,8 @@ its settings**, which brings that part's card into view with its first control r
 - **Before it flies** lists, in plain words and with the numbers, what **Will not fly** (red, ✕)
   and each **Warning** (orange, !): a rocket that will not leave the pad, an upper stage too weak
   for the planner, a stage that cannot throttle down to the acceleration limit, an upper stage
-  wider than its fairing, and so on. **What is estimated or assumed** lists the builder's
+  wider than its fairing, a vacuum engine lit in the air below the height where its flow
+  separates, and so on. **What is estimated or assumed** lists the builder's
   approximations. If the builder cannot make a change it says why, and the drawing shows the last
   rocket it could make. Some details are only in English, under "Technical detail (in English)".
 - **Payload ratings.** A rocket you changed shows "unknown" until you press **Compute ratings**.
@@ -674,8 +675,11 @@ on the drawing.
   estimates). **The model beside the data** sets the catalogue's published figures next to what the
   stand measured, with the difference: where they differ, the model departs from the data (for
   Vulcain 2.1's sea-level Isp, by 5 %). The stand fires the engine as a flight does, with the same
-  throttle limits and solid-motor thrust curve. It refuses a vacuum engine in air and a shutdown
-  of a solid motor, says why, and offers the way out.
+  throttle limits and solid-motor thrust curve. A vacuum engine fires in air too, with the thrust its
+  nozzle really gives there, and the stand says where inside the nozzle the flow separates from the
+  wall. Throttled in air, an engine's Isp is lower than at full thrust (the air presses on the nozzle
+  exit with the same force at any throttle), so it is then not set against the catalogue's. The
+  stand refuses a shutdown of a solid motor, says why, and offers the way out.
 - **Wind tunnel.** Choose what is in the tunnel (the whole rocket or from a given stage up,
   strap-ons on or off, fairing on or off, propellant left, payload), then C_N, C_A, C_m or the
   centre of pressure, over 0–10° or 0–90°. Point at a cell, or select the map and use the arrow
