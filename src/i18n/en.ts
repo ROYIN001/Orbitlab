@@ -487,7 +487,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'evt.seco': 'Engine cutoff: {stage}',
   'evt.backupCutoff': 'The radio command to shut the core down did not get through (the antenna power supply failed at T+156 s): the core stopped late on the backup time mark, Blok E ran long, and the ship reached orbit {dv} m/s fast',
   'evt.parkingOrbit': 'Parking orbit {pe} × {ap} km, i = {inc}°, launcher Δv margin {dv} m/s',
-  'evt.lunarProfileOff': 'Not Apollo 11\'s spacecraft, or its mission outruns the Moon\'s table (to 1 Aug 1969): no translunar injection, the stack stays in its parking orbit',
+  'evt.lunarProfileOff': 'Not Apollo 11\'s spacecraft, or its mission falls outside the Moon\'s table (16 Jul–1 Aug 1969): no translunar injection, the stack stays in its parking orbit',
   'evt.tliPlanned': 'TLI worked out: T+{min} min, C3 {c3} km²/s², {kg} kg spare',
   'evt.tliUnsolved': 'No translunar injection found from this parking orbit',
   'evt.tliPropellant': 'No TLI: it would leave the S-IVB {kg} of the {need} kg it needs',
