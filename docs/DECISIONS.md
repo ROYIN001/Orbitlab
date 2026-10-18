@@ -272,6 +272,23 @@ The owner gave two merge approvals in chat late on 2026-10-17, verbatim:
 | 2026-10-17 | PR #157 | "merge  157" | Merged on 2026-10-18 as bb33307 once CI was green on its head 558cf8d. |
 | 2026-10-17 | The other Argon4 follow-up parts, each its own branch and PR (`claude/charming-archimedes-01p1h5-*`) | "งานส่วนอื่นๆ เมื่อเสร็จเรียบร้อยและ CI เขียวแล้ว ให้ merge ได้เลยเช่นกัน" — merge the other parts too, once each is finished and its CI is green | A part counts as finished when its two-agent review is followed up and no owner question it raises changes an earlier owner decision; one that does waits for that answer. #158, #159 and #160 were merged under it. |
 
+## Decided 2026-10-18 (the re-baseline's questions, chat)
+
+The owner answered in chat on 2026-10-18, at about 14:38 UTC, the seven questions of the re-baseline report (`docs/development/reports/argon4-fu-rebaseline.md`, "Questions for the owner", as asked in chat that day, numbered 1–7), verbatim "1.ข(แบบนี้สมจริงกว่าใช่มั้ยครับ) 2.ก 3.ก 4.ก 5.ก 6.ก 7.เอาตามที่คุณเสนอ". Each answer is the option of that letter as the report put it, and nothing more. To the question in answer 1 ("this is more realistic, isn't it?") the session answered in chat: the physics is the same under either option; (ข) ships it now with the larger files, (ก) would have shipped the same physics after an offset.
+
+| Date | Question | Answer | Where it lands |
+|---|---|---|---|
+| 2026-10-18 | 1: the budget (`lesson-file` +8.3 kB and precache code +50.7 kB over their ceilings, from the nozzle law) | "1.ข" — option (ข): raise the two ceilings by the measured sizes, with D-38's four parts (the size, the feature: the nozzle law, a named offset package, the owner's approval) | `budgets.json` and its `_notes`, measured after the rebase; the offset named there |
+| 2026-10-18 | 2: the historical flights on WGS-84 (Sputnik-1, Vostok-1 and its return, Mercury-Redstone 3; lessons 5.3 and 5.4) | "2.ก" — option (ก): re-derive the historical vehicles' loads and guidance from sources on the WGS-84 pad, as a data step with its own sources and tests | the re-baseline PR: the vehicles' data and the tests that hold them to the flown figures |
+| 2026-10-18 | 3: the test instruments built on the sphere (the corridor sweep, the tower height, E02's v₀, LZ-1's "straight down", fx5-031's point-mass rule) | "3.ก" — option (ก): measure the same quantity on WGS-84, every bound unchanged | the re-baseline PR, in the re-record step |
+| 2026-10-18 | 4: single-burn and trim targets on the physical apsides | "4.ก" — option (ก): the guidance aims a single-burn cut-off and a trim at the physical apsides, and the lessons' semi-major axis is the physical apsides' mean | the re-baseline PR (the review had found this within D-51's "the planning and judging that needs") |
+| 2026-10-18 | 5: lessons and profiles that move (1.4's 18 t, 2.2's failure event, the AVUM+ ignition, Electron's fairing callout) | "5.ก" — option (ก): re-set the lesson numbers and the profile checks to the new flights; for 1.4 and 2.2 the lessons keep teaching what they teach, and the timelines get a measured note | the re-baseline PR: the lesson sources and packs, their review hashes, the timeline notes |
+| 2026-10-18 | 6: a vacuum engine on the pad | "6.ก" — option (ก): keep the refusal (`vacuumEngineOnPad`); the side loads that break a real vacuum nozzle at sea level are not modelled | unchanged |
+| 2026-10-18 | 7: the wall factor | "7.เอาตามที่คุณเสนอ" — the report's proposal: (ก) now, the least factor that keeps each qualified sea-level point attached (Angara-A5's RD-191 then reports a flow separation at its qualified 30 % point, as the review noted and the chat said), and (ค), per-engine published wall pressures, as they are found | `src/physics/nozzle.ts` as it is; (ค) as data appear |
+
+The report's questions were reworded after the review round of 2026-10-18 (the version at fd7796c, 11 questions). Questions 1–7 there are the ones answered above, with their numbers updated; question 4 there asks only where the lessons' semi-major axis is read, which answer 4 (ก) already settles (the physical apsides' mean). Not answered by the message above, and asked again: question 5's lesson S2 bound, and questions 8–11.
+
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
