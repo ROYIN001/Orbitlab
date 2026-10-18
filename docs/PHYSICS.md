@@ -4025,7 +4025,14 @@ The perilune is aimed at 111 km (60.0 n mi over the site's radius); the flown TL
 evasive burn and correction in mind. The Moon's place at the arrival is out of the flown parking plane
 (taken at the flown TLI time) by 0.44° for a launch on 16 or 17 July, 1.30° on the 18th and 4.04° on the
 23rd; the solver finds an injection from the flown plane up to 0.89° (the node edited to 0.5°: its conic
-2.96° out of the parking plane, 873 kg spare) and none from 1.30°. "Plane through the Moon" is a parking
+2.96° out of the parking plane, 873 kg spare) and none from 1.30°. `evt.tliUnsolved` is the solver not
+converging, and two causes were traced (the report's §4): launches an hour or more late into the flown
+node have less Δv left in the S-IVB (3,101 m/s at +60 min) than the cheapest injection that converged
+(3,190 m/s), so they are short of propellant whatever the steering; on later days into the flown plane
+the conic must turn 6.5° (18 July) to 18.9° (23 July) out of the parking plane at the ignition, the
+steering's yaw sits at its ±11.5° limit (0.2 of the thrust) for most of the burn, the burn ends hundreds
+of m/s across the conic's plane and the burn pass does not converge — a limit of the model's steering,
+not shown to be one of the S-IVB. The launches that fly need 1.2°–3.3°. "Plane through the Moon" is a parking
 plane through the pad at lift-off and the Moon at the arrival, as the planners' launch azimuth gave one
 (the model's settings do not turn it with the date). The landing keeps the flown
 mission time, so the Sun stands higher over Tranquility Base each day later; the planners kept it at 5°–14°

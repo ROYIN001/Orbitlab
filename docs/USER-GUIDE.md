@@ -2000,9 +2000,11 @@ the date or the vehicle and it is a different flight. Apollo 11 launched at anot
 another parking orbit still goes to the Moon if the model can really fly it: the S-IVB's burn and every
 burn after it are worked out for that launch (the event log says "TLI worked out"), and it lands at
 Tranquility Base at the flown mission times — so a launch days later lands with the Sun higher over the
-site than Eagle had it. If no injection reaches the Moon from that parking orbit, if the S-IVB would run
-short, if the mission would run past 1 August 1969 (the end of the Moon's table) or with another
-spacecraft, it stays in its parking orbit and the event log says why. The model flies its own guidance, not the
+site than Eagle had it. If the planner finds no injection from that parking orbit (late in the window
+the S-IVB has too little Δv left; on a later day into the flown plane the turn into the Moon's plane is
+more than the model's steering can make), if the S-IVB would run short, if the mission would fall outside
+16 July – 1 August 1969 (the Moon's table) or with another spacecraft, it stays in its parking orbit and
+the event log says why. The model flies its own guidance, not the
 real pitch programme, so the times differ by seconds to a minute; why, flight by flight, is in
 [PHYSICS.md §13](PHYSICS.md).
 
