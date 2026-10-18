@@ -2,7 +2,7 @@
 
 **สรุปภาษาไทย.** เซสชันนี้ทำต่อจาก [HANDOVER-ARGON4-2.md](HANDOVER-ARGON4-2.md)
 - **merge และขึ้นเว็บแล้ว:** IMU (#157), shader (#158), หมอกฟ้า (#159), harness ถ่ายภาพ (#160), Apollo (#162), แก้เทสต์ lui01 (#164) หน้าเว็บเผยแพร่แล้วที่ 0a7e69f
-- **#165:** บันทึกคำตอบ 11 ข้อของงานปรับฐานลง DECISIONS.md รอ CI แล้ว merge
+- **#165:** บันทึกคำตอบ 11 ข้อของงานปรับฐานลง DECISIONS.md merge แล้ว (7793f73)
 - **งานปรับฐาน (WGS-84, J2 และหัวฉีด):** เจ้าของสั่งเก็บไว้ก่อน ("งานใหญ่ให้เก็บไว้ก่อน") ทุกส่วนอยู่ใน branch ด้านล่าง พร้อมบันทึกว่าทำถึงไหนและขั้นต่อไป คำตอบของเจ้าของครบทุกข้อแล้ว จึงทำต่อได้ทันทีเมื่อเจ้าของสั่ง
 
 Branch rule: one branch and one PR per part, all named `claude/charming-archimedes-01p1h5-*`. The owner allowed this in chat on 2026-10-17: "แยกเป็น branch แล้ว เปิด PR ในแต่ละส่วนเลยครับ". Standing merge approval: "งานส่วนอื่นๆ เมื่อเสร็จเรียบร้อยและ CI เขียวแล้ว ให้ merge ได้เลยเช่นกัน" (DECISIONS, "Decided 2026-10-17 (merging the Argon4 follow-up parts, chat)").
@@ -18,7 +18,7 @@ Branch rule: one branch and one PR per part, all named `claude/charming-archimed
 
 #158 and #160 were merged at the end of the second session. Pages published 07e9edc and 0a7e69f.
 
-**Open:** [#165](https://github.com/ROYIN001/Orbitlab/pull/165) records the owner's answers to the re-baseline's 11 questions (2026-10-18), plan item M-PHYSICS-080 and the parking. It is records-only; merge it when CI is green.
+[#165](https://github.com/ROYIN001/Orbitlab/pull/165), the records of the owner's answers to the re-baseline's 11 questions (2026-10-18), plan item M-PHYSICS-080 and the parking, merged as 7793f73. No PR is open.
 
 ## Parked: the re-baseline (D-51 + the nozzle law)
 
