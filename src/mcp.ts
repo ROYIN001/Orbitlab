@@ -742,7 +742,7 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   },
   navigation: {
     type: ['object', 'null'],
-    description: 'Six-DOF inertial navigation (roadmap G02; absent or null, the flight knows its true state): an IMU of a grade (navigation, tactical, mems; custom takes the imu figures over tactical) with a 21-state error-state Kalman filter aided by GNSS (with one outage) and a star tracker; the autopilot, ascent guidance and the cut-off fly on its estimate. Merged into the current settings; null resets a field, or (navigation: null) turns it off.',
+    description: 'Six-DOF inertial navigation (roadmap G02; absent or null, the flight knows its true state): an IMU of a grade (navigation, tactical, mems; custom takes the imu figures over tactical) with a 27-state error-state Kalman filter (the biases as a turn-on constant plus an in-run Gauss–Markov part) aided by GNSS (with one outage) and a star tracker; the autopilot, ascent guidance and the cut-off fly on its estimate. Merged into the current settings; null resets a field, or (navigation: null) turns it off.',
     properties: {
       grade: { type: ['string', 'null'], enum: [...NAV_GRADES, null] },
       imu: { type: ['object', 'null'], properties: Object.fromEntries(IMU_KEYS.map((key) => [key, { type: ['number', 'null'], minimum: IMU_LIMITS[key][0], maximum: IMU_LIMITS[key][1] }])), additionalProperties: false,
