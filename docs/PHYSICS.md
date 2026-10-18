@@ -8,28 +8,55 @@ mission instead, see [docs/USER-GUIDE.md](USER-GUIDE.md).
 
 The vehicle is a point mass with position **r** and velocity **v** in an Earth-centered
 inertial (ECI) frame: +Z along the rotation axis (north), +X toward the vernal equinox at
-the reference epoch. The Earth is a sphere of radius R⊕ = 6 378 137 m rotating at
-ω⊕ = 7.2921159 × 10⁻⁵ rad/s. The Greenwich sidereal angle θ(t) = GMST(t₀) + ω⊕(t − t₀) ties
-ECI to geographic longitude; GMST uses the IAU 1982 polynomial and the Sun direction a
-low-precision solar ephemeris.
+the reference epoch. The Earth is the WGS-84 ellipsoid, equatorial radius a = R⊕ = 6 378 137 m,
+flattening f = 1/298.257223563 (NIMA TR8350.2), rotating at ω⊕ = 7.2921159 × 10⁻⁵ rad/s. The
+Greenwich sidereal angle θ(t) = GMST(t₀) + ω⊕(t − t₀) ties ECI to geographic longitude; GMST uses
+the IAU 1982 polynomial and the Sun direction a low-precision solar ephemeris.
 
-A launch site at latitude φ, longitude λ, altitude h sits at
-**r**ₛ = (R⊕ + h)[cos φ cos(λ+θ), cos φ sin(λ+θ), sin φ] with velocity **v**ₛ = ω⊕ ẑ × **r**ₛ.
-That initial velocity (up to 465 m/s at the equator) is the Earth-rotation credit.
+A launch site at geodetic latitude φ, longitude λ and altitude h above the ellipsoid (the site's
+elevation; the geoid lies within about 100 m of it) sits at
+**r**ₛ = ((N + h) cos φ cos(λ+θ), (N + h) cos φ sin(λ+θ), (N(1 − e²) + h) sin φ), with
+N = a/√(1 − e² sin²φ), e² = f(2 − f), and velocity **v**ₛ = ω⊕ ẑ × **r**ₛ. That initial velocity
+(up to 465 m/s at the equator) is the Earth-rotation credit. Until the owner's decision of
+2026-10-17 (D-51, plan R4.5) the sites stood on the 6 378 137 m sphere at their geodetic latitude
+taken as geocentric: 4.9 km too high in radius at the Cape, 11.0 km at Baikonur, 13.2 km at
+Vostochny, 16.9 km at Plesetsk.
+
+**Heights (one rule, `src/physics/geodesy.ts`).** Every height the flight reads for the air or
+the ground is the geodetic height above WGS-84: the density, pressure and wind, the engines'
+back-pressure, ground contact and landing burns, the site's ground (`groundElevation`), and the
+altitude the HUD, the telemetry and the events show (and the latitude: geodetic). Orbit heights —
+perigee, apogee, the insertion targets, the closed-loop guidance's terminal altitude and the
+cut-off checks — stay the radius less 6 378.137 km, the catalogues' convention (McDowell, GCAT,
+*Orbits*; §13.6, "The height datum"). The planner's orbit-plane geometry from the pad (launch
+azimuth, expected node, launch windows, the corridor's reach) uses the pad's geocentric latitude,
+since the plane passes through the pad and the Earth's centre (45.773° at Baikonur's 45.965°).
+The local vertical the guidance pitches against, and the pad's hold-down attitude, are the
+radius's, at most 0.19° (at 45°) from the ellipsoid's normal; the ground the scene draws is laid
+on the normal.
 
 ## 2. Equations of motion
 
 ```
-d²r/dt² = −μ r/|r|³ (+ J2 term in orbit) + (T/m) û_T − ½ ρ |v_air| C_D(M) A v_air / m
+d²r/dt² = −μ r/|r|³ + J2 term + (T/m) û_T − ½ ρ(h) |v_air| C_D(M) A v_air / m
 ```
 
 - μ = 3.986004418 × 10¹⁴ m³/s².
-- **v**_air = **v** − ω⊕ ẑ × **r** is the velocity relative to the co-rotating atmosphere.
-- The J2 acceleration (Earth oblateness, J2 = 1.08262668 × 10⁻³) is applied in the orbital
-  phase; it drives nodal precession (sun-synchronous orbits, Molniya's critical inclination).
+- **v**_air = **v** − ω⊕ ẑ × **r** is the velocity relative to the co-rotating atmosphere; ρ is
+  read at the height h above WGS-84 (§1).
+- The J2 acceleration (Earth oblateness, J2 = 1.08262668 × 10⁻³) is applied everywhere, from the
+  pad through the ascent, every coast and the orbit (D-51; until 2026-10-17 the point-mass ascent
+  flew the central field and its coasts were Kepler conics). It drives nodal precession
+  (sun-synchronous orbits, Molniya's critical inclination). With the Earth's turn it is the
+  normal gravity of Somigliana's formula at a WGS-84 pad to five parts in a million
+  (tests/wgs84-sites.test.ts); on the old sphere pads J2 made the pad's gravity worse above ~35°,
+  which is why the sites and J2 moved together.
 - Integration: classical fourth-order Runge–Kutta with adaptive steps (0.1 s in the
-  atmosphere, up to 30 s in orbit). Exo-atmospheric unpowered coasts use the analytic
-  Kepler solution. Mass varies linearly inside a step.
+  atmosphere, up to 30 s in orbit). A free coast above the air is the same RK4 under J2 (and
+  drag), in steps of at most 10 s (`rk4Steps`), as the burn planner's forecasts and the six-DOF
+  held coast; it was the analytic Kepler solution until D-51. Mass varies linearly inside a step.
+- The gravity loss in the Δv budget is the J2 field projected on the velocity, −**g**·v̂ dt (it
+  was μ/r² sin γ), so thrust Δv less the losses is the speed gained to 1 %.
 
 ## 2a. Six-DOF flight
 
@@ -59,9 +86,10 @@ it. Two rules keep that affordable and honest over a mission that lasts a day:
   attitude thrusters could stop before the next burn. A burn waits for its attitude as long as
   those thrusters need, not a fixed four minutes.
 
-A six-DOF coast is flown under J2, and there the osculating ellipse of one instant is not the
-orbit: its apsides swing several kilometres round a revolution (a 500 km circle reads anywhere
-from 501 to 515 km of apoapsis). So a six-DOF orbit is **judged on its physical apsides** — the
+Every coast is flown under J2 (six-DOF, and since D-51 the point mass), and there the osculating
+ellipse of one instant is not the orbit: its apsides swing several kilometres round a revolution
+(a 500 km circle reads anywhere from 501 to 515 km of apoapsis). So an orbit is **judged on its
+physical apsides**, in both models (M-LAUNCH-031) — the
 lowest and highest altitude of the next revolution under J2 — when the mission decides it is
 on target, in the event that says so, on the result panel and in the acceptance tests. The
 planner aims at the same orbit. A coast that arrives below the target raises its physical apex
@@ -76,8 +104,8 @@ target (a J2 orbit through the burn point rises and falls by kilometres whatever
 Electron's 600 km sun-synchronous orbit ran 599–624 km after a conic circularisation, 595–602 km
 after an aimed one). A mission about to end with its physical apsides outside the band flies up
 to two such corrections. An aimed burn is flown along the
-velocity direction at the point it is centred on, held still through the burn. Point-mass
-coasts are Kepler, where the two are the same.
+velocity direction at the point it is centred on, held still through the burn. The point-mass
+planner does all of this as six-DOF's does since D-51 (`src/physics/sim/burns.ts`).
 
 The point-mass model below remains selectable in the setup, and the fleet acceptance matrix
 (§6b) of the regular test suite flies it; the same matrix flown in six-DOF is recorded in
@@ -1063,11 +1091,12 @@ Since the owner's decision of 2026-09-29 the live point-mass flight is flown in 
 and 60 s in a high coast, so waiting for a whole step would freeze the picture; instead the
 simulation runs up to one step *ahead* of the instant on screen, and the picture is drawn at that
 instant between the two step boundaries around it — by the interpolation a replay seek uses:
-Kepler from the earlier state on a coast or in orbit, a straight blend under thrust. Measured on
-Falcon 9 and Ariane 64 flights, the drawn position half way through a 0.25 s ascent step is at most
-0.26 m from the same step split in ten, and at a boundary the picture moves by at most 2 mm under
-thrust, 8 cm on a coast and 5.9 m at the end of a 30 s orbit step (the J2 the Kepler arc leaves
-out) — nothing a viewer can see. The recording — its frames and its events — ends at the instant
+the J2 coast from the earlier state on a coast or in orbit (a Kepler arc until D-51), a straight
+blend under thrust. Measured on Falcon 9 and Ariane 64 flights before D-51, the drawn position half
+way through a 0.25 s ascent step is at most 0.26 m from the same step split in ten, and at a
+boundary the picture moved by at most 2 mm under thrust, 8 cm on a coast and 5.9 m at the end of a
+30 s orbit step (the J2 the Kepler arc left out, which the J2 interpolation now follows) — nothing
+a viewer can see. The recording — its frames and its events — ends at the instant
 on screen, so nothing shown runs ahead of the picture. A command (the crew's abort, the TORU hand
 controllers) is taken at the simulation's clock, the step boundary at or after the picture, and
 the picture moves on to it (at most one step: 0.1 s in the lower atmosphere); that clock, not the
@@ -1157,37 +1186,135 @@ healthy ascent peaks at 22–40 kPa against 35–70 kPa placards and never touch
 
 ## 4. Propulsion and mass
 
-For each engine, thrust varies linearly with ambient pressure between sea-level and vacuum
-values, F(p) = F_vac − (F_vac − F_SL) p/p₀, and mass flow is ṁ = F_vac/(g₀ Isp_vac) at full
-throttle. Mass flow is a property of the pump and the injector, not of the ambient pressure —
-thrust is linear in pressure because the nozzle exit term is, while the propellant flow is
-unchanged — so F_vac/(g₀ Isp_vac) and F_SL/(g₀ Isp_SL) are the *same* number, and a data pair
-that says otherwise is over-determined. The model takes the vacuum pair as authoritative (it is
-the pair every source quotes, and the only one a vacuum-only engine has) and **back-solves the
-Isp at every pressure** from Isp(p) = F(p)/(ṁ g₀), so F = ṁ g₀ Isp holds exactly at every
-altitude. The sea-level Isp a ground-lit engine then delivers is within 1 % of the quoted
-`ispSL` for most of the fleet; the exceptions are recorded by a test rather than hidden —
-Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it took
-Arianespace's published pair on 2026-10-01).
+**The thrust law** (`engineThrustAt`, src/physics/nozzle.ts; owner decision of 2026-10-17, option
+(b)). Every thrust in the simulation — ascent, strap-ons, a hot stage, the six-DOF chambers, the
+returning stages and the guidance that plans their burns, the test stand — comes from one function of
+the engine, the ambient pressure and the level λ (the throttle setting × a solid's thrust profile ×
+the start-up or tail-off ramp). An engine's vacuum thrust is ṁ·v_e + p_e·A_e. The level scales the
+mass flow and the chamber pressure, and with the nozzle fixed the exit pressure with them, while the
+exit velocity stays; so the vacuum thrust is λ·F_vac. The air presses on the whole exit area whatever
+the level, and with the flow attached
 
-A throttle level, a solid's thrust profile and the start-up and tail-off ramps scale the whole
-pressure-blended thrust, F = λ·F(p), and the mass flow with it, so the Isp does not depend on the
-level (the test stand says so). With the nozzle flowing full the pressure term would not scale:
-F = λ·F_vac − (F_vac − F_SL)·p/p₀. The model's thrust is therefore high where an engine is
-throttled deep in the air, and a regressive solid's is low at its peak: a Merlin 1D at 40 % at sea
-level gives 338 kN against 297 kN (+14 %), Angara-A5's RD-191 core at 30 % +19 % at 2 km, and a
-P120C at its liftoff peak −2 %. Flown the full-flowing way, a point-mass ascent would end with a few
-metres a second less (Falcon 9 3 m/s, Falcon Heavy 8.5 m/s) or more (the solid-boosted Ariane 6, PSLV,
-Vulcan, H-IIA and H3, 4.5–23 m/s), and Angara-A5 with 25 % of its LEO payload would break up at
-T+202 s until its guidance was set again. Deep-throttle flow may separate in the nozzle, which raises the real thrust above the
-full-flowing figure, so the truth lies between the two. Changing it moves every fingerprint and
-needs the owner (found in the review of 2026-10-17).
+    F = λ·F_vac − p_a·A_e,      ṁ = λ·F_vac/(g₀ Isp_vac)
 
-An engine flagged `vacuumOnly` — every upper- and kick-stage engine that only ever ignites above
-~100 km — has no sea-level operating point at all (an RL10 nozzle would not flow full at sea
-level), and its `thrustSL`/`ispSL` fields are placeholders rather than data. The flag makes the
-model return the vacuum figures at every pressure for those engines, so a future abort or
-suborbital-hop scenario cannot silently fly invented numbers.
+Mass flow is a property of the pump and the injector, not of the ambient pressure, so
+F_vac/(g₀ Isp_vac) and F_SL/(g₀ Isp_SL) are the *same* number at full throttle, and a data pair that
+says otherwise is over-determined. The model takes the vacuum pair as authoritative (it is the pair
+every source quotes, and the only one a vacuum-only engine has) and **back-solves the Isp** at every
+pressure and level, Isp = F/(λ·ṁ g₀), so F = ṁ g₀ Isp holds exactly. For an engine with a sea-level
+operating point the exit area is its own pair's, A_e = (F_vac − F_SL)/p₀, so at λ = 1 and p₀ the law
+gives the catalogue's sea-level thrust exactly. The sea-level Isp a ground-lit engine then delivers is
+within 1 % of the quoted `ispSL` for most of the fleet; the exceptions are recorded by a test rather
+than hidden — Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it
+took Arianespace's published pair on 2026-10-01). In vacuum the Isp does not depend on the level; in
+air it falls as the engine is throttled, which the test stand shows.
+
+Until 2026-10-17 the level scaled the whole pressure-blended thrust, F = λ·[F_vac − (F_vac − F_SL)·p/p₀]:
+the air's share shrank with the throttle, a throttled engine low in the air was too strong (a Merlin 1D
+at 40 % at sea level 338 kN against 297 kN with the flow attached; Angara-A5's RD-191 core at 30 %
++19 % at 2 km) and a regressive solid at its peak a little weak (P120C −2 % at liftoff).
+
+**Separation.** The attached law alone would leave an engine throttled deep at sea level far too
+little thrust — none at all below λ = (F_vac − F_SL)/F_vac, 0.30 for Vulcain 2.1, which is where its
+start-up spends its first instant on the pad — because a nozzle far below ambient does not run full:
+the boundary layer separates inside the bell. Where is from Schmucker's criterion (R. H. Schmucker,
+*Flow processes in overexpanded chemical rocket nozzles, Part 1: Flow separation*, NASA TM-77396,
+1984, eq. 11):
+
+    p_i/p_a = (1.88·M_i − 1)^−0.64
+
+p_i the wall pressure where the separation begins and M_i the wall Mach number there, held at its
+value for M_i = 5 above it (Schmucker: no data above 5). The wall pressure is the one-dimensional
+isentropic pressure of the engine's nozzle at λ times the full-thrust one, from its area ratio ε and
+a ratio of specific heats by propellant (src/data/nozzles.ts: hydrolox 1.26, the value Schmucker uses
+for the SSME; kerolox and methalox 1.22, hypergolic 1.24, solid 1.18, estimates). Downstream of the
+separation the wall sees nearly the ambient pressure — Schmucker §2: it "increases only a little after
+the sharp pressure increase, until it almost reaches the surrounding pressure", and the plateau "is
+practically impossible to determine" — so the nozzle flies as if cut off at the area ratio ε_s where
+the flow separates:
+
+    F = λ·p_c·A_t·C_F,vac(ε_s) − p_a·A_t·ε_s,      floored at 0
+
+with p_c the chamber pressure that closes F_vac = p_c·A_t·C_F,vac(ε) on the engine's own geometry
+(so the vacuum thrust stays the catalogue's) and C_F,vac the ideal vacuum thrust coefficient. It
+meets the attached law where ε_s reaches ε and lies above it once separated, by ∫(p_a − p_w) dA over
+the separated bell. So deep throttle low in the air reads between the attached-flow law and the old
+one, close to the attached law where the separation sits near the exit:
+
+| engine, level, height | old λ·F(p) | attached | flown (separated) |
+|---|---|---|---|
+| Merlin 1D, 40 %, sea level | 338.0 kN | 296.6 kN | 298.9 kN |
+| RD-191, 30 %, sea level | 576 kN | 457 kN | 511 kN |
+| Vulcain 2.1, 50 %, sea level | 480 kN | 275 kN | 442 kN |
+| Merlin Vacuum, 100 %, sea level | 981 kN (its vacuum figure) | 116 kN | 775 kN |
+
+**Qualified sea-level operation stays attached.** The one-dimensional wall pressure understates the
+pressure at the end of a real bell: Schmucker's wall-pressure distribution for the SSME (TM-77396,
+Appendix, Fig. A1) ends at 0.0019·p_c, 2.4 times the one-dimensional 0.00080·p_c for its ε of 69 at γ 1.26. With
+the one-dimensional pressure the criterion — like Summerfield's p_sep ≈ 0.25–0.4 p_a — would separate
+Vulcain 2.1 (one-dimensional p_e/p₀ 0.10), YF-77 (0.12), LE-7A (0.14), LE-9 (0.22) and the R-7's
+chambers at full thrust on the pad, which they run with the flow attached every flight: the
+catalogue's sea-level thrust is that point. So an engine with a sea-level pair takes the least factor
+on its wall pressure that keeps (λ = 1, p₀) attached — 1 for most of the fleet; Vulcain 2.1 2.53,
+YF-77 2.14, LE-7A 1.85, the Starship blend 1.35, LE-9 1.26, the R-7's chambers 1.04–1.28,
+RD-0213 1.10 — and such an engine begins to separate as soon as it is throttled at sea level. The
+others begin at λ = k(M_e)·p₀/p_e at sea level, and at that level times p_a/p₀ higher up: Merlin 1D
+0.42, BE-4 0.45, RD-180 0.53, Raptor 2 0.53, RD-191 0.55, RD-276 0.58, YF-100 0.70, F-1 0.72; the
+ground-lit solid motors 0.31–0.53, below the tail of their profiles (the upper-stage Zefiro 9 0.58,
+HPS3 0.89, which never burn that low). A vacuum engine has no qualified sea-level point
+and takes 1. tests/nozzle-law.test.ts checks every catalogue engine at full thrust at sea level.
+
+*Is the factor defensible?* It is a calibration to one fact per engine, not a measured wall
+pressure: that the engine is qualified to run at its catalogue sea-level thrust with the flow
+attached. Its direction is physical (a thrust-optimised bell's end pressure is above the
+one-dimensional one, as the SSME's 2.4 says), its size is the least that fact needs, and it acts on
+14 of the 60 engines the vehicles and the parts fly, in seven families. The alternative is one factor for every engine, the SSME's 2.4 taken as
+typical: it would keep Vulcain 2.1 separated on the pad (it needs 2.53) and push every other
+engine's onset to deeper throttle — Merlin 1D from 0.42 to about 0.18 — with no engine's data behind
+the number. Measured end-of-nozzle wall pressures per engine would replace both and are not
+published for the fleet.
+
+**Vacuum engines lit in the air** (owner decision of 2026-10-17, "เอาทางที่ตามหลักฟิสิกส์ของจริงเลยครับ
+ของจริงเป็นแบบไหน ก็ใช้แบบนั้น": the physics as it really is, the thrust the nozzle really gives at that
+pressure, separation included; [DECISIONS.md](DECISIONS.md)). An engine flagged `vacuumOnly` has no sea-level
+operating point in the data, and its `thrustSL`/`ispSL` are placeholders the model never reads. Its
+exit area is its published exit diameter, or A_e = ε·F_vac/(p_c·C_F,vac(ε)) from its published ε and
+chamber pressure: the Merlin Vacuum's ε 165 and 9.7 MPa give the 3.3 m nozzle usually quoted; the
+RL10C-1 and C-1-1 fly the manufacturer's 57 and 62 in exits; Vinci the Ariane 6 extension, 1.82 m at
+ε 174 (the 240 usually quoted is the deployable extension of the Ariane 5 ME design); and the J-2 its
+170.4 in² throat times its ε 27.5, 1.96 m, so the S-II's 1 028 kN build and the S-IVB's 901 kN one
+share one nozzle and close their vacuum thrust at 5.2 and 4.6 MPa (the published 5.26 MPa is the
+1 033 kN engine's, which the same nozzle closes at 5.22). Every number has its source or an estimate
+flag in src/data/nozzles.ts; where nothing is published (the RD-0110 and RD-0124, the Fregat's and
+Briz-M's engines, the small kick stages, most solids' ε) the estimate says how it was reached. Lit low in the air the engine flies
+what that nozzle gives — at sea level the Merlin Vacuum 775 kN of its 981 kN (Isp 275 s), the flow
+separating at ε 28 of 165; an RL10C-1 77 of 102 kN; the RD-0124 238 of 294 kN — and above the
+altitude where its exit pressure meets the criterion (about 15 km for the Merlin Vacuum) it runs full.
+Until 2026-10-17 such an engine flew its vacuum thrust at every pressure: a design with Merlin
+Vacuums on strap-ons lit at T+0.5 s flew 981 kN at Isp 348 s from the pad.
+
+A flight reports an engine group running at a steady level with separated flow, once
+(`evt.nozzleSeparation`, with the separation area ratio); the start-up and the tail-off, which every
+engine passes through separated, are not reported. A separated nozzle sees asymmetric side loads
+(Schmucker's Part 2); no sourced criterion for when they break a nozzle was found, so the model flies
+the thrust and does not fail the engine. The builder still refuses a vacuum engine on the pad
+(`vacuumEngineOnPad`) and warns of one on an air-lit strap-on (`vacuumEngineInAir`, with the altitude
+below which it separates and its sea-level thrust); the test stand fires a vacuum engine in air.
+
+The returning stages fly the same law: their burns (src/physics/sim/debris.ts,
+src/physics/rigid/debris-runtime.ts, src/physics/sim/ship-descent.ts) and the return guidance that
+predicts them (src/physics/sim/return-guidance.ts) take the thrust from it and the level for a
+thrust from its inverse (`engineLevelFor`), so the planner and the plant agree. A Monte Carlo thrust
+factor scales the vacuum thrust and keeps the exit area.
+
+What the law leaves out: one γ per propellant family and an ideal C_F; the one-dimensional wall
+pressure with a least factor only where qualification demands it (a real bell's higher end pressure
+would delay separation at deep throttle — Merlin 1D, RD-191, Raptor — so the model separates early,
+on the side of more thrust); ambient pressure on the separated wall, not the plateau below it;
+lumped catalogue entries fly the blend's nozzle (Starship's six engines, landed on as blends); and
+the sea-level pairs the catalogue gives upper-stage solids (Zefiro 9 and 40, HPS3) imply chamber
+pressures no motor runs at (Zefiro 9 35 MPa), which matters only if one is lit low. A custom engine
+the table does not name flies a flagged estimate (`FALLBACK_NOZZLE`).
 
 **Solid motors** quote a *mean* thrust in the data — grain mass divided by the published burn
 time — and fly a regressive ramp on top of it, from a per-motor `peakFactor` (published
@@ -1503,7 +1630,7 @@ know. Two consequences worth knowing about:
 | Soyuz-2.1a | stored programme (3.0 if edited) | — (0.30) | 35 | 0 |
 | Soyuz-2.1b / Fregat | stored programme (1.5 if edited) | — (0.30) | 35 | 0 |
 | Proton-M | 6.0 | 0.30 | 25 | 150 |
-| Angara-A5 | 4.0 | 0.30 | 25 | 150 |
+| Angara-A5 | 3.5 (4.0 until D-51) | 0.30 | 25 | 150 |
 | Falcon 9 | 1.5 | 0.30 | 35 | 0 |
 | Falcon Heavy | 1.5 | 0.30 | 25 | 150 |
 | Atlas V 551 | 6.0 | 0.30 | 25 | 150 |
@@ -2716,14 +2843,14 @@ The trajectory is nearly tangent to the top of the air, so where it meets it mov
 for small differences: the published apsides are presumably not osculating Kepler elements at
 the cut-off, and six-DOF's J2 alone moves the entry by about a minute.
 
-Orbital debris is Kepler-propagated for speed, but the classification has to stay true: the
+Orbital debris coasts under J2 (Kepler-propagated until D-51), but the classification has to stay true: the
 perigee is re-checked every step and an object that can no longer stay up is handed back to the
 drag path. The spent launcher stage released at payload separation takes its outcome from the
 orbit it is actually left in rather than being stamped `orbit` unconditionally — off a marginal
 ascent that stamp propagated it on a Kepler arc straight through the planet, for ever.
 
 **Ground reference.** Impact, altitude-above-ground and debris touchdown use the launch site's
-elevation only near the pad and the landing zone, fading to the mean sphere over the first few
+elevation only near the pad and the landing zone, fading to the WGS-84 ellipsoid (sea level) over the first few
 hundred kilometres downrange. Using the pad's elevation as the ground everywhere had a booster
 1500 km downrange of Vostochny landing 250 m up, and it grows with the inland Chinese sites
 (Jiuquan ~1000 m, Taiyuan ~1500 m).
@@ -2989,8 +3116,10 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
 
 ## 10. Assumptions and limitations
 
-- Spherical Earth for altitude and gravity (J2 only as a perturbation); no terrain. Site
-  elevation is honoured near the pad only (§8).
+- The Earth is the WGS-84 ellipsoid for the sites, the air and the ground, and its gravity
+  μ/r² + J2 (no higher harmonics, no geoid: the geoid's ±100 m are taken as the ellipsoid); no
+  terrain. Site elevation is honoured near the pad only (§8). The guidance's local vertical is
+  the radius, 0.19° at most from the ellipsoid's normal (§1).
 - In the point-mass model (selectable): attitude is a commanded direction with a slew-rate
   limit, no rotational dynamics, no aerodynamic lift, no wind. The six-DOF model (§2a, the
   default) has all four, from estimated rather than measured vehicle data.
@@ -3031,7 +3160,6 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     - The heating placard drops Atlas V's and Falcon Heavy's fairings 17–27 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
-  - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.
   - Four engines' quoted sea-level Isp is 2.4–6.9 % away from what their thrust and mass flow
     deliver; the model flies the delivered value (§4).
 
@@ -3488,18 +3616,19 @@ src/physics/rigid/escape.ts, by the same rigid descent as Mercury's (§13.7), wi
 | Landing | the sphere, 2,099 kg (GCAT 2,125), 10.3 m/s | the sphere at 10:48 (the report), about 10 m/s, about 1.5 km from Gagarin (the report; about 4 km by Gagarin's own report, which puts it near the Volga's bank); Gagarin at 10:53 (the report; 10:55 officially, the FAI record file) at 51°16′ N 45°59′ E (the report), where his monument stands at 51°16′14″ N 45°59′50″ E |
 
 *The height datum.* The orbit is flown in radius: GCAT's 168 × 314 km are the radius less 6,378 km
-(McDowell, GCAT's *Orbits*), as the model's heights are on its 6,378.137 km sphere. The air and the
+(McDowell, GCAT's *Orbits*), and the model's orbit heights are the radius less 6,378.137 km. The air and the
 ground are not on that sphere. The atmosphere's heights are above sea level, the geoid, within about
 100 m of the WGS-84 ellipsoid, and the ellipsoid lies 21.4 km × sin²(latitude) below the sphere:
 0.8 km at 11° S where the TDU-1 fires, 5.3 km at 30° N, 11.1 km at 46° N, 12.9 km at 51° N. A
 sphere that decelerates over 30–50° N, flown on the sphere's heights, meets the air some 10 km too
 high and comes down 336 km short (point-mass), some 27 km of landing for each kilometre of datum. So
-the return reads every height above the ellipsoid (`DescentCapsule.datum: 'wgs84'`,
-src/physics/geodesy.ts, the same `geodetic` the long-term propagator's density uses): the air and the Mach number, the
+the return reads every height above the ellipsoid (src/physics/geodesy.ts): the air and the Mach number, the
 barometric commands of the hatch and the parachutes, the ground, the events' altitudes, and the
-simulation's own altitude and (geodetic) latitude from the pressurising command until the sphere is
-at rest. The switch comes at 11.2° S, where the two heights differ by 0.8 km. The ascent and the orbit
-stay on the sphere, and so do Mercury-Redstone 3 and the Soyuz aborts, whose sites are placed on it.
+simulation's own altitude and (geodetic) latitude. Until 2026-10-17 only the return did, from the
+pressurising command at 11.2° S, where the two heights differ by 0.8 km (`DescentCapsule.datum:
+'wgs84'`), while the ascent, the orbit, Mercury-Redstone 3 and the Soyuz aborts stayed on the sphere
+their sites were placed on. Since D-51 (§1) every flight reads its heights above WGS-84 from the pad,
+and the sites stand on it.
 
 *The pitch.* What the sources do not give is the angle of the thrust line: the solar orientation's
 set angle is not published, and the landing turns on it. It is the one number of the return that is
@@ -3600,14 +3729,14 @@ pad (as placed) at liftoff, and the sphere 28 km (six-DOF 32 km) across the trac
 place to the north-west. So Vostok-K carries `targetPlane`, as the Saturn V does (§13.8): when the
 mission fixes its plane, the closed loop steers into it, the distance from it and the speed out of it
 brought to zero together. Vostok 1 fixes it (raanMode `fixed`): the plane through the pad at liftoff,
-09:06:59.7 Moscow time, at 64.95°. The pad is taken where it is. The sites stand on the 6,378.137 km
-sphere at their geodetic latitude taken as geocentric, which puts Gagarin's Start 0.193° (21 km) north
-of its geocentric 45.728° on WGS-84. That convention is every mission's until R4.5 moves the sites onto
-WGS-84 (D-51); only the plane is
-computed from the true pad: its node 326.653° from the equinox of date (GMST 291.957° at liftoff;
-tests/historical-vehicles.test.ts recomputes it), where the plane through the pad as placed has
-326.442°. The rocket lifts off from the pad as placed, 13 km off that plane, and is steered onto it in
-the climb. Measured at 2.51° in the wind, point-mass (six-DOF):
+09:06:59.7 Moscow time, at 64.95°. The pad is taken where it is: Gagarin's Start at its geodetic
+45.920°, geocentric 45.728° on WGS-84, and the plane's node 326.653° from the equinox of date (GMST
+291.957° at liftoff; tests/historical-vehicles.test.ts recomputes it). Until D-51 the sites stood on the
+6,378.137 km sphere at their geodetic latitude taken as geocentric, which put Gagarin's Start 0.193°
+(21 km) north of where it is; only the plane was computed from the true pad (the plane through the pad
+as placed had 326.442°), and the rocket lifted off from the pad as placed, 13 km off that plane, and
+was steered onto it in the climb. Since D-51 the rocket lifts off from the true pad, on the plane.
+Measured at 2.51° in the wind, point-mass (six-DOF), before D-51:
 
 | Plane | Node at the cut-off | Across the track at the landing | Blok E left, cut-off |
 |---|---|---|---|
