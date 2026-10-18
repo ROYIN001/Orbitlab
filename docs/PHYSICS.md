@@ -3943,7 +3943,7 @@ Journal (AFJ).
 
 | | Value | Source |
 |---|---|---|
-| The Moon and the Sun | geocentric states, ICRF, hourly from 1969-07-16 13:00 to 08-01 00:00 TDB (372 rows; the first 198, to 07-24 18:00, the one-week table of 2026-09-27 to the bit); GM 4,902.800066 km³/s² | Horizons, DE441 (fetched 2026-09-27 and 2026-10-17) |
+| The Moon and the Sun | geocentric states, ICRF, hourly from 1969-07-16 13:00 to 07-24 18:00 TDB; GM 4,902.800066 km³/s² | Horizons, DE441 |
 | TDB − UTC | 39.75 s: TT − TAI 32.184 s, TAI − UTC 7.56 s in July 1969 (4.2131700 s + 0.002592 s/day from MJD 39126) | USNO |
 | The Moon's orientation | pole and prime meridian with the 13 periodic terms (physical librations) | IAU/WGCCRE 2009 |
 | SPS | 94.18 kN, 315.1 s, 30.48 kg/s: the flight's own, from LOI-1 — 43,572.8 kg to 32,675.7 kg in 357.53 s for 2,917.5 ft/s (rated 20,500 lbf, 91.19 kN; the propellant utilisation valve, moved to "increase" 76 s into LOI-1, raised the thrust) | MR Table A-I, §8.8; ORL; press kit |
@@ -3958,8 +3958,8 @@ Journal (AFJ).
 *Its own launch, or another worked out for it.* Apollo 11's own launch — the `apollo11` spacecraft
 within a second of 1969-07-16 13:32:00 UTC (`RANGE_ZERO_MS`), into the flown parking orbit
 (`APOLLO11.parking`, the watch mission's settings) — flies the injection flown (`OrbitSpec.injection`),
-step for step as before. Any other launch of that spacecraft — another minute, another day, an edited
-orbit — is another flight, and the owner's decision of 2026-10-17 (DECISIONS, "Apollo 11 dates") lets it
+step for step as before. Any other launch of that spacecraft — another minute, an edited orbit — is
+another flight, and the owner's decision of 2026-10-17 (DECISIONS, "Apollo 11 dates") lets it
 fly to the Moon if the model can really fly it, its trajectory and figures computed for it: its injection
 is worked out in the parking orbit it reached (`planTli`, src/physics/sim/tli-target.ts) and the rest of
 the mission from where the flight then is. It is flown only if (1) the Moon's table holds the whole
@@ -3967,7 +3967,11 @@ mission (launch to the flown splashdown's mission time plus an hour), (2) the so
 the S-IVB has the propellant: the cut-off mass the steering predicts leaves the stage its tail-off's
 propellant and one second of its flow. Otherwise it stays in its parking orbit and says why
 (`evt.lunarProfileOff` for another spacecraft or a mission past the table, `evt.tliUnsolved`,
-`evt.tliPropellant`). The one-second rule of 1293372 is now the flown launch's test only.
+`evt.tliPropellant`). The one-second rule of 1293372 is now the flown launch's test only. The Moon's
+table covers Apollo 11's week only (D-11, kept by the owner's answer of 2026-10-18) and ends on 24 July
+at 17:59:20 UTC, so (1) holds only for launches from 13:32:00 to 13:40:45 UTC on 16 July, into the flown
+parking orbit or an edited one; every later minute or day stays in its parking orbit with
+`evt.lunarProfileOff`.
 
 The aim is the flown midcourse correction's, at the same mission times: the perilune 60.0 n mi above
 the landing site's radius, at 75:53:35 after the launch and 0.17° N. The parking orbit is propagated as
@@ -4008,36 +4012,35 @@ spacecraft is weighed as the flown one was (*Approximations* below), so only the
 Measured, point-mass, calm (probes in docs/development/reports/argon4-fu-apollo.md; MCC-2 and LOI-1 Δv as
 flown; the landing miss from Tranquility Base; the splashdown miss from the flight's own recovery point):
 
-| Launch | TLI | C3, km²/s² | Perilune after TLI | MCC-2 | LOI-1 | Landing | Splashdown | Sun at landing |
-|---|---|---|---|---|---|---|---|---|
-| Flown, 16 July 13:32:00 | flown | −1.390 | 1,310 km, −38 min | 3.98 m/s | 889.3 m/s | 3 m | 5.4 km | 10.7° |
-| 13:35:56 | computed | −1.434 | 179 km, −1.4 min | 4.63 m/s | 888.0 m/s | 3 m | 2.6 km | 10.7° |
-| 14:02 (+30 min) | computed, 367 kg spare | −1.436 | 156 km, −0.7 min | 4.64 m/s | 887.7 m/s | 3 m | 2.0 km | 10.9° |
-| 14:12 (+40 min) | stays: propellant | — | — | — | — | — | — | — |
-| 14:32 (+60 min) | stays: no injection | — | — | — | — | — | — | — |
-| 17 July 13:32 | computed | −1.496 | 189 km, −1.7 min | 4.59 m/s | 885.9 m/s | 3 m | 6.6 km | 22.9° |
-| 18 July 13:32, flown plane | stays: no injection | — | — | — | — | — | — | — |
-| 18 July 13:32, plane through the Moon | computed | −1.565 | 212 km, −2.1 min | 4.61 m/s | 882.3 m/s | 3 m | 6.4 km | 35.1° |
-| 23 July 13:32, plane through the Moon | computed | −1.863 | 169 km, −0.6 min | 4.43 m/s | 861.4 m/s | 3 m | 14.2 km | 83.9° |
-| 24 July 13:32 | stays: past the table | — | — | — | — | — | — | — |
+| Launch, 16 July 1969 | TLI | C3, km²/s² | Perilune after TLI | MCC-2 | LOI-1 | Landing | Splashdown |
+|---|---|---|---|---|---|---|---|
+| Flown, 13:32:00 | flown | −1.390 | 1,310 km, −38 min | 3.98 m/s | 889.3 m/s | 3 m | 5.4 km |
+| 13:35:56 | computed, 1,820 kg spare | −1.434 | 179 km, −1.4 min | 4.63 m/s | 888.0 m/s | 3 m | 2.6 km |
+| 13:40:45 (the last second the table allows) | computed, 1,798 kg spare | −1.434 | 183 km, −1.5 min | 4.63 m/s | 887.9 m/s | 3 m | 1.2 km |
+| 13:40:46 | stays: past the table | — | — | — | — | — | — |
+| 13:32:00, 350 × 350 km | computed, 669 kg spare | −1.433 | 130 km, −0.4 min | 4.63 m/s | 888.1 m/s | 3 m | 2.0 km |
+| 13:32:00, 300 × 300 km | stays: propellant | — | — | — | — | — | — |
+| 13:32:00, node 0.5° | computed, 873 kg spare | −1.433 | 194 km, −1.6 min | 4.58 m/s | 887.9 m/s | 3 m | 1.6 km |
+| 13:32:00, node 1.0° | stays: no injection | — | — | — | — | — | — |
+| 13:32:00, 29° | stays: no injection | — | — | — | — | — | — |
 
 The perilune is aimed at 111 km (60.0 n mi over the site's radius); the flown TLI was aimed with its
-evasive burn and correction in mind. The Moon's place at the arrival is out of the flown parking plane
-(taken at the flown TLI time) by 0.44° for a launch on 16 or 17 July, 1.30° on the 18th and 4.04° on the
-23rd; the solver finds an injection from the flown plane up to 0.89° (the node edited to 0.5°: its conic
-2.96° out of the parking plane, 873 kg spare) and none from 1.30°. `evt.tliUnsolved` is the solver not
-converging, and two causes were traced (the report's §4): launches an hour or more late into the flown
-node have less Δv left in the S-IVB (3,101 m/s at +60 min) than the cheapest injection that converged
-(3,190 m/s), so they are short of propellant whatever the steering; on later days into the flown plane
-the conic must turn 6.5° (18 July) to 18.9° (23 July) out of the parking plane at the ignition, the
-steering's yaw sits at its ±11.5° limit (0.2 of the thrust) for most of the burn, the burn ends hundreds
-of m/s across the conic's plane and the burn pass does not converge — a limit of the model's steering,
-not shown to be one of the S-IVB. The launches that fly need 1.2°–3.3°. "Plane through the Moon" is a parking
-plane through the pad at lift-off and the Moon at the arrival, as the planners' launch azimuth gave one
-(the model's settings do not turn it with the date). The landing keeps the flown
-mission time, so the Sun stands higher over Tranquility Base each day later; the planners kept it at 5°–14°
-by landing elsewhere (sites 3 and 5 for 18 and 21 July; Nature 223, 1969; ALSJ "Sun Angles"), which
-the model does not do (an open question for the owner).
+evasive burn and correction in mind. Every computed launch in the window lands with the Sun 10.7°–10.8°
+over Tranquility Base, as Eagle had it. The Moon's place at the arrival is 0.44° out of the flown parking
+plane (taken at the flown TLI time); the solver finds an injection with the node edited to 0.5° (its conic
+2.96° out of the parking plane, 873 kg spare) and none with it at 0.7° or more. `evt.tliUnsolved` is the
+solver not converging, and two causes were traced (the report's §4): an ascent into a plane the pad is
+not under at lift-off (29°, the node kept at 359.6°) ends off it, at 29.3°, with less Δv left in the S-IVB
+(3,022 m/s) than the cheapest injection that converged (3,190 m/s), so it is short of propellant whatever
+the steering; with the node at 0.7° or more the conic must turn 3.3° or more out of the parking plane at
+the ignition, the steering's yaw sits at its ±11.5° limit (0.2 of the thrust) for much of the burn, the
+burn ends far across the conic's plane and the burn pass does not converge — a limit of the model's
+steering, not shown to be one of the S-IVB. The launches that fly need 0.3°–3.0°. An earlier sweep, run
+with a table to 1 August 1969 before the owner kept D-11, flew later minutes and days too (into the flown
+plane up to about +30 minutes and on 17 July; on later days only into a plane through the Moon, the
+landing then with the Sun up to 84° high); it is kept in the report as the background of two later
+packages, the planners' alternate landing sites for 18 and 21 July (M-ORBIT-068) and a parking plane
+through the Moon as the setup panel's default (M-ORBIT-069), which wait for a longer table (D-11).
 
 *The Moon and the Sun.* The simulation's inertial frame is the mean equator and equinox of date (the
 Earth turns by the mean sidereal time), so the ICRF states are precessed to the date by the IAU 1976
