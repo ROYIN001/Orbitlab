@@ -4221,6 +4221,12 @@ from Vostochny (not a fleet row; 420.0 × 424.8 → 420.5 × 425.3 km) and Long 
 (an architecture-excluded row; 196.7 × 603.0 → 194.0 × 607.2 km). The 21 six-DOF fingerprints all
 move (below).
 
+**The flexible fleet (tests/heavy/flex-fleet-1…4: slosh, the first bending mode and the bending
+filter, in crosswind, judged by `acceptanceFailures` with every shell under 80 % of its allowable).**
+All 19 tests pass before and after. No shell load moves by more than 2 points: Angara-A5 12 → 10 %,
+Starship 44 → 42 %, the rest unchanged to the per cent (Starship's is the highest, Falcon Heavy's 35 %
+next). Angara-A5's mission ends 3 873 → 4 180 s.
+
 **What does not pass any more, and is not a golden.** Measured before → after, and whether D-51 alone
 gives it (the thrust law alone gives only the last of the lessons below):
 - *Against history* (D-51): Sputnik-1 reaches 214 × 779 km against the flown 214 × 938 km (before
@@ -4232,7 +4238,13 @@ gives it (the thrust law alone gives only the last of the lessons below):
   their Watch harnesses, the excluded-vehicle check that Sputnik's dedicated mission succeeds,
   Vostok-1's return (103 km short, against 15 km), its recording's last orbit frame (17.4 s before the
   retro sequence, against 10 s), the lessons 5.3 and 5.4 and the grading-end check on 5.4's perigee;
-  and Mercury-Redstone 3, whose capsule comes down 30.8 km from where Freedom 7 did (bound 25 km).
+  and Mercury-Redstone 3, whose capsule comes down 30.8 km from where Freedom 7 did (bound 25 km),
+  all of these flown point-mass. In six-DOF (tests/heavy) Sputnik-1 and Vostok-1 still reach their orbits, Apollo 11's S-IVB still
+  relights for the translunar injection, and Vostok-1's recording and the two Soyuz MS dockings pass
+  as before; but Vostok-1's sphere comes down 14.95 km from its place by Smelovka, 14.90 km short
+  along the track (bounds 15 km and 10 km; before 0.99 km, 0.22 km along), and Freedom 7 26.99 km
+  from its splashdown (bound 25 km; before 11.36 km). The D-51-only tree gives the same two numbers,
+  so the thrust law adds nothing to them.
 - *Single-burn and trim targets now judged on the physical apsides* (D-51): Soyuz-2.1a's single burn
   to a 200 km circle, judged on its physical apsides 199.6 × 211.2 km with 6 318 kg (off target; before
   198.6 × 200.5) and its direct-insertion grid (closing within 4.2 and 7.2 km against 3 km); its crew
