@@ -301,6 +301,8 @@ The owner answered in chat on 2026-10-18, at about 21:00 UTC, the questions aske
 | 2026-10-18 | 10, the guidance's vertical after the pitch-over (the vertical rise on the plumb line, everything after the kick on the radius, 0.19° apart) | "10.ข" — option (ข): fly the whole guidance in the geodetic frame, the programme's lean taken out of the plane, with a full re-measure | the re-baseline PR: the guidance, then the fleet table, the ratings and every golden measured again |
 | 2026-10-18 | 11, the 16 assertions kept as they were, and the fleet gate | "11 ก" — option (ก): in the re-record step retire the 16 and keep the tests beside them that state the decided law; the fleet gate stays on the physical apsides in both models (the proposal for the gate, (ก)) | the re-baseline PR, in the re-record step |
 
+Later that evening, at about 21:10 UTC, the owner asked in chat, verbatim "มีส่วนไหนที่งานไม่ใหญ่ทำก่อนได้เลย งานใหญ่ให้เก็บไว้ก่อน" (do first whatever is not big; keep the big work for later). The re-baseline (D-51 with the nozzle law, and the answers recorded in the two sections above) is the big work: it is one change that moves every golden, and its only identical-output part, the unwired nozzle module, is over 700 lines. It is parked, not abandoned: its branches are kept (`claude/charming-archimedes-01p1h5-wip-rebaseline-snapshot` and the three parts started that evening, `-wip-rb-guide`, `-wip-rb-hist`, `-wip-rb-instr`), the hand-over on `claude/charming-archimedes-01p1h5` says where each stands, and the answers above take effect when it resumes. This record lands on its own, ahead of it.
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
