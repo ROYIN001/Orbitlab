@@ -3299,8 +3299,12 @@ the sun 35° up, the sky 6 rows over the horizon came out (198, 198, 215) and th
 under it (16, 34, 61), a dark band; now (190, 190, 209) and, with the haze's light below,
 (138, 169, 205)); none on the night side, and the terminator's twilight from the model. The globe's
 Fresnel rim, the gradient sky's stand-in for this, is off under the scattering sky. The sky pass no
-longer marches a ray that ends more than 10 km inside the Earth's sphere: the opaque globe covers it
-and carries that haze itself.
+longer marches a ray that ends more than 25 km inside the Earth's sphere: the opaque globe covers it
+and carries that haze itself. The margin is the drawn WGS-84 ellipsoid's (D-51): its pole lies
+21.4 km under the sphere and its facets a little deeper (22.2 km), so a ray past the polar limb is
+still marched. The sky and the haze are spherical shells; each takes the camera at its height above
+WGS-84 on its own radius (`skyEci`, `uAerialCam`), and each ends its ray at the ground's or the cloud
+deck's height above WGS-84 (RG and RG + 9 km).
 
 The globe's ground is lit by the sun through the air and by the sky (`daylight`), relative to noon:
 (max(cos i, 0)·T☉(μ☉) + E_sky(μ☉)) / (T☉(1) + E_sky(1)), with T☉ the transmittance table (faded

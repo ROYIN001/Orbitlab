@@ -141,7 +141,7 @@ if (uAerial > 0.5) glint *= sunColour(RG, cosSunGeo);
 col += glint;
 float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
 col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
-if (uAerial > 0.5) col = aerialPerspective(col, camPos, -viewDir, RG, sunDir);
+if (uAerial > 0.5) col = aerialPerspective(col, uAerialCam, -viewDir, RG, sunDir);
 gl_FragColor = vec4(col, 1.0);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
@@ -277,7 +277,7 @@ if (uAerial > 0.5) {
 if (gl_FragColor.a < 0.004) discard;
 vec3 dirW = normalize((vec4(-vViewPosition, 0.0) * viewMatrix).xyz);
 vec3 upW = normalize(cameraPosition + dirW * length(vViewPosition) - earthCentre);
-gl_FragColor.rgb = aerialPerspective(gl_FragColor.rgb * sunColour(RG + ${CLOUD_HEIGHT.toFixed(1)}, dot(upW, sunDir)), cameraPosition, dirW, RG + ${CLOUD_HEIGHT.toFixed(1)}, sunDir);
+gl_FragColor.rgb = aerialPerspective(gl_FragColor.rgb * sunColour(RG + ${CLOUD_HEIGHT.toFixed(1)}, dot(upW, sunDir)), uAerialCam, dirW, RG + ${CLOUD_HEIGHT.toFixed(1)}, sunDir);
 }
 `;
 
@@ -381,6 +381,8 @@ export class SceneManager {
   private aerial = {
     uTransmittance: { value: null as THREE.Texture | null }, uMultiScatter: { value: null as THREE.Texture | null }, uSkyLight: { value: null as THREE.Texture | null },
     uAerial: { value: 0 }, uSunIlluminance: { value: SKY_ILLUMINANCE }, uSceneSun: { value: SUN_INTENSITY }, earthCentre: { value: new THREE.Vector3() },
+    // the camera where the haze's spherical shell sees it: on its radius at its height above WGS-84 (`update`)
+    uAerialCam: { value: new THREE.Vector3() },
   };
 
   constructor(canvas: HTMLCanvasElement, tex: EarthTextures) {
@@ -897,6 +899,9 @@ export class SceneManager {
       const n = camEci.length();
       this.skyEci.copy(camEci);
       if (n > 1) this.skyEci.multiplyScalar((R_EARTH + geodeticHeight(camEci)) / n);
+      // the haze over the globe and the clouds marches the same shell from the same place: the ground and the
+      // cloud deck it ends on are at their own heights above WGS-84 (RG and RG + CLOUD_HEIGHT)
+      this.aerial.uAerialCam.value.copy(this.skyEci).add(this.earthGroup.position);
       this.physicalSky.update(this.camera, this.skyEci, sd, illuminance, SKY_ILLUMINANCE);
     }
     this.updateEnvironment(sky, sunElev);

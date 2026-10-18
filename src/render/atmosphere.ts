@@ -412,7 +412,7 @@ float rp2 = dot(pc, pc);
 float h = sqrt(max(0.0, RT * RT - rp2));
 float tStart = max(0.0, tc - h), tEnd = tc + h;
 if (tc > 0.0 && rp2 < RG * RG) tEnd = tc - sqrt(RG * RG - rp2);
-if (tc > 0.0 && rp2 < (RG - 1e4) * (RG - 1e4)) tEnd = tStart;
+if (tc > 0.0 && rp2 < (RG - 2.5e4) * (RG - 2.5e4)) tEnd = tStart;
 if (tEnd > tStart) {
 float pr = rayleighPhase(c), pm = miePhase(c);
 const int N = 24;
@@ -526,6 +526,7 @@ uniform float uAerial;
 uniform float uSunIlluminance;
 uniform float uSceneSun;
 uniform vec3 earthCentre;
+uniform vec3 uAerialCam;
 vec3 aerial(vec3 o, vec3 dir, float rEnd, vec3 sunDir, out vec3 T) {
 float tc = -dot(o, dir);
 vec3 pc = o + dir * tc;

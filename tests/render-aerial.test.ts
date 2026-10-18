@@ -94,7 +94,7 @@ const SHADER_LINES = [
   'vec3 hazeLight = uSunIlluminance + (uSceneSun - uSunIlluminance) * T;',
   'vec3 seen = col * T + L * hazeLight;',
 ];
-const EARTH_LINE = 'if (uAerial > 0.5) col = aerialPerspective(col, camPos, -viewDir, RG, sunDir);';
+const EARTH_LINE = 'if (uAerial > 0.5) col = aerialPerspective(col, uAerialCam, -viewDir, RG, sunDir);';
 const CLOUD_LINES = [
   '#define AERIAL_N 6',
   'uniform vec3 sunDir;',
@@ -132,7 +132,7 @@ describe('aerial perspective: wired into the globe and the clouds (V02)', () => 
     expect(frag.indexOf('#define AERIAL_N 6')).toBeGreaterThan(frag.indexOf('#include <common>'));
     expect(frag.indexOf('if (gl_FragColor.a < 0.004) discard;')).toBeGreaterThan(frag.indexOf('#include <opaque_fragment>'));
     expect(frag.indexOf('if (gl_FragColor.a < 0.004) discard;')).toBeLessThan(frag.indexOf('#include <tonemapping_fragment>'));
-    for (const k of ['uTransmittance', 'uMultiScatter', 'uSkyLight', 'uAerial', 'uSunIlluminance', 'uSceneSun', 'earthCentre', 'sunDir']) {
+    for (const k of ['uTransmittance', 'uMultiScatter', 'uSkyLight', 'uAerial', 'uSunIlluminance', 'uSceneSun', 'earthCentre', 'uAerialCam', 'sunDir']) {
       expect(shader.uniforms[k], k).toBe(my.earthMat.uniforms[k]);
     }
     // the cloud sphere the march ends on is the mesh's own
@@ -439,7 +439,7 @@ const SUN_LINES = [
 ];
 const EARTH_SUN = 'if (uAerial > 0.5) col = day * (0.09 + 0.95 * daylight(RG, cosSun, cosSunGeo));';
 const EARTH_GLINT = ['vec3 glint = vec3(s * 0.9, s * 0.95, s);', 'if (uAerial > 0.5) glint *= sunColour(RG, cosSunGeo);', 'col += glint;'];
-const CLOUD_SUN = 'gl_FragColor.rgb = aerialPerspective(gl_FragColor.rgb * sunColour(RG + 9000.0, dot(upW, sunDir)), cameraPosition, dirW, RG + 9000.0, sunDir);';
+const CLOUD_SUN = 'gl_FragColor.rgb = aerialPerspective(gl_FragColor.rgb * sunColour(RG + 9000.0, dot(upW, sunDir)), uAerialCam, dirW, RG + 9000.0, sunDir);';
 /** `sunColour`, the table read exactly */
 function sunColour(r: number, muS: number): V {
   const s = sunlight(r, muS), noon = sunlight(r, 1);
@@ -683,10 +683,10 @@ describe('aerial perspective: the far end in float32', () => {
 
 // ------------------------------------------------------------------ the sky pass behind the globe
 
-const SKIP_LINE = 'if (tc > 0.0 && rp2 < (RG - 1e4) * (RG - 1e4)) tEnd = tStart;';
+const SKIP_LINE = 'if (tc > 0.0 && rp2 < (RG - 2.5e4) * (RG - 2.5e4)) tEnd = tStart;';
 /** the sky pass's verdict, op by op in float32: true = the ray is not marched */
 function skipped32(o: V, dir: V): boolean {
-  const tc = -dot32(o, dir), pc = madd32(o, dir, tc), rp2 = dot32(pc, pc), k = add32(f(RG), -1e4);
+  const tc = -dot32(o, dir), pc = madd32(o, dir, tc), rp2 = dot32(pc, pc), k = add32(f(RG), -2.5e4);
   return tc > 0 && rp2 < mul32(k, k);
 }
 
@@ -699,7 +699,7 @@ describe('the sky pass leaves the inside of the disc to the globe', () => {
     expect(frag.indexOf(SKIP_LINE)).toBeLessThan(frag.indexOf('if (tEnd > tStart) {'));
   });
 
-  it('only where the globe\'s mesh covers the ray: its facets lie under 3 km below the sphere', () => {
+  it('only where the globe\'s mesh covers the ray: the WGS-84 ellipsoid\'s facets lie under 25 km below the sphere', () => {
     const { sm } = build(true);
     const geo = sm.earthMesh.geometry as THREE.SphereGeometry;
     expect([geo.parameters.radius, geo.parameters.widthSegments, geo.parameters.heightSegments]).toEqual([R_EARTH, 128, 96]);
@@ -713,8 +713,9 @@ describe('the sky pass leaves the inside of the disc to the globe', () => {
       // the facet's plane comes closest to the centre at |n̂·a|
       deepest = Math.max(deepest, R_EARTH - Math.abs(n.normalize().dot(a)));
     }
-    expect(deepest).toBeGreaterThan(1000);
-    expect(deepest).toBeLessThan(3000);
+    // the drawn Earth is the WGS-84 ellipsoid (D-51): its pole is 21 385 m under the sphere, and the facets cut a little deeper
+    expect(deepest).toBeGreaterThan(R_EARTH / 298.257223563);
+    expect(deepest).toBeLessThan(25e3);
   });
 
   it.each([2, 30e3, 400e3, 36000e3])('marches every ray the globe may leave uncovered from %s m, in float32', (alt) => {
@@ -724,8 +725,8 @@ describe('the sky pass leaves the inside of the disc to the globe', () => {
       const sa = (RG - depth) / r, ca = Math.sqrt(1 - sa * sa);
       return unit([0, 1, 2].map((k) => -ca * up[k] + sa * side[k]) as V).map(f) as V;
     };
-    // through the facets' depth and a little past it: marched; well inside the disc: left to the globe
-    for (const depth of [-50e3, -10, 10, 1000, 3000, 9000]) expect(skipped32(o, ray(depth)), `${depth} m`).toBe(false);
-    for (const depth of [11e3, 50e3, 1000e3]) expect(skipped32(o, ray(depth)), `${depth} m`).toBe(true);
+    // through the ellipsoid's pole and its facets' depth and a little past it: marched; well inside the disc: left to the globe
+    for (const depth of [-50e3, -10, 10, 1000, 3000, 9000, 21.4e3, 22.3e3, 24e3]) expect(skipped32(o, ray(depth)), `${depth} m`).toBe(false);
+    for (const depth of [26e3, 50e3, 1000e3]) expect(skipped32(o, ray(depth)), `${depth} m`).toBe(true);
   });
 });

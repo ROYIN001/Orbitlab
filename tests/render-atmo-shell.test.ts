@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { SceneManager } from '../src/render/scene';
 import { R_EARTH } from '../src/physics/constants';
+import { geodeticHeight, geodeticToCartesian } from '../src/physics/geodesy';
 import type { VisualFrame } from '../src/physics/frame';
 
 /** what the GPU offers: half-float targets (and so the scattering sky) or not */
@@ -104,6 +105,26 @@ describe('atmosphere shell: the gradient sky\'s limb glow only', () => {
     expect(c.toArray()).toEqual([-(R_EARTH + 400e3), 1234.5, -2e5]);
     expect((my.earthMat.uniforms.camPos.value as THREE.Vector3).toArray()).toEqual([30, -20, 10]);
     expect((my.atmoMat.uniforms.camPos.value as THREE.Vector3).toArray()).toEqual([30, -20, 10]);
+  });
+
+  it('the haze sees the camera at its height above WGS-84, as the sky does (D-51)', () => {
+    const { sm, my } = build(true);
+    // a camera 2 m above Plesetsk's pad (62.93 N, 40.57 E, 0.17 km): 16.9 km inside the 6 378.137 km sphere
+    const deg = Math.PI / 180;
+    const pad = geodeticToCartesian(62.93 * deg, 40.57 * deg, 172);
+    sm.origin = pad;
+    sm.camera.position.set(0, 0, 2);
+    sm.update({ theta: 0, t: 0 } as VisualFrame, { x: 0, y: 1, z: 0 }, 2);
+    const u = my.earthMat.uniforms;
+    const c = u.earthCentre.value as THREE.Vector3;
+    const cam = (u.uAerialCam.value as THREE.Vector3).clone().sub(c);
+    const eci = new THREE.Vector3(pad.x, pad.y, pad.z + 2);
+    // on the camera's own radius, at its height above the ellipsoid over the shell's sphere, not 16.9 km under it
+    expect(cam.clone().normalize().dot(eci.clone().normalize())).toBeCloseTo(1, 12);
+    expect(eci.length() - R_EARTH).toBeLessThan(-16e3);
+    expect(cam.length() - R_EARTH).toBeCloseTo(geodeticHeight(eci), 3);
+    expect(cam.length() - R_EARTH).toBeGreaterThan(170);
+    expect(cam.length() - R_EARTH).toBeLessThan(176);
   });
 
   it('draws whole: the shell shader carries no cut, and its rim follows the ground factor', () => {
