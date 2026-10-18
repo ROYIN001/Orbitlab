@@ -118,12 +118,6 @@ export interface GuidanceInputs {
    * hand-over and its blend read it; absent, `altitude`
    */
   height?: number;
-  /**
-   * the local vertical, the plumb line: the WGS-84 normal under the vehicle,
-   * where a levelled pad stands it and its vertical rise and stored pitch
-   * programme are flown from (D-51); absent, the radius
-   */
-  plumb?: Vec3;
   /** dynamic pressure, Pa */
   q: number;
   /** full-thrust acceleration available (vacuum), m/s^2 */
@@ -242,7 +236,6 @@ export class AscentGuidance {
     const { east, north, up } = enuFrame(inp.r);
     const downrange = add(scale(north, Math.cos(this.azimuthRotating)), scale(east, Math.sin(this.azimuthRotating)));
     const turnVelocity = inp.vGround ?? inp.vAir;
-    const plumb = inp.plumb ?? up;
     let dir = up;
     let pitchDeg = 90;
     let predictedApoapsis = 0;
@@ -490,7 +483,7 @@ export class AscentGuidance {
 
     switch (this.phase) {
       case 'vertical':
-        dir = plumb;
+        dir = up;
         pitchDeg = 90;
         break;
       case 'pitchProgram': {
@@ -501,7 +494,7 @@ export class AscentGuidance {
         // left the pad's eastward speed across it, 0.8° of RAAN off an ISS
         // target at insertion and up to 9° of yaw on Blok I (2026-10-01).
         const theta = programmePitch(programme!, inp.t) * DEG;
-        dir = normalize(add(scale(plumb, Math.sin(theta)), scale(downrange, Math.cos(theta))));
+        dir = normalize(add(scale(up, Math.sin(theta)), scale(downrange, Math.cos(theta))));
         pitchDeg = theta / DEG;
         break;
       }

@@ -974,8 +974,7 @@ export class Simulation {
       const cmd = this.guidance.update({
         requireDownrangeKick: !!this.rigidRuntime,
         vGround: this.rigidRuntime ? sub(known.v, cross(v3(0, 0, OMEGA_EARTH), known.r)) : undefined,
-        t: s.t, r: known.r, v: known.v, vAir, altitudeAGL: known.height - this.site.altitude, altitude: known.alt, height: known.height,
-        plumb: geodeticUp(known.r), q,
+        t: s.t, r: known.r, v: known.v, vAir, altitudeAGL: known.height - this.site.altitude, altitude: known.alt, height: known.height, q,
         thrustAccelFull: fullThrust.thrustFullVac / mass, isFirstStage: (active?.index ?? 0) === 0,
         thrustAccel: Math.min(fullThrust.thrust, maxAccel > 0 ? maxAccel * mass : Infinity) / mass,
         timeToGo: (dv: number) => this.vehicle.burnTimeFor(dv, false, this.plan.weakFinalStage),
