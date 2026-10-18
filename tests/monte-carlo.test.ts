@@ -69,7 +69,29 @@ describe('the dispersions (roadmap G05)', () => {
     expect(inOneSigma).toBeLessThan(0.70);
   });
 
+  // The assertion as it stood before the owner's decision of 2026-10-17 (throttle
+  // and pressure, option (ข)), kept unchanged: the decision changes what it
+  // means (a thrust factor is now the chamber's, and the nozzle is kept), so it
+  // fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md. The law's statement is the next test.
   it('scales the engines, the propellant and the dry mass of the vehicle that flies, never the nominal one', () => {
+    const before = JSON.stringify(spec);
+    const factors = Object.fromEntries(propulsionElements(spec).map((e) => [e.id, { thrust: 1.02, isp: 0.99, propellant: 1.01, dryMass: 0.98 }]));
+    const flown = dispersedVehicle(spec, factors);
+    expect(JSON.stringify(spec)).toBe(before);
+    spec.stages.forEach((st, i) => {
+      const f = flown.stages[i];
+      if (st.isSpacecraft) { expect(f).toEqual(st); return; }
+      expect(f.engine.thrustVac).toBeCloseTo(st.engine.thrustVac * 1.02, 6);
+      expect(f.engine.thrustSL).toBeCloseTo(st.engine.thrustSL * 1.02, 6);
+      expect(f.engine.ispVac).toBeCloseTo(st.engine.ispVac * 0.99, 9);
+      expect(f.propellantMass).toBeCloseTo(st.propellantMass * 1.01, 6);
+      expect(f.dryMass).toBeCloseTo(st.dryMass * 0.98, 6);
+      (st.boosters ?? []).forEach((b, j) => expect(f.boosters![j].engine.thrustVac).toBeCloseTo(b.engine.thrustVac * 1.02, 6));
+    });
+  });
+
+  it('scales the engines through their chambers, keeping each nozzle, and the propellant and the dry mass of the vehicle that flies', () => {
     const before = JSON.stringify(spec);
     const factors = Object.fromEntries(propulsionElements(spec).map((e) => [e.id, { thrust: 1.02, isp: 0.99, propellant: 1.01, dryMass: 0.98 }]));
     const flown = dispersedVehicle(spec, factors);
@@ -109,7 +131,26 @@ describe('the dispersions (roadmap G05)', () => {
     expect(b.state.rigid!.attitudeQ).toEqual(a.state.rigid!.attitudeQ);
   }, 60_000);
 
+  // The assertion as it stood before the owner's decision of 2026-10-17 (throttle
+  // and pressure, option (ข)), kept unchanged and failing until the owner
+  // answers question 11 of docs/development/reports/argon4-fu-rebaseline.md;
+  // the law's statement is the next test.
   it('flies the dispersed vehicle through the dispersed air', () => {
+    const cfg = mission();
+    const factors = Object.fromEntries(propulsionElements(vehicleById('falcon9')).map((e) => [e.id, { thrust: 1.03, isp: 1, propellant: 1, dryMass: 1 }]));
+    const a = new Simulation(cfg, { headless: true });
+    const b = new Simulation(cfg, { headless: true, dispersion: { vehicle: factors, densityFactor: 1.2, windENU: { east: 10, north: 0 } } });
+    expect(b.rigidRuntime!.wind.velocityENU!.x).toBe(a.rigidRuntime!.wind.velocityENU!.x + 10);
+    expect(b.vehicleSpec).toBe(a.vehicleSpec); // planned on the nominal vehicle
+    expect(b.plan.insertionAltitude).toBe(a.plan.insertionAltitude);
+    while (a.state.t < 5) { a.step(a.suggestedDt()); b.step(b.suggestedDt()); }
+    expect(b.state.thrust / a.state.thrust).toBeCloseTo(1.03, 3);
+    while (a.state.t < 40) { a.step(a.suggestedDt()); b.step(b.suggestedDt()); }
+    // The same air data 40 s up, 20 % denser: q follows the density (the faster vehicle is higher, and faster, by a little).
+    expect(b.state.q / a.state.q).toBeGreaterThan(1.1);
+  }, 60_000);
+
+  it('flies the dispersed vehicle, its chambers 3 % up, through the dispersed air', () => {
     const cfg = mission();
     const factors = Object.fromEntries(propulsionElements(vehicleById('falcon9')).map((e) => [e.id, { thrust: 1.03, isp: 1, propellant: 1, dryMass: 1 }]));
     const a = new Simulation(cfg, { headless: true });

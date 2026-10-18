@@ -204,7 +204,31 @@ describe('six-DOF data for every vehicle', () => {
     expect(coreParts.find(c => c.kind === 'oxidizer')!.centerBody.x).toBeLessThan(coreParts.find(c => c.kind === 'fuel')!.centerBody.x);
   });
 
+  // The assertion as it stood before the owner's decision of 2026-10-17 (throttle
+  // and pressure, option (ข)), kept unchanged: under the decided law the ratio of
+  // two chambers is no longer the ratio of their levels, so it fails until the
+  // owner answers question 11 of docs/development/reports/argon4-fu-rebaseline.md.
+  // The law's statement is the next test.
   it('flies each strap-on group at its own level', () => {
+    // PSLV-XL: four ground-lit PSOM-XL, two lit in the air 25 s later.
+    const vm = new VehicleModel(vehicleById('pslvxl'), 1000);
+    const [ground, air] = vm.stages[0].boosters;
+    vm.igniteStage(vm.stages[0], 0);
+    vm.igniteBooster(ground, 0);
+    for (let t = 0; t < 40; t += 0.5) vm.consume(t, 1, 0.5);
+    vm.igniteBooster(air, 40);
+    const thrust = vm.thrust(40.2, 50000, 1, 0.01);
+    expect(thrust.boosterLevels).toHaveLength(2);
+    // The pair is still spinning up while the four are well down their regressive profile.
+    expect(thrust.boosterLevels[1]).not.toBeCloseTo(thrust.boosterLevels[0], 2);
+    expect(thrust.boosterThrottle).toBe(Math.min(1, Math.max(...thrust.boosterLevels)));
+    const snapshot = buildRigidVehicle(vm, { pressure: 50000, coreThrottle: thrust.coreThrottle, boosterThrottle: thrust.boosterThrottle,
+      boosterThrottles: thrust.boosterLevels, time: 40.2 });
+    const unit = (prefix: string) => snapshot.engines.find(e => e.id.startsWith(prefix))!.thrustBudgetN;
+    expect(unit('psoma.') / unit('psomg.')).toBeCloseTo(thrust.boosterLevels[1] / thrust.boosterLevels[0], 9);
+  });
+
+  it('flies each strap-on group at its own level, through the thrust law', () => {
     // PSLV-XL: four ground-lit PSOM-XL, two lit in the air 25 s later.
     const vm = new VehicleModel(vehicleById('pslvxl'), 1000);
     const [ground, air] = vm.stages[0].boosters;

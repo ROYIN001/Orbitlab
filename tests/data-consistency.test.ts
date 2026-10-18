@@ -251,7 +251,22 @@ describe('liftoff', () => {
    * kind of thing that comes back, so it is asserted directly: the P120C is
    * Vega-C's first stage and Ariane 6's booster.
    */
+  // Kept as it stood before the owner's decision of 2026-10-17 (throttle and
+  // pressure, option (ข)): its expected value is the old law's, sea-level thrust
+  // × the profile's head, so it fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md. The next test states the
+  // same symmetry through the decided law.
   it('a solid motor contributes the same liftoff thrust as a stage and as a booster', () => {
+    const vegac = VEHICLES.find((v) => v.id === 'vegac')!;
+    const ariane = VEHICLES.find((v) => v.id === 'ariane64')!;
+    const perMotorAsStage = liftoffThrust(vegac);
+    const boosters = ariane.stages[0].boosters![0];
+    const perMotorAsBooster = boosters.count * boosters.engine.count * boosters.engine.thrustSL
+      * solidProfile(0, boosters.engine.peakFactor) / boosters.count;
+    expect(perMotorAsStage / perMotorAsBooster, 'same motor, same ignition factor').toBeCloseTo(1, 2);
+  });
+
+  it('a solid motor contributes the same liftoff thrust as a stage and as a booster, through the thrust law', () => {
     const vegac = VEHICLES.find((v) => v.id === 'vegac')!;
     const ariane = VEHICLES.find((v) => v.id === 'ariane64')!;
     const perMotorAsStage = liftoffThrust(vegac);

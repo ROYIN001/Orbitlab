@@ -125,7 +125,32 @@ describe('the model beside the data', () => {
   const s1 = vehicleStandEngines(f9)[0];
   const m1d = enginePart('merlin1d');
 
+  // The assertions as they stood before the owner's decision of 2026-10-17
+  // (throttle and pressure, option (ข); the stand's "Isp does not depend on the
+  // throttle" changes with it), kept unchanged: in air the start-up and the
+  // tail-off now run at a lower Isp, so the firing's Isp is no longer the
+  // full-thrust one, and this fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md. The next test is the
+  // decided law's.
   it('Merlin 1D ×9 at sea level: the catalogue thrust exactly, and the sea-level Isp the model works out', () => {
+    const run = runStand(s1.engine, inputs({ count: 9, propellantKg: s1.propellantKg, air: 'seaLevel' }));
+    const rows = standComparison(s1.engine, 9, 'seaLevel', run);
+    const row = (f: string) => rows.find((r) => r.figure === f)!;
+    expect(row('thrustSL').published).toBe(9 * m1d.thrustSL);
+    expect(Math.abs(row('thrustSL').difference!)).toBeLessThan(1e-12);
+    expect(row('thrustVac')).toMatchObject({ published: 9 * m1d.thrustVac, stand: null, difference: null });
+    // the model's sea-level Isp, from the data: ṁ = F_vac/(g0·Isp_vac), Isp_SL = F_SL/(g0·ṁ) = Isp_vac·F_SL/F_vac
+    const isp = m1d.ispVac * m1d.thrustSL / m1d.thrustVac;
+    expect(rel(row('ispSL').stand!, isp)).toBeLessThan(1e-9);
+    expect(row('ispSL').published).toBe(m1d.ispSL);
+    expect(row('ispSL').difference!).toBeCloseTo(isp / m1d.ispSL - 1, 9);
+    // the invariant the stand's figures rest on: impulse = propellant burned × g0 · Isp
+    expect(rel(run.result.impulse, run.result.propellantUsed * G0 * isp)).toBeLessThan(1e-9);
+    expect(rel(run.deliveredIsp, isp)).toBeLessThan(1e-9);
+    expect(run.leftKg).toBeLessThan(1e-6 * s1.propellantKg);
+  });
+
+  it('Merlin 1D ×9 at sea level: the catalogue thrust exactly, and the sea-level Isp the model works out, under the thrust law', () => {
     const run = runStand(s1.engine, inputs({ count: 9, propellantKg: s1.propellantKg, air: 'seaLevel' }));
     const rows = standComparison(s1.engine, 9, 'seaLevel', run);
     const row = (f: string) => rows.find((r) => r.figure === f)!;
@@ -164,10 +189,25 @@ describe('the model beside the data', () => {
     expect(Math.abs(rows.find((r) => r.figure === 'ispVac')!.difference!)).toBeLessThan(1e-9);
   });
 
-  // Until the owner's decision of 2026-10-17 the stand refused a vacuum engine
+  // The assertion as it stood before the owner's decision of 2026-10-17 ("the
+  // physics as it really is"), kept unchanged: the stand refused a vacuum engine
   // in air, because the model gave it its vacuum thrust at every pressure. It
   // now fires it, with the thrust its nozzle gives there (src/physics/nozzle.ts),
-  // and still says its sea-level pair is not data.
+  // so this fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md. The next test is the decision's.
+  it('refuses a vacuum engine in air, and says its sea-level pair is not data', () => {
+    const s2 = vehicleStandEngines(f9)[1];
+    for (const air of ['seaLevel', 'pad'] as const) {
+      const run = runStand(s2.engine, inputs({ count: 1, propellantKg: s2.propellantKg, air, padAltitudeM: 3 }));
+      expect(run.result.refused).toBe('vacuumOnlyAtPressure');
+      const rows = standComparison(s2.engine, 1, air, run);
+      expect(rows.every((r) => r.stand === null && r.difference === null)).toBe(true);
+      expect(rows.filter((r) => r.notData).map((r) => r.figure)).toEqual(['thrustSL', 'ispSL']);
+      expect(rows.find((r) => r.figure === 'thrustSL')!.published).toBeNull();
+    }
+    expect(runStand(s2.engine, inputs({ count: 1, propellantKg: s2.propellantKg })).result.refused).toBeUndefined();
+  });
+
   it('fires a vacuum engine in air with its nozzle separated, and says its sea-level pair is not data', () => {
     const s2 = vehicleStandEngines(f9)[1];
     for (const air of ['seaLevel', 'pad'] as const) {

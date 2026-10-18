@@ -396,11 +396,24 @@ describe('delivered engine performance (B27)', () => {
       .toEqual(['Raptor 2 2.4 %', 'Rutherford 2.6 %', 'Vulcain 2.1 5.0 %']);
   });
 
-  // Until the owner's decision of 2026-10-17 a vacuum-only engine flew its
-  // vacuum thrust at every pressure. Now it flies what its nozzle gives
-  // (src/physics/nozzle.ts): never the placeholder sea-level pair, and never
-  // its vacuum figure in air either.
+  // The assertion as it stood before the owner's decision of 2026-10-17 ("the
+  // physics as it really is" for a vacuum engine in air), kept unchanged
+  // (`engineThrust(e, p)` is now `engineThrustAt(e, p, 1)`). The decision
+  // changes what it means, so it fails until the owner answers question 11 of
+  // docs/development/reports/argon4-fu-rebaseline.md; the law's statement is
+  // the next test.
   it('a vacuum-only engine never uses its placeholder sea-level figures', () => {
+    const e: EngineSpec = { name: 'probe', count: 1, thrustSL: 1, thrustVac: 100, ispSL: 1, ispVac: 400, vacuumOnly: true };
+    expect(engineThrustAt(e, P0, 1)).toBe(100);
+    expect(engineIsp(e, P0)).toBeCloseTo(400, 6);
+    const real: EngineSpec = { ...e, vacuumOnly: false, thrustSL: 80, ispSL: 320 };
+    expect(engineThrustAt(real, P0, 1)).toBe(80);
+  });
+
+  // Since the owner's decision of 2026-10-17 a vacuum-only engine flies what its
+  // nozzle gives (src/physics/nozzle.ts): never the placeholder sea-level pair,
+  // and never its vacuum figure in air either.
+  it('a vacuum-only engine flies its nozzle\'s thrust in air, never its placeholder sea-level figures', () => {
     const e: EngineSpec = { name: 'probe', count: 1, thrustSL: 1, thrustVac: 100, ispSL: 1, ispVac: 400, vacuumOnly: true };
     const atSeaLevel = engineThrustAt(e, P0, 1);
     expect(atSeaLevel).toBeLessThan(100);
