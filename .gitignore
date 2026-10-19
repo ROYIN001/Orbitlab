@@ -11,5 +11,7 @@ tests/browser/artifacts/
 tests/probe/
 probe-out.txt
 
-# per-machine agent settings, not part of the project
-.claude/
+# per-machine agent settings, not part of the project; the project's agent
+# skills under .claude/skills/ are shared and tracked
+.claude/*
+!.claude/skills/
