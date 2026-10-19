@@ -12,4 +12,6 @@ tests/probe/
 probe-out.txt
 
 # per-machine agent settings, not part of the project
-.claude/
+.claude/*
+# except the project's shared Claude Code skills (owner's request, 2026-10-19)
+!.claude/skills/
