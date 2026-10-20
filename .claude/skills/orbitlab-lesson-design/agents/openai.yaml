@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orbitlab Lesson Design"
+  short_description: "Design clear, measurable Orbitlab lessons"
+  default_prompt: "Use $orbitlab-lesson-design to design an Orbitlab lesson with learning goals, experiments, diagnostic hints, and transfer assessment."

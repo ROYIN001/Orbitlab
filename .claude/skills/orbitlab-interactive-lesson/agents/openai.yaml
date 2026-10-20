@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orbitlab Interactive Lesson"
+  short_description: "Build connected, tested Orbitlab learning labs"
+  default_prompt: "Use $orbitlab-interactive-lesson to implement an Orbitlab lesson using existing simulation, telemetry, and assessment interfaces."
