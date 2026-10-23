@@ -49,18 +49,17 @@ The same commits passed in other runs (`0a7e69f` in 39098068476, `5374b6d` in 39
 
 ## Reproduction (failing first)
 
-A probe (kept out of the repository, like #164's) drives the app to CI's state with the harness's own `press()`:
-1. Launch with the real button and wait for the 6-DOF controls.
-2. Show the setup with ⚙ Setup.
-3. Hide `#rigid-controls` again, as it is before its first telemetry tick.
-4. Call `press()` with a locator whose `boundingBox()` returns the real box and then waits, up to 8 s, for the panel to come back. That wait is the slow round trip of a loaded runner, during which the app's frames may run.
+A probe, kept out of the repository like #164's, runs `engineer()` of `r2-flight-shell` with every check and the harness's own `press()`. It reaches CI's state through the app's own code path:
+1. From just before Launch, every app frame is held for 2.5 s, as `r2-chooser-late-frame` does. The telemetry clock (`window.orbitlab.telTimer`) is set to 0 at the Launch press, so the phase of the tick is known.
+2. At the press under test, the frames that are due run inside the hit test's `elementFromPoint`, after the box was read. Each is stamped 2.5 s after the last, until one telemetry tick has run (at most 6 frames). That is what a slow runner fits between `press()`'s round trips.
+3. If the harness holds the frames at that moment, the hook passes them to the harness, and they run after the press.
 
-The DejaVu Sans font is set on the page, as on the runners.
+The runners' system font is used (a fontconfig file maps `system-ui` and `sans-serif` to DejaVu Sans; locally `system-ui` is Inter, on which the row does not wrap). Runs were made one at a time, 2026-10-23, against `dist` built from `7c736f5`.
 
-| Harness | Run 1 | Run 2 |
+| Harness | Late frames at the 2nd press (⚙ Setup again) | Late frames at the 1st press (⚙ Setup) |
 |---|---|---|
-| `origin/main` `11c4a7f` | FAIL: "⚙ Setup again: a mouse press at its centre lands on select#warp-select." (an app frame ran after the box; the setup stays shown) | the same |
-| this change | PASS (no app frame ran between the box and the press; the setup hid again) | PASS |
+| `origin/main` `11c4a7f` | **9 failures**, CI's signature: "⚙ Setup again: a mouse press at its centre lands on select#warp-select." and the 8 that follow it (4 frames ran in the hit test; the tick in the 4th showed the panel) | **11 failures**: "⚙ Setup: a mouse press at its centre lands on section#rigid-controls.panel.rigid-controls", the collapsed-layout form, and the ones that follow |
+| this change | **0 failures**: the frames came while held and ran after the press | **0 failures**, the same |
 
 ## The fix
 
