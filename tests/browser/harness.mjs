@@ -80,7 +80,9 @@ export async function reloadDocument(page, control, ready = () => page.waitForSe
 /**
  * Hold (or let go) the page's animation frames (`initScript`). Best effort:
  * a closed or navigating page, or one whose main thread does not answer
- * within 5 s, is screenshotted as it is.
+ * within 5 s, is screenshotted as it is; the release that `press` sends after
+ * its press then stays queued on the page, and the frames stay held until it
+ * gets through.
  */
 async function holdFrames(page, on) {
   if (page.isClosed()) return;
@@ -329,42 +331,73 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
  * `mouse` or `touch`, after checking that the point really lands on it (a
  * covering element is reported as a failure, not waited out). Resolves to
  * false (and records the failure) when it could not.
+ *
+ * No app frame may move the target between its box, the hit test and the
+ * press. The box and the hit test are read in one task on the page, which
+ * first holds the page's animation frames (as `app.shot` holds them over a
+ * capture), and the frames stay held until the press has been sent, so no
+ * animation-frame callback runs between the box, the hit test and the press;
+ * one whose frame came meanwhile runs in the first frame after. (Only those
+ * callbacks are held: timers, ResizeObserver callbacks and worker messages
+ * still run.) They used to be three round trips with app frames free to run
+ * between them, and on the runners' software GPU a frame takes roughly half a
+ * second to a second (see RENDER_SCALE). r2-flight-shell failed so on Pages
+ * (39159723856 and three more runs): "⚙ Setup again … lands on
+ * select#warp-select". A local reproduction with the runners' font matches it
+ * to the frame that brings back the 6-DOF controls after Launch, which raises
+ * the playback row 48.5 px between ⚙ Setup's box and its hit test
+ * (docs/development/reports/r2-flight-shell-press-race.md).
  */
 export async function press(t, app, locator, how, what) {
-  const box = await locator.boundingBox();
-  if (!box) { t.fail(`${what}: not visible for a ${how} press`); return false; }
-  const x = box.x + box.width / 2, y = box.y + box.height / 2;
-  const hit = await hitAt(locator, x, y);
-  if (hit) { t.fail(`${what}: a ${how} press at its centre lands on ${hit}`); return false; }
-  if (how === 'touch') await app.page.touchscreen.tap(x, y);
-  else await app.page.mouse.click(x, y);
-  return true;
+  let held = false;
+  try {
+    const { box, hit } = await measure(locator, true);
+    held = true;
+    if (!box) { t.fail(`${what}: not visible for a ${how} press`); return false; }
+    if (hit) { t.fail(`${what}: a ${how} press at its centre lands on ${hit}`); return false; }
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    if (how === 'touch') await app.page.touchscreen.tap(x, y);
+    else await app.page.mouse.click(x, y);
+    return true;
+  } finally {
+    // only a hold this press took: a failed journey's screenshots hold frames too
+    if (held) await holdFrames(app.page, false);
+  }
 }
 
-/** null when the point (viewport px) lands on `locator`'s element or inside it, else what it lands on. */
-function hitAt(locator, x, y) {
-  return locator.evaluate((el, [px, py]) => {
-    const top = document.elementFromPoint(px, py);
-    return top && (el === top || el.contains(top)) ? null : (top ? `${top.tagName.toLowerCase()}${top.id ? `#${top.id}` : ''}.${[...top.classList].join('.')}` : 'nothing');
-  }, [x, y]);
+/**
+ * In one task on the page (so on one layout): hold its animation frames when
+ * `hold` (the caller lets them go), then read `locator`'s box in viewport px,
+ * as `boundingBox()` gives it (null when it has none, e.g. `display: none`),
+ * and what a press at the box's centre lands on: null for the element itself
+ * or inside it, else a description of what covers it.
+ */
+function measure(locator, hold = false) {
+  return locator.evaluate((el, holdFrames) => {
+    if (holdFrames) window.__holdFrames?.(true);
+    if (!el.getClientRects().length) return { box: null, hit: null };
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    const hit = top && (el === top || el.contains(top)) ? null : (top ? `${top.tagName.toLowerCase()}${top.id ? `#${top.id}` : ''}.${[...top.classList].join('.')}` : 'nothing');
+    return { box: { x: r.x, y: r.y, width: r.width, height: r.height }, hit };
+  }, hold);
 }
 
 /**
  * Whether a person could reach `locator` without pressing it: scrolled into
  * view, its box lies inside the viewport and a press at its centre would land
  * on it (not on something covering it). Records the failure and resolves to
- * false when not.
+ * false when not. The box and the hit test come from one layout (`measure`).
  */
 export async function reachable(t, app, locator, what) {
   await locator.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
-  const box = await locator.boundingBox();
+  const { box, hit } = await measure(locator);
   if (!box || box.width === 0 || box.height === 0) { t.fail(`${what}: not on screen`); return false; }
   const vp = app.page.viewportSize();
   if (box.x < -1 || box.y < -1 || box.x + box.width > vp.width + 1 || box.y + box.height > vp.height + 1) {
     t.fail(`${what}: outside the ${vp.width}×${vp.height} viewport (${JSON.stringify(box)})`);
     return false;
   }
-  const hit = await hitAt(locator, box.x + box.width / 2, box.y + box.height / 2);
   if (hit) { t.fail(`${what}: a press at its centre would land on ${hit}`); return false; }
   return true;
 }
