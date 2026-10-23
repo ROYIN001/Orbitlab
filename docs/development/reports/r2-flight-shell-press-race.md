@@ -86,8 +86,8 @@ Not changed:
 ## Runs (local, Chromium 153 headless shell, SwiftShader, 4 cores)
 
 - The probe above, one run per cell, one browser at a time.
-- Every browser journey in Pages mode (`node tests/browser/run.mjs`, 36 run, 6 held): RUNS_PLACEHOLDER
-- `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` and `npx vitest run tests/repo-hygiene.test.ts`: see the PR.
+- Every browser journey, as the change map selects for `tests/browser/harness.mjs` (`node tests/browser/run.mjs`, `dist` built from `7c736f5`, one browser at a time, nothing else running): **36/36 passed in 3982.5 s**; the 6 held journeys are listed and not run (owner, 2026-10-17). Among them `r2-flight-shell` 302.9 s (its Pages passes took 217.9–340.2 s), `r2-chooser-late-frame` 28.5 s, `r2-shell-smoke` 50.2 s, `lui01-held-tuning` 58.1 s, `fx8-context-loss` 226.4 s, `learner-profiles` 227.3 s. This ran on `29698f7`; `c3b57d8` after it changes comments and skips the release when `measure` threw before taking the hold, so it changes nothing on a press that reaches the page. An earlier full run on `8fb15e8` was stopped part-way, with other browsers running beside it.
+- `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs`: 93 passed. `npx vitest run tests/repo-hygiene.test.ts`: 9 passed. `npm run typecheck`: clean.
 - A second agent reviewed the change in three lenses (equivalence of `measure` with the old box and hit test at every call site, 57 in `tests/browser`; the frame hold; the written claims), each finding then checked by a refuting agent: no blocking finding; the should-fix findings were all wording in this report, the fragment and the comments, and are fixed here; one nit taken in the code (the release only after a hold this press took).
 
 ## For the owner (not done here)
