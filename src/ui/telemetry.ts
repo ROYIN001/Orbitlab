@@ -216,13 +216,6 @@ export class TelemetryPanel {
   }
 
   /**
-   * U07 / R2.1: the flight-dynamics notation, a display preference. It lives
-   * here rather than in the mission setup, which gives way to the scene once a
-   * flight is launched, so the standard can be changed during a flight. The
-   * Engineer level's only (modes.css). It never touches the flight's inputs:
-   * symbols, axes and signs are relabelled from the same recorded values.
-   */
-  /**
    * R2.3: the presets (Flight / Dynamics / Orbit, or every card) and the card
    * choice. The Engineer level's only (style.css); Explore shows one picked
    * chart. The panel's clock, flight commands and event log are not cards.
@@ -282,6 +275,13 @@ export class TelemetryPanel {
     for (const [card, input] of this.cardBoxes) input.checked = shown.has(card);
   }
 
+  /**
+   * U07 / R2.1: the flight-dynamics notation, a display preference. It lives
+   * here rather than in the mission setup, which gives way to the scene once a
+   * flight is launched, so the standard can be changed during a flight. The
+   * Engineer level's only (style.css). It never touches the flight's inputs:
+   * symbols, axes and signs are relabelled from the same recorded values.
+   */
   private notationControl(): HTMLElement {
     const box = el('div', 'tel-display notation-section');
     const label = el('label', 'tel-display-field');
