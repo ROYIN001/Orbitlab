@@ -80,7 +80,9 @@ export async function reloadDocument(page, control, ready = () => page.waitForSe
 /**
  * Hold (or let go) the page's animation frames (`initScript`). Best effort:
  * a closed or navigating page, or one whose main thread does not answer
- * within 5 s, is screenshotted or pressed as it is.
+ * within 5 s, is screenshotted as it is; the release that `press` sends after
+ * its press then stays queued on the page, and the frames stay held until it
+ * gets through.
  */
 async function holdFrames(page, on) {
   if (page.isClosed()) return;
@@ -333,17 +335,24 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
  * No app frame may move the target between its box, the hit test and the
  * press. The box and the hit test are read in one task on the page, which
  * first holds the page's animation frames (as `app.shot` holds them over a
- * capture), and the frames stay held until the press has been sent: the press
- * is made on the layout that was measured, and a frame that came meanwhile
- * runs right after. They used to be three round trips with frames running
- * between them. On the runners' software GPU a frame takes about a second,
- * and in r2-flight-shell the frame that brings back the 6-DOF controls after
- * Launch moved the playback row 48 px between ⚙ Setup's box and its hit test,
- * so the centre fell on the Warp select (Pages 39159723856 and three more).
+ * capture), and the frames stay held until the press has been sent, so no
+ * animation-frame callback runs between the box, the hit test and the press;
+ * one whose frame came meanwhile runs in the first frame after. (Only those
+ * callbacks are held: timers, ResizeObserver callbacks and worker messages
+ * still run.) They used to be three round trips with app frames free to run
+ * between them, and on the runners' software GPU a frame takes roughly half a
+ * second to a second (see RENDER_SCALE). r2-flight-shell failed so on Pages
+ * (39159723856 and three more runs): "⚙ Setup again … lands on
+ * select#warp-select". A local reproduction with the runners' font matches it
+ * to the frame that brings back the 6-DOF controls after Launch, which raises
+ * the playback row 48.5 px between ⚙ Setup's box and its hit test
+ * (docs/development/reports/r2-flight-shell-press-race.md).
  */
 export async function press(t, app, locator, how, what) {
+  let held = false;
   try {
     const { box, hit } = await measure(locator, true);
+    held = true;
     if (!box) { t.fail(`${what}: not visible for a ${how} press`); return false; }
     if (hit) { t.fail(`${what}: a ${how} press at its centre lands on ${hit}`); return false; }
     const x = box.x + box.width / 2, y = box.y + box.height / 2;
@@ -351,7 +360,8 @@ export async function press(t, app, locator, how, what) {
     else await app.page.mouse.click(x, y);
     return true;
   } finally {
-    await holdFrames(app.page, false);
+    // only a hold this press took: a failed journey's screenshots hold frames too
+    if (held) await holdFrames(app.page, false);
   }
 }
 
