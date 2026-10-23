@@ -80,7 +80,7 @@ export async function reloadDocument(page, control, ready = () => page.waitForSe
 /**
  * Hold (or let go) the page's animation frames (`initScript`). Best effort:
  * a closed or navigating page, or one whose main thread does not answer
- * within 5 s, is screenshotted as it is.
+ * within 5 s, is screenshotted or pressed as it is.
  */
 async function holdFrames(page, on) {
   if (page.isClosed()) return;
@@ -329,16 +329,30 @@ export function createJourney({ name, browser, base, server = null, distDir = nu
  * `mouse` or `touch`, after checking that the point really lands on it (a
  * covering element is reported as a failure, not waited out). Resolves to
  * false (and records the failure) when it could not.
+ *
+ * The box, the hit test and the press are separate round trips to the page,
+ * so the page's animation frames are held over all three (as `app.shot` holds
+ * them over a capture): the press is made on the layout that was measured.
+ * Not held, an app frame that lands between them can move the target. On the
+ * runners' software GPU a frame takes about a second, and in r2-flight-shell
+ * the frame that brings back the 6-DOF controls after Launch moved the
+ * playback row 48 px, so the measured centre of ⚙ Setup fell on the Warp
+ * select (Pages 39159723856 and three more runs).
  */
 export async function press(t, app, locator, how, what) {
-  const box = await locator.boundingBox();
-  if (!box) { t.fail(`${what}: not visible for a ${how} press`); return false; }
-  const x = box.x + box.width / 2, y = box.y + box.height / 2;
-  const hit = await hitAt(locator, x, y);
-  if (hit) { t.fail(`${what}: a ${how} press at its centre lands on ${hit}`); return false; }
-  if (how === 'touch') await app.page.touchscreen.tap(x, y);
-  else await app.page.mouse.click(x, y);
-  return true;
+  await holdFrames(app.page, true);
+  try {
+    const box = await locator.boundingBox();
+    if (!box) { t.fail(`${what}: not visible for a ${how} press`); return false; }
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    const hit = await hitAt(locator, x, y);
+    if (hit) { t.fail(`${what}: a ${how} press at its centre lands on ${hit}`); return false; }
+    if (how === 'touch') await app.page.touchscreen.tap(x, y);
+    else await app.page.mouse.click(x, y);
+    return true;
+  } finally {
+    await holdFrames(app.page, false);
+  }
 }
 
 /** null when the point (viewport px) lands on `locator`'s element or inside it, else what it lands on. */
@@ -357,16 +371,22 @@ function hitAt(locator, x, y) {
  */
 export async function reachable(t, app, locator, what) {
   await locator.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
-  const box = await locator.boundingBox();
-  if (!box || box.width === 0 || box.height === 0) { t.fail(`${what}: not on screen`); return false; }
-  const vp = app.page.viewportSize();
-  if (box.x < -1 || box.y < -1 || box.x + box.width > vp.width + 1 || box.y + box.height > vp.height + 1) {
-    t.fail(`${what}: outside the ${vp.width}×${vp.height} viewport (${JSON.stringify(box)})`);
-    return false;
+  // the box and the hit test on one layout, as in `press`
+  await holdFrames(app.page, true);
+  try {
+    const box = await locator.boundingBox();
+    if (!box || box.width === 0 || box.height === 0) { t.fail(`${what}: not on screen`); return false; }
+    const vp = app.page.viewportSize();
+    if (box.x < -1 || box.y < -1 || box.x + box.width > vp.width + 1 || box.y + box.height > vp.height + 1) {
+      t.fail(`${what}: outside the ${vp.width}×${vp.height} viewport (${JSON.stringify(box)})`);
+      return false;
+    }
+    const hit = await hitAt(locator, box.x + box.width / 2, box.y + box.height / 2);
+    if (hit) { t.fail(`${what}: a press at its centre would land on ${hit}`); return false; }
+    return true;
+  } finally {
+    await holdFrames(app.page, false);
   }
-  const hit = await hitAt(locator, box.x + box.width / 2, box.y + box.height / 2);
-  if (hit) { t.fail(`${what}: a press at its centre would land on ${hit}`); return false; }
-  return true;
 }
 
 /**
