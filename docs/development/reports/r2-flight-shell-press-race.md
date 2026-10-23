@@ -8,9 +8,9 @@
 >   - บนเครื่อง CI ที่วาดภาพด้วยซอฟต์แวร์ หนึ่งเฟรมใช้ราว 1 วินาที เฟรมที่นำแผงควบคุม 6-DOF กลับมาหลังกด Launch จึงตกลงระหว่างการวัดกับการตรวจพอดี
 >   - แถวปุ่มเลื่อนขึ้น 48 px จุดที่วัดไว้จึงไปตกบนช่องเลือก Warp แทนปุ่ม ⚙ Setup
 >   - ความล้มเหลวอีก 8–9 ข้อที่ตามมาเป็นผลต่อเนื่องจากการกดครั้งนี้ครั้งเดียว
-> - วิธีแก้: `press` และ `reachable` หยุดเฟรมแอนิเมชันของหน้าเว็บไว้ระหว่างวัด ตรวจ และกด แบบเดียวกับที่การถ่ายภาพหน้าจอทำอยู่แล้ว การกดจึงเกิดบน layout ที่วัดไว้จริง
+> - วิธีแก้: `press` วัดตำแหน่งและตรวจจุดกดในคำสั่งเดียวบนหน้าเว็บ และหยุดเฟรมแอนิเมชันไว้จนกดเสร็จ แบบเดียวกับที่การถ่ายภาพหน้าจอทำอยู่แล้ว การกดจึงเกิดบน layout ที่วัดไว้จริง จำนวนคำสั่งไปกลับยังเท่าเดิม (`reachable` ลดลงหนึ่ง)
 > - ไม่แก้โค้ดแอป ไม่ลดเกณฑ์ ไม่เพิ่ม timeout และไม่ตัดการตรวจข้อใดออก
-> - ทำซ้ำได้แน่นอน: harness เดิมล้มด้วยข้อความเดียวกับ CI 2 จาก 2 ครั้ง และ harness ใหม่ผ่าน 2 จาก 2 ครั้ง
+> - ทำซ้ำได้แน่นอนผ่านโค้ดของแอปเอง (เฟรมช้า 2.5 วินาที และเฟรมที่ค้างมาถึงระหว่างการตรวจจุดกด): harness เดิมล้มด้วยข้อความชุดเดียวกับ CI ส่วน harness ใหม่ผ่าน (ตัวเลขในหัวข้อ Reproduction)
 > - มีเรื่องเสนอให้ตัดสินใจหนึ่งข้อ (ไม่ได้ทำในงานนี้): ในแอปเอง แผง 6-DOF หายไปตอนกด Launch แล้วกลับมาในอีกครึ่งวินาที หรือหลายวินาทีบนเครื่องช้า ทำให้ฉากกระตุกหนึ่งครั้ง (ดูหัวข้อ "For the owner")
 
 ```yaml
@@ -64,7 +64,13 @@ The DejaVu Sans font is set on the page, as on the runners.
 
 ## The fix
 
-`press()` holds the page's animation frames (`holdFrames(page, true)`, the same hold `app.shot` uses, bounded at 5 s per call) before the box and releases them after the press, in a `finally`. `reachable()` holds them over its box and hit test. The press is therefore made on the layout that was measured and hit-tested. A frame that comes while frames are held runs right after the release, so the app keeps every frame. The hit test is unchanged: an element that covers the target still fails the press, and nothing is waited out.
+`press()` reads the box and does the hit test in one task on the page (`measure`). That task first holds the page's animation frames (`window.__holdFrames(true)`, the same hold `app.shot` uses). The frames stay held until the press has been sent, and a `finally` releases them (`holdFrames(page, false)`, bounded at 5 s per call). The press is therefore made on the layout that was measured and hit-tested, and a frame that came meanwhile runs right after the release, so the app keeps every frame.
+
+`reachable()` reads its box and hit test in one task as well; it does not press, so it holds nothing.
+
+Round trips: `press` makes the same number as before (measure, the click, the release, where it used to be the box, the hit test, the click). `reachable` makes one fewer.
+
+The box is the element's `getBoundingClientRect()`, in viewport CSS px as `boundingBox()` gives it for the main frame (no journey presses inside an iframe); an element with no layout box (`display: none`) still gives "not visible". The hit test is unchanged: an element that covers the target still fails the press, and nothing is waited out.
 
 Not changed:
 - the app;
