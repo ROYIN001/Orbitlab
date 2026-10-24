@@ -1792,7 +1792,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.dispersion.title')));
     section.append(this.el('p', 'field-note', t('setup.dispersion.note')));
     const update = (next: DispersedFlightConfig | undefined): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { dispersion: next } : {}) };
       if (!next) delete this.state.dynamics.dispersion;
       this.render();
