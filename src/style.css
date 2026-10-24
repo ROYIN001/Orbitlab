@@ -1107,6 +1107,8 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   #telemetry > .telemetry-heading { order: 0; }
   #telemetry > .telemetry-dock { order: 1; }
   #telemetry > .events-head, #telemetry > .events { order: 2; }
+  /* R2.1's notation (.tel-display) and R2.3's card presets come first */
+  #telemetry > .tel-display, #telemetry > .tel-cards { order: 0; }
   /* The heading gives its generous desktop padding to the log: in a 189 px
      strip its 69.5 px were a third of everything the user could see. */
   .telemetry-heading { padding: 9px 16px 8px; }
@@ -1431,8 +1433,8 @@ body[data-setup='collapsed'] .workspace { grid-template-columns: minmax(0, 1fr) 
 .tel-display { margin: 10px 0 0; }
 .tel-display-field { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
 .tel-display-field select { height: 30px; font-size: 12.5px; }
-/* the notation is the Engineer level's (U07) */
-body:not([data-mode='engineer']) .tel-display { display: none; }
+/* the notation (U07) and the card presets (R2.3) are the Engineer level's */
+body:not([data-mode='engineer']) :is(.tel-display, .tel-cards) { display: none; }
 @media (max-width: 1400px) {
   body[data-setup='collapsed'] .workspace { grid-template-columns: minmax(0, 1fr) 300px; }
 }
@@ -1440,9 +1442,6 @@ body:not([data-mode='engineer']) .tel-display { display: none; }
   body[data-setup='collapsed'] .workspace { grid-template-columns: minmax(0, 1fr); }
   body[data-setup='collapsed'] :is(.flight-column, #telemetry) { grid-column: 1; }
   .setup-toggle span:last-child { display: none; }
-}
-@media (max-width: 1180px) and (min-width: 861px) {
-  #telemetry > .tel-display { order: 0; }
 }
 
 /* A04: a phone's flight bar, fixed to the bottom while the page scrolls past
@@ -1472,10 +1471,7 @@ body:not([data-mode='engineer']) .tel-display { display: none; }
 .tel-cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
 .tel-cards-grid .checkbox { margin: 4px 0; font-size: 12px; }
 #telemetry:not(.simple-charts) .card-off { display: none !important; }
-#telemetry.simple-charts .tel-cards, body:not([data-mode='engineer']) .tel-cards { display: none; }
-@media (max-width: 1180px) and (min-width: 861px) {
-  #telemetry > .tel-cards { order: 0; }
-}
+#telemetry.simple-charts .tel-cards { display: none; }
 
 /* R3.5: a setup field a flight's result points at (src/ui/panel.ts focusField) */
 label.field-pointed { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
