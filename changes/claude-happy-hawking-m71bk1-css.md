@@ -1,7 +1,0 @@
-## CHANGELOG
-
-- Launch (CO-4 step 7, M-LAUNCH-026): the R2 telemetry rules for the 861–1180 px layout sit in one media block instead of three, and the Engineer-only hide for the notation and the card presets is one rule. No page looks or behaves differently; the stylesheet is 132 bytes smaller (176,994 → 176,862 B).
-
-## PROGRESS
-
-| CO-4 s7 (M-LAUNCH-026, P3, wave K1; owner card q05 B) | In PR; not merged; not published | `src/style.css`: the plan's three `@media (max-width: 1180px) and (min-width: 861px)` blocks (`84da81e:1103, 1444, 1476`) become one; the two one-rule blocks' `order: 0` rules join the first as `#telemetry > .tel-display, #telemetry > .tel-cards`. The Engineer-only hide is one `:is(.tel-display, .tel-cards)` rule, and the shared rule keeps its simple-charts half. `src/ui/telemetry.ts`: the orphan U07 doc comment moves to `notationControl()` and names `style.css`. Identical output: every element's computed non-custom style, box, `order` and `display` are equal over 60 views (5 routes × 6 widths × EN/TH) in two runs per build, with the measured `--sb-h` pinned; the one screenshot pair that differed is pixel-identical when retaken. Built JS identical once file-name hashes are set aside; only the CSS and `sw.js`'s revisions differ. #101's fourth copy of the query (`.workspace` rows, line 1164) is left as the plan names three. Budget: CSS 176.9 / 178 kB, no ceiling raised. Waits for the owner (identical-output quality, not a bug fix). | [report](reports/CO-4-s7-m-launch-026.md) |

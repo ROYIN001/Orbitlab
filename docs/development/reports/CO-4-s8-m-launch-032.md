@@ -10,8 +10,8 @@ base_sha_verified_on: {sha: 84da81e, date: 2026-10-23, recheck: "src/ui/panel.ts
 branch: claude/happy-hawking-m71bk1 (this session's one branch, one PR at a time; the fragment's file name carries a suffix so two of its PRs cannot share one)
 wave_lane: K1 / I (P reviews 032)
 allowed_write_paths: [src/ui/panel.ts, tests/dispersed-flight-panel.test.ts, changes/claude-happy-hawking-m71bk1-m-launch-032.md, docs/development/reports/CO-4-s8-m-launch-032.md]
-merge: waits for the owner (Merge Desk), see "For the owner"
-status: In PR; not merged; not published
+merge: 'on the owner''s answer in chat on 2026-10-24 (Merge Desk), "merge ทั้งสอง, #172 ใช้ six-DOF (แนะนำ)" (six-DOF, option (ก)); in the PR this line read: waits for the owner (Merge Desk), see "For the owner"'
+status: 'Merged (PR #172, `aaf787e`, 2026-10-24T23:48:46Z) after PR CI 40000778171 passed on its head `b55475e`; Pages 40144243156 at `aaf787e` cancelled by #173''s merge; published by Pages 40144261297 at `3644749` (2026-10-25T00:16:55Z, every job passed). In the PR this line read "In PR; not merged; not published" (updated 2026-10-25)'
 ---
 
 # CO-4 step 8 — "Fly dispersed" takes the mission's own vehicle's flight model (M-LAUNCH-032)
@@ -24,7 +24,7 @@ status: In PR; not merged; not published
 > - แก้หนึ่งบรรทัด ให้ดูจากตัวจรวดของภารกิจ แบบเดียวกับช่องอื่น
 > - ผลที่ผู้ใช้เห็น: ไม่มีเส้นทางใดในหน้าเว็บที่ใช้อยู่ไปถึงสถานะนี้ได้ ทุกทางตั้งค่าแบบจำลองไว้ก่อนเสมอ จะถึงได้เฉพาะผ่าน `restoreMission()` ด้วยภารกิจที่ไม่มีค่าแบบจำลอง เที่ยวบินที่ผู้ใช้บินได้ทุกวันนี้จึงไม่เปลี่ยนเลย
 > - จรวดใน catalogue ทั้ง 25 ลำได้ค่าเดิมทุกไบต์ (มีเทสต์ยืนยัน)
-> - มีเรื่องให้ตัดสินใจหนึ่งข้อ: แผน S06 ขอให้ค่าตั้งต้นนี้เป็น six-DOF แต่ D03 ในแผนงานกำหนดให้จรวดที่ออกแบบเองบินแบบ point-mass เป็นค่าตั้งต้น ส่วน six-DOF ถือเป็นโหมดทดลอง (ดูหัวข้อ "For the owner") PR นี้จึงรอคุณกดอนุมัติ ไม่ merge เองตามการอนุมัติล่วงหน้า
+> - มีเรื่องให้ตัดสินใจหนึ่งข้อ: แผน S06 ขอให้ค่าตั้งต้นนี้เป็น six-DOF แต่ D03 ในแผนงานกำหนดให้จรวดที่ออกแบบเองบินแบบ point-mass เป็นค่าตั้งต้น ส่วน six-DOF ถือเป็นโหมดทดลอง (ดูหัวข้อ "For the owner") PR นี้จึงรอคุณกดอนุมัติ ไม่ merge เองตามการอนุมัติล่วงหน้า (ตอนเปิด PR; คุณเลือก six-DOF ทางเลือก (ก) ในแชตเมื่อ 2026-10-24 ดู `merge` และ `status` ด้านบน)
 > - ไม่ได้ทำ: ส่วนท้ายของชื่องาน "and optional shared setDynamicsPart helper" ซึ่งเป็นงานปรับโค้ดที่ไม่เปลี่ยนผล ต้องแยกเป็น PR ของตัวเอง
 
 ## What was wrong on `84da81e`
@@ -124,7 +124,7 @@ The table is read from the code. It was not measured, because no shipped path re
 - (ก) Six-DOF, as the plan asks and as this PR does: the dispersed flight is the set's own run, and the fallback matches the setup's other vehicle-default fallbacks.
 - (ข) Point-mass for custom vehicles, as D03 defaults: then run *n* flown alone is not run *n* of the set, which P08 promises. That would be a different change.
 
-Proposal: (ก). Because this is a realism choice that the plan leaves to the physics lane and the owner, this PR waits for the Merge Desk rather than the standing bug-fix approval.
+Proposal: (ก). Because this is a realism choice that the plan leaves to the physics lane and the owner, this PR waited for the Merge Desk rather than the standing bug-fix approval; the owner chose six-DOF, option (ก), in chat on 2026-10-24 (see `merge` and `status` above).
 
 ## Not done
 
