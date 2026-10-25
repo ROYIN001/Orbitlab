@@ -7,11 +7,11 @@ priority: P3
 change_kind: identical output (quality)
 owner_authorization: 'owner, 2026-10-09, K1 decision page 2, card q05 option B: "ทำ 032 และ 026 ใน K1 ส่วนที่เหลือไป K2" (DECISIONS "Decided 2026-10-09"); K1 on K0 verified (owner, 2026-10-05)'
 base_sha_verified_on: {sha: 84da81e, date: 2026-10-23, recheck: "the plan's three blocks 7662ead:src/style.css:1084, 1381, 1413 are 84da81e:1103, 1444, 1476; its hide rules 7662ead:1372 and :1412 are :1435 and :1475; the orphan comment 7662ead:src/ui/telemetry.ts:218-224 is still at :218-224"}
-branch: claude/happy-hawking-m71bk1-css (a second branch of this session, with the owner's leave in chat on 2026-10-23, because claude/happy-hawking-m71bk1 carries the open #172)
+branch: claude/happy-hawking-m71bk1-css (a second branch of this session, with the owner's leave in chat on 2026-10-23, because claude/happy-hawking-m71bk1 carried the then-open #172)
 wave_lane: K1 / I
 allowed_write_paths: [src/style.css, src/ui/telemetry.ts, changes/claude-happy-hawking-m71bk1-css.md, docs/development/reports/CO-4-s7-m-launch-026.md]
-merge: waits for the owner (Merge Desk); an identical-output quality item is not a bug fix, so the standing approval does not cover it
-status: In PR; not merged; not published
+merge: 'on the owner''s answer in chat on 2026-10-24 (Merge Desk), "merge ทั้งสอง, #172 ใช้ six-DOF (แนะนำ)"; in the PR this line read "waits for the owner (Merge Desk); an identical-output quality item is not a bug fix, so the standing approval does not cover it"'
+status: 'Merged (PR #173, `3644749`, 2026-10-24T23:49:03Z) after PR CI 40022426992 passed on its head `bb5781b`; published by Pages 40144261297 at `3644749` (2026-10-25T00:16:55Z, every job passed). In the PR this line read "In PR; not merged; not published" (updated 2026-10-25)'
 ---
 
 # CO-4 step 7 — one 861–1180 px block for the R2 telemetry rules (M-LAUNCH-026)
@@ -22,7 +22,7 @@ status: In PR; not merged; not published
 > - กฎซ่อนของระดับ Engineer สำหรับ notation และชุดการ์ดรวมเป็นกฎเดียว และย้าย comment ของ notation ใน `telemetry.ts` ไปไว้เหนือฟังก์ชันของมัน (เดิมค้างอยู่เหนือฟังก์ชันอื่น และอ้างไฟล์ผิด)
 > - หน้าเว็บไม่เปลี่ยน: ค่า style ที่คำนวณได้และกรอบของทุก element กับภาพของแต่ละหน้าเท่าเดิมที่ 860, 861, 1180, 1181, 1280 และ 390 px ทั้งภาษาอังกฤษและไทย (ผลตรวจอยู่ในหัวข้อ "Evidence")
 > - CSS เล็กลง 132 ไบต์ (176,994 → 176,862 B) JavaScript ทุกไฟล์เหมือนเดิมเมื่อไม่นับชื่อไฟล์ที่มี hash
-> - เป็นงานคุณภาพที่ผลเหมือนเดิม ไม่ใช่การแก้บั๊ก จึงรอคุณอนุมัติใน Merge Desk
+> - เป็นงานคุณภาพที่ผลเหมือนเดิม ไม่ใช่การแก้บั๊ก จึงรอคุณอนุมัติใน Merge Desk (ตอนเปิด PR; คุณตอบในแชตเมื่อ 2026-10-24 และ #173 merge แล้ว ดู `merge` และ `status` ด้านบน)
 
 ## What changed
 
@@ -112,7 +112,7 @@ The change map (`node scripts/verification/select-checks.mjs origin/main..HEAD`)
 
 ## For the owner
 
-This is an identical-output quality item (P3). The standing approval covers bug fixes and records only, so the PR waits for your approval on the Merge Desk. It is also the named offset of the q03 B CSS allowance (`budgets.json` `_notes`); with it merged the CSS is 176.9 kB against the 178 kB ceiling, and the GK1 lowering would set 177.
+This is an identical-output quality item (P3). The standing approval covers bug fixes and records only, so the PR waited for your approval on the Merge Desk (merged on your answer in chat on 2026-10-24; see `merge` and `status` above). It is also the named offset of the q03 B CSS allowance (`budgets.json` `_notes`); with it merged the CSS is 176.9 kB against the 178 kB ceiling, and the GK1 lowering would set 177.
 
 ## Appendix: the oracle scripts
 
