@@ -374,6 +374,26 @@ The five questions before the GK1 freeze were asked with a recommendation each, 
 
 At 14:26:46Z on 2026-10-26, before the Merge Desk answer for #175 and #176, the owner wrote in chat, verbatim "ทำต่อตามลำดับได้เลยครับ ตอนนี้ทำถึงไหนแล้วครับ" (go on in order; where are we now?).
 
+## Follow-through at GK1 (S08 §08.6)
+
+Checked at GK1 on the candidate `7263004` (Pages [40385448079](https://github.com/ROYIN001/Orbitlab/actions/runs/40385448079), published 2026-10-26T19:41:58Z). The full table, 119 rows from 2026-10-06 to 2026-10-26, is in [GK1-followthrough.md](development/reports/GK1-followthrough.md). Only the rows whose status is not "decided" are listed here, with a check that can be re-run and the question that goes to the owner (draft S08 §08.6 item 2: do the work as decided, or change the decision with a new row). Statuses are those of draft S08 §08.1 item 4 (the plan branch at `c2af8ae`). Old rows are not edited. `:n` is a line of this file as at `5092ac9` (records PR 8, #181), the same as at `7263004` up to `:363`; `PROGRESS.md:n` is at `7263004`. S1–S12 in the last column are owner questions at the GK1 sign-off, not plan sections; all twelve are listed, with their options and the recommendation, in [kpi-GK1.md](development/reports/kpi-GK1.md), "Questions for the owner". The rows before 2026-10-06 (D-1…D-28, the 2026-10-05 sheets and the seven historical cases of draft S08 §08.6 item 3) were checked only in part; the full check is proposed for lane I in K2, no later than the GK2 record (a variance for GK1 in PROGRESS). Nothing here is decided for the owner, and no GK1 sign-off, re-plan approval, adoption of K2's plan sections or K2 authorization is recorded.
+
+| Row | Status | Check | Owner question |
+|---|---|---|---|
+| :179 `q11` A (d), "respect the PR cap from now on" | deviated: 6 code PRs open together 2026-10-09T22:51:27–22:51:37Z, 23 min after the answer. Owner: I (the K1 integration session's lane); wave: GK1, closed when the owner acknowledges it under S8 (the six PRs are merged; nothing is left to undo) | `PROGRESS.md:231` | S8 |
+| :170 `q03` B, "every PR states its measured size" | deviated: #176 (FX-2 step 2a, data-safety work inside the allowance) took other chunks from 770.8 to 771.4 kB and its body states no size; whether #153, #155, #157 and #162 fall under the allowance is S9 (the allowance and its lowering by #179 are done). Owner: I (the K1 integration session's lane); wave: GK1, closed when the owner acknowledges it under S8 (#179 lowered every ceiling to the measured size; nothing is left to undo) | `PROGRESS.md:233` (#153, #155, #157, #162); #176's PR body ("bundle budget ok, no ceiling raised") | S8, S9 |
+| :169, :191 `q02` A, the S18 text | decided-not-executed | `docs/development/plan/S18-execution-model.md:207` (§18.6) and `:264` (§18.8) name `push` as a CI trigger; `.github/workflows/ci.yml` runs on `pull_request` (`:5`) and `workflow_dispatch` (`:15`), not on `push` | S10 |
+| :168 `q01` A; :355 its cancellation | decided; the check fails | `git ls-remote origin` (2026-10-26T22:43:31Z): `claude/t-fx8-s2` (`071db68`) and `claude/t-fx8-picture-moment-s1` (`0ac5ca4`) are still on origin | S12 |
+| :344 how to close K1 (ก); :346 and :375 "go on in order" (repeated at :363) | decided-not-executed: the order of work is done up to the candidate; the HU-6 session, the merge of the GK1 record and the owner's sign-off remain | the GK1 record; [kpi-GK1.md](development/reports/kpi-GK1.md), "Gates" | S1 |
+| :354 GK1 decision 3, M-PLAN-026 | decided-not-executed: delivered as [K1-retro.md](development/reports/K1-retro.md) in the GK1 record; its re-plan row is proposed, not approved | PROGRESS history table, row "Re-plan at GK1" | S1, S3 |
+| :356 GK1 decision 6, HU-6; :367 P3, the CSV download on real devices | decided-not-executed | the HU-6 device report (none yet) | none: waits for the owner's HU-6 session |
+| :178 `q10` A | deferred: after GK1 (P4 (ก), :368) | branch `claude/pd-r41-s1` (`e777aae`) not on main, no PR | none |
+| :239, :250, :251, :253, :305–:309, :311, :318, :322–:326 the re-baseline (16 rows) | deferred (owner, :328) | `docs/development/plan/data/packages.tsv:58` R4.2-RB; M-PHYSICS-081…085 not merged | asked again when R4.2-RB resumes |
+
+Not provable (decided, with no check that can be re-run; draft S08 §08.6 item 1): :146 (the telemetry strip as built), :275 (the sky's look), :363's second sentence (more agents working in parallel).
+
+New deviated rows in K1: 2, `q11` A (d) and `q03` B's size statements (draft S08's target is 0). The Q check of this section and its table (`S05:94`) was done on 2026-10-27 by a checker that did not write them: Q check: confirmed 676 of 703 claims (2026-10-27), 3 corrected after the check and none changing a status, 27 not checkable from primary sources ([kpi-GK1.md](development/reports/kpi-GK1.md), "Gates"). KPI-35: 61 decisions asked in K1, 0 later than their needed-by wave ([kpi-GK1.md](development/reports/kpi-GK1.md)).
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
