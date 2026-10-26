@@ -24,6 +24,23 @@ export const BUILTIN_QUESTIONS: readonly Question[] = [...BASICS, ...ORBITS, ...
   .map((raw, i) => readQuestion(raw, `bank[${i}]`, BANK_ISSUES, DATASET_IDS))
   .filter((q): q is Question => q !== null);
 
+/**
+ * The bank's grading revision (M-LEARNING-027; `revision.ts` reads it). It goes up only when what decides
+ * a stored test's score changes for a question: its type, area, level or kind; for choice and multi the
+ * number of options and which are right; for order the number of items; for numeric the answer, its unit
+ * and tolerance (and a constant behind it). Wording, explanations, figures, the skill named and the
+ * lessons a question points to stay current, as the advice follows the live lessons; tests/
+ * assessment-revision.test.ts pins exactly these fields per revision.
+ */
+export const BANK_REVISION = 1;
+
+/**
+ * Each grading change, oldest first: the last revision the old grading belongs to, and every item it
+ * changed as that revision had it, whole and in the bank's own format (null: not in the bank then).
+ * Empty: the grading has not changed since revision 1, the bank the placement test shipped with (#22).
+ */
+export const BANK_HISTORY: ReadonlyArray<{ upTo: number; items: Readonly<Record<string, unknown>> }> = [];
+
 /** The built-in questions and a teacher's, without duplicates. */
 export function questionBank(custom: readonly Question[] = []): Question[] {
   const ids = new Set(BUILTIN_QUESTIONS.map((q) => q.id));

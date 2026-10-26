@@ -13,6 +13,7 @@ import { TEACHER_TOOLS } from '../held';
 import { vehicleById } from '../../data/vehicles';
 import { VEHICLE_PHOTOS, type PhotoCredit } from '../../lessons/assessment/photos';
 import { DATASET_IDS, FLIGHT_DATA, questionBank } from '../../lessons/assessment/bank';
+import { bankFor, readableAttempt } from '../../lessons/assessment/revision';
 import { DOMAIN_ORDER, TEST_LENGTH, drawTest, newSeed, nextKind } from '../../lessons/assessment/draw';
 import { CHART_COLOURS, chartSvg, radarSvg } from '../../lessons/assessment/figures';
 import { SERIES_UNITS } from '../../lessons/assessment/flights';
@@ -46,13 +47,20 @@ const base = import.meta.env.BASE_URL;
 
 export const datasetIds = (): ReadonlySet<string> => DATASET_IDS;
 
-const bankFor = (p: ProgressData): Question[] => questionBank(p.customQuestions);
+/** The bank a test is shown and graded with: its own revision's (M-LEARNING-027). */
+const bankOf = (p: ProgressData, a: AssessmentAttempt): Question[] => bankFor(a, p.customQuestions);
 
-/** The latest finished test, scored. */
+/** The finished tests this build can grade: one from a newer build is left out (and left as it is). */
+const finished = (p: ProgressData): AssessmentAttempt[] => p.assessments.filter((a) => a.finishedAt && readableAttempt(a));
+
+/** The test to offer next, pre or post: the tests this build can read decide, as they decide the comparison. */
+export const nextTestKind = (p: ProgressData): AssessmentAttempt['kind'] => nextKind(p.assessments.filter(readableAttempt));
+
+/** The latest finished test, scored by its own revision. */
 export function latestResult(progress: ProgressData, lessons: readonly CatalogLesson[]): { kind: string; finishedAt?: string; result: AssessmentResult } | null {
-  const done = progress.assessments.filter((a) => a.finishedAt);
+  const done = finished(progress);
   const last = done[done.length - 1];
-  return last ? { kind: last.kind, finishedAt: last.finishedAt, result: scoreAttempt(last, bankFor(progress), lessons) } : null;
+  return last ? { kind: last.kind, finishedAt: last.finishedAt, result: scoreAttempt(last, bankOf(progress, last), lessons) } : null;
 }
 
 /** A number as a question prints it: no more digits than it has. */
@@ -130,14 +138,17 @@ class AssessmentView {
     this.restoreFocus = false;
   }
 
-  private get bank(): Question[] { return bankFor(this.host.progress()); }
-  private question(id: string): Question | undefined { return this.bank.find((q) => q.id === id); }
+  /** The bank new tests are drawn from. */
+  private get bank(): Question[] { return questionBank(this.host.progress().customQuestions); }
+  /** A question of `a` as its own revision has it. */
+  private question(a: AssessmentAttempt, id: string): Question | undefined { return bankOf(this.host.progress(), a).find((q) => q.id === id); }
 
   start(): void {
-    const all = this.host.progress().assessments;
-    const open = all.find((a) => !a.finishedAt);
+    const progress = this.host.progress();
+    // a test from a newer build is neither resumed nor graded here
+    const open = progress.assessments.find((a) => !a.finishedAt && readableAttempt(a));
     if (open) { this.attempt = open; this.index = open.answers.length; this.renderQuestion(); return; }
-    if (all.some((a) => a.finishedAt)) { this.renderResult(); return; }
+    if (finished(progress).length) { this.renderResult(); return; }
     this.renderIntro();
   }
 
@@ -166,7 +177,7 @@ class AssessmentView {
 
   private renderIntro(): void {
     this.redraw = () => this.renderIntro();
-    const kind = nextKind(this.host.progress().assessments);
+    const kind = nextTestKind(this.host.progress());
     const eyebrow = el('span', 'lesson-eyebrow', t(`assess.kind.${kind}`));
     const intro = el('p', 'lead', t(kind === 'pre' ? 'assess.intro' : 'assess.introPost', { n: TEST_LENGTH }));
     const areas = el('ul', 'assess-areas');
@@ -237,7 +248,7 @@ class AssessmentView {
     const a = this.attempt!;
     if (this.index >= a.questions.length) { this.finish(); return; }
     const p = a.questions[this.index];
-    const q = this.question(p.id);
+    const q = this.question(a, p.id);
     if (!q) { a.answers.push({ id: p.id, value: null, skipped: true }); this.index++; this.renderQuestion(); return; }
     // The answer so far lives in the draft, not in the page: drawn again in
     // another language, the question shows it as it was (audit 2026-09-27 A7).
@@ -410,11 +421,11 @@ class AssessmentView {
     this.redraw = () => this.renderResult();
     const progress = this.host.progress();
     const lessons = this.host.lessons();
-    const done = progress.assessments.filter((x) => x.finishedAt);
+    const done = finished(progress);
     const last = done[done.length - 1];
-    const r = scoreAttempt(last, this.bank, lessons);
+    const r = scoreAttempt(last, bankOf(progress, last), lessons);
     const pre = done.find((x) => x.kind === 'pre');
-    const before = last.kind === 'post' && pre ? scoreAttempt(pre, this.bank, lessons) : null;
+    const before = last.kind === 'post' && pre ? scoreAttempt(pre, bankOf(progress, pre), lessons) : null;
     const order = DOMAIN_ORDER;
     const pct = (res: AssessmentResult) => order.map((dmn) => res.domains.find((x) => x.domain === dmn)!.percent);
     const radar = el('div', 'assess-radar');
@@ -484,7 +495,7 @@ class AssessmentView {
     const buttons: HTMLButtonElement[] = [
       this.button(t('assess.review'), () => this.renderReview(last)),
       ...(TEACHER_TOOLS ? [this.button(t('lesson.catalog.export'), () => this.host.exportResults())] : []),
-      this.button(t(nextKind(progress.assessments) === 'post' ? 'assess.startPost' : 'assess.start'), () => this.begin(nextKind(progress.assessments))),
+      this.button(t(nextTestKind(progress) === 'post' ? 'assess.startPost' : 'assess.start'), () => this.begin(nextTestKind(progress))),
     ];
     if (start) {
       const go = this.button(start.comingSoon ? t('assess.goSoon', { n: lessonNumber(start) }) : t('assess.goTo', { n: lessonNumber(start), title: localText(start.title) }),
@@ -507,9 +518,9 @@ class AssessmentView {
     this.redraw = () => this.renderReview(a);
     const list = el('ol', 'assess-review');
     const answers = new Map(a.answers.map((x) => [x.id, x]));
-    const r = scoreAttempt(a, this.bank, this.host.lessons());
+    const r = scoreAttempt(a, bankOf(this.host.progress(), a), this.host.lessons());
     for (const p of a.questions) {
-      const q = this.question(p.id);
+      const q = this.question(a, p.id);
       if (!q) continue;
       const res = r.questions.find((x) => x.id === p.id);
       const ans = answers.get(p.id);
