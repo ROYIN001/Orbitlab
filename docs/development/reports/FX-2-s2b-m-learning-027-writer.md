@@ -11,7 +11,7 @@
 > - journey `learner-profiles` เริ่มแบบทดสอบด้วยปุ่มในหน้าเว็บ แล้วตรวจว่าแบบทดสอบที่เก็บมี revision ตรงกับ `BANK_REVISION` ถ้า `begin()` กลับไปเป็นแบบเดิม journey นี้ล้ม
 > - ทำตามคำตอบของคุณ (2026-10-26) ทั้งสี่ข้อเดิม ไม่มีคำถามใหม่
 > - 2a เผยแพร่แล้ว (Pages 40340692641 ที่ c5da5bb, 2026-10-26 15:10Z) branch นี้ rebase ลง main แล้ว
-> - รอคุณอนุมัติใน Merge Desk: เพราะ `BANK_REVISION` ยังเป็น 1 ไม่มีผลสอบที่เก็บไว้หรือที่เริ่มใหม่ได้คะแนนผิดวันนี้ จึงไม่เข้าเงื่อนไข "ผิด → ถูก" ของการอนุมัติล่วงหน้า
+> - รอคุณอนุมัติใน Merge Desk: เพราะ `BANK_REVISION` ยังเป็น 1 ไม่มีผลสอบที่เก็บไว้หรือที่เริ่มใหม่ได้คะแนนผิดวันนี้ จึงไม่เข้าเงื่อนไข "ผิด → ถูก" ของการอนุมัติล่วงหน้า (ตอนเปิด PR; คุณตอบในแชตเมื่อ 2026-10-26 และ #177 merge แล้ว เผยแพร่แล้วเมื่อ 2026-10-26 ด้วย Pages 40357991698 ดู `merge` และ `status` ด้านล่าง)
 
 ```yaml
 envelope: v2
@@ -24,7 +24,8 @@ lane: L-UI (+ L-C: revision.ts, types.ts)
 items: [M-LEARNING-027]
 priority: {M-LEARNING-027: P2}
 change_kind: bug-fix (S10 §10.5)
-merge: waits for the owner (Merge Desk); with BANK_REVISION = 1 no stored or new result is graded wrong today, so the standing approval's "wrong → right" does not apply. 2a was published by Pages 40340692641 on c5da5bb (deploy step finished 2026-10-26T15:10:22Z)
+merge: 'on the owner''s answer in chat on 2026-10-26 (Merge Desk), "merge #177 แล้วทำต่อตามลำดับได้เลยครับ เปิด agent ให้ทำงานพร้อมกันเพิ่มหน่อยครับ" (DECISIONS); in the PR this line read "waits for the owner (Merge Desk); with BANK_REVISION = 1 no stored or new result is graded wrong today, so the standing approval''s "wrong → right" does not apply. 2a was published by Pages 40340692641 on c5da5bb (deploy step finished 2026-10-26T15:10:22Z)"'
+status: 'Merged (PR #177, `a05ae70`, 2026-10-26T16:19:19Z) after PR CI 40355410874 passed on its head `56ab44f`; published by Pages 40357991698 at `a05ae70` (2026-10-26T16:55:51Z, every job passed; `learner-profiles` with its revision check passed in browser shard 2). In the PR this block had no status line (added 2026-10-26)'
 or_ids: [OR-2]
 oracle: []
 execution_authorized: true

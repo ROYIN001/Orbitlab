@@ -13,7 +13,7 @@
 >   - #41 เขียนโจทย์ 6 ข้อและตัวลวง 2 ข้อใหม่โดยคำตอบเดิม บันทึกไว้ในรายงานนี้ตามที่คุณตอบ หน้าทบทวนแสดงถ้อยคำปัจจุบัน
 > - คำตอบของคุณ (2026-10-26) ทั้งสี่ข้อเป็นตัวเลือกที่แนะนำ PR นี้ทำตามนั้น
 > - เทสต์ที่ล้มก่อนแก้: แก้คำตอบของข้อ b-karman ในคลัง แล้วแบบทดสอบเก่าที่ตอบถูกกลายเป็นผิด (ก่อนแก้) / ยังถูก (หลังแก้)
-> - ขั้นต่อไป 2b (ตัวเขียน) เริ่มบันทึก revision ในแบบทดสอบใหม่ ทำได้หลัง PR นี้ merge และเผยแพร่แล้ว (PR นี้เผยแพร่แล้วเมื่อ 2026-10-26 ด้วย Pages 40340692641 ดู `status` ด้านล่าง)
+> - ขั้นต่อไป 2b (ตัวเขียน) เริ่มบันทึก revision ในแบบทดสอบใหม่ ทำได้หลัง PR นี้ merge และเผยแพร่แล้ว (PR นี้เผยแพร่แล้วเมื่อ 2026-10-26 ด้วย Pages 40340692641 ดู `status` ด้านล่าง; 2b คือ #177 merge แล้วและเผยแพร่แล้วเมื่อ 2026-10-26 ด้วย Pages 40357991698)
 > - รอคุณอนุมัติใน Merge Desk ตามลำดับงานในหน้าความพร้อม GK1 (ข้อ 3): ตอนนี้ไม่มีผลสอบที่เก็บไว้ผิดอยู่ จึงไม่เข้าเงื่อนไข "ผิด → ถูก" ของการอนุมัติล่วงหน้า (ตอนเปิด PR; คุณตอบในแชตเมื่อ 2026-10-26 และ #176 merge แล้ว ดู `merge` และ `status` ด้านล่าง)
 
 ```yaml
@@ -139,7 +139,7 @@ Source: +100 −17 lines in four files (`src/lessons/assessment/bank.ts`, `revis
 
 ## Not in this step
 
-- **2b, the writer.** A new test records `revision: BANK_REVISION`. It waits until this PR is merged and published by Pages, so no build that writes revisions exists before every build reads them. (This PR was merged as `c5da5bb` and published by Pages 40340692641 on 2026-10-26T15:10:22Z; 2b is not on main.)
+- **2b, the writer.** A new test records `revision: BANK_REVISION`. It waits until this PR is merged and published by Pages, so no build that writes revisions exists before every build reads them. (This PR was merged as `c5da5bb` and published by Pages 40340692641 on 2026-10-26T15:10:22Z; 2b was not on main then. #177 merged 2b as `a05ae70` on 2026-10-26T16:19:19Z, and Pages 40357991698 published it on 2026-10-26T16:55:51Z.)
 - **A teacher's questions** have no revision. Their only writer is held with the teaching tools (`TEACHER_TOOLS = false`).
 - **The review's charts and vehicles** come from live data (`FLIGHT_DATA`, the vehicle catalogue). A test's score does not depend on them.
 - **The results file's `summary`** names no test or revision; 2b can add the revision there.
