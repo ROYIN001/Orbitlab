@@ -13,7 +13,7 @@ import { TEACHER_TOOLS } from '../held';
 import { vehicleById } from '../../data/vehicles';
 import { VEHICLE_PHOTOS, type PhotoCredit } from '../../lessons/assessment/photos';
 import { DATASET_IDS, FLIGHT_DATA, questionBank } from '../../lessons/assessment/bank';
-import { bankFor, readableAttempt } from '../../lessons/assessment/revision';
+import { bankFor, newAttempt, readableAttempt } from '../../lessons/assessment/revision';
 import { DOMAIN_ORDER, TEST_LENGTH, drawTest, newSeed, nextKind } from '../../lessons/assessment/draw';
 import { CHART_COLOURS, chartSvg, radarSvg } from '../../lessons/assessment/figures';
 import { SERIES_UNITS } from '../../lessons/assessment/flights';
@@ -190,7 +190,7 @@ class AssessmentView {
     const progress = this.host.progress();
     const asked = new Set(progress.assessments.flatMap((a) => a.questions.map((q) => q.id)));
     const seed = newSeed();
-    this.attempt = { kind, seed, startedAt: new Date().toISOString(), questions: drawTest(this.bank, seed, kind === 'post' ? asked : new Set()), answers: [] };
+    this.attempt = newAttempt(kind, seed, drawTest(this.bank, seed, kind === 'post' ? asked : new Set()), new Date().toISOString());
     progress.assessments.push(this.attempt);
     this.host.save();
     this.index = 0;

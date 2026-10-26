@@ -10,7 +10,7 @@
  */
 import { readQuestion, type FileIssue } from '../lesson-file';
 import { BANK_HISTORY, BANK_REVISION, BUILTIN_QUESTIONS, DATASET_IDS } from './bank';
-import type { AssessmentAttempt, Question } from './types';
+import type { AssessmentAttempt, PreparedQuestion, Question } from './types';
 
 /** The revision a test was drawn from, or null when it is not one this build can read. */
 export function attemptRevision(attempt: Pick<AssessmentAttempt, 'revision'>): number | null {
@@ -47,6 +47,10 @@ export function bankAt(revision: number, custom: readonly Question[] = []): Ques
   const builtin = [...byId.values()];
   return [...builtin, ...custom.filter((q) => !byId.has(q.id))];
 }
+
+/** A test begun now: drawn from today's bank, so it records this revision (step 2b). */
+export const newAttempt = (kind: AssessmentAttempt['kind'], seed: number, questions: PreparedQuestion[], startedAt: string): AssessmentAttempt =>
+  ({ revision: BANK_REVISION, kind, seed, startedAt, questions, answers: [] });
 
 /** The bank a readable test is shown and graded with. */
 export const bankFor = (attempt: Pick<AssessmentAttempt, 'revision'>, custom: readonly Question[] = []): Question[] =>

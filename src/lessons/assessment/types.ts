@@ -128,7 +128,7 @@ export interface Answer {
 export type AssessmentKind = 'pre' | 'post';
 
 export interface AssessmentAttempt {
-  /** the bank revision the test was drawn from (`revision.ts`); absent: revision 1 */
+  /** the bank revision the test was drawn from (`revision.ts`); absent: revision 1, a test begun before tests recorded it */
   revision?: number;
   kind: AssessmentKind;
   seed: number;

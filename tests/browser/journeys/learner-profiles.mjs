@@ -6,6 +6,8 @@ import { reloadDocument } from '../harness.mjs';
 export const smoke = true;
 export const timeoutMs = 480_000;
 const fixture = JSON.parse(readFileSync(new URL('../../fixtures/lessons/v1.orbitlab-lesson.json', import.meta.url), 'utf8'));
+// The placement bank's grading revision, read from the source (M-LEARNING-027).
+const BANK_REVISION = Number(/export const BANK_REVISION = (\d+);/.exec(readFileSync(new URL('../../../src/lessons/assessment/bank.ts', import.meta.url), 'utf8'))[1]);
 const MEDIA_MAGIC = Buffer.from('ORBITLAB-MEDIA-1\n');
 function mediaFixture(profileId, name) {
   // A valid 0.1 s silent PCM WAV also stays safe if the watch player loads it.
@@ -84,6 +86,8 @@ export default async function learnerProfiles(t) {
   await page.locator('.assess-question').waitFor();
   const before = await activeRecord(page);
   assert.equal(JSON.parse(before.values['orbitlab.lessons']).assessments.length, 1);
+  // A test begun with the page's own button records the bank revision it was drawn from (M-LEARNING-027 step 2b).
+  assert.equal(JSON.parse(before.values['orbitlab.lessons']).assessments[0].revision, BANK_REVISION);
 
   await page.locator('#btn-profile').click();
   await createLearner(app, 'Learner B');
