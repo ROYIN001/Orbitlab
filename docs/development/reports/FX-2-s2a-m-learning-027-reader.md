@@ -13,8 +13,8 @@
 >   - #41 เขียนโจทย์ 6 ข้อและตัวลวง 2 ข้อใหม่โดยคำตอบเดิม บันทึกไว้ในรายงานนี้ตามที่คุณตอบ หน้าทบทวนแสดงถ้อยคำปัจจุบัน
 > - คำตอบของคุณ (2026-10-26) ทั้งสี่ข้อเป็นตัวเลือกที่แนะนำ PR นี้ทำตามนั้น
 > - เทสต์ที่ล้มก่อนแก้: แก้คำตอบของข้อ b-karman ในคลัง แล้วแบบทดสอบเก่าที่ตอบถูกกลายเป็นผิด (ก่อนแก้) / ยังถูก (หลังแก้)
-> - ขั้นต่อไป 2b (ตัวเขียน) เริ่มบันทึก revision ในแบบทดสอบใหม่ ทำได้หลัง PR นี้ merge และเผยแพร่แล้ว
-> - รอคุณอนุมัติใน Merge Desk ตามลำดับงานในหน้าความพร้อม GK1 (ข้อ 3): ตอนนี้ไม่มีผลสอบที่เก็บไว้ผิดอยู่ จึงไม่เข้าเงื่อนไข "ผิด → ถูก" ของการอนุมัติล่วงหน้า
+> - ขั้นต่อไป 2b (ตัวเขียน) เริ่มบันทึก revision ในแบบทดสอบใหม่ ทำได้หลัง PR นี้ merge และเผยแพร่แล้ว (PR นี้เผยแพร่แล้วเมื่อ 2026-10-26 ด้วย Pages 40340692641 ดู `status` ด้านล่าง)
+> - รอคุณอนุมัติใน Merge Desk ตามลำดับงานในหน้าความพร้อม GK1 (ข้อ 3): ตอนนี้ไม่มีผลสอบที่เก็บไว้ผิดอยู่ จึงไม่เข้าเงื่อนไข "ผิด → ถูก" ของการอนุมัติล่วงหน้า (ตอนเปิด PR; คุณตอบในแชตเมื่อ 2026-10-26 และ #176 merge แล้ว ดู `merge` และ `status` ด้านล่าง)
 
 ```yaml
 envelope: v2
@@ -27,7 +27,8 @@ lane: L-UI (+ L-C for the bank: bank.ts, revision.ts, types.ts)
 items: [M-LEARNING-027]
 priority: {M-LEARNING-027: P2}
 change_kind: bug-fix (S10 §10.5)
-merge: waits for the owner (Merge Desk), as the GK1 readiness doc's work order (item 3) says; no stored result is wrong today, so the standing approval's "wrong → right" does not apply
+merge: 'on the owner''s answer in chat on 2026-10-26 (Merge Desk), "merge #176 (แนะนำ)"; in the PR this line read "waits for the owner (Merge Desk), as the GK1 readiness doc''s work order (item 3) says; no stored result is wrong today, so the standing approval''s "wrong → right" does not apply"'
+status: 'Merged (PR #176, `c5da5bb`, 2026-10-26T14:33:27Z) after PR CI 40274265429 passed on its head `30b6995`; published by Pages 40340692641 at `c5da5bb` (2026-10-26T15:10:22Z, every job passed). In the PR this block had no status line (added 2026-10-26)'
 or_ids: [OR-2]
 oracle: []
 execution_authorized: true
@@ -138,7 +139,7 @@ Source: +100 −17 lines in four files (`src/lessons/assessment/bank.ts`, `revis
 
 ## Not in this step
 
-- **2b, the writer.** A new test records `revision: BANK_REVISION`. It waits until this PR is merged and published by Pages, so no build that writes revisions exists before every build reads them.
+- **2b, the writer.** A new test records `revision: BANK_REVISION`. It waits until this PR is merged and published by Pages, so no build that writes revisions exists before every build reads them. (This PR was merged as `c5da5bb` and published by Pages 40340692641 on 2026-10-26T15:10:22Z; 2b is not on main.)
 - **A teacher's questions** have no revision. Their only writer is held with the teaching tools (`TEACHER_TOOLS = false`).
 - **The review's charts and vehicles** come from live data (`FLIGHT_DATA`, the vehicle catalogue). A test's score does not depend on them.
 - **The results file's `summary`** names no test or revision; 2b can add the revision there.
