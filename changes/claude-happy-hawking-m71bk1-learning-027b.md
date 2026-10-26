@@ -1,7 +1,0 @@
-## CHANGELOG
-
-- Lessons (FX-2, M-LEARNING-027, step 2b): a placement test records the bank revision it was drawn from. A test begun now stores `revision: BANK_REVISION` (1 today), so a later change to an answer key leaves it graded as it was taken. Before, a new test stored no revision and would be read as revision 1 after the bank moved on. Tests already stored are not changed. No format version changes; builds before step 2a keep the field and grade such a test as before.
-
-## PROGRESS
-
-| FX-2 step 2b (M-LEARNING-027, wave K1) | In PR; not merged; not published | `newAttempt` (`revision.ts`) stamps `revision: BANK_REVISION` on a new test, and the view's `begin()`, the only place a test is created, uses it. Stored tests are not touched. A test begun on this build carries revision 1: 2a builds read it, and builds before 2a keep it (their `loadProgress`, `validProgress`, archives and results file are unchanged since `408ad16`). Owner's answers of 2026-10-26 (the same four as 2a); no new question. Regression `assessment-revision-writer` (bank at revision 2, a new test answered with its key) failed 1/1 before the fix; `learner-profiles` now checks that a test begun with the page's button stores `BANK_REVISION` (fails with `begin()` put back). Unit 333 files / 10 521 tests; journeys `mobile-smoke`, `teaching-held`, `workspace-navigation`, `learner-profiles` (six held with the teaching tools). On `c5da5bb` after 2a's publication (Pages 40340692641); waits for the owner (Merge Desk). | [report](reports/FX-2-s2b-m-learning-027-writer.md) |
