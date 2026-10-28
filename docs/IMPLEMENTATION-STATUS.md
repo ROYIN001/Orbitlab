@@ -114,6 +114,18 @@ are listed there as drafts awaiting the owner's review.
   before the core has gone, the frost on the oxygen tanks shedding
   in the first half minute, and on a crewed launch the escape tower and the fairing's four grid
   fins, the tower pulling away at T+113.5 s. Drawing only; the physics is unchanged.
+- **The Soyuz Anatomy models** (owner, 2026-10-28; `public/anatomy/`, `src/data/anatomy.ts`): the
+  owner's own 3-D models of Soyuz-2.1a with the Soyuz MS or the Progress MS-26, and of Soyuz-2.1b
+  with Fregat under the ST fairing, kept byte for byte. Build's Watch level opens each whole in a
+  dialog (`src/ui/build/anatomy-dialog.ts`). The flight draws those two catalogue rockets from the
+  models' outside (`src/render/anatomy.ts`, meshes made by `scripts/anatomy-meshes.mjs` with each
+  page's own code): strap-ons, Blok A and its truss, Blok I (the 2.1b's skirt shed with the
+  flight's), Fregat, the fairing halves, the escape tower, the Soyuz MS (the flight's own wings
+  unfolding) and the Progress MS (its own hinges), the spent parts as debris too. Blok A and Blok I
+  are stretched along their axes by at most 4 % into the physics' stage heights; above Blok I the
+  model keeps its own size and stacking (the ST fairing round Fregat). Pages and meshes are fetched
+  on demand, never precached; until the meshes arrive, or offline, the R-7 is drawn as above.
+  Drawing only; the physics is unchanged.
 - **Soyuz-2 on its real flight** ([VALIDATION.md §3](VALIDATION.md), 2026-10-01): published
   engines and stage loads; the strap-ons' step to 81 % and their commanded cut-off, the core's
   commanded cut-off, a pad start; a crewed flight's escape tower carried to T+113.5 s and Blok I's

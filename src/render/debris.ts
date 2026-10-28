@@ -25,6 +25,7 @@ import { clamp01, hash11, smoothstep } from './noise';
 import { disposeObject } from './dispose';
 import { R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7CoreProfile, r7CoreTop, r7TrussGeometry } from './soyuz';
 import { VostokBody, isVostokBody } from './vostok-debris';
+import { anatomyGroup, anatomyMaterials, type AnatomyFit, type AnatomyModel, type AnatomyPartName, type Placement } from './anatomy';
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
@@ -36,8 +37,10 @@ interface DebrisItem {
   hinge: THREE.Group | null;
   side: 1 | -1;
   plume: Plume | null;
-  /** the body's material, for the sunlit flash just after separation (none for Vostok's bodies) */
+  /** the body's material, for the sunlit flash just after separation (none for Vostok's bodies, nor for a part of the Soyuz Anatomy model) */
   bodyMat: THREE.MeshStandardMaterial | null;
+  /** a part of the Soyuz Anatomy model: its materials, for the same flash */
+  modelMats: THREE.MeshStandardMaterial[];
   /** C01: one of Vostok-1's bodies, drawn by render/vostok-debris.ts */
   vostok: VostokBody | null;
   createdAt: number;
@@ -118,6 +121,72 @@ export class DebrisView {
    * enough to get the program built during `SceneManager.prewarm`.
    */
   private readonly warmup: THREE.Mesh;
+
+  /** The Soyuz Anatomy model the flight is drawn with (render/anatomy.ts), so its spent parts keep that shape; null on any other flight. */
+  private anatomy: { model: AnatomyModel; fit: AnatomyFit; fregatDiameter: number | null } | null = null;
+
+  /** @param fregatDiameter the Fregat stage's, to tell it among the spent stages (none on 2.1a) */
+  setAnatomy(anatomy: { model: AnatomyModel; fit: AnatomyFit; fregatDiameter: number | null } | null): void {
+    this.anatomy = anatomy;
+  }
+
+  /**
+   * A spent part drawn from the Anatomy model, placed as the flight placed it
+   * in its stage (`AnatomyFit`), its base at `base`: a strap-on, Blok A, Blok
+   * I, Fregat or a fairing half (the half `side` picks, hinged at its own top
+   * and swinging out the way it faces). Null for anything else, which is drawn
+   * as before.
+   */
+  private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[] } | null {
+    const { model, fit, fregatDiameter } = this.anatomy!;
+    const v = d.visual;
+    const spentStage = v.kind === 'stage' || v.kind === 'upperStage';
+    const which: [AnatomyPartName, Placement] | null = v.kind === 'booster' && v.conicalTop ? ['booster', fit.booster]
+      : v.kind === 'fairing' ? [side > 0 ? 'fairing-right' : 'fairing-left', fit.fairing]
+        : spentStage && v.profile === 'r7Core' ? ['core', fit.core]
+          : spentStage && v.profile === 'r7Upper' ? ['stage3', fit.stage3]
+            : spentStage && fit.fregat && fregatDiameter !== null && Math.abs(v.diameter - fregatDiameter) < 1e-6 ? ['fregat', fit.fregat] : null;
+    const part = which ? model.parts[which[0]] : undefined;
+    if (!which || !part) return null;
+    const placement = which[1];
+    const all = anatomyMaterials(model);
+    const used = new Set(part.meshes.map((x) => x.material));
+    const mats: THREE.MeshStandardMaterial[] = [];
+    all.forEach((mat, i) => {
+      if (!used.has(i)) { mat.dispose(); return; }
+      mat.emissive.set(0xdce6ff);
+      mat.emissiveIntensity = 0;
+      mats.push(mat);
+    });
+    const body = anatomyGroup(part, all, placement);
+    if (v.kind === 'fairing') {
+      // hinged at its top, its bottom swinging out toward the side the half faces
+      const top = placement.dy + (part.max.y - placement.y0) * placement.sy;
+      const out = new THREE.Vector2((part.min.x + part.max.x) / 2, (part.min.z + part.max.z) / 2).normalize();
+      const turn = new THREE.Group();
+      turn.position.y = base;
+      turn.rotation.y = Math.atan2(-side * out.y, side * out.x);
+      const hinge = new THREE.Group();
+      hinge.position.y = top;
+      const back = new THREE.Group();
+      back.rotation.y = -turn.rotation.y;
+      back.position.y = -top;
+      back.add(body);
+      hinge.add(back);
+      turn.add(hinge);
+      g.add(turn);
+      return { hinge, plume: null, mats };
+    }
+    const holder = new THREE.Group();
+    holder.position.y = base;
+    holder.add(body);
+    g.add(holder);
+    const r = v.diameter / 2;
+    const plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });
+    plume.group.position.y = base - r * 1.2;
+    g.add(plume.group);
+    return { hinge: null, plume, mats };
+  }
 
   constructor(scene: SceneManager) {
     this.scene = scene;
@@ -203,7 +272,7 @@ export class DebrisView {
     if (isVostokBody(d)) {
       const vostok = new VostokBody(d);
       return {
-        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, vostok, createdAt: d.createdAt,
+        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, modelMats: [], vostok, createdAt: d.createdAt,
         tumbleAxis: new THREE.Vector3(0, 1, 0), tumbleRate: 0, fins: [], legs: [], legAngle: 0, footDrop: 0, finT: -1, legT: -1, shift: null,
       };
     }
@@ -224,7 +293,11 @@ export class DebrisView {
     let fins: THREE.Group[] = [];
     let legs: THREE.Group[] = [];
     let legAngle = 0, footDrop = 0;
-    if (d.visual.kind === 'fairing') {
+    const anatomy = this.anatomy ? this.anatomyBody(d, g, base, side) : null;
+    if (anatomy) {
+      ({ hinge, plume } = anatomy);
+      m.dispose();
+    } else if (d.visual.kind === 'fairing') {
       // one half shell: hinge sits at the nose so it can swing open
       hinge = new THREE.Group();
       hinge.position.y = base + L;
@@ -297,7 +370,7 @@ export class DebrisView {
     }
     const ax = this.randAxis(d.id);
     return {
-      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: m, vostok: null, createdAt: d.createdAt,
+      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: anatomy ? null : m, modelMats: anatomy ? anatomy.mats : [], vostok: null, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
       fins, legs, legAngle, footDrop, finT: -1, legT: -1, shift,
@@ -386,6 +459,7 @@ export class DebrisView {
       const escapePart = d.visual.kind === 'escapeHead' || d.visual.kind === 'modules';
       const glow = escapePart ? 0 : age < 1.2 ? smoothstep(0, 0.4, age) : Math.max(0, 1 - smoothstep(1.2, 9, age));
       if (item.bodyMat) item.bodyMat.emissiveIntensity = glow * 1.3;
+      for (const mat of item.modelMats) mat.emissiveIntensity = glow * 1.3;
     }
     for (const [id, item] of this.items) {
       if (!seen.has(id)) {

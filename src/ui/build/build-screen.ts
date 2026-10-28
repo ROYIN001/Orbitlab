@@ -49,6 +49,8 @@ import { figuresView, mass } from './figures';
 import { partCardView } from './part-card';
 import { ExploreLevel } from './explore-level';
 import { EngineerLevel } from './engineer-level';
+import { AnatomyDialog } from './anatomy-dialog';
+import { anatomyPagesFor } from '../../data/anatomy';
 import { SatelliteWorkspace, type LessonDesk } from './satellite-workspace';
 import type { SatelliteDesign } from '../../design/satellite-spec';
 import type { EcssLevel } from '../../orbit/satellite-air';
@@ -160,6 +162,8 @@ export class BuildScreen {
   private readonly tour = el('section', 'bs-panel bs-tour');
   private readonly stage = el('div', 'bs-stage');
   private readonly tabs = el('div', 'bs-tabs');
+  /** the owner's Soyuz Anatomy pages, made the first time one is opened */
+  private anatomy: AnatomyDialog | null = null;
   private readonly draw = el('div', 'bs-draw');
   private readonly hint = el('p', 'bs-hint');
   private readonly card = el('aside', 'bs-panel bs-card');
@@ -236,6 +240,7 @@ export class BuildScreen {
   applyLanguage(): void {
     this.picker.render();
     this.render();
+    if (this.anatomy?.isOpen) this.anatomy.applyLanguage();
   }
 
   /** The section's keys, from the app's handler: Escape closes the part card. */
@@ -638,6 +643,15 @@ export class BuildScreen {
       b.setAttribute('aria-pressed', String(v === this.view));
       return b;
     }));
+    // Soyuz-2.1a and 2.1b: the owner's Anatomy pages, the inside in 3-D (src/ui/build/anatomy-dialog.ts)
+    if (anatomyPagesFor(this.spec.id).length) {
+      const open = button('bs-tab bs-anatomy-open', t('build.anatomy.open'), () => {
+        this.anatomy ??= new AnatomyDialog();
+        this.anatomy.show(this.spec.id, this.spec.name, open);
+      });
+      open.setAttribute('aria-haspopup', 'dialog');
+      this.tabs.append(open);
+    }
     this.hint.textContent = t('build.hint');
   }
 

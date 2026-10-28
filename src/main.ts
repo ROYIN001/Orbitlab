@@ -22,6 +22,8 @@ import { unseen } from './render/webgl-renderer';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
+import { anatomyLoaded, loadAnatomy, type AnatomyModel } from './render/anatomy';
+import { anatomyPage, flightAnatomy } from './data/anatomy';
 import { TrailLine, OrbitLine } from './render/lines';
 import { LaunchPadView } from './render/launchpad';
 import { RecoverySceneryView } from './render/recovery';
@@ -1911,6 +1913,32 @@ class App {
     if (wasPlaying) { this.playing = true; this.panel.setRunning(true); this.updatePlayButton(); }
   }
 
+  /**
+   * Soyuz-2.1a and 2.1b drawn as the owner's Soyuz Anatomy pages draw them
+   * (render/anatomy.ts), once their exterior meshes have loaded: the flight
+   * starts on the vehicle's own drawing and changes to the model's the moment
+   * they arrive (at once, the second time). If they cannot load it stays as it was.
+   */
+  private mountAnatomy(rocket: RocketView, sim: Simulation): void {
+    this.debrisView.setAnatomy(null);
+    // the browser journeys wait on it (tests/browser/journeys/soyuz-anatomy.mjs)
+    delete document.body.dataset.anatomy;
+    const variant = flightAnatomy(sim.vehicleSpec, sim.satellite);
+    if (!variant) return;
+    const mount = (model: AnatomyModel) => {
+      if (this.rocket !== rocket) return;
+      const page = anatomyPage(variant);
+      const ship = page.spacecraft === 'soyuz-ms' && sim.satellite.crewed ? 'soyuz-ms'
+        : page.spacecraft === 'progress' && sim.satellite.cargoShip ? 'progress' : null;
+      const fit = rocket.mountAnatomy(model, ship);
+      this.debrisView.setAnatomy({ model, fit, fregatDiameter: variant === 'fregat-st31' ? sim.vehicleSpec.stages[2].diameter : null });
+      document.body.dataset.anatomy = variant;
+    };
+    const ready = anatomyLoaded(variant);
+    if (ready) mount(ready);
+    else loadAnatomy(variant).then(mount, (error: unknown) => console.warn('Soyuz Anatomy meshes unavailable; drawing the vehicle as before:', error));
+  }
+
   private setupViews(): void {
     if (!this.sim) return;
     const sim = this.sim;
@@ -1925,6 +1953,7 @@ class App {
     }
     this.rocket = new RocketView(sim.vehicleSpec, sim.satellite, { humidity: SITE_HUMIDITY[sim.site.id], deorbit: sim.cfg.orbit.deorbit?.time });
     this.scene.scene.add(this.rocket.group);
+    this.mountAnatomy(this.rocket, sim);
     // V03: the smoke the flight leaves in the air, from its own recording
     if (this.trails) {
       this.scene.scene.remove(this.trails.mesh);

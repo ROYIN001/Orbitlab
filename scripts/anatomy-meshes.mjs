@@ -1,0 +1,284 @@
+/**
+ * The Soyuz exterior meshes the flight draws (src/render/anatomy.ts), made
+ * from the owner's Soyuz Anatomy pages in public/anatomy/:
+ *
+ *   node scripts/anatomy-meshes.mjs          (npm run anatomy)
+ *
+ * Run it again whenever one of those pages is replaced. It writes one
+ * `<page>.exterior.bin` beside each page, holding the page's SHA-256, so
+ * tests/anatomy-meshes.test.ts can tell a mesh file that no longer matches
+ * its page.
+ *
+ * Each page carries its own model: a compressed "semantic scene" of the
+ * vehicle's solids and the viewer's code that turns it into triangles
+ * (`SoyuzSceneCodec`, `buildSoyuzMeshes`) and colours them
+ * (`createSoyuzRenderer.math.materialOf`). Building the triangles takes the
+ * viewer 10–20 s, too long for a launch, so it is done here, once, with the
+ * page's own code run in an empty `vm` context (no `require`, no file or
+ * network access): the meshes are the page's, not a copy of its geometry.
+ *
+ * Only what is seen from outside goes into the flight: the skins and the
+ * structure (the parts' `shell` and `structural` hosts), the fairing in its
+ * two halves, the escape tower and the spacecraft. The tanks, the pipes and
+ * the engines' insides stay in the page, which Build shows whole. The engine
+ * bells are not taken either: the flight draws its own, which gimbal and
+ * glow with the physics.
+ *
+ * Output (little-endian): "OLAX", u32 format version, u32 header length, the
+ * header as UTF-8 JSON padded to 4 bytes, then the buffers the header points
+ * into: per mesh, positions as u16 × 3 over the mesh's box, normals as
+ * i8 × 4, and u16 or u32 indices. Units are metres; +Y is the anatomy's +z
+ * (up), +X its +x and +Z its −y, so the model stands as the flight's does.
+ */
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
+import vm from 'node:vm';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const dir = join(root, 'public', 'anatomy');
+
+/** The radial segments a full circle is cut into (the page draws 48; the flight sees it from metres away at the closest). */
+export const RADIAL_SEGMENTS = 16;
+export const FORMAT_VERSION = 1;
+
+/**
+ * The pages and what each carries above Blok I. `payload`: the spacecraft's
+ * parts, drawn as the mission's spacecraft (none for the Fregat page, whose
+ * payload is a stand-in: the flight draws the mission's own satellite).
+ */
+const PAGES = [
+  { file: 'soyuz-2-1a-soyuz-ms.html', variant: 'soyuz-ms', payload: ['soyuz-service', 'soyuz-descent', 'soyuz-orbital'] },
+  { file: 'soyuz-2-1a-progress-ms-26.html', variant: 'progress-ms-26', payload: ['progress-service', 'progress-refueling', 'progress-cargo'] },
+  { file: 'soyuz-2-1b-fregat-st31.html', variant: 'fregat-st31', payload: [] },
+];
+
+/** Hosts the flight already draws itself: the engine bells (Blok I's and Fregat's), which gimbal and glow with the physics. */
+const DRAWN_BY_THE_FLIGHT = /(?:nozzle-\d+-jacket|s592-main-chamber|s592-jacket-seam|s592-head-flange|s592-cooling-collector)/;
+/** Blok I's aft skirt (the Fregat page's RD-0124 Blok I): a part of its own, hidden when the flight sheds its skirt. */
+const SKIRT = /skirt-panel-\d+/;
+
+/** Which flight part a host goes into, or null to leave it out. */
+function flightPart(item, page) {
+  const { part, kind, id } = item;
+  if (DRAWN_BY_THE_FLIGHT.test(id)) return null;
+  const outside = kind === 'shell' || kind === 'structural';
+  if (part === 'booster-b') return outside ? 'booster' : null;
+  if (part.startsWith('booster-')) return null; // the other three are booster-b turned (checked below)
+  if (part === 'core' || part === 'interstage') return outside ? 'core' : null;
+  if (part === 'stage3') return outside ? (SKIRT.test(id) ? 'skirt' : 'stage3') : null;
+  if (part === 'fregat') return kind === 'interior' ? null : 'fregat';
+  if (part === 'fairing') return String(item.half ?? '').startsWith('left') ? 'fairing-left' : 'fairing-right';
+  if (part === 'escape') return 'escape';
+  if (page.payload.includes(part)) return outside || item.engineInfo?.progressMotion ? 'payload' : null;
+  return null;
+}
+
+/** The page's own model code (pose math, scene codec, mesher, renderer), run in an empty context. */
+function pageModel(html) {
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  const code = scripts.find((s) => s.includes('buildSoyuzMeshes'));
+  if (!code) throw new Error('no model script in the page');
+  const end = code.indexOf('/* Thai Anatomy controller');
+  if (end < 0) throw new Error('the page\'s script has no controller marker');
+  const context = vm.createContext({});
+  vm.runInContext(`globalThis.globalThis = globalThis;\n${code.slice(0, end)}`, context, { timeout: 120_000 });
+  const { SoyuzSceneCodec, buildSoyuzMeshes, createSoyuzRenderer } = context;
+  if (!SoyuzSceneCodec || !buildSoyuzMeshes || !createSoyuzRenderer?.math?.materialOf) throw new Error('the page\'s model code is not the expected one');
+  const data = JSON.parse(html.match(/<script id="anatomy-3d-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+  if (data.encoding !== 'gzip+base64') throw new Error(`unexpected scene encoding ${data.encoding}`);
+  const packed = JSON.parse(gunzipSync(Buffer.from(data.data, 'base64')).toString('utf8'));
+  return { scene: SoyuzSceneCodec.unpack(packed.scene), buildSoyuzMeshes, materialOf: createSoyuzRenderer.math.materialOf };
+}
+
+/** Anatomy (0.1 m, z up) to the flight's metres, y up. */
+const toFlight = (x, y, z) => [x / 10, z / 10, -y / 10];
+
+const hex = (srgb) => `#${srgb.map((v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join('')}`;
+
+/** A Progress hinge chain in flight axes: each rotation about its own pivot, in turn, as the page applies them. */
+const flightRotations = (rotations) => rotations.map((r) => ({
+  pivot: toFlight(...r.pivot), axis: [r.axis[0], r.axis[2], -r.axis[1]], angle: r.angle,
+}));
+
+/**
+ * Weld a triangle soup (equal position and normal), quantize it over its box
+ * and return the mesh's arrays and its header entry.
+ */
+function weld(positions, normals) {
+  const keyOf = (i) => `${Math.round(positions[i] * 1e5)},${Math.round(positions[i + 1] * 1e5)},${Math.round(positions[i + 2] * 1e5)},`
+    + `${Math.round(normals[i] * 500)},${Math.round(normals[i + 1] * 500)},${Math.round(normals[i + 2] * 500)}`;
+  const map = new Map(), pos = [], nor = [], index = [];
+  for (let i = 0; i < positions.length; i += 3) {
+    const key = keyOf(i);
+    let v = map.get(key);
+    if (v === undefined) {
+      v = pos.length / 3;
+      map.set(key, v);
+      pos.push(positions[i], positions[i + 1], positions[i + 2]);
+      nor.push(normals[i], normals[i + 1], normals[i + 2]);
+    }
+    index.push(v);
+  }
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i++) { const a = i % 3; if (pos[i] < min[a]) min[a] = pos[i]; if (pos[i] > max[a]) max[a] = pos[i]; }
+  const step = min.map((m, a) => Math.max(1e-9, (max[a] - m) / 65535));
+  const q = new Uint16Array(pos.length);
+  for (let i = 0; i < pos.length; i++) q[i] = Math.round((pos[i] - min[i % 3]) / step[i % 3]);
+  const n = new Int8Array((nor.length / 3) * 4);
+  for (let v = 0; v < nor.length / 3; v++) for (let a = 0; a < 3; a++) n[v * 4 + a] = Math.round(Math.max(-1, Math.min(1, nor[v * 3 + a])) * 127);
+  const wide = pos.length / 3 > 65535;
+  return { vertices: pos.length / 3, min, step, q, n, idx: wide ? Uint32Array.from(index) : Uint16Array.from(index), wide };
+}
+
+/** Bounds of a list of flight-space triangle soups. */
+function boundsOf(soups) {
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  for (const s of soups) for (let i = 0; i < s.length; i++) { const a = i % 3; if (s[i] < min[a]) min[a] = s[i]; if (s[i] > max[a]) max[a] = s[i]; }
+  return { min: min.map((v) => +v.toFixed(4)), max: max.map((v) => +v.toFixed(4)) };
+}
+
+/**
+ * Booster-b turned 90°, 180° and 270° about the axis should be the other
+ * three. Their hosts are cut into front and back halves for the page's view,
+ * so the pieces differ; the shapes are compared instead: each booster's
+ * outside surface area, its area-weighted centre and its box, turned back
+ * onto b's. Returns the worst mismatch, m (area as a share).
+ */
+function boosterMismatch(scene, buildSoyuzMeshes) {
+  const outside = (i) => i.kind === 'shell' || i.kind === 'structural';
+  const shape = (part, turns) => {
+    const meshes = buildSoyuzMeshes({ ...scene, items: scene.items.filter((i) => i.part === part && outside(i)) }, { radialSegments: 12 });
+    let area = 0;
+    const c = [0, 0, 0], min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    const turn = (x, y) => { for (let j = 0; j < turns; j++) [x, y] = [y, -x]; return [x, y]; };
+    for (const m of meshes) {
+      const p = m.positions;
+      for (let k = 0; k < p.length; k += 9) {
+        const v = [0, 3, 6].map((o) => { const [x, y] = turn(p[k + o], p[k + o + 1]); return [x / 10, y / 10, p[k + o + 2] / 10]; });
+        const e1 = v[1].map((q, a) => q - v[0][a]), e2 = v[2].map((q, a) => q - v[0][a]);
+        const cr = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+        const da = Math.hypot(...cr) / 2;
+        area += da;
+        for (let a = 0; a < 3; a++) c[a] += da * (v[0][a] + v[1][a] + v[2][a]) / 3;
+        for (const q of v) for (let a = 0; a < 3; a++) { min[a] = Math.min(min[a], q[a]); max[a] = Math.max(max[a], q[a]); }
+      }
+    }
+    return { area, c: c.map((v) => v / area), min, max };
+  };
+  const b = shape('booster-b', 0);
+  let worst = { area: 0, m: 0 };
+  for (const [part, turns] of [['booster-v', 1], ['booster-g', 2], ['booster-d', 3]]) {
+    const o = shape(part, turns);
+    worst.area = Math.max(worst.area, Math.abs(o.area - b.area) / b.area);
+    for (let a = 0; a < 3; a++) worst.m = Math.max(worst.m, Math.abs(o.c[a] - b.c[a]), Math.abs(o.min[a] - b.min[a]), Math.abs(o.max[a] - b.max[a]));
+  }
+  return worst;
+}
+
+function exportPage(page) {
+  const path = join(dir, page.file);
+  const bytes = readFileSync(path);
+  const html = bytes.toString('utf8');
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  const { scene, buildSoyuzMeshes, materialOf } = pageModel(html);
+  const mismatch = boosterMismatch(scene, buildSoyuzMeshes);
+  if (mismatch.area > 0.005 || mismatch.m > 0.02) throw new Error(`${page.file}: the boosters are not one booster turned (${JSON.stringify(mismatch)})`);
+  const chosen = scene.items.filter((it) => flightPart(it, page));
+  const meshes = buildSoyuzMeshes({ ...scene, items: chosen }, { radialSegments: RADIAL_SEGMENTS });
+
+  const materials = [], materialIndex = new Map();
+  const hinges = [], hingeIndex = new Map();
+  /** part → group key → { material, hinge, soups: { p, n }[] } */
+  const parts = new Map();
+  for (let i = 0; i < meshes.length; i++) {
+    const m = meshes[i], item = chosen[i];
+    const part = flightPart(item, page);
+    const base = materialOf(m);
+    const rotations = item.engineInfo?.progressMotion?.rotations;
+    let hinge = -1;
+    if (rotations) {
+      const key = JSON.stringify(rotations);
+      if (!hingeIndex.has(key)) { hingeIndex.set(key, hinges.length); hinges.push({ rotations: flightRotations(rotations) }); }
+      hinge = hingeIndex.get(key);
+    }
+    // one group per material, tone (a detail's own shade of it) and hinge
+    const byTone = new Map();
+    for (let v = 0; v < m.toneFactors.length; v += 3) {
+      const tone = Math.round(m.toneFactors[v] * 1000) / 1000;
+      if (!byTone.has(tone)) byTone.set(tone, []);
+      byTone.get(tone).push(v / 3);
+    }
+    for (const [tone, triangles] of byTone) {
+      const srgb = base.srgb.map((c) => Math.min(0.97, Math.max(0.02, c * tone)));
+      const matKey = `${base.name}|${hex(srgb)}`;
+      if (!materialIndex.has(matKey)) {
+        materialIndex.set(matKey, materials.length);
+        materials.push({ name: base.name, color: hex(srgb), roughness: base.roughness, metalness: base.metalness });
+      }
+      const groupKey = `${materialIndex.get(matKey)}|${hinge}`;
+      if (!parts.has(part)) parts.set(part, new Map());
+      const groups = parts.get(part);
+      if (!groups.has(groupKey)) groups.set(groupKey, { material: materialIndex.get(matKey), hinge, p: [], n: [] });
+      const g = groups.get(groupKey);
+      for (const t of triangles) for (let c = 0; c < 3; c++) {
+        const k = (t * 3 + c) * 3;
+        g.p.push(...toFlight(m.positions[k], m.positions[k + 1], m.positions[k + 2]));
+        const nn = toFlight(m.normals[k], m.normals[k + 1], m.normals[k + 2]).map((v) => v * 10);
+        g.n.push(...nn);
+      }
+    }
+  }
+
+  const buffers = [];
+  let offset = 0;
+  const put = (typed) => {
+    const at = offset;
+    const buf = Buffer.from(typed.buffer, typed.byteOffset, typed.byteLength);
+    const pad = (4 - (buf.length % 4)) % 4;
+    buffers.push(buf, Buffer.alloc(pad));
+    offset += buf.length + pad;
+    return at;
+  };
+  const header = {
+    format: 'orbitlab-anatomy-exterior', version: FORMAT_VERSION,
+    source: { file: page.file, sha256, title: html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '' },
+    variant: page.variant, units: 'm', radialSegments: RADIAL_SEGMENTS, boosterMismatch: { area: +mismatch.area.toExponential(2), m: +mismatch.m.toExponential(2) },
+    materials, hinges, parts: [],
+  };
+  let triangles = 0;
+  const order = ['booster', 'core', 'stage3', 'skirt', 'fregat', 'fairing-left', 'fairing-right', 'escape', 'payload'];
+  for (const name of order) {
+    const groups = parts.get(name);
+    if (!groups) continue;
+    const entry = { name, bounds: boundsOf([...groups.values()].map((g) => g.p)), meshes: [] };
+    for (const g of groups.values()) {
+      const w = weld(g.p, g.n);
+      triangles += w.idx.length / 3;
+      entry.meshes.push({
+        material: g.material, ...(g.hinge >= 0 ? { hinge: g.hinge } : {}), vertices: w.vertices, indices: w.idx.length,
+        min: w.min.map((v) => +v.toFixed(6)), step: w.step,
+        position: put(w.q), normal: put(w.n), index: put(w.idx), wide: w.wide,
+      });
+    }
+    header.parts.push(entry);
+  }
+  header.triangles = triangles;
+  let json = Buffer.from(JSON.stringify(header), 'utf8');
+  json = Buffer.concat([json, Buffer.alloc((4 - (json.length % 4)) % 4, 0x20)]);
+  const lead = Buffer.alloc(12);
+  lead.write('OLAX', 0, 'ascii');
+  lead.writeUInt32LE(FORMAT_VERSION, 4);
+  lead.writeUInt32LE(json.length, 8);
+  const out = Buffer.concat([lead, json, ...buffers]);
+  const target = join(dir, page.file.replace(/\.html$/, '.exterior.bin'));
+  writeFileSync(target, out);
+  console.log(`${page.file}: ${triangles} triangles, ${header.parts.length} parts, ${materials.length} materials, ${hinges.length} hinges, `
+    + `${(out.length / 1024).toFixed(1)} kB → ${target.slice(root.length + 1)}`);
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  for (const page of PAGES) exportPage(page);
+}
