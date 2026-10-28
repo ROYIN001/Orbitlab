@@ -457,8 +457,6 @@ export class CrewedTop {
   /** the control motors' belt at +X, the frame's −Y pointing out from it */
   readonly control = new THREE.Group();
   private readonly flame: THREE.Mesh;
-  /** the ring the flame leaves from: its nozzles' exits' height in the tower and distance from its axis */
-  private readonly flameRing: { y: number; r: number };
   /** every geometry made here, for `dispose`: render/escape.ts frees only its own */
   private readonly geometries: THREE.BufferGeometry[] = [];
 
@@ -533,8 +531,6 @@ export class CrewedTop {
     const plume = new THREE.CylinderGeometry(0.1, 0.4, 3.6, 8, 1, true);
     plume.translate(0, -1.8, 0);
     this.tower.updateMatrixWorld(true);
-    const exit = this.exits[0].getWorldPosition(new THREE.Vector3());
-    this.flameRing = { y: exit.y, r: Math.hypot(exit.x, exit.z) };
     this.flame = new THREE.Mesh(own(merge(this.exits.map((e) => plume.clone().applyMatrix4(e.matrixWorld)))),
       new THREE.MeshBasicMaterial({ color: 0xffc58a, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     plume.dispose();
@@ -557,18 +553,29 @@ export class CrewedTop {
   /**
    * Draw the tower as `shape` (the Soyuz Anatomy model's, render/anatomy.ts),
    * its base on the tower's origin, and leave the fins to the fairing that
-   * model draws: this tower's own shape hidden, its jettison fire kept, moved
-   * onto `jets` (the model's jettison nozzles' ring) where it has them.
+   * model draws: this tower's own shape hidden, its jettison fire kept, and
+   * where `jets` gives the model's jettison nozzles (their exits' centres and
+   * radii in the tower), one plume from each, canted out as this tower's.
    */
-  replaceShape(shape: THREE.Object3D, jets: { y: number; r: number } | null = null): void {
+  replaceShape(shape: THREE.Object3D, jets: readonly { x: number; y: number; z: number; r: number }[] | null = null): void {
     for (const child of this.tower.children) if (child !== this.flame) child.visible = false;
     this.fins.visible = false;
     this.tower.add(shape);
-    if (jets) {
-      const k = jets.r / this.flameRing.r;
-      this.flame.scale.set(k, 1, k);
-      this.flame.position.y = jets.y - this.flameRing.y;
-    }
+    if (!jets?.length) return;
+    const plumes = jets.map((j) => {
+      const plume = new THREE.CylinderGeometry(j.r, j.r + 0.3, 3.6, 8, 1, true);
+      plume.translate(0, -1.8, 0);
+      // down its nozzle's axis: canted out (about the tangent) toward the nozzle's bearing
+      plume.applyMatrix4(new THREE.Matrix4().makeRotationZ(SAS_CANT));
+      plume.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(-j.z, j.x)));
+      plume.translate(j.x, j.y, j.z);
+      return plume;
+    });
+    const old = this.flame.geometry;
+    this.flame.geometry = merge(plumes);
+    for (const p of plumes) p.dispose();
+    this.geometries.splice(this.geometries.indexOf(old), 1, this.flame.geometry);
+    old.dispose();
   }
 
   /**

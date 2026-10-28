@@ -7,7 +7,7 @@
 > - **การบิน**: Soyuz-2.1a และ 2.1b วาดจากผิวด้านนอกของแบบจำลองของคุณ — บูสเตอร์ แกนกลาง โครงถักระหว่างขั้น Blok I, Fregat, หัวครอบสองซีก หอหนีภัย และยาน Soyuz MS / Progress MS ชิ้นที่แยกตัวก็ยังเป็นรูปทรงจากแบบจำลอง Progress กางแผงโซลาร์ด้วยบานพับในไฟล์ของคุณเอง Soyuz MS ใช้ปีกโซลาร์ของโปรแกรม (ไฟล์ของคุณมีแต่แบบพับ) ติดบานพับที่โคนแผงพับของแบบจำลอง ส่วนท้ายของขั้นที่ 3 (ตัวเครื่องยนต์ โครงรับแรงขับ ก้นถังออกซิเจน) วาดจากแบบจำลองด้วย เพราะมองเห็นได้จริงผ่านโครงถักและหลังสลัดกระโปรงท้าย ปลายลำตัวของ Blok A, Blok I และ Progress MS ปิดด้วยชิ้นภายในที่ปิดปลาย (ฐานรับแรงขับ โดมถัง) จึงไม่เป็นท่อกลวงที่มองทะลุได้อีก ปลายท่อไอพ่นของโปรแกรมย้ายไปต่อกับห้องเผาไหม้ของแบบจำลองพอดี ทั้งของขั้นที่ 3 และของ Fregat (S5.92) และไฟของหอหนีภัยตอนดึงตัวออกพุ่งจากหัวฉีด 12 ตัวของแบบจำลอง ส่วนภายในอื่น (ท่อ อุปกรณ์) ไม่วาดตอนบินตามที่ขอ ฟิสิกส์ไม่เปลี่ยน
 > - ไฟล์โหลดเมื่อใช้เท่านั้น ไม่เข้าแคชออฟไลน์ตอนติดตั้ง (หน้าเว็บละราว 4.5 MB, ไฟล์ผิวสำหรับการบินบีบอัดแล้วเหลือ 0.17–0.31 MB จากเดิม 1.2–2 MB) ถ้าออฟไลน์และยังไม่เคยโหลด หรือเบราว์เซอร์คลายไฟล์บีบอัดไม่ได้ จรวดจะถูกวาดแบบเดิม
 > - **ต้นทุนที่ควรตัดสินใจ**: ภารกิจเด่น (Soyuz พาลูกเรือไป ISS) เป็นภาพแรกของหน้าแรกและของโหมดดู และเป็นค่าเริ่มต้นของแผงภารกิจ แอปจึงโหลดแบบจำลอง Soyuz MS ทันทีที่ตั้งภารกิจ เกือบทุกคนที่เข้าครั้งแรกจึงโหลดไฟล์นี้ ตอนนี้ 305 kB (เดิมราว 2 MB) ถ้าไม่ต้องการ อีกทางคือโหลดเมื่อเริ่มบินเท่านั้น (จรวดบนฐานยิงจะเป็นแบบเดิมจนกว่าจะเริ่มบิน)
-> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 20.3 kB (index +15.5, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14675 kB (offset ที่ระบุ: EQ-7) PR นี้รอคุณอนุมัติใน Merge Desk
+> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 20.9 kB (index +16.1, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14675 kB (offset ที่ระบุ: EQ-7) PR นี้รอคุณอนุมัติใน Merge Desk
 > - **รอบตรวจที่สอง**: แก้ตามที่ผู้ตรวจพบ (รายการในหัวข้อ "Second review round") ยังไม่แก้สองข้อ: หัวเชื่อมต่อ (docking probe) ของยาน Soyuz MS จากแบบจำลอง (ยาว 8.0 m) เข้าไปในพอร์ตของสถานีราว 1.0 m ตอนจับยึด (เดิม 0.48 m กับยานยาว 7.48 m ของโปรแกรม) เพราะต้องให้ภาพการนัดพบรู้ความยาวของยานที่วาดจริง และขั้นที่ใช้แล้วที่วาดจากแบบจำลองไม่มีปากท่อไอพ่น (ของแบบจำลองเว้นไว้ให้การบินวาดเอง)
 > - **ขอให้ยืนยัน**: ไฟล์ทั้งสามเป็นงานของคุณเองใช่ไหม (NOTICE.md เขียนไว้อย่างนั้น) และชุดเครื่องมือ "Anatomy kit" ที่ฝังอยู่ในไฟล์มีเงื่อนไขการใช้งานอย่างไร
 
@@ -158,10 +158,13 @@ done; render and Build UI only, the physics unchanged.
 | The meshes were sent raw (1.98 MB for the Soyuz MS), and the featured launch mounts the Soyuz MS model, so nearly every first visit fetched about 2 MB | Format version 2 (byte planes, the whole file gzip-compressed, inflated with `DecompressionStream`): 305.2 / 234.0 / 172.8 kB as fetched. That the first visit fetches it at all is left for the owner (above) |
 | Blok A, Blok I and the Progress MS were open tubes, seen through from below or through the truss | The hosts that close their ends kept (`CLOSURE`, Blok I's tanks); a test runs vertical lines near each body's axis and wall and finds that each meets it |
 | The flight's Fregat bell stood 1.36 m up inside the model's Fregat, cutting its structure | Fregat's S5.92 chamber recorded (`fregat`'s `nozzles`); the bell, glow and flame set on it (`AnatomyFit.fregatChambers`, `RocketView.refitChambers`) |
-| The tower's jettison fire left the simulator's tower's nozzle ring, about 1.2 m from the model's | The 12 jettison nozzles recorded (`escape`'s `nozzles`); the fire leaves their ring (`CrewedTop.replaceShape(shape, jets)`) |
+| The tower's jettison fire left the simulator's tower's nozzle ring, about 1.2 m from the model's | The 12 jettison nozzles recorded (`escape`'s `nozzles`); one plume leaves each, canted out as the simulator's tower's (`CrewedTop.replaceShape(shape, jets)`) |
+| (a check of the fixes) Fregat's flame kept the root radius made for the stage's own 0.84 m bell, about three times the S5.92's 0.35 m exit | `refitChambers` sizes each refitted stage's flames to its new bells, as the stage's own layout sizes them (`Plume.resize`) |
 | The Soyuz MS's wings were hinged 1.6 m up the service module, apart from the model's folded arrays | Hinged at the arrays' foot, 0.2 m above the service module's aft end (`SOYUZ_MS_HINGE`) |
 | On the 2.1a the departing Soyuz MS or Progress started 0.2 m inside the spent Blok I, whose adapter ring stands above the physics' top | The spent Blok I drawn with that ring on the separation plane (`AnatomyFit.stage3Spent`) |
 | The loading note went when the page's file had arrived, though the page then builds its model on the app's thread for 10–20 s on a slow machine, holding the app still, and the note could be lost under the page's dark ground | The note sits over the frame until the page has built its model, and says the app may pause (en/ru/th `build.anatomy.loading`) |
+| (a check of the fixes) A page whose script stopped before it mounted its viewer would never clear `data-loading`, leaving the opaque note up | The note goes at once when the page has no viewer at its `load` |
+| (a check of the fixes) A mesh file that arrived but cannot be used (a browser without `DecompressionStream`, an older format still cached) was fetched again by every mission | Remembered for the visit; only a failed fetch is tried again |
 | The page's frame was not one of the dialog's Tab stops | `iframe` added to the `Modal`'s focus trap |
 | Build's view buttons clipped "Inside, in 3-D" on a 320 px phone | They wrap |
 | The dialog stayed open when Build was left or its level changed | It closes then |
@@ -174,14 +177,16 @@ Not done here (follow-ups if wanted): the abort scenario's escaping head section
 (`render/escape.ts`) is still the simulator's drawing; the fairing's flag and lettering (the
 page's `paintOf`) are not baked into the meshes; the pad frost is not drawn on the model; the
 Soyuz MS's docking probe at capture and the spent stages' bells (above); the Soyuz MS meshes are
-fetched when the featured launch is set up (for the owner to decide, above).
+fetched when the featured launch is set up (for the owner to decide, above); the pages' own in-page
+links (`#soyuz-anatomy`, `#knowledge-…`) add browser history entries inside the open dialog, so Back
+first steps back through those jumps (as any page in a frame does).
 
 ## Checks
 
 | Check | Result |
 | --- | --- |
 | `npx tsc --noEmit` | clean |
-| `tests/anatomy.test.ts` (new) | 17/17: on-demand routes; meshes gzip-compressed and matching their pages' SHA-256; parts per page (with the aft bay and its chambers: 4 + 4 on the 2.1a, 4 + 0 on the 2.1b; Fregat's S5.92; the tower's 12 jettison nozzles); each body closed at its ends (vertical lines near the axis and wall of Blok A, Blok I, a strap-on and the Progress MS each meet it); Blok I's lowest point on the stage's base, its bells on the model's chambers and its flame at their exits, no verniers on the 2.1b; Fregat's bell on its S5.92 chamber and its flame at the exit; the tower's jettison fire at the model's nozzles' ring; page choice per vehicle and payload (none for other vehicles and remixes); fit within a few per cent; 2.1b fairing round Fregat and satellite on Fregat; each variant mounted in a RocketView with its parts in place and its own bodies hidden, the 2.1b skirt shed at 14.06 s; Progress hinges against the page's own rotation order; Soyuz MS folded arrays → wings, hinged at the arrays' foot; the strap-ons' bells under the model's strap-ons; the camera height and Mach-1 collar on the model's fairing; spent Blok I recorded without its profile (point mass), its top at 0 (the separation plane), spent Fregat with its top on the separation plane, none on another vehicle |
+| `tests/anatomy.test.ts` (new) | 18/18: on-demand routes; meshes gzip-compressed and matching their pages' SHA-256; parts per page (with the aft bay and its chambers: 4 + 4 on the 2.1a, 4 + 0 on the 2.1b; Fregat's S5.92; the tower's 12 jettison nozzles); each body closed at its ends (vertical lines near the axis and wall of Blok A, Blok I, a strap-on and the Progress MS each meet it); Blok I's lowest point on the stage's base, its bells on the model's chambers and its flame at their exits, no verniers on the 2.1b; Fregat's bell on its S5.92 chamber and its flame at the exit; the tower's jettison fire at the model's nozzles' ring; page choice per vehicle and payload (none for other vehicles and remixes); fit within a few per cent; 2.1b fairing round Fregat and satellite on Fregat; each variant mounted in a RocketView with its parts in place and its own bodies hidden, the 2.1b skirt shed at 14.06 s; Progress hinges against the page's own rotation order; Soyuz MS folded arrays → wings, hinged at the arrays' foot; the strap-ons' bells under the model's strap-ons; the camera height and Mach-1 collar on the model's fairing; spent Blok I recorded without its profile (point mass), its top at 0 (the separation plane), spent Fregat with its top on the separation plane, none on another vehicle; the flames of the refitted stages sized to their bells; one jettison plume per model nozzle; a failed fetch tried again, a file that arrived but cannot be used not |
 | `tests/i18n.test.ts`, `tests/i18n-thai-terms.test.ts` | 23/23 |
 | `tests/soyuz-render.test.ts`, `tests/vostok-render.test.ts`, `tests/privacy-inventory.test.ts`, `tests/pwa.test.ts`, `tests/architecture.test.ts` | green (privacy: `src/render/anatomy.ts` added to the files that fetch, same-origin files of the app) |
 | journey `soyuz-anatomy` (new) | first round 1/1, 93 s; second round 1/1 twice in a row, 148 s and 154 s (the Build part under reduced motion: the page's idle tour redraws its 1.4-million-triangle model every frame, which software GL cannot finish before a screenshot's 30 s limit). Crewed 2.1a model mounted (core, 4 strap-ons, Blok I, both fairing halves, tower, Soyuz MS); 4 spent strap-ons drawn from the model after T+118 s; Progress model mounted; Build offers the pages for 2.1a and 2.1b and none for Falcon 9, opens both 2.1a pages and waits for each to build its 3-D model (its 3-D viewer shown, not the still image), the loading note gone once it has, the page's frame a Tab stop (Shift+Tab from ×), the frame removed on close with the history length unchanged, focus back; no console errors |
@@ -192,11 +197,11 @@ fetched when the featured launch is set up (for the owner to decide, above).
 
 | Group | Ceiling | Measured with the change | Without | Delta |
 | --- | ---: | ---: | ---: | ---: |
-| `index-*.js` | 2635 → 2651 | 2650.3 kB (2,650,299 B) | 2634.8 | +15.5 |
+| `index-*.js` | 2635 → 2651 | 2650.9 kB (2,650,862 B) | 2634.8 | +16.1 |
 | `index-*.css` | 177 → 179 | 178.3 kB (178,321 B) | 176.9 | +1.4 |
 | `i18n-*.js` | 1729 → 1733 | 1732.5 kB (1,732,544 B) | 1729.0 | +3.5 |
-| precache code | 14654 → 14675 | 14674.3 kB | 14654.0 | +20.3 |
-| precache | 16053 → 16074 | 15793.5 kB (committed snapshots) | — | code +21 |
+| precache code | 14654 → 14675 | 14674.9 kB | 14654.0 | +20.9 |
+| precache | 16053 → 16074 | 15794.1 kB (committed snapshots) | — | code +21 |
 
 The second review round added 1.6 kB to `index-*.js` (the inflater and the byte-plane decoder, the
 Fregat and tower refits, the dialog's wait) and 1.9 kB to precache code, so those two ceilings and

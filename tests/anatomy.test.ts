@@ -245,10 +245,17 @@ describe('RocketView with the model mounted', () => {
         // the escape tower on the fairing's nose, its jettison fire leaving the model's jettison nozzles
         const tower = box(named(rocket.group, 'anatomy:escape')[0]);
         expect(tower.min.y).toBeCloseTo(fairing.max.y, 2);
-        const top = (rocket as unknown as { crewedTop: { flame: THREE.Mesh; flameRing: { y: number; r: number } } }).crewedTop;
-        expect(top.flame.position.y + top.flameRing.y).toBeCloseTo(fit.tower!.jets!.y, 9);
-        expect(top.flame.scale.x * top.flameRing.r).toBeCloseTo(fit.tower!.jets!.r, 9);
-        expect(fit.tower!.jets!.y).toBeGreaterThan(4);
+        // one plume from each of the model's twelve jettison nozzles, near the tower's top
+        const flame = (rocket as unknown as { crewedTop: { flame: THREE.Mesh } }).crewedTop.flame;
+        const jets = fit.tower!.jets!, pos = flame.geometry.attributes.position, v = new THREE.Vector3();
+        expect(jets).toHaveLength(12);
+        expect(pos.count % jets.length).toBe(0);
+        for (const j of jets) {
+          expect(j.y).toBeGreaterThan(4);
+          let near = Infinity;
+          for (let i = 0; i < pos.count; i++) near = Math.min(near, v.fromBufferAttribute(pos, i).distanceTo(new THREE.Vector3(j.x, j.y, j.z)));
+          expect(near).toBeLessThan(2 * j.r);
+        }
       }
       if (variant === 'fregat-st31') {
         // Fregat's bell on the model's S5.92 chamber, its flame at the chamber's exit
@@ -258,6 +265,10 @@ describe('RocketView with the model mounted', () => {
         expect(fregat.engines.nozzles[0].y).toBeCloseTo(c.top, 9);
         expect(fregat.engines.nozzles[0].len).toBeCloseTo(c.top - c.exit, 9);
         expect(fregat.plume.group.position.y).toBeCloseTo(c.exit, 9);
+        // its flame as wide at the root as the stage's own layout makes it for its own bell: about the S5.92's exit, not 3 times it
+        const plume = (fregat.plume as unknown as { radius: number }).radius;
+        expect(plume).toBeGreaterThan(c.r);
+        expect(plume).toBeLessThan(1.5 * c.r);
         // inside the model's Fregat, which hangs below the stage's base over the adapter
         expect(c.exit).toBeLessThan(0);
         expect(c.exit).toBeGreaterThan(fit.fregat!.dy);
@@ -404,4 +415,26 @@ describe('the spacecraft', () => {
     expect(ship.height).toBeGreaterThan(7);
     expect(ship.height).toBeLessThan(8.5);
   }));
+});
+
+describe('loading the meshes', () => {
+  const page = 'https://example.github.io/Orbitlab/';
+  it('asks again after a failed fetch, not after a file that arrived but cannot be used', async () => {
+    vi.resetModules();
+    const { loadAnatomy } = await import('../src/render/anatomy');
+    const fetches: string[] = [];
+    vi.stubGlobal('fetch', async (url: URL) => {
+      fetches.push(String(url));
+      if (String(url).includes('fregat')) throw new TypeError('offline');
+      return new Response(new Uint8Array([79, 76, 65, 88, 1, 0, 0, 0]).buffer);   // "OLAX", format 1: an old cached file
+    });
+    try {
+      await expect(loadAnatomy('fregat-st31', page)).rejects.toThrow('offline');
+      await expect(loadAnatomy('fregat-st31', page)).rejects.toThrow('offline');
+      await expect(loadAnatomy('soyuz-ms', page)).rejects.toThrow(/format 1/);
+      await expect(loadAnatomy('soyuz-ms', page)).rejects.toThrow(/format 1/);
+      expect(fetches.filter((u) => u.includes('fregat'))).toHaveLength(2);
+      expect(fetches.filter((u) => u.includes('soyuz-ms'))).toHaveLength(1);
+    } finally { vi.unstubAllGlobals(); }
+  });
 });

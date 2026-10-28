@@ -851,9 +851,10 @@ export class RocketView {
    * A stage's bells, glow and plumes moved onto the model's chambers
    * (`AnatomyFit.chambers`): each main to the model's main nearest its bearing,
    * each vernier to the nearest vernier, so the physics' chamber ids, gimbals
-   * and throttles carry over. A model without verniers (the RD-0124 has none)
-   * has the stage's drawn at no size and their plume taken away. Left as they
-   * are if the model's chambers are otherwise not as many as the stage's.
+   * and throttles carry over, and the flames sized to the new bells. A model
+   * without verniers (the RD-0124 has none) has the stage's drawn at no size
+   * and their plume taken away. Left as they are if the model's chambers are
+   * otherwise not as many as the stage's.
    */
   private refitChambers(part: StagePart, chambers: NonNullable<AnatomyFit['chambers']>): void {
     const visual = part.engines;
@@ -863,6 +864,9 @@ export class RocketView {
     const noVerniers = count('vernier') === 0;
     if (count('main') !== visual.nozzles.filter((_, i) => kindOf(i) === 'main').length) return;
     if (!noVerniers && count('vernier') !== visual.nozzles.filter((_, i) => vernier(i)).length) return;
+    // how far the flame's root reaches beyond the main exits, kept as the stage's own layout has it
+    const reach = (list: readonly { x: number; z: number; r: number }[]) => Math.max(...list.map((n) => Math.hypot(n.x, n.z) + n.r));
+    const widen = part.plume.radius / reach(visual.nozzles.filter((_, i) => kindOf(i) === 'main'));
     const free = [...chambers];
     const bearing = (x: number, z: number) => Math.atan2(z, x);
     const apart = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
@@ -881,11 +885,18 @@ export class RocketView {
     const exit = (kind: 'main' | 'vernier') => Math.min(...chambers.filter((c) => c.kind === kind).map((c) => c.exit));
     part.bellLength = -exit('main');
     part.plume.group.position.y = exit('main');
+    // the flames as wide as these bells (Fregat's S5.92 is 0.35 m at its exit, its stage's own bell 0.84 m), sized as the stack sizes them
+    const radius = widen * reach(chambers.filter((c) => c.kind === 'main'));
+    part.plume.resize(radius, Math.max(8, radius * 13));
     if (part.vernier && noVerniers) {
       part.vernier.group.removeFromParent();
       part.vernier.dispose();
       part.vernier = null;
-    } else if (part.vernier) part.vernier.group.position.y = exit('vernier');
+    } else if (part.vernier) {
+      const vr = chambers.find((c) => c.kind === 'vernier')!.r;
+      part.vernier.resize(Math.max(0.12, vr * 1.4), Math.max(2.5, vr * 16));
+      part.vernier.group.position.y = exit('vernier');
+    }
     part.flash.position.y = -part.bellLength * 0.6;
   }
 

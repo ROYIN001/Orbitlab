@@ -76,13 +76,16 @@ export class AnatomyDialog extends Modal {
   /**
    * Hide the loading note once the page has built its model: its root's
    * `data-loading`, set while it builds (or falls back to its still image),
-   * gone. At once for a page without that root (not the expected page).
+   * gone. At once for a page without that root (not the expected page, or the
+   * browser's own error page offline), and for one whose script stopped
+   * before it mounted its viewer (`__soyuzController`, set before the frame's
+   * `load`), which would never clear it.
    */
   private whenBuilt(frame: HTMLIFrameElement): void {
     const done = () => { if (frame === this.frame) this.loading.hidden = true; };
-    let root: HTMLElement | null = null;
+    let root: (HTMLElement & { __soyuzController?: unknown }) | null = null;
     try { root = frame.contentDocument?.getElementById('soyuz-anatomy') ?? null; } catch { /* not readable: nothing to wait on */ }
-    if (!root?.dataset.loading) { done(); return; }
+    if (!root?.dataset.loading || !root.__soyuzController) { done(); return; }
     const watch = new MutationObserver(() => { if (!root!.dataset.loading) { watch.disconnect(); done(); } });
     watch.observe(root, { attributes: true, attributeFilter: ['data-loading'] });
   }

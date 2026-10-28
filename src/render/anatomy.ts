@@ -139,25 +139,31 @@ const loaded = new Map<AnatomyVariant, AnatomyModel>();
 export const anatomyLoaded = (variant: AnatomyVariant): AnatomyModel | null => loaded.get(variant) ?? null;
 
 /**
- * Fetch and decode a variant's exterior meshes once per visit. A failed load
- * (offline before the file was ever fetched) is forgotten, so the next
- * mission tries again.
+ * Fetch and decode a variant's exterior meshes once per visit. A file that
+ * could not be had (offline before it was ever fetched) is asked for again by
+ * the next mission; one that arrived but cannot be used here (a browser that
+ * cannot inflate it, or an older format a cache still holds, which the
+ * service worker refreshes for the next visit) is not fetched again this visit.
  */
 export function loadAnatomy(variant: AnatomyVariant, base: string | URL = document.baseURI): Promise<AnatomyModel> {
   let p = loads.get(variant);
   if (!p) {
+    let arrived = false;
     p = fetch(new URL(anatomyPage(variant).meshes, base))
       .then((r) => {
         if (!r.ok) throw new Error(`anatomy meshes: HTTP ${r.status}`);
         return r.arrayBuffer();
       })
-      .then(inflateAnatomy)
+      .then((buffer) => {
+        arrived = true;
+        return inflateAnatomy(buffer);
+      })
       .then((buffer) => {
         const model = decodeAnatomy(buffer);
         loaded.set(variant, model);
         return model;
       });
-    p.catch(() => loads.delete(variant));
+    p.catch(() => { if (!arrived) loads.delete(variant); });
     loads.set(variant, p);
   }
   return p;
@@ -214,10 +220,10 @@ export interface AnatomyFit {
   fairingShoulder: number;
   /**
    * where the escape tower stands in the fairing's group, and the tower in its
-   * own; `jets`: its jettison nozzles' ring there (their exits' mean height
-   * and distance from the axis), where its fire leaves the tower
+   * own; `jets`: its jettison nozzles' exits there (centre and radius), where
+   * its fire leaves the tower
    */
-  tower: { y: number; placement: Placement; jets: { y: number; r: number } | null } | null;
+  tower: { y: number; placement: Placement; jets: { x: number; y: number; z: number; r: number }[] | null } | null;
   /** the spacecraft, centred on its group as render/satellite.ts centres a payload; `seat` above the stage's top */
   payload: (Placement & { height: number; seat: number }) | null;
   /**
@@ -244,12 +250,10 @@ function placed(nozzles: AnatomyNozzle[] | undefined, place: Placement): PlacedC
   return list.length ? list : null;
 }
 
-/** The escape tower's jettison nozzles' ring in the tower's own group. */
-function jets(escape: AnatomyPart, place: Placement): { y: number; r: number } | null {
+/** The escape tower's jettison nozzles' exits in the tower's own group. */
+function jets(escape: AnatomyPart, place: Placement): { x: number; y: number; z: number; r: number }[] | null {
   const list = (escape.nozzles ?? []).filter((n) => n.kind === 'jettison');
-  if (!list.length) return null;
-  const mean = (f: (n: AnatomyNozzle) => number) => list.reduce((sum, n) => sum + f(n), 0) / list.length;
-  return { y: placeY(place, mean((n) => n.exit)), r: mean((n) => Math.hypot(n.x, n.z)) };
+  return list.length ? list.map((n) => ({ x: n.x, y: placeY(place, n.exit), z: n.z, r: n.r })) : null;
 }
 
 /** Each vertex of a part's meshes, in the model's metres. */

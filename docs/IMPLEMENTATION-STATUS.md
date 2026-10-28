@@ -128,7 +128,8 @@ are listed there as drafts awaiting the owner's review.
   own hinges), each body closed at its ends, the spent parts as debris too. Blok A and Blok I are
   stretched along their axes by under 5 % into the physics' stage heights; above Blok I the model
   keeps its own size and stacking (the ST fairing round Fregat). Pages and meshes are fetched on
-  demand, never precached, and kept once fetched; while the meshes load, offline before they were
+  demand (the featured launch, a crewed Soyuz, fetches the Soyuz MS meshes, 305 kB, on a first
+  visit), never precached, and kept once fetched; while the meshes load, offline before they were
   ever fetched, or in a browser that cannot inflate them, the R-7 is drawn as above. Drawing only;
   the physics is unchanged.
 - **Soyuz-2 on its real flight** ([VALIDATION.md §3](VALIDATION.md), 2026-10-01): published
