@@ -14,27 +14,42 @@
  * (`SoyuzSceneCodec`, `buildSoyuzMeshes`) and colours them
  * (`createSoyuzRenderer.math.materialOf`). Building the triangles takes the
  * viewer 10–20 s, too long for a launch, so it is done here, once, with the
- * page's own code run in an empty `vm` context (no `require`, no file or
- * network access): the meshes are the page's, not a copy of its geometry.
+ * page's own code run in a fresh `vm` context, apart from this script's
+ * globals (no `require` in it): the meshes are the page's, not a copy of its
+ * geometry. `vm` is not a sandbox (Node's own documentation says so): run
+ * this only on the owner's pages, as `npm run anatomy` does.
  *
  * Only what is seen from outside goes into the flight: the skins and the
- * structure (the parts' `shell` and `structural` hosts), the fairing in its
- * two halves, the escape tower and the spacecraft. The tanks, the pipes and
- * the engines' insides stay in the page, which Build shows whole. The engine
- * bells are not taken either: the flight draws its own, which gimbal and
- * glow with the physics.
+ * structure (the parts' `shell` and `structural` hosts), the few inside hosts
+ * that close a body's ends (`CLOSURE`, Blok I's tanks), Blok I's aft bay, the
+ * fairing in its two halves, the escape tower and the spacecraft. The pipes
+ * and the engines' insides stay in the page, which Build shows whole. The
+ * engine bells are not taken either: the flight draws its own, which gimbal
+ * and glow with the physics, where the header's `nozzles` say the model's are
+ * (Blok I's chambers on the `bay`, Fregat's on `fregat`, and the escape
+ * tower's jettison nozzles, for its fire, on `escape`).
  *
- * Output (little-endian): "OLAX", u32 format version, u32 header length, the
- * header as UTF-8 JSON padded to 4 bytes, then the buffers the header points
- * into: per mesh, positions as u16 × 3 over the mesh's box, normals as
- * i8 × 4, and u16 or u32 indices. Units are metres; +Y is the anatomy's +z
- * (up), +X its +x and +Z its −y, so the model stands as the flight's does.
+ * Output: the file below, gzip-compressed (the site's host sends `.bin` as it
+ * is; render/anatomy.ts inflates it). Inside (little-endian): "OLAX", u32
+ * format version, u32 header length, the header as UTF-8 JSON padded to 4
+ * bytes, then the buffers the header points into, each padded to 4 bytes. Per
+ * mesh of V vertices and I indices, laid out in byte planes, which gzip packs
+ * about four times tighter than the plain arrays:
+ *   positions: u16 over the mesh's box (`min` + q × `step`), as each axis's
+ *     steps from the vertex before (mod 2^16), its V low bytes then its V
+ *     high bytes, x then y then z;
+ *   normals: i8 × 127, V of x, then V of y, then V of z;
+ *   indices: one code each, 0 for the next vertex not yet used (the welder
+ *     numbers them in their first use), else how far back from it; u16 or,
+ *     `wide`, u32, as their byte planes, lowest first.
+ * Units are metres; +Y is the anatomy's +z (up), +X its +x and +Z its −y, so
+ * the model stands as the flight's does.
  */
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { gunzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import vm from 'node:vm';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -44,7 +59,7 @@ const dir = join(root, 'public', 'anatomy');
 export const RADIAL_SEGMENTS = 16;
 /** …and in Blok I's aft bay, the engine's pipes and pumps, seen only from below it. */
 export const BAY_SEGMENTS = 12;
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 
 /**
  * The pages and what each carries above Blok I. `payload`: the spacecraft's
@@ -69,8 +84,19 @@ const SKIRT = /skirt-panel-\d+/;
 const CHAMBER = /^stage3\.(?:rd\d+-)?(main|vernier)-nozzle-(\d+)$/;
 /** …and the rings on those chambers' walls, which would float without them. */
 const CHAMBER_RING = /^stage3\.(?:rd\d+-)?(?:nozzle-\d+-jacket|vernier-jacket-\d+|throat-jacket-\d+|nozzle-lip-\d+|cooling-collector-\d+)/;
-/** Blok I's tanks: from its bottom up to the lowest of them the stage is seen into once it is open below. */
+/** Blok I's tanks: from its bottom up to the lowest of them the stage is seen into once it is open below; their domes close its ends. */
 const TANK = /^stage3\.(?:rd\d+-)?(?:oxygen|lox|kerosene|fuel)-tank$/;
+/**
+ * The inside hosts that close a body's ends, without which it is an open
+ * tube seen through from below or through the open truss: the strap-ons' and
+ * Blok A's aft rim and thrust platform, Blok A's oxygen tank (its dome under
+ * the truss) and the guidance deck over it, the Progress's aft thrust deck.
+ */
+const CLOSURE = /^(?:(?:booster-b|core)\.(?:aft-rim(?:\.(?:front|back))?|thrust-platform)|core\.(?:oxygen-tank|guidance-deck)|progress-service\.aft-thrust-deck(?:\.(?:front|back))?)$/;
+/** Fregat's main chamber (S5.92), whose place the flight's bell takes. */
+const FREGAT_CHAMBER = /^fregat\.s592-main-chamber$/;
+/** The escape tower's jettison motor's nozzles, where its fire comes from when it pulls the tower away. */
+const JETTISON = /^escape\.jettison-nozzle-(\d+)$/;
 
 /**
  * Which flight part a host goes into, or null to leave it out. `bay`: Blok
@@ -84,20 +110,21 @@ function flightPart(item, page, bay) {
   const { part, kind, id } = item;
   if (DRAWN_BY_THE_FLIGHT.test(id)) return null;
   const outside = kind === 'shell' || kind === 'structural';
-  if (part === 'booster-b') return outside ? 'booster' : null;
+  const closes = CLOSURE.test(id);
+  if (part === 'booster-b') return outside || closes ? 'booster' : null;
   if (part.startsWith('booster-')) return null; // the other three are booster-b turned (checked below)
-  if (part === 'core' || part === 'interstage') return outside ? 'core' : null;
+  if (part === 'core' || part === 'interstage') return outside || closes ? 'core' : null;
   if (part === 'stage3') {
     if (CHAMBER.test(id) || CHAMBER_RING.test(id)) return null;
     if (SKIRT.test(id)) return 'skirt';
     if (kind === 'shell') return 'stage3';
     if (bay.extent.get(id).lo <= bay.top + 1e-3) return 'bay';
-    return kind === 'structural' ? 'stage3' : null;
+    return kind === 'structural' || TANK.test(id) ? 'stage3' : null;
   }
   if (part === 'fregat') return kind === 'interior' ? null : 'fregat';
   if (part === 'fairing') return String(item.half ?? '').startsWith('left') ? 'fairing-left' : 'fairing-right';
   if (part === 'escape') return 'escape';
-  if (page.payload.includes(part)) return outside || item.engineInfo?.progressMotion ? 'payload' : null;
+  if (page.payload.includes(part)) return outside || closes || item.engineInfo?.progressMotion ? 'payload' : null;
   return null;
 }
 
@@ -128,9 +155,37 @@ const flightRotations = (rotations) => rotations.map((r) => ({
   pivot: toFlight(...r.pivot), axis: [r.axis[0], r.axis[2], -r.axis[1]], angle: r.angle,
 }));
 
+/** Quantized positions (u16 × 3 per vertex) as the format's byte planes of steps. */
+function packPositions(q, vertices) {
+  const out = new Uint8Array(vertices * 6);
+  for (let a = 0; a < 3; a++) {
+    let prev = 0;
+    for (let v = 0; v < vertices; v++) {
+      const d = (q[v * 3 + a] - prev) & 0xffff;
+      prev = q[v * 3 + a];
+      out[a * 2 * vertices + v] = d & 0xff;
+      out[(a * 2 + 1) * vertices + v] = d >> 8;
+    }
+  }
+  return out;
+}
+
+/** Indices in first-use order as the format's codes, in byte planes. */
+function packIndices(index, wide) {
+  const size = wide ? 4 : 2, count = index.length, out = new Uint8Array(count * size);
+  let next = 0;
+  for (let i = 0; i < count; i++) {
+    let code = 0;
+    if (index[i] === next) next++;
+    else if ((code = next - index[i]) <= 0) throw new Error('indices are not in first-use order');
+    for (let b = 0; b < size; b++) out[b * count + i] = (code >>> (8 * b)) & 0xff;
+  }
+  return out;
+}
+
 /**
  * Weld a triangle soup (equal position and normal), quantize it over its box
- * and return the mesh's arrays and its header entry.
+ * and return the mesh's packed arrays and what its header entry needs.
  */
 function weld(positions, normals) {
   const keyOf = (i) => `${Math.round(positions[i] * 1e5)},${Math.round(positions[i + 1] * 1e5)},${Math.round(positions[i + 2] * 1e5)},`
@@ -152,10 +207,11 @@ function weld(positions, normals) {
   const step = min.map((m, a) => Math.max(1e-9, (max[a] - m) / 65535));
   const q = new Uint16Array(pos.length);
   for (let i = 0; i < pos.length; i++) q[i] = Math.round((pos[i] - min[i % 3]) / step[i % 3]);
-  const n = new Int8Array((nor.length / 3) * 4);
-  for (let v = 0; v < nor.length / 3; v++) for (let a = 0; a < 3; a++) n[v * 4 + a] = Math.round(Math.max(-1, Math.min(1, nor[v * 3 + a])) * 127);
-  const wide = pos.length / 3 > 65535;
-  return { vertices: pos.length / 3, min, step, q, n, idx: wide ? Uint32Array.from(index) : Uint16Array.from(index), wide };
+  const vertices = pos.length / 3;
+  const n = new Int8Array(vertices * 3);
+  for (let v = 0; v < vertices; v++) for (let a = 0; a < 3; a++) n[a * vertices + v] = Math.round(Math.max(-1, Math.min(1, nor[v * 3 + a])) * 127);
+  const wide = vertices > 65535;
+  return { vertices, indices: index.length, min, step, q: packPositions(q, vertices), n, idx: packIndices(index, wide), wide };
 }
 
 /** Bounds of a list of flight-space triangle soups. */
@@ -203,6 +259,22 @@ function boosterMismatch(scene, buildSoyuzMeshes) {
   return worst;
 }
 
+/**
+ * A chamber's or nozzle's place from its triangles (the page's units): the
+ * centre and radius of its exit, the ring of its vertices within 1 cm of its
+ * bottom, and the heights of that exit and of its top, in flight metres.
+ */
+function nozzleOf(positions, kind, index) {
+  let lo = Infinity, hi = -Infinity;
+  for (let k = 2; k < positions.length; k += 3) { lo = Math.min(lo, positions[k] / 10); hi = Math.max(hi, positions[k] / 10); }
+  let sx = 0, sz = 0, n = 0;
+  for (let k = 0; k < positions.length; k += 3) if (positions[k + 2] / 10 < lo + 0.01) { sx += positions[k] / 10; sz += -positions[k + 1] / 10; n++; }
+  const x = sx / n, z = sz / n;
+  let r = 0;
+  for (let k = 0; k < positions.length; k += 3) if (positions[k + 2] / 10 < lo + 0.01) r = Math.max(r, Math.hypot(positions[k] / 10 - x, -positions[k + 1] / 10 - z));
+  return { kind, index, x: +x.toFixed(4), z: +z.toFixed(4), r: +r.toFixed(4), exit: +lo.toFixed(4), top: +hi.toFixed(4) };
+}
+
 function exportPage(page) {
   const path = join(dir, page.file);
   const bytes = readFileSync(path);
@@ -214,22 +286,19 @@ function exportPage(page) {
   // Blok I first, at the bay's resolution: its hosts' heights, its tanks, its chambers' exits
   const stage3 = scene.items.filter((it) => it.part === 'stage3');
   const stage3Meshes = buildSoyuzMeshes({ ...scene, items: stage3 }, { radialSegments: BAY_SEGMENTS });
-  const extent = new Map(), nozzles = [];
+  const extent = new Map(), nozzles = { bay: [], fregat: [], escape: [] };
   stage3.forEach((it, i) => {
     const p = stage3Meshes[i].positions;
     let lo = Infinity, hi = -Infinity;
     for (let k = 2; k < p.length; k += 3) { lo = Math.min(lo, p[k] / 10); hi = Math.max(hi, p[k] / 10); }
     extent.set(it.id, { lo, hi });
     const c = CHAMBER.exec(it.id);
-    if (!c) return;
-    // the exit: the ring of vertices within 1 cm of the chamber's bottom
-    let sx = 0, sz = 0, n = 0;
-    for (let k = 0; k < p.length; k += 3) if (p[k + 2] / 10 < lo + 0.01) { sx += p[k] / 10; sz += -p[k + 1] / 10; n++; }
-    const x = sx / n, z = sz / n;
-    let r = 0;
-    for (let k = 0; k < p.length; k += 3) if (p[k + 2] / 10 < lo + 0.01) r = Math.max(r, Math.hypot(p[k] / 10 - x, -p[k + 1] / 10 - z));
-    nozzles.push({ kind: c[1], index: Number(c[2]), x: +x.toFixed(4), z: +z.toFixed(4), r: +r.toFixed(4), exit: +lo.toFixed(4), top: +hi.toFixed(4) });
+    if (c) nozzles.bay.push(nozzleOf(p, c[1], Number(c[2])));
   });
+  // Fregat's main chamber, left to the flight's bell like Blok I's
+  const fregatChamber = scene.items.filter((it) => FREGAT_CHAMBER.test(it.id));
+  buildSoyuzMeshes({ ...scene, items: fregatChamber }, { radialSegments: RADIAL_SEGMENTS })
+    .forEach((m, i) => nozzles.fregat.push(nozzleOf(m.positions, 'main', i + 1)));
   const tanks = stage3.filter((it) => TANK.test(it.id)).map((it) => extent.get(it.id).lo);
   const bay = { extent, top: tanks.length ? Math.min(...tanks) : -Infinity };
   const chosen = scene.items.filter((it) => flightPart(it, page, bay));
@@ -238,6 +307,8 @@ function exportPage(page) {
   const bayMeshes = new Map(stage3.map((it, i) => [it.id, stage3Meshes[i]]));
   let r = 0;
   const meshes = chosen.map((it, i) => (inBay[i] ? bayMeshes.get(it.id) : rest[r++]));
+  // the escape tower's jettison nozzles, drawn with it, and where its fire leaves them
+  chosen.forEach((it, i) => { const j = JETTISON.exec(it.id); if (j) nozzles.escape.push(nozzleOf(meshes[i].positions, 'jettison', Number(j[1]))); });
 
   const materials = [], materialIndex = new Map();
   const hinges = [], hingeIndex = new Map();
@@ -303,12 +374,12 @@ function exportPage(page) {
   for (const name of order) {
     const groups = parts.get(name);
     if (!groups) continue;
-    const entry = { name, bounds: boundsOf([...groups.values()].map((g) => g.p)), meshes: [], ...(name === 'bay' ? { nozzles } : {}) };
+    const entry = { name, bounds: boundsOf([...groups.values()].map((g) => g.p)), meshes: [], ...(nozzles[name]?.length ? { nozzles: nozzles[name] } : {}) };
     for (const g of groups.values()) {
       const w = weld(g.p, g.n);
-      triangles += w.idx.length / 3;
+      triangles += w.indices / 3;
       entry.meshes.push({
-        material: g.material, ...(g.hinge >= 0 ? { hinge: g.hinge } : {}), vertices: w.vertices, indices: w.idx.length,
+        material: g.material, ...(g.hinge >= 0 ? { hinge: g.hinge } : {}), vertices: w.vertices, indices: w.indices,
         min: w.min.map((v) => +v.toFixed(6)), step: w.step,
         position: put(w.q), normal: put(w.n), index: put(w.idx), wide: w.wide,
       });
@@ -322,11 +393,13 @@ function exportPage(page) {
   lead.write('OLAX', 0, 'ascii');
   lead.writeUInt32LE(FORMAT_VERSION, 4);
   lead.writeUInt32LE(json.length, 8);
-  const out = Buffer.concat([lead, json, ...buffers]);
+  const raw = Buffer.concat([lead, json, ...buffers]);
+  // gzip: Node writes no timestamp into its header, so the same page makes the same file
+  const out = gzipSync(raw, { level: 9 });
   const target = join(dir, page.file.replace(/\.html$/, '.exterior.bin'));
   writeFileSync(target, out);
   console.log(`${page.file}: ${triangles} triangles, ${header.parts.length} parts, ${materials.length} materials, ${hinges.length} hinges, `
-    + `${(out.length / 1024).toFixed(1)} kB → ${target.slice(root.length + 1)}`);
+    + `${(raw.length / 1000).toFixed(1)} kB, ${(out.length / 1000).toFixed(1)} kB gzip → ${target.slice(root.length + 1)}`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

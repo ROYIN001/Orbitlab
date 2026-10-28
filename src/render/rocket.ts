@@ -823,6 +823,8 @@ export class RocketView {
       }
     }
     if (fregat && fit.fregat) swap(fregat.own, fregat.group, anatomyGroup(p.fregat!, mats, fit.fregat));
+    // Fregat's bell, glow and flame on the model's S5.92 chamber, which the model drops 1.4 m below the stage's base
+    if (fregat && fit.fregatChambers) this.refitChambers(fregat, fit.fregatChambers);
     if (this.fairing) {
       swap(this.fairingOwn, this.fairing, anatomyGroup(p['fairing-left']!, mats, fit.fairing));
       this.fairing.add(anatomyGroup(p['fairing-right']!, mats, fit.fairing));
@@ -831,7 +833,7 @@ export class RocketView {
       if (this.vapourAt?.onFairing) this.vapourAt.y = fit.fairingShoulder;
     }
     if (this.crewedTop && fit.tower) {
-      this.crewedTop.replaceShape(anatomyGroup(p.escape!, mats, fit.tower.placement));
+      this.crewedTop.replaceShape(anatomyGroup(p.escape!, mats, fit.tower.placement), fit.tower.jets);
       this.towerY = fit.tower.y;
     }
     if (spacecraft && fit.payload) {

@@ -152,7 +152,7 @@ export class DebrisView {
     const which: [AnatomyPartName, Placement] | null = v.kind === 'booster' && v.conicalTop ? ['booster', fit.booster]
       : v.kind === 'fairing' ? [side > 0 ? 'fairing-right' : 'fairing-left', fit.fairing]
         : spentStage && v.profile === 'r7Core' ? ['core', fit.core]
-          : spentStage && (v.profile === 'r7Upper' || (!v.profile && is(blokIDiameter))) ? ['stage3', fit.stage3]
+          : spentStage && (v.profile === 'r7Upper' || (!v.profile && is(blokIDiameter))) ? ['stage3', fit.stage3Spent]
             : spentStage && !v.profile && fit.fregatSpent && is(fregatDiameter) ? ['fregat', fit.fregatSpent] : null;
     const part = which ? model.parts[which[0]] : undefined;
     if (!which || !part) return null;

@@ -215,6 +215,7 @@ export class BuildScreen {
   /** Show the section at a level, or at a page of it (D07: `requirements`, at the Engineer level). */
   show(level: AppLevel, page?: AppPage): void {
     const entering = !this.visible || level !== this.level || (page ?? null) !== this.page;
+    if (entering) this.anatomy?.close();
     this.level = level;
     this.page = page ?? null;
     this.visible = true;
@@ -227,6 +228,8 @@ export class BuildScreen {
   /** Off screen: nothing moves. */
   hide(): void {
     this.visible = false;
+    // an Anatomy page open over Build goes with it, its WebGL with it (anatomy-dialog.ts)
+    this.anatomy?.close();
     this.explore?.hide();
     this.engineer?.hide();
     this.satLevel?.hide();

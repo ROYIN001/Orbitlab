@@ -457,6 +457,8 @@ export class CrewedTop {
   /** the control motors' belt at +X, the frame's −Y pointing out from it */
   readonly control = new THREE.Group();
   private readonly flame: THREE.Mesh;
+  /** the ring the flame leaves from: its nozzles' exits' height in the tower and distance from its axis */
+  private readonly flameRing: { y: number; r: number };
   /** every geometry made here, for `dispose`: render/escape.ts frees only its own */
   private readonly geometries: THREE.BufferGeometry[] = [];
 
@@ -531,6 +533,8 @@ export class CrewedTop {
     const plume = new THREE.CylinderGeometry(0.1, 0.4, 3.6, 8, 1, true);
     plume.translate(0, -1.8, 0);
     this.tower.updateMatrixWorld(true);
+    const exit = this.exits[0].getWorldPosition(new THREE.Vector3());
+    this.flameRing = { y: exit.y, r: Math.hypot(exit.x, exit.z) };
     this.flame = new THREE.Mesh(own(merge(this.exits.map((e) => plume.clone().applyMatrix4(e.matrixWorld)))),
       new THREE.MeshBasicMaterial({ color: 0xffc58a, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     plume.dispose();
@@ -553,12 +557,18 @@ export class CrewedTop {
   /**
    * Draw the tower as `shape` (the Soyuz Anatomy model's, render/anatomy.ts),
    * its base on the tower's origin, and leave the fins to the fairing that
-   * model draws: this tower's own shape hidden, its jettison fire kept.
+   * model draws: this tower's own shape hidden, its jettison fire kept, moved
+   * onto `jets` (the model's jettison nozzles' ring) where it has them.
    */
-  replaceShape(shape: THREE.Object3D): void {
+  replaceShape(shape: THREE.Object3D, jets: { y: number; r: number } | null = null): void {
     for (const child of this.tower.children) if (child !== this.flame) child.visible = false;
     this.fins.visible = false;
     this.tower.add(shape);
+    if (jets) {
+      const k = jets.r / this.flameRing.r;
+      this.flame.scale.set(k, 1, k);
+      this.flame.position.y = jets.y - this.flameRing.y;
+    }
   }
 
   /**
@@ -602,6 +612,9 @@ export class CrewedTop {
  * (stowed) to 1 (out); render/anatomy.ts hangs them on the Anatomy
  * model's service module, whose own arrays are drawn folded.
  */
+/** How far up the service module from its aft end the Soyuz MS's wings are hinged in `soyuzMsWings`, m. */
+export const SOYUZ_MS_HINGE = 1.6;
+
 export function soyuzMsWings(parent: THREE.Object3D, aft: number, grey: THREE.Material, panel: THREE.Material, geos: THREE.BufferGeometry[]): (k: number) => void {
   const wings: THREE.Group[] = [];
   const box = (sx: number, sy: number, sz: number, m: THREE.Material, x: number, hinge: THREE.Object3D) => {
@@ -612,7 +625,7 @@ export function soyuzMsWings(parent: THREE.Object3D, aft: number, grey: THREE.Ma
   };
   for (const s of [1, -1]) {
     const hinge = new THREE.Group();
-    hinge.position.set(s * 1.36, aft + 1.6, 0);
+    hinge.position.set(s * 1.36, aft + SOYUZ_MS_HINGE, 0);
     box(0.36, 0.04, 0.5, grey, s * 0.18, hinge);
     for (let p = 0; p < 4; p++) box(0.87, 0.028, 1.22, panel, s * (0.4 + (p + 0.5) * 0.9), hinge);
     box(3.68, 0.04, 0.08, grey, s * 2.14, hinge);

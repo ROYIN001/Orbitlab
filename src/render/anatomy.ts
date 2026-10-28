@@ -20,14 +20,19 @@ import * as THREE from 'three';
 import type { VehicleSpec } from '../types';
 import { stackLayout } from '../physics/frame';
 import { anatomyPage, type AnatomyVariant } from '../data/anatomy';
-import { R7_BOOSTER_GAP, r7CoreBase, soyuzMsWings } from './soyuz';
+import { R7_BOOSTER_GAP, r7CoreBase, SOYUZ_MS_HINGE, soyuzMsWings } from './soyuz';
 
-export const ANATOMY_FORMAT_VERSION = 1;
+export const ANATOMY_FORMAT_VERSION = 2;
 
 export type AnatomyPartName = 'booster' | 'core' | 'stage3' | 'skirt' | 'bay' | 'fregat' | 'fairing-left' | 'fairing-right' | 'escape' | 'payload';
 
-/** One of Blok I's thrust chambers in the model (the `bay` part's): its exit's centre and radius, and its top and exit heights (model metres). */
-export interface AnatomyNozzle { kind: 'main' | 'vernier'; x: number; z: number; r: number; top: number; exit: number }
+/**
+ * A chamber or nozzle in the model that the flight draws its own fire from:
+ * Blok I's (the `bay` part's) and Fregat's, whose bells the flight draws, and
+ * the escape tower's jettison nozzles. Its exit's centre and radius, and its
+ * top's and exit's heights (model metres).
+ */
+export interface AnatomyNozzle { kind: 'main' | 'vernier' | 'jettison'; x: number; z: number; r: number; top: number; exit: number }
 
 export interface AnatomyMaterialSpec { name: string; color: string; roughness: number; metalness: number }
 
@@ -46,7 +51,7 @@ export interface AnatomyPart {
   min: THREE.Vector3;
   max: THREE.Vector3;
   meshes: AnatomyMesh[];
-  /** the `bay`: Blok I's chambers, which the flight draws as its own bells where these are */
+  /** the `bay`'s and `fregat`'s chambers, which the flight draws as its own bells where these are; the `escape` tower's jettison nozzles */
   nozzles?: AnatomyNozzle[];
 }
 
@@ -66,12 +71,24 @@ interface HeaderMesh {
 }
 
 /**
- * Read an exterior mesh file into geometries. Pure but for three's
+ * The file as fetched, gzip-compressed (scripts/anatomy-meshes.mjs), inflated;
+ * one that is not is passed on as it is. Throws where the browser cannot
+ * inflate (no `DecompressionStream`): the vehicle is then drawn as before.
+ */
+export async function inflateAnatomy(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+  const head = new Uint8Array(buffer, 0, Math.min(2, buffer.byteLength));
+  if (head[0] !== 0x1f || head[1] !== 0x8b) return buffer;
+  if (typeof DecompressionStream !== 'function') throw new Error('this browser cannot inflate the anatomy meshes');
+  return new Response(new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+}
+
+/**
+ * Read an (inflated) exterior mesh file into geometries. Pure but for three's
  * `BufferGeometry`, so it runs under test. The geometries are shared by every
  * view that draws the model (`userData.shared`): they live as long as the page.
  */
 export function decodeAnatomy(buffer: ArrayBuffer): AnatomyModel {
-  const view = new DataView(buffer);
+  const view = new DataView(buffer), bytes = new Uint8Array(buffer);
   const magic = String.fromCharCode(...new Uint8Array(buffer, 0, 4));
   if (magic !== 'OLAX') throw new Error('not an Orbitlab anatomy mesh file');
   const version = view.getUint32(4, true);
@@ -82,17 +99,26 @@ export function decodeAnatomy(buffer: ArrayBuffer): AnatomyModel {
   const parts: AnatomyModel['parts'] = {};
   for (const p of header.parts as { name: AnatomyPartName; bounds: { min: number[]; max: number[] }; meshes: HeaderMesh[]; nozzles?: AnatomyNozzle[] }[]) {
     const meshes = p.meshes.map((m): AnatomyMesh => {
-      const q = new Uint16Array(buffer, body + m.position, m.vertices * 3);
-      const n = new Int8Array(buffer, body + m.normal, m.vertices * 4);
-      const positions = new Float32Array(m.vertices * 3), normals = new Float32Array(m.vertices * 3);
-      for (let v = 0; v < m.vertices; v++) {
-        for (let a = 0; a < 3; a++) {
-          positions[v * 3 + a] = m.min[a] + q[v * 3 + a] * m.step[a];
-          normals[v * 3 + a] = n[v * 4 + a] / 127;
+      // the byte planes scripts/anatomy-meshes.mjs lays them out in
+      const V = m.vertices, I = m.indices;
+      const positions = new Float32Array(V * 3), normals = new Float32Array(V * 3);
+      const n = new Int8Array(buffer, body + m.normal, V * 3);
+      for (let a = 0; a < 3; a++) {
+        const lo = body + m.position + a * 2 * V, hi = lo + V;
+        let q = 0;
+        for (let v = 0; v < V; v++) {
+          q = (q + (bytes[lo + v] | (bytes[hi + v] << 8))) & 0xffff;
+          positions[v * 3 + a] = m.min[a] + q * m.step[a];
+          normals[v * 3 + a] = n[a * V + v] / 127;
         }
       }
-      const index = m.wide ? new Uint32Array(buffer.slice(body + m.index, body + m.index + m.indices * 4))
-        : new Uint16Array(buffer.slice(body + m.index, body + m.index + m.indices * 2));
+      const size = m.wide ? 4 : 2, at = body + m.index;
+      const index = m.wide ? new Uint32Array(I) : new Uint16Array(I);
+      for (let i = 0, next = 0; i < I; i++) {
+        let code = 0;
+        for (let b = 0; b < size; b++) code |= bytes[at + b * I + i] << (8 * b);
+        index[i] = code === 0 ? next++ : next - (code >>> 0);
+      }
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
@@ -125,6 +151,7 @@ export function loadAnatomy(variant: AnatomyVariant, base: string | URL = docume
         if (!r.ok) throw new Error(`anatomy meshes: HTTP ${r.status}`);
         return r.arrayBuffer();
       })
+      .then(inflateAnatomy)
       .then((buffer) => {
         const model = decodeAnatomy(buffer);
         loaded.set(variant, model);
@@ -157,13 +184,21 @@ export interface AnatomyFit {
   /** Blok I, in stage 1's group: its skin, its aft bay (`bay`: engine, thrust frame, lowest tank) and its skirt */
   stage3: Placement;
   /**
+   * A spent Blok I, in the debris (drawn from `-height[1]`): on the 2.1a its
+   * top, which stands 0.2 m above the physics' (the spacecraft's seat), on the
+   * separation plane the spacecraft leaves from, so the two do not overlap.
+   */
+  stage3Spent: Placement;
+  /**
    * Blok I's chambers placed in its group (heights there), for its bells,
    * glow and plumes: the model's own chambers are left to the flight, which
    * gimbals and lights them. Null when the model records none.
    */
-  chambers: { kind: 'main' | 'vernier'; x: number; z: number; r: number; top: number; exit: number }[] | null;
+  chambers: PlacedChamber[] | null;
   /** Fregat, in stage 2's group: dropped onto Blok I's top, over the adapter the stack layout puts between */
   fregat: Placement | null;
+  /** Fregat's main chamber placed in its group, as `chambers` */
+  fregatChambers: PlacedChamber[] | null;
   /** a spent Fregat, in the debris: its top on the separation plane its spacecraft leaves from (the debris draws it from `-height[2]`) */
   fregatSpent: Placement | null;
   /**
@@ -177,8 +212,12 @@ export interface AnatomyFit {
   /** the model's fairing's top, and its shoulder (where the nose's curve meets the cylinder, the Mach-1 collar's place), in the fairing's group */
   fairingTop: number;
   fairingShoulder: number;
-  /** where the escape tower stands in the fairing's group, and the tower in its own */
-  tower: { y: number; placement: Placement } | null;
+  /**
+   * where the escape tower stands in the fairing's group, and the tower in its
+   * own; `jets`: its jettison nozzles' ring there (their exits' mean height
+   * and distance from the axis), where its fire leaves the tower
+   */
+  tower: { y: number; placement: Placement; jets: { y: number; r: number } | null } | null;
   /** the spacecraft, centred on its group as render/satellite.ts centres a payload; `seat` above the stage's top */
   payload: (Placement & { height: number; seat: number }) | null;
   /**
@@ -189,9 +228,29 @@ export interface AnatomyFit {
   satelliteSeat: number | null;
 }
 
+/** A chamber in a stage's group: its exit's centre and radius, its top's and exit's heights there. */
+export interface PlacedChamber { kind: 'main' | 'vernier'; x: number; z: number; r: number; top: number; exit: number }
+
 const at = (y0: number, sy = 1, dy = 0, dx = 0): Placement => ({ y0, sy, dy, dx });
 /** A model height in the group a placement puts it in. */
 export const placeY = (p: Placement, y: number): number => p.dy + (y - p.y0) * p.sy;
+
+/** A part's chambers (not the tower's jets) in the group `place` puts it in; null if it records none. */
+function placed(nozzles: AnatomyNozzle[] | undefined, place: Placement): PlacedChamber[] | null {
+  const list: PlacedChamber[] = [];
+  for (const n of nozzles ?? []) {
+    if (n.kind !== 'jettison') list.push({ kind: n.kind, x: n.x, z: n.z, r: n.r, top: placeY(place, n.top), exit: placeY(place, n.exit) });
+  }
+  return list.length ? list : null;
+}
+
+/** The escape tower's jettison nozzles' ring in the tower's own group. */
+function jets(escape: AnatomyPart, place: Placement): { y: number; r: number } | null {
+  const list = (escape.nozzles ?? []).filter((n) => n.kind === 'jettison');
+  if (!list.length) return null;
+  const mean = (f: (n: AnatomyNozzle) => number) => list.reduce((sum, n) => sum + f(n), 0) / list.length;
+  return { y: placeY(place, mean((n) => n.exit)), r: mean((n) => Math.hypot(n.x, n.z)) };
+}
 
 /** Each vertex of a part's meshes, in the model's metres. */
 function eachVertex(part: AnatomyPart, f: (x: number, y: number, z: number) => void): void {
@@ -230,7 +289,7 @@ function shoulder(halves: AnatomyPart[], radius: number): number {
 /**
  * Fit the model's parts into the vehicle's stack. Blok A and Blok I are
  * stretched along their axes into their stages' heights (by 1.02 and 0.96 on
- * 2.1a, 1.02 and 1.03 on 2.1b); everything above Blok I keeps the model's own
+ * 2.1a, 1.03 and 0.99 on 2.1b); everything above Blok I keeps the model's own
  * size and its place on Blok I's top, where the model puts it — the 2.1b
  * fairing round Fregat, as the ST fairing flies, not above it as the stack
  * layout stands it.
@@ -265,20 +324,24 @@ export function anatomyFit(spec: VehicleSpec, model: Pick<AnatomyModel, 'parts'>
   const blokIPlace = at(blokIBase, blokI.length / ((fregat ? fregat.min.y : fairingBase) - blokIBase));
   const fairingDy = blokITop - top;
   const fairingR = (spec.fairing?.diameter ?? 0) / 2;
+  const fregatPlace = fregat ? at(fregat.min.y, 1, blokITop - (layout.base[2] ?? blokITop)) : null;
+  // the 2.1a's Blok I stands a little above the physics' top, where the spacecraft sits (`payload.seat`)
+  const blokIProud = fregat ? 0 : placeY(blokIPlace, stage3.max.y) - blokI.length;
+  const towerPlace = escape ? at(escape.min.y) : null;
   return {
     core: at(core.min.y, sy0),
     booster: at(core.min.y, sy0, -(b.baseOffset ?? 0), -off),
     boosterEngines: { dx: ring.x - off, dy: (booster.min.y - core.min.y) * sy0 },
     stage3: blokIPlace,
-    chambers: p.bay?.nozzles?.length
-      ? p.bay.nozzles.map((n) => ({ kind: n.kind, x: n.x, z: n.z, r: n.r, top: placeY(blokIPlace, n.top), exit: placeY(blokIPlace, n.exit) }))
-      : null,
-    fregat: fregat ? at(fregat.min.y, 1, blokITop - (layout.base[2] ?? blokITop)) : null,
+    stage3Spent: { ...blokIPlace, dy: blokIPlace.dy - Math.max(0, blokIProud) },
+    chambers: placed(p.bay?.nozzles, blokIPlace),
+    fregat: fregatPlace,
+    fregatChambers: fregat && fregatPlace ? placed(fregat.nozzles, fregatPlace) : null,
     fregatSpent: fregat ? at(fregat.min.y, 1, (layout.height[2] ?? 0) - (fregat.max.y - fregat.min.y)) : null,
     fairing: at(fairingBase, 1, fairingDy),
     fairingTop: fairingDy + fairingTop - fairingBase,
     fairingShoulder: fairingDy + shoulder(halves, fairingR) - fairingBase,
-    tower: escape ? { y: fairingDy + (escape.min.y - fairingBase), placement: at(escape.min.y) } : null,
+    tower: escape && towerPlace ? { y: fairingDy + (escape.min.y - fairingBase), placement: towerPlace, jets: jets(escape, towerPlace) } : null,
     payload: ship ? { ...at(ship.min.y, 1, -(ship.max.y - ship.min.y) / 2), height: ship.max.y - ship.min.y, seat: Math.max(0, ship.min.y - fairingBase) } : null,
     satelliteSeat: fregat && !ship ? blokITop + (fregat.max.y - fregat.min.y) - top : null,
   };
@@ -380,7 +443,14 @@ export function anatomySpacecraft(model: AnatomyModel, fit: AnatomyFit, material
   const grey = new THREE.MeshStandardMaterial({ color: 0xb7bfbd, metalness: 0.9, roughness: 0.36 });
   const panel = new THREE.MeshStandardMaterial({ color: 0x263a52, metalness: 0, roughness: 0.3, emissive: 0x070c24 });
   const wings = new THREE.Group();
-  const unfold = soyuzMsWings(wings, part.min.y, grey, panel, geos);
+  // hinged where the model's folded arrays are, 1.6 m above the aft end in the flight's own drawing
+  let hinge = Infinity;
+  for (const o of folded) {
+    const g = (o as THREE.Mesh).geometry;
+    if (!g.boundingBox) g.computeBoundingBox();
+    hinge = Math.min(hinge, g.boundingBox!.min.y);
+  }
+  const unfold = soyuzMsWings(wings, (Number.isFinite(hinge) ? hinge : part.min.y + SOYUZ_MS_HINGE) - SOYUZ_MS_HINGE, grey, panel, geos);
   body.add(wings);
   const setDeploy = (p: number) => {
     const k = smooth(0.1, 0.7, p);

@@ -61,6 +61,12 @@ export default async function soyuzAnatomy(t) {
   }
 
   // ── Build: the pages whole, for the two Soyuz vehicles only
+  // With motion allowed, a page starts its idle tour as soon as its model is built and redraws its
+  // 1.4 million triangles every frame. Software GL takes seconds over each, and a capture waits for every
+  // frame already queued, so `app.shot` of the built page timed out (30 s; holding the frame's animation
+  // frames as well did not help). With reduced motion, the page's own `still` query, it draws only on a
+  // change, as for anyone who has asked for less motion; how it builds and which viewer it shows are the same.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await app.goto('#/build/watch');
   const open = page.locator('.bs-anatomy-open');
   await page.selectOption('#bs-picker-select', 'falcon9');
@@ -73,11 +79,32 @@ export default async function soyuzAnatomy(t) {
   await open.click();
   const dialog = page.locator('dialog.bs-anatomy');
   await dialog.waitFor({ state: 'visible', timeout: 10_000 });
-  const title = () => page.evaluate(() => document.querySelector('.bs-anatomy-frame')?.contentDocument?.querySelector('#anatomy-content') ? document.querySelector('.bs-anatomy-frame').contentDocument.title : '');
-  t.check(await t.until(async () => (await title()).includes('Soyuz-2.1a'), { timeoutMs: 60_000 }), `the Soyuz MS page did not open (title "${await title()}")`);
-  await page.locator('.bs-anatomy [data-k="progress-ms-26"]').click();
-  t.check(await t.until(async () => (await title()).includes('Progress MS-26'), { timeoutMs: 60_000 }), `the Progress MS-26 page did not open (title "${await title()}")`);
+  // A page is built once its script has made its model: its root's data-loading gone, which it sets while
+  // it builds (or falls back to its still image), and its readout naming the viewer it shows. The build runs
+  // on the app's own thread for some 20 s here, so each wait is long; the dialog's note stays up meanwhile.
+  const built = () => page.evaluate(() => {
+    const doc = document.querySelector('.bs-anatomy-frame')?.contentDocument;
+    const root = doc?.getElementById('soyuz-anatomy');
+    if (!root || !root.__soyuzController || root.dataset.loading) return null;
+    return { title: doc.title, viewer: doc.getElementById('live-readout')?.dataset.viewer ?? '', note: !document.querySelector('.bs-anatomy-loading').hidden };
+  });
+  const opened = async (name) => {
+    let got = null;
+    t.check(await t.until(async () => (got = await built()) !== null && got.title.includes(name), { timeoutMs: 150_000, intervalMs: 500 }), `the ${name} page did not build its model (${JSON.stringify(got)})`);
+    t.check(got?.viewer === '3d', `the ${name} page shows its ${got?.viewer || 'no'} view, not its 3-D model`);
+    t.check(await t.until(() => page.evaluate(() => document.querySelector('.bs-anatomy-loading').hidden)), `the loading note stayed over the built ${name} page`);
+  };
+  await opened('Soyuz-2.1a');
   await app.shot('build-anatomy');
+  // the page's frame is one of the dialog's Tab stops: Shift+Tab from the close button, the first, reaches it, the last
+  await page.locator('.bs-anatomy .dialog-close').focus();
+  await page.keyboard.press('Shift+Tab');
+  t.check(await page.evaluate(() => document.activeElement?.classList.contains('bs-anatomy-frame')), `Shift+Tab from × went to ${await page.evaluate(() => document.activeElement?.className)}, not the page`);
+  // the page's tab moves the focus back out of the frame onto itself (pick), which Escape needs: inside the
+  // frame Escape is the page's own (it frames the model again or drops a highlight) and leaves the dialog open
+  await page.locator('.bs-anatomy [data-k="progress-ms-26"]').click();
+  await opened('Progress MS-26');
+  t.check(await page.evaluate(() => document.activeElement?.dataset?.k === 'progress-ms-26'), `the focus left the Progress MS-26 tab while its page built, for ${await page.evaluate(() => document.activeElement?.className)}`);
   await page.keyboard.press('Escape');
   await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
   // the dialog's `close` event, which removes the page's frame, comes in a task after it is hidden

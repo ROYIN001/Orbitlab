@@ -12,6 +12,9 @@
  * and removed on close: loading a page into a frame that has already shown
  * one would add an entry to the browser's history, so Back would step the
  * hidden frame instead of the app; removing it also frees its WebGL at once.
+ * The page then builds its model on the app's own thread (it is of the same
+ * origin), 10–20 s on a slow machine, which holds the app still meanwhile:
+ * the loading note stays over it until the page says it is done.
  */
 import { t } from '../../i18n';
 import { Modal } from '../dialogs';
@@ -65,9 +68,23 @@ export class AnatomyDialog extends Modal {
     frame.title = t('build.anatomy.frame', { name: this.name });
     frame.src = new URL(this.current.page, document.baseURI).href;
     this.loading.hidden = false;
-    frame.addEventListener('load', () => { if (frame === this.frame) this.loading.hidden = true; });
+    frame.addEventListener('load', () => this.whenBuilt(frame));
     this.frame = frame;
     this.view.append(frame);
+  }
+
+  /**
+   * Hide the loading note once the page has built its model: its root's
+   * `data-loading`, set while it builds (or falls back to its still image),
+   * gone. At once for a page without that root (not the expected page).
+   */
+  private whenBuilt(frame: HTMLIFrameElement): void {
+    const done = () => { if (frame === this.frame) this.loading.hidden = true; };
+    let root: HTMLElement | null = null;
+    try { root = frame.contentDocument?.getElementById('soyuz-anatomy') ?? null; } catch { /* not readable: nothing to wait on */ }
+    if (!root?.dataset.loading) { done(); return; }
+    const watch = new MutationObserver(() => { if (!root!.dataset.loading) { watch.disconnect(); done(); } });
+    watch.observe(root, { attributes: true, attributeFilter: ['data-loading'] });
   }
 
   private pick(page: AnatomyPage): void {

@@ -8,7 +8,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { ANATOMY_PAGES, anatomyPagesFor, flightAnatomy, type AnatomyVariant } from '../src/data/anatomy';
-import { anatomyFit, decodeAnatomy, setHinges, anatomySpacecraft, anatomyMaterials, type AnatomyModel } from '../src/render/anatomy';
+import { anatomyFit, decodeAnatomy, inflateAnatomy, setHinges, anatomySpacecraft, anatomyMaterials, type AnatomyModel } from '../src/render/anatomy';
 import { RocketView } from '../src/render/rocket';
 import { DebrisView } from '../src/render/debris';
 import type { SceneManager } from '../src/render/scene';
@@ -28,16 +28,11 @@ const load = (id: string): Promise<unknown> => import(/* @vite-ignore */ id);
 const { readFileSync } = (await load('node:fs')) as { readFileSync(path: URL): Bytes };
 const { createHash } = (await load('node:crypto')) as { createHash(algorithm: 'sha256'): { update(data: Bytes): { digest(encoding: 'hex'): string } } };
 const file = (path: string): Bytes => readFileSync(new URL(`../public/${path}`, import.meta.url));
-const models = new Map<AnatomyVariant, AnatomyModel>();
-const model = (variant: AnatomyVariant): AnatomyModel => {
-  let m = models.get(variant);
-  if (!m) {
-    const bytes = file(ANATOMY_PAGES.find((p) => p.variant === variant)!.meshes);
-    m = decodeAnatomy(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
-    models.set(variant, m);
-  }
-  return m;
-};
+const arrayBuffer = (bytes: Bytes): ArrayBuffer => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+/** Each variant's meshes as the flight reads them: fetched gzip-compressed, inflated, decoded. */
+const models = new Map<AnatomyVariant, AnatomyModel>(await Promise.all(ANATOMY_PAGES.map(async (p) =>
+  [p.variant, decodeAnatomy(await inflateAnatomy(arrayBuffer(file(p.meshes))))] as const)));
+const model = (variant: AnatomyVariant): AnatomyModel => models.get(variant)!;
 
 /** The canvases the stack's textures draw on; nothing here reads their pixels back (as tests/plume-throttle.test.ts). */
 const withCanvas = <T>(run: () => T): T => {
@@ -73,6 +68,8 @@ describe('the Anatomy pages and their meshes', () => {
 
   it('are each made from the page beside it, as it is committed (run `npm run anatomy` after replacing a page)', () => {
     for (const p of ANATOMY_PAGES) {
+      // gzip-compressed, as the host sends a .bin as it is
+      expect([...new Uint8Array(arrayBuffer(file(p.meshes)), 0, 2)], p.meshes).toEqual([0x1f, 0x8b]);
       const m = model(p.variant);
       expect(m.source.sha256, p.page).toBe(createHash('sha256').update(file(p.page)).digest('hex'));
       expect(m.variant).toBe(p.variant);
@@ -96,6 +93,9 @@ describe('the Anatomy pages and their meshes', () => {
       expect(chambers.filter((c) => c.kind === 'main')).toHaveLength(4);
       expect(chambers.filter((c) => c.kind === 'vernier')).toHaveLength(p.variant === 'fregat-st31' ? 0 : 4);
       for (const c of chambers) { expect(c.top).toBeGreaterThan(c.exit); expect(c.r).toBeGreaterThan(0.1); }
+      // Fregat's S5.92, and the escape tower's twelve jettison nozzles
+      if (p.variant === 'fregat-st31') expect(m.parts.fregat!.nozzles!.map((c) => c.kind)).toEqual(['main']);
+      if (p.variant === 'soyuz-ms') expect(m.parts.escape!.nozzles!.filter((c) => c.kind === 'jettison')).toHaveLength(12);
       const all = new THREE.Box3();
       for (const part of Object.values(m.parts)) {
         all.expandByPoint(part!.min).expandByPoint(part!.max);
@@ -109,6 +109,38 @@ describe('the Anatomy pages and their meshes', () => {
       expect(all.max.y).toBeGreaterThan(44);
       expect(all.max.y).toBeLessThan(51);
       expect(m.parts.core!.max.x - m.parts.core!.min.x).toBeCloseTo(2.95, 1);
+    }
+  });
+
+  it('close each body at its ends: a line along it, near its axis or its wall, meets it (no tube seen through)', () => {
+    /** How many of the parts' triangles a vertical line at (x, z) passes through. */
+    const crossings = (parts: (AnatomyModel['parts'][keyof AnatomyModel['parts']])[], x: number, z: number) => {
+      let n = 0;
+      for (const part of parts) for (const mesh of part!.meshes) {
+        const pos = mesh.geometry.attributes.position, index = mesh.geometry.index!;
+        for (let i = 0; i < index.count; i += 3) {
+          const [a, b, c] = [0, 1, 2].map((k) => index.getX(i + k));
+          const ax = pos.getX(a), az = pos.getZ(a), bx = pos.getX(b) - ax, bz = pos.getZ(b) - az, cx = pos.getX(c) - ax, cz = pos.getZ(c) - az;
+          const d = bx * cz - cx * bz;
+          if (Math.abs(d) < 1e-12) continue;
+          const u = ((x - ax) * cz - cx * (z - az)) / d, v = (bx * (z - az) - (x - ax) * bz) / d;
+          if (u >= 0 && v >= 0 && u + v <= 1) n++;
+        }
+      }
+      return n;
+    };
+    for (const p of ANATOMY_PAGES) {
+      const m = model(p.variant);
+      const bodies: [string, (typeof m.parts)[keyof typeof m.parts][]][] = [['Blok A', [m.parts.core]], ['Blok I', [m.parts.stage3, m.parts.bay]], ['a strap-on', [m.parts.booster]]];
+      if (p.variant === 'progress-ms-26') bodies.push(['the Progress MS', [m.parts.payload]]);
+      for (const [name, parts] of bodies) {
+        const { min, max } = parts[0]!;
+        const cx = (min.x + max.x) / 2, cz = (min.z + max.z) / 2, r = Math.min(max.x - min.x, max.z - min.z) / 2;
+        // (the strap-on's box takes in its fins: its body is the inner part of it)
+        for (const [f, a] of name === 'a strap-on' ? [[0, 0], [0.3, 0.3], [0.3, 2.4]] : [[0, 0], [0.4, 0.3], [0.4, 2.4], [0.7, 1.1], [0.7, 4.0]]) {
+          expect(crossings(parts, cx + f * r * Math.cos(a), cz + f * r * Math.sin(a)), `${p.variant}: ${name} open along x ${f}r at ${a} rad`).toBeGreaterThanOrEqual(2);
+        }
+      }
     }
   });
 });
@@ -210,9 +242,25 @@ describe('RocketView with the model mounted', () => {
       const fairing = box(named(rocket.group, 'anatomy:fairing-right')[0]);
       expect(fairing.min.y).toBeCloseTo(layout.base[1] + sim.vehicleSpec.stages[1].length, 2);
       if (variant === 'soyuz-ms') {
-        // the escape tower on the fairing's nose
+        // the escape tower on the fairing's nose, its jettison fire leaving the model's jettison nozzles
         const tower = box(named(rocket.group, 'anatomy:escape')[0]);
         expect(tower.min.y).toBeCloseTo(fairing.max.y, 2);
+        const top = (rocket as unknown as { crewedTop: { flame: THREE.Mesh; flameRing: { y: number; r: number } } }).crewedTop;
+        expect(top.flame.position.y + top.flameRing.y).toBeCloseTo(fit.tower!.jets!.y, 9);
+        expect(top.flame.scale.x * top.flameRing.r).toBeCloseTo(fit.tower!.jets!.r, 9);
+        expect(fit.tower!.jets!.y).toBeGreaterThan(4);
+      }
+      if (variant === 'fregat-st31') {
+        // Fregat's bell on the model's S5.92 chamber, its flame at the chamber's exit
+        const fregat = parts[2] as unknown as { engines: { nozzles: { x: number; z: number; r: number; len: number; y?: number }[] }; plume: { group: THREE.Group } };
+        const [c] = fit.fregatChambers!;
+        expect(fregat.engines.nozzles).toHaveLength(1);
+        expect(fregat.engines.nozzles[0].y).toBeCloseTo(c.top, 9);
+        expect(fregat.engines.nozzles[0].len).toBeCloseTo(c.top - c.exit, 9);
+        expect(fregat.plume.group.position.y).toBeCloseTo(c.exit, 9);
+        // inside the model's Fregat, which hangs below the stage's base over the adapter
+        expect(c.exit).toBeLessThan(0);
+        expect(c.exit).toBeGreaterThan(fit.fregat!.dy);
       }
       // each strap-on's engines hang from the model's strap-on, not 0.36 m below it
       for (const unit of parts[0].boosters[0].units as unknown as { group: THREE.Group; engines: { bells: THREE.InstancedMesh } }[]) {
@@ -290,9 +338,9 @@ describe('spent parts drawn from the model', () => {
       debris(2, { diameter: strapOn.diameter, length: strapOn.length, color: '#ccc', kind: 'booster', conicalTop: true }, 0),
     ]);
     expect(Object.keys(got).sort()).toEqual(['anatomy:bay', 'anatomy:booster', 'anatomy:stage3']);
-    // the spent stage's top at the separation plane, under the spacecraft (the model's adapter ring 0.2 m above it, under the Soyuz MS's base)
-    expect(got['anatomy:stage3'].max.y).toBeGreaterThan(0);
-    expect(got['anatomy:stage3'].max.y).toBeLessThan(0.25);
+    // the spent stage's top (the model's adapter ring, which stands 0.2 m proud of the physics' top, under the
+    // spacecraft's base) on the separation plane, so the spacecraft leaving it does not stand inside it
+    expect(got['anatomy:stage3'].max.y).toBeCloseTo(0, 3);
   });
 
   it('a spent Fregat with its top on the plane its satellite left from', () => {
@@ -347,6 +395,12 @@ describe('the spacecraft', () => {
     expect(folded.every((o) => o.visible)).toBe(true);
     ship.setDeploy(1);
     expect(folded.some((o) => o.visible)).toBe(false);
+    // the wings hinged where the folded arrays were
+    const foldedFoot = Math.min(...folded.map((o) => { o.geometry.computeBoundingBox(); return o.geometry.boundingBox!.min.y; }));
+    const hinges: THREE.Object3D[] = [];
+    ship.group.traverse((o) => { if (Math.abs(Math.abs(o.position.x) - 1.36) < 1e-9 && !(o as THREE.Mesh).isMesh) hinges.push(o); });
+    expect(hinges).toHaveLength(2);
+    for (const h of hinges) expect(h.position.y).toBeCloseTo(foldedFoot, 9);
     expect(ship.height).toBeGreaterThan(7);
     expect(ship.height).toBeLessThan(8.5);
   }));
