@@ -2,7 +2,7 @@
  * The owner's Soyuz Anatomy pages (public/anatomy/): three self-contained 3-D
  * models of the vehicle, its tanks, engines and plumbing, with their Thai
  * guide, made apart from Orbitlab and brought in as they are (owner,
- * 2026-10-28). Build shows a page whole (src/ui/build/anatomy-view.ts); the
+ * 2026-10-28). Build shows a page whole (src/ui/build/anatomy-dialog.ts); the
  * flight draws the outside of the vehicle from the exterior meshes
  * scripts/anatomy-meshes.mjs derives from each page (src/render/anatomy.ts).
  *

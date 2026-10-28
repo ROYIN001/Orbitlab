@@ -5,7 +5,8 @@
  * place, and the strap-ons drawn from it as debris once they go. A Progress
  * MS mission mounts the Progress page's model. Build's Watch level opens the
  * page whole for Soyuz-2.1a (both payloads) and 2.1b, and for no other
- * vehicle, and unloads it on close (src/ui/build/anatomy-dialog.ts). Console
+ * vehicle, unloads it on close and leaves the browser's history as it was,
+ * so Back still steps the app (src/ui/build/anatomy-dialog.ts). Console
  * errors (shader failures among them) fail it.
  */
 export const timeoutMs = 360_000;
@@ -68,6 +69,7 @@ export default async function soyuzAnatomy(t) {
   t.check(await t.until(async () => (await open.count()) === 1), 'Soyuz-2.1b offers no Anatomy page');
   await page.selectOption('#bs-picker-select', 'soyuz21a');
   await open.waitFor({ timeout: 10_000 });
+  const history = await page.evaluate(() => history.length);
   await open.click();
   const dialog = page.locator('dialog.bs-anatomy');
   await dialog.waitFor({ state: 'visible', timeout: 10_000 });
@@ -78,9 +80,11 @@ export default async function soyuzAnatomy(t) {
   await app.shot('build-anatomy');
   await page.keyboard.press('Escape');
   await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
-  // the dialog's `close` event, which unloads the page, comes in a task after it is hidden
-  const src = () => page.evaluate(() => document.querySelector('.bs-anatomy-frame').getAttribute('src'));
-  t.check(await t.until(async () => (await src()) === 'about:blank'), `closing the dialog left the page loaded (${await src()})`);
+  // the dialog's `close` event, which removes the page's frame, comes in a task after it is hidden
+  const frames = () => page.evaluate(() => document.querySelectorAll('.bs-anatomy-frame').length);
+  t.check(await t.until(async () => (await frames()) === 0), `closing the dialog left ${await frames()} page frame(s) loaded`);
+  const after = await page.evaluate(() => history.length);
+  t.check(after === history, `opening a page, switching it and closing the dialog added ${after - history} history entr(ies): Back would step the hidden frame`);
   t.check(await page.evaluate(() => document.activeElement?.classList.contains('bs-anatomy-open')), 'closing the dialog did not hand the focus back to its button');
 
   t.check(consoleErrors.length === 0, `console errors: ${consoleErrors.join(' | ')}`);

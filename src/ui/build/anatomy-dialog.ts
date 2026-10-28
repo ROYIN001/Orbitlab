@@ -8,7 +8,10 @@
  * Progress MS-26, and for Soyuz-2.1b with Fregat (src/data/anatomy.ts).
  *
  * A page is about 4.5 MB, loaded only when it is opened, and kept once seen
- * (src/pwa/manifest.ts); closing the dialog unloads it, freeing its WebGL.
+ * (src/pwa/manifest.ts). Each page opens in a frame of its own, made for it
+ * and removed on close: loading a page into a frame that has already shown
+ * one would add an entry to the browser's history, so Back would step the
+ * hidden frame instead of the app; removing it also frees its WebGL at once.
  */
 import { t } from '../../i18n';
 import { Modal } from '../dialogs';
@@ -26,18 +29,20 @@ export class AnatomyDialog extends Modal {
   private current: AnatomyPage | null = null;
   private name = '';
   private readonly head = el('div', 'bs-anatomy-head');
-  private readonly frame = document.createElement('iframe');
+  /** where the page's frame goes, the loading note under it until the page has loaded */
+  private readonly view = el('div', 'bs-anatomy-view');
+  private readonly loading = el('p', 'bs-anatomy-loading');
+  private frame: HTMLIFrameElement | null = null;
 
   constructor() {
     const dialog = document.createElement('dialog');
     dialog.className = 'dialog bs-anatomy';
     document.body.append(dialog);
     super(dialog);
-    this.frame.className = 'bs-anatomy-frame';
-    this.frame.referrerPolicy = 'no-referrer';
-    // the frame stays put while the header is rebuilt: moving it would load the page again
-    this.body.append(this.head, this.frame);
-    dialog.addEventListener('close', () => { this.frame.src = 'about:blank'; });
+    this.loading.setAttribute('role', 'status');
+    this.view.append(this.loading);
+    this.body.append(this.head, this.view);
+    dialog.addEventListener('close', () => { this.frame?.remove(); this.frame = null; });
   }
 
   /** Open the pages of a vehicle (`name` its display name), at the first; nothing for a vehicle without one. */
@@ -50,10 +55,19 @@ export class AnatomyDialog extends Modal {
     this.load();
   }
 
+  /** The current page, in a new frame: its address set before the frame is in the document, so it is the frame's first page and no history entry. */
   private load(): void {
     if (!this.current) return;
-    this.frame.src = new URL(this.current.page, document.baseURI).href;
-    this.frame.title = t('build.anatomy.frame', { name: this.name });
+    this.frame?.remove();
+    const frame = document.createElement('iframe');
+    frame.className = 'bs-anatomy-frame';
+    frame.referrerPolicy = 'no-referrer';
+    frame.title = t('build.anatomy.frame', { name: this.name });
+    frame.src = new URL(this.current.page, document.baseURI).href;
+    this.loading.hidden = false;
+    frame.addEventListener('load', () => { if (frame === this.frame) this.loading.hidden = true; });
+    this.frame = frame;
+    this.view.append(frame);
   }
 
   private pick(page: AnatomyPage): void {
@@ -87,6 +101,7 @@ export class AnatomyDialog extends Modal {
     link.rel = 'noopener';
     link.textContent = t('build.anatomy.newTab');
     this.head.replaceChildren(title, variants, el('p', 'bs-anatomy-note', t('build.anatomy.note')), link);
-    this.frame.title = t('build.anatomy.frame', { name: this.name });
+    this.loading.textContent = t('build.anatomy.loading');
+    if (this.frame) this.frame.title = t('build.anatomy.frame', { name: this.name });
   }
 }

@@ -2349,6 +2349,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.anatomy.variant.fregat': 'กับขั้นเฟรกัตใต้หัวครอบ ST',
   'build.anatomy.note': 'แบบจำลองแยกที่ผู้สร้าง Orbitlab ทำขึ้น มีถังเชื้อเพลิง เครื่องยนต์ และท่อทาง แยกชิ้นและผ่าดูได้ พร้อมคำอธิบายภาษาไทย ขนาดราว 4.5 MB โหลดเมื่อเปิด ถ้าออฟไลน์จะเปิดได้เฉพาะแบบจำลองที่เคยเปิดแล้ว',
   'build.anatomy.newTab': 'เปิดในแท็บใหม่',
+  'build.anatomy.loading': 'กำลังโหลดแบบจำลอง ขนาดราว 4.5 MB…',
   'build.anatomy.frame': '{name}: แบบจำลอง 3 มิติแบบโต้ตอบพร้อมคำอธิบายภาษาไทย',
   'build.label.stage': 'ท่อนที่ {n}',
   'build.label.boosters': 'บูสเตอร์ ×{n}',

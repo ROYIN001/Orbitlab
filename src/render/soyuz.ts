@@ -319,7 +319,7 @@ const SKIRT_AFTER = 11.07;
 export class AftSkirt {
   readonly group = new THREE.Group();
   private readonly petals: THREE.Group[] = [];
-  /** the skirt as another drawing has it (the Soyuz Anatomy model's, render/anatomy.ts), shown in the petals' place until they fall */
+  /** the skirt as another drawing has it (the Soyuz Anatomy model's, render/anatomy.ts), drawn instead of the petals and falling as they would */
   private cover: THREE.Object3D | null = null;
 
   /** @param after seconds after its stage lights that it falls away, as the stage's physics drops it */
@@ -340,9 +340,10 @@ export class AftSkirt {
     }
   }
 
-  /** Show `shape` for the skirt while it is on; the petals then appear only as they fall away. */
+  /** Draw the skirt as `shape` instead of the petals: on until it is shed, then falling away as the petals do, whole. */
   coverWith(shape: THREE.Object3D): void {
     this.cover = shape;
+    for (const p of this.petals) p.visible = false;
   }
 
   /**
@@ -352,8 +353,8 @@ export class AftSkirt {
   update(sinceIgnition: number): void {
     const tau = sinceIgnition - this.after;
     if (this.cover) {
-      this.cover.visible = tau <= 0;
-      for (const p of this.petals) p.visible = tau > 0;
+      this.cover.visible = tau < 4;
+      this.cover.position.y = tau > 0 ? -0.5 * 13 * tau * tau : 0;
     }
     if (tau <= 0) {
       this.group.visible = true;
@@ -593,7 +594,7 @@ export class CrewedTop {
  * end at `aft` along +Y: a yoke from the hinge, four panels with gaps between
  * them, and a spine under them, 3.99 m from the hull to the tip. Stowed, they
  * stand up its side clear of the periscope. Returns their unfolding, 0
- * (stowed) to 1 (out); render/anatomy-spacecraft.ts hangs them on the Anatomy
+ * (stowed) to 1 (out); render/anatomy.ts hangs them on the Anatomy
  * model's service module, whose own arrays are drawn folded.
  */
 export function soyuzMsWings(parent: THREE.Object3D, aft: number, grey: THREE.Material, panel: THREE.Material, geos: THREE.BufferGeometry[]): (k: number) => void {

@@ -28,6 +28,13 @@ import { VostokBody, isVostokBody } from './vostok-debris';
 import { anatomyGroup, anatomyMaterials, type AnatomyFit, type AnatomyModel, type AnatomyPartName, type Placement } from './anatomy';
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+/**
+ * The Soyuz Anatomy model the flight is drawn with (render/anatomy.ts), so its
+ * spent parts keep that shape; with Blok I's and Fregat's diameters, by which
+ * a spent stage recorded without its profile is told apart (Fregat: none on 2.1a).
+ */
+export interface DebrisAnatomy { model: AnatomyModel; fit: AnatomyFit; blokIDiameter: number; fregatDiameter: number | null }
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
 
 interface DebrisItem {
@@ -123,10 +130,9 @@ export class DebrisView {
   private readonly warmup: THREE.Mesh;
 
   /** The Soyuz Anatomy model the flight is drawn with (render/anatomy.ts), so its spent parts keep that shape; null on any other flight. */
-  private anatomy: { model: AnatomyModel; fit: AnatomyFit; fregatDiameter: number | null } | null = null;
+  private anatomy: DebrisAnatomy | null = null;
 
-  /** @param fregatDiameter the Fregat stage's, to tell it among the spent stages (none on 2.1a) */
-  setAnatomy(anatomy: { model: AnatomyModel; fit: AnatomyFit; fregatDiameter: number | null } | null): void {
+  setAnatomy(anatomy: DebrisAnatomy | null): void {
     this.anatomy = anatomy;
   }
 
@@ -138,14 +144,16 @@ export class DebrisView {
    * as before.
    */
   private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[] } | null {
-    const { model, fit, fregatDiameter } = this.anatomy!;
+    const { model, fit, blokIDiameter, fregatDiameter } = this.anatomy!;
     const v = d.visual;
     const spentStage = v.kind === 'stage' || v.kind === 'upperStage';
+    // the stage a spacecraft separates from in the point-mass flight is recorded without its profile (src/physics/sim/staging.ts)
+    const is = (diameter: number | null) => diameter !== null && Math.abs(v.diameter - diameter) < 1e-6;
     const which: [AnatomyPartName, Placement] | null = v.kind === 'booster' && v.conicalTop ? ['booster', fit.booster]
       : v.kind === 'fairing' ? [side > 0 ? 'fairing-right' : 'fairing-left', fit.fairing]
         : spentStage && v.profile === 'r7Core' ? ['core', fit.core]
-          : spentStage && v.profile === 'r7Upper' ? ['stage3', fit.stage3]
-            : spentStage && fit.fregat && fregatDiameter !== null && Math.abs(v.diameter - fregatDiameter) < 1e-6 ? ['fregat', fit.fregat] : null;
+          : spentStage && (v.profile === 'r7Upper' || (!v.profile && is(blokIDiameter))) ? ['stage3', fit.stage3]
+            : spentStage && !v.profile && fit.fregatSpent && is(fregatDiameter) ? ['fregat', fit.fregatSpent] : null;
     const part = which ? model.parts[which[0]] : undefined;
     if (!which || !part) return null;
     const placement = which[1];

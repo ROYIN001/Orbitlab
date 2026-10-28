@@ -801,11 +801,14 @@ export class RocketView {
     for (const unit of blokA.boosters[0].units) {
       swap(unit.own, unit.group, anatomyGroup(p.booster!, mats, fit.booster));
       unit.frost = null;
+      // its engines under the model's strap-on (`AnatomyFit.boosterEngines`)
+      for (const o of [unit.engines.bells, unit.glow, unit.plume.group, unit.vernier?.group]) o?.position.add(new THREE.Vector3(fit.boosterEngines.dx, fit.boosterEngines.dy, 0));
     }
     swap(blokI.own, blokI.group, anatomyGroup(p.stage3!, mats, fit.stage3));
-    // the model's own aft skirt (the 2.1b's), shed with the flight's
+    // the model's own aft skirt (the 2.1b's), shed when the flight sheds its own
     if (p.skirt && blokI.skirt) {
-      const skirt = anatomyGroup(p.skirt, mats, fit.stage3);
+      const skirt = new THREE.Group();
+      skirt.add(anatomyGroup(p.skirt, mats, fit.stage3));
       blokI.group.add(skirt);
       blokI.skirt.coverWith(skirt);
     }
@@ -813,6 +816,9 @@ export class RocketView {
     if (this.fairing) {
       swap(this.fairingOwn, this.fairing, anatomyGroup(p['fairing-left']!, mats, fit.fairing));
       this.fairing.add(anatomyGroup(p['fairing-right']!, mats, fit.fairing));
+      // the camera's framing and the Mach-1 collar follow the model's fairing
+      this.fairingLength = fit.fairingTop;
+      if (this.vapourAt?.onFairing) this.vapourAt.y = fit.fairingShoulder;
     }
     if (this.crewedTop && fit.tower) {
       this.crewedTop.replaceShape(anatomyGroup(p.escape!, mats, fit.tower.placement));

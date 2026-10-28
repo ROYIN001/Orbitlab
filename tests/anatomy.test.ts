@@ -10,6 +10,9 @@ import * as THREE from 'three';
 import { ANATOMY_PAGES, anatomyPagesFor, flightAnatomy, type AnatomyVariant } from '../src/data/anatomy';
 import { anatomyFit, decodeAnatomy, setHinges, anatomySpacecraft, anatomyMaterials, type AnatomyModel } from '../src/render/anatomy';
 import { RocketView } from '../src/render/rocket';
+import { DebrisView } from '../src/render/debris';
+import type { SceneManager } from '../src/render/scene';
+import type { DebrisFrame } from '../src/physics/frame';
 import { captureFrame, stackLayout } from '../src/physics/frame';
 import { Simulation } from '../src/physics/simulation';
 import { payloadVehicle, vehicleById } from '../src/data/vehicles';
@@ -195,15 +198,37 @@ describe('RocketView with the model mounted', () => {
         const tower = box(named(rocket.group, 'anatomy:escape')[0]);
         expect(tower.min.y).toBeCloseTo(fairing.max.y, 2);
       }
+      // each strap-on's engines hang from the model's strap-on, not 0.36 m below it
+      for (const unit of parts[0].boosters[0].units as unknown as { group: THREE.Group; engines: { bells: THREE.InstancedMesh } }[]) {
+        const body = box(unit.group.children.find((o) => o.name === 'anatomy:booster')!);
+        unit.engines.bells.updateWorldMatrix(true, false);
+        const bellTop = new THREE.Vector3(0, 0, 0).applyMatrix4(unit.engines.bells.matrixWorld);
+        expect(bellTop.y).toBeCloseTo(body.min.y, 3);
+      }
+      // the camera frames, and the Mach-1 collar sits on, the model's fairing
+      const pad = captureFrame(sim);
+      expect(rocket.currentHeight(pad)).toBeCloseTo(fairing.max.y, 1);
+      const collar = (rocket as unknown as { vapourAt: { y: number } }).vapourAt.y;
+      expect(collar).toBe(fit.fairingShoulder);
+      expect(fit.fairingShoulder).toBeGreaterThan(fit.fairing.dy);
+      expect(fit.fairingTop - fit.fairingShoulder).toBeGreaterThan(1);
       if (variant === 'fregat-st31') {
-        // the model's Blok I aft skirt shown until the flight sheds its own, 14.06 s after Blok I lights
-        const skirt = named(rocket.group, 'anatomy:skirt')[0];
-        expect(skirt.visible).toBe(true);
-        const blokI = (rocket as unknown as { stages: { skirt: { update(s: number): void } }[] }).stages[1].skirt;
-        blokI.update(14.5);
-        expect(skirt.visible).toBe(false);
+        // the model's Blok I aft skirt, on until the flight sheds its own 14.06 s after Blok I lights, then falling away whole
+        const skirt = named(rocket.group, 'anatomy:skirt')[0].parent!;
+        const blokI = (rocket as unknown as { stages: { skirt: { update(s: number): void; group: THREE.Group } }[] }).stages[1].skirt;
         blokI.update(1);
         expect(skirt.visible).toBe(true);
+        expect(skirt.position.y).toBe(0);
+        blokI.update(14.5);
+        expect(skirt.visible).toBe(true);
+        expect(skirt.position.y).toBeLessThan(-1);
+        // the flight's own petals are never drawn beside it
+        const shown = (o: THREE.Object3D): boolean => o.visible && (!o.parent || shown(o.parent));
+        let petals = 0;
+        blokI.group.traverse((o) => { if ((o as THREE.Mesh).isMesh && shown(o)) petals++; });
+        expect(petals).toBe(0);
+        blokI.update(18.5);
+        expect(skirt.visible).toBe(false);
       }
       if (ship) {
         expect(named(rocket.group, 'anatomy:payload')).toHaveLength(1);
@@ -213,6 +238,51 @@ describe('RocketView with the model mounted', () => {
       rocket.dispose();
     }));
   }
+});
+
+describe('spent parts drawn from the model', () => {
+  /** A piece of debris as the frame carries it the moment it separates (not tumbling yet), `anchor` below the separation plane at the origin, its axis up. */
+  const debris = (id: number, visual: DebrisFrame['visual'], anchor: number): DebrisFrame => ({
+    id, r: { x: 0, y: 0, z: 0 }, dir: { x: 0, y: 1, z: 0 }, visual, alive: true, createdAt: 1, anchor,
+  } as unknown as DebrisFrame);
+  const drawn = (variant: AnatomyVariant | null, vehicleId: string, sat: string, list: DebrisFrame[]) => withCanvas(() => {
+    const scene = new THREE.Scene();
+    const view = new DebrisView({ scene, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y, p.z) } as unknown as SceneManager);
+    const spec = payloadVehicle(vehicleById(vehicleId), satelliteById(sat));
+    if (variant) {
+      const m = model(variant);
+      view.setAnatomy({ model: m, fit: anatomyFit(spec, m, false), blokIDiameter: spec.stages[1].diameter, fregatDiameter: spec.stages[2]?.diameter ?? null });
+    }
+    view.update(list, 1);
+    const out: Record<string, THREE.Box3> = {};
+    scene.traverse((o) => { if (o.name.startsWith('anatomy:')) out[o.name] = box(o); });
+    return out;
+  });
+
+  it('Blok I as the point-mass flight records it at the spacecraft\'s separation (no profile), and a strap-on', () => {
+    const blokI = vehicleById('soyuz21a').stages[1], strapOn = vehicleById('soyuz21a').stages[0].boosters![0];
+    const got = drawn('soyuz-ms', 'soyuz21a', 'crew', [
+      debris(1, { diameter: blokI.diameter, length: blokI.length, color: '#ccc', kind: 'upperStage' }, -blokI.length),
+      debris(2, { diameter: strapOn.diameter, length: strapOn.length, color: '#ccc', kind: 'booster', conicalTop: true }, 0),
+    ]);
+    expect(Object.keys(got).sort()).toEqual(['anatomy:booster', 'anatomy:stage3']);
+    // the spent stage's top at the separation plane, under the spacecraft (the model's adapter ring 0.2 m above it, under the Soyuz MS's base)
+    expect(got['anatomy:stage3'].max.y).toBeGreaterThan(0);
+    expect(got['anatomy:stage3'].max.y).toBeLessThan(0.25);
+  });
+
+  it('a spent Fregat with its top on the plane its satellite left from', () => {
+    const spec = vehicleById('soyuz21b'), fregat = spec.stages[2];
+    const got = drawn('fregat-st31', 'soyuz21b', 'weather', [
+      debris(1, { diameter: fregat.diameter, length: fregat.length, color: '#ccc', kind: 'upperStage' }, -stackLayout(spec).height[2]),
+    ]);
+    expect(got['anatomy:fregat'].max.y).toBeCloseTo(0, 3);
+  });
+
+  it('none on any other flight', () => {
+    const got = drawn(null, 'falcon9', 'comsat', [debris(1, { diameter: 3.66, length: 13.8, color: '#ccc', kind: 'upperStage' }, -13.8)]);
+    expect(got).toEqual({});
+  });
 });
 
 describe('the spacecraft', () => {

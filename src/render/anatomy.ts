@@ -153,8 +153,19 @@ export interface AnatomyFit {
   stage3: Placement;
   /** Fregat, in stage 2's group: dropped onto Blok I's top, over the adapter the stack layout puts between */
   fregat: Placement | null;
+  /** a spent Fregat, in the debris: its top on the separation plane its spacecraft leaves from (the debris draws it from `-height[2]`) */
+  fregatSpent: Placement | null;
+  /**
+   * Where a strap-on unit's engines go (bells, glow, plumes) so that they hang
+   * under the model's strap-on: its base is above Blok A's in the model, and
+   * its base ring further out than the unit's own axis.
+   */
+  boosterEngines: { dx: number; dy: number };
   /** the fairing's halves, in the fairing's group (at the top of the attached stack) */
   fairing: Placement;
+  /** the model's fairing's top, and its shoulder (where the nose's curve meets the cylinder, the Mach-1 collar's place), in the fairing's group */
+  fairingTop: number;
+  fairingShoulder: number;
   /** where the escape tower stands in the fairing's group, and the tower in its own */
   tower: { y: number; placement: Placement } | null;
   /** the spacecraft, centred on its group as render/satellite.ts centres a payload; `seat` above the stage's top */
@@ -168,6 +179,40 @@ export interface AnatomyFit {
 }
 
 const at = (y0: number, sy = 1, dy = 0, dx = 0): Placement => ({ y0, sy, dy, dx });
+
+/** Each vertex of a part's meshes, in the model's metres. */
+function eachVertex(part: AnatomyPart, f: (x: number, y: number, z: number) => void): void {
+  for (const m of part.meshes) {
+    const p = m.geometry.attributes.position;
+    for (let i = 0; i < p.count; i++) f(p.getX(i), p.getY(i), p.getZ(i));
+  }
+}
+
+/**
+ * The centre of the strap-on's base ring (the model's +X strap-on): its
+ * vertices within 3 cm of its bottom, the ring's radius from its extent
+ * across (Z), which the outboard fin does not reach.
+ */
+function baseRing(booster: AnatomyPart): { x: number; z: number } {
+  let minX = Infinity, minZ = Infinity, maxZ = -Infinity;
+  eachVertex(booster, (x, y, z) => {
+    if (y > booster.min.y + 0.03) return;
+    minX = Math.min(minX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+  });
+  const r = (maxZ - minZ) / 2;
+  return { x: minX + r, z: (minZ + maxZ) / 2 };
+}
+
+/**
+ * The fairing's shoulder: the highest point at which it is still as wide as
+ * its cylinder (`radius`, the vehicle's fairing; 3 % short of it), so the
+ * fins lower down, wider still, do not count.
+ */
+function shoulder(halves: AnatomyPart[], radius: number): number {
+  let y0 = -Infinity;
+  for (const h of halves) eachVertex(h, (x, y, z) => { if (Math.hypot(x, z) >= 0.97 * radius && y > y0) y0 = y; });
+  return Number.isFinite(y0) ? y0 : halves[0].min.y;
+}
 
 /**
  * Fit the model's parts into the vehicle's stack. Blok A and Blok I are
@@ -186,8 +231,12 @@ export function anatomyFit(spec: VehicleSpec, model: Pick<AnatomyModel, 'parts'>
   };
   const layout = stackLayout(spec);
   const [blokA, blokI] = spec.stages;
-  const core = part('core'), stage3 = part('stage3');
-  const fairingBase = Math.min(part('fairing-left').min.y, part('fairing-right').min.y);
+  // every part this vehicle is drawn with, before anything is hidden (render/rocket.ts `mountAnatomy`)
+  const core = part('core'), stage3 = part('stage3'), booster = part('booster');
+  const halves = [part('fairing-left'), part('fairing-right')];
+  if (spec.stages.length > 2 && !p.fregat) throw new Error('the anatomy model has no fregat');
+  const fairingBase = Math.min(halves[0].min.y, halves[1].min.y);
+  const fairingTop = Math.max(halves[0].max.y, halves[1].max.y);
   const fregat = p.fregat ?? null;
   const sy0 = layout.height[0] / (stage3.min.y - core.min.y);
   const b = blokA.boosters![0];
@@ -197,13 +246,20 @@ export function anatomyFit(spec: VehicleSpec, model: Pick<AnatomyModel, 'parts'>
   const top = layout.total;
   const escape = p.escape ?? null;
   const ship = withSpacecraft ? p.payload ?? null : null;
+  const ring = baseRing(booster);
+  const fairingDy = blokITop - top;
+  const fairingR = (spec.fairing?.diameter ?? 0) / 2;
   return {
     core: at(core.min.y, sy0),
     booster: at(core.min.y, sy0, -(b.baseOffset ?? 0), -off),
+    boosterEngines: { dx: ring.x - off, dy: (booster.min.y - core.min.y) * sy0 },
     stage3: at(stage3.min.y, blokI.length / ((fregat ? fregat.min.y : fairingBase) - stage3.min.y)),
     fregat: fregat ? at(fregat.min.y, 1, blokITop - (layout.base[2] ?? blokITop)) : null,
-    fairing: at(fairingBase, 1, blokITop - top),
-    tower: escape ? { y: blokITop - top + (escape.min.y - fairingBase), placement: at(escape.min.y) } : null,
+    fregatSpent: fregat ? at(fregat.min.y, 1, (layout.height[2] ?? 0) - (fregat.max.y - fregat.min.y)) : null,
+    fairing: at(fairingBase, 1, fairingDy),
+    fairingTop: fairingDy + fairingTop - fairingBase,
+    fairingShoulder: fairingDy + shoulder(halves, fairingR) - fairingBase,
+    tower: escape ? { y: fairingDy + (escape.min.y - fairingBase), placement: at(escape.min.y) } : null,
     payload: ship ? { ...at(ship.min.y, 1, -(ship.max.y - ship.min.y) / 2), height: ship.max.y - ship.min.y, seat: Math.max(0, ship.min.y - fairingBase) } : null,
     satelliteSeat: fregat && !ship ? blokITop + (fregat.max.y - fregat.min.y) - top : null,
   };

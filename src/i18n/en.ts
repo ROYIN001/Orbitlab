@@ -2372,6 +2372,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'build.anatomy.variant.fregat': 'With Fregat under the ST fairing',
   'build.anatomy.note': 'A model of its own by Orbitlab\'s maker: the tanks, engines and plumbing, to take apart and cut open, with a guide in Thai. About 4.5 MB, loaded when you open it; offline, only a model opened before.',
   'build.anatomy.newTab': 'Open in a new tab',
+  'build.anatomy.loading': 'Loading the model, about 4.5 MB…',
   'build.anatomy.frame': '{name}: interactive 3-D model with a guide in Thai',
   'build.label.stage': 'Stage {n}',
   'build.label.boosters': 'Strap-ons ×{n}',

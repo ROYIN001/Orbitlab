@@ -1930,9 +1930,15 @@ class App {
       const page = anatomyPage(variant);
       const ship = page.spacecraft === 'soyuz-ms' && sim.satellite.crewed ? 'soyuz-ms'
         : page.spacecraft === 'progress' && sim.satellite.cargoShip ? 'progress' : null;
-      const fit = rocket.mountAnatomy(model, ship);
-      this.debrisView.setAnatomy({ model, fit, fregatDiameter: variant === 'fregat-st31' ? sim.vehicleSpec.stages[2].diameter : null });
-      document.body.dataset.anatomy = variant;
+      try {
+        // fits every part before it hides any of the stack's own (AnatomyFit), so a model it cannot use leaves the stack as it was
+        const fit = rocket.mountAnatomy(model, ship);
+        this.debrisView.setAnatomy({ model, fit, blokIDiameter: sim.vehicleSpec.stages[1].diameter,
+          fregatDiameter: variant === 'fregat-st31' ? sim.vehicleSpec.stages[2].diameter : null });
+        document.body.dataset.anatomy = variant;
+      } catch (error) {
+        console.warn('Soyuz Anatomy meshes unusable; drawing the vehicle as before:', error);
+      }
     };
     const ready = anatomyLoaded(variant);
     if (ready) mount(ready);

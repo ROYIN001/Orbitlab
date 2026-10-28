@@ -6,7 +6,7 @@
  *
  * Run it again whenever one of those pages is replaced. It writes one
  * `<page>.exterior.bin` beside each page, holding the page's SHA-256, so
- * tests/anatomy-meshes.test.ts can tell a mesh file that no longer matches
+ * tests/anatomy.test.ts can tell a mesh file that no longer matches
  * its page.
  *
  * Each page carries its own model: a compressed "semantic scene" of the
