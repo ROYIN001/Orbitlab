@@ -7,7 +7,7 @@
 > - **การบิน**: Soyuz-2.1a และ 2.1b วาดจากผิวด้านนอกของแบบจำลองของคุณ — บูสเตอร์ แกนกลาง โครงถักระหว่างขั้น Blok I, Fregat, หัวครอบสองซีก หอหนีภัย และยาน Soyuz MS / Progress MS ชิ้นที่แยกตัวก็ยังเป็นรูปทรงจากแบบจำลอง Progress กางแผงโซลาร์ด้วยบานพับในไฟล์ของคุณเอง Soyuz MS ใช้ปีกโซลาร์ของโปรแกรม (ไฟล์ของคุณมีแต่แบบพับ) ติดบานพับที่โคนแผงพับของแบบจำลอง ส่วนท้ายของขั้นที่ 3 (ตัวเครื่องยนต์ โครงรับแรงขับ ก้นถังออกซิเจน) วาดจากแบบจำลองด้วย เพราะมองเห็นได้จริงผ่านโครงถักและหลังสลัดกระโปรงท้าย ปลายลำตัวของ Blok A, Blok I และ Progress MS ปิดด้วยชิ้นภายในที่ปิดปลาย (ฐานรับแรงขับ โดมถัง) จึงไม่เป็นท่อกลวงที่มองทะลุได้อีก ปลายท่อไอพ่นของโปรแกรมย้ายไปต่อกับห้องเผาไหม้ของแบบจำลองพอดี ทั้งของขั้นที่ 3 และของ Fregat (S5.92) และไฟของหอหนีภัยตอนดึงตัวออกพุ่งจากหัวฉีด 12 ตัวของแบบจำลอง ส่วนภายในอื่น (ท่อ อุปกรณ์) ไม่วาดตอนบินตามที่ขอ ฟิสิกส์ไม่เปลี่ยน
 > - ไฟล์โหลดเมื่อใช้เท่านั้น ไม่เข้าแคชออฟไลน์ตอนติดตั้ง (หน้าเว็บละราว 4.5 MB, ไฟล์ผิวสำหรับการบินบีบอัดแล้วเหลือ 0.17–0.31 MB จากเดิม 1.2–2 MB) ถ้าออฟไลน์และยังไม่เคยโหลด หรือเบราว์เซอร์คลายไฟล์บีบอัดไม่ได้ จรวดจะถูกวาดแบบเดิม
 > - **ต้นทุนที่ควรตัดสินใจ**: ภารกิจเด่น (Soyuz พาลูกเรือไป ISS) เป็นภาพแรกของหน้าแรกและของโหมดดู และเป็นค่าเริ่มต้นของแผงภารกิจ แอปจึงโหลดแบบจำลอง Soyuz MS ทันทีที่ตั้งภารกิจ เกือบทุกคนที่เข้าครั้งแรกจึงโหลดไฟล์นี้ ตอนนี้ 305 kB (เดิมราว 2 MB) ถ้าไม่ต้องการ อีกทางคือโหลดเมื่อเริ่มบินเท่านั้น (จรวดบนฐานยิงจะเป็นแบบเดิมจนกว่าจะเริ่มบิน)
-> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 21.4 kB (index +16.6, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14676 kB (offset ที่ระบุ: EQ-7) PR นี้รอคุณอนุมัติใน Merge Desk
+> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 21.4 kB (index +16.6, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14676 kB (offset ที่ระบุ: EQ-7) คุณอนุมัติแล้วในแชต 2026-10-28 ("1. อนุมัติ")
 > - **รอบตรวจที่สอง**: แก้ตามที่ผู้ตรวจพบครบทุกข้อ (รายการในหัวข้อ "Second review round") รวมถึงหัวเชื่อมต่อ (docking probe) ของยาน Soyuz MS ที่เคยจมเข้าไปในพอร์ตของสถานีราว 1.0 m ตอนจับยึด (ตอนนี้ปลายหัวเชื่อมต่ออยู่ตรงที่ฟิสิกส์คำนวณ) และขั้นที่ใช้แล้ว (บูสเตอร์ Blok A Blok I Fregat) ที่เคยไม่มีปากท่อไอพ่น (ตอนนี้วาดปากท่อตามตำแหน่งห้องเผาไหม้ในแบบจำลอง)
 > - **ขอให้ยืนยัน**: ไฟล์ทั้งสามเป็นงานของคุณเองใช่ไหม (NOTICE.md เขียนไว้อย่างนั้น) และชุดเครื่องมือ "Anatomy kit" ที่ฝังอยู่ในไฟล์มีเงื่อนไขการใช้งานอย่างไร
 
@@ -18,8 +18,8 @@ change_kind: feature (render, Build UI, PWA on-demand files); physics unchanged
 owner_authorization: 'owner in chat, 2026-10-28: "สามารถนำไฟล์จรวด Soyuz ที่ทำแยกมาใส่ในโปรแกรมนี้ได้มั้ยครับ", then, asked how: "แบบที่มีโครงสร้างภายในเช่นถังเชื้อเพลิง เอาไปใส่ในโหมดการสร้างจรวด ส่วนของการบินให้เอาแต่จรวดที่เห็นจริง เช่นโครงสร้างภายนอกและตัวแคปซูลของจรวด"'
 branch: claude/tender-archimedes-b5bnl9
 base: 7263004
-budget: raise (D-38) — measured below; offset EQ-7; waits for the owner
-merge: waits for the owner (Merge Desk): a new feature and a ceiling raise
+budget: raise (D-38) — measured below; offset EQ-7; approved by the owner in chat, 2026-10-28 ("1. อนุมัติ")
+merge: the owner's (Merge Desk): a new feature; the ceiling raise approved in chat, 2026-10-28
 ```
 
 ## What the owner's files are
@@ -147,6 +147,14 @@ hold was left out, so they hung in space with the simulator's bells and verniers
 aft bay (above), putting Blok I's lowest point on the stage's base, setting the simulator's bells on
 the model's chambers, dropping the two verniers the RD-0124 does not have, and painting the 2.1a's
 petals the model's grey-green.
+
+## The owner's answers (2026-10-28)
+
+The owner, in chat, to the two questions this report asked: "1. อนุมัติ 2. โหลดเลย ใช้แบบ24ส่วน"
+(1. approved; 2. load it at once, and use 24 segments). So the D-38 raise stands, the featured
+launch keeps fetching the Soyuz MS meshes on a first visit, and the flight's meshes are to be made
+at 24 radial segments instead of 16 (next commit: `RADIAL_SEGMENTS`, the meshes remade, sizes and
+triangle counts measured again).
 
 ## Second review round
 
