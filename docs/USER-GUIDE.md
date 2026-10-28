@@ -1088,11 +1088,13 @@ outside of Orbitlab's maker's Soyuz Anatomy models (the ones Build opens): the s
 core and its open truss, the third stage, Fregat, the fairing halves, the escape tower and, on a
 crewed or Progress flight, the Soyuz MS or the Progress MS. The spent stages and the fairing halves
 keep that shape as they fall away, the Progress unfolds its arrays as the model does, and the
-Soyuz MS opens its wings as it always has. The model is fetched (about 1–1.4 MB) when the mission
+Soyuz MS opens its wings as it always has. The model is fetched (about 1.2–2 MB) when the mission
 is set up; until it arrives, or if it cannot (offline before it was ever fetched), the rocket is
-drawn as before. The engines, the flames and the escape tower's flight are the simulator's own;
-the model is drawn without the pad frost the simulator's own drawing shows, and without its inside
-(tanks and pipes), which only Build shows.
+drawn as before. The engines' bells, the flames and the escape tower's flight are the simulator's
+own, its bells set on the model's combustion chambers. The third stage's aft bay, seen through the
+open truss and once its skirt falls away, is the model's: the engine's body, the thrust frame and
+the bottom of the oxygen tank. The rest of the inside (tanks and pipes) only Build shows, and the
+model is drawn without the pad frost the simulator's own drawing shows.
 
 The small buttons beside the camera tabs open the **Frames** menu (below),
 toggle the **glow** (the bloom around the plume, the ignition flash and the city lights) and go

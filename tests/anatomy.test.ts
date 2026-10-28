@@ -82,15 +82,20 @@ describe('the Anatomy pages and their meshes', () => {
 
   it('carry the outside of each vehicle, in metres, standing on y = 0', () => {
     const want: Record<AnatomyVariant, string[]> = {
-      'soyuz-ms': ['booster', 'core', 'stage3', 'fairing-left', 'fairing-right', 'escape', 'payload'],
-      'progress-ms-26': ['booster', 'core', 'stage3', 'fairing-left', 'fairing-right', 'payload'],
-      'fregat-st31': ['booster', 'core', 'stage3', 'skirt', 'fregat', 'fairing-left', 'fairing-right'],
+      'soyuz-ms': ['booster', 'core', 'stage3', 'bay', 'fairing-left', 'fairing-right', 'escape', 'payload'],
+      'progress-ms-26': ['booster', 'core', 'stage3', 'bay', 'fairing-left', 'fairing-right', 'payload'],
+      'fregat-st31': ['booster', 'core', 'stage3', 'skirt', 'bay', 'fregat', 'fairing-left', 'fairing-right'],
     };
     for (const p of ANATOMY_PAGES) {
       const m = model(p.variant);
       expect(Object.keys(m.parts).sort(), p.variant).toEqual([...want[p.variant]].sort());
       expect(m.triangles).toBeGreaterThan(40_000);
-      expect(m.triangles).toBeLessThan(120_000);
+      expect(m.triangles).toBeLessThan(140_000);
+      // Blok I's chambers, left to the flight's bells: RD-0110's four and four verniers, RD-0124's four
+      const chambers = m.parts.bay!.nozzles!;
+      expect(chambers.filter((c) => c.kind === 'main')).toHaveLength(4);
+      expect(chambers.filter((c) => c.kind === 'vernier')).toHaveLength(p.variant === 'fregat-st31' ? 0 : 4);
+      for (const c of chambers) { expect(c.top).toBeGreaterThan(c.exit); expect(c.r).toBeGreaterThan(0.1); }
       const all = new THREE.Box3();
       for (const part of Object.values(m.parts)) {
         all.expandByPoint(part!.min).expandByPoint(part!.max);
@@ -186,9 +191,20 @@ describe('RocketView with the model mounted', () => {
         expect(b.min.y).toBeLessThan(0.6);
         expect(Math.hypot((b.min.x + b.max.x) / 2, (b.min.z + b.max.z) / 2)).toBeGreaterThan(2);
       }
-      // Blok I on Blok A
-      const stage3 = box(named(rocket.group, 'anatomy:stage3')[0]);
-      expect(stage3.min.y).toBeCloseTo(layout.base[1], 2);
+      // Blok I on Blok A: its bottom (its skirt's, on 2.1b) on Blok A's top
+      const blokIBottom = Math.min(...['anatomy:stage3', 'anatomy:skirt'].flatMap((n) => named(rocket.group, n)).map((o) => box(o).min.y));
+      expect(blokIBottom).toBeCloseTo(layout.base[1], 2);
+      expect(named(rocket.group, 'anatomy:bay')).toHaveLength(1);
+      // Blok I's bells on the model's chambers: their tops at the chambers' tops, their glow at the exits
+      const blokIPart = parts[1] as unknown as { engines: { nozzles: { x: number; z: number; r: number; len: number; y?: number }[]; ids: string[] }; vernier: unknown; plume: { group: THREE.Group } };
+      const chambers = fit.chambers!;
+      for (const [i, n] of blokIPart.engines.nozzles.entries()) {
+        if (variant === 'fregat-st31' && blokIPart.engines.ids[i].includes('.vernier.')) { expect(n.r).toBe(0); continue; }
+        expect(chambers.some((c) => Math.hypot(c.x - n.x, c.z - n.z) < 1e-9 && Math.abs(c.top - (n.y ?? 0)) < 1e-9 && Math.abs(c.top - n.len - c.exit) < 1e-9)).toBe(true);
+      }
+      expect(blokIPart.plume.group.position.y).toBeCloseTo(Math.min(...chambers.filter((c) => c.kind === 'main').map((c) => c.exit)), 9);
+      if (variant === 'fregat-st31') expect(blokIPart.vernier).toBeNull();
+      else expect(blokIPart.vernier).not.toBeNull();
       // the fairing on Blok I's top, both halves
       expect(named(rocket.group, 'anatomy:fairing-left')).toHaveLength(1);
       const fairing = box(named(rocket.group, 'anatomy:fairing-right')[0]);
@@ -229,6 +245,14 @@ describe('RocketView with the model mounted', () => {
         expect(petals).toBe(0);
         blokI.update(18.5);
         expect(skirt.visible).toBe(false);
+      } else {
+        // the 2.1a model has no aft skirt: the flight's petals stay, in the model's grey-green
+        const paint = m.materials.find((x) => x.name === 'rocket-gray-green')!;
+        const blokI = (rocket as unknown as { stages: { skirt: { group: THREE.Group } }[] }).stages[1].skirt;
+        const petals: THREE.Mesh[] = [];
+        blokI.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) petals.push(o as THREE.Mesh); });
+        expect(petals.length).toBeGreaterThan(0);
+        for (const petal of petals) expect((petal.material as THREE.MeshStandardMaterial).color.getHex()).toBe(new THREE.Color(paint.color).getHex());
       }
       if (ship) {
         expect(named(rocket.group, 'anatomy:payload')).toHaveLength(1);
@@ -265,7 +289,7 @@ describe('spent parts drawn from the model', () => {
       debris(1, { diameter: blokI.diameter, length: blokI.length, color: '#ccc', kind: 'upperStage' }, -blokI.length),
       debris(2, { diameter: strapOn.diameter, length: strapOn.length, color: '#ccc', kind: 'booster', conicalTop: true }, 0),
     ]);
-    expect(Object.keys(got).sort()).toEqual(['anatomy:booster', 'anatomy:stage3']);
+    expect(Object.keys(got).sort()).toEqual(['anatomy:bay', 'anatomy:booster', 'anatomy:stage3']);
     // the spent stage's top at the separation plane, under the spacecraft (the model's adapter ring 0.2 m above it, under the Soyuz MS's base)
     expect(got['anatomy:stage3'].max.y).toBeGreaterThan(0);
     expect(got['anatomy:stage3'].max.y).toBeLessThan(0.25);

@@ -340,6 +340,11 @@ export class AftSkirt {
     }
   }
 
+  /** Paint the petals with `material` (the Soyuz Anatomy model's stage paint, where the model has no skirt of its own). */
+  repaint(material: THREE.Material): void {
+    for (const hinge of this.petals) for (const petal of hinge.children) (petal as THREE.Mesh).material = material;
+  }
+
   /** Draw the skirt as `shape` instead of the petals: on until it is shed, then falling away as the petals do, whole. */
   coverWith(shape: THREE.Object3D): void {
     this.cover = shape;

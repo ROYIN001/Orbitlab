@@ -157,8 +157,10 @@ export class DebrisView {
     const part = which ? model.parts[which[0]] : undefined;
     if (!which || !part) return null;
     const placement = which[1];
+    // a spent Blok I carries its aft bay (engine, thrust frame, lowest tank) with it
+    const parts = [part, ...(which[0] === 'stage3' && model.parts.bay ? [model.parts.bay] : [])];
     const all = anatomyMaterials(model);
-    const used = new Set(part.meshes.map((x) => x.material));
+    const used = new Set(parts.flatMap((x) => x.meshes.map((m) => m.material)));
     const mats: THREE.MeshStandardMaterial[] = [];
     all.forEach((mat, i) => {
       if (!used.has(i)) { mat.dispose(); return; }
@@ -187,7 +189,7 @@ export class DebrisView {
     }
     const holder = new THREE.Group();
     holder.position.y = base;
-    holder.add(body);
+    holder.add(body, ...parts.slice(1).map((x) => anatomyGroup(x, all, placement)));
     g.add(holder);
     const r = v.diameter / 2;
     const plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });

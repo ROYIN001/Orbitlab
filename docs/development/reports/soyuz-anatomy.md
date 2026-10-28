@@ -4,9 +4,9 @@
 >
 > - นำไฟล์ Soyuz ทั้ง 3 ไฟล์ที่คุณทำแยกไว้เข้ามาในโปรแกรมแบบไม่แก้ไขแม้แต่ไบต์เดียว (`public/anatomy/`): Soyuz-2.1a กับยาน Soyuz MS, Soyuz-2.1a กับ Progress MS-26 และ Soyuz-2.1b กับ Fregat
 > - **โหมดสร้างจรวด (Build › พื้นฐาน)**: เมื่อเลือก Soyuz-2.1a หรือ 2.1b จะมีปุ่ม "ดูภายในแบบ 3 มิติ" เปิดหน้าของคุณทั้งหน้า (ถังเชื้อเพลิง เครื่องยนต์ ท่อทาง แยกชิ้นและผ่าดูได้ คำอธิบายภาษาไทยครบ) ในหน้าต่างเต็มจอ สลับ Soyuz MS / Progress ได้ ปิดแล้วหน้าถูกปลดออกเพื่อคืนหน่วยความจำกราฟิก
-> - **การบิน**: Soyuz-2.1a และ 2.1b วาดจากผิวด้านนอกของแบบจำลองของคุณ — บูสเตอร์ แกนกลาง โครงถักระหว่างขั้น Blok I, Fregat, หัวครอบสองซีก หอหนีภัย และยาน Soyuz MS / Progress MS ชิ้นที่แยกตัวก็ยังเป็นรูปทรงจากแบบจำลอง Progress กางแผงโซลาร์ด้วยบานพับในไฟล์ของคุณเอง Soyuz MS ใช้ปีกโซลาร์ของโปรแกรม (ไฟล์ของคุณมีแต่แบบพับ) ส่วนภายใน (ถัง ท่อ) ไม่วาดตอนบินตามที่ขอ ฟิสิกส์ไม่เปลี่ยน
-> - ไฟล์โหลดเมื่อใช้เท่านั้น ไม่เข้าแคชออฟไลน์ตอนติดตั้ง (หน้าเว็บละราว 4.5 MB, ไฟล์ผิวสำหรับการบินราว 1–1.4 MB) ถ้าออฟไลน์และยังไม่เคยโหลด จรวดจะถูกวาดแบบเดิม
-> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 16.6 kB (index +12.2, CSS +1.3, ข้อความแปล +3.3) จึงขอขึ้นเพดาน precache code 14654 → 14671 kB (offset ที่ระบุ: EQ-7) PR นี้รอคุณอนุมัติใน Merge Desk
+> - **การบิน**: Soyuz-2.1a และ 2.1b วาดจากผิวด้านนอกของแบบจำลองของคุณ — บูสเตอร์ แกนกลาง โครงถักระหว่างขั้น Blok I, Fregat, หัวครอบสองซีก หอหนีภัย และยาน Soyuz MS / Progress MS ชิ้นที่แยกตัวก็ยังเป็นรูปทรงจากแบบจำลอง Progress กางแผงโซลาร์ด้วยบานพับในไฟล์ของคุณเอง Soyuz MS ใช้ปีกโซลาร์ของโปรแกรม (ไฟล์ของคุณมีแต่แบบพับ) ส่วนท้ายของขั้นที่ 3 (ตัวเครื่องยนต์ โครงรับแรงขับ ก้นถังออกซิเจน) วาดจากแบบจำลองด้วย เพราะมองเห็นได้จริงผ่านโครงถักและหลังสลัดกระโปรงท้าย ปลายท่อไอพ่นของโปรแกรมย้ายไปต่อกับห้องเผาไหม้ของแบบจำลองพอดี ส่วนภายในอื่น (ถัง ท่อ) ไม่วาดตอนบินตามที่ขอ ฟิสิกส์ไม่เปลี่ยน
+> - ไฟล์โหลดเมื่อใช้เท่านั้น ไม่เข้าแคชออฟไลน์ตอนติดตั้ง (หน้าเว็บละราว 4.5 MB, ไฟล์ผิวสำหรับการบินราว 1.2–2 MB) ถ้าออฟไลน์และยังไม่เคยโหลด จรวดจะถูกวาดแบบเดิม
+> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 18.4 kB (index +13.9, CSS +1.3, ข้อความแปล +3.3) จึงขอขึ้นเพดาน precache code 14654 → 14673 kB (offset ที่ระบุ: EQ-7) PR นี้รอคุณอนุมัติใน Merge Desk
 > - **ขอให้ยืนยัน**: ไฟล์ทั้งสามเป็นงานของคุณเองใช่ไหม (NOTICE.md เขียนไว้อย่างนั้น) และชุดเครื่องมือ "Anatomy kit" ที่ฝังอยู่ในไฟล์มีเงื่อนไขการใช้งานอย่างไร
 
 ```yaml
@@ -56,10 +56,14 @@ never takes the Build page's scroll.
 (booster-b only: the other three are it turned by 90°, checked by area, area-weighted centre and
 box, worst mismatch 1.2×10⁻⁵ of the area and 0.16 mm), Blok A with its truss, Blok I (the 2.1b's
 skirt panels as a part of their own), Fregat (all but its avionics boxes), the fairing in its two
-halves, the escape tower and the spacecraft. The engine bells are left to the flight, which
-gimbals and lights its own. Materials are the page's `materialOf` (colour, roughness, metalness)
+halves, the escape tower and the spacecraft. Blok I's aft bay is kept too, as its own part `bay`:
+everything of Blok I that reaches below the bottom of its lowest tank (the engine's body, thrust
+frame, the oxygen tank's dome, the helium bottles), which the 2.1a shows through its open truss and
+the 2.1b once its skirt is shed. The combustion chambers and their jackets are left to the flight,
+which gimbals and lights its own; the script records where each chamber sits (bearing, radius, top
+and exit) in the bay's header, so the flight sets its bells there. Materials are the page's `materialOf` (colour, roughness, metalness)
 times each detail's tone. Output per page, welded and quantized (u16 positions over each mesh's
-box, i8 normals): 83,400 / 57,256 / 63,096 triangles, 1,419 / 996 / 971 kB (0.62 / 0.40 / 0.43 MB
+box, i8 normals): 125,816 / 99,672 / 80,128 triangles, 1.98 / 1.54 / 1.19 MB (0.90 / 0.68 / 0.55 MB
 gzip), each carrying its page's SHA-256 (`tests/anatomy.test.ts` fails if a page is replaced and
 the meshes are not remade).
 
@@ -67,9 +71,9 @@ the meshes are not remade).
 
 | Part | Where | Scale along its axis |
 | --- | --- | --- |
-| Blok A + truss | stage 0, model base → 0, Blok I's base → the stage's height | 1.020 (2.1a), 1.022 (2.1b) |
+| Blok A + truss | stage 0, model base → 0, Blok I's base → the stage's height | 1.020 (2.1a), 1.029 (2.1b) |
 | strap-ons | each unit, Blok A's map, less the unit's offset | as Blok A |
-| Blok I | stage 1, base → 0, the next part's base → its 6.7 m | 0.957 (2.1a), 1.025 (2.1b) |
+| Blok I, its aft bay and (2.1b) skirt | stage 1, its lowest point (2.1a: the bay, 2.1b: the skirt's rim) → 0, the next part's base → its 6.7 m | 0.957 (2.1a), 0.993 (2.1b) |
 | Fregat | stage 2, dropped onto Blok I's top (over the layout's adapter) | 1 |
 | fairing halves | the fairing group, base on Blok I's top (2.1b: round Fregat, as ST flies) | 1 |
 | escape tower | `CrewedTop.tower`, on the model's fairing | 1 |
@@ -77,12 +81,28 @@ the meshes are not remade).
 | mission's own satellite on 2.1b | on the model's Fregat (`seat` −2.13 m) | — |
 
 `RocketView.mountAnatomy` hides the R-7's own bodies (and their pad frost), keeps the bells,
-plumes and flash (the strap-ons' moved 0.36 m up and 0.2 m out to hang under the model's strap-ons),
-the aft skirt's timing (the 2.1b model's skirt falls away whole when the flight sheds its own) and
-the tower's jettison, and takes the camera's height and the Mach-1 collar from the model's fairing; `DebrisView` draws spent strap-ons, Blok A, Blok I, Fregat and the fairing halves
+plumes and flash (the strap-ons' moved 0.36 m up and 0.2 m out to hang under the model's strap-ons;
+Blok I's set on the model's chambers, `RocketView.refitChambers`: the 2.1a's four RD-0110 chambers
+and four verniers, the 2.1b's four RD-0124 chambers and no verniers, so the simulator's two
+verniers and their flames are dropped there), the aft skirt's timing (the 2.1b model's skirt falls
+away whole when the flight sheds its own; the 2.1a model has none, so the simulator's petals stay,
+painted the model's grey-green) and the tower's jettison, and takes the camera's height and the Mach-1 collar from the model's fairing; `DebrisView` draws spent strap-ons, Blok A, Blok I, Fregat and the fairing halves
 from the model. `main.ts` loads the meshes when a matching mission is set up and mounts them when
 they arrive; any other vehicle, a remix of a Soyuz (`derivedFrom`), a load still pending or a
 failed load (offline before first fetch) is drawn exactly as before.
+
+## The owner's report: the 2.1b's skirt shed
+
+The owner sent a crop of the 2.1b at T+5:00, as Blok I sheds its aft skirt, with "ตรงนี้แก้ด้วยครับ"
+(fix this too): orange petals and small dark pieces floating under Blok I. The petals were the
+simulator's own skirt; the screenshot predates 9b1d870, where the model's skirt already falls in
+their place on the 2.1b (on the 2.1a, whose model has no skirt, they stayed orange until now). The
+dark pieces were the RD-0124's mounting collars and jackets, kept as structure while the engine they
+hold was left out, so they hung in space with the simulator's bells and verniers well below them
+(the fit put Blok I's base at its tanks' bottom, not at the skirt's rim). Fixed by keeping the whole
+aft bay (above), putting Blok I's lowest point on the stage's base, setting the simulator's bells on
+the model's chambers, dropping the two verniers the RD-0124 does not have, and painting the 2.1a's
+petals the model's grey-green.
 
 Not done here (follow-ups if wanted): the abort scenario's escaping head section
 (`render/escape.ts`) is still the simulator's drawing; the fairing's flag and lettering (the
@@ -93,23 +113,23 @@ page's `paintOf`) are not baked into the meshes; the pad frost is not drawn on t
 | Check | Result |
 | --- | --- |
 | `npx tsc --noEmit` | clean |
-| `tests/anatomy.test.ts` (new) | 16/16: on-demand routes; meshes match their pages' SHA-256; parts per page; page choice per vehicle and payload (none for other vehicles and remixes); fit within a few per cent; 2.1b fairing round Fregat and satellite on Fregat; each variant mounted in a RocketView with its parts in place and its own bodies hidden, the 2.1b skirt shed at 14.06 s; Progress hinges against the page's own rotation order; Soyuz MS folded arrays → wings; the strap-ons' bells under the model's strap-ons; the camera height and Mach-1 collar on the model's fairing; spent Blok I recorded without its profile (point mass), spent Fregat with its top on the separation plane, none on another vehicle |
+| `tests/anatomy.test.ts` (new) | 16/16: on-demand routes; meshes match their pages' SHA-256; parts per page (with the aft bay and its chambers: 4 + 4 on the 2.1a, 4 + 0 on the 2.1b); Blok I's lowest point on the stage's base, its bells on the model's chambers and its flame at their exits, no verniers on the 2.1b; page choice per vehicle and payload (none for other vehicles and remixes); fit within a few per cent; 2.1b fairing round Fregat and satellite on Fregat; each variant mounted in a RocketView with its parts in place and its own bodies hidden, the 2.1b skirt shed at 14.06 s; Progress hinges against the page's own rotation order; Soyuz MS folded arrays → wings; the strap-ons' bells under the model's strap-ons; the camera height and Mach-1 collar on the model's fairing; spent Blok I recorded without its profile (point mass), spent Fregat with its top on the separation plane, none on another vehicle |
 | `tests/i18n.test.ts`, `tests/i18n-thai-terms.test.ts` | 23/23 |
 | `tests/soyuz-render.test.ts`, `tests/vostok-render.test.ts`, `tests/privacy-inventory.test.ts`, `tests/pwa.test.ts`, `tests/architecture.test.ts` | green (privacy: `src/render/anatomy.ts` added to the files that fetch, same-origin files of the app) |
 | journey `soyuz-anatomy` (new) | 1/1, 93 s: crewed 2.1a model mounted (core, 4 strap-ons, Blok I, both fairing halves, tower, Soyuz MS); 4 spent strap-ons drawn from the model after T+118 s; Progress model mounted; Build offers the pages for 2.1a and 2.1b and none for Falcon 9, opens both 2.1a pages, removes the frame on close with the history length unchanged, focus back; no console errors |
 | `npx vite build` + `node scripts/bundle-budget.mjs` | ok with the raised ceilings below |
-| Visual (SwiftShader, 1280×800) | pad, T+16, strap-ons away, fairing away, core separation, skirt shed, Soyuz MS and Progress MS in orbit with arrays out, 2.1b with the satellite on Fregat; Build dialog in Thai |
+| Visual (SwiftShader, 1280×800) | pad, T+16, strap-ons away, fairing away, core separation, skirt shed, Soyuz MS and Progress MS in orbit with arrays out, 2.1b with the satellite on Fregat; Build dialog in Thai; after the owner's report, the 2.1b at T+302, 305 and 307 s (the skirt falling away whole, the RD-0124 on the bay, nothing loose) and the 2.1a at T+289, 297 and 300 s |
 
 ## Budget (D-38)
 
 | Group | Ceiling | Measured with the change | Without | Delta |
 | --- | ---: | ---: | ---: | ---: |
-| `index-*.js` | 2635 → 2647 | 2647.0 kB (2,646,971 B) | 2634.8 | +12.2 |
+| `index-*.js` | 2635 → 2649 | 2648.7 kB (2,648,714 B) | 2634.8 | +13.9 |
 | `index-*.css` | 177 → 179 | 178.2 kB (178,227 B) | 176.9 | +1.3 |
 | `i18n-*.js` | 1729 → 1733 | 1732.3 kB (1,732,276 B) | 1729.0 | +3.3 |
-| precache code | 14654 → 14671 | 14670.6 kB | 14654.0 | +16.6 |
-| precache | 16053 → 16070 | 15789.8 kB (committed snapshots) | — | code +17 |
+| precache code | 14654 → 14673 | 14672.4 kB | 14654.0 | +18.4 |
+| precache | 16053 → 16072 | 15791.6 kB (committed snapshots) | — | code +19 |
 
-The pages and meshes (16.9 MB) are in no ceiling: `anatomy/` is on demand. Without that entry the
-build precaches them and fails the code ceiling by 16.9 MB (measured). Named offset: EQ-7 (split
+The pages and meshes (18.1 MB) are in no ceiling: `anatomy/` is on demand. Without that entry the
+build precaches them and fails the code ceiling by about 18 MB. Named offset: EQ-7 (split
 the first-view code, K2). The raise stands only with the owner's approval.

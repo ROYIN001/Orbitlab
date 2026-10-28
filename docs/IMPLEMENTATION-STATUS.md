@@ -120,8 +120,10 @@ are listed there as drafts awaiting the owner's review.
   dialog (`src/ui/build/anatomy-dialog.ts`). The flight draws those two catalogue rockets from the
   models' outside (`src/render/anatomy.ts`, meshes made by `scripts/anatomy-meshes.mjs` with each
   page's own code): strap-ons, Blok A and its truss, Blok I (the 2.1b's skirt shed with the
-  flight's), Fregat, the fairing halves, the escape tower, the Soyuz MS (the flight's own wings
-  unfolding) and the Progress MS (its own hinges), the spent parts as debris too. Blok A and Blok I
+  flight's; its aft bay with the engine's body, thrust frame and oxygen-tank dome, the flight's
+  bells moved onto the model's chambers), Fregat, the fairing halves, the escape tower, the Soyuz
+  MS (the flight's own wings unfolding) and the Progress MS (its own hinges), the spent parts as
+  debris too. Blok A and Blok I
   are stretched along their axes by at most 4 % into the physics' stage heights; above Blok I the
   model keeps its own size and stacking (the ST fairing round Fregat). Pages and meshes are fetched
   on demand, never precached; until the meshes arrive, or offline, the R-7 is drawn as above.

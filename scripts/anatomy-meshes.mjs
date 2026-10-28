@@ -42,6 +42,8 @@ const dir = join(root, 'public', 'anatomy');
 
 /** The radial segments a full circle is cut into (the page draws 48; the flight sees it from metres away at the closest). */
 export const RADIAL_SEGMENTS = 16;
+/** …and in Blok I's aft bay, the engine's pipes and pumps, seen only from below it. */
+export const BAY_SEGMENTS = 12;
 export const FORMAT_VERSION = 1;
 
 /**
@@ -55,20 +57,43 @@ const PAGES = [
   { file: 'soyuz-2-1b-fregat-st31.html', variant: 'fregat-st31', payload: [] },
 ];
 
-/** Hosts the flight already draws itself: the engine bells (Blok I's and Fregat's), which gimbal and glow with the physics. */
-const DRAWN_BY_THE_FLIGHT = /(?:nozzle-\d+-jacket|s592-main-chamber|s592-jacket-seam|s592-head-flange|s592-cooling-collector)/;
-/** Blok I's aft skirt (the Fregat page's RD-0124 Blok I): a part of its own, hidden when the flight sheds its skirt. */
+/** Hosts the flight already draws itself: Fregat's main engine, a bell which glows with the physics. */
+const DRAWN_BY_THE_FLIGHT = /(?:s592-main-chamber|s592-jacket-seam|s592-head-flange|s592-cooling-collector)/;
+/** Blok I's aft skirt (the Fregat page's RD-0124 Blok I): a part of its own, shed when the flight sheds its skirt. */
 const SKIRT = /skirt-panel-\d+/;
+/**
+ * Blok I's thrust chambers (RD-0110's four mains and four verniers, RD-0124's
+ * four): the flight draws them as its own bells, which gimbal and glow with
+ * the physics, put where these are (the `bay` part's `nozzles`).
+ */
+const CHAMBER = /^stage3\.(?:rd\d+-)?(main|vernier)-nozzle-(\d+)$/;
+/** …and the rings on those chambers' walls, which would float without them. */
+const CHAMBER_RING = /^stage3\.(?:rd\d+-)?(?:nozzle-\d+-jacket|vernier-jacket-\d+|throat-jacket-\d+|nozzle-lip-\d+|cooling-collector-\d+)/;
+/** Blok I's tanks: from its bottom up to the lowest of them the stage is seen into once it is open below. */
+const TANK = /^stage3\.(?:rd\d+-)?(?:oxygen|lox|kerosene|fuel)-tank$/;
 
-/** Which flight part a host goes into, or null to leave it out. */
-function flightPart(item, page) {
+/**
+ * Which flight part a host goes into, or null to leave it out. `bay`: Blok
+ * I's hosts' heights and the top of its aft bay (its lowest tank's bottom):
+ * everything below that, of any kind but the chambers and the skin, is the
+ * bay's — the engine's pumps and pipes, the thrust frame, the helium bottles
+ * and the tank's lower dome — which the open truss and, once Blok A has gone,
+ * the stage's open bottom show. Above it only the skin and the structure.
+ */
+function flightPart(item, page, bay) {
   const { part, kind, id } = item;
   if (DRAWN_BY_THE_FLIGHT.test(id)) return null;
   const outside = kind === 'shell' || kind === 'structural';
   if (part === 'booster-b') return outside ? 'booster' : null;
   if (part.startsWith('booster-')) return null; // the other three are booster-b turned (checked below)
   if (part === 'core' || part === 'interstage') return outside ? 'core' : null;
-  if (part === 'stage3') return outside ? (SKIRT.test(id) ? 'skirt' : 'stage3') : null;
+  if (part === 'stage3') {
+    if (CHAMBER.test(id) || CHAMBER_RING.test(id)) return null;
+    if (SKIRT.test(id)) return 'skirt';
+    if (kind === 'shell') return 'stage3';
+    if (bay.extent.get(id).lo <= bay.top + 1e-3) return 'bay';
+    return kind === 'structural' ? 'stage3' : null;
+  }
   if (part === 'fregat') return kind === 'interior' ? null : 'fregat';
   if (part === 'fairing') return String(item.half ?? '').startsWith('left') ? 'fairing-left' : 'fairing-right';
   if (part === 'escape') return 'escape';
@@ -186,8 +211,33 @@ function exportPage(page) {
   const { scene, buildSoyuzMeshes, materialOf } = pageModel(html);
   const mismatch = boosterMismatch(scene, buildSoyuzMeshes);
   if (mismatch.area > 0.005 || mismatch.m > 0.02) throw new Error(`${page.file}: the boosters are not one booster turned (${JSON.stringify(mismatch)})`);
-  const chosen = scene.items.filter((it) => flightPart(it, page));
-  const meshes = buildSoyuzMeshes({ ...scene, items: chosen }, { radialSegments: RADIAL_SEGMENTS });
+  // Blok I first, at the bay's resolution: its hosts' heights, its tanks, its chambers' exits
+  const stage3 = scene.items.filter((it) => it.part === 'stage3');
+  const stage3Meshes = buildSoyuzMeshes({ ...scene, items: stage3 }, { radialSegments: BAY_SEGMENTS });
+  const extent = new Map(), nozzles = [];
+  stage3.forEach((it, i) => {
+    const p = stage3Meshes[i].positions;
+    let lo = Infinity, hi = -Infinity;
+    for (let k = 2; k < p.length; k += 3) { lo = Math.min(lo, p[k] / 10); hi = Math.max(hi, p[k] / 10); }
+    extent.set(it.id, { lo, hi });
+    const c = CHAMBER.exec(it.id);
+    if (!c) return;
+    // the exit: the ring of vertices within 1 cm of the chamber's bottom
+    let sx = 0, sz = 0, n = 0;
+    for (let k = 0; k < p.length; k += 3) if (p[k + 2] / 10 < lo + 0.01) { sx += p[k] / 10; sz += -p[k + 1] / 10; n++; }
+    const x = sx / n, z = sz / n;
+    let r = 0;
+    for (let k = 0; k < p.length; k += 3) if (p[k + 2] / 10 < lo + 0.01) r = Math.max(r, Math.hypot(p[k] / 10 - x, -p[k + 1] / 10 - z));
+    nozzles.push({ kind: c[1], index: Number(c[2]), x: +x.toFixed(4), z: +z.toFixed(4), r: +r.toFixed(4), exit: +lo.toFixed(4), top: +hi.toFixed(4) });
+  });
+  const tanks = stage3.filter((it) => TANK.test(it.id)).map((it) => extent.get(it.id).lo);
+  const bay = { extent, top: tanks.length ? Math.min(...tanks) : -Infinity };
+  const chosen = scene.items.filter((it) => flightPart(it, page, bay));
+  const inBay = chosen.map((it) => flightPart(it, page, bay) === 'bay');
+  const rest = buildSoyuzMeshes({ ...scene, items: chosen.filter((_, i) => !inBay[i]) }, { radialSegments: RADIAL_SEGMENTS });
+  const bayMeshes = new Map(stage3.map((it, i) => [it.id, stage3Meshes[i]]));
+  let r = 0;
+  const meshes = chosen.map((it, i) => (inBay[i] ? bayMeshes.get(it.id) : rest[r++]));
 
   const materials = [], materialIndex = new Map();
   const hinges = [], hingeIndex = new Map();
@@ -195,7 +245,7 @@ function exportPage(page) {
   const parts = new Map();
   for (let i = 0; i < meshes.length; i++) {
     const m = meshes[i], item = chosen[i];
-    const part = flightPart(item, page);
+    const part = flightPart(item, page, bay);
     const base = materialOf(m);
     const rotations = item.engineInfo?.progressMotion?.rotations;
     let hinge = -1;
@@ -249,11 +299,11 @@ function exportPage(page) {
     materials, hinges, parts: [],
   };
   let triangles = 0;
-  const order = ['booster', 'core', 'stage3', 'skirt', 'fregat', 'fairing-left', 'fairing-right', 'escape', 'payload'];
+  const order = ['booster', 'core', 'stage3', 'skirt', 'bay', 'fregat', 'fairing-left', 'fairing-right', 'escape', 'payload'];
   for (const name of order) {
     const groups = parts.get(name);
     if (!groups) continue;
-    const entry = { name, bounds: boundsOf([...groups.values()].map((g) => g.p)), meshes: [] };
+    const entry = { name, bounds: boundsOf([...groups.values()].map((g) => g.p)), meshes: [], ...(name === 'bay' ? { nozzles } : {}) };
     for (const g of groups.values()) {
       const w = weld(g.p, g.n);
       triangles += w.idx.length / 3;

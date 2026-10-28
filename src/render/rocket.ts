@@ -361,31 +361,30 @@ export class RocketView {
     this.materials.push(bellMat);
     const bells = new THREE.InstancedMesh(geo, bellMat, all.length);
     bells.castShadow = true;
-    let maxLen = 0;
-    for (let i = 0; i < all.length; i++) {
-      const n = all[i];
-      this.tmpMat.makeScale(n.r, n.len, n.r);
-      this.tmpMat.setPosition(n.x, 0, n.z);
-      bells.setMatrixAt(i, this.tmpMat);
-      maxLen = Math.max(maxLen, n.len);
-    }
-    bells.instanceMatrix.needsUpdate = true;
     parent.add(bells);
-
     const glowMat = new THREE.MeshBasicMaterial({ color: 0xffc070, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     this.materials.push(glowMat);
     const glow = new THREE.InstancedMesh(GLOW_GEO, glowMat, all.length);
-    for (let i = 0; i < all.length; i++) {
-      const n = all[i];
-      this.tmpMat.makeScale(n.r * 0.95, 1, n.r * 0.95);
-      this.tmpMat.setPosition(n.x, -n.len * 0.98, n.z);
-      glow.setMatrixAt(i, this.tmpMat);
-    }
-    glow.instanceMatrix.needsUpdate = true;
     glow.visible = false;
     parent.add(glow);
-    return { glow, bellLength: maxLen, bellMat,
-      engines: { bells, glow, nozzles: all, ids: rigidNozzleIds(ownerId, shapeId, layout), rigidApplied: false } };
+    const engines: EngineVisual = { bells, glow, nozzles: all, ids: rigidNozzleIds(ownerId, shapeId, layout), rigidApplied: false };
+    this.placeEngines(engines);
+    return { glow, bellLength: Math.max(0, ...all.map((n) => n.len)), bellMat, engines };
+  }
+
+  /** The bells and their glow where their nozzles stand, untilted (`updateEngineVisual` tilts them on a rigid flight). */
+  private placeEngines(visual: EngineVisual): void {
+    for (let i = 0; i < visual.nozzles.length; i++) {
+      const n = visual.nozzles[i], y = n.y ?? 0;
+      this.tmpMat.makeScale(n.r, n.len, n.r);
+      this.tmpMat.setPosition(n.x, y, n.z);
+      visual.bells.setMatrixAt(i, this.tmpMat);
+      this.tmpMat.makeScale(n.r * 0.95, 1, n.r * 0.95);
+      this.tmpMat.setPosition(n.x, y - n.len * 0.98, n.z);
+      visual.glow.setMatrixAt(i, this.tmpMat);
+    }
+    visual.bells.instanceMatrix.needsUpdate = true;
+    visual.glow.instanceMatrix.needsUpdate = true;
   }
 
   /** Actual recorded chamber directions tilt existing instances at their mount.
@@ -404,12 +403,13 @@ export class RocketView {
         this.engineDirection.normalize();
         this.engineQuaternion.setFromUnitVectors(ENGINE_Y_AXIS, this.engineDirection);
       } else this.engineQuaternion.identity();
-      this.enginePosition.set(nozzle.x, 0, nozzle.z);
+      this.enginePosition.set(nozzle.x, nozzle.y ?? 0, nozzle.z);
       this.engineScale.set(nozzle.r, nozzle.len, nozzle.r);
       this.tmpMat.compose(this.enginePosition, this.engineQuaternion, this.engineScale);
       visual.bells.setMatrixAt(i, this.tmpMat);
       this.enginePosition.set(0, -nozzle.len * 0.98, 0).applyQuaternion(this.engineQuaternion);
       this.enginePosition.x += nozzle.x;
+      this.enginePosition.y += nozzle.y ?? 0;
       this.enginePosition.z += nozzle.z;
       const throttle = rigid?.engineThrottles?.[id];
       const glowScale = throttle === undefined ? 1 : Math.sqrt(Math.max(0, throttle));
@@ -805,12 +805,22 @@ export class RocketView {
       for (const o of [unit.engines.bells, unit.glow, unit.plume.group, unit.vernier?.group]) o?.position.add(new THREE.Vector3(fit.boosterEngines.dx, fit.boosterEngines.dy, 0));
     }
     swap(blokI.own, blokI.group, anatomyGroup(p.stage3!, mats, fit.stage3));
-    // the model's own aft skirt (the 2.1b's), shed when the flight sheds its own
+    // its aft bay — the engine's pumps and pipes, the thrust frame, the lowest tank — with the bells moved onto its chambers
+    if (p.bay) blokI.group.add(anatomyGroup(p.bay, mats, fit.stage3));
+    if (fit.chambers) this.refitChambers(blokI, fit.chambers);
+    // the model's own aft skirt (the 2.1b's), shed when the flight sheds its own; else the flight's petals in the model's paint
     if (p.skirt && blokI.skirt) {
       const skirt = new THREE.Group();
       skirt.add(anatomyGroup(p.skirt, mats, fit.stage3));
       blokI.group.add(skirt);
       blokI.skirt.coverWith(skirt);
+    } else if (blokI.skirt) {
+      const paint = model.materials.find((m) => m.name === 'rocket-gray-green');
+      if (paint) {
+        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(paint.color), roughness: paint.roughness, metalness: paint.metalness, side: THREE.DoubleSide });
+        this.materials.push(mat);
+        blokI.skirt.repaint(mat);
+      }
     }
     if (fregat && fit.fregat) swap(fregat.own, fregat.group, anatomyGroup(p.fregat!, mats, fit.fregat));
     if (this.fairing) {
@@ -833,6 +843,48 @@ export class RocketView {
     } else if (fit.satelliteSeat !== null) this.satellite.seat = fit.satelliteSeat;
     this.installBending();
     return fit;
+  }
+
+  /**
+   * A stage's bells, glow and plumes moved onto the model's chambers
+   * (`AnatomyFit.chambers`): each main to the model's main nearest its bearing,
+   * each vernier to the nearest vernier, so the physics' chamber ids, gimbals
+   * and throttles carry over. A model without verniers (the RD-0124 has none)
+   * has the stage's drawn at no size and their plume taken away. Left as they
+   * are if the model's chambers are otherwise not as many as the stage's.
+   */
+  private refitChambers(part: StagePart, chambers: NonNullable<AnatomyFit['chambers']>): void {
+    const visual = part.engines;
+    const vernier = (i: number) => visual.ids[i].includes('.vernier.');
+    const kindOf = (i: number): 'main' | 'vernier' => (vernier(i) ? 'vernier' : 'main');
+    const count = (kind: 'main' | 'vernier') => chambers.filter((c) => c.kind === kind).length;
+    const noVerniers = count('vernier') === 0;
+    if (count('main') !== visual.nozzles.filter((_, i) => kindOf(i) === 'main').length) return;
+    if (!noVerniers && count('vernier') !== visual.nozzles.filter((_, i) => vernier(i)).length) return;
+    const free = [...chambers];
+    const bearing = (x: number, z: number) => Math.atan2(z, x);
+    const apart = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+    visual.nozzles = visual.nozzles.map((n, i) => {
+      if (noVerniers && vernier(i)) return { ...n, r: 0, len: 0 };
+      const own = bearing(n.x, n.z);
+      let best = -1;
+      for (let k = 0; k < free.length; k++) {
+        if (free[k].kind !== kindOf(i)) continue;
+        if (best < 0 || apart(bearing(free[k].x, free[k].z), own) < apart(bearing(free[best].x, free[best].z), own)) best = k;
+      }
+      const c = free.splice(best, 1)[0];
+      return { ...n, x: c.x, z: c.z, r: c.r, len: c.top - c.exit, y: c.top };
+    });
+    this.placeEngines(visual);
+    const exit = (kind: 'main' | 'vernier') => Math.min(...chambers.filter((c) => c.kind === kind).map((c) => c.exit));
+    part.bellLength = -exit('main');
+    part.plume.group.position.y = exit('main');
+    if (part.vernier && noVerniers) {
+      part.vernier.group.removeFromParent();
+      part.vernier.dispose();
+      part.vernier = null;
+    } else if (part.vernier) part.vernier.group.position.y = exit('vernier');
+    part.flash.position.y = -part.bellLength * 0.6;
   }
 
   /** Lay out the attached parts and animate everything from the frame. */
