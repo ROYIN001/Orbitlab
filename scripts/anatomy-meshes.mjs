@@ -26,8 +26,9 @@
  * and the engines' insides stay in the page, which Build shows whole. The
  * engine bells are not taken either: the flight draws its own, which gimbal
  * and glow with the physics, where the header's `nozzles` say the model's are
- * (Blok I's chambers on the `bay`, Fregat's on `fregat`, and the escape
- * tower's jettison nozzles, for its fire, on `escape`).
+ * (Blok I's chambers on the `bay`, Fregat's on `fregat`, Blok A's and the
+ * strap-on's on `core` and `booster` for the spent ones' bells, and the
+ * escape tower's jettison nozzles, for its fire, on `escape`).
  *
  * Output: the file below, gzip-compressed (the site's host sends `.bin` as it
  * is; render/anatomy.ts inflates it). Inside (little-endian): "OLAX", u32
@@ -95,6 +96,12 @@ const TANK = /^stage3\.(?:rd\d+-)?(?:oxygen|lox|kerosene|fuel)-tank$/;
 const CLOSURE = /^(?:(?:booster-b|core)\.(?:aft-rim(?:\.(?:front|back))?|thrust-platform)|core\.(?:oxygen-tank|guidance-deck)|progress-service\.aft-thrust-deck(?:\.(?:front|back))?)$/;
 /** Fregat's main chamber (S5.92), whose place the flight's bell takes. */
 const FREGAT_CHAMBER = /^fregat\.s592-main-chamber$/;
+/**
+ * Blok A's and the strap-on's chambers (RD-108A's and RD-107A's four and
+ * their verniers): the stack draws its own bells, and a spent one is drawn
+ * with bells where these are (render/debris.ts), not with empty sockets.
+ */
+const STACK_CHAMBER = /^(core|booster-b)\.(main|vernier)-nozzle-(\d+)$/;
 /** The escape tower's jettison motor's nozzles, where its fire comes from when it pulls the tower away. */
 const JETTISON = /^escape\.jettison-nozzle-(\d+)$/;
 
@@ -286,7 +293,7 @@ function exportPage(page) {
   // Blok I first, at the bay's resolution: its hosts' heights, its tanks, its chambers' exits
   const stage3 = scene.items.filter((it) => it.part === 'stage3');
   const stage3Meshes = buildSoyuzMeshes({ ...scene, items: stage3 }, { radialSegments: BAY_SEGMENTS });
-  const extent = new Map(), nozzles = { bay: [], fregat: [], escape: [] };
+  const extent = new Map(), nozzles = { bay: [], fregat: [], escape: [], core: [], booster: [] };
   stage3.forEach((it, i) => {
     const p = stage3Meshes[i].positions;
     let lo = Infinity, hi = -Infinity;
@@ -299,6 +306,12 @@ function exportPage(page) {
   const fregatChamber = scene.items.filter((it) => FREGAT_CHAMBER.test(it.id));
   buildSoyuzMeshes({ ...scene, items: fregatChamber }, { radialSegments: RADIAL_SEGMENTS })
     .forEach((m, i) => nozzles.fregat.push(nozzleOf(m.positions, 'main', i + 1)));
+  // Blok A's and the strap-on's, for the spent ones' bells
+  const stackChambers = scene.items.filter((it) => STACK_CHAMBER.test(it.id));
+  buildSoyuzMeshes({ ...scene, items: stackChambers }, { radialSegments: RADIAL_SEGMENTS }).forEach((m, i) => {
+    const [, part, kind, index] = STACK_CHAMBER.exec(stackChambers[i].id);
+    nozzles[part === 'core' ? 'core' : 'booster'].push(nozzleOf(m.positions, kind, Number(index)));
+  });
   const tanks = stage3.filter((it) => TANK.test(it.id)).map((it) => extent.get(it.id).lo);
   const bay = { extent, top: tanks.length ? Math.min(...tanks) : -Infinity };
   const chosen = scene.items.filter((it) => flightPart(it, page, bay));

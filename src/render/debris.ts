@@ -20,7 +20,7 @@ import type { DebrisFrame } from '../physics/frame';
 import { interstageHeight } from '../physics/frame';
 import type { SceneManager } from './scene';
 import { Plume } from './plume';
-import { ogiveProfile } from './liveries';
+import { bellGeometry, ogiveProfile } from './liveries';
 import { clamp01, hash11, smoothstep } from './noise';
 import { disposeObject } from './dispose';
 import { R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7CoreProfile, r7CoreTop, r7TrussGeometry } from './soyuz';
@@ -190,6 +190,23 @@ export class DebrisView {
     const holder = new THREE.Group();
     holder.position.y = base;
     holder.add(body, ...parts.slice(1).map((x) => anatomyGroup(x, all, placement)));
+    // its engine bells where the model's chambers are: the meshes leave those to the flight's own bells, so a spent
+    // part drawn from them alone would show empty sockets (scripts/anatomy-meshes.mjs `nozzles`)
+    const chambers = parts.flatMap((x) => x.nozzles ?? []).filter((n) => n.kind !== 'jettison');
+    if (chambers.length) {
+      const metal = new THREE.MeshStandardMaterial({ color: 0x55585c, metalness: 0.7, roughness: 0.42, side: THREE.DoubleSide, emissive: 0xdce6ff, emissiveIntensity: 0 });
+      mats.push(metal);
+      const bells = new THREE.Group();
+      bells.name = 'anatomy:bells';
+      bells.position.set(placement.dx, placement.dy - placement.y0 * placement.sy, 0);
+      bells.scale.set(1, placement.sy, 1);
+      for (const n of chambers) {
+        const bell = new THREE.Mesh(bellGeometry(n.r, n.top - n.exit, 10), metal);
+        bell.position.set(n.x, n.top, n.z);
+        bells.add(bell);
+      }
+      holder.add(bells);
+    }
     g.add(holder);
     const r = v.diameter / 2;
     const plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });

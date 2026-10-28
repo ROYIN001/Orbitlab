@@ -338,9 +338,15 @@ describe('spent parts drawn from the model', () => {
     }
     view.update(list, 1);
     const out: Record<string, THREE.Box3> = {};
-    scene.traverse((o) => { if (o.name.startsWith('anatomy:')) out[o.name] = box(o); });
+    bells = [];
+    scene.traverse((o) => {
+      if (o.name === 'anatomy:bells') bells.push(o.children.length);
+      else if (o.name.startsWith('anatomy:')) out[o.name] = box(o);
+    });
     return out;
   });
+  /** the bells each spent part drawn by the last `drawn` carries, in the scene's order */
+  let bells: number[] = [];
 
   it('Blok I as the point-mass flight records it at the spacecraft\'s separation (no profile), and a strap-on', () => {
     const blokI = vehicleById('soyuz21a').stages[1], strapOn = vehicleById('soyuz21a').stages[0].boosters![0];
@@ -349,9 +355,20 @@ describe('spent parts drawn from the model', () => {
       debris(2, { diameter: strapOn.diameter, length: strapOn.length, color: '#ccc', kind: 'booster', conicalTop: true }, 0),
     ]);
     expect(Object.keys(got).sort()).toEqual(['anatomy:bay', 'anatomy:booster', 'anatomy:stage3']);
+    // with bells where the model's chambers are, not empty sockets: RD-0110's four and four verniers, RD-107A's four and two
+    expect([...bells].sort()).toEqual([6, 8]);
     // the spent stage's top (the model's adapter ring, which stands 0.2 m proud of the physics' top, under the
     // spacecraft's base) on the separation plane, so the spacecraft leaving it does not stand inside it
     expect(got['anatomy:stage3'].max.y).toBeCloseTo(0, 3);
+  });
+
+  it('Blok A with its truss, and its bells', () => {
+    const blokA = vehicleById('soyuz21a').stages[0];
+    const got = drawn('soyuz-ms', 'soyuz21a', 'crew', [
+      debris(1, { diameter: blokA.diameter, length: blokA.length, color: '#ccc', kind: 'stage', profile: 'r7Core' }, -stackLayout(vehicleById('soyuz21a')).height[0]),
+    ]);
+    expect(Object.keys(got)).toEqual(['anatomy:core']);
+    expect(bells).toEqual([8]);   // RD-108A's four and four verniers
   });
 
   it('a spent Fregat with its top on the plane its satellite left from', () => {
@@ -360,6 +377,7 @@ describe('spent parts drawn from the model', () => {
       debris(1, { diameter: fregat.diameter, length: fregat.length, color: '#ccc', kind: 'upperStage' }, -stackLayout(spec).height[2]),
     ]);
     expect(got['anatomy:fregat'].max.y).toBeCloseTo(0, 3);
+    expect(bells).toEqual([1]);   // its S5.92
   });
 
   it('none on any other flight', () => {
