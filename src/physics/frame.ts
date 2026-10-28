@@ -704,7 +704,9 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
  * Everything discrete (status, ascent phase, stage/booster/fairing state, the
  * debris list, the event count) comes from the *earlier* frame: a state that
  * changes at an instant must not be shown before that instant. Debris
- * positions are still interpolated, so spent stages fall smoothly.
+ * positions are still interpolated, so spent stages fall smoothly: a body that
+ * coasts out of the air goes from one frame to the next the way the vehicle
+ * does (`debrisCoasts`), anything else in a straight line.
  *
  * The result is a fresh frame; the inputs are never mutated. The function is
  * pure, so seeking twice to the same time produces deep-equal frames.
@@ -735,6 +737,24 @@ function blendDebrisExtras(d: DebrisFrame, o: DebrisFrame, u: number): Pick<Debr
   return out;
 }
 
+/**
+ * Height above which the simulation flies a coast with no air: the vehicle's on
+ * a Kepler arc (`useKepler`, simulation.ts), and a spent stage counts as in
+ * orbit from it (sim/debris.ts).
+ */
+const AIRLESS_HEIGHT = 140e3;
+
+/**
+ * Whether a spent body coasts between two frames: nothing on it firing at
+ * either end, and out of the air at both — in a lasting orbit (flown on a Kepler
+ * arc) or above `AIRLESS_HEIGHT`. A body in the air is slowed by drag, so the
+ * two-body arc is not the path it flew.
+ */
+function debrisCoasts(d: DebrisFrame, o: DebrisFrame): boolean {
+  const airless = (x: DebrisFrame) => x.outcome === 'orbit' || Math.hypot(x.r.x, x.r.y, x.r.z) - R_EARTH > AIRLESS_HEIGHT;
+  return !d.burning && !o.burning && airless(d) && airless(o);
+}
+
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
   // Degenerate spans and a seek that lands on `a` itself still hand back a
@@ -759,20 +779,15 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
   // C01: Apollo between the Earth and the Moon is not on a Kepler arc about the Earth: the cubic through both ends
   const ballistic = !a.rigid && !a.apollo && coasting(a) && coasting(b) && a.thrust <= 0;
-  let r: Vec3;
-  let v: Vec3;
-  if (ballistic) {
-    const p = propagateKepler(a.r, a.v, dt);
-    r = p.r;
-    v = p.v;
-  } else if ((a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo && !a.rigid)) {
-    const p = hermite(a.r, a.v, b.r, b.v, u, span);
-    r = p.r;
-    v = p.v;
-  } else {
-    r = lerpVec(a.r, b.r, u);
-    v = lerpVec(a.v, b.v, u);
-  }
+  // The vehicle's way from one state to the next, which a body coasting beside it shares: one drawn on its arc
+  // beside one drawn on the straight line (sagging v²Δt²/8R under it) parts from it — 115 m half way through a
+  // 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (six-DOF, under thrust), so do they.
+  const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3): { r: Vec3; v: Vec3 } => {
+    if (ballistic) return propagateKepler(ar, av, dt);
+    if ((a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo && !a.rigid)) return hermite(ar, av, br, bv, u, span);
+    return { r: lerpVec(ar, br, u), v: lerpVec(av, bv, u) };
+  };
+  const { r, v } = path(a.r, a.v, b.r, b.v);
   const ea = a.elements, eb = b.elements;
   const debris: DebrisFrame[] = a.debris.map((d) => {
     const other = b.debris.find((x) => x.id === d.id);
@@ -788,11 +803,12 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
       return cloneDebrisFrame(d);
     }
     const rigid = interpolateRigidTelemetry(d.rigid, other.rigid, u);
+    const p = debrisCoasts(d, other) ? path(d.r, d.v, other.r, other.v) : { r: lerpVec(d.r, other.r, u), v: lerpVec(d.v, other.v, u) };
     return {
       ...d,
       rigid,
-      r: lerpVec(d.r, other.r, u),
-      v: lerpVec(d.v, other.v, u),
+      r: p.r,
+      v: p.v,
       dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other.dir, u),
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
       recovery: rec,
