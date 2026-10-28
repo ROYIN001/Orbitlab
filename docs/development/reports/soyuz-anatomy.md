@@ -7,8 +7,8 @@
 > - **การบิน**: Soyuz-2.1a และ 2.1b วาดจากผิวด้านนอกของแบบจำลองของคุณ — บูสเตอร์ แกนกลาง โครงถักระหว่างขั้น Blok I, Fregat, หัวครอบสองซีก หอหนีภัย และยาน Soyuz MS / Progress MS ชิ้นที่แยกตัวก็ยังเป็นรูปทรงจากแบบจำลอง Progress กางแผงโซลาร์ด้วยบานพับในไฟล์ของคุณเอง Soyuz MS ใช้ปีกโซลาร์ของโปรแกรม (ไฟล์ของคุณมีแต่แบบพับ) ติดบานพับที่โคนแผงพับของแบบจำลอง ส่วนท้ายของขั้นที่ 3 (ตัวเครื่องยนต์ โครงรับแรงขับ ก้นถังออกซิเจน) วาดจากแบบจำลองด้วย เพราะมองเห็นได้จริงผ่านโครงถักและหลังสลัดกระโปรงท้าย ปลายลำตัวของ Blok A, Blok I และ Progress MS ปิดด้วยชิ้นภายในที่ปิดปลาย (ฐานรับแรงขับ โดมถัง) จึงไม่เป็นท่อกลวงที่มองทะลุได้อีก ปลายท่อไอพ่นของโปรแกรมย้ายไปต่อกับห้องเผาไหม้ของแบบจำลองพอดี ทั้งของขั้นที่ 3 และของ Fregat (S5.92) และไฟของหอหนีภัยตอนดึงตัวออกพุ่งจากหัวฉีด 12 ตัวของแบบจำลอง ส่วนภายในอื่น (ท่อ อุปกรณ์) ไม่วาดตอนบินตามที่ขอ ฟิสิกส์ไม่เปลี่ยน
 > - ไฟล์โหลดเมื่อใช้เท่านั้น ไม่เข้าแคชออฟไลน์ตอนติดตั้ง (หน้าเว็บละราว 4.5 MB, ไฟล์ผิวสำหรับการบินบีบอัดแล้วเหลือ 0.17–0.31 MB จากเดิม 1.2–2 MB) ถ้าออฟไลน์และยังไม่เคยโหลด หรือเบราว์เซอร์คลายไฟล์บีบอัดไม่ได้ จรวดจะถูกวาดแบบเดิม
 > - **ต้นทุนที่ควรตัดสินใจ**: ภารกิจเด่น (Soyuz พาลูกเรือไป ISS) เป็นภาพแรกของหน้าแรกและของโหมดดู และเป็นค่าเริ่มต้นของแผงภารกิจ แอปจึงโหลดแบบจำลอง Soyuz MS ทันทีที่ตั้งภารกิจ เกือบทุกคนที่เข้าครั้งแรกจึงโหลดไฟล์นี้ ตอนนี้ 305 kB (เดิมราว 2 MB) ถ้าไม่ต้องการ อีกทางคือโหลดเมื่อเริ่มบินเท่านั้น (จรวดบนฐานยิงจะเป็นแบบเดิมจนกว่าจะเริ่มบิน)
-> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 20.9 kB (index +16.1, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14675 kB (offset ที่ระบุ: EQ-7) PR นี้รอคุณอนุมัติใน Merge Desk
-> - **รอบตรวจที่สอง**: แก้ตามที่ผู้ตรวจพบ (รายการในหัวข้อ "Second review round") ยังไม่แก้สองข้อ: หัวเชื่อมต่อ (docking probe) ของยาน Soyuz MS จากแบบจำลอง (ยาว 8.0 m) เข้าไปในพอร์ตของสถานีราว 1.0 m ตอนจับยึด (เดิม 0.48 m กับยานยาว 7.48 m ของโปรแกรม) เพราะต้องให้ภาพการนัดพบรู้ความยาวของยานที่วาดจริง และขั้นที่ใช้แล้วที่วาดจากแบบจำลองไม่มีปากท่อไอพ่น (ของแบบจำลองเว้นไว้ให้การบินวาดเอง)
+> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 21.0 kB (index +16.2, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14676 kB (offset ที่ระบุ: EQ-7) PR นี้รอคุณอนุมัติใน Merge Desk
+> - **รอบตรวจที่สอง**: แก้ตามที่ผู้ตรวจพบครบ (รายการในหัวข้อ "Second review round") รวมถึงหัวเชื่อมต่อ (docking probe) ของยาน Soyuz MS ที่เคยจมเข้าไปในพอร์ตของสถานีราว 1.0 m ตอนจับยึด (ตอนนี้ปลายหัวเชื่อมต่ออยู่ตรงที่ฟิสิกส์คำนวณ) เหลือข้อเดียวที่ยังไม่ทำ: ขั้นที่ใช้แล้วที่วาดจากแบบจำลองไม่มีปากท่อไอพ่น (ของแบบจำลองเว้นไว้ให้การบินวาดเอง)
 > - **ขอให้ยืนยัน**: ไฟล์ทั้งสามเป็นงานของคุณเองใช่ไหม (NOTICE.md เขียนไว้อย่างนั้น) และชุดเครื่องมือ "Anatomy kit" ที่ฝังอยู่ในไฟล์มีเงื่อนไขการใช้งานอย่างไร
 
 ```yaml
@@ -170,13 +170,13 @@ done; render and Build UI only, the physics unchanged.
 | The dialog stayed open when Build was left or its level changed | It closes then |
 | Escape inside the model re-homes its view and does not close the dialog, which nothing said | The user guide says so |
 | The journey took the page's title as the page open, before it had built its model | It waits for each page to build its 3-D model and checks the note, the Tab stop, close, history and focus |
-| The 8.0 m model's docking probe goes about 1.0 m into the station's port at capture (0.48 m with the simulator's 7.48 m ship) | Not done: the rendezvous drawing would need to know the drawn ship's length |
+| The 8.0 m model's docking probe goes about 1.0 m into the station's port at capture (0.48 m with the simulator's 7.48 m ship) | Flown by the rendezvous, whose physics hangs the drawing from a base `size.height − probe` below the CG, the ship is drawn moved by the difference between its drawn length and `size.height`, so its probe's tip, not its base, is where the physics docks it (render only; the simulator's own 7.48 m ship gains the same 0.48 m) |
 | Spent stages drawn from the model carry no engine bells | Not done: the meshes leave the model's chambers out for the flight's own bells, so a spent stage drawn from the model has none |
 
 Not done here (follow-ups if wanted): the abort scenario's escaping head section
 (`render/escape.ts`) is still the simulator's drawing; the fairing's flag and lettering (the
 page's `paintOf`) are not baked into the meshes; the pad frost is not drawn on the model; the
-Soyuz MS's docking probe at capture and the spent stages' bells (above); the Soyuz MS meshes are
+spent stages' bells (above); the Soyuz MS meshes are
 fetched when the featured launch is set up (for the owner to decide, above); the pages' own in-page
 links (`#soyuz-anatomy`, `#knowledge-…`) add browser history entries inside the open dialog, so Back
 first steps back through those jumps (as any page in a frame does).
@@ -197,11 +197,11 @@ first steps back through those jumps (as any page in a frame does).
 
 | Group | Ceiling | Measured with the change | Without | Delta |
 | --- | ---: | ---: | ---: | ---: |
-| `index-*.js` | 2635 → 2651 | 2650.9 kB (2,650,862 B) | 2634.8 | +16.1 |
+| `index-*.js` | 2635 → 2651 | 2651.0 kB (2,650,991 B) | 2634.8 | +16.2 |
 | `index-*.css` | 177 → 179 | 178.3 kB (178,321 B) | 176.9 | +1.4 |
 | `i18n-*.js` | 1729 → 1733 | 1732.5 kB (1,732,544 B) | 1729.0 | +3.5 |
-| precache code | 14654 → 14675 | 14674.9 kB | 14654.0 | +20.9 |
-| precache | 16053 → 16074 | 15794.1 kB (committed snapshots) | — | code +21 |
+| precache code | 14654 → 14676 | 14675.0 kB | 14654.0 | +21.0 |
+| precache | 16053 → 16075 | 15794.2 kB (committed snapshots) | — | code +22 |
 
 The second review round added 1.6 kB to `index-*.js` (the inflater and the byte-plane decoder, the
 Fregat and tower refits, the dialog's wait) and 1.9 kB to precache code, so those two ceilings and

@@ -214,6 +214,12 @@ export class RocketView {
   private vapourAt: { onFairing: boolean; onPayload?: boolean; y: number } | null = null;
   private readonly humidity: number;
   private readonly crewed: boolean;
+  /**
+   * The payload's height as the physics knows it (`SatelliteSpec.size`): in a
+   * rendezvous the ship's drawing hangs from its base, which the physics puts
+   * that far less the probe below its CG (src/physics/sim/rendezvous.ts).
+   */
+  private readonly payloadHeight: number;
   private satellite: SatelliteView;
   /** C01: Vostok's turn for its retro-fire, mission time s (`VOSTOK_RETRO_TURN`), when it flies home from orbit */
   private readonly retroTurn: { from: number; to: number } | null;
@@ -243,6 +249,7 @@ export class RocketView {
   constructor(spec: VehicleSpec, sat: SatelliteSpec, opts: { humidity?: number; deorbit?: number } = {}) {
     this.spec = spec;
     this.crewed = !!sat.crewed;
+    this.payloadHeight = sat.size?.height ?? 7;
     this.humidity = opts.humidity ?? 0.6;
     const at = opts.deorbit;
     this.retroTurn = sat.descent === 'vostok' && at !== undefined ? { from: at + VOSTOK_RETRO_TURN.from, to: at + VOSTOK_RETRO_TURN.to } : null;
@@ -1032,7 +1039,11 @@ export class RocketView {
       // drift apart instead of occupying the same 15 m of space.
       // (C01: Apollo's drawing first, which sets its height: the stack, or Eagle alone)
       this.satellite.setApollo?.(frame.apollo, frame.t, true);
-      satG.position.y = this.satellite.height / 2;
+      // Flown to the station, the ship is drawn from the base the rendezvous puts `payloadHeight − probe` below its CG:
+      // a drawing of another length (the Anatomy Soyuz MS's 8.0 m, the simulator's own 7.48 m, to the physics' 7) is
+      // moved by the difference, so its probe's tip, not its base, is where the physics docks it.
+      const docking = frame.rigid?.configurationId === 'rendezvous.spacecraft' ? this.payloadHeight - this.satellite.height : 0;
+      satG.position.y = this.satellite.height / 2 + docking;
       if (this.retroTurn) this.turnForRetro(frame);
       const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;
       this.satellite.setDeploy(p);

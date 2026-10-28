@@ -78,7 +78,7 @@ interface HeaderMesh {
 export async function inflateAnatomy(buffer: ArrayBuffer): Promise<ArrayBuffer> {
   const head = new Uint8Array(buffer, 0, Math.min(2, buffer.byteLength));
   if (head[0] !== 0x1f || head[1] !== 0x8b) return buffer;
-  if (typeof DecompressionStream !== 'function') throw new Error('this browser cannot inflate the anatomy meshes');
+  if (typeof DecompressionStream !== 'function') throw new Error('no DecompressionStream');
   return new Response(new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
 }
 

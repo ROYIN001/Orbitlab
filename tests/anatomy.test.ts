@@ -417,6 +417,26 @@ describe('the spacecraft', () => {
   }));
 });
 
+describe('docking', () => {
+  it('a ship drawn longer than the physics knows it is set down so its probe, not its base, meets the port', () => withCanvas(() => {
+    const sim = simulation('soyuz21a', 'crew', 'iss');
+    const rocket = new RocketView(sim.vehicleSpec, sim.satellite);
+    rocket.mountAnatomy(model('soyuz-ms'), 'soyuz-ms');
+    const ship = (rocket as unknown as { satellite: { group: THREE.Group; height: number } }).satellite;
+    const free = { ...captureFrame(sim), payloadSeparated: true };
+    rocket.update(free, { night: 0 });
+    const base = ship.group.position.y - ship.height / 2;
+    expect(base).toBeCloseTo(0, 9);   // on the separation plane, as before
+    // flown by the rendezvous, which hangs the drawing from a base size.height − probe below the CG
+    const rigid = { configurationId: 'rendezvous.spacecraft', engineDeflections: {}, renderOffsetBody: { x: -2.8, y: 0, z: 0 }, cgBody: { x: 0, y: 0, z: 0 } };
+    rocket.update({ ...free, rigid } as unknown as typeof free, { night: 0 });
+    const tip = ship.group.position.y + ship.height / 2;
+    expect(ship.height).toBeGreaterThan(7.5);
+    expect(tip).toBeCloseTo(sim.satellite.size!.height, 9);
+    rocket.dispose();
+  }));
+});
+
 describe('loading the meshes', () => {
   const page = 'https://example.github.io/Orbitlab/';
   it('asks again after a failed fetch, not after a file that arrived but cannot be used', async () => {
