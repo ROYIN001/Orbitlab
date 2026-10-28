@@ -26,8 +26,8 @@ export interface PrecacheManifest {
  * site, and precached only by a build with ORBITLAB_PRECACHE_AUDIO=1 (the intranet zip).
  * The privacy statement (M-LEARNING-047): loaded from the network like any page, kept once
  * seen; owner, 2026-10-16, "ใช้เน็ตโหลดปกติเลยครับ" (not precached, so it takes no install room).
- * The Soyuz Anatomy pages and the exterior meshes drawn from them (`anatomy/`, 14.1 MB: pages of
- * 4.3–4.6 MB, meshes of 0.17–0.31 MB gzip-compressed; src/render/anatomy.ts): each kept once it
+ * The Soyuz Anatomy pages and the exterior meshes drawn from them (`anatomy/`, 14.2 MB: pages of
+ * 4.3–4.6 MB, meshes of 0.21–0.34 MB gzip-compressed; src/render/anatomy.ts): each kept once it
  * has been opened or flown; offline before that, Build says the page needs the network and the
  * flight draws its own Soyuz.
  */

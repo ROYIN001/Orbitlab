@@ -438,6 +438,7 @@ export function gridFinGeometry(w: number, h: number): THREE.BufferGeometry {
 
 /** The escape tower's eight main nozzles: their cant out from the axis, rad, and their length, m. */
 const SAS_CANT = 0.47, SAS_NOZZLE = 0.34;
+const DOWN = new THREE.Vector3(0, -1, 0);
 /** How far below the tip of the fairing's nose the escape tower's truss stands, m: its feet on the nose, not over it. */
 const TRUSS_FOOT = 0.07;
 
@@ -557,7 +558,7 @@ export class CrewedTop {
    * where `jets` gives the model's jettison nozzles (their exits' centres and
    * radii in the tower), one plume from each, canted out as this tower's.
    */
-  replaceShape(shape: THREE.Object3D, jets: readonly { x: number; y: number; z: number; r: number }[] | null = null): void {
+  replaceShape(shape: THREE.Object3D, jets: readonly { x: number; y: number; z: number; r: number; axis?: readonly number[] }[] | null = null): void {
     for (const child of this.tower.children) if (child !== this.flame) child.visible = false;
     this.fins.visible = false;
     this.tower.add(shape);
@@ -565,9 +566,12 @@ export class CrewedTop {
     const plumes = jets.map((j) => {
       const plume = new THREE.CylinderGeometry(j.r, j.r + 0.3, 3.6, 8, 1, true);
       plume.translate(0, -1.8, 0);
-      // down its nozzle's axis: canted out (about the tangent) toward the nozzle's bearing
-      plume.applyMatrix4(new THREE.Matrix4().makeRotationZ(SAS_CANT));
-      plume.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(-j.z, j.x)));
+      // along its nozzle's own axis where the model gives it, else canted out (about the tangent) toward its bearing
+      if (j.axis) plume.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(DOWN, new THREE.Vector3(...j.axis).normalize()));
+      else {
+        plume.applyMatrix4(new THREE.Matrix4().makeRotationZ(SAS_CANT));
+        plume.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(-j.z, j.x)));
+      }
       plume.translate(j.x, j.y, j.z);
       return plume;
     });

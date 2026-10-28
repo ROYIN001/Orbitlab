@@ -87,7 +87,7 @@ describe('the Anatomy pages and their meshes', () => {
       const m = model(p.variant);
       expect(Object.keys(m.parts).sort(), p.variant).toEqual([...want[p.variant]].sort());
       expect(m.triangles).toBeGreaterThan(40_000);
-      expect(m.triangles).toBeLessThan(140_000);
+      expect(m.triangles).toBeLessThan(170_000);
       // Blok I's chambers, left to the flight's bells: RD-0110's four and four verniers, RD-0124's four
       const chambers = m.parts.bay!.nozzles!;
       expect(chambers.filter((c) => c.kind === 'main')).toHaveLength(4);
@@ -252,6 +252,10 @@ describe('RocketView with the model mounted', () => {
         expect(pos.count % jets.length).toBe(0);
         for (const j of jets) {
           expect(j.y).toBeGreaterThan(4);
+          // each fires along its own canted axis, out and down, from its mouth's centre
+          const [ax, ay, az] = j.axis!;
+          expect(ay).toBeLessThan(-0.8);
+          expect(ax * j.x + az * j.z).toBeGreaterThan(0);
           let near = Infinity;
           for (let i = 0; i < pos.count; i++) near = Math.min(near, v.fromBufferAttribute(pos, i).distanceTo(new THREE.Vector3(j.x, j.y, j.z)));
           expect(near).toBeLessThan(2 * j.r);
@@ -451,28 +455,40 @@ describe('docking', () => {
     const tip = ship.group.position.y + ship.height / 2;
     expect(ship.height).toBeGreaterThan(7.5);
     expect(tip).toBeCloseTo(sim.satellite.size!.height, 9);
+    // eased in over the 20 s after separation: none at the separation itself, all of it 20 s on
+    rocket.update({ ...free, rigid, t: 530, payloadSepT: 530 } as unknown as typeof free, { night: 0 });
+    expect(ship.group.position.y - ship.height / 2).toBeCloseTo(0, 9);
+    rocket.update({ ...free, rigid, t: 550, payloadSepT: 530 } as unknown as typeof free, { night: 0 });
+    expect(ship.group.position.y + ship.height / 2).toBeCloseTo(sim.satellite.size!.height, 9);
     rocket.dispose();
   }));
 });
 
 describe('loading the meshes', () => {
   const page = 'https://example.github.io/Orbitlab/';
-  it('asks again after a failed fetch, not after a file that arrived but cannot be used', async () => {
+  it('asks again after a failed load, but not in a browser that cannot inflate the file at all', async () => {
     vi.resetModules();
     const { loadAnatomy } = await import('../src/render/anatomy');
     const fetches: string[] = [];
     vi.stubGlobal('fetch', async (url: URL) => {
       fetches.push(String(url));
       if (String(url).includes('fregat')) throw new TypeError('offline');
-      return new Response(new Uint8Array([79, 76, 65, 88, 1, 0, 0, 0]).buffer);   // "OLAX", format 1: an old cached file
+      if (String(url).includes('progress')) return new Response(new Uint8Array([0x1f, 0x8b, 8, 0]).buffer);   // gzip
+      return new Response(new Uint8Array([79, 76, 65, 88, 1, 0, 0, 0]).buffer);   // "OLAX", format 1: an old file a cache still holds
     });
     try {
+      // offline before it was ever fetched, and an old cached file the service worker refreshes meanwhile: tried again
       await expect(loadAnatomy('fregat-st31', page)).rejects.toThrow('offline');
       await expect(loadAnatomy('fregat-st31', page)).rejects.toThrow('offline');
       await expect(loadAnatomy('soyuz-ms', page)).rejects.toThrow(/format 1/);
       await expect(loadAnatomy('soyuz-ms', page)).rejects.toThrow(/format 1/);
       expect(fetches.filter((u) => u.includes('fregat'))).toHaveLength(2);
-      expect(fetches.filter((u) => u.includes('soyuz-ms'))).toHaveLength(1);
+      expect(fetches.filter((u) => u.includes('soyuz-ms'))).toHaveLength(2);
+      // no DecompressionStream: remembered for the visit
+      vi.stubGlobal('DecompressionStream', undefined);
+      await expect(loadAnatomy('progress-ms-26', page)).rejects.toThrow(/DecompressionStream/);
+      await expect(loadAnatomy('progress-ms-26', page)).rejects.toThrow(/DecompressionStream/);
+      expect(fetches.filter((u) => u.includes('progress'))).toHaveLength(1);
     } finally { vi.unstubAllGlobals(); }
   });
 });

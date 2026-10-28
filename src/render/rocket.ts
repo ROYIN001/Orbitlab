@@ -1041,8 +1041,10 @@ export class RocketView {
       this.satellite.setApollo?.(frame.apollo, frame.t, true);
       // Flown to the station, the ship is drawn from the base the rendezvous puts `payloadHeight − probe` below its CG:
       // a drawing of another length (the Anatomy Soyuz MS's 8.0 m, the simulator's own 7.48 m, to the physics' 7) is
-      // moved by the difference, so its probe's tip, not its base, is where the physics docks it.
-      const docking = frame.rigid?.configurationId === 'rendezvous.spacecraft' ? this.payloadHeight - this.satellite.height : 0;
+      // moved by the difference, so its probe's tip, not its base, is where the physics docks it. Eased in over the
+      // 20 s after separation (hours before any docking), so the ship does not step back into the stage it has just left.
+      const docking = frame.rigid?.configurationId === 'rendezvous.spacecraft'
+        ? (this.payloadHeight - this.satellite.height) * (sepT >= 0 ? smoothstep(sepT, sepT + 20, t) : 1) : 0;
       satG.position.y = this.satellite.height / 2 + docking;
       if (this.retroTurn) this.turnForRetro(frame);
       const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;

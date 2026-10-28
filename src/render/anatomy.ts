@@ -32,7 +32,12 @@ export type AnatomyPartName = 'booster' | 'core' | 'stage3' | 'skirt' | 'bay' | 
  * the escape tower's jettison nozzles. Its exit's centre and radius, and its
  * top's and exit's heights (model metres).
  */
-export interface AnatomyNozzle { kind: 'main' | 'vernier' | 'jettison'; x: number; z: number; r: number; top: number; exit: number }
+export interface AnatomyNozzle {
+  kind: 'main' | 'vernier' | 'jettison';
+  x: number; z: number; r: number; top: number; exit: number;
+  /** a canted nozzle's axis, out of its mouth (the jettison nozzles'); others fire straight down */
+  axis?: [number, number, number];
+}
 
 export interface AnatomyMaterialSpec { name: string; color: string; roughness: number; metalness: number }
 
@@ -75,10 +80,13 @@ interface HeaderMesh {
  * one that is not is passed on as it is. Throws where the browser cannot
  * inflate (no `DecompressionStream`): the vehicle is then drawn as before.
  */
+/** This browser cannot read the meshes at all (no `DecompressionStream`): not worth fetching again this visit. */
+class Unsupported extends Error {}
+
 export async function inflateAnatomy(buffer: ArrayBuffer): Promise<ArrayBuffer> {
   const head = new Uint8Array(buffer, 0, Math.min(2, buffer.byteLength));
   if (head[0] !== 0x1f || head[1] !== 0x8b) return buffer;
-  if (typeof DecompressionStream !== 'function') throw new Error('no DecompressionStream');
+  if (typeof DecompressionStream !== 'function') throw new Unsupported('no DecompressionStream');
   return new Response(new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
 }
 
@@ -139,31 +147,26 @@ const loaded = new Map<AnatomyVariant, AnatomyModel>();
 export const anatomyLoaded = (variant: AnatomyVariant): AnatomyModel | null => loaded.get(variant) ?? null;
 
 /**
- * Fetch and decode a variant's exterior meshes once per visit. A file that
- * could not be had (offline before it was ever fetched) is asked for again by
- * the next mission; one that arrived but cannot be used here (a browser that
- * cannot inflate it, or an older format a cache still holds, which the
- * service worker refreshes for the next visit) is not fetched again this visit.
+ * Fetch and decode a variant's exterior meshes once per visit. A failed load
+ * is tried again by the next mission (offline before the file was ever
+ * fetched, or an older format a cache still held, which the service worker
+ * refreshes meanwhile), but for a browser that cannot inflate it at all.
  */
 export function loadAnatomy(variant: AnatomyVariant, base: string | URL = document.baseURI): Promise<AnatomyModel> {
   let p = loads.get(variant);
   if (!p) {
-    let arrived = false;
     p = fetch(new URL(anatomyPage(variant).meshes, base))
       .then((r) => {
         if (!r.ok) throw new Error(`anatomy meshes: HTTP ${r.status}`);
         return r.arrayBuffer();
       })
-      .then((buffer) => {
-        arrived = true;
-        return inflateAnatomy(buffer);
-      })
+      .then(inflateAnatomy)
       .then((buffer) => {
         const model = decodeAnatomy(buffer);
         loaded.set(variant, model);
         return model;
       });
-    p.catch(() => { if (!arrived) loads.delete(variant); });
+    p.catch((error: unknown) => { if (!(error instanceof Unsupported)) loads.delete(variant); });
     loads.set(variant, p);
   }
   return p;
@@ -223,7 +226,7 @@ export interface AnatomyFit {
    * own; `jets`: its jettison nozzles' exits there (centre and radius), where
    * its fire leaves the tower
    */
-  tower: { y: number; placement: Placement; jets: { x: number; y: number; z: number; r: number }[] | null } | null;
+  tower: { y: number; placement: Placement; jets: TowerJet[] | null } | null;
   /** the spacecraft, centred on its group as render/satellite.ts centres a payload; `seat` above the stage's top */
   payload: (Placement & { height: number; seat: number }) | null;
   /**
@@ -233,6 +236,9 @@ export interface AnatomyFit {
    */
   satelliteSeat: number | null;
 }
+
+/** One of the escape tower's jettison nozzles in the tower's group: its mouth's centre and radius, and its axis. */
+export interface TowerJet { x: number; y: number; z: number; r: number; axis?: [number, number, number] }
 
 /** A chamber in a stage's group: its exit's centre and radius, its top's and exit's heights there. */
 export interface PlacedChamber { kind: 'main' | 'vernier'; x: number; z: number; r: number; top: number; exit: number }
@@ -251,9 +257,9 @@ function placed(nozzles: AnatomyNozzle[] | undefined, place: Placement): PlacedC
 }
 
 /** The escape tower's jettison nozzles' exits in the tower's own group. */
-function jets(escape: AnatomyPart, place: Placement): { x: number; y: number; z: number; r: number }[] | null {
+function jets(escape: AnatomyPart, place: Placement): TowerJet[] | null {
   const list = (escape.nozzles ?? []).filter((n) => n.kind === 'jettison');
-  return list.length ? list.map((n) => ({ x: n.x, y: placeY(place, n.exit), z: n.z, r: n.r })) : null;
+  return list.length ? list.map((n) => ({ x: n.x, y: placeY(place, n.exit), z: n.z, r: n.r, ...(n.axis ? { axis: n.axis } : {}) })) : null;
 }
 
 /** Each vertex of a part's meshes, in the model's metres. */

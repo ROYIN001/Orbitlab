@@ -56,10 +56,15 @@ import vm from 'node:vm';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'public', 'anatomy');
 
-/** The radial segments a full circle is cut into (the page draws 48; the flight sees it from metres away at the closest). */
-export const RADIAL_SEGMENTS = 16;
-/** …and in Blok I's aft bay, the engine's pipes and pumps, seen only from below it. */
-export const BAY_SEGMENTS = 12;
+/**
+ * The radial segments a full circle is cut into: 24, the owner's choice
+ * (chat, 2026-10-28: "ใช้แบบ24ส่วน"); the page draws 48, too many triangles to
+ * build or draw in a launch, and the flight sees the vehicle from metres away
+ * at the closest.
+ */
+export const RADIAL_SEGMENTS = 24;
+/** …and in Blok I's aft bay, the engine's pipes and pumps, the same. */
+export const BAY_SEGMENTS = 24;
 export const FORMAT_VERSION = 2;
 
 /**
@@ -282,6 +287,24 @@ function nozzleOf(positions, kind, index) {
   return { kind, index, x: +x.toFixed(4), z: +z.toFixed(4), r: +r.toFixed(4), exit: +lo.toFixed(4), top: +hi.toFixed(4) };
 }
 
+/**
+ * A canted nozzle's mouth from the page's own frame for it (its shape's `F`:
+ * origin and axis, and its profile `poly` of axial distance and radius): the
+ * mouth's centre on its axis, its outer radius, the throat's height, and the
+ * axis it fires along, in flight metres and axes. Null without that frame.
+ */
+function mouthOf(item, kind, index) {
+  const shape = item.shapes?.find((s) => s.F?.o && s.F?.a && s.poly?.length);
+  if (!shape) return null;
+  const { o, a } = shape.F;
+  const axial = Math.max(...shape.poly.map((p) => p[0]));
+  const r = Math.max(...shape.poly.filter((p) => p[0] === axial).map((p) => p[1])) / 10;
+  const [x, exit, z] = toFlight(o[0] + a[0] * axial, o[1] + a[1] * axial, o[2] + a[2] * axial);
+  const top = toFlight(...o)[1];
+  const round = (v) => +v.toFixed(4);
+  return { kind, index, x: round(x), z: round(z), r: round(r), exit: round(exit), top: round(top), axis: [a[0], a[2], -a[1]].map(round) };
+}
+
 function exportPage(page) {
   const path = join(dir, page.file);
   const bytes = readFileSync(path);
@@ -321,7 +344,11 @@ function exportPage(page) {
   let r = 0;
   const meshes = chosen.map((it, i) => (inBay[i] ? bayMeshes.get(it.id) : rest[r++]));
   // the escape tower's jettison nozzles, drawn with it, and where its fire leaves them
-  chosen.forEach((it, i) => { const j = JETTISON.exec(it.id); if (j) nozzles.escape.push(nozzleOf(meshes[i].positions, 'jettison', Number(j[1]))); });
+  // (canted: their mouths and axes from the page's own frames, which a lowest-vertex ring would miss)
+  chosen.forEach((it, i) => {
+    const j = JETTISON.exec(it.id);
+    if (j) nozzles.escape.push(mouthOf(it, 'jettison', Number(j[1])) ?? nozzleOf(meshes[i].positions, 'jettison', Number(j[1])));
+  });
 
   const materials = [], materialIndex = new Map();
   const hinges = [], hingeIndex = new Map();

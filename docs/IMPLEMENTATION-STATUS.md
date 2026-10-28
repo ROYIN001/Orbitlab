@@ -119,7 +119,7 @@ are listed there as drafts awaiting the owner's review.
   with Fregat under the ST fairing, kept byte for byte. Build's Watch level opens each whole in a
   dialog (`src/ui/build/anatomy-dialog.ts`; its note stays up while the page builds its model).
   The flight draws those two catalogue rockets from the models' outside (`src/render/anatomy.ts`,
-  meshes made by `scripts/anatomy-meshes.mjs` with each page's own code, 0.17–0.31 MB each as
+  meshes made by `scripts/anatomy-meshes.mjs` with each page's own code, 0.21–0.34 MB each as
   fetched, gzip-compressed): strap-ons, Blok A and its truss, Blok I (the 2.1b's skirt shed with
   the flight's; its aft bay with the engine's body, thrust frame and oxygen-tank dome, the flight's
   bells moved onto the model's chambers), Fregat (its bell on the model's S5.92 chamber), the
@@ -128,7 +128,7 @@ are listed there as drafts awaiting the owner's review.
   own hinges), each body closed at its ends, the spent parts as debris too. Blok A and Blok I are
   stretched along their axes by under 5 % into the physics' stage heights; above Blok I the model
   keeps its own size and stacking (the ST fairing round Fregat). Pages and meshes are fetched on
-  demand (the featured launch, a crewed Soyuz, fetches the Soyuz MS meshes, 305 kB, on a first
+  demand (the featured launch, a crewed Soyuz, fetches the Soyuz MS meshes, 338 kB, on a first
   visit), never precached, and kept once fetched; while the meshes load, offline before they were
   ever fetched, or in a browser that cannot inflate them, the R-7 is drawn as above. Drawing only;
   the physics is unchanged.
