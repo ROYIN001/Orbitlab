@@ -14,8 +14,8 @@
 >   - คำตอบ #177 อยู่ใน DECISIONS แล้ว (#180)
 > - **รอ session HU-6 ของคุณ:** แถว G5 (HU-6) และ G20 (P3: ดาวน์โหลด CSV บน Safari ของ iPad และ Firefox ของ Android) ช่องผลเว้นไว้ ไม่มีการเดาผล
 > - การตรวจด้วยสคริปต์: ผ่าน 97 ไม่ผ่าน 3 ทั้ง 3 ข้อเป็นเรื่องจริง: branch สองตัวของ q01 ที่ยกเลิกแล้วยังอยู่บน GitHub
-> - คำถามที่ไฟล์นี้ใช้ (ไม่มีคำถามใหม่): S1 (ลงนามและ merge บันทึก GK1), S8 (รับทราบ B15, ส่วนการแจ้งขนาดของ B3, แถวก่อน K1 ที่ตรวจแบบเร็ว และกรณี #110), S9 (การแจ้งขนาดตาม q03 B), S10 (แก้สองบรรทัดใน S18 ใน docs PR), S12 (ลบ branch ของ q01)
-> - คำตัดสินที่เบี่ยง (สถานะ deviated ของ S08) 2 แถว: B15 และส่วนการแจ้งขนาดของ B3 ทั้งสองแถวมีเจ้าของ (I) และปิดที่ GK1 เมื่อคุณรับทราบใน S8
+> - คำถามที่ไฟล์นี้ใช้ (ไม่มีคำถามใหม่): S1 (ลงนามและ merge บันทึก GK1), S8 (รับทราบ B15, ส่วนการแจ้งขนาดของ B3, แถวก่อน K1 ที่ตรวจแบบเร็ว และกรณี #110), S9 (การแจ้งขนาดตาม q03 B), S10 (แก้สองบรรทัดใน S18 ใน docs PR), S12 (ลบ branch ของ q01) คุณตอบทุกข้อในแชตเมื่อ 2026-10-28: S8 "ก รับทราบทั้งหมด ไม่ย้อนแก้ (แนะนำ)" และ S9 "ก นับทั้ง 5 PR (แนะนำ)" และ S10 "ก อนุญาต docs PR ฉบับเดียว (แนะนำ)" (03:03:21Z), S12 "ก คุณลบทั้งสอง branch เอง (แนะนำ)" (03:04:38Z) และ S1 "ก ตอบสองรอบ (แนะนำ)" (02:54:22Z) ตาม S1 การลงนาม GK1 และการ merge บันทึกนี้รอหลัง session HU-6 ตารางในไฟล์นี้คงไว้ตามที่ตรวจตอน GK1
+> - คำตัดสินที่เบี่ยง (สถานะ deviated ของ S08) 2 แถว: B15 และส่วนการแจ้งขนาดของ B3 ทั้งสองแถวมีเจ้าของ (I) และปิดที่ GK1 เมื่อคุณรับทราบใน S8 ซึ่งคุณตอบแล้วว่า "ก รับทราบทั้งหมด ไม่ย้อนแก้ (แนะนำ)" (2026-10-28T03:03:21Z)
 > - ยังไม่ได้ตรวจเต็ม: แถวก่อน 2026-10-06 (D-1…D-28 แผ่นคำตอบ 5 ต.ค. และกรณีในอดีต 7 กรณีของร่าง S08) ตรวจแบบเร็วเท่านั้น (หัวข้อท้ายไฟล์) เสนอให้เลน I ตรวจเต็มใน K2 ไม่ช้ากว่าบันทึก GK2
 > - Q check ทำแล้ว (2026-10-27): agent ที่ไม่ได้เขียนตารางนี้ยืนยันสถานะของ 115 จาก 119 แถวจาก git และ GitHub อีก 4 แถว (G6, G15, G18, G19) อาศัยการรันในเครื่องที่ไม่ได้ commit ไม่มีแถวไหนสถานะผิด ผลอยู่ในหัวข้อ "Not verified"
 
@@ -32,7 +32,7 @@ candidate_sha: 72630046fc5eb56f1797e5363b6f9ad293ff9d38   # main after #179; pub
 base_sha_verified_on: {sha: 7263004, date: 2026-10-26, check: "git ls-remote origin refs/heads/main = 72630046… at 22:43:31Z"}
 stacked_on: 5092ac9   # records PR #181 (folds #179; the owner's answers for #179 and P1-P5); open, held until the owner's HU-6 session ends
 hu6: waits for the owner's HU-6 session
-signed: none   # GK1 sign-off, the re-plan, K2's plan sections and K2 (D-65) wait for the owner
+signed: none   # the GK1 sign-off waits for the owner's HU-6 session (S1); the owner's answers of 2026-10-28 on the re-plan, K2's plan sections and K2 (D-65) are in DECISIONS, "Decided 2026-10-28"
 ```
 
 **How to read this file.**
@@ -92,14 +92,14 @@ S08 column: only the seven statuses of draft S08 §08.1 item 4 (`c2af8ae:docs/de
 Against the draft at `a05ae70` (111 rows): 8 rows added (G15–G22). A1, B4, B7, F4 and G6 became done. B11 moved to after GK1 by the owner (P4). B3 became partly done. G9 and G14 are now published.
 
 S08 statuses that are not "decided" (S08 §08.6 item 2: a failing row goes to the next question batch, with two options):
-- **deviated (2):** B15, `q11` "respect the PR cap": 6 code PRs open for 10 s, 23 min after the answer. B3's size statements, `q03` B "every PR states its measured size": #176, data-safety work inside the allowance, gave no size. **New deviated rows in K1: 2 (target 0, `S08:451`).** Owner and wave: see each row. Owner question S8 (and S9 for which PRs `q03` B covers).
+- **deviated (2):** B15, `q11` "respect the PR cap": 6 code PRs open for 10 s, 23 min after the answer. B3's size statements, `q03` B "every PR states its measured size": #176, data-safety work inside the allowance, gave no size. **New deviated rows in K1: 2 (target 0, `S08:451`).** Owner and wave: see each row. Owner question S8 (and S9 for which PRs `q03` B covers); the owner answered S8 "ก รับทราบทั้งหมด ไม่ย้อนแก้ (แนะนำ)" (chat, 2026-10-28T03:03:21Z) and S9 "ก นับทั้ง 5 PR (แนะนำ)" (chat, 2026-10-28T03:03:21Z).
 - **open:** none. Every K1 question was answered (KPI-35); S08 §08.1 item 4 keeps "open" for a question asked and not yet answered.
-- **decided-not-executed past its condition (1):** B2, `q02`: S18 §18.6 and §18.8 still name `push`. Owner question S10.
+- **decided-not-executed past its condition (1):** B2, `q02`: S18 §18.6 and §18.8 still name `push`. Owner question S10; the owner answered "ก อนุญาต docs PR ฉบับเดียว (แนะนำ)" (chat, 2026-10-28T03:03:21Z): one docs PR, which carries this two-line edit.
 - **decided-not-executed with a planned step (6):** F5, F6, G13 (the GK1 record and its sign-off), G1 (the retrospective, in this record), G5 and G20 (both wait for the owner's HU-6 session).
 - **deferred (17):** the 16 re-baseline rows, paused by the owner (E16), and B11, after GK1 (P4).
-- **Decided, with a failing check (2):** B1 and G2. `q01` is cancelled, and its two branches are still on origin. Owner question S12.
+- **Decided, with a failing check (2):** B1 and G2. `q01` is cancelled, and its two branches are still on origin. Owner question S12; the owner answered "ก คุณลบทั้งสอง branch เอง (แนะนำ)" (chat, 2026-10-28T03:04:38Z) (the owner deletes both).
 - **Not provable (3):** A3, the look itself in D17, and G15.
-- **Transition case, not counted as deviated:** A11 (#110). See the row and owner question S8.
+- **Transition case, not counted as deviated:** A11 (#110). See the row and owner question S8 (the owner answered "ก รับทราบทั้งหมด ไม่ย้อนแก้ (แนะนำ)" (chat, 2026-10-28T03:03:21Z)).
 
 KPI-35 (owner decision latency; S08 §08.6 item 5, `S18:461`): **61 decisions asked in K1, all answered; 0 later than their needed-by wave.** Asked → decided with both times exact: n = 11, median 5.84 h. Re-runnable decision checks: 97 pass, 3 fail, and all 3 failures are true (the two `q01` branches; B1, G2). Cutoff 2026-10-26T19:42:02Z, the end of Pages 40385448079 (local run, not committed). The full row is in [kpi-GK1.md](kpi-GK1.md). Lateness against GK1 itself is computed when the owner signs.
 
@@ -278,17 +278,17 @@ The next records PR or the GK1 record should add them, or say why not. G14 left 
 
 ## For the owner (S08 §08.6 item 2: do the work as decided, or change the decision with a new row)
 
-This file raises no new question. Its open rows go to the GK1 sign-off question set:
-1. **S10, `q02`'s S18 text** (B2). Two lines in two sections still name `push` as a `ci.yml` trigger: §18.6 (`S18:207`) and §18.8 (`S18:264`). S10's option (ก) puts this two-line edit in the one docs PR that follows the re-plan.
-2. **S9, `q03` B use** (B3). #153, #155, #157, #162 and #176 used the allowance, and some gave no size. The ceilings PR lowered every ceiling to the measured size either way, so the choice changes the record, not the build. #176 is in scope either way, so its missing size is a deviated row (S8).
-3. **S8, the two deviated rows:** the PR-cap breach after `q11` (B15), 6 code PRs open for 10 s on 2026-10-09, 23 min after the answer; and #176's missing size statement under `q03` B (B3). Nothing is left to undo in either. S8 also covers the follow-through rows before K1, checked only in part. S8 also covers A11: #110 edited CHANGELOG.md and PROGRESS.md and merged 10 min after the fragment rule (#115). It was opened before the rule with those lines planned and was not synced to #115 before merging. It is recorded here as a transition case, not a deviation.
-4. **S12, the two `t-fx8` branches** (B1, G2). `q01` is cancelled; the session cannot delete them. Their SHAs are recorded (`071db68`, `0ac5ca4`).
-5. **S1.** This table and its DECISIONS section are part of the GK1 record. Nothing in them is written as decided for the owner (`S18:455`).
+This file raises no new question. Its open rows go to the GK1 sign-off question set. The owner answered them in chat on 2026-10-28 ([DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-28"); each answer follows its item. The table above is as checked at GK1 and is not edited for them.
+1. **S10, `q02`'s S18 text** (B2). Two lines in two sections still name `push` as a `ci.yml` trigger: §18.6 (`S18:207`) and §18.8 (`S18:264`). S10's option (ก) puts this two-line edit in the one docs PR that follows the re-plan. The owner answered "ก อนุญาต docs PR ฉบับเดียว (แนะนำ)" (chat, 2026-10-28T03:03:21Z).
+2. **S9, `q03` B use** (B3). #153, #155, #157, #162 and #176 used the allowance, and some gave no size. The ceilings PR lowered every ceiling to the measured size either way, so the choice changes the record, not the build. #176 is in scope either way, so its missing size is a deviated row (S8). The owner answered "ก นับทั้ง 5 PR (แนะนำ)" (chat, 2026-10-28T03:03:21Z): all five count.
+3. **S8, the two deviated rows:** the PR-cap breach after `q11` (B15), 6 code PRs open for 10 s on 2026-10-09, 23 min after the answer; and #176's missing size statement under `q03` B (B3). Nothing is left to undo in either. S8 also covers the follow-through rows before K1, checked only in part. S8 also covers A11: #110 edited CHANGELOG.md and PROGRESS.md and merged 10 min after the fragment rule (#115). It was opened before the rule with those lines planned and was not synced to #115 before merging. It is recorded here as a transition case, not a deviation. The owner answered "ก รับทราบทั้งหมด ไม่ย้อนแก้ (แนะนำ)" (chat, 2026-10-28T03:03:21Z).
+4. **S12, the two `t-fx8` branches** (B1, G2). `q01` is cancelled; the session cannot delete them. Their SHAs are recorded (`071db68`, `0ac5ca4`). The owner answered "ก คุณลบทั้งสอง branch เอง (แนะนำ)" (chat, 2026-10-28T03:04:38Z); this file does not say they have been deleted.
+5. **S1.** This table and its DECISIONS section are part of the GK1 record. Nothing in them is written as decided for the owner (`S18:455`). The owner answered "ก ตอบสองรอบ (แนะนำ)" (chat, 2026-10-28T02:54:22Z): the merge of the GK1 record and the GK1 sign-off wait for the owner's HU-6 session.
 
 Answered or not asked again:
 - `q10`'s timing (B11): answered by P4 (ก), after GK1.
 - Re-baseline answer 5 against main (E11) and E4's size: asked again when R4.2-RB resumes (`DECISIONS.md:322`, :328).
-- HU-2's re-review of ru-24-05-06 (B14): `q11` A queued it; the proposed re-plan moves HU-2 to K2 (S3), and the re-review is to cover #157's change.
+- HU-2's re-review of ru-24-05-06 (B14): `q11` A queued it; the proposed re-plan moves HU-2 to K2 (S3; the owner answered "ก อนุมัติตามที่เขียน (แนะนำ)" (chat, 2026-10-28T02:54:22Z)), and the re-review is to cover #157's change.
 
 ## Waits for the owner's HU-6 session
 
@@ -301,7 +301,7 @@ When the session ends, G5 and G20 change to done or not done, and their S08 stat
 
 ## Before K1: a quick check only
 
-The full table over D-1…D-28, the 2026-10-05 sheets and the seven historical cases was not run at GK1. Proposed owner: lane I; wave: K2, no later than the GK2 record (a variance for GK1; owner question S8). This is a quick check of the 2026-10-05 rows whose landing is a K1 package, at `7263004`:
+The full table over D-1…D-28, the 2026-10-05 sheets and the seven historical cases was not run at GK1. Proposed owner: lane I; wave: K2, no later than the GK2 record (a variance for GK1; owner question S8, which the owner answered "ก รับทราบทั้งหมด ไม่ย้อนแก้ (แนะนำ)" (chat, 2026-10-28T03:03:21Z)). This is a quick check of the 2026-10-05 rows whose landing is a K1 package, at `7263004`:
 - D-45 (`DECISIONS.md:57`): done by #123 `f8540b6` (`src/csv-text.ts` names D-45).
 - D-49 (:48, lands in ED-INST-1 (hence HU-1) and ED-CLASS-2) and D-60 (:49, lands in the ED-INST-1 privacy statement and HU-6): the ED-INST-1 part of each is done by #147 (C8, C5). The HU-1, HU-6 and ED-CLASS-2 parts are not done (HU-1 moved to November, G4; HU-6 waits for the owner's session, G5).
 - D-64 (:60): used for heavy and the fleet at the candidate (F4).

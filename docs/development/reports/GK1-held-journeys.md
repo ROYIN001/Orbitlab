@@ -7,7 +7,7 @@
 > - หลักฐานเพิ่ม (ข้อ 7 ไม่ได้ขอ): อีก 4 journey ที่ข้ามขั้นของครูเมื่อพักเครื่องมือ ผ่านทั้งตัว 4 จาก 4 บนบิลด์เดียวกัน แต่ `r7-cross-system` ไม่มีขั้นของครูเพิ่ม เพราะยังไม่มีโค้ดสำหรับการตรวจผลและ worksheet DOCX
 > - งบขนาด: บิลด์ตามที่ commit (ปิดสวิตช์) ผ่าน precache code 14 653.8 จากเพดาน 14 654 kB ส่วนบิลด์ที่เปิดเครื่องมือครู**เกินงบ** `index-*.js` เกิน 0.5 kB และ precache code เกิน 0.6 kB บิลด์นี้ไม่ได้เผยแพร่ จึงไม่กระทบข้อ 7 แต่ถ้าจะเปิดเครื่องมือครูภายหลัง ต้องขอเพดานเพิ่มราว 1 kB ในสองช่องนี้ (D-38)
 > - พบข้อบกพร่องหนึ่งข้อจากภาพหน้าจอ ซึ่งมีอยู่แล้วก่อน candidate: บนมือถือ ในหน้าบทเรียนที่เปิดรายการส่วนไว้ กด Escape ครั้งเดียว รายการปิด และหน้าบทเรียนปิดไปด้วย ไม่ได้แก้ตอนนี้ (P4 ก: ไม่เพิ่ม PR โค้ดก่อนตรึง) เสนอเป็นงานติดตามหลังตรึง
-> - GK ข้อ 2 ยังเป็น "บางส่วน" เพราะ 6 journey นี้ไม่อยู่ในการผ่านของ Pages เครื่องมือครูจะกลับมาใน K2 หรือไม่ คือคำถาม S4 ตอนอ่านบันทึก GK1
+> - GK ข้อ 2 ยังเป็น "บางส่วน" เพราะ 6 journey นี้ไม่อยู่ในการผ่านของ Pages เครื่องมือครูจะกลับมาใน K2 หรือไม่ คือคำถาม S4 ตอนอ่านบันทึก GK1 ซึ่งคุณตอบเมื่อ 2026-10-28T02:59:22Z ว่า "ข พักต่อ ตรวจ G0 บนบิลด์ครู (แนะนำ)" (พักต่อใน K2 และ oracle ของ G0 ที่ต้องใช้ journey ที่พักรันครั้งเดียวบนบิลด์เครื่องมือครูในเครื่องที่ไม่ commit ไม่ขอเพดานเพิ่ม)
 > - ไม่มีคำถามใหม่ในไฟล์นี้
 
 ```yaml
@@ -41,7 +41,7 @@ evidence: local run, not committed (builds, logs, screenshots, exported files)
 - **Extra evidence, not part of decision 7:** the four journeys that skip teacher steps while the tools are held also passed whole, 4 of 4, on the same build. Total 958.8 s by `run.mjs` and 1 031 s wall clock.
   - One caveat for `r7-cross-system`: with the switch on, it runs no extra teacher step. Its code only drops two "held" log lines. So this run does **not** cover the results check or the worksheet DOCX (see below).
 - **No failures.** No journey failed, so no rerun or diagnosis was needed. No log has an error line: a search for `error|warn|fail|✗|⏸|held` matches only `case-worksheet-exports`' own note, "24/24 actual downloads saved … DOCX pagination still needs independent rendering and visual review".
-- **The size budget.** The build as committed (switch off) passes: precache code 14 653.8 / 14 654 kB. The teaching-tools build fails: `index-*.js` by +0.5 kB and precache code by +0.6 kB (below). That build is never published, so the result does not gate decision 7. It does mean that turning the tools on later needs about +1 kB on those two ceilings.
+- **The size budget.** The build as committed (switch off) passes: precache code 14 653.8 / 14 654 kB. The teaching-tools build fails: `index-*.js` by +0.5 kB and precache code by +0.6 kB (below). That build is never published, so the result does not gate decision 7. It does mean that turning the tools on later needs about +1 kB on those two ceilings. On S4, the teaching tools in K2, the owner answered "ข พักต่อ ตรวจ G0 บนบิลด์ครู (แนะนำ)" (chat, 2026-10-28T02:59:22Z): they stay held, the G0 oracles that need held journeys run once on an uncommitted teaching-tools build, and no ceiling is raised ([DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-28").
 
 ## Journeys (candidate 7263004, teaching-tools build)
 

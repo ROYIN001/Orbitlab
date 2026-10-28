@@ -14,11 +14,11 @@
 >   - PR เปิดพร้อมกันเฉลี่ย 1.33 ตัว และไม่มี PR ของแผนเปิดเลย 41% ของเวลา
 >   - ค่าเฉลี่ยมาจากสองช่วงที่ต่างกันมาก: 9.5 PR ต่อวันในช่วง 6–9 ต.ค. และ 0.78 PR ต่อวันหลังจากนั้น
 >   - สิ่งที่จำกัดคือมีงานในแผนที่พร้อมและเปิดทำอยู่น้อย ไม่ใช่เพดาน WIP
-> - วันที่ของประตูใหม่ (ตัวแรกนับตามจำนวน PR ในแผน ตัวหลังคูณ 1.49):
->   - GK2: 4 ธ.ค. 2026 – 6 ม.ค. 2027
->   - GK3: 19 ม.ค. – 19 ก.พ. 2027
->   - GK4: 24 ก.พ. – 15 เม.ย. 2027
->   - GK6: 29 มี.ค. – 1 มิ.ย. 2027
+> - วันที่ของประตูใหม่ (ตัวแรกนับตามจำนวน PR ในแผน ตัวหลังคูณ 1.49) ตามปฏิทินที่คุณตอบใน S11 เมื่อ 28 ต.ค. ("ไม่พัก" เวลา 03:04:38Z และ "ก ไม่ข้ามวันหยุดด้วย (แนะนำ)" เวลา 03:07:38Z: ไม่พักปลายปีและไม่ข้ามวันหยุดราชการ) เลข Day เท่าเดิม แต่ประตูหลัง ๆ เร็วขึ้น 10 วันทำการ ในวงเล็บคือวันที่ตามปฏิทินตอนตรึง candidate ซึ่งข้ามพักปลายปี:
+>   - GK2: 4 ธ.ค. – 23 ธ.ค. 2026 (เดิม 4 ธ.ค. 2026 – 6 ม.ค. 2027)
+>   - GK3: 5 ม.ค. – 5 ก.พ. 2027 (เดิม 19 ม.ค. – 19 ก.พ.)
+>   - GK4: 10 ก.พ. – 1 เม.ย. 2027 (เดิม 24 ก.พ. – 15 เม.ย.)
+>   - GK6: 15 มี.ค. – 18 พ.ค. 2027 (เดิม 29 มี.ค. – 1 มิ.ย.)
 >   - ถ้าอัตราเท่าช่วงหลัง 9 ต.ค. GK6 จะเลื่อนไปปี 2028–2029
 > - conflict:
 >   - PR #95–#114 ทั้ง 20 ตัวต้องแก้ conflict ใน CHANGELOG/PROGRESS
@@ -28,17 +28,17 @@
 > - เวลาเครื่อง: Pages มัธยฐาน 33 นาที (S05 สมมติ 18–22 นาที) fleet 60 นาที (S05 สมมติ 2 ชม. 40 นาที)
 > - การตัดสินใจ: ใน K1 ถามคุณ 61 ข้อ ตอบครบ ไม่มีข้อใดช้ากว่า needed-by การตรวจซ้ำได้ผ่าน 97 ไม่ผ่าน 3 (ทั้ง 3 คือ branch ของ q01 ที่ยังอยู่บน GitHub) และมีคำตัดสินที่ทำเบี่ยง 2 ข้อ (q11 เรื่องเพดาน PR และ q03 B ที่ #176 ไม่ได้แจ้งขนาด)
 > - งานส่งต่อ (hand-off, ไฟล์ GK1-handoffs.md): 42 รายการไม่มีเจ้าของ ไม่มีรายการที่หายตอนตรึง candidate (ข้อความ ISS ในทัวร์ท้องฟ้าเคยหายทั้งที่บันทึกว่าเสร็จ จนคุณให้ย้ายไป K2 ในข้อ P4 และ #181 แก้บันทึกแล้ว แต่โค้ดยังไม่แก้) และ 1 รายการส่งไปให้งานที่ไม่ครอบ (`exportAll()` อ่านข้อมูลซ้ำ)
-> - **ที่ขอให้คุณอนุมัติก่อน K2 (แถว re-plan ยังเป็นข้อเสนอ ยังไม่อนุมัติ):**
+> - **แถว re-plan ที่เสนอก่อน K2 (คุณตอบ S3 ว่า "ก อนุมัติตามที่เขียน (แนะนำ)" และตอบเรื่องแผนกับการอนุญาต K2 ว่า "รับรองและอนุญาต K2" ทั้งสองข้อเวลา 2026-10-28T02:54:22Z):**
 >   - งานในแผนของ GK1 ครบแล้ว: #175, #176 และ #177 merge และเผยแพร่แล้ว ส่วน PR ลดเพดาน #179 คือ candidate
 >   - ย้ายงาน K1 ที่เหลือ 41.6 PR ไป K2:
 >     - ส่วนที่ G0/G1+ ยังขาด: ตามที่คุณเลือก ก ในข้อ 1
->     - งาน K1 อื่นราว 30 PR: เป็นเรื่องใหม่ ขออนุมัติ (S3)
+>     - งาน K1 อื่นราว 30 PR: เป็นเรื่องใหม่ที่ถามใน S3
 >     - K2 จะเป็น 103.7 PR ราว 29.9 วันทำการที่ 3.46 PR ต่อวัน (คูณ 1.49: 146.0 PR ราว 42.2 วันทำการ) เทียบกับกรอบเวลา 15–20 วัน
 >   - เพดาน WIP คงเดิม (ใน K1 เพดานรายเลนและช่อง I ก็เคยเกิน เช่น #172 กับ #173 เปิดพร้อมกัน 27 ชม.)
 >   - throughput ใช้ lead time เฉลี่ย (7.87 ชม.) แทนมัธยฐานที่ S05 เขียนไว้ เพราะค่าเฉลี่ยให้ผลตรงกับจำนวน PR ที่ merge จริง
->   - เสนอกติกาใหม่ 5 ข้อ เช่น ไม่เปิด PR ต่อจาก branch ของ PR ที่ยังไม่ merge และ journey ใหม่ต้องรันซ้ำบน CI ก่อน merge (ดูหัวข้อ PLAN:U13)
-> - Node 24: บันทึกนี้อ่านว่าการย้ายต้องเสร็จภายใน Day 85 (16 ก.พ. 2027 ตามปฏิทินนี้) ตาม S05:386 ที่รับรองแล้ว ส่วนคำว่า "by GK2" ใน DECISIONS:66 เป็นช่องที่ลงของคำตัดสิน ถ้าคุณหมายถึง GK2 (ตอนนี้ 4 ธ.ค. 2026 – 6 ม.ค. 2027) บอกได้ตอนตอบแถว re-plan
-> - ยังไม่เสร็จ: session บนเครื่องจริง (HU-6) **รอ session ของคุณ** การลงนาม GK1 การอนุมัติแถว re-plan การรับรองส่วนของแผนที่ K2 ใช้ และการอนุญาต K2 (D-65) เป็นของคุณทั้งหมด ไฟล์นี้เขียนแค่ข้อเท็จจริงและข้อเสนอ
+>   - เสนอกติกาใหม่ 5 ข้อ เช่น ไม่เปิด PR ต่อจาก branch ของ PR ที่ยังไม่ merge และ journey ใหม่หรือที่แก้ต้องรันซ้ำบน CI 20 รอบก่อน merge (จำนวนรอบตามตัวเลือก ก ของ S3) (ดูหัวข้อ PLAN:U13)
+> - Node 24: บันทึกนี้อ่านว่าการย้ายต้องเสร็จภายใน Day 85 ตาม S05:386 ที่รับรองแล้ว ซึ่งตรงกับ 2 ก.พ. 2027 ตามปฏิทินที่คุณตอบใน S11 (ตามปฏิทินตอนตรึงที่ข้ามพักปลายปีคือ 16 ก.พ. 2027) ส่วนคำว่า "by GK2" ใน DECISIONS:66 เป็นช่องที่ลงของคำตัดสิน คำตอบ S3 ของคุณ ("ก อนุมัติตามที่เขียน (แนะนำ)") ไม่ได้ระบุ GK2
+> - ยังไม่เสร็จ: session บนเครื่องจริง (HU-6) **รอ session ของคุณ** ส่วนการลงนาม GK1 และการ merge บันทึกนี้ รอหลัง HU-6 จบ ตามที่คุณตอบ S1 ว่า "ก ตอบสองรอบ (แนะนำ)" (2026-10-28T02:54:22Z) คำตอบของคุณเมื่อ 28 ต.ค. เรื่องแถว re-plan ส่วนของแผนที่ K2 ใช้ และการอนุญาต K2 (D-65) อยู่ใน DECISIONS หัวข้อ "Decided 2026-10-28" ไฟล์นี้เขียนข้อเท็จจริง ข้อเสนอ และคำของคุณตรงตัวเท่านั้น
 > - วัดไม่ได้: เวลาที่งาน "พร้อม" ชั่วโมงที่คุณใช้ตรวจ ขนาด PR และงานบน branch ก่อนเปิด PR รายละเอียดในหัวข้อ "Not measured"
 
 ```yaml
@@ -48,7 +48,7 @@ items: [M-PLAN-026]
 wave: K1 (GK1; records slot)
 lane: I
 change_kind: docs
-status: for the GK1 record PR; every number is from the M-PLAN-026 re-run at the freeze; the re-plan is a proposal, not approved
+status: for the GK1 record PR; every number is from the M-PLAN-026 re-run at the freeze; the re-plan was proposed, and the owner answered S3 with "ก อนุมัติตามที่เขียน (แนะนำ)" (chat, 2026-10-28T02:54:22Z)
 owner_authorization: {decision: "GK1 readiness report, decision 3", date: 2026-10-26, via: chat, answer: "ก", option_text: "อนุญาต M-PLAN-026 เพื่อใช้ที่ GK1 แบบที่ q06 อนุญาต M-PLAN-025", chat_words: "ก อนุญาตเพื่อใช้ที่ GK1 (แนะนำ)", recorded_on_main: "DECISIONS:354 at 7263004, since 52dfe03 (#178)"}
 # In English: option (ก), authorize M-PLAN-026 for use at GK1.
 candidate_sha: 72630046fc5eb56f1797e5363b6f9ad293ff9d38   # #179 (q03-1 B), merged 2026-10-26T19:17:43Z
@@ -380,7 +380,7 @@ Measured at the cutoff with the question set brought to it (see "How the numbers
 | #172 / #173 waiting for the owner's answer | 29.67 h / 26.94 h | PR list; `DECISIONS:342` |
 | Decision checks that can be re-run | 54 of 61 asked rows have one; 97 pass, 3 fail | `kpi35.py` |
 
-- The 3 failing checks are true. `claude/t-fx8-s2` and `claude/t-fx8-picture-moment-s1` are still on origin, although `q01` was cancelled (`DECISIONS:355`). Deleting them is the owner's action.
+- The 3 failing checks are true. `claude/t-fx8-s2` and `claude/t-fx8-picture-moment-s1` are still on origin, although `q01` was cancelled (`DECISIONS:355`). Deleting them is the owner's action; on S12 the owner answered "ก คุณลบทั้งสอง branch เอง (แนะนำ)" (the owner deletes both; chat, 2026-10-28T03:04:38Z).
 - #179's first form was shown at 17:47:19Z. A worker restart at 18:02:45Z closed it unanswered, and it was shown again at 18:05:01Z. The owner first answered "ขอดูทีละข้อ" (one at a time) at 19:17:23Z.
 - Not added, with reasons: the question on the order of #180 and #179 was never put to the owner (#180 merged under the standing approval for records-only PRs); the HU-6 timing question was closed by the restart and not asked again; "ทำต่อเวลา 2350 UTC+3" (19:33:11Z) is a scheduling instruction, not a decision.
 - On the Merge Desk, #103–#106 were merged 0.74–2.56 h before their recorded click (2026-10-06T17:03–17:04Z).
@@ -394,16 +394,16 @@ The full tables are in the same PR: [GK1-followthrough.md](GK1-followthrough.md)
 - The re-runnable checks of KPI-35 at the cutoff: 97 pass and 3 fail (above).
 - **Deviated: 2.** The S08 target is 0 new deviated rows per wave (`S08:451`, draft).
   - `q11`'s "respect the PR cap": 6 code PRs were open for 10 s on 2026-10-09, 23 min after the answer (`PROGRESS:231`).
-  - `q03`'s "every PR states its measured size": #176 (2a, data-safety work inside the allowance) gave no size (other chunks 770.8 → 771.4 kB). #153 gave no size and #157 no i18n size (`PROGRESS:233`); whether they fall under the allowance is owner question S9.
+  - `q03`'s "every PR states its measured size": #176 (2a, data-safety work inside the allowance) gave no size (other chunks 770.8 → 771.4 kB). #153 gave no size and #157 no i18n size (`PROGRESS:233`); whether they fall under the allowance was owner question S9, and the owner answered "ก นับทั้ง 5 PR (แนะนำ)" (chat, 2026-10-28T03:03:21Z): all five, #176 with them, count ([DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-28").
 - **Carried out since `c5da5bb`:** `q03-1` by #179 (the ceilings PR, published by the candidate's Pages run); 2b by #177 (published 16:55:51Z); `q06` by #175 (its journey passed on the candidate in 443.5 s).
 - **Not carried out:** `q02`'s S18 text (S18 §18.6 and §18.8 still name `push`). `q10`: `claude/pd-r41-s1` has had a free slot since 2026-10-09T23:00:48Z; on 2026-10-26 the owner confirmed it waits until after GK1 (P4 ก; `DECISIONS:368` at `5092ac9`).
 - **Recorded:** the owner's answers of 2026-10-26 are in DECISIONS: decisions 3, 5, 6, 7, the four M-LEARNING-027 answers and the Merge Desk for #175, #176 and #177 at `DECISIONS:354-363` (since #178 and #180); the Merge Desk for #179 and P1–P5 at `DECISIONS:364-369` at `5092ac9` (#181, not merged).
 
 **Hand-offs (S18:233, process lesson 3).** File 4 checks every K0 and K1 package, `HANDOVER-K1.md` §9, the R0.2r ADR open points and the K0 out-of-scope table. GK0 did not run this check (`kpi-GK0.md:46`), so this is the first, and it covers K0 too.
-- **Rows with no owner:** 42 in file 4's summary. The owners proposed for them come from the lane write sets (S18 §18.2). They are proposals, not assignments; the owner accepts them.
+- **Rows with no owner:** 42 in file 4's summary. The owners proposed for them come from the lane write sets (S18 §18.2). They were proposals, not assignments; on S7 the owner answered "ก รับเลน การ์ดเฉพาะข้อของคุณ (แนะนำ)" (accept the proposed lanes, cards only for the owner's items; chat, 2026-10-28T02:59:22Z).
 - **Dropped: none at the freeze** (file 4). K1-33 was dropped until 2026-10-26: FX-3 PR1 left the sky step "This is where the ISS is at this moment" to FX-3 PR2 (`FX-3-pr1-orbit-honest-figures.md:129-131`), `src/i18n/en.ts:1299` and `src/orbit/sky-tour.ts:32` (warp 60) are unchanged at `7263004`, and `PROGRESS:151` says FX-3's K1 items are merged. The owner chose on 2026-10-26 not to fix it before the freeze: the fix moves to K2 in the re-plan (P4 ก; `DECISIONS:368` at `5092ac9`), and #181 corrects the register row (`PROGRESS:152` at `5092ac9`). File 4 now counts it as recorded · RE-PLAN. The code is still unchanged on the live site.
 - **Sent to an item that does not cover it (1):** R1.6 PR6 left the `exportAll()` double read to M-PLATFORM-005 (`R1.6-pr6-backup-safety.md:102`). M-PLATFORM-005 is about the profile dialog, and `src/workspace/repository.ts:445` is unchanged at `7263004`. No record says it is done.
-- **Never asked:** some reports leave questions "for the owner" that no card, chat question or DECISIONS row asked (file 4, flag `NOT ASKED`). P5 of 2026-10-26 asked one of these items (K1-07, ceilings on compressed sizes), so 10 rows with 19 questions are left. P3 put K1-41 (the CSV download on real devices), a row with no owner, into the HU-6 session.
+- **Never asked:** some reports leave questions "for the owner" that no card, chat question or DECISIONS row asked (file 4, flag `NOT ASKED`). P5 of 2026-10-26 asked one of these items (K1-07, ceilings on compressed sizes), so 10 rows with 19 questions are left. P3 put K1-41 (the CSV download on real devices), a row with no owner, into the HU-6 session. On S7 the owner chose a card for the owner's items only (HU-1's Q-1…Q-8 in K0-31, K0-13, K1-24, K1-38 and K1-62); the K2 session asked it, and the owner answered every question on it on 2026-10-28, 03:19:14Z–03:29:17Z ([DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-28", "The S7 card, asked by the K2 session"). The questions of K1-08, K1-59, K1-72, K1-76 and K1-96 went to their proposed lanes.
 
 ### Machine time
 
@@ -532,7 +532,7 @@ From `K0-retro.md:65-79`:
 | 1 | Fix before asking (show the layout after known findings are fixed) | Yes | F5 fixed and asserted by #101 and #103 before the new screenshots; G2 signed 2026-10-06 (`DECISIONS:151`, `PROGRESS:42`) |
 | 2 | Budget first (each code PR states its precache-code delta before review) | Partly | Most code PRs stated it. #153 gave no size, #157 no i18n size (`PROGRESS:233`) and #176 no size (other chunks 770.8 → 771.4 kB); `q03` B's size statements are a deviated row in the follow-through table (B3) |
 | 3 | Shard balance (new long journeys named so the two longest never share a shard; PR gives its shard estimate) | Yes for #175; not checked for the others | `R7.1-GK1.md:109-112` gives the shard and the shard loads, and `:114` its first CI run (shard 1, pass, 417.6 s). On the candidate it passed in shard 1 in 443.5 s, and the three shards took 18–20 min each (Pages 40385448079). The other journeys added in K1 (#108, #122, #156) were not checked |
-| 4 | Re-estimate with K1's median lead time at GK1 | Changed (proposed) | K0's change asks for the K1 median lead time (`K0-retro.md:77-79`), and so does S05's capacity row (`S05:306`, "KPI-33 (มัธยฐาน lead time ต่อคลื่น)"). This re-estimate uses the mean lead (7.87 h) in WIP ÷ lead (Little's law). With the median (0.757 h), WIP 1.33 ÷ lead gives about 42 PRs per calendar day, against 4.05 actually merged. The median is reported as KPI-33. The owner approves the change with the re-plan (item 4) |
+| 4 | Re-estimate with K1's median lead time at GK1 | Changed (proposed) | K0's change asks for the K1 median lead time (`K0-retro.md:77-79`), and so does S05's capacity row (`S05:306`, "KPI-33 (มัธยฐาน lead time ต่อคลื่น)"). This re-estimate uses the mean lead (7.87 h) in WIP ÷ lead (Little's law). With the median (0.757 h), WIP 1.33 ÷ lead gives about 42 PRs per calendar day, against 4.05 actually merged. The median is reported as KPI-33. The change is part of the re-plan (item 4), on which the owner answered S3 "ก อนุมัติตามที่เขียน (แนะนำ)" (2026-10-28T02:54:22Z) |
 
 ## Re-estimate (§05.11 item 2)
 
@@ -630,6 +630,8 @@ Each gate's Day = 13 + ceil(remaining PRs up to that gate ÷ 3.46). Today is Day
 
 Source: `gates.tsv`; `verify/v_gates_freeze.py` gives the same Days.
 
+**On the owner's calendar (S11, 2026-10-28).** The table above skips 13 and 23 Oct and the year-end break, 21 Dec 2026 – 1 Jan 2027 (the freeze calendar). The owner answered S11 with "ไม่พัก" (typed, chat, 2026-10-28T03:04:38Z) and, on the follow-up about public holidays, "ก ไม่ข้ามวันหยุดด้วย (แนะนำ)" (03:07:38Z): no year-end break and no public holiday skipped, so every Monday to Friday counts and only 13 and 23 Oct, already past, stay skipped ([DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-28"). The Days do not change; the dates do. Measured 3.46, plan basis: GK1 D26 2026-11-11, GK2 D43 2026-12-04, GK3 D65 **2027-01-05**, GK4 D91 **2027-02-10**, GK5 D101 **2027-02-24**, GK6 D114 **2027-03-15**. ×1.49 basis: GK1 D29 2026-11-16, GK2 D56 **2026-12-23**, GK3 D88 **2027-02-05**, GK4 D127 **2027-04-01**, GK5 D142 **2027-04-22**, GK6 D160 **2027-05-18**. Each date after the break moves 10 working days earlier. Day 85 counts to 2027-02-02 (2027-02-16 on the freeze calendar); which date governs the Node move was not asked ("Item 5"). Source: `v_gates_freeze.py`'s method with the break removed (local run, not committed).
+
 - **GK1 under the owner's option (ก).** At the cutoff GK1 needs no plan PR: #175, #176 and #177 are merged and published, and the ceilings PR #179 is the candidate. GK1 still needs the GK1 record PR, the HU-6 session on the candidate (**waits for the owner's HU-6 session**) and the owner's sign-off. The six held journeys ran once (decision 7), the KPI baselines were measured once (P1) and the revert drill ran once (P2).
 - **GK2–GK6 do not change between the two GK1 cases.** Their dates depend on the cumulative remainder, so moving the rest of K1 into K2 moves no later gate.
 
@@ -640,12 +642,13 @@ Source: `gates.tsv`; `verify/v_gates_freeze.py` gives the same Days.
 | The post-9-Oct rate (0.78 a day) | GK2 2027-05-13 / 2027-07-28; GK6 2028-07-25 / 2029-05-10 | `gates.tsv` `after_burst`; `v_gates_freeze.py` agrees |
 | The burst rate (9.5 a day) | GK6 2026-12-15 / 2027-01-21 | `gates.tsv` `burst_phase` |
 | Also skipping S05's other named holidays (10 Dec, 6 Apr, 13–15 Apr) | Later gates move 0–5 working days; GK6 2027-03-30 / 2027-06-08 | `retro.py` run with S05's holidays |
+| No year-end break and no public holiday skipped (the owner's S11 answers, 2026-10-28) | Later gates move 10 working days earlier; GK6 2027-03-15 / 2027-05-18 | `v_gates_freeze.py`'s method with the break removed (local run, not committed) |
 
-**What the dates mean.** Over K1 as a whole, the plan-PR rate was above S05's fast case. But the plan basis assumes the remaining work arrives ready and authorized, as it did on 6–9 Oct. The ×1.49 basis assumes K2+ packages overrun like K1's bug-fix packages, which is not known for EQ oracle gates or serial lane-P physics. The dates hold only if plan work is open in parallel. In K1, mean plan WIP was 1.04 and was zero 41% of the time. S05 lists its holidays as examples (`S05:389`), so other public holidays would move the dates further; the owner confirms the calendar.
+**What the dates mean.** Over K1 as a whole, the plan-PR rate was above S05's fast case. But the plan basis assumes the remaining work arrives ready and authorized, as it did on 6–9 Oct. The ×1.49 basis assumes K2+ packages overrun like K1's bug-fix packages, which is not known for EQ oracle gates or serial lane-P physics. The dates hold only if plan work is open in parallel. In K1, mean plan WIP was 1.04 and was zero 41% of the time. S05 lists its holidays as examples (`S05:389`), so other public holidays would move the dates further; the owner answered S11 on 2026-10-28 with no year-end break and no public holiday skipped (above), which moves the later dates earlier instead.
 
 ## Changes for K2 and the re-plan (§05.11 items 3–5)
 
-**Status: proposed. It waits for the owner's approval before K2 (D-65, `S05:434`).** `packages.tsv`, S05 and `registry.tsv` change only after that, in an R7.5 docs PR, which is not authorized (`PROGRESS:214`).
+**Status: proposed on 2026-10-26. It waited for the owner's approval before K2 (D-65, `S05:434`). The owner answered S3, this re-plan, on 2026-10-28: "ก อนุมัติตามที่เขียน (แนะนำ)" (chat, 02:54:22Z); and on S1's items 4–5, K2's plan sections and K2's authorization (D-65): "รับรองและอนุญาต K2" (02:54:22Z).** `packages.tsv`, S05 and `registry.tsv` change in one docs PR: on S10 the owner answered "ก อนุญาต docs PR ฉบับเดียว (แนะนำ)" (03:03:21Z), one docs PR with the listed edits only, while the rest of R7.5 stays not authorized (`PROGRESS:214`); and on the follow-up to S11, "ก เพิ่มใน docs PR ฉบับเดียวกัน (แนะนำ)" (03:07:38Z), which adds the year-end-break and gate-date lines to the same PR ([DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-28").
 
 The basis is the owner's answer to the readiness report's decision 1 on 2026-10-24: "ก: ทำข้อ GK แล้วรัน GK1 (แนะนำ)" (`DECISIONS:344`), option (ก). The form described option (ก) as "ราว 6–7 PR แล้วรัน GK1 พร้อมแถว re-plan ที่ย้ายส่วนที่ขาดของ G0/G1+ ไป K2 (เป็นการเบี่ยงจากแผนที่คุณต้องอนุมัติ)" (same row). The move lists come from `replan.py`, which classes each package by §05.11 rule 3 (`S05:432`):
 - **open-pr:** a PR is open, so the work stays. None at the cutoff.
@@ -699,7 +702,7 @@ The K2 load per lane (K1 rest + K2, plan basis) is highest in I (28.9), T (17.4)
 
 **Already decided, recorded with the row** (owner, chat, 2026-10-26; `DECISIONS:355-356`):
 - `q09` A (hide the Period row in the full HUD while a lesson asks for it) moves to K2 (decision 5).
-- `q01` is cancelled (decision 5). Its branches `claude/t-fx8-s2` and `claude/t-fx8-picture-moment-s1` are still on origin. Deleting them is the owner's action.
+- `q01` is cancelled (decision 5). Its branches `claude/t-fx8-s2` and `claude/t-fx8-picture-moment-s1` are still on origin. Deleting them is the owner's action (S12: the owner answered "ก คุณลบทั้งสอง branch เอง (แนะนำ)", 2026-10-28T03:04:38Z).
 - HU-1's student sessions move to November, outside school hours. This is a deviation from draft S16's October-break schedule (`S16:105`), chosen by the owner (decision 6; `PROGRESS:236`). S16's own route to November (`S16:107`) is for a privacy statement that is not live in time, and the statement was live since 2026-10-17, so that route does not apply.
 
 **WIP cap:** unchanged: 5 open code PRs plus 2 records PRs for the project, 1 open PR per lane and 1 I-owned PR (`S18:206-207`). There is no evidence for changing them:
@@ -710,9 +713,9 @@ The K2 load per lane (K1 rest + K2, plan basis) is highest in I (28.9), T (17.4)
 
 **PR size:** not adjusted. PR size in lines was not measured (see "Not measured").
 
-**New rules proposed:** the five process fixes under "Hard, slow and repeated work". Each goes into S18 §18.6 or SESSION-PROTOCOL in the R7.5 docs PR if the owner agrees. The evidence for the first three:
+**New rules proposed:** the five process fixes under "Hard, slow and repeated work". Each goes into S18 §18.6 or SESSION-PROTOCOL in the one docs PR of owner question S10; the owner answered S3 "ก อนุมัติตามที่เขียน (แนะนำ)" and S10 "ก อนุญาต docs PR ฉบับเดียว (แนะนำ)" (2026-10-28T02:54:22Z and 03:03:21Z). The evidence for the first three:
 1. No PR starts from another open PR's branch: all 3 K1 code conflicts came from stacking, though 4 of the 7 stacked PRs had none.
-2. A new or changed journey runs repeatedly on CI before merge: three of the five flaky journeys were added in K1 (#108, #122, #156). Of the other two, one first failed at `79d2686` (#159) and one at `0a7e69f` with no code change. The four that failed on Pages failed 14 runs, and each failure held publication.
+2. A new or changed journey runs 20 times on CI before merge (the count of S3's option (ก), which the owner chose): three of the five flaky journeys were added in K1 (#108, #122, #156). Of the other two, one first failed at `79d2686` (#159) and one at `0a7e69f` with no code change. The four that failed on Pages failed 14 runs, and each failure held publication.
 3. Each records PR re-checks the follow-through and hand-off rows it touches, and a second agent confirms its facts: risks 15 and 17 occurred, and the two lost hand-offs were found only at GK1.
 
 ### Item 4: facts that changed after the base
@@ -725,26 +728,26 @@ The K2 load per lane (K1 rest + K2, plan basis) is highest in I (28.9), T (17.4)
   - R4.7: +1 (M-PLAN-032)
   - R8: +3 (M-ORBIT-067–069)
 
-  Separately, R4.2-RB was added with 1 PR. The items came in through #157, #162, #165 and #166 (`PROGRESS:216`). Source: `scope_growth.py` at `7263004`. So the remainder for those packages is understated by an unknown number of PRs. **Proposal:** re-estimate R4.2, R4.3, R4.4, R4.5, R4.7 and R8 in the R7.5 docs PR. Draft S19 C6 also names R4.1 (8 PRs) and R4.4 (5 PRs) as over estimate.
+  Separately, R4.2-RB was added with 1 PR. The items came in through #157, #162, #165 and #166 (`PROGRESS:216`). Source: `scope_growth.py` at `7263004`. So the remainder for those packages is understated by an unknown number of PRs. **Proposal:** re-estimate R4.2, R4.3, R4.4, R4.5, R4.7 and R8 in the R7.5 docs PR (the one docs PR of owner question S10). Draft S19 C6 also names R4.1 (8 PRs) and R4.4 (5 PRs) as over estimate.
 - **R3+ re-check (rule 4).** `packages.tsv` still gives 32 PRs: R3.0 3, R3.1r 7, R3.2r 5, R3.3r 3, R3.4r 10, R3.5r 3, R3.6 1. That is 30 in K3 and 2 in K4. One merged early: #149, R3.4r M-PLAN-027 (card `q07` A). The content was not re-estimated here.
 - **The parked re-baseline.** R4.2-RB was parked by the owner on 2026-10-18 (`DECISIONS:328`). It sits in K4. Its answer 5 (1 000 m) contradicts the 1 500 m on main since #157 (`DECISIONS:322`). It is asked again when R4.2-RB resumes.
-- **Teaching tools held back (#156).** Six journeys have been held since then. GK item 2 is met for GK1 only by decision 7 (ก). Whether they return in K2 is not decided. Turning them on needs about +1 kB on the `index-*.js` and precache-code ceilings (the teaching-tools build is 0.5 and 0.6 kB over; local run, not committed).
+- **Teaching tools held back (#156).** Six journeys have been held since then. GK item 2 is met for GK1 only by decision 7 (ก). On whether they return in K2 the owner answered S4 "ข พักต่อ ตรวจ G0 บนบิลด์ครู (แนะนำ)" (chat, 2026-10-28T02:59:22Z): still held, with the G0 oracles that need held journeys run once on an uncommitted teaching-tools build, and no ceiling raised. Turning them on needs about +1 kB on the `index-*.js` and precache-code ceilings (the teaching-tools build is 0.5 and 0.6 kB over; local run, not committed).
 - **Work outside the plan.** 16 owner-requested PRs merged in K1. None is in `packages.tsv`, and future owner requests use slots the gate dates assume for plan work.
-- **Machine times.** Pages runs about 33 min, not 18–22; the fleet about 60 min, not 2 h 40 min. **Proposal:** update `S05:361` in the R7.5 docs PR.
-- **Throughput uses the mean lead, not the median.** S05's capacity row says the GK1 re-estimate uses KPI-33, the median lead time per wave, with the measured WIP (`S05:306`), and K0's retrospective says the same (`K0-retro.md:77-79`). With K1's median (0.757 h), WIP 1.33 ÷ lead gives about 42 PRs per calendar day, while 85 PRs merged in 20.98 calendar days (4.05 a day). The mean lead (7.87 h) gives the rate that matches the merges, so this re-estimate uses it. **Proposal:** the owner approves this departure from `S05:306`, and the R7.5 docs PR changes the row to "mean lead time".
-- **The Node 24 deadline.** The owner's decision D-3/D-4 has "by GK2" in its "Where it lands" column (`DECISIONS:66`). The adopted plan fixes the move itself at Day 85, "ยึดวันที่ ไม่ใช่ GK" (`S05:386`). This record reads Day 85 as the deadline for the move: 2027-02-16 on this calendar. With the dates recomputed here, GK2 is D43–D56 (2026-12-04 – 2027-01-06), earlier than Day 85. The re-plan row puts M-PHYSICS-060 by Day 85. If the owner meant GK2, the answer to the re-plan says so.
+- **Machine times.** Pages runs about 33 min, not 18–22; the fleet about 60 min, not 2 h 40 min. **Proposal:** update `S05:361` in the R7.5 docs PR (the one docs PR of owner question S10).
+- **Throughput uses the mean lead, not the median.** S05's capacity row says the GK1 re-estimate uses KPI-33, the median lead time per wave, with the measured WIP (`S05:306`), and K0's retrospective says the same (`K0-retro.md:77-79`). With K1's median (0.757 h), WIP 1.33 ÷ lead gives about 42 PRs per calendar day, while 85 PRs merged in 20.98 calendar days (4.05 a day). The mean lead (7.87 h) gives the rate that matches the merges, so this re-estimate uses it. **Proposal:** the owner approves this departure from `S05:306`, and the R7.5 docs PR changes the row to "mean lead time". It was part of S3, on which the owner answered "ก อนุมัติตามที่เขียน (แนะนำ)" (2026-10-28T02:54:22Z); the edit is in the one docs PR of owner question S10.
+- **The Node 24 deadline.** The owner's decision D-3/D-4 has "by GK2" in its "Where it lands" column (`DECISIONS:66`). The adopted plan fixes the move itself at Day 85, "ยึดวันที่ ไม่ใช่ GK" (`S05:386`). This record reads Day 85 as the deadline for the move: 2027-02-16 on the freeze calendar, and 2027-02-02 on the calendar of the owner's S11 answers (no year-end break, no public holiday skipped; "Gate dates recomputed"). With the dates recomputed here, GK2 is D43–D56 (2026-12-04 – 2027-01-06 on the freeze calendar; 2026-12-04 – 2026-12-23 on the owner's), earlier than Day 85. The re-plan row puts M-PHYSICS-060 by Day 85. If the owner meant GK2, the answer to the re-plan says so; the owner answered "ก อนุมัติตามที่เขียน (แนะนำ)" (S3, 2026-10-28T02:54:22Z), which names no GK2.
 
 ### Item 5: the PROGRESS re-plan row
 
 The GK1 record PR adds one row, "Re-plan at GK1 (S05 §05.11 rule 5; R7.2, M-PLAN-026)", to PROGRESS's history table. It goes straight into PROGRESS with no fragment, as records PRs do (#170). It is the only copy of the row; this section lists what it carries, so the two can be checked against each other:
-- **Status:** proposed on the date of the GK1 record; waits for the owner's approval before K2 starts (D-65). The approval field stays blank until the owner answers; no agent writes "approved" (`S18:455`).
+- **Status:** proposed on the date of the GK1 record; it waited for the owner's approval before K2 starts (D-65). The approval field stayed blank until the owner answered; no agent writes "approved" (`S18:455`). The owner answered S3 "ก อนุมัติตามที่เขียน (แนะนำ)" (chat, 2026-10-28T02:54:22Z), and the field holds those words with the date and time.
 - **Reason:** the owner chose on 2026-10-24 to close K1 by option (ก) (`DECISIONS:344`). K1 merged 45 plan PRs against S05's 49.9 (K0 + K1: 55 of 70.2); 38 on 6–9 Oct and 7 after; measured plan throughput 3.46 PRs per working day (Little's law and the direct count agree) replaces §05.9's 2.6 and 1.7; packages so far took 1.49× their `pr_estimate`.
 - **Kept for GK1, moved to K2, already decided:** as in "Item 3". In all, 41.6 plan PRs move; K2 becomes 103.7 (×1.49: 146.0), 29.9 working days at 3.46 (42.2) against a 15–20 day timebox.
 - **Unchanged:** the WIP caps; PR size (not measured).
-- **Proposed rules:** the five above.
-- **Gate Days (Day 1 = 2026-10-05; plan / ×1.49):** GK2 D43–D56 (2026-12-04 – 2027-01-06), GK3 D65–D88 (2027-01-19 – 2027-02-19), GK4 D91–D127 (2027-02-24 – 2027-04-15), GK5 D101–D142 (2027-03-10 – 2027-05-06), GK6 D114–D160 (2027-03-29 – 2027-06-01). At the post-9-Oct rate (0.78) GK6 would be 2028–2029.
-- **To re-estimate in the R7.5 docs PR:** R4.1, R4.2, R4.3, R4.4, R4.5, R4.7, R8; `S05:361`'s machine times; `S05:306`'s "median lead time".
-- **Node 24:** M-PHYSICS-060 by Day 85 (2027-02-16), per `S05:386`.
+- **Proposed rules:** the five above; rule 2's count is 20 (S3's option (ก)).
+- **Gate Days (Day 1 = 2026-10-05; plan / ×1.49):** GK2 D43–D56, GK3 D65–D88, GK4 D91–D127, GK5 D101–D142, GK6 D114–D160. On the calendar of the owner's S11 answers ("ไม่พัก", 2026-10-28T03:04:38Z; "ก ไม่ข้ามวันหยุดด้วย (แนะนำ)", 03:07:38Z: no year-end break, no public holiday skipped): GK2 2026-12-04 – 2026-12-23, GK3 2027-01-05 – 2027-02-05, GK4 2027-02-10 – 2027-04-01, GK5 2027-02-24 – 2027-04-22, GK6 2027-03-15 – 2027-05-18. On the freeze calendar, which skipped the year-end break 21 Dec 2026 – 1 Jan 2027: GK2 2026-12-04 – 2027-01-06, GK3 2027-01-19 – 2027-02-19, GK4 2027-02-24 – 2027-04-15, GK5 2027-03-10 – 2027-05-06, GK6 2027-03-29 – 2027-06-01. At the post-9-Oct rate (0.78) GK6 would be 2028–2029.
+- **To re-estimate in the R7.5 docs PR (the one docs PR of owner question S10):** R4.1, R4.2, R4.3, R4.4, R4.5, R4.7, R8; `S05:361`'s machine times; `S05:306`'s "median lead time".
+- **Node 24:** M-PHYSICS-060 by Day 85, per `S05:386`. Day 85 counts to 2027-02-02 on the calendar of the owner's S11 answers, which no longer skips the year-end break (2027-02-16 on the freeze calendar). The S3 form showed "Day 85 (16 ก.พ. 2027)", and `S05:386` gives "≈ 2027-02-12" and fixes the date ("ยึดวันที่ ไม่ใช่ GK"); which of these dates governs the move was not asked.
 - **Links:** this file; [kpi-GK1.md](kpi-GK1.md) § Gates for the G0 and G1+ parts and their windows.
 
 ### Records fixed in the GK1 record PR
@@ -756,7 +759,7 @@ The GK1 record PR adds one row, "Re-plan at GK1 (S05 §05.11 rule 5; R7.2, M-PLA
 - New variances: G7 item 4 not done at GK1; the follow-through rows before K1, checked in part; #176's missing size statement under `q03` B.
 - Done already: the 12 answers of 2026-10-26 (#178); #177's fold and its Merge Desk answer (#180, `46728e5`, merged 18:03:55Z, 1 h 8 min after 2b's publication; `DECISIONS:363`).
 - In #181, not merged: #179's fold and its Merge Desk answer, P1–P5 (`DECISIONS:364-369` at `5092ac9`), and FX-3's register row (`PROGRESS:151` said every K1 item is merged; #181 says one part of M-ORBIT-003, the ISS sky step K1-33, is not done and moves to K2, `PROGRESS:152` at `5092ac9`). #179's fold is due by 2026-10-27T19:41:58Z, one working day after its publication (`S18:137`). No merge lands until the owner's HU-6 session ends, so if the session ends later than that, the fold is late, and that is recorded under KPI-31.
-- The deletion of the two `q01` branches is the owner's action, not a record fix.
+- The deletion of the two `q01` branches is the owner's action, not a record fix; on S12 the owner answered "ก คุณลบทั้งสอง branch เอง (แนะนำ)" (2026-10-28T03:04:38Z).
 
 ## Risk register (S05 §05.13)
 
@@ -785,7 +788,7 @@ The GK1 record PR adds one row, "Re-plan at GK1 (S05 §05.11 rule 5; R7.2, M-PLA
 | 19 | i18n and `main.ts` conflicts; long I queue | **Yes, until #115** | 20 PRs with hotspot conflicts (CHANGELOG 64, PROGRESS 29 merges); 1 code-hotspot conflict (#103) | Yes: fragments (#115) ended them; I-train not used | Rule 1 (no stacked branches) |
 | 20 | Study participants not found in time | **Signal seen** | The October-break sessions will not happen: HU-1's student sessions move to November (decision 6, `DECISIONS:356`). The main trigger, "HU-1 ไม่ครบภายใน K2" (`S05:475`), can be judged only when K2 ends | A deviation from S16's October schedule (`S16:105`), chosen by the owner. S16's own route (`S16:107`) is for a late privacy statement and does not apply | Record it (variance, `PROGRESS:236`); check at GK2 |
 | 21 | No human reviewer | **Signal seen** | HU-2 re-review of ru-24-05-06 queued since 2026-10-09, none recorded (`PROGRESS:205`, `:251`) | Not yet | HU-2 moves to K2 with the re-plan |
-| 22 | Node line ends | Not yet | CI pins Node 22.23.3 (`.github/workflows/ci.yml:32`). The move to Node 24 is due by Day 85 (`S05:386`), 2027-02-16 on this calendar; D-3/D-4's "by GK2" (`DECISIONS:66`) is where the decision lands | — | M-PHYSICS-060 by Day 85 in the re-plan row |
+| 22 | Node line ends | Not yet | CI pins Node 22.23.3 (`.github/workflows/ci.yml:32`). The move to Node 24 is due by Day 85 (`S05:386`), 2027-02-16 on the freeze calendar and 2027-02-02 on the calendar of the owner's S11 answers; D-3/D-4's "by GK2" (`DECISIONS:66`) is where the decision lands | — | M-PHYSICS-060 by Day 85 in the re-plan row |
 | 23 | SwiftShader noise | **Signal seen** | #175: after Build and Orbit, the phone flight ran at 0.56× real time at best under software rendering; the journey uses warp 10 (`R7.1-GK1.md:93`). The KPI baselines measured once on the candidate (P1) give comparable counts and bytes, but their times are trend-only (browser, binary and host differ from the plan's baseline) | No speed claim was made | — |
 | 24 | Perf work silently lowers quality | No | #173 identical output (0 of 486,600); #158 identical GLSL | Yes | — |
 | 25 | Scope grows | **Yes** | 16 owner-requested PRs; 16 items placed with no new estimate (`PROGRESS:216`) | Partly: placed and recorded, not estimated | Placement row per owner request (rule 5); re-estimate R4.x and R8 |
@@ -797,15 +800,15 @@ Occurred (for the GK1 PROGRESS row): 13, 15, 16, 17, 19, 25, 26, 28. Signal seen
 
 ## For the owner
 
-Nothing in this file is decided for the owner. It needs these answers, asked with the GK1 record. S1–S12 are owner questions, not plan sections; all twelve, with their options and the recommendation, are in [kpi-GK1.md](kpi-GK1.md), "Questions for the owner".
-- **Owner question S3, the re-plan row:** approve the move of 41.6 plan PRs to K2, including started work (R0.4 orders 1–5, 7, 8 and R1.6 PR5, against rule 3 and drafts `S07:211` and `S10:222`); at least 3 small PRs outside `pr_estimate`; the mean lead in place of `S05:306`'s median; the unchanged WIP caps; the five rules, with the number of repeat runs for rule 2; M-PHYSICS-060 by Day 85.
-- **Owner question S4:** do the teaching tools come back in K2? Turning them on needs about +1 kB on two ceilings.
-- **Owner question S7:** accept the proposed owners for the hand-off rows with none.
-- **Owner question S8:** acknowledge the variances recorded as "owner acknowledgement pending", among them the WIP-cap and lane overlaps above.
-- **Owner question S10:** authorize one R7.5 docs PR for the plan-file edits the re-plan needs.
-- **Owner question S11:** confirm the year-end break (`S05:387`) and which public holidays the gate dates skip.
-- **Owner question S12:** delete or keep the two `q01` branches.
-- **Owner question S1:** how to give the five answers that belong only to the owner: merge of the GK1 record, GK1 sign-off, the re-plan, adoption of K2's plan sections, and K2's authorization (D-65).
+Nothing in this file is decided for the owner. It needed these answers, asked with the GK1 record. S1–S12 are owner questions, not plan sections; all twelve, with their options and the recommendation, are in [kpi-GK1.md](kpi-GK1.md), "Questions for the owner". The owner answered them in chat on 2026-10-28; each answer is quoted after its question, and all of them, with the questions as shown, are in [DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-28".
+- **Owner question S3, the re-plan row:** approve the move of 41.6 plan PRs to K2, including started work (R0.4 orders 1–5, 7, 8 and R1.6 PR5, against rule 3 and drafts `S07:211` and `S10:222`); at least 3 small PRs outside `pr_estimate`; the mean lead in place of `S05:306`'s median; the unchanged WIP caps; the five rules, with the number of repeat runs for rule 2; M-PHYSICS-060 by Day 85. The owner answered: "ก อนุมัติตามที่เขียน (แนะนำ)" (2026-10-28T02:54:22Z); the option gave rule 2 20 runs.
+- **Owner question S4:** do the teaching tools come back in K2? Turning them on needs about +1 kB on two ceilings. The owner answered: "ข พักต่อ ตรวจ G0 บนบิลด์ครู (แนะนำ)" (2026-10-28T02:59:22Z).
+- **Owner question S7:** accept the proposed owners for the hand-off rows with none. The owner answered: "ก รับเลน การ์ดเฉพาะข้อของคุณ (แนะนำ)" (2026-10-28T02:59:22Z).
+- **Owner question S8:** acknowledge the variances recorded as "owner acknowledgement pending", among them the WIP-cap and lane overlaps above. The owner answered: "ก รับทราบทั้งหมด ไม่ย้อนแก้ (แนะนำ)" (2026-10-28T03:03:21Z).
+- **Owner question S10:** authorize one R7.5 docs PR for the plan-file edits the re-plan needs. The owner answered: "ก อนุญาต docs PR ฉบับเดียว (แนะนำ)" (2026-10-28T03:03:21Z).
+- **Owner question S11:** confirm the year-end break (`S05:387`) and which public holidays the gate dates skip. The owner answered: "ไม่พัก" (typed, 2026-10-28T03:04:38Z); then, on public holidays, "ก ไม่ข้ามวันหยุดด้วย (แนะนำ)", and on where the plan files change, "ก เพิ่มใน docs PR ฉบับเดียวกัน (แนะนำ)" (both 03:07:38Z).
+- **Owner question S12:** delete or keep the two `q01` branches. The owner answered: "ก คุณลบทั้งสอง branch เอง (แนะนำ)" (2026-10-28T03:04:38Z).
+- **Owner question S1:** how to give the five answers that belong only to the owner: merge of the GK1 record, GK1 sign-off, the re-plan, adoption of K2's plan sections, and K2's authorization (D-65). The owner answered: "ก ตอบสองรอบ (แนะนำ)" (2026-10-28T02:54:22Z), and on adopting K2's plan sections and authorizing K2: "รับรองและอนุญาต K2" (02:54:22Z). The merge of the GK1 record and the GK1 sign-off wait for the owner's HU-6 session.
 
 ## Not measured
 
@@ -824,7 +827,7 @@ Nothing in this file is decided for the owner. It needs these answers, asked wit
 - **Remaining work.** The ×1.49 factor comes from 18 mostly small bug-fix packages. The counts left for R1.6, FX-1, FX-2, FX-5 and CO-4 come from reading the plan's PR tables.
 - **Scope growth.** The 16 items placed since the import have no estimate.
 - **Not recomputed.** G4-S and the earliest start of R5.1 are not tied to cumulative PRs.
-- **The calendar.** The year-end break is S05's assumption and still waits for the owner's confirmation (`S05:387`). S05's holiday list is examples only (`S05:389`).
+- **The calendar.** The year-end break was S05's assumption, waiting for the owner's confirmation (`S05:387`), and S05's holiday list is examples only (`S05:389`). The owner answered S11 on 2026-10-28: "ไม่พัก" (03:04:38Z) and "ก ไม่ข้ามวันหยุดด้วย (แนะนำ)" (03:07:38Z); "Gate dates recomputed" gives the dates on that calendar. The freeze numbers were computed with the break skipped.
 - **Lane attribution has two answers** (plan lane and actual lane).
 
 **Publication and machine time:**
