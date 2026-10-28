@@ -8,7 +8,8 @@
 > - ทำไมไม่ให้ debris ใช้วงโคจรเสมอ: ในโหมด six-DOF ซึ่งเป็นค่าเริ่มต้นของจรวดในแคตตาล็อก ตัวยานเองถูกวาดเป็นเส้นตรง (คลาดได้ถึง 460 m เมื่อเฟรมห่าง 20 s) และ Blok I ยุบไปพร้อมกัน จึงห่างกันแค่ 0.45 m ถ้าย้ายเฉพาะ debris ไปบนวงโคจร จะกลายเป็น Blok I ลอยเหนือยาน 115–460 m แทน ปัญหายานเป็นเส้นตรงใน six-DOF เป็นเรื่องที่มีอยู่เดิมและไม่ได้แก้ใน PR นี้
 > - ผล: point-mass คลาดจากตำแหน่งจริง 0.00 m (ละเอียดถึงเซนติเมตร) ส่วน six-DOF วัดได้เท่าเดิมทุกค่า
 > - ขนาด: อยู่ใต้เพดานทุกกลุ่ม ไม่ได้ขึ้นเพดาน
-> - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) และมีเทสต์ที่ fail ก่อนแก้ แต่เป็นงาน physics จึงต้องให้ agent ตัวที่สองตรวจก่อน ตอนนี้ยังรอการตรวจ
+> - ระหว่างการนัดพบ (rendezvous) และใน Apollo ตอนนี้ debris ใช้ cubic แบบเดียวกับยานด้วย: Blok I คลาดจากวงโคจร 0.027 m เมื่อเฟรมห่าง 30 s (เส้นตรงเดิมอยู่ด้านในวงโคจร 1,036 m) และ S-IVB คลาด 4 mm
+> - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน และไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจแล้ว ไม่พบข้อที่ต้องแก้ก่อน merge (ยืนยัน 10 จาก 10 ข้อที่ตรวจ) ยังรอ CI บน head ล่าสุด
 
 ```yaml
 item: replay debris blend between recorded frames (bug fix)
@@ -19,7 +20,7 @@ tests: tests/debris-replay.test.ts (new)
 base_sha_verified_on: {sha: 7263004, date: 2026-10-28}
 branch: claude/gifted-gauss-ojjpaj
 pr: 185
-second_agent_review: pending
+second_agent_review: 'confirmed 10 of 10 report claims checked, no blocking findings (2026-10-28, on 686537e); not checked by it: the bundle sizes, the two-bundle claim, the 460 m six-DOF sag'
 ```
 
 ## Cause
@@ -34,10 +35,10 @@ Every debris item was drawn on the straight line. In orbit the recorder keeps a 
 ## Change
 
 The vehicle's three branches become one closure, `path(ar, av, br, bv, coasts = true)`, and the vehicle's call is unchanged. A debris item alive in both frames (with the same rigid configuration, as before) is blended with `path(…, coasts)`. Here `coasts` means:
-- nothing on it is firing at either end: `burning`, which is the recovery engines; a stage flown home starts its boostback, entry and landing burns on events, which the recorder pins frames to;
+- nothing on it is firing at either end: `burning`, which is the recovery engines. The only recovery burn above 140 km is a targeted stage's boostback, which starts and ends on events (`evt.boostbackStart`, `evt.boostbackEnd`) that the recorder pins frames to. Entry and landing burns start at or below 70 km, under the next condition;
 - it is above `AIRLESS_HEIGHT` = 140 km at both ends. That is the height above which the simulation flies the vehicle's coast on a Kepler arc (`useKepler`) and counts a spent stage as in orbit.
 
-A body that does not coast keeps the straight line, as does every body while the vehicle takes the line (six-DOF, under thrust, the frame a burn begins on). Both blends are pure functions of the two frames.
+A body that does not coast keeps the straight line, as does every body while the vehicle takes the line (six-DOF, under thrust, the frame a burn begins on). In a rendezvous or Apollo, where the vehicle takes the cubic, a coasting body now takes it too. Both blends are pure functions of the two frames.
 
 ## Measured
 
@@ -57,6 +58,20 @@ Tests:
 - `tests/debris-replay.test.ts`, 5 tests: an orbiting body 10 s apart stays on its 220 km circle at mid-span within 1 m (the chord is 114.4 m inside); Blok I keeps its place beside the spacecraft at the measured instants; the straight line is kept beside a vehicle drawn on the line, and for a body in the air or firing its engines; the blend is pure; a recorded point-mass Progress flight (0.5 s to record).
 - On main's frame.ts, 2 of 5 fail (114.4 m, 1.38 m). With the fix, 5 of 5 pass.
 - Related files: replay, rigid-replay, vostok-replay, vostok-render, launch-abort, equations, live-stepping, orbit-handoff, rendezvous, rendezvous-fuel, rigid-debris, apollo-own-launch, bundle-budget, 10 more that record or seek frames, and debris-replay itself: 24 files, 384 tests, all pass.
+
+## Second-agent review
+
+Done on 686537e, review only (no edits). It recorded all 20 shipped watch missions in point-mass and a six-DOF Soyuz to the station. For every pair of consecutive frames it compared this branch's `interpolateFrames` with main's at five points in the span, about 550,000 calls on deep-frozen frames.
+
+- **The vehicle:** every field of the frame except `debris` is bit-identical to main. This covers all four ways the vehicle is drawn: Kepler, the cubic (three Soyuz MS rendezvous and Apollo 11), the straight line, and six-DOF.
+- **Debris on Kepler arcs:** the largest jump at the end of a span is 4 mm (Electron's second stage, flown with drag at 200 km).
+- **Debris on the cubic:** in a rendezvous, Blok I is 0.027 m from its arc over 30 s spans (the chord was 1,036 m inside it). In Apollo 11, the S-IVB is 4 mm from its arc.
+- **Purity:** no input was written to, and only `r` and `v` differ from main in the debris objects.
+- **Main fails the new test for the right reason:** 2 of 5 fail there (114.4 m, 1.38 m).
+- **Non-blocking, not reachable in shipped missions:**
+  - A boostback that starts and ends inside one simulation step above 140 km while the vehicle coasts would make a body jump at the end of the span. There are none in the 20 missions: boostbacks overlap the upper stage's burn, when the vehicle takes the line.
+  - A hyperbolic body's Kepler fallback is not anchored at the later frame (19 m on a 30 s span). The vehicle has the same error, so the two stay together.
+- **Verdict:** confirmed 10 of 10 report claims checked. Not checked by the reviewer: the bundle sizes, the two-bundle claim and the 460 m six-DOF sag.
 
 ## Size
 
