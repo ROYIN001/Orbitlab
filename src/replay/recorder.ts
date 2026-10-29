@@ -96,8 +96,9 @@ const RETURNING_VACUUM_INTERVAL = 1;
 /**
  * The widest gap between stored frames that thinning a coast or an orbit may
  * open, s (`FlightRecorder.thin`): a minute, 3.6° of a low orbit, whose chord
- * passes 3 km inside the arc. Rigid frames are blended in straight lines, and
- * the six-DOF Vostok-1 recording, thinned ten times when its return had not
+ * passes 4 km inside the arc (a coast is drawn on its arc between two frames,
+ * `interpolateFrames`, the six-DOF one 0.4 m off it over a minute). The
+ * six-DOF Vostok-1 recording, thinned ten times when its return had not
  * been fitted in, kept 13 frames of its orbit: 55 minutes between two, which
  * replayed the spacecraft held still, and a trail through the Earth.
  */

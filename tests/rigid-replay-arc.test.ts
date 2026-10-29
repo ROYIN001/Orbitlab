@@ -12,6 +12,7 @@
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
 import { captureFrame, cloneFrame, interpolateFrames, type DebrisFrame, type VisualFrame } from '../src/physics/frame';
+import type { ApolloState } from '../src/physics/sim/apollo';
 import { propagateKepler } from '../src/physics/orbital';
 import { gravityJ2 } from '../src/physics/gravity';
 import { rk4Step } from '../src/physics/integrator';
@@ -98,6 +99,16 @@ describe('a six-DOF vehicle between two recorded frames', () => {
     const coast = { status: 'descent' as const, descentPhase: 'coast' as const };
     const a = frameAt(T0, kepler(SHIP), [], coast), b = frameAt(T0 + 30, kepler(SHIP), [], coast);
     expect(dist(interpolateFrames(a, b, T0 + 15).r, propagateKepler(SHIP.r, SHIP.v, 15).r)).toBeLessThan(0.1);
+  });
+
+  it('takes the cubic in Apollo as a point-mass Apollo does, its S-IVB venting or not', () => {
+    // the parking orbit: status 'orbit', the hydrogen vent's few hundred newtons on the thrust
+    const apollo = { apollo: { phase: 'parking', tliTime: 0, moon: { alt: 0, speed: 0 }, next: 0 } as ApolloState, thrust: 300 };
+    const a = frameAt(T0, kepler(SHIP), [], apollo), b = frameAt(T0 + 30, kepler(SHIP), [], apollo);
+    const mid = interpolateFrames(a, b, T0 + 15);
+    expect(dist(mid.r, propagateKepler(SHIP.r, SHIP.v, 15).r)).toBeLessThan(0.1);
+    const pointMass = (f: VisualFrame): VisualFrame => ({ ...f, rigid: undefined });
+    expect(interpolateFrames(pointMass(a), pointMass(b), T0 + 15).r).toEqual(mid.r);
   });
 
   it('keeps the straight line where it is not simply coasting', () => {

@@ -694,12 +694,14 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
  *
  * Continuous quantities (altitude, speed, dynamic pressure, the classical
  * elements, the epoch) are blended linearly, angles along the shortest arc and
- * the body axis by slerp. Position and velocity follow the Kepler solution
- * propagated from the earlier frame whenever both frames are coasting or in
- * orbit — over a 30 s orbital recording gap a straight line between two states
- * cuts several kilometres off the arc — and are blended linearly otherwise,
- * because under thrust or in the atmosphere the two-body solution is not the
- * trajectory that was flown.
+ * the body axis by slerp. Position and velocity follow the vehicle's arc
+ * whenever both frames are coasting or in orbit with the engine off at the
+ * earlier one — over a 30 s orbital recording gap a straight line between two
+ * states passes a kilometre inside the arc: for a point mass the Kepler
+ * solution propagated from the earlier frame, which is how it was flown; for a
+ * six-DOF vehicle, flown with J2, the cubic through both frames' states, as in
+ * a rendezvous and in Apollo. They are blended linearly otherwise, because
+ * under thrust the motion between two frames is not a coast.
  *
  * Everything discrete (status, ascent phase, stage/booster/fairing state, the
  * debris list, the event count) comes from the *earlier* frame: a state that
@@ -767,15 +769,21 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   }
   const dt = span * u;
   const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
-  // C01: Apollo between the Earth and the Moon is not on a Kepler arc about the Earth: the cubic through both ends
-  const ballistic = !a.rigid && !a.apollo && coasting(a) && coasting(b) && a.thrust <= 0;
+  // A coast with the engine off at the earlier frame: Kepler from that frame for a point mass, which is how the
+  // simulation flies it. A six-DOF coast is flown with J2, which Kepler from one frame misses at the next by metres,
+  // and a docked spacecraft (rigid telemetry from the rendezvous) rides the station's port, itself on its J2 orbit:
+  // the cubic through both ends, as in a rendezvous — on the straight line either sagged a kilometre under its orbit
+  // half way through a 30 s frame.
+  // C01: Apollo between the Earth and the Moon is not on a Kepler arc about the Earth: the cubic through both ends,
+  // six-DOF or not, and whatever its S-IVB's hydrogen vent (a few hundred newtons through the parking orbit) reads
+  const ballistic = !a.apollo && coasting(a) && coasting(b) && a.thrust <= 0;
   // The vehicle's way from one state to the next, which a spent body coasting beside it shares (`coasts`): one
   // drawn on its arc beside one drawn on the straight line, which sags v²Δt²/8R under it, parts from it — 115 m
-  // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (six-DOF, under
-  // thrust), so do they; a body that does not coast takes it whatever the vehicle does.
+  // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (under thrust,
+  // the span a burn begins in), so do they; a body that does not coast takes it whatever the vehicle does.
   const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
-    coasts && ballistic ? propagateKepler(ar, av, dt)
-      : coasts && ((a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo && !a.rigid)) ? hermite(ar, av, br, bv, u, span)
+    coasts && ballistic && !a.rigid ? propagateKepler(ar, av, dt)
+      : coasts && (ballistic || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
       : { r: lerpVec(ar, br, u), v: lerpVec(av, bv, u) };
   const { r, v } = path(a.r, a.v, b.r, b.v);
   const ea = a.elements, eb = b.elements;
