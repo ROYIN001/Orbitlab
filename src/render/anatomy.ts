@@ -359,15 +359,9 @@ export function anatomyFit(spec: VehicleSpec, model: Pick<AnatomyModel, 'parts'>
 
 // ---------------------------------------------------------------- drawing
 
-/**
- * The model's materials, made once per view: the caller owns and frees them.
- * Double-sided: the page's skins are shells a few centimetres thick whose
- * neighbouring hosts do not share every edge, so pixel-wide cracks open along
- * them; through one the inside of the shell shows, drawn so in the same
- * colour, not the bright far wall.
- */
+/** The model's materials, made once per view: the caller owns and frees them. */
 export function anatomyMaterials(model: AnatomyModel): THREE.MeshStandardMaterial[] {
-  return model.materials.map((m) => new THREE.MeshStandardMaterial({ color: new THREE.Color(m.color), roughness: m.roughness, metalness: m.metalness, side: THREE.DoubleSide }));
+  return model.materials.map((m) => new THREE.MeshStandardMaterial({ color: new THREE.Color(m.color), roughness: m.roughness, metalness: m.metalness }));
 }
 
 /**

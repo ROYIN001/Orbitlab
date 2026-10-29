@@ -196,10 +196,12 @@ function packIndices(index, wide) {
 }
 
 /**
- * Weld a triangle soup (equal position and normal), quantize it over its box
- * and return the mesh's packed arrays and what its header entry needs.
+ * Weld a triangle soup (equal position and normal), quantize it over `box`
+ * (its own box if none: a part's meshes share the part's, so a corner they
+ * share lands on the same point in each) and return the mesh's packed arrays
+ * and what its header entry needs.
  */
-function weld(positions, normals) {
+function weld(positions, normals, box = null) {
   const keyOf = (i) => `${Math.round(positions[i] * 1e5)},${Math.round(positions[i + 1] * 1e5)},${Math.round(positions[i + 2] * 1e5)},`
     + `${Math.round(normals[i] * 500)},${Math.round(normals[i + 1] * 500)},${Math.round(normals[i + 2] * 500)}`;
   const map = new Map(), pos = [], nor = [], index = [];
@@ -215,7 +217,8 @@ function weld(positions, normals) {
     index.push(v);
   }
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
-  for (let i = 0; i < pos.length; i++) { const a = i % 3; if (pos[i] < min[a]) min[a] = pos[i]; if (pos[i] > max[a]) max[a] = pos[i]; }
+  if (box) { min.splice(0, 3, ...box.min); max.splice(0, 3, ...box.max); }
+  else for (let i = 0; i < pos.length; i++) { const a = i % 3; if (pos[i] < min[a]) min[a] = pos[i]; if (pos[i] > max[a]) max[a] = pos[i]; }
   const step = min.map((m, a) => Math.max(1e-9, (max[a] - m) / 65535));
   const q = new Uint16Array(pos.length);
   for (let i = 0; i < pos.length; i++) q[i] = Math.round((pos[i] - min[i % 3]) / step[i % 3]);
@@ -224,6 +227,81 @@ function weld(positions, normals) {
   for (let v = 0; v < vertices; v++) for (let a = 0; a < 3; a++) n[a * vertices + v] = Math.round(Math.max(-1, Math.min(1, nor[v * 3 + a])) * 127);
   const wide = vertices > 65535;
   return { vertices, indices: index.length, min, step, q: packPositions(q, vertices), n, idx: packIndices(index, wide), wide };
+}
+
+/**
+ * Mend a part's T-junctions: where a corner of one host's triangles lies on
+ * the edge of another's (hosts meet with their own subdivisions, a half shell
+ * against a band, a panel against a ring), the two do not share that edge and
+ * the GPU leaves pixel-wide cracks along it, through which the shells' bright
+ * edge walls show. Each such triangle is split at the corners lying on its
+ * edges, its normals interpolated along them: fanned from the corner across
+ * from the one edge they lie on, or from its centroid when on more than one.
+ * `groups`: the part's triangle soups ({ p, n }, flight metres); mended in place.
+ * Returns how many triangles were split.
+ */
+function mendTJunctions(groups, tol = 1e-4) {
+  const G = 0.05;
+  const cell = (x, y, z) => `${Math.floor(x / G)},${Math.floor(y / G)},${Math.floor(z / G)}`;
+  const grid = new Map(), seen = new Set();
+  for (const g of groups) {
+    for (let i = 0; i < g.p.length; i += 3) {
+      const x = g.p[i], y = g.p[i + 1], z = g.p[i + 2];
+      const k = `${Math.round(x / 1e-5)},${Math.round(y / 1e-5)},${Math.round(z / 1e-5)}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const c = cell(x, y, z);
+      if (!grid.has(c)) grid.set(c, []);
+      grid.get(c).push([x, y, z]);
+    }
+  }
+  /** the corners lying inside the edge a→b, with their parameter along it, in order */
+  const onEdge = (a, b) => {
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    if (L2 < tol * tol) return [];
+    const lo = [0, 1, 2].map((i) => Math.floor((Math.min(a[i], b[i]) - tol) / G)), hi = [0, 1, 2].map((i) => Math.floor((Math.max(a[i], b[i]) + tol) / G));
+    const found = [];
+    for (let gx = lo[0]; gx <= hi[0]; gx++) for (let gy = lo[1]; gy <= hi[1]; gy++) for (let gz = lo[2]; gz <= hi[2]; gz++) {
+      for (const p of grid.get(`${gx},${gy},${gz}`) ?? []) {
+        const w = [p[0] - a[0], p[1] - a[1], p[2] - a[2]], t = (w[0] * d[0] + w[1] * d[1] + w[2] * d[2]) / L2;
+        if (t * Math.sqrt(L2) <= tol || (1 - t) * Math.sqrt(L2) <= tol) continue;
+        if (Math.hypot(w[0] - t * d[0], w[1] - t * d[1], w[2] - t * d[2]) < tol) found.push({ t, p });
+      }
+    }
+    return found.sort((u, v) => u.t - v.t);
+  };
+  let split = 0;
+  for (const g of groups) {
+    const p = [], n = [];
+    for (let i = 0; i < g.p.length; i += 9) {
+      const P = [0, 1, 2].map((k) => g.p.slice(i + 3 * k, i + 3 * k + 3)), N = [0, 1, 2].map((k) => g.n.slice(i + 3 * k, i + 3 * k + 3));
+      const ring = [];   // the polygon round the triangle: its corners and the corners on its edges
+      const on = [];     // which edges have corners on them
+      for (let k = 0; k < 3; k++) {
+        const a = P[k], b = P[(k + 1) % 3], na = N[k], nb = N[(k + 1) % 3];
+        ring.push({ p: a, n: na });
+        const inner = onEdge(a, b);
+        if (inner.length) on.push(k);
+        for (const { t, p: q } of inner) ring.push({ p: q, n: na.map((v, j) => v + (nb[j] - v) * t) });
+      }
+      if (ring.length === 3) { p.push(...P.flat()); n.push(...N.flat()); continue; }
+      split++;
+      const tri = (u, v, w) => { p.push(...u.p, ...v.p, ...w.p); n.push(...u.n, ...v.n, ...w.n); };
+      if (on.length === 1) {
+        // the common case, corners on one edge only: fanned from the corner across from it, in the triangle's winding
+        const start = ring.findIndex((r) => r.p === P[on[0]]), opposite = { p: P[(on[0] + 2) % 3], n: N[(on[0] + 2) % 3] };
+        const run = [];
+        for (let k = start; ; k = (k + 1) % ring.length) { run.push(ring[k]); if (ring[k].p === P[(on[0] + 1) % 3]) break; }
+        for (let k = 0; k + 1 < run.length; k++) tri(run[k], run[k + 1], opposite);
+        continue;
+      }
+      const c = { p: [0, 1, 2].map((j) => (P[0][j] + P[1][j] + P[2][j]) / 3), n: [0, 1, 2].map((j) => (N[0][j] + N[1][j] + N[2][j]) / 3) };
+      for (let k = 0; k < ring.length; k++) tri(c, ring[k], ring[(k + 1) % ring.length]);
+    }
+    g.p = p;
+    g.n = n;
+  }
+  return split;
 }
 
 /** Bounds of a list of flight-space triangle soups. */
@@ -411,12 +489,19 @@ function exportPage(page) {
   };
   let triangles = 0;
   const order = ['booster', 'core', 'stage3', 'skirt', 'bay', 'fregat', 'fairing-left', 'fairing-right', 'escape', 'payload'];
+  let mended = 0;
   for (const name of order) {
     const groups = parts.get(name);
     if (!groups) continue;
+    // one pass: the page's own T-junctions. Another would chase the new edges through the coincident shells the
+    // page stacks on one another (a skin and its panels), which hide each other, and never settle.
+    mended += mendTJunctions([...groups.values()]);
+    // one grid for all the part's meshes: a corner two of them share is the same point in both, or cracks reopen
+    const box = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
+    for (const g of groups.values()) for (let i = 0; i < g.p.length; i++) { const a = i % 3; box.min[a] = Math.min(box.min[a], g.p[i]); box.max[a] = Math.max(box.max[a], g.p[i]); }
     const entry = { name, bounds: boundsOf([...groups.values()].map((g) => g.p)), meshes: [], ...(nozzles[name]?.length ? { nozzles: nozzles[name] } : {}) };
     for (const g of groups.values()) {
-      const w = weld(g.p, g.n);
+      const w = weld(g.p, g.n, box);
       triangles += w.indices / 3;
       entry.meshes.push({
         material: g.material, ...(g.hinge >= 0 ? { hinge: g.hinge } : {}), vertices: w.vertices, indices: w.indices,
@@ -438,7 +523,7 @@ function exportPage(page) {
   const out = gzipSync(raw, { level: 9 });
   const target = join(dir, page.file.replace(/\.html$/, '.exterior.bin'));
   writeFileSync(target, out);
-  console.log(`${page.file}: ${triangles} triangles, ${header.parts.length} parts, ${materials.length} materials, ${hinges.length} hinges, `
+  console.log(`${page.file}: ${triangles} triangles (${mended} split at T-junctions), ${header.parts.length} parts, ${materials.length} materials, ${hinges.length} hinges, `
     + `${(raw.length / 1000).toFixed(1)} kB, ${(out.length / 1000).toFixed(1)} kB gzip → ${target.slice(root.length + 1)}`);
 }
 

@@ -1091,7 +1091,7 @@ outside of Orbitlab's maker's Soyuz Anatomy models (the ones Build opens): the s
 core and its open truss, the third stage, Fregat, the fairing halves, the escape tower and, on a
 crewed or Progress flight, the Soyuz MS or the Progress MS. The spent stages and the fairing halves
 keep that shape as they fall away, the Progress unfolds its arrays as the model does, and the
-Soyuz MS opens its wings as it always has. The model is fetched (about 0.2–0.35 MB) when the mission
+Soyuz MS opens its wings as it always has. The model is fetched (about 0.2–0.4 MB) when the mission
 is set up; until it arrives, or if it cannot (offline before it was ever fetched), the rocket is
 drawn as before. The engines' bells, the flames and the escape tower's flight are the simulator's
 own, its bells set on the model's combustion chambers (the third stage's and Fregat's) and the

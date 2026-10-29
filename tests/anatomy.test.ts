@@ -87,7 +87,7 @@ describe('the Anatomy pages and their meshes', () => {
       const m = model(p.variant);
       expect(Object.keys(m.parts).sort(), p.variant).toEqual([...want[p.variant]].sort());
       expect(m.triangles).toBeGreaterThan(40_000);
-      expect(m.triangles).toBeLessThan(170_000);
+      expect(m.triangles).toBeLessThan(200_000);
       // Blok I's chambers, left to the flight's bells: RD-0110's four and four verniers, RD-0124's four
       const chambers = m.parts.bay!.nozzles!;
       expect(chambers.filter((c) => c.kind === 'main')).toHaveLength(4);
