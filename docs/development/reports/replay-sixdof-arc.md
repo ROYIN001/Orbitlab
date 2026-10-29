@@ -95,8 +95,8 @@ Probe (gitignored `tests/probe/sag.test.ts`), all 20 watch missions (`watchMissi
 
 Flights ran to the mission's end or T+4,000 s:
 - Vostok-1 to T+6,600 s;
-- Soyuz MS docking to T+13,500 s, which reached no rendezvous in six-DOF;
-- Apollo 11 to T+1,200 s, 500 s of its parking orbit, since six-DOF Apollo steps at 0.01 s there.
+- Apollo 11 to T+1,200 s, 500 s of its parking orbit, since six-DOF Apollo steps at 0.01 s there;
+- Soyuz MS docking and Soyuz MS-16 were flown a second time with their rendezvous passed in, which the first runs left out: the docking mission to T+14,000 s, docked by T+12,888 s; MS-16, a four-orbit rendezvous, to T+24,000 s, not yet docked. Soyuz MS-25's two-day rendezvous was not flown.
 
 The vehicle, worst sample, metres from the flown position:
 
@@ -111,11 +111,16 @@ The vehicle, worst sample, metres from the flown position:
 | a cut-off's tail at the earlier frame: Sputnik's and Vostok's orbit | 2 | 2 | 14.0 s | 223 | 0.50 |
 | thrust at both frames, coast or orbit | 12 | 31 | 1.2 s | 2.3 | 0.62 |
 | Apollo 11's parking orbit, the S-IVB vent on or off | 1 | 18 | 30 s | 1,042 | 0.035 |
+| docked to the station (Soyuz MS docking, rendezvous flown) | 1 | 30 | 60 s | 3,894 | 0.38 |
 | every other span: ascent, burn, prelaunch, escape, entry, landing, the span a burn begins in | 20 | 16,866 | — | unchanged, bit for bit | |
 
 - **Never worse:** of 57,029 samples, 39,077 changed. None has the vehicle drawn more than 1 cm further from the flown position than main draws it.
 - **What is left:** the 25.3 m is Starship's cut-off span itself, where the engine runs into the span. The 1.29 m is a 60 s thinned span near the transfer orbit's perigee. The cubic's error grows as span⁴: about 0.4 m at 60 s in a low orbit, 6 m at 120 s, 96 m at 240 s. The line's at those spans is 4 km, 16 km and 62 km.
-- **Docked spacecraft:** measured with the second investigation's point-mass probe on Soyuz MS docking, docked at T+12,320.6 s and flown 600 s past it (16 spans, up to 37.2 s). The spacecraft was 1,496.7 m from its place at the port on main, and 0.000 m with the fix (0.056 m from the flown state). It is pinned by the test 'stays on the station's port while docked' (331 m off on main, 3 s into a 30 s span).
+- **Docked spacecraft:**
+  - Six-DOF: in the table, 3,894 m → 0.38 m from the flown position over 30 docked spans, thinned to 60 s. 1,680 samples changed, none worse. Blok I near the station went from 4,122 m to 0.43 m off.
+  - Point mass: the second investigation's probe on Soyuz MS docking, docked at T+12,320.6 s and flown 600 s past it (16 spans, up to 37.2 s). The spacecraft was 1,496.7 m from its place at the port on main, and 0.000 m with the fix (0.056 m from the flown state).
+  - It is pinned by the test 'stays on the station's port while docked' (331 m off on main, 3 s into a 30 s span).
+  - The rendezvous itself already took the cubic and is unchanged: 7,175 spans in the two missions, bit for bit.
 - **Spent bodies beside the vehicle:**
   - A coasting body takes the vehicle's way. In the second investigation's recorded six-DOF Soyuz, Blok I, which has its own rigid telemetry, was 0.028 m from its flown position and 0.0009 m from its place relative to the spacecraft.
   - A body in the air keeps the line, so its absolute error is the same as on main (Blok A 4.8 km, the H-IIA first stage 6.8 km). Its error relative to the vehicle, which no longer sags with it, can grow by up to about 1 km: the Apollo S-II went from 21 m to 1,054 m. These bodies are the stages coming down hundreds of kilometres behind the vehicle, so on screen nothing changes. This is #185's item "for later".
