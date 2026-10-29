@@ -366,7 +366,7 @@ The four M-LEARNING-027 questions were asked with a recommendation each, and the
 
 At 14:26:46Z on 2026-10-26, before the Merge Desk answer for #175 and #176, the owner wrote in chat, verbatim "ทำต่อตามลำดับได้เลยครับ ตอนนี้ทำถึงไหนแล้วครับ" (go on in order; where are we now?).
 
-## Decided 2026-10-28 and 2026-10-29 (spent stages on their arc between replay frames: the request and the Merge Desk for #185; chat)
+## Decided 2026-10-28 and 2026-10-29 (spent stages on their arc between replay frames: the request and the Merge Desk for #185; the GK1 candidate `1842a86`; chat)
 
 The owner wrote in chat, in the session working on the branch `claude/gifted-gauss-ojjpaj` (started 2026-10-28T21:05:22Z), a request on 2026-10-28, and on 2026-10-29 the Merge Desk answer for #185 and the requests that led to this records PR. These were chat messages, not forms with options. The owner's words are verbatim; each answer is what the words say, and nothing more.
 
@@ -377,6 +377,10 @@ The owner wrote in chat, in the session working on the branch `claude/gifted-gau
 | 2026-10-29 | After the merge (21:39:27Z and 21:47:03Z) | "เช็กผล Pages ให้ด้วยครับ" (please check the Pages result too), then "ทำ records PR รวม fragment ของ #185 ด้วยครับ" (make the records PR folding #185's fragment) | This records PR, [#186](https://github.com/ROYIN001/Orbitlab/pull/186). It folds #185's fragment only; #179's fragment, also on main, is folded by records PR [#181](https://github.com/ROYIN001/Orbitlab/pull/181), open when this is recorded. |
 
 PR #185 merged while the GK1 merge hold that the open records PRs #181 and #182 describe was in force (neither is on main): "No merge of any kind, Markdown included, until the owner's HU-6 session ends" (#182, `docs/development/HANDOVER-K2.md`, H2, a rule of the GK1 session's freeze runbook), because a merge changes the build stamp the owner checks in HU-6 (expected `v0.1.0 · 7263004`). The session that merged #185 did not know of the hold, and the owner's merge answer did not mention it. Main and the live site moved from `7263004`, the GK1 candidate, to `1842a86`, and #185 changes `src/physics/frame.ts`. What this means for GK1 and HU-6 is the owner's question; nothing here decides it.
+
+| Date | Question | Answer | Where it lands |
+|---|---|---|---|
+| 2026-10-29 | Asked in chat at about 22:17Z, after the hold above was found: if HU-6 has not taken place, which SHA is the GK1 candidate now that main is `1842a86`? (A revert cannot bring the stamp `7263004` back: it would be a new commit with a stamp of its own.) | "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ" (answered before 22:19Z) — HU-6 has not taken place; `1842a86` is the new candidate | The GK1 candidate is `1842a86` (main after #185, published by Pages [40957726247](https://github.com/ROYIN001/Orbitlab/actions/runs/40957726247) at 2026-10-29T21:49:41Z) in place of `7263004`, and HU-6 is to check the stamp `v0.1.0 · 1842a86`. GK1's evidence recorded on `7263004` in #182 (not on main): the heavy and fleet runs reused under D-64 cannot be reused for `1842a86`, since #185 changes `src/physics/frame.ts`; the held-journeys run, the KPI baselines (P1) and the revert drill (P2) built `7263004`. What is redone on `1842a86` is asked of the owner separately. |
 
 ## Deferred (asked, not yet decided)
 
