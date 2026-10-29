@@ -9,7 +9,7 @@
 > - ผล: point-mass คลาดจากตำแหน่งจริง 0.00 m (ละเอียดถึงเซนติเมตร) ส่วน six-DOF วัดได้เท่าเดิมทุกค่า
 > - ขนาด: อยู่ใต้เพดานทุกกลุ่ม ไม่ได้ขึ้นเพดาน
 > - ระหว่างการนัดพบ (rendezvous) และใน Apollo ตอนนี้ debris ใช้ cubic แบบเดียวกับยานด้วย: Blok I คลาดจากวงโคจร 0.027 m เมื่อเฟรมห่าง 30 s (เส้นตรงเดิมอยู่ด้านในวงโคจร 1,036 m) และ S-IVB คลาด 4 mm
-> - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน และไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจแล้ว ไม่พบข้อที่ต้องแก้ก่อน merge (ยืนยัน 10 จาก 10 ข้อที่ตรวจ) ยังรอ CI บน head ล่าสุด
+> - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน และไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจแล้ว ไม่พบข้อที่ต้องแก้ก่อน merge (ยืนยัน 10 จาก 10 ข้อที่ตรวจ) ยังรอ CI บน head ล่าสุด (ตอนเปิด PR; CI ผ่านบน `133640e` คุณตอบในแชตเมื่อ 2026-10-29 ว่า "merge #185 ได้เลยครับ" และ #185 merge แล้วเป็น `1842a86` เผยแพร่แล้วเมื่อ 2026-10-29 ด้วย Pages 40957726247 ดู `merge` และ `status` ด้านล่าง)
 
 ```yaml
 item: replay debris blend between recorded frames (bug fix)
@@ -20,6 +20,8 @@ tests: tests/debris-replay.test.ts (new)
 base_sha_verified_on: {sha: 7263004, date: 2026-10-28}
 branch: claude/gifted-gauss-ojjpaj
 pr: 185
+merge: 'on the owner''s answer in chat on 2026-10-29 (Merge Desk), "merge #185 ได้เลยครับ" (DECISIONS); the PR had no merge line'
+status: 'Merged (PR #185, `1842a86`, 2026-10-29T21:25:44Z) after PR CI 40789807447 passed on its head `133640e`; published by Pages 40957726247 at `1842a86` (2026-10-29T21:49:41Z, every job passed; its build passed the bundle budget, `index-*.js` 2634.8 and precache code 14653.9 kB). In the PR this block had no status line (added 2026-10-29)'
 second_agent_review: 'confirmed 10 of 10 report claims checked, no blocking findings (2026-10-28, on 686537e); not checked by it: the bundle sizes, the two-bundle claim, the 460 m six-DOF sag'
 ```
 
