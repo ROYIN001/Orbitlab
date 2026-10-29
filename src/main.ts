@@ -1934,7 +1934,7 @@ class App {
         // fits every part before it hides any of the stack's own (AnatomyFit), so a model it cannot use leaves the stack as it was
         const fit = rocket.mountAnatomy(model, ship);
         this.debrisView.setAnatomy({ model, fit, blokIDiameter: sim.vehicleSpec.stages[1].diameter,
-          fregatDiameter: variant === 'fregat-st31' ? sim.vehicleSpec.stages[2].diameter : null });
+          fregatDiameter: variant === 'fregat-st31' ? sim.vehicleSpec.stages[2].diameter : null, azimuth: sim.plan.azimuthRotating });
         document.body.dataset.anatomy = variant;
       } catch (error) {
         console.warn('Soyuz Anatomy meshes unusable; drawing the vehicle as before:', error);

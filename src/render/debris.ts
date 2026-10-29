@@ -18,6 +18,7 @@
 import * as THREE from 'three';
 import type { DebrisFrame } from '../physics/frame';
 import { interstageHeight } from '../physics/frame';
+import { enuFrame } from '../physics/orbital';
 import type { SceneManager } from './scene';
 import { Plume } from './plume';
 import { bellGeometry, ogiveProfile } from './liveries';
@@ -34,7 +35,33 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
  * spent parts keep that shape; with Blok I's and Fregat's diameters, by which
  * a spent stage recorded without its profile is told apart (Fregat: none on 2.1a).
  */
-export interface DebrisAnatomy { model: AnatomyModel; fit: AnatomyFit; blokIDiameter: number; fregatDiameter: number | null }
+/**
+ * The Soyuz Anatomy model a flight is drawn with, for its spent parts; and the
+ * mission's launch azimuth (`plan.azimuthRotating`, rad), which sets the roll
+ * the stack is drawn in (main.ts), so a spent part keeps it.
+ */
+export interface DebrisAnatomy { model: AnatomyModel; fit: AnatomyFit; blokIDiameter: number; fregatDiameter: number | null; azimuth: number }
+
+/**
+ * The attitude main.ts draws a point-mass stack in: its axis along `dir`, its
+ * side (+Z) along the launch azimuth's normal, squared against the axis. A
+ * spent part drawn from the model in it leaves the stack without a roll snap
+ * (its bells and asymmetric parts would otherwise jump round its axis).
+ */
+function stackAttitude(r: { x: number; y: number; z: number }, dir: THREE.Vector3, azimuth: number, out: THREE.Quaternion): THREE.Quaternion {
+  const { east, north, up } = enuFrame(r);
+  const v = (p: { x: number; y: number; z: number }) => new THREE.Vector3(p.x, p.y, p.z);
+  const heading = v(east).multiplyScalar(Math.sin(azimuth)).addScaledVector(v(north), Math.cos(azimuth));
+  let side = new THREE.Vector3().crossVectors(heading, v(up));
+  side.addScaledVector(dir, -side.dot(dir));
+  if (side.length() < 0.05) side = new THREE.Vector3().crossVectors(dir, v(up));
+  if (side.length() < 0.05) side = v(east);
+  side.normalize();
+  const x = new THREE.Vector3().crossVectors(dir, side).normalize();
+  out.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, dir, side));
+  // no place to take the local vertical from (the Earth's centre): the axis alone, as for any other part
+  return Number.isFinite(out.x + out.y + out.z + out.w) ? out : out.setFromUnitVectors(Y_AXIS, dir);
+}
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
 
 interface DebrisItem {
@@ -48,6 +75,8 @@ interface DebrisItem {
   bodyMat: THREE.MeshStandardMaterial | null;
   /** a part of the Soyuz Anatomy model: its materials, for the same flash */
   modelMats: THREE.MeshStandardMaterial[];
+  /** a part of the model on the stack's axis (not a strap-on): drawn in the stack's roll (`stackAttitude`) */
+  stackRoll: boolean;
   /** C01: one of Vostok-1's bodies, drawn by render/vostok-debris.ts */
   vostok: VostokBody | null;
   createdAt: number;
@@ -143,7 +172,7 @@ export class DebrisView {
    * and swinging out the way it faces). Null for anything else, which is drawn
    * as before.
    */
-  private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[] } | null {
+  private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[]; onAxis: boolean } | null {
     const { model, fit, blokIDiameter, fregatDiameter } = this.anatomy!;
     const v = d.visual;
     const spentStage = v.kind === 'stage' || v.kind === 'upperStage';
@@ -185,7 +214,7 @@ export class DebrisView {
       hinge.add(back);
       turn.add(hinge);
       g.add(turn);
-      return { hinge, plume: null, mats };
+      return { hinge, plume: null, mats, onAxis: true };
     }
     const holder = new THREE.Group();
     holder.position.y = base;
@@ -212,7 +241,7 @@ export class DebrisView {
     const plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });
     plume.group.position.y = base - r * 1.2;
     g.add(plume.group);
-    return { hinge: null, plume, mats };
+    return { hinge: null, plume, mats, onAxis: which[0] !== 'booster' };
   }
 
   constructor(scene: SceneManager) {
@@ -299,7 +328,7 @@ export class DebrisView {
     if (isVostokBody(d)) {
       const vostok = new VostokBody(d);
       return {
-        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, modelMats: [], vostok, createdAt: d.createdAt,
+        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, modelMats: [], stackRoll: false, vostok, createdAt: d.createdAt,
         tumbleAxis: new THREE.Vector3(0, 1, 0), tumbleRate: 0, fins: [], legs: [], legAngle: 0, footDrop: 0, finT: -1, legT: -1, shift: null,
       };
     }
@@ -397,7 +426,7 @@ export class DebrisView {
     }
     const ax = this.randAxis(d.id);
     return {
-      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: anatomy ? null : m, modelMats: anatomy ? anatomy.mats : [], vostok: null, createdAt: d.createdAt,
+      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: anatomy ? null : m, modelMats: anatomy ? anatomy.mats : [], stackRoll: !!anatomy?.onAxis, vostok: null, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
       fins, legs, legAngle, footDrop, finT: -1, legT: -1, shift,
@@ -443,7 +472,8 @@ export class DebrisView {
       // A rigid body is placed from its own render offset (below).
       if (item.shift) item.shift.position.y = d.rigid ? 0 : d.anchor ?? 0;
       this.dir.set(d.dir.x, d.dir.y, d.dir.z).normalize();
-      this.q.setFromUnitVectors(Y_AXIS, this.dir);
+      if (item.stackRoll && this.anatomy) stackAttitude(d.r, this.dir, this.anatomy.azimuth, this.q);
+      else this.q.setFromUnitVectors(Y_AXIS, this.dir);
       const age = Math.max(0, t - item.createdAt);
       if (d.rigid) {
         const attitude = d.rigid.attitudeQ;

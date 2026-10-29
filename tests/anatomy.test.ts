@@ -329,16 +329,18 @@ describe('RocketView with the model mounted', () => {
 
 describe('spent parts drawn from the model', () => {
   /** A piece of debris as the frame carries it the moment it separates (not tumbling yet), `anchor` below the separation plane at the origin, its axis up. */
+  /** 200 km straight up the scene's +Y, which the view below draws at its origin */
+  const ORBIT = 6_578_137;
   const debris = (id: number, visual: DebrisFrame['visual'], anchor: number): DebrisFrame => ({
-    id, r: { x: 0, y: 0, z: 0 }, dir: { x: 0, y: 1, z: 0 }, visual, alive: true, createdAt: 1, anchor,
+    id, r: { x: 0, y: ORBIT, z: 0 }, dir: { x: 0, y: 1, z: 0 }, visual, alive: true, createdAt: 1, anchor,
   } as unknown as DebrisFrame);
   const drawn = (variant: AnatomyVariant | null, vehicleId: string, sat: string, list: DebrisFrame[]) => withCanvas(() => {
     const scene = new THREE.Scene();
-    const view = new DebrisView({ scene, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y, p.z) } as unknown as SceneManager);
+    const view = new DebrisView({ scene, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y - ORBIT, p.z) } as unknown as SceneManager);
     const spec = payloadVehicle(vehicleById(vehicleId), satelliteById(sat));
     if (variant) {
       const m = model(variant);
-      view.setAnatomy({ model: m, fit: anatomyFit(spec, m, false), blokIDiameter: spec.stages[1].diameter, fregatDiameter: spec.stages[2]?.diameter ?? null });
+      view.setAnatomy({ model: m, fit: anatomyFit(spec, m, false), blokIDiameter: spec.stages[1].diameter, fregatDiameter: spec.stages[2]?.diameter ?? null, azimuth: 0.6 });
     }
     view.update(list, 1);
     const out: Record<string, THREE.Box3> = {};
@@ -373,6 +375,26 @@ describe('spent parts drawn from the model', () => {
     ]);
     expect(Object.keys(got)).toEqual(['anatomy:core']);
     expect(bells).toEqual([8]);   // RD-108A's four and four verniers
+  });
+
+  it('a spent stage leaves in the roll the stack was drawn in (main.ts: side along the launch azimuth\'s normal), not snapped round its axis', async () => {
+    const { enuFrame } = (await import('../src/physics/orbital'));
+    const blokI = vehicleById('soyuz21a').stages[1];
+    let quaternion: THREE.Quaternion | null = null;
+    withCanvas(() => {
+      const scene = new THREE.Scene();
+      const view = new DebrisView({ scene, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y - ORBIT, p.z) } as unknown as SceneManager);
+      const spec = payloadVehicle(vehicleById('soyuz21a'), satelliteById('crew')), m = model('soyuz-ms');
+      view.setAnatomy({ model: m, fit: anatomyFit(spec, m, false), blokIDiameter: blokI.diameter, fregatDiameter: null, azimuth: 0.6 });
+      view.update([debris(1, { diameter: blokI.diameter, length: blokI.length, color: '#ccc', kind: 'upperStage' }, -blokI.length)], 1);
+      scene.traverse((o) => { if (o.name === 'anatomy:stage3') quaternion = o.parent!.parent!.getWorldQuaternion(new THREE.Quaternion()); });
+    });
+    // the stack's side, as main.ts squares it: the launch heading crossed with the local vertical
+    const { east, north, up } = enuFrame({ x: 0, y: ORBIT, z: 0 });
+    const heading = new THREE.Vector3(east.x, east.y, east.z).multiplyScalar(Math.sin(0.6)).addScaledVector(new THREE.Vector3(north.x, north.y, north.z), Math.cos(0.6));
+    const side = new THREE.Vector3().crossVectors(heading, new THREE.Vector3(up.x, up.y, up.z)).normalize();
+    expect(new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion!).distanceTo(new THREE.Vector3(0, 1, 0))).toBeLessThan(1e-9);
+    expect(new THREE.Vector3(0, 0, 1).applyQuaternion(quaternion!).distanceTo(side)).toBeLessThan(1e-9);
   });
 
   it('a spent Fregat with its top on the plane its satellite left from', () => {
