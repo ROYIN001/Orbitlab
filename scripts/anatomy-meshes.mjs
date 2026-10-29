@@ -236,43 +236,114 @@ function weld(positions, normals, box = null) {
  * Hidden or not, the walls show: the scene's depth is logarithmic, written
  * once per pixel, so with MSAA a wall standing on a skin edge wins some of
  * that pixel's samples and draws a light dash along the seam (the strap-ons'
- * cones were hatched with them). Both walls of each such pair go, and every
- * copy but one of a repeated triangle, of faces on the same hinge (or none).
+ * cones were hatched with them). Both walls of each such pair go, matched by
+ * their corners as triangles or, cut along either diagonal, as quads; and
+ * every copy but one of a repeated face; of faces on the same hinge (or none),
+ * and only faces joined to the rest at an angle (a sheet with no thickness,
+ * drawn as two faces, stays).
  * `groups`: the part's triangle soups ({ p, n, hinge }, flight metres),
  * filtered in place. Returns how many triangles went.
  */
 function dropHiddenFaces(groups) {
-  const key = (g, i) => [0, 1, 2].map((k) => `${Math.round(g.p[i + 3 * k] * 1e4)},${Math.round(g.p[i + 3 * k + 1] * 1e4)},${Math.round(g.p[i + 3 * k + 2] * 1e4)}`).sort().join('|');
-  const normal = (g, i) => {
-    const u = [0, 1, 2].map((a) => g.p[i + 3 + a] - g.p[i + a]), w = [0, 1, 2].map((a) => g.p[i + 6 + a] - g.p[i + a]);
-    return [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
-  };
-  const seen = new Map();   // key → the triangles there: [group, offset, normal]
-  groups.forEach((g, gi) => { for (let i = 0; i < g.p.length; i += 9) { const k = key(g, i); if (!seen.has(k)) seen.set(k, []); seen.get(k).push([gi, i, normal(g, i)]); } });
+  const R = 1e4;   // corners equal to 0.1 mm
+  const cornerKey = (x, y, z) => `${Math.round(x * R)},${Math.round(y * R)},${Math.round(z * R)}`;
+  /** every triangle: its group, offset, corner keys, unit normal and plane */
+  const tris = [];
+  groups.forEach((g, gi) => {
+    for (let i = 0; i < g.p.length; i += 9) {
+      const c = [0, 1, 2].map((k) => [g.p[i + 3 * k], g.p[i + 3 * k + 1], g.p[i + 3 * k + 2]]);
+      const u = [0, 1, 2].map((a) => c[1][a] - c[0][a]), w = [0, 1, 2].map((a) => c[2][a] - c[0][a]);
+      const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+      const len = Math.hypot(...n) || 1;
+      tris.push({ gi, i, hinge: g.hinge, keys: c.map((q) => cornerKey(...q)), c, n: n.map((v) => v / len) });
+    }
+  });
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const drop = new Set();
-  for (const list of seen.values()) {
-    if (list.length < 2) continue;
+  /** of faces found at one place (a triangle's or a quad's corners), drop both of each opposite pair, and repeats */
+  const settle = (list) => {
     const gone = new Set();
     for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) {
       if (gone.has(a) || gone.has(b)) continue;
       // only faces that move together: a Progress array folded against the hull parts from it as it opens
-      if (groups[list[a][0]].hinge !== groups[list[b][0]].hinge) continue;
-      const [na, nb] = [list[a][2], list[b][2]];
-      if (na[0] * nb[0] + na[1] * nb[1] + na[2] * nb[2] < 0) { gone.add(a); gone.add(b); } else gone.add(b);
+      if (list[a].hinge !== list[b].hinge) continue;
+      if (dot(list[a].n, list[b].n) < 0) { gone.add(a); gone.add(b); } else gone.add(b);
     }
-    for (const x of gone) drop.add(`${list[x][0]}:${list[x][1]}`);
+    for (const x of gone) for (const t of list[x].tris) drop.add(t);
+  };
+  // the same three corners
+  const byTriangle = new Map();
+  tris.forEach((t, ti) => { const k = [...t.keys].sort().join('|'); if (!byTriangle.has(k)) byTriangle.set(k, []); byTriangle.get(k).push({ tris: [ti], n: t.n, hinge: t.hinge }); });
+  for (const list of byTriangle.values()) if (list.length > 1) settle(list);
+  // the same four corners, however the quad was cut into two triangles: two coplanar triangles sharing an edge
+  const byEdge = new Map();
+  tris.forEach((t, ti) => { for (let k = 0; k < 3; k++) { const e = [t.keys[k], t.keys[(k + 1) % 3]].sort().join('|'); if (!byEdge.has(e)) byEdge.set(e, []); byEdge.get(e).push(ti); } });
+  const byQuad = new Map();
+  for (const list of byEdge.values()) {
+    for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) {
+      const [s, t] = [tris[list[a]], tris[list[b]]];
+      if (s.hinge !== t.hinge || dot(s.n, t.n) < 0.9999) continue;
+      const far = t.c.find((q, k) => !s.keys.includes(t.keys[k]));
+      if (!far || Math.abs(dot(s.n, far.map((v, k) => v - s.c[0][k]))) > 1e-4) continue;
+      const corners = new Set([...s.keys, ...t.keys]);
+      if (corners.size !== 4) continue;
+      const k = [...corners].sort().join('|');
+      if (!byQuad.has(k)) byQuad.set(k, []);
+      byQuad.get(k).push({ tris: [list[a], list[b]], n: s.n, hinge: s.hinge });
+    }
   }
+  for (const list of byQuad.values()) if (list.length > 1) settle(list.filter((q) => !q.tris.some((ti) => drop.has(ti))));
+  // the rest, cut up differently on each side (one host's wall in one piece, the other's in two): a face every
+  // point of which another face on the same plane, facing the other way, covers. A wall that stands out beyond
+  // the one butted against it (a step to a thicker host) keeps the triangles that are not wholly covered.
+  const byPlane = new Map();
+  tris.forEach((t, ti) => {
+    if (drop.has(ti)) return;
+    const sign = Math.abs(t.n[0]) > 1e-6 ? Math.sign(t.n[0]) : Math.abs(t.n[1]) > 1e-6 ? Math.sign(t.n[1]) : Math.sign(t.n[2]);
+    const m = t.n.map((v) => v * sign), d = dot(m, t.c[0]);
+    const k = `${t.hinge}|${m.map((v) => Math.round(v * 1e3)).join(',')}|${Math.round(d * R)}`;
+    if (!byPlane.has(k)) byPlane.set(k, { m, faces: [] });
+    byPlane.get(k).faces.push({ ti, facing: sign });
+  });
+  for (const { m, faces } of byPlane.values()) {
+    if (!faces.some((f) => f.facing > 0) || !faces.some((f) => f.facing < 0)) continue;
+    // in the plane: drop the axis the normal leans on most
+    const axis = Math.abs(m[0]) > Math.abs(m[1]) ? (Math.abs(m[0]) > Math.abs(m[2]) ? 0 : 2) : (Math.abs(m[1]) > Math.abs(m[2]) ? 1 : 2);
+    const flat = (q) => [q[(axis + 1) % 3], q[(axis + 2) % 3]];
+    const inside = (pt, ti) => {
+      const [a, b, c] = tris[ti].c.map(flat);
+      const cross = (o, p1, p2) => (p1[0] - o[0]) * (p2[1] - o[1]) - (p1[1] - o[1]) * (p2[0] - o[0]);
+      const d1 = cross(a, b, pt), d2 = cross(b, c, pt), d3 = cross(c, a, pt), eps = 1e-9;
+      return (d1 >= -eps && d2 >= -eps && d3 >= -eps) || (d1 <= eps && d2 <= eps && d3 <= eps);
+    };
+    for (const f of faces) {
+      const others = faces.filter((g) => g.facing !== f.facing).map((g) => g.ti);
+      const c = tris[f.ti].c, mid = [0, 1, 2].map((a) => (c[0][a] + c[1][a] + c[2][a]) / 3);
+      // its centroid, its corners drawn 2 % toward it, and its edges' midpoints so drawn
+      const probes = [mid, ...c.map((q) => q.map((v, a) => v + (mid[a] - v) * 0.02)),
+        ...[0, 1, 2].map((k) => c[k].map((v, a) => (v + c[(k + 1) % 3][a]) / 2 + (mid[a] - (v + c[(k + 1) % 3][a]) / 2) * 0.02))];
+      if (probes.every((q) => others.some((ti) => inside(flat(q), ti)))) drop.add(f.ti);
+    }
+  }
+  // but a sheet drawn as two opposite faces with no thickness (a fin, a thin panel) is not hidden: keep any dropped
+  // face no edge of which it shares with a kept face standing at an angle to it (a wall shares its edges with skins)
+  const sheet = [...drop].filter((ti) => !tris[ti].keys.some((key, k) => {
+    const e = [key, tris[ti].keys[(k + 1) % 3]].sort().join('|');
+    return (byEdge.get(e) ?? []).some((oi) => !drop.has(oi) && Math.abs(dot(tris[oi].n, tris[ti].n)) < 0.999);
+  }));
+  for (const ti of sheet) drop.delete(ti);
+  const dropped = new Set([...drop].map((ti) => `${tris[ti].gi}:${tris[ti].i}`));
   groups.forEach((g, gi) => {
     const p = [], n = [];
     for (let i = 0; i < g.p.length; i += 9) {
-      if (drop.has(`${gi}:${i}`)) continue;
+      if (dropped.has(`${gi}:${i}`)) continue;
       p.push(...g.p.slice(i, i + 9));
       n.push(...g.n.slice(i, i + 9));
     }
     g.p = p;
     g.n = n;
   });
-  return drop.size;
+  return dropped.size;
 }
 
 /** Bounds of a list of flight-space triangle soups. */
