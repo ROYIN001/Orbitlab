@@ -237,8 +237,10 @@ function weld(positions, normals, box = null) {
  * once per pixel, so with MSAA a wall standing on a skin edge wins some of
  * that pixel's samples and draws a light dash along the seam (the strap-ons'
  * cones were hatched with them). Both walls of each such pair go, matched by
- * their corners as triangles or, cut along either diagonal, as quads; and
- * every copy but one of a repeated face; of faces on the same hinge (or none),
+ * their corners as triangles or, cut along either diagonal, as quads, or as
+ * a face that opposite-facing faces on its plane cover whole (the area each
+ * covers clipped exactly, so a face covered only in part stays); and every
+ * copy but one of a repeated face; of faces on the same hinge (or none),
  * and only faces joined to the rest at an angle (a sheet with no thickness,
  * drawn as two faces, stays).
  * `groups`: the part's triangle soups ({ p, n, hinge }, flight metres),
@@ -293,9 +295,9 @@ function dropHiddenFaces(groups) {
     }
   }
   for (const list of byQuad.values()) if (list.length > 1) settle(list.filter((q) => !q.tris.some((ti) => drop.has(ti))));
-  // the rest, cut up differently on each side (one host's wall in one piece, the other's in two): a face every
-  // point of which another face on the same plane, facing the other way, covers. A wall that stands out beyond
-  // the one butted against it (a step to a thicker host) keeps the triangles that are not wholly covered.
+  // the rest, cut up differently on each side (one host's wall in one piece, the other's in two): a face the faces
+  // on the same plane facing the other way cover in all its area. A wall that stands out beyond the one butted
+  // against it (a step to a thicker host), or a panel the cells on it cover only in part, stays.
   const byPlane = new Map();
   tris.forEach((t, ti) => {
     if (drop.has(ti)) return;
@@ -310,19 +312,38 @@ function dropHiddenFaces(groups) {
     // in the plane: drop the axis the normal leans on most
     const axis = Math.abs(m[0]) > Math.abs(m[1]) ? (Math.abs(m[0]) > Math.abs(m[2]) ? 0 : 2) : (Math.abs(m[1]) > Math.abs(m[2]) ? 1 : 2);
     const flat = (q) => [q[(axis + 1) % 3], q[(axis + 2) % 3]];
-    const inside = (pt, ti) => {
-      const [a, b, c] = tris[ti].c.map(flat);
-      const cross = (o, p1, p2) => (p1[0] - o[0]) * (p2[1] - o[1]) - (p1[1] - o[1]) * (p2[0] - o[0]);
-      const d1 = cross(a, b, pt), d2 = cross(b, c, pt), d3 = cross(c, a, pt), eps = 1e-9;
-      return (d1 >= -eps && d2 >= -eps && d3 >= -eps) || (d1 <= eps && d2 <= eps && d3 <= eps);
+    const area2 = (poly) => { let a = 0; for (let k = 0; k < poly.length; k++) { const p1 = poly[k], p2 = poly[(k + 1) % poly.length]; a += p1[0] * p2[1] - p2[0] * p1[1]; } return a; };
+    /** the part of convex polygon `poly` inside triangle `tri` (Sutherland-Hodgman), both in the plane */
+    const clip = (poly, tri) => {
+      const t = area2(tri) < 0 ? [...tri].reverse() : tri;
+      let out = poly;
+      for (let k = 0; k < 3 && out.length; k++) {
+        const a = t[k], b = t[(k + 1) % 3], side = (q) => (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]);
+        const next = [];
+        for (let m = 0; m < out.length; m++) {
+          const p1 = out[m], p2 = out[(m + 1) % out.length], s1 = side(p1), s2 = side(p2);
+          if (s1 >= 0) next.push(p1);
+          if ((s1 >= 0) !== (s2 >= 0)) { const u = s1 / (s1 - s2); next.push([p1[0] + (p2[0] - p1[0]) * u, p1[1] + (p2[1] - p1[1]) * u]); }
+        }
+        out = next;
+      }
+      return out;
     };
     for (const f of faces) {
-      const others = faces.filter((g) => g.facing !== f.facing).map((g) => g.ti);
-      const c = tris[f.ti].c, mid = [0, 1, 2].map((a) => (c[0][a] + c[1][a] + c[2][a]) / 3);
-      // its centroid, its corners drawn 2 % toward it, and its edges' midpoints so drawn
-      const probes = [mid, ...c.map((q) => q.map((v, a) => v + (mid[a] - v) * 0.02)),
-        ...[0, 1, 2].map((k) => c[k].map((v, a) => (v + c[(k + 1) % 3][a]) / 2 + (mid[a] - (v + c[(k + 1) % 3][a]) / 2) * 0.02))];
-      if (probes.every((q) => others.some((ti) => inside(flat(q), ti)))) drop.add(f.ti);
+      // wholly covered: the opposite faces (a triangulated surface, so not overlapping one another) cover all its area
+      const tri = tris[f.ti].c.map(flat), whole = Math.abs(area2(tri));
+      if (whole < 1e-12) continue;
+      const lo = [Math.min(...tri.map((q) => q[0])), Math.min(...tri.map((q) => q[1]))], hi = [Math.max(...tri.map((q) => q[0])), Math.max(...tri.map((q) => q[1]))];
+      let covered = 0;
+      for (const g of faces) {
+        if (g.facing === f.facing) continue;
+        const o = tris[g.ti].c.map(flat);
+        if (Math.max(...o.map((q) => q[0])) < lo[0] || Math.min(...o.map((q) => q[0])) > hi[0] || Math.max(...o.map((q) => q[1])) < lo[1] || Math.min(...o.map((q) => q[1])) > hi[1]) continue;
+        const part = clip(tri, o);
+        if (part.length >= 3) covered += Math.abs(area2(part));
+      }
+      // to a millionth (more than the whole, opposite faces overlapping each other, is not counted as covered)
+      if (Math.abs(covered - whole) <= 1e-6 * whole) drop.add(f.ti);
     }
   }
   // but a sheet drawn as two opposite faces with no thickness (a fin, a thin panel) is not hidden: keep any dropped
