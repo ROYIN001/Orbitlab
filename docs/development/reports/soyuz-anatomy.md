@@ -5,8 +5,8 @@
 > - นำไฟล์ Soyuz ทั้ง 3 ไฟล์ที่คุณทำแยกไว้เข้ามาในโปรแกรมแบบไม่แก้ไขแม้แต่ไบต์เดียว (`public/anatomy/`): Soyuz-2.1a กับยาน Soyuz MS, Soyuz-2.1a กับ Progress MS-26 และ Soyuz-2.1b กับ Fregat
 > - **โหมดสร้างจรวด (Build › พื้นฐาน)**: เมื่อเลือก Soyuz-2.1a หรือ 2.1b จะมีปุ่ม "ดูภายในแบบ 3 มิติ" เปิดหน้าของคุณทั้งหน้า (ถังเชื้อเพลิง เครื่องยนต์ ท่อทาง แยกชิ้นและผ่าดูได้ คำอธิบายภาษาไทยครบ) ในหน้าต่างเต็มจอ สลับ Soyuz MS / Progress ได้ ปิดแล้วหน้าถูกปลดออกเพื่อคืนหน่วยความจำกราฟิก ระหว่างที่หน้ากำลังสร้างแบบจำลอง (10–20 วินาทีบนเครื่องช้า แอปจะค้างช่วงนั้น) มีข้อความบอกไว้จนกว่าจะสร้างเสร็จ กด Tab เข้าไปใช้ปุ่มในหน้าได้ และหน้าต่างปิดเองเมื่อออกจาก Build หรือเปลี่ยนระดับ
 > - **การบิน**: Soyuz-2.1a และ 2.1b วาดจากผิวด้านนอกของแบบจำลองของคุณ — บูสเตอร์ แกนกลาง โครงถักระหว่างขั้น Blok I, Fregat, หัวครอบสองซีก หอหนีภัย และยาน Soyuz MS / Progress MS ชิ้นที่แยกตัวก็ยังเป็นรูปทรงจากแบบจำลอง Progress กางแผงโซลาร์ด้วยบานพับในไฟล์ของคุณเอง Soyuz MS ใช้ปีกโซลาร์ของโปรแกรม (ไฟล์ของคุณมีแต่แบบพับ) ติดบานพับที่โคนแผงพับของแบบจำลอง ส่วนท้ายของขั้นที่ 3 (ตัวเครื่องยนต์ โครงรับแรงขับ ก้นถังออกซิเจน) วาดจากแบบจำลองด้วย เพราะมองเห็นได้จริงผ่านโครงถักและหลังสลัดกระโปรงท้าย ปลายลำตัวของ Blok A, Blok I และ Progress MS ปิดด้วยชิ้นภายในที่ปิดปลาย (ฐานรับแรงขับ โดมถัง) จึงไม่เป็นท่อกลวงที่มองทะลุได้อีก ปลายท่อไอพ่นของโปรแกรมย้ายไปต่อกับห้องเผาไหม้ของแบบจำลองพอดี ทั้งของขั้นที่ 3 และของ Fregat (S5.92) และไฟของหอหนีภัยตอนดึงตัวออกพุ่งจากหัวฉีด 12 ตัวของแบบจำลอง ส่วนภายในอื่น (ท่อ อุปกรณ์) ไม่วาดตอนบินตามที่ขอ ฟิสิกส์ไม่เปลี่ยน
-> - ไฟล์โหลดเมื่อใช้เท่านั้น ไม่เข้าแคชออฟไลน์ตอนติดตั้ง (หน้าเว็บละราว 4.5 MB, ไฟล์ผิวสำหรับการบินบีบอัดแล้วเหลือ 0.23–0.41 MB จากเดิม 1.2–2 MB ที่ความละเอียด 24 ส่วนต่อรอบวงตามที่คุณเลือก) ถ้าออฟไลน์และยังไม่เคยโหลด หรือเบราว์เซอร์คลายไฟล์บีบอัดไม่ได้ จรวดจะถูกวาดแบบเดิม
-> - **ต้นทุนที่ควรตัดสินใจ**: ภารกิจเด่น (Soyuz พาลูกเรือไป ISS) เป็นภาพแรกของหน้าแรกและของโหมดดู และเป็นค่าเริ่มต้นของแผงภารกิจ แอปจึงโหลดแบบจำลอง Soyuz MS ทันทีที่ตั้งภารกิจ เกือบทุกคนที่เข้าครั้งแรกจึงโหลดไฟล์นี้ ตอนนี้ 415 kB (เดิมราว 2 MB) คุณตอบว่าให้โหลดเลย ถ้าไม่ต้องการ อีกทางคือโหลดเมื่อเริ่มบินเท่านั้น (จรวดบนฐานยิงจะเป็นแบบเดิมจนกว่าจะเริ่มบิน)
+> - ไฟล์โหลดเมื่อใช้เท่านั้น ไม่เข้าแคชออฟไลน์ตอนติดตั้ง (หน้าเว็บละราว 4.5 MB, ไฟล์ผิวสำหรับการบินบีบอัดแล้วเหลือ 0.20–0.34 MB จากเดิม 1.2–2 MB ที่ความละเอียด 24 ส่วนต่อรอบวงตามที่คุณเลือก) ถ้าออฟไลน์และยังไม่เคยโหลด หรือเบราว์เซอร์คลายไฟล์บีบอัดไม่ได้ จรวดจะถูกวาดแบบเดิม
+> - **ต้นทุนที่ควรตัดสินใจ**: ภารกิจเด่น (Soyuz พาลูกเรือไป ISS) เป็นภาพแรกของหน้าแรกและของโหมดดู และเป็นค่าเริ่มต้นของแผงภารกิจ แอปจึงโหลดแบบจำลอง Soyuz MS ทันทีที่ตั้งภารกิจ เกือบทุกคนที่เข้าครั้งแรกจึงโหลดไฟล์นี้ ตอนนี้ 342 kB (เดิมราว 2 MB) คุณตอบว่าให้โหลดเลย ถ้าไม่ต้องการ อีกทางคือโหลดเมื่อเริ่มบินเท่านั้น (จรวดบนฐานยิงจะเป็นแบบเดิมจนกว่าจะเริ่มบิน)
 > - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 22.2 kB (index +17.4, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14677 kB (offset ที่ระบุ: EQ-7) คุณอนุมัติแล้วในแชต 2026-10-28 ("1. อนุมัติ")
 > - **รอบตรวจที่สอง**: แก้ตามที่ผู้ตรวจพบครบทุกข้อ (รายการในหัวข้อ "Second review round") รวมถึงหัวเชื่อมต่อ (docking probe) ของยาน Soyuz MS ที่เคยจมเข้าไปในพอร์ตของสถานีราว 1.0 m ตอนจับยึด (ตอนนี้ปลายหัวเชื่อมต่ออยู่ตรงที่ฟิสิกส์คำนวณ) และขั้นที่ใช้แล้ว (บูสเตอร์ Blok A Blok I Fregat) ที่เคยไม่มีปากท่อไอพ่น (ตอนนี้วาดปากท่อตามตำแหน่งห้องเผาไหม้ในแบบจำลอง)
 > - **ขอให้ยืนยัน**: ไฟล์ทั้งสามเป็นงานของคุณเองใช่ไหม (NOTICE.md เขียนไว้อย่างนั้น) และชุดเครื่องมือ "Anatomy kit" ที่ฝังอยู่ในไฟล์มีเงื่อนไขการใช้งานอย่างไร
@@ -92,16 +92,16 @@ At 24 radial segments (`RADIAL_SEGMENTS`, `BAY_SEGMENTS`; the owner's choice, 20
 
 | Mesh file | Triangles | Raw | As fetched (gzip) | At 16/12 segments | At a8c58f3 (format 1, sent raw) |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Soyuz MS | 182,382 | 2,543.4 kB | 414.6 kB | 131,960, 305.2 kB | 125,816 triangles, 1,977.3 kB |
-| Progress MS-26 | 145,836 | 2,029.1 kB | 299.9 kB | 106,608, 234.0 kB | 99,672 triangles, 1,543.8 kB |
-| Fregat | 126,112 | 1,684.9 kB | 229.9 kB | 83,736, 172.8 kB | 80,128 triangles, 1,188.8 kB |
+| Soyuz MS | 146,800 | 2,166.5 kB | 341.8 kB | 131,960, 305.2 kB | 125,816 triangles, 1,977.3 kB |
+| Progress MS-26 | 122,120 | 1,770.0 kB | 250.1 kB | 106,608, 234.0 kB | 99,672 triangles, 1,543.8 kB |
+| Fregat | 110,840 | 1,515.6 kB | 197.3 kB | 83,736, 172.8 kB | 80,128 triangles, 1,188.8 kB |
 
-Of the triangles added over a8c58f3, about 6 k per page are the closing hosts, 15–30 k the 24
-segments and 14–29 k the triangles split where the page's hosts meet in T-junctions (below), each
-fanned into two or more so that neighbouring triangles share their edges and no crack opens. What the first visit costs: the featured launch (the
+Over a8c58f3, about 6 k triangles per page are the closing hosts and 15–30 k the 24 segments, less
+the hidden faces dropped (1–7 k: the walls two hosts butt together inside the vehicle, below). A
+part's meshes are quantised on one grid, so a corner they share is the same point in each. What the first visit costs: the featured launch (the
 crewed Soyuz to the ISS, the landing page's and the viewer's first view, and the mission panel's
 default) is a Soyuz-2.1a with a crew, so the app fetches the Soyuz MS model as soon as that
-mission is set up, and nearly every first visit fetches that file: 415 kB now, about 2 MB before.
+mission is set up, and nearly every first visit fetches that file: 342 kB now, about 2 MB before.
 The other way is to load the model only when a flight starts (the rocket on the pad then drawn as
 before until it does). Left as it is for the owner to decide.
 
@@ -186,7 +186,7 @@ done; render and Build UI only, the physics unchanged.
 | The journey took the page's title as the page open, before it had built its model | It waits for each page to build its 3-D model and checks the note, the Tab stop, close, history and focus |
 | The 8.0 m model's docking probe goes about 1.0 m into the station's port at capture (0.48 m with the simulator's 7.48 m ship) | Flown by the rendezvous, whose physics hangs the drawing from a base `size.height − probe` below the CG, the ship is drawn moved by the difference between its drawn length and `size.height`, so its probe's tip, not its base, is where the physics docks it (render only; the simulator's own 7.48 m ship gains the same 0.48 m) |
 | (the visual check) Spent stages drawn from the model carry no engine bells: a spent strap-on's base shows four empty sockets | The export records Blok A's and the strap-on's chambers too (`core` and `booster` `nozzles`), and `DebrisView` draws a bell (`bellGeometry`) at each recorded chamber of a spent strap-on, Blok A, Blok I and Fregat |
-| (the visual check at 24 segments) Pixel-wide light dashes along the strap-on cones, a seam on Blok A and lines on Blok I: cracks along the seams where the page's hosts meet with their own subdivisions (T-junctions: a corner of one triangle inside another's edge, 463 edges on the strap-on, 416 on Blok A, 398 on a fairing half), through which the skin shells' edge walls show | Drawing the model double-sided was tried and did not help (the edge walls shade apart from the skin whichever side is drawn). The export splits each triangle at the corners lying on its edges (one pass; 11,934 / 8,394 / 6,394 triangles split) and quantises all of a part's meshes on one grid, so neighbouring triangles share their edges exactly |
+| (the visual check at 24 segments) Pixel-wide light dashes along the strap-on cones' seams (and Blok A's and Blok I's): where two of the page's hosts butt together each brings the wall that closes its own shell, and the two coincide, facing opposite ways, inside the vehicle. The scene's depth is logarithmic, written once per pixel, so with MSAA a wall standing on a skin edge wins some of that pixel's samples (with MSAA off 94–98 % of the dashes went) | The export drops both walls of each such pair, and every copy but one of a repeated triangle, on the same hinge only (`dropHiddenFaces`: 6,616 / 3,608 / 1,272 triangles). Tried first and taken out again: drawing the model double-sided, and splitting triangles at their T-junctions; neither changed the dashes |
 | (the visual check) A spent Blok I, Fregat or fairing half snapped round its axis at separation (26–48°, its bells and tanks jumping): the debris took its attitude from its axis alone | Spent parts on the stack's axis drawn in the stack's roll (`stackAttitude` in render/debris.ts, as main.ts squares the stack's side on the launch azimuth's normal) |
 | (the visual check) A spent stage in orbit swings up to about 100 m sideways and back every 10 s after separation, live and in replay | Not done here: src/physics/frame.ts blends debris between recorded frames 10 s apart in a straight line while the vehicle follows its orbit; it predates this change and holds for every vehicle (a separate task was offered to the owner) |
 
@@ -223,7 +223,7 @@ Since the first round (2649, 14673, 16072 kB) the second review round and the ch
 added 3.5 kB to `index-*.js` (the inflater and the byte-plane decoder, the Fregat and tower refits,
 the flames' resize, the dialog's wait, the docking offset, the spent stages' bells and roll) and the
 same to precache code, so `index-*.js`, precache code and the precache total stand 4 kB above
-them; each ceiling is the measured size rounded up to the next kB. The pages and meshes (14.4 MB:
-pages 13.4, meshes 0.9) are in no ceiling: `anatomy/` is on demand. Without that entry the build
+them; each ceiling is the measured size rounded up to the next kB. The pages and meshes (14.2 MB:
+pages 13.4, meshes 0.8) are in no ceiling: `anatomy/` is on demand. Without that entry the build
 precaches them and fails the code ceiling by about 14 MB. Named offset: EQ-7 (split the first-view
 code, K2). Approved by the owner in chat, 2026-10-28 ("1. อนุมัติ").
