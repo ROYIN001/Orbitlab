@@ -1338,7 +1338,11 @@ thrust/weight near three, decelerating at 60 % of the net acceleration available
 number is what makes it a hoverslam: a stage with margin falls further before it brakes, and one
 with little thrust starts early and never asks for more than it has. Engine selection is
 per-vehicle (at least three, more when three cannot give the empty stage 2.5 g), so the profile
-is not tuned to one booster.
+is not tuned to one booster. Each burn raises its event as it lights, `evt.entryBurnStart` and
+then `evt.landingBurnStart` (point-mass and six-DOF alike), as a targeted return's burns do, stamped
+as the simulation step that lit it ends: in a coast step that can be up to the step's length after
+the burn lit (8.5 s for a point-mass Falcon Heavy core, measured). The flight recorder pins the
+frames of that step.
 
 Ideal Δv per stage follows Tsiolkovsky, Δv = g₀ Isp ln(m₀/m₁). **Strap-on boosters are a
 separate phase, not a bigger tank**: the remaining-Δv walk splits the active stage at booster
