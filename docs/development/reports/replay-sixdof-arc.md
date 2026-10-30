@@ -22,7 +22,7 @@
 > - ข้อแลกเปลี่ยนที่เจ้าของเลือกไว้: Apollo ที่บันทึกยาวจนเฟรมห่าง 60 s ขึ้นไป ช่วงใต้ร่มหลักจะคลาดมากกว่าเดิม คือราว 200 m ที่ 60 s และ 1.2 km ที่ 240 s เทียบกับราว 150 m เดิม Apollo แบบ point-mass เป็นแบบนี้อยู่แล้ว เสนอให้แก้เป็นงานต่อไปสำหรับทั้งสองแบบ
 > - สิ่งที่ยังไม่แก้: ชิ้นส่วนที่ตกผ่านบรรยากาศยังเป็นเส้นตรงเหมือนเดิม คลาดเท่าเดิม แต่เมื่อเทียบกับตัวยานซึ่งไม่ยุบตามแล้ว จะคลาดได้ถึงราว 1 km ชิ้นส่วนเหล่านี้อยู่ห่างจากยานอย่างน้อย 123 km จึงมองไม่เห็นความต่าง (รายการ "for later" ของ #185) นอกจากนี้ยังมีวิถีของระบบหนีภัย (escape) และสถานีในช่วงที่ยาวมาก
 > - ขนาด: +25 B ต่อ chunk ไม่ได้ขึ้นเพดาน (precache code เหลือที่ว่าง 48 B)
-> - การตรวจโดย agent ตัวที่สอง: ยืนยันการเปลี่ยนแปลงตรงตามที่ตั้งใจ 14 จาก 16 ข้อ (อีก 2 ข้อเป็นถ้อยคำในรายงาน แก้แล้ว) การล่า regression ยืนยัน 9 จาก 12 ข้อ พบปัญหา 1 ข้อ คือช่วงที่ยาวเกินหนึ่งรอบวงโคจร ซึ่งแก้แล้ว อีก 2 ข้อเป็นถ้อยคำ แก้แล้ว อีกสองมุม (ตรวจตัวเลขในรายงาน และตรวจเทสต์กับเอกสาร) จะรันซ้ำบน head ล่าสุด
+> - การตรวจโดย agent ตัวที่สอง (5 มุม; ข้อที่พบบางข้อส่งให้ agent อีกตัวพยายามหักล้าง ข้อที่เหลือ session นี้ตรวจซ้ำเองเพราะติดขีดจำกัดการใช้งาน): ยืนยันว่าการเปลี่ยนแปลงตรงตามที่ตั้งใจ 14 จาก 16 ข้อ, การล่า regression 9 จาก 12 ข้อ (พบปัญหา 1 ข้อ คือช่วงที่ยาวเกินหนึ่งรอบวงโคจร แก้แล้วด้วยขอบเขตหนึ่งในสี่ของคาบ), เทสต์และเอกสาร 24 จาก 32 ข้อ, ตรวจตัวเลขในรายงาน 65 จาก 86 ข้อ (ข้อที่ผิดอยู่ในรายงานและคำอธิบาย PR แก้แล้วทั้งหมด), ตรวจขอบเขตหนึ่งในสี่ของคาบ 22 จาก 24 ข้อ ทุกข้อที่พบแก้แล้ว ไม่มีข้อใดค้าง
 > - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ (11 จาก 16) ไม่ได้ขึ้นเพดาน และไม่ได้เปลี่ยน assertion เดิม แต่มีข้อแลกเปลี่ยนของ Apollo ที่เจ้าของเลือกไว้ จึงควรให้เจ้าของกดอนุมัติเอง
 
 ```yaml
@@ -34,7 +34,7 @@ tests: tests/rigid-replay-arc.test.ts (new); tests/debris-replay.test.ts (header
 base_sha_verified_on: {sha: 1842a86, date: 2026-10-30}
 branch: claude/practical-lovelace-2ndbww
 pr: 187
-second_agent_review: 'equivalence 14 of 16; regression hunt 9 of 12, its blocking finding fixed (c7aac24); tests and docs 24 of 32, its findings fixed (4ec5251); claims audit 65 of 86 (14 wrong, fixed in the record files here; 7 with no artefact on disk); bound check: see "Second-agent review"'
+second_agent_review: 'equivalence 14 of 16; regression hunt 9 of 12, its blocking finding fixed (c7aac24); tests and docs 24 of 32, its findings fixed (4ec5251); claims audit 65 of 86 (14 wrong, fixed in the record files here; 7 with no artefact on disk); bound check 22 of 24, its finding fixed'
 ```
 
 ## Cause
@@ -183,10 +183,9 @@ The vehicle, worst sample, metres from the flown position:
   - The first commit (54abdd3) carried the first 7 of these tests alone, 4 failing on main.
 - **Related files:** debris-replay, rigid-replay-arc, rigid-replay, rigid-event-boundary, rigid-failure-boundary, replay, vostok-replay, vostok-render, launch-abort, equations, session, rendezvous, rendezvous-fuel, live-stepping, orbit-handoff, apollo-own-launch, bundle-budget, audio, rigid-debris, eo-phy-6/apollo11, repo-hygiene, rigid-render and frames-view. 23 files, 294 tests, all pass on c7aac24.
 - **CI:** green on 03f894a (run 40969743239) and on f433505 (run 40973167407). Each ran plan, typecheck, build, test 1–3, browser-smoke 1–2 and verify. The run on 317d185 (40972796233) was cancelled by the push of f433505, and its verify job then failed on the cancelled jobs.
-- **Browser journeys** the change map selects (`node tests/browser/run.mjs …`, local build of 317d185, the same code as 03f894a):
-  - 7 of 8 passed, and recheck is held by design (teaching tools, owner 2026-10-17).
-  - r2-flight-shell failed on its 420 s journey budget (435 s), while six-DOF probes ran on the same 4 cores. It had passed the replay seek and was in its later phone and language steps.
-  - Run alone on the same build, idle machine (load 0.08), it passed in 308 s.
+- **Browser journeys** the change map selects (`node tests/browser/run.mjs …`; recheck is held by design: teaching tools, owner 2026-10-17):
+  - On the final code (local build of f73062c, idle machine): 8 of 8 pass in 675 s, r2-flight-shell in 233 s.
+  - Earlier, on 317d185 (the same code as 03f894a): 7 of 8. r2-flight-shell failed on its 420 s journey budget (435 s) while six-DOF probes ran on the same 4 cores. It had passed the replay seek and was in its later phone and language steps. Run alone on the same build (load 0.08), it passed in 308 s.
 - **Heavy:**
   - `tests/heavy/vostok1-recording.test.ts`: 1 of 1 pass, 166 s, Node 22.22.0, which is not the CI runtime.
   - It is the only heavy or six-DOF fleet file that reaches `interpolateFrames`. The function's only callers are `FlightRecorder.liveBetween` and `ReplayPlayer.frameAt`. `tests/heavy/custom-satellite-sixdof.test.ts` builds a FlightRecorder too (tests/custom-vehicle-harness.ts:91), but it flies six-DOF, whose recorder never blends (`lookahead = !sim.rigidRuntime`), and it compares stored frames. No other heavy or fleet file builds a recorder or a player, directly or through src/lessons or src/session. Re-run by the claims audit on fa92cf6: 1 of 1, 161 s.
@@ -215,7 +214,7 @@ Before the fix, a workflow of four agents and a critic looked at the edge cases,
 
 ## Second-agent review
 
-Four lenses on the branch (code 03f894a), each serious finding then put to a skeptic.
+Five lenses: equivalence and regression hunt on 03f894a; tests and docs, and claims audit, on fa92cf6; bound check on f73062c. Each serious finding was meant to go to a skeptic. Usage limits stopped most skeptics, except the bound check's. The session re-checked those findings against the evidence itself, as said below.
 
 - **Equivalence and purity: confirmed 14 of 16.**
   - The decision changes in exactly the predicted set, line → cubic, and never touches Kepler. It was checked over 21,632 input combinations symbolically, and over 10,816 synthetic frame pairs through main's and the branch's real functions with 0 mismatches.
@@ -250,7 +249,29 @@ Four lenses on the branch (code 03f894a), each serious finding then put to a ske
     - Blok A is 4.7 km.
   - Slips in commit messages (f3a0827's failure list, f433505's "near the station") stay in history.
   - 7 claims had no artefact on disk: the equivalence lens's counts, the regression lens's 9 of 12, the aborted docking, the pre-fix Blok I figures, r2-flight-shell's 308 s run, the vis-viva card figures, and the owner's quotes.
-- **Bound check:** its lens hit a usage limit. The two lenses above checked the bound: mutation, the crossover up to e = 0.95, escapes (period Infinity), and that every fleet span is under a quarter of its orbit (a bound orbit's period is at least 1,790 s). It is re-run on the final head, and its result is recorded on the PR.
+- **Bound check (on f73062c): confirmed 22 of 24.** Nothing blocking.
+  - `a.elements.period` is the vehicle's own osculating period at frame a in every rigid coasting frame a shipped mission produces:
+    - It is refreshed every step: simulation.ts:1225 and 1249–1250 for coasts, 1345 and 1360 for orbit, updateDerived for docked frames.
+    - It is at most one step stale, and only on a failure's early return.
+    - It is never 0. It is NaN only at |r| = 0, which falls back to main's line.
+    - It is Infinity only for Apollo, which the bound excludes.
+  - The two-body crossover on a 0.5° start grid with 800 samples (tests/probe/out/bound-xover-fine.txt), as a fraction of the period:
+
+    | e | crossover |
+    |---|---|
+    | 0 (circle) | 1.0 |
+    | 0.27 (Tundra) | 0.99 |
+    | 0.5 | 0.96 |
+    | 0.6 | 0.84 |
+    | 0.728 (GTO) | 0.357 |
+    | 0.737 (Molniya) | 0.335 |
+    | 0.78 | 0.243 |
+
+    A quarter is safe for every shipped orbit preset (Molniya with a 1.34× margin) and stops being safe above e ≈ 0.78.
+  - **Past the bound:** the branch is bit-identical to main, 54,580 samples in three hard-thinned runs and 0 worse. Under it, the cubic beat the line on every sample.
+  - **The station:** `blendRendezvous` matches main to 0 m over 43,919 samples. On spans at or past a quarter, the spacecraft-to-station split equals main's. Under a quarter, the two stay together where main had them 1.5–24 km apart.
+  - **Its one should-fix finding** (the high-eccentricity crossover figures in "Not changed, for later" came from a 5° grid) was confirmed by its skeptic, refined to 0.21 / 0.07 / 0.024 on a 0.01° grid (tests/probe/out/bound-skeptic-local.txt), and is fixed.
+  - **Its notes are taken:** the docstring now says a vehicle with rigid telemetry, and the comment says debris read the vehicle's period (0 debris samples worse in the hard-thinned runs). The bound's cost and the escape's timing are in "Not changed, for later".
 
 ## Size
 
@@ -264,8 +285,19 @@ Four lenses on the branch (code 03f894a), each serious finding then put to a ske
 - **Escapes and returns from orbit** (status 'abort') stay on the line. Mercury-Redstone's capsule above the air is 128 m off on 10 s spans (the cubic would be 2.2 m); Soyuz 18a's arc is similar. These spans have parachutes, tower jettison and retro-rockets in them, so they need their own look.
 - **Thinned six-DOF Apollo:** the span under the main parachutes is drawn worse by the cubic than by the line once frames are 60 s or more apart. This is the owner's trade-off above, already true of point-mass Apollo. A fix for both could keep a frame about 12 s after `evt.mains`, or stop thinning the entry.
 - **The station over a span of more than a quarter of an orbit:** `blendRendezvous` gives the station the cubic at any span, as on main. Over the 7,981 s docked span the station is 14,945 km from the spacecraft on main and on this branch: the spacecraft keeps main's line there. The same quarter-period bound in `blendRendezvous` would keep the two together.
-- **A very eccentric orbit or an escape:** above an eccentricity of about 0.8 the cubic can be worse than the line inside a quarter of the period too (from 0.23 of the period at e = 0.8, 0.08 at 0.9, 0.03 at 0.95; the second agent's two-body check), and an escape's period is `Infinity`, so its coast takes the cubic at any span (outbound from periapsis it is worse than the line from about 3 h). No shipped orbit preset is that eccentric (Molniya and GTO are 0.73–0.74), and only a hard-thinned recording leaves such spans, where both drawings are thousands of kilometres off. Six-DOF Apollo is not affected: it takes the cubic as point-mass Apollo does.
-- **A long thinned span keeps the line** (over a quarter of the period). A two-sided Kepler blend would fit there: 12.5 km off at 8,000 s against the line's 9,271 km (the second agent's J2 probe). By an estimate, not a build, it needs about 160 B per chunk, more than the 48 B the budget has left.
+- **A very eccentric orbit or an escape:**
+  - Above an eccentricity of about 0.78 the cubic can be worse than the line inside a quarter of the period too: from 0.21 of the period at e = 0.8, 0.07 at 0.9 and 0.024 at 0.95. Those figures are the bound-check skeptic's, on a 0.01° start grid (tests/probe/out/bound-skeptic-local.txt); an earlier 5° grid gave 0.23 / 0.08 / 0.03.
+  - An escape's period is `Infinity`, so its coast takes the cubic at any span. On an analytic hyperbola, outbound from periapsis, the cubic is worse than the line from 2.7–3.1 h at 1.02–1.08 times escape speed, and from 1.7 h at 1.4 times.
+  - `propagateKepler`'s own fallback for an unbound orbit, a 10 s step chain, is tens of kilometres off over an hour (58 km at 1.04 times escape speed). This is as on main. No shipped orbit preset is that eccentric (Molniya and GTO are 0.73–0.74), and only a hard-thinned recording leaves such spans, where both drawings are thousands of kilometres off. Six-DOF Apollo is not affected: it takes the cubic as point-mass Apollo does.
+- **A long thinned span keeps the line** (a quarter of the period or more). On a nearly circular orbit the cubic would be closer there, up to about a whole period. In the bound check's hard-thinned runs:
+  - a point-mass docked span of 0.41 of a period: the line is 4,967 km off, where the cubic would be 718 km;
+  - Angara's near-GEO span of 0.31 of a period: 15,839 km against 1,081 km.
+
+  These were as far off on main. Two fixes would close the gap:
+  - An eccentricity-aware bound, for example most of a period while e ≤ 0.5, would recover those spans.
+  - A two-sided Kepler blend: 12.5 km off at 8,000 s, where the line is 9,275 km on the second agent's synthetic J2 probe. The docked flight's 7,981 s span had the line at 9,271 km. By an estimate, not a build, it needs about 160 B per chunk.
+
+  Both cost bytes against the 48 B left. At the real six-DOF frame budget, the docked flight had no span between a quarter and a whole period.
 - **A point mass in orbit** keeps Kepler from the earlier frame. It is flown with J2, so its drawing jumps about 6 m at each 30 s frame. The cubic would fit there too.
 - **A point mass's cut-off tail** (1–2 m) stays on the line.
 - **The configuration hold** holds frame a for the whole span before a change: 13.9 km over Vostok's 2 s span from its orbit to its return, and 920 m over a 0.2 s span of the H-IIA's at T+392 s, where its configuration changes. Both are as on main.
