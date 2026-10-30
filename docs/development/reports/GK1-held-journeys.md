@@ -2,7 +2,7 @@
 
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 >
-> - รันใหม่บน candidate `1842a86`: #185 merge เป็น `1842a86` เมื่อ 2026-10-29 คุณตอบว่า "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ" แล้วเลือก "Redo all" (2026-10-29) ให้ทำหลักฐาน GK1 ทั้งหมดใหม่บน `1842a86` หลักฐานข้อ 7 ในไฟล์นี้จึงรันใหม่บน `1842a86` `1842a86` ต่างจาก `7263004` แค่ #185: `src/physics/frame.ts` test ใหม่หนึ่งไฟล์ รายงานหนึ่งไฟล์ และ fragment หนึ่งไฟล์
+> - รันใหม่บน candidate `1842a86`: #185 merge เป็น `1842a86` เมื่อ 2026-10-29 คุณตอบว่า "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ" แล้วเลือก "Redo all (Recommended)" (2026-10-29) ให้ทำหลักฐานที่คำถามระบุใหม่บน `1842a86` (heavy, six-DOF fleet, held journeys, KPI baselines และ revert drill) หลักฐานข้อ 7 ในไฟล์นี้จึงรันใหม่บน `1842a86` `1842a86` ต่างจาก `7263004` แค่ #185: `src/physics/frame.ts` test ใหม่หนึ่งไฟล์ รายงานหนึ่งไฟล์ และ fragment หนึ่งไฟล์
 > - ทำตามข้อ 7 ของคุณ (ก "ยอมรับเป็นข้อจำกัด") (`DECISIONS.md:357`): รัน 6 journey ที่พักไว้พร้อมเครื่องมือครูตั้งแต่ #156 หนึ่งครั้ง บนบิลด์ของ candidate `1842a86` ที่เปิด `TEACHER_TOOLS` เมื่อ 2026-10-29 บิลด์นี้ไม่ได้ commit และไม่ได้เผยแพร่ ผลนี้เป็นหลักฐานของข้อจำกัด ไม่ใช่การผ่านใน Pages
 > - **ผล: ผ่าน 6 จาก 6** ในรอบแรก รันทีละตัว ไม่มีการรันซ้ำ รวม 319.2 วินาที: `case-worksheet-exports`, `classroom-preparation`, `fx2-design-check-focus`, `instructor-loading`, `lesson-packs`, `recheck`
 > - หลักฐานเพิ่ม (ข้อ 7 ไม่ได้ขอ): อีก 4 journey ที่ข้ามขั้นของครูเมื่อพักเครื่องมือ ผ่านทั้งตัว 4 จาก 4 บนบิลด์เดียวกัน รวม 844.1 วินาที แต่ `r7-cross-system` ไม่มีขั้นของครูเพิ่ม เพราะยังไม่มีโค้ดสำหรับการตรวจผลและ worksheet DOCX
@@ -21,8 +21,8 @@ lane: I (integration session)
 change_kind: docs (evidence only; no app code, test or build change committed)
 owner_authorization:
   - {date: 2026-10-26, via: chat, question: "GK1 decision 7", answer: "ก ยอมรับเป็นข้อจำกัด (แนะนำ)", where: "DECISIONS.md:357"}
-  - {date: 2026-10-29, via: chat, question: "the GK1 candidate after #185", answer: "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ", when: "before 22:19Z", where: "DECISIONS.md, the answers of 2026-10-29"}
-  - {date: 2026-10-29, via: chat, question: "what to redo on 1842a86", answer: "Redo all (Recommended)", when: "between 22:19:01Z and 22:26:15Z", meaning: "all GK1 evidence redone on 1842a86, this run among it", where: "DECISIONS.md, the answers of 2026-10-29"}
+  - {date: 2026-10-29, via: chat, question: "the GK1 candidate after #185", answer: "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ", when: "before 22:19Z", where: "DECISIONS.md, 'Decided 2026-10-29'"}
+  - {date: 2026-10-29, via: chat, question: "what to redo on 1842a86", answer: "Redo all (Recommended)", when: "between 22:19:01Z and 22:26:15Z", meaning: "the evidence the question named redone on 1842a86, this run among it", where: "DECISIONS.md, 'Decided 2026-10-29'"}
 candidate: {label: candidate 1842a86, sha: 1842a86cee5a1dc4fd40d536d2bc882d31750021, pr: "#185", published: "Pages 40957726247, deploy-pages 2026-10-29T21:49:41Z"}
 previous_candidate: {sha: 72630046fc5eb56f1797e5363b6f9ad293ff9d38, pr: "#179", published: "Pages 40385448079, deploy-pages 2026-10-26T19:41:58Z", run: "2026-10-26, the last section of this file"}
 build: {switch: "src/ui/held.ts:9 set to TEACHER_TOOLS = true, local only, never staged or committed", command: "npm run build (as deploy.yml:156)", stamp_seen: "0.1.0+1842a86 (recheck)", published: never}
@@ -41,8 +41,8 @@ evidence: local run, not committed (builds, logs, screenshots, exported files)
 - GK1 decision 7, option (ก) (`DECISIONS.md:357`): accept this as a GK1 limitation, with the agent running the six once on a build with the teaching tools on, not committed, as evidence.
 - **Why a second run.** The six were first run on 2026-10-26, on `7263004`, the candidate then (last section).
   - #185 merged at 2026-10-29T21:25:44Z as `1842a86`, on the owner's "merge #185 ได้เลยครับ" (21:24:24Z). The GK1 merge hold (H2, [HANDOVER-K2.md](../HANDOVER-K2.md)) was in force, and the session that merged #185 did not know of it.
-  - The owner then answered "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ" (before 22:19Z). To the next question in chat, the owner chose "Redo all (Recommended)": all GK1 evidence is redone on `1842a86`, this run among it ([DECISIONS.md](../../DECISIONS.md), the answers of 2026-10-29).
-  - Decision 7 asked for one run. This second run rests on the "Redo all" answer.
+  - The owner then answered "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ" (before 22:19Z). To the next question in chat, the owner chose "Redo all (Recommended)": the evidence that question named is redone on `1842a86`, this run among it ([DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-29").
+  - Decision 7 asked for one run. This second run rests on the "Redo all (Recommended)" answer.
 - **What differs between the two candidates.** `1842a86` differs from `7263004` only by #185: `src/physics/frame.ts`, a new test (`tests/debris-replay.test.ts`), a report (`replay-debris-arc.md`) and a change fragment, 4 files in all (`git diff --stat 7263004 1842a86`). `src/ui/held.ts`, `tests/browser/` (every journey file), `package.json`, `package-lock.json` and `budgets.json` are the same at both.
 - This file is that evidence. It is not a Pages pass. GK item 2 stays "partial" in [kpi-GK1.md](kpi-GK1.md) ("Gates").
 
@@ -294,7 +294,7 @@ index 0c83a229..a098d760 100644
 - The 28 `case-worksheet-exports` files and their SHA-256 lists.
 - The Escape probe, its build log and its output.
 
-For the GK1 record: keep this apart from the Pages evidence. Decision 7 is a limitation. GK item 2 stays "partial": the six held journeys are not in the Pages pass. The local run on a teaching-tools build of the candidate `1842a86` (2026-10-29) is what decision 7 asked for. The first run, on `7263004` (2026-10-26, below), was redone there on the owner's "Redo all" answer of 2026-10-29.
+For the GK1 record: keep this apart from the Pages evidence. Decision 7 is a limitation. GK item 2 stays "partial": the six held journeys are not in the Pages pass. The local run on a teaching-tools build of the candidate `1842a86` (2026-10-29) is what decision 7 asked for. The first run, on `7263004` (2026-10-26, below), was redone there on the owner's "Redo all (Recommended)" answer of 2026-10-29.
 
 ## The earlier run on 7263004 (2026-10-26)
 
@@ -557,4 +557,4 @@ index 0c83a229..a098d760 100644
 - The 28 `case-worksheet-exports` files and their SHA-256 list.
 - The Escape probe, its build log and its output.
 
-For the GK1 record: keep this apart from the Pages evidence. Decision 7 is a limitation. GK item 2 stays "partial": the six held journeys are not in the Pages pass, and this one local run on a teaching-tools build is what decision 7 asked for (until 2026-10-29: it was redone on `1842a86`, above, on the owner's "Redo all").
+For the GK1 record: keep this apart from the Pages evidence. Decision 7 is a limitation. GK item 2 stays "partial": the six held journeys are not in the Pages pass, and this one local run on a teaching-tools build is what decision 7 asked for (until 2026-10-29: it was redone on `1842a86`, above, on the owner's "Redo all (Recommended)").
