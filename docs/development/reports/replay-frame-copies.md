@@ -12,7 +12,7 @@
 > - ความเร็ว: การคัดลอกทำให้การ seek แต่ละครั้งช้าลง 1–2 µs (เช่น Falcon Heavy 4.76 → 5.93 µs) รุ่นแรกใช้ `structuredClone` ซึ่งช้ากว่ามาก (15.5 µs) และเสียงของการปล่อยจรวด seek หลายสิบครั้งต่อเฟรมภาพ agent ตัวที่สองพบจุดนี้ จึงเปลี่ยนเป็นฟังก์ชันคัดลอกที่เร็วกว่า
 > - หน่วยความจำของการบันทึก (`FRAME_BYTES`) ไม่เปลี่ยน เพราะ `captureFrame` ไม่เปลี่ยน
 > - agent ตัวที่สองตรวจแล้ว ยืนยัน 14 จาก 14 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge พบสองข้อที่ไม่บล็อก: ความเร็ว (แก้แล้วใน PR นี้) และ `rigid.controlFaults` ของเที่ยวบิน six-DOF ที่มีการจำลองความขัดข้อง ซึ่งยังใช้ร่วมกับข้อมูลที่บันทึก (มีมาก่อน PR นี้ อยู่ในไฟล์อื่นที่ถูกรวมใน 7 chunk แยกไว้ทำต่อ)
-> - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (รอ CI บน head ล่าสุด) ทั้งสอง PR merge ได้โดยไม่ชนกันทั้งสองลำดับ แต่ PR ที่ merge ทีหลังต้องแก้ประโยคใน docstring ของ `interpolateFrames` ที่ #187 เขียนว่าผลลัพธ์ใช้ `jettisoned`, Apollo และ `target` ร่วมกับเฟรมที่บันทึก ให้เหลือแค่ `visual` เพราะส่วนอื่นจะไม่จริงแล้ว
+> - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจแล้วไม่มีข้อบล็อก CI ผ่านบนโค้ดสุดท้าย (run 41020718499) จึงเข้าเงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก ยกเว้นการเปลี่ยนเป็น `copyPlain` ที่ agent ตัวที่สองยังไม่ได้ตรวจซ้ำ (ตรวจด้วยเทสต์และ probe เทียบกับ main แล้ว) ทั้งสอง PR merge ได้โดยไม่ชนกันทั้งสองลำดับ แต่ PR ที่ merge ทีหลังต้องแก้ประโยคใน docstring ของ `interpolateFrames` ที่ #187 เขียนว่าผลลัพธ์ใช้ `jettisoned`, Apollo และ `target` ร่วมกับเฟรมที่บันทึก ให้เหลือแค่ `visual` เพราะส่วนอื่นจะไม่จริงแล้ว
 
 ```yaml
 item: replay frame copies (aliasing on main, PR #187's "Not changed, for later")
@@ -130,8 +130,11 @@ That run compared main against the first version (`structuredClone`, before the 
 ### Tests
 
 - **Typecheck:** `npx tsc --noEmit -p .` clean.
-- **Unit suite, local:** 335 files, 10,529 tests, all pass on 8a4ba98 (Node 22.22.0, not CI's 22.23.3); the run on 9080d56 is in progress.
-- **CI:** run 41002400552 green on 8a4ba98: typecheck, build, test ×3, browser-smoke ×2, verify.
+- **Unit suite, local:** 335 files, 10,529 tests, all pass on 8a4ba98 (Node 22.22.0, not CI's 22.23.3). On the final code, CI's three unit shards ran it (below).
+- **CI:**
+  - Run 41020718499 green on f2fe2db, the final code (Node 22.23.3): typecheck, build, test ×3, browser-smoke ×2, verify.
+  - Run 41002400552 green on 8a4ba98, the first version.
+  - Run 41019830551 on 147b232 shows `verify` red only because its test and browser jobs were cancelled by the next push.
 - **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the only heavy or six-DOF fleet file that builds a recorder or player: 1 of 1 passed on 8a4ba98 (161 s) and on f2fe2db (168 s; src/ and tests/ as in 9080d56), Node 22.22.0.
 - **Not run:**
   - The other 32 heavy files and the 6 six-DOF fleet files the change map selects for any `src/physics/**` path. None builds a `FlightRecorder` or `ReplayPlayer` or calls `cloneFrame` or `interpolateFrames` (grep of tests/heavy and tests/sixdof-fleet), so this change cannot reach them. They run on the weekly heavy workflow, and D-64 reuse does not apply because frame.ts is in the physics tree.
