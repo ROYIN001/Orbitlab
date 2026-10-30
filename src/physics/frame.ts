@@ -32,7 +32,7 @@ import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
 import type { ReturnTarget } from './sim/return-guidance';
-import { clone } from './vec3';
+import { clone, norm } from './vec3';
 import { propagateKepler } from './orbital';
 import { atmosphere } from './atmosphere';
 import { R_EARTH } from './constants';
@@ -689,26 +689,6 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
   };
 }
 
-/**
- * Interpolate between two recorded frames for a seek to mission time `time`.
- *
- * Continuous quantities (altitude, speed, dynamic pressure, the classical
- * elements, the epoch) are blended linearly, angles along the shortest arc and
- * the body axis by slerp. Position and velocity follow the Kepler solution
- * propagated from the earlier frame whenever both frames are coasting or in
- * orbit — over a 30 s orbital recording gap a straight line between two states
- * cuts several kilometres off the arc — and are blended linearly otherwise,
- * because under thrust or in the atmosphere the two-body solution is not the
- * trajectory that was flown.
- *
- * Everything discrete (status, ascent phase, stage/booster/fairing state, the
- * debris list, the event count) comes from the *earlier* frame: a state that
- * changes at an instant must not be shown before that instant. Debris
- * positions are still interpolated, so spent stages fall smoothly.
- *
- * The result is a fresh frame; the inputs are never mutated. The function is
- * pure, so seeking twice to the same time produces deep-equal frames.
- */
 function blendAbort(a: AbortState | undefined, b: AbortState | undefined, u: number): AbortState {
   if (!a || !b) return cloneAbort((u < 0.5 ? a : b) ?? (a ?? b)!);
   const near = cloneAbort(u < 0.5 ? a : b);
@@ -735,6 +715,44 @@ function blendDebrisExtras(d: DebrisFrame, o: DebrisFrame, u: number): Pick<Debr
   return out;
 }
 
+/**
+ * Height above which the simulation flies a coast with no air: the vehicle's on
+ * a Kepler arc (`useKepler`, simulation.ts), and a spent stage counts as in
+ * orbit from it (sim/debris.ts). Below it drag slows a falling body, and the
+ * two-body arc is not the path it flew.
+ */
+const AIRLESS_HEIGHT = 140e3;
+
+/**
+ * Interpolate between two recorded frames for a seek to mission time `time`.
+ *
+ * Continuous quantities (altitude, speed, dynamic pressure, the classical
+ * elements, the epoch) are blended linearly, angles along the shortest arc and
+ * the body axis by slerp. Position and velocity follow the vehicle's arc
+ * whenever both frames are coasting or in orbit — over a 30 s orbital
+ * recording gap a straight line between two states passes a kilometre inside
+ * the arc: for a point mass with its engine off at the earlier frame, the
+ * Kepler solution propagated from that frame; for a vehicle with rigid
+ * telemetry (six-DOF, flown with J2, or a docked spacecraft), the cubic through
+ * both frames' states on a span under a quarter of its orbit's period, as in a
+ * rendezvous and in Apollo. They are blended linearly otherwise: a point mass
+ * under thrust, the span a burn begins in, a rigid vehicle's span of a quarter
+ * of the orbit or more (only a hard-thinned recording leaves one), an escape.
+ *
+ * Everything discrete (status, ascent phase, stage/booster/fairing state, the
+ * debris list, the event count) comes from the *earlier* frame: a state that
+ * changes at an instant must not be shown before that instant. Debris
+ * positions are still interpolated, so spent stages fall smoothly: a body that
+ * coasts out of the air goes from one frame to the next the way the vehicle
+ * does (`path`), anything else in a straight line.
+ *
+ * The result is a fresh frame, apart from sub-objects it shares with the
+ * stored frame as `cloneFrame` does, which a caller must not write to:
+ * `jettisoned`, Apollo's state below its top level (the whole of it unless both
+ * frames carry the CSM, the ascent stage or the service module), a recovery's
+ * `target` and a body's `visual`. The inputs are never mutated. The function is
+ * pure, so seeking twice to the same time produces deep-equal frames.
+ */
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
   // Degenerate spans and a seek that lands on `a` itself still hand back a
@@ -757,22 +775,34 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   }
   const dt = span * u;
   const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
-  // C01: Apollo between the Earth and the Moon is not on a Kepler arc about the Earth: the cubic through both ends
-  const ballistic = !a.rigid && !a.apollo && coasting(a) && coasting(b) && a.thrust <= 0;
-  let r: Vec3;
-  let v: Vec3;
-  if (ballistic) {
-    const p = propagateKepler(a.r, a.v, dt);
-    r = p.r;
-    v = p.v;
-  } else if ((a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo && !a.rigid)) {
-    const p = hermite(a.r, a.v, b.r, b.v, u, span);
-    r = p.r;
-    v = p.v;
-  } else {
-    r = lerpVec(a.r, b.r, u);
-    v = lerpVec(a.v, b.v, u);
-  }
+  // A coast. A point mass with its engine off at the earlier frame: Kepler from that frame, which is how a coast
+  // above the air is flown (`useKepler`); one in orbit is flown with J2, which Kepler misses at the next frame by
+  // metres (left as it was). A six-DOF coast is flown with J2 too, and a docked spacecraft (rigid telemetry from the
+  // rendezvous) rides the station's port on the station's J2 orbit: the cubic through both ends, as in a rendezvous,
+  // whatever the engine read at the earlier frame (a cut-off's tail), since the cubic meets both ends' states. On
+  // the straight line they sagged a kilometre under their orbit half way through a 30 s frame.
+  // C01: Apollo between the Earth and the Moon is not on a Kepler arc about the Earth: the cubic through both ends,
+  // six-DOF or not, whatever its engines read (the S-IVB's hydrogen vent puts a few hundred newtons on the thrust
+  // through the parking orbit).
+  const vehicleCoasts = !a.apollo && coasting(a) && coasting(b);
+  // The vehicle's way from one state to the next, which a spent body coasting beside it shares (`coasts`): one
+  // drawn on its arc beside one drawn on the straight line, which sags v²Δt²/8R under it, parts from it — 115 m
+  // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (a point mass
+  // under thrust, the span a burn begins in), so do they, and the quarter-period bound below reads the vehicle's
+  // period for them too; a body that does not coast takes it whatever the vehicle does. Every step change of velocity inside a coast is pinned to a frame: an event's frames, a change of
+  // configuration (held above) or of status; the cubic, which follows both ends' velocities, relies on that. A
+  // cut-off's tail or a small thrust running into a span is not pinned, and costs it metres (25 m over Starship's
+  // 18 s cut-off span) where the line is hundreds. It is only for a span under a quarter of the orbit's period: on
+  // a longer one, which only a recording thinned hard leaves (a docked spacecraft hours past its docking, under the
+  // six-DOF frame budget: 7,981 s), the cubic swings out further than the line does (past a third of a GTO's or a
+  // Molniya's period, a whole one of a circle), so it keeps the line. Above an eccentricity of about 0.8, and on an
+  // escape, whose period is Infinity, it can swing out further inside a quarter too; again only a recording thinned
+  // hard leaves such a span.
+  const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
+    coasts && vehicleCoasts && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
+      : coasts && ((vehicleCoasts && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
+      : { r: lerpVec(ar, br, u), v: lerpVec(av, bv, u) };
+  const { r, v } = path(a.r, a.v, b.r, b.v);
   const ea = a.elements, eb = b.elements;
   const debris: DebrisFrame[] = a.debris.map((d) => {
     const other = b.debris.find((x) => x.id === d.id);
@@ -791,8 +821,9 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     return {
       ...d,
       rigid,
-      r: lerpVec(d.r, other.r, u),
-      v: lerpVec(d.v, other.v, u),
+      // it coasts: nothing on it firing at either end, and out of the air at both
+      ...path(d.r, d.v, other.r, other.v, !d.burning && !other.burning
+        && norm(d.r) - R_EARTH > AIRLESS_HEIGHT && norm(other.r) - R_EARTH > AIRLESS_HEIGHT),
       dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other.dir, u),
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
       recovery: rec,
