@@ -170,11 +170,12 @@ describe('a six-DOF vehicle between two recorded frames', () => {
     const a = docked(T0), b = docked(T0 + 7981);
     for (const dt of [800, 2000, 4000, 6000, 7200]) {
       const f = interpolateFrames(a, b, T0 + dt);
-      // the line, both of them: neither swings out on the cubic
-      expect(f.rendezvous!.station.r).toEqual(lerp(a.rendezvous!.station.r, b.rendezvous!.station.r, dt / 7981));
-      // so the spacecraft stays within the port's 20 m of the station (the line between two places 20 m out on
-      // the station's turning radius passes closer to it than that)
+      // within the port's 20 m of the station: they go the same way (the line between two places 20 m out on the
+      // station's turning radius passes closer to it than that)
       expect(dist(f.r, f.rendezvous!.station.r)).toBeLessThanOrEqual(20 + 1e-6);
+      // and the station swings out no further than the line would draw it, as the cubic did (23,162 km off there)
+      const flown = kepler(SHIP)(dt).r, line = lerp(a.rendezvous!.station.r, b.rendezvous!.station.r, dt / 7981);
+      expect(dist(f.rendezvous!.station.r, flown)).toBeLessThanOrEqual(dist(line, flown) + 1);
     }
     // under a quarter of the orbit both take the cubic, as before: 0.2 of it, 1,060 s
     const c = docked(T0 + 0.2 * PERIOD), mid = interpolateFrames(a, c, T0 + 0.1 * PERIOD);

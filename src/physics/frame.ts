@@ -797,9 +797,9 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // pinned to a frame: an event's frames, a change of configuration (held above) or of status; the cubic, which
   // follows both ends' velocities, relies on that. It is only for a span under a quarter of the orbit's period: on a
   // longer one the cubic swings out further than the line does (past a third of a GTO's or a Molniya's period, a
-  // whole one of a circle), so it keeps the line. Only a recording past its frame budget leaves one, since the
-  // recorder thins a coast to a frame every ten minutes at most before it thins the rest (`MAX_COAST_GAP`); a
-  // six-DOF spacecraft docked for 12,000 s once kept a span of 7,981 s.
+  // whole one of a circle), so it keeps the line. Only a recording thinned hard leaves one: the recorder thins a
+  // coast to a frame every ten minutes at most (`MAX_COAST_GAP`), and further only once the rest of the flight is
+  // at a frame a minute; a six-DOF spacecraft docked for 12,000 s once kept a span of 7,981 s.
   const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
     coasts && vehicleCoasts && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
       : coasts && ((vehicleCoasts && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)

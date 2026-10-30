@@ -16,8 +16,9 @@
 > - ผล:
 >   - Soyuz MS six-DOF เชื่อมต่อ 12,000 s: ช่วงยาวสุด 7,981 s → 570 s ยาน 9,271 km → 3.0 km สถานี 23,162 km → 3.0 km ยานกับสถานีห่างกัน 18 m เท่าที่บินจริง
 >   - Apollo 11 (point-mass ลอยน้ำอีก 4 ชั่วโมงหลังลงน้ำ จนถูก thin): ใต้ร่มหลัก 202 m → 0.8 m ช่วงเข้าบรรยากาศ 2,251 m → 0.3 m
+> - ข้อแลกเปลี่ยน (agent ตัวที่สองพบ): เมื่อ coast ถึงเฟรมละ 10 นาทีทั้งหมดแล้ว รอบถัดไปจะ thin ช่วงบินแบบละเอียดลงเหลือเฟรมละ 1 นาที Soyuz MS six-DOF ที่เชื่อมต่อนานกว่า 5.2 ชั่วโมงถึงรอบนี้ ช่วงขึ้นจาก 1 s เป็น 1.7 s และ rendezvous จาก 30 s เป็น 60 s ของเดิมไม่ถึงรอบนี้ แต่ช่วงที่เชื่อมต่อยืดได้ถึง 71,468 s (เกือบหนึ่งวัน) ทั้งเราและ agent เห็นว่าคุ้ม
 > - ขนาด: เล็กลง index −5 B, flight worker −7 B ไม่ได้ขึ้นเพดาน (precache code เหลือ 60 B)
-> - เทสต์: 5 เทสต์ใหม่ fail บน head ของ #187 ทั้ง 5 และผ่านหลังแก้ ไม่ได้เปลี่ยน assertion เดิม
+> - เทสต์: 5 เทสต์ใหม่ fail บน head ของ #187 ทั้ง 5 และผ่านหลังแก้ ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจแล้ว ไม่มีข้อที่ต้องแก้ก่อน merge ข้อที่ควรแก้ 3 ข้อ (ตัวเลข ข้อแลกเปลี่ยนข้างบน และคอมเมนต์เก่า) จัดการแล้ว
 > - ต่อจาก #187: PR นี้สร้างบน branch ของ #187 ควร merge หลัง #187
 
 ```yaml
@@ -28,8 +29,8 @@ app_code: src/replay/recorder.ts, src/physics/frame.ts
 tests: tests/replay-long-span.test.ts (new); tests/replay.test.ts (+2); tests/rigid-replay-arc.test.ts (+1, the docked-frame builder moved to module level)
 base_sha_verified_on: {sha: fa92cf6, date: 2026-10-30, note: 'the head of #187 (claude/practical-lovelace-2ndbww), itself on main 1842a86'}
 branch: claude/ecstatic-darwin-wijyuc
-pr: (stacked on #187)
-second_agent_review: see "Second-agent review"
+pr: 189 (stacked on #187)
+second_agent_review: 'four lenses on a22922f, nothing blocking; three should-fix items (a number, the pass-4 trade, stale comments) taken on the next commit; see "Second-agent review"'
 ```
 
 ## Cause
@@ -85,7 +86,14 @@ Point-mass Apollo 11 at 12,000 frames and at 6,000 records its entry after its l
   - Ten minutes is under a quarter of any orbit's period. The shortest, at 140 km, is 87 minutes, a quarter of it 1,310 s. So a six-DOF vehicle always takes the cubic between two coast frames.
   - The cubic's error grows as the span's fourth power. In a low orbit it is about 0.4 m at a minute and 2–4 km at 8–10 minutes; the chord sags about 400 km at ten minutes.
   - Spans saturate a little under the ceiling (frames 30 s apart halve to 480 s), 570–595 s in the runs below.
-  - Apollo 11's eight days of coast need about 1,200 frames at ten minutes, so neither budget reaches pass 4 (measured below).
+  - Apollo 11's eight days of coast need 1,150 frames at ten minutes (about 1,450 at the 480 s the halving settles on), so neither budget reaches pass 4 (measured below).
+  - **A docked spacecraft for over five hours does reach pass 4** (the second agent's finding). The six-DOF Soyuz MS at 6,000 frames, flown to 43,200 s docked, first runs it at 18,665 s docked:
+    - the ascent goes from 681 frames to 358, its widest gap from 1.0 s to 1.7 s;
+    - the rendezvous goes from 5,250 frames to 2,708, its widest gap from 30 s to 60 s;
+    - the final approach (under 300 m) keeps a frame every 1.5 s at most, and the docked spans stay under 570 s.
+
+    On #187's head pass 4 never runs there, since pass 3 always finds coast frames, but the docked span grows instead: to 71,468 s for a point mass docked for a day in 3,000 frames. Losing a frame a second on the ascent costs metres on the screen; a docked span of hours costs thousands of kilometres. A second pass-4 run would come about 11 days later.
+  - Decimations run about twice as often (a point mass docked for a day in 3,000 frames: 42 → 91; six-DOF docked 12 h: 80), each a few milliseconds plus the worker's resend of the kept times.
 - **The air goes with the dense flight.** `coasting` now asks for `altitude >= ATMOSPHERIC_CEILING` (140 km) as well, so a coast or orbit frame in the air is thinned by pass 2 (to a frame a second) and passes 4–5, not by 1 and 3.
 - **An orbit in the air every 2 s.** The 'coast' and 'orbit' cases of `interval` are one case now. An orbit frame below 140 km gets the 2 s a coast there already had.
   - About 450 frames for Apollo's entry, about 415 more than at 30 s; the frame budget, a count, is unchanged.
@@ -145,7 +153,9 @@ Probes are gitignored (`tests/probe/`), run on #187's head (fa92cf6) and on this
 
 **The docking span itself** (point-mass Soyuz MS, the 5 s span from 'rendezvous' to 'orbit' at `evt.docked`): the spacecraft took the line there on #187's head and the station the cubic, so they were drawn up to 41.5 m apart (18.04 m flown). Both take the line now: 18.04 m. The spans either side are unchanged (cubic, both).
 
-**The fleet** (all 20 watch missions, point mass, unthinned, to the end or T+30,000 s, Apollo 11 to the water, MS-25 to T+200,000 s): the only 'orbit' frames below 140 km are Apollo's entry (36 frames, T+702,185 to T+703,079). No mission has a coast frame below 140 km in point mass, and Vostok-1, the one flight with a deorbit time, has no coast frame. So the cadence change touches Apollo's entry only; the thinning changes touch only recordings past their budget.
+**The fleet** (all 20 watch missions, point mass, unthinned, to the end or T+30,000 s, Apollo 11 to the water, MS-25 to T+200,000 s): the only 'orbit' frames below 140 km are Apollo's entry (36 frames, T+702,185 to T+703,079). No mission has a coast frame below 140 km in point mass, and Vostok-1, the one flight with a deorbit time, has no coast frame. So among the watch missions the cadence change touches Apollo's entry only; the thinning changes touch only recordings past their budget. A user's orbit with a perigee under 140 km (validation allows 100 km) gets 2 s frames in the air too: the second agent's Falcon 9 Demo-2 at 120 × 350 km, point mass, flown until it decays, has 342 orbit frames in the air where it had 173. The frame budget, a count, still bounds it.
+
+The second agent also flew, old and new code, point mass: Apollo 11 at 12,000 and 6,000 frames; Ariane 6, Falcon Heavy, H-IIA and Angara A5 at 6,000; Soyuz MS-25 at 12,000; Soyuz MS-16 at 6,000. Frame counts and passes are identical except Apollo's frames in the air (21 → 455 at 12,000, 36 → 455 at 6,000), and pass 4 never ran in any of them.
 
 ## Tests
 
@@ -167,6 +177,8 @@ Probes are gitignored (`tests/probe/`), run on #187's head (fa92cf6) and on this
   - 60 s spans in Apollo's entry.
 
   On a22922f all 5 pass.
+  - The 20,505 s is the test's own flight. The second agent's probe, which advances the clock in other steps, kept a 20,802 s span on the same code; both are far past the ceiling.
+  - The station test first asserted the exact line, which would also fail a better long-span blend. It now asserts the pair within the port's 20 m and the station no further off than the line (second agent's note).
 - **Related files** (every test file that builds a recorder, a player or a session, and #187's list): 30 files, 450 tests, all pass on a22922f.
   - custom-vehicle, d06-custom-satellite, d06-satellite-launch, debris-replay, equations, instructor-mode, launch-abort, lesson-grading-end, live-stepping, mcp, orbit-handoff;
   - rendezvous-fuel, rendezvous, replay-long-span, replay, rigid-event-boundary, rigid-failure-boundary, rigid-replay-arc, rigid-replay, session;
@@ -204,4 +216,25 @@ Probes are gitignored (`tests/probe/`), run on #187's head (fa92cf6) and on this
 
 ## Second-agent review
 
-Run on a22922f; the result is recorded on the PR.
+One agent, four lenses, on a22922f (2026-10-30). It edited nothing and ran its probes under the gitignored tests/probe/. Nothing blocking.
+
+- **Recorder (confirmed, one finding).**
+  - The budget stays a bound: pass 5 and the fallback are unchanged, every pass excludes event frames, and a gap-limited pass opens no gap over its limit.
+  - The merged 'coast'/'orbit' case is identical for every coast frame and every orbit frame above 140 km. `burning` can be set for a coast only by a rendezvous burn, which only exists under status 'rendezvous'. `orbit.deorbit` exists only in Vostok-1's flown record, and an edited mission loses it (`ownFlight`, src/config/validation.ts).
+  - Eight watch missions, old and new code: identical but for Apollo's frames in the air.
+  - **Finding (should-fix in this report):** pass 4 now runs for a spacecraft docked over five hours; the numbers are under "Change". Taken: stated in the report, the PR and the `MAX_COAST_GAP` comment. The agent judged the trade right.
+  - **Notes:** a user's orbit with a low perigee gets 2 s frames in the air (under "Measured"); decimations run twice as often; the 'spared' rule can drop the last orbit frame above 140 km before the entry, with no effect seen (spans in the air ≤ 5.2 s in every probe).
+  - **Stale comments (should-fix):** the recorder's header and `decimate`'s comment still described the old order of passes. Fixed.
+- **Station blend (confirmed).**
+  - Every frame with a rendezvous has rigid telemetry (`RendezvousSim.sync` writes both, under 'rendezvous' and while held under 'orbit'), so `path`'s Kepler branch cannot reach the station.
+  - The station drawn by `path` and by the old cubic, against the flown station: identical on rendezvous and docked spans under a quarter of the orbit.
+  - At docking and an aborted docking both bodies now take the line over the one event-pinned step (5 s at capture), so the station sags with the spacecraft, about 27 m, where the two were drawn up to 41.5 m apart.
+  - The live view spans one step and takes the same branches. Apollo's frames carry no rendezvous.
+- **Tests (confirmed, two notes).**
+  - All 5 fail on fa92cf6 for the stated reasons and pass on a22922f.
+  - Thresholds are not tuned: the docked spacecraft is 3.6 km off where the cubic at 600 s gives 3.7–4.6 km by its estimate.
+  - **Notes:**
+    - It measured 20,802 s for the docked span on fa92cf6 where the test comment says 20,505 s. Checked: the test's own flight gives 20,505 s on fa92cf6 (re-run in a worktree), and the 20,802 s is its probe's, which advances the clock differently. Both numbers are now in this report.
+    - The station test pinned the exact line. Loosened, as above.
+- **Comments and claims (confirmed, wording).** 87 minutes at 140 km, the 400 km chord, 1,150 frames for Apollo's coast, the only orbit in the air of the watch missions, and a coast never `burning` all check out. "The vehicle takes the cubic" holds only for rigid frames; it now says so.
+- **Not checked by it:** the bundle bytes, six-DOF drawn distances, six-DOF watch missions other than the docking, the full suite and the typecheck.

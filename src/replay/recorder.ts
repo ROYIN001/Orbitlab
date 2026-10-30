@@ -38,14 +38,16 @@
  * now adds the separately measured rigid telemetry maps. Packed rotation storage
  * is counted separately. These estimates exclude browser/render/simulation heap;
  * `maxFrames` bounds ordinary frames, not protected events.
- * On overflow the *coast* frames are thinned first, down to one a minute
- * (`MAX_THINNED_GAP`); then the dense flight to a frame a second
- * (`DENSE_THINNED_GAP`); then the coast below a frame a minute, because what a
- * user scrubs back to is liftoff, max Q and staging, not the 143rd minute of a
- * parking orbit; only when the coast has nothing left to give, any frame whose
- * going leaves no gap over a minute and no phase without its last frame; and
- * only then without that floor. Event frames are never thinned at all, so
- * seeking to a callout is exact however hard the recording has been squeezed.
+ * On overflow the *coast* frames above the air are thinned first, down to one
+ * a minute (`MAX_THINNED_GAP`); then the dense flight to a frame a second
+ * (`DENSE_THINNED_GAP`); then the coast below a frame a minute, down to one
+ * every ten minutes (`MAX_COAST_GAP`), because what a user scrubs back to is
+ * liftoff, max Q and staging, not the 143rd minute of a parking orbit; only
+ * when the coast has nothing left to give, any frame whose going leaves no gap
+ * over a minute and no phase without its last frame; and only then without
+ * that floor. A coast or an orbit in the air (Apollo's entry) goes with the
+ * dense flight. Event frames are never thinned at all, so seeking to a callout
+ * is exact however hard the recording has been squeezed.
  *
  * Live stepping (roadmap T02; owner decision 2, 2026-09-29): a point-mass flight
  * is flown in the whole steps `Simulation.suggestedDt` asks for, never in steps
@@ -117,10 +119,13 @@ const DENSE_THINNED_GAP = 1;
  * every coast frame each time it ran, so the oldest frames of a long coast ended up hours apart while the newest
  * were a minute apart: a six-DOF Soyuz MS docked for 12,000 s, its rendezvous holding most of the 6,000 frames,
  * kept one docked span of 7,981 s, which a replay drew on the chord 9,271 km off the orbit. Now the old frames stop
- * at ten minutes and the new ones catch up, and only then does the rest of the flight give frames up. Ten minutes
- * is under a quarter of any orbit's period (87 minutes at 140 km), where the vehicle takes the cubic between two
- * frames (`interpolateFrames`), a few kilometres off a low orbit at most where its chord sags 400 km; Apollo's eight
- * days of coast fit in some 1,200 frames of it.
+ * at ten minutes and the new ones catch up, and only then does the rest of the flight give up its frame a second.
+ * Ten minutes is under a quarter of any orbit's period (87 minutes at 140 km), where a six-DOF or docked vehicle
+ * takes the cubic between two frames (`interpolateFrames`; a point mass, Kepler), a few kilometres off a low orbit
+ * at most where its chord sags 400 km. Apollo's eight days of coast fit in 1,150 frames of it (some 1,450 at the
+ * 480 s the halving settles on). A six-DOF Soyuz MS docked for over five hours does reach the next pass, which
+ * takes its ascent from a frame a second to one every 1.7 s and its rendezvous from 30 s to 60 s; the old pass let
+ * a docked span grow instead (71,468 s, a point mass docked for a day in 3,000 frames).
  */
 const MAX_COAST_GAP = 600;
 
@@ -833,10 +838,11 @@ export class FlightRecorder implements RecordingSource {
   }
 
   /**
-   * Thin the recording when it outgrows its budget: drop every other coast or
-   * orbit frame that is not an event boundary. Ascent frames are only touched
-   * when there is no coast left to give, and event frames never are — what a
-   * user scrubs back to is liftoff, max Q and staging.
+   * Thin the recording when it outgrows its budget: drop every other frame of
+   * the first pass below that has one to give (no event boundary is ever one).
+   * The dense flight goes to a frame a second early, and below that only when
+   * the coast is a frame every ten minutes and has nothing left to give — what
+   * a user scrubs back to is liftoff, max Q and staging.
    *
    * The budget is a real bound: the old version raised `maxFrames` by 50 %
    * whenever the coast pass came up empty, so a recording with nothing
