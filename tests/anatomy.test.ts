@@ -451,7 +451,8 @@ describe('spent parts drawn from the model', () => {
     expect(plain.customProgramCacheKey()).toBe(new THREE.MeshStandardMaterial().customProgramCacheKey());
     const shader = { fragmentShader: THREE.ShaderLib.standard.fragmentShader };
     modelMats[0].onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, null as unknown as THREE.WebGLRenderer);
-    expect(shader.fragmentShader).toContain('#include <emissivemap_fragment>\ntotalEmissiveRadiance *= ');
+    // along the outline: 5 % where the surface faces the eye (|n·v| = 1), all of it where it turns away (0)
+    expect(shader.fragmentShader).toContain('#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 0.05 + 0.95 * pow(1.0 - min(abs(dot(normal, normalize(vViewPosition))), 1.0), 2.5);');
     view.clear();
   }));
 

@@ -546,8 +546,10 @@ export class DebrisView {
       if (item.bodyMat) item.bodyMat.emissiveIntensity = glow * 1.3;
       // In sunlight the model's parts read on their own, and the glow clipped them to flat white for seconds: they
       // glow only out of the sun (in the Earth's shadow, fading in across its soft edge), and along their outline.
-      const shade = sunDir ? 1 - sunlitAt(d.r, sunDir) : 1;
-      for (const mat of item.modelMats) mat.emissiveIntensity = glow * 1.3 * shade;
+      if (item.modelMats.length) {
+        const shade = sunDir ? 1 - sunlitAt(d.r, sunDir) : 1;
+        for (const mat of item.modelMats) mat.emissiveIntensity = glow * 1.3 * shade;
+      }
     }
     for (const [id, item] of this.items) {
       if (!seen.has(id)) {
