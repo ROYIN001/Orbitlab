@@ -14,7 +14,8 @@
 >   3. ตัด commit แรกออก แล้วขึ้นเพดานตาม D-38 (precache code +2.1 kB และ index +0.3 kB)
 > - เพราะมีงานย่อโค้ดรวมอยู่ PR นี้จึงไม่เข้าเงื่อนไขอนุมัติถาวรสำหรับการแก้บั๊ก ต้องให้เจ้าของกดเอง
 > - เทสต์: เทสต์ใหม่ 3 อัน ล้มบน main ทั้ง 3 (ไม่มีเหตุการณ์) ผ่านเมื่อแก้แล้ว และเพิ่ม assertion ในเทสต์ six-DOF เดิมที่บินแบบไม่มีเป้าหมาย (ล้มบน main) ไม่ได้เปลี่ยน assertion เดิมข้อใด
-> - การตรวจโดย agent ตัวที่สอง: (ดูหัวข้อ "Second-agent review")
+> - การตรวจโดย agent ตัวที่สอง: ยืนยัน 7 จาก 8 ข้อ อีก 1 ข้อเป็นเรื่องถ้อยคำในรายงาน แก้แล้ว ไม่พบข้อที่ต้องแก้ก่อน merge ข้อสังเกตที่ไม่ขวางการ merge แก้แล้วหรือบันทึกไว้ใน "Not changed, for later"
+> - CI: ผ่านทั้งหมดบน f8426ec (run 41111067263) และไฟล์ heavy ที่บินโค้ดส่วนนี้ (starship-flight5, falcon-heavy-returns) ผ่าน
 
 ```yaml
 item: an untargeted recovery's entry and landing burns raise their events (bug fix; finding B of replay-debris-air)
@@ -47,7 +48,11 @@ The flight recorder pins the frames on both sides of every step that raises an e
 - `boosterRecovery` is on with **no `recoveryPlan`**. This is what the Build panel flies when recovery is ticked and every body is left on its first choice, "downrange" (src/ui/panel.ts: a plan whose bodies are all `downrange` is stored as no plan). It is also MCP's `configure_mission` with `boosterRecovery: true` and no plan, and any mission file saved that way.
 - a plan names **`{ kind: 'downrange' }`** for the core or a strap-on.
 
-Vehicles: the three with `recoverable: true` in src/data/vehicles.ts, Falcon 9, Falcon Heavy (its core and its two side boosters; strap-ons need more than one engine) and Starship (Super Heavy). In six-DOF only the stages in `RIGID_RECOVERABLE` fly burns (`falcon9:s1`, `falconheavy:core`, `falconheavy:side`, `starship:superheavy`); a recoverable custom vehicle's stage falls there without burns, as before.
+Vehicles:
+- the three with `recoverable: true` in src/data/vehicles.ts: Falcon 9, Falcon Heavy (its core and its two side boosters; strap-ons need more than one engine) and Starship (Super Heavy);
+- a custom vehicle whose spec sets `recoverable` and a `recoveryReserve` (src/config/vehicle-spec.ts accepts both): its first stage, and its multi-engine strap-ons, take the point-mass untargeted path.
+
+In six-DOF only the stages in `RIGID_RECOVERABLE` fly burns (`falcon9:s1`, `falconheavy:core`, `falconheavy:side`, `starship:superheavy`); a recoverable custom vehicle's stage falls there without burns, as before.
 
 Not reached by any built-in flight:
 - **Watch missions** (src/ui/watch-missions.ts) set `boosterRecovery: !!m.recoveryPlan`, and every plan there is targeted: Bandwagon-1 and ORBCOMM-2 to LZ-1, Starship Flight 5 to the tower, Arabsat-6A to LZ-1, LZ-2 and the drone ship, Demo-2 to the drone ship.
@@ -101,11 +106,15 @@ The six-DOF flights between them raise all five contact events.
 ## The fix against main (36d8bb3)
 
 The same oracle, main against the fix:
-- **Targeted flights** (the first four rows): event logs, debris and vehicle states bit-identical, point-mass and six-DOF. *(six-DOF: see "Six-DOF oracle" below for the run's result.)*
-- **Untargeted flights:** the event log with `evt.entryBurnStart` and `evt.landingBurnStart` left out, every debris body and the vehicle are bit-identical; only the added events differ. Point-mass:
-  - Falcon 9: entry burn T+305.25 s, landing burn T+366.50 s;
-  - Falcon Heavy, no plan: the side boosters' at T+317.50 and T+378.00 s (two each), the core's at T+406.75 and T+534.83 s;
-  - the mixed plan: the downrange core's at T+398.60 and T+523.40 s (the LZ-1 booster's were there before).
+- **Targeted flights** (the first four rows): event logs, debris and vehicle states bit-identical, point-mass and six-DOF.
+- **Untargeted flights:** with `evt.entryBurnStart` and `evt.landingBurnStart` left out, the event log is bit-identical, and so is the vehicle's state.
+  - Point-mass: every debris body is bit-identical too; only the added events differ.
+  - Six-DOF (Falcon 9 downrange, the mixed plan): the debris bodies differ in one field only, `recovery.entryFlown: true` on the untargeted stage, which the six-DOF fix sets and only targeted code reads (a field-by-field diff of the full end states). Positions, velocities, masses and outcomes are bit-identical.
+  - The added events, point-mass:
+    - Falcon 9: entry burn T+305.25 s, landing burn T+366.50 s;
+    - Falcon Heavy, no plan: the side boosters' at T+317.50 and T+378.00 s (two each), the core's at T+406.75 and T+534.83 s;
+    - the mixed plan: the downrange core's at T+398.60 and T+523.40 s (the LZ-1 booster's were there before).
+  - Six-DOF: Falcon 9 at T+359.80 and T+394.89 s; the mixed plan's downrange core at T+450.44 and T+502.61 s.
 
 ## Measured: where the untargeted burns fall among the frames
 
@@ -143,7 +152,13 @@ So none of these 16 missions has a burn wholly inside a span with `burning` clea
 
 **Merged with #191 and #187** (scratch tree: #191, #187 with its doc-comment conflict resolved, then this branch): tests/recovery-untargeted-events, debris-replay, replay and live-stepping, 56 of 56 pass; type check clean.
 
-**Suites:** *(filled in below: full vitest suite, heavy files)*
+**Suites:**
+- CI run 41111067263 on f8426ec: plan, typecheck, build (with the bundle budget), test 1–3 (the whole default vitest suite in three shards), browser-smoke 1–2 and verify, all green.
+- Heavy files that fly the code this changes, on the branch, one at a time:
+  - tests/heavy/starship-flight5.test.ts: 1 passed, 262 s (six-DOF, the tower catch);
+  - tests/heavy/falcon-heavy-returns.test.ts: 1 passed, 213 s (six-DOF, LZ-1, LZ-2 and the drone ship);
+  - tests/heavy/sixdof-fingerprint.test.ts: *(running)*.
+- The rest of tests/heavy and tests/sixdof-fleet fly with recovery off or the watch missions' targeted plans (fleet-harness, flex-matrix, rigid-harness, validation/flight-harness), so this change reaches them only through the contact-event pattern of the identical-output commit.
 
 ## Size
 
@@ -171,7 +186,46 @@ Because of the identical-output commit, this PR is not covered by the standing b
 
 ## Second-agent review
 
-*(pending)*
+Done on 36d8bb3 (f8426ec for the records), review only, no edits. It reran its own probes in the scratch worktrees of main, the identical-output commit and the fix.
+
+- **The identical-output commit (1):** confirmed.
+  - The helpers give the same `{ key, severity: 'info', params: { name } }`, field for field.
+  - The pattern agrees with the five comparisons on 339 strings (every `evt.*` and `tl.evt.*` literal in src, tests and public, and 21 near-misses): 0 mismatches.
+  - Its own point-mass oracle over 12 flights, as full JSON with every event's `state` and every debris field: main and the commit byte-identical (`cmp`).
+- **The point-mass rule (2):** confirmed. It injected 12 crafted untargeted bodies into a live flight:
+  - the cases: starting below 25 km; climbing at 80 km; at its reserve at entry; running dry in the entry burn or the landing burn; lighting 3 m up; too slow at 65 km; 40× and 400× the thrust, so that the vertical speed turns upward mid-burn and the block is skipped; starting inside the landing law's hysteresis band; hovering;
+  - every body raised at most one of each event, only those two keys, one per lit episode;
+  - a body that never meets the entry conditions raises only the landing burn's event, rightly;
+  - the event is raised before the sub-step's integration and touchdown.
+- **Six-DOF (3):** confirmed.
+  - A targeted stage returns at `guidance`'s second line, and `targetedLanding` sets `landingStarted` before it calls `landingCommand`, so the new landing event is reachable from the untargeted path only.
+  - Falcon 9 with no plan, Falcon 9 with an engine out (engineFraction 8/9) and Falcon Heavy with no plan: each body raised one of each event at its burning false→true instant, before touchdown.
+  - The terminal restarts raise none.
+  - Against main: the event log less the burns byte-identical, the vehicle identical, the debris identical but `entryFlown`.
+- **Targeted flights unchanged (4):** confirmed, point-mass by its own oracle, six-DOF from the author's run.
+- **Tests (5):** confirmed.
+  - All 3 new tests fail on main for the right reason and pass on the fix, twice.
+  - The thinned test does thin (118 decimations). With the burn events hidden from the recorder, no frame stays at T+305.25 or T+366.50 s, so the frames survive because they are pinned.
+  - The first test passes with or without pinning (0.25 s cadence), so the second is the one that tests pinning.
+- **The report's claims (6):** partly: nits, now fixed (below).
+- **Sizes (7):** confirmed. Precache code 14,653,510 B (−392), −56 B in each of the 7 chunks, −220 B for the identical-output commit alone; 14,653,599 B merged with #191 and #187.
+- **Everything else (8):** confirmed.
+  - The type check is clean, and the en/ru/th keys exist.
+  - The watch beats on these events are reached only by targeted watch missions. There is no audio cue, the worksheets' event list leaves them out, and no lesson grades on them. Onboard's latest callout shows the burns, as intended.
+  - 10 event-sensitive test files: 228 of 229 pass; the one failure was debris-replay's Soyuz Blok I test at 5,074 ms against its 5,000 ms timeout under a load of 8–9, and it passes alone.
+  - §5 is the owner's call.
+
+Non-blocking findings, and what was done:
+- *The third test's coast span is exactly 10.0 s* (524.83 → 534.83 s), so `>= 10` sat on the boundary. Now `> 9`.
+- *"Differ only by the added events"* holds for point-mass only; six-DOF debris also carry `entryFlown`. The report and the fragment now say so.
+- *The `entryFlown` doc comment* overstated: a point-mass untargeted return never sets it. Reworded.
+- *Custom vehicles* with `recoverable` also reach the point-mass untargeted path. Added to "Who reaches the untargeted path".
+- *The new test's header* described #191's blend as if it were main's. Reworded.
+- *A six-DOF event with no thrust:* if every commanded engine has failed, or the propellant is gone, the event is raised although nothing burns. The targeted path does the same, and for Falcon it needs every engine out. Under "Not changed, for later".
+- *Existing, out of scope: a point-mass stage that runs dry mid-burn keeps `burning` set* until it lands, so its plume stays drawn. Under "Not changed, for later".
+- *Falcon Heavy's two side boosters* raise identical events (same key, time and name), so the log shows each line twice. That is the log's one-event-per-body rule, as for their landings.
+
+**Verdict: confirmed 7 of 8, partly 1 (wording, fixed); no blocking findings.**
 
 ## Not changed, for later
 
@@ -182,3 +236,5 @@ Because of the identical-output commit, this PR is not covered by the standing b
 
   Both cost bytes; the first is in #191's code.
 - **The six-DOF landing burn's terminal restart** (after its latched coast) raises no event, as on the targeted path, which raises one landing-burn event per burn.
+- **A six-DOF burn event with nothing burning:** when every engine the burn commands has failed or the propellant is gone, the event is still raised, on both paths. Raising it on the throttle `applyCommand` allows would close it.
+- **A point-mass untargeted stage that runs dry mid-burn** skips the burn block from then on and keeps `burning` set until it lands, so its plume stays drawn over an unpowered fall (found by the second agent; older than this change, and it raises no extra event).

@@ -7,10 +7,10 @@
  * `evt.entryBurnStart` and then `evt.landingBurnStart`, as a targeted return's
  * do, and the flight recorder pins the frames of the step that raised it
  * (`FlightRecorder.pullEvents`): the burn is on the timeline, a thinned
- * recording keeps its frames, and the span a burn lights in has the burn
- * lit at its later end, so a replay keeps the stage on the straight line
- * there (`interpolateFrames`) rather than on a curve for a body falling
- * freely. Before, these burns raised nothing.
+ * recording keeps its frames, and the span a burn lights in, when the step
+ * that lit it ends with it still lit, has `burning` set at its later frame,
+ * which is what a replay blend can key the straight line on. Before, these
+ * burns raised nothing.
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
@@ -100,7 +100,8 @@ describe('an untargeted recovery\'s burns', () => {
     const k = recorder.indexAt(landing.t);
     const before = recorder.frames[k - 1];
     expect(before.status).toBe('coast');
-    expect(landing.t - before.t).toBeGreaterThanOrEqual(10);
+    // 10.0 s here (524.83 → 534.83 s); a margin below it, so a rounding of the coast step cannot flip it
+    expect(landing.t - before.t).toBeGreaterThan(9);
     expect(before.debris.find((d) => d.id === core.id)!.burning).toBe(false);
   });
 });
