@@ -15,7 +15,7 @@
 > - เพราะมีงานย่อโค้ดรวมอยู่ PR นี้จึงไม่เข้าเงื่อนไขอนุมัติถาวรสำหรับการแก้บั๊ก ต้องให้เจ้าของกดเอง
 > - เทสต์: เทสต์ใหม่ 3 อัน ล้มบน main ทั้ง 3 (ไม่มีเหตุการณ์) ผ่านเมื่อแก้แล้ว และเพิ่ม assertion ในเทสต์ six-DOF เดิมที่บินแบบไม่มีเป้าหมาย (ล้มบน main) ไม่ได้เปลี่ยน assertion เดิมข้อใด
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 7 จาก 8 ข้อ อีก 1 ข้อเป็นเรื่องถ้อยคำในรายงาน แก้แล้ว ไม่พบข้อที่ต้องแก้ก่อน merge ข้อสังเกตที่ไม่ขวางการ merge แก้แล้วหรือบันทึกไว้ใน "Not changed, for later"
-> - CI: ผ่านทั้งหมดบน f8426ec (run 41111067263) และไฟล์ heavy ที่บินโค้ดส่วนนี้ (starship-flight5, falcon-heavy-returns) ผ่าน
+> - CI: ผ่านทั้งหมดบน f8426ec (run 41111067263) และไฟล์ heavy ที่บินโค้ดส่วนนี้ผ่านทั้งหมด (starship-flight5, falcon-heavy-returns, sixdof-fingerprint 22 จาก 22)
 
 ```yaml
 item: an untargeted recovery's entry and landing burns raise their events (bug fix; finding B of replay-debris-air)
@@ -157,7 +157,7 @@ So none of these 16 missions has a burn wholly inside a span with `burning` clea
 - Heavy files that fly the code this changes, on the branch, one at a time:
   - tests/heavy/starship-flight5.test.ts: 1 passed, 262 s (six-DOF, the tower catch);
   - tests/heavy/falcon-heavy-returns.test.ts: 1 passed, 213 s (six-DOF, LZ-1, LZ-2 and the drone ship);
-  - tests/heavy/sixdof-fingerprint.test.ts: *(running)*.
+  - tests/heavy/sixdof-fingerprint.test.ts: 22 passed, 310 s (the six-DOF fleet's goldens: their event logs, with every spent stage's `evt.stageImpact` through the contact-event pattern, unchanged).
 - The rest of tests/heavy and tests/sixdof-fleet fly with recovery off or the watch missions' targeted plans (fleet-harness, flex-matrix, rigid-harness, validation/flight-harness), so this change reaches them only through the contact-event pattern of the identical-output commit.
 
 ## Size
