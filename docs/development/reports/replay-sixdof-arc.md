@@ -6,15 +6,15 @@
 >   - สูงสุด 1.2 km ที่ 30 s และ 4.1 km ที่ 60 s
 >   - Starship Flight 5 ช่วง coast ก่อนกลับเข้าบรรยากาศ 1.7 km
 >   - Apollo 11 ในวงโคจรจอด 1.0 km
->   - ยาน Soyuz ที่เชื่อมต่อกับสถานีแล้วอยู่ห่างจากพอร์ตของสถานีถึง 1.5 km และเป็นทั้งแบบ point-mass และ six-DOF
+>   - ยาน Soyuz ที่เชื่อมต่อกับสถานีแล้วอยู่ห่างจากพอร์ตของสถานีถึง 1.5 km แบบ point-mass และห่างจากตำแหน่งที่บินจริงถึง 3.9 km แบบ six-DOF
 > - สาเหตุ: `interpolateFrames` วาดยานบนวงโคจร (Kepler) เฉพาะยานที่ไม่มี rigid telemetry ยาน six-DOF และยานที่เชื่อมต่อแล้ว ซึ่งได้ rigid telemetry จาก rendezvous จึงได้เส้นตรง
 > - แก้: ยานที่มี rigid telemetry และ coast ทั้งสองเฟรมใช้ cubic (hermite) ผ่านตำแหน่งและความเร็วของทั้งสองเฟรม แบบเดียวกับที่ rendezvous และ Apollo แบบ point-mass ใช้อยู่แล้ว
 >   - cubic ผ่านทั้งสองปลาย จึงไม่ต้องดูว่าเครื่องยนต์ที่เฟรมแรกดับแล้วหรือยัง ช่วงท้ายของการดับเครื่องจึงได้ cubic ด้วย
->   - ใช้ cubic เฉพาะช่วงที่สั้นกว่าหนึ่งในสี่ของคาบวงโคจร ช่วงที่ยาวกว่านั้นเกิดได้เฉพาะเมื่อการบันทึกถูก thin หนักมาก (เช่น ยานที่เชื่อมต่ออยู่หลายชั่วโมง มีช่วงหนึ่งยาว 7,981 s) ในช่วงแบบนั้น cubic จะเหวี่ยงออกไกลกว่าเส้นตรง จึงใช้เส้นตรงเหมือนเดิม agent ตัวที่สองเป็นผู้พบกรณีนี้
+>   - ใช้ cubic เฉพาะช่วงที่สั้นกว่าหนึ่งในสี่ของคาบวงโคจร ช่วงที่ยาวกว่านั้นเกิดได้เฉพาะเมื่อการบันทึกถูก thin หนักมาก (เช่น ยานที่เชื่อมต่ออยู่หลายชั่วโมง มีช่วงหนึ่งยาว 7,981 s) ในวงโคจรรีอย่าง GTO หรือ Molniya ช่วงที่ยาวเกินราวหนึ่งในสามของคาบ (วงกลม: เกินหนึ่งคาบ) cubic จะเหวี่ยงออกไกลกว่าเส้นตรง จึงใช้เส้นตรงเหมือนเดิมเมื่อยาวเกินหนึ่งในสี่ของคาบ agent ตัวที่สองเป็นผู้พบกรณีนี้
 >   - Apollo ใช้ cubic ทั้ง six-DOF และ point-mass ตามที่เจ้าของเลือก (2026-10-29: "Include Apollo")
 >   - ยานแบบ point-mass ที่ไม่มี rigid telemetry ไม่เปลี่ยน ยานที่เชื่อมต่อกับสถานีแล้ว (หรือยกเลิกการเชื่อมต่อ) ตอนนี้อยู่ที่พอร์ตทั้งตอนดูย้อนหลังและตอนบินจริง
 > - ผล: วัดทั้ง 20 ภารกิจในหน้าดูการปล่อย (six-DOF) โดยเทียบกับตำแหน่งจริงของการจำลองทุก 1 วินาที
->   - ช่วง coast และในวงโคจร คลาดสูงสุด 4.1 km → 0.46 m (1.3 m ในวงโคจรถ่ายโอนของ Falcon Heavy)
+>   - ช่วง coast และในวงโคจร (เครื่องยนต์ดับ) คลาดสูงสุด 4.1 km → 0.46 m (1.3 m ในวงโคจรถ่ายโอนของ Falcon Heavy)
 >   - Starship 1.7 km → 0.075 m และช่วงท้ายการดับเครื่อง 394 m → 25 m
 >   - Apollo 1.0 km → 0.03 m
 >   - ยานที่เชื่อมต่อแล้ว 3.9 km → 0.38 m
@@ -34,7 +34,7 @@ tests: tests/rigid-replay-arc.test.ts (new); tests/debris-replay.test.ts (header
 base_sha_verified_on: {sha: 1842a86, date: 2026-10-30}
 branch: claude/practical-lovelace-2ndbww
 pr: 187
-second_agent_review: 'equivalence lens confirmed 14 of 16; regression-hunt lens confirmed 9 of 12, its one blocking finding fixed (c7aac24); claims-audit and tests-docs lenses: re-run on the final head (see "Second-agent review")'
+second_agent_review: 'equivalence 14 of 16; regression hunt 9 of 12, its blocking finding fixed (c7aac24); tests and docs 24 of 32, its findings fixed (4ec5251); claims audit 65 of 86 (14 wrong, fixed in the record files here; 7 with no artefact on disk); bound check: see "Second-agent review"'
 ```
 
 ## Cause
@@ -57,9 +57,9 @@ So all of these were drawn on the straight line:
 
 The recorder keeps an orbit frame every 10 s (30 s far from a burn), and every 60 s once a long recording is thinned (`MAX_THINNED_GAP`). The straight line sags v²Δt²/8R under the arc: about 1 km half way through a 30 s span and 4 km through a 60 s span.
 
-Kepler from the earlier frame does not fit a six-DOF coast either. It is flown with J2 (`heldCoastStep`, `rigidRuntime.step`), and Kepler from one frame misses the next by 3.6–6 m, so the drawing would jump at every frame.
+Kepler from the earlier frame does not fit a six-DOF coast either. It is flown with J2 (`heldCoastStep`, `rigidRuntime.step`), and Kepler from one frame misses the next by metres (2–10 m over the fleet's 30 s coast spans), so the drawing would jump at every frame.
 
-A six-DOF flight's live view draws the simulation's own state (`lookahead = !sim.rigidRuntime`, src/replay/recorder.ts), so only its replay and seeks (`ReplayPlayer.frameAt`) were affected. A point-mass flight draws its live view through the same blend, so its docked spacecraft was off the port live as well. A docked step is 10 s, so that was about 108 m at mid-step.
+A six-DOF flight's live view draws the simulation's own state (`lookahead = !sim.rigidRuntime`, src/replay/recorder.ts), so only its replay and seeks (`ReplayPlayer.frameAt`) were affected. A point-mass flight draws its live view through the same blend, so its docked spacecraft was off the port live as well. A docked step is 18.6 s (period/300, src/physics/simulation.ts:728), so that was about 370 m at mid-step (the second agent measured 385.6 m from the station's centre, where the port is 18.0 m).
 
 ### What a user saw
 
@@ -93,7 +93,7 @@ Comments:
 - The comment in src/replay/recorder.ts no longer says rigid frames are blended in straight lines.
 - tests/debris-replay.test.ts no longer counts six-DOF among the vehicles drawn on the line.
 
-The cubic follows both ends' velocities. It relies on every step change of velocity inside a coast being pinned to a frame: an event's frames, a change of configuration (held), or a change of status. The pre-fix investigation found no unpinned step change in a coast in any shipped mission (see "Pre-fix investigation" below). A cut-off's tail or a small thrust running into a span is not pinned and costs the cubic metres (25.3 m over Starship's 18.4 s cut-off span; ≤ 30 m in the second agent's synthetic throttle steps) where the line is hundreds.
+The cubic follows both ends' velocities. It relies on every step change of velocity inside a coast being pinned to a frame: an event's frames, a change of configuration (held), or a change of status. The pre-fix investigation found no unpinned step change in a coast in any shipped mission (see "Pre-fix investigation" below). A cut-off's tail or a small thrust running into a span is not pinned and costs the cubic metres (25.3 m over Starship's 18.4 s cut-off span) where the line is hundreds. In the second agent's synthetic throttle steps the cubic is worse than the line only when the thrust points radially out at 20 m/s²: by up to 32 m on a 10 s span and 288 m on a 30 s span; at 5 m/s² and in every other direction it is better.
 
 ## Measured
 
@@ -120,7 +120,7 @@ The vehicle, worst sample, metres from the flown position:
 | Starship's descent coast, below 140 km | 1 | 152 | 4.4 s | 21.5 | 0.000 |
 | a cut-off's tail at the earlier frame: Starship's descent coast | 1 | 1 | 18.4 s | 394 | 25.3 |
 | a cut-off's tail at the earlier frame: Sputnik's and Vostok's orbit | 2 | 2 | 14.0 s | 223 | 0.50 |
-| thrust at both frames, coast or orbit | 12 | 31 | 1.2 s | 2.3 | 0.62 |
+| thrust at both frames, coast or orbit | 14 | 31 | 1.2 s | 2.3 | 0.62 |
 | Apollo 11's parking orbit, the S-IVB vent on or off | 1 | 18 | 30 s | 1,042 | 0.035 |
 | docked to the station (Soyuz MS docking, rendezvous flown) | 1 | 30 | 60 s | 3,894 | 0.38 |
 | every other span: ascent, burn, prelaunch, escape, entry, landing, the span a burn begins in | 20 | 16,866 | — | unchanged, bit for bit | |
@@ -153,7 +153,7 @@ The vehicle, worst sample, metres from the flown position:
   | transposition and docked | 200 m | 0.004 m |
 - **Spent bodies beside the vehicle:**
   - **Coasting:** a coasting body takes the vehicle's way. In the pre-fix investigation's recorded six-DOF Soyuz, Blok I, which has its own rigid telemetry, was 0.028 m from its flown position and 0.0009 m from its place relative to the spacecraft. In the six-DOF docking run, Blok I, thousands of kilometres from the station, went from 4,122 m to 0.43 m off.
-  - **In the air:** a body in the air keeps the line, so its absolute error is the same as on main (Blok A 4.8 km, the H-IIA first stage 6.8 km). Its error relative to the vehicle, which no longer sags with it, can grow by up to about 1 km: the Apollo S-II went from 21 m to 1,054 m.
+  - **In the air:** a body in the air keeps the line, so its absolute error is the same as on main (Blok A 4.7 km, the H-IIA first stage 6.8 km). Its error relative to the vehicle, which no longer sags with it, can grow by up to about 1 km: the Apollo S-II went from 21 m to 1,054 m.
   - **Nothing visible changes.** The second agent measured how far these bodies are in the runs it made (Soyuz to the station, H-IIA, Sputnik, Apollo): at least 123 km from the vehicle, so 7.5 mrad as seen from it at most. No body within 20 km of the vehicle got worse in any run. This is #185's item "for later".
 
 ## Tests
@@ -189,7 +189,7 @@ The vehicle, worst sample, metres from the flown position:
   - Run alone on the same build, idle machine (load 0.08), it passed in 308 s.
 - **Heavy:**
   - `tests/heavy/vostok1-recording.test.ts`: 1 of 1 pass, 166 s, Node 22.22.0, which is not the CI runtime.
-  - It is the only heavy or six-DOF fleet file that reaches `interpolateFrames`. The function's only callers are `FlightRecorder.liveBetween` and `ReplayPlayer.frameAt`, and no other heavy or fleet file builds a recorder or a player, directly or through src/lessons or src/session.
+  - It is the only heavy or six-DOF fleet file that reaches `interpolateFrames`. The function's only callers are `FlightRecorder.liveBetween` and `ReplayPlayer.frameAt`. `tests/heavy/custom-satellite-sixdof.test.ts` builds a FlightRecorder too (tests/custom-vehicle-harness.ts:91), but it flies six-DOF, whose recorder never blends (`lookahead = !sim.rigidRuntime`), and it compares stored frames. No other heavy or fleet file builds a recorder or a player, directly or through src/lessons or src/session. Re-run by the claims audit on fa92cf6: 1 of 1, 161 s.
   - The six-DOF fleet and the other heavy files fly simulations whose state this change cannot touch, since it only changes a drawing. They were not run.
 
 ## Pre-fix investigation
@@ -225,8 +225,32 @@ Four lenses on the branch (code 03f894a), each serious finding then put to a ske
 - **Regression hunt: confirmed 9 of 12.**
   - **Blocking:** the docked span of more than an orbit, above. Its skeptic did not run, because the session hit a usage limit. The session checked it itself: it reproduced the finding with the two-body check and the agent's probe, fixed it with the quarter-period bound (c7aac24), and re-measured 0 samples worse on the same flight.
   - The other two not confirmed were wording, both fixed here: the docking time, and "Blok I near the station".
-  - Also checked: debris that got worse relative to the vehicle are 123 km or more away; unpinned throttle steps in a six-DOF coast are worse only in a contrived radial case (≤ 30 m); and MS-25 and Apollo, above.
-- **Claims audit, and tests and documentation:** these two lenses did not run (usage limit). They are re-run on the final head; the result is recorded on the PR.
+  - Also checked: debris that got worse relative to the vehicle are 123 km or more away; unpinned thrust in a six-DOF coast is worse than the line only radially out at 20 m/s² (up to 32 m on a 10 s span, 288 m on a 30 s one); and MS-25 and Apollo, above.
+- **Tests and documentation (on fa92cf6): confirmed 24 of 32.**
+  - It ran all 16 tests against main's frame.ts with the module swapped, so the recorder and player test too: 11 of 16 fail on main, each on the line, with the report's figures; 16 of 16 pass.
+  - Margins: the 0.1 m tolerances are met 3.7× over, the quarter test's 50 km bound 1.2×.
+  - 13 mutants of frame.ts: every one is killed except two: b's period in place of a's (harmless) and `!a.apollo` dropped from `vehicleCoasts`, which 4ec5251 now pins with Apollo's vent off. The bound is pinned between 0.2 and 0.3 of a period from both sides.
+  - Its should-fix findings are fixed in 4ec5251:
+    - the doc comment now states the bound;
+    - its sharing list is corrected;
+    - "every velocity change is pinned" becomes every step change;
+    - the recorder test's frames carry the orbit's elements;
+    - the PR body states the package and authorization.
+- **Claims audit (on fa92cf6): confirmed 65 of 86.**
+  - It re-ran failing first in a worktree of 1842a86 with the recorder test (11 of 16), the sizes in worktrees (+25 B each, precache code 14,653,952), the fleet JSON (57,029 / 39,077 / 0 worse), the docked-hours table, the two-body crossover, CI, and heavy vostok1-recording on fa92cf6 (161 s).
+  - 14 claims were wrong, all in the record. The PR body, this report and the fragment are fixed here:
+    - the docked live step (18.6 s, about 370 m, not 10 s and 108 m);
+    - "within 0.5 m" holds with the engine off;
+    - the quarter bound's reason is eccentric orbits;
+    - Kepler's miss is 2–10 m;
+    - the Thai docked figures;
+    - the table's 14 missions;
+    - the unpinned-thrust figures;
+    - the heavy-test justification;
+    - Blok A is 4.7 km.
+  - Slips in commit messages (f3a0827's failure list, f433505's "near the station") stay in history.
+  - 7 claims had no artefact on disk: the equivalence lens's counts, the regression lens's 9 of 12, the aborted docking, the pre-fix Blok I figures, r2-flight-shell's 308 s run, the vis-viva card figures, and the owner's quotes.
+- **Bound check:** its lens hit a usage limit. The two lenses above checked the bound: mutation, the crossover up to e = 0.95, escapes (period Infinity), and that every fleet span is under a quarter of its orbit (a bound orbit's period is at least 1,790 s). It is re-run on the final head, and its result is recorded on the PR.
 
 ## Size
 
@@ -236,7 +260,7 @@ Four lenses on the branch (code 03f894a), each serious finding then put to a ske
 
 ## Not changed, for later
 
-- **Bodies in the air between 10–30 s frames** stay on the line: Blok A 4.8 km off, the H-IIA first stage 6.8 km. This is #185's item, unchanged here, except that their error relative to the vehicle can now grow (above).
+- **Bodies in the air between 10–30 s frames** stay on the line: Blok A 4.7 km off, the H-IIA first stage 6.8 km. This is #185's item, unchanged here, except that their error relative to the vehicle can now grow (above).
 - **Escapes and returns from orbit** (status 'abort') stay on the line. Mercury-Redstone's capsule above the air is 128 m off on 10 s spans (the cubic would be 2.2 m); Soyuz 18a's arc is similar. These spans have parachutes, tower jettison and retro-rockets in them, so they need their own look.
 - **Thinned six-DOF Apollo:** the span under the main parachutes is drawn worse by the cubic than by the line once frames are 60 s or more apart. This is the owner's trade-off above, already true of point-mass Apollo. A fix for both could keep a frame about 12 s after `evt.mains`, or stop thinning the entry.
 - **The station over a span of more than a quarter of an orbit:** `blendRendezvous` gives the station the cubic at any span, as on main. Over the 7,981 s docked span the station is 14,945 km from the spacecraft on main and on this branch: the spacecraft keeps main's line there. The same quarter-period bound in `blendRendezvous` would keep the two together.

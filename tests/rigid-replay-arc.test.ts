@@ -101,7 +101,7 @@ describe('a six-DOF vehicle between two recorded frames', () => {
     }
   });
 
-  it('keeps the line over a span longer than a quarter of its orbit, where the cubic swings out further', () => {
+  it('keeps the line over a span longer than a quarter of its orbit, where in an eccentric orbit the cubic can swing out further', () => {
     // Only a recording thinned hard leaves such a span: a six-DOF spacecraft docked for hours under the frame budget
     // kept one of 7,981 s. Over more than a whole circle the cubic went 23,000 km off, the line 9,300 km.
     const sat = (dt: number) => kepler(SHIP)(dt);
