@@ -12,7 +12,7 @@
 > - ความเร็ว: การคัดลอกทำให้การ seek แต่ละครั้งช้าลง 1–2 µs (เช่น Falcon Heavy 4.76 → 5.93 µs) รุ่นแรกใช้ `structuredClone` ซึ่งช้ากว่ามาก (15.5 µs) และเสียงของการปล่อยจรวด seek หลายสิบครั้งต่อเฟรมภาพ agent ตัวที่สองพบจุดนี้ จึงเปลี่ยนเป็นฟังก์ชันคัดลอกที่เร็วกว่า
 > - หน่วยความจำของการบันทึก (`FRAME_BYTES`) ไม่เปลี่ยน เพราะ `captureFrame` ไม่เปลี่ยน
 > - agent ตัวที่สองตรวจแล้ว ยืนยัน 14 จาก 14 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge พบสองข้อที่ไม่บล็อก: ความเร็ว (แก้แล้วใน PR นี้) และ `rigid.controlFaults` ของเที่ยวบิน six-DOF ที่มีการจำลองความขัดข้อง ซึ่งยังใช้ร่วมกับข้อมูลที่บันทึก (มีมาก่อน PR นี้ อยู่ในไฟล์อื่นที่ถูกรวมใน 7 chunk แยกไว้ทำต่อ)
-> - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจแล้วไม่มีข้อบล็อก CI ผ่านบนโค้ดสุดท้าย (run 41020718499) จึงเข้าเงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก ยกเว้นการเปลี่ยนเป็น `copyPlain` ที่ agent ตัวที่สองยังไม่ได้ตรวจซ้ำ (ตรวจด้วยเทสต์และ probe เทียบกับ main แล้ว) ทั้งสอง PR merge ได้โดยไม่ชนกันทั้งสองลำดับ แต่ PR ที่ merge ทีหลังต้องแก้ประโยคใน docstring ของ `interpolateFrames` ที่ #187 เขียนว่าผลลัพธ์ใช้ `jettisoned`, Apollo และ `target` ร่วมกับเฟรมที่บันทึก ให้เหลือแค่ `visual` เพราะส่วนอื่นจะไม่จริงแล้ว
+> - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจแล้วไม่มีข้อบล็อก CI ผ่านบนโค้ดสุดท้าย (run 41020718499) จึงเข้าเงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก (agent ตัวที่สองตรวจการเปลี่ยนเป็น `copyPlain` ซ้ำแล้ว ยืนยัน 3 จาก 3 ข้อ) ทั้งสอง PR merge ได้โดยไม่ชนกันทั้งสองลำดับ แต่ PR ที่ merge ทีหลังต้องแก้ประโยคใน docstring ของ `interpolateFrames` ที่ #187 เขียนว่าผลลัพธ์ใช้ `jettisoned`, Apollo และ `target` ร่วมกับเฟรมที่บันทึก ให้เหลือแค่ `visual` เพราะส่วนอื่นจะไม่จริงแล้ว
 
 ```yaml
 item: replay frame copies (aliasing on main, PR #187's "Not changed, for later")
@@ -23,7 +23,7 @@ tests: tests/replay-copies.test.ts (new)
 base_sha_verified_on: {sha: 1842a86, date: 2026-10-30}
 branch: claude/great-mayer-6kapau
 pr: 188
-second_agent_review: 'confirmed 14 of 14 claims checked, no blocking findings (2026-10-30, on f241a06/8a4ba98); two non-blocking: F1 structuredClone cost on a hot path (fixed here, 9080d56), F2 rigid.controlFaults shared (pre-existing, for later); not re-reviewed: the copyPlain change'
+second_agent_review: 'confirmed 14 of 14 claims checked, no blocking findings (2026-10-30, on f241a06/8a4ba98); two non-blocking: F1 structuredClone cost on a hot path (fixed here, 9080d56), F2 rigid.controlFaults shared (pre-existing, for later); the copyPlain fix re-reviewed on 9080d56: confirmed 3 of 3, no findings'
 ```
 
 ## Cause
@@ -164,11 +164,20 @@ A second agent reviewed f241a06 (built on 8a4ba98, the same src/), review only, 
 8. **Bundle:** confirmed to within 4 B.
 
 **Non-blocking findings:**
-- **F1, fixed in 9080d56:** `structuredClone` cost about 3 µs a recovery and 9 µs an Apollo state, on the launch audio's hot path. Replaced by `copyPlain`; see "Seek time". The `copyPlain` change itself was not re-reviewed; the equivalence probe and the test cover it.
+- **F1, fixed in 9080d56:** `structuredClone` cost about 3 µs a recovery and 9 µs an Apollo state, on the launch audio's hot path. Replaced by `copyPlain`; see "Seek time".
 - **F2, pre-existing, for later:** `rigid.controlFaults` is still shared with the recording.
   - rigid/runtime.ts:380 puts a `ControlFaultRecord` on `s.rigid`, and `cloneRigidTelemetry` copies it by reference, so every seek of a six-DOF flight with control faults (e.g. the lesson ru-24-05-06) shares it.
   - The test here is point-mass and cannot see it.
   - See "Not changed, for later".
+
+**Re-review of the `copyPlain` change (9080d56), review only: confirmed 3 of 3, no findings.**
+1. **`copyPlain` is a correct deep copy** of every input it is given. It was fed deep-frozen inputs: an `ApolloState` with every field, nested vectors, undefined-valued keys, `null`, `-0`, `NaN` and an array of objects, and recoveries with a tower target and with none.
+   - Each output equals `structuredClone`'s (`isDeepStrictEqual`), with the same key order recursively.
+   - No output object is an input object or frozen.
+   - A synthetic main-against-branch run on 9080d56 gave 8,748 cases and 0 differences, with nothing shared but `visual`.
+   - Where it differs from `structuredClone` (none of which frames contain): an object reached twice becomes two copies; Dates, Maps and typed arrays become plain objects; functions are shared; a cycle overflows the stack; and `for…in` would also walk an enumerable key added to `Object.prototype`. Apollo's state and a recovery are built from object literals, so none applies; the function's docstring limits it to plain data.
+2. **The rest of the diff** (docstring, test comment) is right; the comment matches what main shares.
+3. **The figures** were rebuilt exactly (`index-*.js` 2,634,681 B, `flight.worker-*.js` 570,315 B, precache code 14,653,578 B). Its own seek benchmark agrees in ratio with "Seek time": 3 recovered boosters 6.27 µs on main, 7.39 with `copyPlain`, 16.5 with `structuredClone`.
 
 ## Merge order with #187
 
