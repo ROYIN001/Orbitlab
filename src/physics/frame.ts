@@ -744,8 +744,11 @@ const AIRLESS_HEIGHT = 140e3;
  * coasts out of the air goes from one frame to the next the way the vehicle
  * does (`path`), anything else in a straight line.
  *
- * The result is a fresh frame; the inputs are never mutated. The function is
- * pure, so seeking twice to the same time produces deep-equal frames.
+ * The result is a fresh frame, apart from data that stays as it was for the
+ * whole mission and is shared as `cloneFrame` shares it (the jettisoned parts,
+ * Apollo's plan and Moon figures, a recovery's target); the inputs are never
+ * mutated. The function is pure, so seeking twice to the same time produces
+ * deep-equal frames.
  */
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
@@ -778,7 +781,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // C01: Apollo between the Earth and the Moon is not on a Kepler arc about the Earth: the cubic through both ends,
   // six-DOF or not, whatever its engines read (the S-IVB's hydrogen vent puts a few hundred newtons on the thrust
   // through the parking orbit).
-  const coast = !a.apollo && coasting(a) && coasting(b);
+  const vehicleCoasts = !a.apollo && coasting(a) && coasting(b);
   // The vehicle's way from one state to the next, which a spent body coasting beside it shares (`coasts`): one
   // drawn on its arc beside one drawn on the straight line, which sags v²Δt²/8R under it, parts from it — 115 m
   // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (a point mass
@@ -789,8 +792,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // spacecraft hours past its docking, under the six-DOF frame budget: 7,981 s), the cubic swings out further than
   // the line does (past a third of a GTO's or a Molniya's period, a whole one of a circle), so it keeps the line.
   const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
-    coasts && coast && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
-      : coasts && ((coast && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
+    coasts && vehicleCoasts && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
+      : coasts && ((vehicleCoasts && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
       : { r: lerpVec(ar, br, u), v: lerpVec(av, bv, u) };
   const { r, v } = path(a.r, a.v, b.r, b.v);
   const ea = a.elements, eb = b.elements;
