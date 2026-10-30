@@ -401,7 +401,7 @@ describe('spent parts drawn from the model', () => {
   });
 
   it.each([['soyuz-ms', 'soyuz21a', 'crew'], ['fregat-st31', 'soyuz21b', 'weather']] as const)(
-    '%s: the fairing halves each on the side the physics put it, facing out, parting along the way it faces', async (variant, vehicleId, sat) => {
+    '%s: the fairing halves each on the side the physics put it, facing out, parting from where it sat along the way it faces, tumbling about itself', async (variant, vehicleId, sat) => {
       const { enuFrame } = (await import('../src/physics/orbital'));
       const spec = payloadVehicle(vehicleById(vehicleId), satelliteById(sat)), f = spec.fairing!, m = model(variant);
       // the stack's side, as main.ts squares it, and the axis across it: the stack's frame (x, up, side)
@@ -410,17 +410,20 @@ describe('spent parts drawn from the model', () => {
       const side = v3(east).multiplyScalar(Math.sin(0.6)).addScaledVector(v3(north), Math.cos(0.6)).cross(v3(up)).normalize();
       const across = new THREE.Vector3().crossVectors(v3(up), side);
       /** the two halves `gap` m either side of the axis along the stack's side (spawnFairing: ½ diameter + 1 m, then 2.5 m/s each) */
-      const halves = (gap: number) => withCanvas(() => {
+      const halves = (gap: number, age = 0) => withCanvas(() => {
         const scene = new THREE.Scene();
         const view = new DebrisView({ scene, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y - ORBIT, p.z) } as unknown as SceneManager);
         view.setAnatomy({ model: m, fit: anatomyFit(spec, m, false), blokIDiameter: spec.stages[1].diameter, fregatDiameter: spec.stages[2]?.diameter ?? null, azimuth: 0.6 });
         const at = (id: number, s: number) => ({ ...debris(id, { diameter: f.diameter, length: f.length, color: '#eee', kind: 'fairing' }, -10), r: { x: s * gap * side.x, y: ORBIT + s * gap * side.y, z: s * gap * side.z } });
-        view.update([at(5, 1), at(6, -1)], 1);
+        view.update([at(5, 1), at(6, -1)], 1 + age);
         const got: Record<string, THREE.Vector3> = {};
         scene.traverse((o) => { if (o.name.startsWith('anatomy:fairing')) got[o.name] = box(o).getCenter(new THREE.Vector3()); });
         return got;
       });
       const near = halves(f.diameter / 2 + 1), far = halves(f.diameter / 2 + 6);
+      // 3 s on, before it tumbles, and 10 s on, tumbling: both 2.5 m/s a second further out
+      const open = halves(f.diameter / 2 + 1 + 7.5, 3), tumbling = halves(f.diameter / 2 + 1 + 25, 10);
+      const dx = anatomyFit(spec, m, false).fairing.dx;
       expect(Object.keys(near).sort()).toEqual(['anatomy:fairing-left', 'anatomy:fairing-right']);
       for (const name of ['anatomy:fairing-left', 'anatomy:fairing-right'] as const) {
         const p = m.parts[name.slice('anatomy:'.length) as 'fairing-left' | 'fairing-right']!;
@@ -429,9 +432,16 @@ describe('spent parts drawn from the model', () => {
         // on the side the physics put it, its skin out and its cut toward the stack (not the mirror image)
         expect(Math.sign(near[name].dot(side))).toBe(Math.sign(facing.dot(side)));
         expect(near[name].clone().projectOnPlane(v3(up)).normalize().dot(facing)).toBeGreaterThan(0.99);
+        // let go of, it is drawn where it sat on the stack (no jump of the half diameter and metre the physics lets it go at)
+        const sat = across.clone().multiplyScalar((p.min.x + p.max.x) / 2 + dx).addScaledVector(side, (p.min.z + p.max.z) / 2);
+        // (to the header's bounds of the part, which the drawn vertices may fall a few cm inside)
+        expect(near[name].clone().projectOnPlane(v3(up)).distanceTo(sat)).toBeLessThan(0.1);
         // 5 m further apart, each 5 m further out along its own facing (square to its cut), however the model's cut lies
         const moved = far[name].clone().sub(near[name]);
         expect(moved.distanceTo(facing.clone().multiplyScalar(5))).toBeLessThan(1e-6);
+        // tumbling, it turns about itself, not about the stack's point 35-45 m below it: it stays where it was going
+        const drift = tumbling[name].clone().sub(open[name]).sub(facing.clone().multiplyScalar(17.5));
+        expect(drift.length()).toBeLessThan(5);
       }
     });
 

@@ -105,6 +105,8 @@ interface DebrisItem {
    */
   fairOut: THREE.Vector3 | null;
   fairShift: THREE.Vector3;
+  /** …and the pivot at its middle it tumbles about, as a free body does (not the stack's point, 35-45 m below it, nor its hinge) */
+  spin: THREE.Group | null;
   /** C01: one of Vostok-1's bodies, drawn by render/vostok-debris.ts */
   vostok: VostokBody | null;
   createdAt: number;
@@ -208,7 +210,7 @@ export class DebrisView {
    * the side the physics put it; hinged at its own top and swinging out the
    * way it faces). Null for anything else, which is drawn as before.
    */
-  private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[]; onAxis: boolean; out?: THREE.Vector3 } | null {
+  private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[]; onAxis: boolean; out?: THREE.Vector3; spin?: THREE.Group } | null {
     const { model, fit, blokIDiameter, fregatDiameter } = this.anatomy!;
     const v = d.visual;
     const spentStage = v.kind === 'stage' || v.kind === 'upperStage';
@@ -238,6 +240,13 @@ export class DebrisView {
       // hinged at its top, its bottom swinging out toward the side the half faces
       const top = placement.dy + (part.max.y - placement.y0) * placement.sy;
       const out = new THREE.Vector2((part.min.x + part.max.x) / 2, (part.min.z + part.max.z) / 2).normalize();
+      // the middle of the half, where it tumbles about
+      const spin = new THREE.Group();
+      spin.position.set((part.min.x + part.max.x) / 2 + placement.dx, (top + placement.dy + (part.min.y - placement.y0) * placement.sy) / 2, (part.min.z + part.max.z) / 2);
+      const pivot = new THREE.Group();
+      pivot.position.copy(spin.position).negate();
+      pivot.add(body);
+      spin.add(pivot);
       const turn = new THREE.Group();
       turn.position.y = base;
       turn.rotation.y = Math.atan2(-side * out.y, side * out.x);
@@ -246,11 +255,11 @@ export class DebrisView {
       const back = new THREE.Group();
       back.rotation.y = -turn.rotation.y;
       back.position.y = -top;
-      back.add(body);
+      back.add(spin);
       hinge.add(back);
       turn.add(hinge);
       g.add(turn);
-      return { hinge, plume: null, mats, onAxis: true, out: new THREE.Vector3(out.x, 0, out.y) };
+      return { hinge, plume: null, mats, onAxis: true, out: new THREE.Vector3(out.x, 0, out.y), spin };
     }
     const holder = new THREE.Group();
     holder.position.y = base;
@@ -363,7 +372,7 @@ export class DebrisView {
     if (isVostokBody(d)) {
       const vostok = new VostokBody(d);
       return {
-        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, modelMats: [], stackRoll: false, fairOut: null, fairShift: new THREE.Vector3(), vostok, createdAt: d.createdAt,
+        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, modelMats: [], stackRoll: false, fairOut: null, fairShift: new THREE.Vector3(), spin: null, vostok, createdAt: d.createdAt,
         tumbleAxis: new THREE.Vector3(0, 1, 0), tumbleRate: 0, fins: [], legs: [], legAngle: 0, footDrop: 0, finT: -1, legT: -1, shift: null,
       };
     }
@@ -462,7 +471,7 @@ export class DebrisView {
     const ax = this.randAxis(d.id);
     return {
       group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: anatomy ? null : m, modelMats: anatomy ? anatomy.mats : [], stackRoll: !!anatomy?.onAxis,
-      fairOut: anatomy?.out ?? null, fairShift: new THREE.Vector3(), vostok: null, createdAt: d.createdAt,
+      fairOut: anatomy?.out ?? null, fairShift: new THREE.Vector3(), spin: anatomy?.spin ?? null, vostok: null, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
       fins, legs, legAngle, footDrop, finT: -1, legT: -1, shift,
@@ -523,8 +532,9 @@ export class DebrisView {
       if (item.stackRoll && this.anatomy) stackAttitude(d.r, this.dir, this.anatomy.azimuth, this.q);
       else this.q.setFromUnitVectors(Y_AXIS, this.dir);
       if (item.fairOut && !d.rigid) {
-        // as far out as the physics has it, but along the way the half faces
-        if (twin) item.fairShift.copy(item.fairOut).applyQuaternion(this.q).multiplyScalar(this.tmp2.length()).sub(this.tmp2);
+        // as far out as the physics has it, less the half diameter and metre it lets each go at (spawnFairing in
+        // src/physics/sim/debris.ts), so it parts from where it sat; but along the way the half faces
+        if (twin) item.fairShift.copy(item.fairOut).applyQuaternion(this.q).multiplyScalar(Math.max(0, this.tmp2.length() - d.visual.diameter / 2 - 1)).sub(this.tmp2);
         item.group.position.add(item.fairShift);
       }
       const age = Math.max(0, t - item.createdAt);
@@ -542,7 +552,9 @@ export class DebrisView {
         item.hinge.rotation.z = item.side * open * 1.35;
         const spin = Math.max(0, age - 3) * item.tumbleRate;
         this.qt.setFromAxisAngle(item.tumbleAxis, spin);
-        item.group.quaternion.copy(this.q).multiply(this.qt);
+        item.group.quaternion.copy(this.q);
+        if (item.spin) item.spin.quaternion.copy(this.qt);
+        else item.group.quaternion.multiply(this.qt);
       } else if (d.burning || d.recovery) {
         // an engine is firing, or the stage is being flown home (and then
         // stands where it landed): hold attitude along the thrust axis
