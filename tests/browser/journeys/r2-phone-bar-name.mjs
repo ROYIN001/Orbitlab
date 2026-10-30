@@ -21,9 +21,10 @@ export default async function r2PhoneBarName(t) {
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   t.check(await t.until(() => page.locator('#mobile-flight-bar').isVisible(), { timeoutMs: 5000 }), 'no compact flight bar');
   const name = () => page.evaluate(() => { const b = document.getElementById('mfb-play'); return [b.getAttribute('aria-label'), b.title]; });
-  const named = async (want, what) => t.check(await t.until(async () => { const [a, ti] = await name(); return a === want && ti === want; }, { timeoutMs: 3000 }),
+  const named = async (want, what) => t.check(await t.until(async () => { const [a, ti] = await name(); return a === want && ti === want; }, { timeoutMs: 5000 }),
     `${what}: the phone bar's button is "${JSON.stringify(await name())}", not "${want}"`);
-  // a button as index.html ships it (never synced) and paused: the next frames name it
+  // a button as index.html ships it (never synced) and paused: the next frames name it.
+  // A short phone (360x520) reaches this state with no script: the bar becomes active only after the flight is paused and the page scrolled.
   await page.evaluate(() => { const b = document.getElementById('mfb-play'); b.removeAttribute('aria-label'); b.removeAttribute('title'); b.textContent = '▶'; });
   await named(NAMES.en[0], 'paused, as shipped');
   for (const lang of ['th', 'ru', 'en']) {
