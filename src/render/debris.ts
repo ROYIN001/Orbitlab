@@ -19,7 +19,9 @@ import * as THREE from 'three';
 import type { DebrisFrame } from '../physics/frame';
 import { interstageHeight } from '../physics/frame';
 import { enuFrame } from '../physics/orbital';
+import type { Vec3 } from '../physics/vec3';
 import type { SceneManager } from './scene';
+import { sunlitAt } from './sky';
 import { Plume } from './plume';
 import { bellGeometry, ogiveProfile } from './liveries';
 import { clamp01, hash11, smoothstep } from './noise';
@@ -64,6 +66,23 @@ function stackAttitude(r: { x: number; y: number; z: number }, dir: THREE.Vector
 }
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
 
+/**
+ * The separation glow on a part of the Soyuz Anatomy model, along its outline
+ * only (a Fresnel term): spread evenly it washed the model's detail out to a
+ * flat white shape. The emissive keeps 5 % on a face seen square-on and all of
+ * it where the surface turns away at the silhouette, so the shape still reads
+ * against a black sky. One fixed cache key, so every such material shares one
+ * program (and the warm-up mesh below can build it ahead of time).
+ */
+function rimGlow(mat: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+  mat.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 0.05 + 0.95 * pow(1.0 - min(abs(dot(normal, normalize(vViewPosition))), 1.0), 2.5);');
+  };
+  mat.customProgramCacheKey = () => 'orbitlab-rim-glow';
+  return mat;
+}
+
 interface DebrisItem {
   group: THREE.Group;
   rigidGeometry: boolean;
@@ -73,7 +92,7 @@ interface DebrisItem {
   plume: Plume | null;
   /** the body's material, for the sunlit flash just after separation (none for Vostok's bodies, nor for a part of the Soyuz Anatomy model) */
   bodyMat: THREE.MeshStandardMaterial | null;
-  /** a part of the Soyuz Anatomy model: its materials, for the same flash */
+  /** a part of the Soyuz Anatomy model: its materials, for the same flash, which they show only out of the sun and along their outline (`rimGlow`) */
   modelMats: THREE.MeshStandardMaterial[];
   /** a part of the model on the stack's axis (not a strap-on): drawn in the stack's roll (`stackAttitude`) */
   stackRoll: boolean;
@@ -154,7 +173,14 @@ export class DebrisView {
    * compiled on the staging frame itself — measured at 13 ms, i.e. a dropped
    * frame at the most dramatic moment of the flight. `renderer.compile` walks
    * the scene with `traverse`, not `traverseVisible`, so an invisible mesh is
-   * enough to get the program built during `SceneManager.prewarm`.
+   * enough to get the program built during `SceneManager.prewarm`. It carries
+   * the outline glow's two variants too (`rimGlow`: the model's one-sided
+   * materials and its double-sided bells), which only a spent part of the
+   * Soyuz Anatomy model uses; the model may only load after `prewarm`.
+   * Each program is built for the lights of that moment, though: once the
+   * camera is past ~55 km from the pad its four floodlights are out of the
+   * light count (launchpad.ts), and a part separating then still compiles its
+   * program on that frame.
    */
   private readonly warmup: THREE.Mesh;
 
@@ -195,7 +221,7 @@ export class DebrisView {
       if (!used.has(i)) { mat.dispose(); return; }
       mat.emissive.set(0xdce6ff);
       mat.emissiveIntensity = 0;
-      mats.push(mat);
+      mats.push(rimGlow(mat));
     });
     const body = anatomyGroup(part, all, placement);
     if (v.kind === 'fairing') {
@@ -223,7 +249,7 @@ export class DebrisView {
     // part drawn from them alone would show empty sockets (scripts/anatomy-meshes.mjs `nozzles`)
     const chambers = parts.flatMap((x) => x.nozzles ?? []).filter((n) => n.kind !== 'jettison');
     if (chambers.length) {
-      const metal = new THREE.MeshStandardMaterial({ color: 0x55585c, metalness: 0.7, roughness: 0.42, side: THREE.DoubleSide, emissive: 0xdce6ff, emissiveIntensity: 0 });
+      const metal = rimGlow(new THREE.MeshStandardMaterial({ color: 0x55585c, metalness: 0.7, roughness: 0.42, side: THREE.DoubleSide, emissive: 0xdce6ff, emissiveIntensity: 0 }));
       mats.push(metal);
       const bells = new THREE.Group();
       bells.name = 'anatomy:bells';
@@ -246,10 +272,9 @@ export class DebrisView {
 
   constructor(scene: SceneManager) {
     this.scene = scene;
-    this.warmup = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x808080, metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide }),
-    );
+    const plain = () => new THREE.MeshStandardMaterial({ color: 0x808080, metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide });
+    // one box face each (BoxGeometry has a group per face)
+    this.warmup = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [plain(), rimGlow(plain()), rimGlow(new THREE.MeshStandardMaterial())]);
     this.warmup.visible = false;
     this.warmup.frustumCulled = false;
     scene.scene.add(this.warmup);
@@ -445,8 +470,11 @@ export class DebrisView {
    * @param t mission time, s
    * @param pressure fallback ambient pressure, Pa, for frames recorded before
    *        `DebrisFrame.pressure` existed
+   * @param sunDir unit vector toward the Sun, ECI (the frame's own epoch, as
+   *        main.ts lights the scene), for the glow on the Anatomy model's
+   *        parts; with none, nowhere is sunlit
    */
-  update(list: DebrisFrame[], t: number, pressure = 0): void {
+  update(list: DebrisFrame[], t: number, pressure = 0, sunDir?: Vec3): void {
     const seen = new Set<number>();
     for (const d of list) {
       // A stage that landed stays where it came down (the tracker carries it
@@ -516,7 +544,10 @@ export class DebrisView {
       const escapePart = d.visual.kind === 'escapeHead' || d.visual.kind === 'modules';
       const glow = escapePart ? 0 : age < 1.2 ? smoothstep(0, 0.4, age) : Math.max(0, 1 - smoothstep(1.2, 9, age));
       if (item.bodyMat) item.bodyMat.emissiveIntensity = glow * 1.3;
-      for (const mat of item.modelMats) mat.emissiveIntensity = glow * 1.3;
+      // In sunlight the model's parts read on their own, and the glow clipped them to flat white for seconds: they
+      // glow only out of the sun (in the Earth's shadow, fading in across its soft edge), and along their outline.
+      const shade = sunDir ? 1 - sunlitAt(d.r, sunDir) : 1;
+      for (const mat of item.modelMats) mat.emissiveIntensity = glow * 1.3 * shade;
     }
     for (const [id, item] of this.items) {
       if (!seen.has(id)) {

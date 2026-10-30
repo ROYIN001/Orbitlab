@@ -409,6 +409,52 @@ describe('spent parts drawn from the model', () => {
     expect(bells).toEqual([1]);   // its S5.92
   });
 
+  it('glow after separation only out of the sun and along the outline; the parts drawn as before glow as before', () => withCanvas(() => {
+    type Mats = { modelMats: THREE.MeshStandardMaterial[]; bodyMat: THREE.MeshStandardMaterial | null };
+    const scene = new THREE.Scene();
+    const view = new DebrisView({ scene, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y - ORBIT, p.z) } as unknown as SceneManager);
+    const spec = payloadVehicle(vehicleById('soyuz21a'), satelliteById('crew')), m = model('soyuz-ms'), strapOn = spec.stages[0].boosters![0];
+    view.setAnatomy({ model: m, fit: anatomyFit(spec, m, false), blokIDiameter: spec.stages[1].diameter, fregatDiameter: null, azimuth: 0.6 });
+    // a strap-on from the model, and a stage the model has no part for (drawn as before)
+    const list = [debris(1, { diameter: strapOn.diameter, length: strapOn.length, color: '#ccc', kind: 'booster', conicalTop: true }, 0),
+      debris(2, { diameter: 3.66, length: 13.8, color: '#ccc', kind: 'upperStage' }, -13.8)];
+    const inside = view as unknown as { items: Map<number, Mats>; warmup: THREE.Mesh };
+    /** the model's glow and the other part's, at mission time `t` (separated at 1) with the sun along `sunY` */
+    const glow = (t: number, sunY: number, sunX = 0) => {
+      view.update(list, t, 0, { x: sunX, y: sunY, z: 0 });
+      const [model, other] = [inside.items.get(1)!, inside.items.get(2)!];
+      expect(model.bodyMat).toBeNull();
+      expect(other.modelMats).toEqual([]);
+      expect(new Set(model.modelMats.map((x) => x.emissiveIntensity)).size).toBe(1);
+      return [model.modelMats[0].emissiveIntensity, other.bodyMat!.emissiveIntensity];
+    };
+    // 1.2 s after separation, the glow's peak: none on the model in sunlight, all of it in the Earth's shadow
+    const [day, dayOther] = glow(2.2, 1);
+    expect(day).toBe(0);
+    expect(dayOther).toBeCloseTo(1.3, 9);
+    expect(glow(2.2, -1)).toEqual([dayOther, dayOther]);
+    // across the shadow's soft edge (200 km up, 20 km outside the Earth's limb seen from the Sun) a part of it
+    const limb = Math.asin((6_378_137 + 20e3) / ORBIT);
+    const [edge] = glow(2.2, -Math.cos(limb), Math.sin(limb));
+    expect(edge).toBeGreaterThan(0.05);
+    expect(edge).toBeLessThan(1.25);
+    // and gone 9 s on
+    expect(glow(3, -1)[0]).toBeGreaterThan(1);
+    expect(glow(10, -1)).toEqual([0, 0]);
+    // along the outline: every model material (its bells too) compiles the one outline program, which the warm-up mesh
+    // builds ahead of time on both sides; the part drawn as before keeps the plain program
+    const { modelMats } = inside.items.get(1)!, plain = inside.items.get(2)!.bodyMat!;
+    expect(modelMats.some((x) => x.side === THREE.DoubleSide) && modelMats.some((x) => x.side === THREE.FrontSide)).toBe(true);
+    const warm = inside.warmup.material as THREE.MeshStandardMaterial[];
+    for (const x of [...modelMats, plain]) expect(warm.some((w) => w.customProgramCacheKey() === x.customProgramCacheKey() && w.side === x.side)).toBe(true);
+    expect(new Set(modelMats.map((x) => x.customProgramCacheKey()))).toEqual(new Set(['orbitlab-rim-glow']));
+    expect(plain.customProgramCacheKey()).toBe(new THREE.MeshStandardMaterial().customProgramCacheKey());
+    const shader = { fragmentShader: THREE.ShaderLib.standard.fragmentShader };
+    modelMats[0].onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, null as unknown as THREE.WebGLRenderer);
+    expect(shader.fragmentShader).toContain('#include <emissivemap_fragment>\ntotalEmissiveRadiance *= ');
+    view.clear();
+  }));
+
   it('none on any other flight', () => {
     const got = drawn(null, 'falcon9', 'comsat', [debris(1, { diameter: 3.66, length: 13.8, color: '#ccc', kind: 'upperStage' }, -13.8)]);
     expect(got).toEqual({});

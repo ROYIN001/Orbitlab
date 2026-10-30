@@ -2592,7 +2592,7 @@ class App {
     this.syncPredicted(frame, dt);
     this.predicted.update(scene);
     this.target.update(scene);
-    this.debrisView.update(frame.debris, frame.t);
+    this.debrisView.update(frame.debris, frame.t, 0, sunDir);
     // camera
     const radius = frame.abort ? Math.min(2, height / 4) : apolloSize ? apolloSize.radius : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
