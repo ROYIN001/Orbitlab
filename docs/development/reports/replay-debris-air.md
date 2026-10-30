@@ -28,7 +28,7 @@ app_code: src/physics/frame.ts
 tests: tests/debris-replay.test.ts
 base_sha_verified_on: {sha: 1842a86, date: 2026-10-30}
 branch: claude/peaceful-planck-uyne6i
-pr: (see the PR)
+pr: 191
 second_agent_review: (below)
 ```
 
