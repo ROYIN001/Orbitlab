@@ -136,7 +136,7 @@ describe('a seek shares nothing a consumer could write to with the recording', (
     const mid = (a.t + b.t) / 2;
     for (const [name, f] of [['clone', cloneFrame(a)], ['blend', interpolateFrames(a, b, mid)], ['no blend', interpolateFrames(a, alone, mid)],
       ['on a', interpolateFrames(a, b, a.t)]] as const) {
-      // before: frame.apollo (clone, no blend, on a); frame.apollo.dockAxis, .landed, .moon, ... (blend)
+      // before: frame.apollo and frame.jettisoned (clone, no blend, on a); frame.jettisoned and 13 of Apollo's sub-objects (blend)
       expect([...shared(f)], name).toEqual([]);
       scribble(f);
     }

@@ -644,6 +644,21 @@ export function cloneAbort(a: AbortState): AbortState {
     ...(a.tether ? { tether: { sphere: clone(a.tether.sphere), module: clone(a.tether.module) } } : {}) };
 }
 
+/**
+ * A deep copy of plain data: objects and arrays of numbers, strings and
+ * booleans, such as Apollo's state and a recovery. A seek pays for it on every
+ * call, and the launch audio seeks tens of times an animation frame
+ * (audio/launch-audio.ts), so it is a spread and a walk over the values:
+ * 0.16 µs for a recovery and 0.5–2 µs for Apollo's state, where
+ * `structuredClone` took 2.9 and 3.5–12 µs (Node 22).
+ */
+function copyPlain<T extends object>(o: T): T {
+  if (Array.isArray(o)) return o.map((x) => (x && typeof x === 'object' ? copyPlain(x) : x)) as T;
+  const out = { ...o } as Record<string, unknown>;
+  for (const k in out) { const v = out[k]; if (v && typeof v === 'object') out[k] = copyPlain(v); }
+  return out as T;
+}
+
 /** A deep copy of a debris frame's own sub-objects (its `visual` is shared, immutable data). */
 function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
   return {
@@ -653,7 +668,7 @@ function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
     v: clone(d.v),
     dir: clone(d.dir),
     // with the place it is flown to, which the stored frames share with the simulation (see `cloneFrame`)
-    recovery: d.recovery && structuredClone(d.recovery),
+    recovery: d.recovery && copyPlain(d.recovery),
     impact: d.impact ? { ...d.impact } : undefined,
     ...(d.crew ? { crew: { ...d.crew } } : {}),
     ...(d.entry ? { entry: { ...d.entry } } : {}),
@@ -673,8 +688,9 @@ function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
  * Moon figures, next milestone and the bodies beside it change every frame and
  * whose plan (`sequence`, `tli`, `perilune`, `mcc`) changes at its burns; and
  * where a recovered stage is flown to (`debris[].recovery.target`). Apollo's
- * state and a recovery are plain data copied whole with `structuredClone`: the
- * fewest bytes in the two chunks that carry this file, against the precache
+ * state and a recovery are plain data, copied whole (`copyPlain`) rather than
+ * field by field: a hand-written copy of Apollo's state would cost hundreds of
+ * bytes in each of the two chunks that carry this file, against the precache
  * budget (budgets.json).
  *
  * Shared *immutable* data is deliberately aliased: `debris[].visual` is a spec
@@ -695,7 +711,7 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
     ...(f.abort ? { abort: cloneAbort(f.abort) } : {}),
     ...(f.rendezvous ? { rendezvous: cloneRendezvous(f.rendezvous) } : {}),
     // C01: Apollo's state, every figure and body in it, and the parts dropped on the way up
-    ...(f.apollo ? { apollo: structuredClone(f.apollo) } : {}),
+    ...(f.apollo ? { apollo: copyPlain(f.apollo) } : {}),
     ...(f.jettisoned ? { jettisoned: { ...f.jettisoned } } : {}),
     rigid: cloneRigidTelemetry(f.rigid),
     ...(f.eom ? { eom: cloneEom(f.eom) } : {}),
@@ -822,7 +838,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
         && norm(d.r) - R_EARTH > AIRLESS_HEIGHT && norm(other.r) - R_EARTH > AIRLESS_HEIGHT),
       dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other.dir, u),
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
-      recovery: d.recovery && structuredClone(d.recovery),
+      recovery: d.recovery && copyPlain(d.recovery),
       impact: imp,
       ...blendDebrisExtras(d, other, u),
     };
@@ -830,7 +846,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   const rigid = interpolateRigidTelemetry(a.rigid,b.rigid,u);
   // C01: Apollo's state from the earlier frame, copied like the rest of it; Columbia beside Eagle, and the ascent
   // stage beside Columbia after its jettison, each on its own arc
-  const apollo = a.apollo && structuredClone(a.apollo);
+  const apollo = a.apollo && copyPlain(a.apollo);
   if (apollo) for (const k of ['csm', 'ascentStage', 'serviceModule'] as const) {
     const p = apollo[k], q = b.apollo?.[k];
     if (p && q) apollo[k] = hermite(p.r, p.v, q.r, q.v, u, span);
