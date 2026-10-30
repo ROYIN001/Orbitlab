@@ -93,6 +93,9 @@ describe('the Anatomy pages and their meshes', () => {
       expect(chambers.filter((c) => c.kind === 'main')).toHaveLength(4);
       expect(chambers.filter((c) => c.kind === 'vernier')).toHaveLength(p.variant === 'fregat-st31' ? 0 : 4);
       for (const c of chambers) { expect(c.top).toBeGreaterThan(c.exit); expect(c.r).toBeGreaterThan(0.1); }
+      // the aft bay is the engine and the lowest tank, not an inside pipe run up the stage beside that tank (the
+      // 2.1b's helium lines, which the page draws only in its cutaway, hung below the skin once the skirt went)
+      expect(m.parts.bay!.max.y, p.variant).toBeLessThan(m.parts.stage3!.max.y - 1.5);
       // Fregat's S5.92, and the escape tower's twelve jettison nozzles
       if (p.variant === 'fregat-st31') expect(m.parts.fregat!.nozzles!.map((c) => c.kind)).toEqual(['main']);
       if (p.variant === 'soyuz-ms') expect(m.parts.escape!.nozzles!.filter((c) => c.kind === 'jettison')).toHaveLength(12);

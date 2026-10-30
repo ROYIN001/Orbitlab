@@ -112,11 +112,15 @@ const JETTISON = /^escape\.jettison-nozzle-(\d+)$/;
 
 /**
  * Which flight part a host goes into, or null to leave it out. `bay`: Blok
- * I's hosts' heights and the top of its aft bay (its lowest tank's bottom):
- * everything below that, of any kind but the chambers and the skin, is the
- * bay's — the engine's pumps and pipes, the thrust frame, the helium bottles
- * and the tank's lower dome — which the open truss and, once Blok A has gone,
- * the stage's open bottom show. Above it only the skin and the structure.
+ * I's hosts' heights and reach from the axis, the top of its aft bay (its
+ * lowest tank's bottom) and that tank's radius: everything below the top, of
+ * any kind but the chambers and the skin, is the bay's — the engine's pumps
+ * and pipes, the thrust frame, the helium bottles and the tank's lower dome —
+ * which the open truss and, once Blok A has gone, the stage's open bottom
+ * show; but not an inside pipe that runs up beside the tank, outside its wall
+ * (the 2.1b's helium pressurisation lines): the page draws those only in its
+ * cutaway, and below the skin, once the skirt has gone, one would hang in the
+ * open. Above the top only the skin and the structure.
  */
 function flightPart(item, page, bay) {
   const { part, kind, id } = item;
@@ -130,7 +134,8 @@ function flightPart(item, page, bay) {
     if (CHAMBER.test(id) || CHAMBER_RING.test(id)) return null;
     if (SKIRT.test(id)) return 'skirt';
     if (kind === 'shell') return 'stage3';
-    if (bay.extent.get(id).lo <= bay.top + 1e-3) return 'bay';
+    const at = bay.extent.get(id);
+    if (at.lo <= bay.top + 1e-3) return kind === 'interior' && !TANK.test(id) && at.r > bay.tankR + 1e-3 ? null : 'bay';
     return kind === 'structural' || TANK.test(id) ? 'stage3' : null;
   }
   if (part === 'fregat') return kind === 'interior' ? null : 'fregat';
@@ -460,9 +465,9 @@ function exportPage(page) {
   const extent = new Map(), nozzles = { bay: [], fregat: [], escape: [], core: [], booster: [] };
   stage3.forEach((it, i) => {
     const p = stage3Meshes[i].positions;
-    let lo = Infinity, hi = -Infinity;
-    for (let k = 2; k < p.length; k += 3) { lo = Math.min(lo, p[k] / 10); hi = Math.max(hi, p[k] / 10); }
-    extent.set(it.id, { lo, hi });
+    let lo = Infinity, hi = -Infinity, r = 0;
+    for (let k = 2; k < p.length; k += 3) { lo = Math.min(lo, p[k] / 10); hi = Math.max(hi, p[k] / 10); r = Math.max(r, Math.hypot(p[k - 2], p[k - 1]) / 10); }
+    extent.set(it.id, { lo, hi, r });
     const c = CHAMBER.exec(it.id);
     if (c) nozzles.bay.push(nozzleOf(p, c[1], Number(c[2])));
   });
@@ -477,7 +482,10 @@ function exportPage(page) {
     nozzles[part === 'core' ? 'core' : 'booster'].push(nozzleOf(m.positions, kind, Number(index)));
   });
   const tanks = stage3.filter((it) => TANK.test(it.id)).map((it) => extent.get(it.id).lo);
-  const bay = { extent, top: tanks.length ? Math.min(...tanks) : -Infinity };
+  const top = tanks.length ? Math.min(...tanks) : -Infinity;
+  // the lowest tank's radius: an inside pipe below the top that reaches further out runs up outside that tank
+  const tankR = Math.max(0, ...stage3.filter((it) => TANK.test(it.id) && extent.get(it.id).lo <= top + 1e-3).map((it) => extent.get(it.id).r));
+  const bay = { extent, top, tankR };
   const chosen = scene.items.filter((it) => flightPart(it, page, bay));
   const inBay = chosen.map((it) => flightPart(it, page, bay) === 'bay');
   const rest = buildSoyuzMeshes({ ...scene, items: chosen.filter((_, i) => !inBay[i]) }, { radialSegments: RADIAL_SEGMENTS });
