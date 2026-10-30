@@ -733,24 +733,27 @@ const AIRLESS_HEIGHT = 140e3;
  * recording gap a straight line between two states passes a kilometre inside
  * the arc: for a point mass with its engine off at the earlier frame, the
  * Kepler solution propagated from that frame; for a six-DOF vehicle, flown with
- * J2, and for an escape or a capsule's return in flight, the cubic through
- * both frames' states, as in a rendezvous and in Apollo. They are blended
- * linearly otherwise: a point mass under thrust, the span a burn begins in,
- * Vostok's sphere on the ground.
+ * J2, and for a launch escape or a capsule's return in flight ('abort'), the
+ * cubic through both frames' states on a span under a quarter of its orbit's
+ * period, as in a rendezvous and in Apollo. They are blended linearly
+ * otherwise: a point mass under thrust, the span a burn begins in, a six-DOF
+ * span of a quarter of the orbit or more (only a hard-thinned recording leaves
+ * one), Vostok's sphere on the ground.
  *
  * Everything discrete (status, ascent phase, stage/booster/fairing state, the
  * debris list, the event count) comes from the *earlier* frame: a state that
  * changes at an instant must not be shown before that instant. Debris
  * positions are still interpolated, so spent stages fall smoothly: a body that
- * coasts out of the air, or any body not firing beside an escape, goes from one
- * frame to the next the way the vehicle does (`path`), anything else in a
- * straight line.
+ * coasts out of the air, or any body not firing beside a launch escape or a
+ * return, goes from one frame to the next the way the vehicle does (`path`),
+ * anything else in a straight line.
  *
- * The result is a fresh frame, apart from data that stays as it was for the
- * whole mission and is shared as `cloneFrame` shares it (the jettisoned parts,
- * Apollo's plan and Moon figures, a recovery's target); the inputs are never
- * mutated. The function is pure, so seeking twice to the same time produces
- * deep-equal frames.
+ * The result is a fresh frame, apart from sub-objects it shares with the
+ * stored frame as `cloneFrame` does, which a caller must not write to:
+ * `jettisoned`, Apollo's state below its top level (the whole of it unless both
+ * frames carry the CSM, the ascent stage or the service module), a recovery's
+ * `target` and a body's `visual`. The inputs are never mutated. The function is
+ * pure, so seeking twice to the same time produces deep-equal frames.
  */
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
@@ -796,11 +799,15 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // drawn on its arc beside one drawn on the straight line, which sags v²Δt²/8R under it, parts from it — 115 m
   // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (a point mass
   // under thrust, the span a burn begins in), so do they; a body that does not coast takes it whatever the vehicle
-  // does. Every velocity change inside a coast is pinned to a frame: an event's frames, a change of configuration
-  // (held above) or of status; the cubic, which follows both ends' velocities, relies on that. It is only for a span
-  // under a quarter of the orbit's period: on a longer one, which only a recording thinned hard leaves (a docked
-  // spacecraft hours past its docking, under the six-DOF frame budget: 7,981 s), the cubic swings out further than
-  // the line does (past a third of a GTO's or a Molniya's period, a whole one of a circle), so it keeps the line.
+  // does. Every step change of velocity inside a coast is pinned to a frame: an event's frames, a change of
+  // configuration (held above) or of status; the cubic, which follows both ends' velocities, relies on that. A
+  // cut-off's tail or a small thrust running into a span is not pinned, and costs it metres (25 m over Starship's
+  // 18 s cut-off span) where the line is hundreds. It is only for a span under a quarter of the orbit's period: on
+  // a longer one, which only a recording thinned hard leaves (a docked spacecraft hours past its docking, under the
+  // six-DOF frame budget: 7,981 s), the cubic swings out further than the line does (past a third of a GTO's or a
+  // Molniya's period, a whole one of a circle), so it keeps the line. Above an eccentricity of about 0.8, and on an
+  // escape, whose period is Infinity, it can swing out further inside a quarter too; again only a recording thinned
+  // hard leaves such a span.
   const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
     coasts && vehicleCoasts && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
       : coasts && ((vehicleCoasts && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
@@ -824,8 +831,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     return {
       ...d,
       rigid,
-      // it coasts: nothing on it firing at either end, and out of the air at both, or at any height beside an escape,
-      // which takes the cubic in the air too: on the line, the Redstone 25 m from Freedom 7 was drawn 117 m off it on
+      // it coasts: nothing on it firing at either end, and out of the air at both, or at any height beside a launch
+      // escape or a return ('abort'), which takes the cubic in the air too: on the line, the Redstone 25 m from Freedom 7 was drawn 117 m off it on
       // the span that crosses 140 km, Vostok's instrument module 4.7 m off the sphere every 2 s
       ...path(d.r, d.v, other.r, other.v, !d.burning && !other.burning
         && (!!a.abort || (norm(d.r) - R_EARTH > AIRLESS_HEIGHT && norm(other.r) - R_EARTH > AIRLESS_HEIGHT))),
