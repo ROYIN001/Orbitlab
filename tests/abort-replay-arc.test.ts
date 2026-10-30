@@ -275,7 +275,7 @@ describe('Freedom 7 recorded and replayed, from its separation to the water', ()
     expect(sim.state.status).toBe('landed');
     const player = new ReplayPlayer(rec);
     const frames = rec.frames;
-    let above = 0, aboveSamples = 0, worse = 0, i = 0, beside = 0, besideSamples = 0;
+    let above = 0, aboveSamples = 0, worse = 0, i = 0, body = 0, beside = 0, besideSamples = 0;
     for (const { t, r, bodies } of flown) {
       while (i + 1 < frames.length && frames[i + 1].t <= t) i++;
       const a = frames[i], b = frames[i + 1];
@@ -284,10 +284,12 @@ describe('Freedom 7 recorded and replayed, from its separation to the water', ()
       const drawn = dist(f.r, r), chord = dist(lerp(a.r, b.r, (t - a.t) / (b.t - a.t)), r);
       if (drawn > chord + 0.01) worse++;
       if (a.altitude >= 140e3 && b.altitude >= 140e3) { above = Math.max(above, drawn); aboveSamples++; }
-      // a body within 5 km of the capsule (the spent Redstone, tens of metres off it over the top), where it is from it
+      // a body within 5 km of the capsule (the spent Redstone, tens to hundreds of metres off it): where it flew, and
+      // where it is from the capsule
       for (const d of f.debris) {
         const at = bodies.get(d.id);
         if (!at || !d.alive || dist(at, r) > 5e3) continue;
+        body = Math.max(body, dist(d.r, at));
         beside = Math.max(beside, dist(sub(d.r, f.r), sub(at, r)));
         besideSamples++;
       }
@@ -296,8 +298,10 @@ describe('Freedom 7 recorded and replayed, from its separation to the water', ()
     expect(aboveSamples).toBeGreaterThan(500);
     expect(above).toBeLessThan(3);
     expect(worse).toBe(0);
-    // the Redstone on the line beside the capsule on its cubic was drawn 117 m off its place
+    // the Redstone on the line beside the capsule on its cubic was drawn 117 m off its arc and off its place; what is
+    // left of its place is the capsule's own miss while its retro-rockets fire (1.35 m), 0.13 m elsewhere
     expect(besideSamples).toBeGreaterThan(500);
-    expect(beside).toBeLessThan(0.3);
+    expect(body).toBeLessThan(0.05);
+    expect(beside).toBeLessThan(1.5);
   });
 });

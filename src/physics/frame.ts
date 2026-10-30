@@ -733,16 +733,18 @@ const AIRLESS_HEIGHT = 140e3;
  * recording gap a straight line between two states passes a kilometre inside
  * the arc: for a point mass with its engine off at the earlier frame, the
  * Kepler solution propagated from that frame; for a six-DOF vehicle, flown with
- * J2, the cubic through both frames' states, as in a rendezvous and in Apollo.
- * They are blended linearly otherwise: a point mass under thrust, the span a
- * burn begins in, an escape.
+ * J2, and for an escape or a capsule's return in flight, the cubic through
+ * both frames' states, as in a rendezvous and in Apollo. They are blended
+ * linearly otherwise: a point mass under thrust, the span a burn begins in,
+ * Vostok's sphere on the ground.
  *
  * Everything discrete (status, ascent phase, stage/booster/fairing state, the
  * debris list, the event count) comes from the *earlier* frame: a state that
  * changes at an instant must not be shown before that instant. Debris
  * positions are still interpolated, so spent stages fall smoothly: a body that
- * coasts out of the air goes from one frame to the next the way the vehicle
- * does (`path`), anything else in a straight line.
+ * coasts out of the air, or any body not firing beside an escape, goes from one
+ * frame to the next the way the vehicle does (`path`), anything else in a
+ * straight line.
  *
  * The result is a fresh frame, apart from data that stays as it was for the
  * whole mission and is shared as `cloneFrame` shares it (the jettisoned parts,
@@ -779,7 +781,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // it where the line is 128 m off. On the ground it keeps the line: Vostok's sphere, still 'abort' while its pilot
   // comes down, is at rest a step after its landing event, and the cubic through the landing's velocity is 8 m off.
   const coasting = (f: VisualFrame) => ({ coast: true, orbit: true, descent: f.descentPhase === 'coast',
-    abort: f.abort?.phase !== 'landed' } as Partial<Record<SimStatus, boolean>>)[f.status];
+    abort: f.abort?.phase !== 'landed' } satisfies Partial<Record<SimStatus, boolean>> as Partial<Record<SimStatus, boolean>>)[f.status];
   // A coast. A point mass with its engine off at the earlier frame: Kepler from that frame, which is how a coast
   // above the air is flown (`useKepler`); one in orbit is flown with J2, which Kepler misses at the next frame by
   // metres (left as it was). A six-DOF coast is flown with J2 too, and a docked spacecraft (rigid telemetry from the
@@ -822,9 +824,11 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     return {
       ...d,
       rigid,
-      // it coasts: nothing on it firing at either end, and out of the air at both
+      // it coasts: nothing on it firing at either end, and out of the air at both, or at any height beside an escape,
+      // which takes the cubic in the air too: on the line, the Redstone 25 m from Freedom 7 was drawn 117 m off it on
+      // the span that crosses 140 km, Vostok's instrument module 4.7 m off the sphere every 2 s
       ...path(d.r, d.v, other.r, other.v, !d.burning && !other.burning
-        && norm(d.r) - R_EARTH > AIRLESS_HEIGHT && norm(other.r) - R_EARTH > AIRLESS_HEIGHT),
+        && (!!a.abort || (norm(d.r) - R_EARTH > AIRLESS_HEIGHT && norm(other.r) - R_EARTH > AIRLESS_HEIGHT))),
       dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other.dir, u),
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
       recovery: rec,
