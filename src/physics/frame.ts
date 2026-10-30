@@ -774,6 +774,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     return { ...cloneFrame(a), t: a.t + span * u };
   }
   const dt = span * u;
+  // the cubic between a body's states at the two frames (Apollo's craft below)
+  const arc = (x: { r: Vec3; v: Vec3 }, y: { r: Vec3; v: Vec3 }) => hermite(x.r, x.v, y.r, y.v, u, span);
   const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
   // A coast. A point mass with its engine off at the earlier frame: Kepler from that frame, which is how a coast
   // above the air is flown (`useKepler`); one in orbit is flown with J2, which Kepler misses at the next frame by
@@ -844,11 +846,11 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     ...(a.apollo && b.apollo && ((a.apollo.csm && b.apollo.csm) || (a.apollo.ascentStage && b.apollo.ascentStage)
       || (a.apollo.serviceModule && b.apollo.serviceModule)) ? { apollo: {
       ...a.apollo,
-      ...(a.apollo.csm && b.apollo.csm ? { csm: hermite(a.apollo.csm.r, a.apollo.csm.v, b.apollo.csm.r, b.apollo.csm.v, u, span) } : {}),
+      ...(a.apollo.csm && b.apollo.csm ? { csm: arc(a.apollo.csm, b.apollo.csm) } : {}),
       ...(a.apollo.ascentStage && b.apollo.ascentStage
-        ? { ascentStage: hermite(a.apollo.ascentStage.r, a.apollo.ascentStage.v, b.apollo.ascentStage.r, b.apollo.ascentStage.v, u, span) } : {}),
+        ? { ascentStage: arc(a.apollo.ascentStage, b.apollo.ascentStage) } : {}),
       ...(a.apollo.serviceModule && b.apollo.serviceModule
-        ? { serviceModule: hermite(a.apollo.serviceModule.r, a.apollo.serviceModule.v, b.apollo.serviceModule.r, b.apollo.serviceModule.v, u, span) } : {}),
+        ? { serviceModule: arc(a.apollo.serviceModule, b.apollo.serviceModule) } : {}),
     } } : {}),
     rigid,
     // E02: the left frame's step, copied like everything else handed out.
