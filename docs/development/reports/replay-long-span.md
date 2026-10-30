@@ -27,7 +27,7 @@ change_kind: bug fix (wrong → right); no existing assertion changed, no ceilin
 owner_authorization: 'owner in chat to this session, 2026-10-30: the task "the flight recorder ... thins stored frames ... Two things were left as they are on main ... Done when: failing-first vitest tests pin the long-span cases ..."; then "ทำต่อ" (continue)'
 app_code: src/replay/recorder.ts, src/physics/frame.ts
 tests: tests/replay-long-span.test.ts (new); tests/replay.test.ts (+2); tests/rigid-replay-arc.test.ts (+1, the docked-frame builder moved to module level)
-base_sha_verified_on: {sha: fa92cf6, date: 2026-10-30, note: 'the head of #187 (claude/practical-lovelace-2ndbww), itself on main 1842a86'}
+base_sha_verified_on: {sha: fa92cf6, date: 2026-10-30, note: 'the head of #187 (claude/practical-lovelace-2ndbww), itself on main 1842a86; #187 moved on to f7f7577 (comments, a report and tests), merged in 7910057 and 391d847'}
 branch: claude/ecstatic-darwin-wijyuc
 pr: 189 (stacked on #187)
 second_agent_review: 'four lenses on a22922f, nothing blocking; three should-fix items (a number, the pass-4 trade, stale comments) taken on the next commit; see "Second-agent review"'
@@ -183,7 +183,9 @@ The second agent also flew, old and new code, point mass: Apollo 11 at 12,000 an
   - custom-vehicle, d06-custom-satellite, d06-satellite-launch, debris-replay, equations, instructor-mode, launch-abort, lesson-grading-end, live-stepping, mcp, orbit-handoff;
   - rendezvous-fuel, rendezvous, replay-long-span, replay, rigid-event-boundary, rigid-failure-boundary, rigid-replay-arc, rigid-replay, session;
   - vostok-render, vostok-replay, apollo-own-launch, bundle-budget, audio, rigid-debris, eo-phy-6/apollo11, repo-hygiene, rigid-render, frames-view.
-- **Full unit suite and heavy:** see the PR (run on a22922f).
+- **Full unit suite** (`npx vitest run`, a22922f's code): 336 files, 10,547 tests, all pass (2,199 s, Node 22.22.0).
+- **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the one heavy file that builds a recorder: 1 of 1 (167 s). The other heavy and six-DOF fleet files fly simulations without a recorder or a player, which this change cannot touch.
+- **After the merges of #187's head** (comments and tests on its side): typecheck clean, sizes unchanged, and the seven replay files (rigid-replay-arc, replay, replay-long-span, rendezvous, vostok-replay, rigid-replay, debris-replay) 103 of 103.
 - **Typecheck:** `npx tsc --noEmit -p .` clean.
 
 ## Size
