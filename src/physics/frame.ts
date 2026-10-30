@@ -733,9 +733,11 @@ const AIRLESS_HEIGHT = 140e3;
  * recording gap a straight line between two states passes a kilometre inside
  * the arc: for a point mass with its engine off at the earlier frame, the
  * Kepler solution propagated from that frame; for a six-DOF vehicle, flown with
- * J2, the cubic through both frames' states, as in a rendezvous and in Apollo.
- * They are blended linearly otherwise: a point mass under thrust, the span a
- * burn begins in, an escape.
+ * J2, the cubic through both frames' states on a span under a quarter of its
+ * orbit's period, as in a rendezvous and in Apollo. They are blended linearly
+ * otherwise: a point mass under thrust, the span a burn begins in, a six-DOF
+ * span of a quarter of the orbit or more (only a hard-thinned recording leaves
+ * one), an escape.
  *
  * Everything discrete (status, ascent phase, stage/booster/fairing state, the
  * debris list, the event count) comes from the *earlier* frame: a state that
@@ -744,11 +746,12 @@ const AIRLESS_HEIGHT = 140e3;
  * coasts out of the air goes from one frame to the next the way the vehicle
  * does (`path`), anything else in a straight line.
  *
- * The result is a fresh frame, apart from data that stays as it was for the
- * whole mission and is shared as `cloneFrame` shares it (the jettisoned parts,
- * Apollo's plan and Moon figures, a recovery's target); the inputs are never
- * mutated. The function is pure, so seeking twice to the same time produces
- * deep-equal frames.
+ * The result is a fresh frame, apart from sub-objects it shares with the
+ * stored frame as `cloneFrame` does, which a caller must not write to:
+ * `jettisoned`, Apollo's state below its top level (the whole of it unless both
+ * frames carry the CSM, the ascent stage or the service module), a recovery's
+ * `target` and a body's `visual`. The inputs are never mutated. The function is
+ * pure, so seeking twice to the same time produces deep-equal frames.
  */
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
@@ -786,11 +789,15 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // drawn on its arc beside one drawn on the straight line, which sags v²Δt²/8R under it, parts from it — 115 m
   // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (a point mass
   // under thrust, the span a burn begins in), so do they; a body that does not coast takes it whatever the vehicle
-  // does. Every velocity change inside a coast is pinned to a frame: an event's frames, a change of configuration
-  // (held above) or of status; the cubic, which follows both ends' velocities, relies on that. It is only for a span
-  // under a quarter of the orbit's period: on a longer one, which only a recording thinned hard leaves (a docked
-  // spacecraft hours past its docking, under the six-DOF frame budget: 7,981 s), the cubic swings out further than
-  // the line does (past a third of a GTO's or a Molniya's period, a whole one of a circle), so it keeps the line.
+  // does. Every step change of velocity inside a coast is pinned to a frame: an event's frames, a change of
+  // configuration (held above) or of status; the cubic, which follows both ends' velocities, relies on that. A
+  // cut-off's tail or a small thrust running into a span is not pinned, and costs it metres (25 m over Starship's
+  // 18 s cut-off span) where the line is hundreds. It is only for a span under a quarter of the orbit's period: on
+  // a longer one, which only a recording thinned hard leaves (a docked spacecraft hours past its docking, under the
+  // six-DOF frame budget: 7,981 s), the cubic swings out further than the line does (past a third of a GTO's or a
+  // Molniya's period, a whole one of a circle), so it keeps the line. Above an eccentricity of about 0.8, and on an
+  // escape, whose period is Infinity, it can swing out further inside a quarter too; again only a recording thinned
+  // hard leaves such a span.
   const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
     coasts && vehicleCoasts && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
       : coasts && ((vehicleCoasts && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
