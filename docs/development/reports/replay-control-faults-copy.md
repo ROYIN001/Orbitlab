@@ -24,7 +24,7 @@ app_code: src/physics/frame.ts (code); src/physics/rigid/telemetry.ts (comments 
 tests: tests/replay-copies.test.ts (one new test)
 base_sha_verified_on: {sha: 1a7ca0c, branch: claude/great-mayer-6kapau (PR #188), main: 1842a86, date: 2026-10-30}
 branch: claude/epic-wright-cx214p
-pr: PR_NUMBER (stacked on #188)
+pr: #192 (stacked on #188)
 second_agent_review: REVIEW_YAML
 ```
 
