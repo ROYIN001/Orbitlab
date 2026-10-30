@@ -1705,10 +1705,9 @@ class App {
     const mode = live ? t('tl.live') : t('ctl.replay');
     if (modeEl.textContent !== mode) { modeEl.textContent = mode; bar.dataset.replay = String(!live); }
     const running = live ? this.playing : this.player.playing;
-    const glyph = running ? '❚❚' : '▶';
-    if (play.textContent !== glyph) {
-      play.textContent = glyph;
-      const label = t(running ? 'ctl.pause' : 'ctl.play');
+    const label = t(running ? 'ctl.pause' : 'ctl.play');
+    if (play.getAttribute('aria-label') !== label) {
+      play.textContent = running ? '❚❚' : '▶';
       play.title = label;
       play.setAttribute('aria-label', label);
     }
