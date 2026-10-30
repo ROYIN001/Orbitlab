@@ -18,7 +18,8 @@
 > - เทสต์: 6 เทสต์ใหม่ (5 อันล้มบน main) และเปลี่ยน assertion เดิม 1 ข้อ: ชิ้นส่วนในบรรยากาศที่ "ต้องเป็นเส้นตรง" เปลี่ยนเป็นชิ้นส่วนที่จุดเครื่องยนต์ในบรรยากาศ เพราะพฤติกรรมเดิมคือสิ่งที่งานนี้แก้ จึงไม่เข้าเงื่อนไขอนุมัติถาวรสำหรับบั๊ก (ห้ามเปลี่ยน assertion) ต้องให้เจ้าของกดเอง
 > - ขนาด: +19 B และ +20 B ต่อ chunk ไม่ได้ขึ้นเพดาน precache code เหลือ 59 B ถ้า merge #187 ด้วยจะเหลือ 9 B
 > - การ merge กับ #187: ขัดกัน (conflict) แค่ที่ข้อความ doc comment และเทสต์ของ #187 ข้อหนึ่ง (`tests/rigid-replay-arc.test.ts`) ต้องเปลี่ยนแบบเดียวกัน (ใส่ `burning: true`) ใครที่ merge ทีหลังต้องแก้
-> - การตรวจโดย agent ตัวที่สอง: ดูหัวข้อ "Second-agent review"
+> - การตรวจโดย agent ตัวที่สอง: ยืนยัน 10 จาก 10 ข้อ ไม่พบข้อที่ต้องแก้ก่อน merge มีข้อสังเกต 4 ข้อที่ไม่ขวางการ merge (อยู่ในหัวข้อ "Second-agent review" และ "Not changed, for later") ข้อหนึ่งทำให้แก้คำอธิบาย: แบบ point-mass การจำลองให้ตำแหน่งชิ้นส่วนเฉพาะตอนจบแต่ละ step (ในวงโคจรห่างกันได้ถึง 30 s) ตัวเลข point-mass จึงวัดที่จุดเหล่านั้น ถ้าคำนวณซ้ำให้ถี่ จุดที่คลาดมากที่สุดจะมากขึ้นราว 20–25% แต่ cubic ก็ยังไม่เคยแย่กว่าเส้นตรง
+> - CI: ผ่านทั้งหมดบน 5f25287 (run 41023952861)
 
 ```yaml
 item: replay debris blend through the air between recorded frames (bug fix)
@@ -29,7 +30,7 @@ tests: tests/debris-replay.test.ts
 base_sha_verified_on: {sha: 1842a86, date: 2026-10-30}
 branch: claude/peaceful-planck-uyne6i
 pr: 191
-second_agent_review: (below)
+second_agent_review: 'confirmed 10 of 10, no blocking findings, 4 non-blocking (2026-10-30, on a676a23; the later commits change records and one test comment/sample count only)'
 ```
 
 ## Cause
@@ -72,7 +73,7 @@ Comments: the inline comment at the blend, and one sentence of the function's do
 
 ## Measured
 
-Probe (gitignored `tests/probe/air-debris.test.ts`). Each watch mission was built as the app builds it (`watchMissionSettings`, from 2026-09-22) and recorded through `FlightRecorder.advance(1)`, past orbit insertion until the falling bodies were down. Every second it took the simulation's own debris positions as the truth. For every in-air sample of a body alive at both ends of its span, it compared the line and the cubic with the truth. Two measures:
+Probe (gitignored `tests/probe/air-debris.test.ts`). Each watch mission was built as the app builds it (`watchMissionSettings`, from 2026-09-22) and recorded through `FlightRecorder.advance(1)`, past orbit insertion until the falling bodies were down. After every `advance(1)` it took the simulation's own debris positions as the truth. In a six-DOF flight that is every second. A point-mass flight steps up to 30 s at a time in orbit and holds its debris states between steps, so there the truth is the simulation's step boundaries, and the worst instant between them is larger (the second agent's dense re-integration, below). For every in-air sample of a body alive at both ends of its span, it compared the line and the cubic with the truth. Two measures:
 - **from its place:** distance from where the body was at that instant;
 - **off its path:** distance from the polyline through the flight's samples in that span.
 
@@ -95,7 +96,7 @@ Six-DOF (`defaultDynamics`), worst sample per body:
 
 Falcon 9's and Falcon Heavy's returning stages come down while the upper stage still burns: dense frames, under 3 m either way.
 
-Point-mass, all 20 watch missions (Vostok-1 flown to T+6,629 s for its return), 62 bodies in the air:
+Point-mass, all 20 watch missions (Vostok-1 flown to T+6,629 s for its return), 62 bodies in the air, at the simulation's step boundaries:
 - the cubic is never further from the truth than the line, never runs back, and the largest ratio is 2.14;
 - Apollo 11's S-II: 12,615 → 708 m (off its path 948 → 33 m);
 - the H-IIA first stage: 10,707 → 496 m (939 → 79 m);
@@ -116,11 +117,13 @@ Point-mass, all 20 watch missions (Vostok-1 flown to T+6,629 s for its return), 
 - **Three falls at mid-span:** Blok A, the H-IIA first stage, and a Sputnik booster in its drag pulse. Each is flown with gravity and drag (exponential atmosphere; ballistic coefficient and dive angle fitted to the six-DOF spans' end states, within 0.3 km and 50 m/s) beside the spacecraft coasting in orbit. At mid-span the drawn stage must be within **30 m of the path it flew** (8.3, 23.2 and 1.6 m), and within 25 m, 800 m and 1,300 m of where it was (9, 659 and 1,083 m). The line is 464, 1,046 and 527 m off the path and 3.2, 2.8 and 8.6 km from the place. The vehicle stays on its Kepler arc.
 - **The drag pulse, every second:** within 30 m of the path (12.5 m at most). The drawn body never goes back along the chord or past its end, nor below the later sample's height. Both ends are met in position and velocity. The inputs are untouched.
 - **A body that comes down between two frames** is held at its earlier sample (a guard; passes on main too).
-- **A recorded point-mass H-IIA:** the first stage, every second of its fall through the air (120 samples), within 600 m of where the simulation had it (496 m). The line was 10.7 km.
+- **A recorded point-mass H-IIA:** the first stage, at each of the 12 step boundaries inside its spans through the air, within 600 m of where the simulation had it (496 m). The line was 10.7 km. (The first version counted repeated states as 120 samples; found while checking the second agent's finding D, and fixed.) Between step boundaries the second agent's dense re-integration finds 620 m at the worst instant, against the line's 10.9 km.
 
 **Failing first:** on main's frame.ts, 5 of the 6 new tests fail: 464, 1,046 and 527 m off the path at mid-span, 46 m off it in the drag pulse, and 10,707 m on the recorded H-IIA. With the fix 11 of 11 pass.
 
 **One existing assertion changed.** 'keeps the straight line for a body in the air or under its own thrust' asserted that a quiet body at 60 km stays on the line, which is the behaviour this task changes. The body is now `burning: true`, and the test is 'keeps the straight line for a body under its own thrust, in the air or out of it'. It still asserts the line for a firing body, in the air (an entry or landing burn) and above it (a boostback). Because an assertion changed, this PR is not covered by the standing bug-fix approval (SESSION-PROTOCOL §1) and waits for the owner.
+
+**CI:** green on 5f25287 (run 41023952861): plan, typecheck, build, test 1–3, browser-smoke 1–2, verify. The run on 7623a42 (41023920469) was cancelled by the push of 5f25287, and its verify job then failed on the cancelled jobs.
 
 **Related files:** every test file that reaches `interpolateFrames`, `FlightRecorder` or the replay player, plus bundle-budget, repo-hygiene, frames-view, rigid-debris and recovery-return. 43 files, 772 tests, all pass. `npx tsc --noEmit -p .` is clean.
 
@@ -140,7 +143,36 @@ Point-mass, all 20 watch missions (Vostok-1 flown to T+6,629 s for its return), 
 
 ## Second-agent review
 
-(pending)
+Done on a676a23, review only (no edits). It ran main's frame.ts beside the branch's on deep-frozen frames recorded from all 20 watch missions point-mass and from six-DOF H-IIA and Sputnik.
+
+- **Only the intended bodies change (1):** confirmed. At u = 0.13, 0.5, 0.87, 1 and 1.4 on every span with an in-air quiet body, a recursive `Object.is` diff found differences only in `r` and `v` of bodies alive at both ends, unchanged in rigid configuration, firing at neither end and inside 140 km at either. Examples: Vostok-1, 257,520 allowed component differences and 0 others; six-DOF H-IIA, 167,634 and 0. Burning bodies in the air (Falcon Heavy 1,102 items, Starship 388, …), bodies that land between frames and bodies on the ground are bit-identical to main.
+- **The distance comparison (2):** confirmed. Sterbenz for [R/2, 2R]; both sides agree outside it, for NaN and for ±Infinity. 6.1 M fuzzed values, including every double within ±2²⁰ ulps of the threshold: 0 mismatches.
+- **Purity (3):** confirmed. About 300k calls on frozen frames with no write. The output paths that alias the input are the same set as main's. Repeated calls are deep-equal.
+- **Both ends met (4):** confirmed. At u = 1, `r` and `v` are `Object.is`-equal to the later sample, e.g. 27,744 checks on Vostok-1 and 18,638 on six-DOF H-IIA, with 0 failures.
+- **Never worse than the line (5):** confirmed, every figure matching the author's to the metre.
+- **No running back, no dip below the flight (6):** confirmed. The largest ratios are 2.144 (point-mass) and 2.408 (six-DOF). The dips below the lower sample are the flight's own: H-IIA 1,471 m against 1,415 m, Sputnik #3 52 against 50 m, and Sputnik #4 37 against 14 m, where the cubic goes 23 m deeper.
+- **Hard thinning (7):** confirmed. The cubic is closer on all 8,053 samples. There is one run back: Blok A, 140.0 s span, ratio 3.992, 1,424.9 m.
+- **Burns, impacts, the ground (8):** confirmed in the code and bit-identical in practice.
+- **Tests (9):** confirmed, run from `git archive` exports of both commits. 5 of the 6 new tests fail on main, each on its distance assertion, after the chord set-up assertions pass. 11 of 11 pass on the branch. Main's own test file on the branch fails only the changed assertion.
+- **Type check and size (10):** confirmed: +19 and +20 B, precache code 14,653,941 B. Its absolute sizes were 4–8 B lower because an export without .git stamps the build "dev".
+
+Non-blocking findings:
+- **A. No span limit on the in-air cubic.** #187 limits the vehicle's cubic to spans under a quarter of the orbit's period.
+  - A drag-free body in a 120 × 35,786 km orbit, from perigee: the cubic is better than the line at 0.25 P (8,387 against 11,357 km) and worse at 0.5 P and 0.75 P (22,386 against 20,739 km; 36,934 against 31,631 km).
+  - In a 110 × 400 km orbit the cubic is better at every span, though both pass below the ground past a third of the period.
+  - Reaching this needs a body the simulation keeps in orbit with a perigee of 120–140 km, and a recording thinned to spans of hours. None is left by the watch missions: the lowest perigee in orbit at T+4,000 s is 168 km.
+  - Left as it is (for later, below).
+- **B. `burning` is sampled at frames only.** Targeted recoveries start each burn on an event, which pins frames. The untargeted recovery path in sim/debris.ts (a stage with `recovery` and no `target`) starts its entry burn without one, so in a user's mission already coasting in orbit a whole burn could fall inside one quiet span and take the cubic. Not seen in the watch missions, and not a regression: in a 1-D 30 s span with the burn inside, the cubic is 1.9 km off against the line's 5.6 km.
+- **C. Merging with #187:** as in "Merging with #187" above. The doc comment is the only conflict, and taking #187's comment alone leaves "anything else in a straight line" stale. In the merged tree the type check is clean, 26 of 27 tests pass (only the predicted rigid-replay-arc test fails), and precache code is 14,653,991 B.
+- **D. Point-mass worst instants.** A point-mass flight exposes debris states at its step boundaries only. Re-integrating each passive body densely with the simulation's own `pointMassAcceleration` (RK4, steps of at most 0.02 s, kept where it lands within 1 m of the later sample) gives worst instants about 20–25 % above the step-boundary figures. The cubic is still never worse than the line:
+  - Sputnik's boosters: 1,225–1,599 m (line 9,675–10,203 m);
+  - the H-IIA first stage: 620 m (10,919 m);
+  - Apollo's S-II: 875 m (14,134 m);
+  - Soyuz Blok A without the rendezvous: 44 m (1,867 m).
+
+  This report's point-mass figures are now labelled as step-boundary figures, and the recorded-H-IIA test counts its 12 distinct states (it had counted repeated states as 120).
+
+**Verdict: confirmed 10 of 10.**
 
 ## Not changed, for later
 
@@ -149,4 +181,6 @@ Point-mass, all 20 watch missions (Vostok-1 flown to T+6,629 s for its return), 
   2. **The cubic for burning bodies too.** 3 m there; it overshoots only past a ratio of 3, which the sim's burns (constant-deceleration landing burns, a ratio of 2 at most) do not reach.
 - **A body landing between frames is held at its earlier sample** for the whole span, then appears on the ground: up to 30 s hanging in the air when the vehicle's frames are sparse. Unchanged here ("the blend already handles" it). Blending to the impact point would need the impact time.
 - **The drag pulse's timing:** the cubic draws a Sputnik booster up to about 1 km (point-mass) to 2 km (six-DOF) ahead of or behind its place along its path. A frame or two kept around a falling body's peak deceleration, or the debris's acceleration recorded at each frame (a quintic), would close it. Both cost bytes or frames.
+- **No span limit on the in-air cubic** (second agent's finding A). A body kept in orbit with a perigee of 120–140 km, in a recording thinned to spans of hours, would take the cubic over half an orbit or more, where it swings further out than the line. No watch mission leaves such a body. A limit like #187's quarter-period one would close it, but it needs the body's own period, which a debris frame does not carry, so it would cost more than #187's 23 B per chunk; not measured.
+- **An untargeted recovery's entry burn** starts without an event (second agent's finding B), so a whole burn can fall inside one quiet span and take the cubic (1.9 km off, against the line's 5.6 km, in a 1-D case). Raising `evt.entryBurnStart` there too would pin a frame to it.
 - **Hard-thinned recordings:** spans of minutes leave both blends kilometres off and can make the cubic run back along its chord (1.4 km in one forced case). Keeping falling bodies' frames from being thinned, as event frames are, would fix both.

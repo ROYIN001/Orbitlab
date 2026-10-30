@@ -247,13 +247,15 @@ describe('a spent body falling through the air between two recorded frames', () 
       guidanceResolved: true, failure: m.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 } }, { headless: true });
     const rec = new FlightRecorder();
     rec.start(sim);
-    // the simulation's own position of the stage, every second of its flight
+    // The simulation's own position of the stage at each step it takes. A point-mass flight in orbit steps up to
+    // 30 s at a time and holds its debris states between steps, so these are its step boundaries, each once, not
+    // every second; the instants between them are the second agent's dense re-integration, 620 m (report).
     const flown: { t: number; r: Vec3 }[] = [];
     let guard = 0;
     for (let stage = sim.debris.find((d) => /LE-7A/.test(d.name)); !(stage && !stage.alive) && guard++ < 3000;
       stage = sim.debris.find((d) => /LE-7A/.test(d.name))) {
       rec.advance(1, 5000);
-      if (stage?.alive) flown.push({ t: sim.state.t, r: { ...stage.r } });
+      if (stage?.alive && flown[flown.length - 1]?.t !== sim.state.t) flown.push({ t: sim.state.t, r: { ...stage.r } });
     }
     const id = sim.debris.find((d) => /LE-7A/.test(d.name))!.id, frames = rec.frames;
     let n = 0, drawn = 0, line = 0;
@@ -265,7 +267,8 @@ describe('a spent body falling through the air between two recorded frames', () 
       drawn = Math.max(drawn, dist(interpolateFrames(a, b, p.t).debris.find((d) => d.id === id)!.r, p.r));
       line = Math.max(line, dist(lerp(da.r, db.r, (p.t - a.t) / (b.t - a.t)), p.r));
     }
-    expect(n).toBeGreaterThan(30);
+    // 12 of them fall inside the stage's spans through the air
+    expect(n).toBeGreaterThanOrEqual(10);
     // before: 10.7 km off, on the line through a 30 s span from 55 to 27 km
     expect(line).toBeGreaterThan(10e3);
     expect(drawn).toBeLessThan(600);
