@@ -4,7 +4,7 @@
 >
 > - ทำไม: หลัง #187 merge แล้ว ถ้า merge #191 และ #194 ด้วย ขนาด precache code จะเกินเพดาน 15 B เจ้าของเลือกให้ทำงานลดขนาดแบบผลลัพธ์เหมือนเดิมก่อน ("Offset PR first (Recommended)") แทนการขึ้นเพดาน
 > - ทำอะไร: ใน `interpolateFrames` (src/physics/frame.ts) การวาดยานของ Apollo สามลำ (CSM, ascent stage, service module) ระหว่างสองเฟรมเคยเขียนการเรียก `hermite` เต็มๆ สามครั้ง ตอนนี้เรียกผ่านฟังก์ชัน `arc` ตัวเดียว ซึ่งเรียก `hermite` ตัวเดิมด้วยค่าเดิมทุกตัว ภาพที่เห็นไม่เปลี่ยน
-> - ผลลัพธ์เหมือนเดิม: บันทึก Apollo 11 ตั้งแต่ปล่อยจนลงน้ำ (T+703,130 s) แล้วเทียบ `interpolateFrames` ของ main กับของงานนี้ทุกคู่เฟรม: point-mass 34,671 ครั้ง ต่างกัน 0 ครั้ง (มีคู่เฟรมที่มี CSM 1,801 คู่, ascent stage 317, service module 27) และ agent ตัวที่สองสุ่มเฟรมที่มียานครบสามลำอีก 30,000 ครั้ง ต่างกัน 0 ครั้ง; แบบ six-DOF กำลังวัดอยู่
+> - ผลลัพธ์เหมือนเดิม: บันทึก Apollo 11 ตั้งแต่ปล่อยจนลงน้ำ (T+703,130 s) แล้วเทียบ `interpolateFrames` ของ main กับของงานนี้ทุกคู่เฟรม: point-mass 34,671 ครั้ง ต่างกัน 0 ครั้ง (มีคู่เฟรมที่มี CSM 1,801 คู่, ascent stage 317, service module 27) และ agent ตัวที่สองสุ่มเฟรมที่มียานครบสามลำอีก 30,000 ครั้ง ต่างกัน 0 ครั้ง; six-DOF 14,769 ครั้ง ต่างกัน 0 ครั้ง
 > - ขนาด: เล็กลง 120 B ต่อ chunk (index และ flight worker) precache code เหลือ 288 B; เมื่อรวม #191 และ #194 แล้วเหลือ 225 B (วัดจาก trial merge) ไม่ต้องขึ้นเพดาน
 > - ลำดับ: งานนี้ merge ก่อน แล้วตามด้วย #191 แล้ว #194 (#194 ต่อจาก #191 และมี commit ของ #191 อยู่ด้วย) #191 อย่างเดียวกับงานนี้ precache code ก็ยังอยู่ใต้เพดาน
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 12 จาก 14 ข้อ ไม่มีข้อที่ต้องแก้ ข้อสังเกตสองข้อ (ลำดับการ merge และตัวเลขขนาดที่ต่างได้ 1–2 B ตาม build stamp) แก้แล้ว
@@ -17,7 +17,7 @@ app_code: src/physics/frame.ts
 base_sha_verified_on: {sha: ef9d3f6, date: 2026-10-30}
 branch: claude/replay-arc-offset
 pr: 196
-second_agent_review: 'confirmed 12 of 14, nothing blocking or should-fix (2026-10-30, on c62c318); two notes fixed; the open check is the six-DOF run'
+second_agent_review: 'confirmed 12 of 14, nothing blocking or should-fix (2026-10-30, on c62c318); two notes fixed; the check it left open, the six-DOF run, has since finished: 0 differ'
 ```
 
 ## Why
@@ -41,7 +41,7 @@ Why the output is the same: `hermite` gets the same six arguments, read from the
 Probe (gitignored `tests/probe/arc-same.test.ts`): Apollo 11, the watch mission, built as the app builds it (`watchMissionSettings` from 2026-09-22) and recorded through `FlightRecorder.advance` to splashdown. On every pair of consecutive stored frames, main's `interpolateFrames` (a copy of its frame.ts at ef9d3f6) and this branch's were compared at u = 0.13, 0.5 and 0.87, the whole frame, recursively with `Object.is`.
 
 - **Point-mass:** T+703,130 s, 11,558 frames (thinned 12 times), 34,671 blends, 0 differ. 1,801 pairs carry the CSM at both frames, 317 the ascent stage, 27 the service module.
-- **Six-DOF:** running; added when it finishes.
+- **Six-DOF** (`defaultDynamics`): T+703,130 s, 4,924 frames (thinned 36 times), 14,769 blends, 0 differ. 1,110 pairs carry the CSM, 316 the ascent stage, 30 the service module.
 - **Synthetic** (the second agent's `review-arc.test.ts`): 3,000 frame pairs with random states, spans from 1 µs to 1.3 days, statuses orbit, coast, burn and descent, half with all three craft at both frames and half with random subsets, at 10 values of u including 0, 1, 1.5 and −0.2: 30,000 blends, 0 differ (12,164 with all three craft blended), the inputs unchanged. Scaling `span` by 1 + 1e-15 inside `arc` gave 10,492 differences, so the check sees a change of one ulp.
 
 No existing test exercises the blend of Apollo's craft directly; the probe covers every pair of a whole mission.
@@ -72,5 +72,5 @@ Done on c62c318, review only. **Confirmed 12 of 14 checks, nothing blocking or s
 - **Synthetic check** (above): 30,000 blends, 0 differ; its mutant shows it would catch a one-ulp change.
 - **Sizes:** reproduced, with a 1–2 B build-stamp difference that changes no delta; the trial merge with #194's head merges cleanly, bundle-budget ok, 29 of 29.
 - `npx tsc --noEmit -p .` clean on the branch and the trial merge; 6 replay test files, 89 tests, pass.
-- **Not yet checked:** the six-DOF run, still going.
+- **Not yet checked then:** the six-DOF run, which has since finished with 0 differences (above).
 - **Notes, fixed:** the merge order (#191 before #194, not any order); the build-stamp caveat.
