@@ -13,7 +13,9 @@
  *
  * Before: `jettisoned`, `apollo` (and, where the CSM, the ascent stage or the
  * service module blend, its sub-objects) and `debris[].recovery.target` were
- * shared (docs/development/reports/replay-frame-copies.md).
+ * shared (docs/development/reports/replay-frame-copies.md); in a six-DOF flight
+ * with control-system failures, `rigid.controlFaults` too
+ * (docs/development/reports/replay-control-faults-copy.md).
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
@@ -23,6 +25,10 @@ import { ReplayPlayer } from '../src/replay/player';
 import { missionConfigFromState } from '../src/lessons/config';
 import { watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
 import type { ApolloState } from '../src/physics/sim/apollo';
+import { lessonConfig } from '../src/lessons/config';
+import { packPath, readPackText } from '../src/lessons/packs';
+import { isFlightLesson } from '../src/lessons/types';
+import ruPackText from '../public/lessons/packs/ru-24-05-06.orbitlab-lesson.json?raw';
 
 /** A watch mission flown point-mass through the recorder, as the app flies it, to mission time `until`. */
 function recorded(id: WatchMissionId, until: number): FlightRecorder {
@@ -146,5 +152,31 @@ describe('a seek shares nothing a consumer could write to with the recording', (
     expect(blended.csm!.r.x).toBeGreaterThan(1);
     expect(blended.csm!.r.x).toBeLessThan(9);
     expect(blended.moon).toEqual(a.apollo!.moon);
+  });
+
+  it('Soyuz-2.1a six-DOF with a rate gyro stuck (lesson ru-fdir-dus): the control system\'s failures and the FDIR\'s state are the seek\'s own', { timeout: 120_000 }, () => {
+    // the lesson's own flight, as the app flies it: IMU 1's rate gyros stick at T+30 s and, with no FDIR, it breaks up
+    const lesson = readPackText(ruPackText, packPath('ru-24-05-06'))!.lessons.find((l) => l.id === 'ru-fdir-dus')!;
+    if (!isFlightLesson(lesson)) throw new Error('ru-fdir-dus is a flight lesson');
+    const sim = new Simulation(lessonConfig(lesson.mission), { headless: true });
+    const rec = new FlightRecorder();
+    rec.start(sim);
+    let guard = 0;
+    while (!sim.done && !sim.isFailed() && guard++ < 1000) rec.advance(1, 5000);
+    expect(sim.events.map((e) => e.key)).toEqual(expect.arrayContaining(['evt.controlFault', 'evt.vehicleLost']));
+    const frames = rec.frames, carries = (f: VisualFrame) => !!f.rigid?.controlFaults;
+    // every frame carries the record; from the failure on, with the stuck unit in it
+    expect(frames.length).toBeGreaterThan(400);
+    expect(frames.every(carries)).toBe(true);
+    const struck = frames.filter((f) => f.rigid!.controlFaults!.active.length);
+    expect(struck.length).toBeGreaterThan(100);
+    expect(struck[0].rigid!.controlFaults).toMatchObject({ fdir: false, active: [{ kind: 'gyroStuck', units: [1] }], units: ['faulty', 'ok', 'ok'] });
+    const before = structuredClone(frames);
+    deepFreeze(frames);
+    const { seeks, paths } = seekAll(rec, carries);
+    expect(seeks).toBeGreaterThan(800);
+    // before: frame.rigid.controlFaults
+    expect(paths).toEqual([]);
+    expect(frames).toEqual(before);
   });
 });
