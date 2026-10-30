@@ -146,8 +146,16 @@ async function flown(page: Page, to: number, at: number, hash?: string): Promise
 const FACES: Record<ShowcaseFace, { hash: string; ready: (page: Page) => Promise<void> }> = {
   // the boosters falling away, the narration saying so
   watch: { hash: '#/launch/watch', ready: (p) => flown(p, 140, 124) },
-  // the second stage on its way, the workspace round it
-  explore: { hash: '#/launch/watch', ready: (p) => flown(p, 320, 300, '#/launch/explore') },
+  // the second stage on its way, the workspace round it, seen from outside: the cinematic camera
+  // is on by default and takes the onboard view at this moment, so the exterior is chosen
+  explore: {
+    hash: '#/launch/watch',
+    ready: async (p) => {
+      await flown(p, 320, 300, '#/launch/explore');
+      await p.locator('.cam-btn[data-cam="exterior"]').click();
+      await settle(p, 6, 150);
+    },
+  },
   // max-Q, the telemetry beside it
   engineer: { hash: '#/launch/watch', ready: (p) => flown(p, 200, 62, '#/launch/engineer') },
   lessons: {
