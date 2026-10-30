@@ -10,11 +10,11 @@
 >   - จึงเลือกคัดลอกใน frame.ts ซึ่งอยู่ใน 2 chunk และเฉพาะเที่ยวบินที่มีความขัดข้องเท่านั้นที่จ่ายเวลาเพิ่ม เป็นนโยบายเดียวกับ `recovery.target` ใน #188
 > - ค่าทุกค่าที่ seek ได้เหมือนเดิมทุกบิต (60,935 ครั้ง 11 เที่ยวบิน) เปลี่ยนเฉพาะว่าเป็นวัตถุใหม่
 > - ขนาด: `index-*.js` +90 B, `flight.worker-*.js` +88 B, chunk อื่นไม่เปลี่ยน ที่ว่างของ precache code ลดจาก 422 B เป็น 244 B
-> - ความเร็ว: SEEK_TIME_TH
+> - ความเร็ว: เที่ยวบินที่มีความขัดข้อง seek ช้าลงราว 4.6–4.8 µs ต่อช่วง (คัดลอกบันทึกสองครั้ง ครั้งละราว 2.3 µs คือช้าลงราว 10% ของการ seek six-DOF ที่ใช้ 40–100 µs) เที่ยวบินอื่นเท่าเดิม (ต่างกันไม่เกิน noise) หน่วยความจำของการบันทึกไม่เปลี่ยน
 > - ฟิลด์อื่นของ `RigidTelemetry` ตรวจครบแล้ว: คัดลอกลึกทั้งหมด ยกเว้น `linearModel`, `attitudeTest` และ `navigation` ซึ่งอยู่บน telemetry samples เท่านั้น ไม่เคยอยู่บนเฟรม (ตรวจทั้งในโค้ดและในเที่ยวบินที่มี navigation)
 > - ที่ยังไม่แก้: เฟรมที่บันทึกไว้ยังใช้บันทึกนี้ร่วมกับ state ของ simulation และบางครั้งกับ telemetry sample ที่เก็บใน step เดียวกัน (simulation สร้างบันทึกใหม่เกือบทุก step และไม่มีโค้ดไหนเขียนทับ) เหมือน `recovery.target` ใน #188
 > - การ merge: PR นี้ซ้อนอยู่บน #188 ต้อง merge หลัง #188 ไม่ชนกับ #187, #190, #191 ส่วน #189 ชนกับ #188 อยู่แล้วที่จุดเดียวกัน PR นี้ไม่ได้เพิ่มจุดชน
-> - เงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ (บน main และบน #188) และผ่านหลังแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (เพิ่มเทสต์ใหม่หนึ่งข้อ) agent ตัวที่สองตรวจแล้ว ยืนยัน 8 จาก 8 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge (ข้อเล็กห้าข้อเรื่องถ้อยคำใน docstring และ guard ของเทสต์ แก้แล้วใน PR นี้) CI_TH
+> - เงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ (บน main และบน #188) และผ่านหลังแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (เพิ่มเทสต์ใหม่หนึ่งข้อ) agent ตัวที่สองตรวจแล้ว ยืนยัน 8 จาก 8 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge (ข้อเล็กห้าข้อเรื่องถ้อยคำใน docstring และ guard ของเทสต์ แก้แล้วใน PR นี้) CI ผ่านบนโค้ดสุดท้าย (run 41094577401)
 
 ```yaml
 item: replay control-faults copy (PR #188's second-agent finding F2, pre-existing on main)
@@ -140,13 +140,28 @@ The 25,708 calls that shared something before are exactly the calls on frames th
 ### Heap and time
 
 - **Stored frames:** `captureFrame` is unchanged, so `FRAME_BYTES` (replay/recorder.ts) is too.
-- **Seek time,** µs per span (one `cloneFrame` plus one `interpolateFrames` half way), #188's head against this branch, medians of 11 alternating runs over every span of the recording:
+- **Seek time,** µs per span (one `cloneFrame` plus one `interpolateFrames` half way), #188's head (1a7ca0c) against this branch, over every span of the recording. 41 runs alternating old and new, on an idle machine (Node 22.22.0). The last column is the median of the 41 paired differences:
 
-SEEK_TIME_TABLE
+| Flight | Spans | 1a7ca0c, median (IQR) | this branch, median (IQR) | paired difference |
+|---|---|---|---|---|
+| `ru-fdir-dus`, gyro stuck | 525 | 98.4 (93.8–123.8) | 102.7 (98.7–120.3) | **+4.6** |
+| Falcon 9, flex and three failures, FDIR | 1,924 | 40.4 (39.2–43.2) | 45.4 (44.2–48.0) | **+4.8** |
+| Falcon 9, no failures, booster recovery | 2,122 | 41.8 (40.4–43.3) | 43.6 (40.9–48.4) | +1.0 (noise) |
+| Soyuz-2.1a, no failures | 2,121 | 89.7 (86.2–95.0) | 88.4 (85.8–95.4) | −0.8 (noise) |
+
+  - **With failures,** a span costs about 4.7 µs more: two copies of the record, about 2.3 µs each, against six-DOF seeks of 40–100 µs. With the launch audio's ~60 seeks an animation frame (#188's count, on a Falcon Heavy), that would be about 140 µs a frame, on flights with failures only.
+  - **Without failures,** `ownFaults` is one property check, and the difference is within run-to-run noise. An earlier 11-run pass showed −5.3 and +20.8 µs on these two flights, which is why this one has 41 runs and reports the spread.
 
 ### Tests
 
-TESTS_SECTION
+- **Typecheck:** `npx tsc --noEmit -p .` clean, on the final code.
+- **The new test and its file:** `npx vitest run tests/replay-copies.test.ts`, 4 of 4, on every version of the test (3eb54e5, db69b31, 1a4a4f1). On main and on 1a7ca0c the new test fails as listed under "Failing first".
+- **Unit suite, local:** `npx vitest run`, 335 files, 10,530 tests (#188's 10,529 and the new one), all pass (2,570 s, Node 22.22.0). It ran on 3eb54e5's src, which differs from the final code in comments only. The test file was 3eb54e5's or db69b31's; the step guard came in 1a4a4f1 and was run on its own (4 of 4).
+- **CI:** run 41094577401 green on 1a4a4f1, the final code: typecheck, build with the bundle budget, test ×3, browser-smoke ×2, verify. Runs 41092677703 (034bff5) and 41092811088 (fcd3bf3) show `verify` red only because the next push cancelled their test and browser jobs; on fcd3bf3, typecheck, build, test 1 of 3 and browser-smoke 1 of 2 had passed before the cancel.
+- **Heavy:** HEAVY_SECTION
+- **Not run:**
+  - The other 32 heavy files and the 6 six-DOF fleet files. A grep of tests/heavy and tests/sixdof-fleet for the recorder, the player, `cloneFrame` and `interpolateFrames` finds only vostok1-recording, so this change cannot reach the others.
+  - The browser journeys beyond CI's smoke shards. There is no UI change, and what a seek shows is the same to the bit.
 
 ## Second-agent review
 
