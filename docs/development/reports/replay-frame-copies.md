@@ -93,7 +93,7 @@ Probe (gitignored `tests/probe/`): main's `frame.ts` (1842a86) against this bran
   - `jettisoned` is in 7 missions' recordings: Apollo 11 and six Soyuz crewed flights.
   - A recovery target is in 5: Falcon 9 ×3, Falcon Heavy, Starship.
 
-That run compared main against the first version (`structuredClone`; before the recovery copy moved into the branch that uses it). The re-run against this branch's final copy (`copyPlain`, 9080d56) is in progress.
+That run compared main against the first version (`structuredClone`, before the recovery copy moved into the branch that uses it). Re-run against the final code (`copyPlain`, 9080d56): again 709,100 calls, 0 differences; nothing returned shared with the recording; main's 399,444 sharing calls and paths as above (878 s, 718 s of it Apollo 11).
 
 ### Size
 
@@ -132,7 +132,7 @@ That run compared main against the first version (`structuredClone`; before the 
 - **Typecheck:** `npx tsc --noEmit -p .` clean.
 - **Unit suite, local:** 335 files, 10,529 tests, all pass on 8a4ba98 (Node 22.22.0, not CI's 22.23.3); the run on 9080d56 is in progress.
 - **CI:** run 41002400552 green on 8a4ba98: typecheck, build, test ×3, browser-smoke ×2, verify.
-- **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the only heavy or six-DOF fleet file that builds a recorder or player: 1 of 1 passed on 8a4ba98 (161 s, Node 22.22.0); a run on 9080d56 follows.
+- **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the only heavy or six-DOF fleet file that builds a recorder or player: 1 of 1 passed on 8a4ba98 (161 s) and on f2fe2db (168 s; src/ and tests/ as in 9080d56), Node 22.22.0.
 - **Not run:**
   - The other 32 heavy files and the 6 six-DOF fleet files the change map selects for any `src/physics/**` path. None builds a `FlightRecorder` or `ReplayPlayer` or calls `cloneFrame` or `interpolateFrames` (grep of tests/heavy and tests/sixdof-fleet), so this change cannot reach them. They run on the weekly heavy workflow, and D-64 reuse does not apply because frame.ts is in the physics tree.
   - The browser journeys beyond CI's smoke shards. There is no UI change, and what a seek shows is the same to the bit.
