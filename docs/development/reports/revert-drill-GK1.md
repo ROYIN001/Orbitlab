@@ -2,7 +2,7 @@
 
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 >
-> - **ซ้อมใหม่บน candidate 1842a86:** วันที่ 2026-10-29 #185 ถูก merge เป็น `1842a86` (21:25:44Z) และ Pages 40957726247 เผยแพร่เมื่อ 21:49:41Z คุณตอบในแชตว่า "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ" แล้วเลือก "Redo all (Recommended)" (ทำหลักฐาน GK1 ใหม่ทั้งหมดบน 1842a86) การซ้อมนี้จึงทำใหม่บน `1842a86` (2026-10-29 23:21–23:26Z) คำตอบ P2 เดิมของคุณ (2026-10-26) คือ "ข ซ้อมหนึ่งครั้ง" ครั้งนี้เป็นครั้งที่สอง ทำตามคำตอบ "Redo all (Recommended)"
+> - **ซ้อมใหม่บน candidate 1842a86:** วันที่ 2026-10-29 #185 ถูก merge เป็น `1842a86` (21:25:44Z) และ Pages 40957726247 เผยแพร่เมื่อ 21:49:41Z คุณตอบในแชตว่า "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ" แล้วเลือก "Redo all (Recommended)" (ทำหลักฐานที่ตัวเลือกนั้นระบุใหม่บน `1842a86` ซึ่งมีการซ้อมนี้ด้วย) การซ้อมนี้จึงทำใหม่บน `1842a86` (2026-10-29 23:21–23:26Z) คำตอบ P2 เดิมของคุณ (2026-10-26) คือ "ข ซ้อมหนึ่งครั้ง" ครั้งนี้เป็นครั้งที่สอง ทำตามคำตอบ "Redo all (Recommended)"
 > - `1842a86` ต่างจาก `7263004` แค่ #185 สี่ไฟล์: `src/physics/frame.ts` (ส่วน replay) เทสต์ใหม่หนึ่งไฟล์ รายงานหนึ่งไฟล์ และ fragment หนึ่งไฟล์
 > - **ผล: ผ่านทุกขั้น** (ตรวจ 56 จุด ผ่าน 56) ใช้บิลด์จริงของแอปสามรุ่น เสิร์ฟที่ origin เดียวและ path เดียว (`/Orbitlab/`) และ browser profile เดียวตลอด การเปลี่ยนรุ่นทุกครั้งใช้ข้อความอัปเดตของแอปเอง ("A new version of Orbitlab is ready." แล้วกด Reload) แบบเดียวกับที่ผู้เรียนเห็นบน Pages
 > - **ต่างจากถ้อยคำของกฎ (V1) เหมือนครั้งก่อน:** รุ่นที่เผยแพร่ก่อน candidate ตอนนี้คือ `7263004` โค้ดแอปของ `7263004` (และของ `a05ae70`) ต่างจาก candidate แค่ `src/physics/frame.ts` ซึ่งไม่มีโค้ดที่เก็บข้อมูล และทั้งสองรุ่นมีตัวเขียนของ 2b อยู่แล้ว การย้อนไปรุ่นนั้นจึงไม่ได้ย้อนรูปแบบข้อมูลเลย การซ้อมจึงย้อนไป `408ad16` (ก่อน 2a) และ `c5da5bb` (มีแค่ 2a ตัวอ่าน) เหมือนครั้งก่อน ซึ่งตรงกับตัวเลือก (ข) ของ P2 ตามที่ DECISIONS บันทึก (`DECISIONS.md:366` ที่ `5092ac9`) และซ้อมกับ `c5da5bb` เพิ่ม
@@ -29,7 +29,7 @@ wave: K1 (GK1 record)
 lane: I (the integration session ran the drill; it checks lane L's stored format)
 change_kind: docs (evidence only; no app code, test or build change)
 owner_authorization: {date: 2026-10-26, via: chat, question: P2, answer: "ข ซ้อมหนึ่งครั้ง", where: "DECISIONS.md:366 at 5092ac9", scope: "one revert drill of 2b on the candidate, written up as revert-drill-GK1.md for the GK1 record PR"}
-redo_authorization: {date: 2026-10-29, via: chat, new_candidate: "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ", new_candidate_when: "before 22:19Z", answer: "Redo all (Recommended)", answered: "between 22:19:01Z and 22:26:15Z", scope: "redo on 1842a86 the evidence the question named: heavy and six-DOF fleet on GitHub; the held-journeys run, the KPI baselines and this revert drill locally", where: "DECISIONS.md, 'Decided 2026-10-29'"}
+redo_authorization: {date: 2026-10-29, via: chat, new_candidate: "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ", new_candidate_when: "before 22:19Z", answer: "Redo all (Recommended)", answered: "between 22:19:01Z and 22:26:15Z", scope: "redo on 1842a86 the evidence the option names: heavy and six-DOF fleet on GitHub; the held-journeys run, the KPI baselines and this revert drill locally", where: "DECISIONS.md, 'Decided 2026-10-29'"}
 candidate: {label: candidate 1842a86, sha: 1842a86cee5a1dc4fd40d536d2bc882d31750021, pr: "#185", merged: "2026-10-29T21:25:44Z", published: "Pages 40957726247, deploy-pages 2026-10-29T21:49:41Z"}
 previous_candidate: {sha: 72630046fc5eb56f1797e5363b6f9ad293ff9d38, pr: "#179", until: "2026-10-29", differs_by: "#185 only: src/physics/frame.ts, tests/debris-replay.test.ts, docs/development/reports/replay-debris-arc.md, changes/claude-gifted-gauss-ojjpaj.md"}
 rolled_back_to:
@@ -73,7 +73,7 @@ earlier_run: {on: 7263004, date: 2026-10-26, checks: "48 of 48 pass", result: "p
 | 2a only | `c5da5bb4b7cd78e45d030b2747020e7e6ac9994e` | #176, the reader | Pages 40340692641, publish job end 2026-10-26T15:10:24Z |
 | before 2a | `408ad16b90fd72b934f947afc2ed13efc4a7584a` | #174 | Pages 40228322904 (daily refresh at `408ad16`, publish job end 2026-10-25T20:28:25Z) |
 
-The live site is still Pages 40957726247's build of `1842a86`. The scheduled refresh at `1842a86` (Pages 40962284621) failed in browser shard 2 (`r3-first-launch`), so its verify and publish did not run.
+The live site is still Pages 40957726247's build of `1842a86`. The scheduled refresh at `1842a86` (Pages 40962284621) failed in browser shard 2 (`r3-first-launch`), so its `verify` ran and failed (its `aggregate.mjs` step, 22:39:29Z) and `publish` was skipped.
 
 - **Variance V1 (build choice), kept.** The rule names one build to go back to (`7263004` for candidate `1842a86`), and the drill on `1842a86` used two others, as the run on `7263004` did.
   - Draft S17 rule 4 says the `dist` "ของ SHA ที่เผยแพร่ก่อนหน้า" (of the previously published SHA). The wording of the question prepared for P2 is quoted under the earlier run.
