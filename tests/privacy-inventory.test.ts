@@ -52,7 +52,7 @@ const NOT_STORED: Record<string, string> = {
   'orbitlab:offline-prepare': 'service-worker message',
   'orbitlab-': 'download file name prefix', 'orbitlab-case-': 'download file name prefix', 'orbitlab-project-': 'download file name prefix',
   'orbitlab-recheck-': 'download file name prefix', 'orbitlab-report-': 'download file name prefix', 'orbitlab-experiments.json': 'download file name',
-  'orbitlab-bend': 'shader program cache key', 'orbitlab-bend-bell': 'shader program cache key',
+  'orbitlab-bend': 'shader program cache key', 'orbitlab-bend-bell': 'shader program cache key', 'orbitlab-rim-glow': 'shader program cache key',
   'orbitlab-profile-catalog-v1': 'Web Lock name (held while the tab runs, not stored)', 'orbitlab-profile-owner-v1:': 'Web Lock name prefix',
   'orbitlab-profile-conflict': 'DOM event name', 'orbitlab-profile-name-changed': 'DOM event name', 'orbitlab-workspace-storage-error': 'DOM event name',
 };
