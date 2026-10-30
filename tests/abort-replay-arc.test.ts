@@ -112,24 +112,26 @@ describe('an escape between two frames above the air', () => {
     }
   });
 
-  it('stays on its arc while the retro-rockets fire, one burning out inside the span', () => {
-    // the first of Freedom 7's three burns out 3.6 s into the span (each burns 10 s, the next 4.8 s apart): only its
-    // firing is an event, so the cubic meets a change of thrust inside the span; it is a change of the acceleration
-    const push = against((t) => (t < 3.6 ? 3 : 2));
-    const { a, b, flown } = pair(TOP, 10, { motors: { ...SOYUZ_MOTORS, retro: 3 } }, { motors: { ...SOYUZ_MOTORS, retro: 2 } }, push);
-    for (const u of [0.2, 0.36, 0.5, 0.8]) {
+  it('stays on its arc while the retro-rockets fire, two burning out inside the span', () => {
+    // Freedom 7's three fire 4.7 and 4.8 s apart and burn 10 s each: from the third's firing (an event frame) the
+    // first two burn out 0.5 and 5.3 s on, inside the next 10 s. A burn-out is no event, and it changes the
+    // acceleration, not the velocity: the cubic misses by at most Δa·T²/62 for each wherever it falls (5.6 m for one
+    // of these over 10 s), the chord by gT²/8 (119 m) for the gravity alone
+    const push = against((t) => (t < 0.5 ? 3 : t < 5.3 ? 2 : 1));
+    const { a, b, flown } = pair(TOP, 10, { motors: { ...SOYUZ_MOTORS, retro: 3 } }, { motors: { ...SOYUZ_MOTORS, retro: 1 } }, push);
+    for (const u of [0.05, 0.2, 0.4, 0.53, 0.6, 0.8, 0.95]) {
       const m = miss(a, b, flown, u);
       expect(m.drawn, `u ${u}, chord ${m.chord.toFixed(1)} m`).toBeLessThan(3);
-      expect(m.chord).toBeGreaterThan(60);
+      expect(m.drawn).toBeLessThan(m.chord / 10);
     }
   });
 
   it('keeps a coasting body beside the capsule in its place: the spent Redstone, both on their arcs', () => {
     const booster: State = { r: addScaled(TOP.r, v3(0, -1, 0), 2e3), v: addScaled(TOP.v, normalize(TOP.v), -15) };
     const { a, b, flown } = pair(TOP, 10);
-    const body = (t: number, s: State): DebrisFrame => ({ id: 7, name: 'Redstone', r: s.r, v: s.v, dir: v3(1, 0, 0), alive: true, burning: false,
+    const body = (s: State): DebrisFrame => ({ id: 7, name: 'Redstone', r: s.r, v: s.v, dir: v3(1, 0, 0), alive: true, burning: false,
       createdAt: 150, visual: { kind: 'upperStage', diameter: 1.78, length: 17.6, color: '#ffffff' } } as DebrisFrame);
-    const ab = { ...a, debris: [body(a.t, booster)] }, bb = { ...b, debris: [body(b.t, fly(booster, 10))] };
+    const ab = { ...a, debris: [body(booster)] }, bb = { ...b, debris: [body(fly(booster, 10))] };
     const mid = interpolateFrames(ab, bb, T0 + 5);
     const there = fly(booster, 5).r;
     expect(dist(mid.debris[0].r, there)).toBeLessThan(0.05);

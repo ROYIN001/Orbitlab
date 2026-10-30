@@ -771,7 +771,15 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     return { ...cloneFrame(a), t: a.t + span * u };
   }
   const dt = span * u;
-  const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
+  // Which frames coast, by status. An escape or a return from orbit ('abort', sim/abort.ts) coasts in flight: each
+  // change of its velocity is at a frame, an event's (a motor's or a canopy's, a retro-rocket's firing, the pack, the
+  // hatch, the seat, the landing) or a change of the body it is (the capsule leaving the head section, held above).
+  // Inside a span a retro-rocket burning out, a canopy filling or coming out of its reefing, and the air change only
+  // its acceleration, which the cubic follows: Freedom 7 over the top of its arc, 10 s between frames, is 2.3 m off
+  // it where the line is 128 m off. On the ground it keeps the line: Vostok's sphere, still 'abort' while its pilot
+  // comes down, is at rest a step after its landing event, and the cubic through the landing's velocity is 8 m off.
+  const coasting = (f: VisualFrame) => ({ coast: true, orbit: true, descent: f.descentPhase === 'coast',
+    abort: f.abort?.phase !== 'landed' } as Partial<Record<SimStatus, boolean>>)[f.status];
   // A coast. A point mass with its engine off at the earlier frame: Kepler from that frame, which is how a coast
   // above the air is flown (`useKepler`); one in orbit is flown with J2, which Kepler misses at the next frame by
   // metres (left as it was). A six-DOF coast is flown with J2 too, and a docked spacecraft (rigid telemetry from the
