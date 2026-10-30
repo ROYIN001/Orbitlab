@@ -779,6 +779,11 @@ export class DebrisTracker {
             else burn = rc.burning;
           }
           if (burn) {
+            // A burn lighting raises its event, as a targeted return's does
+            // (`stepReturning`): `evt.entryBurnStart`, then `evt.landingBurnStart`.
+            // The entry burn's end clears `burning`; the landing burn's gaps
+            // keep it set, so each burn raises one.
+            if (!rc.burning) this.note(d, `evt.${rc.phase}BurnStart`);
             rc.burning = true;
             if (rc.phase === 'landing') rc.landingStarted = true;
             thrustAccel = T / d.mass;

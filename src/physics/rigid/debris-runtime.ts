@@ -235,6 +235,8 @@ export class RigidDebrisRuntime {
     if (rc.phase === 'entry') {
       if (rc.propellant > rc.landingReserve && height > 25000 && speed > 1400) {
         throttle = 1; engines = this.trio; // Centre and opposing ring engines.
+        if (!rc.entryFlown) this.note('evt.entryBurnStart');
+        rc.entryFlown = true;
       } else rc.phase = 'landing';
     }
     let nose = downward > 0 && speed > 20 ? scale(air, -1 / speed) : up;
@@ -264,6 +266,8 @@ export class RigidDebrisRuntime {
       const deceleration = Math.max(0.1, thrust / this.snapshot.mass - g);
       const stopDistance = Math.max(0, (downward ** 2 - 4) / (2 * deceleration));
       if (rc.landingStarted || contact.tailClearance < 1.15 * stopDistance + 20) {
+        // Only an untargeted burn lights here: `targetedLanding` lights its own first.
+        if (!rc.landingStarted) this.note('evt.landingBurnStart');
         rc.landingStarted = true;
         const groundDownward = -contact.verticalSpeed;
         const demandedAcceleration = Math.max(0, g + (groundDownward ** 2 - 4) / (2 * Math.max(1, contact.tailClearance)));

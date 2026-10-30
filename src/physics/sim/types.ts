@@ -209,7 +209,7 @@ export interface Debris {
     target?: ReturnTarget;
     /** horizontal distance from the target at touchdown, m */
     missDistance?: number;
-    /** a targeted return has fired its entry burn (it waits `armed` until then) */
+    /** the return has fired its entry burn (a targeted one waits `armed` until then) */
     entryFlown?: boolean;
     /** a tower's arms closed on the booster */
     caught?: boolean;
