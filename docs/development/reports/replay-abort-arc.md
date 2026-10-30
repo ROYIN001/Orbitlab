@@ -31,7 +31,7 @@ app_code: src/physics/frame.ts
 tests: tests/abort-replay-arc.test.ts (new)
 base_sha_verified_on: {sha: fa92cf6, date: 2026-10-30, note: 'the head of PR #187, which this branch is stacked on; #187 is on main 1842a86'}
 branch: claude/gracious-sagan-zvg16a
-pr: to be opened (stacked on #187)
+pr: 190 (draft, stacked on #187)
 second_agent_review: 'see "Second-agent review"'
 ```
 
