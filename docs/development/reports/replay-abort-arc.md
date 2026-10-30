@@ -23,7 +23,7 @@
 > - ตัวเลขในงาน "ในอากาศ 117 m (cubic ราว 8 m)" วัดซ้ำไม่ได้ ที่วัดได้คือช่วงที่ข้ามระดับ 140 km 117 m → 0.001 m และช่วงที่อยู่ในอากาศทั้งช่วง (≤ 2 s) 13 m → 0.34 m
 > - ขนาด: +13 B ต่อ chunk (index และ flight.worker) precache code เหลือที่ว่าง 2 B ไม่ได้ขึ้นเพดาน เขียน `coasting` เป็นตารางตามสถานะเพื่อให้พอ
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 5 จาก 6 (ความเท่ากันและความบริสุทธิ์ของฟังก์ชัน), 7 จาก 9 (ล่า regression), 5 จาก 6 (เทสต์) ข้อที่ต้องแก้คือชิ้นส่วนในอากาศข้างยาน (แก้แล้ว มีเทสต์ที่ fail ก่อนแก้ 3 ข้อ) ข้ออื่นเป็นหมายเหตุ: การพิมพ์ชนิด (แก้แล้ว) และการบันทึกที่ถูก thin หนักมาก (ด้านล่าง)
-> - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ (11 จาก 16 และอีก 3 ข้อสำหรับชิ้นส่วน) ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม PR นี้ต่อจาก #187 ซึ่งยังไม่ merge จึงต้อง merge #187 ก่อน
+> - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ (11 จาก 16 และอีก 3 ข้อสำหรับชิ้นส่วน) ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม PR นี้สร้างต่อจาก #187 ซึ่ง merge เข้า main แล้ว (ef9d3f6) และ main ถูก merge เข้า branch นี้แล้ว
 > - ยังไม่แก้ (งานต่อไป): ทรงกลมบนพื้นอาจหมุนไปกับโลกได้ตรง (`turnWithEarth`, คลาด 0.000 m แทน 0.066 m) แต่ไม่มีที่ว่างในงบขนาด; ชิ้นส่วนที่ลอยอยู่ในวงโคจรระหว่างที่ทรงกลมรออยู่บนพื้นยังเป็นเส้นตรงตามตัวยาน (29 m); การบันทึกที่ถูก thin จนช่วงยาวเป็นสิบวินาที (เกิดได้เฉพาะเมื่อบันทึกนานมาก) ช่วงหลังร่มหลักกางอาจวาดแย่กว่าเส้นตรง: agent ตัวที่สองวัดได้ 269 m เทียบกับ 192 m ในช่วง 42 s เมื่อบังคับให้เหลือ 300 เฟรม
 
 ```yaml
@@ -32,9 +32,9 @@ change_kind: bug fix (wrong → right); no existing assertion changed, no ceilin
 owner_authorization: 'owner to this session, 2026-10-30: "Task: decide which ''abort'' spans can safely take the cubic (or another arc) and which must keep the line"; later the same day: "ทำต่อ" (continue)'
 app_code: src/physics/frame.ts
 tests: tests/abort-replay-arc.test.ts (new, 18 tests)
-base_sha_verified_on: {sha: f7f7577, date: 2026-10-30, note: 'the head of PR #187, which this branch is stacked on and has merged (310e79b, and again for f7f7577); its three later commits change comments, its test, report and fragment, and the bundle is byte-identical; #187 is on main 1842a86'}
+base_sha_verified_on: {sha: ef9d3f6, date: 2026-10-30, note: 'main with #187 squash-merged, its tree that of #187''s last head f7f7577, which this branch had merged (310e79b, e8324af); main merged in 8251261, the tree unchanged'}
 branch: claude/gracious-sagan-zvg16a
-pr: 190 (draft, stacked on #187)
+pr: 190
 second_agent_review: 'equivalence and purity confirmed 5 of 6, regression hunt 7 of 9, tests 5 of 6 (2026-10-30, on 52fae07); its one should-fix finding (bodies under 140 km beside the escape) fixed in 05fe391 with failing-first tests (d798764), its typing note taken; its thinning note recorded under "Not changed"'
 ```
 
