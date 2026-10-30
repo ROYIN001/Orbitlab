@@ -28,6 +28,7 @@ import type { RendezvousState } from '../physics/sim/rendezvous';
 import { getLang, t } from '../i18n';
 import { dot, normalize } from '../physics/vec3';
 import { symbolText } from './notation';
+import { localizeEventParams } from './names';
 
 interface Tile {
   label: string;
@@ -229,7 +230,7 @@ export class OnboardOverlay {
     const last = sim.events[sim.events.length - 1];
     const language = getLang();
     if (last !== this.lastEventRef || language !== this.lastEventLanguage) {
-      this.lastEvent = last ? t(last.key, last.params) : '';
+      this.lastEvent = last ? t(last.key, localizeEventParams(sim.vehicleSpec, last.params)) : '';
       this.lastEventRef = last;
       this.lastEventLanguage = language;
     }
