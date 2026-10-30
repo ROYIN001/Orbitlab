@@ -96,6 +96,15 @@ interface DebrisItem {
   modelMats: THREE.MeshStandardMaterial[];
   /** a part of the model on the stack's axis (not a strap-on): drawn in the stack's roll (`stackAttitude`) */
   stackRoll: boolean;
+  /**
+   * A fairing half of the model: the way it faces, in the stack's frame. The
+   * physics parts the two halves along the stack's side, which the model's
+   * cut need not be square to; the half is drawn parting from its twin along
+   * its own facing instead, as the owner's page parts them (`fairShift`, kept
+   * for when its twin has gone).
+   */
+  fairOut: THREE.Vector3 | null;
+  fairShift: THREE.Vector3;
   /** C01: one of Vostok-1's bodies, drawn by render/vostok-debris.ts */
   vostok: VostokBody | null;
   createdAt: number;
@@ -165,6 +174,7 @@ export class DebrisView {
   private q = new THREE.Quaternion();
   private qt = new THREE.Quaternion();
   private dir = new THREE.Vector3();
+  private tmp2 = new THREE.Vector3();
 
   /**
    * A never-drawn mesh carrying exactly the material configuration `build`
@@ -194,18 +204,18 @@ export class DebrisView {
   /**
    * A spent part drawn from the Anatomy model, placed as the flight placed it
    * in its stage (`AnatomyFit`), its base at `base`: a strap-on, Blok A, Blok
-   * I, Fregat or a fairing half (the half `side` picks, hinged at its own top
-   * and swinging out the way it faces). Null for anything else, which is drawn
-   * as before.
+   * I, Fregat or a fairing half (the one facing the stack's side `side`, on
+   * the side the physics put it; hinged at its own top and swinging out the
+   * way it faces). Null for anything else, which is drawn as before.
    */
-  private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[]; onAxis: boolean } | null {
+  private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[]; onAxis: boolean; out?: THREE.Vector3 } | null {
     const { model, fit, blokIDiameter, fregatDiameter } = this.anatomy!;
     const v = d.visual;
     const spentStage = v.kind === 'stage' || v.kind === 'upperStage';
     // the stage a spacecraft separates from in the point-mass flight is recorded without its profile (src/physics/sim/staging.ts)
     const is = (diameter: number | null) => diameter !== null && Math.abs(v.diameter - diameter) < 1e-6;
     const which: [AnatomyPartName, Placement] | null = v.kind === 'booster' && v.conicalTop ? ['booster', fit.booster]
-      : v.kind === 'fairing' ? [side > 0 ? 'fairing-right' : 'fairing-left', fit.fairing]
+      : v.kind === 'fairing' ? [((model.parts['fairing-right']?.max.z ?? 1) + (model.parts['fairing-right']?.min.z ?? 0)) * side > 0 ? 'fairing-right' : 'fairing-left', fit.fairing]
         : spentStage && v.profile === 'r7Core' ? ['core', fit.core]
           : spentStage && (v.profile === 'r7Upper' || (!v.profile && is(blokIDiameter))) ? ['stage3', fit.stage3Spent]
             : spentStage && !v.profile && fit.fregatSpent && is(fregatDiameter) ? ['fregat', fit.fregatSpent] : null;
@@ -240,7 +250,7 @@ export class DebrisView {
       hinge.add(back);
       turn.add(hinge);
       g.add(turn);
-      return { hinge, plume: null, mats, onAxis: true };
+      return { hinge, plume: null, mats, onAxis: true, out: new THREE.Vector3(out.x, 0, out.y) };
     }
     const holder = new THREE.Group();
     holder.position.y = base;
@@ -348,12 +358,12 @@ export class DebrisView {
     return { fins, legs, legAngle, footDrop };
   }
 
-  private build(d: DebrisFrame): DebrisItem {
+  private build(d: DebrisFrame, half?: 1 | -1): DebrisItem {
     // C01: Vostok-1's module, its pieces, hatch, seat and pilot have shapes, and no engines, of their own
     if (isVostokBody(d)) {
       const vostok = new VostokBody(d);
       return {
-        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, modelMats: [], stackRoll: false, vostok, createdAt: d.createdAt,
+        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, modelMats: [], stackRoll: false, fairOut: null, fairShift: new THREE.Vector3(), vostok, createdAt: d.createdAt,
         tumbleAxis: new THREE.Vector3(0, 1, 0), tumbleRate: 0, fins: [], legs: [], legAngle: 0, footDrop: 0, finT: -1, legT: -1, shift: null,
       };
     }
@@ -368,7 +378,7 @@ export class DebrisView {
     const base = d.rigid || shift ? 0 : d.anchor ?? 0;
     const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(d.visual.color), metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide,
       emissive: new THREE.Color(0xdce6ff), emissiveIntensity: 0 });
-    const side: 1 | -1 = d.id % 2 === 0 ? 1 : -1;
+    const side: 1 | -1 = half ?? (d.id % 2 === 0 ? 1 : -1);
     let hinge: THREE.Group | null = null;
     let plume: Plume | null = null;
     let fins: THREE.Group[] = [];
@@ -451,7 +461,8 @@ export class DebrisView {
     }
     const ax = this.randAxis(d.id);
     return {
-      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: anatomy ? null : m, modelMats: anatomy ? anatomy.mats : [], stackRoll: !!anatomy?.onAxis, vostok: null, createdAt: d.createdAt,
+      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: anatomy ? null : m, modelMats: anatomy ? anatomy.mats : [], stackRoll: !!anatomy?.onAxis,
+      fairOut: anatomy?.out ?? null, fairShift: new THREE.Vector3(), vostok: null, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
       fins, legs, legAngle, footDrop, finT: -1, legT: -1, shift,
@@ -489,8 +500,18 @@ export class DebrisView {
         this.items.delete(d.id);
         item = undefined;
       }
+      this.dir.set(d.dir.x, d.dir.y, d.dir.z).normalize();
+      // a model fairing half's twin, let go of with it: half the gap between them is this half's way out
+      const twin = d.visual.kind === 'fairing' && this.anatomy && !d.rigid
+        ? list.find((o) => o !== d && o.alive && o.visual.kind === 'fairing' && o.createdAt === d.createdAt) : undefined;
+      if (twin) {
+        this.tmp2.set(d.r.x - twin.r.x, d.r.y - twin.r.y, d.r.z - twin.r.z).multiplyScalar(0.5);
+        this.tmp2.addScaledVector(this.dir, -this.tmp2.dot(this.dir));
+      }
       if (!item) {
-        item = this.build(d);
+        // the half that faces the side of the stack the physics put this one on
+        if (twin) stackAttitude(d.r, this.dir, this.anatomy!.azimuth, this.q);
+        item = this.build(d, twin ? (this.tmp.set(0, 0, 1).applyQuaternion(this.q).dot(this.tmp2) < 0 ? -1 : 1) : undefined);
         this.scene.scene.add(item.group);
         this.items.set(d.id, item);
       }
@@ -499,9 +520,13 @@ export class DebrisView {
       item.group.position.copy(this.tmp);
       // A rigid body is placed from its own render offset (below).
       if (item.shift) item.shift.position.y = d.rigid ? 0 : d.anchor ?? 0;
-      this.dir.set(d.dir.x, d.dir.y, d.dir.z).normalize();
       if (item.stackRoll && this.anatomy) stackAttitude(d.r, this.dir, this.anatomy.azimuth, this.q);
       else this.q.setFromUnitVectors(Y_AXIS, this.dir);
+      if (item.fairOut && !d.rigid) {
+        // as far out as the physics has it, but along the way the half faces
+        if (twin) item.fairShift.copy(item.fairOut).applyQuaternion(this.q).multiplyScalar(this.tmp2.length()).sub(this.tmp2);
+        item.group.position.add(item.fairShift);
+      }
       const age = Math.max(0, t - item.createdAt);
       if (d.rigid) {
         const attitude = d.rigid.attitudeQ;
