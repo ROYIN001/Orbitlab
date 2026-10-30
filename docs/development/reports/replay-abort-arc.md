@@ -32,7 +32,7 @@ change_kind: bug fix (wrong → right); no existing assertion changed, no ceilin
 owner_authorization: 'owner to this session, 2026-10-30: "Task: decide which ''abort'' spans can safely take the cubic (or another arc) and which must keep the line"; later the same day: "ทำต่อ" (continue)'
 app_code: src/physics/frame.ts
 tests: tests/abort-replay-arc.test.ts (new, 18 tests)
-base_sha_verified_on: {sha: fa92cf6, date: 2026-10-30, note: 'the head of PR #187, which this branch is stacked on; #187 is on main 1842a86'}
+base_sha_verified_on: {sha: f73062c, date: 2026-10-30, note: 'the head of PR #187, which this branch is stacked on and merged in 310e79b (its two later commits change comments, its test, report and fragment; the bundle is byte-identical); #187 is on main 1842a86'}
 branch: claude/gracious-sagan-zvg16a
 pr: 190 (draft, stacked on #187)
 second_agent_review: 'equivalence and purity confirmed 5 of 6, regression hunt 7 of 9, tests 5 of 6 (2026-10-30, on 52fae07); its one should-fix finding (bodies under 140 km beside the escape) fixed in 05fe391 with failing-first tests (d798764), its typing note taken; its thinning note recorded under "Not changed"'
@@ -202,12 +202,12 @@ Purity: frozen inputs, the same frame twice.
 
 **Failing first, the bodies' rule:** the two new cases and the replay's new bounds were committed alone (d798764). On 214db06 they fail 3 of 18: 88.1 m (the Redstone crossing 140 km), 3.57 m (Vostok's module) and 117.1 m (the Redstone's place through the recorder and player). With the fix (05fe391), 18 of 18 pass.
 
-**Related files:** 31 files, all pass with the fix (478 tests on 52fae07; on 05fe391 the ten core replay files, 140 tests, and the rest being rerun):
+**Related files:** 31 files, all pass with the fix (478 tests on 52fae07; 480 on 05fe391, with the bodies' two new cases; after merging #187's head, the eight replay files, 117 tests):
 - the files the task names: launch-abort, vostok-replay, vostok-render, replay;
 - #187's list: rigid-replay-arc, debris-replay, rigid-replay, rigid-event-boundary, rigid-failure-boundary, live-stepping, equations, session, rendezvous, rendezvous-fuel, orbit-handoff, apollo-own-launch, bundle-budget, audio, rigid-debris, repo-hygiene, rigid-render, frames-view, eo-phy-6/apollo11;
 - every other unit file that builds a recorder, a player or a session: custom-vehicle, d06-custom-satellite, d06-satellite-launch, instructor-mode, lesson-grading-end, mcp, recheck-core.
 
-**Heavy:** `tests/heavy/vostok1-recording.test.ts` 1 of 1 (159 s on 52fae07, being rerun on 05fe391; Node 22.22.0, not the CI runtime). It is the only heavy or six-DOF fleet file that records a flight: tests/heavy/mercury-redstone.test.ts flies MR-3 without a recorder.
+**Heavy:** `tests/heavy/vostok1-recording.test.ts` 1 of 1 (159 s on 52fae07, 170 s on 05fe391 at low priority; Node 22.22.0, not the CI runtime). It is the only heavy or six-DOF fleet file that records a flight: tests/heavy/mercury-redstone.test.ts flies MR-3 without a recorder.
 
 **Typecheck:** `npx tsc --noEmit -p .` clean.
 
@@ -215,9 +215,9 @@ Purity: frozen inputs, the same frame twice.
 
 `npx vite build`, `node scripts/bundle-budget.mjs`: ok, no ceiling raised.
 - `index-*.js` 2,634,890 B and `flight.worker-*.js` 570,526 B: +13 B each on #187's 2,634,867 and 570,503 (the `coasting` table 10 B, the bodies' rule 3 B).
-- Precache code 14,653,998 of 14,654,000 B (+46 B; 2 B left).
+- Precache code 14,653,998 of 14,654,000 B (+46 B; 2 B left), the same after merging #187's head.
 
-**Browser journeys** the change map selects (`node tests/browser/run.mjs …`, local build): on 52fae07, 8 of 8 passed in 14 min 52 s (experiment-notebook, launch-explore, r2-chooser-late-frame, r2-flight-shell 351 s, r2-shell-smoke, r3-result-setting, satellite, watch-controls). On 05fe391 they are being rerun. recheck is held by design (teaching tools, owner 2026-10-17).
+**Browser journeys** the change map selects (`node tests/browser/run.mjs …`, local build): on 52fae07, 8 of 8 passed in 14 min 52 s (experiment-notebook, launch-explore, r2-chooser-late-frame, r2-flight-shell 351 s, r2-shell-smoke, r3-result-setting, satellite, watch-controls). On 05fe391, 8 of 8 again in 14 min 50 s (r2-flight-shell 345 s). recheck is held by design (teaching tools, owner 2026-10-17).
 
 **Checks:** `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` 93 of 93; repo-hygiene and watch-missions 35 of 35.
 
