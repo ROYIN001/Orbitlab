@@ -185,6 +185,10 @@ The second agent also flew, old and new code, point mass: Apollo 11 at 12,000 an
   - vostok-render, vostok-replay, apollo-own-launch, bundle-budget, audio, rigid-debris, eo-phy-6/apollo11, repo-hygiene, rigid-render, frames-view.
 - **Full unit suite** (`npx vitest run`, a22922f's code): 336 files, 10,547 tests, all pass (2,199 s, Node 22.22.0).
 - **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the one heavy file that builds a recorder: 1 of 1 (167 s). The other heavy and six-DOF fleet files fly simulations without a recorder or a player, which this change cannot touch.
+- **Browser journeys** the change map selects (`node tests/browser/run.mjs`, a local build of 391d847): 8 of 8 pass.
+  - experiment-notebook 54.9 s, launch-explore 138.6 s, r2-chooser-late-frame 28.8 s, r2-flight-shell 290.2 s;
+  - r2-shell-smoke 53.2 s, r3-result-setting 53.5 s, satellite 37.2 s, watch-controls 176.1 s.
+  - recheck is held by design (teaching tools, owner 2026-10-17).
 - **After the merges of #187's head** (comments and tests on its side): typecheck clean, sizes unchanged, and the seven replay files (rigid-replay-arc, replay, replay-long-span, rendezvous, vostok-replay, rigid-replay, debris-replay) 103 of 103.
 - **Typecheck:** `npx tsc --noEmit -p .` clean.
 
