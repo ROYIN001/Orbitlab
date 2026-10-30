@@ -288,6 +288,11 @@ export class DebrisTracker {
   }
 
   // ------------------------------------------------------------ return
+  /** Raise one of a return's events, naming the body. */
+  private note(d: Debris, key: string): void {
+    this.sim.event(key, 'info', { name: d.name });
+  }
+
   /**
    * What the returning stage's descent looks like to the prediction: its own
    * drag and the entry burn it is going to fly. The rigid body carries J2 in
@@ -438,7 +443,7 @@ export class DebrisTracker {
           if (Math.acos(Math.max(-1, Math.min(1, dot(dir, g.dir)))) < BOOSTBACK_LIGHT_ANGLE) {
             rc.phase = 'boostback';
             setRecoveryEngines(rc, rc.engine ? boostbackEngineCount(rc.engine) : 1);
-            sim.event('evt.boostbackStart', 'info', { name: d.name });
+            this.note(d, 'evt.boostbackStart');
           }
           break;
         }
@@ -455,7 +460,7 @@ export class DebrisTracker {
             rc.guidance = undefined;
             rc.burning = false;
             if (rc.engine) setRecoveryEngines(rc, entryEngineCount(rc.engine, d.mass - rc.propellant, rc.landingReserve));
-            sim.event('evt.boostbackEnd', 'info', { name: d.name });
+            this.note(d, 'evt.boostbackEnd');
             break;
           }
           if (!g.trim && g.dvNeeded < BOOSTBACK_TRIM_DV) {
@@ -481,7 +486,7 @@ export class DebrisTracker {
           const step = entryStep(rc.entryFlown ? 'burning' : 'armed', vDown > 0, alt, speed, rc.propellant,
             { targetSpeed, reserve: rc.landingReserve });
           if (step.burn) {
-            if (!rc.entryFlown) sim.event('evt.entryBurnStart', 'info', { name: d.name });
+            if (!rc.entryFlown) this.note(d, 'evt.entryBurnStart');
             rc.entryFlown = true;
             level = 1;
             const aT = thrustOf(1) / d.mass;
@@ -516,7 +521,7 @@ export class DebrisTracker {
               flow: rc.mdot * LANDING_PLANNED_THROTTLE, cd: d.cd, area: d.area, gravity: gLocal });
             if (hAgl < 1.1 * stop + 10) {
               rc.landingStarted = true;
-              sim.event('evt.landingBurnStart', 'info', { name: d.name });
+              this.note(d, 'evt.landingBurnStart');
             }
           }
           if (rc.landingStarted) {
@@ -679,8 +684,8 @@ export class DebrisTracker {
           d.impact = { lat: ll.lat * RAD, lon: ll.lon * RAD };
         }
         for (const event of result.events) {
-          const contactEvent = event.key === 'evt.stageImpact' || event.key === 'evt.boosterLanded'
-            || event.key === 'evt.boosterLandedZone' || event.key === 'evt.boosterLandedShip' || event.key === 'evt.boosterCaught';
+          // evt.stageImpact, evt.boosterLanded, evt.boosterLandedZone, evt.boosterLandedShip, evt.boosterCaught
+          const contactEvent = /^evt\.(stageImpact|booster(Landed(Zone|Ship)?|Caught))$/.test(event.key);
           const params = contactEvent && d.impact
             ? { ...event.params, lat: +d.impact.lat.toFixed(2), lon: +d.impact.lon.toFixed(2) }
             : event.params;
@@ -783,6 +788,11 @@ export class DebrisTracker {
             else burn = rc.burning;
           }
           if (burn) {
+            // A burn lighting raises its event, as a targeted return's does
+            // (`stepReturning`): `evt.entryBurnStart`, then `evt.landingBurnStart`.
+            // The entry burn's end clears `burning`; the landing burn's gaps
+            // keep it set, so each burn raises one.
+            if (!rc.burning) this.note(d, `evt.${rc.phase}BurnStart`);
             rc.burning = true;
             if (rc.phase === 'landing') rc.landingStarted = true;
             thrustAccel = T / d.mass;
