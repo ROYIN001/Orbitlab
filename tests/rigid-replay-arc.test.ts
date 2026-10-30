@@ -72,6 +72,14 @@ function frameAt(t: number, ship: (dt: number) => State, bodies: Body[] = [], ov
 }
 const pair = (ship: (dt: number) => State, bodies: Body[] = [], over: Partial<VisualFrame> = {}, span = 30): [VisualFrame, VisualFrame] =>
   [frameAt(T0, ship, bodies, over), frameAt(T0 + span, ship, bodies, over)];
+/** 20 m out from a state along its radius, the velocity scaled with it: a port on a body turning once an orbit. */
+const port = (s: State): State => ({ r: scale(s.r, 1 + 20 / norm(s.r)), v: scale(s.v, 1 + 20 / norm(s.r)) });
+/** Docked: status 'orbit', the rendezvous's rigid telemetry, the spacecraft 20 m out from the station on its port. */
+function docked(t: number): VisualFrame {
+  const st = kepler(SHIP)(t - T0);
+  return frameAt(t, (dt) => port(kepler(SHIP)(dt)), [], { rendezvous: { phase: 'docked', station: { r: st.r, v: st.v, q: { w: 1, x: 0, y: 0, z: 0 } },
+    rel: { r: v3(20, 0, 0), v: v3() }, burns: [], range: 20, rangeRate: 0, propellant: 100 } as unknown as RendezvousState });
+}
 
 function deepFreeze<T>(o: T): T {
   if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); for (const x of Object.values(o)) deepFreeze(x); }
@@ -149,18 +157,29 @@ describe('a six-DOF vehicle between two recorded frames', () => {
   });
 
   it('stays on the station\'s port while docked, as the station stays on its arc', () => {
-    // docked: status 'orbit', the rendezvous's rigid telemetry, the spacecraft 20 m out from the station on its port
-    const port = (s: State): State => ({ r: scale(s.r, 1 + 20 / norm(s.r)), v: scale(s.v, 1 + 20 / norm(s.r)) });
-    const docked = (t: number): VisualFrame => {
-      const st = kepler(SHIP)(t - T0);
-      return frameAt(t, (dt) => port(kepler(SHIP)(dt)), [], { rendezvous: { phase: 'docked', station: { r: st.r, v: st.v, q: { w: 1, x: 0, y: 0, z: 0 } },
-        rel: { r: v3(20, 0, 0), v: v3() }, burns: [], range: 20, rangeRate: 0, propellant: 100 } as unknown as RendezvousState });
-    };
     const a = docked(T0), b = docked(T0 + 30);
     for (const dt of [3, 15, 27]) {
       const f = interpolateFrames(a, b, T0 + dt);
       expect(Math.abs(dist(f.r, f.rendezvous!.station.r) - 20)).toBeLessThan(0.1);
     }
+  });
+
+  it('keeps the station with the docked spacecraft over a span longer than a quarter of the orbit', () => {
+    // A six-DOF Soyuz MS docked for 12,000 s under the frame budget kept one docked span of 7,981 s, 1.5 orbits. The
+    // spacecraft keeps the line there (the cubic swings out further); the station took the cubic, 14,945 km from it.
+    const a = docked(T0), b = docked(T0 + 7981);
+    for (const dt of [800, 2000, 4000, 6000, 7200]) {
+      const f = interpolateFrames(a, b, T0 + dt);
+      // the line, both of them: neither swings out on the cubic
+      expect(f.rendezvous!.station.r).toEqual(lerp(a.rendezvous!.station.r, b.rendezvous!.station.r, dt / 7981));
+      // so the spacecraft stays within the port's 20 m of the station (the line between two places 20 m out on
+      // the station's turning radius passes closer to it than that)
+      expect(dist(f.r, f.rendezvous!.station.r)).toBeLessThanOrEqual(20 + 1e-6);
+    }
+    // under a quarter of the orbit both take the cubic, as before: 0.2 of it, 1,060 s
+    const c = docked(T0 + 0.2 * PERIOD), mid = interpolateFrames(a, c, T0 + 0.1 * PERIOD);
+    expect(Math.abs(dist(mid.r, mid.rendezvous!.station.r) - 20)).toBeLessThan(0.5);
+    expect(dist(mid.rendezvous!.station.r, kepler(SHIP)(0.1 * PERIOD).r)).toBeLessThan(50e3);
   });
 
   it('stays on its arc in a returning ship\'s coast before the entry', () => {

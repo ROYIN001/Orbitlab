@@ -633,11 +633,18 @@ function hermite(ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, u: number, span: number
   return { r: m(h00, h10, h01, h11), v: m(d00, d10, d01, d11) };
 }
 
-/** The rendezvous between two frames: both bodies on their arcs, the flags of the nearer frame. */
-function blendRendezvous(a: RendezvousState | undefined, b: RendezvousState | undefined, u: number, span: number): RendezvousState {
+/**
+ * The rendezvous between two frames, the flags of the nearer frame. The station goes the spacecraft's own way
+ * (`path` in `interpolateFrames`), so the two keep their places: the cubic in a rendezvous and, docked, on a span
+ * under a quarter of the orbit; the line on a longer one, where the spacecraft keeps it. On the cubic there the
+ * station was drawn 14,945 km from the spacecraft docked to it (a 7,981 s span). The spacecraft's place from the
+ * station, in the station's turning axes, is constant while docked and takes the cubic at any span.
+ */
+function blendRendezvous(a: RendezvousState | undefined, b: RendezvousState | undefined, u: number, span: number,
+  path: (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3) => { r: Vec3; v: Vec3 }): RendezvousState {
   if (!a || !b) return cloneRendezvous((u < 0.5 ? a : b) ?? (a ?? b)!);
   const near = cloneRendezvous(u < 0.5 ? a : b);
-  const st = hermite(a.station.r, a.station.v, b.station.r, b.station.v, u, span);
+  const st = path(a.station.r, a.station.v, b.station.r, b.station.v);
   const rel = hermite(a.rel.r, a.rel.v, b.rel.r, b.rel.v, u, span);
   const qa = a.station.q, qb = b.station.q;
   const dotq = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z < 0 ? -1 : 1;
@@ -782,15 +789,17 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // six-DOF or not, whatever its engines read (the S-IVB's hydrogen vent puts a few hundred newtons on the thrust
   // through the parking orbit).
   const vehicleCoasts = !a.apollo && coasting(a) && coasting(b);
-  // The vehicle's way from one state to the next, which a spent body coasting beside it shares (`coasts`): one
-  // drawn on its arc beside one drawn on the straight line, which sags v²Δt²/8R under it, parts from it — 115 m
-  // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (a point mass
-  // under thrust, the span a burn begins in), so do they; a body that does not coast takes it whatever the vehicle
-  // does. Every velocity change inside a coast is pinned to a frame: an event's frames, a change of configuration
-  // (held above) or of status; the cubic, which follows both ends' velocities, relies on that. It is only for a span
-  // under a quarter of the orbit's period: on a longer one, which only a recording thinned hard leaves (a docked
-  // spacecraft hours past its docking, under the six-DOF frame budget: 7,981 s), the cubic swings out further than
-  // the line does (past a third of a GTO's or a Molniya's period, a whole one of a circle), so it keeps the line.
+  // The vehicle's way from one state to the next, which a spent body coasting beside it shares (`coasts`), and so
+  // does the station in a rendezvous or docked (`blendRendezvous`): one drawn on its arc beside one drawn on the
+  // straight line, which sags v²Δt²/8R under it, parts from it — 115 m half way through a 10 s orbit frame, Blok I
+  // below the Soyuz. Where the vehicle takes the line (a point mass under thrust, the span a burn begins in), so do
+  // they; a body that does not coast takes it whatever the vehicle does. Every velocity change inside a coast is
+  // pinned to a frame: an event's frames, a change of configuration (held above) or of status; the cubic, which
+  // follows both ends' velocities, relies on that. It is only for a span under a quarter of the orbit's period: on a
+  // longer one the cubic swings out further than the line does (past a third of a GTO's or a Molniya's period, a
+  // whole one of a circle), so it keeps the line. Only a recording past its frame budget leaves one, since the
+  // recorder thins a coast to a frame every ten minutes at most before it thins the rest (`MAX_COAST_GAP`); a
+  // six-DOF spacecraft docked for 12,000 s once kept a span of 7,981 s.
   const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
     coasts && vehicleCoasts && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
       : coasts && ((vehicleCoasts && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
@@ -832,7 +841,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     ...a,
     // the escape's flags and parachutes step, its motors blend
     ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
-    ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span) } : {}),
+    ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span, path) } : {}),
     // C01: Columbia beside Eagle, and the ascent stage beside Columbia after its jettison, each on its own arc
     ...(a.apollo && b.apollo && ((a.apollo.csm && b.apollo.csm) || (a.apollo.ascentStage && b.apollo.ascentStage)
       || (a.apollo.serviceModule && b.apollo.serviceModule)) ? { apollo: {
