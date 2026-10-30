@@ -27,6 +27,7 @@ docs: docs/PHYSICS.md (Vostok-1's recording sizes)
 tests: tests/falling-frames.test.ts, tests/heavy/falling-frames-sixdof.test.ts, tests/dense-fall.ts, tests/debris-replay.test.ts (one test re-sampled)
 base_sha_verified_on: {sha: eec8352, date: 2026-10-30, note: 'head of #191 (claude/peaceful-planck-uyne6i), itself on main 1842a86'}
 branch: claude/zen-dijkstra-f9qa9u
+pr: 198
 second_agent_review: pending
 ```
 
