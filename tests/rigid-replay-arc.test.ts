@@ -4,8 +4,10 @@
  * rendezvous is, not on the straight line between its two samples: that line
  * sags v²Δt²/8R under the arc, about 1 km half way through a 30 s orbit frame
  * (4 km over the minute a thinned coast keeps), and a replayed six-DOF flight
- * was drawn up to 1.7 km off the path it flew (Starship's descent coast), a
- * docked spacecraft 1.5 km off the station's port. Kepler from the earlier
+ * was drawn up to 4.1 km off the path it flew (a thinned 60 s coast; 1.7 km in
+ * Starship's descent coast), a docked spacecraft 1.5 km off the station's
+ * port. On a span of a quarter of the orbit or more, which only a hard-thinned
+ * recording leaves, it keeps the line: the cubic swings out further there. Kepler from the earlier
  * frame, which the point-mass vehicle takes, is not the path either: a six-DOF
  * coast is flown with J2 and misses the later frame by metres. The cubic meets
  * both ends, so it needs no engine off at the earlier frame either: the tail
@@ -21,7 +23,7 @@ import type { RendezvousState } from '../src/physics/sim/rendezvous';
 import { FlightRecorder } from '../src/replay/recorder';
 import { ReplayPlayer } from '../src/replay/player';
 import { sameRigidConfiguration } from '../src/physics/rigid/telemetry';
-import { propagateKepler } from '../src/physics/orbital';
+import { elementsFromState, propagateKepler } from '../src/physics/orbital';
 import { gravityJ2 } from '../src/physics/gravity';
 import { rk4Step } from '../src/physics/integrator';
 import { MU_EARTH, R_EARTH } from '../src/physics/constants';
@@ -107,7 +109,7 @@ describe('a six-DOF vehicle between two recorded frames', () => {
     }
   });
 
-  it('keeps the line over a span longer than a quarter of its orbit, where the cubic swings out further', () => {
+  it('keeps the line over a span longer than a quarter of its orbit, where in an eccentric orbit the cubic can swing out further', () => {
     // Only a recording thinned hard leaves such a span: a six-DOF spacecraft docked for hours under the frame budget
     // kept one of 7,981 s. Over more than a whole circle the cubic went 23,000 km off, the line 9,300 km.
     const sat = (dt: number) => kepler(SHIP)(dt);
@@ -117,7 +119,7 @@ describe('a six-DOF vehicle between two recorded frames', () => {
       expect(mid.r).toEqual(lerp(a.r, b.r, 0.5));
       expect(mid.debris[0].r).toEqual(lerp(a.debris[0].r, b.debris[0].r, 0.5));
     }
-    // and under a quarter, the cubic: over 0.2 of a circle, 1,060 s, it is 42 km off where the line is 1,260 km
+    // and under a quarter, the cubic: over 0.2 of a circle, 1,067 s, it is 42 km off where the line is 1,260 km
     const [a, b] = pair(sat, [], {}, 0.2 * PERIOD);
     const mid = interpolateFrames(a, b, T0 + 0.1 * PERIOD);
     expect(dist(mid.r, kepler(SHIP)(0.1 * PERIOD).r)).toBeLessThan(50e3);
@@ -177,7 +179,7 @@ describe('a six-DOF vehicle between two recorded frames', () => {
       const flown = kepler(SHIP)(dt).r, line = lerp(a.rendezvous!.station.r, b.rendezvous!.station.r, dt / 7981);
       expect(dist(f.rendezvous!.station.r, flown)).toBeLessThanOrEqual(dist(line, flown) + 1);
     }
-    // under a quarter of the orbit both take the cubic, as before: 0.2 of it, 1,060 s
+    // under a quarter of the orbit both take the cubic, as before: 0.2 of it, 1,067 s
     const c = docked(T0 + 0.2 * PERIOD), mid = interpolateFrames(a, c, T0 + 0.1 * PERIOD);
     expect(Math.abs(dist(mid.r, mid.rendezvous!.station.r) - 20)).toBeLessThan(0.5);
     expect(dist(mid.rendezvous!.station.r, kepler(SHIP)(0.1 * PERIOD).r)).toBeLessThan(50e3);
@@ -196,6 +198,9 @@ describe('a six-DOF vehicle between two recorded frames', () => {
     expect(dist(mid.r, propagateKepler(SHIP.r, SHIP.v, 15).r)).toBeLessThan(0.1);
     const pointMass = (f: VisualFrame): VisualFrame => ({ ...f, rigid: undefined });
     expect(interpolateFrames(pointMass(a), pointMass(b), T0 + 15).r).toEqual(mid.r);
+    // the vent off: point-mass Apollo on the cubic too, not Kepler from the earlier frame
+    const [p, q] = pair(kepler(SHIP), [], { ...apollo, thrust: 0 });
+    expect(interpolateFrames(pointMass(p), pointMass(q), T0 + 15).r).toEqual(interpolateFrames(p, q, T0 + 15).r);
     // and under an engine's full thrust (the S-IVB's restart, the service engine's burns), as before for a point mass
     const [x, y] = pair(kepler(SHIP), [], { ...apollo, thrust: 1e5 });
     expect(interpolateFrames(x, y, T0 + 15).r).toEqual(interpolateFrames(pointMass(x), pointMass(y), T0 + 15).r);
@@ -279,12 +284,14 @@ describe('a six-DOF vehicle between two recorded frames', () => {
     // integrator is not under test, and the ascent takes a minute to fly. The recorder keeps an orbit frame
     // every 30 s from the simulation's own captures, the stack's rigid telemetry with them.
     const sim = sixDof(), t0 = sim.state.t;
-    Object.assign(sim.state, { status: 'orbit', r: { ...SHIP.r }, v: { ...SHIP.v }, thrust: 0, throttle: 0, altitude: 220e3, nextBurnTime: -1 });
+    Object.assign(sim.state, { status: 'orbit', r: { ...SHIP.r }, v: { ...SHIP.v }, elements: elementsFromState(SHIP.r, SHIP.v), thrust: 0, throttle: 0,
+      altitude: 220e3, nextBurnTime: -1 });
     sim.debris.push({ id: 1, name: 'Blok I', r: { ...BLOK.r }, v: { ...BLOK.v }, dir: v3(1, 0, 0), mass: 2355, area: 5.6, cd: 2.2,
       alive: true, createdAt: t0, outcome: 'orbit', visual: { kind: 'upperStage', diameter: 2.66, length: 6.7, color: '#cccccc' } });
     sim.suggestedDt = () => 1;
     sim.step = (dt: number) => {
       Object.assign(sim.state, propagateKepler(sim.state.r, sim.state.v, dt));
+      sim.state.elements = elementsFromState(sim.state.r, sim.state.v);
       Object.assign(sim.debris[0], propagateKepler(sim.debris[0].r, sim.debris[0].v, dt));
       sim.state.t += dt;
       return dt;
@@ -293,6 +300,8 @@ describe('a six-DOF vehicle between two recorded frames', () => {
     rec.start(sim);
     rec.advance(90, 10000);
     expect(rec.frames.map((f) => Math.round(f.t - t0))).toEqual([0, 30, 60, 90]);
+    // each frame carries its orbit's period, which the quarter-period bound reads
+    expect(Math.abs(rec.frames[1].elements.period - PERIOD)).toBeLessThan(1);
     expect(rec.frames.every((f) => f.rigid && sameRigidConfiguration(f.rigid, rec.frames[0].rigid))).toBe(true);
     const player = new ReplayPlayer(rec);
     for (const dt of [7.5, 15, 22.5, 45, 75]) {

@@ -161,7 +161,7 @@ The second agent also flew, old and new code, point mass: Apollo 11 at 12,000 an
 
 - `tests/rigid-replay-arc.test.ts`, +1: 'keeps the station with the docked spacecraft over a span longer than a quarter of the orbit'.
   - A 7,981 s docked span (synthetic frames, a real six-DOF capture's telemetry): the station on the line, and the spacecraft within the port's 20 m of it.
-  - Under a quarter (1,060 s), both still on the cubic.
+  - Under a quarter (1,067 s), both still on the cubic.
   - The docked-frame builder moved out of the existing docked test to module level; that test's assertions are unchanged.
 - `tests/replay.test.ts`, +2 (toy recordings through the recorder's own step loop, as the existing thinning tests do):
   - 28 hours of orbit in 800 frames: no orbit span over ten minutes, the ascent still a frame a second;
