@@ -6,7 +6,7 @@
 > - แก้: คัดลอกบันทึกนี้ตอน seek ใน frame.ts (`ownFaults` ใช้ `copyPlain` ที่ #188 เพิ่มไว้) ไม่ได้แก้ใน rigid/telemetry.ts ตามที่งานเสนอไว้ก่อน เพราะไฟล์นั้นถูกรวมอยู่ใน 7 chunk วัดแล้วทุกทางที่แก้ในไฟล์นั้นไม่ผ่าน:
 >   - คัดลอกด้วย `copyPlain`: +1,249 B เกินเพดาน 827 B
 >   - คัดลอกด้วย `structuredClone`: +497 B เกินเพดาน 75 B และช้าที่สุด
->   - ใช้ `copyPlain` แทนการคัดลอก flex และ engine maps ที่เขียนเองไว้ด้วย เพื่อชดเชยขนาด: เล็กลง 1,470 B แต่ทุกเที่ยวบิน six-DOF จะ seek ช้าลง (ส่วน flex ช้าลงราว 5 เท่า)
+>   - ใช้ `copyPlain` แทนการคัดลอก flex และ engine maps ที่เขียนเองไว้ด้วย เพื่อชดเชยขนาด: เล็กลง 1,470 B แต่ทุกเที่ยวบิน six-DOF จะ seek ช้าลง (ส่วน flex ช้าลงราว 4–5 เท่า)
 >   - จึงเลือกคัดลอกใน frame.ts ซึ่งอยู่ใน 2 chunk และเฉพาะเที่ยวบินที่มีความขัดข้องเท่านั้นที่จ่ายเวลาเพิ่ม เป็นนโยบายเดียวกับ `recovery.target` ใน #188
 > - ค่าทุกค่าที่ seek ได้เหมือนเดิมทุกบิต (60,935 ครั้ง 11 เที่ยวบิน) เปลี่ยนเฉพาะว่าเป็นวัตถุใหม่
 > - ขนาด: `index-*.js` +90 B, `flight.worker-*.js` +88 B, chunk อื่นไม่เปลี่ยน ที่ว่างของ precache code ลดจาก 422 B เป็น 244 B
@@ -41,7 +41,7 @@ second_agent_review: 'confirmed 8 of 8 claims checked, no blocking findings (202
 
 The task's first choice was a copy in `cloneRigidTelemetry`. rigid/telemetry.ts is bundled into seven precached chunks: `index-*.js` and the flight, tune, Monte Carlo, ratings, readiness and recheck workers. On #188's head, 1a7ca0c, precache code had 422 B left. frame.ts is in two of them (`index-*.js`, `flight.worker-*.js`), and `copyPlain` with it. Each version was built (`npx vite build`) and measured against 1a7ca0c:
 
-| Version | Precache code | Room left (of 422 B) | Seek time |
+| Version | Precache code | Room left (422 B before) | Seek time |
 |---|---|---|---|
 | A. `cloneRigidTelemetry` copies the record with `copyPlain`, moved to a module of its own so both files can import it | +1,249 B (+58 and +66 B in the two chunks with frame.ts, +225 B in each of the five workers, which gain `copyPlain`) | −827 B: over | only flights with failures pay |
 | B. As A, with `copyPlain` also replacing `cloneFlexTelemetry` and the two engine maps' hand-written copies, to pay for it | −1,470 B (−331 and −329 B; −162 B in each worker) | 1,892 B | every six-DOF flight is slower: see below |
@@ -158,7 +158,7 @@ The 25,708 calls that shared something before are exactly the calls on frames th
 - **The new test and its file:** `npx vitest run tests/replay-copies.test.ts`, 4 of 4, on every version of the test (3eb54e5, db69b31, 1a4a4f1). On main and on 1a7ca0c the new test fails as listed under "Failing first".
 - **Unit suite, local:** `npx vitest run`, 335 files, 10,530 tests (#188's 10,529 and the new one), all pass (2,570 s, Node 22.22.0). It ran on 3eb54e5's src, which differs from the final code in comments only. The test file was 3eb54e5's or db69b31's; the step guard came in 1a4a4f1 and was run on its own (4 of 4).
 - **CI:** run 41094577401 green on 1a4a4f1, the final code: typecheck, build with the bundle budget, test ×3, browser-smoke ×2, verify. Runs 41092677703 (034bff5) and 41092811088 (fcd3bf3) show `verify` red only because the next push cancelled their test and browser jobs; on fcd3bf3, typecheck, build, test 1 of 3 and browser-smoke 1 of 2 had passed before the cancel.
-- **Heavy:** HEAVY_SECTION
+- **Heavy:** `tests/heavy/vostok1-recording.test.ts`, 1 of 1 on the final code (210 s, Node 22.22.0). It records a six-DOF Vostok-1 through the recorder (tests/vostok1-recording-harness.ts), with no failures set, so `ownFaults` finds no record there; it is the only heavy or six-DOF fleet file that builds a recorder or player.
 - **Not run:**
   - The other 32 heavy files and the 6 six-DOF fleet files. A grep of tests/heavy and tests/sixdof-fleet for the recorder, the player, `cloneFrame` and `interpolateFrames` finds only vostok1-recording, so this change cannot reach the others.
   - The browser journeys beyond CI's smoke shards. There is no UI change, and what a seek shows is the same to the bit.
