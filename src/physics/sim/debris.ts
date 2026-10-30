@@ -675,7 +675,9 @@ export class DebrisTracker {
         const result = rigid.step(from, Math.max(0, this.sim.state.t - from), r => this.sim.groundElevation(r));
         if (result.contactTime !== undefined) d.restT = result.contactTime;
         if (result.contact) {
-          const ll = eciToLatLon(result.contact.r, this.sim.plan.gmst0 + OMEGA_EARTH * this.sim.state.t);
+          // the Earth's angle at the contact, part-way through the step, not at its end: its
+          // time is in `restT` from the line above (the runtime gives every contact its time)
+          const ll = eciToLatLon(result.contact.r, this.environment.theta(d.restT!));
           d.impact = { lat: ll.lat * RAD, lon: ll.lon * RAD };
         }
         for (const event of result.events) {
@@ -800,7 +802,8 @@ export class DebrisTracker {
           // Contact ends the burn, latched on through the hoverslam's gaps
           // (an output: nothing reads it once the body is down).
           if (d.recovery) d.recovery.burning = false;
-          const ll = eciToLatLon(d.r, this.sim.state.theta);
+          // the Earth's angle at the contact: `state.theta` is still the step's start's here
+          const ll = eciToLatLon(d.r, this.environment.theta(d.restT));
           d.impact = { lat: ll.lat * RAD, lon: ll.lon * RAD };
           const vImpact = vImpactNow;
           if (d.recovery && vImpact < 12) {
