@@ -32,7 +32,7 @@ change_kind: bug fix (wrong → right); no existing assertion changed, no ceilin
 owner_authorization: 'owner to this session, 2026-10-30: "Task: decide which ''abort'' spans can safely take the cubic (or another arc) and which must keep the line"; later the same day: "ทำต่อ" (continue)'
 app_code: src/physics/frame.ts
 tests: tests/abort-replay-arc.test.ts (new, 18 tests)
-base_sha_verified_on: {sha: f73062c, date: 2026-10-30, note: 'the head of PR #187, which this branch is stacked on and merged in 310e79b (its two later commits change comments, its test, report and fragment; the bundle is byte-identical); #187 is on main 1842a86'}
+base_sha_verified_on: {sha: f7f7577, date: 2026-10-30, note: 'the head of PR #187, which this branch is stacked on and has merged (310e79b, and again for f7f7577); its three later commits change comments, its test, report and fragment, and the bundle is byte-identical; #187 is on main 1842a86'}
 branch: claude/gracious-sagan-zvg16a
 pr: 190 (draft, stacked on #187)
 second_agent_review: 'equivalence and purity confirmed 5 of 6, regression hunt 7 of 9, tests 5 of 6 (2026-10-30, on 52fae07); its one should-fix finding (bodies under 140 km beside the escape) fixed in 05fe391 with failing-first tests (d798764), its typing note taken; its thinning note recorded under "Not changed"'

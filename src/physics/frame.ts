@@ -732,13 +732,14 @@ const AIRLESS_HEIGHT = 140e3;
  * whenever both frames are coasting or in orbit — over a 30 s orbital
  * recording gap a straight line between two states passes a kilometre inside
  * the arc: for a point mass with its engine off at the earlier frame, the
- * Kepler solution propagated from that frame; for a six-DOF vehicle, flown with
- * J2, and for a launch escape or a capsule's return in flight ('abort'), the
- * cubic through both frames' states on a span under a quarter of its orbit's
- * period, as in a rendezvous and in Apollo. They are blended linearly
- * otherwise: a point mass under thrust, the span a burn begins in, a six-DOF
- * span of a quarter of the orbit or more (only a hard-thinned recording leaves
- * one), Vostok's sphere on the ground.
+ * Kepler solution propagated from that frame; for a vehicle with rigid
+ * telemetry (six-DOF, flown with J2, or a docked spacecraft), and for a launch
+ * escape or a capsule's return in flight ('abort'), the cubic through both
+ * frames' states on a span under a quarter of its orbit's period, as in a
+ * rendezvous and in Apollo. They are blended linearly otherwise: a point mass
+ * under thrust, the span a burn begins in, a rigid vehicle's span of a quarter
+ * of the orbit or more (only a hard-thinned recording leaves one), Vostok's
+ * sphere on the ground.
  *
  * Everything discrete (status, ascent phase, stage/booster/fairing state, the
  * debris list, the event count) comes from the *earlier* frame: a state that
@@ -798,8 +799,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // The vehicle's way from one state to the next, which a spent body coasting beside it shares (`coasts`): one
   // drawn on its arc beside one drawn on the straight line, which sags v²Δt²/8R under it, parts from it — 115 m
   // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (a point mass
-  // under thrust, the span a burn begins in), so do they; a body that does not coast takes it whatever the vehicle
-  // does. Every step change of velocity inside a coast is pinned to a frame: an event's frames, a change of
+  // under thrust, the span a burn begins in), so do they, and the quarter-period bound below reads the vehicle's
+  // period for them too; a body that does not coast takes it whatever the vehicle does. Every step change of velocity inside a coast is pinned to a frame: an event's frames, a change of
   // configuration (held above) or of status; the cubic, which follows both ends' velocities, relies on that. A
   // cut-off's tail or a small thrust running into a span is not pinned, and costs it metres (25 m over Starship's
   // 18 s cut-off span) where the line is hundreds. It is only for a span under a quarter of the orbit's period: on
