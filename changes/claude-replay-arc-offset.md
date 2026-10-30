@@ -1,0 +1,7 @@
+## CHANGELOG
+
+- Replay (identical output): `interpolateFrames` draws Apollo's craft between two frames through one local `arc()` instead of three spelled-out calls of the same cubic, which makes the index and flight-worker chunks 120 B smaller each. Nothing on screen changes. It makes room for #191 and #194 under the precache code ceiling now that #187 has merged.
+
+## PROGRESS
+
+| Replay: one local `arc()` for Apollo's cubic calls in `interpolateFrames` (identical output; the D-38 offset for #194, owner's choice in chat, 2026-10-30: "Offset PR first (Recommended)") | In PR #196; not merged; not published | src/physics/frame.ts: `arc(x, y) = hermite(x.r, x.v, y.r, y.v, u, span)`, used for the CSM, the ascent stage and the service module; the same function on the same arguments. Identical output: Apollo 11 recorded to splashdown (T+703,130 s), main's `interpolateFrames` against this one on every stored pair at three instants: point-mass 34,671 blends, 0 differ (1,801 pairs with the CSM, 317 with the ascent stage, 27 with the service module); the second agent's synthetic check with all three craft, 30,000 blends, 0 differ. 38 related test files, 584 tests, pass; `npx tsc --noEmit -p .` clean. Bundle budget ok: index-*.js 2,634,747 B and flight.worker-*.js 570,383 B (−120 B each), precache code 14,653,712 of 14,654,000 B (288 B left; with #191 and #194, 225 B). Merge order: this, then #191, then #194. Second-agent review: confirmed 12 of 14, nothing blocking or should-fix. | [report](reports/replay-arc-offset.md) |
