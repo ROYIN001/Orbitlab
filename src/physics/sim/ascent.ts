@@ -332,7 +332,7 @@ export class AscentMonitor {
   /** The suborbital target is reached (or missed): judge it and fly home. */
   finishSuborbital(el: OrbitalElements): void {
     this.suborbitalCut = true;
-    const hit = orbitResiduals(this.sim.plan.target, el, this.sim.raanWasReachable()).onTarget;
+    const hit = orbitResiduals(this.sim.plan.target, el, true).onTarget;
     for (const b of this.sim.plan.burns) b.done = true;
     this.sim.event(hit ? 'evt.suborbitalTarget' : 'evt.suborbitalOffTarget', hit ? 'success' : 'warn', {
       ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),

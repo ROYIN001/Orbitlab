@@ -1687,10 +1687,13 @@ screen's knife edge showed.
   high GTO perigee and a quarter of a degree of plane error on a geostationary mission as
   "target orbit achieved". The bands are max(10 km, 2 %) on each apsis, 0.3° on inclination, and
   max(15 km, 5 %) on the perigee of a *transfer* orbit (see "Insertion accuracy"). RAAN is
-  reported always and graded only when the launch was made into a window that could reach the
-  target plane: the plane an ascent reaches is fixed at liftoff and no burn in the plan rotates
-  it, so grading it unconditionally would fail every off-window flight for something the vehicle
-  was never asked to fix.
+  reported always and graded in every *final* acceptance, an off-window launch included: the
+  plane an ascent reaches is fixed at liftoff and no burn in the plan rotates it, so a plane
+  that was asked for and missed is a miss of the mission (it ends off target, cause `window`),
+  never "target reached" with the plane row 120° out. Only the checks inside the flight that
+  decide whether a correction burn is worth planning leave the plane out when the window could
+  not reach it (`raanWasReachable`), because no burn could fix it. A suborbital cut-off is judged
+  the same way (`finishSuborbital`).
 
   The residuals are **numbers**, not prose. `orbitResiduals` used to build English sentences
   (`apogee 480 vs 420 km`, `inclination 0.42° off`) inside the physics module and
