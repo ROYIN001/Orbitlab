@@ -7,7 +7,7 @@
 > - **การบิน**: Soyuz-2.1a และ 2.1b วาดจากผิวด้านนอกของแบบจำลองของคุณ — บูสเตอร์ แกนกลาง โครงถักระหว่างขั้น Blok I, Fregat, หัวครอบสองซีก หอหนีภัย และยาน Soyuz MS / Progress MS ชิ้นที่แยกตัวก็ยังเป็นรูปทรงจากแบบจำลอง Progress กางแผงโซลาร์ด้วยบานพับในไฟล์ของคุณเอง Soyuz MS ใช้ปีกโซลาร์ของโปรแกรม (ไฟล์ของคุณมีแต่แบบพับ) ติดบานพับที่โคนแผงพับของแบบจำลอง ส่วนท้ายของขั้นที่ 3 (ตัวเครื่องยนต์ โครงรับแรงขับ ก้นถังออกซิเจน) วาดจากแบบจำลองด้วย เพราะมองเห็นได้จริงผ่านโครงถักและหลังสลัดกระโปรงท้าย ปลายลำตัวของ Blok A, Blok I และ Progress MS ปิดด้วยชิ้นภายในที่ปิดปลาย (ฐานรับแรงขับ โดมถัง) จึงไม่เป็นท่อกลวงที่มองทะลุได้อีก ปลายท่อไอพ่นของโปรแกรมย้ายไปต่อกับห้องเผาไหม้ของแบบจำลองพอดี ทั้งของขั้นที่ 3 และของ Fregat (S5.92) และไฟของหอหนีภัยตอนดึงตัวออกพุ่งจากหัวฉีด 12 ตัวของแบบจำลอง ส่วนภายในอื่น (ท่อ อุปกรณ์) ไม่วาดตอนบินตามที่ขอ ฟิสิกส์ไม่เปลี่ยน
 > - ไฟล์โหลดเมื่อใช้เท่านั้น ไม่เข้าแคชออฟไลน์ตอนติดตั้ง (หน้าเว็บละราว 4.5 MB, ไฟล์ผิวสำหรับการบินบีบอัดแล้วเหลือ 0.17–0.31 MB จากเดิม 1.2–2 MB ที่ความละเอียด 24 ส่วนต่อรอบวงตามที่คุณเลือก) ถ้าออฟไลน์และยังไม่เคยโหลด หรือเบราว์เซอร์คลายไฟล์บีบอัดไม่ได้ จรวดจะถูกวาดแบบเดิม
 > - **ต้นทุนที่ควรตัดสินใจ**: ภารกิจเด่น (Soyuz พาลูกเรือไป ISS) เป็นภาพแรกของหน้าแรกและของโหมดดู และเป็นค่าเริ่มต้นของแผงภารกิจ แอปจึงโหลดแบบจำลอง Soyuz MS ทันทีที่ตั้งภารกิจ เกือบทุกคนที่เข้าครั้งแรกจึงโหลดไฟล์นี้ ตอนนี้ 313 kB (เดิมราว 2 MB) คุณตอบว่าให้โหลดเลย ถ้าไม่ต้องการ อีกทางคือโหลดเมื่อเริ่มบินเท่านั้น (จรวดบนฐานยิงจะเป็นแบบเดิมจนกว่าจะเริ่มบิน)
-> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 22.2 kB (index +17.4, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14677 kB (offset ที่ระบุ: EQ-7) คุณอนุมัติแล้วในแชต 2026-10-28 ("1. อนุมัติ")
+> - **ต้องตัดสินใจ (D-38)**: โค้ดใหม่ทำให้ขนาดแอปเกินเพดาน 22.2 kB (index +17.4, CSS +1.4, ข้อความแปล +3.5) จึงขอขึ้นเพดาน precache code 14654 → 14677 kB (offset ที่ระบุ: EQ-7) คุณอนุมัติแล้วในแชต 2026-10-28 ("1. อนุมัติ") และรอบที่สองอีก +1 kB (14677 → 14678) สำหรับแสงเรืองแบบใหม่และการแก้ฝาครอบ คุณอนุมัติแล้วในแชต 2026-10-30 ("อนุมัติ +1 kB")
 > - **รอบตรวจที่สอง**: แก้ตามที่ผู้ตรวจพบครบทุกข้อ (รายการในหัวข้อ "Second review round") รวมถึงหัวเชื่อมต่อ (docking probe) ของยาน Soyuz MS ที่เคยจมเข้าไปในพอร์ตของสถานีราว 1.0 m ตอนจับยึด (ตอนนี้ปลายหัวเชื่อมต่ออยู่ตรงที่ฟิสิกส์คำนวณ) และขั้นที่ใช้แล้ว (บูสเตอร์ Blok A Blok I Fregat) ที่เคยไม่มีปากท่อไอพ่น (ตอนนี้วาดปากท่อตามตำแหน่งห้องเผาไหม้ในแบบจำลอง)
 > - **ขอให้ยืนยัน**: ไฟล์ทั้งสามเป็นงานของคุณเองใช่ไหม (NOTICE.md เขียนไว้อย่างนั้น) และชุดเครื่องมือ "Anatomy kit" ที่ฝังอยู่ในไฟล์มีเงื่อนไขการใช้งานอย่างไร
 
@@ -218,11 +218,11 @@ first steps back through those jumps (as any page in a frame does).
 
 | Group | Ceiling | Measured with the change | Without | Delta |
 | --- | ---: | ---: | ---: | ---: |
-| `index-*.js` | 2635 → 2653 | 2652.6 kB (2,652,632 B) | 2634.8 | +17.8 |
+| `index-*.js` | 2635 → 2653 | 2652.7 kB | 2634.8 | +17.9 |
 | `index-*.css` | 177 → 179 | 178.3 kB (178,321 B) | 176.9 | +1.4 |
 | `i18n-*.js` | 1729 → 1733 | 1732.5 kB (1,732,544 B) | 1729.0 | +3.5 |
-| precache code | 14654 → 14677 | 14676.7 kB | 14654.0 | +22.7 |
-| precache | 16053 → 16076 | 15795.9 kB (committed snapshots) | — | code +23 |
+| precache code | 14654 → 14677 → 14678 | 14677.2 kB | 14654.0 | +23.2 |
+| precache | 16053 → 16076 → 16077 | 15796.4 kB (committed snapshots) | — | code +24 |
 
 Since the first round (2649, 14673, 16072 kB) the second review round and the checks after it
 added 3.5 kB to `index-*.js` (the inflater and the byte-plane decoder, the Fregat and tower refits,
@@ -232,3 +232,10 @@ them; each ceiling is the measured size rounded up to the next kB. The pages and
 pages 13.4, meshes 0.7) are in no ceiling: `anatomy/` is on demand. Without that entry the build
 precaches them and fails the code ceiling by about 14 MB. Named offset: EQ-7 (split the first-view
 code, K2). Approved by the owner in chat, 2026-10-28 ("1. อนุมัติ").
+
+The two fixes the owner chose on 2026-10-30, after the flight screenshots, added 0.9 kB of code over
+5808bfb (14676.3 kB): the separation glow only out of the sun and along the outline (index JS, about
++0.4) and separated hardware starting where it was let go of (`physics/sim/debris.ts`, in every
+precached physics worker, about +0.5). That is 0.2 kB over 14677, so precache code goes to 14678 kB
+and the total to 16077 kB (the measured size rounded up to the next kB; `index-*.js` stays within
+2653). Same offset, EQ-7. Approved by the owner in chat, 2026-10-30 ("อนุมัติ +1 kB").
