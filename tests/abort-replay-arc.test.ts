@@ -138,6 +138,28 @@ describe('an escape between two frames above the air', () => {
     // and where it is from the capsule, as flown (the line drew each 117 m under its arc)
     expect(dist(sub(mid.debris[0].r, mid.r), sub(there, flown(5).r))).toBeLessThan(0.05);
   });
+
+  // A body in the air beside the escape goes its way too: on the line under the escape's cubic, the two would part
+  // (second-agent review: the Redstone 25 m from Freedom 7 drawn 117 m off it on the span that crosses 140 km, and
+  // Vostok's instrument module bobbing 4.7 m against the sphere every 2 s after the cables part)
+  it.each([
+    // coming down through 140 km at 950 m/s, a 10 s span from 145 km to 135 km
+    ['the spent Redstone 25 m from Freedom 7, crossing 140 km', { r: v3(R_EARTH + 145e3, 0, 0), v: v3(-950, 2000, 0) }, v3(0, -25, 0), 10, {}],
+    // 100 km up, 7.6 km/s, the 2 s frames of Vostok's return; its module 50 m behind the sphere
+    ["Vostok's instrument module 50 m behind the sphere, 100 km up", { r: v3(R_EARTH + 100e3, 0, 0), v: v3(-120, 7600, 0) }, v3(0, -50, 0), 2,
+      { capsule: 'vostok', joint: 'free', motors: { ...SOYUZ_MOTORS, retro: 0 } }],
+  ] as [string, State, Vec3, number, Partial<AbortState>][])('keeps a body beside it in its place under 140 km: %s', (_name, escape, offset, span, abort) => {
+    const beside: State = { r: add(escape.r, offset), v: addScaled(escape.v, normalize(escape.v), -0.5) };
+    const { a, b, flown } = pair(escape, span, abort);
+    const body = (s: State): DebrisFrame => ({ id: 8, name: 'beside', r: s.r, v: s.v, dir: v3(1, 0, 0), alive: true, burning: false,
+      createdAt: T0 - 50, visual: { kind: 'upperStage', diameter: 1.78, length: 17.6, color: '#ffffff' } } as DebrisFrame);
+    const ab = { ...a, debris: [body(beside)] }, bb = { ...b, debris: [body(fly(beside, span))] };
+    for (const u of [0.25, 0.5, 0.75]) {
+      const mid = interpolateFrames(ab, bb, T0 + span * u), there = fly(beside, span * u).r;
+      expect(dist(mid.debris[0].r, there), `u ${u}`).toBeLessThan(0.05);
+      expect(dist(sub(mid.debris[0].r, mid.r), sub(there, flown(span * u).r)), `u ${u}`).toBeLessThan(0.05);
+    }
+  });
 });
 
 describe('an escape between two frames in the air', () => {
@@ -235,34 +257,47 @@ describe('the blend of an escape', () => {
 });
 
 describe('Freedom 7 recorded and replayed, from its separation to the water', () => {
-  it('is drawn where it flew: within 3 m on its arc above the air, never further off than the chord', { timeout: 120_000 }, () => {
+  it('is drawn where it flew: within 3 m on its arc above the air, never further off than the chord, the Redstone in its place beside it', { timeout: 120_000 }, () => {
     const sim = mr3();
     const rec = new FlightRecorder();
     rec.start(sim);
-    // the flown state after every step of the return
-    const flown: { t: number; r: Vec3 }[] = [];
+    // the flown state after every step of the return, and of every body still flying
+    const flown: { t: number; r: Vec3; bodies: Map<number, Vec3> }[] = [];
     const step = sim.step.bind(sim);
     sim.step = ((dt: number, cb?: () => void) => {
       const used = step(dt, cb);
-      if (sim.state.status === 'abort') flown.push({ t: sim.state.t, r: { ...sim.state.r } });
+      if (sim.state.status === 'abort') {
+        flown.push({ t: sim.state.t, r: { ...sim.state.r }, bodies: new Map(sim.debris.filter((d) => d.alive).map((d) => [d.id, { ...d.r }])) });
+      }
       return used;
     }) as typeof sim.step;
     while (sim.state.status !== 'landed' && !sim.isFailed() && sim.state.t < 1200) rec.advance(5, 1e7);
     expect(sim.state.status).toBe('landed');
     const player = new ReplayPlayer(rec);
     const frames = rec.frames;
-    let above = 0, aboveSamples = 0, worse = 0, i = 0;
-    for (const { t, r } of flown) {
+    let above = 0, aboveSamples = 0, worse = 0, i = 0, beside = 0, besideSamples = 0;
+    for (const { t, r, bodies } of flown) {
       while (i + 1 < frames.length && frames[i + 1].t <= t) i++;
       const a = frames[i], b = frames[i + 1];
       if (!b || t <= a.t + 1e-9 || t >= b.t - 1e-9 || a.status !== 'abort' || b.status !== 'abort') continue;
-      const drawn = dist(player.frameAt(t)!.r, r), chord = dist(lerp(a.r, b.r, (t - a.t) / (b.t - a.t)), r);
+      const f = player.frameAt(t)!;
+      const drawn = dist(f.r, r), chord = dist(lerp(a.r, b.r, (t - a.t) / (b.t - a.t)), r);
       if (drawn > chord + 0.01) worse++;
       if (a.altitude >= 140e3 && b.altitude >= 140e3) { above = Math.max(above, drawn); aboveSamples++; }
+      // a body within 5 km of the capsule (the spent Redstone, tens of metres off it over the top), where it is from it
+      for (const d of f.debris) {
+        const at = bodies.get(d.id);
+        if (!at || !d.alive || dist(at, r) > 5e3) continue;
+        beside = Math.max(beside, dist(sub(d.r, f.r), sub(at, r)));
+        besideSamples++;
+      }
     }
     // the 10 s frames over the top, the retro-rockets' among them: 128 m off on the chord
     expect(aboveSamples).toBeGreaterThan(500);
     expect(above).toBeLessThan(3);
     expect(worse).toBe(0);
+    // the Redstone on the line beside the capsule on its cubic was drawn 117 m off its place
+    expect(besideSamples).toBeGreaterThan(500);
+    expect(beside).toBeLessThan(0.3);
   });
 });
