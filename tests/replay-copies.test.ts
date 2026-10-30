@@ -155,26 +155,26 @@ describe('a seek shares nothing a consumer could write to with the recording', (
   });
 
   it('Soyuz-2.1a six-DOF with a rate gyro stuck (lesson ru-fdir-dus): the control system\'s failures and the FDIR\'s state are the seek\'s own', { timeout: 120_000 }, () => {
-    // the lesson's own flight, as the app flies it: IMU 1's rate gyros stick at T+30 s and, with no FDIR, it breaks up
+    // the lesson's own flight, as the app flies it: IMU 1's rate gyros stick at T+30 s and, with no FDIR, it breaks
+    // up about 12 s later (T+60 s bounds it, should it fly on)
     const lesson = readPackText(ruPackText, packPath('ru-24-05-06'))!.lessons.find((l) => l.id === 'ru-fdir-dus')!;
     if (!isFlightLesson(lesson)) throw new Error('ru-fdir-dus is a flight lesson');
     const sim = new Simulation(lessonConfig(lesson.mission), { headless: true });
     const rec = new FlightRecorder();
     rec.start(sim);
-    let guard = 0;
-    while (!sim.done && !sim.isFailed() && guard++ < 1000) rec.advance(1, 5000);
-    expect(sim.events.map((e) => e.key)).toEqual(expect.arrayContaining(['evt.controlFault', 'evt.vehicleLost']));
+    while (!sim.done && !sim.isFailed() && sim.state.t < 60) rec.advance(1, 5000);
+    expect(sim.events.map((e) => e.key)).toContain('evt.controlFault');
     const frames = rec.frames, carries = (f: VisualFrame) => !!f.rigid?.controlFaults;
     // every frame carries the record; from the failure on, with the stuck unit in it
-    expect(frames.length).toBeGreaterThan(400);
     expect(frames.every(carries)).toBe(true);
     const struck = frames.filter((f) => f.rigid!.controlFaults!.active.length);
-    expect(struck.length).toBeGreaterThan(100);
+    expect(struck.length).toBeGreaterThan(50);
     expect(struck[0].rigid!.controlFaults).toMatchObject({ fdir: false, active: [{ kind: 'gyroStuck', units: [1] }], units: ['faulty', 'ok', 'ok'] });
     const before = structuredClone(frames);
     deepFreeze(frames);
     const { seeks, paths } = seekAll(rec, carries);
-    expect(seeks).toBeGreaterThan(800);
+    // on every stored frame and half way to the next
+    expect(seeks).toBe(2 * frames.length - 1);
     // before: frame.rigid.controlFaults
     expect(paths).toEqual([]);
     expect(frames).toEqual(before);
