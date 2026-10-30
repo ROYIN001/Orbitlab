@@ -37,6 +37,8 @@ const sixDof = (): Simulation => new Simulation({ vehicleId: 'soyuz21a', satelli
 
 /** The spacecraft on a circular 220 km orbit at 51.6°, and Blok I beside it 0.5 m/s slower. */
 const R0 = R_EARTH + 220e3, V0 = Math.sqrt(MU_EARTH / R0), INC = 51.6 * Math.PI / 180, T0 = 700;
+/** Its period, s: about 88 minutes. */
+const PERIOD = 2 * Math.PI * Math.sqrt(R0 ** 3 / MU_EARTH);
 const SHIP = { r: v3(R0, 0, 0), v: v3(0, V0 * Math.cos(INC), V0 * Math.sin(INC)) };
 const BLOK = { r: SHIP.r, v: scale(SHIP.v, 1 - 0.5 / V0) };
 /** Blok A coming down through the air 90 km up, under the 140 km a body's coast blend asks for. */
@@ -58,7 +60,7 @@ type Body = { id: number; s: (dt: number) => State; extra?: Partial<DebrisFrame>
 function frameAt(t: number, ship: (dt: number) => State, bodies: Body[] = [], over: Partial<VisualFrame> = {}): VisualFrame {
   pad ??= captureFrame(sixDof());
   const at = ship(t - T0);
-  return { ...cloneFrame(pad), t, status: 'orbit', thrust: 0, throttle: 0, r: at.r, v: at.v, ...over,
+  return { ...cloneFrame(pad), t, status: 'orbit', thrust: 0, throttle: 0, r: at.r, v: at.v, elements: { ...pad.elements, period: PERIOD }, ...over,
     debris: bodies.map(({ id, s, extra, ownRigid }) => {
       const b = s(t - T0);
       return { id, name: 'Blok I', r: b.r, v: b.v, dir: v3(1, 0, 0), alive: true, burning: false, outcome: 'orbit', createdAt: T0 - 5,
@@ -95,6 +97,23 @@ describe('a six-DOF vehicle between two recorded frames', () => {
       expect(dist(f.v, flown.v)).toBeLessThan(1e-2);
       expect(Math.abs(norm(f.r) - R0)).toBeLessThan(0.1);
     }
+  });
+
+  it('keeps the line over a span longer than a quarter of its orbit, where the cubic swings out further', () => {
+    // Only a recording thinned hard leaves such a span: a six-DOF spacecraft docked for hours under the frame budget
+    // kept one of 7,981 s. Over more than a whole circle the cubic went 23,000 km off, the line 9,300 km.
+    const sat = (dt: number) => kepler(SHIP)(dt);
+    for (const span of [0.3 * PERIOD, 1.44 * PERIOD]) {
+      const [a, b] = pair(sat, [{ id: 1, s: kepler(BLOK) }], {}, span);
+      const mid = interpolateFrames(a, b, T0 + span / 2);
+      expect(mid.r).toEqual(lerp(a.r, b.r, 0.5));
+      expect(mid.debris[0].r).toEqual(lerp(a.debris[0].r, b.debris[0].r, 0.5));
+    }
+    // and under a quarter, the cubic: over 0.2 of a circle, 1,060 s, it is 42 km off where the line is 1,260 km
+    const [a, b] = pair(sat, [], {}, 0.2 * PERIOD);
+    const mid = interpolateFrames(a, b, T0 + 0.1 * PERIOD);
+    expect(dist(mid.r, kepler(SHIP)(0.1 * PERIOD).r)).toBeLessThan(50e3);
+    expect(dist(lerp(a.r, b.r, 0.5), kepler(SHIP)(0.1 * PERIOD).r)).toBeGreaterThan(1e6);
   });
 
   it('stays on its arc over a minute, the widest gap thinning leaves in a coast', () => {

@@ -784,10 +784,13 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (a point mass
   // under thrust, the span a burn begins in), so do they; a body that does not coast takes it whatever the vehicle
   // does. Every velocity change inside a coast is pinned to a frame: an event's frames, a change of configuration
-  // (held above) or of status; the cubic, which follows both ends' velocities, relies on that.
+  // (held above) or of status; the cubic, which follows both ends' velocities, relies on that. It is only for a span
+  // under a quarter of the orbit's period: on a longer one, which only a recording thinned hard leaves (a docked
+  // spacecraft hours past its docking, under the six-DOF frame budget: 7,981 s), the cubic swings out further than
+  // the line does (past a third of a GTO's or a Molniya's period, a whole one of a circle), so it keeps the line.
   const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
     coasts && coast && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
-      : coasts && ((coast && a.rigid) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
+      : coasts && ((coast && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
       : { r: lerpVec(ar, br, u), v: lerpVec(av, bv, u) };
   const { r, v } = path(a.r, a.v, b.r, b.v);
   const ea = a.elements, eb = b.elements;
