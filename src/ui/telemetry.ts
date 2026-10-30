@@ -292,7 +292,11 @@ export class TelemetryPanel {
       select.append(option);
     }
     select.value = getNotation();
-    select.addEventListener('change', () => setNotationPreference(select.value as NotationPreference));
+    select.addEventListener('change', () => {
+      setNotationPreference(select.value as NotationPreference);
+      // the panel was rebuilt for the new symbols: the select in hand is gone
+      this.root.querySelector<HTMLSelectElement>('.notation-section select')?.focus();
+    });
     label.append(el('span', undefined, t('setup.notation')), select);
     box.append(label);
     box.title = t('setup.notation.note');
