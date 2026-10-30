@@ -130,11 +130,11 @@ That run compared main against the first version (`structuredClone`, before the 
 ### Tests
 
 - **Typecheck:** `npx tsc --noEmit -p .` clean.
-- **Unit suite, local:** 335 files, 10,529 tests, all pass on 8a4ba98 (Node 22.22.0, not CI's 22.23.3). On the final code, CI's three unit shards ran it (below).
+- **Unit suite, local:** 335 files, 10,529 tests, all pass on 9080d56, the final code (1,876 s), and earlier on 8a4ba98 (Node 22.22.0, not CI's 22.23.3).
 - **CI:**
-  - Run 41020718499 green on f2fe2db, the final code (Node 22.23.3): typecheck, build, test ×3, browser-smoke ×2, verify.
+  - Run 41022766246 green on 1be5052 and run 41020718499 green on f2fe2db, both with the final code (Node 22.23.3): typecheck, build, test ×3, browser-smoke ×2, verify.
   - Run 41002400552 green on 8a4ba98, the first version.
-  - Run 41019830551 on 147b232 shows `verify` red only because its test and browser jobs were cancelled by the next push.
+  - Runs 41019830551 (147b232) and 41022389542 (5605a97) show `verify` red only because their test and browser jobs were cancelled by the next push.
 - **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the only heavy or six-DOF fleet file that builds a recorder or player: 1 of 1 passed on 8a4ba98 (161 s) and on f2fe2db (168 s; src/ and tests/ as in 9080d56), Node 22.22.0.
 - **Not run:**
   - The other 32 heavy files and the 6 six-DOF fleet files the change map selects for any `src/physics/**` path. None builds a `FlightRecorder` or `ReplayPlayer` or calls `cloneFrame` or `interpolateFrames` (grep of tests/heavy and tests/sixdof-fleet), so this change cannot reach them. They run on the weekly heavy workflow, and D-64 reuse does not apply because frame.ts is in the physics tree.
