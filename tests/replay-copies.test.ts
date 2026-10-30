@@ -22,10 +22,9 @@ import { Simulation } from '../src/physics/simulation';
 import { cloneFrame, interpolateFrames, type VisualFrame } from '../src/physics/frame';
 import { FlightRecorder } from '../src/replay/recorder';
 import { ReplayPlayer } from '../src/replay/player';
-import { missionConfigFromState } from '../src/lessons/config';
+import { lessonConfig, missionConfigFromState } from '../src/lessons/config';
 import { watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
 import type { ApolloState } from '../src/physics/sim/apollo';
-import { lessonConfig } from '../src/lessons/config';
 import { packPath, readPackText } from '../src/lessons/packs';
 import { isFlightLesson } from '../src/lessons/types';
 import ruPackText from '../public/lessons/packs/ru-24-05-06.orbitlab-lesson.json?raw';
@@ -156,13 +155,14 @@ describe('a seek shares nothing a consumer could write to with the recording', (
 
   it('Soyuz-2.1a six-DOF with a rate gyro stuck (lesson ru-fdir-dus): the control system\'s failures and the FDIR\'s state are the seek\'s own', { timeout: 120_000 }, () => {
     // the lesson's own flight, as the app flies it: IMU 1's rate gyros stick at T+30 s and, with no FDIR, it breaks
-    // up about 12 s later (T+60 s bounds it, should it fly on)
+    // up about 12 s later (T+60 s bounds it, should it fly on; the guard, should the recorder stall)
     const lesson = readPackText(ruPackText, packPath('ru-24-05-06'))!.lessons.find((l) => l.id === 'ru-fdir-dus')!;
     if (!isFlightLesson(lesson)) throw new Error('ru-fdir-dus is a flight lesson');
     const sim = new Simulation(lessonConfig(lesson.mission), { headless: true });
     const rec = new FlightRecorder();
     rec.start(sim);
-    while (!sim.done && !sim.isFailed() && sim.state.t < 60) rec.advance(1, 5000);
+    let guard = 0;
+    while (!sim.done && !sim.isFailed() && sim.state.t < 60 && guard++ < 1000) rec.advance(1, 5000);
     expect(sim.events.map((e) => e.key)).toContain('evt.controlFault');
     const frames = rec.frames, carries = (f: VisualFrame) => !!f.rigid?.controlFaults;
     // every frame carries the record; from the failure on, with the stuck unit in it

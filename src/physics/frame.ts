@@ -661,8 +661,9 @@ function copyPlain<T extends object>(o: T): T {
 }
 
 /**
- * G08: a seek's copy of the vehicle's telemetry, made its own down to the
- * control system's failures and the FDIR's state (`controlFaults`), which
+ * G08: the vehicle's telemetry in a copy of a frame (a seek's, or what the
+ * recorder hands out), made its own down to the control system's failures
+ * and the FDIR's state (`controlFaults`), which
  * `cloneRigidTelemetry` and `interpolateRigidTelemetry` share. A copy there
  * would land in the seven chunks that carry rigid/telemetry.ts, against the
  * precache budget (budgets.json); here it is in the two that carry this file,
@@ -722,10 +723,11 @@ function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
  * A live capture the recorder hands back without storing it
  * (`FlightRecorder.recordNow`) shares both with the simulation and with the
  * stored frames. The control system's record is shared the same way: the
- * runtime builds a new one every step and never writes into it
- * (rigid/faults.ts `record`), so the frames `captureFrame` stores share it
- * with the simulation's state and its telemetry samples, and only a seek
- * copies it (`ownFaults`).
+ * runtime builds a new one at each step it flies (rigid/faults.ts `record`; a
+ * phase that carries the state over, such as Apollo's, spreads it and keeps
+ * the record) and nothing writes into it, so the frames `captureFrame` stores
+ * share it with the simulation's state, and with a telemetry sample taken at
+ * the same step. Every copy made here has its own (`ownFaults`).
  */
 export function cloneFrame(f: VisualFrame): VisualFrame {
   return {

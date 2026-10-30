@@ -12,9 +12,9 @@
 > - ขนาด: `index-*.js` +90 B, `flight.worker-*.js` +88 B, chunk อื่นไม่เปลี่ยน ที่ว่างของ precache code ลดจาก 422 B เป็น 244 B
 > - ความเร็ว: SEEK_TIME_TH
 > - ฟิลด์อื่นของ `RigidTelemetry` ตรวจครบแล้ว: คัดลอกลึกทั้งหมด ยกเว้น `linearModel`, `attitudeTest` และ `navigation` ซึ่งอยู่บน telemetry samples เท่านั้น ไม่เคยอยู่บนเฟรม (ตรวจทั้งในโค้ดและในเที่ยวบินที่มี navigation)
-> - ที่ยังไม่แก้: เฟรมที่บันทึกไว้ยังใช้บันทึกนี้ร่วมกับ state ของ simulation และ telemetry samples (simulation สร้างบันทึกใหม่ทุก step และไม่เคยเขียนทับ) เหมือน `recovery.target` ใน #188
+> - ที่ยังไม่แก้: เฟรมที่บันทึกไว้ยังใช้บันทึกนี้ร่วมกับ state ของ simulation และบางครั้งกับ telemetry sample ที่เก็บใน step เดียวกัน (simulation สร้างบันทึกใหม่เกือบทุก step และไม่มีโค้ดไหนเขียนทับ) เหมือน `recovery.target` ใน #188
 > - การ merge: PR นี้ซ้อนอยู่บน #188 ต้อง merge หลัง #188 ไม่ชนกับ #187, #190, #191 ส่วน #189 ชนกับ #188 อยู่แล้วที่จุดเดียวกัน PR นี้ไม่ได้เพิ่มจุดชน
-> - เงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ (บน main และบน #188) และผ่านหลังแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (เพิ่มเทสต์ใหม่หนึ่งข้อ) REVIEW_TH CI_TH
+> - เงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ (บน main และบน #188) และผ่านหลังแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (เพิ่มเทสต์ใหม่หนึ่งข้อ) agent ตัวที่สองตรวจแล้ว ยืนยัน 8 จาก 8 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge (ข้อเล็กห้าข้อเรื่องถ้อยคำใน docstring และ guard ของเทสต์ แก้แล้วใน PR นี้) CI_TH
 
 ```yaml
 item: replay control-faults copy (PR #188's second-agent finding F2, pre-existing on main)
@@ -25,7 +25,7 @@ tests: tests/replay-copies.test.ts (one new test)
 base_sha_verified_on: {sha: 1a7ca0c, branch: claude/great-mayer-6kapau (PR #188), main: 1842a86, date: 2026-10-30}
 branch: claude/epic-wright-cx214p
 pr: #192 (stacked on #188)
-second_agent_review: REVIEW_YAML
+second_agent_review: 'confirmed 8 of 8 claims checked, no blocking findings (2026-10-30, on 3eb54e5 and db69b31); six non-blocking: N1–N5 fixed here (docstring wording, the test''s guard, a duplicate import), N6 pre-existing (under "Not changed, for later")'
 ```
 
 ## Cause
@@ -50,7 +50,7 @@ The task's first choice was a copy in `cloneRigidTelemetry`. rigid/telemetry.ts 
 
 - **B's cost in time.** Same values, but `copyPlain` is slower than the hand-written copies it would replace. On a flexible-body record it takes 4.0–5.0 µs against `cloneFlexTelemetry`'s 1.0 µs. A whole `cloneRigidTelemetry` call went from 8.34 to 9.18 µs on a plain six-DOF Falcon 9 frame and from 12.46 to 14.86 µs on a flexible one (medians of 15 alternating runs over ~1,000 recorded frames, Node 22.22.0). That is every six-DOF seek, every stored frame and every telemetry sample, with failures or not, so B was set aside.
 - **A spread-and-walk copy in other forms** (arrays by `slice`, `Object.keys` instead of `for…in`) was no faster on a flexible-body record: 4.3–5.6 µs.
-- **D is #188's policy for `recovery.target`.** The record is copied where a seek hands a frame out. The stored frames keep sharing it with the simulation: the runtime builds a new record every step (`ControlFaults.record`, rigid/faults.ts:513) and never writes into one. On the lesson's flight no two consecutive stored frames share a record.
+- **D is #188's policy for `recovery.target`.** The record is copied where a seek hands a frame out. The stored frames keep sharing it with the simulation: the runtime builds a new record at each step it flies (`ControlFaults.record`, rigid/faults.ts:513), and nothing writes into one. A phase that carries the state over spreads `s.rigid` and keeps its record (Apollo's phases, sim/apollo.ts:512 and five more; a touchdown, simulation.ts:1305). On the lesson's flight no two consecutive stored frames share a record.
 - **D also covers the recorder's own hand-outs.** `FlightRecorder.recordNow` and `captureChangedState` hand out `copyOf(stored)`, which is `cloneFrame` (replay/recorder.ts:615–689). The worker session posts that live frame, with the frames stored since its last delta, in one message to the main thread's mirror (session/core.ts:155; session/mirror.ts), where `applyFrameToState` gives it to the shell's state (a six-DOF flight has no `simulationFrame`).
   - Before: the live frame shared its record with the stored head frame. When both went in the same delta, the structured clone kept them one object, so the shell's state shared it with the mirror's stored frame.
   - Now they are separate objects before they are posted.
@@ -133,6 +133,8 @@ The 25,708 calls that shared something before are exactly the calls on frames th
 | tune, Monte Carlo, ratings, readiness, recheck workers | | | 0 B each |
 | precache code (ceiling 14,654,000 B) | 14,653,578 B (422 B left) | 14,653,756 B (244 B left) | +178 B |
 
+`index-*.js` has its own ceiling, 2,635 kB: 229 B are left under it after this PR (319 B before), less than under precache code.
+
 `ownFaults` minifies to 80 B, and each of its two calls to 4 B.
 
 ### Heap and time
@@ -148,7 +150,26 @@ TESTS_SECTION
 
 ## Second-agent review
 
-REVIEW_SECTION
+A second agent reviewed 3eb54e5 (the code) and db69b31 (the test), review only, on 2026-10-30.
+
+**Result: confirmed 8 of 8 claims checked, no blocking findings.**
+
+1. **No path still shares:** every return of `interpolateFrames` goes through `ownFaults`, directly or through `cloneFrame` (the degenerate span, u ≤ 0, rigid u ≥ 1, the configuration hold). The recorder's `copyOf` is `cloneFrame`; the mirror's seeks use the same player path, and the live copy no longer shares the record with the stored frames posted with it. Its own probe, four flights (among them a gyro failure struck live at T+20 s), checked `cloneFrame`, the degenerate span, u < 0, u > 1, u = 0.01, 0.5 and 0.99, a forced configuration hold and `frameAt` at each frame and mid-point: about 61,000 calls, nothing shared with the recording but `visual`.
+2. **No debris carries a record:** only the vehicle's runtime gets failures (simulation.ts:231–234), and `injectControlFault` targets that runtime; debris runtimes and the other debris telemetry builders have none. 2,261 debris frames with rigid telemetry carried none.
+3. **Nothing writes into the record, and it is plain data:** `record()` builds every array and vector new; the readers (loop-inspector.ts, csv.ts, mcp.ts, loop-view.ts) only read; no Map, class instance or cycle.
+4. **Sample-only fields:** on `ru-bins-astro` with an accelerometer failure and a live attitude test, 141, 141 and 18 samples carried `linearModel`, `navigation` and `attitudeTest`; no state, none of 810 frames and no seek did. Every other object field is copied deep.
+5. **The test** fails on 1a7ca0c and on main with exactly `['frame.rigid.controlFaults']` (on main the other three fail too) and passes on this branch; deterministic.
+6. **Same values:** 0 differences over its ~61,000 calls (`isDeepStrictEqual` and key order).
+7. **Docstrings:** accurate, apart from N1–N3.
+8. **Bundle:** rebuilt exactly (+90 and +88 B, every other chunk byte-identical, 244 B left); rigid/telemetry.ts is in exactly seven chunks.
+
+**Non-blocking findings:**
+- **N1, fixed:** `interpolateRigidTelemetry`'s docstring named the left frame's record; at a fraction of 1 it is the right's.
+- **N2, fixed:** "the runtime builds a new one every step" overstated it (Apollo's phases and a touchdown spread `s.rigid` and keep the record), and "only a seek copies it" left out the recorder's hand-outs, which `cloneFrame` copies too.
+- **N3, fixed:** stored frames share the record with a telemetry sample only when both are taken at the same step (12 of 526 frames, 172 of 2,121); docstring and report now say "can share".
+- **N4, fixed:** without a step guard the test would spin to its timeout if the recorder ever stalled; the guard is back (`guard++ < 1000`).
+- **N5, fixed:** two imports from `../src/lessons/config` in the test file, now one.
+- **N6, pre-existing:** MCP's summary returns live arrays (under "Not changed, for later"); and `index-*.js` has 229 B left under its own ceiling (under "Size").
 
 ## Merge order
 
@@ -160,6 +181,7 @@ REVIEW_SECTION
 
 ## Not changed, for later
 
-- **The stored frames share the record with the simulation and its telemetry samples.** `captureFrame` stores `cloneRigidTelemetry(s.rigid)`, and the telemetry sampler (simulation.ts:1564) takes another copy of the same `s.rigid`. Both share the runtime's record for that step. A consumer that wrote into a telemetry sample's `rigid.controlFaults` would change the recording too. The loop inspector, the CSV export and MCP only read it. Closing this means a copy in `cloneRigidTelemetry`: versions A to C above.
+- **The stored frames can share the record with the simulation and its telemetry samples.** `captureFrame` stores `cloneRigidTelemetry(s.rigid)`, and the telemetry sampler (simulation.ts:1564) takes another copy of `s.rigid`. When both are taken at the same step they share the runtime's record for it: the second agent counted 12 of 526 frames on `ru-fdir-dus` and 172 of 2,121 on the Falcon 9 flight. A consumer that wrote into a telemetry sample's `rigid.controlFaults` would change the recording too. The loop inspector, the CSV export and MCP only read it. Closing this means a copy in `cloneRigidTelemetry`: versions A to C above.
 - **A live capture shares it with the simulation.** When `FlightRecorder.recordNow` hands back a frame it captured without storing it (`return f`, replay/recorder.ts:628), that frame shares the record with the simulation's state, as it does `visual` and a recovery's target (#188's "Not changed, for later").
+- **MCP's summary hands out the samples' own arrays** (pre-existing, the second agent's N6). `controlFaultsSummary` (mcp.ts:1212) returns `record.active`, `.engines` and `.jets` as they are, so a tool result shares them with a telemetry sample, and sometimes with a stored frame. It matters only if a tool result were changed in place rather than serialised.
 - **No type-level guard,** as #188 notes: nothing marks a frame read-only.
