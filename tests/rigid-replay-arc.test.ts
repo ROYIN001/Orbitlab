@@ -229,8 +229,9 @@ describe('a six-DOF vehicle between two recorded frames', () => {
     }
   });
 
-  it('leaves a body in the air, or under its own thrust, on the line while the vehicle takes its arc', () => {
-    const [a, b] = pair(kepler(SHIP), [{ id: 1, s: kepler(LOW), extra: { outcome: undefined } }, { id: 2, s: kepler(BLOK), extra: { burning: true } }]);
+  it('leaves a body under its own thrust, in the air or out of it, on the line while the vehicle takes its arc', () => {
+    // one falling through the air with its engines off takes the cubic through both ends: tests/debris-replay.test.ts
+    const [a, b] = pair(kepler(SHIP), [{ id: 1, s: kepler(LOW), extra: { outcome: undefined, burning: true } }, { id: 2, s: kepler(BLOK), extra: { burning: true } }]);
     const mid = interpolateFrames(a, b, T0 + 15);
     expect(dist(mid.r, propagateKepler(SHIP.r, SHIP.v, 15).r)).toBeLessThan(0.1);
     for (const i of [0, 1]) expect(mid.debris[i].r).toEqual(lerp(a.debris[i].r, b.debris[i].r, 0.5));

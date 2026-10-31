@@ -723,12 +723,13 @@ function blendDebrisExtras(d: DebrisFrame, o: DebrisFrame, u: number): Pick<Debr
 }
 
 /**
- * Height above which the simulation flies a coast with no air: the vehicle's on
- * a Kepler arc (`useKepler`, simulation.ts), and a spent stage counts as in
- * orbit from it (sim/debris.ts). Below it drag slows a falling body, and the
- * two-body arc is not the path it flew.
+ * Distance from the Earth's centre, 140 km up, above which the simulation flies
+ * a coast with no air: the vehicle's on a Kepler arc (`useKepler`,
+ * simulation.ts), and a spent stage counts as in orbit from it (sim/debris.ts).
+ * Below it drag slows a falling body, and the two-body arc is not the path it
+ * flew. A distance, not a height, so the test is one comparison.
  */
-const AIRLESS_HEIGHT = 140e3;
+const AIRLESS_RADIUS = R_EARTH + 140e3;
 
 /**
  * Interpolate between two recorded frames for a seek to mission time `time`.
@@ -751,7 +752,8 @@ const AIRLESS_HEIGHT = 140e3;
  * changes at an instant must not be shown before that instant. Debris
  * positions are still interpolated, so spent stages fall smoothly: a body that
  * coasts out of the air goes from one frame to the next the way the vehicle
- * does (`path`), anything else in a straight line.
+ * does (`path`), one falling through the air on the cubic through both ends'
+ * states, one firing its engines in a straight line.
  *
  * The result is a fresh frame, apart from sub-objects it shares with the
  * stored frame as `cloneFrame` does, which a caller must not write to:
@@ -826,13 +828,17 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
       return cloneDebrisFrame(d);
     }
-    const rigid = interpolateRigidTelemetry(d.rigid, other.rigid, u);
+    // nothing on it firing at either end
+    const rigid = interpolateRigidTelemetry(d.rigid, other.rigid, u), quiet = !d.burning && !other.burning;
     return {
       ...d,
       rigid,
-      // it coasts: nothing on it firing at either end, and out of the air at both
-      ...path(d.r, d.v, other.r, other.v, !d.burning && !other.burning
-        && norm(d.r) - R_EARTH > AIRLESS_HEIGHT && norm(other.r) - R_EARTH > AIRLESS_HEIGHT),
+      // Quiet and out of the air at both ends, it coasts: the vehicle's way. Quiet and in the air at either end, it
+      // falls, its path bent and its speed cut by drag inside the span (a Sputnik booster from 2.3 to 0.3 km/s in
+      // 30 s): the cubic through both ends' states keeps it on that path, where the straight line cut up to 10 km off
+      // it. It meets both samples; past an impact the earlier one holds (above). Firing (a recovery burn), the line.
+      ...(quiet && !(norm(d.r) > AIRLESS_RADIUS && norm(other.r) > AIRLESS_RADIUS)
+        ? hermite(d.r, d.v, other.r, other.v, u, span) : path(d.r, d.v, other.r, other.v, quiet)),
       dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other.dir, u),
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
       recovery: rec,
