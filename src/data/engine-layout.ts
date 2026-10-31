@@ -18,6 +18,12 @@ export interface NozzlePos {
   r: number;
   /** bell length, m */
   len: number;
+  /**
+   * Where the bell's top stands above the stage's base, m: 0 when not given,
+   * the bells hanging from it. Set only where a drawing puts them elsewhere
+   * (the Soyuz Anatomy model's Blok I chambers, src/render/anatomy.ts).
+   */
+  y?: number;
 }
 
 export interface EngineLayout {

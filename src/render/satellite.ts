@@ -19,6 +19,8 @@ import type { ApolloState } from '../physics/sim/apollo';
 export interface SatelliteView {
   group: THREE.Group;
   height: number;
+  /** how far above the stage's top it stands under the fairing, m (0.5 when not given; render/rocket.ts) */
+  seat?: number;
   /** @param p deployment progress 0 (stowed) .. 1 (fully deployed) */
   setDeploy(p: number): void;
   /** C01: the parts dropped on the way up (the Apollo escape tower) */

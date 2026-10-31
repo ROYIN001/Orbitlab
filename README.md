@@ -72,6 +72,12 @@ any academy, and no service or academy name or emblem is used without written pe
   Sun's pull, the lunar orbit, the powered descent to Tranquility Base, the ascent and the
   coelliptic rendezvous, the burn for home and the lifting entry under the parachutes, within
   minutes of the flown timeline ([docs/PHYSICS.md §13](docs/PHYSICS.md)).
+- **Soyuz Anatomy models**: the owner's own 3-D models of Soyuz-2.1a (with the Soyuz MS or the
+  Progress MS-26) and Soyuz-2.1b with Fregat (`public/anatomy/`). Build's Watch level opens each
+  whole — tanks, engines and plumbing, to take apart and cut open, with a Thai guide — and the
+  flight draws those two rockets, their spent stages and their spacecraft from the models' outside
+  (`npm run anatomy` makes the flight's meshes from the pages). Both are loaded on demand, not
+  precached.
 - **A satellite builder** (Build, Phase 4): design a satellite from NAPA-2, a THEOS-2-class
   imager or a class of the catalogue, with its eclipse, power, Δv budget, attitude control, downlink
   and camera worked out as you type and held to published worked examples; test it on the satellite
