@@ -16,18 +16,19 @@
 > - แบบ point-mass วัดครบ 20 ภารกิจ ชิ้นส่วนที่ตก 62 ชิ้น cubic ไม่เคยแย่กว่าเส้นตรง ไม่เคยวิ่งย้อนกลับ และไม่เคยลงต่ำกว่าเฟรมที่ต่ำกว่า ยกเว้นตรงที่ชิ้นส่วนเองลงต่ำกว่าจริง เช่น ท่อนแรกของ H-IIA ที่เชิดขึ้นจาก 43 เป็น 51 km
 > - การบันทึกที่ยาวจนถูก thin หนัก (บังคับด้วยงบเฟรม 800): ทั้งสองแบบคลาดมาก แต่ cubic ใกล้ความจริงกว่าเส้นตรงเสมอ มีครั้งเดียวที่ cubic วิ่งเลยแล้วย้อนกลับ 1.4 km ในช่วง 140 s (Blok A ที่ 18 km เทียบกับเส้นตรงที่ 69 km)
 > - เทสต์: 6 เทสต์ใหม่ (5 อันล้มบน main) และเปลี่ยน assertion เดิม 1 ข้อ: ชิ้นส่วนในบรรยากาศที่ "ต้องเป็นเส้นตรง" เปลี่ยนเป็นชิ้นส่วนที่จุดเครื่องยนต์ในบรรยากาศ เพราะพฤติกรรมเดิมคือสิ่งที่งานนี้แก้ จึงไม่เข้าเงื่อนไขอนุมัติถาวรสำหรับบั๊ก (ห้ามเปลี่ยน assertion) ต้องให้เจ้าของกดเอง
-> - ขนาด: +19 B และ +20 B ต่อ chunk ไม่ได้ขึ้นเพดาน precache code เหลือ 59 B ถ้า merge #187 ด้วยจะเหลือ 9 B
-> - การ merge กับ #187: ขัดกัน (conflict) แค่ที่ข้อความ doc comment และเทสต์ของ #187 ข้อหนึ่ง (`tests/rigid-replay-arc.test.ts`) ต้องเปลี่ยนแบบเดียวกัน (ใส่ `burning: true`) ใครที่ merge ทีหลังต้องแก้
+> - ขนาด: +19 B และ +20 B ต่อ chunk ไม่ได้ขึ้นเพดาน บน main ล่าสุด (089b34e) precache code เหลือ 1,034 B
+> - การ merge กับ main: #187, #189, #193 และ #184 merge ไปก่อนแล้ว จึง merge main เข้า branch นี้ ขัดกันแค่ที่ doc comment และเปลี่ยนเทสต์ของ #187 ข้อหนึ่ง (`tests/rigid-replay-arc.test.ts`) ให้ชิ้นส่วนในบรรยากาศจุดเครื่องยนต์ (`burning: true`) แบบเดียวกับที่เปลี่ยนใน debris-replay ส่วน #193 แก้ข้อสังเกต B ไปแล้ว และ #189 จำกัดช่วงของ coast ที่ถูก thin ไว้ที่ 10 นาทีในรอบแรก
+> - เจ้าของอนุมัติ merge ในแชต 2026-10-31: "จัดการmerge 191 ให้เรียบร้อย"
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 10 จาก 10 ข้อ ไม่พบข้อที่ต้องแก้ก่อน merge มีข้อสังเกต 4 ข้อที่ไม่ขวางการ merge (อยู่ในหัวข้อ "Second-agent review" และ "Not changed, for later") ข้อหนึ่งทำให้แก้คำอธิบาย: แบบ point-mass การจำลองให้ตำแหน่งชิ้นส่วนเฉพาะตอนจบแต่ละ step (ในวงโคจรห่างกันได้ถึง 30 s) ตัวเลข point-mass จึงวัดที่จุดเหล่านั้น ถ้าคำนวณซ้ำให้ถี่ จุดที่คลาดมากที่สุดจะมากขึ้นราว 20–25% แต่ cubic ก็ยังไม่เคยแย่กว่าเส้นตรง
 > - CI: ผ่านทั้งหมดบน 5f25287 (run 41023952861)
 
 ```yaml
 item: replay debris blend through the air between recorded frames (bug fix)
-change_kind: bug fix (wrong → right); one existing assertion changed (see Tests); no ceiling raised
-owner_authorization: 'owner in chat to this session, 2026-10-30: "Task: draw a debris body falling through the air between two frames close to the path it flew, without overshooting an impact … or a recovery burn"; "ทำต่อ" (continue)'
+change_kind: bug fix (wrong → right); two existing assertions changed (see Tests and Merging with main), the same change in each; no ceiling raised
+owner_authorization: 'owner in chat to this session, 2026-10-30: "Task: draw a debris body falling through the air between two frames close to the path it flew, without overshooting an impact … or a recovery burn"; "ทำต่อ" (continue); merge approved in chat 2026-10-31: "จัดการmerge 191 ให้เรียบร้อย" (handle the merge of 191 to completion)'
 app_code: src/physics/frame.ts
 tests: tests/debris-replay.test.ts
-base_sha_verified_on: {sha: 1842a86, date: 2026-10-30}
+base_sha_verified_on: {sha: 089b34e, date: 2026-10-31}
 branch: claude/peaceful-planck-uyne6i
 pr: 191
 second_agent_review: 'confirmed 10 of 10, no blocking findings, 4 non-blocking (2026-10-30, on a676a23; the later commits change records and one test comment/sample count only)'
@@ -127,19 +128,22 @@ Point-mass, all 20 watch missions (Vostok-1 flown to T+6,629 s for its return), 
 
 **Related files:** every test file that reaches `interpolateFrames`, `FlightRecorder` or the replay player, plus bundle-budget, repo-hygiene, frames-view, rigid-debris and recovery-return. 43 files, 772 tests, all pass. `npx tsc --noEmit -p .` is clean.
 
-## Merging with #187
+## Merging with main
 
-#187 (a six-DOF vehicle on its arc, open) changes the same function. A trial merge of #187 into this branch (main + both):
-- **Conflict:** the doc comment only. #187 moves it from above `blendAbort` to the function, and this branch edits one sentence of it. Resolve by taking #187's moved comment and applying the sentence. The code merges cleanly.
-- **One #187 test fails:** `tests/rigid-replay-arc.test.ts` 'leaves a body in the air, or under its own thrust, on the line while the vehicle takes its arc' asserts the old in-air line, like the assertion changed here. Whichever PR merges second sets its in-air body (`LOW`) to `burning: true`, as here. Every other test in both files passes.
-- **Size:** precache code 14,653,991 of 14,654,000 B with both (9 B left).
+#187, #189, #193 and #184 merged first (main 1842a86 → 089b34e), and main was merged into this branch:
+- **Conflict:** the doc comment only. #187 moved it from above `blendAbort` to the function, and this branch edits one sentence of it. Resolved by taking #187's moved comment and applying the sentence. The code merged cleanly, and the debris blend on main was still #185's.
+- **One #187 test changed:** `tests/rigid-replay-arc.test.ts` 'leaves a body in the air, or under its own thrust, on the line while the vehicle takes its arc' asserted the old in-air line, like the assertion changed here. Its in-air body (`LOW`) is now `burning: true`, as in tests/debris-replay.test.ts. It is now 'leaves a body under its own thrust, in the air or out of it, on the line while the vehicle takes its arc', with a pointer to the falling case.
+- **#193** raises `evt.entryBurnStart` and `evt.landingBurnStart` for an untargeted recovery and pins a frame to each, which closes the second agent's finding B.
+- **#189** thins a coast to a frame every ten minutes at most (`MAX_COAST_GAP`, src/replay/recorder.ts) before anything else gives up frames, which bounds the spans of finding A and of the forced hard-thinning cases above in all but the last passes.
+- On the merged tree every test file that reaches `interpolateFrames`, `FlightRecorder` or the replay player, plus bundle-budget, repo-hygiene, frames-view, rigid-debris, recovery-return and rigid-recovery, passes: 48 files, 824 tests (rigid-replay-arc and replay-long-span among them). `npx tsc --noEmit -p .` is clean.
 
 ## Size
 
-`npx vite build`, `node scripts/bundle-budget.mjs`: ok, no ceiling raised.
-- `index-*.js` 2,634,861 B (+19 B on main's 2,634,842 B), `flight.worker-*.js` 570,498 B (+20 B on 570,478 B).
-- Precache code 14,653,941 of 14,654,000 B (+39 B; 59 B left). With #187 too: 14,653,991 B (9 B left).
-- The first version, which kept the height comparison, was +33 B per chunk (66 B, 32 B left on main) and would have been 18 B over the ceiling with #187. The distance comparison brought it to +19/+20 B.
+`npx vite build`, `node scripts/bundle-budget.mjs`: ok, no ceiling raised. On the merged tree, against main 089b34e built the same way:
+- `index-*.js` 2,653,790 B (+19 B on 2,653,771 B), `flight.worker-*.js` 570,527 B (+20 B on 570,507 B).
+- Precache code 14,677,966 of 14,679,000 B (+39 B; 1,034 B left). #184 raised the ceilings for the Soyuz models.
+- Measured first on 1842a86: +19/+20 B, precache code 14,653,941 of 14,654,000 B (59 B left then; 9 B with #187).
+- The first version, which kept the height comparison, was +33 B per chunk (66 B, 32 B left on 1842a86) and would have been 18 B over the ceiling of the day with #187. The distance comparison brought it to +19/+20 B.
 
 ## Second-agent review
 
@@ -163,7 +167,7 @@ Non-blocking findings:
   - Reaching this needs a body the simulation keeps in orbit with a perigee of 120–140 km, and a recording thinned to spans of hours. None is left by the watch missions: the lowest perigee in orbit at T+4,000 s is 168 km.
   - Left as it is (for later, below).
 - **B. `burning` is sampled at frames only.** Targeted recoveries start each burn on an event, which pins frames. The untargeted recovery path in sim/debris.ts (a stage with `recovery` and no `target`) starts its entry burn without one, so in a user's mission already coasting in orbit a whole burn could fall inside one quiet span and take the cubic. Not seen in the watch missions, and not a regression: in a 1-D 30 s span with the burn inside, the cubic is 1.9 km off against the line's 5.6 km.
-- **C. Merging with #187:** as in "Merging with #187" above. The doc comment is the only conflict, and taking #187's comment alone leaves "anything else in a straight line" stale. In the merged tree the type check is clean, 26 of 27 tests pass (only the predicted rigid-replay-arc test fails), and precache code is 14,653,991 B.
+- **C. Merging with #187:** as in "Merging with main" above, where it was then done. The doc comment is the only conflict, and taking #187's comment alone leaves "anything else in a straight line" stale. In the merged tree the type check is clean, 26 of 27 tests pass (only the predicted rigid-replay-arc test fails), and precache code is 14,653,991 B.
 - **D. Point-mass worst instants.** A point-mass flight exposes debris states at its step boundaries only. Re-integrating each passive body densely with the simulation's own `pointMassAcceleration` (RK4, steps of at most 0.02 s, kept where it lands within 1 m of the later sample) gives worst instants about 20–25 % above the step-boundary figures. The cubic is still never worse than the line:
   - Sputnik's boosters: 1,225–1,599 m (line 9,675–10,203 m);
   - the H-IIA first stage: 620 m (10,919 m);
@@ -181,6 +185,6 @@ Non-blocking findings:
   2. **The cubic for burning bodies too.** 3 m there; it overshoots only past a ratio of 3, which the sim's burns (constant-deceleration landing burns, a ratio of 2 at most) do not reach.
 - **A body landing between frames is held at its earlier sample** for the whole span, then appears on the ground: up to 30 s hanging in the air when the vehicle's frames are sparse. Unchanged here ("the blend already handles" it). Blending to the impact point would need the impact time.
 - **The drag pulse's timing:** the cubic draws a Sputnik booster up to about 1 km (point-mass) to 2 km (six-DOF) ahead of or behind its place along its path. A frame or two kept around a falling body's peak deceleration, or the debris's acceleration recorded at each frame (a quintic), would close it. Both cost bytes or frames.
-- **No span limit on the in-air cubic** (second agent's finding A). A body kept in orbit with a perigee of 120–140 km, in a recording thinned to spans of hours, would take the cubic over half an orbit or more, where it swings further out than the line. No watch mission leaves such a body. A limit like #187's quarter-period one would close it, but it needs the body's own period, which a debris frame does not carry, so it would cost more than #187's 23 B per chunk; not measured.
-- **An untargeted recovery's entry burn** starts without an event (second agent's finding B), so a whole burn can fall inside one quiet span and take the cubic (1.9 km off, against the line's 5.6 km, in a 1-D case). Raising `evt.entryBurnStart` there too would pin a frame to it.
-- **Hard-thinned recordings:** spans of minutes leave both blends kilometres off and can make the cubic run back along its chord (1.4 km in one forced case). Keeping falling bodies' frames from being thinned, as event frames are, would fix both.
+- **No span limit on the in-air cubic** (second agent's finding A). A body kept in orbit with a perigee of 120–140 km, in a recording thinned to spans of hours, would take the cubic over half an orbit or more, where it swings further out than the line. No watch mission leaves such a body, and since #189 a coast is thinned to ten-minute spans before anything else. A limit like #187's quarter-period one would close it, but it needs the body's own period, which a debris frame does not carry, so it would cost more than #187's 23 B per chunk; not measured.
+- ~~An untargeted recovery's entry burn without an event~~ (second agent's finding B): done in #193, merged before this.
+- **Hard-thinned recordings:** spans of minutes leave both blends kilometres off and can make the cubic run back along its chord (1.4 km in one forced case). #189's ten-minute cap bounds them; keeping falling bodies' frames from being thinned, as event frames are, would fix both.
