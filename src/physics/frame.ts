@@ -761,10 +761,11 @@ const AIRLESS_RADIUS = R_EARTH + 140e3;
  * positions are still interpolated, so spent stages fall smoothly: a body that
  * coasts out of the air goes from one frame to the next the way the vehicle
  * does (`path`), one falling through the air on the cubic through both ends'
- * states, one firing its engines in a straight line. A body that comes down
- * inside the span, at the contact time its later frame carries (`impact.t`),
- * falls on the cubic to where it touched, firing or not, and from that instant,
- * which is now known, is the later frame's: down, as that frame has it.
+ * states (a straight line over a span of 4,000 s or more), one firing its
+ * engines in a straight line. A body that comes down inside the span, at the
+ * contact time its later frame carries (`impact.t`), falls on the cubic to
+ * where it touched, firing or not, and from that instant, which is now known,
+ * is the later frame's: down, as that frame has it.
  *
  * The result is a fresh frame, apart from sub-objects it shares with the
  * stored frame as `cloneFrame` does, which a caller must not write to:
@@ -855,8 +856,9 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     } else if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
       return cloneDebrisFrame(d);
     }
-    // nothing on it firing at either end
-    const rigid = interpolateRigidTelemetry(d.rigid, other!.rigid, w), quiet = !d.burning && !other!.burning;
+    // nothing on it firing at either end; out of the air at both
+    const rigid = interpolateRigidTelemetry(d.rigid, other!.rigid, w), quiet = !d.burning && !other!.burning,
+      out = norm(d.r) > AIRLESS_RADIUS && norm(other!.r) > AIRLESS_RADIUS;
     return {
       ...d,
       rigid,
@@ -864,8 +866,14 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
       // falls, its path bent and its speed cut by drag inside the span (a Sputnik booster from 2.3 to 0.3 km/s in
       // 30 s): the cubic through both ends' states keeps it on that path, where the straight line cut up to 10 km off
       // it. It meets both samples. Firing (a recovery burn), the line, but on its way down to the ground the cubic too.
-      ...((quiet || s < span) && !(norm(d.r) > AIRLESS_RADIUS && norm(other!.r) > AIRLESS_RADIUS)
-        ? hermite(d.r, d.v, other!.r, other!.v, w, s) : path(d.r, d.v, other!.r, other!.v, quiet)),
+      // Alive at both ends and in the air over a span of 4,000 s or more, the line too. Only a recording thinned far
+      // past its budget leaves one, and the watch missions' falls got none even thinned to a 1,500-frame budget, so
+      // the body in it is circling the Earth with its perigee in the air, kept in orbit (perigee > 120 km) or
+      // decaying. Over half an eccentric orbit, or about one period of a low one, the cubic swings such a body out
+      // further than the line; under 4,000 s it is closer on average. One that comes down inside the span keeps the
+      // cubic to where it touched (above), which the line, over the whole span, would not reach by then.
+      ...(((quiet && span < 4e3) || s < span) && !out
+        ? hermite(d.r, d.v, other!.r, other!.v, w, s) : path(d.r, d.v, other!.r, other!.v, quiet && out)),
       dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other!.dir, w),
       pressure: mix(d.pressure ?? 0, other!.pressure ?? 0, w),
       recovery: rec,

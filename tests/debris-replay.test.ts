@@ -418,3 +418,69 @@ describe('a spent body that comes down between two recorded frames', () => {
     expect(frames.some((f) => f.debris.some((d) => d.name === 'Center core' && d.outcome === 'landed'))).toBe(true);
   });
 });
+
+/**
+ * A body in the air between two frames far apart. A coast keeps a frame at least every minute until a recording
+ * outgrows its frame budget (FlightRecorder.thin), and even thinned hard the watch missions never leave a falling
+ * body a span of more than about 500 s (the longest fall, a fairing's, is 23 minutes in the air). A span of 4,000 s
+ * or more with a body in the air at either end holds one circling the Earth with its perigee in the air: kept in
+ * orbit (sim/debris.ts: a perigee above 120 km, flown on its Kepler arc) or decaying. From about 4,850 s the cubic
+ * swings such a body out further than the straight line (about one period of a low orbit, or half an eccentric one),
+ * so such a span keeps the line.
+ */
+describe('a body in the air between two frames far apart', () => {
+  /** At perigee, `h` m up, of an orbit with its apogee `ha` m up, and that orbit's period. */
+  const perigee = (h: number, ha: number): State & { period: number } => {
+    const rp = R_EARTH + h, a = R_EARTH + (h + ha) / 2;
+    return { r: v3(rp, 0, 0), v: v3(0, Math.sqrt(MU_EARTH * (2 / rp - 1 / a)), 0), period: 2 * Math.PI * Math.sqrt(a ** 3 / MU_EARTH) };
+  };
+  /** The cubic through both ends' states, as `hermite` in src/physics/frame.ts draws it. */
+  const cubic = (a: State, b: State, u: number, span: number): Vec3 => {
+    const u2 = u * u, u3 = u2 * u;
+    return add(add(scale(a.r, 2 * u3 - 3 * u2 + 1), scale(a.v, (u3 - 2 * u2 + u) * span)),
+      add(scale(b.r, 3 * u2 - 2 * u3), scale(b.v, (u3 - u2) * span)));
+  };
+
+  it('keeps the line over a span of 4,000 s or more, where in an eccentric orbit the cubic swings out further', () => {
+    // a body kept in a 120 × 35,786 km orbit, from its perigee (the second agent's case on #191)
+    const gto = perigee(120e3, 35786e3);
+    for (const span of [0.5 * gto.period, 0.75 * gto.period]) {
+      const [a, b] = pair([{ id: 1, s: gto }], span);
+      // at its worst instant the cubic is further from where the body was than the line: 22,386 against 20,739 km
+      // over half the orbit, 36,934 against 31,631 km over three quarters
+      let far = 0, line = 0;
+      for (let k = 1; k < 100; k++) {
+        const was = kepler(gto, k / 100 * span).r;
+        far = Math.max(far, dist(cubic(a.debris[0], b.debris[0], k / 100, span), was));
+        line = Math.max(line, dist(lerp(a.debris[0].r, b.debris[0].r, k / 100), was));
+      }
+      expect(far).toBeGreaterThan(line + 1e6);
+      const mid = interpolateFrames(a, b, T0 + span / 2).debris[0];
+      expect(mid.r).toEqual(lerp(a.debris[0].r, b.debris[0].r, 0.5));
+      expect(mid.v).toEqual(lerp(a.debris[0].v, b.debris[0].v, 0.5));
+    }
+    // A low circle just past the bound keeps the line too, though the cubic is closer there (6,561 km from its place
+    // half way, the line 11,583 km; both far off): a fixed bound cannot tell this span from a longer one.
+    const low = perigee(130e3, 130e3);
+    const [a, b] = pair([{ id: 1, s: low }], 4100);
+    expect(interpolateFrames(a, b, T0 + 2050).debris[0].r).toEqual(lerp(a.debris[0].r, b.debris[0].r, 0.5));
+  });
+
+  it('keeps the cubic over a span under 4,000 s', () => {
+    // a body kept in a 130 km circular orbit, over 900 s, a sixth of it: the cubic is 23 km from its place half way,
+    // the line 930 km, through the Earth
+    const low = perigee(130e3, 130e3);
+    const [a, b] = pair([{ id: 1, s: low }], 900);
+    const mid = interpolateFrames(a, b, T0 + 450).debris[0], was = kepler(low, 450);
+    expect(dist(mid.r, was.r)).toBeLessThan(30e3);
+    expect(dist(lerp(a.debris[0].r, b.debris[0].r, 0.5), was.r)).toBeGreaterThan(900e3);
+    // and the vehicle keeps its own arc
+    expect(dist(interpolateFrames(a, b, T0 + 450).r, propagateKepler(SHIP.r, SHIP.v, 450).r)).toBeLessThan(1e-3);
+    // Just under the bound, still the cubic, which is closer: over 3,900 s, three quarters of the circle, it is
+    // 5,601 km from its place half way, the line 11,058 km.
+    const [c, d] = pair([{ id: 1, s: low }], 3900);
+    const half = interpolateFrames(c, d, T0 + 1950).debris[0], there = kepler(low, 1950).r;
+    expect(dist(half.r, cubic(c.debris[0], d.debris[0], 0.5, 3900))).toBeLessThan(1);
+    expect(dist(half.r, there)).toBeLessThan(dist(lerp(c.debris[0].r, d.debris[0].r, 0.5), there) - 5e6);
+  });
+});
