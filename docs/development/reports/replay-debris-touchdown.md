@@ -16,11 +16,11 @@
 >   - ทุกชิ้นถึงจุดแตะพื้นตรงเวลา ไม่ลงต่ำกว่าจุดแตะก่อนเวลา
 > - เทสต์: เพิ่ม 3 เทสต์ ล้มทั้ง 3 บนฐานเดิม ผ่าน 14 จาก 14 ไม่ได้เปลี่ยน assertion เดิม ไฟล์เทสต์ที่เกี่ยวข้อง 95 ไฟล์ 1,528 เทสต์ผ่านทั้งหมด
 > - ขนาด: +598 B เจ้าของอนุมัติให้ขึ้นเพดานในแชตวันที่ 30 ("Raise +1 kB each (Recommended)")
->   - ตอนถามมีที่ว่างเหลือแค่ 9 B ต่อมา #184 ขึ้นเพดาน precache code และ #193 ลดขนาดลง 392 B หลัง merge main เข้ามาแล้ว precache code ไม่ต้องขึ้นแล้ว (14,678,570 จาก 14,679,000 B)
->   - เหลือขึ้นแค่ index-*.js 2,654 → 2,655 kB เพราะเกิน 4 B (ส่วนของงานนี้ +215 B) อยู่ในวงที่อนุมัติไว้ offset ที่ระบุ: EQ-7 (K2)
+>   - ตอนถามมีที่ว่างเหลือแค่ 9 B ต่อมา #184 ขึ้นเพดาน precache code และ #193 ลดขนาดลง 392 B วัดใหม่บน main cbf1614 (มี #191 แล้ว): precache code ไม่ต้องขึ้นแล้ว (14,678,564 จาก 14,679,000 B)
+>   - เหลือขึ้นแค่ index-*.js 2,654 → 2,655 kB เพราะเกิน 5 B (ส่วนของงานนี้ +215 B) อยู่ในวงที่อนุมัติไว้ offset ที่ระบุ: EQ-7 (K2)
 >   - PR นี้จึงยังต้องรอเจ้าของกด merge (ขึ้นเพดาน จึงไม่เข้าเงื่อนไขอนุมัติถาวรของการแก้บั๊ก)
 > - เทสต์ heavy: ชุดเต็มรันนานเกิน 2 ชั่วโมงจนเครื่องหยุดให้โดยไม่ได้ผล จึงรัน 6 ไฟล์ที่ไปถึง debris และ replay แทน ผ่าน 27 จาก 27 (fingerprint six-DOF ทั้งกองยาน, Falcon Heavy ลงจอด 3 ลำ, Starship จับ booster, MR-3, Vostok-1 กลับโลกและการบันทึก) และ agent ตัวที่สองบินเทียบทีละ step แล้วว่าการบินไม่เปลี่ยน
-> - ฐาน: main + #187 + #191 ตามที่เจ้าของเลือก #187 merge เข้า main แล้ว และ merge main (รวม #193, #184) เข้ามาแล้ว เหลือรอ #191 PR นี้จะแสดง commit ของ #191 ด้วยจนกว่าจะ merge แล้วจะ rebase ลง main
+> - ฐาน: เริ่มจาก main + #187 + #191 ตามที่เจ้าของเลือก ตอนนี้ทั้งสองตัว merge เข้า main แล้ว (พร้อม #193, #184, #189) จึง rebase ลง main cbf1614 แล้ว PR นี้เหลือเฉพาะงานแก้ชิ้นส่วนแตะพื้น เทสต์ใหม่ 3 ข้อยังล้มบน main ใหม่และผ่านบน branch
 > - เรื่องที่ควรรู้: ชิ้นที่กำลังจุดเครื่องลงจอดใช้เส้นโค้งด้วย (#191 ยังให้ชิ้นที่จุดเครื่องในอากาศใช้เส้นตรง และรอเจ้าของตัดสิน) เพราะเส้นตรงคลาด 40 m ส่วนเส้นโค้งคลาด 2.4 m
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 6 จาก 9 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge
 >   - บินเทียบฐานเดิมกับ branch ทีละ step รวม 649,560 step ไม่ต่างกันเลยแม้แต่บิต ยกเว้นค่า `impact.t` ที่เพิ่มเข้ามา
@@ -35,10 +35,10 @@ owner_authorization: 'owner in chat on 2026-10-30, asking for the follow-ups lis
 owner_answers: 'in chat to this session, 2026-10-30: base "main + #191 + #187 (Recommended)"; budget "Raise +1 kB each (Recommended)"'
 app_code: src/physics/frame.ts, src/physics/sim/debris.ts, src/physics/sim/types.ts
 tests: tests/debris-replay.test.ts
-base_sha_verified_on: {sha: 79b3bd7 (main 1842a86 + #187 f7f7577 + #191 eec8352), date: 2026-10-30}
+base_sha_verified_on: {sha: cbf1614 (main with #187, #191, #189, #193, #184), date: 2026-10-31; first built on 79b3bd7 = main 1842a86 + #187 f7f7577 + #191 eec8352, 2026-10-30}
 branch: claude/wizardly-johnson-49mycc
 second_agent_review: 'confirmed 6 of 9, no blocking finding; 2 should-fix comment findings fixed (2026-10-30, on cf5ff7c)'
-budget: 'raised (D-38): index-*.js 2654→2655 kB (measured 2,654,004 B on main f68faab + #191 + this fix, 4 B over); precache code not raised (14,678,570 of 14,679,000 B); named offset EQ-7 (K2)'
+budget: 'raised (D-38): index-*.js 2654→2655 kB (measured 2,654,005 B on main cbf1614 + this fix, 5 B over); precache code not raised (14,678,564 of 14,679,000 B); named offset EQ-7 (K2)'
 ```
 
 ## Authorization
@@ -61,8 +61,11 @@ Since then:
   - `debris.ts` and `types.ts` merged cleanly with #193's events for an untargeted recovery's burns;
   - `budgets.json` takes main's ceilings, and this fix's raise is re-measured (Size).
   - Typecheck clean; debris-replay, vostok-render, rigid-replay-arc, bundle-budget, budget, recovery-untargeted-events (#193's), rigid-recovery, recovery-return and replay: 130 of 130.
-
-#191 is still open.
+- **#191 and #189 merged** into main (cbf1614, 089b34e) on 2026-10-31. This branch was rebased onto cbf1614:
+  - this fix's own changes to `src/` and `tests/` (79b3bd7..f26c7e9) applied cleanly, with the report, the fragment and the `index-*.js` raise re-measured on top;
+  - the PR's diff is now only this fix: 7 files;
+  - typecheck clean; debris-replay, vostok-render, rigid-replay-arc, replay, replay-long-span (#189's), recovery-untargeted-events, rigid-recovery, recovery-return, crew-descent, entry-heating and live-stepping: 138 of 138;
+  - failing first again on cbf1614: with `src/` as on main, exactly the 3 new tests fail.
 
 ## Cause
 
@@ -164,7 +167,7 @@ Choices measured before taking them (same probe, same spans):
   - Each body is drawn below its earlier sample half way down: the core 37 m against 149 m, the fairings 155 m against 312 m.
   - Each is at its contact point at its contact time (0.4 mm), down from then, and continuous at the later frame.
 
-**Failing first:** with src/ as on the base, all 3 new tests fail; the 11 existing tests in the file pass.
+**Failing first:** with src/ as on the base, all 3 new tests fail; the 11 existing tests in the file pass. Checked on 79b3bd7 and again on main cbf1614 after the rebase.
 - The crash is drawn at 1,500 m half way, against the test's 1,000 m.
 - The landing is 81.6 m off at its first sample.
 - The recorded flight's frame has no contact time.
@@ -200,12 +203,12 @@ With the change, 14 of 14 pass. No existing assertion changed. The existing 'hol
   3. the named offset: EQ-7 (split the first-view code, K2);
   4. the owner's approval in chat on 2026-10-30: "Raise +1 kB each (Recommended)".
 - **First raised, at a095323:** 'index-*.js' 2635→2636 kB, 'precache code' 14654→14655 kB, and the total 'precache' 16053→16054 kB, which follows its two groups as every code raise has (tests/bundle-budget.test.ts requires the two to add up to no more than it).
-- **Re-measured after merging main (c77286c).** #184 raised 'index-*.js' to 2654 kB and 'precache code' to 14679 kB with the owner's approval for its 3-D Soyuz models, and #193 took 392 B off. Against main f68faab built alone, the merged tree is +637 B: #191's 39 B plus this fix's same 598 B, chunk for chunk.
+- **Re-measured on main.** #184 raised 'index-*.js' to 2654 kB and 'precache code' to 14679 kB with the owner's approval for its 3-D Soyuz models, and #193 took 392 B off. On main f68faab with #191 and this fix (c77286c), 'index-*.js' was 4 B over and 'precache code' had 430 B left. After the rebase onto main cbf1614, which holds #191, the fix is +598 B against main built alone, chunk for chunk as above:
 
-  | group | main f68faab | + #191 + this fix | ceiling |
+  | group | main cbf1614 | + this fix | ceiling |
   |---|---|---|---|
-  | index-*.js | 2,653,770 B | 2,654,004 B | 2654 kB: 4 B over |
-  | precache code | 14,677,933 B | 14,678,570 B | 14679 kB: 430 B left |
+  | index-*.js | 2,653,790 B | 2,654,005 B | 2654 kB: 5 B over |
+  | precache code | 14,677,966 B | 14,678,564 B | 14679 kB: 436 B left |
 
   So only 'index-*.js' is raised now, 2654→2655 kB, within the owner's approval. 'precache code' and the total keep main's ceilings, and budgets.json's note says so.
 - **Merge.** A raised ceiling takes this PR out of the standing bug-fix approval, so it waits for the owner's button.
