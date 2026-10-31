@@ -234,6 +234,8 @@ describe('a spent body falling through the air between two recorded frames', () 
     expect(end.r).not.toBe(to.r);
   });
 
+  // A later frame without the contact time (`impact.t`), as a recording made before it was kept has; with it, the
+  // body falls to where it touched (the next describe).
   it('holds a body that comes down between two frames at its earlier sample, never past the ground', () => {
     const { s, beta, span } = FALLS[2];
     const [a, b] = pair([{ id: 1, s, extra: { outcome: undefined }, fly: (s0, dt) => fall(s0, dt, beta) }], span);
@@ -273,5 +275,146 @@ describe('a spent body falling through the air between two recorded frames', () 
     // before: 10.7 km off, on the line through a 30 s span from 55 to 27 km
     expect(line).toBeGreaterThan(10e3);
     expect(drawn).toBeLessThan(600);
+  });
+});
+
+/** A body flown from `s` (`fall`, 10 ms steps) to the step it reaches the ground on, as the simulation finds it. */
+function touchdown(s: State, beta: number): State & { t: number } {
+  let p = s, t = 0;
+  while (norm(p.r) - R_EARTH > 0) { p = fall(p, 0.01, beta); t += 0.01; }
+  return { ...p, t };
+}
+
+/** `p` turned about the Earth's axis by `angle`, rad. */
+const turned = (p: Vec3, angle: number): Vec3 => v3(p.x * Math.cos(angle) - p.y * Math.sin(angle), p.x * Math.sin(angle) + p.y * Math.cos(angle), p.z);
+const height = (r: Vec3) => norm(r) - R_EARTH;
+const OMEGA = 7.2921159e-5;
+
+/**
+ * A spent body that comes down between two recorded frames while the vehicle coasts in orbit, where the recorder
+ * keeps a frame every 10–30 s. Held at its earlier sample, it hung there for the rest of the span, then was gone
+ * (a crash) or stood on the ground (a landing): measured on the watch missions, a fairing hung up to 36 s and
+ * 10.5 km from where it hit, Blok A 10 s and 2.8 km, Falcon Heavy's centre core 149 m over the drone ship's deck
+ * for 10 s. The later frame carries when it touched (`impact.t`), and it falls there, arriving then.
+ */
+describe('a spent body that comes down between two recorded frames', () => {
+  // Blok A's last span over the sea (point-mass Soyuz-2.1a: 561 m up at 313 m/s, down 5.5 s into a 10 s span):
+  // here 1.5 km up at 320 m/s, 70° below the horizon, slowing to 249 m/s, and in the sea 5.6 s in
+  const BETA = 2000, S = diving(1500, 320, 70), SPAN = 10, hit = touchdown(S, BETA), TC = T0 + hit.t;
+  function crash(): [VisualFrame, VisualFrame] {
+    const [a, b] = pair([{ id: 3, s: S, extra: { name: 'Blok A (core)', outcome: undefined }, fly: (s0, dt) => fall(s0, dt, BETA) }], SPAN);
+    // the later frame as the simulation leaves it: down, its state the contact's, and when that was
+    return [a, { ...b, debris: [{ ...b.debris[0], r: hit.r, v: hit.v, alive: false, outcome: 'impact', impact: { lat: 0, lon: 0, t: TC }, restT: TC }] }];
+  }
+
+  it('draws a body that crashes mid-span falling to where it hit, there at its contact time, and gone from then', () => {
+    const [a, b] = crash(), from = a.debris[0];
+    expect(hit.t).toBeGreaterThan(5.5);
+    expect(hit.t).toBeLessThan(5.7);
+    const before = JSON.stringify([a, b]);
+    // half way down: on its way, not held 1.5 km up at the earlier sample, where it hung for the whole 10 s
+    const mid = interpolateFrames(a, b, T0 + hit.t / 2).debris[0];
+    expect(mid.alive).toBe(true);
+    expect(height(mid.r)).toBeLessThan(height(from.r) - 500);
+    // on the path it flew all the way down (0.32 m off it at most), and never below where it touched
+    for (let k = 1; k * 0.1 < hit.t; k++) {
+      const d = interpolateFrames(a, b, T0 + k * 0.1).debris[0];
+      expect(dist(d.r, fall(S, k * 0.1, BETA).r)).toBeLessThan(1);
+      expect(height(d.r)).toBeGreaterThan(height(hit.r));
+    }
+    // there at its contact time
+    expect(dist(interpolateFrames(a, b, TC - 1e-6).debris[0].r, hit.r)).toBeLessThan(0.01);
+    // and from then on the later frame's: down where it hit (the renderer no longer draws it)
+    for (const t of [TC + 1e-6, T0 + 8, T0 + SPAN]) {
+      const d = interpolateFrames(a, b, t).debris[0];
+      expect(d.alive).toBe(false);
+      expect(d.outcome).toBe('impact');
+      expect(dist(d.r, hit.r)).toBeLessThan(1e-6);
+    }
+    // pure: the frames are as they were, and twice the same instant is the same frame
+    expect(interpolateFrames(a, b, T0 + 2.5)).toEqual(interpolateFrames(a, b, T0 + 2.5));
+    expect(JSON.stringify([a, b])).toBe(before);
+  });
+
+  it('stands a stage that lands mid-span on the ground where it touched down, turning with the Earth from then', () => {
+    // Falcon Heavy's centre core under its landing burn (point-mass: 149 m over the deck, down 4.6 s into a 10 s
+    // span): here 160 m up, slowing evenly from 67 m/s to rest 4.8 s later on a deck at 30° N. The simulation carries a landed stage round with
+    // the Earth, so the later frame has it where the deck is at that frame's instant (`restT`), not at its contact.
+    const T = 4.8, H = 160, tc = T0 + T, lat = 30 * Math.PI / 180;
+    const deck = v3(R_EARTH * Math.cos(lat), 0, R_EARTH * Math.sin(lat)), up = scale(deck, 1 / R_EARTH);
+    // where it is at `t`, and its velocity: over the deck, H (1 - (t - T0) / T)² up, turned with the Earth
+    const at = (t: number): State => {
+      const left = tc - t, ang = OMEGA * (t - tc), h = H * (left / T) ** 2;
+      const r = turned(add(deck, scale(up, h)), ang);
+      return { r, v: add(v3(-OMEGA * r.y, OMEGA * r.x, 0), turned(scale(up, -2 * H * left / (T * T)), ang)) };
+    };
+    const [a0, b0] = pair([], SPAN);
+    const core = (s: State, extra: Partial<DebrisFrame>): DebrisFrame => body(5, s, { name: 'Center core', visual: { kind: 'stage', diameter: 3.66, length: 41, color: '#eeeeee' }, ...extra });
+    const a: VisualFrame = { ...a0, debris: [core(at(T0), { outcome: undefined, burning: true, recovery: { phase: 'landing', landed: false, landingBurn: true } })] };
+    const rest = turned(at(tc).r, OMEGA * (T0 + SPAN - tc));
+    const b: VisualFrame = { ...b0, debris: [core({ r: rest, v: v3(-OMEGA * rest.y, OMEGA * rest.x, 0) }, { alive: false, outcome: 'landed',
+      recovery: { phase: 'landing', landed: true, landingBurn: true }, impact: { lat: 30, lon: 0, t: tc }, restT: T0 + SPAN })] };
+    // on its way down under the burn (0.11 m off at most), not held 160 m up where the earlier frame had it, 1.9 km
+    // from where the deck is at its contact
+    for (let k = 1; k * 0.2 < T; k++) {
+      const d = interpolateFrames(a, b, T0 + k * 0.2).debris[0];
+      expect(d.alive).toBe(true);
+      expect(dist(d.r, at(T0 + k * 0.2).r)).toBeLessThan(0.5);
+    }
+    expect(height(interpolateFrames(a, b, T0 + T / 2).debris[0].r)).toBeLessThan(H / 3);
+    // on the deck at its contact time, and from then on landed there, carried round with the Earth
+    expect(dist(interpolateFrames(a, b, tc - 1e-6).debris[0].r, at(tc).r)).toBeLessThan(0.01);
+    for (const t of [tc + 1e-6, T0 + 7, T0 + SPAN]) {
+      const d = interpolateFrames(a, b, t).debris[0];
+      expect(d.alive).toBe(false);
+      expect(d.outcome).toBe('landed');
+      expect(d.recovery?.landed).toBe(true);
+      expect(dist(d.r, turned(at(tc).r, OMEGA * (t - tc)))).toBeLessThan(1e-3);
+    }
+  });
+
+  it('draws a recorded Falcon Heavy\'s centre core and fairings down to where the simulation had them touch, on time', () => {
+    const m = watchMissionSettings('falconHeavyArabsat', new Date('2026-09-22T03:00:00Z'));
+    const sim = new Simulation({ vehicleId: m.vehicleId, satelliteId: m.satelliteId, siteId: m.siteId, orbit: m.orbit, padId: m.padId,
+      launchTime: m.launchTime, payloadMassOverride: m.payloadMass, guidance: guidanceForVehicle(vehicleById(m.vehicleId), undefined, 'pointMass'),
+      guidanceResolved: true, failure: m.failure, boosterRecovery: m.boosterRecovery, recoveryPlan: m.recoveryPlan,
+      dynamics: { model: 'pointMass', wind: 'calm', seed: 1 } }, { headless: true });
+    const rec = new FlightRecorder();
+    rec.start(sim);
+    let guard = 0;
+    while (sim.state.t < 1320 && guard++ < 3000) rec.advance(1, 5000);
+    const frames = rec.frames;
+    let n = 0;
+    for (let k = 0; k + 1 < frames.length; k++) {
+      const a = frames[k], b = frames[k + 1];
+      for (const from of a.debris) {
+        const to = b.debris.find((d) => d.id === from.id);
+        if (!from.alive || !to || to.alive || b.t - a.t < 5) continue;
+        n++;
+        // the later frame carries the contact time, inside the span: the simulation's own, which a crash keeps in
+        // `restT` and a landed stage's `restT` has since moved on from (it turns with the Earth)
+        const tc = to.impact!.t!, now = sim.debris.find((d) => d.id === from.id)!;
+        expect(tc).toBeGreaterThan(a.t);
+        expect(tc).toBeLessThanOrEqual(b.t);
+        if (to.outcome === 'landed') expect(now.restT).toBeGreaterThan(b.t);
+        else expect(now.restT).toBe(tc);
+        // and the instant its state is for: the contact for a crash, the frame's own for a stage carried round with the Earth
+        expect(to.restT).toBe(to.outcome === 'landed' ? b.t : tc);
+        const drawn = (t: number) => interpolateFrames(a, b, t).debris.find((d) => d.id === from.id)!;
+        // half way down, below its earlier sample, where it hung for the whole span (the core 149 m up for 10 s, now
+        // 37 m half way; the fairings 312 m for 30 s, now 155 m)
+        expect(height(drawn((a.t + tc) / 2).r)).toBeLessThan(height(from.r) - 0.3 * (height(from.r) - height(to.r)));
+        // there at its contact time: where it touched (a crash's own state; a landed stage turned back with the Earth)
+        const was = to.outcome === 'landed' ? turned(to.r, OMEGA * (tc - b.t)) : to.r;
+        expect(dist(drawn(tc - 1e-6).r, was)).toBeLessThan(0.5);
+        expect(height(was)).toBeLessThan(10);
+        // from then on down, as the later frame has it
+        expect(drawn(tc + 1e-6).alive).toBe(false);
+        expect(dist(drawn(b.t - 1e-6).r, to.r)).toBeLessThan(0.5);
+      }
+    }
+    // the centre core on the drone ship (10 s span) and both fairing halves in the sea (30 s)
+    expect(n).toBeGreaterThanOrEqual(3);
+    expect(frames.some((f) => f.debris.some((d) => d.name === 'Center core' && d.outcome === 'landed'))).toBe(true);
   });
 });
