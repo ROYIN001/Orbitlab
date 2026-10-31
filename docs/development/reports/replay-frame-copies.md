@@ -14,7 +14,7 @@
 > - หน่วยความจำของการบันทึก (`FRAME_BYTES`) ไม่เปลี่ยน เพราะ `captureFrame` ไม่เปลี่ยน
 > - agent ตัวที่สองตรวจแล้ว ยืนยัน 14 จาก 14 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge พบสองข้อที่ไม่บล็อก: ความเร็ว และ `rigid.controlFaults` ทั้งสองข้อแก้แล้วใน PR นี้
 > - #187 merge ก่อน PR นี้แล้ว ผม merge main (f68faab) เข้า branch นี้โดยไม่ชนกัน และแก้ประโยคใน docstring ของ `interpolateFrames` ที่ #187 เขียนว่าผลลัพธ์ใช้ `jettisoned`, Apollo และ `target` ร่วมกับเฟรมที่บันทึก ให้เหลือแค่ `visual`
-> - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจการแก้ `controlFaults` ซ้ำแล้ว ยืนยัน 4 จาก 4 ข้อ (รอ CI บน head ล่าสุด)
+> - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจการแก้ `controlFaults` ซ้ำแล้ว ยืนยัน 4 จาก 4 ข้อ ผลเทียบกับ main ปัจจุบันทั้ง 20 ภารกิจ ไม่ต่างเลย และ heavy Vostok-1 ผ่านบนโค้ดสุดท้าย
 
 ```yaml
 item: replay frame copies (aliasing on main, PR #187's "Not changed, for later")
@@ -109,7 +109,7 @@ Probe (gitignored `tests/probe/`): main's `frame.ts` (1842a86) against this bran
 
 That run compared main against the first version (`structuredClone`, before the recovery copy moved into the branch that uses it). Re-run against the final code (`copyPlain`, 9080d56): again 709,100 calls, 0 differences; nothing returned shared with the recording; main's 399,444 sharing calls and paths as above (878 s, 718 s of it Apollo 11).
 
-A re-run against main as it is now (f68faab, with #187's blend), on this branch's code with the fault-record copy, is in progress.
+Re-run against main as it is now (f68faab, with #187's blend), on this branch's code with the fault-record copy (f746b8c): again 709,100 calls, 0 differences; nothing returned shared with the recording; main shared in 399,444 calls, on the same paths (1,074 s). The watch missions are point-mass, so `ownFaults` has nothing to copy there; the six-DOF fault flight above covers it.
 
 ### Size
 
@@ -156,13 +156,14 @@ Against main as this branch was first based (1842a86), before the merge with mai
 ### Tests
 
 - **Typecheck:** `npx tsc --noEmit -p .` clean.
-- **After merging main and the fault-record copy (f746b8c):** the full suite runs in CI; local runs listed below are of the earlier code.
+- **After merging main and the fault-record copy:** the full unit suite runs in CI on 30b8d0f (below); locally, the 10 replay files on the merged branch (99 tests) and `tests/replay-copies.test.ts` (4 tests). The local full-suite runs listed below are of the earlier code.
 - **Unit suite, local:** 335 files, 10,529 tests, all pass on 9080d56, the final code (1,876 s), and earlier on 8a4ba98 (Node 22.22.0, not CI's 22.23.3).
 - **CI:**
+  - On the final code: the PR's checks on its head (the docs-only commits after 30b8d0f change no code).
   - Run 41022766246 green on 1be5052 and run 41020718499 green on f2fe2db, both with the final code (Node 22.23.3): typecheck, build, test ×3, browser-smoke ×2, verify.
   - Run 41002400552 green on 8a4ba98, the first version.
   - Runs 41019830551 (147b232) and 41022389542 (5605a97) show `verify` red only because their test and browser jobs were cancelled by the next push.
-- **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the only heavy or six-DOF fleet file that builds a recorder or player: 1 of 1 passed on 8a4ba98 (161 s) and on f2fe2db (168 s; src/ and tests/ as in 9080d56), Node 22.22.0. A run on the final code is pending.
+- **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the only heavy or six-DOF fleet file that builds a recorder or player: 1 of 1 passed on 8a4ba98 (161 s) and on f2fe2db (168 s; src/ and tests/ as in 9080d56), Node 22.22.0. On the final code, 30b8d0f: 1 of 1 (208 s).
 - **Not run:**
   - The other 32 heavy files and the 6 six-DOF fleet files the change map selects for any `src/physics/**` path. None builds a `FlightRecorder` or `ReplayPlayer` or calls `cloneFrame` or `interpolateFrames` (grep of tests/heavy and tests/sixdof-fleet), so this change cannot reach them. They run on the weekly heavy workflow, and D-64 reuse does not apply because frame.ts is in the physics tree.
   - The browser journeys beyond CI's smoke shards. There is no UI change, and what a seek shows is the same to the bit.
