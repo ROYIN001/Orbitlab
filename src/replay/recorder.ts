@@ -38,14 +38,16 @@
  * now adds the separately measured rigid telemetry maps. Packed rotation storage
  * is counted separately. These estimates exclude browser/render/simulation heap;
  * `maxFrames` bounds ordinary frames, not protected events.
- * On overflow the *coast* frames are thinned first, down to one a minute
- * (`MAX_THINNED_GAP`); then the dense flight to a frame a second
- * (`DENSE_THINNED_GAP`); then the coast below a frame a minute, because what a
- * user scrubs back to is liftoff, max Q and staging, not the 143rd minute of a
- * parking orbit; only when the coast has nothing left to give, any frame whose
- * going leaves no gap over a minute and no phase without its last frame; and
- * only then without that floor. Event frames are never thinned at all, so
- * seeking to a callout is exact however hard the recording has been squeezed.
+ * On overflow the *coast* frames above the air are thinned first, down to one
+ * a minute (`MAX_THINNED_GAP`); then the dense flight to a frame a second
+ * (`DENSE_THINNED_GAP`); then the coast below a frame a minute, down to one
+ * every ten minutes (`MAX_COAST_GAP`), because what a user scrubs back to is
+ * liftoff, max Q and staging, not the 143rd minute of a parking orbit; only
+ * when the coast has nothing left to give, any frame whose going leaves no gap
+ * over a minute and no phase without its last frame; and only then without
+ * that floor. A coast or an orbit in the air (Apollo's entry) goes with the
+ * dense flight. Event frames are never thinned at all, so seeking to a callout
+ * is exact however hard the recording has been squeezed.
  *
  * Live stepping (roadmap T02; owner decision 2, 2026-09-29): a point-mass flight
  * is flown in the whole steps `Simulation.suggestedDt` asks for, never in steps
@@ -112,6 +114,21 @@ const MAX_THINNED_GAP = 60;
  * for the live view.
  */
 const DENSE_THINNED_GAP = 1;
+/**
+ * The widest gap thinning a coast or an orbit may open before the rest of the flight gives up its frame a second,
+ * s (`FlightRecorder.decimate`): ten minutes. The pass that thins a coast past a minute had no limit, and halved
+ * every coast frame each time it ran, so the oldest frames of a long coast ended up hours apart while the newest
+ * were a minute apart: a six-DOF Soyuz MS docked for 12,000 s, its rendezvous holding most of the 6,000 frames,
+ * kept one docked span of 7,981 s, which a replay drew on the chord 9,271 km off the orbit. Now the old frames stop
+ * at ten minutes and the new ones catch up, and only then does the rest of the flight give up its frame a second.
+ * Ten minutes is under a quarter of any orbit's period (87 minutes at 140 km), where a six-DOF or docked vehicle
+ * takes the cubic between two frames (`interpolateFrames`; a point mass, Kepler), a few kilometres off a low orbit
+ * at most where its chord sags 400 km. Apollo's eight days of coast fit in 1,150 frames of it (some 1,450 at the
+ * 480 s the halving settles on). A six-DOF Soyuz MS docked for over five hours does reach the next pass, which
+ * takes its ascent from a frame a second to one every 1.7 s and its rendezvous from 30 s to 60 s; the old pass let
+ * a docked span grow instead (71,468 s, a point mass docked for a day in 3,000 frames).
+ */
+const MAX_COAST_GAP = 600;
 
 /**
  * C01: the cadence of a return from orbit with its instrument module on
@@ -514,11 +531,10 @@ export class FlightRecorder implements RecordingSource {
         // An escape: dense in the air, sparse on a ballistic arc above it.
         return altitude < ATMOSPHERIC_CEILING ? DENSE_INTERVAL : 10;
       case 'coast':
-        if (altitude < ATMOSPHERIC_CEILING) return 2;
-        return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
       case 'orbit':
         // C01: Apollo flies its own burns in orbit, the injection for the Moon and the service engine's
-        // (more than a kilonewton: not the S-IVB's hydrogen vent, a hundred newtons for hours)
+        // (more than a kilonewton: not the S-IVB's hydrogen vent, a hundred newtons for hours). A coast is never
+        // `burning` (`intervalOf`), and only Vostok-1 has a return from orbit, which it flies from its orbit.
         if (burning) return 1;
         // C01: Vostok's retro sequence is a burn to come too; and the last orbit frame before it is the one a
         // replay holds across the change to the returning spacecraft, so it is a second (or the orbit's step) before it
@@ -526,6 +542,11 @@ export class FlightRecorder implements RecordingSource {
           if (deorbit - t <= 10) return 1;
           if (deorbit - t < 120) return 10;
         }
+        // In the air, every 2 s: a coast below 140 km, and Apollo's command module, whose status stays 'orbit' from
+        // the entry interface to the water (the only orbit in the air of the watch missions). Its mains slow it for
+        // 10–12 s after they open. At the orbit's 30 s, the cubic Apollo takes drew it 47 m off under them, 200 m once
+        // thinned to a minute, and 386 m through the entry; every 2 s, under a metre.
+        if (altitude < ATMOSPHERIC_CEILING) return 2;
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
       case 'descent':
         // A returning ship: sparse on its coast above the air, dense from the entry on.
@@ -818,10 +839,11 @@ export class FlightRecorder implements RecordingSource {
   }
 
   /**
-   * Thin the recording when it outgrows its budget: drop every other coast or
-   * orbit frame that is not an event boundary. Ascent frames are only touched
-   * when there is no coast left to give, and event frames never are — what a
-   * user scrubs back to is liftoff, max Q and staging.
+   * Thin the recording when it outgrows its budget: drop every other frame of
+   * the first pass below that has one to give (no event boundary is ever one).
+   * The dense flight goes to a frame a second early, and below that only when
+   * the coast is a frame every ten minutes and has nothing left to give — what
+   * a user scrubs back to is liftoff, max Q and staging.
    *
    * The budget is a real bound: the old version raised `maxFrames` by 50 %
    * whenever the coast pass came up empty, so a recording with nothing
@@ -830,14 +852,16 @@ export class FlightRecorder implements RecordingSource {
    * where every frame is an event frame.
    */
   private decimate(): void {
-    // The coast and the orbit first, to a frame a minute; then the dense flight, but only to a frame a second,
-    // which still shows liftoff, max Q and staging as they happened; then the coast below a frame a minute (a
-    // long parking orbit or a coast to the Moon is where the frames are); then anything that leaves no gap over
-    // a minute; and only then anything at all, so the ceiling stays a bound
-    const coasting = (f: VisualFrame) => (f.status === 'coast' || f.status === 'orbit') && !this.keep.has(f);
+    // The coast and the orbit above the air first, to a frame a minute; then the dense flight, but only to a frame
+    // a second, which still shows liftoff, max Q and staging as they happened; then the coast to a frame every ten
+    // minutes (a long parking orbit, a coast to the Moon or a spacecraft docked for hours is where the frames are);
+    // then anything that leaves no gap over a minute; and only then anything at all, so the ceiling stays a bound.
+    // A coast or an orbit in the air (Apollo's command module from the entry interface to the water) goes with the
+    // dense flight: thinned with the coast, its 30 s frames had gone to a minute and more.
+    const coasting = (f: VisualFrame) => (f.status === 'coast' || f.status === 'orbit') && f.altitude >= ATMOSPHERIC_CEILING && !this.keep.has(f);
     if (this.thin(coasting, MAX_THINNED_GAP)) return;
     if (this.thin((f) => !coasting(f) && !this.keep.has(f), DENSE_THINNED_GAP)) return;
-    if (this.thin(coasting)) return;
+    if (this.thin(coasting, MAX_COAST_GAP)) return;
     if (this.thin((f) => !this.keep.has(f), MAX_THINNED_GAP)) return;
     if (this.thin((f) => !this.keep.has(f))) return;
     // Every frame is an event boundary: raise the ceiling rather than spin on
