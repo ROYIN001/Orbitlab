@@ -705,8 +705,17 @@ export class DebrisTracker {
         }
         continue;
       }
+      // Only the part of the step since it was let go of, as the rigid path
+      // above: the fairing halves, and the rocket a crewed abort sheds inside
+      // a step, are let go of once the step has moved the stack to its end,
+      // and flying them the whole step put them a step (224 m for the halves
+      // on a crewed Soyuz-2.1a) ahead of it. A piece let go of at the step's
+      // start flies `dt`: an age within a nanosecond of it is the clock's rounding.
+      const age = this.sim.state.t - d.createdAt;
+      const span = age < dt - 1e-9 ? age : dt;
+      if (span <= 0) continue;
       if (d.recovery?.target && d.alive) {
-        this.stepReturning(d, dt);
+        this.stepReturning(d, span);
         continue;
       }
       const alt = norm(d.r) - R_EARTH;
@@ -716,7 +725,7 @@ export class DebrisTracker {
         // skipped every touchdown, drag and lifetime test, so it orbited through
         // the planet forever (audit item B28). Re-check the perigee each step
         // and hand it back to the drag path when it can no longer stay up.
-        const next = propagateKepler(d.r, d.v, dt);
+        const next = propagateKepler(d.r, d.v, span);
         d.r = next.r;
         d.v = next.v;
         const elD = elementsFromState(d.r, d.v);
@@ -724,8 +733,8 @@ export class DebrisTracker {
         continue;
       }
       // sub-step for accuracy when low and fast
-      const sub_ = alt < 60e3 ? Math.max(1, Math.ceil(dt / 0.5)) : Math.max(1, Math.ceil(dt / 2));
-      const h = dt / sub_;
+      const sub_ = alt < 60e3 ? Math.max(1, Math.ceil(span / 0.5)) : Math.max(1, Math.ceil(span / 2));
+      const h = span / sub_;
       for (let k = 0; k < sub_ && d.alive; k++) {
         let thrustAccel = 0;
         let thrustDir = d.dir;
@@ -806,7 +815,7 @@ export class DebrisTracker {
         const touchdown = altN <= ground || (altN <= ground + 3 && d.recovery !== undefined && vImpactNow < 12);
         if (touchdown) {
           d.alive = false;
-          d.restT = this.sim.state.t - dt + (k + 1) * h;
+          d.restT = this.sim.state.t - span + (k + 1) * h;
           // Contact ends the burn, latched on through the hoverslam's gaps
           // (an output: nothing reads it once the body is down).
           if (d.recovery) d.recovery.burning = false;
