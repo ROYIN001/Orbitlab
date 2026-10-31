@@ -84,13 +84,15 @@ describe('a spent body between two recorded frames', () => {
     expect(mid.debris[0].r).toEqual(lerp(a.debris[0].r, b.debris[0].r, 0.5));
   });
 
-  it('keeps the straight line for a body under its own thrust, in the air or out of it', () => {
-    // a recovery burn in the air (an entry or landing burn), and one above it (a boostback); one falling through the
-    // air with its engines off is in the next describe
+  it('keeps the straight line for a body under its own thrust above the air, and the cubic for one in it', () => {
+    // a boostback above the air keeps the line; a recovery burn in the air (an entry or landing burn) takes the cubic
+    // through both ends, as a body falling there with its engines off does (owner's answer, 2026-10-31): this one,
+    // flown here on its Kepler arc, is on it to the millimetre where the chord sags 120 m under it
     const low = { r: v3(R_EARTH + 60e3, 0, 0), v: v3(0, 2000, 0) };
     const [a, b] = pair([{ id: 1, s: low, extra: { outcome: undefined, burning: true } }, { id: 2, s: BLOK, extra: { burning: true } }]);
     const mid = interpolateFrames(a, b, T0 + 5);
-    expect(mid.debris[0].r).toEqual(lerp(a.debris[0].r, b.debris[0].r, 0.5));
+    expect(dist(mid.debris[0].r, propagateKepler(low.r, low.v, 5).r)).toBeLessThan(0.01);
+    expect(dist(lerp(a.debris[0].r, b.debris[0].r, 0.5), propagateKepler(low.r, low.v, 5).r)).toBeGreaterThan(100);
     expect(mid.debris[1].r).toEqual(lerp(a.debris[1].r, b.debris[1].r, 0.5));
     // while the vehicle itself is on its arc
     expect(dist(mid.r, propagateKepler(SHIP.r, SHIP.v, 5).r)).toBeLessThan(1e-6);
@@ -132,12 +134,13 @@ describe('a spent body between two recorded frames', () => {
 
 /**
  * A spent stage falling through still air: gravity, and drag on a ballistic coefficient `beta` (kg/m²) in an
- * exponential atmosphere (1.225 kg/m³ at sea level, 7.2 km scale height), flown from `s` for `dt` s in 10 ms RK4 steps.
+ * exponential atmosphere (1.225 kg/m³ at sea level, 7.2 km scale height), flown from `s` for `dt` s in 10 ms RK4 steps;
+ * under a recovery burn, `thrust` m/s² more against its velocity.
  */
-function fall(s: State, dt: number, beta: number): State {
+function fall(s: State, dt: number, beta: number, thrust = 0): State {
   const acc = (r: Vec3, v: Vec3): Vec3 => {
-    const n = norm(r), rho = 1.225 * Math.exp(-(n - R_EARTH) / 7200);
-    return add(scale(r, -MU_EARTH / (n * n * n)), scale(v, -0.5 * rho * norm(v) / beta));
+    const n = norm(r), rho = 1.225 * Math.exp(-(n - R_EARTH) / 7200), speed = norm(v);
+    return add(scale(r, -MU_EARTH / (n * n * n)), scale(v, -(0.5 * rho * speed / beta + thrust / speed)));
   };
   const h = 0.01;
   let { r, v } = s;
@@ -159,9 +162,9 @@ function diving(h: number, speed: number, gamma: number): State {
 }
 
 /** The path flown from `s` for `span` s, every 50 ms, and how far a point is from it. */
-function flownPath(s: State, span: number, beta: number): (q: Vec3) => number {
+function flownPath(s: State, span: number, beta: number, thrust = 0): (q: Vec3) => number {
   const at: Vec3[] = [s.r];
-  for (let k = 0, p = s; k < span * 20; k++) at.push((p = fall(p, 0.05, beta)).r);
+  for (let k = 0, p = s; k < span * 20; k++) at.push((p = fall(p, 0.05, beta, thrust)).r);
   return (q) => {
     let best = Infinity;
     for (let i = 1; i < at.length; i++) {
@@ -303,6 +306,45 @@ const OMEGA = 7.2921159e-5;
  * 10.5 km from where it hit, Blok A 10 s and 2.8 km, Falcon Heavy's centre core 149 m over the drone ship's deck
  * for 10 s. The later frame carries when it touched (`impact.t`), and it falls there, arriving then.
  */
+/**
+ * A stage flown home firing its engines in the air: an entry burn, retrograde from about 70 km until the airspeed is
+ * near 1.4 km/s, and a landing burn, slowing it to a couple of metres a second at the ground. The cubic through both
+ * frames' states keeps it on the path it flew, as it does a stage falling with its engines off; the straight line cut
+ * up to 145 m off it (Starship's booster at the tower, six-DOF, an 18.4 s span) and kilometres off an entry burn.
+ * The cubic runs past the later sample only where an end's speed passes three times the mean over the span, which a
+ * burn that slows a stage evenly (the simulation's landing burns follow such a profile to the ground) keeps under two.
+ * The stage here is a Falcon 9 first stage, flown tail first (ballistic coefficient 2,400 kg/m²).
+ */
+describe('a stage under a recovery burn in the air between two recorded frames', () => {
+  const BURNS = [
+    // name, height m, speed m/s, degrees below the horizon, thrust m/s² against the velocity, span s, and how far from
+    // where it was half way the cubic may draw it (the line: 1,325 m and 180 m)
+    { name: 'an entry burn', s: diving(65e3, 2000, 30), thrust: 30, span: 20, line: 1300 },
+    { name: 'a landing burn', s: diving(3e3, 250, 70), thrust: 18, span: 10, line: 175 },
+  ];
+
+  it.each(BURNS)('draws $name on the path it flew, not on the chord across it, without running past either sample', ({ s, thrust, span, line }) => {
+    const fly = (s0: State, dt: number) => fall(s0, dt, 2400, thrust);
+    const [a, b] = pair([{ id: 5, s, extra: { name: 'First stage', outcome: undefined, burning: true }, fly }], span);
+    const was = fall(s, span / 2, 2400, thrust), off = flownPath(s, span, 2400, thrust);
+    const mid = interpolateFrames(a, b, T0 + span / 2).debris[0];
+    expect(dist(lerp(a.debris[0].r, b.debris[0].r, 0.5), was.r)).toBeGreaterThan(line);
+    // 1.4 m and 2.0 m
+    expect(dist(mid.r, was.r)).toBeLessThan(5);
+    const from = a.debris[0], to = b.debris[0], chord = sub(to.r, from.r), length = norm(chord);
+    let along = 0;
+    for (let k = 1; k < 20; k++) {
+      const d = interpolateFrames(a, b, T0 + span * k / 20).debris[0];
+      expect(off(d.r)).toBeLessThan(5);
+      const now = dot(sub(d.r, from.r), chord) / length;
+      expect(now).toBeGreaterThan(along);
+      expect(now).toBeLessThan(length);
+      expect(norm(d.r)).toBeGreaterThan(norm(to.r));
+      along = now;
+    }
+  });
+});
+
 describe('a spent body that comes down between two recorded frames', () => {
   // Blok A's last span over the sea (point-mass Soyuz-2.1a: 561 m up at 313 m/s, down 5.5 s into a 10 s span):
   // here 1.5 km up at 320 m/s, 70° below the horizon, slowing to 249 m/s, and in the sea 5.6 s in
