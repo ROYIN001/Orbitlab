@@ -171,15 +171,20 @@ describe('a seek shares nothing a consumer could write to with the recording', (
       createdAt: 0, rigid: rigid('debris-1'), visual: { kind: 'stage', diameter: 2, length: 10, color: '#ffffff' } });
     const a = captureFrame(sim), b = structuredClone(a);
     b.t += 10;
-    deepFreeze(a);
-    deepFreeze(b);
-    const before = structuredClone([a, b]);
+    // the configuration hold (another body ahead) and a spent stage gone by the later frame
+    const held = structuredClone(b), gone = structuredClone(b);
+    held.rigid!.configurationId = 's2';
+    gone.debris[0].alive = false;
+    for (const f of [a, b, held, gone]) deepFreeze(f);
+    const before = structuredClone([a, b, held, gone]);
     for (const [name, f] of [['clone', cloneFrame(a)], ['blend', interpolateFrames(a, b, a.t + 5)], ['on a', interpolateFrames(a, b, a.t)],
-      ['on b', interpolateFrames(a, b, b.t)]] as const) {
+      ['on b', interpolateFrames(a, b, b.t)], ['held', interpolateFrames(a, held, a.t + 5)], ['gone', interpolateFrames(a, gone, a.t + 5)]] as const) {
       // before: frame.debris[].rigid.controlFaults, frame.rigid.controlFaults
       expect([...shared(f)].sort(), name).toEqual([]);
       scribble(f);
     }
-    expect([a, b]).toEqual(before);
+    expect([a, b, held, gone]).toEqual(before);
+    // the hold is the earlier frame at the later instant, rigid telemetry and all
+    expect(interpolateFrames(a, held, a.t + 5).rigid).toEqual(a.rigid);
   });
 });

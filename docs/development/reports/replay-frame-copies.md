@@ -14,7 +14,7 @@
 > - หน่วยความจำของการบันทึก (`FRAME_BYTES`) ไม่เปลี่ยน เพราะ `captureFrame` ไม่เปลี่ยน
 > - agent ตัวที่สองตรวจแล้ว ยืนยัน 14 จาก 14 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge พบสองข้อที่ไม่บล็อก: ความเร็ว และ `rigid.controlFaults` ทั้งสองข้อแก้แล้วใน PR นี้
 > - #187 merge ก่อน PR นี้แล้ว ผม merge main (f68faab) เข้า branch นี้โดยไม่ชนกัน และแก้ประโยคใน docstring ของ `interpolateFrames` ที่ #187 เขียนว่าผลลัพธ์ใช้ `jettisoned`, Apollo และ `target` ร่วมกับเฟรมที่บันทึก ให้เหลือแค่ `visual`
-> - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (ผลตรวจซ้ำของ agent ตัวที่สองและ CI บน head ล่าสุดกำลังมา)
+> - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจการแก้ `controlFaults` ซ้ำแล้ว ยืนยัน 4 จาก 4 ข้อ (รอ CI บน head ล่าสุด)
 
 ```yaml
 item: replay frame copies (aliasing on main, PR #187's "Not changed, for later")
@@ -25,7 +25,7 @@ tests: tests/replay-copies.test.ts (new)
 base_sha_verified_on: {sha: f68faab, date: 2026-10-31}  # main merged in at 1360476; first based on 1842a86
 branch: claude/great-mayer-6kapau
 pr: 188
-second_agent_review: 'confirmed 14 of 14 claims checked, no blocking findings (2026-10-30, on f241a06/8a4ba98); two non-blocking: F1 structuredClone cost on a hot path (fixed here, 9080d56), F2 rigid.controlFaults shared (pre-existing; fixed here, f746b8c, after the owner''s "ทำต่อ"); the copyPlain fix re-reviewed on 9080d56: confirmed 3 of 3, no findings; the F2 fix re-review pending'
+second_agent_review: 'confirmed 14 of 14 claims checked, no blocking findings (2026-10-30, on f241a06/8a4ba98); two non-blocking: F1 structuredClone cost on a hot path (fixed here, 9080d56), F2 rigid.controlFaults shared (pre-existing; fixed here, f746b8c, after the owner''s "ทำต่อ"); the copyPlain fix re-reviewed on 9080d56: confirmed 3 of 3, no findings; the F2 fix (ownFaults, f746b8c) re-reviewed: confirmed 4 of 4, no findings'
 ```
 
 ## Cause
@@ -80,7 +80,7 @@ All in src/physics/frame.ts:
 
 ### Failing first
 
-`tests/replay-copies.test.ts`, 4 tests, new. The first three deep-freeze recorded frames and seek through `ReplayPlayer.frameAt` on each stored frame and half way to the next; the fourth deep-freezes two frames captured from a simulation whose vehicle and spent stage carry a control-fault record, and seeks by clone, by a mid-span blend and on both end frames. It lists, by path, every object in what the seek returned that is still frozen, which means still shared with the recording (`visual` aside). Then it writes into every field of what it was handed and checks the recording against a copy taken before the freeze.
+`tests/replay-copies.test.ts`, 4 tests, new. The first three deep-freeze recorded frames and seek through `ReplayPlayer.frameAt` on each stored frame and half way to the next; the fourth deep-freezes frames captured from a simulation whose vehicle and spent stage carry a control-fault record, and seeks by clone, by a mid-span blend, on both end frames, across a change of configuration (the hold) and with the spent stage gone by the later frame. It lists, by path, every object in what the seek returned that is still frozen, which means still shared with the recording (`visual` aside). Then it writes into every field of what it was handed and checks the recording against a copy taken before the freeze.
 
 | Test | On main (1842a86) | This branch |
 |---|---|---|
@@ -195,6 +195,14 @@ A second agent reviewed f241a06 (built on 8a4ba98, the same src/), review only, 
 - **F2, pre-existing, fixed in f746b8c** (after the owner's "ทำต่อ" of 2026-10-31): `rigid.controlFaults` was shared with the recording.
   - rigid/runtime.ts:380 puts a `ControlFaultRecord` on `s.rigid`, and `cloneRigidTelemetry` copies it by reference, so every seek of a six-DOF flight with control faults (e.g. the lesson ru-24-05-06) shared it.
   - The first three tests are point-mass and could not see it; the fourth and the six-DOF probe above do.
+
+**Re-review of the control-fault fix (`ownFaults`, f746b8c) and the merge-resolved docstring, review only: confirmed 4 of 4, no findings.**
+1. **Every path** that returns a frame gives rigid telemetry, the vehicle's and each debris item's, its own `controlFaults`: the degenerate span, u ≤ 0, rigid u ≥ 1, the configuration hold, ground-turning, unmatched and dead debris go through `cloneFrame` or `cloneDebrisFrame`, and both blends through `ownFaults(interpolateRigidTelemetry(…))`. `record()` builds a fresh, plain-data object on every call. Nothing else on `RigidTelemetry` or `DebrisFrame` is shared; `linearModel`, `navigation` and `attitudeTest` are on telemetry samples only.
+2. **The in-place write is safe:** `ownFaults` only ever receives an object `cloneRigidTelemetry` or `interpolateRigidTelemetry` has just made.
+3. **Nothing untrue:** the docstring matches main's except the narrowed sentence, which is true at f746b8c (at f6c3cff alone it ran one commit ahead of the fix). The `path` code is main's.
+4. **The figures:** the fourth test fails against 1a7ca0c's `frame.ts` with `frame.debris[].rigid.controlFaults` and `frame.rigid.controlFaults`, and passes; its build gave exactly 2,653,713 / 570,455 / 14,677,817 B.
+
+It noted the configuration hold and the gone-debris path were covered only through `cloneFrame` and `cloneDebrisFrame`; the fourth test now seeks across both.
 
 **Re-review of the `copyPlain` change (9080d56), review only: confirmed 3 of 3, no findings.**
 1. **`copyPlain` is a correct deep copy** of every input it is given. It was fed deep-frozen inputs: an `ApolloState` with every field, nested vectors, undefined-valued keys, `null`, `-0`, `NaN` and an array of objects, and recoveries with a tower target and with none.
