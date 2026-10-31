@@ -27,12 +27,10 @@
 > - agent ตัวที่สองตรวจแล้ว ยืนยัน 22 จาก 27 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge
 >   - อีก 3 ข้อถูกในสาระแต่เขียนแรงเกินไป แก้ในรายงานนี้แล้ว: ไฟล์ที่เก็บเหตุการณ์ไว้ คำว่า "ตรงพอดี" และขอบเขต 0.125°
 >   - อีก 2 ข้อไม่ได้วัดซ้ำเอง คือจำนวนเหตุการณ์ที่เปลี่ยน และตัวเลขทั้งฝูงยาน (เทียบกับไฟล์ผลของ probe เท่านั้น)
-> - ยังไม่ได้รัน: heavy อีก 27 ไฟล์ และ six-DOF fleet ที่ change map เลือก เพราะการ dispatch บน CI เคยเป็นสิ่งที่ถามเจ้าของก่อน
->   - เสนอ (แนะนำ): dispatch `heavy.yml` (suite `heavy`, ราว 1 ชั่วโมงบน CI) บน branch นี้ก่อน merge
->   - หรือ dispatch บน main หลัง merge แบบที่ทำกับ #185
->   - หรือรอรอบตามตารางวันอาทิตย์
->   - ข้อนี้รอคำตอบของเจ้าของ ส่วนอื่นไม่ต้องรอ
-> - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองไม่มีข้อค้าง และ CI ผ่าน จึงเข้าเงื่อนไขอนุมัติถาวรสำหรับการแก้บั๊ก ยกเว้นเรื่อง heavy ที่ยังรอคำตอบข้างบน
+> - heavy ทั้งชุด: เจ้าของตอบ "ก." (2026-10-31) จึง dispatch `heavy.yml` (suite `heavy`) บน branch นี้ที่ 9fbdf29
+>   - run 41178532748 ผ่าน: `plan`, heavy ทั้ง 33 ไฟล์ และ `coverage` เสร็จ 07:41 UTC
+>   - six-DOF fleet ไม่ได้รัน (suite `heavy` ไม่รวม fleet) มันตรวจวงโคจรที่ส่งถึง ซึ่งการแก้นี้ไม่แตะ
+> - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองไม่มีข้อค้าง CI และ heavy ผ่าน จึงเข้าเงื่อนไขอนุมัติถาวรสำหรับการแก้บั๊ก
 > - ลำดับ merge กับ #195: #195 แก้ไฟล์เดียวกันคนละช่วง (ท้าย `stepDebris`) จึงไม่ชนกัน เมื่อ merge ทั้งคู่แล้ว ขนาดรวมยังอยู่ใต้เพดานใหม่ที่ #195 ขอ
 > - พบระหว่างตรวจ แต่ไม่ได้แก้ใน PR นี้ (บั๊กเดิม):
 >   - ฝาครอบแบบ point-mass ที่แยกตัวกลาง step ถูกบินเต็ม step อีกรอบ จึงกระโดดไปข้างหน้ายาน 230–556 m ตอนแยกตัว
@@ -49,7 +47,8 @@ branch: claude/lucid-darwin-tcwfxj
 pr: 197
 budget: 'unchanged ceilings: precache code 14,653,979 B (+27 B on main ef9d3f6, 21 B under 14,654 kB); index-*.js +3 B; flight, tune, monte-carlo, ratings, readiness and recheck workers +4 B each'
 second_agent_review: 'confirmed 22 of 27 claims checked, no blocking finding (2026-10-31, on 31535a4/f1b8ac3); 3 right in substance but worded too strongly, fixed in this report (the stored-file sweep, "exact", the 0.125° bound); 2 checked only against the probe output (the event-change counts, the fleet-wide table)'
-ci: 'run 41121414907 green on f1b8ac3 (plan, typecheck, build, test 1–3, browser-smoke 1–2, verify)'
+ci: 'run 41121414907 green on f1b8ac3, run 41176880219 green on 9fbdf29 (plan, typecheck, build, test 1–3, browser-smoke 1–2, verify)'
+heavy: 'heavy.yml run 41178532748 (workflow_dispatch, suite heavy) on 9fbdf29: success, plan + 33 of 33 heavy files + coverage; sixdof-fleet skipped (not in the suite); dispatched on the owner''s answer "ก." (2026-10-31)'
 ```
 
 ## Authorization
@@ -171,10 +170,13 @@ Nothing needs re-recording, so nothing waits for the owner's approval on this po
   - `flex-golden`: the six-DOF goldens, which hash the event log.
   - `falcon-heavy-returns`, `starship-flight5`, `soyuz-aborts`: they read landing events or event params.
   - `vostok1-recording`: Vostok-1 recorded through the replay path, with the bodies it drops.
-- **Not run:** the other 27 heavy files and the six-DOF fleet (6 files), which the change map selects for any `src/physics` change.
-  - D-64's reuse does not apply, since `src/physics` changed.
-  - The fix changes no state, no event key and no event time, only `Debris.impact.lon` and the impact events' `lon`. No other heavy or fleet file reads either (searched: of the heavy files only falcon-heavy-returns, rendezvous, soyuz-aborts and starship-flight5 read event params, for `zone`, `mode`, the rendezvous log and the ship's splashdown; the fleet's dedicated.test reads `evt.burnStart`'s `kind`).
-  - This is a gap until a heavy run on this source passes. Dispatching heavy on CI has been put to the owner before (DECISIONS, 2026-10-24, question 3), so it is a question below.
+- **The whole heavy suite on CI**, on the owner's answer below: `heavy.yml` run [41178532748](https://github.com/ROYIN001/Orbitlab/actions/runs/41178532748) (`workflow_dispatch`, suite `heavy`) on 9fbdf29, 2026-10-31 06:55–07:41 UTC: success.
+  - `plan`, all 33 heavy files (each in its own job; the longest, monte-carlo-falcon9-peg, 41 min) and `coverage` passed.
+  - 9fbdf29 carries the fix's source unchanged; the commits after it touch Markdown and the test's header comment only, so the physics-tree hashes D-64 names are the same and the run stands for a later head with no further `src/physics`, `src/data`, worker or `tests/heavy` change.
+- **Not run: the six-DOF fleet** (6 files), which the change map also selects for any `src/physics` change. Suite `heavy` leaves it out.
+  - It checks delivered orbits and event keys; the fix changes no state, no event key and no event time, only `Debris.impact.lon` and the impact events' `lon`.
+  - The fleet's only params read is `evt.burnStart`'s `kind` (dedicated.test).
+  - Its last green run is 40144277552 at 3644749; D-64's reuse does not cover this source, since `src/physics` changed.
 
 ## Second-agent review
 
@@ -201,7 +203,9 @@ Second agent (D-25, physics), 2026-10-31, on 31535a4 and f1b8ac3:
   - The test's header names #195's report, which is on #195's branch until it merges; the header now says so.
   - The six-DOF test adds about 75 s to the default suite, as rigid-return and historical-vehicles do.
 
-## Question for the owner
+## Question for the owner (answered)
+
+The owner's answer, in chat to this session on 2026-10-31, verbatim: "ก." Heavy was dispatched on this branch the same minute and passed (run 41178532748, under "Checks run"). The question as asked:
 
 **Run the full heavy suite on this branch before merge?** The relevant heavy files pass locally (above). The other 27 heavy files and the six-DOF fleet were not run.
 - **(ก) Dispatch `heavy.yml` (suite `heavy`) on this branch now (recommended).** About an hour on CI, the 33 files in parallel. Merge after it passes.
