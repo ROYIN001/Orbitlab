@@ -32,12 +32,12 @@ import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
 import type { ReturnTarget } from './sim/return-guidance';
-import { clone, norm } from './vec3';
+import { clone, norm, v3 } from './vec3';
 import { propagateKepler } from './orbital';
 import { atmosphere } from './atmosphere';
-import { R_EARTH } from './constants';
+import { OMEGA_EARTH, R_EARTH } from './constants';
 import { cloneRigidTelemetry, interpolateRigidTelemetry, sameRigidConfiguration, type RigidTelemetry } from './rigid/telemetry';
-import { quatRotate } from './rigid/math';
+import { quatFromAxisAngle, quatRotate } from './rigid/math';
 import { cloneEom, type EomRecord } from './eom';
 
 export interface StageFrame {
@@ -130,9 +130,16 @@ export interface DebrisFrame {
    * Where this object came down, once it has. Carried on the frame so the
    * telemetry panel's spent-stage list can be driven from the displayed
    * instant instead of from the live `Simulation` — scrubbing back to before
-   * the impact must not show the impact coordinates.
+   * the impact must not show the impact coordinates. `t`: the mission time it
+   * touched the ground or the sea (absent on older recordings).
    */
-  impact?: { lat: number; lon: number };
+  impact?: { lat: number; lon: number; t?: number };
+  /**
+   * Once it is down, the mission time its `r` and `v` are for (`Debris.restT`):
+   * its contact (`impact.t`), or the frame's own instant for one the
+   * simulation carries round with the Earth (a landed stage, Vostok-1's pieces).
+   */
+  restT?: number;
   /** C01: a crew member on his own parachutes: how far each canopy is open, and whether he is still in his seat */
   crew?: CrewState;
   /**
@@ -476,7 +483,8 @@ export function captureFrame(sim: Simulation): VisualFrame {
     anchor: d.rigid ? d.rigid.renderOffsetBody.x : debrisAnchor(sim, d, layout),
     recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed, target: d.recovery.target, missDistance: d.recovery.missDistance,
       landingBurn: !!d.recovery.landingStarted } : undefined,
-    impact: d.impact ? { lat: d.impact.lat, lon: d.impact.lon } : undefined,
+    impact: d.impact && { ...d.impact },
+    restT: d.restT,
     ...(d.crew ? { crew: { ...d.crew } } : {}),
     ...(d.entry ? { entry: { heatFlux: d.entry.heatFlux, temperature: d.entry.temperature, ablating: d.entry.ablating,
       massFraction: d.entry.initialMass > 0 ? Math.max(0, Math.min(1, d.mass / d.entry.initialMass)) : 1 } } : {}),
@@ -633,11 +641,18 @@ function hermite(ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, u: number, span: number
   return { r: m(h00, h10, h01, h11), v: m(d00, d10, d01, d11) };
 }
 
-/** The rendezvous between two frames: both bodies on their arcs, the flags of the nearer frame. */
-function blendRendezvous(a: RendezvousState | undefined, b: RendezvousState | undefined, u: number, span: number): RendezvousState {
+/**
+ * The rendezvous between two frames, the flags of the nearer frame. The station goes the spacecraft's own way
+ * (`path` in `interpolateFrames`), so the two keep their places: the cubic in a rendezvous and, docked, on a span
+ * under a quarter of the orbit; the line on a longer one, where the spacecraft keeps it. On the cubic there the
+ * station was drawn 14,945 km from the spacecraft docked to it (a 7,981 s span). The spacecraft's place from the
+ * station, in the station's turning axes, is constant while docked and takes the cubic at any span.
+ */
+function blendRendezvous(a: RendezvousState | undefined, b: RendezvousState | undefined, u: number, span: number,
+  path: (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3) => { r: Vec3; v: Vec3 }): RendezvousState {
   if (!a || !b) return cloneRendezvous((u < 0.5 ? a : b) ?? (a ?? b)!);
   const near = cloneRendezvous(u < 0.5 ? a : b);
-  const st = hermite(a.station.r, a.station.v, b.station.r, b.station.v, u, span);
+  const st = path(a.station.r, a.station.v, b.station.r, b.station.v);
   const rel = hermite(a.rel.r, a.rel.v, b.rel.r, b.rel.v, u, span);
   const qa = a.station.q, qb = b.station.q;
   const dotq = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z < 0 ? -1 : 1;
@@ -716,12 +731,13 @@ function blendDebrisExtras(d: DebrisFrame, o: DebrisFrame, u: number): Pick<Debr
 }
 
 /**
- * Height above which the simulation flies a coast with no air: the vehicle's on
- * a Kepler arc (`useKepler`, simulation.ts), and a spent stage counts as in
- * orbit from it (sim/debris.ts). Below it drag slows a falling body, and the
- * two-body arc is not the path it flew.
+ * Distance from the Earth's centre, 140 km up, above which the simulation flies
+ * a coast with no air: the vehicle's on a Kepler arc (`useKepler`,
+ * simulation.ts), and a spent stage counts as in orbit from it (sim/debris.ts).
+ * Below it drag slows a falling body, and the two-body arc is not the path it
+ * flew. A distance, not a height, so the test is one comparison.
  */
-const AIRLESS_HEIGHT = 140e3;
+const AIRLESS_RADIUS = R_EARTH + 140e3;
 
 /**
  * Interpolate between two recorded frames for a seek to mission time `time`.
@@ -744,7 +760,12 @@ const AIRLESS_HEIGHT = 140e3;
  * changes at an instant must not be shown before that instant. Debris
  * positions are still interpolated, so spent stages fall smoothly: a body that
  * coasts out of the air goes from one frame to the next the way the vehicle
- * does (`path`), anything else in a straight line.
+ * does (`path`), one falling through the air on the cubic through both ends'
+ * states (a straight line over a span of 4,000 s or more), one firing its
+ * engines in a straight line. A body that comes down inside the span, at the
+ * contact time its later frame carries (`impact.t`), falls on the cubic to
+ * where it touched, firing or not, and from that instant, which is now known,
+ * is the later frame's: down, as that frame has it.
  *
  * The result is a fresh frame, apart from sub-objects it shares with the
  * stored frame as `cloneFrame` does, which a caller must not write to:
@@ -774,6 +795,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     return { ...cloneFrame(a), t: a.t + span * u };
   }
   const dt = span * u;
+  // the cubic between a body's states at the two frames (Apollo's craft below)
+  const arc = (x: { r: Vec3; v: Vec3 }, y: { r: Vec3; v: Vec3 }) => hermite(x.r, x.v, y.r, y.v, u, span);
   const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
   // A coast. A point mass with its engine off at the earlier frame: Kepler from that frame, which is how a coast
   // above the air is flown (`useKepler`); one in orbit is flown with J2, which Kepler misses at the next frame by
@@ -785,19 +808,21 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   // six-DOF or not, whatever its engines read (the S-IVB's hydrogen vent puts a few hundred newtons on the thrust
   // through the parking orbit).
   const vehicleCoasts = !a.apollo && coasting(a) && coasting(b);
-  // The vehicle's way from one state to the next, which a spent body coasting beside it shares (`coasts`): one
-  // drawn on its arc beside one drawn on the straight line, which sags v²Δt²/8R under it, parts from it — 115 m
-  // half way through a 10 s orbit frame, Blok I below the Soyuz. Where the vehicle takes the line (a point mass
-  // under thrust, the span a burn begins in), so do they, and the quarter-period bound below reads the vehicle's
-  // period for them too; a body that does not coast takes it whatever the vehicle does. Every step change of velocity inside a coast is pinned to a frame: an event's frames, a change of
-  // configuration (held above) or of status; the cubic, which follows both ends' velocities, relies on that. A
-  // cut-off's tail or a small thrust running into a span is not pinned, and costs it metres (25 m over Starship's
-  // 18 s cut-off span) where the line is hundreds. It is only for a span under a quarter of the orbit's period: on
-  // a longer one, which only a recording thinned hard leaves (a docked spacecraft hours past its docking, under the
-  // six-DOF frame budget: 7,981 s), the cubic swings out further than the line does (past a third of a GTO's or a
-  // Molniya's period, a whole one of a circle), so it keeps the line. Above an eccentricity of about 0.8, and on an
-  // escape, whose period is Infinity, it can swing out further inside a quarter too; again only a recording thinned
-  // hard leaves such a span.
+  // The vehicle's way from one state to the next, which a spent body coasting beside it shares (`coasts`), and so
+  // does the station in a rendezvous or docked (`blendRendezvous`): one drawn on its arc beside one drawn on the
+  // straight line, which sags v²Δt²/8R under it, parts from it — 115 m half way through a 10 s orbit frame, Blok I
+  // below the Soyuz. Where the vehicle takes the line (a point mass under thrust, the span a burn begins in), so do
+  // they, and the quarter-period bound below reads the vehicle's period for them too; a body that does not coast
+  // takes it whatever the vehicle does. Every step change of velocity inside a coast is pinned to a frame: an
+  // event's frames, a change of configuration (held above) or of status; the cubic, which follows both ends'
+  // velocities, relies on that. A cut-off's tail or a small thrust running into a span is not pinned, and costs it
+  // metres (25 m over Starship's 18 s cut-off span) where the line is hundreds. It is only for a span under a
+  // quarter of the orbit's period: on a longer one the cubic swings out further than the line does (past a third of
+  // a GTO's or a Molniya's period, a whole one of a circle), so it keeps the line. Above an eccentricity of about
+  // 0.8, and on an escape, whose period is Infinity, it can swing out further inside a quarter too. Only a recording
+  // thinned hard leaves such a span: the recorder thins a coast to a frame every ten minutes at most
+  // (`MAX_COAST_GAP`), and further only once the rest of the flight is at a frame a minute; a six-DOF spacecraft
+  // docked for 12,000 s once kept a span of 7,981 s.
   const path = (ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, coasts = true): { r: Vec3; v: Vec3 } =>
     coasts && vehicleCoasts && !a.rigid && a.thrust <= 0 ? propagateKepler(ar, av, dt)
       : coasts && ((vehicleCoasts && a.rigid && 4 * span < a.elements.period) || (a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo)) ? hermite(ar, av, br, bv, u, span)
@@ -805,7 +830,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   const { r, v } = path(a.r, a.v, b.r, b.v);
   const ea = a.elements, eb = b.elements;
   const debris: DebrisFrame[] = a.debris.map((d) => {
-    const other = b.debris.find((x) => x.id === d.id);
+    let other = b.debris.find((x) => x.id === d.id), w = u, s = span;
     const rec = d.recovery ? { ...d.recovery } : undefined;
     const imp = d.impact ? { ...d.impact } : undefined;
     if (other && !other.alive && !d.alive && (other.r.x !== d.r.x || other.r.y !== d.r.y || other.r.z !== d.r.z)) {
@@ -814,21 +839,48 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
       // between them, not left where the earlier frame had it in space. One that stays put in both is as it was.
       return { ...cloneDebrisFrame(d), r: turnWithEarth(d.r, other.r, u) };
     }
-    if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
+    const tc = other?.impact?.t;
+    if (d.alive && tc! >= a.t) {
+      // It came down inside the span, at `impact.t` (only a body that has come down carries it). Held at its
+      // earlier sample, it hung in the air for the rest of the span, up to 30 s while the vehicle coasts (a frame
+      // every 10–30 s), 10 km from where it hit, and then was gone or stood on the ground. Now it falls to where it
+      // touched, arriving then, and from then on is the later frame's, on the ground: where that frame has it,
+      // turned back with the Earth from the instant that frame's state is for (`restT`) to the one drawn. Its
+      // velocity there, the cubic's end, is the later frame's as it stands: a crash's at the impact; for a body
+      // the simulation turns with the Earth once down, the ground's, off what it was at the contact by its
+      // touchdown speed (a landed stage's 3–5 m/s, Vostok-1's pieces' 13–76 m/s). That puts the drawing up to 2.4 m
+      // and 12.4 m off on the watch missions, growing about 0.15 × that speed × the time to the contact.
+      const o = other!, at = o.restT ?? tc!;
+      const back = (t: number) => quatRotate(quatFromAxisAngle(v3(0, 0, 1), OMEGA_EARTH * Math.min(0, t - at)), o.r);
+      if (dt >= tc! - a.t) return { ...cloneDebrisFrame(o), r: back(a.t + dt) };
+      w = dt / (s = tc! - a.t);
+      other = { ...o, r: back(tc!) };
+    } else if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
       return cloneDebrisFrame(d);
     }
-    const rigid = interpolateRigidTelemetry(d.rigid, other.rigid, u);
+    // nothing on it firing at either end; out of the air at both
+    const rigid = interpolateRigidTelemetry(d.rigid, other!.rigid, w), quiet = !d.burning && !other!.burning,
+      out = norm(d.r) > AIRLESS_RADIUS && norm(other!.r) > AIRLESS_RADIUS;
     return {
       ...d,
       rigid,
-      // it coasts: nothing on it firing at either end, and out of the air at both
-      ...path(d.r, d.v, other.r, other.v, !d.burning && !other.burning
-        && norm(d.r) - R_EARTH > AIRLESS_HEIGHT && norm(other.r) - R_EARTH > AIRLESS_HEIGHT),
-      dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other.dir, u),
-      pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
+      // Quiet and out of the air at both ends, it coasts: the vehicle's way. Quiet and in the air at either end, it
+      // falls, its path bent and its speed cut by drag inside the span (a Sputnik booster from 2.3 to 0.3 km/s in
+      // 30 s): the cubic through both ends' states keeps it on that path, where the straight line cut up to 10 km off
+      // it. It meets both samples. Firing (a recovery burn), the line, but on its way down to the ground the cubic too.
+      // Alive at both ends and in the air over a span of 4,000 s or more, the line too. Only a recording thinned far
+      // past its budget leaves one, and the watch missions' falls got none even thinned to a 1,500-frame budget, so
+      // the body in it is circling the Earth with its perigee in the air, kept in orbit (perigee > 120 km) or
+      // decaying. Over half an eccentric orbit, or about one period of a low one, the cubic swings such a body out
+      // further than the line; under 4,000 s it is closer on average. One that comes down inside the span keeps the
+      // cubic to where it touched (above), which the line, over the whole span, would not reach by then.
+      ...(((quiet && span < 4e3) || s < span) && !out
+        ? hermite(d.r, d.v, other!.r, other!.v, w, s) : path(d.r, d.v, other!.r, other!.v, quiet && out)),
+      dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other!.dir, w),
+      pressure: mix(d.pressure ?? 0, other!.pressure ?? 0, w),
       recovery: rec,
       impact: imp,
-      ...blendDebrisExtras(d, other, u),
+      ...blendDebrisExtras(d, other!, w),
     };
   });
   const rigid = interpolateRigidTelemetry(a.rigid,b.rigid,u);
@@ -839,16 +891,16 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     ...a,
     // the escape's flags and parachutes step, its motors blend
     ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
-    ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span) } : {}),
+    ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span, path) } : {}),
     // C01: Columbia beside Eagle, and the ascent stage beside Columbia after its jettison, each on its own arc
     ...(a.apollo && b.apollo && ((a.apollo.csm && b.apollo.csm) || (a.apollo.ascentStage && b.apollo.ascentStage)
       || (a.apollo.serviceModule && b.apollo.serviceModule)) ? { apollo: {
       ...a.apollo,
-      ...(a.apollo.csm && b.apollo.csm ? { csm: hermite(a.apollo.csm.r, a.apollo.csm.v, b.apollo.csm.r, b.apollo.csm.v, u, span) } : {}),
+      ...(a.apollo.csm && b.apollo.csm ? { csm: arc(a.apollo.csm, b.apollo.csm) } : {}),
       ...(a.apollo.ascentStage && b.apollo.ascentStage
-        ? { ascentStage: hermite(a.apollo.ascentStage.r, a.apollo.ascentStage.v, b.apollo.ascentStage.r, b.apollo.ascentStage.v, u, span) } : {}),
+        ? { ascentStage: arc(a.apollo.ascentStage, b.apollo.ascentStage) } : {}),
       ...(a.apollo.serviceModule && b.apollo.serviceModule
-        ? { serviceModule: hermite(a.apollo.serviceModule.r, a.apollo.serviceModule.v, b.apollo.serviceModule.r, b.apollo.serviceModule.v, u, span) } : {}),
+        ? { serviceModule: arc(a.apollo.serviceModule, b.apollo.serviceModule) } : {}),
     } } : {}),
     rigid,
     // E02: the left frame's step, copied like everything else handed out.
