@@ -659,11 +659,24 @@ function copyPlain<T extends object>(o: T): T {
   return out as T;
 }
 
+/**
+ * Rigid telemetry a seek hands out, given its own copy of the control-fault
+ * record (G08, rigid/faults.ts), which `cloneRigidTelemetry` passes through. The
+ * stored frames share that record with the simulation's state, which makes a new
+ * one every step and never writes into one, as with a recovery's target. Copied
+ * here, in the two chunks that carry this file, rather than in
+ * `cloneRigidTelemetry`, which seven chunks carry.
+ */
+function ownFaults(r: RigidTelemetry | undefined): RigidTelemetry | undefined {
+  if (r?.controlFaults) r.controlFaults = copyPlain(r.controlFaults);
+  return r;
+}
+
 /** A deep copy of a debris frame's own sub-objects (its `visual` is shared, immutable data). */
 function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
   return {
     ...d,
-    rigid: cloneRigidTelemetry(d.rigid),
+    rigid: ownFaults(cloneRigidTelemetry(d.rigid)),
     r: clone(d.r),
     v: clone(d.v),
     dir: clone(d.dir),
@@ -686,9 +699,10 @@ function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
  * recording. That includes what changes seldom: the parts dropped on the way
  * up (`jettisoned`), which flip once each; Apollo's state (`apollo`), whose
  * Moon figures, next milestone and the bodies beside it change every frame and
- * whose plan (`sequence`, `tli`, `perilune`, `mcc`) changes at its burns; and
- * where a recovered stage is flown to (`debris[].recovery.target`). Apollo's
- * state and a recovery are plain data, copied whole (`copyPlain`) rather than
+ * whose plan (`sequence`, `tli`, `perilune`, `mcc`) changes at its burns;
+ * where a recovered stage is flown to (`debris[].recovery.target`); and a
+ * six-DOF body's control-fault record (`rigid.controlFaults`, `ownFaults`).
+ * Apollo's state and a recovery are plain data, copied whole (`copyPlain`) rather than
  * field by field: a hand-written copy of Apollo's state would cost hundreds of
  * bytes in each of the two chunks that carry this file, against the precache
  * budget (budgets.json).
@@ -701,9 +715,10 @@ function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
  * drone ship a new object when it stations it again (rigid/debris-runtime.ts),
  * and a copy in every stored frame would add 120–144 B of heap per recovered
  * stage per frame to what `FRAME_BYTES` (replay/recorder.ts) was fitted to.
- * A live capture the recorder hands back without storing it
- * (`FlightRecorder.recordNow`) shares both with the simulation and with the
- * stored frames.
+ * The control-fault record is shared the same way: the simulation makes a new
+ * one every step and never writes into one. A live capture the recorder hands
+ * back without storing it (`FlightRecorder.recordNow`) shares all three with
+ * the simulation and with the stored frames.
  */
 export function cloneFrame(f: VisualFrame): VisualFrame {
   return {
@@ -713,7 +728,7 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
     // C01: Apollo's state, every figure and body in it, and the parts dropped on the way up
     ...(f.apollo ? { apollo: copyPlain(f.apollo) } : {}),
     ...(f.jettisoned ? { jettisoned: { ...f.jettisoned } } : {}),
-    rigid: cloneRigidTelemetry(f.rigid),
+    rigid: ownFaults(cloneRigidTelemetry(f.rigid)),
     ...(f.eom ? { eom: cloneEom(f.eom) } : {}),
     r: clone(f.r),
     v: clone(f.v),
@@ -852,7 +867,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
       return cloneDebrisFrame(d);
     }
-    const rigid = interpolateRigidTelemetry(d.rigid, other.rigid, u);
+    const rigid = ownFaults(interpolateRigidTelemetry(d.rigid, other.rigid, u));
     return {
       ...d,
       rigid,
@@ -866,7 +881,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
       ...blendDebrisExtras(d, other, u),
     };
   });
-  const rigid = interpolateRigidTelemetry(a.rigid,b.rigid,u);
+  const rigid = ownFaults(interpolateRigidTelemetry(a.rigid,b.rigid,u));
   // C01: Apollo's state from the earlier frame, copied like the rest of it; Columbia beside Eagle, and the ascent
   // stage beside Columbia after its jettison, each on its own arc
   const apollo = a.apollo && copyPlain(a.apollo);

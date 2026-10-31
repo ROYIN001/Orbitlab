@@ -12,17 +12,22 @@
  * the rest of the frame (see `cloneFrame`).
  *
  * Before: `jettisoned`, `apollo` (and, where the CSM, the ascent stage or the
- * service module blend, its sub-objects) and `debris[].recovery.target` were
- * shared (docs/development/reports/replay-frame-copies.md).
+ * service module blend, its sub-objects), `debris[].recovery.target` and a
+ * six-DOF body's control-fault record (`rigid.controlFaults`, G08) were shared
+ * (docs/development/reports/replay-frame-copies.md).
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
-import { cloneFrame, interpolateFrames, type VisualFrame } from '../src/physics/frame';
+import { captureFrame, cloneFrame, interpolateFrames, type VisualFrame } from '../src/physics/frame';
 import { FlightRecorder } from '../src/replay/recorder';
 import { ReplayPlayer } from '../src/replay/player';
 import { missionConfigFromState } from '../src/lessons/config';
 import { watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
 import type { ApolloState } from '../src/physics/sim/apollo';
+import type { RigidTelemetry } from '../src/physics/rigid/telemetry';
+import type { ControlFaultRecord } from '../src/physics/rigid/faults';
+import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../src/physics/defaults';
+import { orbitById } from '../src/data/orbits';
 
 /** A watch mission flown point-mass through the recorder, as the app flies it, to mission time `until`. */
 function recorded(id: WatchMissionId, until: number): FlightRecorder {
@@ -146,5 +151,35 @@ describe('a seek shares nothing a consumer could write to with the recording', (
     expect(blended.csm!.r.x).toBeGreaterThan(1);
     expect(blended.csm!.r.x).toBeLessThan(9);
     expect(blended.moon).toEqual(a.apollo!.moon);
+  });
+  it('a six-DOF body\'s control-fault record (G08) is the seek\'s own, the vehicle\'s and a spent stage\'s', () => {
+    // the runtime puts a new record on the rigid telemetry every step (rigid/runtime.ts); every array and vector in it
+    const v = (x: number) => ({ x, y: 0.2, z: 0.3 });
+    const faults = (): ControlFaultRecord => ({ fdir: true, active: [{ kind: 'gyroStuck', since: 30, units: [1] }],
+      units: ['faulty', 'ok', 'ok'], selected: [2, 3], openLoop: false, computer: 'primary',
+      engines: [{ engine: 1, stage: 's1', state: 'stuck' }], jets: [{ jet: 2, state: 'isolated' }],
+      sensedRateBody: v(0.1), trueRateBody: v(0.2), sensorAttitudeErrorBody: v(0.3) });
+    const rigid = (bodyId: string): RigidTelemetry => ({ modelVersion: 'test-6dof-v1', bodyId, configurationId: 's1+s2',
+      attitudeQ: { w: 1, x: 0, y: 0, z: 0 }, omegaBody: v(0.1), cgBody: v(20), inertiaBody: [2, 0, 0, 0, 3, 0, 0, 0, 4] as RigidTelemetry['inertiaBody'],
+      renderOffsetBody: v(-20), controlMode: 'auto', engineDeflections: { 's1.engine.0': [0.01, 0.02] }, rcsPropellantKg: 20, saturated: false,
+      angleOfAttack: 0.01, sideslip: 0.02, aeroWithinEnvelope: true, windECI: v(1), rawQuaternionNormError: 1e-13, controlFaults: faults() });
+    const sim = new Simulation({ vehicleId: 'falcon9', satelliteId: 'starlink', siteId: 'cape', orbit: orbitById('leo'),
+      launchTime: new Date('2026-09-19T12:00:00Z'), guidance: { ...DEFAULT_GUIDANCE }, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false },
+      { headless: true });
+    sim.state.rigid = rigid('stack');
+    sim.debris.push({ id: 1, name: 'test stage', r: { ...sim.state.r }, v: v(0), dir: { x: 1, y: 0, z: 0 }, mass: 1, area: 1, cd: 1, alive: true,
+      createdAt: 0, rigid: rigid('debris-1'), visual: { kind: 'stage', diameter: 2, length: 10, color: '#ffffff' } });
+    const a = captureFrame(sim), b = structuredClone(a);
+    b.t += 10;
+    deepFreeze(a);
+    deepFreeze(b);
+    const before = structuredClone([a, b]);
+    for (const [name, f] of [['clone', cloneFrame(a)], ['blend', interpolateFrames(a, b, a.t + 5)], ['on a', interpolateFrames(a, b, a.t)],
+      ['on b', interpolateFrames(a, b, b.t)]] as const) {
+      // before: frame.debris[].rigid.controlFaults, frame.rigid.controlFaults
+      expect([...shared(f)].sort(), name).toEqual([]);
+      scribble(f);
+    }
+    expect([a, b]).toEqual(before);
   });
 });
