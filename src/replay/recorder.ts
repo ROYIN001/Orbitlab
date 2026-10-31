@@ -27,7 +27,8 @@
  *   every 30 s otherwise; every second in the last ten before a return's
  *   retro sequence (C01).
  * - a spent body falling through the air, alive between 10 and 100 km up:
- *   every 5 s at the least, whatever the vehicle is doing (`FALLING_INTERVAL`).
+ *   every 5 s at the least, whatever the vehicle is doing, or every step where
+ *   the simulation steps longer (`FALLING_INTERVAL`).
  * - always the frame on both sides of any step that emitted an event, so every
  *   event time is the timestamp of a stored frame (see `advance`).
  *
@@ -130,9 +131,11 @@ const DENSE_THINNED_GAP = 1;
  * from where it was, Sputnik's boosters 2.3 km and Soyuz MS-16's Blok A 0.8 km;
  * at 5 s, 6, 21 and 11 m, the most 24 m (the H-IIA first stage), for 0 to 78
  * frames more a mission (docs/development/reports/replay-falling-frames.md).
- * Thinning never opens a gap wider than this there (`thin`). A point-mass
- * flight holds its debris between its steps, up to 30 s in orbit, so there it
- * keeps every step of the fall where it kept every other.
+ * Thinning never opens a gap wider than this there (`thin`). A frame is kept
+ * only where the simulation stops: a point-mass flight holds its debris
+ * between its steps, up to 30 s in orbit, and a six-DOF coast held on its
+ * attitude steps up to 10 s, 30 s in orbit (`heldCoastWindow`), so there every
+ * step of the fall is kept, where every other was.
  */
 const FALLING_INTERVAL = 5;
 /**
@@ -875,7 +878,7 @@ export class FlightRecorder implements RecordingSource {
    * whenever the coast pass came up empty, so a recording with nothing
    * thinnable grew without limit. The second pass thins any non-event frame
    * instead, and the ceiling only moves in the (unreachable in practice) case
-   * where every frame is an event frame.
+   * where every frame is an event frame, or a falling body's at its 5 s.
    */
   private decimate(): void {
     // The coast and the orbit first, to a frame a minute; then the dense flight, but only to a frame a second,
@@ -888,8 +891,9 @@ export class FlightRecorder implements RecordingSource {
     if (this.thin(coasting)) return;
     if (this.thin((f) => !this.keep.has(f), MAX_THINNED_GAP)) return;
     if (this.thin((f) => !this.keep.has(f))) return;
-    // Every frame is an event boundary: raise the ceiling rather than spin on
-    // every push. Needs ~12 000 events in one mission to happen.
+    // Every frame is an event boundary (or a falling body's at its 5 s): raise
+    // the ceiling rather than spin on every push. Needs ~12 000 events in one
+    // mission to happen.
     this.maxFrames = Math.ceil(this.maxFrames * 1.5);
   }
 
@@ -901,8 +905,9 @@ export class FlightRecorder implements RecordingSource {
    * across a change of configuration (`interpolateFrames`), so the frame
    * before the change is the one it holds. A frame with a spent body falling
    * through the air (`falling`) has a gap of `FALLING_INTERVAL` at the most,
-   * in every pass: the dense flight still thins to a frame a second around it,
-   * and nothing thins a fall wider than its 5 s.
+   * in every pass, and so the last frame of its phase stays too: the dense
+   * flight still thins to a frame a second around it, and nothing thins a fall
+   * wider than its 5 s.
    */
   private thin(thinnable: (f: VisualFrame) => boolean, gap = Infinity): boolean {
     const kept: VisualFrame[] = [];

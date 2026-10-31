@@ -7,7 +7,7 @@
 > - แก้ (src/replay/recorder.ts ไฟล์เดียว ไม่แตะการจำลอง):
 >   1. ขณะมีชิ้นส่วนที่ยังไม่ตกถึงพื้นอยู่ที่ความสูง 10–100 km ตัวบันทึกเก็บเฟรมอย่างน้อยทุก 5 s ไม่ว่ายานกำลังทำอะไร
 >   2. การ thin จะไม่เปิดช่องว่างกว้างกว่า 5 s ตรงที่มีชิ้นส่วนกำลังตก ในทุกขั้น (ช่วงที่บินขึ้นยังถูก thin เหลือเฟรมละวินาทีได้เหมือนเดิม และเพดานจำนวนเฟรมยังเป็นเพดานจริง)
-> - ผล six-DOF (ค่าเริ่มต้นของแอป) ครบ 20 ภารกิจ: ชิ้นส่วนที่ตกทุกชิ้นคลาดไม่เกิน 24 m (S-II 3,394 → 6 m, Sputnik 2,274 → 21 m, Blok A 577–823 → 11–14 m, H-IIA 704 → 24 m) เฟรมเพิ่ม 0–78 เฟรมต่อภารกิจ รวม 511 เฟรม (10.5 MB)
+> - ผล six-DOF (ค่าเริ่มต้นของแอป) ครบ 20 ภารกิจ: ชิ้นส่วนที่ตกทุกชิ้นคลาดไม่เกิน 24 m (S-II 3,394 → 6 m, Sputnik 2,274 → 21 m, Blok A 577–823 → 11–14 m, H-IIA 704 → 24 m) เฟรมเพิ่ม 0–78 เฟรมต่อภารกิจ รวม 511 เฟรม (10.5 MB) ยกเว้นช่วงที่ six-DOF ลอยแบบถือท่าซึ่งการจำลองก้าวทีละ 10–30 s ตัวบันทึกเก็บได้แค่ทุก step ประมาณการคลาดไม่เกิน 22.8 m
 > - point-mass: การจำลองให้ตำแหน่งชิ้นส่วนเฉพาะตอนจบแต่ละ step (ในวงโคจร 10–19 s) ตอนนี้เก็บทุก step แทนที่จะเก็บ step เว้น step: Sputnik 1,596 → 388 m, H-IIA 620 → 51 m, S-II 874 → 13 m, Blok A ของ Soyuz MS 1.2–1.6 km → 27–34 m เฟรมเพิ่มรวม 137 เฟรม (0.8 MB) ต่ำกว่า 388 m ต้องให้การจำลองก้าวสั้นลงตอนชิ้นส่วนตก ซึ่งเปลี่ยนการบิน (fingerprint) จึงไม่ได้ทำ
 > - งบเฟรมที่บังคับให้เล็ก: H-IIA 67.8 km → 51 m, Apollo 36 km → 129 m, MS-25 32.9 km → 33 m, Soyuz MS docking six-DOF ถึง T+14,000 s 577 → 14 m
 > - Vostok-1 six-DOF: 4,726 → 4,804 เฟรม, 98.8 → 100.7 MB ยังอยู่ใต้ 101 MB ที่เทสต์ heavy กำหนด แก้ตัวเลขใน docs/PHYSICS.md แล้ว
@@ -15,8 +15,8 @@
 > - เทสต์: ใหม่ 4 ข้อ (tests/falling-frames.test.ts) ล้มบนโค้ดเดิมทั้ง 4 ข้อ (1,596 m, 4,708 m, 10,671 m) และใหม่ 1 ข้อใน heavy (six-DOF Sputnik, เดิม 2,274 m) เปลี่ยน assertion เดิม 2 ข้อ: ข้อแรก เทสต์ H-IIA ของ #191 เคยวัดที่ step ที่ตัวบันทึกไม่ได้เก็บ ตอนนี้เก็บครบทุก step จึงเปลี่ยนไปวัดระหว่าง step ด้วยการบินซ้ำแบบละเอียด (เกณฑ์ 600 m เท่าเดิม วัดได้ 51 m) ข้อสอง เทสต์ของ #187 จากการ merge main (บรรทัดล่าง) ดังนั้นไม่เข้าเงื่อนไขอนุมัติถาวรสำหรับบั๊ก ต้องให้เจ้าของกด
 > - ขนาด: บน main ล่าสุด (merge แล้ว) precache code +10 B เหลือ 1,018 B ใต้เพดาน (#184 ขึ้นเพดานไปแล้ว) ไม่ได้ขึ้นเพดานเอง ตอนเริ่มงาน (บน #191) +4 B เหลือ 55 B โค้ดเดิมสองจุดที่เขียนสั้นลงโดยผลเท่าเดิมตอนนั้นจำเป็นเพื่อให้พอดี ตอนนี้ไม่จำเป็นแล้วแต่ยังช่วยประหยัด เจ้าของเลือกให้แยกเป็น PR ต่างหากได้ (ดูหัวข้อ Size)
 > - ซ้อนอยู่บน #191 (เจ้าของเลือก "Stack on #191") ต้อง merge #191 ก่อน main ขยับไป (#187, #193, #184) จน #191 และ PR นี้ชนกับ main และ CI ไม่รัน จึง merge main เข้ามาแล้ว (commit 4ed2c86): ชนแค่ doc comment ใน frame.ts และแก้เทสต์ของ #187 หนึ่งข้อตามที่รายงานของ #191 ระบุไว้ (ชิ้นส่วนในอากาศในเทสต์นั้นต้องจุดเครื่องยนต์ `burning: true` เพราะชิ้นที่ไม่จุดเครื่องยนต์ใช้ cubic ของ #191 แล้ว) ตัวเลข point-mass วัดใหม่บนโค้ดที่ merge แล้ว ไม่เปลี่ยน
-> - การบันทึกอยู่ในหน่วยความจำเท่านั้น ไม่มีการเก็บลงเครื่องหรือส่งออก ไม่มี golden หรือ fingerprint ที่ครอบคลุมจำนวนเฟรม
-> - การตรวจโดย agent ตัวที่สอง: ดูหัวข้อ "Second-agent review"
+> - การบันทึกอยู่ในหน่วยความจำ ส่งออกได้ทางเดียว: ปุ่ม Save ของแผงเปรียบเทียบ (U02) บันทึกไฟล์ `.orbitlab-flight.json` ที่มีเส้นทางของยานจากเฟรมที่บันทึกไว้ (ไม่เกิน 4,000 จุด) ไฟล์จาก branch นี้จึงมีจุดมากขึ้นเล็กน้อย แต่รูปแบบไฟล์ไม่เปลี่ยน ไฟล์เก่าและใหม่เปิดได้ทั้งสองเวอร์ชัน (agent ตัวที่สองพบจุดนี้ เดิมรายงานเขียนว่าไม่มีการส่งออก) ไม่มี golden หรือ fingerprint ที่ครอบคลุมจำนวนเฟรม
+> - การตรวจโดย agent ตัวที่สอง: ยืนยัน 19 จาก 21 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge มีข้อที่ควรแก้ 2 ข้อ แก้แล้วทั้งคู่: (1) รายงานเคยเขียนว่าไม่มีการส่งออกเฟรม แต่ไฟล์บันทึกจากแผงเปรียบเทียบมีเส้นทางของยาน (รูปแบบไฟล์ไม่เปลี่ยน) (2) "ทุก 5 s" ไม่จริงเมื่อ six-DOF ลอยแบบถือท่า ซึ่งการจำลองก้าวทีละ 10 s (30 s ในวงโคจร GTO) ตัวบันทึกเก็บได้แค่ทุก step วัดเพิ่มทั้ง 20 ภารกิจแล้ว ประมาณการคลาดสูงสุด 22.8 m (Blok A ของ Soyuz) ข้อสังเกตอื่นแก้ใน comment และรายงานแล้ว
 
 ```yaml
 item: replay frames for spent bodies falling through the air (the drag pulse's timing; hard-thinned recordings)
@@ -28,7 +28,7 @@ tests: tests/falling-frames.test.ts, tests/heavy/falling-frames-sixdof.test.ts, 
 base_sha_verified_on: {sha: eec8352, date: 2026-10-30, note: 'head of #191 (claude/peaceful-planck-uyne6i), itself on main 1842a86'}
 branch: claude/zen-dijkstra-f9qa9u
 pr: 198
-second_agent_review: pending
+second_agent_review: 'confirmed 19 of 21, no blocking findings; 2 should-fix (S1 the saved flight carries frames; S2 six-DOF held coasts step 10–30 s) answered in this report; 7 non-blocking answered (2026-10-31, on bbfa3e0 and the merge 4ed2c86)'
 ```
 
 ## Cause
@@ -42,7 +42,7 @@ Hard thinning made it worse. Once a recording overflows its frame budget (`DEFAU
 src/replay/recorder.ts only. The simulation is not touched: the recorder only reads it.
 
 - **`falling(debris)`**: some spent body is alive between 10 and 100 km up (`Math.abs(norm(r) - FALLING_MID) < FALLING_HALF`, `FALLING_MID = R_EARTH + 55e3`, `FALLING_HALF = 45e3`). It reads only `alive` and `r`, which a simulation `Debris` and a frame's `DebrisFrame` both carry.
-- **Cadence**: `intervalOf` returns `Math.min(interval(...), falling(sim.debris) ? FALLING_INTERVAL : Infinity)` with `FALLING_INTERVAL = 5` s. It is asked at every step (before it, from the pre-step frame; after it, from the state), so a span that starts with no body in the band is cut at the step where one enters it. The bodies are the simulation's: at every call they are the state's (the frame was just captured from it, or the step from it is still to be flown).
+- **Cadence**: `intervalOf` returns `Math.min(interval(...), falling(sim.debris) ? FALLING_INTERVAL : Infinity)` with `FALLING_INTERVAL = 5` s. A frame can only be kept where the simulation stops, so where it steps longer than 5 s every step is kept: a point-mass flight (10 s steps in a coast, up to 30 s in orbit), and a six-DOF coast held on its attitude (`heldCoastWindow`: 10 s steps in a coast, up to 30 s in orbit). It is asked at every step (before it, from the pre-step frame; after it, from the state), so a span that starts with no body in the band is cut at the step where one enters it. The bodies are the simulation's: at every call they are the state's (the frame was just captured from it, or the step from it is still to be flown).
 - **Thinning** (`thin`): a frame with a falling body is dropped only while the gap between its kept neighbours stays within `min(gap, FALLING_INTERVAL)`, in every pass. The dense flight still thins to a frame a second around it (`DENSE_THINNED_GAP` 1 s is below 5 s); no pass, the last one included, opens a gap wider than 5 s where a body falls. The ceiling stays a bound: once thinned, a fall keeps at most two frames in any 5 s, and only for as long as it lasts.
 - **Unchanged**: every other cadence; the blend itself (#191's cubic, #185's path, the line under thrust, the hold for a body that comes down between frames); event frames.
 
@@ -102,6 +102,21 @@ For every sample inside a span with the body alive at both frames, not firing, a
 
 All 20: +511 frames, +10.5 MB of frames by the recorder's estimate. A "–" is a mission whose spent bodies come down while the vehicle still flies densely (under thrust, an abort, a return), under 0.5 m either way. "MB" is the recorder's estimate of the frames at the end of the recording (`stats().bytes` without rotation tracks). The six-DOF recordings that are thinned overflow during the ascent; the count changes by one in two of them (Soyuz-2.1a, Electron).
 
+### Six-DOF where the simulation steps longer than 5 s
+
+The second agent found that six-DOF coasts held on their attitude step 10 s (30 s in a GTO's orbit), so there the recorder keeps every step, not every 5 s. The probe's "truth every second" has no samples inside those steps either (`advance(1)` cannot split a step), so the six-DOF table above does not cover them. Measured from the recorded frames (all 20 missions, six-DOF): spans wider than 5 s with a falling body inside the band at both ends, and, as an upper bound for one span, the cubic drawn across two of them, checked at the recorded frame between.
+
+| mission | wide spans | widest | the cubic across two, at the frame between |
+|---|---|---|---|
+| soyuzIss | 27 | 10 s | 22.8 m (Blok A at 32 km) |
+| h2aHayabusa2 | 25 | 10.5 s | 4.1 m (first stage at 32 km) |
+| ariane6AmazonLeo | 11 | 10.4 s | 2.1 m (core at 11 km) |
+| falconHeavyArabsat | 8 | 30 s | 1.8 m (a fairing at 11 km, in the GTO's orbit) |
+| falcon9Bandwagon, falcon9Orbcomm2 | 34 each | 11.4 s, 13.4 s | 0.5 m, 0.6 m (fairings) |
+| the other 14 | 0 | – | – |
+
+The cubic's error grows about as the fourth power of the span, so one 10 s span is well inside these figures. Point-mass has such spans in every mission where a body falls while the vehicle coasts (its steps), which is what its table measures.
+
 ### Point-mass
 
 | mission | frames | MB (frames) | worst falling body | drawn from its place | span |
@@ -155,7 +170,7 @@ A side effect: a body that comes down between two frames is held at its earlier 
 
 ## Stored and exported recordings; goldens
 
-- Recordings live in memory only. There is no `src/storage`; `src/projects/archive.ts`, `src/workspace/*`, mission files (`src/config/mission-file.ts`, setup only) and lesson records carry no frames (`orbitlab.frames` in src/workspace/registry.ts is a UI setting's key). The main-thread mirror of a worker recording (src/session/mirror.ts) takes the worker's kept frame times (`keepTimes`) and has no thinning of its own. No storage review is needed.
+- Recordings are kept in memory, with one export. The comparison panel's Save (U02, src/ui/compare.ts) writes a `.orbitlab-flight.json` whose `path` is the vehicle's position taken from the recorded frames (src/main.ts → `referenceFromFlight`, src/replay/reference.ts), at most 4,000 points by a stride. A flight saved from this branch therefore has a few more path points (the second agent: +39 for six-DOF Sputnik), and past 4,000 frames the stride picks other frames. Every point is still the vehicle where it flew. The format and its version are unchanged, `parseFlightFile` reads any number of points, and a file saved before or after loads in either version: no storage format changes, so no storage review is asked for (the owner may still ask for one). Nothing else that is kept or exported carries frames: there is no `src/storage`; `src/projects/archive.ts`, `src/workspace/*`, mission files (`src/config/mission-file.ts`, setup only) and lesson records carry none (`orbitlab.frames` in src/workspace/registry.ts is a UI setting's key). The main-thread mirror of a worker recording (src/session/mirror.ts) takes the worker's kept frame times (`keepTimes`) and has no thinning of its own. (This bullet first said nothing exported frames; the second agent found the export.)
 - No golden or fingerprint covers frame counts. The fleet fingerprints (tests/d01-fleet-fingerprint.test.ts, tests/fleet-harness.ts) and the flex goldens fly `sim.step` loops with no recorder, and the recorder only reads the simulation, so they are unchanged.
 - Frame counts that tests do assert: tests/replay.test.ts (a full ascent under 12,000; the 400-frame thinning test's limit ≤ 600; the toy flight's 4,000 and 400), tests/vostok1-recording-harness.ts (no thinning, under the frame limit, the orbit's gaps under 40 s, the memory), tests/session.test.ts (one frame after a restart), tests/live-stepping.test.ts (a live and a headless recording equal). All pass.
 
@@ -197,12 +212,28 @@ A side effect: a body that comes down between two frames is held at its earlier 
 
 ## Second-agent review
 
-Pending.
+Done on bbfa3e0 and the merge 4ed2c86 (review only, no edits). It read the code, ran the tests against the base and branch recorders, its own probes (17 point-mass cases with `falling` forced off, six-DOF Sputnik and H-IIA, forced budgets) and the builds. **Confirmed 19 of 21; no blocking findings.**
+
+- Confirmed: `intervalOf` reads the state's bodies at all three call sites; the `dueAfter` refactor and `kept.at(-1)!` are identical (17 cases bit-identical with `falling` off: frame times, counts, thinnings, limits); thinning keeps its bound and the dense pass its frame a second; the flown flight is unchanged (final state hashes identical in 17 cases, before and on the merge); the tests fail on the base and pass on the branch, each half pinned (it adds that without the cadence the fourth test fails at 1,213 m); tests/dense-fall.ts lands within 0.09 m of the simulation's next step; the point-mass, hard-thinning, six-DOF Sputnik and H-IIA, Vostok-1 and size figures, to the metre or byte; the merge's resolution of frame.ts and rigid-replay-arc.test.ts.
+- Not confirmed (2):
+  - **S1, should-fix: "nothing stores or exports frames" was wrong.** The comparison panel's saved flight carries the vehicle's path from the frames. Fixed: "Stored and exported recordings" now names it and why its format is unaffected.
+  - **S2, should-fix: "every 5 s whatever the vehicle is doing" is false in six-DOF held coasts**, which step 10 s (30 s in a GTO's orbit), and the six-DOF probe had no samples inside those steps. Fixed: the code comments, this report's Change section, the fragment and the PR now say "or every step where the simulation steps longer", and "Six-DOF where the simulation steps longer than 5 s" measures those spans in all 20 missions (the cubic across two of them at most 22.8 m; the reviewer estimated H-IIA's at 4.1 m, as measured here).
+  - Not checked (counted as not confirmed): Soyuz 18a point-mass +14 frames (its run ended at another time), and the six-DOF fleet totals (+511 frames) beyond the two missions it flew.
+- Non-blocking, all answered:
+  - N1: the ceiling can now also rise when every remaining candidate is a falling frame at its 5 s (unreachable at the app's budgets). `decimate`'s doc and comment now say so.
+  - N2: in the passes without a gap, a falling frame now also keeps the last frame of its phase. Documented in `thin`.
+  - N3: the band is measured from the Earth's centre, not geodetically. Noted under "Not changed, for later".
+  - N4: the span into or out of the band can still be wide under hard thinning. Noted under "Not changed, for later".
+  - N5: wording. The heavy test's "about a minute" stands (it measured 42–57 s). heavy-expected.json's note keeps its sentence about the earlier reconciliation. The re-sampled H-IIA test's 600 m bound is #191's; the new behaviour is pinned by tests/falling-frames.test.ts.
+  - N6: the first `Array.prototype.at` in src is fine for ES2022 and the D-40 browsers.
+  - N7: the stale scratch worktrees are removed.
 
 ## Not changed, for later
 
 - **Point-mass steps.** A point-mass flight's debris states exist only at its steps (Sputnik's orbit: 19.25 s), so the recorder cannot do better than every step: Sputnik's boosters are still 388 m off in point-mass (21 m in six-DOF). Shortening the simulation's own step while a body falls would change the flown flight, every point-mass fingerprint and the live/headless identity (T02), so it is a physics change for the owner to decide, not a recorder one.
 - **Below 10 km**: a body there keeps the vehicle's cadence. The cubic is within 10 m on 30 s spans, but a body that lands is still held at its last sample until the next frame: up to 30 s in six-DOF (Falcon Heavy), a step in point-mass, and a whole thinned span under hard thinning (an MS-25 fairing held 480 s at 1,500 frames). Blending to the impact point needs the impact time (#191's "for later").
+- **The band is measured from the Earth's centre** (`norm(r) - R_EARTH`, the equatorial radius), as sim/debris.ts and #191's 140 km test measure a body's height, not the geodetic height the vehicle's own `altitude` can be. At Baikonur's latitude "10–100 km" is about 21–111 km above the ellipsoid (the second agent's figures). The calibration used the same measure, so the figures above hold.
+- **The edges under hard thinning**: only the frame being thinned is tested for a falling body, so the frame just above 100 km, or just after a landing, can still go, and the span into or out of the band can be wide.
 - **Above 100 km**: not in the band. A body falling from higher (a stage from a high apogee) gets frames from 100 km down; the span that crosses 100 km is cut at the crossing step.
 - **Bodies under thrust** (recovery burns) are in the band like any other and get the 5 s; #191's question (the line or the cubic for them) is unchanged.
 - **The 101 MB figure.** Six-DOF Vostok-1 is at 100.68 MB of the 101 MB its heavy test holds it to, 0.32 MB of room; several six-DOF watch missions are already above 101 MB (Falcon Heavy 123.7 MB, the Soyuz MS flights 120 MB) without thinning, because 101 MB is a reference shape's size, not a bound (`RIGID_MAX_FRAMES`).
