@@ -14,7 +14,7 @@
 > - ไม่มีกลุ่มใดขึ้น precache data/ คง 1399 kB เพราะไม่ได้ขึ้นใน K1 กลุ่มอื่นที่ไม่ได้ขึ้นใน K1 (worker ต่าง ๆ, catalog, lesson-file ฯลฯ) ไม่อยู่ในคำตัดสินนี้ จึงไม่แตะ คำว่า "ทุกกลุ่ม" ในหน้าความพร้อม GK1 หมายถึง 6 กลุ่มในตารางเพดานของหน้านั้น ("ค่าที่จะลดของที่ขึ้นใน K1")
 > - หลังจากนี้ที่ว่างเหลือน้อยมาก precache code เหลือ 174 B และไฟล์ JS กับ CSS ทั้ง 34 ไฟล์อยู่ใน precache จึงเป็นเพดานของทุกกลุ่ม ภายในนั้น i18n เหลือ 9 B และ CSS 138 B ส่วน index (เหลือ 197 B) และ other chunks (เหลือ 583 B) เพิ่มได้ไม่เกิน 174 B งานที่เพิ่มขนาดต่อจากนี้ต้องขอขึ้นเพดานตาม D-38
 > - ใช้ส่วนที่ขึ้นใน K1 ไปเท่าไร (HANDOVER-K1 §7) ตอบสองแบบ: ที่ `a05ae70` index ใช้ 12.8 จาก 23 kB และ precache code ไม่ใช้เลย แต่สูงสุดใน K1 index ใช้ 22.6 จาก 23 (2644.6 kB ที่ #154) และ precache code ใช้ 19.3 จาก 20 (14723.3 kB ที่ `23ede7f` ก่อน #126 ลดลง 35.1 kB)
-> - การ merge: คำตัดสิน q03 B และ q03-1 B บอกว่าทำอะไร แต่ไม่ได้บอกว่าใคร merge การอนุมัติล่วงหน้าครอบเฉพาะงานแก้บั๊กและ PR บันทึกข้อเท็จจริง PR นี้ไม่ใช่ทั้งสองอย่าง จึงรอคุณอนุมัติใน Merge Desk (#146 ซึ่งเป็น PR งบขนาดเหมือนกัน merge ตามคำสั่งของคุณในแชต)
+> - การ merge: คำตัดสิน q03 B และ q03-1 B บอกว่าทำอะไร แต่ไม่ได้บอกว่าใคร merge การอนุมัติล่วงหน้าครอบเฉพาะงานแก้บั๊กและ PR บันทึกข้อเท็จจริง PR นี้ไม่ใช่ทั้งสองอย่าง จึงรอคุณอนุมัติใน Merge Desk (#146 ซึ่งเป็น PR งบขนาดเหมือนกัน merge ตามคำสั่งของคุณในแชต) (ตอนเปิด PR; คุณตอบในแชตเมื่อ 2026-10-26 ว่า "merge #179 (แนะนำ)" และ #179 merge แล้วเป็น `7263004` เผยแพร่แล้วเมื่อ 2026-10-26 ด้วย Pages 40385448079 ดู `merge` และ `status` ด้านล่าง)
 
 ```yaml
 package: GK1 (work order item 5 of the GK1 readiness doc)
@@ -26,7 +26,8 @@ allowed_write_paths: [budgets.json, docs/development/reports/GK1-ceilings-q03-1.
 app_code: none
 base_sha_verified_on: {sha: a05ae70, date: 2026-10-26}
 branch: claude/happy-hawking-m71bk1-ceilings
-merge: 'waits for the owner (Merge Desk); q03 B and q03-1 B decide the change and that it is one PR, and say nothing about its merge; the standing approval covers bug fixes and fact-only record PRs, and a lowered ceiling is neither'
+merge: 'on the owner''s answer in chat on 2026-10-26 (Merge Desk), "merge #179 (แนะนำ)" (DECISIONS); in the PR this line read "waits for the owner (Merge Desk); q03 B and q03-1 B decide the change and that it is one PR, and say nothing about its merge; the standing approval covers bug fixes and fact-only record PRs, and a lowered ceiling is neither"'
+status: 'Merged (PR #179, `7263004`, 2026-10-26T19:17:43Z) after PR CI 40371529487 passed on its head `18973db`; published by Pages 40385448079 at `7263004` (2026-10-26T19:41:58Z, every job passed; its build passed the bundle budget with these ceilings). In the PR this block had no status line (added 2026-10-26)'
 ```
 
 ## What the owner decided
