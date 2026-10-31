@@ -209,7 +209,11 @@ export interface Debris {
     target?: ReturnTarget;
     /** horizontal distance from the target at touchdown, m */
     missDistance?: number;
-    /** a targeted return has fired its entry burn (it waits `armed` until then) */
+    /**
+     * the return has fired its entry burn: set by a targeted return (which
+     * waits `armed` until then) and by a six-DOF untargeted one; a point-mass
+     * untargeted return leaves it unset
+     */
     entryFlown?: boolean;
     /** a tower's arms closed on the booster */
     caught?: boolean;
@@ -225,7 +229,8 @@ export interface Debris {
   crew?: CrewState;
   /** C01: a piece of the body with this id, which broke up */
   fragmentOf?: number;
-  impact?: { lat: number; lon: number };
+  /** where it came down, degrees, and when (`t`, mission time: its contact, which `restT` holds until `rest` moves it on) */
+  impact?: { lat: number; lon: number; t?: number };
   /**
    * Once it has landed: the mission time its stored state is for. From there
    * it only turns with the Earth (see `DebrisTracker.stepDebris`).

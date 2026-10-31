@@ -288,6 +288,11 @@ export class DebrisTracker {
   }
 
   // ------------------------------------------------------------ return
+  /** Raise one of a return's events, naming the body. */
+  private note(d: Debris, key: string): void {
+    this.sim.event(key, 'info', { name: d.name });
+  }
+
   /**
    * What the returning stage's descent looks like to the prediction: its own
    * drag and the entry burn it is going to fly. The rigid body carries J2 in
@@ -438,7 +443,7 @@ export class DebrisTracker {
           if (Math.acos(Math.max(-1, Math.min(1, dot(dir, g.dir)))) < BOOSTBACK_LIGHT_ANGLE) {
             rc.phase = 'boostback';
             setRecoveryEngines(rc, rc.engine ? boostbackEngineCount(rc.engine) : 1);
-            sim.event('evt.boostbackStart', 'info', { name: d.name });
+            this.note(d, 'evt.boostbackStart');
           }
           break;
         }
@@ -455,7 +460,7 @@ export class DebrisTracker {
             rc.guidance = undefined;
             rc.burning = false;
             if (rc.engine) setRecoveryEngines(rc, entryEngineCount(rc.engine, d.mass - rc.propellant, rc.landingReserve));
-            sim.event('evt.boostbackEnd', 'info', { name: d.name });
+            this.note(d, 'evt.boostbackEnd');
             break;
           }
           if (!g.trim && g.dvNeeded < BOOSTBACK_TRIM_DV) {
@@ -481,7 +486,7 @@ export class DebrisTracker {
           const step = entryStep(rc.entryFlown ? 'burning' : 'armed', vDown > 0, alt, speed, rc.propellant,
             { targetSpeed, reserve: rc.landingReserve });
           if (step.burn) {
-            if (!rc.entryFlown) sim.event('evt.entryBurnStart', 'info', { name: d.name });
+            if (!rc.entryFlown) this.note(d, 'evt.entryBurnStart');
             rc.entryFlown = true;
             level = 1;
             const aT = thrustOf(1) / d.mass;
@@ -516,7 +521,7 @@ export class DebrisTracker {
               flow: rc.mdot * LANDING_PLANNED_THROTTLE, cd: d.cd, area: d.area, gravity: gLocal });
             if (hAgl < 1.1 * stop + 10) {
               rc.landingStarted = true;
-              sim.event('evt.landingBurnStart', 'info', { name: d.name });
+              this.note(d, 'evt.landingBurnStart');
             }
           }
           if (rc.landingStarted) {
@@ -681,8 +686,8 @@ export class DebrisTracker {
           d.impact = { lat: ll.lat * RAD, lon: ll.lon * RAD };
         }
         for (const event of result.events) {
-          const contactEvent = event.key === 'evt.stageImpact' || event.key === 'evt.boosterLanded'
-            || event.key === 'evt.boosterLandedZone' || event.key === 'evt.boosterLandedShip' || event.key === 'evt.boosterCaught';
+          // evt.stageImpact, evt.boosterLanded, evt.boosterLandedZone, evt.boosterLandedShip, evt.boosterCaught
+          const contactEvent = /^evt\.(stageImpact|booster(Landed(Zone|Ship)?|Caught))$/.test(event.key);
           const params = contactEvent && d.impact
             ? { ...event.params, lat: +d.impact.lat.toFixed(2), lon: +d.impact.lon.toFixed(2) }
             : event.params;
@@ -702,8 +707,17 @@ export class DebrisTracker {
         }
         continue;
       }
+      // Only the part of the step since it was let go of, as the rigid path
+      // above: the fairing halves, and the rocket a crewed abort sheds inside
+      // a step, are let go of once the step has moved the stack to its end,
+      // and flying them the whole step put them a step (224 m for the halves
+      // on a crewed Soyuz-2.1a) ahead of it. A piece let go of at the step's
+      // start flies `dt`: an age within a nanosecond of it is the clock's rounding.
+      const age = this.sim.state.t - d.createdAt;
+      const span = age < dt - 1e-9 ? age : dt;
+      if (span <= 0) continue;
       if (d.recovery?.target && d.alive) {
-        this.stepReturning(d, dt);
+        this.stepReturning(d, span);
         continue;
       }
       const alt = norm(d.r) - R_EARTH;
@@ -713,7 +727,7 @@ export class DebrisTracker {
         // skipped every touchdown, drag and lifetime test, so it orbited through
         // the planet forever (audit item B28). Re-check the perigee each step
         // and hand it back to the drag path when it can no longer stay up.
-        const next = propagateKepler(d.r, d.v, dt);
+        const next = propagateKepler(d.r, d.v, span);
         d.r = next.r;
         d.v = next.v;
         const elD = elementsFromState(d.r, d.v);
@@ -721,8 +735,8 @@ export class DebrisTracker {
         continue;
       }
       // sub-step for accuracy when low and fast
-      const sub_ = alt < 60e3 ? Math.max(1, Math.ceil(dt / 0.5)) : Math.max(1, Math.ceil(dt / 2));
-      const h = dt / sub_;
+      const sub_ = alt < 60e3 ? Math.max(1, Math.ceil(span / 0.5)) : Math.max(1, Math.ceil(span / 2));
+      const h = span / sub_;
       for (let k = 0; k < sub_ && d.alive; k++) {
         let thrustAccel = 0;
         let thrustDir = d.dir;
@@ -776,6 +790,11 @@ export class DebrisTracker {
             else burn = rc.burning;
           }
           if (burn) {
+            // A burn lighting raises its event, as a targeted return's does
+            // (`stepReturning`): `evt.entryBurnStart`, then `evt.landingBurnStart`.
+            // The entry burn's end clears `burning`; the landing burn's gaps
+            // keep it set, so each burn raises one.
+            if (!rc.burning) this.note(d, `evt.${rc.phase}BurnStart`);
             rc.burning = true;
             if (rc.phase === 'landing') rc.landingStarted = true;
             thrustAccel = T / d.mass;
@@ -798,7 +817,7 @@ export class DebrisTracker {
         const touchdown = altN <= ground || (altN <= ground + 3 && d.recovery !== undefined && vImpactNow < 12);
         if (touchdown) {
           d.alive = false;
-          d.restT = this.sim.state.t - dt + (k + 1) * h;
+          d.restT = this.sim.state.t - span + (k + 1) * h;
           // Contact ends the burn, latched on through the hoverslam's gaps
           // (an output: nothing reads it once the body is down).
           if (d.recovery) d.recovery.burning = false;
@@ -822,6 +841,11 @@ export class DebrisTracker {
         }
       }
     }
-    for (const d of this.sim.debris) if (!d.alive && (d.outcome === 'landed' || this.grounded.has(d.id))) this.rest(d);
+    for (const d of this.sim.debris) {
+      if (d.alive) continue;
+      // when it came down, beside where: every contact above sets both, and `rest` moves `restT` on from here
+      if (d.impact) d.impact.t ??= d.restT;
+      if (d.outcome === 'landed' || this.grounded.has(d.id)) this.rest(d);
+    }
   }
 }
