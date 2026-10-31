@@ -300,13 +300,6 @@ const height = (r: Vec3) => norm(r) - R_EARTH;
 const OMEGA = 7.2921159e-5;
 
 /**
- * A spent body that comes down between two recorded frames while the vehicle coasts in orbit, where the recorder
- * keeps a frame every 10–30 s. Held at its earlier sample, it hung there for the rest of the span, then was gone
- * (a crash) or stood on the ground (a landing): measured on the watch missions, a fairing hung up to 36 s and
- * 10.5 km from where it hit, Blok A 10 s and 2.8 km, Falcon Heavy's centre core 149 m over the drone ship's deck
- * for 10 s. The later frame carries when it touched (`impact.t`), and it falls there, arriving then.
- */
-/**
  * A stage flown home firing its engines in the air: an entry burn, retrograde from about 70 km until the airspeed is
  * near 1.4 km/s, and a landing burn, slowing it to a couple of metres a second at the ground. The cubic through both
  * frames' states keeps it on the path it flew, as it does a stage falling with its engines off; the straight line cut
@@ -345,6 +338,13 @@ describe('a stage under a recovery burn in the air between two recorded frames',
   });
 });
 
+/**
+ * A spent body that comes down between two recorded frames while the vehicle coasts in orbit, where the recorder
+ * keeps a frame every 10–30 s. Held at its earlier sample, it hung there for the rest of the span, then was gone
+ * (a crash) or stood on the ground (a landing): measured on the watch missions, a fairing hung up to 36 s and
+ * 10.5 km from where it hit, Blok A 10 s and 2.8 km, Falcon Heavy's centre core 149 m over the drone ship's deck
+ * for 10 s. The later frame carries when it touched (`impact.t`), and it falls there, arriving then.
+ */
 describe('a spent body that comes down between two recorded frames', () => {
   // Blok A's last span over the sea (point-mass Soyuz-2.1a: 561 m up at 313 m/s, down 5.5 s into a 10 s span):
   // here 1.5 km up at 320 m/s, 70° below the horizon, slowing to 249 m/s, and in the sea 5.6 s in
