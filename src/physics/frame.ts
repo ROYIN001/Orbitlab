@@ -474,6 +474,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     outcome: d.outcome,
     createdAt: d.createdAt,
     anchor: d.rigid ? d.rigid.renderOffsetBody.x : debrisAnchor(sim, d, layout),
+    // the target is the simulation's, which never writes into one; a seek hands out a copy (see `cloneFrame`)
     recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed, target: d.recovery.target, missDistance: d.recovery.missDistance,
       landingBurn: !!d.recovery.landingStarted } : undefined,
     impact: d.impact ? { lat: d.impact.lat, lon: d.impact.lon } : undefined,
@@ -602,18 +603,6 @@ function turnWithEarth(a: Vec3, b: Vec3, u: number): Vec3 {
   return { x: rr * Math.cos(lon), y: rr * Math.sin(lon), z: a.z + (b.z - a.z) * u };
 }
 
-/**
- * Deep copy of a frame, down to every sub-object a consumer could write to.
- *
- * The recording is append-only and must stay that way, but nothing in the type
- * system enforces it: a frame handed out by a seek travels through
- * `replay/simview.ts` into `ui/map.ts` and `ui/onboard.ts`, files this wave
- * does not own. Every path that returns "the frame at time t" therefore returns
- * a copy, so a caller that mutates what it was given cannot corrupt the
- * recording. Shared *immutable* data is deliberately aliased: `debris[].visual`
- * is a spec object owned by the simulation, and copying it per frame would cost
- * more than the rest of the frame put together.
- */
 /** A deep copy of a rendezvous's state. */
 export function cloneRendezvous(a: RendezvousState): RendezvousState {
   return {
@@ -655,27 +644,91 @@ export function cloneAbort(a: AbortState): AbortState {
     ...(a.tether ? { tether: { sphere: clone(a.tether.sphere), module: clone(a.tether.module) } } : {}) };
 }
 
+/**
+ * A deep copy of plain data: objects and arrays of numbers, strings and
+ * booleans, such as Apollo's state and a recovery. A seek pays for it on every
+ * call, and the launch audio seeks tens of times an animation frame
+ * (audio/launch-audio.ts), so it is a spread and a walk over the values:
+ * 0.16 µs for a recovery and 0.5–2 µs for Apollo's state, where
+ * `structuredClone` took 2.9 and 3.5–12 µs (Node 22).
+ */
+function copyPlain<T extends object>(o: T): T {
+  if (Array.isArray(o)) return o.map((x) => (x && typeof x === 'object' ? copyPlain(x) : x)) as T;
+  const out = { ...o } as Record<string, unknown>;
+  for (const k in out) { const v = out[k]; if (v && typeof v === 'object') out[k] = copyPlain(v); }
+  return out as T;
+}
+
+/**
+ * Rigid telemetry a seek hands out, given its own copy of the control-fault
+ * record (G08, rigid/faults.ts), which `cloneRigidTelemetry` passes through. The
+ * stored frames share that record with the simulation's state, which makes a new
+ * one every step and never writes into one, as with a recovery's target. Copied
+ * here, in the two chunks that carry this file, rather than in
+ * `cloneRigidTelemetry`, which seven chunks carry.
+ */
+function ownFaults(r: RigidTelemetry | undefined): RigidTelemetry | undefined {
+  if (r?.controlFaults) r.controlFaults = copyPlain(r.controlFaults);
+  return r;
+}
+
 /** A deep copy of a debris frame's own sub-objects (its `visual` is shared, immutable data). */
 function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
   return {
     ...d,
-    rigid: cloneRigidTelemetry(d.rigid),
+    rigid: ownFaults(cloneRigidTelemetry(d.rigid)),
     r: clone(d.r),
     v: clone(d.v),
     dir: clone(d.dir),
-    recovery: d.recovery ? { ...d.recovery } : undefined,
+    // with the place it is flown to, which the stored frames share with the simulation (see `cloneFrame`)
+    recovery: d.recovery && copyPlain(d.recovery),
     impact: d.impact ? { ...d.impact } : undefined,
     ...(d.crew ? { crew: { ...d.crew } } : {}),
     ...(d.entry ? { entry: { ...d.entry } } : {}),
   };
 }
 
+/**
+ * Deep copy of a frame, down to every sub-object a consumer could write to.
+ *
+ * The recording is append-only and must stay that way, but nothing in the type
+ * system enforces it: a frame handed out by a seek travels through
+ * `replay/simview.ts` into `ui/map.ts` and `ui/onboard.ts`, files this wave
+ * does not own. Every path that returns "the frame at time t" therefore returns
+ * a copy, so a caller that mutates what it was given cannot corrupt the
+ * recording. That includes what changes seldom: the parts dropped on the way
+ * up (`jettisoned`), which flip once each; Apollo's state (`apollo`), whose
+ * Moon figures, next milestone and the bodies beside it change every frame and
+ * whose plan (`sequence`, `tli`, `perilune`, `mcc`) changes at its burns;
+ * where a recovered stage is flown to (`debris[].recovery.target`); and a
+ * six-DOF body's control-fault record (`rigid.controlFaults`, `ownFaults`).
+ * Apollo's state and a recovery are plain data, copied whole (`copyPlain`) rather than
+ * field by field: a hand-written copy of Apollo's state would cost hundreds of
+ * bytes in each of the two chunks that carry this file, against the precache
+ * budget (budgets.json).
+ *
+ * Shared *immutable* data is deliberately aliased: `debris[].visual` is a spec
+ * object owned by the simulation, and copying it per frame would cost more than
+ * the rest of the frame put together. A recovery's target is shared one step
+ * earlier, between the simulation and the frames `captureFrame` stores: the
+ * simulation sets it at the separation and never writes into it, giving a
+ * drone ship a new object when it stations it again (rigid/debris-runtime.ts),
+ * and a copy in every stored frame would add 120–144 B of heap per recovered
+ * stage per frame to what `FRAME_BYTES` (replay/recorder.ts) was fitted to.
+ * The control-fault record is shared the same way: the simulation makes a new
+ * one every step and never writes into one. A live capture the recorder hands
+ * back without storing it (`FlightRecorder.recordNow`) shares all three with
+ * the simulation and with the stored frames.
+ */
 export function cloneFrame(f: VisualFrame): VisualFrame {
   return {
     ...f,
     ...(f.abort ? { abort: cloneAbort(f.abort) } : {}),
     ...(f.rendezvous ? { rendezvous: cloneRendezvous(f.rendezvous) } : {}),
-    rigid: cloneRigidTelemetry(f.rigid),
+    // C01: Apollo's state, every figure and body in it, and the parts dropped on the way up
+    ...(f.apollo ? { apollo: copyPlain(f.apollo) } : {}),
+    ...(f.jettisoned ? { jettisoned: { ...f.jettisoned } } : {}),
+    rigid: ownFaults(cloneRigidTelemetry(f.rigid)),
     ...(f.eom ? { eom: cloneEom(f.eom) } : {}),
     r: clone(f.r),
     v: clone(f.v),
@@ -746,12 +799,10 @@ const AIRLESS_HEIGHT = 140e3;
  * coasts out of the air goes from one frame to the next the way the vehicle
  * does (`path`), anything else in a straight line.
  *
- * The result is a fresh frame, apart from sub-objects it shares with the
- * stored frame as `cloneFrame` does, which a caller must not write to:
- * `jettisoned`, Apollo's state below its top level (the whole of it unless both
- * frames carry the CSM, the ascent stage or the service module), a recovery's
- * `target` and a body's `visual`. The inputs are never mutated. The function is
- * pure, so seeking twice to the same time produces deep-equal frames.
+ * The result is a fresh frame, apart from each body's `visual`, which it shares
+ * with the stored frame as `cloneFrame` does and which a caller must not write
+ * to. The inputs are never mutated. The function is pure, so seeking twice to
+ * the same time produces deep-equal frames.
  */
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
@@ -806,7 +857,6 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   const ea = a.elements, eb = b.elements;
   const debris: DebrisFrame[] = a.debris.map((d) => {
     const other = b.debris.find((x) => x.id === d.id);
-    const rec = d.recovery ? { ...d.recovery } : undefined;
     const imp = d.impact ? { ...d.impact } : undefined;
     if (other && !other.alive && !d.alive && (other.r.x !== d.r.x || other.r.y !== d.r.y || other.r.z !== d.r.z)) {
       // C01: a body lying on the ground in both frames that the tracker carries round with the Earth (Gagarin,
@@ -817,7 +867,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
       return cloneDebrisFrame(d);
     }
-    const rigid = interpolateRigidTelemetry(d.rigid, other.rigid, u);
+    const rigid = ownFaults(interpolateRigidTelemetry(d.rigid, other.rigid, u));
     return {
       ...d,
       rigid,
@@ -826,12 +876,19 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
         && norm(d.r) - R_EARTH > AIRLESS_HEIGHT && norm(other.r) - R_EARTH > AIRLESS_HEIGHT),
       dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other.dir, u),
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
-      recovery: rec,
+      recovery: d.recovery && copyPlain(d.recovery),
       impact: imp,
       ...blendDebrisExtras(d, other, u),
     };
   });
-  const rigid = interpolateRigidTelemetry(a.rigid,b.rigid,u);
+  const rigid = ownFaults(interpolateRigidTelemetry(a.rigid,b.rigid,u));
+  // C01: Apollo's state from the earlier frame, copied like the rest of it; Columbia beside Eagle, and the ascent
+  // stage beside Columbia after its jettison, each on its own arc
+  const apollo = a.apollo && copyPlain(a.apollo);
+  if (apollo) for (const k of ['csm', 'ascentStage', 'serviceModule'] as const) {
+    const p = apollo[k], q = b.apollo?.[k];
+    if (p && q) apollo[k] = hermite(p.r, p.v, q.r, q.v, u, span);
+  }
   const samePropulsion = a.stages.every((stage, i) => stage.burning === b.stages[i]?.burning
     && stage.ignited === b.stages[i]?.ignited && stage.engineFraction === b.stages[i]?.engineFraction)
     && a.boosters.every((booster, i) => booster.burning === b.boosters[i]?.burning);
@@ -840,16 +897,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     // the escape's flags and parachutes step, its motors blend
     ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
     ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span) } : {}),
-    // C01: Columbia beside Eagle, and the ascent stage beside Columbia after its jettison, each on its own arc
-    ...(a.apollo && b.apollo && ((a.apollo.csm && b.apollo.csm) || (a.apollo.ascentStage && b.apollo.ascentStage)
-      || (a.apollo.serviceModule && b.apollo.serviceModule)) ? { apollo: {
-      ...a.apollo,
-      ...(a.apollo.csm && b.apollo.csm ? { csm: hermite(a.apollo.csm.r, a.apollo.csm.v, b.apollo.csm.r, b.apollo.csm.v, u, span) } : {}),
-      ...(a.apollo.ascentStage && b.apollo.ascentStage
-        ? { ascentStage: hermite(a.apollo.ascentStage.r, a.apollo.ascentStage.v, b.apollo.ascentStage.r, b.apollo.ascentStage.v, u, span) } : {}),
-      ...(a.apollo.serviceModule && b.apollo.serviceModule
-        ? { serviceModule: hermite(a.apollo.serviceModule.r, a.apollo.serviceModule.v, b.apollo.serviceModule.r, b.apollo.serviceModule.v, u, span) } : {}),
-    } } : {}),
+    ...(apollo ? { apollo } : {}),
+    ...(a.jettisoned ? { jettisoned: { ...a.jettisoned } } : {}),
     rigid,
     // E02: the left frame's step, copied like everything else handed out.
     ...(a.eom ? { eom: cloneEom(a.eom) } : {}),
