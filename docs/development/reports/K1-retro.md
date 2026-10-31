@@ -1,5 +1,9 @@
 # K1 retrospective and re-estimate / ทบทวนหลังคลื่น K1 และประมาณการใหม่
 
+> **Update 2026-10-31: no GK1 candidate until the HU-6 session is scheduled.** After this file was brought to `1842a86` (2026-10-30), four more PRs merged to main on the owner's answers in other sessions' chats: #187 (`ef9d3f6`, 2026-10-30T19:39:11Z) and #193 (`dcfa065`, 20:23:22Z), then #184 (`f68faab`, 2026-10-31T00:01:33Z) and #189 (`089b34e`, 06:44:12Z). Each changes files under `src/physics`, and #184 also raises size ceilings. The owner then answered "ตรึงตอนนัด HU-6 (แนะนำ)": no candidate is frozen now, and bug-fix PRs may still merge; when the owner sets the HU-6 date, main at that time is frozen as the candidate, the evidence is made again on it, and nothing merges until the HU-6 session ends ([DECISIONS](../../DECISIONS.md), "Decided 2026-10-31 (the GK1 candidate after #187 and #193; chat)"). So "the candidate" and the stamp `v0.1.0 · 1842a86` in this file describe 2026-10-30; they are kept as a dated record, not as the current state.
+>
+> **อัปเดต 2026-10-31: ยังไม่มี candidate จนกว่าจะนัด HU-6** หลังไฟล์นี้แก้ให้ตรงกับ `1842a86` (30 ต.ค.) มี PR merge เข้า main อีกสี่ตัวตามที่คุณอนุมัติในแชตของเซสชันอื่น คือ #187 และ #193 (30 ต.ค.) แล้ว #184 และ #189 (31 ต.ค.) คุณตอบว่า "ตรึงตอนนัด HU-6 (แนะนำ)" ตอนนี้จึงยังไม่ตรึง candidate และ PR แก้บั๊กยัง merge ได้ เมื่อคุณนัดวัน HU-6 จะตรึง main ณ ตอนนั้นเป็น candidate ทำหลักฐานใหม่บนนั้น แล้วห้าม merge จน HU-6 จบ ข้อความเรื่อง candidate และรหัสรุ่น `v0.1.0 · 1842a86` ในไฟล์นี้จึงเป็นสภาพของวันที่ 30 ต.ค. ไม่ใช่ของปัจจุบัน
+
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 >
 > - นี่คือ retrospective ของ K1 และการประมาณการใหม่ (M-PLAN-026) ที่คุณอนุญาตให้ใช้ที่ GK1 (ข้อ 3 ตอบ ก เมื่อ 26 ต.ค.)
