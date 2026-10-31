@@ -13,6 +13,7 @@
 >   2. แยก commit แรกเป็น PR ของตัวเองก่อน แล้ว PR นี้ตามหลัง (ต้องให้ผม push อีก branch)
 >   3. ตัด commit แรกออก แล้วขึ้นเพดานตาม D-38 (precache code +2.1 kB และ index +0.3 kB)
 > - เพราะมีงานย่อโค้ดรวมอยู่ PR นี้จึงไม่เข้าเงื่อนไขอนุมัติถาวรสำหรับการแก้บั๊ก ต้องให้เจ้าของกดเอง
+> - ผลการตัดสินใจ: เจ้าของเลือกข้อ 1 ("ข้อ 1 merge ได้เลย", 30 ต.ค. 20:02 UTC) merge แล้วเป็น `dcfa065` (20:23 UTC) และขึ้นเว็บแล้วด้วย Pages run 41122790689 (20:59 UTC)
 > - เทสต์: เทสต์ใหม่ 3 อัน ล้มบน main ทั้ง 3 (ไม่มีเหตุการณ์) ผ่านเมื่อแก้แล้ว และเพิ่ม assertion ในเทสต์ six-DOF เดิมที่บินแบบไม่มีเป้าหมาย (ล้มบน main) ไม่ได้เปลี่ยน assertion เดิมข้อใด
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 7 จาก 8 ข้อ อีก 1 ข้อเป็นเรื่องถ้อยคำในรายงาน แก้แล้ว ไม่พบข้อที่ต้องแก้ก่อน merge ข้อสังเกตที่ไม่ขวางการ merge แก้แล้วหรือบันทึกไว้ใน "Not changed, for later"
 > - CI: ผ่านทั้งหมดบน f8426ec (run 41111067263) และไฟล์ heavy ที่บินโค้ดส่วนนี้ผ่านทั้งหมด (starship-flight5, falcon-heavy-returns, sixdof-fingerprint 22 จาก 22)
@@ -27,6 +28,9 @@ docs: [docs/PHYSICS.md (one paragraph's last sentences)]
 base_sha_verified_on: {sha: 1842a86, date: 2026-10-30}
 branch: claude/elegant-sagan-xxsloc
 commits: {identical_output: ff7ea51, fix: 36d8bb3}
+pr: 193
+merged: {sha: dcfa065, at: '2026-10-30T20:23:22Z', ci: 41120470814, head: f64131c, owner_answer: 'ข้อ 1 merge ได้เลย (2026-10-30T20:02:07Z)'}
+published: {pages: 41122790689, at: '2026-10-30T20:59:23Z', sha: dcfa065}
 ```
 
 ## Authorization (D-65)
