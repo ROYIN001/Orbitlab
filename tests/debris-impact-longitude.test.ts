@@ -12,10 +12,12 @@
  *   angle at the step's start;
  * - a six-DOF body's contact (`RigidDebrisRuntime.step`'s `contactTime`) took
  *   the angle at the step's end.
- * While the vehicle coasts or orbits a step is 10–30 s, so the longitude was
- * up to OMEGA_EARTH × 30 s ≈ 0.125° off, 0.07° (about 5 km) on the watch
- * missions. Found in PR #195 (docs/development/reports/replay-debris-touchdown.md,
- * "Not changed, for later"); report: docs/development/reports/debris-impact-longitude.md.
+ * While the vehicle coasts or orbits a step is 10–30 s (60 s in a point-mass
+ * coast above 2,000 km), so the longitude was up to OMEGA_EARTH × 30 s ≈
+ * 0.125° off (0.25° in a 60 s step), 0.07° (about 5 km) on the watch missions.
+ * Found in PR #195 (its report docs/development/reports/replay-debris-touchdown.md,
+ * on #195's branch until it merges, "Not changed, for later"); report:
+ * docs/development/reports/debris-impact-longitude.md.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Simulation, type Debris } from '../src/physics/simulation';
