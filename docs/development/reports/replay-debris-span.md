@@ -14,7 +14,7 @@
 > - ภารกิจทั้ง 20 ไม่เปลี่ยนเลย: บันทึกถึง T+7,000 s เทียบ blend ของ #191 กับของงานนี้ทุกช่วงเฟรม point-mass 290,382 ครั้ง ต่างกัน 0 ครั้ง (ช่วงที่ใช้ cubic ยาวที่สุด 38.5 s) six-DOF 287,598 ครั้ง ต่างกัน 0 ครั้ง (ยาวที่สุด 60 s ในการบันทึกที่ถูก thin แล้ว)
 > - เทสต์: 2 เทสต์ใหม่ใน `tests/debris-replay.test.ts` อันแรกล้มบนโค้ดของ #191 (ชิ้นส่วนถูกวาดห่างจากเส้นตรง 28,090 km) แล้วผ่านหลังแก้ อันที่สองยืนยันว่าช่วงต่ำกว่า 4,000 s ยังใช้ cubic สองเทสต์นี้ตรึงค่าขอบไว้ระหว่าง 3,900 กับ 4,100 s ไม่ได้เปลี่ยน assertion เดิม
 > - ขนาด: +12 B ต่อ chunk (index และ flight worker) **อัปเดต 2026-10-31:** #184 merge และขึ้นเพดาน precache code เป็น 14,679 kB branch นี้ merge main ล่าสุด (f68faab) แล้ว ขนาดผ่าน: precache code 14,677,998 B (เหลือ 1,002 B) index 2,653,802 B (เหลือ 198 B) จึงไม่ต้องรอ #196 แล้ว #196 ยังช่วยเพิ่มที่ว่างใน index อีก 120 B
-> - ฐาน: เจ้าของเลือกให้ต่อจาก #191 ที่ยังไม่ merge ("Stack on #191") PR นี้จึงมี commit ของ #191 อยู่ด้วย และต้อง rebase ลง main หลัง #191 merge
+> - ฐาน: เจ้าของเลือกให้ต่อจาก #191 ("Stack on #191") **อัปเดต 2026-10-31:** #191 merge แล้ว (cbf1614) และ #195 ก็ merge ตามมา (6953369) ซึ่งแก้ส่วนเดียวกัน branch นี้จึงสร้างใหม่บน main ล่าสุด เหลือแค่การเปลี่ยนของ #194 เอง ชิ้นส่วนที่ตกถึงพื้นภายในช่วงเฟรม (งานของ #195) ยังใช้ cubic ไปถึงจุดที่ตกเหมือนเดิม ขีดจำกัด 4,000 s ใช้กับชิ้นที่ยังอยู่ทั้งสองเฟรมเท่านั้น
 > - การตรวจโดย agent ตัวที่สอง: รอบแรกยืนยัน 19 จาก 28 ข้อ รอบที่สอง (ค่า 4,000 s) ยืนยัน 15 จาก 21 ข้อ ไม่มีข้อที่ขวางการ merge ข้อที่ควรแก้ (ค่าขอบ คำอธิบายเรื่องบรรยากาศ และตัวเลขในรายงานบางข้อ) แก้แล้วทั้งหมด
 
 ```yaml
@@ -23,7 +23,7 @@ change_kind: bug fix (wrong → right) on #191's blend; no existing assertion ch
 owner_authorization: 'owner in chat, 2026-10-30, asking for the follow-ups listed in docs/development/reports/replay-debris-air.md under "Not changed, for later" to be opened: "เปิดงานต่อยอดในอีกเซสชั่นครับ" ("open the follow-up work in another session"); this task is the second agent''s finding A there. Base: owner''s answer in this session, 2026-10-30, "Stack on #191 (Recommended)"'
 app_code: src/physics/frame.ts
 tests: tests/debris-replay.test.ts
-base: 'claude/peaceful-planck-uyne6i at eec8352 (#191, open), on main 1842a86'
+base: 'main 6953369 (#191 merged at cbf1614, then #195), 2026-10-31; first stacked on #191 at eec8352 (on main 1842a86)'
 branch: claude/charming-bardeen-qdid5p
 pr: 194
 second_agent_review: 'confirmed 19 of 28, no blocking findings (2026-10-30, on 19f3aca + 01b8660/0932d7b); follow-up on 90adc83/3f7079a confirmed 15 of 21, no blocking findings; the should-fix findings of both are fixed: the limit moved from 1,000 to 4,000 s, the drag reasoning restated for the simulation''s own atmosphere, the report figures corrected'
@@ -45,18 +45,20 @@ None of the 20 watch missions leaves such a body (the lowest perigee in orbit at
 
 ## Change
 
-In the debris blend, `out` (out of the air at both ends) is named, and the cubic needs `span < 4e3` as well:
+In the debris blend, `out` (out of the air at both ends) is named, and a quiet body's cubic needs `span < 4e3` as well. On main since #195, the blend also draws a body that comes down inside the span on the cubic over its own shorter span `s` to where it touched (`s < span`); that case is unchanged here:
 
 ```ts
-const rigid = …, quiet = !d.burning && !other.burning,
-  out = norm(d.r) > AIRLESS_RADIUS && norm(other.r) > AIRLESS_RADIUS;
-…(quiet && !out && span < 4e3 ? hermite(…) : path(d.r, d.v, other.r, other.v, quiet && out)),
+const rigid = …, quiet = !d.burning && !other!.burning,
+  out = norm(d.r) > AIRLESS_RADIUS && norm(other!.r) > AIRLESS_RADIUS;
+…(((quiet && span < 4e3) || s < span) && !out
+  ? hermite(d.r, d.v, other!.r, other!.v, w, s) : path(d.r, d.v, other!.r, other!.v, quiet && out)),
 ```
 
-- Quiet, in the air at either end, span under 4,000 s: the cubic, as in #191.
+- Quiet, alive at both ends, in the air at either end, span under 4,000 s: the cubic, as in #191.
 - Quiet, in the air at either end, span of 4,000 s or more: `path(…, false)`, the straight line, as on main before #191.
 - Quiet and out of the air at both ends: `path(…, true)`, the vehicle's way, unchanged.
 - Firing at either end: `path(…, false)`, the line, unchanged.
+- Coming down inside the span (#195, `s < span`): the cubic to where it touched, whatever the span, unchanged. The line `path` draws runs over the whole span, so it would not reach the ground by the contact time and the body would jump there.
 
 `path`'s argument changes from `quiet` to `quiet && out`. For the body out of the air, and for the firing one, the value is the same as before; it differs only for the quiet body in the air, which used to take the cubic branch before reaching `path`. An infinite span now takes the line, where #191 gave NaN; NaN, zero and negative spans still return early (`!(span > 0)`).
 
@@ -98,7 +100,7 @@ On average the cubic is closer for a fall up to 1,000 s windows, and about level
 
 ## Measured: no watch-mission span changes
 
-Probe (gitignored `tests/probe/span-bound.test.ts`): each watch mission built as the app builds it (`watchMissionSettings` from 2026-09-22, its rendezvous included), recorded through `FlightRecorder.advance(1)` to T+7,000 s, past orbit insertion. On every pair of consecutive stored frames, `interpolateFrames` from #191 (a copy of its frame.ts) and from this branch were compared at u = 0.13, 0.5 and 0.87: the whole frame, recursively with `Object.is`, where a body takes the in-air cubic, and the debris elsewhere. The run was made with the draft's 1,000 s limit; every span the 4,000 s limit sends to the line is one the 1,000 s limit sent there too, so it holds for both.
+Probe (gitignored `tests/probe/span-bound.test.ts`): each watch mission built as the app builds it (`watchMissionSettings` from 2026-09-22, its rendezvous included), recorded through `FlightRecorder.advance(1)` to T+7,000 s, past orbit insertion. On every pair of consecutive stored frames, `interpolateFrames` from #191 (a copy of its frame.ts) and from this branch were compared at u = 0.13, 0.5 and 0.87: the whole frame, recursively with `Object.is`, where a body takes the in-air cubic, and the debris elsewhere. The run was made with the draft's 1,000 s limit; every span the 4,000 s limit sends to the line is one the 1,000 s limit sent there too, so it holds for both. On main 6953369 (with #195) this branch differs from main's blend only by the same span condition, on a quiet body alive at both frames, and no recorded span comes near 4,000 s (60 s at most), so it still holds there.
 
 - **Point-mass, all 20:** 290,382 blends, 0 differ. 142,857 body-spans take the in-air cubic; the longest is 38.5 s (a Sputnik booster). The longest stored span is 70 s (Angara A5's coast, unthinned); two recordings thin once (Soyuz MS-10 and 18a, the aborts).
 - **Six-DOF, all 20** (`defaultDynamics`, the 6,000-frame budget): 287,598 blends, 0 differ. 187,549 body-spans take the in-air cubic; the longest is 60 s (Electron's and Falcon Heavy's fairings, in recordings thinned 5 and 6 times). 11 of the 20 recordings thin, and none opens a gap over 60 s (`MAX_THINNED_GAP`).
@@ -119,13 +121,15 @@ The pair pins the limit to (3,900, 4,100] s. Mutants: no bound, 4,200 s and 5,00
 
 ## Size
 
-`npx vite build`, `node scripts/bundle-budget.mjs`: no ceiling raised. **Now (2026-10-31) it passes:** #193, #184 and #189 merged into main (089b34e); #184 raised the ceilings (precache code to 14,679,000 B, `index-*.js` to 2,654,000 B). This branch carries #191's latest head (b974bf8, main merged in) since 1fdd97c.
+`npx vite build`, `node scripts/bundle-budget.mjs`: no ceiling raised. **Now it passes**, on main 6953369 (2026-10-31: #191, #193, #184, #189 and #195 merged; #184 raised precache code to 14,679,000 B, #195 `index-*.js` to 2,655,000 B):
 
-| | main (089b34e) | this branch (main + #191 + this) | with #196 too (trial merge) |
+| | main (6953369) | this branch (rebuilt on it) | with #196 too (trial merge) |
 |---|---|---|---|
-| `index-*.js` (ceiling 2,654,000 B) | 2,653,772 B | 2,653,803 B (+31; 197 B left) | 2,653,683 B (317 B left) |
-| `flight.worker-*.js` | 570,507 B | 570,539 B (+32) | 570,419 B |
-| precache code (ceiling 14,679,000 B) | 14,677,929 B | 14,677,992 B (1,008 B left) | 14,677,752 B (1,248 B left) |
+| `index-*.js` (ceiling 2,655,000 B) | 2,654,006 B | 2,654,018 B (+12; 982 B left) | 2,653,898 B |
+| `flight.worker-*.js` | 570,740 B | 570,752 B (+12) | 570,632 B |
+| precache code (ceiling 14,679,000 B) | 14,678,566 B | 14,678,590 B (410 B left) | 14,678,350 B (650 B left) |
+
+Earlier, on main 089b34e with #191 merged in (ceilings 2,654,000 and 14,679,000 B): this branch 2,653,803 B and 14,677,992 B; main alone 2,653,772 B and 14,677,929 B.
 
 On f68faab, before #189, the same columns were 2,653,771 / 2,653,802 / 2,653,682 B and 14,677,935 / 14,677,998 / 14,677,758 B.
 
@@ -156,7 +160,7 @@ The offset is **#196** (branch `claude/replay-arc-offset`, on main ef9d3f6). On 
 
 ## Merging with #191 and #187
 
-- **#191:** this branch is #191's head plus this change, as the owner chose. Once #191 merges (squashed), this branch is rebased onto main, which leaves only this PR's commits.
+- **#191 (merged 2026-10-31 at cbf1614, then #195 at 6953369):** this branch was stacked on #191, as the owner chose. Once #191 merged, the branch was rebuilt on main 6953369 with only this PR's four files (frame.ts, the test, the report, the fragment); its earlier history (to 2a7cea9) is replaced. #195 rewrote the same debris blend, so the change was re-applied there: the 4,000 s limit on a quiet body alive at both frames, and #195's cubic to the impact point for a body that comes down inside the span left as it is (Change, above). The two test describes, #195's and this one, both appended at the end of tests/debris-replay.test.ts, are kept. The long-span test fails on main 6953369's frame.ts as it did on #191's, and the mutants 3,800 s and 4,200 s still fail.
 - **#187 (merged at ef9d3f6):** main is merged into this branch (228f880). The doc comment of `interpolateFrames` conflicted, as it does for #191: #187's moved comment is kept, with its "anything else in a straight line" replaced by this branch's sentence (the cubic for a body falling through the air, a straight line over a span of 4,000 s or more, the line for one firing its engines). The code merged cleanly. #187's 'leaves a body in the air, or under its own thrust, on the line…' asserted the in-air line #191 fixes; as #191's report says for whichever merges second, its in-air body now fires its engines, and the test is 'leaves a body under its own thrust, in the air or out of it, on the line while the vehicle takes its arc'. #191's own branch will need the same two changes when it syncs with main.
 - **#193 and #184 (merged 2026-10-30/31):** main merged into this branch (5fe66da) with no conflict.
 - **#191's new head and #189 (2026-10-31):** #191 merged main (#187, #189, #193, #184) into its own branch (b974bf8), resolving #187's conflicts as this branch had. Merging it here (1fdd97c) conflicted only on two comments: #191's test comment was taken, and this branch's doc-comment sentence (with the 4,000 s limit) kept. This PR's own diff over #191 is now four files: frame.ts, the test, the report and the fragment.
