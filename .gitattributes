@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# The Soyuz Anatomy pages (public/anatomy/) are kept byte for byte as their
+# author made them, CR bytes included: scripts/anatomy-meshes.mjs records each
+# page's SHA-256 in the meshes it derives from it.
+public/anatomy/*.html -text
+public/anatomy/*.bin binary

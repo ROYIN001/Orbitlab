@@ -4,8 +4,9 @@
  * straight line between its two samples: that line sags v²Δt²/8R under the
  * arc, 115 m half way through a 10 s orbit frame, and a replayed Soyuz-2.1a's
  * Blok I was drawn below the spacecraft, seeming to fall away at 45 m/s. Where
- * the vehicle itself is drawn on the line (under thrust, six-DOF), the body
- * keeps the line too, so the two never part.
+ * the vehicle itself is drawn on the line (under thrust), the body keeps the
+ * line too, so the two never part. A six-DOF vehicle and the bodies beside it
+ * take the cubic through both frames: tests/rigid-replay-arc.test.ts.
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
