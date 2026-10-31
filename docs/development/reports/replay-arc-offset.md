@@ -2,11 +2,11 @@
 
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 >
-> - ทำไม: หลัง #187 merge แล้ว ถ้า merge #191 และ #194 ด้วย ขนาด precache code จะเกินเพดาน 15 B เจ้าของเลือกให้ทำงานลดขนาดแบบผลลัพธ์เหมือนเดิมก่อน ("Offset PR first (Recommended)") แทนการขึ้นเพดาน
+> - ทำไม: หลัง #187 merge แล้ว ถ้า merge #191 และ #194 ด้วย ขนาด precache code จะเกินเพดาน 15 B เจ้าของเลือกให้ทำงานลดขนาดแบบผลลัพธ์เหมือนเดิมก่อน ("Offset PR first (Recommended)") แทนการขึ้นเพดาน **อัปเดต 2026-10-31:** หลังจากนั้น #184 merge และขึ้นเพดาน precache code เป็น 14,679 kB #191 กับ #194 จึงผ่านได้เองโดยไม่ต้องรองานนี้ งานนี้ยังมีประโยชน์ เพราะลดขนาด index ซึ่งตอนนี้เหลือที่ว่างแค่ 229 B บน main และยังมี PR อื่นของ replay อีกหลายตัวที่จะเพิ่มขนาด
 > - ทำอะไร: ใน `interpolateFrames` (src/physics/frame.ts) การวาดยานของ Apollo สามลำ (CSM, ascent stage, service module) ระหว่างสองเฟรมเคยเขียนการเรียก `hermite` เต็มๆ สามครั้ง ตอนนี้เรียกผ่านฟังก์ชัน `arc` ตัวเดียว ซึ่งเรียก `hermite` ตัวเดิมด้วยค่าเดิมทุกตัว ภาพที่เห็นไม่เปลี่ยน
 > - ผลลัพธ์เหมือนเดิม: บันทึก Apollo 11 ตั้งแต่ปล่อยจนลงน้ำ (T+703,130 s) แล้วเทียบ `interpolateFrames` ของ main กับของงานนี้ทุกคู่เฟรม: point-mass 34,671 ครั้ง ต่างกัน 0 ครั้ง (มีคู่เฟรมที่มี CSM 1,801 คู่, ascent stage 317, service module 27) และ agent ตัวที่สองสุ่มเฟรมที่มียานครบสามลำอีก 30,000 ครั้ง ต่างกัน 0 ครั้ง; six-DOF 14,769 ครั้ง ต่างกัน 0 ครั้ง
-> - ขนาด: เล็กลง 120 B ต่อ chunk (index และ flight worker) precache code เหลือ 288 B; เมื่อรวม #191 และ #194 แล้วเหลือ 225 B (วัดจาก trial merge) ไม่ต้องขึ้นเพดาน
-> - ลำดับ: งานนี้ merge ก่อน แล้วตามด้วย #191 แล้ว #194 (#194 ต่อจาก #191 และมี commit ของ #191 อยู่ด้วย) #191 อย่างเดียวกับงานนี้ precache code ก็ยังอยู่ใต้เพดาน
+> - ขนาด: เล็กลง 120 B ต่อ chunk (index และ flight worker) บน main ปัจจุบัน (f68faab) precache code เหลือ 1,305 B และ index เหลือ 349 B (main เองเหลือ 1,065 B และ 229 B); เมื่อรวม #191 และ #194 แล้ว precache code เหลือ 1,242 B index เหลือ 318 B ไม่ต้องขึ้นเพดาน
+> - ลำดับ: ไม่ต้อง merge ก่อนแล้ว จะ merge ก่อนหรือหลัง #191 และ #194 ก็ได้
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 12 จาก 14 ข้อ ไม่มีข้อที่ต้องแก้ ข้อสังเกตสองข้อ (ลำดับการ merge และตัวเลขขนาดที่ต่างได้ 1–2 B ตาม build stamp) แก้แล้ว
 
 ```yaml
@@ -14,7 +14,7 @@ item: replay blend, one local arc() for Apollo's cubic calls (identical output; 
 change_kind: identical output; no assertion changed; no ceiling changed
 owner_authorization: 'owner in chat to this session, 2026-10-30, answering the D-38 question for #194 (precache code 15 B over with #187 merged): "Offset PR first (Recommended)", whose option read "I open the identical-output helper as its own small PR on a new branch (you authorize that package and branch now)"'
 app_code: src/physics/frame.ts
-base_sha_verified_on: {sha: ef9d3f6, date: 2026-10-30}
+base_sha_verified_on: {sha: f68faab, date: 2026-10-31} # first on ef9d3f6, 2026-10-30; main merged in at c1a2b64
 branch: claude/replay-arc-offset
 pr: 196
 second_agent_review: 'confirmed 12 of 14, nothing blocking or should-fix (2026-10-30, on c62c318); two notes fixed; the check it left open, the six-DOF run, has since finished: 0 differ'
@@ -23,6 +23,8 @@ second_agent_review: 'confirmed 12 of 14, nothing blocking or should-fix (2026-1
 ## Why
 
 #187 merged at ef9d3f6. #191 (debris through the air, +19/+20 B) and #194 (the span limit on #191's cubic, +12/+12 B) are still open, and with all three merged precache code is 14,654,015 B, 15 B over its 14,654,000 B ceiling (#194's report, "D-38 raise case"). Every byte in `interpolateFrames` counts twice, since it is in the index chunk and the flight worker. The owner chose this offset over a raise.
+
+**Since then (2026-10-31):** #193 and #184 merged into main (f68faab), and #184 raised the precache code ceiling to 14,679,000 B and `index-*.js` to 2,654,000 B. On that main #191 and #194 fit without this PR (#194's report). This PR stays useful as headroom: on main `index-*.js` has 229 B left, and five other open replay PRs (#189, #190, #195, #197, #198) change the same code. It no longer has to merge first.
 
 ## Change
 
@@ -52,6 +54,18 @@ No existing test exercises the blend of Apollo's craft directly; the probe cover
 
 `npx vite build`, `node scripts/bundle-budget.mjs`: ok.
 
+On main as it is now (f68faab, after #193 and #184; ceilings `index-*.js` 2,654,000 B, precache code 14,679,000 B; 8-character build stamp):
+
+| | main (f68faab) | this branch (main merged in, c1a2b64) | with #191 and #194 too |
+|---|---|---|---|
+| `index-*.js` | 2,653,771 B (229 B left) | 2,653,651 B (−120; 349 B left) | 2,653,682 B (318 B left) |
+| `flight.worker-*.js` | 570,514 B | 570,394 B (−120) | 570,426 B |
+| precache code | 14,677,935 B (1,065 B left) | 14,677,695 B (1,305 B left) | 14,677,758 B (1,242 B left) |
+
+The last column is a trial merge of this branch into #194's head with main merged in (5fe66da): bundle-budget passes, and `tests/debris-replay.test.ts` with `tests/rigid-replay-arc.test.ts` pass, 29 of 29. Without this PR, #191 and #194 on that main give 2,653,802 B and 14,677,998 B, which also pass.
+
+First measured on main at ef9d3f6, before #184 raised the ceilings (7-character build stamp):
+
 | | main (ef9d3f6) | this branch | with #191 and #194 too |
 |---|---|---|---|
 | `index-*.js` | 2,634,867 B | 2,634,747 B (−120) | 2,634,778 B |
@@ -62,7 +76,7 @@ The last column is a trial merge of this branch into #194's head (main + #191 + 
 
 The figures are for a build stamped with a 7-character commit hash (`__ORBITLAB_BUILD__`, from `git rev-parse --short HEAD` in vite.config.ts). The second agent's checkout abbreviates to 8 characters and its builds were 1 B larger in index and 2 B in precache code; every difference above is the same, and CI's build may differ by a byte or two in the same way.
 
-**Merge order:** this PR first, then #191, then #194, which is stacked on #191 and carries its commits.
+**Merge order:** first planned as this PR, then #191, then #194 (stacked on #191). Since #184 raised the ceilings, this PR can merge before or after them; #191 still goes before #194.
 
 ## Second-agent review
 
