@@ -12,9 +12,9 @@
 > - งบเฟรมที่บังคับให้เล็ก: H-IIA 67.8 km → 51 m, Apollo 36 km → 129 m, MS-25 32.9 km → 33 m, Soyuz MS docking six-DOF ถึง T+14,000 s 577 → 14 m
 > - Vostok-1 six-DOF: 4,726 → 4,804 เฟรม, 98.8 → 100.7 MB ยังอยู่ใต้ 101 MB ที่เทสต์ heavy กำหนด แก้ตัวเลขใน docs/PHYSICS.md แล้ว
 > - ทางเลือกที่วัดแล้วไม่ใช้: ทุก 2 s; ทุกอย่างที่ต่ำกว่า 100 km (Vostok-1 ได้ 102.7 MB เกินเพดาน 101 MB เพราะ fairing และเปลือกโมดูลที่ตกช้าๆ ใกล้พื้น); ความเร็วเทียบอากาศ (เกินเพดาน bundle); อัตราการตกในแนวดิ่ง (พลาดช่วงที่ชิ้นส่วนบินเกือบราบขณะชะลอแรงที่สุด)
-> - เทสต์: ใหม่ 4 ข้อ (tests/falling-frames.test.ts) ล้มบนโค้ดเดิมทั้ง 4 ข้อ (1,596 m, 4,708 m, 10,671 m) และใหม่ 1 ข้อใน heavy (six-DOF Sputnik, เดิม 2,274 m) เปลี่ยน assertion เดิม 1 ข้อ: เทสต์ H-IIA ของ #191 เคยวัดที่ step ที่ตัวบันทึกไม่ได้เก็บ ตอนนี้เก็บครบทุก step จึงเปลี่ยนไปวัดระหว่าง step ด้วยการบินซ้ำแบบละเอียด (เกณฑ์ 600 m เท่าเดิม วัดได้ 51 m) ดังนั้นไม่เข้าเงื่อนไขอนุมัติถาวรสำหรับบั๊ก ต้องให้เจ้าของกด
-> - ขนาด: precache code +4 B (เหลือ 55 B; ถ้า merge #187 ด้วย เหลือราว 5 B) ไม่ได้ขึ้นเพดาน ส่วนที่ทำให้พอดีคือโค้ดเดิมสองจุดที่เขียนสั้นลงโดยผลเท่าเดิม (ดูหัวข้อ Size)
-> - ซ้อนอยู่บน #191 (เจ้าของเลือก "Stack on #191") ต้อง merge #191 ก่อน
+> - เทสต์: ใหม่ 4 ข้อ (tests/falling-frames.test.ts) ล้มบนโค้ดเดิมทั้ง 4 ข้อ (1,596 m, 4,708 m, 10,671 m) และใหม่ 1 ข้อใน heavy (six-DOF Sputnik, เดิม 2,274 m) เปลี่ยน assertion เดิม 2 ข้อ: ข้อแรก เทสต์ H-IIA ของ #191 เคยวัดที่ step ที่ตัวบันทึกไม่ได้เก็บ ตอนนี้เก็บครบทุก step จึงเปลี่ยนไปวัดระหว่าง step ด้วยการบินซ้ำแบบละเอียด (เกณฑ์ 600 m เท่าเดิม วัดได้ 51 m) ข้อสอง เทสต์ของ #187 จากการ merge main (บรรทัดล่าง) ดังนั้นไม่เข้าเงื่อนไขอนุมัติถาวรสำหรับบั๊ก ต้องให้เจ้าของกด
+> - ขนาด: บน main ล่าสุด (merge แล้ว) precache code +10 B เหลือ 1,018 B ใต้เพดาน (#184 ขึ้นเพดานไปแล้ว) ไม่ได้ขึ้นเพดานเอง ตอนเริ่มงาน (บน #191) +4 B เหลือ 55 B โค้ดเดิมสองจุดที่เขียนสั้นลงโดยผลเท่าเดิมตอนนั้นจำเป็นเพื่อให้พอดี ตอนนี้ไม่จำเป็นแล้วแต่ยังช่วยประหยัด เจ้าของเลือกให้แยกเป็น PR ต่างหากได้ (ดูหัวข้อ Size)
+> - ซ้อนอยู่บน #191 (เจ้าของเลือก "Stack on #191") ต้อง merge #191 ก่อน main ขยับไป (#187, #193, #184) จน #191 และ PR นี้ชนกับ main และ CI ไม่รัน จึง merge main เข้ามาแล้ว (commit 4ed2c86): ชนแค่ doc comment ใน frame.ts และแก้เทสต์ของ #187 หนึ่งข้อตามที่รายงานของ #191 ระบุไว้ (ชิ้นส่วนในอากาศในเทสต์นั้นต้องจุดเครื่องยนต์ `burning: true` เพราะชิ้นที่ไม่จุดเครื่องยนต์ใช้ cubic ของ #191 แล้ว) ตัวเลข point-mass วัดใหม่บนโค้ดที่ merge แล้ว ไม่เปลี่ยน
 > - การบันทึกอยู่ในหน่วยความจำเท่านั้น ไม่มีการเก็บลงเครื่องหรือส่งออก ไม่มี golden หรือ fingerprint ที่ครอบคลุมจำนวนเฟรม
 > - การตรวจโดย agent ตัวที่สอง: ดูหัวข้อ "Second-agent review"
 
@@ -173,21 +173,27 @@ A side effect: a body that comes down between two frames is held at its earlier 
 
 **One existing assertion changed.** #191's *draws a recorded H-IIA's first stage falling through the air close to where the simulation had it* (tests/debris-replay.test.ts) sampled the stage at the simulation's step boundaries the recorder had not kept, and required at least 10 of them. The recorder now keeps every one of them, so none falls between frames and the test found 0. It now samples between the steps with the stage re-flown densely (tests/dense-fall.ts, #191's second agent's method), at least 100 samples (268), the cubic under the same 600 m (51 m), and the line between the same frames over 2 km (2.2 km; the 10 km bound it had was the line across 30 s spans). On the base it fails at 620 m. Because an assertion changed, this PR is not covered by the standing bug-fix approval and waits for the owner.
 
+**And one of #187's, from the merge with main.** tests/rigid-replay-arc.test.ts's *leaves a body in the air, or under its own thrust, on the line while the vehicle takes its arc* asserted that a quiet body in the air stays on the line; with #191 in this branch it takes the cubic. Its in-air body now fires its engines (`burning: true`) and the title reads *leaves a body under its own thrust, in the air or out of it, on the line …*, the change #191's report prescribes for whichever of #191 and #187 merges second.
+
 **Related files**: every test file that reaches `FlightRecorder`, `interpolateFrames`, the replay player, the session or its mirror, plus bundle-budget, repo-hygiene, frames-view, rigid-debris and recovery-return: 26 files, 392 tests, all pass. The full normal suite: see the PR. `npx tsc --noEmit -p .` is clean.
 
 ## Size
 
 `npx vite build`, `node scripts/bundle-budget.mjs`: ok, no ceiling raised.
 
-- `flight.worker-*.js` 570,498 → 570,490 B (−8), `index-*.js` 2,634,861 → 2,634,873 B (+12).
-- Precache code 14,653,941 → 14,653,945 B (+4; 55 B under 14,654,000). #187 adds 25 B to each of the two chunks; with it, about 14,653,995 B (5 B left): measured on a trial merge, see the PR.
-- What made it fit, measured by building this branch with each edit undone: the change alone is +152 B (flight.worker) and +173 B (index), 325 B of precache code against the 59 B left, and it would also take `index-*.js` to 2,635,034 B, over its 2,635 kB ceiling. The `dueAfter` call through `intervalOf` takes 155 and 156 B out (the seven fields were spelled out twice), and `kept.at(-1)` 5 B in each. Both are identical-output edits inside the lines this change touches. SESSION-PROTOCOL §5 asks for one change type per PR; they are here because the change does not fit without them, and the owner can ask for them as a separate identical-output PR first.
+- **On the merge with main** (4ed2c86: #187, #193 and #184 merged since this branch began; #184 raised the ceilings), against the same tree with main's recorder: `flight.worker-*.js` 570,534 → 570,526 B (−8), `index-*.js` 2,653,789 → 2,653,807 B (+18). Precache code 14,677,972 → 14,677,982 B (+10), 1,018 B under its 14,679 kB ceiling; `index-*.js` 193 B under its 2,654 kB.
+- **On #191's head**, where it was first measured: `flight.worker-*.js` 570,498 → 570,490 B (−8), `index-*.js` 2,634,861 → 2,634,873 B (+12); precache code 14,653,941 → 14,653,945 B (+4), 55 B under the 14,654 kB ceiling of then. A trial merge with #187 (before #184 raised the ceilings) was 14,653,995 B, 5 B under.
+- The two identical-output edits, measured on #191's head by building with each undone: the change alone is +152 B (flight.worker) and +173 B (index); the `dueAfter` call through `intervalOf` takes 155 and 156 B out (the seven fields were spelled out twice), and `kept.at(-1)` 5 B in each. They are inside the lines this change touches. Under the ceilings of then the change did not fit without them (325 B of precache code against 59 B left, and `index-*.js` 34 B over its own ceiling). Since #184 raised the ceilings it would fit without them, with `index-*.js` about 37 B under; they stay as a saving that leaves room for the next change. SESSION-PROTOCOL §5 asks for one change type per PR, so the owner can ask for them as a separate identical-output PR first, or for this change without them.
 - Measured alternatives: the airspeed rule was +39/+55 B net (94 B of precache code more than the base, against 59 B left); keeping falling frames out of the coast passes only (instead of the floor in every pass) was 17–19 B a chunk smaller, and left MS-25 4.9 km off.
 
-## Stacked on #191; merging with #187
+## Stacked on #191; merged with main
 
-- This branch is #191's four commits plus this change (the owner's answer above). #191 merges first; this PR's diff then shrinks to its own commit. If #191 changes before it merges, this branch is rebased on it.
-- #187 (a six-DOF vehicle on its arc) changes src/physics/frame.ts and adds tests/rigid-replay-arc.test.ts; this PR touches neither. The bytes are the only interaction: see Size.
+- This branch is #191's four commits plus this change (the owner's answer above). #191 merges first; this PR's diff then shrinks to its own commits.
+- Main moved on 2026-10-30 (#187, #193, #184), and #191 and this PR both conflicted with it, so CI could not run. Commit 4ed2c86 merges main into this branch (a merge commit; #191's commits are not rewritten):
+  - src/physics/frame.ts: the only conflict, the doc comment #187 moved to `interpolateFrames` and #191 edited. #187's comment is taken with #191's sentence in it, as #191's report says. The code merged cleanly: #191's in-air cubic beside #187's new `path`.
+  - tests/rigid-replay-arc.test.ts (#187): its in-air body now fires its engines (`burning: true`), the change #191's report names for whichever merges second, and its title says so. This changes an assertion of #187's, as a consequence of #191; if #191 makes the same change when it merges, the two agree.
+  - src/replay/recorder.ts: #187's and #193's change there is a comment. #193 pins frames to an untargeted recovery's burns through its new events, which the recorder already pins.
+- #184 changed how a point-mass piece let go of mid-step is flown (only the rest of the step). Re-measured on the merge, every point-mass figure in this report is unchanged except one base figure (MS-25's fairing at 1,500 frames, 32,887 → 32,896 m). Six-DOF debris and the in-air blend are untouched by the merge.
 
 ## Second-agent review
 
