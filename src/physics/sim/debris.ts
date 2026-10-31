@@ -838,6 +838,11 @@ export class DebrisTracker {
         }
       }
     }
-    for (const d of this.sim.debris) if (!d.alive && (d.outcome === 'landed' || this.grounded.has(d.id))) this.rest(d);
+    for (const d of this.sim.debris) {
+      if (d.alive) continue;
+      // when it came down, beside where: every contact above sets both, and `rest` moves `restT` on from here
+      if (d.impact) d.impact.t ??= d.restT;
+      if (d.outcome === 'landed' || this.grounded.has(d.id)) this.rest(d);
+    }
   }
 }
