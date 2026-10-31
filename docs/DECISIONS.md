@@ -366,6 +366,19 @@ The four M-LEARNING-027 questions were asked with a recommendation each, and the
 
 At 14:26:46Z on 2026-10-26, before the Merge Desk answer for #175 and #176, the owner wrote in chat, verbatim "ทำต่อตามลำดับได้เลยครับ ตอนนี้ทำถึงไหนแล้วครับ" (go on in order; where are we now?).
 
+## Decided 2026-10-30 and 2026-10-31 (an untargeted recovery's burn events: the request, the §5 question and the Merge Desk for #193; chat)
+
+The owner wrote in chat in the session working on the branch `claude/elegant-sagan-xxsloc`: the task on 2026-10-30, then that evening a question and the answer to the session's one open question, and on 2026-10-31 the message that led to this records PR. The words are verbatim; each answer is what the words say, and nothing more.
+
+| Date | Scope | Words | How it is applied |
+|---|---|---|---|
+| 2026-10-30 | The session's first message, the task: the second agent's finding B in [replay-debris-air](development/reports/replay-debris-air.md) ("Not changed, for later"), an untargeted recovery's entry and landing burns raising no event. It quoted the owner's earlier chat request that those follow-ups be opened | "เปิดงานต่อยอดในอีกเซสชั่นครับ" ("open the follow-up work in another session"), as the task quoted it | The authorization (D-65) recorded in [PR #193](https://github.com/ROYIN001/Orbitlab/pull/193) and in [its report](development/reports/replay-untargeted-burn-events.md). |
+| 2026-10-30 | 20:00:15Z, with #193 green and the second agent's review done | "ตอนนี้รออะไรครับ ตอบกลับเป็นภาษาไทย" (what are we waiting for now? answer in Thai) | A question. The session answered in Thai: the one open question (the next row) and the merge button. |
+| 2026-10-30 | 20:02:07Z, the question of SESSION-PROTOCOL §5 (one change type per PR): #193 carried an identical-output commit (`ff7ea51`, −220 B in each of the seven chunks that carry the simulation) that made room for its bug fix (`36d8bb3`, +164 B each). Options, as written in chat: 1, keep both commits in this PR, no ceiling raised (the session's proposal); 2, split the identical-output commit into its own PR first; 3, drop it and raise the ceilings under D-38 (precache code about +2.1 kB, index-*.js +0.3 kB) | "ข้อ 1 merge ได้เลย" — option 1, and merge | Both commits stayed in #193. Main had moved to `ef9d3f6` (#187) after #193's last CI, so the session merged main in (`f64131c`, no conflict; the head changed only by that merge, SESSION-PROTOCOL §1's exemption) and waited for CI [41120470814](https://github.com/ROYIN001/Orbitlab/actions/runs/41120470814) on it, which passed. PR #193 squash-merged 2026-10-30T20:23:22Z as `dcfa065`; its merge commit quotes the answer. Published by Pages [41122790689](https://github.com/ROYIN001/Orbitlab/actions/runs/41122790689) at `dcfa065` (2026-10-30T20:59:23Z). |
+| 2026-10-31 | 06:26:21Z, after the session had said that the records (this entry, the Merge Desk card, the fragment's fold) were the integration session's to do and offered to do them here | "ทำต่อ" (carry on) | This records PR and the Merge Desk card for #193. It folds #193's fragment only: those of #179 and #185 are folded by the open records PRs [#181](https://github.com/ROYIN001/Orbitlab/pull/181) and [#186](https://github.com/ROYIN001/Orbitlab/pull/186), and those of #187 and #184 are left for their own records. |
+
+The GK1 record in the open PRs #182 and #186 describes a merge hold (H2) until the owner's HU-6 session, on the candidate `1842a86`. Main has moved past it on the owner's merge answers: #187 (`ef9d3f6`), #193 (`dcfa065`) and #184 (`f68faab`). The owner's answer for #193 did not mention the hold. Bringing the GK1 record and its candidate up to date is for #182, not this PR.
+
 ## Deferred (asked, not yet decided)
 
 | Date | Id | Question | Options on the table | Note |
