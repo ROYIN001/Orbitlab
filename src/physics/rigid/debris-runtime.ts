@@ -219,6 +219,10 @@ export class RigidDebrisRuntime {
 
   /** Events raised by the guidance, collected by `step`. */
   private raised: RigidDebrisEvent[] = [];
+  /** Raise one of the return's events, naming the body (`raised`). */
+  private note(key: string): void {
+    this.raised.push({ key, severity: 'info', params: { name: this.debris.name } });
+  }
 
   private guidance(time: number, contact: RigidContact): { nose: Vec3; throttle: number; engines: number[] } {
     const d = this.debris, rc = d.recovery, up = normalize(this.state.r);
@@ -231,6 +235,8 @@ export class RigidDebrisRuntime {
     if (rc.phase === 'entry') {
       if (rc.propellant > rc.landingReserve && height > 25000 && speed > 1400) {
         throttle = 1; engines = this.trio; // Centre and opposing ring engines.
+        if (!rc.entryFlown) this.note('evt.entryBurnStart');
+        rc.entryFlown = true;
       } else rc.phase = 'landing';
     }
     let nose = downward > 0 && speed > 20 ? scale(air, -1 / speed) : up;
@@ -260,6 +266,8 @@ export class RigidDebrisRuntime {
       const deceleration = Math.max(0.1, thrust / this.snapshot.mass - g);
       const stopDistance = Math.max(0, (downward ** 2 - 4) / (2 * deceleration));
       if (rc.landingStarted || contact.tailClearance < 1.15 * stopDistance + 20) {
+        // Only an untargeted burn lights here: `targetedLanding` lights its own first.
+        if (!rc.landingStarted) this.note('evt.landingBurnStart');
         rc.landingStarted = true;
         const groundDownward = -contact.verticalSpeed;
         const demandedAcceleration = Math.max(0, g + (groundDownward ** 2 - 4) / (2 * Math.max(1, contact.tailClearance)));
@@ -552,7 +560,7 @@ export class RigidDebrisRuntime {
         const lit = time - d.createdAt >= FLIP_IGNITION_DELAY;
         if (angleTo(g.dir) < BOOSTBACK_LIGHT_ANGLE) {
           rc.phase = 'boostback';
-          this.raised.push({ key: 'evt.boostbackStart', severity: 'info', params: { name: d.name } });
+          this.note('evt.boostbackStart');
         }
         return { nose: g.dir, throttle: lit ? minimum : 0, engines: lit ? this.centre : [] };
       }
@@ -565,7 +573,7 @@ export class RigidDebrisRuntime {
         if (g.dvNeeded < BOOSTBACK_DONE_DV || spent || (g.trim && (g.miss ?? 0) > before + 1)) {
           rc.phase = 'coast';
           rc.guidance = undefined;
-          this.raised.push({ key: 'evt.boostbackEnd', severity: 'info', params: { name: d.name } });
+          this.note('evt.boostbackEnd');
           return { nose: retro, throttle: 0, engines: [] };
         }
         if (!g.trim && g.dvNeeded < BOOSTBACK_TRIM_DV) g.trim = true;
@@ -585,7 +593,7 @@ export class RigidDebrisRuntime {
         const step = entryStep(this.entryState(), downward > 0, height, speed, rc.propellant,
           { targetSpeed: rg.entryTargetSpeed, reserve: rc.landingReserve });
         if (step.burn) {
-          if (!rc.entryFlown) this.raised.push({ key: 'evt.entryBurnStart', severity: 'info', params: { name: d.name } });
+          if (!rc.entryFlown) this.note('evt.entryBurnStart');
           rc.entryFlown = true;
           const thrust = this.health(this.trio)
             * engineThrust(stage.engine, atmosphere(Math.max(0, height)).p);
@@ -614,7 +622,7 @@ export class RigidDebrisRuntime {
         const surface = rc.target!.kind === 'tower' && !rc.catchPassed
           ? { ...contact, tailClearance: contact.tailClearance - (rc.target!.catchHeight ?? 0) } : contact;
         const landing = this.targetedLanding(time, surface, retro);
-        if (!wasStarted && rc.landingStarted) this.raised.push({ key: 'evt.landingBurnStart', severity: 'info', params: { name: d.name } });
+        if (!wasStarted && rc.landingStarted) this.note('evt.landingBurnStart');
         return landing ?? { nose: retro, throttle: 0, engines: [] };
       }
     }
