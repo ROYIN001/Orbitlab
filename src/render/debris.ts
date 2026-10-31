@@ -18,16 +18,70 @@
 import * as THREE from 'three';
 import type { DebrisFrame } from '../physics/frame';
 import { interstageHeight } from '../physics/frame';
+import { enuFrame } from '../physics/orbital';
+import type { Vec3 } from '../physics/vec3';
 import type { SceneManager } from './scene';
+import { sunlitAt } from './sky';
 import { Plume } from './plume';
-import { ogiveProfile } from './liveries';
+import { bellGeometry, ogiveProfile } from './liveries';
 import { clamp01, hash11, smoothstep } from './noise';
 import { disposeObject } from './dispose';
 import { R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7CoreProfile, r7CoreTop, r7TrussGeometry } from './soyuz';
 import { VostokBody, isVostokBody } from './vostok-debris';
+import { anatomyGroup, anatomyMaterials, type AnatomyFit, type AnatomyModel, type AnatomyPartName, type Placement } from './anatomy';
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+/**
+ * The Soyuz Anatomy model the flight is drawn with (render/anatomy.ts), so its
+ * spent parts keep that shape; with Blok I's and Fregat's diameters, by which
+ * a spent stage recorded without its profile is told apart (Fregat: none on 2.1a).
+ */
+/**
+ * The Soyuz Anatomy model a flight is drawn with, for its spent parts; and the
+ * mission's launch azimuth (`plan.azimuthRotating`, rad), which sets the roll
+ * the stack is drawn in (main.ts), so a spent part keeps it.
+ */
+export interface DebrisAnatomy { model: AnatomyModel; fit: AnatomyFit; blokIDiameter: number; fregatDiameter: number | null; azimuth: number }
+
+/**
+ * The attitude main.ts draws a point-mass stack in: its axis along `dir`, its
+ * side (+Z) along the launch azimuth's normal, squared against the axis. A
+ * spent part drawn from the model in it leaves the stack without a roll snap
+ * (its bells and asymmetric parts would otherwise jump round its axis).
+ */
+function stackAttitude(r: { x: number; y: number; z: number }, dir: THREE.Vector3, azimuth: number, out: THREE.Quaternion): THREE.Quaternion {
+  const { east, north, up } = enuFrame(r);
+  const v = (p: { x: number; y: number; z: number }) => new THREE.Vector3(p.x, p.y, p.z);
+  const heading = v(east).multiplyScalar(Math.sin(azimuth)).addScaledVector(v(north), Math.cos(azimuth));
+  let side = new THREE.Vector3().crossVectors(heading, v(up));
+  side.addScaledVector(dir, -side.dot(dir));
+  if (side.length() < 0.05) side = new THREE.Vector3().crossVectors(dir, v(up));
+  if (side.length() < 0.05) side = v(east);
+  side.normalize();
+  const x = new THREE.Vector3().crossVectors(dir, side).normalize();
+  out.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, dir, side));
+  // no place to take the local vertical from (the Earth's centre): the axis alone, as for any other part
+  return Number.isFinite(out.x + out.y + out.z + out.w) ? out : out.setFromUnitVectors(Y_AXIS, dir);
+}
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+
+/**
+ * The separation glow on a part of the Soyuz Anatomy model, along its outline
+ * only (a Fresnel term): spread evenly it washed the model's detail out to a
+ * flat white shape. The emissive keeps 5 % on a face seen square-on and all of
+ * it where the surface turns away at the silhouette, so the shape still reads
+ * against a black sky. One fixed cache key, so every such material shares one
+ * program (and the warm-up mesh below can build it ahead of time).
+ */
+function rimGlow(mat: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+  mat.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 0.05 + 0.95 * pow(1.0 - min(abs(dot(normal, normalize(vViewPosition))), 1.0), 2.5);');
+  };
+  mat.customProgramCacheKey = () => 'orbitlab-rim-glow';
+  return mat;
+}
 
 interface DebrisItem {
   group: THREE.Group;
@@ -36,8 +90,23 @@ interface DebrisItem {
   hinge: THREE.Group | null;
   side: 1 | -1;
   plume: Plume | null;
-  /** the body's material, for the sunlit flash just after separation (none for Vostok's bodies) */
+  /** the body's material, for the sunlit flash just after separation (none for Vostok's bodies, nor for a part of the Soyuz Anatomy model) */
   bodyMat: THREE.MeshStandardMaterial | null;
+  /** a part of the Soyuz Anatomy model: its materials, for the same flash, which they show only out of the sun and along their outline (`rimGlow`) */
+  modelMats: THREE.MeshStandardMaterial[];
+  /** a part of the model on the stack's axis (not a strap-on): drawn in the stack's roll (`stackAttitude`) */
+  stackRoll: boolean;
+  /**
+   * A fairing half of the model: the way it faces, in the stack's frame. The
+   * physics parts the two halves along the stack's side, which the model's
+   * cut need not be square to; the half is drawn parting from its twin along
+   * its own facing instead, as the owner's page parts them (`fairShift`, kept
+   * for when its twin has gone).
+   */
+  fairOut: THREE.Vector3 | null;
+  fairShift: THREE.Vector3;
+  /** …and the pivot at its middle it tumbles about, as a free body does (not the stack's point, 35-45 m below it, nor its hinge) */
+  spin: THREE.Group | null;
   /** C01: one of Vostok-1's bodies, drawn by render/vostok-debris.ts */
   vostok: VostokBody | null;
   createdAt: number;
@@ -107,6 +176,7 @@ export class DebrisView {
   private q = new THREE.Quaternion();
   private qt = new THREE.Quaternion();
   private dir = new THREE.Vector3();
+  private tmp2 = new THREE.Vector3();
 
   /**
    * A never-drawn mesh carrying exactly the material configuration `build`
@@ -115,16 +185,115 @@ export class DebrisView {
    * compiled on the staging frame itself — measured at 13 ms, i.e. a dropped
    * frame at the most dramatic moment of the flight. `renderer.compile` walks
    * the scene with `traverse`, not `traverseVisible`, so an invisible mesh is
-   * enough to get the program built during `SceneManager.prewarm`.
+   * enough to get the program built during `SceneManager.prewarm`. It carries
+   * the outline glow's two variants too (`rimGlow`: the model's one-sided
+   * materials and its double-sided bells), which only a spent part of the
+   * Soyuz Anatomy model uses; the model may only load after `prewarm`.
+   * Each program is built for the lights of that moment, though: once the
+   * camera is past ~55 km from the pad its four floodlights are out of the
+   * light count (launchpad.ts), and a part separating then still compiles its
+   * program on that frame.
    */
   private readonly warmup: THREE.Mesh;
 
+  /** The Soyuz Anatomy model the flight is drawn with (render/anatomy.ts), so its spent parts keep that shape; null on any other flight. */
+  private anatomy: DebrisAnatomy | null = null;
+
+  setAnatomy(anatomy: DebrisAnatomy | null): void {
+    this.anatomy = anatomy;
+  }
+
+  /**
+   * A spent part drawn from the Anatomy model, placed as the flight placed it
+   * in its stage (`AnatomyFit`), its base at `base`: a strap-on, Blok A, Blok
+   * I, Fregat or a fairing half (the one facing the stack's side `side`, on
+   * the side the physics put it; hinged at its own top and swinging out the
+   * way it faces). Null for anything else, which is drawn as before.
+   */
+  private anatomyBody(d: DebrisFrame, g: THREE.Group, base: number, side: 1 | -1): { hinge: THREE.Group | null; plume: Plume | null; mats: THREE.MeshStandardMaterial[]; onAxis: boolean; out?: THREE.Vector3; spin?: THREE.Group } | null {
+    const { model, fit, blokIDiameter, fregatDiameter } = this.anatomy!;
+    const v = d.visual;
+    const spentStage = v.kind === 'stage' || v.kind === 'upperStage';
+    // the stage a spacecraft separates from in the point-mass flight is recorded without its profile (src/physics/sim/staging.ts)
+    const is = (diameter: number | null) => diameter !== null && Math.abs(v.diameter - diameter) < 1e-6;
+    const which: [AnatomyPartName, Placement] | null = v.kind === 'booster' && v.conicalTop ? ['booster', fit.booster]
+      : v.kind === 'fairing' ? [((model.parts['fairing-right']?.max.z ?? 1) + (model.parts['fairing-right']?.min.z ?? 0)) * side > 0 ? 'fairing-right' : 'fairing-left', fit.fairing]
+        : spentStage && v.profile === 'r7Core' ? ['core', fit.core]
+          : spentStage && (v.profile === 'r7Upper' || (!v.profile && is(blokIDiameter))) ? ['stage3', fit.stage3Spent]
+            : spentStage && !v.profile && fit.fregatSpent && is(fregatDiameter) ? ['fregat', fit.fregatSpent] : null;
+    const part = which ? model.parts[which[0]] : undefined;
+    if (!which || !part) return null;
+    const placement = which[1];
+    // a spent Blok I carries its aft bay (engine, thrust frame, lowest tank) with it
+    const parts = [part, ...(which[0] === 'stage3' && model.parts.bay ? [model.parts.bay] : [])];
+    const all = anatomyMaterials(model);
+    const used = new Set(parts.flatMap((x) => x.meshes.map((m) => m.material)));
+    const mats: THREE.MeshStandardMaterial[] = [];
+    all.forEach((mat, i) => {
+      if (!used.has(i)) { mat.dispose(); return; }
+      mat.emissive.set(0xdce6ff);
+      mat.emissiveIntensity = 0;
+      mats.push(rimGlow(mat));
+    });
+    const body = anatomyGroup(part, all, placement);
+    if (v.kind === 'fairing') {
+      // hinged at its top, its bottom swinging out toward the side the half faces
+      const top = placement.dy + (part.max.y - placement.y0) * placement.sy;
+      const out = new THREE.Vector2((part.min.x + part.max.x) / 2, (part.min.z + part.max.z) / 2).normalize();
+      // the middle of the half, where it tumbles about
+      const spin = new THREE.Group();
+      spin.position.set((part.min.x + part.max.x) / 2 + placement.dx, (top + placement.dy + (part.min.y - placement.y0) * placement.sy) / 2, (part.min.z + part.max.z) / 2);
+      const pivot = new THREE.Group();
+      pivot.position.copy(spin.position).negate();
+      pivot.add(body);
+      spin.add(pivot);
+      const turn = new THREE.Group();
+      turn.position.y = base;
+      turn.rotation.y = Math.atan2(-side * out.y, side * out.x);
+      const hinge = new THREE.Group();
+      hinge.position.y = top;
+      const back = new THREE.Group();
+      back.rotation.y = -turn.rotation.y;
+      back.position.y = -top;
+      back.add(spin);
+      hinge.add(back);
+      turn.add(hinge);
+      g.add(turn);
+      return { hinge, plume: null, mats, onAxis: true, out: new THREE.Vector3(out.x, 0, out.y), spin };
+    }
+    const holder = new THREE.Group();
+    holder.position.y = base;
+    holder.add(body, ...parts.slice(1).map((x) => anatomyGroup(x, all, placement)));
+    // its engine bells where the model's chambers are: the meshes leave those to the flight's own bells, so a spent
+    // part drawn from them alone would show empty sockets (scripts/anatomy-meshes.mjs `nozzles`)
+    const chambers = parts.flatMap((x) => x.nozzles ?? []).filter((n) => n.kind !== 'jettison');
+    if (chambers.length) {
+      const metal = rimGlow(new THREE.MeshStandardMaterial({ color: 0x55585c, metalness: 0.7, roughness: 0.42, side: THREE.DoubleSide, emissive: 0xdce6ff, emissiveIntensity: 0 }));
+      mats.push(metal);
+      const bells = new THREE.Group();
+      bells.name = 'anatomy:bells';
+      bells.position.set(placement.dx, placement.dy - placement.y0 * placement.sy, 0);
+      bells.scale.set(1, placement.sy, 1);
+      for (const n of chambers) {
+        const bell = new THREE.Mesh(bellGeometry(n.r, n.top - n.exit, 10), metal);
+        bell.position.set(n.x, n.top, n.z);
+        bells.add(bell);
+      }
+      holder.add(bells);
+    }
+    g.add(holder);
+    const r = v.diameter / 2;
+    const plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });
+    plume.group.position.y = base - r * 1.2;
+    g.add(plume.group);
+    return { hinge: null, plume, mats, onAxis: which[0] !== 'booster' };
+  }
+
   constructor(scene: SceneManager) {
     this.scene = scene;
-    this.warmup = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x808080, metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide }),
-    );
+    const plain = () => new THREE.MeshStandardMaterial({ color: 0x808080, metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide });
+    // one box face each (BoxGeometry has a group per face)
+    this.warmup = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [plain(), rimGlow(plain()), rimGlow(new THREE.MeshStandardMaterial())]);
     this.warmup.visible = false;
     this.warmup.frustumCulled = false;
     scene.scene.add(this.warmup);
@@ -198,12 +367,12 @@ export class DebrisView {
     return { fins, legs, legAngle, footDrop };
   }
 
-  private build(d: DebrisFrame): DebrisItem {
+  private build(d: DebrisFrame, half?: 1 | -1): DebrisItem {
     // C01: Vostok-1's module, its pieces, hatch, seat and pilot have shapes, and no engines, of their own
     if (isVostokBody(d)) {
       const vostok = new VostokBody(d);
       return {
-        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, vostok, createdAt: d.createdAt,
+        group: vostok.root, rigidGeometry: !!d.rigid, hinge: null, side: 1, plume: null, bodyMat: null, modelMats: [], stackRoll: false, fairOut: null, fairShift: new THREE.Vector3(), spin: null, vostok, createdAt: d.createdAt,
         tumbleAxis: new THREE.Vector3(0, 1, 0), tumbleRate: 0, fins: [], legs: [], legAngle: 0, footDrop: 0, finT: -1, legT: -1, shift: null,
       };
     }
@@ -218,13 +387,17 @@ export class DebrisView {
     const base = d.rigid || shift ? 0 : d.anchor ?? 0;
     const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(d.visual.color), metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide,
       emissive: new THREE.Color(0xdce6ff), emissiveIntensity: 0 });
-    const side: 1 | -1 = d.id % 2 === 0 ? 1 : -1;
+    const side: 1 | -1 = half ?? (d.id % 2 === 0 ? 1 : -1);
     let hinge: THREE.Group | null = null;
     let plume: Plume | null = null;
     let fins: THREE.Group[] = [];
     let legs: THREE.Group[] = [];
     let legAngle = 0, footDrop = 0;
-    if (d.visual.kind === 'fairing') {
+    const anatomy = this.anatomy ? this.anatomyBody(d, g, base, side) : null;
+    if (anatomy) {
+      ({ hinge, plume } = anatomy);
+      m.dispose();
+    } else if (d.visual.kind === 'fairing') {
       // one half shell: hinge sits at the nose so it can swing open
       hinge = new THREE.Group();
       hinge.position.y = base + L;
@@ -297,7 +470,8 @@ export class DebrisView {
     }
     const ax = this.randAxis(d.id);
     return {
-      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: m, vostok: null, createdAt: d.createdAt,
+      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: anatomy ? null : m, modelMats: anatomy ? anatomy.mats : [], stackRoll: !!anatomy?.onAxis,
+      fairOut: anatomy?.out ?? null, fairShift: new THREE.Vector3(), spin: anatomy?.spin ?? null, vostok: null, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
       fins, legs, legAngle, footDrop, finT: -1, legT: -1, shift,
@@ -316,8 +490,11 @@ export class DebrisView {
    * @param t mission time, s
    * @param pressure fallback ambient pressure, Pa, for frames recorded before
    *        `DebrisFrame.pressure` existed
+   * @param sunDir unit vector toward the Sun, ECI (the frame's own epoch, as
+   *        main.ts lights the scene), for the glow on the Anatomy model's
+   *        parts; with none, nowhere is sunlit
    */
-  update(list: DebrisFrame[], t: number, pressure = 0): void {
+  update(list: DebrisFrame[], t: number, pressure = 0, sunDir?: Vec3): void {
     const seen = new Set<number>();
     for (const d of list) {
       // A stage that landed stays where it came down (the tracker carries it
@@ -332,8 +509,18 @@ export class DebrisView {
         this.items.delete(d.id);
         item = undefined;
       }
+      this.dir.set(d.dir.x, d.dir.y, d.dir.z).normalize();
+      // a model fairing half's twin, let go of with it: half the gap between them is this half's way out
+      const twin = d.visual.kind === 'fairing' && this.anatomy && !d.rigid
+        ? list.find((o) => o !== d && o.alive && o.visual.kind === 'fairing' && o.createdAt === d.createdAt) : undefined;
+      if (twin) {
+        this.tmp2.set(d.r.x - twin.r.x, d.r.y - twin.r.y, d.r.z - twin.r.z).multiplyScalar(0.5);
+        this.tmp2.addScaledVector(this.dir, -this.tmp2.dot(this.dir));
+      }
       if (!item) {
-        item = this.build(d);
+        // the half that faces the side of the stack the physics put this one on
+        if (twin) stackAttitude(d.r, this.dir, this.anatomy!.azimuth, this.q);
+        item = this.build(d, twin ? (this.tmp.set(0, 0, 1).applyQuaternion(this.q).dot(this.tmp2) < 0 ? -1 : 1) : undefined);
         this.scene.scene.add(item.group);
         this.items.set(d.id, item);
       }
@@ -342,8 +529,14 @@ export class DebrisView {
       item.group.position.copy(this.tmp);
       // A rigid body is placed from its own render offset (below).
       if (item.shift) item.shift.position.y = d.rigid ? 0 : d.anchor ?? 0;
-      this.dir.set(d.dir.x, d.dir.y, d.dir.z).normalize();
-      this.q.setFromUnitVectors(Y_AXIS, this.dir);
+      if (item.stackRoll && this.anatomy) stackAttitude(d.r, this.dir, this.anatomy.azimuth, this.q);
+      else this.q.setFromUnitVectors(Y_AXIS, this.dir);
+      if (item.fairOut && !d.rigid) {
+        // as far out as the physics has it, less the half diameter and metre it lets each go at (spawnFairing in
+        // src/physics/sim/debris.ts), so it parts from where it sat; but along the way the half faces
+        if (twin) item.fairShift.copy(item.fairOut).applyQuaternion(this.q).multiplyScalar(Math.max(0, this.tmp2.length() - d.visual.diameter / 2 - 1)).sub(this.tmp2);
+        item.group.position.add(item.fairShift);
+      }
       const age = Math.max(0, t - item.createdAt);
       if (d.rigid) {
         const attitude = d.rigid.attitudeQ;
@@ -359,7 +552,9 @@ export class DebrisView {
         item.hinge.rotation.z = item.side * open * 1.35;
         const spin = Math.max(0, age - 3) * item.tumbleRate;
         this.qt.setFromAxisAngle(item.tumbleAxis, spin);
-        item.group.quaternion.copy(this.q).multiply(this.qt);
+        item.group.quaternion.copy(this.q);
+        if (item.spin) item.spin.quaternion.copy(this.qt);
+        else item.group.quaternion.multiply(this.qt);
       } else if (d.burning || d.recovery) {
         // an engine is firing, or the stage is being flown home (and then
         // stands where it landed): hold attitude along the thrust axis
@@ -386,6 +581,12 @@ export class DebrisView {
       const escapePart = d.visual.kind === 'escapeHead' || d.visual.kind === 'modules';
       const glow = escapePart ? 0 : age < 1.2 ? smoothstep(0, 0.4, age) : Math.max(0, 1 - smoothstep(1.2, 9, age));
       if (item.bodyMat) item.bodyMat.emissiveIntensity = glow * 1.3;
+      // In sunlight the model's parts read on their own, and the glow clipped them to flat white for seconds: they
+      // glow only out of the sun (in the Earth's shadow, fading in across its soft edge), and along their outline.
+      if (item.modelMats.length) {
+        const shade = sunDir ? 1 - sunlitAt(d.r, sunDir) : 1;
+        for (const mat of item.modelMats) mat.emissiveIntensity = glow * 1.3 * shade;
+      }
     }
     for (const [id, item] of this.items) {
       if (!seen.has(id)) {
