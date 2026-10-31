@@ -784,12 +784,10 @@ const AIRLESS_HEIGHT = 140e3;
  * coasts out of the air goes from one frame to the next the way the vehicle
  * does (`path`), anything else in a straight line.
  *
- * The result is a fresh frame, apart from sub-objects it shares with the
- * stored frame as `cloneFrame` does, which a caller must not write to:
- * `jettisoned`, Apollo's state below its top level (the whole of it unless both
- * frames carry the CSM, the ascent stage or the service module), a recovery's
- * `target` and a body's `visual`. The inputs are never mutated. The function is
- * pure, so seeking twice to the same time produces deep-equal frames.
+ * The result is a fresh frame, apart from each body's `visual`, which it shares
+ * with the stored frame as `cloneFrame` does and which a caller must not write
+ * to. The inputs are never mutated. The function is pure, so seeking twice to
+ * the same time produces deep-equal frames.
  */
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
