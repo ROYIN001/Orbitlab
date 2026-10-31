@@ -14,7 +14,7 @@ item: replay blend, one local arc() for Apollo's cubic calls (identical output; 
 change_kind: identical output; no assertion changed; no ceiling changed
 owner_authorization: 'owner in chat to this session, 2026-10-30, answering the D-38 question for #194 (precache code 15 B over with #187 merged): "Offset PR first (Recommended)", whose option read "I open the identical-output helper as its own small PR on a new branch (you authorize that package and branch now)"'
 app_code: src/physics/frame.ts
-base_sha_verified_on: {sha: f68faab, date: 2026-10-31} # first on ef9d3f6, 2026-10-30; main merged in at c1a2b64
+base_sha_verified_on: {sha: 089b34e, date: 2026-10-31} # first on ef9d3f6, 2026-10-30; main merged in at c1a2b64 and b4a07cd
 branch: claude/replay-arc-offset
 pr: 196
 second_agent_review: 'confirmed 12 of 14, nothing blocking or should-fix (2026-10-30, on c62c318); two notes fixed; the check it left open, the six-DOF run, has since finished: 0 differ'
@@ -54,15 +54,15 @@ No existing test exercises the blend of Apollo's craft directly; the probe cover
 
 `npx vite build`, `node scripts/bundle-budget.mjs`: ok.
 
-On main as it is now (f68faab, after #193 and #184; ceilings `index-*.js` 2,654,000 B, precache code 14,679,000 B; 8-character build stamp):
+On main as it is now (089b34e, after #193, #184 and #189; ceilings `index-*.js` 2,654,000 B, precache code 14,679,000 B; 8-character build stamp):
 
-| | main (f68faab) | this branch (main merged in, c1a2b64) | with #191 and #194 too |
+| | main (089b34e) | this branch (main merged in, b4a07cd) | with #191 and #194 too |
 |---|---|---|---|
-| `index-*.js` | 2,653,771 B (229 B left) | 2,653,651 B (−120; 349 B left) | 2,653,682 B (318 B left) |
-| `flight.worker-*.js` | 570,514 B | 570,394 B (−120) | 570,426 B |
-| precache code | 14,677,935 B (1,065 B left) | 14,677,695 B (1,305 B left) | 14,677,758 B (1,242 B left) |
+| `index-*.js` | 2,653,772 B (228 B left) | 2,653,652 B (−120; 348 B left) | 2,653,683 B (317 B left) |
+| `flight.worker-*.js` | 570,507 B | 570,387 B (−120) | 570,419 B |
+| precache code | 14,677,929 B (1,071 B left) | 14,677,689 B (1,311 B left) | 14,677,752 B (1,248 B left) |
 
-The last column is a trial merge of this branch into #194's head with main merged in (5fe66da): bundle-budget passes, and `tests/debris-replay.test.ts` with `tests/rigid-replay-arc.test.ts` pass, 29 of 29. Without this PR, #191 and #194 on that main give 2,653,802 B and 14,677,998 B, which also pass.
+The last column is a trial merge of this branch into #194's head (1fdd97c, which carries #191's latest head): bundle-budget passes, and `tests/debris-replay.test.ts`, `tests/rigid-replay-arc.test.ts` and `tests/replay.test.ts` pass, 65 of 65. Without this PR, #191 and #194 on that main give 2,653,803 B and 14,677,992 B, which also pass. On f68faab, before #189, the same three columns were 2,653,771 / 2,653,651 / 2,653,682 B and 14,677,935 / 14,677,695 / 14,677,758 B.
 
 First measured on main at ef9d3f6, before #184 raised the ceilings (7-character build stamp):
 
