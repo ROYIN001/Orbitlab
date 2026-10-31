@@ -20,7 +20,8 @@
 > - การ merge กับ main: #187, #189, #193 และ #184 merge ไปก่อนแล้ว จึง merge main เข้า branch นี้ ขัดกันแค่ที่ doc comment และเปลี่ยนเทสต์ของ #187 ข้อหนึ่ง (`tests/rigid-replay-arc.test.ts`) ให้ชิ้นส่วนในบรรยากาศจุดเครื่องยนต์ (`burning: true`) แบบเดียวกับที่เปลี่ยนใน debris-replay ส่วน #193 แก้ข้อสังเกต B ไปแล้ว และ #189 จำกัดช่วงของ coast ที่ถูก thin ไว้ที่ 10 นาทีในรอบแรก
 > - เจ้าของอนุมัติ merge ในแชต 2026-10-31: "จัดการmerge 191 ให้เรียบร้อย"
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 10 จาก 10 ข้อ ไม่พบข้อที่ต้องแก้ก่อน merge มีข้อสังเกต 4 ข้อที่ไม่ขวางการ merge (อยู่ในหัวข้อ "Second-agent review" และ "Not changed, for later") ข้อหนึ่งทำให้แก้คำอธิบาย: แบบ point-mass การจำลองให้ตำแหน่งชิ้นส่วนเฉพาะตอนจบแต่ละ step (ในวงโคจรห่างกันได้ถึง 30 s) ตัวเลข point-mass จึงวัดที่จุดเหล่านั้น ถ้าคำนวณซ้ำให้ถี่ จุดที่คลาดมากที่สุดจะมากขึ้นราว 20–25% แต่ cubic ก็ยังไม่เคยแย่กว่าเส้นตรง
-> - CI: ผ่านทั้งหมดบน 5f25287 (run 41023952861)
+> - CI: ผ่านทั้งหมดบน 5f25287 (run 41023952861) และบน b974bf8 หลังรวม main (run 41179568653)
+> - ผลการ merge: merge แล้วเป็น `cbf1614` (31 ต.ค. 07:29 UTC) และขึ้นเว็บแล้วด้วย Pages run 41180772086 (08:07 UTC) ทุก job ผ่าน 11/11
 
 ```yaml
 item: replay debris blend through the air between recorded frames (bug fix)
@@ -31,6 +32,8 @@ tests: tests/debris-replay.test.ts
 base_sha_verified_on: {sha: 089b34e, date: 2026-10-31}
 branch: claude/peaceful-planck-uyne6i
 pr: 191
+merged: {sha: cbf1614, at: '2026-10-31T07:29:04Z', ci: 41179568653, head: b974bf8, owner_answer: 'จัดการmerge 191 ให้เรียบร้อย (2026-10-31T07:01:00Z)'}
+published: {pages: 41180772086, at: '2026-10-31T08:07:21Z', sha: cbf1614}
 second_agent_review: 'confirmed 10 of 10, no blocking findings, 4 non-blocking (2026-10-30, on a676a23; the later commits change records and one test comment/sample count only)'
 ```
 
