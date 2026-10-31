@@ -598,6 +598,16 @@ section below the three levels says what those estimates mean.
   Heavy's and Angara-A5's cores show 0 m/s alone, and a note says why: the figures count them at
   full throttle, while in flight they throttle to 55 % and 30 % beside their strap-ons. On a phone
   each stage is a card.
+- **Inside, in 3-D** (Soyuz-2.1a and Soyuz-2.1b only), at the end of the view buttons, opens
+  Orbitlab's maker's own Soyuz Anatomy models over the page: the rocket in 3-D with its tanks,
+  engines and plumbing, to turn, take apart and cut open, with a guide in Thai. Soyuz-2.1a has two,
+  **With the Soyuz MS (crewed)** and **With the Progress MS-26 (cargo)**; Soyuz-2.1b one, with
+  Fregat under the ST fairing. **Open in a new tab** shows the model on its own. Each is about
+  4.5 MB and is loaded only when you open it; offline, only a model opened before opens. Building
+  the model can hold the app still for a few seconds (10–20 on a slow machine) while a note says
+  so. Tab reaches the model's own controls (arrow keys turn it). × closes the window, and so does
+  Escape, except while the model has the focus: there Escape brings its view back home. Leaving
+  Build closes it too.
 - **The tour** has five steps, each on a real rocket: Saturn V (a rocket is a stack of stages),
   Falcon 9 (why rockets stage: the rocket equation), Soyuz (strap-ons and the parallel phase),
   Atlas V (why an upper stage can push less than its weight) and Ariane 64 (the fairing). Saturn
@@ -1075,6 +1085,20 @@ Four camera views, switchable from the tabs above the viewport or keys `1`–`4`
   vehicle is too small to see, a labelled marker takes its place.
 - **Map** — a 2-D ground track with the predicted orbit, the target orbit, the day/night
   terminator, and where spent stages came down.
+
+**Soyuz-2.1a and 2.1b as their 3-D models draw them.** These two rockets are drawn from the
+outside of Orbitlab's maker's Soyuz Anatomy models (the ones Build opens): the strap-ons, the
+core and its open truss, the third stage, Fregat, the fairing halves, the escape tower and, on a
+crewed or Progress flight, the Soyuz MS or the Progress MS. The spent stages and the fairing halves
+keep that shape as they fall away, the Progress unfolds its arrays as the model does, and the
+Soyuz MS opens its wings as it always has. The model is fetched (about 0.2–0.35 MB) when the mission
+is set up; until it arrives, or if it cannot (offline before it was ever fetched), the rocket is
+drawn as before. The engines' bells, the flames and the escape tower's flight are the simulator's
+own, its bells set on the model's combustion chambers (the third stage's and Fregat's) and the
+tower's jettison fire on the model's jettison nozzles. The third stage's aft bay, seen through the
+open truss and once its skirt falls away, is the model's: the engine's body, the thrust frame and
+the bottom of the oxygen tank. The rest of the inside (tanks and pipes) only Build shows, and the
+model is drawn without the pad frost the simulator's own drawing shows.
 
 The small buttons beside the camera tabs open the **Frames** menu (below),
 toggle the **glow** (the bloom around the plume, the ignition flash and the city lights) and go

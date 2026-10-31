@@ -27,6 +27,7 @@ import {
 } from './soyuz';
 import { retroAttitude, VOSTOK_RETRO_TURN } from './vostok';
 import { VOSTOK_CAPSULE } from '../physics/rigid/escape';
+import { anatomyFit, anatomyGroup, anatomyMaterials, anatomySpacecraft, type AnatomyFit, type AnatomyModel } from './anatomy';
 
 /** The rocket's model axes onto a rigid body's (+Y along body x), as src/main.ts turns them. */
 const TURN_MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
@@ -87,6 +88,8 @@ interface BoosterUnit {
   engines: EngineVisual;
   /** the R-7 strap-on's frosted oxygen tank */
   frost: FrostCoat | null;
+  /** its body as this view draws it, hidden when the Anatomy model draws it instead (`mountAnatomy`) */
+  own: THREE.Object3D[];
 }
 
 interface BoosterSet {
@@ -121,6 +124,8 @@ interface StagePart {
   frost: FrostCoat | null;
   /** Blok I's aft skirt, shed after Blok A has gone */
   skirt: AftSkirt | null;
+  /** its body and adapter as this view draws them, hidden when the Anatomy model draws them instead */
+  own: THREE.Object3D[];
 }
 
 interface EngineVisual {
@@ -199,12 +204,22 @@ export class RocketView {
   private fairingLength = 0;
   /** a crewed Soyuz's escape tower and fairing fins */
   private crewedTop: CrewedTop | null = null;
+  /** the fairing as this view draws it, hidden when the Anatomy model draws it instead */
+  private fairingOwn: THREE.Object3D[] = [];
+  /** where the Anatomy model's escape tower stands in the fairing's group, m (null: on this view's fairing's nose) */
+  private towerY: number | null = null;
   /** V03: the condensation collar through Mach 1, at the fairing's shoulder (or a ship's) */
   private vapour: VapourCone | null = null;
   /** where the collar starts: above the fairing's base, or below the top of the stack */
   private vapourAt: { onFairing: boolean; onPayload?: boolean; y: number } | null = null;
   private readonly humidity: number;
   private readonly crewed: boolean;
+  /**
+   * The payload's height as the physics knows it (`SatelliteSpec.size`): in a
+   * rendezvous the ship's drawing hangs from its base, which the physics puts
+   * that far less the probe below its CG (src/physics/sim/rendezvous.ts).
+   */
+  private readonly payloadHeight: number;
   private satellite: SatelliteView;
   /** C01: Vostok's turn for its retro-fire, mission time s (`VOSTOK_RETRO_TURN`), when it flies home from orbit */
   private readonly retroTurn: { from: number; to: number } | null;
@@ -234,6 +249,7 @@ export class RocketView {
   constructor(spec: VehicleSpec, sat: SatelliteSpec, opts: { humidity?: number; deorbit?: number } = {}) {
     this.spec = spec;
     this.crewed = !!sat.crewed;
+    this.payloadHeight = sat.size?.height ?? 7;
     this.humidity = opts.humidity ?? 0.6;
     const at = opts.deorbit;
     this.retroTurn = sat.descent === 'vostok' && at !== undefined ? { from: at + VOSTOK_RETRO_TURN.from, to: at + VOSTOK_RETRO_TURN.to } : null;
@@ -352,31 +368,30 @@ export class RocketView {
     this.materials.push(bellMat);
     const bells = new THREE.InstancedMesh(geo, bellMat, all.length);
     bells.castShadow = true;
-    let maxLen = 0;
-    for (let i = 0; i < all.length; i++) {
-      const n = all[i];
-      this.tmpMat.makeScale(n.r, n.len, n.r);
-      this.tmpMat.setPosition(n.x, 0, n.z);
-      bells.setMatrixAt(i, this.tmpMat);
-      maxLen = Math.max(maxLen, n.len);
-    }
-    bells.instanceMatrix.needsUpdate = true;
     parent.add(bells);
-
     const glowMat = new THREE.MeshBasicMaterial({ color: 0xffc070, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     this.materials.push(glowMat);
     const glow = new THREE.InstancedMesh(GLOW_GEO, glowMat, all.length);
-    for (let i = 0; i < all.length; i++) {
-      const n = all[i];
-      this.tmpMat.makeScale(n.r * 0.95, 1, n.r * 0.95);
-      this.tmpMat.setPosition(n.x, -n.len * 0.98, n.z);
-      glow.setMatrixAt(i, this.tmpMat);
-    }
-    glow.instanceMatrix.needsUpdate = true;
     glow.visible = false;
     parent.add(glow);
-    return { glow, bellLength: maxLen, bellMat,
-      engines: { bells, glow, nozzles: all, ids: rigidNozzleIds(ownerId, shapeId, layout), rigidApplied: false } };
+    const engines: EngineVisual = { bells, glow, nozzles: all, ids: rigidNozzleIds(ownerId, shapeId, layout), rigidApplied: false };
+    this.placeEngines(engines);
+    return { glow, bellLength: Math.max(0, ...all.map((n) => n.len)), bellMat, engines };
+  }
+
+  /** The bells and their glow where their nozzles stand, untilted (`updateEngineVisual` tilts them on a rigid flight). */
+  private placeEngines(visual: EngineVisual): void {
+    for (let i = 0; i < visual.nozzles.length; i++) {
+      const n = visual.nozzles[i], y = n.y ?? 0;
+      this.tmpMat.makeScale(n.r, n.len, n.r);
+      this.tmpMat.setPosition(n.x, y, n.z);
+      visual.bells.setMatrixAt(i, this.tmpMat);
+      this.tmpMat.makeScale(n.r * 0.95, 1, n.r * 0.95);
+      this.tmpMat.setPosition(n.x, y - n.len * 0.98, n.z);
+      visual.glow.setMatrixAt(i, this.tmpMat);
+    }
+    visual.bells.instanceMatrix.needsUpdate = true;
+    visual.glow.instanceMatrix.needsUpdate = true;
   }
 
   /** Actual recorded chamber directions tilt existing instances at their mount.
@@ -395,12 +410,13 @@ export class RocketView {
         this.engineDirection.normalize();
         this.engineQuaternion.setFromUnitVectors(ENGINE_Y_AXIS, this.engineDirection);
       } else this.engineQuaternion.identity();
-      this.enginePosition.set(nozzle.x, 0, nozzle.z);
+      this.enginePosition.set(nozzle.x, nozzle.y ?? 0, nozzle.z);
       this.engineScale.set(nozzle.r, nozzle.len, nozzle.r);
       this.tmpMat.compose(this.enginePosition, this.engineQuaternion, this.engineScale);
       visual.bells.setMatrixAt(i, this.tmpMat);
       this.enginePosition.set(0, -nozzle.len * 0.98, 0).applyQuaternion(this.engineQuaternion);
       this.enginePosition.x += nozzle.x;
+      this.enginePosition.y += nozzle.y ?? 0;
       this.enginePosition.z += nozzle.z;
       const throttle = rigid?.engineThrottles?.[id];
       const glowScale = throttle === undefined ? 1 : Math.sqrt(Math.max(0, throttle));
@@ -433,6 +449,7 @@ export class RocketView {
     this.materials.push(bodyMat);
     const r7Core = spec.profile === 'r7Core';
     let frost: FrostCoat | null = null;
+    const own: THREE.Object3D[] = [];
     if (r7Core) {
       // Blok A: tapering from the booster tips to its engines, closed at the
       // top a metre short of its length, where the truss begins
@@ -443,6 +460,7 @@ export class RocketView {
       g.add(body);
       frost = new FrostCoat(bodyGeo, 0.5, 0.9, seed);
       g.add(frost.mesh);
+      own.push(body, frost.mesh);
       this.materials.push(frost.material);
       this.textures.push(frost.texture);
     } else {
@@ -453,6 +471,7 @@ export class RocketView {
       body.castShadow = true;
       body.receiveShadow = true;
       g.add(body);
+      own.push(body);
     }
     if (noseH > 0) {
       // Its own canvas: the lathe's v runs over the nose alone, and the
@@ -480,16 +499,19 @@ export class RocketView {
       const truss = new THREE.Mesh(r7TrussGeometry(r7CoreTop(r), spec.length - R7_TRUSS_INSIDE, spec.length + interH), this.mat('#4a4d52', 0.45, 0.55));
       truss.castShadow = true;
       g.add(truss);
+      own.push(truss);
     } else if (interH > 0 && topDiameter !== null) {
       const cone = new THREE.Mesh(new THREE.CylinderGeometry(topDiameter / 2, r, interH, ROUND, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
       cone.position.y = spec.length + interH / 2;
       cone.castShadow = true;
       g.add(cone);
+      own.push(cone);
     } else if (topDiameter !== null) {
       // flush interstage band
       const band = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.004, r * 1.004, Math.min(2.5, spec.length * 0.06), ROUND, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
       band.position.y = spec.length - Math.min(2.5, spec.length * 0.06) / 2;
       g.add(band);
+      own.push(band);
     }
 
     const layout = engineLayout(spec.id, spec.engine, r, spec.nozzleLength);
@@ -569,7 +591,7 @@ export class RocketView {
       ring.position.y = -ringH / 2;
       g.add(ring);
     }
-    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters, flaps, frost, skirt,
+    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters, flaps, frost, skirt, own,
       ...(ring ? { ring } : {}) };
   }
 
@@ -613,6 +635,7 @@ export class RocketView {
     const g = new THREE.Group();
     const r = spec.diameter / 2;
     let frost: FrostCoat | null = null;
+    const own: THREE.Object3D[] = [];
     if (spec.conicalTop) {
       // R-7 strap-on: an oblique cone whose tip leans in to Blok A's widest
       // ring, an air rudder on its outer side and the ball joint at its tip
@@ -629,6 +652,7 @@ export class RocketView {
       g.add(ball);
       frost = new FrostCoat(geo, 0.36, 0.96, seed + unit * 1.7);
       g.add(frost.mesh);
+      own.push(body, rudder, ball, frost.mesh);
       this.materials.push(frost.material);
       this.textures.push(frost.texture);
     } else {
@@ -660,7 +684,7 @@ export class RocketView {
       vernier.group.position.y = -layout.verniers[0].len;
       g.add(vernier.group);
     }
-    return { group: g, plume, vernier, glow, engines, frost };
+    return { group: g, plume, vernier, glow, engines, frost, own };
   }
 
   private addGridFins(g: THREE.Group, r: number, len: number): void {
@@ -741,6 +765,7 @@ export class RocketView {
       cone.position.y = adapter / 2;
       cone.castShadow = true;
       g.add(cone);
+      this.fairingOwn.push(cone);
     }
     const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH - adapter, ROUND, 1), m);
     cyl.position.y = adapter + (cylH - adapter) / 2;
@@ -750,6 +775,7 @@ export class RocketView {
     const nose = new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, noseH, 32), ROUND), m);
     nose.castShadow = true;
     g.add(nose);
+    this.fairingOwn.push(cyl, nose);
     // A crewed R-7 flies its escape tower on the fairing's nose and the
     // tower's lattice fins folded along the fairing.
     if (this.crewed && spec.escapeSystem === 'soyuz') {
@@ -758,6 +784,127 @@ export class RocketView {
       g.add(this.crewedTop.tower, this.crewedTop.fins);
     }
     return g;
+  }
+
+  /**
+   * Draw the vehicle as its Soyuz Anatomy page draws it (render/anatomy.ts):
+   * each part of the model in its stage's group, this view's own body of it
+   * hidden; the engines, plumes, aft skirt and the tower's motion stay this
+   * view's. `spacecraft`: the mission flies the page's spacecraft, drawn in
+   * place of this view's. Returns the fit, which the debris draws with too.
+   */
+  mountAnatomy(model: AnatomyModel, spacecraft: 'soyuz-ms' | 'progress' | null): AnatomyFit {
+    const fit = anatomyFit(this.spec, model, !!spacecraft);
+    const mats = anatomyMaterials(model);
+    this.materials.push(...mats);
+    const p = model.parts;
+    const swap = (own: THREE.Object3D[], into: THREE.Object3D, drawn: THREE.Object3D) => {
+      for (const o of own) o.visible = false;
+      into.add(drawn);
+    };
+    const [blokA, blokI, fregat] = this.stages;
+    swap(blokA.own, blokA.group, anatomyGroup(p.core!, mats, fit.core));
+    blokA.frost = null;
+    for (const unit of blokA.boosters[0].units) {
+      swap(unit.own, unit.group, anatomyGroup(p.booster!, mats, fit.booster));
+      unit.frost = null;
+      // its engines under the model's strap-on (`AnatomyFit.boosterEngines`)
+      for (const o of [unit.engines.bells, unit.glow, unit.plume.group, unit.vernier?.group]) o?.position.add(new THREE.Vector3(fit.boosterEngines.dx, fit.boosterEngines.dy, 0));
+    }
+    swap(blokI.own, blokI.group, anatomyGroup(p.stage3!, mats, fit.stage3));
+    // its aft bay — the engine's pumps and pipes, the thrust frame, the lowest tank — with the bells moved onto its chambers
+    if (p.bay) blokI.group.add(anatomyGroup(p.bay, mats, fit.stage3));
+    if (fit.chambers) this.refitChambers(blokI, fit.chambers);
+    // the model's own aft skirt (the 2.1b's), shed when the flight sheds its own; else the flight's petals in the model's paint
+    if (p.skirt && blokI.skirt) {
+      const skirt = new THREE.Group();
+      skirt.add(anatomyGroup(p.skirt, mats, fit.stage3));
+      blokI.group.add(skirt);
+      blokI.skirt.coverWith(skirt);
+    } else if (blokI.skirt) {
+      const paint = model.materials.find((m) => m.name === 'rocket-gray-green');
+      if (paint) {
+        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(paint.color), roughness: paint.roughness, metalness: paint.metalness, side: THREE.DoubleSide });
+        this.materials.push(mat);
+        blokI.skirt.repaint(mat);
+      }
+    }
+    if (fregat && fit.fregat) swap(fregat.own, fregat.group, anatomyGroup(p.fregat!, mats, fit.fregat));
+    // Fregat's bell, glow and flame on the model's S5.92 chamber, which the model drops 1.4 m below the stage's base
+    if (fregat && fit.fregatChambers) this.refitChambers(fregat, fit.fregatChambers);
+    if (this.fairing) {
+      swap(this.fairingOwn, this.fairing, anatomyGroup(p['fairing-left']!, mats, fit.fairing));
+      this.fairing.add(anatomyGroup(p['fairing-right']!, mats, fit.fairing));
+      // the camera's framing and the Mach-1 collar follow the model's fairing
+      this.fairingLength = fit.fairingTop;
+      if (this.vapourAt?.onFairing) this.vapourAt.y = fit.fairingShoulder;
+    }
+    if (this.crewedTop && fit.tower) {
+      this.crewedTop.replaceShape(anatomyGroup(p.escape!, mats, fit.tower.placement), fit.tower.jets);
+      this.towerY = fit.tower.y;
+    }
+    if (spacecraft && fit.payload) {
+      const ship = anatomySpacecraft(model, fit, mats, spacecraft);
+      this.group.remove(this.satellite.group);
+      disposeObject(this.satellite.group);
+      this.satellite = ship;
+      this.group.add(ship.group);
+    } else if (fit.satelliteSeat !== null) this.satellite.seat = fit.satelliteSeat;
+    this.installBending();
+    return fit;
+  }
+
+  /**
+   * A stage's bells, glow and plumes moved onto the model's chambers
+   * (`AnatomyFit.chambers`): each main to the model's main nearest its bearing,
+   * each vernier to the nearest vernier, so the physics' chamber ids, gimbals
+   * and throttles carry over, and the flames sized to the new bells. A model
+   * without verniers (the RD-0124 has none) has the stage's drawn at no size
+   * and their plume taken away. Left as they are if the model's chambers are
+   * otherwise not as many as the stage's.
+   */
+  private refitChambers(part: StagePart, chambers: NonNullable<AnatomyFit['chambers']>): void {
+    const visual = part.engines;
+    const vernier = (i: number) => visual.ids[i].includes('.vernier.');
+    const kindOf = (i: number): 'main' | 'vernier' => (vernier(i) ? 'vernier' : 'main');
+    const count = (kind: 'main' | 'vernier') => chambers.filter((c) => c.kind === kind).length;
+    const noVerniers = count('vernier') === 0;
+    if (count('main') !== visual.nozzles.filter((_, i) => kindOf(i) === 'main').length) return;
+    if (!noVerniers && count('vernier') !== visual.nozzles.filter((_, i) => vernier(i)).length) return;
+    // how far the flame's root reaches beyond the main exits, kept as the stage's own layout has it
+    const reach = (list: readonly { x: number; z: number; r: number }[]) => Math.max(...list.map((n) => Math.hypot(n.x, n.z) + n.r));
+    const widen = part.plume.radius / reach(visual.nozzles.filter((_, i) => kindOf(i) === 'main'));
+    const free = [...chambers];
+    const bearing = (x: number, z: number) => Math.atan2(z, x);
+    const apart = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+    visual.nozzles = visual.nozzles.map((n, i) => {
+      if (noVerniers && vernier(i)) return { ...n, r: 0, len: 0 };
+      const own = bearing(n.x, n.z);
+      let best = -1;
+      for (let k = 0; k < free.length; k++) {
+        if (free[k].kind !== kindOf(i)) continue;
+        if (best < 0 || apart(bearing(free[k].x, free[k].z), own) < apart(bearing(free[best].x, free[best].z), own)) best = k;
+      }
+      const c = free.splice(best, 1)[0];
+      return { ...n, x: c.x, z: c.z, r: c.r, len: c.top - c.exit, y: c.top };
+    });
+    this.placeEngines(visual);
+    const exit = (kind: 'main' | 'vernier') => Math.min(...chambers.filter((c) => c.kind === kind).map((c) => c.exit));
+    part.bellLength = -exit('main');
+    part.plume.group.position.y = exit('main');
+    // the flames as wide as these bells (Fregat's S5.92 is 0.35 m at its exit, its stage's own bell 0.84 m), sized as the stack sizes them
+    const radius = widen * reach(chambers.filter((c) => c.kind === 'main'));
+    part.plume.resize(radius, Math.max(8, radius * 13));
+    if (part.vernier && noVerniers) {
+      part.vernier.group.removeFromParent();
+      part.vernier.dispose();
+      part.vernier = null;
+    } else if (part.vernier) {
+      const vr = chambers.find((c) => c.kind === 'vernier')!.r;
+      part.vernier.resize(Math.max(0.12, vr * 1.4), Math.max(2.5, vr * 16));
+      part.vernier.group.position.y = exit('vernier');
+    }
+    part.flash.position.y = -part.bellLength * 0.6;
   }
 
   /** Lay out the attached parts and animate everything from the frame. */
@@ -874,7 +1021,7 @@ export class RocketView {
     if (this.fairing) {
       this.fairing.visible = frame.fairingAttached;
       this.fairing.position.y = top;
-      this.crewedTop?.update(sinceLiftoff, this.fairingLength);
+      this.crewedTop?.update(sinceLiftoff, this.towerY ?? this.fairingLength);
     }
     if (this.vapour && this.vapourAt) {
       const on = this.vapourAt.onFairing ? frame.fairingAttached : this.vapourAt.onPayload ? !frame.payloadSeparated : true;
@@ -892,14 +1039,20 @@ export class RocketView {
       // drift apart instead of occupying the same 15 m of space.
       // (C01: Apollo's drawing first, which sets its height: the stack, or Eagle alone)
       this.satellite.setApollo?.(frame.apollo, frame.t, true);
-      satG.position.y = this.satellite.height / 2;
+      // Flown to the station, the ship is drawn from the base the rendezvous puts `payloadHeight − probe` below its CG:
+      // a drawing of another length (the Anatomy Soyuz MS's 8.0 m, the simulator's own 7.48 m, to the physics' 7) is
+      // moved by the difference, so its probe's tip, not its base, is where the physics docks it. Eased in over the
+      // 20 s after separation (hours before any docking), so the ship does not step back into the stage it has just left.
+      const docking = frame.rigid?.configurationId === 'rendezvous.spacecraft'
+        ? (this.payloadHeight - this.satellite.height) * (sepT >= 0 ? smoothstep(sepT, sepT + 20, t) : 1) : 0;
+      satG.position.y = this.satellite.height / 2 + docking;
       if (this.retroTurn) this.turnForRetro(frame);
       const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;
       this.satellite.setDeploy(p);
       satG.visible = true;
     } else {
       // a payload flown in the open stands on the stage; one in a fairing half a metre up inside it
-      satG.position.y = top + this.satellite.height / 2 + (this.spec.exposedPayload ? 0 : 0.5);
+      satG.position.y = top + this.satellite.height / 2 + (this.spec.exposedPayload ? 0 : this.satellite.seat ?? 0.5);
       if (this.retroTurn) satG.quaternion.identity();
       this.satellite.setDeploy(0);
       this.satellite.setJettisoned?.(frame.jettisoned);

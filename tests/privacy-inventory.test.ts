@@ -52,7 +52,7 @@ const NOT_STORED: Record<string, string> = {
   'orbitlab:offline-prepare': 'service-worker message',
   'orbitlab-': 'download file name prefix', 'orbitlab-case-': 'download file name prefix', 'orbitlab-project-': 'download file name prefix',
   'orbitlab-recheck-': 'download file name prefix', 'orbitlab-report-': 'download file name prefix', 'orbitlab-experiments.json': 'download file name',
-  'orbitlab-bend': 'shader program cache key', 'orbitlab-bend-bell': 'shader program cache key',
+  'orbitlab-bend': 'shader program cache key', 'orbitlab-bend-bell': 'shader program cache key', 'orbitlab-rim-glow': 'shader program cache key',
   'orbitlab-profile-catalog-v1': 'Web Lock name (held while the tab runs, not stored)', 'orbitlab-profile-owner-v1:': 'Web Lock name prefix',
   'orbitlab-profile-conflict': 'DOM event name', 'orbitlab-profile-name-changed': 'DOM event name', 'orbitlab-workspace-storage-error': 'DOM event name',
 };
@@ -115,8 +115,9 @@ describe('privacy statement (M-LEARNING-047): the page names what the code store
 
   it('sends nothing on its own: no analytics, beacons or sockets, and fetches only from the listed places', () => {
     expect(filesUsing(/sendBeacon|new WebSocket|new EventSource|XMLHttpRequest|document\.cookie/)).toEqual([]);
-    // main.ts: the data provider (DATASETS); lesson-mode and worksheet-view: files of the app itself; sw-core: the worker
-    expect(filesUsing(/\bfetch\(/)).toEqual(['src/main.ts', 'src/pwa/sw-core.ts', 'src/ui/lessons/lesson-mode.ts', 'src/ui/lessons/worksheet-view.ts']);
+    // main.ts: the data provider (DATASETS); lesson-mode, worksheet-view and render/anatomy (the Soyuz exterior meshes,
+    // public/anatomy/): files of the app itself; sw-core: the worker
+    expect(filesUsing(/\bfetch\(/)).toEqual(['src/main.ts', 'src/pwa/sw-core.ts', 'src/render/anatomy.ts', 'src/ui/lessons/lesson-mode.ts', 'src/ui/lessons/worksheet-view.ts']);
     const hosts = new Set(DATASET_IDS.flatMap((id) => DATASETS[id].online?.urls.map((u) => new URL(u).hostname) ?? []));
     expect([...hosts].sort()).toEqual([...DATASET_HOSTS].sort());
     expect([...hosts].sort()).toEqual([...DATA_HOSTS].sort());
