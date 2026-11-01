@@ -14,6 +14,7 @@
 >   - ครบ 20 ภารกิจ cubic ไม่เคยแย่กว่าเส้นตรง และไม่เคยวิ่งเลยจุดแล้วย้อนกลับ
 > - เทสต์: เทสต์ใหม่ 2 ข้อ (entry burn และ landing burn) ล้มบน main และเปลี่ยน assertion เดิม 2 ข้อ (ชิ้นส่วนที่จุดเครื่องในบรรยากาศต้องเป็นเส้นตรง) ตามที่คุณเลือก จึงต้องให้คุณอนุมัติ merge เอง
 > - ขนาด: เล็กลง 7 B ต่อ chunk ไม่ได้ขึ้นเพดาน
+> - ผลการ merge: คุณอนุมัติ ("Merge เลย (แนะนำ)") merge แล้วเป็น `bc63d8a` (31 ต.ค. 13:34 UTC) และขึ้นเว็บแล้วด้วย Pages run 41206179845 (14:13 UTC) ทุก job ผ่าน 11/11
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 7 จาก 8 ข้อ ไม่มีข้อที่ขวางการ merge ข้อที่ไม่ยืนยันเป็นเรื่องถ้อยคำ คือมีกรณีขอบหนึ่งที่เปลี่ยนไปด้วย: ชิ้นส่วนที่จุดเครื่องแล้วแตะพื้นตรงเวลาของเฟรมถัดไปพอดี ตอนนี้ใช้ cubic ไปถึงจุดแตะพื้น (ต่างกันไม่เกิน 0.31 m) แก้คำอธิบายแล้ว
 > - CI: เทสต์ของ #195 ข้อหนึ่ง (บันทึกเที่ยวบิน Falcon Heavy) ใช้เวลาราว 4–5 วินาที ชิดเพดาน 5 วินาทีของ vitest ทั้งบน main และ branch นี้ รอบแรกจึงหมดเวลา ไม่ได้มาจาก PR นี้ (ดู "CI")
 
@@ -25,6 +26,9 @@ app_code: src/physics/frame.ts
 tests: tests/debris-replay.test.ts, tests/rigid-replay-arc.test.ts
 base_sha_verified_on: {sha: 7cbf802, date: 2026-10-31}
 branch: claude/peaceful-planck-uyne6i
+pr: 201
+merged: {sha: bc63d8a, at: '2026-10-31T13:34:25Z', ci: 41204566209, head: 43d1909, owner_answer: 'Merge เลย (แนะนำ) (2026-10-31, about 13:33Z)'}
+published: {pages: 41206179845, at: '2026-10-31T14:13:35Z', sha: bc63d8a}
 second_agent_review: 'confirmed 7 of 8 (claim 1 refuted as worded: the s == span boundary, below), no blocking findings (2026-10-31, on 373e10d)'
 ```
 
