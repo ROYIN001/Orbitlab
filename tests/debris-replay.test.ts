@@ -464,7 +464,7 @@ describe('a spent body that comes down between two recorded frames', () => {
     // the centre core on the drone ship (10 s span) and both fairing halves in the sea (30 s)
     expect(n).toBeGreaterThanOrEqual(3);
     expect(frames.some((f) => f.debris.some((d) => d.name === 'Center core' && d.outcome === 'landed'))).toBe(true);
-  });
+  }, 30_000); // flies Falcon Heavy to T+1320 s: about 2 s alone, over the default 5 s on a loaded CI shard
 });
 
 /**
