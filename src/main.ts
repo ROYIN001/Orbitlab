@@ -22,6 +22,8 @@ import { unseen } from './render/webgl-renderer';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
+import { anatomyLoaded, loadAnatomy, type AnatomyModel } from './render/anatomy';
+import { anatomyPage, flightAnatomy } from './data/anatomy';
 import { TrailLine, OrbitLine } from './render/lines';
 import { LaunchPadView } from './render/launchpad';
 import { RecoverySceneryView } from './render/recovery';
@@ -1911,6 +1913,38 @@ class App {
     if (wasPlaying) { this.playing = true; this.panel.setRunning(true); this.updatePlayButton(); }
   }
 
+  /**
+   * Soyuz-2.1a and 2.1b drawn as the owner's Soyuz Anatomy pages draw them
+   * (render/anatomy.ts), once their exterior meshes have loaded: the flight
+   * starts on the vehicle's own drawing and changes to the model's the moment
+   * they arrive (at once, the second time). If they cannot load it stays as it was.
+   */
+  private mountAnatomy(rocket: RocketView, sim: Simulation): void {
+    this.debrisView.setAnatomy(null);
+    // the browser journeys wait on it (tests/browser/journeys/soyuz-anatomy.mjs)
+    delete document.body.dataset.anatomy;
+    const variant = flightAnatomy(sim.vehicleSpec, sim.satellite);
+    if (!variant) return;
+    const mount = (model: AnatomyModel) => {
+      if (this.rocket !== rocket) return;
+      const page = anatomyPage(variant);
+      const ship = page.spacecraft === 'soyuz-ms' && sim.satellite.crewed ? 'soyuz-ms'
+        : page.spacecraft === 'progress' && sim.satellite.cargoShip ? 'progress' : null;
+      try {
+        // fits every part before it hides any of the stack's own (AnatomyFit), so a model it cannot use leaves the stack as it was
+        const fit = rocket.mountAnatomy(model, ship);
+        this.debrisView.setAnatomy({ model, fit, blokIDiameter: sim.vehicleSpec.stages[1].diameter,
+          fregatDiameter: variant === 'fregat-st31' ? sim.vehicleSpec.stages[2].diameter : null, azimuth: sim.plan.azimuthRotating });
+        document.body.dataset.anatomy = variant;
+      } catch (error) {
+        console.warn('Soyuz Anatomy meshes unusable; drawing the vehicle as before:', error);
+      }
+    };
+    const ready = anatomyLoaded(variant);
+    if (ready) mount(ready);
+    else loadAnatomy(variant).then(mount, (error: unknown) => console.warn('Soyuz Anatomy meshes unavailable; drawing the vehicle as before:', error));
+  }
+
   private setupViews(): void {
     if (!this.sim) return;
     const sim = this.sim;
@@ -1925,6 +1959,7 @@ class App {
     }
     this.rocket = new RocketView(sim.vehicleSpec, sim.satellite, { humidity: SITE_HUMIDITY[sim.site.id], deorbit: sim.cfg.orbit.deorbit?.time });
     this.scene.scene.add(this.rocket.group);
+    this.mountAnatomy(this.rocket, sim);
     // V03: the smoke the flight leaves in the air, from its own recording
     if (this.trails) {
       this.scene.scene.remove(this.trails.mesh);
@@ -2557,7 +2592,7 @@ class App {
     this.syncPredicted(frame, dt);
     this.predicted.update(scene);
     this.target.update(scene);
-    this.debrisView.update(frame.debris, frame.t);
+    this.debrisView.update(frame.debris, frame.t, 0, sunDir);
     // camera
     const radius = frame.abort ? Math.min(2, height / 4) : apolloSize ? apolloSize.radius : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;

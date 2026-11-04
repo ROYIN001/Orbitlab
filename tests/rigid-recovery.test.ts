@@ -88,6 +88,13 @@ describe('Falcon physical recovery acceptance', () => {
     expect(returning!.outcome).toBe('landed');
     const landing = sim.events.find(event => event.key === 'evt.boosterLanded');
     expect(landing).toBeDefined();
+    // With no target the return still raises its two burns' events, once each and
+    // before it lands, as a targeted one does (tests/recovery-untargeted-events.test.ts).
+    const burns = sim.events.filter(event => event.key === 'evt.entryBurnStart' || event.key === 'evt.landingBurnStart');
+    expect(burns.map(event => [event.key, event.params?.name])).toEqual([
+      ['evt.entryBurnStart', returning!.name], ['evt.landingBurnStart', returning!.name]]);
+    expect(burns[0].t).toBeLessThan(burns[1].t);
+    expect(burns[1].t).toBeLessThan(landing!.t);
     expect(Math.abs(Number(landing!.params!.verticalSpeed))).toBeLessThanOrEqual(5);
     expect(Number(landing!.params!.horizontalSpeed)).toBeLessThanOrEqual(3);
     expect(Number(landing!.params!.tiltDeg)).toBeLessThanOrEqual(10);

@@ -205,13 +205,13 @@ test('a suite intentionally absent from a scientific plan may skip; an enabled s
   assert.equal(verifyUnion(plan, [report], { heavy: 'skipped', 'sixdof-fleet': 'skipped' }).ok, false);
 });
 
-test('reviewed heavy file inventory covers all 33 current files and 257 cases', () => {
+test('reviewed heavy file inventory covers all 34 current files and 258 cases', () => {
   const reviewed = readJSON('scripts/audit-heavy/heavy-expected.json');
   assert.deepEqual([...reviewed.files].sort(), discoverFiles('heavy').sort());
-  assert.equal(reviewed.files.length, 33);
-  assert.equal(reviewed.assertions.length, 257);
+  assert.equal(reviewed.files.length, 34);
+  assert.equal(reviewed.assertions.length, 258);
   assert.equal(sha256(JSON.stringify(reviewed.assertions)), reviewed.sourceInventorySha256);
-  assert.equal(new Set(reviewed.assertions.map(assertion => `${assertion.file}::${assertion.name}`)).size, 257);
+  assert.equal(new Set(reviewed.assertions.map(assertion => `${assertion.file}::${assertion.name}`)).size, 258);
   for (const file of reviewed.files) assert.ok(reviewed.assertions.some(assertion => assertion.file === file), file);
 });
 
