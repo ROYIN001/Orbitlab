@@ -502,7 +502,7 @@ Two rows did reach the live site: #128's incomplete fix (about 2.4 days, until #
 
 **Repeated work:**
 - Records PRs: 12 in K1, four of them corrections (#116, #143, #174, #180). #181, after the cutoff, is the thirteenth.
-- Records PRs came within one working day of the publication for 40 of the 70 published K1 PRs, and later for 29, all of them before #170 (KPI-31 timing screen, [kpi-GK1.md](kpi-GK1.md)). #179's fold is due by 2026-10-27T19:41:58Z; #181 carries it.
+- Records PRs came within one working day of the publication for 40 of the 70 published K1 PRs, and later for 29, all of them before #170 (KPI-31 timing screen, [kpi-GK1.md](kpi-GK1.md)). #179's fold was due by 2026-10-27T19:41:58Z; #181 carried it and merged on 2026-11-04T13:15:43Z, 7 d 17 h 33 min 45 s late.
 - The 2026-10-09 answers were re-checked by hand twice (2026-10-18 and 2026-10-25), and five of them were updated again on 2026-10-26 by #178 (`PROGRESS:241`).
 - 16 failed Pages runs, each triaged by hand from logs.
 - Five Pages re-runs on 2026-10-15.
@@ -776,7 +776,7 @@ The GK1 record PR adds one row, "Re-plan at GK1 (S05 §05.11 rule 5; R7.2, M-PLA
 - The hand-off sent to an item that does not cover it (K1-52), as a variance; the ISS sky step (K1-33), as a variance decided by the owner (P4 ก); and an owner proposed for each row with none (file 4).
 - New variances: G7 item 4 not done at GK1; the follow-through rows before K1, checked in part; #176's missing size statement under `q03` B.
 - Done already: the 12 answers of 2026-10-26 (#178); #177's fold and its Merge Desk answer (#180, `46728e5`, merged 18:03:55Z, 1 h 8 min after 2b's publication; `DECISIONS:363`).
-- In #181, not merged: #179's fold and its Merge Desk answer, P1–P5 (`DECISIONS:364-369` at `5092ac9`), and FX-3's register row (`PROGRESS:151` said every K1 item is merged; #181 says one part of M-ORBIT-003, the ISS sky step K1-33, is not done and moves to K2, `PROGRESS:152` at `5092ac9`). #179's fold is due by 2026-10-27T19:41:58Z, one working day after its publication (`S18:137`). The merge hold H2 holds #181 until the owner's HU-6 session ends (#185 merged during the hold, on 2026-10-29T21:25:44Z, the one time it was broken). The session had not taken place by 2026-10-29 (the owner: "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ"), so the fold is late; its delay is counted under KPI-31 when #181 merges. After the session, H2's order is #181, #182, then #186, which folds #185.
+- In #181 (merged 2026-11-04T13:15:43Z as `3a0e3b9`; not merged when this was written): #179's fold and its Merge Desk answer, P1–P5 (`DECISIONS:364-369` at `5092ac9`), and FX-3's register row (`PROGRESS:151` said every K1 item is merged; #181 says one part of M-ORBIT-003, the ISS sky step K1-33, is not done and moves to K2, `PROGRESS:152` at `5092ac9`). #179's fold is due by 2026-10-27T19:41:58Z, one working day after its publication (`S18:137`). The merge hold H2 holds #181 until the owner's HU-6 session ends (#185 merged during the hold, on 2026-10-29T21:25:44Z, the one time it was broken). The session had not taken place by 2026-10-29 (the owner: "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ"), so the fold is late; its delay is counted under KPI-31 when #181 merges. After the session, H2's order is #181, #182, then #186, which folds #185.
 - The deletion of the two `q01` branches is the owner's action, not a record fix; on S12 the owner answered "ก คุณลบทั้งสอง branch เอง (แนะนำ)" (2026-10-28T03:04:38Z).
 
 ## Risk register (S05 §05.13)
