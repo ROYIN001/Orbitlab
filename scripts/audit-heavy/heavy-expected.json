@@ -1,7 +1,7 @@
 {
   "schema": 2,
-  "sourceInventorySha256": "d967cfde12fe8a4bdc778a9ad8414e8f457e84b098de255ba456d4fa6b4b8dcf",
-  "note": "Reviewed expected names only, never test results. Reconciled all 33 discovered heavy files / 257 cases: 11 cases from six previously missing files; existing MS-10 case title follows its current 3.57 s assertion. Generate collection with Vitest list --no-staticParse; review any later drift instead of silently updating this manifest. No test bodies, tolerances or assertions changed.",
+  "sourceInventorySha256": "74a4a8b1a2ea2f086b1118eac1294ee3a303309e5afc7b9b987cd5148c9c987c",
+  "note": "Reviewed expected names only, never test results. Reconciled all 34 discovered heavy files / 258 cases (2026-10-30: tests/heavy/falling-frames-sixdof.test.ts added, one case, docs/development/reports/replay-falling-frames.md): 11 cases from six previously missing files; existing MS-10 case title follows its current 3.57 s assertion. Generate collection with Vitest list --no-staticParse; review any later drift instead of silently updating this manifest. No test bodies, tolerances or assertions changed.",
   "files": [
     "tests/heavy/custom-satellite-sixdof.test.ts",
     "tests/heavy/delivered-falcon-wind.test.ts",
@@ -10,6 +10,7 @@
     "tests/heavy/explicit-fleet-1.test.ts",
     "tests/heavy/explicit-fleet-2.test.ts",
     "tests/heavy/falcon-heavy-returns.test.ts",
+    "tests/heavy/falling-frames-sixdof.test.ts",
     "tests/heavy/flex-fleet-1.test.ts",
     "tests/heavy/flex-fleet-2.test.ts",
     "tests/heavy/flex-fleet-3.test.ts",
@@ -205,6 +206,10 @@
     {
       "file": "tests/heavy/falcon-heavy-returns.test.ts",
       "name": "six-DOF Falcon Heavy returns > lands both side boosters on LZ-1 and LZ-2 and the core on the drone ship"
+    },
+    {
+      "file": "tests/heavy/falling-frames-sixdof.test.ts",
+      "name": "six-DOF Sputnik's boosters falling through the air, recorded > keeps a frame every 5 s of their fall through the air, and draws them within 30 m of where they were"
     },
     {
       "file": "tests/heavy/flex-fleet-1.test.ts",

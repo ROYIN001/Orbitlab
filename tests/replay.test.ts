@@ -11,12 +11,12 @@ import { Simulation } from '../src/physics/simulation';
 import { FlightRecorder } from '../src/replay/recorder';
 import { ReplayPlayer } from '../src/replay/player';
 import { createFrameSimView } from '../src/replay/simview';
-import { captureFrame, interpolateFrames } from '../src/physics/frame';
+import { captureFrame, interpolateFrames, type VisualFrame } from '../src/physics/frame';
 import { chronologicalEvents } from '../src/physics/events';
 import { phaseInfo } from '../src/ui/phase';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE, guidanceForVehicle } from '../src/physics/defaults';
 import { vehicleById } from '../src/data/vehicles';
-import type { SimEvent } from '../src/physics/simulation';
+import type { SimEvent, SimStatus } from '../src/physics/simulation';
 import { orbitById } from '../src/data/orbits';
 import type { FailureConfig, MissionConfig } from '../src/types';
 
@@ -628,5 +628,56 @@ describe('thinning a recording past its ceiling', () => {
     const rec = toyFlight(400);
     expect(rec.frames.length).toBeLessThanOrEqual(rec.frameLimit);
     expect(rec.frameLimit).toBe(400);
+  });
+});
+
+describe('thinning a long recording: no span of hours, and the air kept', () => {
+  /** A toy flight through the recorder's own step loop, phase by phase: [end, status, altitude, step]. The physics is
+   * replaced; the capture, the cadence and the thinning are production code. */
+  function toy(ceiling: number, phases: [number, SimStatus, number, number][]): FlightRecorder {
+    const sim = new Simulation(cfg(), { headless: true });
+    const rec = new FlightRecorder(ceiling);
+    rec.start(sim);
+    const at = (t: number) => phases.find(([end]) => t < end - 1e-9) ?? phases[phases.length - 1];
+    sim.suggestedDt = () => at(sim.state.t)[3];
+    sim.step = (dt) => {
+      sim.state.t += dt;
+      const [, status, altitude] = at(sim.state.t);
+      sim.state.status = status;
+      sim.state.altitude = altitude;
+      return dt;
+    };
+    const end = phases[phases.length - 1][0];
+    while (sim.state.t < end - 1e-6) rec.advance(Math.min(600, end - sim.state.t), 1e6);
+    return rec;
+  }
+  const spans = (frames: readonly VisualFrame[]) => frames.slice(1).map((f, i) => f.t - frames[i].t);
+
+  it('thins a long orbit to a frame every ten minutes at most, where it once left one span of hours', () => {
+    // 300 s of ascent and 28 hours of orbit in 800 frames: the orbit gets about 350 of them, one every five minutes
+    // on average. Halving every orbit frame on each pass, as the last coast pass did, left its oldest frames two
+    // hours apart (7,590 s here) while its newest were a minute apart: a six-DOF spacecraft docked for 12,000 s kept
+    // one docked span of 7,981 s, over which the replay drew it on a chord 9,271 km off its orbit.
+    const rec = toy(800, [[300, 'ascent', 50e3, 0.1], [100300, 'orbit', 200e3, 5]]);
+    expect(rec.stats().decimations).toBeGreaterThan(0);
+    expect(rec.frames.length).toBeLessThanOrEqual(rec.frameLimit);
+    const orbit = rec.frames.filter((f) => f.status === 'orbit');
+    expect(Math.max(...spans(orbit))).toBeLessThanOrEqual(600 + 1e-9);
+    // and the ascent, which still fits, keeps its frame a second
+    expect(Math.max(...spans(rec.frames.filter((f) => f.status === 'ascent')))).toBeLessThanOrEqual(1 + 1e-9);
+  });
+
+  it('records an orbit inside the air every 2 s, as a coast there, and keeps it when the orbit above is thinned', () => {
+    // Apollo's command module keeps the status 'orbit' from the entry interface to the water. At the orbit's 30 s,
+    // thinned to 60 s or more, the cubic drew it 200 m to 1.2 km off under its mains, which slow it for 10-12 s
+    // after they open; every 2 s, it is a fraction of a metre.
+    const rec = toy(1600, [[300, 'ascent', 50e3, 0.1], [40300, 'orbit', 200e3, 5], [41200, 'orbit', 60e3, 0.5], [61200, 'landed', 0, 10]]);
+    expect(rec.stats().decimations).toBeGreaterThan(0);
+    expect(rec.frames.length).toBeLessThanOrEqual(rec.frameLimit);
+    const air = rec.frames.filter((f) => f.status === 'orbit' && f.altitude < 140e3);
+    expect(air.length).toBeGreaterThanOrEqual(449);
+    expect(Math.max(...spans(air))).toBeLessThanOrEqual(2 + 1e-9);
+    // the orbit above the air gave the frames instead
+    expect(Math.max(...spans(rec.frames.filter((f) => f.status === 'orbit' && f.altitude >= 140e3)))).toBeGreaterThan(60);
   });
 });
