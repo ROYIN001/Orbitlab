@@ -319,6 +319,8 @@ const SKIRT_AFTER = 11.07;
 export class AftSkirt {
   readonly group = new THREE.Group();
   private readonly petals: THREE.Group[] = [];
+  /** the skirt as another drawing has it (the Soyuz Anatomy model's, render/anatomy.ts), drawn instead of the petals and falling as they would */
+  private cover: THREE.Object3D | null = null;
 
   /** @param after seconds after its stage lights that it falls away, as the stage's physics drops it */
   constructor(r: number, height: number, mat: THREE.Material, private readonly after = SKIRT_AFTER) {
@@ -338,12 +340,27 @@ export class AftSkirt {
     }
   }
 
+  /** Paint the petals with `material` (the Soyuz Anatomy model's stage paint, where the model has no skirt of its own). */
+  repaint(material: THREE.Material): void {
+    for (const hinge of this.petals) for (const petal of hinge.children) (petal as THREE.Mesh).material = material;
+  }
+
+  /** Draw the skirt as `shape` instead of the petals: on until it is shed, then falling away as the petals do, whole. */
+  coverWith(shape: THREE.Object3D): void {
+    this.cover = shape;
+    for (const p of this.petals) p.visible = false;
+  }
+
   /**
    * @param sinceIgnition mission time since its stage lit, s, once Blok A has
    *        separated (negative while Blok A is still attached)
    */
   update(sinceIgnition: number): void {
     const tau = sinceIgnition - this.after;
+    if (this.cover) {
+      this.cover.visible = tau < 4;
+      this.cover.position.y = tau > 0 ? -0.5 * 13 * tau * tau : 0;
+    }
     if (tau <= 0) {
       this.group.visible = true;
       for (const p of this.petals) { p.rotation.x = 0; p.position.y = 0; }
@@ -421,6 +438,7 @@ export function gridFinGeometry(w: number, h: number): THREE.BufferGeometry {
 
 /** The escape tower's eight main nozzles: their cant out from the axis, rad, and their length, m. */
 const SAS_CANT = 0.47, SAS_NOZZLE = 0.34;
+const DOWN = new THREE.Vector3(0, -1, 0);
 /** How far below the tip of the fairing's nose the escape tower's truss stands, m: its feet on the nose, not over it. */
 const TRUSS_FOOT = 0.07;
 
@@ -534,6 +552,37 @@ export class CrewedTop {
   }
 
   /**
+   * Draw the tower as `shape` (the Soyuz Anatomy model's, render/anatomy.ts),
+   * its base on the tower's origin, and leave the fins to the fairing that
+   * model draws: this tower's own shape hidden, its jettison fire kept, and
+   * where `jets` gives the model's jettison nozzles (their exits' centres and
+   * radii in the tower), one plume from each, canted out as this tower's.
+   */
+  replaceShape(shape: THREE.Object3D, jets: readonly { x: number; y: number; z: number; r: number; axis?: readonly number[] }[] | null = null): void {
+    for (const child of this.tower.children) if (child !== this.flame) child.visible = false;
+    this.fins.visible = false;
+    this.tower.add(shape);
+    if (!jets?.length) return;
+    const plumes = jets.map((j) => {
+      const plume = new THREE.CylinderGeometry(j.r, j.r + 0.3, 3.6, 8, 1, true);
+      plume.translate(0, -1.8, 0);
+      // along its nozzle's own axis where the model gives it, else canted out (about the tangent) toward its bearing
+      if (j.axis) plume.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(DOWN, new THREE.Vector3(...j.axis).normalize()));
+      else {
+        plume.applyMatrix4(new THREE.Matrix4().makeRotationZ(SAS_CANT));
+        plume.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(-j.z, j.x)));
+      }
+      plume.translate(j.x, j.y, j.z);
+      return plume;
+    });
+    const old = this.flame.geometry;
+    this.flame.geometry = merge(plumes);
+    for (const p of plumes) p.dispose();
+    this.geometries.splice(this.geometries.indexOf(old), 1, this.flame.geometry);
+    old.dispose();
+  }
+
+  /**
    * @param sinceLiftoff mission time since liftoff, s
    * @param fairingLength the fairing's length: the tower stands on its nose, m
    */
@@ -565,6 +614,37 @@ export class CrewedTop {
 }
 
 // ------------------------------------------------------------------ Soyuz MS after separation (G07)
+
+/**
+ * The Soyuz MS's two solar wings, on `parent` with the service module's aft
+ * end at `aft` along +Y: a yoke from the hinge, four panels with gaps between
+ * them, and a spine under them, 3.99 m from the hull to the tip. Stowed, they
+ * stand up its side clear of the periscope. Returns their unfolding, 0
+ * (stowed) to 1 (out); render/anatomy.ts hangs them on the Anatomy
+ * model's service module, whose own arrays are drawn folded.
+ */
+/** How far up the service module from its aft end the Soyuz MS's wings are hinged in `soyuzMsWings`, m. */
+export const SOYUZ_MS_HINGE = 1.6;
+
+export function soyuzMsWings(parent: THREE.Object3D, aft: number, grey: THREE.Material, panel: THREE.Material, geos: THREE.BufferGeometry[]): (k: number) => void {
+  const wings: THREE.Group[] = [];
+  const box = (sx: number, sy: number, sz: number, m: THREE.Material, x: number, hinge: THREE.Object3D) => {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m);
+    geos.push(b.geometry);
+    b.position.x = x;
+    hinge.add(b);
+  };
+  for (const s of [1, -1]) {
+    const hinge = new THREE.Group();
+    hinge.position.set(s * 1.36, aft + SOYUZ_MS_HINGE, 0);
+    box(0.36, 0.04, 0.5, grey, s * 0.18, hinge);
+    for (let p = 0; p < 4; p++) box(0.87, 0.028, 1.22, panel, s * (0.4 + (p + 0.5) * 0.9), hinge);
+    box(3.68, 0.04, 0.08, grey, s * 2.14, hinge);
+    parent.add(hinge);
+    wings.push(hinge);
+  }
+  return (k: number) => { for (const [i, w] of wings.entries()) w.rotation.z = (i === 0 ? 1 : -1) * (1 - k) * Math.PI / 2; };
+}
 
 /** The spacecraft's length, service module to the probe's tip, m. */
 export const SOYUZ_MS_LENGTH = 7.48;
@@ -639,25 +719,7 @@ export function buildSoyuzMs(): { group: THREE.Group; height: number; setDeploy(
   // the docking probe and the hatch ring
   add(new THREE.CylinderGeometry(0.62, 0.62, 0.12, 24), dark, 7.1);
   add(new THREE.CylinderGeometry(0.05, 0.14, 0.42, 12), grey, 7.27);
-  // Two solar wings on the service module: a yoke from the hinge, four panels
-  // with gaps between them, and a spine under them, 3.99 m from the hull to
-  // the tip. Stowed, they stand up its side clear of the periscope.
-  const wings: THREE.Group[] = [];
-  const box = (sx: number, sy: number, sz: number, m: THREE.Material, x: number, parent: THREE.Object3D) => {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m);
-    geos.push(b.geometry);
-    b.position.x = x;
-    parent.add(b);
-  };
-  for (const s of [1, -1]) {
-    const hinge = new THREE.Group();
-    hinge.position.set(s * 1.36, 1.6, 0);
-    box(0.36, 0.04, 0.5, grey, s * 0.18, hinge);
-    for (let p = 0; p < 4; p++) box(0.87, 0.028, 1.22, panel, s * (0.4 + (p + 0.5) * 0.9), hinge);
-    box(3.68, 0.04, 0.08, grey, s * 2.14, hinge);
-    body.add(hinge);
-    wings.push(hinge);
-  }
+  const unfoldWings = soyuzMsWings(body, 0, grey, panel, geos);
   const booms: THREE.Group[] = [];
   for (const [ax, az] of [[1, 0], [-1, 0], [0, 1]]) {
     const hinge = new THREE.Group();
@@ -679,7 +741,7 @@ export function buildSoyuzMs(): { group: THREE.Group; height: number; setDeploy(
   }
   const setDeploy = (p: number) => {
     const k = smoothstep(0.1, 0.7, p);
-    for (const [i, w] of wings.entries()) w.rotation.z = (i === 0 ? 1 : -1) * (1 - k) * Math.PI / 2;
+    unfoldWings(k);
     for (const b of booms) b.scale.setScalar(0.2 + 0.8 * smoothstep(0.4, 1, p));
   };
   setDeploy(0);

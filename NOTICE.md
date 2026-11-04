@@ -24,6 +24,17 @@ any academy, and no service or academy name or emblem is used without written pe
   own work. The Earth imagery that appears in the
   screenshots is credited below.
 
+- **The Soyuz Anatomy pages** (`public/anatomy/*.html`) — interactive 3-D models of Soyuz-2.1a
+  with the Soyuz MS or the Progress MS-26 and of Soyuz-2.1b with Fregat, each with its Thai guide
+  and its own viewer — are the owner's own work, made apart from this repository and brought in
+  unchanged (2026-10-28). The exterior meshes beside them (`public/anatomy/*.exterior.bin`) are
+  made from them by `scripts/anatomy-meshes.mjs`. Each page lists the public sources its shapes and
+  colours follow (TsENKI/Roscosmos, NASA, RKTs Progress, KBKhA and others) in its own Sources
+  section; none of those sources is reproduced in it, and its two pictures are renderings of the
+  model itself. Each page also carries, compressed, the source of its own build (its source
+  archive), including a vendored "Anatomy" drawing kit; that kit's terms are its maker's and are
+  not restated here.
+
 How to cite the project: [CITATION.cff](CITATION.cff).
 
 Everything below is someone else's work, with its own terms. Where this file says

@@ -729,3 +729,22 @@ describe('the sky pass leaves the inside of the disc to the globe', () => {
     for (const depth of [11e3, 50e3, 1000e3]) expect(skipped32(o, ray(depth)), `${depth} m`).toBe(true);
   });
 });
+
+describe("the sun's shadow map", () => {
+  it('is read only while it is re-rendered: away from the pad region no stale pad-time shadow falls on the vehicle', () => {
+    const { sm } = build(true);
+    // at the pad, the map is drawn every frame and read
+    sm.setShadowFocus(new THREE.Vector3(0, 0, 0), 300, true);
+    at(sm, 50);
+    expect(sm.sun.shadow.intensity).toBe(1);
+    // gone from the region (or a replay sought from liftoff to the third stage): the map keeps its last
+    // pass's light matrix, in that frame's scene axes, and is not read
+    sm.setShadowFocus(new THREE.Vector3(-30e3, 0, 0), 300, false);
+    at(sm, 150e3);
+    expect(sm.sun.shadow.intensity).toBe(0);
+    // back at the pad (a replay sought to liftoff), read again
+    sm.setShadowFocus(new THREE.Vector3(0, 0, 0), 300, true);
+    at(sm, 50);
+    expect(sm.sun.shadow.intensity).toBe(1);
+  });
+});
