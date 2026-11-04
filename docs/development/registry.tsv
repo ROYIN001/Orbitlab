@@ -75,36 +75,36 @@ M-PLATFORM-064	CO-2	partial	K0	S06		R2 and R3-package-1 close-out evidence: reco
 M-LAUNCH-017	CO-3	partial	K0	S06		R2.4 replay rule: may the chooser list events after the replay cursor? (owner ruling)
 M-LAUNCH-018	CO-3	open	K0	S06		Gate G2 and decision D08: owner confirms layout wireframe, presets, minimum scene size and assumptions A1-A5; screenshot sign-off
 M-LAUNCH-019	CO-3	open	K0	S06		Device/viewport/browser matrix for the Launch shell: 1366x768, 1920x1080, 768x1024, 1100x650, 1280x720 projector, zoom 125/150 %, 860/861 an
-M-LAUNCH-004	CO-4	partial	K1-K2	S06		U16 UI completion: actual engine level in compact HUD and onboard overlay, thrust kN kept visible, live/replay check at the Soyuz 81 % step
-M-LAUNCH-006	CO-4	open	K1-K2	S06		"Notation: visible ""use language default"" reset after an explicit ISO/GOST choice"
-M-LAUNCH-008	CO-4	open	K1-K2	S06		Phone flight bar play button has no accessible name while paused and is not relabelled on language change
+M-LAUNCH-004	CO-4	partial	K2	S06		U16 UI completion: actual engine level in compact HUD and onboard overlay, thrust kN kept visible, live/replay check at the Soyuz 81 % step
+M-LAUNCH-006	CO-4	open	K2	S06		"Notation: visible ""use language default"" reset after an explicit ISO/GOST choice"
+M-LAUNCH-008	CO-4	open	K2	S06		Phone flight bar play button has no accessible name while paused and is not relabelled on language change
 M-LAUNCH-011	CO-4	open	K1-K2	S06		"Stale camera-dialog copy contradicts R2.2 ownership (""a manual choice lasts until the next phase"")"
-M-LAUNCH-022	CO-4	open	K1-K2	S06		Do not paint, describe or snapshot telemetry charts that are hidden (Engineer card presets and Explore non-picked charts)
-M-LAUNCH-025	CO-4	open	K1-K2	S06		Language/notation change fan-out: mid-flight notation change runs full applyLanguage (rebuilds hidden setup, telemetry incl. the select in u
+M-LAUNCH-022	CO-4	open	K2	S06		Do not paint, describe or snapshot telemetry charts that are hidden (Engineer card presets and Explore non-picked charts)
+M-LAUNCH-025	CO-4	open	K2	S06		Language/notation change fan-out: mid-flight notation change runs full applyLanguage (rebuilds hidden setup, telemetry incl. the select in u
 M-LAUNCH-026	CO-4	open	K1-K2	S06		Merge R2 duplicate CSS media blocks and split hide rules; fix orphan notation doc comment
 M-LAUNCH-027	CO-4	open	K0	S06		Use for the next launch in the loop inspector while a live flight is paused destroys the flight and its recording
 M-LAUNCH-032	CO-4	open	K1-K2	S06		Dispersed-flight toggle creates point-mass dynamics for custom vehicles (defaultDynamics(vehicleId) vs missionVehicle) - and optional shared
-M-LAUNCH-066	CO-4	open	K1-K2	S06		"PWA ""ready offline"" toast overlaps the phone flight bar and bottom controls"
-M-PLATFORM-037	CO-4	open	K1-K2	S06		Startup runs applyLanguage() over components already rendered in the same language (SetupPanel, Telemetry, hidden Orbit/Build) (NEW-bundle-2
+M-LAUNCH-066	CO-4	open	K2	S06		"PWA ""ready offline"" toast overlaps the phone flight bar and bottom controls"
+M-PLATFORM-037	CO-4	open	K2	S06		Startup runs applyLanguage() over components already rendered in the same language (SetupPanel, Telemetry, hidden Orbit/Build) (NEW-bundle-2
 M-LAUNCH-020	CO-5	partial	K0	S06		R2 acceptance journey completion and a PR-CI smoke slice: TORU/6-DOF reachability, chooser at 320/390 px in TH/RU, touch tabs and keys 1-4, 
 M-PHYSICS-001	CO-6	open	K0	S06		Physics evidence baseline on current main: full heavy suite + six-DOF fleet + fingerprints on exact da67341, before any physics package
 M-LEARNING-054	CO-7	open	K0	S06		RTAF Academy / NKRAFA (and NAPA) naming in the shipped rtaf-academy pack conflicts with D-2 - obtain written permission or neutralise the ti
 M-PLATFORM-075	CO-8	open	K0	S06		Rebuild docs/README.md index around the master plan (development/, DECISIONS, history records, consumed files)
 M-PLATFORM-077	CO-8	partial	K0	S06		Backlog tracker and session protocol: one GitHub Issue (or master-plan row) per open item, SESSION-PROTOCOL.md, 14-day stale-branch rule, CH
-M-PLAN-013	R0.2r	open	K1	S07		Residual R0.2 ADRs: FlightLifecycle (mission/live clock/display cursor legs), CameraPolicy (as built), CraftState/Handoff, physical-state schema, DesignPreview, ResultAction; valid/invalid/legacy examples
-M-PLAN-014	R0.3r	open	K1	S07		Machine-readable change-to-check map with a trial that selects the tests that caught #63/#64/#68/#70 and the R2/R3 regressions; unknown impact falls back to the full relevant suite
-M-BUILD-024	R0.4	partial	K0-K1	S07		Build browser journey for the rocket side (remix, parts builder, ratings with Stop, Engineer review/test stand) and fake-Worker tests for ra
-M-BUILD-025	R0.4	open	K0-K1	S07		Add a Build scenario to the perf baseline (enter Build, Explore edits, ratings run, satellite page typing, Engineer tabs) to gate R3 preview
+M-PLAN-013	R0.2r	open	K1-K2	S07		Residual R0.2 ADRs: FlightLifecycle (mission/live clock/display cursor legs), CameraPolicy (as built), CraftState/Handoff, physical-state schema, DesignPreview, ResultAction; valid/invalid/legacy examples
+M-PLAN-014	R0.3r	open	K1-K2	S07		Machine-readable change-to-check map with a trial that selects the tests that caught #63/#64/#68/#70 and the R2/R3 regressions; unknown impact falls back to the full relevant suite
+M-BUILD-024	R0.4	partial	K2	S07		Build browser journey for the rocket side (remix, parts builder, ratings with Stop, Engineer review/test stand) and fake-Worker tests for ra
+M-BUILD-025	R0.4	open	K2	S07		Add a Build scenario to the perf baseline (enter Build, Explore edits, ratings run, satellite page typing, Engineer tabs) to gate R3 preview
 M-PHYSICS-002	R0.4	open	K0-K1	S07		Record bitwise characterisation harnesses at base (Cowell propagator cases, Apollo 11 point-mass fingerprint, deriv-call counter, MSIS call-
-M-PHYSICS-003	R0.4	open	K0-K1	S07		Flight-worker cost baseline: CPU profile of a six-DOF flight in the worker (requested 100x warp achieves only ~8.3x), feeding D-27 and the P
-M-PHYSICS-060	R0.4	open	K0-K1	S07		Decision D-3/D-4 and tolerance-tier goldens: pin Node 22 (hash stays the gate), decimated [t,r,v]+events tolerance fixtures (1 m / 1 mm/s / 
-M-PLAN-002	R0.4	open	K0-K1	S07		Resolve the warm-vs-cold startup contradiction (Stage 1: warm slower in 6/6 pairs; perf baseline: warm interactive 6.6 s vs cold 16.4 s) with one harness, Pages-like cache headers and n>=5
-M-PLAN-003	R0.4	open	K0-K1	S07		Mission-length memory budget: JS heap, recording bytes, GPU memory (renderer.info), WebGL context count, forced context-loss journey (Soyuz MS and Falcon 9 full missions)
-M-PLAN-004	R0.4	open	K0-K1	S07		Input-latency KPI (Event Timing / INP proxy) for setup edits, play/pause, scrub, camera wheel at 4x CPU throttle
-M-PLAN-010	R0.4	open	K0-K1	S07		SHA-256 digests at base for numerics without fingerprints: passes/overflights (249 Skyfield events), eclipse/power, applications, M03 re-entry jobs, Apollo phases; never re-recorded by an EQ PR
-M-PLAN-018	R0.4	open	K1	S07		Equivalence-oracle kit for identical-output UI/render/export/storage work: fixed-seed readPixels hash + draw-count probe (R1.3 technique), DOM snapshot diff, byte-identical CSV/DOCX/HTML export and storage-record diff; each oracle sabotage-proven [=M-GAP-003, M-NEW-004]
+M-PHYSICS-003	R0.4	open	K2	S07		Flight-worker cost baseline: CPU profile of a six-DOF flight in the worker (requested 100x warp achieves only ~8.3x), feeding D-27 and the P
+M-PHYSICS-060	R0.4	open	K2	S07		Decision D-3/D-4 and tolerance-tier goldens: pin Node 22 (hash stays the gate), decimated [t,r,v]+events tolerance fixtures (1 m / 1 mm/s / 
+M-PLAN-002	R0.4	open	K2	S07		Resolve the warm-vs-cold startup contradiction (Stage 1: warm slower in 6/6 pairs; perf baseline: warm interactive 6.6 s vs cold 16.4 s) with one harness, Pages-like cache headers and n>=5
+M-PLAN-003	R0.4	open	K2	S07		Mission-length memory budget: JS heap, recording bytes, GPU memory (renderer.info), WebGL context count, forced context-loss journey (Soyuz MS and Falcon 9 full missions)
+M-PLAN-004	R0.4	open	K2	S07		Input-latency KPI (Event Timing / INP proxy) for setup edits, play/pause, scrub, camera wheel at 4x CPU throttle
+M-PLAN-010	R0.4	open	K2	S07		SHA-256 digests at base for numerics without fingerprints: passes/overflights (249 Skyfield events), eclipse/power, applications, M03 re-entry jobs, Apollo phases; never re-recorded by an EQ PR
+M-PLAN-018	R0.4	open	K2	S07		Equivalence-oracle kit for identical-output UI/render/export/storage work: fixed-seed readPixels hash + draw-count probe (R1.3 technique), DOM snapshot diff, byte-identical CSV/DOCX/HTML export and storage-record diff; each oracle sabotage-proven [=M-GAP-003, M-NEW-004]
 M-PLAN-020	R0.4	open	K1	S07		Budget tooling: gzip/brotli columns, an initial-load group (index+i18n+lesson-file+catalog+css) and a texture group in scripts/bundle-budget.mjs so startup bytes ratchet like code bytes [=M-GAP-002, M-NEW-020]
-M-PLATFORM-041	R0.4	partial	K0-K1	S07		Standing performance gate in the repo: perf-baseline script as scripts/perf, hardware-independent budgets (bytes, contexts, shader programs,
+M-PLATFORM-041	R0.4	partial	K2	S07		Standing performance gate in the repo: perf-baseline script as scripts/perf, hardware-independent budgets (bytes, contexts, shader programs,
 M-BUILD-021	DEC	open	K0-K4	S08		Engineer face of the parts builder (roadmap D03 at Engineer): decide (D-21) — declare done at Explore, or build typed guidance/maxQ/maxAccel
 M-LAUNCH-039	DEC	deferred	K0-K4	S08		touch-action:none on #gl (pinch on scene cannot zoom/scroll the page); keep, re-evaluate with device evidence
 M-LEARNING-013	DEC	open	K0-K4	S08		Formative vs summative use: answer keys live on the device; results checksum detects accidents, not forgery - decide scope before classroom 
@@ -148,10 +148,10 @@ M-LEARNING-006	EQ-14	open	K2	S09		Export helpers: de-duplicate CSV/escape/downlo
 M-LEARNING-024	EQ-14	partial	K3-K5	S09		Built-in lessons, worksheets and question banks as data files read through the same parser as teacher files (byte-identical migration)
 M-PLATFORM-038	EQ-14	open	K3-K5	S09		About 28 local el() DOM helpers in src/ui (D4) — migrate only when a file is already being edited
 M-PLATFORM-055	EQ-15	open	K3	S09		Declared refactor window: extract route/data-mode/hand-off controllers from main.ts and sub-panels from panel.ts; SectionModule lifecycle (i
-M-LAUNCH-041	EQ-2	open	K1-K2	S09		Launch/preview rebuild: keep immutable heavy inputs (livery canvases, pad terrain geometry, recovery scenery, keyed materials, trail buffers
-M-LAUNCH-042	EQ-2	open	K1-K2	S09		Prewarm the light-set shader variants a flight can reach (pad floodlights hidden after 55 km, engine light gone after abort/Apollo CM) so co
-M-LAUNCH-049	EQ-2	open	K1-K2	S09		Scene construction helpers: targetOrbitState(plan), replaceView(old, make) keeping add order, table-driven Apollo blocks
-M-PLAN-001	EQ-2	open	K1-K2	S09		Startup critical path with identical pixels: overlap texture fetch/decode, script evaluation and renderer creation; parallel shader compile (KHR_parallel_shader_compile / three.js compileAsync); off-thread decode only wi
+M-LAUNCH-041	EQ-2	open	K2	S09		Launch/preview rebuild: keep immutable heavy inputs (livery canvases, pad terrain geometry, recovery scenery, keyed materials, trail buffers
+M-LAUNCH-042	EQ-2	open	K2	S09		Prewarm the light-set shader variants a flight can reach (pad floodlights hidden after 55 km, engine light gone after abort/Apollo CM) so co
+M-LAUNCH-049	EQ-2	open	K2	S09		Scene construction helpers: targetOrbitState(plan), replaceView(old, make) keeping add order, table-driven Apollo blocks
+M-PLAN-001	EQ-2	open	K2	S09		Startup critical path with identical pixels: overlap texture fetch/decode, script evaluation and renderer creation; parallel shader compile (KHR_parallel_shader_compile / three.js compileAsync); off-thread decode only wi
 M-LAUNCH-024	EQ-3	open	K2	S09		Per-frame DOM and allocation hygiene in frame()/updateVisuals and the R2 shell/chooser
 M-LAUNCH-040	EQ-3	open	K2	S09		While Orbit/Build/lesson pages cover a running flight, skip only frame-pure visual writes (keep every integrator, timer, audio and camera da
 M-LAUNCH-043	EQ-3	open	K2	S09		Exhaust trails: scalar wind fast path (windy 6-DOF) and skip recompute/upload when inputs are exactly unchanged (paused)
@@ -179,10 +179,10 @@ M-PHYSICS-010	EQ-9	open	K2	S09		Cowell propagator: FSAL reuse of the 7th Dormand
 M-BUILD-006	FX-1	open	K1	S10		Ratings search stopped by its 8 s time or flight budget is shown and stored as a real rating (0 kg or a lower bound), and Launch Explore the
 M-BUILD-007	FX-1	open	K1	S10		Opening a saved design or a requirements row replaces the unsaved bench / design-lesson design without asking
 M-BUILD-008	FX-1	open	K1	S10		"Newer-version design file: message claims unknown parts ""were left out"" while any unknown field makes the whole file refused; record the for"
-M-BUILD-029	FX-1	open	K1	S10		Locale decimal comma in number inputs outside Build (Launch panel, lifetime dialog, Orbit Field): reproduce in RU, then use the shared numbe
+M-BUILD-029	FX-1	open	K2	S10		Locale decimal comma in number inputs outside Build (Launch panel, lifetime dialog, Orbit Field): reproduce in RU, then use the shared numbe
 M-LEARNING-001	FX-2	open	K1	S10		Design-lesson strip: progress ticks rebuild the whole strip and destroy the input/button the student is using (P28)
-M-LEARNING-002	FX-2	open	K1	S10		Shared answer-form builder for the flight, design and case lesson strips (D10, identical-output refactor)
-M-LEARNING-003	FX-2	open	K1	S10		Worksheet count fields: the number shown can differ from the number used to generate sheets (B7 + NEW-storage-4)
+M-LEARNING-002	FX-2	open	K2	S10		Shared answer-form builder for the flight, design and case lesson strips (D10, identical-output refactor)
+M-LEARNING-003	FX-2	open	K2	S10		Worksheet count fields: the number shown can differ from the number used to generate sheets (B7 + NEW-storage-4)
 M-LEARNING-004	FX-2	open	K1	S10		Worksheet/author views: one flusher and retained view per tab open; an older failed save can overwrite newer edits; random class code change
 M-LEARNING-027	FX-2	open	K1	S10		Version the placement bank and keep complete attempt history (attempts currently regraded against the current bank)
 M-ORBIT-001	FX-3	open	K1-K2	S10		"Thai satellites panel: stale ""tracking comes with the next phase"" copy; link to Real satellites (Thai group); THEOS-2A check"
@@ -199,7 +199,7 @@ M-PLATFORM-035	FX-4	open	K2	S10		One worker-job contract: shared runner for all 
 M-LAUNCH-029	FX-5	open	K1-K2	S10		"Compare table ""current"" column reads the live simulation, not the displayed (cursor) frame"
 M-LAUNCH-031	FX-5	open	K1-K2	S10		"Mission result table shows osculating apsides flagged ""outside"" beside a ""target reached"" verdict judged on J2 physical apsides"
 M-LAUNCH-034	FX-5	open	K2	S10		Monte Carlo CSV: use shared downloadBlob (5 s revoke), quote \r, decide formula-injection guard
-M-LAUNCH-035	FX-5	open	K1-K2	S10		"Monte Carlo ""failed"" state has no style; attitude auto-tune progress has no percentage"
+M-LAUNCH-035	FX-5	open	K2	S10		"Monte Carlo ""failed"" state has no style; attitude auto-tune progress has no percentage"
 M-LAUNCH-060	FX-5	open	K1-K2	S10		"Equations panel says ""No air to act on at this height"" on the pad, after landing and when no step is recorded"
 M-PLATFORM-016	FX-6	open	K2	S10		Importers of mission/design/flight/lesson/results/validation files read any size into memory (shared bounded reader)
 M-PLATFORM-022	FX-7	open	K2	S10		"Daily data-only deploys change the service-worker version and show the ""update ready — Reload"" toast every day, also mid-lesson"
@@ -215,15 +215,15 @@ M-PLATFORM-003	R1.6	open	K1	S10		Startup re-reads and deep-clones the whole lega
 M-PLATFORM-004	R1.6	open	K1	S10		"One damaged or newer-format profile empties the profile chooser (""No learner profiles yet"") and breaks Export all and audio export (B3)"
 M-PLATFORM-005	R1.6	open	K1	S10		Profile dialog re-parses every profile about four times per render (P8)
 M-PLATFORM-006	R1.6	open	K1	S10		Showing the profile name parses the learner’s whole lessons/designs/experiments JSON (NEW-storage-1)
-M-PLATFORM-007	R1.6	open	K1	S10		Repository re-parses, validates and deep-clones the whole profile on every getItem/setItem (per keystroke) — parse cache keyed on the exact 
+M-PLATFORM-007	R1.6	open	K2	S10		Repository re-parses, validates and deep-clones the whole profile on every getItem/setItem (per keystroke) — parse cache keyed on the exact 
 M-PLATFORM-008	R1.6	open	K1	S10		Export checks the size of compact JSON but downloads pretty JSON: an export near 8 MB can be a backup that cannot be restored; export also d
 M-PLATFORM-009	R1.6	open	K1	S10		Latent hazard: repository.delete() in visit-only mode would delete the real profile’s IndexedDB media (UI blocks it today) (B4)
 M-PLATFORM-010	R1.6	open	K1	S10		"Legacy media migration aborts entirely on one colliding recording: non-colliding recordings stay invisible, ""reload to retry"" can never succ"
-M-PLATFORM-012	R1.6	open	K1	S10		Two copies of the soundtrack IndexedDB open/transaction code (soundtrack.ts vs workspace/media.ts) (D2)
-M-PLATFORM-013	R1.6	open	K1	S10		Media export reads every profile’s track metadata instead of a key range (P27)
-M-PLATFORM-014	R1.6	open	K1	S10		Duplicate isRecord/validId/clone helpers across workspace and ~12 other modules (D3)
-M-PLATFORM-015	R1.6	partial	K1	S10		Storage registry residuals: localStorage still referenced outside the workspace adapters with no test confining it; no per-key owner/schema/
-M-PLATFORM-018	R1.6	open	K1	S10		Ask the browser to keep learner data (navigator.storage.persist) and warn iPad/iPhone users about 7-day eviction unless installed — with a b
+M-PLATFORM-012	R1.6	open	K2	S10		Two copies of the soundtrack IndexedDB open/transaction code (soundtrack.ts vs workspace/media.ts) (D2)
+M-PLATFORM-013	R1.6	open	K2	S10		Media export reads every profile’s track metadata instead of a key range (P27)
+M-PLATFORM-014	R1.6	open	K2	S10		Duplicate isRecord/validId/clone helpers across workspace and ~12 other modules (D3)
+M-PLATFORM-015	R1.6	partial	K2	S10		Storage registry residuals: localStorage still referenced outside the workspace adapters with no test confining it; no per-key owner/schema/
+M-PLATFORM-018	R1.6	open	K2	S10		Ask the browser to keep learner data (navigator.storage.persist) and warn iPad/iPhone users about 7-day eviction unless installed — with a b
 M-PLATFORM-074	R1.6	open	K1	S10		Document R1 learner profiles, reset, archives and backups in README, USER-GUIDE and IMPLEMENTATION-STATUS
 M-LAUNCH-002	R2.1r	partial	K2	S11		R2.1 remainder: compact command/playback band, Analysis-stage layout, short-viewport case (U02, 1100x650 squeeze)
 M-LAUNCH-003	R2.1r	partial	K2	S11		Telemetry grouped summary-first with details on demand
@@ -263,12 +263,12 @@ M-BUILD-013	R3.5r	open	K3	S12		"Explore ""Fly it"" always targets the 500 km pre
 M-BUILD-023	R3.5r	deferred	K4	S12		Share designs and challenge results as ?d= links (8 kB cap, file fallback; owner decides the LINE ~2 kB limit)
 M-LAUNCH-067	R3.5r	partial	K3	S12		First-visit path: Home start cards per audience with time estimates linking existing routes; decision D-8
 M-BUILD-022	R3.6	open	K4	S12		Builder completeness: stretch/re-engine strap-on groups in the remix UI; custom strap-on bodies in the parts builder
-M-ORBIT-043	R4.1	partial	K1-K3	S13		Data provenance: in-app Sources page generated from data and a test that every numeric record has a source URL or an estimate flag (unsource
-M-PHYSICS-040	R4.1	open	K1-K3	S13		R4 entry: catalogue and source ledger for all 25 ids plus the R0 physics-programme audit and an item-by-item recheck of the 1 October flight
-M-PHYSICS-041	R4.1	open	K3	S13		Physics honesty quick fixes in code text: RIGID_DATA_ASSUMPTIONS still says slosh and flexibility are omitted (P05 shipped them); Vulcan gui
-M-PHYSICS-048	R4.1	partial	K1-K3	S13		Proton-M / Angara-A5 (and Soyuz-2.1b) LEO rows always carry the 22 t kick stage: add a sourced Briz-less LEO reference configuration
-M-PHYSICS-049	R4.1	partial	K1-K3	S13		Timeline comparison for the six never-compared vehicles (LM-2D, LM-3B/E, LM-5, Vulcan, Soyuz-2.1b, Starship Flight 5): data-only TimelineRef
-M-PLATFORM-070	R4.1	open	K3	S13	M-PHYSICS-041	"Stale code comments: Vulcan guidance comment (vehicles.ts) and RIGID_DATA_ASSUMPTIONS ""slosh and structural flexibility omitted"""
+M-ORBIT-043	R4.1	partial	K2-K3	S13		Data provenance: in-app Sources page generated from data and a test that every numeric record has a source URL or an estimate flag (unsource
+M-PHYSICS-040	R4.1	open	K2-K3	S13		R4 entry: catalogue and source ledger for all 25 ids plus the R0 physics-programme audit and an item-by-item recheck of the 1 October flight
+M-PHYSICS-041	R4.1	open	K2-K3	S13		Physics honesty quick fixes in code text: RIGID_DATA_ASSUMPTIONS still says slosh and flexibility are omitted (P05 shipped them); Vulcan gui
+M-PHYSICS-048	R4.1	partial	K2-K3	S13		Proton-M / Angara-A5 (and Soyuz-2.1b) LEO rows always carry the 22 t kick stage: add a sourced Briz-less LEO reference configuration
+M-PHYSICS-049	R4.1	partial	K2-K3	S13		Timeline comparison for the six never-compared vehicles (LM-2D, LM-3B/E, LM-5, Vulcan, Soyuz-2.1b, Starship Flight 5): data-only TimelineRef
+M-PLATFORM-070	R4.1	open	K2-K3	S13	M-PHYSICS-041	"Stale code comments: Vulcan guidance comment (vehicles.ts) and RIGID_DATA_ASSUMPTIONS ""slosh and structural flexibility omitted"""
 M-LAUNCH-077	R4.2	open	K4	S13	M-PHYSICS-042	PSLV-XL and H3 loft profiles fitted on multiple flights (one vehicle per PR)
 M-LAUNCH-078	R4.2	partial	K4	S13	M-PHYSICS-043 (+071 done)	Soyuz-2.1a 6-DOF pitch release (done) and Vulcan parking orbit 250x500 km
 M-LAUNCH-079	R4.2	open	K4	S13	M-PHYSICS-044	Falcon 9 6-DOF booster recovery via a coast attitude-control mode (not more gas)
@@ -330,24 +330,24 @@ M-LEARNING-073	ED-GAME-1	open	K4-K6	S16		X01 challenges: Thai-context Orbit chal
 M-LEARNING-074	ED-GAME-1	open	K4-K6	S16		"Launch challenges (heaviest payload from Sriharikota, ISS plane window, engine-out survival, droneship landing, Electron SSO) + ""Highlights"""
 M-LEARNING-075	ED-GAME-1	deferred	K4-K6	S16		X02 campaign from the first orbit (1957) to the Moon
 M-LEARNING-029	ED-I18N-1	open	K1	S16		Apply decided Thai terms D5 (guidance = การนำวิถี, navigation = การนำร่อง) everywhere + deny-list test
-M-LEARNING-030	ED-I18N-1	open	K1	S16		docs/GLOSSARY.md as the single EN/TH/RU source (moved from PHYSICS.md) with GNC rows (guidance, navigation, PEG, IGM, margins, notch)
+M-LEARNING-030	ED-I18N-1	open	K2	S16		docs/GLOSSARY.md as the single EN/TH/RU source (moved from PHYSICS.md) with GNC rows (guidance, navigation, PEG, IGM, margins, notch)
 M-LAUNCH-068	ED-I18N-2	open	K3	S16		Home Build chapter with pictures and localized (TH/RU) share previews; decision D-26
 M-LEARNING-031	ED-I18N-2	open	K3	S16		Other Thai term spellings: stage (ท่อน vs ขั้น), fairing, telemetry, payload, apogee/perigee, max-Q
 M-LEARNING-034	ED-I18N-2	open	K3	S16		Number and date localisation in learning/Build/Orbit text: chart ticks with locale decimal, Buddhist-era vs Gregorian years mixed on one pag
 M-LEARNING-035	ED-I18N-2	partial	K3	S16		"Static <html lang=""en""> and English-only social previews for a Thai audience"
 M-LEARNING-037	ED-I18N-2	open	K3	S16		"Dead ""under construction"" copy: plan.orbit.lead (""Nothing on this page works yet"") and lesson.comingSoon"
 M-LEARNING-032	ED-I18N-3	open	K4	S16		Glossary at point of use: term chips/abbr with tap-to-define one-sentence Thai definitions, generated from GLOSSARY.md
-M-LEARNING-045	ED-INST-1	open	K1-K3	S16		Closed-network install guide EN/TH + serve:dist script + intranet-subpath offline journey
-M-LEARNING-046	ED-INST-1	partial	K1-K3	S16		Intranet classroom kit + offline rehearsal on actual school devices (dist + chosen packs + teacher guide; USB/shared-folder result collectio
+M-LEARNING-045	ED-INST-1	open	K2-K3	S16		Closed-network install guide EN/TH + serve:dist script + intranet-subpath offline journey
+M-LEARNING-046	ED-INST-1	partial	K2-K3	S16		Intranet classroom kit + offline rehearsal on actual school devices (dist + chosen packs + teacher guide; USB/shared-folder result collectio
 M-LEARNING-047	ED-INST-1	partial	K1-K3	S16		"Privacy / PDPA statement and ""what Orbitlab keeps on this device"" inventory in three languages"
-M-PLATFORM-073	ED-INST-1	open	K1-K3	S16		USER-GUIDE is English-only and unreachable from the app: Thai guide and an in-app link
+M-PLATFORM-073	ED-INST-1	open	K2-K3	S16		USER-GUIDE is English-only and unreachable from the app: Thai guide and an in-app link
 M-LEARNING-056	ED-INST-2	deferred	K5	S16		Pilot deployment at one institution from the release zip (install <= 30 min by a non-owner; data refresh once; log in docs/history/pilot-<si
 M-LEARNING-069	ED-INST-2	open	K5	S16		Maintainer guide + second maintainer (bus factor two before month 12; D-23)
-M-LEARNING-007	ED-LES-1	open	K1-K2	S16		Lesson 2.4: grade the Monte Carlo choice from recorded set evidence (complete 20-run set, chosen run is the extreme-perigee one)
-M-LEARNING-008	ED-LES-1	partial	K1-K2	S16		Lesson 4.3 and six-DOF lessons: brief must state the graded window; decide whether to grade the 2 deg amplitude and 8 s hold; use or drop th
-M-LEARNING-009	ED-LES-1	open	K1-K2	S16		Lesson tolerance and rubric honesty audit: every numeric tolerance >= the model's recorded error; ungraded steps labelled; uncertainty shown
-M-LEARNING-010	ED-LES-1	open	K1-K2	S16		Grader never ends a crewed failed flight that ends on escape-system parachutes (lessons without endEvent)
-M-LEARNING-011	ED-LES-1	partial	K1-K2	S16		Pack-lesson listing and id edge cases (WebMCP/check page before packs load; teacher file reusing a pack id)
+M-LEARNING-007	ED-LES-1	open	K2	S16		Lesson 2.4: grade the Monte Carlo choice from recorded set evidence (complete 20-run set, chosen run is the extreme-perigee one)
+M-LEARNING-008	ED-LES-1	partial	K2	S16		Lesson 4.3 and six-DOF lessons: brief must state the graded window; decide whether to grade the 2 deg amplitude and 8 s hold; use or drop th
+M-LEARNING-009	ED-LES-1	open	K2	S16		Lesson tolerance and rubric honesty audit: every numeric tolerance >= the model's recorded error; ungraded steps labelled; uncertainty shown
+M-LEARNING-010	ED-LES-1	open	K2	S16		Grader never ends a crewed failed flight that ends on escape-system parachutes (lessons without endEvent)
+M-LEARNING-011	ED-LES-1	partial	K2	S16		Pack-lesson listing and id edge cases (WebMCP/check page before packs load; teacher file reusing a pack id)
 M-LEARNING-012	ED-LES-1	open	K1-K2	S16		"Event log ""Target orbit achieved ... period N min"" gives away answers in pack lessons 11.2, 12.2, 13.1, 13.2"
 M-LAUNCH-063	ED-LES-2	partial	K3	S16		"Debrief that diagnoses the cause from the flight (time + number), ""view that moment"", one next experiment; lesson fail strip too"
 M-LEARNING-016	ED-LES-2	open	K3	S16		"Lesson metadata (minutes, prerequisite, device, audience) on cards + ""<= 10 min"" filter; grey out desktop-only lessons on phones; phone less"
@@ -372,10 +372,10 @@ M-LEARNING-060	ED-PED-2	open	K4	S16		D06/D07 learning outcomes document (eclipse
 M-LEARNING-057	ED-PED-3	partial	K4-K6	S16		Cadet control-system labs (G01-G08: Bode at max-Q, margins, notch, INS/Kalman, PEG/IGM, Monte Carlo) Russian-first with a lab-report section
 M-LEARNING-058	ED-PED-3	deferred	K4-K6	S16		"Cadet course ""Space domain awareness basics"" (8 chapters: conjunction, overflight, re-entry, DOP, debris, HADR, NAPA-2 lifetime, capstone)"
 M-LEARNING-050	HU-1	partial	K0-K2	S16		Human-evidence track H1: merge the two study protocols and run user-study round 1 (5-6 people: Thai students + cadets, own phones), with sto
-M-LEARNING-053	HU-2	open	K1-K3	S16		T03 lesson packs: owner review and confirmations (code format, numbering, progress exclusion, per-lesson tolerances/payloads/named cases), t
-M-ORBIT-045	HU-2	open	K1-K3	S16		Re-check lesson-pack and academy sources from a reachable network; obtain missing source documents
-M-LAUNCH-070	HU-3	open	K1-K3	S16		Thai-first, phone-first 3-step help checked by a Thai reader
-M-LEARNING-033	HU-3	open	K1-K3	S16		Native-speaker review of Thai and Russian texts (24 lessons, 157 questions, packs, cases, Build) + fix Thai guillemets
+M-LEARNING-053	HU-2	open	K2-K3	S16		T03 lesson packs: owner review and confirmations (code format, numbering, progress exclusion, per-lesson tolerances/payloads/named cases), t
+M-ORBIT-045	HU-2	open	K2-K3	S16		Re-check lesson-pack and academy sources from a reachable network; obtain missing source documents
+M-LAUNCH-070	HU-3	open	K2-K3	S16		Thai-first, phone-first 3-step help checked by a Thai reader
+M-LEARNING-033	HU-3	open	K2-K3	S16		Native-speaker review of Thai and Russian texts (24 lessons, 157 questions, packs, cases, Build) + fix Thai guillemets
 M-LEARNING-051	HU-4	open	K4	S16		User-study round 2 (5-6 new people on own phones) + native RU/TH copy PR
 M-LEARNING-028	HU-5	open	K4	S16		Question-bank item statistics (difficulty/discrimination) and human editorial sign-off of the 157-question bank
 M-PLAN-011	HU-6	open	K1-K4	S16		"Offline ""report a problem"" path: composes a text with build stamp, route, language and device (no telemetry, no network) for the owner; needs privacy decision"
