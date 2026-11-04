@@ -248,6 +248,16 @@ export class Plume {
     this.length = L;
   }
 
+  /** its root's radius, m, at full size */
+  get radius(): number {
+    return this.opts.radius;
+  }
+
+  /** A new size, m, from the next `update`: a flame fitted to bells other than the ones it was made for. */
+  resize(radius: number, length: number): void {
+    this.opts = { ...this.opts, radius, length };
+  }
+
   dispose(): void {
     this.coreMat.dispose();
     this.sheathMat.dispose();

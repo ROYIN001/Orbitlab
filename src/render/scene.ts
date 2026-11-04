@@ -976,8 +976,6 @@ export class SceneManager {
     // recompiles every lit material in the scene — the same multi-frame hitch
     // that detaching the fog used to cause. What `shadowOn` gates is the only
     // part that actually costs per-frame time: re-rendering the shadow map.
-    // Outside the pad region the vehicle is far outside the shadow frustum, and
-    // three's shadow lookup returns "lit" for coordinates outside it.
     const d = Math.max(2000, this.shadowRadius * 6);
     this.sun.position.copy(this.shadowPos).addScaledVector(sd, d);
     this.sun.target.position.copy(this.shadowPos);
@@ -993,6 +991,14 @@ export class SceneManager {
       this.shadowPrimed = true;
       this.renderer.shadowMap.needsUpdate = true;
     }
+    // A map no longer re-rendered keeps its last pass's light matrix, in that
+    // frame's scene axes. The origin has moved with the vehicle since, so a
+    // vehicle that left the pad region while the map was last drawn at the pad
+    // (a replay sought from the first seconds to later, a camera switched away
+    // during liftoff) would read the pad-time map: the tower's or its own
+    // pad-time shadow, as a smear on the stage. Off the region nothing is in a
+    // shadow this map can cast. A uniform, so no program recompiles.
+    this.sun.shadow.intensity = this.shadowOn ? 1 : 0;
     this.sun.target.updateMatrixWorld();
     this.updateMarker(frame, vehicleSize);
   }
