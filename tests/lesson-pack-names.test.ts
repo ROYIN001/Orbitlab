@@ -9,7 +9,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { PACK_SOURCES } from '../src/lessons/pack-sources/index';
-import { classroomEn, classroomRu, classroomTh } from '../src/i18n/classroom';
+import { classroomEn } from '../src/i18n/classroom.en';
+import { classroomRu } from '../src/i18n/classroom.ru';
+import { classroomTh } from '../src/i18n/classroom.th';
 
 /**
  * Names that may not appear in a pack's displayed identity, in EN, TH and RU:
