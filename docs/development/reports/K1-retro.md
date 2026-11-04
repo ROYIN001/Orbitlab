@@ -502,7 +502,7 @@ Two rows did reach the live site: #128's incomplete fix (about 2.4 days, until #
 
 **Repeated work:**
 - Records PRs: 12 in K1, four of them corrections (#116, #143, #174, #180). #181, after the cutoff, is the thirteenth.
-- Records PRs came within one working day of the publication for 40 of the 70 published K1 PRs, and later for 29, all of them before #170 (KPI-31 timing screen, [kpi-GK1.md](kpi-GK1.md)). #179's fold was due by 2026-10-27T19:41:58Z; #181 carried it and merged on 2026-11-04T13:15:43Z, 7 d 17 h 33 min 45 s late.
+- Records PRs came within one working day of the publication for 40 of the 70 published K1 PRs, and later for 29, all of them before #170 (KPI-31 timing screen, [kpi-GK1.md](kpi-GK1.md)). #179's fold was due by 2026-10-27T19:41:58Z; #181 carried it and merged on 2026-11-04T13:15:43Z, 7 d 17 h 33 min 45 s late (counted at merge, as #180 was: 40 on time and 30 late of 70).
 - The 2026-10-09 answers were re-checked by hand twice (2026-10-18 and 2026-10-25), and five of them were updated again on 2026-10-26 by #178 (`PROGRESS:241`).
 - 16 failed Pages runs, each triaged by hand from logs.
 - Five Pages re-runs on 2026-10-15.
