@@ -15,6 +15,7 @@
 > - เทสต์: 2 เทสต์ใหม่ใน `tests/debris-replay.test.ts` อันแรกล้มบนโค้ดของ #191 (ชิ้นส่วนถูกวาดห่างจากเส้นตรง 28,090 km) แล้วผ่านหลังแก้ อันที่สองยืนยันว่าช่วงต่ำกว่า 4,000 s ยังใช้ cubic สองเทสต์นี้ตรึงค่าขอบไว้ระหว่าง 3,900 กับ 4,100 s ไม่ได้เปลี่ยน assertion เดิม
 > - ขนาด: +12 B ต่อ chunk (index และ flight worker) **อัปเดต 2026-10-31:** #184 merge และขึ้นเพดาน precache code เป็น 14,679 kB branch นี้ merge main ล่าสุด (f68faab) แล้ว ขนาดผ่าน: precache code 14,677,998 B (เหลือ 1,002 B) index 2,653,802 B (เหลือ 198 B) จึงไม่ต้องรอ #196 แล้ว #196 ยังช่วยเพิ่มที่ว่างใน index อีก 120 B
 > - ฐาน: เจ้าของเลือกให้ต่อจาก #191 ("Stack on #191") **อัปเดต 2026-10-31:** #191 merge แล้ว (cbf1614) และ #195 ก็ merge ตามมา (6953369) ซึ่งแก้ส่วนเดียวกัน branch นี้จึงสร้างใหม่บน main ล่าสุด เหลือแค่การเปลี่ยนของ #194 เอง ชิ้นส่วนที่ตกถึงพื้นภายในช่วงเฟรม (งานของ #195) ยังใช้ cubic ไปถึงจุดที่ตกเหมือนเดิม ขีดจำกัด 4,000 s ใช้กับชิ้นที่ยังอยู่ทั้งสองเฟรมเท่านั้น
+> - ผลการ merge: คุณอนุมัติ ("Merge ได้เลย") merge แล้วเป็น `e8cc482` (31 ต.ค. 12:28 UTC) หลัง CI 41200099195 ผ่านครบ 9/9 บน `c4422c7` Pages run ของการ merge นี้ (41201296180) ถูกยกเลิกเพราะ #196 merge ตามมา งานนี้จึงขึ้นเว็บพร้อม #195 #198 #197 และ #196 ด้วย Pages run 41201507001 ที่ `7cbf802` (13:01 UTC) ทุก job ผ่าน 11/11
 > - การตรวจโดย agent ตัวที่สอง: รอบแรกยืนยัน 19 จาก 28 ข้อ รอบที่สอง (ค่า 4,000 s) ยืนยัน 15 จาก 21 ข้อ ไม่มีข้อที่ขวางการ merge ข้อที่ควรแก้ (ค่าขอบ คำอธิบายเรื่องบรรยากาศ และตัวเลขในรายงานบางข้อ) แก้แล้วทั้งหมด
 
 ```yaml
@@ -26,6 +27,8 @@ tests: tests/debris-replay.test.ts
 base: 'main 6953369 (#191 merged at cbf1614, then #195), 2026-10-31; first stacked on #191 at eec8352 (on main 1842a86)'
 branch: claude/charming-bardeen-qdid5p
 pr: 194
+merged: {sha: e8cc482, at: '2026-10-31T12:28:55Z', ci: 41200099195, head: c4422c7, owner_answer: 'Merge ได้เลย (2026-10-31, in chat in this PR''s session, before the merge)'}
+published: {pages: 41201507001, at: '2026-10-31T13:01:37Z', sha: 7cbf802, own_push_run: '41201296180 at e8cc482, cancelled by #196''s merge'}
 second_agent_review: 'confirmed 19 of 28, no blocking findings (2026-10-30, on 19f3aca + 01b8660/0932d7b); follow-up on 90adc83/3f7079a confirmed 15 of 21, no blocking findings; the should-fix findings of both are fixed: the limit moved from 1,000 to 4,000 s, the drag reasoning restated for the simulation''s own atmosphere, the report figures corrected'
 ```
 

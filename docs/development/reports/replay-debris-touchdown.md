@@ -26,7 +26,8 @@
 >   - บินเทียบฐานเดิมกับ branch ทีละ step รวม 649,560 step ไม่ต่างกันเลยแม้แต่บิต ยกเว้นค่า `impact.t` ที่เพิ่มเข้ามา
 >   - ข้อที่ควรแก้ 2 ข้อเป็นคำอธิบายในโค้ด แก้แล้ว
 >   - ตัวเลขบางตัวในรายงานมาจากการวัดก่อนแก้โค้ดรอบสุดท้าย วัดใหม่แล้ว: ท่อนกลาง Falcon Heavy 2.35 m
-> - CI: ผ่านทั้งหมดบน a095323 (run 41116791446)
+> - CI: ผ่านทั้งหมดบน a095323 (run 41116791446) และบน d647eb0 ที่ merge หลัง rebase ลง main cbf1614 (run 41183937068, 9 จาก 9 job)
+> - ผลการ merge: merge แล้วเป็น `6953369` (31 ต.ค. 12:00 UTC) ตามที่เจ้าของขอในแชตวันที่ 31 ต.ค. (merge commit บันทึกไว้ แต่ไม่ได้ยกคำพูดมา) Pages run ของ push นี้ (41199230993) ถูกยกเลิกเพราะ #198 merge ตามมา จึงไม่ได้ขึ้นเว็บ ขึ้นเว็บครั้งแรกด้วย Pages run 41201507001 ที่ `7cbf802` (push ของ #196, 13:01 UTC) ทุก job ผ่าน 11/11
 
 ```yaml
 item: replay debris blend for a body that comes down between two recorded frames (bug fix)
@@ -37,6 +38,9 @@ app_code: src/physics/frame.ts, src/physics/sim/debris.ts, src/physics/sim/types
 tests: tests/debris-replay.test.ts
 base_sha_verified_on: {sha: cbf1614 (main with #187, #191, #189, #193, #184), date: 2026-10-31; first built on 79b3bd7 = main 1842a86 + #187 f7f7577 + #191 eec8352, 2026-10-30}
 branch: claude/wizardly-johnson-49mycc
+pr: 195
+merged: {sha: '6953369', at: '2026-10-31T12:00:59Z', ci: 41183937068, head: d647eb0, owner_answer: 'not quoted: the merge commit records "Merged on the owner''s request in chat, 2026-10-31." and gives no words or time'}
+published: {pages: 41201507001, at: '2026-10-31T13:01:37Z', sha: 7cbf802, note: 'the push of #196; the run of this merge''s own push (41199230993, at 6953369) was cancelled by #198''s push and published nothing'}
 second_agent_review: 'confirmed 6 of 9, no blocking finding; 2 should-fix comment findings fixed (2026-10-30, on cf5ff7c)'
 budget: 'raised (D-38): index-*.js 2654→2655 kB (measured 2,654,005 B on main cbf1614 + this fix, 5 B over); precache code not raised (14,678,564 of 14,679,000 B); named offset EQ-7 (K2)'
 ```

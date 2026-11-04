@@ -7,6 +7,7 @@
 > - ผลลัพธ์เหมือนเดิม: บันทึก Apollo 11 ตั้งแต่ปล่อยจนลงน้ำ (T+703,130 s) แล้วเทียบ `interpolateFrames` ของ main กับของงานนี้ทุกคู่เฟรม: point-mass 34,671 ครั้ง ต่างกัน 0 ครั้ง (มีคู่เฟรมที่มี CSM 1,801 คู่, ascent stage 317, service module 27) และ agent ตัวที่สองสุ่มเฟรมที่มียานครบสามลำอีก 30,000 ครั้ง ต่างกัน 0 ครั้ง; six-DOF 14,769 ครั้ง ต่างกัน 0 ครั้ง
 > - ขนาด: เล็กลง 120 B ต่อ chunk (index และ flight worker) บน main ปัจจุบัน (f68faab) precache code เหลือ 1,305 B และ index เหลือ 349 B (main เองเหลือ 1,065 B และ 229 B); เมื่อรวม #191 และ #194 แล้ว precache code เหลือ 1,242 B index เหลือ 318 B ไม่ต้องขึ้นเพดาน
 > - ลำดับ: ไม่ต้อง merge ก่อนแล้ว จะ merge ก่อนหรือหลัง #191 และ #194 ก็ได้
+> - ผลการ merge: คุณอนุมัติ ("Merge ได้เลย") merge แล้วเป็น `7cbf802` (31 ต.ค. 12:31 UTC ต่อจาก #194 ที่ merge เป็น `e8cc482` เมื่อ 12:28 UTC) หลัง CI 41200229915 ผ่านครบ 9/9 บน `a8f01b6` และขึ้นเว็บแล้วด้วย Pages run ของการ merge นี้เอง 41201507001 (13:01 UTC) ทุก job ผ่าน 11/11 run นี้นำ #195 #198 #197 และ #194 ขึ้นเว็บไปพร้อมกัน เพราะ Pages run ของแต่ละตัวถูกยกเลิก
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 12 จาก 14 ข้อ ไม่มีข้อที่ต้องแก้ ข้อสังเกตสองข้อ (ลำดับการ merge และตัวเลขขนาดที่ต่างได้ 1–2 B ตาม build stamp) แก้แล้ว
 
 ```yaml
@@ -17,6 +18,8 @@ app_code: src/physics/frame.ts
 base_sha_verified_on: {sha: 6953369, date: 2026-10-31} # first on ef9d3f6, 2026-10-30; main merged in at c1a2b64, b4a07cd and 49e9041
 branch: claude/replay-arc-offset
 pr: 196
+merged: {sha: 7cbf802, at: '2026-10-31T12:31:41Z', ci: 41200229915, head: a8f01b6, owner_answer: 'Merge ได้เลย (2026-10-31, in chat in this PR''s session, before the merge; the merge commit quotes it and gives no time)'}
+published: {pages: 41201507001, at: '2026-10-31T13:01:37Z', sha: 7cbf802, note: 'the push of this merge; it also published #195, #198, #197 and #194, whose own push runs were cancelled'}
 second_agent_review: 'confirmed 12 of 14, nothing blocking or should-fix (2026-10-30, on c62c318); two notes fixed; the check it left open, the six-DOF run, has since finished: 0 differ'
 ```
 
