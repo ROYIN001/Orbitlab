@@ -44,7 +44,8 @@ export const DEFAULT_CAMERA_PLAN: CameraPlan = {
 
 const CAMERA_MODES: CameraMode[] = ['exterior', 'onboard', 'space', 'map'];
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+// iframe: a page shown in a dialog (Build's Soyuz Anatomy pages) is a stop of its own, its controls inside it
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
