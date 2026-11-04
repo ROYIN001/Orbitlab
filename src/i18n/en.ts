@@ -1,9 +1,9 @@
-import { workspaceEn } from './workspace';
-import { projectsEn } from './projects';
-import { reviewEn } from './review';
-import { experimentsEn } from './experiments';
-import { classroomEn } from './classroom';
-import { validationEn } from './validation';
+import { workspaceEn } from './workspace.en';
+import { projectsEn } from './projects.en';
+import { reviewEn } from './review.en';
+import { experimentsEn } from './experiments.en';
+import { classroomEn } from './classroom.en';
+import { validationEn } from './validation.en';
 
 // Plain-data assembly: language-free workers may discard this dictionary.
 export const en: Record<string, string> = /* @__PURE__ */ (() => ({

@@ -1,9 +1,9 @@
-import { workspaceRu } from './workspace';
-import { projectsRu } from './projects';
-import { reviewRu } from './review';
-import { experimentsRu } from './experiments';
-import { classroomRu } from './classroom';
-import { validationRu } from './validation';
+import { workspaceRu } from './workspace.ru';
+import { projectsRu } from './projects.ru';
+import { reviewRu } from './review.ru';
+import { experimentsRu } from './experiments.ru';
+import { classroomRu } from './classroom.ru';
+import { validationRu } from './validation.ru';
 
 // Plain-data assembly: language-free workers may discard this dictionary.
 export const ru: Record<string, string> = /* @__PURE__ */ (() => ({

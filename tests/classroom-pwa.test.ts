@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CHECK_MESSAGE, PREPARE_MESSAGE, checkClassroom } from '../src/classroom/readiness';
-import { classroomEn, classroomRu, classroomTh } from '../src/i18n/classroom';
+import { classroomEn } from '../src/i18n/classroom.en';
+import { classroomRu } from '../src/i18n/classroom.ru';
+import { classroomTh } from '../src/i18n/classroom.th';
 import { precacheManifest } from '../src/pwa/manifest';
 import {
   MANIFEST_KEY, OFFLINE_CHECK, OFFLINE_PREPARE, installServiceWorker, offlineResources, precache, precacheName, prepareOffline,

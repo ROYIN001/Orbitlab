@@ -1,9 +1,9 @@
-import { workspaceTh } from './workspace';
-import { projectsTh } from './projects';
-import { reviewTh } from './review';
-import { experimentsTh } from './experiments';
-import { classroomTh } from './classroom';
-import { validationTh } from './validation';
+import { workspaceTh } from './workspace.th';
+import { projectsTh } from './projects.th';
+import { reviewTh } from './review.th';
+import { experimentsTh } from './experiments.th';
+import { classroomTh } from './classroom.th';
+import { validationTh } from './validation.th';
 
 // Plain-data assembly: language-free workers may discard this dictionary.
 export const th: Record<string, string> = /* @__PURE__ */ (() => ({
