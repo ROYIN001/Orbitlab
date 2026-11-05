@@ -13,7 +13,7 @@
 > - แก้: เฟรม 'abort' นับเป็นการ coast ระหว่างที่ยังบินอยู่ จึงได้ cubic เหมือนยาน six-DOF ใน #187 ยกเว้นตอนอยู่บนพื้น (phase 'landed') ซึ่งคงเส้นตรง ช่วงแรกบนพื้น cubic จะคลาด 8.2 m ส่วนเส้นตรงคลาด 0.066 m
 >   - ร่ม (drogue, main ขณะกางและขณะรัด), มอเตอร์หนีภัย, จรวดถอยหลัง, คู่ยานของ Vostok ที่ยึดกันด้วยสายเคเบิล: ได้ cubic ทั้งหมด วัดแล้วใกล้กว่าเส้นตรงทุกจุด
 >   - หอหนีภัยแยกออก (แคปซูลออกจากส่วนหัว): เป็นการเปลี่ยนตัวยาน ตรึงเฟรมแรกไว้เหมือนเดิม
->   - ชิ้นส่วนข้างยานที่ไม่ได้จุดเครื่อง (เช่น Redstone ที่แยกออก โมดูลเครื่องมือของ Vostok) ได้ทางเดียวกับยานทุกระดับความสูงระหว่างการหนีภัย agent ตัวที่สองพบว่าถ้าใช้เฉพาะเหนือ 140 km ชิ้นส่วนที่อยู่ในอากาศจะแยกจากยาน: Redstone ห่างแคปซูล 25 m ถูกวาดคลาดตำแหน่ง 117 m และโมดูลของ Vostok ขยับ 4.7 m ทุก 2 s แก้แล้ว
+>   - ชิ้นส่วนข้างยาน (เช่น Redstone ที่แยกออก โมดูลเครื่องมือของ Vostok) ต้องไม่แยกจากยาน agent ตัวที่สองพบว่าถ้าชิ้นส่วนในอากาศยังเป็นเส้นตรง จะถูกวาดคลาดตำแหน่ง: Redstone ห่างแคปซูล 25 m คลาด 117 m และโมดูลของ Vostok ขยับ 4.7 m ทุก 2 s ตอนแรก PR นี้แก้เอง (05fe391) แต่ main แก้เรื่องนี้แล้วใน #191 (ชิ้นส่วนในอากาศใช้ cubic ของตัวเองเสมอ) จึงตัดกฎของ PR นี้ออกตอนรวม main (8005604)
 > - ผล: วัด 5 ภารกิจ (MR-3, Soyuz 18a, MS-10, T-10-1, Vostok-1) ทั้ง six-DOF และ point-mass เทียบกับตำแหน่งจริงของการจำลองทุกก้าว:
 >   - MR-3 เหนือบรรยากาศ 117 m → 0.001 m และขณะจรวดถอยหลังทำงาน 128 m → 2.3 m
 >   - 18a 117 m → 0.000 m และในอากาศ (เฟรมห่าง 0.8 s หลังการ thin) 13 m → 0.19 m
@@ -21,7 +21,7 @@
 >   - ไม่มีจุดใดของตัวยานคลาดมากกว่าเดิมเกิน 1 cm ทั้ง 666,616 จุด และชิ้นส่วนทุกชิ้นทุกระดับความสูง 1,751,467 จุด ก็ไม่มีจุดใดคลาดจากตำแหน่งจริงมากกว่าเดิม
 >   - ระยะของชิ้นส่วนที่อยู่ห่างยานไม่เกิน 5 km จากตัวยาน: ดีขึ้นทุกเที่ยวบิน (เช่น MR-3 64 m → 1.35 m) มีเพียง 182 จาก 325,643 จุดที่แย่ลงไม่เกิน 0.13 m ที่ระยะห่าง 156 m ถึง 3 km
 > - ตัวเลขในงาน "ในอากาศ 117 m (cubic ราว 8 m)" วัดซ้ำไม่ได้ ที่วัดได้คือช่วงที่ข้ามระดับ 140 km 117 m → 0.001 m และช่วงที่อยู่ในอากาศทั้งช่วง (≤ 2 s) 13 m → 0.34 m
-> - ขนาด: +13 B ต่อ chunk (index และ flight.worker) precache code เหลือที่ว่าง 2 B ไม่ได้ขึ้นเพดาน เขียน `coasting` เป็นตารางตามสถานะเพื่อให้พอ
+> - ขนาด: +10 B ต่อ chunk (index และ flight.worker) บน main ล่าสุด precache code 14,678,391 จาก 14,679,000 B เหลือ 609 B ไม่ได้ขึ้นเพดาน เขียน `coasting` เป็นตารางตามสถานะเพื่อให้ประหยัด
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 5 จาก 6 (ความเท่ากันและความบริสุทธิ์ของฟังก์ชัน), 7 จาก 9 (ล่า regression), 5 จาก 6 (เทสต์) ข้อที่ต้องแก้คือชิ้นส่วนในอากาศข้างยาน (แก้แล้ว มีเทสต์ที่ fail ก่อนแก้ 3 ข้อ) ข้ออื่นเป็นหมายเหตุ: การพิมพ์ชนิด (แก้แล้ว) และการบันทึกที่ถูก thin หนักมาก (ด้านล่าง)
 > - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ (11 จาก 16 และอีก 3 ข้อสำหรับชิ้นส่วน) ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม PR นี้สร้างต่อจาก #187 ซึ่ง merge เข้า main แล้ว (ef9d3f6) และ main ถูก merge เข้า branch นี้แล้ว
 > - ยังไม่แก้ (งานต่อไป): ทรงกลมบนพื้นอาจหมุนไปกับโลกได้ตรง (`turnWithEarth`, คลาด 0.000 m แทน 0.066 m) แต่ไม่มีที่ว่างในงบขนาด; ชิ้นส่วนที่ลอยอยู่ในวงโคจรระหว่างที่ทรงกลมรออยู่บนพื้นยังเป็นเส้นตรงตามตัวยาน (29 m); การบันทึกที่ถูก thin จนช่วงยาวเป็นสิบวินาที (เกิดได้เฉพาะเมื่อบันทึกนานมาก) ช่วงหลังร่มหลักกางอาจวาดแย่กว่าเส้นตรง: agent ตัวที่สองวัดได้ 269 m เทียบกับ 192 m ในช่วง 42 s เมื่อบังคับให้เหลือ 300 เฟรม
@@ -32,10 +32,10 @@ change_kind: bug fix (wrong → right); no existing assertion changed, no ceilin
 owner_authorization: 'owner to this session, 2026-10-30: "Task: decide which ''abort'' spans can safely take the cubic (or another arc) and which must keep the line"; later the same day: "ทำต่อ" (continue)'
 app_code: src/physics/frame.ts
 tests: tests/abort-replay-arc.test.ts (new, 18 tests)
-base_sha_verified_on: {sha: ef9d3f6, date: 2026-10-30, note: 'main with #187 squash-merged, its tree that of #187''s last head f7f7577, which this branch had merged (310e79b, e8324af); main merged in 8251261, the tree unchanged'}
+base_sha_verified_on: {sha: 1770d93, date: 2026-11-05, note: 'main, merged in 8005604; before it ef9d3f6 (#187 squash-merged), merged in 8251261. Main''s #189-#205 since ef9d3f6 include the debris blend''s rewrite (#191, #194, #195, #201), which covers the bodies'' rule this branch had added, so the merge drops that rule'}
 branch: claude/gracious-sagan-zvg16a
 pr: 190
-second_agent_review: 'equivalence and purity confirmed 5 of 6, regression hunt 7 of 9, tests 5 of 6 (2026-10-30, on 52fae07); its one should-fix finding (bodies under 140 km beside the escape) fixed in 05fe391 with failing-first tests (d798764), its typing note taken; its thinning note recorded under "Not changed"'
+second_agent_review: 'equivalence and purity confirmed 5 of 6, regression hunt 7 of 9, tests 5 of 6 (2026-10-30, on 52fae07); its one should-fix finding (bodies under 140 km beside the escape) fixed in 05fe391 with failing-first tests (d798764), and since the merge of main covered by main''s #191 (the tests stay); its typing note taken; its thinning note recorded under "Not changed"'
 ```
 
 ## The question
@@ -102,9 +102,9 @@ const coasting = (f: VisualFrame) => ({ coast: true, orbit: true, descent: f.des
 
 - For every other status it gives what the old expression gave (checked over 539 combinations of status, descent phase and abort phase: only 'abort' changes, and 'abort' on the ground stays false).
 - An abort frame always carries rigid telemetry (`LaunchEscape.sync` writes `s.rigid`, in point-mass flights too). So two abort frames in flight reach #187's cubic branch, `vehicleCoasts && a.rigid && 4 * span < a.elements.period`, never Kepler. The quarter-period bound still applies (a suborbital arc's period is over an hour).
-- **Bodies beside the escape take its way at any height** when nothing on them fires (`!!a.abort || <above 140 km at both ends>` in the debris blend). Elsewhere a body takes the vehicle's way only out of the air, as #185 made it. The second agent found why an abort needs more: with the escape on the cubic, a body in the air beside it on the line parted from it. The spent Redstone 25 m from Freedom 7 was drawn 117 m off its place on the span that crosses 140 km, Vostok's instrument module bobbed 4.7 m against the sphere every 2 s after its cables parted, and 18a's Blok I, 0.7 km away, was drawn 79 m off. `a.abort` is set from the abort's first frame to the end of the recording; where the escape keeps the line (on the ground, or once the status is 'landed'), its way is the line, so the bodies keep it too.
+- **Bodies beside the escape keep their places at any height.** The second agent found that, with the escape on the cubic, a body in the air beside it on the line parted from it: the spent Redstone 25 m from Freedom 7 was drawn 117 m off its place on the span that crosses 140 km, Vostok's instrument module bobbed 4.7 m against the sphere every 2 s after its cables parted, and 18a's Blok I, 0.7 km away, was drawn 79 m off. 05fe391 fixed it here: a body not firing went the escape's way at any height (`!!a.abort || <above 140 km at both ends>`). Main has since rewritten the debris blend (#191, #194, #195, #201): a body in the air takes the cubic through its own two states, whatever the vehicle does, and one out of the air the vehicle's way. That covers the finding, so the merge of main (8005604) takes main's blend and drops this branch's rule. The three cases that pin it stay in the test and pass on the merged code.
 - **A point-mass flight's live view** draws an abort through the same blend, between step boundaries (`FlightRecorder.liveBetween`). Those spans are one step, 0.2 s at most above the air, where the line sags about 5 cm; that much changes live. A six-DOF flight's live view draws the simulation's own state and does not change.
-- The table is checked with `satisfies`, so a misspelt status does not compile (the second agent's note; no bytes). The comment above `coasting` gives the reasons, short. **Why a lookup:** the obvious form, `|| f.status === 'abort' && f.abort.phase !== 'landed'`, is 46 B a chunk, 92 B in all, and 'precache code' had 48 B left. The lookup costs 10 B a chunk, the bodies' rule 3 B more.
+- The table is checked with `satisfies`, so a misspelt status does not compile (the second agent's note; no bytes). The comment above `coasting` gives the reasons, short. **Why a lookup:** the obvious form, `|| f.status === 'abort' && f.abort.phase !== 'landed'`, is 46 B a chunk, 92 B in all, and 'precache code' had 48 B left. The lookup costs 10 B a chunk (the bodies' rule, 3 B more, went with the merge of main).
 
 ## Measured
 
@@ -148,13 +148,13 @@ By flight, #187 → this PR:
 | Vostok-1 point mass | 4,626, 0 | 5.24 → 0.000 m (2.2 s) | 1.30 → 0.013 m | 4.76 → 0.012 m | 0.066 m, kept |
 
 - **Never worse:** 656,137 of the 666,616 samples are in spans now drawn differently, and none is drawn more than 1 cm further from the flown position than #187 draws it. The spans whose blend did not change were checked equal, sample for sample, to #187's drawing.
-- **The vehicle is unchanged by the bodies' rule** (05fe391): the same figures, sample for sample.
+- **The vehicle is unchanged by the bodies' rule** (05fe391), and by its drop in the merge of main: the same figures, sample for sample, on the old base. On the new main, see "Against main after its merge" below.
 - **The ground:** the cubic would be 8.2 m off on the first span after Vostok's landing (T+6,106.4–6,111.4 s six-DOF), for 49 samples; that is why the ground keeps the line. Turning the sphere with the Earth (`turnWithEarth`, as a body at rest already is) would be 0.000 m off. The 3-D view already stands a resting sphere on the drawn ground (`drawnFrame`, src/render/datum.ts).
 - **The retro-rockets' 2.33 m** is the span from Freedom 7's third retro-rocket's firing, in which the first two burn out. That is the Δa·T²/62 above: an acceleration step that is no event.
 - **The task's figures:** "above the air 128 m, the cubic about 2.2 m" is reproduced (127.9 m and 2.33 m six-DOF). "In the air, 117 m, the cubic about 8 m" is not: the spans that cross 140 km are 117.2 m off on the line and 0.001 m on the cubic, and the spans wholly in the air (≤ 2 s) are at most 13.0 m and 0.34 m.
 - **Point-mass live view:** its spans are single steps, so the change there is the 0.2 s and shorter spans above, a few centimetres at most.
 
-**The bodies beside the escape**, measured on 05fe391. This covers every body alive at both ends of an abort span, at any height, against its own flown position, and, for a body within 5 km of the escape, its offset from the escape against the flown offset. #187 drew them all on the line, as it drew the escape. (A first count, on 52fae07, took only the bodies above 140 km at both ends, and so missed the second agent's finding.)
+**The bodies beside the escape**, measured on 05fe391 (with this branch's own rule, since replaced by main's #191; the next section measures main's). This covers every body alive at both ends of an abort span, at any height, against its own flown position, and, for a body within 5 km of the escape, its offset from the escape against the flown offset. #187 drew them all on the line, as it drew the escape. (A first count, on 52fae07, took only the bodies above 140 km at both ends, and so missed the second agent's finding.)
 
 | Flight | Body samples | Own miss, #187 → now | Worse | Within 5 km (closest) | Offset, #187 → now | Worse |
 |---|---|---|---|---|---|---|
@@ -202,7 +202,7 @@ Purity: frozen inputs, the same frame twice.
 
 **Failing first, the bodies' rule:** the two new cases and the replay's new bounds were committed alone (d798764). On 214db06 they fail 3 of 18: 88.1 m (the Redstone crossing 140 km), 3.57 m (Vostok's module) and 117.1 m (the Redstone's place through the recorder and player). With the fix (05fe391), 18 of 18 pass.
 
-**Related files:** 31 files, all pass with the fix (478 tests on 52fae07; 480 on 05fe391, with the bodies' two new cases; after merging #187's head, the eight replay files, 117 tests):
+**Related files:** 31 files, all pass with the fix (478 tests on 52fae07; 480 on 05fe391, with the bodies' two new cases; after merging #187's head, the eight replay files, 117 tests). After merging main at 1770d93 (8005604): those 31 and main's new replay and debris files (debris-impact-longitude, debris-release, falling-frames, recovery-untargeted-events, replay-long-span, rigid-recovery), 37 files, 515 tests, all pass:
 - the files the task names: launch-abort, vostok-replay, vostok-render, replay;
 - #187's list: rigid-replay-arc, debris-replay, rigid-replay, rigid-event-boundary, rigid-failure-boundary, live-stepping, equations, session, rendezvous, rendezvous-fuel, orbit-handoff, apollo-own-launch, bundle-budget, audio, rigid-debris, repo-hygiene, rigid-render, frames-view, eo-phy-6/apollo11;
 - every other unit file that builds a recorder, a player or a session: custom-vehicle, d06-custom-satellite, d06-satellite-launch, instructor-mode, lesson-grading-end, mcp, recheck-core.
@@ -214,8 +214,8 @@ Purity: frozen inputs, the same frame twice.
 ## Size
 
 `npx vite build`, `node scripts/bundle-budget.mjs`: ok, no ceiling raised.
-- `index-*.js` 2,634,890 B and `flight.worker-*.js` 570,526 B: +13 B each on #187's 2,634,867 and 570,503 (the `coasting` table 10 B, the bodies' rule 3 B).
-- Precache code 14,653,998 of 14,654,000 B (+46 B; 2 B left), the same after merging #187's head.
+- On main at 1770d93 (8005604): `index-*.js` 2,653,921 B and `flight.worker-*.js` 570,631 B, +10 B each on main's 2,653,911 and 570,621. Precache code 14,678,391 of 14,679,000 B (+20 B; 609 B left; #184 raised the ceilings since).
+- On the old base (#187's head): `index-*.js` 2,634,890 B and `flight.worker-*.js` 570,526 B, +13 B each on #187's 2,634,867 and 570,503 (the table 10 B, the bodies' rule 3 B); precache code 14,653,998 of 14,654,000 B (2 B left).
 
 **Browser journeys** the change map selects (`node tests/browser/run.mjs …`, local build): on 52fae07, 8 of 8 passed in 14 min 52 s (experiment-notebook, launch-explore, r2-chooser-late-frame, r2-flight-shell 351 s, r2-shell-smoke, r3-result-setting, satellite, watch-controls). On 05fe391, 8 of 8 again in 14 min 50 s (r2-flight-shell 345 s). recheck is held by design (teaching tools, owner 2026-10-17).
 
