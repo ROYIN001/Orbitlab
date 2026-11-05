@@ -191,3 +191,46 @@ smoke set, heavy and sixdof-fleet. CI runs them.
 
 Docs touched: N/A (README, IMPLEMENTATION-STATUS and USER-GUIDE describe no
 build detail or class this changes).
+
+### S0 review fixes
+
+Same change type (identical output); the build output is unchanged.
+
+1. `scripts/html-comments.mjs` header: the indentation offset is now called
+   *proposed* for redesign A and points to this report, as the `vite.config.ts`
+   comment already did (Q1 is open). Comment only.
+2. `tests/verification/html-comments.test.mjs`, `tokens()`: a whitespace run
+   between two tags or words is now a token (one space) instead of being thrown
+   away, so the cases also catch two elements or words that were apart coming
+   together. A broken `builtPage` that drops every line break
+   (`.replace(/\n[ \t]*/g, '')`) passed the old case and fails the new one; the
+   shipped `builtPage(source)` still has the same tokens as
+   `stripHtmlComments(source)`, and the first case still passes (its two strings
+   are identical). The test is stricter; no assertion is removed.
+3. Not applied: the review asked the header table's Branch row to put S1–S3 on
+   branches of their own, with their own fragments (SESSION-PROTOCOL §5: one
+   step, one branch, one PR; identical output never mixes). This package's
+   instructions keep one fragment (`changes/claude-friendly-keller-78iuc9.md`)
+   and one report, so where S1–S3 are committed is left to whoever runs the
+   next step, not decided in this fix. The row is unchanged.
+
+Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
+โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
+ส่วนรูปแบบอื่นๆ จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
+ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ". The choices list above is
+unchanged; each is a choice taken under "mix sensibly", which the owner can
+reverse at the screenshot review.
+
+**Budget line: unchanged from S0** (`index-*.css` 177.3 / 179 kB, `index-*.js`
+2653.9 / 2655 kB, `i18n-*.js` 1732.5 / 1733 kB, other chunks 771.4 / 772 kB,
+precache 15794.6 / 16078 kB, precache code 14675.4 / 14679 kB; every ceiling
+unchanged).
+
+Files: `scripts/html-comments.mjs`, `tests/verification/html-comments.test.mjs`,
+this report.
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | 94 / 94 passed |
+| `npx vite build && node scripts/bundle-budget.mjs` | bundle budget: ok (numbers above) |
