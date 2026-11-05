@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { htmlComments, stripHtmlComments } from '../../scripts/html-comments.mjs';
+import { builtPage, htmlComments, stripHtmlComments } from '../../scripts/html-comments.mjs';
 
 const source = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
 
@@ -37,4 +37,14 @@ test('the built page is the source without its comments and nothing else', () =>
   assert.deepEqual(tokens(built), tokens(cut));
   assert.ok(source.length - built.length > 2000, `strips ${source.length - built.length} bytes`);
   assert.match(built, /^<!doctype html>/i, 'the doctype is kept');
+});
+
+test('the built page also drops line indentation and nothing the layout sees', () => {
+  const plain = stripHtmlComments(source);
+  const built = builtPage(source);
+  assert.deepEqual(tokens(built), tokens(plain));
+  assert.doesNotMatch(source, /<(pre|textarea|style)\b|<script\b[^>]*>[^<]/i, 'whitespace would count inside it');
+  assert.doesNotMatch(source, /="[^"]*\n/, 'an attribute value spans lines');
+  assert.doesNotMatch(built, /\n[ \t]/, 'a line still starts with indentation');
+  assert.ok(plain.length - built.length > 1500, `strips ${plain.length - built.length} bytes`);
 });
