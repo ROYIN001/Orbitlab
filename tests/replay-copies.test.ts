@@ -157,7 +157,7 @@ describe('a seek shares nothing a consumer could write to with the recording', (
     expect(blended.moon).toEqual(a.apollo!.moon);
   });
   it('a six-DOF body\'s control-fault record (G08) is the seek\'s own, the vehicle\'s and a spent stage\'s', () => {
-    // the runtime puts a new record on the rigid telemetry every step (rigid/runtime.ts); every array and vector in it
+    // the runtime puts a new record on the rigid telemetry at each step it flies (rigid/runtime.ts); every array and vector in it
     const v = (x: number) => ({ x, y: 0.2, z: 0.3 });
     const faults = (): ControlFaultRecord => ({ fdir: true, active: [{ kind: 'gyroStuck', since: 30, units: [1] }],
       units: ['faulty', 'ok', 'ok'], selected: [2, 3], openLoop: false, computer: 'primary',

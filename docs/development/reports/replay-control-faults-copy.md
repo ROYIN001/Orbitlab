@@ -14,19 +14,41 @@
 > - ฟิลด์อื่นของ `RigidTelemetry` ตรวจครบแล้ว: คัดลอกลึกทั้งหมด ยกเว้น `linearModel`, `attitudeTest` และ `navigation` ซึ่งอยู่บน telemetry samples เท่านั้น ไม่เคยอยู่บนเฟรม (ตรวจทั้งในโค้ดและในเที่ยวบินที่มี navigation)
 > - ที่ยังไม่แก้: เฟรมที่บันทึกไว้ยังใช้บันทึกนี้ร่วมกับ state ของ simulation และบางครั้งกับ telemetry sample ที่เก็บใน step เดียวกัน (simulation สร้างบันทึกใหม่เกือบทุก step และไม่มีโค้ดไหนเขียนทับ) เหมือน `recovery.target` ใน #188
 > - merge กับหัวของ #188 (f552f2d ซึ่งรวม main 5588be1 แล้ว) เมื่อ 2026-11-05: #188 แก้จุดเดียวกันนี้ไว้เองแล้วตั้งแต่ commit f746b8c (2026-10-31, F2 ของ agent ตัวที่สองของ #188 หลังคุณสั่ง "ทำต่อ") ด้วย `ownFaults` ตัวเดียวกัน และใช้กับ debris ด้วย จุดชนจึงมีแต่ docstring และเทสต์ โค้ดเป็นของ #188 ทั้งหมด หลัง merge PR นี้เหลือเพียงเทสต์ที่บินบทเรียน ru-fdir-dus จริงผ่าน recorder และ docstring ที่ละเอียดกว่า ไม่มีโค้ดของตัวเอง: build ได้เหมือนของ #188 ทุกไบต์ ยกเว้น commit ที่ประทับไว้ใน build (และชื่อ chunk ที่ตามมา)
-> - ข้อเสนอ: ปิด PR นี้ ไม่ merge หลัง merge กับหัวของ #188 (f552f2d) PR นี้ไม่มีโค้ดของตัวเอง และเทสต์ใหม่ผ่านบน #188 อยู่แล้ว เมื่อเทียบกับฐานของ PR จึงไม่มีอะไรเปลี่ยนจากผิดเป็นถูก และไม่เข้าเงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก การแก้อยู่ใน #188 ตั้งแต่ f746b8c และ #188 merge เข้า main แล้วเมื่อ 2026-11-05 (7d12951 ซึ่งมีโค้ดเหมือน f552f2d ทุกไฟล์) ตามตัวเลือกของคุณ (2026-11-05T14:33:34Z) PR นี้จึงควรปิดพร้อมบันทึกเหตุผลนี้ ถ้าต้องการเก็บเทสต์ที่บินบทเรียน ru-fdir-dus ไว้ เป็นเรื่องที่คุณตัดสิน (เช่น PR แยกที่มีแต่เทสต์)
+> - ผล: #192 ปิดแล้วเมื่อ 2026-11-05 ไม่ merge เพราะการแก้อยู่ใน main แล้วผ่าน #188 (7d12951) ตามตัวเลือกของคุณ (2026-11-05T14:33:34Z)
+> - PR ต่อจากนี้ (PR_NUMBER, 2026-11-05 ตามที่คุณสั่ง "open a test-only PR with the comment fix"): มีเฉพาะเทสต์ที่บินบทเรียน ru-fdir-dus ผ่าน recorder และ docstring ที่แก้ให้ถูก (ใน main เขียนว่า simulation "สร้างบันทึกใหม่ทุก step" ซึ่งไม่จริงเสมอ: ช่วงของ Apollo และตอนแตะพื้น spread `s.rigid` แล้วใช้บันทึกเดิมต่อ) ไม่มีโค้ด build ได้ไบต์เดียวกับ main ทุก chunk เทสต์ใหม่ fail บน main ก่อน #188 (5588be1) และเมื่อปิด `ownFaults` และผ่านบน main ปัจจุบัน จึงเป็นเทสต์กันถดถอย ไม่ใช่การแก้บั๊ก
 
 ```yaml
 item: replay control-faults copy (PR #188's second-agent finding F2, pre-existing on main)
-change_kind: superseded by #188 (f746b8c; on main as 7d12951); on top of #188's head f552f2d it adds a test and comments only; values unchanged, no assertion changed, no ceiling raised
-owner_authorization: 'owner in chat to this session, 2026-10-30: "Task: 1. Write a failing-first vitest test in the style of `tests/replay-copies.test.ts` [...] 2. Copy `controlFaults` in `cloneRigidTelemetry`, and in `interpolateRigidTelemetry` if it passes the record through. [...] 3. Mind the bundle budget [...] If a field-by-field copy is too large, consider reusing a compact plain-data copy (PR #188 added `copyPlain` in frame.ts) or moving the copy to frame.ts''s seek path."'
-app_code: src/physics/frame.ts (code, the same as #188's own since its f746b8c; after the merge with f552f2d, comments only on top of #188); src/physics/rigid/telemetry.ts (comments only)
-tests: tests/replay-copies.test.ts (one new test)
-base_sha_verified_on: {sha: f552f2d, branch: claude/great-mayer-6kapau (PR #188), main: 5588be1, date: 2026-11-05}
+change_kind: '#192: superseded by #188 (f746b8c; on main as 7d12951), closed 2026-11-05. The follow-up PR on main 7d12951: a regression test and comments only; no code, the build is main''s byte for byte; no assertion changed, no ceiling raised'
+owner_authorization: 'owner in chat to this session, 2026-10-30: "Task: 1. Write a failing-first vitest test in the style of `tests/replay-copies.test.ts` [...] 2. Copy `controlFaults` in `cloneRigidTelemetry`, and in `interpolateRigidTelemetry` if it passes the record through. [...] 3. Mind the bundle budget [...] If a field-by-field copy is too large, consider reusing a compact plain-data copy (PR #188 added `copyPlain` in frame.ts) or moving the copy to frame.ts''s seek path."; 2026-11-05, after #192 closed: "yes, open a test-only PR with the comment fix"'
+app_code: none in the follow-up PR (src/physics/frame.ts and src/physics/rigid/telemetry.ts, comments only); #192's code was the same as #188's own since its f746b8c
+tests: tests/replay-copies.test.ts (one new test, the lesson ru-fdir-dus flown through the recorder)
+base_sha_verified_on: {sha: 7d12951, branch: main, date: 2026-11-05}
 branch: claude/epic-wright-cx214p
-pr: #192 (stacked on #188)
+pr: 'PR_NUMBER (on main); before it #192 (stacked on #188, closed 2026-11-05 as superseded)'
 second_agent_review: 'confirmed 8 of 8 claims checked, no blocking findings (2026-10-30, on 3eb54e5 and db69b31); six non-blocking: N1–N5 fixed here (docstring wording, the test''s guard, a duplicate import), N6 pre-existing (under "Not changed, for later")'
 ```
+
+## The follow-up PR: the test and the comments, on main 7d12951
+
+#192 was closed on 2026-11-05: #188 had made the same copy (f746b8c, for spent stages too) and merged into main as 7d12951 (closing comment on #192). Two parts of #192 did not reach main, and the owner asked for them in a test-only PR the same day. This PR starts from main 7d12951 and carries only those:
+
+- **The ru-fdir-dus test** in `tests/replay-copies.test.ts`, described under "Failing first" below: the lesson's own six-DOF Soyuz flight through `FlightRecorder`, every stored frame and every mid-point seeked through `ReplayPlayer.frameAt`. #188's own control-fault test builds two telemetry records by hand; this one flies the lesson.
+- **The comments** in src/physics/frame.ts and src/physics/rigid/telemetry.ts. Main says the simulation "makes a new one every step" (`ownFaults`' and `cloneFrame`'s docstrings). A phase that carries the state over spreads `s.rigid` and keeps the record (Apollo's phases, sim/apollo.ts:512 and five more; a touchdown, simulation.ts:1305), as #192's second agent found (its N2). The docstrings, and the comment in #188's control-fault test, now say "at each step it flies", and `cloneRigidTelemetry`, `interpolateRigidTelemetry` and the `controlFaults` field say what they share. No code changed.
+
+Checked on 2026-11-05, on this PR's tree (main 7d12951 with the test and the comments):
+
+| Check | Result |
+|---|---|
+| `tests/replay-copies.test.ts` | 5 of 5 (#188's four and this one) |
+| The new test on main before #188 (5588be1), this test file | fails: `frame.rigid.controlFaults` (#188's four fail for their own fields) |
+| The new test on this tree with `ownFaults` made a no-op | fails: `frame.rigid.controlFaults` (and #188's control-fault test: `frame.rigid.controlFaults`, `frame.debris[].rigid.controlFaults`); the other three pass |
+| `npx tsc --noEmit -p .` | clean |
+| `npx vite build`, main and this tree | byte-identical: `flight.worker-*.js` 570,708 B and `index-*.js` 2,654,000 B, same chunk hashes |
+| `node scripts/bundle-budget.mjs` | ok: precache code 14,678.5 of 14,679.0 kB, `index-*.js` 2,654.0 of 2,655.0 kB |
+| `tests/repo-hygiene.test.ts` | 9 of 9 |
+
+The sections below are #192's report, as it was when #192 closed.
 
 ## Cause
 
