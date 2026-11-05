@@ -81,11 +81,15 @@ export default async function r3FirstLaunch(t) {
   await pick.waitFor({ timeout: 15_000 });
   await press(t, app, pick, 'mouse', 'the Soyuz T-10 launch');
   // The viewer's own 100×, which it keeps for the whole flight. A warp set
-  // from outside (WebMCP's control_playback) lasts only to the flight's next
-  // beat, where the viewer's automatic pace puts back its own (1× for the
-  // escape and the landing); below 2 fps 1× plays slower than real time, and
+  // from outside (WebMCP's control_playback) lasts only until the viewer's
+  // automatic pace next sets its own: at its first update if it has not
+  // updated since the launch was picked (a slow runner), so the escape and
+  // the landing play at 1×; below 2 fps 1× plays slower than real time, and
   // on a slow runner the flight missed its end card within 120 s.
   if (!(await press(t, app, page.locator('.watch-speed[data-speed="100"]'), 'mouse', 'the viewer\'s 100×'))) return;
+  let warp;
+  t.check(await t.until(async () => (warp = (await app.mcp('read_flight_state')).warp) === 100, { timeoutMs: 20_000, intervalMs: 250 }),
+    `the viewer's 100× did not set the warp to 100 (warp ${warp})`);
   const copy = page.locator('.watch-end .watch-btn', { hasText: 'Try this launch yourself' });
   // Waited on the flight: its card comes 10 s of flight after the crew is
   // down, and only the card stops it. A clock that stands for 30 s is a
