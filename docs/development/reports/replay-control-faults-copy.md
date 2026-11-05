@@ -8,21 +8,22 @@
 >   - คัดลอกด้วย `structuredClone`: +497 B เกินเพดาน 75 B และช้าที่สุด
 >   - ใช้ `copyPlain` แทนการคัดลอก flex และ engine maps ที่เขียนเองไว้ด้วย เพื่อชดเชยขนาด: เล็กลง 1,470 B แต่ทุกเที่ยวบิน six-DOF จะ seek ช้าลง (ส่วน flex ช้าลงราว 4–5 เท่า)
 >   - จึงเลือกคัดลอกใน frame.ts ซึ่งอยู่ใน 2 chunk และเฉพาะเที่ยวบินที่มีความขัดข้องเท่านั้นที่จ่ายเวลาเพิ่ม เป็นนโยบายเดียวกับ `recovery.target` ใน #188
-> - ค่าทุกค่าที่ seek ได้เหมือนเดิมทุกบิต (60,935 ครั้ง 11 เที่ยวบิน) เปลี่ยนเฉพาะว่าเป็นวัตถุใหม่
-> - ขนาด: `index-*.js` +90 B, `flight.worker-*.js` +88 B, chunk อื่นไม่เปลี่ยน ที่ว่างของ precache code ลดจาก 422 B เป็น 244 B
-> - ความเร็ว: เที่ยวบินที่มีความขัดข้อง seek ช้าลงราว 4.6–4.8 µs ต่อช่วง (คัดลอกบันทึกสองครั้ง ครั้งละราว 2.3 µs คือช้าลงราว 10% ของการ seek six-DOF ที่ใช้ 40–100 µs) เที่ยวบินอื่นเท่าเดิม (ต่างกันไม่เกิน noise) หน่วยความจำของการบันทึกไม่เปลี่ยน
+> - ค่าทุกค่าที่ seek ได้เหมือนเดิมทุกบิต (60,935 ครั้ง 11 เที่ยวบิน) เปลี่ยนเฉพาะว่าเป็นวัตถุใหม่ บนโค้ดที่ merge แล้วเทียบกับ main 5588be1 อีกครั้ง: 11,973 ครั้ง 3 เที่ยวบิน ไม่ต่างเลย
+> - ขนาด: เมื่อเทียบกับ #188 เดิม (1a7ca0c) `index-*.js` +90 B, `flight.worker-*.js` +88 B, chunk อื่นไม่เปลี่ยน ที่ว่างของ precache code ลดจาก 422 B เป็น 244 B หลัง merge กับหัวปัจจุบันของ #188 (f552f2d) PR นี้ไม่เพิ่มสักไบต์: precache code 14,678,549 จาก 14,679,000 B (เหลือ 451 B เท่ากับ #188)
+> - ความเร็ว: เที่ยวบินที่มีความขัดข้อง seek ช้าลงราว 4.6–4.8 µs ต่อช่วง (คัดลอกบันทึกสองครั้ง ครั้งละราว 2.3 µs คือช้าลงราว 10% ของการ seek six-DOF ที่ใช้ 40–100 µs) เที่ยวบินอื่นเท่าเดิม (ต่างกันไม่เกิน noise) หน่วยความจำของการบันทึกไม่เปลี่ยน บนโค้ดที่ merge แล้วเทียบกับ main 5588be1: ru-fdir-dus ช้าลง 2.1 µs ต่อช่วง (56.6 → 58.3 µs) เมื่อไม่มีความขัดข้องต่างกันไม่เกิน noise
 > - ฟิลด์อื่นของ `RigidTelemetry` ตรวจครบแล้ว: คัดลอกลึกทั้งหมด ยกเว้น `linearModel`, `attitudeTest` และ `navigation` ซึ่งอยู่บน telemetry samples เท่านั้น ไม่เคยอยู่บนเฟรม (ตรวจทั้งในโค้ดและในเที่ยวบินที่มี navigation)
 > - ที่ยังไม่แก้: เฟรมที่บันทึกไว้ยังใช้บันทึกนี้ร่วมกับ state ของ simulation และบางครั้งกับ telemetry sample ที่เก็บใน step เดียวกัน (simulation สร้างบันทึกใหม่เกือบทุก step และไม่มีโค้ดไหนเขียนทับ) เหมือน `recovery.target` ใน #188
-> - การ merge: PR นี้ซ้อนอยู่บน #188 ต้อง merge หลัง #188 ไม่ชนกับ #187, #190, #191 ส่วน #189 ชนกับ #188 อยู่แล้วที่จุดเดียวกัน PR นี้ไม่ได้เพิ่มจุดชน
-> - เงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ (บน main และบน #188) และผ่านหลังแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (เพิ่มเทสต์ใหม่หนึ่งข้อ) agent ตัวที่สองตรวจแล้ว ยืนยัน 8 จาก 8 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge (ข้อเล็กห้าข้อเรื่องถ้อยคำใน docstring และ guard ของเทสต์ แก้แล้วใน PR นี้) CI ผ่านบนโค้ดสุดท้าย (run 41094577401)
+> - การ merge: PR นี้ซ้อนอยู่บน #188 ต้อง merge หลัง #188 (#187, #189, #190, #191 อยู่ใน main แล้ว และเข้ามาในสาขานี้พร้อม #188)
+> - merge กับหัวของ #188 (f552f2d ซึ่งรวม main 5588be1 แล้ว) เมื่อ 2026-11-05: #188 แก้จุดเดียวกันนี้ไว้เองแล้วตั้งแต่ commit f746b8c (2026-10-31, F2 ของ agent ตัวที่สองของ #188 หลังคุณสั่ง "ทำต่อ") ด้วย `ownFaults` ตัวเดียวกัน และใช้กับ debris ด้วย จุดชนจึงมีแต่ docstring และเทสต์ โค้ดเป็นของ #188 ทั้งหมด หลัง merge PR นี้เหลือเพียงเทสต์ที่บินบทเรียน ru-fdir-dus จริงผ่าน recorder และ docstring ที่ละเอียดกว่า ไม่มีโค้ดของตัวเอง: build ได้เหมือนของ #188 ทุกไบต์ ยกเว้น commit ที่ประทับไว้ใน build (และชื่อ chunk ที่ตามมา)
+> - เงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ (บน main ทั้ง 1842a86 และ 5588be1 และบน #188 ก่อน f746b8c) และผ่านหลังแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (เพิ่มเทสต์ใหม่หนึ่งข้อ) agent ตัวที่สองตรวจแล้ว ยืนยัน 8 จาก 8 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge (ข้อเล็กห้าข้อเรื่องถ้อยคำใน docstring และ guard ของเทสต์ แก้แล้วใน PR นี้) CI ผ่านบนโค้ดสุดท้าย (run 41094577401)
 
 ```yaml
 item: replay control-faults copy (PR #188's second-agent finding F2, pre-existing on main)
 change_kind: bug fix (the deep copy cloneFrame promises); values unchanged, no assertion changed, no ceiling raised
 owner_authorization: 'owner in chat to this session, 2026-10-30: "Task: 1. Write a failing-first vitest test in the style of `tests/replay-copies.test.ts` [...] 2. Copy `controlFaults` in `cloneRigidTelemetry`, and in `interpolateRigidTelemetry` if it passes the record through. [...] 3. Mind the bundle budget [...] If a field-by-field copy is too large, consider reusing a compact plain-data copy (PR #188 added `copyPlain` in frame.ts) or moving the copy to frame.ts''s seek path."'
-app_code: src/physics/frame.ts (code); src/physics/rigid/telemetry.ts (comments only)
+app_code: src/physics/frame.ts (code, the same as #188's own since its f746b8c; after the merge with f552f2d, comments only on top of #188); src/physics/rigid/telemetry.ts (comments only)
 tests: tests/replay-copies.test.ts (one new test)
-base_sha_verified_on: {sha: 1a7ca0c, branch: claude/great-mayer-6kapau (PR #188), main: 1842a86, date: 2026-10-30}
+base_sha_verified_on: {sha: f552f2d, branch: claude/great-mayer-6kapau (PR #188), main: 5588be1, date: 2026-11-05}
 branch: claude/epic-wright-cx214p
 pr: #192 (stacked on #188)
 second_agent_review: 'confirmed 8 of 8 claims checked, no blocking findings (2026-10-30, on 3eb54e5 and db69b31); six non-blocking: N1–N5 fixed here (docstring wording, the test''s guard, a duplicate import), N6 pre-existing (under "Not changed, for later")'
@@ -60,7 +61,7 @@ The task's first choice was a copy in `cloneRigidTelemetry`. rigid/telemetry.ts 
 - **src/physics/frame.ts**
   - `ownFaults(r)` (new, private): replaces a fresh telemetry copy's `controlFaults` with `copyPlain(controlFaults)` and returns it. It does nothing when there is no record.
   - `cloneFrame`: `rigid: ownFaults(cloneRigidTelemetry(f.rigid))`.
-  - `interpolateFrames`: `const rigid = ownFaults(interpolateRigidTelemetry(a.rigid, b.rigid, u))`. Its other returns go through `cloneFrame`. Debris telemetry is not passed through `ownFaults`, since no debris carries a record (above).
+  - `interpolateFrames`: `const rigid = ownFaults(interpolateRigidTelemetry(a.rigid, b.rigid, u))`. Its other returns go through `cloneFrame`. Debris telemetry was not passed through `ownFaults` here, since no debris carries a record (above); #188's own copy (f746b8c), which the merge with f552f2d brought in, passes it through in `cloneDebrisFrame` and the debris blend too.
   - Docstrings: `cloneFrame` lists the record among what a seek copies and says where it is shared; a comment in `captureFrame`.
 - **src/physics/rigid/telemetry.ts**, comments only (no byte in any chunk changed):
   - `RigidTelemetry.controlFaults`: a new record every step; shared by `cloneRigidTelemetry` and `interpolateRigidTelemetry`; copied by a seek.
@@ -99,6 +100,13 @@ On the frames of a six-DOF flight with navigation and an accelerometer failure (
 | Soyuz-2.1a six-DOF, rate gyro stuck | fails: `frame.rigid.controlFaults` | fails: `frame.rigid.controlFaults` | passes |
 | #188's three tests | fail (their own fields, as #188 reports) | pass | pass |
 
+Again on 2026-11-05, with this branch's test file (now #188's four tests and this one) run against each tree's src:
+
+| Test | main (5588be1) | #188's head (f552f2d) | this branch, merged |
+|---|---|---|---|
+| Soyuz-2.1a six-DOF, rate gyro stuck | fails: `frame.rigid.controlFaults` | passes: #188 has the same copy since f746b8c | passes |
+| #188's four tests | fail (their own fields, as #188 reports) | pass | pass |
+
 The test file takes 21.7 s on its own (the new test about 9–11 s, most of it the six-DOF flight).
 
 ### Same values, nothing shared
@@ -122,6 +130,17 @@ Probe (gitignored `tests/probe/`): #188's head's frame.ts (1a7ca0c) against this
 
 The 25,708 calls that shared something before are exactly the calls on frames that carry a record. The flights without one shared nothing before or after, so #188's copies hold on six-DOF frames too.
 
+Again on the merged tree, 2026-11-05: main 5588be1's frame.ts against this branch's, with the same probe on three flights of the lesson:
+
+| Flight (six-DOF) | Stored frames | Calls | Differ | Shared with the recording, main / merged |
+|---|---|---|---|---|
+| `ru-fdir-dus` (gyro stuck, no FDIR), to its breakup at T+42 s | 526 | 1,576 | 0 | 1,576 / 0 |
+| `ru-fdir-dus` with the FDIR on, to T+162 s | 1,735 | 5,203 | 0 | 5,203 / 0 |
+| `ru-fdir-dus` without failures, to T+162 s | 1,732 | 5,194 | 0 | 0 / 0 |
+| **Total** | | **11,973** | **0** | **6,779 / 0** |
+
+Against #188's head (f552f2d) there is nothing left to compare: the built chunks are the same bytes (under "Size").
+
 ### Size
 
 `npx vite build`, then `node scripts/bundle-budget.mjs`: ok, no ceiling raised. Exact bytes from the precache manifest in `dist/sw.js`:
@@ -137,6 +156,16 @@ The 25,708 calls that shared something before are exactly the calls on frames th
 
 `ownFaults` minifies to 80 B, and each of its two calls to 4 B.
 
+After the merge with #188's head (f552f2d, which has main 5588be1), each tree built with `npm run build`; `node scripts/bundle-budget.mjs` ok on all three, no ceiling raised:
+
+| | main (5588be1) | #188's head (f552f2d) | this branch, merged | change on #188 |
+|---|---|---|---|---|
+| `index-*.js` | 2,653,922 B | 2,654,001 B | 2,654,001 B | 0 B |
+| `flight.worker-*.js` | 570,631 B | 570,708 B | 570,708 B | 0 B |
+| precache code (ceiling 14,679,000 B) | 14,678,393 B (607 B left) | 14,678,549 B (451 B left) | 14,678,549 B (451 B left) | 0 B |
+
+The merged build and #188's are the same bytes but for the commit stamped into the build (`build-info.json`, the `commit` string in `index-*.js`) and the chunk names and references that follow from it; `flight.worker-*.js` is byte-identical. `index-*.js` has 999 B left under its own ceiling, 2,655 kB.
+
 ### Heap and time
 
 - **Stored frames:** `captureFrame` is unchanged, so `FRAME_BYTES` (replay/recorder.ts) is too.
@@ -151,6 +180,7 @@ The 25,708 calls that shared something before are exactly the calls on frames th
 
   - **With failures,** a span costs about 4.7 µs more: two copies of the record, about 2.3 µs each, against six-DOF seeks of 40–100 µs. With the launch audio's ~60 seeks an animation frame (#188's count, on a Falcon Heavy), that would be about 140 µs a frame, on flights with failures only.
   - **Without failures,** `ownFaults` is one property check, and the difference is within run-to-run noise. An earlier 11-run pass showed −5.3 and +20.8 µs on these two flights, which is why this one has 41 runs and reports the spread.
+- **On the merged tree,** 2026-11-05, main 5588be1's frame.ts against this branch's, same method (41 alternating runs): `ru-fdir-dus` with the gyro stuck, 525 spans, 56.6 (54.5–60.7) against 58.3 (57.0–61.1) µs, **+2.1 µs**; without failures, 1,731 spans, 58.0 (53.3–78.0) against 58.0 (53.7–83.5) µs, +0.5 µs (noise). Against #188's head the code is the same.
 
 ### Tests
 
@@ -162,6 +192,13 @@ The 25,708 calls that shared something before are exactly the calls on frames th
 - **Not run:**
   - The other 32 heavy files and the 6 six-DOF fleet files. A grep of tests/heavy and tests/sixdof-fleet for the recorder, the player, `cloneFrame` and `interpolateFrames` finds only vostok1-recording, so this change cannot reach the others.
   - The browser journeys beyond CI's smoke shards. There is no UI change, and what a seek shows is the same to the bit.
+- **On the merged tree** (#188's head f552f2d, with main 5588be1), 2026-11-05:
+  - **Typecheck:** `npx tsc --noEmit -p .` clean.
+  - **`tests/replay-copies.test.ts`:** 5 of 5 (#188's four and this one).
+  - **Every unit file that imports frame.ts, builds a recorder, player or simview, or touches the control system's failures** (54 files, among them replay-copies, debris-replay, abort-replay-arc, rigid-replay-arc, falling-frames, control-faults, rigid-fleet and lesson-packs): 1,083 tests pass (165 s).
+  - **`tests/repo-hygiene.test.ts`:** 9 of 9.
+  - **Heavy** (`-c vitest.heavy.config.ts`): `vostok1-recording` and `falling-frames-sixdof`, 2 of 2 (133 s).
+  - **CI** on the pushed merge: not looked at here.
 
 ## Second-agent review
 
@@ -193,6 +230,22 @@ A second agent reviewed 3eb54e5 (the code) and db69b31 (the test), review only, 
   - #187 (`claude/practical-lovelace-2ndbww`), #191 (`claude/peaceful-planck-uyne6i`) and #190 (`claude/gracious-sagan-zvg16a`, on #187): no conflict.
   - #189 (`claude/ecstatic-darwin-wijyuc`, on #187): one conflict in `interpolateFrames`, between #188's Apollo and `jettisoned` lines and #189's rendezvous blend. #189 has the same single conflict with #188's head, so this PR adds none.
 - **Bytes:** 244 B are left after this PR. #188 measured #187 at 50 B on top of #188.
+
+## Merge with #188's head f552f2d (main 5588be1)
+
+#188's own branch fixed the same record in f746b8c (2026-10-31, its second agent's F2, after the owner's "ทำต่อ"), after this branch had left it at 1a7ca0c: the same `ownFaults`, also around `cloneDebrisFrame` and the debris blend, and a test of its own (a vehicle and a spent stage carrying a record). #188 then merged main 5588be1 (f552f2d). Merging f552f2d here conflicted in two files, both where the two branches had written the same change:
+
+1. **src/physics/frame.ts,** four places, docstrings and one comment only; the code on both sides was the same, and #188's debris calls came in without a conflict.
+   - `ownFaults`' docstring: this branch's, which names the recorder's hand-outs too (the second agent's N2); its last sentence now says debris telemetry goes through it too.
+   - `cloneFrame`'s docstring, the list of what a seek copies: this branch's.
+   - `cloneFrame`'s docstring, what is shared: this branch's (the runtime builds a record at each step it flies, where #188's said every step, N2), then #188's "A live capture … shares all three".
+   - `cloneFrame`'s `// G08` comment: kept.
+2. **tests/replay-copies.test.ts,** three places:
+   - the header: #188's, with this report named for the lesson's test;
+   - the imports: both sides';
+   - the tests: #188's fourth, then this branch's, which is now the fifth.
+
+Nothing from #188 or main was dropped. After the merge this branch adds no code to #188: the lesson's flight as a test, the docstrings in frame.ts and rigid/telemetry.ts, this report and the fragment.
 
 ## Not changed, for later
 
