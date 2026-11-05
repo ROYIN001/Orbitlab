@@ -494,6 +494,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
   return {
     t: s.t,
     schemaVersion: 2,
+    // G08: the control system's record is the runtime's, which never writes into one; a seek hands out a copy (see `cloneFrame`)
     rigid: cloneRigidTelemetry(s.rigid),
     ...(s.eom ? { eom: cloneEom(s.eom) } : {}),
     status: s.status,
@@ -675,12 +676,15 @@ function copyPlain<T extends object>(o: T): T {
 }
 
 /**
- * Rigid telemetry a seek hands out, given its own copy of the control-fault
- * record (G08, rigid/faults.ts), which `cloneRigidTelemetry` passes through. The
- * stored frames share that record with the simulation's state, which makes a new
- * one every step and never writes into one, as with a recovery's target. Copied
- * here, in the two chunks that carry this file, rather than in
- * `cloneRigidTelemetry`, which seven chunks carry.
+ * G08: the vehicle's telemetry in a copy of a frame (a seek's, or what the
+ * recorder hands out), made its own down to the control system's failures
+ * and the FDIR's state (`controlFaults`), which
+ * `cloneRigidTelemetry` and `interpolateRigidTelemetry` share. A copy there
+ * would land in the seven chunks that carry rigid/telemetry.ts, against the
+ * precache budget (budgets.json); here it is in the two that carry this file,
+ * and only a flight with failures set pays for it. `r` is a fresh copy. Debris
+ * telemetry goes through it too, though only the flown vehicle carries a
+ * record (simulation.ts).
  */
 function ownFaults(r: RigidTelemetry | undefined): RigidTelemetry | undefined {
   if (r?.controlFaults) r.controlFaults = copyPlain(r.controlFaults);
@@ -715,9 +719,11 @@ function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
  * up (`jettisoned`), which flip once each; Apollo's state (`apollo`), whose
  * Moon figures, next milestone and the bodies beside it change every frame and
  * whose plan (`sequence`, `tli`, `perilune`, `mcc`) changes at its burns;
- * where a recovered stage is flown to (`debris[].recovery.target`); and a
- * six-DOF body's control-fault record (`rigid.controlFaults`, `ownFaults`).
- * Apollo's state and a recovery are plain data, copied whole (`copyPlain`) rather than
+ * where a recovered stage is flown to (`debris[].recovery.target`); and, in a
+ * six-DOF flight with control-system failures (G08), the failures and the
+ * FDIR's state (`rigid.controlFaults`), whose rates and sensor errors change
+ * every step and whose lists change at each failure and FDIR decision. Apollo's
+ * state and a recovery are plain data, copied whole (`copyPlain`) rather than
  * field by field: a hand-written copy of Apollo's state would cost hundreds of
  * bytes in each of the two chunks that carry this file, against the precache
  * budget (budgets.json).
@@ -730,10 +736,14 @@ function cloneDebrisFrame(d: DebrisFrame): DebrisFrame {
  * drone ship a new object when it stations it again (rigid/debris-runtime.ts),
  * and a copy in every stored frame would add 120–144 B of heap per recovered
  * stage per frame to what `FRAME_BYTES` (replay/recorder.ts) was fitted to.
- * The control-fault record is shared the same way: the simulation makes a new
- * one every step and never writes into one. A live capture the recorder hands
- * back without storing it (`FlightRecorder.recordNow`) shares all three with
- * the simulation and with the stored frames.
+ * The control system's record is shared the same way: the runtime builds a
+ * new one at each step it flies (rigid/faults.ts `record`; a phase that
+ * carries the state over, such as Apollo's, spreads it and keeps the record)
+ * and nothing writes into it, so the frames `captureFrame` stores share it
+ * with the simulation's state, and with a telemetry sample taken at the same
+ * step. Every copy made here has its own (`ownFaults`). A live capture the
+ * recorder hands back without storing it (`FlightRecorder.recordNow`) shares
+ * all three with the simulation and with the stored frames.
  */
 export function cloneFrame(f: VisualFrame): VisualFrame {
   return {
@@ -743,6 +753,7 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
     // C01: Apollo's state, every figure and body in it, and the parts dropped on the way up
     ...(f.apollo ? { apollo: copyPlain(f.apollo) } : {}),
     ...(f.jettisoned ? { jettisoned: { ...f.jettisoned } } : {}),
+    // G08: with the failures and the FDIR's state
     rigid: ownFaults(cloneRigidTelemetry(f.rigid)),
     ...(f.eom ? { eom: cloneEom(f.eom) } : {}),
     r: clone(f.r),
