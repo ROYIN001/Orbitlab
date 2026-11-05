@@ -7,8 +7,8 @@ owner on screenshots.
 | Field | Value |
 |---|---|
 | Package | Redesign A (direction A "Mission Control"), steps S0–S3 |
-| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0) |
-| Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md) |
+| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0). S2: `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1) |
+| Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md). S2: [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md) |
 | Status | In PR; not merged; not published |
 
 ## The owner's authorization (D-65)
@@ -521,6 +521,166 @@ Files: `src/style.css`, `src/ui/modes.css`, `src/ui/lessons/lessons.css`,
 | `… --dist <copy of this build> stage2-preflight` | 1 / 1 passed in 132.5 s |
 | `… --dist <copy of this build> r2-viewport-matrix` | 1 / 1 passed in 787.8 s (journey 785.9 s, every part including the phone TORU part; no FAIL lines) |
 | `… --dist <copy of this build> r2-viewport-scene-floor` | 1 / 1 passed in 334.5 s (G2 S1–S6 in TH, EN and RU) |
+
+Not run here: the full `npx vitest run`, the rest of the browser smoke set,
+heavy and sixdof-fleet. CI runs them.
+
+## S2 — Watch scene-first: the clock block at the top centre, one lower-third caption, nothing over the middle
+
+Change type: **look change** (visual; the owner reviews it on screenshots).
+Branch `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1);
+fragment [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md).
+Docs touched: N/A (USER-GUIDE's "just the picture, three numbers … and one
+sentence" is still true; README and IMPLEMENTATION-STATUS do not describe where
+Watch puts them).
+
+Reviewers: the owner (a look change: the Watch face, soyuzIss at about T+124 s,
+at 1440×900, 1100×650, 390×844 and 844×390 in TH, EN and RU).
+
+Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
+โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
+ส่วนรูปแบบอื่นๆ จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
+ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ". This step is the "เช่น
+โหมดรับชม ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ" part: the scene
+first, only the basic information beside it.
+
+### Choices in this step (taken under "mix sensibly"; the owner can reverse each at the screenshot review)
+
+- The scene first: the full-width dark band behind the bottom of the scene
+  (`.watch-bottom::before`) is gone; only two small cards are left on the scene.
+- A compact clock block at the top centre, between the mission title and the
+  state chip: its label, the mission time large, then altitude · speed on one
+  line. It is the existing three readouts (`watch.stat.*`, the same values and
+  formatting), moved and restyled; the numbers are in `var(--mono)` (IBM Plex
+  Mono online, the system monospace offline).
+- One caption card at the bottom left (max 640 px, a 3 px accent edge), the
+  beat label in sentence case at 15 px with no letter-spacing (EN and RU were
+  upper case and tracked), the sentence at 17 px (15.5 px on a phone).
+- The existing controls (play, speeds, follow, Choose a launch) stay where
+  they were, at the bottom, with the same classes.
+- Nothing over the middle of the scene: the parking-orbit note (A9) moves from
+  the top centre, where it would cover the clock, to just above the caption.
+- On a phone (≤ 860 px) the title and the state share the first row and the
+  clock gets its own row under them (mockup E5); the time is 26 px there.
+- The state chip is pinned to the last column, so it stays at the right while
+  the launch list hides the clock.
+- In a short scene (< 380 px, `data-short`, G2 compact) the clock is one line
+  (its label kept) and the caption's sentence is cut to one line with an
+  ellipsis; the whole sentence is still in the caption's text, which is the
+  live region.
+- The lesson strip hides in Watch and on the landing page only
+  (`body[data-section='home']`), not in the Orbit or Build sections, where
+  case and design lessons are answered in it.
+- Not in this step: the `.hud-fold` fix (the fold button in a short Watch
+  scene); it is a bug fix and goes in a separate bug-fix PR with its own
+  regression check.
+
+The package's choices list at the top of this report is unchanged.
+
+### What changed
+
+1. `src/ui/watch.ts`. The stats block is a field (`this.stats`); the
+   constructor puts it in the scene's top band, before `#sim-state`
+   (`root.parentElement?.querySelector('#sim-state')?.before(this.stats)`: the
+   fx3 test's mock root has no parent, so there it simply stays detached). The
+   `.watch-bar` wrapper is gone: `.watch-bottom` holds the parking note, the
+   caption, the Moon note and the controls. The parking note's inline style is
+   `position: static` in that column (it was absolute at the top centre). The
+   launch list hides the clock (`this.stats.hidden` in `openPicker` /
+   `closePicker`), as `.watch-ui.picking .watch-bottom` did when the clock was
+   in the bottom band. No i18n key, logic or ARIA change: the caption keeps
+   `aria-live="polite"`, the note `role="status"`, `#sim-state` its
+   `aria-live`.
+2. `src/ui/modes.css`. The Watch hide list gets `.lesson-strip`, and
+   `body[data-section='home'] .lesson-strip` joins the same rule (the home
+   mode's list is unchanged, because the Orbit and Build sections are `home`
+   to the launch simulator). The Watch overlay rules are replaced: no scrim;
+   the caption and the clock share one card look (`rgba(10, 16, 24, 0.88)`,
+   `var(--line)`, radius 14 px); `body[data-mode='watch'] .scene-top` is a
+   three-column grid (`minmax(0, 1fr) auto minmax(0, 1fr)`; two columns and a
+   second row for the clock at ≤ 860 px); `body:not([data-mode='watch'])
+   .watch-stats { display: none }` keeps the clock out of Explore and
+   Engineer; the short-scene lines; the old 860 / 640 px stats sizes are gone.
+   Specificity: `body[data-mode] .scene-top` (0,2,1) beats `.scene-top`
+   (0,1,0) in style.css, whose `align-items: flex-start` still applies.
+
+### Tests changed
+
+- `tests/browser/journeys/watch-controls.mjs` (smoke). In every pass (mouse,
+  keyboard, touch), right after the first launch is flying: the clock block has
+  a box and sits wholly above `#camera-tabs`; there is exactly one
+  `.watch-caption[aria-live="polite"]`; and nothing of the clock, the lower
+  third, the title, the state, the camera tabs or the scene tools covers the
+  centre of `#viewport`. The touch pass checks the same at 844×390 (and that
+  the scene is short there, `data-short=true`) and goes back to its size. At the end of the mouse
+  pass: Escape closes the list, the clock is back, and after
+  `#/launch/explore` it is not visible (scene-floor's `OVERLAYS` cannot see a
+  clock leaking into the top band).
+- `tests/browser/journeys/teaching-held.mjs` (smoke). Case 6.1 (track 6, a
+  built-in self-study lesson) opens the Orbit section with its strip on screen,
+  which a hide rule on `body[data-mode='home']` would have broken.
+- No assertion was removed or loosened, no timeout lengthened.
+
+### Files
+
+`src/ui/watch.ts`, `src/ui/modes.css`,
+`tests/browser/journeys/watch-controls.mjs`,
+`tests/browser/journeys/teaching-held.mjs`,
+`changes/claude-u-redesign-a-s2.md` (new), this report.
+
+Changed source lines: 82 in `src/` (+43 / −39), 48 in `tests/` (+48 / −0).
+
+### Measured (this container, `npx vite build`, then `node scripts/bundle-budget.mjs`)
+
+**Budget line: within the unchanged ceilings** (no `budgets.json` change).
+
+| Group | S1 with its fixes | S2 | Ceiling |
+|---|---|---|---|
+| `index-*.css` | 177,658 B | 178,283 B (+625 B; 178.3 kB) | 179 kB |
+| `index-*.js` | 2,653.4 kB | 2,653,495 B (2653.5 kB) | 2655 kB |
+| `i18n-*.js` | 1732.5 kB | 1732.5 kB | 1733 kB |
+| other chunks | 771.4 kB | 771.4 kB | 772 kB |
+| precache code | 14677.5 kB | 14,678,147 B (14678.1 kB) | 14679 kB |
+| precache | 15796.7 kB | 15797.3 kB | 16078 kB |
+
+The CSS is 145 B over the plan's +0.48 kB: the two critique fixes (the
+short-scene sentence on one line, the state chip pinned to its column), the
+landing-page strip rule and `max-width: min(640px, 100%)` (a cut sentence
+cannot push the caption past a narrow scene). Room left for S3: `index-*.css`
+717 B, `index-*.js` 1,505 B, precache code 853 B. S3's plan estimate is
++0.49 kB of CSS and about +0.5 kB of precache code, so it still fits, with
+little to spare.
+
+The Watch face, soyuzIss paused at T+02:04, Chromium, offline fonts (a scratch
+Playwright script against this build, not committed; screenshots in the
+session's scratchpad for the owner's review). Pixels from the top of the page;
+"middle" is what covers the centre of `#viewport`:
+
+| Size | Scene (top, height, centre y) | Short | Clock (top–bottom) | Camera tabs top | Lower third top | Middle | Sentence cut |
+|---|---|---|---|---|---|---|---|
+| 1440×900 | 60, 840, 480 | no | 74–174 | 182 | 728 (RU 703) | nothing | no |
+| 1100×650 | 60, 590, 355 | no | 74–174 | 182 | 478 (RU 453) | nothing | no |
+| 390×844 | 135, 709, 490 | no | 202–293 (TH 294) | 301 (TH 302) | 614 (RU 591) | nothing | no |
+| 844×390 | 89, 301, 240 | yes | 138–181 (TH 182) | 189 (TH 190) | 256 | nothing | yes |
+
+The same in EN, TH and RU except where marked. In the 844×390 phone landscape
+the lower third starts 16 px below the scene's centre with the sentence cut to
+one line; the critique's estimate for a two-line sentence put it above the
+centre. On a phone (≤ 860 px) the clock card spans the scene's width, under
+the title and the state.
+
+### Tests run
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `npx vitest run tests/watch-logic.test.ts tests/hud-layout.test.ts tests/css-motion.test.ts tests/architecture.test.ts` | 4 files, 60 / 60 passed |
+| `npx vitest run tests/fx3-thai-moon-labels.test.ts tests/watch-missions.test.ts tests/i18n.test.ts tests/bundle-budget.test.ts tests/telemetry-layout.test.ts` | 5 files, 69 / 69 passed (WatchView on the mock root unchanged) |
+| `npx vite build && node scripts/bundle-budget.mjs` | bundle budget: ok (numbers above) |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs --dist <copy of this build> watch-controls r2-flight-shell teaching-held` | 3 / 3 passed in 436.4 s (watch-controls 135.6 s, mouse, keyboard and touch passes with the new checks; r2-flight-shell 236.0 s, Watch camera tabs and Cinematic; teaching-held 53.1 s with case 6.1) |
+| `… --dist <copy of this build> watch-controls`, again after its 844×390 step also asserts that the scene is short | 1 / 1 passed in 145.7 s |
+| `… --dist <copy of this build> r3-first-launch` | 1 / 1 passed in 109.8 s |
+| `… --dist <the S1 build; Watch unchanged since d07f597> watch-controls teaching-held` | failing before: watch-controls 4 failures (the clock is not in the top band, mouse / keyboard / touch / touch at 844×390); teaching-held passes (it guards the hide rule S2 could have broken) |
 
 Not run here: the full `npx vitest run`, the rest of the browser smoke set,
 heavy and sixdof-fleet. CI runs them.

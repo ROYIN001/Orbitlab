@@ -120,9 +120,9 @@ export class WatchView {
   /** the flight was paused under its end card, so "keep watching" plays it on */
   private pausedAtEnd = false;
   /**
-   * A9: the parking-orbit note. It is shown once a flight, over the top of the
-   * scene rather than across it, and goes by itself, when closed, or when the
-   * next burn lights.
+   * A9: the parking-orbit note. It is shown once a flight, at the top of the
+   * lower third rather than across the scene, and goes by itself, when closed,
+   * or when the next burn lights.
    */
   private milestone: HTMLElement;
   private milestoneText: HTMLElement;
@@ -139,6 +139,8 @@ export class WatchView {
   private moonNote: HTMLElement;
   private realShown = '';
   private lastEvents: readonly SimEvent[] = [];
+  /** the clock block: mission time, altitude and speed, in the scene's top band (modes.css) */
+  private readonly stats = el('div', 'watch-stats');
   private clockValue: HTMLElement;
   private altValue: HTMLElement;
   private speedValue: HTMLElement;
@@ -166,7 +168,6 @@ export class WatchView {
     this.moonNote.hidden = true;
     Object.assign(this.moonNote.style, { margin: '-8px 0 0', fontSize: '12.5px', color: '#9fb3c4', textShadow: '0 1px 10px rgba(0, 0, 0, 0.7)' });
 
-    const stats = el('div', 'watch-stats');
     this.clockValue = el('span', 'watch-num');
     this.altValue = el('span', 'watch-num');
     this.speedValue = el('span', 'watch-num');
@@ -182,7 +183,7 @@ export class WatchView {
         strong.append(u);
       }
       stat.append(label, strong);
-      stats.append(stat);
+      this.stats.append(stat);
     }
 
     this.playBtn = el('button', 'watch-play');
@@ -212,22 +213,16 @@ export class WatchView {
     const controls = el('div', 'watch-controls');
     controls.append(this.playBtn, this.speedGroup, this.followBtn, this.missionsBtn);
 
-    const bar = el('div', 'watch-bar');
-    bar.append(stats, controls);
-    const bottom = el('div', 'watch-bottom');
-    bottom.append(this.caption, this.moonNote, bar);
-
     this.picker = el('section', 'watch-card watch-picker');
     this.picker.hidden = true;
     this.picker.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); this.closePicker(); } });
     this.endCard = el('section', 'watch-card watch-end');
     this.endCard.hidden = true;
-    // A9: the card styles belong to src/ui/modes.css, which is not this
-    // change's to edit; the note borrows the cards' look and sits at the top.
+    // A9: the parking-orbit note opens the lower third, above the caption, so the clock at the top stays clear
     this.milestone = el('section', 'watch-card watch-milestone');
     this.milestone.hidden = true;
     this.milestone.setAttribute('role', 'status');
-    Object.assign(this.milestone.style, { top: '16px', transform: 'translateX(-50%)', width: 'min(460px, calc(100% - 32px))', padding: '12px 14px 14px' });
+    Object.assign(this.milestone.style, { position: 'static', transform: 'none', width: 'min(460px, 100%)', padding: '12px 14px 14px' });
     const milestoneHead = el('div', 'watch-card-head');
     this.milestoneEyebrow = el('span', 'eyebrow');
     this.milestoneClose = el('button', 'watch-close', '×');
@@ -237,7 +232,11 @@ export class WatchView {
     this.milestoneText = el('p');
     Object.assign(this.milestoneText.style, { margin: '2px 0 0', fontSize: '14.5px', lineHeight: '1.5', color: '#c8d6e2' });
     this.milestone.append(milestoneHead, this.milestoneText);
-    root.replaceChildren(bottom, this.picker, this.endCard, this.milestone);
+    const bottom = el('div', 'watch-bottom');
+    bottom.append(this.milestone, this.caption, this.moonNote, controls);
+    root.replaceChildren(bottom, this.picker, this.endCard);
+    // the clock block stands in the scene's top band, between the title and the state (modes.css)
+    root.parentElement?.querySelector('#sim-state')?.before(this.stats);
     this.applyLanguage();
   }
 
@@ -283,12 +282,14 @@ export class WatchView {
     this.endCard.hidden = true;
     this.hideMilestone();
     this.picker.hidden = false;
+    this.stats.hidden = true;
     this.root.classList.add('picking');
     this.picker.querySelector<HTMLElement>('.watch-mission')?.focus({ preventScroll: true });
   }
 
   closePicker(): void {
     this.picker.hidden = true;
+    this.stats.hidden = false;
     this.root.classList.remove('picking');
   }
 
