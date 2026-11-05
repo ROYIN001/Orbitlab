@@ -209,11 +209,24 @@ function logoMark(): SVGSVGElement {
   return svg;
 }
 
+/** A line icon from index.html's sprite (#i-<name>), in the text colour (style.css .icon). */
+export function icon(name: string, cls = ''): SVGSVGElement {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', `icon ${cls}`.trim());
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS(NS, 'use');
+  use.setAttribute('href', `#i-${name}`);
+  svg.append(use);
+  return svg;
+}
+
 /** The About tab: the app's mark, version, maker, licences, links and the README disclaimer (src/credits.ts). */
 function aboutPanel(b: HTMLElement): void {
   const box = el('div', 'about-box');
   const mark = el('p', 'about-mark');
   const name = el('span', 'brand-name', 'ORBIT');
+  name.lang = 'en'; // keeps the wordmark's tracking under the Thai rule (style.css :lang(th))
   name.append(el('span', undefined, 'LAB'));
   mark.append(logoMark(), name);
   const title = el('h2', 'sr-only', t('app.title'));

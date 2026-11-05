@@ -1,5 +1,6 @@
 /** Minimal canvas line charts for the telemetry panel. */
 import { getLang, t, type Lang } from '../i18n';
+import { CANVAS_SANS } from './web-fonts';
 
 export interface Series {
   x: number[];
@@ -287,16 +288,16 @@ export function paintChart(g: CanvasRenderingContext2D, w: number, h: number, se
   // A title longer than the room left of the legend — a Russian or Thai one
   // on a phone — is set smaller, down to the axis labels' size, and then
   // narrowed to fit: never cut off at the canvas's edge or run under the legend.
-  g.font = `${px(10)}px "DM Sans", system-ui, sans-serif`;
+  g.font = `${px(10)}px ${CANVAS_SANS}`;
   const legend = series.reduce((sum, s) => sum + (s.label ? g.measureText(s.label).width + px(12) : 0), 0);
   const room = Math.max(px(40), w - padR - legend - padL - (legend > 0 ? px(6) : 0));
   let titleSize = 11;
-  const titleFont = (): string => `600 ${px(titleSize)}px "Space Grotesk", system-ui, sans-serif`;
+  const titleFont = (): string => `600 ${px(titleSize)}px ${CANVAS_SANS}`;
   g.font = titleFont();
   while (titleSize > 9 && g.measureText(opt.title).width > room) { titleSize -= 0.5; g.font = titleFont(); }
   g.fillText(opt.title, padL, px(12), room);
   let lx = w - padR;
-  g.font = `${px(10)}px "DM Sans", system-ui, sans-serif`;
+  g.font = `${px(10)}px ${CANVAS_SANS}`;
   for (const s of [...series].reverse()) {
     if (!s.label) continue;
     g.textAlign = 'right';
@@ -307,7 +308,7 @@ export function paintChart(g: CanvasRenderingContext2D, w: number, h: number, se
   if (opt.xLabel) {
     g.textAlign = 'right';
     g.fillStyle = AXIS_TEXT;
-    g.font = `${px(9)}px "DM Sans", system-ui, sans-serif`;
+    g.font = `${px(9)}px ${CANVAS_SANS}`;
     g.fillText(opt.xLabel, w - padR, h - px(5));
   }
   return description;

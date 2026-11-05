@@ -75,6 +75,7 @@ import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
 import { keepUnits } from '../keep-units';
 import { nameForFile } from '../file-name';
+import { icon } from '../dialogs';
 import { decimal, measureText, unitAfter } from './measure-text';
 import { PanelLocks } from './locks';
 import { PACK_REVIEWS } from '../../lessons/review';
@@ -361,7 +362,7 @@ export class LessonMode implements LessonToolsHost {
     const passed = written.filter((l) => this.progressData.lessons[l.id]?.passed).length;
     const fresh = !Object.keys(this.progressData.lessons).length && !this.progressData.assessments.length;
     this.button.classList.toggle('fresh', fresh);
-    this.button.replaceChildren(el('span', 'lesson-glyph', '✎'), el('span', 'lesson-btn-label', t('lesson.button')),
+    this.button.replaceChildren(icon('lessons'), el('span', 'lesson-btn-label', t('lesson.button')),
       el('span', 'lesson-badge', `${passed}/${written.length}`));
     this.button.title = t('lesson.buttonTitle');
     this.button.setAttribute('aria-label', `${t('lesson.button')} — ${t('lesson.catalog.progress', { passed, total: written.length })}`);
@@ -1455,7 +1456,7 @@ export class LessonMode implements LessonToolsHost {
       tabs.append(a);
     }
     const title = el('span', 'lessons-page-title');
-    title.append(el('span', 'lesson-glyph', '✎'), document.createTextNode(` ${t('lesson.page.title')}`));
+    title.append(icon('lessons'), document.createTextNode(` ${t('lesson.page.title')}`));
     this.page.setAttribute('aria-label', t('lesson.page.title'));
     this.pageBar.replaceChildren(title, tabs, back);
     const profile = this.profileContext(false);

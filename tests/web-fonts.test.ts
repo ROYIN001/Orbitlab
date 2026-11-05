@@ -34,6 +34,11 @@ describe('web fonts (S04)', () => {
     expect(head).toEqual([]);
   });
 
+  it('asks for Plex Sans Thai, Plex Sans for its missing Cyrillic, and Plex Mono', () => {
+    expect(new URL(WEB_FONTS_URL).searchParams.getAll('family').map((f) => f.split(':')[0]))
+      .toEqual(['IBM Plex Sans Thai', 'IBM Plex Sans', 'IBM Plex Mono']);
+  });
+
   it('are not in the page itself', () => {
     const html = Object.values(import.meta.glob('../index.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)[0];
     expect(html).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);

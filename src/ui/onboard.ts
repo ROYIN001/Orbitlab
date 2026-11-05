@@ -28,6 +28,7 @@ import type { RendezvousState } from '../physics/sim/rendezvous';
 import { getLang, t } from '../i18n';
 import { dot, normalize } from '../physics/vec3';
 import { symbolText } from './notation';
+import { CANVAS_SANS, CANVAS_MONO } from './web-fonts';
 
 interface Tile {
   label: string;
@@ -125,7 +126,7 @@ export class OnboardOverlay {
     g.fillRect(cx - rw / 2 - 8 * S, y - 4 * S, rw + 16 * S, fs + 8 * S);
     g.fillStyle = rv.manual ? '#ffcf6b' : '#eef4f8';
     g.fillText(row, cx, y);
-    g.font = `600 ${Math.round(10.5 * S)}px "Space Grotesk", system-ui, sans-serif`;
+    g.font = `600 ${Math.round(10.5 * S)}px ${CANVAS_SANS}`;
     g.fillStyle = '#b8c6d4';
     g.fillText(OnboardOverlay.trim(g, t('dock.caption'), W - 32 * S), cx, y + fs + 10 * S);
     g.textBaseline = 'alphabetic';
@@ -183,7 +184,7 @@ export class OnboardOverlay {
     grad.addColorStop(1, 'rgba(0,0,0,0.25)');
     g.fillStyle = grad;
     g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
-    g.font = `600 ${Math.round(11 * S)}px "Space Grotesk", system-ui, sans-serif`;
+    g.font = `600 ${Math.round(11 * S)}px ${CANVAS_SANS}`;
     g.fillStyle = '#8ca0b5';
     g.textAlign = 'center';
     const caption = OnboardOverlay.trim(g, crewed ? t('ob.crew') : t('ob.camera'), W - 2 * padX);
@@ -239,7 +240,7 @@ export class OnboardOverlay {
       g.fillStyle = last.severity === 'fail' ? (blink ? '#ff6b6b' : '#5a1a1a') : last.severity === 'warn' ? '#efa47e' : '#8be5cd';
       const lamp = Math.round(6 * S);
       g.fillRect(padX, ey + eventH / 2 - lamp / 2, lamp, lamp);
-      g.font = `${Math.round(11 * S)}px "DM Sans", system-ui, sans-serif`;
+      g.font = `${Math.round(11 * S)}px ${CANVAS_SANS}`;
       g.fillStyle = '#c3d1de';
       g.textAlign = 'left';
       g.textBaseline = 'middle';
@@ -294,7 +295,7 @@ export class OnboardOverlay {
     g.strokeStyle = gl > 5 ? '#ff6b6b' : gl > 3.5 ? '#efa47e' : '#8be5cd';
     g.beginPath(); g.arc(gx, gy, gr, Math.PI, Math.PI + (Math.PI * gl) / 8); g.stroke();
     g.fillStyle = '#fff';
-    g.font = `600 ${Math.round(15 * S)}px "Space Grotesk", ui-monospace, monospace`;
+    g.font = `600 ${Math.round(15 * S)}px ${CANVAS_MONO}`;
     g.textAlign = 'center';
     g.fillText(`${symbolText('loadFactor')} ${gLoad.toFixed(1)} ${t('ob.gload')}`, gx, gy - 4 * S);
     g.fillStyle = '#8ca0b5';
@@ -314,7 +315,7 @@ export class OnboardOverlay {
     g.font = `${Math.round(9 * S)}px ui-monospace, monospace`;
     g.fillText(OnboardOverlay.trim(g, tile.label, w - pad * 2), x + pad, y + Math.round(14 * S));
     g.fillStyle = '#a2eddc';
-    g.font = `600 ${Math.round(19 * S)}px "Space Grotesk", ui-monospace, monospace`;
+    g.font = `600 ${Math.round(19 * S)}px ${CANVAS_MONO}`;
     g.fillText(OnboardOverlay.trim(g, tile.value, w - pad * 2), x + pad, y + h - Math.round(12 * S));
   }
 }

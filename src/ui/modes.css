@@ -113,7 +113,7 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
   .nav-tab-btn .mode-glyph { display: inline; }
 }
 /* The tabs given the room the bar has (src/ui/section-nav.ts `fit`), each step only where the one before leaves them
-   running under the tools on the right: tighter; tighter still; the current level as its glyph; then on a row of
+   running under the tools on the right: tighter; tighter still; the current level as its icon; then on a row of
    their own, as on a small screen. */
 #topbar[data-nav-fit] .nav-tab-btn { padding: 0 7px; gap: 5px; }
 #topbar[data-nav-fit] :is(.nav-chev, .nav-tab-btn .mode-glyph, .brand-name) { display: none; }
@@ -121,7 +121,8 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 /* (the learner's name, already cut short where it is long, is cut shorter: it stays whole in the button's title) */
 #topbar[data-nav-fit^='tighte'] .profile-button #profile-label { max-width: 64px; }
 #topbar[data-nav-fit='tightest'] .nav-badge { font-size: 0; }
-#topbar[data-nav-fit='tightest'] .nav-badge::before { content: attr(data-glyph); font-size: 11px; }
+.nav-badge-icon { display: none; }
+#topbar[data-nav-fit='tightest'] .nav-badge-icon { display: inline; font-size: 12px; }
 #topbar[data-nav-fit='rows'] { height: auto; flex-wrap: wrap; row-gap: 0; padding-top: 8px; padding-bottom: 0; }
 #topbar[data-nav-fit='rows'] .topbar-nav { order: 3; flex: 1 0 100%; min-height: 42px; }
 @media (max-width: 640px) {
