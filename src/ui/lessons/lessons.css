@@ -152,6 +152,8 @@ button.lessons-page-back {
 }
 .lessons-page-body { max-width: 1260px; margin: 0 auto; padding: 18px 18px 48px; }
 .lesson-btn[aria-current='page'] { background: var(--accent-weak); box-shadow: inset 0 -2px 0 var(--accent); }
+/* forced colours drop the shadow and the background: a border keeps the marker (the outline stays the focus ring) */
+@media (forced-colors: active) { .lesson-btn[aria-current='page'] { border: 2px solid Highlight; } }
 body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide { visibility: hidden; }
 
 /* ── the catalogue ───────────────────────────────────────────────────── */

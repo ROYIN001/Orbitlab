@@ -7,8 +7,8 @@ owner on screenshots.
 | Field | Value |
 |---|---|
 | Package | Redesign A (direction A "Mission Control"), steps S0–S3 |
-| Branch | `claude/friendly-keller-78iuc9` (based on `origin/main` `5588be1`) |
-| Fragment | [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md) |
+| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0) |
+| Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md) |
 | Status | In PR; not merged; not published |
 
 ## The owner's authorization (D-65)
@@ -292,8 +292,11 @@ unchanged.
 2. **Thai letter-spacing.** `src/style.css`, after `.eyebrow`:
    `:lang(th) { letter-spacing: normal !important; }` with a one-line why.
    `setLang` writes `html[lang]` (`src/i18n/index.ts`), so the rule covers every
-   letter-spacing declaration while the interface is Thai; EN and RU keep their
-   tracking. `index.html` `.brand-name` and the About dialog's wordmark
+   letter-spacing declaration while the interface is Thai, in the app's own
+   document. The owner's Soyuz Anatomy pages (`public/anatomy/`, their own
+   document in the anatomy dialog's iframe, pinned by sha256) keep their
+   tracking, as the owner made them. This is listed for the screenshot review.
+   EN and RU keep their tracking. `index.html` `.brand-name` and the About dialog's wordmark
    (`src/ui/dialogs.ts`, `name.lang = 'en'`) keep the −0.6 px.
 3. **Line icons.** `index.html` `#logo-sprite` gains 14 stroke symbols
    (`#i-launch`, `-orbit`, `-build`, `-campaign`, `-watch`, `-explore`,
@@ -302,7 +305,7 @@ unchanged.
    takes only the logo); the sprite comment says so and names Lucide. The ◉ ▤ ⓘ ◈
    spans of `#btn-profile`, `#btn-work`, `#btn-about` and `#btn-camera-plan`
    become `<svg class="icon" aria-hidden="true"><use href="#i-…" /></svg>`;
-   `#btn-data-mode` keeps its own SVG. `src/style.css` `.icon` (1.15 em, stroke
+   `#btn-data-mode` keeps its own SVG. `src/style.css` `.icon` (1.15 em, 1 em after the review fixes; stroke
    `currentColor`, round caps). `src/ui/dialogs.ts` exports `icon(name, cls)`,
    the `logoMark` pattern. `src/ui/section-nav-model.ts` drops `glyph` and
    `LEVEL_GLYPHS` (a section or level is drawn with `#i-<id>`; the model stays
@@ -391,6 +394,7 @@ Changed source lines: 176 in `src/` and `index.html` (+103 / −73), 20 in
 | `npx vite build && node scripts/bundle-budget.mjs <build log>` | bundle budget: ok (table above) |
 | `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs --dist <copy of this build> stage2-preflight r2-viewport-scene-floor` | 2 / 2 journeys passed in 444.2 s (r2-viewport-scene-floor 332.5 s: G2 S1–S6 in TH, EN and RU with the Thai rule; stage2-preflight 104.2 s: every top-bar tool on screen and hit at its centre at 320 px in EN, RU and TH) |
 | Look check (scratch Playwright script, not committed) | TH and EN at 1700 px, RU at 1300 px, TH at 390 px: 34 `svg.icon` elements drawn, none blank |
+| After the review fixes: stage2-preflight (with its new laptop check), r2-viewport-matrix, and the top-bar heights and widths before and after | see "S1 review fixes" below |
 
 Not run here: the full `npx vitest run` (`select-checks` falls back to the full
 set because `index.html` changed), the rest of the browser smoke set, heavy
@@ -400,5 +404,123 @@ Docs touched: README (top-bar items, Typography), USER-GUIDE (My work, learner
 profiles, privacy, Lessons button), NOTICE (web fonts, interface icons).
 IMPLEMENTATION-STATUS: N/A.
 
-Reviewers: the owner (a look change: screenshots in TH, EN and RU at 1600,
-1180, 1040, 860, 640 and 320 px, online and offline).
+Reviewers: the owner (a look change: screenshots in TH, EN and RU at 1720,
+1300, 1240, 1040, 860, 640 and 320 px, online and offline; the breakpoints are
+the ones after the review fixes below).
+
+### S1 review fixes
+
+Same change type (look change). Seven findings: six applied, one left for a
+separate bug-fix PR.
+
+1. **The top bar is as wide as at S0 again.** At d07f597 the Campaign tab ran
+   over the Lessons button: a click at the button's centre opened the Campaign
+   menu in EN at 1100 px and TH at 1181 px. `src/style.css` `.icon` is 1 em (was
+   1.15 em). `src/ui/modes.css`: `.nav-chev` gets `margin-inline: -0.25em` (the
+   chevron path uses only the middle half of its box, so it takes the old ▾'s
+   room); the sections' icons give way at 1240 px (`.nav-tab-btn .mode-glyph
+   { display: none }` moved out of the 1040 px block into its own block; the
+   tabs' padding stays at 1040 px; the 860 px block still shows the icons on the
+   phone row).
+2. **The tools' labels and the product name give way earlier.** With the Plex
+   fonts the switch is wider online too: the tool labels and the language label
+   now hide at 1720 px (was 1600 px), the product name at 1300 px (was 1180 px).
+   Only the brand rule moves; the shared 1180 px layout breakpoints stay. The
+   give-way comment in `modes.css` says the widths were measured again in Thai
+   and English, and no longer says "measured in Russian".
+3. **The phone top bar keeps its height.** Inside the 640 px block,
+   `#topbar .quiet-btn { padding: 7px 5px; }` keeps the tools on one row (they
+   stay at least 27 px wide).
+4. **Forced colours.** `src/ui/lessons/lessons.css`:
+   `@media (forced-colors: active) { .lesson-btn[aria-current='page'] { border: 2px solid Highlight; } }`.
+   It uses the border, not the outline, so the `:focus-visible` ring still
+   shows.
+5. **Thai letter-spacing claim.** "What changed" item 2 above now says the rule
+   covers the app's own document, and that the owner's Soyuz Anatomy pages keep
+   their tracking. Nothing is injected into those pinned pages.
+6. **Branch and fragment** (SESSION-PROTOCOL §5, `changes/README.md`). S1 has
+   its own branch, `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges
+   after S0), and its own fragment, `changes/claude-u-redesign-a-s1.md`, with
+   S1's CHANGELOG line and PROGRESS row. S0's fragment holds only S0's line and
+   row again (as at `5bef72f`). CHANGELOG.md and PROGRESS.md are untouched. The
+   local `claude/friendly-keller-78iuc9` was not moved; S0's PR is its commit
+   `5bef72f`.
+7. **Not applied here: the Russian tabs already ran over the tools at S0.** It
+   is a bug fix (one change type per PR), and the fix the review measured
+   (an ellipsis on the tab names) changes the look, so it is left for a separate
+   bug-fix PR and the owner. After these fixes Russian is better than at S0 at
+   most widths, but not at all of them (below).
+
+New regression check: `tests/browser/journeys/stage2-preflight.mjs` runs its
+toolbar check on a laptop too, in EN and TH at 1100×800 and 1181×800: every
+top-bar tool on screen and hit at its centre. RU is left out until item 7 is
+fixed. No check was removed or loosened.
+
+Choices taken in these fixes under "mix sensibly" (the owner can reverse each
+at the screenshot review): the give-way widths 1720 / 1300 / 1240 px, the
+tighter tool padding on a phone, the forced-colours border, and leaving the
+anatomy pages' tracking as the owner made them. The package's choices list
+above is unchanged.
+
+Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
+โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
+ส่วนรูปแบบอื่นๆ จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
+ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ".
+
+#### Measured top bar (Chromium, offline fonts, scratch Playwright script, not committed)
+
+Height of `#topbar` in px, `#/launch/engineer`, 740 px tall:
+
+| | S0 `5bef72f` | S1 `d07f597` | S1 with the fixes |
+|---|---|---|---|
+| EN 320 px | 139 | 173 | 135 |
+| RU 320 px | 180 | 173 | 173 |
+| RU 340 px | 139 | 173 | 135 |
+| RU 560 px | 100 | 135 | 100 |
+| the other 26 cases (EN, RU, TH at 320–860 px) | | | at or below S0 |
+
+How far the last section tab runs past the start of the tools, in px
+(`#/launch/explore`; negative = room left), S0 / S1 / S1 with the fixes:
+
+| Width | EN | TH | RU |
+|---|---|---|---|
+| 1000 | 16 / 67 / 29 | 4 / 55 / 17 | 136 / 187 / 149 |
+| 1041 | 74 / 129 / 12 | 61 / 117 / 0 | 194 / 249 / 132 |
+| 1100 | 15 / 70 / −31 | 2 / 58 / −37 | 135 / 190 / 73 |
+| 1181 | 38 / 93 / −72 | 25 / 81 / −78 | 158 / 213 / −8 |
+| 1240 | −19 / 34 / −101 | −25 / 22 / −107 | 99 / 154 / −41 |
+| 1601 | 74 / 130 / −194 | 28 / 84 / −200 | 288 / 343 / −134 |
+| 1680 | −5 / 51 / −233 | −33 / 5 / −239 | 209 / 264 / −173 |
+| 1760 | −50 / −23 / −45 | −73 / −45 / −68 | 129 / 184 / 139 |
+| 1800 | −70 / −43 / −65 | −93 / −65 / −88 | 89 / 144 / 99 |
+
+Tools covered at their centre (14 widths from 1000 to 1800 px): with the fixes,
+none in EN or TH (d07f597: `#btn-lessons` at 1000, 1041, 1100, 1181 and
+1601 px in both). In RU, none from 1181 to 1720 px (S0 had `#btn-lessons`
+covered at every one of them); still covered at 1000, 1041, 1100, 1760 and
+1800 px, as at S0, and at 1000 px `#btn-help` is now covered too (13 px more
+than S0). That is inside the old Russian overlap of item 7.
+
+**Budget line: within the unchanged ceilings** (no `budgets.json` change).
+`index-*.css` 177,492 → 177,658 B (+166 B; 177.7 / 179 kB), `index-*.js`
+2,653,439 B and `dist/index.html` 15,296 B unchanged, precache code 14677.5 /
+14679 kB, precache 15796.7 / 16078 kB. Room left for S2–S3: `index-*.css`
+1,342 B, `index-*.js` 1,561 B, precache code about 1,534 B.
+
+Files: `src/style.css`, `src/ui/modes.css`, `src/ui/lessons/lessons.css`,
+`tests/browser/journeys/stage2-preflight.mjs`,
+`changes/claude-friendly-keller-78iuc9.md`, `changes/claude-u-redesign-a-s1.md`
+(new), this report.
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `npx vitest run` web-fonts, section-nav-model, privacy-inventory, i18n, architecture, bundle-budget | 6 files, 50 / 50 passed |
+| `npx vite build && node scripts/bundle-budget.mjs <build log>` | bundle budget: ok (numbers above); no `INEFFECTIVE_DYNAMIC_IMPORT` |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs --dist <d07f597's CSS, the new check in place> stage2-preflight` | failing before: 0 / 1, 4 failures (`#btn-lessons` covered in EN and TH at 1100×800 and 1181×800) |
+| `… --dist <copy of this build> stage2-preflight` | 1 / 1 passed in 132.5 s |
+| `… --dist <copy of this build> r2-viewport-matrix` | 1 / 1 passed in 787.8 s (journey 785.9 s, every part including the phone TORU part; no FAIL lines) |
+| `… --dist <copy of this build> r2-viewport-scene-floor` | 1 / 1 passed in 334.5 s (G2 S1–S6 in TH, EN and RU) |
+
+Not run here: the full `npx vitest run`, the rest of the browser smoke set,
+heavy and sixdof-fleet. CI runs them.
