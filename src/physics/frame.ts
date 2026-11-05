@@ -749,11 +749,13 @@ const AIRLESS_RADIUS = R_EARTH + 140e3;
  * recording gap a straight line between two states passes a kilometre inside
  * the arc: for a point mass with its engine off at the earlier frame, the
  * Kepler solution propagated from that frame; for a vehicle with rigid
- * telemetry (six-DOF, flown with J2, or a docked spacecraft), the cubic through
- * both frames' states on a span under a quarter of its orbit's period, as in a
+ * telemetry (six-DOF, flown with J2, or a docked spacecraft), and for a launch
+ * escape or a capsule's return in flight ('abort'), the cubic through both
+ * frames' states on a span under a quarter of its orbit's period, as in a
  * rendezvous and in Apollo. They are blended linearly otherwise: a point mass
  * under thrust, the span a burn begins in, a rigid vehicle's span of a quarter
- * of the orbit or more (only a hard-thinned recording leaves one), an escape.
+ * of the orbit or more (only a hard-thinned recording leaves one), Vostok's
+ * sphere on the ground.
  *
  * Everything discrete (status, ascent phase, stage/booster/fairing state, the
  * debris list, the event count) comes from the *earlier* frame: a state that
@@ -797,7 +799,15 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   const dt = span * u;
   // the cubic between a body's states at the two frames (Apollo's craft below)
   const arc = (x: { r: Vec3; v: Vec3 }, y: { r: Vec3; v: Vec3 }) => hermite(x.r, x.v, y.r, y.v, u, span);
-  const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
+  // Which frames coast, by status. An escape or a return from orbit ('abort', sim/abort.ts) coasts in flight: each
+  // change of its velocity is at a frame, an event's (a motor's or a canopy's, a retro-rocket's firing, the pack, the
+  // hatch, the seat, the landing) or a change of the body it is (the capsule leaving the head section, held above).
+  // Inside a span a retro-rocket burning out, a canopy filling or coming out of its reefing, and the air change only
+  // its acceleration, which the cubic follows: Freedom 7 over the top of its arc, 10 s between frames, is 2.3 m off
+  // it where the line is 128 m off. On the ground it keeps the line: Vostok's sphere, still 'abort' while its pilot
+  // comes down, is at rest a step after its landing event, and the cubic through the landing's velocity is 8 m off.
+  const coasting = (f: VisualFrame) => ({ coast: true, orbit: true, descent: f.descentPhase === 'coast',
+    abort: f.abort?.phase !== 'landed' } satisfies Partial<Record<SimStatus, boolean>> as Partial<Record<SimStatus, boolean>>)[f.status];
   // A coast. A point mass with its engine off at the earlier frame: Kepler from that frame, which is how a coast
   // above the air is flown (`useKepler`); one in orbit is flown with J2, which Kepler misses at the next frame by
   // metres (left as it was). A six-DOF coast is flown with J2 too, and a docked spacecraft (rigid telemetry from the
