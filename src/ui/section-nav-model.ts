@@ -13,6 +13,8 @@
  * coming, whose menu says what the roadmap brings to it; it has no route and
  * no levels until it is built.
  *
+ * Each section and level is drawn with the sprite icon #i-<id> in index.html.
+ *
  * DOM-free: tests/section-nav-model.test.ts holds it to the dictionaries and
  * to docs/ROADMAP-PART2-3.md.
  */
@@ -24,7 +26,6 @@ export type NavSection = AppSection | FutureSection;
 
 export interface NavEntry {
   id: NavSection;
-  glyph: string;
   /** i18n key of the section's name */
   nameKey: string;
   /** a section still to come: no route, no levels, its menu lists its roadmap items */
@@ -32,10 +33,10 @@ export interface NavEntry {
 }
 
 export const NAV_SECTIONS: readonly NavEntry[] = [
-  { id: 'launch', glyph: '▲', nameKey: 'section.launch', future: false },
-  { id: 'orbit', glyph: '⊕', nameKey: 'section.orbit', future: false },
-  { id: 'build', glyph: '⚙︎', nameKey: 'section.build', future: false },
-  { id: 'campaign', glyph: '⚑', nameKey: 'section.campaign', future: true },
+  { id: 'launch', nameKey: 'section.launch', future: false },
+  { id: 'orbit', nameKey: 'section.orbit', future: false },
+  { id: 'build', nameKey: 'section.build', future: false },
+  { id: 'campaign', nameKey: 'section.campaign', future: true },
 ];
 
 export interface FuturePlan {
@@ -49,8 +50,6 @@ export interface FuturePlan {
 export const FUTURE_PLANS: Readonly<Record<FutureSection, FuturePlan>> = {
   campaign: { phase: 6, items: [{ id: 'X01', key: 'plan.item.X01' }, { id: 'X02', key: 'plan.item.X02' }] },
 };
-
-export const LEVEL_GLYPHS: Readonly<Record<AppLevel, string>> = { watch: '▷', explore: '◎', engineer: '⌬' };
 
 /** i18n key of a level's name in a section: the launch section's first level is watching, the others' is the basics. */
 export function levelNameKey(section: AppSection, level: AppLevel): string {

@@ -6,17 +6,19 @@
  * three dictionaries, a section still to come promises only roadmap items of
  * the phase the roadmap gives them, and the Thai text says "ทดลอง" for the
  * second level wherever it names one, so text written before the rename and
- * merged after it does not bring the old name back.
+ * merged after it does not bring the old name back. Every line icon the
+ * interface names is in index.html's sprite: a missing one draws nothing.
  */
 import { describe, expect, it } from 'vitest';
 import { en } from '../src/i18n/en';
 import { ru } from '../src/i18n/ru';
 import { th } from '../src/i18n/th';
-import { APP_SECTIONS } from '../src/ui/app-mode';
+import { APP_LEVELS, APP_SECTIONS } from '../src/ui/app-mode';
 import { FUTURE_PLANS, NAV_SECTIONS, levelNameKey, navKeys } from '../src/ui/section-nav-model';
 
 const DOCS = import.meta.glob('../docs/ROADMAP-PART2-3.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const roadmap = Object.values(DOCS)[0] ?? '';
+const html = Object.values(import.meta.glob('../index.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)[0];
 // Thai text outside the dictionaries: the help, the lessons and the worksheets
 const SRC = import.meta.glob(['../src/ui/**/*.ts', '../src/lessons/**/*.ts', '../src/worksheets/**/*.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
@@ -53,6 +55,15 @@ describe('the section switch', () => {
       expect(phase, `roadmap phase ${plan.phase}`).toBeTruthy();
       for (const item of plan.items) expect(phase).toContain(`**${item.id}**`);
     }
+  });
+
+  it('draws only icons the sprite has', () => {
+    const symbols = new Set([...html.matchAll(/<symbol id="i-([\w-]+)"/g)].map((m) => m[1]));
+    const named = [...NAV_SECTIONS.map((s) => s.id), ...APP_LEVELS, ...[...html.matchAll(/href="#i-([\w-]+)"/g)].map((m) => m[1])];
+    for (const text of Object.values(SRC)) named.push(...[...text.matchAll(/\bicon\('([\w-]+)'/g)].map((m) => m[1]));
+    // the patterns still find the icons drawn from the code and the page
+    expect(named).toEqual(expect.arrayContaining(['help', 'lessons', 'chev', 'profile']));
+    for (const name of named) expect(symbols.has(name), `#i-${name}`).toBe(true);
   });
 
   it('leaves no Thai text naming a level by its old name', () => {

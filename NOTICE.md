@@ -21,7 +21,7 @@ any academy, and no service or academy name or emblem is used without written pe
   across it, drawn in `index.html`) and the icons and favicon made from it (`public/icons/`,
   `npm run icons`), the landing page's screenshots (`public/home/`) and the link preview
   (`public/social/preview.jpg`), taken from the app itself with `npm run shots` — are the project's
-  own work. The Earth imagery that appears in the
+  own work. The line icons beside the mark in `index.html` follow Lucide (below, "Interface icons"). The Earth imagery that appears in the
   screenshots is credited below.
 
 - **The Soyuz Anatomy pages** (`public/anatomy/*.html`) — interactive 3-D models of Soyuz-2.1a
@@ -108,9 +108,34 @@ resized copy stays under its original licence (for CC BY-SA, the same licence). 
 
 ### Web fonts (online mode only, not shipped)
 
-In online mode the interface asks Google Fonts for DM Sans, Space Grotesk and Noto Sans Thai
-(`src/ui/web-fonts.ts`); offline, the default, it does not. The fonts are not bundled. They are
+In online mode the interface asks Google Fonts for IBM Plex Sans Thai, IBM Plex Sans (Cyrillic)
+and IBM Plex Mono (`src/ui/web-fonts.ts`); offline, the default, it does not. The fonts are not bundled. They are
 served under the SIL Open Font License 1.1 (<https://fonts.google.com/>).
+
+### Interface icons — `index.html`
+
+The line icons in `index.html`'s `#logo-sprite` (`#i-launch` … `#i-lessons`, drawn in the top
+bar) follow Lucide (<https://lucide.dev>, <https://github.com/lucide-icons/lucide>):
+`#i-launch` (rocket), `#i-build` (wrench), `#i-campaign` (flag), `#i-lessons` (book-open) and
+`#i-chev` (chevron-down) are its paths unchanged, and the others are drawn after it in the same
+style. Lucide is under the ISC License, and its Feather portions under the MIT License
+(<https://github.com/feathericons/feather/blob/main/LICENSE>):
+
+> ISC License
+>
+> Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT).
+> All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+>
+> Permission to use, copy, modify, and/or distribute this software for any purpose with or without
+> fee is hereby granted, provided that the above copyright notice and this permission notice
+> appear in all copies.
+>
+> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+> SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+> AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+> WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+> NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+> OF THIS SOFTWARE.
 
 ## Data shipped in the app
 

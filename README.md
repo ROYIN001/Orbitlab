@@ -92,11 +92,11 @@ any academy, and no service or academy name or emblem is used without written pe
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
   explains it in one line, next to the mission clock and the latest callout, and the camera
   follows a per-phase programme you can set yourself — identically live and in replay.
-- **My work** (▤ in the top bar): an experiment notebook for predictions, captured flights,
+- **My work** (the folder icon in the top bar): an experiment notebook for predictions, captured flights,
   input comparisons and conclusions; model limits with a reproducible validation report;
   offline classroom preparation; and project backups with a preview before replacement.
   Available in English, Russian and Thai. [How to use it](docs/USER-GUIDE.md#my-work).
-- **Learner profiles** (◉ in the top bar): up to 40 learners in one browser, each with their own
+- **Learner profiles** (the person icon in the top bar): up to 40 learners in one browser, each with their own
   mission, designs, lessons and tests, notebook, drafts, settings and launch recordings. Local
   only: no accounts, nothing leaves the device. Reset learning, tests, both or one lesson; delete
   a learner; back up one learner or all as JSON (up to 8 MB a file) and the recordings as a
@@ -104,7 +104,7 @@ any academy, and no service or academy name or emblem is used without written pe
   buttons to save a copy of its stored data or delete it; Export all leaves it out and says so.
   A second tab on the same learner is read-only, and a browser without storage or Web Locks gets
   a temporary, visit-only workspace. [How to use it](docs/USER-GUIDE.md#learner-profiles).
-- **About dialog** (ⓘ in the top bar, on every page, and the footer's credit line): an About
+- **About dialog** (the i in a circle in the top bar, on every page, and the footer's credit line): an About
   tab with the version, the maker, the licences and the disclaimer, and a Physics & sources tab
   with a localized summary of the model, the data sources and the credits. Its About tab links
   the [privacy statement](#privacy).
@@ -462,8 +462,8 @@ the same way.
 
 ### Typography
 
-In online mode the interface asks Google Fonts for DM Sans (text), Space Grotesk (figures
-and headings) and Noto Sans Thai. Offline — the default — it does not ask (the owner's choice,
+In online mode the interface asks Google Fonts for IBM Plex Sans Thai (text and headings),
+IBM Plex Sans (the Cyrillic that Plex Sans Thai lacks) and IBM Plex Mono (readouts). Offline — the default — it does not ask (the owner's choice,
 2026-09-26; `src/ui/web-fonts.ts`), so a closed network sees no request leave the page. The
 fonts are a progressive enhancement, not a dependency: every family is declared with a system
 fallback stack (`system-ui`, `-apple-system`, `Segoe UI`, `Roboto`) and `display=swap`, so

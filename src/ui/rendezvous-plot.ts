@@ -17,6 +17,7 @@ import type { VisualFrame } from '../physics/frame';
 import { PORTS } from '../physics/rendezvous/ports';
 import { APPROACH } from '../physics/rendezvous/profiles';
 import { getLang, t } from '../i18n';
+import { CANVAS_SANS } from './web-fonts';
 
 const GRID = '#232d3a';
 const AXIS_TEXT = '#8695a8';
@@ -79,7 +80,7 @@ export class RendezvousPlot {
       range: range >= 1000 ? `${(range / 1000).toLocaleString(lang, { maximumFractionDigits: 2 })} ${t('rv.unit.km')}` : `${range.toLocaleString(lang, { maximumFractionDigits: 0 })} ${t('rv.unit.m')}`,
       rate: rate.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     });
-    g.font = '600 11px "Space Grotesk", system-ui, sans-serif';
+    g.font = `600 11px ${CANVAS_SANS}`;
     const titleW = g.measureText(t('rvplot.title')).width;
     g.font = '10px ui-monospace, monospace';
     const figsW = g.measureText(figs).width;
@@ -104,7 +105,7 @@ export class RendezvousPlot {
     g.fillStyle = AXIS_TEXT;
     const xHalf = pw / 2 / scale, zHalf = ph / 2 / scale;
     // the axis's name sits bottom right; tick labels stop short of it
-    g.font = '9px "DM Sans", system-ui, sans-serif';
+    g.font = `9px ${CANVAS_SANS}`;
     const xName = t('rvplot.vbar', { unit });
     const xNameLeft = w - padR - g.measureText(xName).width - 8;
     g.font = '10px ui-monospace, monospace';
@@ -161,12 +162,12 @@ export class RendezvousPlot {
     // title, figures, axis names
     g.textAlign = 'left';
     g.fillStyle = TITLE_TEXT;
-    g.font = '600 11px "Space Grotesk", system-ui, sans-serif';
+    g.font = `600 11px ${CANVAS_SANS}`;
     g.fillText(t('rvplot.title'), 10, 14);
     g.font = '10px ui-monospace, monospace';
     if (oneLine) { g.textAlign = 'right'; g.fillText(figs, w - padR, 14); } else g.fillText(figs, 10, 28);
     g.fillStyle = AXIS_TEXT;
-    g.font = '9px "DM Sans", system-ui, sans-serif';
+    g.font = `9px ${CANVAS_SANS}`;
     g.textAlign = 'right';
     g.fillText(xName, w - padR, h - 5);
     g.textAlign = 'left';

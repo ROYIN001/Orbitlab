@@ -234,3 +234,171 @@ this report.
 | `npm run -s typecheck` | passed |
 | `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | 94 / 94 passed |
 | `npx vite build && node scripts/bundle-budget.mjs` | bundle budget: ok (numbers above) |
+
+## S1 — foundation: IBM Plex fonts, no Thai letter-spacing, line icons in the top bar, the mint Lessons button
+
+Change type: **look change** (visual; the owner reviews it on screenshots). No
+`budgets.json` change, no new dependency, no i18n key added or removed.
+
+Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
+โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
+ส่วนรูปแบบอื่นๆ จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
+ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ".
+
+### Choices in this step (taken under "mix sensibly"; the owner can reverse each at the screenshot review)
+
+- **Fonts.** Online only, IBM Plex Sans Thai + IBM Plex Sans (Google's Plex
+  Sans Thai has no basic Cyrillic, U+0400–045F) + IBM Plex Mono. Offline the
+  system fallbacks are unchanged, except that the playback mission clock now
+  reads `var(--mono)` (the phone clock already did). Canvas text that named
+  "DM Sans" or "Space Grotesk" uses the Plex families, numbers in Plex Mono;
+  the offline exports `src/ui/report.ts` and `src/worksheets/html.ts` keep
+  their own stacks.
+- **Thai is never letter-spaced**; the ORBITLAB wordmark keeps its tracking
+  through `lang="en"` in the top bar and in the About dialog.
+- **Line icons**: profile = person, My work = folder, About = info circle,
+  Camera sequence = video camera, help = help circle, Lessons = book; also the
+  section and level icons and the menu chevron. The lessons page title uses the
+  same book icon. Lucide/Feather-derived paths are credited in NOTICE.md.
+- **Lessons button**: a mint outline (no gold); its current-page marker is the
+  accent-weak background plus an inset accent underline (the section tabs'
+  underline; contrast for WCAG 1.4.11, the old cream outline is gone); the
+  new-lesson glow is mint.
+- **User docs** that named the removed glyphs or the gold button are reworded.
+
+The package's full choices list (S0–S3, and what is deferred) is above,
+unchanged.
+
+### What changed
+
+1. **Fonts.** `src/ui/web-fonts.ts`: `WEB_FONTS_URL` =
+   `…css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap`
+   (the online-only logic is unchanged), and two constants for canvas text,
+   `CANVAS_SANS` (`"IBM Plex Sans Thai", "IBM Plex Sans", system-ui, sans-serif`)
+   and `CANVAS_MONO` (`"IBM Plex Mono", ui-monospace, monospace`), since a
+   canvas cannot read the CSS tokens. `src/style.css`: `--mono` gains
+   `"IBM Plex Mono"` in front, `--sans` is
+   `"IBM Plex Sans Thai", "IBM Plex Sans", "Noto Sans Thai", system-ui, …`,
+   `--display: var(--sans)` (the token stays, so its uses keep reading it);
+   the header comment names the new families; `.mission-clock > span` uses
+   `var(--mono)`. Canvas: `src/ui/charts.ts` (legend, title, axis name),
+   `src/ui/onboard.ts` (captions and events `CANVAS_SANS`; the g-load and tile
+   values `CANVAS_MONO`), `src/ui/rendezvous-plot.ts`, `src/ui/map.ts`,
+   `src/ui/build/tunnel-map.ts`, and `src/render/cosmonaut.ts` (its only text is
+   "СССР", so the literal is `"IBM Plex Sans", Arial, sans-serif`). The two
+   constants cost less than writing the stack out at each of the 14 sites: the
+   literal version measured `index-*.js` 2,654,108 B, the constants 2,653,439 B.
+   No CSS asks for a weight outside 400–700.
+2. **Thai letter-spacing.** `src/style.css`, after `.eyebrow`:
+   `:lang(th) { letter-spacing: normal !important; }` with a one-line why.
+   `setLang` writes `html[lang]` (`src/i18n/index.ts`), so the rule covers every
+   letter-spacing declaration while the interface is Thai; EN and RU keep their
+   tracking. `index.html` `.brand-name` and the About dialog's wordmark
+   (`src/ui/dialogs.ts`, `name.lang = 'en'`) keep the −0.6 px.
+3. **Line icons.** `index.html` `#logo-sprite` gains 14 stroke symbols
+   (`#i-launch`, `-orbit`, `-build`, `-campaign`, `-watch`, `-explore`,
+   `-engineer`, `-chev`, `-profile`, `-work`, `-about`, `-camera`, `-help`,
+   `-lessons`; viewBox 0 0 24 24, no `clipPath`, so `scripts/icons.mjs` still
+   takes only the logo); the sprite comment says so and names Lucide. The ◉ ▤ ⓘ ◈
+   spans of `#btn-profile`, `#btn-work`, `#btn-about` and `#btn-camera-plan`
+   become `<svg class="icon" aria-hidden="true"><use href="#i-…" /></svg>`;
+   `#btn-data-mode` keeps its own SVG. `src/style.css` `.icon` (1.15 em, stroke
+   `currentColor`, round caps). `src/ui/dialogs.ts` exports `icon(name, cls)`,
+   the `logoMark` pattern. `src/ui/section-nav-model.ts` drops `glyph` and
+   `LEVEL_GLYPHS` (a section or level is drawn with `#i-<id>`; the model stays
+   DOM-free); `src/ui/section-nav.ts` draws `icon(id, 'mode-glyph')` and
+   `icon('chev', 'nav-chev')` in the five places the glyph spans were, so the
+   class-based rules in `modes.css` still apply. `src/ui/help.ts` draws
+   `icon('help')` before its label (the label stays the last span, so the
+   icon-only breakpoint still works). `src/ui/lessons/lesson-mode.ts`: the
+   Lessons button and the lessons page title draw `icon('lessons')`;
+   `.lesson-badge` keeps its class and its n/N text. The accessible names do
+   not change: the glyphs were already `aria-hidden`.
+4. **Lessons button** (`src/ui/lessons/lessons.css`): `.lesson-btn` is
+   `border-color: var(--accent-line); color: var(--accent) !important;
+   font-weight: 600`, hover `border-color: var(--accent)`; the `.fresh` glow and
+   `@keyframes lesson-glow` use `rgba(139, 229, 205, …)` at the same alphas, its
+   three iterations still inside the `no-preference` query; `.lesson-badge` is
+   accent on accent-weak; `[aria-current='page']` is
+   `background: var(--accent-weak); box-shadow: inset 0 -2px 0 var(--accent)`.
+   The `:root` `--lesson*` tokens stay gold for the lesson items inside the app
+   (also `src/ui/build/satellite.css`); `--lesson-deep`, used only by the old
+   gradient, is removed. The file comment no longer says gold sets the way in
+   apart.
+5. **Docs.** README.md (My work, Learner profiles, About named by their icons;
+   Typography names the Plex families), docs/USER-GUIDE.md (My work, the learner
+   button, the About button, the Lessons button "a mint outline with a book
+   icon"; the HUD's ▤ at the HUD section is a scene button and is left as it
+   is), NOTICE.md (Web fonts names the Plex families; a new "Interface icons"
+   subsection credits Lucide, ISC, with its licence text, and Feather's MIT
+   portions; the "own pictures" item points to it).
+
+### Tests changed
+
+- `tests/web-fonts.test.ts`, new case: the URL asks for exactly
+  `IBM Plex Sans Thai`, `IBM Plex Sans`, `IBM Plex Mono`, in that order. The
+  existing cases are unchanged.
+- `tests/section-nav-model.test.ts`, new case "draws only icons the sprite
+  has": every section id, every level, every `href="#i-…"` in `index.html` and
+  every `icon('<name>'` in `src/ui/**/*.ts` must be a `<symbol id="i-…">` in
+  `index.html`, and the list must contain `help`, `lessons`, `chev` and
+  `profile`, so a pattern that stops matching fails. With `#i-help` renamed in
+  `index.html` the case fails (`#i-help: expected false to be true`); restored,
+  it passes.
+- No assertion was removed or loosened; no test pinned the glyphs, the fonts,
+  the gold or any letter-spacing value.
+
+### Files
+
+`index.html`, `src/style.css`, `src/ui/web-fonts.ts`, `src/ui/dialogs.ts`,
+`src/ui/section-nav-model.ts`, `src/ui/section-nav.ts`, `src/ui/help.ts`,
+`src/ui/lessons/lesson-mode.ts`, `src/ui/lessons/lessons.css`,
+`src/ui/charts.ts`, `src/ui/onboard.ts`, `src/ui/rendezvous-plot.ts`,
+`src/ui/map.ts`, `src/ui/build/tunnel-map.ts`, `src/render/cosmonaut.ts`,
+`tests/web-fonts.test.ts`, `tests/section-nav-model.test.ts`, `README.md`,
+`docs/USER-GUIDE.md`, `NOTICE.md`, `changes/claude-friendly-keller-78iuc9.md`,
+this report.
+
+### Measured (this container, `npx vite build`, then `node scripts/bundle-budget.mjs`)
+
+| | S0 | S1 | change |
+|---|---|---|---|
+| `dist/index.html` | 13,070 B | 15,296 B | +2,226 B (the sprite's 14 symbols and the four `<use>` icons) |
+| `index-*.css` | 177,340 B (177.3 / 179 kB) | 177,492 B (177.5 / 179 kB) | +152 B |
+| `index-*.js` | 2,653,921 B (2653.9 / 2655 kB) | 2,653,439 B (2653.4 / 2655 kB) | −482 B |
+| `i18n-*.js` | 1,732,544 B (1732.5 / 1733 kB) | 1,732,544 B | 0 |
+| other chunks | 771.4 / 772 kB | 771.4 / 772 kB | 0 |
+| precache code | 14,675,404 B (14675.4 / 14679 kB) | 14,677,300 B (14677.3 / 14679 kB) | +1,896 B |
+| precache | 15794.6 / 16078 kB | 15796.5 / 16078 kB | +1,896 B |
+| precache data/ | 1119.2 / 1399 kB | 1119.2 / 1399 kB | 0 |
+| `bundle budget` (with the build log) | ok | ok; no `INEFFECTIVE_DYNAMIC_IMPORT` | |
+
+**Budget line: within the unchanged ceilings** (no `budgets.json` change).
+Room left for S2–S3: `index-*.css` 1,508 B, `index-*.js` 1,561 B, precache
+code 1,700 B.
+
+Changed source lines: 176 in `src/` and `index.html` (+103 / −73), 20 in
+`tests/` (+18 / −2).
+
+### Tests run
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `npx vitest run` web-fonts, section-nav-model, privacy-inventory, i18n, architecture, bundle-budget | 6 files, 50 / 50 passed (2 new cases) |
+| `npx vitest run` camera-dialog-copy, chart-marker-export, chart-summary, rendezvous, report, vostok-render (they import changed modules), css-motion, repo-hygiene, hud-layout, telemetry-layout | 10 files, 106 / 106 passed |
+| `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | 94 / 94 passed |
+| `npx vite build && node scripts/bundle-budget.mjs <build log>` | bundle budget: ok (table above) |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs --dist <copy of this build> stage2-preflight r2-viewport-scene-floor` | 2 / 2 journeys passed in 444.2 s (r2-viewport-scene-floor 332.5 s: G2 S1–S6 in TH, EN and RU with the Thai rule; stage2-preflight 104.2 s: every top-bar tool on screen and hit at its centre at 320 px in EN, RU and TH) |
+| Look check (scratch Playwright script, not committed) | TH and EN at 1700 px, RU at 1300 px, TH at 390 px: 34 `svg.icon` elements drawn, none blank |
+
+Not run here: the full `npx vitest run` (`select-checks` falls back to the full
+set because `index.html` changed), the rest of the browser smoke set, heavy
+and sixdof-fleet. CI runs them.
+
+Docs touched: README (top-bar items, Typography), USER-GUIDE (My work, learner
+profiles, privacy, Lessons button), NOTICE (web fonts, interface icons).
+IMPLEMENTATION-STATUS: N/A.
+
+Reviewers: the owner (a look change: screenshots in TH, EN and RU at 1600,
+1180, 1040, 860, 640 and 320 px, online and offline).

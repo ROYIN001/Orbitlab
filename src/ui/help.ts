@@ -1,6 +1,6 @@
 import { workspaceStorage } from '../workspace/storage';
 import { getLang, onLangChange } from '../i18n';
-import { Modal } from './dialogs';
+import { Modal, icon } from './dialogs';
 import { HELP_COPY } from './help-content';
 import { GuideProgress, GUIDE_STEPS, type GuideStore } from './help-state';
 import './help.css';
@@ -84,9 +84,8 @@ export class HelpGuide {
     dialog.id = 'help-dialog';
     document.body.append(dialog);
     this.dialog = new HelpDialog(dialog, () => this.restart());
-    const icon = el('span', '?'); icon.setAttribute('aria-hidden', 'true');
     this.button.type = 'button';
-    this.button.replaceChildren(icon, this.buttonText);
+    this.button.replaceChildren(icon('help'), this.buttonText);
     this.button.addEventListener('click', () => this.dialog.open(this.button));
     this.more.addEventListener('click', () => this.dialog.open(this.more));
     this.previous.addEventListener('click', () => {

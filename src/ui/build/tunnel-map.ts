@@ -15,6 +15,7 @@
 import { getLang } from '../../i18n';
 import { mapColour, type TunnelMap } from '../../design/tunnel-view';
 import { el } from '../orbit/dom';
+import { CANVAS_SANS } from '../web-fonts';
 
 export interface MapText {
   /** the whole map in a sentence, for the accessible name */
@@ -187,7 +188,7 @@ export class TunnelMapView {
       right = x + half;
     }
     c.fillStyle = '#96a3b4';
-    c.font = '10px "DM Sans", system-ui, sans-serif';
+    c.font = `10px ${CANVAS_SANS}`;
     c.textAlign = 'right';
     c.textBaseline = 'alphabetic';
     c.fillText(this.text?.mach ?? '', g.w - PAD.r, g.h - 3);

@@ -17,8 +17,9 @@
  */
 import { t } from '../i18n';
 import { hashForRoute, route, type AppLevel, type AppRoute, type AppSection, APP_LEVELS } from './app-mode';
-import { FUTURE_PLANS, LEVEL_GLYPHS, NAV_SECTIONS, levelDescKey, levelNameKey, type FutureSection, type NavEntry } from './section-nav-model';
+import { FUTURE_PLANS, NAV_SECTIONS, levelDescKey, levelNameKey, type FutureSection, type NavEntry } from './section-nav-model';
 import { el } from './orbit/dom';
+import { icon } from './dialogs';
 
 /** What is open: a tab's menu (by section) or, on a phone, the list. */
 type Open = NavEntry['id'] | 'sheet' | null;
@@ -97,12 +98,10 @@ export class SectionNav {
     // the section is in the name: the same level names repeat in every section
     a.setAttribute('aria-label', `${t(sectionKey(section))} · ${name}`);
     if (this.shown.section === section && this.shown.mode === level) a.setAttribute('aria-current', 'page');
-    const glyph = el('span', 'mode-glyph', LEVEL_GLYPHS[level]);
-    glyph.setAttribute('aria-hidden', 'true');
     const description = el('span', 'nav-level-desc', t(levelDescKey(section, level)));
     description.id = `${cls}-${section}-${level}-description`;
     a.setAttribute('aria-describedby', description.id);
-    a.append(glyph, el('span', 'nav-level-name', name), description);
+    a.append(icon(level, 'mode-glyph'), el('span', 'nav-level-name', name), description);
     return a;
   }
 
@@ -133,9 +132,7 @@ export class SectionNav {
       btn.setAttribute('aria-controls', `nav-menu-${s.id}`);
       if (isCurrent) btn.setAttribute('aria-current', 'page');
       const name = t(s.nameKey);
-      const glyph = el('span', 'mode-glyph', s.glyph);
-      glyph.setAttribute('aria-hidden', 'true');
-      btn.append(glyph, el('span', 'nav-tab-name', name));
+      btn.append(icon(s.id, 'mode-glyph'), el('span', 'nav-tab-name', name));
       if (isCurrent && !s.future) {
         const level = t(levelNameKey(s.id as AppSection, this.shown.mode as AppLevel));
         btn.append(el('span', 'nav-badge', level));
@@ -147,9 +144,7 @@ export class SectionNav {
         btn.append(dot);
         btn.setAttribute('aria-label', `${name} · ${t('nav.future')}`);
       }
-      const chev = el('span', 'nav-chev', '▾');
-      chev.setAttribute('aria-hidden', 'true');
-      btn.append(chev);
+      btn.append(icon('chev', 'nav-chev'));
       const menu = el('div', 'nav-menu');
       menu.id = `nav-menu-${s.id}`;
       menu.hidden = !open;
@@ -176,18 +171,14 @@ export class SectionNav {
     const s = this.shown.section;
     if (s) {
       const entry = NAV_SECTIONS.find((n) => n.id === s)!;
-      const glyph = el('span', 'mode-glyph', entry.glyph);
-      glyph.setAttribute('aria-hidden', 'true');
       const level = t(levelNameKey(s, this.shown.mode as AppLevel));
-      here.append(glyph, el('span', 'nav-tab-name', t(entry.nameKey)), el('span', 'nav-badge', level));
+      here.append(icon(s, 'mode-glyph'), el('span', 'nav-tab-name', t(entry.nameKey)), el('span', 'nav-badge', level));
       btn.setAttribute('aria-label', t('nav.choose', { where: `${t(entry.nameKey)} · ${level}` }));
     } else {
       here.append(el('span', 'nav-tab-name', t('nav.pick')));
       btn.setAttribute('aria-label', t('nav.pick'));
     }
-    const chev = el('span', 'nav-chev', '▾');
-    chev.setAttribute('aria-hidden', 'true');
-    btn.append(here, chev);
+    btn.append(here, icon('chev', 'nav-chev'));
     const sheet = el('div', 'nav-sheet');
     sheet.id = 'nav-sheet';
     sheet.hidden = this.open !== 'sheet';

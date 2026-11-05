@@ -1,26 +1,21 @@
-/* Lessons and the placement test (roadmap E03): gold, so that the way into
-   them stands apart from the app's green in every mode. */
+/* Lessons and the placement test (roadmap E03). The top-bar button is the
+   bar's mint outline (redesign A, docs/development/reports/redesign-a.md); the
+   gold tokens below mark lesson items inside the dark app. */
 :root {
   --lesson: #f5c451;
-  --lesson-deep: #f0a84a;
   --lesson-weak: rgba(245, 196, 81, 0.12);
   --lesson-line: #8a6d25;
   --lesson-ink: #221700;
 }
 
 /* ── the button and the landing-page card ─────────────────────────────── */
-.lesson-btn {
-  background: linear-gradient(90deg, var(--lesson), var(--lesson-deep));
-  color: var(--lesson-ink) !important;
-  font-weight: 700;
-  border-radius: 9px;
-}
-.lesson-btn:hover { filter: brightness(1.08); border-color: transparent; }
+.lesson-btn { border-color: var(--accent-line); color: var(--accent) !important; font-weight: 600; border-radius: 9px; }
+.lesson-btn:hover { border-color: var(--accent); }
 /* a new lesson: the glow pulses three times, then stays lit (with less motion asked for, it is lit from the start) */
-.lesson-btn.fresh { box-shadow: 0 0 0 3px rgba(245, 196, 81, 0.2), 0 0 18px rgba(245, 196, 81, 0.45); }
+.lesson-btn.fresh { box-shadow: 0 0 0 3px rgba(139, 229, 205, 0.2), 0 0 18px rgba(139, 229, 205, 0.45); }
 @media (prefers-reduced-motion: no-preference) { .lesson-btn.fresh { animation: lesson-glow 2.4s ease-in-out 3; } }
-@keyframes lesson-glow { 50% { box-shadow: 0 0 0 3px rgba(245, 196, 81, 0.1), 0 0 8px rgba(245, 196, 81, 0.2); } }
-.lesson-badge { background: var(--lesson-ink); color: var(--lesson); border-radius: 8px; padding: 0 6px; font: 11px var(--mono); }
+@keyframes lesson-glow { 50% { box-shadow: 0 0 0 3px rgba(139, 229, 205, 0.1), 0 0 8px rgba(139, 229, 205, 0.2); } }
+.lesson-badge { background: var(--accent-weak); color: var(--accent); border-radius: 8px; padding: 0 6px; font: 11px var(--mono); }
 
 /* ── locked settings ─────────────────────────────────────────────────── */
 #setup .lesson-locked { position: relative; opacity: 0.6; }
@@ -156,7 +151,7 @@ button.lessons-page-back {
   background: var(--panel2); border: 1px solid var(--line2); color: var(--text);
 }
 .lessons-page-body { max-width: 1260px; margin: 0 auto; padding: 18px 18px 48px; }
-.lesson-btn[aria-current='page'] { outline: 2px solid #fff3cf; outline-offset: 2px; }
+.lesson-btn[aria-current='page'] { background: var(--accent-weak); box-shadow: inset 0 -2px 0 var(--accent); }
 body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide { visibility: hidden; }
 
 /* ── the catalogue ───────────────────────────────────────────────────── */

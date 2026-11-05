@@ -48,7 +48,7 @@ function helmetTexture(): THREE.Texture {
   g.fillRect(0, 0, 512, 256);
   // on a sphere's map +Z, the face, is a quarter of the way along; the brow a third of the way down
   g.fillStyle = '#c8161d';
-  g.font = 'bold 44px "DM Sans", Arial, sans-serif';
+  g.font = 'bold 44px "IBM Plex Sans", Arial, sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillText('СССР', 128, 84);

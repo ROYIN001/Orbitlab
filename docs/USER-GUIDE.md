@@ -161,7 +161,7 @@ IERS cannot be read from a page.
 
 ## My work
 
-Open **▤ My work** in the top bar (Thai: **งานของฉัน**). The four tabs work locally on this
+Open **My work** (the folder icon) in the top bar (Thai: **งานของฉัน**). The four tabs work locally on this
 device. Use the left/right arrow keys, Home or End to switch tabs with the keyboard.
 
 **Experiments.** Write a prediction before capturing the first trial and choose the input you
@@ -216,8 +216,8 @@ running.
 
 ## Learner profiles
 
-Several learners can share one computer or tablet and keep their work apart. The **◉** button in
-the top bar, next to **▤ My work**, shows whose work is open (**Learner: …**; Thai:
+Several learners can share one computer or tablet and keep their work apart. The learner button (a person icon) in
+the top bar, next to **My work**, shows whose work is open (**Learner: …**; Thai:
 **ผู้เรียน: …**) and opens the **Learner profiles** window (Thai: **โปรไฟล์ผู้เรียน**). The lessons
 page has the same button beside the learner's name. Profiles live only in this browser on this
 device. They are not online accounts: there is no sign-in or password, anyone using the device can
@@ -338,7 +338,7 @@ some space and export a backup.
 
 ## Privacy: what Orbitlab keeps on this device
 
-The About tab (ⓘ) links the privacy statement (Thai: **ความเป็นส่วนตัว**; Russian:
+The About tab (the **About** button, an i in a circle) links the privacy statement (Thai: **ความเป็นส่วนตัว**; Russian:
 **Конфиденциальность**), a page in all three languages. It loads from the internet the
 first time; after that it opens offline too. It lists what is
 kept in this browser — the learner profiles, the recordings you added, and the app's offline
@@ -1663,7 +1663,7 @@ a mission file or link carries it and the flight report names it. Untick it to f
 > Orbit section's case worksheets are held back until the site is finished (owner, 2026-10-17). The
 > text below describes them as they will be when they are shown again.
 
-The gold **Lessons** button in the top bar (and **Start with a lesson** on the landing page) opens the
+The **Lessons** button in the top bar (a mint outline with a book icon) (and **Start with a lesson** on the landing page) opens the
 lessons page: a page of its own over the whole window below the top bar, like a mode, with five
 tabs — **Lessons**, **Placement test**, **Worksheets**, and for teachers **Write a scenario** and
 **Check results** — and **Back to the simulator** (or Esc, or the browser's Back). On a phone the

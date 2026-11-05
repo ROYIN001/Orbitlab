@@ -2,8 +2,10 @@
    Orbitlab — design system.
 
    The palette, the typography and the panel structure come from the Codex
-   build (dark teal/graphite, accent mint, DM Sans for text and Space Grotesk
-   for figures and headings, Noto Sans Thai for Thai); the engineering content
+   build (dark teal/graphite, accent mint); the type is IBM Plex Sans Thai for
+   text and headings (IBM Plex Sans for Cyrillic) and IBM Plex Mono for
+   readouts, online only (redesign A, docs/development/reports/redesign-a.md;
+   offline the system fallbacks below); the engineering content
    — charts, Δv budget, event log, timeline, HUD — is the Claude build's,
    restyled onto it.
 
@@ -37,9 +39,9 @@
   --ok: #7ddba0;
   --warn: #efa47e;
   --fail: #ff6b6b;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --sans: "DM Sans", "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --display: "Space Grotesk", "Noto Sans Thai", var(--sans);
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: "IBM Plex Sans Thai", "IBM Plex Sans", "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: var(--sans);
   --radius: 12px;
   /* measured height of the narration band; see main.ts observeSceneBottom() */
   --sb-h: 120px;
@@ -75,6 +77,8 @@ a { color: var(--accent); }
   text-transform: uppercase;
   color: var(--muted);
 }
+/* Thai is never letter-spaced: tracking pulls the vowels and tone marks off their consonants */
+:lang(th) { letter-spacing: normal !important; }
 .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
 
 /* ── shell ───────────────────────────────────────────────────────────────── */
@@ -117,6 +121,8 @@ a { color: var(--accent); }
   border: 1px solid transparent;
 }
 .quiet-btn:hover { color: var(--text); border-color: var(--line2); }
+/* a line icon from index.html's sprite (#i-…), drawn in the text colour */
+.icon { flex: none; width: 1.15em; height: 1.15em; vertical-align: -0.2em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .lang { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
 .lang select { width: auto; height: 32px; }
 
@@ -806,7 +812,7 @@ body[data-lesson] .verdict-fixes { display: none; }
 .live-btn { font-size: 12px; letter-spacing: 0.6px; }
 .live-btn.active { background: var(--ok); border-color: var(--ok); color: #05210f; font-weight: 700; }
 .mission-clock { text-align: center; }
-.mission-clock > span { display: block; font: 500 21px/1 var(--display); letter-spacing: 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mission-clock > span { display: block; font: 500 21px/1 var(--mono); letter-spacing: 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mission-clock small { display: block; margin-top: 3px; font-size: 9px; letter-spacing: 1.2px; color: var(--dim); }
 .warp { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
 .warp select { width: 78px; height: 32px; font-size: 12px; }
