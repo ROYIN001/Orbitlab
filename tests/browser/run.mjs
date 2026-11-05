@@ -34,6 +34,12 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
     if (mod.held) { console.log(`⏸ ${name}: held, not run: ${mod.held}`); continue; }
     picked.push({ name, mod });
   }
+  // TEMPORARY, rule 2 evidence for the changed r3-first-launch (PR #209; reverted before merge):
+  // on CI the smoke shards run only that journey, 12 times (6 per shard).
+  if (smoke && !names.length && process.env.GITHUB_ACTIONS) {
+    const mod = await import(pathToFileURL(join(journeyDir, 'r3-first-launch.mjs')).href);
+    picked = Array.from({ length: 12 }, () => ({ name: 'r3-first-launch', mod }));
+  }
   if (!picked.length && names.length) return { results: [], ok: true };
   if (!picked.length) throw new Error('no journeys selected');
   picked = selectShard(picked, shard);
