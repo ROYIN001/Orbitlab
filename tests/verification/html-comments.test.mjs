@@ -7,7 +7,7 @@ const source = readFileSync(new URL('../../index.html', import.meta.url), 'utf8'
 
 /** Tags and the text between them, whitespace runs collapsed to one space (as the page lays text out). */
 function tokens(html) {
-  return html.split(/(<[^>]*>)/).map((part) => part.replace(/\s+/g, ' ')).filter((part) => part !== '' && part !== ' ');
+  return html.split(/(<[^>]*>)/).map((part) => part.replace(/\s+/g, ' ')).filter((part) => part !== '');
 }
 
 test('every comment in index.html sits between elements, never inside text, a script, a style or a tag', () => {

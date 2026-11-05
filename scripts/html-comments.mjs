@@ -1,7 +1,8 @@
 /**
  * index.html's comments and line indentation are for the people who read the
  * source; the built page every visitor downloads and the app precaches leaves
- * them out (builtPage; D-38 offsets for the G2 layout fix, F5, and redesign A).
+ * them out (builtPage; D-38 offset for the G2 layout fix, F5, and one proposed
+ * for redesign A: docs/development/reports/redesign-a.md).
  * Used by vite.config.ts at build time; tests/verification/html-comments.test.mjs
  * checks that the layout sees nothing else.
  */
