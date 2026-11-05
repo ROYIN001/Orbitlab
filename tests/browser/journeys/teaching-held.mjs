@@ -29,6 +29,12 @@ export default async function teachingHeld(t) {
   await page.locator('.lesson-strip .lesson-strip-head').waitFor();
   assert.equal(await page.locator('.lesson-strip').getByRole('button', { name: 'คัดลอกลิงก์' }).count(), 0, 'no "Copy link" on the strip');
 
+  // a real case (track 6) is answered in its strip in the Orbit section: the strip gives way only in Watch and on the landing page
+  await page.evaluate(() => { location.hash = '#/lessons'; });
+  await page.locator('.lesson-tracks .lesson-card-item', { has: page.locator('b', { hasText: /^6\.1 / }) }).click();
+  assert.ok(await t.until(() => page.evaluate(() => location.hash.startsWith('#/orbit/'))), 'case 6.1 did not open the Orbit section');
+  assert.ok(await t.until(() => page.locator('.lesson-strip .lesson-strip-head').isVisible()), 'case 6.1 has no strip on screen in the Orbit section');
+
   // the placement test still opens; the instructor pages' addresses do not
   await page.evaluate(() => { location.hash = '#/lessons/test'; });
   assert.ok(await t.until(() => page.evaluate(() => document.body.dataset.lessonsPage === 'test')), 'the placement test opens');

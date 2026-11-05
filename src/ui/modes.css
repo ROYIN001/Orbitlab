@@ -133,7 +133,8 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 /* ── lean modes: the scene is the page ───────────────────────────────────── */
 
 body[data-mode='home'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan),
-body[data-mode='watch'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan) {
+body[data-mode='watch'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan, .lesson-strip),
+body[data-section='home'] .lesson-strip {
   display: none !important;
 }
 body[data-mode='home'] #app, body[data-mode='watch'] #app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
@@ -224,27 +225,30 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
   padding: 16px 20px 18px;
   pointer-events: none;
 }
-.watch-bottom { position: relative; display: flex; flex-direction: column; gap: 14px; }
-/* the same kind of scrim as the narration band's: dark under the type, gone by mid-frame */
-.watch-bottom::before {
-  content: ''; position: absolute; left: -20px; right: -20px; top: -70px; bottom: -18px; z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(to top, rgba(6, 10, 16, 0.86), rgba(6, 10, 16, 0.5) 58%, rgba(6, 10, 16, 0));
-}
-.watch-caption { max-width: 660px; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7); }
-.watch-beat { color: var(--accent); font-size: 12px; letter-spacing: 2px; }
+.watch-bottom { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.watch-caption, .watch-stats { padding: 10px 16px 12px; border-radius: 14px; background: rgba(10, 16, 24, 0.88); border: 1px solid var(--line); }
+.watch-caption { max-width: min(640px, 100%); border-left: 3px solid var(--accent); }
+.watch-beat { color: var(--accent); font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .watch-caption[data-beat='failed'] .watch-beat { color: var(--fail); }
 .watch-caption[data-beat='orbit'] .watch-beat, .watch-caption[data-beat='deployed'] .watch-beat { color: var(--ok); }
-.watch-say { margin: 6px 0 0; font-size: 19px; line-height: 1.45; color: #eef4f9; }
-.watch-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px 22px; flex-wrap: wrap; }
-.watch-stats { display: flex; gap: 30px; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7); }
-.watch-stat small { display: block; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #9fb2c4; }
-.watch-stat strong {
-  display: block; margin-top: 2px;
-  font: 600 34px/1.1 var(--display); letter-spacing: -0.5px; color: #fff;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.watch-stat em { margin-left: 2px; font: 500 14px var(--sans); font-style: normal; color: #a9bccd; }
+.watch-say { margin: 2px 0 0; font-size: 17px; line-height: 1.5; color: #eef4f9; }
+/* the clock block: in the scene's top band (watch.ts moves it there), between the title and the state */
+body[data-mode='watch'] .scene-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+body[data-mode='watch'] .sim-state { grid-column: -2; justify-self: end; }
+body:not([data-mode='watch']) .watch-stats { display: none; }
+.watch-stats { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 10px; padding-top: 8px; font-size: 14px; color: #a9bccd; text-align: center; }
+.watch-stat:first-child { flex-basis: 100%; }
+.watch-stat:last-child { padding-left: 10px; border-left: 1px solid var(--line2); }
+.watch-stat small { margin-right: 5px; font-size: 12.5px; }
+.watch-stat:first-child small { display: block; margin: 0; }
+.watch-stat strong { font: 600 15px var(--mono); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.watch-stat:first-child strong { font-size: 34px; line-height: 1.1; }
+.watch-stat em { margin-left: 3px; font: 500 13px var(--sans); color: #a9bccd; }
+/* a short scene (G2 compact, style.css): the clock on one line, its label kept; the sentence cut to one line, all of it still in the live region */
+[data-short=true] .watch-stat:first-child { flex-basis: auto; }
+[data-short=true] .watch-stat:first-child small { display: inline; margin-right: 5px; }
+[data-short=true] .watch-stat:first-child strong { font-size: 18px; }
+[data-short=true] .watch-say { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .watch-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; pointer-events: auto; }
 .watch-play {
   display: grid; place-items: center; flex: none;
@@ -319,16 +323,15 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 @media (max-width: 860px) {
   .watch-ui { padding: 12px; }
   .watch-say { font-size: 15.5px; }
-  .watch-stats { gap: 18px; }
-  .watch-stat strong { font-size: 24px; }
-  .watch-stat em { font-size: 12px; }
+  /* a phone: the title and the state share the first row, the clock fills the second */
+  body[data-mode='watch'] .scene-top { grid-template-columns: minmax(0, 1fr) auto; }
+  .watch-stats { grid-column: 1 / -1; grid-row: 2; }
+  .watch-stat:first-child strong { font-size: 26px; }
   .watch-play { width: 40px; height: 40px; }
   .watch-card { padding: 18px 16px 20px; }
   .watch-card h2 { font-size: 21px; }
 }
 @media (max-width: 640px) {
-  .watch-stats { width: 100%; justify-content: space-between; gap: 10px; }
-  .watch-stat strong { font-size: 21px; }
   .watch-speed { padding: 6px 8px; }
 }
 

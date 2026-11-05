@@ -11,6 +11,11 @@
  * not waited out), and every response is read back from the simulation
  * itself through WebMCP — playing, warp, the vehicle flying, the clock
  * moving or standing — not only from the button's own look.
+ *
+ * Redesign A (S2): with a flight running, the clock block stands in the top
+ * band above the camera views, the caption is one live region and nothing
+ * covers the middle of the scene (also in an 844×390 phone landscape, by
+ * touch); the clock block does not show outside Watch.
  */
 import { press, keyOn } from '../harness.mjs';
 
@@ -72,6 +77,24 @@ async function exercise(t, app, how) {
     const t1 = (await state()).cursorTimeS;
     t.check(Math.abs(t1 - t0) < 1e-6, `${how}: ${what}: the clock still ran (T${t0.toFixed(2)} → T${t1.toFixed(2)})`);
   };
+  /** Where the Watch overlay sits: the clock above the camera views, one live caption, and what covers the scene's centre. */
+  const layout = () => page.evaluate(() => {
+    const v = document.getElementById('viewport').getBoundingClientRect(), x = v.left + v.width / 2, y = v.top + v.height / 2;
+    const box = (s) => document.querySelector(s)?.getBoundingClientRect();
+    const clock = box('.scene-top .watch-stats'), tabs = box('#camera-tabs');
+    return {
+      clockAbove: !!clock && clock.height > 0 && !!tabs && clock.bottom <= tabs.top + 1,
+      live: document.querySelectorAll('.watch-caption[aria-live="polite"]').length,
+      middle: [...document.querySelectorAll('.watch-stats, .watch-bottom > *, .mission-title, .sim-state, #camera-tabs, .camera-tools')]
+        .filter((n) => [...n.getClientRects()].some((r) => r.left <= x && x <= r.right && r.top <= y && y <= r.bottom)).map((n) => n.className || n.id),
+    };
+  });
+  const checkLayout = async (where) => {
+    const l = await layout();
+    t.check(l.clockAbove, `${how}${where}: the Watch clock block is not in the top band above the camera views`);
+    t.check(l.live === 1, `${how}${where}: the Watch caption is not one live region (${l.live})`);
+    t.check(l.middle.length === 0, `${how}${where}: the middle of the Watch scene is covered by ${l.middle.join(', ')}`);
+  };
   const mission = (id) => page.locator(`.watch-picker .watch-mission[data-mission="${id}"]`);
   const vehicleOf = async (id) => (await mission(id).locator('.watch-mission-vehicle').textContent()).split(' · ')[0].trim();
   const playBtn = page.locator('.watch-play');
@@ -84,6 +107,16 @@ async function exercise(t, app, how) {
   if (!(await act(mission(FIRST[how]), `the "${FIRST[how]}" launch`))) return;
   if (!(await expect((s, d) => !d.picker && s.vehicle?.name === firstVehicle && s.playing, `picking "${FIRST[how]}" launches ${firstVehicle}`, 60_000))) return;
   await advancing('after the first launch');
+  await checkLayout('');
+  if (how === 'touch') {
+    // a phone held sideways: a short scene, where the caption's sentence is cut to one line
+    const size = page.viewportSize();
+    await page.setViewportSize({ width: 844, height: 390 });
+    t.check(await t.until(() => page.evaluate(() => document.getElementById('viewport').dataset.short === 'true'), { timeoutMs: RESPOND_MS }), 'touch: the 844×390 scene is not a short scene');
+    await checkLayout(' at 844×390');
+    await page.setViewportSize(size);
+    await t.until(() => page.evaluate(() => document.getElementById('viewport').dataset.short !== 'true'), { timeoutMs: RESPOND_MS });
+  }
 
   // 2. pause and play, with the flight running
   await act(playBtn, 'pause');
@@ -131,4 +164,13 @@ async function exercise(t, app, how) {
   await act(another, 'Another launch');
   await expect((s, d) => d.picker && !d.end, 'Another launch opens the list in place of the end card');
   t.log(`${how}: every control answered`);
+
+  // the clock block is Watch's own: it stands in the scene's top band, which Explore shows too (scene-floor's OVERLAYS cannot see it)
+  if (how === 'mouse') {
+    await page.keyboard.press('Escape');
+    if (!(await expect((s, d) => !d.picker, 'Escape closes the list'))) return;
+    t.check(await page.locator('.watch-stats').isVisible(), 'mouse: the Watch clock block is not back once the list is closed');
+    await page.evaluate(() => { location.hash = '#/launch/explore'; });
+    t.check(await t.until(async () => !(await page.locator('.watch-stats').isVisible()), { timeoutMs: RESPOND_MS }), 'the Watch clock block shows outside Watch');
+  }
 }
