@@ -72,7 +72,13 @@ export interface RigidTelemetry {
   attitudeTest?: AttitudeTestRecord;
   /** G02: the navigation's record at this sample, on the telemetry samples only. */
   navigation?: NavigationRecord;
-  /** G08: the control system's failures and the FDIR's state, on flights that carry them. */
+  /**
+   * G08: the control system's failures and the FDIR's state, on flights that carry them (the flown
+   * vehicle only). Built new at each step the runtime flies (a phase that carries the state over, such
+   * as Apollo's or a touchdown, spreads it and keeps the record), and nothing writes into it: shared by
+   * `cloneRigidTelemetry` and `interpolateRigidTelemetry`, copied by frame.ts's `cloneFrame` and
+   * `interpolateFrames` (`ownFaults`).
+   */
   controlFaults?: ControlFaultRecord;
 }
 
@@ -85,6 +91,13 @@ export function cloneWindProfile(value: WindScenario | undefined): WindScenario 
     altitudeRangeM: value.altitudeRangeM ? [...value.altitudeRangeM] : undefined };
 }
 
+/**
+ * A copy of a body's telemetry with its own vectors, maps, wind, flexible-body and loop records.
+ * Four records are shared: `controlFaults`, which frame.ts's copies copy (`ownFaults`): a copy here
+ * would land in every chunk that carries this file; and `linearModel`, `attitudeTest` and
+ * `navigation`, which only the telemetry samples carry (`Simulation`'s sampler sets them on its
+ * copy), never `SimState.rigid` or a frame.
+ */
 export function cloneRigidTelemetry(value: RigidTelemetry | undefined): RigidTelemetry | undefined {
   if (!value) return undefined;
   return { ...value, windProfile: cloneWindProfile(value.windProfile), attitudeQ: { ...value.attitudeQ }, omegaBody: { ...value.omegaBody },
@@ -115,7 +128,9 @@ export function sameRigidConfiguration(a: RigidTelemetry | undefined, b: RigidTe
 }
 
 /** Discrete modes/health and unknown/new actuator IDs belong to the left frame.
- * Separation never blends one body's attitude or mass geometry into another. */
+ * Separation never blends one body's attitude or mass geometry into another.
+ * A copy like `cloneRigidTelemetry`'s, sharing what it shares (`controlFaults` the left frame's, or
+ * the right's at a fraction of 1). */
 export function interpolateRigidTelemetry(a: RigidTelemetry | undefined, b: RigidTelemetry | undefined, fraction: number): RigidTelemetry | undefined {
   const u = Math.max(0, Math.min(1, fraction));
   if (u >= 1) return cloneRigidTelemetry(b);
