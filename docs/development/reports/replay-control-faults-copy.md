@@ -16,6 +16,7 @@
 > - merge กับหัวของ #188 (f552f2d ซึ่งรวม main 5588be1 แล้ว) เมื่อ 2026-11-05: #188 แก้จุดเดียวกันนี้ไว้เองแล้วตั้งแต่ commit f746b8c (2026-10-31, F2 ของ agent ตัวที่สองของ #188 หลังคุณสั่ง "ทำต่อ") ด้วย `ownFaults` ตัวเดียวกัน และใช้กับ debris ด้วย จุดชนจึงมีแต่ docstring และเทสต์ โค้ดเป็นของ #188 ทั้งหมด หลัง merge PR นี้เหลือเพียงเทสต์ที่บินบทเรียน ru-fdir-dus จริงผ่าน recorder และ docstring ที่ละเอียดกว่า ไม่มีโค้ดของตัวเอง: build ได้เหมือนของ #188 ทุกไบต์ ยกเว้น commit ที่ประทับไว้ใน build (และชื่อ chunk ที่ตามมา)
 > - ผล: #192 ปิดแล้วเมื่อ 2026-11-05 ไม่ merge เพราะการแก้อยู่ใน main แล้วผ่าน #188 (7d12951) ตามตัวเลือกของคุณ (2026-11-05T14:33:34Z)
 > - PR ต่อจากนี้ (#208, 2026-11-05 ตามที่คุณสั่ง "open a test-only PR with the comment fix"): มีเฉพาะเทสต์ที่บินบทเรียน ru-fdir-dus ผ่าน recorder และ docstring ที่แก้ให้ถูก (ใน main เขียนว่า simulation "สร้างบันทึกใหม่ทุก step" ซึ่งไม่จริงเสมอ: ช่วงของ Apollo และตอนแตะพื้น spread `s.rigid` แล้วใช้บันทึกเดิมต่อ) ไม่มีโค้ด build ได้ไบต์เดียวกับ main ทุก chunk เทสต์ใหม่ fail บน main ก่อน #188 (5588be1) และเมื่อปิด `ownFaults` และผ่านบน main ปัจจุบัน จึงเป็นเทสต์กันถดถอย ไม่ใช่การแก้บั๊ก
+> - ผลการ merge: merge แล้วเป็น `7af3b93` (5 พ.ย. 18:37 UTC) แบบ squash ตามที่คุณตอบเมื่อ 14:33 UTC ว่า "ทำให้ทันแล้ว merge (แนะนำ)" หลัง CI 42076557042 ผ่านครบ 9/9 บน `f9f1981` และผู้ตรวจที่ไม่ได้เขียนงานนี้ตรวจแล้วว่า merge ได้ ไม่มีข้อที่ต้องแก้ เว็บจริงหลัง merge: `fa3c486` ตั้งแต่ 19:15:12Z (Pages 42087327369 ของ #209 ผ่านครบ 11 job และ 38 journey) ซึ่งรวม `7af3b93` แล้ว ส่วน run ของ #208 เอง (42086061932) ถูก run ของ #209 ยกเลิกและไม่ได้ publish อะไร
 
 ```yaml
 item: replay control-faults copy (PR #188's second-agent finding F2, pre-existing on main)
@@ -27,6 +28,9 @@ base_sha_verified_on: {sha: 7d12951, branch: main, date: 2026-11-05}
 branch: claude/epic-wright-cx214p
 pr: '#208 (on main); before it #192 (stacked on #188, closed 2026-11-05 as superseded)'
 second_agent_review: 'confirmed 8 of 8 claims checked, no blocking findings (2026-10-30, on 3eb54e5 and db69b31); six non-blocking: N1–N5 fixed here (docstring wording, the test''s guard, a duplicate import), N6 pre-existing (under "Not changed, for later")'
+merged: {sha: 7af3b93, at: '2026-11-05T18:37:41Z', ci: 42076557042, head: f9f1981, owner_answer: '"ทำให้ทันแล้ว merge (แนะนำ)" (2026-11-05T14:33:34Z, chat of the session working on claude/gifted-gauss-ojjpaj, which merged it); opened on "yes, open a test-only PR with the comment fix" (2026-11-05T17:31:54Z, this PR''s session)', note: 'merged tree identical to f9f1981; independent review (a reviewer that did not write it), 2026-11-05: mergeable, no blocking findings'}
+published: {pages: 42087327369, at: '2026-11-05T19:15:12Z', sha: fa3c486, note: 'the push of #209, 11 of 11 jobs, 38 of 38 journeys; it also published 7af3b93 (this merge); the push run of 7af3b93, 42086061932, was cancelled by it and published nothing'}
+review_of_merge: 'independent reviewer, 2026-11-05, on f9f1981: src/ edits comment-only (ASTs equal without comments), vite build gives the same 32 JS chunks as main, the new test fails with ownFaults made a no-op; nits: `pr: #208 (on main)` above was written before the merge (true since 18:37:41Z), and index-*.js 2,654,000 B here vs 2,654,001 B in a clone whose build stamp has 8 characters (a stamp-length difference, not code)'
 ```
 
 ## The follow-up PR: the test and the comments, on main 7d12951

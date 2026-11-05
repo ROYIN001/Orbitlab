@@ -24,6 +24,7 @@
 > - ขนาด: +10 B ต่อ chunk (index และ flight.worker) บน main ล่าสุด precache code 14,678,391 จาก 14,679,000 B เหลือ 609 B ไม่ได้ขึ้นเพดาน เขียน `coasting` เป็นตารางตามสถานะเพื่อให้ประหยัด
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 5 จาก 6 (ความเท่ากันและความบริสุทธิ์ของฟังก์ชัน), 7 จาก 9 (ล่า regression), 5 จาก 6 (เทสต์) ข้อที่ต้องแก้คือชิ้นส่วนในอากาศข้างยาน (แก้แล้ว มีเทสต์ที่ fail ก่อนแก้ 3 ข้อ) ข้ออื่นเป็นหมายเหตุ: การพิมพ์ชนิด (แก้แล้ว) และการบันทึกที่ถูก thin หนักมาก (ด้านล่าง)
 > - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ (11 จาก 16 และอีก 3 ข้อสำหรับชิ้นส่วน) ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม PR นี้สร้างต่อจาก #187 ซึ่ง merge เข้า main แล้ว (ef9d3f6) และ main ถูก merge เข้า branch นี้แล้ว
+> - ผลการ merge: เซสชันนี้ merge แล้วเป็น `5588be1` (5 พ.ย. 10:14 UTC) แบบ squash หลัง CI 42005692799 ผ่านครบ 9/9 บน `7598105` (merge main `1770d93` เข้ามาก่อน) commit ของการ merge ไม่ได้อ้างคำตอบของคุณ ในแชตของเซสชันนี้คุณเขียนว่า "merge" (4 พ.ย. 20:30 UTC) และ "ทำต่อ" (5 พ.ย. 09:44 UTC) ตอน merge main เป็น `9ca2ffe0` แล้ว (#207 ซึ่งเป็นบันทึก) ไม่ใช่ `1770d93` โค้ดที่ merge ต่างจาก head ที่ผ่าน CI แค่ไฟล์ Markdown และข้อมูลแผนของ #203 ไม่มีไฟล์ใน `src/` หรือ `tests/` ขึ้นเว็บแล้วด้วย Pages run ของการ merge นี้เอง 42009007666 (10:52 UTC) ทุก job ผ่าน 11/11
 > - ยังไม่แก้ (งานต่อไป): ทรงกลมบนพื้นอาจหมุนไปกับโลกได้ตรง (`turnWithEarth`, คลาด 0.000 m แทน 0.066 m) แต่ไม่มีที่ว่างในงบขนาด; ชิ้นส่วนที่ลอยอยู่ในวงโคจรระหว่างที่ทรงกลมรออยู่บนพื้นยังเป็นเส้นตรงตามตัวยาน (29 m); การบันทึกที่ถูก thin จนช่วงยาวเป็นสิบวินาที (เกิดได้เฉพาะเมื่อบันทึกนานมาก) ช่วงหลังร่มหลักกางอาจวาดแย่กว่าเส้นตรง: agent ตัวที่สองวัดได้ 269 m เทียบกับ 192 m ในช่วง 42 s เมื่อบังคับให้เหลือ 300 เฟรม
 
 ```yaml
@@ -35,6 +36,8 @@ tests: tests/abort-replay-arc.test.ts (new, 18 tests)
 base_sha_verified_on: {sha: 1770d93, date: 2026-11-05, note: 'main, merged in 8005604; before it ef9d3f6 (#187 squash-merged), merged in 8251261. Main''s #189-#205 since ef9d3f6 include the debris blend''s rewrite (#191, #194, #195, #201), which covers the bodies'' rule this branch had added, so the merge drops that rule'}
 branch: claude/gracious-sagan-zvg16a
 pr: 190
+merged: {sha: 5588be1, at: '2026-11-05T10:14:10Z', ci: 42005692799, head: '7598105', owner_answer: 'none quoted in the merge commit; in this PR''s session''s chat the owner wrote "merge" (2026-11-04T20:30:01Z) and "ทำต่อ" (2026-11-05T09:44:29Z)', note: 'main was 9ca2ffe0 (#207, records) at the merge; the merged tree differs from 7598105 only under docs/, changes/ and CHANGELOG.md (#203''s plan data and Markdown), in no file under src/ or tests/'}
+published: {pages: 42009007666, at: '2026-11-05T10:52:24Z', sha: 5588be1, note: 'the push of this merge, 11 of 11 jobs; #207 before it (records, Markdown only) started no Pages run and changed no file built into the site'}
 second_agent_review: 'equivalence and purity confirmed 5 of 6, regression hunt 7 of 9, tests 5 of 6 (2026-10-30, on 52fae07); its one should-fix finding (bodies under 140 km beside the escape) fixed in 05fe391 with failing-first tests (d798764), and since the merge of main covered by main''s #191 (the tests stay); its typing note taken; its thinning note recorded under "Not changed"'
 ```
 
