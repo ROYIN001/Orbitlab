@@ -80,9 +80,35 @@ export default async function r3FirstLaunch(t) {
   if (!(await pick.isVisible().catch(() => false))) await page.locator('.watch-missions-btn').click().catch(() => {});
   await pick.waitFor({ timeout: 15_000 });
   await press(t, app, pick, 'mouse', 'the Soyuz T-10 launch');
-  await app.mcp('control_playback', { action: 'warp', warp: 100 });
+  // The viewer's own 100×, which it keeps for the whole flight. A warp set
+  // from outside (WebMCP's control_playback) lasts only until the viewer's
+  // automatic pace next sets its own: at its first update if it has not
+  // updated since the launch was picked (a slow runner), so the escape and
+  // the landing play at 1×; below 2 fps 1× plays slower than real time, and
+  // on a slow runner the flight missed its end card within 120 s.
+  if (!(await press(t, app, page.locator('.watch-speed[data-speed="100"]'), 'mouse', 'the viewer\'s 100×'))) return;
+  let warp;
+  t.check(await t.until(async () => (warp = (await app.mcp('read_flight_state')).warp) === 100, { timeoutMs: 20_000, intervalMs: 250 }),
+    `the viewer's 100× did not set the warp to 100 (warp ${warp})`);
   const copy = page.locator('.watch-end .watch-btn', { hasText: 'Try this launch yourself' });
-  if (!t.check(await t.until(() => copy.isVisible(), { timeoutMs: 120_000, intervalMs: 500 }), 'the Watch end card has no "Try this launch yourself"')) return;
+  // Waited on the flight: its card comes 10 s of flight after the crew is
+  // down, and only the card stops it. A clock that stands for 30 s is a
+  // flight that stopped (on one core it stood under 8 s); 120 s in all.
+  const since = Date.now();
+  let flight = await app.mcp('read_flight_state'), moved = since;
+  const end = await t.until(async () => {
+    if (await copy.isVisible()) return 'card';
+    const now = await app.mcp('read_flight_state');
+    if (now.frame?.timeS > flight.frame?.timeS) moved = Date.now();
+    flight = now;
+    return Date.now() - moved > 30_000 ? 'stalled' : null;
+  }, { timeoutMs: 120_000, intervalMs: 1000 });
+  const waited = `${((Date.now() - since) / 1000).toFixed(1)} s`;
+  flight = await app.mcp('read_flight_state'); // under its card the flight stands at its end
+  const at = flight.frame ? `T${flight.frame.timeS >= 0 ? '+' : ''}${flight.frame.timeS.toFixed(1)} s, ${flight.frame.status}` : 'no flight';
+  const card = end === 'card' || await page.locator('.watch-end').isVisible();
+  if (!t.check(end === 'card', `the Watch end card has no "Try this launch yourself" (${end === 'stalled' ? 'the flight\'s clock stood still for 30 s' : 'not within 120 s'}; after ${waited} the flight is at ${at}, warp ${flight.warp}, playing ${flight.playing}, last event ${flight.lastEvent?.key ?? 'none'}; an end card ${card ? 'is' : 'is not'} shown)`)) return;
+  t.log(`the Watch end card after ${waited}, the flight at ${at}`);
   await press(t, app, copy, 'mouse', 'Try this launch yourself');
   t.check(await t.until(async () => (await page.locator('#setup .template-note[data-kind="copy"]').count()) > 0, { timeoutMs: 15_000 }), 'the copy opened without its note');
   t.check(/Soyuz/.test(await page.locator('#setup .template-note').textContent() ?? ''), 'the copy\'s note does not name its rocket');
