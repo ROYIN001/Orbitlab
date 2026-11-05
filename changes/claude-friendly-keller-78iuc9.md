@@ -1,0 +1,7 @@
+## CHANGELOG
+
+- Build (Redesign A, S0; identical output, D-38 offset): unused `.section-*` rules leave `src/ui/modes.css` (−981 B of CSS) and the published page leaves out the indentation at the start of each line of `index.html` (−2.0 kB more for every visitor and in the offline copy); what the page shows and does is unchanged, and no ceiling changes.
+
+## PROGRESS
+
+| Redesign A step S0 (identical-output offset; owner's authorization 2026-11-05 in chat, "เริ่มทำได้เลยครับ …"; whether it covers S0 is open, Q1) | In PR; not merged; not published | Dead `.section-badge`/`-inner`/`-eyebrow`/`-lead`/`-levels`/`-level*` rules removed from `src/ui/modes.css` (the built CSS differs by exactly those 12 rules); `builtPage` (`scripts/html-comments.mjs`, used by `vite.config.ts`) also drops each line's leading indentation from the built `index.html` (15,076 → 13,070 B; same 381 tags and text tokens). `index-*.css` 178.3 → 177.3 / 179 kB, precache code 14,678,391 → 14,675,404 B / 14679 kB, `index-*.js` 2653.9, `i18n-*.js` 1732.5, other chunks 771.4 unchanged; ceilings unchanged, the room set aside for S1–S3. typecheck passed; node verification 94 / 94 (new html-comments case); 10 vitest files 107 / 107; bundle budget ok; browser pwa-offline, r2-viewport-scene-floor, r2-viewport-matrix 3 / 3; every other built file byte-identical once file-name hashes are masked. | [report](reports/redesign-a.md) |

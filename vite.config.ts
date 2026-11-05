@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectPrecacheManifest, precacheManifest } from './src/pwa/manifest.ts';
-import { stripHtmlComments } from './scripts/html-comments.mjs';
+import { builtPage } from './scripts/html-comments.mjs';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
@@ -38,15 +38,17 @@ const buildStamp = {
 /**
  * The page's source comments stay in index.html and leave the built page,
  * which every visitor downloads and the app precaches (D-38 offset for the G2
- * layout fix, F5: about 2.6 kB of the precache code group). Nothing reads a
- * comment node: every comment sits between elements (scripts/html-comments.mjs,
- * tests/verification/html-comments.test.mjs).
+ * layout fix, F5: about 2.6 kB of the precache code group), and the indentation
+ * of every line (about 2 kB more; D-38 offset proposed for redesign A,
+ * docs/development/reports/redesign-a.md). Nothing reads a comment node: every
+ * comment sits between elements, and nothing in the page is whitespace-
+ * sensitive (scripts/html-comments.mjs, tests/verification/html-comments.test.mjs).
  */
 function htmlCommentsPlugin(): Plugin {
   return {
     name: 'orbitlab-html-comments',
     apply: 'build',
-    transformIndexHtml: { order: 'pre', handler: stripHtmlComments },
+    transformIndexHtml: { order: 'pre', handler: builtPage },
   };
 }
 

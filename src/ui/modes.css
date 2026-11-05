@@ -194,33 +194,13 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 
 /* ── the landing page: src/ui/home.css ─────────────────────────────────── */
 
-/* "in development", on a level still being built */
-.section-badge {
-  display: inline-block; padding: 2px 8px; border-radius: 999px;
-  border: 1px solid rgba(239, 164, 126, 0.5); color: var(--warn);
-  font: 500 10.5px/1.4 var(--sans); letter-spacing: 0.8px; text-transform: uppercase;
-}
-
 /* ── a section's plan: the Build levels still being built show it (src/ui/build/build.css), the
    Orbit playground lists what it still lacks with the same items (S01) ─────── */
 
-.section-inner { max-width: 880px; }
-.section-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; color: var(--accent); letter-spacing: 2.4px; }
 .section-title {
   margin: 10px 0 12px;
   font: 600 clamp(28px, 3.6vw, 46px)/1.1 var(--display); letter-spacing: -1px;
 }
-.section-lead { margin: 0 0 24px; max-width: 660px; font-size: 16px; line-height: 1.6; color: #c9d6e2; }
-.section-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.section-level {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 14px; border-radius: 12px;
-  border: 1px solid rgba(103, 132, 138, 0.35); background: rgba(14, 22, 32, 0.74);
-}
-.section-level[aria-current] { border-color: var(--accent-line); background: rgba(22, 46, 45, 0.62); }
-.section-level strong { font: 600 15px/1.3 var(--display); }
-.section-level .mode-glyph { color: var(--accent); }
-.section-level-text { font-size: 13px; line-height: 1.5; color: var(--muted); }
 .section-coming { margin: 32px 0 4px; font: 500 12px/1.4 var(--sans); letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
 .section-phase h3 { margin: 18px 0 8px; font: 600 16px/1.3 var(--display); }
 .section-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
@@ -330,8 +310,6 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 /* ── narrow screens ──────────────────────────────────────────────────────── */
 
 @media (max-width: 860px) {
-  .section-levels { grid-template-columns: 1fr; }
-  .section-lead { font-size: 15px; }
   .watch-ui { padding: 12px; }
   .watch-say { font-size: 15.5px; }
   .watch-stats { gap: 18px; }
