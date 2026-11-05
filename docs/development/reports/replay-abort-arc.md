@@ -176,6 +176,28 @@ By flight, #187 → this PR:
   
   On the line both sagged alike there; now each carries its own small miss of the cubic. At those distances it is under a milliradian as seen from the escape.
 
+### Against main after its merge
+
+Measured again on 8005604, the merge of main at 1770d93, sample for sample. The same probe flies the ten flights and draws each step inside an abort span twice, on the same recorded frames: with this branch's `interpolateFrames` and with main's (a copy of main's src/physics/frame.ts, not committed).
+
+| Flight | Frames, thinnings | Vehicle, worst: main → this PR | Bodies, worst | Within 5 km, offset |
+|---|---|---|---|---|
+| MR-3 six-DOF | 4,295, 1 | 127.9 → 2.33 m | 116.9 → 0.001 m | 117.2 → 2.33 m |
+| MR-3 point mass | 6,913, 0 | 126.5 → 1.35 m | 117.1 → 0.001 m | 117.2 → 1.35 m |
+| Soyuz 18a six-DOF | 5,617, 3 | 29.3 → 0.182 m | 29.3 → 7.95 m | 13.0 → 0.183 m |
+| Soyuz 18a point mass | 7,438, 1 | 29.2 → 0.005 m | 29.3 → 1.13 m | 12.0 → 0.005 m |
+| Soyuz MS-10 six-DOF | 4,814, 3 | 5.31 → 0.336 m | 0.064 m, unchanged | 5.31 → 0.336 m |
+| Soyuz MS-10 point mass | 7,416, 1 | 0.342 → 0.008 m | 0.000 m | 0.342 → 0.008 m |
+| Soyuz T-10-1, both | 2,217–2,219, 0 | 0.177 → 0.005 m | 0.000 m | 0.177 → 0.005 m |
+| Vostok-1 six-DOF | 4,792, 0 | 15,499 m, the held step into the return, unchanged | 15,510 m, the same step | 4.76 → 3.68 m |
+| Vostok-1 point mass | 4,626, 0 | 15,484 m, the same | 15,493 m, the same | 5.50 m, unchanged |
+
+- **The vehicle:** 656,080 of 666,559 samples change, and none is drawn more than 1 cm further from where it flew than main draws it.
+- **Bodies at every height:** of 1,751,830 samples, none is drawn further from where it flew than on main.
+- **Bodies within 5 km:** 20 of 325,644 samples are worse, by at most 0.054 m. All are on MR-3's span after its third retro-rocket's firing, point-mass, with the Redstone 156 m away. The 162 samples in the air that were slightly worse on the old base (above) are gone: main's #191 had already put those bodies on their cubic.
+- **The worst offset beside the escape** falls in every flight but point-mass Vostok-1, where it is unchanged.
+- **Recordings:** frame counts differ slightly from the first run (18a, Vostok-1 six-DOF): main records falling stages every 5 s since #198.
+
 ## Tests
 
 `tests/abort-replay-arc.test.ts`, 18 tests. The frames are built on a real abort frame: point-mass MR-3 flown to its capsule's separation, with the escape's own rigid telemetry. The truth arcs are flown in the test (central gravity and J2, in 0.01 s RK4 steps, with the thrust or the drag a case needs).
