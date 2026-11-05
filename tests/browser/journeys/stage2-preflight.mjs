@@ -94,12 +94,20 @@ export default async function preflight(t) {
       throw new Error(`${where}: ${step}: ${detail.slice(0, 3000)}`, { cause: error });
     }
   }
+  // On a laptop the section tabs come closest to the tools (redesign A, S1 review);
+  // Russian is left out until its older overlap is fixed.
+  for (const lang of ['en', 'th']) {
+    const app = await t.open({ hash: '#/launch/explore', viewport: { width: 1100, height: 800 }, lang });
+    for (const width of [1100, 1181]) await checkNarrowToolbar(t, app, `desktop/${lang}`, lang, width, 800);
+    app.checkErrors();
+    await app.context.close();
+  }
 }
 
-async function checkNarrowToolbar(t, app, where, lang) {
+async function checkNarrowToolbar(t, app, where, lang, width = 320, height = 568) {
   const { page } = app;
   const size = page.viewportSize();
-  await page.setViewportSize({ width: 320, height: 568 });
+  await page.setViewportSize({ width, height });
   await page.evaluate(() => document.fonts.ready);
   const controls = await page.evaluate(() => {
     scrollTo(0, 0);
@@ -117,9 +125,9 @@ async function checkNarrowToolbar(t, app, where, lang) {
   });
   for (const control of controls) {
     t.check(control.onScreen && control.hit,
-      `${where}/320×568: toolbar control #${control.id} is outside the screen or covered (${Math.round(control.left)}–${Math.round(control.right)} px)`);
+      `${where}/${width}×${height}: toolbar control #${control.id} is outside the screen or covered (${Math.round(control.left)}–${Math.round(control.right)} px)`);
   }
-  await app.shot(`mobile-${lang}-toolbar-320`);
+  await app.shot(`${where.split('/')[0]}-${lang}-toolbar-${width}`);
   await page.setViewportSize(size);
 }
 
