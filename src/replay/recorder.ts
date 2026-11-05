@@ -26,6 +26,9 @@
  * - orbital coast: every 10 s while a burn is less than two minutes away,
  *   every 30 s otherwise; every second in the last ten before a return's
  *   retro sequence (C01).
+ * - a spent body falling through the air, alive between 10 and 100 km up:
+ *   every 5 s at the least, whatever the vehicle is doing, or every step where
+ *   the simulation steps longer (`FALLING_INTERVAL`).
  * - always the frame on both sides of any step that emitted an event, so every
  *   event time is the timestamp of a stored frame (see `advance`).
  *
@@ -38,14 +41,17 @@
  * now adds the separately measured rigid telemetry maps. Packed rotation storage
  * is counted separately. These estimates exclude browser/render/simulation heap;
  * `maxFrames` bounds ordinary frames, not protected events.
- * On overflow the *coast* frames are thinned first, down to one a minute
- * (`MAX_THINNED_GAP`); then the dense flight to a frame a second
- * (`DENSE_THINNED_GAP`); then the coast below a frame a minute, because what a
- * user scrubs back to is liftoff, max Q and staging, not the 143rd minute of a
- * parking orbit; only when the coast has nothing left to give, any frame whose
- * going leaves no gap over a minute and no phase without its last frame; and
- * only then without that floor. Event frames are never thinned at all, so
- * seeking to a callout is exact however hard the recording has been squeezed.
+ * On overflow the *coast* frames above the air are thinned first, down to one
+ * a minute (`MAX_THINNED_GAP`); then the dense flight to a frame a second
+ * (`DENSE_THINNED_GAP`); then the coast below a frame a minute, down to one
+ * every ten minutes (`MAX_COAST_GAP`), because what a user scrubs back to is
+ * liftoff, max Q and staging, not the 143rd minute of a parking orbit; only
+ * when the coast has nothing left to give, any frame whose going leaves no gap
+ * over a minute and no phase without its last frame; and only then without
+ * that floor. A coast or an orbit in the air (Apollo's entry) goes with the
+ * dense flight. Event frames are never thinned at all, so seeking to a callout
+ * is exact however hard the recording has been squeezed, and no pass opens a
+ * gap wider than 5 s where a spent body falls through the air (`falling`).
  *
  * Live stepping (roadmap T02; owner decision 2, 2026-09-29): a point-mass flight
  * is flown in the whole steps `Simulation.suggestedDt` asks for, never in steps
@@ -78,6 +84,8 @@ const RETRO_EVENT_WINDOW_S = 30;
 import { quatRotate } from '../physics/rigid/math';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
 import type { AbortState } from '../physics/sim/types';
+import { norm, type Vec3 } from '../physics/vec3';
+import { R_EARTH } from '../physics/constants';
 
 /** Altitude below which a coast is still an atmospheric one, m. */
 const ATMOSPHERIC_CEILING = 140e3;
@@ -112,6 +120,57 @@ const MAX_THINNED_GAP = 60;
  * for the live view.
  */
 const DENSE_THINNED_GAP = 1;
+/**
+ * The widest gap thinning a coast or an orbit may open before the rest of the flight gives up its frame a second,
+ * s (`FlightRecorder.decimate`): ten minutes. The pass that thins a coast past a minute had no limit, and halved
+ * every coast frame each time it ran, so the oldest frames of a long coast ended up hours apart while the newest
+ * were a minute apart: a six-DOF Soyuz MS docked for 12,000 s, its rendezvous holding most of the 6,000 frames,
+ * kept one docked span of 7,981 s, which a replay drew on the chord 9,271 km off the orbit. Now the old frames stop
+ * at ten minutes and the new ones catch up, and only then does the rest of the flight give up its frame a second.
+ * Ten minutes is under a quarter of any orbit's period (87 minutes at 140 km), where a six-DOF or docked vehicle
+ * takes the cubic between two frames (`interpolateFrames`; a point mass, Kepler), a few kilometres off a low orbit
+ * at most where its chord sags 400 km. Apollo's eight days of coast fit in 1,150 frames of it (some 1,450 at the
+ * 480 s the halving settles on). A six-DOF Soyuz MS docked for over five hours does reach the next pass, which
+ * takes its ascent from a frame a second to one every 1.7 s and its rendezvous from 30 s to 60 s; the old pass let
+ * a docked span grow instead (71,468 s, a point mass docked for a day in 3,000 frames).
+ */
+const MAX_COAST_GAP = 600;
+
+/**
+ * The widest spacing, s, while a spent body falls through the air (`falling`),
+ * whatever the vehicle is doing. A coast or an orbit kept a frame every 10–30 s,
+ * and one span could hold a body's whole drag pulse: a Sputnik booster slowed
+ * from 2.3 to 0.3 km/s inside 30 s. A replay draws it between the two frames on
+ * the cubic through their states (`interpolateFrames`), which keeps it near its
+ * path but not on time along it. Measured every second against the six-DOF
+ * simulation over the 20 watch missions, the worst were Apollo 11's S-II 3.4 km
+ * from where it was, Sputnik's boosters 2.3 km and Soyuz MS-16's Blok A 0.8 km;
+ * at 5 s, 6, 21 and 11 m, the most 24 m (the H-IIA first stage), for 0 to 78
+ * frames more a mission (docs/development/reports/replay-falling-frames.md).
+ * Thinning never opens a gap wider than this there (`thin`). A frame is kept
+ * only where the simulation stops: a point-mass flight holds its debris
+ * between its steps, up to 30 s in orbit, and a six-DOF coast held on its
+ * attitude steps up to 10 s, 30 s in orbit (`heldCoastWindow`), so there every
+ * step of the fall is kept, where every other was.
+ */
+const FALLING_INTERVAL = 5;
+/**
+ * The air a falling body is drawn through, m: within `FALLING_HALF` of
+ * `FALLING_MID` from the Earth's centre, 10 to 100 km up. Above 100 km drag has
+ * yet to bend its path. Below 10 km it is close to its terminal speed, and the
+ * cubic draws it within 10 m 30 s apart. A fairing or a module's shell spends
+ * most of its fall there: counted, it cost six-DOF Vostok-1 77 frames more, past
+ * the 101 MB its recording is sized for (tests/heavy/vostok1-recording.test.ts).
+ */
+const FALLING_MID = R_EARTH + 55e3;
+const FALLING_HALF = 45e3;
+
+/** A spent body alive between 10 and 100 km up, falling through the air (`FALLING_INTERVAL`). */
+const falling = (debris: readonly { alive: boolean; r: Vec3 }[]): boolean =>
+  debris.some((d) => d.alive && Math.abs(norm(d.r) - FALLING_MID) < FALLING_HALF);
+
+/** What the cadence reads: a frame and the simulation's state carry the same fields. */
+type Cadence = Pick<VisualFrame, 'status' | 't' | 'altitude' | 'nextBurnTime' | 'rendezvous' | 'thrust' | 'abort'>;
 
 /**
  * C01: the cadence of a return from orbit with its instrument module on
@@ -219,10 +278,11 @@ const DEFAULT_MAX_FRAMES = 12000;
  * C01: Vostok-1 to Gagarin on the ground, the longest six-DOF recording and
  * the heaviest shape (the spent stages, then the return's sphere, module
  * pieces, hatch, seat and pilot: 23–28 kB a frame), stays under it untouched
- * (`RETURNING_VACUUM_INTERVAL`, `vostokInterval`): 4,726 frames, 98.8 MB
- * estimated, 7.6 MB of rotation tracks besides, no thinning, where its first
- * cadence ran past the ceiling ten times and peaked at 140 MB
- * (tests/heavy/vostok1-recording.test.ts). */
+ * (`RETURNING_VACUUM_INTERVAL`, `vostokInterval`): 4,804 frames, 100.7 MB
+ * estimated (4,726 and 98.8 MB before Blok A and the fairings were kept every
+ * 5 s through the air, `FALLING_INTERVAL`), 7.6 MB of rotation tracks besides,
+ * no thinning, where its first cadence ran past the ceiling ten times and
+ * peaked at 140 MB (tests/heavy/vostok1-recording.test.ts). */
 const RIGID_MAX_FRAMES = 6000;
 
 export interface RecorderStats {
@@ -514,11 +574,10 @@ export class FlightRecorder implements RecordingSource {
         // An escape: dense in the air, sparse on a ballistic arc above it.
         return altitude < ATMOSPHERIC_CEILING ? DENSE_INTERVAL : 10;
       case 'coast':
-        if (altitude < ATMOSPHERIC_CEILING) return 2;
-        return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
       case 'orbit':
         // C01: Apollo flies its own burns in orbit, the injection for the Moon and the service engine's
-        // (more than a kilonewton: not the S-IVB's hydrogen vent, a hundred newtons for hours)
+        // (more than a kilonewton: not the S-IVB's hydrogen vent, a hundred newtons for hours). A coast is never
+        // `burning` (`intervalOf`), and only Vostok-1 has a return from orbit, which it flies from its orbit.
         if (burning) return 1;
         // C01: Vostok's retro sequence is a burn to come too; and the last orbit frame before it is the one a
         // replay holds across the change to the returning spacecraft, so it is a second (or the orbit's step) before it
@@ -526,6 +585,11 @@ export class FlightRecorder implements RecordingSource {
           if (deorbit - t <= 10) return 1;
           if (deorbit - t < 120) return 10;
         }
+        // In the air, every 2 s: a coast below 140 km, and Apollo's command module, whose status stays 'orbit' from
+        // the entry interface to the water (the only orbit in the air of the watch missions). Its mains slow it for
+        // 10–12 s after they open. At the orbit's 30 s, the cubic Apollo takes drew it 47 m off under them, 200 m once
+        // thinned to a minute, and 386 m through the entry; every 2 s, under a metre.
+        if (altitude < ATMOSPHERIC_CEILING) return 2;
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
       case 'descent':
         // A returning ship: sparse on its coast above the air, dense from the entry on.
@@ -535,8 +599,15 @@ export class FlightRecorder implements RecordingSource {
     }
   }
 
-  private intervalOf(f: VisualFrame): number {
-    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn' || (f.status === 'orbit' && f.thrust > 1e3), f.abort);
+  /**
+   * The spacing wanted at a frame or at the simulation's state, never wider than
+   * `FALLING_INTERVAL` while a spent body falls through the air. The bodies are
+   * the simulation's, which at every call are the ones of that state: the frame
+   * was just captured from it, or the step from it is still to be flown.
+   */
+  private intervalOf(f: Cadence): number {
+    return Math.min(this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn' || (f.status === 'orbit' && f.thrust > 1e3), f.abort),
+      falling(this.sim!.debris) ? FALLING_INTERVAL : Infinity);
   }
 
   /**
@@ -731,7 +802,7 @@ export class FlightRecorder implements RecordingSource {
     else if (!transitioned && preIsHead && fired) this.store(pre, true);
     const s = sim.state;
     const headNow = this.last;
-    const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn' || (s.status === 'orbit' && s.thrust > 1e3), s.abort) - 1e-9;
+    const dueAfter = !headNow || s.t - headNow.t >= this.intervalOf(s) - 1e-9;
     if (dueAfter || fired) this.store(captureFrame(sim), fired);
     if (fired) this.pullEvents();
     return used;
@@ -818,30 +889,34 @@ export class FlightRecorder implements RecordingSource {
   }
 
   /**
-   * Thin the recording when it outgrows its budget: drop every other coast or
-   * orbit frame that is not an event boundary. Ascent frames are only touched
-   * when there is no coast left to give, and event frames never are — what a
-   * user scrubs back to is liftoff, max Q and staging.
+   * Thin the recording when it outgrows its budget: drop every other frame of
+   * the first pass below that has one to give (no event boundary is ever one).
+   * The dense flight goes to a frame a second early, and below that only when
+   * the coast is a frame every ten minutes and has nothing left to give — what
+   * a user scrubs back to is liftoff, max Q and staging.
    *
    * The budget is a real bound: the old version raised `maxFrames` by 50 %
    * whenever the coast pass came up empty, so a recording with nothing
    * thinnable grew without limit. The second pass thins any non-event frame
    * instead, and the ceiling only moves in the (unreachable in practice) case
-   * where every frame is an event frame.
+   * where every frame is an event frame, or a falling body's at its 5 s.
    */
   private decimate(): void {
-    // The coast and the orbit first, to a frame a minute; then the dense flight, but only to a frame a second,
-    // which still shows liftoff, max Q and staging as they happened; then the coast below a frame a minute (a
-    // long parking orbit or a coast to the Moon is where the frames are); then anything that leaves no gap over
-    // a minute; and only then anything at all, so the ceiling stays a bound
-    const coasting = (f: VisualFrame) => (f.status === 'coast' || f.status === 'orbit') && !this.keep.has(f);
+    // The coast and the orbit above the air first, to a frame a minute; then the dense flight, but only to a frame
+    // a second, which still shows liftoff, max Q and staging as they happened; then the coast to a frame every ten
+    // minutes (a long parking orbit, a coast to the Moon or a spacecraft docked for hours is where the frames are);
+    // then anything that leaves no gap over a minute; and only then anything at all, so the ceiling stays a bound.
+    // A coast or an orbit in the air (Apollo's command module from the entry interface to the water) goes with the
+    // dense flight: thinned with the coast, its 30 s frames had gone to a minute and more.
+    const coasting = (f: VisualFrame) => (f.status === 'coast' || f.status === 'orbit') && f.altitude >= ATMOSPHERIC_CEILING && !this.keep.has(f);
     if (this.thin(coasting, MAX_THINNED_GAP)) return;
     if (this.thin((f) => !coasting(f) && !this.keep.has(f), DENSE_THINNED_GAP)) return;
-    if (this.thin(coasting)) return;
+    if (this.thin(coasting, MAX_COAST_GAP)) return;
     if (this.thin((f) => !this.keep.has(f), MAX_THINNED_GAP)) return;
     if (this.thin((f) => !this.keep.has(f))) return;
-    // Every frame is an event boundary: raise the ceiling rather than spin on
-    // every push. Needs ~12 000 events in one mission to happen.
+    // Every frame is an event boundary (or a falling body's at its 5 s): raise
+    // the ceiling rather than spin on every push. Needs ~12 000 events in one
+    // mission to happen.
     this.maxFrames = Math.ceil(this.maxFrames * 1.5);
   }
 
@@ -851,7 +926,11 @@ export class FlightRecorder implements RecordingSource {
    * kept, are no further apart than that, and the last frame of a phase
    * (the next one's status another) stays: a replay holds a rigid frame
    * across a change of configuration (`interpolateFrames`), so the frame
-   * before the change is the one it holds.
+   * before the change is the one it holds. A frame with a spent body falling
+   * through the air (`falling`) has a gap of `FALLING_INTERVAL` at the most,
+   * in every pass, and so the last frame of its phase stays too: the dense
+   * flight still thins to a frame a second around it, and nothing thins a fall
+   * wider than its 5 s.
    */
   private thin(thinnable: (f: VisualFrame) => boolean, gap = Infinity): boolean {
     const kept: VisualFrame[] = [];
@@ -868,7 +947,9 @@ export class FlightRecorder implements RecordingSource {
       // frames in the middle no longer flips which half of the coast survives.
       if (i > 0 && i < last && f.t < recent && thinnable(f)) {
         const next = this.stored[i + 1];
-        const spared = gap !== Infinity && (next.t - kept[kept.length - 1].t > gap || next.status !== f.status);
+        // a frame with a spent body falling through the air goes only while the gap stays within its 5 s
+        const floor = falling(f.debris) ? Math.min(gap, FALLING_INTERVAL) : gap;
+        const spared = floor !== Infinity && (next.t - kept.at(-1)!.t > floor || next.status !== f.status);
         if (seen++ % 2 === 1 && !spared) { dropped++; continue; }
       }
       kept.push(f);

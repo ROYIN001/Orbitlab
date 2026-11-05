@@ -9,11 +9,12 @@
 >   - `rigid.controlFaults`: simulation สร้างใหม่ทุก step และไม่เคยเขียนทับ → คัดลอกตอน seek เหมือน `target` (ทำต่อตามที่คุณสั่ง "ทำต่อ" เมื่อ 2026-10-31)
 >   - `recovery.target` ตั้งครั้งเดียวตอนแยกตัวและ simulation ไม่เคยเขียนทับ (ถ้าต้องย้ายเรือ จะสร้างวัตถุใหม่) จึงเป็นข้อมูลคงที่แบบเดียวกับ `visual` แต่มีแค่ 6–7 ตัวเลข คัดลอกตอน seek ได้ถูก → คัดลอกตอน seek; ส่วนเฟรมที่บันทึกไว้ยังใช้ร่วมกับ simulation ตามเดิม เพราะการคัดลอกลงทุกเฟรมจะเพิ่มหน่วยความจำ 120–144 B ต่อบูสเตอร์ต่อเฟรม
 > - ค่าทุกค่าที่ seek ได้เหมือนเดิมทุกบิต เปลี่ยนเฉพาะว่าเป็นวัตถุใหม่ (ตรวจกับ main ทุกภารกิจ watch ทั้ง 20 ภารกิจ)
-> - ขนาด: ยังเล็กกว่า main ปัจจุบัน (f68faab) 57–59 B ต่อไฟล์ (`index-*.js` และ `flight.worker-*.js`) เพราะเขียนการ blend ของ CSM, ascent stage และ service module เป็น loop แทนสามชุดซ้ำ ที่ว่างของ precache code เพิ่มจาก 1,067 B เป็น 1,183 B
+> - ขนาด: เทียบกับ main ปัจจุบัน (5588be1) ใหญ่ขึ้น 77–79 B ต่อไฟล์ (`index-*.js` และ `flight.worker-*.js`) ที่ว่างของ precache code ลดจาก 607 B เหลือ 451 B ไม่ได้ขึ้นเพดาน เทียบกับ f68faab เคยเล็กกว่า 57–59 B เพราะเขียนการ blend ของ CSM, ascent stage และ service module เป็น loop แทนสามชุดซ้ำ แต่ #196 ย่อสามชุดนั้นด้วย `arc` ไปก่อนแล้ว
 > - ความเร็ว: การคัดลอกทำให้การ seek แต่ละครั้งช้าลง 1–2 µs (เช่น Falcon Heavy 4.76 → 5.93 µs) รุ่นแรกใช้ `structuredClone` ซึ่งช้ากว่ามาก (15.5 µs) และเสียงของการปล่อยจรวด seek หลายสิบครั้งต่อเฟรมภาพ agent ตัวที่สองพบจุดนี้ จึงเปลี่ยนเป็นฟังก์ชันคัดลอกที่เร็วกว่า
 > - หน่วยความจำของการบันทึก (`FRAME_BYTES`) ไม่เปลี่ยน เพราะ `captureFrame` ไม่เปลี่ยน
 > - agent ตัวที่สองตรวจแล้ว ยืนยัน 14 จาก 14 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge พบสองข้อที่ไม่บล็อก: ความเร็ว และ `rigid.controlFaults` ทั้งสองข้อแก้แล้วใน PR นี้
 > - #187 merge ก่อน PR นี้แล้ว ผม merge main (f68faab) เข้า branch นี้โดยไม่ชนกัน และแก้ประโยคใน docstring ของ `interpolateFrames` ที่ #187 เขียนว่าผลลัพธ์ใช้ `jettisoned`, Apollo และ `target` ร่วมกับเฟรมที่บันทึก ให้เหลือแค่ `visual`
+> - merge main (5588be1) เข้า branch นี้อีกครั้งเมื่อ 2026-11-05: ชนกันใน `interpolateFrames` สี่จุด แก้โดยเก็บของ main ไว้ทั้งหมด (ชิ้นส่วนที่ตกถึงพื้นระหว่างสองเฟรม เส้นโค้งในอากาศ เส้นตรงเมื่อสองเฟรมห่างกัน 4,000 s ขึ้นไป การจุดเครื่องกลับลงจอด `path` ของ rendezvous และ `arc` ของ #196) แล้วใส่การคัดลอกของ PR นี้ลงไป ผลเทียบกับ main ใหม่ทั้ง 20 ภารกิจและเที่ยวบิน six-DOF ที่มีความขัดข้องไม่ต่างเลย
 > - การ merge: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจการแก้ `controlFaults` ซ้ำแล้ว ยืนยัน 4 จาก 4 ข้อ ผลเทียบกับ main ปัจจุบันทั้ง 20 ภารกิจ ไม่ต่างเลย และ heavy Vostok-1 ผ่านบนโค้ดสุดท้าย
 
 ```yaml
@@ -22,7 +23,7 @@ change_kind: bug fix (the deep copy cloneFrame promises); values unchanged, no a
 owner_authorization: 'owner in chat to this session, 2026-10-31, after the remaining work was listed (the rigid.controlFaults finding among it): "ทำต่อ"; 2026-10-30: "Task: decide per field whether it is immutable mission data (then document it as deliberately shared, as `debris[].visual` already is) or could be written by a consumer (then deep-copy it in `cloneFrame` and in `interpolateFrames`, e.g. a `cloneApollo`, `jettisoned: { ...f.jettisoned }`, and a copy of `recovery.target`)."'
 app_code: src/physics/frame.ts
 tests: tests/replay-copies.test.ts (new)
-base_sha_verified_on: {sha: f68faab, date: 2026-10-31}  # main merged in at 1360476; first based on 1842a86
+base_sha_verified_on: {sha: 5588be1, date: 2026-11-05}  # main 5588be1 merged in on 2026-11-05; before that f68faab, merged in at 1360476; first based on 1842a86
 branch: claude/great-mayer-6kapau
 pr: 188
 second_agent_review: 'confirmed 14 of 14 claims checked, no blocking findings (2026-10-30, on f241a06/8a4ba98); two non-blocking: F1 structuredClone cost on a hot path (fixed here, 9080d56), F2 rigid.controlFaults shared (pre-existing; fixed here, f746b8c, after the owner''s "ทำต่อ"); the copyPlain fix re-reviewed on 9080d56: confirmed 3 of 3, no findings; the F2 fix (ownFaults, f746b8c) re-reviewed: confirmed 4 of 4, no findings'
@@ -68,6 +69,7 @@ All in src/physics/frame.ts:
 - **`interpolateFrames`** copies `apollo` with `copyPlain` and `jettisoned` with a spread. The CSM, ascent stage and service module blend changed form:
   - Before: three hand-written spreads, each `hermite(a.apollo.X.r, a.apollo.X.v, b.apollo.X.r, b.apollo.X.v, u, span)`, guarded by one compound condition.
   - Now: a loop over the three keys on the copy. The values are the same, and so is the key order, since an assignment keeps a key's place as the spread did.
+  - Since #196 (on main, identical output) the three spreads called a local `arc(x, y)`, the same `hermite` call. Merged with main 5588be1, the loop calls `arc(p, q)`.
 - **Why `copyPlain`, not a hand-written `cloneApollo`.** Apollo's state has 16 sub-objects, 15 of them optional; written out field by field its copy would cost hundreds of bytes in each of the two precached chunks that carry this file.
 - **Why not `structuredClone`.** The first version (f241a06) used it: the fewest bytes, already used in src/. The second agent found it about 50× slower than a spread, on a hot path: with sound on, the launch audio (audio/launch-audio.ts) seeks through `ReplayPlayer.frameAt` tens of times an animation frame, for the retarded times of the vehicle and each live body and for each past cued event. `copyPlain` takes 0.16 µs for a recovery and 0.5–2 µs for Apollo's state, against 2.9 and 3.5–12 µs (Node 22, 200,000 copies each).
 - **`ownFaults`** (new, private): gives rigid telemetry a seek hands out its own copy of `controlFaults` (`copyPlain`, written into the copy `cloneRigidTelemetry` or `interpolateRigidTelemetry` just made). It wraps the rigid telemetry in `cloneFrame`, `cloneDebrisFrame` and both `interpolateRigidTelemetry` calls in `interpolateFrames`, so the configuration hold, the end frames and every debris branch are covered.
@@ -111,11 +113,29 @@ That run compared main against the first version (`structuredClone`, before the 
 
 Re-run against main as it is now (f68faab, with #187's blend), on this branch's code with the fault-record copy (f746b8c): again 709,100 calls, 0 differences; nothing returned shared with the recording; main shared in 399,444 calls, on the same paths (1,074 s). The watch missions are point-mass, so `ownFaults` has nothing to copy there; the six-DOF fault flight above covers it.
 
+Re-run against main 5588be1 on the merged tree (2026-11-05), main's `frame.ts` against the merged one, each mission flown point-mass to its end (Apollo 11 through its splashdown, to T+800,000 s):
+- **693,380 calls over 115,580 frames, 0 differences.** The counts differ from the runs above because main's recorder changed since (#189, #198).
+- **Main** shared with the recording in 382,146 calls, on the same paths as above; **the merged branch** in none. No write into a frozen input threw.
+- **Coverage:** Apollo 11 carries the CSM in 919 frames, the ascent stage in 161 and the service module in 44; `jettisoned` is in the same 7 missions and a recovery target in the same 5.
+- **The six-DOF fault flight**, flown again on the merged tree: 1,010 frames (549 with a record), 4,037 calls, 0 differences; main shared `frame.rigid.controlFaults` in 2,195, the merged branch nothing.
+
 ### Size
 
 `npx vite build`, `node scripts/bundle-budget.mjs`: ok, no ceiling raised. This file is bundled into `index-*.js` and `flight.worker-*.js` only, so each byte here counts twice in precache code.
 
-Against main as it is now (f68faab; #184 raised the ceilings for its own feature), with the fault-record copy (f746b8c):
+Against main 5588be1, merged in on 2026-11-05 (`npm run build`, `node scripts/bundle-budget.mjs`):
+
+| | main (5588be1) | this branch | change |
+|---|---|---|---|
+| `index-*.js` | 2,653,922 B | 2,654,001 B | +79 B |
+| `flight.worker-*.js` | 570,631 B | 570,708 B | +77 B |
+| precache code (ceiling 14,679,000 B) | 14,678,393 B (607 B left) | 14,678,549 B (451 B left) | +156 B |
+
+- **Why it now adds bytes.** #196 replaced main's three `hermite` calls with a local `arc`, 120 B a chunk, so the saving the loop made against f68faab is already on main. The copies are what is left.
+- **`arc` is kept.** The loop is now its one caller. A build with the loop calling `hermite` and `arc` removed was 16 B smaller a chunk (2,653,985 and 570,692 B, measured, not committed): `arc` is main's.
+- A build that differs from this one only in frame.ts differs only in these two chunks.
+
+Against main f68faab, with the fault-record copy (f746b8c):
 
 | | main (f68faab) | this branch | change |
 |---|---|---|---|
@@ -152,6 +172,7 @@ Against main as this branch was first based (1842a86), before the merge with mai
   - **Per animation frame with sound on:** the launch audio's ~60 seeks a frame on a Falcon Heavy (the second agent's count) cost about 70 µs more than main. The first version cost about 640 µs more.
   - **The Soyuz row** is within run-to-run noise: copying three booleans costs nothing measurable.
   - **`ownFaults`** does nothing on a frame without a fault record, which is every point-mass frame and every six-DOF frame without control faults configured.
+  - **On the merged tree** (main 5588be1, 2026-11-05), the same method, main / this branch, median of three sessions: Apollo 11 6.34 / 9.15, Falcon 9 Demo-2 5.84 / 6.60, Falcon Heavy 5.47 / 7.03, Soyuz 5.64 / 6.49 µs. Main's own seek is slower than before (its new debris paths), and the sessions spread widely (Falcon Heavy's main 5.31–7.82 µs); the copies cost about the same as above.
 
 ### Tests
 
@@ -164,6 +185,7 @@ Against main as this branch was first based (1842a86), before the merge with mai
   - Run 41002400552 green on 8a4ba98, the first version.
   - Runs 41019830551 (147b232) and 41022389542 (5605a97) show `verify` red only because their test and browser jobs were cancelled by the next push.
 - **Heavy:** `tests/heavy/vostok1-recording.test.ts`, the only heavy or six-DOF fleet file that builds a recorder or player: 1 of 1 passed on 8a4ba98 (161 s) and on f2fe2db (168 s; src/ and tests/ as in 9080d56), Node 22.22.0. On the final code, 30b8d0f: 1 of 1 (208 s).
+- **On the merged tree** (main 5588be1, 2026-11-05): typecheck clean; the 45 unit files that import frame.ts or build a recorder or player (`tests/replay-copies`, `debris-replay`, `abort-replay-arc`, `rigid-replay-arc`, `falling-frames` among them), 789 tests, all pass; `tests/repo-hygiene.test.ts` 9 of 9; heavy `vostok1-recording` and `falling-frames-sixdof`, the two heavy files that build a recorder or import frame.ts, 2 of 2 (147 s).
 - **Not run:**
   - The other 32 heavy files and the 6 six-DOF fleet files the change map selects for any `src/physics/**` path. None builds a `FlightRecorder` or `ReplayPlayer` or calls `cloneFrame` or `interpolateFrames` (grep of tests/heavy and tests/sixdof-fleet), so this change cannot reach them. They run on the weekly heavy workflow, and D-64 reuse does not apply because frame.ts is in the physics tree.
   - The browser journeys beyond CI's smoke shards. There is no UI change, and what a seek shows is the same to the bit.
@@ -221,6 +243,17 @@ It noted the configuration hold and the gone-debris path were covered only throu
 #187 had rewritten the last paragraph of the `interpolateFrames` docstring to say the result shares `jettisoned`, Apollo's state below its top level, a recovery's `target` and a body's `visual` with the stored frame. With this branch only `visual` is shared, so f6c3cff narrows it to: "The result is a fresh frame, apart from each body's `visual`, which it shares with the stored frame as `cloneFrame` does and which a caller must not write to."
 
 On the merged branch: typecheck clean; `tests/replay-copies`, `rigid-replay-arc`, `debris-replay`, `replay`, `rigid-replay`, `debris-release`, `recovery-untargeted-events`, `vostok-replay`, `live-stepping` and `rigid-recovery` pass (10 files, 99 tests); budget ok.
+
+## Merge with main 5588be1
+
+Main gained #189–#191, #194–#198 and #201 (and records and plan PRs) after f68faab; #189–#191, #194–#196 and #201 changed `interpolateFrames`. Merging main 5588be1 conflicted in four places there, all where this branch's copies sit beside main's new code. Each keeps main's code whole and adds this branch's copy:
+
+1. **The debris item's first lines.** Main (#195) turned `const other` into `let other …, w = u, s = span` for the span cut at a touchdown; this branch had dropped the `rec` copy below it. Kept: main's `let`, no `rec`.
+2. **The blended debris item's rigid telemetry.** Main (#201, #194) blends it at `w` against `other!` and adds `out`. Kept, wrapped in `ownFaults`.
+3. **The blended debris item's position and recovery.** Main (#191, #194, #195, #201): the cubic in the air, the line past 4,000 s, the touchdown span, a recovery burn's cubic, `dir` and `pressure` at `w`. Kept whole; `recovery: rec` became this branch's `d.recovery && copyPlain(d.recovery)`.
+4. **The returned frame's rendezvous and Apollo.** Main passes `path` to `blendRendezvous` (#189) and calls `arc` for Apollo's three bodies (#196). Kept main's rendezvous line; Apollo stays this branch's loop over the copy, calling `arc(p, q)`, and `jettisoned` its spread.
+
+The touchdown branch returns `cloneDebrisFrame(o)` for a body already down, which copies the later frame's recovery and fault record, and blends from `{ ...o }` otherwise, whose objects are only read.
 
 ## Not changed, for later
 

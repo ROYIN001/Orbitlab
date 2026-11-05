@@ -3676,11 +3676,13 @@ Point-mass, pitch 2.51° (six-DOF in brackets):
   from there until the sphere's main is open, every second under it, and every 5 s while the sphere
   waits on the ground for Gagarin; before it, Blok E's burn above 140 km every second
   (`RETURNING_VACUUM_INTERVAL`) and the orbit every 30 s, every 10 s in the last two minutes before
-  the pressurising command and every second in its last ten. Recorded as the app records it
-  (tests/vostok-replay.test.ts; tests/heavy/vostok1-recording.test.ts), point-mass is 4,666 frames,
-  34.5 MB by the recorder's estimate, and six-DOF (the app's default; its seed 20260919 and the tests'
-  seed 1 fly the same) 4,726 frames of its 6,000, 98.8 MB of frames and 7.6 MB of rotation tracks;
-  neither is thinned. The cadence before, 0.2 s below 140 km and Blok E at 0.1 s, made 7,993 frames
+  the pressurising command and every second in its last ten, and every 5 s while Blok A or a fairing
+  is still coming down between 10 and 100 km (`FALLING_INTERVAL`). Recorded as the app records it
+  (tests/vostok-replay.test.ts; tests/heavy/vostok1-recording.test.ts), point-mass is 4,638 frames,
+  34.3 MB by the recorder's estimate, and six-DOF (the app's default; its seed 20260919 and the tests'
+  seed 1 fly the same) 4,804 frames of its 6,000, 100.7 MB of frames and 7.6 MB of rotation tracks;
+  neither is thinned. Six-DOF was 4,726 frames and 98.8 MB before the falling bodies' 5 s, and
+  point-mass is unchanged. The first cadence, 0.2 s below 140 km and Blok E at 0.1 s, made 7,993 frames
   (63.3 MB) in point-mass, and in six-DOF ran past the ceiling ten times, 140 MB at its peak, thinning
   the orbit to 13 frames 55 minutes apart.
   (A point-mass step is cut at the end of the recorder's packet, 5 s in these tests and a frame's

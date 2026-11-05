@@ -229,7 +229,8 @@ export interface Debris {
   crew?: CrewState;
   /** C01: a piece of the body with this id, which broke up */
   fragmentOf?: number;
-  impact?: { lat: number; lon: number };
+  /** where it came down, degrees, and when (`t`, mission time: its contact, which `restT` holds until `rest` moves it on) */
+  impact?: { lat: number; lon: number; t?: number };
   /**
    * Once it has landed: the mission time its stored state is for. From there
    * it only turns with the Earth (see `DebrisTracker.stepDebris`).
