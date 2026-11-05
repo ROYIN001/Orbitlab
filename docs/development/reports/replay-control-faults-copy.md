@@ -13,13 +13,12 @@
 > - ความเร็ว: เที่ยวบินที่มีความขัดข้อง seek ช้าลงราว 4.6–4.8 µs ต่อช่วง (คัดลอกบันทึกสองครั้ง ครั้งละราว 2.3 µs คือช้าลงราว 10% ของการ seek six-DOF ที่ใช้ 40–100 µs) เที่ยวบินอื่นเท่าเดิม (ต่างกันไม่เกิน noise) หน่วยความจำของการบันทึกไม่เปลี่ยน บนโค้ดที่ merge แล้วเทียบกับ main 5588be1: ru-fdir-dus ช้าลง 2.1 µs ต่อช่วง (56.6 → 58.3 µs) เมื่อไม่มีความขัดข้องต่างกันไม่เกิน noise
 > - ฟิลด์อื่นของ `RigidTelemetry` ตรวจครบแล้ว: คัดลอกลึกทั้งหมด ยกเว้น `linearModel`, `attitudeTest` และ `navigation` ซึ่งอยู่บน telemetry samples เท่านั้น ไม่เคยอยู่บนเฟรม (ตรวจทั้งในโค้ดและในเที่ยวบินที่มี navigation)
 > - ที่ยังไม่แก้: เฟรมที่บันทึกไว้ยังใช้บันทึกนี้ร่วมกับ state ของ simulation และบางครั้งกับ telemetry sample ที่เก็บใน step เดียวกัน (simulation สร้างบันทึกใหม่เกือบทุก step และไม่มีโค้ดไหนเขียนทับ) เหมือน `recovery.target` ใน #188
-> - การ merge: PR นี้ซ้อนอยู่บน #188 ต้อง merge หลัง #188 (#187, #189, #190, #191 อยู่ใน main แล้ว และเข้ามาในสาขานี้พร้อม #188)
 > - merge กับหัวของ #188 (f552f2d ซึ่งรวม main 5588be1 แล้ว) เมื่อ 2026-11-05: #188 แก้จุดเดียวกันนี้ไว้เองแล้วตั้งแต่ commit f746b8c (2026-10-31, F2 ของ agent ตัวที่สองของ #188 หลังคุณสั่ง "ทำต่อ") ด้วย `ownFaults` ตัวเดียวกัน และใช้กับ debris ด้วย จุดชนจึงมีแต่ docstring และเทสต์ โค้ดเป็นของ #188 ทั้งหมด หลัง merge PR นี้เหลือเพียงเทสต์ที่บินบทเรียน ru-fdir-dus จริงผ่าน recorder และ docstring ที่ละเอียดกว่า ไม่มีโค้ดของตัวเอง: build ได้เหมือนของ #188 ทุกไบต์ ยกเว้น commit ที่ประทับไว้ใน build (และชื่อ chunk ที่ตามมา)
-> - เงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก: แก้จากผิดเป็นถูก มีเทสต์ที่ fail ก่อนแก้ (บน main ทั้ง 1842a86 และ 5588be1 และบน #188 ก่อน f746b8c) และผ่านหลังแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม (เพิ่มเทสต์ใหม่หนึ่งข้อ) agent ตัวที่สองตรวจแล้ว ยืนยัน 8 จาก 8 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge (ข้อเล็กห้าข้อเรื่องถ้อยคำใน docstring และ guard ของเทสต์ แก้แล้วใน PR นี้) CI ผ่านบนโค้ดสุดท้าย (run 41094577401)
+> - ข้อเสนอ: ปิด PR นี้ ไม่ merge หลัง merge กับหัวของ #188 (f552f2d) PR นี้ไม่มีโค้ดของตัวเอง และเทสต์ใหม่ผ่านบน #188 อยู่แล้ว เมื่อเทียบกับฐานของ PR จึงไม่มีอะไรเปลี่ยนจากผิดเป็นถูก และไม่เข้าเงื่อนไขการอนุมัติล่วงหน้าสำหรับงานแก้บั๊ก การแก้อยู่ใน #188 ตั้งแต่ f746b8c และ #188 merge เข้า main แล้วเมื่อ 2026-11-05 (7d12951 ซึ่งมีโค้ดเหมือน f552f2d ทุกไฟล์) ตามตัวเลือกของคุณ (2026-11-05T14:33:34Z) PR นี้จึงควรปิดพร้อมบันทึกเหตุผลนี้ ถ้าต้องการเก็บเทสต์ที่บินบทเรียน ru-fdir-dus ไว้ เป็นเรื่องที่คุณตัดสิน (เช่น PR แยกที่มีแต่เทสต์)
 
 ```yaml
 item: replay control-faults copy (PR #188's second-agent finding F2, pre-existing on main)
-change_kind: bug fix (the deep copy cloneFrame promises); values unchanged, no assertion changed, no ceiling raised
+change_kind: superseded by #188 (f746b8c; on main as 7d12951); on top of #188's head f552f2d it adds a test and comments only; values unchanged, no assertion changed, no ceiling raised
 owner_authorization: 'owner in chat to this session, 2026-10-30: "Task: 1. Write a failing-first vitest test in the style of `tests/replay-copies.test.ts` [...] 2. Copy `controlFaults` in `cloneRigidTelemetry`, and in `interpolateRigidTelemetry` if it passes the record through. [...] 3. Mind the bundle budget [...] If a field-by-field copy is too large, consider reusing a compact plain-data copy (PR #188 added `copyPlain` in frame.ts) or moving the copy to frame.ts''s seek path."'
 app_code: src/physics/frame.ts (code, the same as #188's own since its f746b8c; after the merge with f552f2d, comments only on top of #188); src/physics/rigid/telemetry.ts (comments only)
 tests: tests/replay-copies.test.ts (one new test)
@@ -52,7 +51,7 @@ The task's first choice was a copy in `cloneRigidTelemetry`. rigid/telemetry.ts 
 - **B's cost in time.** Same values, but `copyPlain` is slower than the hand-written copies it would replace. On a flexible-body record it takes 4.0–5.0 µs against `cloneFlexTelemetry`'s 1.0 µs. A whole `cloneRigidTelemetry` call went from 8.34 to 9.18 µs on a plain six-DOF Falcon 9 frame and from 12.46 to 14.86 µs on a flexible one (medians of 15 alternating runs over ~1,000 recorded frames, Node 22.22.0). That is every six-DOF seek, every stored frame and every telemetry sample, with failures or not, so B was set aside.
 - **A spread-and-walk copy in other forms** (arrays by `slice`, `Object.keys` instead of `for…in`) was no faster on a flexible-body record: 4.3–5.6 µs.
 - **D is #188's policy for `recovery.target`.** The record is copied where a seek hands a frame out. The stored frames keep sharing it with the simulation: the runtime builds a new record at each step it flies (`ControlFaults.record`, rigid/faults.ts:513), and nothing writes into one. A phase that carries the state over spreads `s.rigid` and keeps its record (Apollo's phases, sim/apollo.ts:512 and five more; a touchdown, simulation.ts:1305). On the lesson's flight no two consecutive stored frames share a record.
-- **D also covers the recorder's own hand-outs.** `FlightRecorder.recordNow` and `captureChangedState` hand out `copyOf(stored)`, which is `cloneFrame` (replay/recorder.ts:615–689). The worker session posts that live frame, with the frames stored since its last delta, in one message to the main thread's mirror (session/core.ts:155; session/mirror.ts), where `applyFrameToState` gives it to the shell's state (a six-DOF flight has no `simulationFrame`).
+- **D also covers the recorder's own hand-outs.** `FlightRecorder.recordNow` and `captureChangedState` hand out `copyOf(stored)`, which is `cloneFrame` (replay/recorder.ts:688–763). The worker session posts that live frame, with the frames stored since its last delta, in one message to the main thread's mirror (session/core.ts:155; session/mirror.ts), where `applyFrameToState` gives it to the shell's state (a six-DOF flight has no `simulationFrame`).
   - Before: the live frame shared its record with the stored head frame. When both went in the same delta, the structured clone kept them one object, so the shell's state shared it with the mirror's stored frame.
   - Now they are separate objects before they are posted.
 
@@ -89,7 +88,7 @@ On the frames of a six-DOF flight with navigation and an accelerometer failure (
 
 ### Failing first
 
-`tests/replay-copies.test.ts` gains a fourth test, written in the style of #188's three, which it reuses (`deepFreeze`, `shared`, `seekAll`, `scribble`):
+`tests/replay-copies.test.ts` gains a test (the fourth when written, now the fifth after #188's four), written in the style of #188's tests, whose helpers it reuses (`deepFreeze`, `shared`, `seekAll`, `scribble`):
 - It flies the lesson `ru-fdir-dus` from the published pack (public/lessons/packs/ru-24-05-06.orbitlab-lesson.json) through `FlightRecorder.advance`, as the app does: Soyuz-2.1a six-DOF, uncrewed, IMU 1's rate gyros stuck at T+30 s, no FDIR. It breaks up at T+42.0 s; T+60 s bounds the flight should a later change keep it flying.
 - Checks that every frame (526) carries a record and that more than 50 (123) carry the stuck unit.
 - Deep-freezes the recording, then seeks through `ReplayPlayer.frameAt` on every stored frame and half way to the next (1,051 seeks), and lists by path every frozen object in what came back, `visual` aside.
@@ -187,8 +186,8 @@ The merged build and #188's are the same bytes but for the commit stamped into t
 - **Typecheck:** `npx tsc --noEmit -p .` clean, on the final code.
 - **The new test and its file:** `npx vitest run tests/replay-copies.test.ts`, 4 of 4, on every version of the test (3eb54e5, db69b31, 1a4a4f1). On main and on 1a7ca0c the new test fails as listed under "Failing first".
 - **Unit suite, local:** `npx vitest run`, 335 files, 10,530 tests (#188's 10,529 and the new one), all pass (2,570 s, Node 22.22.0). It ran on 3eb54e5's src, which differs from the final code in comments only. The test file was 3eb54e5's or db69b31's; the step guard came in 1a4a4f1 and was run on its own (4 of 4).
-- **CI:** run 41094577401 green on 1a4a4f1, the final code: typecheck, build with the bundle budget, test ×3, browser-smoke ×2, verify. Runs 41092677703 (034bff5) and 41092811088 (fcd3bf3) show `verify` red only because the next push cancelled their test and browser jobs; on fcd3bf3, typecheck, build, test 1 of 3 and browser-smoke 1 of 2 had passed before the cancel.
-- **Heavy:** `tests/heavy/vostok1-recording.test.ts`, 1 of 1 on the final code (210 s, Node 22.22.0). It records a six-DOF Vostok-1 through the recorder (tests/vostok1-recording-harness.ts), with no failures set, so `ownFaults` finds no record there; it is the only heavy or six-DOF fleet file that builds a recorder or player.
+- **CI:** run 41094577401 green on 1a4a4f1, the code before the merge: typecheck, build with the bundle budget, test ×3, browser-smoke ×2, verify. Runs 41092677703 (034bff5) and 41092811088 (fcd3bf3) show `verify` red only because the next push cancelled their test and browser jobs; on fcd3bf3, typecheck, build, test 1 of 3 and browser-smoke 1 of 2 had passed before the cancel.
+- **Heavy:** `tests/heavy/vostok1-recording.test.ts`, 1 of 1 on 1a4a4f1 (210 s, Node 22.22.0). It records a six-DOF Vostok-1 through the recorder (tests/vostok1-recording-harness.ts), with no failures set, so `ownFaults` finds no record there; it is the only heavy or six-DOF fleet file that builds a recorder or player.
 - **Not run:**
   - The other 32 heavy files and the 6 six-DOF fleet files. A grep of tests/heavy and tests/sixdof-fleet for the recorder, the player, `cloneFrame` and `interpolateFrames` finds only vostok1-recording, so this change cannot reach the others.
   - The browser journeys beyond CI's smoke shards. There is no UI change, and what a seek shows is the same to the bit.
@@ -198,7 +197,7 @@ The merged build and #188's are the same bytes but for the commit stamped into t
   - **Every unit file that imports frame.ts, builds a recorder, player or simview, or touches the control system's failures** (54 files, among them replay-copies, debris-replay, abort-replay-arc, rigid-replay-arc, falling-frames, control-faults, rigid-fleet and lesson-packs): 1,083 tests pass (165 s).
   - **`tests/repo-hygiene.test.ts`:** 9 of 9.
   - **Heavy** (`-c vitest.heavy.config.ts`): `vostok1-recording` and `falling-frames-sixdof`, 2 of 2 (133 s).
-  - **CI** on the pushed merge: not looked at here.
+  - **CI:** run 42052324195 green on dac7eb2 (typecheck, build with the budget, test ×3, browser-smoke ×2, verify).
 
 ## Second-agent review
 
@@ -225,11 +224,10 @@ A second agent reviewed 3eb54e5 (the code) and db69b31 (the test), review only, 
 
 ## Merge order
 
-- **After #188.** This branch is stacked on #188 (`claude/great-mayer-6kapau` at 1a7ca0c) and its PR targets that branch. It needs #188's `copyPlain` and test file. Once #188 merges into main, this PR's base becomes main.
-- **Other open PRs that touch frame.ts,** merged into this branch's head with `git merge-tree`:
-  - #187 (`claude/practical-lovelace-2ndbww`), #191 (`claude/peaceful-planck-uyne6i`) and #190 (`claude/gracious-sagan-zvg16a`, on #187): no conflict.
-  - #189 (`claude/ecstatic-darwin-wijyuc`, on #187): one conflict in `interpolateFrames`, between #188's Apollo and `jettisoned` lines and #189's rendezvous blend. #189 has the same single conflict with #188's head, so this PR adds none.
-- **Bytes:** 244 B are left after this PR. #188 measured #187 at 50 B on top of #188.
+- **Now (2026-11-05):** #188 merged into main as 7d12951, a squash whose tree is f552f2d's. #187, #189, #190 and #191 are on main and came into this branch with f552f2d. This branch adds 0 B to #188's build (451 B left under precache code). With the fix in #188 since f746b8c and its test passing there, this PR is to be closed rather than merged (the owner's option of 2026-11-05T14:33:34Z: a PR no longer needed is closed with the reason recorded).
+- **As of 1a7ca0c (2026-10-30):** this branch was stacked on #188 (`claude/great-mayer-6kapau` at 1a7ca0c) and its PR targets that branch. It needed #188's `copyPlain` and test file.
+  - Other open PRs that touched frame.ts, merged into this branch's head with `git merge-tree`: #187 (`claude/practical-lovelace-2ndbww`), #191 (`claude/peaceful-planck-uyne6i`) and #190 (`claude/gracious-sagan-zvg16a`, on #187), no conflict; #189 (`claude/ecstatic-darwin-wijyuc`, on #187), one conflict in `interpolateFrames`, between #188's Apollo and `jettisoned` lines and #189's rendezvous blend, the same single conflict #189 had with #188's head.
+  - Bytes then: 244 B were left after this PR. #188 measured #187 at 50 B on top of #188.
 
 ## Merge with #188's head f552f2d (main 5588be1)
 
@@ -250,6 +248,6 @@ Nothing from #188 or main was dropped. After the merge this branch adds no code 
 ## Not changed, for later
 
 - **The stored frames can share the record with the simulation and its telemetry samples.** `captureFrame` stores `cloneRigidTelemetry(s.rigid)`, and the telemetry sampler (simulation.ts:1564) takes another copy of `s.rigid`. When both are taken at the same step they share the runtime's record for it: the second agent counted 12 of 526 frames on `ru-fdir-dus` and 172 of 2,121 on the Falcon 9 flight. A consumer that wrote into a telemetry sample's `rigid.controlFaults` would change the recording too. The loop inspector, the CSV export and MCP only read it. Closing this means a copy in `cloneRigidTelemetry`: versions A to C above.
-- **A live capture shares it with the simulation.** When `FlightRecorder.recordNow` hands back a frame it captured without storing it (`return f`, replay/recorder.ts:628), that frame shares the record with the simulation's state, as it does `visual` and a recovery's target (#188's "Not changed, for later").
+- **A live capture shares it with the simulation.** When `FlightRecorder.recordNow` hands back a frame it captured without storing it (`return f`, replay/recorder.ts:701), that frame shares the record with the simulation's state, as it does `visual` and a recovery's target (#188's "Not changed, for later").
 - **MCP's summary hands out the samples' own arrays** (pre-existing, the second agent's N6). `controlFaultsSummary` (mcp.ts:1212) returns `record.active`, `.engines` and `.jets` as they are, so a tool result shares them with a telemetry sample, and sometimes with a stored frame. It matters only if a tool result were changed in place rather than serialised.
 - **No type-level guard,** as #188 notes: nothing marks a frame read-only.
