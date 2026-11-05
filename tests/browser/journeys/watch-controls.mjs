@@ -14,8 +14,8 @@
  *
  * Redesign A (S2): with a flight running, the clock block stands in the top
  * band above the camera views, the caption is one live region and nothing
- * covers the middle of the scene (also in an 844×390 phone landscape, by
- * touch); the clock block does not show outside Watch.
+ * covers the middle of the scene (also in an 844×390 phone landscape, and an
+ * 800×360 one in Russian, by touch); the clock block does not show outside Watch.
  */
 import { press, keyOn } from '../harness.mjs';
 
@@ -115,6 +115,13 @@ async function exercise(t, app, how) {
     t.check(await t.until(() => page.evaluate(() => document.getElementById('viewport').dataset.short === 'true'), { timeoutMs: RESPOND_MS }), 'touch: the 844×390 scene is not a short scene');
     await checkLayout(' at 844×390');
     await page.setViewportSize(size);
+    // and in Russian at 800×360, whose wider camera tabs a second clock row pushed over the centre
+    await page.locator('#lang-select').selectOption('ru');
+    await page.setViewportSize({ width: 800, height: 360 });
+    t.check(await t.until(() => page.evaluate(() => document.getElementById('viewport').dataset.short === 'true'), { timeoutMs: RESPOND_MS }), 'touch: the 800×360 scene is not a short scene');
+    await checkLayout(' at 800×360 in Russian');
+    await page.setViewportSize(size);
+    await page.locator('#lang-select').selectOption('en');
     await t.until(() => page.evaluate(() => document.getElementById('viewport').dataset.short !== 'true'), { timeoutMs: RESPOND_MS });
   }
 

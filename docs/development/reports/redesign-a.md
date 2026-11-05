@@ -560,14 +560,24 @@ first, only the basic information beside it.
   they were, at the bottom, with the same classes.
 - Nothing over the middle of the scene: the parking-orbit note (A9) moves from
   the top centre, where it would cover the clock, to just above the caption.
+  After the review fixes it is there only where the lower third has room: in a
+  short scene and in a scene up to 640 px wide it is back at the top centre, as
+  before S2, and for its 12 s (it can be closed) it covers the clock, and in a
+  short scene the camera tabs too. "Nothing over the middle" holds down to
+  667×375. It does not hold in landscape scenes 640 px wide or less: there the
+  caption and the camera tabs cover the centre, as they did before S2
+  (measured below, "S2 review fixes").
 - On a phone (≤ 860 px) the title and the state share the first row and the
   clock gets its own row under them (mockup E5); the time is 26 px there.
+  After the review fixes a short scene from 720 to 860 px wide keeps the clock
+  on the title row.
 - The state chip is pinned to the last column, so it stays at the right while
   the launch list hides the clock.
 - In a short scene (< 380 px, `data-short`, G2 compact) the clock is one line
   (its label kept) and the caption's sentence is cut to one line with an
   ellipsis; the whole sentence is still in the caption's text, which is the
-  live region.
+  live region. After the review fixes the whole caption is that one line: the
+  beat label, the sentence and the real-flight line side by side.
 - The lesson strip hides in Watch and on the landing page only
   (`body[data-section='home']`), not in the Orbit or Build sections, where
   case and design lessons are answered in it.
@@ -585,7 +595,8 @@ The package's choices list at the top of this report is unchanged.
    fx3 test's mock root has no parent, so there it simply stays detached). The
    `.watch-bar` wrapper is gone: `.watch-bottom` holds the parking note, the
    caption, the Moon note and the controls. The parking note's inline style is
-   `position: static` in that column (it was absolute at the top centre). The
+   `position: static` in that column (it was absolute at the top centre; the
+   review fixes move its position to `modes.css`). The
    launch list hides the clock (`this.stats.hidden` in `openPicker` /
    `closePicker`), as `.watch-ui.picking .watch-bottom` did when the clock was
    in the bottom band. No i18n key, logic or ARIA change: the caption keeps
@@ -656,7 +667,7 @@ Playwright script against this build, not committed; screenshots in the
 session's scratchpad for the owner's review). Pixels from the top of the page;
 "middle" is what covers the centre of `#viewport`:
 
-| Size | Scene (top, height, centre y) | Short | Clock (top–bottom) | Camera tabs top | Lower third top | Middle | Sentence cut |
+| Size | Scene (top, height, centre y) | Short | Clock (top–bottom) | Camera tabs top | Lower third top | Middle (parking note hidden) | Sentence cut |
 |---|---|---|---|---|---|---|---|
 | 1440×900 | 60, 840, 480 | no | 74–174 | 182 | 728 (RU 703) | nothing | no |
 | 1100×650 | 60, 590, 355 | no | 74–174 | 182 | 478 (RU 453) | nothing | no |
@@ -668,6 +679,11 @@ the lower third starts 16 px below the scene's centre with the sentence cut to
 one line; the critique's estimate for a two-line sentence put it above the
 centre. On a phone (≤ 860 px) the clock card spans the scene's width, under
 the title and the state.
+
+This table is the `3f70452` build, measured with the parking-orbit note hidden.
+The review fixes below change the 844×390 row: the clock is back on the title
+row and the lower third now starts at 279, not 256. They also add rows with the
+note shown, and rows for 640×360 and 568×320.
 
 ### Tests run
 
@@ -684,3 +700,197 @@ the title and the state.
 
 Not run here: the full `npx vitest run`, the rest of the browser smoke set,
 heavy and sixdof-fleet. CI runs them.
+
+### S2 review fixes
+
+Same change type (look change). Ten findings. Seven are applied, one of them
+with a different value; one is applied only in this report, because another
+fix replaces its code change; two are not applied, with the reasons given.
+
+1. **The parking-orbit note goes back to the top centre where the lower third
+   has no room.** Two findings: with the note shown, it covered the scene's
+   centre at 390×844 (473–604 against 490) and in short scenes (844×390: 137–246
+   against 240; 915×412: 146–256 against 236). `src/ui/watch.ts` now sets only
+   the note's padding inline. `src/ui/modes.css` puts it in the lower-third
+   column (`.watch-milestone { position: static; transform: none; width:
+   min(460px, 100%) }`, after the `.watch-card` rule) and moves it back to the
+   top centre, where it was before S2, in a short scene (`[data-short=true]`,
+   top 16 px) and in a scene up to 640 px wide (top 12 px). With the note
+   shown, the centre is clear at every size measured from 1440×900 down to
+   667×375, in EN, TH and RU (table below). Trade-off: in those scenes the note
+   covers the clock for its 12 s (it can be closed), and in a short scene the
+   camera tabs too, as it covered the top band before S2.
+   *Not applied:* the other finding's CSS (the note's sentence cut to one line
+   at ≤ 860 px). It would cut the note for sighted phone users, and in an
+   844×390 scene the note would still cover the centre (181–269). The parts of
+   that finding about this report are applied (item 6).
+2. **A short scene's caption is one line.** The beat label sat on its own line
+   above the sentence, which was cut, so the real-flight line or the Moon note
+   pushed the caption over the centre. `[data-short=true] .watch-caption` now
+   takes the nowrap / ellipsis cut, and its children go inline
+   (`display: inline; margin-right: 8px`), as the narration does in
+   `style.css`. `[hidden]` still hides an empty `.watch-real`. At 844×390 the
+   caption is 279–327, 48 px tall, in EN, TH and RU.
+3. **A short scene from 720 to 860 px wide keeps the clock on the title row.**
+   At 860 px and below the clock took a second row even in a short scene. That
+   pushed the Russian camera tabs over the centre at 800×360 and 740×360.
+   A new `@media (min-width: 720px) and (max-width: 860px)` block gives
+   `[data-short=true]` the three columns again and resets the clock's grid
+   area. The tabs are back at 153–189 at 720–844 px in EN and RU (TH 153–190).
+   The lower bound stays at 720 px: at 667 px the Russian clock would run into
+   the state chip. New check: the touch pass of `watch-controls` switches to
+   Russian, sets 800×360, asserts a short scene and runs the layout checks,
+   then goes back to English and its own size. On the `3f70452` build it fails
+   (one failure: "touch at 800×360 in Russian: the middle of the Watch scene is
+   covered by camera-tabs"). With the fixes it passes.
+4. **The clock's column is capped.** The middle track was `auto`. A wrapping
+   flex row's max-content is all three readouts on one line, so Apollo 11's
+   long Moon labels made the clock about 715 px wide. It ran over the state
+   chip and squeezed the title at 861–1024 px. The track is now
+   `fit-content(31rem)`, in the base rule and in item 3's block. *Changed
+   value:* the finding proposed 28rem. With this page's 15 px root font, 28rem
+   is 420 px, narrower than the Russian one-line short-scene clock (456 px). At
+   28rem the one-line clock wrapped to two lines in TH and RU at 915×412,
+   1100×420 and in the 720–860 px band, pushing the tabs down 22 px. 31rem
+   (465 px) keeps every language's real clock on one line and still caps the
+   Moon case. With the worst-case strings ("Above the Moon" / "Speed relative
+   to the Moon" and their TH/RU strings, T+102:34:56) there is no overlap of
+   title, clock and state, and no clipped title, in EN, TH and RU at 1440×900,
+   1280×800, 1024×600, 900×700, 861×800, 1100×420, 915×412 and 720–844 px short
+   scenes. The title keeps at least 102 px. Cost: under the cap the Moon
+   clock wraps in a short scene, to two lines (RU three), and the camera tabs
+   move down 22 px (RU 43 px); in Russian at 720–800×360 they then reach the
+   centre, where the Moon note's caption (item 5) already covers it.
+5. **The Moon note gets the caption's backing.** Without the bottom scrim it
+   stood over the Earth's day side at 1.79–4.15:1. `src/ui/watch.ts` gives it
+   `padding: 3px 10px; border-radius: 8px; background: rgba(10, 16, 24, 0.88)`,
+   margin 0 (the −8 px would make it touch the caption card) and no text
+   shadow: 6.45:1 even over white (computed). Cost: the lower third is 14 px
+   taller while the note shows. In a scene 360 px tall (720–800×360) on Apollo
+   11's Moon leg, the one-line caption then starts at 214, 11 px over the
+   centre (225). Before this fix it started at 228. At 844×390 the caption is
+   clear by 4 px (244 against 240). The contrast fix is kept: it is a WCAG
+   1.4.3 failure, and the overlap only happens on that leg. In a tall phone
+   scene the leg's caption also covers the centre at 360×740 (EN, RU),
+   375×667 and 320×740 once the real-flight line shows too (measured below).
+6. **This report.** The S2 measured table's middle column now says it was
+   measured with the note hidden. The S2 choices say where "nothing over the
+   middle" stops holding (below 667×375 in landscape, as before S2). Rows with
+   the note shown, and rows for 640×360 and 568×320, are in the table below.
+7. **The browser smoke set was run on this build** (both shards; results
+   below), and `r2-viewport-scene-floor` too.
+8. *Not applied:* hiding the caption visually while the note is up in a small
+   scene. Item 1 already takes the note out of the lower third in every scene
+   where this finding measured the stack running into the top band (320×740,
+   844×390, 915×412). There the note no longer sits on top of the caption.
+   This finding's fix would leave the note in the lower third, where in an
+   844×390 scene it would reach the centre (a two- or three-line note, 88 px
+   or more, above the controls). What is left is item 1's trade-off: for up
+   to 12 s the note covers the camera tabs in a short scene (a keyboard user's
+   focused tab can be under it). It can be closed, and it covered them the
+   same way before S2. It is listed for the owner's screenshot review.
+9. *Not applied:* limiting the short-scene cut to touch screens
+   (`@media (pointer: coarse)`). A desktop zoomed to 150–200 % has a short
+   scene too, and there the caption's sentence is cut to one line (56–68 % of
+   it visible); screen readers still get all of it from the live region. The
+   cut follows the owner's G2 compact answer (2026-10-06: "ฉากเตี้ยกว่า 380 px:
+   ย่อป้ายให้เหลือบรรทัดเดียว และพับการ์ดเทเลเมทรีเป็นปุ่ม"), which is set by
+   the scene's height, not by the pointer. The narration already drops its
+   prose the same way on a zoomed desktop. Without the cut, the wrapped caption
+   would reach 10–27 px past the centre. This is the owner's call (WCAG 1.4.4 /
+   1.4.10 against G2 compact), so it is listed for the screenshot review and
+   nothing is changed.
+
+Files: `src/ui/modes.css`, `src/ui/watch.ts`,
+`tests/browser/journeys/watch-controls.mjs`, `changes/claude-u-redesign-a-s2.md`,
+this report. Changed source lines: 28 in `src/` (+20 / −8), 11 in `tests/`
+(+9 / −2).
+
+#### Measured (this container, `npx vite build`, then `node scripts/bundle-budget.mjs`)
+
+**Budget line: within the unchanged ceilings** (no `budgets.json` change).
+
+| Group | S2 (`3f70452`) | S2 with its review fixes | Ceiling |
+|---|---|---|---|
+| `index-*.css` | 178,283 B | 178,863 B (+580 B; 178.9 kB) | 179 kB |
+| `index-*.js` | 2,653,495 B | 2,653,459 B (−36 B; 2653.5 kB) | 2655 kB |
+| `i18n-*.js` | 1732.5 kB | 1732.5 kB | 1733 kB |
+| other chunks | 771.4 kB | 771.4 kB | 772 kB |
+| precache code | 14,678,147 B | 14,678,691 B (+544 B; 14678.7 kB) | 14679 kB |
+| precache | 15797.3 kB | 15797.9 kB | 16078 kB |
+
+Room left for S3: `index-*.css` 137 B, `index-*.js` 1,541 B, precache code
+309 B. S3's plan estimate (+0.49 kB of CSS, about +0.5 kB of precache code)
+no longer fits: S3 has to make that room with an identical-output offset of
+its own, or stop and ask the owner (D-38). No ceiling changes here.
+
+The Watch face on this build, soyuzIss paused about 3 s after the launch,
+Chromium, offline fonts (the same kind of scratch Playwright script, not
+committed; screenshots in the session's scratchpad). "Note" is the
+parking-orbit note forced on with a sentence of its real length in each
+language. Pixels from the top of the page; the same in EN, TH and RU (TH
+within 1 px) except where marked:
+
+| Size | Short | Centre y | Clock | Camera tabs | Caption | Middle, note hidden | Note, shown | Middle, note shown | The note covers |
+|---|---|---|---|---|---|---|---|---|---|
+| 1440×900 | no | 480 | 74–174 | 182–221 | 728–826 | nothing | 609–718 | nothing | nothing |
+| 1100×650 | no | 355 | 74–174 | 182–221 | 478–576 | nothing | 359–468 | nothing | nothing |
+| 1024×600 | no | 330 | 74–174 | 182–221 | 428–526 | nothing | 309–418 | nothing | nothing |
+| 861×800 | no | 430 | 74–174 | 182–221 | 628–726 | nothing | 509–618 | nothing | nothing |
+| 390×844 | no | 490 | 202–293 (RU 222–313) | 301–366 (RU 321–386) | 614–731 (RU 591) | nothing | 147–257 (RU 147–279) | nothing | the clock |
+| 360×740 | no | 438 | 202–293 (TH, RU 222–313) | 301–366 (TH, RU 321–386) | 487–627 (TH 510) | nothing | 147–279 | nothing | the clock |
+| 375×667 | no | 401 | 202–293 (RU 222–313) | 301–366 (RU 321–386) | 414–554 (TH 437) | nothing | 147–279 (TH 147–257) | nothing | the clock |
+| 320×740 | no | 438 | 222–313 (RU 237–328) | 321–386 (RU 336–430) | 487–627 (RU 463) | nothing | 147–279 | nothing | the clock |
+| 1100×420 | yes | 240 | 74–118 | 126–165 | 297–346 | nothing | 76–186 | nothing | clock, tabs |
+| 915×412 | yes | 236 | 74–118 | 126–165 | 289–338 | nothing | 76–186 | nothing | clock, tabs |
+| 844×390 | yes | 240 | 101–145 | 153–189 | 279–327 | nothing | 105–215 | nothing | clock, tabs |
+| 800, 740 and 720×360 | yes | 225 | 101–145 | 153–189 | 249–297 | nothing | 105–215 | nothing | clock, tabs |
+| 667×375 | yes | 232 | 138–181 | 189–226 | 264–312 | nothing | 105–215 | nothing | clock, tabs, camera tools |
+| 640×360 | yes | 230 | 148–192 | 200–237 | 249–297 | camera tabs (TH nothing) | 116–225 | camera tabs (TH nothing) | clock, tabs, camera tools |
+| 568×320 | yes | 210 | 148–192 | 200–237 | 209–257, over the tabs | camera tabs, caption | 116–225 | camera tabs, note, caption | clock, tabs, camera tools |
+
+In a short scene the caption is one line, 48 px tall, in every language. The
+title keeps at least 106 px (RU 720×360).
+
+The Moon case, forced on the same page: Apollo 11's long Moon labels and
+T+102:34:56 in the clock (the strings of item 4), the Moon note and the
+real-flight line. Title, clock and state never overlap, and the title keeps
+at least 102 px. The centre stays clear from 1440×900 down to 861×800, at
+390×844, 1100×420, 915×412 and 844×390 (caption 244 against 240). It is
+covered by the caption at 720–800×360 (214 against 225; in RU the camera tabs
+too, 196–233, under the three-line clock), at 360×740 (EN 428, RU 410 against
+438; TH clear), at 375×667 and at 320×740 (all three; in RU at those two
+sizes the caption also runs over the camera tabs), and in the 640 px and
+narrower landscape scenes. This case was not measured on the `3f70452`
+build; there the Moon note was 14 px lower and the short-scene clock had no
+cap.
+
+#### Tests run
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `npx vitest run tests/watch-logic.test.ts tests/hud-layout.test.ts tests/css-motion.test.ts tests/architecture.test.ts` | 4 files, 60 / 60 passed |
+| `npx vite build && node scripts/bundle-budget.mjs` | bundle budget: ok (numbers above) |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs --dist <copy of this build> watch-controls r2-flight-shell` | 2 / 2 passed in 346.0 s (watch-controls 124.7 s, with the new 800×360 Russian step; r2-flight-shell 210.5 s) |
+| `… --dist <the 3f70452 build> watch-controls` | failing before: 1 failure, "touch at 800×360 in Russian: the middle of the Watch scene is covered by camera-tabs" |
+| `… --dist <copy of this build> --smoke --shard=1/2` | 8 / 8 passed in 394.3 s |
+| `… --dist <copy of this build> --smoke --shard=2/2` | 8 / 8 passed in 622.4 s (the smoke set's 16 journeys; the five held teaching journeys are not run, as on main) |
+| `… --dist <copy of this build> r2-viewport-scene-floor` | 1 / 1 passed in 292.3 s |
+| `… r2-viewport-scene-floor` on the `3f70452` build (the review's run) | 1 / 1 passed in 489.8 s |
+
+Not run here: the full `npx vitest run`, heavy and sixdof-fleet. CI runs
+them.
+
+Choices taken in these fixes under "mix sensibly" (the owner can reverse each
+at the screenshot review): the note at the top centre in short and ≤ 640 px
+scenes (covering the clock, and in a short scene the tabs, for up to 12 s);
+the 720 px lower bound; `fit-content(31rem)`; the Moon note's backing, at the
+cost of 11 px over the centre in a 360 px tall scene on the Moon leg; the
+short-scene caption cut kept on zoomed desktops. The package's choices list
+above is unchanged.
+
+Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
+โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
+ส่วนรูปแบบอื่นๆ จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
+ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ".

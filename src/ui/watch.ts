@@ -121,8 +121,9 @@ export class WatchView {
   private pausedAtEnd = false;
   /**
    * A9: the parking-orbit note. It is shown once a flight, at the top of the
-   * lower third rather than across the scene, and goes by itself, when closed,
-   * or when the next burn lights.
+   * lower third (in a short or narrow scene at the top centre) rather than
+   * across the scene, and goes by itself, when closed, or when the next burn
+   * lights.
    */
   private milestone: HTMLElement;
   private milestoneText: HTMLElement;
@@ -166,7 +167,7 @@ export class WatchView {
     // outside the caption's live region: a standing label, not news; styled here (the CSS is at its budget)
     this.moonNote = el('p', 'watch-moon');
     this.moonNote.hidden = true;
-    Object.assign(this.moonNote.style, { margin: '-8px 0 0', fontSize: '12.5px', color: '#9fb3c4', textShadow: '0 1px 10px rgba(0, 0, 0, 0.7)' });
+    Object.assign(this.moonNote.style, { margin: '0', padding: '3px 10px', borderRadius: '8px', background: 'rgba(10, 16, 24, 0.88)', fontSize: '12.5px', color: '#9fb3c4' });
 
     this.clockValue = el('span', 'watch-num');
     this.altValue = el('span', 'watch-num');
@@ -218,11 +219,11 @@ export class WatchView {
     this.picker.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); this.closePicker(); } });
     this.endCard = el('section', 'watch-card watch-end');
     this.endCard.hidden = true;
-    // A9: the parking-orbit note opens the lower third, above the caption, so the clock at the top stays clear
+    // A9: the parking-orbit note opens the lower third, above the caption; a short or narrow scene puts it back at the top centre (modes.css)
     this.milestone = el('section', 'watch-card watch-milestone');
     this.milestone.hidden = true;
     this.milestone.setAttribute('role', 'status');
-    Object.assign(this.milestone.style, { position: 'static', transform: 'none', width: 'min(460px, 100%)', padding: '12px 14px 14px' });
+    Object.assign(this.milestone.style, { padding: '12px 14px 14px' });
     const milestoneHead = el('div', 'watch-card-head');
     this.milestoneEyebrow = el('span', 'eyebrow');
     this.milestoneClose = el('button', 'watch-close', '×');

@@ -232,8 +232,9 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 .watch-caption[data-beat='failed'] .watch-beat { color: var(--fail); }
 .watch-caption[data-beat='orbit'] .watch-beat, .watch-caption[data-beat='deployed'] .watch-beat { color: var(--ok); }
 .watch-say { margin: 2px 0 0; font-size: 17px; line-height: 1.5; color: #eef4f9; }
-/* the clock block: in the scene's top band (watch.ts moves it there), between the title and the state */
-body[data-mode='watch'] .scene-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+/* the clock block: in the scene's top band (watch.ts moves it there), between the title and the state;
+   its column capped, as a wrapping row's max-content is every readout on one line (31rem holds the Russian one-line clock) */
+body[data-mode='watch'] .scene-top { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(31rem) minmax(0, 1fr); }
 body[data-mode='watch'] .sim-state { grid-column: -2; justify-self: end; }
 body:not([data-mode='watch']) .watch-stats { display: none; }
 .watch-stats { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 10px; padding-top: 8px; font-size: 14px; color: #a9bccd; text-align: center; }
@@ -248,7 +249,8 @@ body:not([data-mode='watch']) .watch-stats { display: none; }
 [data-short=true] .watch-stat:first-child { flex-basis: auto; }
 [data-short=true] .watch-stat:first-child small { display: inline; margin-right: 5px; }
 [data-short=true] .watch-stat:first-child strong { font-size: 18px; }
-[data-short=true] .watch-say { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-short=true] .watch-caption { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-short=true] .watch-caption > * { display: inline; margin-right: 8px; }
 .watch-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; pointer-events: auto; }
 .watch-play {
   display: grid; place-items: center; flex: none;
@@ -293,6 +295,9 @@ body:not([data-mode='watch']) .watch-stats { display: none; }
 }
 .watch-card h2 { margin: 4px 0 8px; font: 600 26px/1.2 var(--display); letter-spacing: -0.5px; }
 .watch-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+/* A9: the parking-orbit note opens the lower third; a short scene or a ≤ 640 px one has no room there, so it is back at the top centre (as before S2) */
+.watch-milestone { position: static; transform: none; width: min(460px, 100%); }
+[data-short=true] .watch-milestone { position: absolute; top: 16px; transform: translateX(-50%); width: min(460px, calc(100% - 32px)); }
 .watch-close { flex: none; width: 36px; height: 36px; border-radius: 8px; font-size: 24px; line-height: 1; color: var(--muted); }
 .watch-close:hover { color: #fff; background: var(--panel2); }
 .watch-pick-lead { margin: 0; font-size: 14px; color: var(--muted); }
@@ -331,8 +336,14 @@ body:not([data-mode='watch']) .watch-stats { display: none; }
   .watch-card { padding: 18px 16px 20px; }
   .watch-card h2 { font-size: 21px; }
 }
+/* a short scene from 720 px keeps the clock on the title row: a second row pushed the Russian camera tabs over the centre */
+@media (min-width: 720px) and (max-width: 860px) {
+  body[data-mode='watch'] [data-short=true] .scene-top { grid-template-columns: minmax(0, 1fr) fit-content(31rem) minmax(0, 1fr); }
+  [data-short=true] .watch-stats { grid-area: auto; }
+}
 @media (max-width: 640px) {
   .watch-speed { padding: 6px 8px; }
+  .watch-milestone { position: absolute; top: 12px; transform: translateX(-50%); width: calc(100% - 24px); }
 }
 
 /* ── S04: offline or online data ─────────────────────────────────────────── */
