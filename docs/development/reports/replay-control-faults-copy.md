@@ -15,7 +15,7 @@
 > - ที่ยังไม่แก้: เฟรมที่บันทึกไว้ยังใช้บันทึกนี้ร่วมกับ state ของ simulation และบางครั้งกับ telemetry sample ที่เก็บใน step เดียวกัน (simulation สร้างบันทึกใหม่เกือบทุก step และไม่มีโค้ดไหนเขียนทับ) เหมือน `recovery.target` ใน #188
 > - merge กับหัวของ #188 (f552f2d ซึ่งรวม main 5588be1 แล้ว) เมื่อ 2026-11-05: #188 แก้จุดเดียวกันนี้ไว้เองแล้วตั้งแต่ commit f746b8c (2026-10-31, F2 ของ agent ตัวที่สองของ #188 หลังคุณสั่ง "ทำต่อ") ด้วย `ownFaults` ตัวเดียวกัน และใช้กับ debris ด้วย จุดชนจึงมีแต่ docstring และเทสต์ โค้ดเป็นของ #188 ทั้งหมด หลัง merge PR นี้เหลือเพียงเทสต์ที่บินบทเรียน ru-fdir-dus จริงผ่าน recorder และ docstring ที่ละเอียดกว่า ไม่มีโค้ดของตัวเอง: build ได้เหมือนของ #188 ทุกไบต์ ยกเว้น commit ที่ประทับไว้ใน build (และชื่อ chunk ที่ตามมา)
 > - ผล: #192 ปิดแล้วเมื่อ 2026-11-05 ไม่ merge เพราะการแก้อยู่ใน main แล้วผ่าน #188 (7d12951) ตามตัวเลือกของคุณ (2026-11-05T14:33:34Z)
-> - PR ต่อจากนี้ (PR_NUMBER, 2026-11-05 ตามที่คุณสั่ง "open a test-only PR with the comment fix"): มีเฉพาะเทสต์ที่บินบทเรียน ru-fdir-dus ผ่าน recorder และ docstring ที่แก้ให้ถูก (ใน main เขียนว่า simulation "สร้างบันทึกใหม่ทุก step" ซึ่งไม่จริงเสมอ: ช่วงของ Apollo และตอนแตะพื้น spread `s.rigid` แล้วใช้บันทึกเดิมต่อ) ไม่มีโค้ด build ได้ไบต์เดียวกับ main ทุก chunk เทสต์ใหม่ fail บน main ก่อน #188 (5588be1) และเมื่อปิด `ownFaults` และผ่านบน main ปัจจุบัน จึงเป็นเทสต์กันถดถอย ไม่ใช่การแก้บั๊ก
+> - PR ต่อจากนี้ (#208, 2026-11-05 ตามที่คุณสั่ง "open a test-only PR with the comment fix"): มีเฉพาะเทสต์ที่บินบทเรียน ru-fdir-dus ผ่าน recorder และ docstring ที่แก้ให้ถูก (ใน main เขียนว่า simulation "สร้างบันทึกใหม่ทุก step" ซึ่งไม่จริงเสมอ: ช่วงของ Apollo และตอนแตะพื้น spread `s.rigid` แล้วใช้บันทึกเดิมต่อ) ไม่มีโค้ด build ได้ไบต์เดียวกับ main ทุก chunk เทสต์ใหม่ fail บน main ก่อน #188 (5588be1) และเมื่อปิด `ownFaults` และผ่านบน main ปัจจุบัน จึงเป็นเทสต์กันถดถอย ไม่ใช่การแก้บั๊ก
 
 ```yaml
 item: replay control-faults copy (PR #188's second-agent finding F2, pre-existing on main)
@@ -25,7 +25,7 @@ app_code: none in the follow-up PR (src/physics/frame.ts and src/physics/rigid/t
 tests: tests/replay-copies.test.ts (one new test, the lesson ru-fdir-dus flown through the recorder)
 base_sha_verified_on: {sha: 7d12951, branch: main, date: 2026-11-05}
 branch: claude/epic-wright-cx214p
-pr: 'PR_NUMBER (on main); before it #192 (stacked on #188, closed 2026-11-05 as superseded)'
+pr: '#208 (on main); before it #192 (stacked on #188, closed 2026-11-05 as superseded)'
 second_agent_review: 'confirmed 8 of 8 claims checked, no blocking findings (2026-10-30, on 3eb54e5 and db69b31); six non-blocking: N1–N5 fixed here (docstring wording, the test''s guard, a duplicate import), N6 pre-existing (under "Not changed, for later")'
 ```
 
