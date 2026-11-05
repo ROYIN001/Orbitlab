@@ -32,6 +32,7 @@
 >   - six-DOF fleet ไม่ได้รัน (suite `heavy` ไม่รวม fleet) มันตรวจวงโคจรที่ส่งถึง ซึ่งการแก้นี้ไม่แตะ
 > - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ ไม่ได้ขึ้นเพดาน ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองไม่มีข้อค้าง CI และ heavy ผ่าน จึงเข้าเงื่อนไขอนุมัติถาวรสำหรับการแก้บั๊ก
 > - ลำดับ merge กับ #195: #195 แก้ไฟล์เดียวกันคนละช่วง (ท้าย `stepDebris`) จึงไม่ชนกัน เมื่อ merge ทั้งคู่แล้ว ขนาดรวมยังอยู่ใต้เพดานใหม่ที่ #195 ขอ
+> - ผลการ merge: คุณตอบในแชตเมื่อ 31 ต.ค. ("Merge" แล้ว "Merge ต่อได้เลย") merge แล้วเป็น `aab0689` (31 ต.ค. 12:28 UTC) หลัง CI 41199826977 ผ่านครบ 9/9 บน `81e0760` (merge main `6953369` ที่มี #195 เข้ามาก่อน ขนาดผ่านบนโค้ดรวม) Pages run ของการ merge นี้ (41201274632) ถูกยกเลิกเพราะ #194 merge ตามมา ก่อนเริ่ม job ใด งานนี้จึงขึ้นเว็บพร้อม #195 #198 #194 และ #196 ด้วย Pages run 41201507001 ที่ `7cbf802` (13:01 UTC) ทุก job ผ่าน 11/11
 > - พบระหว่างตรวจ แต่ไม่ได้แก้ใน PR นี้ (บั๊กเดิม):
 >   - ฝาครอบแบบ point-mass ที่แยกตัวกลาง step ถูกบินเต็ม step อีกรอบ จึงกระโดดไปข้างหน้ายาน 230–556 m ตอนแยกตัว
 >   - ลองจิจูดตอน Starship ลงน้ำคลาดไม่เกิน 0.0001°
@@ -45,6 +46,8 @@ tests: tests/debris-impact-longitude.test.ts (new)
 base_sha_verified_on: {sha: ef9d3f6, date: 2026-10-30}
 branch: claude/lucid-darwin-tcwfxj
 pr: 197
+merged: {sha: aab0689, at: '2026-10-31T12:28:36Z', ci: 41199826977, head: '81e0760', owner_answer: '"Merge", then "Merge ต่อได้เลย" (2026-10-31, in chat in this PR''s session, before the merge; the merge commit quotes them and gives no time)'}
+published: {pages: 41201507001, at: '2026-10-31T13:01:37Z', sha: 7cbf802, own_push_run: '41201274632 at aab0689, cancelled by #194''s merge before any job started'}
 budget: 'unchanged ceilings: precache code 14,653,979 B (+27 B on main ef9d3f6, 21 B under 14,654 kB); index-*.js +3 B; flight, tune, monte-carlo, ratings, readiness and recheck workers +4 B each'
 second_agent_review: 'confirmed 22 of 27 claims checked, no blocking finding (2026-10-31, on 31535a4/f1b8ac3); 3 right in substance but worded too strongly, fixed in this report (the stored-file sweep, "exact", the 0.125° bound); 2 checked only against the probe output (the event-change counts, the fleet-wide table)'
 ci: 'run 41121414907 green on f1b8ac3, run 41176880219 green on 9fbdf29 (plan, typecheck, build, test 1–3, browser-smoke 1–2, verify)'

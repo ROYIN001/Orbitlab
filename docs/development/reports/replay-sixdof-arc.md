@@ -24,6 +24,7 @@
 > - ขนาด: +25 B ต่อ chunk ไม่ได้ขึ้นเพดาน (precache code เหลือที่ว่าง 48 B)
 > - การตรวจโดย agent ตัวที่สอง (5 มุม; ข้อที่พบบางข้อส่งให้ agent อีกตัวพยายามหักล้าง ข้อที่เหลือ session นี้ตรวจซ้ำเองเพราะติดขีดจำกัดการใช้งาน): ยืนยันว่าการเปลี่ยนแปลงตรงตามที่ตั้งใจ 14 จาก 16 ข้อ, การล่า regression 9 จาก 12 ข้อ (พบปัญหา 1 ข้อ คือช่วงที่ยาวเกินหนึ่งรอบวงโคจร แก้แล้วด้วยขอบเขตหนึ่งในสี่ของคาบ), เทสต์และเอกสาร 24 จาก 32 ข้อ, ตรวจตัวเลขในรายงาน 65 จาก 86 ข้อ (ข้อที่ผิดอยู่ในรายงานและคำอธิบาย PR แก้แล้วทั้งหมด), ตรวจขอบเขตหนึ่งในสี่ของคาบ 22 จาก 24 ข้อ ทุกข้อที่พบแก้แล้ว ไม่มีข้อใดค้าง
 > - การ merge: เป็นการแก้บั๊ก (ผิด → ถูก) มีเทสต์ที่ fail ก่อนแก้ (11 จาก 16) ไม่ได้ขึ้นเพดาน และไม่ได้เปลี่ยน assertion เดิม แต่มีข้อแลกเปลี่ยนของ Apollo ที่เจ้าของเลือกไว้ จึงควรให้เจ้าของกดอนุมัติเอง
+> - ผลการ merge: เจ้าของอนุมัติในแชต 2026-10-30: "อนุมัติ merge PR นี้" merge แล้วเป็น `ef9d3f6` (30 ต.ค. 19:39 UTC) หลัง CI ผ่านทั้งหมดบน f7f7577 (run 41026479990) และขึ้นเว็บแล้วด้วย Pages run 41116997002 (20:12 UTC) ทุก job ผ่าน 11/11
 
 ```yaml
 item: replay six-DOF vehicle blend between recorded frames (bug fix)
@@ -34,6 +35,8 @@ tests: tests/rigid-replay-arc.test.ts (new); tests/debris-replay.test.ts (header
 base_sha_verified_on: {sha: 1842a86, date: 2026-10-30}
 branch: claude/practical-lovelace-2ndbww
 pr: 187
+merged: {sha: ef9d3f6, at: '2026-10-30T19:39:12Z', ci: 41026479990, head: f7f7577, owner_answer: 'อนุมัติ merge PR นี้ (2026-10-30, chat; the merge commit quotes it and gives no time)'}
+published: {pages: 41116997002, at: '2026-10-30T20:12:45Z', sha: ef9d3f6}
 second_agent_review: 'equivalence 14 of 16; regression hunt 9 of 12, its blocking finding fixed (c7aac24); tests and docs 24 of 32, its findings fixed (4ec5251); claims audit 65 of 86 (14 wrong, fixed in the record files here; 7 with no artefact on disk); bound check 22 of 24, its finding fixed'
 ```
 

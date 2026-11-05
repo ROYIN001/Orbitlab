@@ -16,6 +16,7 @@
 > - ขนาด: บน main ล่าสุด (merge แล้ว) precache code +10 B เหลือ 1,018 B ใต้เพดาน (#184 ขึ้นเพดานไปแล้ว) ไม่ได้ขึ้นเพดานเอง ตอนเริ่มงาน (บน #191) +4 B เหลือ 55 B โค้ดเดิมสองจุดที่เขียนสั้นลงโดยผลเท่าเดิมตอนนั้นจำเป็นเพื่อให้พอดี ตอนนี้ไม่จำเป็นแล้วแต่ยังช่วยประหยัด เจ้าของเลือกให้แยกเป็น PR ต่างหากได้ (ดูหัวข้อ Size)
 > - เดิมซ้อนอยู่บน #191 (เจ้าของเลือก "Stack on #191") ตอนนี้ #191 merge เข้า main แล้ว และ merge main เข้ามาแล้ว (#187, #193, #184, #189, #191) PR นี้จึงเหลือแค่การเปลี่ยนแปลงของตัวเอง ตัวเลข point-mass และงบเฟรมที่บังคับ วัดใหม่บนโค้ดที่ merge แล้ว ไม่เปลี่ยน เทสต์ heavy ผ่านทั้งสองข้อ
 > - การบันทึกอยู่ในหน่วยความจำ ส่งออกได้ทางเดียว: ปุ่ม Save ของแผงเปรียบเทียบ (U02) บันทึกไฟล์ `.orbitlab-flight.json` ที่มีเส้นทางของยานจากเฟรมที่บันทึกไว้ (ไม่เกิน 4,000 จุด) ไฟล์จาก branch นี้จึงมีจุดมากขึ้นเล็กน้อย แต่รูปแบบไฟล์ไม่เปลี่ยน ไฟล์เก่าและใหม่เปิดได้ทั้งสองเวอร์ชัน (agent ตัวที่สองพบจุดนี้ เดิมรายงานเขียนว่าไม่มีการส่งออก) ไม่มี golden หรือ fingerprint ที่ครอบคลุมจำนวนเฟรม
+> - ผลการ merge: คุณอนุมัติในแชตเมื่อ 31 ต.ค. ("ถ้าmerge ได้เลยก็ดำเนินการเลย") merge แล้วเป็น `1d5ea19` (31 ต.ค. 12:13 UTC) หลัง CI 41181531727 ผ่านครบ 9/9 บน `9028759` โดย #195 merge เข้า main ก่อนหน้านั้น (12:00 UTC) และรวมกันได้โดยไม่ชนกัน Pages run ของการ merge นี้ (41200134858) ถูกยกเลิกเพราะ #197 merge ตามมา จึงไม่ได้ขึ้นเว็บ งานนี้ขึ้นเว็บครั้งแรกพร้อม #195 #197 #194 และ #196 ด้วย Pages run 41201507001 ที่ `7cbf802` (push ของ #196, 13:01 UTC) ทุก job ผ่าน 11/11
 > - การตรวจโดย agent ตัวที่สอง: ยืนยัน 19 จาก 21 ข้อ ไม่มีข้อที่ต้องแก้ก่อน merge มีข้อที่ควรแก้ 2 ข้อ แก้แล้วทั้งคู่: (1) รายงานเคยเขียนว่าไม่มีการส่งออกเฟรม แต่ไฟล์บันทึกจากแผงเปรียบเทียบมีเส้นทางของยาน (รูปแบบไฟล์ไม่เปลี่ยน) (2) "ทุก 5 s" ไม่จริงเมื่อ six-DOF ลอยแบบถือท่า ซึ่งการจำลองก้าวทีละ 10 s (30 s ในวงโคจร GTO) ตัวบันทึกเก็บได้แค่ทุก step วัดเพิ่มทั้ง 20 ภารกิจแล้ว ประมาณการคลาดสูงสุด 22.8 m (Blok A ของ Soyuz) ข้อสังเกตอื่นแก้ใน comment และรายงานแล้ว
 
 ```yaml
@@ -28,6 +29,8 @@ tests: tests/falling-frames.test.ts, tests/heavy/falling-frames-sixdof.test.ts, 
 base_sha_verified_on: {sha: eec8352, date: 2026-10-30, note: 'head of #191 (claude/peaceful-planck-uyne6i), itself on main 1842a86; merged with main up to cbf1614 (#191 merged) on 2026-10-31'}
 branch: claude/zen-dijkstra-f9qa9u
 pr: 198
+merged: {sha: 1d5ea19, at: '2026-10-31T12:13:23Z', ci: 41181531727, head: '9028759', owner_answer: 'ถ้าmerge ได้เลยก็ดำเนินการเลย (2026-10-31, in chat in this PR''s session, before the merge; the merge commit quotes it and gives no time)'}
+published: {pages: 41201507001, at: '2026-10-31T13:01:37Z', sha: 7cbf802, own_push_run: '41200134858 at 1d5ea19, cancelled by #197''s merge (verify failed on the cancelled jobs; publish never ran)'}
 second_agent_review: 'confirmed 19 of 21, no blocking findings; 2 should-fix (S1 the saved flight carries frames; S2 six-DOF held coasts step 10–30 s) answered in this report; 7 non-blocking answered (2026-10-31, on bbfa3e0 and the merge 4ed2c86)'
 ```
 

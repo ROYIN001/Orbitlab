@@ -20,6 +20,7 @@
 > - ขนาด: เล็กลง index −5 B, flight worker −7 B ไม่ได้ขึ้นเพดาน (precache code เหลือ 60 B)
 > - เทสต์: 5 เทสต์ใหม่ fail บน head ของ #187 ทั้ง 5 และผ่านหลังแก้ ไม่ได้เปลี่ยน assertion เดิม agent ตัวที่สองตรวจแล้ว ไม่มีข้อที่ต้องแก้ก่อน merge ข้อที่ควรแก้ 3 ข้อ (ตัวเลข ข้อแลกเปลี่ยนข้างบน และคอมเมนต์เก่า) จัดการแล้ว
 > - ต่อจาก #187: PR นี้สร้างบน branch ของ #187 ควร merge หลัง #187
+> - ผลการ merge: คุณตอบในแชตเมื่อ 30 ต.ค. ("จัดการให้เรียบร้อยตามลำดับเลยครับ" คือ #187 ก่อน แล้วจึง PR นี้) #187 merge ก่อนเป็น `ef9d3f6` (30 ต.ค. 19:39 UTC) แล้ว PR นี้ merge เป็น `089b34e` (31 ต.ค. 06:44 UTC) หลัง CI ผ่านบน `3bb8ed6` (run 41176798467, 9/9 job) และขึ้นเว็บแล้วด้วย Pages run 41177810784 (07:21 UTC) ทุก job ผ่าน 11/11
 
 ```yaml
 item: replay long spans in a thinned recording (bug fix): the last coast thinning pass, the station's blend, Apollo's entry frames
@@ -29,7 +30,9 @@ app_code: src/replay/recorder.ts, src/physics/frame.ts
 tests: tests/replay-long-span.test.ts (new); tests/replay.test.ts (+2); tests/rigid-replay-arc.test.ts (+1, the docked-frame builder moved to module level)
 base_sha_verified_on: {sha: fa92cf6, date: 2026-10-30, note: 'the head of #187 (claude/practical-lovelace-2ndbww), itself on main 1842a86; #187 moved on to f7f7577 (comments, a report and tests), merged in 7910057 and 391d847'}
 branch: claude/ecstatic-darwin-wijyuc
-pr: 189 (stacked on #187)
+pr: 189 (stacked on #187 until #187 merged as ef9d3f6; then on main)
+merged: {sha: 089b34e, at: '2026-10-31T06:44:13Z', ci: 41176798467, head: 3bb8ed6, owner_answer: 'จัดการให้เรียบร้อยตามลำดับเลยครับ (chat, 2026-10-30; #187 first, then this; the merge commit quotes it and gives no time)'}
+published: {pages: 41177810784, at: '2026-10-31T07:21:28Z', sha: 089b34e}
 second_agent_review: 'four lenses on a22922f, nothing blocking; three should-fix items (a number, the pass-4 trade, stale comments) taken on the next commit; see "Second-agent review"'
 ```
 
