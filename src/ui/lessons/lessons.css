@@ -8,6 +8,17 @@
   --lesson-ink: #221700;
 }
 
+/* the classroom look (redesign A, S3): light only where a lesson is studied, the catalogue, the placement test and a
+   lesson's strip (lesson-mode.ts sets the class), not the teacher pages; the top-bar button stays the bar's mint (S1); the
+   scene and the test's figures stay dark */
+.lesson-study {
+  color-scheme: light; color: var(--text);
+  --bg: #f4f6f9; --panel2: #eef2f7; --panel3: #fff; --line: #dde3ea; --line2: #7f8b9b;
+  --text: #0f1b2d; --muted: #4d5b6e; --dim: #5f6b7a; --accent: #1f3fae;
+  --ok: #12704a; --warn: #8a5a00; --fail: #b4232f; --prose: #0f1b2d;
+  --lesson: #1f3fae; --lesson-weak: #e8edfb; --lesson-line: #9fb0e6; --lesson-ink: #fff;
+}
+
 /* ── the button and the landing-page card ─────────────────────────────── */
 .lesson-btn { border-color: var(--accent-line); color: var(--accent) !important; font-weight: 600; border-radius: 9px; }
 .lesson-btn:hover { border-color: var(--accent); }
@@ -39,31 +50,31 @@ body[data-lesson] #first-use-guide { display: none; }
   border: 1px solid var(--lesson-line);
   border-left: 4px solid var(--lesson);
   border-radius: var(--radius);
-  background: linear-gradient(90deg, rgba(58, 45, 12, 0.85), rgba(16, 22, 32, 0.92));
+  background: #fff;
   max-height: 42vh;
   overflow: auto;
 }
 .lesson-strip[hidden] { display: none; }
 .lesson-strip-head { grid-area: head; min-width: 0; }
-.lesson-eyebrow { font: 600 11px/1.4 var(--mono); color: var(--lesson); letter-spacing: 0.04em; text-transform: none; }
+.lesson-eyebrow { font: 600 11px/1.4 var(--mono); color: var(--lesson); text-transform: none; }
 .lesson-strip h2 { margin: 2px 0 4px; font: 600 17px/1.3 var(--display); }
 .lesson-brief { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
-.lesson-hint { margin: 6px 0 0; font-size: 12.5px; line-height: 1.5; color: #ffe3a6; }
+.lesson-hint { margin: 6px 0 0; font-size: 12.5px; line-height: 1.5; color: #132a7a; }
 .lesson-crits { grid-area: crits; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
-.lesson-crit { border: 1px solid var(--line2); border-radius: 8px; padding: 5px 8px; background: rgba(8, 12, 19, 0.55); }
+.lesson-crit { border: 1px solid var(--line2); border-radius: 8px; padding: 5px 8px; background: var(--bg); }
 .lesson-crit-name { display: block; font-size: 11.5px; color: var(--muted); }
 .lesson-crit-value { display: block; font: 12.5px var(--mono); margin-top: 2px; }
 .lesson-crit.pass { border-color: #3f7a57; } .lesson-crit.pass .lesson-crit-value { color: var(--ok); }
-.lesson-crit.passing .lesson-crit-value { color: #b9e8c9; }
+.lesson-crit.passing .lesson-crit-value { color: var(--ok); }
 .lesson-crit.fail { border-color: #8a3a3a; } .lesson-crit.fail .lesson-crit-value { color: var(--fail); }
 .lesson-crit.pending .lesson-crit-value { color: var(--dim); }
 .lesson-status { grid-area: status; }
 .lesson-note { margin: 4px 0; font-size: 12.5px; color: var(--muted); }
 .lesson-note.pass { color: var(--ok); font-weight: 600; font-size: 14px; }
-.lesson-note.fail { color: #ffb0b0; }
+.lesson-note.fail { color: var(--fail); }
 .lesson-note.helped { color: var(--lesson); font-weight: 600; font-size: 14px; }
 .lesson-note.ok { color: var(--lesson); }
-.lesson-debrief { margin: 4px 0; font-size: 12.5px; line-height: 1.55; color: #e9dcc0; }
+.lesson-debrief { margin: 4px 0; font-size: 12.5px; line-height: 1.55; color: var(--text); }
 .lesson-answers { display: flex; flex-wrap: wrap; align-items: end; gap: 6px 14px; }
 .lesson-answers > p { flex-basis: 100%; }
 .lesson-answer { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
@@ -72,7 +83,7 @@ body[data-lesson] #first-use-guide { display: none; }
 .lesson-answer.fail input { border-color: #8a3a3a; }
 .lesson-answer-mark { font: 12px var(--mono); }
 .lesson-answer.pass .lesson-answer-mark { color: var(--ok); }
-.lesson-answer.fail .lesson-answer-mark { color: #ffb0b0; }
+.lesson-answer.fail .lesson-answer-mark { color: var(--fail); }
 .lesson-actions { grid-area: actions; display: flex; flex-direction: column; gap: 5px; min-width: 128px; }
 /* a case lesson (track 6): no criteria to chip, the case's data and its questions under the task */
 .lesson-strip.case { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'head actions' 'status actions'; }
@@ -98,10 +109,10 @@ body[data-lesson] #first-use-guide { display: none; }
 .lesson-answer .lesson-case-option input { width: auto; height: auto; }
 .lesson-case-field { display: inline-flex; align-items: center; gap: 6px; }
 .lesson-case-unit { font: 12px var(--mono); color: var(--muted); }
-.lesson-case-working { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: #cfe9d8; }
+.lesson-case-working { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: var(--ok); }
 /* a design lesson (T01): the criteria chipped, what the mission asks and the answers under the task, over the designer */
 .lesson-note.small { font-size: 11.5px; }
-.lesson-note.warn { color: #ffd98a; }
+.lesson-note.warn { color: var(--warn); }
 .lesson-crit.stale { opacity: 0.6; }
 .lesson-design-req { margin: 2px 0 6px; }
 .lesson-design-req summary { cursor: pointer; font-size: 12.5px; color: var(--lesson); }
@@ -125,17 +136,14 @@ button.lesson-primary:disabled { opacity: 0.45; }
 .lessons-page {
   position: fixed; left: 0; right: 0; bottom: 0; top: 60px; z-index: 45;
   overflow-y: auto; overscroll-behavior: contain;
-  background:
-    radial-gradient(1200px 500px at 15% -10%, rgba(245, 196, 81, 0.10), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(80, 140, 220, 0.08), transparent 60%),
-    var(--bg);
+  background: var(--bg);
   border-top: 3px solid var(--lesson);
 }
 .lessons-page-bar {
   position: sticky; top: 0; z-index: 2;
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
   padding: 10px max(18px, calc((100% - 1260px) / 2));
-  background: rgba(8, 12, 19, 0.92); backdrop-filter: blur(6px);
+  background: var(--bg);
   border-bottom: 1px solid var(--lesson-line);
 }
 .lessons-page-title { font: 600 16px var(--display); color: var(--lesson); }
@@ -171,7 +179,7 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .lesson-file-notice.warn { border-color: var(--lesson-line); } .lesson-file-notice.error { border-color: #8a3a3a; }
 .lesson-file-notice p { margin: 0; }
 .lesson-tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
-.lesson-track { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: rgba(12, 18, 25, 0.6); }
+.lesson-track { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #fff; }
 .lesson-track h3 { margin: 0 !important; font: 600 14.5px/1.3 var(--display) !important; color: var(--lesson) !important; }
 .lesson-track-note { margin: 0 0 8px !important; font-size: 11.5px !important; color: var(--dim) !important; }
 .lesson-card-item { display: flex; gap: 8px; width: 100%; text-align: left; padding: 7px 6px; margin-bottom: 4px; border-radius: 8px; border: 1px solid transparent; }
@@ -186,18 +194,18 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
   font-size: 11.5px; line-height: 1.4; color: var(--muted);
 }
 .lesson-card-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
-.lesson-tag { font: 10px var(--mono); color: var(--blue); border: 1px solid #2a4a66; border-radius: 4px; padding: 0 4px; }
+.lesson-tag { font: 10px var(--mono); color: #0f6b8a; border: 1px solid #2a4a66; border-radius: 4px; padding: 0 4px; }
 .lesson-tag.soon { color: var(--dim); border-color: var(--line2); }
 .lesson-tag.helped { color: var(--lesson); border-color: var(--lesson); }
 .lesson-tag.skip { color: var(--dim); border-color: var(--line2); text-decoration: line-through; }
-.lesson-tag.review { color: #ffb0b0; border-color: #7a3a3a; }
+.lesson-tag.review { color: var(--fail); border-color: var(--fail); }
 .lesson-tag.do { color: var(--text); border-color: var(--line2); }
 .lesson-tag.start { color: var(--lesson-ink); background: var(--lesson); border-color: var(--lesson); font-weight: 700; }
 
 /* ── lesson packs (T03): a group each below the tracks, codes as chips ── */
 .lesson-packs { margin-top: 18px; }
 .lesson-packs-title { margin: 0 0 2px !important; font: 600 15px/1.3 var(--display) !important; color: var(--lesson) !important; }
-.lesson-pack { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; background: rgba(12, 18, 25, 0.6); min-width: 0; }
+.lesson-pack { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; background: #fff; min-width: 0; }
 .lesson-pack h4 { margin: 0 0 4px !important; font: 600 14.5px/1.35 var(--display) !important; color: var(--text) !important; }
 .lesson-pack-meta { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 0 0 6px !important; font-size: 12px !important; line-height: 1.45; color: var(--muted) !important; }
 .lesson-pack-draft {
@@ -205,7 +213,7 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
   font-size: 12.5px !important; line-height: 1.5; color: var(--text) !important;
 }
 .lesson-pack-about { margin-bottom: 6px; font-size: 12px; color: var(--muted); }
-.lesson-pack-about summary { cursor: pointer; color: var(--blue); }
+.lesson-pack-about summary { cursor: pointer; color: #0f6b8a; }
 .lesson-pack-about p { margin: 4px 0 !important; font-size: 12px !important; line-height: 1.5; overflow-wrap: anywhere; }
 .lesson-pack-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 2px 12px; }
 .lesson-codes { display: flex; flex-wrap: wrap; gap: 3px; margin: 3px 0 2px; }
@@ -217,7 +225,7 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 /* ── the placement test ──────────────────────────────────────────────── */
 .assess-progress { display: flex; gap: 3px; margin: 8px 0 16px; }
 .assess-progress i { flex: 1; height: 5px; border-radius: 3px; background: var(--line); }
-.assess-progress i.done { background: var(--lesson); } .assess-progress i.now { background: #fff; }
+.assess-progress i.done { background: var(--lesson); } .assess-progress i.now { background: var(--text); }
 .assess-question { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 22px; }
 .assess-question.single { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
 .assess-prompt { margin: 0 0 12px !important; font: 600 16.5px/1.55 var(--sans) !important; color: var(--text) !important; }
@@ -234,18 +242,20 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .assess-conf { border: 1px solid var(--line2); border-radius: 20px; padding: 4px 12px; color: var(--text); font-size: 13px; }
 .assess-conf.sel { border-color: var(--lesson); background: var(--lesson-weak); }
 .assess-conf-note { margin: 6px 0 0 !important; font-size: 12.5px !important; color: var(--muted) !important; }
-.assess-figure { margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel3); }
-.assess-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; padding: 0; font-size: 12px; color: #cfd8e3; }
+.assess-figure { margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #0c1219; }
+/* its items are .dialog-body li (style.css), coloured by --prose: on the figure's dark plate they keep the dark app's */
+.assess-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; padding: 0; font-size: 12px; --prose: #b8c8d9; }
 .assess-legend i { display: inline-block; width: 22px; margin-right: 6px; vertical-align: middle; border-top: 2px solid; }
 .assess-legend i.dashed { border-top-style: dashed; }
 .assess-figure-wide { max-width: 760px; margin: 0 auto; }
 .assess-figure img { display: block; width: 100%; max-height: 420px; object-fit: contain; border-radius: 6px; }
-.assess-figure figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.assess-figure figcaption { font-size: 12px; color: #96a3b4; margin-top: 6px; }
 .lesson-chart .grid, .lesson-radar .grid { stroke: #26303c; stroke-width: 1; fill: none; }
 .lesson-chart .tick, .lesson-radar .tick { fill: #8494a8; font: 11px var(--sans); }
+.lesson-radar .tick { fill: var(--muted); }
 .lesson-chart .axis { fill: #96a3b4; font: 11.5px var(--sans); }
 .lesson-chart .legend { fill: #cfd8e3; font: 11.5px var(--sans); }
-.lesson-radar .radar-before { fill: rgba(245, 196, 81, 0.18); stroke: var(--lesson); stroke-width: 2; }
+.lesson-radar .radar-before { fill: var(--lesson-weak); stroke: var(--lesson); stroke-width: 2; }
 .lesson-radar .radar-after { fill: rgba(125, 219, 160, 0.14); stroke: var(--ok); stroke-width: 2; stroke-dasharray: 6 4; }
 .assess-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .assess-areas { columns: 2; font-size: 13.5px; }
@@ -258,28 +268,28 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .assess-count { display: block; font-size: 11.5px; color: var(--muted); }
 .assess-summary { margin: 0 0 2px !important; }
 .assess-level { font: 11px var(--mono); border-radius: 5px; padding: 2px 6px; text-align: center; }
-.assess-level.strong { background: #15382a; color: var(--ok); }
+.assess-level.strong { background: #e3f3ea; color: var(--ok); }
 .assess-level.basic { background: var(--lesson-weak); color: var(--lesson); }
-.assess-level.beginner { background: #3a1717; color: var(--fail); }
+.assess-level.beginner { background: #fbe9ea; color: var(--fail); }
 .assess-card { border: 1px solid var(--line2); border-radius: 10px; padding: 9px 13px; margin-bottom: 10px; }
 .assess-card h4 { margin: 0 0 4px; font: 600 14px var(--sans); }
 .assess-card ul { margin: 0; padding-left: 18px; }
 .assess-card li, .assess-card p { font-size: 13px !important; line-height: 1.55 !important; }
-.assess-card.misc { border-color: #7a3a3a; } .assess-card.misc h4 { color: #ffb0b0; }
+.assess-card.misc { border-color: #7a3a3a; } .assess-card.misc h4 { color: var(--fail); }
 .assess-path { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
 .assess-chip { font-size: 12px; border-radius: 6px; padding: 3px 8px; border: 1px solid var(--line2); color: var(--text); }
 .assess-chip.skip { color: var(--dim); text-decoration: line-through; }
-.assess-chip.review { border-color: #7a3a3a; color: #ffb0b0; }
+.assess-chip.review { border-color: #7a3a3a; color: var(--fail); }
 .assess-chip.start { border-color: var(--lesson); background: var(--lesson-weak); color: var(--lesson); font-weight: 700; }
 .assess-chip.soon { opacity: 0.5; }
 .assess-review { padding-left: 22px; }
 .assess-review li { margin-bottom: 14px; }
 .assess-review li p { margin: 2px 0 !important; }
 .assess-review-q { font-weight: 600; color: var(--text) !important; }
-.assess-review li.right .assess-review-q { color: #cdeedb !important; }
-.assess-review li.wrong .assess-review-q { color: #ffd0d0 !important; }
+.assess-review li.right .assess-review-q { color: var(--ok) !important; }
+.assess-review li.wrong .assess-review-q { color: var(--fail) !important; }
 .assess-review-right { color: var(--ok) !important; }
-.assess-review-misc { color: #ffb0b0 !important; }
+.assess-review-misc { color: var(--fail) !important; }
 
 @media (max-width: 860px) {
   .lesson-strip { grid-template-columns: 1fr; grid-template-areas: 'head' 'crits' 'status' 'actions'; margin: 10px 12px 0; }

@@ -222,7 +222,7 @@ export class LessonMode implements LessonToolsHost {
   private active: Active | null = null;
   private readonly locks: PanelLocks;
   private readonly button = el('button', 'quiet-btn lesson-btn');
-  private readonly strip = el('section', 'lesson-strip');
+  private readonly strip = el('section', 'lesson-strip lesson-study');
   private readonly page = el('section', 'lessons-page');
   private readonly pageBar = el('header', 'lessons-page-bar');
   private readonly content = el('div', 'dialog-body lessons-page-body');
@@ -1420,6 +1420,8 @@ export class LessonMode implements LessonToolsHost {
       return;
     }
     document.body.dataset.lessonsPage = view;
+    // the light classroom look (lessons.css) is for studying: the catalogue and the test, not the teacher pages
+    this.page.classList.toggle('lesson-study', view === 'catalog' || view === 'test');
     // T03: the catalogue lists the packs, and the check knows their lessons
     void this.loadPacks();
     this.button.setAttribute('aria-current', 'page');
