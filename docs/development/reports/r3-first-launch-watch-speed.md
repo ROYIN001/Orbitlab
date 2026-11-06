@@ -18,7 +18,7 @@
 >   - เทสต์หน่วยหนึ่งไฟล์ `tests/watch-picked-speed.test.ts` บินเที่ยวบินเดียวกันผ่าน Watch ที่ 100× ของ Watch จนถึงการ์ดจบ และตรวจว่ามีปุ่ม "Try this launch yourself" เทสต์นี้รันใน unit shards ของทุก PR ส่วน `r3-first-launch` รันเฉพาะใน Pages ถ้าปล่อยให้จังหวะอัตโนมัติทับความเร็วที่เลือก เทสต์จะล้ม
 >   - ไม่ได้แก้โค้ดแอป ไม่ได้แก้ journey ไม่ได้เปลี่ยน assertion เดิม และไม่ได้เพิ่มเพดาน
 > - แก้ไขภายหลัง (ดูหัวข้อ "Corrected: r2-flight-shell"): รายงานฉบับแรกเขียนว่า `r2-flight-shell` "ไม่เสี่ยง" โดยไม่ได้รันจริง ซึ่งผิด Pages รัน 42124771467 ล้มที่ขั้นตอน Watch ของ journey นี้ ("the Watch flight did not fly on") วัดแล้วที่โหลด busy loop 8 ตัว การตั้ง warp 25 ผ่าน WebMCP ถูกทับเป็น 1× ภายใน 1.2 วินาที และใช้ 167.3 และ 160.9 วินาทีถึง T+150 (เกิน 120) ส่วนการกดปุ่ม 25× ของ Watch ใช้ 28.3 วินาที การแก้อยู่ใน PR ถัดมา
-> - คำถามสำหรับคุณ (PR นี้ไม่ต้องรอคำตอบ): ใน Watch warp ที่ตั้งจากนอก Watch (WebMCP `control_playback`, ปุ่ม `.` และ `,`) ยังอยู่ได้แค่จนจังหวะอัตโนมัติเปลี่ยนครั้งถัดไป และปุ่ม Auto ยังติดอยู่ ส่วน `control_playback` ตอบ `ok: true` พร้อม warp ใหม่ ตัวเลือกอยู่ท้ายรายงาน ข้อเสนอคือ B: ให้ warp จากนอก Watch นับเป็นการเลือกความเร็วใน Watch เหมือนปุ่มของ Watch
+> - ตัดสินแล้ว (2026-11-06, คุณตอบ "ตอบข้อ B เลย แก้ที่แอป"): warp ที่ตั้งจากนอก Watch (WebMCP `control_playback`, ปุ่ม `.` และ `,`) นับเป็นการเลือกความเร็วใน Watch เหมือนปุ่มของ Watch เอง Watch ออกจาก Auto และค้างความเร็วนั้นจนกด Auto หรือเริ่ม launch ใหม่ แก้ที่แอปใน PR ถัดมา (หัวข้อ "Decided: option B") ที่โหลด busy loop 8 ตัว การตั้ง warp 25 ผ่าน WebMCP ที่เคยใช้ 167.3 และ 160.9 วินาทีถึง T+150 ตอนนี้ใช้ 30.8 และ 29.9 วินาที
 > - พบระหว่างทาง (ยังไม่แก้): ข้อความบนการ์ด "The crew is safe" บอกว่าลูกเรือลงพื้น "{time} after the abort" แต่เวลานั้นมาจากเฟรมที่การ์ดขึ้น ไม่ใช่เวลาลงพื้น เที่ยวบินจริง 3:36 แต่การ์ดเขียน 3:46 ที่ 1× และราว 4:13 ที่ 100× แยกเป็นงานต่างหาก
 
 ```yaml
@@ -133,9 +133,36 @@ The change map (`scripts/verification/select-checks.mjs --files`) selects `tests
 | main `fa3c486` | 1 of 1 passes (the test 1.2 s; 4.2 s with the transform) |
 | main with the automatic pace run over a picked speed (`if (state.playing) this.applyAutoWarp();` at watch.ts:378) | fails: Watch sets `[1, 100, 1, 20, 5, 1]` where `[1, 100]` is expected, the same pace that slowed the journey |
 
+## Decided: option B, a warp set from outside Watch is a speed picked there
+
+The owner chose option B in chat, 2026-11-06: "ตอบข้อ B เลย แก้ที่แอป" (answer B, fix it in the app). The PR that carries this section makes it so; the options as asked are kept under "Not changed, for the owner" below.
+
+**The change.**
+- `WatchView.speedPicked(warp)` (src/ui/watch.ts) leaves Auto, marks the button of the matching speed (none for a warp that is not 1, 5, 25 or 100) and keeps the speed until Auto is pressed or the next launch.
+- `App.setWarp` (src/main.ts), which WebMCP's `control_playback` and the `.` and `,` keys use, tells it when Watch is the page and the live flight is the active clock.
+- The viewer's own buttons, its automatic pace and `startWatch`'s 1× go through a new private `App.applyWarp`, which does not tell it. If they did, the pace's own first warp would turn Auto off.
+- A warp set while replaying, or in the workspace, does not change Watch's speed.
+
+**Measured** (the machine and the probe of "Corrected: r2-flight-shell"; the WebMCP warp 25 of that journey's old Watch step, time from the warp to T+150, limit 120 s):
+
+| Load | Before (main) | After |
+|---|---|---|
+| none | 31.7 s | 24.8 s |
+| 8 busy loops | 167.3 and 160.9 s; the 25× replaced by 1× within 1.2 s | 30.8 and 29.9 s; warp 25 for the whole run, the 25× button marked |
+
+In the browser, with the probe: from Auto at 1×, the `.` key gives 2×, which is no button, so Auto is off and none is marked; the next `.` gives 5× and marks it; `,` twice gives 1× and marks it; the Auto button brings the pace back. A warp set over WebMCP while replaying leaves Auto marked, and going back to the live flight gives the live warp it had.
+
+**Tests.** `tests/watch-picked-speed.test.ts` has three new tests, which fail on main's `src/` and pass here: a warp picked from outside holds to the end card and marks its button (Auto would have set 20×, 5× and 1× on the way); a warp that is no button is a pick too, and Auto brings the pace back; and `main.ts` routes the viewer's own warps around the notice (a source check, as `tests/compare-cursor.test.ts` does, because `App` is not exported).
+
+**Checked.** Locally, against the changed build: `watch-controls` 129.9 s (mouse, keyboard and touch), `r3-first-launch` 76.0 s (the end card 6.3 s into its wait) and `r2-flight-shell` 228.4 s all pass; so do the 13 unit files nearest the change (Watch, `mcp.test.ts`, architecture, privacy inventory, the `main.ts` source checks, i18n, repo hygiene): 225 of 225. `main.ts` is the composition root, so the change map selects the whole unit suite and all 44 journeys: PR CI runs the suite and the smoke journeys (`watch-controls` is one), and the other journeys run in the next Pages run.
+
+**Size.** `index-*.js` +168 B (2,654,000 to 2,654,168 of 2,655,000); precache code 14,678.5 to 14,678.7 of 14,679.0 kB, about 0.3 kB of room left. No ceiling raised. A sentence in the `control_playback` description would have cost about 50 B and was left out; the README says it.
+
+**Not changed.** The two journeys press Watch's own buttons (#209, #212). They could set the warp over WebMCP again now; they stay as they are.
+
 ## Not changed, for the owner
 
-### A warp set from outside Watch
+### A warp set from outside Watch (the question as asked; answered B, above)
 
 While Watch is on Auto, a warp set from outside it lasts only until the automatic pace next sets its own: at Watch's first update after a launch, or at the next change of pace. This covers WebMCP's `control_playback` (an agent on the page) and the `.` and `,` keys. Meanwhile the Auto button stays marked, and `control_playback` answers `ok: true` with the new warp. The README says Watch plays "at an automatic pace … or at a fixed speed"; its fixed speeds are Watch's own buttons.
 - **A. Leave it.** A warp from outside Watch is a nudge the automatic pace may undo. Say so in README's WebMCP table.
