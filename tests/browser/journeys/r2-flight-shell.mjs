@@ -273,7 +273,7 @@ async function cards(t) {
   await app.context.close();
 }
 
-export async function watch(t) {
+async function watch(t) {
   const app = await t.open({ hash: '#/launch/watch' });
   const { page } = app;
   const state = () => app.mcp('read_flight_state');

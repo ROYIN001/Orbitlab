@@ -34,13 +34,6 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
     if (mod.held) { console.log(`⏸ ${name}: held, not run: ${mod.held}`); continue; }
     picked.push({ name, mod });
   }
-  // TEMPORARY, rule 2 evidence for the changed Watch step of r2-flight-shell (PR #212; reverted before merge):
-  // on CI the smoke shards run only that step, RULE2_RUNS (20) times in all.
-  if (smoke && !names.length && process.env.GITHUB_ACTIONS) {
-    const { watch } = await import(pathToFileURL(join(journeyDir, 'r2-flight-shell.mjs')).href);
-    const mod = { default: watch, timeoutMs: 300_000 };
-    picked = Array.from({ length: Number(process.env.RULE2_RUNS ?? 20) }, () => ({ name: 'r2-flight-shell-watch-step', mod }));
-  }
   if (!picked.length && names.length) return { results: [], ok: true };
   if (!picked.length) throw new Error('no journeys selected');
   picked = selectShard(picked, shard);
