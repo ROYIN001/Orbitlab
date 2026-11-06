@@ -19,7 +19,7 @@
 >   - ไม่ได้แก้โค้ดแอป ไม่ได้แก้ journey ไม่ได้เปลี่ยน assertion เดิม และไม่ได้เพิ่มเพดาน
 > - แก้ไขภายหลัง (ดูหัวข้อ "Corrected: r2-flight-shell"): รายงานฉบับแรกเขียนว่า `r2-flight-shell` "ไม่เสี่ยง" โดยไม่ได้รันจริง ซึ่งผิด Pages รัน 42124771467 ล้มที่ขั้นตอน Watch ของ journey นี้ ("the Watch flight did not fly on") วัดแล้วที่โหลด busy loop 8 ตัว การตั้ง warp 25 ผ่าน WebMCP ถูกทับเป็น 1× ภายใน 1.2 วินาที และใช้ 167.3 และ 160.9 วินาทีถึง T+150 (เกิน 120) ส่วนการกดปุ่ม 25× ของ Watch ใช้ 28.3 วินาที การแก้อยู่ใน PR ถัดมา
 > - ตัดสินแล้ว (2026-11-06, คุณตอบ "ตอบข้อ B เลย แก้ที่แอป"): warp ที่ตั้งจากนอก Watch (WebMCP `control_playback`, ปุ่ม `.` และ `,`) นับเป็นการเลือกความเร็วใน Watch เหมือนปุ่มของ Watch เอง Watch ออกจาก Auto และค้างความเร็วนั้นจนกด Auto หรือเริ่ม launch ใหม่ แก้ที่แอปใน PR ถัดมา (หัวข้อ "Decided: option B") ที่โหลด busy loop 8 ตัว การตั้ง warp 25 ผ่าน WebMCP ที่เคยใช้ 167.3 และ 160.9 วินาทีถึง T+150 ตอนนี้ใช้ 30.8 และ 29.9 วินาที
-> - พบระหว่างทาง (ยังไม่แก้): ข้อความบนการ์ด "The crew is safe" บอกว่าลูกเรือลงพื้น "{time} after the abort" แต่เวลานั้นมาจากเฟรมที่การ์ดขึ้น ไม่ใช่เวลาลงพื้น เที่ยวบินจริง 3:36 แต่การ์ดเขียน 3:46 ที่ 1× และราว 4:13 ที่ 100× แยกเป็นงานต่างหาก
+> - พบระหว่างทาง (แก้แล้วใน PR ถัดมา ดูหัวข้อ "Fixed: the crew-safe card's time"): ข้อความบนการ์ด "The crew is safe" บอกว่าลูกเรือลงพื้น "{time} after the abort" แต่เวลานั้นมาจากเฟรมที่การ์ดขึ้น ไม่ใช่เวลาลงพื้น เที่ยวบินจริง 3:36 แต่การ์ดเขียน 3:46 ที่ 1× และราว 4:13 ที่ 100×
 
 ```yaml
 item: r3-first-launch's Watch end card (Pages browser shard 2 failures 40962284621, 41731265523, 42064589225 attempt 1)
@@ -173,7 +173,7 @@ Proposal: B. Every way of picking a speed would then do what the README says, an
 
 ### Found on the way
 
-- **The crew-safe card's time.** `watch.end.crewSafeText` says the escape system brought the crew down "{time} after the abort". `{time}` is taken from the frame the card is written on (watch.ts:449), which is at least the 10 s settle after the touchdown, and more at a high warp. T-10-1's crew is down 3:36 after the abort; the card reads 3:46 at 1×, and 4:13 at 100× (the card's frame on CI was T+247.3 s). The splashdown card already times its sentence from its event (watch.ts:475–477). This is outside this PR.
+- **The crew-safe card's time.** `watch.end.crewSafeText` says the escape system brought the crew down "{time} after the abort". `{time}` is taken from the frame the card is written on (watch.ts:449), which is at least the 10 s settle after the touchdown, and more at a high warp. T-10-1's crew is down 3:36 after the abort; the card reads 3:46 at 1×, and 4:13 at 100× (the card's frame on CI was T+247.3 s). The splashdown card already times its sentence from its event (watch.ts:475–477). Fixed in a later PR; see "Fixed: the crew-safe card's time" below.
 - **`r2-flight-shell.mjs` uses the same pattern, and this report first got it wrong.** See "Corrected: r2-flight-shell" below.
 
 ## Corrected: r2-flight-shell
@@ -208,6 +208,19 @@ Proposal: B. Every way of picking a speed would then do what the README says, an
 Plan S18 §18.6 rule 2 says a changed journey runs 20 times on CI before merge. This is 20 runs of the changed step, not of the whole journey: the whole journey takes about 380 s a run on CI, so 20 runs of it do not fit the 25-minute smoke jobs. Its other steps are untouched; the whole journey runs on Pages after the merge, and ran once here, locally. On the temporary commit CI's `verify` failed, as the commit said it would, because the executed journeys differed from the plan; the last commit of this PR has no such change, and its CI run is the one that counts.
 
 **Other journeys.** No other journey sets a warp over WebMCP while Watch is open: `watch-controls` and (since #209) `r3-first-launch` press Watch's own speed buttons; the others set it in the workspace, where Watch's pace is not running.
+
+## Fixed: the crew-safe card's time
+
+The card said the escape system brought the crew down "{time} after the abort", and took `{time}` from the frame it is written on. That frame is at least the 10 s settle (`RETURN_SETTLE`) after the touchdown, and further after it at a high warp, where one update is ten seconds of flight or more. The splashdown card already used the event: `showEnd` now takes the touchdown from the newest `evt.escapeLanded` the viewer has seen, and counts from the abort to it (`src/ui/watch.ts`, the `crewSafe` branch). A frame with no such event falls back to the frame's own time, as before.
+
+`tests/watch-picked-speed.test.ts` has two new tests (Soyuz T-10-1's pad abort, flown headless as the viewer flies it): Watch's 1× and 100× buttons, flown to the end card; the card's time must be the flight of the escape system, abort to `evt.escapeLanded`, and the frame must be more than 9 s past it (so the test cannot pass by the two being the same).
+
+| Speed | Flight, abort to touchdown | Card before the fix | Card after |
+|---|---|---|---|
+| 1× | 216.2 s (03:36) | 03:46 | 03:36 |
+| 100× | 216.2 s (03:36) | 03:55 here (04:13 on CI, whose card frame was T+247.3 s) | 03:36 |
+
+Both new tests fail on main's `src` and pass with the fix. `index-*.js` +73 B (2,654,168 to 2,654,241 of 2,655,000); precache code 14,678.7 to 14,678.8 of 14,679.0 kB; no ceiling raised.
 
 ## Checking it in CI
 

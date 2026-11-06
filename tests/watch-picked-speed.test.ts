@@ -6,7 +6,8 @@
  * from outside Watch (WebMCP's `control_playback`, the `.` and `,` keys) is a speed picked there too
  * (`WatchView.speedPicked`, told by `App.setWarp`): without that, its automatic pace set its own warp again, and
  * a journey that sped the flight up over WebMCP missed its end card on a slow runner
- * (docs/development/reports/r3-first-launch-watch-speed.md).
+ * (docs/development/reports/r3-first-launch-watch-speed.md). The last tests are the same flight's end card at 1× and
+ * at 100×: it gives the time the escape system took, abort to touchdown, not the time of the frame it is written on.
  */
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { WatchView, type WatchHost } from '../src/ui/watch';
@@ -156,4 +157,29 @@ it('the viewer\'s own speeds and its automatic pace reach the warp without telli
   expect(set.slice(0, set.indexOf('\n  }\n'))).toContain("if (this.mode === 'watch' && this.player.live) this.watch.speedPicked(v);");
   const apply = mainSource.slice(mainSource.indexOf('  private applyWarp(v: number): void {'));
   expect(apply.slice(0, apply.indexOf('\n  }\n'))).not.toContain('watch');
+});
+
+/** The time the card gives for the escape system's flight, "{time} after the abort": the first mm:ss of its sentence. */
+function cardTime(v: ReturnType<typeof viewer>): string {
+  const sentence = v.root.querySelector('.watch-end')!.all().find((n) => n.tagName === 'P')!.textContent;
+  return /\d+:\d{2}/.exec(sentence)![0];
+}
+
+/** What the card should read: the crew down (`evt.escapeLanded`) after the abort, not the frame the card is written on. */
+function crewDownAfterAbort(v: ReturnType<typeof viewer>): number {
+  const down = v.recorder.events.find((e) => e.key === 'evt.escapeLanded')!;
+  return down.t - v.recorder.recordNow().abort!.t0;
+}
+
+it.each([['1', 1], ['100', 100]])('the crew-safe card times the escape system\'s flight to the touchdown, at %s× as at any other speed', (speed) => {
+  const v = viewer();
+  v.button(speed).click();
+  v.flyToTheCard();
+  expectCrewSafeCard(v);
+  const frame = v.recorder.recordNow();
+  const flight = crewDownAfterAbort(v);
+  // the card waits for the touchdown to be seen, so the frame it is written on is later than the touchdown
+  expect(frame.t - frame.abort!.t0).toBeGreaterThan(flight + 9);
+  const mm = String(Math.floor(flight / 60)).padStart(2, '0'), ss = String(Math.floor(flight % 60)).padStart(2, '0');
+  expect(cardTime(v), `the flight took ${flight.toFixed(1)} s`).toBe(`${mm}:${ss}`);
 });
