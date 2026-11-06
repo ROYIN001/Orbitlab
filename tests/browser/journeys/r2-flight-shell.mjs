@@ -284,10 +284,19 @@ async function watch(t) {
   await app.shot('watch-camera-tabs');
   await press(t, app, page.locator('.cam-btn[data-cam="onboard"]'), 'mouse', 'Watch onboard view');
   t.check((await state()).camera === 'onboard', 'Watch did not take the onboard view');
-  await app.mcp('control_playback', { action: 'warp', warp: 25 });
+  // Watch's own 25×, which it keeps for the whole flight. A warp set over WebMCP lasts only until Watch's
+  // automatic pace next sets its own: at Watch's first update after the launch, which on a slow runner can
+  // come after the call (the flight then plays at 1× from the pad, and T+150 took 161–167 s against the 120 s
+  // below with eight busy loops on four cores), and at T+100, where the pace falls to 2× and 1×
+  // (docs/development/reports/r3-first-launch-watch-speed.md; the same cause as r3-first-launch's, #209).
+  if (!(await press(t, app, page.locator('.watch-speed[data-speed="25"]'), 'mouse', 'Watch\'s 25×'))) return;
+  let warp;
+  t.check(await t.until(async () => (warp = (await state()).warp) === 25, { timeoutMs: RESPOND_MS, intervalMs: 250 }),
+    `Watch's 25× did not set the warp to 25 (warp ${warp})`);
   const ok = await t.until(async () => (await state()).cursorTimeS > 150, { timeoutMs: 120_000, intervalMs: 1000 });
-  t.check(ok, 'the Watch flight did not fly on');
-  const s = await state();
+  const flown = await state();
+  t.check(ok, `the Watch flight did not fly on (T${flown.cursorTimeS >= 0 ? '+' : ''}${flown.cursorTimeS.toFixed(1)} s, warp ${flown.warp}, playing ${flown.playing})`);
+  const s = flown;
   t.check(s.camera === 'onboard', `Watch's picked view did not survive the phase changes: ${s.camera} at T+${s.cursorTimeS.toFixed(0)} s`);
   await press(t, app, page.locator('#btn-cinematic'), 'mouse', 'Watch Cinematic');
   t.check(await page.locator('#btn-cinematic').getAttribute('aria-pressed') === 'true', 'Watch Cinematic is not marked on');

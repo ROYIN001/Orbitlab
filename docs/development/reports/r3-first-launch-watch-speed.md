@@ -17,6 +17,7 @@
 >   - รายงานนี้ คือสาเหตุและหลักฐานที่วัดแยกจาก #209 (#209 มีแต่ fragment ไม่มีรายงาน)
 >   - เทสต์หน่วยหนึ่งไฟล์ `tests/watch-picked-speed.test.ts` บินเที่ยวบินเดียวกันผ่าน Watch ที่ 100× ของ Watch จนถึงการ์ดจบ และตรวจว่ามีปุ่ม "Try this launch yourself" เทสต์นี้รันใน unit shards ของทุก PR ส่วน `r3-first-launch` รันเฉพาะใน Pages ถ้าปล่อยให้จังหวะอัตโนมัติทับความเร็วที่เลือก เทสต์จะล้ม
 >   - ไม่ได้แก้โค้ดแอป ไม่ได้แก้ journey ไม่ได้เปลี่ยน assertion เดิม และไม่ได้เพิ่มเพดาน
+> - แก้ไขภายหลัง (ดูหัวข้อ "Corrected: r2-flight-shell"): รายงานฉบับแรกเขียนว่า `r2-flight-shell` "ไม่เสี่ยง" โดยไม่ได้รันจริง ซึ่งผิด Pages รัน 42124771467 ล้มที่ขั้นตอน Watch ของ journey นี้ ("the Watch flight did not fly on") วัดแล้วที่โหลด busy loop 8 ตัว การตั้ง warp 25 ผ่าน WebMCP ถูกทับเป็น 1× ภายใน 1.2 วินาที และใช้ 167.3 และ 160.9 วินาทีถึง T+150 (เกิน 120) ส่วนการกดปุ่ม 25× ของ Watch ใช้ 28.3 วินาที การแก้อยู่ใน PR ถัดมา
 > - คำถามสำหรับคุณ (PR นี้ไม่ต้องรอคำตอบ): ใน Watch warp ที่ตั้งจากนอก Watch (WebMCP `control_playback`, ปุ่ม `.` และ `,`) ยังอยู่ได้แค่จนจังหวะอัตโนมัติเปลี่ยนครั้งถัดไป และปุ่ม Auto ยังติดอยู่ ส่วน `control_playback` ตอบ `ok: true` พร้อม warp ใหม่ ตัวเลือกอยู่ท้ายรายงาน ข้อเสนอคือ B: ให้ warp จากนอก Watch นับเป็นการเลือกความเร็วใน Watch เหมือนปุ่มของ Watch
 > - พบระหว่างทาง (ยังไม่แก้): ข้อความบนการ์ด "The crew is safe" บอกว่าลูกเรือลงพื้น "{time} after the abort" แต่เวลานั้นมาจากเฟรมที่การ์ดขึ้น ไม่ใช่เวลาลงพื้น เที่ยวบินจริง 3:36 แต่การ์ดเขียน 3:46 ที่ 1× และราว 4:13 ที่ 100× แยกเป็นงานต่างหาก
 
@@ -141,12 +142,35 @@ While Watch is on Auto, a warp set from outside it lasts only until the automati
 - **B. Count it as picking a speed in Watch**, as Watch's buttons do. Watch leaves Auto until Auto is pressed or the next launch, marks the matching button, and marks none for a warp that is not 1, 5, 25 or 100.
 - **C. Close only the first-update race.** Watch's first update after a launch would not set again the 1 the launch already started at. A warp set right after a launch would then last until the pace first changes, as one set later does.
 
-Proposal: B. Every way of picking a speed would then do what the README says, and an agent's `control_playback` result would be true. It changes what the keys and WebMCP do in Watch, so it waits for your answer. Nothing here depends on it.
+Proposal: B. Every way of picking a speed would then do what the README says, and an agent's `control_playback` result would be true. It changes what the keys and WebMCP do in Watch, so it waits for your answer. Nothing here depends on it. `r2-flight-shell` (below) is a second journey that this behaviour made fail on Pages, which counts for B: an agent on the page can meet the same thing.
 
 ### Found on the way
 
 - **The crew-safe card's time.** `watch.end.crewSafeText` says the escape system brought the crew down "{time} after the abort". `{time}` is taken from the frame the card is written on (watch.ts:449), which is at least the 10 s settle after the touchdown, and more at a high warp. T-10-1's crew is down 3:36 after the abort; the card reads 3:46 at 1×, and 4:13 at 100× (the card's frame on CI was T+247.3 s). The splashdown card already times its sentence from its event (watch.ts:475–477). This is outside this PR.
-- **`r2-flight-shell.mjs` uses the same pattern.** Its Watch step (line 287) sets warp 25 with `control_playback` and waits up to 120 s for T+150. Watch's pace for that launch is 1× until T+100 and so does not change before then, which keeps the 25× until T+100: the step is not at risk today.
+- **`r2-flight-shell.mjs` uses the same pattern, and this report first got it wrong.** See "Corrected: r2-flight-shell" below.
+
+## Corrected: r2-flight-shell
+
+**What this report first said, and why it was wrong.** The first version (merged in #210, `4476540`) said that `r2-flight-shell`'s Watch step "is not at risk today", because Watch's pace stays 1× until T+100 and so leaves the 25× alone until then. That was reasoned from the code and never run, and it missed two things: Watch's first update after a launch sets 1 whenever it comes after the journey's call, and after T+100 the pace is 2× and 1×, so the last 50 s of flight to T+150 play slowly. Pages run 42124771467 (schedule, 2026-11-05T22:49Z, at `b195875`) then failed browser shard 3 on that step: `r2-flight-shell`, "the Watch flight did not fly on", 378.8 s; `r3-first-launch` (shard 2) passed in the same run, and so did the other 11 journeys of shard 3. `verify` failed and `publish` was skipped.
+
+**The step.** `watch()` in tests/browser/journeys/r2-flight-shell.mjs opens `#/launch/watch`, picks the first launch (Soyuz to the station), presses the onboard camera, sets warp 25 with WebMCP's `control_playback` and waits up to 120 s for the flight's clock to pass T+150.
+
+**Measured** (the probe is a gitignored copy of the step with the warp, the flight's clock and the frame rate read every second; the machine and the busy loops are those of "Measured" above; time from setting the warp to T+150, limit 120 s):
+
+| Load | Warp set with WebMCP (as the journey did) | Watch's own 25× button (the fix) |
+|---|---|---|
+| none | 31.7 s | 20.2 s |
+| 3 busy loops | 57.8 s and 54.2 s | 30.7 s and 31.5 s |
+| 8 busy loops | **167.3 s and 160.9 s: past the 120 s** | 28.3 s |
+
+- With WebMCP's warp, the 25× was replaced by the pace's 2× and 1× after T+100 in every run (the pace changes at T+100; the probe reads once a second, and at 25× a second is 25 s of flight, so it saw the change at T+100–126: T+114.5 → 2×, T+119.3 → 1×, T+130 → 2× at 3 busy loops). With 8 busy loops the 25× was replaced by 1× within 1.2 s of being set (seen at T−9.5 and T−10) in both runs, so the whole flight to T+150 played at 1×, at 1–4 frames/s.
+- With Watch's own 25× the warp stayed 25 in all 4 runs that read it each second, and T+150 came after 20–32 s whatever the load.
+- 8 busy loops on 4 cores are heavier than the runners' (the GPU process there used 11.4 CPU-s in 3 s; here about 5 with 3 busy loops), so this shows that the step can pass 120 s and why, not that it fails at the CI's own rate. The failure's screenshots could not be read from this session, so the cause on CI is the same mechanism, not shown to be the same instance.
+- The first version's reasoning holds for the part before T+100 when Watch's first update comes before the call, as it did at 3 busy loops and below. It does not hold when the call comes first, and it left out the slow flight after T+100.
+
+**The fix** (the PR that carries this section): the step presses Watch's own 25× (`.watch-speed[data-speed="25"]`), checks within 20 s that `read_flight_state` gives warp 25, and keeps the 120 s wait for T+150, now with the flight's clock, warp and whether it plays in the failure message. No other line of the journey changes.
+
+**Other journeys.** No other journey sets a warp over WebMCP while Watch is open: `watch-controls` and (since #209) `r3-first-launch` press Watch's own speed buttons; the others set it in the workspace, where Watch's pace is not running.
 
 ## Checking it in CI
 
