@@ -170,6 +170,16 @@ Proposal: B. Every way of picking a speed would then do what the README says, an
 
 **The fix** (the PR that carries this section): the step presses Watch's own 25× (`.watch-speed[data-speed="25"]`), checks within 20 s that `read_flight_state` gives warp 25, and keeps the 120 s wait for T+150, now with the flight's clock, warp and whether it plays in the failure message. No other line of the journey changes.
 
+**Checked after the fix** (the journey is `r2-flight-shell` as in this PR; times are the runs' own):
+
+| Where | What | Result |
+|---|---|---|
+| This machine, no load | the whole journey, once | passed, 204.5 s (the failing run on CI: 378.8 s) |
+| This machine, 8 busy loops | the Watch step, 3 runs | 3 of 3 passed, 61.9–65.2 s a run, where the WebMCP warp took 160.9 and 167.3 s to T+150 |
+| CI, rule 2 | the Watch step, 20 runs: a temporary commit (`23389f2`, reverted by `ffad733`) exported the step and made the two smoke shards run it 10 times each; CI run 42238486084 | **20 of 20 passed**: shard 1 63.6–67.6 s a run, shard 2 45.0–48.8 s |
+
+Plan S18 §18.6 rule 2 says a changed journey runs 20 times on CI before merge. This is 20 runs of the changed step, not of the whole journey: the whole journey takes about 380 s a run on CI, so 20 runs of it do not fit the 25-minute smoke jobs. Its other steps are untouched; the whole journey runs on Pages after the merge, and ran once here, locally. On the temporary commit CI's `verify` failed, as the commit said it would, because the executed journeys differed from the plan; the last commit of this PR has no such change, and its CI run is the one that counts.
+
 **Other journeys.** No other journey sets a warp over WebMCP while Watch is open: `watch-controls` and (since #209) `r3-first-launch` press Watch's own speed buttons; the others set it in the workspace, where Watch's pace is not running.
 
 ## Checking it in CI
