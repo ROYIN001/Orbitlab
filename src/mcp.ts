@@ -144,7 +144,8 @@ export interface McpAppHost {
   /** Set the time warp of whichever clock (`warp` or `replayWarp`) is currently
    *  active, keeping the on-screen warp selector and the `,`/`.` keyboard
    *  stepping in sync (`App.setWarp`) — writing `warp`/`replayWarp` directly
-   *  leaves both stale. */
+   *  leaves both stale. In the launch viewer, on the live flight, it picks a
+   *  speed there, as the viewer's own buttons do. */
   setWarp(v: number): void;
   seek(time: number): void;
   goLive(): void;

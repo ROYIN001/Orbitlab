@@ -690,7 +690,7 @@ class App {
     this.watch = new WatchView(document.getElementById('watch-ui')!, {
       start: (id) => this.startWatch(id),
       togglePlay: () => this.togglePlay(),
-      setWarp: (warp) => this.setWarp(warp),
+      setWarp: (warp) => this.applyWarp(warp),
       explore: () => this.go(route('launch', 'explore')),
       tryCopy: (id) => this.tryWatchCopy(id),
       continueInOrbit: () => this.continueInOrbit(),
@@ -913,7 +913,7 @@ class App {
     this.loadViewerMission('watch', watchMissionSettings(id));
     if (!this.panel.isValid()) return;
     this.launch(this.panel.getConfig());
-    this.setWarp(1);
+    this.applyWarp(1);
     this.watch.begin(id);
     void this.loadSoundtrack(id);
     this.watchPayloadKey = watchMissionById(id)?.payloadKey ?? null;
@@ -1426,8 +1426,16 @@ class App {
    * (`src/mcp.ts`) can drive it too, instead of writing `warp`/`replayWarp`
    * directly — which used to leave the dropdown showing a stale value and
    * `,`/`.` stepping from the wrong index (review, WAVE 3 WebMCP follow-up).
+   * In the launch viewer, on the live flight, it is a speed picked there, as its
+   * own buttons are (`WatchView.speedPicked`); the viewer's own speeds and its
+   * automatic pace come through `applyWarp`, which does not tell it.
    */
   setWarp(v: number): void {
+    this.applyWarp(v);
+    if (this.mode === 'watch' && this.player.live) this.watch.speedPicked(v);
+  }
+
+  private applyWarp(v: number): void {
     if (this.player.live) this.warp = v; else this.replayWarp = v;
     this.warpSel.value = String(v);
   }

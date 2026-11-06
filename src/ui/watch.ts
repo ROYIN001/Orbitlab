@@ -300,6 +300,17 @@ export class WatchView {
     this.syncSpeedButtons();
   }
 
+  /**
+   * The live flight's warp was set from outside the viewer (WebMCP's `control_playback`, the `.` and `,` keys):
+   * that is a speed picked here, as its own buttons are. On Auto the pace would set its own warp at its next
+   * change and take it back. It stays until Auto is pressed or the next launch.
+   */
+  speedPicked(warp: number): void {
+    this.speed = warp;
+    this.lastWarp = 0;
+    this.syncSpeedButtons();
+  }
+
   private syncSpeedButtons(): void {
     for (const b of this.speedGroup.querySelectorAll<HTMLButtonElement>('.watch-speed')) {
       const on = b.dataset.speed === String(this.speed);
