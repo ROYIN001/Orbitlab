@@ -20,6 +20,7 @@
 > - แก้ไขภายหลัง (ดูหัวข้อ "Corrected: r2-flight-shell"): รายงานฉบับแรกเขียนว่า `r2-flight-shell` "ไม่เสี่ยง" โดยไม่ได้รันจริง ซึ่งผิด Pages รัน 42124771467 ล้มที่ขั้นตอน Watch ของ journey นี้ ("the Watch flight did not fly on") วัดแล้วที่โหลด busy loop 8 ตัว การตั้ง warp 25 ผ่าน WebMCP ถูกทับเป็น 1× ภายใน 1.2 วินาที และใช้ 167.3 และ 160.9 วินาทีถึง T+150 (เกิน 120) ส่วนการกดปุ่ม 25× ของ Watch ใช้ 28.3 วินาที การแก้อยู่ใน PR ถัดมา
 > - ตัดสินแล้ว (2026-11-06, คุณตอบ "ตอบข้อ B เลย แก้ที่แอป"): warp ที่ตั้งจากนอก Watch (WebMCP `control_playback`, ปุ่ม `.` และ `,`) นับเป็นการเลือกความเร็วใน Watch เหมือนปุ่มของ Watch เอง Watch ออกจาก Auto และค้างความเร็วนั้นจนกด Auto หรือเริ่ม launch ใหม่ แก้ที่แอปใน PR ถัดมา (หัวข้อ "Decided: option B") ที่โหลด busy loop 8 ตัว การตั้ง warp 25 ผ่าน WebMCP ที่เคยใช้ 167.3 และ 160.9 วินาทีถึง T+150 ตอนนี้ใช้ 30.8 และ 29.9 วินาที
 > - พบระหว่างทาง (ยังไม่แก้): ข้อความบนการ์ด "The crew is safe" บอกว่าลูกเรือลงพื้น "{time} after the abort" แต่เวลานั้นมาจากเฟรมที่การ์ดขึ้น ไม่ใช่เวลาลงพื้น เที่ยวบินจริง 3:36 แต่การ์ดเขียน 3:46 ที่ 1× และราว 4:13 ที่ 100× แยกเป็นงานต่างหาก
+> - ผลการ merge และการเผยแพร่: เซสชันนี้ merge ทั้งสาม PR แบบ squash ตามคำของคุณในแชตของเซสชันนี้ #210 เป็น `4476540` (6 พ.ย. 05:28:14 UTC หลังคุณเขียนว่า "เปิด pr แล้ว merge เลย" เมื่อ 05:27:21Z, CI 42115697822 ผ่าน 9/9 บน `67bb582`) Pages 42168605010 เผยแพร่เมื่อ 06:00:42Z; #212 เป็น `4b7b66c` (20:12:21Z หลัง "merge เลย" เมื่อ 20:11:05Z, CI 42241370758 ผ่าน 9/9 บน `9c874a5`) Pages 42286344470 เผยแพร่เมื่อ 20:43:36Z; #213 เป็น `d01019a4` (21:58:22Z หลัง "merge เลย" เมื่อ 21:57:31Z, CI 42289380529 ผ่าน 9/9 บน `a82a929`) Pages 42301024823 เผยแพร่เมื่อ 22:33:31Z ผ่านครบ 11 job และ 38 journey บันทึกอยู่ใน DECISIONS หัวข้อ "Decided 2026-11-06 (#210, #212, #213 and the warp set from outside Watch; chat)" และในประวัติของ PROGRESS ข้อ "พบระหว่างทาง" (เวลาบนการ์ด "The crew is safe") ยังไม่ได้แก้บน main: หลังคุณเขียนว่า "จัดการงานที่ยังเปิดอยู่ปิดให้เรียบร้อยครับ" (22:02:53Z) เซสชันนี้เปิด draft #214 (`claude/gifted-gates-crew-safe-time`, 22:20:01Z) ที่แก้เรื่องนี้ ยังไม่ได้ merge
 
 ```yaml
 item: r3-first-launch's Watch end card (Pages browser shard 2 failures 40962284621, 41731265523, 42064589225 attempt 1)
@@ -30,6 +31,14 @@ tests: tests/watch-picked-speed.test.ts (new, 1 test)
 base_sha_verified_on: {sha: fa3c486, branch: main, date: 2026-11-05}
 branch: claude/gifted-gates-00ox9n
 second_agent_review: not required (tests and a report only; not P0/P1, physics or storage work)
+merged:
+  - {pr: 210, sha: '4476540', at: '2026-11-06T05:28:14Z', ci: 42115697822, head: '67bb582', owner_answer: '"เปิด pr แล้ว merge เลย" (2026-11-06T05:27:21Z, in this report''s session''s chat)', note: 'the merged tree is 67bb582 with #211''s files (records, Markdown only)'}
+  - {pr: 212, sha: 4b7b66c, at: '2026-11-06T20:12:21Z', ci: 42241370758, head: 9c874a5, owner_answer: '"merge เลย" (2026-11-06T20:11:05Z; the new branch on "ทำเลย ใช้ branch ชื่อใหม่", 14:49:13Z)', note: 'the merged tree is identical to 9c874a5'}
+  - {pr: 213, sha: d01019a4, at: '2026-11-06T21:58:22Z', ci: 42289380529, head: a82a929, owner_answer: '"ตอบข้อ B เลย แก้ที่แอป" (2026-11-06T20:13:45Z) and "merge เลย" (21:57:31Z)', note: 'the merged tree is identical to a82a929; app code: src/ui/watch.ts, src/main.ts, src/mcp.ts'}
+published:
+  - {pages: 42168605010, at: '2026-11-06T06:00:42Z', sha: '4476540', note: 'the push of #210, 11 of 11 jobs, 38 of 38 journeys'}
+  - {pages: 42286344470, at: '2026-11-06T20:43:36Z', sha: 4b7b66c, note: 'the push of #212, 11 of 11 jobs, 38 of 38 journeys'}
+  - {pages: 42301024823, at: '2026-11-06T22:33:31Z', sha: d01019a4, note: 'the push of #213, 11 of 11 jobs, 38 of 38 journeys'}
 ```
 
 ## The failure
