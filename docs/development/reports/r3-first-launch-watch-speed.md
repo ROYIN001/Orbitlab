@@ -154,6 +154,8 @@ In the browser, with the probe: from Auto at 1×, the `.` key gives 2×, which i
 
 **Tests.** `tests/watch-picked-speed.test.ts` has three new tests, which fail on main's `src/` and pass here: a warp picked from outside holds to the end card and marks its button (Auto would have set 20×, 5× and 1× on the way); a warp that is no button is a pick too, and Auto brings the pace back; and `main.ts` routes the viewer's own warps around the notice (a source check, as `tests/compare-cursor.test.ts` does, because `App` is not exported).
 
+**Checked.** Locally, against the changed build: `watch-controls` 129.9 s (mouse, keyboard and touch), `r3-first-launch` 76.0 s (the end card 6.3 s into its wait) and `r2-flight-shell` 228.4 s all pass; so do the 13 unit files nearest the change (Watch, `mcp.test.ts`, architecture, privacy inventory, the `main.ts` source checks, i18n, repo hygiene): 225 of 225. `main.ts` is the composition root, so the change map selects the whole unit suite and all 44 journeys: PR CI runs the suite and the smoke journeys (`watch-controls` is one), and the other journeys run in the next Pages run.
+
 **Size.** `index-*.js` +168 B (2,654,000 to 2,654,168 of 2,655,000); precache code 14,678.5 to 14,678.7 of 14,679.0 kB, about 0.3 kB of room left. No ceiling raised. A sentence in the `control_playback` description would have cost about 50 B and was left out; the README says it.
 
 **Not changed.** The two journeys press Watch's own buttons (#209, #212). They could set the warp over WebMCP again now; they stay as they are.
