@@ -383,7 +383,9 @@ The launch section's levels, with the landing page:
   fills the window, three big numbers (mission time, altitude in km, speed over the
   ground in km/h) and one plain-language sentence about what the rocket is doing now.
   Playback runs at an automatic pace — real time for liftoff, max-Q and every separation,
-  faster through the long quiet stretches — or at a fixed speed. The launch list holds
+  faster through the long quiet stretches — or at a fixed speed: its own speed buttons, or a warp
+  set from outside the viewer (WebMCP's `control_playback`, the `.` and `,` keys), which counts as
+  picking one and stays until Auto is pressed or the next launch. The launch list holds
   ten real flights — among them Bandwagon-1 and Arabsat-6A with their boosters landing
   back at the Cape and on a drone ship, Starship Flight 5 with its tower catch and
   splashdown, the three Soyuz launch aborts (T-10-1, 18a, MS-10) flown to the crew on
@@ -519,7 +521,7 @@ browser with no WebMCP support never breaks the app, and every tool that needs a
 | `list_missions` | none | Every vehicle (with its sites and rated payloads), launch site, satellite/payload and orbit preset `configure_mission` accepts. |
 | `configure_mission` | all optional: `vehicleId`, `siteId`, `satelliteId`, `payloadMassKg`, `orbitId` or a custom orbit (`perigeeKm`, `apogeeKm`, `inclinationDeg`, `argPerigeeDeg`, `raanMode`/`raanDeg`/`ltanHours`, `suborbital`), `launchTimeIso`, `boosterRecovery`, `recoveryPlan`, `guidance`, `failureMode`/`failureTimeS`/`failureStageIndex`, `physicsModel`, `windScenario`/`windSeed` and the six-DOF settings `flex`, `control`, `navigation`, `controlFaults`, `explicitGuidance` | Set vehicle, site, payload, orbit, launch time and guidance overrides — validated the same way the setup panel validates them — and preview the mission paused on the pad. |
 | `launch_mission` | the same fields as `configure_mission`, all optional | Configure (if arguments are given) and launch, exactly like the Launch button. |
-| `control_playback` | `action` (`play`, `pause`, `warp`, `live`, `skip_next`, `skip_previous`); `warp`, the factor, with the `warp` action | The same controls as the playback bar, acting on the live flight while at the recording head and on the replay cursor while scrubbed behind it. Needs a mission. |
+| `control_playback` | `action` (`play`, `pause`, `warp`, `live`, `skip_next`, `skip_previous`); `warp`, the factor, with the `warp` action | The same controls as the playback bar, acting on the live flight while at the recording head and on the replay cursor while scrubbed behind it. In the launch viewer a warp set here is a speed picked there, as its own buttons are. Needs a mission. |
 | `seek` | `timeS` | Move the cursor to a mission time, in seconds after liftoff. Needs a mission. |
 | `set_camera` | `mode` (exterior, onboard, space, map) | Switch between the exterior, onboard, space and orbital-map views. |
 | `get_events` | optional `sinceS`, `limit` | The recorded event log, optionally filtered to events at or after a given time and capped to a limit. |
