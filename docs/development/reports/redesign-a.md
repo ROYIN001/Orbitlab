@@ -7,8 +7,8 @@ owner on screenshots.
 | Field | Value |
 |---|---|
 | Package | Redesign A (direction A "Mission Control"), steps S0–S3 |
-| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0). S2: `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1) |
-| Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md). S2: [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md) |
+| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0). S2: `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1). S3: two commits after `fa6927a` on `claude/friendly-keller-78iuc9`, stacked on S2: an identical-output offset, then the look change (each can be its own PR, the offset first) |
+| Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md). S2: [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md). S3: [`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md) |
 | Status | In PR; not merged; not published |
 
 ## The owner's authorization (D-65)
@@ -894,3 +894,87 @@ Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำไ�
 โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
 ส่วนรูปแบบอื่นๆ จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
 ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ".
+
+## S3 — the classroom look on the lesson study surfaces
+
+S3 comes in two commits. The first is an identical-output offset that makes
+room under the unchanged CSS ceiling (below). The second is the look change.
+Fragment [`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md)
+holds a CHANGELOG line and a PROGRESS row for each; if the offset goes out as
+a PR of its own, its line and row go with it.
+
+Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
+โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
+ส่วนรูปแบบอื่นๆ จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
+ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ". S3 is the
+"โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้น"
+part.
+
+### S3 offset — identical output: three dead declaration groups in `src/style.css`
+
+Change type: **identical output** (D-63; no app behaviour, no `budgets.json`).
+
+**Why.** After S2's fixes `index-*.css` had 137 B left under its 179 kB
+ceiling (178,863 B). S3's look change, as small as it could be made, is
++196 B of CSS (measured below), so it needs about 60 B more room. D-38 allows
+an identical-output offset or a question to the owner; this is the offset. No
+ceiling changes.
+
+**What changed** (`src/style.css` only):
+
+1. `@media (max-width: 1180px)`: `.quiet-btn span:last-child { display: none }`
+   and `.quiet-btn { padding: 7px }` are gone. `src/ui/modes.css` has the same
+   two rules, with the same selectors and values, in
+   `@media (max-width: 1720px)` (S1 review fixes). modes.css comes later in the
+   built CSS, and every width up to 1180 px is also under 1720 px, so the
+   later copy already decided both properties at every width.
+2. `@media (max-width: 860px)`: `#topbar { height: 54px; padding: 0 12px; gap: 8px }`
+   keeps only `gap: 8px`. modes.css's `@media (max-width: 860px)`
+   `#topbar { height: auto; …; padding: 8px 12px 0 }`, later in the built CSS
+   with the same selector and media query, already set both.
+3. `.mission-steps li, .mission-steps button { padding: 0 }` keeps only the
+   `li`. The next rule, `.mission-steps button { …; padding: 2px 3px }`, sets
+   the button's padding with the same selector and no media query.
+
+In each case the declaration removed is followed, in the built CSS, by one with
+the same property and selector that applies wherever it applied, and none of
+the removed ones is `!important`. The cascade result is the same for every
+element at every width. Found with a scratch script over the built CSS (not
+committed) that lists such declarations; the other hits were in selector lists
+(`button, select, input`, `.nav-menu, .nav-sheet`, the requirements compare
+table), where removing them would mean splitting the list, which costs more
+than it saves.
+
+**Why the output is identical.** The built `index-*.css` of this commit and of
+`fa6927a`, split at each brace, differ in exactly these lines: the
+`.mission-steps` selector, the 1180 px selector list and its `.quiet-btn`
+rule, and the 860 px `#topbar` declarations. Every other built file is byte
+for byte the same once the file names' content hashes are masked; `sw.js`
+and `SHA256SUMS` differ only in hashes and in the order of one entry (sorted
+by hashed name), `build-info.json` in the build time.
+
+**Measured** (this container, `npx vite build`, then `node scripts/bundle-budget.mjs`):
+
+| Group | S2 with its fixes (`fa6927a`) | S3 offset | Ceiling |
+|---|---|---|---|
+| `index-*.css` | 178,863 B | 178,764 B (−99 B; 178.8 kB) | 179 kB |
+| `index-*.js` | 2,653,459 B | 2,653,459 B | 2655 kB |
+| `i18n-*.js` | 1,732,544 B | 1,732,544 B | 1733 kB |
+| other chunks | 771.4 kB | 771.4 kB | 772 kB |
+| precache code | 14,678,691 B | 14,678,592 B (−99 B) | 14679 kB |
+| precache | 15797.9 kB | 15797.8 kB | 16078 kB |
+
+**Budget line: lowered (usage); every ceiling unchanged.**
+
+**Files:** `src/style.css`, `changes/claude-u-redesign-a-s3.md` (new), this
+report. Changed source lines: 6 in `src/` (+2 / −4).
+
+**Tests run:**
+
+| Command | Result |
+|---|---|
+| `npx vite build && node scripts/bundle-budget.mjs` | bundle budget: ok (table above) |
+| build-to-build comparison with `fa6927a` (hashes masked) | identical except the lines named above |
+| `npx vitest run tests/css-motion.test.ts tests/architecture.test.ts tests/hud-layout.test.ts tests/bundle-budget.test.ts` | 4 files, 41 / 41 passed |
+
+Docs touched: N/A.

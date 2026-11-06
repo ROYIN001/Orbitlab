@@ -478,7 +478,7 @@ body[data-lesson] .verdict-fixes { display: none; }
   font: 10.5px/1 var(--display); letter-spacing: 0.4px; color: #7f97a8; }
 .mission-steps li { display: flex; align-items: center; }
 .mission-steps li + li::before { content: '›'; margin: 0 4px; color: #4d6273; }
-.mission-steps li, .mission-steps button { padding: 0; }
+.mission-steps li { padding: 0; }
 /* the title band lets presses through to the scene (drag to orbit the camera); the chips take theirs */
 .mission-steps button { pointer-events: auto; color: inherit; font: inherit; letter-spacing: inherit; text-decoration: underline dotted; text-underline-offset: 2px;
   padding: 2px 3px; border-radius: 4px; }
@@ -1071,8 +1071,6 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .flight-column { grid-column: 2; grid-row: 1; }
   #telemetry { grid-column: 2; grid-row: 2; max-height: 300px; }
   .scene-hint { display: none; }
-  .quiet-btn span:last-child { display: none; }
-  .quiet-btn { padding: 7px; }
 }
 
 /* Two rows that have to share one screen.
@@ -1203,7 +1201,7 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
      setup is on it, instead of waiting at the end of the form. */
   #setup { overflow: visible; }
   .launch-area { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -10px 24px rgba(8, 12, 19, 0.55); }
-  #topbar { height: 54px; padding: 0 12px; gap: 8px; }
+  #topbar { gap: 8px; }
   .brand-name { font-size: 18px; }
   .brand-mark { width: 32px; height: 32px; }
   .lang span { display: none; }
