@@ -4642,7 +4642,7 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'assess.misconceptionLine': 'Похоже, вы считаете, что {text}.',
   'assess.misconceptionGeneric': 'в разделе «{area}» вы уверенно дали неверный ответ',
   'assess.path': 'Рекомендуемый маршрут — все уроки остаются доступны',
-  'assess.pathLegend': 'Зачёркнуто — можно пропустить · золотой ★ — начать здесь · красный — повторить · бледный — скоро',
+  'assess.pathLegend': 'Зачёркнуто — можно пропустить · ★ — начать здесь · красный — повторить · бледный — скоро',
   'assess.review': 'Ответы и объяснения',
   'assess.backToResult': 'К результату',
   'assess.goTo': 'К уроку {n}: {title}',

@@ -1009,8 +1009,8 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
 .dialog-close:hover { color: #fff; }
 .dialog-body h2 { margin: 8px 0 14px; font: 500 26px/1.2 var(--display); letter-spacing: -0.6px; }
 .dialog-body h3 { margin: 22px 0 6px; font-size: 15px; color: var(--accent); }
-.dialog-body p, .dialog-body li { font-size: 13.5px; line-height: 1.75; color: #b8c8d9; }
-.dialog-body p.lead { color: #cddae6; }
+.dialog-body p, .dialog-body li { font-size: 13.5px; line-height: 1.75; color: var(--prose, #b8c8d9); }
+.dialog-body p.lead { color: var(--prose, #cddae6); }
 .dialog-body p.small { font-size: 12px; color: var(--muted); }
 .dialog-body ul { padding-left: 20px; margin: 6px 0 0; }
 .check-label { display: flex; align-items: center; gap: 10px; margin: 18px 0; font-size: 14px; }

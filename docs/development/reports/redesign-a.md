@@ -978,3 +978,158 @@ report. Changed source lines: 6 in `src/` (+2 / −4).
 | `npx vitest run tests/css-motion.test.ts tests/architecture.test.ts tests/hud-layout.test.ts tests/bundle-budget.test.ts` | 4 files, 41 / 41 passed |
 
 Docs touched: N/A.
+
+### S3 look change — light tokens on the catalogue, the placement test and the lesson strip
+
+Change type: **look change** (visual; the owner reviews it on screenshots).
+Reviewers: the owner (the catalogue, a test question with a figure, the
+result, and the flight, design and case strips, at 1280×800 and 390 px, in
+TH, EN and RU). The owner's words are quoted at the top of this S3 section;
+this commit is the "โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้น"
+part.
+
+#### Choices in this step (taken under "mix sensibly"; the owner can reverse each at the screenshot review)
+
+- Light tokens only where a lesson is studied: the catalogue and the
+  placement test views of the lessons page, and a lesson's strip over the
+  flight. White cards on `#f4f6f9`, ink `#0f1b2d`, muted `#4d5b6e`, lines
+  `#dde3ea`, accent `#1f3fae` (the lesson colour too, in place of the gold).
+- The teacher pages (worksheets, writing a lesson, checking results) keep the
+  dark tokens. They are held today (`TEACHER_TOOLS` false, `src/ui/held.ts`).
+- The 3-D scene, the top bar (its Lessons button stays the bar's mint, S1)
+  and the test's figures stay dark: the figures' SVGs draw light ink for a
+  dark ground (`src/lessons/assessment/diagrams.ts`, `figures.ts`), so the
+  figure keeps its dark plate on the light page.
+- `assess.pathLegend` in EN/TH/RU stops naming a colour ("★: start here");
+  the start chip it describes turns blue with the lesson colour. No key
+  changes.
+- No new font: lesson text stays IBM Plex Sans Thai (S1).
+
+#### What changed
+
+1. `src/ui/lessons/lessons.css`. After the `:root` gold tokens, a
+   `.lesson-study` block: `color-scheme: light; color: var(--text)` and the
+   light values of `--bg`, `--panel2`, `--panel3`, `--line`, `--line2`,
+   `--text`, `--muted`, `--dim`, `--accent`, `--ok`, `--warn`, `--fail`,
+   `--prose`, `--lesson`, `--lesson-weak`, `--lesson-line` and
+   `--lesson-ink`. The explicit `color` is needed because `body`'s colour is
+   inherited as a computed value. Then, in place, the dark-ground literals
+   become tokens or light values: the strip's gold-to-dark gradient, the track
+   and pack cards → `#fff`; the criterion chips → `var(--bg)`; the page's two
+   radial glows → `var(--bg)`; the page bar's translucent dark with blur →
+   `var(--bg)`; the pale reds, greens and yellows (`#ffb0b0`, `#ffd0d0`,
+   `#b9e8c9`, `#cfe9d8`, `#cdeedb`, `#ffd98a`) → `var(--fail)`, `var(--ok)`,
+   `var(--warn)`; the hint `#ffe3a6` → `#132a7a`; the debrief `#e9dcc0` and the
+   test's current-question tick `#fff` → `var(--text)`; the tag and pack-link
+   blue → `#0f6b8a`; the level badges → `#e3f3ea` / `#fbe9ea`; the radar's
+   gold fill → `var(--lesson-weak)` and its labels → `var(--muted)`. The
+   eyebrow drops its 0.04em letter-spacing (no tracked Thai). The test figure
+   keeps `#0c1219` (the dark `--panel3`); its caption is `#96a3b4` (the dark
+   `--muted`), and its chart legend sets `--prose: #b8c8d9`: the legend items
+   are `.dialog-body li`, which `src/style.css` colours with `--prose`, so
+   without it they would be dark ink on the dark plate. The legend's old
+   `color: #cfd8e3` gives way to it; it never reached the items, which
+   `.dialog-body li` always coloured `#b8c8d9`.
+2. `src/ui/lessons/lesson-mode.ts`. The strip is created with the class
+   `lesson-study`; the page gets it while the view is `catalog` or `test`
+   (`classList.toggle` beside `document.body.dataset.lessonsPage = view`).
+   These are the same elements as the selector in the choices list above,
+   `body:is([data-lessons-page='catalog'],[data-lessons-page='test']) .lessons-page, .lesson-strip`;
+   the class costs 76 B less CSS, and `index-*.css` has 35 B left with it.
+3. `src/style.css`. `.dialog-body p, .dialog-body li` and `.dialog-body p.lead`
+   read `var(--prose, #b8c8d9)` and `var(--prose, #cddae6)`. `--prose` is
+   defined only in `.lesson-study` (and the figure legend), so About, the
+   physics notes and every other dialog keep their colours.
+4. `src/i18n/en.ts`, `th.ts`, `ru.ts`: `assess.pathLegend` drops "gold" /
+   "สีทอง" / "золотой".
+
+Outside the two study views, three of these edits also reach the dark
+teacher pages, which are held: the page loses its faint gold and blue glows
+and the bar its blur (both are `var(--bg)` there, the dark ground);
+`.lesson-note.fail` / `.warn` take the app's dark `--fail` / `--warn`
+(`#ff6b6b`, `#efa47e`, in place of `#ffb0b0`, `#ffd98a`; 7.1:1 and 9.6:1 on
+the dark ground); the eyebrow is untracked. Their tokens stay dark.
+
+#### Contrast (WCAG 2 ratios, from the tokens; a scratch script)
+
+| Colour | on `#fff` | on `#f4f6f9` |
+|---|---|---|
+| `--text` `#0f1b2d` | 17.3:1 | 16.0:1 |
+| `--muted` `#4d5b6e` | 6.9:1 | 6.4:1 |
+| `--dim` `#5f6b7a` | 5.4:1 | 5.0:1 |
+| `--accent` / `--lesson` `#1f3fae` | 8.8:1 | 8.1:1 |
+| `--lesson-ink` `#fff` on `--lesson` | 8.8:1 | — |
+| `--lesson` on `--lesson-weak` `#e8edfb` | 7.5:1 | — |
+| `--ok` `#12704a` | 6.1:1 | 5.6:1 (5.3:1 on its badge `#e3f3ea`) |
+| `--fail` `#b4232f` | 6.5:1 | 6.0:1 (5.6:1 on its badge `#fbe9ea`) |
+| `--warn` `#8a5a00` | 5.9:1 | 5.5:1 |
+| hint `#132a7a` | 12.8:1 | — |
+| tag `#0f6b8a` | 6.0:1 | — |
+| control border `--line2` `#7f8b9b` | 3.5:1 | 3.2:1 (WCAG 1.4.11 asks 3:1; the mockup's `#c9d2dd` is 1.5:1) |
+| figure legend `#b8c8d9` / caption `#96a3b4` on the plate `#0c1219` | 11.0:1 / 7.3:1 | — |
+
+#### Seen in a browser
+
+A scratch Playwright script against this build (not committed; screenshots in
+the session's scratchpad for the owner's review), EN and TH, offline fonts:
+the catalogue at 1280×800 and 390×844, the strip of lesson 1.1 over the Launch
+section, and the test's start page. Computed: page `#f4f6f9`, cards `#fff`,
+ink `#0f1b2d`, `color-scheme: light`; the strip `#fff`, its chips `#f4f6f9`;
+the top bar unchanged; a figure built as the test builds it, inside the page
+body: plate `#0c1219`, legend items `#b8c8d9`, caption `#96a3b4`. The full
+screenshot set the plan names (a question with a diagram, the result radar,
+the design and case strips, RU) is not taken here.
+
+#### Measured (this container, `npx vite build`, then `node scripts/bundle-budget.mjs`)
+
+**Budget line: within the unchanged ceilings** (no `budgets.json` change).
+
+| Group | S3 offset | S3 look change | Ceiling |
+|---|---|---|---|
+| `index-*.css` | 178,764 B | 178,965 B (+201 B; 179.0 kB) | 179 kB |
+| `index-*.js` | 2,653,459 B | 2,653,541 B (+82 B) | 2655 kB |
+| `i18n-*.js` | 1,732,544 B | 1,732,508 B (−36 B) | 1733 kB |
+| other chunks | 771.4 kB | 771.4 kB | 772 kB |
+| precache code | 14,678,592 B | 14,678,839 B (+247 B) | 14679 kB |
+| precache | 15797.8 kB | 15798.0 kB | 16078 kB |
+
+Room left: `index-*.css` 35 B, precache code 161 B.
+
+#### Tests changed
+
+None. No test pins lesson colours, contrast or pixels, no i18n key changes,
+and the strip keeps its `lesson-strip` class (every selector still matches).
+No assertion was removed or loosened, no timeout lengthened.
+
+#### Files
+
+`src/ui/lessons/lessons.css`, `src/ui/lessons/lesson-mode.ts`,
+`src/style.css`, `src/i18n/en.ts`, `src/i18n/th.ts`, `src/i18n/ru.ts`,
+`changes/claude-u-redesign-a-s3.md`, this report.
+
+Changed source lines: 88 in `src/` (+50 / −38; 5 of the added lines are comments).
+
+#### Tests run
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `npx vitest run tests/lessons-ui-core.test.ts tests/i18n.test.ts tests/architecture.test.ts` | 3 files, 42 / 42 passed |
+| `npx vitest run tests/css-motion.test.ts tests/bundle-budget.test.ts tests/hud-layout.test.ts` | 3 files, 35 / 35 passed |
+| `npx vitest run tests/assessment.test.ts tests/lessons.test.ts tests/lessons-round2.test.ts tests/lesson-review.test.ts` | 4 files, 69 / 69 passed |
+| `npx vitest run tests/lesson-packs.test.ts tests/lesson-grading-end.test.ts tests/lessons-history.test.ts` | 3 files, 34 / 34 passed |
+| `npx vitest run tests/lesson-packs-design.test.ts tests/lesson-event-answers.test.ts tests/assessment-flights.test.ts` | 3 files, 17 / 17 passed |
+| `npx vitest run tests/assessment-revision.test.ts tests/lesson-pack-format.test.ts tests/lesson-pack-names.test.ts` | 3 files, 29 / 29 passed |
+| `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | 94 / 94 passed |
+| `npx vite build && node scripts/bundle-budget.mjs` | bundle budget: ok (table above) |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs teaching-held learner-profiles` | 2 / 2 passed in 218.9 s (learner-profiles 156.4 s, teaching-held 52.9 s) |
+| `… run.mjs mobile-smoke gesture-ownership r7-cross-system` | 3 / 3 passed in 489.4 s (gesture-ownership 22.1 s, mobile-smoke 28.0 s with the Thai placement test on a 390×844 phone, r7-cross-system 416.5 s, both passes with lesson 1.1 to its grading bar) |
+| `npx vitest run tests/section-nav-model.test.ts tests/web-fonts.test.ts tests/fx3-thai-moon-labels.test.ts tests/telemetry-layout.test.ts tests/assessment-revision-edit.test.ts tests/assessment-revision-writer.test.ts` | 6 files, 29 / 29 passed (run as three commands: 9, 16 and 4) |
+
+Not run: `lesson-packs`, `fx2-design-check-focus`, `instructor-loading` and
+`recheck` (held while `TEACHER_TOOLS` is false, `src/ui/held.ts`); the full
+`npx vitest run`; the `--smoke` set.
+
+Docs touched: N/A (README.md, docs/USER-GUIDE.md and IMPLEMENTATION-STATUS do
+not name the lessons page's colours; the one string that did is
+`assess.pathLegend`, changed above).

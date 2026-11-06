@@ -4643,7 +4643,7 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'assess.misconceptionLine': 'ดูเหมือนคุณเข้าใจว่า{text}',
   'assess.misconceptionGeneric': 'ในด้าน{area} มีข้อที่ตอบผิดทั้งที่มั่นใจ',
   'assess.path': 'เส้นทางที่แนะนำ — ทุกบทเรียนยังเปิดได้เหมือนเดิม',
-  'assess.pathLegend': 'ขีดฆ่า: ข้ามได้ · สีทอง ★: เริ่มที่นี่ · สีแดง: ควรทบทวน · จาง: เร็ว ๆ นี้',
+  'assess.pathLegend': 'ขีดฆ่า: ข้ามได้ · ★: เริ่มที่นี่ · สีแดง: ควรทบทวน · จาง: เร็ว ๆ นี้',
   'assess.review': 'เฉลยและคำอธิบาย',
   'assess.backToResult': 'กลับไปที่ผลการทดสอบ',
   'assess.goTo': 'ไปที่บทเรียน {n}: {title}',

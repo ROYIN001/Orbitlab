@@ -4666,7 +4666,7 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'assess.misconceptionLine': 'You seem to believe that {text}.',
   'assess.misconceptionGeneric': 'a question in {area} was answered wrongly with confidence',
   'assess.path': 'Recommended path — every lesson stays open',
-  'assess.pathLegend': 'Crossed out: can skip · gold ★: start here · red: go over again · faint: coming soon',
+  'assess.pathLegend': 'Crossed out: can skip · ★: start here · red: go over again · faint: coming soon',
   'assess.review': 'Answers and explanations',
   'assess.backToResult': 'Back to the result',
   'assess.goTo': 'Go to lesson {n}: {title}',
