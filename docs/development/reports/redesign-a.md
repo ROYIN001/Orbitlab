@@ -7,8 +7,8 @@ owner on screenshots.
 | Field | Value |
 |---|---|
 | Package | Redesign A (direction A "Mission Control"), steps S0–S3 |
-| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0). S2: `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1). S3: two commits after `fa6927a` on `claude/friendly-keller-78iuc9`, stacked on S2: an identical-output offset, then the look change (each can be its own PR, the offset first) |
-| Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md). S2: [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md). S3: [`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md) |
+| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0). S2: `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1). S3 offset: `claude/u-redesign-a-s3-offset` (`f30bebd`), stacked on S2 (waiting: merges after S2). S3: `claude/u-redesign-a-s3` (`0f2250a` and its review fixes), stacked on the S3 offset (waiting: merges after it). In this session the S3 commits sit after `fa6927a` on `claude/friendly-keller-78iuc9` |
+| Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md). S2: [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md). S3 offset: [`changes/claude-u-redesign-a-s3-offset.md`](../../../changes/claude-u-redesign-a-s3-offset.md). S3: [`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md) |
 | Status | In PR; not merged; not published |
 
 ## The owner's authorization (D-65)
@@ -899,9 +899,10 @@ Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำไ�
 
 S3 comes in two commits. The first is an identical-output offset that makes
 room under the unchanged CSS ceiling (below). The second is the look change.
-Fragment [`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md)
-holds a CHANGELOG line and a PROGRESS row for each; if the offset goes out as
-a PR of its own, its line and row go with it.
+Each commit is its own PR with its own fragment: the offset in
+[`changes/claude-u-redesign-a-s3-offset.md`](../../../changes/claude-u-redesign-a-s3-offset.md)
+(merges first), the look change in
+[`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md).
 
 Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
 โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
@@ -966,7 +967,8 @@ by hashed name), `build-info.json` in the build time.
 
 **Budget line: lowered (usage); every ceiling unchanged.**
 
-**Files:** `src/style.css`, `changes/claude-u-redesign-a-s3.md` (new), this
+**Files:** `src/style.css`, `changes/claude-u-redesign-a-s3-offset.md` (new;
+split out of `changes/claude-u-redesign-a-s3.md` by the S3 review fixes), this
 report. Changed source lines: 6 in `src/` (+2 / −4).
 
 **Tests run:**
@@ -1000,7 +1002,7 @@ part.
   and the test's figures stay dark: the figures' SVGs draw light ink for a
   dark ground (`src/lessons/assessment/diagrams.ts`, `figures.ts`), so the
   figure keeps its dark plate on the light page.
-- `assess.pathLegend` in EN/TH/RU stops naming a colour ("★: start here");
+- `assess.pathLegend` in EN/TH/RU stops calling the start chip gold ("★: start here");
   the start chip it describes turns blue with the lesson colour. No key
   changes.
 - No new font: lesson text stays IBM Plex Sans Thai (S1).
@@ -1093,7 +1095,8 @@ the design and case strips, RU) is not taken here.
 | precache code | 14,678,592 B | 14,678,839 B (+247 B) | 14679 kB |
 | precache | 15797.8 kB | 15798.0 kB | 16078 kB |
 
-Room left: `index-*.css` 35 B, precache code 161 B.
+Room left: `index-*.css` 35 B, precache code 161 B (56 B and 182 B after the
+review fixes, below).
 
 #### Tests changed
 
@@ -1133,3 +1136,94 @@ Not run: `lesson-packs`, `fx2-design-check-focus`, `instructor-loading` and
 Docs touched: N/A (README.md, docs/USER-GUIDE.md and IMPLEMENTATION-STATUS do
 not name the lessons page's colours; the one string that did is
 `assess.pathLegend`, changed above).
+
+### S3 review fixes
+
+Same change type as the commit they fix (look change, `0f2250a`). Four
+findings, all four applied.
+
+1. **A chosen test answer or confidence pill no longer differs by colour
+   alone.** On the light page the chosen state was a 1 px `#1f3fae` border
+   against the unselected `#7f8b9b` (2.55:1 between the two states) and a
+   `#e8edfb` tint on `#f4f6f9` (1.08:1), short of WCAG 1.4.1 and 1.4.11.
+   `src/ui/lessons/lessons.css`: `.assess-option.sel` is deleted and
+   `.assess-conf.sel` becomes one merged rule after both base rules,
+   `.assess-option.sel, .assess-conf.sel { border-color: var(--lesson); background: var(--lesson-weak); box-shadow: inset 0 0 0 1px var(--lesson); }`.
+   The inset shadow adds a second pixel of border, a cue of thickness, not
+   colour. The rule sets no `border-style`, so "I don't know" stays dashed;
+   it sets none of the properties of `.dont-know`, so moving it below that
+   rule changes nothing else. Focus stays an `outline` (`style.css`
+   `:focus-visible`), so the shadow does not hide the focus ring.
+2. **The catalogue card of the lesson in progress has a border that meets
+   3:1.** `.lesson-card-item.active` (and its hover) used `--lesson-line`
+   `#9fb0e6` on `#fff` (2.14:1; the fill `#e8edfb` is 1.17:1). It now uses
+   `var(--lesson)`, `#1f3fae` on `#fff`, 8.8:1. `lesson-card-item` exists only
+   in the catalogue (`lesson-mode.ts`), which always has the light tokens.
+3. **The records say what the legend change really is.** `assess.pathLegend`
+   still names red for the chips to go over again (EN "red: go over again",
+   TH "สีแดง: ควรทบทวน", RU "красный — повторить"), which is still right:
+   `.assess-chip.review` stays `--fail` red. The CHANGELOG line now says the
+   legend "no longer calls the start chip gold … it is blue now", the
+   PROGRESS row that it drops "gold" / "สีทอง" / "золотой", and the choices of
+   the S3 look change above that it "stops calling the start chip gold". The
+   strings are unchanged. The package's choices list at the top keeps the
+   plan's wording.
+4. **One fragment per PR.** The offset and the look change are two change
+   types, so each is its own PR with its own fragment (SESSION-PROTOCOL.md
+   §4, §5; `changes/README.md`). The offset's CHANGELOG line and PROGRESS row
+   move to the new `changes/claude-u-redesign-a-s3-offset.md` (branch
+   `claude/u-redesign-a-s3-offset`); `changes/claude-u-redesign-a-s3.md`
+   keeps the look change's line and row (branch `claude/u-redesign-a-s3`,
+   stacked on the offset). The Branch and Fragment rows at the top and the S3
+   intro say so. No branch is created in this session; `CHANGELOG.md` and
+   `PROGRESS.md` are not touched.
+
+Files: `src/ui/lessons/lessons.css`, `changes/claude-u-redesign-a-s3.md`,
+`changes/claude-u-redesign-a-s3-offset.md` (new), this report. Changed source
+lines: 5 in `src/` (+2 / −3).
+
+#### Measured (this container, `npx vite build`, then `node scripts/bundle-budget.mjs`)
+
+**Budget line: lowered (usage); every ceiling unchanged** (no `budgets.json`
+change).
+
+| Group | S3 look change (`0f2250a`) | With its review fixes | Ceiling |
+|---|---|---|---|
+| `index-*.css` | 178,965 B | 178,944 B (−21 B; 178.9 kB) | 179 kB |
+| `index-*.js` | 2,653,541 B | 2,653,541 B | 2655 kB |
+| `i18n-*.js` | 1,732,508 B | 1,732,508 B | 1733 kB |
+| other chunks | 771.4 kB | 771.4 kB | 772 kB |
+| precache code | 14,678,839 B | 14,678,818 B (−21 B) | 14679 kB |
+| precache | 15798.0 kB | 15798.0 kB | 16078 kB |
+
+Room left: `index-*.css` 56 B, precache code 182 B.
+
+#### Tests changed
+
+None. No assertion was removed or loosened, no timeout lengthened.
+
+#### Tests run
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `npx vitest run tests/lessons-ui-core.test.ts tests/i18n.test.ts tests/architecture.test.ts` | 3 files, 42 / 42 passed |
+| `npx vite build && node scripts/bundle-budget.mjs` | bundle budget: ok (table above) |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs teaching-held learner-profiles` | 2 / 2 passed in 225.3 s (learner-profiles 166.7 s, teaching-held 53.6 s) |
+
+Not run here: the other vitest files and browser journeys of the S3 look
+change (the fixes touch three CSS rules and records only), and a new
+screenshot of the selected state; the review's Chromium measurements are the
+"before".
+
+Choices taken in these fixes under "mix sensibly" (the owner can reverse each
+at the screenshot review): the second pixel of border as the chosen-state
+cue; the hover of a catalogue card taking the same `--lesson` border as the
+lesson in progress. The package's choices list above is unchanged.
+
+Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
+โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
+ส่วนรูปแบบอื่นๆ จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
+ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ".
+
+Docs touched: N/A (no user doc names the lessons page's colours).

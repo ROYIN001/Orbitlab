@@ -183,7 +183,7 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .lesson-track h3 { margin: 0 !important; font: 600 14.5px/1.3 var(--display) !important; color: var(--lesson) !important; }
 .lesson-track-note { margin: 0 0 8px !important; font-size: 11.5px !important; color: var(--dim) !important; }
 .lesson-card-item { display: flex; gap: 8px; width: 100%; text-align: left; padding: 7px 6px; margin-bottom: 4px; border-radius: 8px; border: 1px solid transparent; }
-.lesson-card-item:hover:not(:disabled), .lesson-card-item.active { border-color: var(--lesson-line); background: var(--lesson-weak); }
+.lesson-card-item:hover:not(:disabled), .lesson-card-item.active { border-color: var(--lesson); background: var(--lesson-weak); }
 .lesson-card-item:disabled { opacity: 0.55; cursor: default; }
 .lesson-card-status { width: 16px; flex: none; color: var(--dim); }
 .lesson-card-item.passed .lesson-card-status { color: var(--ok); }
@@ -233,14 +233,13 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .assess-option { display: flex; gap: 10px; text-align: left; padding: 9px 12px; border: 1px solid var(--line2); border-radius: 10px; font-size: 14px; line-height: 1.5; }
 .assess-option b { color: var(--lesson); font-family: var(--mono); min-width: 1em; }
 .assess-option:hover { border-color: var(--lesson-line); }
-.assess-option.sel { border-color: var(--lesson); background: var(--lesson-weak); }
 .assess-option.dont-know { color: var(--muted); border-style: dashed; }
 .assess-number { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .assess-number input { width: 160px; height: 36px; font-size: 15px; }
 .assess-unit { color: var(--muted); font-family: var(--mono); }
 .assess-confidence { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--muted); }
 .assess-conf { border: 1px solid var(--line2); border-radius: 20px; padding: 4px 12px; color: var(--text); font-size: 13px; }
-.assess-conf.sel { border-color: var(--lesson); background: var(--lesson-weak); }
+.assess-option.sel, .assess-conf.sel { border-color: var(--lesson); background: var(--lesson-weak); box-shadow: inset 0 0 0 1px var(--lesson); }
 .assess-conf-note { margin: 6px 0 0 !important; font-size: 12.5px !important; color: var(--muted) !important; }
 .assess-figure { margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #0c1219; }
 /* its items are .dialog-body li (style.css), coloured by --prose: on the figure's dark plate they keep the dark app's */
