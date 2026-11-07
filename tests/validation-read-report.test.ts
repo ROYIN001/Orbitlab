@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readScientificReport, ReportReadError, VALIDATION_REPORT_MAX_BYTES } from '../src/validation/read-report';
 import { buildScientificReport, RATING_REFERENCES, type ScientificValidationReport } from '../src/validation/report';
-import { validationEn, validationRu, validationTh } from '../src/i18n/validation';
+import { validationEn } from '../src/i18n/validation.en';
+import { validationRu } from '../src/i18n/validation.ru';
+import { validationTh } from '../src/i18n/validation.th';
 
 function fixture(): ScientificValidationReport {
   return buildScientificReport({

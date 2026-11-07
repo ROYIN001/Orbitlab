@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BUNDLED_PACKS, packPath, readPackText, type ResolvedPack } from '../src/lessons/packs';
 import { PACK_REVIEWS, packReviewStatus, validatePackReview, type HumanReview } from '../src/lessons/review';
-import { reviewEn, reviewRu, reviewTh } from '../src/i18n/review';
+import { reviewEn } from '../src/i18n/review.en';
+import { reviewRu } from '../src/i18n/review.ru';
+import { reviewTh } from '../src/i18n/review.th';
 
 const FILES = import.meta.glob('../public/lessons/packs/*.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const TESTS = import.meta.glob('./**/*.test.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
