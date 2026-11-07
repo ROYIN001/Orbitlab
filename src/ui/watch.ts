@@ -456,8 +456,9 @@ export class WatchView {
     card.setAttribute('aria-labelledby', title.id);
     card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
     if (ending === 'crewSafe') {
-      // G06: the rocket was lost, the crew was not
-      const since = frame.t - (frame.abort?.t0 ?? frame.t);
+      // G06: the rocket was lost, the crew was not; timed at the touchdown itself, not at the card, which waits for it
+      const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.escapeLanded');
+      const since = (down?.t ?? frame.t) - (frame.abort?.t0 ?? frame.t);
       card.append(el('p', undefined, t('watch.end.crewSafeText', {
         km: num(frame.downrange / 1000), g: num(frame.abort?.maxG ?? 0), time: fmtClock(since).replace(/^T\+/, ''),
       })));
