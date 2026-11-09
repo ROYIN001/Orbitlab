@@ -35,6 +35,7 @@ export const NAV_SECTIONS: readonly NavEntry[] = [
   { id: 'launch', glyph: '▲', nameKey: 'section.launch', future: false },
   { id: 'orbit', glyph: '⊕', nameKey: 'section.orbit', future: false },
   { id: 'build', glyph: '⚙︎', nameKey: 'section.build', future: false },
+  { id: 'structure', glyph: '⊞', nameKey: 'section.structure', future: false },
   { id: 'campaign', glyph: '⚑', nameKey: 'section.campaign', future: true },
 ];
 

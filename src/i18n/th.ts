@@ -1922,6 +1922,8 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'section.launch': 'ปล่อยจรวด',
   'section.orbit': 'วงโคจร',
   'section.build': 'สร้าง',
+  // the Structure & Assembly section (src/ui/structure/, owner 2026-11-09); its own text is src/ui/structure/text.ts
+  'section.structure': 'โครงสร้าง',
   // the top bar's section switch (src/ui/section-nav.ts, owner 2026-10-01)
   'mode.basics': 'พื้นฐาน',
   'section.campaign': 'แคมเปญ',
@@ -1941,6 +1943,9 @@ export const th: Record<string, string> = /* @__PURE__ */ (() => ({
   'nav.level.build.watch': 'จรวดจริงแบบแยกชิ้นส่วน ทีละชิ้น',
   'nav.level.build.explore': 'ดัดแปลงจรวดจริง ต่อจรวดจากชิ้นส่วน หรือออกแบบดาวเทียม',
   'nav.level.build.engineer': 'แท่นทดสอบ อุโมงค์ลม การตรวจความพร้อม การกำหนดขนาด และการแบ่งท่อนที่ดีที่สุด',
+  'nav.level.structure.watch': 'ชุดประกอบหลักของจรวดและดาวเทียม แต่ละชุดคืออะไรและอยู่ตรงไหน',
+  'nav.level.structure.explore': 'ระบบย่อยและจุดเชื่อม การประกอบตามแบบ และการทดลองกับดาวเทียม',
+  'nav.level.structure.engineer': 'ชิ้นส่วนทุกชิ้นพร้อมตัวเลข หน่วย แหล่งข้อมูล และวิธีคำนวณผล',
   'section.coming': 'สิ่งที่กำลังจะมา เรียงตามลำดับการพัฒนา',
   'section.phase': 'ระยะที่ {n} · {title}',
   'section.roadmapNote': 'แต่ละบรรทัดมีรหัสรายการตามแผนงาน แผนฉบับเต็ม รวมถึงวิธีตรวจสอบแบบจำลองใหม่ทุกตัวกับข้อมูลที่เผยแพร่ อยู่ในไฟล์ docs/ROADMAP-PART2-3.md ในคลังซอร์สโค้ด',

@@ -955,6 +955,47 @@ returns.
   science class's 26 m/s short of its controlled re-entry. That is what their classes' propellant holds, not a fault in the designer.
 - **Charge cycles a year** count an eclipse every revolution, so they read "at most".
 
+## 0d. The Structure section: explore, assemble and experiment (a pilot)
+
+**Structure** in the top bar (`#/structure`; a model has its own address,
+`#/structure/explore/soyuz-st31` or `#/structure/explore/edusat`). Its three levels are how deep
+you read the same model: **Basics** picks and explains the main assemblies, **Explore** their
+subsystems, joints and options, **Engineer** each part with its figures, units, sources and the
+method behind the results. Changing level keeps what you picked, your assembly and your design.
+
+- **Two models.** *Soyuz-2.1b / Fregat (ST31)* is the owner's Anatomy model (2,069 parts, a guide
+  in Thai), fetched when you open it (about 0.5 MB, more for the inside and the engines when you
+  ask for them). *EduSat-3U* is a satellite made up for learning — a concept, not a real
+  satellite, and nothing to do with the OneWeb satellites ST31 carried.
+- **Explore.** Drag to turn, wheel or two fingers to zoom, Shift-drag to pan; or the arrow keys,
+  + and − and 0 with the view focused. A press picks a part; so does the list. **Open the front
+  half** hides the halves the Anatomy page cuts its parts into (an illustration, not a section
+  through production drawings); **See-through skins**, **Take apart**, **Open the fairing**,
+  **Hide**, **Show only** and **Reset** do what they say. **Colour by** shows walls, load-bearing
+  structure, mounts and joints, mechanisms, equipment and propulsion, or how each part's shape is
+  known: from photographs (the outside, its main dimensions documented) or estimated for learning
+  (everything inside). Documented figures are listed with their sources.
+- **Assemble.** Pick a part from the tray, a place and, for a part whose way round matters, turn
+  it, then **Fit**; or drag it onto the view. A step that cannot be taken yet says why (what has
+  to go on first, whose place it is, which way round). **Undo**, **Start again** (undoable) and
+  **Remove** work at any time. The model is complete when every part is in its place, the right
+  way round, with everything it rests on — not when the count is reached. The Soyuz order follows
+  the load path standing up; at a launch site it is assembled lying down, the upper part first.
+  Passing these rules says nothing about strength.
+- **My experiment** (EduSat-3U). Make a copy of the reference (no lesson or test first) and change
+  the battery (one or two 18650 cells) or the camera (a day camera, or a night-lights camera that
+  works only in the Earth's shadow). The picture, the parts list, the mass and a three-orbit energy
+  balance change together; the night camera on one cell runs short near the end of every shadow,
+  and two cells power it for 60 g more. The reference stays to compare with and to go back to.
+- **Send to Orbit / Launch.** The section shows what is sent (name, mass with the chosen battery
+  and camera, size, drag, orbit) and what is not (the battery and the energy results, which the
+  destinations do not read yet). Launch flies it on Soyuz-2.1b/Fregat from Vostochny, a
+  hypothetical scenario. Sending replaces the mission or orbit open there, as Build's own buttons
+  do; your saved designs and files are not touched. The section then shows the mass the
+  destination took, and says so if you change the design afterwards.
+- What it keeps (in your profile, `orbitlab.structure.v1`): the model and activity last open, each
+  model's assembly and "my experiment".
+
 ## 1. Set up a mission
 
 The left-hand panel (top of the page on a phone) builds a `MissionConfig` in three steps.

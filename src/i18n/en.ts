@@ -1945,6 +1945,8 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'section.launch': 'Launch',
   'section.orbit': 'Orbit',
   'section.build': 'Build',
+  // the Structure & Assembly section (src/ui/structure/, owner 2026-11-09); its own text is src/ui/structure/text.ts
+  'section.structure': 'Structure',
   // the top bar's section switch (src/ui/section-nav.ts, owner 2026-10-01)
   'mode.basics': 'Basics',
   'section.campaign': 'Campaign',
@@ -1964,6 +1966,9 @@ export const en: Record<string, string> = /* @__PURE__ */ (() => ({
   'nav.level.build.watch': 'Real rockets taken apart, part by part.',
   'nav.level.build.explore': 'Remix a real rocket, build one from parts, or design a satellite.',
   'nav.level.build.engineer': 'Test stand, wind tunnel, readiness review, sizing and optimal staging.',
+  'nav.level.structure.watch': 'The main assemblies of a rocket and a satellite: what each is and where it goes.',
+  'nav.level.structure.explore': 'Subsystems and joints, assembling to the reference, and an experiment with the satellite.',
+  'nav.level.structure.engineer': 'Every part with its figures, units, sources and the method behind the results.',
   'section.coming': 'Coming, in the order it will be built',
   'section.phase': 'Phase {n} · {title}',
   'section.roadmapNote': 'Each line names its roadmap item. The whole plan, with how every new model will be checked against published data, is in docs/ROADMAP-PART2-3.md in the source repository.',

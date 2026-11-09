@@ -114,6 +114,17 @@ are listed there as drafts awaiting the owner's review.
   before the core has gone, the frost on the oxygen tanks shedding
   in the first half minute, and on a crewed launch the escape tower and the fairing's four grid
   fins, the tower pulling away at T+113.5 s. Drawing only; the physics is unchanged.
+- **Structure & Assembly, a pilot** (owner, 2026-11-09; `src/structure/`, `src/ui/structure/`,
+  `src/render/structure-*.ts`, report `docs/development/reports/structure-assembly-pilot.md`): a
+  fourth section, `#/structure/<level>[/<model>]`, its three levels the depth a model is read at.
+  Soyuz-2.1b/Fregat ST31 from the Anatomy page's own parts (2,069, with their ids), in three layers
+  fetched on demand; explore, pick, cutaway, take apart, colour by kind or certainty; assemble the
+  eleven main assemblies by the reference's relations (order, place, way round), with undo and
+  restart. EduSat-3U, a concept satellite for learning: assembled, then "my experiment" with two
+  batteries and two cameras, mass from the parts list and a time-stepped sunlit/eclipse balance
+  built on `src/orbit/power.ts`'s SMAD figures (checked against `arrayPowerRequired` and
+  `batteryCapacity`); handed to Orbit (`designHandoff`) and Launch (`designMissionDocument`,
+  Soyuz-2.1b from Vostochny, hypothetical). Not merged; the bundle ceilings need the owner (D-38).
 - **The Soyuz Anatomy models** (owner, 2026-10-28; `public/anatomy/`, `src/data/anatomy.ts`): the
   owner's own 3-D models of Soyuz-2.1a with the Soyuz MS or the Progress MS-26, and of Soyuz-2.1b
   with Fregat under the ST fairing, kept byte for byte. Build's Watch level opens each whole in a

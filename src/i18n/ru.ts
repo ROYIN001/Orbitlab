@@ -1921,6 +1921,8 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'section.launch': 'Запуск',
   'section.orbit': 'Орбита',
   'section.build': 'Конструктор',
+  // the Structure & Assembly section (src/ui/structure/, owner 2026-11-09); its own text is src/ui/structure/text.ts
+  'section.structure': 'Конструкция',
   // the top bar's section switch (src/ui/section-nav.ts, owner 2026-10-01)
   'mode.basics': 'Основы',
   'section.campaign': 'Кампания',
@@ -1940,6 +1942,9 @@ export const ru: Record<string, string> = /* @__PURE__ */ (() => ({
   'nav.level.build.watch': 'Настоящие ракеты в разобранном виде, деталь за деталью.',
   'nav.level.build.explore': 'Переделать настоящую ракету, собрать свою из деталей или спроектировать спутник.',
   'nav.level.build.engineer': 'Стенд, аэродинамическая труба, проверка готовности, расчёт и оптимальное деление на ступени.',
+  'nav.level.structure.watch': 'Основные блоки ракеты и спутника: что это и где стоит.',
+  'nav.level.structure.explore': 'Подсистемы и соединения, сборка по эталону и эксперимент со спутником.',
+  'nav.level.structure.engineer': 'Каждая деталь с числами, единицами, источниками и методом расчёта.',
   'section.coming': 'Что появится — в порядке разработки',
   'section.phase': 'Этап {n} · {title}',
   'section.roadmapNote': 'У каждой строки — её номер в дорожной карте. Весь план, в том числе как каждая новая модель будет проверяться по опубликованным данным, — в файле docs/ROADMAP-PART2-3.md в репозитории исходного кода.',

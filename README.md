@@ -78,6 +78,13 @@ any academy, and no service or academy name or emblem is used without written pe
   flight draws those two rockets, their spent stages and their spacecraft from the models' outside
   (`npm run anatomy` makes the flight's meshes from the pages). Both are loaded on demand, not
   precached.
+- **Structure & Assembly** (`#/structure`, owner's request 2026-11-09, a pilot): explore
+  Soyuz-2.1b/Fregat ST31 from the Anatomy model part by part (pick in 3-D or in the list, the
+  page's cutaway, take apart, colour by kind of part or by how its shape is known), assemble its
+  eleven main assemblies to the reference, and assemble an educational CubeSat-like satellite,
+  EduSat-3U, then change its battery and camera and see mass and a sunlit/eclipse energy balance
+  change; send it to Orbit or (a hypothetical ride) to Launch. `npm run structure` makes the
+  section's model files from the Anatomy page; they are loaded on demand, not precached.
 - **A satellite builder** (Build, Phase 4): design a satellite from NAPA-2, a THEOS-2-class
   imager or a class of the catalogue, with its eclipse, power, Δv budget, attitude control, downlink
   and camera worked out as you type and held to published worked examples; test it on the satellite

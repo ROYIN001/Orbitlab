@@ -64,6 +64,7 @@ import {
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute,
 } from './ui/app-mode';
 import { BuildScreen } from './ui/build/build-screen';
+import { StructureScreen, type StructureHost } from './ui/structure/structure-screen';
 import { WorkspaceMission, missionSummary, startupMission } from './ui/workspace-mission';
 import { loadExperience } from './ui/experience';
 import { OrbitPlayground } from './ui/orbit/playground';
@@ -301,6 +302,8 @@ class App {
   private buildScreen: BuildScreen;
   /** O01: the Orbit section's playground */
   private playground: OrbitPlayground;
+  /** the Structure & Assembly section (owner, 2026-11-09): made the first time it opens */
+  private structure: StructureScreen | null = null;
   /** the Earth's textures, loaded once for the launch scene and the playground's 3-D view */
   private earthTextures: Promise<EarthTextures> | null = null;
   /** which section and level of the app is showing (src/ui/app-mode.ts) */
@@ -838,12 +841,50 @@ class App {
 
   /** Opaque section and lesson pages cover the scene while the flight continues. */
   private get sceneCovered(): boolean {
-    return !!document.body.dataset.lessonsPage || this.route.section === 'orbit' || this.route.section === 'build' || (this.mode === 'home' && this.homeCovers);
+    return !!document.body.dataset.lessonsPage || this.route.section === 'orbit' || this.route.section === 'build' || this.route.section === 'structure'
+      || (this.mode === 'home' && this.homeCovers);
   }
 
   /** The landing page and the viewer: no workspace, the scene is the page. */
   get lean(): boolean {
     return this.mode === 'home' || this.mode === 'watch';
+  }
+
+  /**
+   * The Structure section, made the first time it opens, shown at the route's
+   * level (its depth) and on a model's page if the address names one. Its
+   * code is in the app's own bundle: a chunk of its own made the bundler
+   * split the app's shared chunks differently (docs/development/reports/structure-assembly-pilot.md).
+   */
+  private showStructure(): void {
+    const r = this.route;
+    if (r.section !== 'structure') return;
+    this.structure ??= new StructureScreen(document.getElementById('structure-screen')!, this.structureHost());
+    this.structure.show(r.mode, r.page);
+  }
+
+  /** What the Structure section may do outside itself: navigate, and hand its satellite to Orbit or Launch as Build does. */
+  private structureHost(): StructureHost {
+    return {
+      go: (r) => this.go(r),
+      toOrbit: (h, level) => {
+        this.handoff = h;
+        this.playground.setHandoff(h);
+        this.go(route('orbit', level));
+        return this.handoff ? { mass: this.handoff.spacecraft.mass } : null;
+      },
+      toLaunch: (doc, level) => {
+        this.goLive(); this.playing = false;
+        const parsed = this.panel.share.apply(doc, 'build');
+        if (!parsed.usable) return null;
+        this.helpGuide.missionGiven();
+        saveStoredMission(this.panel.missionState());
+        this.go(route('launch', level));
+        // read back from the Launch section's own mission, after its checks
+        const m = this.panel.missionState();
+        return { mass: m.payloadMass };
+      },
+    };
   }
 
   /** Navigate to a route (a history entry, so Back returns to the last one). */
@@ -878,6 +919,10 @@ class App {
     document.getElementById('orbit-playground')!.hidden = !orbit;
     if (orbit) this.playground.show(next.mode as AppLevel);
     else this.playground.hide();
+    const structure = next.section === 'structure';
+    document.getElementById('structure-screen')!.hidden = !structure;
+    if (structure) this.showStructure();
+    else this.structure?.hide();
     const experience = experienceForMode(mode);
     // A1: the workspace comes back to the user's mission, not the viewer's launch left on the pad
     if (experience) this.restoreWorkspaceMission();
@@ -1367,6 +1412,7 @@ class App {
     if (this.route.section === 'orbit') { this.playground.onKey(e); return; }
     // Phase 3: the Build section has its own keys, and none of the launch's
     if (this.route.section === 'build') { this.buildScreen.onKey(e); return; }
+    if (this.route.section === 'structure') { this.structure?.onKey(e); return; }
     // The landing page has no flight controls on it: Space must not launch the
     // rocket standing behind it, out of sight.
     if (this.mode === 'home') return;
@@ -1458,6 +1504,7 @@ class App {
     this.watch.applyLanguage();
     this.buildScreen.applyLanguage();
     this.playground.applyLanguage();
+    this.structure?.applyLanguage();
     this.syncDataMode();
     if (this.dataDialog.el.open) this.dataDialog.applyLanguage();
     this.lessons?.applyLanguage(); // E03
