@@ -10,7 +10,8 @@ import {
   type AssemblySpec, type AssemblyState,
 } from '../src/structure/assembly';
 import { SOYUZ_ASSEMBLY, SOYUZ_UNITS, soyuzCategory, soyuzCertainty } from '../src/structure/soyuz';
-import { EDUSAT_ASSEMBLY, EDU_UNITS, FACES, slotOfUnit } from '../src/structure/edusat';
+import * as THREE from 'three';
+import { EDUSAT_ASSEMBLY, EDU_UNITS, FACES, FIXED_PARTS, PANELS, panelTurn, slotOfUnit } from '../src/structure/edusat';
 
 /** Install every unit of a spec into its reference slot, in an order that works. */
 function assembleAll(spec: AssemblySpec): AssemblyState {
@@ -141,6 +142,26 @@ describe('EduSat-3U: the stack goes in from the bottom up, the panels close it',
     for (const [k, unit] of (['panel-nx', 'panel-pz', 'panel-nz'] as const).entries()) state = (install(E, state, unit, { slot: free[k], orientation: 0 }) as { state: AssemblyState }).state;
     state = (install(E, state, 'antenna', { slot: 'antenna', orientation: 0 }) as { state: AssemblyState }).state;
     expect(checkAssembly(E, state)).toMatchObject({ complete: true, placed: EDU_UNITS.length });
+  });
+
+  it('draws a panel put on another face on that face, as the viewer turns it (about +Y, as three.js does)', () => {
+    const boxOf = (unit: string) => FIXED_PARTS.find((p) => p.unit === unit)!.box;
+    for (const unit of PANELS) {
+      for (const face of FACES) {
+        const turn = new THREE.Matrix4().makeRotationY(panelTurn(unit, face));
+        const own = boxOf(unit);
+        const there = boxOf(EDUSAT_ASSEMBLY.slots.find((s) => s.id === face)!.reference);
+        const moved = new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(...own.center), new THREE.Vector3(...own.size)).applyMatrix4(turn);
+        const expected = new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(...there.center), new THREE.Vector3(...there.size));
+        for (const k of ['x', 'y', 'z'] as const) {
+          expect(moved.min[k], `${unit} on ${face}: min ${k}`).toBeCloseTo(expected.min[k], 9);
+          expect(moved.max[k], `${unit} on ${face}: max ${k}`).toBeCloseTo(expected.max[k], 9);
+        }
+      }
+      expect(panelTurn(unit, slotOfUnit(unit))).toBe(0);
+    }
+    expect(panelTurn('battery', 'face-px')).toBe(0);
+    expect(panelTurn('panel-px', 'battery')).toBe(0);
   });
 
   it('refuses a board before the one under it, and the camera lens up', () => {

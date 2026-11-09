@@ -31,8 +31,10 @@ const BOTTOM = -ENVELOPE.y / 2;
 
 /**
  * This pilot's mass bound, kg: 4.00, the 3U limit of the CubeSat Design
- * Specification Rev. 13 (2014). Later revisions and launch providers set
- * their own; the section says so.
+ * Specification Rev. 13 (2014), found through search results, not read in
+ * the document. Later revisions and launch providers set their own; the
+ * section says so (`res.massLimitNote`), and that Rev. 14.1's value was not
+ * checked here (its hosts were out of this session's network).
  */
 export const MASS_LIMIT_KG = 4;
 
@@ -273,6 +275,20 @@ const EDU_REQUIRES: Readonly<Record<EduUnit, readonly EduUnit[]>> = {
 const FLIPPABLE: ReadonlySet<EduUnit> = new Set(['payload', 'panel-px', 'panel-nx', 'panel-pz', 'panel-nz']);
 
 export const slotOfUnit = (unit: EduUnit): string => FACE_OF[unit] ?? unit;
+
+/** Where each face stands round the long axis (+Y), rad: the angle that turns +X onto it about +Y, right-handed. */
+export const FACE_AZIMUTH: Readonly<Record<string, number>> = { 'face-px': 0, 'face-nz': Math.PI / 2, 'face-nx': Math.PI, 'face-pz': -Math.PI / 2 };
+
+/**
+ * The turn about the long axis, rad, that carries a side panel from its own
+ * face to `slot`: how a panel installed on another face is drawn there. 0 on
+ * its own face, and for a unit or slot that is not a panel's or a face.
+ */
+export function panelTurn(unit: string, slot: string): number {
+  const own = FACE_OF[unit];
+  if (own === undefined || !Object.hasOwn(FACE_AZIMUTH, slot)) return 0;
+  return FACE_AZIMUTH[slot] - FACE_AZIMUTH[own];
+}
 
 export const EDUSAT_ASSEMBLY: AssemblySpec = {
   units: EDU_UNITS.map((id) => ({

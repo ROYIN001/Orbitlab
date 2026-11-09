@@ -48,16 +48,23 @@ export interface ReadProgress {
   progress: StructureProgress;
   /** false when the stored record is from a newer version: keep it, do not write over it */
   writable: boolean;
+  /**
+   * What was wrong with the stored record, for the learner to be told: one
+   * that could not be read (written over by the next save; the profile sets
+   * the old copy aside, src/workspace/repository.ts), or a newer version's
+   * (left alone, so nothing here is saved); null when it was fine or absent.
+   */
+  note: 'damaged' | 'newer' | null;
 }
 
 /** Read a stored record (`raw` as stored, or null), restoring each assembly by `specs`' rules. */
 export function readProgress(raw: string | null, specs: Record<StructureModelId, AssemblySpec>): ReadProgress {
   const fresh = freshProgress();
-  if (raw === null) return { progress: fresh, writable: true };
+  if (raw === null) return { progress: fresh, writable: true, note: null };
   let data: unknown;
-  try { data = JSON.parse(raw); } catch { return { progress: fresh, writable: false }; }
-  if (!own(data) || typeof data.version !== 'number') return { progress: fresh, writable: false };
-  if (data.version > STRUCTURE_STORE_VERSION) return { progress: fresh, writable: false };
+  try { data = JSON.parse(raw); } catch { return { progress: fresh, writable: true, note: 'damaged' }; }
+  if (!own(data) || typeof data.version !== 'number' || data.version < 1) return { progress: fresh, writable: true, note: 'damaged' };
+  if (data.version > STRUCTURE_STORE_VERSION) return { progress: fresh, writable: false, note: 'newer' };
   const p = fresh;
   if (STRUCTURE_MODELS.includes(data.model as StructureModelId)) p.model = data.model as StructureModelId;
   for (const m of STRUCTURE_MODELS) {
@@ -71,7 +78,7 @@ export function readProgress(raw: string | null, specs: Record<StructureModelId,
   if (isEduDesign(data.experiment)) p.experiment = { battery: data.experiment.battery, payload: data.experiment.payload };
   p.showing = data.showing === 'mine' && p.experiment ? 'mine' : 'reference';
   if (p.mode['soyuz-st31'] === 'experiment') p.mode['soyuz-st31'] = 'explore';
-  return { progress: p, writable: true };
+  return { progress: p, writable: true, note: null };
 }
 
 /** The record to store. Each assembly keeps its placements only (its undo history is the visit's). */

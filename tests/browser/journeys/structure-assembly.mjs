@@ -38,7 +38,7 @@ export default async function structureAssembly(t) {
   await ready(page);
   const s0 = await screen();
   t.check(s0.model === 'soyuz-st31' && s0.mode === 'explore' && s0.level === 'explore', `the direct link opened ${JSON.stringify(s0)}`);
-  t.check(await page.locator('#section-nav [aria-current="page"], #section-nav .nav-current').count() >= 0, 'the section switch is there');
+  t.check(await page.locator('#section-nav .nav-tab[data-section="structure"][data-current]').count() === 1, 'the section switch marks this section as the one open');
   await app.shot('soyuz-explore');
 
   // a part from the list: its name and its relations
@@ -120,6 +120,28 @@ export default async function structureAssembly(t) {
   await t.until(async () => (await screen()).model === 'edusat');
   await ready(page);
   t.check(await page.evaluate(() => location.hash) === '#/structure/explore/edusat', 'the model has its own address');
+
+  // assembling EduSat: a side panel goes on any face, and is drawn on the face it went on
+  await k('mode:assemble').click();
+  if (await k('restart').isEnabled()) await k('restart').click();
+  for (const u of ['frame', 'stack', 'payload', 'battery', 'eps', 'adcs', 'obc', 'radio']) await fit(u, u, u === 'payload' ? 1 : 0);
+  t.check((await fit('panel-px', 'face-nz', 1)).startsWith('ติดตั้ง'), `the +X panel on the −Z face: ${await msg()}`);
+  const panelAt = await page.evaluate(() => {
+    const s = window.orbitlab.structure;
+    const b = s.viewer.boxOf([9], (i) => s.unitOfItem(i)); // EDU_UNITS[9] = 'panel-px'
+    return b && [(b.min.x + b.max.x) / 2, (b.min.z + b.max.z) / 2];
+  });
+  t.check(!!panelAt && Math.abs(panelAt[0]) < 0.01 && panelAt[1] < -0.04, `drawn on the −Z face, centre x, z = ${JSON.stringify(panelAt)}`);
+  await k('tray:panel-nx').click();
+  t.check(await k('slot:face-px').count() === 1 && await k('slot:face-nz').count() === 0, 'the free +X face is offered, the taken −Z face is not');
+  await app.shot('edusat-panel-swapped');
+  await k('tray:panel-nx').click(); // put it down again
+  // the other panels on the faces left, the antenna last: complete, panels swapped and all
+  for (const [u, face] of [['panel-nx', 'face-nx'], ['panel-pz', 'face-pz'], ['panel-nz', 'face-px']]) await fit(u, face, 1);
+  await fit('antenna', 'antenna');
+  const eduDone = await page.locator('.st-asm .st-done').textContent().catch(() => '');
+  t.check(eduDone.includes('13'), `EduSat complete with two panels on other faces: ${eduDone.slice(0, 120)} / ${await msg()}`);
+  await k('mode:explore').click();
   await k('skip').click();
   await t.until(async () => (await screen()).mode === 'experiment');
   const fig = (f) => text(`.st-results [data-fig="${f}"]`);
@@ -146,14 +168,21 @@ export default async function structureAssembly(t) {
   });
   t.check(!!held && Math.abs(held.mass - 2.07) < 5e-4 && held.kind === 'science' && held.propulsion === null && held.label.startsWith('EduSat-3U'),
     `Orbit holds ${JSON.stringify(held)}`);
+  // Orbit rounds its figure to the kilogram: this only checks it is on screen; the read-back above checks the value
   const shown = Number((await text('#orbit-playground .pg-handoff dd')).replace(/[^\d.,]/g, '').replace(',', '.'));
-  t.check(Math.abs(shown - 2.07) < 0.5, `Orbit shows ${shown} kg`);
+  t.check(shown === 2, `Orbit shows ${shown} kg (2.07 kg rounded to the kilogram)`);
   await app.shot('orbit-received');
   await page.goBack();
   await t.until(async () => page.evaluate(() => location.hash.startsWith('#/structure')), { timeoutMs: 30_000 });
-  t.check((await text('.st-go .st-msg-ok')).includes('2.070'), `the receipt: ${await text('.st-go')}`);
+  t.check((await text('.st-go [data-held="orbit"]')).includes('2.070') && await page.locator('.st-go [data-check="ok"]').count() === 1,
+    `the receipt, read back from Orbit: ${await text('.st-go [data-held]')} ${await text('.st-go .st-msg')}`);
 
   // sent to Launch, a hypothetical ride on Soyuz-2.1b/Fregat: its mission carries the same mass
+  const launchMission = () => page.evaluate(() => {
+    const m = window.orbitlab.panel.missionState();
+    return { vehicle: m.vehicleId, site: m.siteId, orbit: m.orbitId, payload: m.payloadMass, satellite: m.satelliteId, at: new Date(m.launchTime).toISOString() };
+  });
+  const launchBefore = await launchMission();
   await k('go:launch').click();
   await t.until(async () => page.evaluate(() => location.hash.startsWith('#/launch')), { timeoutMs: 30_000 });
   const mission = await t.until(() => page.evaluate(() => {
@@ -165,11 +194,20 @@ export default async function structureAssembly(t) {
   await app.shot('launch-received');
   await page.goBack();
   await t.until(async () => page.evaluate(() => location.hash.startsWith('#/structure')), { timeoutMs: 30_000 });
-  t.check((await text('.st-go .st-msg-ok')).includes('2.070'), `Launch's receipt: ${await text('.st-go')}`);
+  t.check((await text('.st-go [data-held="launch"]')).includes('2.070') && await page.locator('.st-go [data-check="ok"]').count() === 1,
+    `the receipt, read back from Launch: ${await text('.st-go [data-held]')} ${await text('.st-go .st-msg')}`);
   // a change after sending: what was sent is the earlier design
   await k('payload:camera-day').check();
   await t.until(async () => (await fig('mass')).startsWith('1.870'));
   t.check((await page.locator('.st-go .st-msg-no').allTextContents()).some((s) => s.includes('แบบถูกแก้หลังส่ง')), 'a change after sending is flagged');
+  // the mission Launch had before is put back with one press
+  await k('go:undoLaunch').click();
+  await t.until(async () => page.evaluate(() => location.hash.startsWith('#/launch')), { timeoutMs: 30_000 });
+  const launchAfter = await t.until(async () => { const m = await launchMission(); return m.satellite === launchBefore.satellite ? m : null; }, { timeoutMs: 30_000 });
+  t.check(JSON.stringify(launchAfter) === JSON.stringify(launchBefore), `Launch's earlier mission is back: ${JSON.stringify(launchAfter)} (was ${JSON.stringify(launchBefore)})`);
+  await page.goBack();
+  await t.until(async () => page.evaluate(() => location.hash.startsWith('#/structure')), { timeoutMs: 30_000 });
+  t.check((await text('.st-go .st-msg-ok')).includes('นำภารกิจเดิมของ Launch กลับมาแล้ว') && await k('go:undoLaunch').count() === 0, `after putting it back: ${await text('.st-go .st-msg')}`);
   // the reference stays as it was
   await k('show:reference').click();
   t.check((await fig('mass')).startsWith('1.810'), `the reference after all that: ${await fig('mass')}`);
@@ -198,9 +236,20 @@ export default async function structureAssembly(t) {
   for (const u of ['frame', 'stack']) { await pk(`tray:${u}`).tap(); await pk(`slot:${u}`).tap(); await pk('install').tap(); }
   t.check((await p.locator('.st-asm .st-progress').textContent()).includes('2/13'), 'assembled by taps');
   await phone.shot('phone-assemble');
-  // the keyboard on the 3-D view
+  // the keyboard on the 3-D view: each key moves it, 0 brings back the overview
   await p.locator('.st-canvas').focus();
-  for (const key of ['ArrowLeft', 'ArrowUp', '+', '-', '0']) await p.keyboard.press(key);
+  const view = () => p.evaluate(() => window.orbitlab.structure.viewer.view());
+  await p.keyboard.press('0');
+  const home = await view();
+  const moved = [];
+  for (const key of ['ArrowLeft', 'ArrowUp', 'Shift+ArrowRight', '+', '-']) {
+    const before = await view();
+    await p.keyboard.press(key);
+    moved.push(JSON.stringify(await view()) !== JSON.stringify(before) ? key : `${key} (no change)`);
+  }
+  t.check(!moved.some((m) => m.endsWith('(no change)')), `keys on the view: ${moved.join(', ')}`);
+  await p.keyboard.press('0');
+  t.check(!!(await t.until(async () => JSON.stringify(await view()) === JSON.stringify(home), { timeoutMs: 5_000 })), '0 brought back the overview');
   t.check(pErrors.length === 0, `phone console errors: ${pErrors.join(' | ')}`);
   await phone.context.close();
 }

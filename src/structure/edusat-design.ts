@@ -177,3 +177,37 @@ export function eduSatelliteDesign(d: EduDesign, id: string, name: string): Sate
     sources: ['Orbitlab Structure section, EduSat-3U: a concept for learning (src/structure/edusat.ts)'],
   };
 }
+
+// ─── what a destination says it holds ───────────────────────────────────────
+
+/**
+ * What a destination holds once it has taken the satellite, read back from
+ * the destination, not from what was sent: the mass, kg; the orbit, its
+ * altitudes above the equatorial radius, m, and its inclination, deg (or
+ * Launch's own 'sso' target); and how many values its checks put back to its
+ * own defaults (0: it took everything as sent).
+ */
+export interface HandoffReceipt {
+  mass: number;
+  perigeeAlt: number;
+  apogeeAlt: number;
+  inclination: number | 'sso' | 'site';
+  replaced: number;
+  /** Launch: the site it flies from */
+  siteId?: string;
+}
+
+/** What a receipt counts as "as sent": half a gram, a kilometre, a twentieth of a degree. */
+export const RECEIPT_TOLERANCE = { kg: 5e-4, m: 1000, deg: 0.05 } as const;
+
+export interface ReceiptCheck { mass: boolean; orbit: boolean; whole: boolean; ok: boolean }
+
+/** The receipt against the satellite sent: the mass, the orbit, nothing replaced. */
+export function checkReceipt(sat: SatelliteDesign, r: HandoffReceipt): ReceiptCheck {
+  const T = RECEIPT_TOLERANCE;
+  const mass = Math.abs(r.mass - (sat.bus.dryMass + (sat.propulsion?.propellant ?? 0))) < T.kg;
+  const plane = r.inclination === 'sso' ? sat.orbit.sso : r.inclination !== 'site' && Math.abs(r.inclination - sat.orbit.inclination) < T.deg;
+  const orbit = plane && Math.abs(r.perigeeAlt - sat.orbit.perigee) < T.m && Math.abs(r.apogeeAlt - sat.orbit.apogee) < T.m;
+  const whole = r.replaced === 0;
+  return { mass, orbit, whole, ok: mass && orbit && whole };
+}

@@ -1,7 +1,7 @@
 /**
  * Assembling a model to its reference design: which unit goes in which slot,
  * the way round it goes, and what has to be in place first. One state machine
- * for every model of the Structure section (src/structure/soyuz-assembly.ts,
+ * for every model of the Structure section (src/structure/soyuz.ts,
  * src/structure/edusat.ts).
  *
  * The rules are the reference's relations, not a count: a unit goes only into

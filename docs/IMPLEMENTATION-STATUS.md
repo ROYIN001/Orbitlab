@@ -123,8 +123,10 @@ are listed there as drafts awaiting the owner's review.
   restart. EduSat-3U, a concept satellite for learning: assembled, then "my experiment" with two
   batteries and two cameras, mass from the parts list and a time-stepped sunlit/eclipse balance
   built on `src/orbit/power.ts`'s SMAD figures (checked against `arrayPowerRequired` and
-  `batteryCapacity`); handed to Orbit (`designHandoff`) and Launch (`designMissionDocument`,
-  Soyuz-2.1b from Vostochny, hypothetical). Not merged; the bundle ceilings need the owner (D-38).
+  `batteryCapacity`); handed to Orbit (`designHandoff`) and Launch (`designMissionDocument` after
+  Build's pre-flight checks, Soyuz-2.1b from Vostochny, hypothetical), with what each destination
+  took read back and checked (`checkReceipt`). Not merged; the bundle ceilings need the owner
+  (D-38).
 - **The Soyuz Anatomy models** (owner, 2026-10-28; `public/anatomy/`, `src/data/anatomy.ts`): the
   owner's own 3-D models of Soyuz-2.1a with the Soyuz MS or the Progress MS-26, and of Soyuz-2.1b
   with Fregat under the ST fairing, kept byte for byte. Build's Watch level opens each whole in a

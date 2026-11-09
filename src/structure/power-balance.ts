@@ -20,7 +20,13 @@
  *   battery-to-load efficiency: so an orbit balances exactly at the array
  *   power `arrayPowerRequired` asks for, and a battery of
  *   `batteryCapacity` reaches its depth of discharge exactly at the end of
- *   the shadow (tests/structure-power.test.ts);
+ *   the shadow (tests/structure-power.test.ts) — provided no sunlit load
+ *   ever needs more than the panels give through the regulator, and the
+ *   battery neither fills nor reaches its floor. A sunlit peak above the
+ *   panels' power draws the excess, D, from the battery, which SMAD's
+ *   averages do not see: the orbit then ends D·(1/η_BAT − η_charge) short.
+ *   The four EduSat designs never do (their sunlit peak is 4.8 W against
+ *   6.65 W from the panels);
  * - the battery starts full; it holds at most its capacity (more is not
  *   stored: the regulator sheds it) and gives nothing below its allowed depth
  *   of discharge. When the loads need more than the panels give and the

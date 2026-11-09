@@ -10,13 +10,14 @@ import { STRUCTURE_STORE_KEY, freshProgress, readProgress, writeProgress } from 
 import { SOYUZ_ASSEMBLY } from '../src/structure/soyuz';
 import { EDUSAT_ASSEMBLY } from '../src/structure/edusat';
 import { REFERENCE_DESIGN, designKey, eduFigures } from '../src/structure/edusat-design';
-import { WORKSPACE_KEYS } from '../src/workspace/registry';
+import { WORKSPACE_KEYS, isWorkspaceKey } from '../src/workspace/registry';
 
 const specs = { 'soyuz-st31': SOYUZ_ASSEMBLY, edusat: EDUSAT_ASSEMBLY };
 
 describe('the Structure section\'s stored progress', () => {
   it('is a key of the profile, so it goes with the profile and nowhere else', () => {
     expect(WORKSPACE_KEYS).toContain(STRUCTURE_STORE_KEY);
+    expect(isWorkspaceKey(STRUCTURE_STORE_KEY)).toBe(true);
   });
 
   it('round-trips the model, the activities, the assemblies, completion and my experiment', () => {
@@ -32,11 +33,12 @@ describe('the Structure section\'s stored progress', () => {
     expect(back.progress).toEqual(p);
   });
 
-  it('reads nothing, a damaged record or a newer one as fresh, and will not write over the latter two', () => {
-    expect(readProgress(null, specs)).toEqual({ progress: freshProgress(), writable: true });
-    expect(readProgress('{not json', specs).writable).toBe(false);
-    expect(readProgress('[1,2]', specs).writable).toBe(false);
-    expect(readProgress(JSON.stringify({ version: 2, model: 'edusat' }), specs)).toEqual({ progress: freshProgress(), writable: false });
+  it('reads nothing, a damaged record or a newer one as fresh; writes over a damaged one (the profile sets it aside), never a newer one', () => {
+    expect(readProgress(null, specs)).toEqual({ progress: freshProgress(), writable: true, note: null });
+    for (const raw of ['{not json', '[1,2]', '{"version":"1"}', '{"version":0}']) {
+      expect(readProgress(raw, specs), raw).toEqual({ progress: freshProgress(), writable: true, note: 'damaged' });
+    }
+    expect(readProgress(JSON.stringify({ version: 2, model: 'edusat' }), specs)).toEqual({ progress: freshProgress(), writable: false, note: 'newer' });
   });
 
   it('restores a stored assembly by the assembly rules and drops what is not a design', () => {
@@ -63,12 +65,13 @@ describe('the reference and my experiment', () => {
     expect(REFERENCE_DESIGN.payload).toBe('camera-day');
   });
 
-  it('labels every result with the design it was computed for, so an older one cannot pass for a newer design\'s', () => {
+  it('labels every result with its design, and works it out again from the design alone (nothing older to show)', () => {
     const a = eduFigures(REFERENCE_DESIGN);
     const b = eduFigures({ ...REFERENCE_DESIGN, payload: 'camera-night' });
     expect(a.key).toBe(designKey(REFERENCE_DESIGN));
     expect(b.key).not.toBe(a.key);
-    // the section shows a result only while its key is the design's (structure-screen.ts, resultsBlock)
-    expect(a.key === designKey({ ...REFERENCE_DESIGN, payload: 'camera-night' })).toBe(false);
+    // a function of the design: the same design, the same figures, whatever was worked out in between
+    expect(eduFigures({ ...REFERENCE_DESIGN })).toEqual(a);
+    expect(eduFigures({ battery: 'battery-1cell', payload: 'camera-day' })).toEqual(a);
   });
 });

@@ -171,6 +171,10 @@ export class StructureViewer {
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) on(type, (e) => this.onUp(e as PointerEvent));
     on('wheel', (e) => this.onWheel(e), { passive: false });
     on('contextmenu', (e) => e.preventDefault());
+    // drawn on demand: a context the browser gives back is drawn again at once, not at the next touch (the loss itself: webgl-renderer.ts)
+    const restored = (): void => this.requestRender();
+    canvas.addEventListener('webglcontextrestored', restored);
+    this.off.push(() => canvas.removeEventListener('webglcontextrestored', restored));
     this.resizer = new ResizeObserver(() => this.resize());
     this.resizer.observe(canvas.parentElement ?? canvas);
   }
@@ -265,6 +269,11 @@ export class StructureViewer {
     this.units.clear();
     if (this.grid) { this.scene.remove(this.grid); this.grid.geometry.dispose(); (this.grid.material as THREE.Material).dispose(); this.grid = null; }
     this.itemCount = 0;
+    // the parts' state texture: an empty one in its place until the next model (`reset` makes its own)
+    this.state = new Uint8Array(4);
+    this.stateTexture.dispose();
+    this.stateTexture = this.makeStateTexture(0);
+    this.shared.itemState.value = this.stateTexture;
     this.renderer.renderLists.dispose();
     this.requestRender();
   }

@@ -171,3 +171,21 @@ export function unitAxis(index: SoyuzIndex, unit: SoyuzUnit): [number, number] {
   const z = low.reduce((s, c) => s + c[2], 0) / low.length;
   return [Math.abs(x) < 0.05 ? 0 : x, Math.abs(z) < 0.05 ? 0 : z];
 }
+
+/**
+ * Where to look from to see into the page's cutaway, as the viewer's azimuth
+ * (its camera stands at (sin az, cos az) round the target in x and z,
+ * src/render/structure-viewer.ts): from the side of the halves the cutaway
+ * hides ("…front"), away from the halves it keeps ("…back"). Taken from the
+ * page's own halves, so it follows the model if the page is remade.
+ */
+export function cutawayAzimuth(content: SoyuzContent): number {
+  const front = [0, 0, 0], back = [0, 0, 0]; // x sum, z sum, count
+  for (const it of content.items) {
+    const side = it.half?.endsWith('front') ? front : it.half?.endsWith('back') ? back : null;
+    if (!side) continue;
+    side[0] += it.center[0]; side[1] += it.center[2]; side[2]++;
+  }
+  if (!front[2] || !back[2]) return 0;
+  return Math.atan2(front[0] / front[2] - back[0] / back[2], front[1] / front[2] - back[1] / back[2]);
+}

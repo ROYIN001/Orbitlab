@@ -340,6 +340,19 @@ export class OrbitPlayground {
   }
 
   /**
+   * What the playground holds from the hand-off it was given, as it uses it:
+   * the mass its lifetime analysis takes, and the orbit it loaded from the
+   * state vector (altitudes above the equatorial radius, m; inclination,
+   * deg). For a sender to check what arrived; null with none, or once
+   * another orbit is shown.
+   */
+  heldHandoff(): { mass: number; perigeeAlt: number; apogeeAlt: number; inclination: number } | null {
+    if (!this.handoff || this.presetId !== HANDOFF) return null;
+    const f = orbitFacts(this.orbit, false);
+    return { mass: playgroundLifetimeCraft(this.handoff, this.craft).mass, perigeeAlt: f.perigeeAlt, apogeeAlt: f.apogeeAlt, inclination: this.orbit.i * RAD };
+  }
+
+  /**
    * D06: the orbit handed on is a designed satellite's, sent from the Build
    * section with no launch (`handoffFromDesign`: no mission, no vehicle), so
    * it is not called "your launch".

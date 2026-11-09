@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { decodeStructureLayer } from '../src/render/structure-mesh';
 import { inflateAnatomy } from '../src/render/anatomy';
-import { SOYUZ_FILES, SOYUZ_LAYERS, indexSoyuz, parseSoyuzContent, unitAxis } from '../src/structure/soyuz-content';
+import { SOYUZ_FILES, SOYUZ_LAYERS, cutawayAzimuth, indexSoyuz, parseSoyuzContent, unitAxis } from '../src/structure/soyuz-content';
 import { SOYUZ_UNITS, SOYUZ_BOOSTERS } from '../src/structure/soyuz';
 import { CERTAINTIES, PART_CATEGORIES } from '../src/structure/types';
 import { onDemand, precacheable } from '../src/pwa/manifest';
@@ -88,6 +88,25 @@ describe('the Structure section\'s Soyuz-2.1b/Fregat files', () => {
       expect(d).toBeCloseTo((k * Math.PI) / 2, 2);
     }
     expect(unitAxis(index, 'fregat')).toEqual([0, 0]);
+  });
+
+  it('open the cutaway towards the camera: each hidden half stands between the view and the half kept', () => {
+    const az = cutawayAzimuth(content);
+    // the viewer's camera stands at (sin az, cos az) round its target, in x and z
+    const eye = [Math.sin(az), Math.cos(az)];
+    expect(az).toBeCloseTo((3 * Math.PI) / 4, 1);
+    const units = new Set(content.items.filter((it) => it.half).map((it) => it.unit));
+    expect(units.size).toBeGreaterThan(3);
+    for (const unit of units) {
+      const mean = (end: string) => {
+        const c = content.items.filter((it) => it.unit === unit && it.half?.endsWith(end)).map((it) => it.center);
+        return [c.reduce((s, p) => s + p[0], 0) / c.length, c.reduce((s, p) => s + p[2], 0) / c.length];
+      };
+      const [fx, fz] = mean('front'), [bx, bz] = mean('back');
+      const d = Math.hypot(fx - bx, fz - bz);
+      // towards the camera, within 30° of straight at it
+      expect(((fx - bx) * eye[0] + (fz - bz) * eye[1]) / d, unit).toBeGreaterThan(Math.cos(Math.PI / 6));
+    }
   });
 
   it('give every part a group, its kind and how its shape is known', () => {

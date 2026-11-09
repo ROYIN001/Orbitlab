@@ -967,8 +967,9 @@ method behind the results. Changing level keeps what you picked, your assembly a
   in Thai), fetched when you open it (about 0.5 MB, more for the inside and the engines when you
   ask for them). *EduSat-3U* is a satellite made up for learning — a concept, not a real
   satellite, and nothing to do with the OneWeb satellites ST31 carried.
-- **Explore.** Drag to turn, wheel or two fingers to zoom, Shift-drag to pan; or the arrow keys,
-  + and − and 0 with the view focused. A press picks a part; so does the list. **Open the front
+- **Explore.** Drag to turn, wheel or two fingers to zoom, Shift-drag to pan; or, with the view
+  focused, the arrow keys to turn, Shift and the arrow keys to pan, + and − to zoom and 0 for the
+  overview. A press picks a part; so does the list. **Open the front
   half** hides the halves the Anatomy page cuts its parts into (an illustration, not a section
   through production drawings); **See-through skins**, **Take apart**, **Open the fairing**,
   **Hide**, **Show only** and **Reset** do what they say. **Colour by** shows walls, load-bearing
@@ -977,8 +978,9 @@ method behind the results. Changing level keeps what you picked, your assembly a
   (everything inside). Documented figures are listed with their sources.
 - **Assemble.** Pick a part from the tray, a place and, for a part whose way round matters, turn
   it, then **Fit**; or drag it onto the view. A step that cannot be taken yet says why (what has
-  to go on first, whose place it is, which way round). **Undo**, **Start again** (undoable) and
-  **Remove** work at any time. The model is complete when every part is in its place, the right
+  to go on first, whose place it is, which way round). EduSat's four side panels fit any face, and
+  each is drawn on the face it went on. **Undo**, **Start again** (undoable) and **Remove** work at
+  any time; the parts in place are listed too, so one can be picked to take off without the view. The model is complete when every part is in its place, the right
   way round, with everything it rests on — not when the count is reached. The Soyuz order follows
   the load path standing up; at a launch site it is assembled lying down, the upper part first.
   Passing these rules says nothing about strength.
@@ -986,15 +988,21 @@ method behind the results. Changing level keeps what you picked, your assembly a
   the battery (one or two 18650 cells) or the camera (a day camera, or a night-lights camera that
   works only in the Earth's shadow). The picture, the parts list, the mass and a three-orbit energy
   balance change together; the night camera on one cell runs short near the end of every shadow,
-  and two cells power it for 60 g more. The reference stays to compare with and to go back to.
+  and two cells power it for 60 g more. The reference stays to compare with; **Reset my experiment
+  to the reference** sets your copy back to it.
 - **Send to Orbit / Launch.** The section shows what is sent (name, mass with the chosen battery
   and camera, size, drag, orbit) and what is not (the battery and the energy results, which the
   destinations do not read yet). Launch flies it on Soyuz-2.1b/Fregat from Vostochny, a
   hypothetical scenario. Sending replaces the mission or orbit open there, as Build's own buttons
-  do; your saved designs and files are not touched. The section then shows the mass the
-  destination took, and says so if you change the design afterwards.
+  do; your saved designs and files are not touched. The section then reads back what the
+  destination took — the mass, the orbit's height and its inclination — checks it against what was
+  sent, and says so if you change the design afterwards. A send that a destination refuses is said
+  beside the buttons, with the reason. After a send to Launch, **Put back the mission Launch had
+  before** restores the mission that was open there (while the page stays open).
 - What it keeps (in your profile, `orbitlab.structure.v1`): the model and activity last open, each
-  model's assembly and "my experiment".
+  model's assembly and "my experiment". If that record cannot be read, the section says it started
+  afresh (the profile keeps the old copy aside); if it was saved by a newer Orbitlab, the section
+  leaves it alone and says your work here is not being saved.
 
 ## 1. Set up a mission
 

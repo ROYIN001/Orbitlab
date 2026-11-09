@@ -871,7 +871,9 @@ class App {
         this.handoff = h;
         this.playground.setHandoff(h);
         this.go(route('orbit', level));
-        return this.handoff ? { mass: this.handoff.spacecraft.mass } : null;
+        // read back from the Orbit section: the orbit it loaded from the state vector, the mass its lifetime analysis takes
+        const held = this.playground.heldHandoff();
+        return held && { ...held, replaced: 0 };
       },
       toLaunch: (doc, level) => {
         this.goLive(); this.playing = false;
@@ -880,9 +882,19 @@ class App {
         this.helpGuide.missionGiven();
         saveStoredMission(this.panel.missionState());
         this.go(route('launch', level));
-        // read back from the Launch section's own mission, after its checks
+        // read back from the Launch section's own mission, after its checks (a refused value is put back to its own)
         const m = this.panel.missionState();
-        return { mass: m.payloadMass };
+        return { mass: m.payloadMass, perigeeAlt: m.orbit.perigee, apogeeAlt: m.orbit.apogee, inclination: m.orbit.inclination, replaced: parsed.issues.length, siteId: m.siteId };
+      },
+      launchMission: () => missionDocument(this.panel.missionState()),
+      // the mission Launch had, put back as it was kept: read as the stored mission is (no "loaded from" notice)
+      restoreLaunch: (doc, level) => {
+        this.goLive(); this.playing = false;
+        const parsed = this.panel.share.apply(doc, 'stored');
+        if (!parsed.usable) return false;
+        saveStoredMission(this.panel.missionState());
+        this.go(route('launch', level));
+        return true;
       },
     };
   }

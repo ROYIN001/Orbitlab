@@ -5,7 +5,7 @@
    the page's centre of attention: on a wide screen it takes the left two
    thirds at the screen's full height beside a column of panels; on a phone
    it comes first, about half the screen tall, and the panels follow it.
-   Loaded with the section's own chunk.
+   In the app's main stylesheet, with the section's code (main.ts).
    ========================================================================== */
 
 .structure-screen {
