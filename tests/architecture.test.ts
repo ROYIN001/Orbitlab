@@ -13,8 +13,8 @@
  *  2. A core file must not use `document.`, `window.`, `localStorage`,
  *     `navigator.` or `requestAnimationFrame` outside comments and strings.
  *
- * Core = src/physics, src/orbit, src/design, src/data, src/config and
- * src/provider, plus (rule 2 only, see NARROWED) the worker-safe trio of
+ * Core = src/physics, src/orbit, src/design, src/data, src/config,
+ * src/provider and src/structure (the Structure section's models), plus (rule 2 only, see NARROWED) the worker-safe trio of
  * src/session: core.ts, protocol.ts and mirror.ts (session.ts owns the Worker
  * and flight.worker.ts is the worker entry, both are glue). src/lessons and
  * src/worksheets are deliberately NOT core: they are text that goes through
@@ -40,7 +40,7 @@ import { describe, expect, it } from 'vitest';
 // `import.meta.glob` requires its options to be an inline object literal.
 const SRC = import.meta.glob('../src/**/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
-const CORE_DIRS = ['physics', 'orbit', 'design', 'data', 'config', 'provider'];
+const CORE_DIRS = ['physics', 'orbit', 'design', 'data', 'config', 'provider', 'structure'];
 /** Session files checked by rule 2 (DOM tokens) only; see NARROWED in the header. */
 const CORE_FILES = ['session/core.ts', 'session/protocol.ts', 'session/mirror.ts'];
 /** Session files checked by rule 1 (imports) as well: none today. */

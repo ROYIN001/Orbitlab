@@ -30,8 +30,12 @@ export interface PrecacheManifest {
  * 4.3–4.6 MB, meshes of 0.17–0.31 MB gzip-compressed; src/render/anatomy.ts): each kept once it
  * has been opened or flown; offline before that, Build says the page needs the network and the
  * flight draws its own Soyuz.
+ * The Structure section's model files (`structure/`, 1.9 MB: the Soyuz-2.1b/Fregat model's
+ * content and three layers of 0.29–0.65 MB gzip-compressed, src/render/structure-mesh.ts): each
+ * kept once the section has opened it; offline before that, the section says the model needs the
+ * network and its parts list and side view still work.
  */
-export const ON_DEMAND_PREFIXES: readonly string[] = ['home/', 'social/', 'audio/', 'privacy.html', 'anatomy/'];
+export const ON_DEMAND_PREFIXES: readonly string[] = ['home/', 'social/', 'audio/', 'privacy.html', 'anatomy/', 'structure/'];
 export const AUDIO_PREFIX = 'audio/';
 export const onDemand = (path: string): boolean => ON_DEMAND_PREFIXES.some((prefix) => path.startsWith(prefix));
 

@@ -25,9 +25,9 @@ import { workspaceStorage } from '../workspace/storage';
 export type AppMode = 'home' | 'watch' | 'explore' | 'engineer';
 export const APP_MODES: readonly AppMode[] = ['home', 'watch', 'explore', 'engineer'];
 
-/** S01: the three parts of the program. */
-export type AppSection = 'launch' | 'orbit' | 'build';
-export const APP_SECTIONS: readonly AppSection[] = ['launch', 'orbit', 'build'];
+/** S01: the parts of the program; `structure`, the Structure & Assembly section (owner, 2026-11-09). */
+export type AppSection = 'launch' | 'orbit' | 'build' | 'structure';
+export const APP_SECTIONS: readonly AppSection[] = ['launch', 'orbit', 'build', 'structure'];
 
 /** S01: the levels every section offers — the modes other than the landing page. */
 export type AppLevel = Exclude<AppMode, 'home'>;
@@ -38,12 +38,16 @@ export const APP_LEVELS: readonly AppLevel[] = ['watch', 'explore', 'engineer'];
  * requirements page at the Build section's Engineer level,
  * `#/build/engineer/requirements`, beside the satellite bench rather than a
  * seventh tab on it (six already fill a phone's width). Each page belongs to
- * one section and level (`APP_PAGES`); any other third part of a hash is not
- * a route.
+ * one section and level (`APP_PAGES`), or to every level of its section (the
+ * Structure section's models, `#/structure/explore/edusat`); any other third
+ * part of a hash is not a route.
  */
-export type AppPage = 'requirements';
-export const APP_PAGES: Readonly<Record<AppPage, { section: AppSection; mode: AppLevel }>> = {
+export type AppPage = 'requirements' | 'soyuz-st31' | 'edusat';
+export const APP_PAGES: Readonly<Record<AppPage, { section: AppSection; mode: AppLevel | null }>> = {
   requirements: { section: 'build', mode: 'engineer' },
+  // the Structure section's two models, at any level (null): the level is the depth the model is read at
+  'soyuz-st31': { section: 'structure', mode: null },
+  edusat: { section: 'structure', mode: null },
 };
 
 /** Where the app is: the landing page, or one level of one section (and a page inside it). */
@@ -72,7 +76,8 @@ export function sameRoute(a: AppRoute, b: AppRoute): boolean {
 }
 
 const isPageOf = (name: string, section: AppSection, mode: AppLevel): name is AppPage =>
-  Object.hasOwn(APP_PAGES, name) && APP_PAGES[name as AppPage].section === section && APP_PAGES[name as AppPage].mode === mode;
+  Object.hasOwn(APP_PAGES, name) && APP_PAGES[name as AppPage].section === section
+  && (APP_PAGES[name as AppPage].mode === null || APP_PAGES[name as AppPage].mode === mode);
 
 /**
  * The route a location hash names, or null for any other hash.
