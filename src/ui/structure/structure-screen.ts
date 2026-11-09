@@ -466,7 +466,8 @@ export class StructureScreen {
       let f = 0;
       const unit = this.unitOfItem(i);
       if (assembling) {
-        if (held?.unit === unit && !this.assembly.placed[unit]) return FLAG.ghost | FLAG.selected;
+        // the part in hand: see-through and blue, apart from a selected part in place (green)
+        if (held?.unit === unit && !this.assembly.placed[unit]) return FLAG.ghost | FLAG.related;
       } else {
         if (v.hidden.has(i) || (v.isolate && !v.isolate.has(i))) f |= FLAG.hidden;
         if (this.model === 'soyuz-st31' && s) {
@@ -1509,17 +1510,5 @@ export class StructureScreen {
       if (s.key !== designKey(this.design)) box.append(el('p', 'st-msg st-msg-no', tx('go.changed')));
     }
     return box;
-  }
-
-  /** For the browser checks: what the section holds now (src/mcp.ts may read it). */
-  debugState(): Record<string, unknown> {
-    return {
-      model: this.model, mode: this.mode, level: this.level, selection: this.sel[this.model], load: this.load.state,
-      layers: this.viewer ? [...this.viewer.layers()] : [], assembly: Object.keys(this.assembly.placed),
-      complete: checkAssembly(this.spec, this.assembly).complete && this.viewAssembled(),
-      offsets: this.viewer ? Object.fromEntries(this.viewer.unitOffsets()) : {}, design: this.progress.showing === 'mine' ? this.progress.experiment : REFERENCE_DESIGN,
-      figures: this.figures ? { key: this.figures.key, mass: this.figures.massKg, powered: this.figures.powered } : null,
-      sent: this.sent, stats: this.viewer?.stats() ?? null, frames: this.viewer?.timing.frames ?? 0, glError: this.glError,
-    };
   }
 }

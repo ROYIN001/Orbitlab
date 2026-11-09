@@ -169,7 +169,7 @@ export function eduSatelliteDesign(d: EduDesign, id: string, name: string): Sate
     power: {
       ...base.power,
       payloadW: round3(averageWatts(payloadLoads, f.power)), busW: round3(averageWatts(busLoads, f.power)),
-      arrayArea: round3(f.cellArea * 1000) / 1000, mount: 'spinner', batteryWh: round3(f.batteryWh), dod: EDU_SCENARIO.dod,
+      arrayArea: Math.round(f.cellArea * 1e6) / 1e6, mount: 'spinner', batteryWh: round3(f.batteryWh), dod: EDU_SCENARIO.dod,
     },
     propulsion: null,
     adcs: { ...base.adcs, inertia: boxInertia(mass, size) },

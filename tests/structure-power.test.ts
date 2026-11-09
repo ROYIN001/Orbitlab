@@ -147,3 +147,56 @@ describe('EduSat-3U: the cases the section shows', () => {
     }
   });
 });
+
+describe('the energy balance against a brute-force integration written apart from it', () => {
+  /**
+   * One-second steps, the rules restated from the scenario's text: the bus
+   * gets S·A·η·I_d/π·X_d in sunlight; a surplus charges at X_e/(X_d·η_BAT) up to
+   * full; a deficit draws /η_BAT down to the floor, below which the loads go
+   * unpowered.
+   */
+  function bruteForce(cellArea: number, batteryWh: number, loads: Parameters<typeof simulatePower>[1]['loads']) {
+    const period = circularPeriod(S.altitude), Te = eclipseDuration(S.altitude, S.beta), Td = period - Te;
+    const bus = (S.flux * cellArea * S.cellEff * S.Id / S.mountFactor) * S.Xd;
+    const cap = batteryWh * HOUR, floor = cap * (1 - S.dod), etaC = S.Xe / (S.Xd * S.batteryEff);
+    let e = cap, min = e, unmet = 0, shortS = 0;
+    const dt = 1;
+    for (let t = 0; t < S.orbits * period; t += dt) {
+      const phase = (t + dt / 2) % period, sun = phase < Td;
+      let demand = 0;
+      for (const l of loads) {
+        if (l.window === 'always') { demand += l.watts; continue; }
+        const from = l.window === 'sunlit' ? 0 : Td, to = l.window === 'sunlit' ? Td : period;
+        const a = from + (l.start ?? 0) * 60, b = l.minutes === undefined ? to : a + l.minutes * 60;
+        if (phase >= a && phase < b) demand += l.watts;
+      }
+      const net = (sun ? bus : 0) - demand;
+      if (net >= 0) e = Math.min(cap, e + net * etaC * dt);
+      else {
+        const want = (-net / S.batteryEff) * dt;
+        const give = Math.min(want, Math.max(0, e - floor));
+        e -= give;
+        if (give < want - 1e-9) { unmet += ((want - give) * S.batteryEff) / HOUR; shortS += dt * (1 - give / want); }
+      }
+      min = Math.min(min, e);
+    }
+    return { minWh: min / HOUR, finalWh: e / HOUR, unmetWh: unmet, shortS };
+  }
+
+  it('agrees on all four EduSat designs to within a one-second step', () => {
+    for (const battery of ['battery-1cell', 'battery-2cell'] as const) {
+      for (const payload of ['camera-day', 'camera-night'] as const) {
+        const f = eduFigures({ battery, payload });
+        const loads = partsOf({ battery, payload }).flatMap((p) => p.loads);
+        const b = bruteForce(f.cellArea, f.batteryWh, loads);
+        const tag = `${battery} + ${payload}`;
+        expect(f.power.minChargeWh, tag).toBeCloseTo(b.minWh, 2);
+        expect(f.power.finalChargeWh, tag).toBeCloseTo(b.finalWh, 2);
+        const unmet = f.power.shortfalls.reduce((s, x) => s + x.unmetWh, 0);
+        const shortS = f.power.shortfalls.reduce((s, x) => s + (x.end - x.start), 0);
+        expect(Math.abs(unmet - b.unmetWh), tag).toBeLessThan(0.01);
+        expect(Math.abs(shortS - b.shortS), tag).toBeLessThan(S.orbits * 2);
+      }
+    }
+  });
+});

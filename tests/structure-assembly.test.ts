@@ -178,3 +178,26 @@ describe('the Soyuz parts\' kinds and certainty (this pilot\'s reading of the pa
     expect(k('booster-b.stabilizer-fin', 'structural')).toBe('image');
   });
 });
+
+describe('EduSat-3U: every option fits the place and size limits the first version sets', () => {
+  it('keeps every part, in every option, inside the 3U envelope, and each board and payload inside its stack slot', async () => {
+    const { ENVELOPE, STACK_SLOTS, STACK_WIDTH, FIXED_PARTS, BATTERIES, PAYLOADS } = await import('../src/structure/edusat');
+    const parts = [...FIXED_PARTS, ...Object.values(BATTERIES), ...Object.values(PAYLOADS)];
+    const bottom = -ENVELOPE.y / 2;
+    for (const p of parts) {
+      const [cx, cy, cz] = p.box.center, [w, h, d] = p.box.size;
+      expect(Math.abs(cx) + w / 2, p.id).toBeLessThanOrEqual(ENVELOPE.x / 2 + 1e-9);
+      expect(Math.abs(cy) + h / 2, p.id).toBeLessThanOrEqual(ENVELOPE.y / 2 + 1e-9);
+      expect(Math.abs(cz) + d / 2, p.id).toBeLessThanOrEqual(ENVELOPE.z / 2 + 1e-9);
+      const slot = (STACK_SLOTS as Record<string, { from: number; height: number }>)[p.unit];
+      if (!slot) continue;
+      // within its slot's height, and across between the rails
+      expect(cy - h / 2 - bottom, p.id).toBeGreaterThanOrEqual(slot.from - 1e-9);
+      expect(cy + h / 2 - bottom, p.id).toBeLessThanOrEqual(slot.from + slot.height + 1e-9);
+      expect(Math.max(w, d), p.id).toBeLessThanOrEqual(STACK_WIDTH + 1e-9);
+    }
+    // the slots themselves do not overlap
+    const spans = Object.values(STACK_SLOTS).map((s) => [s.from, s.from + s.height]).sort((a, b) => a[0] - b[0]);
+    for (let i = 1; i < spans.length; i++) expect(spans[i][0]).toBeGreaterThanOrEqual(spans[i - 1][1]);
+  });
+});

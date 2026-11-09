@@ -68,7 +68,7 @@ To compare with the 2026-11-02 delivery: put a copy in a folder outside the hidd
 | A1 | เปิดหมวดใหม่ด้วยลิงก์ตรง และกลับไปส่วนเดิมได้ | ผ่าน | journey: `#/structure/explore/soyuz-st31` opens directly; Back from Launch returns to the finished assembly; `tests/structure-model.test.ts` (addresses) |
 | A2 | เลือกจากภาพและรายการได้ตรงกัน ข้อมูลและกล้องตามชิ้นที่เลือก | ผ่าน | journey: list pick shows the core and its 5 relations; a press on the view picks a subsystem and the list marks it; the camera turns about the pick and frames list picks |
 | A3 | เปิดภายใน แยกส่วน คืนสภาพ โดยโมเดลไม่เสียสถานะ | ผ่าน | journey: cutaway loads the inside layer; apart 100 %; Reset restores; assembly completion checks the view's own transforms (`viewAssembled`: every assembly visible, translation and rotation exactly zero) |
-| A4 | ประกอบ Soyuz และดาวเทียมแบบตั้งต้นได้ จัดการติดตั้งผิด/ไม่ครบ | ผ่าน | `tests/structure-assembly.test.ts` (14 tests); journey: out of order, another block's place, wrong way round each refused with its reason; undo; 11/11 and 13/13 complete with the relational check |
+| A4 | ประกอบ Soyuz และดาวเทียมแบบตั้งต้นได้ จัดการติดตั้งผิด/ไม่ครบ | ผ่าน | `tests/structure-assembly.test.ts` (15 tests, every option inside its slot's size limits); journey: out of order, another block's place, wrong way round each refused with its reason; undo; 11/11 and 13/13 complete with the relational check |
 | A5 | เปลี่ยนระดับแล้วแบบและความคืบหน้าคงเดิม | ผ่าน | journey: Fregat stays selected from ทดลอง to วิศวกร; the assembly and design are per section, not per level |
 | A6 | เปลี่ยนแบต/อุปกรณ์แล้วภาพ รายการ มวล ผลพลังงานเปลี่ยนจากข้อมูลจริง | ผ่าน | one design object feeds `partsOf`, `edusatMeshes`, `eduFigures`, `eduSatelliteDesign`; journey checks mass 1.810 → 2.010 → 2.070 kg and the verdicts |
 | A7 | มีกรณีผ่านและกรณีไม่พอที่อธิบายได้จากค่าที่แสดง | ผ่าน | §5 table; `tests/structure-power.test.ts` (10 tests, worked cases) |
@@ -114,9 +114,9 @@ Scenario (on screen): circular 500 km, β = 0° (the longest shadow: 35.75 min o
 | 2 cells + day camera | 1.870 kg | 18.72 Wh | 0.86 Wh | 5.62 Wh | all powered |
 | 2 cells + night camera | 2.070 kg | 18.72 Wh | 3.64 Wh | 5.62 Wh | all powered; lowest 15.08 Wh (81 %); full again before each shadow |
 
-Checks (`tests/structure-power.test.ts`): a constant load drains P·t/η_BAT; the floor and the unpowered energy after it; a full battery sheds exactly the sunlit surplus; at the array power `arrayPowerRequired` asks for and a battery of `batteryCapacity`, an orbit balances exactly and the battery reaches its depth of discharge exactly at the end of the shadow (the SMAD identity X_e = X_d·η_charge·η_BAT); the EduSat cases above, worked apart. The steady-state SMAD check is also shown at the วิศวกร depth (array 7.78 W needed vs 8.32 W; battery 12.13 Wh needed with the night camera). Not modelled: temperatures, stresses, attitude changes while imaging, battery ageing, voltages, real mission life.
+Checks (`tests/structure-power.test.ts`): a brute-force one-second integration, written apart from the code from the scenario's own words, agrees on all four designs (lowest and final charge to 0.01 Wh, unpowered energy to 0.01 Wh, shortfall time to a step); a constant load drains P·t/η_BAT; the floor and the unpowered energy after it; a full battery sheds exactly the sunlit surplus; at the array power `arrayPowerRequired` asks for and a battery of `batteryCapacity`, an orbit balances exactly and the battery reaches its depth of discharge exactly at the end of the shadow (the SMAD identity X_e = X_d·η_charge·η_BAT); the EduSat cases above, worked apart. The steady-state SMAD check is also shown at the วิศวกร depth (array 7.78 W needed vs 8.32 W; battery 12.13 Wh needed with the night camera). Not modelled: temperatures, stresses, attitude changes while imaging, battery ageing, voltages, real mission life.
 
-The bench's balance uses this closed-form shadow; Orbit computes light and shadow from the Sun's position at the date — two separate calculations, said on the hand-off panel. The orbit handed on (500 km sun-synchronous, node at 12:00) keeps β near 0 all year, so the two shadows are close.
+The balance is worked out on the bench only, with this closed-form shadow; the hand-off does not carry it, and Orbit neither receives nor recomputes it (Orbit draws the Earth's day and night from the Sun's position, but computes no eclipse or power for the satellite) — two separate sources, said on the hand-off panel. The orbit handed on (500 km sun-synchronous, node at 12:00) keeps β near 0 all year, so the two shadows are close.
 
 ## 6. Checks run
 
@@ -124,7 +124,7 @@ The bench's balance uses this closed-form shadow; Orbit computes light and shado
 | --- | --- |
 | `npx tsc --noEmit` | pass |
 | `npx vite build` | pass |
-| New unit tests `tests/structure-{assembly,power,model,progress,text}.test.ts` | 42/42 pass |
+| New unit tests `tests/structure-{assembly,power,model,progress,text}.test.ts` | 44/44 pass (assembly 15, power 11 incl. a brute-force 1 s integration written apart, model 8, progress 6, text 4) |
 | Existing tests touched by the change (i18n, app-mode, section-nav-model, section-plan, architecture, privacy-inventory, pwa, repo-hygiene, workspace-profiles, anatomy, i18n-thai-terms, workspace-eo-sto-1) | pass (EO-STO-1 after §7) |
 | `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | 93/93 pass |
 | Full `npx vitest run` | see §12 (run on the final tree) |
