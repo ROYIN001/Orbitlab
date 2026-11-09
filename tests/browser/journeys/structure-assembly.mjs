@@ -161,14 +161,17 @@ export default async function structureAssembly(t) {
   await k('go:orbit').click();
   await t.until(async () => page.evaluate(() => location.hash.startsWith('#/orbit')), { timeoutMs: 30_000 });
   await page.locator('#orbit-playground .pg-handoff dd').first().waitFor({ timeout: 60_000 });
-  // what Orbit holds (its lifetime and planner read this), and what it shows (rounded to the kilogram)
+  // what Orbit's playground holds (`heldHandoff`: the orbit it loaded from the state vector, the masses its panel and analyses use),
+  // and what it shows (rounded to the kilogram)
   const held = await page.evaluate(() => {
-    const h = window.orbitlab.handoff;
-    return h && { mass: h.spacecraft.mass, kind: h.spacecraft.kind, propulsion: h.spacecraft.propulsion, label: h.label };
+    const p = window.orbitlab.playground;
+    const h = p.handoff;
+    return h && { ...p.heldHandoff(), kind: h.spacecraft.kind, propulsion: h.spacecraft.propulsion, label: h.label };
   });
-  t.check(!!held && Math.abs(held.mass - 2.07) < 5e-4 && held.kind === 'science' && held.propulsion === null && held.label.startsWith('EduSat-3U'),
+  t.check(!!held && Math.abs(held.mass - 2.07) < 5e-4 && Math.abs(held.analysisMass - 2.07) < 5e-4 && Math.abs(held.perigeeAlt - 500e3) < 1000
+    && Math.abs(held.apogeeAlt - 500e3) < 1000 && Math.abs(held.inclination - 97.4) < 0.1 && held.kind === 'science' && held.propulsion === null && held.label.startsWith('EduSat-3U'),
     `Orbit holds ${JSON.stringify(held)}`);
-  // Orbit rounds its figure to the kilogram: this only checks it is on screen; the read-back above checks the value
+  // Orbit rounds its figure to the kilogram: this only checks it is on screen; the playground's held values above check the figures
   const shown = Number((await text('#orbit-playground .pg-handoff dd')).replace(/[^\d.,]/g, '').replace(',', '.'));
   t.check(shown === 2, `Orbit shows ${shown} kg (2.07 kg rounded to the kilogram)`);
   await app.shot('orbit-received');
@@ -207,7 +210,7 @@ export default async function structureAssembly(t) {
   t.check(JSON.stringify(launchAfter) === JSON.stringify(launchBefore), `Launch's earlier mission is back: ${JSON.stringify(launchAfter)} (was ${JSON.stringify(launchBefore)})`);
   await page.goBack();
   await t.until(async () => page.evaluate(() => location.hash.startsWith('#/structure')), { timeoutMs: 30_000 });
-  t.check((await text('.st-go .st-msg-ok')).includes('นำภารกิจเดิมของ Launch กลับมาแล้ว') && await k('go:undoLaunch').count() === 0, `after putting it back: ${await text('.st-go .st-msg')}`);
+  t.check((await text('.st-go .st-msg-ok')).includes('นำภารกิจเดิมของส่วนปล่อยจรวดกลับมาแล้ว') && await k('go:undoLaunch').count() === 0, `after putting it back: ${await text('.st-go .st-msg')}`);
   // the reference stays as it was
   await k('show:reference').click();
   t.check((await fig('mass')).startsWith('1.810'), `the reference after all that: ${await fig('mass')}`);

@@ -31,8 +31,8 @@ import { PLAYGROUND_PRESET_IDS, presetOrbit } from '../../orbit/presets';
 import { TOUR, type TourView } from '../../orbit/tour';
 import { SKY_TOUR, type SkyTourStep } from '../../orbit/sky-tour';
 import {
-  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, REPEAT_LIMITS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, linearScale,
-  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, eoRepeatRevs, thaiInSky, tourSetup, withApsis, type SliderScale,
+  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, REPEAT_LIMITS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, heldFromHandoff, linearScale,
+  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, eoRepeatRevs, thaiInSky, tourSetup, withApsis, type HeldHandoff, type SliderScale,
 } from '../../orbit/playground-model';
 import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
 import {
@@ -340,16 +340,12 @@ export class OrbitPlayground {
   }
 
   /**
-   * What the playground holds from the hand-off it was given, as it uses it:
-   * the mass its lifetime analysis takes, and the orbit it loaded from the
-   * state vector (altitudes above the equatorial radius, m; inclination,
-   * deg). For a sender to check what arrived; null with none, or once
-   * another orbit is shown.
+   * What the playground holds of the hand-off it was given (`heldFromHandoff`),
+   * for a sender to check what arrived; null with none, or once another orbit
+   * is shown.
    */
-  heldHandoff(): { mass: number; perigeeAlt: number; apogeeAlt: number; inclination: number } | null {
-    if (!this.handoff || this.presetId !== HANDOFF) return null;
-    const f = orbitFacts(this.orbit, false);
-    return { mass: playgroundLifetimeCraft(this.handoff, this.craft).mass, perigeeAlt: f.perigeeAlt, apogeeAlt: f.apogeeAlt, inclination: this.orbit.i * RAD };
+  heldHandoff(): HeldHandoff | null {
+    return this.handoff && this.presetId === HANDOFF ? heldFromHandoff(this.handoff, this.orbit, this.craft, this.launchCraft) : null;
   }
 
   /**

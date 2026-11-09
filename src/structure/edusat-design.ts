@@ -18,6 +18,7 @@ import { arrayPowerRequired, batteryCapacity } from '../orbit/power';
 import { boxInertia } from '../data/satellite-templates';
 import { designFromTemplate, ssoInclinationDeg } from '../design/satellite-model';
 import type { SatelliteDesign } from '../design/satellite-spec';
+import type { MissionState } from '../config/mission-file';
 import {
   BATTERIES, BATTERY_OPTIONS, CELL_AREA, EDU_UNITS, ENVELOPE, FIXED_PARTS, MASS_LIMIT_KG, PAYLOADS, PAYLOAD_OPTIONS,
   type BatteryOption, type EduLoad, type EduPart, type PayloadOption,
@@ -189,12 +190,23 @@ export function eduSatelliteDesign(d: EduDesign, id: string, name: string): Sate
  */
 export interface HandoffReceipt {
   mass: number;
+  /**
+   * Orbit: the mass its lifetime analysis and planner take — another than
+   * the satellite's while its planner keeps a spacecraft chosen there (said
+   * beside the receipt; not a fault of the hand-off)
+   */
+  analysisMass?: number;
   perigeeAlt: number;
   apogeeAlt: number;
   inclination: number | 'sso' | 'site';
   replaced: number;
   /** Launch: the site it flies from */
   siteId?: string;
+}
+
+/** What the Launch section holds of a mission, read from its state after its checks: the payload, the target, the values it put back. */
+export function launchReceipt(m: Pick<MissionState, 'payloadMass' | 'orbit' | 'siteId'>, replaced: number): HandoffReceipt {
+  return { mass: m.payloadMass, perigeeAlt: m.orbit.perigee, apogeeAlt: m.orbit.apogee, inclination: m.orbit.inclination, replaced, siteId: m.siteId };
 }
 
 /** What a receipt counts as "as sent": half a gram, a kilometre, a twentieth of a degree. */

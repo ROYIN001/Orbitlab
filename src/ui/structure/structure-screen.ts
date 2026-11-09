@@ -44,9 +44,11 @@ import { STRUCTURE_STORE_KEY, readProgress, writeProgress, type StructureMode, t
 import { CERTAINTIES, PART_CATEGORIES, type Certainty, type StructureModelId } from '../../structure/types';
 import { designDateJd, designHandoff } from '../../design/satellite-model';
 import { designLaunch, designMissionDocument, designMissionIssues } from '../../design/satellite-launch';
+import { satelliteDesignProblems } from '../../config/satellite-design';
 import { dragArea } from '../../design/satellite-area';
 import { vehicleById } from '../../data/vehicles';
 import { registerWorkspaceFlush, workspaceStorage } from '../../workspace/storage';
+import { WorkspaceError } from '../../workspace/repository';
 import { getLang } from '../../i18n';
 import { chargeChart, sideView, type SideBox } from './charts';
 import { num, tx } from './text';
@@ -58,11 +60,17 @@ export interface StructureHost {
   toOrbit(h: OrbitHandoff, level: AppLevel): HandoffReceipt | null;
   /** hand a mission to the Launch section and open it at `level`: the mission Launch now holds, read back after its checks, or null */
   toLaunch(doc: MissionDocument, level: AppLevel): HandoffReceipt | null;
-  /** the mission open in the Launch section now, as a document: kept before a send replaces it */
-  launchMission(): MissionDocument;
-  /** put a mission kept that way back in the Launch section and open it at `level`; false when Launch could not use it */
-  restoreLaunch(doc: MissionDocument, level: AppLevel): boolean;
+  /** what the Launch section has now, kept before a send replaces it: its panel's mission and the stored copy's exact text (null with none) */
+  launchMission(): LaunchKept;
+  /** put what was kept back in the Launch section (stored copy first) and open it at `level`; false when Launch could not use it */
+  restoreLaunch(kept: LaunchKept, level: AppLevel): boolean;
 }
+
+/** The Launch section's mission as kept before a send: on its panel, and as stored (byte for byte, null with none). */
+export interface LaunchKept { shown: MissionDocument; stored: string | null }
+
+/** A note by the send buttons, put into words when drawn (so a language switch changes it). */
+interface SendNote { kind: 'no' | 'ok'; key: string; params?: Record<string, string | number>; reason?: { key: string; params?: Record<string, string | number> }; seq?: number }
 
 /** Colours for the kinds of part and the certainty levels: distinct on the dark ground, named in the legend. */
 const CATEGORY_COLOURS = ['#9aa7b4', '#e0a458', '#6ec8ff', '#c792ea', '#7ddba0', '#ff7b72'];
@@ -93,7 +101,16 @@ interface ViewState {
   colour: ColorMode; hidden: Set<number>; isolate: Set<number> | null;
 }
 interface Held { unit: string; slot: string | null; turn: number }
-type LoadState = { state: 'idle' } | { state: 'loading'; what: string } | { state: 'failed'; error: string; listWorks: boolean } | { state: 'ready' };
+/** a failed load's reason, put into words when drawn */
+type LoadState = { state: 'idle' } | { state: 'loading' } | { state: 'failed'; error: () => string; listWorks: boolean } | { state: 'ready' };
+/** thrown when the model's content and a layer come from two versions of the page (said in the interface language) */
+const MISMATCH = 'structure:files-mismatch';
+/** why a fetch failed, in words when drawn: offline, the files' versions apart, or the browser's own message */
+const loadReason = (error: unknown): (() => string) => {
+  const message = error instanceof Error ? error.message : String(error);
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+  return () => (offline ? tx('load.offline') : message === MISMATCH ? tx('load.mismatch') : message);
+};
 
 const freshView = (): ViewState => ({ explode: 0, open: 0, cutaway: false, ghost: false, inner: false, engine: false, colour: 'material', hidden: new Set(), isolate: null });
 
@@ -114,15 +131,23 @@ export class StructureScreen {
   private visible = false;
   private progress: StructureProgress;
   private writable = true;
-  /** what the learner is told about keeping their work: a stored record set aside, a newer one left alone, or saving that failed */
-  private storeNote: 'damaged' | 'newer' | 'failed' | null = null;
+  /**
+   * What the learner is told about keeping their work: a stored record set
+   * aside, a newer one left alone, a save the profile refuses in this tab
+   * (read-only, changed in another tab, no learner chosen), or one the
+   * browser refuses (storage full or blocked).
+   */
+  private storeNote: 'damaged' | 'newer' | 'readonly' | 'failed' | null = null;
+  /** what the live region last said: the storage note, the last message and send note by their counts, the results' design */
+  private said = { store: '', msg: 0, send: 0, verdict: '' };
+  private saySeq = 0;
   private starting = 0;
   private startTask: ReturnType<typeof setTimeout> | undefined;
   private soyuz: SoyuzIndex | null = null;
   private load: LoadState = { state: 'idle' };
   private layerLoading = new Set<SoyuzLayer>();
   /** layers that did not load, with why: said on the stage with a retry, their switch let go */
-  private layerFailed = new Map<Exclude<SoyuzLayer, 'outer'>, string>();
+  private layerFailed = new Map<Exclude<SoyuzLayer, 'outer'>, () => string>();
   /** the generation of what the section asked for: a fetch that finishes for an older one is dropped */
   private gen = 0;
   private abort: AbortController | null = null;
@@ -133,18 +158,25 @@ export class StructureScreen {
   private readonly sel: Record<StructureModelId, Selection> = { 'soyuz-st31': { unit: null, group: null, item: null }, edusat: { unit: null, group: null, item: null } };
   private readonly views: Record<StructureModelId, ViewState> = { 'soyuz-st31': freshView(), edusat: freshView() };
   private readonly held: Record<StructureModelId, Held | null> = { 'soyuz-st31': null, edusat: null };
-  private message: { text: string; kind: 'ok' | 'no' | 'info' } | null = null;
+  /** the assembly's last message, put into words when drawn (a language switch changes it); `seq` counts them, so a repeat is said again */
+  private msg: { text: () => string; kind: 'ok' | 'no' | 'info'; seq: number } | null = null;
+  private msgSeq = 0;
+  private get message(): { text: () => string; kind: 'ok' | 'no' | 'info'; seq: number } | null { return this.msg; }
+  private set message(m: { text: () => string; kind: 'ok' | 'no' | 'info' } | null) { this.msg = m && { ...m, seq: ++this.msgSeq }; }
   private figures: EduFigures | null = null;
   private sent: { where: 'orbit' | 'launch'; key: string; name: string; mass: number; receipt: HandoffReceipt | null; check: ReceiptCheck | null } | null = null;
-  /** why the last send was not handed over, or that Launch's earlier mission is back: shown by the send buttons */
-  private sendNote: { text: string; kind: 'no' | 'ok' } | null = null;
+  /** why the last send was not handed over, or that Launch's earlier mission is back: shown by the send buttons until the design changes */
+  private sendNote: SendNote | null = null;
+  /** where focus goes when the control pressed is gone after a redraw (a part taken off: its tray button) */
+  private focusNext: string | null = null;
   /**
-   * The mission Launch had before this section first replaced it (`before`),
-   * and what Launch held right after the last send (`after`): while Launch
-   * still holds that, a later send keeps the first `before`, so "put back"
-   * returns the learner's own mission, not an earlier EduSat. In memory only.
+   * What Launch had before this section first replaced it (`before`: its
+   * panel's mission and its stored copy), and what its panel held right after
+   * the last send (`after`). While Launch still holds that, a later send keeps
+   * the first `before`, and "put back" is offered; once the learner has made
+   * another mission there, it is not (it would replace theirs). In memory only.
    */
-  private launchBefore: { before: MissionDocument; after: MissionDocument } | null = null;
+  private launchBefore: { before: LaunchKept; after: MissionDocument } | null = null;
   private readonly expanded = new Set<string>();
   private filter = '';
   private axes = new Map<string, [number, number]>();
@@ -256,9 +288,13 @@ export class StructureScreen {
     try {
       workspaceStorage().setItem(STRUCTURE_STORE_KEY, writeProgress(this.progress));
       if (this.storeNote === 'failed') { this.storeNote = null; if (this.visible) this.render(); }
-    } catch {
-      // storage blocked or full: the visit keeps it, and says so
-      if (this.storeNote !== 'failed') { this.storeNote = 'failed'; if (this.visible) this.render(); }
+    } catch (error) {
+      // the visit keeps it, and says why: the profile refusing this tab's writes, or the browser refusing the write
+      // (the unavailable storage's own words, src/workspace/storage.ts, when no learner is chosen)
+      const byProfile = (error instanceof WorkspaceError && (error.code === 'locked' || error.code === 'stale'))
+        || (error instanceof Error && error.message === 'No learner profile selected');
+      const note = byProfile ? 'readonly' : 'failed';
+      if (this.storeNote !== note) { this.storeNote = note; if (this.visible) this.render(); }
     }
   }
 
@@ -319,7 +355,7 @@ export class StructureScreen {
     this.abort?.abort();
     const abort = new AbortController();
     this.abort = abort;
-    this.load = { state: 'loading', what: tx('model.soyuz-st31') };
+    this.load = { state: 'loading' };
     // the other model goes at once: nothing of it stays drawn or pickable under this one's name while this loads
     if (this.shown && this.shown.model !== 'soyuz-st31') { this.viewer?.clear(); this.shown = null; }
     this.render();
@@ -335,7 +371,7 @@ export class StructureScreen {
       if (viewer) {
         const layer = await fetchStructureLayer(SOYUZ_FILES.layers.outer, abort.signal);
         if (gen !== this.gen || this.model !== 'soyuz-st31') return;
-        if (layer.source.sha256 !== this.soyuz.content.source.sha256) throw new Error('the model files are of two different pages');
+        if (layer.source.sha256 !== this.soyuz.content.source.sha256) throw new Error(MISMATCH);
         const s = this.soyuz;
         viewer.reset(s.content.items.length, SOYUZ_UNITS, s.category, s.certainty);
         viewer.addMeshes(this.meshesOf(layer));
@@ -350,10 +386,8 @@ export class StructureScreen {
       this.load = { state: 'ready' };
     } catch (error) {
       if (gen !== this.gen || abort.signal.aborted) return;
-      const message = error instanceof Error ? error.message : String(error);
-      const why = typeof navigator !== 'undefined' && !navigator.onLine ? tx('load.offline') : message;
       // the parts list and the side view work when the model's content came and only its 3-D did not
-      this.load = { state: 'failed', error: why, listWorks: !!this.soyuz };
+      this.load = { state: 'failed', error: loadReason(error), listWorks: !!this.soyuz };
     }
     if (gen === this.gen) { this.syncView(); this.render(); }
   }
@@ -377,13 +411,12 @@ export class StructureScreen {
     try {
       const data = await fetchStructureLayer(SOYUZ_FILES.layers[layer], abort.signal);
       if (gen !== this.gen || this.shown?.model !== 'soyuz-st31' || !this.layerLoading.has(layer)) return;
-      if (data.source.sha256 !== s.content.source.sha256) throw new Error('the model files are of two different pages');
+      if (data.source.sha256 !== s.content.source.sha256) throw new Error(MISMATCH);
       viewer.addMeshes(this.meshesOf(data));
       this.layerFailed.delete(layer);
     } catch (error) {
       if (gen !== this.gen || abort.signal.aborted) return;
-      const message = error instanceof Error ? error.message : String(error);
-      this.layerFailed.set(layer, typeof navigator !== 'undefined' && !navigator.onLine ? tx('load.offline') : message);
+      this.layerFailed.set(layer, loadReason(error));
       // its switch is let go: it does not claim a layer that is not there
       this.views['soyuz-st31'][layer] = false;
     } finally {
@@ -562,7 +595,7 @@ export class StructureScreen {
     this.syncView();
     if (focus) this.focusSelection();
     this.render();
-    this.announcer.textContent = next.unit ? tx('sel.announce', { name: this.selectionName(this.shownSelection()) }) : '';
+    if (next.unit) this.say(tx('sel.announce', { name: this.selectionName(this.shownSelection()) }));
   }
 
   /** What a selection is called, at the depth shown: the part's id, its group's name, or its assembly's. */
@@ -591,8 +624,8 @@ export class StructureScreen {
     switch (e.key) {
       case 'ArrowLeft': if (e.shiftKey) v.panBy(-pan, 0); else v.orbitBy(step, 0); break;
       case 'ArrowRight': if (e.shiftKey) v.panBy(pan, 0); else v.orbitBy(-step, 0); break;
-      case 'ArrowUp': if (e.shiftKey) v.panBy(0, pan); else v.orbitBy(0, step); break;
-      case 'ArrowDown': if (e.shiftKey) v.panBy(0, -pan); else v.orbitBy(0, -step); break;
+      case 'ArrowUp': if (e.shiftKey) v.panBy(0, -pan); else v.orbitBy(0, step); break;
+      case 'ArrowDown': if (e.shiftKey) v.panBy(0, pan); else v.orbitBy(0, -step); break;
       case '+': case '=': v.zoomBy(0.85); break;
       case '-': case '_': v.zoomBy(1 / 0.85); break;
       case '0': case 'Home': v.home(); break;
@@ -670,15 +703,15 @@ export class StructureScreen {
   private tryInstall(): void {
     const h = this.held[this.model];
     if (!h) return;
-    if (!h.slot) { this.message = { text: tx('asm.pick'), kind: 'info' }; this.render(); return; }
+    if (!h.slot) { this.message = { text: () => tx('asm.pick'), kind: 'info' }; this.render(); return; }
     const unit = this.spec.units.find((u) => u.id === h.unit);
     const r = install(this.spec, this.assembly, h.unit, { slot: h.slot, orientation: unit ? h.turn % unit.orientations : h.turn });
     if (r.ok) {
       this.setAssembly(r.state);
       this.held[this.model] = null;
-      this.message = { text: tx('asm.installed', { unit: this.name(h.unit) }), kind: 'ok' };
+      this.message = { text: () => tx('asm.installed', { unit: this.name(h.unit) }), kind: 'ok' };
       this.sel[this.model] = { unit: h.unit, group: null, item: null };
-    } else this.message = { text: this.refusalText(r.refusal), kind: 'no' };
+    } else this.message = { text: () => this.refusalText(r.refusal), kind: 'no' };
     this.syncView();
     this.render();
   }
@@ -689,17 +722,19 @@ export class StructureScreen {
     const r = remove(this.spec, this.assembly, unit);
     if (r.ok) {
       this.setAssembly(r.state);
-      this.message = { text: tx('asm.removed', { unit: this.name(unit) }), kind: 'ok' };
+      this.message = { text: () => tx('asm.removed', { unit: this.name(unit) }), kind: 'ok' };
       this.sel[this.model] = { unit: null, group: null, item: null };
-    } else this.message = { text: this.refusalText(r.refusal), kind: 'no' };
+      // the part is back in the tray: focus follows it there
+      this.focusNext = `tray:${unit}`;
+    } else this.message = { text: () => this.refusalText(r.refusal), kind: 'no' };
     this.syncView();
     this.render();
   }
 
   private undoStep(): void {
     const r = undo(this.assembly);
-    if (r.ok) { this.setAssembly(r.state); this.message = { text: tx('asm.undone'), kind: 'info' }; }
-    else this.message = { text: this.refusalText(r.refusal), kind: 'no' };
+    if (r.ok) { this.setAssembly(r.state); this.message = { text: () => tx('asm.undone'), kind: 'info' }; }
+    else this.message = { text: () => this.refusalText(r.refusal), kind: 'no' };
     this.syncView();
     this.render();
   }
@@ -707,12 +742,11 @@ export class StructureScreen {
   private restartAssembly(): void {
     this.setAssembly(restart(this.assembly));
     this.held[this.model] = null;
-    this.message = { text: tx('asm.restarted'), kind: 'info' };
+    this.message = { text: () => tx('asm.restarted'), kind: 'info' };
     this.syncView();
     this.render();
   }
 
-  /** Complete by the rules, and the view agrees: every assembly shown where the reference puts it, nothing left apart. */
   /**
    * The view draws the assembly as the reference does: every unit shown,
    * nothing left apart, and none turned but as its slot asks (a side panel on
@@ -742,6 +776,7 @@ export class StructureScreen {
     this.progress.experiment = { ...next };
     this.progress.showing = 'mine';
     this.figures = null;
+    this.sendNote = null;
     this.save();
     this.ensureModel();
     this.render();
@@ -749,6 +784,7 @@ export class StructureScreen {
 
   private makeExperiment(): void {
     if (!this.progress.experiment) this.progress.experiment = { ...REFERENCE_DESIGN };
+    if (this.progress.showing !== 'mine') this.sendNote = null;
     this.progress.showing = 'mine';
     this.progress.mode.edusat = 'experiment';
     this.figures = null;
@@ -765,45 +801,50 @@ export class StructureScreen {
     const sat = eduSatelliteDesign(design, `structure-edusat-${designKey(design).replaceAll(':', '-')}`, name);
     const key = designKey(design);
     let receipt: HandoffReceipt | null = null;
-    let refused = '';
+    let refused: SendNote['reason'] | null = null;
     if (where === 'orbit') {
       const jd = designDateJd(new Date().toISOString().slice(0, 10));
       const h = jd === null ? null : designHandoff(sat, jd, name);
-      if (!h) refused = tx('go.refused.design');
-      else {
-        receipt = this.host.toOrbit(h, this.level);
-        if (!receipt) refused = tx('go.refused.orbit');
-      }
+      // handed over once Orbit has it: no read-back is then said as such, not as a refusal
+      if (!h) refused = { key: 'go.refused.design' };
+      else receipt = this.host.toOrbit(h, this.level);
     } else {
-      // the checks the Build section runs before it hands a design to Launch: a mission with issues is not handed over
+      // the checks the Build section runs before it hands a design to Launch: a design or mission with issues is not handed over
       const flight = { vehicle: vehicleById('soyuz21b'), siteId: 'vostochny', from: new Date() };
-      const issues = designLaunch(sat).problems.length + designMissionIssues(sat, flight).length;
-      if (issues) refused = tx('go.refused.checks', { n: issues });
+      const issues = satelliteDesignProblems(sat).length + designLaunch(sat).problems.length + designMissionIssues(sat, flight).length;
+      if (issues) refused = { key: 'go.refused.checks', params: { n: issues } };
       else {
-        // the mission Launch has now, kept so it can be put back: the learner's own, unless Launch still holds our last send
+        // what Launch has now, kept so it can be put back: the learner's, unless Launch still holds our last send
         const now = this.host.launchMission();
-        const before = this.launchBefore && JSON.stringify(now) === JSON.stringify(this.launchBefore.after) ? this.launchBefore.before : now;
+        const before = this.launchBefore && JSON.stringify(now.shown) === JSON.stringify(this.launchBefore.after) ? this.launchBefore.before : now;
         receipt = this.host.toLaunch(designMissionDocument(sat, flight), this.level);
-        if (!receipt) refused = tx('go.refused.launch');
-        else this.launchBefore = { before, after: this.host.launchMission() };
+        if (!receipt) refused = { key: 'go.refused.launch' };
+        else this.launchBefore = { before, after: this.host.launchMission().shown };
       }
     }
     // a refusal leaves the record of what was last handed on as it was, and stays here to say why
-    this.sendNote = refused ? { text: tx('go.refused', { reason: refused }), kind: 'no' } : null;
+    this.sendNote = refused ? { kind: 'no', key: 'go.refused', reason: refused, seq: ++this.msgSeq } : null;
     if (refused) this.render();
     else this.sent = { where, key, name, mass: sat.bus.dryMass, receipt, check: receipt && checkReceipt(sat, receipt) };
+  }
+
+  /** "Put back" is offered while Launch still holds what this section last sent there (not a mission the learner made since). */
+  private canPutBack(): boolean {
+    const kept = this.launchBefore;
+    return !!kept && JSON.stringify(this.host.launchMission().shown) === JSON.stringify(kept.after);
   }
 
   /** Put back the mission Launch had before this section replaced it, and open Launch. */
   private restoreLaunch(): void {
     const kept = this.launchBefore;
     if (!kept) return;
+    if (!this.canPutBack()) { this.launchBefore = null; this.render(); return; }
     if (this.host.restoreLaunch(kept.before, this.level)) {
       this.launchBefore = null;
       if (this.sent?.where === 'launch') this.sent = null;
-      this.sendNote = { text: tx('go.restored'), kind: 'ok' };
+      this.sendNote = { kind: 'ok', key: 'go.restored', seq: ++this.msgSeq };
     } else {
-      this.sendNote = { text: tx('go.refused', { reason: tx('go.refused.restore') }), kind: 'no' };
+      this.sendNote = { kind: 'no', key: 'go.restoreFailed', reason: { key: 'go.refused.restore' }, seq: ++this.msgSeq };
       this.render();
     }
   }
@@ -850,7 +891,47 @@ export class StructureScreen {
     this.renderHead();
     this.renderStage();
     this.renderSide();
-    if (k) (this.root.querySelector(`[data-k="${CSS.escape(k)}"]`) as HTMLElement | null)?.focus({ preventScroll: true });
+    // focus stays on the control pressed; when it went or cannot be pressed now, on the one the action named, else the side's heading
+    const usable = (key: string | undefined | null): HTMLElement | null => {
+      const e = key ? this.root.querySelector<HTMLElement>(`[data-k="${CSS.escape(key)}"]`) : null;
+      return e && !(e as HTMLButtonElement).disabled ? e : null;
+    };
+    if (k) (usable(k) ?? usable(this.focusNext) ?? this.side.querySelector<HTMLElement>('h2'))?.focus({ preventScroll: true });
+    this.focusNext = null;
+    this.announceChanges();
+  }
+
+  /**
+   * The section's messages said once, when they change, by the live region
+   * that stays (`announcer`): the panels that show them are redrawn on every
+   * press, and a live region made afresh with its text is not reliably read.
+   */
+  private announceChanges(): void {
+    const parts: string[] = [];
+    const store = this.storeNote ?? '';
+    if (store !== this.said.store && this.storeNote) parts.push(tx(`store.${this.storeNote}`));
+    this.said.store = store;
+    if (this.mode === 'assemble' && this.message && this.message.seq !== this.said.msg) parts.push(this.message.text());
+    this.said.msg = this.message?.seq ?? 0;
+    if (this.mode === 'experiment' && this.sendNote && this.sendNote.seq !== this.said.send) parts.push(this.sendNoteText());
+    this.said.send = this.sendNote?.seq ?? 0;
+    // the energy verdict, once for each design shown
+    const key = this.mode === 'experiment' && this.model === 'edusat' ? designKey(this.design) : '';
+    if (key && key !== this.said.verdict) parts.push(this.figuresNow().powered ? tx('res.ok') : tx('res.short'));
+    this.said.verdict = key;
+    if (parts.length) this.say(parts.join(' '));
+  }
+
+  /** Say `text` in the live region: emptied first, so the same words said again are read again; the latest call wins. */
+  private say(text: string): void {
+    this.announcer.textContent = '';
+    const seq = ++this.saySeq;
+    requestAnimationFrame(() => { if (seq === this.saySeq) this.announcer.textContent = text; });
+  }
+
+  private sendNoteText(): string {
+    const n = this.sendNote;
+    return n ? tx(n.key, { ...n.params, ...(n.reason ? { reason: tx(n.reason.key, n.reason.params) } : {}) }) : '';
   }
 
   private button(label: string, k: string, onClick: () => void, opts: { pressed?: boolean; disabled?: boolean; cls?: string; title?: string } = {}): HTMLButtonElement {
@@ -901,9 +982,7 @@ export class StructureScreen {
     depth.append(el('span', 'st-depth-desc', tx(`depth.${this.level}.desc`)));
     this.head.replaceChildren(title, models, modes, depth);
     if (this.storeNote) {
-      const note = el('p', `st-msg ${this.storeNote === 'damaged' ? 'st-msg-info' : 'st-msg-no'}`, tx(`store.${this.storeNote}`));
-      note.setAttribute('role', 'status');
-      this.head.append(note);
+      this.head.append(el('p', `st-msg ${this.storeNote === 'damaged' ? 'st-msg-info' : 'st-msg-no'}`, tx(`store.${this.storeNote}`)));
     }
   }
 
@@ -912,19 +991,24 @@ export class StructureScreen {
     this.canvas.setAttribute('aria-label', `${tx(`model.${this.model}`)}. ${tx('view.canvas')}`);
     // status: loading, failed, no WebGL
     const status: (HTMLElement | string)[] = [];
-    if (this.glError) status.push(el('p', 'st-note', tx('load.noGl')));
-    else if (!this.viewer || (this.load.state === 'idle' && this.model === 'soyuz-st31')) status.push(el('p', 'st-note', tx('load.model', { name: tx(`model.${this.model}`) })));
-    else if (this.load.state === 'loading') status.push(el('p', 'st-note', tx('load.model', { name: this.load.what })));
-    else if (this.load.state === 'failed') {
-      const p = el('p', 'st-note st-fail', tx(this.load.listWorks ? 'load.failed3d' : 'load.failed', { error: this.load.error }));
-      p.append(' ', this.button(tx('load.retry'), 'retry', () => { this.load = { state: 'idle' }; this.ensureModel(); }));
+    const loadingNote = (): HTMLElement => el('p', 'st-note', tx('load.model', { name: tx(`model.${this.model}`) }));
+    if (this.load.state === 'failed') {
+      // a failure, with its retry, also without WebGL (the parts list and side view then need the data too)
+      const p = el('p', 'st-note st-fail', tx(this.load.listWorks ? 'load.failed3d' : 'load.failed', { error: this.load.error() }));
+      p.append(' ', this.button(tx('load.retry'), 'retry', () => { this.load = { state: 'idle' }; this.focusNext = 'home'; this.ensureModel(); }));
       status.push(p);
-    }
-    for (const l of this.layerLoading) status.push(el('p', 'st-note', tx(`load.layer.${l}`)));
-    for (const [l, error] of this.layerFailed) {
-      const p = el('p', 'st-note st-fail', tx('load.layerFailed', { layer: tx(`info.layer.${l}`), error }));
+    } else if (this.glError) status.push(this.model === 'soyuz-st31' && !this.soyuz ? loadingNote() : el('p', 'st-note', tx('load.noGl')));
+    else if (!this.viewer || (this.load.state === 'idle' && this.model === 'soyuz-st31') || this.load.state === 'loading') status.push(loadingNote());
+    // the Soyuz layers' notes, only while Soyuz is on screen: a failure is kept for when it is back; a layer still
+    // loading is cancelled when EduSat is shown, and fetched again with the model
+    const soyuzOn = this.model === 'soyuz-st31';
+    if (soyuzOn) for (const l of this.layerLoading) status.push(el('p', 'st-note', tx(`load.layer.${l}`)));
+    if (soyuzOn) for (const [l, error] of this.layerFailed) {
+      const p = el('p', 'st-note st-fail', tx('load.layerFailed', { layer: tx(`info.layer.${l}`), error: error() }));
       p.append(' ', this.button(tx('load.retry'), `retry:${l}`, () => {
         this.layerFailed.delete(l);
+        // the retry button goes with the note: focus to the layer's own switch
+        this.focusNext = l;
         this.views['soyuz-st31'][l] = true;
         void this.loadLayer(l);
         this.render();
@@ -935,8 +1019,10 @@ export class StructureScreen {
     // the side view when there is no 3-D, or the model's 3-D failed (the canvas then goes: it holds nothing of this model)
     const noView = !!this.glError || this.load.state === 'failed';
     this.canvas.hidden = noView;
-    this.fallback.hidden = !noView;
-    if (noView) this.renderFallback();
+    // the side view needs the model's parts: EduSat's are in the code, the Soyuz's come with its data
+    const sideView = noView && (this.model === 'edusat' || !!this.soyuz);
+    this.fallback.hidden = !sideView;
+    if (sideView) this.renderFallback();
     else this.fallback.replaceChildren();
     // the legend
     this.legend.replaceChildren();
@@ -1089,7 +1175,7 @@ export class StructureScreen {
     tree.setAttribute('aria-label', tx('list.units'));
     const sel = this.shownSelection();
     if (this.model === 'soyuz-st31' && !this.soyuz) {
-      panel.append(el('p', 'st-small', this.load.state === 'failed' ? tx('load.failed', { error: this.load.error }) : tx('load.model', { name: tx('model.soyuz-st31') })));
+      panel.append(el('p', 'st-small', this.load.state === 'failed' ? tx('load.failed', { error: this.load.error() }) : tx('load.model', { name: tx('model.soyuz-st31') })));
       return panel;
     }
     if (this.level === 'engineer' && this.model === 'soyuz-st31') {
@@ -1372,8 +1458,7 @@ export class StructureScreen {
     bar.setAttribute('aria-label', tx('asm.placed', { n: check.placed, total: check.total }));
     panel.append(prog, bar);
     if (this.model === 'soyuz-st31') panel.append(el('p', 'st-small', tx('soyuz.reference')));
-    const msg = el('p', `st-msg${this.message ? ` st-msg-${this.message.kind}` : ''}`, this.message?.text ?? tx('asm.pick'));
-    msg.setAttribute('role', 'status');
+    const msg = el('p', `st-msg${this.message ? ` st-msg-${this.message.kind}` : ''}`, this.message?.text() ?? tx('asm.pick'));
     panel.append(msg);
     if (complete) {
       const done = el('div', 'st-done');
@@ -1484,7 +1569,7 @@ export class StructureScreen {
     which.setAttribute('role', 'group');
     which.setAttribute('aria-label', tx('exp.showing'));
     which.append(
-      this.button(tx('exp.reference'), 'show:reference', () => { this.progress.showing = 'reference'; this.figures = null; this.save(); this.ensureModel(); this.render(); }, { pressed: !showingMine }),
+      this.button(tx('exp.reference'), 'show:reference', () => { this.progress.showing = 'reference'; this.figures = null; this.sendNote = null; this.save(); this.ensureModel(); this.render(); }, { pressed: !showingMine }),
       this.button(tx('exp.mine'), 'show:mine', () => this.makeExperiment(), { pressed: showingMine }),
     );
     panel.append(which);
@@ -1533,7 +1618,6 @@ export class StructureScreen {
     const usable = r.capacityWh - r.floorWh;
     const need = (r.perOrbit.eclipseDemandWh) / r.dischargeEff;
     const verdict = el('p', `st-verdict ${f.powered ? 'st-ok' : 'st-short'}`, f.powered ? tx('res.ok') : tx('res.short'));
-    verdict.setAttribute('role', 'status');
     box.append(verdict, el('p', 'st-small', tx(f.powered ? 'res.why.ok' : 'res.why.short', { need: num(need, 2), usable: num(usable, 2) })));
     const dl = el('dl', 'st-facts st-figures');
     const row = (k: string, v: string, key: string) => { const dt = el('dt', '', k); const dd = el('dd', '', v); dd.dataset.fig = key; dl.append(dt, dd); };
@@ -1640,17 +1724,16 @@ export class StructureScreen {
     );
     box.append(actions);
     if (this.sendNote) {
-      const note = el('p', `st-msg st-msg-${this.sendNote.kind}`, this.sendNote.text);
-      note.setAttribute('role', 'status');
-      box.append(note);
+      box.append(el('p', `st-msg st-msg-${this.sendNote.kind}`, this.sendNoteText()));
     }
-    // Launch's earlier mission, which a send replaced: one press puts it back
-    if (this.launchBefore) box.append(this.button(tx('go.undoLaunch'), 'go:undoLaunch', () => this.restoreLaunch()));
+    // Launch's earlier mission, which a send replaced: one press puts it back, while Launch still holds what was sent
+    if (this.canPutBack()) box.append(this.button(tx('go.undoLaunch'), 'go:undoLaunch', () => this.restoreLaunch()));
     if (this.sent) {
       const s = this.sent;
       const p = el('p', 'st-small st-sent', tx('go.sent', { name: s.name, mass: num(s.mass, 3), where: tx(`go.where.${s.where}`) }));
       p.dataset.sent = s.key;
       box.append(p);
+      if (!s.receipt) box.append(el('p', 'st-small', tx('go.noReadBack', { where: tx(`go.where.${s.where}`) })));
       if (s.receipt && s.check) {
         // what the destination holds, read back from it
         const r = s.receipt, km = (m: number) => num(m / 1000, 1);
@@ -1660,11 +1743,17 @@ export class StructureScreen {
         box.append(held);
         const off = [!s.check.mass && tx('go.off.mass'), !s.check.orbit && tx('go.off.orbit'), !s.check.whole && tx('go.off.replaced', { n: r.replaced })].filter(Boolean).join(', ');
         const T = RECEIPT_TOLERANCE;
+        // Launch holds a sun-synchronous target, not an inclination in degrees: its check is that both are sun-synchronous
+        const tol = { g: num(T.kg * 1000, 1), km: num(T.m / 1000, 0), deg: num(T.deg, 2) };
         const verdict = el('p', `st-msg ${s.check.ok ? 'st-msg-ok' : 'st-msg-no'}`, s.check.ok
-          ? tx('go.received', { g: num(T.kg * 1000, 1), km: num(T.m / 1000, 0), deg: num(T.deg, 2) })
+          ? tx(typeof r.inclination === 'number' ? 'go.received' : 'go.received.sso', tol)
           : tx('go.receivedOff', { what: off }));
         verdict.dataset.check = s.check.ok ? 'ok' : 'off';
         box.append(verdict);
+        // Orbit's planner may keep a spacecraft the learner chose there: its analyses then use that one's mass
+        if (r.analysisMass !== undefined && Math.abs(r.analysisMass - r.mass) >= T.kg) {
+          box.append(el('p', 'st-small', tx('go.otherCraft', { mass: num(r.analysisMass, 0) })));
+        }
       }
       if (s.key !== designKey(this.design)) box.append(el('p', 'st-msg st-msg-no', tx('go.changed')));
     }

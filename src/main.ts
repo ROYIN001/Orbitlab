@@ -12,7 +12,7 @@ import { ComparePanel, flightOnScreen } from './ui/compare';
 import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
 import { assessMissionResult } from './ui/result-content';
 import { enableChartExport } from './ui/chart-export';
-import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, parseMissionDocument, saveStoredMission } from './config/mission-file';
+import { MISSION_PARAM, MISSION_STORE_KEY, decodeMissionParam, loadStoredMission, missionDocument, parseMissionDocument, saveStoredMission } from './config/mission-file';
 import { flownMission } from './lessons/progress';
 import { WorkDialog } from './ui/workspace-dialog';
 import { AppProfiles } from './ui/profiles/app-profiles';
@@ -65,6 +65,7 @@ import {
 } from './ui/app-mode';
 import { BuildScreen } from './ui/build/build-screen';
 import { StructureScreen, type StructureHost } from './ui/structure/structure-screen';
+import { launchReceipt } from './structure/edusat-design';
 import { WorkspaceMission, missionSummary, startupMission } from './ui/workspace-mission';
 import { loadExperience } from './ui/experience';
 import { OrbitPlayground } from './ui/orbit/playground';
@@ -871,7 +872,8 @@ class App {
         this.handoff = h;
         this.playground.setHandoff(h);
         this.go(route('orbit', level));
-        // read back from the Orbit section: the orbit it loaded from the state vector, the mass its lifetime analysis takes
+        // read back from the Orbit section (`heldFromHandoff`): the orbit it loaded from the state vector, and the masses its
+        // panel and its analyses use — the satellite's own is the object sent, so for mass this checks the playground kept it
         const held = this.playground.heldHandoff();
         return held && { ...held, replaced: 0 };
       },
@@ -883,17 +885,27 @@ class App {
         saveStoredMission(this.panel.missionState());
         this.go(route('launch', level));
         // read back from the Launch section's own mission, after its checks (a refused value is put back to its own)
-        const m = this.panel.missionState();
-        return { mass: m.payloadMass, perigeeAlt: m.orbit.perigee, apogeeAlt: m.orbit.apogee, inclination: m.orbit.inclination, replaced: parsed.issues.length, siteId: m.siteId };
+        return launchReceipt(this.panel.missionState(), parsed.issues.length);
       },
-      launchMission: () => missionDocument(this.panel.missionState()),
-      // the mission Launch had, put back as it was kept: read as the stored mission is (no "loaded from" notice)
-      restoreLaunch: (doc, level) => {
+      // what Launch has now: the panel's mission, and the learner's stored copy byte for byte (with its design reference), or null
+      launchMission: () => {
+        let stored: string | null = null;
+        try { stored = workspaceStorage().getItem(MISSION_STORE_KEY); } catch { /* storage blocked */ }
+        return { shown: missionDocument(this.panel.missionState()), stored };
+      },
+      // put that back: the stored copy into the panel and storage as it was (none stored: the panel's, and storage emptied)
+      restoreLaunch: (kept, level) => {
+        let doc: unknown = kept.shown;
+        try { if (kept.stored !== null) doc = JSON.parse(kept.stored); } catch { /* unreadable: the panel's */ }
         this.goLive(); this.playing = false;
         const parsed = this.panel.share.apply(doc, 'stored');
         if (!parsed.usable) return false;
-        saveStoredMission(this.panel.missionState());
+        this.workspace.adopt();
         this.go(route('launch', level));
+        try {
+          if (kept.stored !== null) workspaceStorage().setItem(MISSION_STORE_KEY, kept.stored);
+          else workspaceStorage().removeItem(MISSION_STORE_KEY);
+        } catch { /* storage blocked or full: the panel has it */ }
         return true;
       },
     };

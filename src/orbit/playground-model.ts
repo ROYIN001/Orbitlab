@@ -9,10 +9,10 @@
  * DOM-free, SI units and radians; src/ui/orbit/playground.ts is the thin
  * part that puts it on screen, tests/orbit-playground.test.ts holds it here.
  */
-import { DEG, R_EARTH } from '../physics/constants';
+import { DEG, RAD, R_EARTH } from '../physics/constants';
 import { v3, type Vec3 } from '../physics/vec3';
 import { stateFromElements, wrap2pi } from '../physics/orbital';
-import { apsidesToAE, orbitFromState, repeatOrbit, stateAt, type Orbit } from './kepler';
+import { apsidesToAE, orbitFacts, orbitFromState, repeatOrbit, stateAt, type Orbit } from './kepler';
 import { presetOrbit } from './presets';
 import type { TourStep } from './tour';
 import type { ManeuverSettings, PlannerKind } from './maneuver-setup';
@@ -99,6 +99,30 @@ export function handoffOrbit(h: Pick<OrbitHandoff, 'r' | 'v' | 'jd'>): Orbit {
  * DOM part so the Build → Orbit hand-off (D06, Phase 4 map §2.6 a) can be
  * held to reach the dialog with the design's area, C_D and C_R.
  */
+export interface HeldHandoff {
+  /** the satellite's mass as the hand-off panel shows it: the flight's craft, lighter by what plans burned, else the hand-off's own, kg */
+  mass: number;
+  /** the mass its lifetime analysis and planner take (`playgroundLifetimeCraft`): another while the planner keeps a spacecraft chosen there, kg */
+  analysisMass: number;
+  /** the orbit loaded from the state vector: altitudes above the equatorial radius, m; inclination, deg */
+  perigeeAlt: number;
+  apogeeAlt: number;
+  inclination: number;
+}
+
+/**
+ * What the playground holds of a hand-off, for a sender to check (the
+ * Structure section's receipt). The orbit is the playground's own reading of
+ * the state vector; the masses are what its panel and its analyses use.
+ */
+export function heldFromHandoff(handoff: Pick<OrbitHandoff, 'spacecraft'>, orbit: Orbit, craft: Pick<Craft, 'mass'> | null, launchCraft: Pick<Craft, 'mass'> | null): HeldHandoff {
+  const f = orbitFacts(orbit, false);
+  return {
+    mass: launchCraft?.mass ?? handoff.spacecraft.mass, analysisMass: playgroundLifetimeCraft(handoff, craft).mass,
+    perigeeAlt: f.perigeeAlt, apogeeAlt: f.apogeeAlt, inclination: orbit.i * RAD,
+  };
+}
+
 export function playgroundLifetimeCraft(handoff: Pick<OrbitHandoff, 'spacecraft'> | null, craft: Pick<Craft, 'mass'> | null): HandoffSpacecraft {
   const kind = handoff?.spacecraft.kind ?? 'science';
   const mass = craft?.mass ?? handoff?.spacecraft.mass ?? 1000;

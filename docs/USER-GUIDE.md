@@ -998,11 +998,13 @@ method behind the results. Changing level keeps what you picked, your assembly a
   destination took — the mass, the orbit's height and its inclination — checks it against what was
   sent, and says so if you change the design afterwards. A send that a destination refuses is said
   beside the buttons, with the reason. After a send to Launch, **Put back the mission Launch had
-  before** restores the mission that was open there (while the page stays open).
+  before** restores the mission that was there (the saved copy, exactly as it was), offered while
+  Launch still holds the mission sent from here and the page stays open.
 - What it keeps (in your profile, `orbitlab.structure.v1`): the model and activity last open, each
   model's assembly and "my experiment". If that record cannot be read, the section says it started
   afresh (the profile keeps the old copy aside); if it was saved by a newer Orbitlab, the section
-  leaves it alone and says your work here is not being saved.
+  leaves it alone and says your work here is not being saved. In a second tab on the same learner
+  (read-only) it says the same.
 
 ## 1. Set up a mission
 
