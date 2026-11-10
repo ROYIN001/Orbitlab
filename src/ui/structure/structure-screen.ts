@@ -1433,7 +1433,9 @@ export class StructureScreen {
     if (part.batteryWh) dl.append(el('dt', '', tx('res.capacity')), el('dd', '', `${num(part.batteryWh, 2)} ${tx('unit.Wh')}`));
     const [w, h, d] = part.box.size;
     dl.append(el('dt', '', tx('info.size')), el('dd', '', `${num(w * 1000, 0)} × ${num(h * 1000, 0)} × ${num(d * 1000, 0)} mm`));
-    dl.append(el('dt', '', tx('info.slot')), el('dd', '', this.name(slotOfUnit(unit))));
+    // where it is fitted: assembling, the slot it went into (a side panel may be on another face), else the reference's
+    const fitted = this.mode === 'assemble' ? this.assembly.placed[unit]?.slot : undefined;
+    dl.append(el('dt', '', tx('info.slot')), el('dd', '', this.name(fitted ?? slotOfUnit(unit))));
     panel.append(dl);
     if (this.level === 'engineer') {
       panel.append(el('h3', '', tx('info.sources')), this.sourceList(part.sourceIds, EDUSAT_SOURCES));

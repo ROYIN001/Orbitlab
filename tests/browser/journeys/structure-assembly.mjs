@@ -132,6 +132,8 @@ export default async function structureAssembly(t) {
     return b && [(b.min.x + b.max.x) / 2, (b.min.z + b.max.z) / 2];
   });
   t.check(!!panelAt && Math.abs(panelAt[0]) < 0.01 && panelAt[1] < -0.04, `drawn on the −Z face, centre x, z = ${JSON.stringify(panelAt)}`);
+  const fittedAt = await page.locator('.st-info dd').allTextContents();
+  t.check(fittedAt.some((d) => d.includes('−Z')) && !fittedAt.some((d) => d.includes('+X')), `and its information says where it went: ${fittedAt.join(' | ')}`);
   await k('tray:panel-nx').click();
   t.check(await k('slot:face-px').count() === 1 && await k('slot:face-nz').count() === 0, 'the free +X face is offered, the taken −Z face is not');
   await app.shot('edusat-panel-swapped');

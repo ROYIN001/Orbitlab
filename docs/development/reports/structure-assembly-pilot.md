@@ -8,7 +8,7 @@
 > - ผู้ทำงาน: Claude (ไม่ใช่ GPT-6.1 Sol) · ผู้ตรวจทาน: เอเจนต์ Claude แยกบริบท (ไม่ใช่ GPT-6 Astra ซึ่งเรียกจากที่นี่ไม่ได้) — §9
 > - **รอเจ้าของตัดสิน:** (1) งบขนาดตาม D-38: รวมในชุดหลักแบบตอนนี้ หรือโหลดแยกเมื่อเปิดหมวด (วัดไว้ทั้งสองแบบ §8) (2) ขนาด PR เกินแนวทาง D-25 (§10) (3) ส่งชุดส่งมอบ Soyuz 2 พ.ย. มาให้เทียบ (§1)
 > - ผลตรวจทานรอบแรก (เอเจนต์ Claude): 15 ข้อ แก้แล้ว 13 ข้อ เหลือ 1 ข้อรอเจ้าของ (งบขนาด) และ 1 ข้อแก้ได้บางส่วน (ค่ามวล CDS ยังไม่ได้ตรวจจากต้นฉบับ) — §9.1 สำเนาอ้างอิง EO-STO-1 กลับเป็นของเดิมทุกไบต์แล้วตามกฎ q04 B
-> - ผลตรวจทานรอบสอง (เอเจนต์ Claude 4 มุมมอง ตรวจการแก้ของรอบแรก): 22 ข้อ ระดับ P2 ทั้งหมด แก้ครบ — §9.2
+> - ผลตรวจทานรอบสอง (เอเจนต์ Claude 4 มุมมอง ตรวจการแก้ของรอบแรก): 22 ข้อ ระดับ P2 ทั้งหมด แก้ครบ ผู้หักล้างยืนยันว่าจริง 11 ข้อ อีก 11 ข้อพบว่าแก้แล้วตอนตรวจ ไม่มีข้อใดถูกหักล้างด้วยเหตุผล — §9.2
 >
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 >
@@ -16,8 +16,8 @@
 > - **Soyuz-2.1b/Fregat ST31** มาจากหน้า Anatomy ของคุณใน repo (รุ่น `family-v1-20261026`) ครบ 2,069 ชิ้นพร้อมรหัสเดิม คำอธิบาย ข้อมูล และแหล่งอ้างอิงภาษาไทยของหน้า แบ่งไฟล์เป็นเปลือกนอก/ภายใน/เครื่องยนต์ โหลดเฉพาะเมื่อใช้ เลือกชิ้นได้ทั้งจากภาพและรายการ ผ่าซีกตามครึ่งที่หน้าแบ่งไว้ ทำเปลือกโปร่ง แยกชิ้น เปิดหัวครอบ ซ่อน/แสดงเฉพาะ คืนสภาพ ระบายสีตามชนิดชิ้นส่วนหรือสถานะข้อมูล ประกอบชุดหลัก 11 ชุดตามแบบ (ลำดับ ตำแหน่ง ทิศทาง) มีถอด ย้อนกลับ เริ่มใหม่ และตรวจความครบจากความสัมพันธ์ ไม่เปิดให้ดัดแปลงจรวด
 > - **EduSat-3U** ดาวเทียมแนว CubeSat ที่สร้างเพื่อการศึกษา (ระบุชัดว่าไม่ใช่ OneWeb) ประกอบได้ 13 ชุด แล้วสร้าง "แบบทดลองของฉัน" ได้ทันทีโดยไม่ต้องผ่านบทเรียน เปลี่ยนแบตเตอรี่ (1 หรือ 2 เซลล์) และกล้อง (กลางวัน/แสงไฟกลางคืน) ภาพ รายการ มวล และสมดุลพลังงาน 3 รอบวงโคจรเปลี่ยนจากข้อมูลชุดเดียวกัน กรณีตัวอย่าง: กล้องกลางคืน + แบต 1 เซลล์ → ไฟไม่พอ 10.9 นาทีต่อรอบ, + แบต 2 เซลล์ → ผ่านแต่หนักขึ้น 60 g
 > - ส่งแบบทดลองไป **Orbit** ได้จริง (ใช้ `designHandoff` เดิม) และไป **Launch** เป็นสถานการณ์สมมติบน Soyuz-2.1b/Fregat จาก Vostochny (ใช้ `designMissionDocument` เดิม และผ่านการตรวจก่อนบินแบบเดียวกับปุ่มของส่วนสร้าง) ก่อนส่งแสดงค่าที่จะส่ง/ไม่ส่ง หลังส่งอ่านค่ากลับจากปลายทางเอง (มวล วงโคจร ความเอียง) แล้วเทียบกับที่ส่ง เช่น 2.070 kg, 500 × 500 km, 97.4° ตรงกัน ถ้าแก้แบบหลังส่งจะขึ้นเตือน ถ้าส่งไม่ได้จะบอกเหตุผลข้างปุ่ม
-> - ตรวจแล้ว: ชุดทดสอบใหม่ 59 ข้อ, ชุดทดสอบทั้งหมดของแอป (10,681 ข้อ) ผ่าน, browser journey ผ่านครบเส้นทางทั้งเดสก์ท็อปและจอมือถือแบบสัมผัส และตรวจการแก้แต่ละข้อของผู้ตรวจทานในเบราว์เซอร์อีก 41 ข้อ (รายละเอียด §6) **ค่าที่ยังไม่ผ่าน:** งบขนาดแอป (§8) ซึ่งต้องให้คุณตัดสินตาม D-38
-> - ส่งไป Launch แล้วนำภารกิจเดิมของ Launch กลับมาได้ด้วยปุ่มเดียว (เก็บไว้ในหน่วยความจำจนปิดหน้า) เพื่อรักษาภารกิจของผู้ใช้
+> - ตรวจแล้ว: ชุดทดสอบใหม่ 59 ข้อ, ชุดทดสอบทั้งหมดของแอป (10,688 ข้อ) ผ่าน, browser journey ผ่านครบเส้นทางทั้งเดสก์ท็อปและจอมือถือแบบสัมผัส และตรวจการแก้แต่ละข้อของผู้ตรวจทานในเบราว์เซอร์อีก 42 ข้อ (รายละเอียด §6) **ค่าที่ยังไม่ผ่าน:** งบขนาดแอป (§8) ซึ่งต้องให้คุณตัดสินตาม D-38
+> - ส่งไป Launch แล้วนำภารกิจเดิมของ Launch (ฉบับที่บันทึกไว้ ตรงทุกไบต์) กลับมาได้ด้วยปุ่มเดียว ตราบที่ Launch ยังถือภารกิจที่ส่งไปและยังไม่ปิดหน้า เพื่อรักษาภารกิจของผู้ใช้
 
 ```yaml
 package: none in the plan (owner's request in chat, 2026-11-09)
@@ -26,7 +26,7 @@ change_kind: feature (new section, render, UI, storage key, PWA on-demand files)
 owner_authorization: 'owner in chat, 2026-11-09: "ฉันต้องการให้คุณเริ่มพัฒนาส่วน “โครงสร้างและการประกอบ” ใน Orbitlab ตามข้อกำหนดต่อไปนี้ ให้ทำจนได้รุ่นนำร่องที่ใช้งานจริง ตรวจสอบแล้ว และเปิดให้ฉันทดลองในเครื่องได้" … "ยังไม่อนุญาตให้ push, merge หรือเผยแพร่ขึ้นเว็บจริง"'
 branch: claude/trusting-cannon-oah00c
 base: 3e1b48a961c5d79b8dbd68e0471878567c10c748
-budget: owner's decision (D-38) — as built index-*.js +176.0 kB, index-*.css +7.9 kB, i18n-*.js +1.1 kB, precache code +186.7 kB over their ceilings; a lazy-loaded variant measured (§8); no ceiling raised
+budget: owner's decision (D-38) — as built index-*.js +185.2 kB, index-*.css +7.9 kB, i18n-*.js +1.1 kB, precache code +195.9 kB over their ceilings; a lazy-loaded variant measured (§8); no ceiling raised
 merge: not requested (owner: no push, no merge)
 ```
 
@@ -130,10 +130,26 @@ The balance is worked out on the bench only, with this closed-form shadow; the h
 | New unit tests `tests/structure-{assembly,power,model,progress,text,handoff,storage}.test.ts` | 59/59 pass (assembly 16, power 11 incl. a brute-force 1 s integration written apart, model 9, progress 6, text 4, handoff 6, storage 7); the placement test fails if a face's sign is flipped, the storage test if the key leaves the repository's quarantine table |
 | Existing tests touched by the change (i18n, app-mode, section-nav-model, section-plan, architecture, privacy-inventory, pwa, repo-hygiene, workspace-profiles, anatomy, i18n-thai-terms, orbit-playground, workspace-eo-sto-1) | pass; EO-STO-1 7/7 with `tests/eo-sto/ref/` byte-identical to main (§7) |
 | `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` (the change map's rule covers the new tests through `tests/structure-*.test.ts`) | 93/93 pass |
-| Browser probes of each review fix (a script outside the repo, sent with this report: failed layers, model switch while loading, failed model data or 3-D, damaged and newer records, a refused send, receipts, put back (bytes, panel, language, a changed Launch), pan direction, messages following the language, focus after Remove, the parts-in-place buttons and live region, the cutaway's angle) | 41/41 pass on the final build |
-| Full `npx vitest run` | see §12 (run on the final tree) |
+| Browser probes of each review fix (a script outside the repo, sent with this report: failed layers, model switch while loading, failed model data or 3-D, damaged and newer records, a refused send, receipts, put back (bytes, panel, language, a changed Launch), pan direction, messages following the language, focus after Remove, the parts-in-place buttons and live region, the cutaway's angle) | 42/42 pass on the final build |
+| Full `npx vitest run` (on `f2de409`; the last commit changes one line of the screen after it, covered by the typecheck, the section's unit tests and the journey) | 351 files, 10,688 tests, all pass (25 min in this container) |
 | Browser journey `structure-assembly` (`node tests/browser/run.mjs structure-assembly`, built `dist`, Chromium 153, SwiftShader) | pass, 79 s on the final build (desktop 1440×900 Thai: Soyuz explore, cutaway, assembly with refusals and undo, EduSat assembly with two panels on other faces, my experiment, Orbit and Launch with read-back receipts, Launch's earlier mission put back, reload; phone 390×844 touch, reduced motion: taps and keys) |
 | `node scripts/bundle-budget.mjs` | **fails** — §8 |
+
+### 6.1 Performance (measured 2026-11-10, idle machine)
+
+Production build served by `vite preview` on localhost; each case a fresh browser context (a first visit, nothing cached); a script outside the repo (sent with this report). Machine: Linux container, Intel Xeon @ 2.10 GHz × 4, 16 GB, load average 0.7 at the start; Chrome for Testing 153.0.8010.12, headless, **software WebGL (SwiftShader), no GPU**.
+
+| Measure | Desktop 1440×900, Soyuz (ทดลอง) | Desktop 1440×900, EduSat | Phone emulation 390×844 ×3, touch, Soyuz (พื้นฐาน) |
+| --- | ---: | ---: | ---: |
+| Section on screen after the address changes | 20 ms | 23 ms | 23 ms |
+| 3-D ready (WebGL context made, model fetched, decoded and drawn) | 5.0 s | 4.8 s | 3.0 s |
+| Turning the view by drag, time per frame, median / 90th percentile | 217 / 233 ms | 33 / 50 ms | not measured: the emulated touch page took no mouse drag, so its 17 ms frames were idle |
+| Inside and engine layers fetched and drawn | 1.4 s | — | 1.3 s |
+| Turning with all three layers, 90th percentile frame | 483 ms | — | — |
+| JS heap after the above | 53 MB | 40 MB | 72 MB |
+| Opening again after leaving (model and viewer kept) | 2 ms | 1 ms | 2 ms |
+
+SwiftShader draws on the CPU: these are a worst case, not what a learner with a GPU sees (a GPU draws the 257,000-triangle outside in milliseconds). With all layers the median frame interval reads 0 ms (frames stacked while the main thread was busy), so only its 90th percentile is given. Not measured: a real GPU, a real phone, render cost on a phone.
 
 ## 7. Storage
 
@@ -147,17 +163,17 @@ Measured on the final tree with `npx vite build` and `node scripts/bundle-budget
 
 | Group | Main | This tree | Ceiling | Over |
 | --- | ---: | ---: | ---: | ---: |
-| `index-*.js` | 2654.2 kB | 2831.0 kB | 2655.0 kB | +176.0 kB |
+| `index-*.js` | 2654.2 kB | 2840.2 kB | 2655.0 kB | +185.2 kB |
 | `index-*.css` | 178.3 kB | 186.9 kB | 179.0 kB | +7.9 kB |
 | `i18n-*.js` | 1732.5 kB | 1734.1 kB | 1733.0 kB | +1.1 kB |
-| precache code | 14678.8 kB | 14865.7 kB | 14679.0 kB | +186.7 kB |
-| first download (index.html and what it loads) | 5101.1 kB (1430.1 gzip) | 5288.1 kB (1484.3 gzip) | — | +187.0 kB (+54.2 gzip) |
+| precache code | 14678.8 kB | 14874.9 kB | 14679.0 kB | +195.9 kB |
+| first download (index.html and what it loads) | 5101.1 kB (1430.1 gzip) | 5297.2 kB (1486.6 gzip) | — | +196.1 kB (+56.5 gzip) |
 
 CI runs this check (`ci.yml`, `deploy.yml`), so as it stands the branch would fail there. No ceiling was raised: D-38 needs the measured size, the feature, a named identical-output offset (none found) and the owner's approval.
 
-**The other way, measured (not applied): the section loaded when it first opens** (`import()` in `main.ts`, the rest unchanged): `index-*.js` 2434.4 kB (−220 kB), `index-*.css` back to main's 178.3 kB, first download 5107.0 kB (+5.9 kB on main), the section's own chunk 166.6 kB of JS and 8.6 kB of CSS fetched when the section opens. But Rolldown then regroups shared code into new chunks that still load at start (`satellite-templates` 269.5 kB, `escape` 175.5 kB, `presets` 45.6 kB and three small ones; `lesson-file` 345 → 76 kB), so "other chunks" goes 668 kB over its 772 kB ceiling; precache code is still +181 kB (the service worker downloads the section's chunk in the background), and `i18n-*.js` +1.1 kB. It needs, besides the code (a loading and a failed-to-load state with a retry), the regrouped chunks named in `budgets.json` with `index`'s ceiling lowered by as much — a classification, as R1 did on 2026-10-03 — and the precache raise; or the section's chunk on demand (`src/pwa/manifest.ts`), which takes the raise away but makes the section need the network the first time, as its Soyuz model already does.
+**The other way, measured (not applied; on this branch before the review's fixes, which added about 9 kB, nearly all of it in the section's own code): the section loaded when it first opens** (`import()` in `main.ts`, the rest unchanged): `index-*.js` 2434.4 kB (−220 kB), `index-*.css` back to main's 178.3 kB, first download 5107.0 kB (+5.9 kB on main), the section's own chunk 166.6 kB of JS and 8.6 kB of CSS fetched when the section opens. But Rolldown then regroups shared code into new chunks that still load at start (`satellite-templates` 269.5 kB, `escape` 175.5 kB, `presets` 45.6 kB and three small ones; `lesson-file` 345 → 76 kB), so "other chunks" goes 668 kB over its 772 kB ceiling; precache code is still +181 kB (the service worker downloads the section's chunk in the background), and `i18n-*.js` +1.1 kB. It needs, besides the code (a loading and a failed-to-load state with a retry), the regrouped chunks named in `budgets.json` with `index`'s ceiling lowered by as much — a classification, as R1 did on 2026-10-03 — and the precache raise; or the section's chunk on demand (`src/pwa/manifest.ts`), which takes the raise away but makes the section need the network the first time, as its Soyuz model already does.
 
-The owner's choice, then: (A) as it is — one file, every visitor downloads +187 kB (+54 kB gzip) at start; or (B) lazy — +6 kB at start, a `budgets.json` reclassification, and precache or on-demand for the section's chunk. Either way about half of the section's JS is its text in three languages (Thai 31 kB, Russian 26 kB, English 17 kB of source), which could also go into on-demand files. The model files (1.9 MB) are on demand and not precached.
+The owner's choice, then: (A) as it is — one file, every visitor downloads +196 kB (+57 kB gzip) at start; or (B) lazy — +6 kB at start, a `budgets.json` reclassification, and precache or on-demand for the section's chunk. Either way about half of the section's JS is its text in three languages (Thai 38 kB, Russian 33 kB, English 20 kB of source), which could also go into on-demand files. The model files (1.9 MB) are on demand and not precached.
 
 ## 9. Review
 
@@ -187,7 +203,7 @@ Verified correct by the reviewer (unchanged): mass counted once, from the parts 
 
 ### 9.2 Second round: the fixes checked
 
-Four more Claude agents, each with one lens on the fixes (the 3-D and assembly logic; the hand-offs; storage and tests; text and accessibility), read-only, then one more agent per finding trying to refute it. Their findings and what was done:
+Four more Claude agents, each with one lens on the fixes (the 3-D and assembly logic; the hand-offs; storage and tests; text and accessibility), read-only, then one more agent per finding trying to refute it. Of the 22 findings (all P2), the refuters confirmed 11 in the code reviewed and found the other 11 already fixed at the tip by the time they looked; none was refuted on its merits. Their findings and what was done:
 
 | Lens | Finding | Outcome |
 | --- | --- | --- |
@@ -219,8 +235,8 @@ Branch `claude/trusting-cannon-oah00c`, base `3e1b48a`; the files in §2; how to
 - EN and RU text is a draft (marked on screen in those languages); the Soyuz part descriptions are the page's Thai only (said on screen).
 - Phone checks are Chromium's emulation (390×844, touch) in this container, not a real phone; render cost on phones was not measured.
 - Launch's earlier mission is kept in memory only: after a reload the button to put it back is gone (Launch then holds the EduSat mission, as after Build's "Fly it"). Orbit's earlier hand-off is not kept (it lives in memory, as Build's does).
-- All measurements are with software WebGL (SwiftShader) on a 4-core Intel Xeon 2.1 GHz container: a frame of the full Soyuz outside takes about 0.2–0.4 s there (a real GPU draws it in milliseconds), and creating the section's WebGL context took about 12 s the first time.
-- D-25 asks for about 400 changed source lines per PR; this pilot is about 5,500 new lines of source. A proposed split for merging: (1) model files, pure core and their tests; (2) viewer; (3) section, routing and text; (4) experiment and hand-offs. The owner decides.
+- All measurements are with software WebGL (SwiftShader) on a 4-core Intel Xeon 2.1 GHz container (§6.1): a frame of the full Soyuz outside takes about 0.2 s there, 0.5 s with every layer (a real GPU draws it in milliseconds); creating the section's WebGL context took up to 12 s the first time while the machine was busy, about 5 s with it idle.
+- D-25 asks for about 400 changed source lines per PR; this pilot adds about 6,000 lines of source (about 1,000 of them the section's text in three languages) and 1,100 of tests. A proposed split for merging: (1) model files, pure core and their tests; (2) viewer; (3) section, routing and text; (4) experiment and hand-offs. The owner decides.
 - Not in this pilot (as asked): changing Soyuz, a vehicle library, a CAD tool, strength analysis, accounts, a large curriculum.
 
 ## 11. Trying it
@@ -229,4 +245,15 @@ On a machine with the repository at this branch: `npm ci`, then `npm run dev` an
 
 ## 12. Revisions
 
-(filled in at commit time)
+On `claude/trusting-cannon-oah00c`, from `main` @ `3e1b48a`; committed in the cloud session only, **not pushed** (owner, 2026-11-09):
+
+| Commit | What |
+| --- | --- |
+| `a8b6aaa` | the Soyuz-2.1b/Fregat model files (`npm run structure`), the section's pure core and its unit tests |
+| `c1343a7` | the section: 3-D viewer, explore, assemble, my experiment, hand-offs, routing, text, journey, report |
+| `caa92f9` | self-review fixes: an overstated Orbit claim corrected, more independent checks |
+| `81c94b5` | the first review's fixes (§9.1), the put-back of Launch's mission |
+| `f2de409` | the second review round's fixes (§9.2) |
+| the commit after it | the information panel names the slot a part went into (a panel on another face); this report's final figures (checks, budget, performance, review) |
+
+The commits follow the work, not mergeable steps, and only the tip was checked in full: `c1343a7` and `caa92f9` fail EO-STO-1's key step, which `81c94b5` makes compare the reference's own keys (§7); an earlier commit that edited the EO-STO-1 reference copy was dropped from this unpushed history, so `tests/eo-sto/ref/` is never changed. The branch's tip passes everything in §6 except the budget (§8).
