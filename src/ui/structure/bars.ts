@@ -69,7 +69,7 @@ function exploreTools(store: StructureStore, stage: Stage): HTMLElement {
   const ready = stage.ready();
   const shown = store.shown(), has = !!shown;
   const row = el('div', 'st-tools');
-  row.setAttribute('role', 'toolbar');
+  row.setAttribute('role', 'group');
   row.setAttribute('aria-label', tx('view.label'));
   const add = (least: Depth, node: HTMLElement | false): void => { if (node && reaches(level, least)) row.append(node); };
   const toggle = (label: string, k: string, on: boolean, set: () => void, glyph?: string): HTMLElement => button(label, k, set, { pressed: on, disabled: !ready, glyph });
@@ -88,7 +88,7 @@ function exploreTools(store: StructureStore, stage: Stage): HTMLElement {
   if (adapter.offers.deploy) add('watch', toggle(tx('view.deploy'), 'deploy', v.deployed, () => store.setView({ deployed: !v.deployed }), '✣'));
   add('watch', toggle(tx('view.labels'), 'labels', v.labels, () => store.setView({ labels: !v.labels }), 'Aa'));
   add('explore', toggle(tx('view.ghost'), 'ghost', v.shell, () => store.setView({ shell: !v.shell }), '◌'));
-  add('explore', button(tx('view.hide'), 'hide', () => { if (shown) store.toggleHidden(shown.id); }, { disabled: !ready || !has }));
+  add('explore', button(tx('view.hide'), 'hide', () => { if (shown) { store.focusNext = 'showAll'; store.toggleHidden(shown.id); } }, { disabled: !ready || !has }));
   add('explore', button(tx('view.isolate'), 'isolate', () => { if (shown) { store.camera = 'selection'; store.setView({ isolate: shown.id }); } }, { disabled: !ready || !has }));
   add('explore', button(tx('view.showAll'), 'showAll', () => store.showAll(), { disabled: !ready || (!v.hidden.size && !v.isolate) }));
   // the colour view: by kind of part from the middle depth, by how a shape is known at the deepest
@@ -174,7 +174,7 @@ function assemblyBar(store: StructureStore, stage: Stage): HTMLElement {
     }
     line.append(button(tx('asm.install'), 'install', () => store.install(), { cls: 'st-primary', disabled: !held.slot }), button(tx('asm.putDown'), 'putDown', () => store.hold(null)));
   } else {
-    const selected = store.selectedUnits()[0];
+    const selected = store.selectedUnit();
     if (selected && Object.hasOwn(state.placed, selected)) {
       const rests = store.restsOn(selected);
       line.append(el('strong', 'st-hand-name', store.unitName(selected)),
@@ -186,13 +186,16 @@ function assemblyBar(store: StructureStore, stage: Stage): HTMLElement {
       line.append(el('strong', 'st-hand-name st-ok-text', tx('asm.complete')));
     }
   }
-  box.append(line);
+  // what is in hand and what was last said of it, together: on a narrow screen they stay under the picture as one
+  const hand = el('div', 'st-hand-box');
+  hand.append(line);
   const message = store.message;
   const msg = el('p', `st-msg${message ? ` st-msg-${message.kind}` : ' st-msg-quiet'}`, message?.text() ?? '');
   msg.dataset.role = 'asm-msg';
-  if (message) box.append(msg);
+  if (message) hand.append(msg);
+  box.append(hand);
   const tools = el('div', 'st-tools');
-  tools.setAttribute('role', 'toolbar');
+  tools.setAttribute('role', 'group');
   tools.setAttribute('aria-label', tx('view.label'));
   tools.append(
     button(tx('view.home'), 'home', () => stage.home(), { disabled: !stage.ready(), glyph: '⌂' }),
@@ -214,7 +217,7 @@ function experimentBar(store: StructureStore, stage: Stage): HTMLElement {
   if (ui) box.append(ui.strip(store));
   const v = store.view;
   const tools = el('div', 'st-tools');
-  tools.setAttribute('role', 'toolbar');
+  tools.setAttribute('role', 'group');
   tools.setAttribute('aria-label', tx('view.label'));
   tools.append(
     button(tx('view.home'), 'home', () => stage.home(), { disabled: !stage.ready(), glyph: '⌂' }),

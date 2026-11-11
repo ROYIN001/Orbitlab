@@ -12,11 +12,11 @@ import { button, el } from './dom';
 import type { StructureStore } from './store';
 import { tx } from './text';
 
-export function assemblyPanel(store: StructureStore, viewComplete: boolean): HTMLElement {
+export function assemblyPanel(store: StructureStore): HTMLElement {
   const panel = el('section', 'st-panel st-asm');
   const adapter = store.adapter, spec = adapter.spec, state = store.assembly;
   const check = store.check();
-  const complete = check.complete && viewComplete;
+  const complete = check.complete;
   const held = store.held[store.model];
   panel.append(el('h2', '', tx('mode.assemble.title')));
   const prog = el('p', 'st-progress', tx('asm.placed', { n: check.placed, total: check.total }));
@@ -85,7 +85,7 @@ export function assemblyPanel(store: StructureStore, viewComplete: boolean): HTM
     const box = el('div', 'st-tray st-in-place');
     box.append(el('h3', '', tx('asm.inPlace')));
     const row = el('div', 'st-chips-row');
-    const selected = store.selectedUnits()[0];
+    const selected = store.selectedUnit();
     for (const u of inPlace) {
       const node = [...adapter.tree().nodes.values()].find((n) => n.unit === u.id);
       row.append(button(store.unitName(u.id), `placed:${u.id}`, () => store.select(node?.id ?? null), { pressed: selected === u.id, cls: 'st-chip' }));
@@ -99,7 +99,8 @@ export function assemblyPanel(store: StructureStore, viewComplete: boolean): HTM
     const status = relationStatus(adapter.relations, state);
     const made = status.filter((s) => s.made).length;
     const fold = el('details', 'st-fold');
-    fold.open = store.level === 'engineer';
+    fold.open = store.foldOpen('joints', store.level === 'engineer');
+    fold.addEventListener('toggle', () => store.setFold('joints', fold.open));
     const sum = el('summary', '', tx('asm.joints', { n: made, total: status.length }));
     sum.dataset.k = 'fold:joints';
     const ul = el('ul', 'st-joints');

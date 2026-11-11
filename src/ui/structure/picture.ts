@@ -44,7 +44,7 @@ export function freePlace(store: StructureStore, unit: string): string | null {
 
 export function picture(store: StructureStore): Picture {
   const adapter = store.adapter, tree = adapter.tree(), setup = adapter.setup();
-  const n = setup.itemCount, view = store.view;
+  const n = setup.itemCount, view = store.pictureView;
   const flags = new Uint8Array(n);
   const paintOf = new Int8Array(n).fill(-1);
   const colours: string[] = [];

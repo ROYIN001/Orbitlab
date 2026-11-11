@@ -86,10 +86,17 @@
 .st-canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
 .st-canvas:active { cursor: grabbing; }
 .st-canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+/* the view's keys: its description, shown on the picture while it has the keyboard's focus */
+.st-keys {
+  display: none; position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 3; pointer-events: none;
+  margin: 0; padding: 4px 12px; border-radius: 8px; max-width: calc(100% - 24px); box-sizing: border-box;
+  font-size: 12px; line-height: 1.45; color: var(--text); background: var(--st-glass); border: 1px solid var(--line2); text-align: center;
+}
+.st-canvas:focus-visible ~ .st-keys { display: block; }
 .st-hint {
   grid-row: 2; grid-column: 1; align-self: end; justify-self: center; z-index: 2; pointer-events: none;
   margin: 0 0 8px; padding: 2px 10px; border-radius: 999px; max-width: calc(100% - 320px);
-  font-size: 11.5px; color: var(--dim); background: rgba(10, 16, 24, 0.55);
+  font-size: 11.5px; color: var(--muted); background: rgba(10, 16, 24, 0.55);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .st-status { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); width: min(560px, calc(100% - 24px)); display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 4; }
@@ -216,6 +223,7 @@
 .st-panel { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); min-width: 0; }
 .st-panel h1 { margin: 0; font: 600 19px/1.3 var(--display); overflow-wrap: anywhere; }
 .st-panel h1:focus { outline: none; }
+.st-panel h1:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 3px; border-radius: 4px; }
 .st-panel h2 { margin: 0 0 6px; font: 600 16px/1.3 var(--display); overflow-wrap: anywhere; }
 .st-panel h3 { margin: 12px 0 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
 .st-panel h4 { margin: 10px 0 2px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
@@ -245,7 +253,7 @@
 
 .st-prompt { padding: 8px 10px; border-radius: 8px; border: 1px dashed var(--line2); }
 .st-picked { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 8px !important; padding: 6px 10px; border-radius: 8px; background: var(--accent-weak); border: 1px solid var(--accent-line); font-size: 13px !important; }
-.st-path { margin: 0 0 4px !important; font-size: 12px !important; color: var(--dim); }
+.st-path { margin: 0 0 4px !important; font-size: 12px !important; color: var(--muted); }
 .st-path .st-link { font-size: 12px; min-height: 0; padding: 0; }
 .st-sub { margin-top: -2px !important; }
 .st-facts { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr); gap: 5px 10px; margin: 6px 0; font-size: 13px; line-height: 1.45; }
@@ -302,7 +310,7 @@
 .st-count { color: var(--muted); font-size: 11.5px; font-weight: 400; white-space: nowrap; font-family: var(--sans); }
 .st-expand { min-width: 30px; width: 30px; padding: 0; justify-content: center; font-weight: 700; }
 .st-eye { min-width: 30px; width: 30px; padding: 0; justify-content: center; background: none; border-color: transparent; color: var(--muted); }
-.st-eye[aria-pressed='true'] { background: none; border-color: var(--line2); color: var(--dim); }
+.st-eye[aria-pressed='true'] { background: none; border-color: var(--line2); color: var(--muted); }
 .st-where { flex-basis: 100%; padding-left: 8px; }
 
 /* ── assembling ──────────────────────────────────────────────────────────── */
@@ -355,37 +363,68 @@
 .st-hypo { color: var(--warn) !important; }
 .st-sent { margin-top: 8px !important; }
 
+.st-tools.has-more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent); }
+.st-tools.has-before { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 34px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 34px), transparent); }
+.st-tools.has-more.has-before { -webkit-mask-image: linear-gradient(to right, transparent, #000 34px, #000 calc(100% - 34px), transparent); mask-image: linear-gradient(to right, transparent, #000 34px, #000 calc(100% - 34px), transparent); }
+
 /* ── a narrow screen: the picture first and kept in sight, the panels under it ── */
 
 @media (max-width: 860px) and (orientation: portrait), (max-width: 620px) {
-  .structure-screen { overflow-x: hidden; overflow-y: auto; --st-canvas-h: clamp(250px, 47dvh, 640px); }
+  /* the picture takes half of what the section has (`--st-h`, the section's own height: the app's header is not the section's) */
+  .structure-screen {
+    overflow-x: hidden; overflow-y: auto; --st-canvas-h: clamp(200px, calc(var(--st-h, 86dvh) * 0.5), 640px);
+    /* a control the keyboard or a screen reader moves to is brought clear of the picture that stays */
+    scroll-padding-top: calc(var(--st-canvas-h) + 12px);
+  }
   .st-layout { display: flex; flex-direction: column; height: auto; min-height: 100%; padding: 0 0 12px; gap: 0; }
   /* the stage's parts lie in the page's own flow, so the picture can stay while the rest scrolls */
   .st-stage { display: contents; }
-  .st-stage-head { padding: 6px 8px; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .st-stage-head::-webkit-scrollbar { display: none; }
-  .st-models, .st-tabs { flex: none; }
-  .st-tab { padding: 6px 10px; min-height: 40px; }
+  /* the models in one row, the activities in the next, each as wide as its share: none lies off the screen's edge */
+  .st-stage-head { padding: 6px 8px; gap: 6px; flex-wrap: wrap; }
+  .st-models { flex: none; }
+  .st-tabs { flex: 1 1 100%; }
+  .st-tab { flex: 1 1 0; justify-content: center; padding: 6px 6px; min-height: 40px; gap: 5px; min-width: 0; }
+  .st-tab .st-btn-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .st-model { min-height: 34px; padding: 4px 8px; }
   .st-canvas-box { position: sticky; top: 0; z-index: 3; height: var(--st-canvas-h); flex: none; border-radius: 0; border-left: 0; border-right: 0; }
   .st-hint { display: none; }
   .st-bar { max-height: none; overflow: visible; padding: 6px 8px; background: var(--bg); }
-  /* assembling, what is in hand and its controls stay under the picture */
-  .structure-screen[data-mode='assemble'] .st-bar { position: sticky; top: var(--st-canvas-h); z-index: 3; border-bottom: 1px solid var(--line); }
+  /* Assembling and changing a design, the bar's parts lie in the page's flow too, so that one of them can stay under the
+     picture while the others scroll: what is in hand with what was last said of it; the verdict of the design. */
+  .structure-screen[data-mode='assemble'] .st-bar, .structure-screen[data-mode='assemble'] .st-bar-assemble,
+  .structure-screen[data-mode='experiment'] .st-bar, .structure-screen[data-mode='experiment'] .st-bar-experiment,
+  .structure-screen[data-mode='experiment'] .st-strip { display: contents; }
+  .st-hand-box, .structure-screen[data-mode='experiment'] .st-verdict {
+    position: sticky; top: var(--st-canvas-h); z-index: 3; background: var(--bg); padding: 6px 8px; border-bottom: 1px solid var(--line);
+  }
+  .structure-screen[data-mode='experiment'] .st-verdict { border-radius: 0; border-left: 0; border-right: 0; }
+  .structure-screen[data-mode='experiment'] .st-verdict.st-ok { background: #12261c; }
+  .structure-screen[data-mode='experiment'] .st-verdict.st-short { background: #2a1712; }
+  /* (the line's own frame is the box's here: no second one inside it) */
+  .st-hand-box .st-hand { border: 0; padding: 0; background: none; gap: 6px 8px; }
+  .st-hand-box .st-msg { margin: 6px 0 0; padding: 5px 9px; font-size: 12.5px; line-height: 1.45; }
+  .structure-screen[data-mode='assemble'] .st-bar-assemble > .st-tools,
+  .structure-screen[data-mode='experiment'] .st-bar-experiment > .st-tools,
+  .structure-screen[data-mode='experiment'] .st-strip > :not(.st-verdict) { margin: 6px 8px 0; }
   .st-bar-explore .st-tools, .st-bar-experiment .st-tools, .st-bar-assemble > .st-tools { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  /* a first look has few tools: all of them in sight, on two rows */
+  .structure-screen[data-level='watch'] .st-bar-explore .st-tools { flex-wrap: wrap; overflow: visible; }
+  /* putting the view back stands beside the whole view, not at the row's far end */
+  .st-bar-explore .st-tools > [data-k='home'] { order: -2; }
+  .st-bar-explore .st-tools > [data-k='reset'] { order: -1; }
   .st-tools::-webkit-scrollbar { display: none; }
   .st-tools > * { flex: none; }
   .st-btn { min-height: 40px; }
   .st-link, .st-chip, .st-name, .st-mark, .st-legend-item, .st-eye, .st-expand, .st-step { min-height: 0; }
   .st-chip, .st-step { min-height: 34px; }
   .st-eye, .st-expand { min-height: 40px; width: 40px; min-width: 40px; }
-  .st-name, .st-mark { min-height: 24px; font-size: 11.5px; }
+  .st-tier-2 > .st-node, .st-tier-3 > .st-node { min-height: 40px; }
+  .st-name, .st-mark { min-height: 30px; font-size: 11.5px; }
   .st-legend { max-width: 62%; }
   .st-legend-item { min-height: 30px; }
   .st-side { overflow: visible; padding: 8px 8px 0; }
   .st-side-tabs { top: var(--st-canvas-h); }
-  .structure-screen[data-mode='assemble'] .st-side-tabs { position: static; }
-  .st-strip { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'verdict' 'tiles' 'chart' 'note'; }
+  .structure-screen[data-mode='assemble'] .st-side-tabs, .structure-screen[data-mode='experiment'] .st-side-tabs { position: static; }
   .st-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
   .st-slider input { width: 96px; }
 }
@@ -393,7 +432,10 @@
 @media (max-height: 520px) and (orientation: landscape) and (min-width: 621px) {
   .st-layout { grid-template-columns: minmax(0, 1.25fr) minmax(260px, 1fr); }
   .st-hint { display: none; }
-  .st-bar { max-height: 34vh; }
+  /* the picture keeps a height worth looking at; what the bar holds beyond that scrolls inside the bar */
+  .st-stage { grid-template-rows: auto minmax(150px, 1fr) auto; }
+  .st-stage-head { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .st-bar { max-height: none; min-height: 0; overflow-y: auto; }
   .st-tools { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .st-tools > * { flex: none; }
   .st-strip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: 'verdict tiles' 'chart chart' 'note note'; }
@@ -407,7 +449,8 @@
   .st-btn { min-height: 40px; }
   .st-link { min-height: 32px; }
   .st-chip, .st-step, .st-legend-item { min-height: 34px; }
-  .st-name, .st-mark { min-height: 24px; }
+  .st-name, .st-mark { min-height: 30px; }
+  .st-tier-2 > .st-node, .st-tier-3 > .st-node { min-height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .structure-screen * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }

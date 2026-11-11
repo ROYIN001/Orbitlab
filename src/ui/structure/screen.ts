@@ -42,7 +42,7 @@ export class StructureScreen implements StructureSection {
   /** says what was selected or done; it stays put (the panels are redrawn, a live region must not be) */
   private readonly announcer = el('p', 'sr-only');
   /** what the live region last said: the storage note, the last message and send note by their counts, the result's design, the selection */
-  private said = { store: '', msg: 0, send: 0, verdict: '', sel: '' };
+  private said = { store: '', msg: 0, send: 0, verdict: '', sel: '', hand: '', system: '' };
   private saySeq = 0;
 
   constructor(private readonly root: HTMLElement, env: StructureEnv) {
@@ -56,6 +56,9 @@ export class StructureScreen implements StructureSection {
     root.replaceChildren(layout);
     // the launch scene's camera would capture the press (src/render/cameras.ts): it is covered here
     root.addEventListener('pointerdown', (e) => e.stopPropagation());
+    // the section's own height, for the narrow layout: the picture is sized from what the section has, not from the
+    // window (the app's header takes its share), and a control scrolled to is not left under the picture
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => root.style.setProperty('--st-h', `${root.clientHeight}px`)).observe(root);
     this.store.on((change) => this.changed(change));
   }
 
@@ -135,9 +138,15 @@ export class StructureScreen implements StructureSection {
       const e = key ? this.root.querySelector<HTMLElement>(`[data-k="${CSS.escape(key)}"]`) : null;
       return e && !(e as HTMLButtonElement).disabled ? e : null;
     };
-    if (k) (usable(k) ?? usable(store.focusNext) ?? this.side.querySelector<HTMLElement>('#st-title'))?.focus({ preventScroll: true });
-    else if (store.focusNext) usable(store.focusNext)?.focus({ preventScroll: true });
+    // (the heading is in the side column, which scrolls: brought into view when the focus falls back to it)
+    const forced = k ? usable(store.focusNow) : null;
+    if (forced) forced.focus({ preventScroll: true });
+    else if (k) {
+      const to = usable(k) ?? usable(store.focusNext);
+      if (to) to.focus({ preventScroll: true }); else this.side.querySelector<HTMLElement>('#st-title')?.focus();
+    } else if (store.focusNext) usable(store.focusNext)?.focus({ preventScroll: true });
     store.focusNext = null;
+    store.focusNow = null;
     this.announce();
   }
 
@@ -147,7 +156,7 @@ export class StructureScreen implements StructureSection {
     const guide = guidePanel(store);
     if (guide) parts.push(guide);
     if (store.mode === 'assemble') {
-      parts.push(assemblyPanel(store, true));
+      parts.push(assemblyPanel(store));
       if (store.shown()) parts.push(infoPanel(store));
     } else {
       if (store.mode === 'experiment' && adapter.experiment && store.ready) parts.push(...adapter.experiment.panels(store));
@@ -173,8 +182,23 @@ export class StructureScreen implements StructureSection {
     this.said.store = note;
     const shown = store.shown();
     const sel = shown ? `${store.model}:${shown.id}` : '';
-    if (sel && sel !== this.said.sel) parts.push(tx('sel.announce', { name: store.adapter.name(shown!.id) }));
+    // (assembling, the thing picked is the unit itself, whatever the depth's grain)
+    const unit = store.mode === 'assemble' ? store.selectedUnit() : null;
+    if (sel && sel !== this.said.sel) parts.push(tx('sel.announce', { name: unit ? store.unitName(unit) : store.adapter.name(shown!.id) }));
     this.said.sel = sel;
+    // a part in hand: what it is, the place chosen for it and how it is turned, as each changes
+    const hand = store.mode === 'assemble' ? store.handText() : '';
+    if (hand && hand !== this.said.hand) parts.push(hand);
+    this.said.hand = hand;
+    // a system followed, and its step
+    const following = store.mode === 'explore' ? store.system[store.model] : null;
+    const system = following && store.ready ? store.adapter.systems().find((s) => s.id === following.id) : undefined;
+    const sys = system && following ? `${system.id}:${following.step}` : '';
+    if (system && following && sys !== this.said.system) {
+      const step = following.step === null ? undefined : system.steps[following.step];
+      parts.push(step ? tx('sys.announce.step', { name: system.label, n: following.step! + 1, step: step.label }) : tx('sys.announce', { name: system.label, n: system.items.length }));
+    }
+    this.said.system = sys;
     if (store.mode === 'assemble' && store.message && store.message.seq !== this.said.msg) parts.push(store.message.text());
     this.said.msg = store.message?.seq ?? 0;
     if (store.mode === 'experiment' && store.sendNote && store.sendNote.seq !== this.said.send) parts.push(store.sendNote.text());

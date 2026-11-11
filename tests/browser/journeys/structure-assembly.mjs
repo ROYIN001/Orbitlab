@@ -318,7 +318,7 @@ export default async function structureAssembly(t) {
   await fit('fairing-left', 'fairing-left');
   await fit('fairing-right', 'fairing-right');
   await ready(page);
-  t.check((await text('.st-asm .st-done')).includes('จุดต่อครบ 15 จุด') && await ink(page) > 0.01, `complete by its relations, and drawn: ${(await text('.st-asm .st-done')).slice(0, 120)}`);
+  t.check((await text('.st-asm .st-done')).includes('ความสัมพันธ์ตามแบบครบ 15 รายการ') && await ink(page) > 0.01, `complete by its relations, and drawn: ${(await text('.st-asm .st-done')).slice(0, 120)}`);
 
   // ── Back leaves the section and comes back to it as it was
   await page.evaluate(() => { location.hash = '#/launch/explore'; });
@@ -539,7 +539,7 @@ export default async function structureAssembly(t) {
   t.check(fingerHeld?.unit === 'battery' && fingerHeld.dragged, `a finger drags the battery over its place: ${JSON.stringify(fingerHeld)}`);
   await t.until(async () => (await p.locator('.st-asm .st-progress').textContent()).includes('4/13'), { timeoutMs: 10_000 });
   t.check((await p.locator('.st-asm .st-progress').textContent()).includes('4/13'), `and letting go fits it: ${await p.locator('.st-bar [data-role="asm-msg"]').textContent()}`);
-  const handy = await p.evaluate(() => { const b = document.querySelector('.st-bar').getBoundingClientRect(), c = document.querySelector('.st-canvas-box').getBoundingClientRect(); return Math.round(b.top - c.bottom); });
+  const handy = await p.evaluate(() => { const b = document.querySelector('.st-hand-box').getBoundingClientRect(), c = document.querySelector('.st-canvas-box').getBoundingClientRect(); return Math.round(b.top - c.bottom); });
   t.check(Math.abs(handy) <= 2, `what is in hand stays right under the picture: ${handy} px apart`);
   await phone.shot('phone-assemble');
   // the keyboard on the 3-D view: each key moves it, 0 brings back the overview
@@ -558,4 +558,46 @@ export default async function structureAssembly(t) {
   t.check(!!(await t.until(async () => JSON.stringify(await view()) === JSON.stringify(home), { timeoutMs: 5_000 })), '0 brought back the overview');
   t.check(pErrors.length === 0, `phone console errors: ${pErrors.join(' | ')}`);
   await phone.context.close();
+
+  // ── a small phone (the browser's own bars leave about 660 px): nothing needed lies off the screen
+  const small = await t.open({ hash: '#/structure/watch/soyuz-st31', viewport: { width: 390, height: 664 }, lang: 'th', touch: true, contextOptions: { reducedMotion: 'reduce' } });
+  const q = small.page;
+  await ready(q);
+  const sk = (key) => q.locator(`.structure-screen [data-k="${key}"]`);
+  const rectOf = (sel) => q.evaluate((x) => { const e = document.querySelector(x); if (!e) return null; const r = e.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; }, sel);
+  const inSight = (r) => !!r && r.left >= 0 && r.right <= 390 + 1 && r.top >= 0 && r.bottom <= 664 + 1;
+  // the activities and the first look's tools are all on the screen, none past its edge
+  const across = await q.evaluate(() => [...document.querySelectorAll('.structure-screen .st-tab, .structure-screen .st-model, .structure-screen .st-bar-explore .st-tools > *')].map((e) => { const r = e.getBoundingClientRect(); return { k: e.dataset.k, left: Math.round(r.left), right: Math.round(r.right) }; }).filter((r) => r.left < 0 || r.right > 391));
+  t.check(across.length === 0, `on a small phone every model, activity and first-look tool is within the screen's width: ${JSON.stringify(across)}`);
+  const half = await q.evaluate(() => document.querySelector('.st-canvas-box').getBoundingClientRect().height / document.querySelector('.structure-screen').clientHeight);
+  t.check(half > 0.45 && half < 0.55, `the picture takes half of what the section has: ${half.toFixed(2)}`);
+  // changing the design: the verdict stays under the picture while an option far down the page is chosen
+  await q.evaluate(() => { location.hash = '#/structure/watch/edusat/experiment'; });
+  await q.waitForFunction(() => document.querySelector('.structure-screen').dataset.mode === 'experiment');
+  await ready(q);
+  if (await sk('create').count()) await sk('create').click();
+  await sk('payload:camera-night').scrollIntoViewIfNeeded();
+  await sk('payload:camera-night').click();
+  await q.waitForFunction(() => document.querySelector('.st-verdict')?.classList.contains('st-short'));
+  const verdict = await rectOf('.structure-screen .st-verdict'), pic = await rectOf('.structure-screen .st-canvas-box'), option = await rectOf('.structure-screen [data-k="payload:camera-night"]');
+  t.check(inSight(verdict) && Math.abs(verdict.top - pic.bottom) <= 2 && option.top < 664 && option.bottom > verdict.bottom, `on a small phone the verdict stays under the picture beside the option chosen: verdict ${Math.round(verdict.top)}–${Math.round(verdict.bottom)}, option ${Math.round(option.top)}–${Math.round(option.bottom)}`);
+  await small.shot('small-phone-experiment');
+  // assembling: a refusal is read under the picture, and the tools are reached by scrolling back
+  await q.evaluate(() => { location.hash = '#/structure/explore/edusat/assemble'; });
+  await q.waitForFunction(() => document.querySelector('.structure-screen').dataset.mode === 'assemble');
+  await ready(q);
+  if (await sk('restart').isEnabled()) await sk('restart').click();
+  await sk('tray:stack').scrollIntoViewIfNeeded();
+  await sk('tray:stack').click();
+  t.check(await q.evaluate(() => document.activeElement?.dataset.k) === 'slot', 'a part picked up from the list puts the focus on its place to choose');
+  await sk('slot').selectOption('stack');
+  await sk('install').click();
+  const refusal = await rectOf('.structure-screen .st-hand-box .st-msg'), hand = await rectOf('.structure-screen .st-hand-box');
+  t.check(inSight(refusal) && inSight(hand), `on a small phone the refusal is read under the picture: ${JSON.stringify(hand && { top: Math.round(hand.top), bottom: Math.round(hand.bottom) })}`);
+  await q.evaluate(() => document.querySelector('.structure-screen').scrollTo(0, 0));
+  await sk('undo').scrollIntoViewIfNeeded();
+  t.check(inSight(await rectOf('.structure-screen [data-k="hint"]')), 'and the tools are reached by scrolling');
+  await small.shot('small-phone-assemble');
+  small.checkErrors();
+  await small.context.close();
 }

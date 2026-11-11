@@ -12,7 +12,7 @@ import type { ViewerMesh } from '../../../render/structure-viewer';
 import { REST, TIER_OF_DEPTH, partnerOf, relationsOf, ruleFor, type ModelRelation, type ModelTree, type Turn } from '../../../structure/model';
 import {
   FLIGHT_EVENT_UNITS, SOYUZ_ASSEMBLY, SOYUZ_BOOSTERS, SOYUZ_COMPONENT, SOYUZ_FAIRING, SOYUZ_MOUNTS, SOYUZ_ORDER, SOYUZ_RELATIONS, SOYUZ_UNITS,
-  isSoyuzUnit, soyuzFactCertainty, type SoyuzUnit,
+  isSoyuzUnit, pageRemark, soyuzFactCertainty, type SoyuzUnit,
 } from '../../../structure/soyuz';
 import {
   SOYUZ_FILES, SOYUZ_LAYERS, circuitParts, cutawayAzimuth, indexSoyuz, jointParts, parseSoyuzContent, soyuzTree, unitAxis,
@@ -27,7 +27,7 @@ import type { FlightState, InfoBlock, InfoDoc, InfoSource, ModelAdapter, ModelGu
 export const FILES_MISMATCH = 'structure:files-mismatch';
 
 /** How a unit lies as it is picked up: quarter turns from the reference, so its way round has to be set right. */
-const TRAY_TURN: Readonly<Record<string, number>> = { 'booster-b': 2, 'booster-v': 1, 'booster-g': 3, 'booster-d': 2, fregat: 1 };
+const TRAY_TURN: Readonly<Record<string, number>> = { 'booster-b': 2, 'booster-v': 1, 'booster-g': 3, 'booster-d': 2 };
 
 /** What flows in a circuit, by the page's words for it: the colour its parts are painted, and the text key of its name. */
 const MEDIA: Readonly<Record<string, string>> = {
@@ -135,14 +135,19 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
       blocks.push({ kind: 'text', text: tx(`soyuz.card.${card}.what`), tone: 'lead' }, { kind: 'heading', text: tx('info.function') }, { kind: 'text', text: tx(`soyuz.card.${card}.does`) });
     } else if (comp) {
       const paragraphs = comp.body.split('\n\n').filter(Boolean);
-      blocks.push({ kind: 'text', text: paragraphs[0] ?? '', tone: 'lead' });
-      for (const p of paragraphs.slice(1)) blocks.push({ kind: 'text', text: p });
+      paragraphs.forEach((p, k) => {
+        blocks.push({ kind: 'text', text: p, ...(k === 0 ? { tone: 'lead' as const } : {}) });
+        // a passage the page's own data contradicts is followed by this section's remark (the page's words stay the owner's)
+        const remark = pageRemark(comp.id, p);
+        if (remark) blocks.push({ kind: 'text', text: tx(remark), tone: 'note' });
+      });
     }
     blocks.push(...relationBlocks(unit));
     if (depth !== 'watch' && comp) {
       blocks.push({ kind: 'heading', text: tx('info.facts') }, {
         kind: 'facts', rows: comp.facts.map((f) => ({ label: f.label, value: f.value, certainty: soyuzFactCertainty(comp.id, f.label) })),
-      });
+      // (what the badge on these rows rests on: the page's citing of sources, which this work did not read)
+      }, { kind: 'text', text: tx('cert.byPage'), tone: 'small' });
       // the page's own things to look for; those that name the page's own buttons are left out (this view has other ones)
       const seen = comp.observations.filter((o) => !/เลือกมุม|“|”/.test(o));
       if (seen.length) blocks.push({ kind: 'heading', text: tx('info.observe') }, { kind: 'list', items: seen });
@@ -372,7 +377,7 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
       return tx(n.tier === 2 && !tree!.children.get(id)?.length ? 'list.partsShared' : 'list.parts', { n: n.items.length });
     },
     place: (slot) => ({ name: tx(`soyuz.place.${slot}`), mark: SOYUZ_MOUNTS.find((m) => m.slot === slot)?.mark ?? 0 }),
-    turnWhy: (unit) => tx(unit === 'fregat' ? 'soyuz.turn.fregat' : 'soyuz.turn'),
+    turnWhy: () => tx('soyuz.turn'),
     unitOfItem: (i) => index?.content.items[i]?.unit ?? '',
     layerOfItem: (i) => index?.content.items[i]?.layer ?? 'outer',
 

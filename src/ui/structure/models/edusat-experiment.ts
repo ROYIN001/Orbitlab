@@ -213,7 +213,9 @@ export function edusatExperiment(env: StructureEnv, ctx: Context): ExperimentUi 
     panel.append(el('h2', '', tx('res.details')));
     const fold = (title: string, k: string, open: boolean, ...body: (HTMLElement | SVGElement)[]): HTMLDetailsElement => {
       const d = el('details', 'st-fold');
-      d.open = open;
+      // as the learner left it: the panel is redrawn on every press, and a reading opened must not snap shut
+      d.open = store.foldOpen(k, open);
+      d.addEventListener('toggle', () => store.setFold(k, d.open));
       const s = el('summary', '', title);
       s.dataset.k = `fold:${k}`;
       d.append(s, ...body);
@@ -345,6 +347,8 @@ export function edusatExperiment(env: StructureEnv, ctx: Context): ExperimentUi 
       if (s.key !== designKey(designOf(store))) panel.append(el('p', 'st-msg st-msg-no', tx('go.changed')));
     }
     const more = el('details', 'st-fold');
+    more.open = store.foldOpen('go', false);
+    more.addEventListener('toggle', () => store.setFold('go', more.open));
     const sum = el('summary', '', tx('go.about'));
     sum.dataset.k = 'fold:go';
     more.append(sum, el('p', 'st-small', tx('go.orbitDoes')), el('p', 'st-small', tx('go.launchDoes')), el('p', 'st-small', tx('go.separate')), el('p', 'st-small', tx('go.replaces')));

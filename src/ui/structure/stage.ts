@@ -50,6 +50,8 @@ export class Stage {
   private readonly status = el('div', 'st-status');
   private readonly fallback = el('div', 'st-fallback');
   private readonly hint = el('p', 'st-hint');
+  /** the view's keys: its description for a screen reader, and shown on the picture while it has the keyboard's focus */
+  private readonly keys = el('p', 'st-keys');
   private readonly overlay: StageOverlay;
   viewer: StructureViewer | null = null;
   private glError: string | null = null;
@@ -85,7 +87,8 @@ export class Stage {
     });
     // The picture's place always stands: the 3-D view with what is laid over it, or, where there is no 3-D, the side view
     // in its stead — and over either, what the stage has to say (loading, a failure with its retry).
-    this.box.append(this.canvas, this.overlay.el, this.fallback, this.status);
+    this.keys.id = 'st-keys';
+    this.box.append(this.canvas, this.keys, this.overlay.el, this.fallback, this.status);
     this.el.append(this.head, this.box, this.bar, this.hint);
     this.canvas.addEventListener('keydown', (e) => this.key(e));
   }
@@ -473,7 +476,8 @@ export class Stage {
       case '-': case '_': v.zoomBy(1 / 0.85); break;
       case '0': case 'Home': this.home(); break;
       case ' ':
-        if (store.mode === 'assemble') return;
+        // taken apart and put together where the bar has that tool: exploring
+        if (store.mode !== 'explore') return;
         store.setView({ explode: store.view.explode > 0.5 ? 0 : 1 });
         break;
       case 'Enter': if (store.mode === 'assemble' && store.held[store.model]) store.install(); else return; break;
@@ -489,7 +493,10 @@ export class Stage {
   render(): void {
     const store = this.store, model = store.model, load = store.load[model];
     this.el.dataset.mode = store.mode;
+    // named shortly; its keys are its description, and are shown on the picture while it has the keyboard's focus
     this.canvas.setAttribute('aria-label', `${tx(`model.${model}`)}. ${tx('view.canvas')}`);
+    this.canvas.setAttribute('aria-describedby', 'st-keys');
+    this.keys.textContent = tx(store.mode === 'assemble' ? 'view.keys.assemble' : store.mode === 'explore' ? 'view.keys.explore' : 'view.keys');
     this.renderHead(this.head);
     // status: loading, failed, no WebGL
     const notes: HTMLElement[] = [];
@@ -517,8 +524,17 @@ export class Stage {
     this.fallback.hidden = !(noView && store.ready);
     this.hint.hidden = noView;
     if (!this.fallback.hidden) this.renderFallback(); else this.fallback.replaceChildren();
+    // a row of tools that scrolls sideways keeps its place across the redraw, and shows when more lies beyond its edge
+    const left = this.bar.querySelector('.st-tools')?.scrollLeft ?? 0;
     this.renderBar(this.bar);
-    this.hint.textContent = tx(store.mode === 'assemble' ? 'hint.assemble' : 'hint.view');
+    for (const row of this.bar.querySelectorAll<HTMLElement>('.st-tools')) {
+      row.scrollLeft = left;
+      const more = (): void => { row.classList.toggle('has-more', row.scrollLeft + row.clientWidth < row.scrollWidth - 6); row.classList.toggle('has-before', row.scrollLeft > 6); };
+      row.addEventListener('scroll', more, { passive: true });
+      requestAnimationFrame(more);
+    }
+    // (on the reference's outline at a first look a press fits a part and a drag turns the view: there is nothing to drag there)
+    this.hint.textContent = tx(store.mode !== 'assemble' ? 'hint.view' : store.view.outline ? (store.level === 'watch' ? 'hint.assemble.outline' : 'hint.assemble.pick') : 'hint.assemble');
     this.overlay.render();
     this.sync();
   }
@@ -536,7 +552,7 @@ export class Stage {
       if (side && node) boxes.push({ unit, label: adapter.name(node.id), ...side });
     }
     this.fallback.replaceChildren(el('p', 'st-small', tx('fallback.title')));
-    const selected = store.selectedUnits()[0] ?? null;
+    const selected = store.mode === 'assemble' ? store.selectedUnit() : store.selectedUnits()[0] ?? null;
     if (boxes.length) this.fallback.append(sideView(boxes, selected, (u) => store.select(nodeOfUnit(tree, u)?.id ?? null)));
   }
 

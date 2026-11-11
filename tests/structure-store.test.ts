@@ -213,6 +213,63 @@ describe('assembling at a first look: one press fits a part, on the reference\'s
   });
 });
 
+describe('a fitted part picked at a first look', () => {
+  it('is the part itself that is offered to be taken off, though the depth shows its subsystem', async () => {
+    const { store } = await openStore({ level: 'watch', model: 'edusat', mode: 'assemble' });
+    for (let k = 0; k < 13; k++) store.fit(store.next()[0]);
+    expect(store.check().complete).toBe(true);
+    store.select('panel-nx');
+    expect(store.shown()?.id).toBe('sys:power');
+    expect(store.selectedUnit()).toBe('panel-nx');
+    // picked on the picture: a piece of the antenna is the antenna
+    const tree = store.adapter.tree();
+    store.pick(tree.nodes.get('antenna')!.items[0]);
+    expect(store.selectedUnit()).toBe('antenna');
+    expect(store.restsOn('antenna')).toEqual([]);
+    store.remove('antenna');
+    expect(Object.hasOwn(store.assembly.placed, 'antenna')).toBe(false);
+    expect(Object.hasOwn(store.assembly.placed, 'radio')).toBe(true);
+  });
+
+  it('turns only what has a way round in the reference: the strap-ons, not Fregat', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31', mode: 'assemble' });
+    const turning = store.adapter.spec.units.filter((u) => u.orientations > 1).map((u) => u.id);
+    expect(turning).toEqual(['booster-b', 'booster-v', 'booster-g', 'booster-d']);
+  });
+});
+
+describe('where the keyboard\'s focus goes next', () => {
+  it('goes to the place to choose when a part is picked up, to the next part when one is fitted, back to the tray when one is put down', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'edusat', mode: 'assemble' });
+    store.hold('frame');
+    expect(store.focusNow).toBe('slot');
+    store.focusNow = null;
+    store.chooseSlot('frame');
+    for (let k = 0; k < 4 && store.held.edusat && store.held.edusat.turn !== 0; k++) store.turn();
+    store.install();
+    expect(store.focusNext).toBe('tray:stack');
+    store.focusNext = null;
+    store.hold('stack');
+    store.hold(null);
+    expect(store.focusNext).toBe('tray:stack');
+    // at a first look the one button that fits the next part keeps it
+    store.open('watch', 'edusat', 'assemble');
+    store.focusNext = null;
+    store.fit('stack');
+    expect(store.focusNext).toBe('asm-next');
+  });
+
+  it('remembers a folded reading as the learner left it, for each model', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'edusat', mode: 'experiment' });
+    expect([store.foldOpen('flow', false), store.foldOpen('ledger', true)]).toEqual([false, true]);
+    store.setFold('flow', true);
+    store.setFold('ledger', false);
+    expect([store.foldOpen('flow', false), store.foldOpen('ledger', true)]).toEqual([true, false]);
+    store.open('explore', 'soyuz-st31');
+    expect(store.foldOpen('flow', false)).toBe(false);
+  });
+});
+
 describe('undoing with a part in hand', () => {
   it('does not leave in hand a part the step taken back has fitted again', async () => {
     const { store } = await openStore({ level: 'explore', model: 'edusat', mode: 'assemble' });

@@ -260,6 +260,23 @@ describe('assembling', () => {
 });
 
 describe('changing a design', () => {
+  it('does not carry in what exploring did to the picture: taken apart, hidden, coloured by kind, cut', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'edusat', mode: 'explore' });
+    store.setView({ explode: 1, colour: 'category', only: 'category:load', isolate: 'sys:power' });
+    store.toggleHidden('frame');
+    const apart = picture(store);
+    expect(count(apart.flags, FLAG.hidden)).toBeGreaterThan(0);
+    expect(apart.colour).toBe('category');
+    store.open('explore', 'edusat', 'experiment');
+    const p = picture(store);
+    expect([count(p.flags, FLAG.hidden), count(p.flags, FLAG.dim), p.colour]).toEqual([0, 0, 'material']);
+    for (const unit of store.adapter.units) expect(p.poses.get(unit)!.move, unit).toEqual(store.adapter.explorePose(unit, { explode: 0, open: store.view.open }).move);
+    // back exploring, the learner's view is as it was left
+    store.open('explore', 'edusat', 'explore');
+    expect(picture(store).colour).toBe('category');
+    expect(store.view.explode).toBe(1);
+  });
+
   it('paints the parts that differ from the reference, in the experiment only', async () => {
     const { store } = await openStore({ level: 'explore', model: 'edusat', mode: 'experiment' });
     expect(picture(store).paint.colours).toEqual([]);

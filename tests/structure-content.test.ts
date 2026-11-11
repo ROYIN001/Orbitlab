@@ -140,6 +140,32 @@ describe('what each depth shows of the rocket', () => {
   });
 });
 
+describe('a passage of the page that its own data contradicts', () => {
+  const a = adapters['soyuz-st31'];
+  const texts = (doc: InfoDoc): string[] => doc.blocks.flatMap((b) => (b.kind === 'text' ? [b.text] : []));
+
+  it('is shown as the page has it, followed by this section\'s remark — and the remark goes when the passage does', async () => {
+    const { SOYUZ_PAGE_REMARKS, pageRemark } = await import('../src/structure/soyuz');
+    const doc = texts(a.describe('interstage', 'explore', 'explore'));
+    const at = doc.findIndex((t) => /RD-0110 เริ่มทำงาน/.test(t));
+    // the page still says it: the remark stands right after it, and names the engine this vehicle has
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(doc[at + 1]).toContain('RD0124');
+    expect(doc[at + 1]).toContain('หมายเหตุของ Orbitlab');
+    // a first look shows the section's own card, with nothing to remark on
+    expect(texts(a.describe('interstage', 'watch', 'explore')).join(' ')).not.toContain('RD-0110');
+    // corrected, the passage draws no remark; and no other component's text does
+    expect(pageRemark('interstage', 'RD0124 เริ่มทำงานก่อนแกนกลางสิ้นสุดการทำงาน')).toBeNull();
+    expect(pageRemark('stage3', 'RD-0110 เริ่มทำงาน')).toBeNull();
+    expect(SOYUZ_PAGE_REMARKS).toHaveLength(1);
+    for (const unit of ['core', 'stage3', 'fregat', 'booster-b']) expect(texts(a.describe(unit, 'explore', 'explore')).join(' ')).not.toContain('หมายเหตุของ Orbitlab');
+  });
+
+  it('says under an assembly\'s facts what "confirmed from documents" rests on there', () => {
+    expect(texts(a.describe('core', 'explore', 'explore')).join(' ')).toContain('Orbitlab ไม่ได้ตรวจกับเอกสารเหล่านั้นเอง');
+  });
+});
+
 describe('what each depth shows of the satellite', () => {
   const a = adapters.edusat;
 
@@ -169,7 +195,7 @@ describe('what each depth shows of the satellite', () => {
     const tree = a.tree();
     const rail = [...tree.nodes.keys()].find((id) => id.includes('/rail-'))!;
     const doc = a.describe(rail, 'engineer', 'explore');
-    expect(headings(doc)).toContain('ข้อกำหนด CubeSat ที่เกี่ยวข้อง');
+    expect(headings(doc)).toContain('ข้อกำหนดคิวบ์แซตที่เกี่ยวข้อง');
     expect(strings(doc).join(' ')).toContain('8.5 มม.');
     const sources = doc.blocks.find((b) => b.kind === 'sources') as Extract<InfoBlock, { kind: 'sources' }>;
     expect(sources.rows[0].title).toContain('CubeSat Design Specification Rev. 14.1');

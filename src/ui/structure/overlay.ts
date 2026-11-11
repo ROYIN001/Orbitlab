@@ -129,11 +129,13 @@ export class StageOverlay {
         tones.set(`joint:${relation.id}`, 'joint');
       }
     }
-    const rows = Math.max(3, Math.floor((height - 30) / 26));
+    // a finger needs more of a name than a pointer does: taller, and further apart
+    const gap = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 34 : 26;
+    const rows = Math.max(3, Math.floor((height - 30) / gap));
     const placed = layoutLabels(anchors, width, height, {
       max: places.length ? anchors.length : Math.min(16, 2 * rows),
       width: places.length ? (narrow ? 30 : Math.min(nameWidth + 30, 250)) : nameWidth,
-      reach: narrow ? 10 : 18, gap: 26,
+      reach: narrow ? 10 : 18, gap,
     });
     const seenNames = new Set<string>(), seenPlaces = new Set<string>();
     const lines: SVGElement[] = [];
@@ -230,7 +232,7 @@ export class StageOverlay {
     }
     // the colour view's legend: each entry a button that picks its kind out of the picture
     this.legend.replaceChildren();
-    const colour = store.view.colour;
+    const colour = store.pictureView.colour;
     if (store.mode !== 'assemble' && colour !== 'material' && this.view.ready()) {
       const setup = store.adapter.setup();
       const byKind = colour === 'category';

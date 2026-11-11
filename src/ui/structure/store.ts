@@ -110,6 +110,10 @@ export class StructureStore {
   camera: 'selection' | 'home' | 'cutaway' | 'joint' | null = null;
   /** where the focus goes after the next redraw, when the control pressed is gone (a `data-k`) */
   focusNext: string | null = null;
+  /** where the focus goes after the next redraw even though the control pressed is still there: the next thing to do (a part picked up: its place) */
+  focusNow: string | null = null;
+  /** the folded readings the learner opened or closed, by model and name (the panels are redrawn on every press) */
+  private readonly folds = new Map<string, boolean>();
   private seq = 0;
   /** the view was brought close to a place chosen for the part in hand: the next part picked up, or this one put down, brings back the whole */
   private closeUp = false;
@@ -132,8 +136,23 @@ export class StructureStore {
   get adapter(): ModelAdapter { return this.adapters[this.model]; }
   get mode(): StructureMode { return this.progress.mode[this.model]; }
   get view(): ViewState { return this.views[this.model]; }
+  /**
+   * The view as the activity on screen looks at the picture. Changing a
+   * design has its own two switches (the side panels open, the shell seen
+   * through): what exploring did to the picture besides — taken apart, cut,
+   * coloured by kind, parts hidden or shown alone — is not carried into it,
+   * where nothing would put it back.
+   */
+  get pictureView(): ViewState {
+    const v = this.view;
+    return this.mode === 'experiment' ? { ...v, explode: 0, cutaway: false, colour: 'material', only: null, hidden: new Set(), isolate: null, layers: {} } : v;
+  }
   get assembly(): AssemblyState { return this.progress.assembly[this.model]; }
   get ready(): boolean { return this.adapter.ready(); }
+
+  /** Whether a folded reading is open: as the learner left it, else as it starts. */
+  foldOpen(name: string, initial: boolean): boolean { return this.folds.get(`${this.model}:${name}`) ?? initial; }
+  setFold(name: string, open: boolean): void { this.folds.set(`${this.model}:${name}`, open); }
 
   on(listener: (change: Change) => void): () => void {
     this.listeners.add(listener);
@@ -194,6 +213,8 @@ export class StructureStore {
   go(to: { level?: Depth; model?: StructureModelId; mode?: StructureMode }): void {
     const model = to.model ?? this.model;
     const mode = to.mode ?? this.progress.mode[model];
+    // the control pressed is often gone where this leads (an assembly finished: "look inside"): the focus goes to where it led
+    this.focusNext = to.mode ? `mode:${mode}` : to.model ? `model:${model}` : this.focusNext;
     this.env.go(to.level ?? this.level, model, this.adapters[model].activities.includes(mode) ? mode : 'explore');
   }
 
@@ -248,6 +269,16 @@ export class StructureStore {
     const tree = this.adapter.tree();
     // the selection is kept in its most specific form; the depth shows it at its own grain
     this.select(tree.leafOf[item] ?? null);
+  }
+
+  /**
+   * The unit the selection is, or lies in. Assembling works on units
+   * whatever the depth's grain: at a first look a satellite's selection is
+   * shown as its subsystem, and what is taken off is still the part picked.
+   */
+  selectedUnit(): string | null {
+    const id = this.sel[this.model];
+    return id && this.ready ? unitOf(this.adapter.tree(), id) : null;
   }
 
   /** The units the selection covers. */
@@ -341,7 +372,7 @@ export class StructureStore {
   showSystem(id: string | null, step: number | null = null): void {
     this.system[this.model] = id === null ? null : { id, step };
     // the view goes to what is followed: the whole system, then each step's own parts as it is stepped through
-    if (id !== null) { this.tab[this.model] = 'systems'; this.sel[this.model] = null; this.flight[this.model] = null; this.jointShown[this.model] = null; this.camera = 'selection'; }
+    if (id !== null) { this.tab[this.model] = 'systems'; this.sel[this.model] = null; this.flight[this.model] = null; this.jointShown[this.model] = null; this.camera = 'selection'; this.focusNext ??= 'sys:whole'; }
     this.emit();
   }
 
@@ -428,6 +459,20 @@ export class StructureStore {
     return node ? this.adapter.name(node.id) : unit;
   }
 
+  /** The part in hand in words: what it is, the place chosen for it, how it is turned from the reference ('' with nothing in hand). */
+  handText(): string {
+    const h = this.held[this.model];
+    if (!h) return '';
+    const parts = [tx('asm.holding', { unit: this.unitName(h.unit) })];
+    if (h.slot) { const place = this.adapter.place(h.slot); parts.push(`${place.mark} · ${place.name}`); }
+    const of = this.adapter.spec.units.find((u) => u.id === h.unit)?.orientations ?? 1;
+    if (of > 1 && this.level !== 'watch') {
+      const turned = h.turn % of;
+      parts.push(turned ? tx(of === 2 ? 'asm.turned.flip' : 'asm.turned', { deg: (360 / of) * turned }) : tx('asm.turned.none'));
+    }
+    return parts.join('. ');
+  }
+
   private names(units: readonly string[]): string { return units.map((u) => this.unitName(u)).join(', '); }
 
   check(): AssemblyCheck { return checkAssembly(this.adapter.spec, this.assembly); }
@@ -475,11 +520,14 @@ export class StructureStore {
     if (this.closeUp) { this.closeUp = false; this.camera = 'home'; }
     if (unit === null || now?.unit === unit || Object.hasOwn(this.assembly.placed, unit)) {
       this.held[this.model] = null;
+      if (now) this.focusNext ??= `tray:${now.unit}`;
     } else {
       const guided = this.level === 'watch';
       const own = this.adapter.spec.units.find((u) => u.id === unit)?.slots.find((s) => occupant(this.assembly, s) === null) ?? null;
       this.held[this.model] = { unit, slot: guided ? own : null, turn: guided ? 0 : this.adapter.trayTurn(unit) };
       this.sel[this.model] = null;
+      // from the middle depth the next thing to do is to choose its place
+      if (!guided) this.focusNow = 'slot';
     }
     this.message = null;
     this.emit();
@@ -555,7 +603,9 @@ export class StructureStore {
         : tx('asm.installed', { unit: this.unitName(h.unit) })));
       this.sel[this.model] = nodeOfUnit(this.adapter.tree(), h.unit)?.id ?? null;
       const complete = this.check().complete;
-      this.focusNext = complete ? 'asm-done' : 'asm-next';
+      // on to the next thing: at a first look the one button that fits the next part, deeper the next part that can go in
+      const next = this.next()[0];
+      this.focusNext = complete ? 'asm-done' : this.level === 'watch' || !next ? 'asm-next' : `tray:${next}`;
       // The view goes back to the whole once a place was chosen and looked at closely (from the middle depth), ready for
       // the next part's places, and when the assembly is complete. A first look fits parts on the outline without moving the view.
       if (complete || this.level !== 'watch') this.camera = 'home';
@@ -634,6 +684,7 @@ export class StructureStore {
   makeExperiment(reference: EduDesign): void {
     if (!this.progress.experiment) this.progress.experiment = { ...reference };
     this.progress.showing = 'mine';
+    this.focusNext ??= 'show:mine';
     this.sendNote = null;
     this.save();
     this.emit();

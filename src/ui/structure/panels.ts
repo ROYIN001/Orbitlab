@@ -26,6 +26,8 @@ export function introPanel(store: StructureStore): HTMLElement {
   panel.append(el('p', 'st-eyebrow', `${tx('title.short')} · ${tx(`depth.${store.level}`)}`));
   const h = el('h1', '', tx(`model.${store.model}`));
   h.id = 'st-title';
+  // (kept across redraws by its key, as every control is: the focus falls back to it when the control pressed is gone)
+  h.dataset.k = 'title';
   h.tabIndex = -1;
   panel.append(h, el('p', 'st-lead', tx(`model.${store.model}.sub`)));
   // the depth: the same model read deeper — the same links as the top bar's, here beside what they change
@@ -279,7 +281,8 @@ export function listPanel(store: StructureStore): HTMLElement {
     if (level !== 'watch' && store.mode !== 'assemble') {
       // hidden itself, or every part of it hidden by other rows (an assembly's groups when the assembly is hidden)
       const hidden = store.hiddenState(node.id, hiddenItems) !== null;
-      li.append(button('', `eye:${node.id}`, () => store.toggleHidden(node.id), { cls: 'st-eye', pressed: hidden, glyph: hidden ? '◌' : '●', label: tx(hidden ? 'list.show' : 'list.hide', { name: adapter.name(node.id) }) }));
+      // one name, its state in "pressed": hidden or not
+      li.append(button('', `eye:${node.id}`, () => store.toggleHidden(node.id), { cls: 'st-eye', pressed: hidden, glyph: hidden ? '◌' : '●', label: tx('list.hide', { name: adapter.name(node.id) }), title: tx(hidden ? 'list.show' : 'list.hide', { name: adapter.name(node.id) }) }));
     }
     return li;
   };
