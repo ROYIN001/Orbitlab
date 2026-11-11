@@ -81,8 +81,10 @@ export class Stage {
       metresPerPixel: () => this.viewer?.metresPerPixel() ?? 0,
       ready: () => this.ready(),
     });
-    this.box.append(this.canvas, this.overlay.el, this.status);
-    this.el.append(this.head, this.box, this.fallback, this.bar, this.hint);
+    // The picture's place always stands: the 3-D view with what is laid over it, or, where there is no 3-D, the side view
+    // in its stead — and over either, what the stage has to say (loading, a failure with its retry).
+    this.box.append(this.canvas, this.overlay.el, this.fallback, this.status);
+    this.el.append(this.head, this.box, this.bar, this.hint);
     this.canvas.addEventListener('keydown', (e) => this.key(e));
   }
 
@@ -158,6 +160,9 @@ export class Stage {
     const key = this.pictureKeys[model] ?? 0;
     if (this.shown && this.shown.model === model && this.shown.key === key && store.load[model].state === 'ready') return;
     if (store.load[model].state === 'loading' || store.load[model].state === 'failed') return;
+    // without 3-D there is nothing to put in a viewer: once the model's content is here, it is all here
+    // (asked for again each time, a model whose content needs no fetch would be brought without end)
+    if (!this.viewer && adapter.ready() && store.load[model].state === 'ready') return;
     void this.bring(model, key);
   }
 
@@ -168,6 +173,13 @@ export class Stage {
     const abort = new AbortController();
     this.abort = abort;
     const sameModel = this.shown?.model === model;
+    // What else was on its way is no longer wanted, and its fetch is cancelled above: it is asked for afresh when it is
+    // shown again. (Left as "loading", a model switched away from while it loaded could never be opened again.)
+    for (const m of Object.keys(store.load) as StructureModelId[]) {
+      if (m === model) continue;
+      if (store.load[m].state === 'loading') store.load[m] = { state: 'idle' };
+      for (const [layer, state] of store.layerState[m]) if (state === 'loading') store.layerState[m].delete(layer);
+    }
     store.load[model] = { state: 'loading' };
     // another model goes at once: nothing of it stays drawn or pickable under this one's name while this loads
     if (this.shown && !sameModel) { this.viewer?.clear(); this.shown = null; this.layersHere.clear(); this.last = null; }
@@ -481,9 +493,10 @@ export class Stage {
     this.status.replaceChildren(...notes);
     // the side view when there is no 3-D, or the model's 3-D failed (the canvas then goes: it holds nothing of this model)
     const noView = !!this.glError || load.state === 'failed';
-    this.box.hidden = noView && store.ready;
     this.canvas.hidden = noView;
+    this.overlay.el.hidden = noView;
     this.fallback.hidden = !(noView && store.ready);
+    this.hint.hidden = noView;
     if (!this.fallback.hidden) this.renderFallback(); else this.fallback.replaceChildren();
     this.renderBar(this.bar);
     this.hint.textContent = tx(store.mode === 'assemble' ? 'hint.assemble' : 'hint.view');

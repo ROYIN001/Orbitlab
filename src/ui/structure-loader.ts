@@ -88,6 +88,8 @@ export class StructureLoader {
     private readonly host: StructureLoaderHost,
     /** the section's chunk (a test gives its own) */
     private readonly load: () => Promise<Loaded> = () => import('./structure/structure'),
+    /** load the page again, at the address it is on */
+    private readonly reload: () => void = () => location.reload(),
   ) {}
 
   /** Show the section at a level, on the page the address names (a model, or a model's activity), if it names one. */
@@ -111,7 +113,14 @@ export class StructureLoader {
 
   onKey(e: KeyboardEvent): void { this.section?.onKey(e); }
 
-  private bring(): void {
+  /**
+   * Fetch the section's code and start it. `again`: a retry after a failure —
+   * a browser keeps a module's failed fetch for the life of the page and
+   * answers the same import with the same failure, so a retry that fails too
+   * loads the page again, at this address (what the note asks for, and what
+   * the lesson pages' own retry does).
+   */
+  private bring(again = false): void {
     if (this.loading) return;
     this.loading = true;
     this.failed = false;
@@ -124,6 +133,7 @@ export class StructureLoader {
     }, () => {
       this.loading = false;
       this.failed = true;
+      if (again) { this.reload(); return; }
       if (this.want) this.note();
     });
   }
@@ -143,7 +153,7 @@ export class StructureLoader {
       again.className = 'btn';
       again.dataset.k = 'structure-retry';
       again.textContent = t('sky.retry');
-      again.addEventListener('click', () => { this.failed = false; this.bring(); });
+      again.addEventListener('click', () => { this.failed = false; this.bring(true); });
       box.append(again);
     }
     this.root.replaceChildren(box);

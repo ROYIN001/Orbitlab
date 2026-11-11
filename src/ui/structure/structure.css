@@ -78,7 +78,7 @@
 .st-tab-mark { font-size: 11px; font-weight: 500; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line2); color: var(--muted); white-space: nowrap; }
 .st-ok-mark { color: var(--ok); border-color: #3d6b50; }
 
-.st-canvas-box, .st-fallback { grid-row: 2; grid-column: 1; min-height: 0; }
+.st-canvas-box { grid-row: 2; grid-column: 1; min-height: 0; }
 .st-canvas-box {
   position: relative; overflow: hidden;
   border: 1px solid var(--line); border-radius: var(--radius); background: #0a1018;
@@ -96,8 +96,10 @@
 .st-status .st-note { pointer-events: auto; }
 .st-note { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--st-glass); border: 1px solid var(--line2); font-size: 13px; line-height: 1.45; }
 .st-fail { border-color: var(--fail); }
-.st-fallback { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; background: var(--panel); overflow: auto; }
-.st-side-view { display: block; width: 100%; max-height: 100%; height: min(70vh, 640px); }
+/* without 3-D, the side view takes the picture's place (the stage's notes stay over it) */
+.st-fallback { position: absolute; inset: 0; box-sizing: border-box; padding: 64px 12px 10px; background: var(--panel); display: flex; flex-direction: column-reverse; gap: 6px; }
+.st-fallback > p { margin: 0; }
+.st-side-view { display: block; width: 100%; flex: 1 1 0; min-height: 0; }
 .st-side-box { fill: #2b3a4a; stroke: #6c7b8e; stroke-width: 1; cursor: pointer; vector-effect: non-scaling-stroke; }
 .st-side-box.sel, .st-side-box:focus { fill: var(--accent-weak); stroke: var(--accent); outline: none; }
 
@@ -365,9 +367,7 @@
   .st-models, .st-tabs { flex: none; }
   .st-tab { padding: 6px 10px; min-height: 40px; }
   .st-model { min-height: 34px; padding: 4px 8px; }
-  .st-canvas-box, .st-fallback { position: sticky; top: 0; z-index: 3; height: var(--st-canvas-h); flex: none; border-radius: 0; border-left: 0; border-right: 0; }
-  .st-fallback { height: auto; max-height: var(--st-canvas-h); }
-  .st-side-view { height: calc(var(--st-canvas-h) - 50px); }
+  .st-canvas-box { position: sticky; top: 0; z-index: 3; height: var(--st-canvas-h); flex: none; border-radius: 0; border-left: 0; border-right: 0; }
   .st-hint { display: none; }
   .st-bar { max-height: none; overflow: visible; padding: 6px 8px; background: var(--bg); }
   /* assembling, what is in hand and its controls stay under the picture */
