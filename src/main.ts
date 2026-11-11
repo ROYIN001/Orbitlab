@@ -861,7 +861,7 @@ class App {
     const r = this.route;
     if (r.section !== 'structure') return;
     this.structure ??= new StructureLoader(document.getElementById('structure-screen')!, this.structureHost());
-    this.structure.show(r.mode, r.page === 'soyuz-st31' || r.page === 'edusat' ? r.page : undefined);
+    this.structure.show(r.mode, r.page);
   }
 
   /** What the Structure section may do outside itself: navigate, and hand its satellite to Orbit or Launch as Build does. */

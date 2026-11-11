@@ -29,8 +29,10 @@ export interface StructureProgress {
   completed: Record<StructureModelId, string | null>;
   /** "my experiment", or null before the learner makes one */
   experiment: EduDesign | null;
-  /** which design the satellite shows: the learner's copy or the reference */
+  /** which design the experiment shows: the learner's copy or the reference (the other activities always show the reference) */
   showing: 'mine' | 'reference';
+  /** the step-by-step helper is open (the learner's choice; it opens nothing by itself) */
+  guide: boolean;
 }
 
 export const freshProgress = (): StructureProgress => ({
@@ -40,6 +42,7 @@ export const freshProgress = (): StructureProgress => ({
   completed: { 'soyuz-st31': null, edusat: null },
   experiment: null,
   showing: 'reference',
+  guide: false,
 });
 
 const own = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -77,6 +80,7 @@ export function readProgress(raw: string | null, specs: Record<StructureModelId,
   }
   if (isEduDesign(data.experiment)) p.experiment = { battery: data.experiment.battery, payload: data.experiment.payload };
   p.showing = data.showing === 'mine' && p.experiment ? 'mine' : 'reference';
+  p.guide = data.guide === true;
   if (p.mode['soyuz-st31'] === 'experiment') p.mode['soyuz-st31'] = 'explore';
   return { progress: p, writable: true, note: null };
 }
@@ -92,5 +96,6 @@ export function writeProgress(p: StructureProgress): string {
     completed: p.completed,
     experiment: p.experiment,
     showing: p.showing,
+    guide: p.guide,
   });
 }

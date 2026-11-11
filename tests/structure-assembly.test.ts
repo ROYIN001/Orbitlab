@@ -131,15 +131,15 @@ describe('EduSat-3U: the stack goes in from the bottom up, the panels close it',
     const upToRadio = (['frame', 'stack', 'payload', 'battery', 'eps', 'adcs', 'obc', 'radio'] as const)
       .reduce((s, u) => (install(E, s, u, { slot: u, orientation: 0 }) as { state: AssemblyState }).state, EMPTY_ASSEMBLY);
     expect(Object.keys(upToRadio.placed)).toHaveLength(8);
-    const swapped = install(E, upToRadio, 'panel-px', { slot: 'face-nz', orientation: 0 });
+    const swapped = install(E, upToRadio, 'panel-px', { slot: 'face-ny', orientation: 0 });
     expect(swapped.ok).toBe(true);
     expect(install(E, upToRadio, 'panel-px', { slot: 'face-px', orientation: 1 })).toMatchObject({ ok: false, refusal: { code: 'wrongOrientation' } });
     // a panel's face is not a board's slot
     expect(install(E, upToRadio, 'panel-px', { slot: 'antenna', orientation: 0 })).toMatchObject({ ok: false, refusal: { code: 'wrongSlot', owner: 'antenna' } });
     // fill the faces in any order, then the antenna: complete
     let state = swapped.state;
-    const free = FACES.filter((f) => f !== 'face-nz');
-    for (const [k, unit] of (['panel-nx', 'panel-pz', 'panel-nz'] as const).entries()) state = (install(E, state, unit, { slot: free[k], orientation: 0 }) as { state: AssemblyState }).state;
+    const free = FACES.filter((f) => f !== 'face-ny');
+    for (const [k, unit] of (['panel-nx', 'panel-py', 'panel-ny'] as const).entries()) state = (install(E, state, unit, { slot: free[k], orientation: 0 }) as { state: AssemblyState }).state;
     state = (install(E, state, 'antenna', { slot: 'antenna', orientation: 0 }) as { state: AssemblyState }).state;
     expect(checkAssembly(E, state)).toMatchObject({ complete: true, placed: EDU_UNITS.length });
   });
@@ -168,7 +168,7 @@ describe('EduSat-3U: the stack goes in from the bottom up, the panels close it',
     const framed = ['frame', 'stack'].reduce((s, u) => (install(E, s, u, { slot: u, orientation: 0 }) as { state: AssemblyState }).state, EMPTY_ASSEMBLY);
     expect(install(E, framed, 'obc', { slot: 'obc', orientation: 0 })).toMatchObject({ ok: false, refusal: { code: 'missing', missing: ['adcs'] } });
     expect(install(E, framed, 'payload', { slot: 'payload', orientation: 1 })).toMatchObject({ ok: false, refusal: { code: 'wrongOrientation' } });
-    expect(slotOfUnit('panel-nz')).toBe('face-nz');
+    expect(slotOfUnit('panel-ny')).toBe('face-ny');
   });
 });
 
@@ -184,7 +184,8 @@ describe('the Soyuz parts\' kinds and certainty (this pilot\'s reading of the pa
     expect(c('booster-g.frame-foot-1-a', 'engine', 'engine-frame-foot')).toBe('mount');
     expect(c('booster-g.turbine', 'engine', 'turbine')).toBe('propulsion');
     expect(c('fregat.avionics-bay-2-battery', 'interior', 'chemical-battery')).toBe('equipment');
-    expect(c('stage3.rd0124-tank-support-5.8-4', 'interior', 'tank-to-shell-support')).toBe('load');
+    // what holds a tank to the shell is a mount (a place a thing is held at), not the load-bearing frame
+    expect(c('stage3.rd0124-tank-support-5.8-4', 'interior', 'tank-to-shell-support')).toBe('mount');
     expect(c('core.skin-section-1.back', 'shell')).toBe('wall');
     expect(c('fairing.st-barrel-1.right.back', 'shell', 'fairing-white')).toBe('wall');
   });

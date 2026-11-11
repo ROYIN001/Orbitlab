@@ -9,9 +9,9 @@
  *
  * DOM-free.
  */
-import type { StructureSource } from './types';
-import { SOYUZ_COMPONENT, SOYUZ_UNITS, soyuzCategory, soyuzCertainty, type SoyuzUnit } from './soyuz';
-import { CERTAINTIES, PART_CATEGORIES } from './types';
+import { buildTree, type ModelNode, type ModelRelation, type ModelTree } from './model';
+import { SOYUZ_COMPONENT, SOYUZ_INTERFACES, SOYUZ_UNITS, soyuzCategory, soyuzCertainty, type SoyuzJoint, type SoyuzUnit } from './soyuz';
+import { CERTAINTIES, PART_CATEGORIES, type StructureSource } from './types';
 
 /**
  * The files' data revision (scripts/structure-meshes.mjs `DATA_REVISION`): in
@@ -254,4 +254,65 @@ export function cutawayAzimuth(content: SoyuzContent): number {
   }
   if (!front[2] || !back[2]) return 0;
   return Math.atan2(front[0] / front[2] - back[0] / back[2], front[1] / front[2] - back[1] / back[2]);
+}
+
+/**
+ * The model's tree for the three depths: the eleven assemblies (each a unit),
+ * under each its groups as the page lists them (and this section's "other
+ * parts" group where the page groups a part nowhere), under each group its
+ * parts, by the page's own ids.
+ */
+export function soyuzTree(index: SoyuzIndex): ModelTree {
+  const nodes: ModelNode[] = [];
+  for (const unit of SOYUZ_UNITS) nodes.push({ id: unit, parent: null, tier: 1, items: index.units[unit].items, unit });
+  index.groups.forEach((g, gi) => {
+    nodes.push({ id: g.key, parent: g.unit, tier: 2, items: index.content.items.flatMap((_, i) => (index.groupOf[i] === gi ? [i] : [])) });
+  });
+  index.content.items.forEach((p, i) => {
+    nodes.push({
+      id: p.id, parent: index.groups[index.groupOf[i]].key, tier: 3, items: [i],
+      category: PART_CATEGORIES[index.category[i]], certainty: CERTAINTIES[index.certainty[i]],
+    });
+  });
+  return buildTree(nodes, index.content.items.length);
+}
+
+/** A joint as the picture shows it: the parts that are it on each side, and the point it is marked at, m. */
+export interface SoyuzJointParts { a: number[]; b: number[]; at: [number, number, number] | null }
+
+/**
+ * The parts of a relation's joint (`SOYUZ_INTERFACES`, by the page's ids)
+ * and where to mark it: the middle of those parts' centres. A relation whose
+ * joint the page draws no hardware for has no parts and no mark.
+ */
+export function jointParts(index: SoyuzIndex, relation: ModelRelation): SoyuzJointParts {
+  const rule = SOYUZ_INTERFACES[relation.joint as SoyuzJoint] ?? {};
+  const side = (unit: string, pattern: RegExp | undefined): number[] => {
+    if (!pattern || !Object.hasOwn(index.units, unit)) return [];
+    return index.units[unit as SoyuzUnit].items.filter((i) => {
+      const id = index.content.items[i].id;
+      return pattern.test(id.slice(id.indexOf('.') + 1));
+    });
+  };
+  const a = side(relation.a, rule.a), b = side(relation.b, rule.b);
+  const all = [...a, ...b];
+  if (!all.length) return { a, b, at: null };
+  const at: [number, number, number] = [0, 0, 0];
+  for (const i of all) for (let k = 0; k < 3; k++) at[k] += index.content.items[i].center[k] / all.length;
+  return { a, b, at };
+}
+
+/** The parts of one circuit: all of them, and those of each of its steps, in the steps' order. */
+export function circuitParts(index: SoyuzIndex, circuitId: string): { all: number[]; steps: number[][] } {
+  const circuit = index.content.circuits.find((c) => c.id === circuitId);
+  if (!circuit) return { all: [], steps: [] };
+  const stepAt = new Map(circuit.steps.map((s, k) => [index.content.circuitSteps.indexOf(s.id), k]));
+  const steps: number[][] = circuit.steps.map(() => []);
+  const all: number[] = [];
+  index.content.items.forEach((p, i) => {
+    if (!p.circuits?.includes(circuitId)) return;
+    all.push(i);
+    for (const s of p.steps ?? []) { const k = stepAt.get(s); if (k !== undefined) steps[k].push(i); }
+  });
+  return { all, steps };
 }

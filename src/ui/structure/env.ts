@@ -7,6 +7,7 @@
  */
 import type { PowerEnv } from '../../structure/env';
 import type { HandoffEnv } from '../../structure/handoff';
+import type { StructureMode } from '../../structure/progress';
 import type { Depth, StructureModelId } from '../../structure/types';
 import type { ViewerGl } from '../../render/structure-viewer';
 import type { Lang } from './text';
@@ -34,16 +35,16 @@ export interface StructureEnv {
   inflate(buffer: ArrayBuffer): Promise<ArrayBuffer>;
   /** the interface language */
   lang(): Lang;
-  /** the section's address at a depth and model: a link's target */
-  href(level: Depth, model: StructureModelId): string;
+  /** the section's address at a depth, model and activity: a link's target */
+  href(level: Depth, model: StructureModelId, mode: StructureMode): string;
   /** go there (a history entry, so Back returns) */
-  go(level: Depth, model: StructureModelId): void;
+  go(level: Depth, model: StructureModelId, mode: StructureMode): void;
 }
 
 /** The section as the app holds it. */
 export interface StructureSection {
-  /** show the section at a depth, on a model's page if the address names one */
-  show(level: Depth, model?: StructureModelId): void;
+  /** show the section at a depth, on a model's page and activity if the address names them */
+  show(level: Depth, model?: StructureModelId, mode?: StructureMode): void;
   /** off screen: fetches cancelled, the model's GPU resources freed; the state stays */
   hide(): void;
   applyLanguage(): void;

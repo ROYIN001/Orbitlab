@@ -10,7 +10,7 @@
  * tests/structure-boundary.test.ts).
  */
 import type { StructureEnv, StructureSection } from './env';
-import { StructureScreen } from './structure-screen';
+import { StructureScreen } from './screen';
 import { bindLanguage } from './text';
 
 export function createStructureSection(root: HTMLElement, env: StructureEnv): StructureSection {

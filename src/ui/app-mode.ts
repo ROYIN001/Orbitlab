@@ -39,15 +39,20 @@ export const APP_LEVELS: readonly AppLevel[] = ['watch', 'explore', 'engineer'];
  * `#/build/engineer/requirements`, beside the satellite bench rather than a
  * seventh tab on it (six already fill a phone's width). Each page belongs to
  * one section and level (`APP_PAGES`), or to every level of its section (the
- * Structure section's models, `#/structure/explore/edusat`); any other third
- * part of a hash is not a route.
+ * Structure section's models, `#/structure/explore/edusat`, and each model's
+ * further activities, `#/structure/explore/edusat/assemble`: a page's name
+ * may have two parts); any other rest of a hash is not a route.
  */
-export type AppPage = 'requirements' | 'soyuz-st31' | 'edusat';
+export type AppPage = 'requirements' | 'soyuz-st31' | 'soyuz-st31/assemble' | 'edusat' | 'edusat/assemble' | 'edusat/experiment';
 export const APP_PAGES: Readonly<Record<AppPage, { section: AppSection; mode: AppLevel | null }>> = {
   requirements: { section: 'build', mode: 'engineer' },
-  // the Structure section's two models, at any level (null): the level is the depth the model is read at
+  // the Structure section's models and their activities, at any level (null): the level is the depth the model is read at.
+  // The section's own list of them is src/ui/structure/models/index.ts (`modelPages`); tests/structure-registry.test.ts holds the two equal.
   'soyuz-st31': { section: 'structure', mode: null },
+  'soyuz-st31/assemble': { section: 'structure', mode: null },
   edusat: { section: 'structure', mode: null },
+  'edusat/assemble': { section: 'structure', mode: null },
+  'edusat/experiment': { section: 'structure', mode: null },
 };
 
 /** Where the app is: the landing page, or one level of one section (and a page inside it). */
@@ -105,9 +110,10 @@ export function routeFromHash(hash: string, level: AppLevel = DEFAULT_LEVEL): Ap
     const [section, mode] = parts;
     if (isSection(section) && isLevel(mode)) return route(section, mode);
   }
-  // D07: a page with an address of its own inside its level, `#/build/engineer/requirements`
-  if (parts.length === 3) {
-    const [section, mode, page] = parts;
+  // D07: a page with an address of its own inside its level, `#/build/engineer/requirements`; a page's name may have
+  // two parts (the Structure section's `edusat/assemble`)
+  if (parts.length === 3 || parts.length === 4) {
+    const [section, mode] = parts, page = parts.slice(2).join('/');
     if (isSection(section) && isLevel(mode) && isPageOf(page, section, mode)) return route(section, mode, page);
   }
   return null;

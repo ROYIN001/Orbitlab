@@ -1,13 +1,16 @@
 /**
  * The Structure section's 3-D view: one model at a time, its parts each
- * pickable, shown, hidden, seen through, dimmed, highlighted or coloured on
- * their own, and its assemblies each placed by the section (apart, opened,
- * previewed in a slot, or where the reference puts them).
+ * pickable, shown, hidden, seen through, dimmed, highlighted, painted or
+ * coloured on their own, and its assemblies each placed by the section
+ * (apart, opened, previewed in a slot, or where the reference puts them),
+ * moving there over a moment when asked.
  *
  * Every vertex carries its part's index (`item`, structure-mesh.ts); a small
  * texture holds each part's state, read in the vertex shader, so a change of
- * state costs one texture upload, not a new mesh. "See through" is a
- * screen-door pattern (every other pixel dropped), which needs no sorting.
+ * state costs one texture upload, not a new mesh. A part seen through is
+ * drawn in a second pass, blended over the solid ones without writing depth
+ * (so what stands behind it shows through); that pass draws only the meshes
+ * that have such a part, so it costs nothing while nothing is seen through.
  *
  * The camera turns about a target (drag, arrow keys), zooms (wheel, pinch,
  * + and −) and pans (Shift-drag, right-drag, two fingers); a press that does
@@ -23,8 +26,17 @@ import * as THREE from 'three';
 
 export type ColorMode = 'material' | 'category' | 'certainty';
 
-/** A part's state bits. */
-export const FLAG = { hidden: 1, ghost: 2, selected: 4, related: 8, dim: 16 } as const;
+/**
+ * A part's state bits: not drawn; seen through (its own colours, blended);
+ * selected (a rim and a light tint of the accent); related to the selection;
+ * dimmed (grey and dark); a faint outline of where a part belongs (the
+ * assembly's reference: one flat tint, lightly blended); and lit as a target
+ * (a place the part in hand can go).
+ */
+export const FLAG = { hidden: 1, ghost: 2, selected: 4, related: 8, dim: 16, faint: 32, target: 64 } as const;
+
+/** How many paint colours a model can use at once (`setPaint`: circuits by what flows, subsystems, changed parts). */
+export const PAINT_SLOTS = 8;
 
 export interface ViewerMesh {
   unit: string;
@@ -54,12 +66,19 @@ export interface ViewerOptions {
   onPick?: (item: number | null) => void;
   /** the camera moved by the user's hand (to stop a guided view from fighting it) */
   onCameraInput?: () => void;
+  /** a frame was drawn: what is laid over the view (labels, markers, the scale) follows it */
+  onFrame?: () => void;
+  /** the pointer rests over a part (a mouse only), or over none */
+  onHover?: (item: number | null, clientX: number, clientY: number) => void;
   reducedMotion?: () => boolean;
   /** colours for the kinds of part and the certainty levels, CSS strings */
   categoryColors: readonly string[];
   certaintyColors: readonly string[];
   accent: string;
   related: string;
+  /** the flat tint of a faint outline, and of a lit target */
+  outline: string;
+  target: string;
   background: string;
 }
 
@@ -85,10 +104,14 @@ void main() {
 
 const FRAGMENT = /* glsl */ `
 uniform int colorMode;
+uniform int pass;
 uniform vec3 categoryColors[6];
 uniform vec3 certaintyColors[4];
+uniform vec3 paintColors[${PAINT_SLOTS}];
 uniform vec3 accent;
 uniform vec3 relatedColor;
+uniform vec3 outlineColor;
+uniform vec3 targetColor;
 uniform float roughness;
 uniform float metalness;
 varying vec3 vNormalV;
@@ -98,12 +121,13 @@ varying vec4 vState;
 void main() {
   int f = int(vState.r * 255.0 + 0.5);
   if ((f & 1) != 0) discard;
-  if ((f & 2) != 0) {
-    ivec2 p = ivec2(gl_FragCoord.xy);
-    if (((p.x + p.y) & 1) == 0) discard;
-  }
+  // the solid pass leaves out what is seen through; the blended pass draws only that
+  bool through = (f & (2 | 32)) != 0;
+  if (through != (pass == 1)) discard;
+  int paint = int(vState.a * 255.0 + 0.5);
   vec3 base;
-  if (colorMode == 1) base = categoryColors[int(vState.g * 255.0 + 0.5)];
+  if (paint > 0) base = paintColors[paint - 1];
+  else if (colorMode == 1) base = categoryColors[int(vState.g * 255.0 + 0.5)];
   else if (colorMode == 2) base = certaintyColors[int(vState.b * 255.0 + 0.5)];
   else base = pow(vTint, vec3(2.2));
   vec3 n = normalize(vNormalV);
@@ -120,10 +144,16 @@ void main() {
   vec3 diffuse = base * (1.0 - 0.45 * metalness);
   vec3 specColor = mix(vec3(0.05), base, metalness);
   vec3 col = diffuse * (0.24 + 0.2 * hemi + 0.8 * d1 + 0.25 * d2) + specColor * spec * 1.6;
+  float rim = pow(1.0 - max(dot(n, v), 0.0), 2.5);
   if ((f & 16) != 0) col = mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), 0.75) * 0.4;
-  if ((f & 8) != 0) col = mix(col, relatedColor, 0.4);
-  if ((f & 4) != 0) col = mix(col, accent, 0.5) + accent * 0.12;
-  gl_FragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0);
+  if ((f & 8) != 0) col = mix(col, relatedColor, 0.17) + relatedColor * rim * 0.3;
+  // selected: its own colours still read, under a light tint and a bright rim
+  if ((f & 4) != 0) col = mix(col, accent, 0.26) + accent * (0.08 + rim * 0.9);
+  float alpha = 1.0;
+  if ((f & 32) != 0) { col = mix(col, outlineColor, 0.72) + outlineColor * rim * 0.5; alpha = 0.16 + rim * 0.3; }
+  else if ((f & 2) != 0) alpha = 0.22 + rim * 0.3;
+  if ((f & 64) != 0) { col = mix(col, targetColor, 0.6) + targetColor * (0.12 + rim * 0.6); alpha = max(alpha, 0.5); }
+  gl_FragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(1.0 / 2.2)), alpha);
 }`;
 
 interface Pointer { x: number; y: number }
@@ -134,8 +164,15 @@ export class StructureViewer {
   private readonly camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
   private readonly root = new THREE.Group();
   private readonly units = new Map<string, THREE.Group>();
-  private readonly meshes: { mesh: THREE.Mesh; layer: string; unit: string }[] = [];
+  /** each mesh twice: `mesh` in the solid pass, `through` in the blended one (shown only while one of its parts is seen through) */
+  private readonly meshes: { mesh: THREE.Mesh; through: THREE.Mesh; layer: string; unit: string; items: Uint16Array; shown: boolean }[] = [];
   private readonly materials = new Map<string, THREE.ShaderMaterial>();
+  /** where each assembly is on its way to, while it moves there */
+  private readonly unitTweens = new Map<string, { fromP: THREE.Vector3; fromQ: THREE.Quaternion; toP: THREE.Vector3; toQ: THREE.Quaternion; start: number; ms: number }>();
+  /** where each assembly is asked to stand (its matrix once any move is over) */
+  private readonly unitTargets = new Map<string, THREE.Matrix4>();
+  private hoverTimer = 0;
+  private lastHover: number | null = null;
   private grid: THREE.GridHelper | null = null;
   private state = new Uint8Array(4);
   private stateTexture: THREE.DataTexture;
@@ -159,6 +196,8 @@ export class StructureViewer {
   private readonly raycaster = new THREE.Raycaster();
   private readonly off: (() => void)[] = [];
   private homeView = { t: new THREE.Vector3(), az: 0.8, el: 0.25, dist: 10 };
+  private homeBox: THREE.Box3 | null = null;
+  private homeMargin = 1.15;
 
   constructor(readonly canvas: HTMLCanvasElement, private readonly options: ViewerOptions) {
     this.renderer = options.gl.createRenderer({ canvas, antialias: true });
@@ -171,8 +210,11 @@ export class StructureViewer {
       colorMode: { value: 0 },
       categoryColors: { value: colors(options.categoryColors, 6) },
       certaintyColors: { value: colors(options.certaintyColors, 4) },
+      paintColors: { value: colors([], PAINT_SLOTS) },
       accent: { value: new THREE.Color(options.accent) },
       relatedColor: { value: new THREE.Color(options.related) },
+      outlineColor: { value: new THREE.Color(options.outline) },
+      targetColor: { value: new THREE.Color(options.target) },
     };
     this.scene.add(this.root);
     const on = <K extends keyof HTMLElementEventMap>(type: K, fn: (e: HTMLElementEventMap[K]) => void, opts?: AddEventListenerOptions) => {
@@ -180,7 +222,8 @@ export class StructureViewer {
       this.off.push(() => canvas.removeEventListener(type, fn as EventListener, opts));
     };
     on('pointerdown', (e) => this.onDown(e));
-    on('pointermove', (e) => this.onMove(e));
+    on('pointermove', (e) => { this.onMove(e); this.hover(e); });
+    on('pointerleave', () => this.endHover());
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) on(type, (e) => this.onUp(e as PointerEvent));
     on('wheel', (e) => this.onWheel(e), { passive: false });
     on('contextmenu', (e) => e.preventDefault());
@@ -226,13 +269,15 @@ export class StructureViewer {
     return tex;
   }
 
-  private material(roughness: number, metalness: number): THREE.ShaderMaterial {
-    const key = `${roughness}|${metalness}`;
+  private material(roughness: number, metalness: number, pass: 0 | 1): THREE.ShaderMaterial {
+    const key = `${roughness}|${metalness}|${pass}`;
     let m = this.materials.get(key);
     if (!m) {
       m = new THREE.ShaderMaterial({
         vertexShader: VERTEX, fragmentShader: FRAGMENT, side: THREE.DoubleSide,
-        uniforms: { ...this.shared, roughness: { value: roughness }, metalness: { value: metalness } },
+        uniforms: { ...this.shared, roughness: { value: roughness }, metalness: { value: metalness }, pass: { value: pass } },
+        // the blended pass: over the solid one, and writing no depth, so what is behind a see-through part still shows
+        ...(pass === 1 ? { transparent: true, depthWrite: false } : {}),
       });
       this.materials.set(key, m);
     }
@@ -244,23 +289,46 @@ export class StructureViewer {
     for (const m of meshes) {
       const group = this.units.get(m.unit);
       if (!group) continue;
-      const mesh = new THREE.Mesh(m.geometry, this.material(m.roughness, m.metalness));
+      const mesh = new THREE.Mesh(m.geometry, this.material(m.roughness, m.metalness, 0));
       mesh.name = `${m.unit}:${m.layer}`;
       mesh.frustumCulled = true;
-      group.add(mesh);
-      this.meshes.push({ mesh, layer: m.layer, unit: m.unit });
+      const through = new THREE.Mesh(m.geometry, this.material(m.roughness, m.metalness, 1));
+      through.name = `${mesh.name}:through`;
+      through.renderOrder = 1;
+      through.visible = false;
+      group.add(mesh, through);
       const pos = m.geometry.getAttribute('position') as THREE.BufferAttribute;
       const item = m.geometry.getAttribute('item') as THREE.BufferAttribute;
+      const mine = new Set<number>();
       const b = this.boxes;
       for (let v = 0; v < pos.count; v++) {
         const i = item.getX(v);
+        mine.add(i);
         if (i >= this.itemCount) continue;
         const x = pos.getX(v), y = pos.getY(v), z = pos.getZ(v), o = i * 6;
         if (x < b[o]) b[o] = x; if (y < b[o + 1]) b[o + 1] = y; if (z < b[o + 2]) b[o + 2] = z;
         if (x > b[o + 3]) b[o + 3] = x; if (y > b[o + 4]) b[o + 4] = y; if (z > b[o + 5]) b[o + 5] = z;
       }
+      this.meshes.push({ mesh, through, layer: m.layer, unit: m.unit, items: Uint16Array.from(mine), shown: true });
     }
+    this.syncPasses();
     this.requestRender();
+  }
+
+  /** Which of a mesh's two passes have anything to draw: the blended one only while a part of the mesh is seen through, the solid one unless all are. */
+  private syncPasses(): void {
+    const through = FLAG.ghost | FLAG.faint, gone = FLAG.hidden | through;
+    for (const m of this.meshes) {
+      let any = false, solid = false;
+      for (const i of m.items) {
+        const f = this.state[i * 4];
+        if ((f & FLAG.hidden) === 0 && (f & through) !== 0) any = true;
+        if ((f & gone) === 0) solid = true;
+        if (any && solid) break;
+      }
+      m.mesh.visible = m.shown && solid;
+      m.through.visible = m.shown && any;
+    }
   }
 
   /** The layers drawn now. */
@@ -268,7 +336,10 @@ export class StructureViewer {
 
   /** Show or hide a whole layer's meshes (it stays loaded). */
   setLayerVisible(layer: string, visible: boolean): void {
-    for (const m of this.meshes) if (m.layer === layer) m.mesh.visible = visible;
+    let changed = false;
+    for (const m of this.meshes) if (m.layer === layer && m.shown !== visible) { m.shown = visible; changed = true; }
+    if (!changed) return;
+    this.syncPasses();
     this.requestRender();
   }
 
@@ -280,6 +351,8 @@ export class StructureViewer {
     this.materials.clear();
     for (const g of this.units.values()) { g.clear(); this.root.remove(g); }
     this.units.clear();
+    this.unitTweens.clear();
+    this.unitTargets.clear();
     if (this.grid) { this.scene.remove(this.grid); this.grid.geometry.dispose(); (this.grid.material as THREE.Material).dispose(); this.grid = null; }
     this.itemCount = 0;
     // the parts' state texture: an empty one in its place until the next model (`reset` makes its own)
@@ -291,25 +364,39 @@ export class StructureViewer {
     this.requestRender();
   }
 
-  /** Place an assembly (its matrix in the model's frame) and show or hide it. */
-  setUnit(unit: string, matrix: THREE.Matrix4, visible = true): void {
+  /**
+   * Place an assembly (its matrix in the model's frame) and show or hide it.
+   * `animate`: it moves there over a moment (not with reduced motion, and
+   * not when it was hidden: it appears in place).
+   */
+  setUnit(unit: string, matrix: THREE.Matrix4, visible = true, animate = false): void {
     const g = this.units.get(unit);
     if (!g) return;
     g.matrixAutoUpdate = false;
-    if (!g.matrix.equals(matrix) || g.visible !== visible) {
+    const target = this.unitTargets.get(unit);
+    if (target?.equals(matrix) && g.visible === visible) return;
+    const wasVisible = g.visible;
+    this.unitTargets.set(unit, matrix.clone());
+    g.visible = visible;
+    if (animate && visible && wasVisible && !this.options.reducedMotion?.()) {
+      const fromP = new THREE.Vector3(), fromQ = new THREE.Quaternion(), toP = new THREE.Vector3(), toQ = new THREE.Quaternion(), one = new THREE.Vector3();
+      g.matrix.decompose(fromP, fromQ, one);
+      matrix.decompose(toP, toQ, one);
+      this.unitTweens.set(unit, { fromP, fromQ, toP, toQ, start: performance.now(), ms: 380 });
+    } else {
+      this.unitTweens.delete(unit);
       g.matrix.copy(matrix);
-      g.visible = visible;
       g.matrixWorldNeedsUpdate = true;
-      this.requestRender();
     }
+    this.requestRender();
   }
 
-  /** How far each assembly stands from where the reference puts it: the largest translation, m, and rotation, rad. */
+  /** How far each assembly is asked to stand from where the reference puts it: its translation, m, and rotation, rad. */
   unitOffsets(): Map<string, { move: number; turn: number; visible: boolean }> {
     const out = new Map<string, { move: number; turn: number; visible: boolean }>();
     const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
     for (const [u, g] of this.units) {
-      g.matrix.decompose(p, q, s);
+      (this.unitTargets.get(u) ?? g.matrix).decompose(p, q, s);
       out.set(u, { move: p.length(), turn: 2 * Math.acos(Math.min(1, Math.abs(q.w))), visible: g.visible });
     }
     return out;
@@ -325,9 +412,32 @@ export class StructureViewer {
       if (this.state[i * 4] !== f) { this.state[i * 4] = f; changed = true; }
     }
     if (!changed) return;
+    this.upload();
+    this.syncPasses();
+  }
+
+  private upload(): void {
     (this.stateTexture.image.data as Uint8Array).set(this.state.subarray(0, Math.min(this.state.length, this.stateTexture.image.data!.length)));
     this.stateTexture.needsUpdate = true;
     this.requestRender();
+  }
+
+  /**
+   * Paint parts in one of `colors` (at most `PAINT_SLOTS`): `paintOf(i)` is
+   * the colour's place in the list, or −1 for the part's own colour. Paint
+   * goes over the colour view (a circuit by what flows in it, a subsystem,
+   * a changed part).
+   */
+  setPaint(colors: readonly string[], paintOf: (item: number) => number): void {
+    const list = this.shared.paintColors.value as THREE.Color[];
+    colors.slice(0, PAINT_SLOTS).forEach((c, k) => list[k].set(c));
+    let changed = false;
+    for (let i = 0; i < this.itemCount; i++) {
+      const k = paintOf(i);
+      const v = k >= 0 && k < PAINT_SLOTS ? k + 1 : 0;
+      if (this.state[i * 4 + 3] !== v) { this.state[i * 4 + 3] = v; changed = true; }
+    }
+    if (changed) this.upload(); else this.requestRender();
   }
 
   flagsOf(item: number): number { return item >= 0 && item < this.itemCount ? this.state[item * 4] : 0; }
@@ -398,13 +508,38 @@ export class StructureViewer {
     this.goTo({ t: p.clone(), az: this.az, el: this.el, dist: this.dist }, animate);
   }
 
-  /** Turn and zoom so `box` fills the view with room around it (`margin` × its size), keeping the angle. */
-  frameBox(box: THREE.Box3, margin = 1.35, animate = true): void {
-    const center = box.getCenter(new THREE.Vector3());
-    const radius = Math.max(1e-3, box.getSize(new THREE.Vector3()).length() / 2);
-    const fov = (this.camera.fov * Math.PI) / 180;
-    const fit = (radius * margin) / Math.sin(Math.min(fov, fov * this.camera.aspect) / 2);
-    this.goTo({ t: center, az: this.az, el: this.el, dist: fit }, animate);
+  /**
+   * The distance from which `box` just fits the view's own shape when looked
+   * at from azimuth `az` and elevation `el`, times `margin`: each of its
+   * corners inside the view's height and width (a tall thin box in a wide
+   * view is fitted by its height, not by the sphere round it).
+   */
+  private fitDistance(box: THREE.Box3, az: number, el: number, margin: number): number {
+    const c = Math.cos(el);
+    const back = new THREE.Vector3(c * Math.sin(az), Math.sin(el), c * Math.cos(az)); // from the target to the eye
+    const right = new THREE.Vector3(Math.cos(az), 0, -Math.sin(az));
+    const up = new THREE.Vector3().crossVectors(back, right);
+    const tanY = Math.tan((this.camera.fov * Math.PI) / 360), tanX = tanY * Math.max(0.2, this.camera.aspect);
+    const half = box.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+    let dist = 1e-3;
+    const p = new THREE.Vector3();
+    for (let k = 0; k < 8; k++) {
+      p.set(k & 1 ? half.x : -half.x, k & 2 ? half.y : -half.y, k & 4 ? half.z : -half.z);
+      const depth = p.dot(back);
+      dist = Math.max(dist, depth + (Math.abs(p.dot(up)) * margin) / tanY, depth + (Math.abs(p.dot(right)) * margin) / tanX);
+    }
+    return Math.max(dist, half.length() * 0.2);
+  }
+
+  /** Turn about `box`'s centre and zoom so it fills the view with room around it (`margin` × its size), keeping the angle, or from `from`. */
+  frameBox(box: THREE.Box3, margin = 1.35, animate = true, from?: { az?: number; el?: number }): void {
+    const az = from?.az ?? this.az, el = from?.el ?? this.el;
+    this.goTo({ t: box.getCenter(new THREE.Vector3()), az, el, dist: this.fitDistance(box, az, el, margin) }, animate);
+  }
+
+  /** How much of the model one CSS pixel covers at the target's distance, m. */
+  metresPerPixel(): number {
+    return (2 * this.dist * Math.tan((this.camera.fov * Math.PI) / 360)) / Math.max(1, this.canvas.clientHeight);
   }
 
   /**
@@ -413,16 +548,16 @@ export class StructureViewer {
    * thin, so fitting its bounding sphere would leave it small).
    */
   setHome(box: THREE.Box3, az = 0.8, el = 0.18, margin = 1.15): void {
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const across = Math.hypot(size.x, size.z);
-    const half = (this.camera.fov * Math.PI) / 360;
-    const aspect = Math.max(0.3, this.camera.aspect);
-    const dist = margin * Math.max(size.y / 2 / Math.tan(half), across / 2 / (Math.tan(half) * aspect)) + across / 2;
-    this.homeView = { t: center, az, el, dist };
+    this.homeBox = box.clone();
+    this.homeMargin = margin;
+    this.homeView = { t: box.getCenter(new THREE.Vector3()), az, el, dist: this.fitDistance(box, az, el, margin) };
   }
 
-  home(animate = true): void { this.goTo({ ...this.homeView, t: this.homeView.t.clone() }, animate); }
+  home(animate = true): void {
+    // fitted again to the view's shape now: it may have changed since the model opened (a turned phone, a resized window)
+    if (this.homeBox) this.homeView.dist = this.fitDistance(this.homeBox, this.homeView.az, this.homeView.el, this.homeMargin);
+    this.goTo({ ...this.homeView, t: this.homeView.t.clone() }, animate);
+  }
 
   /** Look from the side the page's cutaway opens (its front halves face azimuth `az`). */
   lookFrom(az: number, el = 0.12, animate = true): void { this.goTo({ t: this.target.clone(), az, el, dist: this.dist }, animate); }
@@ -473,23 +608,47 @@ export class StructureViewer {
 
   // ─── picking ─────────────────────────────────────────────────────────────
 
-  /** The part under a point of the page (client px), skipping hidden and see-through parts; null for none. */
-  pick(clientX: number, clientY: number): number | null {
+  /**
+   * The part under a point of the page (client px); null for none. Parts in
+   * any of the states `skip` are passed through: by default the hidden and
+   * the seen-through, so a press reaches what stands behind a see-through
+   * wall. A faint outline or a lit target is picked (a place can be pressed).
+   */
+  pick(clientX: number, clientY: number, skip: number = FLAG.hidden | FLAG.ghost): number | null {
     const r = this.canvas.getBoundingClientRect();
     if (!(r.width > 0 && r.height > 0)) return null;
     const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     this.updateCamera();
     this.root.updateMatrixWorld(true);
     this.raycaster.setFromCamera(ndc, this.camera);
-    const targets = this.meshes.filter((m) => m.mesh.visible && this.units.get(m.unit)?.visible).map((m) => m.mesh);
+    // every shown mesh, whichever of its two passes draws it (they share one geometry)
+    const targets = this.meshes.filter((m) => m.shown && this.units.get(m.unit)?.visible).map((m) => m.mesh);
     for (const hit of this.raycaster.intersectObjects(targets, false)) {
       const geometry = (hit.object as THREE.Mesh).geometry;
       if (!hit.face) continue;
       const item = (geometry.getAttribute('item') as THREE.BufferAttribute).getX(hit.face.a);
-      if (this.flagsOf(item) & (FLAG.hidden | FLAG.ghost)) continue;
+      if (this.flagsOf(item) & (FLAG.hidden | skip)) continue;
       return item;
     }
     return null;
+  }
+
+  /** The pointer resting over the view (a mouse, no button down): say what is under it, a moment after it stops. */
+  private hover(e: PointerEvent): void {
+    if (!this.options.onHover || e.pointerType !== 'mouse' || e.buttons !== 0 || this.pointers.size) return;
+    clearTimeout(this.hoverTimer);
+    const { clientX, clientY } = e;
+    this.hoverTimer = window.setTimeout(() => {
+      const item = this.pick(clientX, clientY);
+      if (item === this.lastHover && item === null) return;
+      this.lastHover = item;
+      this.options.onHover?.(item, clientX, clientY);
+    }, 90);
+  }
+
+  private endHover(): void {
+    clearTimeout(this.hoverTimer);
+    if (this.lastHover !== null) { this.lastHover = null; this.options.onHover?.(null, 0, 0); }
   }
 
   // ─── input ───────────────────────────────────────────────────────────────
@@ -501,6 +660,7 @@ export class StructureViewer {
 
   private onDown(e: PointerEvent): void {
     if (!this.options.gl.isCameraInput(e, this.canvas)) return;
+    this.endHover();
     try { this.canvas.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.pointers.size === 1) this.press = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false };
@@ -571,8 +731,23 @@ export class StructureViewer {
       this.renderer.setSize(w, h, false);
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
+      // Resizing empties the drawing buffer. It is drawn into again here, before the browser paints (drawn a frame
+      // later, the picture would be empty for a frame), and once more on the next frame: a compositor that had already
+      // taken this frame's buffer would keep the empty one until something else changed the picture.
+      if (this.active) this.draw();
       this.requestRender();
     }
+  }
+
+  /** Draw the picture as it is now. */
+  private draw(): void {
+    this.dirty = false;
+    const t0 = performance.now();
+    this.updateCamera();
+    this.renderer.render(this.scene, this.camera);
+    this.timing.frames++;
+    this.timing.last = performance.now() - t0;
+    this.options.onFrame?.();
   }
 
   private updateCamera(): void {
@@ -606,16 +781,30 @@ export class StructureViewer {
       if (k >= 1) this.tween = null;
       this.dirty = true;
     }
-    if (this.dirty) {
-      this.dirty = false;
-      const t0 = performance.now();
-      this.updateCamera();
-      this.renderer.render(this.scene, this.camera);
-      this.timing.frames++;
-      this.timing.last = performance.now() - t0;
+    if (this.unitTweens.size) {
+      const p = new THREE.Vector3(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+      for (const [unit, t] of this.unitTweens) {
+        const g = this.units.get(unit);
+        const k = Math.min(1, (now - t.start) / t.ms);
+        const e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+        if (g) {
+          g.matrix.compose(p.lerpVectors(t.fromP, t.toP, e), q.slerpQuaternions(t.fromQ, t.toQ, e), one);
+          g.matrixWorldNeedsUpdate = true;
+        }
+        if (k >= 1 || !g) {
+          this.unitTweens.delete(unit);
+          const target = this.unitTargets.get(unit);
+          if (g && target) { g.matrix.copy(target); g.matrixWorldNeedsUpdate = true; }
+        }
+      }
+      this.dirty = true;
     }
-    if (this.tween) this.frame = requestAnimationFrame((t) => this.tick(t));
+    if (this.dirty) this.draw();
+    if (this.tween || this.unitTweens.size) this.frame = requestAnimationFrame((t) => this.tick(t));
   }
+
+  /** Nothing is on its way anywhere: the camera and every assembly stand where they were asked to. */
+  settled(): boolean { return !this.tween && this.unitTweens.size === 0; }
 
   /** What is drawn: triangles and draw calls of the last frame. */
   stats(): { triangles: number; calls: number } {
@@ -624,6 +813,7 @@ export class StructureViewer {
 
   /** Free everything, the renderer and its context included (the section's own end). */
   dispose(): void {
+    clearTimeout(this.hoverTimer);
     this.setActive(false);
     this.clear();
     this.stateTexture.dispose();

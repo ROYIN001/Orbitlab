@@ -20,14 +20,25 @@ import { isCameraInputTarget, wheelZoomFactor } from '../render/gestures';
 import { createWebGLRenderer } from '../render/webgl-renderer';
 import { structureHandoff, type StructureAppHost } from '../structure-host/handoff';
 import { POWER_ENV } from '../structure-host/power-env';
+import type { StructureMode } from '../structure/progress';
 import type { StructureModelId } from '../structure/types';
 import { WorkspaceError } from '../workspace/repository';
 import { registerWorkspaceFlush, workspaceStorage } from '../workspace/storage';
-import { hashForRoute, route, type AppLevel, type AppRoute } from './app-mode';
+import { hashForRoute, route, type AppLevel, type AppPage, type AppRoute } from './app-mode';
 import type { StructureEnv, StructureSection } from './structure/env';
 
 /** The profile key of the section's one record (src/structure/progress.ts `STRUCTURE_STORE_KEY`; src/workspace/registry.ts lists it). */
 export const STRUCTURE_PROFILE_KEY = 'orbitlab.structure.v1';
+
+/** A model's activity as a page of the section: `<model>` for exploring, `<model>/<activity>` for the others (`pageOf`, src/ui/structure/models/index.ts). */
+const pageOf = (model: StructureModelId, mode: StructureMode): AppPage => (mode === 'explore' ? model : `${model}/${mode}`) as AppPage;
+
+/** The model and activity a page of the section names. */
+function fromPage(page: string | undefined): { model?: StructureModelId; mode?: StructureMode } {
+  if (!page) return {};
+  const [model, mode = 'explore'] = page.split('/');
+  return { model: model as StructureModelId, mode: mode as StructureMode };
+}
 
 /** What the loader needs of the app: its navigation, and the doors the hand-off goes through. */
 export interface StructureLoaderHost extends StructureAppHost {
@@ -57,8 +68,8 @@ export function structureEnv(host: StructureLoaderHost): StructureEnv {
     gl: { createRenderer: createWebGLRenderer, isCameraInput: isCameraInputTarget, wheelZoom: wheelZoomFactor },
     inflate: inflateAnatomy,
     lang: getLang,
-    href: (level, model) => hashForRoute(route('structure', level, model)),
-    go: (level, model) => host.go(route('structure', level, model)),
+    href: (level, model, mode) => hashForRoute(route('structure', level, pageOf(model, mode))),
+    go: (level, model, mode) => host.go(route('structure', level, pageOf(model, mode))),
   };
 }
 
@@ -70,7 +81,7 @@ export class StructureLoader {
   private loading = false;
   private failed = false;
   /** what to show once the section has arrived; null while it is off screen */
-  private want: { level: AppLevel; model?: StructureModelId } | null = null;
+  private want: { level: AppLevel; model?: StructureModelId; mode?: StructureMode } | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -79,9 +90,11 @@ export class StructureLoader {
     private readonly load: () => Promise<Loaded> = () => import('./structure/structure'),
   ) {}
 
-  show(level: AppLevel, model?: StructureModelId): void {
-    this.want = { level, model };
-    if (this.section) { this.section.show(level, model); return; }
+  /** Show the section at a level, on the page the address names (a model, or a model's activity), if it names one. */
+  show(level: AppLevel, page?: string): void {
+    const { model, mode } = fromPage(page);
+    this.want = { level, model, mode };
+    if (this.section) { this.section.show(level, model, mode); return; }
     if (this.failed) { this.note(); return; }
     this.bring();
   }
@@ -107,7 +120,7 @@ export class StructureLoader {
       this.loading = false;
       // the section draws itself into its place (the note goes)
       this.section = m.createStructureSection(this.root, structureEnv(this.host));
-      if (this.want) this.section.show(this.want.level, this.want.model);
+      if (this.want) this.section.show(this.want.level, this.want.model, this.want.mode);
     }, () => {
       this.loading = false;
       this.failed = true;
