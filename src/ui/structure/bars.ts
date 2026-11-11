@@ -117,14 +117,19 @@ function exploreTools(store: StructureStore, stage: Stage): HTMLElement {
 
   const box = el('div', 'st-bar-explore');
   box.append(row);
-  const notes: string[] = [];
+  const notes: (string | HTMLElement)[] = [];
   if (v.cutaway) notes.push(tx('view.cutawayNote'));
   if (v.shell) notes.push(tx('view.ghostNote'));
   if (v.explode > 0) notes.push(tx('view.explodeNote'));
   if (v.hidden.size) notes.push(tx('view.hiddenCount', { n: v.hidden.size }));
   if (store.flight[store.model] !== null) notes.push(tx('view.flightNote'));
-  if (store.system[store.model]) notes.push(tx('view.systemNote'));
-  for (const text of notes) box.append(el('p', 'st-small st-bar-note', text));
+  if (store.system[store.model]) {
+    // what is followed has its own way off at every depth (a guide's step can put it on where the systems' tab is not offered)
+    const p = el('p', 'st-small st-bar-note', `${tx('view.systemNote')} `);
+    p.append(button(tx('sys.stop'), 'bar:sys:stop', () => { store.focusNext = 'home'; store.showSystem(null); }, { cls: 'st-link' }));
+    notes.push(p);
+  }
+  for (const note of notes) box.append(typeof note === 'string' ? el('p', 'st-small st-bar-note', note) : note);
   return box;
 }
 

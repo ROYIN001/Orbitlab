@@ -114,12 +114,13 @@ export function picture(store: StructureStore): Picture {
   const system = following ? adapter.systems().find((s) => s.id === following.id) : undefined;
   const systemItems = new Set(system?.items ?? []);
   const stepItems = new Set(system && following && following.step !== null ? system.steps[following.step]?.items ?? [] : []);
-  if (system) { colours.push(system.colour); focus = stepItems.size ? [...stepItems] : [...systemItems]; }
+  // (a thing picked while a system is followed is what the view is about, lit among the system's parts)
+  if (system) { colours.push(system.colour); if (!selected.size) focus = stepItems.size ? [...stepItems] : [...systemItems]; }
 
   // a joint shown: the parts that are it, on the side of the unit fitted (lit) and of the unit it is fitted to (related)
   const jointId = store.jointShown[store.model];
   const relation = jointId ? adapter.relations.find((r) => r.id === jointId) : undefined;
-  const joint = relation ? adapter.joint(relation) : null;
+  const joint = relation && !system ? adapter.joint(relation) : null;
   const jointA = new Set(joint?.a ?? []), jointB = new Set(joint?.b ?? []);
   if (joint && (jointA.size || jointB.size)) focus = [...jointA, ...jointB];
 
@@ -161,8 +162,9 @@ export function picture(store: StructureStore): Picture {
     if ((cover.has(i) || (shell?.has(i) && !about.has(i))) && !selected.has(i)) f |= FLAG.ghost;
     if (system) {
       // a system runs inside the model: everything that is not it is dimmed and seen through, so the whole of it shows
-      if (systemItems.has(i)) { paintOf[i] = 0; if (stepItems.has(i)) f |= FLAG.selected; }
-      else f |= FLAG.dim | FLAG.ghost;
+      if (systemItems.has(i)) paintOf[i] = 0;
+      if (selected.size ? selected.has(i) : stepItems.has(i)) f |= FLAG.selected;
+      else if (!systemItems.has(i)) f |= FLAG.dim | FLAG.ghost;
     } else if (joint) {
       if (jointA.has(i)) f |= FLAG.selected;
       else if (jointB.has(i)) f |= FLAG.related;

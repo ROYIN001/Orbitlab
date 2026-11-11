@@ -106,6 +106,34 @@ describe('exploring the rocket', () => {
     expect(p.focus.slice().sort((x, y) => x - y)).toEqual([...joint.a, ...joint.b].sort((x, y) => x - y));
   });
 
+  it('follows a system chosen after a joint was shown: the system is what is lit, framed and fetched', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31' });
+    const relation = store.adapter.relations.find((r) => r.a === 'stage3' && r.b === 'interstage')!;
+    store.select('stage3');
+    store.showJoint(relation.id);
+    const system = store.adapter.systems().find((s) => s.id.startsWith('rd0124'))!;
+    store.showSystem(system.id);
+    expect(store.jointShown['soyuz-st31']).toBeNull();
+    const p = picture(store);
+    expect([...p.focus].sort((a, b) => a - b)).toEqual([...system.items].sort((a, b) => a - b));
+    for (const i of system.items) expect(p.layers.has(store.adapter.layerOfItem(i))).toBe(true);
+    expect(count(p.flags, FLAG.related)).toBe(0);
+  });
+
+  it('lights a part picked while a system is followed, among the system\'s parts, and frames it', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31' });
+    const system = store.adapter.systems().find((s) => s.steps.length > 1)!;
+    store.showSystem(system.id, 1);
+    store.select('fairing-left');
+    const p = picture(store), fairing = itemsOf(store, 'fairing-left');
+    expect(all(p.flags, fairing, FLAG.selected)).toBe(true);
+    expect(fairing.some((i) => (p.flags[i] & (FLAG.dim | FLAG.ghost)) !== 0)).toBe(false);
+    expect([...p.focus].sort((a, b) => a - b)).toEqual([...fairing].sort((a, b) => a - b));
+    // the system stays painted, its step no longer the lit thing
+    expect(system.items.every((i) => p.paint.of[i] === 0)).toBe(true);
+    expect(system.steps[1].items.some((i) => !fairing.includes(i) && (p.flags[i] & FLAG.selected) !== 0)).toBe(false);
+  });
+
   it('hides what was hidden, shows alone what was isolated, and dims all but the legend\'s one kind', async () => {
     const { store } = await openStore({ level: 'explore', model: 'soyuz-st31' });
     store.toggleHidden('fairing-left');

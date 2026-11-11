@@ -103,8 +103,11 @@ export const SOYUZ_MOUNTS: readonly MountPoint[] = SOYUZ_UNITS.map((u, k) => ({ 
  * The parts that are each joint, by the page's ids after the assembly's
  * prefix: on the side of the unit fitted (`a`) and of the unit it is fitted
  * to (`b`). The picture marks a joint at these parts and lights them; a
- * joint with none is one the page draws no hardware for. Representative
- * hardware, in the page's own words, not production parts.
+ * joint with none is one the page draws no hardware for: the line the
+ * fairing's halves meet along runs up its length, and the page's
+ * `st-joint-…` parts are rings round it at stations, so the seam is named
+ * without parts to light. Representative hardware, in the page's own words,
+ * not production parts.
  */
 export const SOYUZ_INTERFACES: Readonly<Record<SoyuzJoint, { a?: RegExp; b?: RegExp }>> = {
   strapOn: { a: /^(?:nose-contact|upper-attachment)(?:\.|$)/ },
@@ -113,7 +116,7 @@ export const SOYUZ_INTERFACES: Readonly<Record<SoyuzJoint, { a?: RegExp; b?: Reg
   adapter: { a: /^lower-(?:load|post)-ring\./, b: /^rd0124-payload-adapter\./ },
   payloadRing: { b: /^payload-load-ring\./ },
   fairingBase: { a: /^st-joint-0\./ },
-  fairingSeam: { a: /^st-joint-40\./, b: /^st-joint-40\./ },
+  fairingSeam: {},
   encloses: {},
 };
 

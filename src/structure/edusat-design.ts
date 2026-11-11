@@ -141,10 +141,10 @@ export function specChecks(parts: readonly EduPart[], massKg: number, batteryWh:
     over = Math.max(over, Math.abs(p.box.center[a]) + p.box.size[a] / 2 - half);
   }
   const cg = centreOfGravity(parts).cds;
-  // a side panel's cells stand proud of its board, whose outer face is in the plane of the rails
+  // what stands proud of a side panel's board, whose outer face is in the plane of the rails: its cells, and its sun sensor further
   const proud = Math.max(...parts.filter((p) => PANELS.includes(p.unit)).map((p) => {
     const a = p.box.size[0] < p.box.size[2] ? 0 : 2;
-    return Math.abs(p.box.center[a]) + p.box.size[a] / 2 + PANEL.cellThick - ENVELOPE.x / 2;
+    return Math.abs(p.box.center[a]) + p.box.size[a] / 2 + Math.max(PANEL.cellThick, PANEL.sensorThick) - ENVELOPE.x / 2;
   }));
   const mm = (m: number): number => m * 1000;
   const within = (id: SpecCheck['id'], value: number, limit: number, unit: SpecCheck['unit'], ref: string, sourceId: SpecCheck['sourceId'] = 'cds14'): SpecCheck =>

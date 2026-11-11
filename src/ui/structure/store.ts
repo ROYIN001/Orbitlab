@@ -94,6 +94,8 @@ export class StructureStore {
   readonly flight: Record<StructureModelId, number | null> = each(() => null);
   /** a relation whose joint is being shown */
   readonly jointShown: Record<StructureModelId, string | null> = each(() => null);
+  /** the view's switches as they were when the guide in hand began (put back when it is left) */
+  private readonly guideBefore: Record<StructureModelId, Record<string, unknown> | null> = each(() => null);
   readonly load: Record<StructureModelId, LoadState> = each(() => ({ state: 'idle' }));
   readonly layerState: Record<StructureModelId, Map<string, 'loading' | 'ready' | { failed: string }>> = each(() => new Map());
   /** the parts list's search words, and the rows opened */
@@ -149,13 +151,43 @@ export class StructureStore {
   open(level: Depth, model?: StructureModelId, mode?: StructureMode): void {
     const depthChanged = level !== this.level;
     this.level = level;
+    if (depthChanged) this.fitViewsToDepth();
     let changed = false;
-    if (model && model !== this.progress.model) { this.progress.model = model; changed = true; }
+    // (what was last said of one model's assembly is not said under the other's)
+    if (model && model !== this.progress.model) { this.progress.model = model; changed = true; this.message = null; }
     const m = this.progress.model;
     if (mode && this.adapters[m].activities.includes(mode) && mode !== this.progress.mode[m]) this.enter(mode);
     else if (changed) this.save();
     // assembling at a first look starts on the reference's outline; deeper, with the parts laid out (until the learner says otherwise)
     if (depthChanged && !Object.keys(this.assembly.placed).length) this.view.outline = level === 'watch';
+  }
+
+  /**
+   * A depth shows the picture only in ways it has a tool for: what a deeper
+   * depth switched on and this one cannot switch off is put back (a first
+   * look has no colour view, see-through shell, hiding or layers by name; the
+   * colouring by how a shape is known belongs to the deepest). And it holds a
+   * part in its own way, so nothing stays in hand across the change.
+   */
+  private fitViewsToDepth(): void {
+    // (a part in hand is put down: a first look holds it at its place, deeper its place is still to choose)
+    this.drag = null;
+    for (const m of STRUCTURE_MODELS) {
+      const v = this.views[m];
+      this.held[m] = null;
+      if (this.level === 'engineer') continue;
+      v.layers = {};
+      if (v.colour === 'certainty') { v.colour = 'material'; v.only = null; }
+      if (this.level !== 'watch') continue;
+      v.colour = 'material';
+      v.only = null;
+      v.shell = false;
+      v.hidden.clear();
+      v.isolate = null;
+      // taken apart and opened are switches here, sliders deeper
+      v.explode = v.explode > 0.5 ? 1 : 0;
+      v.open = v.open > 0.5 ? 1 : 0;
+    }
   }
 
   /** Go to a model, an activity or a depth: an address of the section, so Back returns. */
@@ -203,6 +235,7 @@ export class StructureStore {
   select(id: string | null, focus = false): void {
     this.sel[this.model] = id;
     this.jointShown[this.model] = null;
+    if (id !== null) this.reveal(id);
     if (id !== null && this.tab[this.model] === 'systems') this.tab[this.model] = 'info';
     if (focus && id !== null) this.camera = 'selection';
     this.emit();
@@ -240,10 +273,61 @@ export class StructureStore {
     this.emit();
   }
 
+  /** The parts hidden one by one: those of every hidden node. */
+  hiddenItems(): Set<number> {
+    const out = new Set<number>();
+    if (!this.ready) return out;
+    const tree = this.adapter.tree();
+    for (const id of this.view.hidden) for (const i of tree.nodes.get(id)?.items ?? []) out.add(i);
+    return out;
+  }
+
+  /** A row's eye: 'own' when the node itself was hidden, 'by' when every part of it is hidden by other rows, else null. */
+  hiddenState(id: string, hidden = this.hiddenItems()): 'own' | 'by' | null {
+    if (this.view.hidden.has(id)) return 'own';
+    const items = this.ready ? this.adapter.tree().nodes.get(id)?.items ?? [] : [];
+    return items.length && items.every((i) => hidden.has(i)) ? 'by' : null;
+  }
+
+  /**
+   * Make sure a node is drawn: nothing shown alone that it lies outside of,
+   * and no hidden node over any of its parts. What such a node hid besides
+   * stays hidden, as the largest nodes that hold none of this one's parts.
+   */
+  private reveal(id: string): void {
+    if (!this.ready) return;
+    const tree = this.adapter.tree(), v = this.view, node = tree.nodes.get(id);
+    if (!node) return;
+    const mine = new Set(node.items);
+    if (v.isolate) {
+      const alone = new Set(tree.nodes.get(v.isolate)?.items ?? []);
+      if (!node.items.every((i) => alone.has(i))) v.isolate = null;
+    }
+    const over = [...v.hidden].filter((h) => (tree.nodes.get(h)?.items ?? []).some((i) => mine.has(i)));
+    if (!over.length) return;
+    const rest = new Set<number>();
+    for (const h of over) { v.hidden.delete(h); for (const i of tree.nodes.get(h)!.items) if (!mine.has(i)) rest.add(i); }
+    const walk = (ids: readonly string[]): void => {
+      for (const k of ids) {
+        const n = tree.nodes.get(k)!;
+        const inside = n.items.filter((i) => rest.has(i)).length;
+        if (!inside) continue;
+        if (inside === n.items.length) v.hidden.add(k); else walk(tree.children.get(k) ?? []);
+      }
+    };
+    walk(tree.roots);
+  }
+
+  /** Hide a node, or show it again (one hidden by other rows is shown by itself: what else they hid stays hidden). */
   toggleHidden(id: string): void {
-    const h = this.view.hidden;
-    if (h.has(id)) h.delete(id); else h.add(id);
-    if (this.sel[this.model] === id && h.has(id)) this.sel[this.model] = null;
+    const h = this.view.hidden, state = this.hiddenState(id);
+    if (state === 'own') h.delete(id);
+    else if (state === 'by') this.reveal(id);
+    else h.add(id);
+    // what is hidden is not left selected, nor its joint shown
+    const sel = this.sel[this.model], hidden = this.hiddenItems();
+    const items = sel && this.ready ? this.adapter.tree().nodes.get(sel)?.items ?? [] : [];
+    if (sel && items.length && items.every((i) => hidden.has(i))) { this.sel[this.model] = null; this.jointShown[this.model] = null; }
     this.emit();
   }
 
@@ -256,7 +340,8 @@ export class StructureStore {
   /** Follow an internal system (null: none), at one of its steps or all of it. */
   showSystem(id: string | null, step: number | null = null): void {
     this.system[this.model] = id === null ? null : { id, step };
-    if (id !== null) { this.tab[this.model] = 'systems'; this.sel[this.model] = null; this.flight[this.model] = null; if (step === null) this.camera = 'selection'; }
+    // the view goes to what is followed: the whole system, then each step's own parts as it is stepped through
+    if (id !== null) { this.tab[this.model] = 'systems'; this.sel[this.model] = null; this.flight[this.model] = null; this.jointShown[this.model] = null; this.camera = 'selection'; }
     this.emit();
   }
 
@@ -279,9 +364,32 @@ export class StructureStore {
 
   setGuideOpen(open: boolean): void {
     this.progress.guide = open;
-    if (!open) { this.guide[this.model] = null; this.flight[this.model] = null; }
+    if (!open) this.leaveGuide();
     this.save();
     this.emit();
+  }
+
+  /**
+   * A guide left (finished, or the helper closed): what its steps put on the
+   * picture is taken off again — the system followed, the flight step, the
+   * joint, and the view's switches its steps set, back to what they were
+   * when it began.
+   */
+  private leaveGuide(): void {
+    const g = this.guide[this.model];
+    this.guide[this.model] = null;
+    this.flight[this.model] = null;
+    if (!g) return;
+    this.system[this.model] = null;
+    this.jointShown[this.model] = null;
+    const before = this.guideBefore[this.model];
+    this.guideBefore[this.model] = null;
+    const guide = this.guides().find((x) => x.id === g.id);
+    if (before && guide) {
+      const view = this.view as unknown as Record<string, unknown>;
+      for (const step of guide.steps) for (const key of Object.keys(step.show?.view ?? {})) view[key] = before[key];
+    }
+    this.camera = 'home';
   }
 
   /** Start a guide, or move in it; each step shows itself (the learner can still do anything else). */
@@ -289,14 +397,14 @@ export class StructureStore {
     const guide = this.guides().find((g) => g.id === id);
     if (!guide) return;
     const k = Math.max(0, Math.min(guide.steps.length - 1, step));
+    if (this.guide[this.model]?.id !== id) { this.leaveGuide(); this.guideBefore[this.model] = { ...this.view }; }
     this.guide[this.model] = { id, step: k };
     this.applyShow(guide.steps[k].show);
     this.emit();
   }
 
   endGuide(): void {
-    this.guide[this.model] = null;
-    this.flight[this.model] = null;
+    this.leaveGuide();
     this.emit();
   }
 
@@ -305,7 +413,9 @@ export class StructureStore {
     if (!show) return;
     if (show.mode && show.mode !== this.mode) { this.enter(show.mode); this.env.go(this.level, this.model, show.mode); }
     if (show.view) Object.assign(this.view, show.view);
-    if (show.select !== undefined) this.sel[this.model] = show.select;
+    // a step shows one thing: not a joint left from before it
+    this.jointShown[this.model] = null;
+    if (show.select !== undefined) { this.sel[this.model] = show.select; if (show.select !== null) this.reveal(show.select); }
     if (show.system !== undefined) this.system[this.model] = show.system;
     if (show.flight !== undefined) this.flight[this.model] = show.flight;
     if (show.camera) this.camera = show.camera;
@@ -479,8 +589,13 @@ export class StructureStore {
 
   undo(): void {
     const r = undo(this.assembly);
-    if (r.ok) { this.setAssembly(r.state); this.message = this.note('info', () => tx('asm.undone')); }
-    else this.message = this.note('no', () => this.refusalText(r.refusal));
+    if (r.ok) {
+      this.setAssembly(r.state);
+      this.message = this.note('info', () => tx('asm.undone'));
+      // what the step taken back had taken off is fitted again: it is not also in hand
+      const h = this.held[this.model];
+      if (h && Object.hasOwn(r.state.placed, h.unit)) { this.held[this.model] = null; this.drag = null; if (this.closeUp) { this.closeUp = false; this.camera = 'home'; } }
+    } else this.message = this.note('no', () => this.refusalText(r.refusal));
     this.emit();
   }
 

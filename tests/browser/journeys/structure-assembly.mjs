@@ -266,6 +266,35 @@ export default async function structureAssembly(t) {
   const canvasBox = await page.locator('.st-canvas').boundingBox();
   const nowhere = await drag('booster-v', { x: canvasBox.x + 60, y: canvasBox.y + 60 });
   t.check(nowhere?.unit === 'booster-v' && nowhere.slot === null && (await inHand()) === null && (await progress()).includes('2/11'), `dropped away from every place: ${JSON.stringify(nowhere)}, ${await progress()}`);
+  // with motion on, a dragged part is drawn where the hand has it at every move (an ease begun again on each move would leave it behind)
+  {
+    await ready(page);
+    const from = await at('where', 'booster-v');
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    let worst = 0, moved = 0;
+    for (let i = 1; i <= 14; i++) {
+      await page.mouse.move(from.x + (canvasBox.x + 60 - from.x) * i / 14, from.y + (canvasBox.y + 60 - from.y) * i / 14);
+      await page.waitForTimeout(16);
+      const lag = await page.evaluate(() => {
+        const s = window.orbitlab.structure.section, v = s.viewer, d = s.store.drag;
+        if (!d || s.store.held[s.store.model]?.slot) return null;
+        const g = v.units.get(d.unit).matrix.elements, to = v.unitTargets.get(d.unit).elements;
+        return { lag: Math.hypot(g[12] - to[12], g[13] - to[13], g[14] - to[14]), moved: Math.hypot(...d.move) };
+      });
+      if (lag) { worst = Math.max(worst, lag.lag); moved = Math.max(moved, lag.moved); }
+    }
+    await page.mouse.up();
+    const motionOn = await page.evaluate(() => !matchMedia('(prefers-reduced-motion: reduce)').matches);
+    t.check(motionOn && moved > 1 && worst < 1e-6, `with motion on a dragged part follows the hand: moved ${moved.toFixed(2)} m, drawn at most ${worst.toFixed(4)} m behind`);
+    // the browser's own keys are left to the browser while the 3-D view has the focus
+    const taken = await page.evaluate(() => {
+      const c = document.querySelector('.structure-screen .st-canvas');
+      const fire = (init) => { const e = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }); c.dispatchEvent(e); return e.defaultPrevented; };
+      return { zoom: fire({ key: '0', ctrlKey: true }), plus: fire({ key: '=', metaKey: true }), back: fire({ key: 'ArrowLeft', altKey: true }), own: fire({ key: 'ArrowLeft' }) };
+    });
+    t.check(!taken.zoom && !taken.plus && !taken.back && taken.own, `the view takes its own keys and leaves Ctrl/⌘/Alt combinations to the browser: ${JSON.stringify(taken)}`);
+  }
   // a strap-on dragged onto its place as it lies is refused for its way round; turned, it goes in
   await drag('booster-v', 'booster-v');
   t.check((await msg()).startsWith('ทิศทางยังไม่ตรงแบบ') && (await inHand())?.slot === 'booster-v', `dropped the wrong way round: ${await msg()}`);

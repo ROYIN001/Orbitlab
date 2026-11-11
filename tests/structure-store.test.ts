@@ -99,6 +99,70 @@ describe('a selection, read at each depth', () => {
   });
 });
 
+describe('what is picked is always something drawn', () => {
+  it('shows a thing picked outside what is shown alone, and one under something hidden — what else was hidden stays hidden', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31' });
+    store.setView({ isolate: 'stage3' });
+    store.select('stage3/tanks');
+    expect(store.view.isolate).toBe('stage3'); // inside what is shown alone: left as it is
+    store.select('core');
+    expect(store.view.isolate).toBeNull();
+    // a group picked under a hidden assembly: the group shows, its sister groups stay hidden
+    store.toggleHidden('fregat');
+    store.select('fregat/tanks');
+    const hidden = store.hiddenItems(), tree = store.adapter.tree();
+    expect(tree.nodes.get('fregat/tanks')!.items.some((i) => hidden.has(i))).toBe(false);
+    const others = tree.nodes.get('fregat')!.items.filter((i) => !tree.nodes.get('fregat/tanks')!.items.includes(i));
+    expect(others.every((i) => hidden.has(i))).toBe(true);
+    expect(store.view.hidden.has('fregat')).toBe(false);
+  });
+
+  it('reads a row as hidden when other rows hide every part of it, and shows it by itself', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31' });
+    // the page's "whole engine" row covers six narrower groups
+    store.toggleHidden('core/engine-system');
+    expect(store.hiddenState('core/engine-system')).toBe('own');
+    expect(store.hiddenState('core/main-chambers')).toBe('by');
+    expect(store.hiddenState('core/tanks')).toBeNull();
+    store.toggleHidden('core/main-chambers');
+    expect(store.hiddenState('core/main-chambers')).toBeNull();
+    expect(store.hiddenState('core/verniers')).not.toBeNull();
+    expect(store.hiddenState('core/engine-system')).toBeNull(); // not all of it any more
+    // an assembly hidden: a group under it picked for hiding again is shown instead (it read as hidden)
+    store.showAll();
+    store.select('stage3/tanks');
+    store.toggleHidden('stage3');
+    expect(store.sel['soyuz-st31']).toBeNull(); // what lies under the thing hidden is not left selected
+    expect(store.hiddenState('stage3/tanks')).toBe('by');
+  });
+
+  it('puts back, at a change of depth, what the new depth has no tool to switch off', async () => {
+    const { store } = await openStore({ level: 'engineer', model: 'soyuz-st31' });
+    store.setView({ colour: 'certainty', only: 'certainty:measured', shell: true, layers: { inner: true }, explode: 0.7 });
+    store.toggleHidden('fairing-left');
+    store.open('explore', 'soyuz-st31');
+    expect(store.view).toMatchObject({ colour: 'material', only: null, shell: true, layers: {}, explode: 0.7 });
+    expect(store.view.hidden.size).toBe(1);
+    store.setView({ colour: 'category' });
+    store.open('watch', 'soyuz-st31');
+    expect(store.view).toMatchObject({ colour: 'material', shell: false, isolate: null, explode: 1 });
+    expect(store.view.hidden.size).toBe(0);
+  });
+
+  it('says of one model\'s assembly nothing under the other\'s', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31', mode: 'assemble' });
+    store.open('explore', 'edusat', 'assemble');
+    store.open('explore', 'soyuz-st31', 'assemble');
+    store.hold('stage3');
+    store.chooseSlot('stage3');
+    store.install();
+    expect(store.message?.kind).toBe('no');
+    store.open('explore', 'edusat');
+    expect(store.mode).toBe('assemble');
+    expect(store.message).toBeNull();
+  });
+});
+
 describe('assembling at a first look: one press fits a part, on the reference\'s outline', () => {
   it('fits what can go in, says what a part waits for and why, and knows when it is complete', async () => {
     const { store, app } = await openStore({ level: 'watch', model: 'soyuz-st31', mode: 'assemble' });
@@ -146,6 +210,27 @@ describe('assembling at a first look: one press fits a part, on the reference\'s
     expect(Object.keys(store.assembly.placed).sort()).toEqual(['core', 'interstage']);
     store.hint();
     expect(store.message!.text()).toContain(store.unitName(store.next()[0]));
+  });
+});
+
+describe('undoing with a part in hand', () => {
+  it('does not leave in hand a part the step taken back has fitted again', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'edusat', mode: 'assemble' });
+    store.hold('frame');
+    store.chooseSlot('frame');
+    for (let k = 0; k < 4 && store.held.edusat && store.held.edusat.turn !== 0; k++) store.turn();
+    store.install();
+    expect(Object.keys(store.assembly.placed)).toEqual(['frame']);
+    store.remove('frame');
+    store.hold('frame');
+    expect(store.held.edusat?.unit).toBe('frame');
+    store.undo();
+    expect(Object.keys(store.assembly.placed)).toEqual(['frame']);
+    expect(store.held.edusat).toBeNull();
+    // a part in hand that the undo does not touch stays in hand
+    store.hold('stack');
+    store.undo();
+    expect(store.held.edusat?.unit).toBe('stack');
   });
 });
 
@@ -337,6 +422,38 @@ describe('the optional helper', () => {
     expect(store.flight['soyuz-st31']).toBe(3);
     store.setGuideOpen(false);
     expect([store.flight['soyuz-st31'], store.activeGuide()]).toEqual([null, null]);
+  });
+});
+
+describe('leaving the helper', () => {
+  it('takes off the picture what its steps put there: the system followed, and the view\'s switches as they were', async () => {
+    const { store } = await openStore({ level: 'watch', model: 'edusat' });
+    store.setView({ open: 0 });
+    store.setGuideOpen(true);
+    store.guideStep('edusat-tour', 2);
+    expect(store.system.edusat).toEqual({ id: 'edu-power', step: null });
+    expect(store.view.open).toBe(1);
+    store.setGuideOpen(false);
+    expect([store.guide.edusat, store.system.edusat, store.view.open]).toEqual([null, null, 0]);
+    // finished from a later step: the antenna it put out is back in
+    store.setGuideOpen(true);
+    store.guideStep('edusat-tour', 4);
+    expect(store.view.deployed).toBe(true);
+    store.endGuide();
+    expect([store.view.deployed, store.view.open, store.system.edusat]).toEqual([false, 0, null]);
+  });
+
+  it('puts the rocket\'s cut back when its tour is closed at the step that made it, and shows no joint under a step', async () => {
+    const { store } = await openStore({ level: 'watch', model: 'soyuz-st31' });
+    const relation = store.adapter.relations.find((r) => r.a === 'booster-b' && r.b === 'core')!;
+    store.select('booster-b');
+    store.showJoint(relation.id);
+    store.setGuideOpen(true);
+    store.guideStep('soyuz-tour', 4);
+    expect(store.jointShown['soyuz-st31']).toBeNull();
+    expect(store.view.cutaway).toBe(true);
+    store.setGuideOpen(false);
+    expect(store.view.cutaway).toBe(false);
   });
 });
 

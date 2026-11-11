@@ -12,7 +12,7 @@ import { circularPeriod, eclipseDuration } from '../src/orbit/eclipse';
 import { arrayPower, chargeAt, eduScenario, simulatePower, type PowerScenario } from '../src/structure/power-balance';
 import { POWER_ENV } from '../src/structure-host/power-env';
 import { REFERENCE_DESIGN, changesFrom, designKey, eduFigures, massOf, partsOf } from '../src/structure/edusat-design';
-import { BATTERIES, CELL_AREA, CELL_WH, EDU_UNITS, PAYLOADS } from '../src/structure/edusat';
+import { BATTERIES, CELL_AREA, CELL_WH, EDU_UNITS, MASS_LIMIT_KG, PAYLOADS } from '../src/structure/edusat';
 
 /** the section's scenario on the app's own power model, as the app gives it to the section */
 const EDU_SCENARIO = eduScenario(POWER_ENV);
@@ -144,9 +144,9 @@ describe('EduSat-3U: the cases the section shows', () => {
     expect(fixed.massKg - short.massKg).toBeCloseTo(0.06, 12);
   });
 
-  it('is under the pilot\'s 3U mass bound in every combination', () => {
+  it('is under the 3U mass bound the screen shows (the specification\'s typical maximum) in every combination', () => {
     for (const battery of ['battery-1cell', 'battery-2cell'] as const) {
-      for (const payload of ['camera-day', 'camera-night'] as const) expect(eduFigures({ battery, payload }, POWER_ENV).massKg).toBeLessThan(4);
+      for (const payload of ['camera-day', 'camera-night'] as const) expect(eduFigures({ battery, payload }, POWER_ENV).massKg).toBeLessThan(MASS_LIMIT_KG);
     }
   });
 });

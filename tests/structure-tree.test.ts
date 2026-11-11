@@ -15,7 +15,7 @@ import {
 } from '../src/structure/model';
 import { STRUCTURE_MODES } from '../src/structure/progress';
 import { SOYUZ_ASSEMBLY, SOYUZ_MOUNTS, SOYUZ_ORDER, SOYUZ_RELATIONS, SOYUZ_UNITS } from '../src/structure/soyuz';
-import { SOYUZ_FILES, indexSoyuz, parseSoyuzContent, soyuzTree } from '../src/structure/soyuz-content';
+import { SOYUZ_FILES, indexSoyuz, jointParts, parseSoyuzContent, soyuzTree } from '../src/structure/soyuz-content';
 import { STRUCTURE_MODELS } from '../src/structure/types';
 import { APP_PAGES, hashForRoute, route, routeFromHash } from '../src/ui/app-mode';
 import { fromPage, makeAdapters, modelPages, pageOf } from '../src/ui/structure/models/index';
@@ -93,6 +93,52 @@ describe('the two models as trees', () => {
     }
     expect(tree.children.get('core/engine-system') ?? []).toEqual([]);
     expect(tree.nodes.get('core/engine-system')!.items.length).toBeGreaterThan(100);
+  });
+
+  it('the rocket: a part is in the group that says what it is — Fregat\'s spheres are its tanks and bays, the engine\'s parts its narrower groups\'', () => {
+    const tree = soyuzTree(soyuz);
+    const under = (id: string): readonly string[] => tree.children.get(id) ?? [];
+    // Fregat: the page lists the six spheres both as tanks and bays and as its outer surface
+    expect([...under('fregat/tanks')].sort()).toEqual([
+      'fregat.acs-hydrazine-tank', 'fregat.avionics-bay-1', 'fregat.avionics-bay-2', 'fregat.helium-storage-1', 'fregat.helium-storage-2',
+      'fregat.main-tank-1', 'fregat.main-tank-3', 'fregat.main-tank-4', 'fregat.main-tank-6',
+    ]);
+    // a group every part of which another names stands for its whole list, with no parts of its own under it
+    expect([under('fregat/exterior').length, tree.nodes.get('fregat/exterior')!.items.length]).toEqual([0, 6]);
+    expect(tree.nodes.get('fregat/exterior')!.items.every((i) => tree.nodes.get('fregat/tanks')!.items.includes(i))).toBe(true);
+    for (const unit of ['core', 'booster-b']) {
+      const whole = tree.nodes.get(`${unit}/engine-system`)!;
+      expect(under(whole.id)).toEqual([]);
+      const narrower = ['main-chambers', 'verniers', 'powerpack', 'engine-feed', 'engine-gas', 'engine-mount'].flatMap((g) => tree.nodes.get(`${unit}/${g}`)!.items);
+      expect([...narrower].sort((a, b) => a - b)).toEqual([...whole.items].sort((a, b) => a - b));
+    }
+    // every part has exactly one group over it
+    const counted = new Map<number, number>();
+    for (const n of tree.nodes.values()) if (n.tier === 2) for (const k of under(n.id)) { const i = tree.nodes.get(k)!.items[0]; counted.set(i, (counted.get(i) ?? 0) + 1); }
+    expect(counted.size).toBe(soyuz.content.items.length);
+    expect([...counted.values()].every((c) => c === 1)).toBe(true);
+  });
+
+  it('the rocket\'s joints: each lights the hardware it is named for, and one the page draws no hardware for lights nothing', () => {
+    const names = (items: number[]): string[] => [...new Set(items.map((i) => {
+      const id = soyuz.content.items[i].id;
+      return id.slice(id.indexOf('.') + 1).replace(/\.(?:left|right)\.(?:back|front)$|\.(?:back|front)$/, '');
+    }))].sort();
+    const joint = (a: string, b: string) => {
+      const j = jointParts(soyuz, SOYUZ_RELATIONS.find((r) => r.a === a && r.b === b)!);
+      return { a: names(j.a), b: names(j.b), marked: j.at !== null };
+    };
+    expect(joint('booster-b', 'core')).toEqual({ a: ['nose-contact', 'upper-attachment'], b: [], marked: true });
+    expect(joint('interstage', 'core')).toEqual({ a: ['lower-interface'], b: [], marked: true });
+    expect(joint('stage3', 'interstage')).toEqual({ a: [], b: ['upper-interface'], marked: true });
+    expect(joint('fregat', 'stage3')).toEqual({ a: ['lower-load-ring', 'lower-post-ring'], b: ['rd0124-payload-adapter'], marked: true });
+    expect(joint('payload', 'fregat')).toEqual({ a: [], b: ['payload-load-ring'], marked: true });
+    expect(joint('fairing-left', 'stage3')).toEqual({ a: ['st-joint-0'], b: [], marked: true });
+    // the halves meet along a line up the fairing: the page's rings round it at stations are not that line
+    expect(joint('fairing-left', 'fairing-right')).toEqual({ a: [], b: [], marked: false });
+    expect(joint('fairing-left', 'payload')).toEqual({ a: [], b: [], marked: false });
+    // every joint is one of those kinds
+    for (const r of SOYUZ_RELATIONS) expect(['strapOn', 'trussLower', 'trussUpper', 'adapter', 'payloadRing', 'fairingBase', 'fairingSeam', 'encloses']).toContain(r.joint);
   });
 
   it('the satellite: five subsystems, its thirteen units under them, each unit\'s pieces under it', () => {

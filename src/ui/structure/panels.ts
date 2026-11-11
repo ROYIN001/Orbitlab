@@ -243,6 +243,9 @@ export function listPanel(store: StructureStore): HTMLElement {
       button(tx('list.readInfo'), 'list:info', () => { store.tab[store.model] = 'info'; store.focusNext = 'side:info'; store.emit('panels'); }, { cls: 'st-chip' }));
     panel.append(picked);
   }
+  // what the search box lists under it: redrawn alone as its words change, so the box being typed in is never replaced
+  // (the caret stays where it is, and a keyboard that composes its text is not cut short)
+  const body = el('div', 'st-list-body');
   // a first look lists a handful of things; from the middle depth there are enough to search
   if (level !== 'watch') {
     const search = el('input', 'st-search');
@@ -251,9 +254,10 @@ export function listPanel(store: StructureStore): HTMLElement {
     search.setAttribute('aria-label', tx('list.filter'));
     search.value = store.filter;
     search.dataset.k = 'filter';
-    search.addEventListener('input', () => { store.filter = search.value; store.emit('panels'); });
+    search.addEventListener('input', () => { store.filter = search.value; body.replaceChildren(...rows()); });
     panel.append(search);
   }
+  const hiddenItems = store.hiddenItems();
 
   const row = (node: ModelNode, open?: boolean): HTMLElement => {
     const li = el('li', `st-row st-tier-${node.tier}`);
@@ -273,12 +277,14 @@ export function listPanel(store: StructureStore): HTMLElement {
     if (note && (level !== 'watch' || node.tier === 2)) b.append(el('span', 'st-count', note));
     li.append(b);
     if (level !== 'watch' && store.mode !== 'assemble') {
-      const hidden = store.view.hidden.has(node.id);
+      // hidden itself, or every part of it hidden by other rows (an assembly's groups when the assembly is hidden)
+      const hidden = store.hiddenState(node.id, hiddenItems) !== null;
       li.append(button('', `eye:${node.id}`, () => store.toggleHidden(node.id), { cls: 'st-eye', pressed: hidden, glyph: hidden ? '◌' : '●', label: tx(hidden ? 'list.show' : 'list.hide', { name: adapter.name(node.id) }) }));
     }
     return li;
   };
 
+  const rows = (): HTMLElement[] => {
   const q = level === 'watch' ? '' : store.filter.trim();
   if (q) {
     // a search: what matches, at the depth on screen, each with where it belongs
@@ -292,8 +298,9 @@ export function listPanel(store: StructureStore): HTMLElement {
       if (parent) li.append(el('span', 'st-small st-where', parent));
       ul.append(li);
     }
-    panel.append(el('p', 'st-small', hits.length ? tx('list.found', { n: hits.length }) : tx('list.none')), ul);
-    return panel;
+    const found = el('p', 'st-small', hits.length ? tx('list.found', { n: hits.length }) : tx('list.none'));
+    found.setAttribute('role', 'status');
+    return [found, ul];
   }
   const selectedPath = new Set<string>();
   for (let n = shown; n; n = n.parent === null ? null : tree.nodes.get(n.parent) ?? null) selectedPath.add(n.id);
@@ -320,8 +327,12 @@ export function listPanel(store: StructureStore): HTMLElement {
     }
     return ul;
   };
-  panel.append(build(tree.roots, tx('list.units')));
-  if (store.view.hidden.size) panel.append(button(tx('list.showAll', { n: store.view.hidden.size }), 'list:showAll', () => store.showAll(), { cls: 'st-link' }));
+  const out: HTMLElement[] = [build(tree.roots, tx('list.units'))];
+  if (store.view.hidden.size) out.push(button(tx('list.showAll', { n: store.view.hidden.size }), 'list:showAll', () => store.showAll(), { cls: 'st-link' }));
+  return out;
+  };
+  body.append(...rows());
+  panel.append(body);
   return panel;
 }
 

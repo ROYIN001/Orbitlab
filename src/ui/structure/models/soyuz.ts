@@ -20,7 +20,7 @@ import {
 } from '../../../structure/soyuz-content';
 import { CERTAINTIES, PART_CATEGORIES, type Certainty, type Depth, type PartCategory } from '../../../structure/types';
 import type { StructureEnv } from '../env';
-import { hasText, num, tx } from '../text';
+import { getLang, hasText, num, tx } from '../text';
 import type { FlightState, InfoBlock, InfoDoc, InfoSource, ModelAdapter, ModelGuide, ModelSystem, PictureSetup } from './types';
 
 /** Thrown when the content and a layer come from two versions of the page or two revisions of the files (said in the interface language). */
@@ -49,6 +49,8 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
   /** each unit's box from its parts' centres (the picture's own boxes are the viewer's; these place markers and previews) */
   const centres = new Map<string, [number, number, number]>();
   let systemList: ModelSystem[] | null = null;
+  /** the language `systemList`'s words were written in */
+  let systemLang = '';
 
   const need = (): SoyuzIndex => {
     if (!index) throw new Error('the Soyuz model is not loaded');
@@ -191,8 +193,13 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
       categories: [...byCat].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count),
       certainties: [...byCert].map(([certainty, count]) => ({ certainty, count })),
     });
-    const rows = [{ label: tx('info.partsCount'), value: tx('list.parts', { n: node.items.length }) }];
-    if (g.group) rows.push({ label: tx('info.count'), value: `${g.group.count} ${g.group.unit}` });
+    // the model's count, and the page's own beside it — each said for what it counts: the page's is in its own unit
+    // (chambers, tanks, rings), covers both halves of the fairing, and lists some parts a narrower group names
+    const gi = s.groups.indexOf(g);
+    const covering = !node.items.some((i) => s.groupOf[i] === gi), elsewhere = g.items.length - node.items.length;
+    const count = tx('list.parts', { n: node.items.length });
+    const rows = [{ label: tx('info.partsCount'), value: covering ? tx('info.count.shared', { count }) : elsewhere > 0 ? tx('info.count.elsewhere', { count, n: elsewhere }) : count }];
+    if (g.group) rows.push({ label: tx('info.count'), value: g.group.items.length > g.items.length ? tx('info.count.halves', { count: `${g.group.count} ${g.group.unit}` }) : `${g.group.count} ${g.group.unit}` });
     blocks.push({ kind: 'facts', rows });
     const comp = s.units[g.unit].component;
     if (depth === 'engineer' && comp) {
@@ -240,7 +247,8 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
   // ─── what runs through it, and the helpers ────────────────────────────────
 
   function systems(): ModelSystem[] {
-    if (systemList) return systemList;
+    if (systemList && systemLang === getLang()) return systemList;
+    systemLang = getLang();
     const s = need(), c = s.content;
     systemList = c.circuits.map((circuit) => {
       const parts = circuitParts(s, circuit.id);
@@ -359,7 +367,9 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     name,
     note(id) {
       const n = tree?.nodes.get(id);
-      return n && n.tier < 3 ? tx('list.parts', { n: n.items.length }) : '';
+      if (!n || n.tier === 3) return '';
+      // a group every part of which a narrower group names (the page's "whole engine"): its count is not one more to add up
+      return tx(n.tier === 2 && !tree!.children.get(id)?.length ? 'list.partsShared' : 'list.parts', { n: n.items.length });
     },
     place: (slot) => ({ name: tx(`soyuz.place.${slot}`), mark: SOYUZ_MOUNTS.find((m) => m.slot === slot)?.mark ?? 0 }),
     turnWhy: (unit) => tx(unit === 'fregat' ? 'soyuz.turn.fregat' : 'soyuz.turn'),

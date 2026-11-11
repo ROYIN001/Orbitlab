@@ -240,7 +240,7 @@ export const STACK_SLOTS = {
 } as const;
 export type StackBay = keyof typeof STACK_SLOTS;
 export const STACK_BAYS: readonly StackBay[] = ['payload', 'battery', 'eps', 'adcs', 'obc', 'radio'];
-/** Across, every board and the payload fit inside 90 × 90 mm, between the rails. */
+/** Across, every board and the payload fit inside 90 × 90 mm, inside the rails' angles. */
 export const STACK_WIDTH = 0.09;
 /** The four rods the boards are threaded on stand this far from the axis in x and in z, m: a payload stays inside them. */
 export const ROD_OFFSET = 0.0425;
@@ -267,9 +267,16 @@ export const CELL_AREA = SOLAR_CELL.area;
 /** One 3U side panel: seven cells between the rails (two columns of four places, one place for the sun sensor). */
 export const CELLS_PER_PANEL = 7;
 
-/** The rails: 8.5 mm square, the specification's least width; the side panels stand between them. */
-export const RAIL = CDS.railWidth;
-export const PANEL = { thick: 0.0016, height: 0.32, width: 0.083, cellThick: 0.0003 } as const;
+/**
+ * The rails, m: angles 8.5 mm wide on each of their two outer faces (this
+ * model's own dimension, set at the specification's least width) and
+ * `RAIL_WALL` thick, so the boards' corners and the rods stand inside them;
+ * the side panels stand between them.
+ */
+export const RAIL = 0.0085;
+export const RAIL_WALL = 0.0015;
+/** A side panel, m: its board, and how far its cells and its sun sensor stand proud of the board's outer face. */
+export const PANEL = { thick: 0.0016, height: 0.32, width: 0.083, cellThick: 0.0003, sensorThick: 0.0015 } as const;
 
 /** The side faces, each with the side panel the reference puts there, and where it stands in the picture's frame. */
 export const FACES = ['face-px', 'face-py', 'face-nx', 'face-ny'] as const;
@@ -331,7 +338,7 @@ export const FIXED_PARTS: readonly EduPart[] = [
   },
   {
     id: 'edusat.antenna', unit: 'antenna', category: 'mechanism', massKg: 0.08, massCertainty: 'estimated',
-    box: { center: [0, ENVELOPE.y / 2 - 0.004, 0], size: [0.098, 0.008, 0.098] }, loads: [], sourceIds: ['cds14', 'pilot'],
+    box: { center: [0, ENVELOPE.y / 2 - 0.004, 0], size: [0.094, 0.008, 0.094] }, loads: [], sourceIds: ['cds14', 'pilot'],
     pieces: [{ kind: 'antennaBase' }, ...several('tape', 4)],
   },
   panel('panel-px'),

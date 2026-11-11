@@ -110,7 +110,7 @@ export class StructureScreen implements StructureSection {
 
   private changed(change: Change): void {
     if (!this.visible) return;
-    if (change === 'picture') this.stage.sync();
+    if (change === 'picture') this.stage.sync(true);
     else this.render();
   }
 

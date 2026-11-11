@@ -89,7 +89,7 @@ export default async function structureFailures(t) {
     await page.locator('.structure-screen .st-side-box').first().dispatchEvent('click');
     t.check((await page.locator('.structure-screen .st-info h2').textContent()).includes('แกนกลาง'), 'a press on the side view picks an assembly');
     await k(page, 'side:list').click();
-    t.check(await page.locator('.structure-screen .st-list > .st-tree > li').count() === 11, 'the list works');
+    t.check(await page.locator('.structure-screen .st-list .st-list-body > .st-tree > li').count() === 11, 'the list works');
     await app.shot('no-3d');
     await unblock();
     await k(page, 'retry').click();

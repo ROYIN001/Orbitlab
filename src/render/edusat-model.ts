@@ -12,7 +12,7 @@
  * sizes; they are a concept's, not a product's drawings.
  */
 import * as THREE from 'three';
-import { ENVELOPE, FACE_NORMAL, PANEL, RAIL, ROD_OFFSET, STACK_BAYS, STACK_SLOTS, type EduFace, type EduPart, type EduPiece } from '../structure/edusat';
+import { ENVELOPE, FACE_NORMAL, PANEL, RAIL, RAIL_WALL, ROD_OFFSET, STACK_BAYS, STACK_SLOTS, type EduFace, type EduPart, type EduPiece } from '../structure/edusat';
 import type { EduItem } from '../structure/edusat-design';
 import type { ViewerMesh } from './structure-viewer';
 
@@ -69,8 +69,12 @@ function piecePrims(part: EduPart, piece: EduPiece, deployed: boolean): Prim[] {
   switch (piece.kind) {
     // ── the frame
     case 'rail': {
+      // an angle: a flange on each of the corner's two faces, the boards' corners and a rod inside it
       const [sx, sz] = CORNERS[n - 1];
-      return [box(RAIL, ENVELOPE.y, RAIL, sx * (HALF.x - RAIL / 2), 0, sz * (HALF.z - RAIL / 2), C.rail, 'metal')];
+      return [
+        box(RAIL, ENVELOPE.y, RAIL_WALL, sx * (HALF.x - RAIL / 2), 0, sz * (HALF.z - RAIL_WALL / 2), C.rail, 'metal'),
+        box(RAIL_WALL, ENVELOPE.y, RAIL - RAIL_WALL, sx * (HALF.x - RAIL_WALL / 2), 0, sz * (HALF.z - RAIL_WALL - (RAIL - RAIL_WALL) / 2), C.rail, 'metal'),
+      ];
     }
     case 'endFrame': {
       const y = (n === 1 ? -1 : 1) * (HALF.y - 0.004);
@@ -183,7 +187,7 @@ function piecePrims(part: EduPart, piece: EduPiece, deployed: boolean): Prim[] {
       const place = piece.kind === 'sunSensor' ? 7 : n - 1; // 0…6 the cells, 7 the sensor: rows of two from the −Z end
       const row = Math.floor(place / 2), col = place % 2;
       const y = cy - 0.12 + row * 0.08, across = (col - 0.5) * 0.04;
-      const proud = (piece.kind === 'sunSensor' ? 0.0015 : PANEL.cellThick), out = PANEL.thick / 2 + proud / 2;
+      const proud = (piece.kind === 'sunSensor' ? PANEL.sensorThick : PANEL.cellThick), out = PANEL.thick / 2 + proud / 2;
       const [px, pz] = onX ? [cx + nrm[0] * out, cz + across] : [cx + across, cz + nrm[2] * out];
       if (piece.kind === 'solarCell') return [onX ? box(proud, 0.078, 0.038, px, y, pz, C.solar, 'cell') : box(0.038, 0.078, proud, px, y, pz, C.solar, 'cell')];
       return [onX ? box(proud, 0.012, 0.012, px, y, pz, C.sensor, 'metal') : box(0.012, 0.012, proud, px, y, pz, C.sensor, 'metal')];

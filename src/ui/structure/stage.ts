@@ -65,6 +65,8 @@ export class Stage {
   private last: Picture | null = null;
   private starting = 0;
   private startTask: ReturnType<typeof setTimeout> | undefined;
+  /** the 3-D may be made: the section has been painted once since it was shown */
+  private started = false;
   /** the mode the picture was last set for: a change of activity moves the units there over a moment */
   private lastMode = '';
 
@@ -97,17 +99,20 @@ export class Stage {
     this.active = true;
     this.viewer?.setActive(true);
     // the 3-D after the section has been painted (a frame, then a task): making a WebGL context can take a while
-    // (seconds, with software GL), and the section shows its loading note meanwhile
+    // (seconds, with software GL), and the section shows its loading note meanwhile. Until then nothing that draws
+    // the section (`sync`) makes it.
     cancelAnimationFrame(this.starting);
     clearTimeout(this.startTask);
+    this.started = false;
     this.starting = requestAnimationFrame(() => {
-      this.startTask = setTimeout(() => { if (this.active) { this.ensure(); this.store.emit(); } }, 0);
+      this.startTask = setTimeout(() => { if (this.active) { this.started = true; this.ensure(); this.store.emit(); } }, 0);
     });
   }
 
   /** Off screen: fetches cancelled, the model's GPU resources freed; the state stays. */
   hide(): void {
     this.active = false;
+    this.started = false;
     cancelAnimationFrame(this.starting);
     clearTimeout(this.startTask);
     this.abort?.abort();
@@ -277,20 +282,27 @@ export class Stage {
     return any ? box : null;
   }
 
-  /** Hand the viewer the picture the state calls for, fetch the layers it needs, and move the camera if asked. */
-  sync(): void {
+  /**
+   * Hand the viewer the picture the state calls for, fetch the layers it
+   * needs, and move the camera if asked. `following`: the change follows a
+   * hand (a part dragged, a slider moved), so what moves goes where the hand
+   * has it at once, without an ease that each further move would start again.
+   */
+  sync(following = false): void {
     const store = this.store, viewer = this.viewer;
-    if (!this.active) return;
+    if (!this.active || !this.started) { this.overlay.follow(); return; }
     this.ensure();
     if (!viewer || !this.ready() || store.load[store.model].state !== 'ready') { this.overlay.follow(); return; }
     const adapter = store.adapter;
     const p = picture(store);
     // a change of activity, an install, a tool: the units move to their places over a moment (not on the first picture)
-    const animate = this.last !== null && !reducedMotion();
+    const animate = this.last !== null && !following && !reducedMotion();
+    // (a part dragged and over no place is where the hand has it, also on the move that takes it off a place)
+    const inFlight = store.drag && !store.held[store.model]?.slot ? store.drag.unit : null;
     this.last = p;
     for (const unit of adapter.units) {
       const pose = p.poses.get(unit);
-      if (pose) viewer.setUnit(unit, poseMatrix(pose), pose.visible, animate);
+      if (pose) viewer.setUnit(unit, poseMatrix(pose), pose.visible, animate && unit !== inFlight);
     }
     viewer.setFlags((i) => p.flags[i]);
     viewer.setPaint(p.paint.colours, (i) => p.paint.of[i]);
@@ -338,7 +350,12 @@ export class Stage {
       // assembly with at least a sixth of that assembly in view
       const shown = store.shown();
       const unit = shown && !shown.unit ? unitOf(adapter.tree(), shown.id) : null;
-      fit(p.focus, store.level === 'watch' ? 2.1 : store.level === 'explore' ? 1.75 : 1.5, undefined, unit ? reachOf(unit) / 6 : 0);
+      // (a step of a system followed: with at least an eighth of the model round its parts)
+      const whole = store.system[store.model] ? this.boxAt(all)?.getSize(new THREE.Vector3()) : null;
+      const least = unit ? reachOf(unit) / 6 : whole ? Math.max(whole.x, whole.y, whole.z) / 8 : 0;
+      // (of what is drawn: a part hidden by the cut or by a tool has no place to be shown at)
+      const seen = p.focus.filter((i) => (p.flags[i] & FLAG.hidden) === 0);
+      fit(seen.length ? seen : p.focus, store.level === 'watch' ? 2.1 : store.level === 'explore' ? 1.75 : 1.5, undefined, least);
       if (waiting) store.camera = ask;
     } else if (ask === 'joint') {
       const held = store.held[store.model];
@@ -443,6 +460,8 @@ export class Stage {
   private key(e: KeyboardEvent): void {
     const v = this.viewer, store = this.store;
     if (!v) return;
+    // the browser's own keys stay the browser's (page zoom, Back, reload)
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     // arrows turn the view; with Shift they move it (pan), as Shift and drag does
     const step = 0.08, pan = 0.06;
     switch (e.key) {

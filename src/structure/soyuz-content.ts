@@ -180,9 +180,11 @@ export interface SoyuzIndex {
 /**
  * The index: each part's group is the smallest of the page's groups of its
  * assembly that holds it (the page's "whole engine" group holds the
- * chambers' parts too, which the "main chambers" group names more closely);
- * a part in none goes into its assembly's "other parts" group, a grouping of
- * this pilot's, said as such.
+ * chambers' parts too, which the "main chambers" group names more closely).
+ * A group that says what is seen from outside (`exterior`) comes after those
+ * that say what a part is: Fregat's six spheres are its tanks and equipment
+ * bays first, its outer surface second. A part in none goes into its
+ * assembly's "other parts" group, a grouping of this pilot's, said as such.
  */
 export function indexSoyuz(content: SoyuzContent): SoyuzIndex {
   const n = content.items.length;
@@ -206,8 +208,9 @@ export function indexSoyuz(content: SoyuzContent): SoyuzIndex {
       mine.push(groups.length);
       groups.push({ key: `${unit}/${g.id}`, unit, group: g, items: inUnit });
     }
-    // smallest group first
-    for (const gi of [...mine].sort((a, b) => groups[a].items.length - groups[b].items.length)) {
+    // what a part is before what is seen of it from outside, and among each the smallest group first
+    const outside = (gi: number): number => (groups[gi].group?.id === 'exterior' ? 1 : 0);
+    for (const gi of [...mine].sort((a, b) => outside(a) - outside(b) || groups[a].items.length - groups[b].items.length)) {
       for (const i of groups[gi].items) if (groupOf[i] < 0) groupOf[i] = gi;
     }
     const rest = items.filter((i) => groupOf[i] < 0);
