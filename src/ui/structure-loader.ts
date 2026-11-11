@@ -77,10 +77,15 @@ export function structureEnv(host: StructureLoaderHost): StructureEnv {
 
 type Loaded = typeof import('./structure/structure');
 
-/** The page at this address can be fetched now (by the network, or by the worker's copy of it). */
-async function pageReachable(): Promise<boolean> {
-  if (typeof navigator !== 'undefined' && navigator.onLine === false && !navigator.serviceWorker?.controller) return false;
-  try { return (await fetch(location.href, { method: 'GET', cache: 'no-store' })).ok; } catch { return false; }
+/**
+ * The page at this address can be had now: the browser says it is online, or
+ * a worker stands ready to answer for the page from its own copy. (Asked of
+ * the browser, not tried with a request of this file's own: the app fetches
+ * only from the places its privacy page lists, tests/privacy-inventory.test.ts.)
+ */
+function pageReachable(): Promise<boolean> {
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false && !navigator.serviceWorker?.controller;
+  return Promise.resolve(!offline);
 }
 
 export class StructureLoader {
