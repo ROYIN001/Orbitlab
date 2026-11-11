@@ -67,14 +67,16 @@ export class StageOverlay {
         if (n) out.set(n.id, { strong: l.changed, text: l.text, ...(l.changed ? { tone: 'changed' } : {}) });
       }
     } else for (const id of tree.roots) out.set(id, { strong: false });
-    if (shown) out.set(shown.id, { ...out.get(shown.id), strong: true });
+    // the thing picked is named too — but not while assembling: a fitted part picked there is named in the bar under the
+    // picture, and a name on the picture could lie over a loose part and take the press meant to drag it
+    if (shown && store.mode !== 'assemble') out.set(shown.id, { ...out.get(shown.id), strong: true });
     return [...out].map(([id, v]) => ({ id, ...v }));
   }
 
   /** The places shown as numbered names: the free ones, while a part is in hand and its place is the learner's to choose. */
   private marked(): string[] {
     const store = this.store, held = store.held[store.model];
-    if (store.mode !== 'assemble' || !held || store.level === 'watch' || !this.view.ready()) return [];
+    if (store.mode !== 'assemble' || !held || (store.level === 'watch' && !store.drag) || !this.view.ready()) return [];
     return store.adapter.spec.slots.map((s) => s.id).filter((s) => occupant(store.assembly, s) === null);
   }
 
@@ -118,11 +120,19 @@ export class StageOverlay {
         anchors.push({ id, text: text ?? adapter.name(id), x: at.x, y: at.y, r: at.r, strong });
         if (tone) tones.set(id, tone);
       }
+      // a joint being shown: named where it is (it is small beside what it joins); a press on its name stops showing it
+      const relation = adapter.relations.find((r) => r.id === store.jointShown[store.model]);
+      const where = relation && store.view.labels ? adapter.joint(relation).at : null;
+      const at = where && this.view.toCanvas(where);
+      if (relation && at) {
+        anchors.push({ id: `joint:${relation.id}`, text: adapter.jointName(relation), x: at.x, y: at.y, r: 14, strong: true });
+        tones.set(`joint:${relation.id}`, 'joint');
+      }
     }
     const rows = Math.max(3, Math.floor((height - 30) / 26));
     const placed = layoutLabels(anchors, width, height, {
       max: places.length ? anchors.length : Math.min(16, 2 * rows),
-      width: places.length ? (narrow ? 30 : Math.min(nameWidth, 210)) : nameWidth,
+      width: places.length ? (narrow ? 30 : Math.min(nameWidth + 30, 250)) : nameWidth,
       reach: narrow ? 10 : 18, gap: 26,
     });
     const seenNames = new Set<string>(), seenPlaces = new Set<string>();
@@ -151,12 +161,14 @@ export class StageOverlay {
         b = this.nameButtons.get(p.id);
         if (!b) {
           const id = p.id;
-          b = button(p.text, `name:${id}`, () => store.select(id, false), { cls: 'st-name' });
+          b = button(p.text, `name:${id}`, () => (id.startsWith('joint:') ? store.showJoint(null) : store.select(id, false)), { cls: 'st-name' });
           this.nameButtons.set(id, b);
           this.names.append(b);
         }
-        on = p.id === selected;
+        const joint = tones.get(p.id) === 'joint';
+        on = joint || p.id === selected;
         b.classList.toggle('is-changed', tones.get(p.id) === 'changed');
+        b.classList.toggle('is-joint', joint);
       }
       const text = b.querySelector('.st-btn-text');
       if (text && text.textContent !== p.text) text.textContent = p.text;
@@ -165,9 +177,9 @@ export class StageOverlay {
       b.setAttribute('aria-pressed', String(on));
       b.style.left = `${p.lx}px`;
       b.style.top = `${p.ly}px`;
-      const cls = `${isPlace ? ' is-place' : ''}${on ? ' is-on' : ''}`;
+      const cls = `${isPlace || tones.get(p.id) === 'joint' ? ' is-place' : ''}${on ? ' is-on' : ''}`;
       lines.push(svg('polyline', { points: `${p.x.toFixed(1)},${p.y.toFixed(1)} ${(p.side === 'right' ? p.lx - 4 : p.lx + 4).toFixed(1)},${p.ly.toFixed(1)}`, class: `st-leader${cls}` }),
-        svg('circle', { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: isPlace ? 4 : 2.5, class: `st-dot${cls}` }));
+        svg('circle', { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: tones.get(p.id) === 'joint' ? 9 : isPlace ? 4 : 2.5, class: `st-dot${cls}${tones.get(p.id) === 'joint' ? ' is-joint' : ''}` }));
     }
     for (const [id, b] of this.nameButtons) if (!seenNames.has(id)) { b.remove(); this.nameButtons.delete(id); }
     for (const [slot, b] of this.placeButtons) if (!seenPlaces.has(slot)) { b.remove(); this.placeButtons.delete(slot); }
@@ -228,7 +240,7 @@ export class StageOverlay {
       for (let i = 0; i < setup.itemCount; i++) counts[of[i]]++;
       const list = el('div', 'st-legend-list');
       list.setAttribute('role', 'group');
-      list.setAttribute('aria-label', tx(byKind ? 'view.colour.category' : 'view.colour.certainty'));
+      list.setAttribute('aria-label', tx(byKind ? 'view.legend.category' : 'view.legend.certainty'));
       names.forEach((name, k) => {
         if (!counts[k]) return;
         const key = `${colour}:${name}`;

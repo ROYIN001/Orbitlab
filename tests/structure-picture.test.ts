@@ -197,6 +197,22 @@ describe('assembling', () => {
     expect(count(picture(store).flags, FLAG.faint)).toBe(p.flags.length);
   });
 
+  it('moves a dragged part with the pointer, and settles it on the place it is over', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31', mode: 'assemble' });
+    const lying = apartPose(store.adapter, 'booster-b');
+    store.dragStart('booster-b');
+    store.dragTo([1, 2, 3], null);
+    let p = picture(store);
+    expect(p.poses.get('booster-b')!.move).toEqual([lying.move[0] + 1, lying.move[1] + 2, lying.move[2] + 3]);
+    expect(all(p.flags, itemsOf(store, 'booster-b'), FLAG.selected)).toBe(true);
+    expect(p.poses.get('booster-v')).toEqual(apartPose(store.adapter, 'booster-v')); // nothing else moves
+    store.dragTo([1, 2, 3], 'booster-b');
+    p = picture(store);
+    expect(p.poses.get('booster-b')).toEqual(store.adapter.slotPose('booster-b', 'booster-b', store.held['soyuz-st31']!.turn));
+    store.dragEnd(false);
+    expect(picture(store).poses.get('booster-b')).toEqual(lying);
+  });
+
   it('draws a side panel on the face it was put on', async () => {
     const { store } = await openStore({ level: 'explore', model: 'edusat', mode: 'assemble' });
     for (const u of ['frame', 'stack', 'payload', 'battery', 'eps', 'adcs', 'obc', 'radio']) {

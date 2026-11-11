@@ -100,7 +100,7 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
       { kind: 'text', text: tx('edu.concept'), tone: 'lead' },
       { kind: 'text', text: tx('edu.principles') },
       { kind: 'facts', rows: [
-        { label: tx('edu.fact.size'), value: `100 × 100 × 340.5 ${tx('unit.mm')}`, certainty: 'documented' },
+        { label: tx('edu.fact.size'), value: `${num(ENVELOPE.x * 1000, 0)} × ${num(ENVELOPE.z * 1000, 0)} × ${num(ENVELOPE.y * 1000, 1)} ${tx('unit.mm')}`, certainty: 'documented' },
         { label: tx('res.mass'), value: `${num(massOf(design), 2)} ${tx('unit.kg')}`, certainty: 'estimated' },
         { label: tx('edu.fact.limit'), value: `${num(CDS.massKg, 2)} ${tx('unit.kg')}`, certainty: 'documented' },
         { label: tx('edu.fact.cells'), value: tx('edu.fact.cellsValue', { n: 4 * CELLS_PER_PANEL, eff: num(SOLAR_CELL.efficiency * 100, 1) }), certainty: 'documented' },
@@ -173,8 +173,8 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
     if (k === 'solarCell') {
       blocks.push({ kind: 'facts', rows: [
         { label: tx('edu.cell.size'), value: `${mm(SOLAR_CELL.width)} × ${mm(SOLAR_CELL.length)} ${tx('unit.mm')} · ${num(SOLAR_CELL.area * 1e4, 2)} ${tx('unit.cm2')}`, certainty: 'documented' },
-        { label: tx('edu.cell.eff'), value: `${num(SOLAR_CELL.efficiency * 100, 1)} % (${tx('edu.cell.glassed', { eff: num(SOLAR_CELL.efficiencyGlassed * 100, 1) })})`, certainty: 'documented' },
-        { label: tx('edu.cell.mpp'), value: `${num(SOLAR_CELL.vmp, 3)} V × ${num(SOLAR_CELL.imp, 3)} A = ${num(SOLAR_CELL.vmp * SOLAR_CELL.imp, 3)} ${tx('unit.W')}`, certainty: 'documented' },
+        { label: tx('edu.cell.eff'), value: `${tx('unit.percent', { n: num(SOLAR_CELL.efficiency * 100, 1) })} (${tx('edu.cell.glassed', { eff: num(SOLAR_CELL.efficiencyGlassed * 100, 1) })})`, certainty: 'documented' },
+        { label: tx('edu.cell.mpp'), value: `${num(SOLAR_CELL.vmp, 3)} ${tx('unit.V')} × ${num(SOLAR_CELL.imp, 3)} ${tx('unit.A')} = ${num(SOLAR_CELL.vmp * SOLAR_CELL.imp, 3)} ${tx('unit.W')}`, certainty: 'documented' },
         { label: tx('info.mass'), value: `${num(SOLAR_CELL.massGlassedKg * 1000, 1)} ${tx('unit.g')} (${tx('edu.cell.inUnit')})`, certainty: 'documented' },
       ] }, { kind: 'text', text: tx('edu.cell.conditions', { flux: SOLAR_CELL.testFlux }), tone: 'small' });
     }

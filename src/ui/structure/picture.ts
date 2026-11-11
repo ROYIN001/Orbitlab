@@ -10,7 +10,7 @@
  */
 import { FLAG, type ColorMode } from '../../render/structure-viewer';
 import { occupant } from '../../structure/assembly';
-import { nodeOfUnit, partnerOf, relationsOf, unitsUnder, type ModelTree, type Pose } from '../../structure/model';
+import { nodeOfUnit, partnerOf, relationsOf, unitOf, unitsUnder, type ModelTree, type Pose } from '../../structure/model';
 import { CERTAINTIES, PART_CATEGORIES } from '../../structure/types';
 import type { ModelAdapter } from './models/types';
 import type { StructureStore } from './store';
@@ -50,7 +50,7 @@ export function picture(store: StructureStore): Picture {
   const colours: string[] = [];
   const layers = new Set<string>([adapter.layers[0]]);
   const poses = new Map<string, Pose>();
-  const unitOf = (i: number): string => adapter.unitOfItem(i);
+  const unitAt = (i: number): string => adapter.unitOfItem(i);
   const shown = store.shown();
   const selected = new Set(itemsOf(tree, shown?.id ?? null));
   let focus: number[] = [...selected];
@@ -65,7 +65,10 @@ export function picture(store: StructureStore): Picture {
         poses.set(unit, adapter.slotPose(unit, placed[unit].slot, placed[unit].orientation));
         state.set(unit, 0);
       } else if (held?.unit === unit) {
-        poses.set(unit, held.slot ? adapter.slotPose(unit, held.slot, held.turn) : apartPose(adapter, unit));
+        // in hand: at the place chosen for it, as it would be fitted; while dragged and over no place, where the pointer has it
+        const lying = apartPose(adapter, unit), drag = store.drag?.unit === unit ? store.drag.move : null;
+        poses.set(unit, held.slot ? adapter.slotPose(unit, held.slot, held.turn)
+          : drag ? { ...lying, move: [lying.move[0] + drag[0], lying.move[1] + drag[1], lying.move[2] + drag[2]] } : lying);
         state.set(unit, FLAG.selected);
       } else if (view.outline) {
         const place = freePlace(store, unit);
@@ -77,12 +80,12 @@ export function picture(store: StructureStore): Picture {
       }
     }
     for (let i = 0; i < n; i++) {
-      const unit = unitOf(i);
+      const unit = unitAt(i);
       let f = state.get(unit) ?? 0;
       if (selected.has(i) && Object.hasOwn(placed, unit)) f |= FLAG.selected;
       flags[i] = f;
     }
-    if (held) focus = setup.itemCount ? [...Array(n).keys()].filter((i) => unitOf(i) === held.unit) : [];
+    if (held) focus = setup.itemCount ? [...Array(n).keys()].filter((i) => unitAt(i) === held.unit) : [];
     return { poses, flags, paint: { colours, of: paintOf }, layers, colour: 'material', focus };
   }
 
@@ -139,6 +142,12 @@ export function picture(store: StructureStore): Picture {
 
   // what stands round the thing looked at is seen through, so it can be seen where it is
   const cover = new Set(focus.length ? adapter.coverOf(focus) : []);
+  // a part or a group picked inside an assembly: the rest of that assembly is seen through as well, so the thing shows
+  // wherever in it it lies (a pipe among an engine's chambers)
+  if (shown && !shown.unit && !system && !joint) {
+    const unit = unitOf(tree, shown.id);
+    if (unit) for (const i of nodeOfUnit(tree, unit)?.items ?? []) cover.add(i);
+  }
   const shell = view.shell ? new Set(adapter.shell()) : null;
   const about = new Set(focus);
   // the legend's one kind or status picked out: the rest dimmed
@@ -160,7 +169,7 @@ export function picture(store: StructureStore): Picture {
     } else if (selected.has(i)) f |= FLAG.selected;
     else if (related.has(i)) f |= FLAG.related;
     if (kinds && onlyAt >= 0 && kinds[i] !== onlyAt) f |= FLAG.dim;
-    if (changedAt >= 0 && changed.has(unitOf(i)) && !system) paintOf[i] = changedAt;
+    if (changedAt >= 0 && changed.has(unitAt(i)) && !system) paintOf[i] = changedAt;
     flags[i] = f;
   }
   // A thing looked at lies in its own layer, and that layer is drawn (fetched, the first time) — but not for a whole

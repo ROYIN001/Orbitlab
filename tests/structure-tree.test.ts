@@ -83,12 +83,16 @@ describe('the two models as trees', () => {
       expect(path[2].id).toBe(soyuz.content.items[i].id);
       expect(path[0].unit).toBe(soyuz.content.items[i].unit);
     }
-    // an assembly's parts are its groups' parts, each once
+    // an assembly's parts are its groups' parts: each listed under one group, the one that names it most closely
     for (const unit of SOYUZ_UNITS) {
       const groups = tree.children.get(unit) ?? [];
-      const all = groups.flatMap((g) => [...tree.nodes.get(g)!.items]).sort((a, b) => a - b);
-      expect(all, unit).toEqual([...tree.nodes.get(unit)!.items].sort((a, b) => a - b));
+      const listed = groups.flatMap((g) => (tree.children.get(g) ?? []).map((id) => tree.nodes.get(id)!.items[0])).sort((a, b) => a - b);
+      expect(listed, unit).toEqual([...tree.nodes.get(unit)!.items].sort((a, b) => a - b));
+      // and no group is empty: the page's "whole engine", whose every part a narrower group names, stands for its whole list
+      for (const g of groups) expect(tree.nodes.get(g)!.items.length, g).toBeGreaterThan(0);
     }
+    expect(tree.children.get('core/engine-system') ?? []).toEqual([]);
+    expect(tree.nodes.get('core/engine-system')!.items.length).toBeGreaterThan(100);
   });
 
   it('the satellite: five subsystems, its thirteen units under them, each unit\'s pieces under it', () => {

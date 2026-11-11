@@ -121,7 +121,7 @@
 /* a free place of the assembly: its number and its name, beside the place with a line to it */
 .st-mark {
   position: absolute; transform: translateY(-50%); pointer-events: auto; box-sizing: border-box;
-  height: 24px; min-height: 24px; max-width: 210px; padding: 0 10px 0 2px; gap: 6px; border-radius: 999px;
+  height: 24px; min-height: 24px; max-width: 250px; padding: 0 10px 0 2px; gap: 6px; border-radius: 999px;
   font-size: 12px; line-height: 22px; background: var(--st-glass); border: 1px solid var(--accent-line); color: var(--text);
 }
 .st-mark.is-left { transform: translate(-100%, -50%); }
@@ -136,6 +136,7 @@
 .st-leader.is-place { stroke: rgba(139, 229, 205, 0.5); }
 .st-dot.is-place { fill: none; stroke: var(--accent); stroke-width: 1.5; }
 .st-dot.is-place.is-on { fill: var(--accent); }
+.st-dot.is-joint, .st-dot.is-joint.is-on { fill: rgba(139, 229, 205, 0.18); stroke: var(--accent); stroke-width: 2; }
 .st-badge-box { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; max-width: calc(100% - 20px); }
 .st-design { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--st-glass); border: 1px solid var(--line2); color: var(--muted); }
 .st-design.is-mine { color: var(--st-changed); border-color: #7a5a2a; }
@@ -241,6 +242,7 @@
 .st-side-tab[aria-pressed='true'] { position: relative; z-index: 1; }
 
 .st-prompt { padding: 8px 10px; border-radius: 8px; border: 1px dashed var(--line2); }
+.st-picked { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 8px !important; padding: 6px 10px; border-radius: 8px; background: var(--accent-weak); border: 1px solid var(--accent-line); font-size: 13px !important; }
 .st-path { margin: 0 0 4px !important; font-size: 12px !important; color: var(--dim); }
 .st-path .st-link { font-size: 12px; min-height: 0; padding: 0; }
 .st-sub { margin-top: -2px !important; }

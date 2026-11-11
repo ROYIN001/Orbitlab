@@ -259,14 +259,17 @@ export function cutawayAzimuth(content: SoyuzContent): number {
 /**
  * The model's tree for the three depths: the eleven assemblies (each a unit),
  * under each its groups as the page lists them (and this section's "other
- * parts" group where the page groups a part nowhere), under each group its
- * parts, by the page's own ids.
+ * parts" group where the page groups a part nowhere), under each group the
+ * parts it names most closely, by the page's own ids.
  */
 export function soyuzTree(index: SoyuzIndex): ModelTree {
   const nodes: ModelNode[] = [];
   for (const unit of SOYUZ_UNITS) nodes.push({ id: unit, parent: null, tier: 1, items: index.units[unit].items, unit });
   index.groups.forEach((g, gi) => {
-    nodes.push({ id: g.key, parent: g.unit, tier: 2, items: index.content.items.flatMap((_, i) => (index.groupOf[i] === gi ? [i] : [])) });
+    // a group's own parts: those it names most closely. A group every part of which a narrower one names (the page's
+    // "whole engine", which holds the chambers, the pumps and the pipes) stands for its whole list: picked, it lights all of it.
+    const own = index.content.items.flatMap((_, i) => (index.groupOf[i] === gi ? [i] : []));
+    nodes.push({ id: g.key, parent: g.unit, tier: 2, items: own.length ? own : g.items });
   });
   index.content.items.forEach((p, i) => {
     nodes.push({

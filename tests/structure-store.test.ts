@@ -159,11 +159,20 @@ describe('assembling from the middle depth: the part is picked up, its place and
     expect(store.message).toMatchObject({ kind: 'info' });
     expect(Object.keys(store.assembly.placed)).toEqual([]);
     store.chooseSlot('booster-b');
-    expect(store.camera).toBe('joint');
+    expect(store.camera).toBe('joint'); // a close look at the place chosen
+    store.camera = null; // (the stage takes the request)
     store.install();
     expect(store.message).toMatchObject({ kind: 'no' });
     expect(store.message!.text()).toContain(store.adapter.place('core').name);
     expect(store.held['soyuz-st31']).not.toBeNull(); // still in hand
+    // put down after a close look: the whole again, so every place can be seen and chosen
+    store.hold(null);
+    expect(store.camera).toBe('home');
+    store.camera = null;
+    store.hold('core');
+    expect(store.camera).toBeNull(); // picked up from the whole view: the view stays
+    store.chooseSlot('booster-b');
+    store.camera = null;
     store.chooseSlot('core');
     store.install();
     expect(Object.keys(store.assembly.placed)).toEqual(['core']);
@@ -187,6 +196,53 @@ describe('assembling from the middle depth: the part is picked up, its place and
     expect(store.held.edusat!.turn).toBe(0);
     store.install();
     expect(Object.keys(store.assembly.placed)).toContain('payload');
+  });
+
+  it('drags a loose part: it follows the pointer, settles over a free place, and is fitted when let go of there', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31', mode: 'assemble' });
+    expect(store.dragStart('core')).toBe(true);
+    expect(store.held['soyuz-st31']).toMatchObject({ unit: 'core', slot: null });
+    store.dragTo([1, 2, 3], null);
+    expect(store.drag).toEqual({ unit: 'core', move: [1, 2, 3] });
+    // let go of away from every place: put down, nothing fitted
+    store.dragEnd(true);
+    expect([store.drag, store.held['soyuz-st31'], Object.keys(store.assembly.placed).length]).toEqual([null, null, 0]);
+    // over its own place: fitted
+    store.dragStart('core');
+    store.dragTo([0, 0, 0], 'core');
+    expect(store.held['soyuz-st31']).toMatchObject({ unit: 'core', slot: 'core' });
+    store.dragEnd(true);
+    expect(Object.keys(store.assembly.placed)).toEqual(['core']);
+    expect(store.drag).toBeNull();
+    // over a place it cannot take yet: refused with the reason, still in hand there
+    store.dragStart('stage3');
+    store.dragTo([0, 5, 0], 'stage3');
+    store.dragEnd(true);
+    expect(store.message).toMatchObject({ kind: 'no' });
+    expect(store.message!.text()).toContain(store.unitName('interstage'));
+    expect(store.held['soyuz-st31']).toMatchObject({ unit: 'stage3', slot: 'stage3' });
+    // a drag taken away (a second finger, the pointer lost): put down, nothing fitted
+    store.dragStart('interstage');
+    store.dragTo([0, 1, 0], 'interstage');
+    store.dragEnd(false);
+    expect(store.held['soyuz-st31']).toBeNull();
+    expect(Object.keys(store.assembly.placed)).toEqual(['core']);
+    // a fitted part is not dragged, nor anything outside the assembly
+    expect(store.dragStart('core')).toBe(false);
+    expect(store.dragStart('moon')).toBe(false);
+    store.open('explore', 'soyuz-st31', 'explore');
+    expect(store.dragStart('interstage')).toBe(false);
+  });
+
+  it('starts again as the depth starts: on the outline at a first look, the parts laid out deeper', async () => {
+    const { store } = await openStore({ level: 'watch', model: 'soyuz-st31', mode: 'assemble' });
+    for (let guard = 0; guard < 20 && store.next().length; guard++) store.fit(store.next()[0]);
+    store.open('explore', 'soyuz-st31', 'assemble'); // a finished assembly keeps the look it was made in
+    expect(store.view.outline).toBe(true);
+    store.restart();
+    expect(store.view.outline).toBe(false);
+    store.open('watch', 'soyuz-st31', 'assemble');
+    expect(store.view.outline).toBe(true);
   });
 
   it('puts down what is in hand, and does not pick up what is already fitted', async () => {

@@ -236,6 +236,13 @@ export function listPanel(store: StructureStore): HTMLElement {
   }
   const adapter = store.adapter, tree = adapter.tree(), level = store.level, max = TIER_OF_DEPTH[level];
   const shown = store.shown();
+  // what is picked, and the way to what is said of it (the list stays open while picking from it)
+  if (shown && store.mode !== 'assemble') {
+    const picked = el('p', 'st-picked');
+    picked.append(el('span', '', tx('list.selected', { name: adapter.name(shown.id) })), ' ',
+      button(tx('list.readInfo'), 'list:info', () => { store.tab[store.model] = 'info'; store.focusNext = 'side:info'; store.emit('panels'); }, { cls: 'st-chip' }));
+    panel.append(picked);
+  }
   // a first look lists a handful of things; from the middle depth there are enough to search
   if (level !== 'watch') {
     const search = el('input', 'st-search');

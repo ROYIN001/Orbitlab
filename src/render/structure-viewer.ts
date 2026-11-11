@@ -70,6 +70,16 @@ export interface ViewerOptions {
   onFrame?: () => void;
   /** the pointer rests over a part (a mouse only), or over none */
   onHover?: (item: number | null, clientX: number, clientY: number) => void;
+  /**
+   * A drag began on a part (one pointer, no Shift): `true` takes the drag for
+   * the part — the view then stays still and `onDrag` follows the pointer
+   * until `onDragEnd`; anything else leaves the drag to the camera.
+   */
+  onDragStart?: (item: number, clientX: number, clientY: number) => boolean;
+  /** the pointer while a part is dragged, and how far that is from where the drag began, as a move in the model's frame, m (in the plane of the view, at the part's depth) */
+  onDrag?: (clientX: number, clientY: number, move: readonly [number, number, number]) => void;
+  /** the drag ended: `dropped` when the pointer let go, false when it was taken away (a second finger, the pointer lost) */
+  onDragEnd?: (clientX: number, clientY: number, dropped: boolean) => void;
   reducedMotion?: () => boolean;
   /** colours for the kinds of part and the certainty levels, CSS strings */
   categoryColors: readonly string[];
@@ -188,6 +198,8 @@ export class StructureViewer {
   private tween: { from: { t: THREE.Vector3; az: number; el: number; dist: number }; to: { t: THREE.Vector3; az: number; el: number; dist: number }; start: number; ms: number } | null = null;
   private readonly pointers = new Map<number, Pointer>();
   private press: { x: number; y: number; t: number; moved: boolean } | null = null;
+  /** a part being dragged: metres of the model to a pixel of the page at its depth, and the view's right and up there */
+  private dragging: { mpp: number; right: THREE.Vector3; up: THREE.Vector3 } | null = null;
   private pinch = 0;
   private frame = 0;
   private dirty = true;
@@ -615,6 +627,11 @@ export class StructureViewer {
    * wall. A faint outline or a lit target is picked (a place can be pressed).
    */
   pick(clientX: number, clientY: number, skip: number = FLAG.hidden | FLAG.ghost): number | null {
+    return this.hit(clientX, clientY, skip)?.item ?? null;
+  }
+
+  /** The part under a point of the page, and where on it, in the model's frame. */
+  private hit(clientX: number, clientY: number, skip: number = FLAG.hidden | FLAG.ghost): { item: number; point: THREE.Vector3 } | null {
     const r = this.canvas.getBoundingClientRect();
     if (!(r.width > 0 && r.height > 0)) return null;
     const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
@@ -628,7 +645,7 @@ export class StructureViewer {
       if (!hit.face) continue;
       const item = (geometry.getAttribute('item') as THREE.BufferAttribute).getX(hit.face.a);
       if (this.flagsOf(item) & (FLAG.hidden | skip)) continue;
-      return item;
+      return { item, point: hit.point.clone() };
     }
     return null;
   }
@@ -664,7 +681,28 @@ export class StructureViewer {
     try { this.canvas.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.pointers.size === 1) this.press = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false };
-    else { this.press = null; this.pinch = this.spread(); }
+    else {
+      // a second finger: a part being dragged is let go of, and the two fingers move the view
+      if (this.dragging) { this.dragging = null; this.options.onDragEnd?.(e.clientX, e.clientY, false); }
+      this.press = null;
+      this.pinch = this.spread();
+    }
+  }
+
+  /** A drag that has just begun: offered to whoever wants it for the part under where it began. */
+  private beginDrag(e: PointerEvent): void {
+    const press = this.press;
+    if (!press || !this.options.onDragStart || e.shiftKey || (e.buttons & 2) !== 0) return;
+    const hit = this.hit(press.x, press.y);
+    if (!hit || !this.options.onDragStart(hit.item, press.x, press.y)) return;
+    // how much of the model a pixel covers at the part's depth, and the view's own right and up
+    const forward = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3();
+    this.camera.getWorldDirection(forward);
+    right.setFromMatrixColumn(this.camera.matrixWorld, 0);
+    up.setFromMatrixColumn(this.camera.matrixWorld, 1);
+    const depth = Math.max(1e-6, hit.point.sub(this.camera.position).dot(forward));
+    const mpp = (2 * depth * Math.tan((this.camera.fov * Math.PI) / 360)) / Math.max(1, this.canvas.clientHeight);
+    this.dragging = { mpp, right, up };
   }
 
   private onMove(e: PointerEvent): void {
@@ -673,7 +711,15 @@ export class StructureViewer {
     const dx = e.clientX - p.x, dy = e.clientY - p.y;
     p.x = e.clientX; p.y = e.clientY;
     const h = Math.max(1, this.canvas.clientHeight);
-    if (this.press && Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > 6) this.press.moved = true;
+    if (this.press && !this.press.moved && Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > 6) {
+      this.press.moved = true;
+      if (this.pointers.size === 1) this.beginDrag(e);
+    }
+    if (this.dragging && this.press) {
+      const d = this.dragging, mx = (e.clientX - this.press.x) * d.mpp, my = -(e.clientY - this.press.y) * d.mpp;
+      this.options.onDrag?.(e.clientX, e.clientY, [d.right.x * mx + d.up.x * my, d.right.y * mx + d.up.y * my, d.right.z * mx + d.up.z * my]);
+      return;
+    }
     if (this.pointers.size >= 2) {
       const now = this.spread();
       if (this.pinch > 0 && now > 0) this.zoomBy(this.pinch / now);
@@ -693,6 +739,12 @@ export class StructureViewer {
     this.pointers.delete(e.pointerId);
     const press = this.press;
     if (this.pointers.size < 2) this.pinch = 0;
+    if (this.dragging) {
+      this.dragging = null;
+      this.options.onDragEnd?.(e.clientX, e.clientY, e.type === 'pointerup');
+      if (this.pointers.size === 0) this.press = null;
+      return;
+    }
     if (e.type === 'pointerup' && press && !press.moved && this.pointers.size === 0 && performance.now() - press.t < 700) {
       this.options.onPick?.(this.pick(e.clientX, e.clientY));
     }

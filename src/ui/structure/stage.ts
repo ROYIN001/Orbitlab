@@ -10,7 +10,8 @@
  */
 import * as THREE from 'three';
 import { StructureViewer, FLAG, type ViewerMesh } from '../../render/structure-viewer';
-import { nodeOfUnit, type Pose } from '../../structure/model';
+import { occupant } from '../../structure/assembly';
+import { nodeOfUnit, unitOf, type Pose } from '../../structure/model';
 import type { StructureModelId } from '../../structure/types';
 import { sideView, type SideBox } from './charts';
 import { button, el, reducedMotion } from './dom';
@@ -127,6 +128,9 @@ export class Stage {
         gl: this.store.env.gl,
         onPick: (item) => this.picked(item),
         onFrame: () => this.overlay.follow(),
+        onDragStart: (item) => this.dragStart(item),
+        onDrag: (x, y, move) => this.dragMove(x, y, move),
+        onDragEnd: (_x, _y, dropped) => this.store.dragEnd(dropped),
         onHover: (item, x, y) => this.overlay.hover(item === null || !this.ready() ? null : this.store.adapter.tree().leafOf[item] ?? null, x, y),
         reducedMotion,
         categoryColors: CATEGORY_COLOURS,
@@ -318,8 +322,11 @@ export class Stage {
       const cut = adapter.cutaway();
       if (cut) viewer.lookFrom(cut.azimuth);
     } else if (ask === 'selection') {
-      // with room round it to see where it is: more at a first look, less for a single part
-      fit(p.focus, store.level === 'watch' ? 2.1 : store.level === 'explore' ? 1.75 : 1.5);
+      // with room round it to see where it is: more at a first look, less for a single part — and a small part of an
+      // assembly with at least a sixth of that assembly in view
+      const shown = store.shown();
+      const unit = shown && !shown.unit ? unitOf(adapter.tree(), shown.id) : null;
+      fit(p.focus, store.level === 'watch' ? 2.1 : store.level === 'explore' ? 1.75 : 1.5, undefined, unit ? reachOf(unit) / 6 : 0);
       if (waiting) store.camera = ask;
     } else if (ask === 'joint') {
       const held = store.held[store.model];
@@ -378,6 +385,47 @@ export class Stage {
       return;
     }
     store.pick(item);
+  }
+
+  /** How near a place the pointer must be for a dragged part to settle on it, px. */
+  private snap(): number { return Math.max(40, Math.min(72, 0.1 * Math.min(this.canvas.clientWidth, this.canvas.clientHeight))); }
+
+  /** A drag that began on the model: a part still loose, lying apart, is taken in hand and dragged (else the drag turns the view). */
+  private dragStart(item: number): boolean {
+    const store = this.store;
+    if (!this.ready() || store.mode !== 'assemble' || store.view.outline) return false;
+    return store.dragStart(store.unitAt(item));
+  }
+
+  /** The dragged part follows the pointer; over a free place (within `snap`) it settles there, drawn as it would be fitted. */
+  private dragMove(clientX: number, clientY: number, move: readonly [number, number, number]): void {
+    const store = this.store, adapter = store.adapter;
+    const r = this.canvas.getBoundingClientRect();
+    const x = clientX - r.left, y = clientY - r.top;
+    let near: string | null = null, best = this.snap();
+    for (const s of adapter.spec.slots) {
+      if (occupant(store.assembly, s.id) !== null) continue;
+      const anchor = adapter.slotAnchor(s.id);
+      const at = anchor && this.toCanvas(anchor);
+      const d = at ? Math.hypot(at.x - x, at.y - y) : Infinity;
+      if (d < best) { best = d; near = s.id; }
+    }
+    store.dragTo(move, near);
+  }
+
+  /** Where a node is drawn on the page now (client px): for the browser journeys' presses and drags on the picture. */
+  where(id: string): { x: number; y: number } | null {
+    const at = this.nodeAt(id);
+    const r = this.canvas.getBoundingClientRect();
+    return at ? { x: at.x + r.left, y: at.y + r.top } : null;
+  }
+
+  /** Where a place of the assembly is marked on the page now (client px). */
+  wherePlace(slot: string): { x: number; y: number } | null {
+    const anchor = this.store.adapter.slotAnchor(slot);
+    const at = anchor && this.toCanvas(anchor);
+    const r = this.canvas.getBoundingClientRect();
+    return at ? { x: at.x + r.left, y: at.y + r.top } : null;
   }
 
   private key(e: KeyboardEvent): void {

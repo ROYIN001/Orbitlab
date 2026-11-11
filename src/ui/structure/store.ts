@@ -102,11 +102,15 @@ export class StructureStore {
   message: Note | null = null;
   sendNote: Note | null = null;
   sent: SentRecord | null = null;
+  /** a part being dragged on the picture (the visit's): how far it is from where it lay, m */
+  drag: { unit: string; move: readonly [number, number, number] } | null = null;
   /** asked of the screen once and then cleared: move the view (to the selection, home, the cutaway's side, an assembly laid out) */
   camera: 'selection' | 'home' | 'cutaway' | 'joint' | null = null;
   /** where the focus goes after the next redraw, when the control pressed is gone (a `data-k`) */
   focusNext: string | null = null;
   private seq = 0;
+  /** the view was brought close to a place chosen for the part in hand: the next part picked up, or this one put down, brings back the whole */
+  private closeUp = false;
   private readonly listeners = new Set<(change: Change) => void>();
 
   constructor(readonly env: StructureEnv, readonly adapters: Record<StructureModelId, ModelAdapter>) {
@@ -178,6 +182,7 @@ export class StructureStore {
     if (was !== mode) {
       // each activity starts from its own clear picture: nothing left selected, held, followed or flown from the last
       this.held[this.model] = null;
+      this.drag = null;
       this.system[this.model] = null;
       this.flight[this.model] = null;
       this.jointShown[this.model] = null;
@@ -356,6 +361,8 @@ export class StructureStore {
    */
   hold(unit: string | null): void {
     const now = this.held[this.model];
+    // after a close look at a place, the whole again: the other places are on the picture to choose from
+    if (this.closeUp) { this.closeUp = false; this.camera = 'home'; }
     if (unit === null || now?.unit === unit || Object.hasOwn(this.assembly.placed, unit)) {
       this.held[this.model] = null;
     } else {
@@ -363,10 +370,44 @@ export class StructureStore {
       const own = this.adapter.spec.units.find((u) => u.id === unit)?.slots.find((s) => occupant(this.assembly, s) === null) ?? null;
       this.held[this.model] = { unit, slot: guided ? own : null, turn: guided ? 0 : this.adapter.trayTurn(unit) };
       this.sel[this.model] = null;
-      if (guided || this.held[this.model]!.slot) this.camera = 'joint';
     }
     this.message = null;
     this.emit();
+  }
+
+  /**
+   * Take a loose unit in hand to drag it on the picture: it follows the
+   * pointer (`dragTo`) until it is let go of (`dragEnd`). False for a unit
+   * that is already fitted.
+   */
+  dragStart(unit: string): boolean {
+    if (this.mode !== 'assemble' || Object.hasOwn(this.assembly.placed, unit) || !this.adapter.units.includes(unit)) return false;
+    if (this.held[this.model]?.unit !== unit) { this.held[this.model] = null; this.hold(unit); }
+    const h = this.held[this.model];
+    if (!h) return false;
+    h.slot = null;
+    this.drag = { unit, move: [0, 0, 0] };
+    this.emit();
+    return true;
+  }
+
+  /** The dragged unit moved, and the free place it is over now (null: none near): it is shown there, as it would be fitted. */
+  dragTo(move: readonly [number, number, number], slot: string | null): void {
+    const h = this.held[this.model];
+    if (!this.drag || !h) return;
+    this.drag = { unit: this.drag.unit, move };
+    const changed = h.slot !== slot;
+    h.slot = slot;
+    // the bar names the place: redrawn only when the place changes, the picture on every move
+    this.emit(changed ? 'all' : 'picture');
+  }
+
+  /** The dragged unit let go of: fitted where it was held over a place (or refused there, with the reason, still in hand); put down anywhere else. */
+  dragEnd(dropped: boolean): void {
+    if (!this.drag) return;
+    this.drag = null;
+    if (dropped && this.held[this.model]?.slot) this.install();
+    else this.hold(null);
   }
 
   chooseSlot(slot: string): void {
@@ -374,6 +415,7 @@ export class StructureStore {
     if (!h) return;
     h.slot = slot;
     this.camera = 'joint';
+    this.closeUp = true;
     this.emit();
   }
 
@@ -402,8 +444,12 @@ export class StructureStore {
         ? tx('asm.installedAt', { unit: this.unitName(h.unit), joint: this.adapter.jointName(made[0]) })
         : tx('asm.installed', { unit: this.unitName(h.unit) })));
       this.sel[this.model] = nodeOfUnit(this.adapter.tree(), h.unit)?.id ?? null;
-      this.focusNext = this.check().complete ? 'asm-done' : 'asm-next';
-      if (this.check().complete) this.camera = 'home';
+      const complete = this.check().complete;
+      this.focusNext = complete ? 'asm-done' : 'asm-next';
+      // The view goes back to the whole once a place was chosen and looked at closely (from the middle depth), ready for
+      // the next part's places, and when the assembly is complete. A first look fits parts on the outline without moving the view.
+      if (complete || this.level !== 'watch') this.camera = 'home';
+      this.closeUp = false;
     } else this.message = this.note('no', () => this.refusalText(r.refusal));
     this.emit();
   }
@@ -441,6 +487,9 @@ export class StructureStore {
   restart(): void {
     this.setAssembly(restart(this.assembly));
     this.held[this.model] = null;
+    this.drag = null;
+    // begun again as this depth begins: on the reference's outline at a first look, the parts laid out deeper
+    this.view.outline = this.level === 'watch';
     this.message = this.note('info', () => tx('asm.restarted'));
     this.camera = 'home';
     this.emit();

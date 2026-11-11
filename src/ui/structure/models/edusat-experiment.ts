@@ -376,7 +376,7 @@ export function edusatExperiment(env: StructureEnv, ctx: Context): ExperimentUi 
     tile(tx('res.mass'), `${num(f.massKg, 3)} ${tx('unit.kg')}`, 'mass',
       showDelta && dMass ? tx('res.delta', { d: signed(dMass, 3) }) : tx('res.ofLimit', { limit: num(CDS.massKg, 2) }), showDelta && dMass > 0 ? 'worse' : '');
     tile(tx('res.capacity'), `${num(f.batteryWh, 2)} ${tx('unit.Wh')}`, 'capacity', showDelta && dCap ? tx('res.delta', { d: signed(dCap, 2) }) : '', showDelta && dCap > 0 ? 'better' : '');
-    tile(tx('res.minCharge'), `${num(r.minChargeWh, 2)} ${tx('unit.Wh')} (${num((100 * r.minChargeWh) / r.capacityWh, 0)}%)`, 'minCharge', tx('res.floorAt', { wh: num(r.floorWh, 2) }));
+    tile(tx('res.minCharge'), `${num(r.minChargeWh, 2)} ${tx('unit.Wh')} (${tx('unit.percent', { n: num((100 * r.minChargeWh) / r.capacityWh, 0) })})`, 'minCharge', tx('res.floorAt', { wh: num(r.floorWh, 2) }));
     const short = r.shortfalls[0];
     tile(tx('res.shortfall'), short ? tx('res.shortEach', { minutes: num((short.end - short.start) / 60, 1), wh: num(short.unmetWh, 2) }) : tx('res.none'), 'shortfall', '', short ? 'worse' : '');
     const chart = el('div', 'st-strip-chart');
