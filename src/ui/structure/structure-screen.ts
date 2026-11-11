@@ -19,9 +19,6 @@
  * their profile (src/structure/progress.ts).
  */
 import * as THREE from 'three';
-import { route, type AppLevel, type AppPage, type AppRoute } from '../app-mode';
-import type { OrbitHandoff } from '../../orbit/handoff';
-import type { MissionDocument } from '../../config/mission-file';
 import { StructureViewer, FLAG, type ColorMode, type ViewerMesh } from '../../render/structure-viewer';
 import { fetchStructureJson, fetchStructureLayer } from '../../render/structure-mesh';
 import { edusatMeshes } from '../../render/edusat-model';
@@ -35,39 +32,16 @@ import {
   BATTERIES, BATTERY_OPTIONS, CELL_AREA, CELLS_PER_PANEL, EDUSAT_ASSEMBLY, EDUSAT_SOURCES, EDU_UNITS, PANELS, PAYLOADS, PAYLOAD_OPTIONS,
   FACE_AZIMUTH, eduRelationsOf, panelTurn, slotOfUnit, type BatteryOption, type EduUnit, type PayloadOption,
 } from '../../structure/edusat';
-import {
-  RECEIPT_TOLERANCE, REFERENCE_DESIGN, changesFrom, checkReceipt, designKey, eduFigures, eduSatelliteDesign, partFor,
-  type EduDesign, type EduFigures, type HandoffReceipt, type ReceiptCheck,
-} from '../../structure/edusat-design';
-import { EDU_SCENARIO } from '../../structure/power-balance';
-import { STRUCTURE_STORE_KEY, readProgress, writeProgress, type StructureMode, type StructureProgress } from '../../structure/progress';
-import { CERTAINTIES, PART_CATEGORIES, type Certainty, type StructureModelId } from '../../structure/types';
-import { designDateJd, designHandoff } from '../../design/satellite-model';
-import { designLaunch, designMissionDocument, designMissionIssues } from '../../design/satellite-launch';
-import { satelliteDesignProblems } from '../../config/satellite-design';
-import { dragArea } from '../../design/satellite-area';
-import { vehicleById } from '../../data/vehicles';
-import { registerWorkspaceFlush, workspaceStorage } from '../../workspace/storage';
-import { WorkspaceError } from '../../workspace/repository';
-import { getLang } from '../../i18n';
+import { REFERENCE_DESIGN, changesFrom, designKey, eduFigures, partFor, satelliteRecord, type EduDesign, type EduFigures } from '../../structure/edusat-design';
+import { RECEIPT_TOLERANCE, checkReceipt, type HandoffPreview, type HandoffReceipt, type ReceiptCheck } from '../../structure/handoff';
+import { readProgress, writeProgress, type StructureMode, type StructureProgress } from '../../structure/progress';
+import { CERTAINTIES, PART_CATEGORIES, type Certainty, type Depth, type StructureModelId } from '../../structure/types';
 import { chargeChart, sideView, type SideBox } from './charts';
-import { num, tx } from './text';
+import type { StructureEnv, StructureSection } from './env';
+import { getLang, num, tx } from './text';
 import './structure.css';
 
-export interface StructureHost {
-  go(route: AppRoute): void;
-  /** hand a satellite to the Orbit section and open it at `level`: what Orbit now holds, read back from it, or null when it holds none */
-  toOrbit(h: OrbitHandoff, level: AppLevel): HandoffReceipt | null;
-  /** hand a mission to the Launch section and open it at `level`: the mission Launch now holds, read back after its checks, or null */
-  toLaunch(doc: MissionDocument, level: AppLevel): HandoffReceipt | null;
-  /** what the Launch section has now, kept before a send replaces it: its panel's mission and the stored copy's exact text (null with none) */
-  launchMission(): LaunchKept;
-  /** put what was kept back in the Launch section (stored copy first) and open it at `level`; false when Launch could not use it */
-  restoreLaunch(kept: LaunchKept, level: AppLevel): boolean;
-}
-
-/** The Launch section's mission as kept before a send: on its panel, and as stored (byte for byte, null with none). */
-export interface LaunchKept { shown: MissionDocument; stored: string | null }
+type AppLevel = Depth;
 
 /** A note by the send buttons, put into words when drawn (so a language switch changes it). */
 interface SendNote { kind: 'no' | 'ok'; key: string; params?: Record<string, string | number>; reason?: { key: string; params?: Record<string, string | number> }; seq?: number }
@@ -126,7 +100,7 @@ const MODELS: readonly StructureModelId[] = ['soyuz-st31', 'edusat'];
 const MODES: readonly StructureMode[] = ['explore', 'assemble', 'experiment'];
 const LEVELS: readonly AppLevel[] = ['watch', 'explore', 'engineer'];
 
-export class StructureScreen {
+export class StructureScreen implements StructureSection {
   private level: AppLevel = 'explore';
   private visible = false;
   private progress: StructureProgress;
@@ -164,19 +138,11 @@ export class StructureScreen {
   private get message(): { text: () => string; kind: 'ok' | 'no' | 'info'; seq: number } | null { return this.msg; }
   private set message(m: { text: () => string; kind: 'ok' | 'no' | 'info' } | null) { this.msg = m && { ...m, seq: ++this.msgSeq }; }
   private figures: EduFigures | null = null;
-  private sent: { where: 'orbit' | 'launch'; key: string; name: string; mass: number; receipt: HandoffReceipt | null; check: ReceiptCheck | null } | null = null;
+  private sent: { where: 'orbit' | 'launch'; key: string; sent: HandoffPreview; receipt: HandoffReceipt | null; check: ReceiptCheck | null } | null = null;
   /** why the last send was not handed over, or that Launch's earlier mission is back: shown by the send buttons until the design changes */
   private sendNote: SendNote | null = null;
   /** where focus goes when the control pressed is gone after a redraw (a part taken off: its tray button) */
   private focusNext: string | null = null;
-  /**
-   * What Launch had before this section first replaced it (`before`: its
-   * panel's mission and its stored copy), and what its panel held right after
-   * the last send (`after`). While Launch still holds that, a later send keeps
-   * the first `before`, and "put back" is offered; once the learner has made
-   * another mission there, it is not (it would replace theirs). In memory only.
-   */
-  private launchBefore: { before: LaunchKept; after: MissionDocument } | null = null;
   private readonly expanded = new Set<string>();
   private filter = '';
   private axes = new Map<string, [number, number]>();
@@ -193,12 +159,11 @@ export class StructureScreen {
   /** says what was selected; it stays put (the panels are redrawn, a live region must not be) */
   private readonly announcer = el('p', 'sr-only');
 
-  constructor(root: HTMLElement, private readonly host: StructureHost) {
+  constructor(root: HTMLElement, private readonly env: StructureEnv) {
     this.root = root;
     root.classList.add('structure-screen');
-    let stored: string | null = null;
-    try { stored = workspaceStorage().getItem(STRUCTURE_STORE_KEY); } catch { /* storage blocked: a visit-only copy */ }
-    const read = readProgress(stored, { 'soyuz-st31': SOYUZ_ASSEMBLY, edusat: EDUSAT_ASSEMBLY });
+    // storage blocked reads as none: a visit-only copy
+    const read = readProgress(env.storage.read(), { 'soyuz-st31': SOYUZ_ASSEMBLY, edusat: EDUSAT_ASSEMBLY });
     this.progress = read.progress;
     this.writable = read.writable;
     this.storeNote = read.note;
@@ -219,7 +184,7 @@ export class StructureScreen {
     this.canvas.addEventListener('keydown', (e) => this.canvasKey(e));
     this.canvas.addEventListener('dragover', (e) => { if (this.mode === 'assemble') e.preventDefault(); });
     this.canvas.addEventListener('drop', (e) => this.dropOnModel(e));
-    registerWorkspaceFlush(() => this.saveNow());
+    env.storage.onFlush(() => this.saveNow());
   }
 
   // ─── lifecycle ────────────────────────────────────────────────────────────
@@ -234,7 +199,7 @@ export class StructureScreen {
   }
 
   /** Show the section at a depth, a model's page if the address names one. */
-  show(level: AppLevel, page?: AppPage): void {
+  show(level: AppLevel, page?: StructureModelId): void {
     this.level = level;
     if (page === 'soyuz-st31' || page === 'edusat') {
       if (page !== this.progress.model) { this.progress.model = page; this.save(); }
@@ -285,17 +250,11 @@ export class StructureScreen {
 
   private saveNow(): void {
     if (!this.writable) return;
-    try {
-      workspaceStorage().setItem(STRUCTURE_STORE_KEY, writeProgress(this.progress));
+    // not kept: the visit keeps it, and says why (the profile refusing this tab's writes, or the browser refusing the write)
+    const wrote = this.env.storage.write(writeProgress(this.progress));
+    if (wrote === 'ok') {
       if (this.storeNote === 'failed') { this.storeNote = null; if (this.visible) this.render(); }
-    } catch (error) {
-      // the visit keeps it, and says why: the profile refusing this tab's writes, or the browser refusing the write
-      // (the unavailable storage's own words, src/workspace/storage.ts, when no learner is chosen)
-      const byProfile = (error instanceof WorkspaceError && (error.code === 'locked' || error.code === 'stale'))
-        || (error instanceof Error && error.message === 'No learner profile selected');
-      const note = byProfile ? 'readonly' : 'failed';
-      if (this.storeNote !== note) { this.storeNote = note; if (this.visible) this.render(); }
-    }
+    } else if (this.storeNote !== wrote) { this.storeNote = wrote; if (this.visible) this.render(); }
   }
 
   // ─── the model in the viewer ──────────────────────────────────────────────
@@ -304,6 +263,7 @@ export class StructureScreen {
     if (this.viewer || this.glError) return this.viewer;
     try {
       this.viewer = new StructureViewer(this.canvas, {
+        gl: this.env.gl,
         onPick: (item) => this.picked(item),
         reducedMotion,
         categoryColors: CATEGORY_COLOURS,
@@ -338,7 +298,7 @@ export class StructureScreen {
 
   private showEdusat(viewer: StructureViewer, key: string): void {
     const first = this.shown?.model !== 'edusat';
-    const parts = eduFigures(this.design).parts;
+    const parts = this.figuresNow().parts;
     viewer.reset(EDU_UNITS.length, EDU_UNITS, Uint8Array.from(parts, (p) => PART_CATEGORIES.indexOf(p.category)),
       Uint8Array.from(parts, (p) => CERTAINTIES.indexOf(p.massCertainty)));
     viewer.addMeshes(edusatMeshes(parts));
@@ -369,7 +329,7 @@ export class StructureScreen {
       }
       const viewer = this.viewer;
       if (viewer) {
-        const layer = await fetchStructureLayer(SOYUZ_FILES.layers.outer, abort.signal);
+        const layer = await fetchStructureLayer(SOYUZ_FILES.layers.outer, abort.signal, this.env.inflate);
         if (gen !== this.gen || this.model !== 'soyuz-st31') return;
         if (layer.source.sha256 !== this.soyuz.content.source.sha256) throw new Error(MISMATCH);
         const s = this.soyuz;
@@ -409,7 +369,7 @@ export class StructureScreen {
     this.layerLoading.add(layer);
     this.render();
     try {
-      const data = await fetchStructureLayer(SOYUZ_FILES.layers[layer], abort.signal);
+      const data = await fetchStructureLayer(SOYUZ_FILES.layers[layer], abort.signal, this.env.inflate);
       if (gen !== this.gen || this.shown?.model !== 'soyuz-st31' || !this.layerLoading.has(layer)) return;
       if (data.source.sha256 !== s.content.source.sha256) throw new Error(MISMATCH);
       viewer.addMeshes(this.meshesOf(data));
@@ -768,7 +728,7 @@ export class StructureScreen {
 
   private figuresNow(): EduFigures {
     const key = designKey(this.design);
-    if (this.figures?.key !== key) this.figures = eduFigures(this.design);
+    if (this.figures?.key !== key) this.figures = eduFigures(this.design, this.env.power);
     return this.figures;
   }
 
@@ -794,53 +754,36 @@ export class StructureScreen {
     this.render();
   }
 
-  private send(where: 'orbit' | 'launch'): void {
-    const design = this.design;
+  /** The design on screen as the app is given it (`SatelliteRecord`), under the name the destination shows. */
+  private recordNow(): ReturnType<typeof satelliteRecord> {
     const mine = this.progress.showing === 'mine' && !!this.progress.experiment;
-    const name = tx(mine ? 'go.satName' : 'go.satNameRef');
-    const sat = eduSatelliteDesign(design, `structure-edusat-${designKey(design).replaceAll(':', '-')}`, name);
-    const key = designKey(design);
-    let receipt: HandoffReceipt | null = null;
-    let refused: SendNote['reason'] | null = null;
-    if (where === 'orbit') {
-      const jd = designDateJd(new Date().toISOString().slice(0, 10));
-      const h = jd === null ? null : designHandoff(sat, jd, name);
-      // handed over once Orbit has it: no read-back is then said as such, not as a refusal
-      if (!h) refused = { key: 'go.refused.design' };
-      else receipt = this.host.toOrbit(h, this.level);
-    } else {
-      // the checks the Build section runs before it hands a design to Launch: a design or mission with issues is not handed over
-      const flight = { vehicle: vehicleById('soyuz21b'), siteId: 'vostochny', from: new Date() };
-      const issues = satelliteDesignProblems(sat).length + designLaunch(sat).problems.length + designMissionIssues(sat, flight).length;
-      if (issues) refused = { key: 'go.refused.checks', params: { n: issues } };
-      else {
-        // what Launch has now, kept so it can be put back: the learner's, unless Launch still holds our last send
-        const now = this.host.launchMission();
-        const before = this.launchBefore && JSON.stringify(now.shown) === JSON.stringify(this.launchBefore.after) ? this.launchBefore.before : now;
-        receipt = this.host.toLaunch(designMissionDocument(sat, flight), this.level);
-        if (!receipt) refused = { key: 'go.refused.launch' };
-        else this.launchBefore = { before, after: this.host.launchMission().shown };
-      }
-    }
+    const key = designKey(this.design);
+    return satelliteRecord(this.figuresNow(), `structure-edusat-${key.replaceAll(':', '-')}`, tx(mine ? 'go.satName' : 'go.satNameRef'));
+  }
+
+  private send(where: 'orbit' | 'launch'): void {
+    const key = designKey(this.design);
+    const r = this.env.handoff.send(where, this.recordNow(), this.level);
     // a refusal leaves the record of what was last handed on as it was, and stays here to say why
-    this.sendNote = refused ? { kind: 'no', key: 'go.refused', reason: refused, seq: ++this.msgSeq } : null;
-    if (refused) this.render();
-    else this.sent = { where, key, name, mass: sat.bus.dryMass, receipt, check: receipt && checkReceipt(sat, receipt) };
+    if (!r.ok) {
+      const reason: SendNote['reason'] = r.reason === 'checks' ? { key: 'go.refused.checks', params: { n: r.issues } } : { key: `go.refused.${r.reason}` };
+      this.sendNote = { kind: 'no', key: 'go.refused', reason, seq: ++this.msgSeq };
+      this.render();
+      return;
+    }
+    this.sendNote = null;
+    this.sent = { where, key, sent: r.sent, receipt: r.receipt, check: r.receipt && checkReceipt(r.sent, r.receipt) };
   }
 
   /** "Put back" is offered while Launch still holds what this section last sent there (not a mission the learner made since). */
   private canPutBack(): boolean {
-    const kept = this.launchBefore;
-    return !!kept && JSON.stringify(this.host.launchMission().shown) === JSON.stringify(kept.after);
+    return this.env.handoff.canRestoreLaunch();
   }
 
   /** Put back the mission Launch had before this section replaced it, and open Launch. */
   private restoreLaunch(): void {
-    const kept = this.launchBefore;
-    if (!kept) return;
-    if (!this.canPutBack()) { this.launchBefore = null; this.render(); return; }
-    if (this.host.restoreLaunch(kept.before, this.level)) {
-      this.launchBefore = null;
+    if (!this.canPutBack()) { this.render(); return; }
+    if (this.env.handoff.restoreLaunch(this.level)) {
       if (this.sent?.where === 'launch') this.sent = null;
       this.sendNote = { kind: 'ok', key: 'go.restored', seq: ++this.msgSeq };
     } else {
@@ -853,7 +796,7 @@ export class StructureScreen {
 
   private goModel(model: StructureModelId): void {
     if (model === this.model) return;
-    this.host.go(route('structure', this.level, model));
+    this.env.go(this.level, model);
   }
 
   private setMode(mode: StructureMode): void {
@@ -973,7 +916,7 @@ export class StructureScreen {
     depth.append(el('span', 'st-depth-label', tx('depth.label')));
     for (const l of LEVELS) {
       const a = el('a', 'st-depth-link', tx(`depth.${l}`));
-      a.href = `#/structure/${l}/${this.model}`;
+      a.href = this.env.href(l, this.model);
       a.title = tx(`depth.${l}.desc`);
       a.dataset.k = `depth:${l}`;
       if (l === this.level) a.setAttribute('aria-current', 'true');
@@ -1052,7 +995,7 @@ export class StructureScreen {
       return p ? this.spec.slots.find((s) => s.id === p.slot)?.reference ?? u : null;
     };
     if (this.model === 'edusat') {
-      for (const p of eduFigures(this.design).parts) {
+      for (const p of this.figuresNow().parts) {
         const at = placeOf(p.unit);
         const box = at && partFor(this.design, at)?.box;
         if (!box) continue;
@@ -1641,7 +1584,7 @@ export class StructureScreen {
     box.append(dl);
     // the bound is this pilot's: later CDS revisions and each launch provider set their own
     if (this.level !== 'watch') box.append(el('p', 'st-small', tx('res.massLimitNote')));
-    box.append(chargeChart(r, EDU_SCENARIO.orbits));
+    box.append(chargeChart(r, f.scenario.orbits));
     box.append(el('p', 'st-small', tx('res.scenario', { eclipse: num(r.eclipse / 60, 1), period: num(r.period / 60, 1) })), el('p', 'st-small', tx('res.attitude')));
     if (this.level === 'engineer') {
       box.append(el('h3', '', tx('res.method')), el('p', 'st-small', tx('res.method.text', { charge: num(r.chargeEff, 3) })));
@@ -1682,7 +1625,7 @@ export class StructureScreen {
     const design = this.design;
     const changes = changesFrom(design);
     box.append(el('p', 'st-small', changes.length ? tx('exp.changed', { n: changes.length }) : tx('exp.same')));
-    const ref = eduFigures(REFERENCE_DESIGN), now = this.figuresNow();
+    const ref = eduFigures(REFERENCE_DESIGN, this.env.power), now = this.figuresNow();
     const table = el('table', 'st-table st-diff');
     const head = el('tr');
     head.append(el('th', '', ''), el('th', '', tx('exp.reference')), el('th', '', this.progress.showing === 'mine' ? tx('exp.mine') : tx('exp.reference')));
@@ -1707,16 +1650,17 @@ export class StructureScreen {
     const box = el('div', 'st-go');
     box.append(el('h3', '', tx('go.title')));
     const f = this.figuresNow();
-    const sat = eduSatelliteDesign(this.design, 'preview', tx(this.progress.showing === 'mine' ? 'go.satName' : 'go.satNameRef'));
+    // what the app would send, by its own satellite model: read from the app, not from this section's figures
+    const sat = this.env.handoff.preview(this.recordNow());
     const dl = el('dl', 'st-facts');
     const row = (k: string, v: string, key: string) => { const dd = el('dd', '', v); dd.dataset.send = key; dl.append(el('dt', '', k), dd); };
     row(tx('go.name'), sat.name, 'name');
-    row(tx('go.massSent'), `${num(sat.bus.dryMass, 3)} ${tx('unit.kg')}`, 'mass');
-    row(tx('go.size'), `${num(sat.bus.size.width * 1000, 0)} × ${num(sat.bus.size.height * 1000, 0)} × ${num(sat.bus.size.depth * 1000, 1)} mm`, 'size');
-    row(tx('go.drag'), `${num(dragArea(sat), 4)} ${tx('unit.m2')} / ${num(sat.bus.cd, 1)} / ${num(sat.bus.cr, 1)}`, 'drag');
-    row(tx('go.orbitSent'), tx('go.orbitValue', { inc: num(sat.orbit.inclination, 2) }), 'orbit');
+    row(tx('go.massSent'), `${num(sat.massKg, 3)} ${tx('unit.kg')}`, 'mass');
+    row(tx('go.size'), `${num(sat.size.width * 1000, 0)} × ${num(sat.size.height * 1000, 0)} × ${num(sat.size.depth * 1000, 1)} mm`, 'size');
+    row(tx('go.drag'), `${num(sat.dragArea, 4)} ${tx('unit.m2')} / ${num(sat.cd, 1)} / ${num(sat.cr, 1)}`, 'drag');
+    row(tx('go.orbitSent'), tx('go.orbitValue', { inc: num(sat.inclination, 2) }), 'orbit');
     box.append(el('h4', '', tx('go.preview')), dl, el('p', 'st-small', tx('go.notSent')));
-    if (Math.abs(sat.bus.dryMass - f.massKg) > 5e-4) box.append(el('p', 'st-msg st-msg-no', tx('go.previewOff', { mass: num(sat.bus.dryMass, 3) })));
+    if (Math.abs(sat.massKg - f.massKg) > 5e-4) box.append(el('p', 'st-msg st-msg-no', tx('go.previewOff', { mass: num(sat.massKg, 3) })));
     box.append(el('p', 'st-small', tx('go.orbitDoes')), el('p', 'st-small', tx('go.launchDoes')), el('p', 'st-small st-hypo', tx('go.hypothetical')), el('p', 'st-small', tx('go.separate')),
       el('p', 'st-small', tx('go.replaces')));
     const actions = el('div', 'st-actions');
@@ -1732,7 +1676,7 @@ export class StructureScreen {
     if (this.canPutBack()) box.append(this.button(tx('go.undoLaunch'), 'go:undoLaunch', () => this.restoreLaunch()));
     if (this.sent) {
       const s = this.sent;
-      const p = el('p', 'st-small st-sent', tx('go.sent', { name: s.name, mass: num(s.mass, 3), where: tx(`go.where.${s.where}`) }));
+      const p = el('p', 'st-small st-sent', tx('go.sent', { name: s.sent.name, mass: num(s.sent.massKg, 3), where: tx(`go.where.${s.where}`) }));
       p.dataset.sent = s.key;
       box.append(p);
       if (!s.receipt) box.append(el('p', 'st-small', tx('go.noReadBack', { where: tx(`go.where.${s.where}`) })));

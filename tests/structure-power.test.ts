@@ -9,10 +9,13 @@
 import { describe, expect, it } from 'vitest';
 import { arrayPowerRequired, batteryCapacity } from '../src/orbit/power';
 import { circularPeriod, eclipseDuration } from '../src/orbit/eclipse';
-import { EDU_SCENARIO, arrayPower, chargeAt, simulatePower, type PowerScenario } from '../src/structure/power-balance';
+import { arrayPower, chargeAt, eduScenario, simulatePower, type PowerScenario } from '../src/structure/power-balance';
+import { POWER_ENV } from '../src/structure-host/power-env';
 import { REFERENCE_DESIGN, changesFrom, designKey, eduFigures, massOf, partsOf } from '../src/structure/edusat-design';
 import { BATTERIES, CELL_AREA, CELL_WH, EDU_UNITS, PAYLOADS } from '../src/structure/edusat';
 
+/** the section's scenario on the app's own power model, as the app gives it to the section */
+const EDU_SCENARIO = eduScenario(POWER_ENV);
 const S: PowerScenario = { ...EDU_SCENARIO };
 const HOUR = 3600;
 
@@ -104,7 +107,7 @@ describe('EduSat-3U: the cases the section shows', () => {
   });
 
   it('the reference (one cell, day camera) powers every load through three orbits', () => {
-    const f = eduFigures(REFERENCE_DESIGN);
+    const f = eduFigures(REFERENCE_DESIGN, POWER_ENV);
     expect(f.key).toBe(designKey(REFERENCE_DESIGN));
     expect(f.cellArea).toBeCloseTo(28 * CELL_AREA, 12);
     expect(f.batteryWh).toBeCloseTo(CELL_WH, 12);
@@ -116,7 +119,7 @@ describe('EduSat-3U: the cases the section shows', () => {
   });
 
   it('the night camera on one cell runs short near the end of every shadow; two cells power it, for 60 g more', () => {
-    const short = eduFigures({ battery: 'battery-1cell', payload: 'camera-night' });
+    const short = eduFigures({ battery: 'battery-1cell', payload: 'camera-night' }, POWER_ENV);
     expect(short.powered).toBe(false);
     expect(short.power.shortfalls).toHaveLength(EDU_SCENARIO.orbits);
     for (const [k, s] of short.power.shortfalls.entries()) {
@@ -129,7 +132,7 @@ describe('EduSat-3U: the cases the section shows', () => {
     const drawWh = ((1.3 * short.power.eclipse) / HOUR + (6 * 25) / 60) / 0.9;
     expect(drawWh).toBeGreaterThan(0.3 * CELL_WH);
     expect(short.steady.batteryNeeded).toBeGreaterThan(short.steady.batteryFitted);
-    const fixed = eduFigures({ battery: 'battery-2cell', payload: 'camera-night' });
+    const fixed = eduFigures({ battery: 'battery-2cell', payload: 'camera-night' }, POWER_ENV);
     expect(fixed.powered).toBe(true);
     expect(fixed.power.minChargeWh).toBeCloseTo(2 * CELL_WH - drawWh, 6);
     expect(fixed.steady.batteryNeeded).toBeLessThan(fixed.steady.batteryFitted);
@@ -143,7 +146,7 @@ describe('EduSat-3U: the cases the section shows', () => {
 
   it('is under the pilot\'s 3U mass bound in every combination', () => {
     for (const battery of ['battery-1cell', 'battery-2cell'] as const) {
-      for (const payload of ['camera-day', 'camera-night'] as const) expect(eduFigures({ battery, payload }).massKg).toBeLessThan(4);
+      for (const payload of ['camera-day', 'camera-night'] as const) expect(eduFigures({ battery, payload }, POWER_ENV).massKg).toBeLessThan(4);
     }
   });
 });
@@ -186,7 +189,7 @@ describe('the energy balance against a brute-force integration written apart fro
   it('agrees on all four EduSat designs to within a one-second step', () => {
     for (const battery of ['battery-1cell', 'battery-2cell'] as const) {
       for (const payload of ['camera-day', 'camera-night'] as const) {
-        const f = eduFigures({ battery, payload });
+        const f = eduFigures({ battery, payload }, POWER_ENV);
         const loads = partsOf({ battery, payload }).flatMap((p) => p.loads);
         const b = bruteForce(f.cellArea, f.batteryWh, loads);
         const tag = `${battery} + ${payload}`;

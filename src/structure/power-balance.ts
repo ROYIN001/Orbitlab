@@ -7,11 +7,12 @@
  *
  * The scenario, for learning (all of it said on screen):
  * - a circular orbit of `altitude` at sun angle β, its period and shadow from
- *   src/orbit/eclipse.ts (`circularPeriod`, `eclipseDuration`); the orbit
- *   starts as the satellite comes out of the shadow;
+ *   the app's own orbit model (`PowerEnv.circularPeriod`, `.eclipseDuration`:
+ *   src/orbit/eclipse.ts); the orbit starts as the satellite comes out of the
+ *   shadow;
  * - in sunlight the panels give S·A·η·I_d / π: the satellite turns slowly
  *   about its long axis, square to the Sun, so on average 1/π of its cells'
- *   area faces the Sun (Orbitlab's `MOUNT_FACTOR.spinner`); nothing in the
+ *   area faces the Sun (Orbitlab's spinner mount factor); nothing in the
  *   shadow;
  * - the panels' power reaches the loads through the regulator (X_d), and
  *   what the loads do not use charges the battery; through the shadow the
@@ -39,17 +40,20 @@
  *
  * What it is not: no temperatures, no change of attitude while a camera
  * points, no battery ageing, no voltage, no real mission life. DOM-free; SI
- * inside (s, W), energies reported in Wh.
+ * inside (s, W), energies reported in Wh. The app's constants and orbit
+ * model come in through `PowerEnv` (src/structure/env.ts), not by import.
  */
-import { BATTERY_TO_LOAD_EFFICIENCY, INHERENT_DEGRADATION, MOUNT_FACTOR, PATH_EFFICIENCY, SOLAR_FLUX_1AU } from '../orbit/power';
-import { circularPeriod, eclipseDuration } from '../orbit/eclipse';
 import type { EduLoad } from './edusat';
+import type { PowerEnv } from './env';
 
 export interface PowerScenario {
   /** circular orbit's altitude, m */
   altitude: number;
   /** sun angle β, rad (0: the longest shadow) */
   beta: number;
+  /** that orbit's period and its time in the Earth's shadow, s (the app's orbit model's) */
+  period: number;
+  eclipse: number;
   /** how many orbits to follow */
   orbits: number;
   /** solar flux, W/m² */
@@ -68,21 +72,29 @@ export interface PowerScenario {
   dod: number;
 }
 
-/** The scenario the section uses: 500 km, β = 0 (the longest shadow at that height), three orbits, Orbitlab's sourced defaults. */
-export const EDU_SCENARIO: PowerScenario = Object.freeze({
-  altitude: 500e3,
-  beta: 0,
-  orbits: 3,
-  flux: SOLAR_FLUX_1AU,
-  cellEff: 0.295,
-  Id: INHERENT_DEGRADATION,
-  mountFactor: MOUNT_FACTOR.spinner,
-  Xd: PATH_EFFICIENCY.PPT.Xd,
-  Xe: PATH_EFFICIENCY.PPT.Xe,
-  batteryEff: BATTERY_TO_LOAD_EFFICIENCY,
-  startCharge: 1,
-  dod: 0.3,
-});
+/** The scenario's own choices: 500 km, β = 0 (the longest shadow at that height), three orbits, a full battery, 30 % depth of discharge, 29.5 % cells. */
+export const EDU_SCENARIO_CHOICES = Object.freeze({ altitude: 500e3, beta: 0, orbits: 3, cellEff: 0.295, startCharge: 1, dod: 0.3 });
+
+/** The scenario the section uses: its own choices on Orbitlab's sourced defaults and orbit model (`env`). */
+export function eduScenario(env: PowerEnv): PowerScenario {
+  const c = EDU_SCENARIO_CHOICES;
+  return Object.freeze({
+    altitude: c.altitude,
+    beta: c.beta,
+    period: env.circularPeriod(c.altitude),
+    eclipse: env.eclipseDuration(c.altitude, c.beta),
+    orbits: c.orbits,
+    flux: env.solarFlux,
+    cellEff: c.cellEff,
+    Id: env.inherentDegradation,
+    mountFactor: env.spinnerFactor,
+    Xd: env.Xd,
+    Xe: env.Xe,
+    batteryEff: env.batteryToLoad,
+    startCharge: c.startCharge,
+    dod: c.dod,
+  });
+}
 
 export interface PowerInput {
   /** the solar cells' total area, m² */
@@ -158,8 +170,7 @@ function loadIntervals(load: EduLoad, daylight: number, period: number): [number
 
 /** The scenario's orbit cut into stretches of constant supply and demand, for `orbits` orbits. */
 export function powerSegments(s: PowerScenario, input: PowerInput): { segments: PowerSegment[]; period: number; eclipse: number; daylight: number } {
-  const period = circularPeriod(s.altitude);
-  const eclipse = eclipseDuration(s.altitude, s.beta);
+  const { period, eclipse } = s;
   const daylight = period - eclipse;
   const bus = arrayPower(s, input.cellArea) * s.Xd;
   const intervals = input.loads.map((l) => ({ watts: l.watts, on: loadIntervals(l, daylight, period) }));
@@ -193,6 +204,7 @@ export function simulatePower(s: PowerScenario, input: PowerInput): PowerResult 
   if (!(input.cellArea >= 0) || !(input.batteryWh > 0)) throw new RangeError('the cell area must be 0 or more and the battery more than 0 Wh');
   if (input.loads.some((l) => !(l.watts >= 0))) throw new RangeError('a load must be 0 W or more');
   if (!(Number.isInteger(s.orbits) && s.orbits >= 1)) throw new RangeError('orbits must be a whole number from 1');
+  if (!(s.period > 0 && Number.isFinite(s.period)) || !(s.eclipse >= 0 && s.eclipse < s.period)) throw new RangeError('the period must be more than 0 s and the shadow from 0 s to less than the period');
   const { segments, period, eclipse, daylight } = powerSegments(s, input);
   const chargeEff = s.Xe / (s.Xd * s.batteryEff);
   const dischargeEff = s.batteryEff;

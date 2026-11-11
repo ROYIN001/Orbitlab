@@ -127,7 +127,7 @@ export default async function structureAssembly(t) {
   for (const u of ['frame', 'stack', 'payload', 'battery', 'eps', 'adcs', 'obc', 'radio']) await fit(u, u, u === 'payload' ? 1 : 0);
   t.check((await fit('panel-px', 'face-nz', 1)).startsWith('ติดตั้ง'), `the +X panel on the −Z face: ${await msg()}`);
   const panelAt = await page.evaluate(() => {
-    const s = window.orbitlab.structure;
+    const s = window.orbitlab.structure.section;
     const b = s.viewer.boxOf([9], (i) => s.unitOfItem(i)); // EDU_UNITS[9] = 'panel-px'
     return b && [(b.min.x + b.max.x) / 2, (b.min.z + b.max.z) / 2];
   });
@@ -243,7 +243,7 @@ export default async function structureAssembly(t) {
   await phone.shot('phone-assemble');
   // the keyboard on the 3-D view: each key moves it, 0 brings back the overview
   await p.locator('.st-canvas').focus();
-  const view = () => p.evaluate(() => window.orbitlab.structure.viewer.view());
+  const view = () => p.evaluate(() => window.orbitlab.structure.section.viewer.view());
   await p.keyboard.press('0');
   const home = await view();
   const moved = [];

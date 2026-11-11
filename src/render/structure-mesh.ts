@@ -9,7 +9,6 @@
  * can show, hide, see through or colour each part on its own.
  */
 import * as THREE from 'three';
-import { inflateAnatomy } from './anatomy';
 
 export const STRUCTURE_FORMAT_VERSION = 1;
 
@@ -93,10 +92,12 @@ async function fetchFile(path: string, signal: AbortSignal, base: string | URL):
   return r;
 }
 
-/** A layer file, fetched, inflated and decoded. */
-export async function fetchStructureLayer(path: string, signal: AbortSignal, base: string | URL = document.baseURI): Promise<StructureLayerData> {
+/** A layer file, fetched, inflated (`inflate`: the app's gzip reader, src/structure/env.ts) and decoded. */
+export async function fetchStructureLayer(
+  path: string, signal: AbortSignal, inflate: (buffer: ArrayBuffer) => Promise<ArrayBuffer>, base: string | URL = document.baseURI,
+): Promise<StructureLayerData> {
   const r = await fetchFile(path, signal, base);
-  return decodeStructureLayer(await inflateAnatomy(await r.arrayBuffer()));
+  return decodeStructureLayer(await inflate(await r.arrayBuffer()));
 }
 
 /** A content file (JSON), fetched. */

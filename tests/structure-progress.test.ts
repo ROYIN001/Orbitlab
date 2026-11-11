@@ -10,6 +10,7 @@ import { STRUCTURE_STORE_KEY, freshProgress, readProgress, writeProgress } from 
 import { SOYUZ_ASSEMBLY } from '../src/structure/soyuz';
 import { EDUSAT_ASSEMBLY } from '../src/structure/edusat';
 import { REFERENCE_DESIGN, designKey, eduFigures } from '../src/structure/edusat-design';
+import { POWER_ENV } from '../src/structure-host/power-env';
 import { WORKSPACE_KEYS, isWorkspaceKey } from '../src/workspace/registry';
 
 const specs = { 'soyuz-st31': SOYUZ_ASSEMBLY, edusat: EDUSAT_ASSEMBLY };
@@ -66,12 +67,12 @@ describe('the reference and my experiment', () => {
   });
 
   it('labels every result with its design, and works it out again from the design alone (nothing older to show)', () => {
-    const a = eduFigures(REFERENCE_DESIGN);
-    const b = eduFigures({ ...REFERENCE_DESIGN, payload: 'camera-night' });
+    const a = eduFigures(REFERENCE_DESIGN, POWER_ENV);
+    const b = eduFigures({ ...REFERENCE_DESIGN, payload: 'camera-night' }, POWER_ENV);
     expect(a.key).toBe(designKey(REFERENCE_DESIGN));
     expect(b.key).not.toBe(a.key);
     // a function of the design: the same design, the same figures, whatever was worked out in between
-    expect(eduFigures({ ...REFERENCE_DESIGN })).toEqual(a);
-    expect(eduFigures({ battery: 'battery-1cell', payload: 'camera-day' })).toEqual(a);
+    expect(eduFigures({ ...REFERENCE_DESIGN }, POWER_ENV)).toEqual(a);
+    expect(eduFigures({ battery: 'battery-1cell', payload: 'camera-day' }, POWER_ENV)).toEqual(a);
   });
 });

@@ -8,9 +8,15 @@
  * the same keys, no empty value, the same {placeholders}, Arabic numerals in
  * Thai.
  */
-import { getLang, type Lang } from '../../i18n';
+/** Orbitlab's interface languages (src/i18n's `Lang`, without importing the app). */
+export type Lang = 'en' | 'ru' | 'th';
 
 type Copy = Record<string, string>;
+
+/** The interface language now: the app's, once the section is given it (`bindLanguage`); Thai, the source, until then. */
+let currentLang: () => Lang = () => 'th';
+export function bindLanguage(lang: () => Lang): void { currentLang = lang; }
+export const getLang = (): Lang => currentLang();
 
 const th: Copy = {
   'title': 'โครงสร้างและการประกอบ',

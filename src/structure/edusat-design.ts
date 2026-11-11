@@ -5,25 +5,22 @@
  * from one function of the choice, so the picture, the list and the figures
  * on screen are always the same design's.
  *
- * Also the design as the rest of Orbitlab reads a satellite
- * (`eduSatelliteDesign`): a `SatelliteDesign`, which the Orbit section's
- * hand-off (`designHandoff`) and the Launch section's mission
- * (`designMissionDocument`) take as they take one from the satellite
- * builder. What they carry is the mass, size, drag and orbit; the battery and
- * the power balance stay in the Structure section, which says so.
+ * Also the design as plain figures for the rest of Orbitlab
+ * (`satelliteRecord`): the app's side turns them into its own satellite
+ * record and hands that to Orbit or Launch (src/structure/handoff.ts,
+ * src/structure-host/). What the destinations carry is the mass, size, drag
+ * and orbit; the battery and the power balance stay in the Structure
+ * section, which says so.
  *
- * DOM-free.
+ * DOM-free. The app's power model comes in as `PowerEnv`, not by import.
  */
-import { arrayPowerRequired, batteryCapacity } from '../orbit/power';
-import { boxInertia } from '../data/satellite-templates';
-import { designFromTemplate, ssoInclinationDeg } from '../design/satellite-model';
-import type { SatelliteDesign } from '../design/satellite-spec';
-import type { MissionState } from '../config/mission-file';
 import {
   BATTERIES, BATTERY_OPTIONS, CELL_AREA, EDU_UNITS, ENVELOPE, FIXED_PARTS, MASS_LIMIT_KG, PAYLOADS, PAYLOAD_OPTIONS,
   type BatteryOption, type EduLoad, type EduPart, type PayloadOption,
 } from './edusat';
-import { EDU_SCENARIO, simulatePower, type PowerResult, type PowerScenario } from './power-balance';
+import type { PowerEnv } from './env';
+import type { SatelliteRecord } from './handoff';
+import { eduScenario, simulatePower, type PowerResult, type PowerScenario } from './power-balance';
 
 export interface EduDesign {
   battery: BatteryOption;
@@ -87,6 +84,8 @@ export interface EduFigures {
   /** the design these figures belong to (`designKey`) */
   key: string;
   design: EduDesign;
+  /** the scenario the power figures were worked out in */
+  scenario: PowerScenario;
   parts: EduPart[];
   massKg: number;
   massLimitKg: number;
@@ -98,20 +97,20 @@ export interface EduFigures {
   powered: boolean;
 }
 
-/** Everything the section shows for a design, computed from the design alone. */
-export function eduFigures(d: EduDesign, scenario: PowerScenario = EDU_SCENARIO): EduFigures {
+/** Everything the section shows for a design, computed from the design alone on the app's power model (`env`). */
+export function eduFigures(d: EduDesign, env: PowerEnv, scenario: PowerScenario = eduScenario(env)): EduFigures {
   const parts = partsOf(d);
   const cellArea = cellAreaOf(d);
   const batteryWh = batteryWhOf(d);
   const power = simulatePower(scenario, { cellArea, batteryWh, loads: loadsOf(d) });
   const steady: SteadyState = {
-    arrayNeeded: arrayPowerRequired({ dayLoad: power.dayLoad, eclipseLoad: power.eclipseLoad, Td: power.daylight, Te: power.eclipse, Xd: scenario.Xd, Xe: scenario.Xe }),
+    arrayNeeded: env.arrayPowerRequired({ dayLoad: power.dayLoad, eclipseLoad: power.eclipseLoad, Td: power.daylight, Te: power.eclipse, Xd: scenario.Xd, Xe: scenario.Xe }),
     arrayGiven: power.arrayPower,
-    batteryNeeded: batteryCapacity({ eclipseLoad: power.eclipseLoad, Te: power.eclipse, dod: scenario.dod, eff: scenario.batteryEff }) / 3600,
+    batteryNeeded: env.batteryCapacity({ eclipseLoad: power.eclipseLoad, Te: power.eclipse, dod: scenario.dod, eff: scenario.batteryEff }) / 3600,
     batteryFitted: batteryWh,
   };
   return {
-    key: designKey(d), design: { ...d }, parts, massKg: massOf(d), massLimitKg: MASS_LIMIT_KG, cellArea, batteryWh, power, steady,
+    key: designKey(d), design: { ...d }, scenario, parts, massKg: massOf(d), massLimitKg: MASS_LIMIT_KG, cellArea, batteryWh, power, steady,
     powered: power.shortfalls.length === 0,
   };
 }
@@ -126,7 +125,7 @@ export function changesFrom(d: EduDesign, ref: EduDesign = REFERENCE_DESIGN): De
   return out;
 }
 
-// ─── the design as Orbitlab's satellite ─────────────────────────────────────
+// ─── the design as the app's satellite ──────────────────────────────────────
 
 /** The orbit the design is handed on in: 500 km circular, sun-synchronous, its node at noon, so its shadows are close to the β = 0 of the power scenario. */
 export const EDU_ORBIT = { altitude: 500e3, ltan: 12 } as const;
@@ -142,84 +141,26 @@ function averageWatts(loads: readonly EduLoad[], power: PowerResult): number {
 }
 
 /**
- * The design as a `SatelliteDesign`, as the satellite builder would hold it,
- * from NAPA-2's 6U science template (Orbitlab's one CubeSat template) with
- * this design's own figures: the parts list's mass as the dry mass (no
- * propellant: no engine), the 3U body, the cell area on a spinner's mount,
- * the battery, the loads as orbit averages, the 500 km noon orbit, and no
- * camera figures (the pilot's cameras have none). Its comms and attitude
- * figures stay the template's and are not used by the hand-offs.
+ * The design's figures as the app is given them (`SatelliteRecord`): the
+ * parts list's mass, to the gram; the 3U body; the cell area; the battery and
+ * its allowed depth; the loads as orbit averages; the 500 km noon orbit; one
+ * year. The app's side makes its own satellite record of them
+ * (src/structure-host/satellite.ts).
  */
-export function eduSatelliteDesign(d: EduDesign, id: string, name: string): SatelliteDesign {
-  const f = eduFigures(d);
-  const base = designFromTemplate('napa2', id, name);
-  const size = { width: ENVELOPE.x, height: ENVELOPE.z, depth: ENVELOPE.y };
-  const mass = Math.round(f.massKg * 1000) / 1000;
-  const payloadLoads = PAYLOADS[d.payload].loads;
-  const busLoads = f.parts.filter((p) => p.unit !== 'payload').flatMap((p) => p.loads);
+export function satelliteRecord(f: EduFigures, id: string, name: string): SatelliteRecord {
   const round3 = (x: number) => Math.round(x * 1000) / 1000;
+  const payloadLoads = PAYLOADS[f.design.payload].loads;
+  const busLoads = f.parts.filter((p) => p.unit !== 'payload').flatMap((p) => p.loads);
   return {
-    ...base,
-    kind: 'science',
-    orbit: {
-      perigee: EDU_ORBIT.altitude, apogee: EDU_ORBIT.altitude,
-      inclination: ssoInclinationDeg(EDU_ORBIT.altitude, EDU_ORBIT.altitude) ?? base.orbit.inclination, sso: true, ltan: EDU_ORBIT.ltan,
-    },
+    id, name,
+    massKg: round3(f.massKg),
+    size: { width: ENVELOPE.x, height: ENVELOPE.z, depth: ENVELOPE.y },
+    cellArea: Math.round(f.cellArea * 1e6) / 1e6,
+    batteryWh: round3(f.batteryWh),
+    dod: f.scenario.dod,
+    payloadW: round3(averageWatts(payloadLoads, f.power)),
+    busW: round3(averageWatts(busLoads, f.power)),
+    orbit: { altitude: EDU_ORBIT.altitude, ltan: EDU_ORBIT.ltan },
     lifeYears: 1,
-    bus: { ...base.bus, dryMass: mass, size },
-    power: {
-      ...base.power,
-      payloadW: round3(averageWatts(payloadLoads, f.power)), busW: round3(averageWatts(busLoads, f.power)),
-      arrayArea: Math.round(f.cellArea * 1e6) / 1e6, mount: 'spinner', batteryWh: round3(f.batteryWh), dod: EDU_SCENARIO.dod,
-    },
-    propulsion: null,
-    adcs: { ...base.adcs, inertia: boxInertia(mass, size) },
-    payload: null,
-    sources: ['Orbitlab Structure section, EduSat-3U: a concept for learning (src/structure/edusat.ts)'],
   };
-}
-
-// ─── what a destination says it holds ───────────────────────────────────────
-
-/**
- * What a destination holds once it has taken the satellite, read back from
- * the destination, not from what was sent: the mass, kg; the orbit, its
- * altitudes above the equatorial radius, m, and its inclination, deg (or
- * Launch's own 'sso' target); and how many values its checks put back to its
- * own defaults (0: it took everything as sent).
- */
-export interface HandoffReceipt {
-  mass: number;
-  /**
-   * Orbit: the mass its lifetime analysis and planner take — another than
-   * the satellite's while its planner keeps a spacecraft chosen there (said
-   * beside the receipt; not a fault of the hand-off)
-   */
-  analysisMass?: number;
-  perigeeAlt: number;
-  apogeeAlt: number;
-  inclination: number | 'sso' | 'site';
-  replaced: number;
-  /** Launch: the site it flies from */
-  siteId?: string;
-}
-
-/** What the Launch section holds of a mission, read from its state after its checks: the payload, the target, the values it put back. */
-export function launchReceipt(m: Pick<MissionState, 'payloadMass' | 'orbit' | 'siteId'>, replaced: number): HandoffReceipt {
-  return { mass: m.payloadMass, perigeeAlt: m.orbit.perigee, apogeeAlt: m.orbit.apogee, inclination: m.orbit.inclination, replaced, siteId: m.siteId };
-}
-
-/** What a receipt counts as "as sent": half a gram, a kilometre, a twentieth of a degree. */
-export const RECEIPT_TOLERANCE = { kg: 5e-4, m: 1000, deg: 0.05 } as const;
-
-export interface ReceiptCheck { mass: boolean; orbit: boolean; whole: boolean; ok: boolean }
-
-/** The receipt against the satellite sent: the mass, the orbit, nothing replaced. */
-export function checkReceipt(sat: SatelliteDesign, r: HandoffReceipt): ReceiptCheck {
-  const T = RECEIPT_TOLERANCE;
-  const mass = Math.abs(r.mass - (sat.bus.dryMass + (sat.propulsion?.propellant ?? 0))) < T.kg;
-  const plane = r.inclination === 'sso' ? sat.orbit.sso : r.inclination !== 'site' && Math.abs(r.inclination - sat.orbit.inclination) < T.deg;
-  const orbit = plane && Math.abs(r.perigeeAlt - sat.orbit.perigee) < T.m && Math.abs(r.apogeeAlt - sat.orbit.apogee) < T.m;
-  const whole = r.replaced === 0;
-  return { mass, orbit, whole, ok: mass && orbit && whole };
 }

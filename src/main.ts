@@ -64,8 +64,8 @@ import {
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute,
 } from './ui/app-mode';
 import { BuildScreen } from './ui/build/build-screen';
-import { StructureScreen, type StructureHost } from './ui/structure/structure-screen';
-import { launchReceipt } from './structure/edusat-design';
+import { StructureLoader, type StructureLoaderHost } from './ui/structure-loader';
+import { launchReceipt } from './structure-host/handoff';
 import { WorkspaceMission, missionSummary, startupMission } from './ui/workspace-mission';
 import { loadExperience } from './ui/experience';
 import { OrbitPlayground } from './ui/orbit/playground';
@@ -303,8 +303,8 @@ class App {
   private buildScreen: BuildScreen;
   /** O01: the Orbit section's playground */
   private playground: OrbitPlayground;
-  /** the Structure & Assembly section (owner, 2026-11-09): made the first time it opens */
-  private structure: StructureScreen | null = null;
+  /** the Structure & Assembly section (owner, 2026-11-09): its code is loaded the first time it opens (src/ui/structure-loader.ts) */
+  private structure: StructureLoader | null = null;
   /** the Earth's textures, loaded once for the launch scene and the playground's 3-D view */
   private earthTextures: Promise<EarthTextures> | null = null;
   /** which section and level of the app is showing (src/ui/app-mode.ts) */
@@ -852,20 +852,20 @@ class App {
   }
 
   /**
-   * The Structure section, made the first time it opens, shown at the route's
-   * level (its depth) and on a model's page if the address names one. Its
-   * code is in the app's own bundle: a chunk of its own made the bundler
-   * split the app's shared chunks differently (docs/development/reports/structure-assembly-pilot.md).
+   * The Structure section, shown at the route's level (its depth) and on a
+   * model's page if the address names one. Its code is a chunk of its own,
+   * loaded the first time the section opens; what it needs of the app it is
+   * given, not left to import (docs/development/reports/structure-assembly-pilot.md §2.1).
    */
   private showStructure(): void {
     const r = this.route;
     if (r.section !== 'structure') return;
-    this.structure ??= new StructureScreen(document.getElementById('structure-screen')!, this.structureHost());
-    this.structure.show(r.mode, r.page);
+    this.structure ??= new StructureLoader(document.getElementById('structure-screen')!, this.structureHost());
+    this.structure.show(r.mode, r.page === 'soyuz-st31' || r.page === 'edusat' ? r.page : undefined);
   }
 
   /** What the Structure section may do outside itself: navigate, and hand its satellite to Orbit or Launch as Build does. */
-  private structureHost(): StructureHost {
+  private structureHost(): StructureLoaderHost {
     return {
       go: (r) => this.go(r),
       toOrbit: (h, level) => {

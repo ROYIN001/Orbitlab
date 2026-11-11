@@ -20,8 +20,6 @@
  * dropped one would bring up the app's "view lost" note.
  */
 import * as THREE from 'three';
-import { createWebGLRenderer } from './webgl-renderer';
-import { isCameraInputTarget, wheelZoomFactor } from './gestures';
 
 export type ColorMode = 'material' | 'category' | 'certainty';
 
@@ -36,7 +34,22 @@ export interface ViewerMesh {
   metalness: number;
 }
 
+/**
+ * The app's own WebGL and input rules, given to the viewer rather than
+ * imported (src/structure/env.ts): its renderer factory (the fast GPU, a lost
+ * context taken back: src/render/webgl-renderer.ts) and the gesture rules its
+ * Launch and Orbit viewers share (src/render/gestures.ts).
+ */
+export interface ViewerGl {
+  createRenderer(options: { canvas: HTMLCanvasElement; antialias: boolean }): THREE.WebGLRenderer;
+  /** the event is a camera gesture on `surface`, not one for a control or a page under it */
+  isCameraInput(event: Event, surface: HTMLElement): boolean;
+  /** a wheel event as a zoom factor, or null when it is the browser's own (pinch-zoom of the page) */
+  wheelZoom(event: WheelEvent, height: number): number | null;
+}
+
 export interface ViewerOptions {
+  gl: ViewerGl;
   /** a press that did not move: the part under it, or null for empty space */
   onPick?: (item: number | null) => void;
   /** the camera moved by the user's hand (to stop a guided view from fighting it) */
@@ -148,7 +161,7 @@ export class StructureViewer {
   private homeView = { t: new THREE.Vector3(), az: 0.8, el: 0.25, dist: 10 };
 
   constructor(readonly canvas: HTMLCanvasElement, private readonly options: ViewerOptions) {
-    this.renderer = createWebGLRenderer({ canvas, antialias: true });
+    this.renderer = options.gl.createRenderer({ canvas, antialias: true });
     this.renderer.setClearColor(new THREE.Color(options.background), 1);
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     this.stateTexture = this.makeStateTexture(1);
@@ -487,7 +500,7 @@ export class StructureViewer {
   }
 
   private onDown(e: PointerEvent): void {
-    if (!isCameraInputTarget(e, this.canvas)) return;
+    if (!this.options.gl.isCameraInput(e, this.canvas)) return;
     try { this.canvas.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.pointers.size === 1) this.press = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false };
@@ -527,8 +540,8 @@ export class StructureViewer {
   }
 
   private onWheel(e: WheelEvent): void {
-    if (!isCameraInputTarget(e, this.canvas)) return;
-    const f = wheelZoomFactor(e, this.canvas.clientHeight);
+    if (!this.options.gl.isCameraInput(e, this.canvas)) return;
+    const f = this.options.gl.wheelZoom(e, this.canvas.clientHeight);
     if (f === null) return;
     e.preventDefault();
     this.zoomBy(f);
