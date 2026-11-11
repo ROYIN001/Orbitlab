@@ -80,8 +80,8 @@
       "checks": { "commands": ["@app-build"], "unit": ["tests/design-*.test.ts", "tests/build-*.test.ts", "tests/bench-part.test.ts", "tests/parts*.test.ts", "tests/fairing-rule.test.ts", "tests/readiness-target.test.ts", "tests/recheck-design.test.ts", "tests/panel-verdict.test.ts", "tests/verdict-localization.test.ts", "tests/worker-language-boundary.test.ts", "tests/satellite-*.test.ts", "tests/d06-*.test.ts", "tests/custom-vehicle*.test.ts", "tests/d01-*.test.ts", "tests/mission-result*.test.ts"], "heavy": ["tests/heavy/custom-satellite-sixdof.test.ts"], "browser": ["build-legacy-ratings", "r3-bench-drawings", "satellite", "requirements", "stage2-preflight", "launch-explore", "fx2-design-check-focus"] }
     },
     { "id": "structure", "why": "The Structure & Assembly section (owner, 2026-11-09): its pure core, model files, viewer and screen.",
-      "paths": ["src/structure/**", "src/ui/structure/**", "src/render/structure-*.ts", "src/render/edusat-model.ts", "scripts/structure-meshes.mjs", "public/structure/**"],
-      "checks": { "commands": ["@app-build"], "unit": ["tests/structure-*.test.ts", "tests/architecture.test.ts", "tests/privacy-inventory.test.ts"], "browser": ["structure-assembly"] } },
+      "paths": ["src/structure/**", "src/structure-host/**", "src/ui/structure/**", "src/ui/structure-loader.ts", "src/render/structure-*.ts", "src/render/edusat-model.ts", "scripts/structure-meshes.mjs", "public/structure/**"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/structure-*.test.ts", "tests/architecture.test.ts", "tests/privacy-inventory.test.ts"], "browser": ["structure-assembly", "structure-failures"] } },
     {
       "id": "mission-file",
       "why": "Saved/shared mission format and its readers.",
