@@ -39,7 +39,6 @@ export const isEduDesign = (v: unknown): v is EduDesign =>
 /** A design's identity: equal keys, equal designs, equal figures. */
 export const designKey = (d: EduDesign): string => `edusat:${d.battery}:${d.payload}`;
 
-export const sameDesign = (a: EduDesign, b: EduDesign): boolean => designKey(a) === designKey(b);
 
 /** The design's parts, one per unit, in the units' order: the fixed parts and the two chosen ones. */
 export function partsOf(d: EduDesign): EduPart[] {
@@ -51,8 +50,6 @@ export function partsOf(d: EduDesign): EduPart[] {
   });
 }
 
-/** The part a unit holds in this design. */
-export const partFor = (d: EduDesign, unit: string): EduPart | undefined => partsOf(d).find((p) => p.unit === unit);
 
 /** One thing of the picture: a piece of a part, with its place in the picture's numbering. */
 export interface EduItem { index: number; id: string; unit: EduUnit; part: EduPart; piece: EduPiece }

@@ -47,7 +47,7 @@ export type AppPage = 'requirements' | 'soyuz-st31' | 'soyuz-st31/assemble' | 'e
 export const APP_PAGES: Readonly<Record<AppPage, { section: AppSection; mode: AppLevel | null }>> = {
   requirements: { section: 'build', mode: 'engineer' },
   // the Structure section's models and their activities, at any level (null): the level is the depth the model is read at.
-  // The section's own list of them is src/ui/structure/models/index.ts (`modelPages`); tests/structure-registry.test.ts holds the two equal.
+  // The section's own list of them is src/ui/structure/models/index.ts (`modelPages`); tests/structure-tree.test.ts holds the two equal.
   'soyuz-st31': { section: 'structure', mode: null },
   'soyuz-st31/assemble': { section: 'structure', mode: null },
   edusat: { section: 'structure', mode: null },

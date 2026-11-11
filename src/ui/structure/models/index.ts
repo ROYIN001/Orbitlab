@@ -3,7 +3,7 @@
  * (src/structure/types.ts) with the adapter that gives it to the screens.
  * A new model is added here, with its id there, its addresses in
  * src/ui/app-mode.ts and its words in text.ts
- * (tests/structure-registry.test.ts holds the four together).
+ * (tests/structure-tree.test.ts holds the four together).
  */
 import type { StructureMode } from '../../../structure/progress';
 import { STRUCTURE_MODELS, type StructureModelId } from '../../../structure/types';
@@ -29,10 +29,3 @@ export function modelPages(adapters: Readonly<Record<StructureModelId, Pick<Mode
 /** The page of a model's activity: `<model>` for exploring, `<model>/<activity>` for the others. */
 export const pageOf = (model: StructureModelId, mode: StructureMode): string => (mode === 'explore' ? model : `${model}/${mode}`);
 
-/** The model and activity a page names, or null. */
-export function fromPage(page: string | undefined): { model: StructureModelId; mode: StructureMode } | null {
-  if (!page) return null;
-  const [model, mode = 'explore'] = page.split('/');
-  if (!(STRUCTURE_MODELS as readonly string[]).includes(model) || !['explore', 'assemble', 'experiment'].includes(mode)) return null;
-  return { model: model as StructureModelId, mode: mode as StructureMode };
-}

@@ -25,7 +25,7 @@ import type { StructureMode } from '../../structure/progress';
 import type { Depth, StructureModelId } from '../../structure/types';
 import { assemblyPanel } from './assembly-panel';
 import { stageBar, stageHead } from './bars';
-import { el } from './dom';
+import { button, el } from './dom';
 import type { StructureEnv, StructureSection } from './env';
 import { makeAdapters } from './models/index';
 import { guidePanel, infoPanel, introPanel, listPanel, sideTabs, systemsPanel } from './panels';
@@ -42,6 +42,8 @@ export class StructureScreen implements StructureSection {
   /** says what was selected or done; it stays put (the panels are redrawn, a live region must not be) */
   private readonly announcer = el('p', 'sr-only');
   /** what the live region last said: the storage note, the last message and send note by their counts, the result's design, the selection */
+  /** the language whose copy could not be loaded (null: none) */
+  private langMissing: string | null = null;
   private said = { store: '', msg: 0, send: 0, verdict: '', sel: '', hand: '', system: '' };
   private saySeq = 0;
 
@@ -97,7 +99,22 @@ export class StructureScreen implements StructureSection {
   private language(): void {
     const lang = getLang();
     if (hasLanguage(lang)) return;
-    void loadLanguage(lang).then(() => { if (this.visible && getLang() === lang && hasLanguage(lang)) this.render(); });
+    void loadLanguage(lang).then((here) => {
+      // a copy that cannot be had is said, in the app's own words for it, with the way to get it (the page loaded again)
+      this.langMissing = here ? null : lang;
+      if (this.visible && getLang() === lang) this.render();
+    });
+  }
+
+  /** The note that the interface language's copy could not be loaded, or null. */
+  private languageNote(): HTMLElement | null {
+    if (this.langMissing === null || this.langMissing !== getLang() || hasLanguage(getLang())) return null;
+    const env = this.store.env;
+    const p = el('p', 'st-note st-fail st-lang-note', `${env.words.loadFailed()} `);
+    p.lang = getLang();
+    p.setAttribute('role', 'status');
+    p.append(button(env.words.reload(), 'lang:reload', () => env.reload()));
+    return p;
   }
 
   /** The section's keys from the app's handler: Escape puts down what is in hand, else stops what is being followed, else clears the selection. */
@@ -153,6 +170,8 @@ export class StructureScreen implements StructureSection {
   private renderSide(): void {
     const store = this.store, adapter = store.adapter;
     const parts: HTMLElement[] = [introPanel(store)];
+    const langNote = this.languageNote();
+    if (langNote) parts.unshift(langNote);
     const guide = guidePanel(store);
     if (guide) parts.push(guide);
     if (store.mode === 'assemble') {

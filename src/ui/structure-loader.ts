@@ -31,10 +31,10 @@ import type { StructureEnv, StructureSection } from './structure/env';
 export const STRUCTURE_PROFILE_KEY = 'orbitlab.structure.v1';
 
 /** A model's activity as a page of the section: `<model>` for exploring, `<model>/<activity>` for the others (`pageOf`, src/ui/structure/models/index.ts). */
-const pageOf = (model: StructureModelId, mode: StructureMode): AppPage => (mode === 'explore' ? model : `${model}/${mode}`) as AppPage;
+export const pageOf = (model: StructureModelId, mode: StructureMode): AppPage => (mode === 'explore' ? model : `${model}/${mode}`) as AppPage;
 
-/** The model and activity a page of the section names. */
-function fromPage(page: string | undefined): { model?: StructureModelId; mode?: StructureMode } {
+/** The model and activity a page of the section names (the app's router lets only the section's own pages reach here). */
+export function fromPage(page: string | undefined): { model?: StructureModelId; mode?: StructureMode } {
   if (!page) return {};
   const [model, mode = 'explore'] = page.split('/');
   return { model: model as StructureModelId, mode: mode as StructureMode };
@@ -68,12 +68,20 @@ export function structureEnv(host: StructureLoaderHost): StructureEnv {
     gl: { createRenderer: createWebGLRenderer, isCameraInput: isCameraInputTarget, wheelZoom: wheelZoomFactor },
     inflate: inflateAnatomy,
     lang: getLang,
+    words: { loadFailed: () => t('lesson.page.loadFailed'), reload: () => t('pwa.reload') },
+    reload: () => location.reload(),
     href: (level, model, mode) => hashForRoute(route('structure', level, pageOf(model, mode))),
     go: (level, model, mode) => host.go(route('structure', level, pageOf(model, mode))),
   };
 }
 
 type Loaded = typeof import('./structure/structure');
+
+/** The page at this address can be fetched now (by the network, or by the worker's copy of it). */
+async function pageReachable(): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false && !navigator.serviceWorker?.controller) return false;
+  try { return (await fetch(location.href, { method: 'GET', cache: 'no-store' })).ok; } catch { return false; }
+}
 
 export class StructureLoader {
   /** the section once its code has arrived (read by the browser journeys; null until then) */
@@ -90,6 +98,8 @@ export class StructureLoader {
     private readonly load: () => Promise<Loaded> = () => import('./structure/structure'),
     /** load the page again, at the address it is on */
     private readonly reload: () => void = () => location.reload(),
+    /** whether the page itself can be had now (a reload that cannot be answered would put the browser's error page in the app's place) */
+    private readonly reachable: () => Promise<boolean> = pageReachable,
   ) {}
 
   /** Show the section at a level, on the page the address names (a model, or a model's activity), if it names one. */
@@ -118,7 +128,10 @@ export class StructureLoader {
    * a browser keeps a module's failed fetch for the life of the page and
    * answers the same import with the same failure, so a retry that fails too
    * loads the page again, at this address (what the note asks for, and what
-   * the lesson pages' own retry does).
+   * the lesson pages' own retry does) — but only when the page can be had:
+   * with the network still down and no worker to answer, a reload would
+   * replace the running app with the browser's error page, so the note
+   * stays and the rest of the app goes on working.
    */
   private bring(again = false): void {
     if (this.loading) return;
@@ -133,8 +146,11 @@ export class StructureLoader {
     }, () => {
       this.loading = false;
       this.failed = true;
-      if (again) { this.reload(); return; }
-      if (this.want) this.note();
+      if (!again) { if (this.want) this.note(); return; }
+      void this.reachable().then((yes) => {
+        if (yes) this.reload();
+        else if (this.want && this.failed) this.note();
+      });
     });
   }
 

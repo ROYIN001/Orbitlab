@@ -5,7 +5,7 @@
  * this alone — none of them knows which model it shows — so a new model is a
  * new adapter in `models/index.ts`, its address in src/ui/app-mode.ts and its
  * words in text.ts, and nothing else changes
- * (tests/structure-registry.test.ts).
+ * (tests/structure-tree.test.ts).
  */
 import type { AssemblySpec } from '../../../structure/assembly';
 import type { ModelRelation, ModelTree, MountPoint, OrderRule, Pose } from '../../../structure/model';
@@ -200,5 +200,3 @@ export interface ModelAdapter {
   readonly experiment?: ExperimentUi;
 }
 
-/** The parts' kinds, each with its one-sentence meaning's text key (`cat.<kind>.means`). */
-export const KIND_ORDER: readonly PartCategory[] = ['load', 'mount', 'wall', 'mechanism', 'equipment', 'propulsion'];

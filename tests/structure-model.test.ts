@@ -49,6 +49,26 @@ describe('the Structure section\'s Soyuz-2.1b/Fregat files', () => {
     expect(here.sort()).toEqual([SOYUZ_FILES.content, ...Object.values(SOYUZ_FILES.layers)].map((f) => f.replace('structure/', '')).sort());
   });
 
+  it('are the bytes their revision was made as: files made again with other bytes need a new revision', () => {
+    // The files' names carry the revision, and a browser that has kept some of them answers for those from its copy
+    // (src/pwa/sw-core.ts): bytes changed under one revision would be mixed with kept ones, and the parts lit would not
+    // be the parts named. Changed files therefore fail here until the revision is raised (DATA_REVISION in
+    // scripts/structure-meshes.mjs, SOYUZ_DATA_REVISION) and the new files' hashes are written below.
+    const MADE_AS: Readonly<Record<number, Readonly<Record<string, string>>>> = {
+      2: {
+        'structure/soyuz-2-1b-fregat-st31.r2.json': '03af2b271b5ed219f6da29c9a056177f9c980063d34e2668dae9c2e8e448d5d9',
+        'structure/soyuz-2-1b-fregat-st31.r2.outer.bin': 'e391cdfef0cd3d28116c13d4d666b52ddd847e691f47e6090616d2b074b7565b',
+        'structure/soyuz-2-1b-fregat-st31.r2.inner.bin': '2700d78d2bcf3a998bcebb1d80e7850b19709c075fb7a29cf4df9bd10f619ec2',
+        'structure/soyuz-2-1b-fregat-st31.r2.engine.bin': '4d6f470c813dd64541017879cb528cefb5a678f7ed3929276239c789a67ee705',
+      },
+    };
+    const made = MADE_AS[SOYUZ_DATA_REVISION];
+    expect(made, `revision ${SOYUZ_DATA_REVISION} has no hashes here`).toBeDefined();
+    const paths = [SOYUZ_FILES.content, ...Object.values(SOYUZ_FILES.layers)];
+    expect(Object.keys(made).sort()).toEqual([...paths].sort());
+    for (const path of paths) expect(createHash('sha256').update(file(path)).digest('hex'), `${path} changed within revision ${SOYUZ_DATA_REVISION}`).toBe(made[path]);
+  });
+
   it('mark every vertex with its own part: each triangle is one part\'s, and each part\'s stated centre lies in its own geometry', () => {
     const n = content.items.length;
     const box = Array.from({ length: n }, () => [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity]);

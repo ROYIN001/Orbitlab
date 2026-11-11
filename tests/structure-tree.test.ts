@@ -11,14 +11,15 @@ import { EMPTY_ASSEMBLY, install, type AssemblyState } from '../src/structure/as
 import { EDUSAT_ASSEMBLY, EDUSAT_MOUNTS, EDUSAT_ORDER, EDUSAT_RELATIONS, EDU_SUBSYSTEMS, EDU_UNITS } from '../src/structure/edusat';
 import { REFERENCE_DESIGN, eduTree, itemsOf, subsystemNode } from '../src/structure/edusat-design';
 import {
-  TIER_OF_DEPTH, atDepth, buildTree, nodeOfUnit, pathOf, pickAt, relationProblems, relationStatus, unitOf, unitsUnder, type ModelNode,
+  TIER_OF_DEPTH, atDepth, buildTree, nodeOfUnit, pathOf, relationProblems, relationStatus, unitOf, unitsUnder, type ModelNode,
 } from '../src/structure/model';
 import { STRUCTURE_MODES } from '../src/structure/progress';
 import { SOYUZ_ASSEMBLY, SOYUZ_MOUNTS, SOYUZ_ORDER, SOYUZ_RELATIONS, SOYUZ_UNITS } from '../src/structure/soyuz';
 import { SOYUZ_FILES, indexSoyuz, jointParts, parseSoyuzContent, soyuzTree } from '../src/structure/soyuz-content';
 import { STRUCTURE_MODELS } from '../src/structure/types';
 import { APP_PAGES, hashForRoute, route, routeFromHash } from '../src/ui/app-mode';
-import { fromPage, makeAdapters, modelPages, pageOf } from '../src/ui/structure/models/index';
+import { makeAdapters, modelPages, pageOf } from '../src/ui/structure/models/index';
+import { fromPage, pageOf as loaderPageOf } from '../src/ui/structure-loader';
 import { hasText } from '../src/ui/structure/text';
 import { fakeApp } from './structure-harness';
 
@@ -50,9 +51,9 @@ describe('a model\'s tree', () => {
     expect(atDepth(tree, 'B', 'engineer')?.id).toBe('B');
     expect(atDepth(tree, null, 'watch')).toBeNull();
     expect(atDepth(tree, 'nothing', 'watch')).toBeNull();
-    expect(pickAt(tree, 1, 'engineer')?.id).toBe('A/g');
-    expect(pickAt(tree, 1, 'watch')?.id).toBe('A');
-    expect(pickAt(tree, 9, 'watch')).toBeNull();
+    expect(atDepth(tree, tree.leafOf[1] ?? null, 'engineer')?.id).toBe('A/g');
+    expect(atDepth(tree, tree.leafOf[1] ?? null, 'watch')?.id).toBe('A');
+    expect(atDepth(tree, tree.leafOf[9] ?? null, 'watch')).toBeNull();
   });
 
   it('knows the unit a node is or lies in, and the units a node covers', () => {
@@ -150,9 +151,9 @@ describe('the two models as trees', () => {
     for (const u of EDU_UNITS) expect(nodeOfUnit(tree, u)).toMatchObject({ id: u, tier: 2 });
     // a press on a battery cell: the power system at a first look, the battery at the middle depth, the cell itself at the deepest
     const cell = items.find((it) => it.unit === 'battery' && it.piece.kind === 'cell18650')!;
-    expect(pickAt(tree, cell.index, 'watch')?.id).toBe(subsystemNode('power'));
-    expect(pickAt(tree, cell.index, 'explore')?.id).toBe('battery');
-    expect(pickAt(tree, cell.index, 'engineer')?.id).toBe(cell.id);
+    expect(atDepth(tree, tree.leafOf[cell.index] ?? null, 'watch')?.id).toBe(subsystemNode('power'));
+    expect(atDepth(tree, tree.leafOf[cell.index] ?? null, 'explore')?.id).toBe('battery');
+    expect(atDepth(tree, tree.leafOf[cell.index] ?? null, 'engineer')?.id).toBe(cell.id);
     expect(unitsUnder(tree, subsystemNode('power')).sort()).toEqual(['battery', 'eps', 'panel-nx', 'panel-ny', 'panel-px', 'panel-py']);
   });
 });
@@ -211,9 +212,11 @@ describe('the section\'s models and the app\'s addresses', () => {
     expect(modelPages(adapters).sort()).toEqual(routed);
   });
 
-  it('names a model\'s activity in the address, and reads it back', () => {
+  it('names a model\'s activity in the address, and the app\'s loader reads it back the same way', () => {
     for (const m of STRUCTURE_MODELS) for (const a of adapters[m].activities) {
       const page = pageOf(m, a);
+      // the app's side names pages by its own copy of the rule (it imports nothing of the section): the two agree
+      expect(loaderPageOf(m, a)).toBe(page);
       expect(fromPage(page)).toEqual({ model: m, mode: a });
       const hash = hashForRoute(route('structure', 'explore', page as never));
       expect(hash).toBe(`#/structure/explore/${page}`);
@@ -221,8 +224,12 @@ describe('the section\'s models and the app\'s addresses', () => {
     }
     expect(pageOf('edusat', 'explore')).toBe('edusat');
     expect(fromPage('edusat/assemble')).toEqual({ model: 'edusat', mode: 'assemble' });
-    expect(fromPage('edusat/fly')).toBeNull();
-    expect(fromPage('moon')).toBeNull();
-    expect(fromPage(undefined)).toBeNull();
+    expect(fromPage(undefined)).toEqual({});
+    // an address that names no page of the section does not reach the loader: the router gives the section's own page
+    for (const hash of ['#/structure/explore/moon', '#/structure/explore/edusat/fly']) {
+      const to = routeFromHash(hash);
+      const page = to && to.section ? to.page : undefined;
+      expect(page === undefined || modelPages(adapters).includes(page), hash).toBe(true);
+    }
   });
 });

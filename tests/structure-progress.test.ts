@@ -58,6 +58,46 @@ describe('the Structure section\'s stored progress', () => {
   });
 });
 
+describe('what a record carries from before', () => {
+  it('keeps the helper open or closed across a visit', () => {
+    const p = freshProgress();
+    expect(readProgress(writeProgress(p), specs).progress.guide).toBe(false);
+    p.guide = true;
+    expect(JSON.parse(writeProgress(p)).guide).toBe(true);
+    expect(readProgress(writeProgress(p), specs).progress.guide).toBe(true);
+    // anything but true is closed
+    expect(readProgress(JSON.stringify({ version: 1, guide: 'yes' }), specs).progress.guide).toBe(false);
+  });
+
+  it('reads the first version\'s names for the satellite\'s ±Y panels and faces, so its assembly is whole', () => {
+    // as the first version stored a finished EduSat: the ±Y panels named by the picture's z
+    const v1 = ['frame', 'stack', 'payload', 'battery', 'eps', 'adcs', 'obc', 'radio', 'antenna'].map((u) => [u, { slot: u, orientation: 0 }]);
+    const panels = [['panel-px', 'face-px'], ['panel-nx', 'face-nx'], ['panel-pz', 'face-pz'], ['panel-nz', 'face-nz']].map(([u, f]) => [u, { slot: f, orientation: 0 }]);
+    const raw = JSON.stringify({ version: 1, model: 'edusat', mode: { edusat: 'assemble' }, assembly: { edusat: { placed: Object.fromEntries([...v1, ...panels]) } }, completed: { edusat: '2026-11-09T10:00:00.000Z' } });
+    const { progress, note } = readProgress(raw, specs);
+    expect(note).toBeNull();
+    expect(Object.keys(progress.assembly.edusat.placed)).toHaveLength(13);
+    // the panel that stood at the picture's +z is the specification's −Y one, on that face
+    expect(progress.assembly.edusat.placed['panel-ny']).toEqual({ slot: 'face-ny', orientation: 0 });
+    expect(progress.assembly.edusat.placed['panel-py']).toEqual({ slot: 'face-py', orientation: 0 });
+    // a first-version panel on another face keeps the face it was on
+    const swapped = JSON.parse(raw);
+    swapped.assembly.edusat.placed['panel-pz'] = { slot: 'face-nz', orientation: 0 };
+    swapped.assembly.edusat.placed['panel-nz'] = { slot: 'face-pz', orientation: 0 };
+    const back = readProgress(JSON.stringify(swapped), specs).progress.assembly.edusat.placed;
+    expect([back['panel-ny']?.slot, back['panel-py']?.slot]).toEqual(['face-py', 'face-ny']);
+    // what is written is today's names only
+    expect(writeProgress(progress)).not.toMatch(/panel-[pn]z|face-[pn]z/);
+  });
+
+  it('restores a unit listed before what it rests on, and drops a completion date that is not one', () => {
+    const raw = JSON.stringify({ version: 1, assembly: { edusat: { placed: { stack: { slot: 'stack', orientation: 0 }, frame: { slot: 'frame', orientation: 0 } } } }, completed: { edusat: 'yesterday', 'soyuz-st31': '2026-11-09T10:00:00.000Z' } });
+    const { progress } = readProgress(raw, specs);
+    expect(Object.keys(progress.assembly.edusat.placed).sort()).toEqual(['frame', 'stack']);
+    expect(progress.completed).toEqual({ edusat: null, 'soyuz-st31': '2026-11-09T10:00:00.000Z' });
+  });
+});
+
 describe('the reference and my experiment', () => {
   it('keeps the reference frozen: an experiment is a copy', () => {
     expect(Object.isFrozen(REFERENCE_DESIGN)).toBe(true);

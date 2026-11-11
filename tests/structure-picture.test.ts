@@ -9,8 +9,14 @@ import { FLAG } from '../src/render/structure-viewer';
 import { REFERENCE_DESIGN } from '../src/structure/edusat-design';
 import type { Pose } from '../src/structure/model';
 import type { StructureStore } from '../src/ui/structure/store';
-import { CHANGED_COLOUR, apartPose, picture } from '../src/ui/structure/picture';
+import { SOYUZ_FILES } from '../src/structure/soyuz-content';
+import { CHANGED_COLOUR, apartPose, freePlace, picture } from '../src/ui/structure/picture';
 import { openStore } from './structure-harness';
+
+const load = (id: string): Promise<unknown> => import(/* @vite-ignore */ id);
+const { readFileSync } = (await load('node:fs')) as { readFileSync(path: URL, enc: string): string };
+/** Where each part of the rocket is, m, from the model's content file itself. */
+const soyuzCentres = (JSON.parse(readFileSync(new URL(`../public/${SOYUZ_FILES.content}`, import.meta.url), 'utf8')) as { items: { center: [number, number, number] }[] }).items.map((p) => p.center);
 
 const itemsOf = (store: StructureStore, id: string): readonly number[] => store.adapter.tree().nodes.get(id)!.items;
 const count = (flags: Uint8Array, bit: number): number => flags.reduce((n, f) => n + ((f & bit) ? 1 : 0), 0);
@@ -70,6 +76,45 @@ describe('exploring the rocket', () => {
     expect(count(p.flags, FLAG.hidden)).toBe(cut.hidden.length);
     expect(all(p.flags, cut.hidden, FLAG.hidden)).toBe(true);
     expect([...p.layers].sort()).toEqual(['inner', 'outer']);
+  });
+
+  it('cuts the side towards the view: the halves hidden stand between the camera and the halves kept', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31' });
+    const cut = store.adapter.cutaway()!, hidden = new Set(cut.hidden);
+    // where each half is, from the picture's own geometry (not from the adapter's choice of which to hide)
+    const centre = (items: readonly number[]): [number, number] => {
+      let x = 0, z = 0, n = 0;
+      for (const i of items) { const at = soyuzCentres[i]; x += at[0]; z += at[2]; n++; }
+      return [x / n, z / n];
+    };
+    const halved = store.adapter.shell().filter((i) => store.adapter.unitOfItem(i) === 'core');
+    const gone = centre(halved.filter((i) => hidden.has(i))), kept = centre(halved.filter((i) => !hidden.has(i)));
+    // the camera stands at (sin az, cos az) round the model in x and z
+    const towards = (gone[0] - kept[0]) * Math.sin(cut.azimuth) + (gone[1] - kept[1]) * Math.cos(cut.azimuth);
+    expect(towards).toBeGreaterThan(0.2);
+    expect(hidden.size).toBe(411);
+  });
+
+  it('sees through the shell when asked, and through the rest of an assembly round a part picked inside it', async () => {
+    const { store } = await openStore({ level: 'engineer', model: 'soyuz-st31' });
+    const shell = store.adapter.shell();
+    expect(count(picture(store).flags, FLAG.ghost)).toBe(0);
+    store.setView({ shell: true });
+    const through = picture(store);
+    expect(all(through.flags, shell, FLAG.ghost)).toBe(true);
+    expect(through.layers.has(store.adapter.layers[1])).toBe(true);
+    store.setView({ shell: false });
+    // a single part inside the core: every other part of the core is seen through, the part itself is not
+    const tree = store.adapter.tree();
+    const part = tree.children.get('core/main-chambers')![0], item = tree.nodes.get(part)!.items[0];
+    store.select(part);
+    const p = picture(store), core = itemsOf(store, 'core');
+    expect((p.flags[item] & FLAG.selected) !== 0 && (p.flags[item] & FLAG.ghost) === 0).toBe(true);
+    expect(core.filter((i) => i !== item).every((i) => (p.flags[i] & FLAG.ghost) !== 0)).toBe(true);
+    // a layer asked for by name is drawn
+    store.select(null);
+    store.setView({ layers: { engine: true } });
+    expect(picture(store).layers.has('engine')).toBe(true);
   });
 
   it('follows an internal system: its parts painted by what flows, the step in hand lit, everything else dimmed', async () => {
@@ -165,6 +210,30 @@ describe('exploring the rocket', () => {
   });
 });
 
+describe('the flight sequence on the picture', () => {
+  it('drops the skirt\'s panels at their step and moves Fregat off at the last', async () => {
+    const { store } = await openStore({ level: 'watch', model: 'soyuz-st31' });
+    const flight = store.adapter.flight!;
+    const skirt = flight(5).hiddenItems;
+    expect(skirt).toHaveLength(3);
+    expect(flight(4).hiddenItems).toHaveLength(0);
+    store.setGuideOpen(true);
+    store.guideStep('soyuz-flight', 4);
+    expect(skirt.some((i) => (picture(store).flags[i] & FLAG.hidden) !== 0)).toBe(false);
+    store.guideStep('soyuz-flight', 5);
+    const dropped = picture(store);
+    expect(all(dropped.flags, skirt, FLAG.hidden)).toBe(true);
+    expect(dropped.poses.get('core')!.visible).toBe(false);
+    expect(dropped.poses.get('stage3')!.visible).toBe(true);
+    // the last step: the payload has gone, and Fregat is drawn moved away from where it rode
+    store.guideStep('soyuz-flight', 9);
+    const last = picture(store), rode = store.adapter.explorePose('fregat', { explode: 0, open: 0 }).move;
+    expect(last.poses.get('payload')!.visible).toBe(false);
+    const off = last.poses.get('fregat')!.move;
+    expect(Math.hypot(off[0] - rode[0], off[1] - rode[1], off[2] - rode[2])).toBeGreaterThan(1);
+  });
+});
+
 describe('exploring the satellite', () => {
   it('lights a subsystem\'s units; a thing joined to most of the rest lights none of it', async () => {
     const { store } = await openStore({ level: 'watch', model: 'edusat' });
@@ -239,6 +308,29 @@ describe('assembling', () => {
     expect(p.poses.get('booster-b')).toEqual(store.adapter.slotPose('booster-b', 'booster-b', store.held['soyuz-st31']!.turn));
     store.dragEnd(false);
     expect(picture(store).poses.get('booster-b')).toEqual(lying);
+  });
+
+  it('lights a fitted unit picked while assembling, and draws a loose panel\'s outline at a face still free', async () => {
+    const { store } = await openStore({ level: 'watch', model: 'edusat', mode: 'assemble' });
+    for (let k = 0; k < 9; k++) store.fit(store.next()[0]);
+    store.select('frame');
+    expect(all(picture(store).flags, itemsOf(store, 'frame'), FLAG.selected)).toBe(true);
+    store.select(null);
+    // the +X panel put on the −Y face (deeper, where the place is the learner's): −Y's own panel is then outlined at the face left free
+    store.open('explore', 'edusat', 'assemble');
+    store.hold('panel-px');
+    store.chooseSlot('face-ny');
+    for (let k = 0; k < 4 && !Object.hasOwn(store.assembly.placed, 'panel-px'); k++) { store.install(); if (!Object.hasOwn(store.assembly.placed, 'panel-px')) store.turn(); }
+    expect(store.assembly.placed['panel-px']?.slot).toBe('face-ny');
+    expect(freePlace(store, 'panel-ny')).toBe('face-px');
+    expect(freePlace(store, 'panel-py')).toBe('face-py');
+    store.setView({ outline: true });
+    const p = picture(store);
+    expect(p.poses.get('panel-ny')).toEqual(store.adapter.slotPose('panel-ny', 'face-px', 0));
+    // at a first look a press fits it there, not on the face that is taken
+    store.open('watch', 'edusat', 'assemble');
+    store.fit('panel-ny');
+    expect(store.assembly.placed['panel-ny']?.slot).toBe('face-px');
   });
 
   it('draws a side panel on the face it was put on', async () => {

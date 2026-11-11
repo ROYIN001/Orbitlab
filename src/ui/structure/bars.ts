@@ -8,7 +8,6 @@
  * a design while it is being changed.
  */
 import { occupant } from '../../structure/assembly';
-import { nodeOfUnit } from '../../structure/model';
 import { STRUCTURE_MODES } from '../../structure/progress';
 import { STRUCTURE_MODELS, type Depth } from '../../structure/types';
 import type { ColorMode } from '../../render/structure-viewer';
@@ -237,5 +236,3 @@ export function stageBar(store: StructureStore, stage: Stage, bar: HTMLElement):
   bar.replaceChildren(node);
 }
 
-/** The unit a node stands for in the assembly's lists (a part's own unit). */
-export const unitNode = (store: StructureStore, unit: string): string | null => nodeOfUnit(store.adapter.tree(), unit)?.id ?? null;

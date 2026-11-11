@@ -98,8 +98,6 @@ export function atDepth(tree: ModelTree, id: string | null, depth: Depth): Model
   return shown;
 }
 
-/** The node a press on `item` picks at a depth. */
-export const pickAt = (tree: ModelTree, item: number, depth: Depth): ModelNode | null => atDepth(tree, tree.leafOf[item] ?? null, depth);
 
 /** The unit a node is, or lies in (its nearest ancestor that is one); null for a node above the units. */
 export function unitOf(tree: ModelTree, id: string): string | null {

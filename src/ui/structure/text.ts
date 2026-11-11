@@ -823,12 +823,19 @@ export const th: Copy = {
 /** The copies loaded so far: Thai always; English and Russian once `loadLanguage` has fetched them. */
 const loaded: Partial<Record<Lang, Copy>> = { th };
 
-/** Fetch a language's copy if it is not here yet (Thai always is). Resolves either way: a copy that cannot be had falls back to Thai. */
-export async function loadLanguage(lang: Lang): Promise<void> {
-  if (loaded[lang]) return;
+/**
+ * Fetch a language's copy if it is not here yet (Thai always is). Resolves
+ * either way, with whether the copy is here: one that cannot be had (offline
+ * before it was ever fetched) leaves the Thai showing — and a browser keeps
+ * a module's failed fetch for the life of the page, so only loading the
+ * page again can bring it.
+ */
+export async function loadLanguage(lang: Lang): Promise<boolean> {
+  if (loaded[lang]) return true;
   try {
     loaded[lang] = lang === 'en' ? (await import('./structure-en')).copy : (await import('./structure-ru')).copy;
-  } catch { /* offline before the copy was ever fetched: the source language shows meanwhile */ }
+    return true;
+  } catch { return false; }
 }
 
 /** The section has words for `key` (in Thai, the source: the other two carry the same keys). */

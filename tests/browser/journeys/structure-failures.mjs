@@ -5,11 +5,13 @@
  * offered that is not there —
  *
  * - the section's own code (the note's retry loads the page again at the same
- *   address: a browser keeps a module's failed fetch for the life of the page);
+ *   address: a browser keeps a module's failed fetch for the life of the page
+ *   — but not while the page cannot be had, when the app is kept as it is);
  * - a model's data; its 3-D alone (the list and a side view then stand in);
  *   one of its layers (the rest goes on working);
  * - a model switched away from while it loads, which must open again later;
- * - a language's copy (the source language shows);
+ * - a language's copy (the source language shows, and it is said in the app's
+ *   own words for that language, with the page loaded again as the way out);
  * - no WebGL for the section's view (the side view, and assembling by it).
  *
  * Without the service worker, whose cache would answer for a fetch this
@@ -40,6 +42,12 @@ export default async function structureFailures(t) {
     const note = page.locator('#structure-screen');
     await note.locator('button').waitFor({ timeout: 60_000 });
     t.check((await note.innerText()).includes('ไม่สามารถโหลด'), `the section's code failed to load: “${(await note.innerText()).replace(/\s+/g, ' ').slice(0, 90)}”`);
+    // still offline, with no worker to answer for the page: trying again must not put the browser's error page in the app's place
+    await app.context.setOffline(true);
+    await note.locator('button').click();
+    await page.waitForTimeout(1500);
+    t.check(page.url().includes('#/structure/watch/edusat') && (await note.innerText()).includes('ไม่สามารถโหลด') && await note.locator('button').count() === 1, `offline, a retry keeps the app and the note: ${page.url().slice(-40)}`);
+    await app.context.setOffline(false);
     await unblock();
     await note.locator('button').click();
     await page.waitForSelector('#loading.hidden', { state: 'attached', timeout: 120_000 });
@@ -125,10 +133,20 @@ export default async function structureFailures(t) {
   {
     const app = await open('en');
     const { page } = app;
-    await block(page, /\/assets\/structure-en-[\w-]+\.js$/);
+    const unblock = await block(page, /\/assets\/structure-en-[\w-]+\.js$/);
     await go(page, '#/structure/watch/edusat');
     await ready(page);
     t.check((await k(page, 'mode:assemble').textContent()).includes('ประกอบ') && await page.evaluate(() => document.querySelector('.structure-screen').lang) === 'th', 'without its copy the section shows the Thai, and tells the browser so');
+    // and it is said, in the app's own English, with the way to get the copy (a browser keeps a module's failed fetch: the page loaded again)
+    const langNote = page.locator('.structure-screen .st-lang-note');
+    await langNote.waitFor({ timeout: 30_000 });
+    t.check((await langNote.innerText()).includes('could not be loaded') && await langNote.getAttribute('lang') === 'en' && await k(page, 'lang:reload').isVisible(), `the missing copy is said: “${(await langNote.innerText()).replace(/\s+/g, ' ').slice(0, 90)}”`);
+    await unblock();
+    await k(page, 'lang:reload').click();
+    await page.waitForSelector('#loading.hidden', { state: 'attached', timeout: 120_000 });
+    await ready(page);
+    await page.waitForFunction(() => document.querySelector('.structure-screen')?.lang === 'en', null, { timeout: 60_000 });
+    t.check((await k(page, 'mode:assemble').textContent()).includes('Assemble') && await page.locator('.structure-screen .st-lang-note').count() === 0, 'loading the page again brought the English copy');
     app.checkErrors();
     await app.context.close();
   }

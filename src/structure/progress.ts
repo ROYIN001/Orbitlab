@@ -60,6 +60,25 @@ export interface ReadProgress {
   note: 'damaged' | 'newer' | null;
 }
 
+/**
+ * Names a record may carry from before they changed, by model: the first
+ * version of this section called the satellite's side panels and faces on
+ * the specification's ±Y by the picture's z (its −z is the specification's
+ * +Y). A record kept from then is read with today's names, so its
+ * placements are not dropped as unknown.
+ */
+const STORED_RENAMES: Partial<Record<StructureModelId, Readonly<Record<string, string>>>> = {
+  edusat: { 'panel-nz': 'panel-py', 'panel-pz': 'panel-ny', 'face-nz': 'face-py', 'face-pz': 'face-ny' },
+};
+
+/** A stored `placed` record with the units and places it names given today's names. */
+function renamed(model: StructureModelId, placed: unknown): unknown {
+  const names = STORED_RENAMES[model];
+  if (!names || !own(placed)) return placed;
+  const now = (id: string): string => (Object.hasOwn(names, id) ? names[id] : id);
+  return Object.fromEntries(Object.entries(placed).map(([unit, at]) => [now(unit), own(at) && typeof at.slot === 'string' ? { ...at, slot: now(at.slot) } : at]));
+}
+
 /** Read a stored record (`raw` as stored, or null), restoring each assembly by `specs`' rules. */
 export function readProgress(raw: string | null, specs: Record<StructureModelId, AssemblySpec>): ReadProgress {
   const fresh = freshProgress();
@@ -74,7 +93,7 @@ export function readProgress(raw: string | null, specs: Record<StructureModelId,
     const mode = own(data.mode) ? data.mode[m] : undefined;
     if (STRUCTURE_MODES.includes(mode as StructureMode)) p.mode[m] = mode as StructureMode;
     const placed = own(data.assembly) && own(data.assembly[m]) ? (data.assembly[m] as Record<string, unknown>).placed : undefined;
-    p.assembly[m] = restoreAssembly(specs[m], placed);
+    p.assembly[m] = restoreAssembly(specs[m], renamed(m, placed));
     const done = own(data.completed) ? data.completed[m] : undefined;
     p.completed[m] = typeof done === 'string' && !Number.isNaN(Date.parse(done)) ? done : null;
   }

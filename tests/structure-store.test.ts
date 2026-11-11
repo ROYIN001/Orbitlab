@@ -270,6 +270,37 @@ describe('where the keyboard\'s focus goes next', () => {
   });
 });
 
+describe('what an assembly keeps and lets go of', () => {
+  it('starting again puts down what is in hand; a second completion keeps the first one\'s date; a model changed by the address is kept', async () => {
+    const { store, app } = await openStore({ level: 'watch', model: 'edusat', mode: 'assemble' });
+    for (let k = 0; k < 13; k++) store.fit(store.next()[0]);
+    const first = store.progress.completed.edusat;
+    expect(first).not.toBeNull();
+    store.remove('antenna');
+    await new Promise((r) => setTimeout(r, 5));
+    store.fit('antenna');
+    expect(store.check().complete).toBe(true);
+    expect(store.progress.completed.edusat).toBe(first);
+    store.open('explore', 'edusat', 'assemble');
+    store.remove('antenna');
+    store.hold('antenna');
+    store.restart();
+    expect(store.held.edusat).toBeNull();
+    expect(Object.keys(store.assembly.placed)).toEqual([]);
+    // the model the address names is what a later visit opens on
+    store.open('explore', 'soyuz-st31');
+    expect(JSON.parse(app.stored.text!).model).toBe('soyuz-st31');
+  });
+
+  it('does not take from a stored record an activity the model lacks', async () => {
+    const app = fakeApp(JSON.stringify({ version: STRUCTURE_STORE_VERSION, model: 'soyuz-st31', mode: { 'soyuz-st31': 'experiment', edusat: 'experiment' } }));
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31' }, app);
+    expect(store.mode).toBe('explore');
+    store.open('explore', 'edusat');
+    expect(store.mode).toBe('experiment');
+  });
+});
+
 describe('undoing with a part in hand', () => {
   it('does not leave in hand a part the step taken back has fitted again', async () => {
     const { store } = await openStore({ level: 'explore', model: 'edusat', mode: 'assemble' });

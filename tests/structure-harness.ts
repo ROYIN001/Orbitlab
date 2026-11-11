@@ -37,6 +37,8 @@ export interface FakeApp {
   restore: { can: boolean; ok: boolean; count: number };
   /** the app flushing a learner's work (a profile switch, the page closing) */
   flush(): void;
+  /** how many times the section asked for the page to be loaded again */
+  reloads: number;
 }
 
 /** What the app's satellite model would make of a record, near enough for the section's own rules. */
@@ -49,7 +51,7 @@ export function fakeApp(stored: string | null = null): FakeApp {
   const flushers: (() => void)[] = [];
   const app: FakeApp = {
     stored: { text: stored }, writes: { answer: 'ok', count: 0 }, went: [], sent: [],
-    send: { refuse: null, receipt: true }, restore: { can: false, ok: true, count: 0 },
+    send: { refuse: null, receipt: true }, restore: { can: false, ok: true, count: 0 }, reloads: 0,
     flush: () => { for (const f of flushers) f(); },
     env: {
       power: POWER_ENV,
@@ -72,6 +74,8 @@ export function fakeApp(stored: string | null = null): FakeApp {
       gl: {} as ViewerGl,
       inflate: inflateAnatomy,
       lang: () => 'th',
+      words: { loadFailed: () => 'the page could not be loaded', reload: () => 'reload' },
+      reload: () => { app.reloads++; },
       href: (level: Depth, model: StructureModelId, mode: StructureMode) => `#/structure/${level}/${pageOf(model, mode)}`,
       go(level, model, mode) { app.went.push(`${level}/${pageOf(model, mode)}`); },
     },

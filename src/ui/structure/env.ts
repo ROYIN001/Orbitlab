@@ -35,6 +35,14 @@ export interface StructureEnv {
   inflate(buffer: ArrayBuffer): Promise<ArrayBuffer>;
   /** the interface language */
   lang(): Lang;
+  /**
+   * The app's own words, in the interface language, for a page that could
+   * not be loaded and for loading it again: said when the section's copy of
+   * that language cannot be had (its own words for it are in that copy).
+   */
+  words: { loadFailed(): string; reload(): string };
+  /** load the page again, at the address it is on */
+  reload(): void;
   /** the section's address at a depth, model and activity: a link's target */
   href(level: Depth, model: StructureModelId, mode: StructureMode): string;
   /** go there (a history entry, so Back returns) */
