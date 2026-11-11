@@ -5,26 +5,42 @@
  *   node scripts/structure-meshes.mjs          (npm run structure)
  *
  * Run it again whenever public/anatomy/soyuz-2-1b-fregat-st31.html is
- * replaced. It writes into public/structure/:
+ * replaced. It writes into public/structure/ (`rN` is `DATA_REVISION`):
  *
- *   soyuz-2-1b-fregat-st31.json        the page's own Thai guide (components,
- *                                      their groups, facts, notes and sources),
- *                                      and one record per part of the model
- *                                      (its permanent id, the assembly it
+ *   soyuz-2-1b-fregat-st31.rN.json     the page's own Thai guide (components,
+ *                                      their groups, facts, notes and
+ *                                      sources; its circuits, each with its
+ *                                      ordered steps; its flight sequence),
+ *                                      and one record per part of the model:
+ *                                      its permanent id, the assembly it
  *                                      belongs to, its kind and role, the
  *                                      half the page's cutaway hides, the
- *                                      model-maker's scope note, its circuits)
- *   soyuz-2-1b-fregat-st31.<layer>.bin the triangles of each part, in three
- *                                      layers fetched only when needed:
+ *                                      model-maker's scope note, its circuits
+ *                                      and their steps, what flows through
+ *                                      it, what it connects, its evidence
+ *                                      references, where it is mounted, and
+ *                                      a mechanism's pivot and axis
+ *   soyuz-2-1b-fregat-st31.rN.<layer>.bin  the triangles of each part, in
+ *                                      three layers fetched only when needed:
  *                                      `outer` (skins, structure and the
  *                                      engine bells seen from outside),
  *                                      `inner` (tanks, bottles, supports,
  *                                      lines inside the bodies) and `engine`
  *                                      (pumps, turbines, feeds and frames)
  *
- * Every file records the page's SHA-256, so tests/structure-model.test.ts
- * tells a file that no longer matches its page, and the viewer refuses to mix
- * layers of two pages.
+ * Every file records the page's SHA-256 and this script's data revision, so
+ * tests/structure-model.test.ts tells a file that no longer matches its page,
+ * and the viewer refuses to mix layers of two pages or two revisions. The
+ * revision is in the files' names: a browser that kept an older revision's
+ * files (they are fetched on demand and kept once seen, src/pwa/manifest.ts)
+ * never reads them for this one. Raise it whenever what the files say
+ * changes; the older files are removed.
+ *
+ * Revision 2 (2026-11-11): revision 1 gave most vertices another part's
+ * index (the part was recorded once per triangle and read once per vertex),
+ * so a pick, a highlight, the cutaway and the colour views were wrong below
+ * a whole assembly. Each vertex now carries its own part's, held by
+ * tests/structure-model.test.ts against each part's stated centre.
  *
  * As scripts/anatomy-meshes.mjs does, the triangles are the page's own: its
  * model code (`SoyuzSceneCodec`, `buildSoyuzMeshes`,
@@ -57,7 +73,7 @@
  * flight's exterior meshes (scripts/anatomy-meshes.mjs).
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync, gzipSync } from 'node:zlib';
@@ -69,6 +85,9 @@ const OUT = join(root, 'public', 'structure');
 const NAME = 'soyuz-2-1b-fregat-st31';
 
 export const FORMAT_VERSION = 1;
+/** What the files say, as a number in their names and inside them: raised whenever that changes (the header says why). */
+export const DATA_REVISION = 2;
+export const fileName = (kind) => `${NAME}.r${DATA_REVISION}.${kind === 'json' ? 'json' : `${kind}.bin`}`;
 /**
  * Radial segments per layer. The page draws 48, too many to fetch and draw on
  * a phone; the flight draws the outside at 24. The inside and the engines are
@@ -138,6 +157,12 @@ function pageModel(html) {
 const toFlight = (x, y, z) => [x / 10, z / 10, -y / 10];
 const round = (v, d = 4) => +v.toFixed(d);
 const vec = (v) => toFlight(...v).map((x) => round(x));
+/** A direction of the page's frame in the files' (no scale), to unit length. */
+const dir = (v) => {
+  const [x, y, z] = [v[0], v[2], -v[1]];
+  const n = Math.hypot(x, y, z) || 1;
+  return [x / n, y / n, z / n].map((c) => round(c, 5) + 0);
+};
 
 function packSteps16(values, count) {
   const out = new Uint8Array(count * 2);
@@ -166,9 +191,11 @@ function packIndices(index, wide) {
 /**
  * Weld one mesh's triangle soup (equal part, colour, position and normal),
  * quantize it over `box` and pack its planes. Vertices of two parts are never
- * welded, so every vertex has one part.
+ * welded, so every vertex has one part. `g.item`, like `g.p`, `g.n` and
+ * `g.c`, has one entry per vertex of the soup.
  */
 function weld(g, box) {
+  if (g.item.length !== g.p.length / 3) throw new Error(`a mesh has ${g.item.length} part indices for ${g.p.length / 3} vertices`);
   const map = new Map(), pos = [], nor = [], col = [], itm = [], index = [];
   for (let t = 0; t < g.p.length / 3; t++) {
     const i = t * 3;
@@ -228,8 +255,9 @@ function layerFile(layer, entries, source) {
         g.p.push(...toFlight(mesh.positions[o], mesh.positions[o + 1], mesh.positions[o + 2]));
         g.n.push(...toFlight(mesh.normals[o], mesh.normals[o + 1], mesh.normals[o + 2]).map((v) => v * 10));
         g.c.push(...rgb);
+        // per vertex, as `weld` reads it (once per triangle gave vertex t the part of triangle t: revision 1's fault)
+        g.item.push(index);
       }
-      g.item.push(index);
     }
   }
   const buffers = [];
@@ -262,7 +290,7 @@ function layerFile(layer, entries, source) {
       });
     }
   }
-  const header = { format: 'orbitlab-structure-layer', version: FORMAT_VERSION, source, layer, units: 'm', radialSegments: LAYER_SEGMENTS[layer], materials, meshes, triangles };
+  const header = { format: 'orbitlab-structure-layer', version: FORMAT_VERSION, revision: DATA_REVISION, source, layer, units: 'm', radialSegments: LAYER_SEGMENTS[layer], materials, meshes, triangles };
   let json = Buffer.from(JSON.stringify(header), 'utf8');
   json = Buffer.concat([json, Buffer.alloc((4 - (json.length % 4)) % 4, 0x20)]);
   const lead = Buffer.alloc(12);
@@ -283,9 +311,27 @@ function contentFile(scene, content, identity, source) {
     if (!scopeIndex.has(s)) { scopeIndex.set(s, scopes.length); scopes.push(s); }
     return scopeIndex.get(s);
   };
+  // the circuits' steps, in the circuits' order: a part names the steps it belongs to by their place in this list
+  const circuitSteps = (content.circuits ?? []).flatMap((c) => (c.steps ?? []).map((s) => s.id));
+  const stepIndex = new Map(circuitSteps.map((id, i) => [id, i]));
+  const evidence = [], evidenceIndex = new Map();
+  const evidenceOf = (ref) => {
+    if (!evidenceIndex.has(ref)) { evidenceIndex.set(ref, evidence.length); evidence.push(ref); }
+    return evidenceIndex.get(ref);
+  };
+  const known = (ids) => (ids ?? []).map((t) => index.get(t)).filter((t) => t !== undefined);
   const items = scene.items.map((it) => {
     const info = it.engineInfo ?? {};
-    const targets = (info.mount?.targets ?? []).map((t) => index.get(t)).filter((t) => t !== undefined);
+    const targets = known(info.mount?.targets);
+    const steps = (info.circuitStepIds ?? []).map((id) => {
+      const i = stepIndex.get(id);
+      if (i === undefined) throw new Error(`${it.id}: ${id} is not a step of any circuit`);
+      return i;
+    });
+    // where it is seated on what it is mounted on: the point and the way it faces, m
+    const ends = (info.mount?.ends ?? []).map((e) => ({ at: vec(e.point), normal: dir(e.normal), r: round(e.outerRadius / 10), to: known(e.targetIds) }));
+    const pivot = info.pivot ?? info.gimbal?.pivot, axis = info.axis ?? info.gimbal?.axis;
+    const inside = index.get(info.insideTank), host = index.get(info.componentId);
     return {
       id: it.id, unit: unitOf(it), kind: it.kind, layer: layerOf(it),
       ...(it.half ? { half: it.half } : {}),
@@ -294,7 +340,22 @@ function contentFile(scene, content, identity, source) {
       ...(info.model ? { model: info.model } : {}),
       ...(scopeOf(info.scope) >= 0 ? { scope: scopeOf(info.scope) } : {}),
       ...(info.circuitIds?.length ? { circuits: info.circuitIds } : {}),
+      ...(steps.length ? { steps } : {}),
+      ...(info.medium ? { medium: info.medium } : {}),
+      ...(info.phase ? { phase: info.phase } : {}),
+      ...(known(info.terminals).length ? { terminals: known(info.terminals) } : {}),
+      ...(info.evidenceRefs?.length ? { evidence: info.evidenceRefs.map(evidenceOf) } : {}),
       ...(targets.length ? { mounts: targets } : {}),
+      ...(ends.length ? { ends } : {}),
+      ...(pivot ? { pivot: vec(pivot) } : {}),
+      ...(axis ? { axis: dir(axis) } : {}),
+      ...(info.gimbal ? { gimbalAxes: info.gimbal.axes } : {}),
+      ...(info.orientationApproximate || info.gimbal?.orientationApproximate ? { approximate: true } : {}),
+      ...(info.stageSeparation ? { leaves: { event: info.stageSeparation.event, move: vec(info.stageSeparation.vector) } } : {}),
+      ...(inside !== undefined ? { inside } : {}),
+      ...(host !== undefined ? { host } : {}),
+      ...(info.contents ? { contents: info.contents } : {}),
+      ...(info.steering ? { steering: info.steering } : {}),
       center: vec(it.center),
     };
   });
@@ -307,7 +368,7 @@ function contentFile(scene, content, identity, source) {
     units[unit] = { move: vec(members[0].move), ...(reveal ? { reveal: vec(reveal) } : {}), parts: members.length };
   }
   const components = content.components.map((c) => ({
-    id: c.id, title: c.title, subtitle: c.subtitle ?? '', body: c.body ?? c.description ?? '', facts: c.facts ?? [],
+    id: c.id, title: c.title, subtitle: c.subtitle ?? '', body: c.body ?? c.description ?? '', details: c.details ?? '', facts: c.facts ?? [],
     note: c.note ?? '', sourceIds: [...new Set([...(c.sourceIds ?? []), ...(c.sources ?? [])])],
     observations: c.observations ?? [],
     groups: (c.groups ?? []).map((g) => ({
@@ -320,17 +381,27 @@ function contentFile(scene, content, identity, source) {
     })),
   }));
   return {
-    format: 'orbitlab-structure-content', version: FORMAT_VERSION, source,
+    format: 'orbitlab-structure-content', version: FORMAT_VERSION, revision: DATA_REVISION, source,
     units: 'm', axes: '+Y up; +X the page\'s +x; +Z the page\'s −y',
     guide: {
       title: content.title, subtitle: content.subtitle, configuration: content.configuration, intro: content.intro,
       statusNote: content.statusNote, reviewWarnings: content.reviewWarnings, geometryReference: content.geometryReference,
-      summaryStats: content.summaryStats, timeline: content.timeline,
+      summaryStats: content.summaryStats, engineeringNotes: content.engineeringNotes ?? [],
+    },
+    // the page's flight sequence: its ten steps, and at which step each assembly leaves (`events`; `last` is the last step)
+    flight: {
+      title: content.timeline?.title ?? '', note: content.timeline?.note ?? '',
+      steps: (content.flightSteps ?? []).map((f) => ({ title: f.title, time: f.time, text: f.desc, part: f.part ?? null, engines: f.engines ?? '', sourceIds: f.sourceIds ?? [] })),
+      events: content.family?.flightEvents ?? {}, last: content.family?.flightMax ?? 0,
+      disposalMove: content.family?.disposalOffset ? vec(content.family.disposalOffset) : [0, 0, 0],
     },
     sources: content.sources,
     circuits: (content.circuits ?? []).map((c) => ({
       id: c.id, label: c.label, description: c.description, confidence: c.confidence, limitation: c.limitation, sourceIds: c.sourceIds ?? [],
+      parts: c.parts ?? [],
+      steps: (c.steps ?? []).map((s) => ({ id: s.id, label: s.label, description: s.description, representation: s.representation })),
     })),
+    circuitSteps, evidence,
     components, scopes, units: units, items,
     pageBuild: { app: content.appVersion, version: identity.version, scene: identity.sceneSha256 },
   };
@@ -344,12 +415,15 @@ export function exportStructure() {
   const { scene, buildSoyuzMeshes, materialOf, content, identity } = pageModel(html);
   const source = { file: `anatomy/${PAGE}`, sha256, title: html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '' };
   mkdirSync(OUT, { recursive: true });
+  // this model's files of other revisions go: nothing reads them, and a kept one could be taken for this revision's
+  const mine = new Set(['json', ...Object.keys(LAYER_SEGMENTS)].map(fileName));
+  for (const f of readdirSync(OUT)) if (f.startsWith(`${NAME}.`) && !mine.has(f)) rmSync(join(OUT, f));
   const doc = contentFile(scene, content, identity, source);
   // the units' "units" key is the JSON's length unit; the assemblies go under `assemblies`
   const { units: assemblies, ...rest } = doc;
   const json = { ...rest, units: 'm', assemblies };
-  writeFileSync(join(OUT, `${NAME}.json`), `${JSON.stringify(json)}\n`);
-  console.log(`${NAME}.json: ${scene.items.length} parts, ${(JSON.stringify(json).length / 1000).toFixed(1)} kB`);
+  writeFileSync(join(OUT, fileName('json')), `${JSON.stringify(json)}\n`);
+  console.log(`${fileName('json')}: ${scene.items.length} parts, ${(Buffer.byteLength(JSON.stringify(json)) / 1000).toFixed(1)} kB`);
   for (const layer of Object.keys(LAYER_SEGMENTS)) {
     const chosen = scene.items.map((it, i) => ({ it, i })).filter(({ it }) => layerOf(it) === layer);
     const entries = [];
@@ -360,8 +434,8 @@ export function exportStructure() {
     }
     entries.sort((a, b) => a.index - b.index);
     const file = layerFile(layer, entries, source);
-    writeFileSync(join(OUT, `${NAME}.${layer}.bin`), file.bytes);
-    console.log(`${NAME}.${layer}.bin: ${chosen.length} parts, ${file.triangles} triangles, ${file.meshes} meshes, `
+    writeFileSync(join(OUT, fileName(layer)), file.bytes);
+    console.log(`${fileName(layer)}: ${chosen.length} parts, ${file.triangles} triangles, ${file.meshes} meshes, `
       + `${(file.raw / 1000).toFixed(1)} kB, ${(file.bytes.length / 1000).toFixed(1)} kB gzip`);
   }
 }

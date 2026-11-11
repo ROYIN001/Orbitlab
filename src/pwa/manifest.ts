@@ -30,8 +30,8 @@ export interface PrecacheManifest {
  * 4.3–4.6 MB, meshes of 0.17–0.31 MB gzip-compressed; src/render/anatomy.ts): each kept once it
  * has been opened or flown; offline before that, Build says the page needs the network and the
  * flight draws its own Soyuz.
- * The Structure section's model files (`structure/`, 1.9 MB: the Soyuz-2.1b/Fregat model's
- * content and three layers of 0.29–0.65 MB gzip-compressed, src/render/structure-mesh.ts): each
+ * The Structure section's model files (`structure/`, 1.8 MB: the Soyuz-2.1b/Fregat model's
+ * content and three layers of 0.25–0.56 MB gzip-compressed, src/render/structure-mesh.ts): each
  * kept once the section has opened it; offline before that, the section says the model needs the
  * network (EduSat-3U, drawn from code, works offline).
  */

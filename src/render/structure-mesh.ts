@@ -25,6 +25,8 @@ export interface StructureMesh {
 
 export interface StructureLayerData {
   layer: string;
+  /** the generator's data revision the file was written at (scripts/structure-meshes.mjs) */
+  revision: number;
   source: { file: string; sha256: string; title: string };
   materials: StructureMaterial[];
   meshes: StructureMesh[];
@@ -44,7 +46,7 @@ export function decodeStructureLayer(buffer: ArrayBuffer): StructureLayerData {
   if (version !== STRUCTURE_FORMAT_VERSION) throw new Error(`structure layer format ${version}, expected ${STRUCTURE_FORMAT_VERSION}`);
   const length = view.getUint32(8, true);
   const header = JSON.parse(new TextDecoder().decode(bytes.subarray(12, 12 + length))) as {
-    layer: string; source: StructureLayerData['source']; materials: StructureMaterial[]; meshes: HeaderMesh[]; triangles: number;
+    layer: string; revision?: number; source: StructureLayerData['source']; materials: StructureMaterial[]; meshes: HeaderMesh[]; triangles: number;
   };
   const body = 12 + length;
   const steps16 = (at: number, count: number, out: Uint16Array | Float32Array, stride: number, offset: number, scale?: [number, number]) => {
@@ -82,7 +84,7 @@ export function decodeStructureLayer(buffer: ArrayBuffer): StructureLayerData {
     geometry.computeBoundingBox();
     return { unit: m.unit, material: m.material, geometry };
   });
-  return { layer: header.layer, source: header.source, materials: header.materials, meshes, triangles: header.triangles };
+  return { layer: header.layer, revision: header.revision ?? 1, source: header.source, materials: header.materials, meshes, triangles: header.triangles };
 }
 
 /** Fetch an app file, failing on an HTTP error; `signal` cancels it (the section closed meanwhile). */

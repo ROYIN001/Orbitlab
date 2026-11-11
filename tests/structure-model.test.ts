@@ -2,13 +2,16 @@
  * The Structure section's Soyuz-2.1b/Fregat files (public/structure/,
  * scripts/structure-meshes.mjs): still the page's, every part kept with its
  * page id and its place, the layers decodable with every vertex marked with
- * a part of its own assembly, the page's groups and facts carried over, the
- * files on demand like the Anatomy pages, and the section's addresses.
+ * its own part (held against each part's stated centre: revision 1 of the
+ * files marked most vertices with another part of the same assembly, which a
+ * check of the assembly alone could not see), the cutaway cutting evenly, the
+ * page's groups, facts, circuits and flight sequence carried over, the files
+ * on demand like the Anatomy pages, and the section's addresses.
  */
 import { describe, expect, it } from 'vitest';
 import { decodeStructureLayer } from '../src/render/structure-mesh';
 import { inflateAnatomy } from '../src/render/anatomy';
-import { SOYUZ_FILES, SOYUZ_LAYERS, cutawayAzimuth, indexSoyuz, parseSoyuzContent, unitAxis } from '../src/structure/soyuz-content';
+import { SOYUZ_DATA_REVISION, SOYUZ_FILES, SOYUZ_LAYERS, cutawayAzimuth, indexSoyuz, parseSoyuzContent, unitAxis } from '../src/structure/soyuz-content';
 import { SOYUZ_UNITS, SOYUZ_BOOSTERS } from '../src/structure/soyuz';
 import { CERTAINTIES, PART_CATEGORIES } from '../src/structure/types';
 import { onDemand, precacheable } from '../src/pwa/manifest';
@@ -16,7 +19,8 @@ import { APP_PAGES, hashForRoute, route, routeFromHash } from '../src/ui/app-mod
 
 interface Bytes { buffer: ArrayBuffer; byteOffset: number; byteLength: number }
 const load = (id: string): Promise<unknown> => import(/* @vite-ignore */ id);
-const { readFileSync } = (await load('node:fs')) as { readFileSync(path: URL, enc?: string): Bytes & string };
+const nodeFs = await load('node:fs');
+const { readFileSync } = nodeFs as { readFileSync(path: URL, enc?: string): Bytes & string };
 const { createHash } = (await load('node:crypto')) as { createHash(algorithm: 'sha256'): { update(data: Bytes): { digest(encoding: 'hex'): string } } };
 const file = (path: string): Bytes => readFileSync(new URL(`../public/${path}`, import.meta.url));
 const arrayBuffer = (bytes: Bytes): ArrayBuffer => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
@@ -33,6 +37,144 @@ describe('the Structure section\'s Soyuz-2.1b/Fregat files', () => {
     for (const l of layers) expect(l.source.sha256, l.layer).toBe(page);
     expect(layers.map((l) => l.layer)).toEqual([...SOYUZ_LAYERS]);
     expect(content.pageBuild.version).toBe('family-v1-20261026');
+  });
+
+  it('are of one data revision, which is in their names (a kept copy of an older one is never read for this one)', () => {
+    expect(content.revision).toBe(SOYUZ_DATA_REVISION);
+    for (const l of layers) expect(l.revision, l.layer).toBe(SOYUZ_DATA_REVISION);
+    for (const path of [SOYUZ_FILES.content, ...Object.values(SOYUZ_FILES.layers)]) expect(path).toContain(`.r${SOYUZ_DATA_REVISION}.`);
+    // and no file of another revision lies beside them
+    const { readdirSync } = (nodeFs as unknown as { readdirSync(path: URL): string[] });
+    const here = readdirSync(new URL('../public/structure/', import.meta.url)).filter((f) => f.startsWith('soyuz-2-1b-fregat-st31.'));
+    expect(here.sort()).toEqual([SOYUZ_FILES.content, ...Object.values(SOYUZ_FILES.layers)].map((f) => f.replace('structure/', '')).sort());
+  });
+
+  it('mark every vertex with its own part: each triangle is one part\'s, and each part\'s stated centre lies in its own geometry', () => {
+    const n = content.items.length;
+    const box = Array.from({ length: n }, () => [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity]);
+    const triangles = new Uint32Array(n);
+    for (const l of layers) for (const m of l.meshes) {
+      const pos = m.geometry.getAttribute('position'), item = m.geometry.getAttribute('item'), idx = m.geometry.getIndex()!;
+      for (let v = 0; v < pos.count; v++) {
+        const b = box[item.getX(v)], p = [pos.getX(v), pos.getY(v), pos.getZ(v)];
+        for (let a = 0; a < 3; a++) { if (p[a] < b[a]) b[a] = p[a]; if (p[a] > b[a + 3]) b[a + 3] = p[a]; }
+      }
+      for (let t = 0; t < idx.count; t += 3) {
+        const a = item.getX(idx.getX(t));
+        if (a !== item.getX(idx.getX(t + 1)) || a !== item.getX(idx.getX(t + 2))) throw new Error(`${l.layer}/${m.unit}: triangle ${t / 3} joins two parts`);
+        triangles[a]++;
+      }
+    }
+    // every part is drawn with triangles of its own, and its centre is within 10 cm of them (measured: 7.5 cm at most, the
+    // fairing's quarter shells, whose centre lies just inside their curve; revision 1 had 1,573 parts more than 0.5 m off)
+    let worst = 0;
+    for (let i = 0; i < n; i++) {
+      expect(triangles[i], content.items[i].id).toBeGreaterThanOrEqual(4);
+      const b = box[i], c = content.items[i].center;
+      const off = Math.hypot(...[0, 1, 2].map((a) => Math.max(b[a] - c[a], 0, c[a] - b[a + 3])));
+      if (off > 0.1) throw new Error(`${content.items[i].id}: its centre is ${off.toFixed(2)} m outside the geometry marked with it`);
+      worst = Math.max(worst, off);
+    }
+    expect(worst).toBeLessThan(0.1);
+  });
+
+  it('cut evenly: in every assembly the hidden halves and the kept halves are the same amount of surface, each on its own side', () => {
+    const az = cutawayAzimuth(content), eye = [Math.sin(az), Math.cos(az)];
+    const sides = new Map<string, { front: number; back: number; fx: number; fz: number; bx: number; bz: number }>();
+    for (const l of layers) for (const m of l.meshes) {
+      const pos = m.geometry.getAttribute('position'), item = m.geometry.getAttribute('item'), idx = m.geometry.getIndex()!;
+      for (let t = 0; t < idx.count; t += 3) {
+        const v = idx.getX(t), half = content.items[item.getX(v)].half;
+        if (!half) continue;
+        const s = sides.get(m.unit) ?? { front: 0, back: 0, fx: 0, fz: 0, bx: 0, bz: 0 };
+        if (half.endsWith('front')) { s.front++; s.fx += pos.getX(v); s.fz += pos.getZ(v); } else { s.back++; s.bx += pos.getX(v); s.bz += pos.getZ(v); }
+        sides.set(m.unit, s);
+      }
+    }
+    expect(sides.size).toBe(SOYUZ_UNITS.length);
+    for (const [unit, s] of sides) {
+      // the two sides' triangle counts within 2 % (revision 1: 113,785 hidden against 19,736 kept)
+      expect(Math.abs(s.front - s.back) / (s.front + s.back), unit).toBeLessThan(0.02);
+      // and the hidden side's own triangles stand towards the camera from the kept side's
+      const dx = s.fx / s.front - s.bx / s.back, dz = s.fz / s.front - s.bz / s.back;
+      expect((dx * eye[0] + dz * eye[1]) / Math.hypot(dx, dz), unit).toBeGreaterThan(Math.cos(Math.PI / 6));
+    }
+  });
+
+  it('carry the page\'s circuits with their ordered steps, and say which parts are each step', () => {
+    expect(content.circuits).toHaveLength(15);
+    const steps = content.circuits.flatMap((c) => c.steps.map((s) => s.id));
+    expect(content.circuitSteps).toEqual(steps);
+    expect(new Set(steps).size).toBe(steps.length);
+    for (const c of content.circuits) {
+      expect(c.label && c.description && c.confidence && c.limitation, c.id).toBeTruthy();
+      for (const s of c.steps) expect(s.id.startsWith(`${c.id}/`) && !!s.label && !!s.description, s.id).toBe(true);
+      expect(c.sourceIds.every((id) => content.sources.some((x) => x.id === id)), c.id).toBe(true);
+    }
+    const circuitOfStep = (i: number): string => content.circuitSteps[i].slice(0, content.circuitSteps[i].indexOf('/'));
+    let onCircuit = 0, onStep = 0;
+    const used = new Set<number>();
+    for (const p of content.items) {
+      if (p.circuits?.length) onCircuit++;
+      for (const id of p.circuits ?? []) expect(content.circuits.some((c) => c.id === id), `${p.id}: ${id}`).toBe(true);
+      if (p.steps?.length) onStep++;
+      for (const i of p.steps ?? []) {
+        expect(i >= 0 && i < content.circuitSteps.length, p.id).toBe(true);
+        used.add(i);
+        // a part is a step only of a circuit it is on
+        expect(p.circuits ?? [], p.id).toContain(circuitOfStep(i));
+      }
+    }
+    expect(onCircuit).toBe(1164);
+    // 1,164 parts are on a circuit; 920 of them are named as a step of one
+    expect(onStep).toBe(920);
+    // every circuit that has steps has parts for at least one of them: its path can be shown on the model
+    for (const c of content.circuits) if (c.steps.length) expect(c.steps.some((s) => used.has(content.circuitSteps.indexOf(s.id))), c.id).toBe(true);
+  });
+
+  it('carry the page\'s flight sequence: ten steps, and the step at which each assembly leaves', () => {
+    const f = content.flight;
+    expect(f.steps).toHaveLength(10);
+    expect(f.last).toBe(f.steps.length - 1);
+    for (const s of f.steps) expect(!!s.title && !!s.time && !!s.text, s.title).toBe(true);
+    expect(Object.keys(f.events).sort()).toEqual(['boosters', 'core', 'disposal', 'fairing', 'payload', 'skirt', 'upper']);
+    for (const [name, at] of Object.entries(f.events)) expect(at >= 1 && at <= f.last, name).toBe(true);
+    // in the order the vehicle sheds them
+    expect([f.events.boosters, f.events.fairing, f.events.core, f.events.skirt, f.events.upper, f.events.payload, f.events.disposal]).toEqual([2, 3, 4, 5, 6, 8, 9]);
+    // Block I's three skirt panels are the parts that leave at 'skirt', each its own way
+    const skirt = content.items.filter((p) => p.leaves);
+    expect(skirt.map((p) => p.id).sort()).toEqual(['stage3.rd0124-skirt-panel-1', 'stage3.rd0124-skirt-panel-2', 'stage3.rd0124-skirt-panel-3']);
+    for (const p of skirt) { expect(p.leaves!.event).toBe('skirt'); expect(Math.hypot(...p.leaves!.move)).toBeCloseTo(2.4, 3); }
+  });
+
+  it('carry what the page records of a part beyond its place: what flows, what it joins, its evidence, its seat and its pivot', () => {
+    const n = content.items.length, inRange = (i: number): boolean => Number.isInteger(i) && i >= 0 && i < n;
+    let media = 0, seats = 0, pivots = 0, evidence = 0;
+    for (const p of content.items) {
+      if (p.medium) { media++; expect(['liquid', 'gas'], p.id).toContain(p.phase); }
+      for (const t of p.terminals ?? []) expect(inRange(t), p.id).toBe(true);
+      for (const e of p.evidence ?? []) expect(e >= 0 && e < content.evidence.length, p.id).toBe(true);
+      if (p.evidence?.length) evidence++;
+      for (const m of p.mounts ?? []) expect(inRange(m) && content.items[m].unit === p.unit, p.id).toBe(true);
+      for (const e of p.ends ?? []) {
+        seats++;
+        expect(Math.hypot(...e.normal), p.id).toBeCloseTo(1, 3);
+        expect(e.r, p.id).toBeGreaterThan(0);
+        for (const t of e.to) expect(p.mounts ?? [], p.id).toContain(t);
+        // the seat is on the part: within half a metre of its centre
+        expect(Math.hypot(e.at[0] - p.center[0], e.at[1] - p.center[1], e.at[2] - p.center[2]), p.id).toBeLessThan(0.5);
+      }
+      if (p.pivot) { pivots++; expect(p.axis && Math.abs(Math.hypot(...p.axis) - 1) < 1e-3, p.id).toBe(true); }
+      if (p.inside !== undefined) expect(inRange(p.inside), p.id).toBe(true);
+      if (p.host !== undefined) expect(inRange(p.host), p.id).toBe(true);
+    }
+    expect([media, evidence]).toEqual([517, 578]);
+    expect(seats).toBeGreaterThan(80);
+    // RD0124's four gimballed chambers: the nozzle and its two gimbal bearings share one pivot, on the chamber's own axis
+    expect(pivots).toBe(12);
+    const nozzle = content.items.find((p) => p.id === 'stage3.rd0124-main-nozzle-3')!;
+    expect(nozzle.gimbalAxes).toBe(1);
+    expect(nozzle.pivot![1]).toBeCloseTo(29.75, 2);
   });
 
   it('keep every part of the page once, with its id, its assembly and the layer that draws it', () => {

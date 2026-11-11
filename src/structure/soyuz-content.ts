@@ -1,10 +1,11 @@
 /**
  * The Soyuz-2.1b / Fregat model's content file
- * (public/structure/soyuz-2-1b-fregat-st31.json, scripts/structure-meshes.mjs):
- * the owner's Thai guide as the page has it, and one record per part. Read
- * and checked here, and arranged for the three depths: the assemblies
- * (watch), each assembly's groups as the page lists them (explore), each
- * part (engineer).
+ * (public/structure/soyuz-2-1b-fregat-st31.r2.json, scripts/structure-meshes.mjs):
+ * the owner's Thai guide as the page has it — its components and their
+ * groups, its fifteen propellant and gas circuits with their ordered steps,
+ * its flight sequence — and one record per part. Read and checked here, and
+ * arranged for the three depths: the assemblies (watch), each assembly's
+ * groups as the page lists them (explore), each part (engineer).
  *
  * DOM-free.
  */
@@ -12,12 +13,19 @@ import type { StructureSource } from './types';
 import { SOYUZ_COMPONENT, SOYUZ_UNITS, soyuzCategory, soyuzCertainty, type SoyuzUnit } from './soyuz';
 import { CERTAINTIES, PART_CATEGORIES } from './types';
 
+/**
+ * The files' data revision (scripts/structure-meshes.mjs `DATA_REVISION`): in
+ * their names, so a browser's kept copy of an older revision is never read
+ * for this one, and inside each, so two revisions are never mixed.
+ */
+export const SOYUZ_DATA_REVISION = 2;
+
 export const SOYUZ_FILES = {
-  content: 'structure/soyuz-2-1b-fregat-st31.json',
+  content: 'structure/soyuz-2-1b-fregat-st31.r2.json',
   layers: {
-    outer: 'structure/soyuz-2-1b-fregat-st31.outer.bin',
-    inner: 'structure/soyuz-2-1b-fregat-st31.inner.bin',
-    engine: 'structure/soyuz-2-1b-fregat-st31.engine.bin',
+    outer: 'structure/soyuz-2-1b-fregat-st31.r2.outer.bin',
+    inner: 'structure/soyuz-2-1b-fregat-st31.r2.inner.bin',
+    engine: 'structure/soyuz-2-1b-fregat-st31.r2.engine.bin',
   },
 } as const;
 
@@ -36,8 +44,33 @@ export interface SoyuzPart {
   /** index into `scopes`: the model-maker's note on how far the part is the real one */
   scope?: number;
   circuits?: string[];
+  /** the circuits' steps it belongs to (indices into `circuitSteps`) */
+  steps?: number[];
+  /** what flows through it, and as what */
+  medium?: string;
+  phase?: 'liquid' | 'gas' | string;
+  /** the parts a line runs between (indices) */
+  terminals?: number[];
+  /** the model-maker's evidence references for this part (indices into `evidence`) */
+  evidence?: number[];
   /** parts it is mounted on (indices) */
   mounts?: number[];
+  /** where it is seated on them: the point (m), the way the seat faces, its radius (m), and the parts there */
+  ends?: { at: [number, number, number]; normal: [number, number, number]; r: number; to: number[] }[];
+  /** a mechanism's pivot (m) and axis (a unit vector); `gimbalAxes`: how many axes a gimballed nozzle swings about */
+  pivot?: [number, number, number];
+  axis?: [number, number, number];
+  gimbalAxes?: number;
+  /** the model-maker marks its orientation as approximate */
+  approximate?: boolean;
+  /** it leaves the vehicle in flight at this event of the flight sequence, moving this way (m) */
+  leaves?: { event: string; move: [number, number, number] };
+  /** the tank it stands inside, and the part it is a fitting of (indices) */
+  inside?: number;
+  host?: number;
+  /** the model-maker's notes on what it stands for */
+  contents?: string;
+  steering?: string;
   /** m, the model's frame */
   center: [number, number, number];
 }
@@ -56,6 +89,8 @@ export interface SoyuzComponent {
   title: string;
   subtitle: string;
   body: string;
+  /** a second paragraph of the page's (may be empty) */
+  details: string;
   facts: { label: string; value: string }[];
   note: string;
   sourceIds: string[];
@@ -63,19 +98,48 @@ export interface SoyuzComponent {
   groups: SoyuzGroup[];
 }
 
-export interface SoyuzCircuit { id: string; label: string; description: string; confidence: string; limitation: string; sourceIds: string[] }
+/** One step of a circuit, in the page's own Thai; `representation`: drawn as a pipe of the model, or only as a diagram of what happens inside. */
+export interface SoyuzCircuitStep { id: string; label: string; description: string; representation: 'physicalpipe' | 'internal-schematic' | string }
+
+export interface SoyuzCircuit {
+  id: string; label: string; description: string; confidence: string; limitation: string; sourceIds: string[];
+  /** the page's parts (assemblies) it runs through */
+  parts: string[];
+  steps: SoyuzCircuitStep[];
+}
+
+/** A step of the page's flight sequence; `part`: the page's part it is about (`fairing` for both halves), or null. */
+export interface SoyuzFlightStep { title: string; time: string; text: string; part: string | null; engines: string; sourceIds: string[] }
+
+export interface SoyuzFlight {
+  title: string;
+  note: string;
+  steps: SoyuzFlightStep[];
+  /** at which step (its index) each of these leaves: boosters, fairing, core, skirt, upper, payload, disposal */
+  events: Record<string, number>;
+  last: number;
+  /** how far Fregat moves off at its disposal, m */
+  disposalMove: [number, number, number];
+}
 
 export interface SoyuzContent {
   format: 'orbitlab-structure-content';
   version: 1;
+  revision: number;
   source: { file: string; sha256: string; title: string };
   assemblies: Record<SoyuzUnit, { move: [number, number, number]; reveal?: [number, number, number]; parts: number }>;
   guide: {
     title: string; subtitle: string; configuration: string; intro: string; statusNote: string;
     reviewWarnings: string[]; geometryReference: Record<string, string | number>;
+    summaryStats: { label: string; value: string }[]; engineeringNotes: string[];
   };
+  flight: SoyuzFlight;
   sources: StructureSource[];
   circuits: SoyuzCircuit[];
+  /** every circuit's steps' ids, in the circuits' order: a part's `steps` are indices into it */
+  circuitSteps: string[];
+  /** the model-maker's evidence references: a part's `evidence` are indices into it */
+  evidence: string[];
   components: SoyuzComponent[];
   scopes: string[];
   items: SoyuzPart[];
@@ -87,7 +151,9 @@ export function parseSoyuzContent(raw: unknown): SoyuzContent {
   const c = raw as Partial<SoyuzContent> | null;
   if (!c || typeof c !== 'object' || c.format !== 'orbitlab-structure-content') throw new Error('not a structure content file');
   if (c.version !== 1) throw new Error(`structure content version ${String(c.version)}, expected 1`);
+  if (c.revision !== SOYUZ_DATA_REVISION) throw new Error(`structure content revision ${String(c.revision)}, expected ${SOYUZ_DATA_REVISION}`);
   if (!Array.isArray(c.items) || !Array.isArray(c.components) || !c.assemblies || !c.source?.sha256) throw new Error('structure content is incomplete');
+  if (!Array.isArray(c.circuits) || !Array.isArray(c.circuitSteps) || !Array.isArray(c.evidence) || !Array.isArray(c.flight?.steps)) throw new Error('structure content is incomplete');
   for (const u of SOYUZ_UNITS) if (!c.assemblies[u]) throw new Error(`structure content has no assembly ${u}`);
   c.items.forEach((it, i) => {
     if (typeof it?.id !== 'string' || !(SOYUZ_UNITS as readonly string[]).includes(it.unit)) throw new Error(`structure content part ${i} is not readable`);

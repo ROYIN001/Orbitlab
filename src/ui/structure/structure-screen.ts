@@ -331,7 +331,7 @@ export class StructureScreen implements StructureSection {
       if (viewer) {
         const layer = await fetchStructureLayer(SOYUZ_FILES.layers.outer, abort.signal, this.env.inflate);
         if (gen !== this.gen || this.model !== 'soyuz-st31') return;
-        if (layer.source.sha256 !== this.soyuz.content.source.sha256) throw new Error(MISMATCH);
+        if (layer.source.sha256 !== this.soyuz.content.source.sha256 || layer.revision !== this.soyuz.content.revision) throw new Error(MISMATCH);
         const s = this.soyuz;
         viewer.reset(s.content.items.length, SOYUZ_UNITS, s.category, s.certainty);
         viewer.addMeshes(this.meshesOf(layer));
@@ -371,7 +371,7 @@ export class StructureScreen implements StructureSection {
     try {
       const data = await fetchStructureLayer(SOYUZ_FILES.layers[layer], abort.signal, this.env.inflate);
       if (gen !== this.gen || this.shown?.model !== 'soyuz-st31' || !this.layerLoading.has(layer)) return;
-      if (data.source.sha256 !== s.content.source.sha256) throw new Error(MISMATCH);
+      if (data.source.sha256 !== s.content.source.sha256 || data.revision !== s.content.revision) throw new Error(MISMATCH);
       viewer.addMeshes(this.meshesOf(data));
       this.layerFailed.delete(layer);
     } catch (error) {
