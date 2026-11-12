@@ -11,6 +11,13 @@
  * work as before; a section still to come is a tab whose menu says what is
  * coming to it.
  *
+ * The tabs are given the room the bar has (`fit`): where they would run
+ * under the tools on the bar's right — a narrower window, a language with
+ * longer names, one section more — they are first drawn tighter, and if
+ * that is not enough they take a row of their own under the bar's first, as
+ * they do on a small screen. Measured, not set by a width: what fits depends
+ * on the language and on what the tools on the right say.
+ *
  * The root carries the route it shows (`data-current-section`,
  * `data-current-level`), which is what the lessons page reads to mark the
  * current link again when it closes (src/ui/lessons/lesson-mode.ts).
@@ -42,6 +49,36 @@ export class SectionNav {
     root.addEventListener('focusout', (e) => {
       if (this.open && e.relatedTarget instanceof Node && !root.contains(e.relatedTarget)) this.close(false);
     });
+    // the room changes with the window and with what the tools beside the tabs say
+    const bar = root.closest<HTMLElement>('#topbar');
+    if (bar && typeof ResizeObserver !== 'undefined') {
+      const watch = new ResizeObserver(() => this.fit());
+      watch.observe(bar);
+      const tools = bar.querySelector('.topbar-right');
+      if (tools) watch.observe(tools);
+    }
+  }
+
+  /**
+   * Give the tabs the room the bar has: as they are; tighter (`data-nav-fit`
+   * "tight" on the bar: no menu marks, section glyphs or product name, less
+   * padding); tighter still ("tighter": smaller letters); or on a row of
+   * their own ("rows"), which costs the page under the bar some height and so
+   * comes last. Each step is taken only when the tabs would still run under
+   * the tools on the bar's right.
+   */
+  private fit(): void {
+    const bar = this.root.closest<HTMLElement>('#topbar');
+    const tabs = this.root.querySelector<HTMLElement>('.nav-tabs'), tools = bar?.querySelector<HTMLElement>('.topbar-right');
+    if (!bar || !tabs || !tools) return;
+    const under = (): boolean => {
+      const a = tabs.getBoundingClientRect(), b = tools.getBoundingClientRect();
+      // (not drawn — a phone shows the one button — or already on a row of their own)
+      if (!a.width || a.top >= b.bottom - 1 || a.bottom <= b.top + 1) return false;
+      return a.right > b.left - 6;
+    };
+    delete bar.dataset.navFit;
+    for (const step of ['tight', 'tighter', 'rows']) { if (!under()) break; bar.dataset.navFit = step; }
   }
 
   /** Show a route, every menu folded. */
@@ -85,6 +122,7 @@ export class SectionNav {
     this.root.dataset.currentSection = current ?? 'home';
     this.root.dataset.currentLevel = current ? this.shown.mode : '';
     this.root.replaceChildren(this.tabs(), this.sheet());
+    this.fit();
   }
 
   /** Every route includes its purpose, visually and in the accessible description. */

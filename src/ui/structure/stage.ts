@@ -496,7 +496,8 @@ export class Stage {
     // named shortly; its keys are its description, and are shown on the picture while it has the keyboard's focus
     this.canvas.setAttribute('aria-label', `${tx(`model.${model}`)}. ${tx('view.canvas')}`);
     this.canvas.setAttribute('aria-describedby', 'st-keys');
-    this.keys.textContent = tx(store.mode === 'assemble' ? 'view.keys.assemble' : store.mode === 'explore' ? 'view.keys.explore' : 'view.keys');
+    // (the keys every activity has, then the activity's own)
+    this.keys.textContent = [tx('view.keys'), ...(store.mode === 'experiment' ? [] : [tx(`view.keys.${store.mode}`)])].join(' · ');
     this.renderHead(this.head);
     // status: loading, failed, no WebGL
     const notes: HTMLElement[] = [];

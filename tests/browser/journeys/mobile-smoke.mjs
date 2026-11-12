@@ -86,7 +86,8 @@ export default async function mobileSmoke(t) {
     if (t.check(opened, `${where}: tapping the section switch did not open the list`)) {
       // 3. native keyboard navigation reveals every route in the scrolling list.
       const hrefs = await page.$$eval('#nav-sheet a', (as) => as.map((a) => a.getAttribute('href')));
-      t.check(hrefs.length === 9 && new Set(hrefs).size === 9, `${where}: the list has ${hrefs.length} links (${new Set(hrefs).size} unique)`);
+      // the four sections (Launch, Orbit, Build, Structure) at their three levels each
+      t.check(hrefs.length === 12 && new Set(hrefs).size === 12, `${where}: the list has ${hrefs.length} links (${new Set(hrefs).size} unique)`);
       await page.focus('#section-nav .nav-sheet-btn');
       for (const href of hrefs) {
         await page.keyboard.press('Tab');
