@@ -3,11 +3,11 @@
 > **สถานะปัจจุบัน (บันทึกเดียวที่เป็นปัจจุบัน — แก้ที่นี่ทุกครั้งที่สถานะเปลี่ยน)**
 >
 > - **ฉบับที่ 2 (ยกเครื่องทั้งหมวด ตามคำขอเจ้าของ 2026-11-10: "ตรวจเช็คโครงร่างที่ร่างมาตอนแรกแล้วร่างให้ดีกว่าเดิม … เอาให้ดีที่สุด")** สร้างต่อจากฉบับแรก (`be35eb7`) บนสาขา `claude/trusting-cannon-oah00c` · ฐาน: `main` @ `3e1b48a` · commit ของงาน: §13
-> - **ยังไม่ push / merge / เผยแพร่** ตามคำสั่งเจ้าของ (2026-11-09) งานอยู่ใน commit ในเครื่องคลาวด์ และในไฟล์ bundle/patch ที่ส่งให้เท่านั้น
+> - **push แล้ว เป็น pull request แบบร่าง #217** ตามคำอนุญาตของเจ้าของ (2026-11-11: "อนุญาตให้ push สาขา claude/trusting-cannon-oah00c ขึ้น GitHub และเปิด pull request แบบร่าง") **ยังไม่ merge และยังไม่เผยแพร่ขึ้นเว็บจริง**
 > - **ต้องแจ้งตรง ๆ — ข้อบกพร่องของฉบับแรกที่ส่งมอบไปแล้ว (E-01):** ไฟล์โมเดล Soyuz ของฉบับแรกติดป้ายชิ้นส่วนผิดให้สามเหลี่ยมราว 91 % (สคริปต์สร้างไฟล์บันทึกหมายเลขชิ้นต่อสามเหลี่ยมแต่อ่านต่อจุดยอด) ที่ระดับ "ชุดประกอบหลัก" ไม่เห็นผล แต่ต่ำกว่านั้น การเลือก การเน้น การผ่า และสีตามชนิด ชี้ผิดชิ้น ฉบับที่ 2 แก้แล้ว (ไฟล์รุ่น `.r2.` + การทดสอบที่จับข้อนี้ได้) ชุดส่งมอบฉบับแรกจึงไม่ควรใช้ต่อ — §2
 > - ผู้ทำงาน: Claude (ไม่ใช่ GPT-6.1 Sol) · ผู้ตรวจทาน: เอเจนต์ Claude แยกบริบท · **ยังไม่ได้ตรวจโดย GPT-6 Astra** (เรียกจากที่นี่ไม่ได้ เตรียมบริบทส่งต่อไว้แล้ว) — §10
 > - การตรวจฉบับแรกก่อนยกเครื่อง: ตั้งใจตรวจ 7 มุมมอง **ทำได้จริง 2 มุมมอง** (เป้าหมาย/การใช้งาน/การสำรวจ และ การประกอบ/ดาวเทียม) ได้ 29 ข้อ อีก 5 มุมมองหยุดเพราะโควตาการใช้งานของเซสชันเต็ม การตรวจทานฉบับที่ 2 ทำครบ 5 มุมมอง พบ 45 ข้อ แก้/ตอบครบแล้ว (ผู้หักล้างตรวจยืนยัน 27 ข้อของสามมุมมองหลัง ส่วน 18 ข้อของสองมุมมองแรก ผู้หักล้างหยุดเพราะโควตา ผมทำซ้ำด้วยสคริปต์ของผู้ตรวจเองแทน ซึ่งไม่ใช่การตรวจอิสระ) — §2, §10
-> - **รอเจ้าของตัดสิน:** (0) หน้า Anatomy มีประโยคหนึ่งที่ขัดกับข้อมูลของหน้าเอง (ระบุ RD-0110 ในจรวดรุ่น 2.1b) — คำถามข้อ 5 ใน §11 (1) งบขนาดตาม D-38: ข้อเสนอแก้ `budgets.json` อยู่ใน §9 **ยังไม่ได้แก้เพดานใด** การตรวจงบจึงยังไม่ผ่าน (2) ค่าตั้งต้นที่ผมเลือกแทนไปก่อน 12 ข้อ และคำถาม 5 ข้อ ใน §11 (3) ข้อความภาษาไทยที่เขียนใหม่ (การ์ดระดับพื้นฐาน คำอธิบายกลุ่ม ชิ้นส่วนดาวเทียม ตัวช่วย) ต้องให้เจ้าของอ่านรับรอง
+> - **รอเจ้าของตัดสิน:** (0) หน้า Anatomy มีประโยคหนึ่งที่ขัดกับข้อมูลของหน้าเอง (ระบุ RD-0110 ในจรวดรุ่น 2.1b) — คำถามข้อ 5 ใน §11 (1) ~~งบขนาดตาม D-38~~ เจ้าของอนุมัติข้อเสนอใน §9 แล้ว (2026-11-12 เลือกแบบที่ 1: ไฟล์ของหมวดอยู่ใน precache) เพดานแก้ตามนั้นใน `budgets.json` พร้อมเหตุผล การตรวจงบผ่าน (2) ค่าตั้งต้นที่ผมเลือกแทนไปก่อน 12 ข้อ และคำถาม 5 ข้อ ใน §11 (3) ข้อความภาษาไทยที่เขียนใหม่ (การ์ดระดับพื้นฐาน คำอธิบายกลุ่ม ชิ้นส่วนดาวเทียม ตัวช่วย) ต้องให้เจ้าของอ่านรับรอง
 > - ชุดส่งมอบ Soyuz 2 พ.ย.: เจ้าของเลือก "ใช้โมเดลในเว็บไปก่อน" (2026-11-10) จึง**ยังไม่ได้เทียบ**กับชุดนั้น
 > - คำแปลอังกฤษและรัสเซียเป็น**ร่าง**ที่เอเจนต์แปลจากต้นฉบับไทย ยังไม่ผ่านเจ้าของภาษา (ขึ้นป้ายบอกบนจอ)
 >
@@ -22,7 +22,7 @@
 > - **EduSat-3U ตรงตามเอกสารที่อ่านจริง:** แกนและด้านตาม CDS Rev. 14.1 (แกนยาว Z ด้านข้าง ±X ±Y) มวลสูงสุดโดยทั่วไปของ 3U 6.00 กก. (ฉบับแรกใช้ 4.00 กก. ของ Rev. 13) ตรวจศูนย์กลางมวล ส่วนยื่น ความกว้างราง กับขอบเขตในเอกสาร เซลล์แสงอาทิตย์ตามเอกสารข้อมูล AZUR 3G30-Advanced แต่ละค่าบอกว่ามาจากเอกสาร ค่าทั่วไป หรือค่าที่กำหนดเอง
 > - **โครงสร้างโค้ดรองรับโมเดลถัดไป:** หมวดเป็นชิ้นแยกที่โหลดเมื่อเปิดหมวดเท่านั้น (ผู้เข้าชมทั่วไปดาวน์โหลดเพิ่มตอนเริ่ม 10 kB แทน 196 kB) ทุกโมเดลอธิบายด้วยรูปข้อมูลเดียวกัน (รหัสถาวร แม่ จุดติดตั้ง หน่วย จุดหมุน พารามิเตอร์ แหล่งข้อมูล ระดับความแน่นอน) หน้าจอไม่รู้ว่ากำลังแสดงโมเดลใด เพิ่มโมเดลใหม่ = เพิ่มตัวปรับ (adapter) หนึ่งไฟล์และข้อความของมัน
 > - **การตรวจทานอิสระของฉบับที่ 2 (5 มุมมอง) พบ 45 ข้อ แก้/ตอบครบแล้ว** ที่สำคัญ: ที่ระดับพื้นฐานของดาวเทียม ปุ่ม "ถอดออก" ถอดผิดชิ้น · บนโทรศัพท์ผลไฟพอ/ไม่พอหลุดจอขณะเลือกอุปกรณ์ และบนจอเตี้ยปุ่มเครื่องมือเอื้อมไม่ถึง · การลากชิ้นส่วนตามมือช้าเมื่อไม่ได้ปิดภาพเคลื่อนไหว · กฎ "Fregat ต้องหมุนให้ตรง" ไม่มีข้อมูลรองรับ (เอาออกแล้ว) · กลุ่ม "ถัง" ของ Fregat ไม่มีถังหลัก · ออฟไลน์แล้วกด "ลองอีกครั้ง" ทำให้ทั้งแอปหาย — รายการครบใน §10
-> - ตรวจแล้ว: ชุดทดสอบของหมวด 201 ข้อ ใน 15 ไฟล์ (ก่อนการตรวจทานฉบับที่ 2: 157 ข้อ), ชุดทดสอบทั้งหมดของแอป 10,830 ข้อ (359 ไฟล์) ผ่านครบบนโค้ดชุดสุดท้าย, browser journey สองเส้นทางผ่าน (เดสก์ท็อป ลากด้วยเมาส์ ภาษาอังกฤษ โทรศัพท์แบบสัมผัส 390×844 และ 390×664 ลากด้วยนิ้ว กรณีโหลดล้มเหลวและออฟไลน์) **ที่ยังไม่ผ่าน:** การตรวจงบขนาด (§9 รอเจ้าของ)
+> - ตรวจแล้ว: ชุดทดสอบของหมวด 201 ข้อ ใน 15 ไฟล์ (ก่อนการตรวจทานฉบับที่ 2: 157 ข้อ), ชุดทดสอบทั้งหมดของแอป 10,830 ข้อ (359 ไฟล์) ผ่านครบบนโค้ดชุดสุดท้าย, browser journey สองเส้นทางผ่าน (เดสก์ท็อป ลากด้วยเมาส์ ภาษาอังกฤษ โทรศัพท์แบบสัมผัส 390×844 และ 390×664 ลากด้วยนิ้ว กรณีโหลดล้มเหลวและออฟไลน์) และการตรวจงบขนาดผ่านหลังเจ้าของอนุมัติเพดานใหม่ (§9)
 
 ```yaml
 package: none in the plan (owner's requests in chat, 2026-11-09 and 2026-11-10)
@@ -31,8 +31,8 @@ change_kind: feature (new section, render, UI, storage key, PWA on-demand files)
 owner_authorization: 'owner in chat, 2026-11-09: "ฉันต้องการให้คุณเริ่มพัฒนาส่วน “โครงสร้างและการประกอบ” ใน Orbitlab ตามข้อกำหนดต่อไปนี้ …" · 2026-11-10: "ลองตรวจเช็คโครงร่างที่ร่างมาตอนแรกแล้วร่างให้ดีกว่าเดิมครับ เอาให้ดีที่สุดเท่าที่จะทำได้เลยครับ"; scope "ยกเครื่องทั้งหมวด"; budget "แยกโหลดเมื่อเปิดหมวด"; Soyuz delivery "ใช้โมเดลในเว็บไปก่อน" · standing: "ยังไม่อนุญาตให้ push, merge หรือเผยแพร่ขึ้นเว็บจริง"'
 branch: claude/trusting-cannon-oah00c
 base: 3e1b48a961c5d79b8dbd68e0471878567c10c748
-budget: owner's decision (D-38) — the section is loaded when it opens; index-*.js +8.0 kB, i18n-*.js +1.1 kB, "other chunks" +457.6 kB (the section's four chunks, until they are named), precache code +468.4 kB and precache +188.6 kB over their ceilings; a budgets.json proposal is written out in §9; no ceiling raised
-merge: not requested (owner: no push, no merge)
+budget: approved by the owner in chat, 2026-11-12 (D-38; variant 1 of §9: the section's files in the precache) — four named groups for the section's chunks (275 + 27 + 62 + 97 kB), index-*.js 2655→2664, i18n-*.js 1733→1735, precache code 14679→15148, precache 16078→16547 kB; each with its reason in budgets.json _notes
+merge: not requested (owner allowed the push and a draft pull request, #217; no merge)
 ```
 
 ## 1. Sources checked
@@ -191,7 +191,7 @@ The balance is worked out in this section only; the hand-off does not carry it a
 | Browser journey `structure-assembly` (`node tests/browser/run.mjs structure-assembly`, built `dist`, Chromium 153, software WebGL) | pass, 161 s: desktop 1440×900 in Thai (the section not fetched until opened; exploring at the three depths; a circuit; the flight guide; assembly at a first look and from the middle depth, with mouse drags, one sampled with motion on to see the part keep with the hand; the browser's own keys left alone; EduSat; my experiment; Orbit and Launch with read-back receipts; reload), English 1280×800 (the draft fetched and marked), phone 390×844 with touch and reduced motion (taps, a finger's drag, keys), and a small phone 390×664 (everything within the screen's width, the verdict under the picture beside the option chosen, a refusal read under the picture, the tools reached) |
 | Browser journey `structure-failures` | pass, 101 s: each fetch failed in turn — the section's code (and its retry while still offline: the app is kept), a model's data, its 3-D alone, one layer, a language's copy (said, and brought by loading the page again) — a model switched away from while it loads, and no WebGL; what the page then says and offers |
 | The same failures probed first with a script outside the repo (sent with this report) | 25/25 pass on the final build (run again after every batch of fixes), after it found four defects of the rebuilt stage, now fixed: the retry of the section's own code answered with the browser's remembered failure for ever (it now loads the page again at the same address, as the lesson pages do); the note and retry for a failed 3-D were inside the hidden picture box; a model switched away from while it loaded stayed "loading" and could not be opened again; without WebGL a model that needs no fetch was brought again without end |
-| `node scripts/bundle-budget.mjs` | **fails** — §9 |
+| `node scripts/bundle-budget.mjs` | pass, with the ceilings the owner approved on 2026-11-12 (§9); it failed until then, on the pull request's first CI run too |
 
 Looking at the real page found what the tests had not: the picture left empty after its box changed size; place marks lying over one another along a rocket's axis; names cut off on a phone; a view left close after a place was looked at, so the other places could not be chosen; a name on the picture taking the press meant for a part; every inside layer fetched when an assembly was merely picked. Each is fixed, and the journey now holds the first five. Failing each fetch in turn found four more (the row above). The second review (§10) then found 45 more, most of them by trying the built page in ways the journeys had not: with motion on, on a short phone, with the keyboard alone, offline, with a record kept from the first version.
 
@@ -211,7 +211,7 @@ Measured on the final build with the container idle (4 cores, **software WebGL**
 
 `orbitlab.structure.v1` in the learner's profile, as in the first version, with one field more: whether the helper is open. A record kept from the first version is read with today's names for the satellite's ±Y side panels and faces (the first version named them by the picture's z), so an assembly finished then is still whole. The model and activity last open, each model's placements, when each was first completed, "my experiment" and which design is shown. A record that cannot be read is set aside by the profile before it is written over, and the section says it started afresh; a newer version's record is never written over, and the section says its work is not being saved; a save the profile or the browser refuses is said too (`tests/structure-store.test.ts`, `structure-storage.test.ts`). Sending to Launch or Orbit replaces the mission or orbit open there, as Build's own buttons do, and the panel says so before the press; Launch's earlier mission is kept in memory and can be put back while Launch still holds what was sent. `tests/eo-sto/ref/` is unchanged (owner's rule q04 B).
 
-## 9. Budget (D-38) — awaiting the owner
+## 9. Budget (D-38) — approved by the owner, 2026-11-12
 
 The owner chose on 2026-11-10 to load the section when it opens. Measured on this tree with `npx vite build` and `node scripts/bundle-budget.mjs`, against main's build at `3e1b48a`:
 
@@ -227,7 +227,7 @@ The owner chose on 2026-11-10 to load the section when it opens. Measured on thi
 
 The section's own files, fetched when it opens: `structure-*.js` 274.1 kB (76.7 gzip; about 109 kB of it the Thai text), `structure-*.css` 26.1 kB, and for the language on screen `structure-en-*.js` 61.3 kB (19.1 gzip) or `structure-ru-*.js` 96.7 kB (24.4 gzip) — each some 4 % larger than before the second review's fixes. They are what "other chunks" is over by: no other chunk of the app changed (checked module by module). `index-*.js` grows by the loader, the app's side of the hand-off and the composite addresses; `i18n-*.js` by the four section-switch keys in three languages.
 
-**No ceiling was raised.** The proposal, for the owner to approve or change (D-38 asks for the measured size, the feature, and the owner's word):
+No ceiling was raised until the owner chose. Put the two variants below on the pull request, the owner answered "1" on 2026-11-12: the proposal as written, with the section's files in the precache. The ceilings are now, each with its measured size, its reason and that approval in `budgets.json` `_notes.set`:
 
 ```json
 "structure-*.js": 275,
@@ -237,8 +237,10 @@ The section's own files, fetched when it opens: `structure-*.js` 274.1 kB (76.7 
 "index-*.js": 2664,
 "i18n-*.js": 1735,
 "precache code": 15148,
-"precache": 16267
+"precache": 16547
 ```
+
+One figure differs from the proposal as first written, which said 16267 for the precache total: by the file's own rule the total follows its two groups (code 15148 + data/ 1399), so that a larger data snapshot, which `precache data/` allows, does not fail the total. The raise is the same 469 kB of code; the data headroom is what it was.
 
 with a note under `_notes.set` naming this section, and "other chunks" left at 772 (it then measures 771.5 kB again, as on main). One choice inside it: the service worker downloads every file under `assets/` in the background, so the section's 458 kB join the precache, and the section's code — with EduSat, which needs no model file — then works offline from the first visit. The other way is to fetch the section's files on demand, as its Soyuz model files already are (`src/pwa/manifest.ts`): the precache ceilings then stay as they are, and the section needs the network the first time it is opened. Both are a line of configuration; the owner decides.
 
@@ -320,7 +322,7 @@ How far the findings were checked by someone else: for the last three lenses (27
 
 **Questions:**
 
-1. **Budget (§9):** approve the proposal as written, or the on-demand variant?
+1. ~~Budget (§9)~~ — answered 2026-11-12: the proposal as written (the section's files in the precache).
 2. **The Thai written for this version** (the first-look cards of the seven kinds of assembly, a sentence for each of the page's groups, EduSat's pieces and their specification notes, the three guides, the reasons for the order): please read them; they are mine, not the Anatomy page's.
 3. **Ways in from the rest of Orbitlab (E-15):** a card on Home, a link from Build's Anatomy window and from Launch's Soyuz-2.1b? It touches three other sections and the first download.
 4. **A second assembly sequence, as a launch site does it (AE-14)** — horizontal, the upper composite put together first — and a third model: which next?
@@ -343,7 +345,7 @@ On a machine with the repository at this branch: `npm ci`, then `npm run dev` an
 
 ## 13. Revisions
 
-On `claude/trusting-cannon-oah00c`, from `main` @ `3e1b48a`; committed in the cloud session only, **not pushed** (owner, 2026-11-09):
+On `claude/trusting-cannon-oah00c`, from `main` @ `3e1b48a`; pushed on 2026-11-11 with the owner's word, as draft pull request #217; not merged:
 
 | Commit | What |
 | --- | --- |
@@ -359,9 +361,10 @@ On `claude/trusting-cannon-oah00c`, from `main` @ `3e1b48a`; committed in the cl
 | `fdf11d6` | its text and use lenses: 20 findings, the narrow layout reworked |
 | `85f3843` | its architecture lens: 7 findings, the loader and storage tests |
 | `b62dad8` | the loader asks the browser whether the page can be had (no request of its own: the privacy test) |
-| the commit after it | this report, with the review's results, the final checks and measurements |
+| `48294ad` | this report, with the review's results, the final checks and measurements |
+| the commit after it | the budget's ceilings as the owner approved them, and this report brought up to date |
 
-The commits follow the work, not mergeable steps, and only the tip was checked in full. The tip passes everything in §7 except the budget (§9).
+The commits follow the work, not mergeable steps, and only the tip was checked in full. The tip passes everything in §7.
 
 ## Appendix A. The first version's reviews (kept as a record)
 
