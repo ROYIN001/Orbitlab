@@ -12,7 +12,7 @@ import type { Pass } from '../orbit/passes';
  * each language, public/home/<face>.<lang>.webp, taken from the app itself
  * by scripts/shots.ts (`npm run shots`).
  */
-export const SHOWCASE_FACES = ['watch', 'explore', 'engineer', 'lessons', 'orbit'] as const;
+export const SHOWCASE_FACES = ['watch', 'explore', 'engineer', 'structure', 'lessons', 'orbit'] as const;
 export type ShowcaseFace = typeof SHOWCASE_FACES[number];
 
 /**

@@ -957,7 +957,10 @@ returns.
 
 ## 0d. The Structure section: explore, assemble and modify (a pilot)
 
-**Structure** in the top bar. Every view has its own address:
+**Structure** in the top bar; also the chapter *Take a rocket and a satellite apart* on the
+landing page, **Take apart and assemble** beside Build's Anatomy button when the vehicle is the
+catalogue's Soyuz-2.1b, and **See how this rocket is built** under the mission's steps in Launch
+for the same vehicle. Every view has its own address:
 `#/structure/<level>/<model>` to look round a model, with `/assemble` or `/experiment` after it
 for the other two activities (for example `#/structure/watch/soyuz-st31`,
 `#/structure/explore/edusat/assemble`, `#/structure/explore/edusat/experiment`). The three levels
@@ -984,6 +987,11 @@ is in Thai first; its English and Russian are drafts and say so on screen.
   **Colour by** shows walls, load-bearing structure, mounts and joints, mechanisms, equipment and
   propulsion, or (Engineer) how each part's shape is known. A joint listed on an assembly's card
   can be shown on the picture.
+- **Where the information comes from.** A card says what a thing is and does; its sources, what a
+  "confirmed from documents" badge rests on, the model-maker's own notes and how real the drawing
+  is are in one fold at the card's foot, **Sources and limits of this information**, closed until
+  you open it. What the CubeSat specification asks of a piece is said on the card in plain words;
+  the clause numbers are in the fold.
 - **Internal systems** (Soyuz, from Explore). The Anatomy page's fifteen propellant and gas
   circuits, by engine: the rest of the vehicle is dimmed and seen through, the circuit is painted
   by what flows, and fourteen of them can be followed step by step. Each carries the page's own
@@ -998,9 +1006,20 @@ is in Thai first; its English and Russian are drafts and say so on screen.
   says why (what has to go on first, whose place it is, which way round). EduSat's four side
   panels fit any face. **Undo**, **Start again**, **Hint** and **Remove** work at any time. The
   model is complete when every part is in a place and a way round the reference allows, with
-  everything it rests on — not when the count is reached. The Soyuz order follows the load path
-  standing up; at a launch site it is assembled lying down, the upper part first. Passing these
-  rules says nothing about strength.
+  everything it rests on — not when the count is reached. Passing these rules says nothing about
+  strength.
+- **Two orders for the rocket.** *By the reference* stacks the Soyuz upright by what stands on
+  what, an order for learning. *As at the launch site* is how a Soyuz-2.1b with Fregat is really
+  put together at Vostochny, from the ST31 launch kit and the Starsem user's manual: the vehicle
+  lies horizontal; the four boosters and the truss go on the central core in one building while,
+  in another, the payload goes on Fregat and the fairing is closed round both; the third stage
+  waits for that closed upper composite; then two steps that fit no part, each a press — the
+  final integration, which brings the two built halves together, and the roll-out and erection,
+  which stands the vehicle up. Each step says what is really done there and about how many days
+  before lift-off, and says so where no document does (which booster goes on first). The loose
+  parts wait as outlines where they belong, to be pressed or picked from the list; there is no
+  dragging in this order. Each order keeps what you did in it, and the sources are folded at the
+  foot of the panel.
 - **Modify — my experiment** (EduSat-3U). Make a copy of the reference and change the battery
   (one or two 18650 cells) or the camera (a day camera, or a night-lights camera that works only
   in the Earth's shadow). The changed part is painted on the picture, and the result stays under
@@ -1024,7 +1043,8 @@ is in Thai first; its English and Russian are drafts and say so on screen.
   side view stand in, and assembling still works. A language's copy that cannot be fetched leaves
   the Thai showing and says so.
 - What it keeps (in your profile, `orbitlab.structure.v1`): the model and activity last open, each
-  model's assembly, "my experiment" and whether the helper is open. If that record cannot be
+  model's assembly, the rocket's assembly in the launch site's order and which of the two orders
+  is on screen, "my experiment" and whether the helper is open. If that record cannot be
   read, the section says it started afresh (the profile keeps the old copy aside); if it was saved
   by a newer Orbitlab, the section leaves it alone and says your work here is not being saved. In
   a second tab on the same learner (read-only) it says the same.

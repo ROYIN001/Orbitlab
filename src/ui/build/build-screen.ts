@@ -50,6 +50,7 @@ import { partCardView } from './part-card';
 import { ExploreLevel } from './explore-level';
 import { EngineerLevel } from './engineer-level';
 import { AnatomyDialog } from './anatomy-dialog';
+import { STRUCTURE_VEHICLE, structureHref } from '../structure-loader';
 import { anatomyPagesFor } from '../../data/anatomy';
 import { SatelliteWorkspace, type LessonDesk } from './satellite-workspace';
 import type { SatelliteDesign } from '../../design/satellite-spec';
@@ -654,6 +655,12 @@ export class BuildScreen {
       });
       open.setAttribute('aria-haspopup', 'dialog');
       this.tabs.append(open);
+    }
+    // and the Structure section's model of the catalogue's Soyuz-2.1b, to put together (owner, 2026-11-13): a short word, so it stands beside the Anatomy button
+    if (this.spec.id === STRUCTURE_VEHICLE) {
+      const link = el('a', 'bs-tab bs-structure-open', t('build.structure.open'));
+      link.href = structureHref(this.level, 'assemble');
+      this.tabs.append(link);
     }
     this.hint.textContent = t('build.hint');
   }

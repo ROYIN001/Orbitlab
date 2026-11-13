@@ -64,7 +64,7 @@ import {
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute,
 } from './ui/app-mode';
 import { BuildScreen } from './ui/build/build-screen';
-import { StructureLoader, type StructureLoaderHost } from './ui/structure-loader';
+import { STRUCTURE_VEHICLE, StructureLoader, structureHref, type StructureLoaderHost } from './ui/structure-loader';
 import { launchReceipt } from './structure-host/handoff';
 import { WorkspaceMission, missionSummary, startupMission } from './ui/workspace-mission';
 import { loadExperience } from './ui/experience';
@@ -1657,10 +1657,18 @@ class App {
     }
     const valid = this.stepsValid.valid;
     const inOrbit = stage !== 'setup' && handoffAvailable(this.shown);
-    const key = shown ? `${stage}|${valid}|${inOrbit}|${getLang()}` : 'hidden';
+    // the Structure section's model of this vehicle, one press away (owner, 2026-11-13): the catalogue's Soyuz-2.1b, not a design made from it
+    const cfg = this.panel.state;
+    const model = shown && !cfg.vehicleSpec && cfg.vehicleId === STRUCTURE_VEHICLE;
+    const key = shown ? `${stage}|${valid}|${inOrbit}|${getLang()}|${model ? this.route.mode : ''}` : 'hidden';
     if (key === this.stepsKey) return;
     this.stepsKey = key;
     list.hidden = !shown;
+    const link = document.getElementById('mission-structure') as HTMLAnchorElement | null;
+    if (link) {
+      link.hidden = !model;
+      if (model) { link.href = structureHref(this.route.mode); link.textContent = t('ctx.structure'); }
+    }
     if (!shown) return;
     list.setAttribute('aria-label', t('ctx.steps'));
     const states = missionSteps({ stage, valid, inOrbit });
