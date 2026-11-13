@@ -43,6 +43,9 @@ const local = (id: string): string => id.slice(id.indexOf('.') + 1);
 /** Where a strap-on stands round the axis, rad: the angle that turns +x onto it about +y. */
 const azimuth = (x: number, z: number): number => Math.atan2(-z, x);
 
+/** The blocks' Russian letters as English-language documents write them (Blocks A, B, V, G, D and I). */
+const BLOCK_LATIN: Readonly<Record<string, string>> = { 'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'И': 'I' };
+
 export function soyuzAdapter(env: StructureEnv): ModelAdapter {
   let index: SoyuzIndex | null = null;
   let tree: ModelTree | null = null;
@@ -95,6 +98,15 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
   };
 
   // ─── words ────────────────────────────────────────────────────────────────
+
+  /**
+   * A name of the page's as it is shown outside the Russian interface
+   * (owner, 2026-11-13: Russian letters only in Russian): a block's letter in
+   * its Latin form, and a part of the name that is Russian words left out.
+   */
+  const pageName = (name: string): string => (getLang() === 'ru' ? name : name.split(/\s*[•·]\s*/)
+    .map((part) => part.replace(/(^|\s)([АБВГДИ])(?=$|[\s,])/g, (_, before: string, letter: string) => before + BLOCK_LATIN[letter]))
+    .filter((part) => !/[\u0400-\u04FF]/.test(part)).join(' · '));
 
   function introDoc(depth: Depth): InfoDoc {
     const g = need().content.guide;
@@ -151,7 +163,7 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     if (depth === 'engineer' && comp) {
       blocks.push({ kind: 'facts', rows: [
         { label: tx('info.partsCount'), value: tx('list.parts', { n: s.units[unit].items.length }) },
-        { label: tx('info.pageName'), value: `${comp.title} · ${comp.subtitle}` },
+        { label: tx('info.pageName'), value: pageName(`${comp.title} · ${comp.subtitle}`) },
       ] });
     }
     if (depth !== 'watch' && comp) {

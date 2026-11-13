@@ -92,7 +92,7 @@ describe('what each depth shows of the rocket', () => {
   it('a first look: what an assembly is, what it does and what it meets, in this section\'s plain words; no figures, no sources', () => {
     const doc = a.describe('core', 'watch', 'explore');
     expect(kinds(doc)).toEqual(['text', 'heading', 'text', 'heading', 'relations']);
-    expect(doc.blocks[0]).toMatchObject({ kind: 'text', tone: 'lead', text: 'ลำกลางของจรวด ตั้งแต่ฐานขึ้นไปถึงโครงถัก นับเป็นขั้นที่ 2' });
+    expect(doc.blocks[0]).toMatchObject({ kind: 'text', tone: 'lead', text: 'แกนกลางจรวด ตั้งแต่ฐานขึ้นไปถึงโครงถัก นับเป็นขั้นที่ 2' });
     const relations = doc.blocks[4] as Extract<InfoBlock, { kind: 'relations' }>;
     expect(relations.rows.map((r) => r.other).sort()).toEqual(['booster-b', 'booster-d', 'booster-g', 'booster-v', 'interstage']);
     expect(relations.rows.every((r) => r.hasJoint)).toBe(true);
@@ -203,6 +203,24 @@ describe('what each depth shows of the satellite', () => {
     const clauses = folded(doc).find((b) => b.kind === 'facts') as Extract<InfoBlock, { kind: 'facts' }>;
     expect(clauses.rows[0].value).toContain('§2.2.9');
   });
+
+  it('shows no Russian letters outside the Russian interface, except in the titles of the documents cited (owner, 2026-11-13)', () => {
+    const CYRILLIC = /[\u0400-\u04FF]/;
+    const wrong: string[] = [];
+    const said = (blocks: readonly InfoBlock[]): string[] => blocks.flatMap((b) => (b.kind === 'sources' ? [] : b.kind === 'fold' ? [b.title, ...said(b.blocks)] : strings({ title: '', path: [], blocks: [b] })));
+    for (const m of ['soyuz-st31', 'edusat'] as const) {
+      const adapter = adapters[m];
+      for (const id of adapter.tree().nodes.keys()) if (CYRILLIC.test(adapter.name(id))) wrong.push(`${m}: the name of ${id}`);
+      for (const slot of adapter.spec.slots) if (CYRILLIC.test(adapter.place(slot.id).name)) wrong.push(`${m}: the place ${slot.id}`);
+      everyDoc(adapter, (doc, id, depth) => {
+        for (const s of [doc.title, doc.subtitle ?? '', ...said(doc.blocks)]) if (CYRILLIC.test(s)) wrong.push(`${m} ${id} @${depth}: “${s.slice(0, 50)}”`);
+      });
+    }
+    expect(wrong.slice(0, 20)).toEqual([]);
+    // the page's own name of a side block, as the deepest card quotes it
+    const facts = adapters['soyuz-st31'].describe('booster-b', 'engineer', 'explore').blocks.flatMap((b) => (b.kind === 'facts' ? b.rows : []));
+    expect(facts.find((r) => r.label === 'ชื่อในหน้า Anatomy')?.value).toBe('บูสเตอร์ · บล็อก B · ขั้นที่ 1');
+  }, 30_000);
 
   it('keeps sources and notes on where information comes from in one fold at the foot of every card, never among its facts', () => {
     const PROVENANCE = /Orbitlab ไม่ได้ตรวจกับเอกสาร|ไม่ใช่ป้ายจากผู้สร้างโมเดล|ไม่มีชิ้นใดเป็นแบบผลิต|อ่านจากเอกสาร|ยังไม่ได้ตรวจกับเอกสารผู้ผลิต/;

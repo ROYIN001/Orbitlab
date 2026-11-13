@@ -92,7 +92,7 @@ export default async function structureAssembly(t) {
   await app.shot('soyuz-watch');
 
   // three assemblies picked by their names on the picture
-  for (const [node, name, relations] of [['core', 'แกนกลาง (บล็อก A)', 5], ['fregat', 'ขั้นส่งวงโคจร Fregat', 4], ['booster-b', 'บูสเตอร์ บล็อก Б (เบ)', 1]]) {
+  for (const [node, name, relations] of [['core', 'แกนกลาง บล็อก A', 5], ['fregat', 'ขั้นส่งวงโคจร Fregat', 4], ['booster-b', 'บูสเตอร์ B', 1]]) {
     await k(`name:${node}`).click();
     t.check((await title()) === name, `the name on the picture picked ${await title()}`);
     t.check(await page.locator('.st-info .st-links').first().locator('li').count() === relations, `${name} lists its ${relations} relations`);
@@ -101,7 +101,7 @@ export default async function structureAssembly(t) {
   // and a press on the model itself: the assembly under it, at this depth
   const box = await page.locator('.st-canvas').boundingBox();
   await page.mouse.click(box.x + box.width / 2 + 2, box.y + box.height * 0.34);
-  await t.until(async () => (await title()) !== 'บูสเตอร์ บล็อก Б (เบ)', { timeoutMs: 10_000 });
+  await t.until(async () => (await title()) !== 'บูสเตอร์ B', { timeoutMs: 10_000 });
   const pressed = await page.evaluate(() => window.orbitlab.structure.section.store.shown()?.id ?? null);
   t.check(pressed === 'stage3', `a press on the model's third stage picked ${pressed}`);
   t.check((await layers()) === 'outer', `picking assemblies fetched none of the inside: ${await layers()}`);
@@ -115,7 +115,7 @@ export default async function structureAssembly(t) {
   // the middle depth: the same assembly, the page's own account, its facts and the systems through it; more tools
   await k('depth:explore').click();
   await t.until(async () => (await screen()).level === 'explore');
-  t.check((await screen()).hash === '#/structure/explore/soyuz-st31' && (await title()) === 'แกนกลาง (บล็อก A)', `the depth changed, the selection stayed: ${await title()}`);
+  t.check((await screen()).hash === '#/structure/explore/soyuz-st31' && (await title()) === 'แกนกลาง บล็อก A', `the depth changed, the selection stayed: ${await title()}`);
   for (const tool of ['hide', 'isolate', 'colour', 'ghost', 'explode', 'side:systems']) t.check(await k(tool).count() === 1, `the middle depth adds ${tool}`);
   t.check(await page.locator('.st-info .st-facts').count() > 0 && await page.locator('.st-info .st-sources').count() === 0, 'the middle depth gives the facts, not yet the sources');
 
@@ -158,7 +158,17 @@ export default async function structureAssembly(t) {
   await k('name:fregat').click();
   await k('depth:engineer').click();
   await t.until(async () => (await screen()).level === 'engineer');
-  t.check((await title()) === 'ขั้นส่งวงโคจร Fregat' && await page.locator('.st-info .st-sources li').count() > 0, `at the deepest depth ${await title()} names its sources`);
+  // its sources are there, folded away at the foot of the card until asked for (owner, 2026-11-13)
+  const fold = page.locator('.st-info details[data-k="fold:provenance"]');
+  t.check((await title()) === 'ขั้นส่งวงโคจร Fregat' && await fold.count() === 1 && !(await fold.evaluate((d) => d.open)) && await page.locator('.st-info > .st-sources').count() === 0,
+    `at the deepest depth ${await title()} keeps its sources folded away`);
+  await fold.locator('summary').click();
+  t.check(await fold.locator('.st-sources li').count() > 0 && await fold.locator('.st-sources li').first().isVisible(), 'opened, the fold names the sources');
+  // and it stays as the learner left it across a redraw
+  await k('side:list').click();
+  await k('side:info').click();
+  t.check(await page.locator('.st-info details[data-k="fold:provenance"]').evaluate((d) => d.open), 'the fold stays open across a redraw');
+  await page.locator('.st-info details[data-k="fold:provenance"] summary').click();
   for (const tool of ['inner', 'engine']) t.check(await k(tool).count() === 1, `the deepest depth can ask for the ${tool} layer by name`);
   const part = await page.evaluate(() => { const s = window.orbitlab.structure.section.store, tree = s.adapter.tree(); const id = tree.leafOf[tree.nodes.get('stage3/engine-system').items[3]]; s.select(id, true); return id; });
   await ready(page);
@@ -177,7 +187,7 @@ export default async function structureAssembly(t) {
   const flown = await page.evaluate(() => [...window.orbitlab.structure.section.stage.viewer.unitOffsets()].filter(([, o]) => !o.visible).map(([u]) => u).sort().join(','));
   t.check(flown === 'booster-b,booster-d,booster-g,booster-v,fairing-left,fairing-right', `the fourth step of the flight has dropped ${flown}`);
   await k('name:core').click(); // anything else still works while it is open
-  t.check((await title()) === 'แกนกลาง (บล็อก A)', 'the helper locks nothing');
+  t.check((await title()) === 'แกนกลาง บล็อก A', 'the helper locks nothing');
   await app.shot('soyuz-flight');
   await k('guide:close').click();
   t.check(await page.evaluate(() => [...window.orbitlab.structure.section.stage.viewer.unitOffsets()].every(([, o]) => o.visible)), 'closing the helper puts the whole vehicle back');
@@ -188,7 +198,7 @@ export default async function structureAssembly(t) {
   await ready(page);
   t.check((await screen()).hash === '#/structure/watch/soyuz-st31/assemble', `the activity has its own address: ${(await screen()).hash}`);
   if (await k('restart').isEnabled()) await k('restart').click();
-  t.check(await k('outline').getAttribute('aria-pressed') === 'true' && (await text('.st-step-card h3')) === 'แกนกลาง (บล็อก A)', `a first look starts on the outline, led to ${await text('.st-step-card h3')}`);
+  t.check(await k('outline').getAttribute('aria-pressed') === 'true' && (await text('.st-step-card h3')) === 'แกนกลาง บล็อก A', `a first look starts on the outline, led to ${await text('.st-step-card h3')}`);
   const waiting = await text('.st-tray-list li.is-waiting');
   t.check(waiting.includes('รอ แกนกลาง'), `a part that cannot go in yet says what it waits for: ${waiting}`);
   for (let i = 0; i < 11; i++) await k('asm-next').click();
@@ -236,7 +246,7 @@ export default async function structureAssembly(t) {
   for (let i = 0; i < 4 && !(await text('.st-bar .st-turned')).includes(STRAIGHT); i++) await k('turn').click();
   await app.shot('assemble-in-hand');
   await k('install').click();
-  t.check((await msg()).startsWith('ติดตั้ง บูสเตอร์') && (await msg()).includes('จุดยึดลูกหมาก'), `turned right, the joint named: ${await msg()}`);
+  t.check((await msg()).startsWith('ติดตั้ง บูสเตอร์') && (await msg()).includes('ข้อต่อลูกหมาก'), `turned right, the joint named: ${await msg()}`);
   // ── dragging: the part itself, on the picture, onto its place (pressing "install" is the other way, for touch and keys)
   const at = (fn, arg) => page.evaluate(([f, a]) => window.orbitlab.structure.section.stage[f](a), [fn, arg]);
   const inHand = () => page.evaluate(() => { const s = window.orbitlab.structure.section.store; return s.held[s.model] && { ...s.held[s.model], dragged: !!s.drag }; });
@@ -319,6 +329,49 @@ export default async function structureAssembly(t) {
   await fit('fairing-right', 'fairing-right');
   await ready(page);
   t.check((await text('.st-asm .st-done')).includes('ความสัมพันธ์ตามแบบครบ 15 รายการ') && await ink(page) > 0.01, `complete by its relations, and drawn: ${(await text('.st-asm .st-done')).slice(0, 120)}`);
+
+  // ── the same rocket in the order of the launch site (owner, 2026-11-13): lying, in two places at once, docked, rolled out, erected
+  await k('plan:site').click();
+  await ready(page);
+  t.check((await progress()).includes('0/13') && await k('outline').count() === 0 && await k('plan:site').getAttribute('aria-pressed') === 'true',
+    `the site's order starts with nothing in place and has thirteen steps: ${await progress()}`);
+  const lies = await page.evaluate(() => { const st = window.orbitlab.structure.section.stage; const a = st.wherePlace('core'), b = st.wherePlace('fregat'); return { dx: Math.round(Math.abs(b.x - a.x)), dy: Math.round(Math.abs(b.y - a.y)) }; });
+  t.check(lies.dx > 2 * lies.dy && lies.dx > 150, `the vehicle lies across the picture, Fregat far along it from the core: ${JSON.stringify(lies)}`);
+  t.check(await ink(page) > 0.01, `the parts wait as outlines where they belong: ${(100 * await ink(page)).toFixed(2)} % of the picture`);
+  // the head unit is begun with nothing of the package there; the third stage waits for the fairing to be closed
+  await fit('fregat', 'fregat');
+  t.check((await msg()).startsWith('ติดตั้ง ขั้นส่งวงโคจร Fregat') && (await progress()).includes('1/13'), `Fregat first, in its own hall: ${await msg()}`);
+  await k('tray:stage3').click();
+  await k('mark:stage3').click();
+  await k('install').click();
+  t.check((await msg()).includes('หัวครอบ') && (await msg()).includes('ปิดหัวครอบให้เสร็จ'), `the third stage waits for the closed head unit, and says why: ${await msg()}`);
+  await k('putDown').click();
+  t.check((await text('.st-tray-list li.is-ready .st-site-note')).length > 20, 'a step that can be taken says what is really done there');
+  for (const u of ['payload', 'fairing-left', 'fairing-right', 'stage3', 'core', 'booster-b', 'booster-v', 'booster-g', 'booster-d', 'interstage']) await fit(u, u);
+  t.check((await progress()).includes('11/13') && (await text('.st-tray-list')).includes('ประกอบรวม'), `every assembly in place, two steps left: ${await progress()}`);
+  await app.shot('site-before-docking');
+  // the two steps that fit no part: each a press, in order
+  await k('tray:site-erect').click();
+  t.check((await msg()).includes('ประกอบรวม') && (await progress()).includes('11/13'), `erection waits for the docking: ${await msg()}`);
+  const gap = async () => page.evaluate(() => { const st = window.orbitlab.structure.section.stage; const a = st.where('interstage'), b = st.where('stage3'); return Math.round(Math.hypot(b.x - a.x, b.y - a.y)); });
+  const apart = await gap();
+  await k('tray:site-dock').click();
+  await ready(page);
+  const docked = await gap();
+  t.check((await msg()).startsWith('ทำแล้ว: ประกอบรวม') && (await progress()).includes('12/13'), `docked with a press: ${await msg()}`);
+  t.check(docked < apart, `the upper part came to the package: ${apart} px apart, then ${docked} px`);
+  t.check(await k('placed:site-dock').count() === 1 && await k('remove').count() === 0, 'a step done is listed, and can be taken back from there');
+  await k('tray:site-erect').click();
+  await ready(page);
+  const stands = await page.evaluate(() => { const st = window.orbitlab.structure.section.stage; const a = st.where('core'), b = st.where('fregat'); return { dx: Math.round(Math.abs(b.x - a.x)), dy: Math.round(Math.abs(b.y - a.y)) }; });
+  const siteDone = await text('.st-asm .st-done');
+  t.check(siteDone.includes('ตั้งอยู่บนฐานปล่อยแล้ว') && (await progress()).includes('13/13') && stands.dy > 2 * stands.dx, `rolled out and erected: ${siteDone.slice(0, 80)} ${JSON.stringify(stands)}`);
+  await app.shot('site-erected');
+  // its sources are at the foot of the panel, folded; and the reference's order is as it was left
+  t.check(await page.locator('.st-asm details[data-k="fold:site-sources"] .st-sources li').count() === 3, 'the site\'s order names its three sources, folded away');
+  await k('plan:reference').click();
+  await ready(page);
+  t.check((await progress()).includes('11/11') && (await text('.st-asm .st-done')).includes('ประกอบครบตามแบบอ้างอิงแล้ว'), `the reference's order is as it was left: ${await progress()}`);
 
   // ── Back leaves the section and comes back to it as it was
   await page.evaluate(() => { location.hash = '#/launch/explore'; });

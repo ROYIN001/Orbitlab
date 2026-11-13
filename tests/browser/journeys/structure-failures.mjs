@@ -60,7 +60,7 @@ export default async function structureFailures(t) {
   {
     const app = await open();
     const { page } = app;
-    let unblock = await block(page, /soyuz-2-1b-fregat-st31\.r2\.json$/);
+    let unblock = await block(page, /soyuz-2-1b-fregat-st31\.r\d+\.json$/);
     await go(page, '#/structure/explore/soyuz-st31');
     await page.locator('.structure-screen .st-status .st-fail').waitFor({ timeout: 60_000 });
     t.check((await status(page)).includes('โหลดข้อมูลโมเดลไม่สำเร็จ') && await k(page, 'retry').isVisible(), `the model's data failed: “${(await status(page)).replace(/\s+/g, ' ').slice(0, 80)}”`);
@@ -71,7 +71,7 @@ export default async function structureFailures(t) {
     t.check((await layers(page)) === 'outer' && (await status(page)).trim() === '', 'the retry loaded the model');
 
     // one layer fails: said on the picture with its own retry, the rest goes on working
-    unblock = await block(page, /soyuz-2-1b-fregat-st31\.r2\.inner\.bin$/);
+    unblock = await block(page, /soyuz-2-1b-fregat-st31\.r\d+\.inner\.bin$/);
     await k(page, 'cutaway').click();
     await page.locator('.structure-screen .st-status .st-fail').waitFor({ timeout: 60_000 });
     t.check((await status(page)).includes('โหลดชั้นภายในไม่สำเร็จ') && await k(page, 'retry:inner').isVisible(), `a failed layer: “${(await status(page)).replace(/\s+/g, ' ').slice(0, 80)}”`);
@@ -88,7 +88,7 @@ export default async function structureFailures(t) {
     // the 3-D alone fails (the data is here): the list and a side view stand in, with the note and its retry in sight
     const app = await open();
     const { page } = app;
-    const unblock = await block(page, /soyuz-2-1b-fregat-st31\.r2\.outer\.bin$/);
+    const unblock = await block(page, /soyuz-2-1b-fregat-st31\.r\d+\.outer\.bin$/);
     await go(page, '#/structure/explore/soyuz-st31');
     await page.locator('.structure-screen .st-fallback:not([hidden]) .st-side-box').first().waitFor({ timeout: 60_000 });
     t.check((await status(page)).includes('โหลดภาพสามมิติของโมเดลไม่สำเร็จ') && await k(page, 'retry').isVisible(), `the 3-D failed, said where the picture would be: “${(await status(page)).replace(/\s+/g, ' ').slice(0, 80)}”`);
@@ -112,7 +112,7 @@ export default async function structureFailures(t) {
     const { page } = app;
     let release;
     const held = new Promise((r) => { release = r; });
-    await page.route(/soyuz-2-1b-fregat-st31\.r2\.outer\.bin$/, async (route) => { await held; await route.continue().catch(() => {}); });
+    await page.route(/soyuz-2-1b-fregat-st31\.r\d+\.outer\.bin$/, async (route) => { await held; await route.continue().catch(() => {}); });
     await go(page, '#/structure/watch/soyuz-st31');
     await page.waitForFunction(() => window.orbitlab?.structure?.section?.store.load['soyuz-st31'].state === 'loading', null, { timeout: 60_000 });
     await go(page, '#/structure/watch/edusat');
