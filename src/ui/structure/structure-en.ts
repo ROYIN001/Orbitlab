@@ -344,7 +344,6 @@ export const copy: Copy = {
   'soyuz.place.fairing-left': 'Left half, around the upper part',
   'soyuz.place.fairing-right': 'Right half, around the upper part',
   'soyuz.turn': 'The tip of the strap-on booster\'s cone must lean in towards the ball joint on the core stage, and the fin must be on the outside',
-  'soyuz.remark.interstage': 'Orbitlab’s note: the third stage of this Soyuz-2.1b uses the RD0124 engine (RD-0110 is the Soyuz-2.1a’s). The Anatomy page’s sentence above is waiting for its owner to check and correct it',
   'soyuz.st31': 'The real ST31 mission carried 36 OneWeb satellites. The payload frame in the model is a stand-in, not the real satellites or their release mechanism',
   'soyuz.terms': 'This model\'s own descriptions, part groups and system notes come from the Anatomy page, which is written in Thai; they are shown here as the page has them, untranslated',
   'soyuz.fact.core': 'Core stage diameter (maximum)',

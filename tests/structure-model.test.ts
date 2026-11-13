@@ -61,6 +61,13 @@ describe('the Structure section\'s Soyuz-2.1b/Fregat files', () => {
         'structure/soyuz-2-1b-fregat-st31.r2.inner.bin': '2700d78d2bcf3a998bcebb1d80e7850b19709c075fb7a29cf4df9bd10f619ec2',
         'structure/soyuz-2-1b-fregat-st31.r2.engine.bin': '4d6f470c813dd64541017879cb528cefb5a678f7ed3929276239c789a67ee705',
       },
+      // the page's interstage passage corrected (RD0124); no triangle changed, the layers differ only by the page's hash in their headers
+      3: {
+        'structure/soyuz-2-1b-fregat-st31.r3.json': '29be886561eb0e9748074e90a51c307ac0497bfe4288c2b5211392c1dd02ebce',
+        'structure/soyuz-2-1b-fregat-st31.r3.outer.bin': '41579dd78b36ca5efa953fe27de508749b2cb9175c00e6ee286a38bcd77c1f57',
+        'structure/soyuz-2-1b-fregat-st31.r3.inner.bin': 'fd67ec1cd918d5c0b269e269178c51e79e92c1aea5a1a9003a3cdbbcf4700ed1',
+        'structure/soyuz-2-1b-fregat-st31.r3.engine.bin': 'af9ffb812fe12fe4bf409456fb6d52076ca3d8689aef830ca100d3e60c2bb40a',
+      },
     };
     const made = MADE_AS[SOYUZ_DATA_REVISION];
     expect(made, `revision ${SOYUZ_DATA_REVISION} has no hashes here`).toBeDefined();

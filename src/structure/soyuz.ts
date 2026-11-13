@@ -121,25 +121,6 @@ export const SOYUZ_INTERFACES: Readonly<Record<SoyuzJoint, { a?: RegExp; b?: Reg
 };
 
 /**
- * Passages of the page's own text that this section shows with a remark of
- * its own after them (text key `note`), because the page's data contradicts
- * them. The page's words are the owner's and are shown as they are; a remark
- * goes when its passage does (`match` no longer found), so correcting the
- * page needs nothing changed here.
- *
- * - the interstage: the page says RD-0110 lights before the core is done.
- *   This vehicle's third stage is RD0124 (the page's own Block I card, its
- *   circuits and its flight step); RD-0110 is the Soyuz-2.1a's.
- */
-export const SOYUZ_PAGE_REMARKS: readonly { component: string; match: RegExp; note: string }[] = [
-  { component: 'interstage', match: /RD-?0110 เริ่มทำงาน/, note: 'soyuz.remark.interstage' },
-];
-
-/** The remark this section makes on a paragraph of a component's text, if any. */
-export const pageRemark = (component: string, paragraph: string): string | null =>
-  SOYUZ_PAGE_REMARKS.find((r) => r.component === component && r.match.test(paragraph))?.note ?? null;
-
-/**
  * Which assemblies leave at each event of the page's flight sequence
  * (`SoyuzFlight.events`): `skirt` is three panels of Block I, which the
  * content file marks one by one (`leaves`), and `disposal` moves Fregat off.

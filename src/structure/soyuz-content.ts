@@ -1,6 +1,6 @@
 /**
  * The Soyuz-2.1b / Fregat model's content file
- * (public/structure/soyuz-2-1b-fregat-st31.r2.json, scripts/structure-meshes.mjs):
+ * (public/structure/soyuz-2-1b-fregat-st31.r3.json, scripts/structure-meshes.mjs):
  * the owner's Thai guide as the page has it — its components and their
  * groups, its fifteen propellant and gas circuits with their ordered steps,
  * its flight sequence — and one record per part. Read and checked here, and
@@ -18,14 +18,14 @@ import { CERTAINTIES, PART_CATEGORIES, type StructureSource } from './types';
  * their names, so a browser's kept copy of an older revision is never read
  * for this one, and inside each, so two revisions are never mixed.
  */
-export const SOYUZ_DATA_REVISION = 2;
+export const SOYUZ_DATA_REVISION = 3;
 
 export const SOYUZ_FILES = {
-  content: 'structure/soyuz-2-1b-fregat-st31.r2.json',
+  content: 'structure/soyuz-2-1b-fregat-st31.r3.json',
   layers: {
-    outer: 'structure/soyuz-2-1b-fregat-st31.r2.outer.bin',
-    inner: 'structure/soyuz-2-1b-fregat-st31.r2.inner.bin',
-    engine: 'structure/soyuz-2-1b-fregat-st31.r2.engine.bin',
+    outer: 'structure/soyuz-2-1b-fregat-st31.r3.outer.bin',
+    inner: 'structure/soyuz-2-1b-fregat-st31.r3.inner.bin',
+    engine: 'structure/soyuz-2-1b-fregat-st31.r3.engine.bin',
   },
 } as const;
 

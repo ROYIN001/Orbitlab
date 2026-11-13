@@ -42,6 +42,10 @@
  * a whole assembly. Each vertex now carries its own part's, held by
  * tests/structure-model.test.ts against each part's stated centre.
  *
+ * Revision 3 (2026-11-13): the page's interstage passage named RD-0110 on
+ * this 2.1b; the owner had it corrected to RD0124, and the page's text is
+ * part of the content file. No triangle changed.
+ *
  * As scripts/anatomy-meshes.mjs does, the triangles are the page's own: its
  * model code (`SoyuzSceneCodec`, `buildSoyuzMeshes`,
  * `createSoyuzRenderer.math.materialOf`) is run in a fresh `vm` context, apart
@@ -86,7 +90,7 @@ const NAME = 'soyuz-2-1b-fregat-st31';
 
 export const FORMAT_VERSION = 1;
 /** What the files say, as a number in their names and inside them: raised whenever that changes (the header says why). */
-export const DATA_REVISION = 2;
+export const DATA_REVISION = 3;
 export const fileName = (kind) => `${NAME}.r${DATA_REVISION}.${kind === 'json' ? 'json' : `${kind}.bin`}`;
 /**
  * Radial segments per layer. The page draws 48, too many to fetch and draw on

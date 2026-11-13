@@ -78,7 +78,7 @@ export default async function structureAssembly(t) {
   t.check(s0.model === 'soyuz-st31' && s0.mode === 'explore' && s0.level === 'watch', `the direct link opened ${JSON.stringify(s0)}`);
   t.check(await page.locator('#section-nav .nav-tab[data-section="structure"][data-current]').count() === 1, 'the section switch marks this section as the one open');
   const names = await fetched();
-  t.check(names.some((n) => /^structure-[\w-]+\.js$/.test(n)) && names.some((n) => n.endsWith('.r2.json')) && names.some((n) => n.endsWith('.r2.outer.bin')), `opening it fetched its code and the model: ${names.join(', ')}`);
+  t.check(names.some((n) => /^structure-[\w-]+\.js$/.test(n)) && names.some((n) => n.endsWith('.r3.json')) && names.some((n) => n.endsWith('.r3.outer.bin')), `opening it fetched its code and the model: ${names.join(', ')}`);
   t.check(!names.some((n) => /inner|engine|structure-en|structure-ru/.test(n)), `and not the model's inside, nor a language not on screen: ${names.join(', ')}`);
   // one screen tall, the picture its largest part
   const layout = await page.evaluate(() => {

@@ -12,7 +12,7 @@ import type { ViewerMesh } from '../../../render/structure-viewer';
 import { REST, TIER_OF_DEPTH, partnerOf, relationsOf, ruleFor, type ModelRelation, type ModelTree, type Turn } from '../../../structure/model';
 import {
   FLIGHT_EVENT_UNITS, SOYUZ_ASSEMBLY, SOYUZ_BOOSTERS, SOYUZ_COMPONENT, SOYUZ_FAIRING, SOYUZ_MOUNTS, SOYUZ_ORDER, SOYUZ_RELATIONS, SOYUZ_UNITS,
-  isSoyuzUnit, pageRemark, soyuzFactCertainty, type SoyuzUnit,
+  isSoyuzUnit, soyuzFactCertainty, type SoyuzUnit,
 } from '../../../structure/soyuz';
 import {
   SOYUZ_FILES, SOYUZ_LAYERS, circuitParts, cutawayAzimuth, indexSoyuz, jointParts, parseSoyuzContent, soyuzTree, unitAxis,
@@ -135,12 +135,7 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
       blocks.push({ kind: 'text', text: tx(`soyuz.card.${card}.what`), tone: 'lead' }, { kind: 'heading', text: tx('info.function') }, { kind: 'text', text: tx(`soyuz.card.${card}.does`) });
     } else if (comp) {
       const paragraphs = comp.body.split('\n\n').filter(Boolean);
-      paragraphs.forEach((p, k) => {
-        blocks.push({ kind: 'text', text: p, ...(k === 0 ? { tone: 'lead' as const } : {}) });
-        // a passage the page's own data contradicts is followed by this section's remark (the page's words stay the owner's)
-        const remark = pageRemark(comp.id, p);
-        if (remark) blocks.push({ kind: 'text', text: tx(remark), tone: 'note' });
-      });
+      paragraphs.forEach((p, k) => { blocks.push({ kind: 'text', text: p, ...(k === 0 ? { tone: 'lead' as const } : {}) }); });
     }
     blocks.push(...relationBlocks(unit));
     if (depth !== 'watch' && comp) {
