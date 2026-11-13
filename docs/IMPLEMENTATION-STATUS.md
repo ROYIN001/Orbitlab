@@ -114,19 +114,27 @@ are listed there as drafts awaiting the owner's review.
   before the core has gone, the frost on the oxygen tanks shedding
   in the first half minute, and on a crewed launch the escape tower and the fairing's four grid
   fins, the tower pulling away at T+113.5 s. Drawing only; the physics is unchanged.
-- **Structure & Assembly, a pilot** (owner, 2026-11-09; `src/structure/`, `src/ui/structure/`,
-  `src/render/structure-*.ts`, report `docs/development/reports/structure-assembly-pilot.md`): a
-  fourth section, `#/structure/<level>[/<model>]`, its three levels the depth a model is read at.
-  Soyuz-2.1b/Fregat ST31 from the Anatomy page's own parts (2,069, with their ids), in three layers
-  fetched on demand; explore, pick, cutaway, take apart, colour by kind or certainty; assemble the
-  eleven main assemblies by the reference's relations (order, place, way round), with undo and
-  restart. EduSat-3U, a concept satellite for learning: assembled, then "my experiment" with two
-  batteries and two cameras, mass from the parts list and a time-stepped sunlit/eclipse balance
-  built on `src/orbit/power.ts`'s SMAD figures (checked against `arrayPowerRequired` and
-  `batteryCapacity`); handed to Orbit (`designHandoff`) and Launch (`designMissionDocument` after
-  Build's pre-flight checks, Soyuz-2.1b from Vostochny, hypothetical), with what each destination
-  took read back and checked (`checkReceipt`). Not merged; the bundle ceilings need the owner
-  (D-38).
+- **Structure & Assembly, a pilot in its second version** (owner, 2026-11-09 and 2026-11-10;
+  `src/structure/`, `src/ui/structure/`, `src/render/structure-*.ts`, `src/render/edusat-model.ts`,
+  the app's side in `src/structure-host/` and `src/ui/structure-loader.ts`; report
+  `docs/development/reports/structure-assembly-pilot.md`): a fourth section,
+  `#/structure/<level>/<model>[/assemble|/experiment]`, its three levels the depth a model is read
+  at, each with its own tools. The section is a chunk of its own, fetched when it first opens and
+  given what it needs of the app (`StructureEnv`); it imports nothing of the app at run time
+  (`tests/structure-boundary.test.ts`), and every model is one adapter over one shared description
+  (a tree at three tiers, relations, order rules with their reasons, mounts, poses).
+  Soyuz-2.1b/Fregat ST31 from the Anatomy page's own parts (2,069, with their ids; model files of
+  revision 2, every vertex marked with its part), in three layers fetched on demand: names and a
+  scale on the picture, pick, cutaway, take apart, colour by kind or certainty, the page's fifteen
+  circuits and ten-step flight sequence; assembled by the reference's relations (order, place, way
+  round) with a press at a first look and a drag or a chosen place deeper, undo and restart.
+  EduSat-3U, a concept satellite for learning in the CubeSat Design Specification's frame and
+  bounds (Rev. 14.1; AZUR 3G30 cells): assembled, then "my experiment" with two batteries and two
+  cameras, mass from the parts list and a sunlit/eclipse balance built on `src/orbit/power.ts`'s
+  SMAD figures; handed to Orbit and Launch (Soyuz-2.1b from Vostochny, hypothetical), with what
+  each destination took read back and checked. Thai is the source text; English and Russian are
+  drafts, marked on screen. In draft pull request #217; not merged. The bundle ceilings were
+  raised with the owner's approval of 2026-11-12 (D-38, `budgets.json`).
 - **The Soyuz Anatomy models** (owner, 2026-10-28; `public/anatomy/`, `src/data/anatomy.ts`): the
   owner's own 3-D models of Soyuz-2.1a with the Soyuz MS or the Progress MS-26, and of Soyuz-2.1b
   with Fregat under the ST fairing, kept byte for byte. Build's Watch level opens each whole in a

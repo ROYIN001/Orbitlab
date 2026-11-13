@@ -3,7 +3,7 @@
 > **สถานะปัจจุบัน (บันทึกเดียวที่เป็นปัจจุบัน — แก้ที่นี่ทุกครั้งที่สถานะเปลี่ยน)**
 >
 > - **ฉบับที่ 2 (ยกเครื่องทั้งหมวด ตามคำขอเจ้าของ 2026-11-10: "ตรวจเช็คโครงร่างที่ร่างมาตอนแรกแล้วร่างให้ดีกว่าเดิม … เอาให้ดีที่สุด")** สร้างต่อจากฉบับแรก (`be35eb7`) บนสาขา `claude/trusting-cannon-oah00c` · ฐาน: `main` @ `3e1b48a` · commit ของงาน: §13
-> - **push แล้ว เป็น pull request แบบร่าง #217** ตามคำอนุญาตของเจ้าของ (2026-11-11: "อนุญาตให้ push สาขา claude/trusting-cannon-oah00c ขึ้น GitHub และเปิด pull request แบบร่าง") **ยังไม่ merge และยังไม่เผยแพร่ขึ้นเว็บจริง**
+> - **push แล้ว เป็น pull request แบบร่าง #217** ตามคำอนุญาตของเจ้าของ (2026-11-11: "อนุญาตให้ push สาขา claude/trusting-cannon-oah00c ขึ้น GitHub และเปิด pull request แบบร่าง") **ยังไม่ merge และยังไม่เผยแพร่ขึ้นเว็บจริง** · CI ของ pull request ผ่านครบทุกขั้นตั้งแต่ `2c772e5` (2026-11-12) · README, IMPLEMENTATION-STATUS, USER-GUIDE และไฟล์ใน `changes/` ปรับให้ตรงกับฉบับที่ 2 แล้ว
 > - **ต้องแจ้งตรง ๆ — ข้อบกพร่องของฉบับแรกที่ส่งมอบไปแล้ว (E-01):** ไฟล์โมเดล Soyuz ของฉบับแรกติดป้ายชิ้นส่วนผิดให้สามเหลี่ยมราว 91 % (สคริปต์สร้างไฟล์บันทึกหมายเลขชิ้นต่อสามเหลี่ยมแต่อ่านต่อจุดยอด) ที่ระดับ "ชุดประกอบหลัก" ไม่เห็นผล แต่ต่ำกว่านั้น การเลือก การเน้น การผ่า และสีตามชนิด ชี้ผิดชิ้น ฉบับที่ 2 แก้แล้ว (ไฟล์รุ่น `.r2.` + การทดสอบที่จับข้อนี้ได้) ชุดส่งมอบฉบับแรกจึงไม่ควรใช้ต่อ — §2
 > - ผู้ทำงาน: Claude (ไม่ใช่ GPT-6.1 Sol) · ผู้ตรวจทาน: เอเจนต์ Claude แยกบริบท · **ยังไม่ได้ตรวจโดย GPT-6 Astra** (เรียกจากที่นี่ไม่ได้ เตรียมบริบทส่งต่อไว้แล้ว) — §10
 > - การตรวจฉบับแรกก่อนยกเครื่อง: ตั้งใจตรวจ 7 มุมมอง **ทำได้จริง 2 มุมมอง** (เป้าหมาย/การใช้งาน/การสำรวจ และ การประกอบ/ดาวเทียม) ได้ 29 ข้อ อีก 5 มุมมองหยุดเพราะโควตาการใช้งานของเซสชันเต็ม การตรวจทานฉบับที่ 2 ทำครบ 5 มุมมอง พบ 45 ข้อ แก้/ตอบครบแล้ว (ผู้หักล้างตรวจยืนยัน 27 ข้อของสามมุมมองหลัง ส่วน 18 ข้อของสองมุมมองแรก ผู้หักล้างหยุดเพราะโควตา ผมทำซ้ำด้วยสคริปต์ของผู้ตรวจเองแทน ซึ่งไม่ใช่การตรวจอิสระ) — §2, §10
@@ -366,7 +366,8 @@ On `claude/trusting-cannon-oah00c`, from `main` @ `3e1b48a`; pushed on 2026-11-1
 | `b62dad8` | the loader asks the browser whether the page can be had (no request of its own: the privacy test) |
 | `48294ad` | this report, with the review's results, the final checks and measurements |
 | `3f0027a` | the budget's ceilings as the owner approved them, and this report brought up to date |
-| the commit after it | what the pull request's first browser run on CI found: the section switch's link count in a phone journey, and the top bar's tabs given the room the bar has |
+| `2c772e5` | what the pull request's first browser run on CI found: the section switch's link count in a phone journey, and the top bar's tabs given the room the bar has |
+| the commit after it | the README, the status page, the user guide and the change fragment brought up to the second version |
 
 The commits follow the work, not mergeable steps, and only the tip was checked in full. The tip passes everything in §7.
 
