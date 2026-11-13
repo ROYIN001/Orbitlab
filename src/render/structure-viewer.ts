@@ -112,6 +112,8 @@ void main() {
   gl_Position = projectionMatrix * mv;
 }`;
 
+// `through`: the solid pass leaves out what is seen through, and the blended pass draws only that. Flag 4 (selected):
+// its own colours still read, under a light tint and a bright rim. (Said here, not in the string: the string is shipped.)
 const FRAGMENT = /* glsl */ `
 uniform int colorMode;
 uniform int pass;
@@ -131,7 +133,6 @@ varying vec4 vState;
 void main() {
   int f = int(vState.r * 255.0 + 0.5);
   if ((f & 1) != 0) discard;
-  // the solid pass leaves out what is seen through; the blended pass draws only that
   bool through = (f & (2 | 32)) != 0;
   if (through != (pass == 1)) discard;
   int paint = int(vState.a * 255.0 + 0.5);
@@ -157,7 +158,6 @@ void main() {
   float rim = pow(1.0 - max(dot(n, v), 0.0), 2.5);
   if ((f & 16) != 0) col = mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), 0.75) * 0.4;
   if ((f & 8) != 0) col = mix(col, relatedColor, 0.17) + relatedColor * rim * 0.3;
-  // selected: its own colours still read, under a light tint and a bright rim
   if ((f & 4) != 0) col = mix(col, accent, 0.26) + accent * (0.08 + rim * 0.9);
   float alpha = 1.0;
   if ((f & 32) != 0) { col = mix(col, outlineColor, 0.72) + outlineColor * rim * 0.5; alpha = 0.16 + rim * 0.3; }

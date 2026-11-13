@@ -92,7 +92,7 @@ describe('what each depth shows of the rocket', () => {
   it('a first look: what an assembly is, what it does and what it meets, in this section\'s plain words; no figures, no sources', () => {
     const doc = a.describe('core', 'watch', 'explore');
     expect(kinds(doc)).toEqual(['text', 'heading', 'text', 'heading', 'relations']);
-    expect(doc.blocks[0]).toMatchObject({ kind: 'text', tone: 'lead', text: 'แกนกลางจรวด ตั้งแต่ฐานขึ้นไปถึงโครงถัก นับเป็นขั้นที่ 2' });
+    expect(doc.blocks[0]).toMatchObject({ kind: 'text', tone: 'lead', text: 'ท่อนกลางของจรวด ตั้งแต่ฐานขึ้นไปถึงโครงถัก นับเป็นท่อนที่ 2' });
     const relations = doc.blocks[4] as Extract<InfoBlock, { kind: 'relations' }>;
     expect(relations.rows.map((r) => r.other).sort()).toEqual(['booster-b', 'booster-d', 'booster-g', 'booster-v', 'interstage']);
     expect(relations.rows.every((r) => r.hasJoint)).toBe(true);
@@ -150,7 +150,7 @@ describe('the interstage passage the owner had corrected (2026-11-13)', () => {
 
   it('names the engine this vehicle has, with no remark of this section\'s beside the page\'s words', () => {
     const doc = texts(a.describe('interstage', 'explore', 'explore')).join(' ');
-    expect(doc).toContain('RD0124 เริ่มทำงานก่อนแกนกลางสิ้นสุดการทำงาน');
+    expect(doc).toContain('RD0124 เริ่มทำงานก่อนท่อนกลางสิ้นสุดการทำงาน');
     expect(doc).not.toContain('RD-0110');
     for (const unit of ['interstage', 'core', 'stage3', 'fregat', 'booster-b']) expect(texts(a.describe(unit, 'explore', 'explore')).join(' ')).not.toContain('หมายเหตุของ Orbitlab');
   });
@@ -225,7 +225,7 @@ describe('what each depth shows of the satellite', () => {
     expect(all.some((t) => /RD-107A/.test(t))).toBe(true);
     // the page's own name of a side block, as the deepest card quotes it
     const facts = adapters['soyuz-st31'].describe('booster-b', 'engineer', 'explore').blocks.flatMap((b) => (b.kind === 'facts' ? b.rows : []));
-    expect(facts.find((r) => r.label === 'ชื่อในหน้า Anatomy')?.value).toBe('บูสเตอร์ · บล็อก B · ขั้นที่ 1');
+    expect(facts.find((r) => r.label === 'ชื่อในหน้า Anatomy')?.value).toBe('บูสเตอร์ · บล็อก B · ท่อนที่ 1');
   }, 30_000);
 
   it('names each card\'s fold for the thing shown, so one opened is not found open on the next card', () => {

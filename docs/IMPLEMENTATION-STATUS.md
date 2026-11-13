@@ -124,7 +124,7 @@ are listed there as drafts awaiting the owner's review.
   (`tests/structure-boundary.test.ts`), and every model is one adapter over one shared description
   (a tree at three tiers, relations, order rules with their reasons, mounts, poses).
   Soyuz-2.1b/Fregat ST31 from the Anatomy page's own parts (2,069, with their ids; model files of
-  revision 3, every vertex marked with its part), in three layers fetched on demand: names and a
+  revision 4, every vertex marked with its part), in three layers fetched on demand: names and a
   scale on the picture, pick, cutaway, take apart, colour by kind or certainty, the page's fifteen
   circuits and ten-step flight sequence; assembled by the reference's relations (order, place, way
   round) with a press at a first look and a drag or a chosen place deeper, undo and restart; and,
@@ -141,9 +141,10 @@ are listed there as drafts awaiting the owner's review.
   on 2026-11-13 (Thai agencies and the app's dictionary; the Arianespace/Starsem documents and
   the CubeSat Design Specification; Russian by search results only). Sources and notes on how far
   the information goes are folded at the foot of each card. Ways in from the landing page, Build
-  and Launch. In draft pull request #217; not merged. The bundle ceilings were raised with the
-  owner's approval of 2026-11-12 (D-38, `budgets.json`); the work of 2026-11-13 is over them and
-  waits for the owner's word (report §14.6).
+  and Launch. Its Thai, and the Soyuz-2.1b Anatomy page's, use the words of Thai agencies and
+  press (ท่อน, ท่อนกลาง, แฟริ่ง, เพย์โหลด; owner, 2026-11-13; report §15.2). Pull request
+  #217, merged on the owner's word of 2026-11-13. The bundle ceilings were raised with the
+  owner's approvals of 2026-11-12 and 2026-11-13 (D-38, `budgets.json`).
 - **The Soyuz Anatomy models** (owner, 2026-10-28; `public/anatomy/`, `src/data/anatomy.ts`): the
   owner's own 3-D models of Soyuz-2.1a with the Soyuz MS or the Progress MS-26, and of Soyuz-2.1b
   with Fregat under the ST fairing, kept byte for byte — but for one sentence of the 2.1b page's

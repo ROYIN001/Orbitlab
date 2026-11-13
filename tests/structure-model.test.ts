@@ -68,6 +68,14 @@ describe('the Structure section\'s Soyuz-2.1b/Fregat files', () => {
         'structure/soyuz-2-1b-fregat-st31.r3.inner.bin': 'fd67ec1cd918d5c0b269e269178c51e79e92c1aea5a1a9003a3cdbbcf4700ed1',
         'structure/soyuz-2-1b-fregat-st31.r3.engine.bin': 'af9ffb812fe12fe4bf409456fb6d52076ca3d8689aef830ca100d3e60c2bb40a',
       },
+      // the page's Thai follows what Thai sources write, and its source list names the 2.1a for RD0110 (owner, 2026-11-13);
+      // no triangle changed, the layers differ only by the page's hash in their headers
+      4: {
+        'structure/soyuz-2-1b-fregat-st31.r4.json': 'bab83e3c441146a0eba6efe5a498ff43a5124cf0cbc0e9aa057e3f903a9386f6',
+        'structure/soyuz-2-1b-fregat-st31.r4.outer.bin': 'e70cf4ecba72bb240a7418e5f26d54376affcc418745f7acc080d075be0808fa',
+        'structure/soyuz-2-1b-fregat-st31.r4.inner.bin': '72202cb3ad6447c7580b1f98d540e453c0d2e00cbf35b03ae201cca842ced21b',
+        'structure/soyuz-2-1b-fregat-st31.r4.engine.bin': '6360e5935afcb2c1c0bf422163791227a48941dc5d97b06807dc7b8b611467ae',
+      },
     };
     const made = MADE_AS[SOYUZ_DATA_REVISION];
     expect(made, `revision ${SOYUZ_DATA_REVISION} has no hashes here`).toBeDefined();

@@ -76,7 +76,7 @@ export default async function structureFailures(t) {
     await page.locator('.structure-screen .st-status .st-fail').waitFor({ timeout: 60_000 });
     t.check((await status(page)).includes('โหลดชั้นภายในไม่สำเร็จ') && await k(page, 'retry:inner').isVisible(), `a failed layer: “${(await status(page)).replace(/\s+/g, ' ').slice(0, 80)}”`);
     await k(page, 'name:core').click();
-    t.check((await page.locator('.structure-screen .st-info h2').textContent()).includes('แกนกลาง'), 'the model goes on working');
+    t.check((await page.locator('.structure-screen .st-info h2').textContent()).includes('ท่อนกลาง'), 'the model goes on working');
     await unblock();
     await k(page, 'retry:inner').click();
     await ready(page);
@@ -95,7 +95,7 @@ export default async function structureFailures(t) {
     t.check(await page.locator('.structure-screen .st-side-box').count() === 11, 'the side view shows the eleven assemblies');
     // (a strap-on's box lies over the core's middle from the side: the press is sent to the core's own box)
     await page.locator('.structure-screen .st-side-box').first().dispatchEvent('click');
-    t.check((await page.locator('.structure-screen .st-info h2').textContent()).includes('แกนกลาง'), 'a press on the side view picks an assembly');
+    t.check((await page.locator('.structure-screen .st-info h2').textContent()).includes('ท่อนกลาง'), 'a press on the side view picks an assembly');
     await k(page, 'side:list').click();
     t.check(await page.locator('.structure-screen .st-list .st-list-body > .st-tree > li').count() === 11, 'the list works');
     await app.shot('no-3d');

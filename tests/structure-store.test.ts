@@ -171,8 +171,8 @@ describe('assembling at a first look: one press fits a part, on the reference\'s
     store.fit('stage3');
     expect(store.message).toMatchObject({ kind: 'no' });
     expect(store.message!.text()).toContain(store.unitName('interstage'));
-    expect(store.message!.text()).toContain('ขั้นที่สามตั้งอยู่บนวงแหวนบนของโครงถัก');
-    expect(store.waitsFor('booster-b')).toEqual([{ unit: 'core', why: 'ปลายกรวยของบูสเตอร์ยันเข้ากับแกนกลางผ่านข้อต่อลูกหมาก จึงต้องมีแกนกลางก่อน' }]);
+    expect(store.message!.text()).toContain('ท่อนที่สามตั้งอยู่บนวงแหวนบนของโครงถัก');
+    expect(store.waitsFor('booster-b')).toEqual([{ unit: 'core', why: 'ปลายกรวยของบูสเตอร์ยันเข้ากับท่อนกลางผ่านข้อต่อลูกหมาก จึงต้องมีท่อนกลางก่อน' }]);
     store.fit('core');
     expect(store.message).toMatchObject({ kind: 'ok' });
     expect(Object.keys(store.assembly.placed)).toEqual(['core']);
