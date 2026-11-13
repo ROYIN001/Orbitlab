@@ -28,6 +28,7 @@ function strings(doc: InfoDoc): string[] {
       case 'sources': return b.rows.flatMap((r) => [r.title, r.note ?? '', r.scope ?? '']);
       case 'systems': return b.rows.flatMap((r) => [r.label, r.step ?? '']);
       case 'checks': return [b.note, ...b.rows.flatMap((r) => [r.label, r.value, r.limit, r.ref])];
+      case 'fold': return [b.title, ...b.blocks.flatMap(of)];
       default: return [];
     }
   };
@@ -37,6 +38,10 @@ function strings(doc: InfoDoc): string[] {
 /** A text key shown bare: what `tx` gives back for a key the section has no words for. */
 const BARE_KEY = /^(?:asm|bom|cat|cert|depth|edu|exp|flight|flow|go|guide|info|list|load|medium|mode|model|phase|rel|res|side|soyuz|spec|src|store|sys|unit|view)\.[\w.-]+$/;
 const kinds = (doc: InfoDoc): string[] => doc.blocks.map((b) => b.kind);
+/** Every block of a document, those folded away among them. */
+const everyBlock = (blocks: readonly InfoBlock[]): InfoBlock[] => blocks.flatMap((b) => (b.kind === 'fold' ? [b, ...everyBlock(b.blocks)] : [b]));
+/** What a card keeps folded away at its foot: where its information comes from and how far it goes. */
+const folded = (doc: InfoDoc): InfoBlock[] => doc.blocks.flatMap((b) => (b.kind === 'fold' && b.name === 'provenance' ? b.blocks : []));
 const headings = (doc: InfoDoc): string[] => doc.blocks.flatMap((b) => (b.kind === 'heading' ? [b.text] : []));
 
 function everyDoc(adapter: ModelAdapter, visit: (doc: InfoDoc, id: string | null, depth: Depth) => void): number {
@@ -66,7 +71,7 @@ describe('what is said of each thing', () => {
           if (/undefined|NaN|\[object/.test(s)) wrong.push(`${where}: “${s}”`);
         }
         for (const p of doc.path) if (!tree.nodes.has(p)) wrong.push(`${where}: path ${p}`);
-        for (const b of doc.blocks) {
+        for (const b of everyBlock(doc.blocks)) {
           if (b.kind === 'relations') for (const r of b.rows) { if (!tree.nodes.has(r.other)) wrong.push(`${where}: relation to ${r.other}`); if (!relations.has(r.relation)) wrong.push(`${where}: relation ${r.relation}`); }
           if (b.kind === 'nodes') for (const n of b.ids) if (!tree.nodes.has(n)) wrong.push(`${where}: node ${n}`);
           if (b.kind === 'systems') for (const r of b.rows) if (!systems.has(r.id)) wrong.push(`${where}: system ${r.id}`);
@@ -96,7 +101,7 @@ describe('what each depth shows of the rocket', () => {
   it('the middle depth: the page\'s own account, its facts, what to look for, and the systems that pass through', () => {
     const doc = a.describe('core', 'explore', 'explore');
     expect(kinds(doc)).toEqual(expect.arrayContaining(['relations', 'facts', 'list', 'systems']));
-    expect(kinds(doc)).not.toContain('sources');
+    expect(everyBlock(doc.blocks).map((b) => b.kind)).not.toContain('sources');
     const facts = doc.blocks.find((b) => b.kind === 'facts') as Extract<InfoBlock, { kind: 'facts' }>;
     expect(facts.rows.length).toBeGreaterThan(2);
     for (const r of facts.rows) expect(r.certainty, r.label).toBeDefined();
@@ -104,10 +109,9 @@ describe('what each depth shows of the rocket', () => {
 
   it('the deepest: the same, with the page\'s note on how real it is and its sources', () => {
     const doc = a.describe('core', 'engineer', 'explore');
-    expect(kinds(doc)).toContain('sources');
-    const sources = doc.blocks.find((b) => b.kind === 'sources') as Extract<InfoBlock, { kind: 'sources' }>;
+    const sources = folded(doc).find((b) => b.kind === 'sources') as Extract<InfoBlock, { kind: 'sources' }>;
     expect(sources.rows.length).toBeGreaterThan(0);
-    expect(kinds(a.describe('core', 'explore', 'explore')).length).toBeLessThan(kinds(doc).length);
+    expect(everyBlock(a.describe('core', 'explore', 'explore').blocks).length).toBeLessThan(everyBlock(doc.blocks).length);
   });
 
   it('a group of the page\'s: a sentence of what it is, what it is made of, and whose it is', () => {
@@ -151,8 +155,10 @@ describe('the interstage passage the owner had corrected (2026-11-13)', () => {
     for (const unit of ['interstage', 'core', 'stage3', 'fregat', 'booster-b']) expect(texts(a.describe(unit, 'explore', 'explore')).join(' ')).not.toContain('หมายเหตุของ Orbitlab');
   });
 
-  it('says under an assembly\'s facts what "confirmed from documents" rests on there', () => {
-    expect(texts(a.describe('core', 'explore', 'explore')).join(' ')).toContain('Orbitlab ไม่ได้ตรวจกับเอกสารเหล่านั้นเอง');
+  it('says, folded at the foot of an assembly\'s card, what "confirmed from documents" rests on there', () => {
+    const doc = a.describe('core', 'explore', 'explore');
+    expect(texts(doc).join(' ')).not.toContain('Orbitlab ไม่ได้ตรวจกับเอกสารเหล่านั้นเอง');
+    expect(folded(doc).flatMap((b) => (b.kind === 'text' ? [b.text] : [])).join(' ')).toContain('Orbitlab ไม่ได้ตรวจกับเอกสารเหล่านั้นเอง');
   });
 });
 
@@ -164,7 +170,9 @@ describe('what each depth shows of the satellite', () => {
     expect(strings(doc).join(' ')).toContain('ไม่เกี่ยวข้องกับดาวเทียม OneWeb');
     const facts = doc.blocks.find((b) => b.kind === 'facts') as Extract<InfoBlock, { kind: 'facts' }>;
     expect(facts.rows.find((r) => r.value.includes(CDS.massKg.toFixed(2)))?.certainty).toBe('documented');
-    expect(headings(doc)).toContain('ที่มาและสมมติฐาน');
+    // what the figures rest on is there at every depth, folded away
+    expect(doc.blocks.at(-1)).toMatchObject({ kind: 'fold', title: 'ที่มาและข้อจำกัดของข้อมูล' });
+    expect(folded(doc).flatMap((b) => (b.kind === 'list' ? b.items : [])).join(' ')).toContain('ค่าที่ Orbitlab กำหนดขึ้นสำหรับสถานการณ์นี้');
   });
 
   it('a subsystem at a first look: what it is for and its units; a unit at the middle depth: what it meets and its figures; at the deepest its sources', () => {
@@ -175,9 +183,9 @@ describe('what each depth shows of the satellite', () => {
     expect(mid.path).toEqual(['sys:power']);
     expect(mid.subtitle).toBe('แบตเตอรี่ 1 เซลล์');
     expect(kinds(mid)).toEqual(expect.arrayContaining(['relations', 'facts']));
-    expect(kinds(mid)).not.toContain('sources');
+    expect(everyBlock(mid.blocks).map((b) => b.kind)).not.toContain('sources');
     const deep = a.describe('battery', 'engineer', 'explore');
-    expect(kinds(deep)).toContain('sources');
+    expect(folded(deep).map((b) => b.kind)).toContain('sources');
     expect(strings(deep).join(' ')).toContain('18650');
   });
 
@@ -186,10 +194,34 @@ describe('what each depth shows of the satellite', () => {
     const rail = [...tree.nodes.keys()].find((id) => id.includes('/rail-'))!;
     const doc = a.describe(rail, 'engineer', 'explore');
     expect(headings(doc)).toContain('ข้อกำหนดคิวบ์แซตที่เกี่ยวข้อง');
-    expect(strings(doc).join(' ')).toContain('8.5 มม.');
-    const sources = doc.blocks.find((b) => b.kind === 'sources') as Extract<InfoBlock, { kind: 'sources' }>;
+    // what the specification asks is said on the card in plain words; where it asks it is with the sources, folded away
+    const said = doc.blocks.flatMap((b) => (b.kind === 'text' ? [b.text] : [])).join(' ');
+    expect(said).toContain('8.5 มม.');
+    expect(said).not.toMatch(/§|CDS-14/);
+    const sources = folded(doc).find((b) => b.kind === 'sources') as Extract<InfoBlock, { kind: 'sources' }>;
     expect(sources.rows[0].title).toContain('CubeSat Design Specification Rev. 14.1');
+    const clauses = folded(doc).find((b) => b.kind === 'facts') as Extract<InfoBlock, { kind: 'facts' }>;
+    expect(clauses.rows[0].value).toContain('§2.2.9');
   });
+
+  it('keeps sources and notes on where information comes from in one fold at the foot of every card, never among its facts', () => {
+    const PROVENANCE = /Orbitlab ไม่ได้ตรวจกับเอกสาร|ไม่ใช่ป้ายจากผู้สร้างโมเดล|ไม่มีชิ้นใดเป็นแบบผลิต|อ่านจากเอกสาร|ยังไม่ได้ตรวจกับเอกสารผู้ผลิต/;
+    const wrong: string[] = [];
+    for (const m of ['soyuz-st31', 'edusat'] as const) {
+      everyDoc(adapters[m], (doc, id, depth) => {
+        const where = `${m} ${id} @${depth}`;
+        const folds = doc.blocks.filter((b) => b.kind === 'fold');
+        if (folds.length > 1) wrong.push(`${where}: ${folds.length} folds`);
+        if (folds.length && doc.blocks.at(-1)!.kind !== 'fold') wrong.push(`${where}: the fold is not at the foot`);
+        for (const f of folds) if (f.kind === 'fold' && !f.blocks.length) wrong.push(`${where}: an empty fold`);
+        for (const b of doc.blocks) {
+          if (b.kind === 'sources') wrong.push(`${where}: a source list on the card`);
+          if (b.kind === 'text' && PROVENANCE.test(b.text)) wrong.push(`${where}: “${b.text.slice(0, 40)}…” on the card`);
+        }
+      });
+    }
+    expect(wrong.slice(0, 20)).toEqual([]);
+  }, 30_000);
 
   it('names the option fitted, for every option of the design', () => {
     for (const battery of BATTERY_OPTIONS) for (const payload of PAYLOAD_OPTIONS) {

@@ -22,7 +22,7 @@ import { CERTAINTIES, PART_CATEGORIES, type Depth } from '../../../structure/typ
 import type { StructureEnv } from '../env';
 import { num, tx } from '../text';
 import { edusatExperiment } from './edusat-experiment';
-import type { InfoBlock, InfoCheck, InfoDoc, InfoSource, ModelAdapter, ModelGuide, ModelSystem, PictureSetup } from './types';
+import { provenance, type InfoBlock, type InfoCheck, type InfoDoc, type InfoSource, type ModelAdapter, type ModelGuide, type ModelSystem, type PictureSetup } from './types';
 
 /** Taken apart: each unit's offset at full "take apart", m (the boards drawn out of the frame to one side and spread along the long axis). */
 const APART: Readonly<Record<EduUnit, readonly [number, number, number]>> = {
@@ -59,8 +59,23 @@ const JOINT_PIECES: Readonly<Record<string, { a: readonly EduPieceKind[]; b: rea
   rfCable: { a: ['rfConnector', 'transceiver'], b: ['tape', 'antennaBase'] },
 };
 
-/** The kinds of piece the specification asks something of: said under the piece, with where it is asked (text key `edu.piece.<kind>.spec`). */
-const WITH_SPEC: ReadonlySet<EduPieceKind> = new Set<EduPieceKind>(['rail', 'endFrame', 'switch', 'rbfPin', 'tape', 'cell18650', 'panelBoard', 'transceiver']);
+/**
+ * The kinds of piece the specification asks something of, and where it asks
+ * it. What it asks is said under the piece (text key `edu.piece.<kind>.spec`);
+ * the clause numbers are kept with the sources, folded away (the same in
+ * every language: the document's own numbering).
+ */
+const SPEC_REF: Readonly<Partial<Record<EduPieceKind, string>>> = {
+  rail: 'CDS Rev. 14.1 — CDS-14-004, §2.2.9, §2.2.13',
+  endFrame: 'CDS Rev. 14.1 — §2.2.2, CDS-14-004',
+  switch: 'CDS Rev. 14.1 — §2.3.2, §2.3.1',
+  rbfPin: 'CDS Rev. 14.1 — §2.3.5',
+  tape: 'CDS Rev. 14.1 — §2.4.4',
+  cell18650: 'CDS Rev. 14.1 — §2.3.6 · CDS Rev. 13 — §3.1.6',
+  panelBoard: 'CDS Rev. 14.1 — §2.2.3',
+  transceiver: 'CDS Rev. 14.1 — §2.4.5, §2.3.7',
+};
+const WITH_SPEC: ReadonlySet<EduPieceKind> = new Set(Object.keys(SPEC_REF) as EduPieceKind[]);
 
 /** The buses' colours: electrical power, data, radio signal. */
 const BUS_COLOUR = { power: '#f2c14e', data: '#6ec8ff', rf: '#c792ea' } as const;
@@ -105,10 +120,11 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
         { label: tx('edu.fact.limit'), value: `${num(CDS.massKg, 2)} ${tx('unit.kg')}`, certainty: 'documented' },
         { label: tx('edu.fact.cells'), value: tx('edu.fact.cellsValue', { n: 4 * CELLS_PER_PANEL, eff: num(SOLAR_CELL.efficiency * 100, 1) }), certainty: 'documented' },
       ] },
-      { kind: 'heading', text: tx('info.sourcesShort') },
-      { kind: 'list', items: [tx('edu.basis.size'), tx('edu.basis.cells'), tx('edu.basis.masses')] },
     ];
-    if (depth === 'engineer') blocks.push({ kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourceRows(EDUSAT_SOURCES.map((s) => s.id)) });
+    // what each figure rests on, and at the deepest the documents themselves: folded away at the card's foot
+    const from: InfoBlock[] = [{ kind: 'list', items: [tx('edu.basis.size'), tx('edu.basis.cells'), tx('edu.basis.masses')] }];
+    if (depth === 'engineer') from.push({ kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourceRows(EDUSAT_SOURCES.map((s) => s.id)) });
+    blocks.push(...provenance(tx('info.provenance'), from));
     return { title: tx('model.edusat'), subtitle: tx('model.edusat.sub'), path: [], blocks };
   }
 
@@ -156,8 +172,10 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
       ] });
       if (part.solarCells) blocks.push({ kind: 'text', text: tx('edu.cellNote', { n: part.solarCells, area: num(SOLAR_CELL.area * 1e4, 2), eff: num(SOLAR_CELL.efficiency * 100, 1) }), tone: 'small' });
     }
-    blocks.push({ kind: 'heading', text: tx('info.sourcesShort') }, { kind: 'text', text: tx(`edu.basis.unit.${part.sourceIds.includes('cell-18650') ? 'battery' : part.sourceIds.includes('azur-3g30') ? 'panel' : part.sourceIds.includes('cds14') ? 'spec' : 'pilot'}`), tone: 'small' });
-    if (depth === 'engineer') blocks.push({ kind: 'sources', rows: sourceRows(part.sourceIds) }, { kind: 'facts', rows: [{ label: tx('info.partId'), value: part.id, mono: true }] });
+    if (depth === 'engineer') blocks.push({ kind: 'facts', rows: [{ label: tx('info.partId'), value: part.id, mono: true }] });
+    const from: InfoBlock[] = [{ kind: 'text', text: tx(`edu.basis.unit.${part.sourceIds.includes('cell-18650') ? 'battery' : part.sourceIds.includes('azur-3g30') ? 'panel' : part.sourceIds.includes('cds14') ? 'spec' : 'pilot'}`), tone: 'small' }];
+    if (depth === 'engineer') from.push({ kind: 'sources', rows: sourceRows(part.sourceIds) });
+    blocks.push(...provenance(tx('info.provenance'), from));
     return { title: tx(`edu.unit.${unit}`), ...(option ? { subtitle: tx(`edu.option.${option}`) } : {}), path: [subsystemNode(subsystemOf(unit))], blocks };
   }
 
@@ -176,12 +194,17 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
         { label: tx('edu.cell.eff'), value: `${tx('unit.percent', { n: num(SOLAR_CELL.efficiency * 100, 1) })} (${tx('edu.cell.glassed', { eff: num(SOLAR_CELL.efficiencyGlassed * 100, 1) })})`, certainty: 'documented' },
         { label: tx('edu.cell.mpp'), value: `${num(SOLAR_CELL.vmp, 3)} ${tx('unit.V')} × ${num(SOLAR_CELL.imp, 3)} ${tx('unit.A')} = ${num(SOLAR_CELL.vmp * SOLAR_CELL.imp, 3)} ${tx('unit.W')}`, certainty: 'documented' },
         { label: tx('info.mass'), value: `${num(SOLAR_CELL.massGlassedKg * 1000, 1)} ${tx('unit.g')} (${tx('edu.cell.inUnit')})`, certainty: 'documented' },
-      ] }, { kind: 'text', text: tx('edu.cell.conditions', { flux: SOLAR_CELL.testFlux }), tone: 'small' });
+      ] });
     }
-    if (WITH_SPEC.has(k)) blocks.push({ kind: 'heading', text: tx('info.spec') }, { kind: 'text', text: tx(`edu.piece.${k}.spec`), tone: 'note' });
+    if (WITH_SPEC.has(k)) blocks.push({ kind: 'heading', text: tx('info.spec') }, { kind: 'text', text: tx(`edu.piece.${k}.spec`) });
     blocks.push({ kind: 'facts', rows });
     const ids = k === 'solarCell' ? ['azur-3g30', 'nasa-sst-power'] : k === 'cell18650' ? ['cell-18650', 'cds14', 'cds13'] : WITH_SPEC.has(k) ? ['cds14', 'pilot'] : ['pilot'];
-    blocks.push({ kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourceRows(ids) });
+    // the conditions a data sheet's figures hold under, the clauses asked of the piece, and the documents: folded away
+    const from: InfoBlock[] = [];
+    if (k === 'solarCell') from.push({ kind: 'text', text: tx('edu.cell.conditions', { flux: SOLAR_CELL.testFlux }), tone: 'small' });
+    if (SPEC_REF[k]) from.push({ kind: 'facts', rows: [{ label: tx('info.specRef'), value: SPEC_REF[k] }] });
+    from.push({ kind: 'sources', rows: sourceRows(ids) });
+    blocks.push(...provenance(tx('info.provenance'), from));
     return { title: name(it.id), subtitle: tx('info.partOf', { group: tx(`edu.unit.${it.unit}`) }), path: [subsystemNode(subsystemOf(it.unit)), it.unit], blocks };
   }
 
@@ -387,7 +410,11 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
       else if (n.tier === 2) doc = unitDoc(n.id as EduUnit, depth, mode === 'assemble' ? placedSlot : undefined);
       else doc = pieceDoc(items[n.items[0]]);
       // the whole design against the specification's bounds, where the whole design is what is looked at
-      if (!n && depth === 'engineer') doc.blocks.push({ kind: 'heading', text: tx('spec.title') }, { kind: 'checks', rows: checkRows(), note: tx('spec.note') });
+      // (before the fold that stays at the card's foot)
+      if (!n && depth === 'engineer') {
+        const at = doc.blocks.findIndex((b) => b.kind === 'fold');
+        doc.blocks.splice(at < 0 ? doc.blocks.length : at, 0, { kind: 'heading', text: tx('spec.title') }, { kind: 'checks', rows: checkRows(), note: tx('spec.note') });
+      }
       return doc;
     },
     systems,

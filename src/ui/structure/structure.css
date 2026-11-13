@@ -455,3 +455,9 @@
 @media (prefers-reduced-motion: reduce) {
   .structure-screen * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+
+/* where a thing's information comes from, folded away at the foot of its card */
+.st-fold-quiet { margin-top: 14px; background: transparent; border-color: color-mix(in srgb, var(--line) 70%, transparent); }
+.st-fold-quiet > summary { font-weight: 500; font-size: 12.5px; color: var(--muted); }
+.st-fold-quiet[open] > summary { color: var(--text); }
+.st-fold-quiet h3 { font-size: 12.5px; margin: 10px 0 2px; }

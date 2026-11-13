@@ -21,7 +21,7 @@ import {
 import { CERTAINTIES, PART_CATEGORIES, type Certainty, type Depth, type PartCategory } from '../../../structure/types';
 import type { StructureEnv } from '../env';
 import { getLang, hasText, num, tx } from '../text';
-import type { FlightState, InfoBlock, InfoDoc, InfoSource, ModelAdapter, ModelGuide, ModelSystem, PictureSetup } from './types';
+import { provenance, type FlightState, type InfoBlock, type InfoDoc, type InfoSource, type ModelAdapter, type ModelGuide, type ModelSystem, type PictureSetup } from './types';
 
 /** Thrown when the content and a layer come from two versions of the page or two revisions of the files (said in the interface language). */
 export const FILES_MISMATCH = 'structure:files-mismatch';
@@ -106,13 +106,12 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
         { label: tx('soyuz.fact.fairing'), value: `${num(Number(g.geometryReference.fairingDiameterM), 2)} × ${num(Number(g.geometryReference.fairingLengthM), 2)} ${tx('unit.m')}`, certainty: 'documented' },
         ...g.summaryStats.filter((s) => !/m$/.test(s.value)).map((s) => ({ label: s.label, value: s.value, certainty: 'documented' as Certainty })),
       ] },
-      { kind: 'text', text: g.statusNote, tone: 'small' },
-      { kind: 'text', text: tx('soyuz.terms'), tone: 'small' },
     ];
     if (depth !== 'watch') blocks.push({ kind: 'heading', text: tx('info.notes') }, { kind: 'list', items: g.engineeringNotes.slice(1) });
-    if (depth === 'engineer') {
-      blocks.push({ kind: 'heading', text: tx('info.note') }, { kind: 'list', items: g.reviewWarnings }, { kind: 'text', text: tx('cert.legend'), tone: 'small' });
-    }
+    // how the model was made and how far it goes: folded away at the card's foot
+    const from: InfoBlock[] = [{ kind: 'text', text: g.statusNote, tone: 'small' }, { kind: 'text', text: tx('soyuz.terms'), tone: 'small' }];
+    if (depth === 'engineer') from.push({ kind: 'heading', text: tx('info.note') }, { kind: 'list', items: g.reviewWarnings }, { kind: 'text', text: tx('cert.legend'), tone: 'small' });
+    blocks.push(...provenance(tx('info.provenance'), from));
     return { title: tx('model.soyuz-st31'), subtitle: g.configuration, path: [], blocks };
   }
 
@@ -141,8 +140,7 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     if (depth !== 'watch' && comp) {
       blocks.push({ kind: 'heading', text: tx('info.facts') }, {
         kind: 'facts', rows: comp.facts.map((f) => ({ label: f.label, value: f.value, certainty: soyuzFactCertainty(comp.id, f.label) })),
-      // (what the badge on these rows rests on: the page's citing of sources, which this work did not read)
-      }, { kind: 'text', text: tx('cert.byPage'), tone: 'small' });
+      });
       // the page's own things to look for; those that name the page's own buttons are left out (this view has other ones)
       const seen = comp.observations.filter((o) => !/เลือกมุม|“|”/.test(o));
       if (seen.length) blocks.push({ kind: 'heading', text: tx('info.observe') }, { kind: 'list', items: seen });
@@ -154,8 +152,14 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
         { label: tx('info.partsCount'), value: tx('list.parts', { n: s.units[unit].items.length }) },
         { label: tx('info.pageName'), value: `${comp.title} · ${comp.subtitle}` },
       ] });
-      blocks.push({ kind: 'heading', text: tx('info.note') }, { kind: 'text', text: comp.note, tone: 'small' });
-      blocks.push({ kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourcesOf(comp.sourceIds) }, { kind: 'text', text: tx('cert.legend'), tone: 'small' });
+    }
+    if (depth !== 'watch' && comp) {
+      // what the badge on the facts rests on (the page's citing of sources, which this work did not read), and at the
+      // deepest the page's note on how real the assembly is, with its sources: folded away at the card's foot
+      const from: InfoBlock[] = [{ kind: 'text', text: tx('cert.byPage'), tone: 'small' }];
+      if (depth === 'engineer') from.push({ kind: 'heading', text: tx('info.note') }, { kind: 'text', text: comp.note, tone: 'small' },
+        { kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourcesOf(comp.sourceIds) }, { kind: 'text', text: tx('cert.legend'), tone: 'small' });
+      blocks.push(...provenance(tx('info.provenance'), from));
     }
     return { title: unitName(unit), subtitle: tx(`soyuz.sub.${card}`), path: [], blocks };
   }
@@ -202,10 +206,9 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     if (g.group) rows.push({ label: tx('info.count'), value: g.group.items.length > g.items.length ? tx('info.count.halves', { count: `${g.group.count} ${g.group.unit}` }) : `${g.group.count} ${g.group.unit}` });
     blocks.push({ kind: 'facts', rows });
     const comp = s.units[g.unit].component;
-    if (depth === 'engineer' && comp) {
-      blocks.push({ kind: 'heading', text: tx('info.note') }, { kind: 'text', text: comp.note, tone: 'small' }, { kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourcesOf(comp.sourceIds) });
-    }
-    blocks.push({ kind: 'text', text: tx('cert.byPilot'), tone: 'small' });
+    const from: InfoBlock[] = [{ kind: 'text', text: tx('cert.byPilot'), tone: 'small' }];
+    if (depth === 'engineer' && comp) from.push({ kind: 'heading', text: tx('info.note') }, { kind: 'text', text: comp.note, tone: 'small' }, { kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourcesOf(comp.sourceIds) });
+    blocks.push(...provenance(tx('info.provenance'), from));
     return { title: g.group ? g.group.label : tx('list.other'), subtitle: tx('info.groupOf', { unit: unitName(g.unit) }), path: [g.unit], blocks };
   }
 
@@ -238,9 +241,12 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     const held = [p.inside, p.host].filter((x): x is number => x !== undefined);
     if (held.length) blocks.push({ kind: 'heading', text: tx(p.inside !== undefined ? 'info.inside' : 'info.host') }, { kind: 'nodes', ids: held.map((m) => c.items[m].id) });
     const notes = [p.contents, p.steering, p.scope !== undefined ? c.scopes[p.scope] : undefined].filter((x): x is string => !!x);
-    if (notes.length) blocks.push({ kind: 'heading', text: tx('info.scope') }, ...notes.map((text): InfoBlock => ({ kind: 'text', text, tone: 'note' })));
-    if (p.evidence?.length) blocks.push({ kind: 'heading', text: tx('info.evidence') }, { kind: 'list', items: p.evidence.map((e) => c.evidence[e]) });
-    blocks.push({ kind: 'text', text: tx('cert.byPilot'), tone: 'small' });
+    // the model-maker's own notes and evidence references, and who sorted the part: folded away at the card's foot
+    const from: InfoBlock[] = [];
+    if (notes.length) from.push({ kind: 'heading', text: tx('info.scope') }, ...notes.map((text): InfoBlock => ({ kind: 'text', text, tone: 'note' })));
+    if (p.evidence?.length) from.push({ kind: 'heading', text: tx('info.evidence') }, { kind: 'list', items: p.evidence.map((e) => c.evidence[e]) });
+    from.push({ kind: 'text', text: tx('cert.byPilot'), tone: 'small' });
+    blocks.push(...provenance(tx('info.provenance'), from));
     return { title: local(p.id), subtitle: tx('info.partOf', { group: groupLabel(key) }), path: [p.unit, key], blocks };
   }
 

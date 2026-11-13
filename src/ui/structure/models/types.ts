@@ -36,7 +36,17 @@ export type InfoBlock =
   | { kind: 'systems'; rows: { id: string; label: string; step?: string }[] }
   /** other things to go to (what it is mounted on, what a line joins) */
   | { kind: 'nodes'; ids: string[] }
-  | { kind: 'checks'; rows: InfoCheck[]; note: string };
+  | { kind: 'checks'; rows: InfoCheck[]; note: string }
+  /**
+   * Blocks kept folded away until asked for (owner, 2026-11-13: where a thing's
+   * figures come from, and how far they can be trusted, crowded the card and
+   * were taken for facts of the thing itself). `name` keeps it open or shut
+   * across redraws.
+   */
+  | { kind: 'fold'; name: string; title: string; blocks: InfoBlock[] };
+
+/** Where a thing's information comes from and how far it goes, as one fold at the foot of its card (nothing when there is nothing to say). */
+export const provenance = (title: string, blocks: InfoBlock[]): InfoBlock[] => (blocks.length ? [{ kind: 'fold', name: 'provenance', title, blocks }] : []);
 
 /** What the information panel shows for a thing — content, which the panel draws and a test can read. */
 export interface InfoDoc {

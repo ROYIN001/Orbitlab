@@ -197,6 +197,15 @@ function block(store: StructureStore, b: InfoBlock): HTMLElement {
       box.append(table, el('p', 'st-small', b.note));
       return box;
     }
+    case 'fold': {
+      const d = el('details', 'st-fold st-fold-quiet');
+      d.dataset.k = `fold:${b.name}`;
+      d.append(el('summary', '', b.title));
+      d.open = store.foldOpen(b.name, false);
+      d.addEventListener('toggle', () => store.setFold(b.name, d.open));
+      for (const inner of b.blocks) d.append(block(store, inner));
+      return d;
+    }
   }
 }
 
@@ -369,8 +378,12 @@ export function systemsPanel(store: StructureStore): HTMLElement {
     });
     if (now.steps.length) panel.append(el('h4', '', tx('sys.steps')), steps);
     panel.append(el('p', 'st-small', tx('sys.lit', { n: now.items.length })));
-    panel.append(el('h4', '', tx('sys.confidence')), el('p', 'st-small', now.confidence), el('h4', '', tx('sys.limitation')), el('p', 'st-small st-scope', now.limitation));
-    if (store.level === 'engineer' && now.sources.length) panel.append(el('h4', '', tx('info.sources')), sourceList(now.sources, true));
+    // how sure the page is of this circuit, what its picture leaves out, and its sources: folded away until asked for
+    panel.append(block(store, { kind: 'fold', name: 'provenance', title: tx('info.provenance'), blocks: [
+      { kind: 'heading', text: tx('sys.confidence') }, { kind: 'text', text: now.confidence, tone: 'small' },
+      { kind: 'heading', text: tx('sys.limitation') }, { kind: 'text', text: now.limitation, tone: 'note' },
+      ...(store.level === 'engineer' && now.sources.length ? [{ kind: 'heading' as const, text: tx('info.sources') }, { kind: 'sources' as const, rows: now.sources }] : []),
+    ] }));
     panel.append(button(tx('sys.stop'), 'sys:stop', () => { store.focusNext = `sys:${now.id}`; store.showSystem(null); }, { cls: 'st-link' }));
     return panel;
   }
