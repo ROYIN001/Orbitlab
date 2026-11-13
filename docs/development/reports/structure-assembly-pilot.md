@@ -2,13 +2,14 @@
 
 > **สถานะปัจจุบัน (บันทึกเดียวที่เป็นปัจจุบัน — แก้ที่นี่ทุกครั้งที่สถานะเปลี่ยน)**
 >
-> - **รอบวันที่ 13 พ.ย. 2026 — ทำตามคำตอบของเจ้าของ 7 ข้อ (รายละเอียดใน §14):** แก้ประโยค RD-0110 ในหน้า Anatomy เป็น RD0124 และสร้างไฟล์โมเดลใหม่เป็นรุ่น 3 · ปรับคำไทย อังกฤษ รัสเซีย ตามแหล่งของแต่ละภาษา (บูสเตอร์ B/V/G/D ไม่มีอักษรรัสเซียนอกโหมดรัสเซีย) · พับแหล่งข้อมูลและหมายเหตุเรื่องที่มาไว้ท้ายการ์ด · เพิ่มทางเข้าจากหน้าแรก ส่วนสร้าง และส่วนปล่อย · เพิ่ม**ลำดับประกอบตามฐานปล่อยจริง (Vostochny)** เป็นตัวเลือกที่สองของการประกอบ Soyuz · ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (26 ข้อ: P1 1 ข้อ P2 12 ข้อ P3 13 ข้อ แก้แล้ว 24 ข้อ บันทึกไว้ 2 ข้อ) **ยังไม่ได้ตรวจโดย Astra** · ฝั่งภาษารัสเซียตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น
+> - **รอบที่สองของวันที่ 13 พ.ย. 2026 — ทำตามคำตอบอีก 4 ข้อของเจ้าของ (รายละเอียดใน §15):** (1) **เพดานขนาดไฟล์ได้รับอนุมัติ** (“1.อนุมัติ”) เขียนลง `budgets.json` พร้อมเหตุผลแล้ว ขนาดจริงอยู่ในเพดานที่อนุมัติทุกกลุ่ม ไม่มีเพดานใดตั้งเกินตัวเลขที่อนุมัติ (2) **คำไทยเปลี่ยนตามที่แหล่งไทยใช้** (“ใช้ตามที่แหล่งไทยเรียกกัน”) ทั้งข้อความของหมวดและหน้า Anatomy ของ Soyuz-2.1b: ท่อน · ท่อนกลาง · แฟริ่ง (ฝาครอบหัวจรวด) · เพย์โหลด · เชื้อเพลิงและสารออกซิไดซ์ · การทรงตัว · เงามืดของโลก — ไฟล์โมเดลเป็นรุ่น 4 (ชิ้นส่วนและสามเหลี่ยมเดิม) (3) **บรรทัดแหล่งอ้างอิง RD0110** ในหน้า Anatomy แก้ให้ตรงกับข้อมูลของหน้าเอง (เป็นของ Soyuz-2.1a) (4) **เจ้าของอนุญาตให้ merge** (“อนุญาตให้ merge pull request #217 เข้า main”) · **ยังไม่ได้แก้:** หน้า Anatomy ของ Soyuz-2.1a อีกสองหน้า และคำของพจนานุกรมแอปในส่วนอื่น (§15.4) · ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (13 ข้อ: P1 2 ข้อ P2 1 ข้อ P3 10 ข้อ แก้แล้ว 9 ข้อ แก้บางส่วน 1 ข้อ คงไว้พร้อมเหตุผล 3 ข้อ — §15.5) ผู้ตรวจไม่ใช่เจ้าของภาษาไทย **ยังไม่ได้ตรวจโดย Astra** 
+> - **รอบแรกของวันที่ 13 พ.ย. 2026 — ทำตามคำตอบของเจ้าของ 7 ข้อ (รายละเอียดใน §14):** แก้ประโยค RD-0110 ในหน้า Anatomy เป็น RD0124 และสร้างไฟล์โมเดลใหม่เป็นรุ่น 3 · ปรับคำไทย อังกฤษ รัสเซีย ตามแหล่งของแต่ละภาษา (บูสเตอร์ B/V/G/D ไม่มีอักษรรัสเซียนอกโหมดรัสเซีย) · พับแหล่งข้อมูลและหมายเหตุเรื่องที่มาไว้ท้ายการ์ด · เพิ่มทางเข้าจากหน้าแรก ส่วนสร้าง และส่วนปล่อย · เพิ่ม**ลำดับประกอบตามฐานปล่อยจริง (Vostochny)** เป็นตัวเลือกที่สองของการประกอบ Soyuz · ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (26 ข้อ: P1 1 ข้อ P2 12 ข้อ P3 13 ข้อ แก้แล้ว 24 ข้อ บันทึกไว้ 2 ข้อ) **ยังไม่ได้ตรวจโดย Astra** · ฝั่งภาษารัสเซียตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น
 > - **ฉบับที่ 2 (ยกเครื่องทั้งหมวด ตามคำขอเจ้าของ 2026-11-10: "ตรวจเช็คโครงร่างที่ร่างมาตอนแรกแล้วร่างให้ดีกว่าเดิม … เอาให้ดีที่สุด")** สร้างต่อจากฉบับแรก (`be35eb7`) บนสาขา `claude/trusting-cannon-oah00c` · ฐาน: `main` @ `3e1b48a` · commit ของงาน: §13
-> - **push แล้ว เป็น pull request แบบร่าง #217** ตามคำอนุญาตของเจ้าของ (2026-11-11: "อนุญาตให้ push สาขา claude/trusting-cannon-oah00c ขึ้น GitHub และเปิด pull request แบบร่าง") **ยังไม่ merge และยังไม่เผยแพร่ขึ้นเว็บจริง** · CI ของ pull request ผ่านครบทุกขั้นตั้งแต่ `2c772e5` (2026-11-12) · README, IMPLEMENTATION-STATUS, USER-GUIDE และไฟล์ใน `changes/` ปรับให้ตรงกับฉบับที่ 2 แล้ว · **หลังงานรอบ 13 พ.ย. ขั้น build ของ CI ไม่ผ่านเพราะเกินเพดานขนาดไฟล์ รอเจ้าของอนุมัติ (§14.6)**
+> - **push แล้ว เป็น pull request แบบร่าง #217** ตามคำอนุญาตของเจ้าของ (2026-11-11: "อนุญาตให้ push สาขา claude/trusting-cannon-oah00c ขึ้น GitHub และเปิด pull request แบบร่าง") **เจ้าของอนุญาตให้ merge เข้า `main` แล้ว (2026-11-13: “อนุญาตให้ merge pull request #217 เข้า main”) — merge เมื่อการตรวจอัตโนมัติของ pull request ผ่านครบ และการ merge คือการเผยแพร่ขึ้นเว็บจริง** · CI ของ pull request ผ่านครบทุกขั้นตั้งแต่ `2c772e5` (2026-11-12) · README, IMPLEMENTATION-STATUS, USER-GUIDE และไฟล์ใน `changes/` ปรับให้ตรงกับฉบับที่ 2 แล้ว · หลังงานรอบแรกของวันที่ 13 พ.ย. ขั้น build ของ CI ไม่ผ่านเพราะเกินเพดานขนาดไฟล์ เจ้าของอนุมัติเพดานในวันเดียวกัน (§15.1)
 > - **ต้องแจ้งตรง ๆ — ข้อบกพร่องของฉบับแรกที่ส่งมอบไปแล้ว (E-01):** ไฟล์โมเดล Soyuz ของฉบับแรกติดป้ายชิ้นส่วนผิดให้สามเหลี่ยมราว 91 % (สคริปต์สร้างไฟล์บันทึกหมายเลขชิ้นต่อสามเหลี่ยมแต่อ่านต่อจุดยอด) ที่ระดับ "ชุดประกอบหลัก" ไม่เห็นผล แต่ต่ำกว่านั้น การเลือก การเน้น การผ่า และสีตามชนิด ชี้ผิดชิ้น ฉบับที่ 2 แก้แล้ว (ไฟล์รุ่น `.r2.` + การทดสอบที่จับข้อนี้ได้) ชุดส่งมอบฉบับแรกจึงไม่ควรใช้ต่อ — §2
 > - ผู้ทำงาน: Claude (ไม่ใช่ GPT-6.1 Sol) · ผู้ตรวจทาน: เอเจนต์ Claude แยกบริบท · **ยังไม่ได้ตรวจโดย GPT-6 Astra** (เรียกจากที่นี่ไม่ได้ เตรียมบริบทส่งต่อไว้แล้ว) — §10
 > - การตรวจฉบับแรกก่อนยกเครื่อง: ตั้งใจตรวจ 7 มุมมอง **ทำได้จริง 2 มุมมอง** (เป้าหมาย/การใช้งาน/การสำรวจ และ การประกอบ/ดาวเทียม) ได้ 29 ข้อ อีก 5 มุมมองหยุดเพราะโควตาการใช้งานของเซสชันเต็ม การตรวจทานฉบับที่ 2 ทำครบ 5 มุมมอง พบ 45 ข้อ แก้/ตอบครบแล้ว (ผู้หักล้างตรวจยืนยัน 27 ข้อของสามมุมมองหลัง ส่วน 18 ข้อของสองมุมมองแรก ผู้หักล้างหยุดเพราะโควตา ผมทำซ้ำด้วยสคริปต์ของผู้ตรวจเองแทน ซึ่งไม่ใช่การตรวจอิสระ) — §2, §10
-> - **รอเจ้าของตัดสิน (หลังคำตอบวันที่ 13 พ.ย. 2026):** (1) **เพดานขนาดไฟล์** — งานรอบนี้เกินเพดานที่อนุมัติไว้ ตัวเลขและข้อเสนออยู่ใน §14.6 ยังไม่ได้แก้ `budgets.json` (2) **คำไทยหลักของหน้า Anatomy** (ขั้น หัวครอบ สัมภาระ สารขับดัน) ต่างจากที่หน่วยงานไทยใช้ (ท่อน แฟริ่ง เพย์โหลด เชื้อเพลิง) — ตารางใน §14.1 จะคงตามหน้า Anatomy หรือเปลี่ยนทั้งหน้าและหมวด (3) **การ merge** — เจ้าของเลือก “ทีเดียวจบ” แล้ว แต่ยังไม่ได้สั่ง merge และการ merge คือการเผยแพร่ขึ้นเว็บจริง (4) หน้า Anatomy ยังมีอีกหนึ่งบรรทัดในรายการแหล่งอ้างอิงที่เขียนว่า RD0110 เป็นเครื่องยนต์ขั้นที่สามของ Soyuz-2.1b (§14.5) (5) การส่งให้ Astra ตรวจ ยังไม่ได้ตอบ
+> - **ยังเปิดอยู่ (หลังคำตอบรอบที่สองของวันที่ 13 พ.ย. 2026):** (1) หน้า Anatomy ของ Soyuz-2.1a อีกสองหน้า (Progress MS-26 และ Soyuz MS) ยังใช้คำเดิม (ขั้น หัวครอบ สารขับดัน แกนกลาง) และพจนานุกรมของแอปในส่วนอื่นยังใช้ “ท่อนแกนกลาง” “สัมภาระ” “ระบบขับดัน” และ “ท่าทาง” — ไม่ได้แก้ในงานนี้เพราะอยู่นอกหมวดและนอกสิ่งที่เจ้าของได้เห็น รายการและจำนวนอยู่ใน §15.4 (2) สำเนาหน้า Anatomy ในโครงการ Anatomy ของเจ้าของยังเป็นคำเดิม ถ้าส่งออกหน้าใหม่จากที่นั่น คำเดิมและบรรทัด RD0110 จะกลับมา ตารางคำที่เปลี่ยนอยู่ใน §15.2 (3) ร่างภาษารัสเซียยังตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น (4) การส่งให้ Astra ตรวจ ยังไม่ได้ตอบ 
 > - ชุดส่งมอบ Soyuz 2 พ.ย.: เจ้าของเลือก "ใช้โมเดลในเว็บไปก่อน" (2026-11-10) จึง**ยังไม่ได้เทียบ**กับชุดนั้น
 > - คำแปลอังกฤษและรัสเซียเป็น**ร่าง**ที่เอเจนต์แปลจากต้นฉบับไทย ยังไม่ผ่านเจ้าของภาษา (ขึ้นป้ายบอกบนจอ)
 >
@@ -91,7 +92,7 @@ The owner asked for the first draft to be checked and bettered. It was looked at
 
 | Area | Files | What it does |
 | --- | --- | --- |
-| Model files | `scripts/structure-meshes.mjs` → `public/structure/soyuz-2-1b-fregat-st31.r3.{json,outer.bin,inner.bin,engine.bin}` (revision 3 since 2026-11-13, §14) | The page's own mesher. Every vertex carries its part's index; three layers fetched only when asked for (outer 395 kB, inner 251 kB, engine 560 kB, already compressed); content 633 kB (67 kB gzip) with, per part, its circuits and steps, medium, pivots, mounts, ends and evidence, and the page's circuits, flight sequence and notes. Units m, +Y up |
+| Model files | `scripts/structure-meshes.mjs` → `public/structure/soyuz-2-1b-fregat-st31.r4.{json,outer.bin,inner.bin,engine.bin}` (revision 3 on 2026-11-13, §14; revision 4 the same day, §15) | The page's own mesher. Every vertex carries its part's index; three layers fetched only when asked for (outer 395 kB, inner 251 kB, engine 560 kB, already compressed); content 633 kB (67 kB gzip) with, per part, its circuits and steps, medium, pivots, mounts, ends and evidence, and the page's circuits, flight sequence and notes. Units m, +Y up |
 | Shared description | `src/structure/model.ts` | What every model is described by: a tree of the things it can show at the three depths (permanent id, parent, tier, the picture's parts, unit, kind, certainty), how units meet (`ModelRelation`), the order they go together in with the reason (`OrderRule`), the places they mount at (`MountPoint`), where a unit stands (`Pose`). DOM-free |
 | The two models | `src/structure/{soyuz,soyuz-content,edusat,edusat-design,power-balance,assembly,progress,handoff,env,types}.ts` | Their descriptions, the assembly state machine, EduSat's parts list down to its pieces, its design, checks against the specification, the energy balance, stored progress, the hand-off's plain record. DOM-free, and importing nothing of the app (§3.1) |
 | App side | `src/structure-host/{power-env,satellite,handoff}.ts`, `src/ui/structure-loader.ts` | What the app gives the section: its power model, its satellite model, the doors to Orbit and Launch, the learner's storage; and the loader, with its loading, failed and retry states |
@@ -492,7 +493,7 @@ This round's work is over six of the groups' ceilings the owner approved on 2026
 | precache code | 15148 kB | 15186.0 kB | +38.0 | the sum of the above |
 | precache | 16547 kB | 16305.2 kB | within | |
 
-The first download (index.html and what it loads) grows by about 3.5 kB; the rest is fetched when the section opens. The three pictures of the Home chapter (52 to 62 kB each) are fetched when the chapter comes into view and are not precached or budgeted.
+The first download (index.html and what it loads) grows by about 3.5 kB; the rest is fetched when the section opens. The three pictures of the Home chapter (53 to 64 kB each) are fetched when the chapter comes into view and are not precached or budgeted.
 
 **Proposed, each the measured size rounded up to the next kB, with no room to spare** (the precache total follows its two groups by the file's own rule: code 15187 + data/ 1399):
 
@@ -523,6 +524,114 @@ On `claude/trusting-cannon-oah00c`, after `f71047b`:
 | `55bf292` | the README, the status page and the change fragment |
 | `6a6d2e3` | what the independent review of this round found, fixed; the assembly panel waits for the model |
 | the commit after it | this report's §14 |
+
+## 15. The owner's second answers of 2026-11-13, and what was done
+
+Shown §14's work and its five open items, the owner answered four of them the same day. §14 stands as written for the round before; where this section says otherwise, this section holds.
+
+| # | The owner's answer | What was done |
+| --- | --- | --- |
+| 1 | "อนุมัติ" (the ceilings of §14.6) | written into `budgets.json` with the reason beside each; §15.1 |
+| 2 | "ใช้ตามที่แหล่งไทยเรียกกัน" (the Thai words of Thai sources) | the section's Thai and the Soyuz-2.1b Anatomy page's; §15.2 |
+| 3 | "แก้ด้วย" (the other RD0110 line) | §15.3 |
+| 4 | "อนุญาตให้ merge pull request #217 เข้า main" | merged once the pull request's checks are green on the head that carries this section; §15.6 |
+| 5 | (Russian, Astra) | not answered: the Russian draft is still checked against search results only, and nothing was reviewed by GPT-6 Astra |
+
+### 15.1 Budget (D-38)
+
+The eight ceilings of §14.6 are in `budgets.json` as approved (`structure-*.js` 293, `structure-en-*.js` 67, `structure-ru-*.js` 107, `index-*.js` 2665, `index-*.css` 180, `i18n-*.js` 1737, precache code 15187, precache 16586 kB), each with what grew, what it was measured at and the owner's words.
+
+The owner's second answer changed the text after the sizes they were shown had been measured: with the new words the section's chunk came to 293.8 kB, 0.8 kB over the ceiling just approved, and the precache's code to 15187.4. **No ceiling was set above the number approved.** The tree was brought back inside: Earth's shadow is written in full where a card introduces it and short after (เงามืดของโลก, then เงามืด), the fairing has the shorter of its two attested words (§15.2), a few of the new sentences were tightened, and two comments inside the viewer's fragment shader, which were shipped as part of its string, are now said in the TypeScript above it (no statement of the shader changed).
+
+| Group | Ceiling (approved) | Measured on this round's head |
+| --- | ---: | ---: |
+| `structure-*.js` | 293 kB | 292.9 kB (292,908 B) |
+| `structure-en-*.js` | 67 kB | 66.5 kB |
+| `structure-ru-*.js` | 107 kB | 106.2 kB |
+| `structure-*.css` | 27 kB (as before) | 27.0 kB |
+| `index-*.js` | 2665 kB | 2664.2 kB |
+| `index-*.css` | 180 kB | 179.7 kB |
+| `i18n-*.js` | 1737 kB | 1736.1 kB |
+| precache code | 15187 kB | 15186.5 kB |
+| precache | 16586 kB | 16305.7 kB |
+
+The section's chunk has 0.1 kB of room and its styles none: the next change to either needs the owner's word again.
+
+### 15.2 The Thai words
+
+**The rule the owner chose:** where the Anatomy page's Thai and what Thai agencies and press write differ, theirs. The evidence is §14.1's table and the research kept with this work (209 quotes, each found again in the page it is cited from).
+
+| Was | Now | Whose word | Notes |
+| --- | --- | --- | --- |
+| ขั้น (a rocket stage) | **ท่อน**: ท่อนที่ 1/2/3, ท่อนที่สาม, ท่อนบน, ท่อนล่าง, โครงถักระหว่างท่อน, แยกท่อน | GISTDA, NARIT, Thai PBS, Spaceth; the app's own dictionary | only where a stage is meant. A step of a tour, a circuit, a flight sequence or an assembly is still ขั้น (ขั้นตอน, ทีละขั้น, ขั้นถัดไป, ทำขั้นนี้) |
+| ขั้นส่งวงโคจร Fregat | **ท่อนบน Fregat** | NARIT, GISTDA, Spaceth ("ท่อนบน") | "ขั้นส่งวงโคจร" was found in no Thai source |
+| แกนกลาง (Block A) | **ท่อนกลาง**: "ท่อนกลาง บล็อก A" | The Standard ("ท่อนกลาง"), Spaceth ("ท่อนจรวดตรงกลาง") | replaces "แกนกลางจรวด" of §14.1, which was the owner's own suggestion and was found in no source. The app's dictionary elsewhere says "ท่อนแกนกลาง" (§15.4) |
+| หัวครอบ | **แฟริ่ง**, with **ฝาครอบหัวจรวด** beside it where it is introduced | GISTDA ("แฟริ่ง"); it was already the page's other word for the same thing (34 places, its own button among them). "ฝาครอบหัวจรวด" is the app's own dictionary's word, and Spaceth has "ฝาครอบจรวด" | "หัวครอบ" was found in no source. One word for it now, on the page and in the section |
+| สัมภาระ (what the rocket carries) | **เพย์โหลด** | GISTDA, มจพ., Thai PBS | introduced on its card as "เพย์โหลด (ดาวเทียมที่บรรทุก)" |
+| สารขับดัน, ออกซิไดเซอร์ | **เชื้อเพลิง**; **เชื้อเพลิงและออกซิเจน** for the kerosene and liquid-oxygen stages, **เชื้อเพลิงและสารออกซิไดซ์** where both are meant and for Fregat | GISTDA, NARIT; กองทัพอากาศ for the pair | the category "ระบบขับดัน" is **ระบบขับเคลื่อน** (GISTDA) |
+| ท่าทาง (a satellite's, Fregat's) | **การทรงตัว**: แผงวงจรควบคุมการทรงตัว (ADCS) | GISTDA, the TSC-1 slides, มจพ. | the rocket's own flight attitude in the rest of the app stays ท่าทาง (§15.4) |
+| เงาโลก | **เงามืดของโลก**, then **เงามืด** | GISTDA | also in the three lines of the app's dictionary that say it (Build's satellite) |
+
+**Where:** the section's own Thai (`src/ui/structure/text.ts`, 134 of its 824 strings); the Soyuz-2.1b Anatomy page in the repository (`public/anatomy/soyuz-2-1b-fregat-st31.html`: 239 places in its static text, its content and its script, by a script of rules that left the file's bytes as they were everywhere else, its mixed line endings included); four lines of the app's Thai dictionary (the three of เงาโลก and the Anatomy variant's name in Build, which quoted the page's old words). English and Russian are untouched.
+
+**The model's files are revision 4** (`npm run anatomy`, `npm run structure`): the same 2,069 parts and the same triangles; the content file carries the page's new text, and the layers and the flight's exterior meshes differ by the page's hash in their headers. The landing page's Thai picture of the section was taken again.
+
+**The copy in the owner's Anatomy project** is not reachable from here and still has the old words and the old source line: a page exported again from it brings them back. The table above is what to apply there.
+
+### 15.3 The other RD0110 line
+
+In the page's static list of sources, the entry for KBKhA's history page read "RD0110 บน Soyuz-2.1b … ยืนยัน RD0110 เป็นเครื่องยนต์ขั้นที่สามของ Soyuz-2.1b". The page's own data has the same entry as "Soyuz-2.1a" in both places; the static line now says what the data says. Nothing else of that list was changed, and the section never showed the line.
+
+### 15.4 Not changed, and why
+
+The owner's answer was given on the words of the Anatomy page the section shows. What lies outside the section was left, and is listed here so that it can be decided as one piece:
+
+| Where | Still says | Count | Why left |
+| --- | --- | ---: | --- |
+| the Anatomy pages of Soyuz-2.1a (`soyuz-2-1a-progress-ms-26.html`, `soyuz-2-1a-soyuz-ms.html`), opened from Build; and five places of the 2.1b page that name the 2.1a's spacecraft ("ชุดขับดันหนีฉุกเฉิน", "โมดูลเครื่องมือและขับดัน") | ขั้น, หัวครอบ, สารขับดัน, แกนกลาง | 78 and 96 of ขั้น in all senses, 27 of หัวครอบ, 26 and 11 of สารขับดัน, 54 and 64 of แกนกลาง | not this section's pages, and not what the owner was shown. They also use สัมภาระ for a cargo ship's cargo, which is right as it is. The same rules apply to them; until then the 2.1a and 2.1b pages differ in these words |
+| the app's Thai dictionary (`src/i18n/th.ts`) | แกนกลาง and ท่อนแกนกลาง (core stage), สัมภาระ (the payload tab and three more), ระบบขับดัน, ท่อนขับดัน (Fregat-M, Briz-M, AVUM+), ฝาครอบหัวจรวด (แฟริ่ง in this section) | 36, 4, 5, 6, 38 | used across Launch, Build, Watch and the lessons |
+| the same | ท่าทาง | 76 | the rocket's flight attitude and its autopilot ("ระบบรักษาท่าทาง"), settled in an earlier piece of work on GNC terms (ED-I18N-1); a Thai source has it for flight ("ควบคุมท่าทางการบิน", สสวท.), while การทรงตัว is the agencies' word for a satellite's attitude control |
+
+### 15.5 Checks on this round
+
+On the tree of `8ee6ca3`, in the development container:
+
+| Check | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| `npx vitest run` (whole suite) | 360 files, 10,850 tests, all pass. It ran while the review's points were still being worked; the 20 files that read what those changed (`tests/structure-*.test.ts`, the dictionary test, the budget tests, the Anatomy tests) were run again on the final tree: 288/288 |
+| `node scripts/bundle-budget.mjs` | passes: every group inside its ceiling (§15.1) |
+| browser journeys `structure-assembly`, `structure-entries`, `structure-failures`, `soyuz-anatomy`, on the final build | 4/4 |
+| the other 36 journeys | not run again in the container for this round. They passed with all 40 before §14's review fixes; they run on GitHub for the pushed head, and the merge waits for them |
+
+**Review.** One separate Claude agent, read-only, on the whole change of this round against the head before it: 13 points (2 P1, 1 P2, 10 P3). It read every changed string of the section against the English, every changed leaf of the page's content, and the page's bytes outside Thai letters; it says itself that it did not read the Thai as a native speaker does, and nothing here was read by a Thai editor.
+
+| Severity | Point | What was done |
+| --- | --- | --- |
+| P1 | the sentence for a stage's tanks also stands for Fregat's, and said "ถังออกซิเจน" there | **Fixed:** ถังสารออกซิไดซ์, true of both |
+| P1 | the assembly journey still looked for revision 3's file names | **Fixed:** any revision |
+| P2 | on the truss's card, "เครื่องยนต์ท่อนบน" meant the third stage's engine, while ท่อนบน now names Fregat; the ring's label likewise | **Fixed:** ท่อนที่สาม; ท่อนกลางและท่อนที่สาม |
+| P3 | "การนำส่งท่อนหลัก" read as delivering a stage; "ท่อนเหนือ Block I" was a second word for the upper stage | **Fixed:** การนำส่งของจรวดทั้งสามท่อน; ท่อนบน |
+| P3 | "แผงหัวฉีดเชื้อเพลิง" where เชื้อเพลิง had meant the kerosene earlier in the sentence | **Fixed:** แผงหัวฉีด, in the section and on the page |
+| P3 | ออกซิไดเซอร์ beside the new สารออกซิไดซ์; a label in the reverse order of its value | **Fixed** |
+| P3 | two words for the fairing on the page (ฝาครอบหัวจรวด from this round, แฟริ่ง from before, 34 places) | **Fixed:** one word, แฟริ่ง, on the page and in the section (§15.2) |
+| P3 | figures in the budget notes; revision 4 missing from the generator's notes; a stale file name in §4 | **Fixed** |
+| P3 | เงามืด short where a string stands alone | **In part:** full again where the ceiling allowed (the result's headline and its reason, the two-cell battery's line); "ภาระเฉลี่ยในเงามืด" in the results table stays short |
+| P3 | the page's "ออกซิเจนเหลวกับเคโรซีน" called เชื้อเพลิง together | **Left:** it is from before this round and is how NARIT writes it (propellant, loosely) |
+| P3 | five places of the page that name the 2.1a's spacecraft keep ขับดัน; dictionary lines beside the changed ones keep สัมภาระ and ท่าทาง; the hand-off's sentence says น้ำหนักบรรทุก | **Left, and said in §15.4:** outside this section; the last names Launch's own field |
+
+Not reviewed by GPT-6 Astra.
+
+### 15.6 The merge
+
+The owner's word to merge was given with the three answers above, and covers the pull request with them done. It is merged, in the repository's own way (one squashed commit), when every check of the pull request is green on its head; a merge to `main` publishes to the live site. Before this round the checks of the browser had not run on GitHub for the work of §14, because the build check failed on the budget first.
+
+### 15.7 This round's commits
+
+| Commit | What |
+| --- | --- |
+| `8ee6ca3` | the words in the section and on the page; the other RD0110 line; revision 4; the approved ceilings and their notes; the review's points |
+| the commit after it | this section, and the status at the head of the report |
 
 ## Appendix A. The first version's reviews (kept as a record)
 
