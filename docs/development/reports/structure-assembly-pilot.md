@@ -2,12 +2,13 @@
 
 > **สถานะปัจจุบัน (บันทึกเดียวที่เป็นปัจจุบัน — แก้ที่นี่ทุกครั้งที่สถานะเปลี่ยน)**
 >
+> - **รอบวันที่ 13 พ.ย. 2026 — ทำตามคำตอบของเจ้าของ 7 ข้อ (รายละเอียดใน §14):** แก้ประโยค RD-0110 ในหน้า Anatomy เป็น RD0124 และสร้างไฟล์โมเดลใหม่เป็นรุ่น 3 · ปรับคำไทย อังกฤษ รัสเซีย ตามแหล่งของแต่ละภาษา (บูสเตอร์ B/V/G/D ไม่มีอักษรรัสเซียนอกโหมดรัสเซีย) · พับแหล่งข้อมูลและหมายเหตุเรื่องที่มาไว้ท้ายการ์ด · เพิ่มทางเข้าจากหน้าแรก ส่วนสร้าง และส่วนปล่อย · เพิ่ม**ลำดับประกอบตามฐานปล่อยจริง (Vostochny)** เป็นตัวเลือกที่สองของการประกอบ Soyuz · ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (26 ข้อ: P1 1 ข้อ P2 12 ข้อ P3 13 ข้อ แก้แล้ว 24 ข้อ บันทึกไว้ 2 ข้อ) **ยังไม่ได้ตรวจโดย Astra** · ฝั่งภาษารัสเซียตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น
 > - **ฉบับที่ 2 (ยกเครื่องทั้งหมวด ตามคำขอเจ้าของ 2026-11-10: "ตรวจเช็คโครงร่างที่ร่างมาตอนแรกแล้วร่างให้ดีกว่าเดิม … เอาให้ดีที่สุด")** สร้างต่อจากฉบับแรก (`be35eb7`) บนสาขา `claude/trusting-cannon-oah00c` · ฐาน: `main` @ `3e1b48a` · commit ของงาน: §13
-> - **push แล้ว เป็น pull request แบบร่าง #217** ตามคำอนุญาตของเจ้าของ (2026-11-11: "อนุญาตให้ push สาขา claude/trusting-cannon-oah00c ขึ้น GitHub และเปิด pull request แบบร่าง") **ยังไม่ merge และยังไม่เผยแพร่ขึ้นเว็บจริง** · CI ของ pull request ผ่านครบทุกขั้นตั้งแต่ `2c772e5` (2026-11-12) · README, IMPLEMENTATION-STATUS, USER-GUIDE และไฟล์ใน `changes/` ปรับให้ตรงกับฉบับที่ 2 แล้ว
+> - **push แล้ว เป็น pull request แบบร่าง #217** ตามคำอนุญาตของเจ้าของ (2026-11-11: "อนุญาตให้ push สาขา claude/trusting-cannon-oah00c ขึ้น GitHub และเปิด pull request แบบร่าง") **ยังไม่ merge และยังไม่เผยแพร่ขึ้นเว็บจริง** · CI ของ pull request ผ่านครบทุกขั้นตั้งแต่ `2c772e5` (2026-11-12) · README, IMPLEMENTATION-STATUS, USER-GUIDE และไฟล์ใน `changes/` ปรับให้ตรงกับฉบับที่ 2 แล้ว · **หลังงานรอบ 13 พ.ย. ขั้น build ของ CI ไม่ผ่านเพราะเกินเพดานขนาดไฟล์ รอเจ้าของอนุมัติ (§14.6)**
 > - **ต้องแจ้งตรง ๆ — ข้อบกพร่องของฉบับแรกที่ส่งมอบไปแล้ว (E-01):** ไฟล์โมเดล Soyuz ของฉบับแรกติดป้ายชิ้นส่วนผิดให้สามเหลี่ยมราว 91 % (สคริปต์สร้างไฟล์บันทึกหมายเลขชิ้นต่อสามเหลี่ยมแต่อ่านต่อจุดยอด) ที่ระดับ "ชุดประกอบหลัก" ไม่เห็นผล แต่ต่ำกว่านั้น การเลือก การเน้น การผ่า และสีตามชนิด ชี้ผิดชิ้น ฉบับที่ 2 แก้แล้ว (ไฟล์รุ่น `.r2.` + การทดสอบที่จับข้อนี้ได้) ชุดส่งมอบฉบับแรกจึงไม่ควรใช้ต่อ — §2
 > - ผู้ทำงาน: Claude (ไม่ใช่ GPT-6.1 Sol) · ผู้ตรวจทาน: เอเจนต์ Claude แยกบริบท · **ยังไม่ได้ตรวจโดย GPT-6 Astra** (เรียกจากที่นี่ไม่ได้ เตรียมบริบทส่งต่อไว้แล้ว) — §10
 > - การตรวจฉบับแรกก่อนยกเครื่อง: ตั้งใจตรวจ 7 มุมมอง **ทำได้จริง 2 มุมมอง** (เป้าหมาย/การใช้งาน/การสำรวจ และ การประกอบ/ดาวเทียม) ได้ 29 ข้อ อีก 5 มุมมองหยุดเพราะโควตาการใช้งานของเซสชันเต็ม การตรวจทานฉบับที่ 2 ทำครบ 5 มุมมอง พบ 45 ข้อ แก้/ตอบครบแล้ว (ผู้หักล้างตรวจยืนยัน 27 ข้อของสามมุมมองหลัง ส่วน 18 ข้อของสองมุมมองแรก ผู้หักล้างหยุดเพราะโควตา ผมทำซ้ำด้วยสคริปต์ของผู้ตรวจเองแทน ซึ่งไม่ใช่การตรวจอิสระ) — §2, §10
-> - **รอเจ้าของตัดสิน:** (0) หน้า Anatomy มีประโยคหนึ่งที่ขัดกับข้อมูลของหน้าเอง (ระบุ RD-0110 ในจรวดรุ่น 2.1b) — คำถามข้อ 5 ใน §11 (1) ~~งบขนาดตาม D-38~~ เจ้าของอนุมัติข้อเสนอใน §9 แล้ว (2026-11-12 เลือกแบบที่ 1: ไฟล์ของหมวดอยู่ใน precache) เพดานแก้ตามนั้นใน `budgets.json` พร้อมเหตุผล การตรวจงบผ่าน (2) ค่าตั้งต้นที่ผมเลือกแทนไปก่อน 13 ข้อ (ข้อ 13 แตะแถบเมนูบนสุดของทั้งแอป) และคำถาม 5 ข้อ ใน §11 (3) ข้อความภาษาไทยที่เขียนใหม่ (การ์ดระดับพื้นฐาน คำอธิบายกลุ่ม ชิ้นส่วนดาวเทียม ตัวช่วย) ต้องให้เจ้าของอ่านรับรอง
+> - **รอเจ้าของตัดสิน (หลังคำตอบวันที่ 13 พ.ย. 2026):** (1) **เพดานขนาดไฟล์** — งานรอบนี้เกินเพดานที่อนุมัติไว้ ตัวเลขและข้อเสนออยู่ใน §14.6 ยังไม่ได้แก้ `budgets.json` (2) **คำไทยหลักของหน้า Anatomy** (ขั้น หัวครอบ สัมภาระ สารขับดัน) ต่างจากที่หน่วยงานไทยใช้ (ท่อน แฟริ่ง เพย์โหลด เชื้อเพลิง) — ตารางใน §14.1 จะคงตามหน้า Anatomy หรือเปลี่ยนทั้งหน้าและหมวด (3) **การ merge** — เจ้าของเลือก “ทีเดียวจบ” แล้ว แต่ยังไม่ได้สั่ง merge และการ merge คือการเผยแพร่ขึ้นเว็บจริง (4) หน้า Anatomy ยังมีอีกหนึ่งบรรทัดในรายการแหล่งอ้างอิงที่เขียนว่า RD0110 เป็นเครื่องยนต์ขั้นที่สามของ Soyuz-2.1b (§14.5) (5) การส่งให้ Astra ตรวจ ยังไม่ได้ตอบ
 > - ชุดส่งมอบ Soyuz 2 พ.ย.: เจ้าของเลือก "ใช้โมเดลในเว็บไปก่อน" (2026-11-10) จึง**ยังไม่ได้เทียบ**กับชุดนั้น
 > - คำแปลอังกฤษและรัสเซียเป็น**ร่าง**ที่เอเจนต์แปลจากต้นฉบับไทย ยังไม่ผ่านเจ้าของภาษา (ขึ้นป้ายบอกบนจอ)
 >
@@ -90,7 +91,7 @@ The owner asked for the first draft to be checked and bettered. It was looked at
 
 | Area | Files | What it does |
 | --- | --- | --- |
-| Model files | `scripts/structure-meshes.mjs` → `public/structure/soyuz-2-1b-fregat-st31.r2.{json,outer.bin,inner.bin,engine.bin}` | The page's own mesher. Every vertex carries its part's index; three layers fetched only when asked for (outer 395 kB, inner 251 kB, engine 560 kB, already compressed); content 633 kB (67 kB gzip) with, per part, its circuits and steps, medium, pivots, mounts, ends and evidence, and the page's circuits, flight sequence and notes. Units m, +Y up |
+| Model files | `scripts/structure-meshes.mjs` → `public/structure/soyuz-2-1b-fregat-st31.r3.{json,outer.bin,inner.bin,engine.bin}` (revision 3 since 2026-11-13, §14) | The page's own mesher. Every vertex carries its part's index; three layers fetched only when asked for (outer 395 kB, inner 251 kB, engine 560 kB, already compressed); content 633 kB (67 kB gzip) with, per part, its circuits and steps, medium, pivots, mounts, ends and evidence, and the page's circuits, flight sequence and notes. Units m, +Y up |
 | Shared description | `src/structure/model.ts` | What every model is described by: a tree of the things it can show at the three depths (permanent id, parent, tier, the picture's parts, unit, kind, certainty), how units meet (`ModelRelation`), the order they go together in with the reason (`OrderRule`), the places they mount at (`MountPoint`), where a unit stands (`Pose`). DOM-free |
 | The two models | `src/structure/{soyuz,soyuz-content,edusat,edusat-design,power-balance,assembly,progress,handoff,env,types}.ts` | Their descriptions, the assembly state machine, EduSat's parts list down to its pieces, its design, checks against the specification, the energy balance, stored progress, the hand-off's plain record. DOM-free, and importing nothing of the app (§3.1) |
 | App side | `src/structure-host/{power-env,satellite,handoff}.ts`, `src/ui/structure-loader.ts` | What the app gives the section: its power model, its satellite model, the doors to Orbit and Launch, the learner's storage; and the loader, with its loading, failed and retry states |
@@ -313,23 +314,23 @@ How far the findings were checked by someone else: for the last three lenses (27
 2. The third activity is called "ดัดแปลง" on its tab; the thing made in it is "แบบทดลองของฉัน", as the brief names it.
 3. Strap-ons are block-specific; EduSat's side panels are interchangeable.
 4. Exploring and assembling always show the reference design; only "ดัดแปลง" shows the learner's.
-5. The Soyuz model keeps the Anatomy page's own Thai terms (ขั้น, หัวครอบ, สัมภาระ), with a line saying they are Orbitlab's ท่อน, ฝาครอบหัวจรวด and น้ำหนักบรรทุก; EduSat's text uses Orbitlab's own terms and unit words.
-6. The Cyrillic block letters are given Thai readings (Б เบ, В เว, Г เก, Д เด).
+5. The Soyuz model keeps the Anatomy page's own Thai terms (ขั้น, หัวครอบ, สัมภาระ), with a line saying they are Orbitlab's ท่อน, ฝาครอบหัวจรวด and น้ำหนักบรรทุก; EduSat's text uses Orbitlab's own terms and unit words. What Thai agencies write for these is in §14.1, a decision for the owner.
+6. ~~The Cyrillic block letters are given Thai readings (Б เบ, В เว, Г เก, Д เด).~~ Overruled by the owner on 2026-11-13: a Latin letter, no bracket, and Russian letters only in the Russian interface (§14.1).
 7. A first look assembles on the reference's outline with one press a part; from the middle depth the parts lie apart and the place and the way round are the learner's to choose.
 8. A whole assembly picked does not fetch its inside; a part, a group, a circuit, a joint, the cutaway or the see-through shell does.
 9. The section's files are left in the service worker's precache (works offline after the first visit), which is what the precache part of §9's proposal pays for.
 10. Fregat goes into the assembly one way: the page's data gives no reason to refuse it turned (§10, T-1).
-11. A passage of the Anatomy page that its own data contradicts is shown as the page has it, followed by a remark of this section's, rather than changed or left out (question 5).
-13. **A change outside the section, to the app's top bar** (`src/ui/section-nav.ts` `fit`, `src/ui/modes.css`): the section tabs are given the room the bar has, by measuring. Where they would run under the tools on the right they are drawn tighter (no menu marks, glyphs or product name, less padding), then tighter still (smaller letters, the learner's name cut shorter), and only then put on a row of their own. Measured from 861 to 1440 px in the three languages: no overlap anywhere, and one row from 1024 px up in English and Thai, from 1100 px in Russian. Before this section the bar already overlapped at some widths (English, 861–1024 px: up to 163 px); a fifth tab added about 100 px to that. It changes how the bar looks on a laptop-width window in every section, so it is the owner's to overrule.
+11. ~~A passage of the Anatomy page that its own data contradicts is shown as the page has it, followed by a remark of this section's.~~ The owner had the passage corrected on 2026-11-13; the remark is gone (§14, answer 1).
+13. **A change outside the section, to the app's top bar** (`src/ui/section-nav.ts` `fit`, `src/ui/modes.css`): the section tabs are given the room the bar has, by measuring. Where they would run under the tools on the right they are drawn tighter (no menu marks, glyphs or product name, less padding), then tighter still (smaller letters, the learner's name cut shorter), and only then put on a row of their own. Measured from 861 to 1440 px in the three languages: no overlap anywhere, and one row from 1024 px up in English and Thai, from 1100 px in Russian. Before this section the bar already overlapped at some widths (English, 861–1024 px: up to 163 px); a fifth tab added about 100 px to that. It changes how the bar looks on a laptop-width window in every section, so it is the owner's to overrule. **Accepted for now by the owner, 2026-11-13.**
 12. In the English draft the first activity is "Inspect" (the depth is "Explore", the app's word); in the Russian draft the middle depth is «Исследование», as the app has it.
 
 **Questions:**
 
 1. ~~Budget (§9)~~ — answered 2026-11-12: the proposal as written (the section's files in the precache).
-2. **The Thai written for this version** (the first-look cards of the seven kinds of assembly, a sentence for each of the page's groups, EduSat's pieces and their specification notes, the three guides, the reasons for the order): please read them; they are mine, not the Anatomy page's.
-3. **Ways in from the rest of Orbitlab (E-15):** a card on Home, a link from Build's Anatomy window and from Launch's Soyuz-2.1b? It touches three other sections and the first download.
-4. **A second assembly sequence, as a launch site does it (AE-14)** — horizontal, the upper composite put together first — and a third model: which next?
-5. **A sentence of the Anatomy page (conflicting sources):** the interstage's text says "RD-0110 เริ่มทำงานก่อนแกนกลางสิ้นสุดการทำงาน". The page's own Block I card, circuits and flight step give this Soyuz-2.1b the RD0124; RD-0110 is the 2.1a's engine. I did not change the page (it is yours, and the model files carry its hash): the section shows the sentence followed by its own remark, which goes by itself once the page says RD0124 and `npm run structure` is run. Should the page be corrected?
+2. **The Thai written for this version** (the first-look cards of the seven kinds of assembly, a sentence for each of the page's groups, EduSat's pieces and their specification notes, the three guides, the reasons for the order): please read them; they are mine, not the Anatomy page's. **Read by the owner on 2026-11-13, with changes asked for: §14.1 and §14.2.**
+3. **Ways in from the rest of Orbitlab (E-15):** a card on Home, a link from Build's Anatomy window and from Launch's Soyuz-2.1b? It touches three other sections and the first download. **Answered 2026-11-13: add them, tidy (§14.4).**
+4. **A second assembly sequence, as a launch site does it (AE-14)** — horizontal, the upper composite put together first — and a third model: which next? **Answered 2026-11-13: the launch site's order (§14.3). A third model is not begun.**
+5. **A sentence of the Anatomy page (conflicting sources):** the interstage's text says "RD-0110 เริ่มทำงานก่อนแกนกลางสิ้นสุดการทำงาน". The page's own Block I card, circuits and flight step give this Soyuz-2.1b the RD0124; RD-0110 is the 2.1a's engine. I did not change the page (it is yours, and the model files carry its hash): the section shows the sentence followed by its own remark, which goes by itself once the page says RD0124 and `npm run structure` is run. Should the page be corrected? **Answered 2026-11-13: correct it (§14, answer 1).**
 
 **Limits:**
 
@@ -370,6 +371,158 @@ On `claude/trusting-cannon-oah00c`, from `main` @ `3e1b48a`; pushed on 2026-11-1
 | the commit after it | the README, the status page, the user guide and the change fragment brought up to the second version |
 
 The commits follow the work, not mergeable steps, and only the tip was checked in full. The tip passes everything in §7.
+
+## 14. The owner's answers of 2026-11-13, and what was done
+
+The owner answered the open items of §11 on 2026-11-13, shown pictures of the three that could be pictured. What follows is this round's work; §1 to §13 stand as written for the second version, except where this section says otherwise.
+
+| # | The owner's answer | What was done |
+| --- | --- | --- |
+| 1 | Correct the RD-0110 sentence | The page's interstage passage names RD0124, in the two places it stands in the page's content and nowhere else of the page. What is made from the page was made again: the flight's exterior meshes (same triangles, the page's new hash in the header) and this section's model as **revision 3** (same triangles; the content file carries the page's text). The section's own remark on the passage is gone with its text. The copy of the page in the owner's Anatomy project could not be reached from here and was not touched: a page exported again from it brings the old sentence back unless it is corrected there too |
+| 2 | Words: another word for "ลำกลางจรวด"; a booster followed by a Latin letter, no bracket; Russian letters only in Russian; source notes out of the way; each language as its own sources write it | §14.1 and §14.2 |
+| 3 | The top bar's fit: accepted for now | nothing changed |
+| 4 | The precache total of 16547 kB: accepted | recorded; see §14.6 for what this round adds |
+| 5 | Ways in, tidy and good-looking | §14.4 |
+| 6 | Next: the launch site's order | §14.3 |
+| 7 | Merge in one go | recorded: one pull request, not the five of §11. **Not merged**: a merge to `main` publishes to the live site, and waits for the owner's word to merge |
+| 8 | (hand to Astra) | not answered. Still not reviewed by GPT-6 Astra |
+
+### 14.1 Words
+
+**What the owner named, done as named:** the central core's first-look card begins "แกนกลางจรวด"; the boosters are "บูสเตอร์ B", "บูสเตอร์ V", "บูสเตอร์ G", "บูสเตอร์ D", the core "แกนกลาง บล็อก A" and the third stage "ขั้นที่สาม บล็อก I", with no bracket; no Russian letter is shown outside the Russian interface — the section's own names carry none, and where the deepest card quotes the page's own name of an assembly ("บูสเตอร์ · บล็อก Б" with "Блоки Б, В, Г, Д" under it) the block's letter is given in Latin and the Russian words are left out there. A test holds it for every card, name and place of both models (the titles of the documents cited, which are in their own language, are the exception).
+
+**Each language against its own sources.** Three research agents, one a language, were given the section's terms and told to check them, not to confirm them; what each could read differs, and so does how far its result can be trusted:
+
+| Language | Read | How far checked |
+| --- | --- | --- |
+| Thai | GISTDA, NARIT, the Royal Society's coined terms, สสวท., กองทัพอากาศ, Thai PBS, The Standard, Spaceth, Thai Wikipedia: pages fetched and kept | 209 quotes, each found again by a script in the page it is cited from |
+| English | the Arianespace "Soyuz at the Guiana Space Centre" user's manual (2012, 2018), Starsem's Soyuz User's Manual (2001), the ST29, ST30 and ST31 launch kits, the CubeSat Design Specification Rev. 14.1, NASA's small-spacecraft pages: documents downloaded | the passages the changes rest on found again by me in the kit and the 2001 manual |
+| Russian | search results only: roscosmos.ru, russian.space and ru.wikipedia.org cannot be reached from this session's network | not checked against any page; the changes are those my own knowledge of Russian usage agrees with. The draft stays a draft |
+
+Changed, by language (the section's own text; the Anatomy page's text is shown as the page has it):
+
+- **Thai:** สายอากาศ (was เสาอากาศ: the coined term, and what the app's own dictionary has), สถานีภาคพื้นดิน, จุดเครื่องยนต์ (was ติดเครื่อง), ฐานปล่อย (was แท่น), คอมพิวเตอร์ควบคุมดาวเทียม, เซนเซอร์วัดมุมแสงอาทิตย์, ขดลวดสนามแม่เหล็ก; the fairing's size is its เส้นผ่านศูนย์กลาง, not its width.
+- **English:** RD-0124, interstage truss, intermediate bay (below Fregat), aft section, jettison, lift-off, aerofin, vernier thrusters, equipment bay, EPS board, ADCS board, Remove Before Flight (RBF) pin; the flight events as the launch kit names them.
+- **Russian:** ферма-переходник, переходный отсек, головной обтекатель, разгонный блок (not a «ступень»), рулевые камеры, воздушный руль, двигатели малой тяги, транспортно-пусковой контейнер, стек плат, кабельная сеть, аккумуляторная батарея, приёмопередатчик, РД-0124; the flight events as launch reports name them.
+
+**Two statements were wrong, not only worded oddly,** and are corrected in all three languages: a booster's fin is an aerofin that steers the vehicle with the vernier thrusters ("Three-axis flight control is provided by aerofins (one per booster) and steerable vernier thrusters", ST31 kit), not a surface that keeps it steady; and the ball joint is at the top of the booster's cone, not on the core. Fregat's six spheres are now said to be four propellant tanks and two equipment bays.
+
+**A decision for the owner (conflicting sources).** The Anatomy page's own Thai and what Thai agencies write differ on four words, and the app's own dictionary sides with neither consistently. I changed none of them, because this section shows the page's text beside its own and one card would then say the same thing in two words:
+
+| Thing | The Anatomy page (and so this section) | The app's dictionary | Thai agencies |
+| --- | --- | --- | --- |
+| stage | ขั้น | ท่อน | **ท่อน** (GISTDA "จรวดหลายท่อน", NARIT "ท่อนบน"); GISTDA also wrote "ขั้นที่ 3" once |
+| fairing | หัวครอบ | ฝาครอบหัวจรวด | **แฟริ่ง** (GISTDA); ฝาครอบ in the press; หัวครอบ was found nowhere |
+| payload | สัมภาระ | น้ำหนักบรรทุก | **เพย์โหลด** (GISTDA); สัมภาระ in a สสวท. lesson |
+| propellant | สารขับดัน | (none) | **เชื้อเพลิง** (with สารออกซิไดซ์); สารขับดัน only in Thai Wikipedia |
+| core stage | แกนกลาง | แกนกลาง | "จรวดท่อนหลัก" (NARIT), "ท่อนกลาง" (The Standard); "แกนกลางจรวด", the owner's own suggestion and what the card now says, was not found as a core stage's name |
+| attitude | (ท่าทาง, in EduSat's text) | ท่าทาง, 76 times | **การทรงตัว** (GISTDA, the TSC-1 slides, มจพ.) |
+| Earth's shadow | (เงาโลก) | เงาโลก | **เงามืดของโลก** (GISTDA) |
+
+To follow the agencies the page's own text would have to change with this section's (and, for ท่าทาง and เงาโลก, the app's dictionary). The research files, with every quote and its page, are kept with this work.
+
+### 14.2 Sources out of the way
+
+Source lists, the notes on what a "confirmed from documents" badge rests on, the model-maker's own notes and evidence references, the page's note on how real an assembly is, and a circuit's confidence and limits are now one fold at the foot of a card, "ที่มาและข้อจำกัดของข้อมูล", closed until opened and kept as the learner left it. What the CubeSat specification asks of a piece is said on the card in plain words; the clause numbers are in the fold. Nothing was removed: the brief asks that a part's sources can be read and that what is documented, drawn from pictures and estimated can be told apart, and the badges on the facts stay where they were. A test holds that no card shows a source list or such a note outside its fold.
+
+### 14.3 The rocket in the order of the launch site
+
+Beside the reference's order (upright, by what stands on what: an order for learning), the assembly of the Soyuz has a second order, chosen by a switch at the head of the panel: **as it is really put together before a launch from Vostochny.**
+
+| Step | What the learner does | What is really done (as the step says) | Rests on |
+| --- | --- | --- | --- |
+| core | fits it | the central core, which arrives in two parts, is joined into one and laid horizontally in the launch vehicle assembly and test building | Starsem manual §7.5.4.4.1 ("the central core in two parts") |
+| four boosters | fits each, in any order | attached to the core as it lies; with all four on, the first- and second-stage assembly is complete | the same; no document says which booster goes on first at Vostochny, and the step says so |
+| truss | fits it | the truss is the top of the core, where the third stage will be mated | the manual's Figure 1-4 labels it on the core stage; no document says when it is fitted, and the step says so |
+| Fregat | fits it, with nothing of the package needed | in the spacecraft building; fuelled at the fuelling station first | ST31 kit p. 12; RussianSpaceWeb for the fuelling |
+| payload | fits it on Fregat | the satellites on their dispenser are mated to Fregat | ST31 kit p. 8 |
+| fairing halves | fits each | the stack is lowered to horizontal and the fairing rolled over it: the upper composite | kit p. 8 for the order; horizontal by the 2001 manual (Baikonur) and a Roscosmos photo caption relayed by RussianSpaceWeb |
+| third stage | fits it, only once the fairing is closed | about 6 days before lift-off the upper composite is moved to the assembly building and mated, horizontally, to the third stage | kit p. 8 ("L-6 days") |
+| **final integration** | a press: no part | the third stage, with the upper composite on it, is mated to the truss on the core, on the transporter-erector | kit p. 8 ("which in turn is mated to the rocket's central core"); the transporter-erector by RussianSpaceWeb (a 2019 flight) |
+| **roll-out and erection** | a press: no part | about 3 days before lift-off the complete launcher is rolled out by rail, horizontal, erected, and the mobile gantry rolled on | kit p. 8 ("L-3 days") |
+
+How it is built: one more `AssemblySpec` over the same eleven assemblies and the same places (`src/structure/soyuz-site.ts`), with other things to wait for and two steps that fit no part — units of the spec with no shape, so install, remove, undo, restart, what rests on what, completeness and a stored state read back hold for them as for the parts, with no second engine. The store keeps the two orders side by side, each with its own state in the learner's profile (the stored record's version is unchanged: the fields are added, and a record from before reads as none begun). The picture stands every assembly as the order on screen has it: lying along the floor until erected, the upper part nine metres along the axis from the package until docked; the places are marked where their things lie. The loose parts wait as outlines where they belong, to be pressed or picked from the list.
+
+Limits, said on the panel: eleven assemblies stand for a campaign of many more steps (tests, the fuelling of Fregat, the readiness review) that are named in the steps and not acted out; the fairing goes on one half at a time, where the real one is rolled over the stack; no building, transporter or tower is drawn; the days before lift-off are the kit's nominal timeline, and ST31's own dates put the roll-out four days before. There is no dragging in this order.
+
+### 14.4 Ways in
+
+- **Home:** a chapter of its own in the page's manner, between the Engineer level and the lessons, with the section pictured as it looks in each language (`public/home/structure.<lang>.webp`, taken by `npm run shots`, fetched when the chapter comes into view and not precached).
+- **Build:** where the vehicle is the catalogue's Soyuz-2.1b, "ลองประกอบ" beside the Anatomy button, to the section's assembly at Build's level; one row in all three languages at 1440 px.
+- **Launch:** for the same vehicle, "ดูโครงสร้างของจรวดลำนี้" on the line of the mission's steps and no taller than it: measured, the camera's controls under it are where they were. Left out on a screen narrower than 700 px, where that line is full; the section's own menu is the way in there.
+
+All three are plain links: none needs the section's code or its model before it is pressed.
+
+### 14.5 Checks on this round
+
+On the final tree (`6a6d2e3`), in this container:
+
+| Check | Result |
+| --- | --- |
+| `npx tsc --noEmit` | clean |
+| The section's unit tests, `tests/structure-*.test.ts` | 221/221 in 16 files; the new `structure-site.test.ts` is 17 of them (the order's rules, where the assemblies are drawn, the two orders in the store, the stored record) |
+| Full `npx vitest run` | 360 files, 10,850 tests, all pass (26 min) |
+| Browser journeys, the whole app | 40/40 passed on the build before the review's fixes (62 min; five more are held back by the owner since 2026-10-17 and are not run). After the fixes: `structure-assembly`, `structure-failures`, the new `structure-entries`, and ten that touch Launch, the layout, the Anatomy pages and the workspace — 13/13 |
+| `node scripts/bundle-budget.mjs` | **fails**: over the approved ceilings (§14.6) |
+| The staged preview copy, served without `.bin` files as its host serves it | the section loads through it (2,069 parts), the site's order is there, the Home chapter's picture loads |
+
+**An independent review.** An agent in a fresh context read this round's commits (read-only; it built and ran nothing) and reported 26 findings: no P0, 1 P1, 12 P2, 13 P3. The P1: under the site's order a part in hand was offered the two steps that fit no part as places, named by a raw text key. 24 are fixed in `6a6d2e3`, with tests where the store decides and browser checks where the screen does. Two are left as they are: the stored record keeps its version with three fields added, so a tab still running an older build that writes the record drops them (the learner's site-order progress, not the reference order's); and the Launch link is 15 px high, offered only on screens wider than 700 px.
+
+**A defect older than this round,** found by this round's new browser check and fixed: a visit begun again (a reload) with Soyuz assemblies in place drew the assembly panel before the model was fetched, and the error left the section showing "loading" for good. It had been there since the second version and neither of its reviews found it; the journey now reloads under both orders.
+
+**Outside this round's changes, named by the reviewer and not changed:** the Anatomy 2.1b page's source list still has a line saying RD0110 is the Soyuz-2.1b's third-stage engine (the same error as the sentence the owner had corrected; the section does not show that line) — a question for the owner; the page's own Thai says ติดเครื่อง where the section now says จุดเครื่องยนต์; the app's main Thai dictionary has เสาอากาศ once and ติดเครื่อง four times.
+
+Not measured again this round: performance (§7.1 stands for the second version; the site's order draws the same meshes).
+
+Not reviewed by GPT-6 Astra. The research on Russian usage rests on search results, not on pages read (§14.1).
+
+### 14.6 Budget (D-38): over the approved ceilings — the owner's word is needed
+
+This round's work is over six of the groups' ceilings the owner approved on 2026-11-12, and over the precache's code ceiling with them. No ceiling was raised; `budgets.json` is as approved, and the pull request's build check fails on the budget until the owner chooses.
+
+| Group | Approved ceiling | Measured now | Over | What grew |
+| --- | ---: | ---: | ---: | --- |
+| `structure-*.js` | 275 kB | 292.5 kB | +17.5 | the launch site's order (its rules, the panel's switch, its words in Thai), the fold, the words changed, what the review asked for |
+| `structure-en-*.js` | 62 kB | 66.5 kB | +4.5 | the site's words in English |
+| `structure-ru-*.js` | 97 kB | 106.2 kB | +9.2 | the site's words in Russian, and the longer terms of Russian sources |
+| `structure-*.css` | 27 kB | 27.0 kB | at the ceiling | the switch and the fold |
+| `index-*.js` | 2664 kB | 2664.2 kB | +0.2 | the three ways in |
+| `index-*.css` | 179 kB | 179.7 kB | +0.7 | their styles |
+| `i18n-*.js` | 1735 kB | 1736.0 kB | +1.0 | their words in three languages |
+| precache code | 15148 kB | 15186.0 kB | +38.0 | the sum of the above |
+| precache | 16547 kB | 16305.2 kB | within | |
+
+The first download (index.html and what it loads) grows by about 3.5 kB; the rest is fetched when the section opens. The three pictures of the Home chapter (52 to 62 kB each) are fetched when the chapter comes into view and are not precached or budgeted.
+
+**Proposed, each the measured size rounded up to the next kB, with no room to spare** (the precache total follows its two groups by the file's own rule: code 15187 + data/ 1399):
+
+```json
+"structure-*.js": 293,
+"structure-en-*.js": 67,
+"structure-ru-*.js": 107,
+"index-*.js": 2665,
+"index-*.css": 180,
+"i18n-*.js": 1737,
+"precache code": 15187,
+"precache": 16586
+```
+
+The other way is to keep the approved ceilings and take work out: the launch site's order is 26 of the 38 kB, so nothing short of removing it fits; the three ways in alone are 1.9 kB over three app-shell ceilings that had 0.4 to 0.9 kB of room.
+
+### 14.7 This round's commits
+
+On `claude/trusting-cannon-oah00c`, after `f71047b`:
+
+| Commit | What |
+| --- | --- |
+| `7f0d590` | the Anatomy page's interstage passage names RD0124; the flight meshes and the section's model (revision 3) made again; the section's remark removed |
+| `bc22aa8` | where information comes from folded away at the foot of each card |
+| `9750bbb` | the rocket assembled in the order of the launch site |
+| `f7d7af0` | words as each language's own sources have them; no Russian letters outside the Russian interface |
+| `f1737ee` | ways in from Home, Build and Launch, with the Home chapter's pictures |
+| `55bf292` | the README, the status page and the change fragment |
+| `6a6d2e3` | what the independent review of this round found, fixed; the assembly panel waits for the model |
+| the commit after it | this report's §14 |
 
 ## Appendix A. The first version's reviews (kept as a record)
 
