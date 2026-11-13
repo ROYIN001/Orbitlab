@@ -958,7 +958,7 @@ returns.
 ## 0d. The Structure section: explore, assemble and modify (a pilot)
 
 **Structure** in the top bar; also the chapter *Take a rocket and a satellite apart* on the
-landing page, **Take apart and assemble** beside Build's Anatomy button when the vehicle is the
+landing page, **Assemble it** beside Build's Anatomy button when the vehicle is the
 catalogue's Soyuz-2.1b, and **See how this rocket is built** under the mission's steps in Launch
 for the same vehicle. Every view has its own address:
 `#/structure/<level>/<model>` to look round a model, with `/assemble` or `/experiment` after it

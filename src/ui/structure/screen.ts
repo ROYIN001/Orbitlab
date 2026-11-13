@@ -175,7 +175,9 @@ export class StructureScreen implements StructureSection {
     const guide = guidePanel(store);
     if (guide) parts.push(guide);
     if (store.mode === 'assemble') {
-      parts.push(assemblyPanel(store));
+      // (not before the model is here: the panel names the parts in place by the model's own tree, and a visit begun
+      // again with parts in place drew it before the model was fetched — the error left the section loading for good)
+      if (store.ready) parts.push(assemblyPanel(store));
       if (store.shown()) parts.push(infoPanel(store));
     } else {
       if (store.mode === 'experiment' && adapter.experiment && store.ready) parts.push(...adapter.experiment.panels(store));

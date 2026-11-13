@@ -9,7 +9,7 @@
 import { TIER_OF_DEPTH, type ModelNode } from '../../structure/model';
 import type { Certainty, Depth } from '../../structure/types';
 import { button, el, facts, link } from './dom';
-import type { InfoBlock, InfoDoc, InfoSource, ModelSystem } from './models/types';
+import { provenanceName, type InfoBlock, type InfoDoc, type InfoSource, type ModelSystem } from './models/types';
 import { CATEGORY_COLOURS } from './palette';
 import { SIDE_TABS, type SideTab, type StructureStore } from './store';
 import { PART_CATEGORIES } from '../../structure/types';
@@ -140,7 +140,8 @@ function block(store: StructureStore, b: InfoBlock): HTMLElement {
           const shown = store.jointShown[store.model] === r.relation;
           li.append(' ', button(tx(shown ? 'info.jointHide' : 'info.jointShow'), `joint:${r.relation}`, () => store.showJoint(shown ? null : r.relation), { cls: 'st-chip', pressed: shown }));
         }
-        if (r.why && store.level !== 'watch') li.append(el('span', 'st-small st-why', r.why));
+        // (a relation's reason is the reference order's: not said while the site's order is the one on screen)
+        if (r.why && store.level !== 'watch' && !(store.mode === 'assemble' && store.site)) li.append(el('span', 'st-small st-why', r.why));
         ul.append(li);
       }
       return ul;
@@ -150,7 +151,7 @@ function block(store: StructureStore, b: InfoBlock): HTMLElement {
       for (const item of b.items) ul.append(el('li', '', item));
       return ul;
     }
-    case 'sources': return sourceList(b.rows, store.level === 'engineer');
+    case 'sources': return sourceList(b.rows, b.scoped === true || store.level === 'engineer');
     case 'kinds': {
       const box = el('div', 'st-kinds');
       const kinds = el('p', 'st-chips');
@@ -201,8 +202,11 @@ function block(store: StructureStore, b: InfoBlock): HTMLElement {
     }
     case 'fold': {
       const d = el('details', 'st-fold st-fold-quiet');
-      d.dataset.k = `fold:${b.name}`;
-      d.append(el('summary', '', b.title));
+      d.dataset.fold = b.name.split(':')[0];
+      // (the redraw's key is on the thing that takes the focus, as on the section's other folds)
+      const summary = el('summary', '', b.title);
+      summary.dataset.k = `fold:${b.name}`;
+      d.append(summary);
       d.open = store.foldOpen(b.name, false);
       d.addEventListener('toggle', () => store.setFold(b.name, d.open));
       for (const inner of b.blocks) d.append(block(store, inner));
@@ -381,7 +385,7 @@ export function systemsPanel(store: StructureStore): HTMLElement {
     if (now.steps.length) panel.append(el('h4', '', tx('sys.steps')), steps);
     panel.append(el('p', 'st-small', tx('sys.lit', { n: now.items.length })));
     // how sure the page is of this circuit, what its picture leaves out, and its sources: folded away until asked for
-    panel.append(block(store, { kind: 'fold', name: 'provenance', title: tx('info.provenance'), blocks: [
+    panel.append(block(store, { kind: 'fold', name: provenanceName(`sys:${now.id}`), title: tx('info.provenance'), blocks: [
       { kind: 'heading', text: tx('sys.confidence') }, { kind: 'text', text: now.confidence, tone: 'small' },
       { kind: 'heading', text: tx('sys.limitation') }, { kind: 'text', text: now.limitation, tone: 'note' },
       ...(store.level === 'engineer' && now.sources.length ? [{ kind: 'heading' as const, text: tx('info.sources') }, { kind: 'sources' as const, rows: now.sources }] : []),

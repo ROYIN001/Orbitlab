@@ -41,7 +41,7 @@ const kinds = (doc: InfoDoc): string[] => doc.blocks.map((b) => b.kind);
 /** Every block of a document, those folded away among them. */
 const everyBlock = (blocks: readonly InfoBlock[]): InfoBlock[] => blocks.flatMap((b) => (b.kind === 'fold' ? [b, ...everyBlock(b.blocks)] : [b]));
 /** What a card keeps folded away at its foot: where its information comes from and how far it goes. */
-const folded = (doc: InfoDoc): InfoBlock[] => doc.blocks.flatMap((b) => (b.kind === 'fold' && b.name === 'provenance' ? b.blocks : []));
+const folded = (doc: InfoDoc): InfoBlock[] => doc.blocks.flatMap((b) => (b.kind === 'fold' && b.name.startsWith('provenance:') ? b.blocks : []));
 const headings = (doc: InfoDoc): string[] => doc.blocks.flatMap((b) => (b.kind === 'heading' ? [b.text] : []));
 
 function everyDoc(adapter: ModelAdapter, visit: (doc: InfoDoc, id: string | null, depth: Depth) => void): number {
@@ -217,10 +217,28 @@ describe('what each depth shows of the satellite', () => {
       });
     }
     expect(wrong.slice(0, 20)).toEqual([]);
+    // an engine's designation in a source's title is in Latin too (a Russian book's own title is left as it is)
+    const titles = (id: string): string[] => adapters['soyuz-st31'].describe(id, 'engineer', 'explore').blocks.flatMap((b) => (b.kind === 'fold' ? b.blocks : [])).flatMap((b) => (b.kind === 'sources' ? b.rows.map((r) => r.title) : []));
+    const all = ['core', 'booster-b', 'stage3', 'fregat', 'interstage'].flatMap(titles);
+    expect(all.length).toBeGreaterThan(10);
+    expect(all.filter((t) => /РД-?\d/.test(t))).toEqual([]);
+    expect(all.some((t) => /RD-107A/.test(t))).toBe(true);
     // the page's own name of a side block, as the deepest card quotes it
     const facts = adapters['soyuz-st31'].describe('booster-b', 'engineer', 'explore').blocks.flatMap((b) => (b.kind === 'facts' ? b.rows : []));
     expect(facts.find((r) => r.label === 'ชื่อในหน้า Anatomy')?.value).toBe('บูสเตอร์ · บล็อก B · ขั้นที่ 1');
   }, 30_000);
+
+  it('names each card\'s fold for the thing shown, so one opened is not found open on the next card', () => {
+    const a = adapters['soyuz-st31'];
+    const nameOf = (id: string | null): string => (a.describe(id, 'engineer', 'explore').blocks.at(-1) as Extract<InfoBlock, { kind: 'fold' }>).name;
+    const names = [null, 'core', 'fregat', 'core/tanks'].map(nameOf);
+    expect(new Set(names).size).toBe(names.length);
+    for (const n of names) expect(n.startsWith('provenance:')).toBe(true);
+    store.open('engineer', 'soyuz-st31', 'explore');
+    store.setFold(nameOf('core'), true);
+    expect(store.foldOpen(nameOf('core'), false)).toBe(true);
+    expect(store.foldOpen(nameOf('fregat'), false)).toBe(false);
+  });
 
   it('keeps sources and notes on where information comes from in one fold at the foot of every card, never among its facts', () => {
     const PROVENANCE = /Orbitlab ไม่ได้ตรวจกับเอกสาร|ไม่ใช่ป้ายจากผู้สร้างโมเดล|ไม่มีชิ้นใดเป็นแบบผลิต|อ่านจากเอกสาร|ยังไม่ได้ตรวจกับเอกสารผู้ผลิต/;

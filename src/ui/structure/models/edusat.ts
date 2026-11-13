@@ -124,7 +124,7 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
     // what each figure rests on, and at the deepest the documents themselves: folded away at the card's foot
     const from: InfoBlock[] = [{ kind: 'list', items: [tx('edu.basis.size'), tx('edu.basis.cells'), tx('edu.basis.masses')] }];
     if (depth === 'engineer') from.push({ kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourceRows(EDUSAT_SOURCES.map((s) => s.id)) });
-    blocks.push(...provenance(tx('info.provenance'), from));
+    blocks.push(...provenance(tx('info.provenance'), '', from));
     return { title: tx('model.edusat'), subtitle: tx('model.edusat.sub'), path: [], blocks };
   }
 
@@ -175,7 +175,7 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
     if (depth === 'engineer') blocks.push({ kind: 'facts', rows: [{ label: tx('info.partId'), value: part.id, mono: true }] });
     const from: InfoBlock[] = [{ kind: 'text', text: tx(`edu.basis.unit.${part.sourceIds.includes('cell-18650') ? 'battery' : part.sourceIds.includes('azur-3g30') ? 'panel' : part.sourceIds.includes('cds14') ? 'spec' : 'pilot'}`), tone: 'small' }];
     if (depth === 'engineer') from.push({ kind: 'sources', rows: sourceRows(part.sourceIds) });
-    blocks.push(...provenance(tx('info.provenance'), from));
+    blocks.push(...provenance(tx('info.provenance'), unit, from));
     return { title: tx(`edu.unit.${unit}`), ...(option ? { subtitle: tx(`edu.option.${option}`) } : {}), path: [subsystemNode(subsystemOf(unit))], blocks };
   }
 
@@ -204,7 +204,7 @@ export function edusatAdapter(env: StructureEnv): ModelAdapter {
     if (k === 'solarCell') from.push({ kind: 'text', text: tx('edu.cell.conditions', { flux: SOLAR_CELL.testFlux }), tone: 'small' });
     if (SPEC_REF[k]) from.push({ kind: 'facts', rows: [{ label: tx('info.specRef'), value: SPEC_REF[k] }] });
     from.push({ kind: 'sources', rows: sourceRows(ids) });
-    blocks.push(...provenance(tx('info.provenance'), from));
+    blocks.push(...provenance(tx('info.provenance'), it.id, from));
     return { title: name(it.id), subtitle: tx('info.partOf', { group: tx(`edu.unit.${it.unit}`) }), path: [subsystemNode(subsystemOf(it.unit)), it.unit], blocks };
   }
 

@@ -145,7 +145,7 @@ function assemblyBar(store: StructureStore, stage: Stage): HTMLElement {
     line.append(el('strong', 'st-hand-name', tx('asm.holding', { unit: store.unitName(held.unit) })));
     // its place: at a first look the reference's own; deeper, chosen from the numbers on the picture or here
     if (store.level !== 'watch') {
-      const free = spec.slots.filter((s) => occupant(state, s.id) === null);
+      const free = store.places().filter((s) => occupant(state, s.id) === null);
       const places = el('label', 'st-select');
       places.append(el('span', '', tx('asm.slot')));
       const select = el('select');
@@ -178,9 +178,9 @@ function assemblyBar(store: StructureStore, stage: Stage): HTMLElement {
       const rests = store.restsOn(selected);
       line.append(el('strong', 'st-hand-name', store.unitName(selected)),
         button(tx('asm.remove'), 'remove', () => store.remove(selected), { disabled: rests.length > 0 }));
-      if (rests.length) line.append(el('span', 'st-small', tx('asm.no.holds', { unit: store.unitName(selected), dependents: rests.map((u) => store.unitName(u)).join(', ') })));
+      if (rests.length) line.append(el('span', 'st-small', store.refusalText({ code: 'holds', unit: selected, dependents: rests })));
     } else if (!check.complete) {
-      line.append(el('span', 'st-hand-prompt', tx(store.level === 'watch' ? (store.outlined ? 'asm.prompt.watch' : 'asm.prompt.pick') : store.site ? 'site.prompt' : 'asm.prompt.pick')));
+      line.append(el('span', 'st-hand-prompt', tx(store.stepsOnly ? 'site.prompt.step' : store.level === 'watch' ? (store.outlined ? 'asm.prompt.watch' : 'asm.prompt.pick') : store.site ? 'site.prompt' : 'asm.prompt.pick')));
     } else {
       line.append(el('strong', 'st-hand-name st-ok-text', tx(store.site ? 'site.complete' : 'asm.complete')));
     }

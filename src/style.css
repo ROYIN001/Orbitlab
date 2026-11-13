@@ -482,12 +482,12 @@ body[data-lesson] .verdict-fixes { display: none; }
 /* the Structure section's model of the mission's vehicle, under its steps (owner, 2026-11-13) */
 /* (on the steps' own line and no taller than it, so the scene's controls stay where they are; on a narrow screen,
    where the line is full, the section's own menu is the way in) */
-.mission-under { display: flex; align-items: flex-end; flex-wrap: wrap; column-gap: 12px; }
+.mission-under { display: flex; align-items: flex-start; flex-wrap: wrap; column-gap: 12px; }
 .mission-structure { pointer-events: auto; display: inline-flex; align-items: center; gap: 5px; box-sizing: border-box; height: 15px; margin: 5px 0 0; padding: 0 8px 0 6px;
   border: 1px solid rgba(124, 226, 198, 0.32); border-radius: 999px; background: rgba(8, 22, 26, 0.6); color: #a6e9d5; font-size: 11px; line-height: 13px; text-decoration: none; }
 @media (max-width: 700px) { .mission-structure { display: none; } }
 .mission-structure[hidden] { display: none; }
-.mission-structure::before { content: '⊞'; opacity: 0.8; }
+.mission-structure::before { content: '⊞' / ''; opacity: 0.8; }
 .mission-structure:hover, .mission-structure:focus-visible { color: #e2fff6; border-color: rgba(124, 226, 198, 0.7); }
 .mission-steps [data-state="off"] { color: #4d6273; text-decoration: line-through; }
 .sim-state {
@@ -777,7 +777,7 @@ body[data-lesson] .verdict-fixes { display: none; }
    `.hud-fold` (main.ts foldHud), which opens it over the scene (`data-hud`)
    until it is pressed again or the scene changes size. A docked card is not
    over the scene, so its button stays away. */
-[data-short=true] :is(.phase-detail, .latest-event, .mission-steps, .scene-hint, #ticker > :not(:last-child)),
+[data-short=true] :is(.phase-detail, .latest-event, .mission-steps, .mission-structure, .scene-hint, #ticker > :not(:last-child)),
 [data-short=true]:not([data-hud]) #hud,
 .hud-fold:not([data-short=true]:has(#hud) *) { display: none; }
 [data-short=true] .mission-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

@@ -51,7 +51,8 @@ export function assemblyPanel(store: StructureStore): HTMLElement {
     actions.append(button(tx('asm.lookInside'), 'asm-done', () => { store.view.cutaway = adapter.offers.cutaway; store.view.open = adapter.opens.open; store.go({ mode: 'explore' }); }, { cls: 'st-primary' }));
     if (adapter.activities.includes('experiment')) actions.append(button(tx(store.progress.experiment ? 'exp.goto' : 'exp.create'), 'create', () => store.go({ mode: 'experiment' })));
     for (const other of Object.keys(store.adapters) as (keyof typeof store.adapters)[]) {
-      if (!site && other !== store.model && !store.progress.completed[other]) actions.append(button(tx('asm.nextModel', { name: tx(`model.${other}.short`) }), `next:${other}`, () => store.go({ model: other, mode: 'assemble' })));
+      // (to the other model's reference order: that is the one not yet done)
+      if (!site && other !== store.model && !store.progress.completed[other]) actions.append(button(tx('asm.nextModel', { name: tx(`model.${other}.short`) }), `next:${other}`, () => { store.useReference(); store.go({ model: other, mode: 'assemble' }); }));
     }
     // the reference's order done, the site's is the next thing to try (and the other way round)
     if (adapter.site && !(site ? store.progress.completed[store.model] : store.progress.siteCompleted)) {
@@ -86,13 +87,15 @@ export function assemblyPanel(store: StructureStore): HTMLElement {
     const can = new Set(store.next());
     for (const u of loose) {
       const li = el('li', can.has(u.id) ? 'is-ready' : 'is-waiting');
-      const b = button(store.unitName(u.id), `tray:${u.id}`, () => (store.level === 'watch' ? store.fit(u.id) : store.hold(u.id)), { pressed: held?.unit === u.id, cls: 'st-tray-part' });
+      // (a step that fits no part is an action, not a thing held: no pressed state)
+      const step = store.isOperation(u.id);
+      const b = button(store.unitName(u.id), `tray:${u.id}`, () => (store.level === 'watch' ? store.fit(u.id) : store.hold(u.id)), { ...(step ? {} : { pressed: held?.unit === u.id }), cls: 'st-tray-part' });
       li.append(b);
-      if (can.has(u.id)) li.append(el('span', 'st-tag st-tag-ready', tx('asm.ready')));
+      if (can.has(u.id)) li.append(el('span', 'st-tag st-tag-ready', tx(step ? 'site.ready' : 'asm.ready')));
       else {
         const waits = store.waitsFor(u.id);
         // (a step that waits for everything says so in a word, not in eleven names)
-        li.append(el('span', 'st-small', waits.length > 4 ? tx('site.waitsAll') : tx('asm.waits', { list: waits.map((w) => store.unitName(w.unit)).join(', ') })));
+        li.append(el('span', 'st-small', tx('asm.waits', { list: waits.length > 4 ? tx('site.waitsAll') : waits.map((w) => store.unitName(w.unit)).join(', ') })));
         if (store.level !== 'watch' && waits[0]) li.append(el('span', 'st-small st-why', waits[0].why));
       }
       // from the middle depth, what is really done at this step of the site's order, under the part that can go in now
@@ -113,7 +116,14 @@ export function assemblyPanel(store: StructureStore): HTMLElement {
     for (const u of inPlace) {
       const node = [...adapter.tree().nodes.values()].find((n) => n.unit === u.id);
       // a step done that fits no part has nothing to read about on the picture: its chip takes it back (when nothing rests on it)
-      if (store.isOperation(u.id)) row.append(button(store.unitName(u.id), `placed:${u.id}`, () => store.remove(u.id), { cls: 'st-chip st-chip-step', glyph: '↶', disabled: store.restsOn(u.id).length > 0 }));
+      if (store.isOperation(u.id)) {
+        const held = store.restsOn(u.id);
+        const name = tx('site.takeBack', { step: store.unitName(u.id) });
+        row.append(button(store.unitName(u.id), `placed:${u.id}`, () => store.remove(u.id), {
+          cls: 'st-chip st-chip-step', glyph: '↶', disabled: held.length > 0, label: name,
+          title: held.length ? store.refusalText({ code: 'holds', unit: u.id, dependents: held }) : name,
+        }));
+      }
       else row.append(button(store.unitName(u.id), `placed:${u.id}`, () => store.select(node?.id ?? null), { pressed: selected === u.id, cls: 'st-chip' }));
     }
     box.append(row);
@@ -142,6 +152,6 @@ export function assemblyPanel(store: StructureStore): HTMLElement {
   }
   panel.append(el('p', 'st-small', tx(site ? 'site.about' : `asm.about.${store.model}`)));
   // where the site's order is taken from: folded away, as on the cards
-  if (site) panel.append(infoBlock(store, { kind: 'fold', name: 'site-sources', title: tx('info.provenance'), blocks: [{ kind: 'sources', rows: site.sources() }] }));
+  if (site) panel.append(infoBlock(store, { kind: 'fold', name: 'site-sources', title: tx('info.provenance'), blocks: [{ kind: 'sources', rows: site.sources(), scoped: true }] }));
   return panel;
 }

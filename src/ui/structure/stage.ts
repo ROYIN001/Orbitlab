@@ -436,7 +436,7 @@ export class Stage {
     const r = this.canvas.getBoundingClientRect();
     const x = clientX - r.left, y = clientY - r.top;
     let near: string | null = null, best = this.snap();
-    for (const s of store.spec.slots) {
+    for (const s of store.places()) {
       if (occupant(store.assembly, s.id) !== null) continue;
       const anchor = store.placePoint(s.id);
       const at = anchor && this.toCanvas(anchor);
@@ -536,7 +536,7 @@ export class Stage {
       requestAnimationFrame(more);
     }
     // (on the reference's outline at a first look a press fits a part and a drag turns the view: there is nothing to drag there)
-    this.hint.textContent = tx(store.mode !== 'assemble' ? 'hint.view' : store.outlined ? (store.level === 'watch' ? 'hint.assemble.outline' : 'hint.assemble.pick') : 'hint.assemble');
+    this.hint.textContent = tx(store.mode !== 'assemble' ? 'hint.view' : store.stepsOnly ? 'site.hint.step' : store.outlined ? (store.level === 'watch' ? 'hint.assemble.outline' : 'hint.assemble.pick') : 'hint.assemble');
     this.overlay.render();
     this.sync();
   }
@@ -554,6 +554,8 @@ export class Stage {
       if (side && node) boxes.push({ unit, label: adapter.name(node.id), ...side });
     }
     this.fallback.replaceChildren(el('p', 'st-small', tx('fallback.title')));
+    // (the side view is the reference's arrangement, standing: the site's order lying and its two steps are not drawn in it)
+    if (assembling && store.site) this.fallback.append(el('p', 'st-small', tx('site.fallback')));
     const selected = store.mode === 'assemble' ? store.selectedUnit() : store.selectedUnits()[0] ?? null;
     if (boxes.length) this.fallback.append(sideView(boxes, selected, (u) => store.select(nodeOfUnit(tree, u)?.id ?? null)));
   }

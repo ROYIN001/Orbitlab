@@ -29,7 +29,8 @@ export type InfoBlock =
   | { kind: 'facts'; rows: InfoFact[] }
   | { kind: 'relations'; rows: InfoRelation[] }
   | { kind: 'list'; items: string[] }
-  | { kind: 'sources'; rows: InfoSource[] }
+  /** `scoped`: each source's standing (read for this work, a secondary witness) is said at every depth, not only the deepest */
+  | { kind: 'sources'; rows: InfoSource[]; scoped?: boolean }
   /** what a group is made of: counts by kind of part and by how its shape is known */
   | { kind: 'kinds'; categories: { category: PartCategory; count: number }[]; certainties: { certainty: Certainty; count: number }[] }
   /** internal systems that pass through the thing: links into the systems tab */
@@ -41,12 +42,16 @@ export type InfoBlock =
    * Blocks kept folded away until asked for (owner, 2026-11-13: where a thing's
    * figures come from, and how far they can be trusted, crowded the card and
    * were taken for facts of the thing itself). `name` keeps it open or shut
-   * across redraws.
+   * across redraws: a name for each thing shown, so a fold opened on one card
+   * is not found open on the next.
    */
   | { kind: 'fold'; name: string; title: string; blocks: InfoBlock[] };
 
+/** The name of the fold at the foot of the card of `of` (a node's id, a circuit's; '' for the model's own card). */
+export const provenanceName = (of: string): string => `provenance:${of}`;
+
 /** Where a thing's information comes from and how far it goes, as one fold at the foot of its card (nothing when there is nothing to say). */
-export const provenance = (title: string, blocks: InfoBlock[]): InfoBlock[] => (blocks.length ? [{ kind: 'fold', name: 'provenance', title, blocks }] : []);
+export const provenance = (title: string, of: string, blocks: InfoBlock[]): InfoBlock[] => (blocks.length ? [{ kind: 'fold', name: provenanceName(of), title, blocks }] : []);
 
 /** What the information panel shows for a thing — content, which the panel draws and a test can read. */
 export interface InfoDoc {

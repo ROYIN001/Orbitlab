@@ -159,6 +159,12 @@ export class StructureStore {
   get assembly(): AssemblyState { return this.site ? this.progress.site : this.progress.assembly[this.model]; }
   /** A step of the order on screen that fits no part (the docking, the rollout). */
   isOperation(unit: string): boolean { return !!this.site?.operations.includes(unit); }
+  /** The places of the assembly: every slot a part goes into (a step that fits no part has a slot in the rules and no place on the picture). */
+  places(): { id: string; reference: string }[] { return this.spec.slots.filter((s) => !this.isOperation(s.reference)); }
+  /** What can be done next is only steps that fit no part: every part is in. */
+  get stepsOnly(): boolean { const next = this.next(); return next.length > 0 && next.every((u) => this.isOperation(u)); }
+  /** The reference's own order (what a guide and the other model's "next" lead to). */
+  useReference(): void { if (this.progress.siteOn) { this.progress.siteOn = false; this.save(); } }
   /** The loose parts wait as outlines where they belong: the learner's switch, and always under the site's order (its parts wait in their halls). */
   get outlined(): boolean { return this.view.outline || !!this.site; }
   /** Where a unit is drawn while assembling, given where the reference's order would have it. */
@@ -214,6 +220,8 @@ export class StructureStore {
     else if (changed) this.save();
     // assembling at a first look starts on the reference's outline; deeper, with the parts laid out (until the learner says otherwise)
     if (depthChanged && !Object.keys(this.assembly.placed).length) this.view.outline = level === 'watch';
+    // the site's order lies along the floor: the model's own opening view, made for it standing, is not its view
+    if (this.mode === 'assemble' && this.site) this.camera = 'home';
   }
 
   /**
@@ -477,6 +485,8 @@ export class StructureStore {
   /** Put on the picture what a guide's step shows. */
   private applyShow(show: GuideShow | undefined): void {
     if (!show) return;
+    // (a guide's step that leads to assembling describes the reference's order: that is the one put on)
+    if (show.mode === 'assemble') this.useReference();
     if (show.mode && show.mode !== this.mode) { this.enter(show.mode); this.env.go(this.level, this.model, show.mode); }
     if (show.view) Object.assign(this.view, show.view);
     // a step shows one thing: not a joint left from before it
@@ -525,6 +535,8 @@ export class StructureStore {
     switch (r.code) {
       case 'missing': {
         const why = ruleFor(this.order, r.unit, r.missing[0]);
+        // (a step that fits no part is not "installed", and what it waits for may be every part)
+        if (this.isOperation(r.unit)) return tx('site.no.wait', { step: this.unitName(r.unit), missing: r.missing.length > 4 ? tx('site.waitsAll') : this.names(r.missing), why: why ? tx(why.why) : '' });
         return tx('asm.no.missing', { unit: this.unitName(r.unit), missing: this.names(r.missing), why: why ? tx(why.why) : tx('asm.why.order') });
       }
       case 'wrongSlot':
@@ -532,7 +544,10 @@ export class StructureStore {
       case 'wrongOrientation': return tx('asm.no.wrongOrientation', { why: a.turnWhy(r.unit) });
       case 'slotTaken': return tx('asm.no.slotTaken', { slot: a.place(r.slot).name, by: this.unitName(r.by) });
       case 'alreadyPlaced': return tx('asm.no.alreadyPlaced', { unit: this.unitName(r.unit) });
-      case 'holds': return tx('asm.no.holds', { unit: this.unitName(r.unit), dependents: this.names(r.dependents) });
+      case 'holds': {
+        const step = r.dependents.find((d) => this.isOperation(d));
+        return step ? tx('site.no.holds', { unit: this.unitName(r.unit), step: this.unitName(step) }) : tx('asm.no.holds', { unit: this.unitName(r.unit), dependents: this.names(r.dependents) });
+      }
       case 'notPlaced': return tx('asm.no.notPlaced', { unit: this.unitName(r.unit) });
       case 'nothingToUndo': return tx('asm.no.nothingToUndo');
       default: return tx('asm.no.unknown');
@@ -687,10 +702,13 @@ export class StructureStore {
   remove(unit: string): void {
     const r = remove(this.spec, this.assembly, unit);
     if (r.ok) {
+      const step = this.isOperation(unit);
       this.setAssembly(r.state);
-      this.message = this.note('ok', () => tx('asm.removed', { unit: this.unitName(unit) }));
+      this.message = this.note('ok', () => tx(step ? 'site.undone' : 'asm.removed', { unit: this.unitName(unit), step: this.unitName(unit) }));
       this.sel[this.model] = null;
       this.focusNext = `tray:${unit}`;
+      // a step taken back changes the picture as a whole (the vehicle lies again, the halves part): seen whole
+      if (step) this.camera = 'home';
     } else this.message = this.note('no', () => this.refusalText(r.refusal));
     this.emit();
   }
@@ -699,8 +717,11 @@ export class StructureStore {
   restsOn(unit: string): string[] { return dependents(this.spec, this.assembly, unit); }
 
   undo(): void {
+    const before = this.assembly.placed;
     const r = undo(this.assembly);
     if (r.ok) {
+      // (a step that fits no part taken back or put back: the picture changes as a whole)
+      if (this.site?.operations.some((o) => Object.hasOwn(before, o) !== Object.hasOwn(r.state.placed, o))) this.camera = 'home';
       this.setAssembly(r.state);
       this.message = this.note('info', () => tx('asm.undone'));
       // what the step taken back had taken off is fitted again: it is not also in hand

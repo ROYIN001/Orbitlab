@@ -218,6 +218,70 @@ describe('the two orders in the store', () => {
     expect(store.placePoint('site-dock')).toBeNull();
   });
 
+  it('offers a part only the eleven places, never a step\'s slot, and stands a part held over a place where that place lies', async () => {
+    const { store } = await openStore({ level: 'explore', model: 'soyuz-st31', mode: 'assemble' });
+    store.setSite(true);
+    expect(store.spec.slots).toHaveLength(13);
+    expect(store.places().map((p) => p.id)).toEqual([...SOYUZ_UNITS]);
+    // Fregat held over the core's place (it will be refused there) is drawn at that place, with the package, not a gap away from its mark
+    store.hold('fregat');
+    store.chooseSlot('core');
+    const a = store.adapter;
+    expect(picture(store).poses.get('fregat')).toEqual(siteStand(a.slotPose('fregat', 'core', 0), 'core', {}));
+    store.install();
+    expect(store.message?.kind).toBe('no');
+    expect(store.message?.text()).not.toMatch(/soyuz\.place\.|site\./);
+  });
+
+  it('speaks of a step as a step: what it waits for, taken back, and why a part cannot come off after it', async () => {
+    const { store } = await openStore({ level: 'watch', model: 'soyuz-st31', mode: 'assemble' });
+    store.setSite(true);
+    expect(store.stepsOnly).toBe(false);
+    store.fit('core');
+    // the docking asked for with ten parts missing: said in a phrase, not ten names; and not as a thing to "install"
+    store.hold('site-dock');
+    expect(store.message?.text()).toBe(tx('site.no.wait', { step: tx('site.op.site-dock'), missing: tx('site.waitsAll'), why: tx('site.why.dock') }));
+    for (let k = 0; k < 10; k++) store.fit(store.next().find((u) => !store.isOperation(u))!);
+    expect(store.stepsOnly).toBe(true);
+    store.fit('site-dock');
+    expect(store.refusalText({ code: 'holds', unit: 'stage3', dependents: store.restsOn('stage3') })).toBe(tx('site.no.holds', { unit: store.unitName('stage3'), step: tx('site.op.site-dock') }));
+    // taken back, by its chip or by undo: said as a step, and the picture seen whole again (the halves part)
+    store.camera = null;
+    store.remove('site-dock');
+    expect(store.message?.text()).toBe(tx('site.undone', { step: tx('site.op.site-dock') }));
+    expect(store.camera).toBe('home');
+    store.fit('site-dock');
+    store.camera = null;
+    store.undo();
+    expect(store.camera).toBe('home');
+    expect(store.next()).toEqual(['site-dock']);
+    // an ordinary part taken back by undo does not move the view
+    const other = (await openStore({ level: 'watch', model: 'soyuz-st31', mode: 'assemble' })).store;
+    other.setSite(true);
+    other.fit('core');
+    other.fit('booster-b');
+    other.camera = null;
+    other.undo();
+    expect(Object.keys(other.assembly.placed)).toEqual(['core']);
+    expect(other.camera).toBeNull();
+  });
+
+  it('is framed as it lies when come to by its address, and a guide that leads to assembling puts the reference\'s order on', async () => {
+    const app = fakeApp();
+    const first = (await openStore({ level: 'explore', model: 'soyuz-st31', mode: 'assemble' }, app)).store;
+    first.setSite(true);
+    // a new visit at the same address: the view asked for is the whole, as the site's order has it
+    const again = (await openStore({ level: 'explore', model: 'soyuz-st31', mode: 'assemble' }, app)).store;
+    expect(again.site).not.toBeNull();
+    expect(again.camera).toBe('home');
+    // the tour's last step describes the reference's order: it does not land on the site's
+    again.open('explore', 'soyuz-st31', 'explore');
+    const tour = again.guides().find((g) => g.steps.some((st) => st.show?.mode === 'assemble'))!;
+    again.guideStep(tour.id, tour.steps.findIndex((st) => st.show?.mode === 'assemble'));
+    expect(again.mode).toBe('assemble');
+    expect(again.site).toBeNull();
+  });
+
   it('is kept in the learner\'s profile beside the reference order\'s, and read back by its own rules', async () => {
     const app = fakeApp();
     const { store } = await openStore({ level: 'watch', model: 'soyuz-st31', mode: 'assemble' }, app);

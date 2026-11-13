@@ -30,12 +30,13 @@ import type { StructureEnv, StructureSection } from './structure/env';
 /** The profile key of the section's one record (src/structure/progress.ts `STRUCTURE_STORE_KEY`; src/workspace/registry.ts lists it). */
 export const STRUCTURE_PROFILE_KEY = 'orbitlab.structure.v1';
 
-/** A model's activity as a page of the section: `<model>` for exploring, `<model>/<activity>` for the others (`pageOf`, src/ui/structure/models/index.ts). */
 /** The catalogue vehicle the section has a model of (src/data/anatomy.ts: the Anatomy page it is made from is this vehicle's). */
 export const STRUCTURE_VEHICLE = 'soyuz21b';
 /** The address of that model in the section, at the depth nearest a level of the app (a plain link: the app is routed by its hash). */
 export const structureHref = (mode: string, activity = ''): string =>
   `#/structure/${mode === 'explore' || mode === 'engineer' ? mode : 'watch'}/soyuz-st31${activity ? `/${activity}` : ''}`;
+
+/** A model's activity as a page of the section: `<model>` for exploring, `<model>/<activity>` for the others (`pageOf`, src/ui/structure/models/index.ts). */
 
 export const pageOf = (model: StructureModelId, mode: StructureMode): AppPage => (mode === 'explore' ? model : `${model}/${mode}`) as AppPage;
 

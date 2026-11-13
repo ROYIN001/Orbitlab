@@ -77,7 +77,7 @@ export class StageOverlay {
   private marked(): string[] {
     const store = this.store, held = store.held[store.model];
     if (store.mode !== 'assemble' || !held || (store.level === 'watch' && !store.drag) || !this.view.ready()) return [];
-    return store.spec.slots.map((s) => s.id).filter((s) => occupant(store.assembly, s) === null);
+    return store.places().map((s) => s.id).filter((s) => occupant(store.assembly, s) === null);
   }
 
   // ─── frame by frame ───────────────────────────────────────────────────────

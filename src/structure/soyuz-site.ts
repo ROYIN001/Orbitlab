@@ -5,7 +5,8 @@
  * what rests on what.
  *
  * What is really done, at Vostochny as at Baikonur (`SITE_SOURCES`): the
- * vehicle is put together lying down, in two places at once. In the launch
+ * vehicle is put together lying down, in two separate places (the package
+ * may be assembled earlier and stored until the campaign begins). In the launch
  * vehicle's assembly building the four side blocks are joined to the
  * central block, making the "package" of the first and second stages. In
  * the spacecraft's building the satellites on their dispenser are joined to

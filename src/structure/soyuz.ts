@@ -14,11 +14,11 @@
  * engines, stretching stages or changing the vehicle, and passing these rules
  * says nothing of strength (owner, 2026-11-09).
  *
- * At a launch site the Soyuz is assembled lying down, and the upper part
- * (Fregat, the payload and the fairing) is put together on its own before it
- * is joined to Block I (Arianespace, Soyuz User's Manual, 2012). The order
- * here follows the load path standing up, for learning, and the section says
- * so.
+ * At Vostochny, as at Baikonur, the Soyuz is assembled lying down, and the
+ * upper part (Fregat, the payload and the fairing) is put together on its
+ * own before it is joined to Block I: that order is src/structure/soyuz-site.ts
+ * (the ST31 launch kit; Starsem, Soyuz User's Manual, 2001). The order here
+ * follows the load path standing up, for learning, and the section says so.
  *
  * Also here: which kind of part each of the page's 2,069 parts is (for the
  * colour-by-kind view) and how its shape is known, by rules over the page's

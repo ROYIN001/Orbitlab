@@ -71,7 +71,9 @@ export function picture(store: StructureStore): Picture {
         // in hand: at the place chosen for it, as it would be fitted; while dragged and over no place, where the pointer has it
         const own = site ? freePlace(store, unit) : null;
         const lying = own ? store.stand(unit, adapter.slotPose(unit, own, held.turn)) : apartPose(adapter, unit), drag = store.drag?.unit === unit ? store.drag.move : null;
-        poses.set(unit, held.slot ? store.stand(unit, adapter.slotPose(unit, held.slot, held.turn))
+        // (over a place, it stands where that place's own unit would: a place of the other half is not nine metres from its mark)
+        const owner = held.slot ? store.spec.slots.find((s) => s.id === held.slot)?.reference ?? unit : unit;
+        poses.set(unit, held.slot ? store.stand(owner, adapter.slotPose(unit, held.slot, held.turn))
           : drag ? { ...lying, move: [lying.move[0] + drag[0], lying.move[1] + drag[1], lying.move[2] + drag[2]] } : lying);
         state.set(unit, FLAG.selected);
       } else if (outlined) {

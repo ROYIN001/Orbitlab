@@ -65,9 +65,11 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     const g = need().groups.find((x) => x.key === key);
     return g?.group ? g.group.label : tx('list.other');
   };
+  /** An engine's designation in a source's title as it is written outside the Russian interface (РД-107А: RD-107A); a document's own Russian title is left as it is. */
+  const designation = (title: string): string => (getLang() === 'ru' ? title : title.replace(/РД(-?\d+)(А)?/g, (_, n: string, a?: string) => `RD${n}${a ? 'A' : ''}`));
   const sourcesOf = (ids: readonly string[]): InfoSource[] => ids.flatMap((id) => {
     const s = need().content.sources.find((x) => x.id === id);
-    return s ? [{ title: s.title, url: s.url, note: s.supports, scope: s.scope }] : [];
+    return s ? [{ title: designation(s.title), url: s.url, note: s.supports, scope: s.scope }] : [];
   });
 
   const name = (id: string): string => {
@@ -124,7 +126,7 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     // how the model was made and how far it goes: folded away at the card's foot
     const from: InfoBlock[] = [{ kind: 'text', text: g.statusNote, tone: 'small' }, { kind: 'text', text: tx('soyuz.terms'), tone: 'small' }];
     if (depth === 'engineer') from.push({ kind: 'heading', text: tx('info.note') }, { kind: 'list', items: g.reviewWarnings }, { kind: 'text', text: tx('cert.legend'), tone: 'small' });
-    blocks.push(...provenance(tx('info.provenance'), from));
+    blocks.push(...provenance(tx('info.provenance'), '', from));
     return { title: tx('model.soyuz-st31'), subtitle: g.configuration, path: [], blocks };
   }
 
@@ -172,7 +174,7 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
       const from: InfoBlock[] = [{ kind: 'text', text: tx('cert.byPage'), tone: 'small' }];
       if (depth === 'engineer') from.push({ kind: 'heading', text: tx('info.note') }, { kind: 'text', text: comp.note, tone: 'small' },
         { kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourcesOf(comp.sourceIds) }, { kind: 'text', text: tx('cert.legend'), tone: 'small' });
-      blocks.push(...provenance(tx('info.provenance'), from));
+      blocks.push(...provenance(tx('info.provenance'), unit, from));
     }
     return { title: unitName(unit), subtitle: tx(`soyuz.sub.${card}`), path: [], blocks };
   }
@@ -221,7 +223,7 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     const comp = s.units[g.unit].component;
     const from: InfoBlock[] = [{ kind: 'text', text: tx('cert.byPilot'), tone: 'small' }];
     if (depth === 'engineer' && comp) from.push({ kind: 'heading', text: tx('info.note') }, { kind: 'text', text: comp.note, tone: 'small' }, { kind: 'heading', text: tx('info.sources') }, { kind: 'sources', rows: sourcesOf(comp.sourceIds) });
-    blocks.push(...provenance(tx('info.provenance'), from));
+    blocks.push(...provenance(tx('info.provenance'), key, from));
     return { title: g.group ? g.group.label : tx('list.other'), subtitle: tx('info.groupOf', { unit: unitName(g.unit) }), path: [g.unit], blocks };
   }
 
@@ -259,7 +261,7 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     if (notes.length) from.push({ kind: 'heading', text: tx('info.scope') }, ...notes.map((text): InfoBlock => ({ kind: 'text', text, tone: 'note' })));
     if (p.evidence?.length) from.push({ kind: 'heading', text: tx('info.evidence') }, { kind: 'list', items: p.evidence.map((e) => c.evidence[e]) });
     from.push({ kind: 'text', text: tx('cert.byPilot'), tone: 'small' });
-    blocks.push(...provenance(tx('info.provenance'), from));
+    blocks.push(...provenance(tx('info.provenance'), p.id, from));
     return { title: local(p.id), subtitle: tx('info.partOf', { group: groupLabel(key) }), path: [p.unit, key], blocks };
   }
 
