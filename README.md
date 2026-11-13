@@ -84,11 +84,16 @@ any academy, and no service or academy name or emblem is used without written pe
   Soyuz-2.1b/Fregat ST31 from the Anatomy model: pick in 3-D, by a name on the picture or in the
   list, the page's cutaway, take apart, fifteen propellant and gas circuits followed step by
   step, the flight sequence as an optional helper; assemble its eleven main assemblies to the
-  reference, by one press a part at a first look or by dragging and choosing a place deeper. An
+  reference, by one press a part at a first look or by dragging and choosing a place deeper —
+  upright by what stands on what, or in the order of the launch site (lying, the package and the
+  upper composite built apart, then final integration, roll-out and erection, from the ST31
+  launch kit). An
   educational 3U CubeSat-like satellite, EduSat-3U: explore and assemble it, then change its
   battery and camera and see mass and a sunlit/eclipse energy balance change; send it to Orbit
-  or (a hypothetical ride) to Launch. The section's code is fetched when it first opens;
-  `npm run structure` makes its model files from the Anatomy page, loaded on demand.
+  or (a hypothetical ride) to Launch. Sources and notes on how far the information goes are in a
+  fold at the foot of each card. The section's code is fetched when it first opens;
+  `npm run structure` makes its model files from the Anatomy page, loaded on demand. Ways in: the
+  top bar, a chapter on the landing page, and links from Build and Launch for the Soyuz-2.1b.
 - **A satellite builder** (Build, Phase 4): design a satellite from NAPA-2, a THEOS-2-class
   imager or a class of the catalogue, with its eclipse, power, Δv budget, attitude control, downlink
   and camera worked out as you type and held to published worked examples; test it on the satellite

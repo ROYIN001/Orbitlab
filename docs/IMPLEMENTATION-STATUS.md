@@ -124,20 +124,30 @@ are listed there as drafts awaiting the owner's review.
   (`tests/structure-boundary.test.ts`), and every model is one adapter over one shared description
   (a tree at three tiers, relations, order rules with their reasons, mounts, poses).
   Soyuz-2.1b/Fregat ST31 from the Anatomy page's own parts (2,069, with their ids; model files of
-  revision 2, every vertex marked with its part), in three layers fetched on demand: names and a
+  revision 3, every vertex marked with its part), in three layers fetched on demand: names and a
   scale on the picture, pick, cutaway, take apart, colour by kind or certainty, the page's fifteen
   circuits and ten-step flight sequence; assembled by the reference's relations (order, place, way
-  round) with a press at a first look and a drag or a chosen place deeper, undo and restart.
+  round) with a press at a first look and a drag or a chosen place deeper, undo and restart; and,
+  as a second `AssemblySpec` over the same assemblies (`src/structure/soyuz-site.ts`, owner
+  2026-11-13), in the order of the launch site at Vostochny — lying, the package and the upper
+  composite built apart, two steps that fit no part (final integration; roll-out and erection) —
+  from the ST31 launch kit and the Starsem user's manual, each order with its own kept state.
   EduSat-3U, a concept satellite for learning in the CubeSat Design Specification's frame and
   bounds (Rev. 14.1; AZUR 3G30 cells): assembled, then "my experiment" with two batteries and two
   cameras, mass from the parts list and a sunlit/eclipse balance built on `src/orbit/power.ts`'s
   SMAD figures; handed to Orbit and Launch (Soyuz-2.1b from Vostochny, hypothetical), with what
   each destination took read back and checked. Thai is the source text; English and Russian are
-  drafts, marked on screen. In draft pull request #217; not merged. The bundle ceilings were
-  raised with the owner's approval of 2026-11-12 (D-38, `budgets.json`).
+  drafts, marked on screen; the words of each were checked against that language's own sources
+  on 2026-11-13 (Thai agencies and the app's dictionary; the Arianespace/Starsem documents and
+  the CubeSat Design Specification; Russian by search results only). Sources and notes on how far
+  the information goes are folded at the foot of each card. Ways in from the landing page, Build
+  and Launch. In draft pull request #217; not merged. The bundle ceilings were raised with the
+  owner's approval of 2026-11-12 (D-38, `budgets.json`); the work of 2026-11-13 is over them and
+  waits for the owner's word (report §14.6).
 - **The Soyuz Anatomy models** (owner, 2026-10-28; `public/anatomy/`, `src/data/anatomy.ts`): the
   owner's own 3-D models of Soyuz-2.1a with the Soyuz MS or the Progress MS-26, and of Soyuz-2.1b
-  with Fregat under the ST fairing, kept byte for byte. Build's Watch level opens each whole in a
+  with Fregat under the ST fairing, kept byte for byte — but for one sentence of the 2.1b page's
+  interstage text, which named RD-0110 and which the owner had corrected to RD0124 on 2026-11-13. Build's Watch level opens each whole in a
   dialog (`src/ui/build/anatomy-dialog.ts`; its note stays up while the page builds its model).
   The flight draws those two catalogue rockets from the models' outside (`src/render/anatomy.ts`,
   meshes made by `scripts/anatomy-meshes.mjs` with each page's own code, 0.17–0.31 MB each as
