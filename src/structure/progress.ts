@@ -27,6 +27,14 @@ export interface StructureProgress {
   assembly: Record<StructureModelId, AssemblyState>;
   /** when the model was first assembled complete (ISO time), or null */
   completed: Record<StructureModelId, string | null>;
+  /**
+   * The rocket put together in the launch site's order (owner, 2026-11-13):
+   * its own state beside the reference order's, whether that order is the
+   * one on screen, and when it was first completed.
+   */
+  site: AssemblyState;
+  siteOn: boolean;
+  siteCompleted: string | null;
   /** "my experiment", or null before the learner makes one */
   experiment: EduDesign | null;
   /** which design the experiment shows: the learner's copy or the reference (the other activities always show the reference) */
@@ -40,6 +48,9 @@ export const freshProgress = (): StructureProgress => ({
   mode: { 'soyuz-st31': 'explore', edusat: 'explore' },
   assembly: { 'soyuz-st31': { placed: {}, history: [] }, edusat: { placed: {}, history: [] } },
   completed: { 'soyuz-st31': null, edusat: null },
+  site: { placed: {}, history: [] },
+  siteOn: false,
+  siteCompleted: null,
   experiment: null,
   showing: 'reference',
   guide: false,
@@ -79,8 +90,8 @@ function renamed(model: StructureModelId, placed: unknown): unknown {
   return Object.fromEntries(Object.entries(placed).map(([unit, at]) => [now(unit), own(at) && typeof at.slot === 'string' ? { ...at, slot: now(at.slot) } : at]));
 }
 
-/** Read a stored record (`raw` as stored, or null), restoring each assembly by `specs`' rules. */
-export function readProgress(raw: string | null, specs: Record<StructureModelId, AssemblySpec>): ReadProgress {
+/** Read a stored record (`raw` as stored, or null), restoring each assembly by `specs`' rules (and the launch site's order by `site`'s, where given). */
+export function readProgress(raw: string | null, specs: Record<StructureModelId, AssemblySpec>, site?: AssemblySpec): ReadProgress {
   const fresh = freshProgress();
   if (raw === null) return { progress: fresh, writable: true, note: null };
   let data: unknown;
@@ -96,6 +107,11 @@ export function readProgress(raw: string | null, specs: Record<StructureModelId,
     p.assembly[m] = restoreAssembly(specs[m], renamed(m, placed));
     const done = own(data.completed) ? data.completed[m] : undefined;
     p.completed[m] = typeof done === 'string' && !Number.isNaN(Date.parse(done)) ? done : null;
+  }
+  if (site) {
+    p.site = restoreAssembly(site, own(data.site) ? data.site.placed : undefined);
+    p.siteOn = data.siteOn === true;
+    p.siteCompleted = typeof data.siteCompleted === 'string' && !Number.isNaN(Date.parse(data.siteCompleted)) ? data.siteCompleted : null;
   }
   if (isEduDesign(data.experiment)) p.experiment = { battery: data.experiment.battery, payload: data.experiment.payload };
   p.showing = data.showing === 'mine' && p.experiment ? 'mine' : 'reference';
@@ -113,6 +129,9 @@ export function writeProgress(p: StructureProgress): string {
     mode: p.mode,
     assembly: Object.fromEntries(STRUCTURE_MODELS.map((m) => [m, { placed: placed(p.assembly[m]) }])),
     completed: p.completed,
+    site: { placed: placed(p.site) },
+    siteOn: p.siteOn,
+    siteCompleted: p.siteCompleted,
     experiment: p.experiment,
     showing: p.showing,
     guide: p.guide,

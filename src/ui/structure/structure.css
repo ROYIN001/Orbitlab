@@ -461,3 +461,12 @@
 .st-fold-quiet > summary { font-weight: 500; font-size: 12.5px; color: var(--muted); }
 .st-fold-quiet[open] > summary { color: var(--text); }
 .st-fold-quiet h3 { font-size: 12.5px; margin: 10px 0 2px; }
+
+/* the two orders of assembly (the reference's, the launch site's): a switch at the head of the assembly panel */
+.st-plan { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 8px 0 4px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.st-plan-tab { min-height: 36px; padding: 6px 8px; font-size: 13px; color: var(--muted); background: transparent; border: 0; border-radius: 0; }
+.st-plan-tab + .st-plan-tab { border-left: 1px solid var(--line); }
+.st-plan-tab[aria-pressed='true'] { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+.st-plan-desc { margin: 0 0 8px; }
+.st-site-note { display: block; grid-column: 1 / -1; padding-left: 4px; color: var(--text); opacity: 0.86; }
+.st-chip-step { border-style: dashed; }

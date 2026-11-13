@@ -77,7 +77,7 @@ export class StageOverlay {
   private marked(): string[] {
     const store = this.store, held = store.held[store.model];
     if (store.mode !== 'assemble' || !held || (store.level === 'watch' && !store.drag) || !this.view.ready()) return [];
-    return store.adapter.spec.slots.map((s) => s.id).filter((s) => occupant(store.assembly, s) === null);
+    return store.spec.slots.map((s) => s.id).filter((s) => occupant(store.assembly, s) === null);
   }
 
   // ─── frame by frame ───────────────────────────────────────────────────────
@@ -103,11 +103,11 @@ export class StageOverlay {
     if (places.length) {
       const tree = adapter.tree();
       for (const slot of places) {
-        const p = adapter.slotAnchor(slot);
+        const p = store.placePoint(slot);
         const at = p && this.view.toCanvas(p);
         if (!at) continue;
         // clear of the thing that belongs there: as far out as that thing reaches, where it is drawn now
-        const ref = adapter.spec.slots.find((x) => x.id === slot)?.reference;
+        const ref = store.spec.slots.find((x) => x.id === slot)?.reference;
         const node = ref ? nodeOfUnit(tree, ref) : null;
         const r = Math.min(90, (node && this.view.nodeAt(node.id)?.r) || 10);
         // on the picture a place's name without its bracketed note (the list of places and the name read out carry it whole)

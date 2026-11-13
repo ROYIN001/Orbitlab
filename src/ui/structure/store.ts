@@ -13,16 +13,16 @@
  */
 import {
   checkAssembly, dependents, install, missingFor, nextUnits, occupant, remove, restart, undo,
-  type AssemblyCheck, type AssemblyRefusal, type AssemblyState,
+  type AssemblyCheck, type AssemblyRefusal, type AssemblySpec, type AssemblyState,
 } from '../../structure/assembly';
 import type { EduDesign } from '../../structure/edusat-design';
 import type { HandoffPreview, HandoffReceipt, HandoffTarget, ReceiptCheck } from '../../structure/handoff';
-import { atDepth, nodeOfUnit, ruleFor, unitOf, unitsUnder, type ModelNode } from '../../structure/model';
+import { atDepth, nodeOfUnit, posed, ruleFor, unitOf, unitsUnder, type ModelNode, type OrderRule, type Pose } from '../../structure/model';
 import { readProgress, writeProgress, type StructureMode, type StructureProgress } from '../../structure/progress';
 import { STRUCTURE_MODELS, type Depth, type StructureModelId } from '../../structure/types';
 import type { ColorMode } from '../../render/structure-viewer';
 import type { StructureEnv } from './env';
-import type { GuideShow, ModelAdapter, ModelGuide } from './models/types';
+import type { GuideShow, ModelAdapter, ModelGuide, SitePlan } from './models/types';
 import { tx } from './text';
 
 /** How one model is being looked at (the visit's; "reset" puts it back). */
@@ -120,7 +120,7 @@ export class StructureStore {
   private readonly listeners = new Set<(change: Change) => void>();
 
   constructor(readonly env: StructureEnv, readonly adapters: Record<StructureModelId, ModelAdapter>) {
-    const read = readProgress(env.storage.read(), each((m) => adapters[m].spec));
+    const read = readProgress(env.storage.read(), each((m) => adapters[m].spec), adapters['soyuz-st31'].site?.spec);
     this.progress = read.progress;
     this.writable = read.writable;
     this.storeNote = read.note;
@@ -147,7 +147,42 @@ export class StructureStore {
     const v = this.view;
     return this.mode === 'experiment' ? { ...v, explode: 0, cutaway: false, colour: 'material', only: null, hidden: new Set(), isolate: null, layers: {} } : v;
   }
-  get assembly(): AssemblyState { return this.progress.assembly[this.model]; }
+  /**
+   * The order the model on screen is being put together in: the launch
+   * site's where the model has one and the learner chose it, else null (the
+   * reference's). Each has its own state, so going from one to the other
+   * loses nothing.
+   */
+  get site(): SitePlan | null { return this.progress.siteOn ? this.adapter.site ?? null : null; }
+  get spec(): AssemblySpec { return this.site?.spec ?? this.adapter.spec; }
+  get order(): readonly OrderRule[] { return this.site?.order ?? this.adapter.order; }
+  get assembly(): AssemblyState { return this.site ? this.progress.site : this.progress.assembly[this.model]; }
+  /** A step of the order on screen that fits no part (the docking, the rollout). */
+  isOperation(unit: string): boolean { return !!this.site?.operations.includes(unit); }
+  /** The loose parts wait as outlines where they belong: the learner's switch, and always under the site's order (its parts wait in their halls). */
+  get outlined(): boolean { return this.view.outline || !!this.site; }
+  /** Where a unit is drawn while assembling, given where the reference's order would have it. */
+  stand(unit: string, base: Pose): Pose { return this.site ? this.site.stand(base, unit, this.assembly.placed) : base; }
+  /** Where a place of the assembly is on the picture now (the model's own frame), or null where it has no mark. */
+  placePoint(slot: string): readonly [number, number, number] | null {
+    const anchor = this.adapter.slotAnchor(slot);
+    const ref = this.spec.slots.find((s) => s.id === slot)?.reference;
+    return anchor && ref && this.site ? posed(this.stand(ref, this.adapter.slotPose(ref, slot, 0)), anchor) : anchor;
+  }
+  /** Take the launch site's order, or the reference's. What is in hand is put down; each order keeps what was done in it. */
+  setSite(on: boolean): void {
+    if (!this.adapter.site || this.progress.siteOn === on) return;
+    this.progress.siteOn = on;
+    this.held[this.model] = null;
+    this.drag = null;
+    this.sel[this.model] = null;
+    this.message = null;
+    this.closeUp = false;
+    this.camera = 'home';
+    this.focusNext = `plan:${on ? 'site' : 'reference'}`;
+    this.save();
+    this.emit();
+  }
   get ready(): boolean { return this.adapter.ready(); }
 
   /** Whether a folded reading is open: as the learner left it, else as it starts. */
@@ -455,6 +490,7 @@ export class StructureStore {
   // ─── assembling ───────────────────────────────────────────────────────────
 
   unitName(unit: string): string {
+    if (this.isOperation(unit)) return this.site!.operationName(unit);
     const node = this.ready ? nodeOfUnit(this.adapter.tree(), unit) : null;
     return node ? this.adapter.name(node.id) : unit;
   }
@@ -465,7 +501,7 @@ export class StructureStore {
     if (!h) return '';
     const parts = [tx('asm.holding', { unit: this.unitName(h.unit) })];
     if (h.slot) { const place = this.adapter.place(h.slot); parts.push(`${place.mark} · ${place.name}`); }
-    const of = this.adapter.spec.units.find((u) => u.id === h.unit)?.orientations ?? 1;
+    const of = this.spec.units.find((u) => u.id === h.unit)?.orientations ?? 1;
     if (of > 1 && this.level !== 'watch') {
       const turned = h.turn % of;
       parts.push(turned ? tx(of === 2 ? 'asm.turned.flip' : 'asm.turned', { deg: (360 / of) * turned }) : tx('asm.turned.none'));
@@ -475,20 +511,20 @@ export class StructureStore {
 
   private names(units: readonly string[]): string { return units.map((u) => this.unitName(u)).join(', '); }
 
-  check(): AssemblyCheck { return checkAssembly(this.adapter.spec, this.assembly); }
+  check(): AssemblyCheck { return checkAssembly(this.spec, this.assembly); }
 
   /** The units that can go in now, and for one that cannot, what it waits for and why. */
-  next(): string[] { return nextUnits(this.adapter.spec, this.assembly); }
+  next(): string[] { return nextUnits(this.spec, this.assembly); }
 
   waitsFor(unit: string): { unit: string; why: string }[] {
-    return missingFor(this.adapter.spec, this.assembly, unit).map((m) => ({ unit: m, why: tx(ruleFor(this.adapter.order, unit, m)?.why ?? 'asm.why.order') }));
+    return missingFor(this.spec, this.assembly, unit).map((m) => ({ unit: m, why: tx(ruleFor(this.order, unit, m)?.why ?? 'asm.why.order') }));
   }
 
   refusalText(r: AssemblyRefusal): string {
     const a = this.adapter;
     switch (r.code) {
       case 'missing': {
-        const why = ruleFor(a.order, r.unit, r.missing[0]);
+        const why = ruleFor(this.order, r.unit, r.missing[0]);
         return tx('asm.no.missing', { unit: this.unitName(r.unit), missing: this.names(r.missing), why: why ? tx(why.why) : tx('asm.why.order') });
       }
       case 'wrongSlot':
@@ -504,8 +540,14 @@ export class StructureStore {
   }
 
   private setAssembly(next: AssemblyState): void {
-    this.progress.assembly[this.model] = next;
-    if (checkAssembly(this.adapter.spec, next).complete && !this.progress.completed[this.model]) this.progress.completed[this.model] = new Date().toISOString();
+    const complete = checkAssembly(this.spec, next).complete;
+    if (this.site) {
+      this.progress.site = next;
+      if (complete && !this.progress.siteCompleted) this.progress.siteCompleted = new Date().toISOString();
+    } else {
+      this.progress.assembly[this.model] = next;
+      if (complete && !this.progress.completed[this.model]) this.progress.completed[this.model] = new Date().toISOString();
+    }
     this.save();
   }
 
@@ -515,6 +557,8 @@ export class StructureStore {
    * fitted; deeper, as it lies, with its place still to choose.
    */
   hold(unit: string | null): void {
+    // a step that fits no part is not held: it is done
+    if (unit !== null && this.isOperation(unit)) { this.operate(unit); return; }
     const now = this.held[this.model];
     // after a close look at a place, the whole again: the other places are on the picture to choose from
     if (this.closeUp) { this.closeUp = false; this.camera = 'home'; }
@@ -523,7 +567,7 @@ export class StructureStore {
       if (now) this.focusNext ??= `tray:${now.unit}`;
     } else {
       const guided = this.level === 'watch';
-      const own = this.adapter.spec.units.find((u) => u.id === unit)?.slots.find((s) => occupant(this.assembly, s) === null) ?? null;
+      const own = this.spec.units.find((u) => u.id === unit)?.slots.find((s) => occupant(this.assembly, s) === null) ?? null;
       this.held[this.model] = { unit, slot: guided ? own : null, turn: guided ? 0 : this.adapter.trayTurn(unit) };
       this.sel[this.model] = null;
       // from the middle depth the next thing to do is to choose its place
@@ -580,7 +624,7 @@ export class StructureStore {
   /** Turn the unit in hand one step. */
   turn(): void {
     const h = this.held[this.model];
-    const of = h && this.adapter.spec.units.find((u) => u.id === h.unit)?.orientations;
+    const of = h && this.spec.units.find((u) => u.id === h.unit)?.orientations;
     if (!h || !of || of < 2) return;
     h.turn = (h.turn + 1) % of;
     this.emit();
@@ -591,13 +635,14 @@ export class StructureStore {
     const h = this.held[this.model];
     if (!h) return;
     if (!h.slot) { this.message = this.note('info', () => tx('asm.choosePlace')); this.emit(); return; }
-    const spec = this.adapter.spec;
+    const spec = this.spec;
     const of = spec.units.find((u) => u.id === h.unit)?.orientations ?? 1;
     const r = install(spec, this.assembly, h.unit, { slot: h.slot, orientation: h.turn % of });
     if (r.ok) {
       this.setAssembly(r.state);
       this.held[this.model] = null;
-      const made = this.adapter.relations.filter((x) => x.a === h.unit && Object.hasOwn(r.state.placed, x.b) && x.kind === 'mounts');
+      // (under the site's order a part is in its place before the halves are docked: no joint is said to be made by it)
+      const made = this.site ? [] : this.adapter.relations.filter((x) => x.a === h.unit && Object.hasOwn(r.state.placed, x.b) && x.kind === 'mounts');
       this.message = this.note('ok', () => (made.length
         ? tx('asm.installedAt', { unit: this.unitName(h.unit), joint: this.adapter.jointName(made[0]) })
         : tx('asm.installed', { unit: this.unitName(h.unit) })));
@@ -614,6 +659,22 @@ export class StructureStore {
     this.emit();
   }
 
+  /** Do a step of the site's order that fits no part: the docking of what is built, the rollout and erection. */
+  private operate(operation: string): void {
+    const r = install(this.spec, this.assembly, operation, { slot: operation, orientation: 0 });
+    if (r.ok) {
+      this.held[this.model] = null;
+      this.sel[this.model] = null;
+      this.setAssembly(r.state);
+      this.message = this.note('ok', () => tx('site.done', { step: this.unitName(operation) }));
+      const next = this.next()[0];
+      this.focusNext = this.check().complete ? 'asm-done' : this.level === 'watch' || !next ? 'asm-next' : `tray:${next}`;
+      // the picture changes as a whole (the two halves brought together, the vehicle raised): seen whole
+      this.camera = 'home';
+    } else this.message = this.note('no', () => this.refusalText(r.refusal));
+    this.emit();
+  }
+
   /** Pick a unit up and fit it at once, where it can only go one way (a first look's single press). */
   fit(unit: string): void {
     this.held[this.model] = null;
@@ -624,7 +685,7 @@ export class StructureStore {
 
   /** Take a fitted unit off. */
   remove(unit: string): void {
-    const r = remove(this.adapter.spec, this.assembly, unit);
+    const r = remove(this.spec, this.assembly, unit);
     if (r.ok) {
       this.setAssembly(r.state);
       this.message = this.note('ok', () => tx('asm.removed', { unit: this.unitName(unit) }));
@@ -635,7 +696,7 @@ export class StructureStore {
   }
 
   /** What rests on a fitted unit: why it cannot come off yet. */
-  restsOn(unit: string): string[] { return dependents(this.adapter.spec, this.assembly, unit); }
+  restsOn(unit: string): string[] { return dependents(this.spec, this.assembly, unit); }
 
   undo(): void {
     const r = undo(this.assembly);
@@ -665,7 +726,9 @@ export class StructureStore {
     const next = this.next();
     if (!next.length) return;
     const unit = next[0];
-    this.message = this.note('info', () => tx('asm.hint', { unit: this.unitName(unit), place: this.adapter.place(this.adapter.spec.units.find((u) => u.id === unit)!.slots[0]).name }));
+    this.message = this.isOperation(unit)
+      ? this.note('info', () => tx('site.hint', { step: this.unitName(unit) }))
+      : this.note('info', () => tx('asm.hint', { unit: this.unitName(unit), place: this.adapter.place(this.spec.units.find((u) => u.id === unit)!.slots[0]).name }));
     this.emit();
   }
 

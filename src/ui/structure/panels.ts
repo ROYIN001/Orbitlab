@@ -116,6 +116,8 @@ function sourceList(rows: readonly InfoSource[], withScope: boolean): HTMLElemen
   return ul;
 }
 
+export function infoBlock(store: StructureStore, b: InfoBlock): HTMLElement { return block(store, b); }
+
 function block(store: StructureStore, b: InfoBlock): HTMLElement {
   const adapter = store.adapter;
   switch (b.kind) {

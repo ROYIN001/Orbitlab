@@ -38,7 +38,7 @@ export const apartPose = (adapter: ModelAdapter, unit: string): Pose => adapter.
 
 /** The place a loose unit's outline is drawn at: its own, or the first of its places still free. */
 export function freePlace(store: StructureStore, unit: string): string | null {
-  const spec = store.adapter.spec.units.find((u) => u.id === unit);
+  const spec = store.spec.units.find((u) => u.id === unit);
   return spec?.slots.find((s) => occupant(store.assembly, s) === null) ?? null;
 }
 
@@ -60,19 +60,23 @@ export function picture(store: StructureStore): Picture {
     // at a first look the outlines of what can go in now are lit: a press on one fits it
     const next = store.level === 'watch' ? new Set(store.next()) : new Set<string>();
     const state = new Map<string, number>();
+    // under the launch site's order every unit stands as that order has it (lying, the upper part apart until docked),
+    // and a loose one waits as an outline where it belongs, in hand too until a place is chosen for it
+    const site = !!store.site, outlined = store.outlined;
     for (const unit of adapter.units) {
       if (Object.hasOwn(placed, unit)) {
-        poses.set(unit, adapter.slotPose(unit, placed[unit].slot, placed[unit].orientation));
+        poses.set(unit, store.stand(unit, adapter.slotPose(unit, placed[unit].slot, placed[unit].orientation)));
         state.set(unit, 0);
       } else if (held?.unit === unit) {
         // in hand: at the place chosen for it, as it would be fitted; while dragged and over no place, where the pointer has it
-        const lying = apartPose(adapter, unit), drag = store.drag?.unit === unit ? store.drag.move : null;
-        poses.set(unit, held.slot ? adapter.slotPose(unit, held.slot, held.turn)
+        const own = site ? freePlace(store, unit) : null;
+        const lying = own ? store.stand(unit, adapter.slotPose(unit, own, held.turn)) : apartPose(adapter, unit), drag = store.drag?.unit === unit ? store.drag.move : null;
+        poses.set(unit, held.slot ? store.stand(unit, adapter.slotPose(unit, held.slot, held.turn))
           : drag ? { ...lying, move: [lying.move[0] + drag[0], lying.move[1] + drag[1], lying.move[2] + drag[2]] } : lying);
         state.set(unit, FLAG.selected);
-      } else if (view.outline) {
+      } else if (outlined) {
         const place = freePlace(store, unit);
-        poses.set(unit, place ? adapter.slotPose(unit, place, 0) : { ...apartPose(adapter, unit), visible: false });
+        poses.set(unit, place ? store.stand(unit, adapter.slotPose(unit, place, 0)) : { ...apartPose(adapter, unit), visible: false });
         state.set(unit, FLAG.faint | (next.has(unit) && !held ? FLAG.target : 0));
       } else {
         poses.set(unit, apartPose(adapter, unit));

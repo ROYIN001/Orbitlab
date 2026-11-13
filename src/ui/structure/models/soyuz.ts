@@ -21,6 +21,7 @@ import {
 import { CERTAINTIES, PART_CATEGORIES, type Certainty, type Depth, type PartCategory } from '../../../structure/types';
 import type { StructureEnv } from '../env';
 import { getLang, hasText, num, tx } from '../text';
+import { SITE_OPERATIONS, SITE_SOURCES, SOYUZ_SITE_ASSEMBLY, SOYUZ_SITE_ORDER, siteStand } from '../../../structure/soyuz-site';
 import { provenance, type FlightState, type InfoBlock, type InfoDoc, type InfoSource, type ModelAdapter, type ModelGuide, type ModelSystem, type PictureSetup } from './types';
 
 /** Thrown when the content and a layer come from two versions of the page or two revisions of the files (said in the interface language). */
@@ -332,6 +333,18 @@ export function soyuzAdapter(env: StructureEnv): ModelAdapter {
     id: 'soyuz-st31',
     activities: ['explore', 'assemble'],
     spec: SOYUZ_ASSEMBLY,
+    // the same rocket in the order of the launch site (owner, 2026-11-13; src/structure/soyuz-site.ts)
+    site: {
+      spec: SOYUZ_SITE_ASSEMBLY,
+      order: SOYUZ_SITE_ORDER,
+      operations: SITE_OPERATIONS,
+      stand: siteStand,
+      operationName: (operation) => tx(`site.op.${operation}`),
+      note: (unit) => tx(`site.note.${SOYUZ_BOOSTERS.includes(unit as SoyuzUnit) ? 'booster' : SOYUZ_FAIRING.includes(unit as SoyuzUnit) ? 'fairing' : unit}`),
+      // lying, it is looked at from its side and a little above; erected, as the reference stands
+      view: (done) => (Object.hasOwn(done, 'site-erect') ? null : { az: 0.32, el: 0.3 }),
+      sources: () => SITE_SOURCES.map((x) => ({ title: x.title, url: x.url, note: tx(`site.src.${x.id}`), scope: tx(x.primary ? 'src.basis.document' : 'site.src.secondary') })),
+    },
     relations: SOYUZ_RELATIONS,
     order: SOYUZ_ORDER,
     mounts: SOYUZ_MOUNTS,

@@ -238,3 +238,16 @@ export interface Pose {
 }
 
 export const REST: Pose = Object.freeze({ move: Object.freeze([0, 0, 0]) as readonly [number, number, number], visible: true });
+
+/** Where a point of a unit is once the unit stands as `pose` says: turned about each pivot in turn, then moved (as the picture draws it). */
+export function posed(pose: Pose, point: readonly [number, number, number]): [number, number, number] {
+  let [x, y, z] = point;
+  for (const t of pose.turns ?? []) {
+    const c = Math.cos(t.angle), s = Math.sin(t.angle);
+    const dx = x - t.pivot[0], dy = y - t.pivot[1], dz = z - t.pivot[2];
+    if (t.axis === 'x') { y = t.pivot[1] + dy * c - dz * s; z = t.pivot[2] + dy * s + dz * c; }
+    else if (t.axis === 'y') { x = t.pivot[0] + dx * c + dz * s; z = t.pivot[2] - dx * s + dz * c; }
+    else { x = t.pivot[0] + dx * c - dy * s; y = t.pivot[1] + dx * s + dy * c; }
+  }
+  return [x + pose.move[0], y + pose.move[1], z + pose.move[2]];
+}

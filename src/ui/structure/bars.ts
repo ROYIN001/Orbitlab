@@ -135,7 +135,7 @@ function exploreTools(store: StructureStore, stage: Stage): HTMLElement {
 // ─── assembling: the part in hand ────────────────────────────────────────────
 
 function assemblyBar(store: StructureStore, stage: Stage): HTMLElement {
-  const adapter = store.adapter, spec = adapter.spec, state = store.assembly;
+  const adapter = store.adapter, spec = store.spec, state = store.assembly;
   const held = store.held[store.model];
   const check = store.check();
   const box = el('div', 'st-bar-assemble');
@@ -180,9 +180,9 @@ function assemblyBar(store: StructureStore, stage: Stage): HTMLElement {
         button(tx('asm.remove'), 'remove', () => store.remove(selected), { disabled: rests.length > 0 }));
       if (rests.length) line.append(el('span', 'st-small', tx('asm.no.holds', { unit: store.unitName(selected), dependents: rests.map((u) => store.unitName(u)).join(', ') })));
     } else if (!check.complete) {
-      line.append(el('span', 'st-hand-prompt', tx(store.level === 'watch' ? (store.view.outline ? 'asm.prompt.watch' : 'asm.prompt.pick') : 'asm.prompt.pick')));
+      line.append(el('span', 'st-hand-prompt', tx(store.level === 'watch' ? (store.outlined ? 'asm.prompt.watch' : 'asm.prompt.pick') : store.site ? 'site.prompt' : 'asm.prompt.pick')));
     } else {
-      line.append(el('strong', 'st-hand-name st-ok-text', tx('asm.complete')));
+      line.append(el('strong', 'st-hand-name st-ok-text', tx(store.site ? 'site.complete' : 'asm.complete')));
     }
   }
   // what is in hand and what was last said of it, together: on a narrow screen they stay under the picture as one
@@ -198,7 +198,8 @@ function assemblyBar(store: StructureStore, stage: Stage): HTMLElement {
   tools.setAttribute('aria-label', tx('view.label'));
   tools.append(
     button(tx('view.home'), 'home', () => stage.home(), { disabled: !stage.ready(), glyph: '⌂' }),
-    button(tx('asm.outline'), 'outline', () => { store.camera = 'home'; store.setView({ outline: !store.view.outline }); }, { pressed: store.view.outline, title: tx('asm.outline.title') }),
+    // (under the launch site's order the loose parts always wait as outlines where they belong)
+    ...(store.site ? [] : [button(tx('asm.outline'), 'outline', () => { store.camera = 'home'; store.setView({ outline: !store.view.outline }); }, { pressed: store.view.outline, title: tx('asm.outline.title') })]),
     button(tx('view.labels'), 'labels', () => store.setView({ labels: !store.view.labels }), { pressed: store.view.labels }),
     button(tx('asm.hintButton'), 'hint', () => store.hint(), { disabled: check.complete || !store.next().length }),
     button(tx('asm.undo'), 'undo', () => store.undo(), { disabled: !state.history.length, glyph: '↶' }),

@@ -136,10 +136,33 @@ export interface ExperimentUi {
   verdict(store: StructureStore): { key: string; text: string };
 }
 
+/**
+ * Another order to put a model together in than its reference's: the launch
+ * site's (owner, 2026-11-13). The same assemblies and places, other things
+ * to wait for, and steps that fit no part (`operations`: units of `spec`
+ * with no shape, done with a press).
+ */
+export interface SitePlan {
+  readonly spec: AssemblySpec;
+  readonly order: readonly OrderRule[];
+  readonly operations: readonly string[];
+  /** where an assembly is drawn under this order, given where the reference would have it and what is done so far */
+  stand(base: Pose, unit: string, done: Readonly<Record<string, unknown>>): Pose;
+  /** a step's name where it is no part's, and what is really done at a step (a sentence or two) */
+  operationName(operation: string): string;
+  note(unit: string): string;
+  /** where the order is taken from */
+  sources(): InfoSource[];
+  /** the whole seen from here while it is put together under this order (the model's own home view suits it standing) */
+  view(done: Readonly<Record<string, unknown>>): { az: number; el: number } | null;
+}
+
 export interface ModelAdapter {
   readonly id: StructureModelId;
   readonly activities: readonly StructureMode[];
   readonly spec: AssemblySpec;
+  /** the launch site's order, where the model has one */
+  readonly site?: SitePlan;
   readonly relations: readonly ModelRelation[];
   readonly order: readonly OrderRule[];
   readonly mounts: readonly MountPoint[];

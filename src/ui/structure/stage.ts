@@ -344,7 +344,8 @@ export class Stage {
     };
     if (ask === 'home') {
       // the whole of what is shown, where it stands now (an assembly laid out apart is wider than the model)
-      if (!fit(all, adapter.home.margin, { az: adapter.home.az, el: adapter.home.el })) viewer.home();
+      const from = store.mode === 'assemble' ? store.site?.view(store.assembly.placed) : null;
+      if (!fit(all, adapter.home.margin, from ?? { az: adapter.home.az, el: adapter.home.el })) viewer.home();
     } else if (ask === 'cutaway') {
       const cut = adapter.cutaway();
       if (cut) viewer.lookFrom(cut.azimuth);
@@ -413,7 +414,7 @@ export class Stage {
       const unit = store.unitAt(item);
       if (Object.hasOwn(store.assembly.placed, unit)) { store.select(nodeOfUnit(store.adapter.tree(), unit)?.id ?? null); return; }
       // a loose part: picked up; at a first look, where its outline is lit, fitted at once
-      if (store.level === 'watch' && store.view.outline) store.fit(unit); else store.hold(unit);
+      if (store.level === 'watch' && store.outlined) store.fit(unit); else store.hold(unit);
       return;
     }
     store.pick(item);
@@ -425,19 +426,19 @@ export class Stage {
   /** A drag that began on the model: a part still loose, lying apart, is taken in hand and dragged (else the drag turns the view). */
   private dragStart(item: number): boolean {
     const store = this.store;
-    if (!this.ready() || store.mode !== 'assemble' || store.view.outline) return false;
+    if (!this.ready() || store.mode !== 'assemble' || store.outlined) return false;
     return store.dragStart(store.unitAt(item));
   }
 
   /** The dragged part follows the pointer; over a free place (within `snap`) it settles there, drawn as it would be fitted. */
   private dragMove(clientX: number, clientY: number, move: readonly [number, number, number]): void {
-    const store = this.store, adapter = store.adapter;
+    const store = this.store;
     const r = this.canvas.getBoundingClientRect();
     const x = clientX - r.left, y = clientY - r.top;
     let near: string | null = null, best = this.snap();
-    for (const s of adapter.spec.slots) {
+    for (const s of store.spec.slots) {
       if (occupant(store.assembly, s.id) !== null) continue;
-      const anchor = adapter.slotAnchor(s.id);
+      const anchor = store.placePoint(s.id);
       const at = anchor && this.toCanvas(anchor);
       const d = at ? Math.hypot(at.x - x, at.y - y) : Infinity;
       if (d < best) { best = d; near = s.id; }
@@ -454,7 +455,7 @@ export class Stage {
 
   /** Where a place of the assembly is marked on the page now (client px). */
   wherePlace(slot: string): { x: number; y: number } | null {
-    const anchor = this.store.adapter.slotAnchor(slot);
+    const anchor = this.store.placePoint(slot);
     const at = anchor && this.toCanvas(anchor);
     const r = this.canvas.getBoundingClientRect();
     return at ? { x: at.x + r.left, y: at.y + r.top } : null;
@@ -535,7 +536,7 @@ export class Stage {
       requestAnimationFrame(more);
     }
     // (on the reference's outline at a first look a press fits a part and a drag turns the view: there is nothing to drag there)
-    this.hint.textContent = tx(store.mode !== 'assemble' ? 'hint.view' : store.view.outline ? (store.level === 'watch' ? 'hint.assemble.outline' : 'hint.assemble.pick') : 'hint.assemble');
+    this.hint.textContent = tx(store.mode !== 'assemble' ? 'hint.view' : store.outlined ? (store.level === 'watch' ? 'hint.assemble.outline' : 'hint.assemble.pick') : 'hint.assemble');
     this.overlay.render();
     this.sync();
   }
@@ -548,7 +549,7 @@ export class Stage {
     for (const unit of adapter.units) {
       if (assembling && !Object.hasOwn(store.assembly.placed, unit)) continue;
       // assembling, a unit is drawn at the place it went to (a side panel on another face at that face's)
-      const at = assembling ? adapter.spec.slots.find((s) => s.id === store.assembly.placed[unit].slot)?.reference ?? unit : unit;
+      const at = assembling ? store.spec.slots.find((s) => s.id === store.assembly.placed[unit].slot)?.reference ?? unit : unit;
       const side = adapter.sideBox(at), node = nodeOfUnit(tree, unit);
       if (side && node) boxes.push({ unit, label: adapter.name(node.id), ...side });
     }
