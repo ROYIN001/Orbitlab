@@ -1485,3 +1485,77 @@ No ceiling changed in this commit. Every other group is within its ceiling.
 | `npx vite build && node scripts/bundle-budget.mjs` | ok, 180,416 B / 180.5 kB |
 | `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs teaching-held`, with the new Structure check, on the build before fix 1 | 1 failure ("the lesson strip shows in the Structure section") |
 | `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs teaching-held structure-entries stage2-preflight`, after the fixes | 3 / 3 passed in 335.2 s (stage2-preflight 196.4 s with RU, structure-entries 67.9 s with the links' icons, teaching-held 62.1 s) |
+
+## Checks on the rebased head (2026-11-14)
+
+Run on the tree of `8187795a` (the head after the rebase review fixes; merge
+base `origin/main` `8a9a108`), in this container (4 shared cores).
+
+| Gate | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | 94 / 94 |
+| `npx vitest run` (full suite) | 361 / 361 files, 10,862 / 10,862 tests, 2797 s |
+| `npm run build && node scripts/bundle-budget.mjs` | bundle budget: ok; `index-*.css` 180.4 / 180.5 kB, `index-*.js` 2664.0 / 2665 kB, precache code 15186.3 / 15187 kB |
+| Browser, named: learner-profiles, mobile-smoke, pwa-offline, r2-flight-shell, r2-viewport-matrix, r2-viewport-scene-floor, r3-first-launch, stage2-preflight, structure-assembly, structure-entries, structure-failures, teaching-held, watch-controls, workspace-navigation | 14 / 14 |
+| Browser, `--smoke` | all 21 non-held smoke journeys passed on this tree at least once (below) |
+
+The first `--smoke` pass ran while the full vitest suite and another agent's
+browser runs shared the machine (load average 15–17). In it `launch-explore`
+timed out on a click the debrief card covered, `project-backups` timed out on
+`page.reload`, and `r2-viewport-matrix` was cut off by the run's 30-minute
+limit. All three passed when run again on this tree (98.4 s, 72.9 s, 868.9 s).
+`launch-explore` and `project-backups` also passed on `origin/main` `8a9a108`,
+and their files and the code they exercise are unchanged from main. The
+failures were not reproduced at lower load, so "load" is an inference from
+that evidence, not a demonstrated cause. Not run: the heavy and six-DOF fleet
+configs (no physics change).
+
+### The identical-output steps, checked again on main `8a9a108`
+
+S0 and the S3 offset were first checked on the old base `5588be1`; the tables
+in their sections above are that record and are labelled with it. Main has
+since gained the Structure section (#217) and the self-fitting top bar (#219),
+so both claims were checked again by a second agent told to refute them.
+
+**S0** (`8a9a108` against `2719093`): holds.
+
+- Built CSS: 2,338 → 2,326 rules, 12 removed, none added, the rest in the same
+  order; the removed rule text is 981 B, exactly the file's change (179,833 →
+  178,852 B).
+- No use of the removed `.section-*` classes in `src/`, `index.html`,
+  `public/` or the lesson packs at this head or on main, also none built from
+  strings; #217 added none. The three `public/anatomy/*.html` pages carry
+  their own `#soyuz-anatomy .section-eyebrow` rules and are shown in an
+  iframe that does not load the app's CSS.
+- Built `index.html`: 15,294 → 13,218 B (−2,076 B; leading whitespace 2,088 →
+  12 B, the six lines Vite injects keep theirs). The same 342 tags and 45 text
+  tokens; no text node with text changed; the page has no `<pre>`,
+  `<textarea>`, inline script or style, and no attribute value over two lines.
+- Other built files: identical once file-name hashes and the build stamp are
+  masked (`index-*.js` and `recheck.worker-*.js` carry the commit, and
+  `build-info.json` the commit and time; `sw.js` and `SHA256SUMS` follow the
+  new hashes).
+- In Chromium, Thai, six routes (`#/home`, Launch Explore and Engineer, Orbit
+  Explore, Build Explore, `#/structure/watch`) at 1440×900 and 390×844: 42
+  computed properties and the box of 25,110 elements outside the canvas. 18
+  differ, and the same 18 differ between two runs of main alone (the clock and
+  speed readouts), so none comes from S0.
+- Budget on main with S0: `index-*.css` 178.9 / 180 kB, precache code 15182.6
+  / 15187 kB (−3,057 B).
+
+**S3 offset** (`376c297` against `9b365e0`): holds.
+
+- Built CSS: 6,996 → 6,993 declarations, exactly the three named, −99 B
+  (180,392 → 180,293 B). Other built files: identical once hashes and the
+  build stamp are masked.
+- The cascade, read from the built CSS, where `style.css` comes before
+  `modes.css`: each removed declaration has a later rule with the same
+  selector and specificity, under the same media condition or a wider
+  `max-width` one, and none is `!important` or in a layer. At this head those
+  three later rules are still in `modes.css` and `style.css`.
+- Not done: the same comparison in a browser across widths and languages did
+  not finish on the loaded machine.
+
+Not checked in either: clicks and dialogs, languages other than Thai, the
+service worker at run time.
