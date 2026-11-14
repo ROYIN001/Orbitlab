@@ -626,6 +626,10 @@ Not reviewed by GPT-6 Astra.
 
 The owner's word to merge was given with the three answers above, and covers the pull request with them done. It is merged, in the repository's own way (one squashed commit), when every check of the pull request is green on its head; a merge to `main` publishes to the live site. Before this round the checks of the browser had not run on GitHub for the work of §14, because the build check failed on the budget first.
 
+### 15.6a After the merge: the landing page's Thai picture (a miss of mine)
+
+Merged as `1ddf187` on 2026-11-14 with the pull request's nine checks green on `32b9c56`. One thing was then found wrong in what was merged: the landing page's Thai picture of the section (`public/home/structure.th.webp`) had been taken again early in this round, while the fairing was still to be called ฝาครอบหัวจรวด, and was not taken once more when the review settled on แฟริ่ง. It showed the two halves labelled "ฝาครอบ ST", which the section no longer says. No test reads a picture's words. The picture is taken again from `main` in a follow-up pull request of that one file, which waits for the owner's word to merge like any other.
+
 ### 15.7 This round's commits
 
 | Commit | What |
