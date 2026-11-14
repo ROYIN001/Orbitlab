@@ -630,6 +630,28 @@ The owner's word to merge was given with the three answers above, and covers the
 
 Merged as `1ddf187` on 2026-11-14 with the pull request's nine checks green on `32b9c56`. One thing was then found wrong in what was merged: the landing page's Thai picture of the section (`public/home/structure.th.webp`) had been taken again early in this round, while the fairing was still to be called ฝาครอบหัวจรวด, and was not taken once more when the review settled on แฟริ่ง. It showed the two halves labelled "ฝาครอบ ST", which the section no longer says. No test reads a picture's words. The picture is taken again from `main` in a follow-up pull request of that one file, which waits for the owner's word to merge like any other.
 
+### 15.6b After the merge: the Pages gate failed, and nothing was published (the top bar's fit)
+
+**What happened.** A merge to `main` is published only after the Pages workflow's own gate, which runs every browser journey; a pull request's checks run the smoke set. The gate's run for #217 (43554288543) was cancelled when #218 was merged 24 minutes later; its run for #218 (43556333877, on `6f2e1d5`) failed in one journey, `r2-viewport-scene-floor`, in one of its 84 cells: *"explore zoom125-1366x768 RU guide closed: the play/pause (#btn-play) is not wholly on the first screen — clipped by main.workspace (y 551…585, box 95…578) (S3)"*. The publish job was skipped. **The live site stayed at `3e1b48a`, the version before this work**: nothing was broken for a visitor, and nothing of this section was published.
+
+**The cause, and it is this work's.** The section's tab is the top bar's fifth. Where the tabs would run under the tools on the bar's right, `fit` (`src/ui/section-nav.ts`) draws them tighter in steps and, last, gives them a row of their own, which makes the bar 95 px tall instead of 60. In Russian at 1093 px (a 1366×768 screen at 125 %) the tabs fitted one row at the second step with 6 px to spare on the development machine. On GitHub's runner the same letters are a little wider: the tabs did not fit, the bar took its second row, and on a window 614 px tall that row pushes the flight's playback controls 7 px past the first screen. The journey had passed here, in every run, by those 6 px; it is not in the smoke set, so the pull request's checks never ran it on GitHub's machine. The top bar's fit was in §11 as an open item the owner accepted for now; what I had not measured is how little room the last one-row step left.
+
+**The fix.** One more step before the second row, `tightest`: the current level's badge shows the level's glyph (the one its menu shows beside the name) instead of its name, the longest thing a tab holds — 104 px to 28 in Russian. At 1093 px in Russian the room at that step is about 80 px, not 6. The button's accessible name is unchanged (section · level).
+
+**Shown failing, then passing.** The journey's own S3 check, in Russian with the guide closed, on windows 614 px tall and a little narrower than 1093, where this machine's fonts do what GitHub's do at 1093:
+
+| Window | `main` (`6f2e1d5`) | With the fix |
+| --- | --- | --- |
+| 1093×614 | second step, bar 60 px: passes (by 6 px) | second step, bar 60 px: passes |
+| 1085×614 | a row of their own, bar 95 px: **fails**, "clipped by main.workspace (y 551…585, box 95…578)" — the gate's message to the pixel | `tightest`, bar 60 px: passes |
+| 1075, 1060, 1040 × 614 | the same failure | `tightest`, bar 60 px: passes |
+
+**Checks on the fix** (`107d472`, in the development container): `npx tsc --noEmit` clean; the budget check passes (`index-*.js` +41 B, `index-*.css` +143 B, both inside their ceilings); the layout journeys on the built app, 9/9: `r2-viewport-scene-floor`, `r2-viewport-matrix` (the same sizes on the Engineer flight), `r2-shell-smoke`, `workspace-navigation`, `mobile-smoke`, `stage2-preflight`, `notation-defaults`, `launch-explore`, `structure-entries`. What decides it is the Pages gate on GitHub's own machine, after the merge: the pull request's checks still do not run this journey.
+
+**The owner's word.** Told that this fix would need their word to merge, the owner answered "จัดการให้เรียบร้อย" (2026-11-14); it is merged on that, for this fix alone.
+
+**What I take from it.** A layout that is fitted by measuring has to be checked with room to spare, not at the one width a preset names: a pass by a few pixels on one machine is a failure on the next. And the Pages gate runs journeys the pull request's checks do not; I ran this one here before the merge, but its pass said nothing about GitHub's fonts.
+
 ### 15.7 This round's commits
 
 | Commit | What |
