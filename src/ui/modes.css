@@ -147,7 +147,7 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 
 body[data-mode='home'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan),
 body[data-mode='watch'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan, .lesson-strip),
-body[data-section='home'] .lesson-strip {
+body:is([data-section='home'], [data-section='structure']) .lesson-strip {
   display: none !important;
 }
 body[data-mode='home'] #app, body[data-mode='watch'] #app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }

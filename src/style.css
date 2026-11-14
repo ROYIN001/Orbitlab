@@ -493,7 +493,6 @@ body[data-lesson] .verdict-fixes { display: none; }
   border: 1px solid rgba(124, 226, 198, 0.32); border-radius: 999px; background: rgba(8, 22, 26, 0.6); color: #a6e9d5; font-size: 11px; line-height: 13px; text-decoration: none; }
 @media (max-width: 700px) { .mission-structure { display: none; } }
 .mission-structure[hidden] { display: none; }
-.mission-structure::before { content: '⊞' / ''; opacity: 0.8; }
 .mission-structure:hover, .mission-structure:focus-visible { color: #e2fff6; border-color: rgba(124, 226, 198, 0.7); }
 .mission-steps [data-state="off"] { color: #4d6273; text-decoration: line-through; }
 .sim-state {

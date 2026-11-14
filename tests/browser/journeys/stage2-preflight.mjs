@@ -94,9 +94,8 @@ export default async function preflight(t) {
       throw new Error(`${where}: ${step}: ${detail.slice(0, 3000)}`, { cause: error });
     }
   }
-  // On a laptop the section tabs come closest to the tools (redesign A, S1 review);
-  // Russian is left out until its older overlap is fixed.
-  for (const lang of ['en', 'th']) {
+  // On a laptop the section tabs come closest to the tools (redesign A, S1 review).
+  for (const lang of ['en', 'th', 'ru']) {
     const app = await t.open({ hash: '#/launch/explore', viewport: { width: 1100, height: 800 }, lang });
     for (const width of [1100, 1181]) await checkNarrowToolbar(t, app, `desktop/${lang}`, lang, width, 800);
     app.checkErrors();

@@ -57,7 +57,9 @@ choices and the after-screenshots (below, "The owner's answers").
   state chip is pinned to the last grid column. In short scenes the caption
   sentence is cut to one line (the full sentence stays in the live region).
   The lesson strip hides in Watch and on the landing page only
-  (`body[data-section='home']`), not in Orbit or Build. The `.hud-fold` fix is
+  (`body[data-section='home']`), not in Orbit or Build; after the rebase it
+  also hides in the Structure section, where no lesson is answered (below,
+  "Rebase review fixes"; not on the screenshots). The `.hud-fold` fix is
   not part of this package (a separate bug-fix PR later).
 - **Classroom theme**: light tokens (white cards, ink `#0f1b2d`, muted
   `#4d5b6e`, lines `#dde3ea`, accent `#1f3fae`) scoped to the lesson study
@@ -69,7 +71,10 @@ choices and the after-screenshots (below, "The owner's answers").
 - **Deferred** (not built): Explore question cards, the Engineer flight-wall
   preset, the event rail, progress tracks, a projector mode (`?present=1`),
   glyph icons in the scene and HUD outside the top bar, and new pictures for
-  `public/home` and the social preview.
+  `public/home` and the social preview. One exception after the rebase: the
+  Structure section's two links (#217), which main marked with the Structure
+  tab's `⊞`, draw the tab's `#i-structure` now that the tab does (below,
+  "Rebase review fixes").
 
 ## Question for the owner (closed 2026-11-14)
 
@@ -108,10 +113,13 @@ to three questions put to them in this package's chat:
    sensibly'" above and each step's own list) and the after-screenshots —
    answer **"3. ถือว่าสวยใช้ได้"**: acceptable, it looks good. The choices are
    accepted as the owner's answer of 2026-11-14, as they stand on this branch.
-   Two things came with the rebase after the screenshots the owner saw: the
+   Four things came with the rebase after the screenshots the owner saw: the
    Structure tab's icon `#i-structure` and the current level's icon at the
-   tightest fit of the top bar (below, "Rebase onto main"). They follow the
-   same choices; the owner has not seen them on a screenshot.
+   tightest fit of the top bar (below, "Rebase onto main"), and, from the
+   rebase review fixes, the lesson strip also hidden in the Structure section
+   and the section's two links drawing `#i-structure` in place of `⊞` (below,
+   "Rebase review fixes"). They follow the same choices; the owner has not
+   seen them on a screenshot.
 
 The authorization of 2026-11-05 ("เริ่มทำได้เลยครับ โหมดการเรียนที่คุณเสนอ
 ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ ส่วนรูปแบบอื่นๆ
@@ -619,7 +627,11 @@ first, only the basic information beside it.
   beat label, the sentence and the real-flight line side by side.
 - The lesson strip hides in Watch and on the landing page only
   (`body[data-section='home']`), not in the Orbit or Build sections, where
-  case and design lessons are answered in it.
+  case and design lessons are answered in it. After the rebase (a choice of
+  the rebase review fixes, not on the screenshots): it hides in Watch, on the
+  landing page and in Structure
+  (`body:is([data-section='home'], [data-section='structure'])`), the section
+  #217 added, where no lesson is answered.
 - Not in this step: the `.hud-fold` fix (the fold button in a short Watch
   scene); it is a bug fix and goes in a separate bug-fix PR with its own
   regression check.
@@ -1293,7 +1305,7 @@ checked by hand. Each resolution keeps both sides' intent.
 | `src/ui/modes.css` (merged) | #219: `#topbar[data-nav-fit='tightest'] .nav-badge::before { content: attr(data-glyph); font-size: 11px }` | S1's icons, its 1720 / 1300 / 1240 / 1040 px give-way widths and the chevron's margin | That one rule becomes `.nav-badge-icon { display: none }` and, at "tightest", `display: inline; font-size: 12px` (the badge's own text size; the icon is 1 em). Main's other `data-nav-fit` rules stay as they are: they hide `.nav-chev` and `.nav-tab-btn .mode-glyph`, which the icons keep as their classes. Both sets of rules apply: the media queries first, `fit()` where the tabs would still run under the tools. |
 | `index.html` (merged) | #217: `.mission-under` with `#mission-structure`, and `#structure-screen` | S1's sprite symbols and the four tool buttons' icons | Both kept. A new sprite symbol `#i-structure` (three stacked blocks, a line icon drawn in Lucide's style) between `#i-build` and `#i-campaign`, for the Structure tab and its menu: S1's test "draws only icons the sprite has" names every `NAV_SECTIONS` id. |
 | `NOTICE.md` (merged) | #217: the Structure section's Soyuz-2.1b/Fregat files | S1: "Interface icons" and the fonts paragraph | Both kept; the "Interface icons" paragraph names `#i-structure` among the icons drawn after Lucide (not its paths unchanged). |
-| `src/style.css` (merged) | #217: the `.mission-structure` link, with its `⊞` mark, also hidden in a short scene | S1/S3: fonts, `.icon`, the Thai letter-spacing rule, the dialog prose token, the three overridden declarations removed | Both kept. The link's `⊞` stays: glyphs in the scene and HUD outside the top bar are deferred in this package (choices, "Deferred"). |
+| `src/style.css` (merged) | #217: the `.mission-structure` link, with its `⊞` mark, also hidden in a short scene | S1/S3: fonts, `.icon`, the Thai letter-spacing rule, the dialog prose token, the three overridden declarations removed | Both kept. The link's `⊞` stayed: glyphs in the scene and HUD outside the top bar are deferred in this package (choices, "Deferred"). Changed by the rebase review fixes (below): this link and Build's `.bs-structure-open` (`src/ui/build/build.css`, not in this table before) draw `#i-structure`. |
 | `src/ui/watch.ts` (merged) | #213 `speedPicked`; #214 the touchdown time on the crew-safe card | S2: the clock block in the scene's top band, one lower-third caption | Both kept; S2 moves elements, main's two changes are logic inside them (34 changed lines against main, all S2's). |
 | `src/i18n/{en,ru,th}.ts` (merged) | #217's section keys; #222's Thai words (318 lines of `th.ts`) | S3: `assess.pathLegend` stops naming a colour | Main's text everywhere; #222 did not change `assess.pathLegend`, so S3's edit is applied over main's text: the only lines that differ from main are that key in each language (TH "ขีดฆ่า: ข้ามได้ · ★: เริ่มที่นี่ · สีแดง: ควรทบทวน · จาง: เร็ว ๆ นี้"). Keys: same set in all three. |
 | `README.md`, `docs/USER-GUIDE.md` (merged) | #213's warp text; #217's Structure section text | S1's wording for the removed glyphs and the gold button | Both kept; main's new text names no top-bar glyph. |
@@ -1344,12 +1356,35 @@ left (178,944 B, S3 review fixes). On main, #217 raised the ceiling to 180 kB
 at 179,690 B (2026-11-13) and #219 added 143 B, which leaves 167 B: the
 package's +640 B over main no longer fits.
 
+Each step of the rebased stack, built on its own (`npx vite build && node
+scripts/bundle-budget.mjs`; the review-fix column folds this section's
+"Rebase review fixes" into the step they belong to, S1's links −87 B and S2's
+strip rule +30 B):
+
+| Step (commit) | `index-*.css` | with the rebase review fixes | precache code | against 180 kB |
+|---|---|---|---|---|
+| main `8a9a108` | 179,833 B | — | 15185.7 kB | ok |
+| S0 `2719093` | 178,852 B | — | 15182.6 kB | ok |
+| S1 `0326218` | 179,187 B | 179,100 B | 15184.9 kB | ok |
+| S2 `376c297` | **180,392 B** | 180,335 B | 15186.1 kB | **FAIL, +0.4** |
+| S3 offset `9b365e0` | 180,293 B | 180,236 B | 15186.0 kB | FAIL, +0.3 |
+| S3 `596a53b` | 180,473 B | 180,416 B | 15186.3 kB | FAIL, +0.5 |
+
+S2 is the first step over 180 kB, so **the raise is in S2's PR**, not S3's: a
+PR that crosses a ceiling carries D-38's four parts itself (SESSION-PROTOCOL
+§2). On this branch the `budgets.json` change sits after S3 (the budget commit
+after the rebase); the branch `claude/u-redesign-a-s2`, when it is cut,
+carries it, and the S3 offset and S3 fit the same ceiling. One raise, used
+once, as "1.ก" approved. The stack is not collapsed into one PR: that would
+mix identical-output and look-change commits (SESSION-PROTOCOL §5).
+
 **Budget line: raise, with D-38's four parts** (`budgets.json`, `_notes.set`
 beside `index-*.css`):
 
-1. **Measured size:** 180,473 B on this branch after the rebase, 179,833 B on
-   main `8a9a108` (+640 B). Ceiling 180 → 180.5 kB, the measured size rounded
-   up to the next 0.1 kB.
+1. **Measured size:** S2, 180,392 B, +559 B over main `8a9a108`'s 179,833 B;
+   the stack's largest step, S3, 180,473 B (+640 B). Ceiling 180 → 180.5 kB,
+   the largest measured size rounded up to the next 0.1 kB; after the rebase
+   review fixes the head is 180,416 B.
 2. **What grew it:** Redesign A, S1–S3 — the top bar's line icons (`.icon`,
    the current level's icon at the tightest fit), the mint Lessons button,
    Watch's clock block and lower-third caption, and the classroom tokens on the
@@ -1359,8 +1394,15 @@ beside `index-*.css`):
    [S09 EQ-13](../plan/S09-eq-identical-output.md), PR type (3)
    identical-output, wave K3, open; `build.css` and `satellite.css` are in
    this chunk). It is the plan's only open identical-output CSS item: CO-4's
-   M-LAUNCH-026 is merged (#173). Its size is the plan's assumption until it
-   is measured.
+   M-LAUNCH-026 is merged (#173). The plan gives it no size (its check is
+   only that CSS bytes do not increase). The pair it names,
+   `.sd-axes path`/`.sd-axes circle`, is already one rule in the built
+   `index-*.css` (0 B). Rule blocks of this chunk with a class of Build's
+   stylesheets and the same declarations in the same `@media` come to about
+   1.2 kB (the classes of `build.css` and `satellite.css`) to 4.2 kB (the
+   classes of all five Build stylesheets) before cascade checks (a scratch
+   script, not committed). EQ-13 measures what it removes against these
+   +640 B.
 4. **Owner's approval:** in chat, **2026-11-14**, "1.ก 2.จัดการได้ 3.
    ถือว่าสวยใช้ได้" — "1.ก" answering "งบขนาดไฟล์เกือบเต็มแล้ว … (ก)
    อนุมัติเพิ่มเพดานตามกฎ D-38 พร้อมระบุงานที่จะชดเชย (ข) ให้ผมหา CSS
@@ -1370,3 +1412,76 @@ beside `index-*.css`):
 
 Precache code is not raised (15186.3 / 15187 kB: S0's built-page indentation
 offset keeps it inside). Every other ceiling is unchanged.
+
+### Rebase review fixes (2026-11-14)
+
+A second agent reviewed the rebase: seven findings (one blocker, six minor).
+Each was re-checked here before it was applied.
+
+1. **The lesson strip in Structure** (minor; confirmed: with case 6.1 open,
+   `#/structure/watch` showed the strip, `display: grid`). `src/ui/modes.css`
+   hides it with `body:is([data-section='home'], [data-section='structure']) .lesson-strip`:
+   in Watch, on the landing page and in Structure, where no lesson is answered
+   (no lesson in `src/lessons` names the section). This is a choice made under
+   "mix sensibly" after the rebase, beside `#i-structure`; the owner has not
+   seen it on a screenshot. +30 B of CSS. The check is in
+   `tests/browser/journeys/teaching-held.mjs`.
+2. **The two links into Structure** (minor; confirmed). #217 marked them with
+   `⊞` to match the tab's glyph. After the rebase the tab draws
+   `#i-structure`, so the links did not match it any more. Build's
+   `.bs-structure-open` (`src/ui/build/build.css`) was also missing from the
+   conflict table. Both links now draw the sprite icon: `src/main.ts` builds
+   `#mission-structure` as `icon('structure')` followed by its text, and
+   `src/ui/build/build-screen.ts` puts the icon first in the Build link. The two
+   `::before` glyphs are gone, and Build's icon keeps the old 6 px gap.
+   −87 B of CSS. Not on the screenshots the owner accepted. This is the one
+   exception to the deferral of icons in the scene (choices, "Deferred").
+3. **Where the raise sits in the stack** (blocker; confirmed: each step was
+   built on its own, giving the table above). S2 is the first step over
+   180 kB, so the raise is recorded as S2's. The `budgets.json` note gives
+   S2's 180,392 B (+559 B), says the largest step (S3, 180,473 B) fits the
+   same ceiling, and says this is one raise used once. The S2 fragment carries
+   the raise. The S3 and S3-offset fragments say "inside the ceiling raised in
+   S2's PR". The ceiling stays 180.5 kB. This branch's history is not
+   rewritten here: the fixes are one commit on top, and other work is based on
+   this head. So `budgets.json` still changes in the commit after S3. When
+   `claude/u-redesign-a-s2` is cut, it must carry this `budgets.json`, or its
+   PR fails `node scripts/bundle-budget.mjs` in CI.
+4. **Fragment sizes from the old base** (minor; confirmed). The S0, S1, S2
+   and S3-offset rows give the sizes on main `8a9a108` against 180 kB and
+   15187 kB. The earlier figures stay, marked "before the rebase".
+5. **The offset's size** (minor; confirmed: the plan's row M-BUILD-027 and
+   `plan/data/assignment.tsv` give no size, and the built CSS has
+   `.sd-axes path,.sd-axes circle{…}` as one rule). Part 3 above is reworded.
+   The reviewer's "about 3.0 kB" was not reproduced: a scratch count gives
+   1.2 to 4.2 kB, depending on which classes count as Build's. So the report
+   gives that range.
+6. **"Accepted" in S1's fragment** (minor; confirmed). The S1 row and its
+   CHANGELOG line say that the level icon at the tightest fit, `#i-structure`
+   and the links' icons came with the rebase and are not on the screenshots
+   the owner accepted. The S2 CHANGELOG line says the same of Structure.
+7. **Russian in the laptop toolbar check** (minor; confirmed: the comment was
+   stale after the rebase measurements above). `stage2-preflight` checks EN,
+   TH and RU at 1100 and 1181 px. RU passed on the first run.
+
+#### Measured (this container, `npx vite build`, then `node scripts/bundle-budget.mjs`)
+
+| Group | Before the fixes | After | Ceiling |
+|---|---|---|---|
+| `index-*.css` | 180,473 B | **180,416 B** (−57 B: −87 B links, +30 B strip) | 180.5 kB, ok |
+| `index-*.js` | 2663.9 kB | 2664.0 kB | 2665 kB, ok |
+| precache code | 15186.3 kB | 15186.3 kB | 15187 kB, ok |
+
+No ceiling changed in this commit. Every other group is within its ceiling.
+
+#### Tests run
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `npx vitest run tests/web-fonts.test.ts tests/section-nav-model.test.ts tests/i18n.test.ts tests/architecture.test.ts tests/watch-logic.test.ts tests/lessons-ui-core.test.ts tests/bundle-budget.test.ts` | 7 files, 86 / 86 passed |
+| `npx vitest run tests/structure-*.test.ts tests/watch-picked-speed.test.ts tests/anatomy-terms.test.ts tests/app-mode.test.ts` | 19 files, 248 / 248 passed |
+| `node --test tests/verification/bundle-budget.test.mjs tests/verification/bundle-budget-report.test.mjs tests/verification/html-comments.test.mjs` | 21 / 21 passed |
+| `npx vite build && node scripts/bundle-budget.mjs` | ok, 180,416 B / 180.5 kB |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs teaching-held`, with the new Structure check, on the build before fix 1 | 1 failure ("the lesson strip shows in the Structure section") |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs teaching-held structure-entries stage2-preflight`, after the fixes | 3 / 3 passed in 335.2 s (stage2-preflight 196.4 s with RU, structure-entries 67.9 s with the links' icons, teaching-held 62.1 s) |
