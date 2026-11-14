@@ -93,8 +93,8 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
    (their names stay as the tooltip and the accessible name); a Russian label
    wrapped onto two lines. The order in which things give way to the switch,
    measured again in Thai and English with the IBM Plex fonts and the line
-   icons (redesign A, S1; Russian still overlaps at some widths, left for a
-   separate bug fix), is: the tools' labels and the language label (1720 px); the product name
+   icons (redesign A, S1; where the tabs would still run under the tools, in
+   Russian above all, fit() below takes them tighter), is: the tools' labels and the language label (1720 px); the product name
    (1300 px); the sections' icons (1240 px); the tabs' padding (1040 px); and
    on a phone the switch becomes one button on a row of its own under the
    brand and the tools. */

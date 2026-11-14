@@ -7,7 +7,7 @@ owner on screenshots.
 | Field | Value |
 |---|---|
 | Package | Redesign A (direction A "Mission Control"), steps S0–S3 |
-| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0). S2: `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1). S3 offset: `claude/u-redesign-a-s3-offset` (`f30bebd`), stacked on S2 (waiting: merges after S2). S3: `claude/u-redesign-a-s3` (`0f2250a` and its review fixes), stacked on the S3 offset (waiting: merges after it). In this session the S3 commits sit after `fa6927a` on `claude/friendly-keller-78iuc9` |
+| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`; on 2026-11-14 the whole package was rebased onto `origin/main` `8a9a108`, below, "Rebase onto main", and S0 became `d973ba2` and `2719093`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0). S2: `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1). S3 offset: `claude/u-redesign-a-s3-offset` (`f30bebd`), stacked on S2 (waiting: merges after S2). S3: `claude/u-redesign-a-s3` (`0f2250a` and its review fixes), stacked on the S3 offset (waiting: merges after it). In this session the S3 commits sit after `fa6927a` on `claude/friendly-keller-78iuc9` |
 | Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md). S2: [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md). S3 offset: [`changes/claude-u-redesign-a-s3-offset.md`](../../../changes/claude-u-redesign-a-s3-offset.md). S3: [`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md) |
 | Status | In PR; not merged; not published |
 
@@ -1227,3 +1227,61 @@ Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำไ�
 ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ".
 
 Docs touched: N/A (no user doc names the lessons page's colours).
+
+## Rebase onto main `8a9a108` (2026-11-14)
+
+The package's nine commits (`f917f14..45a5d87`: S0, S1, S2, the S3 offset, S3
+and their review fixes) were replayed onto `origin/main` `8a9a108`, 16 commits
+ahead of the old base `5588be1` (#208–#222). Main's commits read first, for
+what each meant: #213 (a warp set from outside the viewer is a speed picked in
+Watch, `WatchView.speedPicked`), #214 (the crew-safe card times the escape to
+its touchdown), #217 (the fourth section, Structure & Assembly, with its tab,
+its link under the mission steps and its `#structure-screen`), #219 (the top
+bar's `fit()`: the current level shown by its glyph, step "tightest", before
+the tabs take a second row), #222 (the Thai dictionary in the words of Thai
+sources) and #217's `budgets.json` rounds (`index-*.css` 179→180 kB, precache
+code 14679→15187 kB and the section's own groups).
+
+### Conflicts and their resolutions
+
+One textual conflict, in the S1 commit; the rest merged by themselves and were
+checked by hand. Each resolution keeps both sides' intent.
+
+| File | Main | Redesign | Resolution |
+|---|---|---|---|
+| `src/ui/section-nav-model.ts` (textual, S1) | #217 adds `{ id: 'structure', glyph: '⊞', … }` | S1 drops the `glyph` field: every section and level is drawn by its sprite icon `#i-<id>` | Main's Structure entry kept in its place (after Build, before Campaign), without `glyph`. |
+| `src/ui/section-nav.ts` (merged; did not typecheck) | #219 sets `badge.dataset.glyph = LEVEL_GLYPHS[mode]` for the "tightest" step | S1 removes `LEVEL_GLYPHS` and draws the level with its line icon | The current tab's badge starts with the level's icon, `icon(mode, 'nav-badge-icon')`: the same position (before the name, where main's `::before` drew the glyph) and the same behaviour (shown only at "tightest", where the name's size is 0). The badge's text and the button's accessible name are unchanged. The class comments say "icon" for "glyph". |
+| `src/ui/modes.css` (merged) | #219: `#topbar[data-nav-fit='tightest'] .nav-badge::before { content: attr(data-glyph); font-size: 11px }` | S1's icons, its 1720 / 1300 / 1240 / 1040 px give-way widths and the chevron's margin | That one rule becomes `.nav-badge-icon { display: none }` and, at "tightest", `display: inline; font-size: 12px` (the badge's own text size; the icon is 1 em). Main's other `data-nav-fit` rules stay as they are: they hide `.nav-chev` and `.nav-tab-btn .mode-glyph`, which the icons keep as their classes. Both sets of rules apply: the media queries first, `fit()` where the tabs would still run under the tools. |
+| `index.html` (merged) | #217: `.mission-under` with `#mission-structure`, and `#structure-screen` | S1's sprite symbols and the four tool buttons' icons | Both kept. A new sprite symbol `#i-structure` (three stacked blocks, a line icon drawn in Lucide's style) between `#i-build` and `#i-campaign`, for the Structure tab and its menu: S1's test "draws only icons the sprite has" names every `NAV_SECTIONS` id. |
+| `NOTICE.md` (merged) | #217: the Structure section's Soyuz-2.1b/Fregat files | S1: "Interface icons" and the fonts paragraph | Both kept; the "Interface icons" paragraph names `#i-structure` among the icons drawn after Lucide (not its paths unchanged). |
+| `src/style.css` (merged) | #217: the `.mission-structure` link, with its `⊞` mark, also hidden in a short scene | S1/S3: fonts, `.icon`, the Thai letter-spacing rule, the dialog prose token, the three overridden declarations removed | Both kept. The link's `⊞` stays: glyphs in the scene and HUD outside the top bar are deferred in this package (choices, "Deferred"). |
+| `src/ui/watch.ts` (merged) | #213 `speedPicked`; #214 the touchdown time on the crew-safe card | S2: the clock block in the scene's top band, one lower-third caption | Both kept; S2 moves elements, main's two changes are logic inside them (34 changed lines against main, all S2's). |
+| `src/i18n/{en,ru,th}.ts` (merged) | #217's section keys; #222's Thai words (318 lines of `th.ts`) | S3: `assess.pathLegend` stops naming a colour | Main's text everywhere; #222 did not change `assess.pathLegend`, so S3's edit is applied over main's text: the only lines that differ from main are that key in each language (TH "ขีดฆ่า: ข้ามได้ · ★: เริ่มที่นี่ · สีแดง: ควรทบทวน · จาง: เร็ว ๆ นี้"). Keys: same set in all three. |
+| `README.md`, `docs/USER-GUIDE.md` (merged) | #213's warp text; #217's Structure section text | S1's wording for the removed glyphs and the gold button | Both kept; main's new text names no top-bar glyph. |
+
+S1's report text above says 14 symbols; after the rebase the sprite has 15
+(`#i-structure`).
+
+### Checks after the rebase
+
+| Command | Result |
+|---|---|
+| `npm run -s typecheck` | passed |
+| `npx vitest run tests/web-fonts.test.ts tests/section-nav-model.test.ts tests/i18n.test.ts tests/architecture.test.ts tests/watch-logic.test.ts tests/lessons-ui-core.test.ts tests/bundle-budget.test.ts` | 7 files, 86 / 86 passed |
+| main's added files for the Structure section and Watch, with app-mode: `npx vitest run tests/structure-*.test.ts tests/watch-picked-speed.test.ts tests/anatomy-terms.test.ts tests/app-mode.test.ts` | 19 files, 248 / 248 passed |
+| `node --test tests/verification/bundle-budget.test.mjs tests/verification/bundle-budget-report.test.mjs tests/verification/html-comments.test.mjs` | 21 / 21 passed |
+| `npx vite build && node scripts/bundle-budget.mjs` | FAILED before the raise below: `index-*.css` 180.5 / 180 kB (+0.5); every other group within its ceiling |
+| `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers node tests/browser/run.mjs r2-viewport-scene-floor stage2-preflight structure-entries watch-controls` | 4 / 4 passed in 1419.0 s (r2-viewport-scene-floor 774.2 s, its 84 cells with the zoom125-1366x768 RU cell #219 fixed; stage2-preflight 252.4 s, the S1 toolbar checks; structure-entries 99.2 s, the new tab; watch-controls 245.4 s, S2's checks over #213's speed) |
+| the `modes.css` comment below, rebuilt | `index-*.css` byte-identical (the comment is not shipped) |
+
+The top bar's fit with the line icons and the fourth tab, measured in
+Chromium on this build (offline fonts; a scratch Playwright script, not
+committed; `#/launch/explore`, window height 614 px, widths 1720, 1366, 1300,
+1240, 1180, 1093, 1040, 960 and 870 px in RU, TH and EN): the tabs never run
+under the tools (at least 16 px between them on the same row). Russian takes
+"tight" from 1366 px, "tighter" at 1180 px, "tightest" at 1093 and 1040 px (the
+badge 104 → 30 px, its icon 12 × 12 px; the bar stays 60 px tall, 45 px of room
+at 1093 px, the window #219 fixed) and a row of its own from 960 px; Thai and
+English take "tightest" only at 960 px. With this, the `modes.css` comment that
+said Russian still overlapped at some widths is corrected: `fit()` takes the
+tabs tighter wherever they would still run under the tools.
