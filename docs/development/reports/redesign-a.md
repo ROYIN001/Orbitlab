@@ -24,8 +24,9 @@ simulation first, with only basic information beside it.)
 ## Choices taken under "mix sensibly"
 
 These are choices made in this package to fill in "จัดแบบผสมให้เหมาะสม". The
-owner did not decide them, and can reverse any of them at the screenshot
-review.
+owner did not decide them, and could reverse any of them at the screenshot
+review. On 2026-11-14 the owner answered "3. ถือว่าสวยใช้ได้" to these
+choices and the after-screenshots (below, "The owner's answers").
 
 - **S0 first.** An identical-output offset goes first (the dead `.section-*`
   CSS and the line indentation of the built `index.html`); `budgets.json` is
@@ -70,14 +71,52 @@ review.
   glyph icons in the scene and HUD outside the top bar, and new pictures for
   `public/home` and the social preview.
 
-## Open question for the owner
+## Question for the owner (closed 2026-11-14)
 
-**Q1 (D-65/D-38).** Does "เริ่มทำได้เลยครับ" (2026-11-05) cover S0, the
+**Q1 (D-65/D-38), closed by the owner's answer "2.จัดการได้" of 2026-11-14
+(below).** Does "เริ่มทำได้เลยครับ" (2026-11-05) cover S0, the
 identical-output offset below? It leaves `budgets.json` unchanged and the room
 it frees is set aside for S1–S3. Without S0, S1–S3 together are about 0.5 kB of
 CSS and 2.6 kB of precache code over the ceilings, and each would need its own
 D-38 raise. Until the owner answers, S0 is a *proposed* offset; no code comment
 records it as the owner's.
+
+## The owner's answers (2026-11-14)
+
+Owner, in chat, **2026-11-14**, verbatim:
+
+> "1.ก 2.จัดการได้ 3. ถือว่าสวยใช้ได้"
+
+to three questions put to them in this package's chat:
+
+1. **The budget.** "งบขนาดไฟล์เกือบเต็มแล้ว … (ก)
+   อนุมัติเพิ่มเพดานตามกฎ D-38 พร้อมระบุงานที่จะชดเชย (ข) ให้ผมหา CSS
+   ที่ซ้ำหรือไม่ได้ใช้มาลบเพิ่มก่อน" — answer **"1.ก"**: option (ก), approve a
+   ceiling raise under D-38 with the offset work named. Used once, for the
+   raise of `index-*.css` 180 → 180.5 kB after the rebase onto main `8a9a108`
+   (below, "Budget after the rebase"; offset EQ-13 M-BUILD-027). Not a
+   standing raise.
+2. **S0.** Whether "เริ่มทำได้เลยครับ" (2026-11-05) covers S0, the
+   identical-output offset (Q1 above) — answer **"2.จัดการได้"**: go ahead.
+   **Q1 is closed:** S0 is the package's offset by the owner's answer, no
+   longer a proposed one; the comments in `vite.config.ts` and
+   `scripts/html-comments.mjs` say so.
+3. **The choices and the screenshots.** The choices taken under "mix
+   sensibly" (among them the Lucide-derived icons with their NOTICE.md entry,
+   the lesson strip hidden in Watch and on the landing page, the classroom font
+   staying IBM Plex Sans Thai; the full list is "Choices taken under 'mix
+   sensibly'" above and each step's own list) and the after-screenshots —
+   answer **"3. ถือว่าสวยใช้ได้"**: acceptable, it looks good. The choices are
+   accepted as the owner's answer of 2026-11-14, as they stand on this branch.
+   Two things came with the rebase after the screenshots the owner saw: the
+   Structure tab's icon `#i-structure` and the current level's icon at the
+   tightest fit of the top bar (below, "Rebase onto main"). They follow the
+   same choices; the owner has not seen them on a screenshot.
+
+The authorization of 2026-11-05 ("เริ่มทำได้เลยครับ โหมดการเรียนที่คุณเสนอ
+ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ ส่วนรูปแบบอื่นๆ
+จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
+ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ") is unchanged above.
 
 ## S0 — identical-output offset: dead section CSS and the built page's line indentation
 

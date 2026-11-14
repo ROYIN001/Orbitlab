@@ -39,8 +39,8 @@ const buildStamp = {
  * The page's source comments stay in index.html and leave the built page,
  * which every visitor downloads and the app precaches (D-38 offset for the G2
  * layout fix, F5: about 2.6 kB of the precache code group), and the indentation
- * of every line (about 2 kB more; D-38 offset proposed for redesign A,
- * docs/development/reports/redesign-a.md). Nothing reads a comment node: every
+ * of every line (about 2 kB more; D-38 offset for redesign A, S0, the owner's
+ * answer of 2026-11-14, docs/development/reports/redesign-a.md). Nothing reads a comment node: every
  * comment sits between elements, and nothing in the page is whitespace-
  * sensitive (scripts/html-comments.mjs, tests/verification/html-comments.test.mjs).
  */
