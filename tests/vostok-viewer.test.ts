@@ -121,7 +121,7 @@ describe('Vostok-1 in the event log', () => {
   it('tells the over-burn as the core\'s cut-off command lost, and the whole excess, not a backup on Blok E (§13.6)', () => {
     expect(tFor('en', 'evt.backupCutoff', { dv: 25.4 })).toMatch(/^The radio command to shut the core down did not get through .* 25\.4 m\/s fast$/);
     expect(tFor('ru', 'evt.backupCutoff')).toMatch(/центрального блока не прошла.*блок Е проработал дольше/);
-    expect(tFor('th', 'evt.backupCutoff')).toMatch(/ท่อนแกนกลาง.*บล็อก E ทำงานนานกว่า/);
+    expect(tFor('th', 'evt.backupCutoff')).toMatch(/ท่อนกลาง.*บล็อก E ทำงานนานกว่า/);
     expect(tFor('en', 'tl.evt.backupCutoff')).toBe('Over-burn');
   });
 

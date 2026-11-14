@@ -197,7 +197,7 @@ export const experimentsTh: Record<string, string> = {
   'exp.notRecorded': 'ไม่ได้บันทึก',
   'exp.yes': 'ใช่',
   'exp.no': 'ไม่ใช่',
-  'exp.input.payloadMass': 'มวลสัมภาระ (กก.)',
+  'exp.input.payloadMass': 'มวลเพย์โหลด (กก.)',
   'exp.input.perigee': 'ความสูงเพริจีเป้าหมาย (ม.)',
   'exp.input.apogee': 'ความสูงอะโพจีเป้าหมาย (ม.)',
   'exp.input.inclination': 'มุมเอียงวงโคจรเป้าหมาย (°)',

@@ -45,7 +45,10 @@ describe('the Structure section\'s text', () => {
     expect([th['unit.kg'], th['unit.m'], th['unit.W'], th['unit.Wh'], th['unit.min'], th['unit.cm'], th['unit.mm'], th['unit.m2']])
       .toEqual(['กก.', 'ม.', 'วัตต์', 'วัตต์-ชม.', 'นาที', 'ซม.', 'มม.', 'ตร.ม.']);
     const appThai = Object.values(thApp).join('\n');
-    for (const word of ['กก.', 'วัตต์-ชม.', 'เซลล์แสงอาทิตย์', 'เงามืดของโลก', 'ศูนย์กลางมวล', 'น้ำหนักบรรทุก', 'ท่อนที่', 'ฝาครอบหัวจรวด']) expect(appThai.includes(word), word).toBe(true);
+    for (const word of ['กก.', 'วัตต์-ชม.', 'เซลล์แสงอาทิตย์', 'เงามืดของโลก', 'ศูนย์กลางมวล', 'น้ำหนักบรรทุก', 'ท่อนที่', 'ท่อนกลาง', 'ท่อนบน', 'แฟริ่ง', 'เพย์โหลด', 'ระบบขับเคลื่อน']) expect(appThai.includes(word), word).toBe(true);
+    // and none of the words the owner's choice replaced (2026-11-13: the words of Thai sources)
+    for (const word of ['แกนกลาง', 'ท่อนขับ', 'ระบบขับดัน', 'สัมภาระ', 'ครอบจมูก']) expect(appThai.includes(word), word).toBe(false);
+    expect(appThai.match(/(?<!ฝา)ครอบหัว/)?.[0], 'ครอบหัว outside "(ฝาครอบหัวจรวด)"').toBeUndefined();
     for (const [lang, dict] of Object.entries({ en, ru })) for (const [k, v] of Object.entries(dict)) expect(/[฀-๿]/.test(v), `${lang}: ${k}`).toBe(false);
     // what is a sentence in Thai is not left in English in the Russian
     for (const [k, v] of Object.entries(ru)) {
