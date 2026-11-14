@@ -35,6 +35,12 @@ any academy, and no service or academy name or emblem is used without written pe
   archive), including a vendored "Anatomy" drawing kit; that kit's terms are its maker's and are
   not restated here.
 
+- **The Structure section's Soyuz-2.1b/Fregat files** (`public/structure/`) are made from the
+  Soyuz-2.1b Anatomy page above by `scripts/structure-meshes.mjs`, with the page's own code: its
+  parts, their ids, its Thai guide, facts, notes and source list, as the page has them. The
+  educational satellite EduSat-3U (`src/structure/edusat.ts`) is the project's own concept; the
+  public figures it uses are cited where they are used.
+
 How to cite the project: [CITATION.cff](CITATION.cff).
 
 Everything below is someone else's work, with its own terms. Where this file says

@@ -12,7 +12,7 @@ import { ComparePanel, flightOnScreen } from './ui/compare';
 import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
 import { assessMissionResult } from './ui/result-content';
 import { enableChartExport } from './ui/chart-export';
-import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, parseMissionDocument, saveStoredMission } from './config/mission-file';
+import { MISSION_PARAM, MISSION_STORE_KEY, decodeMissionParam, loadStoredMission, missionDocument, parseMissionDocument, saveStoredMission } from './config/mission-file';
 import { flownMission } from './lessons/progress';
 import { WorkDialog } from './ui/workspace-dialog';
 import { AppProfiles } from './ui/profiles/app-profiles';
@@ -64,6 +64,8 @@ import {
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute,
 } from './ui/app-mode';
 import { BuildScreen } from './ui/build/build-screen';
+import { STRUCTURE_VEHICLE, StructureLoader, structureHref, type StructureLoaderHost } from './ui/structure-loader';
+import { launchReceipt } from './structure-host/handoff';
 import { WorkspaceMission, missionSummary, startupMission } from './ui/workspace-mission';
 import { loadExperience } from './ui/experience';
 import { OrbitPlayground } from './ui/orbit/playground';
@@ -301,6 +303,8 @@ class App {
   private buildScreen: BuildScreen;
   /** O01: the Orbit section's playground */
   private playground: OrbitPlayground;
+  /** the Structure & Assembly section (owner, 2026-11-09): its code is loaded the first time it opens (src/ui/structure-loader.ts) */
+  private structure: StructureLoader | null = null;
   /** the Earth's textures, loaded once for the launch scene and the playground's 3-D view */
   private earthTextures: Promise<EarthTextures> | null = null;
   /** which section and level of the app is showing (src/ui/app-mode.ts) */
@@ -838,12 +842,73 @@ class App {
 
   /** Opaque section and lesson pages cover the scene while the flight continues. */
   private get sceneCovered(): boolean {
-    return !!document.body.dataset.lessonsPage || this.route.section === 'orbit' || this.route.section === 'build' || (this.mode === 'home' && this.homeCovers);
+    return !!document.body.dataset.lessonsPage || this.route.section === 'orbit' || this.route.section === 'build' || this.route.section === 'structure'
+      || (this.mode === 'home' && this.homeCovers);
   }
 
   /** The landing page and the viewer: no workspace, the scene is the page. */
   get lean(): boolean {
     return this.mode === 'home' || this.mode === 'watch';
+  }
+
+  /**
+   * The Structure section, shown at the route's level (its depth) and on a
+   * model's page if the address names one. Its code is a chunk of its own,
+   * loaded the first time the section opens; what it needs of the app it is
+   * given, not left to import (docs/development/reports/structure-assembly-pilot.md §2.1).
+   */
+  private showStructure(): void {
+    const r = this.route;
+    if (r.section !== 'structure') return;
+    this.structure ??= new StructureLoader(document.getElementById('structure-screen')!, this.structureHost());
+    this.structure.show(r.mode, r.page);
+  }
+
+  /** What the Structure section may do outside itself: navigate, and hand its satellite to Orbit or Launch as Build does. */
+  private structureHost(): StructureLoaderHost {
+    return {
+      go: (r) => this.go(r),
+      toOrbit: (h, level) => {
+        this.handoff = h;
+        this.playground.setHandoff(h);
+        this.go(route('orbit', level));
+        // read back from the Orbit section (`heldFromHandoff`): the orbit it loaded from the state vector, and the masses its
+        // panel and its analyses use — the satellite's own is the object sent, so for mass this checks the playground kept it
+        const held = this.playground.heldHandoff();
+        return held && { ...held, replaced: 0 };
+      },
+      toLaunch: (doc, level) => {
+        this.goLive(); this.playing = false;
+        const parsed = this.panel.share.apply(doc, 'build');
+        if (!parsed.usable) return null;
+        this.helpGuide.missionGiven();
+        saveStoredMission(this.panel.missionState());
+        this.go(route('launch', level));
+        // read back from the Launch section's own mission, after its checks (a refused value is put back to its own)
+        return launchReceipt(this.panel.missionState(), parsed.issues.length);
+      },
+      // what Launch has now: the panel's mission, and the learner's stored copy byte for byte (with its design reference), or null
+      launchMission: () => {
+        let stored: string | null = null;
+        try { stored = workspaceStorage().getItem(MISSION_STORE_KEY); } catch { /* storage blocked */ }
+        return { shown: missionDocument(this.panel.missionState()), stored };
+      },
+      // put that back: the stored copy into the panel and storage as it was (none stored: the panel's, and storage emptied)
+      restoreLaunch: (kept, level) => {
+        let doc: unknown = kept.shown;
+        try { if (kept.stored !== null) doc = JSON.parse(kept.stored); } catch { /* unreadable: the panel's */ }
+        this.goLive(); this.playing = false;
+        const parsed = this.panel.share.apply(doc, 'stored');
+        if (!parsed.usable) return false;
+        this.workspace.adopt();
+        this.go(route('launch', level));
+        try {
+          if (kept.stored !== null) workspaceStorage().setItem(MISSION_STORE_KEY, kept.stored);
+          else workspaceStorage().removeItem(MISSION_STORE_KEY);
+        } catch { /* storage blocked or full: the panel has it */ }
+        return true;
+      },
+    };
   }
 
   /** Navigate to a route (a history entry, so Back returns to the last one). */
@@ -878,6 +943,10 @@ class App {
     document.getElementById('orbit-playground')!.hidden = !orbit;
     if (orbit) this.playground.show(next.mode as AppLevel);
     else this.playground.hide();
+    const structure = next.section === 'structure';
+    document.getElementById('structure-screen')!.hidden = !structure;
+    if (structure) this.showStructure();
+    else this.structure?.hide();
     const experience = experienceForMode(mode);
     // A1: the workspace comes back to the user's mission, not the viewer's launch left on the pad
     if (experience) this.restoreWorkspaceMission();
@@ -1367,6 +1436,7 @@ class App {
     if (this.route.section === 'orbit') { this.playground.onKey(e); return; }
     // Phase 3: the Build section has its own keys, and none of the launch's
     if (this.route.section === 'build') { this.buildScreen.onKey(e); return; }
+    if (this.route.section === 'structure') { this.structure?.onKey(e); return; }
     // The landing page has no flight controls on it: Space must not launch the
     // rocket standing behind it, out of sight.
     if (this.mode === 'home') return;
@@ -1458,6 +1528,7 @@ class App {
     this.watch.applyLanguage();
     this.buildScreen.applyLanguage();
     this.playground.applyLanguage();
+    this.structure?.applyLanguage();
     this.syncDataMode();
     if (this.dataDialog.el.open) this.dataDialog.applyLanguage();
     this.lessons?.applyLanguage(); // E03
@@ -1586,10 +1657,18 @@ class App {
     }
     const valid = this.stepsValid.valid;
     const inOrbit = stage !== 'setup' && handoffAvailable(this.shown);
-    const key = shown ? `${stage}|${valid}|${inOrbit}|${getLang()}` : 'hidden';
+    // the Structure section's model of this vehicle, one press away (owner, 2026-11-13): the catalogue's Soyuz-2.1b, not a design made from it
+    const cfg = this.panel.state;
+    const model = shown && !cfg.vehicleSpec && cfg.vehicleId === STRUCTURE_VEHICLE;
+    const key = shown ? `${stage}|${valid}|${inOrbit}|${getLang()}|${model ? this.route.mode : ''}` : 'hidden';
     if (key === this.stepsKey) return;
     this.stepsKey = key;
     list.hidden = !shown;
+    const link = document.getElementById('mission-structure') as HTMLAnchorElement | null;
+    if (link) {
+      link.hidden = !model;
+      if (model) { link.href = structureHref(this.route.mode); link.textContent = t('ctx.structure'); }
+    }
     if (!shown) return;
     list.setAttribute('aria-label', t('ctx.steps'));
     const states = missionSteps({ stage, valid, inOrbit });

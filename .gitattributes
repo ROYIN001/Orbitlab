@@ -6,3 +6,6 @@
 # page's SHA-256 in the meshes it derives from it.
 public/anatomy/*.html -text
 public/anatomy/*.bin binary
+
+# The Structure section's model layers (scripts/structure-meshes.mjs): gzip-compressed binaries.
+public/structure/*.bin binary

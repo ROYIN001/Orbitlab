@@ -47,6 +47,8 @@ const FEATURE: Record<ShowcaseFace, Omit<Feature, 'id'>> = {
   watch: { who: 'home.for.watch', title: 'home.feature.watchTitle', text: 'home.card.watchText', cta: 'home.play' },
   explore: { who: 'home.for.explore', title: 'home.feature.exploreTitle', text: 'home.card.exploreText', cta: 'home.card.explore' },
   engineer: { who: 'home.for.engineer', title: 'home.feature.engineerTitle', text: 'home.card.engineerText', cta: 'home.feature.engineerGo' },
+  // the Structure & Assembly section (owner, 2026-11-13: a way in from here, in the page's own manner)
+  structure: { title: 'home.feature.structureTitle', text: 'home.feature.structureText', cta: 'home.feature.structureGo' },
   lessons: { title: 'home.feature.lessonsTitle', text: 'lesson.home.text', cta: 'home.hero.lessons' },
   orbit: { title: 'home.feature.orbitTitle', text: 'home.section.orbitText', cta: 'home.section.orbitOpen' },
 };
@@ -229,6 +231,7 @@ export class HomeScreen {
     if (id === 'watch') this.host.watch(FEATURED_WATCH_MISSION);
     else if (id === 'lessons') this.host.openLessons();
     else if (id === 'orbit') this.host.go(route('orbit', 'explore'));
+    else if (id === 'structure') this.host.go(route('structure', 'watch'));
     else this.host.go(route('launch', id as AppLevel));
   }
 

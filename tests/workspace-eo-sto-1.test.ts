@@ -10,6 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { WORKSPACE_KEYS, type RawStorage } from '../src/workspace/registry';
+import { WORKSPACE_KEYS as REF_WORKSPACE_KEYS } from './eo-sto/ref/workspace/registry';
 import { LEGACY_PROFILE_ID, PROFILE_CATALOG_KEY, profileStorageKey } from '../src/workspace/repository';
 import { emptyProgress } from '../src/lessons/progress';
 import * as missionFile from '../src/config/mission-file';
@@ -44,7 +45,9 @@ const STARTS_TABS_WRITES: Step[] = [
     return w.binding('A').getItem('orbitlab.import.quarantine.v1');
   }],
   ['a preference removed', (w) => w.binding('A').removeItem('orbitlab.sound')],
-  ['every workspace key read', (w) => WORKSPACE_KEYS.map((k) => w.binding('A').getItem(k))],
+  // the keys main had at 23ede7f: a key registered since (orbitlab.structure.v1, the Structure pilot) is the one intended
+  // difference, which the reference refuses as unknown; it is checked on its own (tests/structure-progress.test.ts)
+  ['every workspace key read', (w) => REF_WORKSPACE_KEYS.map((k) => w.binding('A').getItem(k))],
   ['a key outside the workspace is refused', (w) => w.binding('A').setItem('orbitlab.dataset.cache', 'x')],
   ['a second tab on the same learner is read-only', (w) => w.open('B')],
   ['the second tab reads; its write is refused', (w) => [w.binding('B').getItem('orbitlab.lang'), attempt(() => typed(w, 'B', 'orbitlab.lang', 'en'))]],
@@ -157,6 +160,12 @@ const MISSION_PATHS: Step[] = [
 
 const at = (trace: Entry[], step: string): Entry => trace.find((e) => e.step === step)!;
 describe('EO-STO-1: every step stores what main (23ede7f) stores', () => {
+  it('knows the keys main knew, and one more: the Structure section\'s, the one intended difference', () => {
+    const ref: readonly string[] = REF_WORKSPACE_KEYS, live: readonly string[] = WORKSPACE_KEYS;
+    expect(live.filter((k) => !ref.includes(k))).toEqual(['orbitlab.structure.v1']);
+    expect(ref.filter((k) => !live.includes(k))).toEqual([]);
+  });
+
   it('start-up, typing, two tabs, an outside writer and a full disk', async () => {
     const { current, diff } = await differential(STARTS_TABS_WRITES);
     expect(diff).toBe('');

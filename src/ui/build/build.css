@@ -79,6 +79,10 @@
 .bs-tab[aria-pressed='true'] { background: var(--accent-weak); color: var(--accent); }
 /* the owner's Soyuz Anatomy pages (anatomy-dialog.ts): the way in, at the end of the views, and the dialog */
 .bs-anatomy-open { margin-left: auto; color: var(--accent); border: 1px solid var(--accent-line); }
+/* the Structure section's model of this vehicle, beside the Anatomy button (or in its place at the right) */
+.bs-structure-open { margin-left: auto; color: var(--accent); border: 1px solid var(--accent-line); text-decoration: none; }
+.bs-anatomy-open + .bs-structure-open { margin-left: 4px; }
+.bs-structure-open::before { content: '⊞' / ''; margin-right: 6px; opacity: 0.8; }
 dialog.dialog.bs-anatomy {
   max-width: none; width: calc(100vw - 32px); height: calc(100vh - 32px); height: calc(100dvh - 32px); max-height: none;
   padding: 14px 16px 16px; overflow: hidden;

@@ -31,8 +31,8 @@ import { PLAYGROUND_PRESET_IDS, presetOrbit } from '../../orbit/presets';
 import { TOUR, type TourView } from '../../orbit/tour';
 import { SKY_TOUR, type SkyTourStep } from '../../orbit/sky-tour';
 import {
-  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, REPEAT_LIMITS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, linearScale,
-  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, eoRepeatRevs, thaiInSky, tourSetup, withApsis, type SliderScale,
+  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, REPEAT_LIMITS, appsOnOrbit, flownAt, handoffEntry, handoffOrbit, heldFromHandoff, linearScale,
+  logScale, orbitPath, playgroundLifetimeCraft, repeatCount, repeatGroundTrack, eoRepeatRevs, thaiInSky, tourSetup, withApsis, type HeldHandoff, type SliderScale,
 } from '../../orbit/playground-model';
 import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
 import {
@@ -337,6 +337,15 @@ export class OrbitPlayground {
       this.tourIndex = -1;
     }
     this.render();
+  }
+
+  /**
+   * What the playground holds of the hand-off it was given (`heldFromHandoff`),
+   * for a sender to check what arrived; null with none, or once another orbit
+   * is shown.
+   */
+  heldHandoff(): HeldHandoff | null {
+    return this.handoff && this.presetId === HANDOFF ? heldFromHandoff(this.handoff, this.orbit, this.craft, this.launchCraft) : null;
   }
 
   /**

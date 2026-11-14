@@ -8,6 +8,8 @@ export const WORKSPACE_KEYS = [
   'orbitlab.hudLayout', 'orbitlab.hudMode', 'orbitlab.sound', 'orbitlab.experience',
   'orbitlab.mode', 'orbitlab.section', 'orbitlab.frames', 'orbitlab.notation',
   'orbitlab.guide.v1', 'orbitlab.lang', 'orbitlab.glow', 'orbitlab.telemetryLayout',
+  // the Structure section's progress and "my experiment" (src/structure/progress.ts)
+  'orbitlab.structure.v1',
 ] as const;
 export function isWorkspaceKey(key: string): boolean {
   return (WORKSPACE_KEYS as readonly string[]).includes(key)

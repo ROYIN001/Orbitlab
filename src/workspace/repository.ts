@@ -68,7 +68,7 @@ function preserveUnreadableOverwrite(record: ProfileRecord, key: string, next: s
   if (previous === undefined || previous === next || key === 'orbitlab.import.quarantine.v1') return;
   const versioned: Record<string, number> = {
     'orbitlab.mission': 3, 'orbitlab.designs': 1, 'orbitlab.lessons': 1, 'orbitlab.experiments.v1': 1,
-    'orbitlab.build.explore.v1': 1, 'orbitlab.build.satellite.v1': 1, 'orbitlab.numeric-drafts.v1': 1,
+    'orbitlab.build.explore.v1': 1, 'orbitlab.build.satellite.v1': 1, 'orbitlab.numeric-drafts.v1': 1, 'orbitlab.structure.v1': 1,
   };
   const draft = ['orbitlab.build.requirements.v1', 'orbitlab.author.draft', 'orbitlab.author.design', 'orbitlab.worksheets'].includes(key);
   if (!Object.hasOwn(versioned, key) && !draft) return;

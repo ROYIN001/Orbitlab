@@ -12,8 +12,8 @@
  */
 import type { AppLevel, AppSection } from './app-mode';
 
-/** A section with a plan of roadmap items: both sections beyond the launch simulator, built or being built. */
-export type PlannedSection = Exclude<AppSection, 'launch'>;
+/** A section with a plan of roadmap items: Orbit and Build, built or being built (the Structure section has none). */
+export type PlannedSection = Extract<AppSection, 'orbit' | 'build'>;
 export const PLANNED_SECTIONS: readonly PlannedSection[] = ['orbit', 'build'];
 
 export interface PlannedItem {

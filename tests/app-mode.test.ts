@@ -13,7 +13,7 @@ const ALL_ROUTES: AppRoute[] = [HOME_ROUTE, ...APP_SECTIONS.flatMap((s) => APP_L
 
 describe('app routes (S01: section × level)', () => {
   it('round-trips every route through the URL hash', () => {
-    expect(ALL_ROUTES).toHaveLength(10);
+    expect(ALL_ROUTES).toHaveLength(13);
     for (const r of ALL_ROUTES) expect(routeFromHash(hashForRoute(r))).toEqual(r);
     expect(hashForRoute(HOME_ROUTE)).toBe('#/home');
     expect(hashForRoute(route('orbit', 'engineer'))).toBe('#/orbit/engineer');
@@ -111,6 +111,7 @@ describe('app routes (S01: section × level)', () => {
       // another section covers the scene the way the landing page does
       expect(launchMode(route('orbit', level))).toBe('home');
       expect(launchMode(route('build', level))).toBe('home');
+      expect(launchMode(route('structure', level))).toBe('home');
     }
     expect(launchMode(HOME_ROUTE)).toBe('home');
   });

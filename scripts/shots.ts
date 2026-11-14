@@ -159,6 +159,23 @@ const FACES: Record<ShowcaseFace, { hash: string; ready: (page: Page) => Promise
     },
   },
   orbit: { hash: '#/orbit/explore', ready: (p) => settle(p, 10, 150) },
+  // the Soyuz-2.1b taken half apart, its assemblies named: the section's code and its model are fetched when it opens
+  structure: {
+    hash: '#/structure/explore/soyuz-st31',
+    ready: async (p) => {
+      const section = 'window.orbitlab?.structure?.section';
+      for (let i = 0; i < 600; i++) {
+        await step(p, 40);
+        if (await p.evaluate(`(() => { const s = ${section}; return !!s && s.stage?.ready() === true && s.store.load[s.store.model].state === 'ready'; })()`)) break;
+        await p.waitForTimeout(50);
+      }
+      // taken half apart, and the view brought back to the whole of it
+      await p.evaluate(`(() => { const s = ${section}.store; s.camera = 'home'; s.setView({ explode: 0.45 }); })()`);
+      await settle(p, 20, 120);
+      await p.waitForTimeout(800);
+      await settle(p, 6, 120);
+    },
+  },
 };
 
 /** A PNG made smaller and written as WebP or JPEG — by the browser's own encoder, so nothing else need be installed. */
