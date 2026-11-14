@@ -28,6 +28,8 @@
  *
  * Console errors (shader failures among them) fail it.
  */
+// a smoke journey since 2026-11-14 (owner): it failed only at the Pages gate before (#217-#219)
+export const smoke = true;
 export const timeoutMs = 900_000;
 
 const ready = (page) => page.waitForFunction(() => {

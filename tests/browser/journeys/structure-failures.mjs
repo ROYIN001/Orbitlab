@@ -17,6 +17,8 @@
  * Without the service worker, whose cache would answer for a fetch this
  * journey wants to fail.
  */
+// a smoke journey since 2026-11-14 (owner): the Structure section's journeys run in a pull request's checks
+export const smoke = true;
 export const timeoutMs = 600_000;
 
 const ready = (page) => page.waitForFunction(() => {

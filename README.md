@@ -76,8 +76,8 @@ any academy, and no service or academy name or emblem is used without written pe
   Progress MS-26) and Soyuz-2.1b with Fregat (`public/anatomy/`). Build's Watch level opens each
   whole — tanks, engines and plumbing, to take apart and cut open, with a Thai guide — and the
   flight draws those two rockets, their spent stages and their spacecraft from the models' outside
-  (`npm run anatomy` makes the flight's meshes from the pages). Both are loaded on demand, not
-  precached.
+  (`npm run anatomy` makes the flight's meshes from the pages; `npm run anatomy:terms` first puts a
+  page exported again in the app's Thai words). Both are loaded on demand, not precached.
 - **Structure & Assembly** (`#/structure`, owner's request 2026-11-09, a pilot in its second
   version): read a model at three depths (its main assemblies; their groups, joints and internal
   systems; every part with its id, figures and sources), with names and a scale on the picture.
