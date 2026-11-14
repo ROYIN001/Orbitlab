@@ -2,7 +2,7 @@
 
 > **สถานะปัจจุบัน (บันทึกเดียวที่เป็นปัจจุบัน — แก้ที่นี่ทุกครั้งที่สถานะเปลี่ยน)**
 >
-> - **ปิดงานที่ค้าง 14 พ.ย. 2026 (เจ้าของ: “งานที่เปิดอยู่ทำการปิดให้เรียบร้อยครับ ยกเว้นอันที่ให้ astra ตรวจ”) — รายละเอียดใน §16:** (1) **หน้า Anatomy ของ Soyuz-2.1a สองหน้า** (Soyuz MS, Progress MS-26) ใช้คำชุดเดียวกับหน้า 2.1b แล้ว: ท่อน · ท่อนกลาง · แฟริ่ง · เพย์โหลด · เชื้อเพลิงและสารออกซิไดซ์ · ระบบขับเคลื่อน คำว่า “ขั้น” ที่หมายถึงขั้นตอน และ “สัมภาระ” ของยานขนส่งเสบียงคงไว้ ไบต์อื่นของไฟล์เหมือนเดิมทุกตัว หน้า 2.1b ไม่ถูกแตะ ไฟล์โมเดลของหมวดยังเป็นรุ่น 4 (2) **กฎแปลงคำอยู่ในโครงการแล้ว** (`npm run anatomy:terms`) พร้อมการทดสอบที่ล้มถ้าหน้าที่ส่งออกใหม่จากโครงการ Anatomy ของเจ้าของพาคำเดิมกลับมา (3) **การตรวจของ pull request รันชุดทดสอบของหมวดนี้และชุดจัดวางหน้าจอสองชุดที่เคยล้มที่ด่านเผยแพร่** แบ่งเป็นสามชุดขนานแทนสองชุด (4) พจนานุกรมของแอปใน pull request ถัดไป (§16.4) · เพดานขนาดไฟล์ไม่มีงานค้าง · **การตรวจโดย Astra เจ้าของจัดการเอง ยังไม่ได้ตรวจโดย Astra**
+> - **ปิดงานที่ค้าง 14 พ.ย. 2026 (เจ้าของ: “งานที่เปิดอยู่ทำการปิดให้เรียบร้อยครับ ยกเว้นอันที่ให้ astra ตรวจ”) — รายละเอียดใน §16:** (1) **หน้า Anatomy ของ Soyuz-2.1a สองหน้า** (Soyuz MS, Progress MS-26) ใช้คำชุดเดียวกับหน้า 2.1b แล้ว: ท่อน · ท่อนกลาง · แฟริ่ง · เพย์โหลด · เชื้อเพลิงและสารออกซิไดซ์ · ระบบขับเคลื่อน คำว่า “ขั้น” ที่หมายถึงขั้นตอน และ “สัมภาระ” ของยานขนส่งเสบียงคงไว้ ไบต์อื่นของไฟล์เหมือนเดิมทุกตัว หน้า 2.1b ไม่ถูกแตะ ไฟล์โมเดลของหมวดยังเป็นรุ่น 4 (2) **กฎแปลงคำอยู่ในโครงการแล้ว** (`npm run anatomy:terms`) พร้อมการทดสอบที่ล้มถ้าหน้าที่ส่งออกใหม่จากโครงการ Anatomy ของเจ้าของพาคำเดิมกลับมา (3) **การตรวจของ pull request รันชุดทดสอบของหมวดนี้และชุดจัดวางหน้าจอสองชุดที่เคยล้มที่ด่านเผยแพร่** แบ่งเป็นสามชุดขนานแทนสองชุด (4) **พจนานุกรมของแอปใช้คำชุดเดียวกันแล้ว** (§16.4, pull request ที่สอง): ท่อน · ท่อนกลาง · ท่อนบน · เพย์โหลด · ระบบขับเคลื่อน · แฟริ่ง (คำเดียวแทน ฝาครอบหัวจรวด ครอบจมูก ครอบหัว) — “ขั้น” ที่หมายถึงขั้นตอน และ “น้ำหนักบรรทุก” ที่หมายถึงมวลคงไว้ ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (ไม่มีความหมายผิด แก้ตามข้อเสนอแล้ว) · เพดานขนาดไฟล์ไม่มีงานค้าง · **การตรวจโดย Astra เจ้าของจัดการเอง ยังไม่ได้ตรวจโดย Astra**
 > - **รอบที่สองของวันที่ 13 พ.ย. 2026 — ทำตามคำตอบอีก 4 ข้อของเจ้าของ (รายละเอียดใน §15):** (1) **เพดานขนาดไฟล์ได้รับอนุมัติ** (“1.อนุมัติ”) เขียนลง `budgets.json` พร้อมเหตุผลแล้ว ขนาดจริงอยู่ในเพดานที่อนุมัติทุกกลุ่ม ไม่มีเพดานใดตั้งเกินตัวเลขที่อนุมัติ (2) **คำไทยเปลี่ยนตามที่แหล่งไทยใช้** (“ใช้ตามที่แหล่งไทยเรียกกัน”) ทั้งข้อความของหมวดและหน้า Anatomy ของ Soyuz-2.1b: ท่อน · ท่อนกลาง · แฟริ่ง (ฝาครอบหัวจรวด) · เพย์โหลด · เชื้อเพลิงและสารออกซิไดซ์ · การทรงตัว · เงามืดของโลก — ไฟล์โมเดลเป็นรุ่น 4 (ชิ้นส่วนและสามเหลี่ยมเดิม) (3) **บรรทัดแหล่งอ้างอิง RD0110** ในหน้า Anatomy แก้ให้ตรงกับข้อมูลของหน้าเอง (เป็นของ Soyuz-2.1a) (4) **เจ้าของอนุญาตให้ merge** (“อนุญาตให้ merge pull request #217 เข้า main”) · **ยังไม่ได้แก้:** หน้า Anatomy ของ Soyuz-2.1a อีกสองหน้า และคำของพจนานุกรมแอปในส่วนอื่น (§15.4) · ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (13 ข้อ: P1 2 ข้อ P2 1 ข้อ P3 10 ข้อ แก้แล้ว 9 ข้อ แก้บางส่วน 1 ข้อ คงไว้พร้อมเหตุผล 3 ข้อ — §15.5) ผู้ตรวจไม่ใช่เจ้าของภาษาไทย **ยังไม่ได้ตรวจโดย Astra** 
 > - **รอบแรกของวันที่ 13 พ.ย. 2026 — ทำตามคำตอบของเจ้าของ 7 ข้อ (รายละเอียดใน §14):** แก้ประโยค RD-0110 ในหน้า Anatomy เป็น RD0124 และสร้างไฟล์โมเดลใหม่เป็นรุ่น 3 · ปรับคำไทย อังกฤษ รัสเซีย ตามแหล่งของแต่ละภาษา (บูสเตอร์ B/V/G/D ไม่มีอักษรรัสเซียนอกโหมดรัสเซีย) · พับแหล่งข้อมูลและหมายเหตุเรื่องที่มาไว้ท้ายการ์ด · เพิ่มทางเข้าจากหน้าแรก ส่วนสร้าง และส่วนปล่อย · เพิ่ม**ลำดับประกอบตามฐานปล่อยจริง (Vostochny)** เป็นตัวเลือกที่สองของการประกอบ Soyuz · ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (26 ข้อ: P1 1 ข้อ P2 12 ข้อ P3 13 ข้อ แก้แล้ว 24 ข้อ บันทึกไว้ 2 ข้อ) **ยังไม่ได้ตรวจโดย Astra** · ฝั่งภาษารัสเซียตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น
 > - **ฉบับที่ 2 (ยกเครื่องทั้งหมวด ตามคำขอเจ้าของ 2026-11-10: "ตรวจเช็คโครงร่างที่ร่างมาตอนแรกแล้วร่างให้ดีกว่าเดิม … เอาให้ดีที่สุด")** สร้างต่อจากฉบับแรก (`be35eb7`) บนสาขา `claude/trusting-cannon-oah00c` · ฐาน: `main` @ `3e1b48a` · commit ของงาน: §13
@@ -10,7 +10,7 @@
 > - **ต้องแจ้งตรง ๆ — ข้อบกพร่องของฉบับแรกที่ส่งมอบไปแล้ว (E-01):** ไฟล์โมเดล Soyuz ของฉบับแรกติดป้ายชิ้นส่วนผิดให้สามเหลี่ยมราว 91 % (สคริปต์สร้างไฟล์บันทึกหมายเลขชิ้นต่อสามเหลี่ยมแต่อ่านต่อจุดยอด) ที่ระดับ "ชุดประกอบหลัก" ไม่เห็นผล แต่ต่ำกว่านั้น การเลือก การเน้น การผ่า และสีตามชนิด ชี้ผิดชิ้น ฉบับที่ 2 แก้แล้ว (ไฟล์รุ่น `.r2.` + การทดสอบที่จับข้อนี้ได้) ชุดส่งมอบฉบับแรกจึงไม่ควรใช้ต่อ — §2
 > - ผู้ทำงาน: Claude (ไม่ใช่ GPT-6.1 Sol) · ผู้ตรวจทาน: เอเจนต์ Claude แยกบริบท · **ยังไม่ได้ตรวจโดย GPT-6 Astra** (เรียกจากที่นี่ไม่ได้ เตรียมบริบทส่งต่อไว้แล้ว) — §10
 > - การตรวจฉบับแรกก่อนยกเครื่อง: ตั้งใจตรวจ 7 มุมมอง **ทำได้จริง 2 มุมมอง** (เป้าหมาย/การใช้งาน/การสำรวจ และ การประกอบ/ดาวเทียม) ได้ 29 ข้อ อีก 5 มุมมองหยุดเพราะโควตาการใช้งานของเซสชันเต็ม การตรวจทานฉบับที่ 2 ทำครบ 5 มุมมอง พบ 45 ข้อ แก้/ตอบครบแล้ว (ผู้หักล้างตรวจยืนยัน 27 ข้อของสามมุมมองหลัง ส่วน 18 ข้อของสองมุมมองแรก ผู้หักล้างหยุดเพราะโควตา ผมทำซ้ำด้วยสคริปต์ของผู้ตรวจเองแทน ซึ่งไม่ใช่การตรวจอิสระ) — §2, §10
-> - **ยังเปิดอยู่ (14 พ.ย. 2026):** (1) พจนานุกรมของแอปในส่วนอื่นยังใช้ “ท่อนแกนกลาง” “สัมภาระ” “ระบบขับดัน” “ฝาครอบหัวจรวด” — แก้ใน pull request ถัดไป (§16.4) (2) สำเนาหน้า Anatomy ในโครงการ Anatomy ของเจ้าของยังเป็นคำเดิม ถ้าส่งออกหน้าใหม่ ให้รัน `npm run anatomy:terms` แล้ว `npm run anatomy` การทดสอบ `tests/anatomy-terms.test.ts` จะล้มถ้าลืม (§16.1) (3) ร่างภาษารัสเซียยังตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น (4) การตรวจโดย Astra เจ้าของจัดการเอง 
+> - **ยังเปิดอยู่ (14 พ.ย. 2026):** (1) แท็บ «ท่าทาง» ของเครื่องมือออกแบบดาวเทียมยังใช้คำเดิม เพราะชุดบทเรียน 5 ข้อความอ้างชื่อแท็บนี้ และบทเรียน/คลังข้อสอบใช้คำของตัวเอง (§16.4) · รูปหน้าแรกทั้ง 18 รูปเป็นของวันที่ 18 ต.ค. ยังไม่ได้ถ่ายใหม่ เพราะพบข้อบกพร่อง: แถบข้อความในมุมมองในยานแสดง “{alphaDeg}” แทนค่ามุม (`src/ui/onboard.ts`) ควรแก้ก่อนแล้วถ่ายรูปใหม่ทั้งชุด (2) สำเนาหน้า Anatomy ในโครงการ Anatomy ของเจ้าของยังเป็นคำเดิม ถ้าส่งออกหน้าใหม่ ให้รัน `npm run anatomy:terms` แล้ว `npm run anatomy` การทดสอบ `tests/anatomy-terms.test.ts` จะล้มถ้าลืม (§16.1) (3) ร่างภาษารัสเซียยังตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น (4) การตรวจโดย Astra เจ้าของจัดการเอง 
 > - ชุดส่งมอบ Soyuz 2 พ.ย.: เจ้าของเลือก "ใช้โมเดลในเว็บไปก่อน" (2026-11-10) จึง**ยังไม่ได้เทียบ**กับชุดนั้น
 > - คำแปลอังกฤษและรัสเซียเป็น**ร่าง**ที่เอเจนต์แปลจากต้นฉบับไทย ยังไม่ผ่านเจ้าของภาษา (ขึ้นป้ายบอกบนจอ)
 >
@@ -734,6 +734,54 @@ On the tree of this pull request, in the development container (Node 22.23.4; CI
 | heavy and six-DOF fleet | **reused under D-64**: Heavy suites run 42354766879 (dispatched 2026-11-07) on `3e1b48a`, 35 heavy files and 6 six-DOF fleet files, all green. Between `3e1b48a` and this pull request the physics tree is unchanged, compared as git tree hashes: `src/physics` 6a684c0f, `src/data` 4da3d3d8, `tests/heavy` 3a66de37, `tests/sixdof-fleet` b4d9c79e, `package-lock.json` 65a140e5, and the 12 worker files each the same; the run used Node 22.23.3 |
 
 Not reviewed by GPT-6 Astra; the owner arranges that review. No independent agent reviewed this part: its words are the rules of §15.2, whose review is §15.5, applied by a script proven against that round's page; each changed place was read in its sentence (§16.1).
+
+### 16.4 The app's dictionary
+
+**What changed** (`src/i18n/th.ts`, 151 strings; one in `src/i18n/experiments.ts`; three in the help panel, `src/ui/help-content.ts`). Every change was made by a checked list of 95 rules, each stating the key it must find its text in or the number of places it must find (kept with this work, `tools/th-terms.py`), then read in its sentence beside the English:
+
+| Was | Now | Notes |
+| --- | --- | --- |
+| ขั้น for a stage (45 of its 73 places) | **ท่อน**: ท่อนที่ 3, ท่อนบน, ท่อนแรก, ท่อนที่เหลือ, ท่อนจรวด | only where the English says stage. **ขั้น stays for a step** (28 places): ขั้นตอน, ทีละขั้น, ขั้นต่อไป, ขั้นบันได (a step response), ขั้นเวลา (a time step), เข้าเทียบขั้นสุดท้าย (final approach), a parachute opening เป็นขั้น ๆ |
+| ท่อนขับ, the app's older word for a stage | **ท่อนจรวด**, and on the timeline's short labels แยกท่อน | as Thai sources write it |
+| แกนกลาง, ท่อนแกนกลาง; for the Long March 5B ท่อนจรวดหลัก | **ท่อนกลาง** | The Standard writes ท่อนกลาง of the Long March 5B's own core stage; one word for a core stage across Launch, Build, Watch and the re-entry case |
+| ท่อนขับดัน (Fregat-M, Briz-M, AVUM+), ท่อนเสริมแรงส่ง (Curie) | **ท่อนบน** | as the section's ท่อนบน Fregat |
+| สัมภาระ; น้ำหนักบรรทุก where it named the payload as a thing | **เพย์โหลด**: the setup's tab and its step, "เพย์โหลด / ดาวเทียม", "การปล่อยเพย์โหลด", "วงโคจรของเพย์โหลด", "มวลเพย์โหลด" | **น้ำหนักบรรทุก stays for the mass and a rocket's capacity** (54 places): พิกัดน้ำหนักบรรทุก, สัดส่วนน้ำหนักบรรทุก, ลดน้ำหนักบรรทุก, the staging and sizing pages |
+| ระบบขับดัน | **ระบบขับเคลื่อน** | a thruster stays เครื่องขับดัน |
+| ฝาครอบหัวจรวด, ครอบจมูก(จรวด), ครอบหัว(จรวด): three words for one part | **แฟริ่ง**, with "(ฝาครอบหัวจรวด)" beside it where a beginner meets it: Launch's challenge "แฟริ่งไม่แยกตัว", Build's Watch level, Build's tour card, Watch's narration | Apollo's forward heat-shield cover stays ฝาครอบ: it is not a fairing |
+
+Lesson 2.2's hint quotes the Engineer setup's guidance label word for word, and `tests/i18n-thai-terms.test.ts` checks that it does: it says "การนำวิถีของท่อนบน" now (`src/lessons/builtin/track2.ts`). English and Russian are untouched.
+
+**The independent review.** One separate Claude agent, read-only, on every changed pair beside its English, the whole dictionary after the change and the other dictionary files; it says itself that it is not a native Thai editor. No wrong meaning, no step made a stage, no broken placeholder. Its points and what was done:
+
+| Severity | Point | What was done |
+| --- | --- | --- |
+| P2 | ท่อนขับ (12 places) read oddly beside ท่อนบน in the same sentence | **Fixed**: ท่อนจรวด, แยกท่อน |
+| P2 | Launch's payload step had two words on one screen (the tab เพย์โหลด over the heading น้ำหนักบรรทุก); the experiment's input and the setup's field named the same mass differently | **Fixed**: เพย์โหลด for the step and the picker; both fields "มวลเพย์โหลด (กก.)" |
+| P2 | น้ำหนักบรรทุก where it named the object (six places) | **Fixed**, and five more found by reading all 62 of its places beside the English (the rule above): eleven in all |
+| P2 | the Long March 5B core stage; the Curie kick stage | **Fixed**: ท่อนกลาง; ท่อนบน Curie |
+| P3 | the Falcon Heavy note's "ท่อนแกน"; Vega VV17's repeated ท่อนนี้; "จุดเครื่องยนต์ที่เหลือ … เหลือ"; the interstage sentence; ท่อนที่หนึ่ง beside ท่อนแรก | **Fixed** |
+| P3 | แฟริ่ง first met unexplained in Launch and in Build's Watch level | **Fixed**: the note in both |
+| P3 | the test's ban of หัวครอบ, a word the dictionary never had | **Fixed**: it bans ครอบจมูก, ท่อนขับ, แกนกลาง, สัมภาระ, ระบบขับดัน, and ครอบหัว outside the note |
+| note | the help panel's สัมภาระ and ระบบขับดัน | **Fixed** |
+| note | the satellite designer's attitude tab still says ท่าทาง, where the Structure section says การทรงตัว | **Left**: five lesson-pack texts (and the packs published in `public/lessons/packs/`) tell students to open the «ท่าทาง» tab; renaming it means issuing those packs again, which is a decision of its own |
+| note | the lessons and the assessment bank keep their own wording (ขั้นที่ 1, สัมภาระ, แกนกลาง) | **Left**: their texts are teaching material with answer keys; outside the item the owner was shown |
+
+**Left as they are, and why:** the rocket's flight attitude ท่าทาง (ED-I18N-1); the satellite tab above; the lessons and the assessment bank.
+
+**The landing page's pictures are not retaken.** The Thai Explore picture still shows สัมภาระ and ท่อนแกนกลาง. All eighteen pictures date from 2026-10-18 (#164) and show the app of then. Taking them now (`npm run shots -- th`, kept with this work) gives the app of today, and the Explore face then shows the cabin view with a message whose values are not filled in: "…: vehicle, Blok I (3rd stage, RD-0110) (α {alphaDeg}°, β {betaDeg}°)". That is a bug of the cabin view's message strip (`src/ui/onboard.ts` prints `evt.aeroEnvelopeExceeded` from the event's raw values, which carry the angles in radians as `angleOfAttackRad`, and its scope and the part's name untranslated); the event log beside it shows the same event correctly. It is older than this work and outside it, and is reported to the owner. The pictures are best taken again, all of them, once it is fixed.
+
+### 16.5 Checks on the second pull request
+
+On the tree of this pull request, in the development container. The change map selects the build commands, 100 unit files, 25 journeys and two heavy files (the lessons' six-DOF runs, for the lesson's hint):
+
+| Check | Result |
+| --- | --- |
+| `npx tsc --noEmit`; `npx vite build`; `node scripts/bundle-budget.mjs` | clean; built; within every ceiling, `i18n-*.js` 1736.1 → 1735.1 kB (the new words are shorter) |
+| `npx vitest run` (whole suite) | 361 files, 10,860 tests, all pass |
+| the 25 selected journeys on the built app | 19 of 19 pass, three shards at once (12, 21 and 18 minutes); the 6 the owner holds are listed, not run |
+| `tests/heavy/lessons-sixdof.test.ts`, `tests/heavy/lesson-packs-sixdof.test.ts` | 2 files, 10 tests, pass (268 s); the rest of the heavy set and the six-DOF fleet are not selected (the physics tree is unchanged) |
+
+Not reviewed by GPT-6 Astra; the owner arranges that review.
 
 ## Appendix A. The first version's reviews (kept as a record)
 
