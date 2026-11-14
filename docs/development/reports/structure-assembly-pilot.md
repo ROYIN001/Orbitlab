@@ -652,6 +652,20 @@ Merged as `1ddf187` on 2026-11-14 with the pull request's nine checks green on `
 
 **What I take from it.** A layout that is fitted by measuring has to be checked with room to spare, not at the one width a preset names: a pass by a few pixels on one machine is a failure on the next. And the Pages gate runs journeys the pull request's checks do not; I ran this one here before the merge, but its pass said nothing about GitHub's fonts.
 
+### 15.6c The gate's second failure: a race in this section's own journey
+
+**What happened.** The top bar fix was merged as `db9f4de` (#219). The Pages gate for it (run 43564094307) passed `r2-viewport-scene-floor`, the journey that had failed, and failed in another, `structure-assembly`: *"threw: locator.scrollIntoViewIfNeeded: Element is not attached to the DOM"* at the journey's small-phone part, where it scrolls to a part's button in the assembly list. The publish job was skipped again; **the live site was still `3e1b48a`**.
+
+**The cause: the journey, not the app.** The section draws its panels again whenever its state changes, and one such redraw can come a moment after the journey's `ready` has answered (the picture settling). The journey scrolled to the button with Playwright's `scrollIntoViewIfNeeded`, which takes the element, waits for it to be still, and throws if it has left the page meanwhile; a click, by contrast, looks for the element again. On a slower machine the redraw fell inside that wait. The same journey had passed on the gate's run before and in every run here.
+
+**Shown failing, then passing.** The journey's steps up to that scroll, repeated on the built app at the small phone's size: the button was replaced between 20 and 530 ms after `ready` in 5 of 25 tries, and the scroll threw the gate's error in exactly those 5. With the change — the control brought into sight by one call in the page (`reveal`), then the click — 0 of 40 tries threw, and the place had the focus after each.
+
+**Checks on the change** (the journey file alone; no code of the app): `structure-assembly` whole, three times in a row with two of the machine's four processors kept busy to slow it, 3/3; `structure-entries`, `structure-failures` and `soyuz-anatomy` under the same load, 3/3. As with the top bar, what decides it is the Pages gate after the merge: the pull request's checks do not run these journeys.
+
+**The owner's word.** "จัดการให้เรียบร้อย" (2026-11-14) was given for the publication that the first failure stopped. This second obstacle to the same publication is a change to a test alone, and I merged it on the same word; I told the owner so before merging, with the offer to stop.
+
+**What I take from it.** The gate ran this journey on a slower machine than any I had run it on. A journey must not hold an element across a moment in which the page may be drawn again; where it must act at once, it acts by a call that finds the element at that instant. I checked the section's other journeys for the same call: there is none.
+
 ### 15.7 This round's commits
 
 | Commit | What |
