@@ -1285,3 +1285,49 @@ at 1093 px, the window #219 fixed) and a row of its own from 960 px; Thai and
 English take "tightest" only at 960 px. With this, the `modes.css` comment that
 said Russian still overlapped at some widths is corrected: `fit()` takes the
 tabs tighter wherever they would still run under the tools.
+
+### Budget after the rebase: the D-38 raise of `index-*.css`
+
+Measured in this container (`npx vite build`, then `node scripts/bundle-budget.mjs`):
+
+| Group | main `8a9a108` | Redesign A rebased onto it | Ceiling before | Ceiling after |
+|---|---|---|---|---|
+| `index-*.css` | 179,833 B (179.8 kB) | **180,473 B (180.5 kB), +640 B** | 180 kB (FAIL, +0.5 kB) | **180.5 kB** |
+| `index-*.js` | 2664.3 kB | 2663.9 kB | 2665 kB | unchanged |
+| `i18n-*.js` | 1735.1 kB | 1735.0 kB | 1737 kB | unchanged |
+| other chunks | — | 771.4 kB | 772 kB | unchanged |
+| precache code | 15185.7 kB | 15186.3 kB | 15187 kB | unchanged |
+| precache | — | 16305.5 kB | 16586 kB | unchanged |
+| `structure-*` groups | — | 292.9 / 27.0 / 66.5 / 106.2 kB | 293 / 27 / 67 / 107 kB | unchanged |
+
+Before the rebase the package fitted under the old 179 kB ceiling with 56 B
+left (178,944 B, S3 review fixes). On main, #217 raised the ceiling to 180 kB
+at 179,690 B (2026-11-13) and #219 added 143 B, which leaves 167 B: the
+package's +640 B over main no longer fits.
+
+**Budget line: raise, with D-38's four parts** (`budgets.json`, `_notes.set`
+beside `index-*.css`):
+
+1. **Measured size:** 180,473 B on this branch after the rebase, 179,833 B on
+   main `8a9a108` (+640 B). Ceiling 180 → 180.5 kB, the measured size rounded
+   up to the next 0.1 kB.
+2. **What grew it:** Redesign A, S1–S3 — the top bar's line icons (`.icon`,
+   the current level's icon at the tightest fit), the mint Lessons button,
+   Watch's clock block and lower-third caption, and the classroom tokens on the
+   lesson study views — after S0 and the S3 offset took out their bytes.
+3. **Named identical-output offset:** EQ-13, item M-BUILD-027 — "Build CSS:
+   merge only exactly identical rule blocks" (plan
+   [S09 EQ-13](../plan/S09-eq-identical-output.md), PR type (3)
+   identical-output, wave K3, open; `build.css` and `satellite.css` are in
+   this chunk). It is the plan's only open identical-output CSS item: CO-4's
+   M-LAUNCH-026 is merged (#173). Its size is the plan's assumption until it
+   is measured.
+4. **Owner's approval:** in chat, **2026-11-14**, "1.ก 2.จัดการได้ 3.
+   ถือว่าสวยใช้ได้" — "1.ก" answering "งบขนาดไฟล์เกือบเต็มแล้ว … (ก)
+   อนุมัติเพิ่มเพดานตามกฎ D-38 พร้อมระบุงานที่จะชดเชย (ข) ให้ผมหา CSS
+   ที่ซ้ำหรือไม่ได้ใช้มาลบเพิ่มก่อน" (option (ก): approve a raise under D-38
+   with the offset work named). The approval covers this raise only; it is not
+   a standing raise.
+
+Precache code is not raised (15186.3 / 15187 kB: S0's built-page indentation
+offset keeps it inside). Every other ceiling is unchanged.
