@@ -13,10 +13,11 @@
  *
  * The tabs are given the room the bar has (`fit`): where they would run
  * under the tools on the bar's right — a narrower window, a language with
- * longer names, one section more — they are first drawn tighter, and if
- * that is not enough they take a row of their own under the bar's first, as
- * they do on a small screen. Measured, not set by a width: what fits depends
- * on the language and on what the tools on the right say.
+ * longer names, one section more — they are first drawn tighter, then the
+ * current level is shown by its glyph instead of its name, and if that is
+ * not enough they take a row of their own under the bar's first, as they do
+ * on a small screen. Measured, not set by a width: what fits depends on the
+ * language and on what the tools on the right say.
  *
  * The root carries the route it shows (`data-current-section`,
  * `data-current-level`), which is what the lessons page reads to mark the
@@ -62,10 +63,15 @@ export class SectionNav {
   /**
    * Give the tabs the room the bar has: as they are; tighter (`data-nav-fit`
    * "tight" on the bar: no menu marks, section glyphs or product name, less
-   * padding); tighter still ("tighter": smaller letters); or on a row of
-   * their own ("rows"), which costs the page under the bar some height and so
-   * comes last. Each step is taken only when the tabs would still run under
-   * the tools on the bar's right.
+   * padding); tighter still ("tighter": smaller letters); tightest
+   * ("tightest": the current level as its glyph, not its name — the longest
+   * thing a tab holds); or on a row of their own ("rows"), which costs the
+   * page under the bar some height and so comes last: on a short window that
+   * row pushes the flight's playback controls off the first screen (S3 of
+   * tests/browser/scene-floor.mjs), so the steps before it must leave real
+   * room, not a few pixels that another machine's fonts take. Each step is
+   * taken only when the tabs would still run under the tools on the bar's
+   * right.
    */
   private fit(): void {
     const bar = this.root.closest<HTMLElement>('#topbar');
@@ -78,7 +84,7 @@ export class SectionNav {
       return a.right > b.left - 6;
     };
     delete bar.dataset.navFit;
-    for (const step of ['tight', 'tighter', 'rows']) { if (!under()) break; bar.dataset.navFit = step; }
+    for (const step of ['tight', 'tighter', 'tightest', 'rows']) { if (!under()) break; bar.dataset.navFit = step; }
   }
 
   /** Show a route, every menu folded. */
@@ -175,8 +181,11 @@ export class SectionNav {
       glyph.setAttribute('aria-hidden', 'true');
       btn.append(glyph, el('span', 'nav-tab-name', name));
       if (isCurrent && !s.future) {
-        const level = t(levelNameKey(s.id as AppSection, this.shown.mode as AppLevel));
-        btn.append(el('span', 'nav-badge', level));
+        const mode = this.shown.mode as AppLevel;
+        const level = t(levelNameKey(s.id as AppSection, mode));
+        const badge = el('span', 'nav-badge', level);
+        badge.dataset.glyph = LEVEL_GLYPHS[mode]; // what the badge shows at the tightest fit (modes.css)
+        btn.append(badge);
         btn.setAttribute('aria-label', `${name} · ${level}`);
       }
       if (s.future) {
