@@ -77,7 +77,7 @@ export const TRACK2: readonly unknown[] = [
       { id: 'dv', kind: 'measure', measure: 'dvLeft', min: 20 },
     ],
     hints: [
-      { en: 'The setting is in the Engineer mode\'s setup: Ascent guidance: PEG and IGM → Upper-stage guidance.', ru: 'Настройка — в режиме «Инженер»: «Наведение на участке выведения: PEG и IGM» → «Наведение верхних ступеней».', th: 'ค่านี้อยู่ในการตั้งค่าของโหมดวิศวกร: การนำวิถีขาขึ้น: PEG และ IGM → การนำวิถีของขั้นบน' },
+      { en: 'The setting is in the Engineer mode\'s setup: Ascent guidance: PEG and IGM → Upper-stage guidance.', ru: 'Настройка — в режиме «Инженер»: «Наведение на участке выведения: PEG и IGM» → «Наведение верхних ступеней».', th: 'ค่านี้อยู่ในการตั้งค่าของโหมดวิศวกร: การนำวิถีขาขึ้น: PEG และ IGM → การนำวิถีของท่อนบน' },
       { en: 'Either law works; the event log says when it took over and how long it expected to burn (t_go).', ru: 'Подходит любой закон; журнал событий покажет, когда он включился и сколько, по его расчёту, осталось работать (t_go).', th: 'ใช้กฎใดก็ได้ บันทึกเหตุการณ์จะบอกว่ารับช่วงเมื่อใดและคาดว่าจะเผาไหม้อีกนานเท่าใด (t_go)' },
       { en: 'Compare the Δv left at the end with and without it: the difference is what the standard steering wasted.', ru: 'Сравните остаток Δv в конце с явным наведением и без него: разница — то, что стандартное управление потратило впустую.', th: 'เปรียบเทียบ Δv ที่เหลือตอนท้ายเมื่อใช้และไม่ใช้ ผลต่างคือสิ่งที่การบังคับทิศมาตรฐานสิ้นเปลืองไป' },
     ],
