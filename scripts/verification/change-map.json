@@ -81,7 +81,7 @@
     },
     { "id": "structure", "why": "The Structure & Assembly section (owner, 2026-11-09): its pure core, model files, viewer and screen.",
       "paths": ["src/structure/**", "src/structure-host/**", "src/ui/structure/**", "src/ui/structure-loader.ts", "src/render/structure-*.ts", "src/render/edusat-model.ts", "scripts/structure-meshes.mjs", "public/structure/**"],
-      "checks": { "commands": ["@app-build"], "unit": ["tests/structure-*.test.ts", "tests/architecture.test.ts", "tests/privacy-inventory.test.ts"], "browser": ["structure-assembly", "structure-failures"] } },
+      "checks": { "commands": ["@app-build"], "unit": ["tests/structure-*.test.ts", "tests/architecture.test.ts", "tests/privacy-inventory.test.ts"], "browser": ["structure-assembly", "structure-failures", "structure-entries"] } },
     {
       "id": "mission-file",
       "why": "Saved/shared mission format and its readers.",
