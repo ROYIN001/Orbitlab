@@ -2,6 +2,7 @@
 
 > **สถานะปัจจุบัน (บันทึกเดียวที่เป็นปัจจุบัน — แก้ที่นี่ทุกครั้งที่สถานะเปลี่ยน)**
 >
+> - **ปิดงานที่ค้าง 14 พ.ย. 2026 (เจ้าของ: “งานที่เปิดอยู่ทำการปิดให้เรียบร้อยครับ ยกเว้นอันที่ให้ astra ตรวจ”) — รายละเอียดใน §16:** (1) **หน้า Anatomy ของ Soyuz-2.1a สองหน้า** (Soyuz MS, Progress MS-26) ใช้คำชุดเดียวกับหน้า 2.1b แล้ว: ท่อน · ท่อนกลาง · แฟริ่ง · เพย์โหลด · เชื้อเพลิงและสารออกซิไดซ์ · ระบบขับเคลื่อน คำว่า “ขั้น” ที่หมายถึงขั้นตอน และ “สัมภาระ” ของยานขนส่งเสบียงคงไว้ ไบต์อื่นของไฟล์เหมือนเดิมทุกตัว หน้า 2.1b ไม่ถูกแตะ ไฟล์โมเดลของหมวดยังเป็นรุ่น 4 (2) **กฎแปลงคำอยู่ในโครงการแล้ว** (`npm run anatomy:terms`) พร้อมการทดสอบที่ล้มถ้าหน้าที่ส่งออกใหม่จากโครงการ Anatomy ของเจ้าของพาคำเดิมกลับมา (3) **การตรวจของ pull request รันชุดทดสอบของหมวดนี้และชุดจัดวางหน้าจอสองชุดที่เคยล้มที่ด่านเผยแพร่** แบ่งเป็นสามชุดขนานแทนสองชุด (4) พจนานุกรมของแอปใน pull request ถัดไป (§16.4) · เพดานขนาดไฟล์ไม่มีงานค้าง · **การตรวจโดย Astra เจ้าของจัดการเอง ยังไม่ได้ตรวจโดย Astra**
 > - **รอบที่สองของวันที่ 13 พ.ย. 2026 — ทำตามคำตอบอีก 4 ข้อของเจ้าของ (รายละเอียดใน §15):** (1) **เพดานขนาดไฟล์ได้รับอนุมัติ** (“1.อนุมัติ”) เขียนลง `budgets.json` พร้อมเหตุผลแล้ว ขนาดจริงอยู่ในเพดานที่อนุมัติทุกกลุ่ม ไม่มีเพดานใดตั้งเกินตัวเลขที่อนุมัติ (2) **คำไทยเปลี่ยนตามที่แหล่งไทยใช้** (“ใช้ตามที่แหล่งไทยเรียกกัน”) ทั้งข้อความของหมวดและหน้า Anatomy ของ Soyuz-2.1b: ท่อน · ท่อนกลาง · แฟริ่ง (ฝาครอบหัวจรวด) · เพย์โหลด · เชื้อเพลิงและสารออกซิไดซ์ · การทรงตัว · เงามืดของโลก — ไฟล์โมเดลเป็นรุ่น 4 (ชิ้นส่วนและสามเหลี่ยมเดิม) (3) **บรรทัดแหล่งอ้างอิง RD0110** ในหน้า Anatomy แก้ให้ตรงกับข้อมูลของหน้าเอง (เป็นของ Soyuz-2.1a) (4) **เจ้าของอนุญาตให้ merge** (“อนุญาตให้ merge pull request #217 เข้า main”) · **ยังไม่ได้แก้:** หน้า Anatomy ของ Soyuz-2.1a อีกสองหน้า และคำของพจนานุกรมแอปในส่วนอื่น (§15.4) · ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (13 ข้อ: P1 2 ข้อ P2 1 ข้อ P3 10 ข้อ แก้แล้ว 9 ข้อ แก้บางส่วน 1 ข้อ คงไว้พร้อมเหตุผล 3 ข้อ — §15.5) ผู้ตรวจไม่ใช่เจ้าของภาษาไทย **ยังไม่ได้ตรวจโดย Astra** 
 > - **รอบแรกของวันที่ 13 พ.ย. 2026 — ทำตามคำตอบของเจ้าของ 7 ข้อ (รายละเอียดใน §14):** แก้ประโยค RD-0110 ในหน้า Anatomy เป็น RD0124 และสร้างไฟล์โมเดลใหม่เป็นรุ่น 3 · ปรับคำไทย อังกฤษ รัสเซีย ตามแหล่งของแต่ละภาษา (บูสเตอร์ B/V/G/D ไม่มีอักษรรัสเซียนอกโหมดรัสเซีย) · พับแหล่งข้อมูลและหมายเหตุเรื่องที่มาไว้ท้ายการ์ด · เพิ่มทางเข้าจากหน้าแรก ส่วนสร้าง และส่วนปล่อย · เพิ่ม**ลำดับประกอบตามฐานปล่อยจริง (Vostochny)** เป็นตัวเลือกที่สองของการประกอบ Soyuz · ตรวจทานโดยเอเจนต์ Claude แยกบริบท 1 รอบ (26 ข้อ: P1 1 ข้อ P2 12 ข้อ P3 13 ข้อ แก้แล้ว 24 ข้อ บันทึกไว้ 2 ข้อ) **ยังไม่ได้ตรวจโดย Astra** · ฝั่งภาษารัสเซียตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น
 > - **ฉบับที่ 2 (ยกเครื่องทั้งหมวด ตามคำขอเจ้าของ 2026-11-10: "ตรวจเช็คโครงร่างที่ร่างมาตอนแรกแล้วร่างให้ดีกว่าเดิม … เอาให้ดีที่สุด")** สร้างต่อจากฉบับแรก (`be35eb7`) บนสาขา `claude/trusting-cannon-oah00c` · ฐาน: `main` @ `3e1b48a` · commit ของงาน: §13
@@ -9,7 +10,7 @@
 > - **ต้องแจ้งตรง ๆ — ข้อบกพร่องของฉบับแรกที่ส่งมอบไปแล้ว (E-01):** ไฟล์โมเดล Soyuz ของฉบับแรกติดป้ายชิ้นส่วนผิดให้สามเหลี่ยมราว 91 % (สคริปต์สร้างไฟล์บันทึกหมายเลขชิ้นต่อสามเหลี่ยมแต่อ่านต่อจุดยอด) ที่ระดับ "ชุดประกอบหลัก" ไม่เห็นผล แต่ต่ำกว่านั้น การเลือก การเน้น การผ่า และสีตามชนิด ชี้ผิดชิ้น ฉบับที่ 2 แก้แล้ว (ไฟล์รุ่น `.r2.` + การทดสอบที่จับข้อนี้ได้) ชุดส่งมอบฉบับแรกจึงไม่ควรใช้ต่อ — §2
 > - ผู้ทำงาน: Claude (ไม่ใช่ GPT-6.1 Sol) · ผู้ตรวจทาน: เอเจนต์ Claude แยกบริบท · **ยังไม่ได้ตรวจโดย GPT-6 Astra** (เรียกจากที่นี่ไม่ได้ เตรียมบริบทส่งต่อไว้แล้ว) — §10
 > - การตรวจฉบับแรกก่อนยกเครื่อง: ตั้งใจตรวจ 7 มุมมอง **ทำได้จริง 2 มุมมอง** (เป้าหมาย/การใช้งาน/การสำรวจ และ การประกอบ/ดาวเทียม) ได้ 29 ข้อ อีก 5 มุมมองหยุดเพราะโควตาการใช้งานของเซสชันเต็ม การตรวจทานฉบับที่ 2 ทำครบ 5 มุมมอง พบ 45 ข้อ แก้/ตอบครบแล้ว (ผู้หักล้างตรวจยืนยัน 27 ข้อของสามมุมมองหลัง ส่วน 18 ข้อของสองมุมมองแรก ผู้หักล้างหยุดเพราะโควตา ผมทำซ้ำด้วยสคริปต์ของผู้ตรวจเองแทน ซึ่งไม่ใช่การตรวจอิสระ) — §2, §10
-> - **ยังเปิดอยู่ (หลังคำตอบรอบที่สองของวันที่ 13 พ.ย. 2026):** (1) หน้า Anatomy ของ Soyuz-2.1a อีกสองหน้า (Progress MS-26 และ Soyuz MS) ยังใช้คำเดิม (ขั้น หัวครอบ สารขับดัน แกนกลาง) และพจนานุกรมของแอปในส่วนอื่นยังใช้ “ท่อนแกนกลาง” “สัมภาระ” “ระบบขับดัน” และ “ท่าทาง” — ไม่ได้แก้ในงานนี้เพราะอยู่นอกหมวดและนอกสิ่งที่เจ้าของได้เห็น รายการและจำนวนอยู่ใน §15.4 (2) สำเนาหน้า Anatomy ในโครงการ Anatomy ของเจ้าของยังเป็นคำเดิม ถ้าส่งออกหน้าใหม่จากที่นั่น คำเดิมและบรรทัด RD0110 จะกลับมา ตารางคำที่เปลี่ยนอยู่ใน §15.2 (3) ร่างภาษารัสเซียยังตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น (4) การส่งให้ Astra ตรวจ ยังไม่ได้ตอบ 
+> - **ยังเปิดอยู่ (14 พ.ย. 2026):** (1) พจนานุกรมของแอปในส่วนอื่นยังใช้ “ท่อนแกนกลาง” “สัมภาระ” “ระบบขับดัน” “ฝาครอบหัวจรวด” — แก้ใน pull request ถัดไป (§16.4) (2) สำเนาหน้า Anatomy ในโครงการ Anatomy ของเจ้าของยังเป็นคำเดิม ถ้าส่งออกหน้าใหม่ ให้รัน `npm run anatomy:terms` แล้ว `npm run anatomy` การทดสอบ `tests/anatomy-terms.test.ts` จะล้มถ้าลืม (§16.1) (3) ร่างภาษารัสเซียยังตรวจได้จากข้อความย่อในผลค้นหาเท่านั้น (4) การตรวจโดย Astra เจ้าของจัดการเอง 
 > - ชุดส่งมอบ Soyuz 2 พ.ย.: เจ้าของเลือก "ใช้โมเดลในเว็บไปก่อน" (2026-11-10) จึง**ยังไม่ได้เทียบ**กับชุดนั้น
 > - คำแปลอังกฤษและรัสเซียเป็น**ร่าง**ที่เอเจนต์แปลจากต้นฉบับไทย ยังไม่ผ่านเจ้าของภาษา (ขึ้นป้ายบอกบนจอ)
 >
@@ -672,6 +673,67 @@ Merged as `1ddf187` on 2026-11-14 with the pull request's nine checks green on `
 | --- | --- |
 | `8ee6ca3` | the words in the section and on the page; the other RD0110 line; revision 4; the approved ceilings and their notes; the review's points |
 | the commit after it | this section, and the status at the head of the report |
+
+## 16. Close-out of 2026-11-14: the items left open after publication
+
+The section is published (§15.6c: the live site serves `03b0d98`). Shown what was still open, the owner answered: **"งานที่เปิดอยู่ทำการปิดให้เรียบร้อยครับ ยกเว้นอันที่ให้ astra ตรวจ เดี๋ยวผมจัดการเอง"**: close the open items; the review by Astra the owner arranges. I told the owner how I read it before starting (do the work, merge it, follow it to the live site, in two parts), and the owner answered "ทำต่อ".
+
+| Open item, as it was put to the owner | How it is closed |
+| --- | --- |
+| the earlier Thai words on the two Soyuz-2.1a Anatomy pages | §16.1, the first pull request |
+| the same, in the app's dictionary | §16.4, a second pull request after the first is published |
+| the copy in the owner's Anatomy project brings the earlier words back when a page is exported again | §16.1: the rules as a script in the repository, and a test that fails while a page here has the earlier words |
+| the journeys that failed at the Pages gate are not in a pull request's checks ("ง เพิ่ม") | §16.2, the first pull request |
+| the ceilings of the budget have almost no room (§15.1) | nothing to do: a standing limit; nothing here raises a ceiling |
+| the review by GPT-6 Astra | the owner's. Nothing here was reviewed by GPT-6 Astra |
+
+### 16.1 The two Soyuz-2.1a pages, and the rules as a script
+
+**The pages.** `public/anatomy/soyuz-2-1a-progress-ms-26.html` (196 places, on 20 of its 2,546 lines) and `public/anatomy/soyuz-2-1a-soyuz-ms.html` (164 places, on 18 of its 2,361 lines) now say what the 2.1b page says since §15.2: ท่อน for a stage, ท่อนกลาง for the core, แฟริ่ง for the fairing (with ฝาครอบหัวจรวด beside it where the Progress page introduces it), เพย์โหลด for what the rocket carries, เชื้อเพลิง and สารออกซิไดซ์ for propellant, ระบบขับเคลื่อน for a propulsion system, การทรงตัว for a spacecraft's attitude. Every other byte of the two files is as it was, their mixed line endings included (1,310 and 1,242 carriage returns before and after); their content JSON parses and their script compiles. Each changed place was read in its sentence before the files were written.
+
+**Left as they are, on purpose:**
+
+| Still says | Where | Why |
+| --- | --- | --- |
+| ขั้น, 13 and 19 places | "ขั้นตอนถัดไป", "เลือกขั้นเพื่อเน้นชิ้นส่วน", "ตรวจขั้นสุดท้าย", "ในขั้นต้นของการเทียบท่า" | a step of a sequence, not a stage |
+| ชุดขับดันหนีฉุกเฉิน, ชุดขับดันบนยอด, 4 and 10 places | the launch escape tower | the name of that motor unit, not a propulsion system of the vehicle |
+| สัมภาระเติมสถานี, สัมภาระเติมบรรยากาศ, 3 places | the Progress page | a cargo ship's cargo for the station; เพย์โหลด is what the rocket carries, here the ship itself |
+
+**One place the general rule would have got wrong.** The Progress page's refuelling compartment gives "สารขับดันส่งให้สถานี: 580 kg", and the page's own circuit says of that figure "มวลนี้รวมเชื้อเพลิงและสารออกซิไดซ์ มิใช่มวลเชื้อเพลิงอย่างเดียว". The general rule (สารขับดัน → เชื้อเพลิง) would have labelled it fuel alone beside a sentence that tells fuel from oxidiser; the label and its sentence say both: "เชื้อเพลิงและสารออกซิไดซ์ส่งให้สถานี".
+
+**The 2.1b page is untouched**: the same bytes (SHA-256 `19369cd3…`), so the section's model files stay at revision 4. One phrase of the script the three pages share, "โมดูลเครื่องมือและขับดัน (PAO)", names a spacecraft the 2.1b page never shows; it changes on the 2.1a pages, which show it, and stays on the 2.1b page so that its bytes, and the files made from them, do not change for a string nobody sees there.
+
+**The flight's meshes** (`npm run anatomy`) carry each page's hash, so the two files of these pages were made again. Inflated, each differs from the one before in 58 and 60 bytes, all inside the hash; the headers are otherwise equal, and the triangles the same (104,216 and 128,199).
+
+**The rules are now in the repository**: `scripts/anatomy-terms.mjs` (`npm run anatomy:terms`; with `--check` it only says which pages would change). It is the list of §15.2 as code, in order, plus the few rules that are the 2.1a spacecraft's. That it is the same list was checked, not assumed: applied to the 2.1b page as it was before §15, it gives the committed page byte for byte; applied to any of the three pages as they are now, it changes nothing.
+
+**The guard**: `tests/anatomy-terms.test.ts` (10 tests) fails while a page in `public/anatomy/` would still be changed by the rules, and checks the rules on short lines: what they change, and that a step, a cargo ship's cargo and the escape tower's motor are left. Shown failing: with the Soyuz MS page as it was, it reports *"soyuz-2-1a-soyuz-ms.html … at 57241: "…สำรวจ RD-108A · แกนกลาง…" would become "…สำรวจ RD-108A · ท่อนกลาง…""*; with the page of this pull request it passes.
+
+**The owner's own Anatomy project** is read-only to me and not reachable from here; it still has the earlier words. When a page is exported from it again: put it in `public/anatomy/`, run `npm run anatomy:terms`, then `npm run anatomy` (for the 2.1b page also `npm run structure` with a new `DATA_REVISION`). A page put in without that fails the test above before anything is published. To make the project itself say the new words, the script holds every rule.
+
+### 16.2 The journeys that failed at the Pages gate now run in a pull request's checks
+
+Both failures of §15.6b and §15.6c were in journeys that a pull request's checks did not run: those ran the smoke journeys, in two shards; the Pages gate runs every journey, in three, after the merge. The owner had been offered to add the section's journeys and the layout journeys to a pull request's checks ("ง เพิ่ม", for about ten minutes more per pull request) and asked for the open items to be closed.
+
+**What changed.** Five journeys are smoke journeys now (`export const smoke = true`): the section's three, `structure-assembly`, `structure-entries` and `structure-failures`, and the two layout journeys that were not, `r2-viewport-matrix` and `r2-viewport-scene-floor` (the other five of the layout set already were). That is 26 smoke journeys. On GitHub two shards had taken 5 and 15 minutes of the job's 25 (CI 43569587484); on GitHub's runner the five take 23 minutes together (523, 445, 194, 139 and 71 s in the last Pages run, 43571092221), so a pull request runs them in **three shards** (`create-plan.mjs`, `ci.yml`'s matrix, `tests/verification/workflow-paths.test.mjs`, VERIFICATION.md). With each journey's own time on GitHub (the last pull request's run gives the other sixteen's, and reproduces its two shards' 4.9 and 13.7 minutes exactly), the three shards hold 10.5, 16.1 and 15.0 minutes of journeys: a pull request's browser checks take about 17 minutes instead of 15, the five journeys' 23 minutes spread over three machines. The job's limit of 25 minutes is unchanged; the Pages gate is unchanged.
+
+The change map's `structure` rule (`scripts/verification/change-map.json`) also selects `structure-entries`, the journey of the ways into the section, which it had missed.
+
+### 16.3 Checks on the first pull request
+
+On the tree of this pull request, in the development container (Node 22.23.4; CI uses 22.23.3). The change map selects the full set, since `public/**` changed:
+
+| Check | Result |
+| --- | --- |
+| `npx tsc --noEmit`; `npx vite build`; `node scripts/bundle-budget.mjs` | clean; built; every group inside its ceiling (the Anatomy pages are fetched on demand and in no group) |
+| `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | 93/93, with the three-shard check of `workflow-paths.test.mjs` |
+| `node scripts/verification/create-plan.mjs ci` | 8 gates: typecheck, build, three unit shards and **three browser shards**; 21 browser cases |
+| `npx vitest run` (whole suite) | 361 files, 10,860 tests, all pass |
+| `tests/anatomy-terms.test.ts` | 10/10; shown failing with the Soyuz MS page as it was (§16.1) |
+| every browser journey on the built app, three shards at once on four processors | 41 of 41 pass (26, 39 and 30 minutes); the 6 journeys the owner holds are listed, not run, as at the Pages gate |
+| heavy and six-DOF fleet | **reused under D-64**: Heavy suites run 42354766879 (dispatched 2026-11-07) on `3e1b48a`, 35 heavy files and 6 six-DOF fleet files, all green. Between `3e1b48a` and this pull request the physics tree is unchanged, compared as git tree hashes: `src/physics` 6a684c0f, `src/data` 4da3d3d8, `tests/heavy` 3a66de37, `tests/sixdof-fleet` b4d9c79e, `package-lock.json` 65a140e5, and the 12 worker files each the same; the run used Node 22.23.3 |
+
+Not reviewed by GPT-6 Astra; the owner arranges that review. No independent agent reviewed this part: its words are the rules of §15.2, whose review is §15.5, applied by a script proven against that round's page; each changed place was read in its sentence (§16.1).
 
 ## Appendix A. The first version's reviews (kept as a record)
 
