@@ -666,6 +666,17 @@ export default async function structureAssembly(t) {
   const q = small.page;
   await ready(q);
   const sk = (key) => q.locator(`.structure-screen [data-k="${key}"]`);
+  // Brought into sight in the page, at one instant. The section draws its panels again when its state changes, also a
+  // moment after `ready` (the picture settling), and an element taken before that is no longer in the page: Playwright's
+  // own scrollIntoViewIfNeeded then throws "Element is not attached to the DOM" where a click would look again
+  // (Pages run 43564094307; it lost its element in 5 of 25 tries here).
+  const reveal = async (key) => {
+    await sk(key).waitFor();
+    await q.evaluate((k) => {
+      const e = document.querySelector(`.structure-screen [data-k="${k}"]`);
+      if (e?.scrollIntoViewIfNeeded) e.scrollIntoViewIfNeeded(true); else e?.scrollIntoView({ block: 'center' });
+    }, key);
+  };
   const rectOf = (sel) => q.evaluate((x) => { const e = document.querySelector(x); if (!e) return null; const r = e.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; }, sel);
   const inSight = (r) => !!r && r.left >= 0 && r.right <= 390 + 1 && r.top >= 0 && r.bottom <= 664 + 1;
   // the activities and the first look's tools are all on the screen, none past its edge
@@ -678,7 +689,7 @@ export default async function structureAssembly(t) {
   await q.waitForFunction(() => document.querySelector('.structure-screen').dataset.mode === 'experiment');
   await ready(q);
   if (await sk('create').count()) await sk('create').click();
-  await sk('payload:camera-night').scrollIntoViewIfNeeded();
+  await reveal('payload:camera-night');
   await sk('payload:camera-night').click();
   await q.waitForFunction(() => document.querySelector('.st-verdict')?.classList.contains('st-short'));
   const verdict = await rectOf('.structure-screen .st-verdict'), pic = await rectOf('.structure-screen .st-canvas-box'), option = await rectOf('.structure-screen [data-k="payload:camera-night"]');
@@ -689,7 +700,7 @@ export default async function structureAssembly(t) {
   await q.waitForFunction(() => document.querySelector('.structure-screen').dataset.mode === 'assemble');
   await ready(q);
   if (await sk('restart').isEnabled()) await sk('restart').click();
-  await sk('tray:stack').scrollIntoViewIfNeeded();
+  await reveal('tray:stack');
   await sk('tray:stack').click();
   t.check(await q.evaluate(() => document.activeElement?.dataset.k) === 'slot', 'a part picked up from the list puts the focus on its place to choose');
   await sk('slot').selectOption('stack');
@@ -697,7 +708,7 @@ export default async function structureAssembly(t) {
   const refusal = await rectOf('.structure-screen .st-hand-box .st-msg'), hand = await rectOf('.structure-screen .st-hand-box');
   t.check(inSight(refusal) && inSight(hand), `on a small phone the refusal is read under the picture: ${JSON.stringify(hand && { top: Math.round(hand.top), bottom: Math.round(hand.bottom) })}`);
   await q.evaluate(() => document.querySelector('.structure-screen').scrollTo(0, 0));
-  await sk('undo').scrollIntoViewIfNeeded();
+  await reveal('undo');
   t.check(inSight(await rectOf('.structure-screen [data-k="hint"]')), 'and the tools are reached by scrolling');
   await small.shot('small-phone-assemble');
   small.checkErrors();
