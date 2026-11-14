@@ -13,6 +13,8 @@
  *
  * None of them fetches the section's code before it is pressed.
  */
+// a smoke journey since 2026-11-14 (owner): the Structure section's journeys run in a pull request's checks
+export const smoke = true;
 export const timeoutMs = 300_000;
 
 export default async function structureEntries(t) {

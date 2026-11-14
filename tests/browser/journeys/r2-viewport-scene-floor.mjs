@@ -13,6 +13,8 @@
 import { viewportSize } from '../harness.mjs';
 import { checkSceneFloor, sceneMin } from '../scene-floor.mjs';
 
+// a smoke journey since 2026-11-14 (owner): it failed only at the Pages gate before (#217-#219)
+export const smoke = true;
 export const timeoutMs = 900_000;
 
 const RESPOND_MS = 20_000;

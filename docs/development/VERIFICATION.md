@@ -16,8 +16,9 @@ node scripts/bundle-budget.mjs
 node scripts/verification/run-vitest.mjs unit-1of3
 node scripts/verification/run-vitest.mjs unit-2of3
 node scripts/verification/run-vitest.mjs unit-3of3
-node scripts/verification/run-browser.mjs browser-1of2
-node scripts/verification/run-browser.mjs browser-2of2
+node scripts/verification/run-browser.mjs browser-1of3
+node scripts/verification/run-browser.mjs browser-2of3
+node scripts/verification/run-browser.mjs browser-3of3
 # Pages plan (create-plan.mjs pages): browser-1of3, browser-2of3, browser-3of3
 node scripts/verification/aggregate.mjs
 ```
@@ -76,7 +77,7 @@ The selection is early feedback. It does not replace the CI/Pages plans, and it 
 
 ## CI, publishing and measurement
 
-CI retains three default Vitest shards and two smoke shards, plus typecheck/build/budget and a final `verify` job. CI/Pages plan jobs run a separately named repository-hygiene preflight after Node verification and before collection/downstream jobs. The same seven cheap hygiene cases remain in the complete default suite; repeating this subset is deliberate early feedback, not a reduction of final coverage. CI PR/push and Pages main-push share the existing Markdown-only exemption: progress/report Markdown does not retrigger numerical/browser/redeploy gates, while all non-Markdown changes and three consumed Markdown inputs stay gated:
+CI retains three default Vitest shards and three smoke shards (two until 2026-11-14, when the Structure section's journeys and the two viewport journeys joined the smoke set), plus typecheck/build/budget and a final `verify` job. CI/Pages plan jobs run a separately named repository-hygiene preflight after Node verification and before collection/downstream jobs. The same seven cheap hygiene cases remain in the complete default suite; repeating this subset is deliberate early feedback, not a reduction of final coverage. CI PR/push and Pages main-push share the existing Markdown-only exemption: progress/report Markdown does not retrigger numerical/browser/redeploy gates, while all non-Markdown changes and three consumed Markdown inputs stay gated:
 
 - `docs/ROADMAP-PART2-3.md` (section/plan tests)
 - `docs/SIXDOF-VEHICLE-DATA.md` (bundled app dossier)

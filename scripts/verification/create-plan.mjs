@@ -3,10 +3,13 @@ import { pathToFileURL } from 'node:url';
 import { appendFileSync } from 'node:fs';
 import { annotate, assertionKey, browserInventory, collectCases, DEFAULT_OUT, readJSON, runtime, same, sha256, snapshots, sourceIdentity, workflow, writeJSON } from './lib.mjs';
 
-// PR CI runs the smoke journeys in two shards; Pages runs every journey in three (CO-5:
+// PR CI runs the smoke journeys in three shards, Pages every journey in three (CO-5:
 // two full shards measured 18.8 and 23.4 min of a 30 min job at 5f9aa2e, Pages 37230585947).
+// PR CI had two until the Structure section's journeys and the two viewport journeys joined
+// the smoke set (owner, 2026-11-14), after they failed only at the Pages gate (#217-#219):
+// two shards took 5 and 15 min of a 25 min job at 77da674 (CI 43569587484).
 export function browserGates(mode) {
-  const shards = mode === 'pages' ? 3 : 2;
+  const shards = 3;
   return Array.from({ length: shards }, (_, i) => ({ id: `browser-${i + 1}of${shards}`, kind: 'browser', suite: 'browser', shard: `${i + 1}/${shards}` }));
 }
 

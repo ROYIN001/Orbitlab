@@ -38,6 +38,8 @@ import { press, viewportSize } from '../harness.mjs';
 import { checkSceneFloor } from '../scene-floor.mjs';
 
 // 7–10 min here; CI runs flight/WebGL journeys ~1.5–2× slower
+// a smoke journey since 2026-11-14 (owner): it failed only at the Pages gate before (#217-#219)
+export const smoke = true;
 export const timeoutMs = 1_200_000;
 
 const RESPOND_MS = 20_000;

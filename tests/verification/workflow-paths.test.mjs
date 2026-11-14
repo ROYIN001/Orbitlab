@@ -92,8 +92,8 @@ test('cheap repository hygiene runs before collection or downstream expensive ga
 });
 
 test('each workflow runs exactly the browser shards its plan creates', () => {
-  // create-plan.mjs: PR CI runs the smoke journeys in two shards, Pages every journey in three
-  for (const [source, name, shards, mode] of [[ci, 'browser-smoke', 2, 'ci'], [pages, 'browser', 3, 'pages']]) {
+  // create-plan.mjs: PR CI runs the smoke journeys in three shards, Pages every journey in three
+  for (const [source, name, shards, mode] of [[ci, 'browser-smoke', 3, 'ci'], [pages, 'browser', 3, 'pages']]) {
     assert.deepEqual(browserGates(mode).map((gate) => [gate.id, gate.shard]), Array.from({ length: shards }, (_, i) => [`browser-${i + 1}of${shards}`, `${i + 1}/${shards}`]));
     const start = source.indexOf(`\n  ${name}:\n`);
     assert.ok(start >= 0, `Missing ${name} job`);
