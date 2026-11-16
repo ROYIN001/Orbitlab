@@ -34,6 +34,16 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
     if (mod.held) { console.log(`⏸ ${name}: held, not run: ${mod.held}`); continue; }
     picked.push({ name, mod });
   }
+  // TEMPORARY, rule 2 evidence for the changed watch-controls, stage2-preflight and teaching-held (PR #223; reverted before merge):
+  // on CI the smoke shards run only those three, 7 times each (each shard runs every one 2 or 3 times); three CI runs give 21 each.
+  if (smoke && !names.length && process.env.GITHUB_ACTIONS) {
+    const runs = [];
+    for (const name of ['watch-controls', 'stage2-preflight', 'teaching-held']) {
+      const mod = await import(pathToFileURL(join(journeyDir, `${name}.mjs`)).href);
+      runs.push(...Array.from({ length: 7 }, () => ({ name, mod })));
+    }
+    picked = runs;
+  }
   if (!picked.length && names.length) return { results: [], ok: true };
   if (!picked.length) throw new Error('no journeys selected');
   picked = selectShard(picked, shard);
