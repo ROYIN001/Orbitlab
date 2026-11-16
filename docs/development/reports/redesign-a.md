@@ -119,7 +119,8 @@ to three questions put to them in this package's chat:
    rebase review fixes, the lesson strip also hidden in the Structure section
    and the section's two links drawing `#i-structure` in place of `⊞` (below,
    "Rebase review fixes"). They follow the same choices; the owner has not
-   seen them on a screenshot.
+   seen them on a screenshot. *Accepted on 2026-11-16* (below, "The owner's
+   words of 2026-11-16 at 21:21:48Z"), as the session read the owner's words.
 
 The authorization of 2026-11-05 ("เริ่มทำได้เลยครับ โหมดการเรียนที่คุณเสนอ
 ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ ส่วนรูปแบบอื่นๆ
@@ -174,6 +175,27 @@ What follows from it:
   `scripts/` and `vite.config.ts` (+368 / −216), by
   `git diff --numstat origin/main...HEAD` at `166e1577`. No second reviewer's
   view of that is recorded yet.
+
+## The owner's words of 2026-11-16 at 21:21:48Z
+
+Owner, in chat, **2026-11-16** at 21:21:48Z, verbatim:
+
+> "เอาตามที่คุณเสนอไว้ก่อนครับ ทำงานต่อเนื่องๆยาวไปได้เลยครับ"
+
+(Go with what you proposed, for now; keep working, continuously, for a long
+stretch.) The session's message just before it gave its proposal for step 2's
+jump buttons and listed what was still open for the owner; for this PR: the
+four things the rebase added after the screenshots the owner accepted on
+2026-11-14 (above, "The owner's answers (2026-11-14)", item 3), and whether
+the session should watch #223. The session read the words as taking its
+proposals, told the owner in chat how it read each item, and asked to be told
+if any part was wrong:
+
+- **The four are accepted** as they stand on this branch: the Structure tab's
+  icon `#i-structure`; the current level's icon at the tightest fit of the top
+  bar; the Structure section's two links drawing `#i-structure` in place of
+  `⊞`; the lesson strip also hidden in the Structure section.
+- **The session watches #223**: its CI results and reviews reach the session.
 
 ## S0 — identical-output offset: dead section CSS and the built page's line indentation
 
@@ -1632,3 +1654,48 @@ so both claims were checked again by a second agent told to refute them.
 
 Not checked in either: clicks and dialogs, languages other than Thai, the
 service worker at run time.
+
+## Rule 2: 21 CI runs of each changed journey (2026-11-16)
+
+Rule 2 of the five rules ([HANDOVER-K2.md](../HANDOVER-K2.md), "The five
+rules"): a new or changed journey runs 20 times on CI before merge. #223
+changes three journeys: `watch-controls` (S2's layout checks),
+`stage2-preflight` (the laptop toolbar check, now in Russian too) and
+`teaching-held` (the lesson strip hidden in the Structure section). The
+helpers they import, `tests/browser/harness.mjs` and `held.mjs`, are
+unchanged.
+
+The temporary commit `67bd2b71`, "TEMPORARY (rule 2 evidence, reverted before
+merge): CI's smoke shards run only watch-controls, stage2-preflight and
+teaching-held, 7 times each", made CI's three smoke shards run only these
+three journeys, 7 runs of each per CI run, split 3/2/2 over the shards. It
+changed `tests/browser/run.mjs` only, and only on CI (`GITHUB_ACTIONS`), as
+the precedents `23389f2a` and `55cb187f` (#209) did. 20 runs of each, about
+2.2 hours, do not fit three 25-minute shards, and
+`tests/verification/workflow-paths.test.mjs` pins the shards at three, so the
+commit ran three times: the PR's own run, then two `workflow_dispatch` runs,
+one after the other (CI's concurrency group cancels a second run on the same
+branch), as #209's second run was. `80a7bcda` reverts it.
+
+**63 of 63 passed: 21 of each journey.**
+
+| CI run | Event | Shard 1 | Shard 2 | Shard 3 |
+|---|---|---|---|---|
+| [43951855869](https://github.com/ROYIN001/Orbitlab/actions/runs/43951855869) | pull_request | 7 / 7 in 789.5 s | 7 / 7 in 956.9 s | 7 / 7 in 689.7 s |
+| [43960431057](https://github.com/ROYIN001/Orbitlab/actions/runs/43960431057) | workflow_dispatch | 7 / 7 in 792.7 s | 7 / 7 in 640.1 s | 7 / 7 in 932.2 s |
+| [43963576791](https://github.com/ROYIN001/Orbitlab/actions/runs/43963576791) | workflow_dispatch | 7 / 7 in 999.5 s | 7 / 7 in 770.5 s | 7 / 7 in 490.0 s |
+
+Each journey's time per run, in seconds (in a cell, semicolons separate
+shards 1, 2 and 3):
+
+| Journey | Run 43951855869 | Run 43960431057 | Run 43963576791 | Range |
+|---|---|---|---|---|
+| `watch-controls` | 134.2, 137.2, 128.1; 171.6, 161.9; 134.2, 135.7 | 131.0, 131.7, 140.4; 109.4, 109.3; 181.8, 182.2 | 168.7, 172.2, 175.5; 133.3, 132.5; 95.9, 91.7 | 91.7–182.2 |
+| `stage2-preflight` | 124.8, 123.8; 158.2, 159.1, 159.9; 120.1, 122.3 | 123.9, 122.5; 104.9, 100.9, 100.1; 170.0, 168.1 | 162.9, 159.3; 124.4, 122.8, 127.9; 86.2, 91.2 | 86.2–170.0 |
+| `teaching-held` | 51.6, 51.4; 57.6, 55.2; 51.7, 48.0, 50.8 | 51.4, 51.6; 44.9, 44.7; 65.5, 66.5, 60.4 | 55.3, 54.8; 52.2, 49.7; 37.2, 34.4, 34.9 | 34.4–66.5 |
+
+The longest shard took 999.5 s of its 25 minutes. On `67bd2b71` the
+`browser-smoke` and `verify` jobs are red by design: after "7/7 journeys
+passed", the runner reports "Executed browser journeys differs from the
+verification plan". The `plan`, `typecheck`, `build` and `test (1–3)` jobs
+passed in all three runs. A comment on #223 said so while the runs went on.
