@@ -7,9 +7,9 @@ owner on screenshots.
 | Field | Value |
 |---|---|
 | Package | Redesign A (direction A "Mission Control"), steps S0–S3 |
-| Branch | S0: `claude/friendly-keller-78iuc9` at `5bef72f` (based on `origin/main` `5588be1`; on 2026-11-14 the whole package was rebased onto `origin/main` `8a9a108`, below, "Rebase onto main", and S0 became `d973ba2` and `2719093`). S1: `claude/u-redesign-a-s1`, stacked on S0 (waiting: merges after S0). S2: `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1). S3 offset: `claude/u-redesign-a-s3-offset` (`f30bebd`), stacked on S2 (waiting: merges after S2). S3: `claude/u-redesign-a-s3` (`0f2250a` and its review fixes), stacked on the S3 offset (waiting: merges after it). In this session the S3 commits sit after `fa6927a` on `claude/friendly-keller-78iuc9` |
-| Fragment | S0: [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md). S1: [`changes/claude-u-redesign-a-s1.md`](../../../changes/claude-u-redesign-a-s1.md). S2: [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md). S3 offset: [`changes/claude-u-redesign-a-s3-offset.md`](../../../changes/claude-u-redesign-a-s3-offset.md). S3: [`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md) |
-| Status | In PR; not merged; not published |
+| Branch | `claude/friendly-keller-78iuc9`: every step, S0–S3, in one PR, [#223](https://github.com/ROYIN001/Orbitlab/pull/223), by the owner's answer of 2026-11-16 (below, "The owner's answer on delivery"). S0 was `5bef72f` (based on `origin/main` `5588be1`; on 2026-11-14 the whole package was rebased onto `origin/main` `8a9a108`, below, "Rebase onto main", and S0 became `d973ba2` and `2719093`); the S3 offset (`f30bebd`) and S3 (`0f2250a` and its review fixes) sat after `fa6927a` on this branch. Superseded by that answer, the plan of five stacked PRs: S0 from this branch; S1 from `claude/u-redesign-a-s1`, stacked on S0; S2 from `claude/u-redesign-a-s2`, stacked on S1; the S3 offset from `claude/u-redesign-a-s3-offset`, stacked on S2; S3 from `claude/u-redesign-a-s3`, stacked on the S3 offset; each to merge after the one before. None of those four branches is on the remote |
+| Fragment | [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md), the PR's one fragment, named for its branch (`changes/README.md`): a CHANGELOG line and a PROGRESS row for each of S0, S1, S2, the S3 offset and S3. Until 2026-11-16 S1, S2, the S3 offset and S3 each had a fragment named for its planned branch (`changes/claude-u-redesign-a-s1.md`, `changes/claude-u-redesign-a-s2.md`, `changes/claude-u-redesign-a-s3-offset.md`, `changes/claude-u-redesign-a-s3.md`); they were folded into this one then |
+| Status | In PR [#223](https://github.com/ROYIN001/Orbitlab/pull/223); not merged; not published |
 
 ## The owner's authorization (D-65)
 
@@ -125,6 +125,55 @@ The authorization of 2026-11-05 ("เริ่มทำได้เลยคร�
 ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ ส่วนรูปแบบอื่นๆ
 จัดแบบผสมให้เหมาะสมเลยครับ เช่น โหมดรับชม
 ให้เน้นเห็นภาพจำลองมีแค่ข้อมูลพื้นฐานประกอบพอ") is unchanged above.
+
+## The owner's answer on delivery (2026-11-16)
+
+Owner, in chat, **2026-11-16** at 20:08:06Z, verbatim:
+
+> "ทั้งหมด ก ครับ ยกเว้น ข้อ 4 5"
+
+(All ก, except rows 4 and 5.) It answers a table of twelve rows sent in this
+package's chat on 2026-11-15, whose column ก was the recommended option. Its
+header and row 1, the row about this PR:
+
+| # | เรื่อง | ก (แนะนำ) | ข |
+|---|---|---|---|
+| 1 | ส่งมอบขั้นที่ 1 ([PR 223](https://github.com/ROYIN001/Orbitlab/pull/223)) | PR เดียว บันทึกเป็นข้อยกเว้น | แยก 5 ใบ เปิดทีละใบ |
+
+(Delivering step 1, PR 223: ก, one PR, recorded as an exception; ข, split it
+into five, opened one at a time.) Row 1 is not one of the two rows excepted,
+so its answer is **ก**. Rows 2 to 12 concern step 2 and are recorded on its
+branch.
+
+What follows from it:
+
+- **Step 1 is one PR**, [#223](https://github.com/ROYIN001/Orbitlab/pull/223)
+  from `claude/friendly-keller-78iuc9`: S0, S1, S2, the S3 offset and S3, each
+  still in commits of its own, and the `budgets.json` raise. The five stacked
+  PRs planned until this answer, each from a branch of its own and merging
+  after the one before, are superseded; their branches are not cut.
+- **It is an exception to [SESSION-PROTOCOL.md](../SESSION-PROTOCOL.md) §5**,
+  recorded in the owner's words above. #223 departs from these sentences of
+  §5: "One step, one branch, one PR, named `<agent>/<lane>-<package>-s<step>`.
+  One change type per PR (identical-output never mixes with another type)."
+  It holds the identical-output steps S0 and the S3 offset together with the
+  look changes S1, S2 and S3 and a ceiling raise. The exception is this PR's;
+  §5 is unchanged.
+- **Each step keeps its own record:** its section below, with its change type,
+  measurements and checks. The identical-output claims are about their own
+  commits (S0 against the commit before it, the S3 offset against S2's last
+  commit), checked on the old base and again on main `8a9a108` (below, "The
+  identical-output steps, checked again on main"). The five CHANGELOG lines
+  and PROGRESS rows are in one fragment (the Fragment row above).
+- **The D-38 raise** of `index-*.css`, 180 → 180.5 kB, is in #223, the PR that
+  crosses the ceiling. S2 is still the first step over it, and "1.ก" of
+  2026-11-14 covers this one raise (below, "Budget after the rebase").
+- **Size.** D-25 asks for about 400 changed source lines per PR at most, or a
+  written reason the second reviewer agrees with. As one PR, #223 changes 441
+  lines in `src/` and `index.html` (+243 / −198), and 584 with `tests/`,
+  `scripts/` and `vite.config.ts` (+368 / −216), by
+  `git diff --numstat origin/main...HEAD` at `166e1577`. No second reviewer's
+  view of that is recorded yet.
 
 ## S0 — identical-output offset: dead section CSS and the built page's line indentation
 
@@ -491,7 +540,10 @@ separate bug-fix PR.
    S1's CHANGELOG line and PROGRESS row. S0's fragment holds only S0's line and
    row again (as at `5bef72f`). CHANGELOG.md and PROGRESS.md are untouched. The
    local `claude/friendly-keller-78iuc9` was not moved; S0's PR is its commit
-   `5bef72f`.
+   `5bef72f`. *Superseded on 2026-11-16* (above, "The owner's answer on
+   delivery"): S1 is in the one PR #223 from `claude/friendly-keller-78iuc9`,
+   no `claude/u-redesign-a-s1` is on the remote, and S1's line and row are in
+   `changes/claude-friendly-keller-78iuc9.md` with S0's.
 7. **Not applied here: the Russian tabs already ran over the tools at S0.** It
    is a bug fix (one change type per PR), and the fix the review measured
    (an ellipsis on the tab names) changes the look, so it is left for a separate
@@ -575,8 +627,13 @@ heavy and sixdof-fleet. CI runs them.
 ## S2 — Watch scene-first: the clock block at the top centre, one lower-third caption, nothing over the middle
 
 Change type: **look change** (visual; the owner reviews it on screenshots).
-Branch `claude/u-redesign-a-s2`, stacked on S1 (waiting: merges after S1);
-fragment [`changes/claude-u-redesign-a-s2.md`](../../../changes/claude-u-redesign-a-s2.md).
+In the one PR #223 from `claude/friendly-keller-78iuc9`; its CHANGELOG line
+and PROGRESS row are in
+[`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md).
+Until 2026-11-16 it was to be a PR of its own from `claude/u-redesign-a-s2`,
+stacked on S1 and merging after it, with its own fragment,
+`changes/claude-u-redesign-a-s2.md`; superseded (above, "The owner's answer on
+delivery").
 Docs touched: N/A (USER-GUIDE's "just the picture, three numbers … and one
 sentence" is still true; README and IMPLEMENTATION-STATUS do not describe where
 Watch puts them).
@@ -950,10 +1007,12 @@ Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำไ�
 
 S3 comes in two commits. The first is an identical-output offset that makes
 room under the unchanged CSS ceiling (below). The second is the look change.
-Each commit is its own PR with its own fragment: the offset in
-[`changes/claude-u-redesign-a-s3-offset.md`](../../../changes/claude-u-redesign-a-s3-offset.md)
-(merges first), the look change in
-[`changes/claude-u-redesign-a-s3.md`](../../../changes/claude-u-redesign-a-s3.md).
+Both are in the one PR #223, each with its own CHANGELOG line and PROGRESS
+row in [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md).
+Until 2026-11-16 each commit was to be its own PR with its own fragment: the
+offset in `changes/claude-u-redesign-a-s3-offset.md` (merging first), the
+look change in `changes/claude-u-redesign-a-s3.md`; superseded (above, "The
+owner's answer on delivery").
 
 Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำได้เลยครับ
 โหมดการเรียนที่คุณเสนอ ให้ใช้เฉพาะตอนที่เป็นโหมดการเรียนในบทเรียนเท่านั้นครับ
@@ -1227,7 +1286,10 @@ findings, all four applied.
    keeps the look change's line and row (branch `claude/u-redesign-a-s3`,
    stacked on the offset). The Branch and Fragment rows at the top and the S3
    intro say so. No branch is created in this session; `CHANGELOG.md` and
-   `PROGRESS.md` are not touched.
+   `PROGRESS.md` are not touched. *Superseded on 2026-11-16* (above, "The
+   owner's answer on delivery"): both commits are in the one PR #223, with
+   their lines and rows in `changes/claude-friendly-keller-78iuc9.md`; the
+   Branch and Fragment rows and the S3 intro say that now.
 
 Files: `src/ui/lessons/lessons.css`, `changes/claude-u-redesign-a-s3.md`,
 `changes/claude-u-redesign-a-s3-offset.md` (new), this report. Changed source
@@ -1370,13 +1432,17 @@ strip rule +30 B):
 | S3 offset `9b365e0` | 180,293 B | 180,236 B | 15186.0 kB | FAIL, +0.3 |
 | S3 `596a53b` | 180,473 B | 180,416 B | 15186.3 kB | FAIL, +0.5 |
 
-S2 is the first step over 180 kB, so **the raise is in S2's PR**, not S3's: a
-PR that crosses a ceiling carries D-38's four parts itself (SESSION-PROTOCOL
-§2). On this branch the `budgets.json` change sits after S3 (the budget commit
-after the rebase); the branch `claude/u-redesign-a-s2`, when it is cut,
-carries it, and the S3 offset and S3 fit the same ceiling. One raise, used
-once, as "1.ก" approved. The stack is not collapsed into one PR: that would
-mix identical-output and look-change commits (SESSION-PROTOCOL §5).
+S2 is the first step over 180 kB, and a PR that crosses a ceiling carries
+D-38's four parts itself (SESSION-PROTOCOL §2), so **the raise is in #223**,
+the one PR that holds S2. On this branch the `budgets.json` change sits after
+S3 (the budget commit after the rebase), and the S3 offset and S3 fit the
+same ceiling. One raise, used once, as "1.ก" approved. *Superseded on
+2026-11-16* (above, "The owner's answer on delivery"): until then the raise
+was to be in S2's own PR, not S3's, carried by the branch
+`claude/u-redesign-a-s2` when it was cut, and the stack was not to be
+collapsed into one PR, because that mixes identical-output and look-change
+commits (SESSION-PROTOCOL §5); the owner's answer makes the one PR an
+exception to §5.
 
 **Budget line: raise, with D-38's four parts** (`budgets.json`, `_notes.set`
 beside `index-*.css`):
@@ -1446,7 +1512,14 @@ Each was re-checked here before it was applied.
    rewritten here: the fixes are one commit on top, and other work is based on
    this head. So `budgets.json` still changes in the commit after S3. When
    `claude/u-redesign-a-s2` is cut, it must carry this `budgets.json`, or its
-   PR fails `node scripts/bundle-budget.mjs` in CI.
+   PR fails `node scripts/bundle-budget.mjs` in CI. *Superseded on
+   2026-11-16* (above, "The owner's answer on delivery"): no
+   `claude/u-redesign-a-s2` is cut. S2's PROGRESS row, now in
+   `changes/claude-friendly-keller-78iuc9.md`, carries the raise "in this PR
+   at S2, the first step over it", and the S3-offset and S3 rows say "the
+   ceiling raised in this PR at S2" and "raised under D-38 in this PR at S2".
+   The `budgets.json` note still says "the raise is in S2's PR", which is
+   #223; it is not changed here (this records commit is Markdown only).
 4. **Fragment sizes from the old base** (minor; confirmed). The S0, S1, S2
    and S3-offset rows give the sizes on main `8a9a108` against 180 kB and
    15187 kB. The earlier figures stay, marked "before the rebase".
