@@ -118,8 +118,10 @@ to three questions put to them in this package's chat:
    tightest fit of the top bar (below, "Rebase onto main"), and, from the
    rebase review fixes, the lesson strip also hidden in the Structure section
    and the section's two links drawing `#i-structure` in place of `⊞` (below,
-   "Rebase review fixes"). They follow the same choices; the owner has not
-   seen them on a screenshot. *Accepted on 2026-11-16* (below, "The owner's
+   "Rebase review fixes"). They follow the same choices. Of the four, only
+   the Structure tab's icon was on a screenshot, sent in chat later on
+   2026-11-14 (the top bar in Thai and Russian at 1440 px); the other three
+   were not. *Accepted on 2026-11-16* (below, "The owner's
    words of 2026-11-16 at 21:21:48Z"), as the session read the owner's words.
 
 The authorization of 2026-11-05 ("เริ่มทำได้เลยครับ โหมดการเรียนที่คุณเสนอ
@@ -1657,25 +1659,30 @@ service worker at run time.
 
 ## Rule 2: 21 CI runs of each changed journey (2026-11-16)
 
-Rule 2 of the five rules ([HANDOVER-K2.md](../HANDOVER-K2.md), "The five
-rules"): a new or changed journey runs 20 times on CI before merge. #223
+Rule 2 of the five rules ([HANDOVER-K2.md](../HANDOVER-K2.md), section 1,
+the row "The five rules"): a new or changed journey runs 20 times on CI
+before merge. #223
 changes three journeys: `watch-controls` (S2's layout checks),
 `stage2-preflight` (the laptop toolbar check, now in Russian too) and
-`teaching-held` (the lesson strip hidden in the Structure section). The
+`teaching-held` (case 6.1's strip on screen in the Orbit section, from S2,
+and the strip hidden in the Structure section, a rebase review fix). The
 helpers they import, `tests/browser/harness.mjs` and `held.mjs`, are
 unchanged.
 
 The temporary commit `67bd2b71`, "TEMPORARY (rule 2 evidence, reverted before
 merge): CI's smoke shards run only watch-controls, stage2-preflight and
 teaching-held, 7 times each", made CI's three smoke shards run only these
-three journeys, 7 runs of each per CI run, split 3/2/2 over the shards. It
-changed `tests/browser/run.mjs` only, and only on CI (`GITHUB_ACTIONS`), as
-the precedents `23389f2a` and `55cb187f` (#209) did. 20 runs of each, about
+three journeys, 7 runs of each per CI run: each journey ran three times in
+one shard and twice in each of the other two. It changed
+`tests/browser/run.mjs` only, and only on CI (`GITHUB_ACTIONS`), as the
+precedent `55cb187f` (#209) did; the precedent `23389f2a` (#212) did the same
+for one step of `r2-flight-shell`, which it also exported from that
+journey's file. 20 runs of each, about
 2.2 hours, do not fit three 25-minute shards, and
 `tests/verification/workflow-paths.test.mjs` pins the shards at three, so the
 commit ran three times: the PR's own run, then two `workflow_dispatch` runs,
-one after the other (CI's concurrency group cancels a second run on the same
-branch), as #209's second run was. `80a7bcda` reverts it.
+one after the other (CI's concurrency group keeps one run per branch: a run
+that starts cancels the one in progress), as #209's second run was. `80a7bcda` reverts it.
 
 **63 of 63 passed: 21 of each journey.**
 
@@ -1696,6 +1703,7 @@ shards 1, 2 and 3):
 
 The longest shard took 999.5 s of its 25 minutes. On `67bd2b71` the
 `browser-smoke` and `verify` jobs are red by design: after "7/7 journeys
-passed", the runner reports "Executed browser journeys differs from the
-verification plan". The `plan`, `typecheck`, `build` and `test (1–3)` jobs
+passed", the browser runner reports "Executed browser journeys differs from
+the verification plan", and `verify` reports, among its messages, "Coverage
+mismatch: 18 missing, 0 unexpected, 18 duplicate". The `plan`, `typecheck`, `build` and `test (1–3)` jobs
 passed in all three runs. A comment on #223 said so while the runs went on.
