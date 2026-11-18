@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { CARD_IDS, DEFAULT_LAYOUT, PRESETS, choosePreset, parseTelemetryLayout, serializeTelemetryLayout, toggleCard, visibleCards } from '../src/ui/telemetry-layout';
+import { CARD_IDS, DEFAULT_LAYOUT, PRESETS, choosePreset, parseTelemetryLayout, serializeTelemetryLayout, storesLayout, toggleCard, visibleCards } from '../src/ui/telemetry-layout';
+import { CHART_IDS } from '../src/ui/telemetry-charts';
+
+/** the cards before the flight wall: the default panel stays these */
+const TODAY = [...CHART_IDS, 'losses', 'plan', 'debris'];
 
 describe('R2.3 telemetry presets', () => {
-  it('defaults to every card, and falls back to it for unreadable, unknown or newer data', () => {
-    expect([...visibleCards(parseTelemetryLayout(null))]).toEqual([...CARD_IDS]);
+  it('defaults to every card but the wall\'s, and falls back to it for unreadable, unknown or newer data', () => {
+    expect([...PRESETS.all]).toEqual(TODAY);
+    expect([...visibleCards(parseTelemetryLayout(null))]).toEqual(TODAY);
     for (const raw of ['{bad', '[]', '{"version":2,"preset":"orbit","custom":[]}', '{"version":1,"preset":"docking","custom":[]}', 'null']) {
       expect(parseTelemetryLayout(raw)).toEqual(DEFAULT_LAYOUT);
     }
@@ -39,5 +44,25 @@ describe('R2.3 telemetry presets', () => {
       expect(cards.length).toBeGreaterThan(0);
       for (const c of cards) expect(CARD_IDS).toContain(c);
     }
+  });
+
+  it('F2: the wall preset parses and shows exactly the status and track cards', () => {
+    const wall = parseTelemetryLayout('{"version":1,"preset":"wall","custom":["mass"]}');
+    expect(wall).toEqual({ version: 1, preset: 'wall', custom: ['mass'] });
+    expect([...visibleCards(wall)]).toEqual(['status', 'track']);
+    expect(CARD_IDS.slice(-2)).toEqual(['status', 'track']);
+  });
+
+  it('F2: the wall preset is never written; every other layout is', () => {
+    expect(storesLayout(choosePreset(DEFAULT_LAYOUT, 'wall'))).toBe(false);
+    for (const p of ['all', 'flight', 'dynamics', 'orbit', 'custom'] as const) expect(storesLayout(choosePreset(DEFAULT_LAYOUT, p)), p).toBe(true);
+    // ticking a box on the wall makes Custom, which is stored
+    expect(storesLayout(toggleCard(choosePreset(DEFAULT_LAYOUT, 'wall'), 'q', true))).toBe(true);
+  });
+
+  it('F2: a custom list stored by an older build parses unchanged', () => {
+    const raw = '{"version":1,"preset":"custom","custom":["altitude","q","losses","debris"]}';
+    expect(parseTelemetryLayout(raw)).toEqual({ version: 1, preset: 'custom', custom: ['altitude', 'q', 'losses', 'debris'] });
+    expect(serializeTelemetryLayout(parseTelemetryLayout(raw))).toBe(raw);
   });
 });
