@@ -54,6 +54,7 @@ import { localizeEventParams } from './names';
 import { eventLabel } from './phase';
 import { TimeAxis } from './timeaxis';
 import { chooserEntries, chooserFocusMove } from './timeline-chooser';
+import { JUMP_LEAD_S, quickEvents } from './event-jump';
 
 /** Minimum clear space between two rendered chips before they collapse, px. */
 const MIN_GAP = 6;
@@ -94,11 +95,24 @@ const INSERTION_KEYS = ['evt.seco', 'evt.parkingOrbit', 'evt.targetOrbit'];
 /** Margin past the insertion callout that still counts as ascent, s. */
 const INSERTION_MARGIN = 20;
 
+/**
+ * Focus a row of the event chooser (R2.4) or the jump menu (R2.6) and scroll the list just enough to show it
+ * whole; the list has fixed position, so the page does not move.
+ */
+function focusRow(row: HTMLElement | undefined): void {
+  row?.focus({ preventScroll: true });
+  row?.scrollIntoView({ block: 'nearest' });
+}
+
 export interface TimelineCallbacks {
   /** the user moved the cursor to this mission time */
   onSeek(time: number): void;
   /** the user asked to go back to the live head */
   onLive(): void;
+  /** R2.6: the user chose an event in the event-jump menu */
+  onJump?(event: SimEvent): void;
+  /** the app's cursor: the one `update` last drew is a frame old after a seek (a jump, an arrow) */
+  cursor(): number;
 }
 
 interface Chip {
@@ -153,7 +167,8 @@ export class Timeline {
   /**
    * R2.4: the open event chooser and the cluster chip it belongs to. The list
    * is a child of `<body>` with fixed position, because the bar and the
-   * playback panel both clip their overflow.
+   * playback panel both clip their overflow. R2.6: an open list without a chip
+   * is the event-jump menu, opened from `jumpBtn`.
    */
   private chooser: HTMLElement | null = null;
   private chooserChip: Chip | null = null;
@@ -162,14 +177,24 @@ export class Timeline {
   private readonly chooserOutside = (e: PointerEvent): void => {
     const target = e.target as Node | null;
     if (!this.chooser || !target) return;
-    if (this.chooser.contains(target) || this.chooserChip?.el.contains(target)) return;
+    if (this.chooser.contains(target) || this.chooserAnchor?.contains(target)) return;
     this.closeChooser(false);
   };
   private readonly chooserReposition = (): void => { this.placeChooser(); };
+  /** R2.6: the transport row's button that opens the event-jump menu, and the `kind@t` list last seen */
+  private jumpBtn: HTMLButtonElement | null;
+  /** null never equals a real signature, so a reset or a language change always resyncs */
+  private jumpSig: string | null = null;
 
-  constructor(root: HTMLElement, cb: TimelineCallbacks) {
+  constructor(root: HTMLElement, cb: TimelineCallbacks, jumpBtn: HTMLButtonElement | null = null) {
     this.root = root;
     this.cb = cb;
+    this.jumpBtn = jumpBtn;
+    // R2.6: the opener toggles its menu, as a cluster chip toggles its chooser
+    jumpBtn?.addEventListener('click', () => {
+      if (this.chooser && !this.chooserChip) this.closeChooser(true);
+      else this.openChooser(null);
+    });
     root.className = 'timeline';
     root.innerHTML = `
       <div class="tl-bar"><div class="tl-break"></div><div class="tl-playhead"></div></div>
@@ -230,11 +255,14 @@ export class Timeline {
     }
   }
 
-  /** Arrow keys seek 5 s (30 s with shift); Home/End jump to the ends. */
-  onKey(e: KeyboardEvent): boolean {
+  /**
+   * Arrow keys seek 5 s (30 s with shift) from `cursorT`; Home/End jump to the ends.
+   * The app passes its own cursor: the one `update` last drew is a frame old after a seek (a jump, an arrow).
+   */
+  onKey(e: KeyboardEvent, cursorT = this.cursorT): boolean {
     const stepSize = e.shiftKey ? 30 : 5;
-    if (e.key === 'ArrowLeft') this.cb.onSeek(this.cursorT - stepSize);
-    else if (e.key === 'ArrowRight') this.cb.onSeek(this.cursorT + stepSize);
+    if (e.key === 'ArrowLeft') this.cb.onSeek(cursorT - stepSize);
+    else if (e.key === 'ArrowRight') this.cb.onSeek(cursorT + stepSize);
     else if (e.key === 'Home') this.cb.onSeek(this.axis.startT);
     else if (e.key === 'End') this.cb.onLive();
     else return false;
@@ -275,6 +303,8 @@ export class Timeline {
     this.layout(true);
     this.shownCursor = NaN;
     this.shownHead = NaN;
+    this.jumpSig = null;
+    this.syncJump();
   }
 
   /** Drop every chip (a new mission). */
@@ -296,6 +326,8 @@ export class Timeline {
     this.shownHead = NaN;
     this.shownPlayhead = -1e18;
     this.brk.classList.add('hidden');
+    this.jumpSig = null;
+    this.syncJump();
   }
 
   /**
@@ -331,6 +363,26 @@ export class Timeline {
     this.insertionT = this.insertionTimeOf(events);
     this.insertionLabel = this.insertionLabelFor(events);
     this.layout(true);
+    this.syncJump();
+  }
+
+  /**
+   * R2.6: the jump opener, shown disabled from launch (src/style.css), is
+   * enabled once a quick event is recorded, and an open jump menu is refilled,
+   * only when the list changed (or after a language change or a reset, which
+   * clear the signature); never per frame.
+   */
+  private syncJump(): void {
+    const btn = this.jumpBtn;
+    if (!btn) return;
+    const quick = quickEvents(this.events);
+    const sig = quick.map((q) => `${q.kind}@${q.event.t}`).join(' ');
+    if (sig === this.jumpSig) return;
+    this.jumpSig = sig;
+    btn.disabled = quick.length === 0;
+    if (!this.chooser || this.chooserChip) return;
+    if (btn.disabled) this.closeChooser(false);
+    else { this.fillChooser(); this.placeChooser(); }
   }
 
   /** Mission time at which the ascent ends, or null if it has not yet. */
@@ -372,31 +424,38 @@ export class Timeline {
     return this.chooser !== null;
   }
 
-  private openChooser(chip: Chip): void {
+  /** The button the open list belongs to: its cluster chip, or the jump opener (R2.6). */
+  private get chooserAnchor(): HTMLElement | null {
+    return this.chooserChip?.el ?? this.jumpBtn;
+  }
+
+  /** Open the list for a cluster chip, or (`null`) the event-jump menu (R2.6). */
+  private openChooser(chip: Chip | null): void {
     this.closeChooser(false);
     const list = document.createElement('div');
-    list.className = 'tl-chooser';
+    list.className = chip ? 'tl-chooser' : 'tl-chooser jump';
+    if (!chip) list.id = 'event-jump-menu'; // the opener's aria-controls (index.html)
     list.setAttribute('role', 'menu');
     list.addEventListener('keydown', (e) => this.chooserKey(e));
     document.body.append(list);
     this.chooser = list;
     this.chooserChip = chip;
     this.chooserFocus = null;
-    chip.el.setAttribute('aria-expanded', 'true');
+    this.chooserAnchor?.setAttribute('aria-expanded', 'true');
     this.fillChooser();
     this.placeChooser();
     const items = this.chooserItems();
-    (items.find((b) => b.getAttribute('aria-current') === 'time') ?? items[0])?.focus({ preventScroll: true });
+    focusRow(items.find((b) => b.getAttribute('aria-current') === 'time') ?? items[0]);
     document.addEventListener('pointerdown', this.chooserOutside, true);
     window.addEventListener('resize', this.chooserReposition);
     window.addEventListener('scroll', this.chooserReposition, true);
   }
 
-  /** Close the list; `refocus` hands focus back to the chip it opened from. */
+  /** Close the list; `refocus` hands focus back to the chip or the button it opened from. */
   closeChooser(refocus: boolean): void {
     const list = this.chooser;
-    const chip = this.chooserChip;
     if (!list) return;
+    const anchor = this.chooserAnchor;
     this.chooser = null;
     this.chooserChip = null;
     this.chooserFocus = null;
@@ -404,9 +463,9 @@ export class Timeline {
     window.removeEventListener('resize', this.chooserReposition);
     window.removeEventListener('scroll', this.chooserReposition, true);
     list.remove();
-    if (chip) {
-      chip.el.setAttribute('aria-expanded', 'false');
-      if (refocus && chip.el.isConnected && !chip.el.classList.contains('collapsed')) chip.el.focus({ preventScroll: true });
+    if (anchor) {
+      anchor.setAttribute('aria-expanded', 'false');
+      if (refocus && anchor.isConnected && !anchor.classList.contains('collapsed')) anchor.focus({ preventScroll: true });
     }
   }
 
@@ -414,18 +473,19 @@ export class Timeline {
     return this.chooser ? [...this.chooser.querySelectorAll<HTMLButtonElement>('.tl-chooser-item')] : [];
   }
 
-  /** (Re)write the list from the chip's current members, keeping the focused event. */
+  /** (Re)write the list from the chip's current members, or the jump menu's quick events, keeping the focused event. */
   private fillChooser(): void {
     const list = this.chooser;
     const chip = this.chooserChip;
-    if (!list || !chip) return;
+    if (!list) return;
     const active = document.activeElement;
     const hadFocus = active instanceof HTMLElement && list.contains(active);
-    const entries = chooserEntries(chip.members, this.cursorT);
-    list.setAttribute('aria-label', t('tl.chooser.label', { n: entries.length }));
+    const entries = chooserEntries(this.chooserEvents, this.chooserCursor);
+    const label = chip ? t('tl.chooser.label', { n: entries.length }) : t('tl.jump.label');
+    list.setAttribute('aria-label', label);
     const head = document.createElement('p');
     head.className = 'tl-chooser-head';
-    head.textContent = t('tl.chooser.label', { n: entries.length });
+    head.textContent = label;
     head.setAttribute('aria-hidden', 'true');
     const rows: HTMLElement[] = [head];
     let focusEl: HTMLButtonElement | null = null;
@@ -441,26 +501,44 @@ export class Timeline {
       time.textContent = fmtTime(event.t);
       const name = document.createElement('span');
       name.className = 'tl-chooser-name';
-      name.textContent = eventLabel(event.key, this.evParams(event));
-      b.title = t(event.key, this.evParams(event));
+      const short = eventLabel(event.key, this.evParams(event));
+      name.textContent = short;
+      b.title = chip ? t(event.key, this.evParams(event)) : t('tl.jump.title', { s: JUMP_LEAD_S, name: short });
       b.append(time, name);
-      b.addEventListener('click', () => {
-        this.closeChooser(true);
-        this.cb.onSeek(event.t); // the event's own recorded instant
+      b.addEventListener('click', (e) => {
+        // a key's choice gives the focus back to the chip or opener; a pointer's (detail > 0) leaves it on no
+        // button, so that Space then plays instead of opening the list again
+        this.closeChooser(!e.detail);
+        if (chip) this.cb.onSeek(event.t); // the event's own recorded instant
+        else this.cb.onJump?.(event); // R2.6: JUMP_LEAD_S before it (App.seekToEvent)
       });
       b.addEventListener('focus', () => { this.chooserFocus = event; });
       if (event === this.chooserFocus) focusEl = b;
       rows.push(b);
     }
     list.replaceChildren(...rows);
-    if (hadFocus) (focusEl ?? this.chooserItems()[0])?.focus({ preventScroll: true });
+    if (hadFocus) focusRow(focusEl ?? this.chooserItems()[0]);
+  }
+
+  /**
+   * The open list's events: the chip's members or (R2.6) the jump menu's quick events. In both the row at or
+   * just before `chooserCursor` is marked, and takes the focus when the list opens.
+   */
+  private get chooserEvents(): readonly SimEvent[] {
+    return this.chooserChip?.members ?? quickEvents(this.events).map((q) => q.event);
+  }
+
+  /**
+   * The app's cursor, or in the jump menu (R2.6) JUMP_LEAD_S after it: a jump lands that long before its event, which
+   * the menu then opens on.
+   */
+  private get chooserCursor(): number {
+    return this.chooserChip ? this.cb.cursor() : this.cb.cursor() + JUMP_LEAD_S;
   }
 
   /** Mark the row the cursor is at, without rebuilding the list. */
   private markChooserCurrent(): void {
-    const chip = this.chooserChip;
-    if (!chip) return;
-    const entries = chooserEntries(chip.members, this.cursorT);
+    const entries = chooserEntries(this.chooserEvents, this.chooserCursor);
     const items = this.chooserItems();
     for (let i = 0; i < items.length && i < entries.length; i++) {
       const on = entries[i].current;
@@ -470,20 +548,29 @@ export class Timeline {
     }
   }
 
-  /** Over the chip, or under it when the window has no room above. */
+  /**
+   * Over the chip, or under it when the window has no room above. The jump menu (R2.6) goes on whichever side
+   * of its opener has more room, capped to that room (src/style.css; the list scrolls), so it never covers the
+   * opener, where a second press would choose a row.
+   */
   private placeChooser(): void {
     const list = this.chooser;
-    const chip = this.chooserChip;
-    if (!list || !chip) return;
-    const rect = chip.el.getBoundingClientRect();
+    const anchor = this.chooserAnchor;
+    if (!list || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) { this.closeChooser(false); return; }
     const vw = document.documentElement.clientWidth || window.innerWidth;
     const vh = window.innerHeight;
+    const down = vh - rect.bottom > rect.top;
+    if (!this.chooserChip) list.style.setProperty('--room', `${(down ? vh - rect.bottom : rect.top) - 14}px`);
     const w = list.offsetWidth;
     const h = list.offsetHeight;
     const left = Math.min(Math.max(8, rect.left), Math.max(8, vw - w - 8));
     const above = rect.top - h - 6;
-    const top = above >= 8 || rect.bottom + 6 + h > vh ? Math.max(8, above) : rect.bottom + 6;
+    const below = rect.bottom + 6;
+    const top = this.chooserChip
+      ? (above >= 8 || below + h > vh ? Math.max(8, above) : below)
+      : (down ? below : above);
     list.style.left = `${Math.round(left)}px`;
     list.style.top = `${Math.round(top)}px`;
   }
@@ -510,7 +597,7 @@ export class Timeline {
     const next = chooserFocusMove(e.key, index, items.length);
     if (next !== null) {
       e.preventDefault();
-      items[next].focus({ preventScroll: true });
+      focusRow(items[next]);
     }
   }
 

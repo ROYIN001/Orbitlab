@@ -11,8 +11,8 @@
   "fallback": { "all": true, "reason": "Plan S18: if the impact is unknown, run the full set." },
   "sets": {
     "app-build": ["typecheck", "build", "budget"],
-    "flight-journeys": ["launch-explore", "r2-shell-smoke", "r2-flight-shell", "r2-chooser-late-frame", "r3-result-setting", "watch-controls", "experiment-notebook"],
-    "layout-journeys": ["mobile-smoke", "stage2-preflight", "r2-viewport-matrix", "r2-viewport-scene-floor", "r2-shell-smoke", "workspace-navigation", "notation-defaults"],
+    "flight-journeys": ["launch-explore", "r2-shell-smoke", "r2-flight-shell", "r2-chooser-late-frame", "r2-event-jump", "r2-transport-fit", "r2-transport-fit-launch", "r2-transport-fit-clock", "r3-result-setting", "watch-controls", "experiment-notebook"],
+    "layout-journeys": ["mobile-smoke", "stage2-preflight", "r2-viewport-matrix", "r2-viewport-scene-floor", "r2-shell-smoke", "r2-event-jump", "r2-transport-fit", "r2-transport-fit-launch", "r2-transport-fit-clock", "workspace-navigation", "notation-defaults"],
     "workspace-journeys": ["workspace-navigation", "project-backups", "experiment-notebook", "classroom-preparation", "learner-profiles", "profile-session-safety"],
     "export-journeys": ["case-worksheet-exports", "launch-explore", "project-backups"]
   },
@@ -65,7 +65,7 @@
       "id": "replay",
       "why": "Recorder/player feed every chart, compare and result view.",
       "paths": ["src/replay/**"],
-      "checks": { "unit": ["tests/replay.test.ts", "tests/rigid-replay.test.ts", "tests/vostok-replay.test.ts", "tests/attitude-track.test.ts", "tests/compare*.test.ts", "tests/chart-*.test.ts", "tests/telemetry-layout.test.ts", "tests/timeline-chooser.test.ts", "tests/live-stepping.test.ts", "tests/flown.test.ts", "tests/mission-result*.test.ts", "tests/report.test.ts"], "heavy": ["tests/heavy/vostok1-recording.test.ts"], "browser": ["@flight-journeys"] }
+      "checks": { "unit": ["tests/replay.test.ts", "tests/rigid-replay.test.ts", "tests/vostok-replay.test.ts", "tests/attitude-track.test.ts", "tests/compare*.test.ts", "tests/chart-*.test.ts", "tests/telemetry-layout.test.ts", "tests/timeline-chooser.test.ts", "tests/event-jump.test.ts", "tests/live-stepping.test.ts", "tests/flown.test.ts", "tests/mission-result*.test.ts", "tests/report.test.ts"], "heavy": ["tests/heavy/vostok1-recording.test.ts"], "browser": ["@flight-journeys"] }
     },
     {
       "id": "orbit",
@@ -111,7 +111,7 @@
       "why": "Launch/Explore setup panel, flight shell, HUD, results and exports (R2 LUI-01 in panel.ts/flight-lifecycle.ts).",
       "paths": ["src/ui/*.ts"],
       "exclude": ["src/ui/watch*.ts", "src/ui/home*.ts", "src/ui/workspace-*.ts", "src/ui/soundtrack-panel.ts"],
-      "checks": { "commands": ["@app-build"], "unit": ["tests/app-mode.test.ts", "tests/camera-*.test.ts", "tests/chart-*.test.ts", "tests/compare*.test.ts", "tests/csv.test.ts", "tests/dynamics-panel.test.ts", "tests/engine-levels.test.ts", "tests/equations.test.ts", "tests/experience.test.ts", "tests/explore.test.ts", "tests/flight-lifecycle.test.ts", "tests/flown.test.ts", "tests/frames-view.test.ts", "tests/help-*.test.ts", "tests/hud-*.test.ts", "tests/launch-abort.test.ts", "tests/live-stepping.test.ts", "tests/control-*.test.ts", "tests/attitude-loop.test.ts", "tests/linear-loop.test.ts", "tests/tune-job.test.ts", "tests/mission-*.test.ts", "tests/monte-carlo*.test.ts", "tests/notation.test.ts", "tests/panel-*.test.ts", "tests/quickstart.test.ts", "tests/report.test.ts", "tests/result-*.test.ts", "tests/section-*.test.ts", "tests/telemetry-layout.test.ts", "tests/timeaxis.test.ts", "tests/timeline-chooser.test.ts", "tests/recovery-panel.test.ts", "tests/rigid-controls.test.ts", "tests/web-fonts.test.ts", "tests/mcp.test.ts", "tests/case-export-race.test.ts", "tests/worksheet-export-race.test.ts", "tests/i18n.test.ts"], "browser": ["@flight-journeys", "@layout-journeys", "@export-journeys", "lui01-held-tuning", "r3-first-launch", "gesture-ownership", "render-idle", "webgl-startup"] }
+      "checks": { "commands": ["@app-build"], "unit": ["tests/app-mode.test.ts", "tests/camera-*.test.ts", "tests/chart-*.test.ts", "tests/compare*.test.ts", "tests/csv.test.ts", "tests/dynamics-panel.test.ts", "tests/engine-levels.test.ts", "tests/equations.test.ts", "tests/experience.test.ts", "tests/explore.test.ts", "tests/flight-lifecycle.test.ts", "tests/flown.test.ts", "tests/frames-view.test.ts", "tests/help-*.test.ts", "tests/hud-*.test.ts", "tests/launch-abort.test.ts", "tests/live-stepping.test.ts", "tests/control-*.test.ts", "tests/attitude-loop.test.ts", "tests/linear-loop.test.ts", "tests/tune-job.test.ts", "tests/mission-*.test.ts", "tests/monte-carlo*.test.ts", "tests/notation.test.ts", "tests/panel-*.test.ts", "tests/quickstart.test.ts", "tests/report.test.ts", "tests/result-*.test.ts", "tests/section-*.test.ts", "tests/telemetry-layout.test.ts", "tests/timeaxis.test.ts", "tests/timeline-chooser.test.ts", "tests/event-jump.test.ts", "tests/recovery-panel.test.ts", "tests/rigid-controls.test.ts", "tests/web-fonts.test.ts", "tests/mcp.test.ts", "tests/case-export-race.test.ts", "tests/worksheet-export-race.test.ts", "tests/i18n.test.ts"], "browser": ["@flight-journeys", "@layout-journeys", "@export-journeys", "lui01-held-tuning", "r3-first-launch", "gesture-ownership", "render-idle", "webgl-startup"] }
     },
     {
       "id": "watch",

@@ -121,9 +121,10 @@ served under the SIL Open Font License 1.1 (<https://fonts.google.com/>).
 ### Interface icons — `index.html`
 
 The line icons in `index.html`'s `#logo-sprite` (`#i-launch` … `#i-lessons`, drawn in the top
-bar) follow Lucide (<https://lucide.dev>, <https://github.com/lucide-icons/lucide>):
-`#i-launch` (rocket), `#i-build` (wrench), `#i-campaign` (flag), `#i-lessons` (book-open) and
-`#i-chev` (chevron-down) are its paths unchanged, and the others — among them `#i-structure`
+bar, and `#i-chapters`, drawn in the playback row's event-jump opener) follow Lucide
+(<https://lucide.dev>, <https://github.com/lucide-icons/lucide>): `#i-launch` (rocket), `#i-build`
+(wrench), `#i-campaign` (flag), `#i-lessons` (book-open), `#i-chapters` (list-video) and `#i-chev`
+(chevron-down) are its paths unchanged, and the others — among them `#i-structure`
 (three stacked blocks, the Structure & Assembly section's tab) — are drawn after it in the same
 style. Lucide is under the ISC License, and its Feather portions under the MIT License
 (<https://github.com/feathericons/feather/blob/main/LICENSE>):

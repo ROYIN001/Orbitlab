@@ -65,6 +65,7 @@
         <symbol id="i-camera" viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2" /><path d="m16 10 6-3v10l-6-3" /></symbol>
         <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01" /></symbol>
         <symbol id="i-lessons" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></symbol>
+        <symbol id="i-chapters" viewBox="0 0 24 24"><path d="M3 6h13M3 12h9M3 18h9m4-6 5 3-5 3z" /></symbol>
       </defs>
     </svg>
     <div id="app">
@@ -206,9 +207,18 @@
                 <span id="clock">T-00:10</span>
                 <small id="clock-context"></small>
               </div>
-              <label class="warp"><span data-i18n="ctl.warp">Warp</span>
-                <select id="warp-select"></select>
-              </label>
+              <div class="ctl-end">
+                <!-- R2.6: opens the menu of key events to jump to (src/ui/event-jump.ts, src/ui/timeline.ts); at the
+                     row's end with the warp, out of the transport group, so nothing it or the row's fit does moves a
+                     button of the group. Shown from launch, disabled until a key event is recorded (src/style.css).
+                     Named by its word (WCAG 2.5.3), also where the row's fit hides the word and its ▾ for a chapter-list
+                     icon (#i-chapters); aria-labelledby wins over the aria-label main.ts copies from the title, which
+                     describes it -->
+                <button id="btn-jump" class="ctl-btn jump-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="event-jump-menu" aria-labelledby="jump-word" data-i18n-title="tl.jump.label" disabled><span id="jump-word" data-i18n="tl.jump.short">Events</span><span aria-hidden="true">▾</span><svg class="icon" aria-hidden="true"><use href="#i-chapters" /></svg></button>
+                <label class="warp"><span data-i18n="ctl.warp">Warp</span>
+                  <select id="warp-select" data-i18n-title="ctl.warp"></select>
+                </label>
+              </div>
             </div>
             <small id="achieved-warp" hidden></small>
           </section>

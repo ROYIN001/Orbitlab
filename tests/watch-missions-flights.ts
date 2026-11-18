@@ -26,6 +26,7 @@ import { defaultDynamics } from '../src/physics/rigid/config';
 import { reachedOrbit } from '../src/ui/watch-logic';
 import { captureFrame } from '../src/physics/frame';
 import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
+import { quickEvents } from '../src/ui/event-jump';
 
 /** The days the missions' settings are built from; the flights launch from the first. */
 export const FROM = [new Date('2026-09-22T03:00:00Z'), new Date('2027-03-14T17:30:00Z')];
@@ -56,6 +57,24 @@ export const FLIGHT_GROUPS = {
 export type FlightGroup = keyof typeof FLIGHT_GROUPS;
 
 const missions = (ids: readonly WatchMissionId[]) => WATCH_MISSIONS.filter((m) => ids.includes(m.id));
+
+/**
+ * R2.6: the event-jump menu's items for these flights, in time order, from a
+ * real run of shards v and z (the kinds of src/ui/event-jump.ts).
+ */
+const JUMP_KINDS: Partial<Record<WatchMissionId, readonly string[]>> = {
+  falcon9Bandwagon: ['liftoff', 'maxQ', 'staging', 'fairing', 'landing', 'insertion'],
+  starshipFlight5: ['liftoff', 'maxQ', 'staging', 'insertion', 'landing'],
+  soyuzT10: ['failure'],
+};
+
+function expectJumpKinds(id: WatchMissionId, events: Simulation['events']): void {
+  const want = JUMP_KINDS[id];
+  if (!want) return;
+  const quick = quickEvents(events);
+  expect(quick.map((q) => q.kind), id).toEqual(want);
+  expect(quick.every((q, i) => i === 0 || quick[i - 1].event.t <= q.event.t), `${id}: the jump list is not in time order`).toBe(true);
+}
 
 // G06: the launch aborts end with the crew under their parachutes, not in orbit
 const ABORT_MODES: Record<string, string> = { soyuzMs10: 'fairing', soyuzT10: 'tower', soyuz18a: 'separation' };
@@ -90,6 +109,7 @@ function flyFailures(ids: readonly WatchMissionId[]): void {
     while (!sim.state.abort && !sim.isFailed() && sim.state.t < 600 && guard++ < 400000) sim.step(sim.suggestedDt());
     expect(sim.state.abort?.mode).toBe(ABORT_MODES[id]);
     expect(sim.isFailed()).toBe(false);
+    expectJumpKinds(id, sim.events);
   });
 }
 
@@ -131,6 +151,7 @@ function flyToTarget(ids: readonly WatchMissionId[]): void {
       expect(d.outcome, `${d.name} → ${d.recovery!.target!.id}`).toBe('landed');
       expect(d.recovery!.missDistance!).toBeLessThan(d.recovery!.target!.radius);
     }
+    expectJumpKinds(id, sim.events);
     // C01: a historical flight's ascent happens as flown, give or take the
     // model's own guidance — within a minute, or 30 % of the time flown
     const flown = watchMissionById(id)!.flown;
