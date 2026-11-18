@@ -1346,6 +1346,19 @@ once at real-time speed:
   click to jump straight to it. Events too close together to fit share one marker marked
   “+N”; clicking it opens a list of them by name and exact T+ time — pick one with the mouse,
   a tap, or the arrow keys and `Enter` (`Escape` closes it).
+- In Explore and Engineer, **Events ▾**, just before the warp selector at the end of the
+  playback controls, opens a menu of the first event of each kind recorded so far — liftoff,
+  max Q, staging, insertion, fairing separation, a landing, a failure — in the order they
+  happened, each with its T+ time. Choosing one takes you to 5 s before it, in replay. The
+  button is in its place from launch, dimmed until the first of these events is recorded. The
+  menu opens above or below the button, on the side with more room, and scrolls where it does
+  not fit. It opens on the latest event at most 5 s ahead of the cursor (right after a jump,
+  the one you jumped to): pick one with the mouse, a tap, or `↑`/`↓` (`Home`/`End` for the
+  first and the last) and `Enter`; `Escape` closes it.
+  After a jump, `←`/`→` still move the cursor. Where the playback row is short of room, the
+  button shows a list icon instead of its word. Watch has no such menu. A jump does not choose
+  a view. A view you picked stays. With Cinematic on, the camera programme shows its own view
+  for the phase you land in.
 - Moving the cursor behind the recording head drops you into **replay**: the 3-D view, HUD,
   map, onboard overlay and phase narration all rewind together to that instant, because they
   are all driven from the same recorded snapshot. Nothing is re-simulated — scrubbing back
@@ -1357,7 +1370,8 @@ once at real-time speed:
   itself, which is the way to freeze the mission while you keep studying an earlier moment.
 - **Time warp** (`,`/`.` or the warp selector) speeds up whichever clock is active. The live
   flight and the replay cursor keep separate warps on purpose, so scrubbing fast through a
-  recording never makes the live mission sprint ahead of you.
+  recording never makes the live mission sprint ahead of you. Where the playback row is short
+  of room, the selector's word *Warp* gives way; the selector still shows the speed.
 - **The physics runs in its own thread** (a Web Worker), so the speed you ask for no longer
   depends on how fast your graphics card draws. On a six-DOF flight the readout under the
   warp selector shows the speed actually achieved; on a software-rendered test machine drawing
