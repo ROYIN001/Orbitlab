@@ -252,8 +252,10 @@ A failed journey leaves screenshots in `tests/browser/screenshots/` (uploaded as
 Without a GPU, Chromium draws the scene in software and long flight journeys can take several
 minutes. Each journey gets a fresh Chromium process to isolate GPU failures. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
 another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
-leaves the CSS layout unchanged). Pull requests and branch pushes partition the sorted smoke set across two jobs
-(`--shard=1/2` and `--shard=2/2`, inspect with `--list`); the deploy
+leaves the CSS layout unchanged). Pull requests, and CI runs started from the Actions tab, share the
+smoke set out across five jobs (`--shard=1/5` to `--shard=5/5`): each journey, longest first, to the
+shard with the least seconds so far by `tests/browser/shard-seconds.json` (inspect a shard with
+`node tests/browser/run.mjs --list --smoke --shard=k/5`); the deploy
 runs every journey on the build it publishes, after checking the freshly fetched data snapshots with
 `tests/data-provider.test.ts`, `tests/satellite-catalogue.test.ts`, `tests/earth-orientation.test.ts`
 and `tests/activity.test.ts`.
@@ -624,7 +626,7 @@ scheduled run skips `npm test` (the code was tested when it merged) but still ch
 snapshots, builds and runs every browser journey. A run whose commit is no longer the tip of
 `main` (an old run re-run) stops before publishing; use **Run workflow** instead.
 
-CI on pull requests and branch pushes runs the typecheck, the default suite in three shards, the
+CI on pull requests, and runs started from the Actions tab, runs the typecheck, the default suite in three shards, the
 build and the browser smoke set; a change to Markdown files only skips it, except
 `docs/ROADMAP-PART2-3.md` and `docs/SIXDOF-VEHICLE-DATA.md`, which the tests and the app read.
 The slow suites run in the `Heavy suites` workflow instead: `tests/heavy` every Sunday, one job per

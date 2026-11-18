@@ -203,8 +203,8 @@
     },
     {
       "id": "browser-runner",
-      "why": "Journey runner, harness, server, shards and shared journey helpers reach every journey.",
-      "paths": ["tests/browser/*.mjs"],
+      "why": "Journey runner, harness, server, shards and their seconds table, and shared journey helpers reach every journey.",
+      "paths": ["tests/browser/*.mjs", "tests/browser/shard-seconds.json"],
       "exclude": ["tests/browser/shard.test.mjs"],
       "checks": { "commands": ["node-verification", "build"], "browser": ["*"] }
     },
