@@ -1,7 +1,9 @@
 /**
  * The web fonts, in online mode only (roadmap S04; the owner, 2026-09-26).
  *
- * DM Sans, Space Grotesk and Noto Sans Thai come from Google Fonts. Offline —
+ * IBM Plex Sans Thai (Thai and Latin), IBM Plex Sans (the basic Cyrillic Plex
+ * Sans Thai lacks) and IBM Plex Mono (readouts) come from Google Fonts
+ * (redesign A, docs/development/reports/redesign-a.md). Offline —
  * the default — the page asks for them no more than for any other outside
  * data, so a closed network sees no request leave at all, and the interface
  * uses the platform's own fonts: every family is declared with a system
@@ -11,9 +13,12 @@
  */
 import type { DataMode } from '../provider/data-mode';
 
-export const WEB_FONTS_URL = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700'
-  + '&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap';
+export const WEB_FONTS_URL = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700'
+  + '&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 const ID = 'web-fonts';
+/** The same families for canvas text, which cannot read style.css's --sans and --mono. */
+export const CANVAS_SANS = '"IBM Plex Sans Thai", "IBM Plex Sans", system-ui, sans-serif';
+export const CANVAS_MONO = '"IBM Plex Mono", ui-monospace, monospace';
 
 export function applyWebFonts(mode: DataMode, doc: Document = document): void {
   const present = doc.querySelectorAll(`link[data-web-fonts]`);

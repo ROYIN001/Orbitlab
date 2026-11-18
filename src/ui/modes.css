@@ -41,7 +41,8 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
   font: 400 12px/1.4 var(--sans); color: var(--accent); background: var(--accent-weak);
   border: 1px solid var(--accent-line); border-radius: 999px; padding: 0 8px;
 }
-.nav-chev { font-size: 10px; color: var(--dim); }
+/* the chevron's path uses the middle half of its box: the negative margin keeps the old ▾'s footprint */
+.nav-chev { font-size: 10px; color: var(--dim); margin-inline: -0.25em; }
 .nav-future-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--future); transform: translateY(-6px); }
 
 .nav-menu, .nav-sheet {
@@ -91,20 +92,25 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 /* The labels of the workspace's top-bar tools give way to the switch first
    (their names stay as the tooltip and the accessible name); a Russian label
    wrapped onto two lines. The order in which things give way to the switch,
-   measured in Russian — the longest labels — is: the tools' labels and the language label; the
-   product name; the sections' glyphs; and on a phone the switch becomes one
-   button on a row of its own under the brand and the tools. */
+   measured again in Thai and English with the IBM Plex fonts and the line
+   icons (redesign A, S1; where the tabs would still run under the tools, in
+   Russian above all, fit() below takes them tighter), is: the tools' labels and the language label (1720 px); the product name
+   (1300 px); the sections' icons (1240 px); the tabs' padding (1040 px); and
+   on a phone the switch becomes one button on a row of its own under the
+   brand and the tools. */
 .quiet-btn { white-space: nowrap; }
-@media (max-width: 1600px) {
+@media (max-width: 1720px) {
   .quiet-btn span:last-child { display: none; }
   .quiet-btn { padding: 7px; }
   .lang > span { display: none; }
 }
-@media (max-width: 1180px) {
+@media (max-width: 1300px) {
   #topbar .brand-name { display: none; }
 }
-@media (max-width: 1040px) {
+@media (max-width: 1240px) {
   .nav-tab-btn .mode-glyph { display: none; }
+}
+@media (max-width: 1040px) {
   .nav-tab-btn { padding: 0 8px; }
 }
 @media (max-width: 860px) {
@@ -113,7 +119,7 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
   .nav-tab-btn .mode-glyph { display: inline; }
 }
 /* The tabs given the room the bar has (src/ui/section-nav.ts `fit`), each step only where the one before leaves them
-   running under the tools on the right: tighter; tighter still; the current level as its glyph; then on a row of
+   running under the tools on the right: tighter; tighter still; the current level as its icon; then on a row of
    their own, as on a small screen. */
 #topbar[data-nav-fit] .nav-tab-btn { padding: 0 7px; gap: 5px; }
 #topbar[data-nav-fit] :is(.nav-chev, .nav-tab-btn .mode-glyph, .brand-name) { display: none; }
@@ -121,7 +127,8 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 /* (the learner's name, already cut short where it is long, is cut shorter: it stays whole in the button's title) */
 #topbar[data-nav-fit^='tighte'] .profile-button #profile-label { max-width: 64px; }
 #topbar[data-nav-fit='tightest'] .nav-badge { font-size: 0; }
-#topbar[data-nav-fit='tightest'] .nav-badge::before { content: attr(data-glyph); font-size: 11px; }
+.nav-badge-icon { display: none; }
+#topbar[data-nav-fit='tightest'] .nav-badge-icon { display: inline; font-size: 12px; }
 #topbar[data-nav-fit='rows'] { height: auto; flex-wrap: wrap; row-gap: 0; padding-top: 8px; padding-bottom: 0; }
 #topbar[data-nav-fit='rows'] .topbar-nav { order: 3; flex: 1 0 100%; min-height: 42px; }
 @media (max-width: 640px) {
@@ -129,6 +136,7 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
   /* Keep every tool reachable on narrow phones. The six icons and language
      select can exceed a whole 320 px row, so wrap within the brand's space. */
   .topbar-right { flex: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+  #topbar .quiet-btn { padding: 7px 5px; } /* the line icons are wider than the old glyphs: keep the tools on one row */
   .topbar-nav { min-height: 0; position: static; }
   .section-nav { flex: 1; }
   .nav-tabs { display: none; }
@@ -138,7 +146,8 @@ a.brand:hover { background: var(--panel2); --logo-ground: var(--panel2); }
 /* ── lean modes: the scene is the page ───────────────────────────────────── */
 
 body[data-mode='home'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan),
-body[data-mode='watch'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan) {
+body[data-mode='watch'] :is(#setup, #telemetry, #controls, #mission-result, #rigid-controls, #first-use-guide, .mobile-workspace-nav, #footer, #btn-help, #btn-camera-plan, .lesson-strip),
+body:is([data-section='home'], [data-section='structure']) .lesson-strip {
   display: none !important;
 }
 body[data-mode='home'] #app, body[data-mode='watch'] #app { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
@@ -206,33 +215,13 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 
 /* ── the landing page: src/ui/home.css ─────────────────────────────────── */
 
-/* "in development", on a level still being built */
-.section-badge {
-  display: inline-block; padding: 2px 8px; border-radius: 999px;
-  border: 1px solid rgba(239, 164, 126, 0.5); color: var(--warn);
-  font: 500 10.5px/1.4 var(--sans); letter-spacing: 0.8px; text-transform: uppercase;
-}
-
 /* ── a section's plan: the Build levels still being built show it (src/ui/build/build.css), the
    Orbit playground lists what it still lacks with the same items (S01) ─────── */
 
-.section-inner { max-width: 880px; }
-.section-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; color: var(--accent); letter-spacing: 2.4px; }
 .section-title {
   margin: 10px 0 12px;
   font: 600 clamp(28px, 3.6vw, 46px)/1.1 var(--display); letter-spacing: -1px;
 }
-.section-lead { margin: 0 0 24px; max-width: 660px; font-size: 16px; line-height: 1.6; color: #c9d6e2; }
-.section-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.section-level {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 14px; border-radius: 12px;
-  border: 1px solid rgba(103, 132, 138, 0.35); background: rgba(14, 22, 32, 0.74);
-}
-.section-level[aria-current] { border-color: var(--accent-line); background: rgba(22, 46, 45, 0.62); }
-.section-level strong { font: 600 15px/1.3 var(--display); }
-.section-level .mode-glyph { color: var(--accent); }
-.section-level-text { font-size: 13px; line-height: 1.5; color: var(--muted); }
 .section-coming { margin: 32px 0 4px; font: 500 12px/1.4 var(--sans); letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
 .section-phase h3 { margin: 18px 0 8px; font: 600 16px/1.3 var(--display); }
 .section-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
@@ -249,27 +238,32 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
   padding: 16px 20px 18px;
   pointer-events: none;
 }
-.watch-bottom { position: relative; display: flex; flex-direction: column; gap: 14px; }
-/* the same kind of scrim as the narration band's: dark under the type, gone by mid-frame */
-.watch-bottom::before {
-  content: ''; position: absolute; left: -20px; right: -20px; top: -70px; bottom: -18px; z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(to top, rgba(6, 10, 16, 0.86), rgba(6, 10, 16, 0.5) 58%, rgba(6, 10, 16, 0));
-}
-.watch-caption { max-width: 660px; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7); }
-.watch-beat { color: var(--accent); font-size: 12px; letter-spacing: 2px; }
+.watch-bottom { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.watch-caption, .watch-stats { padding: 10px 16px 12px; border-radius: 14px; background: rgba(10, 16, 24, 0.88); border: 1px solid var(--line); }
+.watch-caption { max-width: min(640px, 100%); border-left: 3px solid var(--accent); }
+.watch-beat { color: var(--accent); font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .watch-caption[data-beat='failed'] .watch-beat { color: var(--fail); }
 .watch-caption[data-beat='orbit'] .watch-beat, .watch-caption[data-beat='deployed'] .watch-beat { color: var(--ok); }
-.watch-say { margin: 6px 0 0; font-size: 19px; line-height: 1.45; color: #eef4f9; }
-.watch-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px 22px; flex-wrap: wrap; }
-.watch-stats { display: flex; gap: 30px; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7); }
-.watch-stat small { display: block; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #9fb2c4; }
-.watch-stat strong {
-  display: block; margin-top: 2px;
-  font: 600 34px/1.1 var(--display); letter-spacing: -0.5px; color: #fff;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.watch-stat em { margin-left: 2px; font: 500 14px var(--sans); font-style: normal; color: #a9bccd; }
+.watch-say { margin: 2px 0 0; font-size: 17px; line-height: 1.5; color: #eef4f9; }
+/* the clock block: in the scene's top band (watch.ts moves it there), between the title and the state;
+   its column capped, as a wrapping row's max-content is every readout on one line (31rem holds the Russian one-line clock) */
+body[data-mode='watch'] .scene-top { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(31rem) minmax(0, 1fr); }
+body[data-mode='watch'] .sim-state { grid-column: -2; justify-self: end; }
+body:not([data-mode='watch']) .watch-stats { display: none; }
+.watch-stats { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 10px; padding-top: 8px; font-size: 14px; color: #a9bccd; text-align: center; }
+.watch-stat:first-child { flex-basis: 100%; }
+.watch-stat:last-child { padding-left: 10px; border-left: 1px solid var(--line2); }
+.watch-stat small { margin-right: 5px; font-size: 12.5px; }
+.watch-stat:first-child small { display: block; margin: 0; }
+.watch-stat strong { font: 600 15px var(--mono); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.watch-stat:first-child strong { font-size: 34px; line-height: 1.1; }
+.watch-stat em { margin-left: 3px; font: 500 13px var(--sans); color: #a9bccd; }
+/* a short scene (G2 compact, style.css): the clock on one line, its label kept; the sentence cut to one line, all of it still in the live region */
+[data-short=true] .watch-stat:first-child { flex-basis: auto; }
+[data-short=true] .watch-stat:first-child small { display: inline; margin-right: 5px; }
+[data-short=true] .watch-stat:first-child strong { font-size: 18px; }
+[data-short=true] .watch-caption { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-short=true] .watch-caption > * { display: inline; margin-right: 8px; }
 .watch-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; pointer-events: auto; }
 .watch-play {
   display: grid; place-items: center; flex: none;
@@ -314,6 +308,9 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 }
 .watch-card h2 { margin: 4px 0 8px; font: 600 26px/1.2 var(--display); letter-spacing: -0.5px; }
 .watch-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+/* A9: the parking-orbit note opens the lower third; a short scene or a ≤ 640 px one has no room there, so it is back at the top centre (as before S2) */
+.watch-milestone { position: static; transform: none; width: min(460px, 100%); }
+[data-short=true] .watch-milestone { position: absolute; top: 16px; transform: translateX(-50%); width: min(460px, calc(100% - 32px)); }
 .watch-close { flex: none; width: 36px; height: 36px; border-radius: 8px; font-size: 24px; line-height: 1; color: var(--muted); }
 .watch-close:hover { color: #fff; background: var(--panel2); }
 .watch-pick-lead { margin: 0; font-size: 14px; color: var(--muted); }
@@ -342,21 +339,24 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 /* ── narrow screens ──────────────────────────────────────────────────────── */
 
 @media (max-width: 860px) {
-  .section-levels { grid-template-columns: 1fr; }
-  .section-lead { font-size: 15px; }
   .watch-ui { padding: 12px; }
   .watch-say { font-size: 15.5px; }
-  .watch-stats { gap: 18px; }
-  .watch-stat strong { font-size: 24px; }
-  .watch-stat em { font-size: 12px; }
+  /* a phone: the title and the state share the first row, the clock fills the second */
+  body[data-mode='watch'] .scene-top { grid-template-columns: minmax(0, 1fr) auto; }
+  .watch-stats { grid-column: 1 / -1; grid-row: 2; }
+  .watch-stat:first-child strong { font-size: 26px; }
   .watch-play { width: 40px; height: 40px; }
   .watch-card { padding: 18px 16px 20px; }
   .watch-card h2 { font-size: 21px; }
 }
+/* a short scene from 720 px keeps the clock on the title row: a second row pushed the Russian camera tabs over the centre */
+@media (min-width: 720px) and (max-width: 860px) {
+  body[data-mode='watch'] [data-short=true] .scene-top { grid-template-columns: minmax(0, 1fr) fit-content(31rem) minmax(0, 1fr); }
+  [data-short=true] .watch-stats { grid-area: auto; }
+}
 @media (max-width: 640px) {
-  .watch-stats { width: 100%; justify-content: space-between; gap: 10px; }
-  .watch-stat strong { font-size: 21px; }
   .watch-speed { padding: 6px 8px; }
+  .watch-milestone { position: absolute; top: 12px; transform: translateX(-50%); width: calc(100% - 24px); }
 }
 
 /* ── S04: offline or online data ─────────────────────────────────────────── */

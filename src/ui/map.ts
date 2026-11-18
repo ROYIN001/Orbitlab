@@ -6,6 +6,7 @@ import type { Simulation } from '../physics/simulation';
 import { eciToLatLon, propagateKepler, sunDirectionEci, stateFromElements, elementsFromState } from '../physics/orbital';
 import { OMEGA_EARTH, RAD, DEG, R_EARTH } from '../physics/constants';
 import { t } from '../i18n';
+import { CANVAS_SANS } from './web-fonts';
 
 export class OrbitalMap {
   private canvas: HTMLCanvasElement;
@@ -207,7 +208,7 @@ export class OrbitalMap {
       g.strokeStyle = '#8be5cd'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.stroke();
     }
     // legend
-    g.font = '11px "DM Sans", system-ui, sans-serif';
+    g.font = `11px ${CANVAS_SANS}`;
     const legend: [string, string][] = [['#7ddba0', t('map.site')], ['#efa47e', t('map.groundTrack')], ['rgba(255,255,255,0.8)', t('map.predicted')], ['#8be5cd', t('map.target')], ['#ffd28a', t('map.subsolar')], ['#ff6b6b', t('map.impact')]];
     // keep the legend clear of the narration band below the canvas
     let ly = Math.min(mh - 12, H - bottomInset - oy - 12);

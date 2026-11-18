@@ -14,7 +14,7 @@
  * The tabs are given the room the bar has (`fit`): where they would run
  * under the tools on the bar's right — a narrower window, a language with
  * longer names, one section more — they are first drawn tighter, then the
- * current level is shown by its glyph instead of its name, and if that is
+ * current level is shown by its icon instead of its name, and if that is
  * not enough they take a row of their own under the bar's first, as they do
  * on a small screen. Measured, not set by a width: what fits depends on the
  * language and on what the tools on the right say.
@@ -25,8 +25,9 @@
  */
 import { t } from '../i18n';
 import { hashForRoute, route, type AppLevel, type AppRoute, type AppSection, APP_LEVELS } from './app-mode';
-import { FUTURE_PLANS, LEVEL_GLYPHS, NAV_SECTIONS, levelDescKey, levelNameKey, type FutureSection, type NavEntry } from './section-nav-model';
+import { FUTURE_PLANS, NAV_SECTIONS, levelDescKey, levelNameKey, type FutureSection, type NavEntry } from './section-nav-model';
 import { el } from './orbit/dom';
+import { icon } from './dialogs';
 
 /** What is open: a tab's menu (by section) or, on a phone, the list. */
 type Open = NavEntry['id'] | 'sheet' | null;
@@ -62,9 +63,9 @@ export class SectionNav {
 
   /**
    * Give the tabs the room the bar has: as they are; tighter (`data-nav-fit`
-   * "tight" on the bar: no menu marks, section glyphs or product name, less
+   * "tight" on the bar: no menu marks, section icons or product name, less
    * padding); tighter still ("tighter": smaller letters); tightest
-   * ("tightest": the current level as its glyph, not its name — the longest
+   * ("tightest": the current level as its icon, not its name — the longest
    * thing a tab holds); or on a row of their own ("rows"), which costs the
    * page under the bar some height and so comes last: on a short window that
    * row pushes the flight's playback controls off the first screen (S3 of
@@ -141,12 +142,10 @@ export class SectionNav {
     // the section is in the name: the same level names repeat in every section
     a.setAttribute('aria-label', `${t(sectionKey(section))} · ${name}`);
     if (this.shown.section === section && this.shown.mode === level) a.setAttribute('aria-current', 'page');
-    const glyph = el('span', 'mode-glyph', LEVEL_GLYPHS[level]);
-    glyph.setAttribute('aria-hidden', 'true');
     const description = el('span', 'nav-level-desc', t(levelDescKey(section, level)));
     description.id = `${cls}-${section}-${level}-description`;
     a.setAttribute('aria-describedby', description.id);
-    a.append(glyph, el('span', 'nav-level-name', name), description);
+    a.append(icon(level, 'mode-glyph'), el('span', 'nav-level-name', name), description);
     return a;
   }
 
@@ -177,14 +176,12 @@ export class SectionNav {
       btn.setAttribute('aria-controls', `nav-menu-${s.id}`);
       if (isCurrent) btn.setAttribute('aria-current', 'page');
       const name = t(s.nameKey);
-      const glyph = el('span', 'mode-glyph', s.glyph);
-      glyph.setAttribute('aria-hidden', 'true');
-      btn.append(glyph, el('span', 'nav-tab-name', name));
+      btn.append(icon(s.id, 'mode-glyph'), el('span', 'nav-tab-name', name));
       if (isCurrent && !s.future) {
         const mode = this.shown.mode as AppLevel;
         const level = t(levelNameKey(s.id as AppSection, mode));
         const badge = el('span', 'nav-badge', level);
-        badge.dataset.glyph = LEVEL_GLYPHS[mode]; // what the badge shows at the tightest fit (modes.css)
+        badge.prepend(icon(mode, 'nav-badge-icon')); // what the badge shows at the tightest fit (modes.css)
         btn.append(badge);
         btn.setAttribute('aria-label', `${name} · ${level}`);
       }
@@ -194,9 +191,7 @@ export class SectionNav {
         btn.append(dot);
         btn.setAttribute('aria-label', `${name} · ${t('nav.future')}`);
       }
-      const chev = el('span', 'nav-chev', '▾');
-      chev.setAttribute('aria-hidden', 'true');
-      btn.append(chev);
+      btn.append(icon('chev', 'nav-chev'));
       const menu = el('div', 'nav-menu');
       menu.id = `nav-menu-${s.id}`;
       menu.hidden = !open;
@@ -223,18 +218,14 @@ export class SectionNav {
     const s = this.shown.section;
     if (s) {
       const entry = NAV_SECTIONS.find((n) => n.id === s)!;
-      const glyph = el('span', 'mode-glyph', entry.glyph);
-      glyph.setAttribute('aria-hidden', 'true');
       const level = t(levelNameKey(s, this.shown.mode as AppLevel));
-      here.append(glyph, el('span', 'nav-tab-name', t(entry.nameKey)), el('span', 'nav-badge', level));
+      here.append(icon(s, 'mode-glyph'), el('span', 'nav-tab-name', t(entry.nameKey)), el('span', 'nav-badge', level));
       btn.setAttribute('aria-label', t('nav.choose', { where: `${t(entry.nameKey)} · ${level}` }));
     } else {
       here.append(el('span', 'nav-tab-name', t('nav.pick')));
       btn.setAttribute('aria-label', t('nav.pick'));
     }
-    const chev = el('span', 'nav-chev', '▾');
-    chev.setAttribute('aria-hidden', 'true');
-    btn.append(here, chev);
+    btn.append(here, icon('chev', 'nav-chev'));
     const sheet = el('div', 'nav-sheet');
     sheet.id = 'nav-sheet';
     sheet.hidden = this.open !== 'sheet';

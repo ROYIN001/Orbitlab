@@ -2,8 +2,10 @@
    Orbitlab — design system.
 
    The palette, the typography and the panel structure come from the Codex
-   build (dark teal/graphite, accent mint, DM Sans for text and Space Grotesk
-   for figures and headings, Noto Sans Thai for Thai); the engineering content
+   build (dark teal/graphite, accent mint); the type is IBM Plex Sans Thai for
+   text and headings (IBM Plex Sans for Cyrillic) and IBM Plex Mono for
+   readouts, online only (redesign A, docs/development/reports/redesign-a.md;
+   offline the system fallbacks below); the engineering content
    — charts, Δv budget, event log, timeline, HUD — is the Claude build's,
    restyled onto it.
 
@@ -37,9 +39,9 @@
   --ok: #7ddba0;
   --warn: #efa47e;
   --fail: #ff6b6b;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  --sans: "DM Sans", "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --display: "Space Grotesk", "Noto Sans Thai", var(--sans);
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: "IBM Plex Sans Thai", "IBM Plex Sans", "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: var(--sans);
   --radius: 12px;
   /* measured height of the narration band; see main.ts observeSceneBottom() */
   --sb-h: 120px;
@@ -75,6 +77,8 @@ a { color: var(--accent); }
   text-transform: uppercase;
   color: var(--muted);
 }
+/* Thai is never letter-spaced: tracking pulls the vowels and tone marks off their consonants */
+:lang(th) { letter-spacing: normal !important; }
 .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
 
 /* ── shell ───────────────────────────────────────────────────────────────── */
@@ -117,6 +121,8 @@ a { color: var(--accent); }
   border: 1px solid transparent;
 }
 .quiet-btn:hover { color: var(--text); border-color: var(--line2); }
+/* a line icon from index.html's sprite (#i-…), drawn in the text colour */
+.icon { flex: none; width: 1em; height: 1em; vertical-align: -0.2em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .lang { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
 .lang select { width: auto; height: 32px; }
 
@@ -472,7 +478,7 @@ body[data-lesson] .verdict-fixes { display: none; }
   font: 10.5px/1 var(--display); letter-spacing: 0.4px; color: #7f97a8; }
 .mission-steps li { display: flex; align-items: center; }
 .mission-steps li + li::before { content: '›'; margin: 0 4px; color: #4d6273; }
-.mission-steps li, .mission-steps button { padding: 0; }
+.mission-steps li { padding: 0; }
 /* the title band lets presses through to the scene (drag to orbit the camera); the chips take theirs */
 .mission-steps button { pointer-events: auto; color: inherit; font: inherit; letter-spacing: inherit; text-decoration: underline dotted; text-underline-offset: 2px;
   padding: 2px 3px; border-radius: 4px; }
@@ -487,7 +493,6 @@ body[data-lesson] .verdict-fixes { display: none; }
   border: 1px solid rgba(124, 226, 198, 0.32); border-radius: 999px; background: rgba(8, 22, 26, 0.6); color: #a6e9d5; font-size: 11px; line-height: 13px; text-decoration: none; }
 @media (max-width: 700px) { .mission-structure { display: none; } }
 .mission-structure[hidden] { display: none; }
-.mission-structure::before { content: '⊞' / ''; opacity: 0.8; }
 .mission-structure:hover, .mission-structure:focus-visible { color: #e2fff6; border-color: rgba(124, 226, 198, 0.7); }
 .mission-steps [data-state="off"] { color: #4d6273; text-decoration: line-through; }
 .sim-state {
@@ -816,7 +821,7 @@ body[data-lesson] .verdict-fixes { display: none; }
 .live-btn { font-size: 12px; letter-spacing: 0.6px; }
 .live-btn.active { background: var(--ok); border-color: var(--ok); color: #05210f; font-weight: 700; }
 .mission-clock { text-align: center; }
-.mission-clock > span { display: block; font: 500 21px/1 var(--display); letter-spacing: 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mission-clock > span { display: block; font: 500 21px/1 var(--mono); letter-spacing: 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mission-clock small { display: block; margin-top: 3px; font-size: 9px; letter-spacing: 1.2px; color: var(--dim); }
 .warp { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
 .warp select { width: 78px; height: 32px; font-size: 12px; }
@@ -1013,8 +1018,8 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
 .dialog-close:hover { color: #fff; }
 .dialog-body h2 { margin: 8px 0 14px; font: 500 26px/1.2 var(--display); letter-spacing: -0.6px; }
 .dialog-body h3 { margin: 22px 0 6px; font-size: 15px; color: var(--accent); }
-.dialog-body p, .dialog-body li { font-size: 13.5px; line-height: 1.75; color: #b8c8d9; }
-.dialog-body p.lead { color: #cddae6; }
+.dialog-body p, .dialog-body li { font-size: 13.5px; line-height: 1.75; color: var(--prose, #b8c8d9); }
+.dialog-body p.lead { color: var(--prose, #cddae6); }
 .dialog-body p.small { font-size: 12px; color: var(--muted); }
 .dialog-body ul { padding-left: 20px; margin: 6px 0 0; }
 .check-label { display: flex; align-items: center; gap: 10px; margin: 18px 0; font-size: 14px; }
@@ -1075,8 +1080,6 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .flight-column { grid-column: 2; grid-row: 1; }
   #telemetry { grid-column: 2; grid-row: 2; max-height: 300px; }
   .scene-hint { display: none; }
-  .quiet-btn span:last-child { display: none; }
-  .quiet-btn { padding: 7px; }
 }
 
 /* Two rows that have to share one screen.
@@ -1207,7 +1210,7 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
      setup is on it, instead of waiting at the end of the form. */
   #setup { overflow: visible; }
   .launch-area { position: sticky; bottom: 0; z-index: 2; box-shadow: 0 -10px 24px rgba(8, 12, 19, 0.55); }
-  #topbar { height: 54px; padding: 0 12px; gap: 8px; }
+  #topbar { gap: 8px; }
   .brand-name { font-size: 18px; }
   .brand-mark { width: 32px; height: 32px; }
   .lang span { display: none; }

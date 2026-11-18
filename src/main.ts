@@ -75,7 +75,7 @@ import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode'
 import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentCaches } from './provider/data-provider';
 import { SectionNav } from './ui/section-nav';
 import { FEATURED_WATCH_MISSION, historicalFor, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
-import { AboutDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
+import { AboutDialog, CameraDialog, DEFAULT_CAMERA_PLAN, icon, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
 import { FlightRecorder, type RecordingSource } from './replay/recorder';
@@ -1667,7 +1667,7 @@ class App {
     const link = document.getElementById('mission-structure') as HTMLAnchorElement | null;
     if (link) {
       link.hidden = !model;
-      if (model) { link.href = structureHref(this.route.mode); link.textContent = t('ctx.structure'); }
+      if (model) { link.href = structureHref(this.route.mode); link.replaceChildren(icon('structure'), t('ctx.structure')); }
     }
     if (!shown) return;
     list.setAttribute('aria-label', t('ctx.steps'));
