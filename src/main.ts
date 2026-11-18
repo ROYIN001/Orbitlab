@@ -288,6 +288,8 @@ class App {
   /** E03: lessons with set tasks and automatic grading, and the placement test */
   lessons!: LessonMode;
   map: OrbitalMap;
+  /** F2: the flight wall's ground track, made the first time its card is on screen */
+  private trackMap: OrbitalMap | null = null;
   onboard: OnboardOverlay;
   timeline: Timeline;
   narration: Narration;
@@ -2307,6 +2309,12 @@ class App {
     if (this.simView && this.telTimer > 0.5 && !this.lean) {
       this.telTimer = 0;
       this.tel.update(this.simView.sim, this.player.cursor, this.shown);
+      // F2: frame-backed like the panel; a hidden card has no size and is neither made nor drawn
+      const track = this.tel.trackCanvas;
+      if (track.clientWidth > 0) {
+        this.trackMap ??= new OrbitalMap(track, `${base}textures/earth_atmos_2048.jpg`);
+        this.trackMap.draw(this.simView.sim, this.simView.sim.site.latitude, this.simView.sim.site.longitude, 0, false);
+      }
       this.rendezvousPlot.update(this.recorder.frames, this.shown);
       this.compare.update();
       this.result.update(this.simView.sim);

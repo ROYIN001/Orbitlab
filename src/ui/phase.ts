@@ -314,6 +314,16 @@ export function eventLabel(key: string, params?: Record<string, string | number>
 }
 
 /**
+ * The HUD's outcome note for `frame` and its level, or null while the flight
+ * has no outcome to state (the flight wall's orbit row reads the same rule).
+ */
+export function hudNote(frame: Pick<VisualFrame, 'status' | 'note'>): { key: string; level: 'ok' | 'warn' | 'fail' } | null {
+  if (frame.status !== 'orbit' && frame.status !== 'failed' && frame.status !== 'descent' && frame.status !== 'landed') return null;
+  return { key: `hud.note.${frame.note}`,
+    level: frame.status === 'failed' ? 'fail' : frame.note === 'orbitOffTarget' || frame.note === 'shipLost' || frame.note === 'dockingAborted' ? 'warn' : 'ok' };
+}
+
+/**
  * The status the HUD and the narration print: the simulation's own, save for
  * Apollo on its way (C01), which is not "in orbit" between the Earth and the
  * Moon, in lunar orbit, coming down to the Moon or on it.

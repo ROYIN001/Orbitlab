@@ -43,7 +43,7 @@ import { VOSTOK_IM } from '../physics/sim/module-entry';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { Debris, TelemetrySample } from '../physics/sim/types';
 import { getNotation, setNotationPreference, symbolText, type NotationPreference } from './notation';
-import { CARD_IDS, TELEMETRY_LAYOUT_KEY, choosePreset, parseTelemetryLayout, serializeTelemetryLayout, toggleCard, visibleCards, type CardId, type PresetId, type TelemetryLayout } from './telemetry-layout';
+import { CARD_IDS, TELEMETRY_LAYOUT_KEY, choosePreset, parseTelemetryLayout, serializeTelemetryLayout, storesLayout, toggleCard, visibleCards, type CardId, type PresetId, type TelemetryLayout } from './telemetry-layout';
 import { workspaceStorage } from '../workspace/storage';
 import { EquationsPanel } from './equations';
 import type { EquationLevel } from './equations-model';
@@ -52,6 +52,8 @@ import { downloadBlob } from './download';
 import { ASCENT_MARKERS, CHART_IDS, EXPLORE_CHART_IDS, EXPLORE_CHART_LABELS, ORBIT_MARKERS, chartTitle, referenceSeries, type ExploreChartId } from './telemetry-charts';
 import type { FlownRecord } from './flown';
 import { referenceWindow, type ReferenceFlight } from '../replay/reference';
+import { wallChips } from './flight-wall';
+import { MAP_LEGEND } from './map';
 
 type Range = 'mission' | 'ascent';
 
@@ -137,6 +139,8 @@ export class TelemetryPanel {
   private losses!: HTMLElement;
   private plan!: HTMLElement;
   private debris!: HTMLElement;
+  /** F2: the flight wall's status rows */
+  private status!: HTMLElement;
   private events!: HTMLElement;
   /**
    * The line inside the event log that says the log is empty.
@@ -192,6 +196,8 @@ export class TelemetryPanel {
   readonly rendezvousHost: HTMLElement = el('div', 'telemetry-rv');
   /** U02: where the app puts the comparison (src/ui/compare.ts); kept across rebuilds like the dock. */
   readonly compareHost: HTMLElement = el('div', 'telemetry-compare');
+  /** F2: the ground-track card's map (the app draws it); kept across rebuilds like the dock. */
+  readonly trackCanvas: HTMLCanvasElement = document.createElement('canvas');
   /** U02: the reference flight every chart also draws, dashed. */
   private reference: ReferenceFlight | null = null;
   /** E02: the live equations, a second view of this panel; the frame on screen, and the mode's set. */
@@ -225,7 +231,7 @@ export class TelemetryPanel {
     const label = el('label', 'tel-display-field');
     const select = el('select') as HTMLSelectElement;
     const names: ReadonlyArray<readonly [PresetId, string]> = [['all', t('tel.cards.all')], ['flight', t('tel.cards.flight')],
-      ['dynamics', t('tel.cards.dynamics')], ['orbit', t('tel.cards.orbit')], ['custom', t('tel.cards.custom')]];
+      ['dynamics', t('tel.cards.dynamics')], ['orbit', t('tel.cards.orbit')], ['wall', t('tel.cards.wall')], ['custom', t('tel.cards.custom')]];
     for (const [value, text] of names) {
       const option = el('option', undefined, text) as HTMLOptionElement;
       option.value = value;
@@ -257,12 +263,15 @@ export class TelemetryPanel {
     if (card === 'losses') return t('tel.losses');
     if (card === 'plan') return t('tel.plan');
     if (card === 'debris') return t('tel.debris');
+    if (card === 'status') return t('wall.status');
+    if (card === 'track') return t('map.groundTrack');
     return chartTitle(card);
   }
 
   private setLayout(layout: TelemetryLayout): void {
     this.layout = layout;
-    try { workspaceStorage().setItem(TELEMETRY_LAYOUT_KEY, serializeTelemetryLayout(layout)); } catch { /* storage off: this page keeps it */ }
+    // the wall preset lasts for the page session (storesLayout)
+    if (storesLayout(layout)) try { workspaceStorage().setItem(TELEMETRY_LAYOUT_KEY, serializeTelemetryLayout(layout)); } catch { /* storage off: this page keeps it */ }
     this.applyLayout();
     // a card brought back is drawn from the frame on screen at once
     if (this.view) this.update(this.view, this.cursor);
@@ -413,6 +422,18 @@ export class TelemetryPanel {
     this.losses = mk('tel.losses', 'list info', undefined, 'losses');
     this.plan = mk('tel.plan', 'list info plan', undefined, 'plan');
     this.debris = mk('tel.debris', 'list info', undefined, 'debris');
+    // F2, the flight wall (Engineer only: style.css hides it in Explore)
+    this.status = mk('wall.status', 'list info wall wall-status', 'wall', 'status');
+    const track = mk('map.groundTrack', 'list wall wall-track', 'wall', 'track');
+    this.trackCanvas.setAttribute('role', 'img');
+    this.trackCanvas.setAttribute('aria-label', t('map.groundTrack'));
+    const legend = el('div', 'wall-legend');
+    for (const [color, key] of MAP_LEGEND) {
+      const item = el('span', undefined, t(key));
+      item.style.setProperty('--c', color);
+      legend.append(item);
+    }
+    track.append(this.trackCanvas, legend);
     r.append(this.compareHost);
     this.events = mk('tel.events', 'events', 'events-head');
     this.eventsEmpty = el('div', 'events-empty', t('tel.noEvents'));
@@ -577,6 +598,8 @@ export class TelemetryPanel {
     this.clearRows(this.losses);
     this.clearRows(this.plan);
     this.clearRows(this.debris);
+    this.clearRows(this.status);
+    this.trackCanvas.width = 0;
     this.note.textContent = '';
     this.note.classList.add('hidden');
     this.cursor = 0;
@@ -821,6 +844,11 @@ export class TelemetryPanel {
     }
     if (!any) this.row(this.debris, t('misc.none'), '');
     this.endRows(this.debris);
+
+    // F2: the flight wall's status, from the frame on screen and the events up to it
+    this.beginRows(this.status);
+    if (this.frame) for (const c of wallChips(this.frame, events, view.vehicleSpec)) this.row(this.status, t(c.key), c.text, c.level);
+    this.endRows(this.status);
 
     // Event log. Appended while the cursor moves forwards and trimmed when it
     // moves back, so the log always ends at the displayed instant. The box is
