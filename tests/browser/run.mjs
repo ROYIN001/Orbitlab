@@ -36,21 +36,7 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
   }
   if (!picked.length && names.length) return { results: [], ok: true };
   if (!picked.length) throw new Error('no journeys selected');
-  // TEMPORARY, rule 2 evidence for S4's new r2-event-jump, r2-transport-fit, r2-transport-fit-launch, r2-transport-fit-clock
-  // and changed r2-viewport-matrix (reverted before merge): on CI the five smoke shards run only those, by the fixed plan
-  // PLAN instead of selectShard; any shard but k/5 fails. P10: 2 of each a CI run, 10 runs; P7: 3 of each, 7 runs.
-  const PLAN = 'P10';
-  const [J, F, L, C, M] = ['r2-event-jump', 'r2-transport-fit', 'r2-transport-fit-launch', 'r2-transport-fit-clock', 'r2-viewport-matrix'];
-  const PLANS = {
-    P10: [[M], [M], [J, L, C], [J, L, C], [F, F]],
-    P7: [[M, F], [M, F], [M, F], [L, L, L, J], [J, J, C, C, C]],
-  };
-  if (smoke && !names.length && process.env.GITHUB_ACTIONS) {
-    const run = /^[1-5]\/5$/.test(shard ?? '') && PLANS[PLAN][Number(shard[0]) - 1];
-    if (!run) throw new Error(`TEMPORARY rule 2 plan ${PLAN} needs --shard=k/5 with k in 1..5, not ${shard}`);
-    picked = [];
-    for (const name of run) picked.push({ name, mod: await import(pathToFileURL(join(journeyDir, `${name}.mjs`)).href) });
-  } else picked = selectShard(picked, shard);
+  picked = selectShard(picked, shard);
   if (list) {
     console.log(picked.map(journey => journey.name).join('\n'));
     return { results: [], ok: true };
