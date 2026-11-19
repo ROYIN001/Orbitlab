@@ -22,13 +22,15 @@ export default async function r2FlightWall(t) {
   try {
     if (!await liftoffJump(t, app)) return;
     await flightWall(t, app);
-    // (e) the wall preset was never written: a reload brings back the preset chosen before it
+    // (e) the wall preset is never written: chosen again over the stored Orbit, a reload brings Orbit back.
+    // The wall has to be the choice at the reload: after Orbit, Orbit comes back whether or not the wall was written.
+    await preset(page).selectOption('wall');
     await page.evaluate(() => { location.hash = '#/launch/engineer'; });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await app.ready();
     await preset(page).waitFor({ state: 'attached' });
     const stored = await preset(page).inputValue();
-    t.check(stored === 'orbit', `(e) after a reload the preset is ${stored}, not the Orbit chosen before the wall`);
+    t.check(stored === 'orbit', `(e) after a reload the preset is ${stored}, not the Orbit stored before the wall`);
   } finally {
     app.checkErrors();
     await app.context.close();
