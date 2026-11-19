@@ -136,7 +136,7 @@ export interface ComparedFigure {
 /** Events whose times are compared, in flight order. */
 export const COMPARED_EVENTS = ['evt.maxQ', 'evt.meco', 'evt.stageSep', 'evt.seco', 'evt.fairingSep', 'evt.parkingOrbit', 'evt.targetOrbit'];
 
-const INSERTION = ['evt.parkingOrbit', 'evt.targetOrbit', 'evt.offTargetOrbit', 'evt.suborbitalTarget', 'evt.suborbitalOffTarget'];
+export const INSERTION = ['evt.parkingOrbit', 'evt.targetOrbit', 'evt.offTargetOrbit', 'evt.suborbitalTarget', 'evt.suborbitalOffTarget'];
 
 interface Comparable { telemetry: readonly ReferenceSample[]; events: readonly SimEvent[] }
 

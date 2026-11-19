@@ -811,7 +811,7 @@ body[data-lesson] .verdict-fixes { display: none; }
 
 .playback { flex: none; padding: 14px 18px 12px; }
 .ctl-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-.ctl-group { display: flex; align-items: center; gap: 8px; }
+.ctl-group, .ctl-end { display: flex; align-items: center; gap: 8px; }
 .ctl-btn {
   display: grid; place-items: center; min-width: 34px; height: 34px; padding: 0 9px;
   border: 1px solid var(--line2); border-radius: 7px; background: var(--panel2); font-size: 14px;
@@ -827,6 +827,23 @@ body[data-lesson] .verdict-fixes { display: none; }
 .warp select { width: 78px; height: 32px; font-size: 12px; }
 #achieved-warp { display: block; margin-top: 7px; color: var(--muted); font-size: 11px; }
 #achieved-warp[hidden] { display: none; }
+/* R2.6: the event-jump menu's opener (src/ui/timeline.ts), at the row's end before the warp (.ctl-end), shown in its
+   place through the flight and its analysis, and disabled (dimmed, out of the tab order) until a key event is
+   recorded, so being enabled moves nothing in the row; but where the clock's change at T+0 (as liftoff enables the
+   opener) switches the row's fit to a level that shows or hides the warp's word or the opener's own, the opener moves
+   in that frame, while the transport group, at the row's start, stays. As tall as the warp's select, so a line
+   holding the two is no taller than one holding the warp alone; its menu is the timeline's chooser */
+.jump-btn { display: none; grid-auto-flow: column; gap: 4px; height: 32px; font-size: 12px; }
+body:is([data-flight-stage='flight'], [data-flight-stage='analysis']) .jump-btn { display: grid; }
+/* The transport row keeps one line where it can, as a taller row comes off the scene (also below 861 px, where the
+   stacked flight column has a min-height). main.ts measures the row's height at each level and writes the lowest at
+   which it is least tall (fitLevel, src/ui/event-jump.ts): at 1 the row's two column gaps narrow by 6 px, to 8 px (to
+   4 px from 10 px below 861 px: the opener costs the row as little at every width), at 2 the warp's word gives way as
+   well (its select keeps the word as its name and tooltip and shows the warp, "10×"), at 3 the opener's word and its
+   ▾ as well, for a chapter-list icon (index.html's sprite) in the bare ▾'s 34 px (the word stays the opener's name). */
+.ctl-row[data-fit]:not([data-fit='0']) { column-gap: 8px; }
+.ctl-row:is([data-fit='2'], [data-fit='3']) .warp > span, .ctl-row[data-fit='3'] .jump-btn > span, .jump-btn > svg { display: none; }
+.ctl-row[data-fit='3'] .jump-btn > svg { display: block; font-size: 14px; }
 
 /* ── timeline (behaviour owned by src/ui/timeline.ts) ────────────────────── */
 
@@ -1231,6 +1248,11 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
      `Hud` still forces the compact mode at this same breakpoint. */
   .mission-clock > span { font-size: 18px; }
   .ctl-row { gap: 10px; }
+  .ctl-row[data-fit]:not([data-fit='0']) { column-gap: 4px; }
+  /* R2.6: the transport group takes a second line where the phone has no room for it; Abort, which acts on one tap,
+     ends its line, so on a later line it is not under prev, play and skip at the start */
+  .ctl-group { flex-wrap: wrap; }
+  .abort-btn { margin-inline-start: auto; }
   .events { max-height: 200px; }
   #footer { flex-direction: column; align-items: flex-start; gap: 4px; }
   .camera-plan-row { grid-template-columns: 1fr; gap: 6px; }
@@ -1432,6 +1454,10 @@ canvas.chart:focus-visible { outline: 1px solid var(--accent-line); outline-offs
 .tl-chooser-item.sev-fail { border-left-color: var(--fail); }
 .tl-chooser-time { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .tl-chooser-name { overflow-wrap: anywhere; }
+/* R2.6: the event-jump menu's items seek, so they are touch targets; the menu is no taller than the room on its
+   side of the opener (--room, Timeline.placeChooser) */
+.tl-chooser.jump { max-height: min(320px, 60vh, var(--room)); }
+.tl-chooser.jump .tl-chooser-item { min-height: 44px; align-content: center; }
 
 /* ── R2.1: the Engineer shell through the mission lifecycle ──────────────────
    `body[data-setup='collapsed']` is written by main.ts (src/ui/flight-lifecycle.ts)

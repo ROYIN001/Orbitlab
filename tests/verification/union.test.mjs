@@ -5,15 +5,17 @@ import { resolve } from 'node:path';
 import { test } from 'node:test';
 import { verifyUnion, aggregate, verificationMetadata } from '../../scripts/verification/aggregate.mjs';
 import { discoverFiles, notice, readJSON, runtime, sha256, snapshots, sourceIdentity, workflow, writeJSON } from '../../scripts/verification/lib.mjs';
-import { selectShard } from '../browser/shard.mjs';
+import { JOURNEY_SECONDS, selectShard } from '../browser/shard.mjs';
 
 function fixture(mode = 'ci') {
   const source = { commit: 'same-commit', tree: 'same-tree', sha256: 'same-source', files: [] };
   const environment = { node: 'v22.23.3', v8: 'same-v8', platform: 'linux', arch: 'x64', vitest: '5.0.1', playwright: '1.63.0', packageLock: 'same-lock' };
   const baseline = { sha256: 'baseline', files: [] };
   const fresh = mode === 'pages' ? { sha256: 'fresh', files: [] } : baseline;
+  // selectShard, here and in the aggregate, shards by the checked-in seconds: the fixture's journeys are names it has
+  const journeys = Object.keys(JOURNEY_SECONDS).slice(0, 5);
   const plan = { schema: 1, mode, source, runtime: environment, workflow: { runId: '10', attempt: '1', sha: 'same-commit' }, snapshots: baseline,
-    suites: { unit: { files: ['tests/a.test.ts', 'tests/b.test.ts', 'tests/c.test.ts'], assertions: ['a', 'b', 'c'].map(letter => ({ file: `tests/${letter}.test.ts`, name: `suite > ${letter}` })) }, browser: { names: ['a', 'b', 'c', 'd', 'e'], smoke: mode === 'ci' } },
+    suites: { unit: { files: ['tests/a.test.ts', 'tests/b.test.ts', 'tests/c.test.ts'], assertions: ['a', 'b', 'c'].map(letter => ({ file: `tests/${letter}.test.ts`, name: `suite > ${letter}` })) }, browser: { names: journeys, smoke: mode === 'ci' } },
     gates: [{ id: 'typecheck', kind: 'command' }, { id: 'build', kind: 'build' }, ...[1, 2, 3].map(index => ({ id: `unit-${index}of3`, kind: 'vitest', suite: 'unit', shard: `${index}/3` })), ...[1, 2].map(index => ({ id: `browser-${index}of2`, kind: 'browser', suite: 'browser', shard: `${index}/2` }))] };
   if (mode === 'pages') plan.gates.push({ id: 'snapshot-check', kind: 'command' });
   const dist = { sha256: 'same-dist', files: [{ file: 'index.html', sha256: 'index' }, { file: 'sw.js', sha256: 'worker' }] };
@@ -179,6 +181,8 @@ const mutations = {
   'wrong shard': reports => { reports[2].shard = '3/3'; },
   'changed committed snapshot': reports => { reports[2].snapshots.sha256 = 'other-data'; },
   'missing journey': reports => { reports[5].journeys.pop(); },
+  // the union stays whole: only the browser-selection check sees a journey in another shard's report
+  "two journeys in each other's shard": reports => { [reports[5].journeys[0], reports[6].journeys[0]] = [reports[6].journeys[0], reports[5].journeys[0]]; },
   'failed journey': reports => { reports[5].journeys[0].failures = ['real click timed out']; },
   'different build artifact': reports => { reports[5].dist.sha256 = 'other-dist'; },
   'different Chromium': reports => { reports[5].browserRuntime.configuredExecutableSha256 = 'other-browser'; },

@@ -3,13 +3,21 @@ import { pathToFileURL } from 'node:url';
 import { appendFileSync } from 'node:fs';
 import { annotate, assertionKey, browserInventory, collectCases, DEFAULT_OUT, readJSON, runtime, same, sha256, snapshots, sourceIdentity, workflow, writeJSON } from './lib.mjs';
 
-// PR CI runs the smoke journeys in three shards, Pages every journey in three (CO-5:
-// two full shards measured 18.8 and 23.4 min of a 30 min job at 5f9aa2e, Pages 37230585947).
-// PR CI had two until the Structure section's journeys and the two viewport journeys joined
-// the smoke set (owner, 2026-11-14), after they failed only at the Pages gate (#217-#219):
+// PR CI runs the smoke journeys in five shards, Pages every journey in five, each journey to the
+// shard with the least recorded CI seconds so far (tests/browser/shard.mjs). Three in turn by name
+// would not hold Redesign A step 2's five new smoke journeys: on the journeys' times in CI runs
+// 43590492908, 43594819791, 43624866557, 43627104397 and 43969692549 and Pages runs 43644004174,
+// 43767073800, 43992517502 and 44203696644, two models (every journey at its slowest time; the slowest
+// runner seen x 1.25), with step 2's new journeys, which CI has not timed yet, at their slowest local
+// times x 2 in the first and x 1.093 in the second (and in the table at half their timeouts until it is
+// refreshed), put the worst PR CI shard at 43.3-47.0 min of 25 that way and 21.7-23.6 min in these five
+// (Pages 50.3-59.6 and 30.1-33.0 min of 45).
+// Pages had three since CO-5 (two full shards measured 18.8 and 23.4 min of a 30 min job at 5f9aa2e,
+// Pages 37230585947). PR CI had two until the Structure section's journeys and the two viewport journeys
+// joined the smoke set (owner, 2026-11-14), after they failed only at the Pages gate (#217-#219):
 // two shards took 5 and 15 min of a 25 min job at 77da674 (CI 43569587484).
 export function browserGates(mode) {
-  const shards = 3;
+  const shards = 5;
   return Array.from({ length: shards }, (_, i) => ({ id: `browser-${i + 1}of${shards}`, kind: 'browser', suite: 'browser', shard: `${i + 1}/${shards}` }));
 }
 

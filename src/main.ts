@@ -76,7 +76,8 @@ import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentC
 import { SectionNav } from './ui/section-nav';
 import { FEATURED_WATCH_MISSION, historicalFor, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { AboutDialog, CameraDialog, DEFAULT_CAMERA_PLAN, icon, type CameraPlan, type FlightPhase } from './ui/dialogs';
-import { Simulation } from './physics/simulation';
+import { Simulation, type SimEvent } from './physics/simulation';
+import { JUMP_LEAD_S, fitLevel } from './ui/event-jump';
 import { cloneFrame, type VisualFrame } from './physics/frame';
 import { FlightRecorder, type RecordingSource } from './replay/recorder';
 import { InlineSession, WorkerSession, createPhysicsWorker, type FlightSession, type SessionWorker } from './session/session';
@@ -611,7 +612,9 @@ class App {
     this.timeline = new Timeline(document.getElementById('timeline')!, {
       onSeek: (time) => this.seek(time),
       onLive: () => this.goLive(),
-    });
+      onJump: (ev) => this.seekToEvent(ev),
+      cursor: () => this.player.cursor,
+    }, document.getElementById('btn-jump') as HTMLButtonElement);
     this.panel = new SetupPanel(document.getElementById('setup')!, {
       onLaunch: (cfg) => this.launch(cfg),
       onReset: () => this.reset(),
@@ -1341,7 +1344,17 @@ class App {
   private bindControls(): void {
     const warpSel = document.getElementById('warp-select') as HTMLSelectElement;
     this.warpSel = warpSel;
-    warpSel.setAttribute('aria-label', t('ctl.warp'));
+    // R2.6: the transport row keeps one line where it can (a taller row comes off the scene): its gaps, then its
+    // words, give way in fitLevel's order, measured by the row's own height. Its children are watched as well as the
+    // row, so a longer clock, another language, ⚙ Setup or the jump opener coming or going is measured again.
+    const row = warpSel.closest<HTMLElement>('.ctl-row')!;
+    const fit = new ResizeObserver(() => {
+      row.dataset.fit = String(fitLevel((level) => {
+        row.dataset.fit = String(level);
+        return row.getBoundingClientRect().height;
+      }));
+    });
+    for (const el of [row, ...row.children]) fit.observe(el);
     this.playBtn = document.getElementById('btn-play') as HTMLButtonElement;
     this.playGlyph = this.playBtn.querySelector('span') as HTMLElement;
     this.liveBtn = document.getElementById('btn-live') as HTMLButtonElement;
@@ -1478,7 +1491,7 @@ class App {
     // working the moment the user clicked a camera tab, a timeline chip or
     // Launch. The controls that *do* own their arrows — inputs, selects, the
     // scrubber — were already handled by the `typing` return above.
-    else this.timeline.onKey(e); // arrows seek 5 s / 30 s, Home/End
+    else this.timeline.onKey(e, this.player.cursor); // arrows seek 5 s / 30 s, Home/End
   }
 
   private async toggleFullscreen(): Promise<void> {
@@ -1534,10 +1547,10 @@ class App {
     this.lessons?.applyLanguage(); // E03
     document.getElementById('camera-tabs')?.setAttribute('aria-label', t('a11y.cameraGroup'));
     document.getElementById('controls')?.setAttribute('aria-label', t('a11y.playback'));
-    // icon-only buttons take their accessible name from the same key as the tooltip
+    // icon-only buttons (and the warp select, whose word can give way: bindControls) take their accessible name
+    // from the same key as the tooltip
     document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((node) => node.setAttribute('aria-label', node.title));
     this.viewport.setAttribute('aria-label', t('a11y.viewport'));
-    this.warpSel?.setAttribute('aria-label', t('ctl.warp'));
     this.framesMenu?.applyLanguage();
     // the dialogs rebuild their body from the dictionaries when opened; an
     // open one has to be rebuilt now
@@ -1875,6 +1888,17 @@ class App {
     if (wasLive && !this.player.live) this.player.playing = this.playing; // keep playing, now as replay
     if (!wasLive && this.player.live) this.player.playing = false;
     this.updatePlayButton();
+  }
+
+  /**
+   * R2.6: the one seek-to-event, `leadS` before the event's recorded time
+   * (`ReplayPlayer.seek` clamps to the start). It never chooses a view: a view
+   * the user picked stays, and with Cinematic on the camera programme shows its
+   * own view for the phase landed in. A later caller that wants a view adds it
+   * with its own user action through `camPolicy.choose()`.
+   */
+  seekToEvent(ev: SimEvent, { leadS = JUMP_LEAD_S }: { leadS?: number } = {}): void {
+    this.seek(ev.t - leadS);
   }
 
   /** Back to the live flight. */
