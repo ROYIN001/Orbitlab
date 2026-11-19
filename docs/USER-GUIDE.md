@@ -1387,12 +1387,18 @@ once at real-time speed:
 
 The right-hand panel (bottom, on a phone) covers the whole recorded flight with a playhead
 that follows the timeline cursor; **Ascent** zooms every chart to liftoff → parking orbit.
-In the Engineer mode, **Cards** at the top of the panel picks what it shows: every card, or
-the **Flight** (altitude, speed, dynamic pressure, g, flight plan), **Dynamics** (dynamic
-pressure, g, pitch, mass, Δv budget) or **Orbit** (apsides, Δv, altitude, flight plan, spent
-stages) set; **Choose cards** ticks them one by one (a *Custom* set). The choice is kept for
-the learner using this device. The clock, the playback and flight controls and the event log
-are never hidden by it. The HUD's *Engine level (actual)* row gives what the core and the
+In the Engineer mode, **Cards** at the top of the panel picks what it shows: **All cards** (every
+chart and list), or the **Flight** (altitude, speed, dynamic pressure, g, flight plan),
+**Dynamics** (dynamic pressure, g, pitch, mass, Δv budget) or **Orbit** (apsides, Δv,
+altitude, flight plan, spent stages) set; **Choose cards** ticks them one by one (a *Custom*
+set). The choice is kept for the learner using this device. The clock, the playback and flight
+controls and the event log are never hidden by it. **Flight wall** shows two cards in place of
+the charts and lists — the system status (engines, phase, separations, warnings and faults, the
+active stage's propellant, the orbit; each row carries a mark as well as a colour: ✓ normal,
+▲ warning, ✕ failure, ● nothing to judge; all read from the flight at the timeline cursor) and
+the ground track — with the comparison with a reference flight under them. It is not kept:
+after a reload the set you had before is back. **All cards** does not include these two;
+**Choose cards** can tick them. The HUD's *Engine level (actual)* row gives what the core and the
 strap-ons are really running at — after each engine's limits and programme, such as a
 Soyuz-2's strap-ons stepping down to 81 % — beside the *Throttle command* the guidance gives.
 

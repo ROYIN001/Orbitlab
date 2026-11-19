@@ -1511,6 +1511,20 @@ body:not([data-mode='engineer']) :is(.tel-display, .tel-cards) { display: none; 
 .tel-cards-grid .checkbox { margin: 4px 0; font-size: 12px; }
 #telemetry:not(.simple-charts) .card-off { display: none !important; }
 #telemetry.simple-charts .tel-cards { display: none; }
+/* F2: the flight wall (src/ui/flight-wall.ts); Engineer only. A level is never colour alone: the glyph is read by eye, not aloud */
+#telemetry.simple-charts .wall { display: none; }
+.wall-status > div { flex-wrap: wrap; gap: 0 10px; }
+/* words, not readouts: the sans face has Thai; a value that does not fit beside its label takes its own line */
+.wall-status .v { min-width: 0; margin-left: auto; overflow-wrap: anywhere; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.wall-status .ok .v { color: var(--ok); }
+.wall-status .fail .v { color: var(--fail); }
+.wall-status .ok .v::before { content: '✓ '; content: '✓ ' / ''; }
+.wall-status .warn .v::before { content: '▲ '; content: '▲ ' / ''; }
+.wall-status .fail .v::before { content: '✕ '; content: '✕ ' / ''; }
+.wall-status .idle .v::before { content: '● '; content: '● ' / ''; color: var(--muted); }
+.wall-track canvas { display: block; width: 100%; aspect-ratio: 2 / 1; border-radius: 7px; }
+.wall-track .wall-legend { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 2px 10px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.wall-legend span::before { content: ''; display: inline-block; width: 10px; height: 8px; margin-right: 4px; background: var(--c); }
 
 /* R3.5: a setup field a flight's result points at (src/ui/panel.ts focusField) */
 label.field-pointed { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }

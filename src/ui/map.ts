@@ -8,6 +8,10 @@ import { OMEGA_EARTH, RAD, DEG, R_EARTH } from '../physics/constants';
 import { t } from '../i18n';
 import { CANVAS_SANS } from './web-fonts';
 
+/** The map's legend, colour then i18n key; the telemetry panel's ground-track card writes it as text. */
+export const MAP_LEGEND: ReadonlyArray<readonly [string, string]> = [['#7ddba0', 'map.site'], ['#efa47e', 'map.groundTrack'],
+  ['rgba(255,255,255,0.8)', 'map.predicted'], ['#8be5cd', 'map.target'], ['#ffd28a', 'map.subsolar'], ['#ff6b6b', 'map.impact']];
+
 export class OrbitalMap {
   private canvas: HTMLCanvasElement;
   private img: HTMLImageElement | null = null;
@@ -18,11 +22,14 @@ export class OrbitalMap {
   private trackForSim: Simulation | null = null;
   private trackSeen = 0;
   private trackRevision = -1;
+  /** the last `draw`, repeated once the picture has loaded */
+  private redraw: (() => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement, imageUrl: string) {
     this.canvas = canvas;
     const img = new Image();
-    img.onload = () => { this.img = img; };
+    // a map drawn before its picture arrived is drawn again with it at once, not at some later frame: a page whose frames stop (a screenshot) kept the bare grid
+    img.onload = () => { this.img = img; this.redraw?.(); this.redraw = null; };
     img.src = imageUrl;
   }
 
@@ -52,9 +59,11 @@ export class OrbitalMap {
    * `bottomInset` is the measured height of the phase-narration band over the
    * viewport (main.ts publishes it). The legend is lifted above it, so the two
    * never sit on top of each other whatever the language does to the
-   * narration's height.
+   * narration's height. `legend = false` leaves the legend out (a small map
+   * that writes it beside the canvas).
    */
-  draw(sim: Simulation | null, siteLat: number, siteLon: number, bottomInset = 0): void {
+  draw(sim: Simulation | null, siteLat: number, siteLon: number, bottomInset = 0, legend = true): void {
+    if (!this.img) this.redraw = () => this.draw(sim, siteLat, siteLon, bottomInset, legend);
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
     if (W === 0 || H === 0) return;
@@ -207,12 +216,13 @@ export class OrbitalMap {
       g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill();
       g.strokeStyle = '#8be5cd'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.stroke();
     }
+    if (!legend) { g.restore(); return; }
     // legend
     g.font = `11px ${CANVAS_SANS}`;
-    const legend: [string, string][] = [['#7ddba0', t('map.site')], ['#efa47e', t('map.groundTrack')], ['rgba(255,255,255,0.8)', t('map.predicted')], ['#8be5cd', t('map.target')], ['#ffd28a', t('map.subsolar')], ['#ff6b6b', t('map.impact')]];
     // keep the legend clear of the narration band below the canvas
     let ly = Math.min(mh - 12, H - bottomInset - oy - 12);
-    for (const [c, label] of legend) {
+    for (const [c, key] of MAP_LEGEND) {
+      const label = t(key);
       g.fillStyle = 'rgba(8,12,18,0.72)';
       g.fillRect(6, ly - 10, g.measureText(label).width + 26, 15);
       g.fillStyle = c; g.fillRect(10, ly - 7, 10, 8);

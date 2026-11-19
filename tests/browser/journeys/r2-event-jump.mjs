@@ -45,9 +45,9 @@
  *     reopens the menu on it, marked, and Enter lands 5 s before it again
  *     (no frame drawn in between, as in (a)).
  * The other legs are journeys of their own, each within half its time limit:
- * the transport row's fit is r2-transport-fit ((f), (g), (k)),
- * r2-transport-fit-launch ((h), (j), (l)) and r2-transport-fit-clock ((l),
- * (m)).
+ * (e), F2's flight wall, is r2-flight-wall; the transport row's fit is
+ * r2-transport-fit ((f), (g), (k)), r2-transport-fit-launch ((h), (j), (l))
+ * and r2-transport-fit-clock ((l), (m)).
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -410,8 +410,8 @@ async function engineer(t) {
 
 /**
  * (d) Engineer's first launch at warp 5, paused 6 s past liftoff once the paused flight has settled, and a jump to
- * liftoff chosen in the menu with the mouse, where r2-transport-fit's Engineer legs start too: the paused flight's
- * start and the liftoff event, or null (recorded) when it did not get there.
+ * liftoff chosen in the menu with the mouse, where r2-flight-wall's (e) and r2-transport-fit's Engineer legs start
+ * too: the paused flight's start and the liftoff event, or null (recorded) when it did not get there.
  */
 export async function liftoffJump(t, app) {
   const { page } = app;
