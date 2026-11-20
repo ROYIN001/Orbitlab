@@ -66,9 +66,13 @@ verification 98 / 98. `scripts/verification/change-map.json`: the
 `tests/onboard-*.test.ts` among its unit files, so a change to the cabin view
 selects this test.
 
-**Not checked here:** the whole unit suite and the browser journeys beyond
-those named in the pull request (CI runs them); the cabin view by eye in a
-flight that crosses the envelope.
+**In a browser, on this build:** `r2-flight-shell`, which takes Watch's
+onboard view during a flight, passed in 292.7 s, and `r2-shell-smoke` in
+42.0 s (`tests/browser/run.mjs`, DejaVu Sans, 2026-11-20).
+
+**Not checked here:** the whole unit suite and the other browser journeys
+(CI runs them); the cabin view by eye in a flight that crosses the envelope,
+which neither journey reaches.
 
 ## Not in this change
 
