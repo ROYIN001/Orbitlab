@@ -36,15 +36,7 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
   }
   if (!picked.length && names.length) return { results: [], ok: true };
   if (!picked.length) throw new Error('no journeys selected');
-  // TEMPORARY, rule 2 evidence for the split r2-viewport-matrix and the new r2-viewport-matrix-phone (reverted before
-  // merge): on CI each of the five smoke shards runs only those, one of each, instead of selectShard; any shard but k/5
-  // fails. 5 of each a CI run, 4 runs.
-  if (smoke && !names.length && process.env.GITHUB_ACTIONS) {
-    const run = /^[1-5]\/5$/.test(shard ?? '') && ['r2-viewport-matrix', 'r2-viewport-matrix-phone'];
-    if (!run) throw new Error(`TEMPORARY rule 2 plan needs --shard=k/5 with k in 1..5, not ${shard}`);
-    picked = [];
-    for (const name of run) picked.push({ name, mod: await import(pathToFileURL(join(journeyDir, `${name}.mjs`)).href) });
-  } else picked = selectShard(picked, shard);
+  picked = selectShard(picked, shard);
   if (list) {
     console.log(picked.map(journey => journey.name).join('\n'));
     return { results: [], ok: true };
