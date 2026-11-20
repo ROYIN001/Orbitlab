@@ -1,7 +1,9 @@
 /**
  * CO-3 (M-LAUNCH-019): the Launch Engineer flight across the G2 viewport
  * matrix, class A — machine checks only; the owner's screenshots (class H)
- * are taken separately.
+ * are taken separately. This journey runs the desktop sizes;
+ * r2-viewport-matrix-phone runs the two phone sizes with the same code (split
+ * on 2026-11-20 for CI time: the whole matrix had reached 958 s of its 1200 s).
  *
  * Desktop sizes (the tablet up) run in contexts without touch, booted in
  * Thai; 390×844 and 320×740 in phone contexts (touch, mobile viewport),
@@ -37,9 +39,9 @@
 import { press, viewportSize } from '../harness.mjs';
 import { checkSceneFloor } from '../scene-floor.mjs';
 
-// 7–10 min here; CI runs flight/WebGL journeys ~1.5–2× slower
 // a smoke journey since 2026-11-14 (owner): it failed only at the Pages gate before (#217-#219)
 export const smoke = true;
+// the desktop part took 330–613 s on CI before the split (26 runs of the whole journey, 2026-11-19)
 export const timeoutMs = 1_200_000;
 
 const RESPOND_MS = 20_000;
@@ -69,18 +71,24 @@ const OPEN_FINDINGS = [
     match: (where, r) => /^phone phone-390x844 RU guide (open|closed) \(TORU\)$/.test(where) && r.i >= 0 && r.covered.length > 0 && r.covered.every((c) => c.byCluster) },
 ];
 
+const GROUPS = { desktop: [DESKTOP, false, 'th'], phone: [PHONE, true, 'ru'] };
+
 export default async function r2ViewportMatrix(t) {
+  await viewportMatrix(t, 'desktop');
+}
+
+/** Both missions across one group's sizes, each in a fresh context (r2-viewport-matrix-phone runs the phones). */
+export async function viewportMatrix(t, group) {
+  const [presets, touch, bootLang] = GROUPS[group];
   const scenes = {};
   const open = new Map();
-  for (const [group, presets, touch, bootLang] of [['desktop', DESKTOP, false, 'th'], ['phone', PHONE, true, 'ru']]) {
-    for (const flight of [sixDofFlight, toruFlight]) {
-      const app = await t.open({ hash: '#/launch/engineer', viewport: presets[0], lang: bootLang, touch, guide: true });
-      try {
-        await flight(t, app, group, presets, { scenes, open });
-      } finally {
-        app.checkErrors();
-        await app.context.close();
-      }
+  for (const flight of [sixDofFlight, toruFlight]) {
+    const app = await t.open({ hash: '#/launch/engineer', viewport: presets[0], lang: bootLang, touch, guide: true });
+    try {
+      await flight(t, app, group, presets, { scenes, open });
+    } finally {
+      app.checkErrors();
+      await app.context.close();
     }
   }
   t.log('scene sizes (CSS px, #viewport box; guide open → closed):');
@@ -112,6 +120,10 @@ async function sixDofFlight(t, app, group, presets, { scenes, open }) {
   t.check(launched.ok, `${group}: launch_mission ${JSON.stringify(launched)}`);
   if (!t.check(await t.until(() => page.evaluate(() => document.body.dataset.setup === 'collapsed' && document.body.dataset.flightStage === 'flight'), { timeoutMs: RESPOND_MS }),
     `${group}: launching did not collapse the setup into the flight stage`)) return;
+  // the flight stage comes with the launch, the six-DOF panel only with the first six-DOF frame on screen: pausing
+  // before it left the panel hidden (CI run 44689626224, the phone part's first check), so wait, as r2-shell-smoke does
+  if (!t.check(await t.until(() => page.locator('#rigid-controls').isVisible(), { timeoutMs: RESPOND_MS }),
+    `${group}: no six-DOF flight controls in the six-DOF flight`)) return;
   await app.mcp('control_playback', { action: 'pause' });
   await sweep(t, app, group, presets, async ({ preset, lang, state }) => {
     const where = `${group} ${preset} ${lang.toUpperCase()} guide ${state}`;
