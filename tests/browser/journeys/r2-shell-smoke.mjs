@@ -14,7 +14,8 @@
  *   and hidden again. At a real approach the app also hides `#rigid-controls`;
  *   this check keeps that panel showing, so it guards against TORU being
  *   removed, hidden by CSS or pushed off screen, not reach at the approach
- *   (that is `r2-viewport-matrix` on Pages; CO-3 finding F1).
+ *   (that is `r2-viewport-matrix` and `r2-viewport-matrix-phone`; CO-3
+ *   finding F1).
  * - R2.4: on a 390 px Thai phone, the event chooser opens from a cluster
  *   chip by touch and fits the screen; the page does not scroll sideways.
  *

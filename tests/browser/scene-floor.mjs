@@ -1,7 +1,8 @@
 /**
  * G2 hold / finding F5: the launch scene's minimum size and what may not cover
- * it, checked at one window size (r2-viewport-matrix for the Engineer flight,
- * r2-scene-floor for the Explore flight).
+ * it, checked at one window size (r2-viewport-matrix and
+ * r2-viewport-matrix-phone for the Engineer flight, r2-viewport-scene-floor
+ * for the Explore flight).
  *
  * Owner's note with the G2 hold (2026-10-05, verbatim): "ให้ฉากแสดงการปล่อยได้
  * ตามมาตรฐานขั้นต่ำในทั้งโหมด ทดลองและวิศวกร พวกเครื่องมืออื่นๆให้ย้ายออไปข้างหรือ

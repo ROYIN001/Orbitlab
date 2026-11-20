@@ -12,7 +12,7 @@
   "sets": {
     "app-build": ["typecheck", "build", "budget"],
     "flight-journeys": ["launch-explore", "r2-shell-smoke", "r2-flight-shell", "r2-chooser-late-frame", "r2-event-jump", "r2-transport-fit", "r2-transport-fit-launch", "r2-transport-fit-clock", "r2-flight-wall", "r3-result-setting", "watch-controls", "experiment-notebook"],
-    "layout-journeys": ["mobile-smoke", "stage2-preflight", "r2-viewport-matrix", "r2-viewport-scene-floor", "r2-shell-smoke", "r2-event-jump", "r2-transport-fit", "r2-transport-fit-launch", "r2-transport-fit-clock", "r2-flight-wall", "workspace-navigation", "notation-defaults"],
+    "layout-journeys": ["mobile-smoke", "stage2-preflight", "r2-viewport-matrix", "r2-viewport-matrix-phone", "r2-viewport-scene-floor", "r2-shell-smoke", "r2-event-jump", "r2-transport-fit", "r2-transport-fit-launch", "r2-transport-fit-clock", "r2-flight-wall", "workspace-navigation", "notation-defaults"],
     "workspace-journeys": ["workspace-navigation", "project-backups", "experiment-notebook", "classroom-preparation", "learner-profiles", "profile-session-safety"],
     "export-journeys": ["case-worksheet-exports", "launch-explore", "project-backups"]
   },
@@ -36,6 +36,13 @@
       "why": "A changed test file is selected itself.",
       "paths": ["tests/**/*.test.ts", "tests/browser/journeys/*.mjs", "tests/verification/*.test.mjs", "tests/browser/shard.test.mjs"],
       "self": true
+    },
+    {
+      "id": "viewport-matrix-shared",
+      "additive": true,
+      "why": "r2-viewport-matrix-phone runs r2-viewport-matrix.mjs's code (viewportMatrix): a change there reaches both parts of the split matrix.",
+      "paths": ["tests/browser/journeys/r2-viewport-matrix.mjs"],
+      "checks": { "browser": ["r2-viewport-matrix-phone"] }
     },
     {
       "id": "toolchain-and-public",
