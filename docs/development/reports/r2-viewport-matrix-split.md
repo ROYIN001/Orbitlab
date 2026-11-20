@@ -8,7 +8,7 @@
 | The owner's words | 2026-11-20 at 04:14:36Z, verbatim: "แยก r2-viewport-matrix ต่อได้เลยครับ" (go ahead and split r2-viewport-matrix) |
 | Base | main `a15856b3` (the records PR #226) |
 | Branch | `claude/friendly-keller-78iuc9`, started again from main `a15856b3` once #226 had merged (it held only #226's merged content) |
-| Status | In PR #227; not merged; not published. The owner wrote at 05:33:13Z, verbatim, "Open PR then merge": the session reads it as the order to merge once the PR is ready by the repository's rules (below, "The merge") |
+| Status | In PR #227; not merged; not published. The owner wrote at 05:33:13Z, verbatim, "Open PR then merge": the session reads it as the order to merge once the PR is ready by the repository's rules (below, "The merge") (2026-11-20, the records PR after #227: #227 was squash-merged at 08:56:26Z as `976731ca`, a tree identical to its final head `69b48f8f` (CI run 44703543068, 12 of 12 jobs), on the owner's words of 05:33:13Z as the session read them. Pages run 44706531663 published it at 09:22:27Z, 13 of 13 jobs, and the live site's `build-info.json` gave the commit `976731c` at 15:25:41Z. The records PR after #227 folded this PR's fragment, `changes/claude-friendly-keller-78iuc9.md`, into `CHANGELOG.md` and `docs/development/PROGRESS.md` and deleted it. Lines below that call this PR not merged or not published, or speak of the merge as to come, describe the time before.) |
 
 ## Why
 
