@@ -76,8 +76,10 @@ By group the longer part is 469.15 s median and 612.9 s at most, against
 958.1 s for the whole.
 
 **Limits.** `r2-viewport-matrix` keeps 1 200 000 ms, about 2.0 times its part's
-slowest CI time. `r2-viewport-matrix-phone` exports 720 000 ms, about 2.1 times
-its part's. No `timeoutMs` value goes up, but in effect the desktop part's
+slowest time in the whole journey's 26 CI runs (612.9 s).
+`r2-viewport-matrix-phone` exports 720 000 ms, about 2.1 times its part's
+(345.2 s). Rule 2's runs bring the first to 1.78 (below, "What the runs add to
+the limits"). No `timeoutMs` value goes up, but in effect the desktop part's
 allowance does: it had what the phone part left of the shared 1200 s, 854.8 to
 1039.6 s in those runs, and now has its own 1200 s. The phone part's goes down,
 from 587.1–870.2 s to 720 s. Together the two may take 1920 s, where the one
@@ -87,8 +89,9 @@ journey had 1200 s.
 
 - **`tests/browser/shard-seconds.json`.** `r2-viewport-matrix` 718 → 600 and a
   new `r2-viewport-matrix-phone` 360: both are estimates by the table's own rule
-  for a journey CI has not timed, half its `timeoutMs`, since CI has timed
-  neither part alone. The table's notes give the measured medians above, for
+  for a journey CI has not timed, half its `timeoutMs`, since CI had timed
+  neither part alone when the split was made; rule 2's runs (below) are the
+  first CI times of each part, for follow-up 1. The table's notes give the measured medians above, for
   the next refresh. The two estimates add to 960 s, more than the old 718, so
   the planned shard totals rise: the five smoke shards come to 837, 840, 824,
   823 and 841 s (before, at most 794 s). Scored with measured CI times instead,
@@ -108,7 +111,8 @@ journey had 1200 s.
 
 Not changed: `.github/workflows/deploy.yml`'s comment on its 45-minute browser
 job, "the G2 matrix journey (CO-3) runs 7-10 min alone on a 4-core machine",
-still holds roughly of the desktop part (537 to 545 s here, below). The CO-3
+still holds roughly of the desktop part: 533.8 to 544.8 s locally (below), and
+348.8 to 673.4 s on CI in rule 2's runs. The CO-3
 report and the other reports that name the journey are history.
 
 ## Checks
@@ -118,7 +122,8 @@ outside the checkout: it loads a journey as `tests/browser/run.mjs` does (the
 same browser launch, served `dist`, time limit and failure handling) and records
 every `t.check` with its message and result, every direct `t.fail` and every
 `t.log` line. It ran, one browser at a time, in the CI runners' font (DejaVu
-Sans), on one build of this tree: the journey as it is on main, then
+Sans), on one build of the split commit `813658b9`: the journey as it is on
+main, then
 `r2-viewport-matrix`, then `r2-viewport-matrix-phone`.
 
 | Run (2026-11-20, alone, DejaVu Sans) | Result | Seconds | Checks |
@@ -153,13 +158,14 @@ end of the file, with the groups' settings and the order of the flights as
 they were. That review was of the split commit; a fourth agent reviewed the fix
 (below).
 
-**Local checks on this tree.** `node --test tests/verification/*.test.mjs
+**Local checks**, on the split commit and again on the head that merges. `node --test tests/verification/*.test.mjs
 tests/browser/shard.test.mjs`: 98 / 98. `node tests/browser/run.mjs --smoke
 --list`: 27 journeys, held ones left out (main lists 26: the one more is
 `r2-viewport-matrix-phone`). `git diff --check`: clean.
 
 **Not checked:** either part in the container's other font, Inter; a second run
-of the old journey; typecheck, vitest and the budget (no file they read
+of the old journey; the recorder on the fixed code (the head's 1284 and 174
+checks are counted from the code); typecheck, vitest and the budget (no file they read
 changes); any other journey.
 
 ## Rule 2
@@ -213,9 +219,10 @@ was pushed alone at 06:40:05Z, and its tree is the split commit's.
 **The failure.** After round 1 the revert (`c7cb9421`) was followed by the
 records (`a80040d4`), whose push cancelled the revert's own run, [44689422044](https://github.com/ROYIN001/Orbitlab/actions/runs/44689422044): CI's concurrency group
 keeps one run a branch. The normal CI run on `a80040d4`, [44689626224](https://github.com/ROYIN001/Orbitlab/actions/runs/44689626224),
-failed in `browser-smoke (2)`: `r2-viewport-matrix-phone` failed its first check,
-16 s into the journey, and passed all its others; the shard's other five
-journeys passed.
+failed in `browser-smoke (2)`: `r2-viewport-matrix-phone` failed at its first
+measurement of the six-DOF panel (390×844, Thai, the guide open), 16 s into the
+journey, and passed all its other checks; the shard's other five journeys and
+the run's other four shards passed.
 
 > phone phone-390x844 TH guide open: six-DOF controls: not reachable — not rendered (0×0, visible)
 
@@ -232,14 +239,17 @@ panel then shows during the pause: only a first measurement made at once can
 miss it. In the failed run the next sizes' checks, seconds later, passed.
 
 **Shown locally** by a third agent, with a probe outside the checkout, one fresh
-browser per trial, in DejaVu Sans. With the order before the fix the panel was
+browser per trial, in the phone part's first context (390×844, touch, the guide
+open). With the order before the fix the panel was
 hidden right after the pause, and still 500 ms into it, in 0 of 10 trials
 plainly and in 1 of 10 each with the page's CPU throttled 4× and 6×; each time it
 showed by 3 s, still paused. With the fixed order it was hidden after the pause
-in 0 of 30 trials (10 plain, 10 at 4×, 10 at 6×). The longest wait was 3.65 s of
-the 20 s allowed, in the one trial that found the panel hidden at the flight
-stage. On CI the race showed once in the 47 runs of this code that this PR read
-(the whole journey's 26, round 1's 20 and this run).
+in 0 of 30 trials (10 plain, 10 at 4×, 10 at 6×). The panel showed at most 3.65 s after
+the launch, the fix's wait itself about 3.5 s of its 20 s, in the one trial that
+found it hidden at the flight stage (only the 10 trials at 6× looked at the
+panel there). On CI the race showed once in the 94 runs of a group's six-DOF
+flight on this code that this PR read (both groups in each of the whole
+journey's 26 runs, round 1's 40 journey runs and this run's two parts).
 
 **The fix**, `80bed88c` ("Tests (bug fix): the viewport matrix's six-DOF flight
 waits for its panel before it pauses"), is test-only: before the pause the
@@ -305,10 +315,11 @@ The owner's words: 2026-11-20 at 04:14:36Z, "แยก r2-viewport-matrix ต่
 (go ahead and split r2-viewport-matrix), and at 05:33:13Z, after the PR had
 opened as a draft, "Open PR then merge". What follows is the session's reading,
 not the owner's words. It merges this PR on the second message, without a
-second question, once it is ready by the repository's rules: rule 2's runs in,
-the temporary commit reverted, these records in the PR and CI green on the head
-that merges. It tells the owner that head before it merges. The head at 05:33Z
-was the temporary commit, which could not merge: it would have made every later
+second question, once it is ready by the repository's rules: rule 2's runs in
+(after the fix, its second round), the temporary commits reverted, these records
+in the PR and CI green on the head that merges. It tells the owner that head
+before it merges. The head at 05:33Z was the first temporary commit,
+`0bc52d2d`, which could not merge: it would have made every later
 PR's CI run only these two journeys. The session told the owner so at once, and
 that a word from the owner could have it skip rule 2; the owner did not ask for
 that.
@@ -322,8 +333,8 @@ The owner asked this session for it (above).
 
 ## Follow-ups
 
-1. **Refresh the two shard-table entries** from the parts' own CI times, once
-   rule 2's runs and the runs after it exist (with the R2.6 report's
+1. **Refresh the two shard-table entries** from the parts' own CI times: rule
+   2's second round (on the fixed code) and the normal runs after the merge (with the R2.6 report's
    follow-up 11). *Owner (proposal):* lane T.
 2. **Split the desktop part further** only if a CI run takes it past about two
    thirds of its limit (800 s): its six-DOF leg alone took 230.4–483.0 s in the
