@@ -61,7 +61,8 @@ Both run one exported function, `viewportMatrix(t, group)`, which does for one
 group what the journey's loop did for each group: the same presets, touch
 setting, boot language and first-use guide, both flights in the same order, each
 in a fresh context closed in `finally` after `checkErrors`. Every check is the
-old code, unchanged. The open finding F3 (cluster chips overlap on a phone's
+old code, unchanged; the fix after rule 2's first round adds one wait and one
+check (below, "The failure after round 1, and its fix"). The open finding F3 (cluster chips overlap on a phone's
 event bar) stays in the one shared list; its pattern starts with `phone`, so only
 the phone part meets it. The scene-size log and the open-finding log are now
 written per part. `r2-viewport-matrix-phone` imports from
@@ -138,13 +139,19 @@ scene-size rows are only in `r2-viewport-matrix`, the 6 phone rows only in
 `r2-viewport-matrix-phone`, and the three lines of open finding F3 only in the
 phone part, word for word.
 
+These counts are of the split commit, `813658b9`. The fix below adds one check to
+the six-DOF flight, which each part flies once, so on the head that merges each
+part makes one check more, 1284 and 174, by the code; the recorder did not run
+again.
+
 **A second agent tried to refute the change** and did not run a browser. It
 found two things that had to change, a missing fragment and a wrong run count
 and date in the shard table's note, and two that should: the change-map rule
 above, and saying that the desktop part's allowance grows in effect. All four
 are done. It found the code itself the same as before, from the sweep to the
 end of the file, with the groups' settings and the order of the flights as
-they were.
+they were. That review was of the split commit; a fourth agent reviewed the fix
+(below).
 
 **Local checks on this tree.** `node --test tests/verification/*.test.mjs
 tests/browser/shard.test.mjs`: 98 / 98. `node tests/browser/run.mjs --smoke
@@ -157,8 +164,15 @@ changes); any other journey.
 
 ## Rule 2
 
-Both journeys are new or changed, so each ran 20 times on CI before merge. One
-temporary commit, "TEMPORARY (rule 2 evidence, reverted before merge): CI's
+Both journeys are new or changed, so each runs 20 times on CI before merge. Rule
+2 ran twice on this PR. The first round ran the split commit's code. The fix
+that followed it changed the shared six-DOF flight, so the second round ran the
+fixed code, and that round is the one the merge rests on (below, "The failure
+after round 1, and its fix", and "Round 2: the fixed code").
+
+### Round 1: the split commit
+
+One temporary commit, "TEMPORARY (rule 2 evidence, reverted before merge): CI's
 smoke shards run only the two viewport-matrix journeys, 5 of each a run"
 (`0bc52d2d`), changed `tests/browser/run.mjs` on CI only: each of the five
 smoke shards ran `r2-viewport-matrix` and then `r2-viewport-matrix-phone`, once
@@ -194,18 +208,96 @@ verification plan" after its "2/2 journeys passed", and `verify` reported
 PR says so. No job was run again. The temporary commit is reverted: the revert
 was pushed alone at 06:40:05Z, and its tree is the split commit's.
 
-**What the runs add to the limits.** The desktop part's slowest time, 673.4 s,
-is slower than any of its 26 earlier times (at most 612.9 s): its 1200 s limit
-is 1.78 times that, not 2. The phone part's slowest, 260.8 s, is under its
-earlier 345.2 s; 720 s is 2.76 times it. A shard's two journeys took 617.8 to
-921.5 s of its 25-minute job.
+### The failure after round 1, and its fix
 
-**CI after the revert.** The revert's push started a normal CI run; this records
-commit, pushed a few minutes later, cancelled it (CI's concurrency group keeps
-one run a branch). The head that merges differs from the reverted head in two
-Markdown files only, so its CI run is the first normal run on this PR with both
-journeys in their own shards. Its result is in the PR's description and the
-merge commit's message, which come after these records.
+**The failure.** After round 1 the revert (`c7cb9421`) was followed by the
+records (`a80040d4`), whose push cancelled the revert's own run, [44689422044](https://github.com/ROYIN001/Orbitlab/actions/runs/44689422044): CI's concurrency group
+keeps one run a branch. The normal CI run on `a80040d4`, [44689626224](https://github.com/ROYIN001/Orbitlab/actions/runs/44689626224),
+failed in `browser-smoke (2)`: `r2-viewport-matrix-phone` failed its first check,
+16 s into the journey, and passed all its others; the shard's other five
+journeys passed.
+
+> phone phone-390x844 TH guide open: six-DOF controls: not reachable — not rendered (0×0, visible)
+
+**The cause** is in the shared code, and the whole journey had it too.
+`sixDofFlight` called `launch_mission`, waited for the flight stage and paused
+at once. The launch hides the six-DOF panel (`rigidControls.reset()` in
+`src/main.ts`), and only the telemetry block of the frame loop shows it again,
+on a 0.5 s cadence (`telTimer`, counted in frame time clamped to 0.1 s a frame,
+and not reset at the launch). The flight stage is set in the first frame after
+the launch (`syncLifecycle`), so when the cadence's next tick is still ahead,
+the stage comes one or more frames before the panel, and a measurement in those
+frames finds the panel at 0×0. The cadence keeps running while paused, so the
+panel then shows during the pause: only a first measurement made at once can
+miss it. In the failed run the next sizes' checks, seconds later, passed.
+
+**Shown locally** by a third agent, with a probe outside the checkout, one fresh
+browser per trial, in DejaVu Sans. With the order before the fix the panel was
+hidden right after the pause, and still 500 ms into it, in 0 of 10 trials
+plainly and in 1 of 10 each with the page's CPU throttled 4× and 6×; each time it
+showed by 3 s, still paused. With the fixed order it was hidden after the pause
+in 0 of 30 trials (10 plain, 10 at 4×, 10 at 6×). The longest wait was 3.65 s of
+the 20 s allowed, in the one trial that found the panel hidden at the flight
+stage. On CI the race showed once in the 47 runs of this code that this PR read
+(the whole journey's 26, round 1's 20 and this run).
+
+**The fix**, `80bed88c` ("Tests (bug fix): the viewport matrix's six-DOF flight
+waits for its panel before it pauses"), is test-only: before the pause the
+six-DOF flight waits, with the journey's own 20 s, until `#rigid-controls` is
+visible, and fails a check if it never is, as `r2-shell-smoke` does before it
+measures that panel. No check is removed or loosened. Its code comment gives the
+mechanism inexactly: it says the panel comes "only with the first six-DOF frame
+on screen", but the frame on screen already carries six-DOF telemetry, even on
+the pad, and what the panel waits for is the cadence's tick (follow-up 3). A
+fourth agent tried to refute the diagnosis and the fix and could not: it found
+no other path that hides the panel between the wait and the first check, and the
+TORU flight already waits for its own panel before it pauses. Both parts passed
+on the fixed tree locally, by `run.mjs`, in DejaVu Sans: `r2-viewport-matrix-phone`
+in 231.0 s and `r2-viewport-matrix` in 533.8 s. A second comment on the PR says
+what failed, why, and that rule 2 runs again; its first account of the cause,
+the first-frame one, was corrected in place at 08:07Z.
+
+### Round 2: the fixed code
+
+A second temporary commit, `916c30ec` ("TEMPORARY (rule 2 evidence, reverted
+before merge): … after the fix"), made the same change to `tests/browser/run.mjs`
+on the fix. Four more CI runs, the PR's own and three `workflow_dispatch` runs,
+were read in the same way:
+
+| Run | Event | Shard 1 | Shard 2 | Shard 3 | Shard 4 | Shard 5 |
+|---|---|---|---|---|---|---|
+| [44691861812](https://github.com/ROYIN001/Orbitlab/actions/runs/44691861812) | pull_request | 2/2 in 949.9 s | 2/2 in 512.3 s | 2/2 in 888.0 s | 2/2 in 633.6 s | 2/2 in 618.8 s |
+| [44694281404](https://github.com/ROYIN001/Orbitlab/actions/runs/44694281404) | workflow_dispatch | 2/2 in 624.9 s | 2/2 in 704.1 s | 2/2 in 715.9 s | 2/2 in 674.8 s | 2/2 in 879.2 s |
+| [44696479009](https://github.com/ROYIN001/Orbitlab/actions/runs/44696479009) | workflow_dispatch | 2/2 in 918.9 s | 2/2 in 888.9 s | 2/2 in 897.0 s | 2/2 in 923.2 s | 2/2 in 707.0 s |
+| [44698746207](https://github.com/ROYIN001/Orbitlab/actions/runs/44698746207) | workflow_dispatch | 2/2 in 851.7 s | 2/2 in 695.3 s | 2/2 in 693.2 s | 2/2 in 487.5 s | 2/2 in 610.6 s |
+
+Each journey's 20 times, run by run, in shard order (seconds):
+
+| Journey | Run 1 | Run 2 | Run 3 | Run 4 | Passed | Range |
+|---|---|---|---|---|---|---|
+| `r2-viewport-matrix` | 667.2, 371.7, 655.9, 442.9, 443.9 | 437.2, 525.3, 515.0, 502.7, 648.0 | 668.7, 660.9, 646.2, 668.8, 511.1 | 605.2, 510.3, 511.0, 348.8, 422.1 | 20 of 20 | 348.8–668.8 s |
+| `r2-viewport-matrix-phone` | 278.4, 138.1, 228.4, 185.2, 168.7 | 182.1, 175.3, 198.2, 169.2, 226.7 | 246.3, 224.3, 247.2, 250.5, 192.8 | 243.0, 182.3, 179.8, 136.6, 183.8 | 20 of 20 | 136.6–278.4 s |
+
+None of the 40 journey runs failed. In all four runs `plan`, `typecheck`,
+`build` and `test` (1) to (3) passed, with 10,885 of 10,885 unit tests, and
+`browser-smoke` (1) to (5) and `verify` were red only by design, as in round 1.
+No job was run again. The second temporary commit is reverted (`68301771`), and
+the revert's tree is the fix's.
+
+### What the runs add to the limits
+
+In the two rounds the desktop part took at most 673.4 s, slower than any of its
+26 earlier times (at most 612.9 s): its 1200 s limit is 1.78 times that, not 2.
+The phone part took at most 278.4 s, under its earlier 345.2 s; 720 s is 2.59
+times it. A shard's two journeys took 487.5 to 949.9 s of its 25-minute job.
+
+### CI on the head that merges
+
+The revert of the second temporary commit and these records are pushed
+together, so the head that merges is their head, and its CI run is the first
+normal run of the fixed code, with both journeys in their own shards. Its result
+is in the PR's description and the merge commit's message, which come after
+these records.
 
 ## The merge
 
@@ -237,3 +329,12 @@ The owner asked this session for it (above).
    thirds of its limit (800 s): its six-DOF leg alone took 230.4–483.0 s in the
    whole journey's runs, and the desktop part reached 673.4 s in rule 2's.
    *Owner (proposal):* lane Q.
+3. **Correct the fix's code comment** in `tests/browser/journeys/r2-viewport-matrix.mjs`
+   the next time that file changes for another reason: the panel comes back
+   with the 0.5 s telemetry tick after the launch hid it, not with a first
+   six-DOF frame ("The failure after round 1, and its fix"). A change to the comment alone would have needed rule 2's
+   20 runs a third time. *Owner (proposal):* lane Q.
+4. **The app could show the panel in the same frame as the flight stage**, by
+   setting `telTimer` past its 0.5 s at the launch, as `seek` and a six-DOF
+   command already do in `src/main.ts`. Not needed for this tests-only PR, and
+   it changes app code. *Owner (proposal):* lane U, if wanted.
