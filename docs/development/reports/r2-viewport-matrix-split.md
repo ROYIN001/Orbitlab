@@ -8,7 +8,7 @@
 | The owner's words | 2026-11-20 at 04:14:36Z, verbatim: "แยก r2-viewport-matrix ต่อได้เลยครับ" (go ahead and split r2-viewport-matrix) |
 | Base | main `a15856b3` (the records PR #226) |
 | Branch | `claude/friendly-keller-78iuc9`, started again from main `a15856b3` once #226 had merged (it held only #226's merged content) |
-| Status | In PR; not merged; not published |
+| Status | In PR #227; not merged; not published. The owner wrote at 05:33:13Z, verbatim, "Open PR then merge": the session reads it as the order to merge once the PR is ready by the repository's rules (below, "The merge") |
 
 ## Why
 
@@ -157,15 +157,69 @@ changes); any other journey.
 
 ## Rule 2
 
-Both journeys are new or changed, so each runs 20 times on CI before merge. One
-temporary commit, reverted before merge, changes `tests/browser/run.mjs` on CI
-only: each of the five smoke shards runs `r2-viewport-matrix` and then
-`r2-viewport-matrix-phone`, once each, in place of its own list. One CI run
-gives 5 of each, so four runs give 20: this PR's own run, then three
-`workflow_dispatch` runs, each started once the one before has ended. A shard's
-two journeys took about 490 to 960 s together in the runs above, of a 25-minute
-job; two of each a shard could pass 25 minutes on a slow runner. While that
-commit is the head, `browser-smoke (1–5)` and `verify` are red by design.
+Both journeys are new or changed, so each ran 20 times on CI before merge. One
+temporary commit, "TEMPORARY (rule 2 evidence, reverted before merge): CI's
+smoke shards run only the two viewport-matrix journeys, 5 of each a run"
+(`0bc52d2d`), changed `tests/browser/run.mjs` on CI only: each of the five
+smoke shards ran `r2-viewport-matrix` and then `r2-viewport-matrix-phone`, once
+each, in place of its own list. One of each a shard, not two: two of each could
+pass the 25-minute job on a slow runner. Four CI runs gave 20 of each: this PR's
+own run, then three `workflow_dispatch` runs, each queued once the one before
+had ended. Each run was read from its six raw job logs (the five shards and
+`verify`) by a script that checks each shard's executed list, its passed lines,
+its "2/2 journeys passed" line, that its only errors are the two by design, and
+that its log names its own gate and run; and in `verify`'s log the jobs'
+results, the suites and the issue list.
+
+| Run | Event | Shard 1 | Shard 2 | Shard 3 | Shard 4 | Shard 5 |
+|---|---|---|---|---|---|---|
+| [44680617625](https://github.com/ROYIN001/Orbitlab/actions/runs/44680617625) | pull_request | 2/2 in 884.1 s | 2/2 in 691.3 s | 2/2 in 689.8 s | 2/2 in 896.4 s | 2/2 in 891.1 s |
+| [44682687227](https://github.com/ROYIN001/Orbitlab/actions/runs/44682687227) | workflow_dispatch | 2/2 in 617.8 s | 2/2 in 636.5 s | 2/2 in 680.4 s | 2/2 in 850.8 s | 2/2 in 838.9 s |
+| [44684864794](https://github.com/ROYIN001/Orbitlab/actions/runs/44684864794) | workflow_dispatch | 2/2 in 635.4 s | 2/2 in 869.6 s | 2/2 in 696.5 s | 2/2 in 707.0 s | 2/2 in 879.3 s |
+| [44687113719](https://github.com/ROYIN001/Orbitlab/actions/runs/44687113719) | workflow_dispatch | 2/2 in 921.5 s | 2/2 in 919.0 s | 2/2 in 864.1 s | 2/2 in 874.1 s | 2/2 in 817.9 s |
+
+Each journey's 20 times, run by run, in shard order (seconds):
+
+| Journey | Run 1 | Run 2 | Run 3 | Run 4 | Passed | Range |
+|---|---|---|---|---|---|---|
+| `r2-viewport-matrix` | 673.4, 513.1, 517.2, 640.9, 671.3 | 426.3, 446.6, 498.2, 618.5, 590.9 | 440.7, 648.6, 522.2, 513.9, 658.4 | 665.0, 654.6, 650.8, 658.3, 573.0 | 20 of 20 | 426.3–673.4 s |
+| `r2-viewport-matrix-phone` | 207.0, 175.3, 168.2, 251.4, 216.0 | 187.6, 185.6, 179.1, 228.8, 244.1 | 189.5, 217.1, 171.4, 190.2, 216.0 | 251.1, 260.8, 208.9, 211.6, 240.6 | 20 of 20 | 168.2–260.8 s |
+
+None of the 40 journey runs failed. In all four runs `plan`, `typecheck`,
+`build` and `test` (1) to (3) passed, with 10,885 of 10,885 unit tests, by
+`verify`'s own job results; `browser-smoke` (1) to (5) and `verify` were red only
+by design: each shard reported "Executed browser journeys differs from the
+verification plan" after its "2/2 journeys passed", and `verify` reported
+"Coverage mismatch: 25 missing, 0 unexpected, 8 duplicate". One comment on the
+PR says so. No job was run again. The temporary commit is reverted: the revert
+was pushed alone at 06:40:05Z, and its tree is the split commit's.
+
+**What the runs add to the limits.** The desktop part's slowest time, 673.4 s,
+is slower than any of its 26 earlier times (at most 612.9 s): its 1200 s limit
+is 1.78 times that, not 2. The phone part's slowest, 260.8 s, is under its
+earlier 345.2 s; 720 s is 2.76 times it. A shard's two journeys took 617.8 to
+921.5 s of its 25-minute job.
+
+**CI after the revert.** The revert's push started a normal CI run; this records
+commit, pushed a few minutes later, cancelled it (CI's concurrency group keeps
+one run a branch). The head that merges differs from the reverted head in two
+Markdown files only, so its CI run is the first normal run on this PR with both
+journeys in their own shards. Its result is in the PR's description and the
+merge commit's message, which come after these records.
+
+## The merge
+
+The owner's words: 2026-11-20 at 04:14:36Z, "แยก r2-viewport-matrix ต่อได้เลยครับ"
+(go ahead and split r2-viewport-matrix), and at 05:33:13Z, after the PR had
+opened as a draft, "Open PR then merge". What follows is the session's reading,
+not the owner's words. It merges this PR on the second message, without a
+second question, once it is ready by the repository's rules: rule 2's runs in,
+the temporary commit reverted, these records in the PR and CI green on the head
+that merges. It tells the owner that head before it merges. The head at 05:33Z
+was the temporary commit, which could not merge: it would have made every later
+PR's CI run only these two journeys. The session told the owner so at once, and
+that a word from the owner could have it skip rule 2; the owner did not ask for
+that.
 
 ## Who owns this ground
 
@@ -180,5 +234,6 @@ The owner asked this session for it (above).
    rule 2's runs and the runs after it exist (with the R2.6 report's
    follow-up 11). *Owner (proposal):* lane T.
 2. **Split the desktop part further** only if a CI run takes it past about two
-   thirds of its limit (800 s): its six-DOF leg alone took 230.4–483.0 s.
+   thirds of its limit (800 s): its six-DOF leg alone took 230.4–483.0 s in the
+   whole journey's runs, and the desktop part reached 673.4 s in rule 2's.
    *Owner (proposal):* lane Q.
