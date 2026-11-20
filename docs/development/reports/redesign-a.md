@@ -8,8 +8,8 @@ owner on screenshots.
 |---|---|
 | Package | Redesign A (direction A "Mission Control"), steps S0–S3 |
 | Branch | `claude/friendly-keller-78iuc9`: every step, S0–S3, in one PR, [#223](https://github.com/ROYIN001/Orbitlab/pull/223), by the owner's answer of 2026-11-16 (below, "The owner's answer on delivery"). S0 was `5bef72f` (based on `origin/main` `5588be1`; on 2026-11-14 the whole package was rebased onto `origin/main` `8a9a108`, below, "Rebase onto main", and S0 became `d973ba2` and `2719093`); the S3 offset (`f30bebd`) and S3 (`0f2250a` and its review fixes) sat after `fa6927a` on this branch. Superseded by that answer, the plan of five stacked PRs: S0 from this branch; S1 from `claude/u-redesign-a-s1`, stacked on S0; S2 from `claude/u-redesign-a-s2`, stacked on S1; the S3 offset from `claude/u-redesign-a-s3-offset`, stacked on S2; S3 from `claude/u-redesign-a-s3`, stacked on the S3 offset; each to merge after the one before. None of those four branches is on the remote |
-| Fragment | [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md), the PR's one fragment, named for its branch (`changes/README.md`): a CHANGELOG line and a PROGRESS row for each of S0, S1, S2, the S3 offset and S3. Until 2026-11-16 S1, S2, the S3 offset and S3 each had a fragment named for its planned branch (`changes/claude-u-redesign-a-s1.md`, `changes/claude-u-redesign-a-s2.md`, `changes/claude-u-redesign-a-s3-offset.md`, `changes/claude-u-redesign-a-s3.md`); they were folded into this one then |
-| Status | In PR [#223](https://github.com/ROYIN001/Orbitlab/pull/223); not merged; not published |
+| Fragment | [`changes/claude-friendly-keller-78iuc9.md`](https://github.com/ROYIN001/Orbitlab/blob/359cf6be1c9e7569d38b0800bbfcfe51952a6c68/changes/claude-friendly-keller-78iuc9.md), the PR's one fragment, named for its branch (`changes/README.md`): a CHANGELOG line and a PROGRESS row for each of S0, S1, S2, the S3 offset and S3. Until 2026-11-16 S1, S2, the S3 offset and S3 each had a fragment named for its planned branch (`changes/claude-u-redesign-a-s1.md`, `changes/claude-u-redesign-a-s2.md`, `changes/claude-u-redesign-a-s3-offset.md`, `changes/claude-u-redesign-a-s3.md`); they were folded into this one then (2026-11-19: the records PR after #225 folded this fragment into `CHANGELOG.md` and `docs/development/PROGRESS.md` and deleted it; the links to it in this report now go to the file as it was on main at `359cf6be`.) |
+| Status | In PR [#223](https://github.com/ROYIN001/Orbitlab/pull/223); not merged; not published (2026-11-19, the records PR after #225: #223 was squash-merged on 2026-11-18 at 22:07:42Z as `2eb9f0d3`, a tree identical to its head `186dbbab`, on the owner's words in chat at 22:06:03Z, "งานที่เสร็จแล้ว merge ได้เลย", as the session read them. Pages run 44408512731 published it at 22:46:04Z. Lines below that call #223 open, not merged or not published describe the time before.) |
 
 ## The owner's authorization (D-65)
 
@@ -653,7 +653,7 @@ heavy and sixdof-fleet. CI runs them.
 Change type: **look change** (visual; the owner reviews it on screenshots).
 In the one PR #223 from `claude/friendly-keller-78iuc9`; its CHANGELOG line
 and PROGRESS row are in
-[`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md).
+[`changes/claude-friendly-keller-78iuc9.md`](https://github.com/ROYIN001/Orbitlab/blob/359cf6be1c9e7569d38b0800bbfcfe51952a6c68/changes/claude-friendly-keller-78iuc9.md).
 Until 2026-11-16 it was to be a PR of its own from `claude/u-redesign-a-s2`,
 stacked on S1 and merging after it, with its own fragment,
 `changes/claude-u-redesign-a-s2.md`; superseded (above, "The owner's answer on
@@ -1032,7 +1032,7 @@ Owner's authorization, 2026-11-05, in chat, verbatim: "เริ่มทำไ�
 S3 comes in two commits. The first is an identical-output offset that makes
 room under the unchanged CSS ceiling (below). The second is the look change.
 Both are in the one PR #223, each with its own CHANGELOG line and PROGRESS
-row in [`changes/claude-friendly-keller-78iuc9.md`](../../../changes/claude-friendly-keller-78iuc9.md).
+row in [`changes/claude-friendly-keller-78iuc9.md`](https://github.com/ROYIN001/Orbitlab/blob/359cf6be1c9e7569d38b0800bbfcfe51952a6c68/changes/claude-friendly-keller-78iuc9.md).
 Until 2026-11-16 each commit was to be its own PR with its own fragment: the
 offset in `changes/claude-u-redesign-a-s3-offset.md` (merging first), the
 look change in `changes/claude-u-redesign-a-s3.md`; superseded (above, "The
