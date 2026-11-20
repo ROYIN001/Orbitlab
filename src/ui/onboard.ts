@@ -27,7 +27,8 @@ import type { Simulation, SimEvent } from '../physics/simulation';
 import type { RendezvousState } from '../physics/sim/rendezvous';
 import { getLang, t } from '../i18n';
 import { dot, normalize } from '../physics/vec3';
-import { symbolText } from './notation';
+import { localizeEventParams } from './names';
+import { getNotation, symbolText } from './notation';
 import { CANVAS_SANS, CANVAS_MONO } from './web-fonts';
 
 interface Tile {
@@ -39,7 +40,7 @@ export class OnboardOverlay {
   private canvas: HTMLCanvasElement;
   private lastEvent = '';
   private lastEventRef: SimEvent | undefined;
-  private lastEventLanguage = '';
+  private lastEventView = ''; // the language and notation the callout was written in
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -228,11 +229,12 @@ export class OnboardOverlay {
 
     // ── latest callout ─────────────────────────────────────────────────────
     const last = sim.events[sim.events.length - 1];
-    const language = getLang();
-    if (last !== this.lastEventRef || language !== this.lastEventLanguage) {
-      this.lastEvent = last ? t(last.key, last.params) : '';
+    const view = `${getLang()}/${getNotation()}`;
+    if (last !== this.lastEventRef || view !== this.lastEventView) {
+      // as the event log writes it: ids in words, angles in degrees, the notation's axes
+      this.lastEvent = last ? t(last.key, localizeEventParams(sim.vehicleSpec, last.params)) : '';
       this.lastEventRef = last;
-      this.lastEventLanguage = language;
+      this.lastEventView = view;
     }
     const ey = by + padY + gaugeH;
     if (last && s.t - last.t < 12) {
