@@ -120,6 +120,10 @@ async function sixDofFlight(t, app, group, presets, { scenes, open }) {
   t.check(launched.ok, `${group}: launch_mission ${JSON.stringify(launched)}`);
   if (!t.check(await t.until(() => page.evaluate(() => document.body.dataset.setup === 'collapsed' && document.body.dataset.flightStage === 'flight'), { timeoutMs: RESPOND_MS }),
     `${group}: launching did not collapse the setup into the flight stage`)) return;
+  // the flight stage comes with the launch, the six-DOF panel only with the first six-DOF frame on screen: pausing
+  // before it left the panel hidden (CI run 44689626224, the phone part's first check), so wait, as r2-shell-smoke does
+  if (!t.check(await t.until(() => page.locator('#rigid-controls').isVisible(), { timeoutMs: RESPOND_MS }),
+    `${group}: no six-DOF flight controls in the six-DOF flight`)) return;
   await app.mcp('control_playback', { action: 'pause' });
   await sweep(t, app, group, presets, async ({ preset, lang, state }) => {
     const where = `${group} ${preset} ${lang.toUpperCase()} guide ${state}`;
