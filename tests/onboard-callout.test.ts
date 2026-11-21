@@ -71,6 +71,18 @@ describe('the cabin view\'s latest callout', () => {
     expect(drawn.some(text => text.includes('3rd stage'))).toBe(false);
   });
 
+  it('follows a change of language for the event on screen', () => {
+    setLang('en');
+    const { overlay, drawn } = recorder();
+    const sim = flight(envelope);
+    overlay.draw(sim, true);
+    expect(drawn.some(text => text.includes(t('aero.scope.vehicle')))).toBe(true);
+    drawn.length = 0;
+    setLang('th'); // the notation stays ISO: only the language changed
+    overlay.draw(sim, true);
+    expect(drawn, drawn.join(' | ')).toContain(t(envelope.key, localizeEventParams(null, envelope.params)));
+  });
+
   it('follows a change of notation for the event on screen', () => {
     setLang('en');
     setNotationPreference('iso', memory);
