@@ -88,13 +88,21 @@ envelope, which neither journey reaches.
 
 **The landing page's pictures.** The report that found the bug says the
 eighteen pictures, taken on 2026-10-18 (#164), are best taken again once it
-is fixed, since the Thai Explore picture shows the onboard view with the raw
-line. That changes eighteen files a visitor sees, and the pictures show the
-app of today, with every look change since 2026-10-18, so it is a step of
-its own, with the pictures shown to the owner first.
+is fixed, since a Thai Explore picture taken now shows the onboard view with
+the raw line (main's own picture shows the exterior view). That changes
+eighteen files a visitor sees, and the pictures show the app of today, with
+every look change since 2026-10-18, so it is a step of its own, with the
+pictures shown to the owner first.
 
 ## Follow-ups
 
 1. **Take the landing page's eighteen pictures again** (`npm run shots`),
    after this fix is merged, and show them to the owner before they merge.
    *Owner (proposal):* this session, on the owner's word.
+   *2026-11-21 and 2026-11-22:* taken again on the owner's word in chat
+   (23:40:33Z, "ถ่ายรูปหน้าแรกใหม่ต่อได้เลยครับ"), in PR #231, by
+   `npm run shots -- en,ru,th` on main `ffe3734d`; the owner asked to see
+   them before the merge (23:47:26Z, "ส่งรูปให้ดูก่อน merge ด้วยครับ"). The session sent the before-and-after sheets, one per
+   language, in chat; the owner answered on 2026-11-22 at 00:00:43Z, "merge
+   ได้เลยครับ". The link preview (`public/social/preview.jpg`) was not taken
+   again.
