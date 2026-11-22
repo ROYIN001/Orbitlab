@@ -8,7 +8,7 @@
 | The owner's words | 2026-11-20 at 23:41:37Z, verbatim: "ทำข้อ 1 ต่อได้เลยครับ" (go ahead with item 1), item 1 of the session's list of 23:40:45Z, its answer to the owner's question of 23:39:56Z: this bug, and the landing pictures taken again once it is fixed. At 23:58:52Z, "เปิด PR แล้ว merge ได้เลยครับ" (open the PR, then go ahead and merge) |
 | Base | main `23ce38a5` (the records PR #229) |
 | Branch | `claude/friendly-keller-78iuc9`, started again from main `23ce38a5` |
-| Status | In PR #230; not merged; not published. The owner's words of 23:58:52Z name no head: the session reads them as the order to merge once CI is green on the final head and the review's findings are fixed, telling the owner that head first |
+| Status | In PR #230; not merged; not published. The owner's words of 23:58:52Z name no head: the session reads them as the order to merge once CI is green on the final head and the review's findings are fixed, telling the owner that head first (2026-11-22, the records PR after #231: #230 was squash-merged at 2026-11-21T00:33:01Z as `ffe3734d`, a tree identical to its final head `5a0d8335` (CI run 44842000345, 12 of 12 jobs), on the owner's words of 23:58:52Z as the session read them, after it told the owner that head at 00:31:50Z. Pages run 44844566221 published it at 00:59:35Z, 13 of 13 jobs, and the live site's `build-info.json` gave the commit `ffe3734` at 01:00:20Z. The records PR after #231 folded this PR's fragment, `changes/claude-friendly-keller-78iuc9.md`, into `CHANGELOG.md` and `docs/development/PROGRESS.md` and deleted it. Lines below that call this PR not merged or not published, or speak of the merge as to come, describe the time before.) |
 
 ## The bug
 
@@ -102,7 +102,12 @@ pictures shown to the owner first.
    *2026-11-21 and 2026-11-22:* taken again on the owner's word in chat
    (23:40:33Z, "ถ่ายรูปหน้าแรกใหม่ต่อได้เลยครับ"), in PR #231, by
    `npm run shots -- en,ru,th` on main `ffe3734d`; the owner asked to see
-   them before the merge (23:47:26Z, "ส่งรูปให้ดูก่อน merge ด้วยครับ"). The session sent the before-and-after sheets, one per
-   language, in chat; the owner answered on 2026-11-22 at 00:00:43Z, "merge
-   ได้เลยครับ". The link preview (`public/social/preview.jpg`) was not taken
-   again.
+   them before the merge (23:47:26Z, "ส่งรูปให้ดูก่อน merge ด้วยครับ"). The
+   session sent the before-and-after sheets, one per language, in chat; the
+   owner answered on 2026-11-22 at 00:00:43Z, "merge ได้เลยครับ". The link
+   preview (`public/social/preview.jpg`) was not taken again. (2026-11-22,
+   the records PR after #231: #231 merged at 00:34:11Z as `5be3b7d0`, a tree
+   identical to its final head `4b5fda83` (CI run 44965673885, 12 of 12
+   jobs). Pages run 44967260071 published it at 01:01:04Z, 13 of 13 jobs,
+   and the live site's `build-info.json` gave the commit `5be3b7d` at
+   01:01:12Z.)
