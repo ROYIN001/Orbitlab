@@ -108,4 +108,6 @@ pictures shown to the owner first.
    preview (`public/social/preview.jpg`) was not taken again. (2026-11-22,
    the records PR after #231: #231 merged at 00:34:11Z as `5be3b7d0`, a tree
    identical to its final head `4b5fda83` (CI run 44965673885, 12 of 12
-   jobs). Pages run 44967260071 published it at 01:01:04Z, 13 of 13 jobs, and the live site's `build-info.json` gave the commit `5be3b7d` at 01:01:12Z.)
+   jobs). Pages run 44967260071 published it at 01:01:04Z, 13 of 13 jobs,
+   and the live site's `build-info.json` gave the commit `5be3b7d` at
+   01:01:12Z.)
