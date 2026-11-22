@@ -101,5 +101,7 @@ its own, with the pictures shown to the owner first.
    *2026-11-21:* taken again on the owner's word in chat (23:40:33Z,
    "ถ่ายรูปหน้าแรกใหม่ต่อได้เลยครับ"), in PR #231, on main `ffe3734d`; the
    owner asked to see them before the merge (23:47:26Z, "ส่งรูปให้ดูก่อน
-   merge ด้วยครับ"). The link preview (`public/social/preview.jpg`) was not
-   taken again.
+   merge ด้วยครับ"). The session sent the before-and-after sheets, one per
+   language, in chat; the owner answered on 2026-11-22 at 00:00:43Z, "merge
+   ได้เลยครับ". The link preview (`public/social/preview.jpg`) was not taken
+   again.
