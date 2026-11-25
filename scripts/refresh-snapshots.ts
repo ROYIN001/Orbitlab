@@ -8,8 +8,10 @@
  * A dataset whose source cannot be reached keeps the snapshot already there
  * (the committed baseline, in a fresh checkout) and the run goes on: a
  * network error is tried again twice, a refusal (HTTP 4xx) is not — CelesTrak
- * asks that a refused request not be repeated. What each dataset got is
- * printed, a kept one as a GitHub Actions warning.
+ * asks that a refused request not be repeated. A satellite query that finds
+ * nothing (CelesTrak's 404, "No GP data found") keeps only its own group's
+ * sets from that snapshot, as the app does online (P2.5). What each dataset
+ * got is printed, a kept one or a kept group as a GitHub Actions warning.
  *
  * Node 22.6 or newer, which runs TypeScript with its types stripped: this file
  * imports only src/provider/space-weather.ts, src/provider/satellites.ts and
@@ -17,12 +19,14 @@
  * src/provider/data-provider.ts `parseSnapshot` reads (tests/data-provider.test.ts
  * reads the bundled ones).
  */
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather } from '../src/provider/space-weather.ts';
-import { SATELLITE_URLS, parseCelestrakGp, validSatelliteCatalog } from '../src/provider/satellites.ts';
+import { SATELLITE_URLS, refreshCelestrakGp, validSatelliteCatalog } from '../src/provider/satellites.ts';
 import { IERS_FINALS_URL, parseIersFinals, validEarthOrientation } from '../src/provider/earth-orientation.ts';
 
 class Refused extends Error {}
+/** CelesTrak's "No GP data found": the query matched nothing. */
+class NotFound extends Refused {}
 
 async function json(url: string): Promise<unknown> {
   return JSON.parse(await text(url));
@@ -32,7 +36,7 @@ async function text(url: string): Promise<string> {
   for (let attempt = 1; ; attempt++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-      if (!res.ok) throw new Refused(`${url} answered ${res.status}`);
+      if (!res.ok) throw new (res.status === 404 ? NotFound : Refused)(`${url} answered ${res.status}`);
       return await res.text();
     } catch (error) {
       if (error instanceof Refused || attempt === 3) throw error;
@@ -72,8 +76,22 @@ const REFRESHES: Refresh[] = [
     id: 'satellites', file: 'satellites.json',
     source: { name: 'CelesTrak', url: 'https://celestrak.org/NORAD/elements/' },
     async fetch() {
-      const { data, asOf } = parseCelestrakGp(await all(SATELLITE_URLS));
+      // one after another, as all() asks them; a query that found nothing is null
+      const missed: string[] = [];
+      const answers: unknown[] = [];
+      for (const url of SATELLITE_URLS) {
+        answers.push(await json(url).catch((e: unknown) => {
+          if (!(e instanceof NotFound)) throw e;
+          missed.push(e.message);
+          return null;
+        }));
+      }
+      // only a 404 is a missing answer (a body of null is not a list); nothing found at all names the queries, as online
+      if (answers.filter((a) => a === null).length > missed.length) throw new Error('an answer was null, not a list of element sets');
+      if (answers.every((a) => a === null)) throw new Error(missed.join('; '));
+      const { data, asOf, parts } = refreshCelestrakGp(answers, () => JSON.parse(readFileSync(new URL('../public/data/satellites.json', import.meta.url), 'utf8')).data);
       if (!validSatelliteCatalog(data)) throw new Error('the parsed data do not pass their own check');
+      if (parts.length) console.log(`::warning::satellites: ${parts.join(', ')} kept from the snapshot already in public/data/ (${missed.join('; ')})`);
       return { data, asOf, summary: data.groups.map((g) => `${g.id} ${g.sets.length}`).join(', ') };
     },
   },

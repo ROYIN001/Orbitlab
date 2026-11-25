@@ -165,6 +165,16 @@ export function mergeCelestrakGp(answers: readonly unknown[], snapshot: Satellit
   return { data: { groups }, asOf: new Date(newest).toISOString(), parts };
 }
 
+/**
+ * The catalogue as scripts/refresh-snapshots.ts makes it, P2.5 there too: a
+ * query that found nothing (null) keeps its group's sets from the snapshot
+ * already there (`kept`), and says so; with every answer in, they are parsed
+ * as before and the snapshot is not read.
+ */
+export function refreshCelestrakGp(answers: unknown[], kept: () => SatelliteCatalog): { data: SatelliteCatalog; asOf: string; parts: string[] } {
+  return answers.includes(null) ? mergeCelestrakGp(answers, kept()) : { ...parseCelestrakGp(answers), parts: [] };
+}
+
 /** The OMM keywords SGP4 uses, and no others (CelesTrak sends no others; a copy keeps the snapshot to them). */
 function pick(r: OmmRecord): OmmRecord {
   return {
