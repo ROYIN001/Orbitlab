@@ -32,9 +32,23 @@ describe('the bundled catalogue (R02)', () => {
     expect(snap.source.url).toMatch(/^https:\/\/celestrak\.org\//);
   });
 
-  it('has Thailand\'s seven satellites in orbit, and each of O04\'s catalogue entries that is up', () => {
+  it('has Thailand\'s six satellites in orbit, and each of O04\'s catalogue entries that is up', () => {
     expect(group('thai').map((s) => s.NORAD_CAT_ID).sort()).toEqual([...THAI_NORAD_IDS].sort());
     for (const s of THAI_SATELLITES.filter((x) => !x.reentered)) expect(THAI_NORAD_IDS, s.name).toContain(s.norad);
+  });
+
+  it('asks CelesTrak by name only for Thai satellites still in orbit', () => {
+    // CelesTrak's SATCAT decay dates (read 2026-11-25): NAPA-2 (48963) and NAPA-1 (46320). A NAME= query whose objects
+    // have all decayed answers 404 "No GP data found", and the refresh then keeps the whole Thai group from the snapshot
+    const DECAYED: Record<number, string> = { 48963: '2026-07-05', 46320: '2026-11-02' };
+    for (const s of THAI_SATELLITES) expect(s.reentered, s.name).toBe(DECAYED[s.norad]);
+    for (const norad of Object.keys(DECAYED).map(Number)) expect(THAI_NORAD_IDS, `${norad}`).not.toContain(norad);
+    const thai = SAT_GROUPS.find((g) => g.id === 'thai')!;
+    for (const q of thai.queries.filter((x) => x.startsWith('NAME='))) {
+      const name = q.slice('NAME='.length).toUpperCase();
+      expect(THAI_SATELLITES.filter((s) => !s.reentered && s.name.toUpperCase().includes(name)).map((s) => s.name), q).not.toEqual([]);
+    }
+    for (const q of thai.queries.filter((x) => x.startsWith('CATNR='))) expect(Object.keys(DECAYED), q).not.toContain(q.slice('CATNR='.length));
   });
 
   it('keeps the debris group to Fengyun-1C\'s fragments, from its 1999 launch', () => {

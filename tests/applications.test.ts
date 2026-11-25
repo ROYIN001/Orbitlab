@@ -215,7 +215,7 @@ describe('Thailand\'s satellites, as published (O04)', () => {
       for (const [name, dict] of Object.entries({ en, ru, th })) expect(dict[s.aboutKey], `${name} ${s.aboutKey}`).toBeTruthy();
     }
     expect(thaiSatelliteById('napa2')!.reentered).toBe('2026-07-05');
-    expect(thaiSatelliteById('napa1')!.reentered).toBeUndefined();
+    expect(thaiSatelliteById('napa1')!.reentered).toBe('2026-11-02');
     // the three geostationary slots Thaicom's satellites use
     expect(THAI_SATELLITES.filter((s) => s.orbit.kind === 'geo').map((s) => s.orbit.kind === 'geo' && s.orbit.longitude).sort()).toEqual([119.5, 120, 78.5, 78.5]);
     expect(geodeticToEcef({ lat: 0, lon: 0, h: 0 }).x).toBe(6_378_137);

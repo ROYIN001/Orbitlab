@@ -243,7 +243,7 @@ export function appsResults(host: AppsHost, a: AppSettings, ctx: { comms: CommsR
       src.append(li);
     }
     box.append(el('h3', 'pg-sub', t('use.thai.sources')), src, el('p', 'pg-note', t('use.thai.nominal', { date: THAI_SATELLITES_AS_OF })));
-    // M-ORBIT-001: where it is now is Real satellites' (not NAPA-2's: it has re-entered)
+    // M-ORBIT-001: where it is now is Real satellites' (not NAPA-1's or NAPA-2's: they have re-entered)
     if (thaiInSky(s.id)) box.append(button('watch-btn', t('use.thai.inSky'), () => host.showInSky(s.id)));
   }
   return box;
