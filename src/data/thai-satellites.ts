@@ -79,8 +79,10 @@ export const THAI_SATELLITES: readonly ThaiSatellite[] = [
     id: 'napa1', name: 'NAPA-1', aboutKey: 'thai.napa1.about', operator: 'Royal Thai Air Force', builder: 'ISISPACE (6U CubeSat)',
     launch: { date: '2020-09-03', vehicle: 'Vega (VV16)', site: 'Kourou, French Guiana' },
     cospar: '2020-061BA', norad: 46320,
+    // the orbit in the catalogue on THAI_SATELLITES_AS_OF; it re-entered on 2026-11-02 (the catalogue's DECAY_DATE)
     orbit: { kind: 'leo', perigee: 307, apogee: 310, inclination: 97.23 },
     imaging: { gsd: 39 },
+    reentered: '2026-11-02',
     sources: [
       { title: 'ISISPACE: NAPA-1', url: 'https://www.isispace.nl/project/napa-1/' },
       { title: 'Bangkok Post: Air force satellite Napa-1 launched', url: 'https://www.bangkokpost.com/thailand/general/1979315/air-force-satellite-napa-1-launched' },

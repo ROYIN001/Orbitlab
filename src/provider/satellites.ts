@@ -58,14 +58,15 @@ export type SatGroupId = 'stations' | 'thai' | 'gnss' | 'weather' | 'imaging' | 
 
 /**
  * Thailand's satellites by catalogue number (src/data/thai-satellites.ts has
- * each one's facts and sources): THEOS-2, THEOS, NAPA-1, Thaicom 4, 6, 7, 8.
- * Thaicom 7 is catalogued as AsiaSat 6, so it is asked for by number.
+ * each one's facts and sources) still in orbit: THEOS-2, THEOS, Thaicom 4, 6,
+ * 7, 8. Thaicom 7 is catalogued as AsiaSat 6, so it is asked for by number.
+ * NAPA-1 and NAPA-2 have re-entered, and CelesTrak answers NAME=NAPA with 404.
  */
-export const THAI_NORAD_IDS: readonly number[] = [58016, 33396, 46320, 28786, 39500, 40141, 41552];
+export const THAI_NORAD_IDS: readonly number[] = [58016, 33396, 28786, 39500, 40141, 41552];
 
 export const SAT_GROUPS: readonly { id: SatGroupId; queries: readonly string[]; only?: readonly number[] }[] = [
   { id: 'stations', queries: ['GROUP=stations'] },
-  { id: 'thai', queries: ['NAME=THEOS', 'NAME=NAPA', 'NAME=THAICOM', 'CATNR=40141'], only: THAI_NORAD_IDS },
+  { id: 'thai', queries: ['NAME=THEOS', 'NAME=THAICOM', 'CATNR=40141'], only: THAI_NORAD_IDS },
   { id: 'gnss', queries: ['GROUP=gnss'] },
   { id: 'weather', queries: ['GROUP=weather'] },
   // M02: CelesTrak's Earth Resources group, the imagers of the public catalogue
