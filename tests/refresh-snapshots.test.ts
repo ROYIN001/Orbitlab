@@ -68,9 +68,10 @@ function refresh(answers: Record<string, unknown>): { out: string; asked: number
   return { out, asked: out.split('\n').filter((l) => l.startsWith('asked https://celestrak.org/')).length };
 }
 
-// older than every committed group's newest set (all of 2026-09-26), gnss's (a middle query's) the newest: a date taken from a kept group, or from the oldest, first or last set fetched, would show
+// older than every committed group's newest set (all of 2026-09-26), gnss's (a middle query's) the newest fetched: a date taken from a kept group, or from the oldest, first or last set fetched, would show;
+// THEOS-2's (the kept Thai group's own answer) newer still, so a date that folds in a kept group's answers would show too
 const SET = (norad: number): OmmRecord => ({
-  OBJECT_NAME: `SAT ${norad}`, OBJECT_ID: '2000-001A', EPOCH: norad === 1000 + owner.indexOf('gnss') ? '2026-09-01T12:00:00.000000' : '2026-08-01T12:00:00.000000', MEAN_MOTION: 15.5, ECCENTRICITY: 0.0007,
+  OBJECT_NAME: `SAT ${norad}`, OBJECT_ID: '2000-001A', EPOCH: norad === 58016 ? '2026-09-15T12:00:00.000000' : norad === 1000 + owner.indexOf('gnss') ? '2026-09-01T12:00:00.000000' : '2026-08-01T12:00:00.000000', MEAN_MOTION: 15.5, ECCENTRICITY: 0.0007,
   INCLINATION: 51.6, RA_OF_ASC_NODE: 159.2, ARG_OF_PERICENTER: 184.2, MEAN_ANOMALY: 175.9, EPHEMERIS_TYPE: 0,
   CLASSIFICATION_TYPE: 'U', NORAD_CAT_ID: norad, ELEMENT_SET_NO: 999, REV_AT_EPOCH: 58744, BSTAR: 0.00059, MEAN_MOTION_DOT: 0.0003,
   MEAN_MOTION_DDOT: 0,
@@ -78,7 +79,7 @@ const SET = (norad: number): OmmRecord => ({
 // a new set for each query; Thailand's are THEOS-2's, a number its group keeps
 const owner = SAT_GROUPS.flatMap((g) => g.queries.map(() => g.id));
 const FRESH = Object.fromEntries(SATELLITE_URLS.map((u, k) => [u, [SET(owner[k] === 'thai' ? 58016 : 1000 + k)]]));
-// the Thai group's second query, NAME=NAPA: the one CelesTrak answers 404 since NAPA-1 re-entered
+// the Thai group's second query, NAME=THAICOM, answering 404 as NAME=NAPA did after NAPA-1 re-entered (2026-11-02)
 const MISS = owner.indexOf('thai') + 1;
 
 describe('the snapshot script, run on a copy with fetch stubbed (P2.5)', () => {
@@ -91,7 +92,7 @@ describe('the snapshot script, run on a copy with fetch stubbed (P2.5)', () => {
     expect(written.data.groups).toEqual(groups.map((g, gi) => (g.id === 'thai' ? committed.data.groups[gi] : g)));
     // dated by the groups fetched (the stub's sets), not by the kept Thai sets of 2026-09-26
     expect(written.asOf).toBe('2026-09-01T12:00:00.000Z');
-    // a 404 from every query but debris's, eight in five groups (more 404s than there are groups), from the committed file again: debris is still a group to fetch
+    // a 404 from every query but debris's, seven in five groups (more 404s than there are groups), from the committed file again: debris is still a group to fetch
     const allButDebris = SATELLITE_URLS.filter((_, k) => owner[k] !== 'debris');
     fs.writeFileSync(SNAPSHOT, committedText);
     expect(refresh({ ...FRESH, ...Object.fromEntries(allButDebris.map((u) => [u, 404])) }).out).toContain(`::warning::satellites: stations, thai, gnss, weather, imaging kept from the snapshot already in public/data/ (${allButDebris.map((u) => `${u} answered 404`).join('; ')})`);
@@ -99,7 +100,7 @@ describe('the snapshot script, run on a copy with fetch stubbed (P2.5)', () => {
   }, 30_000);
 
   it('keeps the whole snapshot otherwise, and asks no more after a refusal', () => {
-    // a 404 in every group, while THEOS, THAICOM and CATNR=40141 answer: no group left to fetch
+    // a 404 in every group, while THEOS and CATNR=40141 answer: no group left to fetch
     const inEvery = SATELLITE_URLS.filter((_, k) => owner[k] !== 'thai' || k === MISS);
     // the snapshot's groups out of order: a kept group must still pass the catalogue's check
     const reordered = JSON.stringify({ ...committed, data: { groups: [...committed.data.groups].reverse() } });
