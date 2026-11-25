@@ -403,7 +403,7 @@ The rows for #176–#180 were classified by one agent. The Q check confirmed the
 
 ### KPI-35 owner decisions
 
-Measured at the cutoff with the question set brought to it (see "How the numbers were made"). The GK1 gate has not run, so lateness is against each decision's needed-by wave. `kpi35.py` is run again with the GK1 time at sign-off.
+Measured at the cutoff with the question set brought to it (see "How the numbers were made"). The GK1 gate has not run, so lateness is against each decision's needed-by wave. `kpi35.py` is run again with the GK1 time at sign-off. (2026-11-25: `kpi35.py` is not in the repository, so the re-run was done by hand on C, for the questions put to the owner after this cutoff, from "Decided 2026-10-28" to "Decided 2026-11-25, evening" in DECISIONS: 144 asked, 142 answered, 0 late by this table's method and 3 late against GK1's planned D26 (2026-11-11); asked → answered with both times exact, n = 89, median 2.16 h ([kpi-GK1.md](kpi-GK1.md), "KPI values on the GK1 candidate `9b224ec`", KPI-35). The K1 table below is unchanged. A re-run with the GK1 time still comes at sign-off.)
 
 | Measure | Value | Source |
 |---|---|---|
