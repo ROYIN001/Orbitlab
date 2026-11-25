@@ -11,18 +11,23 @@ export type LifetimeReply = { type: 'progress'; fraction: number } | { type: 're
 
 export function runLifetimeJob(req: LifetimeRequest, signal: AbortSignal, onProgress: (fraction: number) => void): Promise<PropagationResult> {
   return new Promise((resolve, reject) => {
+    const cancelled = (): void => reject(new DOMException('Cancelled', 'AbortError'));
+    // a Stop given before the job listens is never heard: the run would go on to its end (FX-4)
+    if (signal.aborted) { cancelled(); return; }
     let worker: Worker | null = null;
     try { worker = new Worker(new URL('./lifetime.worker.ts', import.meta.url), { type: 'module' }); } catch { worker = null; }
     if (!worker) {
-      // no module workers: run here, between frames
+      // no module workers: run here, between frames; a run stopped part-way is no answer (M-ORBIT-005)
       setTimeout(() => {
-        try { resolve(propagate(req.r0, req.v0, req.jd0, { ...req.options, onProgress: (f) => { onProgress(f); return !signal.aborted; } })); }
-        catch (e) { reject(e); }
+        try {
+          const result = propagate(req.r0, req.v0, req.jd0, { ...req.options, onProgress: (f) => { onProgress(f); return !signal.aborted; } });
+          if (signal.aborted) cancelled(); else resolve(result);
+        } catch (e) { reject(e); }
       }, 0);
       return;
     }
     const w = worker;
-    const stop = (): void => { w.terminate(); reject(new DOMException('Cancelled', 'AbortError')); };
+    const stop = (): void => { w.terminate(); cancelled(); };
     signal.addEventListener('abort', stop, { once: true });
     w.onmessage = ({ data }: MessageEvent<LifetimeReply>) => {
       if (data.type === 'progress') { onProgress(data.fraction); return; }
