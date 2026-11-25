@@ -3,8 +3,8 @@
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 > NAPA-1 กลับเข้าสู่บรรยากาศเมื่อ 2 พ.ย. 2026 และตั้งแต่ 3 พ.ย. (อย่างช้า 22:31Z) CelesTrak ตอบคำค้น `NAME=NAPA` ว่า 404 ("No GP data found") คำค้นเดียวนี้ทำให้การดึงข้อมูลดาวเทียมรายวันล้มทั้งชุด นับจากนั้นทุก build ที่เผยแพร่บน Pages จึงใช้ชุดข้อมูลวงโคจรของวันที่ 26 ก.ย.
 > หลังการแก้ คำค้นที่ตอบ 404 จะคงไว้เฉพาะกลุ่มของตัวเองจากไฟล์ที่ commit ไว้ พร้อมคำเตือนใน log ส่วนอีกห้ากลุ่ม (สถานีอวกาศ นำทาง อุตุนิยมวิทยา สำรวจโลก และเศษซาก) จะได้ข้อมูลใหม่ทุกวันอีกครั้ง
-> แอปที่ build ออกมาไม่มีโค้ดใหม่ (build ด้วย commit stamp เดียวกับ main แล้วทุกไฟล์เหมือนเดิมทุกไบต์ ชื่อไฟล์ asset ขึ้นกับ stamp): ไม่เปลี่ยนข้อความ ไม่แก้ assertion เดิม และไม่ขยายเพดาน budget ผู้ตรวจที่เป็น agent สองมุมมอง (correctness และ protocol) ตรวจรอบแรก และผู้ตรวจอิสระสามมุมมองตรวจซ้ำรอบที่แก้แล้ว (`2fe311c`) ไม่พบข้อที่ขวางการ merge ข้อที่พบแก้หรือตอบไว้แล้ว (หัวข้อ Second-agent review)
-> **รอเจ้าของตัดสิน:** การทำเครื่องหมายว่า NAPA-1 กลับเข้าสู่บรรยากาศแล้ว ต้องแก้ assertion ใน `tests/applications.test.ts` เอา 46320 และคำค้น `NAME=NAPA` ออกจาก `THAI_NORAD_IDS` และคำค้นของกลุ่มไทย และตัดชุดข้อมูลของ NAPA-1 ออกจาก `public/data/satellites.json` งานนี้จึงอยู่นอกการอนุมัติถาวรสำหรับการแก้บั๊ก จนกว่าจะอนุมัติ:
+> แอปที่ build ออกมาไม่มีโค้ดใหม่ (build ด้วย commit stamp เดียวกับ main แล้วทุกไฟล์ใน dist/ เหมือนของ main ทุกไบต์ ยกเว้น `build-info.json` (เวลาที่ build) และ `SHA256SUMS` (hash ของไฟล์นั้นด้วย) ชื่อไฟล์ asset ขึ้นกับ stamp): ไม่เปลี่ยนข้อความ ไม่แก้ assertion เดิม และไม่ขยายเพดาน budget ผู้ตรวจที่เป็น agent ตรวจทุกรอบที่แก้ ตั้งแต่รอบแรกจนถึงสิ่งที่แก้หลัง `8876c89` ไม่พบข้อที่ขวางการ merge ข้อที่พบแก้หรือตอบไว้แล้ว (หัวข้อ Second-agent review) จำนวนข้อที่ผู้ตรวจรอบหลัง ๆ ยืนยันได้อยู่ในคำอธิบายของ PR #234
+> **เจ้าของอนุมัติแล้ว ให้ทำใน PR ถัดไป:** การทำเครื่องหมายว่า NAPA-1 กลับเข้าสู่บรรยากาศแล้ว ต้องแก้ assertion ใน `tests/applications.test.ts` เอา 46320 และคำค้น `NAME=NAPA` ออกจาก `THAI_NORAD_IDS` และคำค้นของกลุ่มไทย และตัดชุดข้อมูลของ NAPA-1 ออกจาก `public/data/satellites.json` งานนี้จึงอยู่นอกการอนุมัติถาวรสำหรับการแก้บั๊ก เจ้าของตอบว่า "เอาตามที่คุณแนะนำครับ" (2026-11-25 เวลา 11:56:29Z) ต่อคำถามของ session เมื่อ 10:55:00Z ซึ่งแนะนำให้ไม่ใส่วันที่ในประโยค จนกว่า PR นั้นจะ merge:
 > - แอปยังแสดง NAPA-1 ว่าอยู่ในวงโคจร SGP4 ของแอปวางชุดข้อมูลวันที่ 25 ก.ย. ไว้ที่ราว 63–100 กม. เหนือรัศมีที่เส้นศูนย์สูตร ในวันที่ 25 พ.ย. แผงจะเริ่มขึ้นว่า "SGP4 ระบุตำแหน่งของมันในขณะนี้ไม่ได้: มันตกกลับสู่ชั้นบรรยากาศแล้ว วงโคจรอยู่ภายในโลก" เป็นช่วง ๆ ตั้งแต่ 2 ธ.ค. และตลอดเวลาหลัง 00:05Z ของ 5 ธ.ค.
 > - กลุ่มดาวเทียมไทยยังใช้ข้อมูลวันที่ 26 ก.ย. ชุดข้อมูลของ THEOS-2 ซึ่งทัวร์ของ Watch (ขั้น theos2) กรณีศึกษา theos2 กับเวลาที่ดาวผ่าน และ journey fx3-thai-in-sky ใช้ จะเก่าขึ้นวันละหนึ่งวัน การคัดกรองการเข้าใกล้ (screening) กับ THEOS ก็ใช้ชุดเก่าในกลุ่มไทย แม้กลุ่มสำรวจโลกจะมีชุดใหม่ของ THEOS (ข้อ 1 ใน Follow-ups)
 > - บรรทัด "ชุดค่าองค์ประกอบวงโคจร ณ …" ของ Real satellites จะแสดงวันที่ใหม่ ทั้งที่กลุ่มไทยยังเป็นของ 26 ก.ย. โหมดออนไลน์มีหมายเหตุว่ากลุ่มไทยใช้ข้อมูลที่มากับแอป แต่โหมดออฟไลน์ไม่มีหมายเหตุนี้ (ข้อ 5 ใน Follow-ups)
@@ -13,7 +13,7 @@
 |---|---|
 | Package | none: a bug found in the audit of 2026-11-24/25 (the live site's `data/satellites.json` dated 2026-09-26T16:10:54Z, 59 days old) |
 | Items | none closed; no plan item |
-| change_kind | bug fix (the snapshot script `scripts/refresh-snapshots.ts` and a helper in `src/provider/satellites.ts` that the app does not use; no new code in the built app, byte-identical to main's when built with main's commit stamp; no ceiling, no assertion changed) |
+| change_kind | bug fix (the snapshot script `scripts/refresh-snapshots.ts` and a helper in `src/provider/satellites.ts` that the app does not use; no new code in the built app: built with main's commit stamp, every file under `dist/` but `build-info.json` and `SHA256SUMS` is byte-identical to main's; no ceiling, no assertion changed) |
 | Authorization | the standing bug-fix approval (owner in chat to the K1 integration session, 2026-10-06, verbatim in [SESSION-PROTOCOL.md](../SESSION-PROTOCOL.md) §1 step 3); this session's request, 2026-11-25 at 06:52:53Z, verbatim: "มาเริ่มทำงานลำดับถัดไปเลยครับ ผมต้องทำอะไรบ้าง" (let's start the next item; what do I need to do?) |
 | Base | main `844319e` (the records PR #232) |
 | Branch | `claude/beautiful-shannon-l4s4za` |
@@ -58,7 +58,8 @@ The app's online mode already falls back group by group (P2.5):
   group keeps the snapshot's sets and is named in `parts`. With every answer
   in, it is `parseCelestrakGp(answers)` as before, and `kept` is never called.
   The app does not import it, and the build drops it: built with main's
-  commit stamp, every asset is byte-identical to main's.
+  commit stamp, every file under `dist/` but `build-info.json` and
+  `SHA256SUMS` is byte-identical to main's (below).
 - `scripts/refresh-snapshots.ts`:
   - A 404 throws `NotFound`, a `Refused`, so it is still not asked again.
   - The satellites refresh asks each query in turn, as before. It takes a
@@ -100,7 +101,7 @@ publish.
 | Test | Before the fix | With the fix |
 |---|---|---|
 | `tests/satellite-catalogue.test.ts`, "keeps the snapshot's group only where a query found nothing, and the rest fresh": each of the nine queries in turn answers nothing; only its group is the snapshot's, the others equal `parseCelestrakGp`'s, the catalogue is valid; with every answer in, the snapshot is not read | fails: `TypeError: refreshCelestrakGp is not a function` | passes |
-| `tests/refresh-snapshots.test.ts` (new file), "asks every query, and keeps from the snapshot only the group of the one that found nothing": the script and its three imports are copied, with the committed `satellites.json`, to a temporary folder and run there by `node --experimental-strip-types`, `fetch` stubbed: `NAME=NAPA` answers 404, the other eight a new set each, NOAA and the IERS 503 | fails: `expected 3 to be 9` (main's script asked 3 of the 9 queries and wrote nothing) | passes: 9 asked; the Thai group is the committed one and the other five are the stub's; the file's `asOf` is the stub's epoch; the warning names NAPA's query |
+| `tests/refresh-snapshots.test.ts` (new file), "asks every query, and keeps from the snapshot only the groups whose query found nothing": the script and its three imports are copied, with the committed `satellites.json`, to a temporary folder and run there by `node --experimental-strip-types`, `fetch` stubbed: `NAME=NAPA` answers 404, the other eight a new set each, gnss's dated 2026-09-01 and the rest 2026-08-01 (both older than each committed group's newest set), NOAA and the IERS 503; then, from the committed file again, a 404 from every query but debris's, eight in five groups | fails: `expected 3 to be 9` (main's script asked 3 of the 9 queries and wrote nothing) | passes: 9 asked; the Thai group is the committed one and the other five are the stub's; the file's `asOf` is debris's epoch, the newest set fetched, not a kept set's or the oldest; the warning names NAPA's query; with the eight 404s, those five groups are the committed ones, debris is the stub's, and the warning names the five groups and the eight 404s |
 | the same file, "keeps the whole snapshot otherwise, and asks no more after a refusal": THAICOM answers 403 after NAPA's 404 (4 asked); every query answers 404 (9 asked, the warning names all nine); a 404 in every group while THEOS, THAICOM and `CATNR=40141` answer (9 asked, the warning names the six); a body of `null` (9 asked); NAPA's 404 with a snapshot whose groups are out of order (9 asked, the catalogue check). Each leaves the file as it was, byte for byte | fails: `expected 3 to be 4` | passes |
 
 3 of 3 fail on main's code and pass with the fix. Before the fix, `tsc`
@@ -128,7 +129,24 @@ Wrong versions, each in a scratch copy and never merged, all caught:
 - found by the fixed round's re-check, and caught since: a kept catalogue
   dated 1970 (the first script test's `asOf`), the script without its
   `validSatelliteCatalog` check, and the nothing-found check on answers
-  rather than groups (both by the second script test).
+  rather than groups (both by the second script test);
+- found by the review of those changes, and caught since by the first
+  script test: the nothing-found check stopping at two groups or at five
+  (a 404 in five groups kept the whole file; the tests had 404s in one
+  group and in six), and the file dated by every group, kept ones
+  included, in the helper's kept branch or in the script (the stub's sets
+  were dated after the committed ones, so both dates agreed);
+- found by the check of the changes made for that review, and caught
+  since by the first script test: the nothing-found check counting 404s
+  against the number of groups (the five-group run had one 404 in each
+  group), and `mergeCelestrakGp` dating the file by the oldest set
+  fetched, not the newest (the stub's sets all had one date);
+- found by the second check of those changes, and caught since by the
+  first script test: the file dated by the last set fetched, not the
+  newest (only the last query's set was the newest).
+
+The fifteen caught by the script tests were run again on this round's
+version of the file: each still fails it.
 
 **Dry run on CelesTrak's real answers (no network, the repo's data
 untouched).** Copies of main's script and of the fixed one ran in a
@@ -158,7 +176,9 @@ files was the same before and after.
   `dist/` keeps the name and size of main's build. `index-C9YcO2QV.js` is
   2,669,324 B, and no chunk contains the helper. Asset names follow the
   stamp (`__ORBITLAB_BUILD__`, `vite.config.ts`), so a build of the
-  branch's own commit names them anew.
+  branch's own commit names them anew. `build-info.json` holds the build
+  time (`builtAt`; `SOURCE_DATE_EPOCH` is set nowhere) and `SHA256SUMS`
+  hashes it, so those two differ between any two builds.
 - `npm run budget`: the report is identical to main's (below).
 - The 18 unit files that import `src/provider/satellites.ts`,
   `datasets.ts` or `data-provider.ts`, `tests/applications.test.ts` and
@@ -175,6 +195,15 @@ files was the same before and after.
   script and helper; `npm run typecheck` and the `--check` above. The
   rest of this list, and the dry run above, were run before them; the
   script's NAPA-only path did not change.
+- After the review of those changes, and again after each check of the
+  changes made for it (below), only: `tests/refresh-snapshots`,
+  `satellite-catalogue`, `fx3-catalogue-load`, `data-provider`,
+  `repo-hygiene` and `architecture`, 49 of 49; 3 of 3 still fail on
+  main's script and helper, with the messages in the table above; the
+  wrong versions above, each caught (twelve after the review, fourteen
+  after the first check, fifteen after the second); `npm run typecheck`, the
+  `--check` above and `git diff --check`. This round changed only the
+  script test and the records.
 
 **Not checked here:**
 - CelesTrak's live answers, beyond those saved in the audit on 2026-11-25.
@@ -198,10 +227,11 @@ Unchanged. After the merge, the Pages job measures a refreshed
 
 ## Not in this change
 
-- **NAPA-1 marked re-entered (part B).** This waits for the owner, because
-  it changes an existing assertion. The change is
-  `reentered: '2026-11-02'` on NAPA-1 in `src/data/thai-satellites.ts`, as
-  NAPA-2 has. It forces three more changes:
+- **NAPA-1 marked re-entered (part B).** It changes an existing assertion,
+  so it waited for the owner, who approved it on 2026-11-25 (11:56:29Z,
+  "เอาตามที่คุณแนะนำครับ") as the next PR, with no date in the sentence. The
+  change is `reentered: '2026-11-02'` on NAPA-1 in
+  `src/data/thai-satellites.ts`, as NAPA-2 has. It forces three more changes:
   - 46320 and `NAME=NAPA` out of `THAI_NORAD_IDS` and the Thai queries:
     `tests/fx3-thai-moon-labels.test.ts` wants Real satellites to offer
     exactly the ids in that list.
@@ -296,8 +326,7 @@ by minute, as the panel draws it.
 **The fixed round's re-check.** Independent verifiers in three lenses
 (correctness, records, pipeline) re-checked the committed head `2fe311c`
 on 2026-11-25, with their own mutants, probes and builds: no blocking
-finding; 4 minor findings and 19 nits. Applied in this round, and not
-re-checked again:
+finding; 4 minor findings and 19 nits. Applied in `8876c89`:
 - the script: a 404 in every group keeps the file and names each 404
   (it said "Invalid time value"); the header says that no status that is
   not ok is retried;
@@ -312,7 +341,63 @@ re-checked again:
   agents; the PROGRESS row's CI pointer; SGP4's last minute; what online
   names; a malformed answer in a kept group.
 
-The rest are answered in PR #234, with the re-check's "confirmed N of M".
+Not applied, each for a reason:
+- part B itself, NAPA-1 marked re-entered: it changes an existing
+  assertion (`tests/applications.test.ts:218`) and wording, so it waited
+  for the owner, who approved it on 2026-11-25 for the next PR (above);
+  recording the kept groups in the snapshot is R7.4's (follow-up 5);
+- a script test that the snapshot is read only when needed: optional.
+  The committed snapshot is always there where the script runs, and the
+  helper's test checks that it is not read when every query answers;
+- `asOf` when a kept group holds the newest set: not reachable today,
+  and it fails safe: the Pages snapshot check stops that build
+  ("`asOf` and the bundled-catalogue test" above);
+- an empty kept group written: not reachable, since the committed file
+  is tested to have sets in every group, and the same test in the Pages
+  snapshot check would stop such a build; optional.
+
+Three more were about the PR's description and were fixed there. The
+re-check's "confirmed N of M" is in PR #234.
+
+**The review of the re-check's changes.** A second agent reviewed
+`2fe311c..8876c89` on 2026-11-25: no blocking finding; 3 minor findings
+and 4 nits. Applied in this round, and checked by a verifier (below):
+- the script test: the stub's sets dated before each committed group's
+  newest set (2026-08-01, gnss's 2026-09-01, below), so the `asOf` check
+  tells a file dated by the groups fetched from one dated by every group,
+  and a 404 in five
+  groups, between the one and the six tested (for each, two wrong
+  versions had passed); the copy put back to the committed text after
+  the second test; its warning check labelled;
+- the record: the four findings above not applied, each with its reason;
+  "every hashed asset is byte-identical", not every file (made exact by
+  the second check, below); the PROGRESS
+  row in this report's words.
+
+Its "confirmed N of M" is in PR #234.
+
+**The check of the changes made for that review.** A verifier checked
+them on 2026-11-25 (the working tree at `8876c89`, nothing committed):
+no blocking finding; 1 minor finding and 2 nits. Applied in this round,
+and checked again (below):
+- the script test: in the five-group run every query but debris's
+  answers 404, eight in five groups, so a nothing-found check counting
+  404s against the number of groups fails it; one stub set (debris's then,
+  gnss's now) dated after the other sets fetched, so a file dated by the
+  oldest set fetched fails the `asOf` check (both wrong versions had passed);
+- the record: this check named here, in follow-up 4, in the Thai summary
+  and in the PROGRESS row; the same finding's points on PR #234's
+  description were fixed there.
+
+**The second check of those changes.** A verifier checked them again on
+2026-11-25 (the working tree at `8876c89`): no blocking finding; 1 minor
+finding, on PR #234's description, fixed there, and 5 nits, applied: the
+newest stub set moved to a middle query (gnss), so a file dated by the
+last set fetched fails the `asOf` check (that wrong version had passed);
+"every file under `dist/` but `build-info.json` and `SHA256SUMS`", in
+English and Thai; the stub's dates and the count of wrong versions
+here. The checks made after this one, with their counts, are in PR #234's
+description.
 
 ## Follow-ups
 
@@ -323,19 +408,23 @@ The rest are answered in PR #234, with the re-check's "confirmed N of M".
    grows a day older every day, screenings against THEOS use its old Thai
    set, and from 2026-12-05 SGP4 cannot place NAPA-1 at all. Part B removes
    the only 404, and the Thai group refreshes again.
-   *Owner (proposal):* approve part B as a second PR after this one merges.
+   *Owner:* approved on 2026-11-25 (11:56:29Z, "เอาตามที่คุณแนะนำครับ"),
+   as the next PR; the session's order puts it after the GK1 candidate's
+   Pages run and #233.
 2. **NAPA-1's texts in EN, RU and TH**, the way NAPA-2's reads ("came down
    on 5 July 2026"), and `sky.about.thai`.
-   *Owner (proposal):* decide the words with part B.
+   *Owner:* decided with part B, in the same answer: no date in the
+   sentence (the panel's Status row and badge give 2026-11-02).
 3. **The online kept-404 stop.** Only a kept 403 or 429 would count as a
    refusal; `tests/fx3-catalogue-load.test.ts`'s kept-503 case would need
    re-checking.
    *Owner (proposal):* a separate bug fix, after part B.
 4. **Second-agent review.** Two second-agent lenses reviewed the first
-   round and three verifier lenses re-checked `2fe311c` (above): nothing
-   blocking; the changes made for the re-check have had no review of their
-   own. A review is
-   required if the data pipeline counts as storage work
+   round, three verifier lenses re-checked `2fe311c`, a second agent
+   reviewed the changes made for the re-check, and a verifier checked
+   the changes made for that review, twice (above): nothing blocking;
+   the counts of the later checks are in PR #234's description.
+   A review is required if the data pipeline counts as storage work
    (D-25). The records use "storage work" for the app's saved data
    ([DECISIONS.md](../../DECISIONS.md), 2026-10-28, K0-13: "R1.6's storage
    work (one more storage write)"), and the plan rates the stale-data item

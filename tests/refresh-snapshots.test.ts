@@ -32,7 +32,7 @@ const { execPath } = (await load('node:process')) as { execPath: string };
 const { fileURLToPath } = (await load('node:url')) as { fileURLToPath(url: URL): string };
 
 // made when the tests run, not when the file is only collected (`vitest list`, as CI's plan job does), so nothing is left behind
-let dir = '', SNAPSHOT = '';
+let dir = '', SNAPSHOT = '', committedText = '';
 let committed: { data: { groups: unknown[] } };
 beforeAll(() => {
   dir = fs.mkdtempSync(`${tmpdir()}/orbitlab-refresh-`);
@@ -53,7 +53,8 @@ globalThis.fetch = async (url) => {
 };
 `);
   SNAPSHOT = `${dir}/public/data/satellites.json`;
-  committed = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
+  committedText = fs.readFileSync(SNAPSHOT, 'utf8');
+  committed = JSON.parse(committedText);
 });
 afterAll(() => {
   if (dir) fs.rmSync(dir, { recursive: true, force: true });
@@ -67,8 +68,9 @@ function refresh(answers: Record<string, unknown>): { out: string; asked: number
   return { out, asked: out.split('\n').filter((l) => l.startsWith('asked https://celestrak.org/')).length };
 }
 
+// older than every committed group's newest set (all of 2026-09-26), gnss's (a middle query's) the newest: a date taken from a kept group, or from the oldest, first or last set fetched, would show
 const SET = (norad: number): OmmRecord => ({
-  OBJECT_NAME: `SAT ${norad}`, OBJECT_ID: '2000-001A', EPOCH: '2026-11-24T12:00:00.000000', MEAN_MOTION: 15.5, ECCENTRICITY: 0.0007,
+  OBJECT_NAME: `SAT ${norad}`, OBJECT_ID: '2000-001A', EPOCH: norad === 1000 + owner.indexOf('gnss') ? '2026-09-01T12:00:00.000000' : '2026-08-01T12:00:00.000000', MEAN_MOTION: 15.5, ECCENTRICITY: 0.0007,
   INCLINATION: 51.6, RA_OF_ASC_NODE: 159.2, ARG_OF_PERICENTER: 184.2, MEAN_ANOMALY: 175.9, EPHEMERIS_TYPE: 0,
   CLASSIFICATION_TYPE: 'U', NORAD_CAT_ID: norad, ELEMENT_SET_NO: 999, REV_AT_EPOCH: 58744, BSTAR: 0.00059, MEAN_MOTION_DOT: 0.0003,
   MEAN_MOTION_DDOT: 0,
@@ -80,7 +82,7 @@ const FRESH = Object.fromEntries(SATELLITE_URLS.map((u, k) => [u, [SET(owner[k] 
 const MISS = owner.indexOf('thai') + 1;
 
 describe('the snapshot script, run on a copy with fetch stubbed (P2.5)', () => {
-  it('asks every query, and keeps from the snapshot only the group of the one that found nothing', () => {
+  it('asks every query, and keeps from the snapshot only the groups whose query found nothing', () => {
     const { out, asked } = refresh({ ...FRESH, [SATELLITE_URLS[MISS]]: 404 });
     expect(asked).toBe(SATELLITE_URLS.length);
     expect(out).toContain(`::warning::satellites: thai kept from the snapshot already in public/data/ (${SATELLITE_URLS[MISS]} answered 404)`);
@@ -88,7 +90,12 @@ describe('the snapshot script, run on a copy with fetch stubbed (P2.5)', () => {
     const written = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
     expect(written.data.groups).toEqual(groups.map((g, gi) => (g.id === 'thai' ? committed.data.groups[gi] : g)));
     // dated by the groups fetched (the stub's sets), not by the kept Thai sets of 2026-09-26
-    expect(written.asOf).toBe('2026-11-24T12:00:00.000Z');
+    expect(written.asOf).toBe('2026-09-01T12:00:00.000Z');
+    // a 404 from every query but debris's, eight in five groups (more 404s than there are groups), from the committed file again: debris is still a group to fetch
+    const allButDebris = SATELLITE_URLS.filter((_, k) => owner[k] !== 'debris');
+    fs.writeFileSync(SNAPSHOT, committedText);
+    expect(refresh({ ...FRESH, ...Object.fromEntries(allButDebris.map((u) => [u, 404])) }).out).toContain(`::warning::satellites: stations, thai, gnss, weather, imaging kept from the snapshot already in public/data/ (${allButDebris.map((u) => `${u} answered 404`).join('; ')})`);
+    expect(JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8')).data.groups).toEqual(groups.map((g, gi) => (g.id === 'debris' ? g : committed.data.groups[gi])));
   }, 30_000);
 
   it('keeps the whole snapshot otherwise, and asks no more after a refusal', () => {
@@ -108,8 +115,10 @@ describe('the snapshot script, run on a copy with fetch stubbed (P2.5)', () => {
       const before = fs.readFileSync(SNAPSHOT, 'utf8');
       const { out, asked } = refresh(answers);
       expect(asked, why).toBe(asks);
-      expect(out).toContain(`::warning::satellites: kept the snapshot already in public/data/ (${why}`);
+      expect(out, why).toContain(`::warning::satellites: kept the snapshot already in public/data/ (${why}`);
       expect(fs.readFileSync(SNAPSHOT, 'utf8'), why).toBe(before);
     }
+    // the copy as committed again, byte for byte
+    fs.writeFileSync(SNAPSHOT, committedText);
   }, 30_000);
 });
