@@ -2,7 +2,7 @@
 
 How every work session on Orbitlab opens, tracks, merges and records its work. It carries package M-PLATFORM-077 of the plan v2.0 draft (CO-8) and the owner's Merge Desk instruction of 2026-10-05 (plan S18 §18.14a).
 
-**Status.** Adopted for waves K0–K1 (usage set S01, S05, S06, S08 set A, S18): owner, 2026-10-05 ~18:04Z, chat answer "รับรอง (แนะนำ)" to the question asking whether to adopt that set; other sections are adopted gate by gate. The adopted text is on the plan branch (`docs/development/plan-v2-draft/`); bringing it into `docs/development/plan/` is CO-8 PR2. This file is in force:
+**Status.** Adopted for waves K0–K1 (usage set S01, S05, S06, S08 set A, S18): owner, 2026-10-05 ~18:04Z, chat answer "รับรอง (แนะนำ)" to the question asking whether to adopt that set; other sections are adopted gate by gate. The adopted text was on the plan branch (`docs/development/plan-v2-draft/`); CO-8 PR2 brought it into `docs/development/plan/` (#105, 2026-10-06). This file is in force:
 
 - §1 (Merge Desk) is the owner's own instruction of 2026-10-05 and is in force now ([DECISIONS](../DECISIONS.md), row "working method").
 - §2 repeats D-65, D-38, D-63 and D-25 as the owner answered them on 2026-10-05 ([DECISIONS](../DECISIONS.md)).
@@ -80,6 +80,6 @@ Owner's choice, 2026-10-06 (decision card option "ใช้ไฟล์ย่อ
 
 Drop test cases, lengthen a timeout as the fix, re-run without knowing the cause, skip heavy for shared physics work, skip browser tests for migration or PWA work, mix results of an old and a new source, or raise a budget without a cause and a named offset (plan S18 §18.15).
 
-## Open question for the owner
+## The register (`registry.tsv`)
 
-The plan proposes a `docs/development/registry.tsv` generated from the plan's item assignment (429 items → package), so each item's package and state can be looked up. It is **not** committed; the owner chooses whether it should be.
+The plan proposes a `docs/development/registry.tsv` generated from the plan's item assignment (429 items → package), so each item's package and state can be looked up. The owner chose to keep it, "เก็บ" (chat, 2026-10-05 ~19:55Z; [DECISIONS](../DECISIONS.md), "Decided 2026-10-05 (plan v2.0 answer sheets, Merge Desk, G2)", row "— (registry.tsv)"), and CO-8 step 2 committed it (#105, `221ed1a`, 2026-10-06). It now holds 445 items (16 placed since); its `status` is the plan's item status as of 2026-10-04, not the package's state ([plan index](plan/README.md), "Register").

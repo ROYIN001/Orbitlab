@@ -263,8 +263,9 @@ and `tests/activity.test.ts`.
 ## Using the simulator
 
 The app is organised on two axes (roadmap S01, [docs/ROADMAP-PART2-3.md](docs/ROADMAP-PART2-3.md)):
-three **sections** — **Launch** (this simulator), **Orbit** and **Build** — and in each of them
-three **levels**, Watch, Explore and Engineer. The top bar has a tab per section, each opening
+four **sections** — **Launch** (this simulator), **Orbit**, **Build** and, since #217,
+**Structure & Assembly** (`#/structure`, under Features above) — and in each of them three
+**levels**, Watch, Explore and Engineer. The top bar has a tab per section, each opening
 the menu of its levels (on a phone, one button opening a scrollable list grouped by section,
 with a description of each level), and the product name
 leads home (`src/ui/section-nav.ts`). Every section
@@ -391,10 +392,10 @@ The launch section's levels, with the landing page:
 - **Home** — the landing page over the live scene, read by scrolling (the scene behind no
   longer takes the wheel). Its first screen is the featured vehicle on its pad, one button
   that plays its launch and one that starts the lessons. Below it the program shows itself a
-  face at a time over a starry sky — Watch, Explore, Engineer, the lessons and the Orbit
-  section, each beside a picture of the app's own screen in the page's language
-  (`public/home/<face>.<lang>.webp`, retaken with `npm run shots`). It ends on the globe with
-  the International Space Station where it is now, and when it next passes over the
+  face at a time over a starry sky — Watch, Explore, Engineer, Structure & Assembly, the
+  lessons and the Orbit section, each beside a picture of the app's own screen in the page's
+  language (`public/home/<face>.<lang>.webp`, retaken with `npm run shots`). It ends on the
+  globe with the International Space Station where it is now, and when it next passes over the
   visitor's city and when it can next be seen there with the naked eye (`src/ui/home.ts`,
   `src/ui/home-stage.ts`).
 - **Watch** — a launch viewer for people with no background in spaceflight: the scene
@@ -410,7 +411,8 @@ The launch section's levels, with the landing page:
   the ground, and Soyuz MS-28 at the station in three hours — each flown to its target,
   and every stage it flies home landed, by `tests/watch-missions-flights-*.test.ts`; the camera
   follows a returning stage for its landing, and the flight ends on a card that offers
-  another launch or the mission builder.
+  another launch or the mission builder. Under "From history" the list also holds the ten
+  historical missions above.
 - **Explore** — the mission builder, lighter, flying the same physics (`src/ui/explore.ts`).
   A mission is set up in three steps — the rocket (cards with what each lifts), the payload
   (against the vehicle's rating), the orbit — under a pre-flight light that offers the change
@@ -447,10 +449,14 @@ The mission builder:
    markers for every event; drag it, click a marker, or use `←`/`→`/`Home`/`End` to rewind
    the 3-D view, HUD, map, onboard overlay and narration together. The live flight keeps
    recording behind the cursor — **Live** (or `Shift`+`Space` to pause the live flight
-   itself) brings you back to it.
+   itself) brings you back to it. In Explore and Engineer, **Events ▾**, just before the warp
+   selector, lists the first event of each kind recorded so far; picking one jumps to 5 s
+   before it, in replay.
 8. The telemetry charts cover the whole recorded flight; the **Ascent** button zooms them to
    liftoff → parking orbit. Max Q, MECO, fairing jettison, SECO and the orbital burns are
-   marked, and a playhead follows the timeline cursor.
+   marked, and a playhead follows the timeline cursor. In the Engineer mode, **Cards** picks
+   what the panel shows; its **Flight wall** shows a system-status card and the ground track,
+   read from the flight at the timeline cursor, and is not kept after a reload.
 9. Export the flight data as CSV from the telemetry panel.
 
 ### Keyboard
@@ -622,7 +628,7 @@ The `Deploy to GitHub Pages` workflow builds and publishes the site on every pus
 `main`. Enable Pages in the repository settings with **GitHub Actions** as the source.
 The Vite base path is relative, so the build also works from any sub-folder.
 It also runs every day at 17:43 UTC (00:43 Bangkok) to publish fresh data snapshots; that
-scheduled run skips `npm test` (the code was tested when it merged) but still checks the fresh
+scheduled run runs the default suite in its three shards too (since #71), checks the fresh
 snapshots, builds and runs every browser journey. A run whose commit is no longer the tip of
 `main` (an old run re-run) stops before publishing; use **Run workflow** instead.
 

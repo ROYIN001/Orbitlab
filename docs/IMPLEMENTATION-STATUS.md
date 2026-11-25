@@ -1,8 +1,12 @@
 # Where Orbitlab stands
 
-Updated 2026-10-08. This file states the current position only; how it was reached is in the
-dated records under [history/](history/), and where those disagree with this file, this file is
-right.
+Updated 2026-11-25. This file states the app's current position only; how it was reached is in
+the dated records under [history/](history/), and where those disagree with this file, this file
+is right. Where the work stands against plan v2.0 (its waves, gates and packages) is in
+[PROGRESS.md](development/PROGRESS.md) and the hand-overs
+[HANDOVER-K1.md](development/HANDOVER-K1.md) and [HANDOVER-K2.md](development/HANDOVER-K2.md),
+the plan itself in [development/plan/](development/plan/README.md); the owner's decisions are in
+[DECISIONS.md](DECISIONS.md), which is right where it and this file disagree.
 
 ## What the app is
 
@@ -37,8 +41,9 @@ certify the physics or mark the outstanding Stage 1 scientific discrepancies as 
 See [the implementation record](history/2026-10-03/STAGE3-4.md) and
 [the review checklist](LESSON-REVIEW-CHECKLIST.md).
 
-Since S01 this is the **Launch** section of three ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)):
-the top bar switches the section (Launch, Orbit, Build) and the level (Watch, Explore, Engineer),
+Since S01 this is the **Launch** section of three ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)),
+and of four since #217 (2026-11-14) added **Structure & Assembly** (below): the top bar switches
+the section (Launch, Orbit, Build, Structure) and the level (Watch, Explore, Engineer),
 at `#/<section>/<level>`; the old `#/watch`, `#/explore` and `#/engineer` open Launch and are
 rewritten. **Orbit** opens on its playground (O01): an orbit by its elements, in 3-D about the
 turning Earth, as its ground track, and Newton's cannon, with Kepler's three laws in numbers, the
@@ -89,7 +94,12 @@ from requirements** works the orbit and the satellite out from what a mission mu
 **lessons** page gained two pages for teachers (T01, T02): a scenario writer that makes a flight or
 a design lesson and hands it out as a file or a link, and a check that flies a class's results
 again on the teacher's own computer. Five lesson packs matched to Thai and Russian curricula (T03)
-are listed there as drafts awaiting the owner's review.
+are drafts awaiting the owner's review. Since 2026-10-17 the owner has held the teaching tools back
+from the page ([DECISIONS](DECISIONS.md), "Decided 2026-10-17 (teaching tools held back)";
+`TEACHER_TOOLS` in `src/ui/held.ts`): the Worksheets, Write a scenario and Check results pages,
+the five packs, opening a lesson file, exporting results, lesson and scenario links, "Prepare a
+class" in My work and the Orbit section's case worksheets stay in the code but are not shown; the
+self-study lessons and the placement test are.
 
 - **Physics** ([PHYSICS.md](PHYSICS.md)): a rigid-body (six-DOF) model with finite actuators
   for every vehicle, which is the default, with each stage's chambers, steering, thrusters and
@@ -281,9 +291,10 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 - **Vulcan's ascent** inserts well away from its planned parking orbit (about 137 × 1 200 km
   against 250 × 500 km) and makes the target with its later burns. Every Vulcan mission in the
   fleet matrix reaches its target; the ascent itself is a guidance-quality item for G01.
-- **The lesson packs** (T03) are drafts. Their curriculum codes, their Thai and Russian wording,
-  the cohort each is for and the naming of the RTAF Academy and NAPA-1 wait for the owner's
-  review; each pack says so on the page.
+- **The lesson packs** (T03) are drafts. Their curriculum codes, their Thai and Russian wording
+  and the cohort each is for wait for the owner's review; each pack says so on its page (not
+  shown since 2026-10-17; held back, above). The naming was answered on 2026-10-05 (D-42): a
+  neutral name for the cadet pack, and NAPA-1 and NAPA-2 kept as the satellites' names.
 - **A satellite's figures are sizing estimates** (D06, D07), each marked on screen: the class
   templates carry their class's typical mass, engine and size, not any satellite's; the THEOS-2
   class carries eoPortal's 425 kg, labelled an estimate; NAPA-2's radio is a CubeSat X-band
@@ -293,10 +304,11 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 9 906 tests in 255 files, 20 to 30 minutes on four cores
-(measured 2026-10-01 at the end of Phase 4: 1 615 s with nothing else running; on a machine shared
-with other work a run took 50 minutes, and tests that ran past their time limits under that load
-passed alone). Among it:
+`npm test` runs the regular suite (vitest): 10 891 tests in 364 files on main at `844319e`, all
+passed in the Pages run 45319634253 (2026-11-24, in three shards of 122, 121 and 121 files). At
+the end of Phase 4 (2026-10-01) it was 9 906 tests in 255 files and took 20 to 30 minutes on four
+cores (1 615 s with nothing else running; on a machine shared with other work a run took 50
+minutes, and tests that ran past their time limits under that load passed alone). Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -346,13 +358,13 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | F01 range-safety corridor and dogleg | done | G02 inertial navigation and Kalman filter | done |
 | F04 break-ups with Δv left | done | G08 control-system failures | done |
 | P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | done |
-| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | not started |
+| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | done |
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
 | F06 documentation | done | G06 Soyuz launch escape system | done |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for every vehicle (18 when chosen; C01's three have it too) | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
-| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a–6e of 7 (below) |
+| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a–6h of 7 (below) |
 | U07 ГОСТ 20058-80 notation | done | | |
 | G03 attitude-loop inspector | done | | |
 | E02 live equations panel | done | | |
@@ -448,7 +460,7 @@ Phase 2, real satellites and the military track, continues on the same branch:
 | Item | |
 |---|---|
 | R01 SGP4 | done: SGP4/SDP4 and the two-line element format, `src/orbit/sgp4.ts` and `src/orbit/tle.ts`. Every line of the AIAA 2006-6753 verification output is reproduced ([VALIDATION.md](VALIDATION.md) §6) |
-| R02 snapshots and the scheduled refresh | done: **Real satellites** in the Orbit section, from a catalogue of CelesTrak's element sets (stations, Thailand's satellites, GNSS, weather, Earth imaging, the Fengyun-1C debris). The catalogue is bundled (`public/data/satellites.json`), fetched online at most once in two hours, and refreshed daily by the deploy without committing. Files in TLE and every OMM form can be read in the page. Held to CelesTrak's six formats and to published orbits ([VALIDATION.md](VALIDATION.md) §6) |
+| R02 snapshots and the scheduled refresh | done: **Real satellites** in the Orbit section, from a catalogue of CelesTrak's element sets (stations, Thailand's satellites, GNSS, weather, Earth imaging, the Fengyun-1C debris). The catalogue is bundled (`public/data/satellites.json`), fetched online at most once in two hours, and refreshed daily by the deploy without committing. From 2026-11-03 to 2026-11-25 01:34Z (Pages 45526780517) that refresh kept the whole committed set on every build: CelesTrak answered 404 to the query for NAPA, NAPA-1 having re-entered on 2026-11-02 (CelesTrak's catalogue), and one failed query kept the whole set (`scripts/refresh-snapshots.ts`), so every build published from 2026-11-04 (Pages 41908317604) carried the set of 2026-09-26. Since #234 (2026-11-25) a query that finds nothing keeps only its own group, and since #239 NAPA-1 is no longer asked for; any other failure still keeps the whole committed set. #234's build (Pages 45615392290) refreshed five groups and kept the Thai one; the builds since, up to the latest published one, Pages 45659701069 (2026-11-25), met a 503 from CelesTrak and carry the set of 2026-09-26 again, until a build finds CelesTrak answering. Online, the page asks CelesTrak itself, and a group whose query fails keeps its snapshot's sets. Files in TLE and every OMM form can be read in the page. Held to CelesTrak's six formats and to published orbits ([VALIDATION.md](VALIDATION.md) §6) |
 | R03 passes | done: the passes of the satellite picked over a place (a city, or coordinates typed in), for three days: rise, highest point and set, with directions and heights, and when it can be seen (sunlit, in a dark sky). Held to Skyfield: times within 0.35 s, angles within 0.004° ([VALIDATION.md](VALIDATION.md) §6) |
 | R04 uncertainty from the element set's age | done: an estimate of how far off the satellite picked may be, from its orbit class at the epoch (Flohrer et al. 2008) and 1.5 km a day of growth (Levit & Marshall 2011), shown as a value, as time along the track, and as a band widening with the set's age; at Engineer each pass's timing ([VALIDATION.md](VALIDATION.md) §6) |
 | R05 space weather | done: the orbit-lifetime analysis reads the Sun's activity as measured by default — GFZ's monthly F10.7 and Ap since 1947, then NOAA SWPC's months, the last days' flux and Kp, then SWPC's forecast (expected, high or low side) — or ECSS's fixed levels. The density's level is NRLMSISE-00's as ECSS tabulates it, at the height above the ellipsoid. Seven spheres of published mass and size (1999–2010) come down within 25 % of their days in orbit on record, 13–22 % early for six ([VALIDATION.md](VALIDATION.md) §6) |
@@ -467,8 +479,8 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
 | M02: what the instrument can see | done: the published geometry of the instruments on 95 imaging satellites (64 entries), each sourced — a fixed camera's swath, an agile one's pointing limit, a radar's incidence band and side — judges each overflight; **Show on the map** draws the pass and the ground the instrument reaches. Swaths held to their fields of view (two of the four added on 2026-09-28 missed the 2 %, a finding), and Landsat, Sentinel-2 and Sentinel-1 to their published revisits. Every agile camera is judged: Cartosat-3 by NRSC's 26° across the track, Cartosat-2C to 2F by ISRO's 26° for their series, CO3D by the 15° of roll of CNES's acquisition plan, a planning limit ([VALIDATION.md](VALIDATION.md) §7) |
 | M03: the drag fitted, transfer orbits, more cases | done: the ballistic coefficient fitted to the element set's decay rate or to a history of sets read from a file (seven spheres within 30 % of their known C_D A/m); an eccentric orbit carried by Cowell with the Sun and the Moon; 66 rocket stages of 2023–2025 and NAPA-2 as new cases (a finding: from first sets, half come down inside the window, 33 of 66; the criterion fixed before, on B from the first set's decay, was missed and could not have been met, only 14 first sets giving a B); the stages' mass is GCAT's dry mass since the fix-up, and a screen written after the results (a first set not the stage's, a kick stage built to fire after deployment, an eccentric perigee lowered more than drag can) is reported beside the unscreened counts (32 of 61); where it may come down drawn on the map. The test fixed before it ran, the agencies' way (B fitted to two NORAD sets a week apart, 100 re-entries of 1985–2004 from J. McDowell's archive): 81 % inside at 30 days and 85 % at 10 (met), 79 % at 5 days (missed by one object; median error under 2 % at each) ([VALIDATION.md](VALIDATION.md) §7) |
 | Real satellites at the Watch level | done: the Watch tour goes on to eight steps with the real catalogue: the station and its passes, THEOS-2, the navigation and weather satellites, the imagers, the Fengyun-1C debris and the Long March 5B re-entries |
-| Worksheets from real cases | done: a sheet and its answer key for the Iridium 33–Cosmos 2251 collision, the Long March 5B stage of Tianhe and THEOS-2 over Bangkok, worked with the published data and this app's physics, in three languages, each with its units and option letters in its own script. Graded as lessons 6.1–6.3 (E03, track 6): Real satellites opens at the case's tool, and the typed answers are graded by the sheet's own key and tolerances with the data frozen when the lesson opens ([USER-GUIDE](USER-GUIDE.md) §18) |
-| Checks in a real browser, and the daily refresh | done: online mode in Chromium through this machine's proxy. NOAA's four answers were read both times. CelesTrak's nine lists, asked all at once, came back three without the cross-origin header a page needs; asked one at a time two hours later, one of nine did — so it is not the asking at once alone, and whether CelesTrak's edge or this machine's proxy drops the header could not be told apart from here. Either way the whole catalogue fell back to the snapshot for one list, so now a list that cannot be read keeps only its own group from the snapshot (the data window and the panel say which), and a host that refuses (403, 429) is asked nothing more. A 30 000-object screening was timed with the CPU slowed fourfold (below). The deploy's refresh step ran on the builds of 27 September (fresh CelesTrak and SWPC data at 13:02 UTC); the scheduled daily build (cron 03:17 UTC) runs, but late: GitHub started it at 09:55 UTC on 28 September and 09:56 UTC on 29 September, about six and a half hours after its time (GitHub documents that scheduled runs may be delayed under load; an earlier note here, written at 05:21 on the 28th, took the delay for a run that had not happened). On 29 September its snapshot step read all three sources afresh, none keeping its baseline: SWPC's space weather (30 days of F10.7, 59 Kp readings, as of 06:00 UTC), CelesTrak's six groups (2 409 element sets, as of 05:56 UTC) and the IERS Earth orientation (3 197 days from 2019-01-01, predicted from 25 September). The deploys pushed to main run the same step. Opened straight from its link, a case lesson sometimes lost the catalogue: the bundled snapshot was read under the online sources' 8 s limit while the page was still starting. The snapshot now has its own limit, 60 s, for a server that hangs; nine cold opens of the three case lessons at a phone's size in Chromium all loaded, in 10 to 12 s. |
+| Worksheets from real cases | done: a sheet and its answer key for the Iridium 33–Cosmos 2251 collision, the Long March 5B stage of Tianhe and THEOS-2 over Bangkok, worked with the published data and this app's physics, in three languages, each with its units and option letters in its own script (the sheets held back from the page since 2026-10-17, above). Graded as lessons 6.1–6.3 (E03, track 6): Real satellites opens at the case's tool, and the typed answers are graded by the sheet's own key and tolerances with the data frozen when the lesson opens ([USER-GUIDE](USER-GUIDE.md) §18) |
+| Checks in a real browser, and the daily refresh | done: online mode in Chromium through this machine's proxy. NOAA's four answers were read both times. CelesTrak's nine lists, asked all at once, came back three without the cross-origin header a page needs; asked one at a time two hours later, one of nine did — so it is not the asking at once alone, and whether CelesTrak's edge or this machine's proxy drops the header could not be told apart from here. Either way the whole catalogue fell back to the snapshot for one list, so now a list that cannot be read keeps only its own group from the snapshot (the data window and the panel say which), and a host that refuses (403, 429) is asked nothing more. A 30 000-object screening was timed with the CPU slowed fourfold (below). The deploy's refresh step ran on the builds of 27 September (fresh CelesTrak and SWPC data at 13:02 UTC); the scheduled daily build (cron 03:17 UTC then; 17:43 UTC since 2026-09-30) ran, but late: GitHub started it at 09:55 UTC on 28 September and 09:56 UTC on 29 September, about six and a half hours after its time (GitHub documents that scheduled runs may be delayed under load; an earlier note here, written at 05:21 on the 28th, took the delay for a run that had not happened). On 29 September its snapshot step read all three sources afresh, none keeping its baseline: SWPC's space weather (30 days of F10.7, 59 Kp readings, as of 06:00 UTC), CelesTrak's six groups (2 409 element sets, as of 05:56 UTC) and the IERS Earth orientation (3 197 days from 2019-01-01, predicted from 25 September). The deploys pushed to main run the same step. Opened straight from its link, a case lesson sometimes lost the catalogue: the bundled snapshot was read under the online sources' 8 s limit while the page was still starting. The snapshot now has its own limit, 60 s, for a server that hangs; nine cold opens of the three case lessons at a phone's size in Chromium all loaded, in 10 to 12 s. |
 
 Phase 3, the rocket builder (the Build section), on the same branch. No built-in flight changed
 (the fingerprints below); Falcon Heavy's data changed on main (F11), and the catalogue took them.
@@ -485,7 +497,8 @@ Phase 3, the rocket builder (the Build section), on the same branch. No built-in
 | Build at Engineer ("Design and test") | done: D04 and D05 above as five tabs, on a real rocket, the design open in Explore, a saved one or a launcher sized there. **Fly it** from the review opens Launch's Engineer level on the mission reviewed; **Open in the builder** takes a sized launcher to Explore's parts builder ([VALIDATION.md](VALIDATION.md) §8) |
 
 Phase 4, the satellite builder and instructor mode, on the same branch. No built-in flight changed
-(the fingerprints above, and since D06 the satellites' own fixture).
+(the fingerprints above, and since D06 the satellites' own fixture). T01–T03 are held back from
+the page since 2026-10-17 (above).
 
 | Item | |
 |---|---|
@@ -498,26 +511,29 @@ Phase 4, the satellite builder and instructor mode, on the same branch. No built
 ### Learner profiles: plan v1.2 phase 1 (R1), hardened in R1.6
 
 Phase 1's learner profiles are merged and published (#71, #72). R1.6, their storage hardening, is
-wave K1 work under way. How to use them is in the [user guide](USER-GUIDE.md#learner-profiles).
+under way, in waves K1–K2 since the re-plan at GK1. How to use them is in the
+[user guide](USER-GUIDE.md#learner-profiles).
 
 | Item | |
 |---|---|
 | R1.1 local learner workspace | done (#71, #72): up to 40 learners in one browser, each in one localStorage record that holds all of that learner's saved work, drafts and personal settings, with their launch recordings in IndexedDB under the learner's id; the learner open is chosen per browser tab; work saved before profiles becomes the first learner, and the originals are removed only after the copy is verified. Create, rename, switch (pending edits saved, then the page reloads on Home), delete (an interrupted delete finishes at the next start), and resets of learning, tests, both or one lesson (D-33) that keep personal lessons, designs, the mission and the notebook. JSON backups of one learner or all, 8 MB a file, previewed before import, with a new learner by default and Keep existing by default for an existing one; old `orbitlab.project` files still import. Recordings in a separate binary file of up to 128 MB and 100 recordings. Values an import cannot use are kept inert as recovery data. A Web Lock per learner makes a second tab on the same learner read-only; without storage or Web Locks a tab is visit-only ([R1.1 report](development/reports/R1.1-storage.md)) |
 | R1.2 profile window and learner context | done (#71, #72): the ◉ button and its window in three languages, the learner's name on the lessons pages, confirmations that say what a switch, reset or delete does, a backup offered before a reset, a delete or a replacing import, and the chooser after deleting the open or the last learner ([R1.2 report](development/reports/R1.2-profiles-ui.md)) |
-| R1.6 storage hardening (wave K1) | under way. Merged: #97 (a learner that cannot be read no longer keeps its lock; a failed clean-up at start no longer sends every learner to visit-only; past 1,000 remembered number fields the oldest is forgotten instead of new typing being lost), #114 (a learner that cannot be read, or was saved by a newer version, stays listed with its bytes untouched, a copy of its stored data and delete, instead of emptying the list; Export all saves the readable learners and says that others were left out; audio export reads only its learner), #122 (a stored mission of a newer version, or with a setting reset, is no longer written over when restored), #124 (a backup near 8 MB is saved in the form the import accepts; visit-only mode refuses delete), #132 (tests only: a differential storage harness and fixtures for older readers), #138 (the held stored mission's notice says it is kept as stored until you change it), #139 (pre-profile recordings move to the first learner one at a time; one that collides stays in place, unowned, with a one-time notice naming the first learner; D-68). Still planned in R1.6: fewer re-reads of the profile record, and asking the browser to keep the data, with a warning for iPhone and iPad |
+| R1.6 storage hardening (waves K1–K2) | under way. Merged: #97 (a learner that cannot be read no longer keeps its lock; a failed clean-up at start no longer sends every learner to visit-only; past 1,000 remembered number fields the oldest is forgotten instead of new typing being lost), #114 (a learner that cannot be read, or was saved by a newer version, stays listed with its bytes untouched, a copy of its stored data and delete, instead of emptying the list; Export all saves the readable learners and says that others were left out; audio export reads only its learner), #122 (a stored mission of a newer version, or with a setting reset, is no longer written over when restored), #124 (a backup near 8 MB is saved in the form the import accepts; visit-only mode refuses delete), #132 (tests only: a differential storage harness and fixtures for older readers), #138 (the held stored mission's notice says it is kept as stored until you change it), #139 (pre-profile recordings move to the first learner one at a time; one that collides stays in place, unowned, with a one-time notice naming the first learner; D-68), #141 (docs only: learner profiles in the user guide, the README and this file), #144 (start-up, the profile list and the top-bar name read each learner once; identical output), #152 (a selected learner that cannot be read, is newer or is missing opens the list of learners, not visit-only; R1.6-FU-SEL, under "Known limitations"). Still planned in R1.6: fewer re-reads of the profile record, and asking the browser to keep the data, with a warning for iPhone and iPad |
 
 ### Development plan v1.2: phases 2 and 3
 
 [PLAN.md](development/PLAN.md) v1.2 sets out phases R1–R7; [PROGRESS.md](development/PROGRESS.md)
-keeps their state. Phases 2 and 3 are merged and published: the site carries `09cc2f5` (Pages run
-37230585947, 2026-10-04), and the owner recorded phase 3 complete on 2026-10-04 (gate G3).
+keeps their state. Phases 2 and 3 were merged and published by 2026-10-04 (`09cc2f5`, Pages run
+37230585947), and the owner recorded phase 3 complete on 2026-10-04 (gate G3). Since 2026-10-05
+the work has followed plan v2.0 ([index](development/plan/README.md)), in waves K0–K6 that each
+end at a gate; PROGRESS's register holds each package's state.
 
 | Item | |
 |---|---|
-| R2.1 Launch Engineer lifecycle | done (#74): setup, flight and analysis; once a flight is launched the setup column gives its width to the scene (⚙ Setup shows the frozen configuration, New mission reopens it); notation in the telemetry panel; the engines' actual level beside the throttle command; a flight bar on a phone. The layout's assumptions (D08) await the owner |
+| R2.1 Launch Engineer lifecycle | done (#74): setup, flight and analysis; once a flight is launched the setup column gives its width to the scene (⚙ Setup shows the frozen configuration, New mission reopens it); notation in the telemetry panel; the engines' actual level beside the throttle command; a flight bar on a phone. The owner answered D08 as D-36 and D-36.A1–A5 on 2026-10-05, as proposed, with A3 narrowed by the owner's note, and signed G2 on 2026-10-06 ([DECISIONS](DECISIONS.md)) |
 | R2.2 camera ownership | done (#74): a picked view is kept across phases until Cinematic is chosen; Watch has view tabs; the camera falls back when its follow target is gone |
 | R2.3 telemetry card presets | first step done (#74): All, Flight, Dynamics, Orbit and Custom, kept with the learner's profile; Flight wall added in Engineer (#225): a system-status card and a ground-track map, not kept after a reload; docking, resizing and reordering cards are not done |
-| R2.4 timeline event chooser | done (#74): clustered events open a chooser with their exact T+ times |
+| R2.4 timeline event chooser | done (#74): clustered events open a chooser with their exact T+ times; **Events ▾** in Explore and Engineer (#224, plan v2.0's R2.6) lists the first event of each kind recorded so far and jumps to 5 s before the one picked, in replay; Watch has no such menu yet |
 | R3.1 provenance and design reference | done (#75, #80): the Orbit hand-off and the comparison reference take the mission flown, not the setup's draft (a defensive change: no path where the two differ was found); a mission flown from Build, and its orbit handed to Orbit, say which saved design it is and its revision (its last save), "changed since saved" or "not saved", as an optional field (the hand-off stays version 1, older files read as before). The flight report's link still reads the draft, a mission file exported by Share carries no reference, and a stored mission of a newer format version is read as far as this version understands it rather than refused |
 | R3.2 rocket on the Engineer bench | done (#75): the vehicle on the bench drawn to scale from the spec the test stand, wind tunnel and review use, stacked or apart; a part's card with its figures, **Fire it on the test stand** or **Open the wind tunnel** |
 | R3.3 satellite on the bench | done (#75, #78, #80): a schematic from the design (bus, wings or body cells, dish, camera, engine) with its assumptions named, deployed or stowed for launch, with the body axes; the Power, Radio and Camera tabs draw the time in shadow, the link to the ground station and the camera's footprint from the tab's own figures. The Explore designer draws no picture |
@@ -536,8 +552,10 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
   and a constant acceleration, and its propellant is budgeted as one burn of its Δv. A
   rendezvous target is always in the chaser's plane.
 - The applications' Thai satellites fly their catalogue orbit (as of 2026-09-26), not where they
-  are today; **Real satellites** (R02) shows where they are. The link budget's starting values
-  are an example, not any satellite's.
+  are today; **Real satellites** (R02) shows where they are from its catalogue's element sets,
+  as fresh as the deploy's last refresh (R02 above; on Pages 45659701069, those of 2026-09-26).
+  NAPA-1 re-entered on 2026-11-02 and carries the "re-entered" mark, as NAPA-2 does (#239). The
+  link budget's starting values are an example, not any satellite's.
 - Real satellites (R02): TEME is taken as the program's inertial frame for the orbits; the
   Earth is turned by UT1 and the pole since P2.5, from the bundled IERS data (not fetched by the
   page: the IERS cannot be read from a browser). An imported file is kept only while the page is
@@ -611,15 +629,16 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
   the propellant) is an estimate awaiting the owner's decision. A swapped engine keeps the stage's
   drawing (nozzle length, profile, legs, grid fins), which may then be drawn wrong. Strap-on groups
   can be added or taken off, not stretched or re-engined, and the parts builder's strap-ons are
-  catalogue bodies only. A body of one's own may state a dry mass below its engines' mass without a
-  warning. A saved design keeps the vehicle, not how it was made: a remix reopens as the base of a
-  new remix with its stretches back at 100 %, a parts design reopens in the parts builder only when
-  it rebuilds exactly, and neither keeps its payload; ratings computed in the review for a saved
-  design are not written back to it. **Fly it** from Explore always aims at the 500 km preset from
-  the design's first site, with the design's payload named as the rideshare dispenser whatever its
-  mass. A design whose ratings have not been computed reads "will not fly" at Launch's Explore
-  level, where a rating of 0 counts as none. The validator's and the design store's details are
-  shown in English.
+  catalogue bodies only. A body of one's own whose dry mass is below its engines' published mass
+  gets a warning, but not with a solid motor or an engine whose mass is unpublished (`exploreChecks`
+  in `src/design/explore-model.ts`). A saved design keeps the vehicle, not how it was made: a remix
+  reopens as the base of a new remix with its stretches back at 100 %, a parts design reopens in the
+  parts builder only when it rebuilds exactly, and neither keeps its payload; ratings computed in
+  the review for a saved design are not written back to it. **Fly it** from Explore always aims at
+  the 500 km preset from the design's first site, with the design's payload named as the rideshare
+  dispenser whatever its mass. A design whose ratings have not been computed reads "will not fly" at
+  Launch's Explore level, where a rating of 0 counts as none. The validator's and the design store's
+  details are shown in English.
 - Six-DOF for a rocket of one's own (D03) is experimental. A single-engine first stage with an id
   of its own has no roll control (PSLV so renamed rolled at 2.2°/s, against 0.075°/s). Where bells
   share engines, the fault system names a bell by its first engine and counts bells, not engines,
@@ -644,17 +663,18 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
   not. In flight as on the stand, a throttle level scales the sea-level pressure loss with the
   thrust: an engine throttled deep low in the air is up to 14–19 % strong
   ([PHYSICS.md](PHYSICS.md) §4).
-- Build: the landing page has no Build chapter (one would need new pictures; the owner's call), so
-  the top bar is the way in. Designing from parts at the Engineer level (D03's face there) is
-  listed as to come, with a link to Explore, where it is. The Russian and Thai texts have not been
-  read by a native speaker. The parts' source notes are partly in English: a note after a link is
-  dropped, and a reference that is not a link is shown as written. Chart tick labels use "." in
-  every language. On a phone the wind tunnel's table of numbers scrolls sideways in its own box,
-  the Engineer level's lead runs to 8–12 lines, and in Russian at 360 px its five tabs take five
-  rows; at 1440 px the sizing drawing cuts off "Rutherford Vacu…".
+- Build: the landing page has no Build chapter (the owner chose six real screenshots for one on
+  2026-10-05, D-26; not built yet), so the top bar is the way in. Designing from parts at the
+  Engineer level (D03's face there) is listed as to come, with a link to Explore, where it is. The
+  Russian and Thai texts have not been read by a native speaker. The parts' source notes are partly
+  in English: a note after a link is dropped, and a reference that is not a link is shown as
+  written. Chart tick labels use "." in every language. On a phone the wind tunnel's table of
+  numbers scrolls sideways in its own box, the Engineer level's lead runs to 8–12 lines, and in
+  Russian at 360 px its five tabs take five rows; at 1440 px the sizing drawing cuts off "Rutherford
+  Vacu…".
 - The satellite builder (D06), each left open by a review ([VALIDATION.md](VALIDATION.md) §9):
   - The propagator's Sun is 0.45° from the orbit tools', so its sunlight-pressure shadow edges move by up to 11 s; not changed.
-  - Power reads 1 361 W/m² and the propagator's sunlight pressure 1 367 W/m²; which to keep is the owner's call.
+  - Power reads 1 361 W/m² and the propagator's sunlight pressure 1 367 W/m²; the owner chose 1 361 everywhere, in the model re-baseline (D-41, 2026-10-05; R4.5), not done yet.
   - Charge cycles a year assume an eclipse every revolution, an upper bound, and are shown as "at most".
   - The off-nadir sample, the diffraction limit and the pointing loss have no published worked example to be held to.
   - The ground speed leaves out the Earth's turning: about 1 % low on a sun-synchronous track, 6.6 % high on the equator.
@@ -754,7 +774,6 @@ keeps their state. Phases 2 and 3 are merged and published: the site carries `09
 - D01's fingerprints (27 point-mass flights, 21 six-DOF) are exact hashes of floating-point
   flights: a Node or V8 upgrade could change them with no change to the code, as it could the older
   six-DOF goldens.
-- At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
 - The physics has been compared with flight data for twelve of the 21 vehicles: Falcon 9
   against webcast telemetry of five flights, the others against published timelines
   ([VALIDATION.md](VALIDATION.md)). No disagreement pointed at the equations. As a result,

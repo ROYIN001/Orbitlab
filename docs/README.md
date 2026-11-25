@@ -9,7 +9,7 @@ Read in this order. Each document assumes the ones before it.
 | 3 | [SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md) | The rigid-body (six-DOF) data for Falcon 9 and Soyuz-2.1a: masses, centres of gravity, inertias, engines and actuators, with sources and uncertainty. |
 | 4 | [SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md) | The gates the six-DOF model was accepted against and the results, dated. |
 | 5 | [SIXDOF-BROWSER-QA.md](SIXDOF-BROWSER-QA.md) | Browser checks of the six-DOF build: what was verified by hand, performance and memory limits. |
-| 6 | [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) | Where the project stands now: what is done, what is experimental, what is next, and how it is tested. |
+| 6 | [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) | Where the app stands now: what is done, what is experimental, its known limitations, and how it is tested. Where the work stands against the plan is in [development/PROGRESS.md](development/PROGRESS.md) and the hand-overs (below). |
 | 7 | [VALIDATION.md](VALIDATION.md) | The simulator against real flight data: Falcon 9 webcast telemetry of five flights and published timelines of ten more vehicles, the tolerances, where it disagrees and why, and the data changes it led to. |
 | 8 | [FLIGHT-PROFILE-METHOD.md](FLIGHT-PROFILE-METHOD.md) | How a vehicle is brought onto its real flight: data closed against the published masses, propulsion and events checked first, the guidance's structure from a source, the fewest fitted numbers, held-out checks; Soyuz-2.1a as the worked example and which vehicles can go through it next. |
 | 9 | [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md) | What comes after the launch simulator: the Orbit and Build sections, the section × level structure, online and offline data, the Moon, and the order they are built in. |
@@ -26,6 +26,8 @@ The repository's own [README](../README.md) covers installing, running and the s
 | [DECISIONS.md](DECISIONS.md) | Every owner decision, dated, with the owner's words. Where it and another document disagree, it is right. |
 | [development/SESSION-PROTOCOL.md](development/SESSION-PROTOCOL.md) | How a work session opens, tracks, merges and records its work, including the owner's Merge Desk. |
 | [development/PROGRESS.md](development/PROGRESS.md) | Status of every work package: merged, published, live, with SHAs and runs. |
+| [development/HANDOVER-K1.md](development/HANDOVER-K1.md) | The hand-over of the K1 integration session (2026-10-05 → 2026-10-08), with a summary in Thai. |
+| [development/HANDOVER-K2.md](development/HANDOVER-K2.md) | The hand-over from K1's close and gate GK1 to wave K2 (from 2026-10-26), with dated updates: open pull requests, the owner's answers, K2's work, the gate dates and the steps to finish GK1. |
 | [development/VERIFICATION.md](development/VERIFICATION.md) | What CI and Pages check and what a passing run proves. |
 | [development/reports/](development/reports/) | One report per package: scope, checks run, results, limitations, hand-offs. |
 
