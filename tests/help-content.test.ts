@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { HELP_COPY } from '../src/ui/help-content';
 import { GUIDE_STEPS } from '../src/ui/help-state';
+import { en } from '../src/i18n/en';
+import { ru } from '../src/i18n/ru';
+import { th } from '../src/i18n/th';
 
 /** Compare nested help sections as well as the flat button labels. */
 function strings(value: unknown, path = ''): Record<string, string> {
@@ -29,6 +32,12 @@ describe('localized Help content', () => {
     for (const copy of Object.values(HELP_COPY)) {
       expect(copy.steps).toHaveLength(GUIDE_STEPS);
       expect(placeholders(copy.progress)).toEqual(['{step}']);
+    }
+  });
+
+  it('points the ISS mission to Flight to the station, by its label in each language', () => {
+    for (const [lang, dict] of [['en', en], ['ru', ru], ['th', th]] as const) {
+      expect(Object.values(strings(HELP_COPY[lang])).join('\n'), lang).toContain(dict['setup.rendezvous']);
     }
   });
 });
