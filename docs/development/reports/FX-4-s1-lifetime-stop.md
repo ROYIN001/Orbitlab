@@ -2,6 +2,8 @@
 
 Package FX-4 of the master plan v2.0 (S10 §10.7), step 1 only: the lifetime job's part of M-ORBIT-005 (a stopped run must not resolve a cut-off result) and of M-PLATFORM-035 (a Stop given before the job listens). Both items stay **partial**. The shared runner, `serveJob`, the fake-Worker kit and the other job wrappers are later steps.
 
+**Status (2026-11-25, the records PR after #234 and #233):** merged (PR #233, `3dd334c7`, 2026-11-25T13:11:12Z, CI 45582570542 on the final head `5cc0d43`, 12 of 12 jobs, under the standing bug-fix approval); published (Pages 45621018552 at `3dd334c7`, 2026-11-25T13:36:42Z; every job passed, 13 of 13; unit 10,899 of 10,899). / สถานะ: merge แล้วและเผยแพร่แล้ว
+
 ```yaml
 envelope: v2
 package: FX-4

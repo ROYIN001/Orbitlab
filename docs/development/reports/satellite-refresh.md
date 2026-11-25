@@ -3,8 +3,8 @@
 > **สรุปสำหรับเจ้าของ (ภาษาไทย)**
 > NAPA-1 กลับเข้าสู่บรรยากาศเมื่อ 2 พ.ย. 2026 และตั้งแต่ 3 พ.ย. (อย่างช้า 22:31Z) CelesTrak ตอบคำค้น `NAME=NAPA` ว่า 404 ("No GP data found") คำค้นเดียวนี้ทำให้การดึงข้อมูลดาวเทียมรายวันล้มทั้งชุด นับจากนั้นทุก build ที่เผยแพร่บน Pages จึงใช้ชุดข้อมูลวงโคจรของวันที่ 26 ก.ย.
 > หลังการแก้ คำค้นที่ตอบ 404 จะคงไว้เฉพาะกลุ่มของตัวเองจากไฟล์ที่ commit ไว้ พร้อมคำเตือนใน log ส่วนอีกห้ากลุ่ม (สถานีอวกาศ นำทาง อุตุนิยมวิทยา สำรวจโลก และเศษซาก) จะได้ข้อมูลใหม่ทุกวันอีกครั้ง
-> แอปที่ build ออกมาไม่มีโค้ดใหม่ (build ด้วย commit stamp เดียวกับ main แล้วทุกไฟล์ใน dist/ เหมือนของ main ทุกไบต์ ยกเว้น `build-info.json` (เวลาที่ build) และ `SHA256SUMS` (hash ของไฟล์นั้นด้วย) ชื่อไฟล์ asset ขึ้นกับ stamp): ไม่เปลี่ยนข้อความ ไม่แก้ assertion เดิม และไม่ขยายเพดาน budget ผู้ตรวจที่เป็น agent ตรวจทุกรอบที่แก้ ตั้งแต่รอบแรกจนถึงสิ่งที่แก้หลัง `8876c89` ไม่พบข้อที่ขวางการ merge ข้อที่พบแก้หรือตอบไว้แล้ว (หัวข้อ Second-agent review) จำนวนข้อที่ผู้ตรวจรอบหลัง ๆ ยืนยันได้อยู่ในคำอธิบายของ PR #234
-> **เจ้าของอนุมัติแล้ว ให้ทำใน PR ถัดไป:** การทำเครื่องหมายว่า NAPA-1 กลับเข้าสู่บรรยากาศแล้ว ต้องแก้ assertion ใน `tests/applications.test.ts` เอา 46320 และคำค้น `NAME=NAPA` ออกจาก `THAI_NORAD_IDS` และคำค้นของกลุ่มไทย และตัดชุดข้อมูลของ NAPA-1 ออกจาก `public/data/satellites.json` งานนี้จึงอยู่นอกการอนุมัติถาวรสำหรับการแก้บั๊ก เจ้าของตอบว่า "เอาตามที่คุณแนะนำครับ" (2026-11-25 เวลา 11:56:29Z) ต่อคำถามของ session เมื่อ 10:55:00Z ซึ่งแนะนำให้ไม่ใส่วันที่ในประโยค จนกว่า PR นั้นจะ merge:
+> แอปที่ build ออกมาไม่มีโค้ดใหม่ (build ด้วย commit stamp เดียวกับ main แล้วทุกไฟล์ใน dist/ เหมือนของ main ทุกไบต์ ยกเว้น `build-info.json` (เวลาที่ build) และ `SHA256SUMS` (hash ของไฟล์นั้นด้วย) ชื่อไฟล์ asset ขึ้นกับ stamp): ไม่เปลี่ยนข้อความ ไม่แก้ assertion เดิม และไม่ขยายเพดาน budget ผู้ตรวจที่เป็น agent ตรวจทุกรอบที่แก้ ตั้งแต่รอบแรกจนถึงสิ่งที่แก้หลัง `8876c89` ไม่พบข้อที่ขวางการ merge ข้อที่รอบก่อน ๆ พบแก้หรือตอบไว้แล้ว (หัวข้อ Second-agent review) ส่วนรอบสุดท้าย (`8876c89..e7b41c8`) พบข้อบกพร่องระดับรอง (minor) 2 ข้อและข้อสังเกตเล็กน้อย (nit) 6 ข้อ (คำอธิบายของ PR #234 แจกแจงไว้ 5 ข้อ): ข้อในรายงานและบันทึก 5 ข้อแก้ใน records PR หลัง #234 และ #233 ข้อเกี่ยวกับเทสต์ 1 ข้อไปอยู่ใน PR ส่วน B และคำผิดในคำอธิบาย PR แก้ที่นั่น (2026-11-25) จำนวนข้อที่ผู้ตรวจรอบหลัง ๆ ยืนยันได้อยู่ในคำอธิบายของ PR #234
+> **เจ้าของอนุมัติแล้ว ให้ทำใน PR ติดตามผลแยกต่างหาก (ส่วน B):** การทำเครื่องหมายว่า NAPA-1 กลับเข้าสู่บรรยากาศแล้ว ต้องแก้ assertion ใน `tests/applications.test.ts` เอา 46320 และคำค้น `NAME=NAPA` ออกจาก `THAI_NORAD_IDS` และคำค้นของกลุ่มไทย และตัดชุดข้อมูลของ NAPA-1 ออกจาก `public/data/satellites.json` งานนี้จึงอยู่นอกการอนุมัติถาวรสำหรับการแก้บั๊ก เจ้าของตอบว่า "เอาตามที่คุณแนะนำครับ" (2026-11-25 เวลา 11:56:29Z) ต่อคำถามของ session เมื่อ 10:55:00Z ซึ่งบอกว่าจะทำหลัง Pages ของรุ่น GK1 และหลัง #233 และแนะนำให้ไม่ใส่วันที่ในประโยค ระหว่างที่ PR ส่วน B ยังไม่ merge จะเป็นดังนี้ (2026-11-25: records PR หลัง #234 และ #233 แก้ถ้อยคำประโยคนี้ ตามข้อที่ผู้ตรวจรอบสุดท้ายของ #234 พบ):
 > - แอปยังแสดง NAPA-1 ว่าอยู่ในวงโคจร SGP4 ของแอปวางชุดข้อมูลวันที่ 25 ก.ย. ไว้ที่ราว 63–100 กม. เหนือรัศมีที่เส้นศูนย์สูตร ในวันที่ 25 พ.ย. แผงจะเริ่มขึ้นว่า "SGP4 ระบุตำแหน่งของมันในขณะนี้ไม่ได้: มันตกกลับสู่ชั้นบรรยากาศแล้ว วงโคจรอยู่ภายในโลก" เป็นช่วง ๆ ตั้งแต่ 2 ธ.ค. และตลอดเวลาหลัง 00:05Z ของ 5 ธ.ค.
 > - กลุ่มดาวเทียมไทยยังใช้ข้อมูลวันที่ 26 ก.ย. ชุดข้อมูลของ THEOS-2 ซึ่งทัวร์ของ Watch (ขั้น theos2) กรณีศึกษา theos2 กับเวลาที่ดาวผ่าน และ journey fx3-thai-in-sky ใช้ จะเก่าขึ้นวันละหนึ่งวัน การคัดกรองการเข้าใกล้ (screening) กับ THEOS ก็ใช้ชุดเก่าในกลุ่มไทย แม้กลุ่มสำรวจโลกจะมีชุดใหม่ของ THEOS (ข้อ 1 ใน Follow-ups)
 > - บรรทัด "ชุดค่าองค์ประกอบวงโคจร ณ …" ของ Real satellites จะแสดงวันที่ใหม่ ทั้งที่กลุ่มไทยยังเป็นของ 26 ก.ย. โหมดออนไลน์มีหมายเหตุว่ากลุ่มไทยใช้ข้อมูลที่มากับแอป แต่โหมดออฟไลน์ไม่มีหมายเหตุนี้ (ข้อ 5 ใน Follow-ups)
@@ -17,7 +17,7 @@
 | Authorization | the standing bug-fix approval (owner in chat to the K1 integration session, 2026-10-06, verbatim in [SESSION-PROTOCOL.md](../SESSION-PROTOCOL.md) §1 step 3); this session's request, 2026-11-25 at 06:52:53Z, verbatim: "มาเริ่มทำงานลำดับถัดไปเลยครับ ผมต้องทำอะไรบ้าง" (let's start the next item; what do I need to do?) |
 | Base | main `844319e` (the records PR #232) |
 | Branch | `claude/beautiful-shannon-l4s4za` |
-| Status | In PR #234 (`0e29723` tests first, then the fix); not merged; not published |
+| Status | Merged (PR #234, `9b224ece`, 2026-11-25T12:36:30Z, CI 45612239962 on the final head `e7b41c80`, 12 of 12 jobs, under the standing bug-fix approval); published (Pages 45615392290 at `9b224ece`, 2026-11-25T13:04:34Z; its build refreshed five groups and kept the Thai group, as expected). The next build, #233's Pages 45621018552 (13:36:42Z), met a 503 from CelesTrak and kept the whole snapshot, so the live sets are those of 2026-09-26 again until a later build refreshes them (2026-11-25, the records PR after #234 and #233). Before the merge: in PR #234 (`0e29723` tests first, then the fix) |
 
 ## The bug
 
@@ -101,7 +101,7 @@ publish.
 | Test | Before the fix | With the fix |
 |---|---|---|
 | `tests/satellite-catalogue.test.ts`, "keeps the snapshot's group only where a query found nothing, and the rest fresh": each of the nine queries in turn answers nothing; only its group is the snapshot's, the others equal `parseCelestrakGp`'s, the catalogue is valid; with every answer in, the snapshot is not read | fails: `TypeError: refreshCelestrakGp is not a function` | passes |
-| `tests/refresh-snapshots.test.ts` (new file), "asks every query, and keeps from the snapshot only the groups whose query found nothing": the script and its three imports are copied, with the committed `satellites.json`, to a temporary folder and run there by `node --experimental-strip-types`, `fetch` stubbed: `NAME=NAPA` answers 404, the other eight a new set each, gnss's dated 2026-09-01 and the rest 2026-08-01 (both older than each committed group's newest set), NOAA and the IERS 503; then, from the committed file again, a 404 from every query but debris's, eight in five groups | fails: `expected 3 to be 9` (main's script asked 3 of the 9 queries and wrote nothing) | passes: 9 asked; the Thai group is the committed one and the other five are the stub's; the file's `asOf` is debris's epoch, the newest set fetched, not a kept set's or the oldest; the warning names NAPA's query; with the eight 404s, those five groups are the committed ones, debris is the stub's, and the warning names the five groups and the eight 404s |
+| `tests/refresh-snapshots.test.ts` (new file), "asks every query, and keeps from the snapshot only the groups whose query found nothing": the script and its three imports are copied, with the committed `satellites.json`, to a temporary folder and run there by `node --experimental-strip-types`, `fetch` stubbed: `NAME=NAPA` answers 404, the other eight a new set each, gnss's dated 2026-09-01 and the rest 2026-08-01 (both older than each committed group's newest set), NOAA and the IERS 503; then, from the committed file again, a 404 from every query but debris's, eight in five groups | fails: `expected 3 to be 9` (main's script asked 3 of the 9 queries and wrote nothing) | passes: 9 asked; the Thai group is the committed one and the other five are the stub's; the file's `asOf` is gnss's epoch (2026-09-01), the newest set fetched, not a kept set's or the oldest (2026-11-25, the records PR after #234 and #233: the cell had named debris's epoch, a point of #234's last review); the warning names NAPA's query; with the eight 404s, those five groups are the committed ones, debris is the stub's, and the warning names the five groups and the eight 404s |
 | the same file, "keeps the whole snapshot otherwise, and asks no more after a refusal": THAICOM answers 403 after NAPA's 404 (4 asked); every query answers 404 (9 asked, the warning names all nine); a 404 in every group while THEOS, THAICOM and `CATNR=40141` answer (9 asked, the warning names the six); a body of `null` (9 asked); NAPA's 404 with a snapshot whose groups are out of order (9 asked, the catalogue check). Each leaves the file as it was, byte for byte | fails: `expected 3 to be 4` | passes |
 
 3 of 3 fail on main's code and pass with the fix. Before the fix, `tsc`
@@ -229,7 +229,7 @@ Unchanged. After the merge, the Pages job measures a refreshed
 
 - **NAPA-1 marked re-entered (part B).** It changes an existing assertion,
   so it waited for the owner, who approved it on 2026-11-25 (11:56:29Z,
-  "เอาตามที่คุณแนะนำครับ") as the next PR, with no date in the sentence. The
+  "เอาตามที่คุณแนะนำครับ") for a follow-up PR (part B), with no date in the sentence. The
   change is `reentered: '2026-11-02'` on NAPA-1 in
   `src/data/thai-satellites.ts`, as NAPA-2 has. It forces three more changes:
   - 46320 and `NAME=NAPA` out of `THAI_NORAD_IDS` and the Thai queries:
@@ -344,7 +344,7 @@ finding; 4 minor findings and 19 nits. Applied in `8876c89`:
 Not applied, each for a reason:
 - part B itself, NAPA-1 marked re-entered: it changes an existing
   assertion (`tests/applications.test.ts:218`) and wording, so it waited
-  for the owner, who approved it on 2026-11-25 for the next PR (above);
+  for the owner, who approved it on 2026-11-25 for a follow-up PR (part B, above);
   recording the kept groups in the snapshot is R7.4's (follow-up 5);
 - a script test that the snapshot is read only when needed: optional.
   The committed snapshot is always there where the script runs, and the
@@ -397,7 +397,10 @@ last set fetched fails the `asOf` check (that wrong version had passed);
 "every file under `dist/` but `build-info.json` and `SHA256SUMS`", in
 English and Thai; the stub's dates and the count of wrong versions
 here. The checks made after this one, with their counts, are in PR #234's
-description.
+description. The last round (`8876c89..e7b41c8`) found 2 minor findings
+and 6 nits: the 5 points on the report and records are fixed in the
+records PR after #234 and #233, the test nit goes to part B's PR, and the
+description's typo was fixed there (2026-11-25).
 
 ## Follow-ups
 
@@ -409,10 +412,14 @@ description.
    set, and from 2026-12-05 SGP4 cannot place NAPA-1 at all. Part B removes
    the only 404, and the Thai group refreshes again.
    *Owner:* approved on 2026-11-25 (11:56:29Z, "เอาตามที่คุณแนะนำครับ"),
-   as the next PR; the session's order puts it after the GK1 candidate's
-   Pages run and #233.
-2. **NAPA-1's texts in EN, RU and TH**, the way NAPA-2's reads ("came down
-   on 5 July 2026"), and `sky.about.thai`.
+   for a follow-up PR (part B); the session's order puts it after the GK1
+   candidate's Pages run and #233, both now published (2026-11-25, the
+   records PR after #234 and #233: "for a follow-up PR" in place of "as the
+   next PR", a point of #234's last review).
+2. **NAPA-1's texts in EN, RU and TH**, to say that it has come down, as
+   NAPA-2's does, but with no date (NAPA-2's reads "came down on 5 July
+   2026"), and `sky.about.thai` (2026-11-25, the records PR after #234 and
+   #233: worded so, a point of #234's last review).
    *Owner:* decided with part B, in the same answer: no date in the
    sentence (the panel's Status row and badge give 2026-11-02).
 3. **The online kept-404 stop.** Only a kept 403 or 429 would count as a
