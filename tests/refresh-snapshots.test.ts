@@ -10,7 +10,7 @@
  * The project has no node types (tsconfig: vite/client only), so node's
  * modules are loaded as tests/repo-hygiene.test.ts loads them.
  */
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SATELLITE_URLS, SAT_GROUPS, parseCelestrakGp, type OmmRecord } from '../src/provider/satellites';
 
 interface FsModule {
@@ -22,7 +22,7 @@ interface FsModule {
   rmSync(path: string, options: { recursive: true; force: true }): void;
 }
 interface ChildProcessModule {
-  execFileSync(file: string, args: string[], options: { cwd: string; encoding: 'utf8'; stdio: 'pipe' }): string;
+  execFileSync(file: string, args: string[], options: { cwd: string; encoding: 'utf8'; stdio: 'pipe'; timeout: number }): string;
 }
 const load = (id: string): Promise<unknown> => import(/* @vite-ignore */ id);
 const fs = (await load('node:fs')) as FsModule;
@@ -31,15 +31,20 @@ const { tmpdir } = (await load('node:os')) as { tmpdir(): string };
 const { execPath } = (await load('node:process')) as { execPath: string };
 const { fileURLToPath } = (await load('node:url')) as { fileURLToPath(url: URL): string };
 
-const dir = fs.mkdtempSync(`${tmpdir()}/orbitlab-refresh-`);
-afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
-// the script, what it imports and the snapshot it keeps from, each where the script looks for it
-for (const file of ['scripts/refresh-snapshots.ts', 'src/provider/space-weather.ts', 'src/provider/satellites.ts', 'src/provider/earth-orientation.ts', 'public/data/satellites.json']) {
-  fs.mkdirSync(`${dir}/${file.slice(0, file.lastIndexOf('/'))}`, { recursive: true });
-  fs.copyFileSync(fileURLToPath(new URL(`../${file}`, import.meta.url)), `${dir}/${file}`);
-}
-// fetch answers from answers.json, a status or a body, and 503 for any other URL (NOAA, the IERS); each URL asked is printed
-fs.writeFileSync(`${dir}/stub.mjs`, `import { readFileSync } from 'node:fs';
+// made when the tests run, not when the file is only collected (`vitest list`, as CI's plan job does), so nothing is left behind
+let dir = '', SNAPSHOT = '';
+let committed: { data: { groups: unknown[] } };
+beforeAll(() => {
+  dir = fs.mkdtempSync(`${tmpdir()}/orbitlab-refresh-`);
+  // the script, what it imports and the snapshot it keeps from, each where the script looks for it
+  for (const file of ['scripts/refresh-snapshots.ts', 'src/provider/space-weather.ts', 'src/provider/satellites.ts', 'src/provider/earth-orientation.ts', 'public/data/satellites.json']) {
+    fs.mkdirSync(`${dir}/${file.slice(0, file.lastIndexOf('/'))}`, { recursive: true });
+    fs.copyFileSync(fileURLToPath(new URL(`../${file}`, import.meta.url)), `${dir}/${file}`);
+  }
+  // an ES module, as under the repo's package.json, whatever package.json is above the temporary folder
+  fs.writeFileSync(`${dir}/package.json`, '{ "type": "module" }\n');
+  // fetch answers from answers.json, a status or a body, and 503 for any other URL (NOAA, the IERS); each URL asked is printed
+  fs.writeFileSync(`${dir}/stub.mjs`, `import { readFileSync } from 'node:fs';
 const answers = JSON.parse(readFileSync(new URL('./answers.json', import.meta.url), 'utf8'));
 globalThis.fetch = async (url) => {
   console.log('asked ' + url);
@@ -47,13 +52,18 @@ globalThis.fetch = async (url) => {
   return typeof a === 'number' ? new Response('stub', { status: a }) : new Response(JSON.stringify(a));
 };
 `);
-const SNAPSHOT = `${dir}/public/data/satellites.json`;
-const committed = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
+  SNAPSHOT = `${dir}/public/data/satellites.json`;
+  committed = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
+});
+afterAll(() => {
+  if (dir) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 /** One run of the copy: what it printed, and how many times it asked CelesTrak. */
 function refresh(answers: Record<string, unknown>): { out: string; asked: number } {
   fs.writeFileSync(`${dir}/answers.json`, JSON.stringify(answers));
-  const out = execFileSync(execPath, ['--experimental-strip-types', '--import', './stub.mjs', 'scripts/refresh-snapshots.ts'], { cwd: dir, encoding: 'utf8', stdio: 'pipe' });
+  // the test's own time limit cannot stop a call that blocks: a child that hangs is stopped here
+  const out = execFileSync(execPath, ['--experimental-strip-types', '--import', './stub.mjs', 'scripts/refresh-snapshots.ts'], { cwd: dir, encoding: 'utf8', stdio: 'pipe', timeout: 20_000 });
   return { out, asked: out.split('\n').filter((l) => l.startsWith('asked https://celestrak.org/')).length };
 }
 
@@ -75,16 +85,26 @@ describe('the snapshot script, run on a copy with fetch stubbed (P2.5)', () => {
     expect(asked).toBe(SATELLITE_URLS.length);
     expect(out).toContain(`::warning::satellites: thai kept from the snapshot already in public/data/ (${SATELLITE_URLS[MISS]} answered 404)`);
     const groups = parseCelestrakGp(SATELLITE_URLS.map((u) => FRESH[u])).data.groups;
-    expect(JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8')).data.groups).toEqual(groups.map((g, gi) => (g.id === 'thai' ? committed.data.groups[gi] : g)));
+    const written = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
+    expect(written.data.groups).toEqual(groups.map((g, gi) => (g.id === 'thai' ? committed.data.groups[gi] : g)));
+    // dated by the groups fetched (the stub's sets), not by the kept Thai sets of 2026-09-26
+    expect(written.asOf).toBe('2026-11-24T12:00:00.000Z');
   }, 30_000);
 
   it('keeps the whole snapshot otherwise, and asks no more after a refusal', () => {
-    const cases: [string, Record<string, unknown>, number][] = [
+    // a 404 in every group, while THEOS, THAICOM and CATNR=40141 answer: no group left to fetch
+    const inEvery = SATELLITE_URLS.filter((_, k) => owner[k] !== 'thai' || k === MISS);
+    // the snapshot's groups out of order: a kept group must still pass the catalogue's check
+    const reordered = JSON.stringify({ ...committed, data: { groups: [...committed.data.groups].reverse() } });
+    const cases: [string, Record<string, unknown>, number, string?][] = [
       [`${SATELLITE_URLS[MISS + 1]} answered 403`, { ...FRESH, [SATELLITE_URLS[MISS]]: 404, [SATELLITE_URLS[MISS + 1]]: 403 }, MISS + 2],
       [SATELLITE_URLS.map((u) => `${u} answered 404`).join('; '), Object.fromEntries(SATELLITE_URLS.map((u) => [u, 404])), SATELLITE_URLS.length],
+      [inEvery.map((u) => `${u} answered 404`).join('; '), { ...FRESH, ...Object.fromEntries(inEvery.map((u) => [u, 404])) }, SATELLITE_URLS.length],
       ['an answer was null', { ...FRESH, [SATELLITE_URLS[MISS]]: 404, [SATELLITE_URLS[0]]: null }, SATELLITE_URLS.length],
+      ['the parsed data do not pass their own check', { ...FRESH, [SATELLITE_URLS[MISS]]: 404 }, SATELLITE_URLS.length, reordered],
     ];
-    for (const [why, answers, asks] of cases) {
+    for (const [why, answers, asks, snapshot] of cases) {
+      if (snapshot) fs.writeFileSync(SNAPSHOT, snapshot);
       const before = fs.readFileSync(SNAPSHOT, 'utf8');
       const { out, asked } = refresh(answers);
       expect(asked, why).toBe(asks);

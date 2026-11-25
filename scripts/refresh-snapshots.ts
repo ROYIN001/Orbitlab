@@ -7,7 +7,7 @@
  *
  * A dataset whose source cannot be reached keeps the snapshot already there
  * (the committed baseline, in a fresh checkout) and the run goes on: a
- * network error is tried again twice, a refusal (HTTP 4xx) is not — CelesTrak
+ * network error is tried again twice, a status that is not ok (4xx or 5xx) is not — CelesTrak
  * asks that a refused request not be repeated. A satellite query that finds
  * nothing (CelesTrak's 404, "No GP data found") keeps only its own group's
  * sets from that snapshot, as the app does online (P2.5). What each dataset
@@ -21,7 +21,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather } from '../src/provider/space-weather.ts';
-import { SATELLITE_URLS, refreshCelestrakGp, validSatelliteCatalog } from '../src/provider/satellites.ts';
+import { SATELLITE_URLS, SAT_GROUPS, refreshCelestrakGp, validSatelliteCatalog } from '../src/provider/satellites.ts';
 import { IERS_FINALS_URL, parseIersFinals, validEarthOrientation } from '../src/provider/earth-orientation.ts';
 
 class Refused extends Error {}
@@ -86,9 +86,10 @@ const REFRESHES: Refresh[] = [
           return null;
         }));
       }
-      // only a 404 is a missing answer (a body of null is not a list); nothing found at all names the queries, as online
+      // only a 404 is a missing answer (a body of null is not a list); a 404 in every group keeps the whole snapshot, as online, with each 404 named
       if (answers.filter((a) => a === null).length > missed.length) throw new Error('an answer was null, not a list of element sets');
-      if (answers.every((a) => a === null)) throw new Error(missed.join('; '));
+      const groupOf = SAT_GROUPS.flatMap((g) => g.queries.map(() => g.id));
+      if (new Set(groupOf.filter((_, k) => answers[k] === null)).size === SAT_GROUPS.length) throw new Error(missed.join('; '));
       const { data, asOf, parts } = refreshCelestrakGp(answers, () => JSON.parse(readFileSync(new URL('../public/data/satellites.json', import.meta.url), 'utf8')).data);
       if (!validSatelliteCatalog(data)) throw new Error('the parsed data do not pass their own check');
       if (parts.length) console.log(`::warning::satellites: ${parts.join(', ')} kept from the snapshot already in public/data/ (${missed.join('; ')})`);
