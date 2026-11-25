@@ -1,5 +1,9 @@
 # Revert drill at GK1: FX-2 step 2b on candidate 1842a86 / ซ้อม revert ของขั้น 2b บน candidate 1842a86
 
+> **Update 2026-11-25: the drill made again on the GK1 candidate `9b224ec`; GK1 is not signed.** On 2026-11-25 the owner answered "ย้าย HU-6 ไป GK2 (แนะนำ)" (07:21:22Z): there is no HU-6 session at GK1, and the session froze main after #234 as the candidate C, `9b224ece` (Pages 45615392290, published 13:04:34Z; [DECISIONS](../../DECISIONS.md), "Decided 2026-11-25 (the next work, HU-6 moved to GK2 …)"). The drill was run again on C on 2026-11-25, 19:20:35–19:24:01Z: **pass, 50 of 50 checks**, with variance V1 (the rollbacks go to `408ad16` and `c5da5bb`); the control re-check and the offline checks (5 of 5) passed after it. New for C, under "Limits": `src/pwa/manifest.ts` is no longer the same at `408ad16` and C (`'anatomy/'` and `'structure/'` are on-demand prefixes at C, from #184 and #217), and K2's new stored key `orbitlab.structure.v1` (#217) is outside the drill and carried to GK2. Its section, "The drill on the GK1 candidate 9b224ec (2026-11-25)", comes before "Why this drill"; the runs on `1842a86` (56 of 56) and `7263004` (48 of 48) stay as dated history. G7 item 1 is rated on C in [kpi-GK1.md](kpi-GK1.md), "Gates"; GK1 item 2, the sign-off, is the owner's.
+>
+> **อัปเดต 2026-11-25: ซ้อม revert ใหม่บนรุ่น GK1 `9b224ec` ยังไม่ได้ลงนาม GK1** เมื่อ 25 พ.ย. คุณตอบว่า "ย้าย HU-6 ไป GK2 (แนะนำ)" (07:21:22Z) ที่ GK1 จึงไม่มี session HU-6 และเซสชันตรึง main หลัง #234 เป็นรุ่นทดสอบ C คือ `9b224ece` การซ้อมจึงทำใหม่บน C เมื่อ 25 พ.ย. 19:20:35–19:24:01Z **ผ่าน ตรวจ 50 จุด ผ่าน 50** โดยยังมีความต่าง V1 (ย้อนไป `408ad16` และ `c5da5bb`) การตรวจควบคุมซ้ำและการตรวจแบบออฟไลน์ (5 จาก 5) ผ่านหลังการซ้อม สิ่งที่ใหม่สำหรับ C อยู่ในหัวข้อ "Limits": `src/pwa/manifest.ts` ที่ C ต่างจาก `408ad16` แล้ว (`'anatomy/'` และ `'structure/'` เป็น path ที่โหลดเมื่อใช้ จาก #184 และ #217) และคีย์ใหม่ของ K2 คือ `orbitlab.structure.v1` (#217) ไม่อยู่ในการซ้อมนี้ จึงยกไปตรวจที่ GK2 หัวข้อของรอบนี้อยู่ก่อน "Why this drill" ส่วนรอบบน `1842a86` (ผ่าน 56 จาก 56) และ `7263004` (ผ่าน 48 จาก 48) เก็บไว้เป็นบันทึกตามวันที่ การลงนาม GK1 เป็นของคุณ
+
 > **Update 2026-11-07: #214 merged; it changes app code; GK1 is not signed.** In the chat of the session working on `claude/gifted-gauss-ojjpaj` the owner wrote "ตรวจ #214 แล้ว merge ให้เลยครับ" (03:53:17Z), and that session merged #214 (`cec4b572`, 04:13:32Z: the crew-safe end card times the escape system's flight to the touchdown, not to the card), after an independent review and after merging main `56887ba` (#215, records) into it; CI 42336107793, 9 of 9 jobs ([DECISIONS](../../DECISIONS.md), "Decided 2026-11-07 (#214 and the merged branches; chat)"). #214 was opened as a draft on 2026-11-06 at 22:20:01Z by the session "Fix the intermittent r3-first-launch journey". It changes `src/ui/watch.ts`. So main is `cec4b572`, and the HU-6 freeze will be taken from main at the time the owner sets the date (now `cec4b572` or later). No candidate has been frozen, so no evidence is lost. The live site is `cec4b572` from 04:38:40Z (Pages 42337488870, the push of #214: 11 of 11 jobs, 38 of 38 journeys); #215 (`56887ba`, Markdown only) started no run. The owner's request to delete the merged branches, "ลบ branch ที่ merge แล้วให้ด้วยครับ" (03:56:06Z), was refused with HTTP 403 by the session's git proxy; nothing was deleted, and the deletion is left to the owner. Lines in this file that call #214 open or the crew-safe card's time unfixed, or that give main or the live site as `d01019a4`, describe the time before; they are kept as a dated record. GK1 item 2, the sign-off, still waits for the HU-6 session, whose date is not set. What is left before K2: the owner's HU-6 session, the freeze and its three re-runs (the K2 session), GK1 item 2, and #206, a draft until the EQ-6 window opens after HU-6 (the only open PR).
 >
 > **อัปเดต 2026-11-07: #214 merge แล้ว #214 แก้โค้ดแอป และยังไม่ได้ลงนาม GK1** ในแชตของเซสชันที่ทำงานบน `claude/gifted-gauss-ojjpaj` คุณเขียนว่า "ตรวจ #214 แล้ว merge ให้เลยครับ" (03:53:17Z) เซสชันนั้นจึง merge #214 (`cec4b572`, 04:13:32Z: การ์ดจบ "The crew is safe" นับเวลาเที่ยวบินของระบบหนีภัยจนถึงตอนลงพื้น ไม่ใช่ถึงเฟรมที่การ์ดขึ้น) หลังการตรวจโดยผู้ตรวจอิสระ และหลัง merge main `56887ba` (#215 งานบันทึก) เข้า branch ก่อน CI 42336107793 ผ่านครบ 9 job (ดู DECISIONS หัวข้อ "Decided 2026-11-07 (#214 and the merged branches; chat)") #214 เปิดเป็น draft เมื่อ 6 พ.ย. 22:20:01Z โดยเซสชัน "Fix the intermittent r3-first-launch journey" และแก้ `src/ui/watch.ts` ตอนนี้ main คือ `cec4b572` การตรึงรุ่นทดสอบสำหรับ HU-6 จะใช้ main ตอนที่คุณนัดวัน (ตอนนี้ `cec4b572` หรือใหม่กว่า) ยังไม่มีการตรึง จึงไม่เสียหลักฐานอะไร เว็บจริงเป็น `cec4b572` ตั้งแต่ 04:38:40Z (Pages 42337488870 ของ #214 ผ่านครบ 11 job และ 38 journey) ส่วน #215 (`56887ba` มีแต่ Markdown) ไม่ได้เริ่ม run ใด คำขอของคุณ "ลบ branch ที่ merge แล้วให้ด้วยครับ" (03:56:06Z) ถูก git proxy ของเซสชันปฏิเสธด้วย HTTP 403 ยังไม่ได้ลบอะไร การลบจึงเป็นของคุณ ข้อความในไฟล์นี้ที่บอกว่า #214 ยังเปิด หรือเวลาบนการ์ด crew-safe ยังไม่ได้แก้ หรือว่า main หรือเว็บจริงเป็น `d01019a4` จึงเป็นสภาพก่อนหน้านี้ เก็บไว้เป็นบันทึกตามวันที่ ข้อ 2 คือการลงนาม GK1 ยังรอ HU-6 ซึ่งยังไม่ได้นัดวัน สิ่งที่เหลือก่อน K2: session HU-6 ของคุณ การตรึงรุ่นทดสอบกับการตรวจสามข้อ (เซสชัน K2) การลงนาม GK1 (ข้อ 2) และ #206 ที่เป็น draft รอหน้าต่าง EQ-6 หลัง HU-6 (PR เดียวที่ยังเปิด)
@@ -67,6 +71,352 @@ earlier_run: {on: 7263004, date: 2026-10-26, checks: "48 of 48 pass", result: "p
 **Why this is a second run.** On 2026-10-29 the GK1 candidate moved from `7263004` to `1842a86`. #185 merged as `1842a86` (21:25:44Z), and Pages 40957726247 published it (`deploy-pages` 21:49:41Z). The owner then answered in chat "HU-6 ยังไม่ได้ทำ ใช้ 1842a86 เป็น candidate ใหม่ครับ" and, to a question on the GK1 evidence, "Redo all (Recommended)": heavy and the six-DOF fleet, the held journeys, the KPI baselines and this drill are redone on `1842a86` ([DECISIONS.md](../../DECISIONS.md), "Decided 2026-10-29"). P2 asked for one drill ("ซ้อมหนึ่งครั้ง"); this second run is on "Redo all (Recommended)". `1842a86` differs from `7263004` only by #185: `src/physics/frame.ts` (+24 −18), a new test (`tests/debris-replay.test.ts`), a report (`docs/development/reports/replay-debris-arc.md`) and a fragment (`changes/claude-gifted-gauss-ojjpaj.md`); `git diff --stat 7263004 1842a86` lists these 4 files. The run of 2026-10-26 on `7263004` is kept as written under "The earlier run on 7263004 (2026-10-26)", at the end.
 
 **How to read this file.** `file:n` is the file at the candidate `1842a86`, unless marked "at `5092ac9`" (#181's commit of 2026-10-26, which records the owner's answers P1–P5) or "at `408ad16`". Plan drafts (`S07`, `S17`) are at `c2af8ae` (`docs/development/plan-v2-draft/sections/` on the plan branch). Apart from `src/physics/frame.ts`, #185 changes none of the files cited here by line, so those lines read the same at `7263004`. The drill's builds, tools, logs and screenshots are local, not committed; their names are given so a rerun can match them. This run repeats the method of the run on `7263004` (as written in #182 at `ac6f2c6`); each place it departs from it is listed under "Departures from the 7263004 method".
+
+## The drill on the GK1 candidate 9b224ec (2026-11-25)
+
+Added by the GK1 close-out records PR. It is HANDOVER-K2 §16.4, step 7, on the owner's "ย้าย HU-6 ไป GK2 (แนะนำ)" (2026-11-25T07:21:22Z), by which the session froze C and made the GK1 evidence again on it; P2 asked for one drill ("ซ้อมหนึ่งครั้ง"), and this third run, like the second, rests on the evidence being made again on a new candidate. The sections after this one, from "Why this drill" to the end, describe the run on `1842a86` (2026-10-29) and the first run on `7263004` (2026-10-26); they stay as dated history. It repeats the 1842a86 run's method, with the departures listed under "Departures from the 1842a86 method" below. The candidate is C = `9b224ece67e8d9167ce67230cd5f4d4d7581bbf0` (#234). Variance V1 stays: the drill rolls back to `408ad16` (before 2a) and `c5da5bb` (2a only).
+
+The run was local and is not committed. The repository checkout was used read only: `git worktree add` only, and the three worktrees were removed at the end. `git status --short` was empty before and after. `HEAD` was `ccc0254b` before and after. `git worktree list` was the same before and after.
+
+```yaml
+run: {date: 2026-11-25, start: "19:20:35Z", end: "19:24:01Z", checks: "50 of 50 pass", exit: 0}
+after_run: {control_recheck: "19:24:10–19:24:43Z, exit 0", offline_checks: "post-run-checks.json, 5 of 5 pass, exit 0"}
+trials: {trial1: "18:58–19:08Z, 20 of 23, exit 1 (E2, E4)", trial2: "19:15:12–19:19:57Z, 50 of 50, exit 0 (E8)"}
+result: pass (with variance V1)
+```
+
+### What is the same at 408ad16, c5da5bb and C, and what is not
+
+These are re-checks, made with git, of the 1842a86 run's lines `:107`, `:126` and `:154` for C. The commands and their exit codes are in `app-input-diffs.txt`.
+
+- **`src/pwa/` is no longer byte-identical.** `git diff --quiet 408ad16 9b224ece -- src/pwa` exits 1, and so does the same command from `c5da5bb`. The only file that differs is `src/pwa/manifest.ts` (+9 −1).
+  - #184 (`f68faabe`) and #217 (`1ddf187b`) added `'anatomy/'` and `'structure/'` to `ON_DEMAND_PREFIXES`, with their comment. The list is `['home/', 'social/', 'audio/', 'privacy.html']` at `408ad16` and `c5da5bb`, and `['home/', 'social/', 'audio/', 'privacy.html', 'anatomy/', 'structure/']` at C (`src/pwa/manifest.ts:38`).
+  - `git diff --quiet <408ad16|c5da5bb> 9b224ece -- src/pwa/sw-core.ts src/pwa/sw.ts src/pwa/register.ts src/pwa/offline-protocol.ts` exits 0. `git log 408ad16..9b224ece` on those four files is empty.
+  - So the FX-7 flow below is unchanged since `408ad16`: registration, install, the update offer, Reload and prune. What changed is only which paths the worker treats as on-demand.
+- **The storage paths are not all the same now.**
+  - `git diff --quiet 408ad16 9b224ece -- src/lessons/progress.ts src/projects/validation.ts src/projects/archive.ts` exits 0.
+  - The 1842a86 run's wider set (`… src/workspace/ src/pwa/ src/ui/lessons/lesson-mode.ts`) exits 1 at C:
+    - `src/workspace/registry.ts` (+2): #217 adds `'orbitlab.structure.v1'` to `WORKSPACE_KEYS`, at `:12`.
+    - `src/workspace/repository.ts` (+1 −1): #217 adds `'orbitlab.structure.v1': 1` to the versioned keys of `preserveUnreadableOverwrite`, at `:71`.
+    - `src/ui/lessons/lesson-mode.ts` (+7 −2): #223 changes the icon and adds the `lesson-study` class, which is looks only. `startLesson`, `showHint` and `save` are unchanged.
+    - `src/pwa/manifest.ts`, as above.
+- **The assessment code is the same as at 1842a86.** `git diff --quiet 1842a86 9b224ece -- src/lessons/assessment src/ui/lessons/assessment-view.ts` exits 0. `BANK_REVISION` is 1 at C (`src/lessons/assessment/bank.ts:35`). `git grep -c BANK_REVISION 408ad16 -- src` finds nothing (exit 1).
+- **The app source moved a lot.** `git diff --stat <sha> 9b224ece -- src` lists:
+  - from `408ad16`: 106 files, +15 140 −669;
+  - from `c5da5bb`: 105 files, +15 043 −655;
+  - from `1842a86`: 102 files, +15 029 −651.
+
+  `index.html`, `vite.config.ts` and `public/` differ too (`public/` gains 29 files: the `anatomy/` and `structure/` models and the `home/structure.*` pictures).
+- **Packages.** `package-lock.json` is the same at all three: `git diff --quiet <408ad16|c5da5bb> 9b224ece -- package-lock.json` exits 0. `package.json` differs only by three `scripts` entries (`anatomy`, `anatomy:terms`, `structure`; #184, #217, #221). No dependency differs.
+
+### Builds
+
+```sh
+G=<scratchpad>/gk1
+git -C /home/user/Orbitlab worktree add --detach $G/wt/rd-9b224ec 9b224ece67e8d9167ce67230cd5f4d4d7581bbf0
+git -C /home/user/Orbitlab worktree add --detach $G/wt/rd-408ad16 408ad16b90fd72b934f947afc2ed13efc4a7584a
+git -C /home/user/Orbitlab worktree add --detach $G/wt/rd-c5da5bb c5da5bb4b7cd78e45d030b2747020e7e6ac9994e
+# each: ln -s /home/user/Orbitlab/node_modules node_modules
+cd <wt-each> && npx vite build      # exit 0 for each: 2.4 s, 2.4 s, 2.4 s (2026-11-25 18:50:53–18:51:01Z)
+```
+
+Node v22.23.5, Vite 8.3.0. The C build was made fresh in its own worktree. The earlier `<scratchpad>/wt-C` build was not used, because its `dist` had been rebuilt with a local switch.
+
+| Build | Stamp (`build-info.json` `commit`, `<html data-build>`) | Files in `dist` | `sw.js` SHA-256 | Precache version (entries) | Page script |
+|---|---|---|---|---|---|
+| candidate 9b224ec | `9b224ece` | 107 | `e1a939db…1133a3f9` | `0016d202bac189` (72) | `assets/index-Drjh8c8i.js` |
+| `c5da5bb` | `c5da5bb4` | 90 | `28c065fc…e05ffecc` | `0eed9ed5c1b44e` (68) | `assets/index-pz2TzFwk.js` |
+| `408ad16` | `408ad16b` | 90 | `d19a235f…e71b429d` | `0fc2847196867c` (68) | `assets/index-BtIg8Rqm.js` |
+
+Full `sw.js` hashes: `c5da5bb` `28c065fcefbdcc985df5bc553611bb91f081cd80ead0f084e2df73b9e05ffecc`; `408ad16` `d19a235f53b5e7a0290527d161f0532af1724b0c6a4b9e6ebfddf0a9e71b429d`; C `e1a939db0a9d9b5efc320c014aad9953f47755144e3ebacdda3da1081133a3f9`.
+
+- **What C precaches beyond the old builds.** With the content hashes taken out of the names, C's precache holds four entries that the old builds' does not: `assets/structure.js`, `assets/structure-en.js`, `assets/structure-ru.js` and `assets/structure.css`. Every entry in the old builds is also in C's.
+- **On-demand files** (never precached; in `builds/ondemand-*.txt`):
+  - `408ad16` and `c5da5bb`: 19 files, namely `home/` (15), `social/` (1), `audio/` (2) and `privacy.html`.
+  - C: 32 files, the same 19 plus `home/structure.{en,ru,th}.webp`, `anatomy/` (6: three Soyuz pages and three `*.exterior.bin` meshes) and `structure/` (4: `soyuz-2-1b-fregat-st31.r4.json` and three layer `.bin` files).
+
+### Tools
+
+The tools are local and not committed. They were written again on 2026-11-25 from this file's "Setup" (E1).
+
+| File | SHA-256 |
+|---|---|
+| `server.mjs` | `38278a0e5834622ce54c2033ca43a179a6d993435766e2be4ad48f1bf4f3ad19` |
+| `drill.mjs` | `c39c00403ea5bfee144b7252848a1fa9c9921a2b1bc6af3d725b4b0d116afdd1` |
+| `common.mjs` (shared by the three scripts) | `6a91a835c55b4fa09ed0796b1680fba1b0632be19bc0e4cf75489c39acf3bdcf` |
+| `control-recheck.mjs` | `91e69fc1afb0ab48a61881225cc083c906c3d4c5d0f4cb9c76407499f8227689` |
+| `post-run-checks.mjs` | `eb27f8d420dc4801ab63e3fe85f09418441a42b52b9172d05b1dd7af0d87fb70` |
+| `fonts.conf` (`<scratchpad>/fonts.conf`; the copy in the tools folder is identical) | `a60015358b11152917a9613f34f733c1ab884d140fb9c5be15fb1cc58085593a` |
+
+`tools.sha256` was written just before the run. `sha256sum -c` against it after the run reported every file OK.
+
+- **The server** serves one `dist` under `http://127.0.0.1:4391/Orbitlab/`.
+  - Headers: `Cache-Control: max-age=600`, `ETag` (the first 16 hex characters of the file's SHA-256), `Last-Modified` (the file's mtime), `Accept-Ranges`, `Access-Control-Allow-Origin: *` and `Vary: Accept-Encoding`.
+  - It answers 304 on a matching `If-None-Match`. There is no SPA fallback: a path with no file gets 404.
+  - `deploy()` switches the folder it serves. It logs every request with the build being served.
+- **The browser.**
+  - Playwright 1.63.0 (`/opt/node-tools/node_modules/playwright`), `chromium.launchPersistentContext` on one user-data folder (`run-candidate-9b224ec/profile/`). The browser is closed after each step and opened again on the same folder.
+  - Chrome for Testing 158.0.8127.36 headless shell, with the harness's flags `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`.
+  - Viewport 1280×900, scale 1, locale en-GB, service workers allowed.
+  - With `FONTCONFIG_FILE`, `fc-match system-ui` gives DejaVu Sans; without it, Inter.
+  - The machine: 4 CPUs, Intel Xeon @ 2.10GHz, KVM.
+- **The init script** is the harness's WebMCP stand-in. On the first visit only, when `localStorage` is empty, it sets the guide to dismissed and the language to English (`orbitlab.lang` `en`). Later visits write nothing.
+- **What the drill does not do.** It presses the FX-7 Reload button. It never calls `skipWaiting` and never clears caches or storage.
+- **What is recorded** is what this file's "What is recorded" lists. Two additions:
+  - the route at each worker reading;
+  - the paths in `orbitlab-runtime`, read only: `caches.has` is checked first, because `caches.open` would create the cache.
+
+```sh
+# T = <scratchpad>/gk1/tools/revert-drill, R = <scratchpad>/gk1/revert-drill
+cd $T && OUT=$R/run-candidate-9b224ec PORT=4391 FONTCONFIG_FILE=<scratchpad>/fonts.conf \
+  timeout 3000 node drill.mjs > $R/run-candidate-9b224ec.out 2>&1      # exit 0, 2026-11-25 19:20:35–19:24:01Z
+```
+
+### Steps and evidence (candidate 9b224ec, run of 2026-11-25 19:20–19:24Z)
+
+#### Step 1: candidate 9b224ec, a learner takes the placement test
+
+- **The first visit.** The visit at `#/lessons` installed the candidate's worker, which took the page:
+  - `data-build` `9b224ece`, worker version `0016d202bac189`, complete 72 of 72, `pageMatches` true;
+  - caches: `orbitlab-precache-0016d202bac189`.
+- **A new learner.** The app opened on `legacy-v1` ("Learner 1"), the only one, with no `orbitlab.lessons` yet. The record's `revision` was 1.
+- **The test begun.** Lessons → "Take the placement test" → "Start the test". At once the stored test carried `"revision":1` with 0 answers:
+  - value SHA-256 `3367cacc…2b8e3f54`, 1 211 bytes;
+  - test bytes `76f808a3…9f205138`, 1 128 bytes.
+- **The answers.** All 25 questions were answered with the page's own controls, in a fixed pattern of options, numbers, orderings and confidences. The confidence cycle was sure, unsure, sure, guess. Each question's Next/Finish button was used. No predict-then-observe screen came up with this draw (E9).
+- **The finished value** is 2 369 bytes, SHA-256 `85a4f6d6bdbb3d302289a7ca21c47d2c6c2faa7200a2d36bb3aa5e929e9a9943`.
+  - The test's bytes are 2 286 bytes, SHA-256 `114df700116fbfe1766d4ff93464b53d913a33e63ff4015922dd26cbd2005c5c`. They begin `{"revision":1,"kind":"pre","seed":464526272,…`.
+  - `finishedAt` is `2026-11-25T19:20:50.286Z`.
+- **Result page.** "Score 16 % — start with Space basics", then "4 of 25 questions right · misconceptions: 4.". The eyebrow reads "Placement test · 11/25/2026". The area bars:
+
+  | Area | Right | Misconceptions | Score | Level |
+  |---|---|---|---|---|
+  | 1 Space basics | 0 of 5 | 2 | 0 % | Beginner |
+  | 2 Orbital mechanics | 1 of 4 | – | 33 % | Beginner |
+  | 3 Rocket performance and the atmosphere | 0 of 4 | 1 | 0 % | Beginner |
+  | 4 Guidance and navigation | 1 of 4 | – | 25 % | Beginner |
+  | 5 Attitude control | 1 of 4 | – | 25 % | Beginner |
+  | 6 Failures and safety | 1 of 4 | 1 | 17 % | Beginner |
+
+  - The catalogue card read "Latest test: 16 %. Recommended start: 1.1 Your first orbit.".
+  - WebMCP `get_assessment_result` gave `taken` true, `percent` 16, `start` `orbit-first`, `startArea` 1, and 4 misconceptions (`b-what-holds`, `b-multi-freefall`, `r-g-peak`, `f-maxq-danger`).
+  - The four cards:
+    - Strengths: "No area is at the proficient level yet."
+    - To work on: 6 lines.
+    - Misconceptions (wrong, and sure of it): 4 lines.
+    - Recommended path: 24 chips (★ 1.1 `start`, the rest `review`).
+- **Reload.** A reload left the value byte for byte (`85a4f6d6…`).
+
+The full stored value at the end of step 1 (`stored/step1-finished.json`):
+
+```json
+{"version":1,"lessons":{},"assessments":[{"revision":1,"kind":"pre","seed":464526272,"startedAt":"2026-11-25T19:20:47.672Z","questions":[{"id":"b-order-altitude","order":[1,0,4,3,2]},{"id":"b-what-holds","order":[1,0,3,2]},{"id":"b-black-sky","order":[2,3,1,0]},{"id":"b-kepler2","order":[2,3,1,0]},{"id":"b-multi-freefall","order":[3,2,4,1,0]},{"id":"o-order-period","order":[1,0,3,4,2]},{"id":"o-ellipse-raise","order":[0,1,2,3]},{"id":"o-molniya","order":[2,1,3,0]},{"id":"o-nodal-regression","order":[0,2,1,3]},{"id":"r-tsiolkovsky","order":[1,0,3,2]},{"id":"r-gravity-loss","order":[1,0,2,3]},{"id":"r-g-peak","order":[0,3,1,2]},{"id":"r-q-calc","values":{"v":550,"rho":0.24}},{"id":"g-gravity-turn","order":[2,0,3,1]},{"id":"g-kalman","order":[0,1,3,2]},{"id":"g-monte-carlo","order":[1,0,3,2]},{"id":"g-gyro-bias","order":[3,2,1,0]},{"id":"c-pid-d","order":[2,3,0,1]},{"id":"c-step-terms","order":[0,2,1,3]},{"id":"c-phase-margin","order":[3,0,1,2]},{"id":"c-multi-phase","order":[2,1,3,0,4]},{"id":"f-fts","order":[3,1,2,0]},{"id":"f-challenger","order":[2,0,1,3]},{"id":"f-maxq-danger","order":[2,3,1,0]},{"id":"f-common-mode","order":[3,1,2,0]}],"answers":[{"id":"b-order-altitude","value":"0,4,3,2,1"},{"id":"b-what-holds","value":2,"confidence":"sure"},{"id":"b-black-sky","value":1},{"id":"b-kepler2","value":3,"confidence":"unsure"},{"id":"b-multi-freefall","value":"3,4","confidence":"sure"},{"id":"o-order-period","value":"0,3,4,2,1"},{"id":"o-ellipse-raise","value":2,"confidence":"guess"},{"id":"o-molniya","value":1},{"id":"o-nodal-regression","value":0,"confidence":"sure"},{"id":"r-tsiolkovsky","value":2},{"id":"r-gravity-loss","value":2,"confidence":"unsure"},{"id":"r-g-peak","value":3,"confidence":"sure"},{"id":"r-q-calc","value":7.8},{"id":"g-gravity-turn","value":1},{"id":"g-kalman","value":3,"confidence":"guess"},{"id":"g-monte-carlo","value":0,"confidence":"sure"},{"id":"g-gyro-bias","value":3,"confidence":"unsure"},{"id":"c-pid-d","value":1},{"id":"c-step-terms","value":1},{"id":"c-phase-margin","value":0,"confidence":"sure"},{"id":"c-multi-phase","value":"0,1","confidence":"guess"},{"id":"f-fts","value":0},{"id":"f-challenger","value":1},{"id":"f-maxq-danger","value":3,"confidence":"sure"},{"id":"f-common-mode","value":3,"confidence":"unsure"}],"finishedAt":"2026-11-25T19:20:50.286Z"}],"customLessons":[],"customQuestions":[]}
+```
+
+#### Step 2: roll back to `408ad16` (before 2a)
+
+- **Deploy and update.** The server switched to `408ad16`'s `dist` at 19:21:03Z, and the browser was opened again on the same profile at `#/lessons`.
+  - **The first page** still ran the candidate from its precache: `data-build` `9b224ece`, worker `0016d202bac189`. The caches were `orbitlab-precache-0016d202bac189` and `orbitlab-runtime`.
+  - **The new worker.** The new `sw.js` was fetched (200 at 19:21:17Z), and the `408ad16` worker installed and waited: version `0fc2847196867c`. The caches were then `orbitlab-precache-0016d202bac189`, `orbitlab-precache-0fc2847196867c` and `orbitlab-runtime`.
+  - **What the install downloaded:** 25 files besides `sw.js`, namely `index.html` and 24 changed files under `assets/` (23 scripts and `index-*.css`). The list is in `drill-log.jsonl` (`install-downloads`). Every other file came from the old cache.
+  - **The offer.** The page offered "A new version of Orbitlab is ready. Reload" at 19:21:18Z.
+  - **After Reload** the page ran `408ad16`, with worker `0fc2847196867c` complete 68 of 68 and `pageMatches` true.
+  - **The old precache was deleted.** The caches were `orbitlab-precache-0fc2847196867c` and `orbitlab-runtime`.
+  - **Later requests.** The page then fetched `home/lessons.en.webp` (19:21:20Z) and `home/orbit.en.webp` (19:21:41Z), which are on demand. A later `sw.js` check answered 304 (19:21:32Z).
+- **Reads, no writes.**
+  - The same learner opened (`legacy-v1`, the only one).
+  - The stored value on opening, after loading `408ad16` and after showing the result was `85a4f6d6…` every time: step 1's bytes exactly. No recovery copy was made.
+- **Same result.** The card, eyebrow, headline, summary, six area bars, four cards and the whole WebMCP answer were identical to step 1. Only the path card's legend text differs, as a static string (E4).
+- **The old build saves, twice.**
+  - **Lesson 1.1 opened.** Lessons → 1.1 Your first orbit (the page went to `#/launch/explore`). Opening the lesson saved.
+    - The value became 2 427 bytes, SHA-256 `80c6002f…e50a55be`.
+    - `lessons` is now `{"orbit-first":{"attempts":0,"hintsShown":0,"passed":false}}`.
+  - **The hint.** Then "💡 Hint 1/3"; the button then read "💡 Hint 2/3". The value is 2 427 bytes, SHA-256 `784aeab6…a97ceaa3`, with `hintsShown` 1.
+  - **The test at both saves.** Its bytes are unchanged (`114df700…`), appear literally in the value and still hold `"revision":1`. No recovery key appeared.
+  - So `408ad16`, which has no `revision` in its types, kept a field it does not know.
+- **After the save.** The result was the same after the hint save, and the value was the same after a reload (`784aeab6…`).
+
+#### Step 3: roll back to `c5da5bb` (2a only)
+
+- **Deploy and update** (19:22:08Z), the same flow as step 2.
+  - The first page ran `408ad16` (worker `0fc2847196867c`).
+  - The new `sw.js` was fetched (200 at 19:22:17Z). The install downloaded 15 files besides `sw.js`: `index.html` and 14 scripts.
+  - The offer came at 19:22:18Z. After Reload the page ran `c5da5bb` with worker `0eed9ed5c1b44e`, complete 68 of 68, `pageMatches` true.
+  - Caches: `orbitlab-precache-0eed9ed5c1b44e` and `orbitlab-runtime`.
+- **Reads, no writes.**
+  - The same learner opened.
+  - The value on opening, after loading and after showing the result was `784aeab6…` each time (what `408ad16` left).
+  - Opening lesson 1.1 did not change it, because its entry already existed.
+- **Same result**: the same card, eyebrow, headline, summary, bars, four cards and WebMCP answer as step 1. This build's reader reads `"revision":1` as revision 1, and the control below shows that it does read the field.
+- **The 2a build saves.** Hint 2/3; the button then read "💡 Hint 3/3".
+  - The value is SHA-256 `80980b8c…6e83b562` with `hintsShown` 2.
+  - The test's bytes are unchanged (`114df700…`) with `"revision":1`, and there is no recovery key.
+  - The result was the same after the save, and the value was the same after a reload.
+
+#### Step 4: roll forward to candidate 9b224ec
+
+- **Deploy and update** (19:23:00Z).
+  - The first page ran `c5da5bb` (worker `0eed9ed5c1b44e`).
+  - The install downloaded only `sw.js` (200 at 19:23:09Z) and `index.html` (19:23:10Z). The candidate's other files were still in the profile's HTTP cache from step 1 and matched their revisions.
+  - The offer came at 19:23:10Z. After Reload the page ran `9b224ece` with worker `0016d202bac189`, complete 72 of 72, `pageMatches` true.
+  - Caches: `orbitlab-precache-0016d202bac189` and `orbitlab-runtime`.
+- **Reads, no writes.** The same learner opened. The value on opening, after loading, after showing the result and after opening lesson 1.1 was `80980b8c…` each time (what `c5da5bb` left).
+- **Same result** as step 1 on every field compared.
+- **The candidate saves.** Hint 3/3; the button then read "No more hints".
+  - The value is SHA-256 `6958b9194122e5b0fd3dcbaa3b30369dd2b0ae6dbcfe8a28ff0ac4393914f392` with `hintsShown` 3.
+  - The test's bytes are unchanged (`114df700…`): the writer stamps new tests only.
+  - The result was the same, and the value was the same after a reload.
+
+#### The on-demand files and `orbitlab-runtime` across the rollbacks
+
+This subsection is new for C (§16.4 step 7).
+
+- **What step 1 put in the runtime cache.** During the first visit on C, the page fetched `anatomy/soyuz-2-1a-soyuz-ms.exterior.bin` (313 200 B, 19:20:36.883Z) and four landing pictures (`home/{watch,explore,engineer,structure}.en.webp`). At the opening of step 2, `orbitlab-runtime` held these five files.
+- **On the old builds.** Their activations deleted only the other precaches (`prune`, `src/pwa/sw-core.ts`, unchanged). So `orbitlab-runtime` kept C's `anatomy/` mesh and `home/structure.en.webp` through `408ad16` and `c5da5bb`.
+  - Those builds route `anatomy/` and `structure/` to the network, because these are not on-demand prefixes there (`routeFor`). Their `dist` has neither folder.
+  - The server log shows no request for `anatomy/` or `structure/` after step 1. So nothing read or refreshed those entries on the old builds or after the roll forward.
+- **At the end of step 4**, `orbitlab-runtime` held `anatomy/soyuz-2-1a-soyuz-ms.exterior.bin` and `home/{engineer,explore,lessons,orbit,structure,watch}.en.webp`.
+- **No `structure/` file was fetched**, because the Structure section was never opened.
+
+#### The round trip, end to end
+
+- **Test bytes.** The test's bytes at the end equal step 1's: SHA-256 `114df700116fbfe1766d4ff93464b53d913a33e63ff4015922dd26cbd2005c5c` at all 20 reads from the finish to the end.
+- **The whole value.** At the end it equals step 1's value except `lessons`, which holds the history that the lesson opening and the three hint saves wrote.
+  - The drill compares the parsed values with `lessons` set aside (`isDeepStrictEqual`).
+  - Offline (`post-run-checks.json`), step 1's `"lessons":{}` (it occurs once) was replaced with `"lessons":{"orbit-first":{"attempts":0,"hintsShown":3,"passed":false}}`. That gives the end value byte for byte: 2 369 → 2 427 bytes, `85a4f6d6…` → `6958b919…`.
+- **The result.** All seven readings of the result were identical: step 1, then steps 2, 3 and 4 each before and after that build's own saves. `sameScore` compares the card, eyebrow, headline, summary, six bars, four cards and the whole WebMCP answer. The offline check found every recorded field identical in all seven, apart from the path legend (E4).
+- **No write on read.** No build wrote `orbitlab.lessons` on opening, on loading, on showing the result or on reloading. That is 13 reads, each compared with the read before it.
+- **The record.** It held one learner throughout, with no `orbitlab.structure.v1` key and no recovery key at any of the 21 reads with a value. Its keys were `orbitlab.guide.v1`, `orbitlab.lang`, `orbitlab.lessons`, `orbitlab.mode`, then `orbitlab.mission` and `orbitlab.section` from the lesson opening on.
+- **Other keys.** The record's own `revision` counter rose on page loads as well as on saves: 29 at the end of step 1, 63 at the end. `orbitlab.lessons` did not change on those loads.
+
+| Read | Build running | `orbitlab.lessons` SHA-256 | Test bytes SHA-256 | `"revision":1` | Recovery key |
+|---|---|---|---|---|---|
+| step 1, test begun | candidate 9b224ec | `3367cacc…` (1 211 B) | `76f808a3…` (no answers) | yes | none |
+| step 1, finished | candidate 9b224ec | `85a4f6d6…` (2 369 B) | `114df700…` | yes | none |
+| step 1, after reload | candidate 9b224ec | `85a4f6d6…` | `114df700…` | yes | none |
+| step 2, opened (before Reload) | candidate 9b224ec | `85a4f6d6…` | `114df700…` | yes | none |
+| step 2, loaded | `408ad16` | `85a4f6d6…` | `114df700…` | yes | none |
+| step 2, after showing the result | `408ad16` | `85a4f6d6…` | `114df700…` | yes | none |
+| step 2, lesson 1.1 opened | `408ad16` | `80c6002f…` (2 427 B) | `114df700…` | yes | none |
+| step 2, after its own save (hint 1) | `408ad16` | `784aeab6…` (2 427 B) | `114df700…` | yes | none |
+| step 2, after reload | `408ad16` | `784aeab6…` | `114df700…` | yes | none |
+| step 3, opened (before Reload) | `408ad16` | `784aeab6…` | `114df700…` | yes | none |
+| step 3, loaded | `c5da5bb` | `784aeab6…` | `114df700…` | yes | none |
+| step 3, after showing the result | `c5da5bb` | `784aeab6…` | `114df700…` | yes | none |
+| step 3, lesson 1.1 opened | `c5da5bb` | `784aeab6…` | `114df700…` | yes | none |
+| step 3, after its own save (hint 2) | `c5da5bb` | `80980b8c…` | `114df700…` | yes | none |
+| step 3, after reload | `c5da5bb` | `80980b8c…` | `114df700…` | yes | none |
+| step 4, opened (before Reload) | `c5da5bb` | `80980b8c…` | `114df700…` | yes | none |
+| step 4, loaded | candidate 9b224ec | `80980b8c…` | `114df700…` | yes | none |
+| step 4, after showing the result | candidate 9b224ec | `80980b8c…` | `114df700…` | yes | none |
+| step 4, lesson 1.1 opened | candidate 9b224ec | `80980b8c…` | `114df700…` | yes | none |
+| step 4, after its own save (hint 3) | candidate 9b224ec | `6958b919…` | `114df700…` | yes | none |
+| step 4, after reload | candidate 9b224ec | `6958b919…` | `114df700…` | yes | none |
+
+#### Control: the 2a build reads the field
+
+- **The setup.** After step 4 the drill switched the server to `c5da5bb` (19:23:53Z). It opened a separate, throwaway browser context with its own storage and service workers blocked, not the drill's profile.
+- **The seed.** It seeded that context with the drill's final storage (`stored/step4-localStorage.json`), changing only the test's `"revision":1` (it occurs once) to `"revision":2`. The seed's SHA-256 is `2101f44071a0a93d9e9a76f5aad237c802bc2882400a59195beae22acb3f32fe`, 2 427 B.
+- **What the page showed.** The `c5da5bb` page (`data-build` `c5da5bb4`) did not show the test:
+  - the card offered "Not sure where to start? A 25-question test …";
+  - WebMCP gave `{"taken":false}`.
+
+**The control re-check** added a storage read-back and a revision-1 twin:
+
+```sh
+cd $T && OUT=$R/control-recheck PORT=4392 FONTCONFIG_FILE=<scratchpad>/fonts.conf \
+  timeout 900 node control-recheck.mjs $R/run-candidate-9b224ec/stored/step4-localStorage.json legacy-v1 > $R/control-recheck/run.out 2>&1
+# exit 0, 2026-11-25 19:24:10–19:24:43Z
+```
+
+It served the same `c5da5bb` `dist` (`sw.js` `28c065fc…e05ffecc`), with the same browser, flags and throwaway context, workers blocked. Each seeding was in a fresh context, followed by a reload and a read back:
+
+| Seeded revision | Page | Seed landed before the reload | Stored value after the reload | Card | WebMCP |
+|---|---|---|---|---|---|
+| 2 | `c5da5bb4` | yes | the seed byte for byte (`2101f440…`, 2 427 B), revision 2, no recovery key | "Not sure where to start? …" | `taken:false` |
+| 1 | `c5da5bb4` | yes | the seed byte for byte (`6958b919…`, the drill's final value), revision 1, no recovery key | "Latest test: 16 %. Recommended start: 1.1 Your first orbit." | `taken:true`, `percent` 16, `start` `orbit-first` |
+
+There was no page error in either context. Eight console messages were set aside (Playwright's blocked-worker note and SwiftShader GL notes, E5). Same storage, same seeding, and only the revision differs. So the 2a build shows the revision-1 test and hides the revision-2 one while keeping its bytes.
+
+### Result
+
+| Step (S17 rule 4) | Check | Build used | Result | Evidence |
+|---|---|---|---|---|
+| 1 | Install the candidate and create a test that has a revision. | candidate 9b224ec | **pass** | test begun and finished with `"revision":1`; score 16 %, 4 of 25, misconceptions 4 |
+| 2 | Install the previously published build. The data must read, or open read-only, not be overwritten, and keep unknown fields. | `408ad16` (before 2a), in place of the build published before C: **variance V1** | **pass** on `408ad16` | worker `0fc2847196867c` through the app's update offer; same learner, same result and score; no write on load or view (`85a4f6d6…`); after its own saves (lesson opening, hint 1) the test bytes are unchanged with `"revision":1` (`114df700…`) |
+| 2 | (same item) | `c5da5bb` (2a only): **variance V1** | **pass** on `c5da5bb` | worker `0eed9ed5c1b44e`; same result and score, read as revision 1; control: a revision-2 test is hidden, and the re-check with read-back and a revision-1 twin shows the seed landed and the field is read; after its own save the test bytes are unchanged |
+| 3 | Go back to the candidate. The stored bytes must be equal. | candidate 9b224ec | **pass** for what was shown: no build wrote on load or view, and the test's bytes are equal; the whole value is not byte-equal to step 1's, because the drill's own saves changed `lessons` | worker `0016d202bac189`; value on opening = what `c5da5bb` left (`80980b8c…`), unchanged after loading and showing the result; test bytes = step 1's (`114df700…`) at all 20 reads from the finish; whole value = step 1's plus the drill's lesson history, byte for byte by replacing `lessons` (`post-run-checks.json`) |
+
+**Checks.** 50 of 50 checks passed.
+
+- **By part:** step 1, 8; steps 2, 3 and 4, 12 each; round trip, 4; control, 1; page errors and console, 1. Every check is named in `steps.json`; E6 says how the list differs from the 56 of the 1842a86 run.
+- **Errors and requests.** There was no page error. There was no console error or warning other than 17 that were set aside: 16 SwiftShader "GL Driver Message (OpenGL, Performance …)" notes and Playwright's blocked-worker note in the control (E5). No request left 127.0.0.1.
+- **Earlier runs.** Two full trial runs came first (E2, E8). The control re-check (2 of 2 rows) and the offline post-run checks (5 of 5) came after the run and are not among the 50.
+
+2b's rollback line holds as written in its report (`FX-2-s2b-m-learning-027-writer.md:150`): "Revert the fix commit. Tests begun while it was live keep `"revision": 1`. Every build reads that as revision 1 or keeps it unread, … so nothing needs migrating." This was shown for the test and the lesson progress. For K2's new Structure record, see "Limits".
+
+### Departures from the 1842a86 method
+
+- **E1. Tools written again.** The tools of the earlier runs were never committed. They were written again from this file's text, so their hashes differ (table above).
+  - Shared code is in `common.mjs`.
+  - The ETag is a content hash, as in D3.
+  - The fontconfig file is the one the session gave, `<scratchpad>/fonts.conf` (`a6001535…`). Its behaviour is the same: `system-ui` and `sans-serif` map to DejaVu Sans, and Inter is rejected. It is not the 1842a86 run's file (`31ff3213…`).
+- **E2. Each visit opens at `#/lessons`.** In the 1842a86 run each visit opened the bare URL.
+  - **What trial 1 showed.** Trial 1 (18:58–19:08Z) used the bare URL. In its step 3 the `408ad16` page opened on lesson 1.1's flight view (`#/launch/explore`), as the app restores it. Chromium then sent no request for `sw.js` for 300 s, so no update offer came and the run stopped (`trial1.out`).
+  - **The probes.** On copies of trial 1's profile, a probe opening the bare URL saw no `sw.js` request in 146 s. A probe opening `#/lessons` fetched it within seconds (`tools/revert-drill/probe/`).
+  - **Why, and what it means.** Chromium's update check on navigation is likely held back while the flight view keeps the page busy, but that was not shown. In the field, a learner whose app opens into a flight may not see the offer until the hourly `registration.update()` (`src/pwa/register.ts:44`). That was not tested here.
+- **E3. Stamps have 8 characters** (`9b224ece`, `408ad16b`, `c5da5bb4`): `git rev-parse --short` gives 8 in this clone now. The 1842a86 run had 7 (its D1).
+- **E4. The path card's legend is left out of `sameScore`.** #223 changed the static text `assess.pathLegend` from "… gold ★: start here …" (`408ad16`, `c5da5bb`) to "… ★: start here …" (C). Trial 1's result comparison failed on that alone. The legend is now recorded separately (`legend`) and is outside the comparison. Every scored field, the cards, the chips and the WebMCP answer included, is still compared.
+- **E5. Console messages set aside.** As in D8, Playwright's "Service Worker registration blocked by Playwright" is set aside: once in the drill's control, and in the re-check's eight. SwiftShader's "GL Driver Message (OpenGL, Performance, …): GPU stall due to ReadPixels" notes from the WebGL scene are also set aside (16 in the run). Neither comes from the app's code.
+- **E6. The check list.** There are 50 checks, not 56. The `sw.js` downloads and runtime-cache contents are recorded but are not checks. The no-write comparison covers 13 reads, one more than the 1842a86 run's 12, because it includes step 1's reload. The counts cannot be compared one for one.
+- **E7. No reference build compared.** The 1842a86 run compared its fresh candidate build with another stage's build (D2). Here the only other C build (`<scratchpad>/wt-C`) had been rebuilt with a local switch, so it was not used. File lists are in `builds/files-*.sha256`.
+- **E8. Trials.**
+  - **Trial 1** (exit 1, 20 of 23) failed on E2 and E4. Its Node process (an idle browser context, its server closed) lingered until 19:20:24Z, when it was killed before the run.
+  - **Trial 2** (19:15:12–19:19:57Z, 50 of 50, exit 0) passed with a different test (7 %, 2 of 25). It ran while trial 1's process was still alive, and before the runtime-cache read was added to `drill.mjs`.
+  - **The run** is the third full run and was alone on the host. The control re-check and the post-run checks followed it one at a time.
+- **E9. The test.** A new seed and the pattern gave 16 % (4 of 25, misconceptions 4), with every area at "Beginner". No predict-then-observe screen came up in this draw, so the drill's path through one was not exercised.
+- **E10. Browser.** Chrome for Testing 158.0.8127.36 headless shell. The 1842a86 run used 153.0.8010.12.
+- **E11. Pages bytes not compared**, as in D11: this run did not read the Pages build of C.
+
+### Limits
+
+- **Local builds, not the Pages bytes.** The three builds were made from the committed data snapshots (`build-info.json` data dates 2026-09-26 and 2026-09-24). Their stamps are compiled in, as before.
+- **Not github.io.** The builds were served from `127.0.0.1:4391` by a server that copies Pages' caching headers. A real rollback goes through a revert on main and a Pages run, and would carry a new stamp. A revert of 2b on main now would publish `c5da5bb`'s assessment code inside K2's app: 105 files of `src/` differ from `c5da5bb`.
+- **One browser.** Chromium 158 headless shell only, one learner, English. Each step closed the browser and came back. A tab left open would get the offer from the hourly check, which was not waited for.
+- **Two kinds of old-build save**, as before: the lesson opening and a hint, both through `lesson-mode`. Resuming an unfinished test on an old build, follow-up tests, project archives, profile backups and the results file were not exercised in the browser.
+- **Revision 1 only.** `BANK_REVISION` is 1 at `c5da5bb` and at C. No build here writes a revision another cannot read. The control shows only that the 2a build hides a revision-2 test.
+- **`src/pwa/manifest.ts` differs at C.**
+  - C treats `anatomy/` and `structure/` as on-demand, so it keeps them in `orbitlab-runtime` once fetched. `408ad16` and `c5da5bb` do not; to them those paths are network paths that their `dist` lacks.
+  - In the drill, C's runtime copy of `anatomy/soyuz-2-1a-soyuz-ms.exterior.bin` survived both rollbacks unused and was still there after the roll forward.
+  - Offline behaviour on an old build of a page that C had fetched on demand, and a fetch of those paths while an old build is served, were not exercised.
+- **K2's new stored key `orbitlab.structure.v1`** (#217; `src/workspace/registry.ts:12`, `src/workspace/repository.ts:71`) is outside the drill and carried to GK2. S17 rule 4 is not in force while the rest of R7.2 is not authorized.
+  - **Not exercised.** The drill never opened the Structure section, and no record held the key at any read.
+  - **By reading the code only.** At `408ad16` (and `c5da5bb`) `parseRecord` treats a profile record whose `values` hold a key not in their `WORKSPACE_KEYS` as `invalid` (`src/workspace/repository.ts:52` at `408ad16`). On opening, such a record is left as it is and the visit opens on another learner, or on a new "Learner 1" if no other is readable (`:262-292` at `408ad16`). So a learner who used Structure on C and was then rolled back past #217 would probably not see their test or progress on the old build, though the bytes would not be overwritten. This is a question for GK2's drill, not a result.
+- **Pattern answers.** The answers followed a fixed pattern through the page's controls, not a real learner. The score is low (16 %), every area is "Beginner", and it has four misconceptions to compare.
+- **Owner checks.** This is not a gate decision. G7 item 2's old-worker reload on the live site stays the owner's.
+
+### Files (local, not committed)
+
+In `<scratchpad>/gk1/revert-drill/`:
+
+- **The run:**
+  - `run-candidate-9b224ec.out` (with `.start`, `.end`, `.exit`): the console of the run, with every check line;
+  - `run-candidate-9b224ec/drill-log.jsonl`: each record with its time: deploys, service-worker states with the route and `orbitlab-runtime`, stored reads, results, update offers, install downloads, hints, console messages;
+  - `run-candidate-9b224ec/steps.json`: everything above, with the 50 checks;
+  - `run-candidate-9b224ec/stored/`: the exact `orbitlab.lessons` string and the test's bytes at each of the 21 reads with a value (`<step>-<moment>.json`, `.test.json`), each step's full `localStorage` (`step2..4-localStorage.json`, `final-localStorage.json`) and `control-seed.json`;
+  - `run-candidate-9b224ec/shots/`: 16 screenshots: the catalogue and first question, each result reading, each update offer, each hint save and the control;
+  - `run-candidate-9b224ec/server.log` and `server-log-summary.json`: every request with the build served, the deploys and the `sw.js` fetches;
+  - `run-candidate-9b224ec/profile/`: the browser profile (62 MB).
+- **The builds:** `builds/` holds the build logs and times, `files-*.sha256`, `precache-*.json`, `ondemand-*.txt` and `builds-summary.txt`. The worktrees and their `dist` folders were removed.
+- **The git checks:** `app-input-diffs.txt` holds the `git diff`/`log`/`grep` commands of "What is the same …", with their output and exit codes.
+- **The trials:** `trial1/` and `trial1.out` (with `.start`, `.end`, `.exit`, `.note`): 20 of 23. `trial2/`, `trial2.out` and `trial2-post.json`: 50 of 50.
+- **After the run:**
+  - `control-recheck/`: `control-recheck.json`, `run.out`, `server.log`, two screenshots, `start`/`end`/`exit`;
+  - `post-run-checks/`: `post-run-checks.json` (5 of 5: whole value by byte replacement, all seven readings on every field, the legends, the whitespace sabotage, the record keys), `start`/`end`/`exit` and `tools.sha256`.
+- **The sabotage check.** One space added inside the stored test changes the value's SHA-256 (`85a4f6d6…` → `3a347246…`) and makes the literal check fail (true → false). The test's own SHA-256 (`114df700…`) does not change, because the test is re-serialized before hashing. So the value hash, not the test hash alone, is what sees it.
+- **Tools and host:**
+  - `tools.sha256`: the hashes of every tool and of `fonts.conf`. The tools are in `<scratchpad>/gk1/tools/revert-drill/`, with the probes of E2 in `probe/`.
+  - `host.txt`, `main-status-*.txt`, `main-head-*.txt`, `worktrees-*.txt` and `cleanup.log`.
 
 ## Why this drill
 
