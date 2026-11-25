@@ -207,7 +207,7 @@ Day is the S05 Day of the UTC merge date ("weekend" = after that Day). Lead = `c
 | Mean WIP, open PRs into main (time-weighted) | **2.72** | 1.33 |
 | Mean WIP, code PRs (with #206, #233, #236) | 1.72 | — |
 | Mean WIP, plan PRs | 0.95, of which #206 alone 0.69 (open 20.5 of 29.7 days) | 1.04 |
-| Lead, all merged PRs | mean 27.76 h, median 3.21 h | mean 7.87 h, median 45 min |
+| Lead, all merged PRs | mean 27.76 h, median 3.20 h | mean 7.87 h, median 45 min |
 | Lead, code PRs | mean 21.52 h | — |
 | Little's law (WIP ÷ mean lead) | 2.35 PRs per calendar day | 4.05 |
 | Direct count | 52 ÷ 29.72 = 1.75 per calendar day | 4.05 |

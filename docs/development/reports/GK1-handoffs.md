@@ -128,7 +128,7 @@ Flags:
 - `DROPPED`: as above. No row has it at the freeze (see K1-33).
 - `DONE`: done on `7263004`, the candidate when the tables were checked. Where the evidence was redone on `1842a86`, the row gives that result too. In "The re-check on `9b224ec`" and "Wave K2", done on `9b224ec`.
 - `RE-PLAN`: remaining K1 scope. The re-plan row of decision 1 (ก) moves it to K2. That row was a proposal; the owner approves it before K2 (`S05:434`; owner question S3). The owner answered "ก อนุมัติตามที่เขียน (แนะนำ)" (chat, 2026-10-28T02:54:22Z).
-- `HU-6`: waits for the owner's HU-6 session.
+- `HU-6`: waits for the owner's HU-6 session (2026-11-25: no session at GK1, by the owner's "ย้าย HU-6 ไป GK2 (แนะนำ)", 07:21:22Z).
 - The draft's `AT FREEZE` flag is retired: every such row was re-checked on `7263004`, the candidate at the freeze.
 
 ## Summary
