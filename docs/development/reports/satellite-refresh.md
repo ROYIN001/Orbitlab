@@ -16,7 +16,7 @@
 | Authorization | the standing bug-fix approval (owner in chat to the K1 integration session, 2026-10-06, verbatim in [SESSION-PROTOCOL.md](../SESSION-PROTOCOL.md) §1 step 3); this session's request, 2026-11-25 at 06:52:53Z, verbatim: "มาเริ่มทำงานลำดับถัดไปเลยครับ ผมต้องทำอะไรบ้าง" (let's start the next item; what do I need to do?) |
 | Base | main `844319e` (the records PR #232) |
 | Branch | `claude/beautiful-shannon-l4s4za` |
-| Status | In the working tree; not committed, no PR yet; not merged; not published |
+| Status | In PR #234 (`0e29723` tests first, then the fix); not merged; not published |
 
 ## The bug
 
