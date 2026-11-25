@@ -48,6 +48,7 @@ describe('the bundled catalogue (R02)', () => {
       const name = q.slice('NAME='.length).toUpperCase();
       expect(THAI_SATELLITES.filter((s) => !s.reentered && s.name.toUpperCase().includes(name)).map((s) => s.name), q).not.toEqual([]);
     }
+    for (const q of thai.queries.filter((x) => x.startsWith('CATNR='))) expect(Object.keys(DECAYED), q).not.toContain(q.slice('CATNR='.length));
   });
 
   it('keeps the debris group to Fengyun-1C\'s fragments, from its 1999 launch', () => {

@@ -69,7 +69,7 @@ function refresh(answers: Record<string, unknown>): { out: string; asked: number
 }
 
 // older than every committed group's newest set (all of 2026-09-26), gnss's (a middle query's) the newest fetched: a date taken from a kept group, or from the oldest, first or last set fetched, would show;
-// THEOS-2's (the kept Thai group's own answer) newer still, so a date that folds in a kept group's answers would show too
+// THEOS-2's (the kept Thai group's own answer) dated 2026-09-15, after gnss's and before the kept sets', so a date that folds in a kept group's answers would show too
 const SET = (norad: number): OmmRecord => ({
   OBJECT_NAME: `SAT ${norad}`, OBJECT_ID: '2000-001A', EPOCH: norad === 58016 ? '2026-09-15T12:00:00.000000' : norad === 1000 + owner.indexOf('gnss') ? '2026-09-01T12:00:00.000000' : '2026-08-01T12:00:00.000000', MEAN_MOTION: 15.5, ECCENTRICITY: 0.0007,
   INCLINATION: 51.6, RA_OF_ASC_NODE: 159.2, ARG_OF_PERICENTER: 184.2, MEAN_ANOMALY: 175.9, EPHEMERIS_TYPE: 0,

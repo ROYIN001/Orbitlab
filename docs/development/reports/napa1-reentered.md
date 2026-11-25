@@ -31,9 +31,9 @@ NAPA-1 re-entered on 2026-11-02 (SATCAT 46320: `DECAY_DATE` 2026-11-02, `OPS_STA
 | `tests/applications.test.ts`, NAPA-1's `reentered` (`toBeUndefined()` → `toBe('2026-11-02')`, the one changed assertion) | fails: `expected undefined to be '2026-11-02'` | passes |
 | `tests/satellite-catalogue.test.ts`, new: "asks CelesTrak by name only for Thai satellites still in orbit" (each `reentered` equals SATCAT's decay date; no decayed number in `THAI_NORAD_IDS`; each `NAME=` query of the Thai group matches a satellite not re-entered) | fails: `NAPA-1: expected undefined to be '2026-11-02'` | passes |
 
-2 of 40 fail on main in the four files most concerned (with `tests/refresh-snapshots.test.ts` and `tests/fx3-thai-moon-labels.test.ts`); 40 of 40 pass with the fix. Wrong versions: the fix with `NAME=NAPA` kept fails the guard (1 of 15); with 46320 kept in `THAI_NORAD_IDS`, 6 of 24 fail (the snapshot test, the guard and four `fx3-thai-moon-labels` tests).
+2 of 40 fail on main in the four files most concerned (with `tests/refresh-snapshots.test.ts` and `tests/fx3-thai-moon-labels.test.ts`); 40 of 40 pass with the fix. Wrong versions: the fix with `NAME=NAPA` kept fails the guard (1 of 15 in `satellite-catalogue` and `refresh-snapshots`); with 46320 kept in `THAI_NORAD_IDS`, 6 of 24 fail in `satellite-catalogue` and `fx3-thai-moon-labels` (the snapshot test, the guard and four `fx3-thai-moon-labels` tests). The second agent's runs over the four files: `NAME=NAPA` kept, 1 of 40; 46320 kept, 6 of 40; the snapshot not edited, 1 of 40; only `reentered` set, 5 of 40. The guard also holds no `CATNR=` query to a decayed number.
 
-`tests/refresh-snapshots.test.ts`: THEOS-2's stub set (58016, the kept Thai group's own answer) is dated 2026-09-15, after gnss's 2026-09-01, so a refresh that dated the file by a kept group's answers would fail the `asOf` check (#234's last review, the test nit; this wrong version was not run here). Its comments follow the new queries (`MISS` is `NAME=THAICOM`; seven 404s in five groups; THEOS and `CATNR=40141` answering).
+`tests/refresh-snapshots.test.ts`: THEOS-2's stub set (58016, the kept Thai group's own answer) is dated 2026-09-15, after gnss's 2026-09-01, so a refresh that dated the file by a kept group's answers would fail the `asOf` check (#234's last review, the test nit): the second agent ran that wrong version (a kept group's answers folded into `newest` in `mergeCelestrakGp`), and it fails 1 of 2 there (expected 2026-09-01, received 2026-09-15), while it passes 2 of 2 with main's stub. Its comments follow the new queries (`MISS` is `NAME=THAICOM`; seven 404s in five groups; THEOS and `CATNR=40141` answering).
 
 Typecheck. 13 related files, 183 of 183. Node verification and the full unit suite: on CI.
 
@@ -44,6 +44,10 @@ Built on main `15f25e8a` and on this branch (`npx vite build`, `node scripts/bun
 ## D-64
 
 `src/data` is on the D-64 list, so the list hash changes and no earlier heavy or fleet run stands: `heavy.yml` with `suite=both` runs on this PR's head (the PR names the run).
+
+## Review
+
+Second agent on `6180c4da`: confirmed 17 of 17 claims checked; 1 blocking finding (a `node_modules` symlink committed by mistake, removed), 2 minor findings (the wrong versions' files and the folded-`asOf` run, recorded above) and 3 nits (a `CATNR=` check in the guard and a comment's wording, applied; HANDOVER-K2's "1 to 5 tests", for the next records PR). No other place in the app assumes NAPA-1 is up.
 
 ## Follow-ups
 
