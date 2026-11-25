@@ -45,6 +45,12 @@ class FakeWorker {
 const noWorkers = class { constructor() { throw new Error('no module workers'); } };
 const answer: PropagationResult = { samples: [], lifetime: 86400, steps: 1 };
 
+/** The three readers test `e instanceof DOMException && e.name === 'AbortError'`, so a Stop must reject with exactly that. */
+async function expectCancelled(job: Promise<unknown>): Promise<void> {
+  await expect(job).rejects.toBeInstanceOf(DOMException);
+  await expect(job).rejects.toMatchObject({ name: 'AbortError' });
+}
+
 beforeEach(() => { FakeWorker.made = []; });
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -57,7 +63,7 @@ describe('a Stop before the run begins (M-PLATFORM-035)', () => {
     const made = FakeWorker.made.length;
     // a worker made anyway runs on to its answer, since the Stop came before the job listened
     for (const w of FakeWorker.made) w.reply({ type: 'result', result: answer });
-    await expect(job).rejects.toMatchObject({ name: 'AbortError' });
+    await expectCancelled(job);
     expect(made).toBe(0);
   });
 
@@ -66,7 +72,7 @@ describe('a Stop before the run begins (M-PLATFORM-035)', () => {
     const stop = new AbortController();
     stop.abort();
     const seen: number[] = [];
-    await expect(runLifetimeJob(request(), stop.signal, (f) => seen.push(f))).rejects.toMatchObject({ name: 'AbortError' });
+    await expectCancelled(runLifetimeJob(request(), stop.signal, (f) => seen.push(f)));
     expect(seen).toEqual([]);
   });
 });
@@ -75,7 +81,7 @@ describe('a Stop part-way where no module worker can be made (M-ORBIT-005)', () 
   it('rejects with an AbortError, not the orbit as far as the run got', async () => {
     vi.stubGlobal('Worker', noWorkers);
     const stop = new AbortController();
-    await expect(runLifetimeJob(request(), stop.signal, (f) => { if (f > 0.2) stop.abort(); })).rejects.toMatchObject({ name: 'AbortError' });
+    await expectCancelled(runLifetimeJob(request(), stop.signal, (f) => { if (f > 0.2) stop.abort(); }));
   });
 });
 
@@ -110,7 +116,7 @@ describe('runs that are not stopped are as before', () => {
     const stop = new AbortController();
     const stopped = runLifetimeJob(req, stop.signal, () => {});
     stop.abort();
-    await expect(stopped).rejects.toMatchObject({ name: 'AbortError' });
+    await expectCancelled(stopped);
     expect(FakeWorker.made[2].terminated).toBe(true);
   });
 });
