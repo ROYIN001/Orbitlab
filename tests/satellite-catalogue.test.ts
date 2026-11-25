@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { CacheStorageRecent, MemoryRecent, OfflineProvider, OnlineProvider, parseSnapshot, type Fetcher, type RecentCaches } from '../src/provider/data-provider';
 import { DATASETS } from '../src/provider/datasets';
 import {
-  SATELLITES_MIN_INTERVAL_MS, SATELLITE_URLS, SAT_GROUPS, THAI_NORAD_IDS, parseCelestrakGp, validOmm, type OmmRecord,
+  SATELLITES_MIN_INTERVAL_MS, SATELLITE_URLS, SAT_GROUPS, THAI_NORAD_IDS, parseCelestrakGp, refreshCelestrakGp, validOmm, type OmmRecord,
 } from '../src/provider/satellites';
 import { elementsFromRecord } from '../src/orbit/omm';
 import { skyFacts, skyObjects, skyState } from '../src/orbit/real-sky';
@@ -127,6 +127,25 @@ describe('the catalogue from CelesTrak\'s answers', () => {
     expect(() => parseCelestrakGp(answers.map((a, k) => (k === 0 ? [{ ...REC(1), MEAN_MOTION: 'x' }] : a)))).toThrow('keywords');
     expect(validOmm({ ...REC(1), ECCENTRICITY: 1 })).toBe(false);
     expect(validOmm({ ...REC(1), EPOCH: '2026-09-26' })).toBe(false);
+  });
+
+  // since NAPA-1 re-entered (2026-11-02) CelesTrak answers NAME=NAPA with 404 "No GP data found", and that one
+  // query kept the whole snapshot of 2026-09-26 in every Pages build from 2026-11-03
+  it('keeps the snapshot\'s group only where a query found nothing, and the rest fresh (the snapshot script, P2.5)', () => {
+    const a = answersFor();
+    const all = SATELLITE_URLS.map((u) => a[u]);
+    const fresh = parseCelestrakGp(all).data;
+    const owner = SAT_GROUPS.flatMap((g) => g.queries.map(() => g.id));
+    for (let k = 0; k < all.length; k++) {
+      const { data, parts } = refreshCelestrakGp(all.map((x, i) => (i === k ? null : x)), () => snap.data);
+      expect(parts, SATELLITE_URLS[k]).toEqual([owner[k]]);
+      expect(data.groups, SATELLITE_URLS[k]).toEqual(fresh.groups.map((g, gi) => (g.id === owner[k] ? snap.data.groups[gi] : g)));
+      expect(DATASETS.satellites.valid(data)).toBe(true);
+    }
+    // every query answered: parsed as before, the snapshot not read
+    let read = 0;
+    expect(refreshCelestrakGp(all, () => { read++; return snap.data; })).toEqual({ ...parseCelestrakGp(all), parts: [] });
+    expect(read).toBe(0);
   });
 });
 
