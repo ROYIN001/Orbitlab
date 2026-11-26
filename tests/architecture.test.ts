@@ -40,7 +40,7 @@ import { describe, expect, it } from 'vitest';
 // `import.meta.glob` requires its options to be an inline object literal.
 const SRC = import.meta.glob('../src/**/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
-const CORE_DIRS = ['physics', 'orbit', 'design', 'data', 'config', 'provider', 'structure'];
+const CORE_DIRS = ['physics', 'orbit', 'design', 'data', 'config', 'provider', 'structure', 'astro'];
 /** Session files checked by rule 2 (DOM tokens) only; see NARROWED in the header. */
 const CORE_FILES = ['session/core.ts', 'session/protocol.ts', 'session/mirror.ts'];
 /** Session files checked by rule 1 (imports) as well: none today. */
@@ -155,6 +155,17 @@ describe('architecture: import boundaries and DOM-free cores', () => {
 
   it('keeps the cores from importing ui, render, replay or i18n', () => {
     expect(importViolations().filter((v) => !(keyOf(v) in ALLOWED))).toEqual([]);
+  });
+
+  it('keeps src/astro free of imports from the rest of src', () => {
+    const bad: string[] = [];
+    for (const [p, text] of CORE.filter(([q]) => q.startsWith('astro/'))) {
+      for (const spec of specifiers(text)) {
+        const dir = targetDir(p, spec);
+        if (dir && dir !== 'astro') bad.push(`${p} -> ${spec}`);
+      }
+    }
+    expect(bad).toEqual([]);
   });
 
   it('keeps browser globals out of the cores', () => {

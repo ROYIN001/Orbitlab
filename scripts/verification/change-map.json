@@ -90,6 +90,12 @@
       "paths": ["src/structure/**", "src/structure-host/**", "src/ui/structure/**", "src/ui/structure-loader.ts", "src/render/structure-*.ts", "src/render/edusat-model.ts", "scripts/structure-meshes.mjs", "public/structure/**"],
       "checks": { "commands": ["@app-build"], "unit": ["tests/structure-*.test.ts", "tests/architecture.test.ts", "tests/privacy-inventory.test.ts"], "browser": ["structure-assembly", "structure-failures", "structure-entries"] } },
     {
+      "id": "astro",
+      "why": "S20: the new physics base, not yet called by the app, with its reference fixtures. Its own tests only; the pull request that switches a caller widens this rule (S20 §5.3).",
+      "paths": ["src/astro/**", "tests/fixtures/astro/**"],
+      "checks": { "commands": ["@app-build"], "unit": ["tests/astro-*.test.ts", "tests/architecture.test.ts"] }
+    },
+    {
       "id": "mission-file",
       "why": "Saved/shared mission format and its readers.",
       "paths": ["src/config/mission-file.ts"],
@@ -191,7 +197,7 @@
       "id": "test-harnesses",
       "why": "Shared unit harnesses, fixtures and validation helpers feed many files and the slow suites.",
       "paths": ["tests/*.ts", "tests/fixtures/**", "tests/validation/*.ts"],
-      "exclude": ["tests/*.test.ts", "tests/validation/*.test.ts", "tests/**/*.md"],
+      "exclude": ["tests/*.test.ts", "tests/validation/*.test.ts", "tests/**/*.md", "tests/fixtures/astro/**"],
       "checks": { "unit": ["*"], "heavy": ["*"], "sixdof-fleet": ["*"] }
     },
     {
