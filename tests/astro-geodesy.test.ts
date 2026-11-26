@@ -53,6 +53,8 @@ describe('astro geodesy', () => {
       for (const v of [east, north, u]) expect(Math.abs(dot(v, v) - 1)).toBeLessThanOrEqual(1e-15);
       for (const [a, b] of [[east, north], [east, u], [north, u]]) expect(Math.abs(dot(a, b))).toBeLessThanOrEqual(1e-15);
       expect(dist(cross(east, north), u)).toBeLessThanOrEqual(1e-15);
+      expect(dist(u, n)).toBeLessThanOrEqual(1e-15);
+      expect(dist(east, { x: -Math.sin(p.lon), y: Math.cos(p.lon), z: 0 })).toBeLessThanOrEqual(1e-15);
     }
   });
 
@@ -77,13 +79,36 @@ describe('astro geodesy', () => {
   });
 
   it('degenerate inputs end', () => {
+    const inputs = [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 7e6 }, { x: 0, y: 0, z: -7e6 }, { x: 1e12, y: 0, z: 1e12 }];
     const t0 = performance.now();
-    const origin = geodeticFromEcef({ x: 0, y: 0, z: 0 });
-    const nan = geodeticFromEcef({ x: NaN, y: 1, z: 2 });
-    const far = geodeticFromEcef({ x: 1e12, y: 0, z: 1e12 });
+    const out = inputs.map((r) => geodeticFromEcef(r));
     expect(performance.now() - t0).toBeLessThan(50);
-    expect([nan.lat, nan.lon, nan.h].every(Number.isNaN)).toBe(true);
-    expect(origin).toBeDefined();
-    expect(far).toBeDefined();
+    out.forEach((g, i) => {
+      const { x, y, z } = inputs[i];
+      for (const v of [g.lat, g.lon, g.h]) expect(Number.isFinite(v), `(${x}, ${y}, ${z}) -> ${JSON.stringify(g)}`).toBe(true);
+      expect(Math.abs(g.lat)).toBeLessThanOrEqual(Math.PI / 2);
+      if (x === 0 && y === 0 && z !== 0) {
+        expect(Math.abs(g.lat - Math.sign(z) * Math.PI / 2)).toBeLessThanOrEqual(1e-15);
+        expect(Math.abs(g.h - (Math.abs(z) - 6378137 * (1 - 1 / 298.257223563)))).toBeLessThanOrEqual(1e-6);
+      }
+    });
+  });
+
+  it('a non-finite input gives NaN in every number returned', () => {
+    const nums = (o: unknown): number[] => (typeof o === 'number' ? [o] : Object.values(o as object).flatMap(nums));
+    const fns: [string, number[], (a: number[]) => unknown][] = [
+      ['geodeticFromEcef', [4e6, 3e6, 5e6], (a) => geodeticFromEcef({ x: a[0], y: a[1], z: a[2] })],
+      ['ecefFromGeodetic', [0.5, 1, 1000], (a) => ecefFromGeodetic(a[0], a[1], a[2])],
+      ['ellipsoidNormal', [0.5, 1], (a) => ellipsoidNormal(a[0], a[1])],
+      ['enuBasis', [0.5, 1], (a) => enuBasis(a[0], a[1])],
+      ['normalGravity', [0.5], (a) => normalGravity(a[0])],
+    ];
+    for (const [name, base, f] of fns)
+      for (const bad of [NaN, Infinity, -Infinity])
+        base.forEach((_, i) => {
+          const args = base.map((v, j) => (j === i ? bad : v));
+          const r = nums(f(args));
+          expect(r.every(Number.isNaN), `${name}(${args.join(', ')}) returned ${r.join(', ')}`).toBe(true);
+        });
   });
 });
