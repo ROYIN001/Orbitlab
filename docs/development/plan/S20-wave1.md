@@ -86,7 +86,7 @@ The functions work in any Earth-centred frame whose z axis is the spin axis; "lo
 | `matches ERFA: geodetic to Earth-fixed` | for every point, distance between `ecefFromGeodetic(lat, lon, h)` and `(x, y, z)` ≤ 1e-6 m |
 | `matches ERFA: Earth-fixed to geodetic` | `lat` within 1e-11 rad of `latBack`, `h` within 1e-6 m of `hBack`; `lon` within 1e-11 rad of `lonBack` modulo 2π, except at the exact poles |
 | `round trip` | `ecefFromGeodetic(geodeticFromEcef(r))` within 1e-6 m of `r` for every point |
-| `the normal is the direction height grows in` | at 20 points, `h` one metre along `ellipsoidNormal` is larger by 1 ± 1e-8 m; `enuBasis` vectors are unit and mutually perpendicular within 1e-15, and east × north = up |
+| `the normal is the direction height grows in` | at 20 points, a step of 1,000 m along `ellipsoidNormal` raises `h` by 1000 ± 1e-6 m and leaves `lat` and `lon` within 1e-11 rad; `enuBasis` vectors are unit and mutually perpendicular within 1e-15, and east × north = up |
 | `agrees with the app's present geodesy below 2,000 km` | for points with h ≤ 2e6, `geodetic()` of `src/physics/geodesy.ts` differs by ≤ 1e-9 rad and ≤ 1e-3 m |
 | `normal gravity matches the closed forms` | relative difference ≤ 5e-10 at the seven latitudes |
 | `longitude stays in (−π, π]` | for every point and for lon = ±π inputs |
@@ -249,7 +249,7 @@ export function azElRange(siteItrf: V3, lat: number, lon: number, targetItrf: V3
 | `GCRF to ITRF is within 2 mas of the full IAU 2006/2000A chain` | the rotation between the two matrices ≤ 9.7e-9 rad at the instants from 1990 to 2040 |
 | `TEME to ITRF agrees with the app's present one` | for a 7,000 km vector at each instant, within 1e-4 m of `temeToItrf` from `src/orbit/earth-orientation.ts` given the same dut1, xp, yp |
 | `TEME to GCRF agrees with Skyfield` | within 0.2 m for the 60 vectors |
-| `velocity carries the Earth's rotation` | a point fixed in GCRF at 7,000 km: its ITRF velocity from `gcrfToItrfState` equals the centred difference of its ITRF position over 1 s within 2e-4 m/s; `itrfToGcrfState(gcrfToItrfState(s))` returns `s` within 1e-9 m and 1e-12 m/s |
+| `velocity carries the Earth's rotation` | a point fixed in GCRF at 7,000 km: its ITRF velocity from `gcrfToItrfState` equals the centred difference of its ITRF position over 1 s within 2e-4 m/s; `itrfToGcrfState(gcrfToItrfState(s))` returns `s` within 1e-8 m and 1e-11 m/s |
 | `matrices are rotations` | M·Mᵀ = I within 1e-14, determinant 1 |
 | `orbit frames` | `rswBasis` and `lvlhBasis` are orthonormal and right-handed; `rsw.r` ∥ r, `rsw.w` ∥ r × v, `lvlh.z` = −r̂, `lvlh.y` = −ŵ |
 | `azimuth, elevation, range` | a target 1,000 km along `up` gives el = π/2 and range 1e6; along `north` gives az = 0, el = 0; along `east` gives az = π/2 |
