@@ -75,7 +75,7 @@ The functions work in any Earth-centred frame whose z axis is the spin axis; "lo
   "gravity": [ { "lat": 0, "gamma": 0 } ] }
 ```
 
-  - `points`: 200 from the Halton sequence (bases 2, 3, 5; no random numbers): `lat = asin(2u₁ − 1)`, `lon = π(2u₂ − 1)`, `h = −10e3 + (40e6 + 10e3)·u₃²`. Then 14 by hand: both poles at h = 0 and at 40e6; the equator at lon 0, at π and at −π + 1e-12; lat 0.7, lon 2 at h = −10e3 and at 40e6; lat ±(π/2 − 1e-9), lon 0.5, h = 500e3; lat ±1e-12, lon 0.3, h = 0. `x, y, z` from `erfa.gd2gc(1, lon, lat, h)`; the `Back` values from `erfa.gc2gd(1, xyz)`.
+  - `points`: 200 from the Halton sequence (bases 2, 3, 5; no random numbers): `lat = asin(2u₁ − 1)`, `lon = π(2u₂ − 1)`, `h = −10e3 + (40e6 + 10e3)·u₃²`. Then 13 by hand: both poles at h = 0 and at 40e6; the equator at lon 0, at π and at −π + 1e-12; lat 0.7, lon 2 at h = −10e3 and at 40e6; lat ±(π/2 − 1e-9), lon 0.5, h = 500e3; lat ±1e-12, lon 0.3, h = 0. `x, y, z` from `erfa.gd2gc(1, lon, lat, h)`; the `Back` values from `erfa.gc2gd(1, xyz)`.
   - `gravity`: latitudes 0°, 15°, 30°, 45°, 60°, 75°, 90°, from Moritz's closed forms in mpmath at 50 digits with a = 6378137, 1/f = 298.257223563, GM = 3.986004418e14, ω = 7.292115e-5: `m = ω²a²b/GM`, `e′ = √(a² − b²)/b`, `q₀ = ½[(1 + 3/e′²)·atan e′ − 3/e′]`, `q₀′ = 3(1 + 1/e′²)(1 − atan(e′)/e′) − 1`, `γₑ = GM/(ab)·(1 − m − m e′ q₀′/(6 q₀))`, `γₚ = GM/a²·(1 + m e′ q₀′/(3 q₀))`, `γ(φ) = (a γₑ cos²φ + b γₚ sin²φ)/√(a² cos²φ + b² sin²φ)`. The script asserts that γₑ and γₚ equal the published 9.7803253359 and 9.8321849378 to ten figures before it writes anything.
   - Floats are written with 17 significant digits.
 
@@ -158,7 +158,7 @@ export function eopAt(table: EopTable | null, utc: Jd2): Eop;
 
 - [ ] **Step 1 (reference author): the generator and the fixture.** `erfa-time.json` holds:
   - `leap`: for each change of TAI − UTC from 1972-07-01 on, the value one second before 0 h and at 0 h (from `erfa.dat`), with the UTC Julian date in two parts;
-  - `drift`: 24 instants from 1960 to 1971 (the first and the fifteenth of January and July, 12 h UTC) with `erfa.dat`;
+  - `drift`: 48 instants from 1960 to 1971 (the first and the fifteenth of January and July of each year, 12 h UTC) with `erfa.dat`;
   - `scales`: 40 Halton instants from 1972 to 2060, none within a day of a leap second, with TAI and TT in two parts from `erfa.utctai` and `erfa.taitt`;
   - `tdb`: 200 Halton instants from 1960 to 2060 (TT) with `erfa.dtdb(tt1, tt2, 0, 0, 0, 0)`.
 
@@ -167,12 +167,12 @@ export function eopAt(table: EopTable | null, utc: Jd2): Eop;
 | Case | Assertion |
 |---|---|
 | `TAI − UTC at every leap second since 1972` | `toBe` the ERFA value one second before and at 0 h |
-| `TAI − UTC in the drift years` | within 1e-9 s of ERFA at the 24 instants |
+| `TAI − UTC in the drift years` | within 1e-9 s of ERFA at the 48 instants |
 | `holds outside the table` | 1957-10-04 gives the 1960-01-01 value; 2040-01-01 gives 37 |
 | `TT − TAI is 32.184 s` | `taiToTt` then `ttToTai` returns the parts within 1e-9 s, and the difference is 32.184 s within 1e-9 s |
 | `UTC to TT and back` | within 1e-6 s at the 40 instants, and `utcToTt` within 1e-6 s of ERFA |
 | `TDB − TT` | within 50e-6 s of ERFA at the 200 instants |
-| `Earth orientation equals today's` | a 30-day table with a 1 s jump on day 12: at 200 instants from 5 days before to 5 days after it, `dut1`, `xp`, `yp` are `toBe` those of `eopAt(jd, table)` from `src/orbit/earth-orientation.ts`; `quality` is `'held'` outside and `'data'` inside |
+| `Earth orientation equals today's` | a 30-day table with a 1 s jump on day 12 (it also carries `predictedFrom`, which the old function's type requires): at 200 instants from 5 days before to 5 days after it, `dut1`, `xp`, `yp` are `toBe` those of `eopAt(jd, table)` from `src/orbit/earth-orientation.ts`; `quality` is `'held'` outside and `'data'` inside |
 | `no table` | zeros and `'none'` |
 | `NaN in, NaN out` | no function throws |
 
