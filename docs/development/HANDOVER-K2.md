@@ -538,6 +538,8 @@ The session that worked on `claude/beautiful-shannon-l4s4za` closes on the owner
 
 **History first.** If `git rev-parse --is-shallow-repository` prints `true`, run `git fetch --unshallow origin`, then `git fetch origin '+refs/heads/claude/*:refs/remotes/origin/claude/*'` (both tried on a clone of depth 50, the default depth of `create_session`, on 2026-11-25). The steps need what such a clone lacks: `1842a86` (C is 51 commits after it, main 52), `7263004`, `408ad16` and `c5da5bb`; `c2af8ae`, only on `claude/hopeful-allen-1o0vmh`; `e7b41c80`, `2fe311c` and `8876c89`, only on `claude/beautiful-shannon-l4s4za`, as #234 was squash-merged; `f5413aa` and `5cc0d43`, only on `claude/p-fx4-s1`.
 
+> **Update 2026-11-26, at the session's close.** The session closes on the owner's "เริ่มทำได้เลยครับในแชทใหม่" (14:47:58Z); its hand-over is section 17. / **อัปเดต 2026-11-26 ปิดเซสชัน:** ส่งมอบงานอยู่ในข้อ 17
+
 > **Update 2026-11-26, later.** #206 (`cb3ccd77`, EQ-6 step 2, the split, identical output) merged at 09:54:22Z on the owner's "ก อนุมัติ merge (แนะนำ)" and was published by Pages 45796316440 at 10:21:52Z ([DECISIONS](../DECISIONS.md), "Decided 2026-11-26, later (…)"). EQ-6's window is open since 2026-11-26: while it is open no other PR touches `src/i18n`, and steps 1 (the worker path) and 3 (the loader) remain. The live satellite sets are fresh in all six groups since Pages 45796316440 (`satellites` 2026-11-26T06:01:25.258Z). Precache code has 1 B left (15,196,999 B of 15,197,000).
 >
 > **อัปเดต 2026-11-26 (ภายหลัง):** #206 (`cb3ccd77`, EQ-6 ขั้น 2 การแยกไฟล์ ผลลัพธ์เหมือนเดิม) merge แล้วเมื่อ 09:54:22Z ตามคำตอบของคุณ "ก อนุมัติ merge (แนะนำ)" และเผยแพร่แล้วโดย Pages 45796316440 เมื่อ 10:21:52Z ([DECISIONS](../DECISIONS.md), "Decided 2026-11-26, later (…)") หน้าต่างของ EQ-6 เปิดแล้วตั้งแต่ 2026-11-26 ระหว่างที่เปิดอยู่ไม่มี PR อื่นแตะ `src/i18n` และยังเหลือขั้น 1 (เส้นทาง worker) กับขั้น 3 (ตัวโหลด) ข้อมูลดาวเทียมบนเว็บจริงใหม่ครบทั้งหกกลุ่มตั้งแต่ Pages 45796316440 (`satellites` 2026-11-26T06:01:25.258Z) และ precache code เหลือที่ว่าง 1 B (15,196,999 B จาก 15,197,000)
@@ -732,6 +734,37 @@ Its scratchpad goes with its container. What the next session needs from it is i
 - the status audit of 2026-11-24, sent in chat in Thai, whose counts the re-plan makes again (section 16.4, step 10).
 
 The tools of GK1's local runs were never in the repo either: the KPI scripts other than `measure.mjs` (`retro.py`, `replan.py`, `kpi35.py` and the rest that K1-retro names), the drill's server and driver, and the fontconfig file (section 16.4). The session's worktrees go with it. Its branches (`git ls-remote`, 13:50Z): open, `claude/i-r75-s2` (#236) and `claude/i-records-s2` (this records PR, not on origin until it is pushed); merged and not deleted, `claude/beautiful-shannon-l4s4za` (#234; kept, as the only branch that holds `e7b41c80`, `2fe311c` and `8876c89`; `refs/pull/234/head` holds them too), `claude/i-records-s1` (#235) and `claude/p-fx4-s1` (#233).
+
+## 17. Hand-over of 2026-11-26 (closing the session that took over from section 16)
+
+The session that took over from section 16 (`Claude-Session` line `session_01JPSDq929PZGEwBFVs1Nd9z`) closes on the owner's words in chat, read at 2026-11-26T14:47:58Z, verbatim: "เริ่มทำได้เลยครับในแชทใหม่" (go ahead and start, in a new chat), in answer to the session's message that listed the next work (EQ-6's worker-path step first). The next session starts here. Code and GitHub win over this text: check every SHA and state again before acting. Nothing here is decided for the owner.
+
+**History first.** As in section 16: if the clone is shallow, `git fetch --unshallow origin`, then `git fetch origin '+refs/heads/claude/*:refs/remotes/origin/claude/*'`.
+
+### 17.1 State (as read at 2026-11-26T14:48Z)
+
+- **Main** is `e6f06af9` (#245, records, Markdown only). **No PR is open.**
+- **The live site** is `cb3ccd7` (Pages 45796316440, the push of #206, published 2026-11-26T10:21:52Z; 13 of 13 jobs; unit 10,905, browser 47). Its satellite sets are fresh in all six groups (stations 18, thai 6, gnss 154, weather 75, imaging 167, debris 1991, as of 2026-11-26T06:01:25.258Z): the first published refresh of every group since 2026-11-03, after #234 and #239. #241–#245 are Markdown only and started no Pages run; the next daily refresh (cron `43 17 * * *`, often hours late) builds main's tip.
+- **Merged by this session** (PROGRESS has each row): #238 (records: #234, #233), #239 (NAPA-1 re-entered, part B; heavy and fleet 45641735280, `suite=both`), #240 (the Help text on the ISS mission), #236 (docs PR B), #241 (records), #242 (the GK1 close-out on C, steps 1–16; Q check 19 of 26), #243 and #244 (records: the owner's answers), #206 (EQ-6 step 2, the split), #245 (records). #239's own Pages run 45649878519 did not publish (GitHub's artifact listing, three attempts); #240's run published both. The schedule run 45733670510 did not publish (browser (4) could not download an artifact, ECONNRESET); the owner chose to wait for the next refresh ("ก.").
+- **GK1:** on item 2 the owner answered "ก ลงนาม GK1 พร้อม variance" (DECISIONS, "Decided 2026-11-25, night"); #242 merged on item 1. **GK2** is set for 2027-01-21 (core scope 49 PRs with ×1.49, checked every Friday; `reports/K2-replan-GK1.md`). S7 counts as status in the hand-offs.
+- **Answered on 2026-11-26** (DECISIONS, "Decided 2026-11-26"): the Windows computer counts for D-56's iPad class at GK2; a bug fix under the standing approval is not new work outside the plan. Section 16.3 has no open question.
+- **Budget headroom:** precache code 15,196,999 of 15,197,000 B (**1 B left**); `index-*.js` 30 B; `i18n-*.js` 328 B (the EQ-6 report's table on `c3da8b32`; #206 changed no raw byte). Any change that grows precache code needs a D-38 raise: measure on the real main first and ask the owner (D-38; S04 names EQ-8 as precache code's offset).
+- **D-64:** the list hash at main is `a27c950c…` (unchanged since #239); heavy and fleet 45641735280 stand for main.
+
+### 17.2 Next, in order
+
+1. **EQ-6's window is open** (since 2026-11-26; "ก หลังปิด GK1 (แนะนำ)"; while it is open no other PR touches `src/i18n/**`). Next is the worker-path PR (S09 EQ-6, PR1: cut the runtime import of `src/i18n` from the recheck worker's path, `lessons/recheck.worker.ts` → `recheck.ts` → `measures.ts` → `lessons/text.ts` → `src/i18n`, or keep the worker on static dictionaries), with EO-BUN-1 per worker byte-identical, then the loader (PR3; its cache condition and first-paint checks in S09), then T's ratchet PR. `reports/EQ-6-i18n-split.md` holds the oracle (`tests/i18n-resolved-snapshot.test.ts`, fixture recorded on `c3da8b32`), the EO-BUN-1 scripts and the window steps. Note there: the oracle cannot see the evaluation-order imports in `src/i18n/index.ts` (commit `eec95cfc`); only `bundle-budget` and the bundle comparison guard them. EQ-6 is plan work: merge needs the owner's approval in chat; a second agent reviews (P1).
+2. **The lane-I docs PR on the GK2 answer** (S05 §05.9's gate table; the wave column of `packages.tsv`, `assignment.tsv` and `registry.tsv`), once lane I has a free slot (section 16.6's caps; EQ-6's PRs are lane I's).
+3. **The plan work in the owner's order** (section 16.5): M-PLATFORM-041 with the 8a server (a new tool: the owner's approval), kits 3a, 3c and 3d, R1.6 PR5, FX-4's later steps, FX-6.
+4. **A Friday checkpoint** line in each Friday's records PR against GK2's plan (`K2-replan-GK1.md`, "A Friday check").
+
+### 17.3 Rules to keep
+
+Section 16.6 holds, with the answers above: the standing approval (bug fixes and records-only PRs; a bug fix is not new work outside the plan); approvals in chat; one branch per PR; rebase before review or merge; the WIP caps; fragments; D-64; D-38 with 1 B of precache code; no merge of any kind during a Pages run; local measurement runs one at a time. Two lessons of this session: a records PR's fragment must name the CI run on the head that merges (a push cancels the earlier run); and this session's permission settings refused a `workflow_dispatch` of `deploy.yml`, so a failed refresh is left to the next one unless the owner runs it.
+
+### 17.4 What this session leaves out of the repo
+
+Its scratchpad goes with its container: the KPI baseline JSON of C and `1842a86` (`measure.mjs` runs of 2026-11-25), the held-journey logs, the rewritten revert-drill tools (`server.mjs`, `drill.mjs`, `common.mjs`, `control-recheck.mjs`, `post-run-checks.mjs`; SHA-256 in `revert-drill-GK1.md`), the fontconfig file, the re-plan scripts and data (`k2count.py`, `k2replan.py`), the register and KPI-35 scripts, the EQ-6 `split.mjs` and EO-BUN-1 outputs. What the records need from them is in the reports #242 and #206 merged. The scratch worktrees at `1842a86` and `9b224ece` are local only.
 
 ## Appendix A — HU-6 record template
 
