@@ -12,13 +12,18 @@ export const WGS84_F = 1 / 298.257223563;
 export const WGS84_B = WGS84_A * (1 - WGS84_F);
 export const WGS84_E2 = WGS84_F * (2 - WGS84_F);
 
+const NAN3 = (): V3 => ({ x: NaN, y: NaN, z: NaN });
+/** True unless every argument is finite (x * 0 is 0 only for a finite x, and cannot overflow). */
+const nonFinite = (...a: number[]) => a.reduce((s, v) => s + v * 0, 0) !== 0;
+
 /**
  * Bowring's iteration on the reduced latitude, run to convergence under a
  * fixed cap, so it ends for every input; good from -10 km to 40,000 km.
  * Height is p cos(lat) + z sin(lat) - a sqrt(1 - e2 sin^2(lat)), which stays
- * accurate at the poles. NaN in gives NaN out.
+ * accurate at the poles. A non-finite input gives NaN in every number.
  */
 export function geodeticFromEcef(r: V3): Geodetic {
+  if (nonFinite(r.x, r.y, r.z)) return { lat: NaN, lon: NaN, h: NaN };
   const p = Math.hypot(r.x, r.y);
   let th = Math.atan2(r.z * WGS84_A, p * WGS84_B);
   let lat = 0;
@@ -27,7 +32,7 @@ export function geodeticFromEcef(r: V3): Geodetic {
     const s = Math.sin(th), c = Math.cos(th);
     lat = Math.atan2(r.z + ep2 * WGS84_B * s * s * s, p - WGS84_E2 * WGS84_A * c * c * c);
     const next = Math.atan2((1 - WGS84_F) * Math.sin(lat), Math.cos(lat));
-    const done = Math.abs(next - th) < 1e-16;
+    const done = next === th; // no change in the last bit
     th = next;
     if (done) break;
   }
@@ -39,6 +44,7 @@ export function geodeticFromEcef(r: V3): Geodetic {
 }
 
 export function ecefFromGeodetic(lat: number, lon: number, h: number): V3 {
+  if (nonFinite(lat, lon, h)) return NAN3();
   const sl = Math.sin(lat), cl = Math.cos(lat);
   const n = WGS84_A / Math.sqrt(1 - WGS84_E2 * sl * sl);
   return {
@@ -50,11 +56,13 @@ export function ecefFromGeodetic(lat: number, lon: number, h: number): V3 {
 
 /** Unit normal to the ellipsoid, outward: the direction height grows in. */
 export function ellipsoidNormal(lat: number, lon: number): V3 {
+  if (nonFinite(lat, lon)) return NAN3();
   const cl = Math.cos(lat);
   return { x: cl * Math.cos(lon), y: cl * Math.sin(lon), z: Math.sin(lat) };
 }
 
 export function enuBasis(lat: number, lon: number): { east: V3; north: V3; up: V3 } {
+  if (nonFinite(lat, lon)) return { east: NAN3(), north: NAN3(), up: NAN3() };
   const sl = Math.sin(lat), cl = Math.cos(lat), so = Math.sin(lon), co = Math.cos(lon);
   return {
     east: { x: -so, y: co, z: 0 },
