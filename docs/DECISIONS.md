@@ -715,7 +715,7 @@ In the chat of the session that took over from `claude/beautiful-shannon-l4s4za`
 | 2026-11-25 | Whether GK1's three re-runs (the M-PLAN-026 re-plan, the hand-off check and the follow-through: GK items 9–11) are still made again on the candidate C (`9b224ec`), about 2–3 hours | "ก ทำใหม่บน C (แนะนำ)" (make them again on C, as the answer of 2026-11-05 "ทำใหม่บนรุ่นที่ตรึง" said; the results go into the GK1 close-out records PR) | HANDOVER-K2 §16.4, steps 10–12 |
 | 2026-11-25 | Whether the rest of H3 (a variance, and GK item 1 revisited) applies, now that #233, #239 and #240 have merged after C | "ก ใช้ C บันทึก variance (แนะนำ)" (keep C: GK1 is checked on C as planned, and a variance records that three PRs merged after C, with their diff; no new evidence is made) | HANDOVER-K2 §16.4; PROGRESS, "Variances for GK1", in the GK1 close-out records PR |
 
-Not asked yet (HANDOVER-K2 §16.3): whether the Windows computer still counts for D-56's iPad class at GK2, and whether a bug fix under the standing approval is new work outside the plan.
+(2026-11-26: both asked and answered; "Decided 2026-11-26".) Not asked yet (HANDOVER-K2 §16.3): whether the Windows computer still counts for D-56's iPad class at GK2, and whether a bug fix under the standing approval is new work outside the plan.
 
 ## Decided 2026-11-25, night (GK1 items 1 and 2, GK2's date, S7 as status; chat)
 
@@ -727,6 +727,15 @@ In the chat of the session that took over from `claude/beautiful-shannon-l4s4za`
 | 2026-11-25 | GK1 item 2, the sign-off, shown with the results on C (GK items pass or done 4: 1, 3, 8, 12; partial 8), G0 and G1+ not passed (2026-10-24), and the new variances: no HU-6 session at GK1; the candidate moved from `1842a86` to `9b224ec`; three PRs merged after C; #217's CSS raise with no named offset; KPI-15 and KPI-16 measured in half; the local tools written again and KPI-35 counted by hand | "ก ลงนาม GK1 พร้อม variance" (sign GK1 with the variances: the results and every variance recorded in #242 are accepted, and the work goes on to GK2) | the `signed:` lines of kpi-GK1, GK1-handoffs and GK1-followthrough; PROGRESS, the GK1 row; CHANGELOG's GK1 line |
 | 2026-11-25 | GK2's scope and date, from the draft re-plan (K2-replan-GK1.md): core scope 49 PRs (R2 complete, G0 and G1+ closed, all FX, GK2's R7 items); K2's measured code rate 1.55 PRs per working day; each option checked every Friday | "ก 49 PR เผื่อ ×1.49 → 21 ม.ค. 2027 (แนะนำ)" (49 PRs at 1.55 a day with K1-retro's ×1.49 on the unwritten parts, about 64 PRs: Day 77, 2027-01-21; checked every Friday) | K2-replan-GK1.md; the lane-I docs PR for S05 §05.9's gate table and the wave columns (HANDOVER-K2 §16.4, step 18) |
 | 2026-11-25 | Whether the owner's S7 answer (2026-10-28), which accepts the 39 proposed lanes as the owners of 39 hand-off rows, also moves those rows to "recorded, owner named" | "ก นับเป็นมีเจ้าของ (แนะนำ)" (count them as having an owner: the counts that #242 wrote stand: done or decided 70, in progress 2, recorded 110, no owner 37, dropped 0, no items 1) | GK1-handoffs.md, its Summary |
+
+## Decided 2026-11-26 (the Windows computer at GK2 and bug fixes in the plan-only period; chat)
+
+In the same session's chat, the session's message after #243 merged ended with the two questions still open from HANDOVER-K2 §16.3, in Thai, with no options: "คอมพิวเตอร์ Windows ยังนับแทน iPad ที่ GK2 ได้ไหม" and "การแก้บั๊กภายใต้การอนุมัติถาวร นับเป็นงานนอกแผนไหม". The owner answered in chat, read at 2026-11-26T04:02:55Z (this machine's clock when the session read it), verbatim: "ตอบคำถาม 1. แทนได้ 2. ไม่นับ".
+
+| Date | Question | Answer | Where it lands |
+|---|---|---|---|
+| 2026-11-26 | Whether the Windows computer (Chrome or Edge) still counts for D-56's iPad class at GK2, as the answer of 2026-11-04 ("ข นับ Windows แทน iPad") did for GK1 | "1. แทนได้" (it can stand in) | HU-6 at GK2 (HANDOVER-K2 §16.3; PROGRESS, "Variances for GK2" when HU-6 is planned) |
+| 2026-11-26 | Whether a bug fix under the standing approval counts as new work outside the plan, which waits until after GK2 by "งานแผนอย่างเดียว (แนะนำ)" (2026-11-25T07:21:22Z) | "2. ไม่นับ" (it does not count) | bug fixes under the standing approval go on during the plan-only period; SESSION-PROTOCOL §1 step 3 unchanged |
 
 ## Follow-through at GK1 (S08 §08.6)
 
