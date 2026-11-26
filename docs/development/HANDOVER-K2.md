@@ -745,6 +745,10 @@ The tools of GK1's local runs were never in the repo either: the KPI scripts oth
 
 The session that took over from section 16 (`Claude-Session` line `session_01JPSDq929PZGEwBFVs1Nd9z`) closes on the owner's words in chat, read at 2026-11-26T14:47:58Z, verbatim: "เริ่มทำได้เลยครับในแชทใหม่" (go ahead and start, in a new chat), in answer to the session's message that listed the next work (EQ-6's worker-path step first). The next session starts here. Code and GitHub win over this text: check every SHA and state again before acting. Nothing here is decided for the owner.
 
+> **Update 2026-11-26, evening.** EQ-6 step 1 (the worker path) merged as #247 (`4b559827`, 16:21:45Z) on the owner's "ก อนุมัติ merge (แนะนำ)" and was published by Pages 45858051574 at 16:48:57Z. It took S09's second form, "keep the worker on static dictionaries": no source change, and a guard, `tests/i18n-worker-path.test.ts`, that fails if a dynamic import other than the two JSON loads appears in a module a worker reaches. So step 3's loader has to sit outside the workers' graph. Section 17.2's item 1 now has the loader left; the window stays open. Main is `4b559827`; precache code unchanged (1 B left).
+>
+> **อัปเดต 2026-11-26 (ค่ำ):** EQ-6 ขั้น 1 (เส้นทาง worker) merge แล้วเป็น #247 (`4b559827`, 16:21:45Z) ตามคำตอบของคุณ "ก อนุมัติ merge (แนะนำ)" และเผยแพร่แล้วโดย Pages 45858051574 เมื่อ 16:48:57Z ใช้แบบที่สองของ S09 "คง worker ไว้บนพจนานุกรมแบบ static" ไม่แก้โค้ดแอป และเพิ่มเทสต์กันที่ล้มเมื่อมี dynamic import อื่นนอกจาก JSON สองตัวในโมดูลที่ worker เข้าถึง ตัวโหลดของขั้น 3 จึงต้องอยู่นอกเส้นทางของ worker ข้อ 1 ของ 17.2 เหลือตัวโหลด หน้าต่างยังเปิดอยู่ main คือ `4b559827` precache code เท่าเดิม (เหลือ 1 B)
+
 **History first.** As in section 16: if the clone is shallow, `git fetch --unshallow origin`, then `git fetch origin '+refs/heads/claude/*:refs/remotes/origin/claude/*'`.
 
 ### 17.1 State (as read at 2026-11-26T14:48Z)
