@@ -449,7 +449,7 @@ step: 1                          # S09's PR1, the worker path; merged after step
 lane: I
 items: [M-PLATFORM-031]
 change_kind: identical-output
-status: review                   # branch claude/i-eq6-s1
+status: merged                   # PR #247 merged 2026-11-26T16:21:45Z as 4b559827 on the owner's "ก อนุมัติ merge (แนะนำ)"; published by Pages 45858051574 (16:48:57Z)
 execution_authorized: true       # wave K2 (D-65): "รับรองและอนุญาต K2", 2026-10-28T02:54:22Z (DECISIONS.md:386)
 window: "open since 2026-11-26 (\"ก หลังปิด GK1 (แนะนำ)\", DECISIONS \"Decided 2026-11-25, evening\"; GK1 signed, \"Decided 2026-11-25, night\")"
 base: {branch: origin/main, sha: 0b7b6e55, date: 2026-11-26}
