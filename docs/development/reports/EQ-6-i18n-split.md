@@ -16,7 +16,7 @@ sources: [RW:INF-02, DP:7.4-M1, "DP:UX-H3-5/INF-16(c)", CR:P1]
 change_kind: identical-output
 fold_of: "M-LEARNING-036 (typed keys) comes after the per-language split (folds.tsv; S09's PR4)"
 or_ids: [OR-1, OR-2]
-status: in_progress              # a local draft, not opened (S18 :424: review = PR open); set to review in the edit that opens the PR
+status: review                   # PR #206 open and marked ready on window day 1 (2026-11-26)
 scientific_acceptance: not-applicable
 execution_authorized: true       # wave K2 (D-65)
 owner_authorization: {date: 2026-10-28T02:54:22Z, quote: "รับรองและอนุญาต K2", scope: "D-65 wave K2 (S1 items 4–5; DECISIONS.md:386)"}
@@ -45,7 +45,7 @@ oracle: [EO-PR-EQ-6-s2-1, EO-PR-EQ-6-s2-2]   # per-PR forms of the catalog rows 
 pr_oracles:
   - id: EO-PR-EQ-6-s2-1
     catalog: EO-I18N-1
-    what: "per language: key count, own-key count, raw SHA-256 (own entries in object order), resolved SHA-256 (tFor with each {name} filled \"<name>\"; tCountFor at 0, 1, 2, 5 and 1.5 for values with \"|\"); one SHA-256 per first key segment (89)"
+    what: "per language: key count, own-key count, raw SHA-256 (own entries in object order), resolved SHA-256 (tFor with each {name} filled \"<name>\"; tCountFor at 0, 1, 2, 5 and 1.5 for values with \"|\"); one SHA-256 per first key segment (90 on c3da8b32; 89 on 8dcc4b2)"
     files: [tests/i18n-resolved-snapshot.test.ts, tests/fixtures/i18n/eo-i18n-1.json]
     recorded: "commit 1 (91350268), re-recorded on main c3da8b32 on 2026-11-26 (5,194 union keys, 90 segments), green there before any source change; first recorded on 8dcc4b2 (fe3ceec, 5,165 keys, 89 segments)"
     sabotage: "on c3da8b32 (2026-11-26; also on 8dcc4b2, 2026-11-04), reverted: delete th 'setup.dynamics.model' -> 4 of 4 fail; swap ...workspaceTh and ...projectsTh -> raw fails (1 of 4); a new key in all three languages -> 4 of 4 fail, and the dump diff shows that key only"
@@ -392,13 +392,13 @@ Not run again on `c3da8b32`: the browser journeys, heavy and the six-DOF fleet (
 
 ## The window and what this PR waits on
 
-- **Window.** S05 `:324` puts EQ-6 on K2 days 1–2. The owner's answers move it. On 2026-10-28 (13:34:15Z): the first two working days once merging is possible with no i18n PR open, with this split first, then the worker path, then the loader. On 2026-11-04: "ก เตรียมตอนนี้ เปิดหน้าต่างหลัง HU-6 (แนะนำ)". HU-6 then moved to GK2, and on 2026-11-25 the owner answered when the window opens now: "ก หลังปิด GK1 (แนะนำ)" (after GK1 is closed: the window opens after the owner signs GK1; before it opens, #206 is rebased onto main and its oracles recorded; while it is open no other PR touches `src/i18n`; [DECISIONS](../../DECISIONS.md), "Decided 2026-11-25, evening", `:714`). The same night GK1 item 2 was answered "ก ลงนาม GK1 พร้อม variance" (sign GK1 with the variances; "Decided 2026-11-25, night", `:727`). So GK1 is signed, and the window-day checks below were made on main `c3da8b32` on 2026-11-26 (results in "Rebased on c3da8b32 (2026-11-26)"); the push and the PR's update are not done yet (step 5).
+- **Window.** S05 `:324` puts EQ-6 on K2 days 1–2. The owner's answers move it. On 2026-10-28 (13:34:15Z): the first two working days once merging is possible with no i18n PR open, with this split first, then the worker path, then the loader. On 2026-11-04: "ก เตรียมตอนนี้ เปิดหน้าต่างหลัง HU-6 (แนะนำ)". HU-6 then moved to GK2, and on 2026-11-25 the owner answered when the window opens now: "ก หลังปิด GK1 (แนะนำ)" (after GK1 is closed: the window opens after the owner signs GK1; before it opens, #206 is rebased onto main and its oracles recorded; while it is open no other PR touches `src/i18n`; [DECISIONS](../../DECISIONS.md), "Decided 2026-11-25, evening", `:714`). The same night GK1 item 2 was answered "ก ลงนาม GK1 พร้อม variance" (sign GK1 with the variances; "Decided 2026-11-25, night", `:727`). So GK1 is signed, and the window-day checks below were made on main `c3da8b32` on 2026-11-26 (results in "Rebased on c3da8b32 (2026-11-26)"); the push and the PR's update are not done yet (step 5). (2026-11-26: step 5 done: `2646c697` pushed to `claude/i-eq6-s2` with `--force-with-lease` over `c922e84`, and #206 marked ready for review.)
 - **Window day 1, before the PR opens** (S09 step 1, `:291`: the baselines are recorded "บน main SHA ณ วันนั้น", on main's SHA on that day):
   1. Fetch main and rebase this branch onto it. If main changed any of the six modules or `en/ru/th.ts` lines 1–6, do not resolve the conflict by hand. Redo commit 2 with `split.mjs` on the new base instead.
   2. Run commit 1 alone on the new merge base: `npx vitest run tests/i18n-resolved-snapshot.test.ts`. If it fails, main's strings have moved (for example a K1-38 wording PR or a K2 string PR). Re-record the fixture there: write the dump, copy `snapshot.json` into the fixture, and set `_recorded.base`. Run the three sabotages again and amend commit 1.
   3. Run commit 2 on top: 4 of 4, and dumps identical to the new base's.
   4. Rebuild EO-BUN-1 (both scripts) and `bundle-budget` on the new base and head. Update the sizes, the room tables and this report: the "456 → 452" and "627 → 623" figures are `8dcc4b2`'s. If the split's +4 B no longer fits a ceiling, look for a 0-B variant or stop. No ceiling is raised (S09 rule 9).
-  5. Check the open PRs (next item). Push with `git push -u origin claude/i-eq6-s2`. The local branch has no upstream: it was unset, because the worktree had set `origin/main`. Then open the PR and set `status: review`. (#206 already exists as a draft on the old head `c922e84`, base `8dcc4b2`; the rebased branch replaces its head with a force push, which is the owner's or the session's step, not done here.)
+  5. Check the open PRs (next item). Push with `git push -u origin claude/i-eq6-s2`. The local branch has no upstream: it was unset, because the worktree had set `origin/main`. Then open the PR and set `status: review`. (#206 already exists as a draft on the old head `c922e84`, base `8dcc4b2`; the rebased branch replaces its head with a force push, which is the owner's or the session's step, not done here.) (2026-11-26: done, as the Window note above says.)
 
   2026-11-26: steps 1–4 and the check of step 5 are done on `c3da8b32`. Step 1: one conflict (#222's Thai `exp.input.payloadMass`), and `split.mjs` gives the hand-resolved commit 2 byte for byte. Step 2: commit 1 failed on the new base (5,194 keys), so the fixture was re-recorded there and the sabotages run again. Step 3: 4 of 4, dumps identical. Step 4: the split alone put `precache code` 3 B over its ceiling (1 B of room on `c3da8b32`), so commit 4 (`eec95cfc`) restores the evaluation order, a 0-B variant; no ceiling is raised.
 - **No other PR on `src/i18n/**`.** At 2026-11-05T00:27:25Z, three PRs are open (REST `pulls?state=open` and `pulls/<n>/files`): #188, #190 and #192, all replay bug fixes. None touches `src/i18n/**`, the six borrowed tests or the oracle files. Checked again at 2026-11-26T06:58:45Z (`gh api 'repos/ROYIN001/Orbitlab/pulls?state=open'`): one PR is open, #206 itself (draft, `claude/i-eq6-s2`, head `c922e84`, base `8dcc4b2`, 37 files). No other open PR, so none touches `src/i18n/**`, the borrowed tests or the oracle files.
@@ -427,9 +427,9 @@ Commit 1 was amended for the oracle's doc comment, so the three commits have new
 
 ## Not done, and limits
 
-- CI has not run on the rebased branch: nothing is pushed since `c922e84` (#206's head on `8dcc4b2`). The fragment's CI run is a placeholder.
+- CI on the rebased head `2646c697`: run 45774755273 (started 2026-11-26; its result is in the PR). Before 2026-11-26: CI had not run on the rebased branch, as nothing was pushed since `c922e84`.
 - Commit 2's message (`292b52ad`) still quotes the `8dcc4b2` figures (526 rows, 27 paths, +4 B); this report and the fragment give the `c3da8b32` ones.
-- No second-agent review of the code yet (the check above was of the claims).
+- Second-agent review of the code on `2646c697` (2026-11-26): confirmed 14 of 18 claims; the code is identical output (the 18 files equal the six modules on main, key order included; the assembled `en`, `ru` and `th` are identical, 5,194 entries each; 11 workers byte-identical and `recheck.worker` identical but for the build stamp; every budget line equal); its sabotages on the head: a changed Russian string fails 3 of 4, a swapped spread fails raw; removing an evaluation-order import in `index.ts` still passes 4 of 4, so only `bundle-budget` and the bundle comparison guard that order. Its findings (the PR description, stale lines here, the fragment's CI run) are fixed. The 3 claims it contradicted were stale text; the one it did not reproduce is commit 2 alone at +4 B, which it did not build.
 - EO-BUN-1 has no committed file (above); kit 3d is where it becomes a committed check. Each of its two sabotages was run once.
 - The branch scan of the plan (16 branches) was not repeated on `8dcc4b2` or `c3da8b32`.
 - Heavy, the six-DOF fleet and `case-worksheet-exports` were not run (reasons above).
