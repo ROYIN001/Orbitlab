@@ -33,12 +33,42 @@ export function ensureLang(l: Lang): Promise<void> {
   return p;
 }
 
-/** Every chunk is in the cache when a service worker controls the page (see above). */
+/**
+ * Every chunk is in the cache when Orbitlab's own service worker controls the
+ * page (see above): a worker another app on the same origin registered does
+ * not count.
+ */
 export function chunksCached(): boolean {
-  try { return !!navigator.serviceWorker?.controller; } catch { return false; }
+  try {
+    const c = navigator.serviceWorker?.controller;
+    return !!c && c.scriptURL === new URL('sw.js', document.baseURI).href;
+  } catch { return false; }
 }
 
-/** Before the app is built: the language in use, and the others unless their chunks are cached. */
-export function loadStartupLanguages(l: Lang): Promise<unknown> {
-  return Promise.all(chunksCached() ? [ensureLang(l)] : LANGS.map(ensureLang));
+/** The language the device asks for, before the workspace (and the stored choice) is open. */
+function deviceHint(): Lang {
+  try {
+    const n = (navigator.language || 'en').slice(0, 2);
+    return n === 'ru' || n === 'th' ? n : 'en';
+  } catch { return 'en'; }
+}
+
+/**
+ * Start fetching before the workspace opens (S09: prefetch alongside
+ * `initializeWorkspace`): every dictionary when the chunks are not cached,
+ * else the device's language. Errors wait for `loadStartupLanguages`.
+ */
+export function prefetchLanguages(): void {
+  const targets: readonly Lang[] = chunksCached() ? [deviceHint()] : LANGS;
+  for (const l of targets) ensureLang(l).catch(() => {});
+}
+
+/**
+ * Before the app is built: the language in use, which the start needs; and,
+ * when the chunks are not cached, the other two as well, as before this step,
+ * though a failure of theirs does not stop the start (a switch tries again).
+ */
+export async function loadStartupLanguages(l: Lang): Promise<void> {
+  const others = chunksCached() ? [] : LANGS.filter((o) => o !== l).map((o) => ensureLang(o).catch(() => {}));
+  await Promise.all([ensureLang(l), ...others]);
 }

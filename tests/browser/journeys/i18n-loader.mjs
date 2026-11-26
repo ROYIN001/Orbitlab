@@ -8,11 +8,13 @@
  *  - offline, a switch to a language not yet loaded reads its dictionary from
  *    the cache, and the page changes language; then back to English;
  *  - offline, a reload in the chosen language (Russian) paints in Russian;
+ *  - English: the first visit paints in English; once installed, a reload
+ *    fetches neither dictionary chunk;
  *  - no page errors and no "used before it was loaded" console error.
  * The words checked are the topbar's `about.button` and the menu's `nav.setup`.
  */
 export const smoke = true;
-export const timeoutMs = 240_000;
+export const timeoutMs = 360_000;
 
 const WORDS = {
   en: { about: 'About', setup: 'Mission' },
@@ -24,17 +26,20 @@ const WORDS = {
 const dictChunks = (page) => page.evaluate(() => performance.getEntriesByType('resource')
   .map((e) => /\/assets\/(ru|th)-[\w-]{8}\.js$/.exec(new URL(e.name).pathname)?.[1]).filter(Boolean).sort());
 
-const painted = (page) => page.evaluate(() => ({
+const paintedOn = (page) => page.evaluate(() => ({
   lang: document.documentElement.lang,
   about: document.querySelector('[data-i18n="about.button"]')?.textContent ?? null,
   setup: document.querySelector('[data-i18n="nav.setup"]')?.textContent ?? null,
 }));
 
+const painted = paintedOn;
+
 export default async function i18nLoader(t) {
   const app = await t.open({ lang: 'th' });
   const { page, context } = app;
   const consoleErrors = [];
-  page.on('console', (m) => { if (m.type() === 'error' && /used before it was loaded/.test(m.text())) consoleErrors.push(m.text()); });
+  // (on the context, so every page after the first load is heard; the first load's paint is checked by its words)
+  context.on('console', (m) => { if (m.type() === 'error' && /used before it was loaded/.test(m.text())) consoleErrors.push(m.text()); });
   const expect = async (lang, what) => {
     const got = await t.until(async () => { const p = await painted(page); return p.lang === lang && p.about === WORDS[lang].about && p.setup === WORDS[lang].setup ? p : null; }, { timeoutMs: 15_000 });
     t.check(!!got, `${what}: expected ${lang} (${JSON.stringify(WORDS[lang])}), got ${JSON.stringify(await painted(page))}`);
@@ -73,10 +78,23 @@ export default async function i18nLoader(t) {
   await app.ready();
   await expect('ru', 'offline reload');
   const offline = await dictChunks(page);
-  t.check(offline.join() === 'ru', `the offline reload fetched ${JSON.stringify(offline)}, not the Russian chunk alone`);
+  // the start also prefetches the device's language (navigator.language, here Thai) while the workspace opens
+  t.check(offline.includes('ru') && offline.every((l) => l === 'ru' || l === 'th'), `the offline reload fetched ${JSON.stringify(offline)}, not the Russian chunk (and the device's Thai)`);
   t.check(await page.locator('#lang-select').inputValue() === 'ru', 'the language menu does not show Russian after the offline reload');
   await context.setOffline(false);
 
+  // 5. English: the first visit paints in English; installed, a reload fetches no dictionary chunk
+  const en = await t.open({ lang: 'en' });
+  const enPainted = await t.until(async () => { const p = await paintedOn(en.page); return p.about === WORDS.en.about && p.setup === WORDS.en.setup ? p : null; }, { timeoutMs: 15_000 });
+  t.check(!!enPainted, `English first visit: got ${JSON.stringify(await paintedOn(en.page))}`);
+  await en.page.waitForFunction(() => navigator.serviceWorker?.controller, null, { timeout: 60_000 });
+  await en.page.reload({ waitUntil: 'domcontentloaded' });
+  await en.ready();
+  const enWarm = await dictChunks(en.page);
+  t.check(enWarm.length === 0, `the installed English reload fetched ${JSON.stringify(enWarm)}, not no dictionary chunk`);
+  t.check((await paintedOn(en.page)).about === WORDS.en.about, 'the installed English reload does not paint in English');
+
   t.check(consoleErrors.length === 0, `console: ${consoleErrors.join(' | ')}`);
   app.checkErrors();
+  en.checkErrors();
 }

@@ -21,7 +21,7 @@ let saved: { document: unknown; navigator: unknown };
 
 beforeEach(() => {
   saved = { document: g.document, navigator: g.navigator };
-  g.document = { documentElement: { lang: '' } };
+  g.document = { documentElement: { lang: '' }, baseURI: 'https://example.test/Orbitlab/' };
 });
 afterEach(() => {
   g.document = saved.document;
@@ -29,8 +29,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function setController(controller: unknown): void {
-  Object.defineProperty(globalThis, 'navigator', { value: { language: 'en-GB', serviceWorker: { controller } }, configurable: true, writable: true });
+const OURS = { scriptURL: 'https://example.test/Orbitlab/sw.js' };
+function setController(controller: unknown, language = 'en-GB'): void {
+  Object.defineProperty(globalThis, 'navigator', { value: { language, serviceWorker: { controller } }, configurable: true, writable: true });
 }
 
 describe('EQ-6 step 3: the dictionary loader', () => {
@@ -50,21 +51,64 @@ describe('EQ-6 step 3: the dictionary loader', () => {
   });
 
   it('with a controlling service worker, the start loads only the language in use', async () => {
-    setController({});
+    setController(OURS);
     const { i18n, loader } = await fresh();
     expect(loader.chunksCached()).toBe(true);
     await loader.loadStartupLanguages('th');
     expect([i18n.hasDict('en'), i18n.hasDict('ru'), i18n.hasDict('th')]).toEqual([true, false, true]);
   });
 
-  it('resolves the same strings as the static dictionaries once loaded', async () => {
+  it('resolves the same strings as the static dictionaries once loaded, every key', async () => {
     const { i18n, loader } = await fresh();
     await loader.ensureLang('ru');
     await loader.ensureLang('th');
     const { ru } = await import('../src/i18n/ru');
     const { th } = await import('../src/i18n/th');
-    for (const key of Object.keys(ru).slice(0, 200)) expect(i18n.tFor('ru', key)).toBe(ru[key].includes('{') ? i18n.tFor('ru', key) : ru[key]);
-    expect(i18n.tFor('th', 'setup.dynamics.model')).toBe(th['setup.dynamics.model']);
+    for (const [l, d] of [['ru', ru], ['th', th]] as const) {
+      const wrong = Object.keys(d).filter((k) => i18n.tFor(l, k) !== d[k]);
+      expect(wrong).toEqual([]);
+    }
+  });
+
+  it('a worker of another app on the origin does not count as the chunks being cached', async () => {
+    setController({ scriptURL: 'https://example.test/sw.js' });
+    const { loader } = await fresh();
+    expect(loader.chunksCached()).toBe(false);
+  });
+
+  it('prefetches every dictionary without a controller, and the device language with one', async () => {
+    setController(null);
+    let { i18n, loader } = await fresh();
+    loader.prefetchLanguages();
+    await loader.loadStartupLanguages('en');
+    expect([i18n.hasDict('ru'), i18n.hasDict('th')]).toEqual([true, true]);
+    setController(OURS, 'ru-RU');
+    ({ i18n, loader } = await fresh());
+    loader.prefetchLanguages();
+    await loader.ensureLang('ru');
+    expect([i18n.hasDict('ru'), i18n.hasDict('th')]).toEqual([true, false]);
+  });
+
+  it('a language other than the one in use that fails to load does not stop the start, and can be tried again', async () => {
+    setController(null);
+    vi.doMock('../src/i18n/ru', () => { throw new Error('offline'); });
+    const { i18n, loader } = await fresh();
+    await expect(loader.loadStartupLanguages('th')).resolves.toBeUndefined();
+    expect([i18n.hasDict('ru'), i18n.hasDict('th')]).toEqual([false, true]);
+    await expect(loader.ensureLang('ru')).rejects.toThrow();
+    vi.doUnmock('../src/i18n/ru');
+  });
+
+  it('only src/main.ts imports the loader, and no app code imports the tests\' all-dictionaries module', async () => {
+    const { readdirSync, readFileSync, statSync } = await import(/* @vite-ignore */ 'node:fs' as string) as {
+      readdirSync(p: string): string[]; readFileSync(p: string, e: 'utf8'): string; statSync(p: string): { isDirectory(): boolean };
+    };
+    const root = new URL('../src/', import.meta.url).pathname;
+    const walk = (d: string): string[] => readdirSync(d).flatMap((f) => (statSync(d + f).isDirectory() ? walk(`${d}${f}/`) : [d + f]));
+    const files = walk(root).filter((f) => /\.ts$/.test(f));
+    const importers = (re: RegExp) => files.filter((f) => re.test(readFileSync(f, 'utf8'))).map((f) => f.slice(root.length)).sort();
+    expect(importers(/from '\.{1,2}\/(?:[\w./-]*\/)?i18n\/loader'|from '\.\/loader'/)).toEqual(['main.ts']);
+    expect(importers(/i18n\/all'|from '\.\/all'/)).toEqual([]);
   });
 
   it('loads each language once, however often it is asked', async () => {
@@ -96,7 +140,7 @@ describe('EQ-6 step 3: the dictionary loader', () => {
   });
 
   it('initLang keeps a stored language although its dictionary is not loaded yet', async () => {
-    setController({});
+    setController(OURS);
     vi.doMock('../src/workspace/storage', () => ({ workspaceStorage: () => ({ getItem: () => 'th', setItem: () => {} }) }));
     const { i18n, loader } = await fresh();
     i18n.initLang();

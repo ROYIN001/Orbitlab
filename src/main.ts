@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
-import { ensureLang, loadStartupLanguages } from './i18n/loader';
+import { ensureLang, loadStartupLanguages, prefetchLanguages } from './i18n/loader';
 import { registerServiceWorker } from './pwa/register';
 import { downloadFlightReport } from './ui/report';
 import { LaunchAudio } from './audio/launch-audio';
@@ -2852,6 +2852,8 @@ function markStartup(step: string): void {
 
 async function bootstrap(): Promise<void> {
   markStartup('bootstrap');
+  // EQ-6 step 3: the dictionaries start loading while the workspace opens
+  prefetchLanguages();
   await initializeWorkspace();
   markStartup('workspace');
   initLang();
