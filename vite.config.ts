@@ -123,6 +123,8 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
+    // EQ-6 step 3: the app loads Russian and Thai on demand; the tests have all three dictionaries from the start
+    setupFiles: ['src/i18n/all.ts'],
     // tests/probe is gitignored scratch space; tests/heavy and
     // tests/sixdof-fleet run separately (`npm run test:heavy`,
     // `npm run test:sixdof-fleet`) because each case is a complete six-DOF flight.

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
+import { ensureLang, loadStartupLanguages, prefetchLanguages } from './i18n/loader';
 import { registerServiceWorker } from './pwa/register';
 import { downloadFlightReport } from './ui/report';
 import { LaunchAudio } from './audio/launch-audio';
@@ -1417,9 +1418,15 @@ class App {
     for (const type of ['pointerdown', 'keydown'] as const) window.addEventListener(type, () => this.audio.sound.resumeOnGesture(), { capture: true });
     showSound();
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
-      const l = (e.target as HTMLSelectElement).value as Lang;
-      setLang(l);
-      this.applyLanguage();
+      const select = e.target as HTMLSelectElement;
+      const l = select.value as Lang;
+      // EQ-6 step 3: the language switches once its dictionary is here (from the cache when the app is installed);
+      // a later choice wins, and a load that fails leaves the language and the menu as they were
+      void ensureLang(l).then(() => {
+        if (select.value !== l) return;
+        setLang(l);
+        this.applyLanguage();
+      }, () => { if (select.value === l) select.value = getLang(); });
     });
     (document.getElementById('lang-select') as HTMLSelectElement).value = getLang();
     // the topbar opens the tab last left open; the footer's credit line opens the maker's credit
@@ -2845,9 +2852,13 @@ function markStartup(step: string): void {
 
 async function bootstrap(): Promise<void> {
   markStartup('bootstrap');
+  // EQ-6 step 3: the dictionaries start loading while the workspace opens
+  prefetchLanguages();
   await initializeWorkspace();
   markStartup('workspace');
   initLang();
+  // EQ-6 step 3: the dictionaries the first paint needs, before the app is built
+  await loadStartupLanguages(getLang());
   stampDocument();
   initNotation();
   // U06: every chart the app draws can be saved as a PNG

@@ -518,6 +518,70 @@ So, for every worker the app's own code builds (check 1), the guard fails on eve
 
 **Limits.** The guard reads source, not the build. A dictionary could still reach a worker by a path it does not model: a `new Worker(url)` whose URL is not a literal fails check 1, but a worker created in a package, a worker constructor under another name (`const W = Worker; new W(...)`), or a module reached through a non-relative alias (none in `vite.config.ts` today; such imports are not followed) is not seen. Files other than `.ts`, `.js` and `.mjs` (there are none in `src` that import code) are not scanned. `import { type A } from './x'` is counted as erased, as the build erases it (no `verbatimModuleSyntax` in `tsconfig.json`). EO-BUN-1 per worker in PR3 remains the check of the build itself.
 
+## Step 3: the loader (S09's PR3; 2026-11-26)
+
+S09's PR3: "โหลดพจนานุกรมของภาษาที่เลือก รอให้โหลดเสร็จก่อน `new App()` และ prefetch ไปพร้อมกับ `initializeWorkspace` โดยใช้ hint ภาษาล่าสุดระดับอุปกรณ์ **โหลดแบบ lazy ได้เฉพาะเมื่อ chunk ของทุกภาษาอยู่ใน cache แล้วก่อนที่เส้นทาง lazy ใดจะถูกใช้ (สลับภาษา, export ภาษาอื่น) มิฉะนั้นให้โหลดทั้งสามภาษาเหมือนวันนี้**" (load the chosen language's dictionary and wait for it before `new App()`, and prefetch it alongside `initializeWorkspace` with a device-level hint of the last language; lazy only when every language's chunk is in the cache before any lazy path is used; otherwise load all three as today; `plan/S09-eq-identical-output.md:287`, step 3 at `:293`). Branch `claude/i-eq6-s3`, base main `aa582e98`.
+
+```yaml
+envelope: v2
+package: EQ-6
+step: 3                          # S09's PR3, the loader
+lane: I
+items: [M-PLATFORM-031]
+change_kind: identical-output    # the same strings in every language; the build's chunks and their loading change
+status: in-progress              # branch claude/i-eq6-s3
+execution_authorized: true       # wave K2 (D-65): "รับรองและอนุญาต K2", 2026-10-28T02:54:22Z
+owner_answers:
+  - {date: 2026-11-26, question: "EQ-6 step 3: the precache-code raise and its named offset", quote: "ก ขึ้นเพดาน offset EQ-8 (แนะนำ)", effect: "the full loader PR; precache code raised by the measured size and the ru/th ceilings named in the same PR; EQ-8 the named offset, as S04 names it, so GK2's KPI-30 row is red until EQ-8 lands; the owner asked again before merge"}
+budget: {precache code: "15197 -> 15199 kB (measured +1,504 B)", precache: "16596 -> 16598 kB (follows its two groups)", new groups: {ru-*.js: 599, th-*.js: 764, preload-helper-*.js: 2}}
+changed_assertion: "tests/i18n.test.ts, 'reads the source tree it is supposed to scan': src/i18n's non-dictionary modules are index.ts, loader.ts and all.ts (was index.ts only)"
+reviewers: [second-agent (P1, D-25), owner (merge, the raise, the changed assertion)]
+```
+
+**What changed.**
+- `src/i18n/index.ts` keeps English in memory and takes Russian and Thai through `registerDict`. `setLang` refuses a language whose dictionary is not loaded; `tFor` and `tCountFor` asked for one give English and say so once in the console (`i18n: the <lang> dictionary was used before it was loaded`), so the fallback is never silent. `initLang` accepts a stored language before its dictionary is loaded. The evaluation-order imports of step 2 are gone: Russian and Thai are chunks of their own now.
+- `src/i18n/loader.ts` (new; only `src/main.ts` imports it, and the worker-path guard of step 1 passes): `ensureLang(l)` loads a dictionary once (`import('./ru')`, `import('./th')`), and a failed load can be tried again. `prefetchLanguages()`, called before `initializeWorkspace()`, starts the loads while the workspace opens: all of them without a cached build, else the device's language (`navigator.language`). `loadStartupLanguages(l)`, after `initLang()`, waits for the language in use, and, without a cached build, for the other two as well, though their failure does not stop the start (a switch tries again).
+- The cache condition: a worker activates only after its install has stored every file of its manifest (`src/pwa/sw-core.ts`), and the two dictionary chunks and the preload helper are in the manifest (72 precached code files, from 69; 75 in all, from 72). Only Orbitlab's own worker counts (`controller.scriptURL` is the app's `sw.js`; the site shares its `github.io` origin with other projects). So when that worker controls the page, a later switch reads its chunk from the cache, offline too. Without a controller (the first visit, before the install), the start loads all three, as before.
+- `src/main.ts`: the start awaits `loadStartupLanguages(getLang())` after `initLang()` and before `new App()`; the language menu calls `ensureLang` and switches once the dictionary is here (a later choice wins; a failed load puts the menu back).
+- `src/i18n/all.ts` (new) registers every dictionary by static import; `vite.config.ts` gives it to vitest as `setupFiles`, so the unit tests have all three as before. The app never imports it.
+- Exports in another language: every worksheet and report builds in the language on screen (`worksheet-view.ts:130`, `sky-panel.ts:1428`, `report.ts:160`), which is always loaded, so no export path reads an unloaded dictionary. The console error above would show one.
+
+**Sizes** (on main `aa582e98` and the branch, `npx vite build`, committed snapshots; local 8-character stamp):
+
+| Group | main | branch | Ceiling |
+|---|---:|---:|---|
+| `precache code` | 15,196,999 B (69 files) | 15,198,503 B (72) | 15197 → 15199 kB |
+| `precache` | 16,315,782 B (72) | 16,317,286 B (75) | 16596 → 16598 kB |
+| `i18n-*.js` | 1,738,172 B | 376,475 B | 1738.5 kB, unchanged (T's ratchet lowers it, S09 step 4) |
+| `ru-*.js` | — | 598,002 B | new, 599 kB |
+| `th-*.js` | — | 763,986 B | new, 764 kB |
+| `preload-helper-*.js` | — | 1,233 B | new, 2 kB |
+| `index-*.js` | 2,669,470 B | 2,669,257 B | 2669.5 kB, unchanged |
+| `other chunks` | 771.4 kB | 771.5 kB | 772 kB, unchanged |
+| initial load (bundle-budget, English; the files `index.html` names, so an installed start) | 5,126.8 kB raw, 1,443.9 kB gzip | 3,766.2 kB raw, 1,144.3 kB gzip | report-only |
+
+All JS and CSS together grow by 1,420 B: the loader and its prefetch, the import() glue, Vite's preload helper as a chunk of its own, and `profile-menu-*.js` (+78 B) and `structure-*.js` (+41 B), which now import that helper (`check-view-*.js` and `workspace-content-*.js` −5 B each). The first visit, before the install, still fetches all three dictionaries, about 1 kB more than before; the saving is for an installed start. No `INEFFECTIVE_DYNAMIC_IMPORT`. A Thai or Russian user's start fetches `i18n-*.js` and its own dictionary chunk; KPI-01's measurement is M-PLATFORM-041's (S09).
+
+**Tests** (2026-11-26):
+- Unit, the whole suite on the first commit `2bb827b9`: 369 files, 10,928 of 10,929; the one failure was `tests/bundle-budget.test.ts`, the code and data ceilings adding up to more than the total (16598 > 16596), fixed by the `precache` line above (8/8).
+- `tests/i18n-loader.test.ts` (new, 12 tests): English only at the start; all three without a controller; only the language in use with one; another app's worker does not count; the prefetch (all three, or the device's language); every loaded string equals the static dictionaries'; one load per language; a failed load of another language does not stop the start and can be tried again; only `src/main.ts` imports the loader and nothing in `src` imports `all.ts`; `setLang` refuses an unloaded language and says so; `tFor` before a load gives English and says so once; `initLang` keeps a stored language before its load.
+- `tests/browser/journeys/i18n-loader.mjs` (new, smoke): the first visit (not served by a worker) paints in Thai and fetched both dictionary chunks; after the worker took the page, a reload paints in Thai and fetched only the Thai chunk; offline, a switch to Russian reads its chunk and the page turns Russian, then English, then Russian; offline, a reload paints in Russian and fetched only the Russian chunk; no console "used before it was loaded" and no page error. Passed locally (75.8 s).
+- The browser suite, locally on the branch (the host stopped the run at its 2-hour limit after 46 of 48 journeys): 43 of 46 passed. `r2-event-jump` failed its checks (a) and (d) (the disabled opener's look at T−2 s; the opener after New mission), and fails the same two on a build of main `aa582e98` on this host, so not this PR's. `r2-viewport-matrix` timed out at 1200 s (on CI it takes 519–904 s). `watch-controls` failed with "Target page, context or browser has been closed" right after that timeout; alone on the branch it passed (298.2 s), and `webgl-startup`, not reached, passed (42.3 s). CI on the final head runs every smoke journey.
+- Rule 2 (a new journey runs 20 times on CI before merge): CI run 45889205456 on `b3fd6b90`, with the temporary commit `019e65dc` ("TEMPORARY (rule 2 evidence, reverted before merge): CI's smoke shards run only i18n-loader, 4 of it a shard"; it changed `tests/browser/run.mjs` only, and only on CI): **20 of 20 passed**, 4/4 in each of the five shards (`4/4 journeys passed` in each shard log), each run 49.3–68.0 s; each shard step then ended "Executed browser journeys differs from the verification plan", as the temporary commit meant. The commit is reverted on the next head. The same run's `plan` job had first failed on `019e65dc`: `shard.test.mjs` wants a `shard-seconds.json` entry for every journey, so `i18n-loader` has one, 120 s, half its `timeoutMs` (the table's rule for an untimed journey). After the second agent's review the journey changed (an English section; its limit 240 → 360 s, its entry 120 → 180 s), so rule 2 was run again. First attempt, CI run 45893299476 on `141e7a29` (the temporary commit again, on `2006a8d5`): the English section's page never became ready (`#loading.hidden`, 120 s; its renderer did not answer, a worker request pending) in shard 1's four runs and shard 3's, while the first page's scene still ran on the runner's software GPU; the journey now checks and closes the first page before opening the English one (`2ad08769`; locally 108 s, against 260 s with both open). Second attempt, CI run 45895570979 on `2ad08769`: **20 of 20 passed**, 4/4 in each of the five shards (shard totals 241.4–419.5 s); the temporary commit is reverted on the next head. The full CI on `a328e680` (before the second agent's points), run 45890195641, passed 12 of 12.
+
+**Second agent** (P1, D-25), on `a328e680`: confirmed 13 of 17 claims; its build, worker hashes (11 of 12 identical, the recheck worker by its 6-byte stamp only), the 20 of 20 on CI and three sabotages (the cache condition forced either way fails one unit test each; the start's `await` removed fails the journey four times) agree with the report. Its findings, and what was done:
+- F1 (blocking): S09's prefetch alongside `initializeWorkspace` was missing, and this section's quote left it out. Done: `prefetchLanguages()` before `initializeWorkspace()`; the quote is whole. The hint is `navigator.language`, not "the last language at device level": the stored language is kept per learner profile (`workspace/storage.ts`), unreadable before the workspace opens, and a device-level copy would be a new storage key outside the profile — a choice left to the owner. When the two differ, an installed start also reads the device language's chunk from the cache.
+- F2 (blocking for the evidence): KPI-01 cold and warm, EO-UI-3 in English, frames with mixed languages, and EO-EXP-1 were not recorded. Done here: the journey now checks English (first visit; installed reload fetches no dictionary chunk). Not done, for the owner: KPI-01 is M-PLATFORM-041's measurement (S09 `:280` names it a dependency); a frame-by-frame check of the first paint (the static markup of `index.html` is English until `applyStatic`, as before this step); EO-EXP-1 byte comparison of exports, which every builder makes in the language on screen (`worksheet-view.ts:130`, `sky-panel.ts:1428`, `lesson-mode.ts:591`, `report.ts:160`).
+- F3: another app's worker on the origin counted as Orbitlab's. Done: `scriptURL` must be the app's `sw.js`.
+- F4: a failed load of a language not in use stopped the start. Done: only the language in use is required.
+- F5: the CHANGELOG's saving holds for an installed start only. Done.
+- F6: the string test compared `tFor` with itself for keys with `{`, and only 200 keys; no retry test; the journey's console listener was on the first page only. Done: every key of both dictionaries; a failed-load-and-retry test; the listener on the context.
+- F7, F10: file counts (69 → 72 code, 72 → 75 in all) and the CI time range (49.3–68.0 s). Done.
+- F8: nothing guarded that only `main.ts` imports the loader and that `all.ts` stays out of the app. Done (a source scan in `tests/i18n-loader.test.ts`).
+- F9: a failed switch reverts the menu with no message. Not done: wording is the owner's choice.
+
+, not a look into Cache Storage: a page controlled by an older worker whose version lacks the new chunk names would fetch them from the network, as any other chunk of a new build would. The first paint of an installed app in Thai or Russian waits for its chunk from the cache before the app is built, as it waited for the whole i18n chunk before. Typed keys (PR4) and T's ratchet PR (S09 step 4) come after.
+
 ## The split script
 
 ```js
