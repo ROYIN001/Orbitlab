@@ -16,7 +16,7 @@ sources: [RW:INF-02, DP:7.4-M1, "DP:UX-H3-5/INF-16(c)", CR:P1]
 change_kind: identical-output
 fold_of: "M-LEARNING-036 (typed keys) comes after the per-language split (folds.tsv; S09's PR4)"
 or_ids: [OR-1, OR-2]
-status: review                   # PR #206 open and marked ready on window day 1 (2026-11-26)
+status: merged                   # PR #206 merged 2026-11-26T09:54:22Z as cb3ccd77; published by Pages 45796316440 (10:21:52Z); before that: review, from window day 1 (2026-11-26)
 scientific_acceptance: not-applicable
 execution_authorized: true       # wave K2 (D-65)
 owner_authorization: {date: 2026-10-28T02:54:22Z, quote: "รับรองและอนุญาต K2", scope: "D-65 wave K2 (S1 items 4–5; DECISIONS.md:386)"}
