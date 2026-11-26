@@ -715,7 +715,7 @@ In the chat of the session that took over from `claude/beautiful-shannon-l4s4za`
 | 2026-11-25 | Whether GK1's three re-runs (the M-PLAN-026 re-plan, the hand-off check and the follow-through: GK items 9–11) are still made again on the candidate C (`9b224ec`), about 2–3 hours | "ก ทำใหม่บน C (แนะนำ)" (make them again on C, as the answer of 2026-11-05 "ทำใหม่บนรุ่นที่ตรึง" said; the results go into the GK1 close-out records PR) | HANDOVER-K2 §16.4, steps 10–12 |
 | 2026-11-25 | Whether the rest of H3 (a variance, and GK item 1 revisited) applies, now that #233, #239 and #240 have merged after C | "ก ใช้ C บันทึก variance (แนะนำ)" (keep C: GK1 is checked on C as planned, and a variance records that three PRs merged after C, with their diff; no new evidence is made) | HANDOVER-K2 §16.4; PROGRESS, "Variances for GK1", in the GK1 close-out records PR |
 
-(2026-11-26: both asked and answered; "Decided 2026-11-26".) Not asked yet (HANDOVER-K2 §16.3): whether the Windows computer still counts for D-56's iPad class at GK2, and whether a bug fix under the standing approval is new work outside the plan.
+Not asked yet (HANDOVER-K2 §16.3): whether the Windows computer still counts for D-56's iPad class at GK2, and whether a bug fix under the standing approval is new work outside the plan. (2026-11-26: both asked and answered; "Decided 2026-11-26".)
 
 ## Decided 2026-11-25, night (GK1 items 1 and 2, GK2's date, S7 as status; chat)
 
@@ -730,12 +730,12 @@ In the chat of the session that took over from `claude/beautiful-shannon-l4s4za`
 
 ## Decided 2026-11-26 (the Windows computer at GK2 and bug fixes in the plan-only period; chat)
 
-In the same session's chat, the session's message after #243 merged ended with the two questions still open from HANDOVER-K2 §16.3, in Thai, with no options: "คอมพิวเตอร์ Windows ยังนับแทน iPad ที่ GK2 ได้ไหม" and "การแก้บั๊กภายใต้การอนุมัติถาวร นับเป็นงานนอกแผนไหม". The owner answered in chat, read at 2026-11-26T04:02:55Z (this machine's clock when the session read it), verbatim: "ตอบคำถาม 1. แทนได้ 2. ไม่นับ".
+In the same session's chat, the session's message after #243 merged ended with the two questions still open from HANDOVER-K2 §16.3, in Thai, with no options: "คอมพิวเตอร์ Windows ยังนับแทน iPad ที่ GK2 ได้ไหม" and "การแก้บั๊กภายใต้การอนุมัติถาวร นับเป็นงานนอกแผนไหม". The owner answered in chat, read at 2026-11-26T04:02:55Z (this machine's clock when the session read it), verbatim: "ตอบคำถาม / 1. แทนได้ / 2. ไม่นับ" (the slashes mark its line breaks).
 
 | Date | Question | Answer | Where it lands |
 |---|---|---|---|
-| 2026-11-26 | Whether the Windows computer (Chrome or Edge) still counts for D-56's iPad class at GK2, as the answer of 2026-11-04 ("ข นับ Windows แทน iPad") did for GK1 | "1. แทนได้" (it can stand in) | HU-6 at GK2 (HANDOVER-K2 §16.3; PROGRESS, "Variances for GK2" when HU-6 is planned) |
-| 2026-11-26 | Whether a bug fix under the standing approval counts as new work outside the plan, which waits until after GK2 by "งานแผนอย่างเดียว (แนะนำ)" (2026-11-25T07:21:22Z) | "2. ไม่นับ" (it does not count) | bug fixes under the standing approval go on during the plan-only period; SESSION-PROTOCOL §1 step 3 unchanged |
+| 2026-11-26 | Whether the Windows computer (Chrome or Edge, by the answers of 2026-10-28) still counts for D-56's iPad class at GK2, as the answer of 2026-11-04 ("ข นับ Windows แทน iPad") did for GK1 | "1. แทนได้" (it can stand in) | HU-6 at GK2 (HANDOVER-K2 §16.3; PROGRESS, "Variances for GK2" when HU-6 is planned) |
+| 2026-11-26 | Whether a bug fix under the standing approval counts as new work outside the plan, which waits until after GK2 by "งานแผนอย่างเดียว (แนะนำ)" (2026-11-25T07:21:22Z) | "2. ไม่นับ" (it does not count) | bug fixes under the standing approval are not held until after GK2; SESSION-PROTOCOL §1 step 3 unchanged |
 
 ## Follow-through at GK1 (S08 §08.6)
 

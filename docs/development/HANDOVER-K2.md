@@ -540,7 +540,7 @@ The session that worked on `claude/beautiful-shannon-l4s4za` closes on the owner
 
 > **Update 2026-11-26.** The owner answered the last two questions of section 16.3 ([DECISIONS](../DECISIONS.md), "Decided 2026-11-26"): the Windows computer counts for D-56's iPad class at GK2 ("แทนได้"), and a bug fix under the standing approval is not new work outside the plan ("ไม่นับ"). Section 16.3 has no open question now. Lines that call these open describe the time before.
 >
-> **อัปเดต 2026-11-26:** คุณตอบสองคำถามที่เหลือแล้ว: คอมพิวเตอร์ Windows นับแทน iPad ที่ GK2 ได้ และการแก้บั๊กตามอนุมัติถาวรไม่นับเป็นงานนอกแผน
+> **อัปเดต 2026-11-26:** คุณตอบสองคำถามที่เหลือของข้อ 16.3 แล้ว ([DECISIONS](../DECISIONS.md), "Decided 2026-11-26"): คอมพิวเตอร์ Windows นับแทน iPad ที่ GK2 ได้ ("แทนได้") และการแก้บั๊กตามอนุมัติถาวรไม่นับเป็นงานนอกแผน ("ไม่นับ") ข้อ 16.3 จึงไม่มีคำถามค้างแล้ว บรรทัดที่บอกว่ายังค้างอยู่หมายถึงช่วงก่อนหน้านี้
 
 > **Update 2026-11-25, night.** #242 (`260a3f05`, the GK1 close-out on C, steps 1–16; Q check 19 of 26) merged on the owner's GK1 item 1 answer, and on item 2 the owner answered "ก ลงนาม GK1 พร้อม variance"; GK2 is set for 2027-01-21 (core scope 49 PRs with ×1.49, checked every Friday); S7 counts as status ([DECISIONS](../DECISIONS.md), "Decided 2026-11-25, night (…)"). Next (step 18): the lane-I docs PR for S05 §05.9's gate table and the wave columns on the GK2 answer, then EQ-6's window (after the owner's GK1 answers: rebase #206 first), and the plan work of section 16.5. Still to ask: the Windows computer at GK2, and whether a bug fix is new work.
 >
