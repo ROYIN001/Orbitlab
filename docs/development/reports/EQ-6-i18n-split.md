@@ -1,6 +1,6 @@
 # EQ-6 step 2: the six feature dictionaries move into per-language files (identical output)
 
-This is the split PR of EQ-6 (M-PLATFORM-031, P1), S09's PR2: "ย้ายโมดูลฟีเจอร์ 6 ตัวเป็นไฟล์รายภาษา (ย้ายอย่างเดียว ไม่แก้ข้อความ)" ("move the 6 feature modules into per-language files; move only, no text changes"; `plan/S09-eq-identical-output.md:292`). It moves no string. The dictionary chunk `i18n-*.js` grows by 4 B (below). Every other built file is identical, except for three things: the hashed chunk names that point to the changed chunks; the service worker's precache manifest (the revisions and version of the changed files, and their order by URL); and the generated `SHA256SUMS` and `build-info.json`. The worker-path PR (S09's PR1) and the loader (PR3) come after it, in the order the owner chose for the window.
+This is the split PR of EQ-6 (M-PLATFORM-031, P1), S09's PR2: "ย้ายโมดูลฟีเจอร์ 6 ตัวเป็นไฟล์รายภาษา (ย้ายอย่างเดียว ไม่แก้ข้อความ)" ("move the 6 feature modules into per-language files; move only, no text changes"; `plan/S09-eq-identical-output.md:292`). It moves no string. On today's base, main `c3da8b32` (2026-11-26), every bundle-budget line equals main's to the byte: a fourth commit keeps the order in which `src/i18n/index.ts` evaluates the dictionaries, which takes back the 4 B the split alone added to `i18n-*.js` and the precache (on `8dcc4b2` those 4 B fitted; on `c3da8b32` the precache code has 1 B of room; see "Rebased on c3da8b32 (2026-11-26)"). The dictionary chunk keeps its size and its strings; its objects are declared in another order. Every other built file is identical, except for three things: the hashed chunk names that point to the changed chunks; the service worker's precache manifest (the revisions and version of the changed files, and their order by URL); and the generated `SHA256SUMS` and `build-info.json`. The worker-path PR (S09's PR1) and the loader (PR3) come after it, in the order the owner chose for the window.
 
 ## Envelope
 
@@ -23,9 +23,12 @@ owner_authorization: {date: 2026-10-28T02:54:22Z, quote: "รับรองแ�
 owner_answers:
   - {date: 2026-10-28T02:59:22Z, question: "S6 (how the EQ-6 window opens)", quote: "ก คง K2 วันที่ 1–2 (แนะนำ)", effect: "each EQ-6 PR carries its own oracle (S09 rule 7); M-LEARNING-030 does not hold the window (DECISIONS.md:391)"}
   - {date: 2026-10-28T13:34:15Z, question: "หน้าต่าง EQ-6 (form question 3 of 4)", quote: "ก 2 วันแรกหลัง merge ได้ แยกไฟล์ก่อน (แนะนำ)", effect: "the first two working days once merging is possible with no i18n PR open; the split PR, then the worker path, then the loader (DECISIONS.md:434)"}
-  - {date: "2026-11-04, by 20:38:36Z", question: "when the EQ-6 PRs are prepared and the window opens", quote: "ก เตรียมตอนนี้ เปิดหน้าต่างหลัง HU-6 (แนะนำ)", effect: "prepared as drafts now; the window opens after HU-6 (K2 session's chat; not yet in DECISIONS)"}
-base: {branch: origin/main, sha: 8dcc4b2598b4dc831cf497574fb6248df66360f8, date: 2026-11-04}
-base_sha_verified_on: {sha: 8dcc4b2, date: 2026-11-05, recheck: "main still 8dcc4b2 at 2026-11-05T00:27Z; src/i18n/{en,ru,th}.ts:1-6 import the six feature modules and spread them in one fixed order; no `// lane:` anchor in src/i18n; 5,165 keys in each language; no worksheet key (ws.*, wsc.*, lesson.strip.caseLoading) in the six modules; only en/ru/th.ts and six tests import the six modules"}
+  - {date: "2026-11-04, by 20:38:36Z", question: "when the EQ-6 PRs are prepared and the window opens", quote: "ก เตรียมตอนนี้ เปิดหน้าต่างหลัง HU-6 (แนะนำ)", effect: "prepared as drafts now; the window opens after HU-6 (K2 session's chat); superseded by the answer of 2026-11-25, evening, once HU-6 moved to GK2"}
+  - {date: "2026-11-25, by 18:06:31Z", question: "when EQ-6's window opens, now that HU-6 has moved to GK2, and what happens to draft #206", quote: "ก หลังปิด GK1 (แนะนำ)", effect: "the window opens after the owner signs GK1; before it opens #206 is rebased onto main and its oracles recorded; while it is open no other PR touches src/i18n (DECISIONS, \"Decided 2026-11-25, evening\", docs/DECISIONS.md:714)"}
+  - {date: "2026-11-25, by 20:57:43Z", question: "GK1 item 2, the sign-off", quote: "ก ลงนาม GK1 พร้อม variance", effect: "GK1 signed with its variances (DECISIONS, \"Decided 2026-11-25, night\", docs/DECISIONS.md:727), so the window's condition is met"}
+base: {branch: origin/main, sha: c3da8b32c519b00589a87398382b73a16bace2f7, date: 2026-11-26}   # first prepared on 8dcc4b2598b4dc831cf497574fb6248df66360f8 (2026-11-04); rebased 2026-11-26
+base_sha_verified_on: {sha: c3da8b32, date: 2026-11-26, recheck: "origin/main still c3da8b32 at 2026-11-26T06:58Z; src/i18n/{en,ru,th}.ts:1-6 import the six feature modules and spread them in one fixed order; no `// lane:` anchor in src/i18n; 5,194 keys in each language; no worksheet key (ws.*, wsc.*, lesson.strip.caseLoading) in the six modules; only en/ru/th.ts and six tests import the six modules; the one change to the six modules since 8dcc4b2 is #222's Thai 'exp.input.payloadMass'"}
+base_history: {sha: 8dcc4b2, verified: 2026-11-05, keys: 5165}   # the results recorded on 8dcc4b2 stay below, dated
 reading_list: ["plan/S09-eq-identical-output.md:278-296 (EQ-6) and rules 1, 7, 9, 10 (:43, :49, :51, :52)", "plan/S07-r0-evidence-oracles.md:320, :322 (EO-I18N-1, EO-BUN-1)", "plan/S05-structure-waves-gates.md:324 (EQ-6 window)", "plan/S18-execution-model.md §18.3.2, §18.9 (:282), §18.11 (:327)", "SESSION-PROTOCOL.md §3-§4"]
 dependencies: [FX-2 (M-LEARNING-027, merged #176/#177), "ED-I18N-1 (M-LEARNING-029 merged #135; M-LEARNING-030 does not hold the window, owner S6)"]
 decisions_needed: []
@@ -44,12 +47,12 @@ pr_oracles:
     catalog: EO-I18N-1
     what: "per language: key count, own-key count, raw SHA-256 (own entries in object order), resolved SHA-256 (tFor with each {name} filled \"<name>\"; tCountFor at 0, 1, 2, 5 and 1.5 for values with \"|\"); one SHA-256 per first key segment (89)"
     files: [tests/i18n-resolved-snapshot.test.ts, tests/fixtures/i18n/eo-i18n-1.json]
-    recorded: "commit 1 (fe3ceec), green on 8dcc4b2 before any source change; re-recorded on the window day if main's strings have moved (§ The window)"
-    sabotage: "on 8dcc4b2, reverted: delete th 'setup.dynamics.model' -> 4 of 4 fail; swap ...workspaceTh and ...projectsTh -> raw fails (1 of 4); a new key in all three languages -> 4 of 4 fail, and the dump diff shows that key only"
+    recorded: "commit 1 (91350268), re-recorded on main c3da8b32 on 2026-11-26 (5,194 union keys, 90 segments), green there before any source change; first recorded on 8dcc4b2 (fe3ceec, 5,165 keys, 89 segments)"
+    sabotage: "on c3da8b32 (2026-11-26; also on 8dcc4b2, 2026-11-04), reverted: delete th 'setup.dynamics.model' -> 4 of 4 fail; swap ...workspaceTh and ...projectsTh -> raw fails (1 of 4); a new key in all three languages -> 4 of 4 fail, and the dump diff shows that key only"
     after_merge: "stays on main until kit 3d's EO-I18N-1 replaces it; a string PR re-records the fixture with its dump diff (lane I's proposal, for Q; § After merge)"
   - id: EO-PR-EQ-6-s2-2
     catalog: EO-BUN-1 (catalog form)
-    what: "vite build --sourcemap of base and head into separate outDirs (dist keeps sourcemap: false); the (source, sha256(sourcesContent), chunk groups) rows outside the 27 declared paths equal; per entry raw/gzip bytes and module set; 12 workers byte-identical; no INEFFECTIVE_DYNAMIC_IMPORT"
+    what: "vite build --sourcemap of base and head into separate outDirs (dist keeps sourcemap: false); the (source, sha256(sourcesContent), chunk groups) rows outside the declared paths equal (27 on 8dcc4b2; 28 on c3da8b32, with src/i18n/index.ts); per entry raw/gzip bytes and module set; 12 workers byte-identical; no INEFFECTIVE_DYNAMIC_IMPORT"
     recorded: "a D-type build comparison, base and head in one run; no committed file: the script and command lines are in this report (S18 :327 asks for a first commit; a deviation for Q to accept)"
     sabotage: "head + one extra module imported by main.ts -> the inventory differs; head + `import { getLang } from '../i18n'` in reentry.worker.ts -> that worker's row differs (+63 B, +1 module src/i18n/index.ts)"
 perf_evidence: none              # no speed claim; sizes below
@@ -68,10 +71,11 @@ handoff: []
 | Deleted (6) | `src/i18n/{workspace,projects,review,experiments,classroom,validation}.ts` |
 | Added (18) | `src/i18n/<feature>.{en,ru,th}.ts`. Each holds one exported block (`workspaceEn` …), byte for byte as it was, with its doc comment (the five one-line doc comments sat above the English block and stay there; see "Paths and comments that still describe the old layout"). `workspace.ru.ts` and `workspace.th.ts` add `import type { workspaceEn } from './workspace.en';` so `typeof workspaceEn` still compiles. |
 | Edited (3) | `src/i18n/en.ts`, `ru.ts`, `th.ts`, lines 1–6 only: `from './<feature>'` becomes `from './<feature>.<lang>'`. The spread order and every inline key are unchanged. |
+| Edited (commit 4, added 2026-11-26) | `src/i18n/index.ts`: 13 added lines, a comment and 12 side-effect imports (`import './<feature>.ru';`, then `import './<feature>.th';`) placed before `import { ru } from './ru';`, so the Russian and Thai feature modules are evaluated before the two dictionaries, as before the split. No other line changes. See "Rebased on c3da8b32 (2026-11-26)". |
 | Borrowed (6, import lines only) | `tests/lesson-pack-names.test.ts`, `tests/lesson-review.test.ts`, `tests/experiment-notebook.test.ts`, `tests/classroom-pwa.test.ts`, `tests/project-archive.test.ts`, `tests/validation-read-report.test.ts`: the one import of three names from `../src/i18n/<feature>` becomes three imports from `../src/i18n/<feature>.<lang>`. |
 | Oracle (commit 1) | `tests/i18n-resolved-snapshot.test.ts`, `tests/fixtures/i18n/eo-i18n-1.json` |
 | Evidence | this report; `changes/claude-i-eq6-s2.md` |
-| Not touched | `src/i18n/index.ts`, `vite.config.ts`, `budgets.json` (lane T; S09 rule 9), `src/main.ts`, `src/lessons/text.ts`, `src/pwa/manifest.ts` |
+| Not touched | `vite.config.ts`, `budgets.json` (lane T; S09 rule 9), `src/main.ts`, `src/lessons/text.ts`, `src/pwa/manifest.ts` |
 
 No re-export barrels at the old paths: they would fail `tests/i18n.test.ts:485` ("reads the source tree it is supposed to scan"), which requires every `src/i18n/*.ts` other than `index.ts` to declare a dictionary. So the six test imports are retargeted.
 
@@ -89,9 +93,13 @@ By script (`split.mjs`, scratch, not committed; reproduced at the end of this re
 
 The script's output is also byte-identical to the prototype's 18 files and `en/ru/th.ts` heads (the plan's prototype at `7263004`), so nothing in the six modules changed between `7263004` and `8dcc4b2`.
 
+**2026-11-26, on `c3da8b32`.** The rebase met one conflict, #222's Thai `'exp.input.payloadMass': 'มวลเพย์โหลด (กก.)'` in `src/i18n/experiments.ts`, which was applied by hand to `experiments.th.ts`. Step 1 of the window day asks for the script instead of a hand resolution, so commit 2 was then made again with `split.mjs` (copied from the end of this report) on a `git archive` copy of commit 1 (`91350268`, main's `src/i18n` plus the oracle). Its output, all of `src/i18n` (the 18 files, the whole of `en/ru/th.ts` and the untouched files), is byte-identical to the hand-resolved commit 2 (`292b52ad`; `diff -r`: no output). So the hand resolution is the script's output, and commit 2 was kept as it is.
+
 ## Oracles
 
-Kit 3d (M-PLAN-018: EO-EXP-1, EO-I18N-1, EO-BUN-1) has not merged: no test, fixture or script on `8dcc4b2` names EO-I18N-1 or EO-BUN-1. So, by S09 rule 1 and the owner's S6 answer, this PR carries its own oracles, `EO-PR-EQ-6-s2-1` and `-2` in the envelope's `oracle` field (S18 `:282`, `:327`), each the per-PR form of a catalog row.
+*The figures in this section, "Sizes" and "Tests run" are those of 2026-11-04/05 on `8dcc4b2`, kept as history. The same checks on `c3da8b32` are in "Rebased on c3da8b32 (2026-11-26)".*
+
+Kit 3d (M-PLAN-018: EO-EXP-1, EO-I18N-1, EO-BUN-1) has not merged: no test, fixture or script on `8dcc4b2` (nor on `c3da8b32`) names EO-I18N-1 or EO-BUN-1. So, by S09 rule 1 and the owner's S6 answer, this PR carries its own oracles, `EO-PR-EQ-6-s2-1` and `-2` in the envelope's `oracle` field (S18 `:282`, `:327`), each the per-PR form of a catalog row.
 
 ### EO-I18N-1 (`EO-PR-EQ-6-s2-1`; `tests/i18n-resolved-snapshot.test.ts`, commit 1)
 
@@ -187,7 +195,7 @@ Per entry, stamp `dev` on both sides. The raw bytes are the same on both sides e
 
 So the 33 js/css files other than `i18n-*.js`, and `index.html`, are all identical up to hashed chunk names.
 
-**The workers' import path, before and after.** No worker bundle holds any `src/i18n/*` module or `src/lessons/text.ts`, on either side (the sources of the 12 worker maps). The source chain S09 names (`recheck.worker.ts` → `recheck.ts` → `measures.ts` → `text.ts` → `src/i18n` for `getLang`) is unchanged: this PR does not touch `index.ts` or `text.ts`, and the six moved modules are imported only by `en/ru/th.ts`. The worker leak S09 warns about comes with PR3's `import()`, which is why the worker-path PR comes before PR3.
+**The workers' import path, before and after.** No worker bundle holds any `src/i18n/*` module or `src/lessons/text.ts`, on either side (the sources of the 12 worker maps). The source chain S09 names (`recheck.worker.ts` → `recheck.ts` → `measures.ts` → `text.ts` → `src/i18n` for `getLang`) is unchanged: this PR does not touch `text.ts`, and the six moved modules are imported only by `en/ru/th.ts` (from 2026-11-26 also by `index.ts`, as side-effect imports of the Russian and Thai files; on `c3da8b32` the 12 worker maps still hold no `src/i18n/*` module and no `text.ts`). The worker leak S09 warns about comes with PR3's `import()`, which is why the worker-path PR comes before PR3.
 
 **Sabotage** (on a scratch copy of the split, deleted after; nothing committed):
 
@@ -199,6 +207,8 @@ So the 33 js/css files other than `i18n-*.js`, and `index.html`, are all identic
 **Build stamp.** `__ORBITLAB_BUILD__` (`src/build-info.ts`, `vite.config.ts:18-27`, `:111`) puts `git rev-parse --short HEAD` into `index-*.js` and `recheck.worker-*.js`: `dev` where git cannot answer (the copies above), 8 characters in this clone, and 7 in CI. CI's `actions/checkout@v4` sets no `fetch-depth`, so it gets a depth-1 clone; a depth-1 clone here (about 1,990 objects) gives 7. Each character is 1 B in each of the two files. Between the stamped builds of commit 1 (`fe3ceecf`) and commit 2 (`27422cfe`), the 12 workers differ only in the recheck worker's stamp. With the stamp replaced by a placeholder they are all identical, and with `dev` on both sides they are byte-identical (the table above). The recheck worker's bytes change with every commit; its size changes only with the stamp's length.
 
 ## Sizes (every budget line)
+
+*On `8dcc4b2`, 2026-11-04/05 (history; before commit 4). On `c3da8b32` every line equals the base's: "Rebased on c3da8b32 (2026-11-26)".*
 
 `npx vite build && node scripts/bundle-budget.mjs` in this clone, base = commit 1 (stamp `fe3ceecf`), head = commit 2 (stamp `27422cfe`); bytes counted the way `scripts/bundle-budget.mjs` counts them. `bundle budget: ok` on both.
 
@@ -249,6 +259,8 @@ CI builds the PR's merge commit, which also has a 7-character stamp. The room CI
 
 ## Tests run
 
+*On `8dcc4b2` (history). The runs on `c3da8b32` are in "Rebased on c3da8b32 (2026-11-26)".*
+
 All on commit 2 (`27422cf`) unless marked; repeated on 2026-11-05 after the history was rewritten for the fixes below (the app source is the same tree as before).
 
 | Command | Result |
@@ -269,6 +281,104 @@ All on commit 2 (`27422cf`) unless marked; repeated on 2026-11-05 after the hist
 - heavy and the six-DOF fleet: no physics, data or worker source changes, the 12 workers are byte-identical, and these are the slow suites (heavy 25–61 min, the fleet ~60 min, S05 `:360`);
 - `case-worksheet-exports`: it is held with the teaching tools (`tests/browser/held.mjs:9-11`, `src/ui/held.ts`), so neither CI nor Pages runs it. The owner's S4 answer ("ข พักต่อ ตรวจ G0 บนบิลด์ครู (แนะนำ)") leaves it to EO-I18N-1 here. No `ws.*`, `wsc.*` or other worksheet key sits in the six modules on `8dcc4b2`. The journey only records hashes of `en/th/ru.ts` (`case-worksheet-exports.mjs:31`), which change at lines 1–6, and asserts nothing on them.
 
+## Rebased on c3da8b32 (2026-11-26)
+
+The window-day checks ("The window and what this PR waits on", steps 1–4 and the open-PR check), made on 2026-11-26 on main `c3da8b32` (#244), once GK1 was signed. The branch is four commits on `c3da8b32`:
+
+| Commit | What |
+|---|---|
+| `91350268` | 1. the oracle: `tests/i18n-resolved-snapshot.test.ts` and the fixture, re-recorded on `c3da8b32` |
+| `292b52ad` | 2. the move (18 files, `en/ru/th.ts` lines 1–6, six borrowed test imports) |
+| `eec95cfc` | 4. `src/i18n/index.ts`: the dictionaries' evaluation order (new, below) |
+| (this commit) | 3. the report and the fragment, brought to `c3da8b32` |
+
+(Commit 3, the docs, was first `1711d364`, still describing `8dcc4b2`, between 2 and 4; this edit is a new commit on top.)
+
+**What changed on main since `8dcc4b2`.** In the six modules, one line: #222 ("Thai: the app's dictionary in the words of Thai sources") changed the Thai `'exp.input.payloadMass'` from `'มวลสัมภาระ (กก.)'` to `'มวลเพย์โหลด (กก.)'` in `src/i18n/experiments.ts`. That was the rebase's one conflict; it was resolved by hand into `experiments.th.ts`, and `split.mjs`, run again on commit 1, gives the same 18 files and the same `en/ru/th.ts` byte for byte ("How the strings moved"). `en/ru/th.ts` changed below line 6 on main (#217, #222, #223–#225, #239: new keys and #222's Thai wording); lines 1–6 are as on `8dcc4b2`. The union grew from 5,165 to 5,194 keys.
+
+**EO-I18N-1, re-recorded.** Commit 1 as recorded on `8dcc4b2` fails on `c3da8b32` (main's strings moved), so, by step 2, the fixture was recorded again on `c3da8b32`: `VITE_ORBITLAB_I18N_DUMP=1 npx vitest run tests/i18n-resolved-snapshot.test.ts`, `snapshot.json` copied into the fixture, `_recorded.base` = `c3da8b32c519b00589a87398382b73a16bace2f7`. 5,194 union keys, each language owning all 5,194; 90 first key segments (`a11y` to `zone`); 11 keys through `tCountFor`; the fixture is 8,434 B. Commit 1 alone on `c3da8b32`: 4 passed (4); its dump equals the base dump (`diff -r`: no output).
+
+Sabotage on commit 1 (each reverted with `git checkout`; nothing committed):
+
+| Sabotage | Result |
+|---|---|
+| delete the Thai `'setup.dynamics.model': 'แบบจำลอง',` from `th.ts` | 4 failed (4): `th: expected [ 5194, 5193 ] to deeply equal [ 5194, 5194 ]`; th raw `fe1b6cb7…` ≠ `0c027ebd…`; th resolved `b850a32b…` ≠ `dc445339…`; segments differ in `"setup"` only (`87195177…` ≠ `2f8a25d0…`) |
+| swap `...workspaceTh, ...projectsTh` in `th.ts`'s spread | 1 failed, 3 passed (4): th raw `f97846cb…` ≠ `0c027ebd…`; counts, resolved and segments equal |
+| a new key `classroom.zzNew` in all three languages (`classroom.ts`, `zz En`, `zz Ru`, `zz Th`) | 4 failed (4): `expected 5195 to be 5194`; en raw `9c592fe1…` ≠ `32d62d89…`; en resolved `a22ab064…` ≠ `f07125bc…`; segments differ. The diff of the six dump files against the base dump is one added line in each (`["classroom.zzNew","zz En"]`, `… "zz Ru"`, `… "zz Th"`, in `*.raw.jsonl` and `*.resolved.jsonl`) and nothing else |
+
+On the head (`eec95cfc`): 4 passed (4), the fixture unchanged; the full dump (`snapshot.json` and the six `*.jsonl` files) is byte-identical to the base's (`diff -r`: no output).
+
+**Commit 4: the evaluation order, and why.** After the split, each language file imports only its own six feature modules, so the bundle evaluates (and the minifier declares) the feature objects language by language, and the Thai ones come between the Russian dictionary and the `{ en, ru, th }` table. The minifier then no longer inlines the Russian dictionary into the table but keeps it as a variable (`ru:C` with `,C={…}` earlier): +4 B in `i18n-*.js` and in the precache, as on `8dcc4b2` ("Sizes", "Where the +4 B comes from"). On `8dcc4b2` those 4 B fitted. On `c3da8b32` the `precache code` line has 1 B of room (15,196,999 of 15,197,000 B), so the split alone would fail it by 3 B, and S09 rule 9 raises no ceiling. Commit 4 adds 12 side-effect imports to `src/i18n/index.ts`, the Russian feature modules then the Thai ones, before `import { ru } from './ru';`, so both are evaluated before the dictionaries, as they were before the split. With it, `i18n-*.js` keeps main's size (1,738,172 B) and every budget line equals main's. This is the 0-B variant step 4 asks for. It changes no string (EO-I18N-1 4 of 4) and no worker (below). The chunk's bytes still differ, because its 18 feature objects are declared in another order and under other short names; its string literals are the same multiset (checked on the two `dist` builds).
+
+The split alone on `c3da8b32`, measured: `git archive` copies of commit 1 and of commit 2 (`292b52ad`), plain builds, stamp `dev` on both, bytes as `bundle-budget` counts them. Three lines differ, each by +4 B: `i18n-*.js` 1,738,172 → 1,738,176, `precache` 16,315,772 → 16,315,776, `precache code` 15,196,989 → 15,196,993; every other line is equal. The stamp is the same length on both sides, so with this clone's 8-character stamp (base `precache code` 15,196,999 B, table below) commit 2 alone would be 15,197,003 B, 3 B over the 15,197,000 B ceiling (computed from the two measurements, not built stamped). With commit 4 (`eec95cfc`, the same `dev` build) all three lines are back at the base's bytes.
+
+**EO-BUN-1 on `c3da8b32`.** Run as described in "EO-BUN-1, catalog form", with `git archive` copies of commit 1 (`91350268`) and of the head (`eec95cfc`), stamp `dev` on both sides, sourcemap builds into `sm-base`/`sm-head` and plain builds into `dd-base`/`dd-head`. The declared paths are 28: the 27 before and `src/i18n/index.ts`, which commit 4 changes (the `CH` line at the end of this report now names it).
+
+| Check | Base | Head | Result |
+|---|---|---|---|
+| distinct sources | 576 | 588 | +12 = 18 added − 6 deleted |
+| (source, sha256, chunk groups) rows outside the 28 paths | 566 | 566 | equal (none only in base, none only in head) |
+| declared paths, and where they sit | 10 (6 modules, `en/ru/th`, `index.ts`), all in `i18n-*.js` only | 22 (18 files, `en/ru/th`, `index.ts`), all in `i18n-*.js` only | no module missing or duplicated; none in a worker |
+| `INEFFECTIVE_DYNAMIC_IMPORT` in the build log | 0 | 0 | — |
+| the 12 workers | — | — | byte-identical, same names; no `src/i18n/*` module and no `src/lessons/text.ts` in any worker map, on either side |
+
+Every entry's raw bytes and module count are equal on both sides. The bytes differ, by hashed chunk names only, in 17 entries (`index-*.js`, the two `archive-*.js`, `assessment-view`, `author-view`, `bank`, `catalog`, `check-view`, `download`, `lesson-file`, `media-archive`, `media-ownership`, `profile-menu`, `structure`, `validation`, `worksheet-view`, `workspace-content`); `i18n-*.js` differs in content at 1,738,172 B on both sides (11 → 23 modules, the declared paths); `solar-daily`, `standard-magnitudes`, `structure-en`, `structure-ru` and the 12 workers are identical. gzip moves by a few bytes per chunk, and by 81 B in `i18n-*.js` (420,021 → 420,102 B).
+
+The whole `dist` (`node dist-compare.mjs dd-base dd-head`): 107 files on each side; 85 byte-identical at the same path; 18 identical once the old hashed chunk names are replaced by the new ones (the 17 chunks above and `index.html`); `i18n-*.js` differs at the same size; `sw.js`: the code outside the precache manifest is identical, 72 entries on each side, 19 with a new revision (the 18 renamed files and `i18n-*.js`), none moved in order, the version changes (`0001411795940b` → `0c0dedf4efc3f4`), and every revision equals its file's SHA-256 on both sides; `SHA256SUMS` and `build-info.json` are generated.
+
+**Sizes on `c3da8b32`.** `npx vite build && node scripts/bundle-budget.mjs` in the worktree, base = commit 1 (`91350268`, 8-character stamp), head = `eec95cfc` (8-character stamp); bytes counted as `scripts/bundle-budget.mjs` counts them. `bundle budget: ok` on both; 72 precache entries on both; `budgets.json` not touched.
+
+| Budget line | Base (B) | Head (B) | Δ | Ceiling (B) | Room base → head |
+|---|---:|---:|---:|---:|---:|
+| `index-*.js` | 2,669,470 | 2,669,470 | 0 | 2,669,500 | 30 → 30 |
+| `index-*.css` | 181,961 | 181,961 | 0 | 182,500 | 539 → 539 |
+| `flight.worker-*.js` | 570,708 | 570,708 | 0 | 589,000 | 18,292 → 18,292 |
+| `tune.worker-*.js` | 542,770 | 542,770 | 0 | 561,000 | 18,230 → 18,230 |
+| `monte-carlo.worker-*.js` | 541,026 | 541,026 | 0 | 559,000 | 17,974 → 17,974 |
+| `ratings.worker-*.js` | 550,223 | 550,223 | 0 | 569,000 | 18,777 → 18,777 |
+| `readiness.worker-*.js` | 564,304 | 564,304 | 0 | 583,000 | 18,696 → 18,696 |
+| `reentry.worker-*.js` | 57,856 | 57,856 | 0 | 60,000 | 2,144 → 2,144 |
+| `lifetime.worker-*.js` | 39,053 | 39,053 | 0 | 40,000 | 947 → 947 |
+| `screening.worker-*.js` | 30,098 | 30,098 | 0 | 31,000 | 902 → 902 |
+| `attitude-tune.worker-*.js` | 11,353 | 11,353 | 0 | 12,000 | 647 → 647 |
+| `recheck.worker-*.js` | 879,240 | 879,240 | 0 | 902,000 | 22,760 → 22,760 |
+| `lifetime-altitude.worker-*.js` | 121,968 | 121,968 | 0 | 122,000 | 32 → 32 |
+| `requirement-trades.worker-*.js` | 135,819 | 135,819 | 0 | 136,000 | 181 → 181 |
+| `other chunks` | 771,417 | 771,417 | 0 | 772,000 | 583 → 583 |
+| `precache` | 16,315,782 | 16,315,782 | 0 | 16,596,000 | 280,218 → 280,218 |
+| `precache code` | 15,196,999 | 15,196,999 | 0 | 15,197,000 | 1 → 1 |
+| `precache data/` | 1,118,783 | 1,118,783 | 0 | 1,399,000 | 280,217 → 280,217 |
+| `catalog-*.js` | 172,824 | 172,824 | 0 | 180,000 | 7,176 → 7,176 |
+| `author-view-*.js` | 26,388 | 26,388 | 0 | 26,500 | 112 → 112 |
+| `check-view-*.js` | 11,511 | 11,511 | 0 | 12,000 | 489 → 489 |
+| `workspace-content-*.js` | 33,932 | 33,932 | 0 | 35,000 | 1,068 → 1,068 |
+| `workspace-content-*.css` | 4,758 | 4,758 | 0 | 5,000 | 242 → 242 |
+| `i18n-*.js` | 1,738,172 | 1,738,172 | 0 | 1,738,500 | 328 → 328 |
+| `lesson-file-*.js` | 345,494 | 345,494 | 0 | 347,000 | 1,506 → 1,506 |
+| `structure-*.js` | 292,908 | 292,908 | 0 | 293,000 | 92 → 92 |
+| `structure-*.css` | 26,967 | 26,967 | 0 | 27,000 | 33 → 33 |
+| `structure-en-*.js` | 66,511 | 66,511 | 0 | 67,000 | 489 → 489 |
+| `structure-ru-*.js` | 106,211 | 106,211 | 0 | 107,000 | 789 → 789 |
+
+The report-only columns (M-PLAN-020) move in gzip and brotli only: `i18n-*.js` gzip 420.0 → 420.1 kB, brotli 303.8 → 302.8 kB; precache code gzip 7,582.4 kB on both, brotli 6,989.7 → 6,988.6 kB; initial load gzip 1,443.8 → 1,443.9 kB, brotli 1,135.5 → 1,134.3 kB. No speed or KPI-01 claim is made from these. These builds carry an 8-character stamp; CI's 7-character stamp makes `index-*.js` and `recheck.worker-*.js` 1 B smaller each, on both sides (inferred from "Build stamp"; not measured here). CI's figures are still to be read from the PR's run.
+
+**Tests on `c3da8b32`** (on the head, `eec95cfc`, unless marked):
+
+| Command | Result |
+|---|---|
+| `npx vitest run tests/i18n-resolved-snapshot.test.ts` on commit 1 alone | 4 passed (4); with each sabotage: 4 failed (4); 1 failed, 3 passed (4); 4 failed (4) |
+| the same on the head, with `VITE_ORBITLAB_I18N_DUMP=1` | 4 passed (4); dump identical to the base's |
+| `npm run -s typecheck` | clean |
+| `npx vitest run tests/i18n*.test.ts tests/worker-language-boundary.test.ts tests/architecture.test.ts tests/profiles-i18n.test.ts tests/lesson-pack-names.test.ts tests/experiment-notebook.test.ts tests/project-archive.test.ts tests/classroom-pwa.test.ts tests/validation-read-report.test.ts tests/lesson-review.test.ts` | 13 files, 137 passed (137): architecture 6, classroom-pwa 14, experiment-notebook 16, i18n-counts 7, i18n-resolved-snapshot 4, i18n-thai-terms 4, i18n 19, lesson-pack-names 5, lesson-review 5, profiles-i18n 2, project-archive 45, validation-read-report 8, worker-language-boundary 2 |
+| `npx vitest run tests/repo-hygiene.test.ts` | 9 passed (9) |
+| `node --test tests/verification/*.test.mjs tests/browser/shard.test.mjs` | 98 tests, 98 pass, 0 fail |
+| `npx vitest run` (the whole unit suite, in the worktree) | 367 files, 10,905 passed (10,905), 0 failed, 1,276 s |
+| `npx vite build && node scripts/bundle-budget.mjs` (base and head) | ok on both; table above |
+| EO-BUN-1 and the whole-`dist` comparison | as above; their two sabotages were not run again |
+| `git diff --check c3da8b32` | clean |
+
+Not run again on `c3da8b32`: the browser journeys, heavy and the six-DOF fleet (for the reasons in "Tests run"; the 12 workers are byte-identical again), the depth-1 CI-stamp builds, and the EO-BUN-1 sabotages.
+
 ## Paths and comments that still describe the old layout
 
 - `tests/verification/change-map-trials.json:280-288` lists `src/i18n/{classroom,experiments,projects,review,validation,workspace}.ts`. It is a historical trial fixture of R0.3r (the paths a past PR changed), not a live list, so it is left as it is (`change-map.test.mjs` passes on it, above).
@@ -282,14 +392,16 @@ All on commit 2 (`27422cf`) unless marked; repeated on 2026-11-05 after the hist
 
 ## The window and what this PR waits on
 
-- **Window.** S05 `:324` puts EQ-6 on K2 days 1–2. The owner's answers move it. On 2026-10-28 (13:34:15Z): the first two working days once merging is possible with no i18n PR open, with this split first, then the worker path, then the loader. On 2026-11-04: "ก เตรียมตอนนี้ เปิดหน้าต่างหลัง HU-6 (แนะนำ)". So this PR is prepared now, stays a local draft until HU-6 ends, and opens window day 1.
+- **Window.** S05 `:324` puts EQ-6 on K2 days 1–2. The owner's answers move it. On 2026-10-28 (13:34:15Z): the first two working days once merging is possible with no i18n PR open, with this split first, then the worker path, then the loader. On 2026-11-04: "ก เตรียมตอนนี้ เปิดหน้าต่างหลัง HU-6 (แนะนำ)". HU-6 then moved to GK2, and on 2026-11-25 the owner answered when the window opens now: "ก หลังปิด GK1 (แนะนำ)" (after GK1 is closed: the window opens after the owner signs GK1; before it opens, #206 is rebased onto main and its oracles recorded; while it is open no other PR touches `src/i18n`; [DECISIONS](../../DECISIONS.md), "Decided 2026-11-25, evening", `:714`). The same night GK1 item 2 was answered "ก ลงนาม GK1 พร้อม variance" (sign GK1 with the variances; "Decided 2026-11-25, night", `:727`). So GK1 is signed, and the window-day checks below were made on main `c3da8b32` on 2026-11-26 (results in "Rebased on c3da8b32 (2026-11-26)"); the push and the PR's update are not done yet (step 5).
 - **Window day 1, before the PR opens** (S09 step 1, `:291`: the baselines are recorded "บน main SHA ณ วันนั้น", on main's SHA on that day):
   1. Fetch main and rebase this branch onto it. If main changed any of the six modules or `en/ru/th.ts` lines 1–6, do not resolve the conflict by hand. Redo commit 2 with `split.mjs` on the new base instead.
   2. Run commit 1 alone on the new merge base: `npx vitest run tests/i18n-resolved-snapshot.test.ts`. If it fails, main's strings have moved (for example a K1-38 wording PR or a K2 string PR). Re-record the fixture there: write the dump, copy `snapshot.json` into the fixture, and set `_recorded.base`. Run the three sabotages again and amend commit 1.
   3. Run commit 2 on top: 4 of 4, and dumps identical to the new base's.
   4. Rebuild EO-BUN-1 (both scripts) and `bundle-budget` on the new base and head. Update the sizes, the room tables and this report: the "456 → 452" and "627 → 623" figures are `8dcc4b2`'s. If the split's +4 B no longer fits a ceiling, look for a 0-B variant or stop. No ceiling is raised (S09 rule 9).
-  5. Check the open PRs (next item). Push with `git push -u origin claude/i-eq6-s2`. The local branch has no upstream: it was unset, because the worktree had set `origin/main`. Then open the PR and set `status: review`.
-- **No other PR on `src/i18n/**`.** At 2026-11-05T00:27:25Z, three PRs are open (REST `pulls?state=open` and `pulls/<n>/files`): #188, #190 and #192, all replay bug fixes. None touches `src/i18n/**`, the six borrowed tests or the oracle files. Check again when the window opens: `gh api 'repos/ROYIN001/Orbitlab/pulls?state=open'`, then each PR's files.
+  5. Check the open PRs (next item). Push with `git push -u origin claude/i-eq6-s2`. The local branch has no upstream: it was unset, because the worktree had set `origin/main`. Then open the PR and set `status: review`. (#206 already exists as a draft on the old head `c922e84`, base `8dcc4b2`; the rebased branch replaces its head with a force push, which is the owner's or the session's step, not done here.)
+
+  2026-11-26: steps 1–4 and the check of step 5 are done on `c3da8b32`. Step 1: one conflict (#222's Thai `exp.input.payloadMass`), and `split.mjs` gives the hand-resolved commit 2 byte for byte. Step 2: commit 1 failed on the new base (5,194 keys), so the fixture was re-recorded there and the sabotages run again. Step 3: 4 of 4, dumps identical. Step 4: the split alone put `precache code` 3 B over its ceiling (1 B of room on `c3da8b32`), so commit 4 (`eec95cfc`) restores the evaluation order, a 0-B variant; no ceiling is raised.
+- **No other PR on `src/i18n/**`.** At 2026-11-05T00:27:25Z, three PRs are open (REST `pulls?state=open` and `pulls/<n>/files`): #188, #190 and #192, all replay bug fixes. None touches `src/i18n/**`, the six borrowed tests or the oracle files. Checked again at 2026-11-26T06:58:45Z (`gh api 'repos/ROYIN001/Orbitlab/pulls?state=open'`): one PR is open, #206 itself (draft, `claude/i-eq6-s2`, head `c922e84`, base `8dcc4b2`, 37 files). No other open PR, so none touches `src/i18n/**`, the borrowed tests or the oracle files.
 - **Branches that touch `src/i18n/`** and would need a rebase onto the per-language files if revived: the plan's scan lists 16 (`codex/stage3-stage4-improvements` touches all six deleted modules). It was made on `7263004`; it was not repeated here.
 - **Reviews before merge:** a second agent (M-PLATFORM-031 is P1, D-25), with its result as "confirmed N of M"; L-C on the text move; the borrowed tests' owner lanes; Q on the oracle files and on the two proposals above (the oracle's life after merge, and EO-BUN-1 without a committed file). Merge needs the owner's Merge Desk approval: this is identical-output work, not a bug fix.
 
@@ -315,12 +427,13 @@ Commit 1 was amended for the oracle's doc comment, so the three commits have new
 
 ## Not done, and limits
 
-- CI has not run: nothing is pushed. The fragment's PR number and CI run are placeholders.
+- CI has not run on the rebased branch: nothing is pushed since `c922e84` (#206's head on `8dcc4b2`). The fragment's CI run is a placeholder.
+- Commit 2's message (`292b52ad`) still quotes the `8dcc4b2` figures (526 rows, 27 paths, +4 B); this report and the fragment give the `c3da8b32` ones.
 - No second-agent review of the code yet (the check above was of the claims).
 - EO-BUN-1 has no committed file (above); kit 3d is where it becomes a committed check. Each of its two sabotages was run once.
-- The branch scan of the plan (16 branches) was not repeated on `8dcc4b2`.
+- The branch scan of the plan (16 branches) was not repeated on `8dcc4b2` or `c3da8b32`.
 - Heavy, the six-DOF fleet and `case-worksheet-exports` were not run (reasons above).
-- The precache grows by 4 B, against S09's guard "ขนาด precache ไม่เปลี่ยน"; no 0-B variant was looked for, because no ceiling is at risk.
+- On `8dcc4b2` the precache grew by 4 B, against S09's guard "ขนาด precache ไม่เปลี่ยน", and no 0-B variant was looked for. On `c3da8b32` commit 4 is that variant: every budget line equals the base's, so the guard is met to the byte. Commit 4 touches `src/i18n/index.ts`, which the plan's move-only description of PR2 does not name; it is inside `src/i18n/**` (`allowed_write_paths`) and changes evaluation order only.
 - The five moved doc comments are left as they were (above).
 
 ## The split script
@@ -385,10 +498,10 @@ for (const f of FEATURES) unlinkSync(join(dir, `${f}.ts`));
 
 ## The EO-BUN-1 scripts
 
-Run from a scratch folder holding the two outDirs and logs (above). The 27 declared paths, as passed:
+Run from a scratch folder holding the two outDirs and logs (above). The declared paths, as passed (28 from 2026-11-26: `src/i18n/index.ts` was added for commit 4; on `8dcc4b2` the list was the other 27):
 
 ```sh
-CH="src/i18n/en.ts src/i18n/ru.ts src/i18n/th.ts $(for f in workspace projects review experiments classroom validation; do
+CH="src/i18n/index.ts src/i18n/en.ts src/i18n/ru.ts src/i18n/th.ts $(for f in workspace projects review experiments classroom validation; do
   printf 'src/i18n/%s.ts src/i18n/%s.en.ts src/i18n/%s.ru.ts src/i18n/%s.th.ts ' $f $f $f $f; done)"
 node eo-bun-1.mjs sm-base sm-head build-sm-base.log build-sm-head.log $CH > bun.json
 node dist-compare.mjs dd-base dd-head > dist.json
