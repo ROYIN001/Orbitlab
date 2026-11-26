@@ -39,8 +39,10 @@ describe('astro geodesy', () => {
     for (const p of P.slice(0, 20)) {
       const n = ellipsoidNormal(p.lat, p.lon);
       const r = ecefFromGeodetic(p.lat, p.lon, p.h);
-      const up = geodeticFromEcef({ x: r.x + n.x, y: r.y + n.y, z: r.z + n.z });
-      expect(Math.abs(up.h - p.h - 1)).toBeLessThanOrEqual(1e-8);
+      const up = geodeticFromEcef({ x: r.x + 1000 * n.x, y: r.y + 1000 * n.y, z: r.z + 1000 * n.z });
+      expect(Math.abs(up.h - p.h - 1000)).toBeLessThanOrEqual(1e-6);
+      expect(Math.abs(up.lat - p.lat)).toBeLessThanOrEqual(1e-11);
+      expect(Math.abs(wrapPi(up.lon - p.lon))).toBeLessThanOrEqual(1e-11);
       const { east, north, up: u } = enuBasis(p.lat, p.lon);
       for (const v of [east, north, u]) expect(Math.abs(dot(v, v) - 1)).toBeLessThanOrEqual(1e-15);
       for (const [a, b] of [[east, north], [east, u], [north, u]]) expect(Math.abs(dot(a, b))).toBeLessThanOrEqual(1e-15);
