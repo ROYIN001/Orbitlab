@@ -75,7 +75,7 @@ The functions work in any Earth-centred frame whose z axis is the spin axis; "lo
   "gravity": [ { "lat": 0, "gamma": 0 } ] }
 ```
 
-  - `points`: 200 from the Halton sequence (bases 2, 3, 5; no random numbers): `lat = asin(2u₁ − 1)`, `lon = π(2u₂ − 1)`, `h = −10e3 + (40e6 + 10e3)·u₃²`. Then 13 by hand: both poles at h = 0 and at 40e6; the equator at lon 0, at π and at −π + 1e-12; lat 0.7, lon 2 at h = −10e3 and at 40e6; lat ±(π/2 − 1e-9), lon 0.5, h = 500e3; lat ±1e-12, lon 0.3, h = 0. `x, y, z` from `erfa.gd2gc(1, lon, lat, h)`; the `Back` values from `erfa.gc2gd(1, xyz)`.
+  - `points`: 200 from the Halton sequence (bases 2, 3, 5; no random numbers): `lat = asin(2u₁ − 1)`, `lon = π(2u₂ − 1)`, `h = −10e3 + (40e6 + 10e3)·u₃²`. Then 13 by hand: both poles at h = 0 and at 40e6; the equator at lon 0, at π and at −π + 1e-12; lat 0.7, lon 2 at h = −10e3 and at 40e6; lat ±(π/2 − 1e-9), lon 0.5, h = 500e3; lat ±1e-12, lon 0.3, h = 0. `x, y, z` from `erfa.gd2gc(1, lon, lat, h)`; the `Back` values from `erfa.gc2gd(1, xyz)`. The forward transform is a closed form, so its inputs are the truth for the inverse; ERFA's own inverse is one pass of Halley's method and is a second witness for height and longitude only (S20 amendment 7).
   - `gravity`: latitudes 0°, 15°, 30°, 45°, 60°, 75°, 90°, from Moritz's closed forms in mpmath at 50 digits with a = 6378137, 1/f = 298.257223563, GM = 3.986004418e14, ω = 7.292115e-5: `m = ω²a²b/GM`, `e′ = √(a² − b²)/b`, `q₀ = ½[(1 + 3/e′²)·atan e′ − 3/e′]`, `q₀′ = 3(1 + 1/e′²)(1 − atan(e′)/e′) − 1`, `γₑ = GM/(ab)·(1 − m − m e′ q₀′/(6 q₀))`, `γₚ = GM/a²·(1 + m e′ q₀′/(3 q₀))`, `γ(φ) = (a γₑ cos²φ + b γₚ sin²φ)/√(a² cos²φ + b² sin²φ)`. The script asserts that γₑ and γₚ equal the published 9.7803253359 and 9.8321849378 to ten figures before it writes anything.
   - Floats are written with 17 significant digits.
 
@@ -84,7 +84,7 @@ The functions work in any Earth-centred frame whose z axis is the spin axis; "lo
 | Case | Assertion |
 |---|---|
 | `matches ERFA: geodetic to Earth-fixed` | for every point, distance between `ecefFromGeodetic(lat, lon, h)` and `(x, y, z)` ≤ 1e-6 m |
-| `matches ERFA: Earth-fixed to geodetic` | `lat` within 1e-11 rad of `latBack`, `h` within 1e-6 m of `hBack`; `lon` within 1e-11 rad of `lonBack` modulo 2π, except at the exact poles |
+| `matches ERFA: Earth-fixed to geodetic` | for every point, `geodeticFromEcef(x, y, z)` gives `lat` within 1e-11 rad and `h` within 1e-6 m of the inputs ERFA's forward transform took, and `lon` within 1e-11 rad of that input modulo 2π, except at the exact poles; `h` is also within 1e-6 m of `hBack` and `lon` within 1e-11 rad of `lonBack`. `latBack` is recorded, not asserted (S20 amendment 7) |
 | `round trip` | `ecefFromGeodetic(geodeticFromEcef(r))` within 1e-6 m of `r` for every point |
 | `the normal is the direction height grows in` | at 20 points, a step of 1,000 m along `ellipsoidNormal` raises `h` by 1000 ± 1e-6 m and leaves `lat` and `lon` within 1e-11 rad; `enuBasis` vectors are unit and mutually perpendicular within 1e-15, and east × north = up |
 | `agrees with the app's present geodesy below 2,000 km` | for points with h ≤ 2e6, `geodetic()` of `src/physics/geodesy.ts` differs by ≤ 1e-9 rad and ≤ 1e-3 m |

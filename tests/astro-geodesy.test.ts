@@ -19,12 +19,18 @@ describe('astro geodesy', () => {
     for (const p of P) expect(dist(ecefFromGeodetic(p.lat, p.lon, p.h), p)).toBeLessThanOrEqual(1e-6);
   });
 
+  // The inputs of ERFA's closed-form forward transform are the truth for (x, y, z). ERFA's own inverse is one pass
+  // of Halley's method, up to 2.6e-11 rad off in latitude near 20,000 km: a witness for h and lon only (S20 amendment 7).
   it('matches ERFA: Earth-fixed to geodetic', () => {
     for (const p of P) {
       const g = geodeticFromEcef(p);
-      expect(Math.abs(g.lat - p.latBack)).toBeLessThanOrEqual(1e-11);
+      expect(Math.abs(g.lat - p.lat)).toBeLessThanOrEqual(1e-11);
+      expect(Math.abs(g.h - p.h)).toBeLessThanOrEqual(1e-6);
       expect(Math.abs(g.h - p.hBack)).toBeLessThanOrEqual(1e-6);
-      if (Math.abs(p.lat) !== Math.PI / 2) expect(Math.abs(wrapPi(g.lon - p.lonBack))).toBeLessThanOrEqual(1e-11);
+      if (Math.abs(p.lat) !== Math.PI / 2) {
+        expect(Math.abs(wrapPi(g.lon - p.lon))).toBeLessThanOrEqual(1e-11);
+        expect(Math.abs(wrapPi(g.lon - p.lonBack))).toBeLessThanOrEqual(1e-11);
+      }
     }
   });
 
