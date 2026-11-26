@@ -41,7 +41,8 @@ export default async function i18nLoader(t) {
   };
 
   // 1. the first visit: no worker controls the page yet, so all three load
-  t.check(!(await page.evaluate(() => !!navigator.serviceWorker?.controller)), 'a service worker controlled the first visit');
+  // (the worker claims the page once installed, so `controller` is set by now; the navigation itself did not go through it)
+  t.check(await page.evaluate(() => performance.getEntriesByType('navigation')[0]?.workerStart === 0), 'a service worker served the first visit');
   await expect('th', 'first visit');
   const first = await dictChunks(page);
   t.log('first visit fetched', JSON.stringify(first));
