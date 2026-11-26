@@ -33,6 +33,8 @@ Where this file and code or GitHub disagree, code and GitHub are right. Where it
 4. `choice: "hold"`, or text in the box: do not merge; do what the text says, then update the card. An approval typed in chat is valid at any time and weighs the same as the button.
 5. After the merge, the card becomes `merged` with the SHA, the Pages run and the publication result. Merged ≠ published ≠ live.
 
+**The physics-foundation track (plan S20).** By the owner's answer of 2026-11-26 ("2.ก"; [DECISIONS](../DECISIONS.md), "Decided 2026-11-26, the plan-review chat") the session that orchestrates S20 merges that track's pull requests itself, without a button, when all of these hold: CI is green on the current head; a reviewer that did not write the work has passed it; the session's own gate check is done. The owner gets a summary at each phase gate. A re-record table, a size ceiling (D-38), a change of look or wording and a change of scope still wait for the owner each time. Everything outside S20 follows the steps above.
+
 **Limitation.** The page does not notify the session when the owner presses. The session sees it when it wakes on a GitHub event, at a scheduled check-in, or from a chat message. To have a PR merged at once, the owner says "กดแล้ว" (pressed) in chat.
 
 ## 2. Rules the owner has decided (2026-10-05)

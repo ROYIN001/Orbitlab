@@ -1,6 +1,6 @@
 # S20 — ฐานฟิสิกส์ (แทร็ก PF) / Physics foundation
 
-> **Status: draft, proposed 2026-11-26, not yet approved.** Nothing in this section is authorized until the owner answers §9; the answers go into [DECISIONS](../../DECISIONS.md). Written by the session on `claude/tender-tesla-4xh9wa` from the owner's instruction of 2026-11-26 (quoted in §1) and that day's physics audit (§2). Where this text and code or GitHub disagree, code and GitHub are right. Where it and DECISIONS disagree, DECISIONS is right.
+> **Status: approved by the owner on 2026-11-26.** The owner answered the four decisions of §9 in chat, verbatim "1.ก 2.ก 3.ก 4.ก.", the first option of each ([DECISIONS](../../DECISIONS.md), "Decided 2026-11-26, the plan-review chat"). That answer adopts this section and authorizes its packages under D-65, T-1 (EQ-8 and the rest of FX-4) included. Written by the session on `claude/tender-tesla-4xh9wa` from the owner's instruction of 2026-11-26 (quoted in §1) and that day's physics audit (§2). Three bounds and one author's call were corrected after the approval and before any work started; they are listed under "Amendments" at the end. Where this text and code or GitHub disagree, code and GitHub are right. Where it and DECISIONS disagree, DECISIONS is right.
 
 ## สรุปสำหรับเจ้าของ
 
@@ -21,7 +21,7 @@
 
 **ผลต่อรุ่นอื่น:** ฐานใหม่มีผลกับจรวดทุกรุ่น รุ่นนอก 4 ตระกูลจะถูกปรับเท่าที่จำเป็นให้บินได้ตามเกณฑ์เดิม ไม่ได้ยกระดับความสมจริงในรอบนี้
 
-**ข้อที่ขอให้คุณตัดสิน** อยู่ใน §9 (4 ข้อ)
+**คำตอบของคุณ (26 พ.ย. 2026):** "1.ก 2.ก 3.ก 4.ก." อนุมัติแผนตามร่าง, ให้ผม merge เองตามเงื่อนไขใน §9 ข้อ 2, ใช้ agent ตัวที่สองกับผมเป็นผู้ตรวจและคุณลงนามตอนสลับฐานแต่ละครั้ง, และอนุญาต EQ-8 กับ FX-4 ส่วนที่เหลือ
 
 ---
 
@@ -147,7 +147,7 @@ Levels: L1 mechanical, L2 specified implementation, L3 delicate numerics or cros
 | Id | What | Level |
 |---|---|---|
 | PF-01 | Oracle toolchain: `tests/fixtures/astro/<domain>/make_*.py` beside each fixture, as `tests/fixtures/passes/` does it; a pinned requirements file for a Python virtual environment (pyerfa 2.0.1.5, astropy 8.0.3, Skyfield 1.55, sgp4 2.27, jplephem 2.24, JPL DE421); each JSON fixture names its generator, versions and kernel hash. Installing these and downloading DE421 worked on this machine on 2026-11-26; Orekit installed but was not run | L2 |
-| PF-02 | New source area `src/astro/` in two folders, `base/` (time, frames, geodesy, gravity, Sun and Moon) and `propagate/` (the numerical propagator, from W-O on): added to `CORE_DIRS` in `tests/architecture.test.ts`; a change-map rule `astro` selecting only `tests/astro-*.test.ts` plus typecheck, build and budget. Nothing in `src/astro` holds global state: Earth-orientation data and options come in as arguments | L1 |
+| PF-02 | New source area `src/astro/` in two folders, `base/` (time, frames, geodesy, gravity, Sun and Moon) and `propagate/` (the numerical propagator, from W-O on): added to `CORE_DIRS` in `tests/architecture.test.ts`; a change-map rule `astro` for `src/astro/**` and `tests/fixtures/astro/**` selecting only `tests/astro-*.test.ts` plus typecheck, build and budget, with `tests/fixtures/astro/**` excluded from the `test-harnesses` rule, which would otherwise select every suite for a new fixture. Nothing in `src/astro` holds global state or imports from another `src` folder: Earth-orientation data and options come in as arguments. Done inside the first package, PF-12 | L1 |
 | PF-03 | Documents brought to the code: the mismatches the audit listed (about twelve), Markdown only | L1 |
 | PF-04 | Two suspected silent wrong answers, diagnosed first: the station transfer that falls back to its first guess (`src/physics/sim/rendezvous.ts:266`) and the Lambert plan solved two-body but flown with J2. Each ends as a failing test and a fix, or as a recorded "not reachable" | L3 |
 | T-1 | Size headroom: FX-4's shared runner, then EQ-8 (workers as ES modules sharing the physics chunk; the plan's estimate is −2.75 MB of 15.2 MB). Without it physics code is paid about seven times in the precache: on the parked branch about 10 kB of nozzle code added 69.1 kB. Identical output, with its own heavy and fleet run | L3 |
@@ -159,8 +159,8 @@ Bounds are frozen here, before any run. A bound that cannot be met stops the pac
 
 | Id | What | Acceptance | Reference | Supersedes | Level |
 |---|---|---|---|---|---|
-| PF-10 | Time scales: UTC, TAI, TT, TDB by the two-term series, and UT1 from the Earth-orientation data the app already loads (`public/data/earth-orientation.json`, 2019 onward) | UTC↔TAI↔TT exact at every leap second since 1972; TDB − TT within 50 µs over 1960–2060; UT1 equal to the data at its nodes; round trips within 1 µs. Outside the data's span UT1 = UTC and the pole is zero, as today, and the result carries a flag: the Earth's angle is then good to 0.9 s of time, about 420 m on the ground | ERFA `dat`, `dtdb`, 200 epochs | — | L2 |
-| PF-11 | Frames: J2000 ↔ mean of date ↔ true of date ↔ pseudo Earth-fixed ↔ ITRF by IAU-1976 precession, IAU-1980 nutation, GMST-82 with the equation of the equinoxes, polar motion; TEME ↔ J2000; topocentric; radial/along/cross and LVLH | Rotation matrices within 1e-11 of ERFA at 24 epochs 1990–2040; Vallado's worked reduction to its printed digits; TEME→J2000 within 1 m at 7,000 km of Skyfield, with the frame bias stated; round trips within 1e-9 m | ERFA `pmat76`, `nut80`, `gmst82`, `eqeq94`; Vallado; Skyfield | `earthAngle` and `temeToItrf` in `src/orbit/earth-orientation.ts`; `gmst` in `src/physics/orbital.ts`. SGP4's own `gstime` stays | L3 |
+| PF-10 | Time scales on two-part Julian dates: UTC, TAI, TT, TDB by the two-term series, and UT1 from the Earth-orientation data the app already loads (`public/data/earth-orientation.json`, 2019 onward) | TAI − UTC exact at every leap second since 1972 and within 1e-9 s of ERFA for 1960–1971; TDB − TT within 50 µs over 1960–2060; UTC→TT→UTC within 1 µs; Earth-orientation values equal to today's `eopAt`, bit for bit. Outside the data's span the nearest value is held, as today, and the result carries a flag: the Earth's angle is then good only to 0.9 s of time, about 420 m on the ground | ERFA `dat`, `dtdb`, `taitt`, 200 epochs | `eopAt` in `src/orbit/earth-orientation.ts` | L2 |
+| PF-11 | Frames: GCRF ↔ ITRF by the IAU 2000B chain (frame bias, precession, the 77-term nutation, Greenwich sidereal time, polar motion); TEME ↔ ITRF by GMST-82; EME2000 by the frame bias; topocentric; radial/along/cross and LVLH | Each matrix within 1e-11 per element of ERFA at 24 epochs 1990–2040; GCRF→ITRF within 2 mas of ERFA's full IAU 2006/2000A chain (7 cm at 7,000 km); TEME→GCRF within 0.2 m at 7,000 km of Skyfield; TEME→ITRF within 1e-4 m of today's `temeToItrf`; round trips within 1e-9 m | ERFA `pnm00b`, `gst00b`, `gmst82`, `pom00`, `c2teqx`, `c2t06a`; Skyfield | `earthAngle` and `temeToItrf` in `src/orbit/earth-orientation.ts`; `gmst` in `src/physics/orbital.ts`. SGP4's own `gstime` stays | L3 |
 | PF-12 | Geodesy on WGS-84: geodetic ↔ Earth-fixed, the plumb line, normal gravity | Within 1e-6 m and 1e-11 rad over 200 low-discrepancy points from −10 km to 40,000 km, poles and equator included | ERFA `gd2gc`, `gc2gd`; Somigliana's formula | `src/physics/geodesy.ts`; the spherical site and height code in `src/physics/orbital.ts` | L2 |
 | PF-13 | Gravity field: fully normalized spherical harmonics, degree and order 20 in the code; a larger set, if a tool needs one, is a data file under `public/data/` fetched on demand | Acceleration within 1e-10 relative at 16 points from 300 km to 36,000 km; J2-only term equal to `gravityJ2` within 1e-13 relative; the potential satisfies Laplace's equation numerically; coefficient checksum equal to the source's | An independent evaluation in Python by a different recursion, from the published coefficients | The zonal terms in `src/physics/propagator/forces.ts`. `src/physics/gravity.ts` is replaced at W-L | L3 |
 | PF-14 | Sun and Moon in J2000 on TT: the shortest series that meets the bounds | Sun within 0.01° and 0.1 % in distance (S14 §14.1.1's bounds); Moon within 0.01° and 0.05 % in distance; 400 epochs 1950–2050 | Skyfield with JPL DE421 | `src/physics/ephemeris-series.ts`; `sunDirectionEci` in `src/physics/orbital.ts`; the series fallback in `src/physics/lunar/ephemeris.ts`. The mean Sun of `src/orbit/kepler.ts` stays as a named convention; the DE441 table of the Apollo week stays | L3 |
@@ -274,7 +274,7 @@ Physics, storage and data changes keep D-25's second reviewer; a re-baseline bat
 
 ## 9. Decisions for the owner
 
-The detailed plan is written on the proposed answers. What a different answer changes is named with each.
+**Answered 2026-11-26: "1.ก 2.ก 3.ก 4.ก."** — the proposal of each item below, as it was put to the owner in chat (DECISIONS has the Thai text of each option). The items are kept as they were asked.
 
 1. **The plan and its order** (§5, §6), which replace "plan work only until GK2" (2026-11-25). GK2's date and scope are set again at the first gate.
 2. **How the work is merged.** Proposed: one branch and one pull request per package, named as SESSION-PROTOCOL §5 says; the orchestrating session merges when CI is green, the reviewer has passed it and the gate check is done; the owner gets one summary per phase. Still the owner's each time: a re-record table, a size ceiling, anything that changes the look or the wording, a change of scope. Records are folded once per phase. *If the owner keeps a button per pull request, each package waits for it and the phases take longer; nothing else changes.*
@@ -283,7 +283,7 @@ The detailed plan is written on the proposed answers. What a different answer ch
 
 ## 10. Calls made by the author, open to correction
 
-- The frame chain is IAU-1976/1980 (FK5), the one SGP4, TEME and the bundled Earth-orientation data already assume; its accuracy, about a metre in low orbit, is stated in the interface. The IAU-2006 chain is not built.
+- The inertial frame is GCRF, reached by the IAU 2000B chain, good to one or two milliarcseconds (under 10 cm in low orbit) from 1995 to 2050. TEME keeps its own definition through GMST-82, which SGP4 needs. The full IAU 2006/2000A series is not built: it is about twenty times longer for a gain below a centimetre. (Amended; see below.)
 - NRLMSISE-00 stays. D-10's choice of NRLMSIS 2.1 waits on its licence terms (`docs/VALIDATION.md:2538-2547`), which is the owner's question at the Phase 3 gate.
 - The ascent atmosphere stays US Standard 1976, as S14 decided; only long-term answers move to the lifetime model.
 - EQ-9, EQ-10 and EQ-11 are not done first, except M-PHYSICS-015. They change speed, not results, and each would cost a heavy and fleet run.
@@ -304,3 +304,13 @@ The detailed plan is written on the proposed answers. What a different answer ch
 9. **Labels and documents** name the model and its known bias; `docs/PHYSICS.md` and `docs/VALIDATION.md` change in the same pull request.
 
 Stop rules: a missed bound means no merge; a value on the must-not-move list that moves stops the batch until the cause is found.
+
+## Amendments
+
+Made on 2026-11-26 after the owner's approval and before any package started, each for a reason found while writing the first work plan ([S20-wave1.md](S20-wave1.md)). None changes the scope, the order or a decision of §9.
+
+1. **PF-11, the frame chain (an author's call of §10).** The draft chose the IAU-1976/1980 chain and said it was good to about a metre in low orbit. That figure was wrong. Measured with ERFA on 2026-11-26 against the full IAU 2006/2000A chain, and without the celestial-pole corrections that the app's Earth-orientation data does not carry, the 1976/1980 chain is 0.07 arcsecond off in 2025 (2.4 m at 7,000 km) and 0.12 in 2040 (4.1 m). The IAU 2000B chain costs about the same code (a 77-term table in place of a 106-term one); on the same measurement it stays within 0.8 mas for GCRF→ITRF from 1990 to 2055, so the bound is set at 2 mas. TEME does not need the 1980 nutation: it is reached from ITRF through GMST-82, as Vallado and Skyfield do.
+2. **PF-11, the Skyfield bound.** With that chain the bound against Skyfield tightens from 1 m to 0.2 m.
+3. **PF-10, time representation.** "Round trips within 1 µs" cannot hold for a Julian date in one number, whose step is about 40 µs. The base therefore works on two-part Julian dates, as ERFA does. The bound stands.
+4. **PF-10, outside the Earth-orientation data.** The draft said UT1 = UTC there "as today". Today's code holds the nearest value beyond the ends and uses UT1 = UTC only when there is no data. The base keeps today's behaviour, bit for bit, and adds the flag.
+5. **PF-02, the rule.** A new fixture under `tests/fixtures/` selects every suite, heavy and fleet included, through the `test-harnesses` rule. The `astro` rule therefore covers `tests/fixtures/astro/**`, and that path is excluded from `test-harnesses`.
