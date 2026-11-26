@@ -464,7 +464,7 @@ perf_evidence: none
 kpi_targets: {}
 rollback: {method: revert, data_compat: "a test file only"}
 reviewers: [second-agent (P1, D-25), "Q (the guard's form)"]
-second_agent: "on d9c7bc40: confirmed 5 of 7 claims; 2 blocking findings (import.meta.glob and a computed import() outside src/i18n passed the guard and leaked about 1.74 MB into the recheck worker; the text overstated the guard), 2 minor, 4 nits; all addressed on the next head (the guard rewritten on the bundler's parser)"
+second_agent: "on d9c7bc40: confirmed 5 of 7 claims; 2 blocking findings (import.meta.glob and a computed import() outside src/i18n passed the guard and leaked about 1.74 MB into the recheck worker; the text overstated the guard), 2 minor, 4 nits; all addressed on the next head (the guard rewritten on the bundler's parser); on 2d888dab: confirmed 3 of 4 checks, nothing blocking, 2 minor gaps in worker discovery (globalThis.Worker; a ?worker URL in an import()), a wording overstatement and 2 nits, addressed on the next head"
 ```
 
 **What the source graph shows** (the guard's walk on `0b7b6e55`; runtime imports only, type-only imports erased). Of the 12 workers, only the recheck worker reaches `src/i18n`, and by two edges, not the one S09 names:
@@ -488,8 +488,8 @@ From `index.ts` the walk reaches `en`, `ru`, `th` and the 18 feature files. None
 
 The extra bytes in chunks that did not change are the i18n chunk's minified export names: moving `getLang` to another module reassigns those one-letter names, and with them the local names in every chunk that imports them (`download-*.js`: `import{i as e,m as t,n}` becomes `import{c as e,m as t,r as n}`). So every variant of the first form needs a D-38 raise of `precache code`, and the second edge also touches two files outside `src/i18n/**` and `src/lessons/text.ts` (S09's allowed paths) and adds a precache file. The second form costs 0 B. What it needs from the loader instead: the `import()` lives in a module no worker reaches, which the guard checks.
 
-**The guard** (`tests/i18n-worker-path.test.ts`, 16 tests). It parses every `src/**/*.ts` file with the bundler's own parser (`parseAst` from `vite`, oxc), so comments, strings and multi-line statements are read as the build reads them, and type-only imports and exports are erased as the build erases them. It checks:
-1. every `new Worker(...)` and `new SharedWorker(...)` in `src` is in the form `new Worker(new URL('<literal>', import.meta.url))`, and no module imports a `?worker` or `?sharedworker` URL, so the walk sees every worker; there are 12;
+**The guard** (`tests/i18n-worker-path.test.ts`, 16 tests). It parses every `.ts`, `.js` and `.mjs` file under `src` with the bundler's own parser (`parseAst` from `vite`, oxc), so comments, strings and multi-line statements are read as the build reads them, and type-only imports and exports are erased as the build erases them. It checks:
+1. every `new Worker(...)` and `new SharedWorker(...)` in `src`, also as `new globalThis.Worker(...)` or `new self.SharedWorker(...)`, is in the form `new Worker(new URL('<literal>', import.meta.url))`, and no static import, `import()` or glob names a `?worker` or `?sharedworker` URL, so the walk sees every worker the app's own code builds; there are 12;
 2. per worker (12 tests): the modules it reaches, through static imports, re-exports and literal `import()`, hold no dynamic import, `import()` (literal or computed) or `import.meta.glob(...)`, but the two JSON loads it holds today (`src/orbit/visibility.ts`, the standard magnitudes; `src/physics/propagator/activity.ts`, the solar history);
 3. the edges into `src/i18n` are exactly the two above;
 4. the recheck worker is the only one that reaches `src/i18n`;
@@ -497,7 +497,7 @@ The extra bytes in chunks that did not change are the i18n chunk's minified expo
 
 A new edge, or a new dynamic import in a worker's graph, is not wrong in itself: it fails here so that EO-BUN-1 per worker is run before the list is updated. The walk's module counts agree with the bundler's own graph (a `rolldown` build with tree-shaking off, by the second agent): the recheck worker reaches 197 modules in both.
 
-**Sabotage** (each reverted; nothing committed). The first two are the second agent's: they passed the first form of the guard (regular expressions, `import()` checked only into or inside `src/i18n`) while the build leaked about 1.74 MB into the recheck worker.
+**Sabotage** (each reverted; nothing committed). The first two are the second agent's, on `d9c7bc40`: they passed the first form of the guard (regular expressions, `import()` checked only into or inside `src/i18n`) while the build leaked about 1.74 MB into the recheck worker.
 
 | Sabotage | Guard (16 tests) | Build |
 |---|---|---|
@@ -509,12 +509,14 @@ A new edge, or a new dynamic import in a worker's graph, is not wrong in itself:
 | `const lazyEn = () => import('../i18n/en');` in `src/lessons/measures.ts` | fails 2 (a dynamic import; the new edge) | not built |
 | in `src/lessons/measures.ts`: `const pat = './*.ts'; void import('../i18n/th'); const end = '*/';` (a `/*` inside a string, which the first form read as a comment and so skipped the `import()`) | fails 2, the same | not built |
 | `export const sab = () => new Worker('./x.worker.js');` in `src/orbit/reentry-job.ts` | fails 1 (a worker not in the `new URL` form) | not built |
+| the same with `new globalThis.Worker(...)` (the second agent's, on `2d888dab`, where it passed) | fails 1, the same | not built |
+| `export const sab2 = () => import('./orbit/reentry.worker.ts?worker');` in `src/main.ts` (the second agent's, on `2d888dab`, where it passed) | fails 1 (a `?worker` URL) | not built |
 
-So the guard fails on every form of loader that sits in a worker's graph, whether the build keeps it (and leaks) or drops it: it is stricter than the build there, as S09's "อาจรวมพจนานุกรมเข้า worker" (may bring the dictionaries into the worker) asks.
+So, for every worker the app's own code builds (check 1), the guard fails on every form of loader that sits in its graph, whether the build keeps it (and leaks) or drops it: it is stricter than the build there, as S09's "อาจรวมพจนานุกรมเข้า worker" (may bring the dictionaries into the worker) asks.
 
 **Tests run** (2026-11-26): on `d9c7bc40` (the first form of the guard) the whole unit suite, 368 files, 10,920/10,920 (main's 10,905 and the first form's 15); on the head the guard 16/16 and `tsc --noEmit` clean. Heavy, the fleet and the journeys not run: no file the build reads changed.
 
-**Limits.** The guard reads source, not the build. A dictionary could still reach a worker by a path it does not model: a `new Worker(url)` whose URL is not a literal fails check 1, but a worker created in a package, or a worker module reached through a non-relative alias (none in `vite.config.ts` today; such imports are not followed), is not seen. `import { type A } from './x'` is counted as erased, as the build erases it (no `verbatimModuleSyntax` in `tsconfig.json`). EO-BUN-1 per worker in PR3 remains the check of the build itself.
+**Limits.** The guard reads source, not the build. A dictionary could still reach a worker by a path it does not model: a `new Worker(url)` whose URL is not a literal fails check 1, but a worker created in a package, a worker constructor under another name (`const W = Worker; new W(...)`), or a module reached through a non-relative alias (none in `vite.config.ts` today; such imports are not followed) is not seen. Files other than `.ts`, `.js` and `.mjs` (there are none in `src` that import code) are not scanned. `import { type A } from './x'` is counted as erased, as the build erases it (no `verbatimModuleSyntax` in `tsconfig.json`). EO-BUN-1 per worker in PR3 remains the check of the build itself.
 
 ## The split script
 

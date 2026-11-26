@@ -10,9 +10,10 @@
  * A dictionary loader (S09's PR3) in a module a worker reaches would not be
  * dropped: an `import()` or an `import.meta.glob` there brings dictionary
  * chunks, or the dictionaries themselves, into the worker build. So:
- *  - every worker is constructed as `new Worker(new URL('<literal>', import.meta.url))`,
- *    and no module imports a `?worker` or `?sharedworker` URL, so the walk
- *    below sees every worker;
+ *  - every worker in `src` is constructed as `new Worker(new URL('<literal>', import.meta.url))`
+ *    (also through `globalThis.Worker` or `self.SharedWorker`), and no import,
+ *    `import()` or glob names a `?worker` or `?sharedworker` URL, so the walk
+ *    below sees every worker the app's own code builds;
  *  - the modules a worker reaches hold no dynamic import (`import()` or
  *    `import.meta.glob`) but the two JSON loads listed below: the loader
  *    goes in a module outside the workers' graph;
@@ -97,7 +98,7 @@ function parse(file: string): Parsed {
   const cached = parsedCache.get(file);
   if (cached) return cached;
   const text = readFileSync(file, 'utf8');
-  const ast = parseAst(text, { lang: 'ts' }) as unknown as { body: Node[] };
+  const ast = parseAst(text, { lang: file.endsWith('.ts') ? 'ts' : 'js' }) as unknown as { body: Node[] };
   const out: Parsed = { imports: [], dynamic: [], workers: [] };
   for (const stmt of ast.body) {
     const spec = literal(stmt.source);
@@ -124,7 +125,9 @@ function parse(file: string): Parsed {
     }
     if (n.type === 'NewExpression') {
       const callee = n.callee as Node;
-      if (callee.type !== 'Identifier' || (callee.name !== 'Worker' && callee.name !== 'SharedWorker')) return;
+      // `new Worker(...)`, and `new globalThis.Worker(...)` / `new self.SharedWorker(...)`
+      const name = callee.type === 'Identifier' ? callee.name : callee.type === 'MemberExpression' ? (callee.property as Node).name : null;
+      if (name !== 'Worker' && name !== 'SharedWorker') return;
       const url = (n.arguments as Node[])[0];
       const args = isNode(url) && url.type === 'NewExpression' && (url.callee as Node).name === 'URL' ? (url.arguments as Node[]) : [];
       const meta = args[1];
@@ -142,7 +145,8 @@ function walkDir(dir: string): string[] {
     return statSync(p).isDirectory() ? walkDir(p) : [p];
   });
 }
-const SOURCES = walkDir(SRC).filter((f) => f.endsWith('.ts')).sort();
+const CODE = /\.(ts|js|mjs)$/;
+const SOURCES = walkDir(SRC).filter((f) => CODE.test(f)).sort();
 
 function resolveImport(from: string, spec: string): string | null {
   if (!spec.startsWith('.')) return null; // packages: no dictionary lives there
@@ -164,7 +168,7 @@ function graph(entry: string): Set<string> {
   const queue = [entry];
   while (queue.length) {
     const file = queue.shift()!;
-    if (!file.endsWith('.ts')) continue; // JSON and other assets import nothing
+    if (!CODE.test(file)) continue; // JSON and other assets import nothing
     const p = parse(file);
     const specs = [...p.imports, ...p.dynamic.flatMap((d) => (d.specifier ? [d.specifier] : []))];
     for (const spec of specs) {
@@ -183,7 +187,11 @@ describe('EQ-6 step 1: the workers stay on static dictionaries', () => {
 
   it('finds the twelve workers, every one in the new Worker(new URL(<literal>, import.meta.url)) form', () => {
     const other = SOURCES.flatMap((f) => (parse(f).workers.some((u) => u === null) ? [rel(f)] : []));
-    const workerUrls = SOURCES.flatMap((f) => parse(f).imports.filter((s) => /\?(shared)?worker\b/.test(s)).map((s) => `${rel(f)}: ${s}`));
+    // a `?worker` URL in a static import, an `import()` or a glob pattern would build a worker this walk does not see
+    const workerUrls = SOURCES.flatMap((f) => {
+      const p = parse(f);
+      return [...p.imports, ...p.dynamic.map((d) => d.text)].filter((s) => /\?(shared)?worker\b/.test(s)).map((s) => `${rel(f)}: ${s}`);
+    });
     expect({ other, workerUrls }).toEqual({ other: [], workerUrls: [] });
     expect(entries).toHaveLength(12);
   });
@@ -191,7 +199,7 @@ describe('EQ-6 step 1: the workers stay on static dictionaries', () => {
   it.each(entries.map((e) => [rel(e), e]))('%s: no dynamic import in its graph but the two JSON loads', (_name, entry) => {
     const found: string[] = [];
     for (const file of graphs.get(entry)!) {
-      if (!file.endsWith('.ts')) continue;
+      if (!CODE.test(file)) continue;
       for (const d of parse(file).dynamic) found.push(`${rel(file)}: ${d.text.replace(/\s+/g, ' ')}`);
     }
     const unexpected = found.filter((f) => !ALLOWED_DYNAMIC.includes(f));
@@ -202,7 +210,7 @@ describe('EQ-6 step 1: the workers stay on static dictionaries', () => {
     const edges = new Set<string>();
     for (const g of graphs.values()) {
       for (const file of g) {
-        if (inI18n(file) || !file.endsWith('.ts')) continue;
+        if (inI18n(file) || !CODE.test(file)) continue;
         const p = parse(file);
         for (const spec of [...p.imports, ...p.dynamic.flatMap((d) => (d.specifier ? [d.specifier] : []))]) {
           const dep = resolveImport(file, spec);
@@ -221,7 +229,7 @@ describe('EQ-6 step 1: the workers stay on static dictionaries', () => {
   it('the allowed dynamic imports are still there (the list does not go stale)', () => {
     const all = new Set<string>();
     for (const g of graphs.values()) for (const file of g) {
-      if (!file.endsWith('.ts')) continue;
+      if (!CODE.test(file)) continue;
       for (const d of parse(file).dynamic) all.add(`${rel(file)}: ${d.text.replace(/\s+/g, ' ')}`);
     }
     expect(ALLOWED_DYNAMIC.filter((a) => !all.has(a))).toEqual([]);
