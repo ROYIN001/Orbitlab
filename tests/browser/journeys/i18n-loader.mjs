@@ -83,8 +83,13 @@ export default async function i18nLoader(t) {
   t.check(await page.locator('#lang-select').inputValue() === 'ru', 'the language menu does not show Russian after the offline reload');
   await context.setOffline(false);
 
+  // the first page is done: close it, so the English page does not share the (software) GPU with its scene
+  app.checkErrors();
+  await context.close();
+
   // 5. English: the first visit paints in English; installed, a reload fetches no dictionary chunk
   const en = await t.open({ lang: 'en' });
+  en.context.on('console', (m) => { if (m.type() === 'error' && /used before it was loaded/.test(m.text())) consoleErrors.push(m.text()); });
   const enPainted = await t.until(async () => { const p = await paintedOn(en.page); return p.about === WORDS.en.about && p.setup === WORDS.en.setup ? p : null; }, { timeoutMs: 15_000 });
   t.check(!!enPainted, `English first visit: got ${JSON.stringify(await paintedOn(en.page))}`);
   await en.page.waitForFunction(() => navigator.serviceWorker?.controller, null, { timeout: 60_000 });
@@ -95,6 +100,5 @@ export default async function i18nLoader(t) {
   t.check((await paintedOn(en.page)).about === WORDS.en.about, 'the installed English reload does not paint in English');
 
   t.check(consoleErrors.length === 0, `console: ${consoleErrors.join(' | ')}`);
-  app.checkErrors();
   en.checkErrors();
 }
