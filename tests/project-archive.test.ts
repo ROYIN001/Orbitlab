@@ -11,7 +11,9 @@ import {
   exportProjectArchive, importProjectArchive, parseProjectArchive, previewProjectImport, projectArchiveText, projectCounts,
   recoverProjectImport, type ProjectArchive, type ProjectStorage,
 } from '../src/projects/archive';
-import { projectsEn, projectsRu, projectsTh } from '../src/i18n/projects';
+import { projectsEn } from '../src/i18n/projects.en';
+import { projectsRu } from '../src/i18n/projects.ru';
+import { projectsTh } from '../src/i18n/projects.th';
 import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS } from '../src/lessons/catalog';
 import { BUILTIN_QUESTIONS } from '../src/lessons/assessment/bank';
 import { caseWorksheet } from '../src/worksheets/cases';

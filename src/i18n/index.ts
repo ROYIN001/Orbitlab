@@ -1,5 +1,18 @@
 import { workspaceStorage } from '../workspace/storage';
 import { en } from './en';
+// Evaluation order only: the Russian and Thai feature modules are evaluated before the two dictionaries, as they were before the per-language split, so the build keeps both inlined (identical output, EQ-6 step 2). The i18n oracle cannot see this order; bundle-budget and the bundle comparison do.
+import './workspace.ru';
+import './projects.ru';
+import './review.ru';
+import './experiments.ru';
+import './classroom.ru';
+import './validation.ru';
+import './workspace.th';
+import './projects.th';
+import './review.th';
+import './experiments.th';
+import './classroom.th';
+import './validation.th';
 import { ru } from './ru';
 import { th } from './th';
 

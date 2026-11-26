@@ -7,7 +7,9 @@ import {
 import { missionDocument } from '../src/config/mission-file';
 import { orbitById } from '../src/data/orbits';
 import { DEFAULT_FAILURE } from '../src/physics/defaults';
-import { experimentsEn, experimentsRu, experimentsTh } from '../src/i18n/experiments';
+import { experimentsEn } from '../src/i18n/experiments.en';
+import { experimentsRu } from '../src/i18n/experiments.ru';
+import { experimentsTh } from '../src/i18n/experiments.th';
 import { Simulation } from '../src/physics/simulation';
 import { flownMission } from '../src/lessons/progress';
 import { DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
