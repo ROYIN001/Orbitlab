@@ -498,7 +498,7 @@ The extra bytes in chunks that did not change are the i18n chunk's minified expo
 
 So the guard catches both an `import()` that leaks and one that the bundler would drop; it is stricter than the build, as S09's "อาจรวมพจนานุกรมเข้า worker" (may bring the dictionaries into the worker) asks.
 
-**Tests run** (2026-11-26, on `e7a497d8`): the guard 15/15; `tsc --noEmit` clean; the whole unit suite: running at the push, its result added in a later commit. Heavy, the fleet and the journeys not run: no file the build reads changed.
+**Tests run** (2026-11-26, on `e7a497d8`): the guard 15/15; `tsc --noEmit` clean; the whole unit suite 368 files, 10,920/10,920 (main's 10,905 and the guard's 15). Heavy, the fleet and the journeys not run: no file the build reads changed.
 
 **Limits.** The walk reads import statements with regular expressions, not a parser: a static import whose clause holds a `;`, or an `import()` with a computed specifier, is not followed (the second is reported in (1) only when it sits in `src/i18n`). The loader PR can still bring a dictionary into a worker through a path the guard does not model (a worker that imports a module through `new URL` or `?worker` imports); EO-BUN-1 per worker in PR3 remains the check.
 
