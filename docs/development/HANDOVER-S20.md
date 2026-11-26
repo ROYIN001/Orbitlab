@@ -1,0 +1,232 @@
+# Hand-over of the physics-foundation track (plan S20)
+
+> **What this is.** The record that lets someone who was not in the chat continue the physics work at once. Written on 2026-11-26 by the session that orchestrated the track (`claude/tender-tesla-4xh9wa`, `session_01JPSDqC2YnTUhAaDr2T2c9J`) on the owner's instruction of that day: "merge งานปัจจุบันเสร็จแล้วยังไม่ต้องเปิดงานต่อไปให้ทำการบันทึกแผนการแก้ไขงานส่วนฟิสิกส์ทั้งหมดที่เราได้คุยและคุณได้วางแผนลงใน repo ได้เลยครับเพื่อให้คนอื่นสามารถเข้ามาอ่าแล้วทำต่อได้เลย" (once the current work is merged, do not open the next work yet; record the whole plan for correcting the physics in the repository, so that others can read it and continue at once; [DECISIONS](../DECISIONS.md), "Decided 2026-11-26, the plan-review chat, later"). State: main at `40218ecc`, after [PR #251](https://github.com/ROYIN001/Orbitlab/pull/251). It was tested on a reader with no context before it was merged, and corrected from what that reader could not do (§5, rule 6). Where this file and code or GitHub disagree, code and GitHub are right. Where it and DECISIONS disagree, DECISIONS is right.
+
+## สรุปสำหรับเจ้าของและผู้รับช่วง
+
+- **แผนทั้งหมดอยู่ใน repo แล้ว** อ่านตามลำดับใน §1: ไฟล์นี้ → แผน S20 → ผลตรวจความสมจริง → แผนลงมือชุดแรก → รายงานงานนำร่อง
+- **สถานะ:** แผนได้รับอนุมัติแล้ว ("1.ก 2.ก 3.ก 4.ก.") งานนำร่อง PF-12 (รูปทรงโลก WGS-84 และกฎของพื้นที่โค้ดใหม่ `src/astro`) merge แล้วใน PR #251 ยังไม่มีโค้ดใดของเว็บเรียกใช้ฐานใหม่ เว็บจริงจึงยังไม่เปลี่ยน
+- **งานถัดไปยังไม่เปิด ตามคำสั่งของเจ้าของ:** PF-10 (มาตราเวลา) แล้ว PF-11 (กรอบอ้างอิง) แผนลงมือของทั้งสองงานแก้ไขตามบทเรียนของงานนำร่องแล้วและพร้อมสั่งงาน
+- **วิธีทำงาน:** ผู้สั่งงานหนึ่งคนเขียนใบสั่งงาน ตรวจรับ และแก้งานที่ถูกส่งกลับ ผู้ลงมือสามบทบาทแยกกัน (ผู้เขียนค่าอ้างอิง ผู้ลงมือทำ ผู้ตรวจ) รายละเอียดใน §4
+- **บทเรียนสำคัญจากงานนำร่อง:** ขอบของเทสต์ต้องตรวจด้วยเครื่องมืออ้างอิงก่อนสั่งงาน แผนตั้งขอบผิดสามจุดในชุดแรก (แก้เป็น amendment 6, 7, 8 โดยไม่คลายขอบ) รายละเอียดใน §5
+- **สิ่งที่ยังเป็นของเจ้าของทุกครั้ง:** ตารางบันทึกค่าใหม่ตอนสลับฐาน (W-O, W-L, เฟส 4), เพดานขนาด (D-38), การเปลี่ยนหน้าตาหรือถ้อยคำ และการเปลี่ยนขอบเขต
+- **ผู้รับช่วงที่เป็น session ใหม่** ควรยืนยันกับเจ้าของหนึ่งครั้งว่ารับบทผู้สั่งงานของแทร็กนี้ก่อน merge เอง (§7)
+
+The English text below says everything this summary says. Three older plan sections that this track leans on are written in Thai ([S09](plan/S09-eq-identical-output.md), [S10](plan/S10-r16-fx-data-safety.md), and the owner's words in DECISIONS); what a reader needs from them is restated in English where it is used (§3.3, T-1).
+
+---
+
+## 1. Read these, in this order
+
+| # | File | What it gives |
+|---|---|---|
+| 1 | this file | where the track stands, the next steps, how a package is run, what the first package taught |
+| 2 | [plan/S20-physics-foundation.md](plan/S20-physics-foundation.md) | the plan: the owner's instruction, classes A to D, the target of every model, every package of every phase, the verification design, the roles, the owner's four answers, amendments 1 to 9 |
+| 3 | [reports/physics-audit-2026-11-26.md](reports/physics-audit-2026-11-26.md) | what the audit found, model by model and vehicle by vehicle, with code locations; the list of documents that disagree with the code (PF-03's work order); the suspected silent wrong answers (PF-04) |
+| 4 | [plan/S20-wave1.md](plan/S20-wave1.md) | the work plan of the first three packages, task by task, with interfaces, fixtures, test tables and bounds. Task 1 is done; Tasks 2 and 3 are ready |
+| 5 | [reports/PF-12-geodesy.md](reports/PF-12-geodesy.md) | the first package's report: the worked example of a finished package |
+| 6 | [DECISIONS](../DECISIONS.md), "Decided 2026-11-26, the plan-review chat" and "…, later" | the owner's words, verbatim, each with an English gloss |
+| 7 | [SESSION-PROTOCOL.md](SESSION-PROTOCOL.md) §1 (the S20 paragraph), [VERIFICATION.md](VERIFICATION.md), [../../changes/README.md](../../changes/README.md) | the merge rule of this track, the verification contract, the change fragment |
+
+**Words used in this track**
+
+| Word | Meaning |
+|---|---|
+| the owner | the repository's owner. Questions are put and answered in chat with the session at work, and every answer is recorded verbatim in DECISIONS |
+| orchestrating session | the one session (or person) that runs the track: it writes each task's text, starts the seats, rules on what they send back, makes the gate check and merges. On 2026-11-26 it was the session named above |
+| seat | one role in a package, held by a separate model instance (or person) that sees only its brief: reference author, implementer, reviewer, re-reviewer. S20 §8 calls them roles |
+| brief | what a seat is given: one task of the work plan, plus the lines of Appendix A |
+| level, tier | S20 §8's levels of difficulty. L1, L2 and L3 go to the smallest, the middle and the largest of the three model sizes the tool offers; L4 is the orchestrating session. No model is named in the repository, on purpose. A team of people would read them as junior, mid-level and senior. S20 §4's "Tier 1 to 3" is a different thing: three groups of models by target class |
+| pilot | the first package, PF-12, run to test this way of working |
+| pre-check | a measurement with reference tools only, before anyone is dispatched, of whether a correct implementation can meet a bound |
+| hand-off runs | the checks an implementer runs once before it reports |
+| held-out set | reference points the writers never see, made by the orchestrating session for its own check |
+| gate | the orchestrating session's check of a package before it merges; also the report to the owner that closes a phase (S20 §6) |
+| class A to D | how close a model is to reality; defined in S20 §2 |
+| re-baseline; W-O, W-L | a change that moves recorded results once, under S20 Appendix A. W-O and W-L are the two of Phase 2: the Orbit side and the Launch side |
+| T-1, T-2 | groundwork taken from the older plan. T-1: FX-4's shared worker runner, then EQ-8 (workers built as ES modules that share the physics code). T-2: EQ-6's language loader |
+| heavy, fleet | the two expensive suites (34 heavy files; 6 six-degree-of-freedom fleet files, about two hours). They run by dispatch (`.github/workflows/heavy.yml`), not on every pull request |
+| CI | `.github/workflows/ci.yml`, on every pull request: plan, typecheck, three unit shards, build and size budget, five browser smoke shards, verify |
+| Pages run | `.github/workflows/deploy.yml`, which publishes main to the live site after a merge |
+| fragment | `changes/<branch>.md`, the one file a work pull request adds for the changelog and the progress table |
+| D-25, D-38, D-40, D-55, D-64, D-65 | numbered decisions of the owner in DECISIONS. D-25: a pull request stays near 400 changed lines and has a second reviewer. D-38: only the owner raises a size ceiling, against a named offset. D-40: the oldest browsers supported. D-55: an independent science review. D-64: a green heavy or fleet run may be reused while the physics tree's content hash is unchanged. D-65: work needs the owner's authorization |
+| GK1, GK2 | gates of the older plan's waves. S20 replaced "plan work only until GK2" |
+
+## 2. Where the track stands
+
+Nothing of the new base is called by the app. The live site is unchanged by this track so far.
+
+| Package | What | State on 2026-11-26 |
+|---|---|---|
+| S20 itself | the plan | approved by the owner, "1.ก 2.ก 3.ก 4.ก." ([PR #250](https://github.com/ROYIN001/Orbitlab/pull/250)) |
+| PF-01 | oracle toolchain | started inside PF-12: `tests/fixtures/astro/requirements.txt`, its `README.md`, the first generator. The JPL kernel (DE421) is needed first by PF-14; it is downloaded, never committed |
+| PF-02 | the area `src/astro`, its change-map rule and import boundary | **done** ([PR #251](https://github.com/ROYIN001/Orbitlab/pull/251)) |
+| PF-12 | WGS-84 geodesy | **done** ([PR #251](https://github.com/ROYIN001/Orbitlab/pull/251)); report [PF-12-geodesy.md](reports/PF-12-geodesy.md) |
+| PF-10 | time scales | **next; not started.** Work plan: S20-wave1 Task 2 |
+| PF-11 | reference frames | after PF-10; not started. Work plan: S20-wave1 Task 3 |
+| PF-13, PF-14, PF-15, PF-16 | gravity field, Sun and Moon, Kepler for e ≥ 1 and integrator tests, reference trajectories | not started; acceptance and references are in S20 §5.2; no work plan yet (§3.3 below) |
+| PF-03 | documents brought to the code | not started; work order: the audit record's §5 |
+| PF-04 | two suspected silent wrong answers | not started; diagnosis first |
+| T-1 | size headroom: FX-4's shared runner, then EQ-8 | not started. It belongs to this track: the session that did T-2 said it will not take FX-4. Tell that session before touching worker entries or `vite.config.ts` |
+| T-2 | EQ-6's loader | **done by another session**: [PR #249](https://github.com/ROYIN001/Orbitlab/pull/249), merged on 2026-11-26 as `c0e2ca75` on the owner's approval |
+| W-O, W-L | the two switches (re-baselines) | not started. W-L resumes the parked branch described in S20 §5.3 |
+| OE-1 to OE-9, LV-1 to LV-4, Phase 5 | Orbit engineer's tools, four launcher families, the rest | not started; each phase is planned in detail at the gate before it |
+
+## 3. The next steps, in order
+
+### 3.1 PF-10, time scales (S20-wave1 Task 2)
+
+1. Branch `claude/p-pf10-s1` from `origin/main`.
+2. Run the seats of §4 on Task 2 as written. The plan's levels: reference author and implementer on the middle tier, reviewer on the large tier.
+3. Already checked, with reference tools only (`tests/fixtures/astro/evidence/pf10_pf11_prechecks.py`, last block): the two-term TDB − TT formula of the plan is within 37.5 µs of ERFA `dtdb` at 200,001 instants from 1960 to 2060, against a bound of 50 µs. ERFA `dat` behaves as the plan says: 0.943482 s on 1960-01-01, 0 with a warning before 1960, 37 s with a "dubious year" warning after 2028; `utctai` leaves the first part of a date as given and moves the offset into the second.
+4. The task adds an ERFA entry to `NOTICE.md` (the leap-second and drift tables come from its `dat.c`); Task 2's Step 6 says what the entry holds.
+
+### 3.2 PF-11, reference frames (S20-wave1 Task 3)
+
+1. Branch `claude/p-pf11-s1` from `origin/main` after PF-10 has merged. Large tier for all three seats.
+2. Already checked the same way: the velocity formula of the plan is within 5.8e-5 m/s of the centred difference of the full chain (bound 2e-4); the bound against the app's present `temeToItrf` was ill-posed and is corrected (S20 amendment 8).
+3. Why this chain, measured by `tests/fixtures/astro/evidence/pf11_chain_choice.py`: the IAU 2000B chain is within 1.1 mas of the full IAU 2006/2000A chain for GCRF→ITRF from 1990 to 2055 (bound 2 mas); the planned definition of TEME is within 0.6 mas of Skyfield's from 2020 to 2030 (bound 0.2 m at 7,000 km, which is 5.9 mas).
+4. The ERFA C sources come from the pyerfa 2.0.1.5 source archive; `tests/fixtures/astro/README.md` has the command.
+
+### 3.3 The rest of Phase 0 and Phase 1: write a second work plan first
+
+PF-13 to PF-16, PF-03, PF-04 and T-1 have acceptance rows in S20 §5 but no task-level plan. Write `plan/S20-wave2.md` in the form of S20-wave1 before dispatching any of them, pre-check its bounds (§5, rule 1), and have a reader with no context try to use it (§5, rule 6). What is known and what is still open:
+
+| Package | Known | Open, to settle in the work plan |
+|---|---|---|
+| PF-13 gravity field | Degree and order 20 in code; acceptance 1e-10 relative at 16 points from 300 km to 36,000 km; the J2-only term equal to `gravityJ2` within 1e-13; Laplace's equation holds numerically. The module takes an Earth-fixed position and returns an Earth-fixed acceleration, so it needs nothing from PF-11 | Which published model. The plan says "the published coefficients" without naming one. A model comes with its own GM, reference radius and tide system, which are not the app's `MU_EARTH` and `R_EARTH`; the work plan has to name the model, its source and licence, those three, the 16 points and the second recursion the reference uses. The author's suggestion, not yet checked: EGM2008 truncated to degree and order 20 |
+| PF-14 Sun and Moon | Bounds: Sun 0.01° and 0.1 % in distance, Moon 0.01° and 0.05 %; reference Skyfield with DE421, 400 epochs 1950 to 2050. Skyfield's `load('de421.bsp')` downloads the kernel; that worked in the cloud environment on 2026-11-26. The four Sun models it replaces or keeps are named in S20 §5.2's row: `src/physics/ephemeris-series.ts`, `sunDirectionEci` in `src/physics/orbital.ts`, the series fallback in `src/physics/lunar/ephemeris.ts`, and the mean Sun of `src/orbit/kepler.ts`, which stays as a named convention | Which series. The shortest that meets the Moon's bound has to be found against the reference; the size rule of S20 §5.2 applies (a table over 30 kB becomes a data file). The fixture has to carry the kernel's hash |
+| PF-15 Kepler for e ≥ 1, integrator tests | Written in `src/astro`; the fallback inside `propagateKepler` (`src/physics/orbital.ts`) is replaced only when its callers switch at W-O, because any change under `src/physics` selects every heavy and fleet file (S20 amendment 9). Reference mpmath at 50 digits | "Elliptic results bit-identical to today's" needs a capture of today's outputs, which is a TypeScript generator, not a Python one. The Dormand–Prince and step-schedule tests have no bounds yet |
+| PF-16 reference trajectories | Six orbits, force model built up term by term; bounds written into the report before the reference is opened | Orekit installed with pip on 2026-11-26 but was never run. Try it once; if it does not run, the reference is an independent Python integrator on ERFA, DE421 and the published coefficients, anchored by one real orbit arc, and the work plan has to say how that arc is chosen |
+| PF-03 documents | Markdown only, small tier. Work order and its rule: the audit record's §5 (28 rows; five cite a test that does not exist; three need a run for the true count; one is LV-2's) | none |
+| PF-04 silent wrong answers | The audit record's §6. `src/physics/sim/rendezvous.ts:262-267` keeps its first guess when the solver fails, with no flag. The Lambert plan is solved for two bodies and flown with J2; the audit computed a miss of 15 to 58 km with a script that was not kept | Whether either is reachable in real use: Phase 0 does the diagnosis and writes the test with the app's own code. A fix touches `src/physics` or `src/orbit`, so it lands in the batch that owns the seam (S20 amendment 9) |
+| T-1 size headroom | Each worker embeds the physics core, so physics code is paid about seven times in the precache. After #249 the precache code measures 15,198,503 B against a ceiling of 15,199 kB (`budgets.json`). EQ-8's estimate is −2.75 MB. From [S09](plan/S09-eq-identical-output.md) (EQ-8) and [S10](plan/S10-r16-fx-data-safety.md) (FX-4), in English: EQ-8 depends on FX-4's shared runner (M-PLATFORM-035) and on D-40, which is answered (Chrome and Edge 94, Safari 16.4, Firefox 114); its files are `vite.config.ts`, the worker entries `src/**/*.worker.ts` and `src/ui/build/ratings-job.ts`; it is two pull requests, both identical-output; a pull request that shrinks a chunk does not edit `budgets.json` (the ceiling is lowered later, in a ratchet pull request); if a supported browser lacked module workers the fallback would be feature detection, never a blanket move to the main thread | Identical output, with its own heavy and fleet run (one of the four budgeted in S20 §7). S09 marks EQ-8 "execution_authorized: false"; the owner's answer "4.ก" of 2026-11-26 authorizes it as this track's groundwork |
+
+### 3.4 The gate after Phase 0 and Phase 1
+
+Report to the owner (S20 §6): what changed on the site (nothing, until a switch), each model's class with its evidence, what was not reached and why, the decisions waiting. Fold the change fragments once per phase. Then plan W-O and W-L in detail. Both follow the re-baseline protocol of S20 Appendix A; the owner signs each from a one-page before-and-after table.
+
+### 3.5 After the switches
+
+Phase 3 (Orbit engineer's tools, S20 §5.4) needs W-O and T-2. Phase 4 (four launcher families, S20 §5.5) needs W-L. Phase 5 is planned at the gate after Phase 3.
+
+## 4. How a package is run
+
+The owner's rule (S20 §1): the orchestrating session designs the work and hands it to other models by difficulty; it does the work itself only when a package is sent back as unsolvable. S20 §7 and §8 define the verification design, the levels and the roles. This is how the first package applied them.
+
+**In practice.** In a coding-agent session each seat is a subagent started with the tool's agent call, with its model size stated in the call, a prompt made of the task's text and the lines of Appendix A, and nothing of the session's own history. A seat is resumed, not replaced, when it has to come back to its own work. A team of people would run the same sequence with three people and a lead.
+
+**The seats, in order, never two at once on one checkout**
+
+| Seat | Level in the first package | Does | Never does |
+|---|---|---|---|
+| Reference author | middle tier | the fixture generator, the fixture, the failing test, from the task's text | sees or reads the implementation; changes an assertion because it fails |
+| Implementer | middle tier | the module, the rule files the task names, the hand-off runs once, one deliberate break, the package report, the change fragment, one commit | edits the test, the fixture or the generator; loosens a bound; runs the default, heavy or fleet suites |
+| Reviewer | large tier | reads the whole package against the task's text; judges whether a wrong implementation could pass the tests; regenerates the fixture or re-derives values from the reference; may run the task's test file once and one break of its own | writes code; re-runs whole suites to confirm a report |
+| Re-reviewer (after a fix) | middle tier | verdicts each finding as addressed or not; looks for breakage in the fix diff only | re-reviews untouched code |
+| Orchestrating session | L4 | the task text and its pre-check; rulings; anything sent back; the gate; the pull request and the merge | hands-on work that a seat can do |
+
+**The sequence for one package**
+
+1. Pre-check every bound of the task with reference tools only (§5, rule 1). Correct the plan before anyone is dispatched.
+2. Reference author: generator, fixture, failing test. The test fails because the module does not exist.
+3. Implementer: makes it pass. A status of "blocked" with evidence is a good outcome, not a failure (§5, rule 4).
+4. Reviewer: one full review. A finding that contradicts the plan's own text is the orchestrating session's to rule on, in writing.
+5. One fix round and one further look, as S20 §8 allows: test changes by the reference author (told not to open the implementation), code changes by the implementer, then one re-review of the fix. A package that needs more than that goes back to the orchestrating session.
+6. The orchestrating session's gate:
+   - a held-out set of its own, seeded, from a different sampler than the fixture's, with hard points added by hand; all inside the same bounds (`tests/fixtures/astro/evidence/` has the first package's);
+   - the module read line by line;
+   - the unit files that `node scripts/verification/select-checks.mjs --files <changed files>` lists, and `npm run typecheck`, run once;
+   - the changed files are all inside the task's list; no model name in any committed file (the trailers a session's tool adds to its commit messages are the one exception);
+   - the report and the fragment say only what the diff and the runs support;
+   - across a fix round, every number the module returns on the held-out set is compared with the version before the fix, so a fix that claims to change nothing is shown to change nothing.
+7. Pull request with the template's headings (`.github/pull_request_template.md`). CI runs. Then the fragment gets the pull request number and the CI run "on the last head tested before the fragment's own update" ([changes/README](../../changes/README.md)), and CI runs once more on that head.
+8. If main has moved meanwhile, main is merged into the branch and CI runs on that head ([HANDOVER-K2](HANDOVER-K2.md) §16.6: up to date before review or merge). Merge by squash when CI is green on the head and no Pages run is in progress (the Actions tab, workflow "Deploy to GitHub Pages"). The next branch starts from the new `origin/main`.
+
+**What the first package cost.** The tool reported, as subagent tokens: reference author 96 thousand, implementer 117 thousand, reviewer 120 thousand, re-reviewer 88 thousand. Three CI rounds of about fourteen minutes each (the package, the fragment, and main merged in after another pull request landed). No heavy or fleet run: the `astro` rule does not select them while nothing calls the area.
+
+**Sending work back** is in S20 §8. Every brief repeats it: two diagnosed attempts without success, a suspected reference, a file outside the brief, a must-not-move value that moves, or a bound that would have to be loosened, each stops the seat and returns the package with what was tried and the numbers seen.
+
+Appendix A has the skeleton of each seat's brief.
+
+## 5. What the first package taught
+
+The first package (PF-12) found defects in the plan, not in the approach. Each is now a rule.
+
+1. **Pre-check every bound before dispatch, with reference tools only.** Three kinds of ill-posed bound were found in the first work plan:
+   - *Below what a double can carry.* "Height +1 m ± 1e-8 m" at 46,000 km from the Earth's centre, where one step of a double is 7e-9 m (S20 amendment 6).
+   - *Tighter than the reference itself.* ERFA's inverse geodetic transform is one pass of Halley's method and is off by up to 2.6e-11 rad near 20,000 km; the bound against it was 1e-11 rad (amendment 7). A forward transform in closed form gives the truth for an inverse by construction: use its inputs.
+   - *Tighter than the present code it is compared with.* Today's `temeToItrf` is off by up to 2.1 cm at 7,000 km through a rounded rate and a Julian date in one number; the bound against it was 1e-4 m (amendment 8).
+
+   For each bound ask: what is the size of the quantity, and what is one step of a double there; how accurate is the reference, measured against something better (40-digit arithmetic, a closed form); when the comparison is with the app's present code, what is that code's own error budget. Scripts that answer these for PF-12, PF-10 and PF-11 are in `tests/fixtures/astro/evidence/`.
+2. **The table of test cases must cover the plan's own review focus, and every function.** The reviewer found that the focus asked for NaN on infinite input while the table did not, and that nothing fixed the orientation of the local frame: a frame turned about "up" passed every case, and the next task's azimuth test would have built its targets from that same frame. The reader of rule 6 then found three functions of Task 2 with no test at all. Cases a wrong implementation cannot fail (`toBeDefined` on a result) are defects.
+3. **One rule for bad input in the whole base:** a non-finite number in any input gives NaN in every number returned, and nothing throws. The exceptions are named in the plan (`eopAt`, the three matrix helpers). Each module pins it with one case that walks every argument position of every function.
+4. **A seat that stops is doing its job.** The implementer met a bound it could not reach, measured which side was wrong, and returned the package instead of loosening the bound or copying the reference's error. The orchestrating session then measured the reference without any app code before ruling. Keep "blocked is acceptable, loosening is not" in every brief.
+5. **The hand-off unit list comes from the change map, not from the plan.** The map selects five unit files for a file under `src/astro` (the task's test, the architecture test, and three repository-wide ones); the plan had named two.
+6. **A plan is ready when a reader with no context can act on it.** Before this record was merged, a fresh reader was asked to start PF-10 from the repository alone and to list every point where it had to guess. It found the value held before 1960 unstated, `taiToUtc` at a leap second undefined, the generators' sampling unspecified, three functions untested, a check that could not be called as written, and several places where this file disagreed with S20. All are corrected (S20 amendment 9). A second reader compared the audit record with its five sources, claim by claim. Do both for the next work plan: they cost less than one fix round.
+7. **A figure is re-measured before it is repeated.** Writing the evidence script for the frame chain showed that the "2.4 m" of amendment 1 was the error of the inertial frame's orientation, not of the complete GCRF→ITRF chain (1.6 m). The conclusion stood; the sentence was wrong.
+
+**Traps met**
+
+1. `pip download --no-binary` of pyerfa builds the package and does not return. Fetch the source archive with curl (`tests/fixtures/astro/README.md`); the C sources are under `liberfa/erfa/src/`.
+2. Node 22 runs a TypeScript module that has only erasable syntax directly (`node script.mjs` importing `…/geodesy.ts`), which is enough for a probe of `src/astro`. Modules of the app proper need vitest.
+3. A review package that includes a large generated fixture costs the reviewer its context for nothing. Leave the fixture out of the diff file and say how to inspect it.
+4. A fixture's first Halton points can sit exactly on a boundary (latitude 0). That is useful, and it is why the hand-added points are not the only boundary cases.
+5. The cloud machine has Node 22.23.5; the project's reference is 22.23.3. Local runs are early feedback; CI is the evidence.
+6. A push to a pull request cancels the CI run in progress on the earlier head, and the aggregate `verify` job of that run then shows red. It is not a failure of the change; the run on the new head is the evidence.
+
+## 6. Evidence and tools in the repository
+
+| Path | What |
+|---|---|
+| `tests/fixtures/astro/requirements.txt`, `README.md` | the pinned Python packages that write fixtures, how to make the virtual environment, how to fetch the ERFA sources and the JPL kernel. Run by hand, never by CI |
+| `tests/fixtures/astro/geodesy/` | the first package's generator and fixture |
+| `tests/fixtures/astro/evidence/` | the orchestrating session's own measurements, with a README of commands: ERFA's inverse against 40-digit arithmetic (amendment 7), the held-out geodesy set and its checker (the gate of PF-12), the pre-checks of PF-10 and PF-11 (amendment 8, the velocity bound, TDB − TT), the choice of the frame chain (amendments 1 and 2) |
+| `scripts/verification/change-map.json`, rule `astro` | the new area runs its own tests only. The pull request that switches a caller widens the rule in the same diff (S20 §5.3, "Rules after a switch") |
+| `tests/architecture.test.ts` | `src/astro` imports nothing from another `src` folder |
+
+## 7. Rules to keep, and what waits for the owner
+
+- **Merging.** By the owner's answer "2.ก" the session that orchestrates S20 merges this track's pull requests itself when CI is green on the head, a reviewer that did not write the work has passed it, and its own gate is done (SESSION-PROTOCOL §1). That answer was given to the session that held the role on 2026-11-26. A session that takes the role over should say so to the owner once and have it confirmed before its first merge.
+- **No merge of any kind during a Pages run** ([HANDOVER-K2](HANDOVER-K2.md) §16.6): a code push cancels the release in progress, and a Markdown merge makes its publish step refuse a source that is no longer main's tip.
+- **Always the owner's:** a re-record table (W-O, W-L, Phase 4), a size ceiling (D-38), a change of look or wording, a change of scope.
+- **Never:** a bound loosened after a result is seen; a failed run repeated without a diagnosed cause; agreement obtained by fitting reported as validation.
+- **Runs are budgeted** (S20 §7): heavy and fleet four times in the whole track, at T-1, W-O, W-L and Phase 4.
+- **Waiting for the owner later, none of it blocking PF-10 or PF-11:** the licence question of NRLMSIS 2.1 at the Phase 3 gate (S20 §10); the size of each switch if T-1 frees too little (S20 §5.2); GK2's date and scope, to be set again at the first gate (S20 §9, item 1).
+- **Another session's planned documents pull request "on GK2's answer"** may be overtaken by S20. The owner was told on 2026-11-26; it is the owner's call.
+
+## Appendix A — the skeleton of each seat's brief
+
+Each brief is one task of the work plan, extracted to a file the seat reads first, plus the lines below. A seat gets its task, the interfaces it touches and the binding constraints, and nothing of the session's history.
+
+**Reference author**
+
+- Scope: the steps of the task marked "reference author", and nothing else. Files it may write: the generator, the fixture, the test (and, for the first task of an area, the requirements file and its README).
+- The Python environment to use, and that a fixture is written by its generator only, with 17 significant digits and no random numbers without a fixed seed.
+- It never opens the implementation. In a fix round it is told which assertions to add, taken from definitions, and that a new assertion failing is the wanted result.
+- Run the test once; the expected failure is "module not found" (or, in a fix round, the new case only).
+- One commit, not pushed. Reply: status, commit, what failed and why.
+
+**Implementer**
+
+- Scope: the steps marked "implementer". The files it may write, by name. It never edits the test, the fixture or the generator.
+- The binding constraints of the work plan, verbatim.
+- The orchestrating session's resolution of anything the task leaves open.
+- While iterating, the task's own test file only. Before hand-off, once: typecheck, the unit files the change map selects, the build and the budget. Never the default, heavy or fleet suites.
+- One deliberate break, recorded with the cases that failed, then undone.
+- The package report `docs/development/reports/<package>.md` (what was built, the worst measured difference per case, the break, the runs with counts, what was not checked) and the change fragment.
+- "Blocked" with evidence is the right answer when a bound cannot be met, the reference is suspected, or a file outside the list is needed.
+- One commit with the subject the task names, not pushed. Reply under fifteen lines: status, commit, one line of test counts, concerns.
+
+**Reviewer**
+
+- The task's text, the binding constraints verbatim, the plan's review focus.
+- Who wrote which commit, as facts. No instruction to overlook anything.
+- The diff as one file (a large generated fixture left out, with a note). Read-only on the checkout.
+- Verdict on the requirements first (missing, extra, misunderstood), then on quality: could a wrong implementation pass these tests; is each bound meaningful; do the rules select what they should; do the documents say only what the runs support.
+- Findings with file and line, sorted Critical, Important, Minor.
+
+**Re-reviewer**
+
+- The findings verbatim, the fix diff as one file, the fix report.
+- A verdict per finding, "addressed" or "not addressed", and any breakage the fix itself introduced. Nothing outside the fix diff.
