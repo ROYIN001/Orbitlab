@@ -37,6 +37,7 @@ Version 2.0, index as of 2026-11-25 (K2 adoption of 2026-10-28; first written 20
 | S17 | R7 ต่อเนื่อง: การปล่อยรุ่นทุกประตู วิศวกรรมคุณภาพ CI ความทนทาน และเอกสาร | **Adopted for K2** — [S17-r7-quality-release.md](S17-r7-quality-release.md) | Owner, 2026-10-28T02:54:22Z (GK1 sign-off questions, items 4–5: "รับรองและอนุญาต K2"; DECISIONS "Decided 2026-10-28", recorded by #182 (merged as `a5b9afe`): `DECISIONS.md:386` on main at `ebddc7e`) |
 | S18 | รูปแบบการทำงาน: เลนและเจ้าของไฟล์ ไฟล์ hotspot กฎ fold ขนาด PR หลักฐาน task envelope DoR/DoD และการตรวจทาน | **Approved for K0–K1** — [S18-execution-model.md](S18-execution-model.md) (includes §18.14a, the Merge Desk) | Owner, 2026-10-05 (K0–K1 usage set) |
 | S19 | ภาคผนวก: ตาราง ID coverage แผนที่รหัสเดิมสู่ใหม่ รายการที่ปฏิเสธ/เลื่อน/ถูกแทนที่ และเอกสารที่ถูกแทนที่ | Draft — [on the plan branch](https://github.com/ROYIN001/Orbitlab/blob/claude/hopeful-allen-1o0vmh/docs/development/plan-v2-draft/sections/S19-appendices.md) | — |
+| S20 | ฐานฟิสิกส์ (แทร็ก PF): ฐานร่วมถึงระดับ A, เครื่องมือวิศวกรใน Orbit, จรวด 4 ตระกูล | Draft, proposed 2026-11-26, awaiting the owner's answers to its §9 — [S20-physics-foundation.md](S20-physics-foundation.md) | — |
 
 The owner's plain-language timeline (`TIMELINE-TH.md`), the work ledgers (`ledger/`) and the performance tool (`perf-baseline/`) also stay on the plan branch.
 
