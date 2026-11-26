@@ -86,11 +86,12 @@ The functions work in any Earth-centred frame whose z axis is the spin axis; "lo
 | `matches ERFA: geodetic to Earth-fixed` | for every point, distance between `ecefFromGeodetic(lat, lon, h)` and `(x, y, z)` ≤ 1e-6 m |
 | `matches ERFA: Earth-fixed to geodetic` | for every point, `geodeticFromEcef(x, y, z)` gives `lat` within 1e-11 rad and `h` within 1e-6 m of the inputs ERFA's forward transform took, and `lon` within 1e-11 rad of that input modulo 2π, except at the exact poles; `h` is also within 1e-6 m of `hBack` and `lon` within 1e-11 rad of `lonBack`. `latBack` is recorded, not asserted (S20 amendment 7) |
 | `round trip` | `ecefFromGeodetic(geodeticFromEcef(r))` within 1e-6 m of `r` for every point |
-| `the normal is the direction height grows in` | at 20 points, a step of 1,000 m along `ellipsoidNormal` raises `h` by 1000 ± 1e-6 m and leaves `lat` and `lon` within 1e-11 rad; `enuBasis` vectors are unit and mutually perpendicular within 1e-15, and east × north = up |
+| `the normal is the direction height grows in` | at 20 points, a step of 1,000 m along `ellipsoidNormal` raises `h` by 1000 ± 1e-6 m and leaves `lat` and `lon` within 1e-11 rad; `enuBasis` vectors are unit and mutually perpendicular within 1e-15, and east × north = up; `up` equals `ellipsoidNormal(lat, lon)` and `east` equals (−sin lon, cos lon, 0), each within 1e-15, which fixes the frame's orientation |
 | `agrees with the app's present geodesy below 2,000 km` | for points with h ≤ 2e6, `geodetic()` of `src/physics/geodesy.ts` differs by ≤ 1e-9 rad and ≤ 1e-3 m |
 | `normal gravity matches the closed forms` | relative difference ≤ 5e-10 at the seven latitudes |
 | `longitude stays in (−π, π]` | for every point and for lon = ±π inputs |
-| `degenerate inputs end` | `{0,0,0}`, a NaN component and `{x: 1e12, y: 0, z: 1e12}` each return within 50 ms without throwing; NaN in gives NaN out |
+| `degenerate inputs end` | `{0,0,0}`, the spin axis exactly (`{0, 0, ±7e6}`) and `{x: 1e12, y: 0, z: 1e12}` each return within 50 ms without throwing, with three finite numbers and \|lat\| ≤ π/2; on the axis `lat` is ±π/2 within 1e-15 and `h` is \|z\| − a(1 − f) within 1e-6 m |
+| `a non-finite input gives NaN in every number returned` | for NaN, +∞ and −∞ in each component or argument of `geodeticFromEcef`, `ecefFromGeodetic`, `ellipsoidNormal`, `enuBasis` and `normalGravity`: nothing throws, and every number returned is NaN |
 
   Run `npx vitest run tests/astro-geodesy.test.ts`. Expected: it fails because `src/astro/base/geodesy.ts` does not exist.
 
