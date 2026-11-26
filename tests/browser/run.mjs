@@ -37,6 +37,11 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
   if (!picked.length && names.length) return { results: [], ok: true };
   if (!picked.length) throw new Error('no journeys selected');
   picked = selectShard(picked, shard);
+  // TEMPORARY (rule 2 evidence for EQ-6 step 3, reverted before merge): on CI a smoke run with no journey names runs only i18n-loader, 4 times a shard
+  if (process.env.GITHUB_ACTIONS && smoke && !names.length) {
+    const mod = await import(pathToFileURL(join(journeyDir, 'i18n-loader.mjs')).href);
+    picked = [1, 2, 3, 4].map(() => ({ name: 'i18n-loader', mod }));
+  }
   if (list) {
     console.log(picked.map(journey => journey.name).join('\n'));
     return { results: [], ok: true };
