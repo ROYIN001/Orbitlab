@@ -13,7 +13,7 @@ Package PF-12 of plan S20 (the physics-foundation track), first module of the ne
 
 ## The reference's inverse
 
-Measured by the orchestrating session, without this module: Against a 40-digit mpmath solution for the stored x, y, z (4,429 points), the fixture's inputs `lat`, `lon`, `h` are right to 2.1e-16 rad and 1.3e-8 m. ERFA's own `gc2gd` is one pass of Halley's method (no loop in `gc2gde.c`). It is off by up to 2.6e-11 rad in latitude near 20,000 km (2.5e-12 below 2,000 km) and 1.4e-8 m in height. So the test compares the inverse with the fixture's inputs; `latBack` is recorded, not asserted. No bound was loosened (plan S20 amendment 7). This module's inverse differs from `latBack` by up to 2.6e-11 rad, as expected.
+Measured by the orchestrating session, without this module: against a 40-digit mpmath solution for the stored x, y, z (4,429 points), the fixture's inputs `lat`, `lon`, `h` are right to 2.1e-16 rad and 1.3e-8 m. ERFA's own `gc2gd` is one pass of Halley's method (no loop in `gc2gde.c`). It is off by up to 2.6e-11 rad in latitude near 20,000 km (2.5e-12 below 2,000 km) and 1.4e-8 m in height. So the test compares the inverse with the fixture's inputs; `latBack` is recorded, not asserted. No bound was loosened (plan S20 amendment 7). This module's inverse differs from `latBack` by up to 2.6e-11 rad, as expected.
 
 ## Worst measured difference per case
 
@@ -46,7 +46,7 @@ Longitude range and degenerate inputs are pass or fail; both pass.
 
 - `npx vitest run tests/architecture.test.ts tests/astro-geodesy.test.ts tests/bundle-budget.test.ts tests/privacy-inventory.test.ts tests/repo-hygiene.test.ts` (the five files the change map selects): 41 of 41 pass.
 - `npm run typecheck`: clean.
-- `npx vite build && node scripts/bundle-budget.mjs`: `bundle budget: ok`. It printed `initial load 7 files, 5126.8 KB, 1443.9 gzip, 1134.6 brotli`. nothing outside `src/astro` imports the module (checked by search), so the bundle cannot have changed.
+- `npx vite build && node scripts/bundle-budget.mjs`: `bundle budget: ok`. It printed `initial load 7 files, 5126.8 KB, 1443.9 gzip, 1134.6 brotli`. Nothing outside `src/astro` imports the module (checked by search), so the bundle cannot have changed.
 - `node --test tests/verification/*.test.mjs`: 93 of 93 pass.
 - `select-checks.mjs` for the geodesy file and fixture: `unit (5/369)` holding `tests/astro-geodesy.test.ts` and `tests/architecture.test.ts`, `heavy (0/34)`, `sixdof-fleet (0/6)`.
 
