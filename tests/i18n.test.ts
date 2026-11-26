@@ -482,7 +482,8 @@ describe('call sites', () => {
     // A glob that silently matches nothing would make every check below pass.
     expect(SOURCES.length).toBeGreaterThan(20);
     expect(Object.keys(I18N).sort()).toEqual(Object.keys(I18N_MODULES).sort());
-    expect(Object.keys(I18N).sort()).toEqual([...new Set(['../src/i18n/index.ts', ...DECLARATIONS.map(row => row.path)])].sort());
+    // EQ-6 step 3: besides index.ts, the loader and the tests' all-dictionaries setup are the only modules that declare no dictionary
+    expect(Object.keys(I18N).sort()).toEqual([...new Set(['../src/i18n/index.ts', '../src/i18n/loader.ts', '../src/i18n/all.ts', ...DECLARATIONS.map(row => row.path)])].sort());
     for (const name of ['en', 'ru', 'th']) {
       expect(DECLARATIONS.filter(row => row.path === `../src/i18n/${name}.ts` && row.name === name)).toHaveLength(1);
     }

@@ -1,30 +1,41 @@
 import { workspaceStorage } from '../workspace/storage';
 import { en } from './en';
-// Evaluation order only: the Russian and Thai feature modules are evaluated before the two dictionaries, as they were before the per-language split, so the build keeps both inlined (identical output, EQ-6 step 2). The i18n oracle cannot see this order; bundle-budget and the bundle comparison do.
-import './workspace.ru';
-import './projects.ru';
-import './review.ru';
-import './experiments.ru';
-import './classroom.ru';
-import './validation.ru';
-import './workspace.th';
-import './projects.th';
-import './review.th';
-import './experiments.th';
-import './classroom.th';
-import './validation.th';
-import { ru } from './ru';
-import { th } from './th';
 
 export type Lang = 'en' | 'ru' | 'th';
-const DICTS: Record<Lang, Record<string, string>> = { en, ru, th };
+const LANGS: readonly Lang[] = ['en', 'ru', 'th'];
+/**
+ * The dictionaries in memory (EQ-6 step 3). English is always here; Russian
+ * and Thai come from their own chunks, by `./loader`, which the app's start
+ * and the language switch await before they use a language. No worker
+ * reaches the loader (tests/i18n-worker-path.test.ts).
+ */
+const DICTS: Partial<Record<Lang, Record<string, string>>> = { en };
+const missing = new Set<Lang>();
+
+/** A language's dictionary is in memory. */
+export function hasDict(l: Lang): boolean {
+  return !!DICTS[l];
+}
+/** For `./loader` (and `./all`) only: a loaded dictionary. */
+export function registerDict(l: Lang, d: Record<string, string>): void {
+  DICTS[l] = d;
+}
+/** A dictionary asked for before it was loaded: English stands in, and the console says so (never silently). */
+function dict(l: Lang): Record<string, string> {
+  const d = DICTS[l];
+  if (d) return d;
+  if (!missing.has(l)) { missing.add(l); console.error(`i18n: the ${l} dictionary was used before it was loaded`); }
+  return en;
+}
 let current: Lang = 'en';
 const listeners: Array<(l: Lang) => void> = [];
 
 export function getLang(): Lang {
   return current;
 }
+/** Switch the language; its dictionary must be loaded (`ensureLang` in `./loader`). */
 export function setLang(l: Lang): void {
+  if (!DICTS[l]) { dict(l); return; }
   current = l;
   try { workspaceStorage().setItem('orbitlab.lang', l); } catch { /* ignore */ }
   document.documentElement.lang = l;
@@ -37,7 +48,7 @@ export function initLang(): void {
   let l: Lang = 'en';
   try {
     const stored = workspaceStorage().getItem('orbitlab.lang') as Lang | null;
-    if (stored && DICTS[stored]) l = stored;
+    if (stored && LANGS.includes(stored)) l = stored;
     else {
       const nav = (navigator.language || 'en').slice(0, 2);
       if (nav === 'ru' || nav === 'th') l = nav;
@@ -54,7 +65,7 @@ export function t(key: string, params?: Record<string, string | number>): string
 
 /** Translate frozen/exported content without changing the UI's language. */
 export function tFor(lang: Lang, key: string, params?: Record<string, string | number>): string {
-  let s = DICTS[lang][key] ?? en[key] ?? key;
+  let s = dict(lang)[key] ?? en[key] ?? key;
   if (params) {
     for (const [k, v] of Object.entries(params)) s = s.split(`{${k}}`).join(String(v));
   }
@@ -89,7 +100,7 @@ export function tCount(key: string, count: number, digits = 0): string {
 
 /** `tCount` in a given language. */
 export function tCountFor(lang: Lang, key: string, count: number, digits = 0): string {
-  const forms = (DICTS[lang][key] ?? en[key] ?? key).split('|');
+  const forms = (dict(lang)[key] ?? en[key] ?? key).split('|');
   const shown = { minimumFractionDigits: digits, maximumFractionDigits: digits };
   let at = forms.length - 1;
   try {
