@@ -6,7 +6,7 @@
 
 - **แผนทั้งหมดอยู่ใน repo แล้ว** อ่านตามลำดับใน §1: ไฟล์นี้ → แผน S20 → ผลตรวจความสมจริง → แผนลงมือชุดแรก → รายงานงานนำร่อง
 - **สถานะ:** แผนได้รับอนุมัติแล้ว ("1.ก 2.ก 3.ก 4.ก.") งานนำร่อง PF-12 (รูปทรงโลก WGS-84 และกฎของพื้นที่โค้ดใหม่ `src/astro`) merge แล้วใน PR #251 ยังไม่มีโค้ดใดของเว็บเรียกใช้ฐานใหม่ เว็บจริงจึงยังไม่เปลี่ยน
-- **งานถัดไปยังไม่เปิด ตามคำสั่งของเจ้าของ:** PF-10 (มาตราเวลา) แล้ว PF-11 (กรอบอ้างอิง) แผนลงมือของทั้งสองงานแก้ไขตามบทเรียนของงานนำร่องแล้วและพร้อมสั่งงาน
+- **อัปเดต 2026-11-27:** PF-10 (มาตราเวลา, PR #254) และ PF-11 (กรอบอ้างอิง, PR #256) เสร็จและ merge แล้วโดย session ที่รับช่วง ชุดงานแรก (S20-wave1) จึงครบสามงาน ยังไม่มีโค้ดใดของเว็บเรียกใช้ฐานใหม่ งานถัดไปยังไม่เปิด: ต้องเขียนแผนลงมือชุดที่สอง (§3.3) และรอคำสั่งของเจ้าของ
 - **วิธีทำงาน:** ผู้สั่งงานหนึ่งคนเขียนใบสั่งงาน ตรวจรับ และแก้งานที่ถูกส่งกลับ ผู้ลงมือสามบทบาทแยกกัน (ผู้เขียนค่าอ้างอิง ผู้ลงมือทำ ผู้ตรวจ) รายละเอียดใน §4
 - **บทเรียนสำคัญจากงานนำร่อง:** ขอบของเทสต์ต้องตรวจด้วยเครื่องมืออ้างอิงก่อนสั่งงาน แผนตั้งขอบผิดสามจุดในชุดแรก (แก้เป็น amendment 6, 7, 8 โดยไม่คลายขอบ) รายละเอียดใน §5
 - **สิ่งที่ยังเป็นของเจ้าของทุกครั้ง:** ตารางบันทึกค่าใหม่ตอนสลับฐาน (W-O, W-L, เฟส 4), เพดานขนาด (D-38), การเปลี่ยนหน้าตาหรือถ้อยคำ และการเปลี่ยนขอบเขต
@@ -62,8 +62,8 @@ Nothing of the new base is called by the app. The live site is unchanged by this
 | PF-01 | oracle toolchain | started inside PF-12: `tests/fixtures/astro/requirements.txt`, its `README.md`, the first generator. The JPL kernel (DE421) is needed first by PF-14; it is downloaded, never committed |
 | PF-02 | the area `src/astro`, its change-map rule and import boundary | **done** ([PR #251](https://github.com/ROYIN001/Orbitlab/pull/251)) |
 | PF-12 | WGS-84 geodesy | **done** ([PR #251](https://github.com/ROYIN001/Orbitlab/pull/251)); report [PF-12-geodesy.md](reports/PF-12-geodesy.md) |
-| PF-10 | time scales | **next; not started.** Work plan: S20-wave1 Task 2 |
-| PF-11 | reference frames | after PF-10; not started. Work plan: S20-wave1 Task 3 |
+| PF-10 | time scales | **done** ([PR #254](https://github.com/ROYIN001/Orbitlab/pull/254), 2026-11-27, `b372c474`); report [PF-10-time.md](reports/PF-10-time.md) |
+| PF-11 | reference frames | **done** ([PR #256](https://github.com/ROYIN001/Orbitlab/pull/256), 2026-11-27, `8aaadc9a`); report [PF-11-frames.md](reports/PF-11-frames.md) |
 | PF-13, PF-14, PF-15, PF-16 | gravity field, Sun and Moon, Kepler for e ≥ 1 and integrator tests, reference trajectories | not started; acceptance and references are in S20 §5.2; no work plan yet (§3.3 below) |
 | PF-03 | documents brought to the code | not started; work order: the audit record's §5 |
 | PF-04 | two suspected silent wrong answers | not started; diagnosis first |
@@ -74,14 +74,18 @@ Nothing of the new base is called by the app. The live site is unchanged by this
 
 ## 3. The next steps, in order
 
-### 3.1 PF-10, time scales (S20-wave1 Task 2)
+### 3.1 PF-10, time scales (S20-wave1 Task 2) — done on 2026-11-27
+
+Kept as it was written, for the record of how the package was set up. What it found is in §5, rules 8 to 12.
 
 1. Branch `claude/p-pf10-s1` from `origin/main`.
 2. Run the seats of §4 on Task 2 as written. The plan's levels: reference author and implementer on the middle tier, reviewer on the large tier.
 3. Already checked, with reference tools only (`tests/fixtures/astro/evidence/pf10_pf11_prechecks.py`, last block): the two-term TDB − TT formula of the plan is within 37.5 µs of ERFA `dtdb` at 200,001 instants from 1960 to 2060, against a bound of 50 µs. ERFA `dat` behaves as the plan says: 0.943482 s on 1960-01-01, 0 with a warning before 1960, 37 s with a "dubious year" warning after 2028; `utctai` leaves the first part of a date as given and moves the offset into the second.
 4. The task adds an ERFA entry to `NOTICE.md` (the leap-second and drift tables come from its `dat.c`); Task 2's Step 6 says what the entry holds.
 
-### 3.2 PF-11, reference frames (S20-wave1 Task 3)
+### 3.2 PF-11, reference frames (S20-wave1 Task 3) — done on 2026-11-27
+
+Kept as it was written. The next step is §3.3.
 
 1. Branch `claude/p-pf11-s1` from `origin/main` after PF-10 has merged. Large tier for all three seats.
 2. Already checked the same way: the velocity formula of the plan is within 5.8e-5 m/s of the centred difference of the full chain (bound 2e-4); the bound against the app's present `temeToItrf` was ill-posed and is corrected (S20 amendment 8).
@@ -143,6 +147,8 @@ The owner's rule (S20 §1): the orchestrating session designs the work and hands
 7. Pull request with the template's headings (`.github/pull_request_template.md`). CI runs. Then the fragment gets the pull request number and the CI run "on the last head tested before the fragment's own update" ([changes/README](../../changes/README.md)), and CI runs once more on that head.
 8. If main has moved meanwhile, main is merged into the branch and CI runs on that head ([HANDOVER-K2](HANDOVER-K2.md) §16.6: up to date before review or merge). Merge by squash when CI is green on the head and no Pages run is in progress (the Actions tab, workflow "Deploy to GitHub Pages"). The next branch starts from the new `origin/main`.
 
+**What the second and third packages cost** (2026-11-27, as the tool reported subagent tokens). PF-10: reference author 109 thousand, implementer 119, reviewer 125, re-reviewer 86; two CI rounds, then a third after an unrelated journey failed (§5, traps 7 and 8). PF-11, large tier throughout: reference author 192 thousand, implementer 173, reviewer 151, re-reviewer 108; two CI rounds. The fix of the journey, outside the track: one reviewer of 101 thousand and three CI rounds, one of them the twenty-run round.
+
 **What the first package cost.** The tool reported, as subagent tokens: reference author 96 thousand, implementer 117 thousand, reviewer 120 thousand, re-reviewer 88 thousand. Three CI rounds of about fourteen minutes each (the package, the fragment, and main merged in after another pull request landed). No heavy or fleet run: the `astro` rule does not select them while nothing calls the area.
 
 **Sending work back** is in S20 §8. Every brief repeats it: two diagnosed attempts without success, a suspected reference, a file outside the brief, a must-not-move value that moves, or a bound that would have to be loosened, each stops the seat and returns the package with what was tried and the numbers seen.
@@ -166,6 +172,12 @@ The first package (PF-12) found defects in the plan, not in the approach. Each i
 6. **A plan is ready when a reader with no context can act on it.** Before this record was merged, a fresh reader was asked to start PF-10 from the repository alone and to list every point where it had to guess. It found the value held before 1960 unstated, `taiToUtc` at a leap second undefined, the generators' sampling unspecified, three functions untested, a check that could not be called as written, and several places where this file disagreed with S20. All are corrected (S20 amendment 9). A second reader compared the audit record with its five sources, claim by claim. Do both for the next work plan: they cost less than one fix round.
 7. **A figure is re-measured before it is repeated.** Writing the evidence script for the frame chain showed that the "2.4 m" of amendment 1 was the error of the inertial frame's orientation, not of the complete GCRF→ITRF chain (1.6 m). The conclusion stood; the sentence was wrong.
 
+8. **A sampling rule is checked against the table it is meant to cover, entry by entry.** PF-10's work plan sampled the drift years at 48 instants that left five of the table's fourteen entries untouched; a wrong number in such a row passed every case (S20 amendment 11). The same question for a series: which terms can the bound see at all? PF-11's 1e-11 cannot see most of the smallest terms, so a checksum against the source holds the copy (amendment 13).
+9. **Every prose claim of a work plan is a bound, and is pre-checked like one.** PF-10's text said a round trip was good to 1e-9 s everywhere; with the one correction pass it prescribed, 3.2e-9 s is left in the seconds before nine steps of the 1961–1972 table (amendment 10).
+10. **The reference's convention is pinned where it differs from the base's.** ERFA's `utcut1` and `utctai` treat a day that ends in a leap second, and a day of the drift years, by stretching its seconds; this base's UTC has 86,400 s in every day. A fixture must form UT1 and TT as the base does or say why not (amendment 12, point a). ERFA's `anp` returns exactly 2π at some instants; a range the plan promises is checked at the wrap (amendment 13, point a).
+11. **A case that reads a function only where one of its inputs is zero does not test that input.** `gcrfToTeme` was compared only with Skyfield, which has no polar motion; the velocity case used only a point at rest in GCRF. Both hid a whole term (amendments 12 c and 13 b). For each case ask which argument it leaves at zero or at identity.
+12. **A bound that would be met or missed by rounding is moved before the work, with the owner's word if it is the spec's.** Measure what the reference's own numbers leave (ERFA's matrices are rotations to 1.2e-15, which is 8.5e-9 m at 7,000 km) and set the bound clear of it (amendment 12, point b).
+
 **Traps met**
 
 1. `pip download --no-binary` of pyerfa builds the package and does not return. Fetch the source archive with curl (`tests/fixtures/astro/README.md`); the C sources are under `liberfa/erfa/src/`.
@@ -174,6 +186,10 @@ The first package (PF-12) found defects in the plan, not in the approach. Each i
 4. A fixture's first Halton points can sit exactly on a boundary (latitude 0). That is useful, and it is why the hand-added points are not the only boundary cases.
 5. The cloud machine has Node 22.23.5; the project's reference is 22.23.3. Local runs are early feedback; CI is the evidence.
 6. A push to a pull request cancels the CI run in progress on the earlier head, and the aggregate `verify` job of that run then shows red. It is not a failure of the change; the run on the new head is the evidence.
+7. Re-running the failed jobs of a CI run cannot pass in this repository: the verification plan belongs to attempt 1 and `scripts/verification/run-browser.mjs` refuses a different attempt ("Workflow differs from the verification plan"; [VERIFICATION.md](VERIFICATION.md): never combine artifacts from different attempts). A red shard is diagnosed from its log and fixed at its cause.
+8. A browser journey that fails on a pull request whose diff cannot reach it is still a failure to diagnose. PF-10's second CI round failed in `launch-explore`, a race between the journey's click and Explore's end card; the fix was a pull request of its own (#255), with rule 2's twenty runs on CI, and the owner ordered its merge ([smoke-launch-explore-race.md](reports/smoke-launch-explore-race.md)).
+9. Node cannot import a module of `src/astro` that imports a neighbour without a file extension (`./time`). A probe or a checker bundles it first with rolldown, which is installed with vite (`node_modules/.bin/rolldown <file> --format esm --file <scratch>`); esbuild is not installed.
+10. A held-out point can itself be ill-posed: a date split as `{ 2400000.5, 51544.5 }` cannot carry a nanosecond in its second part. Judge an "out of bound" of the gate's own set by what a double carries there before ruling on the module.
 
 ## 6. Evidence and tools in the repository
 
@@ -181,6 +197,7 @@ The first package (PF-12) found defects in the plan, not in the approach. Each i
 |---|---|
 | `tests/fixtures/astro/requirements.txt`, `README.md` | the pinned Python packages that write fixtures, how to make the virtual environment, how to fetch the ERFA sources and the JPL kernel. Run by hand, never by CI |
 | `tests/fixtures/astro/geodesy/` | the first package's generator and fixture |
+| `tests/fixtures/astro/time/`, `tests/fixtures/astro/frames/` | the generators and fixtures of PF-10 (ERFA) and PF-11 (ERFA and Skyfield) |
 | `tests/fixtures/astro/evidence/` | the orchestrating session's own measurements, with a README of commands: ERFA's inverse against 40-digit arithmetic (amendment 7), the held-out geodesy set and its checker (the gate of PF-12), the pre-checks of PF-10 and PF-11 (amendment 8, the velocity bound, TDB − TT), the choice of the frame chain (amendments 1 and 2) |
 | `scripts/verification/change-map.json`, rule `astro` | the new area runs its own tests only. The pull request that switches a caller widens the rule in the same diff (S20 §5.3, "Rules after a switch") |
 | `tests/architecture.test.ts` | `src/astro` imports nothing from another `src` folder |
