@@ -63,4 +63,4 @@ The pull request's lines by part, as `git diff --stat origin/main..HEAD` gives t
 
 ## Not checked
 
-The default, heavy and fleet suites (not selected for this change). No browser run: the app does not call the module. The years 1000 to 3000 are sampled at the fixture's 60 instants; no instant where the Kepler iteration reaches its ten-step limit was sought. The direction the Sun is seen in (aberration, light time) is not part of this module.
+The default, heavy and fleet suites (not selected for this change). No browser run: the app does not call the module. The years 1000 to 3000 are sampled at the fixture's 65 instants; no instant where the Kepler iteration reaches its ten-step limit was sought. The direction the Sun is seen in (aberration, light time) is not part of this module.
