@@ -85,6 +85,16 @@ export default async function launchExplore(t) {
   }
   t.check(await page.evaluate(() => location.hash) === '#/launch/explore', 'the page left Explore');
 
+  // Explore's card at the end of a flight (src/ui/explore-debrief.ts) opens 2.5 s after the outcome is first seen and lies over
+  // the mission's steps. The click below used to race it and waited out its 30 s when the card came first, as it did on a slow
+  // runner. Wait for the card and put it aside with its own "Keep watching", as a viewer would; its tab is clear of the steps.
+  const endCard = page.locator('#explore-debrief .explore-debrief-card');
+  if (t.check(await t.until(() => endCard.isVisible(), { timeoutMs: 30_000 }), 'the flight in orbit never showed its end card')) {
+    await endCard.locator('button', { hasText: 'Keep watching' }).click();
+    t.check(await t.until(async () => !(await endCard.isVisible()) && await page.locator('.explore-debrief-tab').isVisible(), { timeoutMs: 5000 }),
+      '"Keep watching" did not put the end card aside');
+  }
+
   // R3.5: the Orbit step, then the Orbit section's words for a continued flight
   const orbitStep = page.locator('#mission-steps [data-step="orbit"] button');
   if (t.check(await t.until(() => orbitStep.isVisible(), { timeoutMs: 5000 }), 'the steps offer no way on to Orbit for a flight in orbit')) {
