@@ -52,9 +52,39 @@ terms apply. The data sources are named for credit and for checking; none of the
 | What | Used for | Licence | Source |
 | --- | --- | --- | --- |
 | three.js 0.186.0 | 3-D rendering; the only runtime dependency, bundled into the build | MIT | <https://threejs.org/>, <https://github.com/mrdoob/three.js> |
+| ERFA 2.0.1.5 (liberfa), read from the pyerfa 2.0.1.5 source archive | `src/astro/base/time.ts` follows `dat.c` (the leap-second and drift tables of TAI − UTC, copied) and `dtdb.c` (the origin of its two-term TDB − TT series); `src/astro/base/geodesy.ts` is held to `gc2gd` and `gd2gc` in its tests | BSD-3-Clause | <https://github.com/liberfa/erfa>, <https://pypi.org/project/pyerfa/> |
 
 The development tools (Vite, TypeScript, Vitest, Playwright) build and test the app and are not
 shipped in it; each carries its own licence in `node_modules/`.
+
+ERFA is derived, with permission, from the International Astronomical Union's "Standards of
+Fundamental Astronomy" library. If you wish to acknowledge the SOFA heritage, acknowledge that
+this is a library derived from SOFA, not SOFA itself. Its licence (`liberfa/erfa/LICENSE` in the
+pyerfa 2.0.1.5 archive), for the parts of it that `src/astro/base/time.ts` follows:
+
+> Copyright (C) 2013-2021, NumFOCUS Foundation. All rights reserved.
+>
+> Redistribution and use in source and binary forms, with or without modification, are permitted
+> provided that the following conditions are met:
+>
+> 1. Redistributions of source code must retain the above copyright notice, this list of
+>    conditions and the following disclaimer.
+> 2. Redistributions in binary form must reproduce the above copyright notice, this list of
+>    conditions and the following disclaimer in the documentation and/or other materials provided
+>    with the distribution.
+> 3. Neither the name of the Standards Of Fundamental Astronomy Board, the International
+>    Astronomical Union nor the names of its contributors may be used to endorse or promote
+>    products derived from this software without specific prior written permission.
+>
+> THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+> IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+> AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+> CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+> CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+> SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+> THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+> OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+> POSSIBILITY OF SUCH DAMAGE.
 
 ## Media shipped in the app
 
