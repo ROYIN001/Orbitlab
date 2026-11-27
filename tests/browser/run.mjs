@@ -37,11 +37,6 @@ export async function runJourneys({ names = [], smoke = false, shard = null, lis
   if (!picked.length && names.length) return { results: [], ok: true };
   if (!picked.length) throw new Error('no journeys selected');
   picked = selectShard(picked, shard);
-  // TEMPORARY (rule 2 evidence for the privacy-offline fix, reverted before merge): on CI a smoke run with no journey names runs only privacy-offline, 4 times a shard
-  if (process.env.GITHUB_ACTIONS && smoke && !names.length) {
-    const mod = await import(pathToFileURL(join(journeyDir, 'privacy-offline.mjs')).href);
-    picked = [1, 2, 3, 4].map(() => ({ name: 'privacy-offline', mod }));
-  }
   if (list) {
     console.log(picked.map(journey => journey.name).join('\n'));
     return { results: [], ok: true };
