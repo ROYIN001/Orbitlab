@@ -209,7 +209,7 @@ export function eopAt(table: EopTable | null, utc: Jd2): Eop;
 ### Task 3: reference frames (PF-11)
 
 **Files:**
-- Create: `src/astro/base/frames.ts`, and `src/astro/base/nutation-2000b.ts` for the series tables
+- Create: `src/astro/base/frames.ts`, and `src/astro/base/nutation-2000b.ts` for the series tables. The tables are exported as they stand in the C sources, a row an entry and its numbers in the source's column order: `NUT00B_LS` (the 77 luni-solar terms of `nut00b.c`, eleven numbers a row), `NUT00B_PLANETARY_OFFSET` (its two fixed offsets, in milliarcseconds), `EECT00_T0` and `EECT00_T1` (the 33 and the 1 complementary terms of `eect00.c`, ten numbers a row)
 - Create: `tests/astro-frames.test.ts`
 - Create: `tests/fixtures/astro/frames/make_frames_fixture.py`, `tests/fixtures/astro/frames/erfa-frames.json`
 - Create: `tests/fixtures/astro/frames/make_teme_fixture.py`, `tests/fixtures/astro/frames/skyfield-teme.json`
@@ -247,7 +247,7 @@ export function azElRange(siteItrf: V3, lat: number, lon: number, targetItrf: V3
 
 **Definitions the signatures do not settle** (each is ERFA's, so the fixture can hold it to 1e-11):
 - R₃(θ) is ERFA's `rz`: it turns the frame, so a vector's components become (x cos θ + y sin θ, −x sin θ + y cos θ, z).
-- `biasPrecessionNutation` = ERFA `pnm00b`. `greenwichSiderealTime` = `gst00b`. `gmst1982` = `gmst82`. `polarMotion(xp, yp)` = `pom00(xp, yp, 0)`. `FRAME_BIAS` = the `rb` of `bp00`.
+- `biasPrecessionNutation` = ERFA `pnm00b`. `greenwichSiderealTime` = `gst00b`. `gmst1982` = `gmst82`. One difference: ERFA's `anp` returns exactly 2π when its argument is a tiny negative number, so `gst00b` and `gmst82` do so at some instants; the two functions here return 0 there, which keeps them in [0, 2π). Only the value returned is folded; nothing inside the chain changes (S20 amendment 13). `polarMotion(xp, yp)` = `pom00(xp, yp, 0)`. `FRAME_BIAS` = the `rb` of `bp00`.
 - `gcrfToPef` = R₃(gst)·`biasPrecessionNutation(tt)`. `gcrfToItrf` = `pole`·`gcrfToPef`, which is `c2teqx`.
 - `temeToItrf` = `pole`·R₃(gmst82). `gcrfToTeme` = `temeToItrf`ᵀ·`gcrfToItrf`.
 - Velocity: with ω = (0, 0, `EARTH_ROTATION_RATE`), `v_pef = gcrfToPef·v − ω × r_pef`, then both through `pole`. The inverse undoes it.
@@ -255,7 +255,7 @@ export function azElRange(siteItrf: V3, lat: number, lon: number, targetItrf: V3
 - `azElRange` takes the site's geodetic `lat` and `lon` as well as its position, so that it does not invert them. A target exactly at the zenith has no azimuth; the function returns whatever atan2 gives there, and no test reads it.
 - `rswBasis` and `lvlhBasis` of a state with r ∥ v, or with a zero r, return NaN in every number (the normalization divides zero by zero).
 
-- [ ] **Step 1 (reference author): the ERFA fixture.** At 25 instants (the first of January and July of 1990, 1995, … 2040, which is 22, plus 1969-07-16, 1961-04-12 and 2059-12-31; the k-th of them, k from 0, at k·3,456 s after 0 h UTC, so that every time of day occurs), with dut1, xp, yp taken as (−0.1 s, 0.1″, 0.3″): `pnm00b`, `gst00b`, `gmst82`, `pom00`, `c2teqx` of those, the `rb` of `bp00`, and `c2t06a` for the same instant and pole. The instants are stored as UTC in two parts with the TT and UT1 the script used.
+- [ ] **Step 1 (reference author): the ERFA fixture.** At 25 instants (the first of January and July of 1990, 1995, … 2040, which is 22, plus 1969-07-16, 1961-04-12 and 2059-12-31; the k-th of them, k from 0, at k·3,456 s after 0 h UTC, so that every time of day occurs), with dut1, xp, yp taken as (−0.1 s, 0.1″, 0.3″): `pnm00b`, `gst00b`, `gmst82`, `pom00`, `c2teqx` of those, the `rb` of `bp00`, and `c2t06a` for the same instant and pole. The fixture also holds, for each instant, ERFA's R₃(gmst82)ᵀ·R₃(gst)·`pnm00b`; a `wrap` set of UT1 instants at which `gst00b` or `gmst82` returns exactly 2π, each asserted by the script to do so; and a `tables` block of row counts and checksums that the script derives from `nut00b.c` and `eect00.c` when the environment variable `ERFA_SRC` names the folder of the ERFA C sources, and otherwise writes from the same figures kept in the script. The instants are stored as UTC in two parts with the TT and UT1 the script used: TT from `erfa.utctai` then `erfa.taitt`, and UT1 as UTC with `dut1 / 86400` added to its second part, which is this base's `utcToUt1`. ERFA's own `utcut1` is not used: in the drift years it subtracts the TAI − UTC of 0 h, so it differs by the day's drift up to the instant, 2.3 ms at the 1969 instant and 1.6e-7 in a matrix element (S20 amendment 12).
 
 - [ ] **Step 2 (reference author): the Skyfield fixture.** At 20 instants (Halton base 2, index from 1, between 2020-01-01 and 2030-01-01 UTC): the three directions (1, 0, 0), (0.3, −0.8, 0.52) and (−0.5, 0.5, 0.7071), each scaled to 7,000 km, in TEME, and the same in GCRS by Skyfield's `TEME` frame (`skyfield.sgp4lib.TEME`). The timescale is `load.timescale(builtin=True)`; its `t.dut1` is stored as the UT1 − UTC of each instant, and it applies no polar motion unless it is given a table. The generator names the Skyfield version.
 
@@ -265,12 +265,16 @@ export function azElRange(siteItrf: V3, lat: number, lon: number, targetItrf: V3
 |---|---|
 | `bias-precession-nutation equals ERFA` | every element within 1e-11 at the 25 instants |
 | `sidereal times equal ERFA` | `greenwichSiderealTime` and `gmst1982` within 1e-11 rad, both in [0, 2π) |
+| `sidereal time at the wrap` | at each instant of the fixture's `wrap` set, where ERFA `gst00b` or `gmst82` returns exactly 2π: the function's result is in [0, 2π), and equals ERFA's modulo 2π within 1e-11 rad |
+| `the tables are ERFA's` | the row counts of the four exported tables, and for each a checksum (the sum over rows i and columns j, both from 1, of i·j·x, taken in that order in doubles), `toBe` the fixture's `tables` block, which the generator derives from the ERFA C sources |
+| `GCRF to TEME with a pole` | at the 25 instants, with the fixture's pole (0.1″, 0.3″): `framesAt(…).gcrfToTeme` equals ERFA's R₃(gmst82)ᵀ·R₃(gst)·`pnm00b` within 1e-11 per element. The pole cancels in this product, so a result that kept it on one side is off by 1e-6 |
 | `polar motion and frame bias equal ERFA` | within 1e-15 per element |
 | `GCRF to ITRF equals ERFA's equinox-based chain` | within 1e-11 per element |
 | `GCRF to ITRF is within 2 mas of the full IAU 2006/2000A chain` | the rotation between the two matrices ≤ 9.7e-9 rad at the instants from 1990 to 2040 |
 | `TEME to ITRF agrees with the app's present one` | for a 7,000 km vector at each instant, within 3e-2 m of `temeToItrf(r, jd, table)` from `src/orbit/earth-orientation.ts`, for the three directions of Step 2. `table` holds the same constant values (−0.1 s, 0.1″, 0.3″) on two days, with the `predictedFrom` its type requires; the new function is given `jd2(jd)` for the same one-number `jd`, so both see the same instant. The present function is the looser side, by 2.1 cm at most over these years (S20 amendment 8) |
 | `TEME to GCRF agrees with Skyfield` | within 0.2 m for the 60 vectors |
-| `velocity carries the Earth's rotation` | a point fixed in GCRF at 7,000 km: its ITRF velocity from `gcrfToItrfState` equals the centred difference of its ITRF position over 1 s within 2e-4 m/s; `itrfToGcrfState(gcrfToItrfState(s))` returns `s` within 1e-8 m and 1e-11 m/s |
+| `velocity carries the Earth's rotation` | two states at each instant: a point fixed in GCRF at 7,000 km, and a state at 7,000 km moving at 7.5 km/s in GCRF in a direction that is not along r. For each, the ITRF velocity from `gcrfToItrfState` equals, within 2e-4 m/s, the centred difference over 1 s of the ITRF position of the point as it moves uniformly in GCRF (r − v·0.5 s through the frames half a second before, r + v·0.5 s through those half a second after; the half second is added to the second part of the date, never to a date in one number). `itrfToGcrfState(gcrfToItrfState(s))` returns `s` within 1e-7 m and 1e-10 m/s for both (S20 amendment 12) |
+| `the matrix helpers` | on two matrices of small integers and one integer vector, `matMul(a, b)`, `matT(a)` and `matVec(a, v)` equal the products worked by hand, exactly; the two matrices do not commute, so `matMul(a, b)` is a·b and not b·a; the layout is row-major |
 | `matrices are rotations` | M·Mᵀ = I within 1e-14, determinant 1 |
 | `orbit frames` | `rswBasis` and `lvlhBasis` are orthonormal and right-handed; `rsw.r` ∥ r, `rsw.w` ∥ r × v, `lvlh.z` = −r̂, `lvlh.y` = −ŵ; for r ∥ v, and for a zero r, every number returned is NaN |
 | `azimuth, elevation, range` | a target 1,000 km along `up` gives el = π/2 and range 1e6; along `north` gives az = 0, el = 0; along `east` gives az = π/2. Angles within 1e-12 rad, azimuth compared modulo 2π; range within 1e-6 m. Elevation is the arctangent of the up component over the horizontal distance: an arcsine loses 1.5e-8 rad at the zenith |
