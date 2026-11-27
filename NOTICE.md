@@ -60,7 +60,7 @@ shipped in it; each carries its own licence in `node_modules/`.
 ERFA is derived, with permission, from the International Astronomical Union's "Standards of
 Fundamental Astronomy" library. If you wish to acknowledge the SOFA heritage, acknowledge that
 this is a library derived from SOFA, not SOFA itself. Its licence (`liberfa/erfa/LICENSE` in the
-pyerfa 2.0.1.5 archive), for the parts of it that `src/astro/base/time.ts` follows and that `src/astro/base/frames.ts` and `src/astro/base/nutation-2000b.ts` are ported from (the ERFA sources named in the table above):
+pyerfa 2.0.1.5 archive), for the parts of it that `src/astro/base/time.ts` follows, that `src/astro/base/frames.ts`, `src/astro/base/nutation-2000b.ts` and `src/astro/base/sun-moon.ts` are ported from, and that `src/astro/base/sun-moon-tables.ts` copies its tables from (the ERFA sources named in the table above):
 
 > Copyright (C) 2013-2021, NumFOCUS Foundation. All rights reserved.
 >
