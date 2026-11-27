@@ -25,6 +25,9 @@ export default async function privacyOffline(t) {
   // online: open it once from About, from the network
   const about = async (lang) => {
     await page.locator('#lang-select').selectOption(lang);
+    // the switch applies once the language's dictionary is read (EQ-6 step 3, src/i18n/loader.ts):
+    // offline after a reload, Russian is read from the worker's cache, so wait for the page to change
+    await page.waitForFunction((l) => document.documentElement.lang === l, lang, { timeout: 15_000 });
     await page.evaluate(() => document.getElementById('btn-about').click());
     const link = page.locator('#about-dialog a[href*="privacy.html"]');
     await link.waitFor({ state: 'attached', timeout: 10_000 });
