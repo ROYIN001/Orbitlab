@@ -31,7 +31,7 @@ describe('astro time scales', () => {
   });
 
   it('TAI − UTC in the drift years', () => {
-    expect(fixture.drift).toHaveLength(48);
+    expect(fixture.drift).toHaveLength(159);
     for (const d of fixture.drift) expect(Math.abs(taiMinusUtc(J(d.utc)) - d.dat), `${d.utc}`).toBeLessThanOrEqual(1e-9);
   });
 
@@ -47,13 +47,30 @@ describe('astro time scales', () => {
       ...fixture.leap.flatMap((l) => [l.before, l.at]),
       ...fixture.drift,
     ];
-    expect(cases).toHaveLength(27 * 2 + 48);
+    expect(cases).toHaveLength(27 * 2 + 159);
     for (const c of cases) {
       const u = J(c.utc);
       const t = utcToTai(u);
       expect(t.a, `${c.utc}`).toBe(u.a);
       expect(Math.abs(diff(t, u) - c.dat), `${c.utc} shift`).toBeLessThanOrEqual(1e-9);
       expect(Math.abs(diff(taiToUtc(t), u)), `${c.utc} back`).toBeLessThanOrEqual(1e-9);
+    }
+  });
+
+  it('a TAI instant inside a leap second', () => {
+    const a = 2457754.5;
+    const t: Jd2 = { a, b: 36.5 / 86400 };
+    const u = taiToUtc(t);
+    expect(u.a).toBe(a);
+    expect(Math.abs(diff(u, { a, b: 0.5 / 86400 }))).toBeLessThanOrEqual(1e-9);
+    const back = utcToTai(u);
+    expect(back.a).toBe(a);
+    expect(Math.abs(diff(back, t) - 1)).toBeLessThanOrEqual(1e-9);
+    for (const s of [35.5, 37.5]) {
+      const x: Jd2 = { a, b: s / 86400 };
+      const r = utcToTai(taiToUtc(x));
+      expect(r.a, `${s}`).toBe(a);
+      expect(Math.abs(diff(r, x)), `${s}`).toBeLessThanOrEqual(1e-9);
     }
   });
 

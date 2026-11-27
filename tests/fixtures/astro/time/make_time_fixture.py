@@ -55,8 +55,11 @@ for y in range(1972, 2031):
 assert len(leap) == 27 and leap[0]['at']['utc'][0] == day(1972, 7, 1) and leap[-1]['at']['utc'][0] == day(2017, 1, 1)
 assert leap[-1]['at']['dat'] == 37.0
 
-drift = [entry(day(y, m, d), 0.5) for y in range(1960, 1972) for (m, d) in ((1, 1), (1, 15), (7, 1), (7, 15))]
-assert len(drift) == 48
+# the first day of each of the fifteen entries of dat.c from 1960-01-01 to 1972-01-01, then the 15th of every month 1960-1971
+ENTRIES = [(1960, 1), (1961, 1), (1961, 8), (1962, 1), (1963, 11), (1964, 1), (1964, 4), (1964, 9), (1965, 1), (1965, 3),
+           (1965, 7), (1965, 9), (1966, 1), (1968, 2), (1972, 1)]
+drift = [entry(day(y, m, 1), 0.5) for (y, m) in ENTRIES] + [entry(day(y, m, 15), 0.5) for y in range(1960, 1972) for m in range(1, 13)]
+assert len(drift) == 159
 
 # 40 Halton instants (base 2) from 1972-01-01 to 2060-01-01, none within a day of a leap second
 lo, hi = day(1972, 1, 1), day(2060, 1, 1)
