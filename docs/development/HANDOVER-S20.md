@@ -7,6 +7,7 @@
 - **แผนทั้งหมดอยู่ใน repo แล้ว** อ่านตามลำดับใน §1: ไฟล์นี้ → แผน S20 → ผลตรวจความสมจริง → แผนลงมือชุดแรก → รายงานงานนำร่อง
 - **สถานะ:** แผนได้รับอนุมัติแล้ว ("1.ก 2.ก 3.ก 4.ก.") งานนำร่อง PF-12 (รูปทรงโลก WGS-84 และกฎของพื้นที่โค้ดใหม่ `src/astro`) merge แล้วใน PR #251 ยังไม่มีโค้ดใดของเว็บเรียกใช้ฐานใหม่ เว็บจริงจึงยังไม่เปลี่ยน
 - **อัปเดต 2026-11-27:** PF-10 (มาตราเวลา, PR #254) และ PF-11 (กรอบอ้างอิง, PR #256) เสร็จและ merge แล้วโดย session ที่รับช่วง ชุดงานแรก (S20-wave1) จึงครบสามงาน ยังไม่มีโค้ดใดของเว็บเรียกใช้ฐานใหม่ งานถัดไปยังไม่เปิด: ต้องเขียนแผนลงมือชุดที่สอง (§3.3) และรอคำสั่งของเจ้าของ
+- **อัปเดต 2026-11-27 (ครั้งที่สอง):** แผนลงมือชุดที่สองเขียนแล้ว ([S20-wave2](plan/S20-wave2.md)) ครอบคลุม PF-13, PF-14, PF-15, PF-16, PF-03 และ PF-04 ทุกขอบเขตตรวจล่วงหน้าแล้ว ยังไม่มีแพ็กเกจใดถูกเปิด ส่วน T-1 (ลดขนาด) ยังไม่พร้อม: วัดแล้วพบว่าการตั้ง worker เป็น ES module อย่างเดียวไม่ลดขนาด จึงต้องมีแผนของตัวเองก่อน (S20 amendment 14)
 - **วิธีทำงาน:** ผู้สั่งงานหนึ่งคนเขียนใบสั่งงาน ตรวจรับ และแก้งานที่ถูกส่งกลับ ผู้ลงมือสามบทบาทแยกกัน (ผู้เขียนค่าอ้างอิง ผู้ลงมือทำ ผู้ตรวจ) รายละเอียดใน §4
 - **บทเรียนสำคัญจากงานนำร่อง:** ขอบของเทสต์ต้องตรวจด้วยเครื่องมืออ้างอิงก่อนสั่งงาน แผนตั้งขอบผิดสามจุดในชุดแรก (แก้เป็น amendment 6, 7, 8 โดยไม่คลายขอบ) รายละเอียดใน §5
 - **สิ่งที่ยังเป็นของเจ้าของทุกครั้ง:** ตารางบันทึกค่าใหม่ตอนสลับฐาน (W-O, W-L, เฟส 4), เพดานขนาด (D-38), การเปลี่ยนหน้าตาหรือถ้อยคำ และการเปลี่ยนขอบเขต
@@ -64,10 +65,10 @@ Nothing of the new base is called by the app. The live site is unchanged by this
 | PF-12 | WGS-84 geodesy | **done** ([PR #251](https://github.com/ROYIN001/Orbitlab/pull/251)); report [PF-12-geodesy.md](reports/PF-12-geodesy.md) |
 | PF-10 | time scales | **done** ([PR #254](https://github.com/ROYIN001/Orbitlab/pull/254), 2026-11-27, `b372c474`); report [PF-10-time.md](reports/PF-10-time.md) |
 | PF-11 | reference frames | **done** ([PR #256](https://github.com/ROYIN001/Orbitlab/pull/256), 2026-11-27, `8aaadc9a`); report [PF-11-frames.md](reports/PF-11-frames.md) |
-| PF-13, PF-14, PF-15, PF-16 | gravity field, Sun and Moon, Kepler for e ≥ 1 and integrator tests, reference trajectories | not started; acceptance and references are in S20 §5.2; no work plan yet (§3.3 below) |
-| PF-03 | documents brought to the code | not started; work order: the audit record's §5 |
-| PF-04 | two suspected silent wrong answers | not started; diagnosis first |
-| T-1 | size headroom: FX-4's shared runner, then EQ-8 | not started. It belongs to this track: the session that did T-2 said it will not take FX-4. Tell that session before touching worker entries or `vite.config.ts` |
+| PF-13, PF-14, PF-15, PF-16 | gravity field, Sun and Moon, Kepler for every conic and integrator tests, reference trajectories | not started; the work plan is [S20-wave2](plan/S20-wave2.md) Tasks 1 to 4, written and pre-checked on 2026-11-27, nothing dispatched |
+| PF-03 | documents brought to the code | not started; S20-wave2 Task 5; work order: the audit record's §5 |
+| PF-04 | two suspected silent wrong answers | not started; S20-wave2 Task 6; diagnosis first |
+| T-1 | size headroom: FX-4's shared runner, then EQ-8 | not started, and not ready to dispatch: it needs a work plan of its own (S20-wave2 Task 7 says what that plan has to settle; S20 amendment 14 g). It belongs to this track: the session that did T-2 said it will not take FX-4. Tell that session before touching worker entries or `vite.config.ts` |
 | T-2 | EQ-6's loader | **done by another session**: [PR #249](https://github.com/ROYIN001/Orbitlab/pull/249), merged on 2026-11-26 as `c0e2ca75` on the owner's approval |
 | W-O, W-L | the two switches (re-baselines) | not started. W-L resumes the parked branch described in S20 §5.3 |
 | OE-1 to OE-9, LV-1 to LV-4, Phase 5 | Orbit engineer's tools, four launcher families, the rest | not started; each phase is planned in detail at the gate before it |
@@ -93,6 +94,8 @@ Kept as it was written. The next step is §3.3.
 4. The ERFA C sources come from the pyerfa 2.0.1.5 source archive; `tests/fixtures/astro/README.md` has the command.
 
 ### 3.3 The rest of Phase 0 and Phase 1: write a second work plan first
+
+> **Written on 2026-11-27:** [plan/S20-wave2.md](plan/S20-wave2.md), with S20 amendment 14. It settles every "open" entry of the table below for PF-13 to PF-16, PF-03 and PF-04; its bounds were pre-checked (rule 1) and a reader with no context tried it (rule 6). T-1 is the exception: two measurements showed it needs a work plan of its own (wave 2, Task 7). The table is kept as it was written. The next step is to dispatch wave 2's tasks on the owner's word, one at a time (§4); Task 4 after Tasks 1 to 3.
 
 PF-13 to PF-16, PF-03, PF-04 and T-1 have acceptance rows in S20 §5 but no task-level plan. Write `plan/S20-wave2.md` in the form of S20-wave1 before dispatching any of them, pre-check its bounds (§5, rule 1), and have a reader with no context try to use it (§5, rule 6). What is known and what is still open:
 
@@ -198,7 +201,7 @@ The first package (PF-12) found defects in the plan, not in the approach. Each i
 | `tests/fixtures/astro/requirements.txt`, `README.md` | the pinned Python packages that write fixtures, how to make the virtual environment, how to fetch the ERFA sources and the JPL kernel. Run by hand, never by CI |
 | `tests/fixtures/astro/geodesy/` | the first package's generator and fixture |
 | `tests/fixtures/astro/time/`, `tests/fixtures/astro/frames/` | the generators and fixtures of PF-10 (ERFA) and PF-11 (ERFA and Skyfield) |
-| `tests/fixtures/astro/evidence/` | the orchestrating session's own measurements, with a README of commands: ERFA's inverse against 40-digit arithmetic (amendment 7), the held-out geodesy set and its checker (the gate of PF-12), the pre-checks of PF-10 and PF-11 (amendment 8, the velocity bound, TDB − TT), the choice of the frame chain (amendments 1 and 2) |
+| `tests/fixtures/astro/evidence/` | the orchestrating session's own measurements, with a README of commands: ERFA's inverse against 40-digit arithmetic (amendment 7), the held-out geodesy set and its checker (the gate of PF-12), the pre-checks of PF-10 and PF-11 (amendment 8, the velocity bound, TDB − TT), the choice of the frame chain (amendments 1 and 2), and the pre-checks of the second work plan (amendment 14: the gravity field, the Sun and Moon, Kepler and the integrators, the Orekit trial) |
 | `scripts/verification/change-map.json`, rule `astro` | the new area runs its own tests only. The pull request that switches a caller widens the rule in the same diff (S20 §5.3, "Rules after a switch") |
 | `tests/architecture.test.ts` | `src/astro` imports nothing from another `src` folder |
 

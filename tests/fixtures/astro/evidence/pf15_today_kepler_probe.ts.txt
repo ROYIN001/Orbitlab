@@ -1,0 +1,18 @@
+// Scratch test, not part of any suite: writes what today's propagateKepler returns for the states of
+// pf15_kepler_precheck.py --write-inputs, for that script's --compare mode.
+// Run: copy to tests/zz-pf15-kepler.test.ts, then
+//   KEPLER_CASES=cases.json KEPLER_OUT=outputs.json npx vitest run tests/zz-pf15-kepler.test.ts
+// and delete the copy.
+// The copy uses Node's fs and process, which the project's typecheck does not know: delete it before a typecheck.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { it } from 'vitest';
+import { propagateKepler } from '../src/physics/orbital';
+
+it('writes the outputs', () => {
+  const cases = JSON.parse(readFileSync(process.env.KEPLER_CASES!, 'utf8')) as { r: number[]; v: number[]; dt: number; out?: unknown }[];
+  for (const c of cases) {
+    const o = propagateKepler({ x: c.r[0], y: c.r[1], z: c.r[2] }, { x: c.v[0], y: c.v[1], z: c.v[2] }, c.dt);
+    c.out = { r: [o.r.x, o.r.y, o.r.z], v: [o.v.x, o.v.y, o.v.z] };
+  }
+  writeFileSync(process.env.KEPLER_OUT!, JSON.stringify(cases));
+});
