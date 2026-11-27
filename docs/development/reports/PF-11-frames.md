@@ -35,25 +35,38 @@ A script read `nut00b.c` and `eect00.c` and wrote `nutation-2000b.ts`, copying e
 | state position against `gcrfToItrf`·r | 1e-7 m | 1.3e-9 m |
 | round trip r / v | 1e-7 m / 1e-10 m/s | 4.0e-9 m / 5.6e-12 m/s |
 
-The remaining cases (fixtures whole, the matrix helpers, rotations, orbit frames, azimuth/elevation/range, non-finite input) are pass or fail and pass. The test file has 14 cases.
+The remaining cases (fixtures whole, the matrix helpers, rotations, orbit frames, azimuth/elevation/range, non-finite input, and the three cases the fix round added: `sidereal time at the wrap`, TEME with a nonzero pole, `the tables are ERFA's`) are pass or fail and pass. The test file has 17 cases. The table above was measured on the first version; after the fix round the same measurement gives the same figures, and at the fixture's six `wrap` instants both functions return 0 where ERFA returns 2π.
 
 ## The deliberate breaks
 
-Each made once, the test file run, then restored; both files were byte-identical after each restore (SHA-256 `a33db168…` for `frames.ts`, `f7e1625e…` for `nutation-2000b.ts`, checked with `sha256sum -c`).
+The counts below were recorded against the first, 14-case version of the test file and were not re-run against the 17-case file. Each made once, the test file run, then restored; both files were byte-identical after each restore (SHA-256 `a33db168…` for `frames.ts`, `f7e1625e…` for `nutation-2000b.ts`, checked with `sha256sum -c`).
 
 - The fixed planetary offsets of the nutation dropped: 3 failed, 11 passed. Failed: `bias-precession-nutation equals ERFA`, `sidereal times equal ERFA`, `GCRF to ITRF equals ERFA's equinox-based chain`.
 - TT fed in place of UT1 to the Earth rotation angle (`framesAt` computing GST from TT): 5 failed, 9 passed. Failed: `sidereal times equal ERFA` (framesAt gst off by 4.2e-3 rad at 1990-01-01), `GCRF to ITRF equals ERFA's equinox-based chain` (4.1e-3 per element), `GCRF to ITRF is within 2 mas of the full IAU 2006/2000A chain` (4.2e-3 rad), `TEME to GCRF agrees with Skyfield` (35 km), `velocity carries the Earth's rotation` (436 m/s at the first instant).
 
 ## Size
 
-`frames.ts` 356 lines, 15,977 bytes; `nutation-2000b.ts` 140 lines, 7,565 bytes; 496 lines together. That passes the plan's near-400 lines: 140 of them are the copied coefficient tables (the stated reason), and `frames.ts` alone is the port of some 30 ERFA routines with its header. Minified with rolldown, `frames.ts` with what it uses of `time.ts`, `geodesy.ts` and the tables is 11,056 bytes (4,649 gzip). Nothing outside `src/astro` imports either file (a search shows none), so the app's bundle cannot change.
+`frames.ts` 361 lines, 16,386 bytes after the fix round (356 lines, 15,977 bytes before it); `nutation-2000b.ts` 140 lines, 7,565 bytes; 501 lines together. That passes the plan's near-400 lines: 140 of them are the copied coefficient tables (the stated reason), and `frames.ts` alone is the port of some 30 ERFA routines with its header. Minified with rolldown, `frames.ts` with what it uses of `time.ts`, `geodesy.ts` and the tables is 11,056 bytes (4,649 gzip). Nothing outside `src/astro` imports either file (a search shows none), so the app's bundle cannot change.
 
 ## Runs (once each)
+
+First version:
 
 - `npm run -s typecheck`: clean.
 - `npx vitest run` on `tests/architecture.test.ts`, `tests/astro-frames.test.ts`, `tests/astro-geodesy.test.ts`, `tests/astro-time.test.ts`, `tests/bundle-budget.test.ts`, `tests/privacy-inventory.test.ts`, `tests/repo-hygiene.test.ts` (the selection `select-checks.mjs` gives for the three files): 69 of 69 pass (7 files; 14 cases in the frames test).
 - `npx vite build && node scripts/bundle-budget.mjs`: `bundle budget: ok`.
 
+After the fix round (no build: the change is inside a module nothing imports):
+
+- the same seven unit files, the selection `select-checks.mjs` gives for the changed files: 72 of 72 pass (17 cases in the frames test).
+- `npm run -s typecheck`: clean.
+
+## The fix round
+
+The independent review passed the port (all 1,189 table numbers equal to the C sources; results bit-identical to ERFA or within 2.2e-16 at 28 instants), with fixes. It found two Important points: the sidereal times reached exactly 2π, which ERFA's `anp` returns for a tiny negative argument and the port, faithful to it, shared (found at 13 of 400 days searched; for example `greenwichSiderealTime({ a: 2451545.5, b: 0.7176188233457006 })` gave 6.283185307179586), so the promise of [0, 2π) did not hold; and `gcrfToTeme` was untested with a nonzero pole, shown by a break that still passed 14 of 14. It also noted that the small table terms are invisible at 1e-11, so the matrix cases alone cannot show a wrong small coefficient. One Minor point: the header said the module imports only `./time` and `./geodesy`.
+
+What changed: the plan was amended (S20 amendment 13), and the reference author added three cases with their fixture data (commit 6f03750): `sidereal time at the wrap` (a `wrap` set of UT1 instants where ERFA returns exactly 2π), TEME with a nonzero pole (ERFA's R₃(gmst82)ᵀ·R₃(gst)·`pnm00b` per instant), and `the tables are ERFA's` (row counts and checksums derived from the C sources). In `frames.ts` the value returned by `greenwichSiderealTime` and `gmst1982` is folded, 2π becoming 0, through a two-line helper; `anp`, `era00`, `gmst00` and the rest of the chain are unchanged, so every other result stays bit-identical to ERFA. `framesAt` takes the folded GST, and R₃(0) and R₃(2π) differ by at most 2.5e-16. The header now names `./nutation-2000b` among the imports and states the fold. `nutation-2000b.ts` is untouched; `the tables are ERFA's` passed without a change.
+
 ## Not checked
 
-The default, heavy and fleet suites (not selected for this change). No browser run: the app does not call the module. The orchestrating session's held-out set and the independent review follow this report.
+The default, heavy and fleet suites (not selected for this change). No browser run: the app does not call the module. The deliberate breaks were not repeated against the 17-case file, and no break was made for the three new cases (the reviewer's pole break is the evidence for the TEME case). The wrap was checked only at the fixture's six instants and the reviewer's search, not over every instant; `framesAt` near the wrap passes GST 0 where ERFA's `c2teqx` would use 2π, a difference of a rounding error that no case reads. The small table terms are held by the checksum case, not by any result at 1e-11. The orchestrating session's held-out set follows this report.

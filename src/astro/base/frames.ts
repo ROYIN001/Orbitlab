@@ -2,7 +2,7 @@
  * Reference frames of the astro base (PF-11): the rotations between GCRF, ITRF, TEME and EME2000 by the
  * IAU 2000B equinox-based chain, the sidereal times, the transformation of a state with the Earth's rotation,
  * the orbit frames RSW and LVLH, and azimuth, elevation and range. Radians, metres, seconds; Julian dates in
- * two parts. Imports only ./time and ./geodesy.
+ * two parts. Imports only ./time, ./geodesy and ./nutation-2000b (the series tables).
  *
  * The chain: GCRF -> (bias, precession, nutation, IAU 2000B) -> true equator and equinox of date
  * -> R3(GST, IAU 2000B) -> Earth-fixed of date (PEF) -> polar motion -> ITRF. TEME is the true equator and
@@ -26,6 +26,8 @@
  *   state functions this covers every number of the `Frames` argument, used or not. `matMul`, `matT` and
  *   `matVec` are plain arithmetic and are the exception.
  * - `rswBasis` and `lvlhBasis` of a state with r ∥ v or a zero r give NaN in every number (zero over zero).
+ * - The two sidereal times return 0 where ERFA's `anp` returns exactly 2π (a tiny negative argument); only the
+ *   value returned is folded, nothing inside the chain.
  * - Azimuth is from north through east in [0, 2π); elevation is atan2(up, horizontal distance).
  * - Each function returns a fresh object or array; an input is never changed.
  */
@@ -104,6 +106,9 @@ function anp(a: number): number {
   if (w < 0) w += D2PI;
   return w;
 }
+
+/** ERFA's `anp` gives exactly 2π for a tiny negative argument; that value becomes 0, so a result stays in [0, 2π). */
+const fold2pi = (a: number): number => (a === D2PI ? 0 : a);
 
 export function matMul(a: Mat3, b: Mat3): Mat3 { return rxr(a, b); }
 export function matT(a: Mat3): Mat3 { return tr(a); }
@@ -238,7 +243,7 @@ function ee00b(date1: number, date2: number): number {
 /** Greenwich apparent sidereal time, IAU 2000B (`gst00b`), rad in [0, 2π); UT1. */
 export function greenwichSiderealTime(ut1: Jd2): number {
   if (nonFinite(ut1.a, ut1.b)) return NaN;
-  return anp(gmst00(ut1.a, ut1.b, ut1.a, ut1.b) + ee00b(ut1.a, ut1.b));
+  return fold2pi(anp(gmst00(ut1.a, ut1.b, ut1.a, ut1.b) + ee00b(ut1.a, ut1.b)));
 }
 
 /** Greenwich mean sidereal time, IAU 1982 (`gmst82`), rad in [0, 2π); UT1. */
@@ -248,7 +253,7 @@ export function gmst1982(ut1: Jd2): number {
   const [d1, d2] = ut1.a < ut1.b ? [ut1.a, ut1.b] : [ut1.b, ut1.a];
   const t = (d1 + (d2 - DJ00)) / DJC;
   const f = DAYSEC * ((d1 % 1.0) + (d2 % 1.0));
-  return anp(DS2R * ((A + (B + (C + D * t) * t) * t) + f));
+  return fold2pi(anp(DS2R * ((A + (B + (C + D * t) * t) * t) + f)));
 }
 
 /** Earth-fixed of date → ITRF, `pom00(xp, yp, 0)`; rad. */
