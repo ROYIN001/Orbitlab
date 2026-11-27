@@ -27,6 +27,7 @@ The English text below says everything this summary says. Three older plan secti
 | 3 | [reports/physics-audit-2026-11-26.md](reports/physics-audit-2026-11-26.md) | what the audit found, model by model and vehicle by vehicle, with code locations; the list of documents that disagree with the code (PF-03's work order); the suspected silent wrong answers (PF-04) |
 | 4 | [plan/S20-wave1.md](plan/S20-wave1.md) | the work plan of the first three packages, task by task, with interfaces, fixtures, test tables and bounds. All three tasks are done |
 | 4a | [plan/S20-wave2.md](plan/S20-wave2.md) | the work plan of the rest of Phase 0 and Phase 1: six tasks ready to dispatch, and why T-1 is not |
+| 4b | [plan/S20-T1.md](plan/S20-T1.md) | T-1's own work plan, a draft: what the scratch builds measured, three decisions waiting for the owner, the tasks for the recommended answers |
 | 5 | [reports/PF-12-geodesy.md](reports/PF-12-geodesy.md) | the first package's report: the worked example of a finished package |
 | 6 | [DECISIONS](../DECISIONS.md), "Decided 2026-11-26, the plan-review chat" and "…, later" | the owner's words, verbatim, each with an English gloss |
 | 7 | [SESSION-PROTOCOL.md](SESSION-PROTOCOL.md) §1 (the S20 paragraph), [VERIFICATION.md](VERIFICATION.md), [../../changes/README.md](../../changes/README.md) | the merge rule of this track, the verification contract, the change fragment |
