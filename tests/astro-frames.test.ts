@@ -9,7 +9,7 @@ import fixture from './fixtures/astro/frames/erfa-frames.json';
 import skyfield from './fixtures/astro/frames/skyfield-teme.json';
 import {
   EARTH_ROTATION_RATE, FRAME_BIAS, azElRange, biasPrecessionNutation, framesAt, gcrfToItrfState, gmst1982,
-  greenwichSiderealTime, itrfToGcrfState, lvlhBasis, matT, matVec, polarMotion, rswBasis,
+  greenwichSiderealTime, itrfToGcrfState, lvlhBasis, matMul, matT, matVec, polarMotion, rswBasis,
   type Frames, type Mat3, type State,
 } from '../src/astro/base/frames';
 import { jd2, type Jd2 } from '../src/astro/base/time';
@@ -67,6 +67,33 @@ describe('astro reference frames', () => {
     expect(eop.dut1).toBe(-0.1);
     expect(eop.xp).toBe(0.1 * (Math.PI / (180 * 3600)));
     expect(eop.yp).toBe(0.3 * (Math.PI / (180 * 3600)));
+  });
+
+  it('the matrix helpers', () => {
+    // row-major; the products below were worked by hand (and checked with numpy), not by the module under test
+    const a: Mat3 = [1, 2, 0, -1, 3, 4, 2, 0, -2];
+    const b: Mat3 = [0, 1, 3, 2, -1, 1, 5, 2, 0];
+    const v: V3 = { x: 3, y: -2, z: 1 };
+    const ab = [4, -1, 5, 26, 4, 0, -10, -2, 6];
+    const ba = [5, 3, -2, 5, 1, -6, 3, 16, 8];
+    expect(ab).not.toEqual(ba);
+    const [a0, b0, v0] = [[...a], [...b], { ...v }];
+    const p = matMul(a, b);
+    expect([...p]).toEqual(ab);
+    expect([...p]).not.toEqual(ba);
+    expect([...matMul(b, a)]).toEqual(ba);
+    const t = matT(a);
+    expect([...t]).toEqual([1, -1, 2, 2, 3, 0, 0, 4, -2]);
+    const av = matVec(a, v);
+    expect(av).toEqual({ x: -1, y: -5, z: 4 });
+    // new results; the inputs are left as they were
+    expect(p).not.toBe(a);
+    expect(p).not.toBe(b);
+    expect(t).not.toBe(a);
+    expect(av).not.toBe(v);
+    expect([...a]).toEqual(a0);
+    expect([...b]).toEqual(b0);
+    expect(v).toEqual(v0);
   });
 
   it('bias-precession-nutation equals ERFA', () => {
