@@ -171,7 +171,7 @@ export function eopAt(table: EopTable | null, utc: Jd2): Eop;
   - Layout: `{ generator, script, first: { utc, dat }, leap: [{ before: { utc, dat }, at: { utc, dat } }], drift: [{ utc, dat }], scales: [{ utc, tai, tt }], tdb: [{ tt, dtdb }] }`, every date a pair `[a, b]`, every `dat` and `dtdb` in seconds.
   - `first`: `erfa.dat(1960, 1, 1, 0.0)` with its date: the value held before 1960.
   - `leap`: for each change of TAI − UTC from 1972-07-01 on, the value one second before 0 h (`[the day before at 0 h, 86399/86400]`) and at 0 h (`[the day at 0 h, 0]`), from `erfa.dat`;
-  - `drift`: 48 instants from 1960 to 1971 (the first and the fifteenth of January and July of each year, 12 h UTC) with `erfa.dat`;
+  - `drift`: 159 instants at 12 h UTC with `erfa.dat`: the first day of each of the fifteen entries of `dat.c` from 1960-01-01 to 1972-01-01, then the fifteenth of every month from 1960-01 to 1971-12. Every entry of the drift table is sampled on its first day and inside it (S20 amendment 11);
   - `scales`: 40 Halton instants (base 2, index from 1) between 1972-01-01 and 2060-01-01, `jd = lo + (hi − lo)·u`; an instant within one day of a leap-second step is skipped and the next index taken; with TAI and TT in two parts from `erfa.utctai` and `erfa.taitt`;
   - `tdb`: 200 Halton instants (base 3, index from 1) between 1960-01-01 and 2060-01-01 on TT, with `erfa.dtdb(tt1, tt2, 0, 0, 0, 0)`.
 
@@ -180,9 +180,10 @@ export function eopAt(table: EopTable | null, utc: Jd2): Eop;
 | Case | Assertion |
 |---|---|
 | `TAI − UTC at every leap second since 1972` | `toBe` the ERFA value one second before and at 0 h |
-| `TAI − UTC in the drift years` | within 1e-9 s of ERFA at the 48 instants |
+| `TAI − UTC in the drift years` | within 1e-9 s of ERFA at the 159 instants |
 | `holds outside the table` | 1957-10-04 gives the fixture's `first` value within 1e-9 s, and `toBe` what the function gives at 1960-01-01 0 h; 2040-01-01 gives 37 exactly |
 | `UTC to TAI at the leap seconds and in the drift years` | at every `leap` and `drift` instant, `utcToTai` moves the date by the ERFA value within 1e-9 s with `a` unchanged, and `taiToUtc` brings it back within 1e-9 s |
+| `a TAI instant inside a leap second` | TAI 2017-01-01 00:00:36.5 (`{ a: 2457754.5, b: 36.5 / 86400 }`): `taiToUtc` gives UTC 2017-01-01 00:00:00.5 within 1e-9 s, and `utcToTai` of that result is 1 s later than the instant given, within 1e-9 s. One second earlier and one second later in TAI, the round trip TAI→UTC→TAI returns the instant within 1e-9 s |
 | `a date splits and adds back` | for six dates from 1960 to 2060, `jd2(jd)` has `a` a half-integer day at or before `jd`, 0 ≤ `b` < 1, and `a + b` `toBe` `jd` |
 | `UT1 from UTC` | `utcToUt1(utc, 0.3)` is 0.3 s later than `utc` and `utcToUt1(utc, −0.3)` is 0.3 s earlier, within 1e-9 s, with `a` unchanged |
 | `Julian centuries` | 0 at `{ a: 2451545.0, b: 0 }`, 1 at `{ a: 2451545.0, b: 36525 }`, −0.5 at `{ a: 2433282.5, b: 0 }`, each within 1e-15 |
