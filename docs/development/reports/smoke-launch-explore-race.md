@@ -56,11 +56,11 @@ One run each. The second is the failing-first evidence: the same journey, made t
 
 ## The fix
 
-Before the Orbit step, the journey now waits for the end card (up to 30 s) and puts it aside with the card's own "Keep watching", then checks that the card has given way to its tab. The tab sits at the top centre of the picture, clear of the steps. The Orbit step is then pressed as before, and everything after it is unchanged.
+Before the Orbit step, the journey now waits for the end card (up to 30 s) and puts it aside with the card's own "Keep watching", then checks that the card has given way to its tab. The tab sits at the top centre of the picture (`.explore-debrief-tab`, `left: 50%; top: 14px`) and the host itself takes no pointer events, so the steps are free: the Orbit step was pressed after it in all 20 CI runs below and in both local runs. The Orbit step is then pressed as before, and everything after it is unchanged.
 
 Two checks are added ("the flight in orbit never showed its end card", "Keep watching did not put the end card aside"). No existing check is changed or removed and no existing timeout is lengthened. The journey no longer depends on which comes first: it always goes by way of the card.
 
-## After the fix
+## After the fix, locally
 
 | Run | Card when the journey reaches it | Result |
 |---|---|---|
@@ -71,8 +71,18 @@ Local runs are on this machine's software WebGL, Node 22.23.5; CI is the evidenc
 
 ## Rule 2: twenty runs on CI
 
-A changed journey runs 20 times on CI before merge (HANDOVER-K2 §1, the five rules). A temporary commit on this branch makes CI's five smoke shards run only `launch-explore`, four times each; it is reverted before merge and the result is recorded in the pull request.
+A changed journey runs 20 times on CI before merge (HANDOVER-K2 §1, the five rules). The temporary commit `012f1d5e` made CI's five smoke shards run only `launch-explore`, four times each (CI run 46016143301); it is reverted in this branch.
+
+| Shard | Passed | Seconds per run |
+|---|---|---|
+| browser-smoke (1) | 4 of 4 | 74.3, 74.4, 77.7, 73.4 |
+| browser-smoke (2) | 4 of 4 | 92.4, 88.0, 84.8, 86.9 |
+| browser-smoke (3) | 4 of 4 | 109.2, 111.4, 106.2, 102.6 |
+| browser-smoke (4) | 4 of 4 | 104.6, 103.6, 101.7, 105.0 |
+| browser-smoke (5) | 4 of 4 | 144.9, 149.6, 149.8, 147.6 |
+
+20 of 20, with no `FAIL:` line in any log. The runners differed by a factor of two in speed, which is the spread the old click could not survive. Each shard's job is red in that run for one reason, the same in all five: `Executed browser journeys differs from the verification plan`, which is the verification contract noticing that the temporary commit ran other journeys than the plan lists. It is not a journey's result.
 
 ## Not checked
 
-Whether the end card could fail to appear at all in this journey on a runner slower than any seen: the new wait is 30 s against the card's 2.5 s. The heavy and fleet suites (not selected). Other journeys were read for the same pattern, not run.
+Whether the end card could fail to appear at all in this journey on a runner slower than any seen: the new wait is 30 s against the card's 2.5 s. The 5 s allowed for the card to give way to its tab has no measured basis; the change is made in the click's own handler, so it is there at the first poll. The heavy and fleet suites (not selected). Other journeys were read for the same pattern, not run.
