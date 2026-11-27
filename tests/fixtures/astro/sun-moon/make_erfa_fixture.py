@@ -4,10 +4,13 @@
     astro-venv/bin/python make_erfa_fixture.py
     ERFA_SRC=<pyerfa-2.0.1.5/liberfa/erfa/src> astro-venv/bin/python make_erfa_fixture.py   # also checks the C sources
 
-60 TT instants, each a pair [a, b]. For i from 1 to 50, jd = 2415020.5 + 73049 H2(i) (1900 to 2100; H2 is the Halton
+65 TT instants, each a pair [a, b]. For i from 1 to 50, jd = 2415020.5 + 73049 H2(i) (1900 to 2100; H2 is the Halton
 value in base 2, index from 1), stored as a = floor(jd - 0.5) + 0.5, b = jd - a. Then ten by hand: {2451545.0, 0},
 {2451545.0, 0.5}, {2400000.5, 51544.5}, and seven calendar instants as erfa.dtf2d('TT', ...) splits them, among them
-the years 999 and 3001, outside the years plan94 is fitted to (its status is 1 there; the numbers are kept).
+the years 999 and 3001, outside the years plan94 is fitted to (its status is 1 there; the numbers are kept). Then
+five more by hand whose second part is not a dyadic fraction, so that a date whose two parts are added before J2000 is
+taken off is seen: {2451545.0, 0.1}, {2460000.5, 0.123456789}, {2400000.5, 60310.3371}, {2440423.5, 0.7},
+{2469807.5, 0.31415926}.
 
 At each: moon = moon98 (geocentric, GCRS); emb = plan94 with np = 3 (heliocentric Earth-Moon barycentre, mean equator
 and equinox of J2000); sun = -(rb^T emb - moon / (1 + mu)), the same for the velocity, with rb from
@@ -15,7 +18,8 @@ erfa.bp00(2451545.0, 0.0) and mu = 81.30056, the Earth/Moon mass ratio. The time
 Astronomical units and days are turned to metres and seconds with AU = 149597870700 m and 86400 s. Metres, m/s.
 
 With ERFA_SRC set, the script asserts from moon98.c and plan94.c the smallest non-zero coefficients of moon98's series
-(0.000294 deg in longitude, 0.000107 deg in latitude, 1117 m in distance) and plan94's amas for the barycentre.
+(0.000294 deg in longitude, 0.000107 deg in latitude, 1117 m in distance), and plan94's amas and the third row of omega
+(the barycentre's node), which the fixture also carries.
 """
 import json, math, os, re, warnings
 from pathlib import Path
@@ -28,6 +32,7 @@ AU = 149597870700.0
 DAY = 86400.0
 EMRAT = 81.30056
 AMAS_EMB = 328900.5
+OMEGA_EMB = [174.87317577, -8679.27034, 15.34191]
 
 
 def halton(i, base):
@@ -55,7 +60,9 @@ def check_sources(src):
     assert smallest(r[5] for r in lr) == 1117.0
     amas = [float(x) for x in re.findall(r'(\d+\.\d*)', plan.split('amas[] =')[1].split(';')[0])]
     assert len(amas) == 8 and amas[2] == AMAS_EMB, amas
-    print('ERFA_SRC: the smallest coefficients of moon98.c and amas of plan94.c are as stated')
+    omega = re.findall(r'\{\s*' + num + r',\s*' + num + r',\s*' + num + r'\s*\}', plan.split('omega[][3] =')[1].split(';')[0])
+    assert len(omega) == 8 and [float(x) for x in omega[2]] == OMEGA_EMB, omega
+    print('ERFA_SRC: the smallest coefficients of moon98.c, and amas and the third row of omega of plan94.c, are as stated')
 
 
 if os.environ.get('ERFA_SRC'):
@@ -98,11 +105,16 @@ for (y, m, d, h, mi) in CALENDAR:
     a, b = erfa.dtf2d('TT', y, m, d, h, mi, 0)
     instants.append(entry(f'{y:04d}-{m:02d}-{d:02d} {h:02d}:{mi:02d} TT', a, b))
 assert len(instants) == 60
-assert [s['status'] for s in instants] == [0] * 58 + [1, 1]
+for (a, b) in [(2451545.0, 0.1), (2460000.5, 0.123456789), (2400000.5, 60310.3371), (2440423.5, 0.7),
+               (2469807.5, 0.31415926)]:
+    instants.append(entry(f'{a} + {b}', a, b))
+assert len(instants) == 65
+assert [s['status'] for s in instants] == [0] * 58 + [1, 1] + [0] * 5
 
 out = dict(generator=f'pyerfa {erfa.__version__} (ERFA {erfa.version.erfa_version}): moon98, plan94, bp00, dtf2d; '
                      f'numpy {np.__version__}',
            script='make_erfa_fixture.py', au=AU, earth_moon_mass_ratio=EMRAT, amas_emb=AMAS_EMB,
+           omega_emb=OMEGA_EMB,
            rb=[float(x) for x in rb.ravel()], instants=instants)
 
 

@@ -27,9 +27,9 @@ type Row = { r: number[]; v: number[] };
 const I = erfa.instants;
 const D = de421.instants;
 
-/** Position within `dr` m and velocity within `dv` m/s of the ERFA row, at all 60 instants. */
+/** Position within `dr` m and velocity within `dv` m/s of the ERFA row, at all 65 instants. */
 const holdsToErfa = (f: (tt: Jd2) => State, key: 'moon' | 'emb' | 'sun', dr: number, dv: number) => {
-  expect(I).toHaveLength(60);
+  expect(I).toHaveLength(65);
   for (const s of I) {
     const want = (s as unknown as Record<string, Row>)[key];
     const got = f(J(s.tt));
@@ -93,6 +93,13 @@ describe('astro Sun and Moon', () => {
       expect(xs, `PLAN94_EMB.${String(name)}`).toHaveLength(n);
       expect(allNumbers(xs), `PLAN94_EMB.${String(name)}`).toBe(true);
     }
+  });
+
+  it("the node of the barycentre's orbit is the source's", () => {
+    // the third row of omega in plan94.c; the barycentre's inclination is near zero, so the cases above cannot see it
+    const OMEGA_EMB = [174.87317577, -8679.27034, 15.34191];
+    expect(erfa.omega_emb).toEqual(OMEGA_EMB);
+    expect([...PLAN94_EMB.omega]).toEqual(OMEGA_EMB);
   });
 
   it('the Moon against DE421', () => {
