@@ -18,12 +18,13 @@ of `../requirements.txt` (see `../README.md`) and are run by hand.
 | `pf14_sun_moon_precheck.py` | which series for the Sun and the Moon: ERFA `moon98` and `plan94` against DE421 over 1950 to 2050 (Moon 0.0051°, Sun 0.0022° at worst), and the Sun without the Moon's pull on the Earth (0.0039°) | S20 amendment 14; S20-wave2 Task 2 |
 | `pf15_kepler_precheck.py`, `pf15_today_kepler_probe.ts.txt` | a universal-variable Kepler step in doubles against an 80-digit classical solution for every conic (3.2e-6 m with careful Stumpff functions, 2.4e-2 m with the textbook forms); today's fallback for e ≥ 1 (5.8 km in ten minutes); today's elliptic path as e nears 1 (29 m at 1 − e = 1e-6) | S20 amendment 14; S20-wave2 Task 3 |
 | `pf15_integrator_precheck.ts.txt` | what today's integrators give against exact solutions: `rk4Step` is fourth order (ratios 16.0 to 16.5), Dormand–Prince answers to its tolerance, and the point-mass step schedule converges at about first order | S20 amendment 14; S20-wave2 Task 3 |
-| `pf16_orekit_trial.py` | Orekit 13.1.9 runs here; its EGM2008 field, its Earth-fixed frame, its Sun and Moon against the reference tools the base is held to; the six orbits of the work plan with the size of each force term and the reference's own noise | S20 amendment 14; S20-wave2 Task 4 |
+| `pf16_orekit_trial.py` | Orekit 13.1.9 runs here; its EGM2008 field, its Earth-fixed frame, its Sun and Moon against the reference tools the base is held to; the six orbits of the work plan at every level of force model, with the size of each term in position and velocity and the reference's own noise | S20 amendment 14; S20-wave2 Task 4 |
+| `pf04_precheck.ts.txt` | PF-04's two suspects with the app's own code: the Lambert rendezvous planned and flown with one J2 flag arrives 15 to 60 km from its target; the station transfer's solver converges on sixteen nominal flights | S20 amendment 14; S20-wave2 Task 6 |
 
 ## How to run them
 
 From this folder, with the virtual environment of `../README.md` (Python 3.13 was used) and
-Node 22 for the one `.mjs` file. Each script's first lines say what it found, on 2026-11-26 or on 2026-11-27 for the five of the second work plan;
+Node 22 for the one `.mjs` file. Each script's first lines say what it found, on 2026-11-26 or on 2026-11-27 for those of the second work plan;
 a run should print the same figures.
 
     VENV=/path/to/astro-venv/bin/python
@@ -43,7 +44,7 @@ a run should print the same figures.
     OREKIT=/path/to/orekit-venv/bin/python                         # orekit_jpype 13.1.9.0 with the pins of ../requirements.txt, and Java 17 or later
     $OREKIT pf16_orekit_trial.py orekit-data-main.zip head.gfc /tmp/orekit-scratch   # about 20 s; the archive of orekit-data at the commit the script names
 
-The two `.ts.txt` files are scratch tests of the app's own code, kept as text so that no suite picks
+The three `.ts.txt` files are scratch tests of the app's own code, kept as text so that no suite picks
 them up. Their first lines say how to run one: copy it to `tests/` under a `.test.ts` name, run that one
 file with vitest, delete the copy.
 

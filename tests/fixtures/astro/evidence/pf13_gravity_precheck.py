@@ -13,8 +13,8 @@ Run:  python pf13_gravity_precheck.py <the first 60 kB of EGM2008.gfc>
 (curl -r 0-60000 -o head.gfc https://icgem.gfz.de/getmodel/gfc/c50128797a9cb62e936337c890e4425f03f0461d7329b09a8cc8561504465340/EGM2008.gfc)
 
 Found on 2026-11-27: A against B 1.1e-15 relative at 16 points, 9.0e-16 over a field cut at each degree;
-the potential 1.4e-15; on the spin axis 1.0e-12 (B stands 1e-12 rad off it); J2 against gravityJ2 5.1e-16;
-J2 to J4 against the propagator's zonal terms 6.5e-16; gradient 2.4e-11 and divergence 1.7e-11 at a
+the potential 9.8e-16; on the spin axis 1.0e-12 (B stands 1e-12 rad off it); J2 against gravityJ2 5.8e-16;
+J2 to J4 against the propagator's zonal terms 5.0e-16; gradient 2.4e-11 and divergence 1.7e-11 at a
 1,000 m step. At 35,786 km degree 20 is worth 9.5e-23; one coefficient 1 % wrong moves the acceleration at
 300 km by 4e-10 to 5e-9. Its functions are imported by pf16_orekit_trial.py.
 """
@@ -91,7 +91,7 @@ def potential_cunningham(r, gm, radius, Cn, Sn, nmax):
             f = norm_factor(n, m); u += Cn.get((n, m), 0.0) * f * V[n][m] + (Sn.get((n, m), 0.0) * f * W[n][m] if m else 0.0)
     return gm / radius * u
 
-def accel_reference(r, nmax, gm_s, R_s, Cs, Ss):
+def accel_reference(r, nmax, gm_s, R_s, Cs, Ss, mmax=None):
     """B: mpmath; normalized Legendre functions of sin(lat) by the standard forward recursions, spherical gradient."""
     x, y, z = [mp.mpf(repr(float(c))) for c in r]
     gm, radius = mp.mpf(gm_s.replace('E', 'e')), mp.mpf(R_s.replace('E', 'e'))
@@ -108,7 +108,7 @@ def accel_reference(r, nmax, gm_s, R_s, Cs, Ss):
     dUdr = -gm / rr**2; dUdphi = mp.mpf(0); dUdlam = mp.mpf(0)
     for n in range(2, nmax + 1):
         q = (radius / rr)**n
-        for m in range(n + 1):
+        for m in range(min(n, nmax if mmax is None else mmax) + 1):
             c, s = mp.mpf(Cs[(n, m)]), mp.mpf(Ss[(n, m)])
             trig = c * mp.cos(m * lam) + s * mp.sin(m * lam)
             # dP/dphi for fully normalized functions
@@ -150,10 +150,11 @@ def main():
     GM, R = float(gm_s), float(R_s)
     Cn = {k: float(v) for k, v in Cs.items()}; Sn = {k: float(v) for k, v in Ss.items()}
     pts = []
-    for i in range(1, 13):
-        lat = math.asin(2 * halton(i, 2) - 1); lon = math.pi * (2 * halton(i, 3) - 1); h = 300e3 + (36000e3 - 300e3) * halton(i, 5) ** 2
+    for i in range(1, 11):   # the work plan's sixteen: ten Halton points, six by hand
+        lat = math.asin(2 * halton(i, 2) - 1); lon = math.pi * (2 * halton(i, 3) - 1); h = 300e3 + 35.7e6 * halton(i, 5) ** 2
         pts.append((lat, lon, h))
-    pts += [(math.radians(89.99), 0.3, 300e3), (math.radians(-89.99), 2.0, 800e3), (0.0, math.radians(-14.7), 35786e3), (math.radians(51.6), math.radians(100.0), 420e3)]
+    pts += [(math.radians(89.99), 0.3, 300e3), (math.radians(-89.99), 2.0, 800e3), (0.0, math.radians(-14.7), 35786e3), (math.radians(51.6), math.radians(100.0), 420e3),
+            (math.radians(-30.0), math.radians(-170.0), 300e3), (math.radians(10.0), math.radians(45.0), 1000e3)]
     assert len(pts) == 16
     worst = 0.0
     for lat, lon, h in pts:
@@ -181,8 +182,11 @@ def main():
         for n in range(2, N + 1):
             a = accel_cunningham(r, GM, R, Cn, Sn, n); b = accel_reference(r, n, gm_s, R_s, Cs, Ss)
             wt = max(wt, float(mp.sqrt(sum((mp.mpf(repr(float(a[i]))) - b[i])**2 for i in range(3))) / mp.sqrt(sum(c * c for c in b))))
+        for n, m in ((20, 0), (20, 5), (8, 3)):
+            a = accel_cunningham(r, GM, R, Cn, Sn, n, m); b = accel_reference(r, n, gm_s, R_s, Cs, Ss, m)
+            wt = max(wt, float(mp.sqrt(sum((mp.mpf(repr(float(a[i]))) - b[i])**2 for i in range(3))) / mp.sqrt(sum(c * c for c in b))))
     smallest = min(np.linalg.norm(accel_cunningham(r, GM, R, Cn, Sn, n) - accel_cunningham(r, GM, R, Cn, Sn, n - 1)) / np.linalg.norm(accel_cunningham(r, GM, R, Cn, Sn, n)) for n in range(2, N + 1))
-    print(f'   a field cut at each degree from 2 to 20, four points at 300-400 km, the two routes: worst relative {wt:.2e}; the smallest step from one degree to the next at the last point is {smallest:.1e}')
+    print(f'   a field cut at each degree from 2 to 20, and at (degree, order) = (20, 0), (20, 5), (8, 3), four points at 300-400 km, the two routes: worst relative {wt:.2e}; the smallest step from one degree to the next at the last point is {smallest:.1e}')
     # one wrong coefficient: what can the bound see?
     r = ((R + 300e3) * math.cos(0.3) * math.cos(0.5), (R + 300e3) * math.cos(0.3) * math.sin(0.5), (R + 300e3) * math.sin(0.3))
     base = accel_cunningham(r, GM, R, Cn, Sn, N); seen = []
@@ -206,10 +210,12 @@ def main():
         f = -MU_APP / (rm * r2); k = (1.5 * J2_APP * MU_APP * R_APP * R_APP) / (rm * r2 * r2); five = (5 * z * z) / r2
         return np.array([x * f + k * x * (five - 1), y * f + k * y * (five - 1), z * f + k * z * (five - 3)])
     c20 = {(2, 0): -J2_APP / math.sqrt(5)}
+    def app_point(i):
+        lat = math.asin(2 * halton(i, 2) - 1); lon = math.pi * (2 * halton(i, 3) - 1); d = R_APP + 150e3 + 39.85e6 * halton(i, 5)
+        return np.array([d * math.cos(lat) * math.cos(lon), d * math.cos(lat) * math.sin(lon), d * math.sin(lat)])
     w = 0.0
-    rng = np.random.RandomState(13)
-    for _ in range(2000):
-        u = rng.normal(size=3); u /= np.linalg.norm(u); r = (R_APP + rng.uniform(150e3, 4e7)) * u
+    for i in range(1, 2001):
+        r = app_point(i)
         a = accel_cunningham(r, MU_APP, R_APP, c20, {}, 2, 0); b = gravity_j2(r)
         w = max(w, np.linalg.norm(a - b) / np.linalg.norm(b))
     print(f"2. degree 2, order 0 with the app's GM, radius and J2 against gravityJ2, 2,000 points: worst relative {w:.2e} (bound 1e-13)")
@@ -227,9 +233,9 @@ def main():
         ax += c4 * x * f4; ay += c4 * y * f4; az += c4 * z * (5 - (70 / 3) * zr2 + 21 * zr2 * zr2)
         return np.array([ax, ay, az])
     cz = {(2, 0): -J2_APP / math.sqrt(5), (3, 0): -J3_APP / math.sqrt(7), (4, 0): -J4_APP / 3.0}
-    w = 0.0; rng = np.random.RandomState(14)
-    for _ in range(2000):
-        u = rng.normal(size=3); u /= np.linalg.norm(u); r = (R_APP + rng.uniform(150e3, 4e7)) * u
+    w = 0.0
+    for i in range(1, 2001):
+        r = app_point(i)
         a = accel_cunningham(r, MU_APP, R_APP, cz, {}, 4, 0); b = gravity_zonal(r)
         w = max(w, np.linalg.norm(a - b) / np.linalg.norm(b))
     print(f"2b. degrees 2 to 4, order 0 with the app's J2, J3, J4 against the propagator's zonal terms, 2,000 points: worst relative {w:.2e}")

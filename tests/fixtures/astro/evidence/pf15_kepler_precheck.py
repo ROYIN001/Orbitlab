@@ -14,8 +14,8 @@ Run:  python pf15_kepler_precheck.py
 The two last modes measure the app's present `propagateKepler` below e = 1; the outputs file is written
 by the scratch test kept beside this script as pf15_today_kepler_probe.ts.txt.
 
-Found on 2026-11-27: the careful form is within 3.2e-6 m and 4.6e-10 m/s over 1,110 cases; the plain form
-leaves 2.4e-2 m and 7.4e-7 m/s. Today's fallback for e >= 1 is 5.78 km off after 600 s and 61.3 km after an
+Found on 2026-11-27: the careful form is within 1.0e-5 m and 3.1e-9 m/s over 1,776 cases (steps up to
+three days, perigee radii up to 1e8 m); the plain form leaves 5.1e-2 m and 7.4e-7 m/s. Today's fallback for e >= 1 is 5.78 km off after 600 s and 61.3 km after an
 hour at e = 1.04. Today's elliptic path: 9.0e-2 m at worst for e <= 0.99, 0.43 m at 1 - e = 1e-3,
 29 m at 1e-6, 23 km at 1e-8, 13,000 km at 1e-10.
 """
@@ -148,13 +148,13 @@ for CAREFUL in (False, True):
     print('careful Stumpff functions:' if CAREFUL else 'plain Stumpff functions with a series only below |psi| = 1e-6:')
     rows = []
     for e in (1.0, 1.0 + 1e-12, 1.0 + 1e-9, 1.0 + 1e-6, 1.001, 1.04, 1.5, 3.0, 10.0, 1.0 - 1e-12, 1.0 - 1e-9, 1.0 - 1e-6, 0.999, 0.99, 0.9, 0.6, 0.1, 0.001, 0.0):
-        for rp in (6.578e6, 2.0e7, 1.0e8):
+        for rp in (6.578e6, 2.0e7, 4.2e7, 1.0e8):
             for nu0 in (-2.0, -0.3, 0.0, 0.8):
                 if e >= 1 and abs(nu0) >= math.acos(-1 / e) - 0.2: continue
                 r0, v0 = from_perifocal(rp, e, nu0)
                 if e == 1.0:  # make the orbit exactly parabolic in doubles as nearly as they allow: scale the speed to escape speed
                     v0 = v0 * math.sqrt(2 * MU / np.linalg.norm(r0)) / np.linalg.norm(v0)
-                for dt in (600.0, 3600.0, 6 * 3600.0, 24 * 3600.0, -3600.0):
+                for dt in (600.0, 3600.0, 6 * 3600.0, 24 * 3600.0, 72 * 3600.0, -3600.0):
                     ra, va = kepler_universal(r0, v0, dt)
                     rb, vb = kepler_reference(r0, v0, dt)
                     dr = float(mp.sqrt(sum((mp.mpf(repr(float(ra[i]))) - rb[i]) ** 2 for i in range(3))))

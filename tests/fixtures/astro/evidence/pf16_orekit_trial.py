@@ -11,7 +11,8 @@ pf13_gravity_precheck.py); no app code.
   3. Orekit's Sun and Moon (the DE-440 file of orekit-data) against DE421, and against the ERFA series the
      base ports.
   4. Two-body: Orekit's numerical propagation against its own Kepler orbit, and what each term adds in a day.
-  5. The six orbits of the work plan: the reference's own noise and the size of each force term.
+  5. The six orbits of the work plan at each level of force model: what the level adds, in position and in
+     velocity, and the reference's own noise (the same trajectory at 1e-7 m and at 1e-9 m).
 
 Run:  python pf16_orekit_trial.py <orekit-data-main.zip> <the first 60 kB of EGM2008.gfc> <a scratch folder>
 in an environment with orekit_jpype 13.1.9.0, jpype1, pyerfa, numpy, mpmath, skyfield, and a Java 17+ runtime
@@ -22,7 +23,8 @@ Found on 2026-11-27: the provider reports GM 398600441500000.0, radius 6378136.3
 is within 2.0e-15 relative of the Cunningham recursion; Orekit's GCRF to ITRF is within 0.52 mas of ERFA's
 IAU 2000B chain; its Sun and Moon within 216 m and 3.2 m of DE421, ERFA's series within 3,323 km and 5.1 km
 of Orekit's; level A is within 7.5e-6 m of a Kepler orbit on all six orbits; the station orbit's node under
-J2 alone moves -5.0140 deg in a day against -5.0023 by the secular rate.
+J2 alone moves -5.0140 deg in a day against -5.0023 by the secular rate. The noise is 3.6e-5 m or better at
+levels A to D and up to 0.14 m once radiation pressure is on (the station orbit).
 """
 import math, os, sys, time, warnings
 import numpy as np, erfa
@@ -150,20 +152,25 @@ def fly(o, forces, ptol):
     p = NumericalPropagator(integ); p.setOrbitType(OrbitType.CARTESIAN); p.setMu(GM); p.setInitialState(SpacecraftState(o).withMass(1000.0))
     for f in forces: p.addForceModel(f)
     return p
-def pos(p, d):
-    q = p.propagate(d).getPVCoordinates(gcrf).getPosition(); return np.array([q.getX(), q.getY(), q.getZ()])
 tic = time.time()
-print('5. orbit: two-body numerical against Kepler | the same trajectory at 1e-6 m and 1e-9 m (all terms) | what each term adds by the end: J2, the rest of the field, Sun and Moon, radiation pressure, drag (station and transfer only)')
+def end_state(p, d):
+    pv = p.propagate(d).getPVCoordinates(gcrf); q, w = pv.getPosition(), pv.getVelocity()
+    return np.array([q.getX(), q.getY(), q.getZ(), w.getX(), w.getY(), w.getZ()])
+print('5. for each orbit and level, at the end of the span: what the level adds to the one before (position, velocity), and the same level run at 1e-7 m against 1e-9 m (the noise)')
 for name, a, e, inc, raan, argp, nu, days in ORBITS:
+    # Orekit's constructor takes (a, e, i, argument of perigee, node, anomaly): the node comes after the perigee
     o = KeplerianOrbit(a, e, math.radians(inc), math.radians(argp), math.radians(raan), math.radians(nu), PositionAngleType.TRUE, gcrf, t0, GM)
     end = t0.shiftedBy(days * 86400.0)
-    ana = o.shiftedBy(days * 86400.0).getPVCoordinates(gcrf).getPosition(); ana = np.array([ana.getX(), ana.getY(), ana.getZ()])
-    levels = [[], [HolmesFeatherstoneAttractionModel(itrf, prov2)], [hf], [hf] + tb, [hf] + tb + [srp]]
-    if name in ('station', 'transfer'): levels.append([hf] + tb + [srp, drag])
-    ends = [pos(fly(o, f, 1e-9), end) for f in levels]
-    noise = np.linalg.norm(pos(fly(o, levels[-1], 1e-6), end) - ends[-1])
-    steps = [np.linalg.norm(ends[k] - ends[k - 1]) for k in range(1, len(ends))]
-    print(f'   {name:16s} {days} d: {np.linalg.norm(ends[0] - ana):.1e} m | {noise:.1e} m | ' + ', '.join(f'{x:.4g} m' for x in steps))
+    pvk = o.shiftedBy(days * 86400.0).getPVCoordinates(gcrf); q, w = pvk.getPosition(), pvk.getVelocity()
+    ana = np.array([q.getX(), q.getY(), q.getZ(), w.getX(), w.getY(), w.getZ()])
+    levels = [('A', []), ('B', [HolmesFeatherstoneAttractionModel(itrf, prov2)]), ('C', [hf]), ('D', [hf] + tb), ('E', [hf] + tb + [srp])]
+    if name in ('station', 'transfer'): levels.append(('F', [hf] + tb + [srp, drag]))
+    prev = ana; out = []
+    for lab, f in levels:
+        fine = end_state(fly(o, f, 1e-9), end); coarse = end_state(fly(o, f, 1e-7), end)
+        out.append(f'{lab}: +{np.linalg.norm(fine[:3] - prev[:3]):.4g} m, +{np.linalg.norm(fine[3:] - prev[3:]):.3g} m/s, noise {np.linalg.norm(fine[:3] - coarse[:3]):.1e} m {np.linalg.norm(fine[3:] - coarse[3:]):.1e} m/s')
+        prev = fine
+    print(f'   {name:16s} {days} d (level A is against the Kepler orbit): ' + '; '.join(out))
 # the node of the station orbit under J2 alone against the first-order secular rate
 name, a, e, inc, raan, argp, nu, days = ORBITS[0]
 o = KeplerianOrbit(a, e, math.radians(inc), math.radians(argp), math.radians(raan), math.radians(nu), PositionAngleType.TRUE, gcrf, t0, GM)
