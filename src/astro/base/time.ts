@@ -3,9 +3,10 @@
  * dates held in two parts, and the Earth-orientation values read between the
  * days of a table. Seconds, days, radians. Imports nothing.
  *
- * The leap-second and drift tables (TAI - UTC from 1960 on) and the origin of
- * the two-term TDB - TT series are those of ERFA 2.0.1.5 (liberfa), `dat.c`
- * and `dtdb.c`, read from the pyerfa 2.0.1.5 source archive.
+ * The leap-second and drift tables (TAI - UTC from 1960 on) are those of ERFA
+ * 2.0.1.5 (liberfa), `dat.c`, read from the pyerfa 2.0.1.5 source archive. The
+ * two-term TDB - TT series is the classical form with the work plan's numbers;
+ * it is held to ERFA's `dtdb` in the tests, not taken from it.
  *
  * Conventions where the signatures leave room:
  * - A Jd2 may be split in any way on input. A conversion leaves `a` as given
@@ -121,7 +122,11 @@ export function ttToTai(tt: Jd2): Jd2 {
 export const utcToTt = (utc: Jd2): Jd2 => taiToTt(utcToTai(utc));
 export const ttToUtc = (tt: Jd2): Jd2 => taiToUtc(ttToTai(tt));
 
-/** TDB - TT, s: the two largest terms of ERFA's `dtdb.c` series, in the mean anomaly of the Earth. */
+/**
+ * TDB - TT, s: the classical two-term form in the Earth's mean anomaly, with the numbers the work plan
+ * gives (S20 wave 1, Task 2). It corresponds to the largest term of ERFA's `dtdb.c` and that term's first
+ * harmonic; ERFA `dtdb` is what it is held to (within 50 microseconds, 1960 to 2060), not where it comes from.
+ */
 export function tdbMinusTt(tt: Jd2): number {
   if (nonFinite(tt.a, tt.b)) return NaN;
   const g = (357.53 + 0.98560028 * ((tt.a - JD_J2000) + tt.b)) * (Math.PI / 180);

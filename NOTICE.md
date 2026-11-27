@@ -52,7 +52,7 @@ terms apply. The data sources are named for credit and for checking; none of the
 | What | Used for | Licence | Source |
 | --- | --- | --- | --- |
 | three.js 0.186.0 | 3-D rendering; the only runtime dependency, bundled into the build | MIT | <https://threejs.org/>, <https://github.com/mrdoob/three.js> |
-| ERFA 2.0.1.5 (liberfa), read from the pyerfa 2.0.1.5 source archive | `src/astro/base/time.ts` follows `dat.c` (the leap-second and drift tables of TAI − UTC, copied) and `dtdb.c` (the origin of its two-term TDB − TT series); `src/astro/base/geodesy.ts` is held to `gc2gd` and `gd2gc` in its tests | BSD-3-Clause | <https://github.com/liberfa/erfa>, <https://pypi.org/project/pyerfa/> |
+| ERFA 2.0.1.5 (liberfa), read from the pyerfa 2.0.1.5 source archive | `src/astro/base/time.ts` follows `dat.c` (the leap-second and drift tables of TAI − UTC, copied); its two-term TDB − TT is held to ERFA `dtdb` in its tests; `src/astro/base/geodesy.ts` is held to `gc2gd` and `gd2gc` in its tests | BSD-3-Clause | <https://github.com/liberfa/erfa>, <https://pypi.org/project/pyerfa/> |
 
 The development tools (Vite, TypeScript, Vitest, Playwright) build and test the app and are not
 shipped in it; each carries its own licence in `node_modules/`.
