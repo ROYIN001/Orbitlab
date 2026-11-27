@@ -50,7 +50,7 @@ The independent review passed the module's behaviour. Its one Important finding 
 ## The gate (the orchestrating session)
 
 - **Pre-check before dispatch, reference tools only.** The plan's earlier pre-check was re-run (two-term TDB − TT against ERFA `dtdb` at 200,001 instants: 37.5 µs). A new one found the task's sentence on the round trip wrong beside a step of the drift table: up to 3.2e-9 s where 1e-9 s was stated. The sentence was corrected before anyone was dispatched (S20 amendment 10; `tests/fixtures/astro/evidence/pf10_roundtrip_precheck.py`).
-- **Held-out set.** Made by the orchestrating session from pyerfa alone with a seeded pseudo-random sampler (not the fixture's Halton sequence), never shown to the writers: 4,377 instants for TAI − UTC from 1900 to 2200 (4,000 random from 1950 to 2075, nine on each side of each of the 41 steps, eight by hand with unusual splits), 3,962 round trips, 378 round trips inside the window of amendment 10, 2,000 instants for UTC→TAI→TT against `utctai` and `taitt`, 4,000 for TDB − TT, and 8,145 Earth-orientation instants against today's arithmetic on the app's own data file and on a table with two leap-second jumps. All inside the bounds:
+- **Held-out set.** Made by the orchestrating session from pyerfa alone with a seeded pseudo-random sampler (not the fixture's Halton sequence), never shown to the writers: 4,377 instants for TAI − UTC from 1900 to 2200 (4,000 random from 1950 to 2075, nine around each of the 41 steps, eight by hand with unusual splits), 3,962 round trips, 378 round trips inside the window of amendment 10, 2,000 instants for UTC→TAI→TT against `utctai` and `taitt`, 4,000 for TDB − TT, and 8,078 Earth-orientation instants against today's arithmetic on the app's own data file and on a table with two leap-second jumps. All inside the bounds:
 
 | Check | Bound | Measured worst |
 |---|---|---|
@@ -63,7 +63,7 @@ The independent review passed the module's behaviour. Its one Important finding 
 | UTC→TT→UTC | 1e-6 s | 2.4e-12 s |
 | TDB − TT against ERFA `dtdb` | 50e-6 s | 3.75e-5 s |
 | Earth orientation against today's arithmetic, values and `quality` | exact | exact |
-| non-finite input, 63 calls | NaN in every number | holds |
+| non-finite input, 66 calls | NaN in every number | holds |
 
   The held-out bound for the third row first read 1e-9 s at every instant; a part `b` of 51,544 days cannot carry that, so the check, not the module, was corrected to one step of `b` there. It is a property of the two-part form: the split `jd2` makes carries 1e-11 s.
 - **Across the fix round** every one of the 64,045 numbers the module returns on the held-out set is identical before (`72e4d3f`) and after (`1e20e29`), and the diff of `time.ts` between the two holds comment lines only.
