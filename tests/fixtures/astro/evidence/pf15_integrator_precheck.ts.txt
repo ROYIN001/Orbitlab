@@ -1,0 +1,88 @@
+// Scratch test, not part of any suite: what today's integrators give against exact solutions (S20 wave 2, Task 3).
+// Run: copy to tests/zz-pf15-integrators.test.ts, then
+//   PROBE_OUT=probe.txt npx vitest run tests/zz-pf15-integrators.test.ts
+// and delete the copy. It appends its lines to PROBE_OUT (vitest swallows console output of a passing test).
+// The copy uses Node's fs and process, which the project's typecheck does not know: delete it before a typecheck.
+// Found on 2026-11-27: rk4Step error ratios 16.46, 16.23, 16.12 for steps 40 to 5 s on a circular orbit and
+// 16.02, 16.01, 16.01 through a perigee at e = 0.6; Dormand-Prince |a - a0| after half a day 100 m, 0.94 m,
+// 1.26e-2 m, 1.31e-4 m at tolerances 1e-6 to 1e-12; the point-mass step schedule, full against halved
+// steps: 11.9 m at 60 s, 335 m at 150 s, 1,098 m at 300 s, 1,267 m at 500 s (halved against quartered:
+// 7.3, 162, 460, 896 m).
+import { appendFileSync } from 'node:fs';
+import { describe, it } from 'vitest';
+import { rk4Step, type PointState } from '../src/physics/integrator';
+import { propagate } from '../src/physics/propagator/propagate';
+import { ECSS_LEVELS } from '../src/physics/propagator/activity';
+import type { ForceModel } from '../src/physics/propagator/forces';
+import { MU_EARTH } from '../src/physics/constants';
+import { Simulation } from '../src/physics/simulation';
+import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
+import { orbitById } from '../src/data/orbits';
+import type { MissionConfig } from '../src/types';
+
+const log = (s: string) => appendFileSync(process.env.PROBE_OUT!, s + '\n');
+const NONE: ForceModel = { j2: false, j3j4: false, drag: false, sun: false, moon: false, srp: false, activity: ECSS_LEVELS.moderate };
+const twoBody = (_t: number, r: { x: number; y: number; z: number }) => { const d = Math.hypot(r.x, r.y, r.z), k = -MU_EARTH / (d * d * d); return { x: r.x * k, y: r.y * k, z: r.z * k }; };
+
+describe('pre-check', () => {
+  it('rk4Step order on a circular orbit', () => {
+    const a = 7.0e6, n = Math.sqrt(MU_EARTH / a ** 3), vc = Math.sqrt(MU_EARTH / a), T = 1200;
+    const err = (h: number) => {
+      let s: PointState = { r: { x: a, y: 0, z: 0 }, v: { x: 0, y: vc * Math.cos(0.9), z: vc * Math.sin(0.9) } };
+      const steps = Math.round(T / h);
+      for (let i = 0; i < steps; i++) s = rk4Step(i * h, s, h, twoBody);
+      const th = n * T, ex = { x: a * Math.cos(th), y: a * Math.sin(th) * Math.cos(0.9), z: a * Math.sin(th) * Math.sin(0.9) };
+      return Math.hypot(s.r.x - ex.x, s.r.y - ex.y, s.r.z - ex.z);
+    };
+    const hs = [80, 40, 20, 10, 5, 2.5, 1.25, 0.625];
+    const e = hs.map(err);
+    log('RK4 circular 7000 km, 1200 s: ' + hs.map((h, i) => 'h=' + h + ': ' + e[i].toExponential(3) + ' m' + (i ? ' (ratio ' + (e[i - 1] / e[i]).toFixed(2) + ')' : '')).join('; '));
+  });
+  it('rk4Step order on an eccentric orbit through perigee', () => {
+    const rp = 6.678e6, ecc = 0.6, sma = rp / (1 - ecc), n = Math.sqrt(MU_EARTH / sma ** 3), T = 1200;
+    const solve = (M: number) => { let E = M; for (let i = 0; i < 80; i++) E -= (E - ecc * Math.sin(E) - M) / (1 - ecc * Math.cos(E)); return E; };
+    const pos = (E: number) => ({ x: sma * (Math.cos(E) - ecc), y: sma * Math.sqrt(1 - ecc * ecc) * Math.sin(E) });
+    const E0 = solve(n * (-T / 2)), rr0 = sma * (1 - ecc * Math.cos(E0));
+    const v0 = { x: -Math.sqrt(MU_EARTH * sma) * Math.sin(E0) / rr0, y: Math.sqrt(MU_EARTH * sma) * Math.sqrt(1 - ecc * ecc) * Math.cos(E0) / rr0 };
+    const p0 = pos(E0), ex = pos(solve(n * (T / 2)));
+    const err = (h: number) => {
+      let s: PointState = { r: { x: p0.x, y: p0.y, z: 0 }, v: { x: v0.x, y: v0.y, z: 0 } };
+      const steps = Math.round(T / h);
+      for (let i = 0; i < steps; i++) s = rk4Step(i * h, s, h, twoBody);
+      return Math.hypot(s.r.x - ex.x, s.r.y - ex.y);
+    };
+    const hs = [40, 20, 10, 5, 2.5, 1.25];
+    const e = hs.map(err);
+    log('RK4 e=0.6 through perigee, 1200 s: ' + hs.map((h, i) => 'h=' + h + ': ' + e[i].toExponential(3) + ' m' + (i ? ' (ratio ' + (e[i - 1] / e[i]).toFixed(2) + ')' : '')).join('; '));
+  });
+  it('Dormand-Prince against Kepler, by tolerance', () => {
+    const a = 7.0e6, vc = Math.sqrt(MU_EARTH / a);
+    for (const days of [0.5, 3]) {
+      const out: string[] = [];
+      for (const tol of [1e-6, 1e-8, 1e-10, 1e-12]) {
+        const T = days * 86400;
+        const res = propagate([a, 0, 0], [0, vc * Math.cos(0.9), vc * Math.sin(0.9)], 2461310.5, { method: 'cowell', duration: T, forces: NONE, spacecraft: { mass: 1, area: 0, cd: 0, cr: 0 }, samples: 4, tolerance: tol });
+        const last = res.samples[res.samples.length - 1];
+        out.push('tol ' + tol + ': t=' + last.t + ' |a - a0| = ' + Math.abs(last.a - a).toExponential(3) + ' m');
+      }
+      log('DP5(4) circular 7000 km, ' + days + ' d: ' + out.join(' | '));
+    }
+  });
+  it('point-mass step schedule: full against halved against quartered steps', () => {
+    const cfg = { vehicleId: 'falcon9', satelliteId: 'starlink', siteId: 'cape', orbit: orbitById('iss'),
+      launchTime: new Date(Date.UTC(2026, 8, 15, 12, 0, 0)), guidance: { ...DEFAULT_GUIDANCE }, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false } as MissionConfig;
+    const fly = (div: number, until: number) => {
+      const sim = new Simulation(cfg, { headless: true });
+      let guard = 0;
+      while (!sim.done && sim.state.t < until - 1e-9 && guard++ < 4_000_000) sim.step(Math.min(sim.suggestedDt() / div, until - sim.state.t));
+      return { t: sim.state.t, r: { ...sim.state.r }, v: { ...sim.state.v }, status: sim.state.status };
+    };
+    for (const until of [60, 150, 300, 500]) {
+      const t0 = Date.now();
+      const s1 = fly(1, until), s2 = fly(2, until), s4 = fly(4, until);
+      const d = (p: typeof s1, q: typeof s1) => [Math.hypot(p.r.x - q.r.x, p.r.y - q.r.y, p.r.z - q.r.z), Math.hypot(p.v.x - q.v.x, p.v.y - q.v.y, p.v.z - q.v.z)];
+      const a = d(s1, s2), b = d(s2, s4);
+      log('schedule at T+' + until + ' s (' + s1.status + ', t ' + s1.t.toFixed(3) + '/' + s2.t.toFixed(3) + '/' + s4.t.toFixed(3) + '): full-half ' + a[0].toExponential(3) + ' m ' + a[1].toExponential(3) + ' m/s; half-quarter ' + b[0].toExponential(3) + ' m ' + b[1].toExponential(3) + ' m/s; ' + (Date.now() - t0) + ' ms');
+    }
+  });
+});

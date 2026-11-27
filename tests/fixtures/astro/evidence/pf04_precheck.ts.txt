@@ -1,0 +1,74 @@
+// Scratch test, not part of any suite: two measurements for S20 wave 2, Task 6 (PF-04), made before the package.
+// Run: copy to tests/zz-pf04.test.ts, then  PROBE_OUT=probe.txt npx vitest run tests/zz-pf04.test.ts  and delete the copy.
+// The copy uses Node's fs and process, which the project's typecheck does not know: delete it before a typecheck.
+// Found on 2026-11-27: the rendezvous of tests/maneuvers.test.ts planned and flown with one J2 flag arrives
+// 7.4e-3 m from its target with J2 off and 59.5 km, 15.3 km, 28.4 km away with J2 on at i = 0, 51.6, 98 deg
+// (velocities within 7.7e-6 m/s); the station transfer's solver converged in 2 or 3 passes, to 0.28 m or better,
+// on 12 two-orbit, 2 four-orbit and 2 two-day flights, each reached in 0.1 to 0.3 s.
+import { appendFileSync } from 'node:fs';
+import { describe, it, vi } from 'vitest';
+
+const calls: { duration: number; solved: boolean; iterations: number; miss: number }[] = [];
+vi.mock('../src/physics/rendezvous/targeting', async (original) => {
+  const m = await original<typeof import('../src/physics/rendezvous/targeting')>();
+  return {
+    ...m,
+    interceptImpulse: (...a: Parameters<typeof m.interceptImpulse>) => {
+      const r = m.interceptImpulse(...a);
+      // tolerance 5 m is what the transfer burn of the station flight passes
+      if (a[4] === 5) calls.push({ duration: a[1], solved: r !== null, iterations: r ? r.iterations : -1, miss: r ? r.miss : NaN });
+      return r;
+    },
+  };
+});
+
+import { DEG, R_EARTH } from '../src/physics/constants';
+import { norm, sub } from '../src/physics/vec3';
+import { stateAt, type Orbit } from '../src/orbit/kepler';
+import { rendezvous, stateOnPlan, type Plan } from '../src/orbit/maneuvers';
+import { Simulation } from '../src/physics/simulation';
+import { orbitById } from '../src/data/orbits';
+import { siteById } from '../src/data/sites';
+import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../src/physics/defaults';
+import { launchWindows } from '../src/physics/mission';
+import { PROFILE_IDS } from '../src/physics/rendezvous/profiles';
+import type { MissionConfig } from '../src/types';
+
+const log = (s: string) => appendFileSync(process.env.PROBE_OUT!, s + '\n');
+const JD = 2461309.5;
+const circle = (alt: number, i = 0, extra: Partial<Orbit> = {}): Orbit => ({ a: R_EARTH + alt, e: 0, i, raan: 0.3, argp: 0, m0: 0.2, jd0: JD, ...extra });
+
+describe('pre-check for PF-04', () => {
+  it('the two-burn rendezvous of tests/maneuvers.test.ts, planned and flown with one J2 flag, as the Orbit playground does', () => {
+    for (const inc of [0, 51.6, 98]) {
+      for (const j2 of [false, true]) {
+        const chaser = circle(400e3, inc * DEG, { raan: 0, m0: 0 });
+        const target = circle(800e3, inc * DEG, { raan: 0, m0: -6 * DEG });
+        const plan = rendezvous(chaser, target, 600, 2800, j2) as Plan;
+        if (!('arrival' in plan)) { log(`i=${inc} j2=${j2}: no plan ${JSON.stringify(plan)}`); continue; }
+        const c = stateOnPlan(plan, plan.arrival + 1e-6, j2), tg = stateAt(target, plan.arrival, j2);
+        // and the same plan flown the other way round: planned two-body, flown with J2
+        const c2 = stateOnPlan(plan, plan.arrival + 1e-6, !j2), tg2 = stateAt(target, plan.arrival, !j2);
+        log(`i=${inc} planned j2=${j2}: flown with the same flag ${norm(sub(c.r, tg.r)).toExponential(3)} m ${norm(sub(c.v, tg.v)).toExponential(3)} m/s; flown with the other flag ${norm(sub(c2.r, tg2.r)).toExponential(3)} m ${norm(sub(c2.v, tg2.v)).toExponential(3)} m/s`);
+      }
+    }
+  });
+  it('a flight to the station in point mass, each profile: its cost, and what the transfer solver returned', () => {
+    const windows = launchWindows(orbitById('iss'), siteById('baikonur'), new Date('2026-09-20T00:00:00Z'), 12);
+    log('windows: ' + windows.map((w) => w.time.toISOString()).join(', '));
+    for (const profile of PROFILE_IDS) {
+      for (const w of profile === 'twoOrbit' ? windows : windows.slice(0, 2)) {
+        calls.length = 0;
+        const cfg: MissionConfig = { vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'), launchTime: w.time,
+          guidance: { ...DEFAULT_GUIDANCE }, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: 7150,
+          dynamics: { model: 'pointMass', wind: 'calm', seed: 1 }, rendezvous: { profile, port: 'rassvet' } };
+        const t0 = Date.now();
+        const sim = new Simulation(cfg, { headless: true });
+        let guard = 0;
+        // to the end of the transfer burn's solution: stop once the solver has been called for it, or at the limit
+        while (!sim.done && sim.state.t < 60 * 3600 && calls.length === 0 && guard++ < 3e6) sim.step(sim.suggestedDt());
+        log(`${profile} ${w.time.toISOString()}: stopped at t=${sim.state.t.toFixed(0)} s after ${Date.now() - t0} ms; solver calls ${JSON.stringify(calls)}; status ${sim.state.status} ${sim.state.note ?? ''}`);
+      }
+    }
+  }, 600_000);
+});
