@@ -12,6 +12,7 @@ import {
   greenwichSiderealTime, itrfToGcrfState, lvlhBasis, matMul, matT, matVec, polarMotion, rswBasis,
   type Frames, type Mat3, type State,
 } from '../src/astro/base/frames';
+import { EECT00_T0, EECT00_T1, NUT00B_LS, NUT00B_PLANETARY_OFFSET } from '../src/astro/base/nutation-2000b';
 import { jd2, type Jd2 } from '../src/astro/base/time';
 import { ecefFromGeodetic, enuBasis, type V3 } from '../src/astro/base/geodesy';
 import { temeToItrf as temeToItrfToday } from '../src/orbit/earth-orientation';
@@ -115,6 +116,39 @@ describe('astro reference frames', () => {
     }
   });
 
+  it('sidereal time at the wrap', () => {
+    // instants at which ERFA's anp returns exactly 2π; the functions here fold that to [0, 2π) (S20 amendment 13)
+    const W = fixture.wrap;
+    expect(W.filter((w) => w.fn === 'gst00b').length).toBeGreaterThan(0);
+    for (const w of W) {
+      expect(w.erfa).toBe(TWO_PI);
+      const got = (w.fn === 'gst00b' ? greenwichSiderealTime : gmst1982)(J(w.ut1));
+      const what = `${w.fn} at ${w.ut1[0]} + ${w.ut1[1]} = ${got}`;
+      expect(got >= 0 && got < TWO_PI, `${what} in [0, 2π)`).toBe(true);
+      expect(Math.abs(wrapPi(got - w.erfa)), what).toBeLessThanOrEqual(1e-11);
+    }
+  });
+
+  it("the tables are ERFA's", () => {
+    const checksum = (rows: readonly (readonly number[])[]) => {
+      let s = 0;
+      rows.forEach((row, i) => row.forEach((x, j) => { s += (i + 1) * (j + 1) * x; }));
+      return s;
+    };
+    const T = fixture.tables;
+    expect(NUT00B_LS).toHaveLength(T.NUT00B_LS.rows);
+    expect(NUT00B_LS.every((row) => row.length === 11)).toBe(true);
+    expect(checksum(NUT00B_LS)).toBe(T.NUT00B_LS.checksum);
+    expect(NUT00B_PLANETARY_OFFSET).toHaveLength(T.NUT00B_PLANETARY_OFFSET.rows);
+    expect(checksum([NUT00B_PLANETARY_OFFSET])).toBe(T.NUT00B_PLANETARY_OFFSET.checksum);
+    expect(EECT00_T0).toHaveLength(T.EECT00_T0.rows);
+    expect(EECT00_T0.every((row) => row.length === 10)).toBe(true);
+    expect(checksum(EECT00_T0)).toBe(T.EECT00_T0.checksum);
+    expect(EECT00_T1).toHaveLength(T.EECT00_T1.rows);
+    expect(EECT00_T1.every((row) => row.length === 10)).toBe(true);
+    expect(checksum(EECT00_T1)).toBe(T.EECT00_T1.checksum);
+  });
+
   it('polar motion and frame bias equal ERFA', () => {
     expectMat(polarMotion(eop.xp, eop.yp), fixture.pom00, 1e-15, 'pom00');
     expectMat(FRAME_BIAS, fixture.rb, 1e-15, 'rb');
@@ -127,6 +161,11 @@ describe('astro reference frames', () => {
 
   it("GCRF to ITRF equals ERFA's equinox-based chain", () => {
     for (const i of I) expectMat(framesAt(J(i.utc), eop).gcrfToItrf, i.c2teqx, 1e-11, `c2teqx ${i.date}`);
+  });
+
+  it('GCRF to TEME with a pole', () => {
+    // R3(gmst82)^T R3(gst) pnm00b: the pole cancels, so a result that kept it on one side is off by 1e-6
+    for (const i of I) expectMat(framesAt(J(i.utc), eop).gcrfToTeme, i.gcrf_to_teme, 1e-11, `gcrfToTeme ${i.date}`);
   });
 
   it('GCRF to ITRF is within 2 mas of the full IAU 2006/2000A chain', () => {
