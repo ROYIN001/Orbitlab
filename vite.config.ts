@@ -105,11 +105,62 @@ function pwaPlugin(): Plugin {
   };
 }
 
+/**
+ * The twelve Web Workers share their code (EQ-8, M-PLATFORM-033; plan S20-T1,
+ * route 1). Build only: each `new Worker(new URL('./x.worker.ts',
+ * import.meta.url), …)` becomes an entry chunk of the main build
+ * (`emitFile`), kept at `assets/x.worker-<hash>.js` and started as a module
+ * worker as before, so the bundler shares code between the workers and with
+ * the page as it does between any two entries. Vite's `worker` options cannot
+ * do this: Vite bundles each worker by a build of its own, so `worker.format`
+ * and a worker's chunking options split a worker only inside its own bundle,
+ * and the physics core was paid once per worker. So that no worker stays a
+ * bundle of its own unnoticed, the build fails, naming the file, for the other
+ * ways of starting a worker: a `new URL(` that names a `.worker.<any
+ * extension>` file and is left after the rewrite (double quotes, a sub-folder,
+ * a trailing comma, `.worker.js`, `.worker.mts`, …), and an import of any kind
+ * with Vite's worker query (`?worker`, `?sharedworker`, `?worker&inline`,
+ * `?worker&url`). A worker file not named `*.worker.*` and started by
+ * `new URL(` is not caught. The development server is left alone and serves
+ * each worker from its source.
+ */
+function sharedWorkersPlugin(): Plugin {
+  const re = /new URL\(\s*'(\.\/[\w.-]+\.worker\.ts)'\s*,\s*import\.meta\.url\s*\)/g;
+  const left = /new URL\([^)]*\.worker\.\w/;
+  const query = /[?&](?:shared)?worker(?:[&=]|$)/;
+  return {
+    name: 'orbitlab-shared-workers',
+    apply: 'build',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (query.test(source)) this.error(`orbitlab-shared-workers: ${importer ? relative(root, importer) : source} imports '${source}', a worker the build would bundle on its own; start it as new Worker(new URL('./name.worker.ts', import.meta.url), { type: 'module' })`);
+      return null;
+    },
+    async transform(code, id) {
+      if (!/\.[cm]?[jt]sx?$/.test(id) || !code.includes('.worker.')) return null;
+      let out = code;
+      for (const m of [...code.matchAll(re)]) {
+        const resolved = await this.resolve(m[1], id);
+        if (!resolved) continue;
+        const ref = this.emitFile({ type: 'chunk', id: resolved.id, name: m[1].slice(2, -3), preserveSignature: false });
+        // the call's own line breaks are kept, so the rewrite never changes a line count
+        out = out.replace(m[0], `import.meta.ROLLUP_FILE_URL_${ref}${'\n'.repeat(m[0].split('\n').length - 1)}`);
+      }
+      if (left.test(out)) this.error(`orbitlab-shared-workers: ${relative(root, id)} has a new URL( naming a .worker. file that was not made an entry of the build; write it as new URL('./name.worker.ts', import.meta.url)`);
+      if (out === code) return null;
+      // The file as written, mapped one segment per line: exact at line level since the
+      // line count is unchanged, and the build's module comparison then sees the file as written.
+      const mappings = ['AAAA', ...Array<string>(out.split('\n').length - 1).fill('AACA')].join(';');
+      return { code: out, map: { version: 3, sources: [id], sourcesContent: [code], names: [], mappings } };
+    },
+  };
+}
+
 // Relative base so the build works both locally and under a GitHub Pages
 // sub-path (https://<user>.github.io/Orbitlab/).
 export default defineConfig({
   base: './',
-  plugins: [htmlCommentsPlugin(), pwaPlugin()],
+  plugins: [sharedWorkersPlugin(), htmlCommentsPlugin(), pwaPlugin()],
   define: { __ORBITLAB_BUILD__: JSON.stringify(buildStamp) },
   build: {
     target: 'es2022',
