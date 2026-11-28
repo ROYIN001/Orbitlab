@@ -110,7 +110,7 @@ describe('integrator against exact solutions', () => {
       const sim = new Simulation(cfg, { headless: true });
       let guard = 0;
       while (!sim.done && sim.state.t < until - 1e-9 && guard++ < 4_000_000) sim.step(Math.min(sim.suggestedDt() / k, until - sim.state.t));
-      return { r: { ...sim.state.r }, v: { ...sim.state.v } };
+      return { t: sim.state.t, done: sim.done, r: { ...sim.state.r }, v: { ...sim.state.v } };
     };
     const d = (p: ReturnType<typeof fly>, q: ReturnType<typeof fly>) => [
       Math.hypot(p.r.x - q.r.x, p.r.y - q.r.y, p.r.z - q.r.z),
@@ -120,7 +120,12 @@ describe('integrator against exact solutions', () => {
     // 1,267 m and 6.78; k = 2 to 4, position: 7.3, 162, 460, 896 m
     const rows: [number, number, number][] = [[60, 30, 2], [150, 800, 10], [300, 2500, 12], [500, 3000, 16]];
     for (const [until, dr, dv] of rows) {
-      const [s1, s2, s4] = [fly(1, until), fly(2, until), fly(4, until)];
+      const runs = { 1: fly(1, until), 2: fly(2, until), 4: fly(4, until) };
+      for (const [k, run] of Object.entries(runs)) {
+        expect(Math.abs(run.t - until), `T+${until} s, k = ${k}: the run is at t = ${run.t}`).toBeLessThanOrEqual(1e-6);
+        expect(run.done, `T+${until} s, k = ${k}: the flight had ended`).toBe(false);
+      }
+      const [s1, s2, s4] = [runs[1], runs[2], runs[4]];
       const [p12, v12] = d(s1, s2);
       const [p24] = d(s2, s4);
       expect(p12, `T+${until} s, k = 1 to 2, position`).toBeLessThanOrEqual(dr);

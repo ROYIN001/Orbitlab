@@ -80,15 +80,46 @@ describe('keplerUniversal', () => {
   });
 
   it('ends on extreme inputs', () => {
-    const pick = (e: number) => CASES.find((c) => c.e === e && c.rp === 6.578e6 && c.nu === 0)!;
-    const runs: [Case, number][] = [[pick(10), 1e12], [pick(0.001), 1e9], [pick(0.001), -1e9]];
-    for (const [c, dt] of runs) {
+    // the block `extreme` holds the three inputs, solved at 120 digits: e = 10 with dt = 1e12 s, e = 0.001 with dt = +-1e9 s
+    const X = fixture.extreme.cases as Case[];
+    expect(X.map((c) => [c.e, c.dt])).toEqual([[10, 1e12], [0.001, 1e9], [0.001, -1e9]]);
+    for (const c of X) {
       const t0 = performance.now();
-      const got = nums(keplerUniversal(state(c), dt, MU));
+      const got = keplerUniversal(state(c), c.dt, MU);
       const ms = performance.now() - t0;
-      expect(got, `e = ${c.e}, dt = ${dt}`).toHaveLength(6);
-      expect(got.every(Number.isFinite), `e = ${c.e}, dt = ${dt} returned ${got.join(', ')}`).toBe(true);
-      expect(ms, `e = ${c.e}, dt = ${dt} took ${ms} ms`).toBeLessThan(200);
+      const n = nums(got);
+      expect(n, `${label(c)}`).toHaveLength(6);
+      expect(n.every(Number.isFinite), `${label(c)} returned ${n.join(', ')}`).toBe(true);
+      expect(ms, `${label(c)} took ${ms} ms`).toBeLessThan(200);
+      if (c.e === 10) {
+        expect(dist(got.r, vec(c.r1)) / norm(vec(c.r1)), `${label(c)} position, relative`).toBeLessThanOrEqual(1e-9);
+        expect(dist(got.v, vec(c.v1)) / norm(vec(c.v1)), `${label(c)} velocity, relative`).toBeLessThanOrEqual(1e-9);
+      } else {
+        expect(dist(got.r, vec(c.r1)), `${label(c)} position`).toBeLessThanOrEqual(1);
+        expect(dist(got.v, vec(c.v1)), `${label(c)} velocity`).toBeLessThanOrEqual(1e-3);
+      }
+    }
+  });
+
+  it('another mu, another orientation', () => {
+    const H = fixture.heliocentric;
+    expect(H.mu).toBe(1.32712440018e20);
+    expect(H.cases).toHaveLength(120);
+    for (const c of H.cases as Case[]) {
+      const got = keplerUniversal(state(c), c.dt, H.mu);
+      const r1 = vec(c.r1);
+      const v1 = vec(c.v1);
+      expect(dist(got.r, r1) / norm(r1), `${label(c)} position, relative`).toBeLessThanOrEqual(1e-11);
+      expect(dist(got.v, v1) / norm(v1), `${label(c)} velocity, relative`).toBeLessThanOrEqual(1e-11);
+    }
+  });
+
+  it('very short steps', () => {
+    expect(fixture.short.cases).toHaveLength(24);
+    for (const c of fixture.short.cases as Case[]) {
+      const got = keplerUniversal(state(c), c.dt, MU);
+      expect(dist(got.r, vec(c.r1)), `${label(c)} position`).toBeLessThanOrEqual(1e-3);
+      expect(dist(got.v, vec(c.v1)), `${label(c)} velocity`).toBeLessThanOrEqual(1e-7);
     }
   });
 

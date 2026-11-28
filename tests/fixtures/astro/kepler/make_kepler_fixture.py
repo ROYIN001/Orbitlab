@@ -36,11 +36,11 @@ NU = [-2.0, -0.3, 0.0, 0.8]
 DT = [600.0, 3600.0, 21600.0, 86400.0, 259200.0, -3600.0]
 
 
-def from_perifocal(rp, e, nu, inc=INC, raan=RAAN, argp=ARGP):
+def from_perifocal(rp, e, nu, inc=INC, raan=RAAN, argp=ARGP, mu=MU):
     p = rp * (1 + e)
     r = p / (1 + e * math.cos(nu))
     rpf = np.array([r * math.cos(nu), r * math.sin(nu), 0.0])
-    vpf = math.sqrt(MU / p) * np.array([-math.sin(nu), e + math.cos(nu), 0.0])
+    vpf = math.sqrt(mu / p) * np.array([-math.sin(nu), e + math.cos(nu), 0.0])
     cO, sO, ci, si, cw, sw = (math.cos(raan), math.sin(raan), math.cos(inc), math.sin(inc), math.cos(argp),
                               math.sin(argp))
     P = np.array([cO * cw - sO * sw * ci, sO * cw + cO * sw * ci, sw * si])
@@ -58,7 +58,7 @@ def newton(f, df, x):
     raise RuntimeError(f'reference did not converge: x={mp.nstr(x, 8)}, step={mp.nstr(step, 8)}')
 
 
-def kepler_reference(r0, v0, dt):
+def kepler_reference(r0, v0, dt, MU=MU):
     r0 = [mp.mpf(repr(float(x))) for x in r0]
     v0 = [mp.mpf(repr(float(x))) for x in v0]
     mu = mp.mpf(repr(MU))
@@ -126,7 +126,57 @@ for e in ECC:
                 cases.append(dict(e=e, rp=rp, nu=nu, r=[f17(x) for x in r0], v=[f17(x) for x in v0], dt=dt,
                                   r1=[f17(x) for x in r1], v1=[f17(x) for x in v1]))
 assert len(cases) == 888, len(cases)
+
+
+def build(rp, e, nu, mu, raan, inc, argp):
+    r0, v0 = from_perifocal(rp, e, nu, inc, raan, argp, mu)
+    if e == 1.0:
+        v0 = v0 * (math.sqrt(2 * mu / np.linalg.norm(r0)) / np.linalg.norm(v0))
+    return r0, v0
+
+
+def case(e, rp, nu, mu, raan, inc, argp, dt):
+    r0, v0 = build(rp, e, nu, mu, raan, inc, argp)
+    r1, v1 = kepler_reference(r0, v0, dt, mu)
+    return dict(e=e, rp=rp, nu=nu, r=[f17(x) for x in r0], v=[f17(x) for x in v0], dt=dt,
+                r1=[f17(x) for x in r1], v1=[f17(x) for x in v1])
+
+
+# Block `heliocentric`: another mu and another orientation. mu = 1.32712440018e20, Omega = 4.0, i = 2.5, omega = 5.5 rad;
+# e in {0.0167, 0.2, 0.9, 1, 1.5} x perihelion in {5e10, 1.5e11, 7.8e11} m x nu in {-1, 0.5} rad x dt in
+# {86400, 3e6, 3e8, -3e6} s = 120 cases, built as the main block is built (for e = 1 the speed scaled to sqrt(2 mu / r)).
+MU_SUN = 1.32712440018e20
+helio = [case(e, rp, nu, MU_SUN, 4.0, 2.5, 5.5, dt)
+         for e in [0.0167, 0.2, 0.9, 1.0, 1.5] for rp in [5e10, 1.5e11, 7.8e11] for nu in [-1.0, 0.5]
+         for dt in [86400.0, 3e6, 3e8, -3e6]]
+assert len(helio) == 120
+# Block `short`: very short steps, Earth's mu and the main block's orientation: e in {0.001, 0.6, 1, 1.5},
+# r_p = 6.578e6 m, nu in {0, 0.8} rad, dt in {1e-3, -1e-3, 1} s = 24 cases.
+short = [case(e, 6.578e6, nu, MU, RAAN, INC, ARGP, dt)
+         for e in [0.001, 0.6, 1.0, 1.5] for nu in [0.0, 0.8] for dt in [1e-3, -1e-3, 1.0]]
+assert len(short) == 24
+# Block `extreme`: the three inputs of the test `ends on extreme inputs`, solved at 120 digits instead of 80 (the
+# route loses about 6 digits to 190,000 revolutions and a few to the deep hyperbola); `check_dps` is the largest
+# difference between the 120-digit and a 160-digit solution, a measure of the reference against itself.
+extreme = []
+check = 0.0
+for e, dt in [(10.0, 1e12), (0.001, 1e9), (0.001, -1e9)]:
+    mp.mp.dps = 120
+    c = case(e, 6.578e6, 0.0, MU, RAAN, INC, ARGP, dt)
+    r0, v0 = build(6.578e6, e, 0.0, MU, RAAN, INC, ARGP)
+    r120, v120 = kepler_reference(r0, v0, dt)
+    mp.mp.dps = 160
+    r160, v160 = kepler_reference(r0, v0, dt)
+    d = max(abs(a_ - b_) / abs(b_) for a_, b_ in zip(r120 + v120, r160 + v160))
+    check = max(check, float(d))
+    mp.mp.dps = 120
+    extreme.append(c)
+mp.mp.dps = 80
+assert check < 1e-15, check
+print('extreme block: 120 digits against 160 digits, worst relative difference', check)
 out = dict(generator=f'mpmath {mp.__version__} at {mp.mp.dps} digits; numpy {np.__version__}',
-           script='make_kepler_fixture.py', mu=MU, raan=RAAN, inc=INC, argp=ARGP, cases=cases)
+           script='make_kepler_fixture.py', mu=MU, raan=RAAN, inc=INC, argp=ARGP, cases=cases,
+           heliocentric=dict(mu=MU_SUN, raan=4.0, inc=2.5, argp=5.5, cases=helio), short=dict(cases=short),
+           extreme=dict(dps=120, cases=extreme))
 OUT.write_text(json.dumps(out, indent=1) + '\n')
-print(OUT, len(cases), 'cases')
+print(OUT, len(cases), 'cases', len(helio), 'heliocentric', len(short), 'short', len(extreme), 'extreme')
