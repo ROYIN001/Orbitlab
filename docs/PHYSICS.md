@@ -1109,17 +1109,25 @@ second without a change, on the six-DOF LEO quick start at 200 km); recorded, no
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic
 pressure, ideal-gas density, speed of sound √(γ R T)). 86–1000 km: piecewise exponential
-density (Vallado table 8-4), with the mesopause temperature held at 186.87 K to 91 km as
+density (Vallado table 8-4 from 90 km up), with the mesopause temperature held at 186.87 K to 91 km as
 USSA-76 does before the thermosphere rises toward ~1000 K.
 
-The 86 km row of the exponential table is re-derived rather than copied. Vallado's published
-values are discontinuous at both ends of their own interval: 6.6e-6 kg/m³ with a 5.5 km scale
-height is 5.1 % below the USSA-76 density the branch above hands over, and decays to 3.190e-6
-at 90 km where the next row *starts* at 3.396e-6 — a 6.4 % density **inversion** in the middle
-of the decay band, which gives drag a discontinuous, wrong-signed derivative. The row used here
-is base 6.95793e-6 (the USSA-76 value at 86 km) with H = 4 km / ln(6.958e-6/3.396e-6) =
-5.575 km, which lands exactly on the 90 km row. Every other node is continuous to better than
-0.04 % and is left as published. The guard that missed this stepped 1000 m at a time, landing
+The 86 km row of the exponential table is the app's own; Vallado's table has no row at 86 km.
+Its rows there start at 80 km (1.905e-5 kg/m³ with a 5.799 km scale height) and at 90 km
+(3.396e-6 kg/m³, 5.382 km), as two works that reproduce the table give them; the printed book
+was not at hand ([PF-03's report](development/reports/PF-03-documents.md), "Row 4, settled").
+The 80 km row arrives at 90 km on 1.905e-5 × exp(−10/5.799) = 3.396e-6, so the published table
+has no step there. The app hands over from USSA-76 at 86 km and so needs a row that starts
+there. The row it first had, 6.6e-6 kg/m³ with a 5.5 km scale height (where it came from is not
+recorded in this repository), was discontinuous at both ends of its interval: it was 5.1 % below the USSA-76
+density the branch above hands over, and decayed to 3.189e-6 at 90 km where the next row
+*starts* at 3.396e-6 — a density **inversion** in the middle of the decay band (6.5 % at the
+node itself, 6.4 % measured a metre either side of it), which gave drag a discontinuous, wrong-signed
+derivative. The row used now is base 6.95793e-6 (the USSA-76 value at 86 km) with H = 5.575 km;
+4 km / ln(6.958e-6/3.396e-6) is 5.577 km, and with 5.575 the row reaches 3.3953e-6 at 90 km,
+0.02 % under the next row. The rows from 90 km up are as published (all twenty equal the rows
+of one of the two reproductions, and the seven to 150 km those of the other as well), and
+every node among them is continuous to better than 0.04 %. The guard that missed this stepped 1000 m at a time, landing
 on every table node and so stepping over a discontinuity *at* one; it now samples off-node and
 a metre either side of every node.
 
