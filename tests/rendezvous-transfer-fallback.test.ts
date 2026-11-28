@@ -69,11 +69,19 @@ function fly(sim: Simulation, until: (sim: Simulation) => boolean = () => false,
   while (!sim.done && sim.state.t < limit && !until(sim) && guard++ < 3e6) sim.step(sim.suggestedDt());
 }
 
+/** The number of events logged before the step that called the solver, for the flight last flown by `toTransfer`. */
+let eventsBeforeSolve = -1;
+
 /** A flight flown in point mass to the transfer burn's solution. */
 function toTransfer(profile: RendezvousProfileId, launchTime: Date): Simulation {
   rec.calls.length = 0;
+  eventsBeforeSolve = -1;
   const sim = new Simulation(mission(profile, launchTime), { headless: true });
-  fly(sim, () => rec.calls.length > 0);
+  fly(sim, () => {
+    if (rec.calls.length > 0) return true;
+    eventsBeforeSolve = sim.events.length;
+    return false;
+  });
   return sim;
 }
 
@@ -158,12 +166,14 @@ describe('a failed transfer solution, flown', () => {
       const call = rec.calls[0];
       const plan = sim.rendezvous.plan!;
       const from = sim.events.length - 1;
+      // every event the step that called the solver logged
+      const solveStep = sim.events.slice(eventsBeforeSolve);
       // the first step that ends at or after the plan's arrival (measured 0.43 to 0.46 s after it)
       fly(sim, (x) => x.state.t >= plan.tArrive);
       const atArrival = norm(sub(sim.state.r, plan.station.at(sim.state.t).r));
       const late = sim.state.t - plan.tArrive;
       fly(sim);
-      return { sim, call, transfer: sim.events[from], after: sim.events.slice(from + 1), atArrival, late };
+      return { sim, call, solveStep, transfer: sim.events[from], after: sim.events.slice(from + 1), atArrival, late };
     } finally {
       rec.fail = false;
     }
@@ -189,6 +199,13 @@ describe('a failed transfer solution, flown', () => {
     expect(f.transfer.params!.burn).toBe('dv3');
     expect(f.transfer.params!.dv).toBe(+guess.toFixed(1));
     within10(guess, 30.35);
+    // the step that called the solver logged only that burn's event: nothing before it says the solution failed
+    expect(f.solveStep.map((e) => `${e.key} ${e.severity}`)).toEqual(['evt.rendezvousBurn info']);
+    expect(f.solveStep[0]).toBe(f.transfer);
+    // over the whole flight, launch included, the one event at warn or fail is the propellant's (measured; every other
+    // event is info, major or success)
+    expect(f.sim.events.filter((e) => e.severity === 'warn' || e.severity === 'fail').map((e) => `${e.key} ${e.severity}`))
+      .toEqual(['evt.rendezvousFuelDepleted fail']);
     // what follows, to the end: no event names the solver, and none is a warning; the one failure is the propellant's,
     // 6,163 s after Kurs takes over 107 km out (measured)
     expect(f.after.map((e) => `${e.key} ${e.severity}`)).toEqual([
