@@ -5,7 +5,7 @@
 import type { State } from './frames';
 
 /** Cap on the passes of the solver (the bracket's own growth is capped apart). */
-export const KEPLER_MAX_ITER = 100;
+const KEPLER_MAX_ITER = 100;
 const MAX_BRACKET = 2200;
 
 /** True unless every argument is finite (x * 0 is 0 only for a finite x, and cannot overflow). */
@@ -43,7 +43,11 @@ function stumpff(psi: number): [number, number] {
  * inside a bracket (the time is monotonic in chi), at most KEPLER_MAX_ITER
  * passes, so it always ends. dt = 0 returns the input; r = 0, mu <= 0 or any
  * non-finite input gives NaN in every number. A state with r parallel to v is
- * outside the contract.
+ * outside the contract. If the cap on passes is ever reached the function
+ * returns the last iterate inside the bracket, as finite numbers, without a
+ * flag (no case tried has reached it). For a |dt| beyond what a double carries
+ * through the solver (about 1e150 s and more, where t(chi) overflows) the
+ * result is not defined: it may be NaN in every number.
  */
 export function keplerUniversal(s: State, dt: number, mu: number): State {
   const { r, v } = s;
