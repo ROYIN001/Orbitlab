@@ -1,0 +1,219 @@
+// Scratch test, not part of any suite: it writes tests/fixtures/t1/requests.json, the requests that the
+// T-1 checks send to the twelve workers of the built app (plan S20-T1, Task A, Step 2; read by
+// tests/browser/t1/worker-digests.mjs and tests/browser/t1/first-load.mjs).
+// Run, from the repository root:
+//   cp tests/fixtures/t1/build-requests.ts.txt tests/t1-build-requests.test.ts
+//   npx vitest run tests/t1-build-requests.test.ts
+//   rm tests/t1-build-requests.test.ts
+// It runs under the test runner because some of these modules need the runner's own loader (the
+// snapshot of the catalogue is read with import.meta.glob, as tests/conjunction.test.ts reads it).
+//
+// The file's form: { about, workers: { <worker>: { messages: [...] } } }, the workers in the order of
+// the plan's table, each worker's messages in the order they are posted. A Date is written as
+// { "$date": <time value> }. The attitude-tune request is written with a list "$planes" beside it, and
+// each `plane` in its `cases` and `verify` as { "$ref": <index into that list> }: the page makes the
+// Dates again, and puts the one object of the list in place of every reference to it, before posting,
+// so that each plane is one object on both sides after posting (src/physics/attitude-tune-job.ts:12-16).
+// The test checks that the file read back that way gives the very values built here (their canonical
+// bytes, tests/browser/t1/canonical.mjs), so that nothing is lost on the way through JSON.
+import { describe, expect, it } from 'vitest';
+import { canonicalBytes } from './browser/t1/canonical.mjs';
+import { defaultMissionState, missionConfigFromState } from '../src/lessons/config';
+import type { MissionConfig } from '../src/types';
+import type { AttitudeTuneRequest } from '../src/physics/attitude-tune-job';
+import type { PlaneModel } from '../src/physics/rigid/linear';
+import { defaultMonteCarlo } from '../src/physics/monte-carlo';
+import { vehicleById } from '../src/data/vehicles';
+import { ECSS_LEVELS } from '../src/physics/propagator/activity';
+import { ballisticFromSets } from '../src/orbit/ballistic';
+import { AGENCY_OBJECTS, readSet, type BundledSet } from './fixtures/reentry/agencies';
+import { candidates } from '../src/orbit/screening';
+import { skyFacts, skyObjects } from '../src/orbit/real-sky';
+import { elementsFromRecord } from '../src/orbit/omm';
+import { parseSnapshot } from '../src/provider/data-provider';
+import { DEG } from '../src/physics/constants';
+import { stateAt } from '../src/orbit/kepler';
+import { altitudesForLifetimes, circularOrbit } from '../src/orbit/lifetime-altitude';
+import { ALL_FORCES } from '../src/physics/propagator/forces';
+import { DEFAULT_FORM, lifetimeRequestFor, missionRequirements, templateDesign, tradeOptionsFor } from '../src/design/requirements-page';
+import { parseLessonFile } from '../src/lessons/lesson-file';
+import resultsText from './fixtures/recheck/results.orbitlab-results.json?raw';
+import scenarioText from './fixtures/recheck/scenario.orbitlab-lesson.json?raw';
+
+// Node's modules through a non-literal import, as tests/repo-hygiene.test.ts loads them: the project has no node types.
+interface FsModule { writeFileSync(path: string | URL, data: string): void }
+const load = (id: string): Promise<unknown> => import(/* @vite-ignore */ id);
+
+/** 2026-09-15 12:00Z, the default mission's launch, as a Julian date. */
+const JD = 2461299.0;
+
+// ─── the attitude-tune request: the eleven lines of tests/tune-job.test.ts:227-237, copied ─────
+// (`plant` and `attitudeRequest` are private to that test file.)
+/** A rigid double integrator behind a gimbal lag, at inertia `I` (kg·m²). */
+function plant(I: number): PlaneModel {
+  return { axis: 'z', n: 2, states: ['angle', 'rate'], A: [0, 1, 0, 0], B: [0, 1 / I], cAngle: [1, 0], cRate: [0, 1], cAero: [0, 0],
+    actuator: 'engines', tau: 0.1 + I / 1e9, inertia: I, kTheta: 1.5, kOmega: 3 };
+}
+
+function attitudeRequest(): AttitudeTuneRequest {
+  const planes = [1e6, 3e6, 1e7, 3e7, 6e7].map(plant);
+  const verify = planes.map((p, i) => ({ t: 10 * i, plane: p }));
+  // The search cases are other objects holding the same planes, as tuneCases gives them.
+  return { cases: [verify[0], verify[2], verify[4]].map((c) => ({ ...c })), T: 0.01, targets: { pmDeg: 45, gmDb: 6 }, feedForward: 1, verify };
+}
+// ─── end of the copy ───────────────────────────────────────────────────────────────────────────
+
+/** A value as JSON can carry it: each Date as { $date }. */
+function encode(v: unknown): unknown {
+  if (v instanceof Date) return { $date: v.getTime() };
+  if (Array.isArray(v)) return v.map(encode);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, encode(x)]));
+  return v;
+}
+
+/** What the page does with the file's value (tests/browser/t1/worker-digests.mjs, `revive`). */
+function revive(v: unknown, planes: unknown[] | null): unknown {
+  if (Array.isArray(v)) return v.map((x) => revive(x, planes));
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    const keys = Object.keys(o);
+    if (keys.length === 1 && keys[0] === '$date') return new Date(o.$date as number);
+    if (keys.length === 1 && keys[0] === '$ref') {
+      if (!planes) throw new Error('a $ref with no $planes');
+      return planes[o.$ref as number];
+    }
+    return Object.fromEntries(keys.map((k) => [k, revive(o[k], planes)]));
+  }
+  return v;
+}
+
+/** The attitude request with its planes listed once and referred to by index. */
+function encodeAttitude(req: AttitudeTuneRequest): { $planes: unknown[]; messages: unknown[] } {
+  const planes: PlaneModel[] = [];
+  const ref = (p: PlaneModel): { $ref: number } => {
+    let k = planes.indexOf(p);
+    if (k < 0) { planes.push(p); k = planes.length - 1; }
+    return { $ref: k };
+  };
+  const at = (c: { t: number; plane: PlaneModel }) => ({ ...c, plane: ref(c.plane) });
+  const verify = req.verify.map(at);
+  const cases = req.cases.map(at);
+  const { cases: _c, verify: _v, ...rest } = req;
+  return { $planes: planes.map(encode), messages: [{ ...(encode(rest) as object), cases, verify }] };
+}
+
+const sameBytes = (a: Uint8Array, b: Uint8Array): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
+
+const mission = (): MissionConfig => missionConfigFromState(defaultMissionState());
+
+describe('the T-1 requests', () => {
+  it('builds the twelve requests from the app\'s own modules and writes tests/fixtures/t1/requests.json', async () => {
+    expect(Date.UTC(2026, 8, 15, 12) / 86400000 + 2440587.5).toBe(JD);
+    expect(mission().launchTime.getTime()).toBe(Date.UTC(2026, 8, 15, 12));
+    const built: Record<string, { messages: unknown[]; planes?: unknown[] }> = {};
+
+    // flight: start, then sixty advances of 10 s, the clock unable to end one
+    built.flight = { messages: [
+      { type: 'start', session: 1, cfg: mission() },
+      ...Array.from({ length: 60 }, (_, i) => ({ type: 'advance', session: 1, id: i + 1, seconds: 10, maxSteps: 20000, budgetMs: 1e9 })),
+    ] };
+
+    // tune: the default mission flown as a point mass, as the bare message
+    built.tune = { messages: [{ ...mission(), dynamics: { model: 'pointMass', wind: 'calm', seed: 1 } }] };
+
+    // attitude-tune: five planes; the cases hold the same plane objects as `verify`
+    const attitude = attitudeRequest();
+    expect(attitude.cases.every((c) => attitude.verify.some((v) => v.plane === c.plane && v !== c))).toBe(true);
+    built['attitude-tune'] = { messages: [attitude] };
+
+    // monte-carlo: runs 0 and 1 of the default set, to one worker
+    built['monte-carlo'] = { messages: [0, 1].map((index) => ({ cfg: mission(), mc: defaultMonteCarlo(), index, law: 'standard' })) };
+
+    // ratings: the catalogue's Electron, as the bare VehicleSpec
+    const electron = vehicleById('electron');
+    expect(electron.id).toBe('electron');
+    built.ratings = { messages: [electron] };
+
+    // readiness: the default mission without its vehicle, against the catalogue's Soyuz-2.1a
+    const { vehicleId: _id, vehicleSpec: _spec, ...readinessMission } = mission();
+    built.readiness = { messages: [{ id: 1, vehicleId: 'soyuz21a', mission: readinessMission }] };
+
+    // reentry: the first agency object's two sets at lead 30, B from their history, a constant activity
+    const sets = (AGENCY_OBJECTS[0].sets as Record<string, BundledSet[]>)['30'].map(readSet);
+    expect(sets.length).toBe(2);
+    const reentry = { sets, from: 'history', craft: { mass: 1000, area: 5, cd: 2.2 }, activity: ECSS_LEVELS.moderate, horizonDays: 365 };
+    // the plan's condition: the B fitted from the two sets is not null
+    const b = ballisticFromSets(sets, ECSS_LEVELS.moderate);
+    expect(b, 'the B fitted from the two sets').not.toBeNull();
+    built.reentry = { messages: [reentry] };
+
+    // screening: as the case "misses no approach a ten-second brute force finds" of tests/conjunction.test.ts builds it
+    const SNAPSHOT_FILE = import.meta.glob('../public/data/satellites.json', { import: 'default', eager: true }) as Record<string, unknown>;
+    const snap = parseSnapshot(Object.values(SNAPSHOT_FILE)[0], 'satellites');
+    const all = snap.data.groups.flatMap((g) => skyObjects(g.sets.map(elementsFromRecord), g.id));
+    const self = all.find((o) => o.source === 'weather' && Math.abs(skyFacts(o).perigeeAlt - 850e3) < 60e3)!;
+    expect(self).toBeDefined();
+    const within = 200e3;
+    const others = candidates(self, all.filter((o) => o.source === 'debris'), within).slice(0, 40);
+    expect(others.length).toBe(40);
+    const jd0 = Date.parse('2026-09-26T12:00:00Z') / 86400000 + 2440587.5;
+    built.screening = { messages: [{ self: self.el, others: others.map((o) => o.el), jd0, jd1: jd0 + 1, within, radius: 10 }] };
+
+    // lifetime: a circular orbit at 400 km, 51.6 deg, every force, 25 years
+    const orbit = circularOrbit(400e3, { sso: false, inclination: 51.6 * DEG, raan: 0 }, JD);
+    const state = stateAt(orbit, 0, false);
+    built.lifetime = { messages: [{
+      r0: [state.r.x, state.r.y, state.r.z], v0: [state.v.x, state.v.y, state.v.z], jd0: JD,
+      options: { method: 'mean', duration: 788400000, forces: ALL_FORCES, spacecraft: { mass: 1000, area: 5, cd: 2.2, cr: 1.3 }, samples: 600, tolerance: 1e-9 },
+    }] };
+    expect(788400000).toBe(25 * 365 * 86400);
+
+    // lifetime-altitude: the requirements page's default form
+    const template = templateDesign(DEFAULT_FORM.template);
+    const altitudes = lifetimeRequestFor(template, DEFAULT_FORM, JD);
+    built['lifetime-altitude'] = { messages: [altitudes] };
+
+    // requirement-trades: the same form, with the lifetimes answered here for the request above
+    const lifetime = altitudesForLifetimes(lifetimeRequestFor(templateDesign(DEFAULT_FORM.template), DEFAULT_FORM, JD), () => {});
+    built['requirement-trades'] = { messages: [{
+      req: missionRequirements(DEFAULT_FORM), template: templateDesign(DEFAULT_FORM.template), opts: tradeOptionsFor(DEFAULT_FORM, JD, lifetime),
+    }] };
+
+    // recheck: the fixture's results file against its lesson file
+    const results = JSON.parse(resultsText) as unknown;
+    const scenario = JSON.parse(scenarioText) as unknown;
+    built.recheck = { messages: [{ results: [results], lessons: parseLessonFile(scenario, new Set()).lessons, names: ['results.orbitlab-results.json'] }] };
+
+    const order = ['flight', 'tune', 'attitude-tune', 'monte-carlo', 'ratings', 'readiness', 'reentry', 'screening', 'lifetime',
+      'lifetime-altitude', 'requirement-trades', 'recheck'];
+    expect(Object.keys(built)).toEqual(order);
+
+    const workers: Record<string, unknown> = {};
+    for (const name of order) {
+      workers[name] = name === 'attitude-tune' ? encodeAttitude(built[name].messages[0] as AttitudeTuneRequest) : { messages: built[name].messages.map(encode) };
+    }
+    const file = {
+      about: 'The requests of plan S20-T1, Task A, Step 2, written by tests/fixtures/t1/build-requests.ts.txt. A Date is {"$date": <time value>}; '
+        + 'in the attitude-tune request each {"$ref": k} stands for the one object $planes[k].',
+      workers,
+    };
+    const text = `${JSON.stringify(file, null, 1)}\n`;
+
+    // read back as the page reads it, each worker's messages must be the values built here, byte for byte
+    const back = JSON.parse(text) as typeof file;
+    for (const name of order) {
+      const w = back.workers[name] as { messages: unknown[]; $planes?: unknown[] };
+      const planes = w.$planes ? (revive(w.$planes, null) as unknown[]) : null;
+      const messages = revive(w.messages, planes) as unknown[];
+      expect(sameBytes(canonicalBytes(messages), canonicalBytes(built[name].messages)), `${name} through JSON`).toBe(true);
+      if (name === 'attitude-tune') {
+        const m = messages[0] as AttitudeTuneRequest;
+        expect(m.cases.map((c) => m.verify.indexOf(m.verify.find((v) => v.plane === c.plane)!))).toEqual([0, 2, 4]);
+      }
+    }
+    expect(text.length).toBeLessThan(1024 * 1024);
+
+    const { writeFileSync } = (await load('node:fs')) as FsModule;
+    writeFileSync(new URL('./fixtures/t1/requests.json', import.meta.url), text);
+  }, 600_000);
+});

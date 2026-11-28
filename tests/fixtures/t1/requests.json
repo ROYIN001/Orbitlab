@@ -1,0 +1,4811 @@
+{
+ "about": "The requests of plan S20-T1, Task A, Step 2, written by tests/fixtures/t1/build-requests.ts.txt. A Date is {\"$date\": <time value>}; in the attitude-tune request each {\"$ref\": k} stands for the one object $planes[k].",
+ "workers": {
+  "flight": {
+   "messages": [
+    {
+     "type": "start",
+     "session": 1,
+     "cfg": {
+      "vehicleId": "soyuz21a",
+      "satelliteId": "crew",
+      "siteId": "baikonur",
+      "orbit": {
+       "id": "iss",
+       "name": "ISS orbit (420 km, 51.6°)",
+       "perigee": 420000,
+       "apogee": 420000,
+       "inclination": 51.64,
+       "argPerigee": 0,
+       "raanMode": "iss",
+       "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+      },
+      "launchTime": {
+       "$date": 1789473600000
+      },
+      "guidance": {
+       "pitchOverAltitude": 50,
+       "kickAngle": 6,
+       "kickDuration": 12,
+       "gravityTurnEnd": 65000,
+       "parkingAltitude": 0,
+       "maxTimeToGo": 1500,
+       "maxTurnRate": 0.5,
+       "loftAltitude": 0,
+       "pitchMax": 35,
+       "pitchMin": -15,
+       "slewRate": 3,
+       "maxAccel": 0,
+       "pitchProgram": [
+        [
+         0,
+         90
+        ],
+        [
+         5,
+         90
+        ],
+        [
+         6,
+         89.85
+        ],
+        [
+         8.5,
+         89.47
+        ],
+        [
+         11,
+         88.89
+        ],
+        [
+         13.5,
+         88.02
+        ],
+        [
+         16,
+         87.12
+        ],
+        [
+         18.5,
+         86.2
+        ],
+        [
+         21,
+         85.13
+        ],
+        [
+         23.5,
+         83.85
+        ],
+        [
+         26,
+         82.57
+        ],
+        [
+         28.5,
+         81.29
+        ],
+        [
+         31,
+         79.86
+        ],
+        [
+         36,
+         76.59
+        ],
+        [
+         41,
+         73.22
+        ],
+        [
+         46,
+         69.4
+        ],
+        [
+         51,
+         65.63
+        ],
+        [
+         56,
+         62.03
+        ],
+        [
+         61,
+         58.45
+        ],
+        [
+         66,
+         54.97
+        ],
+        [
+         71,
+         51.6
+        ],
+        [
+         76,
+         48.71
+        ],
+        [
+         81,
+         45.89
+        ],
+        [
+         86,
+         43.32
+        ],
+        [
+         91,
+         40.85
+        ],
+        [
+         96,
+         38.73
+        ],
+        [
+         118,
+         33.73
+        ],
+        [
+         128,
+         26.73
+        ],
+        [
+         210,
+         17.28
+        ],
+        [
+         285,
+         11.28
+        ],
+        [
+         287.7,
+         11.28
+        ]
+       ],
+       "closedLoopStart": 140
+      },
+      "failure": {
+       "mode": "none",
+       "time": 60,
+       "stage": 0
+      },
+      "boosterRecovery": false,
+      "payloadMassOverride": 7150,
+      "guidanceResolved": true,
+      "dynamics": {
+       "model": "sixDof",
+       "wind": "calm",
+       "seed": 20260919
+      }
+     }
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 1,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 2,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 3,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 4,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 5,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 6,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 7,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 8,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 9,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 10,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 11,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 12,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 13,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 14,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 15,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 16,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 17,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 18,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 19,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 20,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 21,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 22,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 23,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 24,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 25,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 26,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 27,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 28,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 29,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 30,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 31,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 32,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 33,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 34,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 35,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 36,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 37,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 38,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 39,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 40,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 41,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 42,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 43,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 44,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 45,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 46,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 47,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 48,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 49,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 50,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 51,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 52,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 53,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 54,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 55,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 56,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 57,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 58,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 59,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    },
+    {
+     "type": "advance",
+     "session": 1,
+     "id": 60,
+     "seconds": 10,
+     "maxSteps": 20000,
+     "budgetMs": 1000000000
+    }
+   ]
+  },
+  "tune": {
+   "messages": [
+    {
+     "vehicleId": "soyuz21a",
+     "satelliteId": "crew",
+     "siteId": "baikonur",
+     "orbit": {
+      "id": "iss",
+      "name": "ISS orbit (420 km, 51.6°)",
+      "perigee": 420000,
+      "apogee": 420000,
+      "inclination": 51.64,
+      "argPerigee": 0,
+      "raanMode": "iss",
+      "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+     },
+     "launchTime": {
+      "$date": 1789473600000
+     },
+     "guidance": {
+      "pitchOverAltitude": 50,
+      "kickAngle": 6,
+      "kickDuration": 12,
+      "gravityTurnEnd": 65000,
+      "parkingAltitude": 0,
+      "maxTimeToGo": 1500,
+      "maxTurnRate": 0.5,
+      "loftAltitude": 0,
+      "pitchMax": 35,
+      "pitchMin": -15,
+      "slewRate": 3,
+      "maxAccel": 0,
+      "pitchProgram": [
+       [
+        0,
+        90
+       ],
+       [
+        5,
+        90
+       ],
+       [
+        6,
+        89.85
+       ],
+       [
+        8.5,
+        89.47
+       ],
+       [
+        11,
+        88.89
+       ],
+       [
+        13.5,
+        88.02
+       ],
+       [
+        16,
+        87.12
+       ],
+       [
+        18.5,
+        86.2
+       ],
+       [
+        21,
+        85.13
+       ],
+       [
+        23.5,
+        83.85
+       ],
+       [
+        26,
+        82.57
+       ],
+       [
+        28.5,
+        81.29
+       ],
+       [
+        31,
+        79.86
+       ],
+       [
+        36,
+        76.59
+       ],
+       [
+        41,
+        73.22
+       ],
+       [
+        46,
+        69.4
+       ],
+       [
+        51,
+        65.63
+       ],
+       [
+        56,
+        62.03
+       ],
+       [
+        61,
+        58.45
+       ],
+       [
+        66,
+        54.97
+       ],
+       [
+        71,
+        51.6
+       ],
+       [
+        76,
+        48.71
+       ],
+       [
+        81,
+        45.89
+       ],
+       [
+        86,
+        43.32
+       ],
+       [
+        91,
+        40.85
+       ],
+       [
+        96,
+        38.73
+       ],
+       [
+        118,
+        33.73
+       ],
+       [
+        128,
+        26.73
+       ],
+       [
+        210,
+        17.28
+       ],
+       [
+        285,
+        11.28
+       ],
+       [
+        287.7,
+        11.28
+       ]
+      ],
+      "closedLoopStart": 140
+     },
+     "failure": {
+      "mode": "none",
+      "time": 60,
+      "stage": 0
+     },
+     "boosterRecovery": false,
+     "payloadMassOverride": 7150,
+     "guidanceResolved": true,
+     "dynamics": {
+      "model": "pointMass",
+      "wind": "calm",
+      "seed": 1
+     }
+    }
+   ]
+  },
+  "attitude-tune": {
+   "$planes": [
+    {
+     "axis": "z",
+     "n": 2,
+     "states": [
+      "angle",
+      "rate"
+     ],
+     "A": [
+      0,
+      1,
+      0,
+      0
+     ],
+     "B": [
+      0,
+      0.000001
+     ],
+     "cAngle": [
+      1,
+      0
+     ],
+     "cRate": [
+      0,
+      1
+     ],
+     "cAero": [
+      0,
+      0
+     ],
+     "actuator": "engines",
+     "tau": 0.101,
+     "inertia": 1000000,
+     "kTheta": 1.5,
+     "kOmega": 3
+    },
+    {
+     "axis": "z",
+     "n": 2,
+     "states": [
+      "angle",
+      "rate"
+     ],
+     "A": [
+      0,
+      1,
+      0,
+      0
+     ],
+     "B": [
+      0,
+      3.3333333333333335e-7
+     ],
+     "cAngle": [
+      1,
+      0
+     ],
+     "cRate": [
+      0,
+      1
+     ],
+     "cAero": [
+      0,
+      0
+     ],
+     "actuator": "engines",
+     "tau": 0.10300000000000001,
+     "inertia": 3000000,
+     "kTheta": 1.5,
+     "kOmega": 3
+    },
+    {
+     "axis": "z",
+     "n": 2,
+     "states": [
+      "angle",
+      "rate"
+     ],
+     "A": [
+      0,
+      1,
+      0,
+      0
+     ],
+     "B": [
+      0,
+      1e-7
+     ],
+     "cAngle": [
+      1,
+      0
+     ],
+     "cRate": [
+      0,
+      1
+     ],
+     "cAero": [
+      0,
+      0
+     ],
+     "actuator": "engines",
+     "tau": 0.11,
+     "inertia": 10000000,
+     "kTheta": 1.5,
+     "kOmega": 3
+    },
+    {
+     "axis": "z",
+     "n": 2,
+     "states": [
+      "angle",
+      "rate"
+     ],
+     "A": [
+      0,
+      1,
+      0,
+      0
+     ],
+     "B": [
+      0,
+      3.3333333333333334e-8
+     ],
+     "cAngle": [
+      1,
+      0
+     ],
+     "cRate": [
+      0,
+      1
+     ],
+     "cAero": [
+      0,
+      0
+     ],
+     "actuator": "engines",
+     "tau": 0.13,
+     "inertia": 30000000,
+     "kTheta": 1.5,
+     "kOmega": 3
+    },
+    {
+     "axis": "z",
+     "n": 2,
+     "states": [
+      "angle",
+      "rate"
+     ],
+     "A": [
+      0,
+      1,
+      0,
+      0
+     ],
+     "B": [
+      0,
+      1.6666666666666667e-8
+     ],
+     "cAngle": [
+      1,
+      0
+     ],
+     "cRate": [
+      0,
+      1
+     ],
+     "cAero": [
+      0,
+      0
+     ],
+     "actuator": "engines",
+     "tau": 0.16,
+     "inertia": 60000000,
+     "kTheta": 1.5,
+     "kOmega": 3
+    }
+   ],
+   "messages": [
+    {
+     "T": 0.01,
+     "targets": {
+      "pmDeg": 45,
+      "gmDb": 6
+     },
+     "feedForward": 1,
+     "cases": [
+      {
+       "t": 0,
+       "plane": {
+        "$ref": 0
+       }
+      },
+      {
+       "t": 20,
+       "plane": {
+        "$ref": 2
+       }
+      },
+      {
+       "t": 40,
+       "plane": {
+        "$ref": 4
+       }
+      }
+     ],
+     "verify": [
+      {
+       "t": 0,
+       "plane": {
+        "$ref": 0
+       }
+      },
+      {
+       "t": 10,
+       "plane": {
+        "$ref": 1
+       }
+      },
+      {
+       "t": 20,
+       "plane": {
+        "$ref": 2
+       }
+      },
+      {
+       "t": 30,
+       "plane": {
+        "$ref": 3
+       }
+      },
+      {
+       "t": 40,
+       "plane": {
+        "$ref": 4
+       }
+      }
+     ]
+    }
+   ]
+  },
+  "monte-carlo": {
+   "messages": [
+    {
+     "cfg": {
+      "vehicleId": "soyuz21a",
+      "satelliteId": "crew",
+      "siteId": "baikonur",
+      "orbit": {
+       "id": "iss",
+       "name": "ISS orbit (420 km, 51.6°)",
+       "perigee": 420000,
+       "apogee": 420000,
+       "inclination": 51.64,
+       "argPerigee": 0,
+       "raanMode": "iss",
+       "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+      },
+      "launchTime": {
+       "$date": 1789473600000
+      },
+      "guidance": {
+       "pitchOverAltitude": 50,
+       "kickAngle": 6,
+       "kickDuration": 12,
+       "gravityTurnEnd": 65000,
+       "parkingAltitude": 0,
+       "maxTimeToGo": 1500,
+       "maxTurnRate": 0.5,
+       "loftAltitude": 0,
+       "pitchMax": 35,
+       "pitchMin": -15,
+       "slewRate": 3,
+       "maxAccel": 0,
+       "pitchProgram": [
+        [
+         0,
+         90
+        ],
+        [
+         5,
+         90
+        ],
+        [
+         6,
+         89.85
+        ],
+        [
+         8.5,
+         89.47
+        ],
+        [
+         11,
+         88.89
+        ],
+        [
+         13.5,
+         88.02
+        ],
+        [
+         16,
+         87.12
+        ],
+        [
+         18.5,
+         86.2
+        ],
+        [
+         21,
+         85.13
+        ],
+        [
+         23.5,
+         83.85
+        ],
+        [
+         26,
+         82.57
+        ],
+        [
+         28.5,
+         81.29
+        ],
+        [
+         31,
+         79.86
+        ],
+        [
+         36,
+         76.59
+        ],
+        [
+         41,
+         73.22
+        ],
+        [
+         46,
+         69.4
+        ],
+        [
+         51,
+         65.63
+        ],
+        [
+         56,
+         62.03
+        ],
+        [
+         61,
+         58.45
+        ],
+        [
+         66,
+         54.97
+        ],
+        [
+         71,
+         51.6
+        ],
+        [
+         76,
+         48.71
+        ],
+        [
+         81,
+         45.89
+        ],
+        [
+         86,
+         43.32
+        ],
+        [
+         91,
+         40.85
+        ],
+        [
+         96,
+         38.73
+        ],
+        [
+         118,
+         33.73
+        ],
+        [
+         128,
+         26.73
+        ],
+        [
+         210,
+         17.28
+        ],
+        [
+         285,
+         11.28
+        ],
+        [
+         287.7,
+         11.28
+        ]
+       ],
+       "closedLoopStart": 140
+      },
+      "failure": {
+       "mode": "none",
+       "time": 60,
+       "stage": 0
+      },
+      "boosterRecovery": false,
+      "payloadMassOverride": 7150,
+      "guidanceResolved": true,
+      "dynamics": {
+       "model": "sixDof",
+       "wind": "calm",
+       "seed": 20260919
+      }
+     },
+     "mc": {
+      "runs": 200,
+      "seed": 1,
+      "dispersions": {
+       "thrust": {
+        "enabled": true,
+        "sigma": 1
+       },
+       "isp": {
+        "enabled": true,
+        "sigma": 0.3
+       },
+       "propellant": {
+        "enabled": true,
+        "sigma": 0.5
+       },
+       "dryMass": {
+        "enabled": true,
+        "sigma": 0.5
+       },
+       "density": {
+        "enabled": true,
+        "sigma": 5
+       },
+       "wind": {
+        "enabled": true,
+        "sigma": 5
+       },
+       "imu": {
+        "enabled": true,
+        "sigma": 0
+       }
+      },
+      "compareLaws": false
+     },
+     "index": 0,
+     "law": "standard"
+    },
+    {
+     "cfg": {
+      "vehicleId": "soyuz21a",
+      "satelliteId": "crew",
+      "siteId": "baikonur",
+      "orbit": {
+       "id": "iss",
+       "name": "ISS orbit (420 km, 51.6°)",
+       "perigee": 420000,
+       "apogee": 420000,
+       "inclination": 51.64,
+       "argPerigee": 0,
+       "raanMode": "iss",
+       "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+      },
+      "launchTime": {
+       "$date": 1789473600000
+      },
+      "guidance": {
+       "pitchOverAltitude": 50,
+       "kickAngle": 6,
+       "kickDuration": 12,
+       "gravityTurnEnd": 65000,
+       "parkingAltitude": 0,
+       "maxTimeToGo": 1500,
+       "maxTurnRate": 0.5,
+       "loftAltitude": 0,
+       "pitchMax": 35,
+       "pitchMin": -15,
+       "slewRate": 3,
+       "maxAccel": 0,
+       "pitchProgram": [
+        [
+         0,
+         90
+        ],
+        [
+         5,
+         90
+        ],
+        [
+         6,
+         89.85
+        ],
+        [
+         8.5,
+         89.47
+        ],
+        [
+         11,
+         88.89
+        ],
+        [
+         13.5,
+         88.02
+        ],
+        [
+         16,
+         87.12
+        ],
+        [
+         18.5,
+         86.2
+        ],
+        [
+         21,
+         85.13
+        ],
+        [
+         23.5,
+         83.85
+        ],
+        [
+         26,
+         82.57
+        ],
+        [
+         28.5,
+         81.29
+        ],
+        [
+         31,
+         79.86
+        ],
+        [
+         36,
+         76.59
+        ],
+        [
+         41,
+         73.22
+        ],
+        [
+         46,
+         69.4
+        ],
+        [
+         51,
+         65.63
+        ],
+        [
+         56,
+         62.03
+        ],
+        [
+         61,
+         58.45
+        ],
+        [
+         66,
+         54.97
+        ],
+        [
+         71,
+         51.6
+        ],
+        [
+         76,
+         48.71
+        ],
+        [
+         81,
+         45.89
+        ],
+        [
+         86,
+         43.32
+        ],
+        [
+         91,
+         40.85
+        ],
+        [
+         96,
+         38.73
+        ],
+        [
+         118,
+         33.73
+        ],
+        [
+         128,
+         26.73
+        ],
+        [
+         210,
+         17.28
+        ],
+        [
+         285,
+         11.28
+        ],
+        [
+         287.7,
+         11.28
+        ]
+       ],
+       "closedLoopStart": 140
+      },
+      "failure": {
+       "mode": "none",
+       "time": 60,
+       "stage": 0
+      },
+      "boosterRecovery": false,
+      "payloadMassOverride": 7150,
+      "guidanceResolved": true,
+      "dynamics": {
+       "model": "sixDof",
+       "wind": "calm",
+       "seed": 20260919
+      }
+     },
+     "mc": {
+      "runs": 200,
+      "seed": 1,
+      "dispersions": {
+       "thrust": {
+        "enabled": true,
+        "sigma": 1
+       },
+       "isp": {
+        "enabled": true,
+        "sigma": 0.3
+       },
+       "propellant": {
+        "enabled": true,
+        "sigma": 0.5
+       },
+       "dryMass": {
+        "enabled": true,
+        "sigma": 0.5
+       },
+       "density": {
+        "enabled": true,
+        "sigma": 5
+       },
+       "wind": {
+        "enabled": true,
+        "sigma": 5
+       },
+       "imu": {
+        "enabled": true,
+        "sigma": 0
+       }
+      },
+      "compareLaws": false
+     },
+     "index": 1,
+     "law": "standard"
+    }
+   ]
+  },
+  "ratings": {
+   "messages": [
+    {
+     "id": "electron",
+     "name": "Electron",
+     "country": "NZ/US",
+     "manufacturer": "Rocket Lab",
+     "height": 18,
+     "payloadLEO": 300,
+     "payloadGTO": 0,
+     "payloadSSO": 200,
+     "fairing": {
+      "mass": 50,
+      "diameter": 1.2,
+      "length": 2.5,
+      "sepAltitude": 105000,
+      "color": "#111"
+     },
+     "stages": [
+      {
+       "id": "e1",
+       "name": "First stage (9× Rutherford)",
+       "dryMass": 850,
+       "propellantMass": 9700,
+       "engine": {
+        "name": "Rutherford",
+        "count": 9,
+        "thrustSL": 24000,
+        "thrustVac": 25800,
+        "ispSL": 311,
+        "ispVac": 343,
+        "minThrottle": 0.5
+       },
+       "diameter": 1.2,
+       "length": 12.1,
+       "color": "#111",
+       "accentColor": "#333"
+      },
+      {
+       "id": "e2",
+       "name": "Second stage (Rutherford Vacuum)",
+       "dryMass": 220,
+       "propellantMass": 2300,
+       "engine": {
+        "name": "Rutherford Vacuum",
+        "count": 1,
+        "thrustSL": 18000,
+        "thrustVac": 25800,
+        "ispSL": 260,
+        "ispVac": 343,
+        "minThrottle": 0.5,
+        "vacuumOnly": true
+       },
+       "diameter": 1.2,
+       "length": 2.4,
+       "sepDelay": 1,
+       "ignitionDelay": 2,
+       "color": "#111"
+      },
+      {
+       "id": "curie",
+       "name": "Curie kick stage",
+       "dryMass": 30,
+       "propellantMass": 150,
+       "engine": {
+        "name": "Curie",
+        "count": 1,
+        "thrustSL": 100,
+        "thrustVac": 120,
+        "ispSL": 250,
+        "ispVac": 320,
+        "vacuumOnly": true
+       },
+       "diameter": 1.2,
+       "length": 0.5,
+       "restartable": true,
+       "sepDelay": 2,
+       "ignitionDelay": 3,
+       "color": "#222"
+      }
+     ],
+     "sites": [
+      "mahia",
+      "wallops"
+     ],
+     "maxQ": 50000,
+     "maxAccel": 60,
+     "guidanceDefaults": {
+      "kickAngle": 6,
+      "maxTurnRate": 0.45,
+      "pitchMax": 35,
+      "loftAltitude": 0
+     },
+     "notes": "Small carbon-composite launcher with electric-pump Rutherford engines and a Curie kick stage."
+    }
+   ]
+  },
+  "readiness": {
+   "messages": [
+    {
+     "id": 1,
+     "vehicleId": "soyuz21a",
+     "mission": {
+      "satelliteId": "crew",
+      "siteId": "baikonur",
+      "orbit": {
+       "id": "iss",
+       "name": "ISS orbit (420 km, 51.6°)",
+       "perigee": 420000,
+       "apogee": 420000,
+       "inclination": 51.64,
+       "argPerigee": 0,
+       "raanMode": "iss",
+       "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+      },
+      "launchTime": {
+       "$date": 1789473600000
+      },
+      "guidance": {
+       "pitchOverAltitude": 50,
+       "kickAngle": 6,
+       "kickDuration": 12,
+       "gravityTurnEnd": 65000,
+       "parkingAltitude": 0,
+       "maxTimeToGo": 1500,
+       "maxTurnRate": 0.5,
+       "loftAltitude": 0,
+       "pitchMax": 35,
+       "pitchMin": -15,
+       "slewRate": 3,
+       "maxAccel": 0,
+       "pitchProgram": [
+        [
+         0,
+         90
+        ],
+        [
+         5,
+         90
+        ],
+        [
+         6,
+         89.85
+        ],
+        [
+         8.5,
+         89.47
+        ],
+        [
+         11,
+         88.89
+        ],
+        [
+         13.5,
+         88.02
+        ],
+        [
+         16,
+         87.12
+        ],
+        [
+         18.5,
+         86.2
+        ],
+        [
+         21,
+         85.13
+        ],
+        [
+         23.5,
+         83.85
+        ],
+        [
+         26,
+         82.57
+        ],
+        [
+         28.5,
+         81.29
+        ],
+        [
+         31,
+         79.86
+        ],
+        [
+         36,
+         76.59
+        ],
+        [
+         41,
+         73.22
+        ],
+        [
+         46,
+         69.4
+        ],
+        [
+         51,
+         65.63
+        ],
+        [
+         56,
+         62.03
+        ],
+        [
+         61,
+         58.45
+        ],
+        [
+         66,
+         54.97
+        ],
+        [
+         71,
+         51.6
+        ],
+        [
+         76,
+         48.71
+        ],
+        [
+         81,
+         45.89
+        ],
+        [
+         86,
+         43.32
+        ],
+        [
+         91,
+         40.85
+        ],
+        [
+         96,
+         38.73
+        ],
+        [
+         118,
+         33.73
+        ],
+        [
+         128,
+         26.73
+        ],
+        [
+         210,
+         17.28
+        ],
+        [
+         285,
+         11.28
+        ],
+        [
+         287.7,
+         11.28
+        ]
+       ],
+       "closedLoopStart": 140
+      },
+      "failure": {
+       "mode": "none",
+       "time": 60,
+       "stage": 0
+      },
+      "boosterRecovery": false,
+      "payloadMassOverride": 7150,
+      "guidanceResolved": true,
+      "dynamics": {
+       "model": "sixDof",
+       "wind": "calm",
+       "seed": 20260919
+      }
+     }
+    }
+   ]
+  },
+  "reentry": {
+   "messages": [
+    {
+     "sets": [
+      {
+       "name": null,
+       "satnum": 23,
+       "classification": "U",
+       "intldesg": "",
+       "epochYear": 1989,
+       "epochDays": 160.12475608,
+       "jdEpoch": 2447686.5,
+       "jdEpochFrac": 0.12475607999999738,
+       "ndot": 8.239560014731911e-9,
+       "nddot": 0,
+       "bstar": 0.0031159,
+       "inclo": 0.8775498025734969,
+       "nodeo": 0.9870098719415732,
+       "ecco": 0.0037761,
+       "argpo": 4.286633362653193,
+       "mo": 1.9913822792819862,
+       "noKozai": 0.06805833301577892,
+       "elnum": 685,
+       "revnum": 57487
+      },
+      {
+       "name": null,
+       "satnum": 23,
+       "classification": "U",
+       "intldesg": "",
+       "epochYear": 1989,
+       "epochDays": 166.9688232,
+       "jdEpoch": 2447692.5,
+       "jdEpochFrac": 0.9688232000000028,
+       "ndot": 1.5220301306462913e-8,
+       "nddot": 0,
+       "bstar": 0.004565100000000001,
+       "inclo": 0.8776667396333805,
+       "nodeo": 0.36647201902900534,
+       "ecco": 0.0037345,
+       "argpo": 4.748173466038329,
+       "mo": 1.5311040489460417,
+       "noKozai": 0.06828540104959507,
+       "elnum": 701,
+       "revnum": 57594
+      }
+     ],
+     "from": "history",
+     "craft": {
+      "mass": 1000,
+      "area": 5,
+      "cd": 2.2
+     },
+     "activity": {
+      "f107": 140,
+      "f107a": 140,
+      "ap": 15
+     },
+     "horizonDays": 365
+    }
+   ]
+  },
+  "screening": {
+   "messages": [
+    {
+     "self": {
+      "name": "DMSP 5D-3 F16 (USA 172)",
+      "satnum": 28054,
+      "classification": "U",
+      "intldesg": "03048A",
+      "epochYear": 2026,
+      "epochDays": 269.47402542,
+      "jdEpoch": 2461309.5,
+      "jdEpochFrac": 0.47402542,
+      "ndot": 1.575644463605992e-12,
+      "nddot": 0,
+      "bstar": 0.000050947,
+      "inclo": 1.727619396074343,
+      "nodeo": 5.130479112041427,
+      "ecco": 0.0006442,
+      "argpo": 3.7164063707586137,
+      "mo": 4.963780969854198,
+      "noKozai": 0.06171887039590017,
+      "elnum": 999,
+      "revnum": 18380
+     },
+     "others": [
+      {
+       "name": "FENGYUN 1C",
+       "satnum": 25730,
+       "classification": "U",
+       "intldesg": "99025A",
+       "epochYear": 2026,
+       "epochDays": 269.19158561,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.19158561000000002,
+       "ndot": 4.651181253144611e-11,
+       "nddot": 0,
+       "bstar": 0.00064566185,
+       "inclo": 1.7253871199610422,
+       "nodeo": 6.004569672037471,
+       "ecco": 0.00122689,
+       "argpo": 5.8050087253644405,
+       "mo": 0.47910509697720743,
+       "noKozai": 0.06227691961473835,
+       "elnum": 999,
+       "revnum": 41236
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29733,
+       "classification": "U",
+       "intldesg": "99025X",
+       "epochYear": 2026,
+       "epochDays": 269.0099837,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.0099837,
+       "ndot": 5.332950492204896e-12,
+       "nddot": 0,
+       "bstar": 0.00035733415,
+       "inclo": 1.7314591204287304,
+       "nodeo": 4.9963889562692065,
+       "ecco": 0.05639917,
+       "argpo": 4.509782434166929,
+       "mo": 2.162934182119013,
+       "noKozai": 0.056589048269422425,
+       "elnum": 999,
+       "revnum": 92843
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29734,
+       "classification": "U",
+       "intldesg": "99025Y",
+       "epochYear": 2026,
+       "epochDays": 269.48635285,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.48635285,
+       "ndot": 8.22668215132744e-11,
+       "nddot": 0,
+       "bstar": 0.0043796,
+       "inclo": 1.730762734057185,
+       "nodeo": 2.7484275689807864,
+       "ecco": 0.061203,
+       "argpo": 1.2381522793280453,
+       "mo": 1.720590955176562,
+       "noKozai": 0.056380787423660206,
+       "elnum": 999,
+       "revnum": 92263
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29735,
+       "classification": "U",
+       "intldesg": "99025Z",
+       "epochYear": 2026,
+       "epochDays": 269.34768573,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.34768573,
+       "ndot": 3.575500898182828e-12,
+       "nddot": 0,
+       "bstar": 0.00026403,
+       "inclo": 1.7344959933272008,
+       "nodeo": 2.470071987897219,
+       "ecco": 0.0698172,
+       "argpo": 4.500204067231983,
+       "mo": 1.647018345887993,
+       "noKozai": 0.05567174073915312,
+       "elnum": 999,
+       "revnum": 91082
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29736,
+       "classification": "U",
+       "intldesg": "99025AA",
+       "epochYear": 2026,
+       "epochDays": 269.27866183,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.27866183,
+       "ndot": 3.9300209024941764e-11,
+       "nddot": 0,
+       "bstar": 0.0029157,
+       "inclo": 1.7355187562688694,
+       "nodeo": 0.6824324641760428,
+       "ecco": 0.0724192,
+       "argpo": 5.261588245451241,
+       "mo": 1.3653658378474078,
+       "noKozai": 0.054882359385336775,
+       "elnum": 999,
+       "revnum": 90159
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29737,
+       "classification": "U",
+       "intldesg": "99025AB",
+       "epochYear": 2026,
+       "epochDays": 269.27553138,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.27553138,
+       "ndot": -1.575644463605992e-11,
+       "nddot": 0,
+       "bstar": -0.00099133,
+       "inclo": 1.7379028760270936,
+       "nodeo": 3.1799445185731163,
+       "ecco": 0.069193,
+       "argpo": 4.125396355695453,
+       "mo": 4.961203118549001,
+       "noKozai": 0.05525147994150568,
+       "elnum": 999,
+       "revnum": 90507
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29738,
+       "classification": "U",
+       "intldesg": "99025AC",
+       "epochYear": 2026,
+       "epochDays": 269.31288714,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.31288714,
+       "ndot": 4.09061543436171e-12,
+       "nddot": 0,
+       "bstar": 0.00022458,
+       "inclo": 1.7351801623939824,
+       "nodeo": 0.5128458020767618,
+       "ecco": 0.0847533,
+       "argpo": 0.5094790619496647,
+       "mo": 5.853694684848822,
+       "noKozai": 0.05508566192522699,
+       "elnum": 999,
+       "revnum": 89844
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29740,
+       "classification": "U",
+       "intldesg": "99025AE",
+       "epochYear": 2026,
+       "epochDays": 269.34018637,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.34018637,
+       "ndot": 2.4210383200407452e-11,
+       "nddot": 0,
+       "bstar": 0.0021567,
+       "inclo": 1.7290104234881825,
+       "nodeo": 0.7707461243269559,
+       "ecco": 0.0970986,
+       "argpo": 6.0148391893562065,
+       "mo": 0.2218906891230471,
+       "noKozai": 0.05274081233697201,
+       "elnum": 999,
+       "revnum": 86409
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29741,
+       "classification": "U",
+       "intldesg": "99025AF",
+       "epochYear": 2026,
+       "epochDays": 269.2003806,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.2003806,
+       "ndot": 4.081525177840906e-11,
+       "nddot": 0,
+       "bstar": 0.0034472,
+       "inclo": 1.7311414705048676,
+       "nodeo": 1.1730881501429486,
+       "ecco": 0.1025316,
+       "argpo": 3.824962359574157,
+       "mo": 5.664642365602048,
+       "noKozai": 0.05243657313038228,
+       "elnum": 999,
+       "revnum": 55635
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29750,
+       "classification": "U",
+       "intldesg": "99025AQ",
+       "epochYear": 2026,
+       "epochDays": 269.35461961,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.35461961,
+       "ndot": 7.27220521664304e-12,
+       "nddot": 0,
+       "bstar": 0.00015969,
+       "inclo": 1.7231338998967178,
+       "nodeo": 5.151941425853202,
+       "ecco": 0.003556,
+       "argpo": 3.5794294404035947,
+       "mo": 3.901273390459105,
+       "noKozai": 0.06151696315948045,
+       "elnum": 999,
+       "revnum": 1114
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29751,
+       "classification": "U",
+       "intldesg": "99025AR",
+       "epochYear": 2026,
+       "epochDays": 269.3185206,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.3185206,
+       "ndot": 6.847993245672196e-12,
+       "nddot": 0,
+       "bstar": 0.00011273,
+       "inclo": 1.7194320565532377,
+       "nodeo": 5.12308589732998,
+       "ecco": 0.0089293,
+       "argpo": 0.3893445588763911,
+       "mo": 0.7135220141418178,
+       "noKozai": 0.06212622182210201,
+       "elnum": 999,
+       "revnum": 2164
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29754,
+       "classification": "U",
+       "intldesg": "99025AU",
+       "epochYear": 2026,
+       "epochDays": 269.26786177,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.26786177,
+       "ndot": 3.9179005604664376e-11,
+       "nddot": 0,
+       "bstar": 0.00062419,
+       "inclo": 1.7260503450768,
+       "nodeo": 0.31515410303261604,
+       "ecco": 0.0036669,
+       "argpo": 2.3930209374094256,
+       "mo": 4.864047620407485,
+       "noKozai": 0.061962246655347275,
+       "elnum": 999,
+       "revnum": 1420
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29758,
+       "classification": "U",
+       "intldesg": "99025AY",
+       "epochYear": 2026,
+       "epochDays": 269.29592095,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.29592095,
+       "ndot": 1.7132103456208228e-10,
+       "nddot": 0,
+       "bstar": 0.0016324,
+       "inclo": 1.7255633982154939,
+       "nodeo": 0.7232120821488903,
+       "ecco": 0.002116,
+       "argpo": 3.0525948243720986,
+       "mo": 4.396606558821356,
+       "noKozai": 0.06304507667401966,
+       "elnum": 999,
+       "revnum": 1820
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29760,
+       "classification": "U",
+       "intldesg": "99025BA",
+       "epochYear": 2026,
+       "epochDays": 269.4898081,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.4898081,
+       "ndot": 7.787319752821922e-12,
+       "nddot": 0,
+       "bstar": 0.00016077,
+       "inclo": 1.7238826461458232,
+       "nodeo": 4.688771184946702,
+       "ecco": 0.0131618,
+       "argpo": 1.4288783693274818,
+       "mo": 4.882364850907166,
+       "noKozai": 0.06145590962238351,
+       "elnum": 999,
+       "revnum": 1142
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29762,
+       "classification": "U",
+       "intldesg": "99025BC",
+       "epochYear": 2026,
+       "epochDays": 269.49372484,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.49372484000000005,
+       "ndot": 7.605514622405847e-12,
+       "nddot": 0,
+       "bstar": 0.00010761,
+       "inclo": 1.7210656847331045,
+       "nodeo": 4.3732540534296716,
+       "ecco": 0.020252,
+       "argpo": 3.8195396215882105,
+       "mo": 4.668579470830379,
+       "noKozai": 0.06208791695010879,
+       "elnum": 999,
+       "revnum": 2035
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29763,
+       "classification": "U",
+       "intldesg": "99025BD",
+       "epochYear": 2026,
+       "epochDays": 269.19073068,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.19073068,
+       "ndot": 3.696704318460212e-12,
+       "nddot": 0,
+       "bstar": 0.000088983,
+       "inclo": 1.724278835886026,
+       "nodeo": 4.289546317174771,
+       "ecco": 0.0128313,
+       "argpo": 1.5775908935729106,
+       "mo": 5.853556803837914,
+       "noKozai": 0.06143892874685885,
+       "elnum": 999,
+       "revnum": 1096
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29765,
+       "classification": "U",
+       "intldesg": "99025BF",
+       "epochYear": 2026,
+       "epochDays": 269.32367559,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.32367559,
+       "ndot": 8.666044549832957e-12,
+       "nddot": 0,
+       "bstar": 0.00021138,
+       "inclo": 1.7246732802969766,
+       "nodeo": 4.944266443487648,
+       "ecco": 0.0058335,
+       "argpo": 0.2003114382513892,
+       "mo": 0.031257101573966446,
+       "noKozai": 0.061183057544397026,
+       "elnum": 999,
+       "revnum": 772
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29766,
+       "classification": "U",
+       "intldesg": "99025BG",
+       "epochYear": 2026,
+       "epochDays": 269.33944998,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.33944998,
+       "ndot": 2.7694981533382247e-11,
+       "nddot": 0,
+       "bstar": 0.00061853,
+       "inclo": 1.7226452077061591,
+       "nodeo": 3.643737842022578,
+       "ecco": 0.0142533,
+       "argpo": 3.644320781992744,
+       "mo": 4.904691102698677,
+       "noKozai": 0.060995664422403666,
+       "elnum": 999,
+       "revnum": 99821
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29767,
+       "classification": "U",
+       "intldesg": "99025BH",
+       "epochYear": 2026,
+       "epochDays": 269.32734096,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.32734096,
+       "ndot": 1.0541667478625473e-10,
+       "nddot": 0,
+       "bstar": 0.0013443,
+       "inclo": 1.7142431926870587,
+       "nodeo": 3.7743635192295892,
+       "ecco": 0.0324764,
+       "argpo": 5.595159062750902,
+       "mo": 3.3817831199200006,
+       "noKozai": 0.06133149605194989,
+       "elnum": 999,
+       "revnum": 99637
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29769,
+       "classification": "U",
+       "intldesg": "99025BK",
+       "epochYear": 2026,
+       "epochDays": 267.14027865,
+       "jdEpoch": 2461307.5,
+       "jdEpochFrac": 0.14027865,
+       "ndot": 4.5572486024296386e-11,
+       "nddot": 0,
+       "bstar": 0.00077316844,
+       "inclo": 1.7293891599358653,
+       "nodeo": 5.838367203357808,
+       "ecco": 0.00910784,
+       "argpo": 0.8110981366330647,
+       "mo": 5.487261063063361,
+       "noKozai": 0.06172967005697919,
+       "elnum": 999,
+       "revnum": 711
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29770,
+       "classification": "U",
+       "intldesg": "99025BL",
+       "epochYear": 2026,
+       "epochDays": 269.48456955,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.48456954999999996,
+       "ndot": 5.699590838543983e-11,
+       "nddot": 0,
+       "bstar": 0.0008594,
+       "inclo": 1.7249560236357997,
+       "nodeo": 6.1112581585533805,
+       "ecco": 0.006284,
+       "argpo": 2.8899947152685503,
+       "mo": 3.6976510626166825,
+       "noKozai": 0.06203223955070677,
+       "elnum": 999,
+       "revnum": 1170
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29772,
+       "classification": "U",
+       "intldesg": "99025BN",
+       "epochYear": 2026,
+       "epochDays": 269.01208319,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.012083189999999999,
+       "ndot": 3.684583976432474e-11,
+       "nddot": 0,
+       "bstar": 0.00073094454,
+       "inclo": 1.7168908571623338,
+       "nodeo": 1.7623898454325742,
+       "ecco": 0.01355163,
+       "argpo": 3.426714876183343,
+       "mo": 5.537123374463587,
+       "noKozai": 0.06126287402545137,
+       "elnum": 999,
+       "revnum": 204
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29773,
+       "classification": "U",
+       "intldesg": "99025BP",
+       "epochYear": 2026,
+       "epochDays": 269.4495961,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.4495961,
+       "ndot": 1.8271415606815637e-11,
+       "nddot": 0,
+       "bstar": 0.00025894,
+       "inclo": 1.728259931909825,
+       "nodeo": 1.3413256727304381,
+       "ecco": 0.0047173,
+       "argpo": 3.1024710984063404,
+       "mo": 4.154569534142538,
+       "noKozai": 0.06230977098731755,
+       "elnum": 999,
+       "revnum": 2302
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29774,
+       "classification": "U",
+       "intldesg": "99025BQ",
+       "epochYear": 2026,
+       "epochDays": 269.42266494,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.42266494,
+       "ndot": 7.211603506504348e-12,
+       "nddot": 0,
+       "bstar": 0.00012505,
+       "inclo": 1.729757424408036,
+       "nodeo": 3.9090767575447716,
+       "ecco": 0.0050822,
+       "argpo": 0.3817925192030116,
+       "mo": 1.7585431397611786,
+       "noKozai": 0.06208785800161331,
+       "elnum": 999,
+       "revnum": 2167
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29776,
+       "classification": "U",
+       "intldesg": "99025BS",
+       "epochYear": 2026,
+       "epochDays": 269.36237785,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.36237785,
+       "ndot": 8.48423941941688e-12,
+       "nddot": 0,
+       "bstar": 0.00018932,
+       "inclo": 1.7234602764668405,
+       "nodeo": 5.105051410169122,
+       "ecco": 0.0023853,
+       "argpo": 3.093960872973616,
+       "mo": 3.4147977680507258,
+       "noKozai": 0.06143177769658112,
+       "elnum": 999,
+       "revnum": 1127
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29777,
+       "classification": "U",
+       "intldesg": "99025BT",
+       "epochYear": 2026,
+       "epochDays": 269.44061553,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.44061553000000003,
+       "ndot": -1.151432492635148e-12,
+       "nddot": 0,
+       "bstar": 0.0000049531,
+       "inclo": 1.7321485254832683,
+       "nodeo": 5.778087021652428,
+       "ecco": 0.0093487,
+       "argpo": 2.644830060570159,
+       "mo": 4.84900811824305,
+       "noKozai": 0.06074597552521825,
+       "elnum": 999,
+       "revnum": 43
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29779,
+       "classification": "U",
+       "intldesg": "99025BV",
+       "epochYear": 2026,
+       "epochDays": 269.2570556,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.2570556,
+       "ndot": 8.63574369476361e-12,
+       "nddot": 0,
+       "bstar": 0.00016969,
+       "inclo": 1.7221792047958766,
+       "nodeo": 4.832732922968202,
+       "ecco": 0.0064132,
+       "argpo": 1.1349684139501404,
+       "mo": 5.161860131992285,
+       "noKozai": 0.061683303814603636,
+       "elnum": 999,
+       "revnum": 1475
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29780,
+       "classification": "U",
+       "intldesg": "99025BW",
+       "epochYear": 2026,
+       "epochDays": 269.27234574,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.27234574,
+       "ndot": 8.950872587484808e-11,
+       "nddot": 0,
+       "bstar": 0.0013244,
+       "inclo": 1.7327977879650103,
+       "nodeo": 3.667072894121742,
+       "ecco": 0.0043071,
+       "argpo": 0.5895268427631327,
+       "mo": 5.700477465803996,
+       "noKozai": 0.06208322345431756,
+       "elnum": 999,
+       "revnum": 1162
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29781,
+       "classification": "U",
+       "intldesg": "99025BX",
+       "epochYear": 2026,
+       "epochDays": 269.48728447,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.48728447,
+       "ndot": 2.0483378026877895e-11,
+       "nddot": 0,
+       "bstar": 0.00042988,
+       "inclo": 1.724879229148712,
+       "nodeo": 4.55364604892805,
+       "ecco": 0.0072933,
+       "argpo": 1.5107744538188117,
+       "mo": 0.7739819647601534,
+       "noKozai": 0.061337840192881195,
+       "elnum": 999,
+       "revnum": 683
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29782,
+       "classification": "U",
+       "intldesg": "99025BY",
+       "epochYear": 2026,
+       "epochDays": 269.43973619,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.43973618999999997,
+       "ndot": 3.5088390170302665e-11,
+       "nddot": 0,
+       "bstar": 0.00063912,
+       "inclo": 1.7292757135344858,
+       "nodeo": 5.794983554140984,
+       "ecco": 0.0055097,
+       "argpo": 2.016673845472636,
+       "mo": 5.436477217818081,
+       "noKozai": 0.06164213843523288,
+       "elnum": 999,
+       "revnum": 731
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29784,
+       "classification": "U",
+       "intldesg": "99025CA",
+       "epochYear": 2026,
+       "epochDays": 269.37667669,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.37667669,
+       "ndot": 2.1028793418126124e-11,
+       "nddot": 0,
+       "bstar": 0.00027509,
+       "inclo": 1.727048673408941,
+       "nodeo": 3.5195611564016853,
+       "ecco": 0.005887,
+       "argpo": 3.103820237918132,
+       "mo": 5.343904954292302,
+       "noKozai": 0.06244830536223058,
+       "elnum": 999,
+       "revnum": 2470
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29786,
+       "classification": "U",
+       "intldesg": "99025CC",
+       "epochYear": 2026,
+       "epochDays": 269.2742948,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.2742948,
+       "ndot": 7.363107781851077e-12,
+       "nddot": 0,
+       "bstar": 0.00016002,
+       "inclo": 1.72305710540963,
+       "nodeo": 4.932281267514203,
+       "ecco": 0.0077159,
+       "argpo": 3.6404060084805208,
+       "mo": 3.720286237685797,
+       "noKozai": 0.061489646356859017,
+       "elnum": 999,
+       "revnum": 1209
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29788,
+       "classification": "U",
+       "intldesg": "99025CE",
+       "epochYear": 2026,
+       "epochDays": 269.20458115,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.20458115,
+       "ndot": 7.363107781851078e-11,
+       "nddot": 0,
+       "bstar": 0.00099327,
+       "inclo": 1.7238250502805075,
+       "nodeo": 6.050349658317282,
+       "ecco": 0.0041216,
+       "argpo": 1.323551239628128,
+       "mo": 5.923356011283672,
+       "noKozai": 0.0622972794913281,
+       "elnum": 999,
+       "revnum": 1456
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29789,
+       "classification": "U",
+       "intldesg": "99025CF",
+       "epochYear": 2026,
+       "epochDays": 268.77114473,
+       "jdEpoch": 2461308.5,
+       "jdEpochFrac": 0.7711447300000001,
+       "ndot": 2.9513032837543004e-11,
+       "nddot": 0,
+       "bstar": 0.0011194947,
+       "inclo": 1.7359987218131678,
+       "nodeo": 1.4792450808815338,
+       "ecco": 0.0295717,
+       "argpo": 4.777227962096279,
+       "mo": 1.696269792050021,
+       "noKozai": 0.0591207234858645,
+       "elnum": 999,
+       "revnum": 96874
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29790,
+       "classification": "U",
+       "intldesg": "99025CG",
+       "epochYear": 2026,
+       "epochDays": 269.00632688,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.00632688,
+       "ndot": 1.5271630954950384e-11,
+       "nddot": 0,
+       "bstar": 0.00019633142,
+       "inclo": 1.7305183879619055,
+       "nodeo": 4.95535626555482,
+       "ecco": 0.00770345,
+       "argpo": 1.1164958491470327,
+       "mo": 5.182551010274679,
+       "noKozai": 0.06251342407658804,
+       "elnum": 999,
+       "revnum": 2639
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29791,
+       "classification": "U",
+       "intldesg": "99025CH",
+       "epochYear": 2026,
+       "epochDays": 269.33818611,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.33818611,
+       "ndot": 1.2356688697279298e-10,
+       "nddot": 0,
+       "bstar": 0.00082344,
+       "inclo": 1.7283681423234487,
+       "nodeo": 5.246152553546604,
+       "ecco": 0.0037055,
+       "argpo": 4.6232044009370314,
+       "mo": 2.8011784002930633,
+       "noKozai": 0.06377511443344049,
+       "elnum": 999,
+       "revnum": 3043
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29792,
+       "classification": "U",
+       "intldesg": "99025CJ",
+       "epochYear": 2026,
+       "epochDays": 269.09021082,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.09021082,
+       "ndot": 4.351202787958086e-11,
+       "nddot": 0,
+       "bstar": 0.0007389957,
+       "inclo": 1.7232229116885693,
+       "nodeo": 5.572696675277734,
+       "ecco": 0.00472964,
+       "argpo": 5.11855327726255,
+       "mo": 1.1579980334302058,
+       "noKozai": 0.06179414819186794,
+       "elnum": 999,
+       "revnum": 1006
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29793,
+       "classification": "U",
+       "intldesg": "99025CK",
+       "epochYear": 2026,
+       "epochDays": 263.24568367,
+       "jdEpoch": 2461303.5,
+       "jdEpochFrac": 0.24568367,
+       "ndot": 3.272492347489368e-11,
+       "nddot": 0,
+       "bstar": 0.00067563,
+       "inclo": 1.7170444461365095,
+       "nodeo": 1.1140000283166807,
+       "ecco": 0.0138903,
+       "argpo": 4.602722962164878,
+       "mo": 3.8919062083636513,
+       "noKozai": 0.06117293240944066,
+       "elnum": 999,
+       "revnum": 1
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29794,
+       "classification": "U",
+       "intldesg": "99025CL",
+       "epochYear": 2026,
+       "epochDays": 269.35265118,
+       "jdEpoch": 2461309.5,
+       "jdEpochFrac": 0.35265118,
+       "ndot": 2.0968191707987433e-11,
+       "nddot": 0,
+       "bstar": 0.0003743,
+       "inclo": 1.7145224453673775,
+       "nodeo": 0.8383671608662242,
+       "ecco": 0.015445,
+       "argpo": 5.136430684790728,
+       "mo": 1.6247531806203013,
+       "noKozai": 0.06150743196006854,
+       "elnum": 999,
+       "revnum": 888
+      },
+      {
+       "name": "FENGYUN 1C DEB",
+       "satnum": 29795,
+       "classification": "U",
+       "intldesg": "99025CM",
+       "epochYear": 2026,
+       "epochDays": 266.32245815,
+       "jdEpoch": 2461306.5,
+       "jdEpochFrac": 0.32245815,
+       "ndot": 2.1210598548542201e-13,
+       "nddot": 0,
+       "bstar": 0.000036189054,
+       "inclo": 1.7262615299162916,
+       "nodeo": 0.5140535699191419,
+       "ecco": 0.01113427,
+       "argpo": 3.7681885443360335,
+       "mo": 2.978851172816834,
+       "noKozai": 0.06078211658163807,
+       "elnum": 999,
+       "revnum": 15
+      }
+     ],
+     "jd0": 2461310,
+     "jd1": 2461311,
+     "within": 200000,
+     "radius": 10
+    }
+   ]
+  },
+  "lifetime": {
+   "messages": [
+    {
+     "r0": [
+      6778137,
+      0,
+      0
+     ],
+     "v0": [
+      0,
+      4763.307888589182,
+      6009.79886918909
+     ],
+     "jd0": 2461299,
+     "options": {
+      "method": "mean",
+      "duration": 788400000,
+      "forces": {
+       "j2": true,
+       "j3j4": true,
+       "drag": true,
+       "sun": true,
+       "moon": true,
+       "srp": true,
+       "activity": {
+        "f107": 140,
+        "f107a": 140,
+        "ap": 15
+       }
+      },
+      "spacecraft": {
+       "mass": 1000,
+       "area": 5,
+       "cd": 2.2,
+       "cr": 1.3
+      },
+      "samples": 600,
+      "tolerance": 1e-9
+     }
+    }
+   ]
+  },
+  "lifetime-altitude": {
+   "messages": [
+    {
+     "years": [
+      5,
+      30
+     ],
+     "spacecraft": {
+      "mass": 425,
+      "area": 3.85,
+      "cd": 2.2,
+      "cr": 1.3
+     },
+     "level": "moderate",
+     "plane": {
+      "sso": true,
+      "ltan": 22.25
+     },
+     "jd0": 2461299
+    }
+   ]
+  },
+  "requirement-trades": {
+   "messages": [
+    {
+     "req": {
+      "target": {
+       "lat": 13.7563,
+       "lon": 100.5018,
+       "name": "bangkok"
+      },
+      "gsd": 0.5,
+      "revisitDays": 5,
+      "daylightOnly": true,
+      "lifeYears": 5,
+      "activity": "moderate",
+      "dataPerDay": 100000000000,
+      "stations": [
+       "bangkok"
+      ],
+      "minElDeg": 10,
+      "disposal": "25y",
+      "ltan": 22.25
+     },
+     "template": {
+      "id": "req-theos2",
+      "name": "theos2",
+      "template": "theos2",
+      "kind": "earthObs",
+      "orbit": {
+       "perigee": 621000,
+       "apogee": 621000,
+       "inclination": 97.871,
+       "sso": true,
+       "ltan": 22.25
+      },
+      "lifeYears": 10,
+      "bus": {
+       "dryMass": 385,
+       "size": {
+        "width": 1,
+        "height": 1.6,
+        "depth": 1
+       },
+       "cd": 2.2,
+       "cr": 1.3
+      },
+      "power": {
+       "payloadW": 150,
+       "busW": 250,
+       "arrayArea": 3.5,
+       "mount": "tracking",
+       "batteryWh": 1200,
+       "dod": 0.3,
+       "cellEff": 0.295,
+       "Id": 0.77,
+       "degPerYear": 0.005,
+       "regulation": "PPT",
+       "batteryEff": 0.9
+      },
+      "propulsion": {
+       "thrust": 4,
+       "isp": 223,
+       "propellant": 40
+      },
+      "adcs": {
+       "mode": "threeAxis",
+       "inertia": [
+        126,
+        70.8,
+        126
+       ],
+       "pointingDeg": 0.05,
+       "wheelH": 12,
+       "residualDipole": 1,
+       "cpOffset": 0.1
+      },
+      "comms": {
+       "txPowerW": 10,
+       "frequency": 8200000000,
+       "txAntennaD": 0.15,
+       "lineLoss": 1,
+       "dataRate": 140000000,
+       "requiredEbN0": 5.52,
+       "station": "bangkok",
+       "minElDeg": 10,
+       "rxAntennaD": 11.28,
+       "rxNoiseK": 189.7,
+       "losses": 2
+      },
+      "payload": {
+       "focalLength": 16.1,
+       "pixelPitch": 0.000013,
+       "pixels": 20600,
+       "aperture": 0.9,
+       "bits": 12,
+       "wavelength": 5.5e-7
+      }
+     },
+     "opts": {
+      "jd0": 2461299,
+      "cycles": [
+       {
+        "revs": 36,
+        "days": 5
+       },
+       {
+        "revs": 29,
+        "days": 4
+       },
+       {
+        "revs": 22,
+        "days": 3
+       },
+       {
+        "revs": 37,
+        "days": 5
+       },
+       {
+        "revs": 15,
+        "days": 2
+       },
+       {
+        "revs": 38,
+        "days": 5
+       },
+       {
+        "revs": 23,
+        "days": 3
+       },
+       {
+        "revs": 31,
+        "days": 4
+       },
+       {
+        "revs": 39,
+        "days": 5
+       },
+       {
+        "revs": 8,
+        "days": 1
+       },
+       {
+        "revs": 41,
+        "days": 5
+       },
+       {
+        "revs": 33,
+        "days": 4
+       },
+       {
+        "revs": 25,
+        "days": 3
+       },
+       {
+        "revs": 42,
+        "days": 5
+       },
+       {
+        "revs": 17,
+        "days": 2
+       },
+       {
+        "revs": 43,
+        "days": 5
+       },
+       {
+        "revs": 26,
+        "days": 3
+       },
+       {
+        "revs": 35,
+        "days": 4
+       },
+       {
+        "revs": 44,
+        "days": 5
+       },
+       {
+        "revs": 9,
+        "days": 1
+       },
+       {
+        "revs": 46,
+        "days": 5
+       },
+       {
+        "revs": 37,
+        "days": 4
+       },
+       {
+        "revs": 28,
+        "days": 3
+       },
+       {
+        "revs": 47,
+        "days": 5
+       },
+       {
+        "revs": 19,
+        "days": 2
+       },
+       {
+        "revs": 48,
+        "days": 5
+       },
+       {
+        "revs": 29,
+        "days": 3
+       },
+       {
+        "revs": 39,
+        "days": 4
+       },
+       {
+        "revs": 49,
+        "days": 5
+       },
+       {
+        "revs": 10,
+        "days": 1
+       },
+       {
+        "revs": 51,
+        "days": 5
+       },
+       {
+        "revs": 41,
+        "days": 4
+       },
+       {
+        "revs": 31,
+        "days": 3
+       },
+       {
+        "revs": 52,
+        "days": 5
+       },
+       {
+        "revs": 21,
+        "days": 2
+       },
+       {
+        "revs": 53,
+        "days": 5
+       },
+       {
+        "revs": 32,
+        "days": 3
+       },
+       {
+        "revs": 43,
+        "days": 4
+       },
+       {
+        "revs": 54,
+        "days": 5
+       },
+       {
+        "revs": 11,
+        "days": 1
+       },
+       {
+        "revs": 56,
+        "days": 5
+       },
+       {
+        "revs": 45,
+        "days": 4
+       },
+       {
+        "revs": 34,
+        "days": 3
+       },
+       {
+        "revs": 57,
+        "days": 5
+       },
+       {
+        "revs": 23,
+        "days": 2
+       },
+       {
+        "revs": 58,
+        "days": 5
+       },
+       {
+        "revs": 35,
+        "days": 3
+       },
+       {
+        "revs": 47,
+        "days": 4
+       },
+       {
+        "revs": 59,
+        "days": 5
+       },
+       {
+        "revs": 12,
+        "days": 1
+       },
+       {
+        "revs": 61,
+        "days": 5
+       },
+       {
+        "revs": 49,
+        "days": 4
+       },
+       {
+        "revs": 37,
+        "days": 3
+       },
+       {
+        "revs": 62,
+        "days": 5
+       },
+       {
+        "revs": 25,
+        "days": 2
+       },
+       {
+        "revs": 63,
+        "days": 5
+       },
+       {
+        "revs": 38,
+        "days": 3
+       },
+       {
+        "revs": 51,
+        "days": 4
+       },
+       {
+        "revs": 64,
+        "days": 5
+       },
+       {
+        "revs": 13,
+        "days": 1
+       },
+       {
+        "revs": 66,
+        "days": 5
+       },
+       {
+        "revs": 53,
+        "days": 4
+       },
+       {
+        "revs": 40,
+        "days": 3
+       },
+       {
+        "revs": 67,
+        "days": 5
+       },
+       {
+        "revs": 27,
+        "days": 2
+       },
+       {
+        "revs": 68,
+        "days": 5
+       },
+       {
+        "revs": 41,
+        "days": 3
+       },
+       {
+        "revs": 55,
+        "days": 4
+       },
+       {
+        "revs": 69,
+        "days": 5
+       },
+       {
+        "revs": 14,
+        "days": 1
+       },
+       {
+        "revs": 71,
+        "days": 5
+       },
+       {
+        "revs": 57,
+        "days": 4
+       },
+       {
+        "revs": 43,
+        "days": 3
+       },
+       {
+        "revs": 72,
+        "days": 5
+       },
+       {
+        "revs": 29,
+        "days": 2
+       },
+       {
+        "revs": 73,
+        "days": 5
+       },
+       {
+        "revs": 44,
+        "days": 3
+       },
+       {
+        "revs": 59,
+        "days": 4
+       },
+       {
+        "revs": 74,
+        "days": 5
+       },
+       {
+        "revs": 15,
+        "days": 1
+       },
+       {
+        "revs": 76,
+        "days": 5
+       },
+       {
+        "revs": 61,
+        "days": 4
+       },
+       {
+        "revs": 46,
+        "days": 3
+       },
+       {
+        "revs": 77,
+        "days": 5
+       },
+       {
+        "revs": 31,
+        "days": 2
+       },
+       {
+        "revs": 78,
+        "days": 5
+       },
+       {
+        "revs": 47,
+        "days": 3
+       },
+       {
+        "revs": 63,
+        "days": 4
+       },
+       {
+        "revs": 79,
+        "days": 5
+       },
+       {
+        "revs": 16,
+        "days": 1
+       },
+       {
+        "revs": 81,
+        "days": 5
+       },
+       {
+        "revs": 65,
+        "days": 4
+       },
+       {
+        "revs": 49,
+        "days": 3
+       },
+       {
+        "revs": 82,
+        "days": 5
+       }
+      ],
+      "margin": 3,
+      "tilt": 0.5235987755982988,
+      "lifetime": [
+       {
+        "years": 5,
+        "outcome": "found",
+        "altitude": 533642.578125,
+        "lo": 528906.25,
+        "hi": 538378.90625,
+        "runs": [
+         {
+          "altitude": 150000,
+          "lifetime": 10542.418847881749
+         },
+         {
+          "altitude": 5000000,
+          "lifetime": null
+         },
+         {
+          "altitude": 2575000,
+          "lifetime": null
+         },
+         {
+          "altitude": 1362500,
+          "lifetime": null
+         },
+         {
+          "altitude": 756250,
+          "lifetime": null
+         },
+         {
+          "altitude": 453125,
+          "lifetime": 41267039.26937415
+         },
+         {
+          "altitude": 604687.5,
+          "lifetime": null
+         },
+         {
+          "altitude": 528906.25,
+          "lifetime": 144431522.87034875
+         },
+         {
+          "altitude": 566796.875,
+          "lifetime": null
+         },
+         {
+          "altitude": 547851.5625,
+          "lifetime": null
+         },
+         {
+          "altitude": 538378.90625,
+          "lifetime": null
+         }
+        ]
+       },
+       {
+        "years": 30,
+        "outcome": "found",
+        "altitude": 655529.0222167969,
+        "lo": 651162.7197265625,
+        "hi": 659895.3247070312,
+        "runs": [
+         {
+          "altitude": 5000000,
+          "lifetime": null
+         },
+         {
+          "altitude": 2764453.125,
+          "lifetime": null
+         },
+         {
+          "altitude": 1646679.6875,
+          "lifetime": null
+         },
+         {
+          "altitude": 1087792.96875,
+          "lifetime": null
+         },
+         {
+          "altitude": 808349.609375,
+          "lifetime": null
+         },
+         {
+          "altitude": 668627.9296875,
+          "lifetime": null
+         },
+         {
+          "altitude": 598767.08984375,
+          "lifetime": 415618496.46226585
+         },
+         {
+          "altitude": 633697.509765625,
+          "lifetime": 685410824.5366529
+         },
+         {
+          "altitude": 651162.7197265625,
+          "lifetime": 874189758.5796576
+         },
+         {
+          "altitude": 659895.3247070312,
+          "lifetime": null
+         }
+        ]
+       }
+      ],
+      "revisitWindow": 60
+     }
+    }
+   ]
+  },
+  "recheck": {
+   "messages": [
+    {
+     "results": [
+      {
+       "format": "orbitlab.results",
+       "version": 1,
+       "exportedAt": "2026-10-06T08:00:00.000Z",
+       "student": "Student A (fixture)",
+       "progress": {
+        "version": 1,
+        "lessons": {
+         "class-leo": {
+          "attempts": 0,
+          "hintsShown": 0,
+          "passed": true,
+          "last": {
+           "at": "2026-10-06T07:20:00.000Z",
+           "verdict": "fail",
+           "criteria": [
+            {
+             "id": "c1",
+             "state": "fail",
+             "value": null
+            },
+            {
+             "id": "c2",
+             "state": "fail",
+             "value": 16.57833414386685
+            },
+            {
+             "id": "c3",
+             "state": "pass",
+             "value": 89.6778165129015,
+             "expected": 89.6778165129015
+            }
+           ],
+           "answers": {
+            "c3": 89.6778165129015
+           },
+           "hintsShown": 0,
+           "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+             "vehicleId": "falcon9",
+             "satelliteId": "cubesats",
+             "siteId": "cape",
+             "orbitId": "custom",
+             "orbit": {
+              "id": "leo",
+              "name": "Low Earth orbit (500 km)",
+              "perigee": 500000,
+              "apogee": 500000,
+              "inclination": "site",
+              "argPerigee": 0,
+              "raanMode": "free",
+              "description": "Generic circular LEO at the minimum inclination of the launch site."
+             },
+             "launchTime": "2026-10-05T03:00:00.000Z",
+             "payloadMass": 20000,
+             "guidanceOverrides": {
+              "pitchOverAltitude": 200,
+              "kickAngle": 1.5,
+              "kickDuration": 8,
+              "gravityTurnEnd": 65000,
+              "parkingAltitude": 0,
+              "maxTimeToGo": 1500,
+              "maxTurnRate": 0.3,
+              "loftAltitude": 0,
+              "pitchMax": 35,
+              "pitchMin": -15,
+              "slewRate": 3,
+              "maxAccel": 0
+             },
+             "failure": {
+              "mode": "none",
+              "time": 60,
+              "stage": 0
+             },
+             "boosterRecovery": false,
+             "dynamics": {
+              "model": "pointMass",
+              "wind": "calm",
+              "seed": 20260919
+             }
+            }
+           },
+           "t": 553.8599999999882,
+           "clock": 544.0469232929887,
+           "actions": [],
+           "app": "0.1.0+fixture"
+          },
+          "passedRecord": {
+           "at": "2026-10-06T07:10:00.000Z",
+           "verdict": "pass",
+           "criteria": [
+            {
+             "id": "c1",
+             "state": "pass",
+             "value": null
+            },
+            {
+             "id": "c2",
+             "state": "pass",
+             "value": 1725.199846621405
+            },
+            {
+             "id": "c3",
+             "state": "pass",
+             "value": 95.11414955970703,
+             "expected": 94.61454955970703
+            }
+           ],
+           "answers": {
+            "c3": 95.11414955970703
+           },
+           "hintsShown": 0,
+           "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+             "vehicleId": "falcon9",
+             "satelliteId": "cubesats",
+             "siteId": "cape",
+             "orbitId": "custom",
+             "orbit": {
+              "id": "leo",
+              "name": "Low Earth orbit (500 km)",
+              "perigee": 500000,
+              "apogee": 500000,
+              "inclination": "site",
+              "argPerigee": 0,
+              "raanMode": "free",
+              "description": "Generic circular LEO at the minimum inclination of the launch site."
+             },
+             "launchTime": "2026-10-05T03:00:00.000Z",
+             "payloadMass": 10000,
+             "guidanceOverrides": {
+              "pitchOverAltitude": 200,
+              "kickAngle": 1.5,
+              "kickDuration": 8,
+              "gravityTurnEnd": 65000,
+              "parkingAltitude": 0,
+              "maxTimeToGo": 1500,
+              "maxTurnRate": 0.3,
+              "loftAltitude": 0,
+              "pitchMax": 35,
+              "pitchMin": -15,
+              "slewRate": 3,
+              "maxAccel": 0
+             },
+             "failure": {
+              "mode": "none",
+              "time": 60,
+              "stage": 0
+             },
+             "boosterRecovery": false,
+             "dynamics": {
+              "model": "pointMass",
+              "wind": "calm",
+              "seed": 20260919
+             }
+            }
+           },
+           "t": 3237.8201278267784,
+           "clock": 3224.91927886418,
+           "actions": [],
+           "app": "0.1.0+fixture"
+          }
+         },
+         "class-abort": {
+          "attempts": 0,
+          "hintsShown": 0,
+          "passed": true,
+          "last": {
+           "at": "2026-10-06T07:30:00.000Z",
+           "verdict": "pass",
+           "criteria": [
+            {
+             "id": "c1",
+             "state": "pass",
+             "value": 1027.1399999994633
+            },
+            {
+             "id": "c2",
+             "state": "pass",
+             "value": 18.008237250911666,
+             "expected": 17.483725486322005
+            }
+           ],
+           "answers": {
+            "c2": 18.008237250911666
+           },
+           "hintsShown": 0,
+           "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+             "vehicleId": "soyuz21a",
+             "satelliteId": "crew",
+             "siteId": "baikonur",
+             "orbitId": "custom",
+             "orbit": {
+              "id": "iss",
+              "name": "ISS orbit (420 km, 51.6°)",
+              "perigee": 420000,
+              "apogee": 420000,
+              "inclination": 51.64,
+              "argPerigee": 0,
+              "raanMode": "iss",
+              "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+             },
+             "launchTime": "2026-10-05T03:00:00.000Z",
+             "payloadMass": 7150,
+             "guidanceOverrides": {
+              "pitchOverAltitude": 200,
+              "kickAngle": 3,
+              "kickDuration": 8,
+              "gravityTurnEnd": 65000,
+              "parkingAltitude": 0,
+              "maxTimeToGo": 1500,
+              "maxTurnRate": 0.3,
+              "loftAltitude": 0,
+              "pitchMax": 35,
+              "pitchMin": -15,
+              "slewRate": 3,
+              "maxAccel": 0,
+              "pitchProgram": [
+               [
+                0,
+                90
+               ],
+               [
+                5,
+                90
+               ],
+               [
+                6,
+                89.85
+               ],
+               [
+                8.5,
+                89.47
+               ],
+               [
+                11,
+                88.89
+               ],
+               [
+                13.5,
+                88.02
+               ],
+               [
+                16,
+                87.12
+               ],
+               [
+                18.5,
+                86.2
+               ],
+               [
+                21,
+                85.13
+               ],
+               [
+                23.5,
+                83.85
+               ],
+               [
+                26,
+                82.57
+               ],
+               [
+                28.5,
+                81.29
+               ],
+               [
+                31,
+                79.86
+               ],
+               [
+                36,
+                76.59
+               ],
+               [
+                41,
+                73.22
+               ],
+               [
+                46,
+                69.4
+               ],
+               [
+                51,
+                65.63
+               ],
+               [
+                56,
+                62.03
+               ],
+               [
+                61,
+                58.45
+               ],
+               [
+                66,
+                54.97
+               ],
+               [
+                71,
+                51.6
+               ],
+               [
+                76,
+                48.71
+               ],
+               [
+                81,
+                45.89
+               ],
+               [
+                86,
+                43.32
+               ],
+               [
+                91,
+                40.85
+               ],
+               [
+                96,
+                38.73
+               ],
+               [
+                118,
+                33.73
+               ],
+               [
+                128,
+                26.73
+               ],
+               [
+                210,
+                17.28
+               ],
+               [
+                285,
+                11.28
+               ],
+               [
+                287.7,
+                11.28
+               ]
+              ]
+             },
+             "failure": {
+              "mode": "none",
+              "time": 60,
+              "stage": 0
+             },
+             "boosterRecovery": false,
+             "dynamics": {
+              "model": "pointMass",
+              "wind": "calm",
+              "seed": 20260919
+             }
+            }
+           },
+           "t": 1028.1399999994633,
+           "clock": 1027.2771509070742,
+           "actions": [
+            {
+             "t": 60.10000000000056,
+             "kind": "commandAbort"
+            }
+           ],
+           "app": "0.1.0+fixture"
+          },
+          "passedRecord": {
+           "at": "2026-10-06T07:30:00.000Z",
+           "verdict": "pass",
+           "criteria": [
+            {
+             "id": "c1",
+             "state": "pass",
+             "value": 1027.1399999994633
+            },
+            {
+             "id": "c2",
+             "state": "pass",
+             "value": 18.008237250911666,
+             "expected": 17.483725486322005
+            }
+           ],
+           "answers": {
+            "c2": 18.008237250911666
+           },
+           "hintsShown": 0,
+           "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+             "vehicleId": "soyuz21a",
+             "satelliteId": "crew",
+             "siteId": "baikonur",
+             "orbitId": "custom",
+             "orbit": {
+              "id": "iss",
+              "name": "ISS orbit (420 km, 51.6°)",
+              "perigee": 420000,
+              "apogee": 420000,
+              "inclination": 51.64,
+              "argPerigee": 0,
+              "raanMode": "iss",
+              "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+             },
+             "launchTime": "2026-10-05T03:00:00.000Z",
+             "payloadMass": 7150,
+             "guidanceOverrides": {
+              "pitchOverAltitude": 200,
+              "kickAngle": 3,
+              "kickDuration": 8,
+              "gravityTurnEnd": 65000,
+              "parkingAltitude": 0,
+              "maxTimeToGo": 1500,
+              "maxTurnRate": 0.3,
+              "loftAltitude": 0,
+              "pitchMax": 35,
+              "pitchMin": -15,
+              "slewRate": 3,
+              "maxAccel": 0,
+              "pitchProgram": [
+               [
+                0,
+                90
+               ],
+               [
+                5,
+                90
+               ],
+               [
+                6,
+                89.85
+               ],
+               [
+                8.5,
+                89.47
+               ],
+               [
+                11,
+                88.89
+               ],
+               [
+                13.5,
+                88.02
+               ],
+               [
+                16,
+                87.12
+               ],
+               [
+                18.5,
+                86.2
+               ],
+               [
+                21,
+                85.13
+               ],
+               [
+                23.5,
+                83.85
+               ],
+               [
+                26,
+                82.57
+               ],
+               [
+                28.5,
+                81.29
+               ],
+               [
+                31,
+                79.86
+               ],
+               [
+                36,
+                76.59
+               ],
+               [
+                41,
+                73.22
+               ],
+               [
+                46,
+                69.4
+               ],
+               [
+                51,
+                65.63
+               ],
+               [
+                56,
+                62.03
+               ],
+               [
+                61,
+                58.45
+               ],
+               [
+                66,
+                54.97
+               ],
+               [
+                71,
+                51.6
+               ],
+               [
+                76,
+                48.71
+               ],
+               [
+                81,
+                45.89
+               ],
+               [
+                86,
+                43.32
+               ],
+               [
+                91,
+                40.85
+               ],
+               [
+                96,
+                38.73
+               ],
+               [
+                118,
+                33.73
+               ],
+               [
+                128,
+                26.73
+               ],
+               [
+                210,
+                17.28
+               ],
+               [
+                285,
+                11.28
+               ],
+               [
+                287.7,
+                11.28
+               ]
+              ]
+             },
+             "failure": {
+              "mode": "none",
+              "time": 60,
+              "stage": 0
+             },
+             "boosterRecovery": false,
+             "dynamics": {
+              "model": "pointMass",
+              "wind": "calm",
+              "seed": 20260919
+             }
+            }
+           },
+           "t": 1028.1399999994633,
+           "clock": 1027.2771509070742,
+           "actions": [
+            {
+             "t": 60.10000000000056,
+             "kind": "commandAbort"
+            }
+           ],
+           "app": "0.1.0+fixture"
+          }
+         },
+         "class-power": {
+          "attempts": 0,
+          "hintsShown": 0,
+          "passed": true,
+          "last": {
+           "at": "2026-10-06T07:50:00.000Z",
+           "verdict": "fail",
+           "criteria": [
+            {
+             "id": "margin",
+             "state": "fail",
+             "value": 6.831164394302602
+            },
+            {
+             "id": "battery",
+             "state": "pass",
+             "value": 13.01070731749505
+            },
+            {
+             "id": "eclipse",
+             "state": "pass",
+             "value": 35.42890975723664,
+             "expected": 35.12890975723664
+            }
+           ],
+           "answers": {
+            "eclipse": 35.42890975723664
+           },
+           "hintsShown": 0,
+           "design": {
+            "id": "fixture-napa2",
+            "name": "NAPA-2 (fixture)",
+            "template": "napa2",
+            "kind": "science",
+            "orbit": {
+             "perigee": 520000,
+             "apogee": 540000,
+             "inclination": 97.516,
+             "sso": true,
+             "ltan": 22.5
+            },
+            "lifeYears": 3,
+            "bus": {
+             "dryMass": 10,
+             "size": {
+              "width": 0.2,
+              "height": 0.1,
+              "depth": 0.3405
+             },
+             "cd": 2.2,
+             "cr": 1.3
+            },
+            "power": {
+             "payloadW": 4,
+             "busW": 4,
+             "arrayArea": 0.068,
+             "mount": "body",
+             "batteryWh": 40,
+             "dod": 0.3,
+             "cellEff": 0.295,
+             "Id": 0.77,
+             "degPerYear": 0.005,
+             "regulation": "PPT",
+             "batteryEff": 0.9
+            },
+            "propulsion": null,
+            "adcs": {
+             "mode": "threeAxis",
+             "inertia": [
+              0.105,
+              0.13,
+              0.0417
+             ],
+             "pointingDeg": 1,
+             "wheelH": 0.015,
+             "residualDipole": 0.02,
+             "cpOffset": 0.02
+            },
+            "comms": {
+             "txPowerW": 1,
+             "frequency": 8380000000,
+             "txAntennaD": 0,
+             "lineLoss": 0.4,
+             "dataRate": 12500000,
+             "requiredEbN0": 5.52,
+             "station": "bangkok",
+             "minElDeg": 10,
+             "rxAntennaD": 11.28,
+             "rxNoiseK": 189.7,
+             "losses": 2
+            },
+            "payload": {
+             "focalLength": 0.58,
+             "pixelPitch": 0.0000055,
+             "pixels": 4096,
+             "aperture": 0.095,
+             "bits": 10,
+             "wavelength": 5.5e-7
+            }
+           },
+           "designDate": "2026-10-05",
+           "level": "moderate",
+           "figures": {
+            "sat.mass": 10,
+            "sat.eclipseMax": 35.12890975723664,
+            "sat.powerMargin": 6.831164394302602,
+            "sat.batteryDod": 13.01070731749505,
+            "sat.dvMargin": 0,
+            "sat.linkMargin": 8.426984511389392,
+            "sat.gsd": 4.931034482758621,
+            "sat.swath": 20.197836222906616,
+            "sat.wheelMargin": 12.853649098102164,
+            "sat.torquerDipole": 0.024277157931354085
+           },
+           "app": "0.1.0+fixture"
+          },
+          "passedRecord": {
+           "at": "2026-10-06T07:40:00.000Z",
+           "verdict": "pass",
+           "criteria": [
+            {
+             "id": "margin",
+             "state": "pass",
+             "value": 10.000000002000009
+            },
+            {
+             "id": "battery",
+             "state": "pass",
+             "value": 13.01070731749505
+            },
+            {
+             "id": "eclipse",
+             "state": "pass",
+             "value": 35.42890975723664,
+             "expected": 35.12890975723664
+            }
+           ],
+           "answers": {
+            "eclipse": 35.42890975723664
+           },
+           "hintsShown": 0,
+           "design": {
+            "id": "fixture-napa2",
+            "name": "NAPA-2 (fixture)",
+            "template": "napa2",
+            "kind": "science",
+            "orbit": {
+             "perigee": 520000,
+             "apogee": 540000,
+             "inclination": 97.516,
+             "sso": true,
+             "ltan": 22.5
+            },
+            "lifeYears": 3,
+            "bus": {
+             "dryMass": 10,
+             "size": {
+              "width": 0.2,
+              "height": 0.1,
+              "depth": 0.3405
+             },
+             "cd": 2.2,
+             "cr": 1.3
+            },
+            "power": {
+             "payloadW": 4,
+             "busW": 4,
+             "arrayArea": 0.07001702211658115,
+             "mount": "body",
+             "batteryWh": 40,
+             "dod": 0.3,
+             "cellEff": 0.295,
+             "Id": 0.77,
+             "degPerYear": 0.005,
+             "regulation": "PPT",
+             "batteryEff": 0.9
+            },
+            "propulsion": null,
+            "adcs": {
+             "mode": "threeAxis",
+             "inertia": [
+              0.105,
+              0.13,
+              0.0417
+             ],
+             "pointingDeg": 1,
+             "wheelH": 0.015,
+             "residualDipole": 0.02,
+             "cpOffset": 0.02
+            },
+            "comms": {
+             "txPowerW": 1,
+             "frequency": 8380000000,
+             "txAntennaD": 0,
+             "lineLoss": 0.4,
+             "dataRate": 12500000,
+             "requiredEbN0": 5.52,
+             "station": "bangkok",
+             "minElDeg": 10,
+             "rxAntennaD": 11.28,
+             "rxNoiseK": 189.7,
+             "losses": 2
+            },
+            "payload": {
+             "focalLength": 0.58,
+             "pixelPitch": 0.0000055,
+             "pixels": 4096,
+             "aperture": 0.095,
+             "bits": 10,
+             "wavelength": 5.5e-7
+            }
+           },
+           "designDate": "2026-10-05",
+           "level": "moderate",
+           "figures": {
+            "sat.mass": 10,
+            "sat.eclipseMax": 35.12890975723664,
+            "sat.powerMargin": 10.000000002000009,
+            "sat.batteryDod": 13.01070731749505,
+            "sat.dvMargin": 0,
+            "sat.linkMargin": 8.426984511389392,
+            "sat.gsd": 4.931034482758621,
+            "sat.swath": 20.197836222906616,
+            "sat.wheelMargin": 12.853649098102164,
+            "sat.torquerDipole": 0.024277157931354085
+           },
+           "app": "0.1.0+fixture"
+          }
+         },
+         "class-theos": {
+          "attempts": 0,
+          "hintsShown": 0,
+          "passed": true,
+          "last": {
+           "at": "2026-10-06T08:00:00.000Z",
+           "verdict": "pass",
+           "criteria": [
+            {
+             "id": "life",
+             "state": "pass",
+             "value": 18.050705695740717
+            },
+            {
+             "id": "down",
+             "state": "pass",
+             "value": 1
+            },
+            {
+             "id": "data",
+             "state": "pass",
+             "value": 160.72505322396756
+            },
+            {
+             "id": "gsd",
+             "state": "pass",
+             "value": 0.5014285714285713
+            },
+            {
+             "id": "dv",
+             "state": "pass",
+             "value": 31.893966589910377
+            },
+            {
+             "id": "swath",
+             "state": "pass",
+             "value": 10.432759127250849,
+             "expected": 10.329464482426584
+            }
+           ],
+           "answers": {
+            "swath": 10.432759127250849
+           },
+           "hintsShown": 0,
+           "design": {
+            "id": "fixture-theos2",
+            "name": "THEOS-2 (fixture)",
+            "template": "theos2",
+            "kind": "earthObs",
+            "orbit": {
+             "perigee": 621000,
+             "apogee": 621000,
+             "inclination": 97.871,
+             "sso": true,
+             "ltan": 22.25
+            },
+            "lifeYears": 10,
+            "bus": {
+             "dryMass": 385,
+             "size": {
+              "width": 1,
+              "height": 1.6,
+              "depth": 1
+             },
+             "cd": 2.2,
+             "cr": 1.3
+            },
+            "power": {
+             "payloadW": 150,
+             "busW": 250,
+             "arrayArea": 3.5,
+             "mount": "tracking",
+             "batteryWh": 1200,
+             "dod": 0.3,
+             "cellEff": 0.295,
+             "Id": 0.77,
+             "degPerYear": 0.005,
+             "regulation": "PPT",
+             "batteryEff": 0.9
+            },
+            "propulsion": {
+             "thrust": 4,
+             "isp": 223,
+             "propellant": 40
+            },
+            "adcs": {
+             "mode": "threeAxis",
+             "inertia": [
+              126,
+              70.8,
+              126
+             ],
+             "pointingDeg": 0.05,
+             "wheelH": 12,
+             "residualDipole": 1,
+             "cpOffset": 0.1
+            },
+            "comms": {
+             "txPowerW": 10,
+             "frequency": 8200000000,
+             "txAntennaD": 0.15,
+             "lineLoss": 1,
+             "dataRate": 140000000,
+             "requiredEbN0": 5.52,
+             "station": "bangkok",
+             "minElDeg": 10,
+             "rxAntennaD": 11.28,
+             "rxNoiseK": 189.7,
+             "losses": 2
+            },
+            "payload": {
+             "focalLength": 16.1,
+             "pixelPitch": 0.000013,
+             "pixels": 20600,
+             "aperture": 0.9,
+             "bits": 12,
+             "wavelength": 5.5e-7
+            }
+           },
+           "designDate": "2026-10-05",
+           "level": "moderate",
+           "figures": {
+            "sat.mass": 425,
+            "sat.eclipseMax": 34.55281310329835,
+            "sat.powerMargin": 18.6408829941902,
+            "sat.batteryDod": 21.32889697734466,
+            "sat.dvMargin": 31.893966589910377,
+            "sat.linkMargin": 26.07515262611048,
+            "sat.gsd": 0.5014285714285713,
+            "sat.swath": 10.329464482426584,
+            "sat.wheelMargin": 78.84517560084515,
+            "sat.torquerDipole": 3.243173577022257,
+            "sat.dataPerDay": 160.72505322396756,
+            "sat.lifetime": 18.050705695740717,
+            "sat.disposal25y": 1
+           },
+           "app": "0.1.0+fixture"
+          },
+          "passedRecord": {
+           "at": "2026-10-06T08:00:00.000Z",
+           "verdict": "pass",
+           "criteria": [
+            {
+             "id": "life",
+             "state": "pass",
+             "value": 18.050705695740717
+            },
+            {
+             "id": "down",
+             "state": "pass",
+             "value": 1
+            },
+            {
+             "id": "data",
+             "state": "pass",
+             "value": 160.72505322396756
+            },
+            {
+             "id": "gsd",
+             "state": "pass",
+             "value": 0.5014285714285713
+            },
+            {
+             "id": "dv",
+             "state": "pass",
+             "value": 31.893966589910377
+            },
+            {
+             "id": "swath",
+             "state": "pass",
+             "value": 10.432759127250849,
+             "expected": 10.329464482426584
+            }
+           ],
+           "answers": {
+            "swath": 10.432759127250849
+           },
+           "hintsShown": 0,
+           "design": {
+            "id": "fixture-theos2",
+            "name": "THEOS-2 (fixture)",
+            "template": "theos2",
+            "kind": "earthObs",
+            "orbit": {
+             "perigee": 621000,
+             "apogee": 621000,
+             "inclination": 97.871,
+             "sso": true,
+             "ltan": 22.25
+            },
+            "lifeYears": 10,
+            "bus": {
+             "dryMass": 385,
+             "size": {
+              "width": 1,
+              "height": 1.6,
+              "depth": 1
+             },
+             "cd": 2.2,
+             "cr": 1.3
+            },
+            "power": {
+             "payloadW": 150,
+             "busW": 250,
+             "arrayArea": 3.5,
+             "mount": "tracking",
+             "batteryWh": 1200,
+             "dod": 0.3,
+             "cellEff": 0.295,
+             "Id": 0.77,
+             "degPerYear": 0.005,
+             "regulation": "PPT",
+             "batteryEff": 0.9
+            },
+            "propulsion": {
+             "thrust": 4,
+             "isp": 223,
+             "propellant": 40
+            },
+            "adcs": {
+             "mode": "threeAxis",
+             "inertia": [
+              126,
+              70.8,
+              126
+             ],
+             "pointingDeg": 0.05,
+             "wheelH": 12,
+             "residualDipole": 1,
+             "cpOffset": 0.1
+            },
+            "comms": {
+             "txPowerW": 10,
+             "frequency": 8200000000,
+             "txAntennaD": 0.15,
+             "lineLoss": 1,
+             "dataRate": 140000000,
+             "requiredEbN0": 5.52,
+             "station": "bangkok",
+             "minElDeg": 10,
+             "rxAntennaD": 11.28,
+             "rxNoiseK": 189.7,
+             "losses": 2
+            },
+            "payload": {
+             "focalLength": 16.1,
+             "pixelPitch": 0.000013,
+             "pixels": 20600,
+             "aperture": 0.9,
+             "bits": 12,
+             "wavelength": 5.5e-7
+            }
+           },
+           "designDate": "2026-10-05",
+           "level": "moderate",
+           "figures": {
+            "sat.mass": 425,
+            "sat.eclipseMax": 34.55281310329835,
+            "sat.powerMargin": 18.6408829941902,
+            "sat.batteryDod": 21.32889697734466,
+            "sat.dvMargin": 31.893966589910377,
+            "sat.linkMargin": 26.07515262611048,
+            "sat.gsd": 0.5014285714285713,
+            "sat.swath": 10.329464482426584,
+            "sat.wheelMargin": 78.84517560084515,
+            "sat.torquerDipole": 3.243173577022257,
+            "sat.dataPerDay": 160.72505322396756,
+            "sat.lifetime": 18.050705695740717,
+            "sat.disposal25y": 1
+           },
+           "app": "0.1.0+fixture"
+          }
+         }
+        },
+        "assessments": []
+       },
+       "checksum": "fc047c4a0011788287172af2a163bfe7d6190c39f8da6fa8d23e75a4ecfecf6e"
+      }
+     ],
+     "lessons": [
+      {
+       "id": "class-leo",
+       "track": 9,
+       "order": 1,
+       "mode": "explore",
+       "domains": [
+        2,
+        3
+       ],
+       "title": {
+        "en": "A payload to 500 km",
+        "ru": "Полезный груз на 500 км",
+        "th": "น้ำหนักบรรทุกสู่ 500 กม."
+       },
+       "brief": {
+        "en": "Fly Falcon 9 into the 500 km circular orbit with a payload you choose, keep at least 100 m/s in the second stage, and type the orbit's period.",
+        "ru": "Выведите Falcon 9 на круговую орбиту 500 км с выбранным вами грузом, сохраните во второй ступени не меньше 100 м/с и введите период орбиты.",
+        "th": "นำ Falcon 9 ขึ้นสู่วงโคจรวงกลม 500 กม. พร้อมน้ำหนักบรรทุกที่เลือกเอง ให้ขั้นที่ 2 เหลือ Δv อย่างน้อย 100 ม./วินาที แล้วพิมพ์คาบของวงโคจร"
+       },
+       "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+         "vehicleId": "falcon9",
+         "satelliteId": "cubesats",
+         "siteId": "cape",
+         "orbitId": "leo",
+         "orbit": {
+          "id": "leo",
+          "name": "Low Earth orbit (500 km)",
+          "perigee": 500000,
+          "apogee": 500000,
+          "inclination": "site",
+          "argPerigee": 0,
+          "raanMode": "free",
+          "description": "Generic circular LEO at the minimum inclination of the launch site."
+         },
+         "launchTime": "2026-10-05T03:00:00.000Z",
+         "payloadMass": 10000,
+         "guidanceOverrides": {},
+         "failure": {
+          "mode": "none",
+          "time": 60,
+          "stage": 0
+         },
+         "boosterRecovery": false,
+         "dynamics": {
+          "model": "pointMass",
+          "wind": "calm",
+          "seed": 20260919
+         }
+        }
+       },
+       "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.failure",
+        "setup.dynamics.model"
+       ],
+       "criteria": [
+        {
+         "id": "c1",
+         "kind": "outcome",
+         "is": "target"
+        },
+        {
+         "id": "c2",
+         "kind": "measure",
+         "measure": "dvLeft",
+         "min": 100
+        },
+        {
+         "id": "c3",
+         "kind": "answer",
+         "measure": "orbit.period",
+         "prompt": {
+          "en": "Period (min)",
+          "ru": "Период (мин)",
+          "th": "คาบ (นาที)"
+         },
+         "tol": 0.5
+        }
+       ],
+       "hints": [
+        {
+         "en": "T = 2π√(a³/μ)",
+         "ru": "T = 2π√(a³/μ)",
+         "th": "T = 2π√(a³/μ)"
+        }
+       ]
+      },
+      {
+       "id": "class-abort",
+       "track": 9,
+       "order": 1,
+       "mode": "explore",
+       "domains": [
+        6
+       ],
+       "title": {
+        "en": "Abort at max-Q",
+        "ru": "Спасение на максимальном напоре",
+        "th": "ยกเลิกการปล่อยที่ max-Q"
+       },
+       "brief": {
+        "en": "A crewed Soyuz. Press Abort at T+60 s, fly until the crew is down, and type the peak load on the crew.",
+        "ru": "Пилотируемый «Союз». Нажмите «Авария» на T+60 с, выполните полёт до приземления экипажа и введите максимальную перегрузку экипажа.",
+        "th": "ยานโซยุซมีมนุษย์ กดยกเลิกการปล่อยที่ T+60 วินาที บินจนลูกเรือถึงพื้น แล้วพิมพ์ภาระสูงสุดที่ลูกเรือได้รับ"
+       },
+       "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+         "vehicleId": "soyuz21a",
+         "satelliteId": "crew",
+         "siteId": "baikonur",
+         "orbitId": "iss",
+         "orbit": {
+          "id": "iss",
+          "name": "ISS orbit (420 km, 51.6°)",
+          "perigee": 420000,
+          "apogee": 420000,
+          "inclination": 51.64,
+          "argPerigee": 0,
+          "raanMode": "iss",
+          "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+         },
+         "launchTime": "2026-10-05T03:00:00.000Z",
+         "payloadMass": 7150,
+         "guidanceOverrides": {},
+         "failure": {
+          "mode": "none",
+          "time": 60,
+          "stage": 0
+         },
+         "boosterRecovery": false,
+         "dynamics": {
+          "model": "pointMass",
+          "wind": "calm",
+          "seed": 20260919
+         }
+        }
+       },
+       "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.launchTime",
+        "setup.dynamics.model"
+       ],
+       "criteria": [
+        {
+         "id": "c1",
+         "kind": "event",
+         "key": "evt.abortCrewSafe",
+         "present": true
+        },
+        {
+         "id": "c2",
+         "kind": "answer",
+         "measure": "abort.maxG",
+         "prompt": {
+          "en": "Peak load (g)",
+          "ru": "Максимальная перегрузка (ед.)",
+          "th": "ภาระสูงสุด (g)"
+         },
+         "tolPct": 10
+        }
+       ],
+       "hints": [],
+       "endEvent": "evt.abortCrewSafe"
+      },
+      {
+       "kind": "design",
+       "id": "class-power",
+       "track": 9,
+       "order": 1,
+       "mode": "explore",
+       "domains": [
+        1,
+        2
+       ],
+       "title": {
+        "en": "Power through the eclipse",
+        "ru": "Мощность в тени",
+        "th": "กำลังไฟฟ้าตลอดอุปราคา"
+       },
+       "brief": {
+        "en": "Give NAPA-2 a power margin of at least 10 % at the end of its life, the battery drained no deeper than 30 %, and type its longest eclipse.",
+        "ru": "Обеспечьте NAPA-2 запас мощности не меньше 10 % к концу срока службы при разряде аккумулятора не глубже 30 % и введите самую длинную тень.",
+        "th": "ทำให้ NAPA-2 มีค่าเผื่อกำลังไฟฟ้าอย่างน้อย 10 % เมื่อสิ้นอายุการใช้งาน แบตเตอรี่คายประจุไม่เกิน 30 % แล้วพิมพ์อุปราคานานที่สุด"
+       },
+       "start": {
+        "template": "napa2"
+       },
+       "designDate": "2026-10-05",
+       "level": "moderate",
+       "locked": [
+        "orbit.perigee",
+        "orbit.apogee",
+        "orbit.inclination",
+        "orbit.ltan",
+        "orbit.raan",
+        "orbit.sso",
+        "lifeYears",
+        "bus.dryMass",
+        "bus.size.width",
+        "bus.size.height",
+        "bus.size.depth",
+        "bus.cd",
+        "bus.cr",
+        "power.payloadW",
+        "power.busW"
+       ],
+       "criteria": [
+        {
+         "id": "margin",
+         "kind": "design",
+         "measure": "sat.powerMargin",
+         "min": 10
+        },
+        {
+         "id": "battery",
+         "kind": "design",
+         "measure": "sat.batteryDod",
+         "max": 30
+        },
+        {
+         "id": "eclipse",
+         "kind": "answer",
+         "measure": "sat.eclipseMax",
+         "prompt": {
+          "en": "Longest eclipse (min)",
+          "ru": "Самая длинная тень (мин)",
+          "th": "อุปราคานานที่สุด (นาที)"
+         },
+         "tol": 1
+        }
+       ],
+       "hints": []
+      },
+      {
+       "kind": "design",
+       "id": "class-theos",
+       "track": 9,
+       "order": 1,
+       "mode": "engineer",
+       "domains": [
+        2
+       ],
+       "title": {
+        "en": "An imager that lasts and leaves",
+        "ru": "Съёмочный спутник: прослужить и уйти",
+        "th": "ดาวเทียมถ่ายภาพที่อยู่นานแล้วออกจากวงโคจร"
+       },
+       "brief": {
+        "en": "Keep the THEOS-2-class imager up for its ten years and down within IADC's 25, bring 100 Gbit down to Bangkok a day, and type its swath.",
+        "ru": "Сохраните съёмочный спутник класса THEOS-2 на орбите все десять лет и сведите его в течение 25 лет по правилу IADC, передавайте в Бангкок 100 Гбит в сутки и введите полосу обзора.",
+        "th": "ให้ดาวเทียมถ่ายภาพระดับ THEOS-2 อยู่ในวงโคจรครบ 10 ปีและตกสู่บรรยากาศภายใน 25 ปีตามแนวทาง IADC ส่งข้อมูลลงกรุงเทพฯ วันละ 100 กิกะบิต แล้วพิมพ์ความกว้างแนวถ่ายภาพ"
+       },
+       "start": {
+        "template": "theos2"
+       },
+       "designDate": "2026-10-05",
+       "level": "moderate",
+       "requirements": {
+        "target": {
+         "lat": 13.7563,
+         "lon": 100.5018,
+         "name": "Bangkok"
+        },
+        "gsd": 0.5,
+        "revisitDays": 26,
+        "daylightOnly": true,
+        "ltan": 22.25,
+        "lifeYears": 10,
+        "activity": "moderate",
+        "dataPerDay": 100000000000,
+        "stations": [
+         "bangkok"
+        ],
+        "minElDeg": 10,
+        "disposal": "25y"
+       },
+       "locked": [
+        "bus.dryMass",
+        "bus.size.width",
+        "bus.size.height",
+        "bus.size.depth",
+        "bus.cd",
+        "bus.cr"
+       ],
+       "criteria": [
+        {
+         "id": "life",
+         "kind": "design",
+         "measure": "sat.lifetime",
+         "min": 10
+        },
+        {
+         "id": "down",
+         "kind": "design",
+         "measure": "sat.disposal25y",
+         "min": 1
+        },
+        {
+         "id": "data",
+         "kind": "design",
+         "measure": "sat.dataPerDay",
+         "min": 100
+        },
+        {
+         "id": "gsd",
+         "kind": "design",
+         "measure": "sat.gsd",
+         "max": 0.55
+        },
+        {
+         "id": "dv",
+         "kind": "design",
+         "measure": "sat.dvMargin",
+         "min": 0
+        },
+        {
+         "id": "swath",
+         "kind": "answer",
+         "measure": "sat.swath",
+         "prompt": {
+          "en": "Swath (km)",
+          "ru": "Полоса обзора (км)",
+          "th": "ความกว้างแนวถ่ายภาพ (กม.)"
+         },
+         "tolPct": 2
+        }
+       ],
+       "hints": []
+      }
+     ],
+     "names": [
+      "results.orbitlab-results.json"
+     ]
+    }
+   ]
+  }
+ }
+}
