@@ -27,13 +27,13 @@ d²r/dt² = −μ r/|r|³ (+ J2 term in orbit) + (T/m) û_T − ½ ρ |v_air| C_
 - **v**_air = **v** − ω⊕ ẑ × **r** is the velocity relative to the co-rotating atmosphere.
 - The J2 acceleration (Earth oblateness, J2 = 1.08262668 × 10⁻³) is applied in the orbital
   phase; it drives nodal precession (sun-synchronous orbits, Molniya's critical inclination).
-- Integration: classical fourth-order Runge–Kutta with adaptive steps (0.1 s in the
+- Integration: classical fourth-order Runge–Kutta with steps chosen by flight regime and no error control (0.1 s in the
   atmosphere, up to 30 s in orbit). Exo-atmospheric unpowered coasts use the analytic
   Kepler solution. Mass varies linearly inside a step.
 
 ## 2a. Six-DOF flight
 
-Every vehicle flies by default as a **rigid body**: the state adds a quaternion attitude and
+In the app, every vehicle flies by default as a **rigid body** (a `Simulation` without `dynamics`, and a Build hand-over without six-DOF ticked, fly point mass): the state adds a quaternion attitude and
 three body rotation rates to **r** and **v**, and the thrust no longer points where guidance
 asks — guidance asks an autopilot, and the autopilot moves real actuators. Each chamber of each
 engine sits where its bell is drawn and swings within its own travel (two planes, or one plane
@@ -1136,7 +1136,7 @@ Two drag laws, because the model flies two kinds of body:
   fast and too far downrange.
 
 In **six-DOF** flight the attitude matters, so the body also feels a normal force and a
-moment, from a table built for each configuration of the vehicle (Falcon 9 and Soyuz-2.1a;
+moment, from a table built for each configuration of the vehicle (every vehicle;
 `src/physics/rigid/aero-tables.ts`, data in [SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md)).
 The normal force is slender-body lift — made where the cross-section grows going down from the
 nose: the fairing, a boat-tail, each strap-on's nose cone — plus viscous crossflow drag on the
@@ -1165,10 +1165,7 @@ unchanged — so F_vac/(g₀ Isp_vac) and F_SL/(g₀ Isp_SL) are the *same* numb
 that says otherwise is over-determined. The model takes the vacuum pair as authoritative (it is
 the pair every source quotes, and the only one a vacuum-only engine has) and **back-solves the
 Isp at every pressure** from Isp(p) = F(p)/(ṁ g₀), so F = ṁ g₀ Isp holds exactly at every
-altitude. The sea-level Isp a ground-lit engine then delivers is within 1 % of the quoted
-`ispSL` for most of the fleet; the exceptions are recorded by a test rather than hidden —
-Vulcain 2.1 +5.0 %, Rutherford +2.6 %, Raptor 2 +2.4 % (and the RD-108A +6.9 % until it took
-Arianespace's published pair on 2026-10-01).
+altitude. The sea-level Isp a ground-lit engine of each vehicle's first stage and its boosters then delivers is within 8 % of the quoted `ispSL`, the bound `tests/physics-core.test.ts` asserts; the engines it pins above 2 % are Vulcain 2.1, Rutherford and Raptor 2 (the RD-108A left that list on 2026-10-01, when it took Arianespace's published pair).
 
 A throttle level, a solid's thrust profile and the start-up and tail-off ramps scale the whole
 pressure-blended thrust, F = λ·F(p), and the mass flow with it, so the Isp does not depend on the
@@ -1511,13 +1508,15 @@ know. Two consequences worth knowing about:
 | Falcon 9 | 1.5 | 0.30 | 35 | 0 |
 | Falcon Heavy | 1.5 | 0.30 | 25 | 150 |
 | Atlas V 551 | 6.0 | 0.30 | 25 | 150 |
-| Vulcan Centaur | 1.5 | 0.30 | 35 | 150 |
+| Vulcan Centaur | 3.0 | 0.30 | 40 | 150 |
 | Ariane 64 | 6.0 | 0.30 | 35 | 150 |
 | Long March 5 | 1.5 | 0.45 | 35 | 0 |
 | H3-22 | 1.5 | 0.30 | 35 | 0 |
-| PSLV-XL | 1.5 | 0.30 | 25 | 0 |
+| PSLV-XL | 1.5 | 0.30 | 25 | 80 |
 | Electron | 6.0 | 0.45 | 35 | 0 |
 | Starship | 1.5 | 0.30 | 35 | 0 |
+
+The six-DOF kicks the default flight uses are not in this table; among them are Soyuz-2.1a 6°, Falcon 9 3.5°, Atlas V 8° and Angara-A5 8° (`src/data/vehicles.ts`, `guidanceDefaultsSixDof`).
 
 The pattern is physical rather than arbitrary: launchers that leave the pad with a high
 thrust-to-weight or a solid first stage (Atlas V, Ariane 64, Electron, Proton-M) turn over
@@ -2746,7 +2745,7 @@ lost. The flight ends with the crew at rest, status `landed`. Code: src/physics/
 
 | Time of the abort | Way out | What flies |
 |---|---|---|
-| Countdown to T+113.5 s | The tower's main motor, with its control motor pushing the tower's top sideways | The head section: tower, upper fairing, orbital and descent modules (7 635 kg) |
+| Countdown to T+113.5 s | The tower's main motor, with its control motor pushing the tower's top sideways | The head section: tower, upper fairing, orbital and descent modules (7 170 kg) |
 | T+113.5 s to the fairing's jettison (T+153.3 s) | The fairing's four motors (РДГ 860М), as on MS-10 | The head section without the tower |
 | After the fairing | The spacecraft released from the rocket on springs | Service, descent and orbital modules together |
 
@@ -2769,7 +2768,7 @@ g is the specific force on the body carrying them, and its peak is kept.
 
 | Quantity | Value | Source |
 |---|---|---|
-| Head section with the tower | 7 635 kg | Braeunig, Soyuz specifications (the 1966 system's; 7.5–8.0 t from today's parts) |
+| Head section with the tower | 7 170 kg | Sum of the parts in `src/physics/rigid/escape.ts`: tower 1 740, fairing 1 180, orbital module 1 300, descent module 2 950 kg (the propellants are added back in, so the tower's 800 and the fairing's 176 are counted in full) |
 | Crewed fairing (11S517A3); head with the tower | 3.0 m × 9.5 m; 15.5 m (the tower 6.0 m above the nose) | Arianespace, Soyuz CSG User's Manual (2012), Table A5-1, derived from the drawing; the tower's split into truss, motor and cap is an estimate |
 | Descent module; orbital module | 2 950 kg, 2.17 m; 1 300 kg | Soyuz MS data (en.wikipedia), GCTC |
 | Upper fairing, which leaves with the crew | 1 180 kg, from 3.5 m above the fairing's base | estimate: its shell above the joint (63 %) of the crewed fairing's 1 645 kg, with the motors and the fins |
@@ -2841,8 +2840,8 @@ Progress MS (MS-17: 200 ± 2 × 242 ± 5 km, separation at T+8:49 near perigee).
 off at T+9:00 in 200 × 240 km. The stage's tail-off impulse, which the cut-off is judged with,
 is given to the spacecraft before it separates.
 
-**The station** is a reference orbit, not a live TLE: a circle at 418 km in the plane the
-launch windows use (the ISS flies 413 × 422 km, 51.64°), integrated under the same J2 gravity
+**The station** is a reference orbit, not a live TLE: a circle at 418 km in the spacecraft's
+own plane at arrival (the ISS flies 413 × 422 km, 51.64°), integrated under the same J2 gravity
 as the spacecraft (drag left out for both; the ISS loses 50–100 m a day). Its phase is set
 from the plan: the nominal plan is flown forward from the actual separation, the station is
 placed ahead of the spacecraft's arrival by the aim point's distance and flown back to the
@@ -2887,8 +2886,8 @@ at the centre of its finite burn; the burns are flown on the main engine (СКД
 
 The model's split between the two-orbit transfer and its braking differs from MS-28's (42 +
 6 m/s against 31 + 12 m/s) because it brings the spacecraft to the aim point level, where
-MS-28 arrived still closing; the sum is the same, and the whole two-orbit flight costs
-116.8 m/s against MS-28's 117.
+MS-28 arrived still closing. The whole two-orbit flight costs
+120.8 m/s, the sum of the four burns in the table above (115.1 without the braking burn); `tests/rendezvous.test.ts` bounds the total between 95 and 135 m/s.
 
 **The approach (Kurs)** is flown in six degrees of freedom: the spacecraft is a rigid body
 (RK4, J2) whose attitude is held by the thrusters' torque and whose translation asks for a
@@ -2927,8 +2926,7 @@ controller asks for rates in steps of 0.1 °/s, and the attitude is held in the 
 when they are zero. Handing back lets Kurs fly the spacecraft back to the stationkeeping point
 and in again. Every command is pinned into the recording like a six-DOF command.
 
-Flown headless (tests/rendezvous.test.ts, tests/heavy/rendezvous.test.ts): every profile
-docks, to every port, in the point-mass and the six-DOF ascent alike.
+Flown headless (tests/rendezvous.test.ts, tests/heavy/rendezvous.test.ts): the tests dock three profiles to Rassvet, four ports on the two-orbit profile, and one six-DOF ascent (`tests/heavy/rendezvous.test.ts`); no test docks every profile to every port.
 
 Limits: the station is a reference circle, not the ISS's measured orbit; the phasing burns are
 copied from one flight each rather than computed from the insertion as flight control does;
@@ -3036,8 +3034,9 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.
-  - Four engines' quoted sea-level Isp is 2.4–6.9 % away from what their thrust and mass flow
-    deliver; the model flies the delivered value (§4).
+  - Three engines' quoted sea-level Isp is more than 2 % away from what their thrust and mass flow
+    deliver (Vulcain 2.1, Rutherford and Raptor 2, the list `tests/physics-core.test.ts` pins); the
+    model flies the delivered value (§4).
 
 ## 11. Sound heard at the camera (roadmap V01)
 
@@ -3250,8 +3249,7 @@ ISS TLEs (NORAD 25544) either side of liftoff: 329.18° at MS-16's liftoff (TLEs
 `sat_tracking_and_pred/ref_tles_2024/25544.txt`); Space-Track itself needs an account. With the
 measured node the model's own launch window opens 158 s (MS-16) and 69 s (MS-25) from the real
 liftoff — the difference between its one head start for every launch (`T_PLANE`, 200 s) and the
-one flown — and MS-16, launched at its real second, reaches a plane 0.4° from the station's
-(tests/watch-missions.test.ts).
+one flown — and MS-16, launched at its real second, reaches a plane 0.4° from the station's; no test holds that angle, and `tests/watch-missions.test.ts` checks only that the launch window opens within 180 s of the real liftoff.
 
 **13.3 What stands in, and what is left out (approximations).**
 - *ORBCOMM-2* flew the first Falcon 9 Full Thrust (v1.2, 2015); the fleet's Block 5 stands in
@@ -3685,11 +3683,9 @@ Point-mass, pitch 2.51° (six-DOF in brackets):
   point-mass is unchanged. The first cadence, 0.2 s below 140 km and Blok E at 0.1 s, made 7,993 frames
   (63.3 MB) in point-mass, and in six-DOF ran past the ceiling ten times, 140 MB at its peak, thinning
   the orbit to 13 frames 55 minutes apart.
-  (A point-mass step is cut at the end of the recorder's packet, 5 s in these tests and a frame's
-  worth of mission time in the app, which moves Blok E's cut-off by up to half a second and the
-  sphere along the track by up to 4 km: 0.7 km short of its place at 5 s packets, 4.0 km beyond it
-  at a sixtieth of a second, against 0.5 km beyond in the tests' flight. The six-DOF takes the same
-  steps at any packet.)
+  (The point-mass flight steps whole steps (`sim.suggestedDt()`, `src/replay/recorder.ts:862-889`):
+  no step is cut at the end of a recorder's packet, and a packet's length decides only when a step
+  is flown. The six-DOF takes the same steps at any packet.)
 
 *The wind that morning.* The return, and everything it lets go of, flies in the wind measured at
 Saratov, 32 km north of where Gagarin came down (`OrbitSpec.deorbit.wind`,
