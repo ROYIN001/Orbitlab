@@ -4,7 +4,7 @@ The work package is Task 3 of [S20-wave2.md](../plan/S20-wave2.md). The referenc
 
 ## What was built
 
-- `src/astro/base/kepler.ts` (106 lines): `keplerUniversal(s, dt, mu)`, one universal-variable step for the ellipse, the parabola and the hyperbola, and `KEPLER_MAX_ITER`. It imports `State` from `./frames` as a type only, holds no mutable state, and each call returns a fresh object.
+- `src/astro/base/kepler.ts` (106 lines as first committed, 110 after the review round): `keplerUniversal(s, dt, mu)`, one universal-variable step for the ellipse, the parabola and the hyperbola. The cap on passes, `KEPLER_MAX_ITER`, is a constant private to the module since the review round. It imports `State` from `./frames` as a type only, holds no mutable state, and each call returns a fresh object.
 - Stumpff functions c2 and c3 with the series (twelve terms) wherever |psi| < 1; beyond, c2 in its half-angle form 2 sin^2(z/2)/z^2 (sinh for psi < 0) and c3 as (z - sin z)/z^3 (sinh for psi < 0).
 - The solver: F(chi) = t(chi) - dt, which is monotonic in chi (its slope is r/sqrt(mu)). A bracket [0, w] (or [-w, 0] for dt < 0) is grown by doubling from min(sqrt(r0), sqrt(mu)|dt|/r0), so that sin and sinh stay finite; then Newton's method from chi = sqrt(mu)·dt/r0 clipped into the bracket, bisecting whenever a step leaves the bracket. It stops when the Newton step is 4 eps of chi or less, or when the bracket is 64 eps of chi wide (below that, rounding noise in t(chi) decides), or at the cap.
 - The state is f·r + g·v and f'·r + g'·v with f = 1 - chi^2 c2/r0, g = dt - chi^3 c3/sqrt(mu), f' = sqrt(mu) chi (psi c3 - 1)/(r r0), g' = 1 - chi^2 c2/r, r taken from the norm of the new position.
@@ -37,7 +37,7 @@ Each made once on `kepler.ts`, the test file run, then restored (`cmp` against t
 
 ## Size
 
-`kepler.ts` is 106 lines, 4,451 bytes; minified with rolldown it is 1,425 bytes (824 gzip -9). Nothing outside `src/astro` imports it, so the app's bundle cannot change.
+`kepler.ts` was 106 lines, 4,451 bytes when first committed, and minified with rolldown 1,425 bytes (824 gzip -9); after the review round's docstring it is 110 lines, 4,783 bytes, and the minified size was not measured again. Nothing outside `src/astro` imports it, so the app's bundle cannot change.
 
 The pull request's lines by part, as `git diff --stat origin/main..HEAD` gives them before the review round's own commit: `kepler.ts` 106, `tests/astro-kepler.test.ts` 166, `tests/kepler-elliptic-pin.test.ts` 21, `tests/integrator-convergence.test.ts` 136, `mpmath-kepler.json` 26,937, `today-elliptic.json` 210, `make_kepler_fixture.py` 182, `make_elliptic_pin.mjs` 57, this report 60, the change fragment 7; 27,882 insertions in 10 files. The source is 106 lines, under the 400 the plan names, so no reason to pass it is needed.
 
@@ -59,7 +59,7 @@ These are the plan's pre-checked findings (`pf15_kepler_precheck.py`, `pf15_toda
 
 ## Not checked
 
-The default, heavy and fleet suites (not selected). No browser run: the app does not call the module. A state with r parallel to v is outside the contract and was not tried. Many revolutions (dt of 1e9 s on a low orbit) return finite numbers; their accuracy was not measured.
+The default, heavy and fleet suites (not selected). No browser run: the app does not call the module. A state with r parallel to v is outside the contract and was not tried. Many revolutions are held at two inputs only since the review round (dt of +1e9 and -1e9 s on one low orbit, the extreme case); no other long run was compared with a reference.
 
 ## Review round
 
