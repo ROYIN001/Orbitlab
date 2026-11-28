@@ -114,21 +114,30 @@ function pwaPlugin(): Plugin {
  * the page as it does between any two entries. Vite's `worker` options cannot
  * do this: Vite bundles each worker by a build of its own, so `worker.format`
  * and a worker's chunking options split a worker only inside its own bundle,
- * and the physics core was paid once per worker. A module that still holds a
- * `new URL(` with `.worker.ts` in it after the rewrite (double quotes, a
- * sub-folder, another form) fails the build, naming the file, so that no
- * worker stays a bundle of its own unnoticed. The development server is left
- * alone and serves each worker from its source.
+ * and the physics core was paid once per worker. So that no worker stays a
+ * bundle of its own unnoticed, the build fails, naming the file, for the other
+ * ways of starting a worker: a `new URL(` that names a `.worker.<any
+ * extension>` file and is left after the rewrite (double quotes, a sub-folder,
+ * a trailing comma, `.worker.js`, `.worker.mts`, …), and an import of any kind
+ * with Vite's worker query (`?worker`, `?sharedworker`, `?worker&inline`,
+ * `?worker&url`). A worker file not named `*.worker.*` and started by
+ * `new URL(` is not caught. The development server is left alone and serves
+ * each worker from its source.
  */
 function sharedWorkersPlugin(): Plugin {
   const re = /new URL\(\s*'(\.\/[\w.-]+\.worker\.ts)'\s*,\s*import\.meta\.url\s*\)/g;
-  const left = /new URL\([^)]*\.worker\.ts/;
+  const left = /new URL\([^)]*\.worker\.\w/;
+  const query = /[?&](?:shared)?worker(?:[&=]|$)/;
   return {
     name: 'orbitlab-shared-workers',
     apply: 'build',
     enforce: 'pre',
+    resolveId(source, importer) {
+      if (query.test(source)) this.error(`orbitlab-shared-workers: ${importer ? relative(root, importer) : source} imports '${source}', a worker the build would bundle on its own; start it as new Worker(new URL('./name.worker.ts', import.meta.url), { type: 'module' })`);
+      return null;
+    },
     async transform(code, id) {
-      if (!/\.[cm]?[jt]sx?$/.test(id) || !code.includes('.worker.ts')) return null;
+      if (!/\.[cm]?[jt]sx?$/.test(id) || !code.includes('.worker.')) return null;
       let out = code;
       for (const m of [...code.matchAll(re)]) {
         const resolved = await this.resolve(m[1], id);
@@ -137,7 +146,7 @@ function sharedWorkersPlugin(): Plugin {
         // the call's own line breaks are kept, so the rewrite never changes a line count
         out = out.replace(m[0], `import.meta.ROLLUP_FILE_URL_${ref}${'\n'.repeat(m[0].split('\n').length - 1)}`);
       }
-      if (left.test(out)) this.error(`orbitlab-shared-workers: ${relative(root, id)} has a new URL( with .worker.ts that was not made an entry of the build; write it as new URL('./name.worker.ts', import.meta.url)`);
+      if (left.test(out)) this.error(`orbitlab-shared-workers: ${relative(root, id)} has a new URL( naming a .worker. file that was not made an entry of the build; write it as new URL('./name.worker.ts', import.meta.url)`);
       if (out === code) return null;
       // The file as written, mapped one segment per line: exact at line level since the
       // line count is unchanged, and the build's module comparison then sees the file as written.

@@ -13,13 +13,18 @@ point, as the plan says it does (Step 6); its new groups and ceilings are Task C
 ```ts
 function sharedWorkersPlugin(): Plugin {
   const re = /new URL\(\s*'(\.\/[\w.-]+\.worker\.ts)'\s*,\s*import\.meta\.url\s*\)/g;
-  const left = /new URL\([^)]*\.worker\.ts/;
+  const left = /new URL\([^)]*\.worker\.\w/;
+  const query = /[?&](?:shared)?worker(?:[&=]|$)/;
   return {
     name: 'orbitlab-shared-workers',
     apply: 'build',
     enforce: 'pre',
+    resolveId(source, importer) {
+      if (query.test(source)) this.error(`orbitlab-shared-workers: ${importer ? relative(root, importer) : source} imports '${source}', a worker the build would bundle on its own; start it as new Worker(new URL('./name.worker.ts', import.meta.url), { type: 'module' })`);
+      return null;
+    },
     async transform(code, id) {
-      if (!/\.[cm]?[jt]sx?$/.test(id) || !code.includes('.worker.ts')) return null;
+      if (!/\.[cm]?[jt]sx?$/.test(id) || !code.includes('.worker.')) return null;
       let out = code;
       for (const m of [...code.matchAll(re)]) {
         const resolved = await this.resolve(m[1], id);
@@ -28,7 +33,7 @@ function sharedWorkersPlugin(): Plugin {
         // the call's own line breaks are kept, so the rewrite never changes a line count
         out = out.replace(m[0], `import.meta.ROLLUP_FILE_URL_${ref}${'\n'.repeat(m[0].split('\n').length - 1)}`);
       }
-      if (left.test(out)) this.error(`orbitlab-shared-workers: ${relative(root, id)} has a new URL( with .worker.ts that was not made an entry of the build; write it as new URL('./name.worker.ts', import.meta.url)`);
+      if (left.test(out)) this.error(`orbitlab-shared-workers: ${relative(root, id)} has a new URL( naming a .worker. file that was not made an entry of the build; write it as new URL('./name.worker.ts', import.meta.url)`);
       if (out === code) return null;
       // The file as written, mapped one segment per line: exact at line level since the
       // line count is unchanged, and the build's module comparison then sees the file as written.
@@ -40,20 +45,29 @@ function sharedWorkersPlugin(): Plugin {
 // plugins: [sharedWorkersPlugin(), htmlCommentsPlugin(), pwaPlugin()]
 ```
 
-Its comment in the file says what it does and why Vite's `worker` options cannot do it: Vite bundles
+Its comment in the file says what it does, why Vite's `worker` options cannot do it (Vite bundles
 each worker by a build of its own, so `worker.format` and a worker's chunking options split a worker
-only inside its own bundle (plan §1).
+only inside its own bundle; plan §1), and which forms the guard covers.
 
 How it differs from the patch of the plan's appendix:
 
-- **The build fails on a worker site it did not rewrite** (Task B, Step 1). A module that still holds
-  `new URL(` with `.worker.ts` in it after the rewrite stops the build with the message above, naming
-  the file from the checkout's root. Tried in a throwaway project: the single-quoted form builds;
-  double quotes, a sub-folder (`'./sub/b.worker.ts'`) and a trailing comma after `import.meta.url`
-  each fail the build naming `src/main.ts`; a call split over four lines without a trailing comma
-  builds, and its source map holds the file as written.
+- **The build fails on a worker started any other way** (Task B, Step 1; widened in the review
+  round). Two guards, each naming the file from the checkout's root: a module that still holds a
+  `new URL(` naming a `.worker.<any extension>` file after the rewrite (`transform`), and an import
+  of any kind, static or dynamic, whose specifier carries Vite's worker query `?worker` or
+  `?sharedworker`, with or without `&inline` or `&url` (`resolveId`). Tried in a throwaway project
+  with the final plugin, one form at a time: `new URL('./a.worker.ts', import.meta.url)` builds
+  (`a.worker-*.js` emitted); each of these fails the build with the plugin's message naming
+  `src/main.ts`: double quotes, a sub-folder (`'./sub/b.worker.ts'`), a trailing comma after
+  `import.meta.url`, `'./c.worker.js'`, `'./d.worker.mts'`, `import W from './e.ts?worker'`,
+  `'./e.ts?sharedworker'`, `'./e.ts?worker&inline'`, `'./e.ts?worker&url'`, and
+  `import('./e.ts?worker')`. Before the review round, a call split over four lines without a
+  trailing comma built, and its source map held the file as written. Not caught: a worker whose
+  file is not named `*.worker.*`, started by `new URL(` (Vite would then build it on its own); the
+  plugin's comment says so.
 - **The file filter** is `/\.[cm]?[jt]sx?$/` instead of `/\.ts$/`, so that a worker site in a `.js`
-  or `.tsx` file is checked too.
+  or `.tsx` file is checked too; the quick test on the content is `.worker.` instead of `.worker.ts`,
+  so that a file naming only a `.worker.js` reaches the guard.
 - **A source map.** The appendix's patch returned no map (`map: null`). With it, the module
   comparison (Step 3) gave `sets: DIFFER` for exactly the twelve files that start a worker
   (`src/session/session.ts` and the eleven `*-job.ts`), because the content recorded for them was the
@@ -70,33 +84,39 @@ How it differs from the patch of the plan's appendix:
 | | Commit | How it was built |
 |---|---|---|
 | Baseline | `efd6fd731e60193069c13878a4aae069cca25a97` (`efd6fd7`), the commit of main the branch is cut from | by the reference author, as the README's "Measured on the baseline" says: `npx vite build` in a `git worktree` of it at `$T1/base`; source maps into `$T1/base-maps` |
-| Head | `7dc7ccb` (the reference author's checks) with the change above, built from the working tree before it was committed | `npx vite build` in the package's checkout; `npx vite build --sourcemap --outDir $T1/head-maps --emptyOutDir 2>&1 \| tee $T1/head-maps.log` |
+| Head | `cd11a97` (the reference author's checks after the review round, on top of this package's first commit `c89a023`) with the review round's plugin, built from the working tree before it was committed | `npx vite build` in the package's checkout; `npx vite build --sourcemap --outDir $T1/head-maps --emptyOutDir 2>&1 \| tee $T1/head-maps.log` |
 
-The head's build stamp therefore reads `7dc7ccb`; the commit that holds the change differs from the
-built tree only in this report and the change fragment. Vite 8.3.0, Node 22.23.5, Chromium
+The head's build stamp therefore reads `cd11a97`; the commit that holds the change differs from the
+built tree only in this report and the change fragment. Every figure below is of this build, made
+after the review round; the first round's figures, on `7dc7ccb` with the first plugin, were the same
+except where a section says otherwise. Vite 8.3.0, Node 22.23.5, Chromium
 158.0.8127.36, 2026-11-28. Neither build's log has `INEFFECTIVE_DYNAMIC_IMPORT` or
 `SOURCEMAP_BROKEN`. The baseline's figures below are copied from the README unless a step said to
 measure it again.
 
 ## Step 2: the same answers
 
-`node tests/browser/t1/worker-digests.mjs dist $T1/out/head-3.json` on the head: `worker digests: ok`.
-`--compare` of the baseline's output (`base-2.json`) with it: **the two outputs agree**.
+`node tests/browser/t1/worker-digests.mjs dist $T1/out/head-4.json` on the head: `worker digests: ok`.
+`--compare $T1/out/base-3.json $T1/out/head-4.json`, where `base-3.json` is the baseline's output
+written by the reference author with the script as it stands after the review round (an output that
+failed cannot agree; each worker is listened to for one second after its row's end): `output A:
+passed by itself`, `output B: passed by itself`, every worker `agree`, and **the two outputs agree**.
+No worker sent a message in the second after its end (`afterEnd` 0 for all twelve in both).
 
 | Worker | Baseline digest (README) | Head digest | Messages, both | Seconds, head |
 |---|---|---|---|---|
-| flight | `c6f4d2b7a2b20e28abf1747c7d27694484af81a05071f7d947871de250675656` | the same | delta 61 | 22.0 |
+| flight | `c6f4d2b7a2b20e28abf1747c7d27694484af81a05071f7d947871de250675656` | the same | delta 61 | 20.5 |
 | tune | `54cfc885534f53a5f18da54e1a773ba198ecae244ced9c30d6fcf33c6979c2b8` | the same | progress 30, result 1 | 2.8 |
 | attitude-tune | `1b4fb520e6c62ba41c854bb3c815d21c933777e86971f20e3dcd06e0278b8f5e` | the same | progress 1, result 1 | 0.0 |
-| monte-carlo | `2fc624fa4eb2dbd4c9868f1686b4339984ef048e9be3b90805ffdd9e72988bd3` | the same | run 2 | 57.1 |
+| monte-carlo | `2fc624fa4eb2dbd4c9868f1686b4339984ef048e9be3b90805ffdd9e72988bd3` | the same | run 2 | 58.1 |
 | ratings | `69d6d93ebb25f41c072c9ed838a26993b3f54c64beec483a3db93e42e91f8afd` | the same | progress 12, result 1 | 0.4 |
-| readiness | `4cd51a8ac671ac1c704883a6377c4828f0e3eb89892d9f9a9106243bd770bf5c` | the same | result 1 | 0.2 |
-| reentry | `2e9d0cefaa852323e5b81db60e11900235e56ba189ca3c1315b7a07ad7eeda53` | the same | progress 5, result 1 | 0.6 |
+| readiness | `4cd51a8ac671ac1c704883a6377c4828f0e3eb89892d9f9a9106243bd770bf5c` | the same | result 1 | 0.1 |
+| reentry | `2e9d0cefaa852323e5b81db60e11900235e56ba189ca3c1315b7a07ad7eeda53` | the same | progress 5, result 1 | 0.5 |
 | screening | `081cfe82d932d34a59451b79be1a6b40943c99b626c85b04aab793951769d348` | the same | progress 1, result 1 | 0.0 |
 | lifetime | `cfecb3372a0575384bdddd1706cdda62e4aab9f2f845f4f4758b682ee50a3eac` | the same | progress 3, result 1 | 0.2 |
-| lifetime-altitude | `5e524edff576d7eb9158659391d5a349a1682e3a2a0c3105f27d21dd24f51314` | the same | progress 1736, result 1 | 5.0 |
-| requirement-trades | `2a1f1031da63dd0cacf741b9f1bad884e83420139f7033066f11a359c4562d02` | the same | progress 94, result 1 | 1.0 |
-| recheck | `036fe826f59c472676b1db9f86e1ad8ee3f6710838e0ada1a72f34cac73f0072` | the same | files 1, record 6, result 1 | 1.5 |
+| lifetime-altitude | `5e524edff576d7eb9158659391d5a349a1682e3a2a0c3105f27d21dd24f51314` | the same | progress 1736, result 1 | 4.9 |
+| requirement-trades | `2a1f1031da63dd0cacf741b9f1bad884e83420139f7033066f11a359c4562d02` | the same | progress 94, result 1 | 0.9 |
+| recheck | `036fe826f59c472676b1db9f86e1ad8ee3f6710838e0ada1a72f34cac73f0072` | the same | files 1, record 6, result 1 | 1.3 |
 
 The three checks on the head:
 
@@ -104,12 +124,13 @@ The three checks on the head:
 - `precache: pass: 114 file(s) loaded at start by the 12 worker entries (entries and their static imports), 0 not in the precache manifest` (baseline: 12 files, 0 missing).
 - `failed load: pass:` and **`error`** for each of the twelve, as on the baseline. On the head the file aborted is the first the entry imports: flight `simulation-*.js`, tune `autotune-*.js`, attitude-tune `attitude-tune-job-*.js`, monte-carlo and readiness `mission-*.js`, ratings `ratings-budget-*.js`, reentry `reentry-job-*.js`, screening `screening-job-*.js`, lifetime `propagate-*.js`, lifetime-altitude `lifetime-altitude-*.js`, requirement-trades `requirement-trades-*.js`, recheck `recheck-*.js`. No worker posted an answer.
 
-Before the source map was added, the same run on that build (`head-2.json`) gave the same twelve
-digests and the same three lines, and agreed with the baseline too.
+Before the review round, the same run on the first plugin's build (`head-3.json`, and before the
+source map was added `head-2.json`) gave the same twelve digests and the same three lines, and
+agreed with the baseline's `base-2.json` under the script as it then stood.
 
 ## Step 3: the same modules, and what each worker now loads
 
-`node tests/browser/t1/bundle-modules.mjs $T1/base-maps $T1/head-maps $T1/out/head-modules-3.json $T1/head-maps.log`:
+`node tests/browser/t1/bundle-modules.mjs $T1/base-maps $T1/head-maps $T1/out/head-modules-4.json $T1/head-maps.log`:
 baseline 36 maps and 589 (source, content) pairs, head 62 maps and 589 pairs; **sets: equal**; no
 `INEFFECTIVE_DYNAMIC_IMPORT`; `bundle modules: ok`.
 
@@ -171,6 +192,22 @@ read at its top level, which counts when it reads `document`, `window`, `localSt
 - `src/orbit/mean-state.ts`, `src/orbit/real-sky.ts`, `src/physics/propagator/spacecraft.ts`: no top-level effect
 - `src/workspace/storage.ts`: no top-level effect (`let` bindings left unset, an `unavailable` stand-in object whose methods run only when called, `new WeakMap()`)
 
+**What the lists cannot show: Vite's preload helper.** It is the build tool's own code, with no
+source file of the app, so no source map names it. On the baseline it was the chunk
+`preload-helper-*.js`; on the head its code sits in `propagate-*.js` (found by the event name
+`vite:preloadError`, which no other chunk holds), and the page and five workers load that chunk at
+start: reentry, lifetime, lifetime-altitude, requirement-trades and recheck. Its top level only
+declares a string, two functions and an empty object: no top-level effect. A worker can reach two
+dynamic imports today, both through the helper and both with an empty list of dependencies:
+`solar-daily-*.js` from `propagate-*.js` (`src/physics/propagator/activity.ts:110`) and
+`standard-magnitudes-*.js` from `coverage-*.js` (`src/orbit/visibility.ts:65`; `coverage-*.js` is
+loaded by requirement-trades and recheck). With an empty list the helper does not touch `document`;
+the build's other dynamic imports are in chunks no worker loads. A later dynamic import that passes
+dependencies would fail inside a worker, since the helper then calls `document`; and if one of
+today's two imports failed inside a worker, the helper's error path calls `window.dispatchEvent`, so
+the worker would see a `ReferenceError` in place of the import's own error. On the baseline each
+worker was one file, its dynamic imports inlined (README: no worker entry imports another file).
+
 The recheck worker was already the one whose imports reach `src/i18n` on the source
 (`tests/i18n-worker-path.test.ts`, `tests/worker-language-boundary.test.ts`); on the head it also
 evaluates the English dictionaries at start. No other worker loads a module of `src/i18n`.
@@ -178,13 +215,15 @@ evaluates the English dictionaries at start. No other worker loads a module of `
 ## Step 4: the first load
 
 `node tests/browser/t1/first-load.mjs <dist> <out.json>`, service workers blocked, a new context each
-run; both `first load: ok`, no console error on either.
+run; both `first load: ok`, no console error on either. The baseline's runs here were made in the
+first round; the head's are of the final build (the first round's head: 2.60, 3.36, 3.34 s, the same
+requests and bytes).
 
 | Run | Baseline (README) | Baseline, `$T1/base/dist`, measured again here | Head |
 |---|---|---|---|
-| 1 | 2.70 s; 24 requests, 9,497.2 kB | 2.45 s; 24 requests, 9,497.2 kB | 2.60 s; 49 requests, 9,515.6 kB |
-| 2 | 3.19 s; 24, 9,497.2 kB | 3.36 s; 24, 9,497.2 kB | 3.36 s; 49, 9,515.6 kB |
-| 3 | 3.49 s; 24, 9,497.2 kB | 3.02 s; 24, 9,497.2 kB | 3.34 s; 49, 9,515.6 kB |
+| 1 | 2.70 s; 24 requests, 9,497.2 kB | 2.45 s; 24 requests, 9,497.2 kB | 2.52 s; 49 requests, 9,515.6 kB |
+| 2 | 3.19 s; 24, 9,497.2 kB | 3.36 s; 24, 9,497.2 kB | 3.13 s; 49, 9,515.6 kB |
+| 3 | 3.49 s; 24, 9,497.2 kB | 3.02 s; 24, 9,497.2 kB | 3.13 s; 49, 9,515.6 kB |
 | Once settled, each run | 24 requests, 9,497.2 kB | 24 requests, 9,497.2 kB | 56 requests, 10,092.4 kB |
 
 Time to ready, requests and bytes are counted to ready. On the head the page asks for 25 more files
@@ -198,15 +237,17 @@ point).
 ## Step 5: the development server
 
 `npx vite --port 5179 --strictPort` in the package's checkout, then
-`node tests/browser/t1/first-load.mjs http://localhost:5179/ $T1/out/head-dev-first-load.json`:
+`node tests/browser/t1/first-load.mjs http://localhost:5179/ $T1/out/head-dev-first-load-4.json`, with
+the script as it stands after the review round (the lifetime worker from its source must also send
+nothing in the second after its answer):
 
 | Run | Time to ready | Requests to ready | Transferred to ready | Once settled | Console errors |
 |---|---|---|---|---|---|
-| 1 | 3.85 s | 539 | 34,670.3 kB | 640 requests, 34,716.0 kB | none |
-| 2 | 3.36 s | 539 | 34,670.3 kB | 640 requests, 34,716.0 kB | none |
-| 3 | 3.47 s | 539 | 34,670.3 kB | 640 requests, 34,716.0 kB | none |
+| 1 | 3.61 s | 539 | 34,670.3 kB | 640 requests, 34,716.0 kB | none |
+| 2 | 3.44 s | 539 | 34,670.3 kB | 640 requests, 34,716.0 kB | none |
+| 3 | 3.37 s | 539 | 34,670.3 kB | 640 requests, 34,716.0 kB | none |
 
-`ok   the lifetime worker from its source: result, digest cfecb3372a05 equals the baseline's cfecb3372a05`;
+`ok   the lifetime worker from its source: result, digest cfecb3372a05 equals the baseline's cfecb3372a05`, with no message after its answer;
 `first load: ok`. The server was stopped afterwards.
 
 ## Step 6: the sizes
@@ -254,14 +295,14 @@ says it does: `other chunks` and the four names that no longer exist. Sizes in k
 | preload-helper-*.js | 2.0 | 1.2 | ok | absent | | **FAIL: no such file; rename or remove the budget** |
 
 Baseline: 75 files precached, manifest `0e9de8c03fa90d`; 15198.5 kB code + 1118.8 kB under data/.
-Head: 100 files precached, manifest `16b7cfc6c9a714`; 11176.1 kB code + 1118.8 kB under data/. Data
+Head: 100 files precached, manifest `1b06e532f340c6`; 11176.1 kB code + 1118.8 kB under data/. Data
 baseline 1126.9 kB in both. **Precache code: 15,198.5 → 11,176.1 kB, 4,022.4 kB less.**
 
 **Report only, no ceilings** (raw kB / gzip kB / brotli kB; files)
 
 | Group | Baseline | Head |
 |---|---|---|
-| index-*.js | 1 file: 2669.3 / 824.0 / 663.9 | 1 file: 2109.1 / 627.8 / 507.2 |
+| index-*.js | 1 file: 2669.3 / 824.0 / 663.9 | 1 file: 2109.1 / 627.7 / 506.8 |
 | index-*.css | 1: 182.0 / 35.5 / 30.1 | 1: 182.0 / 35.5 / 30.1 |
 | flight.worker-*.js | 1: 570.7 / 182.7 / 153.6 | 1: 4.5 / 1.7 / 1.6 |
 | tune.worker-*.js | 1: 542.8 / 173.7 / 146.4 | 1: 0.3 / 0.2 / 0.2 |
@@ -275,14 +316,14 @@ baseline 1126.9 kB in both. **Precache code: 15,198.5 → 11,176.1 kB, 4,022.4 k
 | recheck.worker-*.js | 1: 879.2 / 279.0 / 231.7 | 1: 0.3 / 0.2 / 0.2 |
 | lifetime-altitude.worker-*.js | 1: 122.0 / 37.6 / 32.1 | 1: 0.3 / 0.2 / 0.2 |
 | requirement-trades.worker-*.js | 1: 135.8 / 43.4 / 37.0 | 1: 0.3 / 0.2 / 0.2 |
-| other chunks | 13: 771.5 / 232.1 / 191.3 | 42: 2240.0 / 717.3 / 601.7 |
-| precache | 75: 16317.3 / 7760.1 / 7150.1 | 100: 12294.8 / 6471.6 / 6077.3 |
-| precache code | 72: 15198.5 / 7582.6 / 7017.2 | 97: 11176.1 / 6294.1 / 5944.4 |
+| other chunks | 13: 771.5 / 232.1 / 191.3 | 42: 2240.0 / 717.4 / 601.6 |
+| precache | 75: 16317.3 / 7760.1 / 7150.1 | 100: 12294.8 / 6471.6 / 6076.8 |
+| precache code | 72: 15198.5 / 7582.6 / 7017.2 | 97: 11176.1 / 6294.1 / 5943.9 |
 | precache data/ | 3: 1118.8 / 177.5 / 132.9 | 3: 1118.8 / 177.5 / 132.9 |
 | catalog-*.js | 1: 172.8 / 48.8 / 39.9 | absent |
 | author-view-*.js | 1: 26.4 / 7.2 / 6.5 | 1: 26.4 / 7.3 / 6.5 |
-| check-view-*.js | 1: 11.5 / 4.0 / 3.6 | 1: 11.5 / 3.9 / 3.6 |
-| workspace-content-*.js | 1: 33.9 / 10.7 / 9.6 | 1: 33.9 / 10.7 / 9.5 |
+| check-view-*.js | 1: 11.5 / 4.0 / 3.6 | 1: 11.5 / 4.0 / 3.6 |
+| workspace-content-*.js | 1: 33.9 / 10.7 / 9.6 | 1: 33.9 / 10.7 / 9.6 |
 | workspace-content-*.css | 1: 4.8 / 1.4 / 1.2 | 1: 4.8 / 1.4 / 1.2 |
 | i18n-*.js | 1: 376.5 / 119.1 / 99.5 | absent |
 | lesson-file-*.js | 1: 345.5 / 110.5 / 93.7 | absent |
@@ -293,12 +334,16 @@ baseline 1126.9 kB in both. **Precache code: 15,198.5 → 11,176.1 kB, 4,022.4 k
 | ru-*.js | 1: 598.0 / 153.2 / 118.0 | 1: 598.0 / 153.2 / 118.0 |
 | th-*.js | 1: 764.0 / 146.6 / 112.3 | 1: 764.0 / 146.6 / 112.3 |
 | preload-helper-*.js | 1: 1.2 / 0.7 / 0.6 | absent |
-| initial load | 8: 3766.2 / 1144.3 / 932.5 | 33: 3779.6 / 1154.1 / 952.5 |
+| initial load | 8: 3766.2 / 1144.3 / 932.5 | 33: 3779.6 / 1154.1 / 952.0 |
 | textures | 6: 3789.4 / 3789.4 / 3789.4 | 6: 3789.4 / 3789.4 / 3789.4 |
+
+In the first round the head's manifest was `16b7cfc6c9a714` and five of its compressed figures
+differed by 0.1 to 0.5 kB (the hashed names inside the chunks changed with the build stamp's commit);
+every raw size and every line of the ceiling table is the same in both rounds.
 
 Initial load, baseline: index.html, `index-BZbxrmBo.js`, `i18n-Cn_TJ0_E.js`,
 `preload-helper-uBIymjUX.js`, `lesson-file-C61-AsHj.js`, `download-CkLdfcCm.js`,
-`catalog-BN9zN3fq.js`, `index-AVUtvM6b.css`. Head: index.html, `index-D5tsagkb.js`, 30 shared chunks
+`catalog-BN9zN3fq.js`, `index-AVUtvM6b.css`. Head: index.html, `index-*.js`, 30 shared chunks
 (`vec3`, `orbital`, `geodesy`, `propagate`, `mission`, `linear`, `simulation`, `orbits`, `kepler`,
 `disposal`, `sgp4`, `reentry`, `real-sky`, `coverage`, `vehicle-spec`, `csv-text`, `recheck`,
 `download`, `verdict-core`, `lifetime-altitude`, `autotune`, `attitude-tune-job`, `monte-carlo`,
@@ -312,8 +357,28 @@ Initial load, baseline: index.html, `index-BZbxrmBo.js`, `i18n-Cn_TJ0_E.js`,
 - The Monte Carlo CSV is not compared between the builds; the Monte Carlo worker's answers are (Step 2).
 - The default, heavy and fleet suites, and `npm run test:browser`, at this point: the default suite and the journeys run once in Task C, the heavy and fleet suites at the gate.
 - Run at the end of this task: `npm run typecheck` (clean) and
-  `npx vitest run tests/pwa.test.ts tests/bundle-budget.test.ts tests/repo-hygiene.test.ts tests/i18n-worker-path.test.ts tests/worker-language-boundary.test.ts` (5 files, 59 tests, all pass; the first builds the app with this plugin).
+  `npx vitest run tests/pwa.test.ts tests/bundle-budget.test.ts tests/repo-hygiene.test.ts tests/i18n-worker-path.test.ts tests/worker-language-boundary.test.ts` (5 files, 59 tests, all pass; the first builds the app with this plugin), in both rounds.
 
 ## The budget, old against new
 
 Filled in Task C, from the tables of Step 6, once the owner has signed it.
+
+## Review round
+
+An independent review passed the package with fixes, nothing critical or important. Its three
+findings on this seat's work, and what was done:
+
+1. **The plugin's guard** failed the build only for a `new URL(` holding `.worker.ts`; a worker
+   started by an import with Vite's worker query, or by a `new URL(` naming a `.worker.js` or
+   `.worker.mts` file, would still have gone through Vite's own worker build unnoticed. The guard now
+   covers both, naming the file; the plugin's comment lists the forms; each was tried (above, "What
+   was changed"). The rewriting pattern, the file filter and the line-level map are unchanged.
+2. **Step 3 could not show Vite's preload helper**, which has no source file. Where it sits, which
+   workers load it, and what it would do inside a worker are now under Step 3, checked on the final
+   build.
+3. **The change fragment** counted 32 pairs of worker and module as "32 modules"; it now gives 25
+   distinct modules in 32 pairs.
+
+The reference author's checks were tightened in the same round (an output that failed cannot agree;
+each worker is listened to for one second after its row's end; `canonicalBytes` refuses three more
+kinds of value), and every run above was made again with them on the final build.
