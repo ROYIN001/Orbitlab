@@ -13,8 +13,10 @@ data changes and one bug fix, all in §2. Falcon 9's first stage now flies its p
 Falcon 9's six-DOF pitch programme was fitted to three flights' flight-path angles and checked on
 two held-out flights ("Six-DOF pitch programme fitted"). Soyuz-2.1a's stored pitch programme has
 two fitted scalars, to its flown heights at the fairing and at core separation (§3, "Soyuz-2.1a
-flies its stored pitch programme"). Every fitted, derived and constructed value the vehicles fly
-is in one register (§1, "Fitted and derived values").
+flies its stored pitch programme"). The fitted, derived and constructed values of Falcon 9 (its six-DOF kick only), the Soyuz-2.1
+vehicles, Saturn V AS-506 and Mercury-Redstone are in one register (§1, "Fitted and derived
+values"); it lacks the 8° six-DOF kicks of Atlas V and Angara-A5, Falcon 9's 22 kPa throttle
+bucket and Sputnik's core load.
 Later, Falcon Heavy took the same published first-stage masses and Falcon 9's max-Q bucket
 (§4, F11), and Proton-M its published stage propellant loads and, with Angara-A5, its operator's
 fairing jettison rule (§4, F14). None of these was fitted.
@@ -816,7 +818,7 @@ table left only under 1 Pa. The same table reaches orbit in the reference crossw
 | the rating: 7 430 kg | 200.0 × 237.5 km | to 200 × 240 km | met |
 | Blok I's attitude | its closed loop lifts the nose from 10° to 35° above the horizon, then down to −3° | Starsem: smooth, 12° to −10° | **missed** |
 | aborts | MS-10 108 km, 18a 167 km (PHYSICS.md §8.3) | 93 km, 192 km | MS-10 met loosely, 18a **missed** |
-| Soyuz-2.1b on the same programme, unfitted | T+117.9 s: 47.2 / 45.0 km, 1.66 / 1.68 km/s; T+286.4 s: 153.2 / 142.2 km, 3.61 / 3.66 km/s | 43.2 km, 1.72 km/s; 144.7 km, 3.65 km/s (Arianespace Fig. 2.3.1c, to GTO from Kourou) | met within 10 % |
+| Soyuz-2.1b on the same programme, unfitted | T+117.9 s: 47.2 / 45.0 km, 1.66 / 1.68 km/s; T+286.4 s: 153.2 / 142.2 km, 3.61 / 3.66 km/s | 43.2 km, 1.72 km/s; 144.7 km, 3.65 km/s (Arianespace Fig. 2.3.1c, to GTO from Kourou) | met within 10 %; no test in the repository holds this check |
 
 **Disagreements, pinned.**
 
@@ -872,7 +874,7 @@ Arianespace's T+208.4 s (it was the crewed 157 s).
 
 **Drag, checked before fitting.** Soyuz-2.1b with the 4.11 m fairing follows Arianespace's
 acceleration trace within 1 % through max Q (1.839 / 1.833 / 1.855 g at T+45 / 50 / 55 s, against
-1.828 / 1.841 / 1.869 g). The 3.0 m fairings take 18 % off the stack's drag area, and the stack
+1.828 / 1.841 / 1.869 g); no test in the repository holds this within-1 % check. The 3.0 m fairings take 18 % off the stack's drag area, and the stack
 climbs higher for it: a zero-lift turn that keeps max Q under SoyCOM's 3 700 kgf/m² (36.3 kPa)
 puts the crewed fairing at 88 km, not 79. So the refit trades the two:
 
@@ -1880,7 +1882,7 @@ and time the model is asked about, and the series to the data it is built from.
 - **The two methods agree to 7 %.** Starshine 2 carried by the full equations of motion, every
   force on and NRLMSISE-00 at every point, comes down after 142.6 days against the mean method's
   132.8 (and 130.8 on record); the full equations start from the mean elements taken as
-  osculating ones. R05's density gave 140.3 and 131.2.
+  osculating ones. No test in the repository holds this run. R05's density gave 140.3 and 131.2.
 - **Steps.** Up to a day, the spheres come down within 0.4 % of their six-hour-step days; up to five
   days (with the indices' mean over the step) within 0.8 %, and a century at 700 km takes some 3 s
   instead of 7.
@@ -1943,7 +1945,7 @@ cross-track at Engineer), the relative speed, and an estimated probability of co
 | the screening's coarse steps against a 10 s brute force | the same pairs (a DMSP satellite and 40 Fengyun-1C fragments, one day) | every approach found | 0.01 s, 0.1 m |
 | the time filter's bounds: every near-Earth object of the bundled catalogue at 40 times across a week (88 450 states) | SGP4's own radius, argument of latitude and plane | none outside; the largest along-track and tilt 0.80 of the bounds | none outside |
 | the radius at a pass: the same objects, stretches of 10 s to 10 min (132 675 states) | SGP4's own radius | none outside | none outside |
-| the filtered screening: 12 primaries × 1, 3, 7 days × 1, 5, 25 km (108 runs, 591 approaches) | the full search | the same 591, none dropped, none added | same objects; TCA 1 ms, miss 1 mm |
+| the filtered screening: 12 primaries × 1, 3, 7 days × 1, 5, 25 km (108 runs; no test pins the number of approaches) | the full search | the same approaches, none dropped, none added | same objects; TCA 1 ms, miss 1 mm |
 | Iridium 33–Cosmos 2251: relative speed, crossing angle | 11.6 km/s, "nearly right angles" (Shepperd; Kelso) | 11.6 km/s, 102° | 0.05 km/s; 95–110° |
 | the same: TCA of the conjunction message | 16:55:59.798 UTC | found again by straight-line motion; miss 226.3 m | 2 ms |
 | the same: probability, the military's covariances | 2.6 × 10⁻⁵¹ (Shepperd, Table 2, 9 February) | 2.66 × 10⁻⁵¹ | 0.1 in log₁₀ |
@@ -1981,8 +1983,8 @@ was changed after the first runs (the radial test at each pass, and the handling
 come down), and two primaries were added; the whole sweep was then run again on the final code,
 in review, with the same result.
 
-- **The sweep.** All 108 runs gave the full search's approaches, 591 in all, with none dropped and
-  none added. The criterion allows 1 ms and 1 mm. Where they were compared exactly, the times and
+- **The sweep.** All 108 runs gave the full search's approaches, with none dropped and none added
+  (`tests/heavy/screening-filter.test.ts` asserts that equality; no test pins the count of 591). The criterion allows 1 ms and 1 mm. Where they were compared exactly, the times and
   misses were equal to the last bit: in one run of the regular suite and in the 30 000-object runs
   below. The filtered search takes the very samples the full search takes, so this is expected.
 - **Primaries added.** Two constructed primaries were added to the ten above: a second object that
@@ -2718,8 +2720,8 @@ with no change to the code, as it could the older six-DOF goldens.
 
 **The catalogue held to itself** (`tests/parts.test.ts`, every comparison exact):
 
-- 21 vehicles; 55 engine parts (49 single engines, 2 clusters, 4 lumped entries), 50 stage
-  bodies, 14 strap-on bodies, 17 fairings.
+- 21 vehicles; 55 engine parts (49 single engines, 2 clusters, 4 lumped entries), 49 stage
+  bodies, 14 strap-on bodies, 18 fairings.
 - Every stage, strap-on group and fairing of every vehicle is emitted, field for field, by exactly
   one part, and every part is used. This is found by value, not by asking the catalogue.
 - The propellant family agrees with the six-DOF model's `PROPELLANT_LOADS` for the 51 of 64
@@ -2744,11 +2746,11 @@ so (`UNCITED`) rather than borrow one:
 
 - 27 of 55 engine parts (29 before the RD-107A and RD-108A took Arianespace's figures on
   2026-10-01, §3), and 5 more solid motors that cite only their peak-to-mean thrust ratio;
-- 25 of 49 stage bodies (26 of 50 before F11 gave Falcon Heavy's core a source for its
-  propellant, and the two Soyuz-2 cores became one on 2026-10-01; Falcon Heavy's 28 000 kg dry
-  mass is still an estimate), and Proton-M's first stage cites only its diameter;
+- stage bodies with no cited source (no test holds how many; `UNCITED` in `src/data/parts.ts`
+  marks them; Falcon Heavy's 28 000 kg dry mass is still an estimate), and Proton-M's first
+  stage cites only its diameter;
 - 5 of 14 strap-on bodies (7 before F11, 6 before Soyuz-2's strap-ons took Arianespace's figures);
-- 13 of 17 fairings.
+- fairings with no cited source (no test holds how many).
 
 Four engine entries are not one real engine: RD-0213 + RD-0214, YF-24C, YF-75 and Raptor 2 /
 RVac are lumped, and the builder refuses to re-count them (below). Some propellant families are
@@ -2989,8 +2991,8 @@ engine model every flight runs.
   count × thrustVac at zero pressure and count × thrustSL at 101 325 Pa exactly, and Isp in
   vacuum is ispVac within 1e-12. **Met.**
 - **Delivered sea-level Isp against the quoted one**, bound 8 % (from `physics-core.test.ts`):
-  worst RD-108A, +6.93 %. The engines more than 2 % off are the four already known: RD-108A
-  +6.9 %, Vulcain 2.1 5.0 %, Rutherford 2.6 %, Raptor 2 2.4 %. **Met.** In review the expected
+  the engines this test pins above 2 % off are three: Vulcain 2.1, Rutherford and Raptor 2
+  (`tests/design-static-fire.test.ts`). **Met.** In review the expected
   value was worked from the data in the test, not from the model the stand runs on. These are
   inconsistencies in the data (the model derives sea-level Isp from the thrust ratio), shown on
   screen and not tuned: Merlin 1D 287.52 s against 282 s (+1.96 %), Vulcain 2.1 302.0 s against
