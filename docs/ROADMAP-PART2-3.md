@@ -152,8 +152,8 @@ with a slowed CPU. What each met and missed is in [VALIDATION.md](VALIDATION.md)
 | **D05** parametric design and optimal staging | Size a vehicle from a payload and an orbit; the optimal division of Δv among stages. | Optimal staging against the analytic Lagrange-multiplier solution for stages of given Isp and structural ratio (Curtis ch. 11). |
 
 Built by 2026-09-28, as the Build section's three levels. The catalogue (`src/data/parts.ts`) holds
-55 engines (49 single engines, 2 clusters and 4 entries that lump several engines together), 50
-stage bodies, 14 strap-on bodies and 17 fairings, and the 21 vehicles are assembled from it;
+55 engines (49 single engines, 2 clusters and 4 entries that lump several engines together), 49
+stage bodies, 14 strap-on bodies and 18 fairings, and the 21 vehicles are assembled from it;
 interstages are derived for the drawing and weigh nothing. The Watch level takes the real rockets
 apart. Explore remixes one (D02) or builds one from parts (D03), with the warnings, payload ratings
 computed by flying the design, saved designs and **Fly it**. Engineer has the test stand, the wind
