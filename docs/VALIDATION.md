@@ -42,7 +42,7 @@ Status on 2026-10-01:
 | Close approaches (M01, P2.5) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023); NASA CARA's test conjunctions as messages (Alfano 2009; Omitron) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade; CARA's twelve within 0.12 % (§7), 2026-09-27 |
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
 | The Earth's orientation (P2.5) | Vallado et al., AIAA 2006-6753, Appendix C: TEME to ITRF with UT1 − UTC and polar motion; the IERS's finals2000A | The paper's Earth-fixed position within 71 mm (262 m before) (§6), 2026-09-27 |
-| Parts catalogue (D01) | The fleet's specs and 27 point-mass and 21 six-DOF flights, recorded before the catalogue; main's literal fleet after F11 | The 21 vehicles emitted value for value and key for key; every flight bit for bit; sources missing for 29 of 55 engines, 25 of 50 stage bodies, 6 of 14 strap-on bodies and 13 of 17 fairings, stated (§8), 2026-09-28 |
+| Parts catalogue (D01) | The fleet's specs and 27 point-mass and 21 six-DOF flights, recorded before the catalogue; main's literal fleet after F11 | The 21 vehicles emitted value for value and key for key; every flight bit for bit; sources missing for some of the engines, stage bodies, strap-on bodies and fairings, stated (§8), 2026-09-28 |
 | The builder's figures (D02–D05) | The model's own Δv walk; the rocket equation worked by hand; published burn times; engine masses from makers, agencies, secondary sources and Wikipedia, some inferred | Exactly the walk's Δv from every state tried; the hand-worked stage figures within 1e-12; six published burn times within 10 %; a mass with its sources for every engine but the four with none published (§8), 2026-09-28 |
 | Optimal staging (D05) | Closed forms; brute-force grids; NPTEL Lecture 20's worked examples (IIT Bombay); Saturn V and Falcon 9 by hand | All met; one bound widened after a result, for the slide's truncated β, and the page's Saturn V bounds set after a probe; two of the slide's figures found not to follow from its own; the real first stage takes more than the optimum on two vehicles and less on four (§8), 2026-09-28 |
 | Remix, parts builder and warnings (D02, D03) | The catalogue vehicles; the published engine masses; the rocket equation; the flight's own liftoff, planner and acceleration decisions | Unchanged remixes and rebuilt vehicles equal the catalogue; `noLiftoff` agrees with 85 flights; no catalogue vehicle fails (§8), 2026-09-28 |
@@ -2991,8 +2991,8 @@ engine model every flight runs.
   count × thrustVac at zero pressure and count × thrustSL at 101 325 Pa exactly, and Isp in
   vacuum is ispVac within 1e-12. **Met.**
 - **Delivered sea-level Isp against the quoted one**, bound 8 % (from `physics-core.test.ts`):
-  the engines this test pins above 2 % off are three: Vulcain 2.1, Rutherford and Raptor 2
-  (`tests/design-static-fire.test.ts`). **Met.** In review the expected
+  the engines that both tests pin above 2 % off are three: Vulcain 2.1, Rutherford and Raptor 2
+  (`tests/physics-core.test.ts`, `tests/design-static-fire.test.ts`). **Met.** In review the expected
   value was worked from the data in the test, not from the model the stand runs on. These are
   inconsistencies in the data (the model derives sea-level Isp from the thrust ratio), shown on
   screen and not tuned: Merlin 1D 287.52 s against 282 s (+1.96 %), Vulcain 2.1 302.0 s against

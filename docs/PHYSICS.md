@@ -1516,7 +1516,7 @@ know. Two consequences worth knowing about:
 | Electron | 6.0 | 0.45 | 35 | 0 |
 | Starship | 1.5 | 0.30 | 35 | 0 |
 
-The six-DOF kicks the default flight uses are not in this table: Falcon 9 3.5°, Atlas V 8° and Angara-A5 8° (`src/data/vehicles.ts`, `guidanceDefaultsSixDof`).
+The six-DOF kicks the default flight uses are not in this table; among them are Soyuz-2.1a 6°, Falcon 9 3.5°, Atlas V 8° and Angara-A5 8° (`src/data/vehicles.ts`, `guidanceDefaultsSixDof`).
 
 The pattern is physical rather than arbitrary: launchers that leave the pad with a high
 thrust-to-weight or a solid first stage (Atlas V, Ariane 64, Electron, Proton-M) turn over
@@ -2886,7 +2886,7 @@ at the centre of its finite burn; the burns are flown on the main engine (СКД
 
 The model's split between the two-orbit transfer and its braking differs from MS-28's (42 +
 6 m/s against 31 + 12 m/s) because it brings the spacecraft to the aim point level, where
-MS-28 arrived still closing; the sum is the same, and the whole two-orbit flight costs
+MS-28 arrived still closing. The whole two-orbit flight costs
 120.8 m/s, the sum of the four burns in the table above (115.1 without the braking burn); `tests/rendezvous.test.ts` bounds the total between 95 and 135 m/s.
 
 **The approach (Kurs)** is flown in six degrees of freedom: the spacecraft is a rigid body
@@ -3034,8 +3034,9 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.
-  - Four engines' quoted sea-level Isp is 2.4–6.9 % away from what their thrust and mass flow
-    deliver; the model flies the delivered value (§4).
+  - Three engines' quoted sea-level Isp is more than 2 % away from what their thrust and mass flow
+    deliver (Vulcain 2.1, Rutherford and Raptor 2, the list `tests/physics-core.test.ts` pins); the
+    model flies the delivered value (§4).
 
 ## 11. Sound heard at the camera (roadmap V01)
 
