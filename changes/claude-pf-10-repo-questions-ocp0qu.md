@@ -11,6 +11,7 @@
 - Docs (PF-03, row 4): `docs/PHYSICS.md` §3 no longer says Vallado's table has a row at 86 km; two reproductions of the table have none, and the row was the app's own.
 - Plans: the T-1 work plan brought to the owner's decisions, with the inventory of the older plan's checks, one fixed request for each of the twelve workers, and what a reader with no context could not act on.
 - Plans: the T-1 work plan corrected after two readers with no context tried it: who writes which file, twelve requests that can be built, each step's pass condition, the budget's two kinds of ceiling, a deliberate break that can be seen.
+- Records: the owner's ruling of 2026-11-28 that the word to the session that did T-2 is skipped, in DECISIONS, the T-1 plan and HANDOVER-S20.
 
 ## PROGRESS
 
