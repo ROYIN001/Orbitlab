@@ -122,3 +122,26 @@ test('a Map or a Set is an error', () => {
   assert.throws(() => canonicalBytes(new Set([1])), /Set/);
   assert.throws(() => canonicalBytes({ deep: [{ s: new Set() }] }), /Set/);
 });
+
+// Review round: three values whose bytes could be shared with another's are refused.
+test('a string holding a lone surrogate is an error (its UTF-8 bytes would be those of U+FFFD)', () => {
+  assert.throws(() => canonicalBytes('\uD800'), /surrogate/);
+  assert.throws(() => canonicalBytes({ key: 'a\uDC00b' }), /surrogate/);
+  assert.throws(() => canonicalBytes({ ['\uD83D']: 1 }), /surrogate/);
+  same('🚀', '\u{1F680}');
+});
+
+test('an object of a kind the rule does not name is an error: an Error, a RegExp, a boxed number', () => {
+  assert.throws(() => canonicalBytes(new Error('x')), /no canonical form/);
+  assert.throws(() => canonicalBytes(/x/g), /no canonical form/);
+  assert.throws(() => canonicalBytes(Object(1)), /no canonical form/);
+  assert.throws(() => canonicalBytes({ deep: [new Boolean(false)] }), /no canonical form/);
+  same(Object.create(null), {});
+});
+
+test('an array with a hole is an error (a hole would read as undefined)', () => {
+  // eslint-disable-next-line no-sparse-arrays
+  assert.throws(() => canonicalBytes([1, , 3]), /hole/);
+  assert.throws(() => canonicalBytes(new Array(2)), /hole/);
+  same([1, undefined, 3], [1, undefined, 3]);
+});

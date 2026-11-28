@@ -13,10 +13,14 @@
  *   - `D` a Date: its time value, written as a number (`d` and sixteen hex digits);
  *   - `B` a typed array, DataView or ArrayBuffer: the name of its type and its byte length, each
  *     as above, then the bytes of its own view;
- *   - `a` an array: its length as eight hex digits, then each element in order (a hole as undefined);
- *   - `o` any other object: its count of own enumerable string keys as eight hex digits, then for
- *     each key in sorted order the key as a string and its value;
- *   - a Map or a Set is an error, as are a function, a symbol and a bigint.
+ *   - `a` an array: its length as eight hex digits, then each element in order;
+ *   - `o` an object whose prototype is `Object.prototype` or null: its count of own enumerable
+ *     string keys as eight hex digits, then for each key in sorted order the key as a string and
+ *     its value;
+ *   - an error, as values whose bytes would be another's: a Map or a Set; any other object the rule
+ *     does not name (an Error, a RegExp, a boxed number or string, a class instance); a string, or a
+ *     key, holding a lone surrogate (its UTF-8 would be that of U+FFFD); an array with a hole (it
+ *     would read as undefined); and a function, a symbol and a bigint.
  * Every value's bytes say where they end, so a sequence of values cannot be read two ways.
  */
 
@@ -58,7 +62,10 @@ function numberHex(x) {
   return out;
 }
 
-function writeString(w, s) {
+const wellFormed = (s) => (typeof s.isWellFormed === 'function' ? s.isWellFormed() : !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(s));
+
+function writeString(w, s, path) {
+  if (!wellFormed(s)) throw new TypeError(`canonicalBytes: a string holding a lone surrogate at ${path} has no canonical form`);
   const bytes = encoder.encode(s);
   w.byte(tag('s'));
   w.ascii(hex8(bytes.length));
@@ -70,7 +77,7 @@ function writeValue(w, v, path) {
     case 'undefined': w.byte(tag('u')); return;
     case 'boolean': w.byte(tag(v ? 't' : 'f')); return;
     case 'number': w.byte(tag('d')); w.ascii(numberHex(v)); return;
-    case 'string': writeString(w, v); return;
+    case 'string': writeString(w, v, path); return;
     case 'object': break;
     default: throw new TypeError(`canonicalBytes: a ${typeof v} at ${path} has no canonical form`);
   }
@@ -88,7 +95,7 @@ function writeValue(w, v, path) {
   if (ArrayBuffer.isView(v) || kind === 'ArrayBuffer' || kind === 'SharedArrayBuffer') {
     const view = ArrayBuffer.isView(v) ? new Uint8Array(v.buffer, v.byteOffset, v.byteLength) : new Uint8Array(v);
     w.byte(tag('B'));
-    writeString(w, kind);
+    writeString(w, kind, path);
     w.ascii(hex8(view.length));
     w.bytes(view);
     return;
@@ -96,14 +103,21 @@ function writeValue(w, v, path) {
   if (Array.isArray(v)) {
     w.byte(tag('a'));
     w.ascii(hex8(v.length));
-    for (let i = 0; i < v.length; i++) writeValue(w, v[i], `${path}[${i}]`);
+    for (let i = 0; i < v.length; i++) {
+      if (!(i in v)) throw new TypeError(`canonicalBytes: an array with a hole at ${path}[${i}] has no canonical form`);
+      writeValue(w, v[i], `${path}[${i}]`);
+    }
     return;
+  }
+  const proto = Object.getPrototypeOf(v);
+  if (proto !== Object.prototype && proto !== null) {
+    throw new TypeError(`canonicalBytes: a ${kind}${proto?.constructor?.name ? ` (${proto.constructor.name})` : ''} at ${path} has no canonical form`);
   }
   const keys = Object.keys(v).sort();
   w.byte(tag('o'));
   w.ascii(hex8(keys.length));
   for (const key of keys) {
-    writeString(w, key);
+    writeString(w, key, `${path}.${key}`);
     writeValue(w, v[key], `${path}.${key}`);
   }
 }

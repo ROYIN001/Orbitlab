@@ -115,7 +115,7 @@ async function main([target, outArg, expected]) {
         await context.close();
       }
       const { raw: _raw, ...rest } = r;
-      const pass = !r.failure && r.digest === want && consoleErrors.length === 0;
+      const pass = !r.failure && !r.afterEnd && !r.afterEndErrors && r.digest === want && consoleErrors.length === 0;
       out.sourceWorker = { ...rest, expected: want, consoleErrors, pass };
       if (!pass) ok = false;
       console.log(`${pass ? 'ok  ' : 'FAIL'} the lifetime worker from its source: ${r.failure ?? r.ended}, digest ${r.digest.slice(0, 12)} ${r.digest === want ? 'equals' : 'DIFFERS FROM'} the baseline's ${want.slice(0, 12)}${consoleErrors.length ? `; console errors: ${consoleErrors.join(' | ')}` : ''}`);

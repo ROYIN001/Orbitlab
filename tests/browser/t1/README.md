@@ -8,7 +8,7 @@ Nothing they write is committed; the numbers that matter are below.
 
 | File | What |
 |---|---|
-| `canonical.mjs` | `canonicalBytes(value)` and `digest(values)`: the canonical bytes the answers are hashed by; tested by `tests/verification/t1-canonical.test.mjs` (`node --test`, CI's `plan` job) |
+| `canonical.mjs` | `canonicalBytes(value)` and `digest(values)`: the canonical bytes the answers are hashed by; tested by `tests/verification/t1-canonical.test.mjs` (`node --test`, CI's `plan` job). It refuses, as having no canonical form, a Map or Set, any object the rule does not name (an Error, a RegExp, a boxed number), a string with a lone surrogate and an array with a hole |
 | `../../fixtures/t1/requests.json` | the twelve requests, written by `../../fixtures/t1/build-requests.ts.txt` (its first lines say how to run it) |
 | `worker-digests.mjs` | each worker of a build sent its requests in Chromium, its answers hashed; the cancel, precache and failed-load checks; and `--compare` of two outputs |
 | `bundle-modules.mjs` | the modules of two builds with source maps, and what each worker and the page load at start |
@@ -37,15 +37,17 @@ node tests/browser/t1/first-load.mjs http://localhost:5173/ <out.json>       # t
 ```
 
 **`worker-digests.mjs`** prints one line per worker (the digest's first 12 hex digits, the messages by
-type, the seconds), then the three checks' lines, and writes `out.json` and the canonical bytes of each
+type, the seconds, and how many messages came after the end when any did), then the three checks' lines, and writes `out.json` and the canonical bytes of each
 worker's compared sequence to `<out.json>.raw/<worker>.bin` (the flight's is about 400 MB). A worker
 fails the run on a worker `error` event, a reply of type `error`, no end within 120 s, a console error
-on its page, or its row's condition (screening: the list is not empty; recheck: 4 match and 2
-borderline among its 6 records). What the comparison leaves out is exactly the plan's table: the
+on its page, its row's condition (screening: the list is not empty; recheck: 4 match and 2
+borderline among its 6 records), or any message or error event in the one second it is still listened
+to after its row's end (`afterEnd` in `out.json`; those messages are counted, never hashed). What the comparison leaves out is exactly the plan's table: the
 ratings `result.elapsedMs`, the Monte Carlo `run.ms`, the screening `progress` messages (counted, not
 hashed), every field named `app` in a recheck reply; nothing of the flight, whose `advance` goes with
-`budgetMs: 1e9`. Two outputs **agree** when every worker's digest and messages are equal (screening's
-`progress` count aside), cancel and precache pass in both, and the failed-load check records the same
+`budgetMs: 1e9`. Two outputs **agree** when each passed by itself (its `ok` true, no worker with a
+failure; `--compare` names the one that did not), every worker's digest and messages are equal
+(screening's `progress` count aside), every worker's `afterEnd` is equal, cancel and precache pass in both, and the failed-load check records the same
 for each worker in both; `--compare` says so, and for a digest that differs it reads both raw files back
 and names the first differing message and field.
 
@@ -86,11 +88,19 @@ What was run, in this order:
    `bundle-modules.mjs` on the pair with both logs: **sets equal**, 36 maps and 589 (source, content)
    pairs each, no source with two contents, no `INEFFECTIVE_DYNAMIC_IMPORT`, `bundle modules: ok`.
 4. `first-load.mjs` on `$T1/base/dist`: `first load: ok`.
+5. After the review round (an output that failed cannot agree; a second after the end; the three
+   values `canonicalBytes` now refuses), `worker-digests.mjs` once more on `$T1/base/dist`: `worker
+   digests: ok`, the twelve digests and messages as below, `afterEnd` 0 for every worker, the three
+   checks' lines as below. Its `--compare` with the second run's output says they do **not** agree,
+   only because that older output has no `afterEnd` ("not recorded"); every other line agrees and both
+   outputs passed by themselves.
 
 ### The twelve workers
 
-The same digest and the same messages in both runs. Seconds are from the first post to the end, for
-information only (first run / second run).
+The same digest and the same messages in all three runs (the third, after the review round, also with
+no message in the second after each end). Seconds are from the first post to the end, for information
+only (first run / second run; the third run's: flight 19.3 s, monte-carlo 52.5 s, every other within
+0.1 s of the second's).
 
 | Worker | Digest (SHA-256 of the compared sequence) | Messages | Seconds |
 |---|---|---|---|

@@ -14,8 +14,11 @@
  * messages of tests/fixtures/t1/requests.json as the plan's table orders them, records every
  * message until the row's end, removes what the plan leaves out of the comparison (below), turns
  * the sequence into canonical bytes in the page (tests/browser/t1/canonical.mjs) and keeps their
- * SHA-256 and the count of messages by `type`. A worker `error` event, a reply of type `error`, no
- * end within 120 s, or a row's condition that does not hold fails the run for that worker.
+ * SHA-256 and the count of messages by `type`. After the row's end the worker is listened to for one
+ * second more before it is ended; what it posts then is counted (`afterEnd`), not hashed. A worker
+ * `error` event, a reply of type `error`, no end within 120 s, a row's condition that does not hold,
+ * a console error on its page, or any message or error event in the second after the end fails the
+ * run for that worker.
  *
  * What the comparison leaves out, and nothing else (the plan's table "What a worker answers that
  * depends on the clock or on the build"):
@@ -40,12 +43,14 @@
  *     the dist folder.
  *
  * out.json holds, per worker, `entry`, `digest`, `messages` (count by type), `seconds` (wall time
- * from the first post to the end, for information, never compared) and its condition; and the three
+ * from the first post to the end, for information, never compared), `afterEnd` (messages in the second
+ * after the end), its condition and its `failures`; `ok` for the whole run; and the three
  * checks with their lines. The canonical bytes of each worker's sequence go to `<out.json>.raw/`.
  *
- * Two outputs agree (`--compare`) when every worker's `digest` and `messages` are equal, screening's
- * `progress` count aside, the cancel and precache checks pass in both, and the failed-load check
- * records the same for each worker in both. Where two digests differ and both raw folders are there,
+ * Two outputs agree (`--compare`) when each passed by itself (its `ok` true and no worker with a
+ * failure; the one that did not is named), every worker's `digest` and `messages` are equal,
+ * screening's `progress` count aside, every worker's `afterEnd` is equal, the cancel and precache
+ * checks pass in both, and the failed-load check records the same for each worker in both. Where two digests differ and both raw folders are there,
  * the comparison names the first differing message and field.
  */
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -66,6 +71,8 @@ export const WORKERS = ['flight', 'tune', 'attitude-tune', 'monte-carlo', 'ratin
 
 export const RUN_TIMEOUT_MS = 120_000;
 const CANCEL_QUIET_MS = 2_000;
+/** How long a worker is still listened to after its row's end. */
+export const AFTER_END_MS = 1_000;
 const FAILED_LOAD_MS = 5_000;
 
 /** The worker's answer, the message type a failed load must not produce. */
@@ -125,7 +132,7 @@ export function staticClosure(dist, entry, files) {
  * Runs in the page: start the worker, post the row's messages, record what it posts until the
  * row's end, take out what the comparison leaves out, and hash. Returns the record.
  */
-export async function runInPage({ name, url, worker: entryFile, timeoutMs }) {
+export async function runInPage({ name, url, worker: entryFile, timeoutMs, afterEndMs = 1000 }) {
   const spec = window.__t1;
   const revive = (v, planes) => {
     if (Array.isArray(v)) return v.map((x) => revive(x, planes));
@@ -144,22 +151,35 @@ export async function runInPage({ name, url, worker: entryFile, timeoutMs }) {
   const messages = revive(spec.messages, planes);
   const seen = [];
   const counts = {};
-  let started = 0;
+  let started = 0, endedAt = 0;
+  // after the row's end the worker is listened to for `afterEndMs` more: what it posts then is counted, not hashed
+  let after = null; // null until the row has ended; then { messages, errors }
   const outcome = await new Promise((done) => {
     const worker = new Worker(url, { type: 'module' });
-    const timer = setTimeout(() => done({ failure: `no end within ${timeoutMs / 1000} s` }), timeoutMs);
-    const end = (r) => { clearTimeout(timer); worker.terminate(); done(r); };
+    const timer = setTimeout(() => { worker.terminate(); done({ failure: `no end within ${timeoutMs / 1000} s` }); }, timeoutMs);
+    const stop = (r) => { clearTimeout(timer); endedAt = performance.now(); worker.terminate(); done(r); };
+    const end = (r) => {
+      clearTimeout(timer);
+      endedAt = performance.now();
+      after = { messages: 0, errors: [] };
+      setTimeout(() => { worker.terminate(); done(r); }, afterEndMs);
+    };
     let next = 0; // the next message to post
     const post = () => { if (!started) started = performance.now(); worker.postMessage(messages[next++]); };
-    worker.onerror = (e) => { e.preventDefault?.(); end({ failure: `worker error event: ${e.message || '(no message)'} ${e.filename || ''}:${e.lineno || ''}` }); };
-    worker.onmessageerror = () => end({ failure: 'messageerror: a reply could not be read' });
+    worker.onerror = (e) => {
+      e.preventDefault?.();
+      const what = `worker error event: ${e.message || '(no message)'} ${e.filename || ''}:${e.lineno || ''}`;
+      if (after) after.errors.push(what); else stop({ failure: what });
+    };
+    worker.onmessageerror = () => { if (after) after.messages++; else stop({ failure: 'messageerror: a reply could not be read' }); };
     let runs = 0;
     worker.onmessage = (e) => {
+      if (after) { after.messages++; return; }
       const m = e.data;
       seen.push(m);
       const type = m && typeof m === 'object' ? m.type : typeof m;
       counts[type] = (counts[type] ?? 0) + 1;
-      if (type === 'error') { end({ failure: `a reply of type error: ${m.message}` }); return; }
+      if (type === 'error') { stop({ failure: `a reply of type error: ${m.message}` }); return; }
       if (name === 'flight') {
         if (type !== 'delta') return;
         // the reply to start is a delta with no ack; each later advance goes out on the delta with ack k - 1
@@ -180,7 +200,7 @@ export async function runInPage({ name, url, worker: entryFile, timeoutMs }) {
     };
     post();
   });
-  const seconds = started ? (performance.now() - started) / 1000 : 0;
+  const seconds = started ? ((endedAt || performance.now()) - started) / 1000 : 0;
 
   // what the comparison leaves out (the plan's table), and nothing else
   const dropApp = (v) => {
@@ -219,7 +239,10 @@ export async function runInPage({ name, url, worker: entryFile, timeoutMs }) {
   const digest = await window.digest(compared);
   let raw = '';
   for (let i = 0; i < bytes.length; i += 0x8000) raw += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-  return { entry: entryFile, ...outcome, digest, messages: counts, seconds, condition, compared: compared.length, raw: btoa(raw) };
+  return {
+    entry: entryFile, ...outcome, digest, messages: counts, seconds, condition, compared: compared.length,
+    afterEnd: after ? after.messages : null, ...(after?.errors.length ? { afterEndErrors: after.errors } : {}), raw: btoa(raw),
+  };
 }
 
 /** Runs in the page: start the worker and end it at its first progress; count what arrives after. */
@@ -355,7 +378,7 @@ async function run(distArg, outArg) {
       const { context, page, consoleErrors } = await freshPage(browser, server.url, spec);
       let r;
       try {
-        r = await page.evaluate(runInPage, { name, url: `${server.url}${entries[name]}`, worker: entries[name], timeoutMs: RUN_TIMEOUT_MS });
+        r = await page.evaluate(runInPage, { name, url: `${server.url}${entries[name]}`, worker: entries[name], timeoutMs: RUN_TIMEOUT_MS, afterEndMs: AFTER_END_MS });
       } finally {
         await context.close();
       }
@@ -363,13 +386,15 @@ async function run(distArg, outArg) {
       writeFileSync(join(rawDir, `${name}.bin`), Buffer.from(raw, 'base64'));
       const failures = [];
       if (r.failure) failures.push(r.failure);
+      if (r.afterEnd) failures.push(`${r.afterEnd} message(s) in the ${AFTER_END_MS / 1000} s after the end`);
+      if (r.afterEndErrors) failures.push(`after the end: ${r.afterEndErrors.join(' | ')}`);
       if (r.condition && !r.condition.holds) failures.push(`condition does not hold: ${r.condition.what} (${JSON.stringify(r.condition)})`);
       if ((name === 'screening' || name === 'recheck') && !r.condition) failures.push('no result to check the condition on');
       if (consoleErrors.length) failures.push(`console errors: ${consoleErrors.join(' | ')}`);
       out.workers[name] = { ...rest, imports: closures[name].slice(1), failures };
       if (failures.length) ok = false;
       const counts = Object.entries(r.messages).map(([k, v]) => `${k} ${v}`).join(', ');
-      console.log(`${failures.length ? 'FAIL' : 'ok  '} ${name.padEnd(19)} ${r.digest.slice(0, 12)}  ${counts}  ${r.seconds.toFixed(1)} s${failures.length ? `  ${failures.join('; ')}` : ''}`);
+      console.log(`${failures.length ? 'FAIL' : 'ok  '} ${name.padEnd(19)} ${r.digest.slice(0, 12)}  ${counts}  ${r.seconds.toFixed(1)} s${r.afterEnd ? `  ${r.afterEnd} after the end` : ''}${failures.length ? `  ${failures.join('; ')}` : ''}`);
     }
 
     // cancel
@@ -495,6 +520,19 @@ function compare(aPath, bPath) {
       }
     }
     lines.push(`${name}: DIFFER: digest ${wa.digest.slice(0, 12)} / ${wb.digest.slice(0, 12)}, messages ${JSON.stringify(wa.messages)} / ${JSON.stringify(wb.messages)}${where}`);
+  }
+  for (const [label, o] of [['A', a], ['B', b]]) {
+    const failed = WORKERS.filter((n) => o.workers[n]?.failures?.length);
+    const passed = o.ok === true && failed.length === 0;
+    if (!passed) agree = false;
+    lines.push(`output ${label}: ${passed ? 'passed by itself' : `DID NOT PASS by itself (ok ${o.ok}${failed.length ? `; failures in ${failed.map((n) => `${n}: ${o.workers[n].failures.join('; ')}`).join(' / ')}` : ''})`}`);
+  }
+  for (const name of WORKERS) {
+    const xa = a.workers[name]?.afterEnd, xb = b.workers[name]?.afterEnd;
+    if (xa === undefined || xb === undefined || xa !== xb) {
+      agree = false;
+      lines.push(`after the end, ${name}: DIFFER: ${xa ?? '(not recorded)'} / ${xb ?? '(not recorded)'}`);
+    }
   }
   for (const check of ['cancel', 'precache']) {
     const pa = a.checks?.[check]?.pass, pb = b.checks?.[check]?.pass;
