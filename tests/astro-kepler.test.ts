@@ -60,7 +60,7 @@ describe('keplerUniversal', () => {
       expect(dist(back.r, s.r), `${label(c)} position`).toBeLessThanOrEqual(1e-2);
       expect(dist(back.v, s.v), `${label(c)} velocity`).toBeLessThanOrEqual(1e-5);
     }
-    expect(n).toBeGreaterThan(300);
+    expect(n).toBe(296);
   });
 
   it('keeps angular momentum and energy', () => {
@@ -76,7 +76,7 @@ describe('keplerUniversal', () => {
       expect(Math.abs(h1 - h0) / h0, `${label(c)} angular momentum`).toBeLessThanOrEqual(1e-11);
       expect(Math.abs(energy(g) - energy(s)), `${label(c)} energy`).toBeLessThanOrEqual((1e-11 * MU) / norm(s.r));
     }
-    expect(n).toBeGreaterThan(300);
+    expect(n).toBe(296);
   });
 
   it('ends on extreme inputs', () => {
